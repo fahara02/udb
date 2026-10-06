@@ -295,7 +295,167 @@ pub fn lint_catalog(manifest: &CatalogManifest) -> LintReport {
 
 // ── Table-level lint ─────────────────────────────────────────────────────────
 
+/// Projection option keys the manifest builder emits or the runtime reads. A
+/// key outside this list is ignored at runtime, so a typo (`payload_field`, `fts_column`) silently
+/// changes nothing; `udb check` reports it.
+pub const KNOWN_PROJECTION_OPTION_KEYS: &[&str] = &[
+    "acl",
+    "artifact_path",
+    "auto_register",
+    "bucket_env_key",
+    "column_name",
+    "compression",
+    "dimension",
+    "distance",
+    "downsample_policy",
+    "edge_source_field",
+    "edge_source_label",
+    "edge_target_field",
+    "edge_target_label",
+    "embedding_field",
+    "engine",
+    "eviction_policy",
+    "experiment_name",
+    "field_name",
+    "from_label",
+    "fts_columns",
+    "fts_config",
+    "hnsw_m",
+    "id_field",
+    "key_pattern",
+    "key_prefix",
+    "kms_key_id",
+    "metric_keys",
+    "node_label",
+    "on_disk",
+    "order_by",
+    "param_keys",
+    "partition_by",
+    "partition_key",
+    "payload_fields",
+    "presigned_read",
+    "presigned_write",
+    "read_through",
+    "replica_count",
+    "retention_days",
+    "server_side_encryption",
+    "shard_count",
+    "sort_key",
+    "stage",
+    "storage_uri_env",
+    "tag_fields",
+    "tenant_field",
+    "time_field",
+    "to_label",
+    "ttl_seconds",
+    "validator",
+    "value_fields",
+    "vector_field",
+    "vector_size",
+    "write_through",
+];
+
+/// Projection option checks: unknown keys, and `payload_fields` /
+/// `fts_columns` naming a column that does not exist, is encrypted, or (for
+/// payload copies into another store) is PII.
+fn lint_projection_options(table: &ManifestTable, items: &mut Vec<LintItem>) {
+    let resolver = crate::planning::broker::column_resolver(table);
+    let finding = |severity: LintSeverity,
+                   kind: &str,
+                   column: &str,
+                   description: String,
+                   suggestion: &str| LintItem {
+        severity,
+        kind: kind.to_string(),
+        schema: table.schema.clone(),
+        table: table.table.clone(),
+        column: column.to_string(),
+        description,
+        suggestion: suggestion.to_string(),
+        source_file: table.source_file.clone(),
+    };
+    for projection in &table.projections {
+        let target = format!(
+            "{} projection '{}'",
+            projection.backend, projection.resource_name
+        );
+        for option in &projection.options {
+            let key = option.key.trim();
+            if let Some(canonical) = match key {
+                "from_label" => Some("edge_source_label"),
+                "to_label" => Some("edge_target_label"),
+                _ => None,
+            } {
+                items.push(finding(
+                    LintSeverity::Warning,
+                    "projection_option_deprecated_alias",
+                    "",
+                    format!("{target} sets '{key}', a deprecated alias of '{canonical}'"),
+                    "Use the typed data_store field (edge_source_label / edge_target_label); the alias is removed in 0.6.",
+                ));
+            }
+            if !KNOWN_PROJECTION_OPTION_KEYS.contains(&key) {
+                items.push(finding(
+                    LintSeverity::Warning,
+                    "projection_option_unknown",
+                    "",
+                    format!("{target} sets option '{key}', which the runtime never reads"),
+                    "Check the spelling against the documented projection options; unknown keys are ignored.",
+                ));
+                continue;
+            }
+            if key != "payload_fields" && key != "fts_columns" {
+                continue;
+            }
+            for name in option
+                .value
+                .split(',')
+                .map(str::trim)
+                .filter(|name| !name.is_empty())
+            {
+                let Some(column_name) = resolver.get(&name.to_ascii_lowercase()) else {
+                    items.push(finding(
+                        LintSeverity::Error,
+                        "projection_option_column_missing",
+                        name,
+                        format!(
+                            "{target}: {key} names '{name}', which is not a column of this table"
+                        ),
+                        "Name an existing field or column, or remove it from the list.",
+                    ));
+                    continue;
+                };
+                let Some(column) = table
+                    .columns
+                    .iter()
+                    .find(|column| &column.column_name == column_name)
+                else {
+                    continue;
+                };
+                if column.encrypted || column.security.is_encrypted {
+                    items.push(finding(
+                        LintSeverity::Error,
+                        "projection_option_column_encrypted",
+                        &column.column_name,
+                        format!("{target}: {key} names encrypted column '{}'; its ciphertext cannot be searched or copied usefully", column.column_name),
+                        "Remove the column from the list, or stop encrypting it.",
+                    ));
+                } else if key == "payload_fields" && column.security.is_pii {
+                    items.push(finding(
+                        LintSeverity::Warning,
+                        "projection_option_column_sensitive",
+                        &column.column_name,
+                        format!("{target}: payload_fields copies PII column '{}' into another store, outside the masking the data plane applies", column.column_name),
+                        "Leave PII columns out of payload_fields; read them from the canonical table.",
+                    ));
+                }
+            }
+        }
+    }
+}
+
 fn lint_table(table: &ManifestTable, items: &mut Vec<LintItem>) {
+    lint_projection_options(table, items);
     // Propagate per-table warnings already computed during manifest build
     for warning in &table.warnings {
         items.push(LintItem {
@@ -1177,6 +1337,44 @@ mod tests {
 
     fn has_kind(report: &LintReport, kind: &str) -> bool {
         report.items.iter().any(|item| item.kind == kind)
+    }
+
+    /// C1: a misspelled option and a PII column in payload_fields warn; a
+    /// payload/fts list naming a missing or encrypted column is an error.
+    #[test]
+    fn projection_option_rules() {
+        let option = |key: &str, value: &str| crate::generation::manifest::ManifestStoreOption {
+            key: key.to_string(),
+            value: value.to_string(),
+        };
+        let mut projection = base_projection(false);
+        projection.backend = "qdrant".to_string();
+        projection.options = vec![
+            option("payload_field", "id"),
+            option("payload_fields", "id, nope, ssn"),
+            option("fts_columns", "secret"),
+        ];
+        let mut manifest = base_manifest(vec![projection]);
+        let table = &mut manifest.tables[0];
+        let mut ssn = table.columns[0].clone();
+        ssn.field_name = "ssn".to_string();
+        ssn.column_name = "ssn".to_string();
+        ssn.is_primary = false;
+        ssn.sql_type = "TEXT".to_string();
+        ssn.security.is_pii = true;
+        let mut secret = ssn.clone();
+        secret.field_name = "secret".to_string();
+        secret.column_name = "secret".to_string();
+        secret.security.is_pii = false;
+        secret.encrypted = true;
+        table.columns.push(ssn);
+        table.columns.push(secret);
+        let report = lint_catalog(&manifest);
+        assert!(has_kind(&report, "projection_option_unknown"));
+        assert!(has_kind(&report, "projection_option_column_missing"));
+        assert!(has_kind(&report, "projection_option_column_sensitive"));
+        assert!(has_kind(&report, "projection_option_column_encrypted"));
+        assert!(!report.passed);
     }
 
     fn store(store_kind: &str, backend: &str) -> crate::generation::manifest::ManifestStore {

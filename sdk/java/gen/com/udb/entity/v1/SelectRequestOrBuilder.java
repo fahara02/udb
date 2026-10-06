@@ -145,4 +145,15 @@ public interface SelectRequestOrBuilder extends
    * @return The includeRevision.
    */
   boolean getIncludeRevision();
+
+  /**
+   * <pre>
+   * Also count every matching row into `RecordSet.exact_total` (one extra
+   * COUNT over the same filter and scope; the read cache is skipped).
+   * </pre>
+   *
+   * <code>bool include_total = 10 [json_name = "includeTotal"];</code>
+   * @return The includeTotal.
+   */
+  boolean getIncludeTotal();
 }

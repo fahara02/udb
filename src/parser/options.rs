@@ -298,6 +298,14 @@ const GENERIC_STORE_KEYS: &[&str] = &[
     "uri",
     "payload_schema_json",
     "options_json",
+    // Typed projection options (stored under the same option keys).
+    "payload_fields",
+    "fts_columns",
+    "fts_config",
+    "edge_source_field",
+    "edge_target_field",
+    "edge_source_label",
+    "edge_target_label",
     "<backend-specific option>",
 ];
 

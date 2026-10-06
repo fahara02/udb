@@ -7,14 +7,40 @@ from typing import ClassVar as _ClassVar, Optional as _Optional, Union as _Union
 DESCRIPTOR: _descriptor.FileDescriptor
 
 class CDCSubscriptionRequest(_message.Message):
-    __slots__ = ("context", "topic_pattern", "since_event_id")
+    __slots__ = ("context", "topic_pattern", "since_event_id", "consumer_name")
     CONTEXT_FIELD_NUMBER: _ClassVar[int]
     TOPIC_PATTERN_FIELD_NUMBER: _ClassVar[int]
     SINCE_EVENT_ID_FIELD_NUMBER: _ClassVar[int]
+    CONSUMER_NAME_FIELD_NUMBER: _ClassVar[int]
     context: _context_pb2.RequestContext
     topic_pattern: str
     since_event_id: str
-    def __init__(self, context: _Optional[_Union[_context_pb2.RequestContext, _Mapping]] = ..., topic_pattern: _Optional[str] = ..., since_event_id: _Optional[str] = ...) -> None: ...
+    consumer_name: str
+    def __init__(self, context: _Optional[_Union[_context_pb2.RequestContext, _Mapping]] = ..., topic_pattern: _Optional[str] = ..., since_event_id: _Optional[str] = ..., consumer_name: _Optional[str] = ...) -> None: ...
+
+class AckCdcEventsRequest(_message.Message):
+    __slots__ = ("context", "consumer_name", "topic_pattern", "event_id")
+    CONTEXT_FIELD_NUMBER: _ClassVar[int]
+    CONSUMER_NAME_FIELD_NUMBER: _ClassVar[int]
+    TOPIC_PATTERN_FIELD_NUMBER: _ClassVar[int]
+    EVENT_ID_FIELD_NUMBER: _ClassVar[int]
+    context: _context_pb2.RequestContext
+    consumer_name: str
+    topic_pattern: str
+    event_id: str
+    def __init__(self, context: _Optional[_Union[_context_pb2.RequestContext, _Mapping]] = ..., consumer_name: _Optional[str] = ..., topic_pattern: _Optional[str] = ..., event_id: _Optional[str] = ...) -> None: ...
+
+class AckCdcEventsResponse(_message.Message):
+    __slots__ = ("consumer_name", "topic_pattern", "event_id", "acked_at_unix")
+    CONSUMER_NAME_FIELD_NUMBER: _ClassVar[int]
+    TOPIC_PATTERN_FIELD_NUMBER: _ClassVar[int]
+    EVENT_ID_FIELD_NUMBER: _ClassVar[int]
+    ACKED_AT_UNIX_FIELD_NUMBER: _ClassVar[int]
+    consumer_name: str
+    topic_pattern: str
+    event_id: str
+    acked_at_unix: int
+    def __init__(self, consumer_name: _Optional[str] = ..., topic_pattern: _Optional[str] = ..., event_id: _Optional[str] = ..., acked_at_unix: _Optional[int] = ...) -> None: ...
 
 class CdcControlRequest(_message.Message):
     __slots__ = ("context", "slot_name", "reason")

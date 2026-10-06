@@ -636,7 +636,7 @@ func runLiveDocumentKind(t *testing.T, broker servicesv1.DataBrokerClient, callC
 // (independent of the GenericDispatch op tokens), so only a mount failure is fatal.
 func runLiveCacheKind(t *testing.T, broker servicesv1.DataBrokerClient, callCtx context.Context, rc func(string) *entityv1.RequestContext, backend, suffix string, mountOK mountChecker) {
 	t.Helper()
-	res := &entityv1.StoreResource{Backend: backend}
+	res := &entityv1.StoreResource{Backend: backend, ResourceName: "sdk_live_cache"}
 	key := "sdk-live-cache-" + suffix
 	val := []byte("cache-" + backend + "-" + suffix)
 	if _, err := broker.CacheSet(callCtx, &entityv1.CacheSetRequest{
@@ -688,7 +688,7 @@ func runLiveVectorKind(t *testing.T, broker servicesv1.DataBrokerClient, callCtx
 // (neo4j). Cypher dialect; a business error is tolerated, a mount failure is fatal.
 func runLiveGraphKind(t *testing.T, broker servicesv1.DataBrokerClient, callCtx context.Context, rc func(string) *entityv1.RequestContext, backend, suffix string, mountOK mountChecker) {
 	t.Helper()
-	res := &entityv1.StoreResource{Backend: backend}
+	res := &entityv1.StoreResource{Backend: backend, ResourceName: "sdk_live_graph"}
 	label := "SdkLive" + suffix
 	if _, err := broker.GraphMutate(callCtx, &entityv1.GraphMutationRequest{
 		Context: rc("go.live.kind.graph"), Resource: res,

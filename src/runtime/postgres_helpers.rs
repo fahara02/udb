@@ -15,6 +15,7 @@ use crate::broker::{RequestContext, resolve_table_for_message};
 use crate::generation::sql::{resolve_tenant_column_ref, table_requires_tenant_column};
 use crate::generation::{CatalogManifest, ManifestColumn, ManifestTable};
 use crate::proto::{Mutation, SelectRequest, UpsertRequest};
+use crate::runtime::core::pg_wire::PgDecimal;
 
 use super::executor_utils::{
     invalid_argument_fields, json_scalar_to_string, qi_runtime, reject_plan, struct_to_json,
@@ -591,6 +592,10 @@ pub(crate) fn bind_one<'q>(
     let sql_type = column
         .map(|column| column.sql_type.to_ascii_uppercase())
         .unwrap_or_default();
+    // Coercion errors name the column the value was bound for.
+    let field = column
+        .map(|column| column.column_name.as_str())
+        .unwrap_or("value");
     // DAT-001: a JSON/JSONB target column stores the value VERBATIM — including a
     // top-level JSON array or object. This decision MUST precede the filter-array
     // path below: otherwise a genuine JSON array destined for a JSONB entity
@@ -622,14 +627,14 @@ pub(crate) fn bind_one<'q>(
                 .map(|bytes| query.bind(bytes))
                 .map_err(|err| {
                     postgres_invalid_field(
-                        "value",
+                        field,
                         "bytea value must be a base64-encoded string",
                         format!("invalid base64 for bytea value: {err}"),
                     )
                 }),
             JsonValue::Array(items) if items.is_empty() => Ok(query.bind(Vec::<u8>::new())),
             _ => Err(postgres_invalid_field(
-                "value",
+                field,
                 "bytea value must be a base64 string or null",
                 "bytea value must be a base64 string or null",
             )),
@@ -655,9 +660,8 @@ pub(crate) fn bind_one<'q>(
         return Ok(match element_type {
             "UUID" => query.bind(Option::<Vec<Uuid>>::None),
             _ if postgres_is_integer_type(&sql_type) => query.bind(Option::<Vec<i64>>::None),
-            "REAL" | "FLOAT4" | "FLOAT8" | "DOUBLE" | "NUMERIC" | "DECIMAL" => {
-                query.bind(Option::<Vec<f64>>::None)
-            }
+            "NUMERIC" | "DECIMAL" => query.bind(Option::<Vec<PgDecimal>>::None),
+            "REAL" | "FLOAT4" | "FLOAT8" | "DOUBLE" => query.bind(Option::<Vec<f64>>::None),
             "BOOL" | "BOOLEAN" => query.bind(Option::<Vec<bool>>::None),
             _ if is_timestamptz => query.bind(Option::<Vec<chrono::DateTime<chrono::Utc>>>::None),
             _ => query.bind(Option::<Vec<String>>::None),
@@ -669,14 +673,14 @@ pub(crate) fn bind_one<'q>(
             for item in items {
                 let raw = item.as_str().ok_or_else(|| {
                     postgres_invalid_field(
-                        "value",
+                        field,
                         "timestamptz array values must be RFC-3339 strings",
                         "timestamptz array value must be a string",
                     )
                 })?;
                 let parsed = chrono::DateTime::parse_from_rfc3339(raw).map_err(|err| {
                     postgres_invalid_field(
-                        "value",
+                        field,
                         "timestamptz array values must be RFC-3339 strings",
                         format!("invalid timestamptz array value: {err}"),
                     )
@@ -692,7 +696,7 @@ pub(crate) fn bind_one<'q>(
                     .as_str()
                     .ok_or_else(|| {
                         postgres_invalid_field(
-                            "value",
+                            field,
                             "UUID $in array values must be strings",
                             "UUID $in value must be a string",
                         )
@@ -700,7 +704,7 @@ pub(crate) fn bind_one<'q>(
                     .parse::<Uuid>()
                     .map_err(|err| {
                         postgres_invalid_field(
-                            "value",
+                            field,
                             "UUID $in array values must be valid UUID strings",
                             format!("invalid UUID in $in: {err}"),
                         )
@@ -712,19 +716,31 @@ pub(crate) fn bind_one<'q>(
         if postgres_is_integer_type(&sql_type) {
             let mut arr: Vec<i64> = Vec::with_capacity(items.len());
             for item in items {
-                arr.push(postgres_json_i64("value", item)?);
+                arr.push(postgres_json_i64(field, item)?);
             }
             return Ok(query.bind(arr));
         }
-        if sql_type.contains("REAL")
-            || sql_type.contains("DOUBLE")
-            || sql_type.contains("FLOAT")
-            || sql_type.contains("NUMERIC")
-            || sql_type.contains("DECIMAL")
-        {
+        if matches!(element_type, "NUMERIC" | "DECIMAL") {
+            let mut arr: Vec<Option<PgDecimal>> = Vec::with_capacity(items.len());
+            for item in items {
+                if item.is_null() {
+                    arr.push(None);
+                    continue;
+                }
+                arr.push(Some(PgDecimal::from_json(item).map_err(|err| {
+                    postgres_invalid_field(
+                        field,
+                        "numeric values must be numbers or numeric strings",
+                        err,
+                    )
+                })?));
+            }
+            return Ok(query.bind(arr));
+        }
+        if sql_type.contains("REAL") || sql_type.contains("DOUBLE") || sql_type.contains("FLOAT") {
             let mut arr: Vec<f64> = Vec::with_capacity(items.len());
             for item in items {
-                arr.push(postgres_json_f64("value", item)?);
+                arr.push(postgres_json_f64(field, item)?);
             }
             return Ok(query.bind(arr));
         }
@@ -762,14 +778,14 @@ pub(crate) fn bind_one<'q>(
                     .map(|uuid| query.bind(uuid))
                     .map_err(|err| {
                         postgres_invalid_field(
-                            "value",
+                            field,
                             "UUID value must be a valid UUID string",
                             format!("invalid UUID: {err}"),
                         )
                     })
             }
             _ => Err(postgres_invalid_field(
-                "value",
+                field,
                 "UUID value must be a string",
                 "UUID value must be a string",
             )),
@@ -785,13 +801,13 @@ pub(crate) fn bind_one<'q>(
                 .map(|dt| query.bind(dt.with_timezone(&chrono::Utc)))
                 .map_err(|err| {
                     postgres_invalid_field(
-                        "value",
+                        field,
                         "timestamptz value must be an RFC3339 string",
                         format!("timestamptz value must be an RFC3339 string: {err}"),
                     )
                 }),
             _ => Err(postgres_invalid_field(
-                "value",
+                field,
                 "timestamptz value must be a string or null",
                 "timestamptz value must be a string or null",
             )),
@@ -807,13 +823,13 @@ pub(crate) fn bind_one<'q>(
                 .map(|dt| query.bind(dt))
                 .ok_or_else(|| {
                     postgres_invalid_field(
-                        "value",
+                        field,
                         "timestamp value must be an ISO-8601 string or null",
                         "timestamp value must be an ISO-8601 string or null",
                     )
                 }),
             _ => Err(postgres_invalid_field(
-                "value",
+                field,
                 "timestamp value must be a string or null",
                 "timestamp value must be a string or null",
             )),
@@ -830,13 +846,13 @@ pub(crate) fn bind_one<'q>(
                 .map(|date| query.bind(date))
                 .map_err(|err| {
                     postgres_invalid_field(
-                        "value",
+                        field,
                         "date value must be a valid date string",
                         format!("invalid date: {err}"),
                     )
                 }),
             _ => Err(postgres_invalid_field(
-                "value",
+                field,
                 "date value must be a string or null",
                 "date value must be a string or null",
             )),
@@ -856,7 +872,7 @@ pub(crate) fn bind_one<'q>(
             }
             JsonValue::String(raw) => Ok(query.bind(strip_nul(raw))),
             _ => Err(postgres_invalid_field(
-                "value",
+                field,
                 "value must be a string or null",
                 format!(
                     "{} value must be a string or null",
@@ -876,12 +892,10 @@ pub(crate) fn bind_one<'q>(
         if postgres_is_integer_type(&sql_type) {
             return Ok(query.bind(Option::<i64>::None));
         }
-        if sql_type.contains("REAL")
-            || sql_type.contains("DOUBLE")
-            || sql_type.contains("FLOAT")
-            || sql_type.contains("NUMERIC")
-            || sql_type.contains("DECIMAL")
-        {
+        if matches!(element_type, "NUMERIC" | "DECIMAL") {
+            return Ok(query.bind(Option::<PgDecimal>::None));
+        }
+        if sql_type.contains("REAL") || sql_type.contains("DOUBLE") || sql_type.contains("FLOAT") {
             return Ok(query.bind(Option::<f64>::None));
         }
         return Ok(query.bind(Option::<String>::None));
@@ -890,15 +904,23 @@ pub(crate) fn bind_one<'q>(
         return Ok(query.bind(value.as_bool().unwrap_or(false)));
     }
     if postgres_is_integer_type(&sql_type) {
-        return Ok(query.bind(postgres_json_i64("value", value)?));
+        return Ok(query.bind(postgres_json_i64(field, value)?));
     }
-    if sql_type.contains("REAL")
-        || sql_type.contains("DOUBLE")
-        || sql_type.contains("FLOAT")
-        || sql_type.contains("NUMERIC")
-        || sql_type.contains("DECIMAL")
-    {
-        return Ok(query.bind(postgres_json_f64("value", value)?));
+    // NUMERIC binds as an exact decimal in NUMERIC's own wire format: no float
+    // in between, and no cast needed in a filter (`amount = $1`) or a write.
+    if matches!(element_type, "NUMERIC" | "DECIMAL") {
+        return PgDecimal::from_json(value)
+            .map(|decimal| query.bind(decimal))
+            .map_err(|err| {
+                postgres_invalid_field(
+                    field,
+                    "numeric values must be numbers or numeric strings",
+                    err,
+                )
+            });
+    }
+    if sql_type.contains("REAL") || sql_type.contains("DOUBLE") || sql_type.contains("FLOAT") {
+        return Ok(query.bind(postgres_json_f64(field, value)?));
     }
     Ok(query.bind(strip_nul(&json_scalar_to_string(value))))
 }
@@ -1015,8 +1037,17 @@ fn collect_filter_values(value: &JsonValue, out: &mut Vec<JsonValue>) {
         JsonValue::Object(map) => {
             for (key, nested) in map {
                 let normalized = key.to_ascii_lowercase();
-                if matches!(normalized.as_str(), "$and" | "and" | "$or" | "or") {
+                if matches!(
+                    normalized.as_str(),
+                    "$and" | "and" | "$or" | "or" | "$not" | "not"
+                ) {
+                    // `$not` wraps an operator object whose own operators bind.
                     collect_filter_values(nested, out);
+                } else if matches!(normalized.as_str(), "$between" | "between")
+                    && let JsonValue::Array(bounds) = nested
+                {
+                    // `col BETWEEN $n AND $n+1`: one value per bound.
+                    out.extend(bounds.iter().cloned());
                 } else if normalized.starts_with('$') {
                     // Skip the null predicates — `$is_null`/`$not_null` compile to
                     // `IS NULL` / `IS NOT NULL`, which bind no SQL parameter. Pushing

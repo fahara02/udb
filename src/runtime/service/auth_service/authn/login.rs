@@ -992,6 +992,25 @@ impl AuthnServiceImpl {
                     login_internal_status("forgot_password_email_lookup", err.to_string())
                 })?,
         };
+        // Cooldown: a reset requested again within UDB_OTP_COOLDOWN_SECONDS issues
+        // no new code. It answers exactly like an unknown address (a refusal
+        // would reveal that the account exists), and the code already sent
+        // stays valid.
+        let user = match user {
+            Some(user) => match self
+                .enforce_otp_cooldown(
+                    &user.user_id,
+                    authn_entity_pb::OtpType::PasswordReset as i32,
+                    now_unix(),
+                )
+                .await
+            {
+                Ok(()) => Some(user),
+                Err(status) if status.code() == tonic::Code::ResourceExhausted => None,
+                Err(status) => return Err(status),
+            },
+            None => None,
+        };
         let (otp_id, code) = if let Some(user) = user {
             let (otp_id, code) = self
                 .issue_otp(
@@ -1083,6 +1102,14 @@ impl AuthnServiceImpl {
         user.failed_login_count = 0;
         user.locked_until_unix = 0;
         user.updated_at_unix = now;
+        // An invited account is activated by setting its first password: the
+        // code arrived at its email, which proves the address.
+        if user.status == crate::runtime::authn::AccountStatus::PasswordSetupRequired {
+            user.status = crate::runtime::authn::AccountStatus::Active;
+            if user.email_verified_at_unix == 0 {
+                user.email_verified_at_unix = now;
+            }
+        }
         let user_id = user.user_id.clone();
         let tenant = user.tenant_id.clone();
         self.users

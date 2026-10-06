@@ -12,6 +12,7 @@ mod audit_sink_live;
 mod authz_deny_path_live;
 mod backup_live;
 mod catalog_authority_live;
+mod data_contract_live;
 mod data_plane_live;
 mod data_plane_seam_live;
 mod data_plane_tenant_rls_live;
@@ -50,4 +51,5 @@ mod vector_tenant_iso_live;
 #[cfg(feature = "http-client")]
 mod webhook_delivery_live;
 mod webrtc_live;
+mod wire_types_live;
 mod workflow_live;

@@ -130,4 +130,79 @@ public interface SubscribeRequestOrBuilder extends
    * @return The snapshotLimit.
    */
   int getSnapshotLimit();
+
+  /**
+   * <pre>
+   * OR-groups AND-ed with `filters` (see LiveQueryAnyOf). An empty group is
+   * rejected rather than read as "matches nothing".
+   * </pre>
+   *
+   * <code>repeated .udb.core.livequery.services.v1.LiveQueryAnyOf any_of = 6 [json_name = "anyOf"];</code>
+   */
+  java.util.List<com.udb.core.livequery.services.v1.LiveQueryAnyOf>
+      getAnyOfList();
+  /**
+   * <pre>
+   * OR-groups AND-ed with `filters` (see LiveQueryAnyOf). An empty group is
+   * rejected rather than read as "matches nothing".
+   * </pre>
+   *
+   * <code>repeated .udb.core.livequery.services.v1.LiveQueryAnyOf any_of = 6 [json_name = "anyOf"];</code>
+   */
+  com.udb.core.livequery.services.v1.LiveQueryAnyOf getAnyOf(int index);
+  /**
+   * <pre>
+   * OR-groups AND-ed with `filters` (see LiveQueryAnyOf). An empty group is
+   * rejected rather than read as "matches nothing".
+   * </pre>
+   *
+   * <code>repeated .udb.core.livequery.services.v1.LiveQueryAnyOf any_of = 6 [json_name = "anyOf"];</code>
+   */
+  int getAnyOfCount();
+  /**
+   * <pre>
+   * OR-groups AND-ed with `filters` (see LiveQueryAnyOf). An empty group is
+   * rejected rather than read as "matches nothing".
+   * </pre>
+   *
+   * <code>repeated .udb.core.livequery.services.v1.LiveQueryAnyOf any_of = 6 [json_name = "anyOf"];</code>
+   */
+  java.util.List<? extends com.udb.core.livequery.services.v1.LiveQueryAnyOfOrBuilder>
+      getAnyOfOrBuilderList();
+  /**
+   * <pre>
+   * OR-groups AND-ed with `filters` (see LiveQueryAnyOf). An empty group is
+   * rejected rather than read as "matches nothing".
+   * </pre>
+   *
+   * <code>repeated .udb.core.livequery.services.v1.LiveQueryAnyOf any_of = 6 [json_name = "anyOf"];</code>
+   */
+  com.udb.core.livequery.services.v1.LiveQueryAnyOfOrBuilder getAnyOfOrBuilder(
+      int index);
+
+  /**
+   * <pre>
+   * Durable resume: the last `LiveQueryChange.event_id` this client delivered.
+   * The broker replays the changes after it from the CDC journal before going
+   * live. Supersedes the `x-udb-livequery-resume` header (still honoured); when
+   * both are set they must name the same event.
+   * </pre>
+   *
+   * <code>string since_event_id = 7 [json_name = "sinceEventId"];</code>
+   * @return The sinceEventId.
+   */
+  java.lang.String getSinceEventId();
+  /**
+   * <pre>
+   * Durable resume: the last `LiveQueryChange.event_id` this client delivered.
+   * The broker replays the changes after it from the CDC journal before going
+   * live. Supersedes the `x-udb-livequery-resume` header (still honoured); when
+   * both are set they must name the same event.
+   * </pre>
+   *
+   * <code>string since_event_id = 7 [json_name = "sinceEventId"];</code>
+   * @return The bytes for sinceEventId.
+   */
+  com.google.protobuf.ByteString
+      getSinceEventIdBytes();
 }

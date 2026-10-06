@@ -209,4 +209,154 @@ public interface ErrorDetailOrBuilder extends
    */
   com.udb.entity.v1.ErrorFieldViolationOrBuilder getFieldViolationsOrBuilder(
       int index);
+
+  /**
+   * <pre>
+   * Stable machine reason, `UDB_` + upper snake case (for example
+   * `UDB_CAS_CONFLICT`, `UDB_CAS_KEY_NOT_PK`, `UDB_NO_ROWS_AFFECTED`). The set is
+   * listed in docs/error-reasons.md; a reason is never renamed once shipped.
+   * Branch on this, never on the message text.
+   * </pre>
+   *
+   * <code>string reason = 10 [json_name = "reason"];</code>
+   * @return The reason.
+   */
+  java.lang.String getReason();
+  /**
+   * <pre>
+   * Stable machine reason, `UDB_` + upper snake case (for example
+   * `UDB_CAS_CONFLICT`, `UDB_CAS_KEY_NOT_PK`, `UDB_NO_ROWS_AFFECTED`). The set is
+   * listed in docs/error-reasons.md; a reason is never renamed once shipped.
+   * Branch on this, never on the message text.
+   * </pre>
+   *
+   * <code>string reason = 10 [json_name = "reason"];</code>
+   * @return The bytes for reason.
+   */
+  com.google.protobuf.ByteString
+      getReasonBytes();
+
+  /**
+   * <pre>
+   * The constraint involved (unique, foreign key, check), when known.
+   * </pre>
+   *
+   * <code>string constraint = 11 [json_name = "constraint"];</code>
+   * @return The constraint.
+   */
+  java.lang.String getConstraint();
+  /**
+   * <pre>
+   * The constraint involved (unique, foreign key, check), when known.
+   * </pre>
+   *
+   * <code>string constraint = 11 [json_name = "constraint"];</code>
+   * @return The bytes for constraint.
+   */
+  com.google.protobuf.ByteString
+      getConstraintBytes();
+
+  /**
+   * <pre>
+   * The column involved (not null, coercion, decode), when known.
+   * </pre>
+   *
+   * <code>string column = 12 [json_name = "column"];</code>
+   * @return The column.
+   */
+  java.lang.String getColumn();
+  /**
+   * <pre>
+   * The column involved (not null, coercion, decode), when known.
+   * </pre>
+   *
+   * <code>string column = 12 [json_name = "column"];</code>
+   * @return The bytes for column.
+   */
+  com.google.protobuf.ByteString
+      getColumnBytes();
+
+  /**
+   * <pre>
+   * One sentence telling the caller how to fix the request.
+   * </pre>
+   *
+   * <code>string fix_hint = 13 [json_name = "fixHint"];</code>
+   * @return The fixHint.
+   */
+  java.lang.String getFixHint();
+  /**
+   * <pre>
+   * One sentence telling the caller how to fix the request.
+   * </pre>
+   *
+   * <code>string fix_hint = 13 [json_name = "fixHint"];</code>
+   * @return The bytes for fixHint.
+   */
+  com.google.protobuf.ByteString
+      getFixHintBytes();
+
+  /**
+   * <pre>
+   * What the caller is missing, as key/value pairs: for example
+   * `{"scope": "udb:pii:read"}`, `{"purpose": ""}`,
+   * `{"rule": "Select acme.notes.v1.Note"}`.
+   * </pre>
+   *
+   * <code>map&lt;string, string&gt; missing = 14 [json_name = "missing"];</code>
+   */
+  int getMissingCount();
+  /**
+   * <pre>
+   * What the caller is missing, as key/value pairs: for example
+   * `{"scope": "udb:pii:read"}`, `{"purpose": ""}`,
+   * `{"rule": "Select acme.notes.v1.Note"}`.
+   * </pre>
+   *
+   * <code>map&lt;string, string&gt; missing = 14 [json_name = "missing"];</code>
+   */
+  boolean containsMissing(
+      java.lang.String key);
+  /**
+   * Use {@link #getMissingMap()} instead.
+   */
+  @java.lang.Deprecated
+  java.util.Map<java.lang.String, java.lang.String>
+  getMissing();
+  /**
+   * <pre>
+   * What the caller is missing, as key/value pairs: for example
+   * `{"scope": "udb:pii:read"}`, `{"purpose": ""}`,
+   * `{"rule": "Select acme.notes.v1.Note"}`.
+   * </pre>
+   *
+   * <code>map&lt;string, string&gt; missing = 14 [json_name = "missing"];</code>
+   */
+  java.util.Map<java.lang.String, java.lang.String>
+  getMissingMap();
+  /**
+   * <pre>
+   * What the caller is missing, as key/value pairs: for example
+   * `{"scope": "udb:pii:read"}`, `{"purpose": ""}`,
+   * `{"rule": "Select acme.notes.v1.Note"}`.
+   * </pre>
+   *
+   * <code>map&lt;string, string&gt; missing = 14 [json_name = "missing"];</code>
+   */
+  /* nullable */
+java.lang.String getMissingOrDefault(
+      java.lang.String key,
+      /* nullable */
+java.lang.String defaultValue);
+  /**
+   * <pre>
+   * What the caller is missing, as key/value pairs: for example
+   * `{"scope": "udb:pii:read"}`, `{"purpose": ""}`,
+   * `{"rule": "Select acme.notes.v1.Note"}`.
+   * </pre>
+   *
+   * <code>map&lt;string, string&gt; missing = 14 [json_name = "missing"];</code>
+   */
+  java.lang.String getMissingOrThrow(
+      java.lang.String key);
 }

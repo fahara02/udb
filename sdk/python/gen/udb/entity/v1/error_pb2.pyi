@@ -17,6 +17,14 @@ class ErrorKind(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     ERROR_KIND_RETRYABLE: _ClassVar[ErrorKind]
     ERROR_KIND_INTERNAL: _ClassVar[ErrorKind]
     ERROR_KIND_VALIDATION: _ClassVar[ErrorKind]
+    ERROR_KIND_CONFLICT: _ClassVar[ErrorKind]
+    ERROR_KIND_NOT_FOUND: _ClassVar[ErrorKind]
+    ERROR_KIND_UNIQUE: _ClassVar[ErrorKind]
+    ERROR_KIND_NOT_NULL: _ClassVar[ErrorKind]
+    ERROR_KIND_FOREIGN_KEY: _ClassVar[ErrorKind]
+    ERROR_KIND_PERMISSION: _ClassVar[ErrorKind]
+    ERROR_KIND_REDACTED: _ClassVar[ErrorKind]
+    ERROR_KIND_RATE_LIMITED: _ClassVar[ErrorKind]
 ERROR_KIND_UNSPECIFIED: ErrorKind
 ERROR_KIND_CAPABILITY: ErrorKind
 ERROR_KIND_POLICY: ErrorKind
@@ -25,6 +33,14 @@ ERROR_KIND_SCHEMA: ErrorKind
 ERROR_KIND_RETRYABLE: ErrorKind
 ERROR_KIND_INTERNAL: ErrorKind
 ERROR_KIND_VALIDATION: ErrorKind
+ERROR_KIND_CONFLICT: ErrorKind
+ERROR_KIND_NOT_FOUND: ErrorKind
+ERROR_KIND_UNIQUE: ErrorKind
+ERROR_KIND_NOT_NULL: ErrorKind
+ERROR_KIND_FOREIGN_KEY: ErrorKind
+ERROR_KIND_PERMISSION: ErrorKind
+ERROR_KIND_REDACTED: ErrorKind
+ERROR_KIND_RATE_LIMITED: ErrorKind
 
 class ErrorFieldViolation(_message.Message):
     __slots__ = ("field", "description")
@@ -35,7 +51,14 @@ class ErrorFieldViolation(_message.Message):
     def __init__(self, field: _Optional[str] = ..., description: _Optional[str] = ...) -> None: ...
 
 class ErrorDetail(_message.Message):
-    __slots__ = ("backend", "operation", "capability_required", "retryable", "retry_after_ms", "policy_decision_id", "correlation_id", "kind", "field_violations")
+    __slots__ = ("backend", "operation", "capability_required", "retryable", "retry_after_ms", "policy_decision_id", "correlation_id", "kind", "field_violations", "reason", "constraint", "column", "fix_hint", "missing")
+    class MissingEntry(_message.Message):
+        __slots__ = ("key", "value")
+        KEY_FIELD_NUMBER: _ClassVar[int]
+        VALUE_FIELD_NUMBER: _ClassVar[int]
+        key: str
+        value: str
+        def __init__(self, key: _Optional[str] = ..., value: _Optional[str] = ...) -> None: ...
     BACKEND_FIELD_NUMBER: _ClassVar[int]
     OPERATION_FIELD_NUMBER: _ClassVar[int]
     CAPABILITY_REQUIRED_FIELD_NUMBER: _ClassVar[int]
@@ -45,6 +68,11 @@ class ErrorDetail(_message.Message):
     CORRELATION_ID_FIELD_NUMBER: _ClassVar[int]
     KIND_FIELD_NUMBER: _ClassVar[int]
     FIELD_VIOLATIONS_FIELD_NUMBER: _ClassVar[int]
+    REASON_FIELD_NUMBER: _ClassVar[int]
+    CONSTRAINT_FIELD_NUMBER: _ClassVar[int]
+    COLUMN_FIELD_NUMBER: _ClassVar[int]
+    FIX_HINT_FIELD_NUMBER: _ClassVar[int]
+    MISSING_FIELD_NUMBER: _ClassVar[int]
     backend: str
     operation: str
     capability_required: str
@@ -54,4 +82,9 @@ class ErrorDetail(_message.Message):
     correlation_id: str
     kind: ErrorKind
     field_violations: _containers.RepeatedCompositeFieldContainer[ErrorFieldViolation]
-    def __init__(self, backend: _Optional[str] = ..., operation: _Optional[str] = ..., capability_required: _Optional[str] = ..., retryable: bool = ..., retry_after_ms: _Optional[int] = ..., policy_decision_id: _Optional[str] = ..., correlation_id: _Optional[str] = ..., kind: _Optional[_Union[ErrorKind, str]] = ..., field_violations: _Optional[_Iterable[_Union[ErrorFieldViolation, _Mapping]]] = ...) -> None: ...
+    reason: str
+    constraint: str
+    column: str
+    fix_hint: str
+    missing: _containers.ScalarMap[str, str]
+    def __init__(self, backend: _Optional[str] = ..., operation: _Optional[str] = ..., capability_required: _Optional[str] = ..., retryable: bool = ..., retry_after_ms: _Optional[int] = ..., policy_decision_id: _Optional[str] = ..., correlation_id: _Optional[str] = ..., kind: _Optional[_Union[ErrorKind, str]] = ..., field_violations: _Optional[_Iterable[_Union[ErrorFieldViolation, _Mapping]]] = ..., reason: _Optional[str] = ..., constraint: _Optional[str] = ..., column: _Optional[str] = ..., fix_hint: _Optional[str] = ..., missing: _Optional[_Mapping[str, str]] = ...) -> None: ...

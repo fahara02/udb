@@ -29,16 +29,20 @@ mod doctor;
 mod env_setup;
 mod env_template;
 mod evidence;
+mod gen_edge;
 mod help;
 mod init;
 mod init_prompt;
 mod native_app;
 pub(crate) mod native_lint;
+mod ops_cli;
 mod output;
 mod proto_export;
 mod proto_fmt;
 mod scaffold;
 mod sdk_gen;
+mod self_cli;
+mod upgrade_cli;
 pub(crate) use args::*;
 pub(crate) use auth::*;
 pub(crate) use authz_cli::*;
@@ -254,6 +258,33 @@ fn scan_dense_aggregate_annotations(dir: &std::path::Path, out: &mut Vec<String>
             }
         }
     }
+}
+
+/// Runs `body` against a runtime connected to the catalog store (`--dsn`, or
+/// `UDB_PG_DSN`), for the `udb catalog` subcommands. Returns the exit code.
+fn with_catalog_runtime<F, Fut>(label: &str, dsn: Option<&str>, body: F) -> i32
+where
+    F: FnOnce(DataBrokerRuntime) -> Fut,
+    Fut: std::future::Future<Output = i32>,
+{
+    if let Some(dsn) = dsn.filter(|value| !value.trim().is_empty()) {
+        #[allow(unused_unsafe)]
+        unsafe {
+            env::set_var("UDB_PG_DSN", dsn);
+        }
+    }
+    let runtime = tokio::runtime::Runtime::new().unwrap_or_else(|err| {
+        eprintln!("failed to create tokio runtime: {err}");
+        process::exit(1);
+    });
+    runtime.block_on(async {
+        let rt = DataBrokerRuntime::from_env().await;
+        if rt.pg_pool_clone().is_none() {
+            eprintln!("{label}: PostgreSQL is not configured. Pass --dsn <dsn> or set UDB_PG_DSN.");
+            return 1;
+        }
+        body(rt).await
+    })
 }
 
 pub fn run() {
@@ -529,6 +560,97 @@ pub fn run() {
         } => {
             process::exit(run_dev_sandbox(action, service.as_deref(), confirmed));
         }
+        Command::CatalogActivate {
+            project,
+            catalog_id,
+            dsn,
+        } => {
+            if project.trim().is_empty() || catalog_id.trim().is_empty() {
+                eprintln!("catalog activate: --project <id> and --catalog-id <id> are required");
+                process::exit(2);
+            }
+            let exit_code = with_catalog_runtime(
+                "catalog activate",
+                dsn.as_deref(),
+                |rt| async move {
+                    match rt
+                        .activate_project_catalog(
+                            &project,
+                            &catalog_id,
+                            "udb catalog activate",
+                            "udb-cli",
+                        )
+                        .await
+                    {
+                        Ok(replayed) => {
+                            println!(
+                                "{}",
+                                serde_json::json!({
+                                    "project": project,
+                                    "catalog_id": catalog_id,
+                                    "active": true,
+                                    "replayed": replayed,
+                                })
+                            );
+                            eprintln!(
+                                "catalog activate: {catalog_id} is now ACTIVE for project '{project}'; \
+                                 running brokers reload it without a restart."
+                            );
+                            0
+                        }
+                        Err(err) => {
+                            eprintln!("catalog activate: {err}");
+                            1
+                        }
+                    }
+                },
+            );
+            process::exit(exit_code);
+        }
+        Command::CatalogStatus { project, dsn } => {
+            if project.trim().is_empty() {
+                eprintln!("catalog status: --project <id> is required");
+                process::exit(2);
+            }
+            let exit_code = with_catalog_runtime(
+                "catalog status",
+                dsn.as_deref(),
+                |rt| async move {
+                    match rt.active_project_catalog_summary(&project).await {
+                        Ok(Some((catalog_id, version, checksum, entities))) => {
+                            println!(
+                                "{}",
+                                serde_json::json!({
+                                    "project": project,
+                                    "active": true,
+                                    "catalog_id": catalog_id,
+                                    "version": version,
+                                    "checksum_sha256": checksum,
+                                    "entities": entities,
+                                })
+                            );
+                            0
+                        }
+                        Ok(None) => {
+                            println!(
+                                "{}",
+                                serde_json::json!({"project": project, "active": false})
+                            );
+                            eprintln!(
+                                "catalog status: project '{project}' has no ACTIVE catalog, so services in it are refused. \
+                             Run `udb catalog bootstrap --project {project}` (or stage + activate)."
+                            );
+                            3
+                        }
+                        Err(err) => {
+                            eprintln!("catalog status: {err}");
+                            1
+                        }
+                    }
+                },
+            );
+            process::exit(exit_code);
+        }
         Command::Auth(auth_command) => {
             process::exit(run_auth_command(auth_command));
         }
@@ -537,6 +659,39 @@ pub fn run() {
         }
         Command::Compliance(compliance_command) => {
             process::exit(run_compliance_command(compliance_command));
+        }
+        Command::Ops(ops_command) => {
+            process::exit(ops_cli::run_ops_command(ops_command));
+        }
+        Command::SelfUpdate(self_command) => {
+            process::exit(self_cli::run_self_command(self_command));
+        }
+        Command::GenEdge {
+            spec,
+            package,
+            message,
+        } => {
+            match gen_edge::parse_edge_spec(&spec)
+                .and_then(|parsed| gen_edge::render_edge_proto(&parsed, &package, &message))
+            {
+                Ok(proto) => {
+                    print!("{proto}");
+                    process::exit(0);
+                }
+                Err(err) => {
+                    eprintln!("udb gen edge: {err}");
+                    process::exit(2);
+                }
+            }
+        }
+        Command::Upgrade {
+            check,
+            from,
+            to,
+            repo,
+            dsn,
+        } => {
+            process::exit(upgrade_cli::run_upgrade_command(check, from, to, repo, dsn));
         }
         Command::AdminReleaseLock => {
             let runtime = tokio::runtime::Runtime::new().unwrap_or_else(|err| {
@@ -798,7 +953,7 @@ pub fn run() {
                 {
                     Ok(catalog_id) => {
                         eprintln!(
-                            "catalog bootstrap: project '{project}' now has an ACTIVE catalog ({catalog_id}).
+                            "catalog bootstrap: project '{project}' now has an ACTIVE catalog ({catalog_id}). \
                              Services authenticating under this project can serve. Safe to re-run."
                         );
                         0
@@ -809,6 +964,54 @@ pub fn run() {
                     }
                 }
             });
+            process::exit(exit_code);
+        }
+        Command::CatalogStage { project, dsn } => {
+            if project.trim().is_empty() {
+                eprintln!("catalog stage: --project <id> is required");
+                process::exit(2);
+            }
+            let manifest = CatalogManifest::from_schemas(&schemas)
+                .unwrap_or_else(|err| fatal_json("failed to build catalog manifest", err));
+            let (manifest, _) = udb::runtime::native_catalog::merge_native(&manifest, &schemas);
+            let manifest_json = serde_json::to_vec(&manifest)
+                .unwrap_or_else(|err| fatal_json("failed to serialize catalog manifest", err));
+            let exit_code = with_catalog_runtime(
+                "catalog stage",
+                dsn.as_deref(),
+                |rt| async move {
+                    match rt
+                        .stage_project_catalog(
+                            &project,
+                            &manifest_json,
+                            "udb catalog stage",
+                            "udb-cli",
+                        )
+                        .await
+                    {
+                        Ok((catalog_id, version, replayed)) => {
+                            println!(
+                                "{}",
+                                serde_json::json!({
+                                    "project": project,
+                                    "catalog_id": catalog_id,
+                                    "version": version,
+                                    "replayed": replayed,
+                                })
+                            );
+                            eprintln!(
+                                "catalog stage: staged {catalog_id} ({version}) for project '{project}'. \
+                             Activate it with `udb catalog activate --project {project} --catalog-id {catalog_id}`."
+                            );
+                            0
+                        }
+                        Err(err) => {
+                            eprintln!("catalog stage: {err}");
+                            1
+                        }
+                    }
+                },
+            );
             process::exit(exit_code);
         }
         Command::Catalog => output_json(&ProtoCatalog { schemas }, "catalog"),
@@ -1070,10 +1273,73 @@ pub fn run() {
             }
             process::exit(exit_code);
         }
+        Command::Check { policies } => {
+            let manifest = CatalogManifest::from_schemas(&schemas)
+                .unwrap_or_else(|err| fatal_json("failed to build catalog manifest", err));
+            let catalog = lint_catalog(&manifest);
+            // Policies: --policies <json|yaml>, else UDB_ABAC_POLICY_FILE when set;
+            // without either the policy sections are skipped, not failed.
+            let loaded = if !policies.trim().is_empty() {
+                Some(ops_cli::load_policy_file(policies.trim()))
+            } else if env::var("UDB_ABAC_POLICY_FILE")
+                .map(|value| !value.trim().is_empty())
+                .unwrap_or(false)
+            {
+                Some(load_authz_policies_for_lint())
+            } else {
+                None
+            };
+            let mut passed = catalog.passed;
+            let mut policy_section = serde_json::Value::Null;
+            let mut coverage_section = serde_json::Value::Null;
+            if let Some(loaded) = loaded {
+                let coverage = loaded.as_ref().ok().map(|policies| {
+                    let entities: Vec<(String, String)> = manifest
+                        .tables
+                        .iter()
+                        .map(|table| {
+                            (
+                                table.message_name.clone(),
+                                format!("{}.{}", table.schema, table.table),
+                            )
+                        })
+                        .collect();
+                    udb::lint_policy_entity_coverage(policies, &entities)
+                });
+                let (result, _) = build_policy_lint_cli_result(loaded);
+                passed &= result.passed;
+                policy_section = serde_json::to_value(&result).unwrap_or_default();
+                if let Some(coverage) = coverage {
+                    passed &= !coverage.iter().any(|finding| finding.severity == "error");
+                    coverage_section = serde_json::to_value(&coverage).unwrap_or_default();
+                }
+            }
+            eprintln!(
+                "check: {} ({} catalog error(s), {} warning(s){})",
+                if passed { "passed" } else { "FAILED" },
+                catalog.error_count,
+                catalog.warning_count,
+                if policy_section.is_null() {
+                    "; no policy file, policy checks skipped"
+                } else {
+                    ""
+                }
+            );
+            output_json(
+                &serde_json::json!({
+                    "passed": passed,
+                    "catalog": catalog,
+                    "policy": policy_section,
+                    "coverage": coverage_section,
+                }),
+                "check report",
+            );
+            process::exit(if passed { 0 } else { 1 });
+        }
         Command::Verify { live, dsn, json } => {
             if !live {
                 eprintln!(
-                    "udb verify currently supports only --live.
+                    "udb verify currently supports only --live.\n\
                      For an offline proto-vs-prior-manifest comparison use `udb drift --prior <manifest>`."
                 );
                 process::exit(2);
@@ -1112,6 +1378,19 @@ pub fn run() {
                         return 1i32;
                     }
                 };
+                // Delivery health: outbox backlog, durable-consumer lag against
+                // the journal, projection queue age.
+                let delivery = match rt
+                    .delivery_health(udb::runtime::DeliveryThresholds::default())
+                    .await
+                {
+                    Ok(checks) => checks,
+                    Err(err) => {
+                        eprintln!("verify --live: could not read delivery health: {err}");
+                        return 1i32;
+                    }
+                };
+                let delivery_failed = delivery.iter().filter(|check| !check.passed).count();
                 if json {
                     #[derive(Serialize)]
                     struct Finding<'a> {
@@ -1137,6 +1416,8 @@ pub fn run() {
                             "verified_tables": manifest.tables.len(),
                             "finding_count": findings.len(),
                             "findings": findings,
+                            "delivery": delivery,
+                            "delivery_failed": delivery_failed,
                         })
                     );
                 } else if drift.is_empty() {
@@ -1154,13 +1435,26 @@ pub fn run() {
                         eprintln!("  [{}] {}", finding.kind, finding.message);
                     }
                     eprintln!(
-                        "
-These are what a startup verification would fail on. Reconcile the proto or the
-                         database before applying, or set UDB_MIGRATION_EMERGENCY_AUTO_ALTER=true to let
+                        "\nThese are what a startup verification would fail on. Reconcile the proto or the \
+                         database before applying, or set UDB_MIGRATION_EMERGENCY_AUTO_ALTER=true to let \
                          startup feed them to the repair planner."
                     );
                 }
-                if drift.is_empty() { 0 } else { 1 }
+                if !json {
+                    for check in &delivery {
+                        eprintln!(
+                            "verify --live: [{}] {}: {}",
+                            if check.passed { "ok" } else { "FAIL" },
+                            check.check,
+                            check.detail
+                        );
+                    }
+                }
+                if drift.is_empty() && delivery_failed == 0 {
+                    0
+                } else {
+                    1
+                }
             });
             process::exit(exit_code);
         }
@@ -1446,9 +1740,15 @@ These are what a startup verification would fail on. Reconcile the proto or the
         | Command::InitProject
         | Command::Init(_)
         | Command::Dev { .. }
+        | Command::CatalogActivate { .. }
+        | Command::CatalogStatus { .. }
         | Command::Auth(_)
         | Command::Authz(_)
         | Command::Compliance(_)
+        | Command::Ops(_)
+        | Command::SelfUpdate(_)
+        | Command::GenEdge { .. }
+        | Command::Upgrade { .. }
         | Command::AdminReleaseLock
         | Command::AdminVerifyAudit { .. }
         | Command::AdminResetDb { .. }

@@ -44,6 +44,31 @@ class LiveQueryComparison
      * Generated from protobuf enum <code>LIVE_QUERY_COMPARISON_GE = 6;</code>
      */
     const LIVE_QUERY_COMPARISON_GE = 6;
+    /**
+     * Membership: the field equals one of `LiveQueryPredicate.values`.
+     *
+     * Generated from protobuf enum <code>LIVE_QUERY_COMPARISON_IN = 7;</code>
+     */
+    const LIVE_QUERY_COMPARISON_IN = 7;
+    /**
+     * Non-membership: the field is present, non-null and equals none of `values`
+     * (SQL NOT IN semantics, so the snapshot and the live deltas agree).
+     *
+     * Generated from protobuf enum <code>LIVE_QUERY_COMPARISON_NOT_IN = 8;</code>
+     */
+    const LIVE_QUERY_COMPARISON_NOT_IN = 8;
+    /**
+     * The field is null or absent. `value`/`values` are ignored.
+     *
+     * Generated from protobuf enum <code>LIVE_QUERY_COMPARISON_IS_NULL = 9;</code>
+     */
+    const LIVE_QUERY_COMPARISON_IS_NULL = 9;
+    /**
+     * The field is present and non-null. `value`/`values` are ignored.
+     *
+     * Generated from protobuf enum <code>LIVE_QUERY_COMPARISON_IS_NOT_NULL = 10;</code>
+     */
+    const LIVE_QUERY_COMPARISON_IS_NOT_NULL = 10;
 
     private static $valueToName = [
         self::LIVE_QUERY_COMPARISON_UNSPECIFIED => 'LIVE_QUERY_COMPARISON_UNSPECIFIED',
@@ -53,6 +78,10 @@ class LiveQueryComparison
         self::LIVE_QUERY_COMPARISON_LE => 'LIVE_QUERY_COMPARISON_LE',
         self::LIVE_QUERY_COMPARISON_GT => 'LIVE_QUERY_COMPARISON_GT',
         self::LIVE_QUERY_COMPARISON_GE => 'LIVE_QUERY_COMPARISON_GE',
+        self::LIVE_QUERY_COMPARISON_IN => 'LIVE_QUERY_COMPARISON_IN',
+        self::LIVE_QUERY_COMPARISON_NOT_IN => 'LIVE_QUERY_COMPARISON_NOT_IN',
+        self::LIVE_QUERY_COMPARISON_IS_NULL => 'LIVE_QUERY_COMPARISON_IS_NULL',
+        self::LIVE_QUERY_COMPARISON_IS_NOT_NULL => 'LIVE_QUERY_COMPARISON_IS_NOT_NULL',
     ];
 
     public static function name($value)

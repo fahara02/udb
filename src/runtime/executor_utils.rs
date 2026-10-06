@@ -152,6 +152,16 @@ fn status_with_error_detail(
     tonic::Status::with_metadata(code, message, metadata)
 }
 
+/// [`status_with_error_detail`] for callers outside this module that build a
+/// complete [`crate::proto::ErrorDetail`] themselves (the reason registry).
+pub(crate) fn status_with_typed_detail(
+    code: tonic::Code,
+    message: impl Into<String>,
+    detail: crate::proto::ErrorDetail,
+) -> tonic::Status {
+    status_with_error_detail(code, message, detail)
+}
+
 #[cfg(test)]
 pub(crate) trait ErrorDetailRawBytes {
     fn raw_error_detail_bytes(&self) -> bytes::Bytes;
@@ -221,6 +231,17 @@ fn bounded_error_detail_field_path(value: String) -> String {
     }
 }
 
+/// An optional identifier (constraint, column, `missing` key): bounded, and
+/// empty when absent or not a single token.
+fn bounded_error_detail_ident(value: String) -> String {
+    let ident = bounded_error_detail_string(value, "");
+    if ident.chars().any(char::is_whitespace) {
+        String::new()
+    } else {
+        ident
+    }
+}
+
 fn bounded_error_detail_token(value: String, fallback: &str) -> String {
     let value = bounded_error_detail_string(value, fallback);
     let token = value.split_whitespace().collect::<Vec<_>>().join("_");
@@ -259,13 +280,47 @@ fn sanitized_error_detail(mut detail: crate::proto::ErrorDetail) -> crate::proto
     if detail.kind != crate::proto::ErrorKind::Validation as i32
         && detail.kind != crate::proto::ErrorKind::Quota as i32
         && detail.kind != crate::proto::ErrorKind::Retryable as i32
+        && detail.kind != crate::proto::ErrorKind::RateLimited as i32
     {
         detail.retryable = false;
         detail.retry_after_ms = 0;
     }
-    if detail.kind != crate::proto::ErrorKind::Validation as i32 {
+    // Field violations explain validation refusals and name the fields a
+    // compare-and-swap or NOT NULL refusal is about.
+    if detail.kind != crate::proto::ErrorKind::Validation as i32
+        && detail.kind != crate::proto::ErrorKind::Conflict as i32
+        && detail.kind != crate::proto::ErrorKind::NotNull as i32
+    {
         detail.field_violations.clear();
     }
+    // Reason codes are `UDB_` + upper snake case; anything else is dropped
+    // rather than shipped as an unstable machine value.
+    let reason_ok = detail.reason.len() <= 64
+        && detail.reason.starts_with("UDB_")
+        && detail
+            .reason
+            .bytes()
+            .all(|b| b.is_ascii_uppercase() || b.is_ascii_digit() || b == b'_');
+    if !reason_ok {
+        detail.reason.clear();
+    }
+    detail.constraint = bounded_error_detail_ident(std::mem::take(&mut detail.constraint));
+    detail.column = bounded_error_detail_ident(std::mem::take(&mut detail.column));
+    detail.fix_hint = bounded_error_detail_string(std::mem::take(&mut detail.fix_hint), "");
+    if detail.missing.len() > 8 {
+        let keep: Vec<String> = detail.missing.keys().take(8).cloned().collect();
+        detail.missing.retain(|key, _| keep.contains(key));
+    }
+    detail.missing = std::mem::take(&mut detail.missing)
+        .into_iter()
+        .map(|(key, value)| {
+            (
+                bounded_error_detail_ident(key),
+                bounded_error_detail_string(value, ""),
+            )
+        })
+        .filter(|(key, _)| !key.is_empty())
+        .collect();
     if detail.kind != crate::proto::ErrorKind::Policy as i32 {
         detail.policy_decision_id.clear();
     }
@@ -311,6 +366,7 @@ pub(crate) fn capability_status(
         correlation_id: String::new(),
         kind: crate::proto::ErrorKind::Capability as i32,
         field_violations: Vec::new(),
+        ..Default::default()
     };
     status_with_error_detail(tonic::Code::FailedPrecondition, message, detail)
 }
@@ -337,6 +393,7 @@ pub(crate) fn unauthenticated_status(
         correlation_id: String::new(),
         kind: crate::proto::ErrorKind::Policy as i32,
         field_violations: Vec::new(),
+        ..Default::default()
     };
     status_with_error_detail(tonic::Code::Unauthenticated, message, detail)
 }
@@ -362,6 +419,7 @@ pub(crate) fn capability_status_with_code(
         correlation_id: String::new(),
         kind: crate::proto::ErrorKind::Capability as i32,
         field_violations: Vec::new(),
+        ..Default::default()
     };
     status_with_error_detail(code, message, detail)
 }
@@ -400,6 +458,7 @@ pub(crate) fn policy_status_with_code(
         correlation_id: String::new(),
         kind: crate::proto::ErrorKind::Policy as i32,
         field_violations: Vec::new(),
+        ..Default::default()
     };
     status_with_error_detail(code, message, detail)
 }
@@ -422,6 +481,7 @@ pub(crate) fn retryable_status(
         correlation_id: String::new(),
         kind: crate::proto::ErrorKind::Retryable as i32,
         field_violations: Vec::new(),
+        ..Default::default()
     };
     status_with_error_detail(tonic::Code::Unavailable, message, detail)
 }
@@ -445,6 +505,7 @@ pub(crate) fn deadline_exceeded_status(
         correlation_id: String::new(),
         kind: crate::proto::ErrorKind::Retryable as i32,
         field_violations: Vec::new(),
+        ..Default::default()
     };
     status_with_error_detail(tonic::Code::DeadlineExceeded, message, detail)
 }
@@ -484,6 +545,7 @@ pub(crate) fn retryable_aborted_status(
         correlation_id: String::new(),
         kind: crate::proto::ErrorKind::Retryable as i32,
         field_violations: Vec::new(),
+        ..Default::default()
     };
     status_with_error_detail(tonic::Code::Aborted, message, detail)
 }
@@ -506,6 +568,7 @@ pub(crate) fn quota_status(
         correlation_id: String::new(),
         kind: crate::proto::ErrorKind::Quota as i32,
         field_violations: Vec::new(),
+        ..Default::default()
     };
     status_with_error_detail(tonic::Code::ResourceExhausted, message, detail)
 }
@@ -528,6 +591,7 @@ pub(crate) fn quota_refusal_status(
         correlation_id: String::new(),
         kind: crate::proto::ErrorKind::Quota as i32,
         field_violations: Vec::new(),
+        ..Default::default()
     };
     status_with_error_detail(tonic::Code::ResourceExhausted, message, detail)
 }
@@ -561,6 +625,7 @@ where
                 description: description.into(),
             })
             .collect(),
+        ..Default::default()
     };
     status_with_error_detail(tonic::Code::InvalidArgument, message, detail)
 }
@@ -593,6 +658,7 @@ where
                 description: description.into(),
             })
             .collect(),
+        ..Default::default()
     };
     status_with_error_detail(tonic::Code::FailedPrecondition, message, detail)
 }
@@ -643,12 +709,17 @@ pub(crate) fn sqlx_error_to_status(context: &str, err: &sqlx::Error) -> tonic::S
                         }
                         None => "resource already exists".to_string(),
                     };
-                    return schema_status(
-                        tonic::Code::AlreadyExists,
-                        "database",
-                        "unique_constraint",
-                        "unique_violation",
-                        msg,
+                    return crate::runtime::error_reasons::annotate(
+                        schema_status(
+                            tonic::Code::AlreadyExists,
+                            "database",
+                            "unique_constraint",
+                            "unique_violation",
+                            msg,
+                        ),
+                        crate::runtime::error_reasons::UNIQUE_VIOLATION,
+                        None,
+                        db.constraint(),
                     );
                 }
                 "23502" => {
@@ -658,19 +729,42 @@ pub(crate) fn sqlx_error_to_status(context: &str, err: &sqlx::Error) -> tonic::S
                         Some(c) => format!("required field '{c}' is missing"),
                         None => "a required field is missing".to_string(),
                     };
-                    let field =
-                        not_null_column(db.message()).unwrap_or_else(|| "database".to_string());
-                    return executor_utils_invalid_field(
-                        field,
-                        "required database field is missing",
-                        msg,
+                    let column = not_null_column(db.message());
+                    let field = column.clone().unwrap_or_else(|| "database".to_string());
+                    // An Upsert inserts a whole row: a NOT NULL column it left out
+                    // is the "send the full row or use Update" mistake, not a
+                    // missing value in a complete write.
+                    let (reason, msg) = if context.to_ascii_lowercase().contains("upsert") {
+                        (
+                            crate::runtime::error_reasons::UPSERT_INCOMPLETE_ROW,
+                            format!(
+                                "{msg}: an Upsert inserts a full row; send every NOT NULL column, or use Update to change only some columns of an existing row"
+                            ),
+                        )
+                    } else {
+                        (crate::runtime::error_reasons::NOT_NULL_VIOLATION, msg)
+                    };
+                    return crate::runtime::error_reasons::annotate(
+                        executor_utils_invalid_field(
+                            field,
+                            "required database field is missing",
+                            msg,
+                        ),
+                        reason,
+                        column.as_deref(),
+                        None,
                     );
                 }
                 "22P02" | "22007" => {
-                    return executor_utils_invalid_field(
-                        "parameter",
-                        "must be a valid UUID/value for the target column",
-                        "invalid identifier format (a parameter must be a valid UUID/value)",
+                    return crate::runtime::error_reasons::annotate(
+                        executor_utils_invalid_field(
+                            "parameter",
+                            "must be a valid UUID/value for the target column",
+                            "invalid identifier format (a parameter must be a valid UUID/value)",
+                        ),
+                        crate::runtime::error_reasons::TYPE_MISMATCH,
+                        None,
+                        None,
                     );
                 }
                 "42804" => {
@@ -684,10 +778,15 @@ pub(crate) fn sqlx_error_to_status(context: &str, err: &sqlx::Error) -> tonic::S
                         Some(c) => format!("value type does not match column '{c}'"),
                         None => "a value's type does not match the target column type".to_string(),
                     };
-                    return executor_utils_invalid_field(
-                        column.unwrap_or_else(|| "parameter".to_string()),
-                        "value type must match the target column type",
-                        msg,
+                    return crate::runtime::error_reasons::annotate(
+                        executor_utils_invalid_field(
+                            column.clone().unwrap_or_else(|| "parameter".to_string()),
+                            "value type must match the target column type",
+                            msg,
+                        ),
+                        crate::runtime::error_reasons::TYPE_MISMATCH,
+                        column.as_deref(),
+                        None,
                     );
                 }
                 "42846" => {
@@ -703,14 +802,24 @@ pub(crate) fn sqlx_error_to_status(context: &str, err: &sqlx::Error) -> tonic::S
                         Some(c) => format!("value cannot be coerced to column '{c}' type"),
                         None => "a value cannot be coerced to the target column type".to_string(),
                     };
-                    return executor_utils_invalid_field(
-                        column.unwrap_or_else(|| "parameter".to_string()),
-                        "value must be coercible to the target column type",
-                        msg,
+                    return crate::runtime::error_reasons::annotate(
+                        executor_utils_invalid_field(
+                            column.clone().unwrap_or_else(|| "parameter".to_string()),
+                            "value must be coercible to the target column type",
+                            msg,
+                        ),
+                        crate::runtime::error_reasons::TYPE_MISMATCH,
+                        column.as_deref(),
+                        None,
                     );
                 }
                 "23503" => {
-                    return referential_constraint_status();
+                    return crate::runtime::error_reasons::annotate(
+                        referential_constraint_status(),
+                        crate::runtime::error_reasons::FOREIGN_KEY_VIOLATION,
+                        None,
+                        db.constraint(),
+                    );
                 }
                 // Connection loss surfaced AS a database error (Postgres class 08
                 // "connection exception" and the 57P0x shutdown/cannot-connect
@@ -969,6 +1078,7 @@ pub(crate) fn schema_status(
         correlation_id: String::new(),
         kind: crate::proto::ErrorKind::Schema as i32,
         field_violations: Vec::new(),
+        ..Default::default()
     };
     status_with_error_detail(code, message, detail)
 }
@@ -991,6 +1101,7 @@ pub(crate) fn internal_status(
         correlation_id: String::new(),
         kind: crate::proto::ErrorKind::Internal as i32,
         field_violations: Vec::new(),
+        ..Default::default()
     };
     status_with_error_detail(tonic::Code::Internal, message, detail)
 }
@@ -1024,6 +1135,7 @@ pub(crate) fn compile_error_status(
         correlation_id: String::new(),
         kind: crate::proto::ErrorKind::Schema as i32,
         field_violations: Vec::new(),
+        ..Default::default()
     };
     status_with_error_detail(tonic::Code::InvalidArgument, message, detail)
 }
@@ -1240,13 +1352,33 @@ pub(crate) fn first_non_empty(left: &str, right: &str) -> String {
 
 pub(crate) fn reject_plan(errors: &[String]) -> Result<(), tonic::Status> {
     if errors.is_empty() {
-        Ok(())
+        return Ok(());
+    }
+    let status = executor_utils_invalid_field(
+        "plan",
+        "planner validation errors must be resolved",
+        errors.join("; "),
+    );
+    // The first error that has a stable reason names it; the message keeps
+    // every planner error for the human reading it.
+    let reason = errors.iter().find_map(|error| plan_error_reason(error));
+    Err(match reason {
+        Some(reason) => crate::runtime::error_reasons::annotate(status, reason, None, None),
+        None => status,
+    })
+}
+
+/// The stable reason for a planner validation error, when it has one.
+fn plan_error_reason(error: &str) -> Option<crate::runtime::error_reasons::ErrorReason> {
+    use crate::runtime::error_reasons as reasons;
+    if error.starts_with("unknown message_type") {
+        Some(reasons::UNKNOWN_MESSAGE_TYPE)
+    } else if error.starts_with("unsupported filter operator") {
+        Some(reasons::UNSUPPORTED_FILTER_OPERATOR)
+    } else if error.starts_with("comparison with NULL") {
+        Some(reasons::NULL_COMPARISON)
     } else {
-        Err(executor_utils_invalid_field(
-            "plan",
-            "planner validation errors must be resolved",
-            errors.join("; "),
-        ))
+        None
     }
 }
 
@@ -1646,15 +1778,35 @@ pub(crate) fn validate_client_encrypted_write(
             ));
         }
     }
-    if violations.is_empty() {
-        Ok(())
-    } else {
-        Err(invalid_argument_fields(
+    if !violations.is_empty() {
+        return Err(invalid_argument_fields(
             "write refused: a field would bypass field-level encryption",
             violations,
-        ))
+        ));
     }
+    // A record read without the PII scope carries the redaction placeholder in
+    // every protected column. Writing that record back would replace the real
+    // value with the placeholder, silently and for good.
+    if let Some(column) = columns.iter().find(|column| {
+        (column.security.is_pii || column.security.mask_in_logs)
+            && object.get(&column.column_name).and_then(JsonValue::as_str)
+                == Some(REDACTION_PLACEHOLDER)
+    }) {
+        return Err(crate::runtime::error_reasons::Refusal::new(
+            crate::runtime::error_reasons::REDACTED_VALUE_WRITE,
+            format!(
+                "write refused: {} holds the redaction placeholder, which would erase the stored value",
+                column.column_name
+            ),
+        )
+        .column(&column.column_name)
+        .into_status());
+    }
+    Ok(())
 }
+
+/// What a protected column reads as for a caller without the PII read scope.
+pub(crate) const REDACTION_PLACEHOLDER: &str = "***MASKED***";
 
 // ── Time helpers ──────────────────────────────────────────────────────────────
 
@@ -2533,6 +2685,7 @@ mod error_detail_tests {
                     field: "tenant_id".to_string(),
                     description: "required".to_string(),
                 }],
+                ..Default::default()
             },
         );
         let detail = decode_detail(&status);
@@ -2577,6 +2730,7 @@ mod error_detail_tests {
                     field: "tenant_id".to_string(),
                     description: "required".to_string(),
                 }],
+                ..Default::default()
             },
         );
         let detail = decode_detail(&status);
@@ -2604,6 +2758,7 @@ mod error_detail_tests {
                     field: "sql".to_string(),
                     description: "unsupported".to_string(),
                 }],
+                ..Default::default()
             },
         );
         let capability_detail = decode_detail(&capability_status);
@@ -2631,6 +2786,7 @@ mod error_detail_tests {
                     field: "principal".to_string(),
                     description: "denied".to_string(),
                 }],
+                ..Default::default()
             },
         );
         let policy_detail = decode_detail(&policy_status);
@@ -2655,6 +2811,7 @@ mod error_detail_tests {
                     field: "table_name".to_string(),
                     description: "bad schema".to_string(),
                 }],
+                ..Default::default()
             },
         );
         let schema_detail = decode_detail(&schema_status);
@@ -2684,6 +2841,7 @@ mod error_detail_tests {
                         field: "request".to_string(),
                         description: "not validation".to_string(),
                     }],
+                    ..Default::default()
                 },
             );
             let detail = decode_detail(&status);
@@ -2717,6 +2875,7 @@ mod error_detail_tests {
                     correlation_id: String::new(),
                     kind,
                     field_violations: Vec::new(),
+                    ..Default::default()
                 },
             );
             let detail = decode_detail(&status);
@@ -2760,6 +2919,7 @@ mod error_detail_tests {
                 correlation_id: String::new(),
                 kind: ErrorKind::Retryable as i32,
                 field_violations: Vec::new(),
+                ..Default::default()
             },
         );
         let detail = decode_detail(&status);
@@ -2782,6 +2942,7 @@ mod error_detail_tests {
                     correlation_id: String::new(),
                     kind,
                     field_violations: Vec::new(),
+                    ..Default::default()
                 },
             );
             let detail = decode_detail(&status);
@@ -2802,6 +2963,7 @@ mod error_detail_tests {
                 correlation_id: String::new(),
                 kind: ErrorKind::Quota as i32,
                 field_violations: Vec::new(),
+                ..Default::default()
             },
         );
         let detail = decode_detail(&status);
@@ -2831,6 +2993,7 @@ mod error_detail_tests {
                     correlation_id: String::new(),
                     kind,
                     field_violations: Vec::new(),
+                    ..Default::default()
                 },
             );
             let detail = decode_detail(&status);
@@ -2854,6 +3017,7 @@ mod error_detail_tests {
                 correlation_id: String::new(),
                 kind: ErrorKind::Policy as i32,
                 field_violations: Vec::new(),
+                ..Default::default()
             },
         );
         let policy_detail = decode_detail(&policy_status);
@@ -2882,6 +3046,7 @@ mod error_detail_tests {
                     correlation_id: String::new(),
                     kind,
                     field_violations: Vec::new(),
+                    ..Default::default()
                 },
             );
             let detail = decode_detail(&status);
@@ -2908,6 +3073,7 @@ mod error_detail_tests {
                     correlation_id: String::new(),
                     kind,
                     field_violations: Vec::new(),
+                    ..Default::default()
                 },
             );
             let detail = decode_detail(&status);
@@ -2936,6 +3102,7 @@ mod error_detail_tests {
                     correlation_id: String::new(),
                     kind,
                     field_violations: Vec::new(),
+                    ..Default::default()
                 },
             );
             let detail = decode_detail(&status);
@@ -2961,6 +3128,7 @@ mod error_detail_tests {
                     field: "tenant_id".to_string(),
                     description: "required".to_string(),
                 }],
+                ..Default::default()
             },
         );
         let detail = decode_detail(&status_with_field);
@@ -2985,6 +3153,7 @@ mod error_detail_tests {
                 correlation_id: String::new(),
                 kind: ErrorKind::Validation as i32,
                 field_violations: Vec::new(),
+                ..Default::default()
             },
         );
         let fallback_detail = decode_detail(&status_without_fields);
@@ -4068,6 +4237,36 @@ mod client_encrypted_write_tests {
     fn ciphertext_shaped_text_in_a_plain_column_is_not_this_checks_concern() {
         assert!(
             validate_client_encrypted_write(&columns(), &json!({"name": "udb-aead:v1:x"})).is_ok()
+        );
+    }
+
+    #[test]
+    fn writing_back_a_redacted_pii_value_is_refused_by_reason() {
+        let mut columns = columns();
+        columns.push(ManifestColumn {
+            column_name: "phone".to_string(),
+            security: ManifestColumnSecurity {
+                is_pii: true,
+                ..ManifestColumnSecurity::default()
+            },
+            ..ManifestColumn::default()
+        });
+        let status = validate_client_encrypted_write(
+            &columns,
+            &json!({"name": "a", "phone": super::REDACTION_PLACEHOLDER}),
+        )
+        .expect_err("the placeholder would erase the stored phone number");
+        assert_eq!(
+            crate::runtime::error_reasons::reason_of(&status).as_deref(),
+            Some("UDB_REDACTED_VALUE_WRITE")
+        );
+        // The same text in a column that is never redacted is just text.
+        assert!(
+            validate_client_encrypted_write(
+                &columns,
+                &json!({"name": super::REDACTION_PLACEHOLDER, "phone": "+8801"})
+            )
+            .is_ok()
         );
     }
 }

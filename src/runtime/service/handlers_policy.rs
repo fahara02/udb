@@ -115,16 +115,28 @@ impl DataBrokerService {
                     &serde_json::json!({"effect": p.effect, "operation": p.operation, "tenant_id": p.tenant_id}),
                     "ok", &security.tenant_id, "", &security.correlation_id,
                 ).await;
-                self.record_grpc(
-                    "PutPolicy",
-                    started,
-                    Ok(Response::new(MutationResponse {
-                        mutation_id: uuid::Uuid::new_v4().to_string(),
-                        resource_uri: format!("policy/{id}"),
-                        affected_rows: 1,
-                        ..Default::default()
-                    })),
-                )
+                // This table is not what authorizes requests (the Casbin
+                // governance table behind AuthzService is), so a rule written
+                // here grants nothing. Say so on every call until 0.6.0 removes
+                // the RPC.
+                tracing::warn!(
+                    target: "udb.deprecation",
+                    policy_id = id,
+                    "DataBroker.PutPolicy writes the legacy ABAC table, which does not authorize requests; use AuthzService.PutAuthzPolicy or `udb authz seed` instead"
+                );
+                let mut response = Response::new(MutationResponse {
+                    mutation_id: uuid::Uuid::new_v4().to_string(),
+                    resource_uri: format!("policy/{id}"),
+                    affected_rows: 1,
+                    ..Default::default()
+                });
+                response.metadata_mut().insert(
+                    "x-udb-deprecated",
+                    tonic::metadata::MetadataValue::from_static(
+                        "PutPolicy does not authorize requests; use AuthzService.PutAuthzPolicy",
+                    ),
+                );
+                self.record_grpc("PutPolicy", started, Ok(response))
             }
             Err(err) => self.record_grpc("PutPolicy", started, Err(err)),
         }

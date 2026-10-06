@@ -79,6 +79,7 @@ pub(super) fn account_status_to_proto(status: AccountStatus) -> i32 {
         AccountStatus::Suspended => authn_entity_pb::UserStatus::Suspended,
         AccountStatus::Locked => authn_entity_pb::UserStatus::Locked,
         AccountStatus::Deactivated => authn_entity_pb::UserStatus::Deactivated,
+        AccountStatus::PasswordSetupRequired => authn_entity_pb::UserStatus::PasswordSetupRequired,
     };
     proto as i32
 }

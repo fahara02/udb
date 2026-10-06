@@ -4746,7 +4746,10 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
             'crate::runtime::executor_utils::internal_status("tx_object", operation, message)',
             '"enqueue_projection_tasks"',
             '"enqueue_tx_event"',
-            '"mutation_failure_compensation"',
+            # A failed mutation keeps its own code and typed detail (UNIQUE,
+            # CAS conflict, policy denial, ...); it is no longer re-wrapped as
+            # INTERNAL "mutation_failure_compensation".
+            "err.metadata().clone()",
             '"xa_ledger_unavailable"',
             '"xa_ledger_commit_record"',
             '"postgres_commit_compensation"',

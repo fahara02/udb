@@ -189,10 +189,21 @@ impl SqlDialect for Postgres {
             // input (hex EWKB, "10.1.2.3", "2026-07-16") type-check; the column
             // typmod is still checked on assignment. (bug_report 2026-07-16
             // #1a geography, #1c inet, #1d date — same class as the B8 uuid fix.)
+            // NUMERIC/DECIMAL cast too: the executor binds an exact decimal for
+            // a `$n::NUMERIC` placeholder, so a value never passes through a
+            // float (the column typmod still rounds on assignment).
             let base = ty.split('(').next().unwrap_or(ty).trim();
             matches!(
                 base.to_ascii_lowercase().as_str(),
-                "geography" | "geometry" | "inet" | "cidr" | "macaddr" | "macaddr8" | "date"
+                "geography"
+                    | "geometry"
+                    | "inet"
+                    | "cidr"
+                    | "macaddr"
+                    | "macaddr8"
+                    | "date"
+                    | "numeric"
+                    | "decimal"
             )
         } {
             let base = ty

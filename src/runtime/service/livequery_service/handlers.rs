@@ -38,6 +38,33 @@ pub(super) fn no_delta_feed_status() -> Status {
 /// resume needs no contract change — a fresh subscription simply omits it.
 const RESUME_CURSOR_HEADER: &str = "x-udb-livequery-resume";
 
+/// Pick the resume cursor from the typed field and the legacy header. Both may
+/// be set only when they name the same event: two different cursors mean the
+/// client's resume state is confused, and guessing one would skip or repeat
+/// changes.
+pub(super) fn resolve_resume_cursor(
+    since_event_id: &str,
+    header: Option<&str>,
+) -> Result<Option<String>, Status> {
+    let typed = parse_resume_cursor(Some(since_event_id));
+    let legacy = parse_resume_cursor(header);
+    match (typed, legacy) {
+        (Some(typed), Some(legacy)) if typed != legacy => {
+            Err(crate::runtime::executor_utils::invalid_argument_fields(
+                format!(
+                    "since_event_id '{typed}' and the {RESUME_CURSOR_HEADER} header '{legacy}' name different resume points"
+                ),
+                [(
+                    "since_event_id",
+                    "set since_event_id only; drop the legacy resume header",
+                )],
+            ))
+        }
+        (Some(typed), _) => Ok(Some(typed)),
+        (None, legacy) => Ok(legacy),
+    }
+}
+
 pub(crate) async fn subscribe(
     svc: &LiveQueryServiceImpl,
     request: Request<lq_pb::SubscribeRequest>,
@@ -59,16 +86,18 @@ pub(crate) async fn subscribe(
     }
     // Fail closed BEFORE any read/stream if the source has no tenant column.
     let source = resolve_source(&message_type)?;
-    let user_filter = build_user_filter(&req.filters)?;
+    let user_filter = build_user_filter(&req.filters, &req.any_of)?;
 
-    // Durable-resume cursor (optional): the client's last-delivered event_id,
-    // carried in request metadata so resume needs no proto change. Absent/blank =
-    // a fresh, non-resuming subscription.
-    let resume_cursor = parse_resume_cursor(
+    // Durable-resume cursor (optional): the client's last-delivered event_id.
+    // The typed `since_event_id` field is canonical; the older
+    // `x-udb-livequery-resume` header is still honoured. Absent/blank = a fresh,
+    // non-resuming subscription.
+    let resume_cursor = resolve_resume_cursor(
+        &req.since_event_id,
         metadata
             .get(RESUME_CURSOR_HEADER)
             .and_then(|value| value.to_str().ok()),
-    );
+    )?;
 
     // Rate-bound new subscriptions per tenant at entry; the permit is dropped
     // immediately (not held across the long-lived stream) so it cannot block.
@@ -102,9 +131,23 @@ pub(crate) async fn subscribe(
     // read REFUSES the subscription (Unavailable, retryable): falling back to
     // the broadcast alone would silently deliver nothing on every replica but
     // the tailer's leader.
+    // The journal itself is scanned by one shared poller per (topic, tenant,
+    // project); join it BEFORE reading this subscriber's head so no batch
+    // produced after the head can be missed.
     let journal_head = match svc.cdc_engine.as_ref() {
-        Some(cdc) => match cdc.journal_head_event_id(&source.cdc_topic).await {
-            Ok(head) => Some((cdc.clone(), head.unwrap_or_default())),
+        Some(cdc) => match {
+            let feed = super::shared_tail::join(
+                cdc,
+                &source.cdc_topic,
+                &tenant_id,
+                &project_id,
+                i64::from(resume_replay_limit()),
+            );
+            cdc.journal_head_watermark(&source.cdc_topic)
+                .await
+                .map(|head| (head, feed))
+        } {
+            Ok((head, feed)) => Some((cdc.clone(), head, feed)),
             Err(err) => {
                 tracing::warn!(
                     topic = %source.cdc_topic,
@@ -224,10 +267,11 @@ pub(crate) async fn subscribe(
     // exits); without a live feed the stream is snapshot-only and ends
     // immediately, so the slot is released right here.
     if let Some(rx_delta) = delta_rx {
-        let journal_tail = journal_head.map(|(cdc, cursor)| JournalTail {
+        let journal_tail = journal_head.map(|(cdc, watermark, feed)| JournalTail {
             cdc,
-            cursor,
+            watermark,
             batch: i64::from(resume_replay_limit()),
+            feed,
         });
         tokio::spawn(run_delta_forward(
             rx_delta,

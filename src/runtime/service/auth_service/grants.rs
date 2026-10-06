@@ -650,9 +650,14 @@ pub(crate) async fn create_grant(
         .await
         .map_err(|err| match unique_violation_constraint(&err) {
             Some(constraint) if constraint.contains("identity") => {
-                grants_failed_precondition_fields(
-                    "service identity is already bound to another service account",
-                    [("service_identity", "must be unique across the deployment")],
+                crate::runtime::error_reasons::annotate(
+                    grants_failed_precondition_fields(
+                        "service identity is already bound to another service account",
+                        [("service_identity", "must be unique across the deployment")],
+                    ),
+                    crate::runtime::error_reasons::GRANT_OWNED_BY_OTHER,
+                    Some("service_identity"),
+                    Some(constraint.as_str()),
                 )
             }
             Some(_) => grants_failed_precondition_fields(

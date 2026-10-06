@@ -59,6 +59,8 @@ message RecordSet {
   // deprecated for reads.
   repeated Row rows = 2;
   string next_page_token = 3;
+  // The number of records in THIS page (the length of `records_json`), not the
+  // number of matching rows. Use `exact_total` for that.
   int32 total_count = 4;
   // #5 (opaque row revision / ETag): when the caller asked for revisions
   // (`SelectRequest.include_revision`), this carries the broker-maintained
@@ -70,6 +72,20 @@ message RecordSet {
   // feed it back as `UpdateRequest.expected_revision` / `DeleteRequest.
   // expected_revision` for optimistic concurrency.
   repeated string record_revisions = 5;
+  // True when the page is full (as many records as the request's limit, or the
+  // default limit of 100 when none was given): more rows may match. A read that
+  // was capped never looks like the complete result; page on with
+  // `next_page_token` (set a positive `limit` to get one) or narrow the filter.
+  bool has_more = 6;
+  // Every row the filter matches, ignoring the limit and the page position.
+  // Set only when `SelectRequest.include_total` asked for it (it costs one
+  // COUNT query); 0 otherwise.
+  int64 exact_total = 7;
+  // Columns that came back as the redaction placeholder because the caller
+  // lacks the PII read scope (`udb:pii:read`). A value listed here is not the
+  // stored value: never write it back (the broker refuses that write with
+  // reason `UDB_REDACTED_VALUE_WRITE`). Empty when nothing was redacted.
+  repeated string redacted_fields = 8;
 }
 
 message SelectRequest {
@@ -85,6 +101,9 @@ message SelectRequest {
   // system-side revision map and fills `RecordSet.record_revisions`. Off by
   // default so the read hot path is unchanged (zero extra SQL).
   bool include_revision = 9;
+  // Also count every matching row into `RecordSet.exact_total` (one extra
+  // COUNT over the same filter and scope; the read cache is skipped).
+  bool include_total = 10;
 }
 
 message UpsertRequest {
@@ -151,6 +170,13 @@ message DeleteRequest {
   // gate 25 (lock-fencing-at-commit): see UpdateRequest.lock_name/fencing_token.
   string lock_name = 7;
   int64 fencing_token = 8;
+  // Optional exact row count. When non-zero the write must change exactly this
+  // many rows, checked inside the write transaction; any other count changes
+  // nothing and fails NOT_FOUND with reason `UDB_NO_ROWS_AFFECTED`. Set 1 for a
+  // single-row write that must not silently match nothing (an already-deleted
+  // row, a key that drifted). 0 keeps today's behaviour: the count is reported
+  // in MutationResponse.affected_rows and never checked.
+  uint32 require_affected = 9;
 }
 
 // Partial update: set only the named columns (and/or apply atomic increments)
@@ -197,6 +223,13 @@ message UpdateRequest {
   // side effect. Unset (empty `lock_name`) = no fencing (unchanged behaviour).
   string lock_name = 10;
   int64 fencing_token = 11;
+  // Optional exact row count. When non-zero the write must change exactly this
+  // many rows, checked inside the write transaction; any other count changes
+  // nothing and fails NOT_FOUND with reason `UDB_NO_ROWS_AFFECTED`. Set 1 for a
+  // single-row write that must not silently match nothing (an already-deleted
+  // row, a key that drifted). 0 keeps today's behaviour: the count is reported
+  // in MutationResponse.affected_rows and never checked.
+  uint32 require_affected = 12;
 }
 
 message ViewDefinition {

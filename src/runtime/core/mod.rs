@@ -613,11 +613,14 @@ pub(crate) struct CatalogMutationResult {
 pub(crate) mod audit;
 mod helpers;
 pub(crate) mod pagination;
+pub(crate) mod pg_wire;
+pub(crate) mod scope_autofill;
 pub(crate) use helpers::*;
 mod accessors;
 pub(crate) use accessors::RoutedReadPool;
 mod catalog_admin;
 mod catalog_sql;
+pub mod delivery_health;
 pub(crate) mod native_store;
 pub use catalog_sql::ManifestDrift;
 mod probe_dispatch;
@@ -886,7 +889,7 @@ fn prepare_outbox_envelope(
             "payload",
             "top-level keys must belong to the EventEnvelope schema; put event fields under \"payload\"",
             format!(
-                "event payload has top-level keys outside the EventEnvelope schema ({});                  put the event's own fields under \"payload\"",
+                "event payload has top-level keys outside the EventEnvelope schema ({}); put the event's own fields under \"payload\"",
                 unknown.join(", ")
             ),
         ));
@@ -926,8 +929,30 @@ fn prepare_outbox_envelope(
         ));
     }
 
+    // An envelope newer than this broker's would be stored and delivered under
+    // rules the broker does not know; a malformed version is refused too.
+    let current_version = crate::runtime::cdc::EVENT_ENVELOPE_VERSION;
+    if let Some(version) = obj.get("envelope_version") {
+        let accepted = version
+            .as_u64()
+            .is_some_and(|version| version >= 1 && version <= u64::from(current_version));
+        if !accepted {
+            return Err(crate::runtime::error_reasons::Refusal::new(
+                crate::runtime::error_reasons::ENVELOPE_VERSION_UNSUPPORTED,
+                format!(
+                    "event envelope_version {version} is not supported; this broker writes version {current_version}"
+                ),
+            )
+            .field("payload.envelope_version", "must be an integer between 1 and the broker's version")
+            .into_status());
+        }
+    }
+
     let event_id = event_id_uuid.to_string();
     let mut enriched_obj = obj.clone();
+    enriched_obj
+        .entry("envelope_version".to_string())
+        .or_insert_with(|| serde_json::Value::Number(serde_json::Number::from(current_version)));
     enriched_obj.insert(
         "event_id".to_string(),
         serde_json::Value::String(event_id.clone()),
@@ -1453,6 +1478,29 @@ mod outbox_envelope_tests {
         assert_eq!(payload["redaction_mode"], "none");
         assert_eq!(payload["redaction_version"], 1);
         assert!(payload["redacted_fields"].as_array().is_some());
+        assert_eq!(
+            payload["envelope_version"],
+            crate::runtime::cdc::EVENT_ENVELOPE_VERSION
+        );
+
+        // A newer envelope than the broker writes is refused by reason.
+        let newer = prepare_outbox_envelope(
+            "document.uploaded.v1",
+            "doc-1",
+            json!({
+                "event_id": "11111111-1111-4111-8111-111111111111",
+                "event_type": "document.uploaded.v1",
+                "correlation_id": "corr-1",
+                "document_id": "doc-1",
+                "envelope_version": crate::runtime::cdc::EVENT_ENVELOPE_VERSION + 1
+            }),
+            None,
+        )
+        .unwrap_err();
+        assert_eq!(
+            crate::runtime::error_reasons::reason_of(&newer).as_deref(),
+            Some("UDB_ENVELOPE_VERSION_UNSUPPORTED")
+        );
     }
 
     #[test]
@@ -2547,6 +2595,9 @@ fn rows_to_record_set(
     // sets — the row-build path is the relational read hot path).
     let mut proto_rows = Vec::with_capacity(rows.len());
     let mut records_json = Vec::with_capacity(rows.len());
+    // Columns this caller received as the redaction placeholder, so a client can
+    // tell a redacted value from a stored one.
+    let mut redacted_fields: std::collections::BTreeSet<String> = std::collections::BTreeSet::new();
     for row in rows {
         // `records_json` is the CANONICAL representation of a relational read:
         // the record, serialised once, with integers intact. Every SDK decodes
@@ -2585,7 +2636,10 @@ fn rows_to_record_set(
                     decrypt_record_value(encryption, encryption_metrics, &name, json_value)?;
             }
             if masked_columns.contains(&name) && !can_read_pii {
-                json_value = JsonValue::String("***MASKED***".to_string());
+                json_value = JsonValue::String(
+                    crate::runtime::executor_utils::REDACTION_PLACEHOLDER.to_string(),
+                );
+                redacted_fields.insert(name.clone());
             }
             json_row.insert(name, json_value);
         }
@@ -2603,6 +2657,7 @@ fn rows_to_record_set(
         total_count: proto_rows.len() as i32,
         rows: proto_rows,
         records_json,
+        redacted_fields: redacted_fields.into_iter().collect(),
         ..RecordSet::default()
     })
 }
@@ -2746,22 +2801,142 @@ mod inet_decode_tests {
     }
 }
 
+/// Name of the result column at `idx`, for decode errors.
+fn column_name_at(row: &PgRow, idx: usize) -> String {
+    row.columns()
+        .get(idx)
+        .map(|column| column.name().to_string())
+        .unwrap_or_else(|| format!("#{idx}"))
+}
+
+/// A typed column that does not decode is an error naming the column, never a
+/// silent NULL: a NOT NULL value read back as NULL gets written back as one.
+fn column_decode_failed(
+    row: &PgRow,
+    idx: usize,
+    type_name: &str,
+    err: sqlx::Error,
+) -> tonic::Status {
+    let column = column_name_at(row, idx);
+    crate::runtime::error_reasons::annotate(
+        core_internal_status(
+            "read_column",
+            format!("column {column} ({type_name}) could not be decoded: {err}"),
+        ),
+        crate::runtime::error_reasons::DECODE_FAILED,
+        Some(&column),
+        None,
+    )
+}
+
 fn row_value_to_json(row: &PgRow, idx: usize, type_name: &str) -> Result<JsonValue, tonic::Status> {
     let type_name = type_name.to_ascii_uppercase();
+    // Enums first: a user type name can contain any of the substrings the
+    // scalar branches below match on (`realm_status` contains REAL).
+    // A user enum, or an array of them (sqlx names the array `_<type>` without
+    // the `[]` suffix): sqlx's String decoder refuses both, and the raw fallback
+    // below would hex-encode the label. Both travel as UTF-8 label text.
+    let kind = row.column(idx).type_info().kind();
+    if matches!(kind, sqlx::postgres::PgTypeKind::Enum(_)) {
+        use sqlx::ValueRef as _;
+        let raw = row.try_get_raw(idx).map_err(|err| {
+            core_internal_status("read_column", format!("row decode failed: {err}"))
+        })?;
+        if raw.is_null() {
+            return Ok(JsonValue::Null);
+        }
+        let bytes = raw.as_bytes().map_err(|err| {
+            core_internal_status("read_column", format!("raw column read failed: {err}"))
+        })?;
+        return std::str::from_utf8(bytes)
+            .map(|label| JsonValue::String(label.to_string()))
+            .map_err(|err| {
+                core_internal_status(
+                    "read_column",
+                    format!(
+                        "column {}: enum label is not UTF-8: {err}",
+                        column_name_at(row, idx)
+                    ),
+                )
+            });
+    }
+    let is_enum_array = match kind {
+        sqlx::postgres::PgTypeKind::Array(element) => {
+            matches!(element.kind(), sqlx::postgres::PgTypeKind::Enum(_))
+        }
+        _ => false,
+    };
+    if is_enum_array {
+        use sqlx::ValueRef as _;
+        let raw = row.try_get_raw(idx).map_err(|err| {
+            core_internal_status("read_column", format!("row decode failed: {err}"))
+        })?;
+        if raw.is_null() {
+            return Ok(JsonValue::Null);
+        }
+        let format = raw.format();
+        let bytes = raw.as_bytes().map_err(|err| {
+            core_internal_status("read_column", format!("raw column read failed: {err}"))
+        })?;
+        let labels = match format {
+            sqlx::postgres::PgValueFormat::Binary => {
+                pg_wire::pg_text_element_array_binary_to_strings(bytes)
+            }
+            sqlx::postgres::PgValueFormat::Text => {
+                pg_wire::pg_text_array_elements(&String::from_utf8_lossy(bytes))
+            }
+        }
+        .map_err(|err| {
+            core_internal_status(
+                "read_column",
+                format!("column {}: {err}", column_name_at(row, idx)),
+            )
+        })?;
+        return Ok(JsonValue::Array(
+            labels
+                .into_iter()
+                .map(|label| label.map(JsonValue::String).unwrap_or(JsonValue::Null))
+                .collect(),
+        ));
+    }
     // W2: arrays MUST be matched BEFORE the scalar branches. sqlx reports a
     // bigint array as `INT8[]`, so `contains("INT8")` below would route it into
     // the scalar i64 decoder, which fails and used to collapse a populated array
     // to JSON null. Decode the SQLx-enabled element matrix exactly and preserve
-    // nullable elements. NUMERIC[] / DECIMAL[] remain intentionally unsupported:
-    // this build does not enable a sqlx decimal codec, so do not claim them in the
-    // supported matrix or silently route them through a scalar decoder.
+    // nullable elements. NUMERIC[] / DECIMAL[] decode from the wire format into
+    // exact decimal strings (see `pg_numeric`).
     if let Some(element) = type_name.strip_suffix("[]") {
         if matches!(element, "NUMERIC" | "DECIMAL") {
-            return Err(core_internal_status(
-                "read_column",
-                format!(
-                    "PostgreSQL {element}[] decoding requires a decimal codec that is not enabled"
-                ),
+            use sqlx::ValueRef as _;
+            let raw = row.try_get_raw(idx).map_err(|err| {
+                core_internal_status("read_column", format!("row decode failed: {err}"))
+            })?;
+            if raw.is_null() {
+                return Ok(JsonValue::Null);
+            }
+            let format = raw.format();
+            let bytes = raw.as_bytes().map_err(|err| {
+                core_internal_status("read_column", format!("raw column read failed: {err}"))
+            })?;
+            let items = match format {
+                sqlx::postgres::PgValueFormat::Binary => {
+                    pg_wire::pg_numeric_array_binary_to_strings(bytes)
+                }
+                sqlx::postgres::PgValueFormat::Text => {
+                    pg_wire::pg_numeric_array_text_to_strings(&String::from_utf8_lossy(bytes))
+                }
+            }
+            .map_err(|err| {
+                core_internal_status(
+                    "read_column",
+                    format!("column {}: {err}", column_name_at(row, idx)),
+                )
+            })?;
+            return Ok(JsonValue::Array(
+                items
+                    .into_iter()
+                    .map(|item| item.map(JsonValue::String).unwrap_or(JsonValue::Null))
+                    .collect(),
             ));
         }
 
@@ -2839,6 +3014,11 @@ fn row_value_to_json(row: &PgRow, idx: usize, type_name: &str) -> Result<JsonVal
             "TIME" | "TIME WITHOUT TIME ZONE" => row
                 .try_get::<Option<Vec<Option<chrono::NaiveTime>>>, _>(idx)
                 .map(|items| wrap_rendered(items, |value| value.to_string())),
+            // CHAR(n) pads to its length; the padding is not part of the value
+            // (PostgreSQL ignores it in comparisons), so it never reaches clients.
+            "CHAR" | "BPCHAR" | "CHARACTER" => row
+                .try_get::<Option<Vec<Option<String>>>, _>(idx)
+                .map(|items| wrap_rendered(items, |value| value.trim_end_matches(' ').to_string())),
             _ => row.try_get::<Option<Vec<Option<String>>>, _>(idx).map(wrap),
         }
         .map_err(|err| {
@@ -2853,87 +3033,103 @@ fn row_value_to_json(row: &PgRow, idx: usize, type_name: &str) -> Result<JsonVal
     // with a type-mismatch, which the NULL fallback would otherwise swallow into a
     // silent NULL for a non-null column (bug_report 2026-07-16 #3).
     if type_name.contains("INT2") || type_name == "SMALLINT" {
-        return Ok(row
+        return row
             .try_get::<Option<i16>, _>(idx)
             .map(|value| value.map(JsonValue::from).unwrap_or(JsonValue::Null))
-            .unwrap_or(JsonValue::Null));
+            .map_err(|err| column_decode_failed(row, idx, &type_name, err));
     }
-    if type_name.contains("INT4") || type_name == "INTEGER" || type_name == "INT" {
-        return Ok(row
+    if (type_name.contains("INT4") && !type_name.contains("RANGE"))
+        || type_name == "INTEGER"
+        || type_name == "INT"
+    {
+        return row
             .try_get::<Option<i32>, _>(idx)
             .map(|value| value.map(JsonValue::from).unwrap_or(JsonValue::Null))
-            .unwrap_or(JsonValue::Null));
+            .map_err(|err| column_decode_failed(row, idx, &type_name, err));
     }
-    if type_name.contains("INT8") || type_name == "BIGINT" {
-        return Ok(row
+    if (type_name.contains("INT8") && !type_name.contains("RANGE")) || type_name == "BIGINT" {
+        return row
             .try_get::<Option<i64>, _>(idx)
             .map(|value| value.map(JsonValue::from).unwrap_or(JsonValue::Null))
-            .unwrap_or(JsonValue::Null));
+            .map_err(|err| column_decode_failed(row, idx, &type_name, err));
     }
     if type_name.contains("FLOAT") || type_name.contains("DOUBLE") || type_name.contains("REAL") {
         // W1: sqlx-postgres decodes float4/REAL ONLY as f32 and float8/DOUBLE ONLY
         // as f64 (type-exact, no widening). A single f64 probe therefore returned
         // Err for every float4/REAL column → unwrap_or(Null) = SILENT data loss on
         // read. Probe f64 first (float8/double), then fall back to f32 (float4/real).
-        return Ok(row
+        return row
             .try_get::<Option<f64>, _>(idx)
             .or_else(|_| {
                 row.try_get::<Option<f32>, _>(idx)
                     .map(|value| value.map(f64::from))
             })
             .map(|value| value.map(JsonValue::from).unwrap_or(JsonValue::Null))
-            .unwrap_or(JsonValue::Null));
+            .map_err(|err| column_decode_failed(row, idx, &type_name, err));
     }
-    // GAP 10: NUMERIC / DECIMAL — deserialise as string to avoid floating-point
-    // precision loss.  Clients can parse the string value to their preferred
-    // arbitrary-precision type.
+    // NUMERIC / DECIMAL: an exact decimal string that keeps the declared scale.
+    // sqlx's String and f64 decoders both refuse the NUMERIC OID (no decimal
+    // codec is enabled), which used to turn every NUMERIC value into NULL.
     if type_name.contains("NUMERIC") || type_name.contains("DECIMAL") {
-        return Ok(row
-            .try_get::<Option<String>, _>(idx)
-            .or_else(|_| {
-                // Fallback: try f64 and convert to string when text cast fails.
-                row.try_get::<Option<f64>, _>(idx)
-                    .map(|v| v.map(|f| f.to_string()))
-            })
-            .map(|value| value.map(JsonValue::String).unwrap_or(JsonValue::Null))
-            .unwrap_or(JsonValue::Null));
+        use sqlx::ValueRef as _;
+        let raw = row.try_get_raw(idx).map_err(|err| {
+            core_internal_status("read_column", format!("row decode failed: {err}"))
+        })?;
+        if raw.is_null() {
+            return Ok(JsonValue::Null);
+        }
+        let format = raw.format();
+        let bytes = raw.as_bytes().map_err(|err| {
+            core_internal_status("read_column", format!("raw column read failed: {err}"))
+        })?;
+        let text = match format {
+            sqlx::postgres::PgValueFormat::Binary => pg_wire::pg_numeric_binary_to_string(bytes),
+            sqlx::postgres::PgValueFormat::Text => Ok(String::from_utf8_lossy(bytes).into_owned()),
+        }
+        .map_err(|err| {
+            core_internal_status(
+                "read_column",
+                format!("column {}: {err}", column_name_at(row, idx)),
+            )
+        })?;
+        return Ok(JsonValue::String(text));
     }
     if type_name.contains("BOOL") {
-        return Ok(row
+        return row
             .try_get::<Option<bool>, _>(idx)
             .map(|value| value.map(JsonValue::from).unwrap_or(JsonValue::Null))
-            .unwrap_or(JsonValue::Null));
+            .map_err(|err| column_decode_failed(row, idx, &type_name, err));
     }
     if type_name.contains("UUID") {
-        return Ok(row
+        return row
             .try_get::<Option<Uuid>, _>(idx)
             .map(|value| {
                 value
                     .map(|uuid| JsonValue::String(uuid.to_string()))
                     .unwrap_or(JsonValue::Null)
             })
-            .unwrap_or(JsonValue::Null));
+            .map_err(|err| column_decode_failed(row, idx, &type_name, err));
     }
     if type_name.contains("JSON") {
-        return Ok(row
+        return row
             .try_get::<Option<sqlx::types::Json<JsonValue>>, _>(idx)
             .map(|value| value.map(|json| json.0).unwrap_or(JsonValue::Null))
-            .unwrap_or(JsonValue::Null));
+            .map_err(|err| column_decode_failed(row, idx, &type_name, err));
     }
     // GAP 10: BYTEA — encode as base64 string so the binary data survives JSON.
     if type_name == "BYTEA" {
         use base64::{Engine as _, engine::general_purpose::STANDARD as B64};
-        return Ok(row
+        return row
             .try_get::<Option<Vec<u8>>, _>(idx)
             .map(|value| {
                 value
                     .map(|bytes| JsonValue::String(B64.encode(&bytes)))
                     .unwrap_or(JsonValue::Null)
             })
-            .unwrap_or(JsonValue::Null));
+            .map_err(|err| column_decode_failed(row, idx, &type_name, err));
     }
     if type_name.contains("TIMESTAMPTZ") {
-        return Ok(row
+        return row
             .try_get::<Option<DateTime<Utc>>, _>(idx)
             .map(|value| {
                 value
@@ -2945,27 +3141,27 @@ fn row_value_to_json(row: &PgRow, idx: usize, type_name: &str) -> Result<JsonVal
                     })
                     .unwrap_or(JsonValue::Null)
             })
-            .unwrap_or(JsonValue::Null));
+            .map_err(|err| column_decode_failed(row, idx, &type_name, err));
     }
     if type_name == "TIMESTAMP" {
-        return Ok(row
+        return row
             .try_get::<Option<NaiveDateTime>, _>(idx)
             .map(|value| {
                 value
                     .map(|dt| JsonValue::String(dt.to_string()))
                     .unwrap_or(JsonValue::Null)
             })
-            .unwrap_or(JsonValue::Null));
+            .map_err(|err| column_decode_failed(row, idx, &type_name, err));
     }
     if type_name == "DATE" {
-        return Ok(row
+        return row
             .try_get::<Option<NaiveDate>, _>(idx)
             .map(|value| {
                 value
                     .map(|dt| JsonValue::String(dt.to_string()))
                     .unwrap_or(JsonValue::Null)
             })
-            .unwrap_or(JsonValue::Null));
+            .map_err(|err| column_decode_failed(row, idx, &type_name, err));
     }
     // INET / CIDR / MACADDR: sqlx's String decoder is TEXT-family-only and REJECTS
     // these OIDs, and the generic hex-of-binary fallback below would return the raw
@@ -2999,6 +3195,17 @@ fn row_value_to_json(row: &PgRow, idx: usize, type_name: &str) -> Result<JsonVal
             }
         };
         return Ok(text.map(JsonValue::String).unwrap_or(JsonValue::Null));
+    }
+    // CHAR(n): the same padding rule as the array branch above.
+    if matches!(type_name.as_str(), "CHAR" | "BPCHAR" | "CHARACTER") {
+        return row
+            .try_get::<Option<String>, _>(idx)
+            .map(|value| {
+                value
+                    .map(|text| JsonValue::String(text.trim_end_matches(' ').to_string()))
+                    .unwrap_or(JsonValue::Null)
+            })
+            .map_err(|err| column_decode_failed(row, idx, &type_name, err));
     }
     // TSVECTOR and other text-representable types: handled by the String catch-all.
     // An unknown/user-defined OID (e.g. PostGIS `geography`/`geometry`) makes sqlx's

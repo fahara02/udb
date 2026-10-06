@@ -66,6 +66,54 @@ fn tx_object_invalid_field(
     )
 }
 
+/// Applies [`crate::runtime::core::scope_autofill`] to every upsert record and
+/// update/delete filter of a transaction, writing the scoped JSON back into the
+/// mutation so every later reader (CAS check, plan, CDC) sees the same shape.
+fn autofill_tx_mutation_scope(
+    manifest: &CatalogManifest,
+    mut mutations: Vec<Mutation>,
+    context: &RequestContext,
+) -> Result<Vec<Mutation>, tonic::Status> {
+    use crate::runtime::core::scope_autofill::{FilterUse, autofill_filter, autofill_record};
+    for mutation in &mut mutations {
+        let operation = mutation.operation.to_ascii_lowercase();
+        let Ok(table) = resolve_table_for_message(manifest, &mutation.message_type) else {
+            continue;
+        };
+        match operation.as_str() {
+            "upsert" => {
+                let Ok(mut record) = mutation_record_json(mutation) else {
+                    continue;
+                };
+                autofill_record(table, &mut record, context)?;
+                if mutation.payload.is_some() {
+                    mutation.payload = json_to_struct(&record);
+                } else {
+                    mutation.record_json = serde_json::to_vec(&record).map_err(|err| {
+                        tx_object_internal_status(
+                            "autofill_scope",
+                            format!("record encode failed: {err}"),
+                        )
+                    })?;
+                }
+            }
+            "update" | "delete" => {
+                let mut filter = mutation
+                    .filter
+                    .as_ref()
+                    .map(struct_to_json)
+                    .unwrap_or(JsonValue::Null);
+                autofill_filter(table, &mut filter, context, FilterUse::Write)?;
+                if !filter.is_null() {
+                    mutation.filter = json_to_struct(&filter);
+                }
+            }
+            _ => {}
+        }
+    }
+    Ok(mutations)
+}
+
 fn tx_object_internal_status(
     operation: impl Into<String>,
     message: impl Into<String>,
@@ -358,6 +406,13 @@ impl DataBrokerRuntime {
                 "transaction stream requires at least one mutation",
             ))];
         }
+        // The verified tenant/project fill into every relational mutation that
+        // leaves them out, exactly as on the unary verbs, before the CAS checks
+        // and the apply loop read the records and filters.
+        let mutations = match autofill_tx_mutation_scope(manifest, mutations, &metadata_context) {
+            Ok(mutations) => mutations,
+            Err(status) => return vec![Err(status)],
+        };
         let tx_id = mutations
             .iter()
             .find(|mutation| !mutation.tx_id.is_empty())
@@ -969,9 +1024,15 @@ impl DataBrokerRuntime {
                             self.saga_set_status(sid, "compensated").await;
                         }
                     }
-                    statuses.push(Err(tx_object_internal_status(
-                        "mutation_failure_compensation",
+                    // Keep the failing mutation's own code and typed detail (a
+                    // unique violation stays ALREADY_EXISTS with its constraint,
+                    // a CAS miss stays FAILED_PRECONDITION with its reason) and
+                    // only extend the message with the compensation outcome.
+                    // Re-wrapping it as INTERNAL hid every one of those.
+                    statuses.push(Err(tonic::Status::with_metadata(
+                        err.code(),
                         format!("{}; {}", err.message(), compensation_message),
+                        err.metadata().clone(),
                     )));
                     for skipped in tx_mutations.iter().skip(mutation_index + 1) {
                         statuses.push(Ok(TxStatus {

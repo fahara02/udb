@@ -67,6 +67,58 @@ class ErrorKind
      * Generated from protobuf enum <code>ERROR_KIND_VALIDATION = 7;</code>
      */
     const ERROR_KIND_VALIDATION = 7;
+    /**
+     * A compare-and-swap / revision precondition did not hold: the row changed
+     * since the caller read it. Re-read and retry. Maps to FailedPrecondition.
+     *
+     * Generated from protobuf enum <code>ERROR_KIND_CONFLICT = 8;</code>
+     */
+    const ERROR_KIND_CONFLICT = 8;
+    /**
+     * The addressed row or resource does not exist (or is not visible to the
+     * caller). Maps to NotFound.
+     *
+     * Generated from protobuf enum <code>ERROR_KIND_NOT_FOUND = 9;</code>
+     */
+    const ERROR_KIND_NOT_FOUND = 9;
+    /**
+     * A unique constraint was violated; `constraint` names it. Maps to
+     * AlreadyExists.
+     *
+     * Generated from protobuf enum <code>ERROR_KIND_UNIQUE = 10;</code>
+     */
+    const ERROR_KIND_UNIQUE = 10;
+    /**
+     * A NOT NULL column received no value; `column` names it.
+     *
+     * Generated from protobuf enum <code>ERROR_KIND_NOT_NULL = 11;</code>
+     */
+    const ERROR_KIND_NOT_NULL = 11;
+    /**
+     * A foreign-key constraint was violated; `constraint` names it.
+     *
+     * Generated from protobuf enum <code>ERROR_KIND_FOREIGN_KEY = 12;</code>
+     */
+    const ERROR_KIND_FOREIGN_KEY = 12;
+    /**
+     * The caller lacks a scope, grant or policy rule; `missing` names it.
+     *
+     * Generated from protobuf enum <code>ERROR_KIND_PERMISSION = 13;</code>
+     */
+    const ERROR_KIND_PERMISSION = 13;
+    /**
+     * A value was redacted for this caller (PII without the read scope), or a
+     * write tried to store a redacted placeholder.
+     *
+     * Generated from protobuf enum <code>ERROR_KIND_REDACTED = 14;</code>
+     */
+    const ERROR_KIND_REDACTED = 14;
+    /**
+     * A rate limit was hit; `retry_after_ms` and `missing` describe the bucket.
+     *
+     * Generated from protobuf enum <code>ERROR_KIND_RATE_LIMITED = 15;</code>
+     */
+    const ERROR_KIND_RATE_LIMITED = 15;
 
     private static $valueToName = [
         self::ERROR_KIND_UNSPECIFIED => 'ERROR_KIND_UNSPECIFIED',
@@ -77,6 +129,14 @@ class ErrorKind
         self::ERROR_KIND_RETRYABLE => 'ERROR_KIND_RETRYABLE',
         self::ERROR_KIND_INTERNAL => 'ERROR_KIND_INTERNAL',
         self::ERROR_KIND_VALIDATION => 'ERROR_KIND_VALIDATION',
+        self::ERROR_KIND_CONFLICT => 'ERROR_KIND_CONFLICT',
+        self::ERROR_KIND_NOT_FOUND => 'ERROR_KIND_NOT_FOUND',
+        self::ERROR_KIND_UNIQUE => 'ERROR_KIND_UNIQUE',
+        self::ERROR_KIND_NOT_NULL => 'ERROR_KIND_NOT_NULL',
+        self::ERROR_KIND_FOREIGN_KEY => 'ERROR_KIND_FOREIGN_KEY',
+        self::ERROR_KIND_PERMISSION => 'ERROR_KIND_PERMISSION',
+        self::ERROR_KIND_REDACTED => 'ERROR_KIND_REDACTED',
+        self::ERROR_KIND_RATE_LIMITED => 'ERROR_KIND_RATE_LIMITED',
     ];
 
     public static function name($value)

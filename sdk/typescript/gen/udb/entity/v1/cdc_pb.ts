@@ -12,7 +12,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file udb/entity/v1/cdc.proto.
  */
 export const file_udb_entity_v1_cdc: GenFile = /*@__PURE__*/
-  fileDesc("Chd1ZGIvZW50aXR5L3YxL2NkYy5wcm90bxINdWRiLmVudGl0eS52MSJ3ChZDRENTdWJzY3JpcHRpb25SZXF1ZXN0Ei4KB2NvbnRleHQYASABKAsyHS51ZGIuZW50aXR5LnYxLlJlcXVlc3RDb250ZXh0EhUKDXRvcGljX3BhdHRlcm4YAiABKAkSFgoOc2luY2VfZXZlbnRfaWQYAyABKAkiZgoRQ2RjQ29udHJvbFJlcXVlc3QSLgoHY29udGV4dBgBIAEoCzIdLnVkYi5lbnRpdHkudjEuUmVxdWVzdENvbnRleHQSEQoJc2xvdF9uYW1lGAIgASgJEg4KBnJlYXNvbhgDIAEoCSK6AQoRQ2RjU3RhdHVzUmVzcG9uc2USEQoJc2xvdF9uYW1lGAEgASgJEhEKCWlzX2xlYWRlchgCIAEoCBIOCgZwYXVzZWQYAyABKAgSFAoMcGF1c2VfcmVhc29uGAQgASgJEhUKDWxhc3RfZXZlbnRfaWQYBSABKAkSEwoLbGFnX3NlY29uZHMYBiABKAESFAoMb3V0Ym94X2RlcHRoGAcgASgDEhcKD3VwZGF0ZWRfYXRfdW5peBgIIAEoA0KuAQoRY29tLnVkYi5lbnRpdHkudjFCCENkY1Byb3RvUAFaOWdpdGh1Yi5jb20vZmFoYXJhMDIvdWRiL3Nkay9nby9nZW4vdWRiL2VudGl0eS92MTtlbnRpdHl2MaICA1VFWKoCDVVkYi5FbnRpdHkuVjHKAg1VZGJcRW50aXR5XFYx4gIZVWRiXEdQQk1ldGFkYXRhXEVudGl0eVxWMeoCD1VkYjo6RW50aXR5OjpWMWIGcHJvdG8z", [file_udb_entity_v1_context]);
+  fileDesc("Chd1ZGIvZW50aXR5L3YxL2NkYy5wcm90bxINdWRiLmVudGl0eS52MSKOAQoWQ0RDU3Vic2NyaXB0aW9uUmVxdWVzdBIuCgdjb250ZXh0GAEgASgLMh0udWRiLmVudGl0eS52MS5SZXF1ZXN0Q29udGV4dBIVCg10b3BpY19wYXR0ZXJuGAIgASgJEhYKDnNpbmNlX2V2ZW50X2lkGAMgASgJEhUKDWNvbnN1bWVyX25hbWUYBCABKAkihQEKE0Fja0NkY0V2ZW50c1JlcXVlc3QSLgoHY29udGV4dBgBIAEoCzIdLnVkYi5lbnRpdHkudjEuUmVxdWVzdENvbnRleHQSFQoNY29uc3VtZXJfbmFtZRgCIAEoCRIVCg10b3BpY19wYXR0ZXJuGAMgASgJEhAKCGV2ZW50X2lkGAQgASgJIm0KFEFja0NkY0V2ZW50c1Jlc3BvbnNlEhUKDWNvbnN1bWVyX25hbWUYASABKAkSFQoNdG9waWNfcGF0dGVybhgCIAEoCRIQCghldmVudF9pZBgDIAEoCRIVCg1hY2tlZF9hdF91bml4GAQgASgDImYKEUNkY0NvbnRyb2xSZXF1ZXN0Ei4KB2NvbnRleHQYASABKAsyHS51ZGIuZW50aXR5LnYxLlJlcXVlc3RDb250ZXh0EhEKCXNsb3RfbmFtZRgCIAEoCRIOCgZyZWFzb24YAyABKAkiugEKEUNkY1N0YXR1c1Jlc3BvbnNlEhEKCXNsb3RfbmFtZRgBIAEoCRIRCglpc19sZWFkZXIYAiABKAgSDgoGcGF1c2VkGAMgASgIEhQKDHBhdXNlX3JlYXNvbhgEIAEoCRIVCg1sYXN0X2V2ZW50X2lkGAUgASgJEhMKC2xhZ19zZWNvbmRzGAYgASgBEhQKDG91dGJveF9kZXB0aBgHIAEoAxIXCg91cGRhdGVkX2F0X3VuaXgYCCABKANCrgEKEWNvbS51ZGIuZW50aXR5LnYxQghDZGNQcm90b1ABWjlnaXRodWIuY29tL2ZhaGFyYTAyL3VkYi9zZGsvZ28vZ2VuL3VkYi9lbnRpdHkvdjE7ZW50aXR5djGiAgNVRViqAg1VZGIuRW50aXR5LlYxygINVWRiXEVudGl0eVxWMeICGVVkYlxHUEJNZXRhZGF0YVxFbnRpdHlcVjHqAg9VZGI6OkVudGl0eTo6VjFiBnByb3RvMw", [file_udb_entity_v1_context]);
 
 /**
  * @generated from message udb.entity.v1.CDCSubscriptionRequest
@@ -32,6 +32,17 @@ export type CDCSubscriptionRequest = Message<"udb.entity.v1.CDCSubscriptionReque
    * @generated from field: string since_event_id = 3;
    */
   sinceEventId: string;
+
+  /**
+   * A durable consumer's name (1-120 chars of [A-Za-z0-9_.:-]). When set and
+   * since_event_id is empty, the stream resumes after the last event this
+   * consumer acknowledged with AckCdcEvents for this topic_pattern, so a
+   * restarted (or reconnected) consumer neither skips nor re-reads its place.
+   * Cursors are scoped to the caller's verified tenant and project.
+   *
+   * @generated from field: string consumer_name = 4;
+   */
+  consumerName: string;
 };
 
 /**
@@ -40,6 +51,79 @@ export type CDCSubscriptionRequest = Message<"udb.entity.v1.CDCSubscriptionReque
  */
 export const CDCSubscriptionRequestSchema: GenMessage<CDCSubscriptionRequest> = /*@__PURE__*/
   messageDesc(file_udb_entity_v1_cdc, 0);
+
+/**
+ * AckCdcEvents records how far a durable consumer has processed a stream.
+ *
+ * @generated from message udb.entity.v1.AckCdcEventsRequest
+ */
+export type AckCdcEventsRequest = Message<"udb.entity.v1.AckCdcEventsRequest"> & {
+  /**
+   * @generated from field: udb.entity.v1.RequestContext context = 1;
+   */
+  context?: RequestContext | undefined;
+
+  /**
+   * The consumer named in CDCSubscriptionRequest.consumer_name.
+   *
+   * @generated from field: string consumer_name = 2;
+   */
+  consumerName: string;
+
+  /**
+   * The topic_pattern the consumer subscribed with.
+   *
+   * @generated from field: string topic_pattern = 3;
+   */
+  topicPattern: string;
+
+  /**
+   * The last event the consumer has fully handled. The next subscription
+   * under this consumer name resumes after it.
+   *
+   * @generated from field: string event_id = 4;
+   */
+  eventId: string;
+};
+
+/**
+ * Describes the message udb.entity.v1.AckCdcEventsRequest.
+ * Use `create(AckCdcEventsRequestSchema)` to create a new message.
+ */
+export const AckCdcEventsRequestSchema: GenMessage<AckCdcEventsRequest> = /*@__PURE__*/
+  messageDesc(file_udb_entity_v1_cdc, 1);
+
+/**
+ * @generated from message udb.entity.v1.AckCdcEventsResponse
+ */
+export type AckCdcEventsResponse = Message<"udb.entity.v1.AckCdcEventsResponse"> & {
+  /**
+   * @generated from field: string consumer_name = 1;
+   */
+  consumerName: string;
+
+  /**
+   * @generated from field: string topic_pattern = 2;
+   */
+  topicPattern: string;
+
+  /**
+   * @generated from field: string event_id = 3;
+   */
+  eventId: string;
+
+  /**
+   * @generated from field: int64 acked_at_unix = 4;
+   */
+  ackedAtUnix: bigint;
+};
+
+/**
+ * Describes the message udb.entity.v1.AckCdcEventsResponse.
+ * Use `create(AckCdcEventsResponseSchema)` to create a new message.
+ */
+export const AckCdcEventsResponseSchema: GenMessage<AckCdcEventsResponse> = /*@__PURE__*/
+  messageDesc(file_udb_entity_v1_cdc, 2);
 
 /**
  * @generated from message udb.entity.v1.CdcControlRequest
@@ -66,7 +150,7 @@ export type CdcControlRequest = Message<"udb.entity.v1.CdcControlRequest"> & {
  * Use `create(CdcControlRequestSchema)` to create a new message.
  */
 export const CdcControlRequestSchema: GenMessage<CdcControlRequest> = /*@__PURE__*/
-  messageDesc(file_udb_entity_v1_cdc, 1);
+  messageDesc(file_udb_entity_v1_cdc, 3);
 
 /**
  * @generated from message udb.entity.v1.CdcStatusResponse
@@ -118,4 +202,4 @@ export type CdcStatusResponse = Message<"udb.entity.v1.CdcStatusResponse"> & {
  * Use `create(CdcStatusResponseSchema)` to create a new message.
  */
 export const CdcStatusResponseSchema: GenMessage<CdcStatusResponse> = /*@__PURE__*/
-  messageDesc(file_udb_entity_v1_cdc, 2);
+  messageDesc(file_udb_entity_v1_cdc, 4);

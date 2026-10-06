@@ -12,7 +12,7 @@ resolver = "2"
 
 [package]
 name = "udb"
-version = "0.5.28"
+version = "0.5.29"
 edition = "2024"
 rust-version = "1.88"
 description = "Universal Data Broker — a Rust gRPC broker over multiple databases (Postgres, MySQL, SQLite, MongoDB, ClickHouse, Cassandra, MSSQL, Redis, Qdrant, S3, Neo4j, …) with per-tenant RLS, 2PC, sagas, and CDC."
@@ -29,6 +29,7 @@ authors = ["fahara02 <idea3d.faruk@gmail.com>"]
 # crate, embedded proto contract, third-party proto imports, and files referenced
 # at compile time.
 include = [
+    "/CHANGELOG.md",
     "/Cargo.lock",
     "/Cargo.toml",
     "/LICENSE",

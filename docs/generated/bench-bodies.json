@@ -1844,7 +1844,7 @@
     "operation_id": "analyticalQuery",
     "op_kind": "READ_ONLY",
     "request_msg": "AnalyticalQueryRequest",
-    "body": "`{ \"context\": { \"tenant_id\": \"<seed:tenant_id>\", \"project_id\": \"<seed:project>\", \"purpose\": \"sdk.live.perf\" }, \"resource\": { \"backend\": \"clickhouse\" }, \"query\": \"SELECT 1\", \"limit\": 100 }`",
+    "body": "`{ \"context\": { \"tenant_id\": \"<seed:tenant_id>\", \"project_id\": \"<seed:project>\", \"purpose\": \"sdk.live.perf\" }, \"resource\": { \"backend\": \"clickhouse\", \"resource_name\": \"<seed:ts_table>\" }, \"query\": \"SELECT 1\", \"limit\": 100 }`",
     "notes": "`parameters`(Struct),`dry_run`,`page_token` optional."
   },
   {
@@ -1928,7 +1928,7 @@
     "operation_id": "cacheDelete",
     "op_kind": "MUTATION",
     "request_msg": "CacheDeleteRequest",
-    "body": "`{ \"context\": { \"tenant_id\": \"<seed:tenant_id>\", \"project_id\": \"<seed:project>\", \"purpose\": \"sdk.live.perf\" }, \"resource\": { \"backend\": \"redis\" }, \"key\": \"<seed:object_key>\" }`",
+    "body": "`{ \"context\": { \"tenant_id\": \"<seed:tenant_id>\", \"project_id\": \"<seed:project>\", \"purpose\": \"sdk.live.perf\" }, \"resource\": { \"backend\": \"redis\", \"resource_name\": \"sdk_perf_cache\" }, \"key\": \"<seed:object_key>\" }`",
     "notes": "`idempotency_key` optional."
   },
   {
@@ -1940,7 +1940,7 @@
     "operation_id": "cacheGet",
     "op_kind": "READ_ONLY",
     "request_msg": "CacheGetRequest",
-    "body": "`{ \"context\": { \"tenant_id\": \"<seed:tenant_id>\", \"project_id\": \"<seed:project>\", \"purpose\": \"sdk.live.perf\" }, \"resource\": { \"backend\": \"redis\" }, \"key\": \"<seed:object_key>\", \"touch\": false }`",
+    "body": "`{ \"context\": { \"tenant_id\": \"<seed:tenant_id>\", \"project_id\": \"<seed:project>\", \"purpose\": \"sdk.live.perf\" }, \"resource\": { \"backend\": \"redis\", \"resource_name\": \"sdk_perf_cache\" }, \"key\": \"<seed:object_key>\", \"touch\": false }`",
     "notes": "key must have been CacheSet first for found=true."
   },
   {
@@ -1952,7 +1952,7 @@
     "operation_id": "cacheScan",
     "op_kind": "READ_ONLY",
     "request_msg": "CacheScanRequest",
-    "body": "`{ \"context\": { \"tenant_id\": \"<seed:tenant_id>\", \"project_id\": \"<seed:project>\", \"purpose\": \"sdk.live.perf\" }, \"resource\": { \"backend\": \"redis\" }, \"key_pattern\": \"*\", \"limit\": 50 }`",
+    "body": "`{ \"context\": { \"tenant_id\": \"<seed:tenant_id>\", \"project_id\": \"<seed:project>\", \"purpose\": \"sdk.live.perf\" }, \"resource\": { \"backend\": \"redis\", \"resource_name\": \"sdk_perf_cache\" }, \"key_pattern\": \"*\", \"limit\": 50 }`",
     "notes": "`page_token` optional."
   },
   {
@@ -1964,7 +1964,7 @@
     "operation_id": "cacheSet",
     "op_kind": "MUTATION",
     "request_msg": "CacheSetRequest",
-    "body": "`{ \"context\": { \"tenant_id\": \"<seed:tenant_id>\", \"project_id\": \"<seed:project>\", \"purpose\": \"sdk.live.perf\" }, \"resource\": { \"backend\": \"redis\" }, \"key\": \"<seed:object_key>\", \"value\": \"cGVyZg==\", \"content_type\": \"text/plain\", \"ttl_seconds\": 60 }`",
+    "body": "`{ \"context\": { \"tenant_id\": \"<seed:tenant_id>\", \"project_id\": \"<seed:project>\", \"purpose\": \"sdk.live.perf\" }, \"resource\": { \"backend\": \"redis\", \"resource_name\": \"sdk_perf_cache\" }, \"key\": \"<seed:object_key>\", \"value\": \"cGVyZg==\", \"content_type\": \"text/plain\", \"ttl_seconds\": 60 }`",
     "notes": "`only_if_absent`/`only_if_present`/`idempotency_key`/`metadata` optional."
   },
   {
@@ -2300,7 +2300,7 @@
     "operation_id": "graphMutate",
     "op_kind": "MUTATION",
     "request_msg": "GraphMutationRequest",
-    "body": "`{ \"context\": { \"tenant_id\": \"<seed:tenant_id>\", \"project_id\": \"<seed:project>\", \"purpose\": \"sdk.live.perf\" }, \"resource\": { \"backend\": \"neo4j\" }, \"query\": \"CREATE (n:Node {id:$id})\", \"parameters\": { \"id\": \"<seed:record_id>\" } }`",
+    "body": "`{ \"context\": { \"tenant_id\": \"<seed:tenant_id>\", \"project_id\": \"<seed:project>\", \"purpose\": \"sdk.live.perf\" }, \"resource\": { \"backend\": \"neo4j\", \"resource_name\": \"sdk_perf_graph\" }, \"query\": \"CREATE (n:Node {id:$id})\", \"parameters\": { \"id\": \"<seed:record_id>\" } }`",
     "notes": "`idempotency_key` optional. Cypher property keys are identifiers, not JSON strings."
   },
   {
@@ -2312,7 +2312,7 @@
     "operation_id": "graphQuery",
     "op_kind": "READ_ONLY",
     "request_msg": "GraphQueryRequest",
-    "body": "`{ \"context\": { \"tenant_id\": \"<seed:tenant_id>\", \"project_id\": \"<seed:project>\", \"purpose\": \"sdk.live.perf\" }, \"resource\": { \"backend\": \"neo4j\" }, \"query\": \"MATCH (n) RETURN n LIMIT 1\", \"read_only\": true, \"limit\": 10 }`",
+    "body": "`{ \"context\": { \"tenant_id\": \"<seed:tenant_id>\", \"project_id\": \"<seed:project>\", \"purpose\": \"sdk.live.perf\" }, \"resource\": { \"backend\": \"neo4j\", \"resource_name\": \"sdk_perf_graph\" }, \"query\": \"MATCH (n) RETURN n LIMIT 1\", \"read_only\": true, \"limit\": 10 }`",
     "notes": "`parameters`(Struct),`page_token` optional. query syntax = backend (Cypher)."
   },
   {

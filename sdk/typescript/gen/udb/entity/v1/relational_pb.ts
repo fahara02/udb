@@ -14,7 +14,7 @@ import type { JsonObject, Message } from "@bufbuild/protobuf";
  * Describes the file udb/entity/v1/relational.proto.
  */
 export const file_udb_entity_v1_relational: GenFile = /*@__PURE__*/
-  fileDesc("Ch51ZGIvZW50aXR5L3YxL3JlbGF0aW9uYWwucHJvdG8SDXVkYi5lbnRpdHkudjEiKQoEU29ydBINCgVmaWVsZBgBIAEoCRISCgpkZXNjZW5kaW5nGAIgASgIIk4KDENhY2hlT3B0aW9ucxITCgtieXBhc3NfcmVhZBgBIAEoCBIUCgxieXBhc3Nfd3JpdGUYAiABKAgSEwoLdHRsX3NlY29uZHMYAyABKAUifAoDUm93Ei4KBmZpZWxkcxgBIAMoCzIeLnVkYi5lbnRpdHkudjEuUm93LkZpZWxkc0VudHJ5GkUKC0ZpZWxkc0VudHJ5EgsKA2tleRgBIAEoCRIlCgV2YWx1ZRgCIAEoCzIWLmdvb2dsZS5wcm90b2J1Zi5WYWx1ZToCOAEiiwEKCVJlY29yZFNldBIUCgxyZWNvcmRzX2pzb24YASADKAwSIAoEcm93cxgCIAMoCzISLnVkYi5lbnRpdHkudjEuUm93EhcKD25leHRfcGFnZV90b2tlbhgDIAEoCRITCgt0b3RhbF9jb3VudBgEIAEoBRIYChByZWNvcmRfcmV2aXNpb25zGAUgAygJIpoCCg1TZWxlY3RSZXF1ZXN0Ei4KB2NvbnRleHQYASABKAsyHS51ZGIuZW50aXR5LnYxLlJlcXVlc3RDb250ZXh0EhQKDG1lc3NhZ2VfdHlwZRgCIAEoCRInCgZmaWx0ZXIYAyABKAsyFy5nb29nbGUucHJvdG9idWYuU3RydWN0Eg4KBmZpZWxkcxgEIAMoCRINCgVsaW1pdBgFIAEoBRISCgpwYWdlX3Rva2VuGAYgASgJEiEKBHNvcnQYByADKAsyEy51ZGIuZW50aXR5LnYxLlNvcnQSKgoFY2FjaGUYCCABKAsyGy51ZGIuZW50aXR5LnYxLkNhY2hlT3B0aW9ucxIYChBpbmNsdWRlX3JldmlzaW9uGAkgASgIIt4CCg1VcHNlcnRSZXF1ZXN0Ei4KB2NvbnRleHQYASABKAsyHS51ZGIuZW50aXR5LnYxLlJlcXVlc3RDb250ZXh0EhQKDG1lc3NhZ2VfdHlwZRgCIAEoCRITCgtyZWNvcmRfanNvbhgDIAEoDBIoCgdwYXlsb2FkGAQgASgLMhcuZ29vZ2xlLnByb3RvYnVmLlN0cnVjdBIXCg9jb25mbGljdF9maWVsZHMYBSADKAkSFQoNcmV0dXJuX3JlY29yZBgGIAEoCBIqCgVjYWNoZRgHIAEoCzIbLnVkYi5lbnRpdHkudjEuQ2FjaGVPcHRpb25zEhcKD2lkZW1wb3RlbmN5X2tleRgIIAEoCRIpCghleHBlY3RlZBgJIAEoCzIXLmdvb2dsZS5wcm90b2J1Zi5TdHJ1Y3QSEQoJbG9ja19uYW1lGAogASgJEhUKDWZlbmNpbmdfdG9rZW4YCyABKAMihwIKDURlbGV0ZVJlcXVlc3QSLgoHY29udGV4dBgBIAEoCzIdLnVkYi5lbnRpdHkudjEuUmVxdWVzdENvbnRleHQSFAoMbWVzc2FnZV90eXBlGAIgASgJEicKBmZpbHRlchgDIAEoCzIXLmdvb2dsZS5wcm90b2J1Zi5TdHJ1Y3QSFwoPaWRlbXBvdGVuY3lfa2V5GAQgASgJEikKCGV4cGVjdGVkGAUgASgLMhcuZ29vZ2xlLnByb3RvYnVmLlN0cnVjdBIZChFleHBlY3RlZF9yZXZpc2lvbhgGIAEoCRIRCglsb2NrX25hbWUYByABKAkSFQoNZmVuY2luZ190b2tlbhgIIAEoAyKwAwoNVXBkYXRlUmVxdWVzdBIuCgdjb250ZXh0GAEgASgLMh0udWRiLmVudGl0eS52MS5SZXF1ZXN0Q29udGV4dBIUCgxtZXNzYWdlX3R5cGUYAiABKAkSJwoGZmlsdGVyGAMgASgLMhcuZ29vZ2xlLnByb3RvYnVmLlN0cnVjdBIoCgdjaGFuZ2VzGAQgASgLMhcuZ29vZ2xlLnByb3RvYnVmLlN0cnVjdBIpCghleHBlY3RlZBgFIAEoCzIXLmdvb2dsZS5wcm90b2J1Zi5TdHJ1Y3QSOgoKaW5jcmVtZW50cxgGIAMoCzImLnVkYi5lbnRpdHkudjEuVXBkYXRlUmVxdWVzdC5JbmNyZW1lbnQSFwoPaWRlbXBvdGVuY3lfa2V5GAcgASgJEhUKDXJldHVybl9yZWNvcmQYCCABKAgSGQoRZXhwZWN0ZWRfcmV2aXNpb24YCSABKAkSEQoJbG9ja19uYW1lGAogASgJEhUKDWZlbmNpbmdfdG9rZW4YCyABKAMaKgoJSW5jcmVtZW50Eg4KBmNvbHVtbhgBIAEoCRINCgVkZWx0YRgCIAEoASKSAQoOVmlld0RlZmluaXRpb24SLgoHY29udGV4dBgBIAEoCzIdLnVkYi5lbnRpdHkudjEuUmVxdWVzdENvbnRleHQSDgoGc2NoZW1hGAIgASgJEgwKBG5hbWUYAyABKAkSDQoFcXVlcnkYBCABKAkSEQoJd2l0aF9kYXRhGAUgASgIEhAKCHR0bF9kYXlzGAYgASgFIuIBCgtCdWxrQ2FzSXRlbRInCgZmaWx0ZXIYASABKAsyFy5nb29nbGUucHJvdG9idWYuU3RydWN0EigKB2NoYW5nZXMYAiABKAsyFy5nb29nbGUucHJvdG9idWYuU3RydWN0EhkKEWV4cGVjdGVkX3JldmlzaW9uGAMgASgJEikKCGV4cGVjdGVkGAQgASgLMhcuZ29vZ2xlLnByb3RvYnVmLlN0cnVjdBI6CgppbmNyZW1lbnRzGAUgAygLMiYudWRiLmVudGl0eS52MS5VcGRhdGVSZXF1ZXN0LkluY3JlbWVudCKsAQoOQnVsa0Nhc1JlcXVlc3QSLgoHY29udGV4dBgBIAEoCzIdLnVkYi5lbnRpdHkudjEuUmVxdWVzdENvbnRleHQSFAoMbWVzc2FnZV90eXBlGAIgASgJEikKBWl0ZW1zGAMgAygLMhoudWRiLmVudGl0eS52MS5CdWxrQ2FzSXRlbRIXCg9pZGVtcG90ZW5jeV9rZXkYBCABKAkSEAoIbWF4X3Jvd3MYBSABKAUiWwoRQnVsa0Nhc0l0ZW1SZXN1bHQSDwoHbWF0Y2hlZBgBIAEoCBIPCgdjaGFuZ2VkGAIgASgIEhIKCmNvbmZsaWN0ZWQYAyABKAgSEAoIcmV2aXNpb24YBCABKAkilgEKD0J1bGtDYXNSZXNwb25zZRIPCgdtYXRjaGVkGAEgASgFEg8KB2NoYW5nZWQYAiABKAUSEgoKY29uZmxpY3RlZBgDIAEoBRIaChJ3cml0ZV9yZWNlaXB0X2pzb24YBCABKAkSMQoHcmVzdWx0cxgFIAMoCzIgLnVkYi5lbnRpdHkudjEuQnVsa0Nhc0l0ZW1SZXN1bHRCtQEKEWNvbS51ZGIuZW50aXR5LnYxQg9SZWxhdGlvbmFsUHJvdG9QAVo5Z2l0aHViLmNvbS9mYWhhcmEwMi91ZGIvc2RrL2dvL2dlbi91ZGIvZW50aXR5L3YxO2VudGl0eXYxogIDVUVYqgINVWRiLkVudGl0eS5WMcoCDVVkYlxFbnRpdHlcVjHiAhlVZGJcR1BCTWV0YWRhdGFcRW50aXR5XFYx6gIPVWRiOjpFbnRpdHk6OlYxYgZwcm90bzM", [file_google_protobuf_struct, file_udb_entity_v1_context]);
+  fileDesc("Ch51ZGIvZW50aXR5L3YxL3JlbGF0aW9uYWwucHJvdG8SDXVkYi5lbnRpdHkudjEiKQoEU29ydBINCgVmaWVsZBgBIAEoCRISCgpkZXNjZW5kaW5nGAIgASgIIk4KDENhY2hlT3B0aW9ucxITCgtieXBhc3NfcmVhZBgBIAEoCBIUCgxieXBhc3Nfd3JpdGUYAiABKAgSEwoLdHRsX3NlY29uZHMYAyABKAUifAoDUm93Ei4KBmZpZWxkcxgBIAMoCzIeLnVkYi5lbnRpdHkudjEuUm93LkZpZWxkc0VudHJ5GkUKC0ZpZWxkc0VudHJ5EgsKA2tleRgBIAEoCRIlCgV2YWx1ZRgCIAEoCzIWLmdvb2dsZS5wcm90b2J1Zi5WYWx1ZToCOAEiywEKCVJlY29yZFNldBIUCgxyZWNvcmRzX2pzb24YASADKAwSIAoEcm93cxgCIAMoCzISLnVkYi5lbnRpdHkudjEuUm93EhcKD25leHRfcGFnZV90b2tlbhgDIAEoCRITCgt0b3RhbF9jb3VudBgEIAEoBRIYChByZWNvcmRfcmV2aXNpb25zGAUgAygJEhAKCGhhc19tb3JlGAYgASgIEhMKC2V4YWN0X3RvdGFsGAcgASgDEhcKD3JlZGFjdGVkX2ZpZWxkcxgIIAMoCSKxAgoNU2VsZWN0UmVxdWVzdBIuCgdjb250ZXh0GAEgASgLMh0udWRiLmVudGl0eS52MS5SZXF1ZXN0Q29udGV4dBIUCgxtZXNzYWdlX3R5cGUYAiABKAkSJwoGZmlsdGVyGAMgASgLMhcuZ29vZ2xlLnByb3RvYnVmLlN0cnVjdBIOCgZmaWVsZHMYBCADKAkSDQoFbGltaXQYBSABKAUSEgoKcGFnZV90b2tlbhgGIAEoCRIhCgRzb3J0GAcgAygLMhMudWRiLmVudGl0eS52MS5Tb3J0EioKBWNhY2hlGAggASgLMhsudWRiLmVudGl0eS52MS5DYWNoZU9wdGlvbnMSGAoQaW5jbHVkZV9yZXZpc2lvbhgJIAEoCBIVCg1pbmNsdWRlX3RvdGFsGAogASgIIt4CCg1VcHNlcnRSZXF1ZXN0Ei4KB2NvbnRleHQYASABKAsyHS51ZGIuZW50aXR5LnYxLlJlcXVlc3RDb250ZXh0EhQKDG1lc3NhZ2VfdHlwZRgCIAEoCRITCgtyZWNvcmRfanNvbhgDIAEoDBIoCgdwYXlsb2FkGAQgASgLMhcuZ29vZ2xlLnByb3RvYnVmLlN0cnVjdBIXCg9jb25mbGljdF9maWVsZHMYBSADKAkSFQoNcmV0dXJuX3JlY29yZBgGIAEoCBIqCgVjYWNoZRgHIAEoCzIbLnVkYi5lbnRpdHkudjEuQ2FjaGVPcHRpb25zEhcKD2lkZW1wb3RlbmN5X2tleRgIIAEoCRIpCghleHBlY3RlZBgJIAEoCzIXLmdvb2dsZS5wcm90b2J1Zi5TdHJ1Y3QSEQoJbG9ja19uYW1lGAogASgJEhUKDWZlbmNpbmdfdG9rZW4YCyABKAMioQIKDURlbGV0ZVJlcXVlc3QSLgoHY29udGV4dBgBIAEoCzIdLnVkYi5lbnRpdHkudjEuUmVxdWVzdENvbnRleHQSFAoMbWVzc2FnZV90eXBlGAIgASgJEicKBmZpbHRlchgDIAEoCzIXLmdvb2dsZS5wcm90b2J1Zi5TdHJ1Y3QSFwoPaWRlbXBvdGVuY3lfa2V5GAQgASgJEikKCGV4cGVjdGVkGAUgASgLMhcuZ29vZ2xlLnByb3RvYnVmLlN0cnVjdBIZChFleHBlY3RlZF9yZXZpc2lvbhgGIAEoCRIRCglsb2NrX25hbWUYByABKAkSFQoNZmVuY2luZ190b2tlbhgIIAEoAxIYChByZXF1aXJlX2FmZmVjdGVkGAkgASgNIsoDCg1VcGRhdGVSZXF1ZXN0Ei4KB2NvbnRleHQYASABKAsyHS51ZGIuZW50aXR5LnYxLlJlcXVlc3RDb250ZXh0EhQKDG1lc3NhZ2VfdHlwZRgCIAEoCRInCgZmaWx0ZXIYAyABKAsyFy5nb29nbGUucHJvdG9idWYuU3RydWN0EigKB2NoYW5nZXMYBCABKAsyFy5nb29nbGUucHJvdG9idWYuU3RydWN0EikKCGV4cGVjdGVkGAUgASgLMhcuZ29vZ2xlLnByb3RvYnVmLlN0cnVjdBI6CgppbmNyZW1lbnRzGAYgAygLMiYudWRiLmVudGl0eS52MS5VcGRhdGVSZXF1ZXN0LkluY3JlbWVudBIXCg9pZGVtcG90ZW5jeV9rZXkYByABKAkSFQoNcmV0dXJuX3JlY29yZBgIIAEoCBIZChFleHBlY3RlZF9yZXZpc2lvbhgJIAEoCRIRCglsb2NrX25hbWUYCiABKAkSFQoNZmVuY2luZ190b2tlbhgLIAEoAxIYChByZXF1aXJlX2FmZmVjdGVkGAwgASgNGioKCUluY3JlbWVudBIOCgZjb2x1bW4YASABKAkSDQoFZGVsdGEYAiABKAEikgEKDlZpZXdEZWZpbml0aW9uEi4KB2NvbnRleHQYASABKAsyHS51ZGIuZW50aXR5LnYxLlJlcXVlc3RDb250ZXh0Eg4KBnNjaGVtYRgCIAEoCRIMCgRuYW1lGAMgASgJEg0KBXF1ZXJ5GAQgASgJEhEKCXdpdGhfZGF0YRgFIAEoCBIQCgh0dGxfZGF5cxgGIAEoBSLiAQoLQnVsa0Nhc0l0ZW0SJwoGZmlsdGVyGAEgASgLMhcuZ29vZ2xlLnByb3RvYnVmLlN0cnVjdBIoCgdjaGFuZ2VzGAIgASgLMhcuZ29vZ2xlLnByb3RvYnVmLlN0cnVjdBIZChFleHBlY3RlZF9yZXZpc2lvbhgDIAEoCRIpCghleHBlY3RlZBgEIAEoCzIXLmdvb2dsZS5wcm90b2J1Zi5TdHJ1Y3QSOgoKaW5jcmVtZW50cxgFIAMoCzImLnVkYi5lbnRpdHkudjEuVXBkYXRlUmVxdWVzdC5JbmNyZW1lbnQirAEKDkJ1bGtDYXNSZXF1ZXN0Ei4KB2NvbnRleHQYASABKAsyHS51ZGIuZW50aXR5LnYxLlJlcXVlc3RDb250ZXh0EhQKDG1lc3NhZ2VfdHlwZRgCIAEoCRIpCgVpdGVtcxgDIAMoCzIaLnVkYi5lbnRpdHkudjEuQnVsa0Nhc0l0ZW0SFwoPaWRlbXBvdGVuY3lfa2V5GAQgASgJEhAKCG1heF9yb3dzGAUgASgFIlsKEUJ1bGtDYXNJdGVtUmVzdWx0Eg8KB21hdGNoZWQYASABKAgSDwoHY2hhbmdlZBgCIAEoCBISCgpjb25mbGljdGVkGAMgASgIEhAKCHJldmlzaW9uGAQgASgJIpYBCg9CdWxrQ2FzUmVzcG9uc2USDwoHbWF0Y2hlZBgBIAEoBRIPCgdjaGFuZ2VkGAIgASgFEhIKCmNvbmZsaWN0ZWQYAyABKAUSGgoSd3JpdGVfcmVjZWlwdF9qc29uGAQgASgJEjEKB3Jlc3VsdHMYBSADKAsyIC51ZGIuZW50aXR5LnYxLkJ1bGtDYXNJdGVtUmVzdWx0QrUBChFjb20udWRiLmVudGl0eS52MUIPUmVsYXRpb25hbFByb3RvUAFaOWdpdGh1Yi5jb20vZmFoYXJhMDIvdWRiL3Nkay9nby9nZW4vdWRiL2VudGl0eS92MTtlbnRpdHl2MaICA1VFWKoCDVVkYi5FbnRpdHkuVjHKAg1VZGJcRW50aXR5XFYx4gIZVWRiXEdQQk1ldGFkYXRhXEVudGl0eVxWMeoCD1VkYjo6RW50aXR5OjpWMWIGcHJvdG8z", [file_google_protobuf_struct, file_udb_entity_v1_context]);
 
 /**
  * @generated from message udb.entity.v1.Sort
@@ -135,6 +135,9 @@ export type RecordSet = Message<"udb.entity.v1.RecordSet"> & {
   nextPageToken: string;
 
   /**
+   * The number of records in THIS page (the length of `records_json`), not the
+   * number of matching rows. Use `exact_total` for that.
+   *
    * @generated from field: int32 total_count = 4;
    */
   totalCount: number;
@@ -153,6 +156,35 @@ export type RecordSet = Message<"udb.entity.v1.RecordSet"> & {
    * @generated from field: repeated string record_revisions = 5;
    */
   recordRevisions: string[];
+
+  /**
+   * True when the page is full (as many records as the request's limit, or the
+   * default limit of 100 when none was given): more rows may match. A read that
+   * was capped never looks like the complete result; page on with
+   * `next_page_token` (set a positive `limit` to get one) or narrow the filter.
+   *
+   * @generated from field: bool has_more = 6;
+   */
+  hasMore: boolean;
+
+  /**
+   * Every row the filter matches, ignoring the limit and the page position.
+   * Set only when `SelectRequest.include_total` asked for it (it costs one
+   * COUNT query); 0 otherwise.
+   *
+   * @generated from field: int64 exact_total = 7;
+   */
+  exactTotal: bigint;
+
+  /**
+   * Columns that came back as the redaction placeholder because the caller
+   * lacks the PII read scope (`udb:pii:read`). A value listed here is not the
+   * stored value: never write it back (the broker refuses that write with
+   * reason `UDB_REDACTED_VALUE_WRITE`). Empty when nothing was redacted.
+   *
+   * @generated from field: repeated string redacted_fields = 8;
+   */
+  redactedFields: string[];
 };
 
 /**
@@ -214,6 +246,14 @@ export type SelectRequest = Message<"udb.entity.v1.SelectRequest"> & {
    * @generated from field: bool include_revision = 9;
    */
   includeRevision: boolean;
+
+  /**
+   * Also count every matching row into `RecordSet.exact_total` (one extra
+   * COUNT over the same filter and scope; the read cache is skipped).
+   *
+   * @generated from field: bool include_total = 10;
+   */
+  includeTotal: boolean;
 };
 
 /**
@@ -381,6 +421,18 @@ export type DeleteRequest = Message<"udb.entity.v1.DeleteRequest"> & {
    * @generated from field: int64 fencing_token = 8;
    */
   fencingToken: bigint;
+
+  /**
+   * Optional exact row count. When non-zero the write must change exactly this
+   * many rows, checked inside the write transaction; any other count changes
+   * nothing and fails NOT_FOUND with reason `UDB_NO_ROWS_AFFECTED`. Set 1 for a
+   * single-row write that must not silently match nothing (an already-deleted
+   * row, a key that drifted). 0 keeps today's behaviour: the count is reported
+   * in MutationResponse.affected_rows and never checked.
+   *
+   * @generated from field: uint32 require_affected = 9;
+   */
+  requireAffected: number;
 };
 
 /**
@@ -480,6 +532,18 @@ export type UpdateRequest = Message<"udb.entity.v1.UpdateRequest"> & {
    * @generated from field: int64 fencing_token = 11;
    */
   fencingToken: bigint;
+
+  /**
+   * Optional exact row count. When non-zero the write must change exactly this
+   * many rows, checked inside the write transaction; any other count changes
+   * nothing and fails NOT_FOUND with reason `UDB_NO_ROWS_AFFECTED`. Set 1 for a
+   * single-row write that must not silently match nothing (an already-deleted
+   * row, a key that drifted). 0 keeps today's behaviour: the count is reported
+   * in MutationResponse.affected_rows and never checked.
+   *
+   * @generated from field: uint32 require_affected = 12;
+   */
+  requireAffected: number;
 };
 
 /**

@@ -14,6 +14,31 @@ message CDCSubscriptionRequest {
   RequestContext context = 1;
   string topic_pattern = 2;
   string since_event_id = 3;
+  // A durable consumer's name (1-120 chars of [A-Za-z0-9_.:-]). When set and
+  // since_event_id is empty, the stream resumes after the last event this
+  // consumer acknowledged with AckCdcEvents for this topic_pattern, so a
+  // restarted (or reconnected) consumer neither skips nor re-reads its place.
+  // Cursors are scoped to the caller's verified tenant and project.
+  string consumer_name = 4;
+}
+
+// AckCdcEvents records how far a durable consumer has processed a stream.
+message AckCdcEventsRequest {
+  RequestContext context = 1;
+  // The consumer named in CDCSubscriptionRequest.consumer_name.
+  string consumer_name = 2;
+  // The topic_pattern the consumer subscribed with.
+  string topic_pattern = 3;
+  // The last event the consumer has fully handled. The next subscription
+  // under this consumer name resumes after it.
+  string event_id = 4;
+}
+
+message AckCdcEventsResponse {
+  string consumer_name = 1;
+  string topic_pattern = 2;
+  string event_id = 3;
+  int64 acked_at_unix = 4;
 }
 
 // CDC control plane.

@@ -9,6 +9,7 @@ pub mod core;
 pub mod descriptor_diff; // F6: native-service contract version + descriptor-diff classifier
 pub mod descriptor_manifest;
 mod encryption;
+pub(crate) mod error_reasons;
 pub mod evidence_export; // 4.4: leader-elected compliance-evidence export worker (chain-hashed JSONL → object store)
 pub(crate) mod executor_utils;
 pub mod executors;
@@ -65,6 +66,7 @@ pub mod xa_recovery; // C6: in-doubt 2PC recovery worker (PG + MySQL participant
 
 pub use channels::{ChannelManager, OperationChannel};
 pub use connection_manager::{ClientSnapshot, ClientState, ConnectionManager, PoolingMode};
+pub use core::delivery_health::{DeliveryCheck, DeliveryThresholds};
 pub use core::{
     ConfigReloadMode, ConfigReloadOptions, ConfigReloadReport, DataBrokerRuntime, RuntimeInitReport,
 };

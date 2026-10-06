@@ -471,7 +471,26 @@ message GenericStoreOptions {
   string dsn_env_key = 7;
   string dsn = 8;
   string payload_schema_json = 9;
+  // Free-form backend options. Prefer the typed fields below for every key
+  // they cover: a misspelled typed field fails the proto build, while a
+  // misspelled map key is ignored at runtime (`udb check` warns about it).
   map<string, string> options = 10;
+  // Qdrant/vector projections: comma list of fields or columns copied into
+  // each point's payload (plus the row identity and scope stamps). Empty: the
+  // whole row. Same as options["payload_fields"].
+  string payload_fields = 11;
+  // Hybrid search: comma list of columns searched with Postgres full-text
+  // search as the text leg of VectorHybridSearch. Same as options["fts_columns"].
+  string fts_columns = 12;
+  // Text search configuration for fts_columns (default "simple").
+  string fts_config = 13;
+  // Graph edge projections: the source/target fields of the edge row and the
+  // node labels they point at. Same as options["edge_source_field"] etc.; the
+  // older "from_label"/"to_label" keys are deprecated aliases.
+  string edge_source_field = 14;
+  string edge_target_field = 15;
+  string edge_source_label = 16;
+  string edge_target_label = 17;
 }
 
 enum ModelBackendType {

@@ -32,6 +32,11 @@ public final class LivequeryServiceProto {
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_udb_core_livequery_services_v1_LiveQueryPredicate_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_udb_core_livequery_services_v1_LiveQueryAnyOf_descriptor;
+  static final
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_udb_core_livequery_services_v1_LiveQueryAnyOf_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
     internal_static_udb_core_livequery_services_v1_SubscribeRequest_descriptor;
   static final
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
@@ -64,66 +69,76 @@ public final class LivequeryServiceProto {
       "ry_service.proto\022\036udb.core.livequery.ser" +
       "vices.v1\032\034google/api/annotations.proto\032\034" +
       "udb/core/common/v1/dto.proto\032!udb/core/c" +
-      "ommon/v1/security.proto\"\205\001\n\022LiveQueryPre" +
+      "ommon/v1/security.proto\"\235\001\n\022LiveQueryPre" +
       "dicate\022\024\n\005field\030\001 \001(\tR\005field\022C\n\002op\030\002 \001(\016" +
       "23.udb.core.livequery.services.v1.LiveQu" +
-      "eryComparisonR\002op\022\024\n\005value\030\003 \001(\tR\005value\"" +
-      "\210\002\n\020SubscribeRequest\022\033\n\ttenant_id\030\001 \001(\tR" +
-      "\010tenantId\022!\n\014message_type\030\002 \001(\tR\013message" +
-      "Type\022L\n\007filters\030\003 \003(\01322.udb.core.liveque" +
-      "ry.services.v1.LiveQueryPredicateR\007filte" +
-      "rs\022\035\n\nproject_id\030\004 \001(\tR\tprojectId\022%\n\016sna" +
-      "pshot_limit\030\005 \001(\005R\rsnapshotLimit: \232\262\031\034\010\001" +
-      "\032\003udb(\260\352\0010\003@\001J\tlivequeryP\001\"\220\002\n\021Subscribe" +
-      "Response\022O\n\010snapshot\030\001 \001(\01321.udb.core.li" +
-      "vequery.services.v1.LiveQuerySnapshotH\000R" +
-      "\010snapshot\022I\n\006change\030\002 \001(\0132/.udb.core.liv" +
-      "equery.services.v1.LiveQueryChangeH\000R\006ch" +
-      "ange\0222\n\005error\030\003 \001(\0132\034.udb.core.common.v1" +
-      ".ApiErrorR\005error: \232\262\031\034\010\001\032\003udb(\260\352\0010\003@\001J\tl" +
-      "ivequeryP\001B\t\n\007payload\"M\n\021LiveQuerySnapsh" +
-      "ot\022\033\n\trows_json\030\001 \003(\tR\010rowsJson\022\033\n\trow_c" +
-      "ount\030\002 \001(\003R\010rowCount\"\212\001\n\017LiveQueryChange" +
-      "\022A\n\002op\030\001 \001(\01621.udb.core.livequery.servic" +
-      "es.v1.LiveQueryChangeOpR\002op\022\031\n\010row_json\030" +
-      "\002 \001(\tR\007rowJson\022\031\n\010event_id\030\003 \001(\tR\007eventI" +
-      "d*\360\001\n\023LiveQueryComparison\022%\n!LIVE_QUERY_" +
-      "COMPARISON_UNSPECIFIED\020\000\022\034\n\030LIVE_QUERY_C" +
-      "OMPARISON_EQ\020\001\022\034\n\030LIVE_QUERY_COMPARISON_" +
-      "NE\020\002\022\034\n\030LIVE_QUERY_COMPARISON_LT\020\003\022\034\n\030LI" +
-      "VE_QUERY_COMPARISON_LE\020\004\022\034\n\030LIVE_QUERY_C" +
-      "OMPARISON_GT\020\005\022\034\n\030LIVE_QUERY_COMPARISON_" +
-      "GE\020\006*\234\001\n\021LiveQueryChangeOp\022$\n LIVE_QUERY" +
-      "_CHANGE_OP_UNSPECIFIED\020\000\022\037\n\033LIVE_QUERY_C" +
-      "HANGE_OP_INSERT\020\001\022\037\n\033LIVE_QUERY_CHANGE_O" +
-      "P_UPDATE\020\002\022\037\n\033LIVE_QUERY_CHANGE_OP_DELET" +
-      "E\020\0032\372\005\n\020LiveQueryService\022\351\002\n\tSubscribe\0220" +
-      ".udb.core.livequery.services.v1.Subscrib" +
-      "eRequest\0321.udb.core.livequery.services.v" +
-      "1.SubscribeResponse\"\364\001\312\363\030:\010\002\032\027udb:livequ" +
-      "ery:subscribe \001J\003\001\002\004j\023livequery.Subscrib" +
-      "e\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030;\010\001\022\tsubscribe\032\003udb(\260\352\001" +
-      "0\003@\001J\tlivequeryP\001Z\022liveQuerySubscribe\362\363\030" +
-      "C\n\tlivequery\032\010postgres2\033UDB_NATIVE_SERVI" +
-      "CES_ENABLED2\017UDB_GRPC_TARGET\370\363\030\001\202\323\344\223\002\034\"\027" +
-      "/v1/livequery:subscribe:\001*0\001\032\371\002\312\360\031t\n\tliv" +
-      "equery\022\tlivequery\032\tlivequery\"\nLive Query" +
-      "*\tlivequery0\0018\001h\001z\tlivequery\202\001\tlivequery" +
-      "\212\001\tlivequery\222\001\020native.livequery\322\360\031\034\010\001\032\003u" +
-      "db(\260\352\0010\003@\001J\tlivequeryP\001\332\360\031\225\001\n\tlivequery\022" +
-      "\024udb/native/livequery\032\033UDB_NATIVE_SERVIC" +
-      "ES_ENABLED\032\017UDB_GRPC_TARGET\"\033udb.native." +
-      "livequery.config:\tlivequeryJ\013UDB_API_KEY" +
-      "Z\017udb native lint\342\360\031C\n\tlivequery\032\010postgr" +
-      "es2\033UDB_NATIVE_SERVICES_ENABLED2\017UDB_GRP" +
-      "C_TARGETB\246\002\n\"com.udb.core.livequery.serv" +
-      "ices.v1B\025LivequeryServiceProtoP\001ZLgithub" +
-      ".com/fahara02/udb/sdk/go/gen/udb/core/li" +
-      "vequery/services/v1;servicesv1\242\002\004UCLS\252\002\036" +
-      "Udb.Core.LiveQuery.Services.V1\312\002\036Udb\\Cor" +
-      "e\\Livequery\\Services\\V1\342\002*Udb\\GPBMetadat" +
-      "a\\Core\\Livequery\\Services\\V1\352\002\"Udb::Core" +
-      "::Livequery::Services::V1b\006proto3"
+      "eryComparisonR\002op\022\024\n\005value\030\003 \001(\tR\005value\022" +
+      "\026\n\006values\030\004 \003(\tR\006values\"d\n\016LiveQueryAnyO" +
+      "f\022R\n\npredicates\030\001 \003(\01322.udb.core.liveque" +
+      "ry.services.v1.LiveQueryPredicateR\npredi" +
+      "cates\"\365\002\n\020SubscribeRequest\022\033\n\ttenant_id\030" +
+      "\001 \001(\tR\010tenantId\022!\n\014message_type\030\002 \001(\tR\013m" +
+      "essageType\022L\n\007filters\030\003 \003(\01322.udb.core.l" +
+      "ivequery.services.v1.LiveQueryPredicateR" +
+      "\007filters\022\035\n\nproject_id\030\004 \001(\tR\tprojectId\022" +
+      "%\n\016snapshot_limit\030\005 \001(\005R\rsnapshotLimit\022E" +
+      "\n\006any_of\030\006 \003(\0132..udb.core.livequery.serv" +
+      "ices.v1.LiveQueryAnyOfR\005anyOf\022$\n\016since_e" +
+      "vent_id\030\007 \001(\tR\014sinceEventId: \232\262\031\034\010\001\032\003udb" +
+      "(\260\352\0010\003@\001J\tlivequeryP\001\"\220\002\n\021SubscribeRespo" +
+      "nse\022O\n\010snapshot\030\001 \001(\01321.udb.core.liveque" +
+      "ry.services.v1.LiveQuerySnapshotH\000R\010snap" +
+      "shot\022I\n\006change\030\002 \001(\0132/.udb.core.livequer" +
+      "y.services.v1.LiveQueryChangeH\000R\006change\022" +
+      "2\n\005error\030\003 \001(\0132\034.udb.core.common.v1.ApiE" +
+      "rrorR\005error: \232\262\031\034\010\001\032\003udb(\260\352\0010\003@\001J\tlivequ" +
+      "eryP\001B\t\n\007payload\"M\n\021LiveQuerySnapshot\022\033\n" +
+      "\trows_json\030\001 \003(\tR\010rowsJson\022\033\n\trow_count\030" +
+      "\002 \001(\003R\010rowCount\"\212\001\n\017LiveQueryChange\022A\n\002o" +
+      "p\030\001 \001(\01621.udb.core.livequery.services.v1" +
+      ".LiveQueryChangeOpR\002op\022\031\n\010row_json\030\002 \001(\t" +
+      "R\007rowJson\022\031\n\010event_id\030\003 \001(\tR\007eventId*\372\002\n" +
+      "\023LiveQueryComparison\022%\n!LIVE_QUERY_COMPA" +
+      "RISON_UNSPECIFIED\020\000\022\034\n\030LIVE_QUERY_COMPAR" +
+      "ISON_EQ\020\001\022\034\n\030LIVE_QUERY_COMPARISON_NE\020\002\022" +
+      "\034\n\030LIVE_QUERY_COMPARISON_LT\020\003\022\034\n\030LIVE_QU" +
+      "ERY_COMPARISON_LE\020\004\022\034\n\030LIVE_QUERY_COMPAR" +
+      "ISON_GT\020\005\022\034\n\030LIVE_QUERY_COMPARISON_GE\020\006\022" +
+      "\034\n\030LIVE_QUERY_COMPARISON_IN\020\007\022 \n\034LIVE_QU" +
+      "ERY_COMPARISON_NOT_IN\020\010\022!\n\035LIVE_QUERY_CO" +
+      "MPARISON_IS_NULL\020\t\022%\n!LIVE_QUERY_COMPARI" +
+      "SON_IS_NOT_NULL\020\n*\234\001\n\021LiveQueryChangeOp\022" +
+      "$\n LIVE_QUERY_CHANGE_OP_UNSPECIFIED\020\000\022\037\n" +
+      "\033LIVE_QUERY_CHANGE_OP_INSERT\020\001\022\037\n\033LIVE_Q" +
+      "UERY_CHANGE_OP_UPDATE\020\002\022\037\n\033LIVE_QUERY_CH" +
+      "ANGE_OP_DELETE\020\0032\372\005\n\020LiveQueryService\022\351\002" +
+      "\n\tSubscribe\0220.udb.core.livequery.service" +
+      "s.v1.SubscribeRequest\0321.udb.core.liveque" +
+      "ry.services.v1.SubscribeResponse\"\364\001\312\363\030:\010" +
+      "\002\032\027udb:livequery:subscribe \001J\003\001\002\004j\023liveq" +
+      "uery.Subscribe\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030;\010\001\022\tsubsc" +
+      "ribe\032\003udb(\260\352\0010\003@\001J\tlivequeryP\001Z\022liveQuer" +
+      "ySubscribe\362\363\030C\n\tlivequery\032\010postgres2\033UDB" +
+      "_NATIVE_SERVICES_ENABLED2\017UDB_GRPC_TARGE" +
+      "T\370\363\030\001\202\323\344\223\002\034\"\027/v1/livequery:subscribe:\001*0" +
+      "\001\032\371\002\312\360\031t\n\tlivequery\022\tlivequery\032\tlivequer" +
+      "y\"\nLive Query*\tlivequery0\0018\001h\001z\tlivequer" +
+      "y\202\001\tlivequery\212\001\tlivequery\222\001\020native.liveq" +
+      "uery\322\360\031\034\010\001\032\003udb(\260\352\0010\003@\001J\tlivequeryP\001\332\360\031\225" +
+      "\001\n\tlivequery\022\024udb/native/livequery\032\033UDB_" +
+      "NATIVE_SERVICES_ENABLED\032\017UDB_GRPC_TARGET" +
+      "\"\033udb.native.livequery.config:\tlivequery" +
+      "J\013UDB_API_KEYZ\017udb native lint\342\360\031C\n\tlive" +
+      "query\032\010postgres2\033UDB_NATIVE_SERVICES_ENA" +
+      "BLED2\017UDB_GRPC_TARGETB\246\002\n\"com.udb.core.l" +
+      "ivequery.services.v1B\025LivequeryServicePr" +
+      "otoP\001ZLgithub.com/fahara02/udb/sdk/go/ge" +
+      "n/udb/core/livequery/services/v1;service" +
+      "sv1\242\002\004UCLS\252\002\036Udb.Core.LiveQuery.Services" +
+      ".V1\312\002\036Udb\\Core\\Livequery\\Services\\V1\342\002*U" +
+      "db\\GPBMetadata\\Core\\Livequery\\Services\\V" +
+      "1\352\002\"Udb::Core::Livequery::Services::V1b\006" +
+      "proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -137,27 +152,33 @@ public final class LivequeryServiceProto {
     internal_static_udb_core_livequery_services_v1_LiveQueryPredicate_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_core_livequery_services_v1_LiveQueryPredicate_descriptor,
-        new java.lang.String[] { "Field", "Op", "Value", });
-    internal_static_udb_core_livequery_services_v1_SubscribeRequest_descriptor =
+        new java.lang.String[] { "Field", "Op", "Value", "Values", });
+    internal_static_udb_core_livequery_services_v1_LiveQueryAnyOf_descriptor =
       getDescriptor().getMessageTypes().get(1);
+    internal_static_udb_core_livequery_services_v1_LiveQueryAnyOf_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_udb_core_livequery_services_v1_LiveQueryAnyOf_descriptor,
+        new java.lang.String[] { "Predicates", });
+    internal_static_udb_core_livequery_services_v1_SubscribeRequest_descriptor =
+      getDescriptor().getMessageTypes().get(2);
     internal_static_udb_core_livequery_services_v1_SubscribeRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_core_livequery_services_v1_SubscribeRequest_descriptor,
-        new java.lang.String[] { "TenantId", "MessageType", "Filters", "ProjectId", "SnapshotLimit", });
+        new java.lang.String[] { "TenantId", "MessageType", "Filters", "ProjectId", "SnapshotLimit", "AnyOf", "SinceEventId", });
     internal_static_udb_core_livequery_services_v1_SubscribeResponse_descriptor =
-      getDescriptor().getMessageTypes().get(2);
+      getDescriptor().getMessageTypes().get(3);
     internal_static_udb_core_livequery_services_v1_SubscribeResponse_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_core_livequery_services_v1_SubscribeResponse_descriptor,
         new java.lang.String[] { "Snapshot", "Change", "Error", "Payload", });
     internal_static_udb_core_livequery_services_v1_LiveQuerySnapshot_descriptor =
-      getDescriptor().getMessageTypes().get(3);
+      getDescriptor().getMessageTypes().get(4);
     internal_static_udb_core_livequery_services_v1_LiveQuerySnapshot_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_core_livequery_services_v1_LiveQuerySnapshot_descriptor,
         new java.lang.String[] { "RowsJson", "RowCount", });
     internal_static_udb_core_livequery_services_v1_LiveQueryChange_descriptor =
-      getDescriptor().getMessageTypes().get(4);
+      getDescriptor().getMessageTypes().get(5);
     internal_static_udb_core_livequery_services_v1_LiveQueryChange_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_core_livequery_services_v1_LiveQueryChange_descriptor,

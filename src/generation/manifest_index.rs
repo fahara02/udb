@@ -213,9 +213,10 @@ impl fmt::Display for TableLookupError {
                 write!(
                     formatter,
                     "unknown message_type {message_type}: this broker serves {known_entities} \
-                     entities from catalog {checksum}. If you just added this entity, the \
-                     running broker image predates it — rebuild and redeploy the broker, \
-                     then retry"
+                     entities from catalog {checksum}. If you just added this entity, stage \
+                     and activate a catalog that contains it (`udb catalog stage` then \
+                     `udb catalog activate`, or the StageCatalog/ActivateCatalog RPCs); \
+                     no broker rebuild is needed"
                 )
             }
             Self::Ambiguous {

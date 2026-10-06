@@ -96,6 +96,9 @@ pub use auth_service::{
     cli_api_key_list, cli_api_key_revoke, migrate_service_account_grants, seed_authz_policy_id,
     seed_project_authz_policies_offline, served_bootstrap_admin,
 };
+pub use auth_service::{
+    PolicyReconcileReport, normalize_declared_policies, reconcile_authz_policies_offline,
+};
 // W17: native LiveQueryService (master-plan 9.7). Server-streaming tenant-scoped
 // live queries: an initial mediated Snapshot then a fail-closed-filtered stream
 // of CDC Change deltas. The leader wires `build_livequery_service`
@@ -853,10 +856,11 @@ impl DataBrokerService {
         if decision.allowed {
             Ok(decision.decision_id)
         } else {
-            Err(service_policy_denied(
+            Err(data_plane_denial(
                 "data_plane_authorize",
-                decision.decision_id,
-                decision.deny_reason,
+                decision,
+                operation,
+                &resource,
             ))
         }
     }
@@ -879,10 +883,16 @@ impl DataBrokerService {
             return Err(Status::unauthenticated("tenant_id is required"));
         }
         if security.purpose.trim().is_empty() {
-            return Err(service_policy_denied(
-                "data_plane_authorize_item",
-                "purpose_required",
-                "purpose is required",
+            return Err(crate::runtime::error_reasons::annotate_with(
+                service_policy_denied(
+                    "data_plane_authorize_item",
+                    "purpose_required",
+                    "purpose is required",
+                ),
+                crate::runtime::error_reasons::POLICY_DENIED,
+                None,
+                None,
+                &[("purpose", "")],
             ));
         }
         let principal = Principal::from_security_context(security, Vec::new());
@@ -901,10 +911,11 @@ impl DataBrokerService {
         if decision.allowed {
             Ok(decision.decision_id)
         } else {
-            Err(service_policy_denied(
+            Err(data_plane_denial(
                 "data_plane_authorize_item",
-                decision.decision_id,
-                decision.deny_reason,
+                decision,
+                operation,
+                &resource,
             ))
         }
     }
@@ -1420,6 +1431,25 @@ fn catalog_compatibility_status(operation: &str, message: String) -> Status {
         operation,
         "catalog_version_incompatible",
         message,
+    )
+}
+
+/// A data-plane authorization denial carrying reason `UDB_POLICY_DENIED` and
+/// `missing.rule`: the action + object an allow rule must name for this call
+/// (the Casbin action is the RPC method, the object the message type).
+fn data_plane_denial(
+    operation: &str,
+    decision: crate::runtime::authz::Decision,
+    action: &str,
+    resource: &crate::runtime::authz::ResourceRef,
+) -> Status {
+    let rule = format!("{action} {}", resource.resource_name);
+    crate::runtime::error_reasons::annotate_with(
+        service_policy_denied(operation, decision.decision_id, decision.deny_reason),
+        crate::runtime::error_reasons::POLICY_DENIED,
+        None,
+        None,
+        &[("rule", rule.as_str())],
     )
 }
 
@@ -4532,6 +4562,13 @@ impl DataBroker for DataBrokerService {
         self.enqueue_outbox_event_inner(request).await
     }
 
+    async fn ack_cdc_events(
+        &self,
+        request: Request<crate::proto::AckCdcEventsRequest>,
+    ) -> Result<Response<crate::proto::AckCdcEventsResponse>, Status> {
+        self.ack_cdc_events_inner(request).await
+    }
+
     async fn get_capabilities(
         &self,
         request: Request<CapabilitiesRequest>,
@@ -5270,20 +5307,32 @@ impl RateLimitHandle {
         if count > u64::from(max_rps) {
             let retry_after_ms =
                 (window_secs.saturating_sub(unix_epoch % window_secs).max(1) as i64) * 1_000;
-            return Err(crate::runtime::executor_utils::quota_status(
-                "data_broker",
-                "distributed rate limit",
-                retry_after_ms,
-                // Name the governing knob and the bucket identity so operators can
-                // attribute the pressure and raise the ceiling without grepping
-                // the binary. The budget is per (tenant, operation) — every
-                // principal in the tenant shares it — so callers know the fix is a
-                // higher tenant budget, not a per-principal one.
-                format!(
-                    "rate limit exceeded for tenant '{}' on {}: {}/{} requests per {}s window \
+            let limit = max_rps.to_string();
+            let window = format!("{window_secs}s");
+            return Err(crate::runtime::error_reasons::annotate_with(
+                crate::runtime::executor_utils::quota_status(
+                    "data_broker",
+                    "distributed rate limit",
+                    retry_after_ms,
+                    // Name the governing knob and the bucket identity so operators can
+                    // attribute the pressure and raise the ceiling without grepping
+                    // the binary. The budget is per (tenant, operation) — every
+                    // principal in the tenant shares it — so callers know the fix is a
+                    // higher tenant budget, not a per-principal one.
+                    format!(
+                        "rate limit exceeded for tenant '{}' on {}: {}/{} requests per {}s window \
                      (raise UDB_RATE_LIMIT_MAX_PER_WINDOW to increase the per-tenant budget)",
-                    tenant_id, operation, count, max_rps, window_secs
+                        tenant_id, operation, count, max_rps, window_secs
+                    ),
                 ),
+                crate::runtime::error_reasons::RATE_LIMITED,
+                None,
+                None,
+                &[
+                    ("bucket", key.as_str()),
+                    ("limit", limit.as_str()),
+                    ("window", window.as_str()),
+                ],
             ));
         }
         Ok(())
@@ -5318,16 +5367,28 @@ impl RateLimitHandle {
         if count > u64::from(max_rps) {
             let retry_after_ms =
                 (window_secs.saturating_sub(unix_epoch % window_secs).max(1) as i64) * 1_000;
-            return Err(crate::runtime::executor_utils::quota_status(
-                "data_broker",
-                "local rate limit (degraded)",
-                retry_after_ms,
-                format!(
-                    "rate limit exceeded: {}/{} requests per {}s window \
+            let limit = max_rps.to_string();
+            let window = format!("{window_secs}s");
+            return Err(crate::runtime::error_reasons::annotate_with(
+                crate::runtime::executor_utils::quota_status(
+                    "data_broker",
+                    "local rate limit (degraded)",
+                    retry_after_ms,
+                    format!(
+                        "rate limit exceeded: {}/{} requests per {}s window \
                      (per-process fallback; raise UDB_RATE_LIMIT_MAX_PER_WINDOW \
                      to increase the budget)",
-                    count, max_rps, window_secs
+                        count, max_rps, window_secs
+                    ),
                 ),
+                crate::runtime::error_reasons::RATE_LIMITED,
+                None,
+                None,
+                &[
+                    ("bucket", key),
+                    ("limit", limit.as_str()),
+                    ("window", window.as_str()),
+                ],
             ));
         }
         Ok(())

@@ -36,18 +36,31 @@ const (
 	LiveQueryComparison_LIVE_QUERY_COMPARISON_LE          LiveQueryComparison = 4
 	LiveQueryComparison_LIVE_QUERY_COMPARISON_GT          LiveQueryComparison = 5
 	LiveQueryComparison_LIVE_QUERY_COMPARISON_GE          LiveQueryComparison = 6
+	// Membership: the field equals one of `LiveQueryPredicate.values`.
+	LiveQueryComparison_LIVE_QUERY_COMPARISON_IN LiveQueryComparison = 7
+	// Non-membership: the field is present, non-null and equals none of `values`
+	// (SQL NOT IN semantics, so the snapshot and the live deltas agree).
+	LiveQueryComparison_LIVE_QUERY_COMPARISON_NOT_IN LiveQueryComparison = 8
+	// The field is null or absent. `value`/`values` are ignored.
+	LiveQueryComparison_LIVE_QUERY_COMPARISON_IS_NULL LiveQueryComparison = 9
+	// The field is present and non-null. `value`/`values` are ignored.
+	LiveQueryComparison_LIVE_QUERY_COMPARISON_IS_NOT_NULL LiveQueryComparison = 10
 )
 
 // Enum value maps for LiveQueryComparison.
 var (
 	LiveQueryComparison_name = map[int32]string{
-		0: "LIVE_QUERY_COMPARISON_UNSPECIFIED",
-		1: "LIVE_QUERY_COMPARISON_EQ",
-		2: "LIVE_QUERY_COMPARISON_NE",
-		3: "LIVE_QUERY_COMPARISON_LT",
-		4: "LIVE_QUERY_COMPARISON_LE",
-		5: "LIVE_QUERY_COMPARISON_GT",
-		6: "LIVE_QUERY_COMPARISON_GE",
+		0:  "LIVE_QUERY_COMPARISON_UNSPECIFIED",
+		1:  "LIVE_QUERY_COMPARISON_EQ",
+		2:  "LIVE_QUERY_COMPARISON_NE",
+		3:  "LIVE_QUERY_COMPARISON_LT",
+		4:  "LIVE_QUERY_COMPARISON_LE",
+		5:  "LIVE_QUERY_COMPARISON_GT",
+		6:  "LIVE_QUERY_COMPARISON_GE",
+		7:  "LIVE_QUERY_COMPARISON_IN",
+		8:  "LIVE_QUERY_COMPARISON_NOT_IN",
+		9:  "LIVE_QUERY_COMPARISON_IS_NULL",
+		10: "LIVE_QUERY_COMPARISON_IS_NOT_NULL",
 	}
 	LiveQueryComparison_value = map[string]int32{
 		"LIVE_QUERY_COMPARISON_UNSPECIFIED": 0,
@@ -57,6 +70,10 @@ var (
 		"LIVE_QUERY_COMPARISON_LE":          4,
 		"LIVE_QUERY_COMPARISON_GT":          5,
 		"LIVE_QUERY_COMPARISON_GE":          6,
+		"LIVE_QUERY_COMPARISON_IN":          7,
+		"LIVE_QUERY_COMPARISON_NOT_IN":      8,
+		"LIVE_QUERY_COMPARISON_IS_NULL":     9,
+		"LIVE_QUERY_COMPARISON_IS_NOT_NULL": 10,
 	}
 )
 
@@ -146,9 +163,12 @@ func (LiveQueryChangeOp) EnumDescriptor() ([]byte, []int) {
 type LiveQueryPredicate struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Proto logical field name on the source entity (dotted paths allowed).
-	Field         string              `protobuf:"bytes,1,opt,name=field,proto3" json:"field,omitempty"`
-	Op            LiveQueryComparison `protobuf:"varint,2,opt,name=op,proto3,enum=udb.core.livequery.services.v1.LiveQueryComparison" json:"op,omitempty"`
-	Value         string              `protobuf:"bytes,3,opt,name=value,proto3" json:"value,omitempty"`
+	Field string              `protobuf:"bytes,1,opt,name=field,proto3" json:"field,omitempty"`
+	Op    LiveQueryComparison `protobuf:"varint,2,opt,name=op,proto3,enum=udb.core.livequery.services.v1.LiveQueryComparison" json:"op,omitempty"`
+	Value string              `protobuf:"bytes,3,opt,name=value,proto3" json:"value,omitempty"`
+	// Operands of IN / NOT_IN (each typed like `value`). Must be non-empty for
+	// those operators and empty for every other operator.
+	Values        []string `protobuf:"bytes,4,rep,name=values,proto3" json:"values,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -204,6 +224,61 @@ func (x *LiveQueryPredicate) GetValue() string {
 	return ""
 }
 
+func (x *LiveQueryPredicate) GetValues() []string {
+	if x != nil {
+		return x.Values
+	}
+	return nil
+}
+
+// A disjunction: the row matches when ANY of its predicates matches. Each group
+// in `SubscribeRequest.any_of` is AND-ed with `filters` and with the other
+// groups, so a filter is written in conjunctive normal form, e.g.
+// `status IN (open, held) AND (owner = me OR assignee = me)`.
+type LiveQueryAnyOf struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Predicates    []*LiveQueryPredicate  `protobuf:"bytes,1,rep,name=predicates,proto3" json:"predicates,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *LiveQueryAnyOf) Reset() {
+	*x = LiveQueryAnyOf{}
+	mi := &file_udb_core_livequery_services_v1_livequery_service_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *LiveQueryAnyOf) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*LiveQueryAnyOf) ProtoMessage() {}
+
+func (x *LiveQueryAnyOf) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_livequery_services_v1_livequery_service_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use LiveQueryAnyOf.ProtoReflect.Descriptor instead.
+func (*LiveQueryAnyOf) Descriptor() ([]byte, []int) {
+	return file_udb_core_livequery_services_v1_livequery_service_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *LiveQueryAnyOf) GetPredicates() []*LiveQueryPredicate {
+	if x != nil {
+		return x.Predicates
+	}
+	return nil
+}
+
 type SubscribeRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Verified against the bearer/claim tenant; cross-tenant values are rejected.
@@ -218,13 +293,21 @@ type SubscribeRequest struct {
 	ProjectId string `protobuf:"bytes,4,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
 	// Upper bound on rows returned in the initial snapshot (clamped server-side).
 	SnapshotLimit int32 `protobuf:"varint,5,opt,name=snapshot_limit,json=snapshotLimit,proto3" json:"snapshot_limit,omitempty"`
+	// OR-groups AND-ed with `filters` (see LiveQueryAnyOf). An empty group is
+	// rejected rather than read as "matches nothing".
+	AnyOf []*LiveQueryAnyOf `protobuf:"bytes,6,rep,name=any_of,json=anyOf,proto3" json:"any_of,omitempty"`
+	// Durable resume: the last `LiveQueryChange.event_id` this client delivered.
+	// The broker replays the changes after it from the CDC journal before going
+	// live. Supersedes the `x-udb-livequery-resume` header (still honoured); when
+	// both are set they must name the same event.
+	SinceEventId  string `protobuf:"bytes,7,opt,name=since_event_id,json=sinceEventId,proto3" json:"since_event_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *SubscribeRequest) Reset() {
 	*x = SubscribeRequest{}
-	mi := &file_udb_core_livequery_services_v1_livequery_service_proto_msgTypes[1]
+	mi := &file_udb_core_livequery_services_v1_livequery_service_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -236,7 +319,7 @@ func (x *SubscribeRequest) String() string {
 func (*SubscribeRequest) ProtoMessage() {}
 
 func (x *SubscribeRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_livequery_services_v1_livequery_service_proto_msgTypes[1]
+	mi := &file_udb_core_livequery_services_v1_livequery_service_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -249,7 +332,7 @@ func (x *SubscribeRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SubscribeRequest.ProtoReflect.Descriptor instead.
 func (*SubscribeRequest) Descriptor() ([]byte, []int) {
-	return file_udb_core_livequery_services_v1_livequery_service_proto_rawDescGZIP(), []int{1}
+	return file_udb_core_livequery_services_v1_livequery_service_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *SubscribeRequest) GetTenantId() string {
@@ -287,6 +370,20 @@ func (x *SubscribeRequest) GetSnapshotLimit() int32 {
 	return 0
 }
 
+func (x *SubscribeRequest) GetAnyOf() []*LiveQueryAnyOf {
+	if x != nil {
+		return x.AnyOf
+	}
+	return nil
+}
+
+func (x *SubscribeRequest) GetSinceEventId() string {
+	if x != nil {
+		return x.SinceEventId
+	}
+	return ""
+}
+
 // One streamed frame: either the initial snapshot or a single change delta.
 type SubscribeResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -303,7 +400,7 @@ type SubscribeResponse struct {
 
 func (x *SubscribeResponse) Reset() {
 	*x = SubscribeResponse{}
-	mi := &file_udb_core_livequery_services_v1_livequery_service_proto_msgTypes[2]
+	mi := &file_udb_core_livequery_services_v1_livequery_service_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -315,7 +412,7 @@ func (x *SubscribeResponse) String() string {
 func (*SubscribeResponse) ProtoMessage() {}
 
 func (x *SubscribeResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_livequery_services_v1_livequery_service_proto_msgTypes[2]
+	mi := &file_udb_core_livequery_services_v1_livequery_service_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -328,7 +425,7 @@ func (x *SubscribeResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SubscribeResponse.ProtoReflect.Descriptor instead.
 func (*SubscribeResponse) Descriptor() ([]byte, []int) {
-	return file_udb_core_livequery_services_v1_livequery_service_proto_rawDescGZIP(), []int{2}
+	return file_udb_core_livequery_services_v1_livequery_service_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *SubscribeResponse) GetPayload() isSubscribeResponse_Payload {
@@ -390,7 +487,7 @@ type LiveQuerySnapshot struct {
 
 func (x *LiveQuerySnapshot) Reset() {
 	*x = LiveQuerySnapshot{}
-	mi := &file_udb_core_livequery_services_v1_livequery_service_proto_msgTypes[3]
+	mi := &file_udb_core_livequery_services_v1_livequery_service_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -402,7 +499,7 @@ func (x *LiveQuerySnapshot) String() string {
 func (*LiveQuerySnapshot) ProtoMessage() {}
 
 func (x *LiveQuerySnapshot) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_livequery_services_v1_livequery_service_proto_msgTypes[3]
+	mi := &file_udb_core_livequery_services_v1_livequery_service_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -415,7 +512,7 @@ func (x *LiveQuerySnapshot) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use LiveQuerySnapshot.ProtoReflect.Descriptor instead.
 func (*LiveQuerySnapshot) Descriptor() ([]byte, []int) {
-	return file_udb_core_livequery_services_v1_livequery_service_proto_rawDescGZIP(), []int{3}
+	return file_udb_core_livequery_services_v1_livequery_service_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *LiveQuerySnapshot) GetRowsJson() []string {
@@ -445,7 +542,7 @@ type LiveQueryChange struct {
 
 func (x *LiveQueryChange) Reset() {
 	*x = LiveQueryChange{}
-	mi := &file_udb_core_livequery_services_v1_livequery_service_proto_msgTypes[4]
+	mi := &file_udb_core_livequery_services_v1_livequery_service_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -457,7 +554,7 @@ func (x *LiveQueryChange) String() string {
 func (*LiveQueryChange) ProtoMessage() {}
 
 func (x *LiveQueryChange) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_livequery_services_v1_livequery_service_proto_msgTypes[4]
+	mi := &file_udb_core_livequery_services_v1_livequery_service_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -470,7 +567,7 @@ func (x *LiveQueryChange) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use LiveQueryChange.ProtoReflect.Descriptor instead.
 func (*LiveQueryChange) Descriptor() ([]byte, []int) {
-	return file_udb_core_livequery_services_v1_livequery_service_proto_rawDescGZIP(), []int{4}
+	return file_udb_core_livequery_services_v1_livequery_service_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *LiveQueryChange) GetOp() LiveQueryChangeOp {
@@ -498,18 +595,25 @@ var File_udb_core_livequery_services_v1_livequery_service_proto protoreflect.Fil
 
 const file_udb_core_livequery_services_v1_livequery_service_proto_rawDesc = "" +
 	"\n" +
-	"6udb/core/livequery/services/v1/livequery_service.proto\x12\x1eudb.core.livequery.services.v1\x1a\x1cgoogle/api/annotations.proto\x1a\x1cudb/core/common/v1/dto.proto\x1a!udb/core/common/v1/security.proto\"\x85\x01\n" +
+	"6udb/core/livequery/services/v1/livequery_service.proto\x12\x1eudb.core.livequery.services.v1\x1a\x1cgoogle/api/annotations.proto\x1a\x1cudb/core/common/v1/dto.proto\x1a!udb/core/common/v1/security.proto\"\x9d\x01\n" +
 	"\x12LiveQueryPredicate\x12\x14\n" +
 	"\x05field\x18\x01 \x01(\tR\x05field\x12C\n" +
 	"\x02op\x18\x02 \x01(\x0e23.udb.core.livequery.services.v1.LiveQueryComparisonR\x02op\x12\x14\n" +
-	"\x05value\x18\x03 \x01(\tR\x05value\"\x88\x02\n" +
+	"\x05value\x18\x03 \x01(\tR\x05value\x12\x16\n" +
+	"\x06values\x18\x04 \x03(\tR\x06values\"d\n" +
+	"\x0eLiveQueryAnyOf\x12R\n" +
+	"\n" +
+	"predicates\x18\x01 \x03(\v22.udb.core.livequery.services.v1.LiveQueryPredicateR\n" +
+	"predicates\"\xf5\x02\n" +
 	"\x10SubscribeRequest\x12\x1b\n" +
 	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x12!\n" +
 	"\fmessage_type\x18\x02 \x01(\tR\vmessageType\x12L\n" +
 	"\afilters\x18\x03 \x03(\v22.udb.core.livequery.services.v1.LiveQueryPredicateR\afilters\x12\x1d\n" +
 	"\n" +
 	"project_id\x18\x04 \x01(\tR\tprojectId\x12%\n" +
-	"\x0esnapshot_limit\x18\x05 \x01(\x05R\rsnapshotLimit: \x9a\xb2\x19\x1c\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\tlivequeryP\x01\"\x90\x02\n" +
+	"\x0esnapshot_limit\x18\x05 \x01(\x05R\rsnapshotLimit\x12E\n" +
+	"\x06any_of\x18\x06 \x03(\v2..udb.core.livequery.services.v1.LiveQueryAnyOfR\x05anyOf\x12$\n" +
+	"\x0esince_event_id\x18\a \x01(\tR\fsinceEventId: \x9a\xb2\x19\x1c\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\tlivequeryP\x01\"\x90\x02\n" +
 	"\x11SubscribeResponse\x12O\n" +
 	"\bsnapshot\x18\x01 \x01(\v21.udb.core.livequery.services.v1.LiveQuerySnapshotH\x00R\bsnapshot\x12I\n" +
 	"\x06change\x18\x02 \x01(\v2/.udb.core.livequery.services.v1.LiveQueryChangeH\x00R\x06change\x122\n" +
@@ -521,7 +625,7 @@ const file_udb_core_livequery_services_v1_livequery_service_proto_rawDesc = "" +
 	"\x0fLiveQueryChange\x12A\n" +
 	"\x02op\x18\x01 \x01(\x0e21.udb.core.livequery.services.v1.LiveQueryChangeOpR\x02op\x12\x19\n" +
 	"\brow_json\x18\x02 \x01(\tR\arowJson\x12\x19\n" +
-	"\bevent_id\x18\x03 \x01(\tR\aeventId*\xf0\x01\n" +
+	"\bevent_id\x18\x03 \x01(\tR\aeventId*\xfa\x02\n" +
 	"\x13LiveQueryComparison\x12%\n" +
 	"!LIVE_QUERY_COMPARISON_UNSPECIFIED\x10\x00\x12\x1c\n" +
 	"\x18LIVE_QUERY_COMPARISON_EQ\x10\x01\x12\x1c\n" +
@@ -529,7 +633,12 @@ const file_udb_core_livequery_services_v1_livequery_service_proto_rawDesc = "" +
 	"\x18LIVE_QUERY_COMPARISON_LT\x10\x03\x12\x1c\n" +
 	"\x18LIVE_QUERY_COMPARISON_LE\x10\x04\x12\x1c\n" +
 	"\x18LIVE_QUERY_COMPARISON_GT\x10\x05\x12\x1c\n" +
-	"\x18LIVE_QUERY_COMPARISON_GE\x10\x06*\x9c\x01\n" +
+	"\x18LIVE_QUERY_COMPARISON_GE\x10\x06\x12\x1c\n" +
+	"\x18LIVE_QUERY_COMPARISON_IN\x10\a\x12 \n" +
+	"\x1cLIVE_QUERY_COMPARISON_NOT_IN\x10\b\x12!\n" +
+	"\x1dLIVE_QUERY_COMPARISON_IS_NULL\x10\t\x12%\n" +
+	"!LIVE_QUERY_COMPARISON_IS_NOT_NULL\x10\n" +
+	"*\x9c\x01\n" +
 	"\x11LiveQueryChangeOp\x12$\n" +
 	" LIVE_QUERY_CHANGE_OP_UNSPECIFIED\x10\x00\x12\x1f\n" +
 	"\x1bLIVE_QUERY_CHANGE_OP_INSERT\x10\x01\x12\x1f\n" +
@@ -557,31 +666,34 @@ func file_udb_core_livequery_services_v1_livequery_service_proto_rawDescGZIP() [
 }
 
 var file_udb_core_livequery_services_v1_livequery_service_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_udb_core_livequery_services_v1_livequery_service_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
+var file_udb_core_livequery_services_v1_livequery_service_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
 var file_udb_core_livequery_services_v1_livequery_service_proto_goTypes = []any{
 	(LiveQueryComparison)(0),   // 0: udb.core.livequery.services.v1.LiveQueryComparison
 	(LiveQueryChangeOp)(0),     // 1: udb.core.livequery.services.v1.LiveQueryChangeOp
 	(*LiveQueryPredicate)(nil), // 2: udb.core.livequery.services.v1.LiveQueryPredicate
-	(*SubscribeRequest)(nil),   // 3: udb.core.livequery.services.v1.SubscribeRequest
-	(*SubscribeResponse)(nil),  // 4: udb.core.livequery.services.v1.SubscribeResponse
-	(*LiveQuerySnapshot)(nil),  // 5: udb.core.livequery.services.v1.LiveQuerySnapshot
-	(*LiveQueryChange)(nil),    // 6: udb.core.livequery.services.v1.LiveQueryChange
-	(*v1.ApiError)(nil),        // 7: udb.core.common.v1.ApiError
+	(*LiveQueryAnyOf)(nil),     // 3: udb.core.livequery.services.v1.LiveQueryAnyOf
+	(*SubscribeRequest)(nil),   // 4: udb.core.livequery.services.v1.SubscribeRequest
+	(*SubscribeResponse)(nil),  // 5: udb.core.livequery.services.v1.SubscribeResponse
+	(*LiveQuerySnapshot)(nil),  // 6: udb.core.livequery.services.v1.LiveQuerySnapshot
+	(*LiveQueryChange)(nil),    // 7: udb.core.livequery.services.v1.LiveQueryChange
+	(*v1.ApiError)(nil),        // 8: udb.core.common.v1.ApiError
 }
 var file_udb_core_livequery_services_v1_livequery_service_proto_depIdxs = []int32{
 	0, // 0: udb.core.livequery.services.v1.LiveQueryPredicate.op:type_name -> udb.core.livequery.services.v1.LiveQueryComparison
-	2, // 1: udb.core.livequery.services.v1.SubscribeRequest.filters:type_name -> udb.core.livequery.services.v1.LiveQueryPredicate
-	5, // 2: udb.core.livequery.services.v1.SubscribeResponse.snapshot:type_name -> udb.core.livequery.services.v1.LiveQuerySnapshot
-	6, // 3: udb.core.livequery.services.v1.SubscribeResponse.change:type_name -> udb.core.livequery.services.v1.LiveQueryChange
-	7, // 4: udb.core.livequery.services.v1.SubscribeResponse.error:type_name -> udb.core.common.v1.ApiError
-	1, // 5: udb.core.livequery.services.v1.LiveQueryChange.op:type_name -> udb.core.livequery.services.v1.LiveQueryChangeOp
-	3, // 6: udb.core.livequery.services.v1.LiveQueryService.Subscribe:input_type -> udb.core.livequery.services.v1.SubscribeRequest
-	4, // 7: udb.core.livequery.services.v1.LiveQueryService.Subscribe:output_type -> udb.core.livequery.services.v1.SubscribeResponse
-	7, // [7:8] is the sub-list for method output_type
-	6, // [6:7] is the sub-list for method input_type
-	6, // [6:6] is the sub-list for extension type_name
-	6, // [6:6] is the sub-list for extension extendee
-	0, // [0:6] is the sub-list for field type_name
+	2, // 1: udb.core.livequery.services.v1.LiveQueryAnyOf.predicates:type_name -> udb.core.livequery.services.v1.LiveQueryPredicate
+	2, // 2: udb.core.livequery.services.v1.SubscribeRequest.filters:type_name -> udb.core.livequery.services.v1.LiveQueryPredicate
+	3, // 3: udb.core.livequery.services.v1.SubscribeRequest.any_of:type_name -> udb.core.livequery.services.v1.LiveQueryAnyOf
+	6, // 4: udb.core.livequery.services.v1.SubscribeResponse.snapshot:type_name -> udb.core.livequery.services.v1.LiveQuerySnapshot
+	7, // 5: udb.core.livequery.services.v1.SubscribeResponse.change:type_name -> udb.core.livequery.services.v1.LiveQueryChange
+	8, // 6: udb.core.livequery.services.v1.SubscribeResponse.error:type_name -> udb.core.common.v1.ApiError
+	1, // 7: udb.core.livequery.services.v1.LiveQueryChange.op:type_name -> udb.core.livequery.services.v1.LiveQueryChangeOp
+	4, // 8: udb.core.livequery.services.v1.LiveQueryService.Subscribe:input_type -> udb.core.livequery.services.v1.SubscribeRequest
+	5, // 9: udb.core.livequery.services.v1.LiveQueryService.Subscribe:output_type -> udb.core.livequery.services.v1.SubscribeResponse
+	9, // [9:10] is the sub-list for method output_type
+	8, // [8:9] is the sub-list for method input_type
+	8, // [8:8] is the sub-list for extension type_name
+	8, // [8:8] is the sub-list for extension extendee
+	0, // [0:8] is the sub-list for field type_name
 }
 
 func init() { file_udb_core_livequery_services_v1_livequery_service_proto_init() }
@@ -589,7 +701,7 @@ func file_udb_core_livequery_services_v1_livequery_service_proto_init() {
 	if File_udb_core_livequery_services_v1_livequery_service_proto != nil {
 		return
 	}
-	file_udb_core_livequery_services_v1_livequery_service_proto_msgTypes[2].OneofWrappers = []any{
+	file_udb_core_livequery_services_v1_livequery_service_proto_msgTypes[3].OneofWrappers = []any{
 		(*SubscribeResponse_Snapshot)(nil),
 		(*SubscribeResponse_Change)(nil),
 	}
@@ -599,7 +711,7 @@ func file_udb_core_livequery_services_v1_livequery_service_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_udb_core_livequery_services_v1_livequery_service_proto_rawDesc), len(file_udb_core_livequery_services_v1_livequery_service_proto_rawDesc)),
 			NumEnums:      2,
-			NumMessages:   5,
+			NumMessages:   6,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

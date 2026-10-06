@@ -120,6 +120,7 @@ async fn subscribe_empty_predicate_field_carries_field_violation() {
             field: " ".to_string(),
             op: lq_pb::LiveQueryComparison::Eq as i32,
             value: "HELD".to_string(),
+            values: Vec::new(),
         }],
         ..Default::default()
     });
@@ -157,6 +158,7 @@ async fn subscribe_unspecified_predicate_op_carries_field_violation() {
             field: "status".to_string(),
             op: lq_pb::LiveQueryComparison::Unspecified as i32,
             value: "HELD".to_string(),
+            values: Vec::new(),
         }],
         ..Default::default()
     });

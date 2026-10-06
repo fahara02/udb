@@ -37,6 +37,82 @@ use sha2::{Digest, Sha256};
 
 use super::{AuthzPolicy, AuthzQuery, AuthzSnapshot, Decision, Effect, conditions_match, wildcard};
 
+/// For a denial with no applicable allow: the same-tenant allow rule for this
+/// action and resource that comes closest to matching, and the attributes it
+/// fails on (purpose, project, scopes, subject/role, conditions,
+/// relationship). Only rules of the caller's own tenant are considered and
+/// only attribute names plus the rule's expected purpose/scopes are named,
+/// so a denial never describes another tenant's policy.
+fn closest_allow_miss(
+    policies: &[AuthzPolicy],
+    roles: &[String],
+    req: &AuthzQuery<'_>,
+) -> Option<String> {
+    let principal = req.principal;
+    let selectors = req.resource.selectors();
+    let mut best: Option<(&AuthzPolicy, Vec<String>)> = None;
+    for policy in policies.iter().filter(|p| {
+        p.enabled
+            && p.effect == Effect::Allow
+            && super::domain_match(&p.tenant, &principal.tenant_id)
+            && super::pattern_match(&p.action, req.action)
+            && super::resource_match(&p.resource, &selectors)
+    }) {
+        let mut misses = Vec::new();
+        if !wildcard(&policy.purpose, req.purpose) {
+            misses.push(format!(
+                "purpose (the rule allows '{}', the request sent '{}')",
+                policy.purpose, req.purpose
+            ));
+        }
+        if !super::domain_match(&policy.project, &principal.project_id) {
+            misses.push("project".to_string());
+        }
+        let missing_scopes: Vec<&str> = policy
+            .required_scopes
+            .iter()
+            .filter(|scope| !principal.has_scope(scope))
+            .map(String::as_str)
+            .collect();
+        if !missing_scopes.is_empty() {
+            misses.push(format!("scopes (missing {})", missing_scopes.join(", ")));
+        }
+        if !super::subject_match(&policy.subject, &principal.identities())
+            || !super::role_match(&policy.role, roles)
+        {
+            misses.push(
+                "subject/role (bind this principal to the rule's role or subject)".to_string(),
+            );
+        }
+        if !conditions_match(&policy.conditions, req.attributes) {
+            misses.push("attribute conditions".to_string());
+        }
+        if !policy.relationship.is_empty() {
+            misses.push("relationship tuple".to_string());
+        }
+        if misses.is_empty() {
+            continue;
+        }
+        if best
+            .as_ref()
+            .is_none_or(|(_, current)| misses.len() < current.len())
+        {
+            best = Some((policy, misses));
+        }
+    }
+    best.map(|(policy, misses)| {
+        format!(
+            "the closest rule for this action and resource ({}) fails on: {}",
+            if policy.id.is_empty() {
+                "unnamed"
+            } else {
+                policy.id.as_str()
+            },
+            misses.join("; ")
+        )
+    })
+}
+
 /// The Casbin PERM model. RBAC-with-domains request + policy, a `g` role
 /// grouping, allow effect, and `udbMatch` glob matching for resources and
 /// actions. Explicit deny is checked before enforcement. `p.sub == "*"`
@@ -380,15 +456,21 @@ impl AuthzSnapshot {
                 // Anti-enumeration-safe: echoes only the caller's own request
                 // (their action/resource/tenant) plus counts — never another
                 // principal's policies.
-                format!(
-                    "denied by Casbin PERM model: no applicable allow policy for action '{}' on '{}' (tenant '{}'). Check the three token traps: the policy action must be exactly '{}' (the RPC method name, or the typed store RPC's dotted token — NOT a data.* alias), the policy's tenant_id must be this tenant UUID, and its object must match the resource. Seed it with `udb authz seed --tenant {} --role app_rw --action {}` (+ bind this principal to the role)",
-                    req.action,
-                    selectors.join("|"),
-                    principal.tenant_id,
-                    req.action,
-                    principal.tenant_id,
-                    req.action,
-                )
+                {
+                    let base = format!(
+                        "denied by Casbin PERM model: no applicable allow policy for action '{}' on '{}' (tenant '{}'). Check the three token traps: the policy action must be exactly '{}' (the RPC method name, or the typed store RPC's dotted token — NOT a data.* alias), the policy's tenant_id must be this tenant UUID, and its object must match the resource. Seed it with `udb authz seed --tenant {} --role app_rw --action {}` (+ bind this principal to the role)",
+                        req.action,
+                        selectors.join("|"),
+                        principal.tenant_id,
+                        req.action,
+                        principal.tenant_id,
+                        req.action,
+                    );
+                    match closest_allow_miss(&self.policies, &roles, req) {
+                        Some(miss) => format!("{base}. Diagnosis: {miss}"),
+                        None => base,
+                    }
+                }
             } else {
                 format!(
                     "denied by Casbin PERM model: {} candidate polic{} evaluated, none granted action '{}' on '{}' (tenant '{}') for the caller's identities/roles",

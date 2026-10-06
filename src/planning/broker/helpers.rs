@@ -10,6 +10,9 @@ pub(crate) fn sql_operator(value: &str) -> Option<&'static str> {
         "$lt" | "<" => Some("<"),
         "$lte" | "<=" => Some("<="),
         "$in" | "in" => Some("IN"),
+        "$nin" | "nin" => Some("NOT IN"),
+        "$between" | "between" => Some("BETWEEN"),
+        "$not" | "not" => Some("NOT"),
         "$like" | "like" => Some("LIKE"),
         "$is_null" | "is_null" => Some("IS NULL"),
         // GAP 6: PostgreSQL-specific operators

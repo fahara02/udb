@@ -192,6 +192,11 @@ class DataBrokerStub(object):
                 request_serializer=udb_dot_entity_dot_v1_dot_cdc__pb2.CDCSubscriptionRequest.SerializeToString,
                 response_deserializer=udb_dot_events_dot_v1_dot_udb__events__pb2.CDCEnvelope.FromString,
                 _registered_method=True)
+        self.AckCdcEvents = channel.unary_unary(
+                '/udb.services.v1.DataBroker/AckCdcEvents',
+                request_serializer=udb_dot_entity_dot_v1_dot_cdc__pb2.AckCdcEventsRequest.SerializeToString,
+                response_deserializer=udb_dot_entity_dot_v1_dot_cdc__pb2.AckCdcEventsResponse.FromString,
+                _registered_method=True)
         self.CreateMaterializedView = channel.unary_unary(
                 '/udb.services.v1.DataBroker/CreateMaterializedView',
                 request_serializer=udb_dot_entity_dot_v1_dot_relational__pb2.ViewDefinition.SerializeToString,
@@ -661,6 +666,13 @@ class DataBrokerServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def AckCdcEvents(self, request, context):
+        """Record a durable consumer's position (see CDCSubscriptionRequest.consumer_name).
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
     def CreateMaterializedView(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
@@ -907,7 +919,11 @@ class DataBrokerServicer(object):
         raise NotImplementedError('Method not implemented!')
 
     def PutPolicy(self, request, context):
-        """Missing associated documentation comment in .proto file."""
+        """DEPRECATED: writes the legacy ABAC table, which does NOT authorize
+        requests. Authorization comes from the Casbin governance table: use
+        AuthzService.PutAuthzPolicy (or `udb authz seed` / `udb policy apply`).
+        Every response carries an `x-udb-deprecated` header; removed in 0.6.0.
+        """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
@@ -1171,6 +1187,11 @@ def add_DataBrokerServicer_to_server(servicer, server):
                     servicer.PublishCDC,
                     request_deserializer=udb_dot_entity_dot_v1_dot_cdc__pb2.CDCSubscriptionRequest.FromString,
                     response_serializer=udb_dot_events_dot_v1_dot_udb__events__pb2.CDCEnvelope.SerializeToString,
+            ),
+            'AckCdcEvents': grpc.unary_unary_rpc_method_handler(
+                    servicer.AckCdcEvents,
+                    request_deserializer=udb_dot_entity_dot_v1_dot_cdc__pb2.AckCdcEventsRequest.FromString,
+                    response_serializer=udb_dot_entity_dot_v1_dot_cdc__pb2.AckCdcEventsResponse.SerializeToString,
             ),
             'CreateMaterializedView': grpc.unary_unary_rpc_method_handler(
                     servicer.CreateMaterializedView,
@@ -2306,6 +2327,33 @@ class DataBroker(object):
             '/udb.services.v1.DataBroker/PublishCDC',
             udb_dot_entity_dot_v1_dot_cdc__pb2.CDCSubscriptionRequest.SerializeToString,
             udb_dot_events_dot_v1_dot_udb__events__pb2.CDCEnvelope.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def AckCdcEvents(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/udb.services.v1.DataBroker/AckCdcEvents',
+            udb_dot_entity_dot_v1_dot_cdc__pb2.AckCdcEventsRequest.SerializeToString,
+            udb_dot_entity_dot_v1_dot_cdc__pb2.AckCdcEventsResponse.FromString,
             options,
             channel_credentials,
             insecure,

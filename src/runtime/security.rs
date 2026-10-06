@@ -2345,30 +2345,53 @@ pub fn enforce_select_export_controls(
             [("message_type", "must identify exactly one catalog entity")],
         )
     })?;
-    let selected = if selected_fields.is_empty() {
-        table
+    // An implicit read (no `fields`) never returns a PII or encrypted column:
+    // the planner leaves them out of `SELECT *`. Only a read that NAMES one
+    // needs the scope; refusing every bare read of a table that merely has a
+    // PII column forced every service onto `udb:pii:read`.
+    if selected_fields.is_empty() {
+        // The planner's implicit column list drops `security.is_pii` and
+        // `security.is_encrypted` columns; a column marked only by the legacy
+        // `encrypted` flag would still be returned, so it keeps the check.
+        let returned_protected = table
             .columns
             .iter()
-            .map(|column| column.column_name.clone())
-            .collect::<Vec<_>>()
-    } else {
-        selected_fields
-            .iter()
-            .map(|field| field.to_ascii_lowercase())
-            .collect::<Vec<_>>()
-    };
+            .filter(|column| !column.security.is_pii && !column.security.is_encrypted)
+            .find(|column| is_aead_or_pii_column(column));
+        return match returned_protected {
+            Some(column) => Err(crate::runtime::error_reasons::annotate(
+                export_control_policy_status(
+                    "pii_export_scope_required",
+                    "PII/encrypted fields require purpose export, verification, or audit, or scope udb:pii:read",
+                ),
+                crate::runtime::error_reasons::SCOPE_MISSING,
+                Some(&column.column_name),
+                None,
+            )),
+            None => Ok(()),
+        };
+    }
+    let resolver = crate::planning::broker::column_resolver(table);
+    let selected = selected_fields
+        .iter()
+        .map(|field| crate::planning::broker::resolve_column(&resolver, field))
+        .collect::<Vec<_>>();
     let blocked = table
         .columns
         .iter()
         .filter(|column| selected.iter().any(|field| field == &column.column_name))
-        .any(is_aead_or_pii_column);
-    if blocked {
-        Err(export_control_policy_status(
-            "pii_export_scope_required",
-            "PII/encrypted fields require purpose export, verification, or audit, or scope udb:pii:read",
-        ))
-    } else {
-        Ok(())
+        .find(|column| is_aead_or_pii_column(column));
+    match blocked {
+        Some(column) => Err(crate::runtime::error_reasons::annotate(
+            export_control_policy_status(
+                "pii_export_scope_required",
+                "PII/encrypted fields require purpose export, verification, or audit, or scope udb:pii:read",
+            ),
+            crate::runtime::error_reasons::SCOPE_MISSING,
+            Some(&column.column_name),
+            None,
+        )),
+        None => Ok(()),
     }
 }
 
@@ -3352,6 +3375,26 @@ mod tests {
         assert!(!detail.retryable);
         assert_eq!(detail.retry_after_ms, 0);
         assert!(detail.field_violations.is_empty());
+    }
+
+    #[test]
+    fn select_export_controls_let_a_bare_read_through_and_name_the_column_otherwise() {
+        let manifest = pii_manifest();
+        let context = SecurityContext {
+            purpose: "billing".to_string(),
+            scopes: vec!["udb:read".to_string()],
+            ..SecurityContext::default()
+        };
+        // No `fields`: the implicit column list already leaves PII out.
+        enforce_select_export_controls(&manifest, &context, "Customer", &[])
+            .expect("a bare read never returns a PII column, so it needs no PII scope");
+        // Naming the PII column still needs the scope, and the refusal says which.
+        let err =
+            enforce_select_export_controls(&manifest, &context, "Customer", &["EMAIL".to_string()])
+                .expect_err("naming a PII column needs the scope");
+        let detail = decode_detail(&err);
+        assert_eq!(detail.reason, "UDB_SCOPE_MISSING");
+        assert_eq!(detail.column, "email");
     }
 
     #[test]

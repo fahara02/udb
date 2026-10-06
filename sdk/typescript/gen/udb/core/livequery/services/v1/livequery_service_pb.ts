@@ -14,7 +14,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file udb/core/livequery/services/v1/livequery_service.proto.
  */
 export const file_udb_core_livequery_services_v1_livequery_service: GenFile = /*@__PURE__*/
-  fileDesc("CjZ1ZGIvY29yZS9saXZlcXVlcnkvc2VydmljZXMvdjEvbGl2ZXF1ZXJ5X3NlcnZpY2UucHJvdG8SHnVkYi5jb3JlLmxpdmVxdWVyeS5zZXJ2aWNlcy52MSJzChJMaXZlUXVlcnlQcmVkaWNhdGUSDQoFZmllbGQYASABKAkSPwoCb3AYAiABKA4yMy51ZGIuY29yZS5saXZlcXVlcnkuc2VydmljZXMudjEuTGl2ZVF1ZXJ5Q29tcGFyaXNvbhINCgV2YWx1ZRgDIAEoCSLOAQoQU3Vic2NyaWJlUmVxdWVzdBIRCgl0ZW5hbnRfaWQYASABKAkSFAoMbWVzc2FnZV90eXBlGAIgASgJEkMKB2ZpbHRlcnMYAyADKAsyMi51ZGIuY29yZS5saXZlcXVlcnkuc2VydmljZXMudjEuTGl2ZVF1ZXJ5UHJlZGljYXRlEhIKCnByb2plY3RfaWQYBCABKAkSFgoOc25hcHNob3RfbGltaXQYBSABKAU6IJqyGRwIARoDdWRiKLDqATADQAFKCWxpdmVxdWVyeVABIvcBChFTdWJzY3JpYmVSZXNwb25zZRJFCghzbmFwc2hvdBgBIAEoCzIxLnVkYi5jb3JlLmxpdmVxdWVyeS5zZXJ2aWNlcy52MS5MaXZlUXVlcnlTbmFwc2hvdEgAEkEKBmNoYW5nZRgCIAEoCzIvLnVkYi5jb3JlLmxpdmVxdWVyeS5zZXJ2aWNlcy52MS5MaXZlUXVlcnlDaGFuZ2VIABIrCgVlcnJvchgDIAEoCzIcLnVkYi5jb3JlLmNvbW1vbi52MS5BcGlFcnJvcjogmrIZHAgBGgN1ZGIosOoBMANAAUoJbGl2ZXF1ZXJ5UAFCCQoHcGF5bG9hZCI5ChFMaXZlUXVlcnlTbmFwc2hvdBIRCglyb3dzX2pzb24YASADKAkSEQoJcm93X2NvdW50GAIgASgDInQKD0xpdmVRdWVyeUNoYW5nZRI9CgJvcBgBIAEoDjIxLnVkYi5jb3JlLmxpdmVxdWVyeS5zZXJ2aWNlcy52MS5MaXZlUXVlcnlDaGFuZ2VPcBIQCghyb3dfanNvbhgCIAEoCRIQCghldmVudF9pZBgDIAEoCSrwAQoTTGl2ZVF1ZXJ5Q29tcGFyaXNvbhIlCiFMSVZFX1FVRVJZX0NPTVBBUklTT05fVU5TUEVDSUZJRUQQABIcChhMSVZFX1FVRVJZX0NPTVBBUklTT05fRVEQARIcChhMSVZFX1FVRVJZX0NPTVBBUklTT05fTkUQAhIcChhMSVZFX1FVRVJZX0NPTVBBUklTT05fTFQQAxIcChhMSVZFX1FVRVJZX0NPTVBBUklTT05fTEUQBBIcChhMSVZFX1FVRVJZX0NPTVBBUklTT05fR1QQBRIcChhMSVZFX1FVRVJZX0NPTVBBUklTT05fR0UQBiqcAQoRTGl2ZVF1ZXJ5Q2hhbmdlT3ASJAogTElWRV9RVUVSWV9DSEFOR0VfT1BfVU5TUEVDSUZJRUQQABIfChtMSVZFX1FVRVJZX0NIQU5HRV9PUF9JTlNFUlQQARIfChtMSVZFX1FVRVJZX0NIQU5HRV9PUF9VUERBVEUQAhIfChtMSVZFX1FVRVJZX0NIQU5HRV9PUF9ERUxFVEUQAzL6BQoQTGl2ZVF1ZXJ5U2VydmljZRLpAgoJU3Vic2NyaWJlEjAudWRiLmNvcmUubGl2ZXF1ZXJ5LnNlcnZpY2VzLnYxLlN1YnNjcmliZVJlcXVlc3QaMS51ZGIuY29yZS5saXZlcXVlcnkuc2VydmljZXMudjEuU3Vic2NyaWJlUmVzcG9uc2Ui9AHK8xg6CAIaF3VkYjpsaXZlcXVlcnk6c3Vic2NyaWJlIAFKAwECBGoTbGl2ZXF1ZXJ5LlN1YnNjcmliZZABAdLzGAYIARABIAHa8xg7CAESCXN1YnNjcmliZRoDdWRiKLDqATADQAFKCWxpdmVxdWVyeVABWhJsaXZlUXVlcnlTdWJzY3JpYmXy8xhDCglsaXZlcXVlcnkaCHBvc3RncmVzMhtVREJfTkFUSVZFX1NFUlZJQ0VTX0VOQUJMRUQyD1VEQl9HUlBDX1RBUkdFVPjzGAGC0+STAhw6ASoiFy92MS9saXZlcXVlcnk6c3Vic2NyaWJlMAEa+QLK8Bl0CglsaXZlcXVlcnkSCWxpdmVxdWVyeRoJbGl2ZXF1ZXJ5IgpMaXZlIFF1ZXJ5KglsaXZlcXVlcnkwATgBaAF6CWxpdmVxdWVyeYIBCWxpdmVxdWVyeYoBCWxpdmVxdWVyeZIBEG5hdGl2ZS5saXZlcXVlcnnS8BkcCAEaA3VkYiiw6gEwA0ABSglsaXZlcXVlcnlQAdrwGZUBCglsaXZlcXVlcnkSFHVkYi9uYXRpdmUvbGl2ZXF1ZXJ5GhtVREJfTkFUSVZFX1NFUlZJQ0VTX0VOQUJMRUQaD1VEQl9HUlBDX1RBUkdFVCIbdWRiLm5hdGl2ZS5saXZlcXVlcnkuY29uZmlnOglsaXZlcXVlcnlKC1VEQl9BUElfS0VZWg91ZGIgbmF0aXZlIGxpbnTi8BlDCglsaXZlcXVlcnkaCHBvc3RncmVzMhtVREJfTkFUSVZFX1NFUlZJQ0VTX0VOQUJMRUQyD1VEQl9HUlBDX1RBUkdFVEKmAgoiY29tLnVkYi5jb3JlLmxpdmVxdWVyeS5zZXJ2aWNlcy52MUIVTGl2ZXF1ZXJ5U2VydmljZVByb3RvUAFaTGdpdGh1Yi5jb20vZmFoYXJhMDIvdWRiL3Nkay9nby9nZW4vdWRiL2NvcmUvbGl2ZXF1ZXJ5L3NlcnZpY2VzL3YxO3NlcnZpY2VzdjGiAgRVQ0xTqgIeVWRiLkNvcmUuTGl2ZVF1ZXJ5LlNlcnZpY2VzLlYxygIeVWRiXENvcmVcTGl2ZXF1ZXJ5XFNlcnZpY2VzXFYx4gIqVWRiXEdQQk1ldGFkYXRhXENvcmVcTGl2ZXF1ZXJ5XFNlcnZpY2VzXFYx6gIiVWRiOjpDb3JlOjpMaXZlcXVlcnk6OlNlcnZpY2VzOjpWMWIGcHJvdG8z", [file_google_api_annotations, file_udb_core_common_v1_dto, file_udb_core_common_v1_security]);
+  fileDesc("CjZ1ZGIvY29yZS9saXZlcXVlcnkvc2VydmljZXMvdjEvbGl2ZXF1ZXJ5X3NlcnZpY2UucHJvdG8SHnVkYi5jb3JlLmxpdmVxdWVyeS5zZXJ2aWNlcy52MSKDAQoSTGl2ZVF1ZXJ5UHJlZGljYXRlEg0KBWZpZWxkGAEgASgJEj8KAm9wGAIgASgOMjMudWRiLmNvcmUubGl2ZXF1ZXJ5LnNlcnZpY2VzLnYxLkxpdmVRdWVyeUNvbXBhcmlzb24SDQoFdmFsdWUYAyABKAkSDgoGdmFsdWVzGAQgAygJIlgKDkxpdmVRdWVyeUFueU9mEkYKCnByZWRpY2F0ZXMYASADKAsyMi51ZGIuY29yZS5saXZlcXVlcnkuc2VydmljZXMudjEuTGl2ZVF1ZXJ5UHJlZGljYXRlIqYCChBTdWJzY3JpYmVSZXF1ZXN0EhEKCXRlbmFudF9pZBgBIAEoCRIUCgxtZXNzYWdlX3R5cGUYAiABKAkSQwoHZmlsdGVycxgDIAMoCzIyLnVkYi5jb3JlLmxpdmVxdWVyeS5zZXJ2aWNlcy52MS5MaXZlUXVlcnlQcmVkaWNhdGUSEgoKcHJvamVjdF9pZBgEIAEoCRIWCg5zbmFwc2hvdF9saW1pdBgFIAEoBRI+CgZhbnlfb2YYBiADKAsyLi51ZGIuY29yZS5saXZlcXVlcnkuc2VydmljZXMudjEuTGl2ZVF1ZXJ5QW55T2YSFgoOc2luY2VfZXZlbnRfaWQYByABKAk6IJqyGRwIARoDdWRiKLDqATADQAFKCWxpdmVxdWVyeVABIvcBChFTdWJzY3JpYmVSZXNwb25zZRJFCghzbmFwc2hvdBgBIAEoCzIxLnVkYi5jb3JlLmxpdmVxdWVyeS5zZXJ2aWNlcy52MS5MaXZlUXVlcnlTbmFwc2hvdEgAEkEKBmNoYW5nZRgCIAEoCzIvLnVkYi5jb3JlLmxpdmVxdWVyeS5zZXJ2aWNlcy52MS5MaXZlUXVlcnlDaGFuZ2VIABIrCgVlcnJvchgDIAEoCzIcLnVkYi5jb3JlLmNvbW1vbi52MS5BcGlFcnJvcjogmrIZHAgBGgN1ZGIosOoBMANAAUoJbGl2ZXF1ZXJ5UAFCCQoHcGF5bG9hZCI5ChFMaXZlUXVlcnlTbmFwc2hvdBIRCglyb3dzX2pzb24YASADKAkSEQoJcm93X2NvdW50GAIgASgDInQKD0xpdmVRdWVyeUNoYW5nZRI9CgJvcBgBIAEoDjIxLnVkYi5jb3JlLmxpdmVxdWVyeS5zZXJ2aWNlcy52MS5MaXZlUXVlcnlDaGFuZ2VPcBIQCghyb3dfanNvbhgCIAEoCRIQCghldmVudF9pZBgDIAEoCSr6AgoTTGl2ZVF1ZXJ5Q29tcGFyaXNvbhIlCiFMSVZFX1FVRVJZX0NPTVBBUklTT05fVU5TUEVDSUZJRUQQABIcChhMSVZFX1FVRVJZX0NPTVBBUklTT05fRVEQARIcChhMSVZFX1FVRVJZX0NPTVBBUklTT05fTkUQAhIcChhMSVZFX1FVRVJZX0NPTVBBUklTT05fTFQQAxIcChhMSVZFX1FVRVJZX0NPTVBBUklTT05fTEUQBBIcChhMSVZFX1FVRVJZX0NPTVBBUklTT05fR1QQBRIcChhMSVZFX1FVRVJZX0NPTVBBUklTT05fR0UQBhIcChhMSVZFX1FVRVJZX0NPTVBBUklTT05fSU4QBxIgChxMSVZFX1FVRVJZX0NPTVBBUklTT05fTk9UX0lOEAgSIQodTElWRV9RVUVSWV9DT01QQVJJU09OX0lTX05VTEwQCRIlCiFMSVZFX1FVRVJZX0NPTVBBUklTT05fSVNfTk9UX05VTEwQCiqcAQoRTGl2ZVF1ZXJ5Q2hhbmdlT3ASJAogTElWRV9RVUVSWV9DSEFOR0VfT1BfVU5TUEVDSUZJRUQQABIfChtMSVZFX1FVRVJZX0NIQU5HRV9PUF9JTlNFUlQQARIfChtMSVZFX1FVRVJZX0NIQU5HRV9PUF9VUERBVEUQAhIfChtMSVZFX1FVRVJZX0NIQU5HRV9PUF9ERUxFVEUQAzL6BQoQTGl2ZVF1ZXJ5U2VydmljZRLpAgoJU3Vic2NyaWJlEjAudWRiLmNvcmUubGl2ZXF1ZXJ5LnNlcnZpY2VzLnYxLlN1YnNjcmliZVJlcXVlc3QaMS51ZGIuY29yZS5saXZlcXVlcnkuc2VydmljZXMudjEuU3Vic2NyaWJlUmVzcG9uc2Ui9AHK8xg6CAIaF3VkYjpsaXZlcXVlcnk6c3Vic2NyaWJlIAFKAwECBGoTbGl2ZXF1ZXJ5LlN1YnNjcmliZZABAdLzGAYIARABIAHa8xg7CAESCXN1YnNjcmliZRoDdWRiKLDqATADQAFKCWxpdmVxdWVyeVABWhJsaXZlUXVlcnlTdWJzY3JpYmXy8xhDCglsaXZlcXVlcnkaCHBvc3RncmVzMhtVREJfTkFUSVZFX1NFUlZJQ0VTX0VOQUJMRUQyD1VEQl9HUlBDX1RBUkdFVPjzGAGC0+STAhw6ASoiFy92MS9saXZlcXVlcnk6c3Vic2NyaWJlMAEa+QLK8Bl0CglsaXZlcXVlcnkSCWxpdmVxdWVyeRoJbGl2ZXF1ZXJ5IgpMaXZlIFF1ZXJ5KglsaXZlcXVlcnkwATgBaAF6CWxpdmVxdWVyeYIBCWxpdmVxdWVyeYoBCWxpdmVxdWVyeZIBEG5hdGl2ZS5saXZlcXVlcnnS8BkcCAEaA3VkYiiw6gEwA0ABSglsaXZlcXVlcnlQAdrwGZUBCglsaXZlcXVlcnkSFHVkYi9uYXRpdmUvbGl2ZXF1ZXJ5GhtVREJfTkFUSVZFX1NFUlZJQ0VTX0VOQUJMRUQaD1VEQl9HUlBDX1RBUkdFVCIbdWRiLm5hdGl2ZS5saXZlcXVlcnkuY29uZmlnOglsaXZlcXVlcnlKC1VEQl9BUElfS0VZWg91ZGIgbmF0aXZlIGxpbnTi8BlDCglsaXZlcXVlcnkaCHBvc3RncmVzMhtVREJfTkFUSVZFX1NFUlZJQ0VTX0VOQUJMRUQyD1VEQl9HUlBDX1RBUkdFVEKmAgoiY29tLnVkYi5jb3JlLmxpdmVxdWVyeS5zZXJ2aWNlcy52MUIVTGl2ZXF1ZXJ5U2VydmljZVByb3RvUAFaTGdpdGh1Yi5jb20vZmFoYXJhMDIvdWRiL3Nkay9nby9nZW4vdWRiL2NvcmUvbGl2ZXF1ZXJ5L3NlcnZpY2VzL3YxO3NlcnZpY2VzdjGiAgRVQ0xTqgIeVWRiLkNvcmUuTGl2ZVF1ZXJ5LlNlcnZpY2VzLlYxygIeVWRiXENvcmVcTGl2ZXF1ZXJ5XFNlcnZpY2VzXFYx4gIqVWRiXEdQQk1ldGFkYXRhXENvcmVcTGl2ZXF1ZXJ5XFNlcnZpY2VzXFYx6gIiVWRiOjpDb3JlOjpMaXZlcXVlcnk6OlNlcnZpY2VzOjpWMWIGcHJvdG8z", [file_google_api_annotations, file_udb_core_common_v1_dto, file_udb_core_common_v1_security]);
 
 /**
  * One AND-ed predicate of the subscription filter. The value is carried as a
@@ -40,6 +40,14 @@ export type LiveQueryPredicate = Message<"udb.core.livequery.services.v1.LiveQue
    * @generated from field: string value = 3;
    */
   value: string;
+
+  /**
+   * Operands of IN / NOT_IN (each typed like `value`). Must be non-empty for
+   * those operators and empty for every other operator.
+   *
+   * @generated from field: repeated string values = 4;
+   */
+  values: string[];
 };
 
 /**
@@ -48,6 +56,28 @@ export type LiveQueryPredicate = Message<"udb.core.livequery.services.v1.LiveQue
  */
 export const LiveQueryPredicateSchema: GenMessage<LiveQueryPredicate> = /*@__PURE__*/
   messageDesc(file_udb_core_livequery_services_v1_livequery_service, 0);
+
+/**
+ * A disjunction: the row matches when ANY of its predicates matches. Each group
+ * in `SubscribeRequest.any_of` is AND-ed with `filters` and with the other
+ * groups, so a filter is written in conjunctive normal form, e.g.
+ * `status IN (open, held) AND (owner = me OR assignee = me)`.
+ *
+ * @generated from message udb.core.livequery.services.v1.LiveQueryAnyOf
+ */
+export type LiveQueryAnyOf = Message<"udb.core.livequery.services.v1.LiveQueryAnyOf"> & {
+  /**
+   * @generated from field: repeated udb.core.livequery.services.v1.LiveQueryPredicate predicates = 1;
+   */
+  predicates: LiveQueryPredicate[];
+};
+
+/**
+ * Describes the message udb.core.livequery.services.v1.LiveQueryAnyOf.
+ * Use `create(LiveQueryAnyOfSchema)` to create a new message.
+ */
+export const LiveQueryAnyOfSchema: GenMessage<LiveQueryAnyOf> = /*@__PURE__*/
+  messageDesc(file_udb_core_livequery_services_v1_livequery_service, 1);
 
 /**
  * @generated from message udb.core.livequery.services.v1.SubscribeRequest
@@ -89,6 +119,24 @@ export type SubscribeRequest = Message<"udb.core.livequery.services.v1.Subscribe
    * @generated from field: int32 snapshot_limit = 5;
    */
   snapshotLimit: number;
+
+  /**
+   * OR-groups AND-ed with `filters` (see LiveQueryAnyOf). An empty group is
+   * rejected rather than read as "matches nothing".
+   *
+   * @generated from field: repeated udb.core.livequery.services.v1.LiveQueryAnyOf any_of = 6;
+   */
+  anyOf: LiveQueryAnyOf[];
+
+  /**
+   * Durable resume: the last `LiveQueryChange.event_id` this client delivered.
+   * The broker replays the changes after it from the CDC journal before going
+   * live. Supersedes the `x-udb-livequery-resume` header (still honoured); when
+   * both are set they must name the same event.
+   *
+   * @generated from field: string since_event_id = 7;
+   */
+  sinceEventId: string;
 };
 
 /**
@@ -96,7 +144,7 @@ export type SubscribeRequest = Message<"udb.core.livequery.services.v1.Subscribe
  * Use `create(SubscribeRequestSchema)` to create a new message.
  */
 export const SubscribeRequestSchema: GenMessage<SubscribeRequest> = /*@__PURE__*/
-  messageDesc(file_udb_core_livequery_services_v1_livequery_service, 1);
+  messageDesc(file_udb_core_livequery_services_v1_livequery_service, 2);
 
 /**
  * One streamed frame: either the initial snapshot or a single change delta.
@@ -134,7 +182,7 @@ export type SubscribeResponse = Message<"udb.core.livequery.services.v1.Subscrib
  * Use `create(SubscribeResponseSchema)` to create a new message.
  */
 export const SubscribeResponseSchema: GenMessage<SubscribeResponse> = /*@__PURE__*/
-  messageDesc(file_udb_core_livequery_services_v1_livequery_service, 2);
+  messageDesc(file_udb_core_livequery_services_v1_livequery_service, 3);
 
 /**
  * @generated from message udb.core.livequery.services.v1.LiveQuerySnapshot
@@ -158,7 +206,7 @@ export type LiveQuerySnapshot = Message<"udb.core.livequery.services.v1.LiveQuer
  * Use `create(LiveQuerySnapshotSchema)` to create a new message.
  */
 export const LiveQuerySnapshotSchema: GenMessage<LiveQuerySnapshot> = /*@__PURE__*/
-  messageDesc(file_udb_core_livequery_services_v1_livequery_service, 3);
+  messageDesc(file_udb_core_livequery_services_v1_livequery_service, 4);
 
 /**
  * @generated from message udb.core.livequery.services.v1.LiveQueryChange
@@ -189,7 +237,7 @@ export type LiveQueryChange = Message<"udb.core.livequery.services.v1.LiveQueryC
  * Use `create(LiveQueryChangeSchema)` to create a new message.
  */
 export const LiveQueryChangeSchema: GenMessage<LiveQueryChange> = /*@__PURE__*/
-  messageDesc(file_udb_core_livequery_services_v1_livequery_service, 4);
+  messageDesc(file_udb_core_livequery_services_v1_livequery_service, 5);
 
 /**
  * Comparison operator for a live-query predicate. Maps 1:1 onto the neutral IR
@@ -233,6 +281,35 @@ export enum LiveQueryComparison {
    * @generated from enum value: LIVE_QUERY_COMPARISON_GE = 6;
    */
   GE = 6,
+
+  /**
+   * Membership: the field equals one of `LiveQueryPredicate.values`.
+   *
+   * @generated from enum value: LIVE_QUERY_COMPARISON_IN = 7;
+   */
+  IN = 7,
+
+  /**
+   * Non-membership: the field is present, non-null and equals none of `values`
+   * (SQL NOT IN semantics, so the snapshot and the live deltas agree).
+   *
+   * @generated from enum value: LIVE_QUERY_COMPARISON_NOT_IN = 8;
+   */
+  NOT_IN = 8,
+
+  /**
+   * The field is null or absent. `value`/`values` are ignored.
+   *
+   * @generated from enum value: LIVE_QUERY_COMPARISON_IS_NULL = 9;
+   */
+  IS_NULL = 9,
+
+  /**
+   * The field is present and non-null. `value`/`values` are ignored.
+   *
+   * @generated from enum value: LIVE_QUERY_COMPARISON_IS_NOT_NULL = 10;
+   */
+  IS_NOT_NULL = 10,
 }
 
 /**

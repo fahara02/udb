@@ -989,7 +989,7 @@ function run_document_kind_php(GeneratedClient $data, UdbMetadata $meta, callabl
 
 function run_cache_kind_php(GeneratedClient $data, UdbMetadata $meta, callable $rc, string $backend, string $suffix, callable $mountOk): void
 {
-    $res = (new \Udb\Entity\V1\StoreResource())->setBackend($backend);
+    $res = (new \Udb\Entity\V1\StoreResource())->setBackend($backend)->setResourceName('sdk_live_cache');
     $key = "sdk-live-cache-$suffix";
     $val = "cache-$backend-$suffix";
     try {
@@ -1042,7 +1042,7 @@ function run_vector_kind_php(GeneratedClient $data, UdbMetadata $meta, callable 
 
 function run_graph_kind_php(GeneratedClient $data, UdbMetadata $meta, callable $rc, string $backend, string $suffix, callable $mountOk): void
 {
-    $res = (new \Udb\Entity\V1\StoreResource())->setBackend($backend);
+    $res = (new \Udb\Entity\V1\StoreResource())->setBackend($backend)->setResourceName('sdk_live_graph');
     $label = "SdkLive$suffix";
     try {
         $data->graph_mutate((new \Udb\Entity\V1\GraphMutationRequest())->setContext($rc('php.live.kind.graph'))->setResource($res)->setQuery("CREATE (n:$label {id: \$id}) RETURN n")->setParameters(liveStruct(['id' => $suffix])), $meta);
@@ -3741,7 +3741,7 @@ function perfSeedPhp(array $s): array
         ->setConflictFields(['record_id']), $meta));
     $fix->set('record_id', $recordId);
     $try('SeedBrokerCache', fn () => $data->cache_set((new \Udb\Entity\V1\CacheSetRequest())
-        ->setContext($rc)->setResource((new \Udb\Entity\V1\StoreResource())->setBackend('redis'))
+        ->setContext($rc)->setResource((new \Udb\Entity\V1\StoreResource())->setBackend('redis')->setResourceName('sdk_perf_cache'))
         ->setKey((string) $fix->lookup('object_key'))->setValue('perf')->setContentType('text/plain')->setTtlSeconds(300), $meta));
 
     // AuthnService: a real user (reused everywhere a user_id is needed) + login + codes.

@@ -957,12 +957,30 @@ impl AuthnServiceImpl {
                 &req.tenant_id,
                 &req.project_id,
             )?;
+        // Invite: no password now; the user sets one with the emailed code.
+        let invite = req.password_setup_required;
+        if invite && !req.password.is_empty() {
+            return Err(crate::runtime::executor_utils::invalid_argument_fields(
+                "password_setup_required creates the account without a password; leave password empty",
+                [(
+                    "password",
+                    "must be empty when password_setup_required is set",
+                )],
+            ));
+        }
         // Externally-provisioned (SSO/OIDC) users have no local password to vet.
-        if req.external_provider_id.trim().is_empty() {
+        if !invite && req.external_provider_id.trim().is_empty() {
             authn::PasswordPolicy::from_env()
                 .validate(&req.password)
                 .map_err(create_user_password_policy_status)?;
         }
+        // An invited account holds the hash of a random secret nobody knows,
+        // so no password matches it until ResetPassword replaces it.
+        let initial_password = if invite {
+            format!("{}{}", Uuid::new_v4(), Uuid::new_v4())
+        } else {
+            req.password.clone()
+        };
         let now = now_unix();
         let user_id = Uuid::new_v4().to_string();
         // Default an unspecified request to PERSON, then cross the adapter boundary
@@ -998,9 +1016,13 @@ impl AuthnServiceImpl {
             user_id: user_id.clone(),
             username: req.username.trim().to_ascii_lowercase(),
             email: req.email.trim().to_ascii_lowercase(),
-            password_hash: authn::hash_password(&req.password, &self.password_hash_key()),
+            password_hash: authn::hash_password(&initial_password, &self.password_hash_key()),
             account_kind,
-            status: crate::runtime::authn::AccountStatus::PendingVerification,
+            status: if invite {
+                crate::runtime::authn::AccountStatus::PasswordSetupRequired
+            } else {
+                crate::runtime::authn::AccountStatus::PendingVerification
+            },
             tenant_id,
             full_name: req.full_name,
             totp_secret_hash: String::new(),
@@ -1025,9 +1047,15 @@ impl AuthnServiceImpl {
         // transaction as the user upsert and the registration event. The
         // notification is a side-effect that cannot be rolled back, so it is sent
         // only AFTER the transaction commits (best-effort, post-commit).
+        // An invite sends a password-reset code instead: completing it sets the
+        // password and proves the address in one step.
         let (otp_rec, otp_code) = self.prepare_otp_record(
             &rec,
-            authn_entity_pb::OtpType::EmailVerification as i32,
+            if invite {
+                authn_entity_pb::OtpType::PasswordReset as i32
+            } else {
+                authn_entity_pb::OtpType::EmailVerification as i32
+            },
             "email",
             &rec.email,
             format!("create_user:{user_id}"),
@@ -1425,6 +1453,10 @@ impl AuthnServiceImpl {
             &[
                 "authn.user.password.reset",
                 "authn.user.write",
+                // The method's own descriptor scope: a least-privilege grant
+                // that passed the transport gate must pass this one too
+                // (same rule as CreateUser).
+                "udb:authn:admin-reset-password",
                 "udb:authn:admin",
             ],
         )?;
@@ -1451,6 +1483,14 @@ impl AuthnServiceImpl {
             &user.tenant_id,
             &user.project_id,
         )?;
+        // The same per-(user, type) cooldown SendOTP enforces: an admin loop
+        // must not flood a user's inbox with reset codes.
+        self.enforce_otp_cooldown(
+            &user.user_id,
+            authn_entity_pb::OtpType::PasswordReset as i32,
+            now_unix(),
+        )
+        .await?;
         let (otp_id, _code) = self
             .issue_otp(
                 &user,

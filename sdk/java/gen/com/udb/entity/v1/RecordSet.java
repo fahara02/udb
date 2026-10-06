@@ -40,6 +40,8 @@ private static final long serialVersionUID = 0L;
     nextPageToken_ = "";
     recordRevisions_ =
         com.google.protobuf.LazyStringArrayList.emptyList();
+    redactedFields_ =
+        com.google.protobuf.LazyStringArrayList.emptyList();
   }
 
   public static final com.google.protobuf.Descriptors.Descriptor
@@ -282,6 +284,11 @@ private static final long serialVersionUID = 0L;
   public static final int TOTAL_COUNT_FIELD_NUMBER = 4;
   private int totalCount_ = 0;
   /**
+   * <pre>
+   * The number of records in THIS page (the length of `records_json`), not the
+   * number of matching rows. Use `exact_total` for that.
+   * </pre>
+   *
    * <code>int32 total_count = 4 [json_name = "totalCount"];</code>
    * @return The totalCount.
    */
@@ -375,6 +382,106 @@ private static final long serialVersionUID = 0L;
     return recordRevisions_.getByteString(index);
   }
 
+  public static final int HAS_MORE_FIELD_NUMBER = 6;
+  private boolean hasMore_ = false;
+  /**
+   * <pre>
+   * True when the page is full (as many records as the request's limit, or the
+   * default limit of 100 when none was given): more rows may match. A read that
+   * was capped never looks like the complete result; page on with
+   * `next_page_token` (set a positive `limit` to get one) or narrow the filter.
+   * </pre>
+   *
+   * <code>bool has_more = 6 [json_name = "hasMore"];</code>
+   * @return The hasMore.
+   */
+  @java.lang.Override
+  public boolean getHasMore() {
+    return hasMore_;
+  }
+
+  public static final int EXACT_TOTAL_FIELD_NUMBER = 7;
+  private long exactTotal_ = 0L;
+  /**
+   * <pre>
+   * Every row the filter matches, ignoring the limit and the page position.
+   * Set only when `SelectRequest.include_total` asked for it (it costs one
+   * COUNT query); 0 otherwise.
+   * </pre>
+   *
+   * <code>int64 exact_total = 7 [json_name = "exactTotal"];</code>
+   * @return The exactTotal.
+   */
+  @java.lang.Override
+  public long getExactTotal() {
+    return exactTotal_;
+  }
+
+  public static final int REDACTED_FIELDS_FIELD_NUMBER = 8;
+  @SuppressWarnings("serial")
+  private com.google.protobuf.LazyStringArrayList redactedFields_ =
+      com.google.protobuf.LazyStringArrayList.emptyList();
+  /**
+   * <pre>
+   * Columns that came back as the redaction placeholder because the caller
+   * lacks the PII read scope (`udb:pii:read`). A value listed here is not the
+   * stored value: never write it back (the broker refuses that write with
+   * reason `UDB_REDACTED_VALUE_WRITE`). Empty when nothing was redacted.
+   * </pre>
+   *
+   * <code>repeated string redacted_fields = 8 [json_name = "redactedFields"];</code>
+   * @return A list containing the redactedFields.
+   */
+  public com.google.protobuf.ProtocolStringList
+      getRedactedFieldsList() {
+    return redactedFields_;
+  }
+  /**
+   * <pre>
+   * Columns that came back as the redaction placeholder because the caller
+   * lacks the PII read scope (`udb:pii:read`). A value listed here is not the
+   * stored value: never write it back (the broker refuses that write with
+   * reason `UDB_REDACTED_VALUE_WRITE`). Empty when nothing was redacted.
+   * </pre>
+   *
+   * <code>repeated string redacted_fields = 8 [json_name = "redactedFields"];</code>
+   * @return The count of redactedFields.
+   */
+  public int getRedactedFieldsCount() {
+    return redactedFields_.size();
+  }
+  /**
+   * <pre>
+   * Columns that came back as the redaction placeholder because the caller
+   * lacks the PII read scope (`udb:pii:read`). A value listed here is not the
+   * stored value: never write it back (the broker refuses that write with
+   * reason `UDB_REDACTED_VALUE_WRITE`). Empty when nothing was redacted.
+   * </pre>
+   *
+   * <code>repeated string redacted_fields = 8 [json_name = "redactedFields"];</code>
+   * @param index The index of the element to return.
+   * @return The redactedFields at the given index.
+   */
+  public java.lang.String getRedactedFields(int index) {
+    return redactedFields_.get(index);
+  }
+  /**
+   * <pre>
+   * Columns that came back as the redaction placeholder because the caller
+   * lacks the PII read scope (`udb:pii:read`). A value listed here is not the
+   * stored value: never write it back (the broker refuses that write with
+   * reason `UDB_REDACTED_VALUE_WRITE`). Empty when nothing was redacted.
+   * </pre>
+   *
+   * <code>repeated string redacted_fields = 8 [json_name = "redactedFields"];</code>
+   * @param index The index of the value to return.
+   * @return The bytes of the redactedFields at the given index.
+   */
+  public com.google.protobuf.ByteString
+      getRedactedFieldsBytes(int index) {
+    return redactedFields_.getByteString(index);
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -403,6 +510,15 @@ private static final long serialVersionUID = 0L;
     }
     for (int i = 0; i < recordRevisions_.size(); i++) {
       com.google.protobuf.GeneratedMessage.writeString(output, 5, recordRevisions_.getRaw(i));
+    }
+    if (hasMore_ != false) {
+      output.writeBool(6, hasMore_);
+    }
+    if (exactTotal_ != 0L) {
+      output.writeInt64(7, exactTotal_);
+    }
+    for (int i = 0; i < redactedFields_.size(); i++) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 8, redactedFields_.getRaw(i));
     }
     getUnknownFields().writeTo(output);
   }
@@ -441,6 +557,22 @@ private static final long serialVersionUID = 0L;
       size += dataSize;
       size += 1 * getRecordRevisionsList().size();
     }
+    if (hasMore_ != false) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeBoolSize(6, hasMore_);
+    }
+    if (exactTotal_ != 0L) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeInt64Size(7, exactTotal_);
+    }
+    {
+      int dataSize = 0;
+      for (int i = 0; i < redactedFields_.size(); i++) {
+        dataSize += computeStringSizeNoTag(redactedFields_.getRaw(i));
+      }
+      size += dataSize;
+      size += 1 * getRedactedFieldsList().size();
+    }
     size += getUnknownFields().getSerializedSize();
     memoizedSize = size;
     return size;
@@ -466,6 +598,12 @@ private static final long serialVersionUID = 0L;
         != other.getTotalCount()) return false;
     if (!getRecordRevisionsList()
         .equals(other.getRecordRevisionsList())) return false;
+    if (getHasMore()
+        != other.getHasMore()) return false;
+    if (getExactTotal()
+        != other.getExactTotal()) return false;
+    if (!getRedactedFieldsList()
+        .equals(other.getRedactedFieldsList())) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -492,6 +630,16 @@ private static final long serialVersionUID = 0L;
     if (getRecordRevisionsCount() > 0) {
       hash = (37 * hash) + RECORD_REVISIONS_FIELD_NUMBER;
       hash = (53 * hash) + getRecordRevisionsList().hashCode();
+    }
+    hash = (37 * hash) + HAS_MORE_FIELD_NUMBER;
+    hash = (53 * hash) + com.google.protobuf.Internal.hashBoolean(
+        getHasMore());
+    hash = (37 * hash) + EXACT_TOTAL_FIELD_NUMBER;
+    hash = (53 * hash) + com.google.protobuf.Internal.hashLong(
+        getExactTotal());
+    if (getRedactedFieldsCount() > 0) {
+      hash = (37 * hash) + REDACTED_FIELDS_FIELD_NUMBER;
+      hash = (53 * hash) + getRedactedFieldsList().hashCode();
     }
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
@@ -643,6 +791,10 @@ private static final long serialVersionUID = 0L;
       totalCount_ = 0;
       recordRevisions_ =
           com.google.protobuf.LazyStringArrayList.emptyList();
+      hasMore_ = false;
+      exactTotal_ = 0L;
+      redactedFields_ =
+          com.google.protobuf.LazyStringArrayList.emptyList();
       return this;
     }
 
@@ -702,6 +854,16 @@ private static final long serialVersionUID = 0L;
       if (((from_bitField0_ & 0x00000010) != 0)) {
         recordRevisions_.makeImmutable();
         result.recordRevisions_ = recordRevisions_;
+      }
+      if (((from_bitField0_ & 0x00000020) != 0)) {
+        result.hasMore_ = hasMore_;
+      }
+      if (((from_bitField0_ & 0x00000040) != 0)) {
+        result.exactTotal_ = exactTotal_;
+      }
+      if (((from_bitField0_ & 0x00000080) != 0)) {
+        redactedFields_.makeImmutable();
+        result.redactedFields_ = redactedFields_;
       }
     }
 
@@ -772,6 +934,22 @@ private static final long serialVersionUID = 0L;
         }
         onChanged();
       }
+      if (other.getHasMore() != false) {
+        setHasMore(other.getHasMore());
+      }
+      if (other.getExactTotal() != 0L) {
+        setExactTotal(other.getExactTotal());
+      }
+      if (!other.redactedFields_.isEmpty()) {
+        if (redactedFields_.isEmpty()) {
+          redactedFields_ = other.redactedFields_;
+          bitField0_ |= 0x00000080;
+        } else {
+          ensureRedactedFieldsIsMutable();
+          redactedFields_.addAll(other.redactedFields_);
+        }
+        onChanged();
+      }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
       return this;
@@ -833,6 +1011,22 @@ private static final long serialVersionUID = 0L;
               recordRevisions_.add(s);
               break;
             } // case 42
+            case 48: {
+              hasMore_ = input.readBool();
+              bitField0_ |= 0x00000020;
+              break;
+            } // case 48
+            case 56: {
+              exactTotal_ = input.readInt64();
+              bitField0_ |= 0x00000040;
+              break;
+            } // case 56
+            case 66: {
+              java.lang.String s = input.readStringRequireUtf8();
+              ensureRedactedFieldsIsMutable();
+              redactedFields_.add(s);
+              break;
+            } // case 66
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -1624,6 +1818,11 @@ private static final long serialVersionUID = 0L;
 
     private int totalCount_ ;
     /**
+     * <pre>
+     * The number of records in THIS page (the length of `records_json`), not the
+     * number of matching rows. Use `exact_total` for that.
+     * </pre>
+     *
      * <code>int32 total_count = 4 [json_name = "totalCount"];</code>
      * @return The totalCount.
      */
@@ -1632,6 +1831,11 @@ private static final long serialVersionUID = 0L;
       return totalCount_;
     }
     /**
+     * <pre>
+     * The number of records in THIS page (the length of `records_json`), not the
+     * number of matching rows. Use `exact_total` for that.
+     * </pre>
+     *
      * <code>int32 total_count = 4 [json_name = "totalCount"];</code>
      * @param value The totalCount to set.
      * @return This builder for chaining.
@@ -1644,6 +1848,11 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
+     * <pre>
+     * The number of records in THIS page (the length of `records_json`), not the
+     * number of matching rows. Use `exact_total` for that.
+     * </pre>
+     *
      * <code>int32 total_count = 4 [json_name = "totalCount"];</code>
      * @return This builder for chaining.
      */
@@ -1869,6 +2078,283 @@ private static final long serialVersionUID = 0L;
       ensureRecordRevisionsIsMutable();
       recordRevisions_.add(value);
       bitField0_ |= 0x00000010;
+      onChanged();
+      return this;
+    }
+
+    private boolean hasMore_ ;
+    /**
+     * <pre>
+     * True when the page is full (as many records as the request's limit, or the
+     * default limit of 100 when none was given): more rows may match. A read that
+     * was capped never looks like the complete result; page on with
+     * `next_page_token` (set a positive `limit` to get one) or narrow the filter.
+     * </pre>
+     *
+     * <code>bool has_more = 6 [json_name = "hasMore"];</code>
+     * @return The hasMore.
+     */
+    @java.lang.Override
+    public boolean getHasMore() {
+      return hasMore_;
+    }
+    /**
+     * <pre>
+     * True when the page is full (as many records as the request's limit, or the
+     * default limit of 100 when none was given): more rows may match. A read that
+     * was capped never looks like the complete result; page on with
+     * `next_page_token` (set a positive `limit` to get one) or narrow the filter.
+     * </pre>
+     *
+     * <code>bool has_more = 6 [json_name = "hasMore"];</code>
+     * @param value The hasMore to set.
+     * @return This builder for chaining.
+     */
+    public Builder setHasMore(boolean value) {
+
+      hasMore_ = value;
+      bitField0_ |= 0x00000020;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * True when the page is full (as many records as the request's limit, or the
+     * default limit of 100 when none was given): more rows may match. A read that
+     * was capped never looks like the complete result; page on with
+     * `next_page_token` (set a positive `limit` to get one) or narrow the filter.
+     * </pre>
+     *
+     * <code>bool has_more = 6 [json_name = "hasMore"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearHasMore() {
+      bitField0_ = (bitField0_ & ~0x00000020);
+      hasMore_ = false;
+      onChanged();
+      return this;
+    }
+
+    private long exactTotal_ ;
+    /**
+     * <pre>
+     * Every row the filter matches, ignoring the limit and the page position.
+     * Set only when `SelectRequest.include_total` asked for it (it costs one
+     * COUNT query); 0 otherwise.
+     * </pre>
+     *
+     * <code>int64 exact_total = 7 [json_name = "exactTotal"];</code>
+     * @return The exactTotal.
+     */
+    @java.lang.Override
+    public long getExactTotal() {
+      return exactTotal_;
+    }
+    /**
+     * <pre>
+     * Every row the filter matches, ignoring the limit and the page position.
+     * Set only when `SelectRequest.include_total` asked for it (it costs one
+     * COUNT query); 0 otherwise.
+     * </pre>
+     *
+     * <code>int64 exact_total = 7 [json_name = "exactTotal"];</code>
+     * @param value The exactTotal to set.
+     * @return This builder for chaining.
+     */
+    public Builder setExactTotal(long value) {
+
+      exactTotal_ = value;
+      bitField0_ |= 0x00000040;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Every row the filter matches, ignoring the limit and the page position.
+     * Set only when `SelectRequest.include_total` asked for it (it costs one
+     * COUNT query); 0 otherwise.
+     * </pre>
+     *
+     * <code>int64 exact_total = 7 [json_name = "exactTotal"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearExactTotal() {
+      bitField0_ = (bitField0_ & ~0x00000040);
+      exactTotal_ = 0L;
+      onChanged();
+      return this;
+    }
+
+    private com.google.protobuf.LazyStringArrayList redactedFields_ =
+        com.google.protobuf.LazyStringArrayList.emptyList();
+    private void ensureRedactedFieldsIsMutable() {
+      if (!redactedFields_.isModifiable()) {
+        redactedFields_ = new com.google.protobuf.LazyStringArrayList(redactedFields_);
+      }
+      bitField0_ |= 0x00000080;
+    }
+    /**
+     * <pre>
+     * Columns that came back as the redaction placeholder because the caller
+     * lacks the PII read scope (`udb:pii:read`). A value listed here is not the
+     * stored value: never write it back (the broker refuses that write with
+     * reason `UDB_REDACTED_VALUE_WRITE`). Empty when nothing was redacted.
+     * </pre>
+     *
+     * <code>repeated string redacted_fields = 8 [json_name = "redactedFields"];</code>
+     * @return A list containing the redactedFields.
+     */
+    public com.google.protobuf.ProtocolStringList
+        getRedactedFieldsList() {
+      redactedFields_.makeImmutable();
+      return redactedFields_;
+    }
+    /**
+     * <pre>
+     * Columns that came back as the redaction placeholder because the caller
+     * lacks the PII read scope (`udb:pii:read`). A value listed here is not the
+     * stored value: never write it back (the broker refuses that write with
+     * reason `UDB_REDACTED_VALUE_WRITE`). Empty when nothing was redacted.
+     * </pre>
+     *
+     * <code>repeated string redacted_fields = 8 [json_name = "redactedFields"];</code>
+     * @return The count of redactedFields.
+     */
+    public int getRedactedFieldsCount() {
+      return redactedFields_.size();
+    }
+    /**
+     * <pre>
+     * Columns that came back as the redaction placeholder because the caller
+     * lacks the PII read scope (`udb:pii:read`). A value listed here is not the
+     * stored value: never write it back (the broker refuses that write with
+     * reason `UDB_REDACTED_VALUE_WRITE`). Empty when nothing was redacted.
+     * </pre>
+     *
+     * <code>repeated string redacted_fields = 8 [json_name = "redactedFields"];</code>
+     * @param index The index of the element to return.
+     * @return The redactedFields at the given index.
+     */
+    public java.lang.String getRedactedFields(int index) {
+      return redactedFields_.get(index);
+    }
+    /**
+     * <pre>
+     * Columns that came back as the redaction placeholder because the caller
+     * lacks the PII read scope (`udb:pii:read`). A value listed here is not the
+     * stored value: never write it back (the broker refuses that write with
+     * reason `UDB_REDACTED_VALUE_WRITE`). Empty when nothing was redacted.
+     * </pre>
+     *
+     * <code>repeated string redacted_fields = 8 [json_name = "redactedFields"];</code>
+     * @param index The index of the value to return.
+     * @return The bytes of the redactedFields at the given index.
+     */
+    public com.google.protobuf.ByteString
+        getRedactedFieldsBytes(int index) {
+      return redactedFields_.getByteString(index);
+    }
+    /**
+     * <pre>
+     * Columns that came back as the redaction placeholder because the caller
+     * lacks the PII read scope (`udb:pii:read`). A value listed here is not the
+     * stored value: never write it back (the broker refuses that write with
+     * reason `UDB_REDACTED_VALUE_WRITE`). Empty when nothing was redacted.
+     * </pre>
+     *
+     * <code>repeated string redacted_fields = 8 [json_name = "redactedFields"];</code>
+     * @param index The index to set the value at.
+     * @param value The redactedFields to set.
+     * @return This builder for chaining.
+     */
+    public Builder setRedactedFields(
+        int index, java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      ensureRedactedFieldsIsMutable();
+      redactedFields_.set(index, value);
+      bitField0_ |= 0x00000080;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Columns that came back as the redaction placeholder because the caller
+     * lacks the PII read scope (`udb:pii:read`). A value listed here is not the
+     * stored value: never write it back (the broker refuses that write with
+     * reason `UDB_REDACTED_VALUE_WRITE`). Empty when nothing was redacted.
+     * </pre>
+     *
+     * <code>repeated string redacted_fields = 8 [json_name = "redactedFields"];</code>
+     * @param value The redactedFields to add.
+     * @return This builder for chaining.
+     */
+    public Builder addRedactedFields(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      ensureRedactedFieldsIsMutable();
+      redactedFields_.add(value);
+      bitField0_ |= 0x00000080;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Columns that came back as the redaction placeholder because the caller
+     * lacks the PII read scope (`udb:pii:read`). A value listed here is not the
+     * stored value: never write it back (the broker refuses that write with
+     * reason `UDB_REDACTED_VALUE_WRITE`). Empty when nothing was redacted.
+     * </pre>
+     *
+     * <code>repeated string redacted_fields = 8 [json_name = "redactedFields"];</code>
+     * @param values The redactedFields to add.
+     * @return This builder for chaining.
+     */
+    public Builder addAllRedactedFields(
+        java.lang.Iterable<java.lang.String> values) {
+      ensureRedactedFieldsIsMutable();
+      com.google.protobuf.AbstractMessageLite.Builder.addAll(
+          values, redactedFields_);
+      bitField0_ |= 0x00000080;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Columns that came back as the redaction placeholder because the caller
+     * lacks the PII read scope (`udb:pii:read`). A value listed here is not the
+     * stored value: never write it back (the broker refuses that write with
+     * reason `UDB_REDACTED_VALUE_WRITE`). Empty when nothing was redacted.
+     * </pre>
+     *
+     * <code>repeated string redacted_fields = 8 [json_name = "redactedFields"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearRedactedFields() {
+      redactedFields_ =
+        com.google.protobuf.LazyStringArrayList.emptyList();
+      bitField0_ = (bitField0_ & ~0x00000080);;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Columns that came back as the redaction placeholder because the caller
+     * lacks the PII read scope (`udb:pii:read`). A value listed here is not the
+     * stored value: never write it back (the broker refuses that write with
+     * reason `UDB_REDACTED_VALUE_WRITE`). Empty when nothing was redacted.
+     * </pre>
+     *
+     * <code>repeated string redacted_fields = 8 [json_name = "redactedFields"];</code>
+     * @param value The bytes of the redactedFields to add.
+     * @return This builder for chaining.
+     */
+    public Builder addRedactedFieldsBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      ensureRedactedFieldsIsMutable();
+      redactedFields_.add(value);
+      bitField0_ |= 0x00000080;
       onChanged();
       return this;
     }

@@ -39,6 +39,11 @@ use super::{sourcing, store};
 pub const ENV_RELOAD_INTERVAL_MS: &str = "UDB_CONTROL_RELOAD_INTERVAL_MS";
 const DEFAULT_RELOAD_INTERVAL_MS: u64 = 1_000;
 
+/// Re-source the registry from config only on every Nth tick (and the first).
+/// Config changes are rare and node-local; the per-tick work is the cheap
+/// change signal (one fingerprint query plus the in-memory authz version).
+const RESYNC_EVERY_TICKS: u64 = 30;
+
 /// Resolve the reload interval from the environment, clamped to a safe range.
 pub fn reload_interval() -> Duration {
     let ms = std::env::var(ENV_RELOAD_INTERVAL_MS)
@@ -125,9 +130,12 @@ pub fn spawn_control_plane_subscriber(handle: SubscriberHandle) -> tokio::task::
         // sources the registry, records versions, but only notifies on a real
         // change thereafter.
         let mut seeded = false;
+        let mut tick: u64 = 0;
         loop {
             ticker.tick().await;
-            match run_once(&handle, &last, seeded).await {
+            let full = tick % RESYNC_EVERY_TICKS == 0;
+            tick = tick.wrapping_add(1);
+            match run_tick(&handle, &last, seeded, full).await {
                 Ok(next) => {
                     last = next;
                     seeded = true;
@@ -155,13 +163,41 @@ pub(crate) async fn run_once(
     last: &LastSeen,
     seeded: bool,
 ) -> Result<LastSeen, String> {
+    run_tick(handle, last, seeded, true).await
+}
+
+/// One tick. A `full` tick re-sources the registry from config first; every
+/// tick then reads the fleet fingerprint, and the per-type versions are only
+/// recomputed when the fingerprint or the authz version moved. An idle broker
+/// therefore costs one query per tick instead of a resync plus one query per
+/// resource type.
+async fn run_tick(
+    handle: &SubscriberHandle,
+    last: &LastSeen,
+    seeded: bool,
+    full: bool,
+) -> Result<LastSeen, String> {
     // urgent_fix #27: time the reload cycle (resync → version recompute → apply) so
     // `observe_policy_reload_seconds` is fed from the serving path, not just tests.
     let reload_started = std::time::Instant::now();
     // 1. Re-source the registry from live config (idempotent, content-addressed).
-    sourcing::resync(&handle.pool, &handle.config)
-        .await
-        .map_err(|status| format!("resync failed: {status}"))?;
+    if full || !seeded {
+        sourcing::resync(&handle.pool, &handle.config)
+            .await
+            .map_err(|status| format!("resync failed: {status}"))?;
+    } else {
+        let fingerprint = store::fleet_world_fingerprint(&handle.pool)
+            .await
+            .map_err(|status| format!("fleet fingerprint failed: {status}"))?;
+        let authz_version = handle
+            .authz_version
+            .as_ref()
+            .map(|probe| probe())
+            .unwrap_or_default();
+        if fingerprint == last.fingerprint && authz_version == last.authz_version {
+            return Ok(last.clone());
+        }
+    }
 
     // 2. Capture per-type world versions + the combined fleet fingerprint.
     let mut per_type = std::collections::BTreeMap::new();

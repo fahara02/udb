@@ -3271,7 +3271,7 @@ async function documentKind(data, rc, backend, suffix, mountFatal) {
 }
 async function cacheKind(data, rc, backend, suffix, mountFatal) {
     const opts = { deadlineMs: 8_000, noRetry: true };
-    const resource = { backend };
+    const resource = { backend, resource_name: "sdk_live_cache" };
     const key = `sdk-live-cache-${suffix}`;
     const val = Buffer.from(`cache-${backend}-${suffix}`, "utf8");
     try {
@@ -3328,7 +3328,7 @@ async function vectorKind(data, rc, backend, suffix, mountFatal) {
 }
 async function graphKind(data, rc, backend, suffix, mountFatal) {
     const opts = { deadlineMs: 8_000, noRetry: true };
-    const resource = { backend };
+    const resource = { backend, resource_name: "sdk_live_graph" };
     const label = `SdkLive${suffix.replace(/[^a-zA-Z0-9]/g, "")}`;
     try {
         await data.graph_mutate({ context: rc("ts.live.kind.graph"), resource, query: `CREATE (n:${label} {id: $id}) RETURN n`, parameters: { id: suffix } }, opts);

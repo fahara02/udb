@@ -297,6 +297,12 @@ impl SystemCatalogConfig {
     pub(crate) fn vector_resource_routes_relation(&self) -> String {
         relation(&self.cdc.system_schema, VECTOR_RESOURCE_ROUTES_TABLE)
     }
+
+    /// Durable CDC consumer positions, one row per (tenant, project, consumer,
+    /// topic pattern).
+    pub(crate) fn cdc_consumer_cursors_relation(&self) -> String {
+        relation(&self.cdc.system_schema, CDC_CONSUMER_CURSORS_TABLE)
+    }
 }
 
 /// C3: the system table holding the serving route of every vector collection
@@ -304,6 +310,9 @@ impl SystemCatalogConfig {
 /// Keyed per `(tenant, project, collection)` so the hard tenant purge can find
 /// every ad-hoc collection a tenant wrote to, on any replica and after restart.
 pub(crate) const VECTOR_RESOURCE_ROUTES_TABLE: &str = "udb_vector_resource_routes";
+
+/// Durable CDC consumer positions (see `AckCdcEvents`).
+pub(crate) const CDC_CONSUMER_CURSORS_TABLE: &str = "udb_cdc_consumer_cursors";
 
 /// H4: bootstrap the UDB system catalog under the startup advisory lock.
 ///
@@ -1733,6 +1742,20 @@ fn system_catalog_statements(config: &SystemCatalogConfig) -> Vec<String> {
             "CREATE INDEX IF NOT EXISTS {} ON {} (tenant_id, project_id, slot_name)",
             qi(&format!("idx_{}_tenant_project_slot", config.cdc_control_table)),
             config.cdc_control_relation()
+        ),
+        // Durable consumer positions: AckCdcEvents writes, PublishCDC with a
+        // consumer_name resumes from here.
+        format!(
+            "CREATE TABLE IF NOT EXISTS {} (
+                tenant_id TEXT NOT NULL,
+                project_id TEXT NOT NULL DEFAULT '',
+                consumer_name TEXT NOT NULL,
+                topic_pattern TEXT NOT NULL,
+                last_event_id UUID NOT NULL,
+                acked_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                PRIMARY KEY (tenant_id, project_id, consumer_name, topic_pattern)
+            )",
+            config.cdc_consumer_cursors_relation()
         ),
         // ── Phase 7 — Topic policy ────────────────────────────────────────────
         format!(

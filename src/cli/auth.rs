@@ -288,6 +288,45 @@ async fn run_auth_command_async(command: AuthCommand) -> Result<serde_json::Valu
                 .map(grant_json)
                 .ok_or_else(|| "grant replace returned no grant".to_string())
         }
+        AuthCommand::GrantTransfer {
+            tenant_id,
+            from_user_id,
+            to_user_id,
+            expected_revision,
+            reason,
+        } => {
+            require("tenant", &tenant_id)?;
+            require("from", &from_user_id)?;
+            require("to", &to_user_id)?;
+            if expected_revision <= 0 {
+                return Err(
+                    "--expected-revision is required (the grant's current revision, from \
+                     `auth grant get`)"
+                        .to_string(),
+                );
+            }
+            let mut client = authn_client().await?;
+            let response = client
+                .transfer_service_account_grant(with_metadata(
+                    authn_pb::TransferServiceAccountGrantRequest {
+                        tenant_id,
+                        from_user_id,
+                        to_user_id,
+                        expected_revision,
+                        reason,
+                    },
+                ))
+                .await
+                .map_err(|error| format!("grant transfer failed: {error}"))?
+                .into_inner();
+            let previous = response.previous_user_id.clone();
+            let mut out = response
+                .grant
+                .map(grant_json)
+                .ok_or_else(|| "grant transfer returned no grant".to_string())?;
+            out["previous_user_id"] = serde_json::Value::String(previous);
+            Ok(out)
+        }
         AuthCommand::GrantRevoke {
             tenant_id,
             user_id,

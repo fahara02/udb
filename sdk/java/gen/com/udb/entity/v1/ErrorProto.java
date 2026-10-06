@@ -36,6 +36,11 @@ public final class ErrorProto {
   static final
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_udb_entity_v1_ErrorDetail_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_udb_entity_v1_ErrorDetail_MissingEntry_descriptor;
+  static final
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_udb_entity_v1_ErrorDetail_MissingEntry_fieldAccessorTable;
 
   public static com.google.protobuf.Descriptors.FileDescriptor
       getDescriptor() {
@@ -48,7 +53,7 @@ public final class ErrorProto {
       "\n\031udb/entity/v1/error.proto\022\rudb.entity." +
       "v1\"M\n\023ErrorFieldViolation\022\024\n\005field\030\001 \001(\t" +
       "R\005field\022 \n\013description\030\002 \001(\tR\013descriptio" +
-      "n\"\214\003\n\013ErrorDetail\022\030\n\007backend\030\001 \001(\tR\007back" +
+      "n\"\366\004\n\013ErrorDetail\022\030\n\007backend\030\001 \001(\tR\007back" +
       "end\022\034\n\toperation\030\002 \001(\tR\toperation\022/\n\023cap" +
       "ability_required\030\003 \001(\tR\022capabilityRequir" +
       "ed\022\034\n\tretryable\030\004 \001(\010R\tretryable\022$\n\016retr" +
@@ -58,17 +63,28 @@ public final class ErrorProto {
       "ind\030\010 \001(\0162\030.udb.entity.v1.ErrorKindR\004kin" +
       "d\022M\n\020field_violations\030\t \003(\0132\".udb.entity" +
       ".v1.ErrorFieldViolationR\017fieldViolations" +
-      "*\324\001\n\tErrorKind\022\032\n\026ERROR_KIND_UNSPECIFIED" +
-      "\020\000\022\031\n\025ERROR_KIND_CAPABILITY\020\001\022\025\n\021ERROR_K" +
-      "IND_POLICY\020\002\022\024\n\020ERROR_KIND_QUOTA\020\003\022\025\n\021ER" +
-      "ROR_KIND_SCHEMA\020\004\022\030\n\024ERROR_KIND_RETRYABL" +
-      "E\020\005\022\027\n\023ERROR_KIND_INTERNAL\020\006\022\031\n\025ERROR_KI" +
-      "ND_VALIDATION\020\007B\260\001\n\021com.udb.entity.v1B\nE" +
-      "rrorProtoP\001Z9github.com/fahara02/udb/sdk" +
-      "/go/gen/udb/entity/v1;entityv1\242\002\003UEX\252\002\rU" +
-      "db.Entity.V1\312\002\rUdb\\Entity\\V1\342\002\031Udb\\GPBMe" +
-      "tadata\\Entity\\V1\352\002\017Udb::Entity::V1b\006prot" +
-      "o3"
+      "\022\026\n\006reason\030\n \001(\tR\006reason\022\036\n\nconstraint\030\013" +
+      " \001(\tR\nconstraint\022\026\n\006column\030\014 \001(\tR\006column" +
+      "\022\031\n\010fix_hint\030\r \001(\tR\007fixHint\022A\n\007missing\030\016" +
+      " \003(\0132\'.udb.entity.v1.ErrorDetail.Missing" +
+      "EntryR\007missing\032:\n\014MissingEntry\022\020\n\003key\030\001 " +
+      "\001(\tR\003key\022\024\n\005value\030\002 \001(\tR\005value:\0028\001*\244\003\n\tE" +
+      "rrorKind\022\032\n\026ERROR_KIND_UNSPECIFIED\020\000\022\031\n\025" +
+      "ERROR_KIND_CAPABILITY\020\001\022\025\n\021ERROR_KIND_PO" +
+      "LICY\020\002\022\024\n\020ERROR_KIND_QUOTA\020\003\022\025\n\021ERROR_KI" +
+      "ND_SCHEMA\020\004\022\030\n\024ERROR_KIND_RETRYABLE\020\005\022\027\n" +
+      "\023ERROR_KIND_INTERNAL\020\006\022\031\n\025ERROR_KIND_VAL" +
+      "IDATION\020\007\022\027\n\023ERROR_KIND_CONFLICT\020\010\022\030\n\024ER" +
+      "ROR_KIND_NOT_FOUND\020\t\022\025\n\021ERROR_KIND_UNIQU" +
+      "E\020\n\022\027\n\023ERROR_KIND_NOT_NULL\020\013\022\032\n\026ERROR_KI" +
+      "ND_FOREIGN_KEY\020\014\022\031\n\025ERROR_KIND_PERMISSIO" +
+      "N\020\r\022\027\n\023ERROR_KIND_REDACTED\020\016\022\033\n\027ERROR_KI" +
+      "ND_RATE_LIMITED\020\017B\260\001\n\021com.udb.entity.v1B" +
+      "\nErrorProtoP\001Z9github.com/fahara02/udb/s" +
+      "dk/go/gen/udb/entity/v1;entityv1\242\002\003UEX\252\002" +
+      "\rUdb.Entity.V1\312\002\rUdb\\Entity\\V1\342\002\031Udb\\GPB" +
+      "Metadata\\Entity\\V1\352\002\017Udb::Entity::V1b\006pr" +
+      "oto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -85,7 +101,13 @@ public final class ErrorProto {
     internal_static_udb_entity_v1_ErrorDetail_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_ErrorDetail_descriptor,
-        new java.lang.String[] { "Backend", "Operation", "CapabilityRequired", "Retryable", "RetryAfterMs", "PolicyDecisionId", "CorrelationId", "Kind", "FieldViolations", });
+        new java.lang.String[] { "Backend", "Operation", "CapabilityRequired", "Retryable", "RetryAfterMs", "PolicyDecisionId", "CorrelationId", "Kind", "FieldViolations", "Reason", "Constraint", "Column", "FixHint", "Missing", });
+    internal_static_udb_entity_v1_ErrorDetail_MissingEntry_descriptor =
+      internal_static_udb_entity_v1_ErrorDetail_descriptor.getNestedTypes().get(0);
+    internal_static_udb_entity_v1_ErrorDetail_MissingEntry_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_udb_entity_v1_ErrorDetail_MissingEntry_descriptor,
+        new java.lang.String[] { "Key", "Value", });
     descriptor.resolveAllFeaturesImmutable();
   }
 

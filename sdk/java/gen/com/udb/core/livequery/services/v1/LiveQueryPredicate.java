@@ -37,6 +37,8 @@ private static final long serialVersionUID = 0L;
     field_ = "";
     op_ = 0;
     value_ = "";
+    values_ =
+        com.google.protobuf.LazyStringArrayList.emptyList();
   }
 
   public static final com.google.protobuf.Descriptors.Descriptor
@@ -156,6 +158,63 @@ private static final long serialVersionUID = 0L;
     }
   }
 
+  public static final int VALUES_FIELD_NUMBER = 4;
+  @SuppressWarnings("serial")
+  private com.google.protobuf.LazyStringArrayList values_ =
+      com.google.protobuf.LazyStringArrayList.emptyList();
+  /**
+   * <pre>
+   * Operands of IN / NOT_IN (each typed like `value`). Must be non-empty for
+   * those operators and empty for every other operator.
+   * </pre>
+   *
+   * <code>repeated string values = 4 [json_name = "values"];</code>
+   * @return A list containing the values.
+   */
+  public com.google.protobuf.ProtocolStringList
+      getValuesList() {
+    return values_;
+  }
+  /**
+   * <pre>
+   * Operands of IN / NOT_IN (each typed like `value`). Must be non-empty for
+   * those operators and empty for every other operator.
+   * </pre>
+   *
+   * <code>repeated string values = 4 [json_name = "values"];</code>
+   * @return The count of values.
+   */
+  public int getValuesCount() {
+    return values_.size();
+  }
+  /**
+   * <pre>
+   * Operands of IN / NOT_IN (each typed like `value`). Must be non-empty for
+   * those operators and empty for every other operator.
+   * </pre>
+   *
+   * <code>repeated string values = 4 [json_name = "values"];</code>
+   * @param index The index of the element to return.
+   * @return The values at the given index.
+   */
+  public java.lang.String getValues(int index) {
+    return values_.get(index);
+  }
+  /**
+   * <pre>
+   * Operands of IN / NOT_IN (each typed like `value`). Must be non-empty for
+   * those operators and empty for every other operator.
+   * </pre>
+   *
+   * <code>repeated string values = 4 [json_name = "values"];</code>
+   * @param index The index of the value to return.
+   * @return The bytes of the values at the given index.
+   */
+  public com.google.protobuf.ByteString
+      getValuesBytes(int index) {
+    return values_.getByteString(index);
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -179,6 +238,9 @@ private static final long serialVersionUID = 0L;
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(value_)) {
       com.google.protobuf.GeneratedMessage.writeString(output, 3, value_);
     }
+    for (int i = 0; i < values_.size(); i++) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 4, values_.getRaw(i));
+    }
     getUnknownFields().writeTo(output);
   }
 
@@ -197,6 +259,14 @@ private static final long serialVersionUID = 0L;
     }
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(value_)) {
       size += com.google.protobuf.GeneratedMessage.computeStringSize(3, value_);
+    }
+    {
+      int dataSize = 0;
+      for (int i = 0; i < values_.size(); i++) {
+        dataSize += computeStringSizeNoTag(values_.getRaw(i));
+      }
+      size += dataSize;
+      size += 1 * getValuesList().size();
     }
     size += getUnknownFields().getSerializedSize();
     memoizedSize = size;
@@ -218,6 +288,8 @@ private static final long serialVersionUID = 0L;
     if (op_ != other.op_) return false;
     if (!getValue()
         .equals(other.getValue())) return false;
+    if (!getValuesList()
+        .equals(other.getValuesList())) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -235,6 +307,10 @@ private static final long serialVersionUID = 0L;
     hash = (53 * hash) + op_;
     hash = (37 * hash) + VALUE_FIELD_NUMBER;
     hash = (53 * hash) + getValue().hashCode();
+    if (getValuesCount() > 0) {
+      hash = (37 * hash) + VALUES_FIELD_NUMBER;
+      hash = (53 * hash) + getValuesList().hashCode();
+    }
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -375,6 +451,8 @@ private static final long serialVersionUID = 0L;
       field_ = "";
       op_ = 0;
       value_ = "";
+      values_ =
+          com.google.protobuf.LazyStringArrayList.emptyList();
       return this;
     }
 
@@ -417,6 +495,10 @@ private static final long serialVersionUID = 0L;
       if (((from_bitField0_ & 0x00000004) != 0)) {
         result.value_ = value_;
       }
+      if (((from_bitField0_ & 0x00000008) != 0)) {
+        values_.makeImmutable();
+        result.values_ = values_;
+      }
     }
 
     @java.lang.Override
@@ -442,6 +524,16 @@ private static final long serialVersionUID = 0L;
       if (!other.getValue().isEmpty()) {
         value_ = other.value_;
         bitField0_ |= 0x00000004;
+        onChanged();
+      }
+      if (!other.values_.isEmpty()) {
+        if (values_.isEmpty()) {
+          values_ = other.values_;
+          bitField0_ |= 0x00000008;
+        } else {
+          ensureValuesIsMutable();
+          values_.addAll(other.values_);
+        }
         onChanged();
       }
       this.mergeUnknownFields(other.getUnknownFields());
@@ -485,6 +577,12 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00000004;
               break;
             } // case 26
+            case 34: {
+              java.lang.String s = input.readStringRequireUtf8();
+              ensureValuesIsMutable();
+              values_.add(s);
+              break;
+            } // case 34
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -713,6 +811,162 @@ private static final long serialVersionUID = 0L;
       checkByteStringIsUtf8(value);
       value_ = value;
       bitField0_ |= 0x00000004;
+      onChanged();
+      return this;
+    }
+
+    private com.google.protobuf.LazyStringArrayList values_ =
+        com.google.protobuf.LazyStringArrayList.emptyList();
+    private void ensureValuesIsMutable() {
+      if (!values_.isModifiable()) {
+        values_ = new com.google.protobuf.LazyStringArrayList(values_);
+      }
+      bitField0_ |= 0x00000008;
+    }
+    /**
+     * <pre>
+     * Operands of IN / NOT_IN (each typed like `value`). Must be non-empty for
+     * those operators and empty for every other operator.
+     * </pre>
+     *
+     * <code>repeated string values = 4 [json_name = "values"];</code>
+     * @return A list containing the values.
+     */
+    public com.google.protobuf.ProtocolStringList
+        getValuesList() {
+      values_.makeImmutable();
+      return values_;
+    }
+    /**
+     * <pre>
+     * Operands of IN / NOT_IN (each typed like `value`). Must be non-empty for
+     * those operators and empty for every other operator.
+     * </pre>
+     *
+     * <code>repeated string values = 4 [json_name = "values"];</code>
+     * @return The count of values.
+     */
+    public int getValuesCount() {
+      return values_.size();
+    }
+    /**
+     * <pre>
+     * Operands of IN / NOT_IN (each typed like `value`). Must be non-empty for
+     * those operators and empty for every other operator.
+     * </pre>
+     *
+     * <code>repeated string values = 4 [json_name = "values"];</code>
+     * @param index The index of the element to return.
+     * @return The values at the given index.
+     */
+    public java.lang.String getValues(int index) {
+      return values_.get(index);
+    }
+    /**
+     * <pre>
+     * Operands of IN / NOT_IN (each typed like `value`). Must be non-empty for
+     * those operators and empty for every other operator.
+     * </pre>
+     *
+     * <code>repeated string values = 4 [json_name = "values"];</code>
+     * @param index The index of the value to return.
+     * @return The bytes of the values at the given index.
+     */
+    public com.google.protobuf.ByteString
+        getValuesBytes(int index) {
+      return values_.getByteString(index);
+    }
+    /**
+     * <pre>
+     * Operands of IN / NOT_IN (each typed like `value`). Must be non-empty for
+     * those operators and empty for every other operator.
+     * </pre>
+     *
+     * <code>repeated string values = 4 [json_name = "values"];</code>
+     * @param index The index to set the value at.
+     * @param value The values to set.
+     * @return This builder for chaining.
+     */
+    public Builder setValues(
+        int index, java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      ensureValuesIsMutable();
+      values_.set(index, value);
+      bitField0_ |= 0x00000008;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Operands of IN / NOT_IN (each typed like `value`). Must be non-empty for
+     * those operators and empty for every other operator.
+     * </pre>
+     *
+     * <code>repeated string values = 4 [json_name = "values"];</code>
+     * @param value The values to add.
+     * @return This builder for chaining.
+     */
+    public Builder addValues(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      ensureValuesIsMutable();
+      values_.add(value);
+      bitField0_ |= 0x00000008;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Operands of IN / NOT_IN (each typed like `value`). Must be non-empty for
+     * those operators and empty for every other operator.
+     * </pre>
+     *
+     * <code>repeated string values = 4 [json_name = "values"];</code>
+     * @param values The values to add.
+     * @return This builder for chaining.
+     */
+    public Builder addAllValues(
+        java.lang.Iterable<java.lang.String> values) {
+      ensureValuesIsMutable();
+      com.google.protobuf.AbstractMessageLite.Builder.addAll(
+          values, values_);
+      bitField0_ |= 0x00000008;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Operands of IN / NOT_IN (each typed like `value`). Must be non-empty for
+     * those operators and empty for every other operator.
+     * </pre>
+     *
+     * <code>repeated string values = 4 [json_name = "values"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearValues() {
+      values_ =
+        com.google.protobuf.LazyStringArrayList.emptyList();
+      bitField0_ = (bitField0_ & ~0x00000008);;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Operands of IN / NOT_IN (each typed like `value`). Must be non-empty for
+     * those operators and empty for every other operator.
+     * </pre>
+     *
+     * <code>repeated string values = 4 [json_name = "values"];</code>
+     * @param value The bytes of the values to add.
+     * @return This builder for chaining.
+     */
+    public Builder addValuesBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      ensureValuesIsMutable();
+      values_.add(value);
+      bitField0_ |= 0x00000008;
       onChanged();
       return this;
     }

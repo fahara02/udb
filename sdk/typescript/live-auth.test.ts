@@ -3551,7 +3551,7 @@ async function documentKind(data: any, rc: (p: string) => any, backend: string, 
 
 async function cacheKind(data: any, rc: (p: string) => any, backend: string, suffix: string, mountFatal: MountFatal): Promise<void> {
   const opts = { deadlineMs: 8_000, noRetry: true };
-  const resource = { backend };
+  const resource = { backend, resource_name: "sdk_live_cache" };
   const key = `sdk-live-cache-${suffix}`;
   const val = Buffer.from(`cache-${backend}-${suffix}`, "utf8");
   try { await data.cache_set({ context: rc("ts.live.kind.cache"), resource, key, value: val, content_type: "text/plain", ttl_seconds: 60 }, opts); } catch (err) { mountFatal(backend, "cache_set", err); return; }
@@ -3574,7 +3574,7 @@ async function vectorKind(data: any, rc: (p: string) => any, backend: string, su
 
 async function graphKind(data: any, rc: (p: string) => any, backend: string, suffix: string, mountFatal: MountFatal): Promise<void> {
   const opts = { deadlineMs: 8_000, noRetry: true };
-  const resource = { backend };
+  const resource = { backend, resource_name: "sdk_live_graph" };
   const label = `SdkLive${suffix.replace(/[^a-zA-Z0-9]/g, "")}`;
   try { await data.graph_mutate({ context: rc("ts.live.kind.graph"), resource, query: `CREATE (n:${label} {id: $id}) RETURN n`, parameters: { id: suffix } }, opts); } catch (err) { mountFatal(backend, "mutate", err); return; }
   try { await data.graph_query({ context: rc("ts.live.kind.graph"), resource, query: `MATCH (n:${label}) RETURN n LIMIT 1`, read_only: true }, opts); } catch (err) { mountFatal(backend, "query", err); }

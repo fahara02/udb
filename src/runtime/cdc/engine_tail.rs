@@ -1242,6 +1242,7 @@ impl CdcEngine {
     /// `(published_at, event_id)` order); `Ok(None)` when the topic has none.
     /// A live subscriber that tails the journal anchors here so it receives
     /// only changes committed after it subscribed.
+    #[cfg(test)]
     pub(crate) async fn journal_head_event_id(
         &self,
         topic: &str,
@@ -1255,6 +1256,29 @@ impl CdcEngine {
         .fetch_optional(&self.pool)
         .await
         .map_err(|err| format!("journal head read failed: {err}"))
+    }
+
+    /// [`Self::journal_head_event_id`] as a full journal watermark
+    /// `(published_at, event_id)`; the Unix epoch and an empty id when the topic
+    /// has no events yet (every real row sorts after it).
+    pub(crate) async fn journal_head_watermark(
+        &self,
+        topic: &str,
+    ) -> Result<(DateTime<Utc>, String), String> {
+        let journal_relation = SystemCatalogConfig::current().cdc_journal_relation();
+        let head: Option<(DateTime<Utc>, String)> = sqlx::query_as(&format!(
+            "SELECT published_at, event_id::TEXT FROM {journal_relation} WHERE topic = $1 ORDER BY published_at DESC, event_id::TEXT DESC LIMIT 1"
+        ))
+        .bind(topic)
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(|err| format!("journal head read failed: {err}"))?;
+        Ok(head.unwrap_or_else(|| {
+            (
+                DateTime::<Utc>::from_timestamp(0, 0).expect("unix epoch is a valid timestamp"),
+                String::new(),
+            )
+        }))
     }
 
     /// [`Self::journal_replay_for_scope`], also returning the id of the LAST
@@ -1344,6 +1368,37 @@ impl CdcEngine {
                 }
                 Err(_) => (genesis, String::new()),
             };
+        self.try_journal_scan_after(
+            topic,
+            tenant_scope,
+            project_scope,
+            anchor_ts,
+            anchor_id,
+            limit,
+        )
+        .await
+        .map(|(events, last)| (events, last.map(|(_, event_id)| event_id)))
+    }
+
+    /// The scan behind [`Self::try_journal_scan_for_scope`], anchored at an
+    /// already-resolved journal watermark `(published_at, event_id)` instead of
+    /// a cursor event id, so a caller that tracks its own watermark (the shared
+    /// LiveQuery journal poller) skips the per-poll cursor lookup. Returns the
+    /// in-scope events and the watermark of the LAST row scanned (in scope or
+    /// not), `None` when nothing was scanned.
+    pub(crate) async fn try_journal_scan_after(
+        &self,
+        topic: &str,
+        tenant_scope: &str,
+        project_scope: &str,
+        anchor_ts: DateTime<Utc>,
+        anchor_id: String,
+        limit: i64,
+    ) -> Result<(Vec<CdcEnvelope>, Option<(DateTime<Utc>, String)>), String> {
+        if topic.trim().is_empty() || limit <= 0 {
+            return Ok((Vec::new(), None));
+        }
+        let journal_relation = SystemCatalogConfig::current().cdc_journal_relation();
         // Page size = `limit` in-scope rows worth of raw rows per fetch; the total
         // raw scan is capped at `limit * REPLAY_SCAN_PAGES` so a tenant with little
         // backlog on a busy shared topic can't walk the entire journal chasing rows
@@ -1452,7 +1507,7 @@ impl CdcEngine {
                 break;
             }
         }
-        let last_scanned = (scanned > 0).then_some(cursor_id);
+        let last_scanned = (scanned > 0).then_some((cursor_ts, cursor_id));
         Ok((out, last_scanned))
     }
 

@@ -84,6 +84,74 @@ public enum ErrorKind
    * <code>ERROR_KIND_VALIDATION = 7;</code>
    */
   ERROR_KIND_VALIDATION(7),
+  /**
+   * <pre>
+   * A compare-and-swap / revision precondition did not hold: the row changed
+   * since the caller read it. Re-read and retry. Maps to FailedPrecondition.
+   * </pre>
+   *
+   * <code>ERROR_KIND_CONFLICT = 8;</code>
+   */
+  ERROR_KIND_CONFLICT(8),
+  /**
+   * <pre>
+   * The addressed row or resource does not exist (or is not visible to the
+   * caller). Maps to NotFound.
+   * </pre>
+   *
+   * <code>ERROR_KIND_NOT_FOUND = 9;</code>
+   */
+  ERROR_KIND_NOT_FOUND(9),
+  /**
+   * <pre>
+   * A unique constraint was violated; `constraint` names it. Maps to
+   * AlreadyExists.
+   * </pre>
+   *
+   * <code>ERROR_KIND_UNIQUE = 10;</code>
+   */
+  ERROR_KIND_UNIQUE(10),
+  /**
+   * <pre>
+   * A NOT NULL column received no value; `column` names it.
+   * </pre>
+   *
+   * <code>ERROR_KIND_NOT_NULL = 11;</code>
+   */
+  ERROR_KIND_NOT_NULL(11),
+  /**
+   * <pre>
+   * A foreign-key constraint was violated; `constraint` names it.
+   * </pre>
+   *
+   * <code>ERROR_KIND_FOREIGN_KEY = 12;</code>
+   */
+  ERROR_KIND_FOREIGN_KEY(12),
+  /**
+   * <pre>
+   * The caller lacks a scope, grant or policy rule; `missing` names it.
+   * </pre>
+   *
+   * <code>ERROR_KIND_PERMISSION = 13;</code>
+   */
+  ERROR_KIND_PERMISSION(13),
+  /**
+   * <pre>
+   * A value was redacted for this caller (PII without the read scope), or a
+   * write tried to store a redacted placeholder.
+   * </pre>
+   *
+   * <code>ERROR_KIND_REDACTED = 14;</code>
+   */
+  ERROR_KIND_REDACTED(14),
+  /**
+   * <pre>
+   * A rate limit was hit; `retry_after_ms` and `missing` describe the bucket.
+   * </pre>
+   *
+   * <code>ERROR_KIND_RATE_LIMITED = 15;</code>
+   */
+  ERROR_KIND_RATE_LIMITED(15),
   UNRECOGNIZED(-1),
   ;
 
@@ -164,6 +232,74 @@ public enum ErrorKind
    * <code>ERROR_KIND_VALIDATION = 7;</code>
    */
   public static final int ERROR_KIND_VALIDATION_VALUE = 7;
+  /**
+   * <pre>
+   * A compare-and-swap / revision precondition did not hold: the row changed
+   * since the caller read it. Re-read and retry. Maps to FailedPrecondition.
+   * </pre>
+   *
+   * <code>ERROR_KIND_CONFLICT = 8;</code>
+   */
+  public static final int ERROR_KIND_CONFLICT_VALUE = 8;
+  /**
+   * <pre>
+   * The addressed row or resource does not exist (or is not visible to the
+   * caller). Maps to NotFound.
+   * </pre>
+   *
+   * <code>ERROR_KIND_NOT_FOUND = 9;</code>
+   */
+  public static final int ERROR_KIND_NOT_FOUND_VALUE = 9;
+  /**
+   * <pre>
+   * A unique constraint was violated; `constraint` names it. Maps to
+   * AlreadyExists.
+   * </pre>
+   *
+   * <code>ERROR_KIND_UNIQUE = 10;</code>
+   */
+  public static final int ERROR_KIND_UNIQUE_VALUE = 10;
+  /**
+   * <pre>
+   * A NOT NULL column received no value; `column` names it.
+   * </pre>
+   *
+   * <code>ERROR_KIND_NOT_NULL = 11;</code>
+   */
+  public static final int ERROR_KIND_NOT_NULL_VALUE = 11;
+  /**
+   * <pre>
+   * A foreign-key constraint was violated; `constraint` names it.
+   * </pre>
+   *
+   * <code>ERROR_KIND_FOREIGN_KEY = 12;</code>
+   */
+  public static final int ERROR_KIND_FOREIGN_KEY_VALUE = 12;
+  /**
+   * <pre>
+   * The caller lacks a scope, grant or policy rule; `missing` names it.
+   * </pre>
+   *
+   * <code>ERROR_KIND_PERMISSION = 13;</code>
+   */
+  public static final int ERROR_KIND_PERMISSION_VALUE = 13;
+  /**
+   * <pre>
+   * A value was redacted for this caller (PII without the read scope), or a
+   * write tried to store a redacted placeholder.
+   * </pre>
+   *
+   * <code>ERROR_KIND_REDACTED = 14;</code>
+   */
+  public static final int ERROR_KIND_REDACTED_VALUE = 14;
+  /**
+   * <pre>
+   * A rate limit was hit; `retry_after_ms` and `missing` describe the bucket.
+   * </pre>
+   *
+   * <code>ERROR_KIND_RATE_LIMITED = 15;</code>
+   */
+  public static final int ERROR_KIND_RATE_LIMITED_VALUE = 15;
 
 
   public final int getNumber() {
@@ -198,6 +334,14 @@ public enum ErrorKind
       case 5: return ERROR_KIND_RETRYABLE;
       case 6: return ERROR_KIND_INTERNAL;
       case 7: return ERROR_KIND_VALIDATION;
+      case 8: return ERROR_KIND_CONFLICT;
+      case 9: return ERROR_KIND_NOT_FOUND;
+      case 10: return ERROR_KIND_UNIQUE;
+      case 11: return ERROR_KIND_NOT_NULL;
+      case 12: return ERROR_KIND_FOREIGN_KEY;
+      case 13: return ERROR_KIND_PERMISSION;
+      case 14: return ERROR_KIND_REDACTED;
+      case 15: return ERROR_KIND_RATE_LIMITED;
       default: return null;
     }
   }

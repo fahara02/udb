@@ -27,6 +27,24 @@ const GROUPS: &[&str] = &[
     "Diagnostics",
 ];
 
+/// Top-level command words, derived from the help registry so the
+/// unknown-command suggestion never drifts from what `udb help` documents.
+pub(super) fn top_level_commands() -> Vec<&'static str> {
+    let mut names: Vec<&'static str> = COMMANDS
+        .iter()
+        .map(|command| {
+            command
+                .name
+                .split_whitespace()
+                .next()
+                .unwrap_or(command.name)
+        })
+        .collect();
+    names.sort_unstable();
+    names.dedup();
+    names
+}
+
 const COMMANDS: &[CmdHelp] = &[
     CmdHelp {
         name: "serve",
@@ -57,6 +75,33 @@ const COMMANDS: &[CmdHelp] = &[
   changes nothing, so it is safe to re-run and safe on a healthy deployment.
 
   Run once per project that services authenticate under.",
+    },
+    CmdHelp {
+        name: "catalog stage",
+        group: "Core",
+        summary: "Stage the catalog built from your protos for a project, without activating it.",
+        usage: "udb catalog stage --project <id> [--dsn <dsn>]",
+        details: "  Adds an entity without rebuilding the broker: build the manifest from the
+  protos, stage it, check it, then `udb catalog activate`. Prints the staged
+  catalog id as JSON on stdout. Staging the same manifest again replays the
+  earlier stage instead of adding a row.",
+    },
+    CmdHelp {
+        name: "catalog activate",
+        group: "Core",
+        summary: "Make a staged catalog the project's ACTIVE one; running brokers reload it.",
+        usage: "udb catalog activate --project <id> --catalog-id <id> [--dsn <dsn>]",
+        details: "  Running brokers pick the new catalog up through the catalog reload
+  notification, so no restart is needed. Re-running is a no-op.",
+    },
+    CmdHelp {
+        name: "catalog status",
+        group: "Core",
+        summary: "Show the project's ACTIVE catalog (exit 3 when it has none).",
+        usage: "udb catalog status --project <id> [--dsn <dsn>]",
+        details: "  Prints the active catalog id, version, checksum and entity count as JSON.
+  Exit code 3 means the project has no ACTIVE catalog, so every service in it
+  is refused until one is bootstrapped or activated.",
     },
     CmdHelp {
         name: "verify",
@@ -219,7 +264,7 @@ const COMMANDS: &[CmdHelp] = &[
         name: "auth grant",
         group: "Auth & policy",
         summary: "Manage typed service-account grants through the authenticated native API.",
-        usage: "udb auth grant <create|get|list|replace|rotate-identity|revoke> --tenant <tenant-id> [flags]",
+        usage: "udb auth grant <create|get|list|replace|rotate-identity|transfer|revoke> --tenant <tenant-id> [flags]",
         details: "\
   Needs UDB_AUTH_TARGET (or UDB_GRPC_TARGET) and UDB_AUTH_TOKEN.
   create:  --tenant <tenant-id> --user <uuid> --identity <svc-id> --scope <s> [--scope <s>…]
@@ -228,6 +273,8 @@ const COMMANDS: &[CmdHelp] = &[
   list:    --tenant <tenant-id>
   replace: --tenant <tenant-id> --user <uuid> --scope <s> [--scope <s>…]
            --expected-revision <n> [--project <p>] [--reason <r>]
+  transfer: --tenant <tenant-id> --from <uuid> --to <uuid> --expected-revision <n> [--reason <r>]
+           (the only way to move a grant and its service identity to another account)
   rotate-identity: --tenant <tenant-id> --user <uuid> --identity <new-id>
            --expected-revision <n> [--reason <r>]
   revoke:  --tenant <tenant-id> --user <uuid> [--reason <r>]
@@ -296,6 +343,159 @@ const COMMANDS: &[CmdHelp] = &[
         summary: "Generate INSERT SQL to seed ABAC policies into the UDB ABAC table.",
         usage: "udb policy-seed",
         details: "",
+    },
+    CmdHelp {
+        name: "check",
+        group: "Schema & SQL",
+        summary: "One verdict over catalog lint, policy lint and entity/policy coverage.",
+        usage: "udb check [--policies <policies.yaml|json>]",
+        details: "  Runs the catalog lint (including projection options: unknown keys, and
+  payload_fields / fts_columns naming missing, encrypted or PII columns), the
+  policy lint and the entity coverage check, prints one JSON report and exits 1
+  when any part has an error. Policies come from --policies, else
+  UDB_ABAC_POLICY_FILE; without either the policy checks are skipped.",
+    },
+    CmdHelp {
+        name: "gen edge",
+        group: "Scaffold",
+        summary: "Print the proto for an edge table projected as a graph relationship.",
+        usage: "udb gen edge <source table> -[REL{prop:type,...}]-> <target table> [--package <pkg>] [--message <Name>]",
+        details: "  Emits a message with a UUID key, the tenant column, a foreign key to each
+  endpoint and a graph_store declaring the relationship type (REL) and the
+  endpoint fields; the listed properties (string, int64, int32, double, bool,
+  timestamp) become relationship properties. Example:
+    udb gen edge notes -[RELATED{weight:double}]-> notes --package acme.notes.v1",
+    },
+    CmdHelp {
+        name: "upgrade",
+        group: "Admin",
+        summary: "List the breaking changes between two versions that touch this project.",
+        usage: "udb upgrade --check --from <x.y.z> [--to <x.y.z>] [--repo <dir>] [--dsn <dsn>]",
+        details: "  Reads the `Breaking for callers` entries of every release after --from up to
+  --to (default: this binary), searches --repo (default .) for each entry's code
+  detectors and runs its read-only SQL probes against --dsn (or UDB_PG_DSN).
+  Prints each change with where it hits and its fix; exits 1 when any applies.",
+    },
+    CmdHelp {
+        name: "self verify",
+        group: "Admin",
+        summary: "Check a udb binary against its release's published sha256.",
+        usage: "udb self verify [--version <x.y.z>] [--tier full] [--file <path>] [--manifest <manifest.json>]",
+        details: "  Downloads manifest.json (checked against manifest.json.sha256) for the version
+  (default: this binary's) and compares size and sha256 of --file (default: this
+  executable). UDB_RELEASE_BASE_URL points at a mirror; --manifest works offline.",
+    },
+    CmdHelp {
+        name: "self install",
+        group: "Admin",
+        summary: "Download a release binary and install it only if its sha256 matches.",
+        usage: "udb self install --version <x.y.z> [--tier full] [--to <path>]",
+        details: "  Picks the asset for this OS/arch and tier from the release manifest, verifies
+  size and sha256, then writes it to --to (default ./udb or ./udb.exe) through a
+  staging file and rename, so a failed download never replaces a working binary.",
+    },
+    CmdHelp {
+        name: "policy diff",
+        group: "Auth & policy",
+        summary: "Show how a tenant's live policies differ from a policy file.",
+        usage: "udb policy diff -f <policies.yaml|json> --tenant <uuid> [--overlay <file>]… [--dsn <dsn>]",
+        details: "  Reads a list of policies (or {tenant, policies}) and compares the whole rule,
+  purpose, conditions and scopes included, against the tenant's active rows in
+  udb_authz.policy_rules. A policy naming another tenant is refused. Postgres-direct
+  (UDB_PG_DSN / DATABASE_URL / --dsn).",
+    },
+    CmdHelp {
+        name: "policy apply",
+        group: "Auth & policy",
+        summary: "Reconcile a tenant's policies to a policy file (one transaction).",
+        usage: "udb policy apply -f <policies.yaml|json> --tenant <uuid> [--overlay <file>]… [--dsn <dsn>] [--by <name>]",
+        details: "  Adds the declared rules that are missing and soft-deletes active rules the
+  file no longer declares, for that tenant only, then appends an authz revision
+  so every replica reloads. Applying the same file twice changes nothing.",
+    },
+    CmdHelp {
+        name: "identity diff",
+        group: "Auth & policy",
+        summary: "Show how service-account grants differ from an identities file.",
+        usage: "udb identity diff -f <identities.yaml> [--tenant <uuid>] [--allow-transfer]",
+        details: "  File: {tenant, service_accounts: [{account, identity, project, scopes, reason}]}.
+  Plans create / rotate-identity / replace-scopes per account. An identity held
+  by another account is refused (UDB_GRANT_OWNED_BY_OTHER) unless
+  --allow-transfer. Grants the file does not declare are reported, never revoked.",
+    },
+    CmdHelp {
+        name: "identity apply",
+        group: "Auth & policy",
+        summary: "Reconcile service-account grants to an identities file.",
+        usage: "udb identity apply -f <identities.yaml> [--tenant <uuid>] [--allow-transfer]",
+        details: "  Runs the `identity diff` plan through the authn API (UDB_AUTH_TARGET,
+  UDB_AUTH_TOKEN). Refuses to change anything if any account is refused.",
+    },
+    CmdHelp {
+        name: "projection status",
+        group: "Admin",
+        summary: "Check an entity's projections (vector, search, graph, cache) against its rows.",
+        usage: "udb projection status <message type> [--project <id>]",
+        details: "  Samples every projection target of the entity and reports divergent and
+  missing rows per target (ScanProjectionDrift on UDB_GRPC_TARGET; admin bearer
+  in UDB_AUTH_TOKEN).",
+    },
+    CmdHelp {
+        name: "projection backfill",
+        group: "Admin",
+        summary: "Repair an entity's projections: enqueue a task for every missing or divergent row.",
+        usage: "udb projection backfill <message type> [--project <id>] [--limit <rows, default 10000>]",
+        details: "  Scans up to --limit canonical rows and enqueues projection repair tasks, which
+  the projection workers apply. Run `udb projection status` afterwards to confirm.",
+    },
+    CmdHelp {
+        name: "events tail",
+        group: "Diagnostics",
+        summary: "Print the events on a topic as JSON lines (optionally decoded).",
+        usage: "udb events tail <topic pattern> [--since <event id>] [--decode] [--max <n>]",
+        details: "  Subscribes with PublishCDC on UDB_GRPC_TARGET (bearer in UDB_AUTH_TOKEN) and
+  prints one JSON line per event. --decode unwraps the outbox envelope into the
+  domain event; --since resumes after an event id; --max stops after n events.",
+    },
+    CmdHelp {
+        name: "resources list",
+        group: "Diagnostics",
+        summary: "List the collections, graphs, indexes or buckets a backend holds.",
+        usage: "udb resources list --backend <qdrant|neo4j|elasticsearch|s3|…>",
+        details: "  Calls ListResources on the data plane; use it to inspect vector collections
+  (--backend qdrant) and graphs (--backend neo4j) the projections created.",
+    },
+    CmdHelp {
+        name: "up",
+        group: "Admin",
+        summary: "Reconcile a project's udb.yaml: policies, service accounts, seed data.",
+        usage: "udb up [-f udb.yaml] [--dry-run] [--allow-transfer] [--dsn <dsn>]",
+        details: "  udb.yaml: {tenant, project, policies | policies_file, policy_overlays,
+  service_accounts | service_accounts_file, seed | seed_file}. Runs the same
+  reconcilers as `udb policy apply`, `udb identity apply` and `udb data seed`, in
+  that order; --dry-run prints the differences only. Paths are relative to the
+  file. Applying the same file twice changes nothing.",
+    },
+    CmdHelp {
+        name: "data seed",
+        group: "Admin",
+        summary: "Upsert seed rows from a file through the broker (idempotent).",
+        usage: "udb data seed -f <seed.yaml|json> [--tenant <uuid>] [--project <id>] [--dry-run]",
+        details: "  File: {tenant, project, entities: [{message_type, conflict_fields, records: [...]}]}.
+  Each record is an Upsert on the data plane (UDB_GRPC_TARGET, bearer in
+  UDB_AUTH_TOKEN, purpose UDB_PURPOSE or \"seed\"), so policies, tenancy and
+  events apply exactly as for an application write.",
+    },
+    CmdHelp {
+        name: "authz check",
+        group: "Auth & policy",
+        summary: "Ask the live policy engine whether a principal may do an action, and why not.",
+        usage: "udb authz check --user <id> --object <message type> --action <Select|Upsert|…> [--tenant <uuid>] [--purpose <p>]",
+        details: "  Calls AuthzService.CheckAccess against the running broker (UDB_AUTH_TARGET,
+  with the bearer in UDB_AUTH_TOKEN) and prints the decision as JSON. A denial
+  includes the broker's diagnosis: the closest rule for that action and object
+  in the tenant and the attribute it fails on (purpose, project, scopes,
+  subject/role, conditions). `udb authz explain` is the same command.",
     },
     CmdHelp {
         name: "authz seed",

@@ -1180,7 +1180,7 @@ def _run_document_kind(stub, md, ctx, backend, suffix, mount_ok) -> None:
 
 
 def _run_cache_kind(stub, md, ctx, backend, suffix, mount_ok) -> None:
-    res = operation_pb2.StoreResource(backend=backend)
+    res = operation_pb2.StoreResource(backend=backend, resource_name="sdk_live_cache")
     key = f"sdk-live-cache-{suffix}"
     val = f"cache-{backend}-{suffix}".encode()
     try:
@@ -1223,7 +1223,7 @@ def _run_vector_kind(stub, md, ctx, backend, suffix, mount_ok) -> None:
 
 
 def _run_graph_kind(stub, md, ctx, backend, suffix, mount_ok) -> None:
-    res = operation_pb2.StoreResource(backend=backend)
+    res = operation_pb2.StoreResource(backend=backend, resource_name="sdk_live_graph")
     label = f"SdkLive{suffix}"
     try:
         stub.GraphMutate(stores_pb2.GraphMutationRequest(context=ctx("python.live.kind.graph"), resource=res, query=f"CREATE (n:{label} {{id: $id}}) RETURN n", parameters=live_struct({"id": suffix})), metadata=md, timeout=8.0)

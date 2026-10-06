@@ -152,4 +152,19 @@ public interface DeleteRequestOrBuilder extends
    * @return The fencingToken.
    */
   long getFencingToken();
+
+  /**
+   * <pre>
+   * Optional exact row count. When non-zero the write must change exactly this
+   * many rows, checked inside the write transaction; any other count changes
+   * nothing and fails NOT_FOUND with reason `UDB_NO_ROWS_AFFECTED`. Set 1 for a
+   * single-row write that must not silently match nothing (an already-deleted
+   * row, a key that drifted). 0 keeps today's behaviour: the count is reported
+   * in MutationResponse.affected_rows and never checked.
+   * </pre>
+   *
+   * <code>uint32 require_affected = 9 [json_name = "requireAffected"];</code>
+   * @return The requireAffected.
+   */
+  int getRequireAffected();
 }

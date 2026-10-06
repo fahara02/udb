@@ -26,6 +26,16 @@ class CDCSubscriptionRequest extends \Google\Protobuf\Internal\Message
      * Generated from protobuf field <code>string since_event_id = 3 [json_name = "sinceEventId"];</code>
      */
     protected $since_event_id = '';
+    /**
+     * A durable consumer's name (1-120 chars of [A-Za-z0-9_.:-]). When set and
+     * since_event_id is empty, the stream resumes after the last event this
+     * consumer acknowledged with AckCdcEvents for this topic_pattern, so a
+     * restarted (or reconnected) consumer neither skips nor re-reads its place.
+     * Cursors are scoped to the caller's verified tenant and project.
+     *
+     * Generated from protobuf field <code>string consumer_name = 4 [json_name = "consumerName"];</code>
+     */
+    protected $consumer_name = '';
 
     /**
      * Constructor.
@@ -36,6 +46,12 @@ class CDCSubscriptionRequest extends \Google\Protobuf\Internal\Message
      *     @type \Udb\Entity\V1\RequestContext $context
      *     @type string $topic_pattern
      *     @type string $since_event_id
+     *     @type string $consumer_name
+     *           A durable consumer's name (1-120 chars of [A-Za-z0-9_.:-]). When set and
+     *           since_event_id is empty, the stream resumes after the last event this
+     *           consumer acknowledged with AckCdcEvents for this topic_pattern, so a
+     *           restarted (or reconnected) consumer neither skips nor re-reads its place.
+     *           Cursors are scoped to the caller's verified tenant and project.
      * }
      */
     public function __construct($data = NULL) {
@@ -115,6 +131,40 @@ class CDCSubscriptionRequest extends \Google\Protobuf\Internal\Message
     {
         GPBUtil::checkString($var, True);
         $this->since_event_id = $var;
+
+        return $this;
+    }
+
+    /**
+     * A durable consumer's name (1-120 chars of [A-Za-z0-9_.:-]). When set and
+     * since_event_id is empty, the stream resumes after the last event this
+     * consumer acknowledged with AckCdcEvents for this topic_pattern, so a
+     * restarted (or reconnected) consumer neither skips nor re-reads its place.
+     * Cursors are scoped to the caller's verified tenant and project.
+     *
+     * Generated from protobuf field <code>string consumer_name = 4 [json_name = "consumerName"];</code>
+     * @return string
+     */
+    public function getConsumerName()
+    {
+        return $this->consumer_name;
+    }
+
+    /**
+     * A durable consumer's name (1-120 chars of [A-Za-z0-9_.:-]). When set and
+     * since_event_id is empty, the stream resumes after the last event this
+     * consumer acknowledged with AckCdcEvents for this topic_pattern, so a
+     * restarted (or reconnected) consumer neither skips nor re-reads its place.
+     * Cursors are scoped to the caller's verified tenant and project.
+     *
+     * Generated from protobuf field <code>string consumer_name = 4 [json_name = "consumerName"];</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setConsumerName($var)
+    {
+        GPBUtil::checkString($var, True);
+        $this->consumer_name = $var;
 
         return $this;
     }

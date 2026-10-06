@@ -844,10 +844,33 @@ fn diff_columns(old: &ManifestTable, new: &ManifestTable, ops: &mut Vec<ChangeOp
         } else {
             ChangeSafety::Blocked
         };
+        // A drop beside an added column of the same SQL type is usually a
+        // rename. Say how to declare it, so the plan keeps the data instead of
+        // asking for allow_drop.
+        let rename_hint = new
+            .columns
+            .iter()
+            .filter(|candidate| {
+                !old_columns.contains_key(&candidate.column_name)
+                    && candidate.previous_column_name.is_empty()
+                    && candidate
+                        .sql_type
+                        .eq_ignore_ascii_case(&old_col.sql_type)
+            })
+            .map(|candidate| {
+                format!(
+                    "; if {} is {} renamed, set previous_column_name = \"{}\" on it (or reserve the old field number) to keep the data",
+                    candidate.column_name, old_col.column_name, old_col.column_name
+                )
+            })
+            .next()
+            .unwrap_or_default();
         let blocked = if safety == ChangeSafety::Blocked {
-            "drop_column is destructive; add allow_drop only after explicit review"
+            format!(
+                "drop_column is destructive; add allow_drop only after explicit review{rename_hint}"
+            )
         } else {
-            ""
+            String::new()
         };
         ops.push(op(
             ChangeKind::DropColumn,
@@ -857,7 +880,7 @@ fn diff_columns(old: &ManifestTable, new: &ManifestTable, ops: &mut Vec<ChangeOp
             &old_col.column_name,
             &old_col.column_name,
             "column no longer exists in desired proto AST",
-            blocked,
+            &blocked,
         ));
     }
 }

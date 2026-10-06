@@ -54,6 +54,7 @@ const (
 	DataBroker_AnalyticalQuery_FullMethodName         = "/udb.services.v1.DataBroker/AnalyticalQuery"
 	DataBroker_BeginTx_FullMethodName                 = "/udb.services.v1.DataBroker/BeginTx"
 	DataBroker_PublishCDC_FullMethodName              = "/udb.services.v1.DataBroker/PublishCDC"
+	DataBroker_AckCdcEvents_FullMethodName            = "/udb.services.v1.DataBroker/AckCdcEvents"
 	DataBroker_CreateMaterializedView_FullMethodName  = "/udb.services.v1.DataBroker/CreateMaterializedView"
 	DataBroker_EnqueueOutboxEvent_FullMethodName      = "/udb.services.v1.DataBroker/EnqueueOutboxEvent"
 	DataBroker_GenericDispatch_FullMethodName         = "/udb.services.v1.DataBroker/GenericDispatch"
@@ -168,6 +169,8 @@ type DataBrokerClient interface {
 	// ── Tx / CDC ───────────────────────────────────────────────────────────────
 	BeginTx(ctx context.Context, opts ...grpc.CallOption) (grpc.BidiStreamingClient[v1.Mutation, v1.TxStatus], error)
 	PublishCDC(ctx context.Context, in *v1.CDCSubscriptionRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[v11.CDCEnvelope], error)
+	// Record a durable consumer's position (see CDCSubscriptionRequest.consumer_name).
+	AckCdcEvents(ctx context.Context, in *v1.AckCdcEventsRequest, opts ...grpc.CallOption) (*v1.AckCdcEventsResponse, error)
 	CreateMaterializedView(ctx context.Context, in *v1.ViewDefinition, opts ...grpc.CallOption) (*v1.MutationResponse, error)
 	// ── First-Class Event API ─────────────────────────────────────────────────
 	EnqueueOutboxEvent(ctx context.Context, in *v1.EnqueueOutboxEventRequest, opts ...grpc.CallOption) (*v1.EnqueueOutboxEventResponse, error)
@@ -243,6 +246,11 @@ type DataBrokerClient interface {
 	EnsureBaseline(ctx context.Context, in *EnsureBaselineRequest, opts ...grpc.CallOption) (*EnsureBaselineResponse, error)
 	// Policy administration.
 	ListPolicies(ctx context.Context, in *v1.PolicyListRequest, opts ...grpc.CallOption) (*v1.PolicyListResponse, error)
+	// Deprecated: Do not use.
+	// DEPRECATED: writes the legacy ABAC table, which does NOT authorize
+	// requests. Authorization comes from the Casbin governance table: use
+	// AuthzService.PutAuthzPolicy (or `udb authz seed` / `udb policy apply`).
+	// Every response carries an `x-udb-deprecated` header; removed in 0.6.0.
 	PutPolicy(ctx context.Context, in *v1.PutPolicyRequest, opts ...grpc.CallOption) (*v1.MutationResponse, error)
 	DeletePolicy(ctx context.Context, in *v1.PolicyRequest, opts ...grpc.CallOption) (*v1.MutationResponse, error)
 	ReloadPolicies(ctx context.Context, in *v1.CapabilitiesRequest, opts ...grpc.CallOption) (*v1.MutationResponse, error)
@@ -653,6 +661,16 @@ func (c *dataBrokerClient) PublishCDC(ctx context.Context, in *v1.CDCSubscriptio
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
 type DataBroker_PublishCDCClient = grpc.ServerStreamingClient[v11.CDCEnvelope]
 
+func (c *dataBrokerClient) AckCdcEvents(ctx context.Context, in *v1.AckCdcEventsRequest, opts ...grpc.CallOption) (*v1.AckCdcEventsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(v1.AckCdcEventsResponse)
+	err := c.cc.Invoke(ctx, DataBroker_AckCdcEvents_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *dataBrokerClient) CreateMaterializedView(ctx context.Context, in *v1.ViewDefinition, opts ...grpc.CallOption) (*v1.MutationResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(v1.MutationResponse)
@@ -993,6 +1011,7 @@ func (c *dataBrokerClient) ListPolicies(ctx context.Context, in *v1.PolicyListRe
 	return out, nil
 }
 
+// Deprecated: Do not use.
 func (c *dataBrokerClient) PutPolicy(ctx context.Context, in *v1.PutPolicyRequest, opts ...grpc.CallOption) (*v1.MutationResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(v1.MutationResponse)
@@ -1197,6 +1216,8 @@ type DataBrokerServer interface {
 	// ── Tx / CDC ───────────────────────────────────────────────────────────────
 	BeginTx(grpc.BidiStreamingServer[v1.Mutation, v1.TxStatus]) error
 	PublishCDC(*v1.CDCSubscriptionRequest, grpc.ServerStreamingServer[v11.CDCEnvelope]) error
+	// Record a durable consumer's position (see CDCSubscriptionRequest.consumer_name).
+	AckCdcEvents(context.Context, *v1.AckCdcEventsRequest) (*v1.AckCdcEventsResponse, error)
 	CreateMaterializedView(context.Context, *v1.ViewDefinition) (*v1.MutationResponse, error)
 	// ── First-Class Event API ─────────────────────────────────────────────────
 	EnqueueOutboxEvent(context.Context, *v1.EnqueueOutboxEventRequest) (*v1.EnqueueOutboxEventResponse, error)
@@ -1272,6 +1293,11 @@ type DataBrokerServer interface {
 	EnsureBaseline(context.Context, *EnsureBaselineRequest) (*EnsureBaselineResponse, error)
 	// Policy administration.
 	ListPolicies(context.Context, *v1.PolicyListRequest) (*v1.PolicyListResponse, error)
+	// Deprecated: Do not use.
+	// DEPRECATED: writes the legacy ABAC table, which does NOT authorize
+	// requests. Authorization comes from the Casbin governance table: use
+	// AuthzService.PutAuthzPolicy (or `udb authz seed` / `udb policy apply`).
+	// Every response carries an `x-udb-deprecated` header; removed in 0.6.0.
 	PutPolicy(context.Context, *v1.PutPolicyRequest) (*v1.MutationResponse, error)
 	DeletePolicy(context.Context, *v1.PolicyRequest) (*v1.MutationResponse, error)
 	ReloadPolicies(context.Context, *v1.CapabilitiesRequest) (*v1.MutationResponse, error)
@@ -1407,6 +1433,9 @@ func (UnimplementedDataBrokerServer) BeginTx(grpc.BidiStreamingServer[v1.Mutatio
 }
 func (UnimplementedDataBrokerServer) PublishCDC(*v1.CDCSubscriptionRequest, grpc.ServerStreamingServer[v11.CDCEnvelope]) error {
 	return status.Error(codes.Unimplemented, "method PublishCDC not implemented")
+}
+func (UnimplementedDataBrokerServer) AckCdcEvents(context.Context, *v1.AckCdcEventsRequest) (*v1.AckCdcEventsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method AckCdcEvents not implemented")
 }
 func (UnimplementedDataBrokerServer) CreateMaterializedView(context.Context, *v1.ViewDefinition) (*v1.MutationResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method CreateMaterializedView not implemented")
@@ -2089,6 +2118,24 @@ func _DataBroker_PublishCDC_Handler(srv interface{}, stream grpc.ServerStream) e
 
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
 type DataBroker_PublishCDCServer = grpc.ServerStreamingServer[v11.CDCEnvelope]
+
+func _DataBroker_AckCdcEvents_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(v1.AckCdcEventsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DataBrokerServer).AckCdcEvents(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DataBroker_AckCdcEvents_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DataBrokerServer).AckCdcEvents(ctx, req.(*v1.AckCdcEventsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
 
 func _DataBroker_CreateMaterializedView_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(v1.ViewDefinition)
@@ -3060,6 +3107,10 @@ var DataBroker_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "AnalyticalQuery",
 			Handler:    _DataBroker_AnalyticalQuery_Handler,
+		},
+		{
+			MethodName: "AckCdcEvents",
+			Handler:    _DataBroker_AckCdcEvents_Handler,
 		},
 		{
 			MethodName: "CreateMaterializedView",

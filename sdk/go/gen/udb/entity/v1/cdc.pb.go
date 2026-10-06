@@ -22,10 +22,16 @@ const (
 )
 
 type CDCSubscriptionRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Context       *RequestContext        `protobuf:"bytes,1,opt,name=context,proto3" json:"context,omitempty"`
-	TopicPattern  string                 `protobuf:"bytes,2,opt,name=topic_pattern,json=topicPattern,proto3" json:"topic_pattern,omitempty"`
-	SinceEventId  string                 `protobuf:"bytes,3,opt,name=since_event_id,json=sinceEventId,proto3" json:"since_event_id,omitempty"`
+	state        protoimpl.MessageState `protogen:"open.v1"`
+	Context      *RequestContext        `protobuf:"bytes,1,opt,name=context,proto3" json:"context,omitempty"`
+	TopicPattern string                 `protobuf:"bytes,2,opt,name=topic_pattern,json=topicPattern,proto3" json:"topic_pattern,omitempty"`
+	SinceEventId string                 `protobuf:"bytes,3,opt,name=since_event_id,json=sinceEventId,proto3" json:"since_event_id,omitempty"`
+	// A durable consumer's name (1-120 chars of [A-Za-z0-9_.:-]). When set and
+	// since_event_id is empty, the stream resumes after the last event this
+	// consumer acknowledged with AckCdcEvents for this topic_pattern, so a
+	// restarted (or reconnected) consumer neither skips nor re-reads its place.
+	// Cursors are scoped to the caller's verified tenant and project.
+	ConsumerName  string `protobuf:"bytes,4,opt,name=consumer_name,json=consumerName,proto3" json:"consumer_name,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -81,6 +87,154 @@ func (x *CDCSubscriptionRequest) GetSinceEventId() string {
 	return ""
 }
 
+func (x *CDCSubscriptionRequest) GetConsumerName() string {
+	if x != nil {
+		return x.ConsumerName
+	}
+	return ""
+}
+
+// AckCdcEvents records how far a durable consumer has processed a stream.
+type AckCdcEventsRequest struct {
+	state   protoimpl.MessageState `protogen:"open.v1"`
+	Context *RequestContext        `protobuf:"bytes,1,opt,name=context,proto3" json:"context,omitempty"`
+	// The consumer named in CDCSubscriptionRequest.consumer_name.
+	ConsumerName string `protobuf:"bytes,2,opt,name=consumer_name,json=consumerName,proto3" json:"consumer_name,omitempty"`
+	// The topic_pattern the consumer subscribed with.
+	TopicPattern string `protobuf:"bytes,3,opt,name=topic_pattern,json=topicPattern,proto3" json:"topic_pattern,omitempty"`
+	// The last event the consumer has fully handled. The next subscription
+	// under this consumer name resumes after it.
+	EventId       string `protobuf:"bytes,4,opt,name=event_id,json=eventId,proto3" json:"event_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AckCdcEventsRequest) Reset() {
+	*x = AckCdcEventsRequest{}
+	mi := &file_udb_entity_v1_cdc_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AckCdcEventsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AckCdcEventsRequest) ProtoMessage() {}
+
+func (x *AckCdcEventsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_entity_v1_cdc_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AckCdcEventsRequest.ProtoReflect.Descriptor instead.
+func (*AckCdcEventsRequest) Descriptor() ([]byte, []int) {
+	return file_udb_entity_v1_cdc_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *AckCdcEventsRequest) GetContext() *RequestContext {
+	if x != nil {
+		return x.Context
+	}
+	return nil
+}
+
+func (x *AckCdcEventsRequest) GetConsumerName() string {
+	if x != nil {
+		return x.ConsumerName
+	}
+	return ""
+}
+
+func (x *AckCdcEventsRequest) GetTopicPattern() string {
+	if x != nil {
+		return x.TopicPattern
+	}
+	return ""
+}
+
+func (x *AckCdcEventsRequest) GetEventId() string {
+	if x != nil {
+		return x.EventId
+	}
+	return ""
+}
+
+type AckCdcEventsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ConsumerName  string                 `protobuf:"bytes,1,opt,name=consumer_name,json=consumerName,proto3" json:"consumer_name,omitempty"`
+	TopicPattern  string                 `protobuf:"bytes,2,opt,name=topic_pattern,json=topicPattern,proto3" json:"topic_pattern,omitempty"`
+	EventId       string                 `protobuf:"bytes,3,opt,name=event_id,json=eventId,proto3" json:"event_id,omitempty"`
+	AckedAtUnix   int64                  `protobuf:"varint,4,opt,name=acked_at_unix,json=ackedAtUnix,proto3" json:"acked_at_unix,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AckCdcEventsResponse) Reset() {
+	*x = AckCdcEventsResponse{}
+	mi := &file_udb_entity_v1_cdc_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AckCdcEventsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AckCdcEventsResponse) ProtoMessage() {}
+
+func (x *AckCdcEventsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_entity_v1_cdc_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AckCdcEventsResponse.ProtoReflect.Descriptor instead.
+func (*AckCdcEventsResponse) Descriptor() ([]byte, []int) {
+	return file_udb_entity_v1_cdc_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *AckCdcEventsResponse) GetConsumerName() string {
+	if x != nil {
+		return x.ConsumerName
+	}
+	return ""
+}
+
+func (x *AckCdcEventsResponse) GetTopicPattern() string {
+	if x != nil {
+		return x.TopicPattern
+	}
+	return ""
+}
+
+func (x *AckCdcEventsResponse) GetEventId() string {
+	if x != nil {
+		return x.EventId
+	}
+	return ""
+}
+
+func (x *AckCdcEventsResponse) GetAckedAtUnix() int64 {
+	if x != nil {
+		return x.AckedAtUnix
+	}
+	return 0
+}
+
 type CdcControlRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Context       *RequestContext        `protobuf:"bytes,1,opt,name=context,proto3" json:"context,omitempty"`
@@ -92,7 +246,7 @@ type CdcControlRequest struct {
 
 func (x *CdcControlRequest) Reset() {
 	*x = CdcControlRequest{}
-	mi := &file_udb_entity_v1_cdc_proto_msgTypes[1]
+	mi := &file_udb_entity_v1_cdc_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -104,7 +258,7 @@ func (x *CdcControlRequest) String() string {
 func (*CdcControlRequest) ProtoMessage() {}
 
 func (x *CdcControlRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_entity_v1_cdc_proto_msgTypes[1]
+	mi := &file_udb_entity_v1_cdc_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -117,7 +271,7 @@ func (x *CdcControlRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CdcControlRequest.ProtoReflect.Descriptor instead.
 func (*CdcControlRequest) Descriptor() ([]byte, []int) {
-	return file_udb_entity_v1_cdc_proto_rawDescGZIP(), []int{1}
+	return file_udb_entity_v1_cdc_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *CdcControlRequest) GetContext() *RequestContext {
@@ -157,7 +311,7 @@ type CdcStatusResponse struct {
 
 func (x *CdcStatusResponse) Reset() {
 	*x = CdcStatusResponse{}
-	mi := &file_udb_entity_v1_cdc_proto_msgTypes[2]
+	mi := &file_udb_entity_v1_cdc_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -169,7 +323,7 @@ func (x *CdcStatusResponse) String() string {
 func (*CdcStatusResponse) ProtoMessage() {}
 
 func (x *CdcStatusResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_entity_v1_cdc_proto_msgTypes[2]
+	mi := &file_udb_entity_v1_cdc_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -182,7 +336,7 @@ func (x *CdcStatusResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CdcStatusResponse.ProtoReflect.Descriptor instead.
 func (*CdcStatusResponse) Descriptor() ([]byte, []int) {
-	return file_udb_entity_v1_cdc_proto_rawDescGZIP(), []int{2}
+	return file_udb_entity_v1_cdc_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *CdcStatusResponse) GetSlotName() string {
@@ -245,11 +399,22 @@ var File_udb_entity_v1_cdc_proto protoreflect.FileDescriptor
 
 const file_udb_entity_v1_cdc_proto_rawDesc = "" +
 	"\n" +
-	"\x17udb/entity/v1/cdc.proto\x12\rudb.entity.v1\x1a\x1budb/entity/v1/context.proto\"\x9c\x01\n" +
+	"\x17udb/entity/v1/cdc.proto\x12\rudb.entity.v1\x1a\x1budb/entity/v1/context.proto\"\xc1\x01\n" +
 	"\x16CDCSubscriptionRequest\x127\n" +
 	"\acontext\x18\x01 \x01(\v2\x1d.udb.entity.v1.RequestContextR\acontext\x12#\n" +
 	"\rtopic_pattern\x18\x02 \x01(\tR\ftopicPattern\x12$\n" +
-	"\x0esince_event_id\x18\x03 \x01(\tR\fsinceEventId\"\x81\x01\n" +
+	"\x0esince_event_id\x18\x03 \x01(\tR\fsinceEventId\x12#\n" +
+	"\rconsumer_name\x18\x04 \x01(\tR\fconsumerName\"\xb3\x01\n" +
+	"\x13AckCdcEventsRequest\x127\n" +
+	"\acontext\x18\x01 \x01(\v2\x1d.udb.entity.v1.RequestContextR\acontext\x12#\n" +
+	"\rconsumer_name\x18\x02 \x01(\tR\fconsumerName\x12#\n" +
+	"\rtopic_pattern\x18\x03 \x01(\tR\ftopicPattern\x12\x19\n" +
+	"\bevent_id\x18\x04 \x01(\tR\aeventId\"\x9f\x01\n" +
+	"\x14AckCdcEventsResponse\x12#\n" +
+	"\rconsumer_name\x18\x01 \x01(\tR\fconsumerName\x12#\n" +
+	"\rtopic_pattern\x18\x02 \x01(\tR\ftopicPattern\x12\x19\n" +
+	"\bevent_id\x18\x03 \x01(\tR\aeventId\x12\"\n" +
+	"\racked_at_unix\x18\x04 \x01(\x03R\vackedAtUnix\"\x81\x01\n" +
 	"\x11CdcControlRequest\x127\n" +
 	"\acontext\x18\x01 \x01(\v2\x1d.udb.entity.v1.RequestContextR\acontext\x12\x1b\n" +
 	"\tslot_name\x18\x02 \x01(\tR\bslotName\x12\x16\n" +
@@ -278,21 +443,24 @@ func file_udb_entity_v1_cdc_proto_rawDescGZIP() []byte {
 	return file_udb_entity_v1_cdc_proto_rawDescData
 }
 
-var file_udb_entity_v1_cdc_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
+var file_udb_entity_v1_cdc_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
 var file_udb_entity_v1_cdc_proto_goTypes = []any{
 	(*CDCSubscriptionRequest)(nil), // 0: udb.entity.v1.CDCSubscriptionRequest
-	(*CdcControlRequest)(nil),      // 1: udb.entity.v1.CdcControlRequest
-	(*CdcStatusResponse)(nil),      // 2: udb.entity.v1.CdcStatusResponse
-	(*RequestContext)(nil),         // 3: udb.entity.v1.RequestContext
+	(*AckCdcEventsRequest)(nil),    // 1: udb.entity.v1.AckCdcEventsRequest
+	(*AckCdcEventsResponse)(nil),   // 2: udb.entity.v1.AckCdcEventsResponse
+	(*CdcControlRequest)(nil),      // 3: udb.entity.v1.CdcControlRequest
+	(*CdcStatusResponse)(nil),      // 4: udb.entity.v1.CdcStatusResponse
+	(*RequestContext)(nil),         // 5: udb.entity.v1.RequestContext
 }
 var file_udb_entity_v1_cdc_proto_depIdxs = []int32{
-	3, // 0: udb.entity.v1.CDCSubscriptionRequest.context:type_name -> udb.entity.v1.RequestContext
-	3, // 1: udb.entity.v1.CdcControlRequest.context:type_name -> udb.entity.v1.RequestContext
-	2, // [2:2] is the sub-list for method output_type
-	2, // [2:2] is the sub-list for method input_type
-	2, // [2:2] is the sub-list for extension type_name
-	2, // [2:2] is the sub-list for extension extendee
-	0, // [0:2] is the sub-list for field type_name
+	5, // 0: udb.entity.v1.CDCSubscriptionRequest.context:type_name -> udb.entity.v1.RequestContext
+	5, // 1: udb.entity.v1.AckCdcEventsRequest.context:type_name -> udb.entity.v1.RequestContext
+	5, // 2: udb.entity.v1.CdcControlRequest.context:type_name -> udb.entity.v1.RequestContext
+	3, // [3:3] is the sub-list for method output_type
+	3, // [3:3] is the sub-list for method input_type
+	3, // [3:3] is the sub-list for extension type_name
+	3, // [3:3] is the sub-list for extension extendee
+	0, // [0:3] is the sub-list for field type_name
 }
 
 func init() { file_udb_entity_v1_cdc_proto_init() }
@@ -307,7 +475,7 @@ func file_udb_entity_v1_cdc_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_udb_entity_v1_cdc_proto_rawDesc), len(file_udb_entity_v1_cdc_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   3,
+			NumMessages:   5,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

@@ -2,7 +2,7 @@
   "swagger": "2.0",
   "info": {
     "title": "UDB Control-Plane API",
-    "version": "0.5.28",
+    "version": "0.5.29",
     "description": "HTTP/JSON (gRPC-gateway) surface for UDB control-plane services. The core DataBroker data-plane RPCs are gRPC-native and are not represented here."
   },
   "tags": [
@@ -54422,6 +54422,19 @@
         }
       }
     },
+    "v1LiveQueryAnyOf": {
+      "type": "object",
+      "properties": {
+        "predicates": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1LiveQueryPredicate"
+          }
+        }
+      },
+      "description": "A disjunction: the row matches when ANY of its predicates matches. Each group\nin `SubscribeRequest.any_of` is AND-ed with `filters` and with the other\ngroups, so a filter is written in conjunctive normal form, e.g.\n`status IN (open, held) AND (owner = me OR assignee = me)`."
+    },
     "v1LiveQueryChange": {
       "type": "object",
       "properties": {
@@ -54458,10 +54471,14 @@
         "LIVE_QUERY_COMPARISON_LT",
         "LIVE_QUERY_COMPARISON_LE",
         "LIVE_QUERY_COMPARISON_GT",
-        "LIVE_QUERY_COMPARISON_GE"
+        "LIVE_QUERY_COMPARISON_GE",
+        "LIVE_QUERY_COMPARISON_IN",
+        "LIVE_QUERY_COMPARISON_NOT_IN",
+        "LIVE_QUERY_COMPARISON_IS_NULL",
+        "LIVE_QUERY_COMPARISON_IS_NOT_NULL"
       ],
       "default": "LIVE_QUERY_COMPARISON_UNSPECIFIED",
-      "description": "Comparison operator for a live-query predicate. Maps 1:1 onto the neutral IR\n`ComparisonOp`; only the scalar relational operators are exposed (the live\nsingle-row evaluator and the mediated snapshot read share the same set)."
+      "description": "Comparison operator for a live-query predicate. Maps 1:1 onto the neutral IR\n`ComparisonOp`; only the scalar relational operators are exposed (the live\nsingle-row evaluator and the mediated snapshot read share the same set).\n\n - LIVE_QUERY_COMPARISON_IN: Membership: the field equals one of `LiveQueryPredicate.values`.\n - LIVE_QUERY_COMPARISON_NOT_IN: Non-membership: the field is present, non-null and equals none of `values`\n(SQL NOT IN semantics, so the snapshot and the live deltas agree).\n - LIVE_QUERY_COMPARISON_IS_NULL: The field is null or absent. `value`/`values` are ignored.\n - LIVE_QUERY_COMPARISON_IS_NOT_NULL: The field is present and non-null. `value`/`values` are ignored."
     },
     "v1LiveQueryPredicate": {
       "type": "object",
@@ -54475,6 +54492,13 @@
         },
         "value": {
           "type": "string"
+        },
+        "values": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Operands of IN / NOT_IN (each typed like `value`). Must be non-empty for\nthose operators and empty for every other operator."
         }
       },
       "description": "One AND-ed predicate of the subscription filter. The value is carried as a\nstring and compared as a number when both sides parse numerically, else as a\nstring — keeping the wire contract simple while staying IR-expressible."
@@ -59370,6 +59394,18 @@
           "type": "integer",
           "format": "int32",
           "description": "Upper bound on rows returned in the initial snapshot (clamped server-side)."
+        },
+        "anyOf": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1LiveQueryAnyOf"
+          },
+          "description": "OR-groups AND-ed with `filters` (see LiveQueryAnyOf). An empty group is\nrejected rather than read as \"matches nothing\"."
+        },
+        "sinceEventId": {
+          "type": "string",
+          "description": "Durable resume: the last `LiveQueryChange.event_id` this client delivered.\nThe broker replays the changes after it from the CDC journal before going\nlive. Supersedes the `x-udb-livequery-resume` header (still honoured); when\nboth are set they must name the same event."
         }
       }
     },

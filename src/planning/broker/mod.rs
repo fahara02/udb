@@ -2158,7 +2158,8 @@ fn collect_mandatory_and_columns(value: &Value, allowed: &BTreeSet<String>, out:
 fn is_operator(value: &str) -> bool {
     matches!(
         value,
-        "$eq" | "$ne" | "$gt" | "$gte" | "$lt" | "$lte" | "$in" | "$like" | "$is_null"
+        "$eq" | "$ne" | "$gt" | "$gte" | "$lt" | "$lte" | "$in" | "$nin" | "$between" | "$not"
+            | "$like" | "$is_null"
             // GAP 6: PostgreSQL-specific operators
             | "$not_null" | "$ilike" | "$contains" | "$contained_by"
             | "$has_key" | "$overlaps" | "$matches"
@@ -2591,16 +2592,73 @@ fn compile_column_predicate(
         let mut next_param = start_param;
         for (op, op_value) in map {
             let Some(sql_op) = sql_operator(op) else {
-                errors.push(format!("unsupported filter operator {}", op));
+                errors.push(format!(
+                    "unsupported filter operator {} (supported: $eq, $ne, $gt, $gte, $lt, $lte, $in, $nin, $between, $like, $ilike, $is_null, $not_null, $not, $contains, $contained_by, $has_key, $matches)",
+                    op
+                ));
                 continue;
             };
-            // Operators that need no bound parameter
-            if sql_op == "IS NULL" {
-                parts.push(format!("{} IS NULL", qi(column)));
+            // Operators that need no bound parameter. `$is_null: false` means
+            // IS NOT NULL (and `$not_null: false` IS NULL): the flag's value is
+            // honoured, never ignored.
+            if sql_op == "IS NULL" || sql_op == "IS NOT NULL" {
+                let wants_null = (sql_op == "IS NULL") == op_value.as_bool().unwrap_or(true);
+                parts.push(format!(
+                    "{} {}",
+                    qi(column),
+                    if wants_null { "IS NULL" } else { "IS NOT NULL" }
+                ));
                 continue;
             }
-            if sql_op == "IS NOT NULL" {
-                parts.push(format!("{} IS NOT NULL", qi(column)));
+            if sql_op == "NOT" {
+                if !op_value.is_object() {
+                    errors.push(format!(
+                        "$not filter on {} requires an operator object, e.g. {{\"$in\": [...]}}",
+                        column
+                    ));
+                    continue;
+                }
+                let inner = compile_column_predicate(
+                    column,
+                    op_value,
+                    errors,
+                    parameter_columns,
+                    next_param,
+                    backend_kind,
+                );
+                if !inner.sql.is_empty() {
+                    parts.push(format!("NOT ({})", inner.sql));
+                }
+                next_param = inner.next_param;
+                continue;
+            }
+            if sql_op == "NOT IN" {
+                if !op_value.is_array() {
+                    errors.push(format!("$nin filter on {} requires an array value", column));
+                    continue;
+                }
+                parameter_columns.push(column.to_string());
+                parts.push(format!("NOT ({} = ANY(${}))", qi(column), next_param));
+                next_param += 1;
+                continue;
+            }
+            if sql_op == "BETWEEN" {
+                if op_value.as_array().map(Vec::len) != Some(2) {
+                    errors.push(format!(
+                        "$between filter on {} requires a two-element array [low, high]",
+                        column
+                    ));
+                    continue;
+                }
+                parameter_columns.push(column.to_string());
+                parameter_columns.push(column.to_string());
+                parts.push(format!(
+                    "{} BETWEEN ${} AND ${}",
+                    qi(column),
+                    next_param,
+                    next_param + 1
+                ));
+                next_param += 2;
                 continue;
             }
             if sql_op == "IN" {
@@ -2916,10 +2974,58 @@ fn logical_column_filter_from_json(
                     values: values.iter().map(logical_value_from_json).collect(),
                 });
             }
-            "$is_null" | "is_null" => clauses.push(LogicalFilter::IsNull(column.to_string())),
-            "$not_null" | "is_not_null" => clauses.push(LogicalFilter::Not(Box::new(
-                LogicalFilter::IsNull(column.to_string()),
-            ))),
+            "$is_null" | "is_null" | "$not_null" | "is_not_null" => {
+                // The flag's value is honoured: `$is_null: false` = IS NOT NULL.
+                let wants_null = normalized.contains("is_null") == op_value.as_bool().unwrap_or(true);
+                let is_null = LogicalFilter::IsNull(column.to_string());
+                clauses.push(if wants_null {
+                    is_null
+                } else {
+                    LogicalFilter::Not(Box::new(is_null))
+                });
+            }
+            "$nin" | "nin" => {
+                let Some(values) = op_value.as_array() else {
+                    errors.push(format!("$nin filter on {} requires an array value", column));
+                    continue;
+                };
+                clauses.push(LogicalFilter::Not(Box::new(LogicalFilter::InList {
+                    field: column.to_string(),
+                    values: values.iter().map(logical_value_from_json).collect(),
+                })));
+            }
+            "$between" | "between" => {
+                let Some([low, high]) = op_value.as_array().map(Vec::as_slice).and_then(|items| {
+                    <&[Value; 2]>::try_from(items).ok().map(|pair| pair.clone())
+                }) else {
+                    errors.push(format!(
+                        "$between filter on {} requires a two-element array [low, high]",
+                        column
+                    ));
+                    continue;
+                };
+                clauses.push(LogicalFilter::And(vec![
+                    LogicalFilter::Comparison {
+                        field: column.to_string(),
+                        op: ComparisonOp::Ge,
+                        value: logical_value_from_json(&low),
+                    },
+                    LogicalFilter::Comparison {
+                        field: column.to_string(),
+                        op: ComparisonOp::Le,
+                        value: logical_value_from_json(&high),
+                    },
+                ]));
+            }
+            "$not" | "not" => {
+                if !op_value.is_object() {
+                    errors.push(format!("$not filter on {} requires an operator object", column));
+                    continue;
+                }
+                if let Some(inner) = logical_column_filter_from_json(column, op_value, errors) {
+                    clauses.push(LogicalFilter::Not(Box::new(inner)));
+                }
+            }
             "$contains" | "contains" | "$contained_by" | "contained_by" | "$has_key"
             | "has_key" | "$overlaps" | "overlaps" | "$matches" | "matches" => {
                 errors.push(format!(
@@ -2927,7 +3033,10 @@ fn logical_column_filter_from_json(
                     op, column
                 ));
             }
-            _ => errors.push(format!("unsupported filter operator {}", op)),
+            _ => errors.push(format!(
+                "unsupported filter operator {} (supported: $eq, $ne, $gt, $gte, $lt, $lte, $in, $nin, $between, $like, $ilike, $is_null, $not_null, $not, $contains, $contained_by, $has_key, $matches)",
+                op
+            )),
         }
     }
 
@@ -3293,6 +3402,78 @@ mod tests {
         assert!(!plan.sql.contains("RETURNING"));
         assert_eq!(plan.operation, "update");
         assert_eq!(plan.audit_event_type, "udb.sql.update");
+    }
+
+    #[test]
+    fn filter_grammar_covers_nin_between_not_and_a_false_is_null() {
+        let manifest = update_test_manifest();
+        let filter = json!({
+            "tenant_id": "t1",
+            "status": {"$nin": ["closed", "void"]},
+            "login_attempts": {"$between": [1, 5]},
+            "id": {"$not": {"$in": ["w1", "w2"]}}
+        });
+        let plan = build_update_plan(
+            &manifest,
+            &UpdatePlanRequest {
+                context: RequestContext {
+                    tenant_id: "t1".to_string(),
+                    purpose: "unit-test".to_string(),
+                    scopes: vec!["udb:write".to_string()],
+                    ..RequestContext::default()
+                },
+                message_type: "acme.test.v1.Widget".to_string(),
+                filter: filter.clone(),
+                changes: json!({"status": "open"}),
+                increments: Vec::new(),
+                return_record: false,
+            },
+        );
+        assert_eq!(plan.errors, Vec::<String>::new());
+        assert!(
+            plan.sql.contains("NOT (\"status\" = ANY($"),
+            "sql: {}",
+            plan.sql
+        );
+        assert!(
+            plan.sql.contains("\"login_attempts\" BETWEEN $"),
+            "sql: {}",
+            plan.sql
+        );
+        assert!(
+            plan.sql.contains("NOT (\"id\" = ANY($"),
+            "sql: {}",
+            plan.sql
+        );
+        // One bound value per placeholder the filter compiled (changes + scope
+        // backstop excluded): the `$between` pair binds as two values.
+        let filter_values = crate::runtime::postgres_helpers::filter_bind_values(&filter);
+        assert_eq!(filter_values.len(), 5, "{filter_values:?}");
+
+        let mut errors = Vec::new();
+        let mut columns = Vec::new();
+        let not_null = compile_column_predicate(
+            "deleted_at",
+            &json!({"$is_null": false}),
+            &mut errors,
+            &mut columns,
+            1,
+            &BackendKind::Postgres,
+        );
+        assert_eq!(not_null.sql, "\"deleted_at\" IS NOT NULL");
+        let unknown = compile_column_predicate(
+            "deleted_at",
+            &json!({"$regex": "x"}),
+            &mut errors,
+            &mut columns,
+            1,
+            &BackendKind::Postgres,
+        );
+        assert!(unknown.sql.is_empty());
+        assert!(
+            errors.iter().any(|e| e.contains("supported: $eq")),
+            "{errors:?}"
+        );
     }
 
     #[test]

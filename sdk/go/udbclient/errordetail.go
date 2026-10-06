@@ -66,12 +66,16 @@ func (e *Error) RetryAfter() time.Duration {
 }
 
 // Reason returns the stable machine-readable reason a caller can branch on: the
-// policy decision id for auth/policy denials, else the capability token, else "".
-// Prefer this over matching the human-readable message, which may change.
+// broker's `UDB_*` reason code (see docs/error-reasons.md) when it sent one, else
+// the policy decision id for auth/policy denials, else the capability token,
+// else "". Prefer this over matching the human-readable message, which may change.
 func (e *Error) Reason() string {
 	d, ok := e.Detail()
 	if !ok {
 		return ""
+	}
+	if r := d.GetReason(); r != "" {
+		return r
 	}
 	if r := d.GetPolicyDecisionId(); r != "" {
 		return r

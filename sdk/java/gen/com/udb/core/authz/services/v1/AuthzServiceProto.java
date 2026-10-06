@@ -40,7 +40,7 @@ public final class AuthzServiceProto {
       "ogle/api/annotations.proto\032%udb/core/aut" +
       "hz/services/v1/core.proto\032+udb/core/auth" +
       "z/services/v1/governance.proto\032!udb/core" +
-      "/common/v1/security.proto2\323\241\001\n\014AuthzServ" +
+      "/common/v1/security.proto2\324\241\001\n\014AuthzServ" +
       "ice\022\271\004\n\tAuthorize\022(.udb.core.authz.servi" +
       "ces.v1.AuthzRequest\032).udb.core.authz.ser" +
       "vices.v1.AuthzResponse\"\326\003\312\363\0302\010\002\032\023udb:aut" +
@@ -373,198 +373,198 @@ public final class AuthzServiceProto {
       "tenant_id\"\010standard*\rat_least_once2\006stab" +
       "le\362\363\030?\n\005authz\032\010postgres2\033UDB_NATIVE_SERV" +
       "ICES_ENABLED2\017UDB_GRPC_TARGET\370\363\030\001\202\323\344\223\002\034\"" +
-      "\027/v1/authz/policies:lint:\001*\022\202\005\n\017GetNativ" +
+      "\027/v1/authz/policies:lint:\001*\022\203\005\n\017GetNativ" +
       "eAccess\022/.udb.core.authz.services.v1.Nat" +
       "iveAccessRequest\0320.udb.core.authz.servic" +
-      "es.v1.NativeAccessResponse\"\213\004\312\363\030?\010\002\032\033udb" +
-      ":authz:get-native-access \001J\002\001\002j\025authz.Ge" +
-      "tNativeAccess\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030<\010\001\022\021get_na" +
-      "tive_access\032\003udb(\260\352\0010\003@\001J\005authzP\001Z\017getNa" +
-      "tiveAccess\342\363\030\273\001\n\005authz\022\020udb/native/authz" +
-      "\032\033UDB_NATIVE_SERVICES_ENABLED\032\017UDB_GRPC_" +
-      "TARGET\".udb.native.authz.get_native_acce" +
-      "ss.boilerplate*\021get_native_access2\tudb_a" +
-      "uthz:\005authzJ\013UDB_API_KEYZ\020udb native smo" +
-      "ke\352\363\030Q\n\025authz.GetNativeAccess\022\014authz.eve" +
-      "nts\032\ttenant_id\"\010standard*\rat_least_once2" +
-      "\006stable\362\363\030?\n\005authz\032\010postgres2\033UDB_NATIVE" +
-      "_SERVICES_ENABLED2\017UDB_GRPC_TARGET\370\363\030\001\202\323" +
-      "\344\223\002\034\"\027/v1/authz/native-access:\001*\022\202\005\n\017Get" +
-      "PolicyBundle\022/.udb.core.authz.services.v" +
-      "1.PolicyBundleRequest\0320.udb.core.authz.s" +
-      "ervices.v1.PolicyBundleResponse\"\213\004\312\363\030?\010\002" +
-      "\032\033udb:authz:get-policy-bundle \001J\002\001\002j\025aut" +
-      "hz.GetPolicyBundle\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030<\010\001\022\021g" +
-      "et_policy_bundle\032\003udb(\260\352\0010\003@\001J\005authzP\001Z\017" +
-      "getPolicyBundle\342\363\030\273\001\n\005authz\022\020udb/native/" +
-      "authz\032\033UDB_NATIVE_SERVICES_ENABLED\032\017UDB_" +
-      "GRPC_TARGET\".udb.native.authz.get_policy" +
-      "_bundle.boilerplate*\021get_policy_bundle2\t" +
-      "udb_authz:\005authzJ\013UDB_API_KEYZ\020udb nativ" +
-      "e smoke\352\363\030Q\n\025authz.GetPolicyBundle\022\014auth" +
-      "z.events\032\ttenant_id\"\010standard*\rat_least_" +
-      "once2\006stable\362\363\030?\n\005authz\032\010postgres2\033UDB_N" +
-      "ATIVE_SERVICES_ENABLED2\017UDB_GRPC_TARGET\370" +
-      "\363\030\001\202\323\344\223\002\034\"\027/v1/authz/policy-bundle:\001*\022\265\002" +
-      "\n\021CreatePolicyDraft\0224.udb.core.authz.ser" +
-      "vices.v1.CreatePolicyDraftRequest\032/.udb." +
-      "core.authz.services.v1.PolicyDraftRespon" +
-      "se\"\270\001\312\363\030N\010\002\032\026udb:authz:policy:write \001J\002\001" +
-      "\002j)native.authz.governance.CreatePolicyD" +
-      "raft\220\001\001\332\363\0308\010\001\022\023create_policy_draft\032\003udb@" +
-      "\001J\005authzZ\021createPolicyDraft\370\363\030\002\202\323\344\223\002 \"\033/" +
-      "v1/authz/governance/drafts:\001*\022\274\002\n\021Update" +
-      "PolicyDraft\0224.udb.core.authz.services.v1" +
-      ".UpdatePolicyDraftRequest\032/.udb.core.aut" +
-      "hz.services.v1.PolicyDraftResponse\"\277\001\312\363\030" +
-      "N\010\002\032\026udb:authz:policy:write \001J\002\001\002j)nativ" +
-      "e.authz.governance.UpdatePolicyDraft\220\001\001\332" +
-      "\363\0308\010\001\022\023update_policy_draft\032\003udb@\001J\005authz" +
-      "Z\021updatePolicyDraft\370\363\030\002\202\323\344\223\002\'\"\"/v1/authz" +
-      "/governance/drafts:update:\001*\022\263\002\n\017DiffPol" +
-      "icyDraft\0222.udb.core.authz.services.v1.Di" +
-      "ffPolicyDraftRequest\0323.udb.core.authz.se" +
-      "rvices.v1.DiffPolicyDraftResponse\"\266\001\312\363\030K" +
-      "\010\002\032\025udb:authz:policy:read \001J\002\001\002j\'native." +
-      "authz.governance.DiffPolicyDraft\220\001\001\332\363\0304\010" +
-      "\001\022\021diff_policy_draft\032\003udb@\001J\005authzZ\017diff" +
-      "PolicyDraft\370\363\030\001\202\323\344\223\002%\" /v1/authz/governa" +
-      "nce/drafts:diff:\001*\022\274\002\n\021SubmitPolicyDraft" +
-      "\0224.udb.core.authz.services.v1.SubmitPoli" +
-      "cyDraftRequest\032/.udb.core.authz.services" +
-      ".v1.PolicyDraftResponse\"\277\001\312\363\030N\010\002\032\026udb:au" +
-      "thz:policy:write \001J\002\001\002j)native.authz.gov" +
-      "ernance.SubmitPolicyDraft\220\001\001\332\363\0308\010\001\022\023subm",
-      "it_policy_draft\032\003udb@\001J\005authzZ\021submitPol" +
-      "icyDraft\370\363\030\002\202\323\344\223\002\'\"\"/v1/authz/governance" +
-      "/drafts:submit:\001*\022\307\002\n\022ApprovePolicyDraft" +
-      "\0225.udb.core.authz.services.v1.ApprovePol" +
-      "icyDraftRequest\0322.udb.core.authz.service" +
-      "s.v1.PolicyApprovalResponse\"\305\001\312\363\030Q\010\002\032\030ud" +
-      "b:authz:policy:approve \001J\002\001\002j*native.aut" +
-      "hz.governance.ApprovePolicyDraft\220\001\001\332\363\030:\010" +
-      "\001\022\024approve_policy_draft\032\003udb@\001J\005authzZ\022a" +
-      "pprovePolicyDraft\370\363\030\002\202\323\344\223\002(\"#/v1/authz/g" +
-      "overnance/drafts:approve:\001*\022\301\002\n\021RejectPo" +
-      "licyDraft\0224.udb.core.authz.services.v1.R" +
-      "ejectPolicyDraftRequest\0322.udb.core.authz" +
-      ".services.v1.PolicyApprovalResponse\"\301\001\312\363" +
-      "\030P\010\002\032\030udb:authz:policy:approve \001J\002\001\002j)na" +
-      "tive.authz.governance.RejectPolicyDraft\220" +
-      "\001\001\332\363\0308\010\001\022\023reject_policy_draft\032\003udb@\001J\005au" +
-      "thzZ\021rejectPolicyDraft\370\363\030\002\202\323\344\223\002\'\"\"/v1/au" +
-      "thz/governance/drafts:reject:\001*\022\314\002\n\025Acti" +
-      "vatePolicyVersion\0228.udb.core.authz.servi" +
-      "ces.v1.ActivatePolicyVersionRequest\032..ud" +
-      "b.core.authz.services.v1.ActivationRespo" +
-      "nse\"\310\001\312\363\030K\010\002\032\017udb:authz:admin \001J\002\001\002j-nat" +
-      "ive.authz.governance.ActivatePolicyVersi" +
-      "on\220\001\001\332\363\030@\010\001\022\027activate_policy_version\032\003ud" +
-      "b@\001J\005authzZ\025activatePolicyVersion\370\363\030\003\202\323\344" +
-      "\223\002+\"&/v1/authz/governance/versions:activ" +
-      "ate:\001*\022\314\002\n\025RollbackPolicyVersion\0228.udb.c" +
-      "ore.authz.services.v1.RollbackPolicyVers" +
-      "ionRequest\032..udb.core.authz.services.v1." +
-      "ActivationResponse\"\310\001\312\363\030K\010\002\032\017udb:authz:a" +
-      "dmin \001J\002\001\002j-native.authz.governance.Roll" +
-      "backPolicyVersion\220\001\001\332\363\030@\010\001\022\027rollback_pol" +
-      "icy_version\032\003udb@\001J\005authzZ\025rollbackPolic" +
-      "yVersion\370\363\030\003\202\323\344\223\002+\"&/v1/authz/governance" +
-      "/versions:rollback:\001*\022\244\002\n\016ActivateCanary" +
-      "\0221.udb.core.authz.services.v1.ActivateCa" +
-      "naryRequest\032*.udb.core.authz.services.v1" +
-      ".CanaryResponse\"\262\001\312\363\030D\010\002\032\017udb:authz:admi" +
-      "n \001J\002\001\002j&native.authz.governance.Activat" +
-      "eCanary\220\001\001\332\363\0301\010\001\022\017activate_canary\032\003udb@\001" +
-      "J\005authzZ\016activateCanary\370\363\030\003\202\323\344\223\002+\"&/v1/a" +
-      "uthz/governance/canaries:activate:\001*\022\236\002\n" +
-      "\rPromoteCanary\0220.udb.core.authz.services" +
-      ".v1.PromoteCanaryRequest\032*.udb.core.auth" +
-      "z.services.v1.CanaryResponse\"\256\001\312\363\030C\010\002\032\017u" +
-      "db:authz:admin \001J\002\001\002j%native.authz.gover" +
-      "nance.PromoteCanary\220\001\001\332\363\030/\010\001\022\016promote_ca" +
-      "nary\032\003udb@\001J\005authzZ\rpromoteCanary\370\363\030\003\202\323\344" +
-      "\223\002*\"%/v1/authz/governance/canaries:promo" +
-      "te:\001*\022\271\002\n\017GetCanaryStatus\0222.udb.core.aut" +
-      "hz.services.v1.GetCanaryStatusRequest\0323." +
-      "udb.core.authz.services.v1.GetCanaryStat" +
-      "usResponse\"\274\001\312\363\030K\010\002\032\025udb:authz:policy:re" +
-      "ad \001J\002\001\002j\'native.authz.governance.GetCan" +
-      "aryStatus\220\001\001\332\363\0304\010\001\022\021get_canary_status\032\003u" +
-      "db@\001J\005authzZ\017getCanaryStatus\370\363\030\001\202\323\344\223\002+\022)" +
-      "/v1/authz/governance/canaries/{canary_id" +
-      "}\022\277\002\n\022ListPolicyVersions\0225.udb.core.auth" +
-      "z.services.v1.ListPolicyVersionsRequest\032" +
-      "6.udb.core.authz.services.v1.ListPolicyV" +
-      "ersionsResponse\"\271\001\312\363\030N\010\002\032\025udb:authz:poli" +
-      "cy:read \001J\002\001\002j*native.authz.governance.L" +
-      "istPolicyVersions\220\001\001\332\363\030:\010\001\022\024list_policy_" +
-      "versions\032\003udb@\001J\005authzZ\022listPolicyVersio" +
-      "ns\370\363\030\001\202\323\344\223\002\037\022\035/v1/authz/governance/versi" +
-      "ons\022\263\002\n\016SimulatePolicy\0221.udb.core.authz." +
-      "services.v1.SimulatePolicyRequest\0322.udb." +
-      "core.authz.services.v1.SimulatePolicyRes" +
-      "ponse\"\271\001\312\363\030J\010\002\032\025udb:authz:policy:read \001J" +
-      "\002\001\002j&native.authz.governance.SimulatePol" +
-      "icy\220\001\001\332\363\0301\010\001\022\017simulate_policy\032\003udb@\001J\005au" +
-      "thzZ\016simulatePolicy\370\363\030\002\202\323\344\223\002,\"\'/v1/authz" +
-      "/governance/policy-simulations:\001*\022\256\002\n\rEx" +
-      "plainPolicy\0220.udb.core.authz.services.v1" +
-      ".ExplainPolicyRequest\0321.udb.core.authz.s" +
-      "ervices.v1.ExplainPolicyResponse\"\267\001\312\363\030I\010" +
-      "\002\032\025udb:authz:policy:read \001J\002\001\002j%native.a" +
-      "uthz.governance.ExplainPolicy\220\001\001\332\363\030/\010\001\022\016" +
-      "explain_policy\032\003udb@\001J\005authzZ\rexplainPol" +
-      "icy\370\363\030\001\202\323\344\223\002-\"(/v1/authz/governance/poli" +
-      "cy-explanations:\001*\022\274\002\n\020GetAuthzRevision\022" +
-      "3.udb.core.authz.services.v1.GetAuthzRev" +
-      "isionRequest\0324.udb.core.authz.services.v" +
-      "1.GetAuthzRevisionResponse\"\274\001\312\363\030L\010\002\032\025udb" +
-      ":authz:policy:read \001J\002\001\002j(native.authz.g" +
-      "overnance.GetAuthzRevision\220\001\001\332\363\0306\010\001\022\022get" +
-      "_authz_revision\032\003udb@\001J\005authzZ\020getAuthzR" +
-      "evision\370\363\030\001\202\323\344\223\002(\022&/v1/authz/governance/" +
-      "revisions/current\022\344\002\n\027InvalidatePolicyBu" +
-      "ndles\022:.udb.core.authz.services.v1.Inval" +
-      "idatePolicyBundlesRequest\032;.udb.core.aut" +
-      "hz.services.v1.InvalidatePolicyBundlesRe" +
-      "sponse\"\317\001\312\363\030M\010\002\032\017udb:authz:admin \001J\002\001\002j/" +
-      "native.authz.governance.InvalidatePolicy" +
-      "Bundles\220\001\001\332\363\030D\010\001\022\031invalidate_policy_bund" +
-      "les\032\003udb@\001J\005authzZ\027invalidatePolicyBundl" +
-      "es\370\363\030\003\202\323\344\223\002,\"\'/v1/authz/governance/bundl" +
-      "es:invalidate:\001*\022\262\002\n\020SeedBuiltinRoles\0223." +
-      "udb.core.authz.services.v1.SeedBuiltinRo" +
-      "lesRequest\0324.udb.core.authz.services.v1." +
-      "SeedBuiltinRolesResponse\"\262\001\312\363\030F\010\002\032\017udb:a" +
-      "uthz:admin \001J\002\001\002j(native.authz.governanc" +
-      "e.SeedBuiltinRoles\220\001\001\332\363\0306\010\001\022\022seed_builti" +
-      "n_roles\032\003udb@\001J\005authzZ\020seedBuiltinRoles\370" +
-      "\363\030\002\202\323\344\223\002$\"\037/v1/authz/governance/roles:se" +
-      "ed:\001*\022\324\002\n\025MigrateLegacyPolicies\0228.udb.co" +
-      "re.authz.services.v1.MigrateLegacyPolici" +
-      "esRequest\0329.udb.core.authz.services.v1.M" +
-      "igrateLegacyPoliciesResponse\"\305\001\312\363\030K\010\002\032\017u" +
-      "db:authz:admin \001J\002\001\002j-native.authz.gover" +
-      "nance.MigrateLegacyPolicies\220\001\001\332\363\030@\010\001\022\027mi" +
-      "grate_legacy_policies\032\003udb@\001J\005authzZ\025mig" +
-      "rateLegacyPolicies\370\363\030\003\202\323\344\223\002(\"#/v1/authz/" +
-      "governance/legacy:migrate:\001*\032\311\002\312\360\031\\\n\005aut" +
-      "hz\022\005authz\032\005authz\"\rAuthorization*\ngoverna" +
-      "nce0\0018\001h\001z\005authz\202\001\005authz\212\001\005authz\222\001\014nativ" +
-      "e.authz\322\360\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authzP\001\332\360\031\205\001" +
-      "\n\005authz\022\020udb/native/authz\032\033UDB_NATIVE_SE" +
-      "RVICES_ENABLED\032\017UDB_GRPC_TARGET\"\027udb.nat" +
-      "ive.authz.config:\005authzJ\013UDB_API_KEYZ\017ud" +
-      "b native lint\342\360\031?\n\005authz\032\010postgres2\033UDB_" +
+      "es.v1.NativeAccessResponse\"\214\004\312\363\030@\010\002\032\033udb" +
+      ":authz:get-native-access \001J\003\001\002\004j\025authz.G" +
+      "etNativeAccess\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030<\010\001\022\021get_n" +
+      "ative_access\032\003udb(\260\352\0010\003@\001J\005authzP\001Z\017getN" +
+      "ativeAccess\342\363\030\273\001\n\005authz\022\020udb/native/auth" +
+      "z\032\033UDB_NATIVE_SERVICES_ENABLED\032\017UDB_GRPC" +
+      "_TARGET\".udb.native.authz.get_native_acc" +
+      "ess.boilerplate*\021get_native_access2\tudb_" +
+      "authz:\005authzJ\013UDB_API_KEYZ\020udb native sm" +
+      "oke\352\363\030Q\n\025authz.GetNativeAccess\022\014authz.ev" +
+      "ents\032\ttenant_id\"\010standard*\rat_least_once" +
+      "2\006stable\362\363\030?\n\005authz\032\010postgres2\033UDB_NATIV" +
+      "E_SERVICES_ENABLED2\017UDB_GRPC_TARGET\370\363\030\001\202" +
+      "\323\344\223\002\034\"\027/v1/authz/native-access:\001*\022\202\005\n\017Ge" +
+      "tPolicyBundle\022/.udb.core.authz.services." +
+      "v1.PolicyBundleRequest\0320.udb.core.authz." +
+      "services.v1.PolicyBundleResponse\"\213\004\312\363\030?\010" +
+      "\002\032\033udb:authz:get-policy-bundle \001J\002\001\002j\025au" +
+      "thz.GetPolicyBundle\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030<\010\001\022\021" +
+      "get_policy_bundle\032\003udb(\260\352\0010\003@\001J\005authzP\001Z" +
+      "\017getPolicyBundle\342\363\030\273\001\n\005authz\022\020udb/native" +
+      "/authz\032\033UDB_NATIVE_SERVICES_ENABLED\032\017UDB" +
+      "_GRPC_TARGET\".udb.native.authz.get_polic" +
+      "y_bundle.boilerplate*\021get_policy_bundle2" +
+      "\tudb_authz:\005authzJ\013UDB_API_KEYZ\020udb nati" +
+      "ve smoke\352\363\030Q\n\025authz.GetPolicyBundle\022\014aut" +
+      "hz.events\032\ttenant_id\"\010standard*\rat_least" +
+      "_once2\006stable\362\363\030?\n\005authz\032\010postgres2\033UDB_" +
       "NATIVE_SERVICES_ENABLED2\017UDB_GRPC_TARGET" +
-      "B\212\002\n\036com.udb.core.authz.services.v1B\021Aut" +
-      "hzServiceProtoP\001ZHgithub.com/fahara02/ud" +
-      "b/sdk/go/gen/udb/core/authz/services/v1;" +
-      "servicesv1\242\002\004UCAS\252\002\032Udb.Core.Authz.Servi" +
-      "ces.V1\312\002\032Udb\\Core\\Authz\\Services\\V1\342\002&Ud" +
-      "b\\GPBMetadata\\Core\\Authz\\Services\\V1\352\002\036U" +
-      "db::Core::Authz::Services::V1b\006proto3"
+      "\370\363\030\001\202\323\344\223\002\034\"\027/v1/authz/policy-bundle:\001*\022\265" +
+      "\002\n\021CreatePolicyDraft\0224.udb.core.authz.se" +
+      "rvices.v1.CreatePolicyDraftRequest\032/.udb" +
+      ".core.authz.services.v1.PolicyDraftRespo" +
+      "nse\"\270\001\312\363\030N\010\002\032\026udb:authz:policy:write \001J\002" +
+      "\001\002j)native.authz.governance.CreatePolicy" +
+      "Draft\220\001\001\332\363\0308\010\001\022\023create_policy_draft\032\003udb" +
+      "@\001J\005authzZ\021createPolicyDraft\370\363\030\002\202\323\344\223\002 \"\033" +
+      "/v1/authz/governance/drafts:\001*\022\274\002\n\021Updat" +
+      "ePolicyDraft\0224.udb.core.authz.services.v" +
+      "1.UpdatePolicyDraftRequest\032/.udb.core.au" +
+      "thz.services.v1.PolicyDraftResponse\"\277\001\312\363" +
+      "\030N\010\002\032\026udb:authz:policy:write \001J\002\001\002j)nati" +
+      "ve.authz.governance.UpdatePolicyDraft\220\001\001" +
+      "\332\363\0308\010\001\022\023update_policy_draft\032\003udb@\001J\005auth" +
+      "zZ\021updatePolicyDraft\370\363\030\002\202\323\344\223\002\'\"\"/v1/auth" +
+      "z/governance/drafts:update:\001*\022\263\002\n\017DiffPo" +
+      "licyDraft\0222.udb.core.authz.services.v1.D" +
+      "iffPolicyDraftRequest\0323.udb.core.authz.s" +
+      "ervices.v1.DiffPolicyDraftResponse\"\266\001\312\363\030" +
+      "K\010\002\032\025udb:authz:policy:read \001J\002\001\002j\'native" +
+      ".authz.governance.DiffPolicyDraft\220\001\001\332\363\0304" +
+      "\010\001\022\021diff_policy_draft\032\003udb@\001J\005authzZ\017dif" +
+      "fPolicyDraft\370\363\030\001\202\323\344\223\002%\" /v1/authz/govern" +
+      "ance/drafts:diff:\001*\022\274\002\n\021SubmitPolicyDraf" +
+      "t\0224.udb.core.authz.services.v1.SubmitPol" +
+      "icyDraftRequest\032/.udb.core.authz.service" +
+      "s.v1.PolicyDraftResponse\"\277\001\312\363\030N\010\002\032\026udb:a" +
+      "uthz:policy:write \001J\002\001\002j)native.authz.go" +
+      "vernance.SubmitPolicyDraft\220\001\001\332\363\0308\010\001\022\023sub",
+      "mit_policy_draft\032\003udb@\001J\005authzZ\021submitPo" +
+      "licyDraft\370\363\030\002\202\323\344\223\002\'\"\"/v1/authz/governanc" +
+      "e/drafts:submit:\001*\022\307\002\n\022ApprovePolicyDraf" +
+      "t\0225.udb.core.authz.services.v1.ApprovePo" +
+      "licyDraftRequest\0322.udb.core.authz.servic" +
+      "es.v1.PolicyApprovalResponse\"\305\001\312\363\030Q\010\002\032\030u" +
+      "db:authz:policy:approve \001J\002\001\002j*native.au" +
+      "thz.governance.ApprovePolicyDraft\220\001\001\332\363\030:" +
+      "\010\001\022\024approve_policy_draft\032\003udb@\001J\005authzZ\022" +
+      "approvePolicyDraft\370\363\030\002\202\323\344\223\002(\"#/v1/authz/" +
+      "governance/drafts:approve:\001*\022\301\002\n\021RejectP" +
+      "olicyDraft\0224.udb.core.authz.services.v1." +
+      "RejectPolicyDraftRequest\0322.udb.core.auth" +
+      "z.services.v1.PolicyApprovalResponse\"\301\001\312" +
+      "\363\030P\010\002\032\030udb:authz:policy:approve \001J\002\001\002j)n" +
+      "ative.authz.governance.RejectPolicyDraft" +
+      "\220\001\001\332\363\0308\010\001\022\023reject_policy_draft\032\003udb@\001J\005a" +
+      "uthzZ\021rejectPolicyDraft\370\363\030\002\202\323\344\223\002\'\"\"/v1/a" +
+      "uthz/governance/drafts:reject:\001*\022\314\002\n\025Act" +
+      "ivatePolicyVersion\0228.udb.core.authz.serv" +
+      "ices.v1.ActivatePolicyVersionRequest\032..u" +
+      "db.core.authz.services.v1.ActivationResp" +
+      "onse\"\310\001\312\363\030K\010\002\032\017udb:authz:admin \001J\002\001\002j-na" +
+      "tive.authz.governance.ActivatePolicyVers" +
+      "ion\220\001\001\332\363\030@\010\001\022\027activate_policy_version\032\003u" +
+      "db@\001J\005authzZ\025activatePolicyVersion\370\363\030\003\202\323" +
+      "\344\223\002+\"&/v1/authz/governance/versions:acti" +
+      "vate:\001*\022\314\002\n\025RollbackPolicyVersion\0228.udb." +
+      "core.authz.services.v1.RollbackPolicyVer" +
+      "sionRequest\032..udb.core.authz.services.v1" +
+      ".ActivationResponse\"\310\001\312\363\030K\010\002\032\017udb:authz:" +
+      "admin \001J\002\001\002j-native.authz.governance.Rol" +
+      "lbackPolicyVersion\220\001\001\332\363\030@\010\001\022\027rollback_po" +
+      "licy_version\032\003udb@\001J\005authzZ\025rollbackPoli" +
+      "cyVersion\370\363\030\003\202\323\344\223\002+\"&/v1/authz/governanc" +
+      "e/versions:rollback:\001*\022\244\002\n\016ActivateCanar" +
+      "y\0221.udb.core.authz.services.v1.ActivateC" +
+      "anaryRequest\032*.udb.core.authz.services.v" +
+      "1.CanaryResponse\"\262\001\312\363\030D\010\002\032\017udb:authz:adm" +
+      "in \001J\002\001\002j&native.authz.governance.Activa" +
+      "teCanary\220\001\001\332\363\0301\010\001\022\017activate_canary\032\003udb@" +
+      "\001J\005authzZ\016activateCanary\370\363\030\003\202\323\344\223\002+\"&/v1/" +
+      "authz/governance/canaries:activate:\001*\022\236\002" +
+      "\n\rPromoteCanary\0220.udb.core.authz.service" +
+      "s.v1.PromoteCanaryRequest\032*.udb.core.aut" +
+      "hz.services.v1.CanaryResponse\"\256\001\312\363\030C\010\002\032\017" +
+      "udb:authz:admin \001J\002\001\002j%native.authz.gove" +
+      "rnance.PromoteCanary\220\001\001\332\363\030/\010\001\022\016promote_c" +
+      "anary\032\003udb@\001J\005authzZ\rpromoteCanary\370\363\030\003\202\323" +
+      "\344\223\002*\"%/v1/authz/governance/canaries:prom" +
+      "ote:\001*\022\271\002\n\017GetCanaryStatus\0222.udb.core.au" +
+      "thz.services.v1.GetCanaryStatusRequest\0323" +
+      ".udb.core.authz.services.v1.GetCanarySta" +
+      "tusResponse\"\274\001\312\363\030K\010\002\032\025udb:authz:policy:r" +
+      "ead \001J\002\001\002j\'native.authz.governance.GetCa" +
+      "naryStatus\220\001\001\332\363\0304\010\001\022\021get_canary_status\032\003" +
+      "udb@\001J\005authzZ\017getCanaryStatus\370\363\030\001\202\323\344\223\002+\022" +
+      ")/v1/authz/governance/canaries/{canary_i" +
+      "d}\022\277\002\n\022ListPolicyVersions\0225.udb.core.aut" +
+      "hz.services.v1.ListPolicyVersionsRequest" +
+      "\0326.udb.core.authz.services.v1.ListPolicy" +
+      "VersionsResponse\"\271\001\312\363\030N\010\002\032\025udb:authz:pol" +
+      "icy:read \001J\002\001\002j*native.authz.governance." +
+      "ListPolicyVersions\220\001\001\332\363\030:\010\001\022\024list_policy" +
+      "_versions\032\003udb@\001J\005authzZ\022listPolicyVersi" +
+      "ons\370\363\030\001\202\323\344\223\002\037\022\035/v1/authz/governance/vers" +
+      "ions\022\263\002\n\016SimulatePolicy\0221.udb.core.authz" +
+      ".services.v1.SimulatePolicyRequest\0322.udb" +
+      ".core.authz.services.v1.SimulatePolicyRe" +
+      "sponse\"\271\001\312\363\030J\010\002\032\025udb:authz:policy:read \001" +
+      "J\002\001\002j&native.authz.governance.SimulatePo" +
+      "licy\220\001\001\332\363\0301\010\001\022\017simulate_policy\032\003udb@\001J\005a" +
+      "uthzZ\016simulatePolicy\370\363\030\002\202\323\344\223\002,\"\'/v1/auth" +
+      "z/governance/policy-simulations:\001*\022\256\002\n\rE" +
+      "xplainPolicy\0220.udb.core.authz.services.v" +
+      "1.ExplainPolicyRequest\0321.udb.core.authz." +
+      "services.v1.ExplainPolicyResponse\"\267\001\312\363\030I" +
+      "\010\002\032\025udb:authz:policy:read \001J\002\001\002j%native." +
+      "authz.governance.ExplainPolicy\220\001\001\332\363\030/\010\001\022" +
+      "\016explain_policy\032\003udb@\001J\005authzZ\rexplainPo" +
+      "licy\370\363\030\001\202\323\344\223\002-\"(/v1/authz/governance/pol" +
+      "icy-explanations:\001*\022\274\002\n\020GetAuthzRevision" +
+      "\0223.udb.core.authz.services.v1.GetAuthzRe" +
+      "visionRequest\0324.udb.core.authz.services." +
+      "v1.GetAuthzRevisionResponse\"\274\001\312\363\030L\010\002\032\025ud" +
+      "b:authz:policy:read \001J\002\001\002j(native.authz." +
+      "governance.GetAuthzRevision\220\001\001\332\363\0306\010\001\022\022ge" +
+      "t_authz_revision\032\003udb@\001J\005authzZ\020getAuthz" +
+      "Revision\370\363\030\001\202\323\344\223\002(\022&/v1/authz/governance" +
+      "/revisions/current\022\344\002\n\027InvalidatePolicyB" +
+      "undles\022:.udb.core.authz.services.v1.Inva" +
+      "lidatePolicyBundlesRequest\032;.udb.core.au" +
+      "thz.services.v1.InvalidatePolicyBundlesR" +
+      "esponse\"\317\001\312\363\030M\010\002\032\017udb:authz:admin \001J\002\001\002j" +
+      "/native.authz.governance.InvalidatePolic" +
+      "yBundles\220\001\001\332\363\030D\010\001\022\031invalidate_policy_bun" +
+      "dles\032\003udb@\001J\005authzZ\027invalidatePolicyBund" +
+      "les\370\363\030\003\202\323\344\223\002,\"\'/v1/authz/governance/bund" +
+      "les:invalidate:\001*\022\262\002\n\020SeedBuiltinRoles\0223" +
+      ".udb.core.authz.services.v1.SeedBuiltinR" +
+      "olesRequest\0324.udb.core.authz.services.v1" +
+      ".SeedBuiltinRolesResponse\"\262\001\312\363\030F\010\002\032\017udb:" +
+      "authz:admin \001J\002\001\002j(native.authz.governan" +
+      "ce.SeedBuiltinRoles\220\001\001\332\363\0306\010\001\022\022seed_built" +
+      "in_roles\032\003udb@\001J\005authzZ\020seedBuiltinRoles" +
+      "\370\363\030\002\202\323\344\223\002$\"\037/v1/authz/governance/roles:s" +
+      "eed:\001*\022\324\002\n\025MigrateLegacyPolicies\0228.udb.c" +
+      "ore.authz.services.v1.MigrateLegacyPolic" +
+      "iesRequest\0329.udb.core.authz.services.v1." +
+      "MigrateLegacyPoliciesResponse\"\305\001\312\363\030K\010\002\032\017" +
+      "udb:authz:admin \001J\002\001\002j-native.authz.gove" +
+      "rnance.MigrateLegacyPolicies\220\001\001\332\363\030@\010\001\022\027m" +
+      "igrate_legacy_policies\032\003udb@\001J\005authzZ\025mi" +
+      "grateLegacyPolicies\370\363\030\003\202\323\344\223\002(\"#/v1/authz" +
+      "/governance/legacy:migrate:\001*\032\311\002\312\360\031\\\n\005au" +
+      "thz\022\005authz\032\005authz\"\rAuthorization*\ngovern" +
+      "ance0\0018\001h\001z\005authz\202\001\005authz\212\001\005authz\222\001\014nati" +
+      "ve.authz\322\360\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authzP\001\332\360\031\205" +
+      "\001\n\005authz\022\020udb/native/authz\032\033UDB_NATIVE_S" +
+      "ERVICES_ENABLED\032\017UDB_GRPC_TARGET\"\027udb.na" +
+      "tive.authz.config:\005authzJ\013UDB_API_KEYZ\017u" +
+      "db native lint\342\360\031?\n\005authz\032\010postgres2\033UDB" +
+      "_NATIVE_SERVICES_ENABLED2\017UDB_GRPC_TARGE" +
+      "TB\212\002\n\036com.udb.core.authz.services.v1B\021Au" +
+      "thzServiceProtoP\001ZHgithub.com/fahara02/u" +
+      "db/sdk/go/gen/udb/core/authz/services/v1" +
+      ";servicesv1\242\002\004UCAS\252\002\032Udb.Core.Authz.Serv" +
+      "ices.V1\312\002\032Udb\\Core\\Authz\\Services\\V1\342\002&U" +
+      "db\\GPBMetadata\\Core\\Authz\\Services\\V1\352\002\036" +
+      "Udb::Core::Authz::Services::V1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,

@@ -904,7 +904,18 @@ pub(crate) const EVENT_ENVELOPE_FIELDS: &[&str] = &[
     "trace_id",
     "span_id",
     "target_resource",
+    "envelope_version",
 ];
+
+/// The envelope shape version every event is stamped with. Bumped when a
+/// consumer that only knows the previous shape would misread an event (the
+/// 0.5.26 move of domain fields under `payload` is version 2). SDK consumers
+/// refuse a newer major than they understand instead of reading empty fields.
+pub(crate) const EVENT_ENVELOPE_VERSION: u32 = 2;
+
+fn current_envelope_version() -> u32 {
+    EVENT_ENVELOPE_VERSION
+}
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct EventEnvelope {
@@ -959,6 +970,10 @@ pub struct EventEnvelope {
     pub span_id: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub target_resource: String,
+    /// See [`EVENT_ENVELOPE_VERSION`]. An event written before versioning reads
+    /// as the current version (its shape is the current one).
+    #[serde(default = "current_envelope_version")]
+    pub envelope_version: u32,
 }
 
 #[derive(Debug, Clone)]

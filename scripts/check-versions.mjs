@@ -449,10 +449,27 @@ if (!FIX) {
   const heading = new RegExp("^## \\[?" + escaped + "\\]?[^\n]*$", "m");
   const match = heading.exec(changelog);
   let hasNotes = false;
+  let section = "";
   if (match) {
     const rest = changelog.slice(match.index + match[0].length);
     const next = rest.search(/^## /m);
-    hasNotes = (next === -1 ? rest : rest.slice(0, next)).trim().length > 0;
+    section = next === -1 ? rest : rest.slice(0, next);
+    hasNotes = section.trim().length > 0;
+  }
+  // C4 (0.5.29+): every release says what breaks for callers, even when the
+  // answer is "- None.", so `udb upgrade --check` can tell a quiet release from
+  // an unreviewed one.
+  const [major, minor, patch] = version.split(".").map((part) => parseInt(part, 10));
+  const needsBreaking = major > 0 || minor > 5 || (minor === 5 && patch >= 29);
+  if (hasNotes && needsBreaking && !/^### Breaking for callers\s*$/m.test(section)) {
+    failures.push({
+      file: "CHANGELOG.md",
+      note: "section for " + version + " lacks a '### Breaking for callers' subsection",
+    });
+    console.error(
+      "CHANGELOG.md: the " + version + " section needs a '### Breaking for callers' subsection " +
+        "(entries with '- detect: code: …' / '- detect: sql: …' and '- fix: …' lines, or '- None.')",
+    );
   }
   if (!hasNotes) {
     failures.push({

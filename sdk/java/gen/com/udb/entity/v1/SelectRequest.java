@@ -311,6 +311,22 @@ private static final long serialVersionUID = 0L;
     return includeRevision_;
   }
 
+  public static final int INCLUDE_TOTAL_FIELD_NUMBER = 10;
+  private boolean includeTotal_ = false;
+  /**
+   * <pre>
+   * Also count every matching row into `RecordSet.exact_total` (one extra
+   * COUNT over the same filter and scope; the read cache is skipped).
+   * </pre>
+   *
+   * <code>bool include_total = 10 [json_name = "includeTotal"];</code>
+   * @return The includeTotal.
+   */
+  @java.lang.Override
+  public boolean getIncludeTotal() {
+    return includeTotal_;
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -351,6 +367,9 @@ private static final long serialVersionUID = 0L;
     }
     if (includeRevision_ != false) {
       output.writeBool(9, includeRevision_);
+    }
+    if (includeTotal_ != false) {
+      output.writeBool(10, includeTotal_);
     }
     getUnknownFields().writeTo(output);
   }
@@ -399,6 +418,10 @@ private static final long serialVersionUID = 0L;
       size += com.google.protobuf.CodedOutputStream
         .computeBoolSize(9, includeRevision_);
     }
+    if (includeTotal_ != false) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeBoolSize(10, includeTotal_);
+    }
     size += getUnknownFields().getSerializedSize();
     memoizedSize = size;
     return size;
@@ -441,6 +464,8 @@ private static final long serialVersionUID = 0L;
     }
     if (getIncludeRevision()
         != other.getIncludeRevision()) return false;
+    if (getIncludeTotal()
+        != other.getIncludeTotal()) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -481,6 +506,9 @@ private static final long serialVersionUID = 0L;
     hash = (37 * hash) + INCLUDE_REVISION_FIELD_NUMBER;
     hash = (53 * hash) + com.google.protobuf.Internal.hashBoolean(
         getIncludeRevision());
+    hash = (37 * hash) + INCLUDE_TOTAL_FIELD_NUMBER;
+    hash = (53 * hash) + com.google.protobuf.Internal.hashBoolean(
+        getIncludeTotal());
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -649,6 +677,7 @@ private static final long serialVersionUID = 0L;
         cacheBuilder_ = null;
       }
       includeRevision_ = false;
+      includeTotal_ = false;
       return this;
     }
 
@@ -730,6 +759,9 @@ private static final long serialVersionUID = 0L;
       if (((from_bitField0_ & 0x00000100) != 0)) {
         result.includeRevision_ = includeRevision_;
       }
+      if (((from_bitField0_ & 0x00000200) != 0)) {
+        result.includeTotal_ = includeTotal_;
+      }
       result.bitField0_ |= to_bitField0_;
     }
 
@@ -805,6 +837,9 @@ private static final long serialVersionUID = 0L;
       }
       if (other.getIncludeRevision() != false) {
         setIncludeRevision(other.getIncludeRevision());
+      }
+      if (other.getIncludeTotal() != false) {
+        setIncludeTotal(other.getIncludeTotal());
       }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
@@ -892,6 +927,11 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00000100;
               break;
             } // case 72
+            case 80: {
+              includeTotal_ = input.readBool();
+              bitField0_ |= 0x00000200;
+              break;
+            } // case 80
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -1845,6 +1885,53 @@ private static final long serialVersionUID = 0L;
     public Builder clearIncludeRevision() {
       bitField0_ = (bitField0_ & ~0x00000100);
       includeRevision_ = false;
+      onChanged();
+      return this;
+    }
+
+    private boolean includeTotal_ ;
+    /**
+     * <pre>
+     * Also count every matching row into `RecordSet.exact_total` (one extra
+     * COUNT over the same filter and scope; the read cache is skipped).
+     * </pre>
+     *
+     * <code>bool include_total = 10 [json_name = "includeTotal"];</code>
+     * @return The includeTotal.
+     */
+    @java.lang.Override
+    public boolean getIncludeTotal() {
+      return includeTotal_;
+    }
+    /**
+     * <pre>
+     * Also count every matching row into `RecordSet.exact_total` (one extra
+     * COUNT over the same filter and scope; the read cache is skipped).
+     * </pre>
+     *
+     * <code>bool include_total = 10 [json_name = "includeTotal"];</code>
+     * @param value The includeTotal to set.
+     * @return This builder for chaining.
+     */
+    public Builder setIncludeTotal(boolean value) {
+
+      includeTotal_ = value;
+      bitField0_ |= 0x00000200;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Also count every matching row into `RecordSet.exact_total` (one extra
+     * COUNT over the same filter and scope; the read cache is skipped).
+     * </pre>
+     *
+     * <code>bool include_total = 10 [json_name = "includeTotal"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearIncludeTotal() {
+      bitField0_ = (bitField0_ & ~0x00000200);
+      includeTotal_ = false;
       onChanged();
       return this;
     }

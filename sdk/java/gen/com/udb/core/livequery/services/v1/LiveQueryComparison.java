@@ -45,6 +45,39 @@ public enum LiveQueryComparison
    * <code>LIVE_QUERY_COMPARISON_GE = 6;</code>
    */
   LIVE_QUERY_COMPARISON_GE(6),
+  /**
+   * <pre>
+   * Membership: the field equals one of `LiveQueryPredicate.values`.
+   * </pre>
+   *
+   * <code>LIVE_QUERY_COMPARISON_IN = 7;</code>
+   */
+  LIVE_QUERY_COMPARISON_IN(7),
+  /**
+   * <pre>
+   * Non-membership: the field is present, non-null and equals none of `values`
+   * (SQL NOT IN semantics, so the snapshot and the live deltas agree).
+   * </pre>
+   *
+   * <code>LIVE_QUERY_COMPARISON_NOT_IN = 8;</code>
+   */
+  LIVE_QUERY_COMPARISON_NOT_IN(8),
+  /**
+   * <pre>
+   * The field is null or absent. `value`/`values` are ignored.
+   * </pre>
+   *
+   * <code>LIVE_QUERY_COMPARISON_IS_NULL = 9;</code>
+   */
+  LIVE_QUERY_COMPARISON_IS_NULL(9),
+  /**
+   * <pre>
+   * The field is present and non-null. `value`/`values` are ignored.
+   * </pre>
+   *
+   * <code>LIVE_QUERY_COMPARISON_IS_NOT_NULL = 10;</code>
+   */
+  LIVE_QUERY_COMPARISON_IS_NOT_NULL(10),
   UNRECOGNIZED(-1),
   ;
 
@@ -85,6 +118,39 @@ public enum LiveQueryComparison
    * <code>LIVE_QUERY_COMPARISON_GE = 6;</code>
    */
   public static final int LIVE_QUERY_COMPARISON_GE_VALUE = 6;
+  /**
+   * <pre>
+   * Membership: the field equals one of `LiveQueryPredicate.values`.
+   * </pre>
+   *
+   * <code>LIVE_QUERY_COMPARISON_IN = 7;</code>
+   */
+  public static final int LIVE_QUERY_COMPARISON_IN_VALUE = 7;
+  /**
+   * <pre>
+   * Non-membership: the field is present, non-null and equals none of `values`
+   * (SQL NOT IN semantics, so the snapshot and the live deltas agree).
+   * </pre>
+   *
+   * <code>LIVE_QUERY_COMPARISON_NOT_IN = 8;</code>
+   */
+  public static final int LIVE_QUERY_COMPARISON_NOT_IN_VALUE = 8;
+  /**
+   * <pre>
+   * The field is null or absent. `value`/`values` are ignored.
+   * </pre>
+   *
+   * <code>LIVE_QUERY_COMPARISON_IS_NULL = 9;</code>
+   */
+  public static final int LIVE_QUERY_COMPARISON_IS_NULL_VALUE = 9;
+  /**
+   * <pre>
+   * The field is present and non-null. `value`/`values` are ignored.
+   * </pre>
+   *
+   * <code>LIVE_QUERY_COMPARISON_IS_NOT_NULL = 10;</code>
+   */
+  public static final int LIVE_QUERY_COMPARISON_IS_NOT_NULL_VALUE = 10;
 
 
   public final int getNumber() {
@@ -118,6 +184,10 @@ public enum LiveQueryComparison
       case 4: return LIVE_QUERY_COMPARISON_LE;
       case 5: return LIVE_QUERY_COMPARISON_GT;
       case 6: return LIVE_QUERY_COMPARISON_GE;
+      case 7: return LIVE_QUERY_COMPARISON_IN;
+      case 8: return LIVE_QUERY_COMPARISON_NOT_IN;
+      case 9: return LIVE_QUERY_COMPARISON_IS_NULL;
+      case 10: return LIVE_QUERY_COMPARISON_IS_NOT_NULL;
       default: return null;
     }
   }

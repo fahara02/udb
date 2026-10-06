@@ -13,7 +13,7 @@
 │    UNIVERSAL DATA BROKER                                                   │
 │    gRPC data plane | native control plane | tenant/project scope guard     │
 │                                                                            │
-│    crate v0.5.28 | protocol v1.0.0                                          │
+│    crate v0.5.29 | protocol v1.0.0                                          │
 └────────────────────────────────────────────────────────────────────────────┘
 ```
 These pages document UDB, the Universal Data Broker — one typed API in
@@ -25,7 +25,7 @@ If you're brand new, start with the [project overview](../README.md) to see what
 UDB is and why it exists. When you're ready to build, jump straight to the guide
 that matches your task below.
 
-This is the public documentation for UDB 0.5.28. The guides are grouped by what you're doing: understanding the architecture,
+This is the public documentation for UDB 0.5.29. The guides are grouped by what you're doing: understanding the architecture,
 annotating your protos, integrating an app, using the native services, running
 UDB in production, securing it, testing it, and picking an SDK.
 
@@ -40,6 +40,9 @@ Each row is a task. Read across to the guide that covers it.
 | API rules, route naming, OpenAPI operation IDs, SDK alias policy | [api-rules.md](api-rules.md) |
 | Proto annotations | [annotations.md](annotations.md) |
 | Application integration | [integration.md](integration.md) |
+| Migrating from a hand-written udb wrapper: what the SDK and broker now provide | [migrating-from-a-wrapper.md](migrating-from-a-wrapper.md) |
+| Error reasons: the stable `UDB_*` codes every refusal carries, with fixes | [error-reasons.md](error-reasons.md) |
+| Wire types: the JSON shape of every PostgreSQL column type in a record | [wire-types.md](wire-types.md) |
 | Native auth, authz, IdP, storage, assets, WebRTC, and SDK facades | [native-services.md](native-services.md) |
 | Production readiness, config, runbooks, SLOs, and validation | [operations.md](operations.md) |
 | Upgrading a database that already has data: pre-flight checks, approval plans, rehearsing on a clone, and what to do when startup fails after a migration applied | [upgrading.md](upgrading.md) |

@@ -75,6 +75,41 @@ class ErrorDetail extends \Google\Protobuf\Internal\Message
      * Generated from protobuf field <code>repeated .udb.entity.v1.ErrorFieldViolation field_violations = 9 [json_name = "fieldViolations"];</code>
      */
     private $field_violations;
+    /**
+     * Stable machine reason, `UDB_` + upper snake case (for example
+     * `UDB_CAS_CONFLICT`, `UDB_CAS_KEY_NOT_PK`, `UDB_NO_ROWS_AFFECTED`). The set is
+     * listed in docs/error-reasons.md; a reason is never renamed once shipped.
+     * Branch on this, never on the message text.
+     *
+     * Generated from protobuf field <code>string reason = 10 [json_name = "reason"];</code>
+     */
+    protected $reason = '';
+    /**
+     * The constraint involved (unique, foreign key, check), when known.
+     *
+     * Generated from protobuf field <code>string constraint = 11 [json_name = "constraint"];</code>
+     */
+    protected $constraint = '';
+    /**
+     * The column involved (not null, coercion, decode), when known.
+     *
+     * Generated from protobuf field <code>string column = 12 [json_name = "column"];</code>
+     */
+    protected $column = '';
+    /**
+     * One sentence telling the caller how to fix the request.
+     *
+     * Generated from protobuf field <code>string fix_hint = 13 [json_name = "fixHint"];</code>
+     */
+    protected $fix_hint = '';
+    /**
+     * What the caller is missing, as key/value pairs: for example
+     * `{"scope": "udb:pii:read"}`, `{"purpose": ""}`,
+     * `{"rule": "Select acme.notes.v1.Note"}`.
+     *
+     * Generated from protobuf field <code>map<string, string> missing = 14 [json_name = "missing"];</code>
+     */
+    private $missing;
 
     /**
      * Constructor.
@@ -107,6 +142,21 @@ class ErrorDetail extends \Google\Protobuf\Internal\Message
      *     @type \Udb\Entity\V1\ErrorFieldViolation[] $field_violations
      *           Structured invalid-field details for INVALID_ARGUMENT responses. Empty for
      *           non-validation errors.
+     *     @type string $reason
+     *           Stable machine reason, `UDB_` + upper snake case (for example
+     *           `UDB_CAS_CONFLICT`, `UDB_CAS_KEY_NOT_PK`, `UDB_NO_ROWS_AFFECTED`). The set is
+     *           listed in docs/error-reasons.md; a reason is never renamed once shipped.
+     *           Branch on this, never on the message text.
+     *     @type string $constraint
+     *           The constraint involved (unique, foreign key, check), when known.
+     *     @type string $column
+     *           The column involved (not null, coercion, decode), when known.
+     *     @type string $fix_hint
+     *           One sentence telling the caller how to fix the request.
+     *     @type array|\Google\Protobuf\Internal\MapField $missing
+     *           What the caller is missing, as key/value pairs: for example
+     *           `{"scope": "udb:pii:read"}`, `{"purpose": ""}`,
+     *           `{"rule": "Select acme.notes.v1.Note"}`.
      * }
      */
     public function __construct($data = NULL) {
@@ -358,6 +408,146 @@ class ErrorDetail extends \Google\Protobuf\Internal\Message
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::MESSAGE, \Udb\Entity\V1\ErrorFieldViolation::class);
         $this->field_violations = $arr;
+
+        return $this;
+    }
+
+    /**
+     * Stable machine reason, `UDB_` + upper snake case (for example
+     * `UDB_CAS_CONFLICT`, `UDB_CAS_KEY_NOT_PK`, `UDB_NO_ROWS_AFFECTED`). The set is
+     * listed in docs/error-reasons.md; a reason is never renamed once shipped.
+     * Branch on this, never on the message text.
+     *
+     * Generated from protobuf field <code>string reason = 10 [json_name = "reason"];</code>
+     * @return string
+     */
+    public function getReason()
+    {
+        return $this->reason;
+    }
+
+    /**
+     * Stable machine reason, `UDB_` + upper snake case (for example
+     * `UDB_CAS_CONFLICT`, `UDB_CAS_KEY_NOT_PK`, `UDB_NO_ROWS_AFFECTED`). The set is
+     * listed in docs/error-reasons.md; a reason is never renamed once shipped.
+     * Branch on this, never on the message text.
+     *
+     * Generated from protobuf field <code>string reason = 10 [json_name = "reason"];</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setReason($var)
+    {
+        GPBUtil::checkString($var, True);
+        $this->reason = $var;
+
+        return $this;
+    }
+
+    /**
+     * The constraint involved (unique, foreign key, check), when known.
+     *
+     * Generated from protobuf field <code>string constraint = 11 [json_name = "constraint"];</code>
+     * @return string
+     */
+    public function getConstraint()
+    {
+        return $this->constraint;
+    }
+
+    /**
+     * The constraint involved (unique, foreign key, check), when known.
+     *
+     * Generated from protobuf field <code>string constraint = 11 [json_name = "constraint"];</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setConstraint($var)
+    {
+        GPBUtil::checkString($var, True);
+        $this->constraint = $var;
+
+        return $this;
+    }
+
+    /**
+     * The column involved (not null, coercion, decode), when known.
+     *
+     * Generated from protobuf field <code>string column = 12 [json_name = "column"];</code>
+     * @return string
+     */
+    public function getColumn()
+    {
+        return $this->column;
+    }
+
+    /**
+     * The column involved (not null, coercion, decode), when known.
+     *
+     * Generated from protobuf field <code>string column = 12 [json_name = "column"];</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setColumn($var)
+    {
+        GPBUtil::checkString($var, True);
+        $this->column = $var;
+
+        return $this;
+    }
+
+    /**
+     * One sentence telling the caller how to fix the request.
+     *
+     * Generated from protobuf field <code>string fix_hint = 13 [json_name = "fixHint"];</code>
+     * @return string
+     */
+    public function getFixHint()
+    {
+        return $this->fix_hint;
+    }
+
+    /**
+     * One sentence telling the caller how to fix the request.
+     *
+     * Generated from protobuf field <code>string fix_hint = 13 [json_name = "fixHint"];</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setFixHint($var)
+    {
+        GPBUtil::checkString($var, True);
+        $this->fix_hint = $var;
+
+        return $this;
+    }
+
+    /**
+     * What the caller is missing, as key/value pairs: for example
+     * `{"scope": "udb:pii:read"}`, `{"purpose": ""}`,
+     * `{"rule": "Select acme.notes.v1.Note"}`.
+     *
+     * Generated from protobuf field <code>map<string, string> missing = 14 [json_name = "missing"];</code>
+     * @return \Google\Protobuf\Internal\MapField
+     */
+    public function getMissing()
+    {
+        return $this->missing;
+    }
+
+    /**
+     * What the caller is missing, as key/value pairs: for example
+     * `{"scope": "udb:pii:read"}`, `{"purpose": ""}`,
+     * `{"rule": "Select acme.notes.v1.Note"}`.
+     *
+     * Generated from protobuf field <code>map<string, string> missing = 14 [json_name = "missing"];</code>
+     * @param array|\Google\Protobuf\Internal\MapField $var
+     * @return $this
+     */
+    public function setMissing($var)
+    {
+        $arr = GPBUtil::checkMapField($var, \Google\Protobuf\Internal\GPBType::STRING, \Google\Protobuf\Internal\GPBType::STRING);
+        $this->missing = $arr;
 
         return $this;
     }

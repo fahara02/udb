@@ -52,4 +52,49 @@ public interface LiveQueryPredicateOrBuilder extends
    */
   com.google.protobuf.ByteString
       getValueBytes();
+
+  /**
+   * <pre>
+   * Operands of IN / NOT_IN (each typed like `value`). Must be non-empty for
+   * those operators and empty for every other operator.
+   * </pre>
+   *
+   * <code>repeated string values = 4 [json_name = "values"];</code>
+   * @return A list containing the values.
+   */
+  java.util.List<java.lang.String>
+      getValuesList();
+  /**
+   * <pre>
+   * Operands of IN / NOT_IN (each typed like `value`). Must be non-empty for
+   * those operators and empty for every other operator.
+   * </pre>
+   *
+   * <code>repeated string values = 4 [json_name = "values"];</code>
+   * @return The count of values.
+   */
+  int getValuesCount();
+  /**
+   * <pre>
+   * Operands of IN / NOT_IN (each typed like `value`). Must be non-empty for
+   * those operators and empty for every other operator.
+   * </pre>
+   *
+   * <code>repeated string values = 4 [json_name = "values"];</code>
+   * @param index The index of the element to return.
+   * @return The values at the given index.
+   */
+  java.lang.String getValues(int index);
+  /**
+   * <pre>
+   * Operands of IN / NOT_IN (each typed like `value`). Must be non-empty for
+   * those operators and empty for every other operator.
+   * </pre>
+   *
+   * <code>repeated string values = 4 [json_name = "values"];</code>
+   * @param index The index of the value to return.
+   * @return The bytes of the values at the given index.
+   */
+  com.google.protobuf.ByteString
+      getValuesBytes(int index);
 }

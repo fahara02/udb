@@ -51,6 +51,9 @@ class RecordSet extends \Google\Protobuf\Internal\Message
      */
     protected $next_page_token = '';
     /**
+     * The number of records in THIS page (the length of `records_json`), not the
+     * number of matching rows. Use `exact_total` for that.
+     *
      * Generated from protobuf field <code>int32 total_count = 4 [json_name = "totalCount"];</code>
      */
     protected $total_count = 0;
@@ -68,6 +71,32 @@ class RecordSet extends \Google\Protobuf\Internal\Message
      * Generated from protobuf field <code>repeated string record_revisions = 5 [json_name = "recordRevisions"];</code>
      */
     private $record_revisions;
+    /**
+     * True when the page is full (as many records as the request's limit, or the
+     * default limit of 100 when none was given): more rows may match. A read that
+     * was capped never looks like the complete result; page on with
+     * `next_page_token` (set a positive `limit` to get one) or narrow the filter.
+     *
+     * Generated from protobuf field <code>bool has_more = 6 [json_name = "hasMore"];</code>
+     */
+    protected $has_more = false;
+    /**
+     * Every row the filter matches, ignoring the limit and the page position.
+     * Set only when `SelectRequest.include_total` asked for it (it costs one
+     * COUNT query); 0 otherwise.
+     *
+     * Generated from protobuf field <code>int64 exact_total = 7 [json_name = "exactTotal"];</code>
+     */
+    protected $exact_total = 0;
+    /**
+     * Columns that came back as the redaction placeholder because the caller
+     * lacks the PII read scope (`udb:pii:read`). A value listed here is not the
+     * stored value: never write it back (the broker refuses that write with
+     * reason `UDB_REDACTED_VALUE_WRITE`). Empty when nothing was redacted.
+     *
+     * Generated from protobuf field <code>repeated string redacted_fields = 8 [json_name = "redactedFields"];</code>
+     */
+    private $redacted_fields;
 
     /**
      * Constructor.
@@ -97,6 +126,8 @@ class RecordSet extends \Google\Protobuf\Internal\Message
      *           deprecated for reads.
      *     @type string $next_page_token
      *     @type int $total_count
+     *           The number of records in THIS page (the length of `records_json`), not the
+     *           number of matching rows. Use `exact_total` for that.
      *     @type string[] $record_revisions
      *           #5 (opaque row revision / ETag): when the caller asked for revisions
      *           (`SelectRequest.include_revision`), this carries the broker-maintained
@@ -107,6 +138,20 @@ class RecordSet extends \Google\Protobuf\Internal\Message
      *           hot path pays nothing. The token is opaque + monotonically increasing;
      *           feed it back as `UpdateRequest.expected_revision` / `DeleteRequest.
      *           expected_revision` for optimistic concurrency.
+     *     @type bool $has_more
+     *           True when the page is full (as many records as the request's limit, or the
+     *           default limit of 100 when none was given): more rows may match. A read that
+     *           was capped never looks like the complete result; page on with
+     *           `next_page_token` (set a positive `limit` to get one) or narrow the filter.
+     *     @type int|string $exact_total
+     *           Every row the filter matches, ignoring the limit and the page position.
+     *           Set only when `SelectRequest.include_total` asked for it (it costs one
+     *           COUNT query); 0 otherwise.
+     *     @type string[] $redacted_fields
+     *           Columns that came back as the redaction placeholder because the caller
+     *           lacks the PII read scope (`udb:pii:read`). A value listed here is not the
+     *           stored value: never write it back (the broker refuses that write with
+     *           reason `UDB_REDACTED_VALUE_WRITE`). Empty when nothing was redacted.
      * }
      */
     public function __construct($data = NULL) {
@@ -221,6 +266,9 @@ class RecordSet extends \Google\Protobuf\Internal\Message
     }
 
     /**
+     * The number of records in THIS page (the length of `records_json`), not the
+     * number of matching rows. Use `exact_total` for that.
+     *
      * Generated from protobuf field <code>int32 total_count = 4 [json_name = "totalCount"];</code>
      * @return int
      */
@@ -230,6 +278,9 @@ class RecordSet extends \Google\Protobuf\Internal\Message
     }
 
     /**
+     * The number of records in THIS page (the length of `records_json`), not the
+     * number of matching rows. Use `exact_total` for that.
+     *
      * Generated from protobuf field <code>int32 total_count = 4 [json_name = "totalCount"];</code>
      * @param int $var
      * @return $this
@@ -280,6 +331,100 @@ class RecordSet extends \Google\Protobuf\Internal\Message
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::STRING);
         $this->record_revisions = $arr;
+
+        return $this;
+    }
+
+    /**
+     * True when the page is full (as many records as the request's limit, or the
+     * default limit of 100 when none was given): more rows may match. A read that
+     * was capped never looks like the complete result; page on with
+     * `next_page_token` (set a positive `limit` to get one) or narrow the filter.
+     *
+     * Generated from protobuf field <code>bool has_more = 6 [json_name = "hasMore"];</code>
+     * @return bool
+     */
+    public function getHasMore()
+    {
+        return $this->has_more;
+    }
+
+    /**
+     * True when the page is full (as many records as the request's limit, or the
+     * default limit of 100 when none was given): more rows may match. A read that
+     * was capped never looks like the complete result; page on with
+     * `next_page_token` (set a positive `limit` to get one) or narrow the filter.
+     *
+     * Generated from protobuf field <code>bool has_more = 6 [json_name = "hasMore"];</code>
+     * @param bool $var
+     * @return $this
+     */
+    public function setHasMore($var)
+    {
+        GPBUtil::checkBool($var);
+        $this->has_more = $var;
+
+        return $this;
+    }
+
+    /**
+     * Every row the filter matches, ignoring the limit and the page position.
+     * Set only when `SelectRequest.include_total` asked for it (it costs one
+     * COUNT query); 0 otherwise.
+     *
+     * Generated from protobuf field <code>int64 exact_total = 7 [json_name = "exactTotal"];</code>
+     * @return int|string
+     */
+    public function getExactTotal()
+    {
+        return $this->exact_total;
+    }
+
+    /**
+     * Every row the filter matches, ignoring the limit and the page position.
+     * Set only when `SelectRequest.include_total` asked for it (it costs one
+     * COUNT query); 0 otherwise.
+     *
+     * Generated from protobuf field <code>int64 exact_total = 7 [json_name = "exactTotal"];</code>
+     * @param int|string $var
+     * @return $this
+     */
+    public function setExactTotal($var)
+    {
+        GPBUtil::checkInt64($var);
+        $this->exact_total = $var;
+
+        return $this;
+    }
+
+    /**
+     * Columns that came back as the redaction placeholder because the caller
+     * lacks the PII read scope (`udb:pii:read`). A value listed here is not the
+     * stored value: never write it back (the broker refuses that write with
+     * reason `UDB_REDACTED_VALUE_WRITE`). Empty when nothing was redacted.
+     *
+     * Generated from protobuf field <code>repeated string redacted_fields = 8 [json_name = "redactedFields"];</code>
+     * @return RepeatedField<string>
+     */
+    public function getRedactedFields()
+    {
+        return $this->redacted_fields;
+    }
+
+    /**
+     * Columns that came back as the redaction placeholder because the caller
+     * lacks the PII read scope (`udb:pii:read`). A value listed here is not the
+     * stored value: never write it back (the broker refuses that write with
+     * reason `UDB_REDACTED_VALUE_WRITE`). Empty when nothing was redacted.
+     *
+     * Generated from protobuf field <code>repeated string redacted_fields = 8 [json_name = "redactedFields"];</code>
+     * @param string[] $var
+     * @return $this
+     */
+    public function setRedactedFields($var)
+    {
+        $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::STRING);
+        $this->redacted_fields = $arr;
 
         return $this;
     }

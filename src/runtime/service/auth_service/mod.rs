@@ -34,6 +34,11 @@ pub(crate) mod events;
 pub(crate) mod grants;
 mod idp;
 mod mappings;
+// Policy as code: `udb policy diff|apply` reconciles one tenant's policies.
+mod policy_reconcile;
+pub use policy_reconcile::{
+    PolicyReconcileReport, normalize_declared_policies, reconcile_authz_policies_offline,
+};
 pub(crate) mod readiness;
 // Phase 10: re-export the auth-plane readiness adapter so the parent `service`
 // module can re-export it one level up (`pub use auth_service::auth_readiness_triples;`)

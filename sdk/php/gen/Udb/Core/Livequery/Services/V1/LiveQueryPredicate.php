@@ -32,6 +32,13 @@ class LiveQueryPredicate extends \Google\Protobuf\Internal\Message
      * Generated from protobuf field <code>string value = 3 [json_name = "value"];</code>
      */
     protected $value = '';
+    /**
+     * Operands of IN / NOT_IN (each typed like `value`). Must be non-empty for
+     * those operators and empty for every other operator.
+     *
+     * Generated from protobuf field <code>repeated string values = 4 [json_name = "values"];</code>
+     */
+    private $values;
 
     /**
      * Constructor.
@@ -43,6 +50,9 @@ class LiveQueryPredicate extends \Google\Protobuf\Internal\Message
      *           Proto logical field name on the source entity (dotted paths allowed).
      *     @type int $op
      *     @type string $value
+     *     @type string[] $values
+     *           Operands of IN / NOT_IN (each typed like `value`). Must be non-empty for
+     *           those operators and empty for every other operator.
      * }
      */
     public function __construct($data = NULL) {
@@ -116,6 +126,34 @@ class LiveQueryPredicate extends \Google\Protobuf\Internal\Message
     {
         GPBUtil::checkString($var, True);
         $this->value = $var;
+
+        return $this;
+    }
+
+    /**
+     * Operands of IN / NOT_IN (each typed like `value`). Must be non-empty for
+     * those operators and empty for every other operator.
+     *
+     * Generated from protobuf field <code>repeated string values = 4 [json_name = "values"];</code>
+     * @return RepeatedField<string>
+     */
+    public function getValues()
+    {
+        return $this->values;
+    }
+
+    /**
+     * Operands of IN / NOT_IN (each typed like `value`). Must be non-empty for
+     * those operators and empty for every other operator.
+     *
+     * Generated from protobuf field <code>repeated string values = 4 [json_name = "values"];</code>
+     * @param string[] $var
+     * @return $this
+     */
+    public function setValues($var)
+    {
+        $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::STRING);
+        $this->values = $arr;
 
         return $this;
     }

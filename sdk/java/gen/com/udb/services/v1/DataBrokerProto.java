@@ -60,7 +60,7 @@ public final class DataBrokerProto {
       "ntity.v1.RequestContextR\007context\"i\n\026Ensu" +
       "reBaselineResponse\022\031\n\010saga_ids\030\001 \003(\tR\007sa" +
       "gaIds\022\027\n\007dlq_ids\030\002 \003(\tR\006dlqIds\022\033\n\tdevice" +
-      "_id\030\003 \001(\tR\010deviceId2\202W\n\nDataBroker\022\\\n\006Se" +
+      "_id\030\003 \001(\tR\010deviceId2\211X\n\nDataBroker\022\\\n\006Se" +
       "lect\022\034.udb.entity.v1.SelectRequest\032\030.udb" +
       ".entity.v1.RecordSet\"\032\332\363\030\022\010\001\022\006selectZ\006se" +
       "lect\370\363\030\001\022p\n\013BatchSelect\022\034.udb.entity.v1." +
@@ -166,185 +166,188 @@ public final class DataBrokerProto {
       "n_txZ\007beginTx\370\363\030\002(\0010\001\022v\n\nPublishCDC\022%.ud" +
       "b.entity.v1.CDCSubscriptionRequest\032\032.udb" +
       ".events.v1.CDCEnvelope\"#\332\363\030\033\010\001\022\013publish_" +
-      "cdcZ\npublishCdc\370\363\030\0020\001\022\226\001\n\026CreateMaterial" +
-      "izedView\022\035.udb.entity.v1.ViewDefinition\032" +
-      "\037.udb.entity.v1.MutationResponse\"<\332\363\0304\010\001" +
-      "\022\030create_materialized_viewZ\026createMateri" +
-      "alizedView\370\363\030\002\022\237\001\n\022EnqueueOutboxEvent\022(." +
-      "udb.entity.v1.EnqueueOutboxEventRequest\032" +
-      ").udb.entity.v1.EnqueueOutboxEventRespon" +
-      "se\"4\332\363\030,\010\001\022\024enqueue_outbox_eventZ\022enqueu" +
-      "eOutboxEvent\370\363\030\002\022\217\001\n\017GenericDispatch\022%.u" +
-      "db.entity.v1.GenericDispatchRequest\032&.ud" +
-      "b.entity.v1.GenericDispatchResponse\"-\332\363\030" +
-      "%\010\001\022\020generic_dispatchZ\017genericDispatch\370\363" +
-      "\030\002\022\203\001\n\016EnsureResource\022#.udb.entity.v1.Re" +
-      "sourceAdminRequest\032\037.udb.entity.v1.Mutat" +
-      "ionResponse\"+\332\363\030#\010\001\022\017ensure_resourceZ\016en" +
-      "sureResource\370\363\030\002\022}\n\014DropResource\022#.udb.e" +
-      "ntity.v1.ResourceAdminRequest\032\037.udb.enti" +
-      "ty.v1.MutationResponse\"\'\332\363\030\037\010\001\022\rdrop_res" +
-      "ourceZ\014dropResource\370\363\030\003\022\204\001\n\rListResource" +
-      "s\022#.udb.entity.v1.ResourceAdminRequest\032#" +
-      ".udb.entity.v1.ResourceListResponse\")\332\363\030" +
-      "!\010\001\022\016list_resourcesZ\rlistResources\370\363\030\001\022\202" +
-      "\001\n\014StageCatalog\022\".udb.entity.v1.StageCat" +
-      "alogRequest\032%.udb.entity.v1.CatalogVersi" +
-      "onResponse\"\'\332\363\030\037\010\001\022\rstage_catalogZ\014stage" +
-      "Catalog\370\363\030\003\022\215\001\n\017ActivateCatalog\022$.udb.en" +
-      "tity.v1.CatalogVersionRequest\032%.udb.enti" +
-      "ty.v1.CatalogVersionResponse\"-\332\363\030%\010\001\022\020ac" +
-      "tivate_catalogZ\017activateCatalog\370\363\030\003\022\215\001\n\017" +
-      "RollbackCatalog\022$.udb.entity.v1.CatalogV" +
-      "ersionRequest\032%.udb.entity.v1.CatalogVer" +
-      "sionResponse\"-\332\363\030%\010\001\022\020rollback_catalogZ\017" +
-      "rollbackCatalog\370\363\030\003\022\216\001\n\017ValidateCatalog\022" +
-      "\".udb.entity.v1.StageCatalogRequest\032(.ud" +
-      "b.entity.v1.CatalogValidationResponse\"-\332" +
-      "\363\030%\010\001\022\020validate_catalogZ\017validateCatalog" +
-      "\370\363\030\003\022\234\001\n\022GetCatalogVersions\022%.udb.entity" +
-      ".v1.CatalogManifestRequest\032).udb.entity." +
-      "v1.CatalogVersionListResponse\"4\332\363\030,\010\001\022\024g" +
-      "et_catalog_versionsZ\022getCatalogVersions\370" +
-      "\363\030\001\022\224\001\n\021GetCatalogVersion\022$.udb.entity.v" +
-      "1.CatalogVersionRequest\032%.udb.entity.v1." +
-      "CatalogVersionResponse\"2\332\363\030*\010\001\022\023get_cata" +
-      "log_versionZ\021getCatalogVersion\370\363\030\001\022\277\001\n\rP" +
-      "lanMigration\022#.udb.entity.v1.MigrationPl" +
-      "anRequest\032$.udb.entity.v1.MigrationPlanR" +
-      "esponse\"c\332\363\030!\010\001\022\016plan_migrationZ\rplanMig" +
-      "ration\370\363\030\002\222\364\0306\n\014MigrationRun\032\007DRY_RUN\"\tC" +
-      "OMPLETED\"\005ERROR\"\013DEAD_LETTER\022\336\001\n\016ApplyMi" +
-      "gration\022$.udb.entity.v1.MigrationApplyRe" +
-      "quest\032&.udb.entity.v1.MigrationStatusRes" +
-      "ponse\"~\332\363\030#\010\001\022\017apply_migrationZ\016applyMig" +
-      "ration\370\363\030\002\222\364\030O\n\014MigrationRun\022\007DRY_RUN\022\tP" +
-      "REFLIGHT\032\010APPLYING\"\tCOMPLETED\"\005ERROR\"\013DE" +
-      "AD_LETTER(\0010\001\022\226\001\n\022GetMigrationStatus\022\".u" +
-      "db.entity.v1.MigrationRunRequest\032&.udb.e" +
-      "ntity.v1.MigrationStatusResponse\"4\332\363\030,\010\001" +
-      "\022\024get_migration_statusZ\022getMigrationStat" +
-      "us\370\363\030\001\022\230\001\n\021ListMigrationRuns\022&.udb.entit" +
-      "y.v1.MigrationRunListRequest\032\'.udb.entit" +
-      "y.v1.MigrationRunListResponse\"2\332\363\030*\010\001\022\023l" +
-      "ist_migration_runsZ\021listMigrationRuns\370\363\030" +
-      "\001\022\341\001\n\024ApproveMigrationPlan\022\".udb.entity." +
-      "v1.MigrationRunRequest\032&.udb.entity.v1.M" +
-      "igrationStatusResponse\"}\332\363\0300\010\001\022\026approve_" +
-      "migration_planZ\024approveMigrationPlan\370\363\030\002" +
-      "\222\364\030A\n\014MigrationRun\022\007DRY_RUN\032\tPREFLIGHT\"\t" +
-      "COMPLETED\"\005ERROR\"\013DEAD_LETTER\022z\n\rListDlq" +
-      "Events\022\035.udb.entity.v1.DlqListRequest\032\036." +
-      "udb.entity.v1.DlqListResponse\"*\332\363\030\"\010\001\022\017l" +
-      "ist_dlq_eventsZ\rlistDlqEvents\370\363\030\001\022v\n\013Get" +
-      "DlqEvent\022\036.udb.entity.v1.DlqEventRequest" +
-      "\032\037.udb.entity.v1.DlqEventResponse\"&\332\363\030\036\010" +
-      "\001\022\rget_dlq_eventZ\013getDlqEvent\370\363\030\001\022\200\001\n\016Re" +
-      "playDlqEvent\022\037.udb.entity.v1.DlqActionRe" +
-      "quest\032\037.udb.entity.v1.MutationResponse\"," +
-      "\332\363\030$\010\001\022\020replay_dlq_eventZ\016replayDlqEvent" +
-      "\370\363\030\002\022\203\001\n\017DismissDlqEvent\022\037.udb.entity.v1" +
+      "cdcZ\npublishCdc\370\363\030\0020\001\022\201\001\n\014AckCdcEvents\022\"" +
+      ".udb.entity.v1.AckCdcEventsRequest\032#.udb" +
+      ".entity.v1.AckCdcEventsResponse\"(\332\363\030 \010\001\022" +
+      "\016ack_cdc_eventsZ\014ackCdcEvents\370\363\030\002\022\226\001\n\026Cr" +
+      "eateMaterializedView\022\035.udb.entity.v1.Vie" +
+      "wDefinition\032\037.udb.entity.v1.MutationResp" +
+      "onse\"<\332\363\0304\010\001\022\030create_materialized_viewZ\026" +
+      "createMaterializedView\370\363\030\002\022\237\001\n\022EnqueueOu" +
+      "tboxEvent\022(.udb.entity.v1.EnqueueOutboxE" +
+      "ventRequest\032).udb.entity.v1.EnqueueOutbo" +
+      "xEventResponse\"4\332\363\030,\010\001\022\024enqueue_outbox_e" +
+      "ventZ\022enqueueOutboxEvent\370\363\030\002\022\217\001\n\017Generic" +
+      "Dispatch\022%.udb.entity.v1.GenericDispatch" +
+      "Request\032&.udb.entity.v1.GenericDispatchR" +
+      "esponse\"-\332\363\030%\010\001\022\020generic_dispatchZ\017gener" +
+      "icDispatch\370\363\030\002\022\203\001\n\016EnsureResource\022#.udb." +
+      "entity.v1.ResourceAdminRequest\032\037.udb.ent" +
+      "ity.v1.MutationResponse\"+\332\363\030#\010\001\022\017ensure_" +
+      "resourceZ\016ensureResource\370\363\030\002\022}\n\014DropReso" +
+      "urce\022#.udb.entity.v1.ResourceAdminReques" +
+      "t\032\037.udb.entity.v1.MutationResponse\"\'\332\363\030\037" +
+      "\010\001\022\rdrop_resourceZ\014dropResource\370\363\030\003\022\204\001\n\r" +
+      "ListResources\022#.udb.entity.v1.ResourceAd" +
+      "minRequest\032#.udb.entity.v1.ResourceListR" +
+      "esponse\")\332\363\030!\010\001\022\016list_resourcesZ\rlistRes" +
+      "ources\370\363\030\001\022\202\001\n\014StageCatalog\022\".udb.entity" +
+      ".v1.StageCatalogRequest\032%.udb.entity.v1." +
+      "CatalogVersionResponse\"\'\332\363\030\037\010\001\022\rstage_ca" +
+      "talogZ\014stageCatalog\370\363\030\003\022\215\001\n\017ActivateCata" +
+      "log\022$.udb.entity.v1.CatalogVersionReques" +
+      "t\032%.udb.entity.v1.CatalogVersionResponse" +
+      "\"-\332\363\030%\010\001\022\020activate_catalogZ\017activateCata" +
+      "log\370\363\030\003\022\215\001\n\017RollbackCatalog\022$.udb.entity" +
+      ".v1.CatalogVersionRequest\032%.udb.entity.v" +
+      "1.CatalogVersionResponse\"-\332\363\030%\010\001\022\020rollba" +
+      "ck_catalogZ\017rollbackCatalog\370\363\030\003\022\216\001\n\017Vali" +
+      "dateCatalog\022\".udb.entity.v1.StageCatalog" +
+      "Request\032(.udb.entity.v1.CatalogValidatio" +
+      "nResponse\"-\332\363\030%\010\001\022\020validate_catalogZ\017val" +
+      "idateCatalog\370\363\030\003\022\234\001\n\022GetCatalogVersions\022" +
+      "%.udb.entity.v1.CatalogManifestRequest\032)" +
+      ".udb.entity.v1.CatalogVersionListRespons" +
+      "e\"4\332\363\030,\010\001\022\024get_catalog_versionsZ\022getCata" +
+      "logVersions\370\363\030\001\022\224\001\n\021GetCatalogVersion\022$." +
+      "udb.entity.v1.CatalogVersionRequest\032%.ud" +
+      "b.entity.v1.CatalogVersionResponse\"2\332\363\030*" +
+      "\010\001\022\023get_catalog_versionZ\021getCatalogVersi" +
+      "on\370\363\030\001\022\277\001\n\rPlanMigration\022#.udb.entity.v1" +
+      ".MigrationPlanRequest\032$.udb.entity.v1.Mi" +
+      "grationPlanResponse\"c\332\363\030!\010\001\022\016plan_migrat" +
+      "ionZ\rplanMigration\370\363\030\002\222\364\0306\n\014MigrationRun" +
+      "\032\007DRY_RUN\"\tCOMPLETED\"\005ERROR\"\013DEAD_LETTER" +
+      "\022\336\001\n\016ApplyMigration\022$.udb.entity.v1.Migr" +
+      "ationApplyRequest\032&.udb.entity.v1.Migrat" +
+      "ionStatusResponse\"~\332\363\030#\010\001\022\017apply_migrati" +
+      "onZ\016applyMigration\370\363\030\002\222\364\030O\n\014MigrationRun" +
+      "\022\007DRY_RUN\022\tPREFLIGHT\032\010APPLYING\"\tCOMPLETE" +
+      "D\"\005ERROR\"\013DEAD_LETTER(\0010\001\022\226\001\n\022GetMigrati" +
+      "onStatus\022\".udb.entity.v1.MigrationRunReq" +
+      "uest\032&.udb.entity.v1.MigrationStatusResp" +
+      "onse\"4\332\363\030,\010\001\022\024get_migration_statusZ\022getM" +
+      "igrationStatus\370\363\030\001\022\230\001\n\021ListMigrationRuns" +
+      "\022&.udb.entity.v1.MigrationRunListRequest" +
+      "\032\'.udb.entity.v1.MigrationRunListRespons" +
+      "e\"2\332\363\030*\010\001\022\023list_migration_runsZ\021listMigr" +
+      "ationRuns\370\363\030\001\022\341\001\n\024ApproveMigrationPlan\022\"" +
+      ".udb.entity.v1.MigrationRunRequest\032&.udb" +
+      ".entity.v1.MigrationStatusResponse\"}\332\363\0300" +
+      "\010\001\022\026approve_migration_planZ\024approveMigra" +
+      "tionPlan\370\363\030\002\222\364\030A\n\014MigrationRun\022\007DRY_RUN\032" +
+      "\tPREFLIGHT\"\tCOMPLETED\"\005ERROR\"\013DEAD_LETTE" +
+      "R\022z\n\rListDlqEvents\022\035.udb.entity.v1.DlqLi" +
+      "stRequest\032\036.udb.entity.v1.DlqListRespons" +
+      "e\"*\332\363\030\"\010\001\022\017list_dlq_eventsZ\rlistDlqEvent" +
+      "s\370\363\030\001\022v\n\013GetDlqEvent\022\036.udb.entity.v1.Dlq" +
+      "EventRequest\032\037.udb.entity.v1.DlqEventRes" +
+      "ponse\"&\332\363\030\036\010\001\022\rget_dlq_eventZ\013getDlqEven" +
+      "t\370\363\030\001\022\200\001\n\016ReplayDlqEvent\022\037.udb.entity.v1" +
       ".DlqActionRequest\032\037.udb.entity.v1.Mutati" +
-      "onResponse\".\332\363\030&\010\001\022\021dismiss_dlq_eventZ\017d" +
-      "ismissDlqEvent\370\363\030\002\022\214\001\n\022QuarantineDlqEven" +
-      "t\022\037.udb.entity.v1.DlqActionRequest\032\037.udb" +
-      ".entity.v1.MutationResponse\"4\332\363\030,\010\001\022\024qua" +
-      "rantine_dlq_eventZ\022quarantineDlqEvent\370\363\030" +
-      "\002\022|\n\014GetCdcStatus\022 .udb.entity.v1.CdcCon" +
-      "trolRequest\032 .udb.entity.v1.CdcStatusRes" +
-      "ponse\"(\332\363\030 \010\001\022\016get_cdc_statusZ\014getCdcSta" +
-      "tus\370\363\030\001\022o\n\010PauseCdc\022 .udb.entity.v1.CdcC" +
-      "ontrolRequest\032 .udb.entity.v1.CdcStatusR" +
-      "esponse\"\037\332\363\030\027\010\001\022\tpause_cdcZ\010pauseCdc\370\363\030\002" +
-      "\022r\n\tResumeCdc\022 .udb.entity.v1.CdcControl" +
-      "Request\032 .udb.entity.v1.CdcStatusRespons" +
-      "e\"!\332\363\030\031\010\001\022\nresume_cdcZ\tresumeCdc\370\363\030\002\022\214\001\n" +
-      "\021StepDownCdcLeader\022 .udb.entity.v1.CdcCo" +
-      "ntrolRequest\032 .udb.entity.v1.CdcStatusRe" +
-      "sponse\"3\332\363\030+\010\001\022\024step_down_cdc_leaderZ\021st" +
-      "epDownCdcLeader\370\363\030\002\022\244\001\n\023PreviewCdcRedact" +
-      "ion\022).udb.entity.v1.CdcRedactionPreviewR" +
-      "equest\032*.udb.entity.v1.CdcRedactionPrevi" +
-      "ewResponse\"6\332\363\030.\010\001\022\025preview_cdc_redactio" +
-      "nZ\023previewCdcRedaction\370\363\030\001\022\244\001\n\023ScanProje" +
-      "ctionDrift\022).udb.entity.v1.ProjectionDri" +
-      "ftScanRequest\032*.udb.entity.v1.Projection" +
-      "DriftScanResponse\"6\332\363\030.\010\001\022\025scan_projecti" +
-      "on_driftZ\023scanProjectionDrift\370\363\030\001\022o\n\tLis" +
-      "tSagas\022\036.udb.entity.v1.SagaListRequest\032\037" +
-      ".udb.entity.v1.SagaListResponse\"!\332\363\030\031\010\001\022" +
-      "\nlist_sagasZ\tlistSagas\370\363\030\001\022a\n\007GetSaga\022\032." +
-      "udb.entity.v1.SagaRequest\032\033.udb.entity.v" +
-      "1.SagaResponse\"\035\332\363\030\025\010\001\022\010get_sagaZ\007getSag" +
-      "a\370\363\030\001\022\214\001\n\025RetrySagaCompensation\022\032.udb.en" +
-      "tity.v1.SagaRequest\032\033.udb.entity.v1.Saga" +
-      "Response\":\332\363\0302\010\001\022\027retry_saga_compensatio" +
-      "nZ\025retrySagaCompensation\370\363\030\002\022}\n\020MarkSaga" +
-      "Reviewed\022\032.udb.entity.v1.SagaRequest\032\033.u" +
-      "db.entity.v1.SagaResponse\"0\332\363\030(\010\001\022\022mark_" +
-      "saga_reviewedZ\020markSagaReviewed\370\363\030\002\022\216\001\n\016" +
-      "EnsureBaseline\022&.udb.services.v1.EnsureB" +
-      "aselineRequest\032\'.udb.services.v1.EnsureB" +
-      "aselineResponse\"+\332\363\030#\010\001\022\017ensure_baseline" +
-      "Z\016ensureBaseline\370\363\030\002\022|\n\014ListPolicies\022 .u" +
-      "db.entity.v1.PolicyListRequest\032!.udb.ent" +
-      "ity.v1.PolicyListResponse\"\'\332\363\030\037\010\001\022\rlist_" +
-      "policiesZ\014listPolicies\370\363\030\001\022p\n\tPutPolicy\022" +
-      "\037.udb.entity.v1.PutPolicyRequest\032\037.udb.e" +
-      "ntity.v1.MutationResponse\"!\332\363\030\031\010\001\022\nput_p" +
-      "olicyZ\tputPolicy\370\363\030\003\022v\n\014DeletePolicy\022\034.u" +
-      "db.entity.v1.PolicyRequest\032\037.udb.entity." +
-      "v1.MutationResponse\"\'\332\363\030\037\010\001\022\rdelete_poli" +
-      "cyZ\014deletePolicy\370\363\030\002\022\202\001\n\016ReloadPolicies\022" +
-      "\".udb.entity.v1.CapabilitiesRequest\032\037.ud" +
-      "b.entity.v1.MutationResponse\"+\332\363\030#\010\001\022\017re" +
-      "load_policiesZ\016reloadPolicies\370\363\030\003\022~\n\014Lin" +
-      "tPolicies\022\".udb.entity.v1.CapabilitiesRe" +
-      "quest\032!.udb.entity.v1.PolicyLintResponse" +
-      "\"\'\332\363\030\037\010\001\022\rlint_policiesZ\014lintPolicies\370\363\030" +
-      "\001\022\211\001\n\017GetCapabilities\022\".udb.entity.v1.Ca" +
-      "pabilitiesRequest\032#.udb.entity.v1.Capabi" +
-      "litiesResponse\"-\332\363\030%\010\001\022\020get_capabilities" +
-      "Z\017getCapabilities\370\363\030\001\022\231\001\n\022GetCatalogMani" +
-      "fest\022%.udb.entity.v1.CatalogManifestRequ" +
-      "est\032&.udb.entity.v1.CatalogManifestRespo" +
-      "nse\"4\332\363\030,\010\001\022\024get_catalog_manifestZ\022getCa" +
-      "talogManifest\370\363\030\001\022\244\001\n\023LookupMessageSchem" +
-      "a\022).udb.entity.v1.MessageSchemaLookupReq" +
-      "uest\032*.udb.entity.v1.MessageSchemaLookup" +
-      "Response\"6\332\363\030.\010\001\022\025lookup_message_schemaZ" +
-      "\023lookupMessageSchema\370\363\030\001\022\235\001\n\022ListMessage" +
-      "Schemas\022\'.udb.entity.v1.MessageSchemaLis" +
-      "tRequest\032(.udb.entity.v1.MessageSchemaLi" +
-      "stResponse\"4\332\363\030,\010\001\022\024list_message_schemas" +
-      "Z\022listMessageSchemas\370\363\030\001\022\212\001\n\017GetHealthRe" +
-      "port\022\".udb.entity.v1.HealthReportRequest" +
-      "\032#.udb.entity.v1.HealthReportResponse\".\332" +
-      "\363\030&\010\001\022\021get_health_reportZ\017getHealthRepor" +
-      "t\370\363\030\001\022\200\001\n\rEnsureProject\022#.udb.entity.v1." +
-      "EnsureProjectRequest\032\037.udb.entity.v1.Mut" +
-      "ationResponse\")\332\363\030!\010\001\022\016ensure_projectZ\re" +
-      "nsureProject\370\363\030\002\022~\n\014ListProjects\022!.udb.e" +
-      "ntity.v1.ProjectListRequest\032\".udb.entity" +
-      ".v1.ProjectListResponse\"\'\332\363\030\037\010\001\022\rlist_pr" +
-      "ojectsZ\014listProjects\370\363\030\001\022\212\001\n\017GetAdminSum" +
-      "mary\022\".udb.entity.v1.AdminSummaryRequest" +
-      "\032#.udb.entity.v1.AdminSummaryResponse\".\332" +
-      "\363\030&\010\001\022\021get_admin_summaryZ\017getAdminSummar" +
-      "y\370\363\030\001\022\226\001\n\022ListAdminAuditLogs\022#.udb.entit" +
-      "y.v1.AdminAuditLogRequest\032$.udb.entity.v" +
-      "1.AdminAuditLogResponse\"5\332\363\030-\010\001\022\025list_ad" +
-      "min_audit_logsZ\022listAdminAuditLogs\370\363\030\001\022\237" +
-      "\001\n\023VerifyAdminAuditLog\022&.udb.entity.v1.A" +
-      "dminAuditVerifyRequest\032\'.udb.entity.v1.A" +
-      "dminAuditVerifyResponse\"7\332\363\030/\010\001\022\026verify_" +
-      "admin_audit_logZ\023verifyAdminAuditLog\370\363\030\001" +
-      "B\303\001\n\023com.udb.services.v1B\017DataBrokerProt" +
-      "oP\001Z=github.com/fahara02/udb/sdk/go/gen/" +
-      "udb/services/v1;servicesv1\242\002\003USX\252\002\017Udb.S" +
-      "ervices.V1\312\002\017Udb\\Services\\V1\342\002\033Udb\\GPBMe" +
-      "tadata\\Services\\V1\352\002\021Udb::Services::V1b\006" +
-      "proto3"
+      "onResponse\",\332\363\030$\010\001\022\020replay_dlq_eventZ\016re" +
+      "playDlqEvent\370\363\030\002\022\203\001\n\017DismissDlqEvent\022\037.u" +
+      "db.entity.v1.DlqActionRequest\032\037.udb.enti" +
+      "ty.v1.MutationResponse\".\332\363\030&\010\001\022\021dismiss_" +
+      "dlq_eventZ\017dismissDlqEvent\370\363\030\002\022\214\001\n\022Quara" +
+      "ntineDlqEvent\022\037.udb.entity.v1.DlqActionR" +
+      "equest\032\037.udb.entity.v1.MutationResponse\"" +
+      "4\332\363\030,\010\001\022\024quarantine_dlq_eventZ\022quarantin" +
+      "eDlqEvent\370\363\030\002\022|\n\014GetCdcStatus\022 .udb.enti" +
+      "ty.v1.CdcControlRequest\032 .udb.entity.v1." +
+      "CdcStatusResponse\"(\332\363\030 \010\001\022\016get_cdc_statu" +
+      "sZ\014getCdcStatus\370\363\030\001\022o\n\010PauseCdc\022 .udb.en" +
+      "tity.v1.CdcControlRequest\032 .udb.entity.v" +
+      "1.CdcStatusResponse\"\037\332\363\030\027\010\001\022\tpause_cdcZ\010" +
+      "pauseCdc\370\363\030\002\022r\n\tResumeCdc\022 .udb.entity.v" +
+      "1.CdcControlRequest\032 .udb.entity.v1.CdcS" +
+      "tatusResponse\"!\332\363\030\031\010\001\022\nresume_cdcZ\tresum" +
+      "eCdc\370\363\030\002\022\214\001\n\021StepDownCdcLeader\022 .udb.ent" +
+      "ity.v1.CdcControlRequest\032 .udb.entity.v1" +
+      ".CdcStatusResponse\"3\332\363\030+\010\001\022\024step_down_cd" +
+      "c_leaderZ\021stepDownCdcLeader\370\363\030\002\022\244\001\n\023Prev" +
+      "iewCdcRedaction\022).udb.entity.v1.CdcRedac" +
+      "tionPreviewRequest\032*.udb.entity.v1.CdcRe" +
+      "dactionPreviewResponse\"6\332\363\030.\010\001\022\025preview_" +
+      "cdc_redactionZ\023previewCdcRedaction\370\363\030\001\022\244" +
+      "\001\n\023ScanProjectionDrift\022).udb.entity.v1.P" +
+      "rojectionDriftScanRequest\032*.udb.entity.v" +
+      "1.ProjectionDriftScanResponse\"6\332\363\030.\010\001\022\025s" +
+      "can_projection_driftZ\023scanProjectionDrif" +
+      "t\370\363\030\001\022o\n\tListSagas\022\036.udb.entity.v1.SagaL" +
+      "istRequest\032\037.udb.entity.v1.SagaListRespo" +
+      "nse\"!\332\363\030\031\010\001\022\nlist_sagasZ\tlistSagas\370\363\030\001\022a" +
+      "\n\007GetSaga\022\032.udb.entity.v1.SagaRequest\032\033." +
+      "udb.entity.v1.SagaResponse\"\035\332\363\030\025\010\001\022\010get_" +
+      "sagaZ\007getSaga\370\363\030\001\022\214\001\n\025RetrySagaCompensat" +
+      "ion\022\032.udb.entity.v1.SagaRequest\032\033.udb.en" +
+      "tity.v1.SagaResponse\":\332\363\0302\010\001\022\027retry_saga" +
+      "_compensationZ\025retrySagaCompensation\370\363\030\002" +
+      "\022}\n\020MarkSagaReviewed\022\032.udb.entity.v1.Sag" +
+      "aRequest\032\033.udb.entity.v1.SagaResponse\"0\332" +
+      "\363\030(\010\001\022\022mark_saga_reviewedZ\020markSagaRevie" +
+      "wed\370\363\030\002\022\216\001\n\016EnsureBaseline\022&.udb.service" +
+      "s.v1.EnsureBaselineRequest\032\'.udb.service" +
+      "s.v1.EnsureBaselineResponse\"+\332\363\030#\010\001\022\017ens" +
+      "ure_baselineZ\016ensureBaseline\370\363\030\002\022|\n\014List" +
+      "Policies\022 .udb.entity.v1.PolicyListReque" +
+      "st\032!.udb.entity.v1.PolicyListResponse\"\'\332" +
+      "\363\030\037\010\001\022\rlist_policiesZ\014listPolicies\370\363\030\001\022s" +
+      "\n\tPutPolicy\022\037.udb.entity.v1.PutPolicyReq" +
+      "uest\032\037.udb.entity.v1.MutationResponse\"$\210" +
+      "\002\001\332\363\030\031\010\001\022\nput_policyZ\tputPolicy\370\363\030\003\022v\n\014D" +
+      "eletePolicy\022\034.udb.entity.v1.PolicyReques" +
+      "t\032\037.udb.entity.v1.MutationResponse\"\'\332\363\030\037" +
+      "\010\001\022\rdelete_policyZ\014deletePolicy\370\363\030\002\022\202\001\n\016" +
+      "ReloadPolicies\022\".udb.entity.v1.Capabilit" +
+      "iesRequest\032\037.udb.entity.v1.MutationRespo" +
+      "nse\"+\332\363\030#\010\001\022\017reload_policiesZ\016reloadPoli" +
+      "cies\370\363\030\003\022~\n\014LintPolicies\022\".udb.entity.v1" +
+      ".CapabilitiesRequest\032!.udb.entity.v1.Pol" +
+      "icyLintResponse\"\'\332\363\030\037\010\001\022\rlint_policiesZ\014" +
+      "lintPolicies\370\363\030\001\022\211\001\n\017GetCapabilities\022\".u" +
+      "db.entity.v1.CapabilitiesRequest\032#.udb.e" +
+      "ntity.v1.CapabilitiesResponse\"-\332\363\030%\010\001\022\020g" +
+      "et_capabilitiesZ\017getCapabilities\370\363\030\001\022\231\001\n" +
+      "\022GetCatalogManifest\022%.udb.entity.v1.Cata" +
+      "logManifestRequest\032&.udb.entity.v1.Catal" +
+      "ogManifestResponse\"4\332\363\030,\010\001\022\024get_catalog_" +
+      "manifestZ\022getCatalogManifest\370\363\030\001\022\244\001\n\023Loo" +
+      "kupMessageSchema\022).udb.entity.v1.Message" +
+      "SchemaLookupRequest\032*.udb.entity.v1.Mess" +
+      "ageSchemaLookupResponse\"6\332\363\030.\010\001\022\025lookup_" +
+      "message_schemaZ\023lookupMessageSchema\370\363\030\001\022" +
+      "\235\001\n\022ListMessageSchemas\022\'.udb.entity.v1.M" +
+      "essageSchemaListRequest\032(.udb.entity.v1." +
+      "MessageSchemaListResponse\"4\332\363\030,\010\001\022\024list_" +
+      "message_schemasZ\022listMessageSchemas\370\363\030\001\022" +
+      "\212\001\n\017GetHealthReport\022\".udb.entity.v1.Heal" +
+      "thReportRequest\032#.udb.entity.v1.HealthRe" +
+      "portResponse\".\332\363\030&\010\001\022\021get_health_reportZ" +
+      "\017getHealthReport\370\363\030\001\022\200\001\n\rEnsureProject\022#" +
+      ".udb.entity.v1.EnsureProjectRequest\032\037.ud" +
+      "b.entity.v1.MutationResponse\")\332\363\030!\010\001\022\016en" +
+      "sure_projectZ\rensureProject\370\363\030\002\022~\n\014ListP" +
+      "rojects\022!.udb.entity.v1.ProjectListReque" +
+      "st\032\".udb.entity.v1.ProjectListResponse\"\'" +
+      "\332\363\030\037\010\001\022\rlist_projectsZ\014listProjects\370\363\030\001\022" +
+      "\212\001\n\017GetAdminSummary\022\".udb.entity.v1.Admi" +
+      "nSummaryRequest\032#.udb.entity.v1.AdminSum" +
+      "maryResponse\".\332\363\030&\010\001\022\021get_admin_summaryZ" +
+      "\017getAdminSummary\370\363\030\001\022\226\001\n\022ListAdminAuditL" +
+      "ogs\022#.udb.entity.v1.AdminAuditLogRequest" +
+      "\032$.udb.entity.v1.AdminAuditLogResponse\"5" +
+      "\332\363\030-\010\001\022\025list_admin_audit_logsZ\022listAdmin" +
+      "AuditLogs\370\363\030\001\022\237\001\n\023VerifyAdminAuditLog\022&." +
+      "udb.entity.v1.AdminAuditVerifyRequest\032\'." +
+      "udb.entity.v1.AdminAuditVerifyResponse\"7" +
+      "\332\363\030/\010\001\022\026verify_admin_audit_logZ\023verifyAd" +
+      "minAuditLog\370\363\030\001B\303\001\n\023com.udb.services.v1B" +
+      "\017DataBrokerProtoP\001Z=github.com/fahara02/" +
+      "udb/sdk/go/gen/udb/services/v1;servicesv" +
+      "1\242\002\003USX\252\002\017Udb.Services.V1\312\002\017Udb\\Services" +
+      "\\V1\342\002\033Udb\\GPBMetadata\\Services\\V1\352\002\021Udb:" +
+      ":Services::V1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,

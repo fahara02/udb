@@ -1188,9 +1188,10 @@ fn generate(
 /// the GENERATED Go is verified by the litmus compile (`go build` on the output);
 /// the Rust here is the emitter.
 ///
-/// Returns `Err` (FAILS CLOSED) when an entity has a NOT NULL column the emitter
-/// cannot marshal — currently a NOT NULL cross-package enum (#3) — rather than
-/// silently omitting it and emitting a record the broker rejects.
+/// Returns `Err` (FAILS CLOSED) when an entity has a field with no column
+/// round-trip — a message stored in a non-JSON column — rather than silently
+/// omitting it. Every other shape is emitted inline or through the reflective
+/// field codec; nothing is skipped.
 fn render_go_entities_file(entities: &[EntityDescriptor], package: &str) -> Result<String, String> {
     // First pass: which entities are renderable + what imports/helpers are needed.
     let mut proto_imports: BTreeMap<String, String> = BTreeMap::new();
@@ -1242,28 +1243,26 @@ fn render_go_entities_file(entities: &[EntityDescriptor], package: &str) -> Resu
         renderable.push((entity, alias, type_name));
     }
 
-    // #3: FAIL CLOSED before emitting anything — a NOT NULL column the emitter
-    // cannot marshal would be silently omitted from the record, and the broker
-    // would reject the resulting INSERT. A cross-package enum is now qualified by
-    // importing its own Go package (`enum_go_import`); the ONLY remaining
-    // unmarshalable case is a cross-package enum whose foreign proto file declared
-    // no `go_package`, so its Go type cannot be named. A nullable such column is
-    // fine (it round-trips as NULL) and is skipped with a TODO instead.
+    // FAIL CLOSED before emitting anything. Repeated fields, maps and enums
+    // from another package go through the reflective field codec
+    // (`udbclient.EncodeField` / `DecodeField`), so every remaining shape has a
+    // round-trip except a message stored in a column that is not JSON: there
+    // is no column value to hold it, and dropping it would lose data silently.
     for (entity, _, _) in &renderable {
         for column in &entity.columns {
-            if column.enum_cross_package
-                && column.enum_go_import.is_none()
-                && column.not_null
-                && column.declared_in_proto
-                && !column.exclude_from_insert
+            if column.declared_in_proto
+                && !column.is_array
+                && !(column.is_json || column.is_jsonb)
+                && !is_go_timestamp(&column.proto_type)
+                && column.enum_values.is_empty()
+                && go_map_types(&column.proto_type).is_none()
+                && matches!(go_scalar_kind(&column.proto_type), GoScalar::Unknown)
             {
                 return Err(format!(
-                    "entity `{}`: column `{}` is a NOT NULL cross-package enum ({}) whose proto \
-                     file declares no `option go_package`, so the Go entity generator cannot name \
-                     (import) its type and omitting it would emit a record the broker rejects. Add \
-                     `option go_package` to the enum's proto file, move the enum into the entity's \
-                     proto package, or make the column nullable/optional.",
-                    entity.short_name, column.field_name, column.proto_type,
+                    "entity `{}`: field `{}` is a message ({}) stored in a {} column. A message \
+                     needs a JSON/JSONB column (set `sql_type: \"JSONB\"` on its pg_column), or \
+                     flatten it into scalar fields.",
+                    entity.short_name, column.field_name, column.proto_type, column.sql_type,
                 ));
             }
         }
@@ -1571,8 +1570,57 @@ func (r {name}Repo) DeleteGuarded(ctx context.Context, where, expected map[strin
         ));
     }
 
+    // Typed stores on the generic udbclient.Table: one constructor and one
+    // primary-key struct per entity, so callers address rows with a typed key
+    // instead of a map, and the store layer itself is udb's, not the app's.
+    out.push_str("// ── Typed stores and keys (generated) ──────────────────────────────\n\n");
+    for (entity, alias, type_name) in &renderable {
+        out.push_str(&render_go_table_and_key(
+            entity,
+            &format!("{alias}.{type_name}"),
+        ));
+    }
+
     out.push_str(&go_coercion_helpers(needs_time, needs_json_message));
     Ok(out)
+}
+
+/// `<Entity>Table(u)` and `<Entity>Key` for one entity. A primary-key column
+/// whose Go type is not a plain scalar is typed `any` (still a valid key).
+fn render_go_table_and_key(entity: &EntityDescriptor, qualified: &str) -> String {
+    let name = &entity.short_name;
+    let mut fields = String::new();
+    let mut entries = Vec::new();
+    for pk in &entity.primary_keys {
+        let column = entity
+            .columns
+            .iter()
+            .find(|column| column.column_name == *pk || column.field_name == *pk);
+        let field_name = column
+            .map(|column| column.field_name.clone())
+            .unwrap_or_else(|| pk.clone());
+        let go_type = column
+            .and_then(|column| go_scalar_type_name(&column.proto_type))
+            .unwrap_or("any");
+        let go_field = go_pascal(&field_name);
+        fields.push_str(&format!("\t{go_field} {go_type}\n"));
+        entries.push(format!("{pk:?}: k.{go_field}"));
+    }
+    format!(
+        "// {name}Table is the typed store for {name}: typed reads and writes,\n\
+         // conditional updates and transactions, with the caller's tenant filled in\n\
+         // by the broker.\n\
+         func {name}Table(u *udbclient.Udb) *udbclient.Table[*{qualified}] {{\n\
+         \treturn udbclient.TableOf[*{qualified}](u)\n\
+         }}\n\n\
+         // {name}Key addresses one {name} row by its primary key.\n\
+         type {name}Key struct {{\n{fields}}}\n\n\
+         // Row converts the key for udbclient.Table calls.\n\
+         func (k {name}Key) Row() udbclient.RowKey {{\n\
+         \treturn udbclient.RowKey{{{entries}}}\n\
+         }}\n\n",
+        entries = entries.join(", "),
+    )
 }
 
 /// Render the typed Go entity file AND canonicalize it with gofmt (#8). Used by
@@ -1807,11 +1855,10 @@ fn go_to_record_stmt(column: &EntityColumnDescriptor) -> String {
     let field = go_pascal(&column.field_name);
     let getter = format!("Get{field}");
     if column.is_array {
-        // Repeated fields (TEXT[] etc.) have no scalar round-trip yet; skipped
-        // on write AND read.
+        // Repeated fields: the reflective codec writes the JSON array the
+        // broker binds to the array column (enum tokens, exact 64-bit ints).
         return format!(
-            "\t// TODO(udb-b3): unsupported write for \"{key}\" (repeated {}) — field skipped\n",
-            column.proto_type
+            "\tif v, ok, err := udbclient.EncodeField(m, \"{key}\"); err != nil {{\n\t\treturn nil, fmt.Errorf(\"encode column %q: %w\", \"{key}\", err)\n\t}} else if ok {{\n\t\tr[\"{key}\"] = v\n\t}}\n"
         );
     }
     if is_go_timestamp(&column.proto_type) {
@@ -1835,10 +1882,10 @@ fn go_to_record_stmt(column: &EntityColumnDescriptor) -> String {
             // nullable one lands here and is skipped (NULL is legal). A qualifiable
             // cross-package enum falls through — the write path only calls
             // `.String()` on the getter and needs no type name.
+            // Its Go type cannot be named here; the reflective codec needs no
+            // type name.
             return format!(
-                "\t// TODO(udb-b3): unsupported write for \"{key}\" (cross-package enum {}; \
-                 no go_package to import) — field skipped\n",
-                column.proto_type
+                "\tif v, ok, err := udbclient.EncodeField(m, \"{key}\"); err != nil {{\n\t\treturn nil, fmt.Errorf(\"encode column %q: %w\", \"{key}\", err)\n\t}} else if ok {{\n\t\tr[\"{key}\"] = v\n\t}}\n"
             );
         }
         let prefix = enum_common_prefix(&column.enum_values);
@@ -1886,9 +1933,10 @@ fn go_to_record_stmt(column: &EntityColumnDescriptor) -> String {
         // Skipped on write AND read — go_from_row_stmt emits the matching TODO.
         // Checked BEFORE the presence arm: an `optional` message field would
         // otherwise write a raw struct pointer.
+        // Unreachable for declared fields (the render pre-scan refuses a
+        // message outside a JSON column); kept total via the reflective codec.
         return format!(
-            "\t// TODO(udb-b3): unsupported write for \"{key}\" ({}) — field skipped\n",
-            column.proto_type
+            "\tif v, ok, err := udbclient.EncodeField(m, \"{key}\"); err != nil {{\n\t\treturn nil, fmt.Errorf(\"encode column %q: %w\", \"{key}\", err)\n\t}} else if ok {{\n\t\tr[\"{key}\"] = v\n\t}}\n"
         );
     }
     // #11: optional `bytes` — []byte is already nilable, so nil means unset (omit →
@@ -1929,8 +1977,8 @@ fn go_from_row_stmt(column: &EntityColumnDescriptor, alias: &str) -> String {
     if column.is_array {
         // Mirrors go_to_record_stmt's repeated-field skip (symmetry rule).
         return format!(
-            "\t// TODO(udb-b3): unsupported read for \"{key}\" (repeated {}) — field skipped\n",
-            column.proto_type
+            "\tif err := udbclient.DecodeField(m, \"{key}\", row[\"{key}\"]); err != nil {{\n{fail}\t}}\n",
+            fail = fail("\t\t"),
         );
     }
     if is_go_timestamp(&column.proto_type) {
@@ -1949,9 +1997,8 @@ fn go_from_row_stmt(column: &EntityColumnDescriptor, alias: &str) -> String {
             // NOT NULL already failed closed in the render pre-scan; a nullable one
             // lands here and is skipped (NULL is legal).
             return format!(
-                "\t// TODO(udb-b3): unsupported read for \"{key}\" (cross-package enum {}; \
-                 no go_package to import) — field skipped\n",
-                column.proto_type
+                "\tif err := udbclient.DecodeField(m, \"{key}\", row[\"{key}\"]); err != nil {{\n{fail}\t}}\n",
+                fail = fail("\t\t"),
             );
         }
         // The DB stores the enum SHORT token (the write path trims the prefix);
@@ -2030,8 +2077,8 @@ fn go_from_row_stmt(column: &EntityColumnDescriptor, alias: &str) -> String {
     if matches!(kind, GoScalar::Unknown) {
         // Message-typed (or unresolved-enum) column: no scalar round-trip.
         return format!(
-            "\t// TODO(udb-b3): unsupported read for \"{key}\" ({}) — field skipped\n",
-            column.proto_type
+            "\tif err := udbclient.DecodeField(m, \"{key}\", row[\"{key}\"]); err != nil {{\n{fail}\t}}\n",
+            fail = fail("\t\t"),
         );
     }
     // (coercer, cast-open, cast-close) for the value the coercer yields.
@@ -2750,6 +2797,28 @@ fn service_matches(svc: &ServiceInfo, filter: &str) -> bool {
     }
 }
 
+/// Where an RPC is served, for generated point-of-use docs.
+fn rpc_listener_label(rpc: &RpcDescriptor) -> &'static str {
+    if rpc.internal_grpc_only {
+        "internal loopback only"
+    } else if rpc.service_pkg.starts_with("udb.services.") {
+        "data plane (UDB_GRPC_TARGET, default :50051)"
+    } else if rpc.peer_listener_allowed && !rpc.control_plane_listener_allowed {
+        "WebRTC peer listener (default :50071)"
+    } else {
+        "native control plane (UDB_AUTH_TARGET, default :50061)"
+    }
+}
+
+/// A Go string-slice literal body: `"a", "b"`.
+fn go_string_list(values: &[String]) -> String {
+    values
+        .iter()
+        .map(|value| format!("{value:?}"))
+        .collect::<Vec<_>>()
+        .join(", ")
+}
+
 fn substitute_rpc(body: &str, rpc: &RpcDescriptor, manifest: &[RpcDescriptor]) -> String {
     let alias_snake = rpc_alias_snake(rpc);
     let alias_camel = rpc_alias_camel(rpc);
@@ -2762,7 +2831,7 @@ fn substitute_rpc(body: &str, rpc: &RpcDescriptor, manifest: &[RpcDescriptor]) -
     } else {
         rpc.rest_operation_id.clone()
     };
-    let pairs: [(&str, String); 36] = [
+    let pairs: [(&str, String); 40] = [
         ("{{RPC_NAME}}", rpc.method.clone()),
         ("{{RPC_WIRE_NAME}}", rpc.method.clone()),
         ("{{RPC_SNAKE}}", rpc.method_snake.clone()),
@@ -2811,6 +2880,16 @@ fn substitute_rpc(body: &str, rpc: &RpcDescriptor, manifest: &[RpcDescriptor]) -
         ("{{RPC_READ_ONLY}}", rpc.read_only.to_string()),
         ("{{RPC_OPERATION_KIND}}", rpc.operation_kind.clone()),
         ("{{RPC_REPLAY_SAFE}}", rpc.replay_safe.to_string()),
+        (
+            "{{RPC_LISTENER_LABEL}}",
+            rpc_listener_label(rpc).to_string(),
+        ),
+        ("{{RPC_AUTH_MODE}}", rpc.auth_mode.clone()),
+        ("{{RPC_SCOPES_GO}}", go_string_list(&rpc.scopes)),
+        (
+            "{{RPC_CREDENTIAL_TYPES_GO}}",
+            go_string_list(&rpc.credential_types),
+        ),
         ("{{PHP_METHOD_ALIAS_ENTRIES}}", php_method_alias_entries),
     ];
     let mut text = body.to_string();
@@ -3454,16 +3533,18 @@ mod tests {
         );
     }
 
-    // THE SYMMETRY RULE (V19-1/V19-2): a column the read path cannot decode must
-    // not be written either — a raw enum write puts a JSON number into a VARCHAR
-    // CHECK column; a raw message write puts a struct into a scalar column.
+    // THE SYMMETRY RULE (V19-1/V19-2): a column the inline arms cannot write
+    // raw (a message, a repeated field) goes through the reflective field codec
+    // on BOTH sides, never a raw getter: a raw enum write puts a JSON number into
+    // a VARCHAR CHECK column; a raw message write puts a struct into a scalar
+    // column.
     #[test]
-    fn message_typed_column_is_skipped_on_both_sides() {
+    fn message_typed_column_uses_the_reflective_codec_on_both_sides() {
         let col = column("wallet_balance", "acme.common.v1.Money");
         let write = go_to_record_stmt(&col);
         assert!(
-            write.contains("TODO(udb-b3): unsupported write for \"wallet_balance\""),
-            "message-typed write must be a TODO, got: {write}"
+            write.contains("udbclient.EncodeField(m, \"wallet_balance\")"),
+            "message-typed write must use the field codec, got: {write}"
         );
         assert!(
             !write.contains("m.GetWalletBalance()"),
@@ -3471,44 +3552,42 @@ mod tests {
         );
         let read = go_from_row_stmt(&col, "acmev1");
         assert!(
-            read.contains("TODO(udb-b3): unsupported read for \"wallet_balance\""),
-            "message-typed read must be a TODO, got: {read}"
+            read.contains("udbclient.DecodeField(m, \"wallet_balance\", row[\"wallet_balance\"])"),
+            "message-typed read must use the field codec, got: {read}"
         );
     }
 
-    // `optional` on an unsupported type must not fall into the pointer-guarded
-    // raw write — the Unknown check has to run before the presence arm.
+    // `optional` on a message must not fall into the pointer-guarded raw write —
+    // the Unknown check has to run before the presence arm.
     #[test]
-    fn optional_message_typed_column_still_skips_write() {
+    fn optional_message_typed_column_never_writes_raw() {
         let mut col = column("wallet_balance", "acme.common.v1.Money");
         col.has_presence = true;
         let write = go_to_record_stmt(&col);
-        assert!(
-            write.contains("TODO(udb-b3): unsupported write"),
-            "optional message column must be a TODO, got: {write}"
-        );
+        assert!(write.contains("udbclient.EncodeField"), "got: {write}");
         assert!(!write.contains("m.GetWalletBalance()"), "got: {write}");
     }
 
     // V19-4: `repeated string` hit the scalar-string paths and produced Go that
-    // does not compile (`v != ""` on []string). Repeated fields are skipped on
-    // both sides until TEXT[] round-trip lands.
+    // does not compile (`v != ""` on []string). G2: repeated fields round-trip
+    // through the field codec (JSON array on write, array or literal on read).
     #[test]
-    fn repeated_column_is_skipped_on_both_sides() {
+    fn repeated_column_round_trips_through_the_field_codec() {
         let mut col = column("mfa_methods", "string");
         col.is_array = true;
         let write = go_to_record_stmt(&col);
         assert!(
-            write.contains("unsupported write for \"mfa_methods\" (repeated string)"),
-            "repeated write must be a TODO, got: {write}"
+            write.contains("udbclient.EncodeField(m, \"mfa_methods\")"),
+            "repeated write must use the field codec, got: {write}"
         );
         assert!(!write.contains("m.GetMfaMethods()"), "got: {write}");
         let read = go_from_row_stmt(&col, "acmev1");
         assert!(
-            read.contains("unsupported read for \"mfa_methods\" (repeated string)"),
-            "repeated read must be a TODO, got: {read}"
+            read.contains("udbclient.DecodeField(m, \"mfa_methods\", row[\"mfa_methods\"])"),
+            "repeated read must use the field codec, got: {read}"
         );
         assert!(!read.contains("udbAsString"), "got: {read}");
+        assert!(!write.contains("TODO") && !read.contains("TODO"));
     }
 
     // G-13: a DATE column takes the date-only layout — RFC3339Nano fails a
@@ -3975,7 +4054,7 @@ mod tests {
             "a string JSON column must keep the text form"
         );
 
-        // A repeated message column is skipped by the array arm, as before.
+        // A repeated message column belongs to the array arm (field codec).
         let mut repeated = column("tags", "acme.v1.Tag");
         repeated.is_jsonb = true;
         repeated.is_array = true;
@@ -3989,8 +4068,8 @@ mod tests {
 
     // #3 + V050-2: a cross-package enum is now QUALIFIED by importing its own Go
     // package (`enum_go_import`) and referencing the foreign type on the read path.
-    // It only FAILS CLOSED (NOT NULL) when the foreign proto file declared no
-    // `go_package`, so there is nothing to import.
+    // Without a `go_package` there is nothing to import, so it goes through the
+    // reflective field codec instead.
     #[test]
     fn cross_package_enum_qualifies_when_go_package_known() {
         let mut region = column("region", "acme.geo.v1.Region");
@@ -4020,35 +4099,49 @@ mod tests {
             "read path must qualify the enum type with the foreign alias, got:\n{out}"
         );
 
-        // No go_package to import → still fails closed for a NOT NULL column.
+        // No go_package to import: the type cannot be named, so the field goes
+        // through the reflective codec — NOT NULL or not, generation succeeds.
         let mut unqualifiable = region.clone();
         unqualifiable.enum_go_import = None;
-        let err = render_go_entities_file(
-            &widget_entity(
-                vec!["id".to_string()],
-                vec![column("id", "string"), unqualifiable.clone()],
-            ),
-            "acmegen",
-        )
-        .expect_err("NOT NULL cross-package enum without go_package must fail closed");
-        assert!(
-            err.contains("cross-package enum") && err.contains("region"),
-            "fail-closed message must name the offending column, got: {err}"
-        );
+        for not_null in [true, false] {
+            unqualifiable.not_null = not_null;
+            let out = render_go_entities_file(
+                &widget_entity(
+                    vec!["id".to_string()],
+                    vec![column("id", "string"), unqualifiable.clone()],
+                ),
+                "acmegen",
+            )
+            .expect("cross-package enum without go_package must generate");
+            assert!(
+                out.contains("udbclient.EncodeField(m, \"region\")")
+                    && out.contains("udbclient.DecodeField(m, \"region\", row[\"region\"])"),
+                "unqualifiable cross-package enum must use the field codec, got:
+{out}"
+            );
+            assert!(
+                !out.contains("TODO(udb-b3)"),
+                "got:
+{out}"
+            );
+        }
+    }
 
-        // Nullable + no go_package → skipped with a TODO, generation succeeds.
-        unqualifiable.not_null = false;
-        let out = render_go_entities_file(
-            &widget_entity(
-                vec!["id".to_string()],
-                vec![column("id", "string"), unqualifiable],
-            ),
+    // G2: a message stored in a non-JSON column has no column value and fails
+    // generation, naming the field.
+    #[test]
+    fn message_in_a_scalar_column_fails_generation() {
+        let mut money = column("wallet_balance", "acme.common.v1.Money");
+        money.sql_type = "NUMERIC(12,2)".to_string();
+        money.declared_in_proto = true;
+        let err = render_go_entities_file(
+            &widget_entity(vec!["id".to_string()], vec![column("id", "string"), money]),
             "acmegen",
         )
-        .expect("nullable unqualifiable cross-package enum must not fail closed");
+        .expect_err("a message in a NUMERIC column must fail generation");
         assert!(
-            out.contains("cross-package enum acme.geo.v1.Region"),
-            "nullable unqualifiable cross-package enum must be skipped with a TODO, got:\n{out}"
+            err.contains("wallet_balance") && err.contains("JSON"),
+            "got: {err}"
         );
     }
 

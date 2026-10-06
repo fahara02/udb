@@ -70,6 +70,17 @@ pub(crate) fn map_comparison(op: lq_pb::LiveQueryComparison) -> Result<Compariso
         P::Le => Ok(ComparisonOp::Le),
         P::Gt => Ok(ComparisonOp::Gt),
         P::Ge => Ok(ComparisonOp::Ge),
+        // Membership and null tests have their own IR nodes (`predicate_filter`)
+        // and are never a scalar comparison.
+        P::In | P::NotIn | P::IsNull | P::IsNotNull => {
+            Err(crate::runtime::executor_utils::invalid_argument_fields(
+                "live query IN / NOT_IN / IS_NULL / IS_NOT_NULL is not a scalar comparison",
+                [(
+                    "filters.op",
+                    "membership and null operators are not scalar comparisons",
+                )],
+            ))
+        }
         P::Unspecified => Err(livequery_required_field(
             "filters.op",
             "must specify a live query predicate comparison operator",
@@ -107,32 +118,103 @@ fn typed_value(raw: &str) -> LogicalValue {
     LogicalValue::String(raw.to_string())
 }
 
-/// Build the user-supplied IR filter (AND of comparisons). Returns `None` when
-/// no predicates were supplied. An empty field or unspecified op is rejected.
+/// Translate one wire predicate into its IR filter. Membership and null tests
+/// get their own IR nodes; NOT_IN also requires the field to be non-null so the
+/// single-row evaluator agrees with SQL `NOT IN` on the snapshot read.
+fn predicate_filter(predicate: &lq_pb::LiveQueryPredicate) -> Result<LogicalFilter, Status> {
+    use lq_pb::LiveQueryComparison as P;
+    let field = predicate.field.trim();
+    if field.is_empty() {
+        return Err(livequery_required_field(
+            "filters.field",
+            "must be a non-empty live query predicate field",
+            "live query predicate field must not be empty",
+        ));
+    }
+    let field = field.to_string();
+    let op = predicate.op();
+    let is_membership = matches!(op, P::In | P::NotIn);
+    if is_membership && predicate.values.is_empty() {
+        return Err(livequery_required_field(
+            "filters.values",
+            "IN / NOT_IN need at least one value in `values`",
+            "live query IN / NOT_IN predicate has no values",
+        ));
+    }
+    if !is_membership && !predicate.values.is_empty() {
+        return Err(crate::runtime::executor_utils::invalid_argument_fields(
+            format!(
+                "live query predicate on '{field}' sets `values` but its operator is not IN / NOT_IN"
+            ),
+            [(
+                "filters.values",
+                "only IN / NOT_IN take `values`; use `value` for other operators",
+            )],
+        ));
+    }
+    let list = || -> Vec<LogicalValue> {
+        predicate
+            .values
+            .iter()
+            .map(|value| typed_value(value.trim()))
+            .collect()
+    };
+    Ok(match op {
+        P::In => LogicalFilter::InList {
+            field,
+            values: list(),
+        },
+        P::NotIn => LogicalFilter::And(vec![
+            LogicalFilter::Not(Box::new(LogicalFilter::IsNull(field.clone()))),
+            LogicalFilter::Not(Box::new(LogicalFilter::InList {
+                field,
+                values: list(),
+            })),
+        ]),
+        P::IsNull => LogicalFilter::IsNull(field),
+        P::IsNotNull => LogicalFilter::Not(Box::new(LogicalFilter::IsNull(field))),
+        _ => LogicalFilter::Comparison {
+            field,
+            op: map_comparison(op)?,
+            value: typed_value(predicate.value.trim()),
+        },
+    })
+}
+
+/// Build the user-supplied IR filter: the AND of `filters` and of every
+/// `any_of` group, each group being the OR of its predicates. Returns `None`
+/// when nothing was supplied. An empty field, an unspecified op, misplaced
+/// `values`, or an empty OR-group is rejected.
 pub(crate) fn build_user_filter(
     predicates: &[lq_pb::LiveQueryPredicate],
+    any_of: &[lq_pb::LiveQueryAnyOf],
 ) -> Result<Option<LogicalFilter>, Status> {
-    if predicates.is_empty() {
+    if predicates.is_empty() && any_of.is_empty() {
         return Ok(None);
     }
-    let mut comparisons = Vec::with_capacity(predicates.len());
+    let mut branches = Vec::with_capacity(predicates.len() + any_of.len());
     for predicate in predicates {
-        let field = predicate.field.trim();
-        if field.is_empty() {
+        branches.push(predicate_filter(predicate)?);
+    }
+    for group in any_of {
+        if group.predicates.is_empty() {
             return Err(livequery_required_field(
-                "filters.field",
-                "must be a non-empty live query predicate field",
-                "live query predicate field must not be empty",
+                "any_of.predicates",
+                "an any_of group needs at least one predicate",
+                "live query any_of group is empty",
             ));
         }
-        let op = map_comparison(predicate.op());
-        comparisons.push(LogicalFilter::Comparison {
-            field: field.to_string(),
-            op: op?,
-            value: typed_value(predicate.value.trim()),
+        let mut alternatives = Vec::with_capacity(group.predicates.len());
+        for predicate in &group.predicates {
+            alternatives.push(predicate_filter(predicate)?);
+        }
+        branches.push(if alternatives.len() == 1 {
+            alternatives.remove(0)
+        } else {
+            LogicalFilter::Or(alternatives)
         });
     }
-    Ok(Some(LogicalFilter::And(comparisons)))
+    Ok(Some(LogicalFilter::And(branches)))
 }
 
 /// Compose the snapshot filter: the server-side tenant equality (and project
@@ -519,6 +601,108 @@ mod predicate_tests {
             "acme",
             "p1",
         ));
+    }
+
+    fn pred(
+        field: &str,
+        op: lq_pb::LiveQueryComparison,
+        value: &str,
+        values: &[&str],
+    ) -> lq_pb::LiveQueryPredicate {
+        lq_pb::LiveQueryPredicate {
+            field: field.to_string(),
+            op: op as i32,
+            value: value.to_string(),
+            values: values.iter().map(|v| v.to_string()).collect(),
+        }
+    }
+
+    /// LQ3: IN, NOT_IN, null tests and OR-groups build an IR filter that the
+    /// single-row evaluator applies with SQL semantics (NOT_IN excludes null).
+    #[test]
+    fn build_user_filter_supports_in_not_in_null_and_or_groups() {
+        use lq_pb::LiveQueryComparison as C;
+        let filter = super::build_user_filter(
+            &[
+                pred("status", C::In, "", &["open", "held"]),
+                pred("kind", C::NotIn, "", &["spam"]),
+                pred("closed_at", C::IsNull, "", &[]),
+            ],
+            &[lq_pb::LiveQueryAnyOf {
+                predicates: vec![
+                    pred("owner", C::Eq, "me", &[]),
+                    pred("assignee", C::Eq, "me", &[]),
+                ],
+            }],
+        )
+        .expect("valid filter")
+        .expect("non-empty filter");
+        let row = |status: &str, kind: serde_json::Value, owner: &str, assignee: &str| json!({"status": status, "kind": kind, "closed_at": null, "owner": owner, "assignee": assignee});
+        assert!(super::filter_matches_row(
+            &filter,
+            &row("open", json!("bug"), "me", "x")
+        ));
+        assert!(super::filter_matches_row(
+            &filter,
+            &row("held", json!("bug"), "x", "me")
+        ));
+        assert!(!super::filter_matches_row(
+            &filter,
+            &row("done", json!("bug"), "me", "x")
+        ));
+        assert!(!super::filter_matches_row(
+            &filter,
+            &row("open", json!("spam"), "me", "x")
+        ));
+        // NOT_IN does not match a null field (SQL NOT IN semantics).
+        assert!(!super::filter_matches_row(
+            &filter,
+            &row("open", json!(null), "me", "x")
+        ));
+        assert!(!super::filter_matches_row(
+            &filter,
+            &row("open", json!("bug"), "x", "y")
+        ));
+        let mut closed = row("open", json!("bug"), "me", "x");
+        closed["closed_at"] = json!("2026-10-07");
+        assert!(!super::filter_matches_row(&filter, &closed));
+    }
+
+    /// LQ3: malformed predicates are refused, not silently widened.
+    #[test]
+    fn build_user_filter_rejects_malformed_membership_and_empty_groups() {
+        use lq_pb::LiveQueryComparison as C;
+        assert!(super::build_user_filter(&[pred("status", C::In, "", &[])], &[]).is_err());
+        assert!(super::build_user_filter(&[pred("status", C::Eq, "a", &["b"])], &[]).is_err());
+        assert!(
+            super::build_user_filter(&[], &[lq_pb::LiveQueryAnyOf { predicates: vec![] }]).is_err()
+        );
+        assert!(
+            super::build_user_filter(&[], &[])
+                .expect("empty is fine")
+                .is_none()
+        );
+    }
+
+    /// LQ1: the typed since_event_id wins, the legacy header still works, and two
+    /// different cursors are refused.
+    #[test]
+    fn resolve_resume_cursor_prefers_typed_field_and_rejects_conflicts() {
+        use super::super::handlers::resolve_resume_cursor;
+        assert_eq!(
+            resolve_resume_cursor("evt-1", None).unwrap(),
+            Some("evt-1".to_string())
+        );
+        assert_eq!(
+            resolve_resume_cursor("", Some("evt-2")).unwrap(),
+            Some("evt-2".to_string())
+        );
+        assert_eq!(
+            resolve_resume_cursor(" evt-3 ", Some("evt-3")).unwrap(),
+            Some("evt-3".to_string())
+        );
+        assert_eq!(resolve_resume_cursor("  ", None).unwrap(), None);
+        assert!(resolve_resume_cursor("evt-1", Some("evt-2")).is_err());
     }
 
     /// A keepalive frame is a proto-free heartbeat: an UNSPECIFIED-op `Change`

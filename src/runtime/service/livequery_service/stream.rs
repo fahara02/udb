@@ -6,7 +6,6 @@
 use std::collections::{HashSet, VecDeque};
 use std::pin::Pin;
 use std::sync::Arc;
-use std::time::Duration;
 
 use tokio::sync::{broadcast, mpsc};
 use tokio::time::{Instant, Interval, MissedTickBehavior, interval_at};
@@ -24,6 +23,7 @@ use super::predicate::{
     change_frame, change_row, event_matches_tenant_scope, filter_matches_row, keepalive_frame,
     topic_matches_source,
 };
+use super::shared_tail::{FeedBatch, Watermark, envelope_watermark};
 
 /// Await the next keepalive tick, or park forever when keepalives are disabled
 /// (`None`). Kept total so the `tokio::select!` arm compiles whether or not a
@@ -42,8 +42,9 @@ async fn next_keepalive_tick(keepalive: &mut Option<Interval>) {
 pub(crate) type LiveQueryStream =
     Pin<Box<dyn Stream<Item = Result<lq_pb::SubscribeResponse, Status>> + Send + 'static>>;
 
-/// How often the forwarder polls the durable CDC journal.
-const JOURNAL_TAIL_POLL: Duration = Duration::from_millis(500);
+/// Private catch-up scans a lagging subscriber runs before it re-joins the
+/// shared feed; a backlog larger than this is finished on the next batch.
+const MAX_CATCH_UP_SCANS: usize = 64;
 
 /// How many event ids the forwarder remembers to de-duplicate the broadcast
 /// fast path against the journal backstop.
@@ -56,12 +57,29 @@ const DEDUP_WINDOW: usize = 16_384;
 /// broadcasting it, so tailing the journal delivers the same deltas on every
 /// replica. The broadcast stays as the low-latency fast path; the two are
 /// de-duplicated by `event_id`.
+///
+/// The journal is scanned by ONE shared poller per (topic, tenant, project)
+/// ([`super::shared_tail`]); this subscriber applies the poller's batches from
+/// its own watermark and only scans privately to catch up after a lag or a
+/// resume from an older cursor.
 pub(crate) struct JournalTail {
     pub(crate) cdc: Arc<crate::cdc::CdcEngine>,
-    /// Last journal event id scanned; the next poll continues strictly after it.
-    pub(crate) cursor: String,
-    /// In-scope rows per poll (bounded scan, see `journal_scan_for_scope`).
+    /// Journal position delivered up to; batches apply strictly after it.
+    pub(crate) watermark: Watermark,
+    /// In-scope rows per private catch-up scan.
     pub(crate) batch: i64,
+    /// The shared poller's batches for this subscriber's scope.
+    pub(crate) feed: broadcast::Receiver<Arc<FeedBatch>>,
+}
+
+/// Await the next shared-feed batch, or park forever without a journal tail.
+async fn next_feed_batch(
+    journal_tail: &mut Option<JournalTail>,
+) -> Result<Arc<FeedBatch>, broadcast::error::RecvError> {
+    match journal_tail.as_mut() {
+        Some(tail) => tail.feed.recv().await,
+        None => std::future::pending().await,
+    }
 }
 
 /// Bounded FIFO set of delivered event ids.
@@ -144,7 +162,7 @@ pub(crate) async fn run_delta_forward(
         // The journal tail continues after the backlog, and a replayed event
         // the broadcast also carries is delivered once.
         if let Some(tail) = journal_tail.as_mut() {
-            tail.cursor = envelope.event_id.clone();
+            tail.watermark = envelope_watermark(&envelope);
         }
         if !seen.first_sighting(&envelope.event_id) {
             continue;
@@ -233,11 +251,6 @@ async fn run_live_loop(
         ticker.set_missed_tick_behavior(MissedTickBehavior::Skip);
         ticker
     });
-    let mut journal_poll: Option<Interval> = journal_tail.as_ref().map(|_| {
-        let mut ticker = interval_at(Instant::now() + JOURNAL_TAIL_POLL, JOURNAL_TAIL_POLL);
-        ticker.set_missed_tick_behavior(MissedTickBehavior::Delay);
-        ticker
-    });
     // Once the broadcast closes (or lags) the journal tail alone carries the
     // stream when it is configured.
     let mut broadcast_open = true;
@@ -257,8 +270,9 @@ async fn run_live_loop(
                     Err(mpsc::error::TrySendError::Closed(_)) => break,
                 }
             }
-            _ = next_keepalive_tick(&mut journal_poll), if journal_poll.is_some() => {
-                match poll_journal_tail(
+            batch = next_feed_batch(&mut journal_tail), if journal_tail.is_some() => {
+                match apply_feed_batch(
+                    batch,
                     journal_tail.as_mut(),
                     seen,
                     tx,
@@ -327,11 +341,37 @@ async fn run_live_loop(
     }
 }
 
-/// One journal-tail poll: scan past the cursor (tenant/project re-checked by
-/// the scan), advance the cursor to the last row scanned, and forward each
-/// event not already delivered by the broadcast.
+/// Close the stream because the journal cannot be read. Swallowing it would
+/// leave this subscriber on the broadcast alone, which on every replica but the
+/// CDC tailer's leader is silent — indistinguishable from "nothing changed".
+/// The client resumes from its last delivered event id once the journal is
+/// readable again.
+async fn close_journal_unavailable(
+    tx: &mpsc::Sender<Result<lq_pb::SubscribeResponse, Status>>,
+    cdc_topic: &str,
+    error: &str,
+) -> Forwarded {
+    tracing::warn!(
+        topic = %cdc_topic,
+        error = %error,
+        "live query stream closed: the CDC journal cannot be read"
+    );
+    let _ = tx
+        .send(Err(super::errors::livequery_journal_unavailable_status(
+            "journal_tail",
+        )))
+        .await;
+    Forwarded::Stop
+}
+
+/// Apply one shared-feed batch. When the batch starts past this subscriber's
+/// watermark (it lagged, or resumed from an older cursor), first catch up with
+/// private scans; the batch's events are then applied only past the watermark,
+/// and the watermark only advances to the batch end once the two are contiguous,
+/// so the shared feed never opens a gap or replays what was delivered.
 #[allow(clippy::too_many_arguments)]
-async fn poll_journal_tail(
+async fn apply_feed_batch(
+    batch: Result<Arc<FeedBatch>, broadcast::error::RecvError>,
     journal_tail: Option<&mut JournalTail>,
     seen: &mut SeenEvents,
     tx: &mpsc::Sender<Result<lq_pb::SubscribeResponse, Status>>,
@@ -345,35 +385,58 @@ async fn poll_journal_tail(
     let Some(tail) = journal_tail else {
         return Forwarded::Continue;
     };
-    // An unreadable journal closes the stream with a routable, retryable
-    // error. Swallowing it would leave this subscriber on the broadcast
-    // alone, which on every replica but the CDC tailer's leader is silent —
-    // indistinguishable from "nothing changed". The client resumes from its
-    // last delivered event id once the journal is readable again.
-    let (events, last_scanned) = match tail
-        .cdc
-        .try_journal_scan_for_scope(cdc_topic, tenant_id, project_id, &tail.cursor, tail.batch)
-        .await
-    {
-        Ok(scan) => scan,
-        Err(err) => {
-            tracing::warn!(
-                topic = %cdc_topic,
-                error = %err,
-                "live query stream closed: the CDC journal cannot be read"
-            );
-            let _ = tx
-                .send(Err(super::errors::livequery_journal_unavailable_status(
-                    "journal_tail",
-                )))
-                .await;
-            return Forwarded::Stop;
+    let batch = match batch {
+        Ok(batch) => batch,
+        // Missed batches are recovered by the catch-up the next batch triggers.
+        Err(broadcast::error::RecvError::Lagged(_)) => return Forwarded::Continue,
+        Err(broadcast::error::RecvError::Closed) => {
+            return close_journal_unavailable(tx, cdc_topic, "journal feed closed").await;
         }
     };
-    if let Some(last_scanned) = last_scanned {
-        tail.cursor = last_scanned;
+    if let Some(error) = batch.error.as_deref() {
+        return close_journal_unavailable(tx, cdc_topic, error).await;
     }
-    for envelope in events {
+    let mut pending: Vec<crate::cdc::CdcEnvelope> = Vec::new();
+    if batch.from > tail.watermark {
+        // Private catch-up from this subscriber's own watermark.
+        for _ in 0..MAX_CATCH_UP_SCANS {
+            let scan = tail
+                .cdc
+                .try_journal_scan_after(
+                    cdc_topic,
+                    tenant_id,
+                    project_id,
+                    tail.watermark.0,
+                    tail.watermark.1.clone(),
+                    tail.batch,
+                )
+                .await;
+            match scan {
+                Ok((events, Some(last))) => {
+                    pending.extend(events);
+                    tail.watermark = last;
+                    if tail.watermark >= batch.to {
+                        break;
+                    }
+                }
+                Ok((_, None)) => break,
+                Err(err) => return close_journal_unavailable(tx, cdc_topic, &err).await,
+            }
+        }
+    }
+    if batch.from <= tail.watermark {
+        pending.extend(
+            batch
+                .events
+                .iter()
+                .filter(|envelope| envelope_watermark(envelope) > tail.watermark)
+                .cloned(),
+        );
+        if batch.to > tail.watermark {
+            tail.watermark = batch.to.clone();
+        }
+    }
+    for envelope in pending {
         if !seen.first_sighting(&envelope.event_id) {
             continue;
         }

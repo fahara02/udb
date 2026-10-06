@@ -27,6 +27,10 @@ enum UserStatus {
   USER_STATUS_SUSPENDED = 3; // Temporarily suspended by admin
   USER_STATUS_LOCKED = 4; // Locked after repeated failed logins
   USER_STATUS_DEACTIVATED = 5; // Permanently deactivated
+  // Invited (CreateUser with password_setup_required): the account has no
+  // usable password until the user completes ResetPassword with the emailed
+  // code, which also verifies the email and activates the account.
+  USER_STATUS_PASSWORD_SETUP_REQUIRED = 6;
 }
 
 enum SessionType {

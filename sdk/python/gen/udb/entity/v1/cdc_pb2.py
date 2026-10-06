@@ -25,7 +25,7 @@ _sym_db = _symbol_database.Default()
 from udb.entity.v1 import context_pb2 as udb_dot_entity_dot_v1_dot_context__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x17udb/entity/v1/cdc.proto\x12\rudb.entity.v1\x1a\x1budb/entity/v1/context.proto\"\x9c\x01\n\x16\x43\x44\x43SubscriptionRequest\x12\x37\n\x07\x63ontext\x18\x01 \x01(\x0b\x32\x1d.udb.entity.v1.RequestContextR\x07\x63ontext\x12#\n\rtopic_pattern\x18\x02 \x01(\tR\x0ctopicPattern\x12$\n\x0esince_event_id\x18\x03 \x01(\tR\x0csinceEventId\"\x81\x01\n\x11\x43\x64\x63\x43ontrolRequest\x12\x37\n\x07\x63ontext\x18\x01 \x01(\x0b\x32\x1d.udb.entity.v1.RequestContextR\x07\x63ontext\x12\x1b\n\tslot_name\x18\x02 \x01(\tR\x08slotName\x12\x16\n\x06reason\x18\x03 \x01(\tR\x06reason\"\x98\x02\n\x11\x43\x64\x63StatusResponse\x12\x1b\n\tslot_name\x18\x01 \x01(\tR\x08slotName\x12\x1b\n\tis_leader\x18\x02 \x01(\x08R\x08isLeader\x12\x16\n\x06paused\x18\x03 \x01(\x08R\x06paused\x12!\n\x0cpause_reason\x18\x04 \x01(\tR\x0bpauseReason\x12\"\n\rlast_event_id\x18\x05 \x01(\tR\x0blastEventId\x12\x1f\n\x0blag_seconds\x18\x06 \x01(\x01R\nlagSeconds\x12!\n\x0coutbox_depth\x18\x07 \x01(\x03R\x0boutboxDepth\x12&\n\x0fupdated_at_unix\x18\x08 \x01(\x03R\rupdatedAtUnixB\xae\x01\n\x11\x63om.udb.entity.v1B\x08\x43\x64\x63ProtoP\x01Z9github.com/fahara02/udb/sdk/go/gen/udb/entity/v1;entityv1\xa2\x02\x03UEX\xaa\x02\rUdb.Entity.V1\xca\x02\rUdb\\Entity\\V1\xe2\x02\x19Udb\\GPBMetadata\\Entity\\V1\xea\x02\x0fUdb::Entity::V1b\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x17udb/entity/v1/cdc.proto\x12\rudb.entity.v1\x1a\x1budb/entity/v1/context.proto\"\xc1\x01\n\x16\x43\x44\x43SubscriptionRequest\x12\x37\n\x07\x63ontext\x18\x01 \x01(\x0b\x32\x1d.udb.entity.v1.RequestContextR\x07\x63ontext\x12#\n\rtopic_pattern\x18\x02 \x01(\tR\x0ctopicPattern\x12$\n\x0esince_event_id\x18\x03 \x01(\tR\x0csinceEventId\x12#\n\rconsumer_name\x18\x04 \x01(\tR\x0c\x63onsumerName\"\xb3\x01\n\x13\x41\x63kCdcEventsRequest\x12\x37\n\x07\x63ontext\x18\x01 \x01(\x0b\x32\x1d.udb.entity.v1.RequestContextR\x07\x63ontext\x12#\n\rconsumer_name\x18\x02 \x01(\tR\x0c\x63onsumerName\x12#\n\rtopic_pattern\x18\x03 \x01(\tR\x0ctopicPattern\x12\x19\n\x08\x65vent_id\x18\x04 \x01(\tR\x07\x65ventId\"\x9f\x01\n\x14\x41\x63kCdcEventsResponse\x12#\n\rconsumer_name\x18\x01 \x01(\tR\x0c\x63onsumerName\x12#\n\rtopic_pattern\x18\x02 \x01(\tR\x0ctopicPattern\x12\x19\n\x08\x65vent_id\x18\x03 \x01(\tR\x07\x65ventId\x12\"\n\racked_at_unix\x18\x04 \x01(\x03R\x0b\x61\x63kedAtUnix\"\x81\x01\n\x11\x43\x64\x63\x43ontrolRequest\x12\x37\n\x07\x63ontext\x18\x01 \x01(\x0b\x32\x1d.udb.entity.v1.RequestContextR\x07\x63ontext\x12\x1b\n\tslot_name\x18\x02 \x01(\tR\x08slotName\x12\x16\n\x06reason\x18\x03 \x01(\tR\x06reason\"\x98\x02\n\x11\x43\x64\x63StatusResponse\x12\x1b\n\tslot_name\x18\x01 \x01(\tR\x08slotName\x12\x1b\n\tis_leader\x18\x02 \x01(\x08R\x08isLeader\x12\x16\n\x06paused\x18\x03 \x01(\x08R\x06paused\x12!\n\x0cpause_reason\x18\x04 \x01(\tR\x0bpauseReason\x12\"\n\rlast_event_id\x18\x05 \x01(\tR\x0blastEventId\x12\x1f\n\x0blag_seconds\x18\x06 \x01(\x01R\nlagSeconds\x12!\n\x0coutbox_depth\x18\x07 \x01(\x03R\x0boutboxDepth\x12&\n\x0fupdated_at_unix\x18\x08 \x01(\x03R\rupdatedAtUnixB\xae\x01\n\x11\x63om.udb.entity.v1B\x08\x43\x64\x63ProtoP\x01Z9github.com/fahara02/udb/sdk/go/gen/udb/entity/v1;entityv1\xa2\x02\x03UEX\xaa\x02\rUdb.Entity.V1\xca\x02\rUdb\\Entity\\V1\xe2\x02\x19Udb\\GPBMetadata\\Entity\\V1\xea\x02\x0fUdb::Entity::V1b\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -34,9 +34,13 @@ if not _descriptor._USE_C_DESCRIPTORS:
   _globals['DESCRIPTOR']._loaded_options = None
   _globals['DESCRIPTOR']._serialized_options = b'\n\021com.udb.entity.v1B\010CdcProtoP\001Z9github.com/fahara02/udb/sdk/go/gen/udb/entity/v1;entityv1\242\002\003UEX\252\002\rUdb.Entity.V1\312\002\rUdb\\Entity\\V1\342\002\031Udb\\GPBMetadata\\Entity\\V1\352\002\017Udb::Entity::V1'
   _globals['_CDCSUBSCRIPTIONREQUEST']._serialized_start=72
-  _globals['_CDCSUBSCRIPTIONREQUEST']._serialized_end=228
-  _globals['_CDCCONTROLREQUEST']._serialized_start=231
-  _globals['_CDCCONTROLREQUEST']._serialized_end=360
-  _globals['_CDCSTATUSRESPONSE']._serialized_start=363
-  _globals['_CDCSTATUSRESPONSE']._serialized_end=643
+  _globals['_CDCSUBSCRIPTIONREQUEST']._serialized_end=265
+  _globals['_ACKCDCEVENTSREQUEST']._serialized_start=268
+  _globals['_ACKCDCEVENTSREQUEST']._serialized_end=447
+  _globals['_ACKCDCEVENTSRESPONSE']._serialized_start=450
+  _globals['_ACKCDCEVENTSRESPONSE']._serialized_end=609
+  _globals['_CDCCONTROLREQUEST']._serialized_start=612
+  _globals['_CDCCONTROLREQUEST']._serialized_end=741
+  _globals['_CDCSTATUSRESPONSE']._serialized_start=744
+  _globals['_CDCSTATUSRESPONSE']._serialized_end=1024
 # @@protoc_insertion_point(module_scope)

@@ -1,0 +1,133 @@
+name: Go SDK live contract
+
+# Runs the Go SDK's typed-store contract (sdk/go/udbtest/conformance, the same
+# suite the in-memory fake passes) against a served broker: the one CI just
+# built for main, or a release on demand. A fake that drifts from the broker,
+# or a broker change that breaks the SDK's typed stores, fails here.
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: "Release tag to prove, or 'latest'"
+        required: true
+        default: latest
+        type: string
+      release_asset:
+        description: "Linux release asset name to download"
+        required: true
+        default: udb-linux-amd64-full
+        type: string
+      broker_artifact_run_id:
+        description: "Optional CI run id containing udb-broker-debug for current-main proof before release"
+        required: false
+        default: ""
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: go-sdk-live-${{ github.event.workflow_run.head_sha || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  go-live-contract:
+    name: Go SDK typed-store contract (live)
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      RELEASE_TAG: ${{ inputs.release_tag || 'latest' }}
+      RELEASE_ASSET: ${{ inputs.release_asset || 'udb-linux-amd64-full' }}
+      UDB_LIVE_SDK_TESTS: "1"
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: udb_ci
+          POSTGRES_USER: udb
+          POSTGRES_PASSWORD: udb
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U udb -d udb_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+
+      - name: Set up SDK toolchains
+        uses: ./.github/actions/setup-sdk-toolchains
+        with:
+          go: "true"
+
+      - name: Resolve served binary
+        uses: ./.github/actions/resolve-served-binary
+        with:
+          release-tag: ${{ env.RELEASE_TAG }}
+          release-asset: ${{ env.RELEASE_ASSET }}
+          broker-artifact-run-id: ${{ inputs.broker_artifact_run_id || github.event.workflow_run.id }}
+
+      - name: Write broker env
+        uses: ./.github/actions/broker-env
+        with:
+          pg_dsn: postgres://udb:udb@localhost:5432/udb_ci
+          grpc_addr: 127.0.0.1:50051
+          grpc_target: 127.0.0.1:50051
+          auth_grpc_addr: 127.0.0.1:50061
+          auth_grpc_target: 127.0.0.1:50061
+          cdc_enabled: "false"
+          startup_dry_run: "false"
+          enable_column_backend: "false"
+          enable_graph_backend: "false"
+
+      - name: Bootstrap live user
+        shell: bash
+        run: |
+          set -euo pipefail
+          "${UDB_SERVED_BIN}" auth bootstrap user \
+            --username "${UDB_LIVE_USERNAME}" \
+            --email "${UDB_LIVE_USERNAME}" \
+            --password "${UDB_LIVE_PASSWORD}" \
+            --tenant "${UDB_LIVE_TENANT}" \
+            --project "${UDB_LIVE_PROJECT}"
+
+      - name: Launch broker
+        uses: ./.github/actions/launch-broker
+        with:
+          bin: ${{ env.UDB_SERVED_BIN }}
+          grpc-addr: 127.0.0.1:50051
+          bootstrap: "false"
+          ready-timeout-secs: "180"
+          log-file: /tmp/udb-go-live.log
+
+      - name: Run the typed-store contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd sdk/go
+          go test ./udbtest -run '^TestLiveBrokerMeetsTheTableContract$' -count=1 -v -timeout 10m
+
+      - name: Upload broker log
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: go-sdk-live-broker-log
+          path: /tmp/udb-go-live.log
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Stop broker
+        if: always()
+        shell: bash
+        run: |
+          if [ -n "${UDB_BROKER_PID:-}" ]; then kill "${UDB_BROKER_PID}" 2>/dev/null || true; fi

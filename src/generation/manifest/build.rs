@@ -1360,6 +1360,22 @@ pub(crate) fn validate_manifest_tables(tables: &[ManifestTable]) -> Vec<String> 
         .collect::<BTreeSet<_>>();
     for table in tables {
         errors.extend(validate_table_security_alignment(table));
+        // RLS on, no tenant/project column to build the default isolation
+        // policy from, and no explicit policy: PostgreSQL then hides every row
+        // and the planner refuses every request, which looked like a working
+        // table until the first read.
+        if table.enable_rls
+            && table.rls_policies.is_empty()
+            && crate::generation::sql::resolve_tenant_column(table).is_none()
+            && crate::generation::sql::resolve_project_column(table).is_none()
+        {
+            errors.push(format!(
+                "{}.{} enables RLS but has no tenant column and no RLS policy, so every row would be hidden \
+                 (UDB_RLS_WITHOUT_TENANT_COLUMN): mark its tenant column (pg_column tenant_column = true) \
+                 or declare an rls_policies block",
+                table.schema, table.table
+            ));
+        }
         for fk in &table.foreign_keys {
             if fk.ref_table.is_empty() {
                 errors.push(format!(
@@ -1808,5 +1824,41 @@ mod oneof_check_tests {
         assert!(sql_a.contains("ENABLE ROW LEVEL SECURITY"));
         assert!(sql_a.contains("CREATE POLICY"));
         assert_ne!(sql_a, sql_b);
+    }
+
+    #[test]
+    fn rls_without_a_tenant_column_or_policy_fails_the_build() {
+        let column = |name: &str| crate::generation::ManifestColumn {
+            field_name: name.to_string(),
+            column_name: name.to_string(),
+            sql_type: "TEXT".to_string(),
+            ..crate::generation::ManifestColumn::default()
+        };
+        let hidden = ManifestTable {
+            schema: "app".to_string(),
+            table: "ledger".to_string(),
+            enable_rls: true,
+            columns: vec![column("id"), column("affected_tenant_id")],
+            primary_key: vec!["id".to_string()],
+            ..ManifestTable::default()
+        };
+        let errors = validate_manifest_tables(std::slice::from_ref(&hidden));
+        assert!(
+            errors
+                .iter()
+                .any(|e| e.contains("UDB_RLS_WITHOUT_TENANT_COLUMN")),
+            "{errors:?}"
+        );
+
+        // A tenant column gives RLS its default isolation policy: no error.
+        let scoped = ManifestTable {
+            columns: vec![column("id"), column("tenant_id")],
+            ..hidden.clone()
+        };
+        assert!(
+            !validate_manifest_tables(std::slice::from_ref(&scoped))
+                .iter()
+                .any(|e| e.contains("UDB_RLS_WITHOUT_TENANT_COLUMN"))
+        );
     }
 }

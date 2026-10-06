@@ -10,7 +10,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file udb/entity/v1/error.proto.
  */
 export const file_udb_entity_v1_error: GenFile = /*@__PURE__*/
-  fileDesc("Chl1ZGIvZW50aXR5L3YxL2Vycm9yLnByb3RvEg11ZGIuZW50aXR5LnYxIjkKE0Vycm9yRmllbGRWaW9sYXRpb24SDQoFZmllbGQYASABKAkSEwoLZGVzY3JpcHRpb24YAiABKAkikwIKC0Vycm9yRGV0YWlsEg8KB2JhY2tlbmQYASABKAkSEQoJb3BlcmF0aW9uGAIgASgJEhsKE2NhcGFiaWxpdHlfcmVxdWlyZWQYAyABKAkSEQoJcmV0cnlhYmxlGAQgASgIEhYKDnJldHJ5X2FmdGVyX21zGAUgASgDEhoKEnBvbGljeV9kZWNpc2lvbl9pZBgGIAEoCRIWCg5jb3JyZWxhdGlvbl9pZBgHIAEoCRImCgRraW5kGAggASgOMhgudWRiLmVudGl0eS52MS5FcnJvcktpbmQSPAoQZmllbGRfdmlvbGF0aW9ucxgJIAMoCzIiLnVkYi5lbnRpdHkudjEuRXJyb3JGaWVsZFZpb2xhdGlvbirUAQoJRXJyb3JLaW5kEhoKFkVSUk9SX0tJTkRfVU5TUEVDSUZJRUQQABIZChVFUlJPUl9LSU5EX0NBUEFCSUxJVFkQARIVChFFUlJPUl9LSU5EX1BPTElDWRACEhQKEEVSUk9SX0tJTkRfUVVPVEEQAxIVChFFUlJPUl9LSU5EX1NDSEVNQRAEEhgKFEVSUk9SX0tJTkRfUkVUUllBQkxFEAUSFwoTRVJST1JfS0lORF9JTlRFUk5BTBAGEhkKFUVSUk9SX0tJTkRfVkFMSURBVElPThAHQrABChFjb20udWRiLmVudGl0eS52MUIKRXJyb3JQcm90b1ABWjlnaXRodWIuY29tL2ZhaGFyYTAyL3VkYi9zZGsvZ28vZ2VuL3VkYi9lbnRpdHkvdjE7ZW50aXR5djGiAgNVRViqAg1VZGIuRW50aXR5LlYxygINVWRiXEVudGl0eVxWMeICGVVkYlxHUEJNZXRhZGF0YVxFbnRpdHlcVjHqAg9VZGI6OkVudGl0eTo6VjFiBnByb3RvMw");
+  fileDesc("Chl1ZGIvZW50aXR5L3YxL2Vycm9yLnByb3RvEg11ZGIuZW50aXR5LnYxIjkKE0Vycm9yRmllbGRWaW9sYXRpb24SDQoFZmllbGQYASABKAkSEwoLZGVzY3JpcHRpb24YAiABKAkiwwMKC0Vycm9yRGV0YWlsEg8KB2JhY2tlbmQYASABKAkSEQoJb3BlcmF0aW9uGAIgASgJEhsKE2NhcGFiaWxpdHlfcmVxdWlyZWQYAyABKAkSEQoJcmV0cnlhYmxlGAQgASgIEhYKDnJldHJ5X2FmdGVyX21zGAUgASgDEhoKEnBvbGljeV9kZWNpc2lvbl9pZBgGIAEoCRIWCg5jb3JyZWxhdGlvbl9pZBgHIAEoCRImCgRraW5kGAggASgOMhgudWRiLmVudGl0eS52MS5FcnJvcktpbmQSPAoQZmllbGRfdmlvbGF0aW9ucxgJIAMoCzIiLnVkYi5lbnRpdHkudjEuRXJyb3JGaWVsZFZpb2xhdGlvbhIOCgZyZWFzb24YCiABKAkSEgoKY29uc3RyYWludBgLIAEoCRIOCgZjb2x1bW4YDCABKAkSEAoIZml4X2hpbnQYDSABKAkSOAoHbWlzc2luZxgOIAMoCzInLnVkYi5lbnRpdHkudjEuRXJyb3JEZXRhaWwuTWlzc2luZ0VudHJ5Gi4KDE1pc3NpbmdFbnRyeRILCgNrZXkYASABKAkSDQoFdmFsdWUYAiABKAk6AjgBKqQDCglFcnJvcktpbmQSGgoWRVJST1JfS0lORF9VTlNQRUNJRklFRBAAEhkKFUVSUk9SX0tJTkRfQ0FQQUJJTElUWRABEhUKEUVSUk9SX0tJTkRfUE9MSUNZEAISFAoQRVJST1JfS0lORF9RVU9UQRADEhUKEUVSUk9SX0tJTkRfU0NIRU1BEAQSGAoURVJST1JfS0lORF9SRVRSWUFCTEUQBRIXChNFUlJPUl9LSU5EX0lOVEVSTkFMEAYSGQoVRVJST1JfS0lORF9WQUxJREFUSU9OEAcSFwoTRVJST1JfS0lORF9DT05GTElDVBAIEhgKFEVSUk9SX0tJTkRfTk9UX0ZPVU5EEAkSFQoRRVJST1JfS0lORF9VTklRVUUQChIXChNFUlJPUl9LSU5EX05PVF9OVUxMEAsSGgoWRVJST1JfS0lORF9GT1JFSUdOX0tFWRAMEhkKFUVSUk9SX0tJTkRfUEVSTUlTU0lPThANEhcKE0VSUk9SX0tJTkRfUkVEQUNURUQQDhIbChdFUlJPUl9LSU5EX1JBVEVfTElNSVRFRBAPQrABChFjb20udWRiLmVudGl0eS52MUIKRXJyb3JQcm90b1ABWjlnaXRodWIuY29tL2ZhaGFyYTAyL3VkYi9zZGsvZ28vZ2VuL3VkYi9lbnRpdHkvdjE7ZW50aXR5djGiAgNVRViqAg1VZGIuRW50aXR5LlYxygINVWRiXEVudGl0eVxWMeICGVVkYlxHUEJNZXRhZGF0YVxFbnRpdHlcVjHqAg9VZGI6OkVudGl0eTo6VjFiBnByb3RvMw");
 
 /**
  * A single invalid input field. `field` is the protobuf field path relative to
@@ -111,6 +111,46 @@ export type ErrorDetail = Message<"udb.entity.v1.ErrorDetail"> & {
    * @generated from field: repeated udb.entity.v1.ErrorFieldViolation field_violations = 9;
    */
   fieldViolations: ErrorFieldViolation[];
+
+  /**
+   * Stable machine reason, `UDB_` + upper snake case (for example
+   * `UDB_CAS_CONFLICT`, `UDB_CAS_KEY_NOT_PK`, `UDB_NO_ROWS_AFFECTED`). The set is
+   * listed in docs/error-reasons.md; a reason is never renamed once shipped.
+   * Branch on this, never on the message text.
+   *
+   * @generated from field: string reason = 10;
+   */
+  reason: string;
+
+  /**
+   * The constraint involved (unique, foreign key, check), when known.
+   *
+   * @generated from field: string constraint = 11;
+   */
+  constraint: string;
+
+  /**
+   * The column involved (not null, coercion, decode), when known.
+   *
+   * @generated from field: string column = 12;
+   */
+  column: string;
+
+  /**
+   * One sentence telling the caller how to fix the request.
+   *
+   * @generated from field: string fix_hint = 13;
+   */
+  fixHint: string;
+
+  /**
+   * What the caller is missing, as key/value pairs: for example
+   * `{"scope": "udb:pii:read"}`, `{"purpose": ""}`,
+   * `{"rule": "Select acme.notes.v1.Note"}`.
+   *
+   * @generated from field: map<string, string> missing = 14;
+   */
+  missing: { [key: string]: string };
 };
 
 /**
@@ -186,6 +226,66 @@ export enum ErrorKind {
    * @generated from enum value: ERROR_KIND_VALIDATION = 7;
    */
   VALIDATION = 7,
+
+  /**
+   * A compare-and-swap / revision precondition did not hold: the row changed
+   * since the caller read it. Re-read and retry. Maps to FailedPrecondition.
+   *
+   * @generated from enum value: ERROR_KIND_CONFLICT = 8;
+   */
+  CONFLICT = 8,
+
+  /**
+   * The addressed row or resource does not exist (or is not visible to the
+   * caller). Maps to NotFound.
+   *
+   * @generated from enum value: ERROR_KIND_NOT_FOUND = 9;
+   */
+  NOT_FOUND = 9,
+
+  /**
+   * A unique constraint was violated; `constraint` names it. Maps to
+   * AlreadyExists.
+   *
+   * @generated from enum value: ERROR_KIND_UNIQUE = 10;
+   */
+  UNIQUE = 10,
+
+  /**
+   * A NOT NULL column received no value; `column` names it.
+   *
+   * @generated from enum value: ERROR_KIND_NOT_NULL = 11;
+   */
+  NOT_NULL = 11,
+
+  /**
+   * A foreign-key constraint was violated; `constraint` names it.
+   *
+   * @generated from enum value: ERROR_KIND_FOREIGN_KEY = 12;
+   */
+  FOREIGN_KEY = 12,
+
+  /**
+   * The caller lacks a scope, grant or policy rule; `missing` names it.
+   *
+   * @generated from enum value: ERROR_KIND_PERMISSION = 13;
+   */
+  PERMISSION = 13,
+
+  /**
+   * A value was redacted for this caller (PII without the read scope), or a
+   * write tried to store a redacted placeholder.
+   *
+   * @generated from enum value: ERROR_KIND_REDACTED = 14;
+   */
+  REDACTED = 14,
+
+  /**
+   * A rate limit was hit; `retry_after_ms` and `missing` describe the bucket.
+   *
+   * @generated from enum value: ERROR_KIND_RATE_LIMITED = 15;
+   */
+  RATE_LIMITED = 15,
 }
 
 /**

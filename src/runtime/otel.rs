@@ -182,6 +182,10 @@ fn context_from_headers(headers: &http::HeaderMap) -> TraceContext {
 #[derive(Clone, Default)]
 pub struct TraceExtractLayer;
 
+/// Response header carrying the broker's version (`CARGO_PKG_VERSION`) on
+/// every gRPC response. SDKs compare it with their own version.
+pub const UDB_VERSION_HEADER: &str = "x-udb-version";
+
 impl TraceExtractLayer {
     pub fn new() -> Self {
         Self
@@ -259,6 +263,17 @@ where
         #[cfg(feature = "otel")]
         set_span_parent_from_inbound(&span, &ctx);
         let fut = inner.call(req);
+        // Every response on every listener says which broker build answered, so
+        // an SDK can warn about (or refuse) a version it was not built for and
+        // an operator can spot a mixed-version fleet from any client log.
+        let fut = async move {
+            let mut response = fut.await?;
+            response.headers_mut().insert(
+                UDB_VERSION_HEADER,
+                http::HeaderValue::from_static(env!("CARGO_PKG_VERSION")),
+            );
+            Ok::<http::Response<BoxBody>, S::Error>(response)
+        };
         let scoped = CURRENT_TRACE.scope(ctx, fut);
         Box::pin(tracing::Instrument::instrument(scoped, span))
     }

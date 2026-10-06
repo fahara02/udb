@@ -179,6 +179,11 @@ public interface RecordSetOrBuilder extends
       getNextPageTokenBytes();
 
   /**
+   * <pre>
+   * The number of records in THIS page (the length of `records_json`), not the
+   * number of matching rows. Use `exact_total` for that.
+   * </pre>
+   *
    * <code>int32 total_count = 4 [json_name = "totalCount"];</code>
    * @return The totalCount.
    */
@@ -256,4 +261,82 @@ public interface RecordSetOrBuilder extends
    */
   com.google.protobuf.ByteString
       getRecordRevisionsBytes(int index);
+
+  /**
+   * <pre>
+   * True when the page is full (as many records as the request's limit, or the
+   * default limit of 100 when none was given): more rows may match. A read that
+   * was capped never looks like the complete result; page on with
+   * `next_page_token` (set a positive `limit` to get one) or narrow the filter.
+   * </pre>
+   *
+   * <code>bool has_more = 6 [json_name = "hasMore"];</code>
+   * @return The hasMore.
+   */
+  boolean getHasMore();
+
+  /**
+   * <pre>
+   * Every row the filter matches, ignoring the limit and the page position.
+   * Set only when `SelectRequest.include_total` asked for it (it costs one
+   * COUNT query); 0 otherwise.
+   * </pre>
+   *
+   * <code>int64 exact_total = 7 [json_name = "exactTotal"];</code>
+   * @return The exactTotal.
+   */
+  long getExactTotal();
+
+  /**
+   * <pre>
+   * Columns that came back as the redaction placeholder because the caller
+   * lacks the PII read scope (`udb:pii:read`). A value listed here is not the
+   * stored value: never write it back (the broker refuses that write with
+   * reason `UDB_REDACTED_VALUE_WRITE`). Empty when nothing was redacted.
+   * </pre>
+   *
+   * <code>repeated string redacted_fields = 8 [json_name = "redactedFields"];</code>
+   * @return A list containing the redactedFields.
+   */
+  java.util.List<java.lang.String>
+      getRedactedFieldsList();
+  /**
+   * <pre>
+   * Columns that came back as the redaction placeholder because the caller
+   * lacks the PII read scope (`udb:pii:read`). A value listed here is not the
+   * stored value: never write it back (the broker refuses that write with
+   * reason `UDB_REDACTED_VALUE_WRITE`). Empty when nothing was redacted.
+   * </pre>
+   *
+   * <code>repeated string redacted_fields = 8 [json_name = "redactedFields"];</code>
+   * @return The count of redactedFields.
+   */
+  int getRedactedFieldsCount();
+  /**
+   * <pre>
+   * Columns that came back as the redaction placeholder because the caller
+   * lacks the PII read scope (`udb:pii:read`). A value listed here is not the
+   * stored value: never write it back (the broker refuses that write with
+   * reason `UDB_REDACTED_VALUE_WRITE`). Empty when nothing was redacted.
+   * </pre>
+   *
+   * <code>repeated string redacted_fields = 8 [json_name = "redactedFields"];</code>
+   * @param index The index of the element to return.
+   * @return The redactedFields at the given index.
+   */
+  java.lang.String getRedactedFields(int index);
+  /**
+   * <pre>
+   * Columns that came back as the redaction placeholder because the caller
+   * lacks the PII read scope (`udb:pii:read`). A value listed here is not the
+   * stored value: never write it back (the broker refuses that write with
+   * reason `UDB_REDACTED_VALUE_WRITE`). Empty when nothing was redacted.
+   * </pre>
+   *
+   * <code>repeated string redacted_fields = 8 [json_name = "redactedFields"];</code>
+   * @param index The index of the value to return.
+   * @return The bytes of the redactedFields at the given index.
+   */
+  com.google.protobuf.ByteString
+      getRedactedFieldsBytes(int index);
 }

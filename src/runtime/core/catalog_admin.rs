@@ -1451,6 +1451,91 @@ impl DataBrokerRuntime {
         Ok(catalog_id)
     }
 
+    /// `udb catalog stage`: stage `manifest_json` for `project_id` without
+    /// activating it. Returns `(catalog_id, version, replayed)`; staging the same
+    /// manifest again replays the earlier stage instead of adding a row.
+    pub async fn stage_project_catalog(
+        &self,
+        project_id: &str,
+        manifest_json: &[u8],
+        reason: &str,
+        actor: &str,
+    ) -> Result<(String, String, bool), tonic::Status> {
+        let manifest: crate::CatalogManifest =
+            serde_json::from_slice(manifest_json).map_err(|err| {
+                catalog_admin_invalid_field(
+                    "manifest_json",
+                    "must be a serialized CatalogManifest",
+                    format!("catalog manifest payload is not valid JSON: {err}"),
+                )
+            })?;
+        let version = if !manifest.generator_version.trim().is_empty() {
+            format!("generator-{}", manifest.generator_version.trim())
+        } else if !manifest.checksum_sha256.trim().is_empty() {
+            manifest.checksum_sha256.chars().take(12).collect()
+        } else {
+            "v1".to_string()
+        };
+        let compatibility_level = self.config().service.catalog_compatibility_level.clone();
+        let checksum: String = manifest.checksum_sha256.chars().take(16).collect();
+        let staged = self
+            .stage_catalog(
+                project_id,
+                &version,
+                manifest_json,
+                reason,
+                actor,
+                &compatibility_level,
+                &format!("cli-stage:{project_id}:{version}:{checksum}"),
+            )
+            .await?;
+        Ok((
+            staged.catalog.catalog_id,
+            staged.catalog.version,
+            staged.replayed,
+        ))
+    }
+
+    /// `udb catalog activate`: make a staged catalog the project's ACTIVE one.
+    /// Running brokers pick it up through the catalog reload notification.
+    pub async fn activate_project_catalog(
+        &self,
+        project_id: &str,
+        catalog_id: &str,
+        reason: &str,
+        actor: &str,
+    ) -> Result<bool, tonic::Status> {
+        let activated = self
+            .activate_catalog(
+                project_id,
+                catalog_id,
+                reason,
+                actor,
+                &format!("cli-activate:{project_id}:{catalog_id}"),
+            )
+            .await?;
+        Ok(activated.replayed)
+    }
+
+    /// `udb catalog status`: the project's ACTIVE catalog as
+    /// `(catalog_id, version, checksum_sha256, entity_count)`, if any.
+    pub async fn active_project_catalog_summary(
+        &self,
+        project_id: &str,
+    ) -> Result<Option<(String, String, String, usize)>, tonic::Status> {
+        Ok(self
+            .load_active_catalog_for_project(project_id)
+            .await?
+            .map(|record| {
+                (
+                    record.catalog_id,
+                    record.version,
+                    record.checksum_sha256,
+                    record.manifest.tables.len(),
+                )
+            }))
+    }
+
     /// Activate a catalog version (marks it ACTIVE, records activation log).
     pub(crate) async fn activate_catalog(
         &self,

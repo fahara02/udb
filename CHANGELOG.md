@@ -5,6 +5,169 @@ the package version in `Cargo.toml`; historical v0.3.2 audit material is folded
 into the v0.3.x entries because the codebase advanced to v0.3.7 before that
 release line was tagged.
 
+## [0.5.29] - 2026-10-07
+
+This release closes the gaps that made every project write its own wrapper
+around UDB. It covers data correctness, errors that say what to do, a Go SDK
+with typed tables, transactions and durable consumers, and operations commands
+that replace hand-kept scripts.
+
+### Added
+
+**Data correctness**
+- **`NUMERIC` columns round-trip exactly.** They used to read back as NULL. They
+  are now read and written as exact decimal strings, including arrays and
+  compare-and-swap.
+- **One documented JSON shape per column type** (`docs/wire-types.md`).
+  `CHAR(n)` values come back trimmed, and enums, enum arrays and range types
+  decode correctly.
+- **`require_affected` on Update and Delete.** The write fails with
+  `UDB_NO_ROWS_AFFECTED` and changes nothing when the filter matched a different
+  number of rows than expected.
+- **The broker fills in the caller's tenant.** A filter or record that leaves
+  out the tenant column gets the verified tenant; a different tenant is refused.
+- **Capped reads say so.** `RecordSet.has_more` is set when the limit cut the
+  result, and `SelectRequest.include_total` returns the exact count in
+  `exact_total`. Reads without an explicit sort are now ordered by primary key,
+  so pages are stable.
+- **New filter operators:** `$nin`, `$between`, `$not`, and `$is_null: false`.
+- **Strong reads (`primary_read`) skip the read cache.**
+
+**Errors**
+- **Every refusal carries a stable reason code** (`ErrorDetail.reason`, such as
+  `UDB_CAS_CONFLICT` or `UDB_UNIQUE_VIOLATION`), plus `constraint`, `column`,
+  `fix_hint` and `missing` where they apply. The 22 codes are listed in
+  `docs/error-reasons.md`; a code is never renamed once shipped.
+- **Scope and policy denials name what is missing:** the scope, or the closest
+  policy rule and the attribute it fails on.
+- **Rate-limit refusals carry their bucket, limit and retry time.**
+- **Every response carries the broker version** (`x-udb-version`). Setting
+  `UDB_EXPECTED_VERSION` makes the broker refuse to start on a mismatch.
+
+**Auth**
+- **Invites:** `CreateUser` with `password_setup_required` creates the account
+  without a password and sends a password-reset code. `ResetPassword` with that
+  code sets the password, verifies the email and activates the account.
+- **`GetNativeAccess` accepts service accounts.**
+- **`udb auth grant transfer`** moves a grant and its service identity to
+  another service account. It is the only way to do so: creating a grant for an
+  identity another account holds is refused with `UDB_GRANT_OWNED_BY_OTHER`.
+- **`abuse_policy_ref` is enforced.** RPCs that name the same abuse policy, such
+  as ForgotPassword and ResetPassword, share one per-client budget per minute:
+  `UDB_ABUSE_POLICY_<REF>`, default 30.
+
+**Events and LiveQuery**
+- **Durable named consumers.** `PublishCDC` with a `consumer_name` resumes from
+  the consumer's stored position, and the new `AckCdcEvents` RPC records it.
+- **Event envelopes are versioned** (`envelope_version: 2`). A consumer refuses
+  an envelope newer than it understands instead of misreading it.
+- **LiveQuery filters support `IN`, `NOT_IN`, `IS_NULL`, `IS_NOT_NULL`** and OR
+  groups (`any_of`, AND-ed together). A typed `since_event_id` resume point
+  replaces the `x-udb-livequery-resume` header, which still works.
+- **LiveQuery polls the CDC journal once per (topic, tenant, project) on each
+  replica**, instead of once per subscription.
+
+**Go SDK** (`sdk/go/v0.5.29`)
+- **API keys** are exchanged and refreshed by `Connect`. `ConnectFromEnv`, with
+  `Expect` and `Verify`, reports every missing variable in one error, and
+  `Ready` waits for the broker.
+- **Enterprise sessions log in again** when a refresh is refused, and
+  `TenantSessionPool` keeps one session per tenant.
+- **`Table[T]`** offers typed `Get`, `Select`, `Count`, `Upsert`, `Patch`,
+  `UpdateIf`, `UpdateWithRetry`, `Increment` and `Delete`, with read-your-writes
+  and `ErrNotFound`/`ErrConflict`. `udb sdk generate` emits `<Entity>Table` and
+  `<Entity>Key`.
+- **Transactions and consumers:** `Udb.Tx` runs a transaction with `Emit` for
+  events. `Consume[T]` is a durable consumer that reconnects with backoff, acks
+  after the handler, removes duplicates and refuses envelopes newer than it
+  understands.
+- **`LiveQuery[T]`** delivers typed snapshots and changes, with reconnect and
+  resume and the `LQIn`/`LQEq`/... filter helpers.
+- **Builders:** `GraphFrom[T](u, id).Out("REL").Depth(1, 2).Run(ctx)` and
+  `VectorsHybrid[T](u, coll).Text(q).Near(v).Run(ctx)`.
+- **`EncodeRecord`/`DecodeRecord` and `EncodeField`/`DecodeField`** convert
+  messages and rows following the column annotations. The closed `ErrorCode`
+  enum and `Inspect` replace message matching.
+- **`udbtest`:** an in-memory broker and the `conformance.RunTable` suite, which
+  also runs against a live broker in CI.
+- **Generated code skips nothing.** Repeated fields, maps, messages in JSON
+  columns and enums from other packages all round-trip. A message stored in a
+  non-JSON column fails generation and names the field.
+- **Every RPC's metadata states its listener, scopes, credential types and
+  retry rules** (`RPCInfo.Describe`, `DescribeRPC`).
+
+**CLI**
+- **`udb check`** gives one verdict and one exit code over the catalog lint, the
+  policy lint and entity/policy coverage. New lints flag unknown projection
+  option keys and `payload_fields`/`fts_columns` that name a missing, encrypted
+  or PII column.
+- **`udb policy diff|apply`** reconciles one tenant's policies from a file in a
+  single transaction and refuses rules for another tenant. The comparison
+  covers purpose, conditions and scopes. Removed rules are soft-deleted, and
+  every replica reloads.
+- **`udb identity diff|apply`** reconciles service-account grants from a file.
+  It never moves a grant without `--allow-transfer` and never revokes one.
+- **`udb data seed`** upserts seed rows through the broker.
+- **`udb up`** applies a project's `udb.yaml` (policies, service accounts, seed
+  data); `--dry-run` shows the differences only.
+- **`udb authz check|explain`** asks the live policy engine for a decision and
+  its diagnosis.
+- **`udb catalog stage|activate|status`.**
+- **`udb verify --live`** also reports delivery health: outbox backlog,
+  durable-consumer lag and projection queue age.
+- **`udb upgrade --check --from X`** lists the breaking changes between two
+  versions that apply to your code (`--repo`) and data (`--dsn`).
+- **`udb self verify|install`** checks or installs a release binary against the
+  release's `manifest.json` and sha256. Release binaries now carry GitHub
+  build-provenance attestations.
+- **Operations:** `udb projection status|backfill`, `udb events tail --decode`,
+  `udb resources list` and `udb gen edge A -[REL{props}]-> B`.
+- **Typed projection options on `data_store`:** `payload_fields`,
+  `fts_columns`, `fts_config` and `edge_source_*`/`edge_target_*`. A misspelled
+  typed field fails the proto build.
+
+### Changed
+
+- **A failed mutation inside a transaction keeps its own error** (code, reason
+  and detail), instead of being re-wrapped as INTERNAL.
+- **A plain `Select` on a table with PII columns no longer needs
+  `udb:pii:read`.** The PII columns come back masked.
+- **ForgotPassword and AdminResetPassword respect `UDB_OTP_COOLDOWN_SECONDS`.**
+  During the cooldown, ForgotPassword sends no new code and answers exactly as
+  for an unknown address.
+- **The control-plane reload loop** re-reads everything only every 30 ticks.
+- **`PutPolicy` is deprecated** in favour of `udb policy apply`.
+
+### Breaking for callers
+
+- **A value that cannot be decoded is now an error, not NULL.** The error is
+  `UDB_DECODE_FAILED` and names the column. Code that treated NULL as "missing"
+  for such columns now sees the error.
+  - fix: report the column's SQL type; the error points at a broker defect, not a request error.
+- **Writing the redaction placeholder back is refused.** A row read without the
+  PII scope and written back unchanged now fails with `UDB_REDACTED_VALUE_WRITE`
+  instead of overwriting the real value with `***MASKED***`.
+  - detect: code: ***MASKED***
+  - fix: read with the `udb:pii:read` scope before writing the row back, or leave masked columns out of the write.
+- **A table with row-level security but no tenant column fails the build.**
+  - fix: mark the tenant column with `tenant_column: true`, or drop `enable_rls`.
+- **Reads without an explicit sort are ordered by primary key.** Code that
+  relied on the previous, unspecified order sees a different order.
+  - fix: pass an explicit sort when you need a specific order.
+- **Transaction mutation failures keep their original gRPC code.** Code that
+  matched `INTERNAL` for a failed transaction mutation now sees, for example,
+  `ALREADY_EXISTS` or `FAILED_PRECONDITION`.
+  - detect: code: codes.Internal
+  - fix: branch on `ErrorDetail.reason` (Go: `udbclient.CodeOf(err)`) instead of the gRPC code.
+- **Public auth RPCs share a per-client abuse budget** (30 requests per minute
+  per policy by default). Load tests that hammer login or reset from one
+  address are throttled earlier.
+  - detect: code: ForgotPassword
+  - fix: raise `UDB_ABUSE_POLICY_<REF>` (for example `UDB_ABUSE_POLICY_AUTHN_PASSWORD_RESET_ABUSE`) for test environments.
+- **`udb sdk generate` refuses a message stored in a non-JSON column.** Such
+  fields were silently left out before.
+  - fix: give the column `sql_type: "JSONB"`, or flatten the message into scalar fields.
+
 ## [0.5.28] - 2026-10-07
 
 ### Added

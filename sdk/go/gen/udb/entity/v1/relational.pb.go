@@ -212,7 +212,9 @@ type RecordSet struct {
 	// deprecated for reads.
 	Rows          []*Row `protobuf:"bytes,2,rep,name=rows,proto3" json:"rows,omitempty"`
 	NextPageToken string `protobuf:"bytes,3,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
-	TotalCount    int32  `protobuf:"varint,4,opt,name=total_count,json=totalCount,proto3" json:"total_count,omitempty"`
+	// The number of records in THIS page (the length of `records_json`), not the
+	// number of matching rows. Use `exact_total` for that.
+	TotalCount int32 `protobuf:"varint,4,opt,name=total_count,json=totalCount,proto3" json:"total_count,omitempty"`
 	// #5 (opaque row revision / ETag): when the caller asked for revisions
 	// (`SelectRequest.include_revision`), this carries the broker-maintained
 	// opaque revision token for each returned record, index-aligned with
@@ -223,8 +225,22 @@ type RecordSet struct {
 	// feed it back as `UpdateRequest.expected_revision` / `DeleteRequest.
 	// expected_revision` for optimistic concurrency.
 	RecordRevisions []string `protobuf:"bytes,5,rep,name=record_revisions,json=recordRevisions,proto3" json:"record_revisions,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	// True when the page is full (as many records as the request's limit, or the
+	// default limit of 100 when none was given): more rows may match. A read that
+	// was capped never looks like the complete result; page on with
+	// `next_page_token` (set a positive `limit` to get one) or narrow the filter.
+	HasMore bool `protobuf:"varint,6,opt,name=has_more,json=hasMore,proto3" json:"has_more,omitempty"`
+	// Every row the filter matches, ignoring the limit and the page position.
+	// Set only when `SelectRequest.include_total` asked for it (it costs one
+	// COUNT query); 0 otherwise.
+	ExactTotal int64 `protobuf:"varint,7,opt,name=exact_total,json=exactTotal,proto3" json:"exact_total,omitempty"`
+	// Columns that came back as the redaction placeholder because the caller
+	// lacks the PII read scope (`udb:pii:read`). A value listed here is not the
+	// stored value: never write it back (the broker refuses that write with
+	// reason `UDB_REDACTED_VALUE_WRITE`). Empty when nothing was redacted.
+	RedactedFields []string `protobuf:"bytes,8,rep,name=redacted_fields,json=redactedFields,proto3" json:"redacted_fields,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *RecordSet) Reset() {
@@ -292,6 +308,27 @@ func (x *RecordSet) GetRecordRevisions() []string {
 	return nil
 }
 
+func (x *RecordSet) GetHasMore() bool {
+	if x != nil {
+		return x.HasMore
+	}
+	return false
+}
+
+func (x *RecordSet) GetExactTotal() int64 {
+	if x != nil {
+		return x.ExactTotal
+	}
+	return 0
+}
+
+func (x *RecordSet) GetRedactedFields() []string {
+	if x != nil {
+		return x.RedactedFields
+	}
+	return nil
+}
+
 type SelectRequest struct {
 	state       protoimpl.MessageState `protogen:"open.v1"`
 	Context     *RequestContext        `protobuf:"bytes,1,opt,name=context,proto3" json:"context,omitempty"`
@@ -306,8 +343,11 @@ type SelectRequest struct {
 	// system-side revision map and fills `RecordSet.record_revisions`. Off by
 	// default so the read hot path is unchanged (zero extra SQL).
 	IncludeRevision bool `protobuf:"varint,9,opt,name=include_revision,json=includeRevision,proto3" json:"include_revision,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	// Also count every matching row into `RecordSet.exact_total` (one extra
+	// COUNT over the same filter and scope; the read cache is skipped).
+	IncludeTotal  bool `protobuf:"varint,10,opt,name=include_total,json=includeTotal,proto3" json:"include_total,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *SelectRequest) Reset() {
@@ -399,6 +439,13 @@ func (x *SelectRequest) GetCache() *CacheOptions {
 func (x *SelectRequest) GetIncludeRevision() bool {
 	if x != nil {
 		return x.IncludeRevision
+	}
+	return false
+}
+
+func (x *SelectRequest) GetIncludeTotal() bool {
+	if x != nil {
+		return x.IncludeTotal
 	}
 	return false
 }
@@ -576,10 +623,17 @@ type DeleteRequest struct {
 	// reveals a foreign row's existence). ABA-safe (the revision only increases).
 	ExpectedRevision string `protobuf:"bytes,6,opt,name=expected_revision,json=expectedRevision,proto3" json:"expected_revision,omitempty"`
 	// gate 25 (lock-fencing-at-commit): see UpdateRequest.lock_name/fencing_token.
-	LockName      string `protobuf:"bytes,7,opt,name=lock_name,json=lockName,proto3" json:"lock_name,omitempty"`
-	FencingToken  int64  `protobuf:"varint,8,opt,name=fencing_token,json=fencingToken,proto3" json:"fencing_token,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	LockName     string `protobuf:"bytes,7,opt,name=lock_name,json=lockName,proto3" json:"lock_name,omitempty"`
+	FencingToken int64  `protobuf:"varint,8,opt,name=fencing_token,json=fencingToken,proto3" json:"fencing_token,omitempty"`
+	// Optional exact row count. When non-zero the write must change exactly this
+	// many rows, checked inside the write transaction; any other count changes
+	// nothing and fails NOT_FOUND with reason `UDB_NO_ROWS_AFFECTED`. Set 1 for a
+	// single-row write that must not silently match nothing (an already-deleted
+	// row, a key that drifted). 0 keeps today's behaviour: the count is reported
+	// in MutationResponse.affected_rows and never checked.
+	RequireAffected uint32 `protobuf:"varint,9,opt,name=require_affected,json=requireAffected,proto3" json:"require_affected,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *DeleteRequest) Reset() {
@@ -668,6 +722,13 @@ func (x *DeleteRequest) GetFencingToken() int64 {
 	return 0
 }
 
+func (x *DeleteRequest) GetRequireAffected() uint32 {
+	if x != nil {
+		return x.RequireAffected
+	}
+	return 0
+}
+
 // Partial update: set only the named columns (and/or apply atomic increments)
 // on the rows matched by `filter`, without resending the full record. Closes
 // the Select → merge → full-record Upsert pattern every consumer carried, and
@@ -705,10 +766,17 @@ type UpdateRequest struct {
 	// write transaction; a stale token (a writer that outlived its lease) is
 	// rejected fail-closed with NO write / projection / CDC / audit / idempotency
 	// side effect. Unset (empty `lock_name`) = no fencing (unchanged behaviour).
-	LockName      string `protobuf:"bytes,10,opt,name=lock_name,json=lockName,proto3" json:"lock_name,omitempty"`
-	FencingToken  int64  `protobuf:"varint,11,opt,name=fencing_token,json=fencingToken,proto3" json:"fencing_token,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	LockName     string `protobuf:"bytes,10,opt,name=lock_name,json=lockName,proto3" json:"lock_name,omitempty"`
+	FencingToken int64  `protobuf:"varint,11,opt,name=fencing_token,json=fencingToken,proto3" json:"fencing_token,omitempty"`
+	// Optional exact row count. When non-zero the write must change exactly this
+	// many rows, checked inside the write transaction; any other count changes
+	// nothing and fails NOT_FOUND with reason `UDB_NO_ROWS_AFFECTED`. Set 1 for a
+	// single-row write that must not silently match nothing (an already-deleted
+	// row, a key that drifted). 0 keeps today's behaviour: the count is reported
+	// in MutationResponse.affected_rows and never checked.
+	RequireAffected uint32 `protobuf:"varint,12,opt,name=require_affected,json=requireAffected,proto3" json:"require_affected,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *UpdateRequest) Reset() {
@@ -814,6 +882,13 @@ func (x *UpdateRequest) GetLockName() string {
 func (x *UpdateRequest) GetFencingToken() int64 {
 	if x != nil {
 		return x.FencingToken
+	}
+	return 0
+}
+
+func (x *UpdateRequest) GetRequireAffected() uint32 {
+	if x != nil {
+		return x.RequireAffected
 	}
 	return 0
 }
@@ -1298,14 +1373,18 @@ const file_udb_entity_v1_relational_proto_rawDesc = "" +
 	"\x06fields\x18\x01 \x03(\v2\x1e.udb.entity.v1.Row.FieldsEntryR\x06fields\x1aQ\n" +
 	"\vFieldsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12,\n" +
-	"\x05value\x18\x02 \x01(\v2\x16.google.protobuf.ValueR\x05value:\x028\x01\"\xca\x01\n" +
+	"\x05value\x18\x02 \x01(\v2\x16.google.protobuf.ValueR\x05value:\x028\x01\"\xaf\x02\n" +
 	"\tRecordSet\x12!\n" +
 	"\frecords_json\x18\x01 \x03(\fR\vrecordsJson\x12&\n" +
 	"\x04rows\x18\x02 \x03(\v2\x12.udb.entity.v1.RowR\x04rows\x12&\n" +
 	"\x0fnext_page_token\x18\x03 \x01(\tR\rnextPageToken\x12\x1f\n" +
 	"\vtotal_count\x18\x04 \x01(\x05R\n" +
 	"totalCount\x12)\n" +
-	"\x10record_revisions\x18\x05 \x03(\tR\x0frecordRevisions\"\xf0\x02\n" +
+	"\x10record_revisions\x18\x05 \x03(\tR\x0frecordRevisions\x12\x19\n" +
+	"\bhas_more\x18\x06 \x01(\bR\ahasMore\x12\x1f\n" +
+	"\vexact_total\x18\a \x01(\x03R\n" +
+	"exactTotal\x12'\n" +
+	"\x0fredacted_fields\x18\b \x03(\tR\x0eredactedFields\"\x95\x03\n" +
 	"\rSelectRequest\x127\n" +
 	"\acontext\x18\x01 \x01(\v2\x1d.udb.entity.v1.RequestContextR\acontext\x12!\n" +
 	"\fmessage_type\x18\x02 \x01(\tR\vmessageType\x12/\n" +
@@ -1316,7 +1395,9 @@ const file_udb_entity_v1_relational_proto_rawDesc = "" +
 	"page_token\x18\x06 \x01(\tR\tpageToken\x12'\n" +
 	"\x04sort\x18\a \x03(\v2\x13.udb.entity.v1.SortR\x04sort\x121\n" +
 	"\x05cache\x18\b \x01(\v2\x1b.udb.entity.v1.CacheOptionsR\x05cache\x12)\n" +
-	"\x10include_revision\x18\t \x01(\bR\x0fincludeRevision\"\xe0\x03\n" +
+	"\x10include_revision\x18\t \x01(\bR\x0fincludeRevision\x12#\n" +
+	"\rinclude_total\x18\n" +
+	" \x01(\bR\fincludeTotal\"\xe0\x03\n" +
 	"\rUpsertRequest\x127\n" +
 	"\acontext\x18\x01 \x01(\v2\x1d.udb.entity.v1.RequestContextR\acontext\x12!\n" +
 	"\fmessage_type\x18\x02 \x01(\tR\vmessageType\x12\x1f\n" +
@@ -1330,7 +1411,7 @@ const file_udb_entity_v1_relational_proto_rawDesc = "" +
 	"\bexpected\x18\t \x01(\v2\x17.google.protobuf.StructR\bexpected\x12\x1b\n" +
 	"\tlock_name\x18\n" +
 	" \x01(\tR\blockName\x12#\n" +
-	"\rfencing_token\x18\v \x01(\x03R\ffencingToken\"\xe9\x02\n" +
+	"\rfencing_token\x18\v \x01(\x03R\ffencingToken\"\x94\x03\n" +
 	"\rDeleteRequest\x127\n" +
 	"\acontext\x18\x01 \x01(\v2\x1d.udb.entity.v1.RequestContextR\acontext\x12!\n" +
 	"\fmessage_type\x18\x02 \x01(\tR\vmessageType\x12/\n" +
@@ -1339,7 +1420,8 @@ const file_udb_entity_v1_relational_proto_rawDesc = "" +
 	"\bexpected\x18\x05 \x01(\v2\x17.google.protobuf.StructR\bexpected\x12+\n" +
 	"\x11expected_revision\x18\x06 \x01(\tR\x10expectedRevision\x12\x1b\n" +
 	"\tlock_name\x18\a \x01(\tR\blockName\x12#\n" +
-	"\rfencing_token\x18\b \x01(\x03R\ffencingToken\"\xc4\x04\n" +
+	"\rfencing_token\x18\b \x01(\x03R\ffencingToken\x12)\n" +
+	"\x10require_affected\x18\t \x01(\rR\x0frequireAffected\"\xef\x04\n" +
 	"\rUpdateRequest\x127\n" +
 	"\acontext\x18\x01 \x01(\v2\x1d.udb.entity.v1.RequestContextR\acontext\x12!\n" +
 	"\fmessage_type\x18\x02 \x01(\tR\vmessageType\x12/\n" +
@@ -1354,7 +1436,8 @@ const file_udb_entity_v1_relational_proto_rawDesc = "" +
 	"\x11expected_revision\x18\t \x01(\tR\x10expectedRevision\x12\x1b\n" +
 	"\tlock_name\x18\n" +
 	" \x01(\tR\blockName\x12#\n" +
-	"\rfencing_token\x18\v \x01(\x03R\ffencingToken\x1a9\n" +
+	"\rfencing_token\x18\v \x01(\x03R\ffencingToken\x12)\n" +
+	"\x10require_affected\x18\f \x01(\rR\x0frequireAffected\x1a9\n" +
 	"\tIncrement\x12\x16\n" +
 	"\x06column\x18\x01 \x01(\tR\x06column\x12\x14\n" +
 	"\x05delta\x18\x02 \x01(\x01R\x05delta\"\xc3\x01\n" +

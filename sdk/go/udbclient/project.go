@@ -80,7 +80,14 @@ type Config struct {
 // Credentials carries the per-call auth material the facade attaches as headers.
 type Credentials struct {
 	Bearer string // sent as "authorization: Bearer <token>"
-	APIKey string // sent as "x-api-key: <key>"
+	// APIKey is a service-account key. Without a Bearer, NewUdb exchanges it for
+	// a service bearer at connect and keeps that bearer fresh in the background;
+	// the raw key is never sent on a call.
+	APIKey string
+	// RawAPIKey restores the pre-0.5.31 behaviour of sending APIKey as an
+	// `x-api-key` header on every call instead of exchanging it. Deprecated:
+	// removed in 0.6.0 (the native control plane refuses raw keys).
+	RawAPIKey bool
 }
 
 func (c Config) metadata() Metadata {
@@ -100,7 +107,9 @@ func (c Config) options() Options {
 		Meta:        c.metadata(),
 		CallTimeout: c.Deadline,
 		Retry:       c.Retry,
-		APIKey:      c.Credentials.APIKey,
+	}
+	if c.Credentials.RawAPIKey || c.Credentials.Bearer != "" {
+		o.APIKey = c.Credentials.APIKey
 	}
 	if c.Credentials.Bearer != "" {
 		o.Authorization = "Bearer " + c.Credentials.Bearer
@@ -139,6 +148,12 @@ type Udb struct {
 
 	// owned connections to close.
 	conns []*grpc.ClientConn
+
+	// apiKey is the exchanged service-account key state (nil when the
+	// connection does not exchange one); see apikey_session.go.
+	apiKey *apiKeySession
+	// fence is the latest Table write's receipt; see session_fence.go.
+	fence writeFence
 }
 
 // Connect is the canonical naming-contract constructor: it dials the broker and
@@ -238,6 +253,13 @@ func NewUdb(ctx context.Context, cfg Config) (*Udb, error) {
 	}
 	u.webrtcConn = webrtcConn
 	u.WebRTC = newWebRTCFacade(webrtcConn, meta)
+
+	if cfg.Credentials.APIKey != "" && cfg.Credentials.Bearer == "" && !cfg.Credentials.RawAPIKey {
+		if err := u.startAPIKeyExchange(ctx, cfg.Credentials.APIKey, cfg.Deadline); err != nil {
+			_ = u.Close()
+			return nil, err
+		}
+	}
 
 	return u, nil
 }
@@ -357,6 +379,7 @@ func (u *Udb) LoginAndAdoptTenant(ctx context.Context, req *authnv1.LoginRequest
 
 // Close closes every connection NewUdb owns. Safe to call once.
 func (u *Udb) Close() error {
+	u.stopAPIKeyRefresh()
 	var firstErr error
 	for _, c := range u.conns {
 		if err := c.Close(); err != nil && firstErr == nil {

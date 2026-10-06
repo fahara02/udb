@@ -54,6 +54,13 @@ class SelectRequest extends \Google\Protobuf\Internal\Message
      * Generated from protobuf field <code>bool include_revision = 9 [json_name = "includeRevision"];</code>
      */
     protected $include_revision = false;
+    /**
+     * Also count every matching row into `RecordSet.exact_total` (one extra
+     * COUNT over the same filter and scope; the read cache is skipped).
+     *
+     * Generated from protobuf field <code>bool include_total = 10 [json_name = "includeTotal"];</code>
+     */
+    protected $include_total = false;
 
     /**
      * Constructor.
@@ -73,6 +80,9 @@ class SelectRequest extends \Google\Protobuf\Internal\Message
      *           #5: opt-in — when true, the broker joins each returned record against the
      *           system-side revision map and fills `RecordSet.record_revisions`. Off by
      *           default so the read hot path is unchanged (zero extra SQL).
+     *     @type bool $include_total
+     *           Also count every matching row into `RecordSet.exact_total` (one extra
+     *           COUNT over the same filter and scope; the read cache is skipped).
      * }
      */
     public function __construct($data = NULL) {
@@ -312,6 +322,34 @@ class SelectRequest extends \Google\Protobuf\Internal\Message
     {
         GPBUtil::checkBool($var);
         $this->include_revision = $var;
+
+        return $this;
+    }
+
+    /**
+     * Also count every matching row into `RecordSet.exact_total` (one extra
+     * COUNT over the same filter and scope; the read cache is skipped).
+     *
+     * Generated from protobuf field <code>bool include_total = 10 [json_name = "includeTotal"];</code>
+     * @return bool
+     */
+    public function getIncludeTotal()
+    {
+        return $this->include_total;
+    }
+
+    /**
+     * Also count every matching row into `RecordSet.exact_total` (one extra
+     * COUNT over the same filter and scope; the read cache is skipped).
+     *
+     * Generated from protobuf field <code>bool include_total = 10 [json_name = "includeTotal"];</code>
+     * @param bool $var
+     * @return $this
+     */
+    public function setIncludeTotal($var)
+    {
+        GPBUtil::checkBool($var);
+        $this->include_total = $var;
 
         return $this;
     }

@@ -35,6 +35,10 @@ private static final long serialVersionUID = 0L;
     correlationId_ = "";
     kind_ = 0;
     fieldViolations_ = java.util.Collections.emptyList();
+    reason_ = "";
+    constraint_ = "";
+    column_ = "";
+    fixHint_ = "";
   }
 
   public static final com.google.protobuf.Descriptors.Descriptor
@@ -42,6 +46,18 @@ private static final long serialVersionUID = 0L;
     return com.udb.entity.v1.ErrorProto.internal_static_udb_entity_v1_ErrorDetail_descriptor;
   }
 
+  @SuppressWarnings({"rawtypes"})
+  @java.lang.Override
+  protected com.google.protobuf.MapFieldReflectionAccessor internalGetMapFieldReflection(
+      int number) {
+    switch (number) {
+      case 14:
+        return internalGetMissing();
+      default:
+        throw new RuntimeException(
+            "Invalid map field number: " + number);
+    }
+  }
   @java.lang.Override
   protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internalGetFieldAccessorTable() {
@@ -419,6 +435,303 @@ private static final long serialVersionUID = 0L;
     return fieldViolations_.get(index);
   }
 
+  public static final int REASON_FIELD_NUMBER = 10;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object reason_ = "";
+  /**
+   * <pre>
+   * Stable machine reason, `UDB_` + upper snake case (for example
+   * `UDB_CAS_CONFLICT`, `UDB_CAS_KEY_NOT_PK`, `UDB_NO_ROWS_AFFECTED`). The set is
+   * listed in docs/error-reasons.md; a reason is never renamed once shipped.
+   * Branch on this, never on the message text.
+   * </pre>
+   *
+   * <code>string reason = 10 [json_name = "reason"];</code>
+   * @return The reason.
+   */
+  @java.lang.Override
+  public java.lang.String getReason() {
+    java.lang.Object ref = reason_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs =
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      reason_ = s;
+      return s;
+    }
+  }
+  /**
+   * <pre>
+   * Stable machine reason, `UDB_` + upper snake case (for example
+   * `UDB_CAS_CONFLICT`, `UDB_CAS_KEY_NOT_PK`, `UDB_NO_ROWS_AFFECTED`). The set is
+   * listed in docs/error-reasons.md; a reason is never renamed once shipped.
+   * Branch on this, never on the message text.
+   * </pre>
+   *
+   * <code>string reason = 10 [json_name = "reason"];</code>
+   * @return The bytes for reason.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getReasonBytes() {
+    java.lang.Object ref = reason_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b =
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      reason_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
+  public static final int CONSTRAINT_FIELD_NUMBER = 11;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object constraint_ = "";
+  /**
+   * <pre>
+   * The constraint involved (unique, foreign key, check), when known.
+   * </pre>
+   *
+   * <code>string constraint = 11 [json_name = "constraint"];</code>
+   * @return The constraint.
+   */
+  @java.lang.Override
+  public java.lang.String getConstraint() {
+    java.lang.Object ref = constraint_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs =
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      constraint_ = s;
+      return s;
+    }
+  }
+  /**
+   * <pre>
+   * The constraint involved (unique, foreign key, check), when known.
+   * </pre>
+   *
+   * <code>string constraint = 11 [json_name = "constraint"];</code>
+   * @return The bytes for constraint.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getConstraintBytes() {
+    java.lang.Object ref = constraint_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b =
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      constraint_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
+  public static final int COLUMN_FIELD_NUMBER = 12;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object column_ = "";
+  /**
+   * <pre>
+   * The column involved (not null, coercion, decode), when known.
+   * </pre>
+   *
+   * <code>string column = 12 [json_name = "column"];</code>
+   * @return The column.
+   */
+  @java.lang.Override
+  public java.lang.String getColumn() {
+    java.lang.Object ref = column_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs =
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      column_ = s;
+      return s;
+    }
+  }
+  /**
+   * <pre>
+   * The column involved (not null, coercion, decode), when known.
+   * </pre>
+   *
+   * <code>string column = 12 [json_name = "column"];</code>
+   * @return The bytes for column.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getColumnBytes() {
+    java.lang.Object ref = column_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b =
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      column_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
+  public static final int FIX_HINT_FIELD_NUMBER = 13;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object fixHint_ = "";
+  /**
+   * <pre>
+   * One sentence telling the caller how to fix the request.
+   * </pre>
+   *
+   * <code>string fix_hint = 13 [json_name = "fixHint"];</code>
+   * @return The fixHint.
+   */
+  @java.lang.Override
+  public java.lang.String getFixHint() {
+    java.lang.Object ref = fixHint_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs =
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      fixHint_ = s;
+      return s;
+    }
+  }
+  /**
+   * <pre>
+   * One sentence telling the caller how to fix the request.
+   * </pre>
+   *
+   * <code>string fix_hint = 13 [json_name = "fixHint"];</code>
+   * @return The bytes for fixHint.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getFixHintBytes() {
+    java.lang.Object ref = fixHint_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b =
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      fixHint_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
+  public static final int MISSING_FIELD_NUMBER = 14;
+  private static final class MissingDefaultEntryHolder {
+    static final com.google.protobuf.MapEntry<
+        java.lang.String, java.lang.String> defaultEntry =
+            com.google.protobuf.MapEntry
+            .<java.lang.String, java.lang.String>newDefaultInstance(
+                com.udb.entity.v1.ErrorProto.internal_static_udb_entity_v1_ErrorDetail_MissingEntry_descriptor,
+                com.google.protobuf.WireFormat.FieldType.STRING,
+                "",
+                com.google.protobuf.WireFormat.FieldType.STRING,
+                "");
+  }
+  @SuppressWarnings("serial")
+  private com.google.protobuf.MapField<
+      java.lang.String, java.lang.String> missing_;
+  private com.google.protobuf.MapField<java.lang.String, java.lang.String>
+  internalGetMissing() {
+    if (missing_ == null) {
+      return com.google.protobuf.MapField.emptyMapField(
+          MissingDefaultEntryHolder.defaultEntry);
+    }
+    return missing_;
+  }
+  public int getMissingCount() {
+    return internalGetMissing().getMap().size();
+  }
+  /**
+   * <pre>
+   * What the caller is missing, as key/value pairs: for example
+   * `{"scope": "udb:pii:read"}`, `{"purpose": ""}`,
+   * `{"rule": "Select acme.notes.v1.Note"}`.
+   * </pre>
+   *
+   * <code>map&lt;string, string&gt; missing = 14 [json_name = "missing"];</code>
+   */
+  @java.lang.Override
+  public boolean containsMissing(
+      java.lang.String key) {
+    if (key == null) { throw new NullPointerException("map key"); }
+    return internalGetMissing().getMap().containsKey(key);
+  }
+  /**
+   * Use {@link #getMissingMap()} instead.
+   */
+  @java.lang.Override
+  @java.lang.Deprecated
+  public java.util.Map<java.lang.String, java.lang.String> getMissing() {
+    return getMissingMap();
+  }
+  /**
+   * <pre>
+   * What the caller is missing, as key/value pairs: for example
+   * `{"scope": "udb:pii:read"}`, `{"purpose": ""}`,
+   * `{"rule": "Select acme.notes.v1.Note"}`.
+   * </pre>
+   *
+   * <code>map&lt;string, string&gt; missing = 14 [json_name = "missing"];</code>
+   */
+  @java.lang.Override
+  public java.util.Map<java.lang.String, java.lang.String> getMissingMap() {
+    return internalGetMissing().getMap();
+  }
+  /**
+   * <pre>
+   * What the caller is missing, as key/value pairs: for example
+   * `{"scope": "udb:pii:read"}`, `{"purpose": ""}`,
+   * `{"rule": "Select acme.notes.v1.Note"}`.
+   * </pre>
+   *
+   * <code>map&lt;string, string&gt; missing = 14 [json_name = "missing"];</code>
+   */
+  @java.lang.Override
+  public /* nullable */
+java.lang.String getMissingOrDefault(
+      java.lang.String key,
+      /* nullable */
+java.lang.String defaultValue) {
+    if (key == null) { throw new NullPointerException("map key"); }
+    java.util.Map<java.lang.String, java.lang.String> map =
+        internalGetMissing().getMap();
+    return map.containsKey(key) ? map.get(key) : defaultValue;
+  }
+  /**
+   * <pre>
+   * What the caller is missing, as key/value pairs: for example
+   * `{"scope": "udb:pii:read"}`, `{"purpose": ""}`,
+   * `{"rule": "Select acme.notes.v1.Note"}`.
+   * </pre>
+   *
+   * <code>map&lt;string, string&gt; missing = 14 [json_name = "missing"];</code>
+   */
+  @java.lang.Override
+  public java.lang.String getMissingOrThrow(
+      java.lang.String key) {
+    if (key == null) { throw new NullPointerException("map key"); }
+    java.util.Map<java.lang.String, java.lang.String> map =
+        internalGetMissing().getMap();
+    if (!map.containsKey(key)) {
+      throw new java.lang.IllegalArgumentException();
+    }
+    return map.get(key);
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -460,6 +773,24 @@ private static final long serialVersionUID = 0L;
     for (int i = 0; i < fieldViolations_.size(); i++) {
       output.writeMessage(9, fieldViolations_.get(i));
     }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(reason_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 10, reason_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(constraint_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 11, constraint_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(column_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 12, column_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(fixHint_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 13, fixHint_);
+    }
+    com.google.protobuf.GeneratedMessage
+      .serializeStringMapTo(
+        output,
+        internalGetMissing(),
+        MissingDefaultEntryHolder.defaultEntry,
+        14);
     getUnknownFields().writeTo(output);
   }
 
@@ -500,6 +831,28 @@ private static final long serialVersionUID = 0L;
       size += com.google.protobuf.CodedOutputStream
         .computeMessageSize(9, fieldViolations_.get(i));
     }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(reason_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(10, reason_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(constraint_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(11, constraint_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(column_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(12, column_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(fixHint_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(13, fixHint_);
+    }
+    for (java.util.Map.Entry<java.lang.String, java.lang.String> entry
+         : internalGetMissing().getMap().entrySet()) {
+      com.google.protobuf.MapEntry<java.lang.String, java.lang.String>
+      missing__ = MissingDefaultEntryHolder.defaultEntry.newBuilderForType()
+          .setKey(entry.getKey())
+          .setValue(entry.getValue())
+          .build();
+      size += com.google.protobuf.CodedOutputStream
+          .computeMessageSize(14, missing__);
+    }
     size += getUnknownFields().getSerializedSize();
     memoizedSize = size;
     return size;
@@ -532,6 +885,16 @@ private static final long serialVersionUID = 0L;
     if (kind_ != other.kind_) return false;
     if (!getFieldViolationsList()
         .equals(other.getFieldViolationsList())) return false;
+    if (!getReason()
+        .equals(other.getReason())) return false;
+    if (!getConstraint()
+        .equals(other.getConstraint())) return false;
+    if (!getColumn()
+        .equals(other.getColumn())) return false;
+    if (!getFixHint()
+        .equals(other.getFixHint())) return false;
+    if (!internalGetMissing().equals(
+        other.internalGetMissing())) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -564,6 +927,18 @@ private static final long serialVersionUID = 0L;
     if (getFieldViolationsCount() > 0) {
       hash = (37 * hash) + FIELD_VIOLATIONS_FIELD_NUMBER;
       hash = (53 * hash) + getFieldViolationsList().hashCode();
+    }
+    hash = (37 * hash) + REASON_FIELD_NUMBER;
+    hash = (53 * hash) + getReason().hashCode();
+    hash = (37 * hash) + CONSTRAINT_FIELD_NUMBER;
+    hash = (53 * hash) + getConstraint().hashCode();
+    hash = (37 * hash) + COLUMN_FIELD_NUMBER;
+    hash = (53 * hash) + getColumn().hashCode();
+    hash = (37 * hash) + FIX_HINT_FIELD_NUMBER;
+    hash = (53 * hash) + getFixHint().hashCode();
+    if (!internalGetMissing().getMap().isEmpty()) {
+      hash = (37 * hash) + MISSING_FIELD_NUMBER;
+      hash = (53 * hash) + internalGetMissing().hashCode();
     }
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
@@ -674,6 +1049,28 @@ private static final long serialVersionUID = 0L;
       return com.udb.entity.v1.ErrorProto.internal_static_udb_entity_v1_ErrorDetail_descriptor;
     }
 
+    @SuppressWarnings({"rawtypes"})
+    protected com.google.protobuf.MapFieldReflectionAccessor internalGetMapFieldReflection(
+        int number) {
+      switch (number) {
+        case 14:
+          return internalGetMissing();
+        default:
+          throw new RuntimeException(
+              "Invalid map field number: " + number);
+      }
+    }
+    @SuppressWarnings({"rawtypes"})
+    protected com.google.protobuf.MapFieldReflectionAccessor internalGetMutableMapFieldReflection(
+        int number) {
+      switch (number) {
+        case 14:
+          return internalGetMutableMissing();
+        default:
+          throw new RuntimeException(
+              "Invalid map field number: " + number);
+      }
+    }
     @java.lang.Override
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
@@ -711,6 +1108,11 @@ private static final long serialVersionUID = 0L;
         fieldViolationsBuilder_.clear();
       }
       bitField0_ = (bitField0_ & ~0x00000100);
+      reason_ = "";
+      constraint_ = "";
+      column_ = "";
+      fixHint_ = "";
+      internalGetMutableMissing().clear();
       return this;
     }
 
@@ -780,6 +1182,22 @@ private static final long serialVersionUID = 0L;
       }
       if (((from_bitField0_ & 0x00000080) != 0)) {
         result.kind_ = kind_;
+      }
+      if (((from_bitField0_ & 0x00000200) != 0)) {
+        result.reason_ = reason_;
+      }
+      if (((from_bitField0_ & 0x00000400) != 0)) {
+        result.constraint_ = constraint_;
+      }
+      if (((from_bitField0_ & 0x00000800) != 0)) {
+        result.column_ = column_;
+      }
+      if (((from_bitField0_ & 0x00001000) != 0)) {
+        result.fixHint_ = fixHint_;
+      }
+      if (((from_bitField0_ & 0x00002000) != 0)) {
+        result.missing_ = internalGetMissing();
+        result.missing_.makeImmutable();
       }
     }
 
@@ -855,6 +1273,29 @@ private static final long serialVersionUID = 0L;
           }
         }
       }
+      if (!other.getReason().isEmpty()) {
+        reason_ = other.reason_;
+        bitField0_ |= 0x00000200;
+        onChanged();
+      }
+      if (!other.getConstraint().isEmpty()) {
+        constraint_ = other.constraint_;
+        bitField0_ |= 0x00000400;
+        onChanged();
+      }
+      if (!other.getColumn().isEmpty()) {
+        column_ = other.column_;
+        bitField0_ |= 0x00000800;
+        onChanged();
+      }
+      if (!other.getFixHint().isEmpty()) {
+        fixHint_ = other.fixHint_;
+        bitField0_ |= 0x00001000;
+        onChanged();
+      }
+      internalGetMutableMissing().mergeFrom(
+          other.internalGetMissing());
+      bitField0_ |= 0x00002000;
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
       return this;
@@ -934,6 +1375,35 @@ private static final long serialVersionUID = 0L;
               }
               break;
             } // case 74
+            case 82: {
+              reason_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00000200;
+              break;
+            } // case 82
+            case 90: {
+              constraint_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00000400;
+              break;
+            } // case 90
+            case 98: {
+              column_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00000800;
+              break;
+            } // case 98
+            case 106: {
+              fixHint_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00001000;
+              break;
+            } // case 106
+            case 114: {
+              com.google.protobuf.MapEntry<java.lang.String, java.lang.String>
+              missing__ = input.readMessage(
+                  MissingDefaultEntryHolder.defaultEntry.getParserForType(), extensionRegistry);
+              internalGetMutableMissing().getMutableMap().put(
+                  missing__.getKey(), missing__.getValue());
+              bitField0_ |= 0x00002000;
+              break;
+            } // case 114
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -1928,6 +2398,558 @@ private static final long serialVersionUID = 0L;
         fieldViolations_ = null;
       }
       return fieldViolationsBuilder_;
+    }
+
+    private java.lang.Object reason_ = "";
+    /**
+     * <pre>
+     * Stable machine reason, `UDB_` + upper snake case (for example
+     * `UDB_CAS_CONFLICT`, `UDB_CAS_KEY_NOT_PK`, `UDB_NO_ROWS_AFFECTED`). The set is
+     * listed in docs/error-reasons.md; a reason is never renamed once shipped.
+     * Branch on this, never on the message text.
+     * </pre>
+     *
+     * <code>string reason = 10 [json_name = "reason"];</code>
+     * @return The reason.
+     */
+    public java.lang.String getReason() {
+      java.lang.Object ref = reason_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        reason_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <pre>
+     * Stable machine reason, `UDB_` + upper snake case (for example
+     * `UDB_CAS_CONFLICT`, `UDB_CAS_KEY_NOT_PK`, `UDB_NO_ROWS_AFFECTED`). The set is
+     * listed in docs/error-reasons.md; a reason is never renamed once shipped.
+     * Branch on this, never on the message text.
+     * </pre>
+     *
+     * <code>string reason = 10 [json_name = "reason"];</code>
+     * @return The bytes for reason.
+     */
+    public com.google.protobuf.ByteString
+        getReasonBytes() {
+      java.lang.Object ref = reason_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b =
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        reason_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <pre>
+     * Stable machine reason, `UDB_` + upper snake case (for example
+     * `UDB_CAS_CONFLICT`, `UDB_CAS_KEY_NOT_PK`, `UDB_NO_ROWS_AFFECTED`). The set is
+     * listed in docs/error-reasons.md; a reason is never renamed once shipped.
+     * Branch on this, never on the message text.
+     * </pre>
+     *
+     * <code>string reason = 10 [json_name = "reason"];</code>
+     * @param value The reason to set.
+     * @return This builder for chaining.
+     */
+    public Builder setReason(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      reason_ = value;
+      bitField0_ |= 0x00000200;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Stable machine reason, `UDB_` + upper snake case (for example
+     * `UDB_CAS_CONFLICT`, `UDB_CAS_KEY_NOT_PK`, `UDB_NO_ROWS_AFFECTED`). The set is
+     * listed in docs/error-reasons.md; a reason is never renamed once shipped.
+     * Branch on this, never on the message text.
+     * </pre>
+     *
+     * <code>string reason = 10 [json_name = "reason"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearReason() {
+      reason_ = getDefaultInstance().getReason();
+      bitField0_ = (bitField0_ & ~0x00000200);
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Stable machine reason, `UDB_` + upper snake case (for example
+     * `UDB_CAS_CONFLICT`, `UDB_CAS_KEY_NOT_PK`, `UDB_NO_ROWS_AFFECTED`). The set is
+     * listed in docs/error-reasons.md; a reason is never renamed once shipped.
+     * Branch on this, never on the message text.
+     * </pre>
+     *
+     * <code>string reason = 10 [json_name = "reason"];</code>
+     * @param value The bytes for reason to set.
+     * @return This builder for chaining.
+     */
+    public Builder setReasonBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      reason_ = value;
+      bitField0_ |= 0x00000200;
+      onChanged();
+      return this;
+    }
+
+    private java.lang.Object constraint_ = "";
+    /**
+     * <pre>
+     * The constraint involved (unique, foreign key, check), when known.
+     * </pre>
+     *
+     * <code>string constraint = 11 [json_name = "constraint"];</code>
+     * @return The constraint.
+     */
+    public java.lang.String getConstraint() {
+      java.lang.Object ref = constraint_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        constraint_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <pre>
+     * The constraint involved (unique, foreign key, check), when known.
+     * </pre>
+     *
+     * <code>string constraint = 11 [json_name = "constraint"];</code>
+     * @return The bytes for constraint.
+     */
+    public com.google.protobuf.ByteString
+        getConstraintBytes() {
+      java.lang.Object ref = constraint_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b =
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        constraint_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <pre>
+     * The constraint involved (unique, foreign key, check), when known.
+     * </pre>
+     *
+     * <code>string constraint = 11 [json_name = "constraint"];</code>
+     * @param value The constraint to set.
+     * @return This builder for chaining.
+     */
+    public Builder setConstraint(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      constraint_ = value;
+      bitField0_ |= 0x00000400;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * The constraint involved (unique, foreign key, check), when known.
+     * </pre>
+     *
+     * <code>string constraint = 11 [json_name = "constraint"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearConstraint() {
+      constraint_ = getDefaultInstance().getConstraint();
+      bitField0_ = (bitField0_ & ~0x00000400);
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * The constraint involved (unique, foreign key, check), when known.
+     * </pre>
+     *
+     * <code>string constraint = 11 [json_name = "constraint"];</code>
+     * @param value The bytes for constraint to set.
+     * @return This builder for chaining.
+     */
+    public Builder setConstraintBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      constraint_ = value;
+      bitField0_ |= 0x00000400;
+      onChanged();
+      return this;
+    }
+
+    private java.lang.Object column_ = "";
+    /**
+     * <pre>
+     * The column involved (not null, coercion, decode), when known.
+     * </pre>
+     *
+     * <code>string column = 12 [json_name = "column"];</code>
+     * @return The column.
+     */
+    public java.lang.String getColumn() {
+      java.lang.Object ref = column_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        column_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <pre>
+     * The column involved (not null, coercion, decode), when known.
+     * </pre>
+     *
+     * <code>string column = 12 [json_name = "column"];</code>
+     * @return The bytes for column.
+     */
+    public com.google.protobuf.ByteString
+        getColumnBytes() {
+      java.lang.Object ref = column_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b =
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        column_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <pre>
+     * The column involved (not null, coercion, decode), when known.
+     * </pre>
+     *
+     * <code>string column = 12 [json_name = "column"];</code>
+     * @param value The column to set.
+     * @return This builder for chaining.
+     */
+    public Builder setColumn(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      column_ = value;
+      bitField0_ |= 0x00000800;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * The column involved (not null, coercion, decode), when known.
+     * </pre>
+     *
+     * <code>string column = 12 [json_name = "column"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearColumn() {
+      column_ = getDefaultInstance().getColumn();
+      bitField0_ = (bitField0_ & ~0x00000800);
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * The column involved (not null, coercion, decode), when known.
+     * </pre>
+     *
+     * <code>string column = 12 [json_name = "column"];</code>
+     * @param value The bytes for column to set.
+     * @return This builder for chaining.
+     */
+    public Builder setColumnBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      column_ = value;
+      bitField0_ |= 0x00000800;
+      onChanged();
+      return this;
+    }
+
+    private java.lang.Object fixHint_ = "";
+    /**
+     * <pre>
+     * One sentence telling the caller how to fix the request.
+     * </pre>
+     *
+     * <code>string fix_hint = 13 [json_name = "fixHint"];</code>
+     * @return The fixHint.
+     */
+    public java.lang.String getFixHint() {
+      java.lang.Object ref = fixHint_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        fixHint_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <pre>
+     * One sentence telling the caller how to fix the request.
+     * </pre>
+     *
+     * <code>string fix_hint = 13 [json_name = "fixHint"];</code>
+     * @return The bytes for fixHint.
+     */
+    public com.google.protobuf.ByteString
+        getFixHintBytes() {
+      java.lang.Object ref = fixHint_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b =
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        fixHint_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <pre>
+     * One sentence telling the caller how to fix the request.
+     * </pre>
+     *
+     * <code>string fix_hint = 13 [json_name = "fixHint"];</code>
+     * @param value The fixHint to set.
+     * @return This builder for chaining.
+     */
+    public Builder setFixHint(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      fixHint_ = value;
+      bitField0_ |= 0x00001000;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * One sentence telling the caller how to fix the request.
+     * </pre>
+     *
+     * <code>string fix_hint = 13 [json_name = "fixHint"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearFixHint() {
+      fixHint_ = getDefaultInstance().getFixHint();
+      bitField0_ = (bitField0_ & ~0x00001000);
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * One sentence telling the caller how to fix the request.
+     * </pre>
+     *
+     * <code>string fix_hint = 13 [json_name = "fixHint"];</code>
+     * @param value The bytes for fixHint to set.
+     * @return This builder for chaining.
+     */
+    public Builder setFixHintBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      fixHint_ = value;
+      bitField0_ |= 0x00001000;
+      onChanged();
+      return this;
+    }
+
+    private com.google.protobuf.MapField<
+        java.lang.String, java.lang.String> missing_;
+    private com.google.protobuf.MapField<java.lang.String, java.lang.String>
+        internalGetMissing() {
+      if (missing_ == null) {
+        return com.google.protobuf.MapField.emptyMapField(
+            MissingDefaultEntryHolder.defaultEntry);
+      }
+      return missing_;
+    }
+    private com.google.protobuf.MapField<java.lang.String, java.lang.String>
+        internalGetMutableMissing() {
+      if (missing_ == null) {
+        missing_ = com.google.protobuf.MapField.newMapField(
+            MissingDefaultEntryHolder.defaultEntry);
+      }
+      if (!missing_.isMutable()) {
+        missing_ = missing_.copy();
+      }
+      bitField0_ |= 0x00002000;
+      onChanged();
+      return missing_;
+    }
+    public int getMissingCount() {
+      return internalGetMissing().getMap().size();
+    }
+    /**
+     * <pre>
+     * What the caller is missing, as key/value pairs: for example
+     * `{"scope": "udb:pii:read"}`, `{"purpose": ""}`,
+     * `{"rule": "Select acme.notes.v1.Note"}`.
+     * </pre>
+     *
+     * <code>map&lt;string, string&gt; missing = 14 [json_name = "missing"];</code>
+     */
+    @java.lang.Override
+    public boolean containsMissing(
+        java.lang.String key) {
+      if (key == null) { throw new NullPointerException("map key"); }
+      return internalGetMissing().getMap().containsKey(key);
+    }
+    /**
+     * Use {@link #getMissingMap()} instead.
+     */
+    @java.lang.Override
+    @java.lang.Deprecated
+    public java.util.Map<java.lang.String, java.lang.String> getMissing() {
+      return getMissingMap();
+    }
+    /**
+     * <pre>
+     * What the caller is missing, as key/value pairs: for example
+     * `{"scope": "udb:pii:read"}`, `{"purpose": ""}`,
+     * `{"rule": "Select acme.notes.v1.Note"}`.
+     * </pre>
+     *
+     * <code>map&lt;string, string&gt; missing = 14 [json_name = "missing"];</code>
+     */
+    @java.lang.Override
+    public java.util.Map<java.lang.String, java.lang.String> getMissingMap() {
+      return internalGetMissing().getMap();
+    }
+    /**
+     * <pre>
+     * What the caller is missing, as key/value pairs: for example
+     * `{"scope": "udb:pii:read"}`, `{"purpose": ""}`,
+     * `{"rule": "Select acme.notes.v1.Note"}`.
+     * </pre>
+     *
+     * <code>map&lt;string, string&gt; missing = 14 [json_name = "missing"];</code>
+     */
+    @java.lang.Override
+    public /* nullable */
+java.lang.String getMissingOrDefault(
+        java.lang.String key,
+        /* nullable */
+java.lang.String defaultValue) {
+      if (key == null) { throw new NullPointerException("map key"); }
+      java.util.Map<java.lang.String, java.lang.String> map =
+          internalGetMissing().getMap();
+      return map.containsKey(key) ? map.get(key) : defaultValue;
+    }
+    /**
+     * <pre>
+     * What the caller is missing, as key/value pairs: for example
+     * `{"scope": "udb:pii:read"}`, `{"purpose": ""}`,
+     * `{"rule": "Select acme.notes.v1.Note"}`.
+     * </pre>
+     *
+     * <code>map&lt;string, string&gt; missing = 14 [json_name = "missing"];</code>
+     */
+    @java.lang.Override
+    public java.lang.String getMissingOrThrow(
+        java.lang.String key) {
+      if (key == null) { throw new NullPointerException("map key"); }
+      java.util.Map<java.lang.String, java.lang.String> map =
+          internalGetMissing().getMap();
+      if (!map.containsKey(key)) {
+        throw new java.lang.IllegalArgumentException();
+      }
+      return map.get(key);
+    }
+    public Builder clearMissing() {
+      bitField0_ = (bitField0_ & ~0x00002000);
+      internalGetMutableMissing().getMutableMap()
+          .clear();
+      return this;
+    }
+    /**
+     * <pre>
+     * What the caller is missing, as key/value pairs: for example
+     * `{"scope": "udb:pii:read"}`, `{"purpose": ""}`,
+     * `{"rule": "Select acme.notes.v1.Note"}`.
+     * </pre>
+     *
+     * <code>map&lt;string, string&gt; missing = 14 [json_name = "missing"];</code>
+     */
+    public Builder removeMissing(
+        java.lang.String key) {
+      if (key == null) { throw new NullPointerException("map key"); }
+      internalGetMutableMissing().getMutableMap()
+          .remove(key);
+      return this;
+    }
+    /**
+     * Use alternate mutation accessors instead.
+     */
+    @java.lang.Deprecated
+    public java.util.Map<java.lang.String, java.lang.String>
+        getMutableMissing() {
+      bitField0_ |= 0x00002000;
+      return internalGetMutableMissing().getMutableMap();
+    }
+    /**
+     * <pre>
+     * What the caller is missing, as key/value pairs: for example
+     * `{"scope": "udb:pii:read"}`, `{"purpose": ""}`,
+     * `{"rule": "Select acme.notes.v1.Note"}`.
+     * </pre>
+     *
+     * <code>map&lt;string, string&gt; missing = 14 [json_name = "missing"];</code>
+     */
+    public Builder putMissing(
+        java.lang.String key,
+        java.lang.String value) {
+      if (key == null) { throw new NullPointerException("map key"); }
+      if (value == null) { throw new NullPointerException("map value"); }
+      internalGetMutableMissing().getMutableMap()
+          .put(key, value);
+      bitField0_ |= 0x00002000;
+      return this;
+    }
+    /**
+     * <pre>
+     * What the caller is missing, as key/value pairs: for example
+     * `{"scope": "udb:pii:read"}`, `{"purpose": ""}`,
+     * `{"rule": "Select acme.notes.v1.Note"}`.
+     * </pre>
+     *
+     * <code>map&lt;string, string&gt; missing = 14 [json_name = "missing"];</code>
+     */
+    public Builder putAllMissing(
+        java.util.Map<java.lang.String, java.lang.String> values) {
+      internalGetMutableMissing().getMutableMap()
+          .putAll(values);
+      bitField0_ |= 0x00002000;
+      return this;
     }
 
     // @@protoc_insertion_point(builder_scope:udb.entity.v1.ErrorDetail)

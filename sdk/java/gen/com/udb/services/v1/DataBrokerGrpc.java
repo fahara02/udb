@@ -1039,6 +1039,37 @@ public final class DataBrokerGrpc {
     return getPublishCDCMethod;
   }
 
+  private static volatile io.grpc.MethodDescriptor<com.udb.entity.v1.AckCdcEventsRequest,
+      com.udb.entity.v1.AckCdcEventsResponse> getAckCdcEventsMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "AckCdcEvents",
+      requestType = com.udb.entity.v1.AckCdcEventsRequest.class,
+      responseType = com.udb.entity.v1.AckCdcEventsResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.udb.entity.v1.AckCdcEventsRequest,
+      com.udb.entity.v1.AckCdcEventsResponse> getAckCdcEventsMethod() {
+    io.grpc.MethodDescriptor<com.udb.entity.v1.AckCdcEventsRequest, com.udb.entity.v1.AckCdcEventsResponse> getAckCdcEventsMethod;
+    if ((getAckCdcEventsMethod = DataBrokerGrpc.getAckCdcEventsMethod) == null) {
+      synchronized (DataBrokerGrpc.class) {
+        if ((getAckCdcEventsMethod = DataBrokerGrpc.getAckCdcEventsMethod) == null) {
+          DataBrokerGrpc.getAckCdcEventsMethod = getAckCdcEventsMethod =
+              io.grpc.MethodDescriptor.<com.udb.entity.v1.AckCdcEventsRequest, com.udb.entity.v1.AckCdcEventsResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "AckCdcEvents"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.entity.v1.AckCdcEventsRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.entity.v1.AckCdcEventsResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new DataBrokerMethodDescriptorSupplier("AckCdcEvents"))
+              .build();
+        }
+      }
+    }
+    return getAckCdcEventsMethod;
+  }
+
   private static volatile io.grpc.MethodDescriptor<com.udb.entity.v1.ViewDefinition,
       com.udb.entity.v1.MutationResponse> getCreateMaterializedViewMethod;
 
@@ -2870,6 +2901,16 @@ public final class DataBrokerGrpc {
     }
 
     /**
+     * <pre>
+     * Record a durable consumer's position (see CDCSubscriptionRequest.consumer_name).
+     * </pre>
+     */
+    default void ackCdcEvents(com.udb.entity.v1.AckCdcEventsRequest request,
+        io.grpc.stub.StreamObserver<com.udb.entity.v1.AckCdcEventsResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getAckCdcEventsMethod(), responseObserver);
+    }
+
+    /**
      */
     default void createMaterializedView(com.udb.entity.v1.ViewDefinition request,
         io.grpc.stub.StreamObserver<com.udb.entity.v1.MutationResponse> responseObserver) {
@@ -3191,7 +3232,14 @@ public final class DataBrokerGrpc {
     }
 
     /**
+     * <pre>
+     * DEPRECATED: writes the legacy ABAC table, which does NOT authorize
+     * requests. Authorization comes from the Casbin governance table: use
+     * AuthzService.PutAuthzPolicy (or `udb authz seed` / `udb policy apply`).
+     * Every response carries an `x-udb-deprecated` header; removed in 0.6.0.
+     * </pre>
      */
+    @java.lang.Deprecated
     default void putPolicy(com.udb.entity.v1.PutPolicyRequest request,
         io.grpc.stub.StreamObserver<com.udb.entity.v1.MutationResponse> responseObserver) {
       io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getPutPolicyMethod(), responseObserver);
@@ -3661,6 +3709,17 @@ public final class DataBrokerGrpc {
     }
 
     /**
+     * <pre>
+     * Record a durable consumer's position (see CDCSubscriptionRequest.consumer_name).
+     * </pre>
+     */
+    public void ackCdcEvents(com.udb.entity.v1.AckCdcEventsRequest request,
+        io.grpc.stub.StreamObserver<com.udb.entity.v1.AckCdcEventsResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getAckCdcEventsMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
      */
     public void createMaterializedView(com.udb.entity.v1.ViewDefinition request,
         io.grpc.stub.StreamObserver<com.udb.entity.v1.MutationResponse> responseObserver) {
@@ -4016,7 +4075,14 @@ public final class DataBrokerGrpc {
     }
 
     /**
+     * <pre>
+     * DEPRECATED: writes the legacy ABAC table, which does NOT authorize
+     * requests. Authorization comes from the Casbin governance table: use
+     * AuthzService.PutAuthzPolicy (or `udb authz seed` / `udb policy apply`).
+     * Every response carries an `x-udb-deprecated` header; removed in 0.6.0.
+     * </pre>
      */
+    @java.lang.Deprecated
     public void putPolicy(com.udb.entity.v1.PutPolicyRequest request,
         io.grpc.stub.StreamObserver<com.udb.entity.v1.MutationResponse> responseObserver) {
       io.grpc.stub.ClientCalls.asyncUnaryCall(
@@ -4468,6 +4534,16 @@ public final class DataBrokerGrpc {
     }
 
     /**
+     * <pre>
+     * Record a durable consumer's position (see CDCSubscriptionRequest.consumer_name).
+     * </pre>
+     */
+    public com.udb.entity.v1.AckCdcEventsResponse ackCdcEvents(com.udb.entity.v1.AckCdcEventsRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getAckCdcEventsMethod(), getCallOptions(), request);
+    }
+
+    /**
      */
     public com.udb.entity.v1.MutationResponse createMaterializedView(com.udb.entity.v1.ViewDefinition request) throws io.grpc.StatusException {
       return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
@@ -4789,7 +4865,14 @@ public final class DataBrokerGrpc {
     }
 
     /**
+     * <pre>
+     * DEPRECATED: writes the legacy ABAC table, which does NOT authorize
+     * requests. Authorization comes from the Casbin governance table: use
+     * AuthzService.PutAuthzPolicy (or `udb authz seed` / `udb policy apply`).
+     * Every response carries an `x-udb-deprecated` header; removed in 0.6.0.
+     * </pre>
      */
+    @java.lang.Deprecated
     public com.udb.entity.v1.MutationResponse putPolicy(com.udb.entity.v1.PutPolicyRequest request) throws io.grpc.StatusException {
       return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
           getChannel(), getPutPolicyMethod(), getCallOptions(), request);
@@ -5173,6 +5256,16 @@ public final class DataBrokerGrpc {
     }
 
     /**
+     * <pre>
+     * Record a durable consumer's position (see CDCSubscriptionRequest.consumer_name).
+     * </pre>
+     */
+    public com.udb.entity.v1.AckCdcEventsResponse ackCdcEvents(com.udb.entity.v1.AckCdcEventsRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getAckCdcEventsMethod(), getCallOptions(), request);
+    }
+
+    /**
      */
     public com.udb.entity.v1.MutationResponse createMaterializedView(com.udb.entity.v1.ViewDefinition request) {
       return io.grpc.stub.ClientCalls.blockingUnaryCall(
@@ -5494,7 +5587,14 @@ public final class DataBrokerGrpc {
     }
 
     /**
+     * <pre>
+     * DEPRECATED: writes the legacy ABAC table, which does NOT authorize
+     * requests. Authorization comes from the Casbin governance table: use
+     * AuthzService.PutAuthzPolicy (or `udb authz seed` / `udb policy apply`).
+     * Every response carries an `x-udb-deprecated` header; removed in 0.6.0.
+     * </pre>
      */
+    @java.lang.Deprecated
     public com.udb.entity.v1.MutationResponse putPolicy(com.udb.entity.v1.PutPolicyRequest request) {
       return io.grpc.stub.ClientCalls.blockingUnaryCall(
           getChannel(), getPutPolicyMethod(), getCallOptions(), request);
@@ -5874,6 +5974,17 @@ public final class DataBrokerGrpc {
     }
 
     /**
+     * <pre>
+     * Record a durable consumer's position (see CDCSubscriptionRequest.consumer_name).
+     * </pre>
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.udb.entity.v1.AckCdcEventsResponse> ackCdcEvents(
+        com.udb.entity.v1.AckCdcEventsRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getAckCdcEventsMethod(), getCallOptions()), request);
+    }
+
+    /**
      */
     public com.google.common.util.concurrent.ListenableFuture<com.udb.entity.v1.MutationResponse> createMaterializedView(
         com.udb.entity.v1.ViewDefinition request) {
@@ -6229,7 +6340,14 @@ public final class DataBrokerGrpc {
     }
 
     /**
+     * <pre>
+     * DEPRECATED: writes the legacy ABAC table, which does NOT authorize
+     * requests. Authorization comes from the Casbin governance table: use
+     * AuthzService.PutAuthzPolicy (or `udb authz seed` / `udb policy apply`).
+     * Every response carries an `x-udb-deprecated` header; removed in 0.6.0.
+     * </pre>
      */
+    @java.lang.Deprecated
     public com.google.common.util.concurrent.ListenableFuture<com.udb.entity.v1.MutationResponse> putPolicy(
         com.udb.entity.v1.PutPolicyRequest request) {
       return io.grpc.stub.ClientCalls.futureUnaryCall(
@@ -6397,59 +6515,60 @@ public final class DataBrokerGrpc {
   private static final int METHODID_TIME_SERIES_QUERY = 25;
   private static final int METHODID_ANALYTICAL_QUERY = 26;
   private static final int METHODID_PUBLISH_CDC = 27;
-  private static final int METHODID_CREATE_MATERIALIZED_VIEW = 28;
-  private static final int METHODID_ENQUEUE_OUTBOX_EVENT = 29;
-  private static final int METHODID_GENERIC_DISPATCH = 30;
-  private static final int METHODID_ENSURE_RESOURCE = 31;
-  private static final int METHODID_DROP_RESOURCE = 32;
-  private static final int METHODID_LIST_RESOURCES = 33;
-  private static final int METHODID_STAGE_CATALOG = 34;
-  private static final int METHODID_ACTIVATE_CATALOG = 35;
-  private static final int METHODID_ROLLBACK_CATALOG = 36;
-  private static final int METHODID_VALIDATE_CATALOG = 37;
-  private static final int METHODID_GET_CATALOG_VERSIONS = 38;
-  private static final int METHODID_GET_CATALOG_VERSION = 39;
-  private static final int METHODID_PLAN_MIGRATION = 40;
-  private static final int METHODID_APPLY_MIGRATION = 41;
-  private static final int METHODID_GET_MIGRATION_STATUS = 42;
-  private static final int METHODID_LIST_MIGRATION_RUNS = 43;
-  private static final int METHODID_APPROVE_MIGRATION_PLAN = 44;
-  private static final int METHODID_LIST_DLQ_EVENTS = 45;
-  private static final int METHODID_GET_DLQ_EVENT = 46;
-  private static final int METHODID_REPLAY_DLQ_EVENT = 47;
-  private static final int METHODID_DISMISS_DLQ_EVENT = 48;
-  private static final int METHODID_QUARANTINE_DLQ_EVENT = 49;
-  private static final int METHODID_GET_CDC_STATUS = 50;
-  private static final int METHODID_PAUSE_CDC = 51;
-  private static final int METHODID_RESUME_CDC = 52;
-  private static final int METHODID_STEP_DOWN_CDC_LEADER = 53;
-  private static final int METHODID_PREVIEW_CDC_REDACTION = 54;
-  private static final int METHODID_SCAN_PROJECTION_DRIFT = 55;
-  private static final int METHODID_LIST_SAGAS = 56;
-  private static final int METHODID_GET_SAGA = 57;
-  private static final int METHODID_RETRY_SAGA_COMPENSATION = 58;
-  private static final int METHODID_MARK_SAGA_REVIEWED = 59;
-  private static final int METHODID_ENSURE_BASELINE = 60;
-  private static final int METHODID_LIST_POLICIES = 61;
-  private static final int METHODID_PUT_POLICY = 62;
-  private static final int METHODID_DELETE_POLICY = 63;
-  private static final int METHODID_RELOAD_POLICIES = 64;
-  private static final int METHODID_LINT_POLICIES = 65;
-  private static final int METHODID_GET_CAPABILITIES = 66;
-  private static final int METHODID_GET_CATALOG_MANIFEST = 67;
-  private static final int METHODID_LOOKUP_MESSAGE_SCHEMA = 68;
-  private static final int METHODID_LIST_MESSAGE_SCHEMAS = 69;
-  private static final int METHODID_GET_HEALTH_REPORT = 70;
-  private static final int METHODID_ENSURE_PROJECT = 71;
-  private static final int METHODID_LIST_PROJECTS = 72;
-  private static final int METHODID_GET_ADMIN_SUMMARY = 73;
-  private static final int METHODID_LIST_ADMIN_AUDIT_LOGS = 74;
-  private static final int METHODID_VERIFY_ADMIN_AUDIT_LOG = 75;
-  private static final int METHODID_BATCH_SELECT = 76;
-  private static final int METHODID_BATCH_UPSERT = 77;
-  private static final int METHODID_VECTOR_BATCH_UPSERT = 78;
-  private static final int METHODID_PUT_OBJECT = 79;
-  private static final int METHODID_BEGIN_TX = 80;
+  private static final int METHODID_ACK_CDC_EVENTS = 28;
+  private static final int METHODID_CREATE_MATERIALIZED_VIEW = 29;
+  private static final int METHODID_ENQUEUE_OUTBOX_EVENT = 30;
+  private static final int METHODID_GENERIC_DISPATCH = 31;
+  private static final int METHODID_ENSURE_RESOURCE = 32;
+  private static final int METHODID_DROP_RESOURCE = 33;
+  private static final int METHODID_LIST_RESOURCES = 34;
+  private static final int METHODID_STAGE_CATALOG = 35;
+  private static final int METHODID_ACTIVATE_CATALOG = 36;
+  private static final int METHODID_ROLLBACK_CATALOG = 37;
+  private static final int METHODID_VALIDATE_CATALOG = 38;
+  private static final int METHODID_GET_CATALOG_VERSIONS = 39;
+  private static final int METHODID_GET_CATALOG_VERSION = 40;
+  private static final int METHODID_PLAN_MIGRATION = 41;
+  private static final int METHODID_APPLY_MIGRATION = 42;
+  private static final int METHODID_GET_MIGRATION_STATUS = 43;
+  private static final int METHODID_LIST_MIGRATION_RUNS = 44;
+  private static final int METHODID_APPROVE_MIGRATION_PLAN = 45;
+  private static final int METHODID_LIST_DLQ_EVENTS = 46;
+  private static final int METHODID_GET_DLQ_EVENT = 47;
+  private static final int METHODID_REPLAY_DLQ_EVENT = 48;
+  private static final int METHODID_DISMISS_DLQ_EVENT = 49;
+  private static final int METHODID_QUARANTINE_DLQ_EVENT = 50;
+  private static final int METHODID_GET_CDC_STATUS = 51;
+  private static final int METHODID_PAUSE_CDC = 52;
+  private static final int METHODID_RESUME_CDC = 53;
+  private static final int METHODID_STEP_DOWN_CDC_LEADER = 54;
+  private static final int METHODID_PREVIEW_CDC_REDACTION = 55;
+  private static final int METHODID_SCAN_PROJECTION_DRIFT = 56;
+  private static final int METHODID_LIST_SAGAS = 57;
+  private static final int METHODID_GET_SAGA = 58;
+  private static final int METHODID_RETRY_SAGA_COMPENSATION = 59;
+  private static final int METHODID_MARK_SAGA_REVIEWED = 60;
+  private static final int METHODID_ENSURE_BASELINE = 61;
+  private static final int METHODID_LIST_POLICIES = 62;
+  private static final int METHODID_PUT_POLICY = 63;
+  private static final int METHODID_DELETE_POLICY = 64;
+  private static final int METHODID_RELOAD_POLICIES = 65;
+  private static final int METHODID_LINT_POLICIES = 66;
+  private static final int METHODID_GET_CAPABILITIES = 67;
+  private static final int METHODID_GET_CATALOG_MANIFEST = 68;
+  private static final int METHODID_LOOKUP_MESSAGE_SCHEMA = 69;
+  private static final int METHODID_LIST_MESSAGE_SCHEMAS = 70;
+  private static final int METHODID_GET_HEALTH_REPORT = 71;
+  private static final int METHODID_ENSURE_PROJECT = 72;
+  private static final int METHODID_LIST_PROJECTS = 73;
+  private static final int METHODID_GET_ADMIN_SUMMARY = 74;
+  private static final int METHODID_LIST_ADMIN_AUDIT_LOGS = 75;
+  private static final int METHODID_VERIFY_ADMIN_AUDIT_LOG = 76;
+  private static final int METHODID_BATCH_SELECT = 77;
+  private static final int METHODID_BATCH_UPSERT = 78;
+  private static final int METHODID_VECTOR_BATCH_UPSERT = 79;
+  private static final int METHODID_PUT_OBJECT = 80;
+  private static final int METHODID_BEGIN_TX = 81;
 
   private static final class MethodHandlers<Req, Resp> implements
       io.grpc.stub.ServerCalls.UnaryMethod<Req, Resp>,
@@ -6579,6 +6698,10 @@ public final class DataBrokerGrpc {
         case METHODID_PUBLISH_CDC:
           serviceImpl.publishCDC((com.udb.entity.v1.CDCSubscriptionRequest) request,
               (io.grpc.stub.StreamObserver<com.udb.events.v1.CDCEnvelope>) responseObserver);
+          break;
+        case METHODID_ACK_CDC_EVENTS:
+          serviceImpl.ackCdcEvents((com.udb.entity.v1.AckCdcEventsRequest) request,
+              (io.grpc.stub.StreamObserver<com.udb.entity.v1.AckCdcEventsResponse>) responseObserver);
           break;
         case METHODID_CREATE_MATERIALIZED_VIEW:
           serviceImpl.createMaterializedView((com.udb.entity.v1.ViewDefinition) request,
@@ -7037,6 +7160,13 @@ public final class DataBrokerGrpc {
               com.udb.events.v1.CDCEnvelope>(
                 service, METHODID_PUBLISH_CDC)))
         .addMethod(
+          getAckCdcEventsMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              com.udb.entity.v1.AckCdcEventsRequest,
+              com.udb.entity.v1.AckCdcEventsResponse>(
+                service, METHODID_ACK_CDC_EVENTS)))
+        .addMethod(
           getCreateMaterializedViewMethod(),
           io.grpc.stub.ServerCalls.asyncUnaryCall(
             new MethodHandlers<
@@ -7453,6 +7583,7 @@ public final class DataBrokerGrpc {
               .addMethod(getAnalyticalQueryMethod())
               .addMethod(getBeginTxMethod())
               .addMethod(getPublishCDCMethod())
+              .addMethod(getAckCdcEventsMethod())
               .addMethod(getCreateMaterializedViewMethod())
               .addMethod(getEnqueueOutboxEventMethod())
               .addMethod(getGenericDispatchMethod())

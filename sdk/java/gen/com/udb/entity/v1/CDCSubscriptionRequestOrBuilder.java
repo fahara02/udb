@@ -48,4 +48,32 @@ public interface CDCSubscriptionRequestOrBuilder extends
    */
   com.google.protobuf.ByteString
       getSinceEventIdBytes();
+
+  /**
+   * <pre>
+   * A durable consumer's name (1-120 chars of [A-Za-z0-9_.:-]). When set and
+   * since_event_id is empty, the stream resumes after the last event this
+   * consumer acknowledged with AckCdcEvents for this topic_pattern, so a
+   * restarted (or reconnected) consumer neither skips nor re-reads its place.
+   * Cursors are scoped to the caller's verified tenant and project.
+   * </pre>
+   *
+   * <code>string consumer_name = 4 [json_name = "consumerName"];</code>
+   * @return The consumerName.
+   */
+  java.lang.String getConsumerName();
+  /**
+   * <pre>
+   * A durable consumer's name (1-120 chars of [A-Za-z0-9_.:-]). When set and
+   * since_event_id is empty, the stream resumes after the last event this
+   * consumer acknowledged with AckCdcEvents for this topic_pattern, so a
+   * restarted (or reconnected) consumer neither skips nor re-reads its place.
+   * Cursors are scoped to the caller's verified tenant and project.
+   * </pre>
+   *
+   * <code>string consumer_name = 4 [json_name = "consumerName"];</code>
+   * @return The bytes for consumerName.
+   */
+  com.google.protobuf.ByteString
+      getConsumerNameBytes();
 }

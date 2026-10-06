@@ -19,6 +19,10 @@ class LiveQueryComparison(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     LIVE_QUERY_COMPARISON_LE: _ClassVar[LiveQueryComparison]
     LIVE_QUERY_COMPARISON_GT: _ClassVar[LiveQueryComparison]
     LIVE_QUERY_COMPARISON_GE: _ClassVar[LiveQueryComparison]
+    LIVE_QUERY_COMPARISON_IN: _ClassVar[LiveQueryComparison]
+    LIVE_QUERY_COMPARISON_NOT_IN: _ClassVar[LiveQueryComparison]
+    LIVE_QUERY_COMPARISON_IS_NULL: _ClassVar[LiveQueryComparison]
+    LIVE_QUERY_COMPARISON_IS_NOT_NULL: _ClassVar[LiveQueryComparison]
 
 class LiveQueryChangeOp(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     __slots__ = ()
@@ -33,34 +37,50 @@ LIVE_QUERY_COMPARISON_LT: LiveQueryComparison
 LIVE_QUERY_COMPARISON_LE: LiveQueryComparison
 LIVE_QUERY_COMPARISON_GT: LiveQueryComparison
 LIVE_QUERY_COMPARISON_GE: LiveQueryComparison
+LIVE_QUERY_COMPARISON_IN: LiveQueryComparison
+LIVE_QUERY_COMPARISON_NOT_IN: LiveQueryComparison
+LIVE_QUERY_COMPARISON_IS_NULL: LiveQueryComparison
+LIVE_QUERY_COMPARISON_IS_NOT_NULL: LiveQueryComparison
 LIVE_QUERY_CHANGE_OP_UNSPECIFIED: LiveQueryChangeOp
 LIVE_QUERY_CHANGE_OP_INSERT: LiveQueryChangeOp
 LIVE_QUERY_CHANGE_OP_UPDATE: LiveQueryChangeOp
 LIVE_QUERY_CHANGE_OP_DELETE: LiveQueryChangeOp
 
 class LiveQueryPredicate(_message.Message):
-    __slots__ = ("field", "op", "value")
+    __slots__ = ("field", "op", "value", "values")
     FIELD_FIELD_NUMBER: _ClassVar[int]
     OP_FIELD_NUMBER: _ClassVar[int]
     VALUE_FIELD_NUMBER: _ClassVar[int]
+    VALUES_FIELD_NUMBER: _ClassVar[int]
     field: str
     op: LiveQueryComparison
     value: str
-    def __init__(self, field: _Optional[str] = ..., op: _Optional[_Union[LiveQueryComparison, str]] = ..., value: _Optional[str] = ...) -> None: ...
+    values: _containers.RepeatedScalarFieldContainer[str]
+    def __init__(self, field: _Optional[str] = ..., op: _Optional[_Union[LiveQueryComparison, str]] = ..., value: _Optional[str] = ..., values: _Optional[_Iterable[str]] = ...) -> None: ...
+
+class LiveQueryAnyOf(_message.Message):
+    __slots__ = ("predicates",)
+    PREDICATES_FIELD_NUMBER: _ClassVar[int]
+    predicates: _containers.RepeatedCompositeFieldContainer[LiveQueryPredicate]
+    def __init__(self, predicates: _Optional[_Iterable[_Union[LiveQueryPredicate, _Mapping]]] = ...) -> None: ...
 
 class SubscribeRequest(_message.Message):
-    __slots__ = ("tenant_id", "message_type", "filters", "project_id", "snapshot_limit")
+    __slots__ = ("tenant_id", "message_type", "filters", "project_id", "snapshot_limit", "any_of", "since_event_id")
     TENANT_ID_FIELD_NUMBER: _ClassVar[int]
     MESSAGE_TYPE_FIELD_NUMBER: _ClassVar[int]
     FILTERS_FIELD_NUMBER: _ClassVar[int]
     PROJECT_ID_FIELD_NUMBER: _ClassVar[int]
     SNAPSHOT_LIMIT_FIELD_NUMBER: _ClassVar[int]
+    ANY_OF_FIELD_NUMBER: _ClassVar[int]
+    SINCE_EVENT_ID_FIELD_NUMBER: _ClassVar[int]
     tenant_id: str
     message_type: str
     filters: _containers.RepeatedCompositeFieldContainer[LiveQueryPredicate]
     project_id: str
     snapshot_limit: int
-    def __init__(self, tenant_id: _Optional[str] = ..., message_type: _Optional[str] = ..., filters: _Optional[_Iterable[_Union[LiveQueryPredicate, _Mapping]]] = ..., project_id: _Optional[str] = ..., snapshot_limit: _Optional[int] = ...) -> None: ...
+    any_of: _containers.RepeatedCompositeFieldContainer[LiveQueryAnyOf]
+    since_event_id: str
+    def __init__(self, tenant_id: _Optional[str] = ..., message_type: _Optional[str] = ..., filters: _Optional[_Iterable[_Union[LiveQueryPredicate, _Mapping]]] = ..., project_id: _Optional[str] = ..., snapshot_limit: _Optional[int] = ..., any_of: _Optional[_Iterable[_Union[LiveQueryAnyOf, _Mapping]]] = ..., since_event_id: _Optional[str] = ...) -> None: ...
 
 class SubscribeResponse(_message.Message):
     __slots__ = ("snapshot", "change", "error")

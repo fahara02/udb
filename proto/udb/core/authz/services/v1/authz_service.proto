@@ -1271,6 +1271,10 @@ service AuthzService {
       scopes: "udb:authz:get-native-access"
       allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
       allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      // A service account (an exchanged service bearer) gets native access for
+      // ITS OWN identity: the contract is bound to the verified claim and the
+      // requested scopes can only narrow it, exactly as for a user session.
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
       decision_resource: "authz.GetNativeAccess"
       request_context_required: true
       tenant_required: true

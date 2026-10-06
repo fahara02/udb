@@ -677,12 +677,52 @@ type RPCInfo struct {
 	// mutation is safe to replay according to descriptor metadata.
 	// Mutation retry is still gated again by retryableForRPC and the request
 	// idempotency key.
+	Listener        string   // where the RPC is served (data plane, control plane, peer, loopback)
+	AuthMode        string   // endpoint_security.mode, e.g. "bearer" or "public"
+	Scopes          []string // scopes the caller's credential must carry
+	CredentialTypes []string // credential types the RPC admits (empty: the listener default)
+}
+
+// Describe is the RPC's point-of-use contract: where it is served, what the
+// caller must hold, and how retries and idempotency behave.
+func (r RPCInfo) Describe() string {
+	var b strings.Builder
+	fmt.Fprintf(&b, "%s (%s, %s)\n", r.FullMethod, r.Kind, r.OperationKind)
+	fmt.Fprintf(&b, "  listener: %s\n", r.Listener)
+	if r.AuthMode != "" {
+		fmt.Fprintf(&b, "  auth: %s\n", r.AuthMode)
+	}
+	if len(r.Scopes) > 0 {
+		fmt.Fprintf(&b, "  scopes: %s\n", strings.Join(r.Scopes, ", "))
+	}
+	if len(r.CredentialTypes) > 0 {
+		fmt.Fprintf(&b, "  credentials: %s\n", strings.Join(r.CredentialTypes, ", "))
+	}
+	switch {
+	case r.ReadOnly:
+		b.WriteString("  retries: safe to retry on transient failure\n")
+	case r.ReplaySafe:
+		b.WriteString("  retries: retried on transient failure only with the same idempotency key; inside a transaction per-mutation idempotency keys are refused (the transaction is the unit)\n")
+	default:
+		b.WriteString("  retries: not retried automatically (not replay-safe)\n")
+	}
+	return b.String()
+}
+
+// DescribeRPC returns Describe for a full method or wire name ("" when unknown).
+func DescribeRPC(name string) string {
+	for _, rpc := range AllRPCs {
+		if rpc.FullMethod == name || rpc.Name == name {
+			return rpc.Describe()
+		}
+	}
+	return ""
 }
 
 // AllRPCs lists every RPC across every UDB service in this build.
 var AllRPCs = []RPCInfo{
 	// @@UDB_RPC_BEGIN
-	{Service: "{{SERVICE_NAME}}", ServicePkg: "{{SERVICE_PKG}}", FullMethod: "{{RPC_PATH}}", Name: "{{RPC_WIRE_NAME}}", APIAlias: "{{RPC_ALIAS_SNAKE}}", OperationID: "{{REST_OPERATION_ID}}", HTTPMethod: "{{RPC_HTTP_METHOD}}", HTTPPath: "{{RPC_HTTP_PATH}}", Kind: RPCKind("{{RPC_KIND}}"), ReadOnly: {{RPC_READ_ONLY}}, OperationKind: "{{RPC_OPERATION_KIND}}", ReplaySafe: {{RPC_REPLAY_SAFE}}},
+	{Service: "{{SERVICE_NAME}}", ServicePkg: "{{SERVICE_PKG}}", FullMethod: "{{RPC_PATH}}", Name: "{{RPC_WIRE_NAME}}", APIAlias: "{{RPC_ALIAS_SNAKE}}", OperationID: "{{REST_OPERATION_ID}}", HTTPMethod: "{{RPC_HTTP_METHOD}}", HTTPPath: "{{RPC_HTTP_PATH}}", Kind: RPCKind("{{RPC_KIND}}"), ReadOnly: {{RPC_READ_ONLY}}, OperationKind: "{{RPC_OPERATION_KIND}}", ReplaySafe: {{RPC_REPLAY_SAFE}}, Listener: "{{RPC_LISTENER_LABEL}}", AuthMode: "{{RPC_AUTH_MODE}}", Scopes: []string{{{RPC_SCOPES_GO}}}, CredentialTypes: []string{{{RPC_CREDENTIAL_TYPES_GO}}}},
 	// @@UDB_RPC_END
 }
 

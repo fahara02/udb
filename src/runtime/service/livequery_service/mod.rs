@@ -45,6 +45,7 @@ mod config;
 mod errors;
 mod handlers;
 mod predicate;
+mod shared_tail;
 mod stream;
 #[cfg(test)]
 mod tests;

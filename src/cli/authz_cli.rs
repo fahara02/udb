@@ -125,6 +125,49 @@ async fn run_authz_command_async(command: AuthzCommand) -> Result<serde_json::Va
 
             Ok(render_simulation(&response))
         }
+        AuthzCommand::Check {
+            user,
+            object,
+            action,
+            tenant,
+            purpose,
+        } => {
+            if user.trim().is_empty() || object.trim().is_empty() || action.trim().is_empty() {
+                return Err(
+                    "provide --user <id>, --object <message type> and --action <RPC name, e.g. Select>"
+                        .to_string(),
+                );
+            }
+            let tenant = first_non_empty(&tenant, "UDB_TENANT_ID");
+            let request = authz_pb::CheckAccessRequest {
+                user_id: user.trim().to_string(),
+                domain: tenant.clone(),
+                object: object.trim().to_string(),
+                action: action.trim().to_string(),
+                purpose: purpose.trim().to_string(),
+                tenant_id: tenant.clone(),
+                ..Default::default()
+            };
+            let mut client = authz_client().await?;
+            let response = client
+                .check_access(with_metadata(request))
+                .await
+                .map_err(|err| format!("authz check failed: {err}"))?
+                .into_inner();
+            let decision = response.decision.unwrap_or_default();
+            Ok(serde_json::json!({
+                "allowed": response.allowed,
+                "user": user.trim(),
+                "tenant": tenant,
+                "object": object.trim(),
+                "action": action.trim(),
+                "matched_rule": response.matched_rule,
+                "reason": response.reason,
+                "deny_reason": decision.deny_reason,
+                "matched_policy_ids": decision.matched_policy_ids,
+                "required_scopes": decision.required_scopes,
+            }))
+        }
         AuthzCommand::Seed {
             tenant,
             role,
@@ -365,7 +408,7 @@ async fn authz_client() -> Result<AuthzServiceClient<Channel>, String> {
 /// Resolve the control-plane gRPC target exactly like the `auth` CLI: honor
 /// `UDB_AUTH_TARGET` / `UDB_GRPC_TARGET` / `UDB_GRPC_ADDR`, rewrite a bind host
 /// to the loopback target host, and default to the standard target address.
-fn auth_target() -> String {
+pub(super) fn auth_target() -> String {
     let raw = env::var("UDB_AUTH_TARGET")
         .or_else(|_| env::var("UDB_GRPC_TARGET"))
         .or_else(|_| env::var("UDB_GRPC_ADDR"))
@@ -378,7 +421,7 @@ fn auth_target() -> String {
     }
 }
 
-fn client_target_addr(addr: &str) -> String {
+pub(super) fn client_target_addr(addr: &str) -> String {
     let addr = addr.trim();
     if let Some(port) = addr.strip_prefix(&format!("{DEFAULT_GRPC_BIND_HOST}:")) {
         format!("{DEFAULT_GRPC_TARGET_HOST}:{port}")
@@ -390,7 +433,7 @@ fn client_target_addr(addr: &str) -> String {
 /// Attach the bearer token + control-plane identity headers from the
 /// environment, mirroring the `auth` CLI. The bearer claim is the authoritative
 /// caller identity the server authorizes against.
-fn with_metadata<T>(message: T) -> Request<T> {
+pub(super) fn with_metadata<T>(message: T) -> Request<T> {
     let mut request = Request::new(message);
     if let Ok(token) = env::var("UDB_AUTH_TOKEN").or_else(|_| env::var("UDB_BEARER_TOKEN")) {
         let token = token.trim();

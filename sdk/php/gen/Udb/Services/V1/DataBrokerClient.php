@@ -490,6 +490,21 @@ class DataBrokerClient extends \Grpc\BaseStub {
     }
 
     /**
+     * Record a durable consumer's position (see CDCSubscriptionRequest.consumer_name).
+     * @param \Udb\Entity\V1\AckCdcEventsRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall<\Udb\Entity\V1\AckCdcEventsResponse>
+     */
+    public function AckCdcEvents(\Udb\Entity\V1\AckCdcEventsRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/udb.services.v1.DataBroker/AckCdcEvents',
+        $argument,
+        ['\Udb\Entity\V1\AckCdcEventsResponse', 'decode'],
+        $metadata, $options);
+    }
+
+    /**
      * @param \Udb\Entity\V1\ViewDefinition $argument input argument
      * @param array $metadata metadata
      * @param array $options call options
@@ -1007,6 +1022,11 @@ class DataBrokerClient extends \Grpc\BaseStub {
     }
 
     /**
+     * @deprecated
+     * DEPRECATED: writes the legacy ABAC table, which does NOT authorize
+     * requests. Authorization comes from the Casbin governance table: use
+     * AuthzService.PutAuthzPolicy (or `udb authz seed` / `udb policy apply`).
+     * Every response carries an `x-udb-deprecated` header; removed in 0.6.0.
      * @param \Udb\Entity\V1\PutPolicyRequest $argument input argument
      * @param array $metadata metadata
      * @param array $options call options

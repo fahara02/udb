@@ -121,6 +121,15 @@ enum LiveQueryComparison {
   LIVE_QUERY_COMPARISON_LE = 4;
   LIVE_QUERY_COMPARISON_GT = 5;
   LIVE_QUERY_COMPARISON_GE = 6;
+  // Membership: the field equals one of `LiveQueryPredicate.values`.
+  LIVE_QUERY_COMPARISON_IN = 7;
+  // Non-membership: the field is present, non-null and equals none of `values`
+  // (SQL NOT IN semantics, so the snapshot and the live deltas agree).
+  LIVE_QUERY_COMPARISON_NOT_IN = 8;
+  // The field is null or absent. `value`/`values` are ignored.
+  LIVE_QUERY_COMPARISON_IS_NULL = 9;
+  // The field is present and non-null. `value`/`values` are ignored.
+  LIVE_QUERY_COMPARISON_IS_NOT_NULL = 10;
 }
 
 // The kind of change a delta represents.
@@ -139,6 +148,17 @@ message LiveQueryPredicate {
   string field = 1;
   LiveQueryComparison op = 2;
   string value = 3;
+  // Operands of IN / NOT_IN (each typed like `value`). Must be non-empty for
+  // those operators and empty for every other operator.
+  repeated string values = 4;
+}
+
+// A disjunction: the row matches when ANY of its predicates matches. Each group
+// in `SubscribeRequest.any_of` is AND-ed with `filters` and with the other
+// groups, so a filter is written in conjunctive normal form, e.g.
+// `status IN (open, held) AND (owner = me OR assignee = me)`.
+message LiveQueryAnyOf {
+  repeated LiveQueryPredicate predicates = 1;
 }
 
 message SubscribeRequest {
@@ -163,6 +183,14 @@ message SubscribeRequest {
   string project_id = 4;
   // Upper bound on rows returned in the initial snapshot (clamped server-side).
   int32 snapshot_limit = 5;
+  // OR-groups AND-ed with `filters` (see LiveQueryAnyOf). An empty group is
+  // rejected rather than read as "matches nothing".
+  repeated LiveQueryAnyOf any_of = 6;
+  // Durable resume: the last `LiveQueryChange.event_id` this client delivered.
+  // The broker replays the changes after it from the CDC journal before going
+  // live. Supersedes the `x-udb-livequery-resume` header (still honoured); when
+  // both are set they must name the same event.
+  string since_event_id = 7;
 }
 
 // One streamed frame: either the initial snapshot or a single change delta.

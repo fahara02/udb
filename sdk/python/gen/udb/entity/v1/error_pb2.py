@@ -24,7 +24,7 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x19udb/entity/v1/error.proto\x12\rudb.entity.v1\"M\n\x13\x45rrorFieldViolation\x12\x14\n\x05\x66ield\x18\x01 \x01(\tR\x05\x66ield\x12 \n\x0b\x64\x65scription\x18\x02 \x01(\tR\x0b\x64\x65scription\"\x8c\x03\n\x0b\x45rrorDetail\x12\x18\n\x07\x62\x61\x63kend\x18\x01 \x01(\tR\x07\x62\x61\x63kend\x12\x1c\n\toperation\x18\x02 \x01(\tR\toperation\x12/\n\x13\x63\x61pability_required\x18\x03 \x01(\tR\x12\x63\x61pabilityRequired\x12\x1c\n\tretryable\x18\x04 \x01(\x08R\tretryable\x12$\n\x0eretry_after_ms\x18\x05 \x01(\x03R\x0cretryAfterMs\x12,\n\x12policy_decision_id\x18\x06 \x01(\tR\x10policyDecisionId\x12%\n\x0e\x63orrelation_id\x18\x07 \x01(\tR\rcorrelationId\x12,\n\x04kind\x18\x08 \x01(\x0e\x32\x18.udb.entity.v1.ErrorKindR\x04kind\x12M\n\x10\x66ield_violations\x18\t \x03(\x0b\x32\".udb.entity.v1.ErrorFieldViolationR\x0f\x66ieldViolations*\xd4\x01\n\tErrorKind\x12\x1a\n\x16\x45RROR_KIND_UNSPECIFIED\x10\x00\x12\x19\n\x15\x45RROR_KIND_CAPABILITY\x10\x01\x12\x15\n\x11\x45RROR_KIND_POLICY\x10\x02\x12\x14\n\x10\x45RROR_KIND_QUOTA\x10\x03\x12\x15\n\x11\x45RROR_KIND_SCHEMA\x10\x04\x12\x18\n\x14\x45RROR_KIND_RETRYABLE\x10\x05\x12\x17\n\x13\x45RROR_KIND_INTERNAL\x10\x06\x12\x19\n\x15\x45RROR_KIND_VALIDATION\x10\x07\x42\xb0\x01\n\x11\x63om.udb.entity.v1B\nErrorProtoP\x01Z9github.com/fahara02/udb/sdk/go/gen/udb/entity/v1;entityv1\xa2\x02\x03UEX\xaa\x02\rUdb.Entity.V1\xca\x02\rUdb\\Entity\\V1\xe2\x02\x19Udb\\GPBMetadata\\Entity\\V1\xea\x02\x0fUdb::Entity::V1b\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x19udb/entity/v1/error.proto\x12\rudb.entity.v1\"M\n\x13\x45rrorFieldViolation\x12\x14\n\x05\x66ield\x18\x01 \x01(\tR\x05\x66ield\x12 \n\x0b\x64\x65scription\x18\x02 \x01(\tR\x0b\x64\x65scription\"\xf6\x04\n\x0b\x45rrorDetail\x12\x18\n\x07\x62\x61\x63kend\x18\x01 \x01(\tR\x07\x62\x61\x63kend\x12\x1c\n\toperation\x18\x02 \x01(\tR\toperation\x12/\n\x13\x63\x61pability_required\x18\x03 \x01(\tR\x12\x63\x61pabilityRequired\x12\x1c\n\tretryable\x18\x04 \x01(\x08R\tretryable\x12$\n\x0eretry_after_ms\x18\x05 \x01(\x03R\x0cretryAfterMs\x12,\n\x12policy_decision_id\x18\x06 \x01(\tR\x10policyDecisionId\x12%\n\x0e\x63orrelation_id\x18\x07 \x01(\tR\rcorrelationId\x12,\n\x04kind\x18\x08 \x01(\x0e\x32\x18.udb.entity.v1.ErrorKindR\x04kind\x12M\n\x10\x66ield_violations\x18\t \x03(\x0b\x32\".udb.entity.v1.ErrorFieldViolationR\x0f\x66ieldViolations\x12\x16\n\x06reason\x18\n \x01(\tR\x06reason\x12\x1e\n\nconstraint\x18\x0b \x01(\tR\nconstraint\x12\x16\n\x06\x63olumn\x18\x0c \x01(\tR\x06\x63olumn\x12\x19\n\x08\x66ix_hint\x18\r \x01(\tR\x07\x66ixHint\x12\x41\n\x07missing\x18\x0e \x03(\x0b\x32\'.udb.entity.v1.ErrorDetail.MissingEntryR\x07missing\x1a:\n\x0cMissingEntry\x12\x10\n\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n\x05value\x18\x02 \x01(\tR\x05value:\x02\x38\x01*\xa4\x03\n\tErrorKind\x12\x1a\n\x16\x45RROR_KIND_UNSPECIFIED\x10\x00\x12\x19\n\x15\x45RROR_KIND_CAPABILITY\x10\x01\x12\x15\n\x11\x45RROR_KIND_POLICY\x10\x02\x12\x14\n\x10\x45RROR_KIND_QUOTA\x10\x03\x12\x15\n\x11\x45RROR_KIND_SCHEMA\x10\x04\x12\x18\n\x14\x45RROR_KIND_RETRYABLE\x10\x05\x12\x17\n\x13\x45RROR_KIND_INTERNAL\x10\x06\x12\x19\n\x15\x45RROR_KIND_VALIDATION\x10\x07\x12\x17\n\x13\x45RROR_KIND_CONFLICT\x10\x08\x12\x18\n\x14\x45RROR_KIND_NOT_FOUND\x10\t\x12\x15\n\x11\x45RROR_KIND_UNIQUE\x10\n\x12\x17\n\x13\x45RROR_KIND_NOT_NULL\x10\x0b\x12\x1a\n\x16\x45RROR_KIND_FOREIGN_KEY\x10\x0c\x12\x19\n\x15\x45RROR_KIND_PERMISSION\x10\r\x12\x17\n\x13\x45RROR_KIND_REDACTED\x10\x0e\x12\x1b\n\x17\x45RROR_KIND_RATE_LIMITED\x10\x0f\x42\xb0\x01\n\x11\x63om.udb.entity.v1B\nErrorProtoP\x01Z9github.com/fahara02/udb/sdk/go/gen/udb/entity/v1;entityv1\xa2\x02\x03UEX\xaa\x02\rUdb.Entity.V1\xca\x02\rUdb\\Entity\\V1\xe2\x02\x19Udb\\GPBMetadata\\Entity\\V1\xea\x02\x0fUdb::Entity::V1b\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -32,10 +32,14 @@ _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'udb.entity.v1.error_pb2', _
 if not _descriptor._USE_C_DESCRIPTORS:
   _globals['DESCRIPTOR']._loaded_options = None
   _globals['DESCRIPTOR']._serialized_options = b'\n\021com.udb.entity.v1B\nErrorProtoP\001Z9github.com/fahara02/udb/sdk/go/gen/udb/entity/v1;entityv1\242\002\003UEX\252\002\rUdb.Entity.V1\312\002\rUdb\\Entity\\V1\342\002\031Udb\\GPBMetadata\\Entity\\V1\352\002\017Udb::Entity::V1'
-  _globals['_ERRORKIND']._serialized_start=523
-  _globals['_ERRORKIND']._serialized_end=735
+  _globals['_ERRORDETAIL_MISSINGENTRY']._loaded_options = None
+  _globals['_ERRORDETAIL_MISSINGENTRY']._serialized_options = b'8\001'
+  _globals['_ERRORKIND']._serialized_start=757
+  _globals['_ERRORKIND']._serialized_end=1177
   _globals['_ERRORFIELDVIOLATION']._serialized_start=44
   _globals['_ERRORFIELDVIOLATION']._serialized_end=121
   _globals['_ERRORDETAIL']._serialized_start=124
-  _globals['_ERRORDETAIL']._serialized_end=520
+  _globals['_ERRORDETAIL']._serialized_end=754
+  _globals['_ERRORDETAIL_MISSINGENTRY']._serialized_start=696
+  _globals['_ERRORDETAIL_MISSINGENTRY']._serialized_end=754
 # @@protoc_insertion_point(module_scope)

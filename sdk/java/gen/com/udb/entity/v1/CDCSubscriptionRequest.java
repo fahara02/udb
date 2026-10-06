@@ -30,6 +30,7 @@ private static final long serialVersionUID = 0L;
   private CDCSubscriptionRequest() {
     topicPattern_ = "";
     sinceEventId_ = "";
+    consumerName_ = "";
   }
 
   public static final com.google.protobuf.Descriptors.Descriptor
@@ -150,6 +151,61 @@ private static final long serialVersionUID = 0L;
     }
   }
 
+  public static final int CONSUMER_NAME_FIELD_NUMBER = 4;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object consumerName_ = "";
+  /**
+   * <pre>
+   * A durable consumer's name (1-120 chars of [A-Za-z0-9_.:-]). When set and
+   * since_event_id is empty, the stream resumes after the last event this
+   * consumer acknowledged with AckCdcEvents for this topic_pattern, so a
+   * restarted (or reconnected) consumer neither skips nor re-reads its place.
+   * Cursors are scoped to the caller's verified tenant and project.
+   * </pre>
+   *
+   * <code>string consumer_name = 4 [json_name = "consumerName"];</code>
+   * @return The consumerName.
+   */
+  @java.lang.Override
+  public java.lang.String getConsumerName() {
+    java.lang.Object ref = consumerName_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs =
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      consumerName_ = s;
+      return s;
+    }
+  }
+  /**
+   * <pre>
+   * A durable consumer's name (1-120 chars of [A-Za-z0-9_.:-]). When set and
+   * since_event_id is empty, the stream resumes after the last event this
+   * consumer acknowledged with AckCdcEvents for this topic_pattern, so a
+   * restarted (or reconnected) consumer neither skips nor re-reads its place.
+   * Cursors are scoped to the caller's verified tenant and project.
+   * </pre>
+   *
+   * <code>string consumer_name = 4 [json_name = "consumerName"];</code>
+   * @return The bytes for consumerName.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getConsumerNameBytes() {
+    java.lang.Object ref = consumerName_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b =
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      consumerName_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -173,6 +229,9 @@ private static final long serialVersionUID = 0L;
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(sinceEventId_)) {
       com.google.protobuf.GeneratedMessage.writeString(output, 3, sinceEventId_);
     }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(consumerName_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 4, consumerName_);
+    }
     getUnknownFields().writeTo(output);
   }
 
@@ -191,6 +250,9 @@ private static final long serialVersionUID = 0L;
     }
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(sinceEventId_)) {
       size += com.google.protobuf.GeneratedMessage.computeStringSize(3, sinceEventId_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(consumerName_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(4, consumerName_);
     }
     size += getUnknownFields().getSerializedSize();
     memoizedSize = size;
@@ -216,6 +278,8 @@ private static final long serialVersionUID = 0L;
         .equals(other.getTopicPattern())) return false;
     if (!getSinceEventId()
         .equals(other.getSinceEventId())) return false;
+    if (!getConsumerName()
+        .equals(other.getConsumerName())) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -235,6 +299,8 @@ private static final long serialVersionUID = 0L;
     hash = (53 * hash) + getTopicPattern().hashCode();
     hash = (37 * hash) + SINCE_EVENT_ID_FIELD_NUMBER;
     hash = (53 * hash) + getSinceEventId().hashCode();
+    hash = (37 * hash) + CONSUMER_NAME_FIELD_NUMBER;
+    hash = (53 * hash) + getConsumerName().hashCode();
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -379,6 +445,7 @@ private static final long serialVersionUID = 0L;
       }
       topicPattern_ = "";
       sinceEventId_ = "";
+      consumerName_ = "";
       return this;
     }
 
@@ -425,6 +492,9 @@ private static final long serialVersionUID = 0L;
       if (((from_bitField0_ & 0x00000004) != 0)) {
         result.sinceEventId_ = sinceEventId_;
       }
+      if (((from_bitField0_ & 0x00000008) != 0)) {
+        result.consumerName_ = consumerName_;
+      }
       result.bitField0_ |= to_bitField0_;
     }
 
@@ -451,6 +521,11 @@ private static final long serialVersionUID = 0L;
       if (!other.getSinceEventId().isEmpty()) {
         sinceEventId_ = other.sinceEventId_;
         bitField0_ |= 0x00000004;
+        onChanged();
+      }
+      if (!other.getConsumerName().isEmpty()) {
+        consumerName_ = other.consumerName_;
+        bitField0_ |= 0x00000008;
         onChanged();
       }
       this.mergeUnknownFields(other.getUnknownFields());
@@ -496,6 +571,11 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00000004;
               break;
             } // case 26
+            case 34: {
+              consumerName_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00000008;
+              break;
+            } // case 34
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -774,6 +854,118 @@ private static final long serialVersionUID = 0L;
       checkByteStringIsUtf8(value);
       sinceEventId_ = value;
       bitField0_ |= 0x00000004;
+      onChanged();
+      return this;
+    }
+
+    private java.lang.Object consumerName_ = "";
+    /**
+     * <pre>
+     * A durable consumer's name (1-120 chars of [A-Za-z0-9_.:-]). When set and
+     * since_event_id is empty, the stream resumes after the last event this
+     * consumer acknowledged with AckCdcEvents for this topic_pattern, so a
+     * restarted (or reconnected) consumer neither skips nor re-reads its place.
+     * Cursors are scoped to the caller's verified tenant and project.
+     * </pre>
+     *
+     * <code>string consumer_name = 4 [json_name = "consumerName"];</code>
+     * @return The consumerName.
+     */
+    public java.lang.String getConsumerName() {
+      java.lang.Object ref = consumerName_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        consumerName_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <pre>
+     * A durable consumer's name (1-120 chars of [A-Za-z0-9_.:-]). When set and
+     * since_event_id is empty, the stream resumes after the last event this
+     * consumer acknowledged with AckCdcEvents for this topic_pattern, so a
+     * restarted (or reconnected) consumer neither skips nor re-reads its place.
+     * Cursors are scoped to the caller's verified tenant and project.
+     * </pre>
+     *
+     * <code>string consumer_name = 4 [json_name = "consumerName"];</code>
+     * @return The bytes for consumerName.
+     */
+    public com.google.protobuf.ByteString
+        getConsumerNameBytes() {
+      java.lang.Object ref = consumerName_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b =
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        consumerName_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <pre>
+     * A durable consumer's name (1-120 chars of [A-Za-z0-9_.:-]). When set and
+     * since_event_id is empty, the stream resumes after the last event this
+     * consumer acknowledged with AckCdcEvents for this topic_pattern, so a
+     * restarted (or reconnected) consumer neither skips nor re-reads its place.
+     * Cursors are scoped to the caller's verified tenant and project.
+     * </pre>
+     *
+     * <code>string consumer_name = 4 [json_name = "consumerName"];</code>
+     * @param value The consumerName to set.
+     * @return This builder for chaining.
+     */
+    public Builder setConsumerName(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      consumerName_ = value;
+      bitField0_ |= 0x00000008;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * A durable consumer's name (1-120 chars of [A-Za-z0-9_.:-]). When set and
+     * since_event_id is empty, the stream resumes after the last event this
+     * consumer acknowledged with AckCdcEvents for this topic_pattern, so a
+     * restarted (or reconnected) consumer neither skips nor re-reads its place.
+     * Cursors are scoped to the caller's verified tenant and project.
+     * </pre>
+     *
+     * <code>string consumer_name = 4 [json_name = "consumerName"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearConsumerName() {
+      consumerName_ = getDefaultInstance().getConsumerName();
+      bitField0_ = (bitField0_ & ~0x00000008);
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * A durable consumer's name (1-120 chars of [A-Za-z0-9_.:-]). When set and
+     * since_event_id is empty, the stream resumes after the last event this
+     * consumer acknowledged with AckCdcEvents for this topic_pattern, so a
+     * restarted (or reconnected) consumer neither skips nor re-reads its place.
+     * Cursors are scoped to the caller's verified tenant and project.
+     * </pre>
+     *
+     * <code>string consumer_name = 4 [json_name = "consumerName"];</code>
+     * @param value The bytes for consumerName to set.
+     * @return This builder for chaining.
+     */
+    public Builder setConsumerNameBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      consumerName_ = value;
+      bitField0_ |= 0x00000008;
       onChanged();
       return this;
     }

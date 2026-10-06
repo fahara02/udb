@@ -1071,6 +1071,16 @@ impl MigrationOptions {
         if let Some(value) = bool_env("UDB_MIGRATION_EMERGENCY_AUTO_ALTER") {
             self.emergency_auto_alter = value;
         }
+        // The approval-plan path the gate reads. Config-file-only made a deploy
+        // read a stale plan from an old volume with no way to point it at the
+        // fresh one; the env wins so a deploy names the plan it just approved.
+        if let Some(path) = std::env::var("UDB_MIGRATION_APPROVAL_PLAN")
+            .ok()
+            .map(|value| value.trim().to_string())
+            .filter(|value| !value.is_empty())
+        {
+            self.require_approval_plan = path;
+        }
     }
 
     /// Returns `true` when any notification events are configured.

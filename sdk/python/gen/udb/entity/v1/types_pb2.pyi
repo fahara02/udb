@@ -77,6 +77,8 @@ from udb.entity.v1.stores_pb2 import GraphTraversalDirection as GraphTraversalDi
 from udb.entity.v1.tx_pb2 import Mutation as Mutation
 from udb.entity.v1.tx_pb2 import TxStatus as TxStatus
 from udb.entity.v1.cdc_pb2 import CDCSubscriptionRequest as CDCSubscriptionRequest
+from udb.entity.v1.cdc_pb2 import AckCdcEventsRequest as AckCdcEventsRequest
+from udb.entity.v1.cdc_pb2 import AckCdcEventsResponse as AckCdcEventsResponse
 from udb.entity.v1.cdc_pb2 import CdcControlRequest as CdcControlRequest
 from udb.entity.v1.cdc_pb2 import CdcStatusResponse as CdcStatusResponse
 from udb.entity.v1.outbox_pb2 import EnqueueOutboxEventRequest as EnqueueOutboxEventRequest

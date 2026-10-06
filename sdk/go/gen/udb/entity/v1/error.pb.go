@@ -46,29 +46,65 @@ const (
 	// Malformed or semantically invalid request fields. Maps to gRPC
 	// InvalidArgument and carries `field_violations`.
 	ErrorKind_ERROR_KIND_VALIDATION ErrorKind = 7
+	// A compare-and-swap / revision precondition did not hold: the row changed
+	// since the caller read it. Re-read and retry. Maps to FailedPrecondition.
+	ErrorKind_ERROR_KIND_CONFLICT ErrorKind = 8
+	// The addressed row or resource does not exist (or is not visible to the
+	// caller). Maps to NotFound.
+	ErrorKind_ERROR_KIND_NOT_FOUND ErrorKind = 9
+	// A unique constraint was violated; `constraint` names it. Maps to
+	// AlreadyExists.
+	ErrorKind_ERROR_KIND_UNIQUE ErrorKind = 10
+	// A NOT NULL column received no value; `column` names it.
+	ErrorKind_ERROR_KIND_NOT_NULL ErrorKind = 11
+	// A foreign-key constraint was violated; `constraint` names it.
+	ErrorKind_ERROR_KIND_FOREIGN_KEY ErrorKind = 12
+	// The caller lacks a scope, grant or policy rule; `missing` names it.
+	ErrorKind_ERROR_KIND_PERMISSION ErrorKind = 13
+	// A value was redacted for this caller (PII without the read scope), or a
+	// write tried to store a redacted placeholder.
+	ErrorKind_ERROR_KIND_REDACTED ErrorKind = 14
+	// A rate limit was hit; `retry_after_ms` and `missing` describe the bucket.
+	ErrorKind_ERROR_KIND_RATE_LIMITED ErrorKind = 15
 )
 
 // Enum value maps for ErrorKind.
 var (
 	ErrorKind_name = map[int32]string{
-		0: "ERROR_KIND_UNSPECIFIED",
-		1: "ERROR_KIND_CAPABILITY",
-		2: "ERROR_KIND_POLICY",
-		3: "ERROR_KIND_QUOTA",
-		4: "ERROR_KIND_SCHEMA",
-		5: "ERROR_KIND_RETRYABLE",
-		6: "ERROR_KIND_INTERNAL",
-		7: "ERROR_KIND_VALIDATION",
+		0:  "ERROR_KIND_UNSPECIFIED",
+		1:  "ERROR_KIND_CAPABILITY",
+		2:  "ERROR_KIND_POLICY",
+		3:  "ERROR_KIND_QUOTA",
+		4:  "ERROR_KIND_SCHEMA",
+		5:  "ERROR_KIND_RETRYABLE",
+		6:  "ERROR_KIND_INTERNAL",
+		7:  "ERROR_KIND_VALIDATION",
+		8:  "ERROR_KIND_CONFLICT",
+		9:  "ERROR_KIND_NOT_FOUND",
+		10: "ERROR_KIND_UNIQUE",
+		11: "ERROR_KIND_NOT_NULL",
+		12: "ERROR_KIND_FOREIGN_KEY",
+		13: "ERROR_KIND_PERMISSION",
+		14: "ERROR_KIND_REDACTED",
+		15: "ERROR_KIND_RATE_LIMITED",
 	}
 	ErrorKind_value = map[string]int32{
-		"ERROR_KIND_UNSPECIFIED": 0,
-		"ERROR_KIND_CAPABILITY":  1,
-		"ERROR_KIND_POLICY":      2,
-		"ERROR_KIND_QUOTA":       3,
-		"ERROR_KIND_SCHEMA":      4,
-		"ERROR_KIND_RETRYABLE":   5,
-		"ERROR_KIND_INTERNAL":    6,
-		"ERROR_KIND_VALIDATION":  7,
+		"ERROR_KIND_UNSPECIFIED":  0,
+		"ERROR_KIND_CAPABILITY":   1,
+		"ERROR_KIND_POLICY":       2,
+		"ERROR_KIND_QUOTA":        3,
+		"ERROR_KIND_SCHEMA":       4,
+		"ERROR_KIND_RETRYABLE":    5,
+		"ERROR_KIND_INTERNAL":     6,
+		"ERROR_KIND_VALIDATION":   7,
+		"ERROR_KIND_CONFLICT":     8,
+		"ERROR_KIND_NOT_FOUND":    9,
+		"ERROR_KIND_UNIQUE":       10,
+		"ERROR_KIND_NOT_NULL":     11,
+		"ERROR_KIND_FOREIGN_KEY":  12,
+		"ERROR_KIND_PERMISSION":   13,
+		"ERROR_KIND_REDACTED":     14,
+		"ERROR_KIND_RATE_LIMITED": 15,
 	}
 )
 
@@ -181,8 +217,23 @@ type ErrorDetail struct {
 	// Structured invalid-field details for INVALID_ARGUMENT responses. Empty for
 	// non-validation errors.
 	FieldViolations []*ErrorFieldViolation `protobuf:"bytes,9,rep,name=field_violations,json=fieldViolations,proto3" json:"field_violations,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	// Stable machine reason, `UDB_` + upper snake case (for example
+	// `UDB_CAS_CONFLICT`, `UDB_CAS_KEY_NOT_PK`, `UDB_NO_ROWS_AFFECTED`). The set is
+	// listed in docs/error-reasons.md; a reason is never renamed once shipped.
+	// Branch on this, never on the message text.
+	Reason string `protobuf:"bytes,10,opt,name=reason,proto3" json:"reason,omitempty"`
+	// The constraint involved (unique, foreign key, check), when known.
+	Constraint string `protobuf:"bytes,11,opt,name=constraint,proto3" json:"constraint,omitempty"`
+	// The column involved (not null, coercion, decode), when known.
+	Column string `protobuf:"bytes,12,opt,name=column,proto3" json:"column,omitempty"`
+	// One sentence telling the caller how to fix the request.
+	FixHint string `protobuf:"bytes,13,opt,name=fix_hint,json=fixHint,proto3" json:"fix_hint,omitempty"`
+	// What the caller is missing, as key/value pairs: for example
+	// `{"scope": "udb:pii:read"}`, `{"purpose": ""}`,
+	// `{"rule": "Select acme.notes.v1.Note"}`.
+	Missing       map[string]string `protobuf:"bytes,14,rep,name=missing,proto3" json:"missing,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *ErrorDetail) Reset() {
@@ -278,6 +329,41 @@ func (x *ErrorDetail) GetFieldViolations() []*ErrorFieldViolation {
 	return nil
 }
 
+func (x *ErrorDetail) GetReason() string {
+	if x != nil {
+		return x.Reason
+	}
+	return ""
+}
+
+func (x *ErrorDetail) GetConstraint() string {
+	if x != nil {
+		return x.Constraint
+	}
+	return ""
+}
+
+func (x *ErrorDetail) GetColumn() string {
+	if x != nil {
+		return x.Column
+	}
+	return ""
+}
+
+func (x *ErrorDetail) GetFixHint() string {
+	if x != nil {
+		return x.FixHint
+	}
+	return ""
+}
+
+func (x *ErrorDetail) GetMissing() map[string]string {
+	if x != nil {
+		return x.Missing
+	}
+	return nil
+}
+
 var File_udb_entity_v1_error_proto protoreflect.FileDescriptor
 
 const file_udb_entity_v1_error_proto_rawDesc = "" +
@@ -285,7 +371,7 @@ const file_udb_entity_v1_error_proto_rawDesc = "" +
 	"\x19udb/entity/v1/error.proto\x12\rudb.entity.v1\"M\n" +
 	"\x13ErrorFieldViolation\x12\x14\n" +
 	"\x05field\x18\x01 \x01(\tR\x05field\x12 \n" +
-	"\vdescription\x18\x02 \x01(\tR\vdescription\"\x8c\x03\n" +
+	"\vdescription\x18\x02 \x01(\tR\vdescription\"\xf6\x04\n" +
 	"\vErrorDetail\x12\x18\n" +
 	"\abackend\x18\x01 \x01(\tR\abackend\x12\x1c\n" +
 	"\toperation\x18\x02 \x01(\tR\toperation\x12/\n" +
@@ -295,7 +381,18 @@ const file_udb_entity_v1_error_proto_rawDesc = "" +
 	"\x12policy_decision_id\x18\x06 \x01(\tR\x10policyDecisionId\x12%\n" +
 	"\x0ecorrelation_id\x18\a \x01(\tR\rcorrelationId\x12,\n" +
 	"\x04kind\x18\b \x01(\x0e2\x18.udb.entity.v1.ErrorKindR\x04kind\x12M\n" +
-	"\x10field_violations\x18\t \x03(\v2\".udb.entity.v1.ErrorFieldViolationR\x0ffieldViolations*\xd4\x01\n" +
+	"\x10field_violations\x18\t \x03(\v2\".udb.entity.v1.ErrorFieldViolationR\x0ffieldViolations\x12\x16\n" +
+	"\x06reason\x18\n" +
+	" \x01(\tR\x06reason\x12\x1e\n" +
+	"\n" +
+	"constraint\x18\v \x01(\tR\n" +
+	"constraint\x12\x16\n" +
+	"\x06column\x18\f \x01(\tR\x06column\x12\x19\n" +
+	"\bfix_hint\x18\r \x01(\tR\afixHint\x12A\n" +
+	"\amissing\x18\x0e \x03(\v2'.udb.entity.v1.ErrorDetail.MissingEntryR\amissing\x1a:\n" +
+	"\fMissingEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01*\xa4\x03\n" +
 	"\tErrorKind\x12\x1a\n" +
 	"\x16ERROR_KIND_UNSPECIFIED\x10\x00\x12\x19\n" +
 	"\x15ERROR_KIND_CAPABILITY\x10\x01\x12\x15\n" +
@@ -304,7 +401,16 @@ const file_udb_entity_v1_error_proto_rawDesc = "" +
 	"\x11ERROR_KIND_SCHEMA\x10\x04\x12\x18\n" +
 	"\x14ERROR_KIND_RETRYABLE\x10\x05\x12\x17\n" +
 	"\x13ERROR_KIND_INTERNAL\x10\x06\x12\x19\n" +
-	"\x15ERROR_KIND_VALIDATION\x10\aB\xb0\x01\n" +
+	"\x15ERROR_KIND_VALIDATION\x10\a\x12\x17\n" +
+	"\x13ERROR_KIND_CONFLICT\x10\b\x12\x18\n" +
+	"\x14ERROR_KIND_NOT_FOUND\x10\t\x12\x15\n" +
+	"\x11ERROR_KIND_UNIQUE\x10\n" +
+	"\x12\x17\n" +
+	"\x13ERROR_KIND_NOT_NULL\x10\v\x12\x1a\n" +
+	"\x16ERROR_KIND_FOREIGN_KEY\x10\f\x12\x19\n" +
+	"\x15ERROR_KIND_PERMISSION\x10\r\x12\x17\n" +
+	"\x13ERROR_KIND_REDACTED\x10\x0e\x12\x1b\n" +
+	"\x17ERROR_KIND_RATE_LIMITED\x10\x0fB\xb0\x01\n" +
 	"\x11com.udb.entity.v1B\n" +
 	"ErrorProtoP\x01Z9github.com/fahara02/udb/sdk/go/gen/udb/entity/v1;entityv1\xa2\x02\x03UEX\xaa\x02\rUdb.Entity.V1\xca\x02\rUdb\\Entity\\V1\xe2\x02\x19Udb\\GPBMetadata\\Entity\\V1\xea\x02\x0fUdb::Entity::V1b\x06proto3"
 
@@ -321,20 +427,22 @@ func file_udb_entity_v1_error_proto_rawDescGZIP() []byte {
 }
 
 var file_udb_entity_v1_error_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_udb_entity_v1_error_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
+var file_udb_entity_v1_error_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
 var file_udb_entity_v1_error_proto_goTypes = []any{
 	(ErrorKind)(0),              // 0: udb.entity.v1.ErrorKind
 	(*ErrorFieldViolation)(nil), // 1: udb.entity.v1.ErrorFieldViolation
 	(*ErrorDetail)(nil),         // 2: udb.entity.v1.ErrorDetail
+	nil,                         // 3: udb.entity.v1.ErrorDetail.MissingEntry
 }
 var file_udb_entity_v1_error_proto_depIdxs = []int32{
 	0, // 0: udb.entity.v1.ErrorDetail.kind:type_name -> udb.entity.v1.ErrorKind
 	1, // 1: udb.entity.v1.ErrorDetail.field_violations:type_name -> udb.entity.v1.ErrorFieldViolation
-	2, // [2:2] is the sub-list for method output_type
-	2, // [2:2] is the sub-list for method input_type
-	2, // [2:2] is the sub-list for extension type_name
-	2, // [2:2] is the sub-list for extension extendee
-	0, // [0:2] is the sub-list for field type_name
+	3, // 2: udb.entity.v1.ErrorDetail.missing:type_name -> udb.entity.v1.ErrorDetail.MissingEntry
+	3, // [3:3] is the sub-list for method output_type
+	3, // [3:3] is the sub-list for method input_type
+	3, // [3:3] is the sub-list for extension type_name
+	3, // [3:3] is the sub-list for extension extendee
+	0, // [0:3] is the sub-list for field type_name
 }
 
 func init() { file_udb_entity_v1_error_proto_init() }
@@ -348,7 +456,7 @@ func file_udb_entity_v1_error_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_udb_entity_v1_error_proto_rawDesc), len(file_udb_entity_v1_error_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   2,
+			NumMessages:   3,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

@@ -46,6 +46,22 @@ class SubscribeRequest extends \Google\Protobuf\Internal\Message
      * Generated from protobuf field <code>int32 snapshot_limit = 5 [json_name = "snapshotLimit"];</code>
      */
     protected $snapshot_limit = 0;
+    /**
+     * OR-groups AND-ed with `filters` (see LiveQueryAnyOf). An empty group is
+     * rejected rather than read as "matches nothing".
+     *
+     * Generated from protobuf field <code>repeated .udb.core.livequery.services.v1.LiveQueryAnyOf any_of = 6 [json_name = "anyOf"];</code>
+     */
+    private $any_of;
+    /**
+     * Durable resume: the last `LiveQueryChange.event_id` this client delivered.
+     * The broker replays the changes after it from the CDC journal before going
+     * live. Supersedes the `x-udb-livequery-resume` header (still honoured); when
+     * both are set they must name the same event.
+     *
+     * Generated from protobuf field <code>string since_event_id = 7 [json_name = "sinceEventId"];</code>
+     */
+    protected $since_event_id = '';
 
     /**
      * Constructor.
@@ -65,6 +81,14 @@ class SubscribeRequest extends \Google\Protobuf\Internal\Message
      *           Optional project scope; further narrows the tenant predicate.
      *     @type int $snapshot_limit
      *           Upper bound on rows returned in the initial snapshot (clamped server-side).
+     *     @type \Udb\Core\Livequery\Services\V1\LiveQueryAnyOf[] $any_of
+     *           OR-groups AND-ed with `filters` (see LiveQueryAnyOf). An empty group is
+     *           rejected rather than read as "matches nothing".
+     *     @type string $since_event_id
+     *           Durable resume: the last `LiveQueryChange.event_id` this client delivered.
+     *           The broker replays the changes after it from the CDC journal before going
+     *           live. Supersedes the `x-udb-livequery-resume` header (still honoured); when
+     *           both are set they must name the same event.
      * }
      */
     public function __construct($data = NULL) {
@@ -202,6 +226,66 @@ class SubscribeRequest extends \Google\Protobuf\Internal\Message
     {
         GPBUtil::checkInt32($var);
         $this->snapshot_limit = $var;
+
+        return $this;
+    }
+
+    /**
+     * OR-groups AND-ed with `filters` (see LiveQueryAnyOf). An empty group is
+     * rejected rather than read as "matches nothing".
+     *
+     * Generated from protobuf field <code>repeated .udb.core.livequery.services.v1.LiveQueryAnyOf any_of = 6 [json_name = "anyOf"];</code>
+     * @return RepeatedField<\Udb\Core\Livequery\Services\V1\LiveQueryAnyOf>
+     */
+    public function getAnyOf()
+    {
+        return $this->any_of;
+    }
+
+    /**
+     * OR-groups AND-ed with `filters` (see LiveQueryAnyOf). An empty group is
+     * rejected rather than read as "matches nothing".
+     *
+     * Generated from protobuf field <code>repeated .udb.core.livequery.services.v1.LiveQueryAnyOf any_of = 6 [json_name = "anyOf"];</code>
+     * @param \Udb\Core\Livequery\Services\V1\LiveQueryAnyOf[] $var
+     * @return $this
+     */
+    public function setAnyOf($var)
+    {
+        $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::MESSAGE, \Udb\Core\Livequery\Services\V1\LiveQueryAnyOf::class);
+        $this->any_of = $arr;
+
+        return $this;
+    }
+
+    /**
+     * Durable resume: the last `LiveQueryChange.event_id` this client delivered.
+     * The broker replays the changes after it from the CDC journal before going
+     * live. Supersedes the `x-udb-livequery-resume` header (still honoured); when
+     * both are set they must name the same event.
+     *
+     * Generated from protobuf field <code>string since_event_id = 7 [json_name = "sinceEventId"];</code>
+     * @return string
+     */
+    public function getSinceEventId()
+    {
+        return $this->since_event_id;
+    }
+
+    /**
+     * Durable resume: the last `LiveQueryChange.event_id` this client delivered.
+     * The broker replays the changes after it from the CDC journal before going
+     * live. Supersedes the `x-udb-livequery-resume` header (still honoured); when
+     * both are set they must name the same event.
+     *
+     * Generated from protobuf field <code>string since_event_id = 7 [json_name = "sinceEventId"];</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setSinceEventId($var)
+    {
+        GPBUtil::checkString($var, True);
+        $this->since_event_id = $var;
 
         return $this;
     }

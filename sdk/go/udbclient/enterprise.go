@@ -70,6 +70,12 @@ type EnterpriseSession struct {
 	// stopRefresh stops the background bearer refresher; closed once by Close.
 	stopRefresh chan struct{}
 	stopOnce    sync.Once
+
+	// relogin logs in again with the credentials the session connected with.
+	// A refresh token that was revoked (or a session the broker no longer has)
+	// cannot be refreshed; without this the session kept a dead bearer until
+	// the process restarted.
+	relogin func(context.Context) (Token, error)
 }
 
 // Background bearer-refresher tuning.
@@ -157,6 +163,22 @@ func ConnectEnterprise(ctx context.Context, cfg EnterpriseConfig) (*EnterpriseSe
 		bearer:             "Bearer " + adopted.Token.AccessToken,
 		stopRefresh:        make(chan struct{}),
 	}
+	canonicalTenant := principal.GetTenantId()
+	sess.relogin = func(ctx context.Context) (Token, error) {
+		again, err := u.LoginAndAdoptTenant(ctx, &authnv1.LoginRequest{
+			Username:    cfg.Username,
+			Password:    cfg.Password,
+			TenantHint:  cfg.TenantCode,
+			ProjectHint: cfg.ProjectID,
+		})
+		if err != nil {
+			return Token{}, err
+		}
+		if again.Principal == nil || again.Principal.GetTenantId() != canonicalTenant {
+			return Token{}, fmt.Errorf("udb: re-login resolved a different tenant than the session's %s", canonicalTenant)
+		}
+		return again.Token, nil
+	}
 	// Refresh the bearer proactively in the background so no data-plane call pays
 	// the RefreshToken round-trip, and so an unrefreshable (revoked/expired) token
 	// fails closed locally. Stopped by Close.
@@ -234,6 +256,18 @@ func (s *EnterpriseSession) backgroundRefresh() {
 	refErr := s.tm.RefreshIfNeeded(ctx)
 	tok, loadErr := s.tm.store.Load(context.Background())
 	now := s.tm.now()
+
+	// The refresh token itself is unusable (revoked, expired, session gone):
+	// log in again instead of holding a bearer that can no longer be renewed.
+	if refErr != nil && s.relogin != nil {
+		if fresh, err := s.relogin(ctx); err == nil {
+			if err := s.tm.store.Save(ctx, fresh); err == nil {
+				tok, loadErr, refErr = fresh, nil, nil
+			}
+		} else {
+			refErr = fmt.Errorf("%w (re-login also failed: %v)", refErr, err)
+		}
+	}
 
 	s.mu.Lock()
 	defer s.mu.Unlock()

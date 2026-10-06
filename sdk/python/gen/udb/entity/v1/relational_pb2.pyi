@@ -40,21 +40,27 @@ class Row(_message.Message):
     def __init__(self, fields: _Optional[_Mapping[str, _struct_pb2.Value]] = ...) -> None: ...
 
 class RecordSet(_message.Message):
-    __slots__ = ("records_json", "rows", "next_page_token", "total_count", "record_revisions")
+    __slots__ = ("records_json", "rows", "next_page_token", "total_count", "record_revisions", "has_more", "exact_total", "redacted_fields")
     RECORDS_JSON_FIELD_NUMBER: _ClassVar[int]
     ROWS_FIELD_NUMBER: _ClassVar[int]
     NEXT_PAGE_TOKEN_FIELD_NUMBER: _ClassVar[int]
     TOTAL_COUNT_FIELD_NUMBER: _ClassVar[int]
     RECORD_REVISIONS_FIELD_NUMBER: _ClassVar[int]
+    HAS_MORE_FIELD_NUMBER: _ClassVar[int]
+    EXACT_TOTAL_FIELD_NUMBER: _ClassVar[int]
+    REDACTED_FIELDS_FIELD_NUMBER: _ClassVar[int]
     records_json: _containers.RepeatedScalarFieldContainer[bytes]
     rows: _containers.RepeatedCompositeFieldContainer[Row]
     next_page_token: str
     total_count: int
     record_revisions: _containers.RepeatedScalarFieldContainer[str]
-    def __init__(self, records_json: _Optional[_Iterable[bytes]] = ..., rows: _Optional[_Iterable[_Union[Row, _Mapping]]] = ..., next_page_token: _Optional[str] = ..., total_count: _Optional[int] = ..., record_revisions: _Optional[_Iterable[str]] = ...) -> None: ...
+    has_more: bool
+    exact_total: int
+    redacted_fields: _containers.RepeatedScalarFieldContainer[str]
+    def __init__(self, records_json: _Optional[_Iterable[bytes]] = ..., rows: _Optional[_Iterable[_Union[Row, _Mapping]]] = ..., next_page_token: _Optional[str] = ..., total_count: _Optional[int] = ..., record_revisions: _Optional[_Iterable[str]] = ..., has_more: bool = ..., exact_total: _Optional[int] = ..., redacted_fields: _Optional[_Iterable[str]] = ...) -> None: ...
 
 class SelectRequest(_message.Message):
-    __slots__ = ("context", "message_type", "filter", "fields", "limit", "page_token", "sort", "cache", "include_revision")
+    __slots__ = ("context", "message_type", "filter", "fields", "limit", "page_token", "sort", "cache", "include_revision", "include_total")
     CONTEXT_FIELD_NUMBER: _ClassVar[int]
     MESSAGE_TYPE_FIELD_NUMBER: _ClassVar[int]
     FILTER_FIELD_NUMBER: _ClassVar[int]
@@ -64,6 +70,7 @@ class SelectRequest(_message.Message):
     SORT_FIELD_NUMBER: _ClassVar[int]
     CACHE_FIELD_NUMBER: _ClassVar[int]
     INCLUDE_REVISION_FIELD_NUMBER: _ClassVar[int]
+    INCLUDE_TOTAL_FIELD_NUMBER: _ClassVar[int]
     context: _context_pb2.RequestContext
     message_type: str
     filter: _struct_pb2.Struct
@@ -73,7 +80,8 @@ class SelectRequest(_message.Message):
     sort: _containers.RepeatedCompositeFieldContainer[Sort]
     cache: CacheOptions
     include_revision: bool
-    def __init__(self, context: _Optional[_Union[_context_pb2.RequestContext, _Mapping]] = ..., message_type: _Optional[str] = ..., filter: _Optional[_Union[_struct_pb2.Struct, _Mapping]] = ..., fields: _Optional[_Iterable[str]] = ..., limit: _Optional[int] = ..., page_token: _Optional[str] = ..., sort: _Optional[_Iterable[_Union[Sort, _Mapping]]] = ..., cache: _Optional[_Union[CacheOptions, _Mapping]] = ..., include_revision: bool = ...) -> None: ...
+    include_total: bool
+    def __init__(self, context: _Optional[_Union[_context_pb2.RequestContext, _Mapping]] = ..., message_type: _Optional[str] = ..., filter: _Optional[_Union[_struct_pb2.Struct, _Mapping]] = ..., fields: _Optional[_Iterable[str]] = ..., limit: _Optional[int] = ..., page_token: _Optional[str] = ..., sort: _Optional[_Iterable[_Union[Sort, _Mapping]]] = ..., cache: _Optional[_Union[CacheOptions, _Mapping]] = ..., include_revision: bool = ..., include_total: bool = ...) -> None: ...
 
 class UpsertRequest(_message.Message):
     __slots__ = ("context", "message_type", "record_json", "payload", "conflict_fields", "return_record", "cache", "idempotency_key", "expected", "lock_name", "fencing_token")
@@ -102,7 +110,7 @@ class UpsertRequest(_message.Message):
     def __init__(self, context: _Optional[_Union[_context_pb2.RequestContext, _Mapping]] = ..., message_type: _Optional[str] = ..., record_json: _Optional[bytes] = ..., payload: _Optional[_Union[_struct_pb2.Struct, _Mapping]] = ..., conflict_fields: _Optional[_Iterable[str]] = ..., return_record: bool = ..., cache: _Optional[_Union[CacheOptions, _Mapping]] = ..., idempotency_key: _Optional[str] = ..., expected: _Optional[_Union[_struct_pb2.Struct, _Mapping]] = ..., lock_name: _Optional[str] = ..., fencing_token: _Optional[int] = ...) -> None: ...
 
 class DeleteRequest(_message.Message):
-    __slots__ = ("context", "message_type", "filter", "idempotency_key", "expected", "expected_revision", "lock_name", "fencing_token")
+    __slots__ = ("context", "message_type", "filter", "idempotency_key", "expected", "expected_revision", "lock_name", "fencing_token", "require_affected")
     CONTEXT_FIELD_NUMBER: _ClassVar[int]
     MESSAGE_TYPE_FIELD_NUMBER: _ClassVar[int]
     FILTER_FIELD_NUMBER: _ClassVar[int]
@@ -111,6 +119,7 @@ class DeleteRequest(_message.Message):
     EXPECTED_REVISION_FIELD_NUMBER: _ClassVar[int]
     LOCK_NAME_FIELD_NUMBER: _ClassVar[int]
     FENCING_TOKEN_FIELD_NUMBER: _ClassVar[int]
+    REQUIRE_AFFECTED_FIELD_NUMBER: _ClassVar[int]
     context: _context_pb2.RequestContext
     message_type: str
     filter: _struct_pb2.Struct
@@ -119,10 +128,11 @@ class DeleteRequest(_message.Message):
     expected_revision: str
     lock_name: str
     fencing_token: int
-    def __init__(self, context: _Optional[_Union[_context_pb2.RequestContext, _Mapping]] = ..., message_type: _Optional[str] = ..., filter: _Optional[_Union[_struct_pb2.Struct, _Mapping]] = ..., idempotency_key: _Optional[str] = ..., expected: _Optional[_Union[_struct_pb2.Struct, _Mapping]] = ..., expected_revision: _Optional[str] = ..., lock_name: _Optional[str] = ..., fencing_token: _Optional[int] = ...) -> None: ...
+    require_affected: int
+    def __init__(self, context: _Optional[_Union[_context_pb2.RequestContext, _Mapping]] = ..., message_type: _Optional[str] = ..., filter: _Optional[_Union[_struct_pb2.Struct, _Mapping]] = ..., idempotency_key: _Optional[str] = ..., expected: _Optional[_Union[_struct_pb2.Struct, _Mapping]] = ..., expected_revision: _Optional[str] = ..., lock_name: _Optional[str] = ..., fencing_token: _Optional[int] = ..., require_affected: _Optional[int] = ...) -> None: ...
 
 class UpdateRequest(_message.Message):
-    __slots__ = ("context", "message_type", "filter", "changes", "expected", "increments", "idempotency_key", "return_record", "expected_revision", "lock_name", "fencing_token")
+    __slots__ = ("context", "message_type", "filter", "changes", "expected", "increments", "idempotency_key", "return_record", "expected_revision", "lock_name", "fencing_token", "require_affected")
     class Increment(_message.Message):
         __slots__ = ("column", "delta")
         COLUMN_FIELD_NUMBER: _ClassVar[int]
@@ -141,6 +151,7 @@ class UpdateRequest(_message.Message):
     EXPECTED_REVISION_FIELD_NUMBER: _ClassVar[int]
     LOCK_NAME_FIELD_NUMBER: _ClassVar[int]
     FENCING_TOKEN_FIELD_NUMBER: _ClassVar[int]
+    REQUIRE_AFFECTED_FIELD_NUMBER: _ClassVar[int]
     context: _context_pb2.RequestContext
     message_type: str
     filter: _struct_pb2.Struct
@@ -152,7 +163,8 @@ class UpdateRequest(_message.Message):
     expected_revision: str
     lock_name: str
     fencing_token: int
-    def __init__(self, context: _Optional[_Union[_context_pb2.RequestContext, _Mapping]] = ..., message_type: _Optional[str] = ..., filter: _Optional[_Union[_struct_pb2.Struct, _Mapping]] = ..., changes: _Optional[_Union[_struct_pb2.Struct, _Mapping]] = ..., expected: _Optional[_Union[_struct_pb2.Struct, _Mapping]] = ..., increments: _Optional[_Iterable[_Union[UpdateRequest.Increment, _Mapping]]] = ..., idempotency_key: _Optional[str] = ..., return_record: bool = ..., expected_revision: _Optional[str] = ..., lock_name: _Optional[str] = ..., fencing_token: _Optional[int] = ...) -> None: ...
+    require_affected: int
+    def __init__(self, context: _Optional[_Union[_context_pb2.RequestContext, _Mapping]] = ..., message_type: _Optional[str] = ..., filter: _Optional[_Union[_struct_pb2.Struct, _Mapping]] = ..., changes: _Optional[_Union[_struct_pb2.Struct, _Mapping]] = ..., expected: _Optional[_Union[_struct_pb2.Struct, _Mapping]] = ..., increments: _Optional[_Iterable[_Union[UpdateRequest.Increment, _Mapping]]] = ..., idempotency_key: _Optional[str] = ..., return_record: bool = ..., expected_revision: _Optional[str] = ..., lock_name: _Optional[str] = ..., fencing_token: _Optional[int] = ..., require_affected: _Optional[int] = ...) -> None: ...
 
 class ViewDefinition(_message.Message):
     __slots__ = ("context", "schema", "name", "query", "with_data", "ttl_days")

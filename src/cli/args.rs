@@ -10,6 +10,11 @@ pub(crate) enum Command {
     Sql,
     Plan,
     Lint,
+    /// `udb check [--policies <file>]` — one verdict and one exit code over the
+    /// catalog lint, the policy lint and entity/policy coverage.
+    Check {
+        policies: String,
+    },
     Drift,
     /// Check runtime environment and backend readiness.
     Doctor {
@@ -52,6 +57,23 @@ pub(crate) enum Command {
     /// Stage + activate a catalog for a project that has none, so an upgraded
     /// deployment can serve without writing a gRPC client.
     CatalogBootstrap {
+        project: String,
+        dsn: Option<String>,
+    },
+    /// `udb catalog stage --project <id>`: stage the catalog built from the
+    /// protos without activating it; prints the staged catalog id.
+    CatalogStage {
+        project: String,
+        dsn: Option<String>,
+    },
+    /// `udb catalog activate --project <id> --catalog-id <id>`.
+    CatalogActivate {
+        project: String,
+        catalog_id: String,
+        dsn: Option<String>,
+    },
+    /// `udb catalog status --project <id>`: the project's ACTIVE catalog.
+    CatalogStatus {
         project: String,
         dsn: Option<String>,
     },
@@ -146,6 +168,26 @@ pub(crate) enum Command {
     /// audit window into a chain-hashed evidence bundle written through the
     /// storage-service object helpers and emits a machine-readable manifest.
     Compliance(ComplianceCommand),
+    /// Declarative operations over files: `udb policy diff|apply`,
+    /// `udb identity diff|apply`, `udb data seed`.
+    Ops(OpsCommand),
+    /// `udb self verify|install` — release binaries checked against the
+    /// release's manifest.json.
+    SelfUpdate(SelfCommand),
+    /// `udb gen edge <source> -[REL{prop:type,…}]-> <target> [--package p] [--message M]`
+    GenEdge {
+        spec: String,
+        package: String,
+        message: String,
+    },
+    /// `udb upgrade --check --from X [--to Y] [--repo <dir>] [--dsn <dsn>]`.
+    Upgrade {
+        check: bool,
+        from: String,
+        to: String,
+        repo: String,
+        dsn: String,
+    },
     /// Export UDB's embedded proto contract (annotations + broker/service protos)
     /// into a local proto tree, so a project can `import "udb/core/common/v1/
     /// db.proto"` without cloning the repo or depending on a registry. The files
@@ -405,6 +447,16 @@ pub(crate) enum AuthCommand {
         reason: String,
         expected_revision: i64,
     },
+    /// `udb auth grant transfer --tenant <uuid> --from <account> --to <account>
+    ///   --expected-revision <n> [--reason <text>]` — the one explicit way to
+    /// move a grant (and its service identity) to another service account.
+    GrantTransfer {
+        tenant_id: String,
+        from_user_id: String,
+        to_user_id: String,
+        expected_revision: i64,
+        reason: String,
+    },
     GrantRotateIdentity {
         tenant_id: String,
         user_id: String,
@@ -526,6 +578,20 @@ pub(crate) enum AuthzCommand {
     /// submits (`Select`/`Upsert`/… — never a `data.*` alias) and the caller's
     /// canonical tenant UUID. Idempotent + atomic. Bind users AND service accounts
     /// to `--role` (`udb auth role bind`) and one policy set authorizes both.
+    /// `udb authz check --user <id> --object <message type> --action <Rpc>
+    ///   [--tenant <uuid>] [--purpose <p>]`
+    ///
+    /// Asks the broker whether that principal may perform the action on the
+    /// object, through the live policy engine (AuthzService.CheckAccess), and
+    /// prints the decision. A denial carries the broker's diagnosis: the closest
+    /// rule for that action and object and the attribute it fails on.
+    Check {
+        user: String,
+        object: String,
+        action: String,
+        tenant: String,
+        purpose: String,
+    },
     Seed {
         tenant: String,
         role: String,
@@ -534,6 +600,73 @@ pub(crate) enum AuthzCommand {
         actions: Vec<String>,
         dsn: String,
         emit: String,
+    },
+}
+
+/// `udb self verify [--version X] [--tier full] [--file <path>] [--manifest <path>]`
+/// and `udb self install --version X [--tier full] [--to <path>]`.
+pub(crate) struct SelfCommand {
+    pub(crate) install: bool,
+    pub(crate) version: String,
+    pub(crate) tier: String,
+    pub(crate) file: String,
+    pub(crate) manifest: String,
+    pub(crate) to: String,
+}
+
+/// File-driven operations: each reads a declared state, shows the difference
+/// from the live state, and (with `apply`) reconciles it.
+pub(crate) enum OpsCommand {
+    /// `udb policy diff|apply -f <policies.(json|yaml)> --tenant <uuid>
+    ///   [--overlay <file>]... [--dsn <postgres-dsn>] [--by <name>]`
+    Policy {
+        apply: bool,
+        file: String,
+        overlays: Vec<String>,
+        tenant: String,
+        dsn: String,
+        changed_by: String,
+    },
+    /// `udb identity diff|apply -f <identities.(yaml|json)> [--tenant <uuid>]
+    ///   [--allow-transfer]`
+    Identity {
+        apply: bool,
+        file: String,
+        tenant: String,
+        allow_transfer: bool,
+    },
+    /// `udb projection status|backfill <message type> [--project <id>]
+    ///   [--limit <rows>]`
+    Projection {
+        backfill: bool,
+        message_type: String,
+        project: String,
+        limit: i32,
+    },
+    /// `udb events tail <topic pattern> [--since <event id>] [--decode] [--max <n>]`
+    EventsTail {
+        topic_pattern: String,
+        since: String,
+        decode: bool,
+        max: u64,
+    },
+    /// `udb resources list --backend <qdrant|neo4j|…>`
+    ResourcesList { backend: String },
+    /// `udb up [-f udb.yaml] [--dry-run] [--allow-transfer] [--dsn <dsn>]` —
+    /// reconcile a project's declared identities, policies and seed data.
+    Up {
+        file: String,
+        dry_run: bool,
+        allow_transfer: bool,
+        dsn: String,
+    },
+    /// `udb data seed -f <seed.(yaml|json)> [--tenant <uuid>] [--project <id>]
+    ///   [--dry-run]`
+    DataSeed {
+        file: String,
+        tenant: String,
+        project: String,
+        dry_run: bool,
     },
 }
 
@@ -588,48 +721,6 @@ impl DevAction {
         }
     }
 }
-
-const KNOWN_COMMANDS: &[&str] = &[
-    "catalog",
-    "dsn",
-    "sql",
-    "plan",
-    "lint",
-    "drift",
-    "doctor",
-    "health-check",
-    "init",
-    "init-project",
-    "scaffold",
-    "dev",
-    "explain",
-    "manifest-export",
-    "policy-lint",
-    "policy-seed",
-    "field-mask-preview",
-    "compat-matrix",
-    "sync-migrations",
-    "dbops sync",
-    "auth",
-    "authz simulate",
-    "compliance evidence",
-    "serve",
-    "proto export",
-    "proto fmt",
-    "sdk",
-    "native",
-    "app init",
-    "admin force-sync",
-    "admin release-lock",
-    "admin verify-audit",
-    "admin dry-run",
-    "admin reset-db",
-    "tracker-ddl",
-    "system-ddl",
-    "status-schema",
-    "fsm-states",
-    "config-skeleton",
-];
 
 const DEV_ACTIONS: &[&str] = &[
     "up/start",
@@ -786,6 +877,15 @@ fn parse_auth_subcommand(args: &[String]) -> Option<(AuthCommand, usize)> {
                 .and_then(|value| value.trim().parse::<i64>().ok())
                 .unwrap_or(0),
         },
+        (Some("grant"), Some("transfer")) => AuthCommand::GrantTransfer {
+            tenant_id: flag_value("--tenant").unwrap_or_default(),
+            from_user_id: flag_value("--from").unwrap_or_default(),
+            to_user_id: flag_value("--to").unwrap_or_default(),
+            expected_revision: flag_value("--expected-revision")
+                .and_then(|value| value.trim().parse::<i64>().ok())
+                .unwrap_or(0),
+            reason: flag_value("--reason").unwrap_or_default(),
+        },
         (Some("grant"), Some("revoke")) => AuthCommand::GrantRevoke {
             tenant_id: flag_value("--tenant").unwrap_or_default(),
             user_id: flag_value("--user").unwrap_or_default(),
@@ -917,6 +1017,13 @@ fn parse_authz_subcommand(args: &[String]) -> Option<(AuthzCommand, usize)> {
             persist: has_flag("--persist"),
             policy_version_id: flag_value("--policy-version").unwrap_or_default(),
         },
+        Some("check") | Some("explain") => AuthzCommand::Check {
+            user: flag_value("--user").unwrap_or_default(),
+            object: flag_value("--object").unwrap_or_default(),
+            action: flag_value("--action").unwrap_or_default(),
+            tenant: flag_value("--tenant").unwrap_or_default(),
+            purpose: flag_value("--purpose").unwrap_or_default(),
+        },
         Some("seed") => AuthzCommand::Seed {
             tenant: flag_value("--tenant").unwrap_or_default(),
             role: flag_value("--role").unwrap_or_default(),
@@ -960,6 +1067,91 @@ fn parse_compliance_subcommand(args: &[String]) -> Option<(ComplianceCommand, us
     Some((command, 2))
 }
 
+/// Parse `udb policy|identity diff|apply …` and `udb data seed …`. Returns the
+/// command and the number of leading positional tokens consumed (2).
+fn parse_ops_subcommand(args: &[String]) -> Option<(OpsCommand, usize)> {
+    let has_flag = |flag: &str| -> bool { args.iter().any(|a| a == flag) };
+    let flag_value = |flag: &str| -> Option<String> {
+        args.windows(2).find(|w| w[0] == flag).map(|w| w[1].clone())
+    };
+    let file = || {
+        flag_value("-f")
+            .or_else(|| flag_value("--file"))
+            .unwrap_or_default()
+    };
+    let command = match (
+        args.first().map(String::as_str),
+        args.get(1).map(String::as_str),
+    ) {
+        (Some("policy"), Some(verb @ ("diff" | "apply"))) => OpsCommand::Policy {
+            apply: verb == "apply",
+            file: file(),
+            overlays: args
+                .windows(2)
+                .filter(|w| w[0] == "--overlay")
+                .map(|w| w[1].clone())
+                .collect(),
+            tenant: flag_value("--tenant").unwrap_or_default(),
+            dsn: flag_value("--dsn").unwrap_or_default(),
+            changed_by: flag_value("--by").unwrap_or_default(),
+        },
+        (Some("identity"), Some(verb @ ("diff" | "apply"))) => OpsCommand::Identity {
+            apply: verb == "apply",
+            file: file(),
+            tenant: flag_value("--tenant").unwrap_or_default(),
+            allow_transfer: has_flag("--allow-transfer"),
+        },
+        (Some("projection"), Some(verb @ ("status" | "backfill"))) => OpsCommand::Projection {
+            backfill: verb == "backfill",
+            message_type: args
+                .get(2)
+                .filter(|value| !value.starts_with("--"))
+                .cloned()
+                .unwrap_or_default(),
+            project: flag_value("--project").unwrap_or_default(),
+            limit: flag_value("--limit")
+                .and_then(|value| value.trim().parse::<i32>().ok())
+                .unwrap_or(0),
+        },
+        (Some("events"), Some("tail")) => OpsCommand::EventsTail {
+            topic_pattern: args
+                .get(2)
+                .filter(|value| !value.starts_with("--"))
+                .cloned()
+                .unwrap_or_default(),
+            since: flag_value("--since").unwrap_or_default(),
+            decode: has_flag("--decode"),
+            max: flag_value("--max")
+                .and_then(|value| value.trim().parse::<u64>().ok())
+                .unwrap_or(0),
+        },
+        (Some("up"), _) => OpsCommand::Up {
+            file: {
+                let file = file();
+                if file.is_empty() {
+                    "udb.yaml".to_string()
+                } else {
+                    file
+                }
+            },
+            dry_run: has_flag("--dry-run"),
+            allow_transfer: has_flag("--allow-transfer"),
+            dsn: flag_value("--dsn").unwrap_or_default(),
+        },
+        (Some("resources"), Some("list")) => OpsCommand::ResourcesList {
+            backend: flag_value("--backend").unwrap_or_default(),
+        },
+        (Some("data"), Some("seed")) => OpsCommand::DataSeed {
+            file: file(),
+            tenant: flag_value("--tenant").unwrap_or_default(),
+            project: flag_value("--project").unwrap_or_default(),
+            dry_run: has_flag("--dry-run"),
+        },
+        _ => return None,
+    };
+    Some((command, 2))
+}
+
 /// Split a comma-separated flag value into trimmed, non-empty tokens.
 pub(crate) fn split_csv(value: &str) -> Vec<String> {
     value
@@ -973,6 +1165,7 @@ pub(crate) fn split_csv(value: &str) -> Vec<String> {
 /// collector and `collect_positional_services` use this to skip flag values.
 const VALUE_FLAGS: &[&str] = &[
     "--prior",
+    "--catalog-id",
     "--emit-approval-plan",
     "--backend",
     "--out",
@@ -1022,6 +1215,18 @@ const VALUE_FLAGS: &[&str] = &[
     "--until",
     "--bucket",
     "--prefix",
+    "-f",
+    "--file",
+    "--overlay",
+    "--by",
+    "--from",
+    "--to",
+    "--tier",
+    "--manifest",
+    "--policies",
+    "--repo",
+    "--max",
+    "--version",
 ];
 
 /// Collect positional (non-flag) tokens after `start`, skipping any token that
@@ -1080,6 +1285,28 @@ pub(crate) fn parse_args(args: &[String]) -> (Command, String, String, String) {
                 dsn: flag_value("--dsn"),
             }
         }
+        Some("catalog") if matches!(args.get(1).map(String::as_str), Some("stage")) => {
+            offset = 2;
+            Command::CatalogStage {
+                project: flag_value("--project").unwrap_or_default(),
+                dsn: flag_value("--dsn"),
+            }
+        }
+        Some("catalog") if matches!(args.get(1).map(String::as_str), Some("activate")) => {
+            offset = 2;
+            Command::CatalogActivate {
+                project: flag_value("--project").unwrap_or_default(),
+                catalog_id: flag_value("--catalog-id").unwrap_or_default(),
+                dsn: flag_value("--dsn"),
+            }
+        }
+        Some("catalog") if matches!(args.get(1).map(String::as_str), Some("status")) => {
+            offset = 2;
+            Command::CatalogStatus {
+                project: flag_value("--project").unwrap_or_default(),
+                dsn: flag_value("--dsn"),
+            }
+        }
         Some("catalog") => {
             offset = 1;
             Command::Catalog
@@ -1099,6 +1326,16 @@ pub(crate) fn parse_args(args: &[String]) -> (Command, String, String, String) {
         Some("lint") => {
             offset = 1;
             Command::Lint
+        }
+        Some("check") => {
+            offset = 1;
+            Command::Check {
+                policies: args
+                    .windows(2)
+                    .find(|w| w[0] == "--policies")
+                    .map(|w| w[1].clone())
+                    .unwrap_or_default(),
+            }
         }
         Some("drift") => {
             offset = 1;
@@ -1258,6 +1495,70 @@ pub(crate) fn parse_args(args: &[String]) -> (Command, String, String, String) {
         // `udb compliance evidence [--since … --until … --bucket … --prefix …]`
         // — master-plan 4.4 compliance-evidence export. Unrecognized
         // `compliance …` shapes fall through to InvalidUsage.
+        // `udb policy diff|apply -f <file>`.
+        Some("self") if matches!(args.get(1).map(String::as_str), Some("verify" | "install")) => {
+            let flag_value = |flag: &str| -> String {
+                args.windows(2)
+                    .find(|w| w[0] == flag)
+                    .map(|w| w[1].clone())
+                    .unwrap_or_default()
+            };
+            offset = 2;
+            Command::SelfUpdate(SelfCommand {
+                install: args.get(1).map(String::as_str) == Some("install"),
+                version: flag_value("--version"),
+                tier: flag_value("--tier"),
+                file: flag_value("--file"),
+                manifest: flag_value("--manifest"),
+                to: flag_value("--to"),
+            })
+        }
+        Some("gen") if args.get(1).map(String::as_str) == Some("edge") => {
+            let flag_value = |flag: &str| -> String {
+                args.windows(2)
+                    .find(|w| w[0] == flag)
+                    .map(|w| w[1].clone())
+                    .unwrap_or_default()
+            };
+            let spec = args
+                .iter()
+                .skip(2)
+                .take_while(|arg| !arg.starts_with("--"))
+                .cloned()
+                .collect::<Vec<_>>()
+                .join(" ");
+            offset = 2;
+            Command::GenEdge {
+                spec,
+                package: flag_value("--package"),
+                message: flag_value("--message"),
+            }
+        }
+        Some("upgrade") => {
+            let flag_value = |flag: &str| -> String {
+                args.windows(2)
+                    .find(|w| w[0] == flag)
+                    .map(|w| w[1].clone())
+                    .unwrap_or_default()
+            };
+            offset = 1;
+            Command::Upgrade {
+                check: args.iter().any(|a| a == "--check"),
+                from: flag_value("--from"),
+                to: flag_value("--to"),
+                repo: flag_value("--repo"),
+                dsn: flag_value("--dsn"),
+            }
+        }
+        Some("policy") | Some("identity") | Some("data") | Some("projection") | Some("events")
+        | Some("resources") | Some("up")
+            if parse_ops_subcommand(args).is_some() =>
+        {
+            let (ops_command, consumed) =
+                parse_ops_subcommand(args).expect("guard guarantees Some");
+            offset = consumed;
+            Command::Ops(ops_command)
+        }
         Some("compliance") if parse_compliance_subcommand(args).is_some() => {
             let (compliance_command, consumed) =
                 parse_compliance_subcommand(args).expect("guard guarantees Some");
@@ -1502,8 +1803,8 @@ pub(crate) fn parse_args(args: &[String]) -> (Command, String, String, String) {
         }
         Some(other) => invalid_usage(format!(
             "unknown command '{other}'{}; known: {}",
-            did_you_mean(other, KNOWN_COMMANDS),
-            KNOWN_COMMANDS.join(", ")
+            did_you_mean(other, &super::help::top_level_commands()),
+            super::help::top_level_commands().join(", ")
         )),
         None => Command::Catalog,
     };

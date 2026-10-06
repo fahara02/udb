@@ -32,6 +32,8 @@ private static final long serialVersionUID = 0L;
     messageType_ = "";
     filters_ = java.util.Collections.emptyList();
     projectId_ = "";
+    anyOf_ = java.util.Collections.emptyList();
+    sinceEventId_ = "";
   }
 
   public static final com.google.protobuf.Descriptors.Descriptor
@@ -271,6 +273,125 @@ private static final long serialVersionUID = 0L;
     return snapshotLimit_;
   }
 
+  public static final int ANY_OF_FIELD_NUMBER = 6;
+  @SuppressWarnings("serial")
+  private java.util.List<com.udb.core.livequery.services.v1.LiveQueryAnyOf> anyOf_;
+  /**
+   * <pre>
+   * OR-groups AND-ed with `filters` (see LiveQueryAnyOf). An empty group is
+   * rejected rather than read as "matches nothing".
+   * </pre>
+   *
+   * <code>repeated .udb.core.livequery.services.v1.LiveQueryAnyOf any_of = 6 [json_name = "anyOf"];</code>
+   */
+  @java.lang.Override
+  public java.util.List<com.udb.core.livequery.services.v1.LiveQueryAnyOf> getAnyOfList() {
+    return anyOf_;
+  }
+  /**
+   * <pre>
+   * OR-groups AND-ed with `filters` (see LiveQueryAnyOf). An empty group is
+   * rejected rather than read as "matches nothing".
+   * </pre>
+   *
+   * <code>repeated .udb.core.livequery.services.v1.LiveQueryAnyOf any_of = 6 [json_name = "anyOf"];</code>
+   */
+  @java.lang.Override
+  public java.util.List<? extends com.udb.core.livequery.services.v1.LiveQueryAnyOfOrBuilder>
+      getAnyOfOrBuilderList() {
+    return anyOf_;
+  }
+  /**
+   * <pre>
+   * OR-groups AND-ed with `filters` (see LiveQueryAnyOf). An empty group is
+   * rejected rather than read as "matches nothing".
+   * </pre>
+   *
+   * <code>repeated .udb.core.livequery.services.v1.LiveQueryAnyOf any_of = 6 [json_name = "anyOf"];</code>
+   */
+  @java.lang.Override
+  public int getAnyOfCount() {
+    return anyOf_.size();
+  }
+  /**
+   * <pre>
+   * OR-groups AND-ed with `filters` (see LiveQueryAnyOf). An empty group is
+   * rejected rather than read as "matches nothing".
+   * </pre>
+   *
+   * <code>repeated .udb.core.livequery.services.v1.LiveQueryAnyOf any_of = 6 [json_name = "anyOf"];</code>
+   */
+  @java.lang.Override
+  public com.udb.core.livequery.services.v1.LiveQueryAnyOf getAnyOf(int index) {
+    return anyOf_.get(index);
+  }
+  /**
+   * <pre>
+   * OR-groups AND-ed with `filters` (see LiveQueryAnyOf). An empty group is
+   * rejected rather than read as "matches nothing".
+   * </pre>
+   *
+   * <code>repeated .udb.core.livequery.services.v1.LiveQueryAnyOf any_of = 6 [json_name = "anyOf"];</code>
+   */
+  @java.lang.Override
+  public com.udb.core.livequery.services.v1.LiveQueryAnyOfOrBuilder getAnyOfOrBuilder(
+      int index) {
+    return anyOf_.get(index);
+  }
+
+  public static final int SINCE_EVENT_ID_FIELD_NUMBER = 7;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object sinceEventId_ = "";
+  /**
+   * <pre>
+   * Durable resume: the last `LiveQueryChange.event_id` this client delivered.
+   * The broker replays the changes after it from the CDC journal before going
+   * live. Supersedes the `x-udb-livequery-resume` header (still honoured); when
+   * both are set they must name the same event.
+   * </pre>
+   *
+   * <code>string since_event_id = 7 [json_name = "sinceEventId"];</code>
+   * @return The sinceEventId.
+   */
+  @java.lang.Override
+  public java.lang.String getSinceEventId() {
+    java.lang.Object ref = sinceEventId_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs =
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      sinceEventId_ = s;
+      return s;
+    }
+  }
+  /**
+   * <pre>
+   * Durable resume: the last `LiveQueryChange.event_id` this client delivered.
+   * The broker replays the changes after it from the CDC journal before going
+   * live. Supersedes the `x-udb-livequery-resume` header (still honoured); when
+   * both are set they must name the same event.
+   * </pre>
+   *
+   * <code>string since_event_id = 7 [json_name = "sinceEventId"];</code>
+   * @return The bytes for sinceEventId.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getSinceEventIdBytes() {
+    java.lang.Object ref = sinceEventId_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b =
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      sinceEventId_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -300,6 +421,12 @@ private static final long serialVersionUID = 0L;
     if (snapshotLimit_ != 0) {
       output.writeInt32(5, snapshotLimit_);
     }
+    for (int i = 0; i < anyOf_.size(); i++) {
+      output.writeMessage(6, anyOf_.get(i));
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(sinceEventId_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 7, sinceEventId_);
+    }
     getUnknownFields().writeTo(output);
   }
 
@@ -326,6 +453,13 @@ private static final long serialVersionUID = 0L;
       size += com.google.protobuf.CodedOutputStream
         .computeInt32Size(5, snapshotLimit_);
     }
+    for (int i = 0; i < anyOf_.size(); i++) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeMessageSize(6, anyOf_.get(i));
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(sinceEventId_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(7, sinceEventId_);
+    }
     size += getUnknownFields().getSerializedSize();
     memoizedSize = size;
     return size;
@@ -351,6 +485,10 @@ private static final long serialVersionUID = 0L;
         .equals(other.getProjectId())) return false;
     if (getSnapshotLimit()
         != other.getSnapshotLimit()) return false;
+    if (!getAnyOfList()
+        .equals(other.getAnyOfList())) return false;
+    if (!getSinceEventId()
+        .equals(other.getSinceEventId())) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -374,6 +512,12 @@ private static final long serialVersionUID = 0L;
     hash = (53 * hash) + getProjectId().hashCode();
     hash = (37 * hash) + SNAPSHOT_LIMIT_FIELD_NUMBER;
     hash = (53 * hash) + getSnapshotLimit();
+    if (getAnyOfCount() > 0) {
+      hash = (37 * hash) + ANY_OF_FIELD_NUMBER;
+      hash = (53 * hash) + getAnyOfList().hashCode();
+    }
+    hash = (37 * hash) + SINCE_EVENT_ID_FIELD_NUMBER;
+    hash = (53 * hash) + getSinceEventId().hashCode();
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -516,6 +660,14 @@ private static final long serialVersionUID = 0L;
       bitField0_ = (bitField0_ & ~0x00000004);
       projectId_ = "";
       snapshotLimit_ = 0;
+      if (anyOfBuilder_ == null) {
+        anyOf_ = java.util.Collections.emptyList();
+      } else {
+        anyOf_ = null;
+        anyOfBuilder_.clear();
+      }
+      bitField0_ = (bitField0_ & ~0x00000020);
+      sinceEventId_ = "";
       return this;
     }
 
@@ -558,6 +710,15 @@ private static final long serialVersionUID = 0L;
       } else {
         result.filters_ = filtersBuilder_.build();
       }
+      if (anyOfBuilder_ == null) {
+        if (((bitField0_ & 0x00000020) != 0)) {
+          anyOf_ = java.util.Collections.unmodifiableList(anyOf_);
+          bitField0_ = (bitField0_ & ~0x00000020);
+        }
+        result.anyOf_ = anyOf_;
+      } else {
+        result.anyOf_ = anyOfBuilder_.build();
+      }
     }
 
     private void buildPartial0(com.udb.core.livequery.services.v1.SubscribeRequest result) {
@@ -573,6 +734,9 @@ private static final long serialVersionUID = 0L;
       }
       if (((from_bitField0_ & 0x00000010) != 0)) {
         result.snapshotLimit_ = snapshotLimit_;
+      }
+      if (((from_bitField0_ & 0x00000040) != 0)) {
+        result.sinceEventId_ = sinceEventId_;
       }
     }
 
@@ -631,6 +795,37 @@ private static final long serialVersionUID = 0L;
       }
       if (other.getSnapshotLimit() != 0) {
         setSnapshotLimit(other.getSnapshotLimit());
+      }
+      if (anyOfBuilder_ == null) {
+        if (!other.anyOf_.isEmpty()) {
+          if (anyOf_.isEmpty()) {
+            anyOf_ = other.anyOf_;
+            bitField0_ = (bitField0_ & ~0x00000020);
+          } else {
+            ensureAnyOfIsMutable();
+            anyOf_.addAll(other.anyOf_);
+          }
+          onChanged();
+        }
+      } else {
+        if (!other.anyOf_.isEmpty()) {
+          if (anyOfBuilder_.isEmpty()) {
+            anyOfBuilder_.dispose();
+            anyOfBuilder_ = null;
+            anyOf_ = other.anyOf_;
+            bitField0_ = (bitField0_ & ~0x00000020);
+            anyOfBuilder_ =
+              com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
+                 internalGetAnyOfFieldBuilder() : null;
+          } else {
+            anyOfBuilder_.addAllMessages(other.anyOf_);
+          }
+        }
+      }
+      if (!other.getSinceEventId().isEmpty()) {
+        sinceEventId_ = other.sinceEventId_;
+        bitField0_ |= 0x00000040;
+        onChanged();
       }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
@@ -691,6 +886,24 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00000010;
               break;
             } // case 40
+            case 50: {
+              com.udb.core.livequery.services.v1.LiveQueryAnyOf m =
+                  input.readMessage(
+                      com.udb.core.livequery.services.v1.LiveQueryAnyOf.parser(),
+                      extensionRegistry);
+              if (anyOfBuilder_ == null) {
+                ensureAnyOfIsMutable();
+                anyOf_.add(m);
+              } else {
+                anyOfBuilder_.addMessage(m);
+              }
+              break;
+            } // case 50
+            case 58: {
+              sinceEventId_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00000040;
+              break;
+            } // case 58
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -1359,6 +1572,443 @@ private static final long serialVersionUID = 0L;
     public Builder clearSnapshotLimit() {
       bitField0_ = (bitField0_ & ~0x00000010);
       snapshotLimit_ = 0;
+      onChanged();
+      return this;
+    }
+
+    private java.util.List<com.udb.core.livequery.services.v1.LiveQueryAnyOf> anyOf_ =
+      java.util.Collections.emptyList();
+    private void ensureAnyOfIsMutable() {
+      if (!((bitField0_ & 0x00000020) != 0)) {
+        anyOf_ = new java.util.ArrayList<com.udb.core.livequery.services.v1.LiveQueryAnyOf>(anyOf_);
+        bitField0_ |= 0x00000020;
+       }
+    }
+
+    private com.google.protobuf.RepeatedFieldBuilder<
+        com.udb.core.livequery.services.v1.LiveQueryAnyOf, com.udb.core.livequery.services.v1.LiveQueryAnyOf.Builder, com.udb.core.livequery.services.v1.LiveQueryAnyOfOrBuilder> anyOfBuilder_;
+
+    /**
+     * <pre>
+     * OR-groups AND-ed with `filters` (see LiveQueryAnyOf). An empty group is
+     * rejected rather than read as "matches nothing".
+     * </pre>
+     *
+     * <code>repeated .udb.core.livequery.services.v1.LiveQueryAnyOf any_of = 6 [json_name = "anyOf"];</code>
+     */
+    public java.util.List<com.udb.core.livequery.services.v1.LiveQueryAnyOf> getAnyOfList() {
+      if (anyOfBuilder_ == null) {
+        return java.util.Collections.unmodifiableList(anyOf_);
+      } else {
+        return anyOfBuilder_.getMessageList();
+      }
+    }
+    /**
+     * <pre>
+     * OR-groups AND-ed with `filters` (see LiveQueryAnyOf). An empty group is
+     * rejected rather than read as "matches nothing".
+     * </pre>
+     *
+     * <code>repeated .udb.core.livequery.services.v1.LiveQueryAnyOf any_of = 6 [json_name = "anyOf"];</code>
+     */
+    public int getAnyOfCount() {
+      if (anyOfBuilder_ == null) {
+        return anyOf_.size();
+      } else {
+        return anyOfBuilder_.getCount();
+      }
+    }
+    /**
+     * <pre>
+     * OR-groups AND-ed with `filters` (see LiveQueryAnyOf). An empty group is
+     * rejected rather than read as "matches nothing".
+     * </pre>
+     *
+     * <code>repeated .udb.core.livequery.services.v1.LiveQueryAnyOf any_of = 6 [json_name = "anyOf"];</code>
+     */
+    public com.udb.core.livequery.services.v1.LiveQueryAnyOf getAnyOf(int index) {
+      if (anyOfBuilder_ == null) {
+        return anyOf_.get(index);
+      } else {
+        return anyOfBuilder_.getMessage(index);
+      }
+    }
+    /**
+     * <pre>
+     * OR-groups AND-ed with `filters` (see LiveQueryAnyOf). An empty group is
+     * rejected rather than read as "matches nothing".
+     * </pre>
+     *
+     * <code>repeated .udb.core.livequery.services.v1.LiveQueryAnyOf any_of = 6 [json_name = "anyOf"];</code>
+     */
+    public Builder setAnyOf(
+        int index, com.udb.core.livequery.services.v1.LiveQueryAnyOf value) {
+      if (anyOfBuilder_ == null) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        ensureAnyOfIsMutable();
+        anyOf_.set(index, value);
+        onChanged();
+      } else {
+        anyOfBuilder_.setMessage(index, value);
+      }
+      return this;
+    }
+    /**
+     * <pre>
+     * OR-groups AND-ed with `filters` (see LiveQueryAnyOf). An empty group is
+     * rejected rather than read as "matches nothing".
+     * </pre>
+     *
+     * <code>repeated .udb.core.livequery.services.v1.LiveQueryAnyOf any_of = 6 [json_name = "anyOf"];</code>
+     */
+    public Builder setAnyOf(
+        int index, com.udb.core.livequery.services.v1.LiveQueryAnyOf.Builder builderForValue) {
+      if (anyOfBuilder_ == null) {
+        ensureAnyOfIsMutable();
+        anyOf_.set(index, builderForValue.build());
+        onChanged();
+      } else {
+        anyOfBuilder_.setMessage(index, builderForValue.build());
+      }
+      return this;
+    }
+    /**
+     * <pre>
+     * OR-groups AND-ed with `filters` (see LiveQueryAnyOf). An empty group is
+     * rejected rather than read as "matches nothing".
+     * </pre>
+     *
+     * <code>repeated .udb.core.livequery.services.v1.LiveQueryAnyOf any_of = 6 [json_name = "anyOf"];</code>
+     */
+    public Builder addAnyOf(com.udb.core.livequery.services.v1.LiveQueryAnyOf value) {
+      if (anyOfBuilder_ == null) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        ensureAnyOfIsMutable();
+        anyOf_.add(value);
+        onChanged();
+      } else {
+        anyOfBuilder_.addMessage(value);
+      }
+      return this;
+    }
+    /**
+     * <pre>
+     * OR-groups AND-ed with `filters` (see LiveQueryAnyOf). An empty group is
+     * rejected rather than read as "matches nothing".
+     * </pre>
+     *
+     * <code>repeated .udb.core.livequery.services.v1.LiveQueryAnyOf any_of = 6 [json_name = "anyOf"];</code>
+     */
+    public Builder addAnyOf(
+        int index, com.udb.core.livequery.services.v1.LiveQueryAnyOf value) {
+      if (anyOfBuilder_ == null) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        ensureAnyOfIsMutable();
+        anyOf_.add(index, value);
+        onChanged();
+      } else {
+        anyOfBuilder_.addMessage(index, value);
+      }
+      return this;
+    }
+    /**
+     * <pre>
+     * OR-groups AND-ed with `filters` (see LiveQueryAnyOf). An empty group is
+     * rejected rather than read as "matches nothing".
+     * </pre>
+     *
+     * <code>repeated .udb.core.livequery.services.v1.LiveQueryAnyOf any_of = 6 [json_name = "anyOf"];</code>
+     */
+    public Builder addAnyOf(
+        com.udb.core.livequery.services.v1.LiveQueryAnyOf.Builder builderForValue) {
+      if (anyOfBuilder_ == null) {
+        ensureAnyOfIsMutable();
+        anyOf_.add(builderForValue.build());
+        onChanged();
+      } else {
+        anyOfBuilder_.addMessage(builderForValue.build());
+      }
+      return this;
+    }
+    /**
+     * <pre>
+     * OR-groups AND-ed with `filters` (see LiveQueryAnyOf). An empty group is
+     * rejected rather than read as "matches nothing".
+     * </pre>
+     *
+     * <code>repeated .udb.core.livequery.services.v1.LiveQueryAnyOf any_of = 6 [json_name = "anyOf"];</code>
+     */
+    public Builder addAnyOf(
+        int index, com.udb.core.livequery.services.v1.LiveQueryAnyOf.Builder builderForValue) {
+      if (anyOfBuilder_ == null) {
+        ensureAnyOfIsMutable();
+        anyOf_.add(index, builderForValue.build());
+        onChanged();
+      } else {
+        anyOfBuilder_.addMessage(index, builderForValue.build());
+      }
+      return this;
+    }
+    /**
+     * <pre>
+     * OR-groups AND-ed with `filters` (see LiveQueryAnyOf). An empty group is
+     * rejected rather than read as "matches nothing".
+     * </pre>
+     *
+     * <code>repeated .udb.core.livequery.services.v1.LiveQueryAnyOf any_of = 6 [json_name = "anyOf"];</code>
+     */
+    public Builder addAllAnyOf(
+        java.lang.Iterable<? extends com.udb.core.livequery.services.v1.LiveQueryAnyOf> values) {
+      if (anyOfBuilder_ == null) {
+        ensureAnyOfIsMutable();
+        com.google.protobuf.AbstractMessageLite.Builder.addAll(
+            values, anyOf_);
+        onChanged();
+      } else {
+        anyOfBuilder_.addAllMessages(values);
+      }
+      return this;
+    }
+    /**
+     * <pre>
+     * OR-groups AND-ed with `filters` (see LiveQueryAnyOf). An empty group is
+     * rejected rather than read as "matches nothing".
+     * </pre>
+     *
+     * <code>repeated .udb.core.livequery.services.v1.LiveQueryAnyOf any_of = 6 [json_name = "anyOf"];</code>
+     */
+    public Builder clearAnyOf() {
+      if (anyOfBuilder_ == null) {
+        anyOf_ = java.util.Collections.emptyList();
+        bitField0_ = (bitField0_ & ~0x00000020);
+        onChanged();
+      } else {
+        anyOfBuilder_.clear();
+      }
+      return this;
+    }
+    /**
+     * <pre>
+     * OR-groups AND-ed with `filters` (see LiveQueryAnyOf). An empty group is
+     * rejected rather than read as "matches nothing".
+     * </pre>
+     *
+     * <code>repeated .udb.core.livequery.services.v1.LiveQueryAnyOf any_of = 6 [json_name = "anyOf"];</code>
+     */
+    public Builder removeAnyOf(int index) {
+      if (anyOfBuilder_ == null) {
+        ensureAnyOfIsMutable();
+        anyOf_.remove(index);
+        onChanged();
+      } else {
+        anyOfBuilder_.remove(index);
+      }
+      return this;
+    }
+    /**
+     * <pre>
+     * OR-groups AND-ed with `filters` (see LiveQueryAnyOf). An empty group is
+     * rejected rather than read as "matches nothing".
+     * </pre>
+     *
+     * <code>repeated .udb.core.livequery.services.v1.LiveQueryAnyOf any_of = 6 [json_name = "anyOf"];</code>
+     */
+    public com.udb.core.livequery.services.v1.LiveQueryAnyOf.Builder getAnyOfBuilder(
+        int index) {
+      return internalGetAnyOfFieldBuilder().getBuilder(index);
+    }
+    /**
+     * <pre>
+     * OR-groups AND-ed with `filters` (see LiveQueryAnyOf). An empty group is
+     * rejected rather than read as "matches nothing".
+     * </pre>
+     *
+     * <code>repeated .udb.core.livequery.services.v1.LiveQueryAnyOf any_of = 6 [json_name = "anyOf"];</code>
+     */
+    public com.udb.core.livequery.services.v1.LiveQueryAnyOfOrBuilder getAnyOfOrBuilder(
+        int index) {
+      if (anyOfBuilder_ == null) {
+        return anyOf_.get(index);  } else {
+        return anyOfBuilder_.getMessageOrBuilder(index);
+      }
+    }
+    /**
+     * <pre>
+     * OR-groups AND-ed with `filters` (see LiveQueryAnyOf). An empty group is
+     * rejected rather than read as "matches nothing".
+     * </pre>
+     *
+     * <code>repeated .udb.core.livequery.services.v1.LiveQueryAnyOf any_of = 6 [json_name = "anyOf"];</code>
+     */
+    public java.util.List<? extends com.udb.core.livequery.services.v1.LiveQueryAnyOfOrBuilder>
+         getAnyOfOrBuilderList() {
+      if (anyOfBuilder_ != null) {
+        return anyOfBuilder_.getMessageOrBuilderList();
+      } else {
+        return java.util.Collections.unmodifiableList(anyOf_);
+      }
+    }
+    /**
+     * <pre>
+     * OR-groups AND-ed with `filters` (see LiveQueryAnyOf). An empty group is
+     * rejected rather than read as "matches nothing".
+     * </pre>
+     *
+     * <code>repeated .udb.core.livequery.services.v1.LiveQueryAnyOf any_of = 6 [json_name = "anyOf"];</code>
+     */
+    public com.udb.core.livequery.services.v1.LiveQueryAnyOf.Builder addAnyOfBuilder() {
+      return internalGetAnyOfFieldBuilder().addBuilder(
+          com.udb.core.livequery.services.v1.LiveQueryAnyOf.getDefaultInstance());
+    }
+    /**
+     * <pre>
+     * OR-groups AND-ed with `filters` (see LiveQueryAnyOf). An empty group is
+     * rejected rather than read as "matches nothing".
+     * </pre>
+     *
+     * <code>repeated .udb.core.livequery.services.v1.LiveQueryAnyOf any_of = 6 [json_name = "anyOf"];</code>
+     */
+    public com.udb.core.livequery.services.v1.LiveQueryAnyOf.Builder addAnyOfBuilder(
+        int index) {
+      return internalGetAnyOfFieldBuilder().addBuilder(
+          index, com.udb.core.livequery.services.v1.LiveQueryAnyOf.getDefaultInstance());
+    }
+    /**
+     * <pre>
+     * OR-groups AND-ed with `filters` (see LiveQueryAnyOf). An empty group is
+     * rejected rather than read as "matches nothing".
+     * </pre>
+     *
+     * <code>repeated .udb.core.livequery.services.v1.LiveQueryAnyOf any_of = 6 [json_name = "anyOf"];</code>
+     */
+    public java.util.List<com.udb.core.livequery.services.v1.LiveQueryAnyOf.Builder>
+         getAnyOfBuilderList() {
+      return internalGetAnyOfFieldBuilder().getBuilderList();
+    }
+    private com.google.protobuf.RepeatedFieldBuilder<
+        com.udb.core.livequery.services.v1.LiveQueryAnyOf, com.udb.core.livequery.services.v1.LiveQueryAnyOf.Builder, com.udb.core.livequery.services.v1.LiveQueryAnyOfOrBuilder>
+        internalGetAnyOfFieldBuilder() {
+      if (anyOfBuilder_ == null) {
+        anyOfBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
+            com.udb.core.livequery.services.v1.LiveQueryAnyOf, com.udb.core.livequery.services.v1.LiveQueryAnyOf.Builder, com.udb.core.livequery.services.v1.LiveQueryAnyOfOrBuilder>(
+                anyOf_,
+                ((bitField0_ & 0x00000020) != 0),
+                getParentForChildren(),
+                isClean());
+        anyOf_ = null;
+      }
+      return anyOfBuilder_;
+    }
+
+    private java.lang.Object sinceEventId_ = "";
+    /**
+     * <pre>
+     * Durable resume: the last `LiveQueryChange.event_id` this client delivered.
+     * The broker replays the changes after it from the CDC journal before going
+     * live. Supersedes the `x-udb-livequery-resume` header (still honoured); when
+     * both are set they must name the same event.
+     * </pre>
+     *
+     * <code>string since_event_id = 7 [json_name = "sinceEventId"];</code>
+     * @return The sinceEventId.
+     */
+    public java.lang.String getSinceEventId() {
+      java.lang.Object ref = sinceEventId_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        sinceEventId_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <pre>
+     * Durable resume: the last `LiveQueryChange.event_id` this client delivered.
+     * The broker replays the changes after it from the CDC journal before going
+     * live. Supersedes the `x-udb-livequery-resume` header (still honoured); when
+     * both are set they must name the same event.
+     * </pre>
+     *
+     * <code>string since_event_id = 7 [json_name = "sinceEventId"];</code>
+     * @return The bytes for sinceEventId.
+     */
+    public com.google.protobuf.ByteString
+        getSinceEventIdBytes() {
+      java.lang.Object ref = sinceEventId_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b =
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        sinceEventId_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <pre>
+     * Durable resume: the last `LiveQueryChange.event_id` this client delivered.
+     * The broker replays the changes after it from the CDC journal before going
+     * live. Supersedes the `x-udb-livequery-resume` header (still honoured); when
+     * both are set they must name the same event.
+     * </pre>
+     *
+     * <code>string since_event_id = 7 [json_name = "sinceEventId"];</code>
+     * @param value The sinceEventId to set.
+     * @return This builder for chaining.
+     */
+    public Builder setSinceEventId(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      sinceEventId_ = value;
+      bitField0_ |= 0x00000040;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Durable resume: the last `LiveQueryChange.event_id` this client delivered.
+     * The broker replays the changes after it from the CDC journal before going
+     * live. Supersedes the `x-udb-livequery-resume` header (still honoured); when
+     * both are set they must name the same event.
+     * </pre>
+     *
+     * <code>string since_event_id = 7 [json_name = "sinceEventId"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearSinceEventId() {
+      sinceEventId_ = getDefaultInstance().getSinceEventId();
+      bitField0_ = (bitField0_ & ~0x00000040);
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Durable resume: the last `LiveQueryChange.event_id` this client delivered.
+     * The broker replays the changes after it from the CDC journal before going
+     * live. Supersedes the `x-udb-livequery-resume` header (still honoured); when
+     * both are set they must name the same event.
+     * </pre>
+     *
+     * <code>string since_event_id = 7 [json_name = "sinceEventId"];</code>
+     * @param value The bytes for sinceEventId to set.
+     * @return This builder for chaining.
+     */
+    public Builder setSinceEventIdBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      sinceEventId_ = value;
+      bitField0_ |= 0x00000040;
       onChanged();
       return this;
     }

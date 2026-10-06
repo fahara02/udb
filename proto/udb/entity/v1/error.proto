@@ -50,6 +50,26 @@ enum ErrorKind {
   // Malformed or semantically invalid request fields. Maps to gRPC
   // InvalidArgument and carries `field_violations`.
   ERROR_KIND_VALIDATION = 7;
+  // A compare-and-swap / revision precondition did not hold: the row changed
+  // since the caller read it. Re-read and retry. Maps to FailedPrecondition.
+  ERROR_KIND_CONFLICT = 8;
+  // The addressed row or resource does not exist (or is not visible to the
+  // caller). Maps to NotFound.
+  ERROR_KIND_NOT_FOUND = 9;
+  // A unique constraint was violated; `constraint` names it. Maps to
+  // AlreadyExists.
+  ERROR_KIND_UNIQUE = 10;
+  // A NOT NULL column received no value; `column` names it.
+  ERROR_KIND_NOT_NULL = 11;
+  // A foreign-key constraint was violated; `constraint` names it.
+  ERROR_KIND_FOREIGN_KEY = 12;
+  // The caller lacks a scope, grant or policy rule; `missing` names it.
+  ERROR_KIND_PERMISSION = 13;
+  // A value was redacted for this caller (PII without the read scope), or a
+  // write tried to store a redacted placeholder.
+  ERROR_KIND_REDACTED = 14;
+  // A rate limit was hit; `retry_after_ms` and `missing` describe the bucket.
+  ERROR_KIND_RATE_LIMITED = 15;
 }
 
 message ErrorDetail {
@@ -78,4 +98,19 @@ message ErrorDetail {
   // Structured invalid-field details for INVALID_ARGUMENT responses. Empty for
   // non-validation errors.
   repeated ErrorFieldViolation field_violations = 9;
+  // Stable machine reason, `UDB_` + upper snake case (for example
+  // `UDB_CAS_CONFLICT`, `UDB_CAS_KEY_NOT_PK`, `UDB_NO_ROWS_AFFECTED`). The set is
+  // listed in docs/error-reasons.md; a reason is never renamed once shipped.
+  // Branch on this, never on the message text.
+  string reason = 10;
+  // The constraint involved (unique, foreign key, check), when known.
+  string constraint = 11;
+  // The column involved (not null, coercion, decode), when known.
+  string column = 12;
+  // One sentence telling the caller how to fix the request.
+  string fix_hint = 13;
+  // What the caller is missing, as key/value pairs: for example
+  // `{"scope": "udb:pii:read"}`, `{"purpose": ""}`,
+  // `{"rule": "Select acme.notes.v1.Note"}`.
+  map<string, string> missing = 14;
 }

@@ -26,7 +26,7 @@ var File_udb_core_authz_services_v1_authz_service_proto protoreflect.FileDescrip
 
 const file_udb_core_authz_services_v1_authz_service_proto_rawDesc = "" +
 	"\n" +
-	".udb/core/authz/services/v1/authz_service.proto\x12\x1audb.core.authz.services.v1\x1a\x1cgoogle/api/annotations.proto\x1a%udb/core/authz/services/v1/core.proto\x1a+udb/core/authz/services/v1/governance.proto\x1a!udb/core/common/v1/security.proto2ӡ\x01\n" +
+	".udb/core/authz/services/v1/authz_service.proto\x12\x1audb.core.authz.services.v1\x1a\x1cgoogle/api/annotations.proto\x1a%udb/core/authz/services/v1/core.proto\x1a+udb/core/authz/services/v1/governance.proto\x1a!udb/core/common/v1/security.proto2ԡ\x01\n" +
 	"\fAuthzService\x12\xb9\x04\n" +
 	"\tAuthorize\x12(.udb.core.authz.services.v1.AuthzRequest\x1a).udb.core.authz.services.v1.AuthzResponse\"\xd6\x03\xca\xf3\x182\b\x02\x1a\x13udb:authz:authorize \x01J\x03\x01\x02\x04j\x0fauthz.Authorize\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18.\b\x01\x12\tauthorize\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authzP\x01Z\tauthorize\xe2\xf3\x18\xab\x01\n" +
 	"\x05authz\x12\x10udb/native/authz\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\"&udb.native.authz.authorize.boilerplate*\tauthorize2\tudb_authz:\x05authzJ\vUDB_API_KEYZ\x10udb native smoke\xea\xf3\x18K\n" +
@@ -123,8 +123,8 @@ const file_udb_core_authz_services_v1_authz_service_proto_rawDesc = "" +
 	"\x11LintAuthzPolicies\x124.udb.core.authz.services.v1.LintAuthzPoliciesRequest\x1a5.udb.core.authz.services.v1.LintAuthzPoliciesResponse\"\x99\x04\xca\xf3\x18C\b\x02\x1a\x1dudb:authz:lint-authz-policies \x01J\x02\x01\x02j\x17authz.LintAuthzPolicies\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18@\b\x01\x12\x13lint_authz_policies\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authzP\x01Z\x11lintAuthzPolicies\xe2\xf3\x18\xbf\x01\n" +
 	"\x05authz\x12\x10udb/native/authz\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\"0udb.native.authz.lint_authz_policies.boilerplate*\x13lint_authz_policies2\tudb_authz:\x05authzJ\vUDB_API_KEYZ\x10udb native smoke\xea\xf3\x18S\n" +
 	"\x17authz.LintAuthzPolicies\x12\fauthz.events\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable\xf2\xf3\x18?\n" +
-	"\x05authz\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x01\x82\xd3\xe4\x93\x02\x1c:\x01*\"\x17/v1/authz/policies:lint\x12\x82\x05\n" +
-	"\x0fGetNativeAccess\x12/.udb.core.authz.services.v1.NativeAccessRequest\x1a0.udb.core.authz.services.v1.NativeAccessResponse\"\x8b\x04\xca\xf3\x18?\b\x02\x1a\x1budb:authz:get-native-access \x01J\x02\x01\x02j\x15authz.GetNativeAccess\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18<\b\x01\x12\x11get_native_access\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authzP\x01Z\x0fgetNativeAccess\xe2\xf3\x18\xbb\x01\n" +
+	"\x05authz\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x01\x82\xd3\xe4\x93\x02\x1c:\x01*\"\x17/v1/authz/policies:lint\x12\x83\x05\n" +
+	"\x0fGetNativeAccess\x12/.udb.core.authz.services.v1.NativeAccessRequest\x1a0.udb.core.authz.services.v1.NativeAccessResponse\"\x8c\x04\xca\xf3\x18@\b\x02\x1a\x1budb:authz:get-native-access \x01J\x03\x01\x02\x04j\x15authz.GetNativeAccess\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18<\b\x01\x12\x11get_native_access\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authzP\x01Z\x0fgetNativeAccess\xe2\xf3\x18\xbb\x01\n" +
 	"\x05authz\x12\x10udb/native/authz\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\".udb.native.authz.get_native_access.boilerplate*\x11get_native_access2\tudb_authz:\x05authzJ\vUDB_API_KEYZ\x10udb native smoke\xea\xf3\x18Q\n" +
 	"\x15authz.GetNativeAccess\x12\fauthz.events\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable\xf2\xf3\x18?\n" +
 	"\x05authz\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x01\x82\xd3\xe4\x93\x02\x1c:\x01*\"\x17/v1/authz/native-access\x12\x82\x05\n" +

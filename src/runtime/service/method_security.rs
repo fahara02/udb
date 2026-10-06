@@ -107,6 +107,13 @@ pub struct MethodSecurity {
     /// RPC's abuse bucket is keyed under, so distinct policies get distinct buckets
     /// and an operator can tune a named policy's ceiling (C24).
     pub rate_limit_policy_ref: Option<String>,
+    /// `endpoint_security.abuse_policy_ref` — a per-client budget SHARED by
+    /// every RPC that names the same policy (e.g. ForgotPassword and
+    /// ResetPassword both name `authn.password_reset.abuse`), so an attacker
+    /// cannot spread one attack across sibling RPCs to multiply its per-RPC
+    /// rate limit. Ceiling: `UDB_ABUSE_POLICY_<REF>` requests per minute
+    /// (default 30).
+    pub abuse_policy_ref: Option<String>,
     /// `endpoint_security.audit_event_type` — the per-RPC audit event type the
     /// proto declares (C25).
     ///
@@ -167,6 +174,7 @@ fn method_security_from_contract(es: &EndpointSecurityContract) -> MethodSecurit
         required_assurance_level: es.required_assurance_level,
         owner_field: opt_non_empty(&es.owner_field),
         rate_limit_policy_ref: opt_non_empty(&es.rate_limit_policy_ref),
+        abuse_policy_ref: opt_non_empty(&es.abuse_policy_ref),
         audit_event_type: opt_non_empty(&es.audit_event_type),
     }
 }
@@ -478,6 +486,8 @@ mod deny_reason {
     pub const PROJECT_MISMATCH: &str = "project_mismatch";
     pub const PROJECT_REQUIRED: &str = "project_required";
     pub const PUBLIC_RATE_LIMIT: &str = "public_rate_limit";
+    /// The client exhausted the shared budget of the RPC's `abuse_policy_ref`.
+    pub const ABUSE_POLICY: &str = "abuse_policy";
     /// The caller authenticated, but its OWN claim tenant has been observed
     /// SUSPENDED/INACTIVE on this node — live tokens are revoked at the request
     /// gate before dispatch instead of waiting for the bearer TTL.
@@ -739,6 +749,89 @@ fn check_public_bootstrap_rate_limit(
                 "public bootstrap rate limit exceeded",
             ),
             deny_reason::PUBLIC_RATE_LIMIT,
+        ));
+    }
+    Ok(())
+}
+
+/// Default per-client, per-minute budget of an `abuse_policy_ref`.
+const DEFAULT_ABUSE_POLICY_PER_MINUTE: u32 = 30;
+
+/// The per-minute budget for an abuse policy: `UDB_ABUSE_POLICY_<REF>`
+/// (uppercased, non-alphanumerics as `_`), else the default. Memoized per ref.
+fn abuse_policy_limit(reference: &str) -> u32 {
+    static CACHE: OnceLock<Mutex<HashMap<String, u32>>> = OnceLock::new();
+    let cache = CACHE.get_or_init(|| Mutex::new(HashMap::new()));
+    let Ok(mut map) = cache.lock() else {
+        return DEFAULT_ABUSE_POLICY_PER_MINUTE;
+    };
+    if let Some(limit) = map.get(reference) {
+        return *limit;
+    }
+    let env_key = format!(
+        "UDB_ABUSE_POLICY_{}",
+        reference
+            .to_ascii_uppercase()
+            .chars()
+            .map(|c| if c.is_ascii_alphanumeric() { c } else { '_' })
+            .collect::<String>()
+    );
+    let limit = std::env::var(&env_key)
+        .ok()
+        .and_then(|raw| raw.trim().parse::<u32>().ok())
+        .filter(|&limit| limit > 0)
+        .unwrap_or(DEFAULT_ABUSE_POLICY_PER_MINUTE);
+    map.insert(reference.to_string(), limit);
+    limit
+}
+
+/// Count one request against the caller's bucket of `reference` (the bucket is
+/// keyed by the policy, not the RPC path, so sibling RPCs share it).
+fn check_abuse_policy(
+    reference: &str,
+    headers: &http::HeaderMap,
+    peer: &TransportPeer,
+) -> Result<(), (Status, &'static str)> {
+    static BUCKETS: OnceLock<Mutex<HashMap<(String, String, u64), u32>>> = OnceLock::new();
+    let (_, caller, minute) = public_rate_limit_key("", headers, peer, None);
+    let buckets = BUCKETS.get_or_init(|| Mutex::new(HashMap::new()));
+    let mut guard = buckets.lock().map_err(|_| {
+        (
+            crate::runtime::executor_utils::quota_status(
+                "method_security",
+                "abuse policy limiter",
+                1_000,
+                "abuse policy limiter unavailable",
+            ),
+            deny_reason::ABUSE_POLICY,
+        )
+    })?;
+    guard.retain(|(_, _, bucket_minute), _| *bucket_minute + 2 >= minute);
+    let count = guard
+        .entry((reference.to_string(), caller, minute))
+        .or_insert(0);
+    *count = count.saturating_add(1);
+    let limit = abuse_policy_limit(reference);
+    if *count > limit {
+        return Err((
+            crate::runtime::error_reasons::annotate_with(
+                crate::runtime::executor_utils::quota_status(
+                    "method_security",
+                    "abuse_policy",
+                    public_bootstrap_retry_after_ms(),
+                    format!(
+                        "too many requests for '{reference}' from this client; retry in a minute"
+                    ),
+                ),
+                crate::runtime::error_reasons::RATE_LIMITED,
+                None,
+                None,
+                &[
+                    ("bucket", reference),
+                    ("limit_per_minute", &limit.to_string()),
+                ],
+            ),
+            deny_reason::ABUSE_POLICY,
         ));
     }
     Ok(())
@@ -1116,11 +1209,17 @@ pub fn authorize_action(
         action = %action,
         "DENY: principal lacks the action-specific scope for this admin mutation"
     );
-    Err(method_security_policy_denied(
-        deny_reason::SCOPE,
-        format!(
-            "action '{action}' requires one of the scopes {required_scopes:?} (or a control-plane admin scope)"
+    Err(crate::runtime::error_reasons::annotate_with(
+        method_security_policy_denied(
+            deny_reason::SCOPE,
+            format!(
+                "action '{action}' requires one of the scopes {required_scopes:?} (or a control-plane admin scope)"
+            ),
         ),
+        crate::runtime::error_reasons::SCOPE_MISSING,
+        None,
+        None,
+        &[("scope", required_scopes.join(" or ").as_str())],
     ))
 }
 
@@ -1230,6 +1329,11 @@ fn enforce(
         ));
     }
     let declared = method_security(path);
+
+    // Shared abuse budget (public or not), before any credential work.
+    if let Some(reference) = declared.and_then(|s| s.abuse_policy_ref.as_deref()) {
+        check_abuse_policy(reference, headers, peer)?;
+    }
 
     // Public bootstrap RPCs need no control-plane bearer.
     if matches!(declared, Some(s) if s.mode == AuthMode::Public) {
@@ -1451,8 +1555,19 @@ fn enforce(
                 method_scopes.join(" or ")
             )
         };
+        let missing_scope = if method_scopes.is_empty() {
+            "udb:admin".to_string()
+        } else {
+            method_scopes.join(" or ")
+        };
         return Err((
-            method_security_policy_denied(deny_reason::SCOPE, message),
+            crate::runtime::error_reasons::annotate_with(
+                method_security_policy_denied(deny_reason::SCOPE, message),
+                crate::runtime::error_reasons::SCOPE_MISSING,
+                None,
+                None,
+                &[("scope", missing_scope.as_str())],
+            ),
             deny_reason::SCOPE,
         ));
     }
@@ -2332,6 +2447,7 @@ mod tests {
             required_assurance_level: 0,
             owner_field: None,
             rate_limit_policy_ref: None,
+            abuse_policy_ref: None,
             audit_event_type: None,
         }
     }
@@ -2878,6 +2994,11 @@ mod tests {
             Some("ae"),
             "C25 field dropped"
         );
+        assert_eq!(
+            ms.abuse_policy_ref.as_deref(),
+            Some("ab"),
+            "abuse_policy_ref dropped"
+        );
 
         // Exhaustive destructure — adding a field to EndpointSecurityContract makes
         // THIS fail to compile until the author decides: wire it into
@@ -2900,6 +3021,8 @@ mod tests {
             required_assurance_level: _,
             allowed_credential_types: _,
             rate_limit_policy_ref: _,
+            // Enforced: a per-client budget shared across the RPCs naming it.
+            abuse_policy_ref: _,
             audit_event_type: _,
             decision_resource: _,
             owner_field: _,
@@ -2907,8 +3030,6 @@ mod tests {
             project_field: _,
             request_context_required: _,
             // ── metadata-only whitelist (intentionally NOT a MethodSecurity gate) ──
-            // abuse_policy_ref: reserved paired signal; no consumer yet.
-            abuse_policy_ref: _,
             // idempotency_required: superseded by the separate
             // method_idempotency_contract (own posture gate + dedup).
             idempotency_required: _,

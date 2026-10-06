@@ -1065,6 +1065,26 @@ private static final long serialVersionUID = 0L;
     return fencingToken_;
   }
 
+  public static final int REQUIRE_AFFECTED_FIELD_NUMBER = 12;
+  private int requireAffected_ = 0;
+  /**
+   * <pre>
+   * Optional exact row count. When non-zero the write must change exactly this
+   * many rows, checked inside the write transaction; any other count changes
+   * nothing and fails NOT_FOUND with reason `UDB_NO_ROWS_AFFECTED`. Set 1 for a
+   * single-row write that must not silently match nothing (an already-deleted
+   * row, a key that drifted). 0 keeps today's behaviour: the count is reported
+   * in MutationResponse.affected_rows and never checked.
+   * </pre>
+   *
+   * <code>uint32 require_affected = 12 [json_name = "requireAffected"];</code>
+   * @return The requireAffected.
+   */
+  @java.lang.Override
+  public int getRequireAffected() {
+    return requireAffected_;
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -1111,6 +1131,9 @@ private static final long serialVersionUID = 0L;
     }
     if (fencingToken_ != 0L) {
       output.writeInt64(11, fencingToken_);
+    }
+    if (requireAffected_ != 0) {
+      output.writeUInt32(12, requireAffected_);
     }
     getUnknownFields().writeTo(output);
   }
@@ -1161,6 +1184,10 @@ private static final long serialVersionUID = 0L;
       size += com.google.protobuf.CodedOutputStream
         .computeInt64Size(11, fencingToken_);
     }
+    if (requireAffected_ != 0) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeUInt32Size(12, requireAffected_);
+    }
     size += getUnknownFields().getSerializedSize();
     memoizedSize = size;
     return size;
@@ -1210,6 +1237,8 @@ private static final long serialVersionUID = 0L;
         .equals(other.getLockName())) return false;
     if (getFencingToken()
         != other.getFencingToken()) return false;
+    if (getRequireAffected()
+        != other.getRequireAffected()) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -1255,6 +1284,8 @@ private static final long serialVersionUID = 0L;
     hash = (37 * hash) + FENCING_TOKEN_FIELD_NUMBER;
     hash = (53 * hash) + com.google.protobuf.Internal.hashLong(
         getFencingToken());
+    hash = (37 * hash) + REQUIRE_AFFECTED_FIELD_NUMBER;
+    hash = (53 * hash) + getRequireAffected();
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -1436,6 +1467,7 @@ private static final long serialVersionUID = 0L;
       expectedRevision_ = "";
       lockName_ = "";
       fencingToken_ = 0L;
+      requireAffected_ = 0;
       return this;
     }
 
@@ -1525,6 +1557,9 @@ private static final long serialVersionUID = 0L;
       if (((from_bitField0_ & 0x00000400) != 0)) {
         result.fencingToken_ = fencingToken_;
       }
+      if (((from_bitField0_ & 0x00000800) != 0)) {
+        result.requireAffected_ = requireAffected_;
+      }
       result.bitField0_ |= to_bitField0_;
     }
 
@@ -1603,6 +1638,9 @@ private static final long serialVersionUID = 0L;
       }
       if (other.getFencingToken() != 0L) {
         setFencingToken(other.getFencingToken());
+      }
+      if (other.getRequireAffected() != 0) {
+        setRequireAffected(other.getRequireAffected());
       }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
@@ -1701,6 +1739,11 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00000400;
               break;
             } // case 88
+            case 96: {
+              requireAffected_ = input.readUInt32();
+              bitField0_ |= 0x00000800;
+              break;
+            } // case 96
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -3047,6 +3090,65 @@ private static final long serialVersionUID = 0L;
     public Builder clearFencingToken() {
       bitField0_ = (bitField0_ & ~0x00000400);
       fencingToken_ = 0L;
+      onChanged();
+      return this;
+    }
+
+    private int requireAffected_ ;
+    /**
+     * <pre>
+     * Optional exact row count. When non-zero the write must change exactly this
+     * many rows, checked inside the write transaction; any other count changes
+     * nothing and fails NOT_FOUND with reason `UDB_NO_ROWS_AFFECTED`. Set 1 for a
+     * single-row write that must not silently match nothing (an already-deleted
+     * row, a key that drifted). 0 keeps today's behaviour: the count is reported
+     * in MutationResponse.affected_rows and never checked.
+     * </pre>
+     *
+     * <code>uint32 require_affected = 12 [json_name = "requireAffected"];</code>
+     * @return The requireAffected.
+     */
+    @java.lang.Override
+    public int getRequireAffected() {
+      return requireAffected_;
+    }
+    /**
+     * <pre>
+     * Optional exact row count. When non-zero the write must change exactly this
+     * many rows, checked inside the write transaction; any other count changes
+     * nothing and fails NOT_FOUND with reason `UDB_NO_ROWS_AFFECTED`. Set 1 for a
+     * single-row write that must not silently match nothing (an already-deleted
+     * row, a key that drifted). 0 keeps today's behaviour: the count is reported
+     * in MutationResponse.affected_rows and never checked.
+     * </pre>
+     *
+     * <code>uint32 require_affected = 12 [json_name = "requireAffected"];</code>
+     * @param value The requireAffected to set.
+     * @return This builder for chaining.
+     */
+    public Builder setRequireAffected(int value) {
+
+      requireAffected_ = value;
+      bitField0_ |= 0x00000800;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Optional exact row count. When non-zero the write must change exactly this
+     * many rows, checked inside the write transaction; any other count changes
+     * nothing and fails NOT_FOUND with reason `UDB_NO_ROWS_AFFECTED`. Set 1 for a
+     * single-row write that must not silently match nothing (an already-deleted
+     * row, a key that drifted). 0 keeps today's behaviour: the count is reported
+     * in MutationResponse.affected_rows and never checked.
+     * </pre>
+     *
+     * <code>uint32 require_affected = 12 [json_name = "requireAffected"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearRequireAffected() {
+      bitField0_ = (bitField0_ & ~0x00000800);
+      requireAffected_ = 0;
       onChanged();
       return this;
     }

@@ -431,6 +431,8 @@ pub enum AccountStatus {
     Suspended = 3,
     Locked = 4,
     Deactivated = 5,
+    /// Invited: no usable password until ResetPassword completes.
+    PasswordSetupRequired = 6,
 }
 
 impl AccountStatus {
@@ -442,6 +444,7 @@ impl AccountStatus {
             AccountStatus::Suspended => "SUSPENDED",
             AccountStatus::Locked => "LOCKED",
             AccountStatus::Deactivated => "DEACTIVATED",
+            AccountStatus::PasswordSetupRequired => "PASSWORD_SETUP_REQUIRED",
         }
     }
 
@@ -452,6 +455,7 @@ impl AccountStatus {
             "SUSPENDED" => AccountStatus::Suspended,
             "LOCKED" => AccountStatus::Locked,
             "DEACTIVATED" => AccountStatus::Deactivated,
+            "PASSWORD_SETUP_REQUIRED" => AccountStatus::PasswordSetupRequired,
             _ => AccountStatus::Unspecified,
         }
     }
@@ -467,6 +471,7 @@ impl AccountStatus {
             3 => AccountStatus::Suspended,
             4 => AccountStatus::Locked,
             5 => AccountStatus::Deactivated,
+            6 => AccountStatus::PasswordSetupRequired,
             _ => AccountStatus::Unspecified,
         }
     }

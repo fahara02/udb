@@ -59,6 +59,17 @@ class DeleteRequest extends \Google\Protobuf\Internal\Message
      * Generated from protobuf field <code>int64 fencing_token = 8 [json_name = "fencingToken"];</code>
      */
     protected $fencing_token = 0;
+    /**
+     * Optional exact row count. When non-zero the write must change exactly this
+     * many rows, checked inside the write transaction; any other count changes
+     * nothing and fails NOT_FOUND with reason `UDB_NO_ROWS_AFFECTED`. Set 1 for a
+     * single-row write that must not silently match nothing (an already-deleted
+     * row, a key that drifted). 0 keeps today's behaviour: the count is reported
+     * in MutationResponse.affected_rows and never checked.
+     *
+     * Generated from protobuf field <code>uint32 require_affected = 9 [json_name = "requireAffected"];</code>
+     */
+    protected $require_affected = 0;
 
     /**
      * Constructor.
@@ -84,6 +95,13 @@ class DeleteRequest extends \Google\Protobuf\Internal\Message
      *     @type string $lock_name
      *           gate 25 (lock-fencing-at-commit): see UpdateRequest.lock_name/fencing_token.
      *     @type int|string $fencing_token
+     *     @type int $require_affected
+     *           Optional exact row count. When non-zero the write must change exactly this
+     *           many rows, checked inside the write transaction; any other count changes
+     *           nothing and fails NOT_FOUND with reason `UDB_NO_ROWS_AFFECTED`. Set 1 for a
+     *           single-row write that must not silently match nothing (an already-deleted
+     *           row, a key that drifted). 0 keeps today's behaviour: the count is reported
+     *           in MutationResponse.affected_rows and never checked.
      * }
      */
     public function __construct($data = NULL) {
@@ -319,6 +337,42 @@ class DeleteRequest extends \Google\Protobuf\Internal\Message
     {
         GPBUtil::checkInt64($var);
         $this->fencing_token = $var;
+
+        return $this;
+    }
+
+    /**
+     * Optional exact row count. When non-zero the write must change exactly this
+     * many rows, checked inside the write transaction; any other count changes
+     * nothing and fails NOT_FOUND with reason `UDB_NO_ROWS_AFFECTED`. Set 1 for a
+     * single-row write that must not silently match nothing (an already-deleted
+     * row, a key that drifted). 0 keeps today's behaviour: the count is reported
+     * in MutationResponse.affected_rows and never checked.
+     *
+     * Generated from protobuf field <code>uint32 require_affected = 9 [json_name = "requireAffected"];</code>
+     * @return int
+     */
+    public function getRequireAffected()
+    {
+        return $this->require_affected;
+    }
+
+    /**
+     * Optional exact row count. When non-zero the write must change exactly this
+     * many rows, checked inside the write transaction; any other count changes
+     * nothing and fails NOT_FOUND with reason `UDB_NO_ROWS_AFFECTED`. Set 1 for a
+     * single-row write that must not silently match nothing (an already-deleted
+     * row, a key that drifted). 0 keeps today's behaviour: the count is reported
+     * in MutationResponse.affected_rows and never checked.
+     *
+     * Generated from protobuf field <code>uint32 require_affected = 9 [json_name = "requireAffected"];</code>
+     * @param int $var
+     * @return $this
+     */
+    public function setRequireAffected($var)
+    {
+        GPBUtil::checkUint32($var);
+        $this->require_affected = $var;
 
         return $this;
     }

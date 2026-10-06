@@ -65,6 +65,21 @@ fn env_truthy(key: &str) -> bool {
         .unwrap_or(false)
 }
 
+/// `UDB_EXPECTED_VERSION` (optionally `v`-prefixed) must equal the running
+/// broker's version when it is set.
+fn expected_version_finding(expected: Option<&str>, running: &str) -> Option<PreflightFinding> {
+    let expected = expected.map(str::trim).filter(|value| !value.is_empty())?;
+    let expected = expected.strip_prefix('v').unwrap_or(expected);
+    (expected != running).then(|| PreflightFinding {
+        name: "expected-version",
+        severity: PreflightSeverity::Fail,
+        detail: format!(
+            "UDB_EXPECTED_VERSION is {expected} but this broker is {running}: the deployment is running a different build than it was pinned to"
+        ),
+        fix: "deploy the pinned broker version, or update UDB_EXPECTED_VERSION after verifying the new one",
+    })
+}
+
 /// Evaluate every enterprise prerequisite against the loaded config + env.
 ///
 /// Returns ONLY the unmet/risky findings (empty slice = clean). `public_addr` is
@@ -188,7 +203,7 @@ pub fn evaluate(config: &UdbConfig, public_addr: SocketAddr) -> Vec<PreflightFin
         out.push(PreflightFinding {
             name: "redis",
             severity: PreflightSeverity::Warn,
-            detail: "no Redis configured: the distributed rate limiter is disabled (no-op)"
+            detail: "no Redis configured: rate limiting falls back to a per-process window, so N replicas together admit N times the configured limit"
                 .to_string(),
             fix: "set REDIS_URL (or UDB_REDIS_DSN) to a reachable Redis for rate limiting",
         });
@@ -199,6 +214,17 @@ pub fn evaluate(config: &UdbConfig, public_addr: SocketAddr) -> Vec<PreflightFin
     if let Some(finding) = authz_default_posture_finding(
         config.service.abac_default_allow,
         crate::runtime::security::udb_env_is_production(),
+    ) {
+        out.push(finding);
+    }
+
+    // (g) Version pin: an operator who sets UDB_EXPECTED_VERSION is saying which
+    // broker build this deployment was tested against. A different binary (a
+    // stale image, a partial rollout) is caught at boot instead of by the first
+    // client that trips over a changed contract.
+    if let Some(finding) = expected_version_finding(
+        std::env::var("UDB_EXPECTED_VERSION").ok().as_deref(),
+        env!("CARGO_PKG_VERSION"),
     ) {
         out.push(finding);
     }
@@ -270,6 +296,18 @@ pub fn log_findings(findings: &[PreflightFinding]) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn expected_version_pin_fails_only_on_a_different_build() {
+        assert!(expected_version_finding(None, "0.5.30").is_none());
+        assert!(expected_version_finding(Some("  "), "0.5.30").is_none());
+        assert!(expected_version_finding(Some("0.5.30"), "0.5.30").is_none());
+        assert!(expected_version_finding(Some("v0.5.30"), "0.5.30").is_none());
+        let finding = expected_version_finding(Some("0.5.29"), "0.5.30").expect("mismatch");
+        assert_eq!(finding.name, "expected-version");
+        assert_eq!(finding.severity, PreflightSeverity::Fail);
+        assert!(finding.detail.contains("0.5.29") && finding.detail.contains("0.5.30"));
+    }
 
     // These assert only the CONFIG-driven findings (Redis, authz default-deny,
     // auth-plane exposure), which are deterministic from `UdbConfig::default()`

@@ -33,11 +33,21 @@ fn message_type_lookup_status(
     manifest: &crate::generation::CatalogManifest,
     message_type: &str,
 ) -> tonic::Status {
-    setup_data_invalid_field(
+    let status = setup_data_invalid_field(
         "message_type",
         "must match exactly one manifest table message type",
         crate::planning::broker::describe_table_lookup_miss(manifest, message_type),
-    )
+    );
+    if status.message().starts_with("unknown message_type") {
+        crate::runtime::error_reasons::annotate(
+            status,
+            crate::runtime::error_reasons::UNKNOWN_MESSAGE_TYPE,
+            None,
+            None,
+        )
+    } else {
+        status
+    }
 }
 
 /// GO-005: value equality for a compare-and-swap assertion that treats an
@@ -53,6 +63,131 @@ fn json_values_match(have: &JsonValue, want: &JsonValue) -> bool {
         },
         _ => have == want,
     }
+}
+
+/// Compare-and-swap equality by the column's declared type, so the assertion
+/// compares values, not their text: `2026-10-07T09:30:00.120Z` equals
+/// `2026-10-07T09:30:00.12+00:00`, NUMERIC `12.50` equals `12.5` (or the
+/// number `12.5`), a CHAR(n) value ignores its padding, a UUID ignores case, and
+/// a JSON column accepts its document as JSON text. Arrays compare element-wise.
+/// Anything that does not parse as the column type falls back to
+/// [`json_values_match`].
+fn typed_values_match(have: &JsonValue, want: &JsonValue, sql_type: Option<&str>) -> bool {
+    use crate::runtime::core::pg_wire::PgDecimal;
+    let Some(sql_type) = sql_type.map(|ty| ty.trim().to_ascii_uppercase()) else {
+        return json_values_match(have, want);
+    };
+    if let Some(element) = sql_type.strip_suffix("[]") {
+        return match (have, want) {
+            (JsonValue::Array(a), JsonValue::Array(b)) => {
+                a.len() == b.len()
+                    && a.iter()
+                        .zip(b)
+                        .all(|(x, y)| typed_values_match(x, y, Some(element)))
+            }
+            _ => json_values_match(have, want),
+        };
+    }
+    if have.is_null() || want.is_null() {
+        return have.is_null() && want.is_null();
+    }
+    let base = sql_type
+        .split(|c: char| c == '(' || c.is_whitespace())
+        .next()
+        .unwrap_or_default();
+    let as_text = |value: &JsonValue| match value {
+        JsonValue::String(text) => Some(text.clone()),
+        JsonValue::Number(number) => Some(number.to_string()),
+        _ => None,
+    };
+    match base {
+        "NUMERIC" | "DECIMAL" => {
+            if let (Ok(a), Ok(b)) = (PgDecimal::from_json(have), PgDecimal::from_json(want)) {
+                return a.same_value(&b);
+            }
+        }
+        "TIMESTAMPTZ" => {
+            if let (Some(a), Some(b)) = (as_text(have), as_text(want))
+                && let (Ok(a), Ok(b)) = (
+                    chrono::DateTime::parse_from_rfc3339(a.trim()),
+                    chrono::DateTime::parse_from_rfc3339(b.trim()),
+                )
+            {
+                return a == b;
+            }
+        }
+        "TIMESTAMP" if sql_type.contains("WITH TIME ZONE") => {
+            if let (Some(a), Some(b)) = (as_text(have), as_text(want))
+                && let (Ok(a), Ok(b)) = (
+                    chrono::DateTime::parse_from_rfc3339(a.trim()),
+                    chrono::DateTime::parse_from_rfc3339(b.trim()),
+                )
+            {
+                return a == b;
+            }
+        }
+        "TIMESTAMP" => {
+            let parse = |text: &str| {
+                let text = text.trim();
+                chrono::NaiveDateTime::parse_from_str(text, "%Y-%m-%d %H:%M:%S%.f").or_else(|_| {
+                    chrono::NaiveDateTime::parse_from_str(text, "%Y-%m-%dT%H:%M:%S%.f")
+                })
+            };
+            if let (Some(a), Some(b)) = (as_text(have), as_text(want))
+                && let (Ok(a), Ok(b)) = (parse(&a), parse(&b))
+            {
+                return a == b;
+            }
+        }
+        "DATE" => {
+            let parse = |text: &str| {
+                let text = text.trim();
+                chrono::NaiveDate::parse_from_str(text.get(..10).unwrap_or(text), "%Y-%m-%d")
+            };
+            if let (Some(a), Some(b)) = (as_text(have), as_text(want))
+                && let (Ok(a), Ok(b)) = (parse(&a), parse(&b))
+            {
+                return a == b;
+            }
+        }
+        "CHAR" | "CHARACTER" | "BPCHAR" if !sql_type.contains("VARYING") => {
+            if let (JsonValue::String(a), JsonValue::String(b)) = (have, want) {
+                return a.trim_end_matches(' ') == b.trim_end_matches(' ');
+            }
+        }
+        "UUID" => {
+            if let (JsonValue::String(a), JsonValue::String(b)) = (have, want) {
+                return a.trim().eq_ignore_ascii_case(b.trim());
+            }
+        }
+        "JSON" | "JSONB" => {
+            // A Struct cannot carry a nested JSON document losslessly, so a caller
+            // may assert a JSON column with its JSON text.
+            if let JsonValue::String(text) = want
+                && !have.is_string()
+                && let Ok(parsed) = serde_json::from_str::<JsonValue>(text)
+            {
+                return json_values_match(have, &parsed) || have == &parsed;
+            }
+        }
+        _ => {}
+    }
+    json_values_match(have, want)
+}
+
+/// The declared SQL type of the column a CAS field resolves to.
+fn cas_column_sql_type<'t>(
+    table: Option<&'t crate::generation::ManifestTable>,
+    column: &str,
+    field: &str,
+) -> Option<&'t str> {
+    table?
+        .columns
+        .iter()
+        .find(|c| {
+            c.column_name.eq_ignore_ascii_case(column) || c.field_name.eq_ignore_ascii_case(field)
+        })
+        .map(|c| c.sql_type.as_str())
 }
 
 fn empty_object_stream_status() -> tonic::Status {
@@ -774,6 +909,18 @@ impl DataBrokerRuntime {
         // the validated wire grammar + tenant/RLS scoping, not new SQL).
         use crate::runtime::core::pagination;
         let mut filter = filter;
+        // The verified tenant/project scope fills in what the caller left out
+        // (and a different tenant is refused by name) before anything reads the
+        // filter: the page-token digest, the plan and the cache key all see the
+        // scoped shape.
+        if let Ok(scope_table) = resolve_table_for_message(manifest, &request.message_type) {
+            crate::runtime::core::scope_autofill::autofill_filter(
+                scope_table,
+                &mut filter,
+                &context,
+                crate::runtime::core::scope_autofill::FilterUse::Read,
+            )?;
+        }
         // W11: route plaintext equality on encrypted columns through the
         // blind index before planning (planner still fails closed on shapes
         // the rewrite cannot express).
@@ -813,6 +960,9 @@ impl DataBrokerRuntime {
         // caller projection) that minted the token. Both are set together (Some) iff
         // paginating, so a next-token is bound to the exact query it walks and a
         // token from a different filter/sort/projection is refused on decode.
+        // The filter an `include_total` count runs on: scoped and rewritten, but
+        // without the page cursor, so the total covers every matching row.
+        let total_filter = filter.clone();
         let (cursor_keys, page_query_digest): (Option<Vec<pagination::CursorKey>>, Option<String>) =
             if paginate {
                 let table_for_keys = resolve_table_for_message(manifest, &request.message_type)
@@ -887,14 +1037,36 @@ impl DataBrokerRuntime {
                     descending: key.descending,
                 })
                 .collect::<Vec<_>>(),
-            None => request
-                .sort
-                .iter()
-                .map(|sort| SortSpec {
-                    field: sort.field.clone(),
-                    descending: sort.descending,
-                })
-                .collect::<Vec<_>>(),
+            None => {
+                let mut sort = request
+                    .sort
+                    .iter()
+                    .map(|sort| SortSpec {
+                        field: sort.field.clone(),
+                        descending: sort.descending,
+                    })
+                    .collect::<Vec<_>>();
+                // A read always has a total order: the primary key breaks ties
+                // after the caller's sort (or orders the whole read when none was
+                // given), so repeating a query returns rows in the same order and
+                // a truncated page is the same page every time.
+                if let Ok(order_table) = resolve_table_for_message(manifest, &request.message_type)
+                {
+                    let resolver = crate::planning::broker::column_resolver(order_table);
+                    for pk in &order_table.primary_key {
+                        if !sort.iter().any(|existing| {
+                            crate::planning::broker::resolve_column(&resolver, &existing.field)
+                                == *pk
+                        }) {
+                            sort.push(SortSpec {
+                                field: pk.clone(),
+                                descending: false,
+                            });
+                        }
+                    }
+                }
+                sort
+            }
         };
         let plan_request = SelectPlanRequest {
             context: context.clone(),
@@ -964,12 +1136,20 @@ impl DataBrokerRuntime {
             // RecordSet carries no per-row revisions, so serving it would drop the
             // tokens the caller asked for (mirrors the paginated-read cache skip).
             && !request.include_revision
+            // include_total: a cached RecordSet carries no count.
+            && !request.include_total
+            // Read-your-writes: a read that must see the primary (strong /
+            // primary consistency, a primary routing policy, or a read fence the
+            // replicas have not reached) is never answered from the cache.
+            && !read_must_see_primary(&context)
             && let Some(cache_key) = cache_key.as_deref()
             && let Some(cached) = self
                 .cache_get_fresh(cache_key, &manifest.checksum_sha256, &context)
                 .await
         {
-            return Ok((cached_record_set(cached), fence_warning));
+            let mut cached = cached_record_set(cached);
+            cached.has_more = (cached.records_json.len() as i32) >= request.limit;
+            return Ok((cached, fence_warning));
         }
 
         let table = resolve_table_for_message(manifest, &request.message_type)
@@ -1036,6 +1216,16 @@ impl DataBrokerRuntime {
         let rows_result = query.fetch_all(&mut *conn).await.map_err(|err| {
             setup_data_internal_status("select_query", format!("PostgreSQL select failed: {err}"))
         });
+        // include_total: COUNT the same scoped filter (no page cursor, no sort,
+        // no limit) on the same connection, under the same RLS settings.
+        let total_result = if request.include_total && rows_result.is_ok() {
+            Some(
+                self.exact_select_total(manifest, table, &plan_request, &total_filter, &mut *conn)
+                    .await,
+            )
+        } else {
+            None
+        };
         let reset_result = reset_request_local_settings_conn(&mut conn, &context).await;
         // Leak-safety teardown: if the RESET succeeded the connection is clean
         // and may recycle into the pool (plain drop). If the RESET FAILED the
@@ -1050,6 +1240,7 @@ impl DataBrokerRuntime {
             drop(conn.detach());
         }
         let rows = rows_result?;
+        let exact_total = total_result.transpose()?;
         reset_result?;
         let mut record_set = rows_to_record_set(
             rows,
@@ -1059,6 +1250,12 @@ impl DataBrokerRuntime {
             self.encryption.as_ref(),
             &self.encryption_metrics,
         )?;
+        // A full page means more rows may match: the caller sees the truncation
+        // instead of mistaking the default 100-row cap for the whole result.
+        record_set.has_more = (record_set.records_json.len() as i32) >= request.limit;
+        if let Some(total) = exact_total {
+            record_set.exact_total = total;
+        }
         // P-1: mint next_page_token when this is a FULL page (more rows may exist).
         // An empty token signals the last page (AIP-158), so a full page whose
         // last row has a NULL sort key is refused rather than silently ending the
@@ -1222,6 +1419,52 @@ impl DataBrokerRuntime {
         Ok((record_set, stale_warning))
     }
 
+    /// `SELECT COUNT(*)` over exactly the rows a read's filter matches (scope
+    /// and soft-delete predicates included, page cursor excluded), for
+    /// `SelectRequest.include_total`. Runs on the read's own connection so the
+    /// same RLS settings apply.
+    async fn exact_select_total(
+        &self,
+        manifest: &CatalogManifest,
+        table: &crate::generation::ManifestTable,
+        plan_request: &SelectPlanRequest,
+        total_filter: &JsonValue,
+        conn: &mut sqlx::PgConnection,
+    ) -> Result<i64, tonic::Status> {
+        let count_request = SelectPlanRequest {
+            filter: total_filter.clone(),
+            fields: Vec::new(),
+            limit: 0,
+            sort: Vec::new(),
+            ..plan_request.clone()
+        };
+        let plan = build_select_query_plan(manifest, &count_request);
+        reject_plan(&plan.errors)?;
+        let normalized = crate::planning::broker::normalize_filter_keys(
+            &crate::planning::broker::column_resolver(table),
+            total_filter,
+        );
+        let mut values = filter_bind_values(&normalized);
+        values.extend(
+            plan.context_parameter_values
+                .iter()
+                .map(|value| JsonValue::String(value.clone())),
+        );
+        let sql = format!("SELECT COUNT(*) FROM ({}) AS udb_total", plan.sql);
+        let row = bind_values(sqlx::query(&sql), table, &plan.parameter_columns, &values)?
+            .fetch_one(&mut *conn)
+            .await
+            .map_err(|err| {
+                crate::runtime::executor_utils::sqlx_error_to_status(
+                    "select total count failed",
+                    &err,
+                )
+            })?;
+        row.try_get::<i64, _>(0).map_err(|err| {
+            setup_data_internal_status("select_total", format!("count decode failed: {err}"))
+        })
+    }
+
     pub async fn upsert(
         &self,
         manifest: &CatalogManifest,
@@ -1230,7 +1473,14 @@ impl DataBrokerRuntime {
     ) -> Result<MutationResponse, tonic::Status> {
         let context = merge_context(request.context.as_ref(), metadata_context);
         typed_relational_backend_guard(&context, &self.backend_instances, "upsert")?;
-        let record = upsert_record_json(&request)?;
+        let mut record = upsert_record_json(&request)?;
+        if let Ok(scope_table) = resolve_table_for_message(manifest, &request.message_type) {
+            crate::runtime::core::scope_autofill::autofill_record(
+                scope_table,
+                &mut record,
+                &context,
+            )?;
+        }
         let plan_request = UpsertPlanRequest {
             context: context.clone(),
             message_type: request.message_type.clone(),
@@ -1668,12 +1918,17 @@ impl DataBrokerRuntime {
             )
         })?;
         let Some(row) = row else {
-            return Err(crate::runtime::executor_utils::failed_precondition_fields(
-                "compare-and-swap precondition failed: the target row does not exist",
-                [(
-                    "expected".to_string(),
-                    "no row matches the compare-and-swap key".to_string(),
-                )],
+            return Err(crate::runtime::error_reasons::annotate(
+                crate::runtime::executor_utils::failed_precondition_fields(
+                    "compare-and-swap precondition failed: the target row does not exist",
+                    [(
+                        "expected".to_string(),
+                        "no row matches the compare-and-swap key".to_string(),
+                    )],
+                ),
+                crate::runtime::error_reasons::CAS_ROW_MISSING,
+                None,
+                None,
             ));
         };
         // Decrypt so the assertion compares plaintext, matching what the caller
@@ -1704,13 +1959,19 @@ impl DataBrokerRuntime {
                 let have = current
                     .and_then(|obj| obj.get(&column).or_else(|| obj.get(field)))
                     .unwrap_or(&JsonValue::Null);
-                if !json_values_match(have, want) {
-                    return Err(crate::runtime::executor_utils::failed_precondition_fields(
-                        "compare-and-swap precondition failed: a field did not match the current row",
-                        [(
-                            field.clone(),
-                            "the current value differs from the expected value".to_string(),
-                        )],
+                let sql_type = cas_column_sql_type(Some(table), &column, field);
+                if !typed_values_match(have, want, sql_type) {
+                    return Err(crate::runtime::error_reasons::annotate(
+                        crate::runtime::executor_utils::failed_precondition_fields(
+                            "compare-and-swap precondition failed: a field did not match the current row",
+                            [(
+                                field.clone(),
+                                "the current value differs from the expected value".to_string(),
+                            )],
+                        ),
+                        crate::runtime::error_reasons::CAS_CONFLICT,
+                        None,
+                        None,
                     ));
                 }
             }
@@ -2005,6 +2266,15 @@ impl DataBrokerRuntime {
         guards: MutationGuards,
     ) -> Result<MutationResponse, tonic::Status> {
         typed_relational_backend_guard(&context, &self.backend_instances, "delete")?;
+        let mut filter = filter;
+        if let Ok(scope_table) = resolve_table_for_message(manifest, message_type) {
+            crate::runtime::core::scope_autofill::autofill_filter(
+                scope_table,
+                &mut filter,
+                &context,
+                crate::runtime::core::scope_autofill::FilterUse::Write,
+            )?;
+        }
         let filter = match resolve_table_for_message(manifest, message_type) {
             Ok(table_for_encryption) => self.rewrite_encrypted_equality_filters(
                 table_for_encryption,
@@ -2178,6 +2448,7 @@ impl DataBrokerRuntime {
         let result = query.execute(&mut *tx).await.map_err(|err| {
             setup_data_internal_status("delete_query", format!("PostgreSQL delete failed: {err}"))
         })?;
+        enforce_require_affected(guards.require_affected, result.rows_affected())?;
         let mut projection_task_ids = Vec::new();
         if result.rows_affected() > 0 {
             let projection_plans =
@@ -2595,6 +2866,15 @@ impl DataBrokerRuntime {
         guards: MutationGuards,
     ) -> Result<MutationResponse, tonic::Status> {
         typed_relational_backend_guard(&context, &self.backend_instances, "update")?;
+        let mut filter = filter;
+        if let Ok(scope_table) = resolve_table_for_message(manifest, message_type) {
+            crate::runtime::core::scope_autofill::autofill_filter(
+                scope_table,
+                &mut filter,
+                &context,
+                crate::runtime::core::scope_autofill::FilterUse::Write,
+            )?;
+        }
         let filter = match resolve_table_for_message(manifest, message_type) {
             Ok(table_for_encryption) => self.rewrite_encrypted_equality_filters(
                 table_for_encryption,
@@ -2736,6 +3016,9 @@ impl DataBrokerRuntime {
                 return_record,
             )
             .await?;
+        // Before commit: a count mismatch drops the uncommitted transaction, so
+        // the rows, their projection tasks and the change event all roll back.
+        enforce_require_affected(guards.require_affected, affected_rows.max(0) as u64)?;
         // #5: bump + surface the opaque revision for a SINGLE-ROW (primary-key
         // pinned) update. Revision is a single-row optimistic-concurrency primitive
         // (like the CAS above), so a multi-row range update leaves it empty and
@@ -2956,6 +3239,13 @@ impl DataBrokerRuntime {
                 .as_ref()
                 .map(struct_to_json)
                 .unwrap_or(JsonValue::Null);
+            let mut filter_json = filter_json;
+            crate::runtime::core::scope_autofill::autofill_filter(
+                table,
+                &mut filter_json,
+                &context,
+                crate::runtime::core::scope_autofill::FilterUse::Write,
+            )?;
             let filter =
                 self.rewrite_encrypted_equality_filters(table, &filter_json, &context.tenant_id);
             let normalized_filter =
@@ -2979,6 +3269,7 @@ impl DataBrokerRuntime {
                         &row_json,
                         item.expected.as_ref(),
                         &resolver,
+                        Some(table),
                     );
                     let revision_ok = if item.expected_revision.trim().is_empty() {
                         true
@@ -5305,6 +5596,35 @@ pub(crate) struct MutationGuards {
     pub(crate) lock_name: String,
     /// gate 25: the caller's monotonic fencing token for `lock_name`.
     pub(crate) fencing_token: i64,
+    /// Exact number of rows the write must change; 0 = not checked.
+    pub(crate) require_affected: u32,
+}
+
+/// Whether a read must be served from the primary, and therefore never from
+/// the read cache, whose entry may predate the caller's own last write.
+fn read_must_see_primary(context: &RequestContext) -> bool {
+    context.requires_primary_read()
+        || matches!(
+            context.routing_policy.to_ascii_lowercase().as_str(),
+            "primary" | "write" | "strong"
+        )
+        || super::accessors::read_fence_requires_primary(context)
+}
+
+/// Refuses a write whose row count differs from a non-zero `require_affected`.
+/// Called inside the write transaction BEFORE commit, so the `?` rolls the
+/// whole write back: nothing is changed, projected or emitted.
+fn enforce_require_affected(require_affected: u32, affected: u64) -> Result<(), tonic::Status> {
+    if require_affected == 0 || affected == u64::from(require_affected) {
+        return Ok(());
+    }
+    Err(crate::runtime::error_reasons::Refusal::new(
+        crate::runtime::error_reasons::NO_ROWS_AFFECTED,
+        format!(
+            "the write matched {affected} row(s) but require_affected is {require_affected}; nothing was changed"
+        ),
+    )
+    .into_status())
 }
 
 /// Typed relational data-plane RPCs (Select / Upsert / Update / Delete / BulkCas
@@ -5832,12 +6152,17 @@ async fn enforce_expected_revision_in_tx(
 /// NON-DISCLOSING typed refusal for an `expected_revision` mismatch (#5). Names
 /// only the contract violation; never leaks the current revision or row.
 fn row_revision_precondition_failed_status() -> tonic::Status {
-    crate::runtime::executor_utils::failed_precondition_fields(
-        "revision precondition failed: the row's current revision differs from expected_revision, or the row is not revision-tracked",
-        [(
-            "expected_revision".to_string(),
-            "the current revision differs from the expected revision".to_string(),
-        )],
+    crate::runtime::error_reasons::annotate(
+        crate::runtime::executor_utils::failed_precondition_fields(
+            "revision precondition failed: the row's current revision differs from expected_revision, or the row is not revision-tracked",
+            [(
+                "expected_revision".to_string(),
+                "the current revision differs from the expected revision".to_string(),
+            )],
+        ),
+        crate::runtime::error_reasons::REVISION_CONFLICT,
+        None,
+        None,
     )
 }
 
@@ -5992,6 +6317,7 @@ fn bulk_cas_field_precondition_holds(
     row: &JsonValue,
     expected: Option<&prost_types::Struct>,
     resolver: &std::collections::HashMap<String, String>,
+    table: Option<&crate::generation::ManifestTable>,
 ) -> bool {
     let Some(expected) = expected.filter(|expected| !expected.fields.is_empty()) else {
         return true;
@@ -6006,7 +6332,7 @@ fn bulk_cas_field_precondition_holds(
         let have = current
             .and_then(|obj| obj.get(&column).or_else(|| obj.get(field)))
             .unwrap_or(&JsonValue::Null);
-        if !json_values_match(have, want) {
+        if !typed_values_match(have, want, cas_column_sql_type(table, &column, field)) {
             return false;
         }
     }
@@ -6388,9 +6714,14 @@ fn pk_equality_values_from_filter(
                 "primary-key column must be pinned by equality, not an operator",
             ),
         };
-        crate::runtime::executor_utils::failed_precondition_fields(
-            "conditional mutation requires an equality filter on every primary-key column",
-            [(column, why.to_string())],
+        crate::runtime::error_reasons::annotate(
+            crate::runtime::executor_utils::failed_precondition_fields(
+                "conditional mutation requires an equality filter on every primary-key column",
+                [(column, why.to_string())],
+            ),
+            crate::runtime::error_reasons::CAS_KEY_NOT_PK,
+            None,
+            None,
         )
     })
 }
@@ -6476,9 +6807,14 @@ fn conditional_mutation_key(
             "table has no primary key and no declared unique key is pinned by equality",
         ),
     };
-    Err(crate::runtime::executor_utils::failed_precondition_fields(
-        CONDITIONAL_MUTATION_KEY_REFUSAL,
-        [(field, why.to_string())],
+    Err(crate::runtime::error_reasons::annotate(
+        crate::runtime::executor_utils::failed_precondition_fields(
+            CONDITIONAL_MUTATION_KEY_REFUSAL,
+            [(field, why.to_string())],
+        ),
+        crate::runtime::error_reasons::CAS_KEY_NOT_PK,
+        None,
+        None,
     ))
 }
 
@@ -7664,12 +8000,12 @@ fn assert_deployment_tier_floor(runtime: &DataBrokerRuntime) {
 #[cfg(test)]
 mod setup_data_validation_tests {
     use super::{
-        empty_object_stream_status, es_payload_filter_terms, gcs_feature_status,
-        invalid_part_count_status, invalid_presign_ttl_status, json_values_match,
-        no_object_store_feature_status, object_instance_missing_status,
+        empty_object_stream_status, enforce_require_affected, es_payload_filter_terms,
+        gcs_feature_status, invalid_part_count_status, invalid_presign_ttl_status,
+        json_values_match, no_object_store_feature_status, object_instance_missing_status,
         parse_vector_search_response, pinecone_metadata_filter, qdrant_vector_feature_status,
         s3_object_feature_status, setup_data_internal_status, text_search_dispatch_spec,
-        unknown_message_type_status, unsupported_object_backend_status,
+        typed_values_match, unknown_message_type_status, unsupported_object_backend_status,
         unsupported_presign_method_status, vector_hybrid_qdrant_only_status,
         vector_search_dispatch_spec, vector_upsert_dispatch_spec, weaviate_where_arg,
     };
@@ -7763,6 +8099,89 @@ mod setup_data_validation_tests {
         assert!(!json_values_match(&json!(true), &json!(false)));
         // A present value never matches an absent (null) assertion target.
         assert!(!json_values_match(&serde_json::Value::Null, &json!(1)));
+    }
+
+    #[test]
+    fn require_affected_refuses_any_other_row_count_with_its_reason() {
+        assert!(enforce_require_affected(0, 0).is_ok());
+        assert!(enforce_require_affected(0, 7).is_ok());
+        assert!(enforce_require_affected(1, 1).is_ok());
+        for affected in [0, 2] {
+            let err = enforce_require_affected(1, affected).unwrap_err();
+            assert_eq!(err.code(), tonic::Code::NotFound);
+            assert_eq!(
+                crate::runtime::error_reasons::reason_of(&err).as_deref(),
+                Some("UDB_NO_ROWS_AFFECTED")
+            );
+        }
+    }
+
+    #[test]
+    fn cas_compares_values_by_column_type_not_text() {
+        let ts = Some("TIMESTAMPTZ");
+        assert!(typed_values_match(
+            &json!("2026-10-07T09:30:00.12Z"),
+            &json!("2026-10-07T09:30:00.120000+00:00"),
+            ts
+        ));
+        assert!(!typed_values_match(
+            &json!("2026-10-07T09:30:00.12Z"),
+            &json!("2026-10-07T09:30:00.13Z"),
+            ts
+        ));
+        let naive = Some("TIMESTAMP");
+        assert!(typed_values_match(
+            &json!("2026-10-07 09:30:00.5"),
+            &json!("2026-10-07T09:30:00.500"),
+            naive
+        ));
+        let numeric = Some("NUMERIC(12,2)");
+        assert!(typed_values_match(&json!("12.50"), &json!(12.5), numeric));
+        assert!(typed_values_match(&json!("12.50"), &json!("12.5"), numeric));
+        assert!(!typed_values_match(
+            &json!("12.50"),
+            &json!("12.51"),
+            numeric
+        ));
+        assert!(typed_values_match(
+            &json!("AB"),
+            &json!("AB  "),
+            Some("CHAR(4)")
+        ));
+        assert!(!typed_values_match(
+            &json!("AB"),
+            &json!("AB  "),
+            Some("VARCHAR(4)")
+        ));
+        assert!(typed_values_match(
+            &json!("0192F0C4-0000-7000-8000-000000000001"),
+            &json!("0192f0c4-0000-7000-8000-000000000001"),
+            Some("UUID")
+        ));
+        assert!(typed_values_match(
+            &json!({"a": [1, 2]}),
+            &json!("{\"a\": [1, 2]}"),
+            Some("JSONB")
+        ));
+        assert!(typed_values_match(
+            &json!(["2026-10-07T09:30:00Z", null]),
+            &json!(["2026-10-07T09:30:00.000Z", null]),
+            Some("TIMESTAMPTZ[]")
+        ));
+        assert!(typed_values_match(
+            &json!("2026-10-07"),
+            &json!("2026-10-07"),
+            Some("DATE")
+        ));
+        assert!(!typed_values_match(&json!(null), &json!("x"), Some("TEXT")));
+        assert!(typed_values_match(
+            &json!(null),
+            &json!(null),
+            Some("NUMERIC")
+        ));
+        // Values that do not parse as the column type compare as JSON.
+        assert!(typed_values_match(&json!("n/a"), &json!("n/a"), numeric));
+        assert!(typed_values_match(&json!(8), &json!(8.0), None));
     }
 
     #[test]
@@ -8528,7 +8947,9 @@ mod setup_data_consistency_tests {
         let row = serde_json::json!({"status": "active", "version": 3});
         let resolver: std::collections::HashMap<String, String> = std::collections::HashMap::new();
         // No precondition → holds.
-        assert!(bulk_cas_field_precondition_holds(&row, None, &resolver));
+        assert!(bulk_cas_field_precondition_holds(
+            &row, None, &resolver, None
+        ));
         let want = |field: &str, kind: prost_types::value::Kind| prost_types::Struct {
             fields: std::collections::BTreeMap::from([(
                 field.to_string(),
@@ -8543,7 +8964,8 @@ mod setup_data_consistency_tests {
         assert!(bulk_cas_field_precondition_holds(
             &row,
             Some(&ok),
-            &resolver
+            &resolver,
+            None
         ));
         let bad = want(
             "status",
@@ -8552,14 +8974,16 @@ mod setup_data_consistency_tests {
         assert!(!bulk_cas_field_precondition_holds(
             &row,
             Some(&bad),
-            &resolver
+            &resolver,
+            None
         ));
         // int/float tolerance: an INTEGER column 3 matches an asserted 3.0.
         let num = want("version", prost_types::value::Kind::NumberValue(3.0));
         assert!(bulk_cas_field_precondition_holds(
             &row,
             Some(&num),
-            &resolver
+            &resolver,
+            None
         ));
     }
 

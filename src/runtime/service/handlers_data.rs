@@ -469,6 +469,7 @@ impl DataBrokerService {
             expected_revision: req.expected_revision.clone(),
             lock_name: req.lock_name.clone(),
             fencing_token: req.fencing_token,
+            require_affected: req.require_affected,
         };
         // Authorize against the concrete target table (not "*"), so per-table
         // ABAC Allow/Deny policies actually match — matching Select/Upsert.
@@ -538,6 +539,7 @@ impl DataBrokerService {
             expected_revision: req.expected_revision.clone(),
             lock_name: req.lock_name.clone(),
             fencing_token: req.fencing_token,
+            require_affected: req.require_affected,
         };
         let decision_id = match self.authorize(&security, &message_type, "Update").await {
             Ok(id) => id,

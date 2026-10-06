@@ -1,4 +1,5 @@
 //! Free helper functions split out of core.rs (Phase F).
+use super::pg_wire::PgDecimal;
 use super::*;
 #[cfg(any(
     feature = "qdrant",
@@ -690,6 +691,38 @@ pub(crate) fn bind_typed_generic_pg_params<'q>(
                 query.bind(values)
             }
             "json" => query.bind(sqlx::types::Json(strip_nul_json(value))),
+            "numeric" => match value {
+                JsonValue::Null => query.bind(Option::<PgDecimal>::None),
+                _ => query.bind(PgDecimal::from_json(value).map_err(|err| {
+                    core_helper_invalid_field(
+                        "params",
+                        "numeric params must be numbers or numeric strings",
+                        err,
+                    )
+                })?),
+            },
+            "array_numeric" => {
+                if value.is_null() {
+                    query.bind(Option::<Vec<PgDecimal>>::None)
+                } else {
+                    let values = json_array_values(value, "array_numeric")?
+                        .iter()
+                        .map(|item| {
+                            if item.is_null() {
+                                return Ok(None);
+                            }
+                            PgDecimal::from_json(item).map(Some).map_err(|err| {
+                                core_helper_invalid_field(
+                                    "params",
+                                    "array_numeric params must contain numbers or numeric strings",
+                                    err,
+                                )
+                            })
+                        })
+                        .collect::<Result<Vec<_>, _>>()?;
+                    query.bind(values)
+                }
+            }
             "timestamptz" => {
                 // Parse RFC-3339 text back into a real DateTime<Utc> so sqlx
                 // binds timestamptz. A typed NULL must bind as a nullable
@@ -1527,7 +1560,7 @@ mod generic_dispatch_validation_tests {
             ),
             ("INSERT INTO t (n) VALUES ($1::INTEGER[])", "array_int"),
             ("INSERT INTO t (n) VALUES ($1::BIGINT[])", "array_int"),
-            ("INSERT INTO t (f) VALUES ($1::NUMERIC[])", "array_float"),
+            ("INSERT INTO t (f) VALUES ($1::NUMERIC[])", "array_numeric"),
             ("INSERT INTO t (b) VALUES ($1::BOOLEAN[])", "array_bool"),
         ] {
             assert_eq!(
@@ -1555,6 +1588,27 @@ mod generic_dispatch_validation_tests {
         assert_eq!(
             postgres_array_cast_param_type("jsonb) values ($10::text[]"),
             None
+        );
+        // A NUMERIC placeholder binds an exact decimal whatever the JSON shape:
+        // a float, an integer, a numeric string or NULL.
+        for value in [
+            LogicalValue::Float(12.5),
+            LogicalValue::Int(3),
+            LogicalValue::String("12345678901234567.89".to_string()),
+            LogicalValue::Null,
+        ] {
+            assert_eq!(
+                postgres_param_types("UPDATE t SET amount = $1::NUMERIC", &[value.clone()]),
+                vec!["numeric"],
+                "{value:?}"
+            );
+        }
+        assert_eq!(
+            postgres_param_types(
+                "INSERT INTO t (amounts) VALUES ($1::NUMERIC[])",
+                &[LogicalValue::Array(vec![LogicalValue::Float(1.5)])]
+            ),
+            vec!["array_numeric"]
         );
     }
 
@@ -1722,6 +1776,13 @@ pub(crate) fn postgres_param_types(
         .enumerate()
         .map(|(idx, value)| {
             let value_type = logical_value_param_type(value);
+            // A NUMERIC placeholder binds an exact decimal whatever JSON shape
+            // the value has (number or numeric string): never a float.
+            if let Some(cast @ ("numeric" | "array_numeric")) =
+                postgres_placeholder_cast_type(statement, idx + 1)
+            {
+                return cast;
+            }
             // A non-empty array headed for a JSON column is a JSON document,
             // not a Postgres array: binding `float8[]` under a `$n::jsonb`
             // cast fails with 42846 (cannot coerce), which made every JSONB
@@ -1760,6 +1821,10 @@ fn postgres_placeholder_cast_type(statement: &str, position: usize) -> Option<&'
         Some("timestamptz")
     } else if lower.starts_with("uuid") {
         Some("uuid")
+    } else if (lower.starts_with("numeric") || lower.starts_with("decimal"))
+        && postgres_array_cast_param_type(&lower).is_none()
+    {
+        Some("numeric")
     } else {
         // An array cast names the element type the bind must produce. Without
         // this an EMPTY array reaches a `TEXT[]` column as jsonb (42804) — a
@@ -1787,7 +1852,8 @@ fn postgres_array_cast_param_type(lowercase_tail: &str) -> Option<&'static str> 
     }
     Some(match element {
         "smallint" | "int2" | "integer" | "int" | "int4" | "bigint" | "int8" => "array_int",
-        "real" | "float4" | "double precision" | "float8" | "numeric" | "decimal" => "array_float",
+        "numeric" | "decimal" => "array_numeric",
+        "real" | "float4" | "double precision" | "float8" => "array_float",
         "boolean" | "bool" => "array_bool",
         _ => "array_string",
     })
