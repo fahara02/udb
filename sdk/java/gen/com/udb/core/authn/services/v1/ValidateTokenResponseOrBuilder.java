@@ -267,4 +267,30 @@ java.lang.String defaultValue);
    */
   java.lang.String getAttributesOrThrow(
       java.lang.String key);
+
+  /**
+   * <pre>
+   * Stable, NON-SECRET public id of the login session this token belongs to
+   * (`sesspub_…`). Identical for the login token and every token refreshed from
+   * it, and equal to LoginResponse.session_public_id; empty for tokens not
+   * minted from a login session (API-key exchange, service accounts).
+   * </pre>
+   *
+   * <code>string session_public_id = 16 [json_name = "sessionPublicId"];</code>
+   * @return The sessionPublicId.
+   */
+  java.lang.String getSessionPublicId();
+  /**
+   * <pre>
+   * Stable, NON-SECRET public id of the login session this token belongs to
+   * (`sesspub_…`). Identical for the login token and every token refreshed from
+   * it, and equal to LoginResponse.session_public_id; empty for tokens not
+   * minted from a login session (API-key exchange, service accounts).
+   * </pre>
+   *
+   * <code>string session_public_id = 16 [json_name = "sessionPublicId"];</code>
+   * @return The bytes for sessionPublicId.
+   */
+  com.google.protobuf.ByteString
+      getSessionPublicIdBytes();
 }

@@ -861,8 +861,13 @@ impl AuthnServiceImpl {
         // CSRF token for the double-submit cookie pattern (WEB flows); bound to
         // the session and validated by `ValidateCSRF`.
         let csrf_token = self.csrf_token_for(&session_id);
+        // Stable non-secret session id: the same `sesspub_…` value ValidateToken
+        // and RefreshToken report for every token of this session.
+        let session_public_id =
+            public_session_handle_from_hash(&authn::hash_secret(&session_id, &self.hash_key()));
         Ok(Response::new(authn_pb::LoginResponse {
             user_id: user.user_id,
+            session_public_id,
             session_id: session_id.clone(),
             session_token: session_id,
             access_token,

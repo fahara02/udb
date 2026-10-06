@@ -159,4 +159,30 @@ public interface LoginResponseOrBuilder extends
    * @return The refreshTokenExpiresIn.
    */
   int getRefreshTokenExpiresIn();
+
+  /**
+   * <pre>
+   * Stable, NON-SECRET public id of this login session (`sesspub_…`). Unlike
+   * `session_id` (the session handle, a credential), it is safe to store and
+   * log, and ValidateToken / RefreshToken report the same value for every token
+   * of this session — use it to recognise "this device's" session.
+   * </pre>
+   *
+   * <code>string session_public_id = 11 [json_name = "sessionPublicId"];</code>
+   * @return The sessionPublicId.
+   */
+  java.lang.String getSessionPublicId();
+  /**
+   * <pre>
+   * Stable, NON-SECRET public id of this login session (`sesspub_…`). Unlike
+   * `session_id` (the session handle, a credential), it is safe to store and
+   * log, and ValidateToken / RefreshToken report the same value for every token
+   * of this session — use it to recognise "this device's" session.
+   * </pre>
+   *
+   * <code>string session_public_id = 11 [json_name = "sessionPublicId"];</code>
+   * @return The bytes for sessionPublicId.
+   */
+  com.google.protobuf.ByteString
+      getSessionPublicIdBytes();
 }

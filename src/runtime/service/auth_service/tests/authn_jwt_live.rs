@@ -233,6 +233,51 @@ async fn live_postgres_refresh_token_family_rotation_and_reuse() {
     assert!(first.refresh_token.starts_with("rt_"));
     assert_ne!(first.refresh_token, login.refresh_token);
 
+    // One stable, non-secret public session id: Login, RefreshToken, and
+    // ValidateToken (for the login token AND the refreshed token) all agree, and
+    // it is never the session handle itself.
+    assert!(
+        login.session_public_id.starts_with("sesspub_"),
+        "login must report a public session id, got {:?}",
+        login.session_public_id
+    );
+    assert_ne!(login.session_public_id, login.session_id);
+    assert_eq!(first.session_public_id, login.session_public_id);
+    for (label, token) in [
+        ("login", &login.access_token),
+        ("refreshed", &first.access_token),
+    ] {
+        let validated = authn
+            .validate_token(Request::new(authn_pb::ValidateTokenRequest {
+                token: token.clone(),
+                token_type: authn_entity_pb::TokenType::JwtAccess as i32,
+            }))
+            .await
+            .unwrap_or_else(|err| panic!("validate {label} token: {err}"))
+            .into_inner();
+        assert!(validated.valid, "{label} token must validate");
+        assert_eq!(
+            validated.session_public_id, login.session_public_id,
+            "{label} token must report the login session's public id"
+        );
+        assert!(
+            validated.expires_at.is_some(),
+            "{label} token reports its expiry"
+        );
+    }
+    let login_validated = authn
+        .validate_token(Request::new(authn_pb::ValidateTokenRequest {
+            token: login.access_token.clone(),
+            token_type: authn_entity_pb::TokenType::JwtAccess as i32,
+        }))
+        .await
+        .expect("validate login token")
+        .into_inner();
+    assert_eq!(
+        login_validated.session_id, login.session_id,
+        "the login token reports the session handle login returned"
+    );
+
     // Replaying the ORIGINAL (now rotated-away) refresh token is reuse: rejected,
     // and it revokes the whole family.
     let reuse = authn

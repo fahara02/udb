@@ -71,6 +71,15 @@ class LoginResponse extends \Google\Protobuf\Internal\Message
      * Generated from protobuf field <code>int32 refresh_token_expires_in = 10 [json_name = "refreshTokenExpiresIn"];</code>
      */
     protected $refresh_token_expires_in = 0;
+    /**
+     * Stable, NON-SECRET public id of this login session (`sesspub_…`). Unlike
+     * `session_id` (the session handle, a credential), it is safe to store and
+     * log, and ValidateToken / RefreshToken report the same value for every token
+     * of this session — use it to recognise "this device's" session.
+     *
+     * Generated from protobuf field <code>string session_public_id = 11 [json_name = "sessionPublicId"];</code>
+     */
+    protected $session_public_id = '';
 
     /**
      * Constructor.
@@ -98,6 +107,11 @@ class LoginResponse extends \Google\Protobuf\Internal\Message
      *           Absolute lifetime (seconds) of the rotating refresh token (field 4). The
      *           refresh token is a token-family credential (rt_<family>.<jti>), rotated on
      *           every RefreshToken call; reuse of a superseded value revokes the family.
+     *     @type string $session_public_id
+     *           Stable, NON-SECRET public id of this login session (`sesspub_…`). Unlike
+     *           `session_id` (the session handle, a credential), it is safe to store and
+     *           log, and ValidateToken / RefreshToken report the same value for every token
+     *           of this session — use it to recognise "this device's" session.
      * }
      */
     public function __construct($data = NULL) {
@@ -355,6 +369,38 @@ class LoginResponse extends \Google\Protobuf\Internal\Message
     {
         GPBUtil::checkInt32($var);
         $this->refresh_token_expires_in = $var;
+
+        return $this;
+    }
+
+    /**
+     * Stable, NON-SECRET public id of this login session (`sesspub_…`). Unlike
+     * `session_id` (the session handle, a credential), it is safe to store and
+     * log, and ValidateToken / RefreshToken report the same value for every token
+     * of this session — use it to recognise "this device's" session.
+     *
+     * Generated from protobuf field <code>string session_public_id = 11 [json_name = "sessionPublicId"];</code>
+     * @return string
+     */
+    public function getSessionPublicId()
+    {
+        return $this->session_public_id;
+    }
+
+    /**
+     * Stable, NON-SECRET public id of this login session (`sesspub_…`). Unlike
+     * `session_id` (the session handle, a credential), it is safe to store and
+     * log, and ValidateToken / RefreshToken report the same value for every token
+     * of this session — use it to recognise "this device's" session.
+     *
+     * Generated from protobuf field <code>string session_public_id = 11 [json_name = "sessionPublicId"];</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setSessionPublicId($var)
+    {
+        GPBUtil::checkString($var, True);
+        $this->session_public_id = $var;
 
         return $this;
     }

@@ -35,6 +35,13 @@ class RefreshTokenResponse extends \Google\Protobuf\Internal\Message
      * Generated from protobuf field <code>int32 refresh_token_expires_in = 4 [json_name = "refreshTokenExpiresIn"];</code>
      */
     protected $refresh_token_expires_in = 0;
+    /**
+     * The refreshed session's stable public id (same value LoginResponse and
+     * ValidateToken report); empty for a legacy session-id refresh.
+     *
+     * Generated from protobuf field <code>string session_public_id = 5 [json_name = "sessionPublicId"];</code>
+     */
+    protected $session_public_id = '';
 
     /**
      * Constructor.
@@ -50,6 +57,9 @@ class RefreshTokenResponse extends \Google\Protobuf\Internal\Message
      *           new one is minted (atomic rotation). Empty when the caller refreshed with a
      *           legacy server-side session id rather than a token-family credential.
      *     @type int $refresh_token_expires_in
+     *     @type string $session_public_id
+     *           The refreshed session's stable public id (same value LoginResponse and
+     *           ValidateToken report); empty for a legacy session-id refresh.
      * }
      */
     public function __construct($data = NULL) {
@@ -151,6 +161,34 @@ class RefreshTokenResponse extends \Google\Protobuf\Internal\Message
     {
         GPBUtil::checkInt32($var);
         $this->refresh_token_expires_in = $var;
+
+        return $this;
+    }
+
+    /**
+     * The refreshed session's stable public id (same value LoginResponse and
+     * ValidateToken report); empty for a legacy session-id refresh.
+     *
+     * Generated from protobuf field <code>string session_public_id = 5 [json_name = "sessionPublicId"];</code>
+     * @return string
+     */
+    public function getSessionPublicId()
+    {
+        return $this->session_public_id;
+    }
+
+    /**
+     * The refreshed session's stable public id (same value LoginResponse and
+     * ValidateToken report); empty for a legacy session-id refresh.
+     *
+     * Generated from protobuf field <code>string session_public_id = 5 [json_name = "sessionPublicId"];</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setSessionPublicId($var)
+    {
+        GPBUtil::checkString($var, True);
+        $this->session_public_id = $var;
 
         return $this;
     }

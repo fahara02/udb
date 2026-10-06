@@ -1621,10 +1621,12 @@ impl DataBrokerRuntime {
 
     /// Evaluate an optional compare-and-swap precondition for UPDATE or DELETE.
     /// Unset/empty `expected` returns immediately. Otherwise the mutation filter
-    /// must pin EVERY primary-key column by equality (so the precondition targets
-    /// exactly one row); that row is locked `FOR UPDATE` and each `expected` field
-    /// asserted, identically to the upsert CAS. On mismatch or a missing row the
-    /// caller returns before the mutation, so nothing is changed.
+    /// must pin by equality EVERY primary-key column, or every column of a
+    /// declared (non-partial) unique key, so the precondition targets exactly one
+    /// row (see [`conditional_mutation_key`]); that row is locked `FOR UPDATE` and
+    /// each `expected` field asserted, identically to the upsert CAS. On mismatch
+    /// or a missing row the caller returns before the mutation, so nothing is
+    /// changed.
     pub(crate) async fn enforce_conditional_mutation_precondition(
         &self,
         tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
@@ -1633,17 +1635,7 @@ impl DataBrokerRuntime {
         normalized_filter: &JsonValue,
         context: &RequestContext,
     ) -> Result<(), tonic::Status> {
-        let key_columns = table.primary_key.clone();
-        if key_columns.is_empty() {
-            return Err(crate::runtime::executor_utils::failed_precondition_fields(
-                "conditional mutation requires a manifest primary key to locate the row",
-                [(
-                    "expected".to_string(),
-                    "table has no primary key".to_string(),
-                )],
-            ));
-        }
-        let key_values = pk_equality_values_from_filter(normalized_filter, &key_columns)?;
+        let (key_columns, key_values) = conditional_mutation_key(table, normalized_filter)?;
         self.enforce_cas_precondition(tx, table, expected, &key_columns, &key_values, context)
             .await
     }
@@ -6307,8 +6299,51 @@ fn idempotency_dedup_claim_status(err: &sqlx::Error) -> tonic::Status {
     )
 }
 
-/// Extract the equality value for each key column from a normalized filter, for
-/// conditional update/delete. Every key column MUST be pinned by equality — bare
+/// Why a filter does not pin a key column set by equality.
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum EqualityPinError {
+    /// The filter is not a JSON object.
+    NotObject,
+    /// The named key column is absent from the filter.
+    Missing(String),
+    /// The named key column is constrained by an operator other than a lone `$eq`.
+    Operator(String),
+}
+
+/// Extract the equality value for each of `key_columns` from a normalized filter.
+/// Every column MUST be pinned by equality — bare (`{"col": v}`) or a lone
+/// `{"col": {"$eq": v}}` — otherwise the filter cannot target a single row
+/// deterministically. Shared by the primary-key and unique-key resolutions.
+fn equality_values_from_filter(
+    filter: &JsonValue,
+    key_columns: &[String],
+) -> Result<Vec<JsonValue>, EqualityPinError> {
+    let object = filter.as_object().ok_or(EqualityPinError::NotObject)?;
+    let mut values = Vec::with_capacity(key_columns.len());
+    for column in key_columns {
+        let raw = object
+            .get(column)
+            .ok_or_else(|| EqualityPinError::Missing(column.clone()))?;
+        let value = match raw {
+            JsonValue::Object(inner) => {
+                // Only a lone {"$eq": v} is a single-row equality; any other
+                // operator (ranges, IN, …) can match multiple rows and is unsafe
+                // for a single-row compare-and-swap.
+                match (inner.len(), inner.get("$eq").or_else(|| inner.get("eq"))) {
+                    (1, Some(v)) => v.clone(),
+                    _ => return Err(EqualityPinError::Operator(column.clone())),
+                }
+            }
+            other => other.clone(),
+        };
+        values.push(value);
+    }
+    Ok(values)
+}
+
+/// Extract the equality value for each PRIMARY-KEY column from a normalized
+/// filter, for the primary-key-only single-row paths (opaque revision, row
+/// revision tracking). Every key column MUST be pinned by equality — bare
 /// (`{"col": v}`) or `{"col": {"$eq": v}}` — otherwise the precondition cannot
 /// target a single row deterministically and the mutation is refused. This is the
 /// deliberately conservative semantic: compare-and-swap acts on THIS row, not
@@ -6317,43 +6352,110 @@ fn pk_equality_values_from_filter(
     filter: &JsonValue,
     key_columns: &[String],
 ) -> Result<Vec<JsonValue>, tonic::Status> {
-    let reject = |column: &str, why: &str| {
-        crate::runtime::executor_utils::failed_precondition_fields(
-            "conditional mutation requires an equality filter on every primary-key column",
-            [(column.to_string(), why.to_string())],
-        )
-    };
-    let object = filter
-        .as_object()
-        .ok_or_else(|| reject("filter", "filter must be a JSON object"))?;
-    let mut values = Vec::with_capacity(key_columns.len());
-    for column in key_columns {
-        let raw = object.get(column).ok_or_else(|| {
-            reject(
+    equality_values_from_filter(filter, key_columns).map_err(|err| {
+        let (column, why) = match err {
+            EqualityPinError::NotObject => ("filter".to_string(), "filter must be a JSON object"),
+            EqualityPinError::Missing(column) => (
                 column,
                 "primary-key column is not constrained by the filter",
-            )
-        })?;
-        let value = match raw {
-            JsonValue::Object(inner) => {
-                // Only a lone {"$eq": v} is a single-row equality; any other
-                // operator (ranges, IN, …) can match multiple rows and is unsafe
-                // for a single-row compare-and-swap.
-                match (inner.len(), inner.get("$eq").or_else(|| inner.get("eq"))) {
-                    (1, Some(v)) => v.clone(),
-                    _ => {
-                        return Err(reject(
-                            column,
-                            "primary-key column must be pinned by equality, not an operator",
-                        ));
-                    }
-                }
-            }
-            other => other.clone(),
+            ),
+            EqualityPinError::Operator(column) => (
+                column,
+                "primary-key column must be pinned by equality, not an operator",
+            ),
         };
-        values.push(value);
+        crate::runtime::executor_utils::failed_precondition_fields(
+            "conditional mutation requires an equality filter on every primary-key column",
+            [(column, why.to_string())],
+        )
+    })
+}
+
+/// Refusal message when a conditional (compare-and-swap) Update/Delete filter
+/// pins neither the primary key nor a declared unique key.
+const CONDITIONAL_MUTATION_KEY_REFUSAL: &str = "conditional mutation requires an equality filter on every primary-key column or on every column of a declared unique key";
+
+/// Resolve the single-row key a conditional (compare-and-swap) Update/Delete
+/// locks, from its normalized (physical-column-keyed) filter:
+///
+/// 1. the primary key, when the filter pins every primary-key column by
+///    equality (unchanged behaviour);
+/// 2. otherwise a declared unique index — `unique`, NOT partial (a non-empty
+///    `where_clause` is not a table-wide single-row key), every column a real
+///    table column — whose every column the filter pins by equality to a
+///    non-null value (NULLs never collide in a unique index). Index columns are
+///    resolved through the manifest column resolver so a field-name spelling
+///    matches the filter's physical keys. The fewest-column match wins; ties
+///    keep manifest order.
+/// 3. otherwise `FAILED_PRECONDITION`.
+///
+/// Tenant/project columns inside a unique key are fine: the row lookup also
+/// binds the verified tenant/project, so a forged value only finds no row.
+fn conditional_mutation_key(
+    table: &ManifestTable,
+    filter: &JsonValue,
+) -> Result<(Vec<String>, Vec<JsonValue>), tonic::Status> {
+    let pk_error = if table.primary_key.is_empty() {
+        None
+    } else {
+        match equality_values_from_filter(filter, &table.primary_key) {
+            Ok(values) => return Ok((table.primary_key.clone(), values)),
+            Err(err) => Some(err),
+        }
+    };
+    if !matches!(pk_error, Some(EqualityPinError::NotObject)) {
+        let resolver = crate::planning::broker::column_resolver(table);
+        let mut candidates: Vec<Vec<String>> = table
+            .indexes
+            .iter()
+            .filter(|index| {
+                index.unique && index.where_clause.trim().is_empty() && !index.columns.is_empty()
+            })
+            .map(|index| {
+                index
+                    .columns
+                    .iter()
+                    .map(|column| crate::planning::broker::resolve_column(&resolver, column))
+                    .collect::<Vec<_>>()
+            })
+            .filter(|columns| {
+                columns.iter().all(|column| {
+                    table
+                        .columns
+                        .iter()
+                        .any(|declared| &declared.column_name == column)
+                })
+            })
+            .collect();
+        // Stable sort: fewest columns first, manifest order among equals.
+        candidates.sort_by_key(Vec::len);
+        for columns in candidates {
+            if let Ok(values) = equality_values_from_filter(filter, &columns)
+                && values.iter().all(|value| !value.is_null())
+            {
+                return Ok((columns, values));
+            }
+        }
     }
-    Ok(values)
+    let (field, why) = match pk_error {
+        Some(EqualityPinError::NotObject) => ("filter".to_string(), "filter must be a JSON object"),
+        Some(EqualityPinError::Missing(column)) => (
+            column,
+            "primary-key column is not constrained by the filter and no declared unique key is pinned by equality",
+        ),
+        Some(EqualityPinError::Operator(column)) => (
+            column,
+            "primary-key column must be pinned by equality, not an operator, and no declared unique key is pinned by equality",
+        ),
+        None => (
+            "filter".to_string(),
+            "table has no primary key and no declared unique key is pinned by equality",
+        ),
+    };
+    Err(crate::runtime::executor_utils::failed_precondition_fields(
+        CONDITIONAL_MUTATION_KEY_REFUSAL,
+        [(field, why.to_string())],
+    ))
 }
 
 fn idempotency_claim_sql(rel: &str) -> String {
@@ -8230,9 +8332,10 @@ mod setup_data_validation_tests {
 #[cfg(test)]
 mod setup_data_consistency_tests {
     use super::{
-        RequestContext, bulk_cas_effective_ceiling, bulk_cas_field_precondition_holds,
-        bulk_cas_response_from_idempotency_json, fencing_lease_lost_status,
-        fencing_lock_absent_status, full_canonical_store_requires_opt_in, idempotency_claim_sql,
+        CONDITIONAL_MUTATION_KEY_REFUSAL, RequestContext, bulk_cas_effective_ceiling,
+        bulk_cas_field_precondition_holds, bulk_cas_response_from_idempotency_json,
+        conditional_mutation_key, fencing_lease_lost_status, fencing_lock_absent_status,
+        full_canonical_store_requires_opt_in, idempotency_claim_sql,
         idempotency_dedup_claim_status, idempotency_dedup_key, idempotency_key_for_dedup,
         idempotency_request_hash_bulk_cas, idempotency_request_hash_delete,
         idempotency_request_hash_update, idempotency_request_hash_upsert,
@@ -8953,6 +9056,85 @@ mod setup_data_consistency_tests {
                 .code(),
             tonic::Code::FailedPrecondition
         );
+    }
+
+    /// `cursors`: PK `id`, a declared unique key on (`tenant_id`, `slug`), a
+    /// PARTIAL unique index on `topic`, and a non-unique index on `status`.
+    fn conditional_key_table() -> crate::generation::ManifestTable {
+        use crate::generation::{ManifestColumn, ManifestIndex, ManifestTable};
+        let column = |name: &str| ManifestColumn {
+            field_name: name.to_string(),
+            column_name: name.to_string(),
+            sql_type: "TEXT".to_string(),
+            is_primary: name == "id",
+            is_tenant_column: name == "tenant_id",
+            ..ManifestColumn::default()
+        };
+        let index = |columns: &[&str], unique: bool, where_clause: &str| ManifestIndex {
+            columns: columns.iter().map(|c| c.to_string()).collect(),
+            unique,
+            where_clause: where_clause.to_string(),
+            ..ManifestIndex::default()
+        };
+        ManifestTable {
+            message_name: "acme.test.v1.Cursor".to_string(),
+            schema: "public".to_string(),
+            table: "cursors".to_string(),
+            primary_key: vec!["id".to_string()],
+            columns: ["id", "tenant_id", "slug", "topic", "status"]
+                .into_iter()
+                .map(column)
+                .collect(),
+            indexes: vec![
+                index(&["status"], false, ""),
+                index(&["topic"], true, "status = 'ACTIVE'"),
+                index(&["tenant_id", "slug"], true, ""),
+            ],
+            ..ManifestTable::default()
+        }
+    }
+
+    // A conditional update/delete keyed by the PK keeps using the PK; without the
+    // PK it falls back to a fully-pinned declared unique key.
+    #[test]
+    fn conditional_mutation_key_prefers_pk_then_declared_unique_key() {
+        let table = conditional_key_table();
+
+        let by_pk = serde_json::json!({"id": "r1", "slug": "s"});
+        let (columns, values) = conditional_mutation_key(&table, &by_pk).expect("pk key");
+        assert_eq!(columns, vec!["id".to_string()]);
+        assert_eq!(values, vec![serde_json::json!("r1")]);
+
+        let by_unique = serde_json::json!({"tenant_id": "t1", "slug": {"$eq": "s"}});
+        let (columns, values) =
+            conditional_mutation_key(&table, &by_unique).expect("unique key chosen");
+        assert_eq!(columns, vec!["tenant_id".to_string(), "slug".to_string()]);
+        assert_eq!(
+            values,
+            vec![serde_json::json!("t1"), serde_json::json!("s")]
+        );
+
+        // A NULL never collides in a unique index, so it cannot pin one row.
+        let null_slug = serde_json::json!({"tenant_id": "t1", "slug": null});
+        assert!(conditional_mutation_key(&table, &null_slug).is_err());
+    }
+
+    // A partial unique index is not a table-wide single-row key, and a
+    // non-unique index never is: neither may key a compare-and-swap.
+    #[test]
+    fn conditional_mutation_key_ignores_partial_and_non_unique_indexes() {
+        let table = conditional_key_table();
+        for filter in [
+            serde_json::json!({"topic": "notes"}),
+            serde_json::json!({"status": "A"}),
+            serde_json::json!({"tenant_id": "t1"}),
+            serde_json::json!({"tenant_id": "t1", "slug": {"$in": ["a", "b"]}}),
+        ] {
+            let err = conditional_mutation_key(&table, &filter).unwrap_err();
+            assert_eq!(err.code(), tonic::Code::FailedPrecondition, "{filter}");
+            assert_eq!(err.message(), CONDITIONAL_MUTATION_KEY_REFUSAL, "{filter}");
+        }
+        assert!(CONDITIONAL_MUTATION_KEY_REFUSAL.contains("every column of a declared unique key"));
     }
 
     #[test]

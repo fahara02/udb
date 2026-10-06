@@ -7,6 +7,18 @@ release line was tagged.
 
 ## [0.5.27] - 2026-10-06
 
+### Added
+
+- **Compare-and-swap Update/Delete can be keyed by a declared unique key.**
+  A conditional (`expected`) Update or Delete — unary and in BeginTx — no
+  longer requires the filter to pin the primary key: when it pins every
+  column of a declared, non-partial unique index by equality, that row is
+  locked and asserted instead. Partial and non-unique indexes never key a
+  compare-and-swap; a filter pinning neither key is refused with
+  `FAILED_PRECONDITION` ("conditional mutation requires an equality filter on
+  every primary-key column or on every column of a declared unique key").
+  Opaque-revision preconditions remain primary-key only.
+
 ### Fixed
 
 - **Array columns of the remaining element types were unwritable.** 0.5.26
@@ -20,6 +32,12 @@ release line was tagged.
   `DATE[]`, `TIMESTAMPTZ[]`, `TIMESTAMP[]` or `TIME[]` column failed with an
   INTERNAL "array decode failed" because the decoder fell back to `TEXT[]`.
   They now decode element-wise, rendered exactly like their scalar columns.
+- **Stable public session id.** `LoginResponse`, `RefreshTokenResponse` and
+  `ValidateTokenResponse` carry a new `session_public_id` (`sesspub_…`): a
+  non-secret id of the login session, identical for the login token and every
+  token refreshed from it. `session_id` keeps its meaning (the session handle,
+  a credential); use `session_public_id` to recognise a device's session
+  across refreshes. Additive field — existing clients are unaffected.
 - **ValidateToken dropped the session id and expiry of a JWT.** For a
   login-minted access token it returned an empty `session_id` and no
   `expires_at` (IntrospectToken reported both), so a caller could not tie a

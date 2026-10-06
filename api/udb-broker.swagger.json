@@ -54586,6 +54586,10 @@
           "type": "integer",
           "format": "int32",
           "description": "Absolute lifetime (seconds) of the rotating refresh token (field 4). The\nrefresh token is a token-family credential (rt_<family>.<jti>), rotated on\nevery RefreshToken call; reuse of a superseded value revokes the family."
+        },
+        "sessionPublicId": {
+          "type": "string",
+          "description": "Stable, NON-SECRET public id of this login session (`sesspub_…`). Unlike\n`session_id` (the session handle, a credential), it is safe to store and\nlog, and ValidateToken / RefreshToken report the same value for every token\nof this session — use it to recognise \"this device's\" session."
         }
       }
     },
@@ -56603,6 +56607,10 @@
         "refreshTokenExpiresIn": {
           "type": "integer",
           "format": "int32"
+        },
+        "sessionPublicId": {
+          "type": "string",
+          "description": "The refreshed session's stable public id (same value LoginResponse and\nValidateToken report); empty for a legacy session-id refresh."
         }
       }
     },
@@ -60171,6 +60179,10 @@
           "additionalProperties": {
             "type": "string"
           }
+        },
+        "sessionPublicId": {
+          "type": "string",
+          "description": "Stable, NON-SECRET public id of the login session this token belongs to\n(`sesspub_…`). Identical for the login token and every token refreshed from\nit, and equal to LoginResponse.session_public_id; empty for tokens not\nminted from a login session (API-key exchange, service accounts)."
         }
       }
     },

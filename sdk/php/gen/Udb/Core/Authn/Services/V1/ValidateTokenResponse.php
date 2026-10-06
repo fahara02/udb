@@ -80,6 +80,15 @@ class ValidateTokenResponse extends \Google\Protobuf\Internal\Message
      * Generated from protobuf field <code>map<string, string> attributes = 15 [json_name = "attributes"];</code>
      */
     private $attributes;
+    /**
+     * Stable, NON-SECRET public id of the login session this token belongs to
+     * (`sesspub_…`). Identical for the login token and every token refreshed from
+     * it, and equal to LoginResponse.session_public_id; empty for tokens not
+     * minted from a login session (API-key exchange, service accounts).
+     *
+     * Generated from protobuf field <code>string session_public_id = 16 [json_name = "sessionPublicId"];</code>
+     */
+    protected $session_public_id = '';
 
     /**
      * Constructor.
@@ -105,6 +114,11 @@ class ValidateTokenResponse extends \Google\Protobuf\Internal\Message
      *     @type string $project_id
      *     @type string[] $scopes
      *     @type array|\Google\Protobuf\Internal\MapField $attributes
+     *     @type string $session_public_id
+     *           Stable, NON-SECRET public id of the login session this token belongs to
+     *           (`sesspub_…`). Identical for the login token and every token refreshed from
+     *           it, and equal to LoginResponse.session_public_id; empty for tokens not
+     *           minted from a login session (API-key exchange, service accounts).
      * }
      */
     public function __construct($data = NULL) {
@@ -470,6 +484,38 @@ class ValidateTokenResponse extends \Google\Protobuf\Internal\Message
     {
         $arr = GPBUtil::checkMapField($var, \Google\Protobuf\Internal\GPBType::STRING, \Google\Protobuf\Internal\GPBType::STRING);
         $this->attributes = $arr;
+
+        return $this;
+    }
+
+    /**
+     * Stable, NON-SECRET public id of the login session this token belongs to
+     * (`sesspub_…`). Identical for the login token and every token refreshed from
+     * it, and equal to LoginResponse.session_public_id; empty for tokens not
+     * minted from a login session (API-key exchange, service accounts).
+     *
+     * Generated from protobuf field <code>string session_public_id = 16 [json_name = "sessionPublicId"];</code>
+     * @return string
+     */
+    public function getSessionPublicId()
+    {
+        return $this->session_public_id;
+    }
+
+    /**
+     * Stable, NON-SECRET public id of the login session this token belongs to
+     * (`sesspub_…`). Identical for the login token and every token refreshed from
+     * it, and equal to LoginResponse.session_public_id; empty for tokens not
+     * minted from a login session (API-key exchange, service accounts).
+     *
+     * Generated from protobuf field <code>string session_public_id = 16 [json_name = "sessionPublicId"];</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setSessionPublicId($var)
+    {
+        GPBUtil::checkString($var, True);
+        $this->session_public_id = $var;
 
         return $this;
     }

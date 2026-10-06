@@ -119,6 +119,54 @@ impl AuthnServiceImpl {
         })
     }
 
+    /// The stable public id (`sesspub_…`) of the login session a refresh family
+    /// was minted from, derived from the session hash the family row stores.
+    /// Best-effort: empty when there is no backing pool, the family is unknown
+    /// in `tenant_id`, or it was minted without a session.
+    pub(super) async fn family_session_public_id(
+        &self,
+        family_id: &str,
+        tenant_id: &str,
+    ) -> String {
+        let Some(pool) = self.pg_pool.as_ref() else {
+            return String::new();
+        };
+        if uuid::Uuid::parse_str(family_id.trim()).is_err() || tenant_id.trim().is_empty() {
+            return String::new();
+        }
+        let m = token_family_model();
+        let sql = format!(
+            "SELECT {session} FROM {rel} WHERE {id} = $1::UUID AND {tenant} = $2",
+            session = m.q("session_id"),
+            rel = m.relation,
+            id = m.q("family_id"),
+            tenant = m.q("tenant_id"),
+        );
+        let Ok(mut tx) = pool.begin().await else {
+            return String::new();
+        };
+        if sqlx::query("SELECT set_config('app.current_tenant_id', $1, true)")
+            .bind(tenant_id)
+            .execute(&mut *tx)
+            .await
+            .is_err()
+        {
+            return String::new();
+        }
+        let session_hash: Option<String> = sqlx::query_scalar(&sql)
+            .bind(family_id.trim())
+            .bind(tenant_id)
+            .fetch_optional(&mut *tx)
+            .await
+            .ok()
+            .flatten();
+        let _ = tx.commit().await;
+        session_hash
+            .filter(|hash| !hash.trim().is_empty())
+            .map(|hash| super::super::mappings::public_session_handle_from_hash(&hash))
+            .unwrap_or_default()
+    }
+
     /// Keyed-HMAC digest of a refresh jti. STORAGE_ONLY: only this digest is ever
     /// persisted; the raw jti is credential-equivalent for a live token.
     fn refresh_jti_hash(&self, jti: &str) -> String {

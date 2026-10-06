@@ -2,6 +2,7 @@ package udbclient
 
 import (
 	"errors"
+	"strings"
 	"time"
 
 	entityv1 "github.com/fahara02/udb/sdk/go/gen/udb/entity/v1"
@@ -127,12 +128,15 @@ func stringValue(msg protoreflect.Message, fd protoreflect.FieldDescriptor) stri
 // the target row was absent or a field no longer matched the expected value.
 // Check it after Upsert(WithExpected) or Delete(WithDeleteExpected) to decide
 // whether to re-read and retry the optimistic operation. Detected by the
-// FAILED_PRECONDITION code the broker returns for a CAS mismatch (it writes
-// nothing on failure), so a retry loop is safe.
+// FAILED_PRECONDITION code AND the broker's conflict message (it writes nothing
+// on failure), so a retry loop is safe. Other FAILED_PRECONDITION refusals —
+// e.g. a conditional mutation whose filter does not pin the primary key — are
+// usage errors that a retry can never fix, and are NOT conflicts.
 func IsCASConflict(err error) bool {
 	var e *Error
-	if !errors.As(err, &e) {
+	if !errors.As(err, &e) || e.Code != codes.FailedPrecondition {
 		return false
 	}
-	return e.Code == codes.FailedPrecondition
+	return strings.HasPrefix(e.Message, "compare-and-swap precondition failed") ||
+		strings.HasPrefix(e.Message, "revision precondition failed")
 }

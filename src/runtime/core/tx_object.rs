@@ -1351,9 +1351,10 @@ impl DataBrokerRuntime {
     /// drift: `enforce_cas_precondition` (upsert, keyed by the primary key — the
     /// transactional upsert carries no conflict_fields, so its conflict target is
     /// always the PK, matching `enforce_upsert_precondition`'s empty-conflict_fields
-    /// branch) and `enforce_conditional_mutation_precondition` (update/delete, keyed by PK
-    /// equality from the encryption-rewritten, normalized filter — identical to the
-    /// unary update/delete CAS). The SELECT ... FOR UPDATE is tenant/RLS-fenced by
+    /// branch) and `enforce_conditional_mutation_precondition` (update/delete, keyed
+    /// by PK — or else a declared unique key — equality from the
+    /// encryption-rewritten, normalized filter — identical to the unary
+    /// update/delete CAS). The SELECT ... FOR UPDATE is tenant/RLS-fenced by
     /// installing the request-local GUCs on `tx` first: the tx apply loop otherwise
     /// fences its writes through SQL-baked tenant predicates and never installs the
     /// GUC, so without this the CAS read would not be tenant-scoped. `SET LOCAL` is

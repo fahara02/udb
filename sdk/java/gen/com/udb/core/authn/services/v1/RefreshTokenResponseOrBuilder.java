@@ -59,4 +59,26 @@ public interface RefreshTokenResponseOrBuilder extends
    * @return The refreshTokenExpiresIn.
    */
   int getRefreshTokenExpiresIn();
+
+  /**
+   * <pre>
+   * The refreshed session's stable public id (same value LoginResponse and
+   * ValidateToken report); empty for a legacy session-id refresh.
+   * </pre>
+   *
+   * <code>string session_public_id = 5 [json_name = "sessionPublicId"];</code>
+   * @return The sessionPublicId.
+   */
+  java.lang.String getSessionPublicId();
+  /**
+   * <pre>
+   * The refreshed session's stable public id (same value LoginResponse and
+   * ValidateToken report); empty for a legacy session-id refresh.
+   * </pre>
+   *
+   * <code>string session_public_id = 5 [json_name = "sessionPublicId"];</code>
+   * @return The bytes for sessionPublicId.
+   */
+  com.google.protobuf.ByteString
+      getSessionPublicIdBytes();
 }

@@ -130,6 +130,7 @@ fn validate_session_response(
         access_surface: "session".to_string(),
         device_id: rec.client_fingerprint.clone(),
         token_id: public_session_handle_from_hash(&rec.session_id_hash),
+        session_public_id: public_session_handle_from_hash(&rec.session_id_hash),
         session_type: authn_entity_pb::SessionType::ServerSide as i32,
         principal: Some(authn_principal_to_pb(
             &principal,
@@ -540,6 +541,8 @@ fn validate_api_key_response(rec: Option<authn::ApiKeyRecord>) -> authn_pb::Vali
         access_surface: "api_key".to_string(),
         device_id: String::new(),
         token_id: rec.key_prefix.clone(),
+        // An API key is not a login session.
+        session_public_id: String::new(),
         session_type: authn_entity_pb::SessionType::ApiKey as i32,
         principal: Some(authn_principal_to_pb(
             &principal,
@@ -993,6 +996,7 @@ impl AuthnServiceImpl {
             // Legacy session-id refresh path does not rotate a family token.
             refresh_token: String::new(),
             refresh_token_expires_in: 0,
+            session_public_id: public_session_handle_from_hash(&rec.session_id_hash),
         }))
     }
 
@@ -1037,11 +1041,15 @@ impl AuthnServiceImpl {
                 } else {
                     self.config.session_ttl_secs as i32
                 };
+                let session_public_id = self
+                    .family_session_public_id(family_id, &family.tenant_id)
+                    .await;
                 Ok(authn_pb::RefreshTokenResponse {
                     access_token,
                     access_token_expires_in,
                     refresh_token: new_refresh_token,
                     refresh_token_expires_in: self.config.session_ttl_secs as i32,
+                    session_public_id,
                 })
             }
             // Reuse of a rotated-away token: the family is now revoked + audited
@@ -1242,10 +1250,29 @@ impl AuthnServiceImpl {
                 } else {
                     String::new()
                 };
+                // The session's stable public id: derived from the login token's
+                // own handle, or — for a token refreshed from a family — from the
+                // session hash that family was minted with. Equal to
+                // LoginResponse.session_public_id for every token of the session.
+                let session_public_id = if !session_id.is_empty() {
+                    public_session_handle_from_hash(&authn::hash_secret(
+                        &session_id,
+                        &self.hash_key(),
+                    ))
+                } else if let Some(family_id) = jti.strip_prefix("rtf_") {
+                    self.family_session_public_id(
+                        family_id,
+                        claims.tenant_id.as_deref().unwrap_or_default(),
+                    )
+                    .await
+                } else {
+                    String::new()
+                };
                 authn_pb::ValidateTokenResponse {
                     valid: true,
                     user_id: subject,
                     session_id,
+                    session_public_id,
                     account_kind: token_account_kind,
                     tenant_id: principal.tenant_id.clone(),
                     roles: principal.roles.clone(),

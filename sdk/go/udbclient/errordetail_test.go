@@ -169,6 +169,14 @@ func TestIsCASConflict(t *testing.T) {
 	if IsCASConflict(&Error{Code: codes.Unavailable}) {
 		t.Error("IsCASConflict(Unavailable) = true, want false")
 	}
+	if !IsCASConflict(&Error{Code: codes.FailedPrecondition, Message: "revision precondition failed: the row's current revision differs"}) {
+		t.Error("a revision mismatch is a conflict")
+	}
+	// A usage refusal shares FAILED_PRECONDITION but is not retryable.
+	usage := &Error{Code: codes.FailedPrecondition, Message: "conditional mutation requires an equality filter on every primary-key column"}
+	if IsCASConflict(usage) {
+		t.Error("IsCASConflict(primary-key filter refusal) = true, want false")
+	}
 	if IsCASConflict(nil) || IsCASConflict(status.Error(codes.Internal, "boom")) {
 		t.Error("IsCASConflict must be false for nil and non-*Error")
 	}

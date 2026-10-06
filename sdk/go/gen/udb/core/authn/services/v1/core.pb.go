@@ -1716,8 +1716,13 @@ type LoginResponse struct {
 	// refresh token is a token-family credential (rt_<family>.<jti>), rotated on
 	// every RefreshToken call; reuse of a superseded value revokes the family.
 	RefreshTokenExpiresIn int32 `protobuf:"varint,10,opt,name=refresh_token_expires_in,json=refreshTokenExpiresIn,proto3" json:"refresh_token_expires_in,omitempty"`
-	unknownFields         protoimpl.UnknownFields
-	sizeCache             protoimpl.SizeCache
+	// Stable, NON-SECRET public id of this login session (`sesspub_…`). Unlike
+	// `session_id` (the session handle, a credential), it is safe to store and
+	// log, and ValidateToken / RefreshToken report the same value for every token
+	// of this session — use it to recognise "this device's" session.
+	SessionPublicId string `protobuf:"bytes,11,opt,name=session_public_id,json=sessionPublicId,proto3" json:"session_public_id,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *LoginResponse) Reset() {
@@ -1820,6 +1825,13 @@ func (x *LoginResponse) GetRefreshTokenExpiresIn() int32 {
 	return 0
 }
 
+func (x *LoginResponse) GetSessionPublicId() string {
+	if x != nil {
+		return x.SessionPublicId
+	}
+	return ""
+}
+
 type RefreshTokenRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	RefreshToken  string                 `protobuf:"bytes,1,opt,name=refresh_token,json=refreshToken,proto3" json:"refresh_token,omitempty"`
@@ -1882,8 +1894,11 @@ type RefreshTokenResponse struct {
 	// legacy server-side session id rather than a token-family credential.
 	RefreshToken          string `protobuf:"bytes,3,opt,name=refresh_token,json=refreshToken,proto3" json:"refresh_token,omitempty"`
 	RefreshTokenExpiresIn int32  `protobuf:"varint,4,opt,name=refresh_token_expires_in,json=refreshTokenExpiresIn,proto3" json:"refresh_token_expires_in,omitempty"`
-	unknownFields         protoimpl.UnknownFields
-	sizeCache             protoimpl.SizeCache
+	// The refreshed session's stable public id (same value LoginResponse and
+	// ValidateToken report); empty for a legacy session-id refresh.
+	SessionPublicId string `protobuf:"bytes,5,opt,name=session_public_id,json=sessionPublicId,proto3" json:"session_public_id,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *RefreshTokenResponse) Reset() {
@@ -1942,6 +1957,13 @@ func (x *RefreshTokenResponse) GetRefreshTokenExpiresIn() int32 {
 		return x.RefreshTokenExpiresIn
 	}
 	return 0
+}
+
+func (x *RefreshTokenResponse) GetSessionPublicId() string {
+	if x != nil {
+		return x.SessionPublicId
+	}
+	return ""
 }
 
 type LogoutRequest struct {
@@ -2262,8 +2284,13 @@ type ValidateTokenResponse struct {
 	ProjectId     string                 `protobuf:"bytes,13,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
 	Scopes        []string               `protobuf:"bytes,14,rep,name=scopes,proto3" json:"scopes,omitempty"`
 	Attributes    map[string]string      `protobuf:"bytes,15,rep,name=attributes,proto3" json:"attributes,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	// Stable, NON-SECRET public id of the login session this token belongs to
+	// (`sesspub_…`). Identical for the login token and every token refreshed from
+	// it, and equal to LoginResponse.session_public_id; empty for tokens not
+	// minted from a login session (API-key exchange, service accounts).
+	SessionPublicId string `protobuf:"bytes,16,opt,name=session_public_id,json=sessionPublicId,proto3" json:"session_public_id,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *ValidateTokenResponse) Reset() {
@@ -2399,6 +2426,13 @@ func (x *ValidateTokenResponse) GetAttributes() map[string]string {
 		return x.Attributes
 	}
 	return nil
+}
+
+func (x *ValidateTokenResponse) GetSessionPublicId() string {
+	if x != nil {
+		return x.SessionPublicId
+	}
+	return ""
 }
 
 type CreateSessionRequest struct {
@@ -6795,7 +6829,7 @@ const file_udb_core_authn_services_v1_core_proto_rawDesc = "" +
 	"tenantHint\x12!\n" +
 	"\fproject_hint\x18\v \x01(\tR\vprojectHint\x12%\n" +
 	"\x0eaccess_surface\x18\f \x01(\tR\raccessSurface\x12#\n" +
-	"\rrecovery_code\x18\r \x01(\tR\frecoveryCode:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"\xa2\x03\n" +
+	"\rrecovery_code\x18\r \x01(\tR\frecoveryCode:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"\xce\x03\n" +
 	"\rLoginResponse\x12\x17\n" +
 	"\auser_id\x18\x01 \x01(\tR\x06userId\x12\x1d\n" +
 	"\n" +
@@ -6810,16 +6844,18 @@ const file_udb_core_authn_services_v1_core_proto_rawDesc = "" +
 	"\n" +
 	"mfa_otp_id\x18\t \x01(\tR\bmfaOtpId\x127\n" +
 	"\x18refresh_token_expires_in\x18\n" +
-	" \x01(\x05R\x15refreshTokenExpiresIn:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"w\n" +
+	" \x01(\x05R\x15refreshTokenExpiresIn\x12*\n" +
+	"\x11session_public_id\x18\v \x01(\tR\x0fsessionPublicId:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"w\n" +
 	"\x13RefreshTokenRequest\x12#\n" +
 	"\rrefresh_token\x18\x01 \x01(\tR\frefreshToken\x12\x1d\n" +
 	"\n" +
-	"session_id\x18\x02 \x01(\tR\tsessionId:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"\xec\x01\n" +
+	"session_id\x18\x02 \x01(\tR\tsessionId:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"\x98\x02\n" +
 	"\x14RefreshTokenResponse\x12!\n" +
 	"\faccess_token\x18\x01 \x01(\tR\vaccessToken\x125\n" +
 	"\x17access_token_expires_in\x18\x02 \x01(\x05R\x14accessTokenExpiresIn\x12#\n" +
 	"\rrefresh_token\x18\x03 \x01(\tR\frefreshToken\x127\n" +
-	"\x18refresh_token_expires_in\x18\x04 \x01(\x05R\x15refreshTokenExpiresIn:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"\xd2\x01\n" +
+	"\x18refresh_token_expires_in\x18\x04 \x01(\x05R\x15refreshTokenExpiresIn\x12*\n" +
+	"\x11session_public_id\x18\x05 \x01(\tR\x0fsessionPublicId:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"\xd2\x01\n" +
 	"\rLogoutRequest\x12\x1d\n" +
 	"\n" +
 	"session_id\x18\x01 \x01(\tR\tsessionId\x12!\n" +
@@ -6842,7 +6878,7 @@ const file_udb_core_authn_services_v1_core_proto_rawDesc = "" +
 	"\x14ValidateTokenRequest\x12\x14\n" +
 	"\x05token\x18\x01 \x01(\tR\x05token\x12B\n" +
 	"\n" +
-	"token_type\x18\x02 \x01(\x0e2#.udb.core.authn.entity.v1.TokenTypeR\ttokenType:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"\x82\x06\n" +
+	"token_type\x18\x02 \x01(\x0e2#.udb.core.authn.entity.v1.TokenTypeR\ttokenType:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"\xae\x06\n" +
 	"\x15ValidateTokenResponse\x12\x14\n" +
 	"\x05valid\x18\x01 \x01(\bR\x05valid\x12\x17\n" +
 	"\auser_id\x18\x02 \x01(\tR\x06userId\x12\x1d\n" +
@@ -6864,7 +6900,8 @@ const file_udb_core_authn_services_v1_core_proto_rawDesc = "" +
 	"\x06scopes\x18\x0e \x03(\tR\x06scopes\x12a\n" +
 	"\n" +
 	"attributes\x18\x0f \x03(\v2A.udb.core.authn.services.v1.ValidateTokenResponse.AttributesEntryR\n" +
-	"attributes\x1a=\n" +
+	"attributes\x12*\n" +
+	"\x11session_public_id\x18\x10 \x01(\tR\x0fsessionPublicId\x1a=\n" +
 	"\x0fAttributesEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"\xc9\x01\n" +

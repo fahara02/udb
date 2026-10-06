@@ -41,6 +41,7 @@ private static final long serialVersionUID = 0L;
     projectId_ = "";
     scopes_ =
         com.google.protobuf.LazyStringArrayList.emptyList();
+    sessionPublicId_ = "";
   }
 
   public static final com.google.protobuf.Descriptors.Descriptor
@@ -626,6 +627,59 @@ java.lang.String defaultValue) {
     return map.get(key);
   }
 
+  public static final int SESSION_PUBLIC_ID_FIELD_NUMBER = 16;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object sessionPublicId_ = "";
+  /**
+   * <pre>
+   * Stable, NON-SECRET public id of the login session this token belongs to
+   * (`sesspub_…`). Identical for the login token and every token refreshed from
+   * it, and equal to LoginResponse.session_public_id; empty for tokens not
+   * minted from a login session (API-key exchange, service accounts).
+   * </pre>
+   *
+   * <code>string session_public_id = 16 [json_name = "sessionPublicId"];</code>
+   * @return The sessionPublicId.
+   */
+  @java.lang.Override
+  public java.lang.String getSessionPublicId() {
+    java.lang.Object ref = sessionPublicId_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs =
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      sessionPublicId_ = s;
+      return s;
+    }
+  }
+  /**
+   * <pre>
+   * Stable, NON-SECRET public id of the login session this token belongs to
+   * (`sesspub_…`). Identical for the login token and every token refreshed from
+   * it, and equal to LoginResponse.session_public_id; empty for tokens not
+   * minted from a login session (API-key exchange, service accounts).
+   * </pre>
+   *
+   * <code>string session_public_id = 16 [json_name = "sessionPublicId"];</code>
+   * @return The bytes for sessionPublicId.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getSessionPublicIdBytes() {
+    java.lang.Object ref = sessionPublicId_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b =
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      sessionPublicId_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -688,6 +742,9 @@ java.lang.String defaultValue) {
         internalGetAttributes(),
         AttributesDefaultEntryHolder.defaultEntry,
         15);
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(sessionPublicId_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 16, sessionPublicId_);
+    }
     getUnknownFields().writeTo(output);
   }
 
@@ -764,6 +821,9 @@ java.lang.String defaultValue) {
       size += com.google.protobuf.CodedOutputStream
           .computeMessageSize(15, attributes__);
     }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(sessionPublicId_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(16, sessionPublicId_);
+    }
     size += getUnknownFields().getSerializedSize();
     memoizedSize = size;
     return size;
@@ -813,6 +873,8 @@ java.lang.String defaultValue) {
         .equals(other.getScopesList())) return false;
     if (!internalGetAttributes().equals(
         other.internalGetAttributes())) return false;
+    if (!getSessionPublicId()
+        .equals(other.getSessionPublicId())) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -865,6 +927,8 @@ java.lang.String defaultValue) {
       hash = (37 * hash) + ATTRIBUTES_FIELD_NUMBER;
       hash = (53 * hash) + internalGetAttributes().hashCode();
     }
+    hash = (37 * hash) + SESSION_PUBLIC_ID_FIELD_NUMBER;
+    hash = (53 * hash) + getSessionPublicId().hashCode();
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -1050,6 +1114,7 @@ java.lang.String defaultValue) {
       scopes_ =
           com.google.protobuf.LazyStringArrayList.emptyList();
       internalGetMutableAttributes().clear();
+      sessionPublicId_ = "";
       return this;
     }
 
@@ -1137,6 +1202,9 @@ java.lang.String defaultValue) {
       if (((from_bitField0_ & 0x00004000) != 0)) {
         result.attributes_ = internalGetAttributes();
         result.attributes_.makeImmutable();
+      }
+      if (((from_bitField0_ & 0x00008000) != 0)) {
+        result.sessionPublicId_ = sessionPublicId_;
       }
       result.bitField0_ |= to_bitField0_;
     }
@@ -1226,6 +1294,11 @@ java.lang.String defaultValue) {
       internalGetMutableAttributes().mergeFrom(
           other.internalGetAttributes());
       bitField0_ |= 0x00004000;
+      if (!other.getSessionPublicId().isEmpty()) {
+        sessionPublicId_ = other.sessionPublicId_;
+        bitField0_ |= 0x00008000;
+        onChanged();
+      }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
       return this;
@@ -1337,6 +1410,11 @@ java.lang.String defaultValue) {
               bitField0_ |= 0x00004000;
               break;
             } // case 122
+            case 130: {
+              sessionPublicId_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00008000;
+              break;
+            } // case 130
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -2656,6 +2734,113 @@ java.lang.String defaultValue) {
       internalGetMutableAttributes().getMutableMap()
           .putAll(values);
       bitField0_ |= 0x00004000;
+      return this;
+    }
+
+    private java.lang.Object sessionPublicId_ = "";
+    /**
+     * <pre>
+     * Stable, NON-SECRET public id of the login session this token belongs to
+     * (`sesspub_…`). Identical for the login token and every token refreshed from
+     * it, and equal to LoginResponse.session_public_id; empty for tokens not
+     * minted from a login session (API-key exchange, service accounts).
+     * </pre>
+     *
+     * <code>string session_public_id = 16 [json_name = "sessionPublicId"];</code>
+     * @return The sessionPublicId.
+     */
+    public java.lang.String getSessionPublicId() {
+      java.lang.Object ref = sessionPublicId_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        sessionPublicId_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <pre>
+     * Stable, NON-SECRET public id of the login session this token belongs to
+     * (`sesspub_…`). Identical for the login token and every token refreshed from
+     * it, and equal to LoginResponse.session_public_id; empty for tokens not
+     * minted from a login session (API-key exchange, service accounts).
+     * </pre>
+     *
+     * <code>string session_public_id = 16 [json_name = "sessionPublicId"];</code>
+     * @return The bytes for sessionPublicId.
+     */
+    public com.google.protobuf.ByteString
+        getSessionPublicIdBytes() {
+      java.lang.Object ref = sessionPublicId_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b =
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        sessionPublicId_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <pre>
+     * Stable, NON-SECRET public id of the login session this token belongs to
+     * (`sesspub_…`). Identical for the login token and every token refreshed from
+     * it, and equal to LoginResponse.session_public_id; empty for tokens not
+     * minted from a login session (API-key exchange, service accounts).
+     * </pre>
+     *
+     * <code>string session_public_id = 16 [json_name = "sessionPublicId"];</code>
+     * @param value The sessionPublicId to set.
+     * @return This builder for chaining.
+     */
+    public Builder setSessionPublicId(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      sessionPublicId_ = value;
+      bitField0_ |= 0x00008000;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Stable, NON-SECRET public id of the login session this token belongs to
+     * (`sesspub_…`). Identical for the login token and every token refreshed from
+     * it, and equal to LoginResponse.session_public_id; empty for tokens not
+     * minted from a login session (API-key exchange, service accounts).
+     * </pre>
+     *
+     * <code>string session_public_id = 16 [json_name = "sessionPublicId"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearSessionPublicId() {
+      sessionPublicId_ = getDefaultInstance().getSessionPublicId();
+      bitField0_ = (bitField0_ & ~0x00008000);
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Stable, NON-SECRET public id of the login session this token belongs to
+     * (`sesspub_…`). Identical for the login token and every token refreshed from
+     * it, and equal to LoginResponse.session_public_id; empty for tokens not
+     * minted from a login session (API-key exchange, service accounts).
+     * </pre>
+     *
+     * <code>string session_public_id = 16 [json_name = "sessionPublicId"];</code>
+     * @param value The bytes for sessionPublicId to set.
+     * @return This builder for chaining.
+     */
+    public Builder setSessionPublicIdBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      sessionPublicId_ = value;
+      bitField0_ |= 0x00008000;
+      onChanged();
       return this;
     }
 

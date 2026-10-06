@@ -450,6 +450,12 @@ message LoginResponse {
   // refresh token is a token-family credential (rt_<family>.<jti>), rotated on
   // every RefreshToken call; reuse of a superseded value revokes the family.
   int32 refresh_token_expires_in = 10;
+
+  // Stable, NON-SECRET public id of this login session (`sesspub_…`). Unlike
+  // `session_id` (the session handle, a credential), it is safe to store and
+  // log, and ValidateToken / RefreshToken report the same value for every token
+  // of this session — use it to recognise "this device's" session.
+  string session_public_id = 11;
 }
 
 message RefreshTokenRequest {
@@ -485,6 +491,9 @@ message RefreshTokenResponse {
   // legacy server-side session id rather than a token-family credential.
   string refresh_token = 3;
   int32 refresh_token_expires_in = 4;
+  // The refreshed session's stable public id (same value LoginResponse and
+  // ValidateToken report); empty for a legacy session-id refresh.
+  string session_public_id = 5;
 }
 
 message LogoutRequest {
@@ -592,6 +601,11 @@ message ValidateTokenResponse {
   string project_id = 13;
   repeated string scopes = 14;
   map<string, string> attributes = 15;
+  // Stable, NON-SECRET public id of the login session this token belongs to
+  // (`sesspub_…`). Identical for the login token and every token refreshed from
+  // it, and equal to LoginResponse.session_public_id; empty for tokens not
+  // minted from a login session (API-key exchange, service accounts).
+  string session_public_id = 16;
 }
 
 // ============================================================

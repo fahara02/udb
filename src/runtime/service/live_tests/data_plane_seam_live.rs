@@ -22,7 +22,7 @@ use super::data_plane_live::{
     dp_service, dp_service_deny, dp_warm_authz, install_dp_security, raw_tenant_and_status,
     serve_data_broker, served_upsert, teardown, widget_manifest, with_ctx,
 };
-use crate::generation::{CatalogManifest, ManifestTable, ManifestTableSecurity};
+use crate::generation::{CatalogManifest, ManifestIndex, ManifestTable, ManifestTableSecurity};
 use crate::proto::data_broker_client::DataBrokerClient;
 use crate::proto::data_broker_server::DataBroker;
 use crate::proto::{Chunk, DeleteRequest, Mutation, SelectRequest, Sort, UpsertRequest, tx_status};
@@ -1108,8 +1108,10 @@ async fn served_begin_tx_and_put_object_authorize_every_target_live() {
 /// An Update keyed by a UNIQUE NON-PRIMARY-KEY column set (consumer report:
 /// event-cursor CAS on `(tenant_id, consumer, topic_pattern)` returned
 /// `affected_rows=0` with no error while a PK-keyed CAS on the same row
-/// succeeded). A plain update by the unique key must apply; a CAS update by the
-/// unique key must either apply or be REFUSED — never a silent zero.
+/// succeeded). A plain update by the unique key must apply; a CAS update keyed
+/// by the DECLARED unique key must apply when its expectation holds, fail its
+/// precondition when stale, and a CAS pinning neither the primary key nor a
+/// declared unique key is refused — never a silent zero.
 #[tokio::test]
 #[ignore = "requires live Postgres; run in the CI live lane"]
 async fn served_update_by_unique_non_pk_key_never_silently_affects_zero_live() {
@@ -1135,6 +1137,12 @@ async fn served_update_by_unique_non_pk_key_never_silently_affects_zero_live() {
     const CURSOR: &str = "acme.dp.v1.Cursor";
     let mut manifest = widget_manifest(&schema, "cursors", "Cursor", false);
     manifest.tables[0].columns.push(col("slug", "TEXT", false));
+    manifest.tables[0].indexes.push(ManifestIndex {
+        name: "cursors_tenant_slug_key".to_string(),
+        columns: vec!["tenant_id".to_string(), "slug".to_string()],
+        unique: true,
+        ..ManifestIndex::default()
+    });
     let svc = dp_service(&dsn, manifest).await;
     let tenant = Uuid::new_v4().to_string();
     let id = format!("cursor-{}", Uuid::new_v4().simple());
@@ -1167,32 +1175,85 @@ async fn served_update_by_unique_non_pk_key_never_silently_affects_zero_live() {
         "plain update by the unique key must apply"
     );
 
+    let cas_update =
+        |filter: serde_json::Value, changes: serde_json::Value, expected: serde_json::Value| {
+            with_ctx(
+                crate::proto::UpdateRequest {
+                    message_type: CURSOR.to_string(),
+                    filter: json_to_struct(&filter),
+                    changes: json_to_struct(&changes),
+                    expected: json_to_struct(&expected),
+                    idempotency_key: format!("cas-{}", Uuid::new_v4().simple()),
+                    return_record: true,
+                    ..crate::proto::UpdateRequest::default()
+                },
+                &tenant,
+            )
+        };
+
+    // CAS keyed by the declared unique key, expectation holds -> applies.
     let cas = svc
-        .update(with_ctx(
-            crate::proto::UpdateRequest {
-                message_type: CURSOR.to_string(),
-                filter: json_to_struct(&by_unique),
-                changes: json_to_struct(&json!({"status": "C"})),
-                expected: json_to_struct(&json!({"status": "B"})),
-                idempotency_key: format!("cas-{}", Uuid::new_v4().simple()),
-                return_record: true,
-                ..crate::proto::UpdateRequest::default()
-            },
-            &tenant,
+        .update(cas_update(
+            by_unique.clone(),
+            json!({"status": "C"}),
+            json!({"status": "B"}),
         ))
-        .await;
-    match cas {
-        Ok(response) => assert_eq!(
-            response.into_inner().affected_rows,
-            1,
-            "a CAS update by the unique key whose expectation holds must apply, not silently \
-             affect zero rows"
+        .await
+        .expect("a CAS update keyed by the declared unique key must apply")
+        .into_inner();
+    assert_eq!(
+        cas.affected_rows, 1,
+        "a CAS update by the unique key whose expectation holds must apply, not silently          affect zero rows"
+    );
+    assert_eq!(
+        raw_tenant_and_status(&pool, &schema, "cursors", &id).await,
+        Some((tenant.clone(), Some("C".to_string()))),
+        "the unique-key CAS must have written the row"
+    );
+
+    // Same key, stale expectation -> precondition failure, nothing written.
+    let stale = svc
+        .update(cas_update(
+            by_unique.clone(),
+            json!({"status": "D"}),
+            json!({"status": "B"}),
+        ))
+        .await
+        .expect_err("a stale unique-key CAS must fail its precondition");
+    assert_eq!(stale.code(), Code::FailedPrecondition, "{stale:?}");
+    assert!(
+        stale
+            .message()
+            .contains("compare-and-swap precondition failed"),
+        "{stale:?}"
+    );
+    assert_eq!(
+        raw_tenant_and_status(&pool, &schema, "cursors", &id).await,
+        Some((tenant.clone(), Some("C".to_string()))),
+        "a failed CAS must not write"
+    );
+
+    // A filter pinning neither the primary key nor a declared unique key cannot
+    // key a single-row CAS -> refused.
+    let unkeyed = svc
+        .update(cas_update(
+            json!({"tenant_id": tenant}),
+            json!({"status": "E"}),
+            json!({"status": "C"}),
+        ))
+        .await
+        .expect_err("a CAS pinning no single-row key must be refused");
+    assert_eq!(unkeyed.code(), Code::FailedPrecondition, "{unkeyed:?}");
+    assert!(
+        unkeyed.message().contains(
+            "conditional mutation requires an equality filter on every primary-key column              or on every column of a declared unique key"
         ),
-        Err(status) => assert_eq!(
-            status.code(),
-            Code::FailedPrecondition,
-            "a refused unique-key CAS must say so: {status:?}"
-        ),
-    }
+        "{unkeyed:?}"
+    );
+    assert_eq!(
+        raw_tenant_and_status(&pool, &schema, "cursors", &id).await,
+        Some((tenant.clone(), Some("C".to_string()))),
+        "a refused CAS must not write"
+    );
     teardown(&pool, &schema, &tenant).await;
 }
