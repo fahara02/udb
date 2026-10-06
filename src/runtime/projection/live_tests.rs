@@ -408,7 +408,11 @@ fn served_manifest(
     projections: Vec<ManifestProjection>,
     stores: Vec<ManifestStore>,
 ) -> CatalogManifest {
-    let mut columns = vec![text_col("id", true), text_col("tenant_id", false)];
+    // Tenant-composite key: the seams below give two tenants the SAME id. On a
+    // bare-id key the second write is a cross-tenant takeover Upsert refuses.
+    let mut tenant = text_col("tenant_id", false);
+    tenant.is_primary = true;
+    let mut columns = vec![text_col("id", true), tenant];
     columns.extend(extra);
     CatalogManifest {
         tables: vec![ManifestTable {
@@ -416,7 +420,7 @@ fn served_manifest(
             message_name: message.to_string(),
             schema: schema.to_string(),
             table: table.to_string(),
-            primary_key: vec!["id".to_string()],
+            primary_key: vec!["tenant_id".to_string(), "id".to_string()],
             table_security: ManifestTableSecurity {
                 tenant_column: "tenant_id".to_string(),
                 ..ManifestTableSecurity::default()
@@ -437,7 +441,7 @@ async fn create_source_table(pool: &PgPool, schema: &str, table: &str, extra_ddl
         .expect("create throwaway projection source schema");
     sqlx::query(&format!(
         "CREATE TABLE \"{schema}\".\"{table}\" \
-         (id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL{extra_ddl})"
+         (id TEXT NOT NULL, tenant_id TEXT NOT NULL{extra_ddl},          PRIMARY KEY (tenant_id, id))"
     ))
     .execute(pool)
     .await
@@ -475,6 +479,7 @@ async fn live_served_writes_project_tenant_scoped_points_into_qdrant() {
 
     let mut vector = text_col("vector", false);
     vector.sql_type = "JSONB".to_string();
+    vector.is_jsonb = true;
     let svc = served_service(served_manifest(
         &schema,
         "seam_vectors",

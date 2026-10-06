@@ -15,6 +15,7 @@
 use super::support::*;
 use crate::proto::udb::core::apikey::services::v1 as apikey_pb;
 use crate::proto::udb::core::apikey::services::v1::api_key_service_server::ApiKeyService;
+use crate::proto::udb::core::authn::entity::v1 as authn_entity_pb;
 use crate::proto::udb::core::authn::services::v1 as authn_pb;
 use crate::proto::udb::core::authn::services::v1::authn_service_server::AuthnService;
 use crate::proto::udb::core::common::v1 as common_pb;
@@ -216,12 +217,17 @@ fn gate_denial(status: &tonic::Status) -> Option<&'static str> {
 
 async fn create_service_api_key(
     apikey: &crate::runtime::service::auth_service::ApiKeyServiceImpl,
-    owner_id: &str,
+    owner: &authn_entity_pb::User,
     name: &str,
     scopes: &[String],
 ) -> String {
+    // The key must live in the owner's CANONICAL tenant/project (the user and
+    // its grant carry the resolved tenant UUID, not the `acme` alias): a key
+    // minted under the alias exchanges into a bearer the grant check rejects.
+    let owner_id = owner.user_id.as_str();
+    let (tenant_id, project_id) = (owner.tenant_id.as_str(), owner.project_id.as_str());
     scope_claim_context_for_test(
-        test_claim_context(owner_id, "acme", "billing", &[], &[]),
+        test_claim_context(owner_id, tenant_id, project_id, &[], &[]),
         apikey.create_api_key(Request::new(apikey_pb::CreateApiKeyRequest {
             name: name.to_string(),
             owner_id: owner_id.to_string(),
@@ -229,8 +235,8 @@ async fn create_service_api_key(
             context: Some(common_pb::RequestContext {
                 principal_id: owner_id.to_string(),
                 tenant: Some(common_pb::TenantContext {
-                    tenant_id: "acme".to_string(),
-                    project_id: "billing".to_string(),
+                    tenant_id: tenant_id.to_string(),
+                    project_id: project_id.to_string(),
                     ..Default::default()
                 }),
                 ..Default::default()
@@ -312,13 +318,8 @@ async fn live_service_account_reaches_every_service_callable_native_method() {
         &grant_scope_refs,
     )
     .await;
-    let plain_key = create_service_api_key(
-        &apikey,
-        &owner.user_id,
-        "svc-conformance-key",
-        &grant_scopes,
-    )
-    .await;
+    let plain_key =
+        create_service_api_key(&apikey, &owner, "svc-conformance-key", &grant_scopes).await;
     let exchanged = exchange_api_key(&authn, &plain_key).await;
     assert!(
         !exchanged.access_token.is_empty(),
@@ -347,6 +348,43 @@ async fn live_service_account_reaches_every_service_callable_native_method() {
             ..crate::runtime::authn::AuthnConfig::default()
         },
         Arc::new(authn.clone()),
+    );
+
+    // Precheck the two durable checks the credential resolver runs, with the
+    // inputs in the message: the served gate reports only "invalid bearer
+    // token", so a failure here names the actual cause.
+    let claims = crate::runtime::security::validate_bearer_token(
+        &crate::runtime::security::SecurityConfig::current(),
+        &exchanged.access_token,
+    )
+    .expect("the exchanged bearer verifies against the installed keys");
+    let grant_check = super::super::grants::validate_service_principal_against_grant(
+        &pool,
+        claims.tenant_id.as_deref().unwrap_or_default(),
+        claims.sub.as_deref().unwrap_or_default(),
+        claims.project_id.as_deref().unwrap_or_default(),
+        claims.service_identity.as_deref().unwrap_or_default(),
+        &claims.resolved_scopes(),
+    )
+    .await;
+    assert_eq!(
+        grant_check,
+        Ok(true),
+        "grant check for tenant={:?} sub={:?} project={:?} identity={:?} ({} scopes)",
+        claims.tenant_id,
+        claims.sub,
+        claims.project_id,
+        claims.service_identity,
+        claims.resolved_scopes().len()
+    );
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .expect("clock after epoch")
+        .as_secs();
+    let durable = authn.jwt_persisted_state_valid(&claims, now).await;
+    assert!(
+        matches!(durable, Ok(true)),
+        "durable bearer state for the exchanged key: {durable:?}"
     );
 
     // Serve the native plane exactly as production mounts it.
@@ -523,7 +561,7 @@ async fn live_service_account_reaches_every_service_callable_native_method() {
     );
     let reduced_key = create_service_api_key(
         &apikey,
-        &owner.user_id,
+        &owner,
         "svc-conformance-reduced-key",
         &reduced_scopes,
     )

@@ -73,6 +73,20 @@ pub(crate) fn require_live_dsn_any(names: &[&str]) -> Option<String> {
     None
 }
 
+/// Expose `UDB_LIVE_*` aliases under their real names for code that reads the
+/// real names itself (e.g. an executor's `from_env`). Never overrides a value
+/// that is already set.
+pub(crate) fn export_live_env(names: &[&str]) {
+    for name in names {
+        if std::env::var(name).map_or(true, |current| current.trim().is_empty())
+            && let Some(value) = live_env(name)
+        {
+            // SAFETY: the live lane runs single-threaded (--test-threads=1).
+            unsafe { std::env::set_var(name, &value) };
+        }
+    }
+}
+
 /// Single-variable form of [`require_live_dsn_any`].
 pub(crate) fn require_live_dsn(name: &str) -> Option<String> {
     require_live_dsn_any(&[name])

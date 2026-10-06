@@ -306,6 +306,11 @@ async fn typed_store_rpc_without_tenant_is_refused_live() {
 
 #[cfg(feature = "neo4j")]
 fn graph_executor() -> crate::runtime::executors::neo4j::Neo4jExecutor {
+    super::support::export_live_env(&[
+        "UDB_GRAPH_HTTP_URL",
+        "UDB_GRAPH_USER",
+        "UDB_GRAPH_PASSWORD",
+    ]);
     crate::runtime::executors::neo4j::Neo4jExecutor::from_env()
         .expect("UDB_GRAPH_HTTP_URL configures the read-back Neo4j executor")
 }
@@ -670,7 +675,12 @@ async fn generic_dispatch_escaped_compiler_mediated_is_rejected_live() {
         ))
         .await
         .expect_err("caller-asserted compiler_mediated must not unlock DDL");
-    assert_eq!(err.code(), Code::InvalidArgument, "{err:?}");
+    // Refused either as an invalid spec or by the RLS-bypass gate the marker
+    // would otherwise have skipped; what matters is that nothing ran.
+    assert!(
+        matches!(err.code(), Code::InvalidArgument | Code::FailedPrecondition),
+        "{err:?}"
+    );
     let tables = cassandra_rows(
         &executor,
         "SELECT table_name FROM system_schema.tables WHERE keyspace_name = ?",

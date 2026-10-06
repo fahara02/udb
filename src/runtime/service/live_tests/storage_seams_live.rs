@@ -198,7 +198,7 @@ async fn f1_multipart_complete_over_object_cap_is_resource_exhausted_and_aborted
                     upload_id: upload.upload_id.clone(),
                     parts: vec![crate::proto::MultipartUploadPart {
                         part_number: 1,
-                        etag,
+                        etag: etag.clone(),
                     }],
                     idempotency_key: String::new(),
                 },
@@ -219,24 +219,32 @@ async fn f1_multipart_complete_over_object_cap_is_resource_exhausted_and_aborted
         "refusal must carry a typed QUOTA detail"
     );
 
-    // Read back: the upload was aborted (the store no longer knows the id) ...
-    let abort = runtime
-        .abort_multipart_upload(
+    // Read back: the upload was aborted. With the ceiling lifted, completing
+    // the same upload again can no longer list its parts — while it existed
+    // the same call answered ResourceExhausted. (A second Abort proves nothing:
+    // S3/MinIO abort is idempotent and reports success either way.)
+    let retried = runtime
+        .complete_multipart_upload(
             &manifest,
-            crate::proto::AbortMultipartUploadRequest {
+            crate::proto::CompleteMultipartUploadRequest {
                 context: None,
                 bucket: bucket.clone(),
                 object_key: key.clone(),
                 upload_id: upload.upload_id.clone(),
+                parts: vec![crate::proto::MultipartUploadPart {
+                    part_number: 1,
+                    etag: etag.clone(),
+                }],
                 idempotency_key: String::new(),
             },
             object_context(&tenant),
         )
         .await
-        .expect("abort of a released upload must not error");
-    assert!(
-        !abort.aborted,
-        "the refused completion must already have aborted the upload"
+        .expect_err("an aborted upload can no longer be completed");
+    assert_ne!(
+        retried.code(),
+        Code::ResourceExhausted,
+        "the parts must be gone, not still over the ceiling: {retried}"
     );
     // ... and no object was assembled at the tenant-namespaced physical key.
     let physical_key =

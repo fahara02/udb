@@ -114,7 +114,12 @@ async fn live_served_tenant_suspension_revokes_live_bearer_until_reactivated() {
     migrate_native_auth_db(&pool).await;
 
     let admin = tenant_service(pool.clone()).await;
-    let tenant_id = seed_default_tenant(&pool).await;
+    // The bearer must belong to a real ACTIVE user: durable bearer validation
+    // rejects a token whose subject is not an active account. Suspend the
+    // user's own (canonical) tenant.
+    let authn = authn_service(pool.clone());
+    let user = create_verified_user(&authn, "tenant_suspension", "CorrectHorse1!").await;
+    let tenant_id = user.tenant_id.clone();
 
     let security = crate::runtime::security::SecurityConfig {
         jwt_private_key: Some(include_str!("../../../testdata/jwt_rs256_private.pem").to_string()),
@@ -123,9 +128,9 @@ async fn live_served_tenant_suspension_revokes_live_bearer_until_reactivated() {
     };
     let token = crate::runtime::security::sign_access_token(
         &security,
-        "tenant-suspension-user",
+        &user.user_id,
         &tenant_id,
-        "default",
+        &user.project_id,
         &["udb:tenant:get-tenant".to_string()],
         &[],
         "",
@@ -138,7 +143,6 @@ async fn live_served_tenant_suspension_revokes_live_bearer_until_reactivated() {
     .expect("signing key configured")
     .0;
     crate::runtime::security::SecurityConfig::install_global(security);
-    let authn = authn_service(pool.clone());
     super::super::install_data_plane_credential_resolvers(
         pool.clone(),
         &crate::runtime::authn::AuthnConfig {

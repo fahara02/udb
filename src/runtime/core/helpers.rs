@@ -1483,6 +1483,26 @@ mod generic_dispatch_validation_tests {
     }
 
     #[test]
+    fn scalar_arrays_bound_for_a_json_column_bind_as_json() {
+        use crate::ir::value::LogicalValue;
+        let floats = LogicalValue::Array(vec![LogicalValue::Float(0.1), LogicalValue::Float(0.2)]);
+        assert_eq!(
+            postgres_param_types("INSERT INTO t (v) VALUES ($1::JSONB)", &[floats.clone()]),
+            vec!["json"]
+        );
+        let strings = LogicalValue::Array(vec![LogicalValue::String("a".into())]);
+        assert_eq!(
+            postgres_param_types("INSERT INTO t (v) VALUES ($1::json)", &[strings]),
+            vec!["json"]
+        );
+        // A real Postgres array column keeps its element-typed bind.
+        assert_eq!(
+            postgres_param_types("INSERT INTO t (v) VALUES ($1::FLOAT8[])", &[floats]),
+            vec!["array_float"]
+        );
+    }
+
+    #[test]
     fn empty_array_and_null_take_their_type_from_the_column_cast() {
         use crate::ir::value::LogicalValue;
 
@@ -1702,6 +1722,15 @@ pub(crate) fn postgres_param_types(
         .enumerate()
         .map(|(idx, value)| {
             let value_type = logical_value_param_type(value);
+            // A non-empty array headed for a JSON column is a JSON document,
+            // not a Postgres array: binding `float8[]` under a `$n::jsonb`
+            // cast fails with 42846 (cannot coerce), which made every JSONB
+            // column holding a list of scalars unwritable through Upsert.
+            if value_type.starts_with("array_")
+                && postgres_placeholder_casts_to_json(statement, idx + 1)
+            {
+                return "json";
+            }
             if value_type.is_empty() {
                 postgres_placeholder_cast_type(statement, idx + 1).unwrap_or("")
             } else {
@@ -1709,6 +1738,18 @@ pub(crate) fn postgres_param_types(
             }
         })
         .collect()
+}
+
+/// Whether the rendered statement casts placeholder `$position` to json/jsonb.
+fn postgres_placeholder_casts_to_json(statement: &str, position: usize) -> bool {
+    let marker = format!("${position}::");
+    statement
+        .split_once(&marker)
+        .map(|(_, tail)| {
+            let lower = tail.trim_start().to_ascii_lowercase();
+            lower.starts_with("jsonb") || lower.starts_with("json")
+        })
+        .unwrap_or(false)
 }
 
 fn postgres_placeholder_cast_type(statement: &str, position: usize) -> Option<&'static str> {
