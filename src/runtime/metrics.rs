@@ -1289,7 +1289,7 @@ pub(crate) fn vector_hybrid_fallbacks() -> &'static prometheus::IntCounter {
     COUNTER.get_or_init(|| {
         prometheus::IntCounter::new(
             "udb_vector_hybrid_fallback_total",
-            "Hybrid vector searches whose native fusion query failed and were served              by the dense-search + local lexical re-rank fallback",
+            "Hybrid vector searches whose native fusion query failed and were served by the dense-search + local lexical re-rank fallback",
         )
         .expect("udb_vector_hybrid_fallback_total is a valid metric name")
     })

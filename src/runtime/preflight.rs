@@ -125,9 +125,9 @@ pub fn evaluate(config: &UdbConfig, public_addr: SocketAddr) -> Vec<PreflightFin
         out.push(PreflightFinding {
             name: "jwt-signing-key",
             severity: PreflightSeverity::Fail,
-            detail: "Authenticate (login and API-key exchange) issues no access token:                      no UDB-issued JWT signing key is configured"
+            detail: "Authenticate (login and API-key exchange) issues no access token: no UDB-issued JWT signing key is configured"
                 .to_string(),
-            fix: "set UDB_JWT_PRIVATE_KEY (RS256 PEM, inline or a file path) and                   UDB_JWT_PUBLIC_KEY so the broker can sign and verify its own bearers",
+            fix: "set UDB_JWT_PRIVATE_KEY (RS256 PEM, inline or a file path) and UDB_JWT_PUBLIC_KEY so the broker can sign and verify its own bearers",
         });
     }
 
@@ -176,8 +176,9 @@ pub fn evaluate(config: &UdbConfig, public_addr: SocketAddr) -> Vec<PreflightFin
         out.push(PreflightFinding {
             name: "webrtc-plane-exposure",
             severity: PreflightSeverity::Warn,
-            detail: "the WebRTC peer listener binds loopback by default; remote peers                      cannot reach it"
-                .to_string(),
+            detail:
+                "the WebRTC peer listener binds loopback by default; remote peers cannot reach it"
+                    .to_string(),
             fix: "set UDB_WEBRTC_GRPC_ADDR=0.0.0.0:<public_port+20> when WebRTC is used",
         });
     }

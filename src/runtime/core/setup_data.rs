@@ -3533,7 +3533,7 @@ impl DataBrokerRuntime {
                             "vector_search",
                             "weaviate_field_tokenized_scope",
                             format!(
-                                "Weaviate class '{}' declares the scope properties [{}] with                                  `word` tokenization, so a tenant-scoped filter would also                                  match other tenants sharing a token; recreate the class                                  through EnsureResource (which declares them `tokenization:                                  field`) and re-index before searching it",
+                                "Weaviate class '{}' declares the scope properties [{}] with `word` tokenization, so a tenant-scoped filter would also match other tenants sharing a token; recreate the class through EnsureResource (which declares them `tokenization: field`) and re-index before searching it",
                                 vector_weaviate_class_name(&request.collection),
                                 word_tokenized.join(", ")
                             ),
@@ -5313,7 +5313,7 @@ pub(crate) fn typed_relational_backend_guard(
         operation,
         "typed_relational_data_plane",
         format!(
-            "typed {operation} executes on PostgreSQL only; the request resolves to backend              '{effective}', which is served through GenericDispatch (neutral IR), not the typed              data-plane RPCs"
+            "typed {operation} executes on PostgreSQL only; the request resolves to backend '{effective}', which is served through GenericDispatch (neutral IR), not the typed data-plane RPCs"
         ),
     ))
 }

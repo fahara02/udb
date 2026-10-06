@@ -1203,7 +1203,7 @@ async fn served_update_by_unique_non_pk_key_never_silently_affects_zero_live() {
         .into_inner();
     assert_eq!(
         cas.affected_rows, 1,
-        "a CAS update by the unique key whose expectation holds must apply, not silently          affect zero rows"
+        "a CAS update by the unique key whose expectation holds must apply, not silently affect zero rows"
     );
     assert_eq!(
         raw_tenant_and_status(&pool, &schema, "cursors", &id).await,
@@ -1246,7 +1246,7 @@ async fn served_update_by_unique_non_pk_key_never_silently_affects_zero_live() {
     assert_eq!(unkeyed.code(), Code::FailedPrecondition, "{unkeyed:?}");
     assert!(
         unkeyed.message().contains(
-            "conditional mutation requires an equality filter on every primary-key column              or on every column of a declared unique key"
+            "conditional mutation requires an equality filter on every primary-key column or on every column of a declared unique key"
         ),
         "{unkeyed:?}"
     );

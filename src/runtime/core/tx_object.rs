@@ -306,7 +306,7 @@ fn reject_relational_tx_idempotency_keys(mutations: &[Mutation]) -> Result<(), t
                 format!("mutations[{index}].idempotency_key"),
                 "not supported on upsert/update/delete inside BeginTx; leave it empty",
                 format!(
-                    "BeginTx mutation {index} ({operation}) sets idempotency_key, which a                      transactional relational mutation cannot honour; nothing was written"
+                    "BeginTx mutation {index} ({operation}) sets idempotency_key, which a transactional relational mutation cannot honour; nothing was written"
                 ),
             ));
         }
@@ -2019,7 +2019,7 @@ impl DataBrokerRuntime {
                 pattern = %pattern,
                 first_error = %first_error,
                 error = %err,
-                "read-cache invalidation failed after an exact-key retry; matching entries                  stay cached until their TTL expires"
+                "read-cache invalidation failed after an exact-key retry; matching entries stay cached until their TTL expires"
             );
         }
         retry
