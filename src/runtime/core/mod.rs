@@ -872,6 +872,25 @@ fn prepare_outbox_envelope(
             "event payload must be a JSON object conforming to the EventEnvelope schema",
         )
     })?;
+    // Keys outside the EventEnvelope schema are dropped when CDC deserializes
+    // the row, so a producer that put its event fields flat beside the envelope
+    // delivered `"payload":{}` with no error. Refuse them, naming each key.
+    let mut unknown: Vec<&str> = obj
+        .keys()
+        .map(String::as_str)
+        .filter(|key| !crate::runtime::cdc::EVENT_ENVELOPE_FIELDS.contains(key))
+        .collect();
+    if !unknown.is_empty() {
+        unknown.sort_unstable();
+        return Err(core_invalid_field(
+            "payload",
+            "top-level keys must belong to the EventEnvelope schema; put event fields under \"payload\"",
+            format!(
+                "event payload has top-level keys outside the EventEnvelope schema ({});                  put the event's own fields under \"payload\"",
+                unknown.join(", ")
+            ),
+        ));
+    }
     let envelope_field = |field: &str| -> Result<&str, tonic::Status> {
         obj.get(field)
             .and_then(|value| value.as_str())
@@ -1434,6 +1453,67 @@ mod outbox_envelope_tests {
         assert_eq!(payload["redaction_mode"], "none");
         assert_eq!(payload["redaction_version"], 1);
         assert!(payload["redacted_fields"].as_array().is_some());
+    }
+
+    #[test]
+    fn prepare_outbox_envelope_refuses_event_fields_outside_payload() {
+        let err = prepare_outbox_envelope(
+            "notes.note_job.queued.v1",
+            "doc-1",
+            json!({
+                "event_id": "11111111-1111-4111-8111-111111111111",
+                "event_type": "notes.note_job.queued.v1",
+                "correlation_id": "corr-1",
+                "document_id": "doc-1",
+                "job_id": "job-7",
+                "note_id": "note-3"
+            }),
+            None,
+        )
+        .expect_err("flat event fields would be dropped on delivery");
+        assert_eq!(err.code(), tonic::Code::InvalidArgument);
+        assert!(
+            err.message().contains("job_id, note_id"),
+            "{}",
+            err.message()
+        );
+
+        let (_, _, delivered) = prepare_outbox_envelope(
+            "notes.note_job.queued.v1",
+            "doc-1",
+            json!({
+                "event_id": "11111111-1111-4111-8111-111111111111",
+                "event_type": "notes.note_job.queued.v1",
+                "correlation_id": "corr-1",
+                "document_id": "doc-1",
+                "payload": {"job_id": "job-7"}
+            }),
+            None,
+        )
+        .expect("event fields under payload are accepted");
+        assert_eq!(delivered["payload"]["job_id"], "job-7");
+    }
+
+    #[test]
+    fn event_envelope_fields_cover_every_serialized_key() {
+        // Every key the envelope serializes must be accepted at ingress.
+        let envelope: crate::runtime::cdc::EventEnvelope = serde_json::from_value(json!({
+            "event_id": "e", "event_type": "t", "correlation_id": "c",
+            "document_id": "d", "page_number": 1, "source_agent": "a",
+            "payload": {"k": 1}, "tenant_id": "t1", "project_id": "p1",
+            "schema_uri": "s", "redaction_version": 1, "redacted_fields": ["f"],
+            "redaction_mode": "m", "actor": "x", "operation": "o", "outcome": "ok",
+            "decision_id": "dd", "policy_version": "pv", "auth_method": "am",
+            "trace_id": "tr", "span_id": "sp", "target_resource": "tg"
+        }))
+        .expect("envelope decodes");
+        let value = serde_json::to_value(&envelope).expect("envelope encodes");
+        for key in value.as_object().expect("object").keys() {
+            assert!(
+                crate::runtime::cdc::EVENT_ENVELOPE_FIELDS.contains(&key.as_str()),
+                "serialized envelope key {key} missing from EVENT_ENVELOPE_FIELDS"
+            );
+        }
     }
 
     #[test]

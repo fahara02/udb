@@ -876,6 +876,36 @@ fn utc_now() -> DateTime<Utc> {
     Utc::now()
 }
 
+/// Every top-level key [`EventEnvelope`] deserializes. A producer key outside
+/// this set is DROPPED by serde, so outbox ingress refuses it instead of
+/// delivering an event that silently lost its fields; domain fields belong
+/// under `payload`. Keep in sync with the struct (pinned by a test).
+pub(crate) const EVENT_ENVELOPE_FIELDS: &[&str] = &[
+    "event_id",
+    "event_type",
+    "timestamp",
+    "correlation_id",
+    "document_id",
+    "page_number",
+    "source_agent",
+    "payload",
+    "tenant_id",
+    "project_id",
+    "schema_uri",
+    "redaction_version",
+    "redacted_fields",
+    "redaction_mode",
+    "actor",
+    "operation",
+    "outcome",
+    "decision_id",
+    "policy_version",
+    "auth_method",
+    "trace_id",
+    "span_id",
+    "target_resource",
+];
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct EventEnvelope {
     pub event_id: String,

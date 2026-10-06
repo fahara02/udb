@@ -33,6 +33,14 @@ it on a real backend.
 
 ### Fixed
 
+- **Outbox events silently lost their fields.** An EnqueueOutboxEvent /
+  BeginTx `enqueue_outbox_event` payload with event fields flat beside the
+  envelope keys was accepted, then delivered with `"payload":{}` because CDC
+  drops keys outside the EventEnvelope schema. Ingress now refuses such keys
+  with INVALID_ARGUMENT naming them; event fields belong under `payload`.
+- **JSONB arrays were unwritable through Upsert.** A non-empty array of
+  numbers or strings bound for a JSONB column was sent as a Postgres array
+  under a `::jsonb` cast (42846). Such arrays now bind as JSON.
 - **HA: a second replica crashed on startup.** System-store DDL raced the first
   replica (`relation "outbox_events" already exists`) and tripped the outbox
   assertion. All startup DDL runs under the startup advisory lock; the outbox
