@@ -642,8 +642,50 @@ pub(crate) fn bind_one<'q>(
     // execution. Typed arrays keep the predicate index-usable (no `::type` cast
     // on the column needed). Checked before the scalar branches below so a
     // `uuid`/temporal array isn't misrouted into the scalar (single-value) path.
+    // Array COLUMNS (`UUID[]`, `INTEGER[]`, `TIMESTAMPTZ[]`, ...) dispatch on the
+    // element type: comparing the whole declaration (`sql_type == "UUID"`) sent a
+    // UUID[] value through the text[] fallback, which PostgreSQL refuses for a
+    // uuid[] column ("is of type uuid[] but expression is of type text[]").
+    let element_type = postgres_base_sql_type(&sql_type);
+    let is_timestamptz =
+        element_type == "TIMESTAMPTZ" || sql_type.contains("TIMESTAMP WITH TIME ZONE");
+    if sql_type.trim_end().ends_with("[]") && value.is_null() {
+        // A NULL array must be typed like the column: a text/scalar-typed NULL
+        // fails to plan against an array column (42804).
+        return Ok(match element_type {
+            "UUID" => query.bind(Option::<Vec<Uuid>>::None),
+            _ if postgres_is_integer_type(&sql_type) => query.bind(Option::<Vec<i64>>::None),
+            "REAL" | "FLOAT4" | "FLOAT8" | "DOUBLE" | "NUMERIC" | "DECIMAL" => {
+                query.bind(Option::<Vec<f64>>::None)
+            }
+            "BOOL" | "BOOLEAN" => query.bind(Option::<Vec<bool>>::None),
+            _ if is_timestamptz => query.bind(Option::<Vec<chrono::DateTime<chrono::Utc>>>::None),
+            _ => query.bind(Option::<Vec<String>>::None),
+        });
+    }
     if let JsonValue::Array(items) = value {
-        if sql_type == "UUID" {
+        if is_timestamptz {
+            let mut arr: Vec<chrono::DateTime<chrono::Utc>> = Vec::with_capacity(items.len());
+            for item in items {
+                let raw = item.as_str().ok_or_else(|| {
+                    postgres_invalid_field(
+                        "value",
+                        "timestamptz array values must be RFC-3339 strings",
+                        "timestamptz array value must be a string",
+                    )
+                })?;
+                let parsed = chrono::DateTime::parse_from_rfc3339(raw).map_err(|err| {
+                    postgres_invalid_field(
+                        "value",
+                        "timestamptz array values must be RFC-3339 strings",
+                        format!("invalid timestamptz array value: {err}"),
+                    )
+                })?;
+                arr.push(parsed.with_timezone(&chrono::Utc));
+            }
+            return Ok(query.bind(arr));
+        }
+        if element_type == "UUID" {
             let mut arr: Vec<Uuid> = Vec::with_capacity(items.len());
             for item in items {
                 let parsed = item

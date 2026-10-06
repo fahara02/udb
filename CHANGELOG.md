@@ -41,6 +41,11 @@ it on a real backend.
 - **JSONB arrays were unwritable through Upsert.** A non-empty array of
   numbers or strings bound for a JSONB column was sent as a Postgres array
   under a `::jsonb` cast (42846). Such arrays now bind as JSON.
+- **Typed array columns were unwritable.** A `UUID[]` / `TIMESTAMPTZ[]` value
+  was bound as `text[]` ("is of type uuid[] but expression is of type text[]")
+  on both write paths (BeginTx/Update planner bind and the bridged Upsert
+  emitter), and a NULL array bound a scalar-typed NULL. Array values now bind
+  by element type and cast to the declared array type.
 - **HA: a second replica crashed on startup.** System-store DDL raced the first
   replica (`relation "outbox_events" already exists`) and tripped the outbox
   assertion. All startup DDL runs under the startup advisory lock; the outbox

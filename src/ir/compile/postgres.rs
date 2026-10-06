@@ -53,6 +53,15 @@ fn cast_write_placeholder(
         LogicalValue::Array(items) => items.is_empty(),
         _ => false,
     };
+    // A non-empty array bound for an ARRAY column binds as the element type the
+    // values look like (strings → `text[]`), which PostgreSQL will not assign to
+    // a `uuid[]` / `timestamptz[]` column. Cast to the declared array type so
+    // the explicit `text[] → uuid[]` conversion applies.
+    let array_into_array_column = matches!(value, LogicalValue::Array(items) if !items.is_empty())
+        && column_sql_type.trim_end().ends_with("[]");
+    if array_into_array_column && let Some(cast) = castable_column_type(column_sql_type) {
+        return format!("{placeholder}::{cast}");
+    }
     if untyped_bind && let Some(cast) = castable_column_type(column_sql_type) {
         return format!("{placeholder}::{cast}");
     }
@@ -1250,6 +1259,26 @@ mod tests {
     use crate::generation::{
         CatalogManifest, ManifestColumn, ManifestForeignKey, ManifestIndex, ManifestTable,
     };
+
+    #[test]
+    fn non_empty_arrays_into_array_columns_cast_to_the_declared_type() {
+        let uuids = LogicalValue::Array(vec![LogicalValue::String(
+            "11111111-1111-4111-8111-111111111111".to_string(),
+        )]);
+        assert_eq!(cast_write_placeholder("UUID[]", &uuids, "$1"), "$1::UUID[]");
+        let stamps = LogicalValue::Array(vec![LogicalValue::String(
+            "2026-10-06T00:00:00Z".to_string(),
+        )]);
+        assert_eq!(
+            cast_write_placeholder("timestamptz[]", &stamps, "$2"),
+            "$2::TIMESTAMPTZ[]"
+        );
+        // A scalar column keeps its comparison cast; no array cast is invented.
+        assert_eq!(
+            cast_write_placeholder("UUID", &LogicalValue::String("x".into()), "$3"),
+            "$3::UUID"
+        );
+    }
     use crate::ir::filter::{ComparisonOp, LogicalFilter};
     use crate::ir::operations::{
         AggregateExpr, AggregateFunc, ConflictStrategy, LogicalAggregate, LogicalAssignment,
