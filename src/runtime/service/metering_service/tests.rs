@@ -255,9 +255,47 @@ async fn explicit_record_usage_rejects_store_error_instead_of_acknowledging_it()
     assert_eq!(decode_detail(&strict).operation, "record_usage_insert");
 }
 
-/// Live rollup/export oracle for master-plan 9.9: served RecordUsage writes
-/// durable rows, QueryUsage sums the same rows, and the leader rollup worker
-/// exports exactly one closed-window outbox event with deterministic dedupe.
+/// Admission telemetry releases a request even when its pool cannot serve it.
+#[tokio::test]
+#[ignore = "requires live Postgres; CI runs every ignored lib test"]
+async fn live_admission_metering_does_not_block_on_an_exhausted_pool() {
+    let (pool, _svc, _, _) = live_metering_fixture().await;
+    let mut held = Vec::new();
+    for _ in 0..4 {
+        held.push(
+            pool.acquire()
+                .await
+                .expect("hold every metering connection"),
+        );
+    }
+    let tenant = Uuid::new_v4().to_string();
+    tokio::time::timeout(
+        Duration::from_secs(5),
+        record_usage(&pool, &tenant, "", "cache.set", "request", 1, 0),
+    )
+    .await
+    .expect("best-effort telemetry must finish before pool acquisition's 10s deadline")
+    .expect("telemetry is fail-open");
+    drop(held);
+    tokio::time::timeout(
+        Duration::from_secs(5),
+        record_usage_strict(&pool, &tenant, "", "explicit", "request", 1, 0),
+    )
+    .await
+    .expect("strict metering resumes when the pool is available")
+    .expect("strict durable write");
+    let rows: i64 =
+        sqlx::query_scalar("SELECT COUNT(*) FROM udb_metering.usage_events WHERE tenant_id=$1")
+            .bind(&tenant)
+            .fetch_one(&pool)
+            .await
+            .expect("read durable usage");
+    assert_eq!(
+        rows, 1,
+        "the timed-out admission must not later write behind the strict write"
+    );
+}
+
 #[tokio::test]
 #[ignore = "requires live Postgres; run with cargo test --lib live_postgres_metering_rollup_exports_closed_window_once -- --ignored --nocapture"]
 async fn live_postgres_metering_rollup_exports_closed_window_once() {

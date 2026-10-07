@@ -3,6 +3,7 @@
 //! `native_helpers::admit_on`.
 
 use std::sync::{OnceLock, RwLock};
+use std::time::Duration;
 
 use sqlx::PgPool;
 use tonic::Status;
@@ -113,25 +114,39 @@ pub(crate) async fn record_usage(
     quantity: i64,
     now_unix: i64,
 ) -> Result<(), Status> {
-    let res = write_usage(
-        pool,
-        tenant_id,
-        principal_id,
-        method,
-        unit,
-        quantity,
-        now_unix,
+    // A stalled telemetry connection must not stall an admitted data request.
+    // Bound both pool acquisition and the statement, not just connection setup.
+    let res = tokio::time::timeout(
+        Duration::from_secs(2),
+        write_usage(
+            pool,
+            tenant_id,
+            principal_id,
+            method,
+            unit,
+            quantity,
+            now_unix,
+        ),
     )
     .await;
 
-    if let Err(err) = res {
-        tracing::warn!(
-            target: "udb::metering",
-            error = %err,
-            tenant_id = %tenant_id,
-            method = %method,
-            "usage metering insert failed; swallowing so metering never fails the metered request",
-        );
+    match res {
+        Ok(Err(err)) => {
+            tracing::warn!(
+                target: "udb::metering",
+                error = %err,
+                tenant_id = %tenant_id,
+                method = %method,
+                "usage metering insert failed; swallowing so metering never fails the metered request",
+            );
+        }
+        Err(_) => {
+            tracing::warn!(
+                target: "udb::metering", tenant_id = %tenant_id, method = %method,
+                "usage metering exceeded its 2s budget; continuing the metered request",
+            );
+        }
+        Ok(Ok(())) => {}
     }
     Ok(())
 }

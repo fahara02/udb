@@ -1293,6 +1293,11 @@ jobs:
         with:
           cache-key: native-integration
 
+      - name: Install native live-test debugger
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends gdb
+
       - name: Start integration stack while compiling tests
         # Start integration stack: postgres/kafka/redis/memcached/qdrant/minio only —
         # the `udb` and `spark` services are profile-gated and not needed for the

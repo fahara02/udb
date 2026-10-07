@@ -649,6 +649,7 @@ async fn f6_cache_byte_budget_admits_exactly_budget_under_concurrent_sets() {
     let tenant_id = Uuid::new_v4().to_string();
     let namespace = format!("f6-{}", Uuid::new_v4().simple());
 
+    eprintln!("F6 cache budget: creating namespace");
     svc.create_namespace(tenant_request(
         cache_pb::CreateNamespaceRequest {
             tenant_id: tenant_id.clone(),
@@ -661,6 +662,7 @@ async fn f6_cache_byte_budget_admits_exactly_budget_under_concurrent_sets() {
     .await
     .expect("create budgeted namespace");
 
+    eprintln!("F6 cache budget: running 20 concurrent sets");
     let mut tasks = Vec::new();
     for i in 0..20 {
         let svc = svc.clone();
@@ -692,6 +694,7 @@ async fn f6_cache_byte_budget_admits_exactly_budget_under_concurrent_sets() {
     assert_eq!(stored, 10, "exactly budget/size Sets may be admitted");
     assert_eq!(refused, 10, "every Set past the budget is refused");
 
+    eprintln!("F6 cache budget: reading namespace stats");
     let stats = svc
         .get_namespace_stats(tenant_request(
             cache_pb::GetNamespaceStatsRequest {
