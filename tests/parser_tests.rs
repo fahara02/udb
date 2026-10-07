@@ -2079,6 +2079,16 @@ fn lint_warns_on_rls_without_policies() {
     let mut schema = table_schema("processing", "docs", 1);
     schema.enable_rls = true;
     schema.columns.push(pk_col("doc_id"));
+    // A tenant column: RLS without one (and without policies) is an error, not
+    // the warning this test is about.
+    schema.columns.push(ProtoColumn {
+        field_name: "tenant_id".to_string(),
+        column_name: "tenant_id".to_string(),
+        sql_type: "UUID".to_string(),
+        not_null: true,
+        field_number: 2,
+        ..ProtoColumn::default()
+    });
 
     let manifest = CatalogManifest::from_schemas(&[schema]).unwrap();
     let report = lint_catalog(&manifest);
