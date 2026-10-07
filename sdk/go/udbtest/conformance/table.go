@@ -174,12 +174,18 @@ func RunTable(t *testing.T, connect Connect, opts ...Option) {
 	t.Run("select pages, says when capped, and counts", func(t *testing.T) {
 		tenant := newTenant()
 		files := udbclient.TableOf[*storagev1.File](connect(t, tenant))
+		ids := make([]any, 0, 5)
 		for i := 0; i < 5; i++ {
-			if err := files.Upsert(context.Background(), file(tenant, newID(100+i), fmt.Sprintf("p%d.pdf", i))); err != nil {
+			id := newID(100 + i)
+			ids = append(ids, id)
+			if err := files.Upsert(context.Background(), file(tenant, id, fmt.Sprintf("p%d.pdf", i))); err != nil {
 				t.Fatalf("seed: %v", err)
 			}
 		}
-		page, err := files.Select(context.Background(), udbclient.Filter{}, udbclient.SelectOptions{Limit: 2, IncludeTotal: true})
+		// A live login shares its tenant with the other cases and previous runs.
+		// Count and pagination must cover this case's five rows only.
+		filter := udbclient.Filter{"file_id": udbclient.Filter{"$in": ids}}
+		page, err := files.Select(context.Background(), filter, udbclient.SelectOptions{Limit: 2, IncludeTotal: true})
 		if err != nil {
 			t.Fatalf("select: %v", err)
 		}
@@ -187,13 +193,14 @@ func RunTable(t *testing.T, connect Connect, opts ...Option) {
 			t.Fatalf("page = rows %d hasMore %v total %d", len(page.Rows), page.HasMore, page.Total)
 		}
 		seen := 0
-		if err := files.SelectAll(context.Background(), udbclient.Filter{}, func(*storagev1.File) error { seen++; return nil }); err != nil {
+		if err := files.SelectAll(context.Background(), filter, func(*storagev1.File) error { seen++; return nil }); err != nil {
 			t.Fatalf("select all: %v", err)
 		}
 		if seen != 5 {
 			t.Fatalf("SelectAll saw %d rows, want 5", seen)
 		}
-		n, err := files.Count(context.Background(), udbclient.Filter{"filename": udbclient.Filter{"$in": []any{"p1.pdf", "p3.pdf"}}})
+		filter["filename"] = udbclient.Filter{"$in": []any{"p1.pdf", "p3.pdf"}}
+		n, err := files.Count(context.Background(), filter)
 		if err != nil || n != 2 {
 			t.Fatalf("Count = %d, %v; want 2", n, err)
 		}
