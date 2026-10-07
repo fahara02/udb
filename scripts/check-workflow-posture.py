@@ -4286,6 +4286,8 @@ LINT_WORKFLOW_TRIGGER_PATHS = (
     ("scripts/check-launcher-assets.mjs", "launcher asset guard"),
     ("scripts/ci_slim_dep_guard.sh", "CI slim dependency guard"),
     ("scripts/generate-codebase-map.py", "codebase map generator"),
+    ("scripts/run-live-tests.py", "live test stall watchdog"),
+    ("scripts/check-embedded-dev.py", "embedded developer-mode live proof"),
     ("scripts/check-vendored-ffmpeg.py", "vendored ffmpeg guard"),
     ("scripts/gen-release-manifest.mjs", "release manifest generator"),
     ("scripts/gen-bench-bodies-skeleton.mjs", "benchmark body skeleton generator"),
