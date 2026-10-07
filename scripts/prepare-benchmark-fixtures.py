@@ -33,6 +33,7 @@ def main() -> int:
         tenant_id=required_env("UDB_LIVE_TENANT"),
         project_id=required_env("UDB_LIVE_PROJECT"),
         purpose="ci.benchmark.fixtures",
+        correlation_id=str(uuid.uuid4()),
         client_catalog_version="",
     )
     with UdbAuthClient(required_env("UDB_AUTH_GRPC_TARGET"), metadata, timeout=15.0) as auth:
