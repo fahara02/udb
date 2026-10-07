@@ -268,7 +268,7 @@ TARGETED_PROOF_WORKFLOW_REQUIREMENTS = {
     "ffmpeg-transcode-smoke.yml": (
         ("ffmpeg-transcode-smoke:", "ffmpeg transcode job"),
         ("python scripts/check-vendored-ffmpeg.py --selftest", "vendored ffmpeg verifier selftest"),
-        ("sudo apt-get install -y --no-install-recommends ffmpeg", "ffmpeg package install"),
+        ('sudo python3 "${GITHUB_WORKSPACE}/scripts/install-ci-native-deps.py" --packages ffmpeg', "ffmpeg package install"),
         ('python scripts/ffmpeg_transcode_smoke.py --ffmpeg-bin "$(command -v ffmpeg)" --artifact-dir ffmpeg-transcode-smoke', "ffmpeg transcode smoke"),
         ("ffmpeg-transcode-smoke", "ffmpeg artifact name"),
     ),
@@ -876,7 +876,7 @@ RELEASE_FFMPEG_REQUIREMENTS = (
     ("vendored-ffmpeg:", "vendored ffmpeg release gate job"),
     ("needs: version-guard", "vendored ffmpeg gate after version guard"),
     ("python scripts/check-vendored-ffmpeg.py --selftest", "vendored ffmpeg verifier selftest"),
-    ("sudo apt-get install -y --no-install-recommends ffmpeg", "ffmpeg package install"),
+    ('sudo python3 "${GITHUB_WORKSPACE}/scripts/install-ci-native-deps.py" --packages ffmpeg', "ffmpeg package install"),
     ('python scripts/ffmpeg_transcode_smoke.py --ffmpeg-bin "$(command -v ffmpeg)" --artifact-dir ffmpeg-transcode-smoke', "ffmpeg transcode smoke"),
     ("name: ffmpeg-transcode-smoke", "release ffmpeg diagnostics artifact"),
     ("needs: vendored-ffmpeg", "binary build waits for ffmpeg gate"),
@@ -6149,7 +6149,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - run: python scripts/check-vendored-ffmpeg.py --selftest
-      - run: sudo apt-get install -y --no-install-recommends ffmpeg
+      - run: sudo python3 "${GITHUB_WORKSPACE}/scripts/install-ci-native-deps.py" --packages ffmpeg
       - run: python scripts/ffmpeg_transcode_smoke.py --ffmpeg-bin "$(command -v ffmpeg)" --artifact-dir ffmpeg-transcode-smoke
       - if: always()
         uses: actions/upload-artifact@v4
@@ -6317,7 +6317,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - run: python scripts/check-vendored-ffmpeg.py --selftest
-      - run: sudo apt-get install -y --no-install-recommends ffmpeg
+      - run: sudo python3 "${GITHUB_WORKSPACE}/scripts/install-ci-native-deps.py" --packages ffmpeg
       - run: python scripts/ffmpeg_transcode_smoke.py --ffmpeg-bin "$(command -v ffmpeg)" --artifact-dir ffmpeg-transcode-smoke
       - uses: actions/upload-artifact@v4
         with:

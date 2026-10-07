@@ -90,8 +90,7 @@ jobs:
       - name: Install ffmpeg package
         run: |
           set -euo pipefail
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends ffmpeg
+          sudo python3 "${GITHUB_WORKSPACE}/scripts/install-ci-native-deps.py" --packages ffmpeg
       - name: Smoke ffmpeg transcode executor
         run: python scripts/ffmpeg_transcode_smoke.py --ffmpeg-bin "$(command -v ffmpeg)" --artifact-dir ffmpeg-transcode-smoke
       - name: Upload ffmpeg transcode smoke artifacts

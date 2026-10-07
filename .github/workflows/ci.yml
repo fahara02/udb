@@ -812,8 +812,7 @@ jobs:
           install-build-deps: "false"
       - name: Install AArch64 cross compiler
         run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends gcc-aarch64-linux-gnu libc6-dev-arm64-cross
+          sudo python3 "${GITHUB_WORKSPACE}/scripts/install-ci-native-deps.py" --packages aarch64-cross
       - run: cargo check --locked --target aarch64-unknown-linux-gnu --no-default-features --features postgres
         env:
           CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER: aarch64-linux-gnu-gcc
@@ -1294,8 +1293,7 @@ jobs:
 
       - name: Install native live-test debugger
         run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends gdb
+          sudo python3 "${GITHUB_WORKSPACE}/scripts/install-ci-native-deps.py" --packages debugger
 
       - name: Start integration stack while compiling tests
         # Start integration stack: postgres/kafka/redis/memcached/qdrant/minio only —

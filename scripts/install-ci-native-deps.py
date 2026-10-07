@@ -7,10 +7,10 @@ components and third-party repositories; bound both network and process waits.
 
 from __future__ import annotations
 
+import argparse
 import os
 import re
 import subprocess
-import sys
 from pathlib import Path
 
 
@@ -18,6 +18,14 @@ PACKAGES = (
     "build-essential", "cmake", "clang", "perl", "nasm", "ninja-build",
     "pkg-config", "libssl-dev",
 )
+PACKAGE_SETS = {
+    "native": PACKAGES,
+    "aarch64-cross": ("gcc-aarch64-linux-gnu", "libc6-dev-arm64-cross"),
+    "protobuf": ("protobuf-compiler",),
+    "debugger": ("gdb",),
+    "ffmpeg": ("ffmpeg",),
+    "postgres-client": ("postgresql-client",),
+}
 APT_OPTIONS = (
     "-o", "Acquire::Retries=3",
     "-o", "Acquire::http::Timeout=30",
@@ -57,10 +65,14 @@ def selftest() -> None:
     assert arm.count("URIs: https://ports.ubuntu.com/ubuntu-ports\n") == 2
     unrelated = "deb https://packages.microsoft.com/ubuntu/24.04/prod noble main\n"
     assert direct_ubuntu_sources(unrelated, "amd64") == unrelated
+    assert PACKAGE_SETS["native"] == PACKAGES
+    assert PACKAGE_SETS["aarch64-cross"] == ("gcc-aarch64-linux-gnu", "libc6-dev-arm64-cross")
+    assert all(packages and all(not package.startswith("-") for package in packages)
+               for packages in PACKAGE_SETS.values())
     print("CI native dependency source regressions passed")
 
 
-def install() -> None:
+def install(packages: tuple[str, ...]) -> None:
     architecture = subprocess.check_output(["dpkg", "--print-architecture"], text=True).strip()
     files = [Path("/etc/apt/sources.list")]
     directory = Path("/etc/apt/sources.list.d")
@@ -83,14 +95,16 @@ def install() -> None:
     ], env=environment, check=True)
     subprocess.run([
         "timeout", "--kill-after=15s", "8m", "apt-get", *APT_OPTIONS,
-        "install", "-y", "--no-install-recommends", *PACKAGES,
+        "install", "-y", "--no-install-recommends", *packages,
     ], env=environment, check=True)
 
 
 if __name__ == "__main__":
-    if sys.argv[1:] == ["--selftest"]:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--selftest", action="store_true")
+    parser.add_argument("--packages", choices=PACKAGE_SETS, default="native")
+    options = parser.parse_args()
+    if options.selftest:
         selftest()
-    elif sys.argv[1:]:
-        raise SystemExit("usage: install-ci-native-deps.py [--selftest]")
     else:
-        install()
+        install(PACKAGE_SETS[options.packages])

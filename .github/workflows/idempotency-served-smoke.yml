@@ -188,9 +188,7 @@ jobs:
         run: |
           set -euo pipefail
           if ! command -v psql >/dev/null 2>&1; then
-            export DEBIAN_FRONTEND=noninteractive
-            sudo timeout 120s apt-get -o DPkg::Lock::Timeout=60 update
-            sudo timeout 120s apt-get -o DPkg::Lock::Timeout=60 install -y postgresql-client
+            sudo python3 "${GITHUB_WORKSPACE}/scripts/install-ci-native-deps.py" --packages postgres-client
           fi
           export PGPASSWORD=udb
           psql -h localhost -p 5432 -U udb -d udb_ci -v ON_ERROR_STOP=1 \
