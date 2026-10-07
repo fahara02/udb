@@ -244,8 +244,7 @@ jobs:
           key: rust-msrv-1.88
       - name: Install native build dependencies
         run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends build-essential cmake clang perl nasm ninja-build pkg-config libssl-dev
+          sudo python3 "${GITHUB_WORKSPACE}/scripts/install-ci-native-deps.py"
       - name: Check all targets on declared MSRV
         run: cargo check --locked --all-features --all-targets
 

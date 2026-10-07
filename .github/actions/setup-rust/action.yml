@@ -56,8 +56,7 @@ runs:
       if: runner.os == 'Linux' && inputs.install-build-deps == 'true'
       shell: bash
       run: |
-        sudo apt-get update
-        sudo apt-get install -y --no-install-recommends build-essential cmake clang perl nasm ninja-build pkg-config libssl-dev
+        sudo python3 "${GITHUB_WORKSPACE}/scripts/install-ci-native-deps.py"
 
     - name: Install build deps (macOS)
       if: runner.os == 'macOS' && inputs.install-build-deps == 'true'

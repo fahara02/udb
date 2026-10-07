@@ -34,6 +34,7 @@ on:
       - "scripts/check-versions.mjs"
       - "scripts/check-launcher-assets.mjs"
       - "scripts/ci_slim_dep_guard.sh"
+      - "scripts/install-ci-native-deps.py"
       - "scripts/generate-codebase-map.py"
       - "scripts/run-live-tests.py"
       - "scripts/check-embedded-dev.py"
@@ -131,6 +132,7 @@ on:
       - "scripts/check-versions.mjs"
       - "scripts/check-launcher-assets.mjs"
       - "scripts/ci_slim_dep_guard.sh"
+      - "scripts/install-ci-native-deps.py"
       - "scripts/generate-codebase-map.py"
       - "scripts/run-live-tests.py"
       - "scripts/check-embedded-dev.py"
@@ -247,5 +249,6 @@ jobs:
           python3 scripts/idempotency_served_replay_smoke.py --selftest
           python3 scripts/retry_safe_served_smoke.py --selftest
           python3 scripts/native_load_gate.py --selftest
+          python3 scripts/install-ci-native-deps.py --selftest
           python3 scripts/check-workflow-posture.py --selftest
           python3 scripts/check-workflow-posture.py
