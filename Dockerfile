@@ -18,6 +18,8 @@ RUN sed -i 's|http://deb.debian.org|https://deb.debian.org|g' /etc/apt/sources.l
 # Manifests and workspace members first (better layer caching). The workspace
 # declares crates/udb-portable as a member, so its manifest must be present.
 COPY Cargo.toml Cargo.lock build.rs ./
+# The upgrade CLI embeds the release notes with include_str! at compile time.
+COPY CHANGELOG.md ./
 COPY crates ./crates
 COPY src ./src
 COPY proto ./proto
