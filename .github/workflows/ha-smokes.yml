@@ -5,7 +5,9 @@ on:
   # Release tags must carry multi-process HA evidence, not only the weekly run.
   # Tags pushed by the release automation do not always fire this trigger, so
   # release commits on main run the smokes too (the job-level `if` below skips
-  # every other main push: a full run builds three broker images, ~90 min).
+  # other main pushes unless explicitly marked '(resilience)': a full run
+  # builds three broker images, ~90 min). The marker also proves post-release
+  # image fixes without moving a release tag or publishing another version.
   push:
     branches:
       - main
@@ -28,6 +30,7 @@ jobs:
       github.event_name != 'push'
       || startsWith(github.ref, 'refs/tags/')
       || contains(github.event.head_commit.message, '(release)')
+      || contains(github.event.head_commit.message, '(resilience)')
       || startsWith(github.event.head_commit.message, 'release:')
     runs-on: ubuntu-latest
     timeout-minutes: 90
@@ -155,6 +158,7 @@ jobs:
       github.event_name != 'push'
       || startsWith(github.ref, 'refs/tags/')
       || contains(github.event.head_commit.message, '(release)')
+      || contains(github.event.head_commit.message, '(resilience)')
       || startsWith(github.event.head_commit.message, 'release:')
     runs-on: ubuntu-latest
     timeout-minutes: 60
