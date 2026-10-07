@@ -4726,6 +4726,15 @@ def check_release_topology(root: Path = ROOT) -> list[str]:
         _require(release_text, needle, label, scoped)
     if not _has_push_tag_trigger(release_text):
         scoped.append("release orchestrator must be the tag-triggered release entrypoint")
+    binary_job = _workflow_job_block(release_text, "build-binaries") or ""
+    permissions = re.search(
+        r"(?ms)^    permissions:\n(?P<block>.*?)(?=^    [A-Za-z0-9_-]+:|\Z)",
+        _non_comment_text(binary_job),
+    )
+    permission_block = permissions.group("block") if permissions else ""
+    for scope in ("contents", "id-token", "attestations"):
+        if not re.search(rf"(?m)^      {re.escape(scope)}: write\s*$", permission_block):
+            scoped.append(f"build-binaries must grant {scope}: write to its reusable workflow")
     for job_name in (
         "publish-crates",
         "publish-docker",
@@ -6481,6 +6490,10 @@ jobs:
     runs-on: ubuntu-latest
   build-binaries:
     needs: version-guard
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
     uses: ./.github/workflows/release-binaries.yml
     secrets: inherit
   publish-crates:
@@ -10822,6 +10835,16 @@ jobs:
         )
         failures = check_release_topology(root)
         assert any("publish-crates must wait for build-binaries" in failure for failure in failures), failures
+        (wf / "release.yml").write_text(release_topology_good, encoding="utf-8")
+
+        for scope in ("contents", "id-token", "attestations"):
+            for replacement in ("", f"      {scope}: read\n", f"      # {scope}: write\n"):
+                (wf / "release.yml").write_text(
+                    release_topology_good.replace(f"      {scope}: write\n", replacement),
+                    encoding="utf-8",
+                )
+                failures = check_release_topology(root)
+                assert any(f"build-binaries must grant {scope}: write" in failure for failure in failures), failures
         (wf / "release.yml").write_text(release_topology_good, encoding="utf-8")
 
         (wf / "cleanup-packages.yml").write_text(

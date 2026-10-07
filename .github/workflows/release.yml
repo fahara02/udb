@@ -49,8 +49,8 @@ on:
     tags:
       - 'v*.*.*'
 
-# Minimal at the top; each reusable scopes up (packages: write for docker,
-# id-token: write for nuget) inside its own jobs.
+# Minimal at the top; callers grant the permissions each reusable needs.
+# A reusable workflow can reduce inherited permissions, never increase them.
 permissions:
   contents: read
   actions: read
@@ -123,6 +123,8 @@ jobs:
     needs: version-guard
     permissions:
       contents: write
+      id-token: write
+      attestations: write
     uses: ./.github/workflows/release-binaries.yml
     secrets: inherit
 
