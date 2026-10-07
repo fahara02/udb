@@ -116,6 +116,7 @@ pub(super) async fn cleanup_native_service_db(pool: &sqlx::PgPool) {
     // leaks them across runs: the next `CREATE SCHEMA` fails with a duplicate and
     // control-plane rows accumulate. Enumerating live objects drops whatever
     // migrate created, regardless of that filter.
+    end_abandoned_transactions(pool).await;
     let schemas: Vec<String> = sqlx::query_scalar(
         "SELECT nspname FROM pg_namespace WHERE nspname LIKE 'udb\\_%' ESCAPE '\\'",
     )
@@ -124,10 +125,7 @@ pub(super) async fn cleanup_native_service_db(pool: &sqlx::PgPool) {
     .expect("list native udb_* schemas");
     for schema in schemas {
         let stmt = format!("DROP SCHEMA IF EXISTS {} CASCADE", quote_ident(&schema));
-        sqlx::query(&stmt)
-            .execute(pool)
-            .await
-            .unwrap_or_else(|err| panic!("drop native schema {schema}: {err}"));
+        drop_within_lock_timeout(pool, &stmt).await;
     }
     // Skip tables an EXTENSION owns: PostGIS installs `public.spatial_ref_sys`,
     // and dropping it fails ("extension postgis requires it"), which would fail
@@ -151,10 +149,7 @@ pub(super) async fn cleanup_native_service_db(pool: &sqlx::PgPool) {
             "DROP TABLE IF EXISTS public.{} CASCADE",
             quote_ident(&table)
         );
-        sqlx::query(&stmt)
-            .execute(pool)
-            .await
-            .unwrap_or_else(|err| panic!("drop public table {table}: {err}"));
+        drop_within_lock_timeout(pool, &stmt).await;
     }
     sqlx::query("DROP EXTENSION IF EXISTS pg_partman CASCADE")
         .execute(pool)
@@ -164,6 +159,53 @@ pub(super) async fn cleanup_native_service_db(pool: &sqlx::PgPool) {
         .execute(pool)
         .await
         .expect("drop partman schema");
+}
+
+/// Ends sessions left idle inside a transaction. A test whose runtime shuts
+/// down mid-transaction leaves its connection open with every lock it took, and
+/// the next fixture DROP waits on those locks with no end: the live job then
+/// stalls at whichever test happens to run next. No live session of a running
+/// test sits idle in a transaction across fixture setup, so these are residue.
+async fn end_abandoned_transactions(pool: &sqlx::PgPool) {
+    let ended: Vec<i32> = sqlx::query_scalar(
+        "SELECT pid FROM pg_stat_activity \
+         WHERE datname = current_database() AND pid <> pg_backend_pid() \
+           AND backend_type = 'client backend' \
+           AND state IN ('idle in transaction', 'idle in transaction (aborted)') \
+           AND pg_terminate_backend(pid)",
+    )
+    .fetch_all(pool)
+    .await
+    .expect("end abandoned transactions");
+    if !ended.is_empty() {
+        eprintln!(
+            "live fixture: ended {} abandoned transaction(s): {ended:?}",
+            ended.len()
+        );
+    }
+}
+
+/// Runs one fixture DROP with a lock timeout, so a session still holding a lock
+/// fails the test naming that session instead of hanging the whole job.
+async fn drop_within_lock_timeout(pool: &sqlx::PgPool, stmt: &str) {
+    let mut tx = pool.begin().await.expect("begin fixture drop");
+    sqlx::query("SET LOCAL lock_timeout = '30s'")
+        .execute(&mut *tx)
+        .await
+        .expect("set fixture lock_timeout");
+    if let Err(err) = sqlx::query(stmt).execute(&mut *tx).await {
+        drop(tx);
+        let holders: Vec<(i32, String, String)> = sqlx::query_as(
+            "SELECT pid, coalesce(state, ''), left(query, 300) FROM pg_stat_activity \
+             WHERE datname = current_database() AND pid <> pg_backend_pid() \
+               AND backend_type = 'client backend' AND state <> 'idle'",
+        )
+        .fetch_all(pool)
+        .await
+        .unwrap_or_default();
+        panic!("{stmt}: {err}\nother sessions: {holders:#?}");
+    }
+    tx.commit().await.expect("commit fixture drop");
 }
 
 fn quote_ident(value: &str) -> String {
