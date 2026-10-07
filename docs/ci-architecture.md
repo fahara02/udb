@@ -73,6 +73,9 @@ Reusable workflows (`workflow_call`, job-level reuse):
   from its exact workflow commit. This lane records the candidate binary digest
   separately and produces no release claim or Pages deployment; release-triggered
   benchmarks continue to verify the immutable published binary and manifest.
+  `benchmark-candidate.yml` also calls this suite for a normal main commit marked
+  `(benchmark)`, building that exact commit with the full Linux release features.
+  Its artifact cannot trigger a release-evidence Pages deployment.
 
 Self-test + lint:
 - `_selftest.yml` — `workflow_dispatch`; proves each composite on the runner
@@ -151,8 +154,9 @@ Current source evidence:
 - Critical PR artifact path: quick-gate -> build-broker -> {smoke, scaffold-compiles}.
 - Cheap PR checks stay dependency-free and start at t=0.
 - Timeout ceilings are source guardrails, not runner wall-clock evidence.
-- `_live-sdk-suite.yml` callers are limited to `benchmark-sdks.yml` plus the
-  dispatch-only `_shadow-live-sdk.yml` diagnostic; CI must not call it.
+- `_live-sdk-suite.yml` callers are `benchmark-sdks.yml`, the dispatch-only
+  `_shadow-live-sdk.yml` diagnostic, and the explicit `benchmark-candidate.yml`
+  check. `ci.yml` keeps its existing conformance jobs.
 - Pages deploy, `pages: write`, and `concurrency.group: pages` are single-owned
   by `pages.yml`.
 - PR broker compile count: 1 debug build in build-broker, consumed by smoke and
@@ -324,6 +328,7 @@ Current source evidence:
 | `ci.yml::rust` toolchain blocks | `setup-rust` |
 | `ci.yml::versions` + 7 release guards | `version-guard` |
 | `benchmark-sdks.yml::benchmark` | calls `_live-sdk-suite`; release binary; no own pages deploy |
+| `benchmark-candidate.yml::benchmark` | calls `_live-sdk-suite`; exact main source build; no release claim or Pages deploy |
 | `feature-matrix.yml` | folded into ci feature jobs (PR subset / integration full) |
 | inline UDB_* env (ci + benchmark) | `broker-env` |
 | inline kafka/minio/qdrant setup | `start-backends` |

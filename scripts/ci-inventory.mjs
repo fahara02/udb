@@ -24,6 +24,7 @@ const requiredWorkflows = [
   "release-csharp-sdk.yml",
   "release-packagist.yml",
   "benchmark-sdks.yml",
+  "benchmark-candidate.yml",
   "pages.yml",
   "cleanup-packages.yml",
   "publish-skill.yml",
@@ -186,6 +187,7 @@ const releaseGraphEdges = [
 
 const allowedLiveSuiteCallers = [
   "_shadow-live-sdk.yml",
+  "benchmark-candidate.yml",
   "benchmark-sdks.yml",
 ];
 
@@ -396,6 +398,13 @@ function checkRepo(repo = ROOT) {
     errors.push("benchmark-sdks.yml must run post-release benchmarks only after a successful top-level Release v* tag run");
   }
   const liveSuiteOwners = workflowUseOwners(repo, "./.github/workflows/_live-sdk-suite.yml");
+  const candidateText = exists(repo, ".github/workflows/benchmark-candidate.yml")
+    ? read(repo, ".github/workflows/benchmark-candidate.yml") : "";
+  for (const token of ["contains(github.event.head_commit.message, '(benchmark)')", "candidate-build: true", "checkout-ref: ${{ github.sha }}"]) {
+    if (!candidateText.includes(token)) {
+      errors.push(`benchmark-candidate.yml must explicitly build the marked exact source commit: missing ${token}`);
+    }
+  }
   const unexpectedLiveSuiteOwners = liveSuiteOwners.filter((owner) => !allowedLiveSuiteCallers.includes(owner));
   const missingLiveSuiteOwners = allowedLiveSuiteCallers.filter((owner) => !liveSuiteOwners.includes(owner));
   if (unexpectedLiveSuiteOwners.length || missingLiveSuiteOwners.length) {
@@ -582,6 +591,7 @@ Runner wall-clock evidence is still required before marking 15.A.5 done.
       "on:\n  workflow_run:\n    workflows: [\"Release\"]\njobs:\n  benchmark:\n    if: github.event.workflow_run.conclusion == 'success' && startsWith(github.event.workflow_run.head_branch, 'v')\n    uses: ./.github/workflows/_live-sdk-suite.yml\n",
     );
     workflow("_shadow-live-sdk.yml", "on:\n  workflow_dispatch:\njobs:\n  shadow:\n    uses: ./.github/workflows/_live-sdk-suite.yml\n");
+    workflow("benchmark-candidate.yml", "on:\n  push:\n    branches: [main]\njobs:\n  benchmark:\n    if: contains(github.event.head_commit.message, '(benchmark)')\n    uses: ./.github/workflows/_live-sdk-suite.yml\n    with:\n      candidate-build: true\n      checkout-ref: ${{ github.sha }}\n");
     workflow("pages.yml", 'on:\n  workflow_run:\n    workflows: ["Benchmark · SDKs"]\npermissions:\n  pages: write\nconcurrency:\n  group: pages\n  cancel-in-progress: false\njobs:\n  deploy:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/deploy-pages@v4\n');
     workflow("cleanup-packages.yml", "on:\n  workflow_run:\n    workflows: [Release]\njobs:\n  cleanup:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/delete-package-versions@v5\n");
     workflow("_live-sdk-suite.yml", "on:\n  workflow_call:\njobs:\n  live:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: ./.github/actions/start-backends\n      - uses: ./.github/actions/broker-env\n      - uses: ./.github/actions/setup-sdk-toolchains\n");
