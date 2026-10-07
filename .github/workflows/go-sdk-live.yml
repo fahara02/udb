@@ -90,6 +90,16 @@ jobs:
           enable_column_backend: "false"
           enable_graph_backend: "false"
 
+      - name: Start catalog backends
+        # serve proto loads the SDK fixture's declared Qdrant collection and
+        # MinIO bucket. Provision them before startup verifies the catalog.
+        uses: ./.github/actions/start-backends
+        with:
+          minio: "true"
+          qdrant: "true"
+          redis: "true"
+          kafka: "false"
+
       - name: Bootstrap live user
         shell: bash
         run: |
