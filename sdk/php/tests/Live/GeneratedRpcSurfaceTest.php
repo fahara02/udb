@@ -4901,7 +4901,7 @@ it('measures per-RPC latency', function () {
     );
     $s['platformAuthGenerated']->bindContext($s['platformMeta']);
 
-    $itersFor = fn (string $kind) => $kind === 'destructive' ? 1 : ($kind === 'mutation' ? 5 : 25);
+    $itersFor = fn (string $kind) => $kind === 'read_only' ? 25 : 1;
 
     $invoke = function ($stub, ReflectionMethod $method, $hasRequest, $probeRequest, $callMeta) {
         return $hasRequest
@@ -5195,24 +5195,44 @@ it('measures per-RPC latency', function () {
                 || str_contains($doc, 'ClientStreamingCall')
                 || str_contains($doc, 'BidiStreamingCall');
             if ($isStreaming) {
+                $streamErr = 'OK';
+                $streamDetail = '';
+                $probe = null;
                 try {
                     $probe = $invoke($stub, $method, $hasRequest, $probeRequest, $callMeta);
-                    if (method_exists($probe, 'cancel')) {
-                        try {
-                            $probe->cancel();
-                        } catch (\Throwable $e) {
+                    if (! $hasRequest) {
+                        // Client/bidi stub signatures take metadata only; send
+                        // the documented request on the returned writable call.
+                        $probe->write(perfBodyPhp($name, $fix, $callMeta->tenantId, $callMeta->projectId, $svc));
+                        $probe->writesDone();
+                    }
+                    if (str_contains($doc, 'ClientStreamingCall')) {
+                        [, $observedStatus] = $probe->wait();
+                        $streamErr = grpcStatusNamePhp((int) $observedStatus->code);
+                        $streamDetail = (string) ($observedStatus->details ?? '');
+                    } else {
+                        $firstResponse = $probe->read();
+                        if ($firstResponse === null) {
+                            $observedStatus = $probe->getStatus();
+                            $streamErr = grpcStatusNamePhp((int) $observedStatus->code);
+                            $streamDetail = (string) ($observedStatus->details ?? '');
                         }
                     }
                 } catch (\Throwable $e) {
-                    // Signature-level streaming coverage is still reported as a
-                    // stream-open sample; unary failures are handled below by
-                    // timeUnary(), never hidden here.
+                    $streamErr = 'UNKNOWN';
+                    $streamDetail = $e->getMessage();
+                } finally {
+                    if ($probe !== null && method_exists($probe, 'cancel')) {
+                        $probe->cancel();
+                    }
                 }
-                // Stream-open latency (initiate + cancel, no response drain).
                 $openMs = (microtime(true) - $openStart) * 1000.0;
+                if ($streamErr !== 'OK') {
+                    fwrite(STDERR, "FAILDETAIL $svc/$name [$streamErr] ".substr($streamDetail, 0, 200)."\n");
+                }
                 $samples[] = [
                     'service' => $svc, 'rpc' => $name, 'api_alias' => $aliasOf($svc, $name),
-                    'operation_id' => $operationIdOf($svc, $name), 'kind' => 'stream_open', 'err' => 'OK',
+                    'operation_id' => $operationIdOf($svc, $name), 'kind' => 'stream_first_recv', 'err' => $streamErr,
                     'p50' => $openMs, 'p99' => $openMs, 'mean' => $openMs, 'iters' => 1,
                 ];
 
@@ -5258,12 +5278,10 @@ it('measures per-RPC latency', function () {
                     $errDetail = $detail;
                 }
             }
-            // An RPC that succeeds AT LEAST ONCE works: repeated-call failures on a
-            // non-idempotent mutation (consumed token / duplicate / already-deleted) are a
-            // measurement artifact, not an RPC failure (mirrors the Go harness).
+            // Every measured call must succeed; one success cannot hide a refusal.
             $capabilitySkipped = ! $anyOk && isCapabilitySkipPhp($svc, $name, $firstErr, $errDetail);
-            $errCode = $anyOk ? 'OK' : ($capabilitySkipped ? 'CAPABILITY_SKIPPED' : $firstErr);
-            $durs = $anyOk ? $okDurs : $allDurs;
+            $errCode = $capabilitySkipped ? 'CAPABILITY_SKIPPED' : $firstErr;
+            $durs = $allDurs;
             if ($errCode !== 'OK' && $errCode !== 'CAPABILITY_SKIPPED') {
                 fwrite(STDERR, "FAILDETAIL $svc/$name [$errCode] ".substr($errDetail, 0, 200)."\n");
             }

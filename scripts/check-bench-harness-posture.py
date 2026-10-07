@@ -23,6 +23,41 @@ class SourceCheck:
 
 CHECKS: tuple[SourceCheck, ...] = (
     SourceCheck(
+        "analytics fixture historical partitions",
+        "scripts/fixtures/benchmark-analytics.sql",
+        (
+            "PARTITION OF udb_analytics.executor_performance_summaries",
+            "PARTITION OF udb_analytics.reconciliation_analytics_summaries",
+            "FOR VALUES FROM ('2026-06-01') TO ('2026-07-01')",
+        ),
+    ),
+    SourceCheck(
+        "Go benchmark refuses any failed iteration",
+        "sdk/go/udbclient/live_perf_test.go",
+        ('if firstErr != "" {', 'if code != "OK" && firstErr == "" {'),
+        forbidden=("An RPC that succeeds AT LEAST ONCE",),
+    ),
+    SourceCheck(
+        "Python benchmark refuses any failed iteration",
+        "sdk/python/tests/test_live_conformance.py",
+        ('err_code, err_detail = failure if failure else ("OK", "")', '"iters": len(runs)'),
+        forbidden=('err_code = "OK" if ok_durs else',),
+    ),
+    SourceCheck(
+        "TypeScript benchmark uses served streaming evidence",
+        "sdk/typescript/live-auth.test.ts",
+        ('const errCode = capabilitySkipped ? "CAPABILITY_SKIPPED" : firstErr;',
+         'await timeSeededWritableStream(fn, streamReq)', 'await response;'),
+        forbidden=('const errCode = anyOk ? "OK"', 'const timeStreamOpen ='),
+    ),
+    SourceCheck(
+        "PHP benchmark uses served streaming evidence",
+        "sdk/php/tests/Live/GeneratedRpcSurfaceTest.php",
+        ("$errCode = $capabilitySkipped ? 'CAPABILITY_SKIPPED' : $firstErr;",
+         '$firstResponse = $probe->read();', '$observedStatus = $probe->getStatus();'),
+        forbidden=("$errCode = $anyOk ? 'OK'", "'kind' => 'stream_open', 'err' => 'OK'"),
+    ),
+    SourceCheck(
         "bench-body markdown column contract",
         "docs/bench-bodies/data_broker.md",
         (

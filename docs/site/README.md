@@ -69,7 +69,11 @@ strict suite against its exact source binary in CI. Candidate results cannot
 deploy release evidence. Each isolated SDK reset prepares a real uploaded
 multipart part, a separate dispatched one-step workflow, and stored input
 records for the ETL-fed analytics read RPCs. Setup is excluded from RPC latency;
-the consumed multipart completion is measured once. The full Linux release
+mutations consume a prepared fixture once, while repeatable reads retain their
+iteration budget. Any failed measured iteration fails its RPC, even if another
+iteration succeeded. Streaming rows await an actual server response or an OK
+empty completion; opening and cancelling a call is not success evidence.
+The consumed multipart completion is measured once. The full Linux release
 includes WebRTC media alongside OIDC/WebAuthn. Per-RPC
 rows prefer
 descriptor-derived `operation_id`, then `api_alias`, then the legacy

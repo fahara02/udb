@@ -1,6 +1,16 @@
 -- Disposable input records for the two read-only, ETL-fed analytics RPCs.
 -- Run only after reset.sh recreates the isolated udb_ci database. These are
 -- stored fixture observations, not claimed measurements of a live deployment.
+-- Startup provisions partitions around the current date, while the shared
+-- benchmark request bodies deliberately use a fixed historical read window.
+-- Keep that window deterministic by provisioning its actual monthly storage.
+CREATE TABLE IF NOT EXISTS udb_analytics.executor_performance_summaries_bench_202606
+    PARTITION OF udb_analytics.executor_performance_summaries
+    FOR VALUES FROM ('2026-06-01') TO ('2026-07-01');
+CREATE TABLE IF NOT EXISTS udb_analytics.reconciliation_analytics_summaries_bench_202606
+    PARTITION OF udb_analytics.reconciliation_analytics_summaries
+    FOR VALUES FROM ('2026-06-01') TO ('2026-07-01');
+
 INSERT INTO udb_analytics.executor_performance_summaries
     (summary_date, executor_identity, workload_kind, total_dispatches,
      successful_results, timeout_count, error_count, avg_execution_ms,

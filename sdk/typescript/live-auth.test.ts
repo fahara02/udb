@@ -4349,7 +4349,7 @@ test("live per-RPC perf", {
     // Iteration budget per operation_kind. Every RPC is now driven down its SUCCESS
     // path with seeded inputs, so even destructive RPCs run for real (against a
     // disposable seeded target) — measured ONCE because the action is not idempotent.
-    const itersFor = (kind: string) => (kind === "destructive" ? 1 : kind === "mutation" ? 5 : 25);
+    const itersFor = (kind: string) => (kind === "read_only" ? 25 : 1);
     type Sample = { service: string; rpc: string; apiAlias: string; operationId: string; kind: string; err: string; p50: number; p99: number; mean: number; iters: number; note: string };
     const samples: Sample[] = [];
 
@@ -4377,22 +4377,46 @@ test("live per-RPC perf", {
       return /webrtc_egress_(enabled|backend)/.test(detail ?? "");
     };
 
-    // Stream-open timer: create the streaming call and tear it down WITHOUT draining
-    // responses. A subscription/upload stream emits a first message only on an event,
-    // so draining it in a passive run would just hit the deadline. This measures the
-    // client-side latency to establish the stream. Used for the client-streaming /
-    // bidi RPCs (put_object, batch_*, begin_tx, vector_batch_upsert, delta/stream
-    // resources, signal) where a single seeded message cannot drive a real response.
-    const timeStreamOpen = (fn: any, request: any): number => {
+    // Send the prepared message, close the request side, then measure an actual
+    // response or successful empty completion. Opening a channel proves no RPC.
+    const timeSeededWritableStream = async (fn: any, request: any): Promise<{ ms: number; err: string }> => {
       const start = performance.now();
+      let stream: any;
       try {
-        const r = (fn as any)(request, { deadlineMs: 1_500, noRetry: true });
-        const s = r?.stream ?? r;
-        if (s && typeof s.cancel === "function") s.cancel();
-        else if (s && typeof s.destroy === "function") s.destroy();
-        if (r?.response && typeof r.response.catch === "function") r.response.catch(() => {});
-      } catch { /* setup latency still counts */ }
-      return performance.now() - start;
+        const call = fn({ deadlineMs: 15_000, noRetry: true });
+        stream = call?.stream ?? call;
+        if (call?.response) {
+          // The generated client-streaming API takes options, not a request.
+          const response = call.response;
+          stream.write(request);
+          stream.end();
+          await response;
+          return { ms: performance.now() - start, err: "OK" };
+        }
+        return await new Promise((resolve) => {
+          let settled = false;
+          const finish = (err: string) => {
+            if (settled) return;
+            settled = true;
+            clearTimeout(timer);
+            resolve({ ms: performance.now() - start, err });
+          };
+          const timer = setTimeout(() => finish("DEADLINE_EXCEEDED"), 15_000);
+          stream.once("data", () => finish("OK"));
+          stream.once("end", () => finish("OK"));
+          stream.on("error", (e: unknown) => finish(codeNameOf(e)));
+          try {
+            stream.write(request);
+            stream.end();
+          } catch (e) {
+            finish(codeNameOf(e));
+          }
+        });
+      } catch (e) {
+        return { ms: performance.now() - start, err: codeNameOf(e) };
+      } finally {
+        if (typeof stream?.cancel === "function") stream.cancel();
+      }
     };
 
     // Server-streaming first-response timer: open the stream with a seeded request
@@ -4481,8 +4505,8 @@ test("live per-RPC perf", {
       topic_pattern: "*",
     });
     // Server-streaming reads that take a request and deliver a real first response.
-    const SERVER_STREAM_FIRST_RESPONSE = new Set(["select_v_2", "get_object", "download_file"]);
-    const seededStreamRequest = (methodName: string) => {
+    const SERVER_STREAM_FIRST_RESPONSE = new Set(["select_v_2", "get_object", "download_file", "subscribe"]);
+    const seededStreamRequest = (serviceName: string, methodName: string) => {
       if (methodName === "select_v_2") {
         return { context: requestContext(tenantId, projectId, "ts.live.perf"), message_type: LIVE_MESSAGE_TYPE, filter: { tenant_id: tenantId, project_id: projectId }, limit: 1 };
       }
@@ -4494,8 +4518,7 @@ test("live per-RPC perf", {
         // the first DownloadFileChunk carries object metadata + the first bytes.
         return { tenant_id: tenantId, file_id: fixtures.lookup("file_id") ?? "", chunk_size_bytes: 65536 };
       }
-      // Only select_v_2/get_object/download_file reach here; never a generic body.
-      return perfRealBody("StorageService", methodName, tenantId, projectId, fixtures) ?? {};
+      return perfRealBody(serviceName, methodName, tenantId, projectId, fixtures);
     };
 
     // ── measureRpc: time ONE RPC (unary or streaming) and push its sample ─────────
@@ -4528,7 +4551,7 @@ test("live per-RPC perf", {
         }
         // Server-streaming reads with a real first response (select_v_2, get_object).
         if (SERVER_STREAM_FIRST_RESPONSE.has(methodName)) {
-          const req = seededStreamRequest(methodName);
+          const req = seededStreamRequest(serviceName, methodName);
           const durs: number[] = [];
           let errCode = "OK";
           await timeServerStreamFirstResponse(fn, req); // warm-up
@@ -4542,13 +4565,12 @@ test("live per-RPC perf", {
           samples.push({ service: identity.service, rpc: identity.rpc, apiAlias: apiAliasOf(api.serviceFull, methodName), operationId: operationIdOf(api.serviceFull, methodName), kind: "stream", err: errCode, p50: pct(50), p99: pct(99), mean: durs.reduce((s, d) => s + d, 0) / durs.length, iters: durs.length, note: "streaming: time-to-first-response (seeded)" });
           return;
         }
-        // Client-streaming / bidi: a single seeded message cannot drive a real
-        // response in a passive run — report stream-open latency. The first message
-        // is the shared manifest body (no generic): perfRealBody must cover it.
+        // Client-streaming / bidi uses a real response to the
+        // shared manifest body (no generic): perfRealBody must cover it.
         const streamReq = perfRealBody(serviceName, methodName, tenantId, projectId, fixtures);
         if (!streamReq) throw new Error(`perfRealBody has no doc-grounded body for streaming ${serviceName}/${methodName} — gap/bypass not allowed`);
-        const d = timeStreamOpen(fn, streamReq);
-        samples.push({ service: identity.service, rpc: identity.rpc, apiAlias: apiAliasOf(api.serviceFull, methodName), operationId: operationIdOf(api.serviceFull, methodName), kind: "stream_open", err: "OK", p50: d, p99: d, mean: d, iters: 1, note: "streaming: stream-open latency" });
+        const r = await timeSeededWritableStream(fn, streamReq);
+        samples.push({ service: identity.service, rpc: identity.rpc, apiAlias: apiAliasOf(api.serviceFull, methodName), operationId: operationIdOf(api.serviceFull, methodName), kind: "stream_first_recv", err: r.err, p50: r.ms, p99: r.ms, mean: r.ms, iters: 1, note: "streaming: time-to-first-response (seeded)" });
         return;
       }
       const kind = operationKindOf(api.serviceFull, methodName) || "read_only";
@@ -4605,14 +4627,11 @@ test("live per-RPC perf", {
         if (r.err === "OK") { anyOk = true; okDurs.push(r.ms); }
         else if (firstErr === "OK") { firstErr = r.err; firstDetail = r.detail; }
       }
-      // An RPC that succeeds AT LEAST ONCE works: repeated-call failures on a
-      // non-idempotent mutation (consumed token / duplicate / already-deleted) are a
-      // measurement artifact, not an RPC failure (mirrors the Go harness). Only an RPC
-      // that NEVER succeeds is a real failure (its first-attempt status).
+      // Every measured call must succeed; one success cannot hide a refusal.
       const capabilitySkipped = !anyOk && isCapabilitySkip(serviceName, methodName, firstErr, firstDetail);
-      const errCode = anyOk ? "OK" : capabilitySkipped ? "CAPABILITY_SKIPPED" : firstErr;
-      const errDetail = anyOk ? undefined : firstDetail;
-      const durs = (anyOk ? okDurs : allDurs);
+      const errCode = capabilitySkipped ? "CAPABILITY_SKIPPED" : firstErr;
+      const errDetail = firstDetail;
+      const durs = allDurs;
       if (errCode !== "OK" && errCode !== "CAPABILITY_SKIPPED") console.error(`FAILDETAIL ${serviceName}/${methodName} [${errCode}] ${errDetail ?? ""}`);
       durs.sort((a, b) => a - b);
       const pct = (p: number) => durs[Math.min(durs.length - 1, Math.floor((p * (durs.length - 1)) / 100))];

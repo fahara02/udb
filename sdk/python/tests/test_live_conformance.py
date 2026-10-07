@@ -4450,7 +4450,7 @@ def test_live_perf():
             return client_cls is DataBrokerClient and method.name == "PublishCDC"
 
         def iters_for(kind):
-            return 1 if kind == "destructive" else (3 if kind == "mutation" else 10)
+            return 10 if kind == "read_only" else 1
 
         def time_one(client, client_cls, method, call_meta):
             # Returns (elapsed_ms, err_code, err_detail) where err_code is the gRPC
@@ -4524,7 +4524,8 @@ def test_live_perf():
             if is_cdc_subscription(client_cls, method):
                 kind, n = "cdc_first_event", 1
             elif streaming:
-                kind, n = "stream_first_recv", 3
+                kind = "stream_first_recv"
+                n = 3 if RPC_OPERATION_KIND.get(rpc_path(method)) == "read_only" else 1
             else:
                 kind = RPC_OPERATION_KIND.get(rpc_path(method), "read_only")
                 n = iters_for(kind)
@@ -4543,9 +4544,12 @@ def test_live_perf():
                     break
             all_durs = [d for d, _, _ in runs]
             ok_durs = [d for d, code, _ in runs if code == "OK"]
-            err_code = "OK" if ok_durs else next((code for _, code, _ in runs if code != "OK"), "UNKNOWN")
-            err_detail = "" if ok_durs else next((detail for _, code, detail in runs if code != "OK"), "")
-            durs = sorted(ok_durs or all_durs)
+            failure = next(((code, detail) for _, code, detail in runs if code != "OK"), None)
+            # A successful iteration never clears an earlier or later refusal.
+            err_code, err_detail = failure if failure else ("OK", "")
+            if ok_durs and err_code == "CAPABILITY_SKIPPED":
+                err_code = "FAILED_PRECONDITION"
+            durs = sorted(all_durs)
 
             def pct(p, durs=durs):
                 return durs[min(len(durs) - 1, (p * (len(durs) - 1)) // 100)]
@@ -4555,7 +4559,7 @@ def test_live_perf():
                 "rpc": method.name,
                 "api_alias": RPC_API_ALIAS.get(rpc_path(method), ""),
                 "operation_id": RPC_OPERATION_ID.get(rpc_path(method), ""),
-                "kind": kind, "iters": n, "err": err_code,
+                "kind": kind, "iters": len(runs), "err": err_code,
                 "err_detail": err_detail,
                 "p50": pct(50), "p99": pct(99), "mean": sum(durs) / len(durs),
             })

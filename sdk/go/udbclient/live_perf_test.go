@@ -27,7 +27,7 @@ import (
 //
 // Honesty of the numbers:
 //   - read_only RPCs are timed over many iterations (safe to repeat) → real p50/p99.
-//   - mutation RPCs are timed over a few iterations with unique keys per call.
+//   - mutation RPCs consume their prepared target once.
 //   - destructive RPCs are sent ONCE, typed-empty (validation latency only; the
 //     action never executes), and clearly marked so the number is not mistaken for
 //     a full destructive round-trip.
@@ -255,13 +255,13 @@ func TestLivePerf(t *testing.T) {
 	// Iteration budget per operation_kind. Every RPC is now driven down its SUCCESS
 	// path with seeded inputs, so even destructive RPCs run for real (against a
 	// disposable seeded target) — they are measured ONCE because the action is not
-	// idempotent. Mutation: a few. Read: enough for a stable p99.
+	// idempotent. A mutation's prepared target is consumed once. Reads repeat.
 	iterFor := func(kind string) (int, string) {
 		switch kind {
 		case "destructive":
 			return 1, "destructive: 1 real call against a seeded disposable target"
 		case "mutation":
-			return 5, "mutation (seeded success path)"
+			return 1, "mutation: 1 real call against a seeded target"
 		default:
 			return 25, "read_only (seeded success path)"
 		}
@@ -341,7 +341,7 @@ func TestLivePerf(t *testing.T) {
 			} else if err != nil {
 				code = status.Code(err).String()
 			}
-			if i == 0 {
+			if code != "OK" && firstErr == "" {
 				firstErr = code
 				if err != nil {
 					firstErrText = err.Error()
@@ -352,23 +352,20 @@ func TestLivePerf(t *testing.T) {
 			}
 			durs = append(durs, d)
 		}
-		// An RPC that succeeds AT LEAST ONCE works: repeated-call failures on a
-		// non-idempotent mutation (consumed token / duplicate / already-deleted) are a
-		// measurement artifact, not an RPC failure — report OK and measure latency over
-		// the successful calls. Only an RPC that NEVER succeeds is a real failure (its
-		// first-attempt status).
+		// Every measured call must succeed. A successful sample must never hide a
+		// later failed call; single-use fixtures are measured once above.
 		measured := okDurs
 		errCode := "OK"
-		if len(okDurs) == 0 {
+		if firstErr != "" {
 			measured = durs
 			errCode = firstErr
-			if isCapabilitySkip(rpc, firstErr, firstErrText) {
+			if len(okDurs) == 0 && isCapabilitySkip(rpc, firstErr, firstErrText) {
 				errCode = "CAPABILITY_SKIPPED"
 				note += "; optional capability unavailable"
 			}
 		}
 		// Surface the FULL gRPC error (code + message + details) for every RPC that
-		// never succeeded, so `go test -v` is a complete diagnosis log — the report
+		// failed, so `go test -v` is a complete diagnosis log — the report
 		// table only carries the status code.
 		if errCode != "OK" {
 			t.Logf("[PERF-FAIL] %s => %s: %s", rpc.FullMethod, errCode, firstErrText)
@@ -433,7 +430,7 @@ func TestLivePerf(t *testing.T) {
 		out.WriteString(fmt.Sprintf("| %s | %d | %s |\n", sv, svcCount[sv], (svcMean[sv] / time.Duration(svcCount[sv])).Round(time.Microsecond)))
 	}
 
-	// A non-OK status on the LAST iteration marks the RPC failed. err column carries
+	// A non-OK status on ANY measured iteration marks the RPC failed. err column carries
 	// the gRPC status code (e.g. UNAVAILABLE, FAILED_PRECONDITION) so a failing RPC is
 	// never reported as a silent latency sample — this is what turns a saga/audit
 	// regression from a "slow RPC" into an obvious FAILURE with its code.
@@ -444,7 +441,7 @@ func TestLivePerf(t *testing.T) {
 		return "OK"
 	}
 
-	// Failures subsection: every RPC whose last iteration returned a non-OK status.
+	// Failures subsection: every RPC with a failed measured call.
 	failed := make([]sample, 0)
 	for _, s := range samples {
 		if e := errOf(s); e != "OK" && e != "CAPABILITY_SKIPPED" {
@@ -455,7 +452,7 @@ func TestLivePerf(t *testing.T) {
 	if len(failed) == 0 {
 		out.WriteString("No RPC returned a non-OK gRPC status — every RPC ran its success path.\n")
 	} else {
-		out.WriteString("These RPCs still returned a non-OK gRPC status on their last iteration: the " +
+		out.WriteString("These RPCs returned a non-OK gRPC status on a measured iteration: the " +
 			"seed phase could not construct a fully-valid request for them. They are reported (not " +
 			"silently sampled) so the maintainer can finish their seeding/fixtures.\n\n")
 		out.WriteString("| RPC | api_alias | operation_id | kind | err | detail | p99 | mean | iters |\n|---|---|---|---|---|---|---:|---:|---:|\n")
