@@ -313,6 +313,8 @@ func TestLivePerf(t *testing.T) {
 			iters, note = 3, "cdc subscription: time-to-first-event (real mutation produced)"
 		} else if rpc.FullMethod == "/udb.services.v1.DataBroker/ApproveMigrationPlan" {
 			iters, note = 1, "single-use migration approval"
+		} else if rpc.FullMethod == "/udb.services.v1.DataBroker/CompleteMultipartUpload" {
+			iters, note = 1, "single completion of a real uploaded multipart fixture"
 		} else if rpc.Service == "AuthnService" && rpc.Name == "RefreshToken" {
 			// Refresh-token rotation is single-use. Replaying the same fixture token
 			// is a theft signal in v0.5.7 and correctly revokes every session for the

@@ -164,6 +164,7 @@ func perfSeed(t *testing.T, ctx context.Context, broker servicesv1.DataBrokerCli
 	actorUserID, platformActorID, tenant, project, uuidTenant string) perfSeedResult {
 	t.Helper()
 	fix := newPerfFixtures()
+	loadPreparedBenchmarkFixtures(t, fix, tenant, project)
 	suffix := strings.NewReplacer(".", "", ":", "", "+", "").Replace(time.Now().UTC().Format("20060102150405.000000000"))
 	var cleanups []func()
 	addCleanup := func(fn func()) { cleanups = append(cleanups, fn) }

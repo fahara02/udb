@@ -4300,6 +4300,8 @@ LINT_WORKFLOW_TRIGGER_PATHS = (
     ("scripts/playground_wasm_smoke.mjs", "playground WASM smoke"),
     ("scripts/collect_sdk_bench_results.py", "benchmark collector"),
     ("scripts/bootstrap_benchmark_project_catalog.py", "benchmark catalog bootstrap"),
+    ("scripts/prepare-benchmark-fixtures.py", "served benchmark fixture preparation"),
+    ("scripts/fixtures/benchmark-analytics.sql", "stored analytics benchmark fixtures"),
     ("scripts/check-openapi-api-rules.mjs", "OpenAPI API-rule guard"),
     ("scripts/check-http-api-style.mjs", "HTTP API route-style guard"),
     ("scripts/rest_route_gateway_smoke.py", "REST route gateway smoke guard"),

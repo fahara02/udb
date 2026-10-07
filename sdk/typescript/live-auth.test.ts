@@ -637,7 +637,19 @@ function manifestJSONBody(serviceName: string, methodName: string, fixtures?: Pe
   if (!jsonCell) return undefined;
   const resolved = resolveManifestSeeds(jsonCell, fixtures);
   if (!resolved) return undefined;
-  return JSON.parse(resolved);
+  const body = JSON.parse(resolved);
+  // The manifest uses canonical protobuf JSON; proto-loader expects Timestamp
+  // objects on this wire path. Convert the declared, whole-second fixture.
+  if (serviceName === "DataBroker" && methodName === "time_series_write") {
+    for (const point of body.points ?? []) {
+      if (typeof point.timestamp === "string") {
+        const milliseconds = Date.parse(point.timestamp);
+        if (!Number.isFinite(milliseconds)) throw new Error("invalid benchmark Timestamp");
+        point.timestamp = { seconds: Math.floor(milliseconds / 1000), nanos: (milliseconds % 1000) * 1_000_000 };
+      }
+    }
+  }
+  return body;
 }
 
 function uniquifyPerfBody(
@@ -681,6 +693,8 @@ function fullSurfaceManifestFixtures(): PerfFixtures {
     actor_user_id: "actor-user-1", platform_actor_user_id: "platform-actor-user-1",
     tenant_code: "tenant-code-1", purge_tenant_id: "tenant-1",
     message_type: LIVE_MESSAGE_TYPE, record_id: "record-1", bucket: "bucket-1", object_key: "object-1",
+    multipart_bucket: "bucket-1", multipart_object_key: "multipart-1", multipart_upload_id: "upload-1",
+    multipart_etag: "etag-1", ack_workflow_id: "workflow-ack-1",
     document_id: "document-1", mongo_collection: "collection_1", node_id: "node-1",
     user_id: "user-1", subject: "user:user-1", session_id: "session-1", token: "token-1",
     grant_binding_id: "grant-binding-1", grant_create_user_id: "grant-create-user-1",
@@ -2107,6 +2121,18 @@ async function seedPerfFixtures(
   platformActorUserId: string,
 ): Promise<SeedResult> {
   const fix = fullSurfaceManifestFixtures();
+  for (const key of ["multipart_bucket", "multipart_object_key", "multipart_upload_id", "multipart_etag", "ack_workflow_id"]) fix.clear(key);
+  if (process.env.UDB_BENCH_FIXTURES) {
+    const prepared = JSON.parse(readFileSync(process.env.UDB_BENCH_FIXTURES, "utf8"));
+    if (prepared.schema_version !== 1 || prepared.tenant_id !== tenantId || prepared.project_id !== projectId) {
+      throw new Error("prepared benchmark fixtures do not match the verified tenant/project");
+    }
+    for (const key of ["multipart_bucket", "multipart_object_key", "multipart_upload_id", "multipart_etag", "ack_workflow_id"]) {
+      const value = prepared.fixtures?.[key];
+      if (typeof value !== "string" || !value) throw new Error(`prepared benchmark fixtures missing ${key}`);
+      fix.set(key, value);
+    }
+  }
   // The manifest-only unit fixture uses typed placeholder IDs to prove every body
   // hydrates. A live run must never let those placeholders become authority: every
   // governance dependency is either replaced by a served seed or marked with the
@@ -4569,7 +4595,8 @@ test("live per-RPC perf", {
       // v0.5.7 treats refresh-token replay as credential theft and revokes the
       // principal's sessions. Measure the single-use rotation once; repeating the
       // same fixture token would invalidate the bearer used by every later RPC.
-      const iterations = serviceName === "AuthnService" && methodName === "refresh_token"
+      const iterations = (serviceName === "AuthnService" && methodName === "refresh_token") ||
+        (serviceName === "DataBroker" && ["approve_migration_plan", "complete_multipart_upload"].includes(methodName))
         ? 1
         : itersFor(kind);
       for (let i = 0; i < iterations; i++) {

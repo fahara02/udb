@@ -22,7 +22,7 @@ name: Release · binaries
 #     keeping the common surface (postgres, qdrant, s3, redis, mongodb-native
 #     [rustls, pure-Rust — local mongod dev], the REST backends, otel).
 #   - `-full` currently ships for Linux amd64 only and keeps default features
-#     plus OIDC/WebAuthn. SDK launchers can select it with UDB_BIN_VARIANT=full.
+#     plus OIDC/WebAuthn and WebRTC media. SDK launchers can select it with UDB_BIN_VARIANT=full.
 # A disabled backend's RPCs return FailedPrecondition rather than disappearing.
 #
 # Trigger: this is a `workflow_call` REUSABLE — `release.yml` (the tag-driven
@@ -43,7 +43,7 @@ env:
   PORTABLE_FEATURES: >-
     postgres,mysql,sqlite,qdrant,s3,mongodb-native,neo4j,clickhouse,redis,elasticsearch,weaviate,pinecone,azureblob,gcs,otel,runtime-logging,http-client,oidc,webauthn
   FULL_FEATURES: >-
-    oidc,webauthn
+    oidc,webauthn,webrtc
 
 permissions:
   contents: read

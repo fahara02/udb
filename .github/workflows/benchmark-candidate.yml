@@ -1,0 +1,34 @@
+name: Benchmark · candidate
+
+# Run the same strict release benchmark against this exact source commit before
+# tagging. The marker makes expensive live sweeps explicit in normal commits.
+# Published release evidence still comes from Release -> Benchmark -> Pages.
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/benchmark-candidate.yml"
+      - ".github/workflows/_live-sdk-suite.yml"
+      - ".github/workflows/release-binaries.yml"
+      - "scripts/prepare-benchmark-fixtures.py"
+      - "scripts/fixtures/benchmark-analytics.sql"
+      - "docs/bench-bodies/**"
+      - "docs/generated/bench-bodies.json"
+      - "sdk/go/udbclient/*perf*"
+      - "sdk/go/udbclient/benchmark_fixtures_test.go"
+      - "sdk/python/tests/test_live_conformance.py"
+      - "sdk/typescript/live-auth.test.ts"
+      - "sdk/php/tests/Live/GeneratedRpcSurfaceTest.php"
+
+permissions:
+  contents: read
+
+jobs:
+  benchmark:
+    name: Current broker + all SDK benchmarks
+    if: contains(github.event.head_commit.message, '(benchmark)')
+    uses: ./.github/workflows/_live-sdk-suite.yml
+    with:
+      candidate-build: true
+      checkout-ref: ${{ github.sha }}
+    secrets: inherit

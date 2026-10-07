@@ -1988,8 +1988,8 @@
     "operation_id": "completeMultipartUpload",
     "op_kind": "MUTATION",
     "request_msg": "CompleteMultipartUploadRequest",
-    "body": "`{ \"context\": { \"tenant_id\": \"<seed:tenant_id>\", \"project_id\": \"<seed:project>\", \"purpose\": \"sdk.live.perf\" }, \"bucket\": \"<seed:bucket>\", \"object_key\": \"<seed:object_key>\", \"upload_id\": \"sdk-perf-unknown-upload\", \"parts\": [ { \"part_number\": 1, \"etag\": \"sdk-perf-etag\" } ] }`",
-    "notes": "unknown `upload_id` exercises the tenant-scoped NoSuchUpload refusal; a real completion needs an Initiate + part upload first."
+    "body": "`{ \"context\": { \"tenant_id\": \"<seed:tenant_id>\", \"project_id\": \"<seed:project>\", \"purpose\": \"sdk.live.perf\" }, \"bucket\": \"<seed:multipart_bucket>\", \"object_key\": \"<seed:multipart_object_key>\", \"upload_id\": \"<seed:multipart_upload_id>\", \"parts\": [{ \"part_number\": 1, \"etag\": \"<seed:multipart_etag>\" }] }`",
+    "notes": "Single completion of a real InitiateMultipartUpload plus PUT fixture prepared after each CI reset. Upload ID and ETag come from the served path and object store; setup is excluded from latency."
   },
   {
     "file": "data_broker.md",
@@ -2696,7 +2696,7 @@
     "operation_id": "timeSeriesWrite",
     "op_kind": "MUTATION",
     "request_msg": "TimeSeriesWriteRequest",
-    "body": "`{ \"context\": { \"tenant_id\": \"<seed:tenant_id>\", \"project_id\": \"<seed:project>\", \"purpose\": \"sdk.live.perf\" }, \"resource\": { \"backend\": \"clickhouse\", \"resource_name\": \"<seed:ts_table>\" }, \"points\": [{ \"timestamp\": { \"seconds\": 1767225600, \"nanos\": 0 }, \"tags\": { \"host\": \"a\" }, \"values\": { \"cpu\": 0.5 } }] }`",
+    "body": "`{ \"context\": { \"tenant_id\": \"<seed:tenant_id>\", \"project_id\": \"<seed:project>\", \"purpose\": \"sdk.live.perf\" }, \"resource\": { \"backend\": \"clickhouse\", \"resource_name\": \"<seed:ts_table>\" }, \"points\": [{ \"timestamp\": \"2026-01-01T00:00:00Z\", \"tags\": { \"host\": \"a\" }, \"values\": { \"cpu\": 0.5 } }] }`",
     "notes": "TimeSeriesPoint = `{timestamp(Timestamp), tags<map str,str>, values<map str,double>, fields(Struct)}`. `idempotency_key` optional."
   },
   {
@@ -4568,8 +4568,8 @@
     "operation_id": "ackWorkflowStep",
     "op_kind": "MUTATION",
     "request_msg": "AckWorkflowStepRequest",
-    "body": "`{ \"tenant_id\": \"<seed:tenant_id>\", \"workflow_id\": \"<seed:workflow_id>\", \"step_index\": 0, \"outcome\": \"WORKFLOW_STEP_OUTCOME_SUCCEEDED\", \"output\": \"{\\\"ok\\\":true}\" }`",
-    "notes": "acknowledges the in-flight step of the seeded workflow; an ack for a step that is not in flight returns FAILED_PRECONDITION."
+    "body": "`{ \"tenant_id\": \"<seed:tenant_id>\", \"workflow_id\": \"<seed:ack_workflow_id>\", \"step_index\": 0, \"outcome\": \"WORKFLOW_STEP_OUTCOME_SUCCEEDED\", \"output\": \"{\\\"ok\\\":true}\" }`",
+    "notes": "acknowledges step zero of a separate, real one-step workflow; CI waits for dispatch before measuring, so SignalWorkflow cannot consume its state; an ack for a step that is not in flight returns FAILED_PRECONDITION."
   },
   {
     "file": "workflow.md",

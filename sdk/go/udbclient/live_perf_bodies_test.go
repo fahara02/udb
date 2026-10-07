@@ -63,6 +63,8 @@ func TestLivePerfExplicitBodyCoverage(t *testing.T) {
 		"grant_transfer_from_user_id": "user-grant-from-1",
 		"finalize_reference_id":       "finalize-ref-1",
 		"message_type":                liveMessageType, "record_id": "record-1", "bucket": "bucket-1", "object_key": "object-1",
+		"multipart_bucket": "bucket-1", "multipart_object_key": "multipart-1", "multipart_upload_id": "upload-1",
+		"multipart_etag": "etag-1", "ack_workflow_id": "workflow-ack-1",
 		"document_id": "document-1", "mongo_collection": "collection_1", "node_id": "node-1",
 		"user_id": "user-1", "subject": "user:user-1", "session_id": "session-1", "token": "token-1",
 		"refresh_token": "refresh-1", "csrf_token": "csrf-1", "code": "123456", "role_id": "role-1",
@@ -410,9 +412,9 @@ func TestManifestAuthorityIdentityFollowsSelectedCredential(t *testing.T) {
 	for key, value := range map[string]string{
 		"tenant_id": "tenant-1", "tenant": "tenant-1", "project": "project-1",
 		"user_id": "target-user", "subject": "user:target-user", "role_code": "reader",
-		"actor_user_id": "11111111-1111-4111-8111-111111111111",
+		"actor_user_id":          "11111111-1111-4111-8111-111111111111",
 		"platform_actor_user_id": "22222222-2222-4222-8222-222222222222",
-		"gov_exp": "1900000000",
+		"gov_exp":                "1900000000",
 	} {
 		fix.set(key, value)
 	}

@@ -64,7 +64,13 @@ deploys may publish only the exact pinned SHA-256 of the committed v0.4.28
 historical JSON; committed schema-v2/canonical evidence is rejected, and new
 evidence is published only by the Release -> Benchmark artifact chain. The
 historical JSON is visibly marked legacy/incomplete and never rendered as green
-proof. Per-RPC
+proof. Before tagging, a normal main commit marked `(benchmark)` runs the same
+strict suite against its exact source binary in CI. Candidate results cannot
+deploy release evidence. Each isolated SDK reset prepares a real uploaded
+multipart part, a separate dispatched one-step workflow, and stored input
+records for the ETL-fed analytics read RPCs. Setup is excluded from RPC latency;
+the consumed multipart completion is measured once. The full Linux release
+includes WebRTC media alongside OIDC/WebAuthn. Per-RPC
 rows prefer
 descriptor-derived `operation_id`, then `api_alias`, then the legacy
 `service/rpc` wire identity. The dashboard keeps the wire RPC as row detail so

@@ -1485,6 +1485,24 @@ def test_platform_perf_identity_routing_is_narrow():
     assert not requires_platform_perf_identity(TenantServiceClient, "PurgeTenant")
 
 
+def test_timeseries_benchmark_body_keeps_resource_authority():
+    method = next(m for cc, m in ALL_RPCS if cc is DataBrokerClient and m.name == "TimeSeriesWrite")
+    fix = PerfFixtures()
+    fix.set("tenant_id", "tenant-1")
+    fix.set("project", "project-1")
+    fix.set("ts_table", "sdk_perf_ts")
+    request = perf_real_body(DataBrokerClient, method, Metadata(
+        tenant_id="tenant-1", project_id="project-1"), fix)
+    assert request.resource.backend == "clickhouse"
+    assert request.resource.resource_name == "sdk_perf_ts"
+    # The explicit resource-based contract does not name the unrelated SQL
+    # entity. A legacy fallback used to inject SdkLiveRecord after failing to
+    # parse the Timestamp's JSON representation, changing its authority.
+    assert request.message_type == ""
+    assert len(request.points) == 1
+    assert request.points[0].timestamp.seconds == 1767225600
+
+
 def postprocess_perf_body(client_cls, method, request, meta: Metadata, fix: "PerfFixtures") -> None:
     """Adjust doc-grounded bodies where the valid body is intentionally per-call.
 
@@ -2289,6 +2307,18 @@ def perf_seed(
     fix = PerfFixtures()
     suffix = uuid.uuid4().hex
     tenant, project = meta.tenant_id, meta.project_id
+    prepared_path = os.getenv("UDB_BENCH_FIXTURES", "")
+    if prepared_path:
+        prepared = json.loads(Path(prepared_path).read_text(encoding="utf-8"))
+        if (prepared.get("schema_version") != 1 or prepared.get("tenant_id") != tenant
+                or prepared.get("project_id") != project):
+            raise ValueError("prepared benchmark fixtures do not match the verified tenant/project")
+        for key in ("multipart_bucket", "multipart_object_key", "multipart_upload_id",
+                    "multipart_etag", "ack_workflow_id"):
+            value = prepared.get("fixtures", {}).get(key)
+            if not isinstance(value, str) or not value:
+                raise ValueError(f"prepared benchmark fixtures missing {key}")
+            fix.set(key, value)
     md = meta.to_grpc_metadata()
     platform_md = platform_meta.to_grpc_metadata()
     cleanups: list = []
@@ -4172,6 +4202,7 @@ TERMINAL_PERF_METHODS = {
 SINGLE_CALL_PERF_METHODS = {
     "VerifyOTP", "VerifyMfaChallenge", "SendOTP", "ResendOTP", "ResetPassword",
     "ChangePassword", "RefreshToken", "RefreshSession", "Authenticate",
+    "CompleteMultipartUpload",
 }
 
 

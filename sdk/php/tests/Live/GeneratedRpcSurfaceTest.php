@@ -1785,6 +1785,7 @@ function phpManifestFixtureValue(string $key): string
 function phpFullSurfaceManifestFixtures(): PerfFixturesPhp
 {
     $fix = new PerfFixturesPhp();
+
     foreach (phpBenchBodyEntries() as $entry) {
         foreach (preg_match_all('/<seed:([^>]+)>/', (string) ($entry['body'] ?? ''), $m) ? $m[1] : [] as $key) {
             $key = strtolower((string) $key);
@@ -3666,6 +3667,19 @@ function perfSeedPhp(array $s): array
     $project = $meta->projectId;
     $suffix = bin2hex(random_bytes(8));
     $fix = new PerfFixturesPhp();
+    $preparedPath = getenv('UDB_BENCH_FIXTURES');
+    if ($preparedPath !== false && $preparedPath !== '') {
+        $prepared = json_decode(file_get_contents($preparedPath), true, 512, JSON_THROW_ON_ERROR);
+        if (($prepared['schema_version'] ?? null) !== 1 || ($prepared['tenant_id'] ?? null) !== $tenant
+            || ($prepared['project_id'] ?? null) !== $project) {
+            throw new RuntimeException('prepared benchmark fixtures do not match the verified tenant/project');
+        }
+        foreach (['multipart_bucket', 'multipart_object_key', 'multipart_upload_id', 'multipart_etag', 'ack_workflow_id'] as $key) {
+            $value = $prepared['fixtures'][$key] ?? null;
+            if (!is_string($value) || $value === '') throw new RuntimeException("prepared benchmark fixtures missing {$key}");
+            $fix->set($key, $value);
+        }
+    }
     $cleanups = [];
 
     foreach ([
@@ -5168,7 +5182,7 @@ it('measures per-RPC latency', function () {
             $iters = $svc === 'AuthnService' && $rpcName === 'refresh_token'
                 ? 1
                 : $itersFor($kind);
-            if ($rpcName === 'approve_migration_plan') {
+            if (in_array($rpcName, ['approve_migration_plan', 'complete_multipart_upload'], true)) {
                 $iters = 1;
             }
             // Classify streaming by generated stub signature, not by invoking a
