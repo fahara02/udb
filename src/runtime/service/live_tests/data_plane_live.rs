@@ -2342,17 +2342,24 @@ async fn served_select_fallback_cannot_read_a_foreign_tenant_live() {
         .push(col("payload", "JSONB", false));
     let svc = dp_service(&dsn, manifest).await;
 
-    let foreign = served_select_rows(
-        &svc,
-        &attacker,
-        MSG,
-        json!({"tenant_id": victim, "payload": {"$contains": {"kind": "secret"}}}),
-        false,
-    )
-    .await;
-    assert!(
-        foreign.records_json.is_empty(),
-        "a fallback-SQL read naming another tenant must return nothing"
+    // Naming another tenant is refused by name rather than answered with zero rows.
+    let foreign = svc
+        .select(with_ctx(
+            SelectRequest {
+                message_type: MSG.to_string(),
+                filter: json_to_struct(
+                    &json!({"tenant_id": victim, "payload": {"$contains": {"kind": "secret"}}}),
+                ),
+                ..SelectRequest::default()
+            },
+            &attacker,
+        ))
+        .await
+        .expect_err("a fallback-SQL read naming another tenant must be refused");
+    assert_eq!(foreign.code(), tonic::Code::PermissionDenied, "{foreign:?}");
+    assert_eq!(
+        crate::runtime::error_reasons::reason_of(&foreign).as_deref(),
+        Some("UDB_TENANT_MISMATCH")
     );
 
     let own = served_select_rows(

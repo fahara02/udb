@@ -179,7 +179,7 @@ async fn data_plane_select_never_returns_foreign_tenant_rows_live() {
     let ctx_a = tenant_context(&tenant_a);
 
     // Attack 1 — FORGED foreign-tenant predicate: caller (tenant A) asks for
-    // {tenant_id: B}. Compiler ANDs tenant_id = A ⇒ zero rows.
+    // {tenant_id: B}. Refused by name; B's rows are never read.
     let forged = SelectRequest {
         context: None,
         message_type: MESSAGE.to_string(),
@@ -189,14 +189,14 @@ async fn data_plane_select_never_returns_foreign_tenant_rows_live() {
         limit: 100,
         ..Default::default()
     };
-    let (rows, _) = runtime
+    let err = runtime
         .select(&manifest, forged, ctx_a.clone())
         .await
-        .expect("served select (forged tenant filter) must succeed");
-    assert!(
-        rows.records_json.is_empty(),
-        "forged {{tenant_id: B}} select as tenant A must return 0 rows, got {}",
-        rows.records_json.len()
+        .expect_err("forged {tenant_id: B} select as tenant A must be refused");
+    assert_eq!(err.code(), tonic::Code::PermissionDenied, "{err:?}");
+    assert_eq!(
+        crate::runtime::error_reasons::reason_of(&err).as_deref(),
+        Some("UDB_TENANT_MISMATCH")
     );
 
     // Attack 2 — OMITTED tenant predicate: a bare list. Either the planner
@@ -251,7 +251,7 @@ async fn data_plane_delete_cannot_touch_foreign_tenant_rows_live() {
     let ctx_a = tenant_context(&tenant_a);
 
     // Attack — tenant A tries to delete tenant B's row b1 by naming it exactly.
-    let resp = runtime
+    let err = runtime
         .delete(
             &manifest,
             MESSAGE,
@@ -262,10 +262,11 @@ async fn data_plane_delete_cannot_touch_foreign_tenant_rows_live() {
             MutationGuards::default(),
         )
         .await
-        .expect("served delete must succeed (0 rows), not error");
+        .expect_err("cross-tenant delete as tenant A must be refused");
+    assert_eq!(err.code(), tonic::Code::PermissionDenied, "{err:?}");
     assert_eq!(
-        resp.affected_rows, 0,
-        "cross-tenant delete as tenant A must affect 0 rows"
+        crate::runtime::error_reasons::reason_of(&err).as_deref(),
+        Some("UDB_TENANT_MISMATCH")
     );
     assert_eq!(
         count_tenant_rows(&pool, &schema, &tenant_b).await,
@@ -325,7 +326,7 @@ async fn data_plane_update_cannot_touch_foreign_tenant_rows_live() {
     let ctx_a = tenant_context(&tenant_a);
 
     // Attack — tenant A tries to overwrite EVERY tenant-B row's label.
-    let resp = runtime
+    let err = runtime
         .update(
             &manifest,
             MESSAGE,
@@ -339,10 +340,11 @@ async fn data_plane_update_cannot_touch_foreign_tenant_rows_live() {
             MutationGuards::default(),
         )
         .await
-        .expect("served update must succeed (0 rows), not error");
+        .expect_err("cross-tenant update as tenant A must be refused");
+    assert_eq!(err.code(), tonic::Code::PermissionDenied, "{err:?}");
     assert_eq!(
-        resp.affected_rows, 0,
-        "cross-tenant update as tenant A must affect 0 rows"
+        crate::runtime::error_reasons::reason_of(&err).as_deref(),
+        Some("UDB_TENANT_MISMATCH")
     );
     assert_eq!(
         label_of(&pool, &schema, "b1").await,
