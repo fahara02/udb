@@ -32,7 +32,7 @@ type WriteMode int
 const (
 	// WriteInsert drops generated and exclude_from_insert columns.
 	WriteInsert WriteMode = iota
-	// WriteUpdate drops generated, exclude_from_update, primary-key and tenant columns.
+	// WriteUpdate drops generated, exclude_from_update, primary-key, tenant and project columns.
 	WriteUpdate
 )
 
@@ -62,10 +62,15 @@ func EncodeRecord(m proto.Message, mode WriteMode) (Record, error) {
 	}
 	pr := m.ProtoReflect()
 	fields := pr.Descriptor().Fields()
+	tenant, project := "", ""
+	if mode == WriteUpdate {
+		tenant = TenantColumn(m)
+		project = ProjectColumn(m)
+	}
 	for i := 0; i < fields.Len(); i++ {
 		fd := fields.Get(i)
 		c := columnOptions(fd)
-		if !carries(c, mode) {
+		if !carries(c, mode) || (mode == WriteUpdate && (string(fd.Name()) == tenant || string(fd.Name()) == project)) {
 			delete(rec, string(fd.Name()))
 			continue
 		}

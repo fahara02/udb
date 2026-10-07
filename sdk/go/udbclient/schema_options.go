@@ -98,14 +98,55 @@ func PrimaryKey(m proto.Message) string {
 	return ""
 }
 
-// TenantColumn is the column holding the row's tenant: the field annotated
-// tenant_column, else a field named tenant_id, else "" (a tenant-wide table).
+var tenantColumnCandidates = []string{"tenant_id", "_tenant_id", "org_id", "institution_id"}
+var projectColumnCandidates = []string{"project_id", "_project_id"}
+
+// TenantColumn is the proto field holding the row's tenant, resolved from table
+// security, its tenant_column flag, then the broker's conventional tenant names.
 func TenantColumn(m proto.Message) string {
-	if cols := fieldsWhere(m, func(fd protoreflect.FieldDescriptor) bool { return columnOptions(fd).GetTenantColumn() }); len(cols) > 0 {
-		return cols[0]
+	return scopeColumn(m, tableSecurityOptions(m).GetTenantColumn(), func(column *udbcommonv1.ColumnOptions) bool {
+		return column.GetTenantColumn()
+	}, tenantColumnCandidates)
+}
+
+// ProjectColumn is the proto field holding the row's project. Resolution matches
+// the broker: table security, the column's project_column flag, then conventional
+// project names. A column_name alias still returns the proto field used by records.
+func ProjectColumn(m proto.Message) string {
+	return scopeColumn(m, tableSecurityOptions(m).GetProjectColumn(), func(column *udbcommonv1.ColumnOptions) bool {
+		return column.GetProjectColumn()
+	}, projectColumnCandidates)
+}
+
+func scopeColumn(m proto.Message, declared string, flagged func(*udbcommonv1.ColumnOptions) bool, candidates []string) string {
+	declared = strings.TrimSpace(declared)
+	matches := func(fd protoreflect.FieldDescriptor, name string, fold bool) bool {
+		column := columnOptions(fd)
+		if column == nil {
+			return false
+		}
+		if fold {
+			return strings.EqualFold(string(fd.Name()), name) || strings.EqualFold(column.GetColumnName(), name)
+		}
+		return string(fd.Name()) == name || strings.ToLower(column.GetColumnName()) == name
 	}
-	if m.ProtoReflect().Descriptor().Fields().ByName("tenant_id") != nil {
-		return "tenant_id"
+	if declared != "" {
+		if fields := fieldsWhere(m, func(fd protoreflect.FieldDescriptor) bool { return matches(fd, declared, false) }); len(fields) > 0 {
+			return fields[0]
+		}
+	}
+	if fields := fieldsWhere(m, func(fd protoreflect.FieldDescriptor) bool { return flagged(columnOptions(fd)) }); len(fields) > 0 {
+		return fields[0]
+	}
+	if fields := fieldsWhere(m, func(fd protoreflect.FieldDescriptor) bool {
+		for _, name := range candidates {
+			if matches(fd, name, true) {
+				return true
+			}
+		}
+		return false
+	}); len(fields) > 0 {
+		return fields[0]
 	}
 	return ""
 }

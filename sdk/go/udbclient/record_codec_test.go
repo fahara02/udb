@@ -2,14 +2,76 @@ package udbclient
 
 import (
 	"encoding/json"
+	"strings"
 	"testing"
 	"time"
 
+	commonv1 "github.com/fahara02/udb/sdk/go/gen/udb/core/common/v1"
 	storagev1 "github.com/fahara02/udb/sdk/go/gen/udb/core/storage/entity/v1"
+	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/reflect/protodesc"
+	"google.golang.org/protobuf/reflect/protoreflect"
+	"google.golang.org/protobuf/reflect/protoregistry"
+	"google.golang.org/protobuf/types/dynamicpb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 const codecTenant = "0190f1b2-0000-7000-8000-0000000000aa"
+
+func TestUpdateCodecExcludesAliasedScopeColumns(t *testing.T) {
+	for _, declared := range []bool{false, true} {
+		t.Run(map[bool]string{false: "column flags", true: "table security"}[declared], func(t *testing.T) {
+			model := protodesc.ToFileDescriptorProto((&storagev1.File{}).ProtoReflect().Descriptor().ParentFile())
+			entity := model.GetMessageType()[0]
+			security := proto.Clone(proto.GetExtension(entity.GetOptions(), commonv1.E_DbTableSecurity).(*commonv1.DbTableSecurityOptions)).(*commonv1.DbTableSecurityOptions)
+			security.TenantColumn, security.ProjectColumn = "", ""
+			for _, field := range entity.GetField() {
+				if field.GetName() != "tenant_id" && field.GetName() != "project_id" {
+					continue
+				}
+				kind := strings.TrimSuffix(field.GetName(), "_id")
+				field.Name = proto.String("owned_" + kind)
+				column := proto.Clone(proto.GetExtension(field.GetOptions(), commonv1.E_PgColumn).(*commonv1.ColumnOptions)).(*commonv1.ColumnOptions)
+				column.ColumnName = "scope_" + kind
+				column.TenantColumn, column.ProjectColumn = !declared && kind == "tenant", !declared && kind == "project"
+				proto.SetExtension(field.Options, commonv1.E_PgColumn, column)
+				if declared && kind == "tenant" {
+					security.TenantColumn = column.ColumnName
+				}
+				if declared && kind == "project" {
+					security.ProjectColumn = column.ColumnName
+				}
+			}
+			proto.SetExtension(entity.Options, commonv1.E_DbTableSecurity, security)
+			descriptor, err := protodesc.NewFile(model, protoregistry.GlobalFiles)
+			if err != nil {
+				t.Fatal(err)
+			}
+			message := dynamicpb.NewMessage(descriptor.Messages().ByName("File"))
+			message.Set(message.Descriptor().Fields().ByName("owned_tenant"), protoreflect.ValueOfString(codecTenant))
+			message.Set(message.Descriptor().Fields().ByName("owned_project"), protoreflect.ValueOfString("project-a"))
+			if TenantColumn(message) != "owned_tenant" || ProjectColumn(message) != "owned_project" {
+				t.Fatal("scope discovery did not resolve the physical column aliases")
+			}
+			insert, err := EncodeRecord(message, WriteInsert)
+			if err != nil {
+				t.Fatal(err)
+			}
+			update, err := EncodeRecord(message, WriteUpdate)
+			if err != nil {
+				t.Fatal(err)
+			}
+			for _, field := range []string{"owned_tenant", "owned_project"} {
+				if _, ok := insert[field]; !ok {
+					t.Fatalf("insert dropped scope field %s", field)
+				}
+				if _, ok := update[field]; ok {
+					t.Fatalf("update would rewrite scope field %s", field)
+				}
+			}
+		})
+	}
+}
 
 // The column annotations drive every encode rule: an empty NOT NULL UUID is
 // dropped (its default applies), an empty nullable column is NULL, an enum in a
@@ -42,11 +104,12 @@ func TestEncodeRecordFollowsColumnAnnotations(t *testing.T) {
 		t.Errorf("tenant_id = %v", rec["tenant_id"])
 	}
 
+	file.ProjectId = "owned-project"
 	update, err := EncodeRecord(file, WriteUpdate)
 	if err != nil {
 		t.Fatalf("encode update: %v", err)
 	}
-	for _, owned := range []string{"file_id", "tenant_id"} {
+	for _, owned := range []string{"file_id", "tenant_id", "project_id"} {
 		if _, present := update[owned]; present {
 			t.Errorf("an update must not carry %s", owned)
 		}

@@ -1162,7 +1162,7 @@ pub(crate) fn build_upsert_logical_write(
 ///
 /// #3 soft-delete-is-hard-delete: when the resolved table is annotated
 /// `soft_delete`, the emitted statement is NOT a physical `DELETE` but an
-/// idempotent `UPDATE … SET <soft_delete_column> = NOW()` that stamps the
+/// `UPDATE … SET <soft_delete_column> = NOW()` that stamps a live row's
 /// declared tombstone column using the SAME WHERE/tenant/project predicate the
 /// physical delete would have used. The SET clause binds no parameter, so
 /// `parameter_columns` and the `$N` filter numbering are byte-identical to the
@@ -1296,14 +1296,16 @@ pub fn build_delete_plan(
             qi(&table.table),
             where_clause
         ),
-        // Soft-delete table, valid metadata: idempotent tombstone UPDATE that
-        // reuses the exact delete WHERE/tenant/project predicate.
+        // Soft-delete table, valid metadata: stamp only live rows. A tombstone
+        // is absent from ordinary reads and must not count as another deletion.
+        // Group the caller predicate so OR cannot bypass the live-row guard.
         (true, Some(column)) => format!(
-            "UPDATE {}.{} SET {} = NOW() WHERE {}",
+            "UPDATE {}.{} SET {} = NOW() WHERE ({}) AND {} IS NULL",
             qi(&table.schema),
             qi(&table.table),
             qi(column),
-            where_clause
+            where_clause,
+            qi(column)
         ),
         // Soft-delete table, MALFORMED metadata: an error is already queued, so
         // fail closed with an inert (never-matching) UPDATE — we must never emit
@@ -3746,7 +3748,7 @@ mod tests {
             // the column was the only thing checked — so the soft-delete
             // tombstone, which the bridged emitter always declines and therefore
             // always lands on this SQL, carries the backstop too.
-            "UPDATE \"public\".\"widgets\" SET \"deleted_at\" = NOW() WHERE (\"id\" = $1 AND \"tenant_id\" = $2) AND \"tenant_id\" = $3"
+            "UPDATE \"public\".\"widgets\" SET \"deleted_at\" = NOW() WHERE ((\"id\" = $1 AND \"tenant_id\" = $2) AND \"tenant_id\" = $3) AND \"deleted_at\" IS NULL"
         );
         assert!(
             !plan.sql.to_ascii_uppercase().contains("DELETE FROM"),

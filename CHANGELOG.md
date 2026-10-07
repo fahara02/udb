@@ -7,10 +7,9 @@ release line was tagged.
 
 ## [0.5.29] - 2026-10-07
 
-This release closes the gaps that made every project write its own wrapper
-around UDB. It covers data correctness, errors that say what to do, a Go SDK
-with typed tables, transactions and durable consumers, and operations commands
-that replace hand-kept scripts.
+This release improves data correctness, error details, typed Go tables,
+transactions and operations commands. Further SDK, local development and
+consumer migration work follows in the no-wrapper release plan.
 
 ### Added
 
@@ -95,9 +94,6 @@ that replace hand-kept scripts.
   enum and `Inspect` replace message matching.
 - **`udbtest`:** an in-memory broker and the `conformance.RunTable` suite, which
   also runs against a live broker in CI.
-- **Generated code skips nothing.** Repeated fields, maps, messages in JSON
-  columns and enums from other packages all round-trip. A message stored in a
-  non-JSON column fails generation and names the field.
 - **Every RPC's metadata states its listener, scopes, credential types and
   retry rules** (`RPCInfo.Describe`, `DescribeRPC`).
 
@@ -133,6 +129,12 @@ that replace hand-kept scripts.
 
 ### Changed
 
+- **Go updates omit immutable tenant and project columns**, including fields
+  whose column annotations or table security declare physical column aliases.
+  Typed CAS and transaction updates no longer attempt to rewrite those columns.
+- **Deleting an already soft-deleted row affects zero rows.** With
+  `require_affected: 1`, the broker returns `UDB_NO_ROWS_AFFECTED`; typed Go
+  `Delete` returns `ErrNotFound`.
 - **A failed mutation inside a transaction keeps its own error** (code, reason
   and detail), instead of being re-wrapped as INTERNAL.
 - **A plain `Select` on a table with PII columns no longer needs
