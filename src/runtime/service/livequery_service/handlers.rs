@@ -142,6 +142,7 @@ pub(crate) async fn subscribe(
                 &tenant_id,
                 &project_id,
                 i64::from(resume_replay_limit()),
+                svc.metrics.clone(),
             );
             cdc.journal_head_watermark(&source.cdc_topic)
                 .await

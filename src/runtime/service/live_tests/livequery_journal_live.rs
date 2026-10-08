@@ -211,3 +211,240 @@ async fn live_livequery_non_leader_streams_own_tenant_deltas_from_the_journal() 
         .execute(&pool)
         .await;
 }
+
+fn journal_scan_count(metrics: &crate::metrics::PrometheusMetrics, source: &str) -> u64 {
+    metric_sum(
+        metrics,
+        &format!("udb_livequery_journal_scans_total{{source=\"{source}\"}} "),
+    )
+}
+
+fn metric_sum(metrics: &crate::metrics::PrometheusMetrics, prefix: &str) -> u64 {
+    metrics
+        .gather_text("")
+        .lines()
+        .filter(|line| line.starts_with(prefix))
+        .map(|line| {
+            line.split_whitespace()
+                .last()
+                .expect("metric value")
+                .parse::<u64>()
+                .expect("non-negative integer counter or gauge")
+        })
+        .sum()
+}
+
+fn filtered_watch_request(tenant: &str, watcher: usize) -> Request<lq_pb::SubscribeRequest> {
+    let mut request = subscribe_request(tenant);
+    let predicate =
+        |op: lq_pb::LiveQueryComparison, value: &str, values: &[&str]| lq_pb::LiveQueryPredicate {
+            field: "lock_name".into(),
+            op: op as i32,
+            value: value.into(),
+            values: values.iter().map(|value| (*value).to_string()).collect(),
+        };
+    if watcher % 2 == 0 {
+        // IN(alpha, beta) AND (beta OR gamma) matches only beta. Applying just
+        // one of the two clauses leaks alpha or gamma into the stream.
+        request.get_mut().filters = vec![predicate(
+            lq_pb::LiveQueryComparison::In,
+            "",
+            &["alpha", "beta"],
+        )];
+        request.get_mut().any_of = vec![lq_pb::LiveQueryAnyOf {
+            predicates: vec![
+                predicate(lq_pb::LiveQueryComparison::Eq, "beta", &[]),
+                predicate(lq_pb::LiveQueryComparison::Eq, "gamma", &[]),
+            ],
+        }];
+    } else {
+        request.get_mut().filters = vec![predicate(lq_pb::LiveQueryComparison::Eq, "gamma", &[])];
+    }
+    request
+}
+
+async fn next_data_change<S>(stream: &mut S) -> lq_pb::LiveQueryChange
+where
+    S: futures::Stream<Item = Result<lq_pb::SubscribeResponse, tonic::Status>> + Unpin,
+{
+    loop {
+        let frame = stream
+            .next()
+            .await
+            .expect("the live subscription must stay open")
+            .expect("the live subscription must not fail");
+        match frame.payload {
+            Some(lq_pb::subscribe_response::Payload::Change(change)) => return change,
+            Some(lq_pb::subscribe_response::Payload::Heartbeat(_)) => {}
+            other => panic!("unexpected frame after the snapshot: {other:?}"),
+        }
+    }
+}
+
+/// LQ3/LQ4: 1,000 actual served subscriptions share a real PostgreSQL journal
+/// poll, retain each watcher's IN/OR filter on snapshots and deltas, and stop
+/// polling after the clients disconnect. No CDC leader or in-memory store can
+/// supply these deltas. The scan count is measured at the production SQL calls.
+#[tokio::test]
+#[ignore = "requires live Postgres; runs in the CI native live lane"]
+async fn live_livequery_thousand_watchers_share_scans_and_keep_filter_parity() {
+    const WATCHERS: usize = 1_000;
+    let _guard = live_native_service_db_lock().lock().await;
+    let pool = live_pg_pool().await;
+    migrate_native_service_db(&pool).await;
+    let runtime = live_runtime().await;
+    let topic = lock_cdc_topic();
+    let tenant = Uuid::new_v4().to_string();
+    let foreign = Uuid::new_v4().to_string();
+    // Fixture rows exercise the mediated snapshot read, independently of the
+    // journal images that later exercise the delta evaluator.
+    for (scope, name) in [
+        (&tenant, "alpha"),
+        (&tenant, "beta"),
+        (&tenant, "gamma"),
+        (&foreign, "beta"),
+    ] {
+        sqlx::query(
+            "INSERT INTO udb_lock.locks (tenant_id, lock_name, owner_id) VALUES ($1, $2, $3)",
+        )
+        .bind(scope)
+        .bind(name)
+        .bind("live-query-watch-proof")
+        .execute(&pool)
+        .await
+        .expect("seed real snapshot row");
+    }
+    let metrics = Arc::new(crate::metrics::PrometheusMetrics::new().expect("metrics registry"));
+    let service = LiveQueryServiceImpl::new()
+        .with_runtime(Some(runtime.clone()))
+        .with_cdc_engine(Some(idle_cdc_engine(pool.clone())))
+        .with_channels(Some(runtime.channels().clone()))
+        .with_metrics(metrics.clone());
+    let mut streams = Vec::with_capacity(WATCHERS);
+    tokio::time::timeout(Duration::from_secs(120), async {
+        for watcher in 0..WATCHERS {
+            let mut stream = service
+                .subscribe(filtered_watch_request(&tenant, watcher))
+                .await
+                .unwrap_or_else(|err| panic!("watcher {watcher} must be admitted: {err:?}"))
+                .into_inner();
+            let first = stream
+                .next()
+                .await
+                .expect("snapshot")
+                .expect("snapshot read");
+            let Some(lq_pb::subscribe_response::Payload::Snapshot(snapshot)) = first.payload else {
+                panic!("watcher {watcher} must receive its snapshot first");
+            };
+            assert_eq!(snapshot.row_count, 1, "watcher {watcher}: {snapshot:?}");
+            assert_eq!(snapshot.rows_json.len(), 1);
+            let row: serde_json::Value = serde_json::from_str(&snapshot.rows_json[0]).unwrap();
+            let expected = if watcher % 2 == 0 { "beta" } else { "gamma" };
+            assert_eq!(row["lock_name"], expected, "watcher {watcher}: {row}");
+            assert_eq!(row["tenant_id"], tenant, "snapshot tenant leak");
+            streams.push(stream);
+        }
+    })
+    .await
+    .expect("all 1,000 subscriptions must open within the setup budget");
+    tokio::time::timeout(Duration::from_secs(5), async {
+        while metric_sum(&metrics, "udb_livequery_active_streams{") != WATCHERS as u64 {
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+    })
+    .await
+    .expect("all admitted stream tasks must publish their active gauge");
+
+    // Measure only steady-state idle SQL, excluding the necessary snapshot/head
+    // reads during admission. A poll per watcher would issue thousands here.
+    let before = journal_scan_count(&metrics, "shared");
+    let started = tokio::time::Instant::now();
+    tokio::time::sleep(Duration::from_secs(2)).await;
+    let elapsed = started.elapsed();
+    let scans = journal_scan_count(&metrics, "shared") - before;
+    let ceiling = elapsed.as_millis() as u64 / 500 + 2;
+    assert!(
+        scans > 0 && scans <= ceiling,
+        "{WATCHERS} watchers: {scans} scans in {elapsed:?}"
+    );
+    assert_eq!(
+        journal_scan_count(&metrics, "catch_up"),
+        0,
+        "idle watchers must not scan privately"
+    );
+
+    let mut events = vec![journal_lock_change(&pool, &topic, &foreign, "beta").await];
+    events.push(journal_lock_change(&pool, &topic, &tenant, "alpha").await);
+    let beta = journal_lock_change(&pool, &topic, &tenant, "beta").await;
+    let gamma = journal_lock_change(&pool, &topic, &tenant, "gamma").await;
+    events.extend([beta, gamma]);
+    tokio::time::timeout(Duration::from_secs(30), async {
+        for (watcher, stream) in streams.iter_mut().enumerate() {
+            let change = next_data_change(stream).await;
+            let (expected_event, expected_name) = if watcher % 2 == 0 {
+                (beta, "beta")
+            } else {
+                (gamma, "gamma")
+            };
+            assert_eq!(
+                change.event_id,
+                expected_event.to_string(),
+                "watcher {watcher}"
+            );
+            let row: serde_json::Value = serde_json::from_str(&change.row_json).unwrap();
+            assert_eq!(row["lock_name"], expected_name, "delta predicate mismatch");
+            assert_eq!(row["tenant_id"], tenant, "delta tenant leak");
+        }
+    })
+    .await
+    .expect("every watcher must receive its own matching journal delta");
+    // Keep reading all watchers concurrently: an omitted filter clause or a
+    // duplicate journal delivery must fail, even when its first delta matched.
+    let unexpected = tokio::time::timeout(
+        Duration::from_secs(1),
+        futures::future::select_all(
+            streams
+                .iter_mut()
+                .map(|stream| Box::pin(next_data_change(stream))),
+        ),
+    )
+    .await;
+    assert!(
+        unexpected.is_err(),
+        "a watcher received an extra or duplicate data change"
+    );
+    drop(unexpected);
+    assert_eq!(
+        metric_sum(&metrics, "udb_livequery_delta_forwarded_total{"),
+        WATCHERS as u64
+    );
+
+    drop(streams);
+    tokio::time::timeout(Duration::from_secs(5), async {
+        while metric_sum(&metrics, "udb_livequery_active_streams{") != 0 {
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+    })
+    .await
+    .expect("disconnecting every watcher must release every stream slot");
+    tokio::time::sleep(Duration::from_secs(1)).await;
+    let retired = journal_scan_count(&metrics, "shared");
+    tokio::time::sleep(Duration::from_secs(1)).await;
+    assert_eq!(
+        journal_scan_count(&metrics, "shared"),
+        retired,
+        "an idle feed must retire"
+    );
+
+    let journal = crate::runtime::system::SystemCatalogConfig::current().cdc_journal_relation();
+    sqlx::query(&format!("DELETE FROM {journal} WHERE event_id = ANY($1)"))
+        .bind(events.as_slice())
+        .execute(&pool)
+        .await
+        .expect("remove proof journal rows");
+    sqlx::query("DELETE FROM udb_lock.locks WHERE tenant_id = ANY($1)")
+        .bind([tenant, foreign].as_slice())
+        .execute(&pool)
+        .await
+        .expect("remove snapshot fixture rows");
+}

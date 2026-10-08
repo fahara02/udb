@@ -214,6 +214,9 @@ pub trait MetricsRecorder: Send + Sync + std::fmt::Debug {
     /// Set the number of ACTIVE live-query delta streams currently open for
     /// `tenant` (per-tenant concurrency gauge).
     fn set_livequery_active_streams(&self, _tenant: &str, _n: i64) {}
+    /// Count an actual journal scan, by source (`shared` poll or subscriber
+    /// `catch_up`). Subscription count must not multiply idle shared scans.
+    fn record_livequery_journal_scan(&self, _source: &str) {}
 
     // ── Phase 10 (Audit / Observability / SLOs) metrics ───────────────────────
     /// Increment the per-RPC method-security denial counter, labelled by `reason`
@@ -520,6 +523,7 @@ pub struct PrometheusMetrics {
     livequery_delta_forwarded: prometheus::IntCounterVec,
     livequery_delta_dropped: prometheus::IntCounterVec,
     livequery_active_streams: prometheus::IntGaugeVec,
+    livequery_journal_scans: prometheus::IntCounterVec,
 }
 
 impl std::fmt::Debug for PrometheusMetrics {
@@ -979,6 +983,13 @@ impl PrometheusMetrics {
             ),
             &["tenant"],
         )?;
+        let livequery_journal_scans = prometheus::IntCounterVec::new(
+            prometheus::Opts::new(
+                "udb_livequery_journal_scans_total",
+                "Native live-query journal scans, by shared poll or subscriber catch-up",
+            ),
+            &["source"],
+        )?;
 
         for collector in [
             Box::new(grpc_requests.clone()) as Box<dyn prometheus::core::Collector>,
@@ -1060,6 +1071,7 @@ impl PrometheusMetrics {
             Box::new(livequery_delta_forwarded.clone()),
             Box::new(livequery_delta_dropped.clone()),
             Box::new(livequery_active_streams.clone()),
+            Box::new(livequery_journal_scans.clone()),
             Box::new(vector_hybrid_fallbacks().clone()),
         ] {
             registry.register(collector)?;
@@ -1146,6 +1158,7 @@ impl PrometheusMetrics {
             livequery_delta_forwarded,
             livequery_delta_dropped,
             livequery_active_streams,
+            livequery_journal_scans,
         })
     }
 
@@ -1763,6 +1776,11 @@ impl MetricsRecorder for PrometheusMetrics {
         self.livequery_active_streams
             .with_label_values(&[bounded_label("livequery_delta_tenant", tenant).as_ref()])
             .set(n);
+    }
+    fn record_livequery_journal_scan(&self, source: &str) {
+        self.livequery_journal_scans
+            .with_label_values(&[bounded_label("livequery_journal_scan_source", source).as_ref()])
+            .inc();
     }
 }
 

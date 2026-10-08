@@ -400,6 +400,7 @@ async fn apply_feed_batch(
     if batch.from > tail.watermark {
         // Private catch-up from this subscriber's own watermark.
         for _ in 0..MAX_CATCH_UP_SCANS {
+            metrics.record_livequery_journal_scan("catch_up");
             let scan = tail
                 .cdc
                 .try_journal_scan_after(

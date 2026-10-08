@@ -27,6 +27,7 @@ use tokio::sync::broadcast;
 use tokio::time::{Instant, MissedTickBehavior, interval_at};
 
 use crate::cdc::{CdcEngine, CdcEnvelope};
+use crate::metrics::MetricsRecorder;
 
 /// A position in the journal's canonical `(published_at, event_id)` order.
 pub(crate) type Watermark = (DateTime<Utc>, String);
@@ -105,6 +106,7 @@ pub(crate) fn join(
     tenant_id: &str,
     project_id: &str,
     batch: i64,
+    metrics: Arc<dyn MetricsRecorder>,
 ) -> broadcast::Receiver<Arc<FeedBatch>> {
     let key: FeedKey = (
         topic.to_string(),
@@ -118,7 +120,7 @@ pub(crate) fn join(
     let (sender, receiver) = broadcast::channel(FEED_CAPACITY);
     feeds.insert(key.clone(), sender.clone());
     drop(feeds);
-    tokio::spawn(run_feed(cdc.clone(), key, sender, batch));
+    tokio::spawn(run_feed(cdc.clone(), key, sender, batch, metrics));
     receiver
 }
 
@@ -139,7 +141,13 @@ fn retire(key: &FeedKey, sender: &FeedSender, only_if_idle: bool) -> bool {
     true
 }
 
-async fn run_feed(cdc: Arc<CdcEngine>, key: FeedKey, sender: FeedSender, batch: i64) {
+async fn run_feed(
+    cdc: Arc<CdcEngine>,
+    key: FeedKey,
+    sender: FeedSender,
+    batch: i64,
+    metrics: Arc<dyn MetricsRecorder>,
+) {
     let (topic, tenant_id, project_id) = (&key.0, &key.1, &key.2);
     let mut watermark = match cdc.journal_head_watermark(topic).await {
         Ok(head) => head,
@@ -156,6 +164,7 @@ async fn run_feed(cdc: Arc<CdcEngine>, key: FeedKey, sender: FeedSender, batch: 
             return;
         }
         for _ in 0..MAX_SCANS_PER_TICK {
+            metrics.record_livequery_journal_scan("shared");
             let scan = cdc
                 .try_journal_scan_after(
                     topic,

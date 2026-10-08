@@ -31,6 +31,15 @@ skips full config re-sourcing; `udb_control_resync_total` counts completed resyn
 including the startup baseline. Listener reconnects check the durable world to
 recover changes from a connection gap.
 
+LiveQuery subscriptions share one 500 ms journal poll per tenant, project and
+topic. Each stream applies its own IN/OR predicates to snapshots and deltas.
+The default concurrent-stream limits are 1,024 per tenant and 4,096 per process;
+override them with `UDB_LIVEQUERY_MAX_STREAMS_PER_TENANT` and
+`UDB_LIVEQUERY_MAX_STREAMS_GLOBAL`. Delta channels remain bounded, and lagging
+streams catch up from their own journal watermark. Monitor
+`udb_livequery_journal_scans_total{source="shared"}` and `{source="catch_up"}` to
+distinguish the shared polling load from reconnect or slow-subscriber recovery.
+
 UDB runs two listeners. The **data plane** is the public gRPC endpoint your
 application clients talk to. Run it where those clients can reach it:
 

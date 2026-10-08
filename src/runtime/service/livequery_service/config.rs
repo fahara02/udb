@@ -130,7 +130,9 @@ pub(crate) fn livequery_keepalive_interval() -> Option<Duration> {
 /// subscription SETUP (it is dropped immediately, by design, so a long-lived
 /// stream never pins an admission slot); this budget is what bounds how many
 /// open streams one tenant can hold at once.
-const DEFAULT_MAX_STREAMS_PER_TENANT: usize = 64;
+// Shared journal polling keeps the scan rate independent of subscriber count;
+// retain a finite per-tenant ceiling while supporting 1,000 watchers.
+const DEFAULT_MAX_STREAMS_PER_TENANT: usize = 1_024;
 
 /// Resolve the per-tenant concurrent-stream budget from
 /// `UDB_LIVEQUERY_MAX_STREAMS_PER_TENANT`, falling back to
@@ -148,8 +150,8 @@ pub(crate) fn max_streams_per_tenant() -> usize {
 }
 
 /// Default GLOBAL ceiling on concurrent live-query streams across ALL tenants.
-/// The per-tenant budget alone does not bound the process: N tenants × 64 each
-/// would spawn N×64 forwarder tasks + N×64 bounded channels. This aggregate cap
+/// The per-tenant budget alone does not bound the process: every admitted stream
+/// owns a forwarder task and bounded channel. This aggregate cap
 /// keeps a large tenant fan-out from exhausting process memory.
 const DEFAULT_MAX_STREAMS_GLOBAL: usize = 4_096;
 

@@ -35,6 +35,9 @@ no-wrapper plan.
   retains support for older brokers' empty Change heartbeat.
 - Every broker gRPC listener sends HTTP/2 keepalive pings every 30 seconds with
   a 20-second acknowledgment timeout.
+- LiveQuery supports 1,024 concurrent streams per tenant with a 4,096 process
+  ceiling. Shared journal polling fans out to each subscriber's IN/OR filter;
+  scan counters distinguish shared polls from subscriber catch-up.
 
 ### Fixed
 
