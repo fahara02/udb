@@ -3754,6 +3754,23 @@ function perfSeedPhp(array $s): array
         ->setRecordJson(liveRecordJson($recordId, $tenant, $project, "php-perf-lk-$suffix", 'perf-seed', 1))
         ->setConflictFields(['record_id']), $meta));
     $fix->set('record_id', $recordId);
+
+    // GetObject is read before the measured PutObject. Seed its exact bucket
+    // and key through the served writer, independently of native file uploads.
+    $try('SeedBrokerObject', function () use ($data, $rc, $meta, $fix, $suffix) {
+        $bucket = (string) $fix->lookup('bucket');
+        $data->ensure_resource((new \Udb\Entity\V1\ResourceAdminRequest())
+            ->setContext($rc)->setBackend('minio')->setResourceName($bucket)->setSpecJson('{}'), $meta);
+        $upload = $data->put_object($meta);
+        $upload->write((new \Udb\Entity\V1\Chunk())->setContext($rc)->setBucket($bucket)
+            ->setObjectKey((string) $fix->lookup('object_key'))->setData("php-perf-object-$suffix")
+            ->setContentType('text/plain')->setFinalChunk(true));
+        [, $status] = $upload->wait();
+        if ((int) $status->code !== 0) {
+            throw new PerfSeedRpcExceptionPhp('DataBroker/PutObject', (int) $status->code, (string) $status->details);
+        }
+    }, $blockSeedsOnFailure('DataBroker/PutObject', ['bucket']));
+
     $try('SeedBrokerCache', fn () => $data->cache_set((new \Udb\Entity\V1\CacheSetRequest())
         ->setContext($rc)->setResource((new \Udb\Entity\V1\StoreResource())->setBackend('redis')->setResourceName('sdk_perf_cache'))
         ->setKey((string) $fix->lookup('object_key'))->setValue('perf')->setContentType('text/plain')->setTtlSeconds(300), $meta));

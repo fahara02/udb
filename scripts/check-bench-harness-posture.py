@@ -58,6 +58,13 @@ CHECKS: tuple[SourceCheck, ...] = (
         forbidden=("$errCode = $anyOk ? 'OK'", "'kind' => 'stream_open', 'err' => 'OK'"),
     ),
     SourceCheck(
+        "PHP object read has a completed served upload fixture",
+        "sdk/php/tests/Live/GeneratedRpcSurfaceTest.php",
+        ("$try('SeedBrokerObject'", "$upload = $data->put_object($meta);",
+         "[, $status] = $upload->wait();", "if ((int) $status->code !== 0)",
+         "$blockSeedsOnFailure('DataBroker/PutObject', ['bucket'])"),
+    ),
+    SourceCheck(
         "TypeScript signaling has a disposable served peer",
         "sdk/typescript/live-auth.test.ts",
         ('await tryRun("JoinSignalPeer"', 'fix.set("signal_peer_id", joined.peer.peer_id);'),
