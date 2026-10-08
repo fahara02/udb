@@ -12,7 +12,7 @@ use super::data_plane_live::{
 };
 use crate::proto::{ErrorKind, SelectRequest, UpsertRequest};
 use crate::runtime::config::RedisConfig;
-use crate::runtime::executor_utils::decode_error_detail_from_raw;
+use crate::runtime::executor_utils::{ERROR_DETAIL_METADATA_KEY, decode_error_detail_from_raw};
 use crate::runtime::otel::UDB_VERSION_HEADER;
 use crate::runtime::system::ensure_system_catalog;
 
@@ -33,14 +33,17 @@ async fn served_rate_limit_reports_operation_ceiling_and_principal_live() {
     install_dp_security();
     let pool = dp_pool(&pg).await;
     ensure_system_catalog(&pool).await.expect("system catalog");
-    let schema = format!("rate_limit_{}", Uuid::new_v4().simple());
-    create_schema(&pool, &schema).await;
-    sqlx::query(&format!(
-        "CREATE TABLE \"{schema}\".widgets (id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, status TEXT)"
-    )).execute(&pool).await.expect("rate-limit fixture");
     const MSG: &str = "acme.dp.v1.Widget";
     const WINDOW_SECS: u64 = 3600;
     for distributed in [false, true] {
+        let schema = format!("rate_limit_{}", Uuid::new_v4().simple());
+        create_schema(&pool, &schema).await;
+        sqlx::query(&format!(
+            "CREATE TABLE \"{schema}\".widgets (id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, status TEXT)"
+        ))
+        .execute(&pool)
+        .await
+        .expect("rate-limit fixture");
         let tenant = Uuid::new_v4().to_string();
         let principal = Uuid::new_v4().to_string();
         let svc = dp_service_with(
@@ -134,7 +137,12 @@ async fn served_rate_limit_reports_operation_ceiling_and_principal_live() {
                 .unwrap(),
             env!("CARGO_PKG_VERSION")
         );
-        let detail = decode_error_detail_from_raw(&refused);
+        let detail = decode_error_detail_from_raw(
+            refused
+                .metadata()
+                .get_bin(ERROR_DETAIL_METADATA_KEY)
+                .expect("actual typed rate-limit response trailer"),
+        );
         assert_eq!(detail.reason, "UDB_RATE_LIMITED");
         assert_eq!(detail.kind, ErrorKind::RateLimited as i32);
         assert_eq!(detail.missing.get("limit").map(String::as_str), Some("2"));
@@ -160,6 +168,6 @@ async fn served_rate_limit_reports_operation_ceiling_and_principal_live() {
             .expect("another operation retains the tenant default budget");
         shutdown.send(()).expect("stop proof listener");
         task.await.expect("proof listener stopped");
+        teardown(&pool, &schema, &tenant).await;
     }
-    teardown(&pool, &schema).await;
 }
