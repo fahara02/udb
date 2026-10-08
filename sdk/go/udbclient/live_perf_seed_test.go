@@ -60,6 +60,11 @@ import (
 	"google.golang.org/grpc/metadata"
 )
 
+// Keep disposable lock fixtures held through the full RPC sweep, using the
+// broker's bounded one-hour maximum, as the other SDK benchmark seeds do. A
+// short lease can be marked EXPIRED before RenewLock is measured.
+const perfLockFixtureLeaseTTLSeconds = 3600
+
 // samlIdpMetadataXML is minimal-but-valid SAML 2.0 IdP metadata (entityID +
 // IDPSSODescriptor + a SingleSignOnService) so ImportSamlMetadata parses instead
 // of failing "metadata missing entityID".
@@ -1142,7 +1147,7 @@ func perfSeed(t *testing.T, ctx context.Context, broker servicesv1.DataBrokerCli
 	locks := lockpb.NewLockServiceClient(authConn)
 	if renew, err := locks.AcquireLock(nctx, &lockpb.AcquireLockRequest{
 		TenantId: tenant, LockName: "sdk-perf-renew-lock", OwnerId: fix.m["user_id"],
-		LeaseTtlSeconds: 60, MetadataJson: "{}",
+		LeaseTtlSeconds: perfLockFixtureLeaseTTLSeconds, MetadataJson: "{}",
 	}); err == nil {
 		fix.set("renew_fencing_token", strconv.FormatInt(renew.GetFencingToken(), 10))
 	} else {
@@ -1150,7 +1155,7 @@ func perfSeed(t *testing.T, ctx context.Context, broker servicesv1.DataBrokerCli
 	}
 	if release, err := locks.AcquireLock(nctx, &lockpb.AcquireLockRequest{
 		TenantId: tenant, LockName: "sdk-perf-release-lock", OwnerId: fix.m["user_id"],
-		LeaseTtlSeconds: 60, MetadataJson: "{}",
+		LeaseTtlSeconds: perfLockFixtureLeaseTTLSeconds, MetadataJson: "{}",
 	}); err == nil {
 		fix.set("release_fencing_token", strconv.FormatInt(release.GetFencingToken(), 10))
 	} else {

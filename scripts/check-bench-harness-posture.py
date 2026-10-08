@@ -23,6 +23,16 @@ class SourceCheck:
 
 CHECKS: tuple[SourceCheck, ...] = (
     SourceCheck(
+        "Go lock fixtures survive the full measured RPC sweep",
+        "sdk/go/udbclient/live_perf_seed_test.go",
+        (
+            "const perfLockFixtureLeaseTTLSeconds = 3600",
+            'LockName: "sdk-perf-renew-lock"',
+            'LockName: "sdk-perf-release-lock"',
+            'LeaseTtlSeconds: perfLockFixtureLeaseTTLSeconds, MetadataJson: "{}"',
+        ),
+    ),
+    SourceCheck(
         "analytics fixture historical partitions",
         "scripts/fixtures/benchmark-analytics.sql",
         (
