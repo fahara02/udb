@@ -768,13 +768,13 @@ async fn xa_recovery_pass_under_superseded_lease_commits_nothing_live() {
 // ── H6: durable-audit degradation drives grpc.health ─────────────────────────
 
 /// Restores (or removes) an env var on drop.
-struct EnvRestore {
+pub(in crate::runtime::service) struct EnvRestore {
     key: &'static str,
     previous: Option<String>,
 }
 
 impl EnvRestore {
-    fn set(key: &'static str, value: &str) -> Self {
+    pub(in crate::runtime::service) fn set(key: &'static str, value: &str) -> Self {
         let previous = std::env::var(key).ok();
         // SAFETY: the live lane runs `--test-threads=1`; no other thread
         // reads or writes the environment concurrently.

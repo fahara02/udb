@@ -57,17 +57,17 @@ impl Drop for LoopbackSwitch {
 
 /// One request the loopback provider accepted.
 #[derive(Debug, Clone)]
-struct Received {
-    method: String,
-    path: String,
-    headers: HashMap<String, String>,
-    body: Vec<u8>,
+pub(in crate::runtime::service) struct Received {
+    pub(in crate::runtime::service) method: String,
+    pub(in crate::runtime::service) path: String,
+    pub(in crate::runtime::service) headers: HashMap<String, String>,
+    pub(in crate::runtime::service) body: Vec<u8>,
 }
 
 /// Minimal HTTP/1.1 provider: reads one request per connection (headers +
 /// `content-length` body), records it, answers with `status_line` (plus an
 /// `x-message-id` header) and closes.
-async fn spawn_provider(
+pub(in crate::runtime::service) async fn spawn_provider(
     status_line: &'static str,
 ) -> (std::net::SocketAddr, Arc<Mutex<Vec<Received>>>) {
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0")

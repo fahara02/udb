@@ -41,6 +41,8 @@ no-wrapper plan.
 
 ### Fixed
 
+- PII selection denials name `udb:pii:read` in `missing.scope`, retain the
+  physical column and carry the canonical Permission error kind.
 - Cached Select responses retain `redacted_fields`, including physical column
   names for masked aliases, and match the complete uncached response. PII scope
   checks and refusal to write a mask sentinel are verified on the served path.

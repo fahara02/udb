@@ -12,7 +12,9 @@ use crate::proto::data_broker_server::DataBroker;
 use crate::proto::{CacheOptions, SelectRequest};
 use crate::runtime::config::RedisConfig;
 use crate::runtime::error_reasons::reason_of;
-use crate::runtime::executor_utils::{REDACTION_PLACEHOLDER, json_to_struct};
+use crate::runtime::executor_utils::{
+    ERROR_DETAIL_METADATA_KEY, REDACTION_PLACEHOLDER, decode_error_detail_from_raw, json_to_struct,
+};
 use crate::runtime::system::ensure_system_catalog;
 
 #[tokio::test]
@@ -154,6 +156,19 @@ async fn served_cached_select_preserves_redacted_fields_live() {
         .expect_err("a PII field alias still requires the PII scope");
     assert_eq!(denied.code(), tonic::Code::PermissionDenied);
     assert_eq!(reason_of(&denied).as_deref(), Some("UDB_SCOPE_MISSING"));
+    let raw = denied
+        .metadata()
+        .get_bin(ERROR_DETAIL_METADATA_KEY)
+        .expect("typed denial trailer")
+        .to_bytes()
+        .expect("binary denial detail");
+    let detail = decode_error_detail_from_raw(&raw).expect("decode served denial");
+    assert_eq!(detail.kind, crate::proto::ErrorKind::Permission as i32);
+    assert_eq!(detail.column, "private_data");
+    assert_eq!(
+        detail.missing.get("scope").map(String::as_str),
+        Some("udb:pii:read")
+    );
     let refused = served_upsert(
         &svc,
         &tenant,

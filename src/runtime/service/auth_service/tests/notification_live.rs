@@ -6,6 +6,147 @@ use crate::proto::udb::core::notification::services::v1 as notif_pb;
 use crate::proto::udb::core::notification::services::v1::notification_service_server::NotificationService;
 use tonic::Request;
 
+/// AU2: the real Authn RPC handlers keep delivering persisted codes through the
+/// operator's HTTP webhook when NotificationService is absent or unavailable.
+/// A real loopback provider captures the posted bytes and authorization header;
+/// no delivery stub or replacement OTP store supplies the proof.
+#[cfg(feature = "http-client")]
+#[tokio::test]
+#[ignore = "requires live Postgres; CI runs every ignored lib test"]
+async fn authn_webhook_fallback_delivers_actual_codes_for_every_issuance_path() {
+    use crate::proto::udb::core::authn::entity::v1::OtpType;
+    use crate::runtime::authn::{PostgresUserStore, UserStore};
+    use crate::runtime::service::live_tests::notification_http_live::spawn_provider;
+    use crate::runtime::service::live_tests::ops_seams_live::EnvRestore;
+    use crate::runtime::service::method_security::{
+        scope_claim_context_for_test, test_claim_context,
+    };
+    use crate::runtime::service::notification_service::NotificationServiceImpl;
+    let _guard = live_auth_db_lock().lock().await;
+    let pool = live_pg_pool().await;
+    migrate_native_auth_db(&pool).await;
+    let plain = authn_service(pool.clone());
+    // This is the real production service without its required runtime. Its
+    // typed capability refusal exercises the error branch of fallback.
+    let unavailable = authn_service(pool.clone())
+        .with_system_notifier(std::sync::Arc::new(NotificationServiceImpl::new()));
+    let (addr, received) = spawn_provider("200 OK").await;
+    let _url = EnvRestore::set(
+        "UDB_OTP_DELIVERY_WEBHOOK_URL",
+        &format!("http://{addr}/otp"),
+    );
+    let _auth = EnvRestore::set(
+        "UDB_OTP_DELIVERY_AUTH_HEADER",
+        "Bearer ci-otp-fallback-proof",
+    );
+    let store = PostgresUserStore::new(pool.clone(), "");
+    let mut expected = Vec::new();
+    for (case, svc) in [("absent", &plain), ("unavailable", &unavailable)] {
+        let tenant = uuid::Uuid::new_v4().to_string();
+        let name = format!("fallback-{case}-{}", uuid::Uuid::new_v4().simple());
+        let created = svc
+            .create_user(Request::new(authn_pb::CreateUserRequest {
+                username: name.clone(),
+                email: format!("{name}@example.test"),
+                password: "CorrectHorse1!".into(),
+                tenant_id: tenant,
+                project_id: "default".into(),
+                ..Default::default()
+            }))
+            .await
+            .expect("verification code issuance succeeds through webhook fallback")
+            .into_inner();
+        let user = created.user.expect("created user");
+        expected.push((
+            created.otp_id.clone(),
+            issued_test_otp_code(&created.otp_id),
+            OtpType::EmailVerification as i32,
+            user.user_id.clone(),
+            user.email.clone(),
+        ));
+        assert!(store.get_otp(&created.otp_id).await.unwrap().is_some());
+        assert!(verify_issued_otp(svc, &created.otp_id).await.verified);
+        let forgot = svc
+            .forgot_password(Request::new(authn_pb::ForgotPasswordRequest {
+                identifier: user.email.clone(),
+                ..Default::default()
+            }))
+            .await
+            .expect("public password reset uses webhook fallback")
+            .into_inner();
+        let admin = scope_claim_context_for_test(
+            test_claim_context(
+                &user.user_id,
+                &user.tenant_id,
+                &user.project_id,
+                &["udb:authn:admin-reset-password"],
+                &[],
+            ),
+            svc.admin_reset_password(Request::new(authn_pb::AdminResetPasswordRequest {
+                user_id: user.user_id.clone(),
+                ..Default::default()
+            })),
+        )
+        .await
+        .expect("least-privilege admin reset uses webhook fallback")
+        .into_inner();
+        let otp = svc
+            .send_otp(Request::new(authn_pb::SendOtpRequest {
+                user_id: user.user_id.clone(),
+                otp_type: OtpType::SensitiveOperation as i32,
+                ..Default::default()
+            }))
+            .await
+            .expect("sensitive-operation OTP uses webhook fallback")
+            .into_inner();
+        for (id, kind) in [
+            (forgot.otp_id, OtpType::PasswordReset),
+            (admin.otp_id, OtpType::PasswordReset),
+            (otp.otp_id, OtpType::SensitiveOperation),
+        ] {
+            assert!(
+                store.get_otp(&id).await.unwrap().is_some(),
+                "OTP is persisted before delivery"
+            );
+            expected.push((
+                id.clone(),
+                issued_test_otp_code(&id),
+                kind as i32,
+                user.user_id.clone(),
+                user.email.clone(),
+            ));
+        }
+    }
+    let requests = received.lock().await;
+    assert_eq!(
+        requests.len(),
+        8,
+        "exactly four delivered codes per fallback mode"
+    );
+    for (request, (_, code, kind, user_id, address)) in requests.iter().zip(expected) {
+        assert_eq!(request.method, "POST");
+        assert_eq!(request.path, "/otp");
+        assert!(
+            request
+                .headers
+                .get("authorization")
+                .is_some_and(|value| value == "Bearer ci-otp-fallback-proof")
+        );
+        let body: serde_json::Value =
+            serde_json::from_slice(&request.body).expect("JSON webhook body");
+        assert!(
+            body["code"].as_str() == Some(code.as_str()),
+            "the provider receives the actual issued code"
+        );
+        assert_eq!(body["otp_type"], kind);
+        assert_eq!(body["user_id"], user_id);
+        assert_eq!(body["address"], address);
+        assert_eq!(body["channel"], "email");
+    }
+    drop(requests);
+    cleanup_native_auth_db(&pool).await;
+}
+
 #[tokio::test]
 #[ignore = "requires live Postgres; CI runs every ignored lib test"]
 async fn authn_reset_codes_are_queued_but_never_returned_by_notification_apis() {

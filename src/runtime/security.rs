@@ -2359,7 +2359,7 @@ pub fn enforce_select_export_controls(
             .filter(|column| !column.security.is_pii && !column.security.is_encrypted)
             .find(|column| is_aead_or_pii_column(column));
         return match returned_protected {
-            Some(column) => Err(crate::runtime::error_reasons::annotate(
+            Some(column) => Err(crate::runtime::error_reasons::annotate_with(
                 export_control_policy_status(
                     "pii_export_scope_required",
                     "PII/encrypted fields require purpose export, verification, or audit, or scope udb:pii:read",
@@ -2367,6 +2367,7 @@ pub fn enforce_select_export_controls(
                 crate::runtime::error_reasons::SCOPE_MISSING,
                 Some(&column.column_name),
                 None,
+                &[("scope", "udb:pii:read")],
             )),
             None => Ok(()),
         };
@@ -2382,7 +2383,7 @@ pub fn enforce_select_export_controls(
         .filter(|column| selected.iter().any(|field| field == &column.column_name))
         .find(|column| is_aead_or_pii_column(column));
     match blocked {
-        Some(column) => Err(crate::runtime::error_reasons::annotate(
+        Some(column) => Err(crate::runtime::error_reasons::annotate_with(
             export_control_policy_status(
                 "pii_export_scope_required",
                 "PII/encrypted fields require purpose export, verification, or audit, or scope udb:pii:read",
@@ -2390,6 +2391,7 @@ pub fn enforce_select_export_controls(
             crate::runtime::error_reasons::SCOPE_MISSING,
             Some(&column.column_name),
             None,
+            &[("scope", "udb:pii:read")],
         )),
         None => Ok(()),
     }

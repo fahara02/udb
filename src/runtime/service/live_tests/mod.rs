@@ -24,8 +24,8 @@ mod livequery_journal_live;
 mod native_events_live;
 mod native_worker_seams_live;
 #[cfg(feature = "http-client")]
-mod notification_http_live;
-mod ops_seams_live;
+pub(super) mod notification_http_live;
+pub(super) mod ops_seams_live;
 mod projection_drift_live;
 #[cfg(feature = "redis")]
 mod rate_limit_live;
