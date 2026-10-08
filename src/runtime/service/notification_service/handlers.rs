@@ -20,9 +20,10 @@ use super::super::native_helpers::{
     native_page_window, parse_uuid, project_scoped_native_service_context, validate_request_tenant,
     validated_native_service_context,
 };
+use super::NotificationServiceImpl;
 use super::config::{
-    test_mode_enabled, DEFAULT_PAGE_SIZE, LOG_MSG, PREFERENCE_MSG, TEMPLATE_MSG,
-    TEST_FORCE_FAILED_SENTINEL, VARIABLE_MISSING,
+    DEFAULT_PAGE_SIZE, LOG_MSG, PREFERENCE_MSG, TEMPLATE_MSG, TEST_FORCE_FAILED_SENTINEL,
+    VARIABLE_MISSING, test_mode_enabled,
 };
 use super::errors::{
     notification_internal_status, notification_log_not_found_status,
@@ -31,8 +32,8 @@ use super::errors::{
     notification_tenant_metadata_required_status, status_with_reason,
 };
 use super::events::{
-    enqueue_delivery_event_in_tx, enqueue_sent_event_in_tx, enqueue_suppressed_event_in_tx,
-    sent_event_transaction_op, suppressed_event_transaction_op, NotificationDeliveryEvent,
+    NotificationDeliveryEvent, enqueue_delivery_event_in_tx, enqueue_sent_event_in_tx,
+    enqueue_suppressed_event_in_tx, sent_event_transaction_op, suppressed_event_transaction_op,
 };
 use super::model::{
     channel_from_db, channel_send_decision, channel_to_db, delivery_attempt_from_row,
@@ -48,7 +49,6 @@ use super::store::{
     recipient_opted_out_db, reset_delivery_attempts_for_retry, suppress_log_if_pending,
     template_read, template_scope_filter, transition_log_status, write_delivery_attempt,
 };
-use super::NotificationServiceImpl;
 
 pub(crate) async fn send_notification(
     svc: &NotificationServiceImpl,
