@@ -54,8 +54,31 @@ CHECKS: tuple[SourceCheck, ...] = (
         "PHP benchmark uses served streaming evidence",
         "sdk/php/tests/Live/GeneratedRpcSurfaceTest.php",
         ("$errCode = $capabilitySkipped ? 'CAPABILITY_SKIPPED' : $firstErr;",
-         '$firstResponse = $probe->read();', '$observedStatus = $probe->getStatus();'),
+         'foreach ($probe->responses() as $response)', '$observedStatus = $probe->getStatus();'),
         forbidden=("$errCode = $anyOk ? 'OK'", "'kind' => 'stream_open', 'err' => 'OK'"),
+    ),
+    SourceCheck(
+        "TypeScript signaling has a disposable served peer",
+        "sdk/typescript/live-auth.test.ts",
+        ('await tryRun("JoinSignalPeer"', 'fix.set("signal_peer_id", joined.peer.peer_id);'),
+    ),
+    SourceCheck(
+        "PHP signaling has a disposable served peer",
+        "sdk/php/tests/Live/GeneratedRpcSurfaceTest.php",
+        ("$try('JoinSignalPeer'", "$fix->set('signal_peer_id', $sj->getPeer()->getPeerId());"),
+    ),
+    SourceCheck(
+        "native backups use the provider streaming writer",
+        "src/runtime/service/backup_service/export.rs",
+        (".put_object_stream_backend_target_for_project(", "backup_artifact_stream(bytes)",
+         "backup_artifact_stream(manifest_bytes)"),
+        forbidden=(".put_object_backend_target_for_project(",),
+    ),
+    SourceCheck(
+        "large tenant artifacts are restored in served backup coverage",
+        "src/runtime/service/live_tests/backup_live.rs",
+        ("live_postgres_backup_restore_remaps_owned_bigserial_identity",
+         "INLINE_OBJECT_LIMIT_BYTES + 1", "assert_eq!(restored_condition, large_condition);"),
     ),
     SourceCheck(
         "bench-body markdown column contract",

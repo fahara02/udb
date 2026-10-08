@@ -4586,6 +4586,13 @@ function perfSeedPhp(array $s): array
             if ($lj) {
                 $fix->set('leave_peer_id', $lj->getPeer()->getPeerId());
             }
+            // Closing Signal disconnects its peer. Keep that lifecycle separate
+            // from the active peer used by PublishTrack and IssueCredentials.
+            $sj = $try('JoinSignalPeer', fn () => $authGen->join_room((new \Udb\Core\Webrtc\Services\V1\JoinRoomRequest())
+                ->setTenantId($tenant)->setRoomId($roomId)->setDisplayName('sdk-perf-signal-peer')->setMetadata('{}')->setUserAgent('sdk-perf'), $meta));
+            if ($sj) {
+                $fix->set('signal_peer_id', $sj->getPeer()->getPeerId());
+            }
             // A SEPARATE disposable room for the destructive CloseRoom (closing the main room
             // would close its peers and break PublishTrack/MuteTrack/Signal).
             $cr = $try('CreateCloseRoom', fn () => $authGen->create_room((new \Udb\Core\Webrtc\Services\V1\CreateRoomRequest())
@@ -5210,6 +5217,17 @@ it('measures per-RPC latency', function () {
                         [, $observedStatus] = $probe->wait();
                         $streamErr = grpcStatusNamePhp((int) $observedStatus->code);
                         $streamDetail = (string) ($observedStatus->details ?? '');
+                    } elseif (str_contains($doc, 'ServerStreamingCall')) {
+                        $firstResponse = null;
+                        foreach ($probe->responses() as $response) {
+                            $firstResponse = $response;
+                            break;
+                        }
+                        if ($firstResponse === null) {
+                            $observedStatus = $probe->getStatus();
+                            $streamErr = grpcStatusNamePhp((int) $observedStatus->code);
+                            $streamDetail = (string) ($observedStatus->details ?? '');
+                        }
                     } else {
                         $firstResponse = $probe->read();
                         if ($firstResponse === null) {

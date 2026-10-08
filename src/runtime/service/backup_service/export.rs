@@ -23,7 +23,9 @@ use super::super::native_helpers::{
     validate_request_tenant,
 };
 use super::BackupServiceImpl;
-use super::config::{KIND_BACKUP, MANIFEST_SUFFIX, TOPIC_BACKUP_COMPLETED};
+use super::config::{
+    BACKUP_UPLOAD_CHUNK_BYTES, KIND_BACKUP, MANIFEST_SUFFIX, TOPIC_BACKUP_COMPLETED,
+};
 use super::errors::{backup_internal_status, backup_not_found_status};
 use super::events::emit_event;
 use super::model::{policy_view_from_json, qualified_relation, sha256_hex};
@@ -66,6 +68,17 @@ pub(crate) fn backup_table_select_sql(
             tenant_col = qi_runtime(tenant_column),
         ),
     }
+}
+
+fn backup_artifact_stream(bytes: Vec<u8>) -> crate::runtime::executors::ExecutorByteStream {
+    let bytes = bytes::Bytes::from(bytes);
+    let length = bytes.len();
+    let chunks = (0..length)
+        .step_by(BACKUP_UPLOAD_CHUNK_BYTES)
+        .map(move |offset| {
+            Ok(bytes.slice(offset..std::cmp::min(offset + BACKUP_UPLOAD_CHUNK_BYTES, length)))
+        });
+    Box::pin(tokio_stream::iter(chunks))
 }
 
 pub(crate) async fn start_tenant_backup(
@@ -328,12 +341,12 @@ pub(crate) async fn run_tenant_backup(
             "application/octet-stream",
         );
         runtime
-            .put_object_backend_target_for_project(
+            .put_object_stream_backend_target_for_project(
                 &object_backend,
                 None,
                 &context.project_id,
                 &put_req,
-                bytes,
+                backup_artifact_stream(bytes),
             )
             .await?;
         table_entries.push(backup_pb::BackupTableEntry {
@@ -419,12 +432,12 @@ pub(crate) async fn run_tenant_backup(
         "application/json",
     );
     runtime
-        .put_object_backend_target_for_project(
+        .put_object_stream_backend_target_for_project(
             &object_backend,
             None,
             &context.project_id,
             &manifest_put,
-            manifest_bytes,
+            backup_artifact_stream(manifest_bytes),
         )
         .await?;
 

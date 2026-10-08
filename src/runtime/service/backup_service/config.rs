@@ -25,6 +25,10 @@ pub(crate) const MAX_LIST_ROWS: u32 = 500;
 /// anchor restore reads to find and verify each encrypted table artifact.
 pub(crate) const MANIFEST_SUFFIX: &str = "manifest.json";
 
+/// Feed encrypted artifacts to the provider in bounded chunks, independent of
+/// the public inline-object request limit and the provider's multipart size.
+pub(crate) const BACKUP_UPLOAD_CHUNK_BYTES: usize = 64 * 1024;
+
 /// Maintenance cadence for the leader spawn site — env resolved ONCE via
 /// `OnceLock` (a worker-spawn cadence knob, never a per-request read), mirroring
 /// `lock_service::lock_expiry_interval` / `cache_service::cache_invalidation_interval`.

@@ -3160,6 +3160,11 @@ async function seedPerfFixtures(
       const lj = await gen.PeerService.join_room({ tenant_id: uuidTenant, room_id: roomId, display_name: "sdk-perf-leave-peer", metadata: "{}", user_agent: "sdk-perf" }, opts);
       fix.set("leave_peer_id", lj.peer.peer_id);
     });
+    // Closing Signal disconnects its peer; other RPCs retain the active peer.
+    await tryRun("JoinSignalPeer", async () => {
+      const joined = await gen.PeerService.join_room({ tenant_id: uuidTenant, room_id: roomId, display_name: "sdk-perf-signal-peer", metadata: "{}", user_agent: "sdk-perf" }, opts);
+      fix.set("signal_peer_id", joined.peer.peer_id);
+    });
     // A SEPARATE disposable room for the destructive CloseRoom — closing the MAIN room
     // would close its peers and break PublishTrack/MuteTrack/Signal (arbitrary order).
     await tryRun("CreateCloseRoom", async () => {

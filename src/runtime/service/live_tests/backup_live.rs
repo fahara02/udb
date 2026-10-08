@@ -229,6 +229,7 @@ async fn live_postgres_backup_restore_remaps_owned_bigserial_identity() {
             "object",
             "action",
             "effect",
+            "condition",
             "tenant_id",
             "project_id",
         ],
@@ -256,6 +257,21 @@ async fn live_postgres_backup_restore_remaps_owned_bigserial_identity() {
         .fetch_one(&pool)
         .await
         .expect("seed source BIGSERIAL policy tuple");
+
+    // A single legal TEXT value exceeds the public inline-object ceiling.
+    // Export must use native streaming IO and restore must preserve the value.
+    let large_condition = "x".repeat(crate::runtime::executor_utils::INLINE_OBJECT_LIMIT_BYTES + 1);
+    sqlx::query(&format!(
+        "UPDATE {} SET {} = $1 WHERE {} = $2",
+        tuple.relation,
+        tuple.q("condition"),
+        tuple.q("policy_tuple_id"),
+    ))
+    .bind(&large_condition)
+    .bind(source_tuple_id)
+    .execute(&pool)
+    .await
+    .expect("seed tenant artifact larger than the inline object limit");
 
     let notification_log = native_model(
         "udb.core.notification.entity.v1.NotificationLog",
@@ -495,6 +511,17 @@ async fn live_postgres_backup_restore_remaps_owned_bigserial_identity() {
         target_ids[0], source_tuple_id,
         "RestoreTenant must allocate a fresh sequence-owned identity without overwriting the source"
     );
+    let restored_condition: String = sqlx::query_scalar(&format!(
+        "SELECT {} FROM {} WHERE {} = $1",
+        tuple.q("condition"),
+        tuple.relation,
+        tuple.q("policy_tuple_id"),
+    ))
+    .bind(target_ids[0])
+    .fetch_one(&pool)
+    .await
+    .expect("read restored artifact larger than the inline object limit");
+    assert_eq!(restored_condition, large_condition);
 
     let restored_log_sql = format!(
         "SELECT {}::text, {}::text FROM {} WHERE {}::text = $1 AND {} = $2",

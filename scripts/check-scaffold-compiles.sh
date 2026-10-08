@@ -193,7 +193,8 @@ cat > "$JAVA_DIR/pom.xml" <<EOF
   </build>
 </project>
 EOF
-( cd "$JAVA_DIR" && mvn -B -ntp compile )
+# Recheck missing releases so a transient registry miss is not retained.
+( cd "$JAVA_DIR" && mvn -U -B -ntp compile )
 echo "    Java scaffold example built OK"
 
 # ── PHP: resolve the local package, lint the example, prove referenced classes ─

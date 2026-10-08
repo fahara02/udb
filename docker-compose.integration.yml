@@ -61,7 +61,8 @@ services:
       POSTGRES_PASSWORD: udb
       POSTGRES_DB: udb
     ports:
-      - "55432:5432"
+      # CI supplies only the container port so Docker chooses a free host port.
+      - "${UDB_INTEGRATION_PG_BINDING:-55432:5432}"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U udb -d udb"]
       interval: 5s

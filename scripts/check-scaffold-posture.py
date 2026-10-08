@@ -27,7 +27,7 @@ LANGUAGES: tuple[ScaffoldLanguage, ...] = (
     ScaffoldLanguage("typescript", "examples/typescript/client.ts", ("npx --yes tsc", "examples/typescript/client.ts"), 'node: "true"'),
     ScaffoldLanguage("python", "examples/python/client.py", ("python -m py_compile client.py", "data_broker_pb2_grpc.DataBrokerStub"), 'python: "true"'),
     ScaffoldLanguage("csharp", "examples/csharp/Client.cs", ("dotnet build", "Udb.Client.csproj"), 'dotnet: "true"'),
-    ScaffoldLanguage("java", "examples/java/Client.java", ("mvn -B -ntp compile", "sdk/java/gen"), 'java: "true"'),
+    ScaffoldLanguage("java", "examples/java/Client.java", ("mvn -U -B -ntp compile", "sdk/java/gen"), 'java: "true"'),
     ScaffoldLanguage("php", "examples/php/client.php", ("composer install", "php -l client.php"), 'php: "true"'),
 )
 
@@ -136,7 +136,7 @@ npx --yes tsc examples/typescript/client.ts
 python -m py_compile client.py
 data_broker_pb2_grpc.DataBrokerStub
 dotnet build Udb.Client.csproj
-mvn -B -ntp compile
+mvn -U -B -ntp compile
 sdk/java/gen
 composer install
 php -l client.php

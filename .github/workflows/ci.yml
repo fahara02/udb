@@ -51,7 +51,7 @@ permissions:
 env:
   CARGO_TERM_COLOR: always
   RELEASE_BINARY_FEATURES: >-
-    postgres,mysql,sqlite,qdrant,s3,mongodb-native,neo4j,clickhouse,redis,elasticsearch,weaviate,pinecone,azureblob,gcs,otel,runtime-logging,http-client,oidc,webauthn
+    postgres,mysql,sqlite,qdrant,s3,mongodb-native,neo4j,clickhouse,redis,elasticsearch,weaviate,pinecone,azureblob,gcs,otel,runtime-logging,http-client,oidc,webauthn,webrtc
   # The broker feature tier the smoke job runs against. Built ONCE by
   # build-broker and downloaded by consumers (no per-job rebuild).
   LIVE_BROKER_FEATURES: postgres,mongodb-native,s3,kafka,qdrant,runtime-logging
@@ -1266,6 +1266,9 @@ jobs:
     needs: quick-gate
     runs-on: ubuntu-latest
     timeout-minutes: 75
+    env:
+      # Docker allocates a free PostgreSQL host port; tests use the resolved DSN.
+      UDB_INTEGRATION_PG_BINDING: "5432"
     steps:
       - uses: actions/checkout@v4
       - name: Reclaim runner disk for live backend stack
@@ -1321,6 +1324,18 @@ jobs:
             echo "::error::native/integration compile preflight failed"
             exit "$compile_status"
           fi
+
+      - name: Resolve live PostgreSQL address
+        run: |
+          set -euo pipefail
+          integration_pg_binding="$(docker compose -f docker-compose.integration.yml port postgres 5432)"
+          integration_pg_port="${integration_pg_binding##*:}"
+          if ! [[ "$integration_pg_port" =~ ^[0-9]+$ ]] || (( integration_pg_port < 1 || integration_pg_port > 65535 )); then
+            echo "::error::PostgreSQL did not publish a valid host port"
+            exit 1
+          fi
+          printf 'UDB_PG_DSN=postgres://udb:udb@127.0.0.1:%s/udb\n' "$integration_pg_port" >> "$GITHUB_ENV"
+          printf 'UDB_INTEGRATION_PG_DSN=postgres://udb:udb@127.0.0.1:%s/udb\n' "$integration_pg_port" >> "$GITHUB_ENV"
 
       - name: Start canonical-store stack
         # Start canonical-store stack: MySQL / SQL Server / MongoDB / Cassandra /
@@ -1393,7 +1408,7 @@ jobs:
         # env checks and skip honestly; provisioned backends must not self-skip.
         env:
           UDB_IR_LIVE_GOLDEN_TESTS: "1"
-          UDB_PG_DSN: postgres://udb:udb@localhost:55432/udb
+          UDB_PG_DSN: ${{ env.UDB_PG_DSN }}
           UDB_MYSQL_DSN: mysql://udb:udb@127.0.0.1:53306/udb
           UDB_MSSQL_DSN: Server=127.0.0.1,51433;User=sa;Password=Udb_Strong#2026;Database=udb;TrustServerCertificate=true
           UDB_NOSQL_DSN: mongodb://127.0.0.1:57017/udb?directConnection=true
@@ -1428,7 +1443,7 @@ jobs:
         # serialize their setup; run them serially to avoid cross-talk.
         env:
           UDB_LIVE_AUTH_TESTS: "1"
-          UDB_INTEGRATION_PG_DSN: postgres://udb:udb@localhost:55432/udb
+          UDB_INTEGRATION_PG_DSN: ${{ env.UDB_INTEGRATION_PG_DSN }}
           UDB_INTEGRATION_KAFKA_BROKERS: localhost:59192
           UDB_INTEGRATION_REDIS_URL: redis://localhost:56379
           UDB_MINIO_ENDPOINT: http://localhost:59000
@@ -1487,7 +1502,7 @@ jobs:
         # false-green runtime skip into a test failure.
         env:
           UDB_WIRE_CODEC_LIVE_TESTS: "1"
-          UDB_PG_DSN: postgres://udb:udb@localhost:55432/udb
+          UDB_PG_DSN: ${{ env.UDB_PG_DSN }}
           UDB_MYSQL_DSN: mysql://udb:udb@127.0.0.1:53306/udb
           UDB_MSSQL_DSN: Server=127.0.0.1,51433;User=sa;Password=Udb_Strong#2026;Database=udb;TrustServerCertificate=true
           UDB_CASSANDRA_DSN: 127.0.0.1:59042
@@ -1495,7 +1510,7 @@ jobs:
 
       - name: Canonical store live conformance
         env:
-          UDB_PG_DSN: postgres://udb:udb@localhost:55432/udb
+          UDB_PG_DSN: ${{ env.UDB_PG_DSN }}
           UDB_REDIS_DSN: redis://localhost:56379/0
           UDB_QDRANT_URL: http://localhost:56333
           UDB_MYSQL_DSN: mysql://udb:udb@127.0.0.1:53306/udb
@@ -1521,7 +1536,7 @@ jobs:
         # would not execute at all.
         env:
           UDB_INTEGRATION_TESTS: "1"
-          UDB_INTEGRATION_PG_DSN: postgres://udb:udb@localhost:55432/udb
+          UDB_INTEGRATION_PG_DSN: ${{ env.UDB_INTEGRATION_PG_DSN }}
           UDB_INTEGRATION_KAFKA_BROKERS: localhost:59192
           UDB_INTEGRATION_REDIS_URL: redis://localhost:56379
           UDB_INTEGRATION_QDRANT_URL: http://localhost:56333

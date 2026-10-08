@@ -1277,6 +1277,60 @@ impl DataBrokerRuntime {
         .await
     }
 
+    /// Stream trusted native artifacts through the existing provider upload path.
+    pub(crate) async fn put_object_stream_backend_target_for_project(
+        &self,
+        backend: &str,
+        instance: Option<&str>,
+        project_id: &str,
+        request_json: &str,
+        stream: crate::runtime::executors::ExecutorByteStream,
+    ) -> Result<String, tonic::Status> {
+        // Validate well-formed JSON before dispatch; the executor re-parses shape.
+        parse_dispatch_json(request_json)?;
+        use crate::runtime::executors::ObjectExecutor;
+        #[cfg(not(feature = "s3"))]
+        let _ = project_id;
+        #[cfg(feature = "s3")]
+        if matches!(backend, "s3" | "minio") {
+            let project = project_id.trim();
+            let project = if project.is_empty() {
+                crate::runtime::catalog::DEFAULT_PROJECT_ID
+            } else {
+                project
+            };
+            let target_instance = instance
+                .filter(|value| !value.trim().is_empty())
+                .or_else(|| {
+                    self.choose_instance_name_for_project("minio", true, project)
+                        .or_else(|| self.choose_instance_name_for_project("s3", true, project))
+                });
+            return ObjectExecutor::put_object_stream(
+                &crate::runtime::executors::s3::S3Executor(
+                    self.s3_for_instance_for_project(target_instance, project)?
+                        .clone(),
+                ),
+                request_json,
+                stream,
+            )
+            .await;
+        }
+        ObjectExecutor::put_object_stream(
+            &self.resolve_dispatch_executor(
+                backend,
+                instance,
+                false,
+                tonic::Code::FailedPrecondition,
+                // Probe/admin paths: no request context, so RLS settings
+                // aren't installed (these are infrastructure calls).
+                None,
+            )?,
+            request_json,
+            stream,
+        )
+        .await
+    }
+
     /// Write an object to an object-store backend.
     pub async fn put_object_backend(
         &self,
