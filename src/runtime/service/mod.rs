@@ -1913,51 +1913,56 @@ impl NativeControlPlaneServices {
     /// method-security layer. The caller adds the transport layers (credential
     /// resolution, timeouts) and, in production, the listener health service.
     fn into_routes(self, msec: &method_security::MethodSecurityLayer) -> tonic::service::Routes {
-        tonic::service::Routes::new(msec.wrap(auth_service::AuthnServiceServer::new(self.authn)))
-            .add_service(msec.wrap(auth_service::AuthzServiceServer::new(self.authz)))
-            .add_service(msec.wrap(auth_service::ApiKeyServiceServer::new(self.api_key)))
-            .add_service(msec.wrap(auth_service::IdentityProviderServiceServer::new(
-                self.identity_provider,
-            )))
-            .add_service(msec.wrap(auth_service::ControlPlaneServiceServer::new(
-                self.control_plane,
-            )))
-            .add_service(msec.wrap(tenant_service::TenantServiceServer::new(self.tenant)))
-            .add_service(msec.wrap(lock_service::LockServiceServer::new(self.lock)))
-            .add_service(msec.wrap(scheduler_service::SchedulerServiceServer::new(
-                self.scheduler,
-            )))
-            .add_service(msec.wrap(vault_service::VaultServiceServer::new(self.vault)))
-            .add_service(msec.wrap(cache_service::CacheServiceServer::new(self.cache)))
-            .add_service(msec.wrap(webhook_service::WebhookServiceServer::new(self.webhook)))
-            .add_service(msec.wrap(backup_service::BackupServiceServer::new(self.backup)))
-            .add_service(msec.wrap(search_service::SearchServiceServer::new(self.search)))
-            .add_service(msec.wrap(config_service::ConfigServiceServer::new(self.config)))
-            .add_service(msec.wrap(metering_service::MeteringServiceServer::new(self.metering)))
-            .add_service(msec.wrap(livequery_service::LiveQueryServiceServer::new(
-                self.livequery,
-            )))
-            .add_service(msec.wrap(workflow_service::WorkflowServiceServer::new(self.workflow)))
-            .add_service(msec.wrap(embedding_service::EmbeddingServiceServer::new(
-                self.embedding,
-            )))
-            .add_service(
-                msec.wrap(notification_service::NotificationServiceServer::new(
-                    self.notification,
-                )),
-            )
-            .add_service(msec.wrap(analytics_service::AnalyticsServiceServer::new(
-                self.analytics,
-            )))
-            .add_service(msec.wrap(storage_service::StorageServiceServer::new(self.storage)))
-            .add_service(msec.wrap(asset_service::AssetServiceServer::new(self.asset)))
-            // WebRTC ships five tonic services on one (Clone) impl; each mounts with
-            // the same proto-driven method-security layer.
-            .add_service(msec.wrap(webrtc_service::RoomServiceServer::new(self.webrtc.clone())))
-            .add_service(msec.wrap(webrtc_service::PeerServiceServer::new(self.webrtc.clone())))
-            .add_service(msec.wrap(webrtc_service::TrackServiceServer::new(self.webrtc.clone())))
-            .add_service(msec.wrap(webrtc_service::TurnServiceServer::new(self.webrtc.clone())))
-            .add_service(msec.wrap(webrtc_service::SignalingServiceServer::new(self.webrtc)))
+        // The broker's own notifications (auth codes) go through the same
+        // NotificationService instance the RPCs serve.
+        let notification = std::sync::Arc::new(self.notification);
+        tonic::service::Routes::new(msec.wrap(auth_service::AuthnServiceServer::new(
+            self.authn.with_system_notifier(notification.clone()),
+        )))
+        .add_service(msec.wrap(auth_service::AuthzServiceServer::new(self.authz)))
+        .add_service(msec.wrap(auth_service::ApiKeyServiceServer::new(self.api_key)))
+        .add_service(msec.wrap(auth_service::IdentityProviderServiceServer::new(
+            self.identity_provider,
+        )))
+        .add_service(msec.wrap(auth_service::ControlPlaneServiceServer::new(
+            self.control_plane,
+        )))
+        .add_service(msec.wrap(tenant_service::TenantServiceServer::new(self.tenant)))
+        .add_service(msec.wrap(lock_service::LockServiceServer::new(self.lock)))
+        .add_service(msec.wrap(scheduler_service::SchedulerServiceServer::new(
+            self.scheduler,
+        )))
+        .add_service(msec.wrap(vault_service::VaultServiceServer::new(self.vault)))
+        .add_service(msec.wrap(cache_service::CacheServiceServer::new(self.cache)))
+        .add_service(msec.wrap(webhook_service::WebhookServiceServer::new(self.webhook)))
+        .add_service(msec.wrap(backup_service::BackupServiceServer::new(self.backup)))
+        .add_service(msec.wrap(search_service::SearchServiceServer::new(self.search)))
+        .add_service(msec.wrap(config_service::ConfigServiceServer::new(self.config)))
+        .add_service(msec.wrap(metering_service::MeteringServiceServer::new(self.metering)))
+        .add_service(msec.wrap(livequery_service::LiveQueryServiceServer::new(
+            self.livequery,
+        )))
+        .add_service(msec.wrap(workflow_service::WorkflowServiceServer::new(self.workflow)))
+        .add_service(msec.wrap(embedding_service::EmbeddingServiceServer::new(
+            self.embedding,
+        )))
+        .add_service(
+            msec.wrap(notification_service::NotificationServiceServer::from_arc(
+                notification,
+            )),
+        )
+        .add_service(msec.wrap(analytics_service::AnalyticsServiceServer::new(
+            self.analytics,
+        )))
+        .add_service(msec.wrap(storage_service::StorageServiceServer::new(self.storage)))
+        .add_service(msec.wrap(asset_service::AssetServiceServer::new(self.asset)))
+        // WebRTC ships five tonic services on one (Clone) impl; each mounts with
+        // the same proto-driven method-security layer.
+        .add_service(msec.wrap(webrtc_service::RoomServiceServer::new(self.webrtc.clone())))
+        .add_service(msec.wrap(webrtc_service::PeerServiceServer::new(self.webrtc.clone())))
+        .add_service(msec.wrap(webrtc_service::TrackServiceServer::new(self.webrtc.clone())))
+        .add_service(msec.wrap(webrtc_service::TurnServiceServer::new(self.webrtc.clone())))
+        .add_service(msec.wrap(webrtc_service::SignalingServiceServer::new(self.webrtc)))
     }
 }
 

@@ -1,0 +1,3 @@
+Hello {{user_name}},
+
+Use code {{code}} to verify your email address. It expires in {{expires_in_minutes}} minutes.

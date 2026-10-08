@@ -1122,11 +1122,15 @@ impl AuthnServiceImpl {
         // Post-commit, best-effort OTP delivery (cannot be rolled back; the OTP is
         // already durable and the caller holds the otp_id).
         self.deliver_otp_code(
+            &rec,
             &otp_channel,
             &otp_address,
             &otp_code,
-            authn_entity_pb::OtpType::EmailVerification as i32,
-            &rec.user_id,
+            if invite {
+                authn_entity_pb::OtpType::PasswordReset as i32
+            } else {
+                authn_entity_pb::OtpType::EmailVerification as i32
+            },
             &otp_id,
         )
         .await;

@@ -64,6 +64,19 @@ pub(crate) async fn send_notification(
             "event_type is required",
         ));
     }
+    let logs = send_notification_in_context(svc, context, req, None).await?;
+    Ok(Response::new(notif_pb::SendNotificationResponse { logs }))
+}
+
+/// The send itself, for a context that is already verified: the
+/// public RPC above, and the broker's own system notifications (auth codes),
+/// which run with the target user's tenant and no caller bearer.
+pub(crate) async fn send_notification_in_context(
+    svc: &NotificationServiceImpl,
+    context: crate::RequestContext,
+    req: notif_pb::SendNotificationRequest,
+    builtin_template: Option<notif_entity_pb::NotificationTemplate>,
+) -> Result<Vec<notif_entity_pb::NotificationLog>, Status> {
     // Per-tenant fair admission (Write budget) so one tenant's send flood
     // can't starve the shared control plane.
     let _admit = native_admit_on(
@@ -111,15 +124,21 @@ pub(crate) async fn send_notification(
             .await?;
         let template = match template_rows.first() {
             Some(row) => template_from_json_row(row),
-            None => {
-                return Err(notification_template_not_found_status(
-                    "send_notification",
-                    format!(
-                        "no active notification template for event '{}' channel '{}' locale '{}'",
-                        req.event_type, channel_db, locale
-                    ),
-                ));
-            }
+            None => match builtin_template
+                .as_ref()
+                .filter(|template| template.channel == channel)
+            {
+                Some(template) => template.clone(),
+                None => {
+                    return Err(notification_template_not_found_status(
+                        "send_notification",
+                        format!(
+                            "no active notification template for event '{}' channel '{}' locale '{}'",
+                            req.event_type, channel_db, locale
+                        ),
+                    ));
+                }
+            },
         };
         // Render subject/body against the request variables; an unsatisfied
         // `{{placeholder}}` fails closed naming the missing variable.
@@ -151,15 +170,18 @@ pub(crate) async fn send_notification(
                     &[("error-variable", field.as_str())],
                 )
             })?;
-        let opted_out = is_notification_opted_out(
-            runtime,
-            &context,
-            &req.recipient_id,
-            &req.tenant_id,
-            channel,
-            &req.event_type,
-        )
-        .await?;
+        // An authentication code is not marketing: opting out of a channel
+        // must not lock a user out of their own password reset.
+        let opted_out = !super::model::is_secret_bearing_event(&req.event_type)
+            && is_notification_opted_out(
+                runtime,
+                &context,
+                &req.recipient_id,
+                &req.tenant_id,
+                channel,
+                &req.event_type,
+            )
+            .await?;
         let (_, mut status_pb) = channel_send_decision(opted_out);
         // Test-only forced-FAILED path (TODO 04.4.2.2): gated false in prod.
         let mut error_message = String::new();
@@ -223,7 +245,10 @@ pub(crate) async fn send_notification(
     runtime
         .native_entity_transaction_for_service("notification", &context, transaction_ops)
         .await?;
-    Ok(Response::new(notif_pb::SendNotificationResponse { logs }))
+    for log in &mut logs {
+        super::model::redact_secret_log(log);
+    }
+    Ok(logs)
 }
 
 pub(crate) async fn get_notification(
@@ -394,9 +419,12 @@ pub(crate) async fn retry_notification(
         "UPDATE {rel} SET {status} = 'PENDING', {retry} = {retry} + 1 \
          WHERE {log_id} = $1::UUID AND {tenant_id} = $2 AND {project_id} = $3 \
            AND {status} = 'FAILED' \
+           AND NOT (btrim({event_type}) LIKE 'authn.%' AND {body} = $4) \
          RETURNING {projection}",
         status = m.q("status"),
         retry = m.q("retry_count"),
+        event_type = m.q("event_type"),
+        body = m.q("rendered_body"),
         log_id = m.q("log_id"),
         tenant_id = m.q("tenant_id"),
         project_id = m.q("project_id"),
@@ -453,7 +481,7 @@ pub(crate) async fn retry_notification(
         // No user-scoped recipient id → no preference key → nothing to suppress on.
         Err(_) => false,
     };
-    if opted_out {
+    if opted_out && !super::model::is_secret_bearing_event(&log.event_type) {
         // Mark SUPPRESSED (moving the just-set PENDING row) and do NOT emit a sent
         // event — nothing is handed to a provider for an opted-out recipient.
         let suppressed =
@@ -601,6 +629,7 @@ pub(crate) async fn report_delivery(
         .bind(log_id)
         .bind(&req.tenant_id)
         .bind(&context.project_id)
+        .bind(super::model::SECRET_BODY_PLACEHOLDER)
         .fetch_optional(&mut *tx)
         .await
         .map_err(|err| {
@@ -662,6 +691,18 @@ pub(crate) async fn report_delivery(
                 format!("report delivery failed: {err}"),
             )
         })?;
+    }
+    if super::model::is_secret_bearing_event(&event_type)
+        && matches!(status_db, "SENT" | "DELIVERED")
+    {
+        super::store::scrub_secret_body(&mut *tx, log_id, &req.tenant_id, &context.project_id)
+            .await
+            .map_err(|err| {
+                notification_internal_status(
+                    "report_delivery_scrub",
+                    format!("scrub delivered auth code failed: {err}"),
+                )
+            })?;
     }
     // Use the canonical project stored with the log after proving it equals the
     // caller's verified project scope. The outbox insert stays in this same tx.

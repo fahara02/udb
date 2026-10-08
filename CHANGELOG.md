@@ -12,6 +12,13 @@ no-wrapper plan.
 
 ### Added
 
+- Auth codes route through the listener's NotificationService with shipped
+  reset, verification and OTP templates; API responses redact codes and terminal
+  delivery scrubs stored bodies. Tenant templates override defaults.
+- Passwordless invitations report `UDB_PASSWORD_SETUP_REQUIRED` before login
+  and activate after the emailed code sets the first password.
+
+
 - **Rate-limit refusals identify the verified caller and effective budget.**
   Per-operation ceilings apply to unary and batch requests, and startup logs
   describe the active limiter. API-key reads and rotation retain stored budgets.

@@ -453,3 +453,72 @@ async fn live_postgres_authn_resend_otp_and_admin_reset() {
 
     cleanup_native_auth_db(&pool).await;
 }
+
+/// Least-privilege admin scope and reset cooldown share the persisted OTP state.
+#[tokio::test]
+#[ignore = "requires live Postgres; native CI runs every ignored auth test"]
+async fn live_postgres_admin_and_forgot_reset_share_cooldown() {
+    use crate::runtime::authn::{PostgresUserStore, UserStore};
+    use crate::runtime::service::method_security::{
+        scope_claim_context_for_test, test_claim_context,
+    };
+    let _guard = live_auth_db_lock().lock().await;
+    let pool = live_pg_pool().await;
+    migrate_native_auth_db(&pool).await;
+    let svc = authn_service_with_cooldown(pool.clone(), 300);
+    let user = create_verified_user(&svc, "reset-cooldown", "CorrectHorse1!").await;
+    let caller = || {
+        test_claim_context(
+            &user.user_id,
+            &user.tenant_id,
+            &user.project_id,
+            &["udb:authn:admin-reset-password"],
+            &[],
+        )
+    };
+    let first = scope_claim_context_for_test(
+        caller(),
+        svc.admin_reset_password(Request::new(authn_pb::AdminResetPasswordRequest {
+            user_id: user.user_id.clone(),
+            ..Default::default()
+        })),
+    )
+    .await
+    .expect("descriptor's least-privilege admin-reset scope passes handler")
+    .into_inner();
+    let store = PostgresUserStore::new(pool.clone(), "");
+    assert!(store.get_otp(&first.otp_id).await.unwrap().is_some());
+    let repeated = scope_claim_context_for_test(
+        caller(),
+        svc.admin_reset_password(Request::new(authn_pb::AdminResetPasswordRequest {
+            user_id: user.user_id.clone(),
+            ..Default::default()
+        })),
+    )
+    .await
+    .expect_err("admin reset honors the persisted cooldown");
+    assert_eq!(repeated.code(), tonic::Code::ResourceExhausted);
+    assert!(decode_detail(&repeated).retry_after_ms > 0);
+    let public_repeat = svc
+        .forgot_password(Request::new(authn_pb::ForgotPasswordRequest {
+            identifier: user.email.clone(),
+            ..Default::default()
+        }))
+        .await
+        .expect("public cooldown keeps the non-enumerating response shape")
+        .into_inner();
+    assert!(!public_repeat.otp_id.is_empty());
+    assert!(
+        store
+            .get_otp(&public_repeat.otp_id)
+            .await
+            .unwrap()
+            .is_none(),
+        "cooldown issues no second durable code"
+    );
+    assert!(
+        store.get_otp(&first.otp_id).await.unwrap().is_some(),
+        "the original code remains valid"
+    );
+    cleanup_native_auth_db(&pool).await;
+}

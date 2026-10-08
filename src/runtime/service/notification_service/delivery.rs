@@ -809,6 +809,18 @@ async fn record_attempt_outcome(
                 }
             }
         }
+        // A secret-bearing body (an auth code) is scrubbed once no further
+        // attempt will read it.
+        if super::model::is_secret_bearing_event(&intent.event_type) && !will_retry {
+            super::store::scrub_secret_body(
+                &mut *tx,
+                notification_id,
+                &intent.tenant_id,
+                &intent.project_id,
+            )
+            .await
+            .map_err(|err| format!("scrub secret notification body failed: {err}"))?;
+        }
         enqueue_delivery_event_in_tx(
             &mut *tx,
             outbox_relation,
@@ -897,7 +909,11 @@ pub(crate) async fn run_notification_delivery_once(
         // (leave it PENDING for a later pass) rather than risk delivering to an
         // opted-out recipient. An empty/non-UUID recipient id has no preference key,
         // so it is delivered normally (its address, if required, is checked below).
-        if let Ok(recipient_uuid) = Uuid::parse_str(intent.recipient_id.trim()) {
+        // Authentication codes are exempt (see send_notification_in_context).
+        let opt_out_applies = !super::model::is_secret_bearing_event(&intent.event_type);
+        if let Ok(recipient_uuid) = Uuid::parse_str(intent.recipient_id.trim())
+            && opt_out_applies
+        {
             match recipient_opted_out_db(
                 pool,
                 recipient_uuid,

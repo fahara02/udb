@@ -638,6 +638,38 @@ where
 /// FAILED transition is deliberately NOT handled here — it belongs with the
 /// bounded-retry model (max-attempts + backoff) rather than marking a log failed
 /// on the first transient error.
+/// Replace a delivered secret-bearing notification's stored body with the
+/// placeholder so the code does not stay at rest once it has been sent (or the
+/// delivery has failed for good).
+pub(crate) async fn scrub_secret_body<'e, E>(
+    executor: E,
+    log_id: Uuid,
+    tenant_id: &str,
+    project_id: &str,
+) -> Result<(), sqlx::Error>
+where
+    E: sqlx::Executor<'e, Database = sqlx::Postgres>,
+{
+    let m = log_model();
+    sqlx::query(&format!(
+        "UPDATE {rel} SET {subject} = $1, {body} = $1 \
+         WHERE {log_id} = $2::UUID AND {tenant_id} = $3 AND {project_id} = $4",
+        rel = m.relation,
+        subject = m.q("rendered_subject"),
+        body = m.q("rendered_body"),
+        log_id = m.q("log_id"),
+        tenant_id = m.q("tenant_id"),
+        project_id = m.q("project_id"),
+    ))
+    .bind(super::model::SECRET_BODY_PLACEHOLDER)
+    .bind(log_id)
+    .bind(tenant_id)
+    .bind(project_id)
+    .execute(executor)
+    .await?;
+    Ok(())
+}
+
 pub(crate) async fn transition_log_status<'e, E>(
     executor: E,
     log_id: Uuid,

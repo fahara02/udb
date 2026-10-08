@@ -107,6 +107,9 @@ reasons! {
     ENVELOPE_VERSION_UNSUPPORTED = "UDB_ENVELOPE_VERSION_UNSUPPORTED", Schema, FailedPrecondition,
         "An event's envelope_version is newer than the consumer understands.",
         "Upgrade the consumer's SDK to the broker's version.";
+    PASSWORD_SETUP_REQUIRED = "UDB_PASSWORD_SETUP_REQUIRED", Validation, FailedPrecondition,
+        "The invited account has no user-selected password yet and cannot start a login session.",
+        "Complete ResetPassword using the invitation code delivered to the account email, then log in.";
     POLICY_WRONG_SURFACE = "UDB_POLICY_WRONG_SURFACE", Validation, FailedPrecondition,
         "DataBroker.PutPolicy writes the legacy ABAC table, which does not authorize requests.",
         "Use AuthzService.PutAuthzPolicy or udb policy apply; UDB_ALLOW_LEGACY_PUT_POLICY=true is a temporary migration override.";

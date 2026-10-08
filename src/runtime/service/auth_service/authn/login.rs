@@ -481,7 +481,18 @@ impl AuthnServiceImpl {
                 "invalid username or password",
             ));
         }
-        // First factor: the password is ALWAYS verified, before any account
+        // A passwordless invite has no valid first factor. Its explicit next
+        // action is password setup; do not test the random placeholder password
+        // or accrue failed-login lockouts before the invited user can set one.
+        if user.status == crate::runtime::authn::AccountStatus::PasswordSetupRequired {
+            self.metrics.record_auth_login(false);
+            return Err(crate::runtime::error_reasons::Refusal::new(
+                crate::runtime::error_reasons::PASSWORD_SETUP_REQUIRED,
+                "complete password setup using the emailed invitation code before logging in",
+            )
+            .into_status());
+        }
+        // For accounts with a password, the first factor is verified before any account
         // status is revealed (so a caller without the password cannot tell
         // unknown / inactive / locked accounts apart) AND before any MFA second
         // factor is considered. An MFA code (totp_code / mfa_otp_id) is purely

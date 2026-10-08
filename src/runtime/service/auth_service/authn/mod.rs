@@ -356,6 +356,10 @@ pub struct AuthnServiceImpl {
     /// attaches this from `DataBrokerService`; direct test construction may leave
     /// it absent and continue through the store/pool fallbacks those tests own.
     runtime: Option<Arc<DataBrokerRuntime>>,
+    /// The notifier mounted alongside this auth service. Keeping it on the
+    /// instance prevents another listener or served test from using its store.
+    system_notifier:
+        Option<Arc<crate::runtime::service::notification_service::NotificationServiceImpl>>,
     /// Publishes authn domain events to the outbox → Kafka relay.
     event_sink: Arc<dyn AuthEventSink>,
     /// Records auth-plane metrics (login success/failure, lockout, MFA failure,
@@ -1852,6 +1856,7 @@ impl AuthnServiceImpl {
             security,
             pg_pool: None,
             runtime: None,
+            system_notifier: None,
             event_sink: events::noop_sink(),
             metrics: Arc::new(crate::metrics::NoopMetrics),
             #[cfg(feature = "redis")]
@@ -1882,6 +1887,7 @@ impl AuthnServiceImpl {
             security,
             pg_pool,
             runtime: None,
+            system_notifier: None,
             event_sink: events::noop_sink(),
             metrics: Arc::new(crate::metrics::NoopMetrics),
             #[cfg(feature = "redis")]
@@ -1897,6 +1903,14 @@ impl AuthnServiceImpl {
 
     pub(crate) fn with_runtime(mut self, runtime: Option<Arc<DataBrokerRuntime>>) -> Self {
         self.runtime = runtime;
+        self
+    }
+
+    pub(crate) fn with_system_notifier(
+        mut self,
+        notifier: Arc<crate::runtime::service::notification_service::NotificationServiceImpl>,
+    ) -> Self {
+        self.system_notifier = Some(notifier);
         self
     }
 

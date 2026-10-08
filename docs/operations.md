@@ -73,6 +73,28 @@ A mismatch refuses `serve` before proto parsing or backend startup. Every gRPC
 response carries `x-udb-version`, including refusals, so clients can identify the
 build that answered.
 
+### Auth-code delivery and invitation setup
+
+Auth issuance queues `authn.email_verification`, `authn.password_reset`, and
+`authn.otp` through the NotificationService mounted on the same listener.
+Shipped English templates render `{{code}}`, `{{expires_in_minutes}}`, and
+`{{user_name}}`; an active tenant template takes precedence. Configure a
+notification channel provider to deliver the queued messages. If notification
+queuing is unavailable, the configured `UDB_OTP_DELIVERY_WEBHOOK_URL` is the
+fallback. Issuance remains a durable operation when delivery is unavailable.
+
+Notification read/send responses redact auth-code subjects and bodies. The
+worker retains the delivery material while retries are pending and scrubs it
+when delivery reaches a terminal result. Channel opt-outs do not suppress
+requested authentication codes. A terminal notification whose code has been
+scrubbed cannot be manually retried; request a fresh authentication code.
+
+Create an invitation with `password_setup_required=true` and an empty password.
+Login returns `UDB_PASSWORD_SETUP_REQUIRED` until ResetPassword consumes the
+emailed invitation code and sets the first password. ForgotPassword and
+AdminResetPassword share the configured OTP cooldown; public repeat requests
+keep the non-enumerating response shape and do not issue another code.
+
 ## Local Playground
 
 Want a broker running on your laptop in one command? These bring one up, poke it

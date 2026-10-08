@@ -149,11 +149,57 @@ impl NotificationServiceImpl {
         self
     }
 
+    /// Send one of the broker's own notifications through the tenant's active
+    /// template for `event_type`, using the shipped auth-code template when
+    /// absent. `Ok(false)` if neither a tenant nor shipped template applies. The
+    /// rendered body of an `authn.*` event is redacted on every read and
+    /// scrubbed once delivered.
+    #[allow(clippy::too_many_arguments)]
+    pub(crate) async fn send_system(
+        &self,
+        tenant_id: &str,
+        project_id: &str,
+        event_type: &str,
+        channel: i32,
+        recipient_id: &str,
+        recipient_address: &str,
+        variables: std::collections::HashMap<String, String>,
+    ) -> Result<bool, Status> {
+        let context = crate::RequestContext {
+            tenant_id: tenant_id.to_string(),
+            project_id: project_id.to_string(),
+            ..crate::RequestContext::default()
+        };
+        let request = notif_pb::SendNotificationRequest {
+            tenant_id: tenant_id.to_string(),
+            project_id: project_id.to_string(),
+            event_type: event_type.to_string(),
+            channels: vec![channel],
+            recipient_id: recipient_id.to_string(),
+            recipient_address: recipient_address.to_string(),
+            variables,
+            ..Default::default()
+        };
+        let builtin = model::builtin_authn_template(event_type, channel);
+        match handlers::send_notification_in_context(self, context, request, builtin).await {
+            Ok(_) => Ok(true),
+            Err(status)
+                if status.code() == tonic::Code::NotFound
+                    && status
+                        .metadata()
+                        .get("error-reason")
+                        .and_then(|value| value.to_str().ok())
+                        == Some(config::TEMPLATE_NOT_FOUND) =>
+            {
+                Ok(false)
+            }
+            Err(status) => Err(status),
+        }
+    }
+
     /// Resolve and pin one physical Postgres authority for the request project.
-    /// Empty project metadata names the explicit `default` project; it never means
-    /// "pick any configured instance". Compound typed/raw operations carry the
-    /// selected instance in the returned context so weighted routing cannot split
-    /// a notification mutation from its transactional outbox row.
+    /// Empty project metadata names the explicit `default` project. Typed/raw
+    /// operations carry the selected instance so routing cannot split their writes.
     pub(crate) fn resolve_project_store(
         &self,
         mut context: crate::RequestContext,

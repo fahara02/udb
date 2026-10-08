@@ -260,7 +260,34 @@ pub(crate) fn json_i64_field(row: &serde_json::Map<String, serde_json::Value>, f
         .unwrap_or(0)
 }
 
+/// Event types whose rendered body carries a one-time authentication code
+/// (password reset, email verification, OTP). The `authn.` namespace is
+/// reserved for the broker's own auth notifications.
+pub(crate) fn is_secret_bearing_event(event_type: &str) -> bool {
+    event_type.trim().starts_with("authn.")
+}
+
+/// What a read API returns, and what the stored body becomes once delivered,
+/// for a secret-bearing notification: the code must never be readable back
+/// through NotificationService (anyone with notification read access could
+/// take over the account) or linger at rest.
+pub(crate) const SECRET_BODY_PLACEHOLDER: &str =
+    "[redacted: this notification carried an authentication code]";
+
 pub(crate) fn log_from_json(row: &serde_json::Value) -> notif_entity_pb::NotificationLog {
+    let mut log = log_from_json_unredacted(row);
+    redact_secret_log(&mut log);
+    log
+}
+
+pub(crate) fn redact_secret_log(log: &mut notif_entity_pb::NotificationLog) {
+    if is_secret_bearing_event(&log.event_type) {
+        log.rendered_subject = SECRET_BODY_PLACEHOLDER.to_string();
+        log.rendered_body = SECRET_BODY_PLACEHOLDER.to_string();
+    }
+}
+
+fn log_from_json_unredacted(row: &serde_json::Value) -> notif_entity_pb::NotificationLog {
     let row = json_object(row);
     notif_entity_pb::NotificationLog {
         log_id: json_string_field(row, "log_id"),
@@ -319,6 +346,46 @@ pub(crate) fn template_from_json_row(
         project_id: json_string_field(row, "project_id"),
         ..Default::default()
     }
+}
+
+/// Shipped English auth-code templates used only by internal auth issuance.
+/// A tenant's active template takes precedence. No template row is fabricated:
+/// the optional log template reference stays empty for this compiled default.
+pub(crate) fn builtin_authn_template(
+    event_type: &str,
+    channel: i32,
+) -> Option<notif_entity_pb::NotificationTemplate> {
+    use notif_entity_pb::NotificationChannel;
+    if !matches!(
+        NotificationChannel::try_from(channel).ok(),
+        Some(NotificationChannel::Email | NotificationChannel::Sms)
+    ) {
+        return None;
+    }
+    let (subject, body) = match event_type {
+        "authn.password_reset" => (
+            "Set or reset your password",
+            include_str!("templates/authn.password_reset.txt"),
+        ),
+        "authn.email_verification" => (
+            "Verify your email address",
+            include_str!("templates/authn.email_verification.txt"),
+        ),
+        "authn.otp" => (
+            "Your authentication code",
+            include_str!("templates/authn.otp.txt"),
+        ),
+        _ => return None,
+    };
+    Some(notif_entity_pb::NotificationTemplate {
+        event_type: event_type.to_string(),
+        channel,
+        subject_template: subject.to_string(),
+        body_template: body.to_string(),
+        locale: "en".to_string(),
+        is_active: true,
+        ..Default::default()
+    })
 }
 
 /// Render a `{{placeholder}}` template against the request `variables` map.
@@ -588,4 +655,32 @@ pub(crate) fn delivery_attempt_from_row(
         ),
         ..Default::default()
     })
+}
+
+#[cfg(test)]
+mod secret_body_tests {
+    use super::{SECRET_BODY_PLACEHOLDER, is_secret_bearing_event, log_from_json};
+
+    /// An auth-code notification never reads back its body; others do.
+    #[test]
+    fn authn_bodies_are_redacted_on_read() {
+        assert!(is_secret_bearing_event("authn.password_reset"));
+        assert!(!is_secret_bearing_event("orders.shipped"));
+        let secret = serde_json::json!({
+            "event_type": "authn.otp",
+            "rendered_subject": "123456 is your code",
+            "rendered_body": "your code is 123456",
+        });
+        assert_eq!(
+            log_from_json(&secret).rendered_subject,
+            SECRET_BODY_PLACEHOLDER
+        );
+        assert_eq!(
+            log_from_json(&secret).rendered_body,
+            SECRET_BODY_PLACEHOLDER
+        );
+        let plain =
+            serde_json::json!({"event_type": "orders.shipped", "rendered_body": "on its way"});
+        assert_eq!(log_from_json(&plain).rendered_body, "on its way");
+    }
 }

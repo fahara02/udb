@@ -83,7 +83,7 @@ impl AuthnServiceImpl {
         // Best-effort outbound delivery to the operator's channel gateway. A
         // delivery failure (or no configured webhook) never fails issuance — the
         // OTP is persisted and the caller holds the otp_id.
-        self.deliver_otp_code(channel, address, &code, otp_type, &user.user_id, &otp_id)
+        self.deliver_otp_code(user, channel, address, &code, otp_type, &otp_id)
             .await;
         Ok((otp_id, code))
     }
@@ -131,20 +131,101 @@ impl AuthnServiceImpl {
     /// notification side-effect is post-commit (it cannot be rolled back).
     pub(super) async fn deliver_otp_code(
         &self,
+        user: &UserRecord,
         channel: &str,
         address: &str,
         code: &str,
         otp_type: i32,
-        user_id: &str,
         otp_id: &str,
     ) {
-        authn::deliver_otp(channel, address, code, otp_type, user_id).await;
+        // Through NotificationService when the tenant has an active template for
+        // the code's event (`authn.password_reset`, `authn.email_verification`,
+        // `authn.otp`; variables `code`, `expires_in_minutes`, `user_name`).
+        // The stored body is redacted on read and scrubbed once delivered.
+        // Without a template, the operator webhook delivers as before.
+        if self
+            .deliver_otp_via_notification(user, channel, address, code, otp_type)
+            .await
+        {
+            #[cfg(test)]
+            if let Ok(mut codes) = test_otp_codes().lock() {
+                codes.insert(otp_id.to_string(), code.to_string());
+            }
+            #[cfg(not(test))]
+            let _ = otp_id;
+            return;
+        }
+        authn::deliver_otp(channel, address, code, otp_type, &user.user_id).await;
         #[cfg(test)]
         if let Ok(mut codes) = test_otp_codes().lock() {
             codes.insert(otp_id.to_string(), code.to_string());
         }
         #[cfg(not(test))]
         let _ = otp_id;
+    }
+
+    /// Queue the code through the tenant's NotificationService template.
+    /// `false` when there is no notifier or no template for the event, or the
+    /// send failed (logged); the caller then uses the webhook.
+    async fn deliver_otp_via_notification(
+        &self,
+        user: &UserRecord,
+        channel: &str,
+        address: &str,
+        code: &str,
+        otp_type: i32,
+    ) -> bool {
+        let Some(notifier) = &self.system_notifier else {
+            return false;
+        };
+        let event_type = if otp_type == authn_entity_pb::OtpType::PasswordReset as i32 {
+            "authn.password_reset"
+        } else if otp_type == authn_entity_pb::OtpType::EmailVerification as i32 {
+            "authn.email_verification"
+        } else {
+            "authn.otp"
+        };
+        use crate::proto::udb::core::notification::entity::v1::NotificationChannel;
+        let notification_channel = if channel.eq_ignore_ascii_case("sms") {
+            NotificationChannel::Sms
+        } else {
+            NotificationChannel::Email
+        } as i32;
+        let user_name = if user.full_name.trim().is_empty() {
+            user.username.clone()
+        } else {
+            user.full_name.clone()
+        };
+        let variables = std::collections::HashMap::from([
+            ("code".to_string(), code.to_string()),
+            (
+                "expires_in_minutes".to_string(),
+                self.config.otp_ttl_secs.div_ceil(60).to_string(),
+            ),
+            ("user_name".to_string(), user_name),
+        ]);
+        match notifier
+            .send_system(
+                &user.tenant_id,
+                &user.project_id,
+                event_type,
+                notification_channel,
+                &user.user_id,
+                address,
+                variables,
+            )
+            .await
+        {
+            Ok(sent) => sent,
+            Err(err) => {
+                tracing::warn!(
+                    event_type,
+                    error = %err,
+                    "auth code notification failed; falling back to the OTP webhook"
+                );
+                false
+            }
+        }
     }
 
     /// Enforce the configured per-(user, OTP type) cooldown to throttle OTP

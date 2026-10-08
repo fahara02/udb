@@ -323,6 +323,42 @@ async fn notification_http_sender_delivers_and_retries_live() {
         assert_eq!(sent, 0, "a 503 provider never counts as delivered");
     }
 
+    // A reset code reaches its provider, then both rendered fields are scrubbed
+    // from the durable log once no retry needs them.
+    let (secret_addr, secret_received) = spawn_provider("200 OK").await;
+    let secret_project = "notification-http-live-authn";
+    let secret_log = queue_email(&pool, &tenant, secret_project, "reset@example.test").await;
+    sqlx::query("UPDATE udb_notification.notification_logs SET event_type = 'authn.password_reset', rendered_subject = 'Reset 123456', rendered_body = 'Code 123456' WHERE log_id = $1::UUID")
+        .bind(&secret_log).execute(&pool).await.expect("queue a secret-bearing body");
+    assert_eq!(
+        run_notification_delivery_worker_pass(
+            &http,
+            runtime.clone(),
+            &pool,
+            secret_project,
+            Some(&outbox),
+            50,
+            None,
+            &[email_provider(secret_addr, "/send", &wrapped)],
+            3600,
+        )
+        .await
+        .expect("auth-code delivery pass"),
+        1
+    );
+    let secret_posts = secret_received.lock().await.clone();
+    assert_eq!(secret_posts.len(), 1);
+    let secret_body: serde_json::Value =
+        serde_json::from_slice(&secret_posts[0].body).expect("provider JSON");
+    assert_eq!(secret_body["subject"], "Reset 123456");
+    assert_eq!(secret_body["body"], "Code 123456");
+    let scrubbed: (String, String) = sqlx::query_as("SELECT rendered_subject, rendered_body FROM udb_notification.notification_logs WHERE log_id = $1::UUID")
+        .bind(&secret_log).fetch_one(&pool).await.expect("read back delivered auth code");
+    assert!(
+        !scrubbed.0.contains("123456") && !scrubbed.1.contains("123456"),
+        "terminal delivery removes the stored code"
+    );
+
     drop(loopback);
     assert!(!ALLOW_LOOPBACK_HTTP_DELIVERY_FOR_TEST.load(Ordering::SeqCst));
 
