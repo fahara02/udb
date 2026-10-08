@@ -483,6 +483,28 @@ pub(crate) const SUPPORTED_RPC_NAMES: &[&str] = &[
     "VerifyAdminAuditLog",
 ];
 
+fn log_rate_limit_posture(runtime: &DataBrokerRuntime) {
+    #[cfg(not(feature = "redis"))]
+    {
+        let _ = runtime;
+        tracing::warn!("rate limiting disabled in this build because the redis feature is off");
+    }
+    #[cfg(feature = "redis")]
+    {
+        let settings = &runtime.config().service;
+        tracing::info!(
+            enabled = settings.rate_limit_enabled,
+            max_per_window = settings.rate_limit_max_per_window,
+            window_secs = settings.rate_limit_window_secs.max(1),
+            operation_overrides = ?settings.rate_limit_max_per_operation,
+            bucket_scope = if settings.rate_limit_per_key_enabled { "tenant+credential+operation" } else { "tenant+operation" },
+            redis_configured = runtime.redis_clone().is_some(),
+            failure_mode = %settings.rate_limit_failure_mode,
+            "effective data-plane rate limit configuration"
+        );
+    }
+}
+
 impl DataBrokerService {
     pub fn new(manifest: CatalogManifest) -> Self {
         let catalog = Arc::new(crate::runtime::catalog::CatalogManager::new(
@@ -507,6 +529,7 @@ impl DataBrokerService {
     }
 
     pub fn with_runtime(manifest: CatalogManifest, runtime: DataBrokerRuntime) -> Self {
+        log_rate_limit_posture(&runtime);
         let catalog = Arc::new(crate::runtime::catalog::CatalogManager::new(
             manifest.clone(),
         ));
@@ -536,6 +559,7 @@ impl DataBrokerService {
         cdc_engine: Option<Arc<CdcEngine>>,
         abac_default_allow: bool,
     ) -> Self {
+        log_rate_limit_posture(&runtime);
         let catalog = Arc::new(crate::runtime::catalog::CatalogManager::new(
             manifest.clone(),
         ));
@@ -804,6 +828,7 @@ impl DataBrokerService {
                 operation,
                 &safe.credential_id,
                 security.rate_limit_per_minute,
+                &safe.user_id,
             )
             .await?;
         }
@@ -978,11 +1003,8 @@ impl DataBrokerService {
         _operation: &str,
         _principal_id: &str,
         _per_key_per_minute: i64,
+        _subject: &str,
     ) -> Result<(), Status> {
-        static WARN_ONCE: std::sync::Once = std::sync::Once::new();
-        WARN_ONCE.call_once(|| {
-            tracing::warn!("rate limiting disabled in this build because the redis feature is off");
-        });
         Ok(())
     }
 
@@ -993,9 +1015,16 @@ impl DataBrokerService {
         operation: &str,
         principal_id: &str,
         per_key_per_minute: i64,
+        subject: &str,
     ) -> Result<(), Status> {
         self.rate_limit_handle()
-            .check(tenant_id, operation, principal_id, per_key_per_minute)
+            .check(
+                tenant_id,
+                operation,
+                principal_id,
+                per_key_per_minute,
+                subject,
+            )
             .await
     }
 
@@ -1937,6 +1966,7 @@ pub async fn serve(
     schemas: Vec<ProtoSchema>,
     addr: SocketAddr,
 ) -> Result<(), Box<dyn std::error::Error>> {
+    crate::runtime::preflight::enforce_expected_version()?;
     let runtime = DataBrokerRuntime::try_from_env().await.map_err(|err| {
         std::io::Error::other(format!("UDB startup config validation failed: {err}"))
     })?;
@@ -5190,6 +5220,7 @@ impl RateLimitHandle {
         _operation: &str,
         _principal_id: &str,
         _per_key_per_minute: i64,
+        _subject: &str,
     ) -> Result<(), Status> {
         Ok(())
     }
@@ -5203,11 +5234,18 @@ impl RateLimitHandle {
         operation: &str,
         principal_id: &str,
         per_key_per_minute: i64,
+        subject: &str,
     ) -> Result<(), Status> {
         let redis = self.runtime.redis_clone();
         let window_secs = self.runtime.config().service.rate_limit_window_secs.max(1);
         let per_key_enabled = self.runtime.config().service.rate_limit_per_key_enabled;
-        let base_max_rps = self.runtime.config().service.rate_limit_max_per_window;
+        let operation_max = self
+            .runtime
+            .config()
+            .service
+            .rate_limit_max_for_operation(operation);
+        let base_max_rps =
+            operation_max.unwrap_or(self.runtime.config().service.rate_limit_max_per_window);
 
         let unix_epoch = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
@@ -5215,7 +5253,7 @@ impl RateLimitHandle {
             .as_secs();
         let window_index = unix_epoch / window_secs;
 
-        let (key, max_rps) = resolve_rate_limit_bucket(
+        let (key, mut max_rps) = resolve_rate_limit_bucket(
             per_key_enabled,
             tenant_id,
             principal_id,
@@ -5225,6 +5263,9 @@ impl RateLimitHandle {
             window_secs,
             per_key_per_minute,
         );
+        if let Some(limit) = operation_max {
+            max_rps = limit;
+        }
 
         // C5: no Redis configured — do NOT silently fail OPEN. Explicit
         // `UDB_RATE_LIMIT_FAILURE_MODE=open` allows; every other mode (including the
@@ -5241,7 +5282,14 @@ impl RateLimitHandle {
                 return Ok(());
             }
             return self
-                .apply_local_rate_limit(&key, window_secs, max_rps, unix_epoch, "no_backend")
+                .apply_local_rate_limit(
+                    &key,
+                    window_secs,
+                    max_rps,
+                    unix_epoch,
+                    "no_backend",
+                    subject,
+                )
                 .await;
         };
 
@@ -5265,6 +5313,7 @@ impl RateLimitHandle {
                                 max_rps,
                                 unix_epoch,
                                 status,
+                                subject,
                             )
                             .await;
                     }
@@ -5312,7 +5361,14 @@ impl RateLimitHandle {
                     format!("rate limit redis error: {err}"),
                 );
                 return self
-                    .rate_limit_failure_fallback(&key, window_secs, max_rps, unix_epoch, status)
+                    .rate_limit_failure_fallback(
+                        &key,
+                        window_secs,
+                        max_rps,
+                        unix_epoch,
+                        status,
+                        subject,
+                    )
                     .await;
             }
         };
@@ -5343,6 +5399,7 @@ impl RateLimitHandle {
                 None,
                 &[
                     ("bucket", key.as_str()),
+                    ("principal", subject),
                     ("limit", limit.as_str()),
                     ("window", window.as_str()),
                 ],
@@ -5363,6 +5420,7 @@ impl RateLimitHandle {
         max_rps: u32,
         unix_epoch: u64,
         degraded_label: &'static str,
+        subject: &str,
     ) -> Result<(), Status> {
         self.degraded
             .store(true, std::sync::atomic::Ordering::Relaxed);
@@ -5399,6 +5457,7 @@ impl RateLimitHandle {
                 None,
                 &[
                     ("bucket", key),
+                    ("principal", subject),
                     ("limit", limit.as_str()),
                     ("window", window.as_str()),
                 ],
@@ -5421,6 +5480,7 @@ impl RateLimitHandle {
         max_rps: u32,
         unix_epoch: u64,
         closed_status: Status,
+        subject: &str,
     ) -> Result<(), Status> {
         let mode = self
             .runtime
@@ -5430,7 +5490,7 @@ impl RateLimitHandle {
             .clone();
         match mode.as_str() {
             "local" => {
-                self.apply_local_rate_limit(key, window_secs, max_rps, unix_epoch, "local")
+                self.apply_local_rate_limit(key, window_secs, max_rps, unix_epoch, "local", subject)
                     .await
             }
             "open" => {

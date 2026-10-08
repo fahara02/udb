@@ -917,6 +917,14 @@ fn session_from_row(row: &sqlx::postgres::PgRow) -> Result<SessionRecord, sqlx::
     })
 }
 
+fn api_key_budget_select_clause(model: &crate::runtime::native_catalog::NativeModel) -> String {
+    format!(
+        "{}::bigint AS rate_limit_per_minute, {}::bigint AS rate_limit_per_day",
+        model.q("rate_limit_per_minute"),
+        model.q("rate_limit_per_day"),
+    )
+}
+
 fn api_key_from_row(row: &sqlx::postgres::PgRow) -> Result<ApiKeyRecord, sqlx::Error> {
     Ok(ApiKeyRecord {
         key_prefix: row.try_get("key_prefix")?,
@@ -935,10 +943,8 @@ fn api_key_from_row(row: &sqlx::postgres::PgRow) -> Result<ApiKeyRecord, sqlx::E
         last_used_at_unix: row.try_get::<i64, _>("last_used_at_unix")?.max(0) as u64,
         expires_at_unix: row.try_get::<i64, _>("expires_at_unix")?.max(0) as u64,
         revoked_at_unix: row.try_get::<i64, _>("revoked_at_unix")?.max(0) as u64,
-        // Tolerant: SELECTs that don't project these columns hydrate to 0
-        // (= no per-key override), so only the resolution path needs to add them.
-        rate_limit_per_minute: row.try_get::<i64, _>("rate_limit_per_minute").unwrap_or(0),
-        rate_limit_per_day: row.try_get::<i64, _>("rate_limit_per_day").unwrap_or(0),
+        rate_limit_per_minute: row.try_get("rate_limit_per_minute")?,
+        rate_limit_per_day: row.try_get("rate_limit_per_day")?,
     })
 }
 
@@ -2478,17 +2484,11 @@ impl ApiKeyStore for PostgresApiKeyStore {
         let revoked_at_unix = m.timestamp_unix_as("deleted_at", "revoked_at_unix");
         let created_at = m.q("created_at");
         let deleted_at = m.q("deleted_at");
-        // Per-key budgets for the opt-in DataBroker limiter. Cast to bigint so the
-        // INTEGER `rate_limit_per_minute` and BIGINT `rate_limit_per_day` both
-        // decode uniformly as i64. Only this resolution SELECT projects them (the
-        // limiter reads the record built here); management list SELECTs omit them
-        // and hydrate to 0 (= no per-key override) via the tolerant row decoder.
-        let rate_limit_per_minute = m.q("rate_limit_per_minute");
-        let rate_limit_per_day = m.q("rate_limit_per_day");
+        let budgets = api_key_budget_select_clause(m);
         let row = sqlx::query(&format!(
             "SELECT {key_prefix_col} AS key_prefix, {key_hash}, {name}, {description}, {owner_id}, {service_identity}, {grant_revision}, {tenant_id}, {project_id}, {scopes}, \
                     {created_at_unix}, {last_used_at_unix}, {expires_at_unix}, {revoked_at_unix}, \
-                    {rate_limit_per_minute}::bigint AS rate_limit_per_minute, {rate_limit_per_day}::bigint AS rate_limit_per_day \
+                    {budgets} \
              FROM {rel} WHERE {key_prefix_col} = $1 AND {deleted_at} IS NULL ORDER BY {created_at} DESC LIMIT 1"
         ))
         .bind(key_prefix)
@@ -2530,6 +2530,7 @@ impl ApiKeyStore for PostgresApiKeyStore {
         let status_col = m.q("status");
         let expires_at = m.q("expires_at");
         let created_at = m.q("created_at");
+        let budgets = api_key_budget_select_clause(m);
         let active_clause = if active_only {
             format!(
                 "AND {deleted_at} IS NULL AND {status_col} = 'ACTIVE' AND ({expires_at} IS NULL OR {expires_at} > to_timestamp($2::DOUBLE PRECISION))"
@@ -2539,7 +2540,7 @@ impl ApiKeyStore for PostgresApiKeyStore {
         };
         let sql = format!(
             "SELECT {key_prefix_col}, {key_hash}, {name}, {description}, {owner_id}, {service_identity}, {grant_revision}, {tenant_id}, {project_id}, {scopes}, \
-                    {created_at_unix}, {last_used_at_unix}, {expires_at_unix}, {revoked_at_unix} \
+                    {created_at_unix}, {last_used_at_unix}, {expires_at_unix}, {revoked_at_unix}, {budgets} \
              FROM {rel} WHERE ({owner_id_col} = $1 OR {service_identity_expr} = $1) {active_clause} ORDER BY {created_at} DESC"
         );
         let mut query = sqlx::query(&sql).bind(principal_id);
@@ -2587,6 +2588,7 @@ impl ApiKeyStore for PostgresApiKeyStore {
         let status_col = m.q("status");
         let expires_at = m.q("expires_at");
         let created_at = m.q("created_at");
+        let budgets = api_key_budget_select_clause(m);
         let active_clause = if active_only {
             format!(
                 "AND {deleted_at} IS NULL AND {status_col} = 'ACTIVE' AND ({expires_at} IS NULL OR {expires_at} > to_timestamp($2::DOUBLE PRECISION))"
@@ -2615,7 +2617,7 @@ impl ApiKeyStore for PostgresApiKeyStore {
         };
         let sql = format!(
             "SELECT {key_prefix_col}, {key_hash}, {name}, {description}, {owner_id}, {service_identity}, {grant_revision}, {tenant_id}, {project_id}, {scopes}, \
-                    {created_at_unix}, {last_used_at_unix}, {expires_at_unix}, {revoked_at_unix} \
+                    {created_at_unix}, {last_used_at_unix}, {expires_at_unix}, {revoked_at_unix}, {budgets} \
              FROM {rel} WHERE ({owner_id_col} = $1 OR {service_identity_expr} = $1) {active_clause} ORDER BY {created_at} DESC LIMIT {limit_param} OFFSET {offset_param}"
         );
         let mut query = sqlx::query(&sql).bind(principal_id);
@@ -2667,6 +2669,7 @@ impl ApiKeyStore for PostgresApiKeyStore {
         let status_col = m.q("status");
         let expires_at = m.q("expires_at");
         let created_at = m.q("created_at");
+        let budgets = api_key_budget_select_clause(m);
         let status_clause = match status {
             ApiKeyStatus::Unspecified => String::new(),
             ApiKeyStatus::Active => format!(
@@ -2701,7 +2704,7 @@ impl ApiKeyStore for PostgresApiKeyStore {
             };
         let sql = format!(
             "SELECT {key_prefix_col}, {key_hash}, {name}, {description}, {owner_id}, {service_identity}, {grant_revision}, {tenant_id}, {project_id}, {scopes}, \
-                    {created_at_unix}, {last_used_at_unix}, {expires_at_unix}, {revoked_at_unix} \
+                    {created_at_unix}, {last_used_at_unix}, {expires_at_unix}, {revoked_at_unix}, {budgets} \
              FROM {rel} WHERE ({owner_id_col} = $1 OR {service_identity_expr} = $1) {status_clause} ORDER BY {created_at} DESC LIMIT {limit_param} OFFSET {offset_param}"
         );
         let mut query = sqlx::query(&sql).bind(principal_id);

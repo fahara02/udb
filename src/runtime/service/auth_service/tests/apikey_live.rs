@@ -30,6 +30,8 @@ async fn live_postgres_apikey_roundtrip() {
             name: "live-key".to_string(),
             owner_id: principal_id.clone(),
             scopes: vec!["data:read".to_string()],
+            rate_limit_per_minute: 1234,
+            rate_limit_per_day: 12345,
             context: Some(common_pb::RequestContext {
                 principal_id: principal_id.clone(),
                 tenant: Some(common_pb::TenantContext {
@@ -48,6 +50,10 @@ async fn live_postgres_apikey_roundtrip() {
     let key = created.key.expect("created API key");
     assert!(created.plain_key.starts_with("udbk_"));
     assert_eq!(key.owner_id, principal_id);
+    assert_eq!(key.name, "live-key");
+    assert_ne!(key.name, key.key_prefix);
+    assert_eq!(key.rate_limit_per_minute, 1234);
+    assert_eq!(key.rate_limit_per_day, 12345);
     // AUTH-006: `service_identity` is OUTPUT_VIEW_STORAGE_ONLY on the ApiKey
     // entity (never returned over the wire), so the lineage is asserted against
     // the STORED record — it must carry the grant's immutable service identity.
@@ -74,6 +80,66 @@ async fn live_postgres_apikey_roundtrip() {
     // CRIT-4: the validated scopes are the grant-attenuated set.
     assert!(valid.scopes.contains(&"data:read".to_string()));
 
+    let caller = || test_claim_context(&principal_id, "acme", "billing", &[], &[]);
+    let listed = scope_claim_context_for_test(
+        caller(),
+        svc.list_api_keys(Request::new(apikey_pb::ListApiKeysRequest {
+            owner_id: principal_id.clone(),
+            ..Default::default()
+        })),
+    )
+    .await
+    .expect("list stored named API key")
+    .into_inner();
+    let listed_key = listed
+        .keys
+        .iter()
+        .find(|row| row.key_prefix == key.key_prefix)
+        .expect("new key appears in ListApiKeys");
+    assert_eq!(listed_key.name, key.name);
+    assert_eq!(listed_key.rate_limit_per_minute, 1234);
+    assert_eq!(listed_key.rate_limit_per_day, 12345);
+    let fetched = scope_claim_context_for_test(
+        caller(),
+        svc.get_api_key(Request::new(apikey_pb::GetApiKeyRequest {
+            key_id: key.key_id.clone(),
+            ..Default::default()
+        })),
+    )
+    .await
+    .expect("get stored named API key")
+    .into_inner()
+    .key
+    .expect("fetched key");
+    assert_eq!(fetched.name, key.name);
+    assert_eq!(fetched.rate_limit_per_minute, 1234);
+    assert_eq!(fetched.rate_limit_per_day, 12345);
+    let rotated = scope_claim_context_for_test(
+        caller(),
+        svc.rotate_api_key(Request::new(apikey_pb::RotateApiKeyRequest {
+            key_id: key.key_id.clone(),
+            rotation_reason: "roundtrip-budget-proof".into(),
+            ..Default::default()
+        })),
+    )
+    .await
+    .expect("rotate stored named API key")
+    .into_inner();
+    let rotated_key = rotated.key.expect("rotated key");
+    assert_eq!(rotated_key.name, key.name);
+    assert_ne!(rotated_key.key_prefix, key.key_prefix);
+    assert_eq!(rotated_key.rate_limit_per_minute, 1234);
+    assert_eq!(rotated_key.rate_limit_per_day, 12345);
+    let old_valid = svc
+        .validate_api_key(Request::new(apikey_pb::ValidateApiKeyRequest {
+            plain_key: created.plain_key,
+            ..Default::default()
+        }))
+        .await
+        .expect("validate replaced key")
+        .into_inner();
+    assert!(!old_valid.valid, "rotation must revoke the previous secret");
+
     // Revoke runs as the authenticated tenant-`acme` admin — the same validated
     // claim `MethodSecurityLayer` installs from the bearer token over the wire.
     // The tenant guard stays strict: the caller IS tenant `acme`, so it matches
@@ -82,7 +148,7 @@ async fn live_postgres_apikey_roundtrip() {
     scope_claim_context_for_test(
         caller,
         svc.revoke_api_key(Request::new(apikey_pb::RevokeApiKeyRequest {
-            key_id: key.key_id,
+            key_id: rotated_key.key_id,
             revoke_reason: "live_test".to_string(),
             ..Default::default()
         })),
@@ -92,7 +158,7 @@ async fn live_postgres_apikey_roundtrip() {
 
     let invalid = svc
         .validate_api_key(Request::new(apikey_pb::ValidateApiKeyRequest {
-            plain_key: created.plain_key,
+            plain_key: rotated.plain_key,
             ..Default::default()
         }))
         .await

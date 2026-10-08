@@ -65,6 +65,23 @@ fn env_truthy(key: &str) -> bool {
         .unwrap_or(false)
 }
 
+fn resolved_expected_version() -> Option<&'static str> {
+    static EXPECTED: std::sync::OnceLock<Option<String>> = std::sync::OnceLock::new();
+    EXPECTED
+        .get_or_init(|| std::env::var("UDB_EXPECTED_VERSION").ok())
+        .as_deref()
+}
+
+/// Refuse to serve a broker build that differs from the explicit deployment pin.
+/// Called before proto/startup side effects by the CLI and before backend setup
+/// by the library server entry point. Doctor reports the same finding.
+pub fn enforce_expected_version() -> std::io::Result<()> {
+    match expected_version_finding(resolved_expected_version(), env!("CARGO_PKG_VERSION")) {
+        Some(finding) => Err(std::io::Error::other(finding.detail)),
+        None => Ok(()),
+    }
+}
+
 /// `UDB_EXPECTED_VERSION` (optionally `v`-prefixed) must equal the running
 /// broker's version when it is set.
 fn expected_version_finding(expected: Option<&str>, running: &str) -> Option<PreflightFinding> {
@@ -222,10 +239,9 @@ pub fn evaluate(config: &UdbConfig, public_addr: SocketAddr) -> Vec<PreflightFin
     // broker build this deployment was tested against. A different binary (a
     // stale image, a partial rollout) is caught at boot instead of by the first
     // client that trips over a changed contract.
-    if let Some(finding) = expected_version_finding(
-        std::env::var("UDB_EXPECTED_VERSION").ok().as_deref(),
-        env!("CARGO_PKG_VERSION"),
-    ) {
+    if let Some(finding) =
+        expected_version_finding(resolved_expected_version(), env!("CARGO_PKG_VERSION"))
+    {
         out.push(finding);
     }
 

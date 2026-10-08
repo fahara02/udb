@@ -99,6 +99,7 @@ fn saga_settings_merge_env_overrides_file_values() {
 fn rate_limit_max_accepts_short_alias_with_canonical_precedence() {
     let prior_canonical = std::env::var("UDB_RATE_LIMIT_MAX_PER_WINDOW").ok();
     let prior_alias = std::env::var("UDB_RATE_LIMIT_MAX").ok();
+    let prior_select = std::env::var("UDB_RATE_LIMIT_SELECT_MAX_PER_WINDOW").ok();
 
     // The short name operators reach for first (`UDB_RATE_LIMIT_MAX`) must move
     // the per-tenant budget — before the alias it silently did nothing and the
@@ -117,13 +118,17 @@ fn rate_limit_max_accepts_short_alias_with_canonical_precedence() {
     unsafe {
         std::env::set_var("UDB_RATE_LIMIT_MAX_PER_WINDOW", "2000");
         std::env::set_var("UDB_RATE_LIMIT_MAX", "9");
+        std::env::set_var("UDB_RATE_LIMIT_SELECT_MAX_PER_WINDOW", "2");
     }
     let mut both = UdbConfig::default();
     both.merge_env();
     assert_eq!(both.service.rate_limit_max_per_window, 2000);
+    assert_eq!(both.service.rate_limit_max_for_operation("Select"), Some(2));
+    assert_eq!(both.service.rate_limit_max_for_operation("Upsert"), None);
 
     restore_env("UDB_RATE_LIMIT_MAX_PER_WINDOW", prior_canonical);
     restore_env("UDB_RATE_LIMIT_MAX", prior_alias);
+    restore_env("UDB_RATE_LIMIT_SELECT_MAX_PER_WINDOW", prior_select);
 }
 
 #[test]

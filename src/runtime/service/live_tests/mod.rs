@@ -27,6 +27,8 @@ mod native_worker_seams_live;
 mod notification_http_live;
 mod ops_seams_live;
 mod projection_drift_live;
+#[cfg(feature = "redis")]
+mod rate_limit_live;
 mod scheduler_live;
 #[cfg(feature = "http-client")]
 mod search_tenant_iso_live;

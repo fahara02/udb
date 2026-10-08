@@ -50,6 +50,29 @@ export UDB_AUTH_GRPC_ADDR=127.0.0.1:50061   # :50052 is the metrics port
 udb serve proto "" 0.0.0.0:50051
 ```
 
+### Rate limits and version pins
+
+The broker logs the effective rate-limit window, tenant default, operation
+ceilings, bucket scope and Redis failure policy when its runtime starts. A build
+without Redis support logs that rate limiting is disabled. With Redis support,
+a missing backend uses the configured local fallback unless `open` is explicit.
+
+Set `UDB_RATE_LIMIT_<OP>_MAX_PER_WINDOW` for a specific RPC, for example
+`UDB_RATE_LIMIT_SELECT_MAX_PER_WINDOW=250`. `<OP>` is the uppercase RPC name
+(`BEGINTX`, `BATCHSELECT`, `VECTORSEARCH`); these explicit ceilings also take
+precedence over a per-key budget raise. The equivalent configuration map is
+`service.rate_limit_max_per_operation`. Other RPCs retain the tenant default.
+
+A refusal carries `UDB_RATE_LIMITED`, its effective `bucket`, `limit`, `window`
+and verified `principal`, plus `retry_after_ms`. Batch lookups such as
+`{"id":{"$in":["a","b"]}}` charge one Select instead of one request per id.
+API-key Create/Get/List/Rotate responses report the persisted per-key budgets.
+
+`UDB_EXPECTED_VERSION` pins the broker build (an optional `v` prefix is allowed).
+A mismatch refuses `serve` before proto parsing or backend startup. Every gRPC
+response carries `x-udb-version`, including refusals, so clients can identify the
+build that answered.
+
 ## Local Playground
 
 Want a broker running on your laptop in one command? These bring one up, poke it

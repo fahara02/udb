@@ -769,7 +769,20 @@ fn status_for(rec: &ApiKeyRecord, now_unix: u64) -> apikey_entity_pb::ApiKeyStat
     }
 }
 
-fn api_key_to_pb(rec: &ApiKeyRecord, now_unix: u64) -> apikey_entity_pb::ApiKey {
+fn api_key_to_pb(rec: &ApiKeyRecord, now_unix: u64) -> Result<apikey_entity_pb::ApiKey, Status> {
+    let rate_limit_per_minute = i32::try_from(rec.rate_limit_per_minute).map_err(|_| {
+        crate::runtime::error_reasons::annotate_with(
+            crate::runtime::executor_utils::internal_status(
+                "apikey",
+                "read_rate_limit",
+                "stored rate_limit_per_minute cannot be represented as an INTEGER",
+            ),
+            crate::runtime::error_reasons::DECODE_FAILED,
+            Some("rate_limit_per_minute"),
+            None,
+            &[],
+        )
+    })?;
     let mut dto = apikey_entity_pb::ApiKey {
         key_id: rec.key_prefix.clone(),
         key_prefix: rec.key_prefix.clone(),
@@ -791,8 +804,8 @@ fn api_key_to_pb(rec: &ApiKeyRecord, now_unix: u64) -> apikey_entity_pb::ApiKey 
         scopes_json: serde_json::to_string(&rec.scopes).unwrap_or_else(|_| "[]".to_string()),
         status: status_for(rec, now_unix) as i32,
         ip_allowlist_json: "[]".to_string(),
-        rate_limit_per_minute: 60,
-        rate_limit_per_day: 10_000,
+        rate_limit_per_minute,
+        rate_limit_per_day: rec.rate_limit_per_day,
         created_by: String::new(),
         revoked_by: String::new(),
         revoke_reason: String::new(),
@@ -815,7 +828,7 @@ fn api_key_to_pb(rec: &ApiKeyRecord, now_unix: u64) -> apikey_entity_pb::ApiKey 
     // §7: structurally blank OUTPUT_VIEW_STORAGE_ONLY fields (key_hash) via
     // descriptor-driven codegen.
     crate::proto_redaction::RedactStorageOnly::redact_storage_only(&mut dto);
-    dto
+    Ok(dto)
 }
 
 #[tonic::async_trait]
@@ -964,8 +977,18 @@ impl ApiKeyService for ApiKeyServiceImpl {
             }),
         ))
         .await;
+        // Return the persisted record so descriptor-backed column defaults and
+        // custom budgets agree with subsequent Get/List responses.
+        let stored = self
+            .api_keys
+            .get_by_prefix(&rec.key_prefix)
+            .await
+            .map_err(|err| Self::internal_status("create_api_key_read_back", err))?
+            .ok_or_else(|| {
+                Self::internal_status("create_api_key_read_back", "created API key is missing")
+            })?;
         Ok(Response::new(apikey_pb::CreateApiKeyResponse {
-            key: Some(api_key_to_pb(&rec, now)),
+            key: Some(api_key_to_pb(&stored, now)?),
             plain_key,
         }))
     }
@@ -989,7 +1012,7 @@ impl ApiKeyService for ApiKeyServiceImpl {
                     &rec.tenant_id,
                     &rec.project_id,
                 )?;
-                Some(api_key_to_pb(&rec, now))
+                Some(api_key_to_pb(&rec, now)?)
             }
             None => return Err(Self::api_key_not_found_status("get_api_key")),
         };
@@ -1038,7 +1061,7 @@ impl ApiKeyService for ApiKeyServiceImpl {
             .skip(offset)
             .take(limit)
             .map(|rec| api_key_to_pb(rec, now))
-            .collect();
+            .collect::<Result<Vec<_>, _>>()?;
         Ok(Response::new(apikey_pb::ListApiKeysResponse {
             keys,
             page: Some(bounded_page_response(total, page)),
@@ -1100,7 +1123,7 @@ impl ApiKeyService for ApiKeyServiceImpl {
         ))
         .await;
         Ok(Response::new(apikey_pb::UpdateApiKeyResponse {
-            key: Some(api_key_to_pb(&rec, now)),
+            key: Some(api_key_to_pb(&rec, now)?),
         }))
     }
 
@@ -1253,7 +1276,7 @@ impl ApiKeyService for ApiKeyServiceImpl {
         ))
         .await;
         Ok(Response::new(apikey_pb::RotateApiKeyResponse {
-            key: Some(api_key_to_pb(&new_rec, now)),
+            key: Some(api_key_to_pb(&new_rec, now)?),
             plain_key,
             previous_key_id: existing.key_prefix,
         }))
@@ -1952,7 +1975,7 @@ mod tests {
             created_at_unix: 1,
             ..Default::default()
         };
-        let pb = api_key_to_pb(&rec, 100);
+        let pb = api_key_to_pb(&rec, 100).expect("valid stored API key DTO");
         for field in storage_only {
             match field.as_str() {
                 "key_hash" => assert!(
@@ -1976,7 +1999,7 @@ mod tests {
             description: "issues invoices".to_string(),
             ..Default::default()
         };
-        let pb = api_key_to_pb(&rec, 100);
+        let pb = api_key_to_pb(&rec, 100).expect("valid stored API key DTO");
         assert_eq!(pb.name, "billing-projector");
         assert_eq!(pb.description, "issues invoices");
         assert_eq!(pb.key_prefix, "udbk_abc123");
@@ -1991,7 +2014,10 @@ mod tests {
             name: "   ".to_string(),
             ..Default::default()
         };
-        assert_eq!(api_key_to_pb(&rec, 100).name, "udbk_abc123");
+        assert_eq!(
+            api_key_to_pb(&rec, 100).expect("legacy API key DTO").name,
+            "udbk_abc123"
+        );
     }
 
     #[test]

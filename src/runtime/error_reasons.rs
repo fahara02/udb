@@ -215,6 +215,9 @@ pub(crate) fn annotate_with(
             kind: reason.kind as i32,
             ..ErrorDetail::default()
         });
+    // The registry owns the refusal kind, including annotations on legacy
+    // statuses whose old detail used a broader category such as QUOTA.
+    detail.kind = reason.kind as i32;
     detail.reason = reason.code.to_string();
     detail.fix_hint = reason.fix_hint.to_string();
     if let Some(column) = column {

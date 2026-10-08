@@ -273,6 +273,7 @@ impl DataBrokerService {
                             "BatchSelect",
                             &security_for_stream.credential_id,
                             security_for_stream.rate_limit_per_minute,
+                            &security_for_stream.user_id,
                         )
                         .await?;
                 }
@@ -405,6 +406,7 @@ impl DataBrokerService {
                             "BatchUpsert",
                             &security_for_stream.credential_id,
                             security_for_stream.rate_limit_per_minute,
+                            &security_for_stream.user_id,
                         )
                         .await?;
                 }

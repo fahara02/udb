@@ -323,6 +323,12 @@ pub fn run() {
         eprintln!("{message}");
         process::exit(2);
     }
+    if matches!(&command, Command::Serve) {
+        if let Err(err) = udb::runtime::preflight::enforce_expected_version() {
+            eprintln!("{err}");
+            process::exit(1);
+        }
+    }
     let proto_root = resolve_existing_project_path(&proto_root);
 
     // Commands that do not need proto parsing — emit output and exit immediately.

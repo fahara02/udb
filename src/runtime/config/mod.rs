@@ -382,6 +382,9 @@ pub struct ServiceSettings {
     pub rate_limit_enabled: bool,
     pub rate_limit_window_secs: u64,
     pub rate_limit_max_per_window: u32,
+    /// Explicit per-operation ceilings, keyed by uppercase RPC name. These
+    /// override both the tenant default and a per-key budget raise.
+    pub rate_limit_max_per_operation: BTreeMap<String, u32>,
     /// Per-key data-plane rate limiting (`UDB_RATE_LIMIT_PER_KEY`, default off).
     /// OFF: the DataBroker limiter keys one bucket per `(tenant, operation)` and
     /// every principal in the tenant shares `rate_limit_max_per_window`.
@@ -426,6 +429,7 @@ impl Default for ServiceSettings {
             rate_limit_enabled: true,
             rate_limit_window_secs: 60,
             rate_limit_max_per_window: 1000,
+            rate_limit_max_per_operation: BTreeMap::new(),
             rate_limit_per_key_enabled: false,
             rate_limit_failure_mode: "closed".to_string(),
             require_secure_transport: false,
@@ -438,6 +442,13 @@ impl Default for ServiceSettings {
 }
 
 impl ServiceSettings {
+    /// The operator's explicit ceiling for this RPC, if configured.
+    pub fn rate_limit_max_for_operation(&self, operation: &str) -> Option<u32> {
+        self.rate_limit_max_per_operation
+            .get(&operation.to_ascii_uppercase())
+            .copied()
+    }
+
     fn apply_security_posture(
         &mut self,
         production_env: bool,
@@ -545,6 +556,36 @@ impl ServiceSettings {
             .and_then(|value| value.parse::<u32>().ok())
         {
             self.rate_limit_max_per_window = value;
+        }
+        self.rate_limit_max_per_operation = std::mem::take(&mut self.rate_limit_max_per_operation)
+            .into_iter()
+            .map(|(operation, limit)| (operation.to_ascii_uppercase(), limit))
+            .collect();
+        // Resolve overrides once at startup, never in a request handler.
+        for (name, value) in std::env::vars_os() {
+            let Some(name) = name.to_str() else { continue };
+            let Some(operation) = name
+                .strip_prefix("UDB_RATE_LIMIT_")
+                .and_then(|name| name.strip_suffix("_MAX_PER_WINDOW"))
+            else {
+                continue;
+            };
+            if operation.is_empty() || !operation.bytes().all(|b| b.is_ascii_alphanumeric()) {
+                continue;
+            }
+            match value
+                .to_str()
+                .and_then(|value| value.trim().parse::<u32>().ok())
+            {
+                Some(limit) => {
+                    self.rate_limit_max_per_operation
+                        .insert(operation.to_ascii_uppercase(), limit);
+                }
+                None => tracing::warn!(
+                    setting = name,
+                    "invalid per-operation rate limit; keeping configured ceiling"
+                ),
+            }
         }
         if let Some(value) = bool_env("UDB_RATE_LIMIT_PER_KEY") {
             self.rate_limit_per_key_enabled = value;

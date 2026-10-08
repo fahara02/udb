@@ -1960,6 +1960,7 @@ pub(super) async fn serve_data_broker(
     let (shutdown_tx, shutdown_rx) = tokio::sync::oneshot::channel::<()>();
     let handle = tokio::spawn(async move {
         tonic::transport::Server::builder()
+            .layer(crate::runtime::otel::TraceExtractLayer::new())
             .add_service(DataBrokerServer::new(svc))
             .serve_with_incoming_shutdown(incoming, async move {
                 let _ = shutdown_rx.await;

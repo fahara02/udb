@@ -12,6 +12,11 @@ no-wrapper plan.
 
 ### Added
 
+- **Rate-limit refusals identify the verified caller and effective budget.**
+  Per-operation ceilings apply to unary and batch requests, and startup logs
+  describe the active limiter. API-key reads and rotation retain stored budgets.
+- **An explicit broker version pin stops a mismatched build before startup.**
+  Error reasons also supply their canonical kinds when annotating legacy details.
 - **Control-plane reloads wake on committed PostgreSQL notifications.** A
   30-second fallback recovers missed events; unchanged worlds skip config
   re-sourcing. The resync counter includes startup for an observable idle budget.
