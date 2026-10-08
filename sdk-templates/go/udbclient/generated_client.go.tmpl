@@ -35,10 +35,13 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"math"
 	"math/rand"
 	"reflect"
+	"regexp"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -64,6 +67,35 @@ const (
 // baked at generation time and is the version the bundled `udb` CLI launcher
 // (cmd/udb) will resolve.
 const SDKVersion = "{{UDB_VERSION}}"
+
+// VersionMismatchError reports an absent, malformed, or incompatible broker
+// release header. Compatibility requires the same major and minor release;
+// patches, prereleases, and build metadata do not change that policy. A strict
+// refusal is never retried: a mutation may already have reached the broker.
+type VersionMismatchError struct {
+	SDKVersion    string
+	ServerVersion string
+}
+
+func (e *VersionMismatchError) Error() string {
+	return fmt.Sprintf("UDB SDK %s requires a broker in the same major.minor release; server advertised %q", e.SDKVersion, e.ServerVersion)
+}
+
+var releaseVersionPattern = regexp.MustCompile(`^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-([0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*))?(\+([0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*))?$`)
+
+func releaseMinor(version string) (major, minor string, valid bool) {
+	parts := releaseVersionPattern.FindStringSubmatch(version)
+	if parts == nil {
+		return "", "", false
+	}
+	// Numeric prerelease identifiers must not contain leading zeros.
+	for _, identifier := range strings.Split(parts[5], ".") {
+		if len(identifier) > 1 && identifier[0] == '0' && strings.Trim(identifier, "0123456789") == "" {
+			return "", "", false
+		}
+	}
+	return parts[1], parts[2], true
+}
 
 // GeneratedProtocolVersion mirrors the wire protocol this layer targets. It is
 // the generated companion to the hand-written udbclient.ProtocolVersion and is
@@ -262,6 +294,15 @@ type Options struct {
 	// RequestID, when non-empty, is sent as the `x-request-id` header. When
 	// empty a per-call id is derived from Meta.CorrelationID if set.
 	RequestID string
+	// StrictServerVersion returns *VersionMismatchError when the broker's
+	// x-udb-version is absent, malformed, or in a different major.minor release.
+	// The default warns and allows the response. Existing RPC failures retain
+	// their original typed error. This checks responses, not a write preflight.
+	StrictServerVersion bool
+	// OnVersionWarning receives a compatibility warning instead of the default
+	// log.Printf. It may be called concurrently from different RPCs. Warnings
+	// are suppressed while the observed server version remains unchanged.
+	OnVersionWarning func(error)
 }
 
 func (o Options) withDefaults() Options {
@@ -289,6 +330,93 @@ type GeneratedClient struct {
 	// tenant/authorization header pair to a concurrent call. Reads go through
 	// options() (a single atomic load); the read-mostly path stays lock-free.
 	opt atomic.Pointer[Options]
+	// Retain only the latest warned version, rather than an unbounded set of
+	// versions seen across reconnects or a rolling broker deployment.
+	serverVersion atomic.Pointer[serverVersionObservation]
+}
+
+type serverVersionObservation struct {
+	version    string
+	compatible bool
+	warned     atomic.Bool
+}
+
+func (g *GeneratedClient) checkServerVersion(header metadata.MD) error {
+	versions := header.Get("x-udb-version")
+	serverVersion := strings.Join(versions, ",")
+	observation := g.serverVersion.Load()
+	for observation == nil || observation.version != serverVersion {
+		major, minor, valid := releaseMinor(serverVersion)
+		sdkMajor, sdkMinor, sdkValid := releaseMinor(SDKVersion)
+		next := &serverVersionObservation{
+			version:    serverVersion,
+			compatible: len(versions) == 1 && valid && sdkValid && major == sdkMajor && minor == sdkMinor,
+		}
+		if g.serverVersion.CompareAndSwap(observation, next) {
+			observation = next
+			break
+		}
+		observation = g.serverVersion.Load()
+	}
+	if observation.compatible {
+		return nil
+	}
+	err := &VersionMismatchError{SDKVersion: SDKVersion, ServerVersion: serverVersion}
+	opt := g.options()
+	if opt.StrictServerVersion {
+		return err
+	}
+	if !observation.warned.CompareAndSwap(false, true) {
+		return nil
+	}
+	if opt.OnVersionWarning != nil {
+		opt.OnVersionWarning(err)
+	} else {
+		log.Printf("UDB version compatibility warning: %v", err)
+	}
+	return nil
+}
+
+// gRPC's Header/Trailer options write one pointer each. Collect our own metadata
+// while copying it to every caller-supplied pointer after the RPC, so neither
+// caller options nor an outer interceptor can hide the version or typed trailer.
+type responseMetadata struct {
+	header, trailer   metadata.MD
+	headers, trailers []*metadata.MD
+}
+
+func captureResponseMetadata(opts []grpc.CallOption) (*responseMetadata, []grpc.CallOption) {
+	capture := &responseMetadata{}
+	callOpts := make([]grpc.CallOption, 0, len(opts)+2)
+	for _, option := range opts {
+		switch option := option.(type) {
+		case grpc.HeaderCallOption:
+			capture.headers = append(capture.headers, option.HeaderAddr)
+		case *grpc.HeaderCallOption:
+			capture.headers = append(capture.headers, option.HeaderAddr)
+		case grpc.TrailerCallOption:
+			capture.trailers = append(capture.trailers, option.TrailerAddr)
+		case *grpc.TrailerCallOption:
+			capture.trailers = append(capture.trailers, option.TrailerAddr)
+		default:
+			callOpts = append(callOpts, option)
+		}
+	}
+	callOpts = append(callOpts, grpc.Header(&capture.header), grpc.Trailer(&capture.trailer))
+	return capture, callOpts
+}
+
+func (capture *responseMetadata) publish() {
+	for _, pointer := range capture.headers {
+		if pointer != nil {
+			*pointer = capture.header.Copy()
+		}
+	}
+	for _, pointer := range capture.trailers {
+		if pointer != nil {
+			*pointer = capture.trailer.Copy()
+		}
+	}
 }
 
 // NewGenerated wraps an existing connection. The connection's transport
@@ -371,6 +499,13 @@ func (g *GeneratedClient) outgoingContext(ctx context.Context) context.Context {
 	// context) still get every default, while facade calls keep their single
 	// authoritative value.
 	existing, _ := metadata.FromOutgoingContext(ctx)
+	if versions := existing.Get("x-udb-sdk-version"); len(versions) != 1 || versions[0] != SDKVersion {
+		// The identifier describes this compiled SDK, even when caller metadata
+		// was copied from another client. Preserve other caller-owned headers.
+		existing = existing.Copy()
+		existing.Set("x-udb-sdk-version", SDKVersion)
+		ctx = metadata.NewOutgoingContext(ctx, existing)
+	}
 	var pairs []string
 	add := func(key, val string) {
 		if len(existing.Get(key)) > 0 {
@@ -443,14 +578,18 @@ func (g *GeneratedClient) InvokeUnary(ctx context.Context, fullMethod string, re
 			}
 		}
 		callCtx, cancel := g.withDeadline(g.outgoingContext(ctx))
-		var trailer metadata.MD
-		callOpts := append([]grpc.CallOption{grpc.Trailer(&trailer)}, opts...)
+		capture, callOpts := captureResponseMetadata(opts)
 		err := g.conn.Invoke(callCtx, fullMethod, req, reply, callOpts...)
 		cancel()
-		if err == nil {
-			return nil
+		capture.publish()
+		var versionErr error
+		if err == nil || len(capture.header) > 0 {
+			versionErr = g.checkServerVersion(capture.header)
 		}
-		lastErr = mapError(fullMethod, err, trailer)
+		if err == nil {
+			return versionErr
+		}
+		lastErr = mapError(fullMethod, err, capture.trailer)
 		if !rc.retryableForRPC(status.Code(err), readOnly, replaySafe, idemKeyed) {
 			return lastErr
 		}
@@ -464,7 +603,7 @@ func (g *GeneratedClient) InvokeUnary(ctx context.Context, fullMethod string, re
 // stream (LiveQuery, PublishCDC, downloads) is long-lived and the unary call
 // budget would kill it. The caller's own context deadline still applies.
 func (g *GeneratedClient) NewServerStream(ctx context.Context, fullMethod string, desc *grpc.StreamDesc, req any, opts ...grpc.CallOption) (grpc.ClientStream, error) {
-	callCtx, cancel := g.outgoingContext(ctx), context.CancelFunc(func() {})
+	callCtx, cancel := g.streamContext(ctx, true)
 	cs, err := g.conn.NewStream(callCtx, desc, fullMethod, opts...)
 	if err != nil {
 		cancel()
@@ -480,7 +619,7 @@ func (g *GeneratedClient) NewServerStream(ctx context.Context, fullMethod string
 			return nil, mapError(fullMethod, err, nil)
 		}
 	}
-	return &cancelOnRecvStream{ClientStream: cs, cancel: cancel}, nil
+	return &cancelOnRecvStream{ClientStream: g.versionStream(cs, cancel), cancel: cancel}, nil
 }
 
 // NewClientStream opens a client-streaming or bidi RPC. Never retried (the body
@@ -489,17 +628,57 @@ func (g *GeneratedClient) NewServerStream(ctx context.Context, fullMethod string
 // e.g. WebRTC Signal) is long-lived and gets no implicit deadline; the caller's
 // own context deadline still applies.
 func (g *GeneratedClient) NewClientStream(ctx context.Context, fullMethod string, desc *grpc.StreamDesc, opts ...grpc.CallOption) (grpc.ClientStream, error) {
-	outCtx := g.outgoingContext(ctx)
-	callCtx, cancel := outCtx, context.CancelFunc(func() {})
-	if desc == nil || !desc.ServerStreams {
-		callCtx, cancel = g.withDeadline(outCtx)
-	}
+	callCtx, cancel := g.streamContext(ctx, desc != nil && desc.ServerStreams)
 	cs, err := g.conn.NewStream(callCtx, desc, fullMethod, opts...)
 	if err != nil {
 		cancel()
 		return nil, mapError(fullMethod, err, nil)
 	}
-	return &cancelOnCloseStream{ClientStream: cs, cancel: cancel}, nil
+	return &cancelOnCloseStream{ClientStream: g.versionStream(cs, cancel), cancel: cancel}, nil
+}
+
+func (g *GeneratedClient) streamContext(ctx context.Context, serverStreams bool) (context.Context, context.CancelFunc) {
+	callCtx, cancel := context.WithCancel(g.outgoingContext(ctx))
+	if serverStreams {
+		return callCtx, cancel
+	}
+	deadlineCtx, deadlineCancel := g.withDeadline(callCtx)
+	return deadlineCtx, func() { deadlineCancel(); cancel() }
+}
+
+func (g *GeneratedClient) versionStream(stream grpc.ClientStream, cancel context.CancelFunc) grpc.ClientStream {
+	return &versionClientStream{ClientStream: stream, client: g, cancel: cancel}
+}
+
+type versionClientStream struct {
+	grpc.ClientStream
+	client *GeneratedClient
+	cancel context.CancelFunc
+	once   sync.Once
+	header metadata.MD
+	err    error
+}
+
+func (s *versionClientStream) Header() (metadata.MD, error) {
+	s.once.Do(func() {
+		s.header, s.err = s.ClientStream.Header()
+		if s.err == nil {
+			s.err = s.client.checkServerVersion(s.header)
+		}
+		if s.err != nil {
+			s.cancel()
+		}
+	})
+	return s.header.Copy(), s.err
+}
+
+func (s *versionClientStream) RecvMsg(message any) error {
+	// Wait lazily, after the caller can SendMsg/CloseSend. Waiting in NewStream
+	// would deadlock a bidi RPC whose server needs its first request to reply.
+	if _, err := s.Header(); err != nil {
+		return err
+	}
+	return s.ClientStream.RecvMsg(message)
 }
 
 type cancelOnRecvStream struct {
@@ -569,14 +748,18 @@ func (g *GeneratedClient) unaryInterceptor() grpc.UnaryClientInterceptor {
 				}
 			}
 			callCtx, cancel := g.withDeadline(g.outgoingContext(ctx))
-			var trailer metadata.MD
-			callOpts := append([]grpc.CallOption{grpc.Trailer(&trailer)}, opts...)
+			capture, callOpts := captureResponseMetadata(opts)
 			err := invoker(callCtx, method, req, reply, cc, callOpts...)
 			cancel()
-			if err == nil {
-				return nil
+			capture.publish()
+			var versionErr error
+			if err == nil || len(capture.header) > 0 {
+				versionErr = g.checkServerVersion(capture.header)
 			}
-			lastErr = mapError(method, err, trailer)
+			if err == nil {
+				return versionErr
+			}
+			lastErr = mapError(method, err, capture.trailer)
 			if !rc.retryableForRPC(status.Code(err), readOnly, replaySafe, idemKeyed) {
 				return lastErr
 			}
@@ -595,20 +778,15 @@ func (g *GeneratedClient) streamInterceptor() grpc.StreamClientInterceptor {
 		// the timeout would kill after a few seconds, so it gets no implicit
 		// deadline; the caller's own context deadline still applies.
 		// Client-streaming uploads (BeginTx, PutObject) keep the call timeout.
-		outCtx := g.outgoingContext(ctx)
-		callCtx, cancel := outCtx, context.CancelFunc(func() {})
-		if !desc.ServerStreams {
-			callCtx, cancel = g.withDeadline(outCtx)
-		}
+		callCtx, cancel := g.streamContext(ctx, desc != nil && desc.ServerStreams)
 		cs, err := streamer(callCtx, desc, cc, method, opts...)
 		if err != nil {
 			cancel()
 			return nil, mapError(method, err, nil)
 		}
-		return &cancelOnCloseStream{ClientStream: cs, cancel: cancel}, nil
+		return &cancelOnCloseStream{ClientStream: g.versionStream(cs, cancel), cancel: cancel}, nil
 	}
 }
-
 // AsError extracts a *Error from any error returned by this layer, if present.
 func AsError(err error) (*Error, bool) {
 	var e *Error
