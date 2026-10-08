@@ -7,7 +7,7 @@ package com.udb.core.livequery.services.v1;
 
 /**
  * <pre>
- * One streamed frame: either the initial snapshot or a single change delta.
+ * One streamed frame: the initial snapshot, a change delta, or an idle heartbeat.
  * </pre>
  *
  * Protobuf type {@code udb.core.livequery.services.v1.SubscribeResponse}
@@ -56,6 +56,7 @@ private static final long serialVersionUID = 0L;
           com.google.protobuf.AbstractMessage.InternalOneOfEnum {
     SNAPSHOT(1),
     CHANGE(2),
+    HEARTBEAT(4),
     PAYLOAD_NOT_SET(0);
     private final int value;
     private PayloadCase(int value) {
@@ -75,6 +76,7 @@ private static final long serialVersionUID = 0L;
       switch (value) {
         case 1: return SNAPSHOT;
         case 2: return CHANGE;
+        case 4: return HEARTBEAT;
         case 0: return PAYLOAD_NOT_SET;
         default: return null;
       }
@@ -152,6 +154,37 @@ private static final long serialVersionUID = 0L;
     return com.udb.core.livequery.services.v1.LiveQueryChange.getDefaultInstance();
   }
 
+  public static final int HEARTBEAT_FIELD_NUMBER = 4;
+  /**
+   * <code>.udb.core.livequery.services.v1.LiveQueryHeartbeat heartbeat = 4 [json_name = "heartbeat"];</code>
+   * @return Whether the heartbeat field is set.
+   */
+  @java.lang.Override
+  public boolean hasHeartbeat() {
+    return payloadCase_ == 4;
+  }
+  /**
+   * <code>.udb.core.livequery.services.v1.LiveQueryHeartbeat heartbeat = 4 [json_name = "heartbeat"];</code>
+   * @return The heartbeat.
+   */
+  @java.lang.Override
+  public com.udb.core.livequery.services.v1.LiveQueryHeartbeat getHeartbeat() {
+    if (payloadCase_ == 4) {
+       return (com.udb.core.livequery.services.v1.LiveQueryHeartbeat) payload_;
+    }
+    return com.udb.core.livequery.services.v1.LiveQueryHeartbeat.getDefaultInstance();
+  }
+  /**
+   * <code>.udb.core.livequery.services.v1.LiveQueryHeartbeat heartbeat = 4 [json_name = "heartbeat"];</code>
+   */
+  @java.lang.Override
+  public com.udb.core.livequery.services.v1.LiveQueryHeartbeatOrBuilder getHeartbeatOrBuilder() {
+    if (payloadCase_ == 4) {
+       return (com.udb.core.livequery.services.v1.LiveQueryHeartbeat) payload_;
+    }
+    return com.udb.core.livequery.services.v1.LiveQueryHeartbeat.getDefaultInstance();
+  }
+
   public static final int ERROR_FIELD_NUMBER = 3;
   private com.udb.core.common.v1.ApiError error_;
   /**
@@ -213,6 +246,9 @@ private static final long serialVersionUID = 0L;
     if (((bitField0_ & 0x00000001) != 0)) {
       output.writeMessage(3, getError());
     }
+    if (payloadCase_ == 4) {
+      output.writeMessage(4, (com.udb.core.livequery.services.v1.LiveQueryHeartbeat) payload_);
+    }
     getUnknownFields().writeTo(output);
   }
 
@@ -233,6 +269,10 @@ private static final long serialVersionUID = 0L;
     if (((bitField0_ & 0x00000001) != 0)) {
       size += com.google.protobuf.CodedOutputStream
         .computeMessageSize(3, getError());
+    }
+    if (payloadCase_ == 4) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeMessageSize(4, (com.udb.core.livequery.services.v1.LiveQueryHeartbeat) payload_);
     }
     size += getUnknownFields().getSerializedSize();
     memoizedSize = size;
@@ -264,6 +304,10 @@ private static final long serialVersionUID = 0L;
         if (!getChange()
             .equals(other.getChange())) return false;
         break;
+      case 4:
+        if (!getHeartbeat()
+            .equals(other.getHeartbeat())) return false;
+        break;
       case 0:
       default:
     }
@@ -290,6 +334,10 @@ private static final long serialVersionUID = 0L;
       case 2:
         hash = (37 * hash) + CHANGE_FIELD_NUMBER;
         hash = (53 * hash) + getChange().hashCode();
+        break;
+      case 4:
+        hash = (37 * hash) + HEARTBEAT_FIELD_NUMBER;
+        hash = (53 * hash) + getHeartbeat().hashCode();
         break;
       case 0:
       default:
@@ -393,7 +441,7 @@ private static final long serialVersionUID = 0L;
   }
   /**
    * <pre>
-   * One streamed frame: either the initial snapshot or a single change delta.
+   * One streamed frame: the initial snapshot, a change delta, or an idle heartbeat.
    * </pre>
    *
    * Protobuf type {@code udb.core.livequery.services.v1.SubscribeResponse}
@@ -441,6 +489,9 @@ private static final long serialVersionUID = 0L;
       if (changeBuilder_ != null) {
         changeBuilder_.clear();
       }
+      if (heartbeatBuilder_ != null) {
+        heartbeatBuilder_.clear();
+      }
       error_ = null;
       if (errorBuilder_ != null) {
         errorBuilder_.dispose();
@@ -483,7 +534,7 @@ private static final long serialVersionUID = 0L;
     private void buildPartial0(com.udb.core.livequery.services.v1.SubscribeResponse result) {
       int from_bitField0_ = bitField0_;
       int to_bitField0_ = 0;
-      if (((from_bitField0_ & 0x00000004) != 0)) {
+      if (((from_bitField0_ & 0x00000008) != 0)) {
         result.error_ = errorBuilder_ == null
             ? error_
             : errorBuilder_.build();
@@ -502,6 +553,10 @@ private static final long serialVersionUID = 0L;
       if (payloadCase_ == 2 &&
           changeBuilder_ != null) {
         result.payload_ = changeBuilder_.build();
+      }
+      if (payloadCase_ == 4 &&
+          heartbeatBuilder_ != null) {
+        result.payload_ = heartbeatBuilder_.build();
       }
     }
 
@@ -527,6 +582,10 @@ private static final long serialVersionUID = 0L;
         }
         case CHANGE: {
           mergeChange(other.getChange());
+          break;
+        }
+        case HEARTBEAT: {
+          mergeHeartbeat(other.getHeartbeat());
           break;
         }
         case PAYLOAD_NOT_SET: {
@@ -577,9 +636,16 @@ private static final long serialVersionUID = 0L;
               input.readMessage(
                   internalGetErrorFieldBuilder().getBuilder(),
                   extensionRegistry);
-              bitField0_ |= 0x00000004;
+              bitField0_ |= 0x00000008;
               break;
             } // case 26
+            case 34: {
+              input.readMessage(
+                  internalGetHeartbeatFieldBuilder().getBuilder(),
+                  extensionRegistry);
+              payloadCase_ = 4;
+              break;
+            } // case 34
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -896,6 +962,148 @@ private static final long serialVersionUID = 0L;
       return changeBuilder_;
     }
 
+    private com.google.protobuf.SingleFieldBuilder<
+        com.udb.core.livequery.services.v1.LiveQueryHeartbeat, com.udb.core.livequery.services.v1.LiveQueryHeartbeat.Builder, com.udb.core.livequery.services.v1.LiveQueryHeartbeatOrBuilder> heartbeatBuilder_;
+    /**
+     * <code>.udb.core.livequery.services.v1.LiveQueryHeartbeat heartbeat = 4 [json_name = "heartbeat"];</code>
+     * @return Whether the heartbeat field is set.
+     */
+    @java.lang.Override
+    public boolean hasHeartbeat() {
+      return payloadCase_ == 4;
+    }
+    /**
+     * <code>.udb.core.livequery.services.v1.LiveQueryHeartbeat heartbeat = 4 [json_name = "heartbeat"];</code>
+     * @return The heartbeat.
+     */
+    @java.lang.Override
+    public com.udb.core.livequery.services.v1.LiveQueryHeartbeat getHeartbeat() {
+      if (heartbeatBuilder_ == null) {
+        if (payloadCase_ == 4) {
+          return (com.udb.core.livequery.services.v1.LiveQueryHeartbeat) payload_;
+        }
+        return com.udb.core.livequery.services.v1.LiveQueryHeartbeat.getDefaultInstance();
+      } else {
+        if (payloadCase_ == 4) {
+          return heartbeatBuilder_.getMessage();
+        }
+        return com.udb.core.livequery.services.v1.LiveQueryHeartbeat.getDefaultInstance();
+      }
+    }
+    /**
+     * <code>.udb.core.livequery.services.v1.LiveQueryHeartbeat heartbeat = 4 [json_name = "heartbeat"];</code>
+     */
+    public Builder setHeartbeat(com.udb.core.livequery.services.v1.LiveQueryHeartbeat value) {
+      if (heartbeatBuilder_ == null) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        payload_ = value;
+        onChanged();
+      } else {
+        heartbeatBuilder_.setMessage(value);
+      }
+      payloadCase_ = 4;
+      return this;
+    }
+    /**
+     * <code>.udb.core.livequery.services.v1.LiveQueryHeartbeat heartbeat = 4 [json_name = "heartbeat"];</code>
+     */
+    public Builder setHeartbeat(
+        com.udb.core.livequery.services.v1.LiveQueryHeartbeat.Builder builderForValue) {
+      if (heartbeatBuilder_ == null) {
+        payload_ = builderForValue.build();
+        onChanged();
+      } else {
+        heartbeatBuilder_.setMessage(builderForValue.build());
+      }
+      payloadCase_ = 4;
+      return this;
+    }
+    /**
+     * <code>.udb.core.livequery.services.v1.LiveQueryHeartbeat heartbeat = 4 [json_name = "heartbeat"];</code>
+     */
+    public Builder mergeHeartbeat(com.udb.core.livequery.services.v1.LiveQueryHeartbeat value) {
+      if (heartbeatBuilder_ == null) {
+        if (payloadCase_ == 4 &&
+            payload_ != com.udb.core.livequery.services.v1.LiveQueryHeartbeat.getDefaultInstance()) {
+          payload_ = com.udb.core.livequery.services.v1.LiveQueryHeartbeat.newBuilder((com.udb.core.livequery.services.v1.LiveQueryHeartbeat) payload_)
+              .mergeFrom(value).buildPartial();
+        } else {
+          payload_ = value;
+        }
+        onChanged();
+      } else {
+        if (payloadCase_ == 4) {
+          heartbeatBuilder_.mergeFrom(value);
+        } else {
+          heartbeatBuilder_.setMessage(value);
+        }
+      }
+      payloadCase_ = 4;
+      return this;
+    }
+    /**
+     * <code>.udb.core.livequery.services.v1.LiveQueryHeartbeat heartbeat = 4 [json_name = "heartbeat"];</code>
+     */
+    public Builder clearHeartbeat() {
+      if (heartbeatBuilder_ == null) {
+        if (payloadCase_ == 4) {
+          payloadCase_ = 0;
+          payload_ = null;
+          onChanged();
+        }
+      } else {
+        if (payloadCase_ == 4) {
+          payloadCase_ = 0;
+          payload_ = null;
+        }
+        heartbeatBuilder_.clear();
+      }
+      return this;
+    }
+    /**
+     * <code>.udb.core.livequery.services.v1.LiveQueryHeartbeat heartbeat = 4 [json_name = "heartbeat"];</code>
+     */
+    public com.udb.core.livequery.services.v1.LiveQueryHeartbeat.Builder getHeartbeatBuilder() {
+      return internalGetHeartbeatFieldBuilder().getBuilder();
+    }
+    /**
+     * <code>.udb.core.livequery.services.v1.LiveQueryHeartbeat heartbeat = 4 [json_name = "heartbeat"];</code>
+     */
+    @java.lang.Override
+    public com.udb.core.livequery.services.v1.LiveQueryHeartbeatOrBuilder getHeartbeatOrBuilder() {
+      if ((payloadCase_ == 4) && (heartbeatBuilder_ != null)) {
+        return heartbeatBuilder_.getMessageOrBuilder();
+      } else {
+        if (payloadCase_ == 4) {
+          return (com.udb.core.livequery.services.v1.LiveQueryHeartbeat) payload_;
+        }
+        return com.udb.core.livequery.services.v1.LiveQueryHeartbeat.getDefaultInstance();
+      }
+    }
+    /**
+     * <code>.udb.core.livequery.services.v1.LiveQueryHeartbeat heartbeat = 4 [json_name = "heartbeat"];</code>
+     */
+    private com.google.protobuf.SingleFieldBuilder<
+        com.udb.core.livequery.services.v1.LiveQueryHeartbeat, com.udb.core.livequery.services.v1.LiveQueryHeartbeat.Builder, com.udb.core.livequery.services.v1.LiveQueryHeartbeatOrBuilder>
+        internalGetHeartbeatFieldBuilder() {
+      if (heartbeatBuilder_ == null) {
+        if (!(payloadCase_ == 4)) {
+          payload_ = com.udb.core.livequery.services.v1.LiveQueryHeartbeat.getDefaultInstance();
+        }
+        heartbeatBuilder_ = new com.google.protobuf.SingleFieldBuilder<
+            com.udb.core.livequery.services.v1.LiveQueryHeartbeat, com.udb.core.livequery.services.v1.LiveQueryHeartbeat.Builder, com.udb.core.livequery.services.v1.LiveQueryHeartbeatOrBuilder>(
+                (com.udb.core.livequery.services.v1.LiveQueryHeartbeat) payload_,
+                getParentForChildren(),
+                isClean());
+        payload_ = null;
+      }
+      payloadCase_ = 4;
+      onChanged();
+      return heartbeatBuilder_;
+    }
+
     private com.udb.core.common.v1.ApiError error_;
     private com.google.protobuf.SingleFieldBuilder<
         com.udb.core.common.v1.ApiError, com.udb.core.common.v1.ApiError.Builder, com.udb.core.common.v1.ApiErrorOrBuilder> errorBuilder_;
@@ -908,7 +1116,7 @@ private static final long serialVersionUID = 0L;
      * @return Whether the error field is set.
      */
     public boolean hasError() {
-      return ((bitField0_ & 0x00000004) != 0);
+      return ((bitField0_ & 0x00000008) != 0);
     }
     /**
      * <pre>
@@ -941,7 +1149,7 @@ private static final long serialVersionUID = 0L;
       } else {
         errorBuilder_.setMessage(value);
       }
-      bitField0_ |= 0x00000004;
+      bitField0_ |= 0x00000008;
       onChanged();
       return this;
     }
@@ -959,7 +1167,7 @@ private static final long serialVersionUID = 0L;
       } else {
         errorBuilder_.setMessage(builderForValue.build());
       }
-      bitField0_ |= 0x00000004;
+      bitField0_ |= 0x00000008;
       onChanged();
       return this;
     }
@@ -972,7 +1180,7 @@ private static final long serialVersionUID = 0L;
      */
     public Builder mergeError(com.udb.core.common.v1.ApiError value) {
       if (errorBuilder_ == null) {
-        if (((bitField0_ & 0x00000004) != 0) &&
+        if (((bitField0_ & 0x00000008) != 0) &&
           error_ != null &&
           error_ != com.udb.core.common.v1.ApiError.getDefaultInstance()) {
           getErrorBuilder().mergeFrom(value);
@@ -983,7 +1191,7 @@ private static final long serialVersionUID = 0L;
         errorBuilder_.mergeFrom(value);
       }
       if (error_ != null) {
-        bitField0_ |= 0x00000004;
+        bitField0_ |= 0x00000008;
         onChanged();
       }
       return this;
@@ -996,7 +1204,7 @@ private static final long serialVersionUID = 0L;
      * <code>.udb.core.common.v1.ApiError error = 3 [json_name = "error"];</code>
      */
     public Builder clearError() {
-      bitField0_ = (bitField0_ & ~0x00000004);
+      bitField0_ = (bitField0_ & ~0x00000008);
       error_ = null;
       if (errorBuilder_ != null) {
         errorBuilder_.dispose();
@@ -1013,7 +1221,7 @@ private static final long serialVersionUID = 0L;
      * <code>.udb.core.common.v1.ApiError error = 3 [json_name = "error"];</code>
      */
     public com.udb.core.common.v1.ApiError.Builder getErrorBuilder() {
-      bitField0_ |= 0x00000004;
+      bitField0_ |= 0x00000008;
       onChanged();
       return internalGetErrorFieldBuilder().getBuilder();
     }

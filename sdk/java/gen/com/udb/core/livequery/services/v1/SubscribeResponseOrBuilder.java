@@ -41,6 +41,21 @@ public interface SubscribeResponseOrBuilder extends
   com.udb.core.livequery.services.v1.LiveQueryChangeOrBuilder getChangeOrBuilder();
 
   /**
+   * <code>.udb.core.livequery.services.v1.LiveQueryHeartbeat heartbeat = 4 [json_name = "heartbeat"];</code>
+   * @return Whether the heartbeat field is set.
+   */
+  boolean hasHeartbeat();
+  /**
+   * <code>.udb.core.livequery.services.v1.LiveQueryHeartbeat heartbeat = 4 [json_name = "heartbeat"];</code>
+   * @return The heartbeat.
+   */
+  com.udb.core.livequery.services.v1.LiveQueryHeartbeat getHeartbeat();
+  /**
+   * <code>.udb.core.livequery.services.v1.LiveQueryHeartbeat heartbeat = 4 [json_name = "heartbeat"];</code>
+   */
+  com.udb.core.livequery.services.v1.LiveQueryHeartbeatOrBuilder getHeartbeatOrBuilder();
+
+  /**
    * <pre>
    * Error information if the stream is terminating abnormally.
    * </pre>

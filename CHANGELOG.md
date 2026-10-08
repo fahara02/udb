@@ -5,6 +5,43 @@ the package version in `Cargo.toml`; historical v0.3.2 audit material is folded
 into the v0.3.x entries because the codebase advanced to v0.3.7 before that
 release line was tagged.
 
+## [0.5.30] - 2026-10-08
+
+This release continues the server error, authorization and liveness work in the
+no-wrapper plan.
+
+### Added
+
+- LiveQuery idle frames have an explicit `Heartbeat` payload. The Go helper
+  ignores them without delivering a row or advancing the resume cursor, and
+  retains support for older brokers' empty Change heartbeat.
+- Every broker gRPC listener sends HTTP/2 keepalive pings every 30 seconds with
+  a 20-second acknowledgment timeout.
+
+### Fixed
+
+- Keyed retries preserve the original row revision and write receipt. Reusing a
+  key with a changed opaque revision or required row count refuses with
+  `UDB_IDEMPOTENCY_REUSE`; it cannot replay a success for different inputs.
+- Transactional upserts and updates advance opaque row revisions atomically.
+  Tokens read before a committed transaction become stale, and failed
+  transactions roll back their row and revision changes together.
+- Go CAS retry decisions use structured reasons. A key-reuse or policy-surface
+  refusal cannot become a CAS conflict through its message or coarse error kind.
+- The full SDK benchmark keeps Go lock fixtures alive for the whole sweep and
+  seeds PHP's generic object before measuring its read.
+
+### Breaking for callers
+
+- `DataBroker.PutPolicy` refuses writes to the obsolete authorization table.
+  - detect: code: PutPolicy
+  - fix: use AuthzService.PutAuthzPolicy or `udb policy apply`; UDB_ALLOW_LEGACY_PUT_POLICY=true temporarily permits legacy migration writes only.
+- Keyed Update/Delete retries include asserted revision and row-count guards in
+  their authoritative input hash. Guarded receipts created before this upgrade
+  can therefore refuse a retry instead of returning the old receipt.
+  - detect: code: expected_revision|require_affected
+  - fix: reconcile the authoritative row after an upgrade before issuing a new operation with a new key; retry an existing operation with identical guards only.
+
 ## [0.5.29] - 2026-10-07
 
 This release improves data correctness, error details, typed Go tables,

@@ -83,14 +83,16 @@ class SubscribeRequest(_message.Message):
     def __init__(self, tenant_id: _Optional[str] = ..., message_type: _Optional[str] = ..., filters: _Optional[_Iterable[_Union[LiveQueryPredicate, _Mapping]]] = ..., project_id: _Optional[str] = ..., snapshot_limit: _Optional[int] = ..., any_of: _Optional[_Iterable[_Union[LiveQueryAnyOf, _Mapping]]] = ..., since_event_id: _Optional[str] = ...) -> None: ...
 
 class SubscribeResponse(_message.Message):
-    __slots__ = ("snapshot", "change", "error")
+    __slots__ = ("snapshot", "change", "heartbeat", "error")
     SNAPSHOT_FIELD_NUMBER: _ClassVar[int]
     CHANGE_FIELD_NUMBER: _ClassVar[int]
+    HEARTBEAT_FIELD_NUMBER: _ClassVar[int]
     ERROR_FIELD_NUMBER: _ClassVar[int]
     snapshot: LiveQuerySnapshot
     change: LiveQueryChange
+    heartbeat: LiveQueryHeartbeat
     error: _dto_pb2.ApiError
-    def __init__(self, snapshot: _Optional[_Union[LiveQuerySnapshot, _Mapping]] = ..., change: _Optional[_Union[LiveQueryChange, _Mapping]] = ..., error: _Optional[_Union[_dto_pb2.ApiError, _Mapping]] = ...) -> None: ...
+    def __init__(self, snapshot: _Optional[_Union[LiveQuerySnapshot, _Mapping]] = ..., change: _Optional[_Union[LiveQueryChange, _Mapping]] = ..., heartbeat: _Optional[_Union[LiveQueryHeartbeat, _Mapping]] = ..., error: _Optional[_Union[_dto_pb2.ApiError, _Mapping]] = ...) -> None: ...
 
 class LiveQuerySnapshot(_message.Message):
     __slots__ = ("rows_json", "row_count")
@@ -109,3 +111,7 @@ class LiveQueryChange(_message.Message):
     row_json: str
     event_id: str
     def __init__(self, op: _Optional[_Union[LiveQueryChangeOp, str]] = ..., row_json: _Optional[str] = ..., event_id: _Optional[str] = ...) -> None: ...
+
+class LiveQueryHeartbeat(_message.Message):
+    __slots__ = ()
+    def __init__(self) -> None: ...

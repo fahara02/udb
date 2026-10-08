@@ -2057,6 +2057,56 @@ impl DataBrokerRuntime {
         )
     }
 
+    /// BeginTx writes must invalidate the same opaque revision as unary writes,
+    /// in their existing SQL transaction. Otherwise a pre-transaction token can
+    /// overwrite a newly committed value, despite passing the revision guard.
+    pub(super) async fn bump_tx_row_revision(
+        &self,
+        tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+        manifest: &CatalogManifest,
+        mutation: &Mutation,
+        context: &RequestContext,
+    ) -> Result<(), tonic::Status> {
+        let operation = mutation.operation.to_ascii_lowercase();
+        if !matches!(operation.as_str(), "upsert" | "insert" | "update") {
+            return Ok(());
+        }
+        let table = resolve_table_for_message(manifest, &mutation.message_type)
+            .map_err(|_| message_type_lookup_status(manifest, &mutation.message_type))?;
+        let pk_values = if operation == "update" {
+            let filter = mutation
+                .filter
+                .as_ref()
+                .map(struct_to_json)
+                .unwrap_or(JsonValue::Null);
+            let filter =
+                self.rewrite_encrypted_equality_filters(table, &filter, &context.tenant_id);
+            let normalized = crate::planning::broker::normalize_filter_keys(
+                &crate::planning::broker::column_resolver(table),
+                &filter,
+            );
+            // Unary range updates also leave the single-row revision unset.
+            let Ok(values) = pk_equality_values_from_filter(&normalized, &table.primary_key) else {
+                return Ok(());
+            };
+            values
+        } else {
+            let record = mutation_record_json(mutation)?;
+            let normalized = crate::broker::normalize_record_keys(table, &record);
+            record_values(&normalized, &table.primary_key)?
+        };
+        bump_row_revision_in_tx(
+            tx,
+            &crate::runtime::system::SystemCatalogConfig::current(),
+            &context.tenant_id,
+            &context.project_id,
+            &mutation.message_type,
+            &pk_values,
+        )
+        .await?;
+        Ok(())
+    }
+
     /// #5: batch-load opaque revisions for a set of revision keys, keyed by
     /// `revision_key`. Runs on the pool directly — no RLS/tenant GUCs are needed
     /// because each key is a salted hash of (tenant, project, message_type, PK), so
@@ -2372,7 +2422,7 @@ impl DataBrokerRuntime {
                 // #6: bind the claim to the authoritative inputs (normalized filter
                 // + expected precondition).
                 let request_hash =
-                    idempotency_request_hash_delete(&normalized_filter, expected.as_ref());
+                    idempotency_request_hash_delete(&normalized_filter, expected.as_ref(), &guards);
                 let claim = claim_idempotency_key_in_tx(
                     &mut tx,
                     &config,
@@ -2930,6 +2980,7 @@ impl DataBrokerRuntime {
                     &changes,
                     &increments,
                     expected.as_ref(),
+                    &guards,
                 );
                 let claim = claim_idempotency_key_in_tx(
                     &mut tx,
@@ -6540,17 +6591,35 @@ fn idempotency_request_hash_upsert(request: &UpsertRequest, record: &JsonValue) 
     idempotency_request_hash("upsert", &authoritative)
 }
 
+/// Optional concurrency guards are authoritative inputs, not transport fields.
+/// Keep the historical unguarded hash shape so those receipts remain replayable.
+fn idempotency_request_hash_guarded(
+    operation: &str,
+    mut authoritative: JsonValue,
+    guards: &MutationGuards,
+) -> String {
+    if !guards.expected_revision.trim().is_empty() {
+        authoritative["expected_revision"] =
+            JsonValue::String(guards.expected_revision.trim().to_string());
+    }
+    if guards.require_affected != 0 {
+        authoritative["require_affected"] = JsonValue::from(guards.require_affected);
+    }
+    idempotency_request_hash(operation, &authoritative)
+}
+
 /// Authoritative-input hash for a keyed `Delete`: the normalized filter (which
 /// rows) and any CAS precondition.
 fn idempotency_request_hash_delete(
     normalized_filter: &JsonValue,
     expected: Option<&prost_types::Struct>,
+    guards: &MutationGuards,
 ) -> String {
     let authoritative = serde_json::json!({
         "filter": normalized_filter,
         "expected": idempotency_expected_json(expected),
     });
-    idempotency_request_hash("delete", &authoritative)
+    idempotency_request_hash_guarded("delete", authoritative, guards)
 }
 
 /// Authoritative-input hash for a keyed `Update`: the normalized filter (which
@@ -6560,6 +6629,7 @@ fn idempotency_request_hash_update(
     changes: &JsonValue,
     increments: &[(String, f64)],
     expected: Option<&prost_types::Struct>,
+    guards: &MutationGuards,
 ) -> String {
     let authoritative = serde_json::json!({
         "filter": normalized_filter,
@@ -6570,7 +6640,7 @@ fn idempotency_request_hash_update(
             .collect::<Vec<_>>(),
         "expected": idempotency_expected_json(expected),
     });
-    idempotency_request_hash("update", &authoritative)
+    idempotency_request_hash_guarded("update", authoritative, guards)
 }
 
 /// NON-DISCLOSING typed refusal for a keyed mutation whose idempotency key was
@@ -6578,14 +6648,15 @@ fn idempotency_request_hash_update(
 /// message names ONLY the contract violation — it must never leak the first
 /// writer's stored inputs or response.
 fn idempotency_request_mismatch_status() -> tonic::Status {
-    crate::runtime::executor_utils::failed_precondition_fields(
+    crate::runtime::error_reasons::Refusal::new(
+        crate::runtime::error_reasons::IDEMPOTENCY_REUSE,
         "idempotency_key was already used for a different request; reuse a key only to retry an identical request",
-        [(
-            "idempotency_key".to_string(),
-            "the same idempotency_key was already claimed by a request with different inputs"
-                .to_string(),
-        )],
     )
+    .field(
+        "idempotency_key",
+        "the same idempotency_key was already claimed by a request with different inputs",
+    )
+    .into_status()
 }
 
 /// Atomically claim a dedup key INSIDE the caller's write transaction, mirroring
@@ -6875,6 +6946,7 @@ fn mutation_response_idempotency_json(
         "record_json": record_json_b64,
         "affected_rows": response.affected_rows,
         "write_receipt_json": response.write_receipt_json,
+        "revision": response.revision,
     });
     idempotency_response_write_receipt_lockstep(response, &summary)?;
     mutation_response_from_idempotency_json(&summary)?;
@@ -7759,6 +7831,13 @@ fn mutation_response_from_idempotency_json(
         record_json: idempotency_replay_record_json(prior)?,
         affected_rows: idempotency_replay_i64(prior, "affected_rows")?,
         was_duplicate: true,
+        // Older receipts predate revision persistence; a present malformed
+        // value is corruption and must not be silently treated as absent.
+        revision: if prior.get("revision").is_some() {
+            idempotency_replay_string(prior, "revision", true)?
+        } else {
+            String::new()
+        },
         write_receipt_json,
         write_receipt: Some(write_receipt.to_proto()),
         ..MutationResponse::default()
@@ -9648,8 +9727,14 @@ mod setup_data_consistency_tests {
         // must not collide.
         let filter = serde_json::json!({"id": {"$eq": "r1"}});
         assert_ne!(
-            idempotency_request_hash_delete(&filter, None),
-            idempotency_request_hash_update(&filter, &serde_json::json!({}), &[], None)
+            idempotency_request_hash_delete(&filter, None, &super::MutationGuards::default()),
+            idempotency_request_hash_update(
+                &filter,
+                &serde_json::json!({}),
+                &[],
+                None,
+                &super::MutationGuards::default()
+            )
         );
         // Update increments and changes participate.
         let u_base = idempotency_request_hash_update(
@@ -9657,6 +9742,7 @@ mod setup_data_consistency_tests {
             &serde_json::json!({"status": "paid"}),
             &[("balance".to_string(), 5.0)],
             None,
+            &super::MutationGuards::default(),
         );
         assert_ne!(
             u_base,
@@ -9665,6 +9751,7 @@ mod setup_data_consistency_tests {
                 &serde_json::json!({"status": "paid"}),
                 &[("balance".to_string(), 6.0)],
                 None,
+                &super::MutationGuards::default()
             )
         );
         assert_ne!(
@@ -9674,6 +9761,7 @@ mod setup_data_consistency_tests {
                 &serde_json::json!({"status": "void"}),
                 &[("balance".to_string(), 5.0)],
                 None,
+                &super::MutationGuards::default()
             )
         );
     }
@@ -9686,7 +9774,9 @@ mod setup_data_consistency_tests {
         assert!(status.message().contains("idempotency_key"));
         assert!(status.message().contains("different request"));
         let detail = decode_error_detail(&status);
-        assert_eq!(detail.kind, ErrorKind::Validation as i32);
+        assert_eq!(detail.kind, ErrorKind::Conflict as i32);
+        assert_eq!(detail.reason, "UDB_IDEMPOTENCY_REUSE");
+        assert!(!detail.fix_hint.is_empty());
         assert!(!detail.retryable);
         assert_eq!(detail.field_violations.len(), 1);
         assert_eq!(detail.field_violations[0].field, "idempotency_key");
@@ -9772,6 +9862,7 @@ mod setup_data_consistency_tests {
             was_duplicate: false,
             write_receipt_json: receipt_json.clone(),
             write_receipt: Some(receipt.to_proto()),
+            revision: "17".to_string(),
             ..MutationResponse::default()
         };
 
@@ -9790,6 +9881,7 @@ mod setup_data_consistency_tests {
         assert_eq!(replay.record_json, first.record_json);
         assert_eq!(replay.affected_rows, first.affected_rows);
         assert_eq!(replay.write_receipt_json, receipt_json);
+        assert_eq!(replay.revision, first.revision);
         let typed_receipt = replay
             .write_receipt
             .as_ref()

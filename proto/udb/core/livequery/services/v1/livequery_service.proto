@@ -15,7 +15,8 @@ option php_namespace = "Udb\\Core\\Livequery\\Services\\V1";
 // LiveQueryService (master-plan 9.7) — query results that update themselves. A
 // client subscribes to a tenant-scoped query over a source entity and receives
 // an initial Snapshot (the current matching rows) followed by an open stream of
-// Change deltas (insert / update / delete) as the underlying data mutates.
+// Change deltas (insert / update / delete) as the underlying data mutates, with
+// explicit Heartbeat frames while idle.
 //
 // Tenant isolation is the whole point: the snapshot is produced ONLY through the
 // mediated IR read path with the tenant predicate injected server-side from the
@@ -68,7 +69,7 @@ service LiveQueryService {
   // Subscribe to a tenant-scoped live query. SERVER-STREAMING: the first message
   // carries the initial Snapshot (the current rows matching the IR filter, read
   // through the mediated path with the tenant predicate injected server-side);
-  // every subsequent message carries a single Change delta. Fails closed
+  // subsequent messages carry a Change delta or an idle Heartbeat. Fails closed
   // (failed_precondition) when the source entity has no resolvable tenant column.
   rpc Subscribe(SubscribeRequest) returns (stream SubscribeResponse) {
     option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
@@ -193,7 +194,7 @@ message SubscribeRequest {
   string since_event_id = 7;
 }
 
-// One streamed frame: either the initial snapshot or a single change delta.
+// One streamed frame: the initial snapshot, a change delta, or an idle heartbeat.
 message SubscribeResponse {
   option (udb.core.common.v1.message_sdk_surface) = {
     include_in_facade: true
@@ -207,6 +208,7 @@ message SubscribeResponse {
   oneof payload {
     LiveQuerySnapshot snapshot = 1;
     LiveQueryChange change = 2;
+    LiveQueryHeartbeat heartbeat = 4;
   }
   // Error information if the stream is terminating abnormally.
   udb.core.common.v1.ApiError error = 3;
@@ -225,3 +227,7 @@ message LiveQueryChange {
   // Source CDC event id (for client-side de-duplication / resume).
   string event_id = 3;
 }
+
+// The subscription is still open. Carries no row or resume cursor: clients must
+// not deliver it as a data change or advance since_event_id when it arrives.
+message LiveQueryHeartbeat {}

@@ -12,7 +12,8 @@ namespace Udb.Core.LiveQuery.Services.V1 {
   /// LiveQueryService (master-plan 9.7) — query results that update themselves. A
   /// client subscribes to a tenant-scoped query over a source entity and receives
   /// an initial Snapshot (the current matching rows) followed by an open stream of
-  /// Change deltas (insert / update / delete) as the underlying data mutates.
+  /// Change deltas (insert / update / delete) as the underlying data mutates, with
+  /// explicit Heartbeat frames while idle.
   ///
   /// Tenant isolation is the whole point: the snapshot is produced ONLY through the
   /// mediated IR read path with the tenant predicate injected server-side from the
@@ -86,7 +87,7 @@ namespace Udb.Core.LiveQuery.Services.V1 {
       /// Subscribe to a tenant-scoped live query. SERVER-STREAMING: the first message
       /// carries the initial Snapshot (the current rows matching the IR filter, read
       /// through the mediated path with the tenant predicate injected server-side);
-      /// every subsequent message carries a single Change delta. Fails closed
+      /// subsequent messages carry a Change delta or an idle Heartbeat. Fails closed
       /// (failed_precondition) when the source entity has no resolvable tenant column.
       /// </summary>
       /// <param name="request">The request received from the client.</param>
@@ -132,7 +133,7 @@ namespace Udb.Core.LiveQuery.Services.V1 {
       /// Subscribe to a tenant-scoped live query. SERVER-STREAMING: the first message
       /// carries the initial Snapshot (the current rows matching the IR filter, read
       /// through the mediated path with the tenant predicate injected server-side);
-      /// every subsequent message carries a single Change delta. Fails closed
+      /// subsequent messages carry a Change delta or an idle Heartbeat. Fails closed
       /// (failed_precondition) when the source entity has no resolvable tenant column.
       /// </summary>
       /// <param name="request">The request to send to the server.</param>
@@ -149,7 +150,7 @@ namespace Udb.Core.LiveQuery.Services.V1 {
       /// Subscribe to a tenant-scoped live query. SERVER-STREAMING: the first message
       /// carries the initial Snapshot (the current rows matching the IR filter, read
       /// through the mediated path with the tenant predicate injected server-side);
-      /// every subsequent message carries a single Change delta. Fails closed
+      /// subsequent messages carry a Change delta or an idle Heartbeat. Fails closed
       /// (failed_precondition) when the source entity has no resolvable tenant column.
       /// </summary>
       /// <param name="request">The request to send to the server.</param>

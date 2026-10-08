@@ -76,6 +76,7 @@ var reasonCodes = map[string]ErrorCode{
 	"UDB_REVISION_CONFLICT":            CodeConflict,
 	"UDB_GRANT_OWNED_BY_OTHER":         CodeConflict,
 	"UDB_CAS_KEY_NOT_PK":               CodePrecondition,
+	"UDB_IDEMPOTENCY_REUSE":            CodePrecondition,
 	"UDB_NO_ROWS_AFFECTED":             CodeNotFound,
 	"UDB_UNIQUE_VIOLATION":             CodeUnique,
 	"UDB_NOT_NULL_VIOLATION":           CodeNotNull,
@@ -93,6 +94,7 @@ var reasonCodes = map[string]ErrorCode{
 	"UDB_RATE_LIMITED":                 CodeRateLimited,
 	"UDB_UNKNOWN_MESSAGE_TYPE":         CodeInvalid,
 	"UDB_ENVELOPE_VERSION_UNSUPPORTED": CodePrecondition,
+	"UDB_POLICY_WRONG_SURFACE":         CodePrecondition,
 }
 
 var kindCodes = map[entityv1.ErrorKind]ErrorCode{

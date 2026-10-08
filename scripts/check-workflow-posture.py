@@ -4287,6 +4287,7 @@ LINT_WORKFLOW_TRIGGER_PATHS = (
     ("scripts/ci_slim_dep_guard.sh", "CI slim dependency guard"),
     ("scripts/install-ci-native-deps.py", "bounded CI native dependency installer"),
     ("scripts/generate-codebase-map.py", "codebase map generator"),
+    ("scripts/generate-error-reasons.py", "error reason registry generator"),
     ("scripts/run-live-tests.py", "live test stall watchdog"),
     ("scripts/check-embedded-dev.py", "embedded developer-mode live proof"),
     ("scripts/check-vendored-ffmpeg.py", "vendored ffmpeg guard"),

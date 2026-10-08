@@ -30914,7 +30914,7 @@
     },
     "/v1/livequery:subscribe": {
       "post": {
-        "summary": "Subscribe to a tenant-scoped live query. SERVER-STREAMING: the first message\ncarries the initial Snapshot (the current rows matching the IR filter, read\nthrough the mediated path with the tenant predicate injected server-side);\nevery subsequent message carries a single Change delta. Fails closed\n(failed_precondition) when the source entity has no resolvable tenant column.",
+        "summary": "Subscribe to a tenant-scoped live query. SERVER-STREAMING: the first message\ncarries the initial Snapshot (the current rows matching the IR filter, read\nthrough the mediated path with the tenant predicate injected server-side);\nsubsequent messages carry a Change delta or an idle Heartbeat. Fails closed\n(failed_precondition) when the source entity has no resolvable tenant column.",
         "operationId": "liveQuerySubscribe",
         "responses": {
           "200": {
@@ -54485,6 +54485,10 @@
       "default": "LIVE_QUERY_COMPARISON_UNSPECIFIED",
       "description": "Comparison operator for a live-query predicate. Maps 1:1 onto the neutral IR\n`ComparisonOp`; only the scalar relational operators are exposed (the live\nsingle-row evaluator and the mediated snapshot read share the same set).\n\n - LIVE_QUERY_COMPARISON_IN: Membership: the field equals one of `LiveQueryPredicate.values`.\n - LIVE_QUERY_COMPARISON_NOT_IN: Non-membership: the field is present, non-null and equals none of `values`\n(SQL NOT IN semantics, so the snapshot and the live deltas agree).\n - LIVE_QUERY_COMPARISON_IS_NULL: The field is null or absent. `value`/`values` are ignored.\n - LIVE_QUERY_COMPARISON_IS_NOT_NULL: The field is present and non-null. `value`/`values` are ignored."
     },
+    "v1LiveQueryHeartbeat": {
+      "type": "object",
+      "description": "The subscription is still open. Carries no row or resume cursor: clients must\nnot deliver it as a data change or advance since_event_id when it arrives."
+    },
     "v1LiveQueryPredicate": {
       "type": "object",
       "properties": {
@@ -59423,12 +59427,15 @@
         "change": {
           "$ref": "#/definitions/v1LiveQueryChange"
         },
+        "heartbeat": {
+          "$ref": "#/definitions/v1LiveQueryHeartbeat"
+        },
         "error": {
           "$ref": "#/definitions/v1ApiError",
           "description": "Error information if the stream is terminating abnormally."
         }
       },
-      "description": "One streamed frame: either the initial snapshot or a single change delta."
+      "description": "One streamed frame: the initial snapshot, a change delta, or an idle heartbeat."
     },
     "v1Tenant": {
       "type": "object",

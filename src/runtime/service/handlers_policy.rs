@@ -12,6 +12,21 @@ type BackendSummaryRow = (
     String,
 );
 
+/// Temporary migration opt-in, resolved once for the process.
+fn legacy_put_policy_enabled() -> bool {
+    static ENABLED: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+    *ENABLED.get_or_init(|| {
+        std::env::var("UDB_ALLOW_LEGACY_PUT_POLICY")
+            .map(|value| {
+                matches!(
+                    value.trim().to_ascii_lowercase().as_str(),
+                    "true" | "1" | "yes" | "on"
+                )
+            })
+            .unwrap_or(false)
+    })
+}
+
 fn policy_required_field(
     field: &'static str,
     description: &'static str,
@@ -86,6 +101,14 @@ impl DataBrokerService {
         let (started, security) = authorized_call!(self, request, "PutPolicy");
         if let Err(err) = require_admin_scope(&security) {
             return self.record_grpc("PutPolicy", started, Err(err));
+        }
+        if !legacy_put_policy_enabled() {
+            let refusal = crate::runtime::error_reasons::Refusal::new(
+                crate::runtime::error_reasons::POLICY_WRONG_SURFACE,
+                "DataBroker.PutPolicy does not authorize requests; use AuthzService.PutAuthzPolicy or udb policy apply",
+            )
+            .into_status();
+            return self.record_grpc("PutPolicy", started, Err(refusal));
         }
         let req = request.into_inner();
         let p = req.policy.unwrap_or_default();

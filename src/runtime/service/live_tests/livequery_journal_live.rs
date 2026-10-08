@@ -153,6 +153,24 @@ async fn live_livequery_non_leader_streams_own_tenant_deltas_from_the_journal() 
         "the first frame is the snapshot: {first:?}"
     );
 
+    // Exercise the real idle forwarder before any data is journalled. The CI
+    // native lane uses a one-second cadence; local live invocations retain the
+    // configured cadence. An old empty Change must fail this assertion.
+    let idle_period = super::super::livequery_service::livequery_keepalive_interval()
+        .expect("the live heartbeat proof requires keepalives enabled");
+    let heartbeat = tokio::time::timeout(idle_period + Duration::from_secs(10), stream.next())
+        .await
+        .expect("the idle subscription must receive a heartbeat")
+        .expect("the idle subscription must stay open")
+        .expect("the heartbeat must not be an error");
+    assert!(
+        matches!(
+            heartbeat.payload,
+            Some(lq_pb::subscribe_response::Payload::Heartbeat(_))
+        ),
+        "an idle frame must be an explicit Heartbeat, not a data change: {heartbeat:?}"
+    );
+
     // Journalled AFTER the subscription anchored at the journal head: the
     // foreign tenant's change first, so a scope leak would be delivered first.
     let foreign_event = journal_lock_change(&pool, &topic, &foreign, "foreign-lock").await;
@@ -173,7 +191,7 @@ async fn live_livequery_non_leader_streams_own_tenant_deltas_from_the_journal() 
             {
                 break change;
             }
-            // Keepalive frames carry no event id; skip them.
+            // Heartbeats carry no event id; skip them.
             _ => continue,
         }
     };

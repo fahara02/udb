@@ -2,7 +2,8 @@
 //! themselves. A client subscribes to a tenant-scoped query over a source proto
 //! entity and receives an initial `Snapshot` (the rows currently matching an
 //! IR-expressible filter) followed by an open server stream of `Change` deltas
-//! (insert / update / delete) as the underlying data mutates.
+//! (insert / update / delete) as the underlying data mutates, with explicit
+//! `Heartbeat` frames while idle.
 //!
 //! Tenant isolation is the entire point of 9.7, so it is enforced twice, both
 //! fail closed:
@@ -49,6 +50,9 @@ mod shared_tail;
 mod stream;
 #[cfg(test)]
 mod tests;
+
+#[cfg(test)]
+pub(super) use config::livequery_keepalive_interval;
 
 use errors::livequery_capability_status;
 use stream::LiveQueryStream;

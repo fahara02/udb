@@ -207,6 +207,18 @@ fail and scale independently, so manage them that way.
 
 ## Native Service Operations
 
+All broker gRPC listeners send HTTP/2 keepalive pings every 30 seconds and wait
+20 seconds for an acknowledgment. LiveQuery subscriptions additionally send an
+explicit `Heartbeat` frame while idle. A heartbeat carries no row or event ID;
+clients ignore it without advancing their resume cursor. The Go helper also
+accepts the empty Change heartbeat from older brokers.
+
+Use `AuthzService.PutAuthzPolicy` or `udb policy apply` to manage authorization.
+`DataBroker.PutPolicy` returns `UDB_POLICY_WRONG_SURFACE` because its legacy ABAC
+table does not grant access. `UDB_ALLOW_LEGACY_PUT_POLICY=true` temporarily enables
+that table's migration writes. The performance harness measures this explicit
+migration mode; native correctness CI verifies the default refusal and no write.
+
 The native services are the control-plane building blocks (auth, storage, WebRTC,
 and more). List what's running, check the health of specific ones, or scaffold a
 client app wired to the services you name:

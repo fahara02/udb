@@ -206,6 +206,7 @@ jobs:
           python3 scripts/check-retry-safe-posture.py
       - name: Error-detail posture guard
         run: |
+          python3 scripts/generate-error-reasons.py --check
           python3 scripts/check-error-detail-posture.py --selftest
           python3 scripts/check-error-detail-posture.py
       - name: HTTP API route-style guard
@@ -1443,6 +1444,8 @@ jobs:
         # serialize their setup; run them serially to avoid cross-talk.
         env:
           UDB_LIVE_AUTH_TESTS: "1"
+          # Exercise the real idle LiveQuery heartbeat before journalled deltas.
+          UDB_LIVEQUERY_KEEPALIVE_SECS: "1"
           UDB_INTEGRATION_PG_DSN: ${{ env.UDB_INTEGRATION_PG_DSN }}
           UDB_INTEGRATION_KAFKA_BROKERS: localhost:59192
           UDB_INTEGRATION_REDIS_URL: redis://localhost:56379

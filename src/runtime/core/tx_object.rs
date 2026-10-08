@@ -992,6 +992,13 @@ impl DataBrokerRuntime {
                     format!("unsupported transaction operation {}", mutation.operation),
                 ))
             };
+            let result = match result {
+                Ok(affected) if affected > 0 => self
+                    .bump_tx_row_revision(&mut tx, manifest, mutation, &context)
+                    .await
+                    .map(|()| affected),
+                result => result,
+            };
             match result {
                 Ok(affected) => {
                     audit_affected[mutation_index] = affected;

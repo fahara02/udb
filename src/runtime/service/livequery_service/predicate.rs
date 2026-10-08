@@ -501,21 +501,13 @@ pub(crate) fn change_frame(
     }
 }
 
-/// Build a keepalive/heartbeat frame: an empty `Change` with the UNSPECIFIED op,
-/// an empty row, and an empty event id. It carries NO data — its only purpose is
-/// to put a byte on an otherwise-idle stream so an L4/L7 load balancer's idle
-/// timeout does not reap a healthy long-lived subscription. It needs no proto
-/// change: a client distinguishes it by the UNSPECIFIED op (and empty
-/// `event_id`) and ignores it — it is never a real delta and never advances a
-/// resume cursor. Emitted only when `livequery_keepalive_interval()` is enabled.
+/// Keep an idle subscription open without presenting a data change. The explicit
+/// Heartbeat payload carries no row or event id and cannot advance a resume
+/// cursor. Emitted only when `livequery_keepalive_interval()` is enabled.
 pub(crate) fn keepalive_frame() -> lq_pb::SubscribeResponse {
     lq_pb::SubscribeResponse {
-        payload: Some(lq_pb::subscribe_response::Payload::Change(
-            lq_pb::LiveQueryChange {
-                op: lq_pb::LiveQueryChangeOp::Unspecified as i32,
-                row_json: String::new(),
-                event_id: String::new(),
-            },
+        payload: Some(lq_pb::subscribe_response::Payload::Heartbeat(
+            lq_pb::LiveQueryHeartbeat {},
         )),
         error: None,
     }
@@ -705,21 +697,16 @@ mod predicate_tests {
         assert!(resolve_resume_cursor("evt-1", Some("evt-2")).is_err());
     }
 
-    /// A keepalive frame is a proto-free heartbeat: an UNSPECIFIED-op `Change`
-    /// with empty row/event id that a client ignores. It must NOT look like a
-    /// real delta (no op, no event id to advance a resume cursor).
+    /// A heartbeat has its own payload variant, so it cannot be mistaken for a
+    /// data change or carry an event id that advances a resume cursor.
     #[test]
-    fn keepalive_frame_is_an_ignorable_empty_change() {
+    fn keepalive_frame_has_an_explicit_heartbeat_payload() {
         let frame = keepalive_frame();
         assert!(frame.error.is_none());
-        match frame.payload {
-            Some(lq_pb::subscribe_response::Payload::Change(change)) => {
-                assert_eq!(change.op, lq_pb::LiveQueryChangeOp::Unspecified as i32);
-                assert!(change.row_json.is_empty());
-                assert!(change.event_id.is_empty());
-            }
-            other => panic!("keepalive must be a Change frame, got {other:?}"),
-        }
+        assert!(matches!(
+            frame.payload,
+            Some(lq_pb::subscribe_response::Payload::Heartbeat(_))
+        ));
     }
 
     /// F7 regression: a numeric-looking business string with a leading zero (or

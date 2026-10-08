@@ -384,6 +384,9 @@ jobs:
 
       - name: Benchmark Go SDK
         shell: bash
+        env:
+          # Measure the retained migration surface; native CI proves default refusal.
+          UDB_ALLOW_LEGACY_PUT_POLICY: "true"
         run: |
           set +e
           mkdir -p bench-output/logs
@@ -428,6 +431,8 @@ jobs:
 
       - name: Benchmark Python SDK
         shell: bash
+        env:
+          UDB_ALLOW_LEGACY_PUT_POLICY: "true"
         run: |
           set +e
           mkdir -p bench-output/logs
@@ -472,6 +477,8 @@ jobs:
 
       - name: Benchmark TypeScript SDK
         shell: bash
+        env:
+          UDB_ALLOW_LEGACY_PUT_POLICY: "true"
         run: |
           set +e
           mkdir -p bench-output/logs
@@ -516,6 +523,8 @@ jobs:
 
       - name: Benchmark PHP SDK
         shell: bash
+        env:
+          UDB_ALLOW_LEGACY_PUT_POLICY: "true"
         run: |
           set +e
           mkdir -p bench-output/logs

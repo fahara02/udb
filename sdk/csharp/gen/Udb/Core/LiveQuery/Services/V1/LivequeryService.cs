@@ -42,63 +42,66 @@ namespace Udb.Core.LiveQuery.Services.V1 {
             "bWl0EkUKBmFueV9vZhgGIAMoCzIuLnVkYi5jb3JlLmxpdmVxdWVyeS5zZXJ2",
             "aWNlcy52MS5MaXZlUXVlcnlBbnlPZlIFYW55T2YSJAoOc2luY2VfZXZlbnRf",
             "aWQYByABKAlSDHNpbmNlRXZlbnRJZDogmrIZHAgBGgN1ZGIosOoBMANAAUoJ",
-            "bGl2ZXF1ZXJ5UAEikAIKEVN1YnNjcmliZVJlc3BvbnNlEk8KCHNuYXBzaG90",
+            "bGl2ZXF1ZXJ5UAEi5AIKEVN1YnNjcmliZVJlc3BvbnNlEk8KCHNuYXBzaG90",
             "GAEgASgLMjEudWRiLmNvcmUubGl2ZXF1ZXJ5LnNlcnZpY2VzLnYxLkxpdmVR",
             "dWVyeVNuYXBzaG90SABSCHNuYXBzaG90EkkKBmNoYW5nZRgCIAEoCzIvLnVk",
             "Yi5jb3JlLmxpdmVxdWVyeS5zZXJ2aWNlcy52MS5MaXZlUXVlcnlDaGFuZ2VI",
-            "AFIGY2hhbmdlEjIKBWVycm9yGAMgASgLMhwudWRiLmNvcmUuY29tbW9uLnYx",
-            "LkFwaUVycm9yUgVlcnJvcjogmrIZHAgBGgN1ZGIosOoBMANAAUoJbGl2ZXF1",
-            "ZXJ5UAFCCQoHcGF5bG9hZCJNChFMaXZlUXVlcnlTbmFwc2hvdBIbCglyb3dz",
-            "X2pzb24YASADKAlSCHJvd3NKc29uEhsKCXJvd19jb3VudBgCIAEoA1IIcm93",
-            "Q291bnQiigEKD0xpdmVRdWVyeUNoYW5nZRJBCgJvcBgBIAEoDjIxLnVkYi5j",
-            "b3JlLmxpdmVxdWVyeS5zZXJ2aWNlcy52MS5MaXZlUXVlcnlDaGFuZ2VPcFIC",
-            "b3ASGQoIcm93X2pzb24YAiABKAlSB3Jvd0pzb24SGQoIZXZlbnRfaWQYAyAB",
-            "KAlSB2V2ZW50SWQq+gIKE0xpdmVRdWVyeUNvbXBhcmlzb24SJQohTElWRV9R",
-            "VUVSWV9DT01QQVJJU09OX1VOU1BFQ0lGSUVEEAASHAoYTElWRV9RVUVSWV9D",
-            "T01QQVJJU09OX0VREAESHAoYTElWRV9RVUVSWV9DT01QQVJJU09OX05FEAIS",
-            "HAoYTElWRV9RVUVSWV9DT01QQVJJU09OX0xUEAMSHAoYTElWRV9RVUVSWV9D",
-            "T01QQVJJU09OX0xFEAQSHAoYTElWRV9RVUVSWV9DT01QQVJJU09OX0dUEAUS",
-            "HAoYTElWRV9RVUVSWV9DT01QQVJJU09OX0dFEAYSHAoYTElWRV9RVUVSWV9D",
-            "T01QQVJJU09OX0lOEAcSIAocTElWRV9RVUVSWV9DT01QQVJJU09OX05PVF9J",
-            "ThAIEiEKHUxJVkVfUVVFUllfQ09NUEFSSVNPTl9JU19OVUxMEAkSJQohTElW",
-            "RV9RVUVSWV9DT01QQVJJU09OX0lTX05PVF9OVUxMEAoqnAEKEUxpdmVRdWVy",
-            "eUNoYW5nZU9wEiQKIExJVkVfUVVFUllfQ0hBTkdFX09QX1VOU1BFQ0lGSUVE",
-            "EAASHwobTElWRV9RVUVSWV9DSEFOR0VfT1BfSU5TRVJUEAESHwobTElWRV9R",
-            "VUVSWV9DSEFOR0VfT1BfVVBEQVRFEAISHwobTElWRV9RVUVSWV9DSEFOR0Vf",
-            "T1BfREVMRVRFEAMy+gUKEExpdmVRdWVyeVNlcnZpY2US6QIKCVN1YnNjcmli",
-            "ZRIwLnVkYi5jb3JlLmxpdmVxdWVyeS5zZXJ2aWNlcy52MS5TdWJzY3JpYmVS",
-            "ZXF1ZXN0GjEudWRiLmNvcmUubGl2ZXF1ZXJ5LnNlcnZpY2VzLnYxLlN1YnNj",
-            "cmliZVJlc3BvbnNlIvQByvMYOggCGhd1ZGI6bGl2ZXF1ZXJ5OnN1YnNjcmli",
-            "ZSABSgMBAgRqE2xpdmVxdWVyeS5TdWJzY3JpYmWQAQHS8xgGCAEQASAB2vMY",
-            "OwgBEglzdWJzY3JpYmUaA3VkYiiw6gEwA0ABSglsaXZlcXVlcnlQAVoSbGl2",
-            "ZVF1ZXJ5U3Vic2NyaWJl8vMYQwoJbGl2ZXF1ZXJ5Gghwb3N0Z3JlczIbVURC",
-            "X05BVElWRV9TRVJWSUNFU19FTkFCTEVEMg9VREJfR1JQQ19UQVJHRVT48xgB",
-            "gtPkkwIcIhcvdjEvbGl2ZXF1ZXJ5OnN1YnNjcmliZToBKjABGvkCyvAZdAoJ",
-            "bGl2ZXF1ZXJ5EglsaXZlcXVlcnkaCWxpdmVxdWVyeSIKTGl2ZSBRdWVyeSoJ",
-            "bGl2ZXF1ZXJ5MAE4AWgBeglsaXZlcXVlcnmCAQlsaXZlcXVlcnmKAQlsaXZl",
-            "cXVlcnmSARBuYXRpdmUubGl2ZXF1ZXJ50vAZHAgBGgN1ZGIosOoBMANAAUoJ",
-            "bGl2ZXF1ZXJ5UAHa8BmVAQoJbGl2ZXF1ZXJ5EhR1ZGIvbmF0aXZlL2xpdmVx",
-            "dWVyeRobVURCX05BVElWRV9TRVJWSUNFU19FTkFCTEVEGg9VREJfR1JQQ19U",
-            "QVJHRVQiG3VkYi5uYXRpdmUubGl2ZXF1ZXJ5LmNvbmZpZzoJbGl2ZXF1ZXJ5",
-            "SgtVREJfQVBJX0tFWVoPdWRiIG5hdGl2ZSBsaW504vAZQwoJbGl2ZXF1ZXJ5",
-            "Gghwb3N0Z3JlczIbVURCX05BVElWRV9TRVJWSUNFU19FTkFCTEVEMg9VREJf",
-            "R1JQQ19UQVJHRVRCpgIKImNvbS51ZGIuY29yZS5saXZlcXVlcnkuc2Vydmlj",
-            "ZXMudjFCFUxpdmVxdWVyeVNlcnZpY2VQcm90b1ABWkxnaXRodWIuY29tL2Zh",
-            "aGFyYTAyL3VkYi9zZGsvZ28vZ2VuL3VkYi9jb3JlL2xpdmVxdWVyeS9zZXJ2",
-            "aWNlcy92MTtzZXJ2aWNlc3YxogIEVUNMU6oCHlVkYi5Db3JlLkxpdmVRdWVy",
-            "eS5TZXJ2aWNlcy5WMcoCHlVkYlxDb3JlXExpdmVxdWVyeVxTZXJ2aWNlc1xW",
-            "MeICKlVkYlxHUEJNZXRhZGF0YVxDb3JlXExpdmVxdWVyeVxTZXJ2aWNlc1xW",
-            "MeoCIlVkYjo6Q29yZTo6TGl2ZXF1ZXJ5OjpTZXJ2aWNlczo6VjFiBnByb3Rv",
-            "Mw=="));
+            "AFIGY2hhbmdlElIKCWhlYXJ0YmVhdBgEIAEoCzIyLnVkYi5jb3JlLmxpdmVx",
+            "dWVyeS5zZXJ2aWNlcy52MS5MaXZlUXVlcnlIZWFydGJlYXRIAFIJaGVhcnRi",
+            "ZWF0EjIKBWVycm9yGAMgASgLMhwudWRiLmNvcmUuY29tbW9uLnYxLkFwaUVy",
+            "cm9yUgVlcnJvcjogmrIZHAgBGgN1ZGIosOoBMANAAUoJbGl2ZXF1ZXJ5UAFC",
+            "CQoHcGF5bG9hZCJNChFMaXZlUXVlcnlTbmFwc2hvdBIbCglyb3dzX2pzb24Y",
+            "ASADKAlSCHJvd3NKc29uEhsKCXJvd19jb3VudBgCIAEoA1IIcm93Q291bnQi",
+            "igEKD0xpdmVRdWVyeUNoYW5nZRJBCgJvcBgBIAEoDjIxLnVkYi5jb3JlLmxp",
+            "dmVxdWVyeS5zZXJ2aWNlcy52MS5MaXZlUXVlcnlDaGFuZ2VPcFICb3ASGQoI",
+            "cm93X2pzb24YAiABKAlSB3Jvd0pzb24SGQoIZXZlbnRfaWQYAyABKAlSB2V2",
+            "ZW50SWQiFAoSTGl2ZVF1ZXJ5SGVhcnRiZWF0KvoCChNMaXZlUXVlcnlDb21w",
+            "YXJpc29uEiUKIUxJVkVfUVVFUllfQ09NUEFSSVNPTl9VTlNQRUNJRklFRBAA",
+            "EhwKGExJVkVfUVVFUllfQ09NUEFSSVNPTl9FURABEhwKGExJVkVfUVVFUllf",
+            "Q09NUEFSSVNPTl9ORRACEhwKGExJVkVfUVVFUllfQ09NUEFSSVNPTl9MVBAD",
+            "EhwKGExJVkVfUVVFUllfQ09NUEFSSVNPTl9MRRAEEhwKGExJVkVfUVVFUllf",
+            "Q09NUEFSSVNPTl9HVBAFEhwKGExJVkVfUVVFUllfQ09NUEFSSVNPTl9HRRAG",
+            "EhwKGExJVkVfUVVFUllfQ09NUEFSSVNPTl9JThAHEiAKHExJVkVfUVVFUllf",
+            "Q09NUEFSSVNPTl9OT1RfSU4QCBIhCh1MSVZFX1FVRVJZX0NPTVBBUklTT05f",
+            "SVNfTlVMTBAJEiUKIUxJVkVfUVVFUllfQ09NUEFSSVNPTl9JU19OT1RfTlVM",
+            "TBAKKpwBChFMaXZlUXVlcnlDaGFuZ2VPcBIkCiBMSVZFX1FVRVJZX0NIQU5H",
+            "RV9PUF9VTlNQRUNJRklFRBAAEh8KG0xJVkVfUVVFUllfQ0hBTkdFX09QX0lO",
+            "U0VSVBABEh8KG0xJVkVfUVVFUllfQ0hBTkdFX09QX1VQREFURRACEh8KG0xJ",
+            "VkVfUVVFUllfQ0hBTkdFX09QX0RFTEVURRADMvoFChBMaXZlUXVlcnlTZXJ2",
+            "aWNlEukCCglTdWJzY3JpYmUSMC51ZGIuY29yZS5saXZlcXVlcnkuc2Vydmlj",
+            "ZXMudjEuU3Vic2NyaWJlUmVxdWVzdBoxLnVkYi5jb3JlLmxpdmVxdWVyeS5z",
+            "ZXJ2aWNlcy52MS5TdWJzY3JpYmVSZXNwb25zZSL0AcrzGDoIAhoXdWRiOmxp",
+            "dmVxdWVyeTpzdWJzY3JpYmUgAUoDAQIEahNsaXZlcXVlcnkuU3Vic2NyaWJl",
+            "kAEB0vMYBggBEAEgAdrzGDsIARIJc3Vic2NyaWJlGgN1ZGIosOoBMANAAUoJ",
+            "bGl2ZXF1ZXJ5UAFaEmxpdmVRdWVyeVN1YnNjcmliZfLzGEMKCWxpdmVxdWVy",
+            "eRoIcG9zdGdyZXMyG1VEQl9OQVRJVkVfU0VSVklDRVNfRU5BQkxFRDIPVURC",
+            "X0dSUENfVEFSR0VU+PMYAYLT5JMCHCIXL3YxL2xpdmVxdWVyeTpzdWJzY3Jp",
+            "YmU6ASowARr5AsrwGXQKCWxpdmVxdWVyeRIJbGl2ZXF1ZXJ5GglsaXZlcXVl",
+            "cnkiCkxpdmUgUXVlcnkqCWxpdmVxdWVyeTABOAFoAXoJbGl2ZXF1ZXJ5ggEJ",
+            "bGl2ZXF1ZXJ5igEJbGl2ZXF1ZXJ5kgEQbmF0aXZlLmxpdmVxdWVyedLwGRwI",
+            "ARoDdWRiKLDqATADQAFKCWxpdmVxdWVyeVAB2vAZlQEKCWxpdmVxdWVyeRIU",
+            "dWRiL25hdGl2ZS9saXZlcXVlcnkaG1VEQl9OQVRJVkVfU0VSVklDRVNfRU5B",
+            "QkxFRBoPVURCX0dSUENfVEFSR0VUIht1ZGIubmF0aXZlLmxpdmVxdWVyeS5j",
+            "b25maWc6CWxpdmVxdWVyeUoLVURCX0FQSV9LRVlaD3VkYiBuYXRpdmUgbGlu",
+            "dOLwGUMKCWxpdmVxdWVyeRoIcG9zdGdyZXMyG1VEQl9OQVRJVkVfU0VSVklD",
+            "RVNfRU5BQkxFRDIPVURCX0dSUENfVEFSR0VUQqYCCiJjb20udWRiLmNvcmUu",
+            "bGl2ZXF1ZXJ5LnNlcnZpY2VzLnYxQhVMaXZlcXVlcnlTZXJ2aWNlUHJvdG9Q",
+            "AVpMZ2l0aHViLmNvbS9mYWhhcmEwMi91ZGIvc2RrL2dvL2dlbi91ZGIvY29y",
+            "ZS9saXZlcXVlcnkvc2VydmljZXMvdjE7c2VydmljZXN2MaICBFVDTFOqAh5V",
+            "ZGIuQ29yZS5MaXZlUXVlcnkuU2VydmljZXMuVjHKAh5VZGJcQ29yZVxMaXZl",
+            "cXVlcnlcU2VydmljZXNcVjHiAipVZGJcR1BCTWV0YWRhdGFcQ29yZVxMaXZl",
+            "cXVlcnlcU2VydmljZXNcVjHqAiJVZGI6OkNvcmU6OkxpdmVxdWVyeTo6U2Vy",
+            "dmljZXM6OlYxYgZwcm90bzM="));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { global::Google.Api.AnnotationsReflection.Descriptor, global::Udb.Core.Common.V1.DtoReflection.Descriptor, global::Udb.Core.Common.V1.SecurityReflection.Descriptor, },
           new pbr::GeneratedClrTypeInfo(new[] {typeof(global::Udb.Core.LiveQuery.Services.V1.LiveQueryComparison), typeof(global::Udb.Core.LiveQuery.Services.V1.LiveQueryChangeOp), }, null, new pbr::GeneratedClrTypeInfo[] {
             new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Core.LiveQuery.Services.V1.LiveQueryPredicate), global::Udb.Core.LiveQuery.Services.V1.LiveQueryPredicate.Parser, new[]{ "Field", "Op", "Value", "Values" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Core.LiveQuery.Services.V1.LiveQueryAnyOf), global::Udb.Core.LiveQuery.Services.V1.LiveQueryAnyOf.Parser, new[]{ "Predicates" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Core.LiveQuery.Services.V1.SubscribeRequest), global::Udb.Core.LiveQuery.Services.V1.SubscribeRequest.Parser, new[]{ "TenantId", "MessageType", "Filters", "ProjectId", "SnapshotLimit", "AnyOf", "SinceEventId" }, null, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Core.LiveQuery.Services.V1.SubscribeResponse), global::Udb.Core.LiveQuery.Services.V1.SubscribeResponse.Parser, new[]{ "Snapshot", "Change", "Error" }, new[]{ "Payload" }, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Core.LiveQuery.Services.V1.SubscribeResponse), global::Udb.Core.LiveQuery.Services.V1.SubscribeResponse.Parser, new[]{ "Snapshot", "Change", "Heartbeat", "Error" }, new[]{ "Payload" }, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Core.LiveQuery.Services.V1.LiveQuerySnapshot), global::Udb.Core.LiveQuery.Services.V1.LiveQuerySnapshot.Parser, new[]{ "RowsJson", "RowCount" }, null, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Core.LiveQuery.Services.V1.LiveQueryChange), global::Udb.Core.LiveQuery.Services.V1.LiveQueryChange.Parser, new[]{ "Op", "RowJson", "EventId" }, null, null, null, null)
+            new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Core.LiveQuery.Services.V1.LiveQueryChange), global::Udb.Core.LiveQuery.Services.V1.LiveQueryChange.Parser, new[]{ "Op", "RowJson", "EventId" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Core.LiveQuery.Services.V1.LiveQueryHeartbeat), global::Udb.Core.LiveQuery.Services.V1.LiveQueryHeartbeat.Parser, null, null, null, null, null)
           }));
     }
     #endregion
@@ -1079,7 +1082,7 @@ namespace Udb.Core.LiveQuery.Services.V1 {
   }
 
   /// <summary>
-  /// One streamed frame: either the initial snapshot or a single change delta.
+  /// One streamed frame: the initial snapshot, a change delta, or an idle heartbeat.
   /// </summary>
   [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
   public sealed partial class SubscribeResponse : pb::IMessage<SubscribeResponse>
@@ -1124,6 +1127,9 @@ namespace Udb.Core.LiveQuery.Services.V1 {
         case PayloadOneofCase.Change:
           Change = other.Change.Clone();
           break;
+        case PayloadOneofCase.Heartbeat:
+          Heartbeat = other.Heartbeat.Clone();
+          break;
       }
 
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
@@ -1159,6 +1165,18 @@ namespace Udb.Core.LiveQuery.Services.V1 {
       }
     }
 
+    /// <summary>Field number for the "heartbeat" field.</summary>
+    public const int HeartbeatFieldNumber = 4;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public global::Udb.Core.LiveQuery.Services.V1.LiveQueryHeartbeat Heartbeat {
+      get { return payloadCase_ == PayloadOneofCase.Heartbeat ? (global::Udb.Core.LiveQuery.Services.V1.LiveQueryHeartbeat) payload_ : null; }
+      set {
+        payload_ = value;
+        payloadCase_ = value == null ? PayloadOneofCase.None : PayloadOneofCase.Heartbeat;
+      }
+    }
+
     /// <summary>Field number for the "error" field.</summary>
     public const int ErrorFieldNumber = 3;
     private global::Udb.Core.Common.V1.ApiError error_;
@@ -1180,6 +1198,7 @@ namespace Udb.Core.LiveQuery.Services.V1 {
       None = 0,
       Snapshot = 1,
       Change = 2,
+      Heartbeat = 4,
     }
     private PayloadOneofCase payloadCase_ = PayloadOneofCase.None;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -1212,6 +1231,7 @@ namespace Udb.Core.LiveQuery.Services.V1 {
       }
       if (!object.Equals(Snapshot, other.Snapshot)) return false;
       if (!object.Equals(Change, other.Change)) return false;
+      if (!object.Equals(Heartbeat, other.Heartbeat)) return false;
       if (!object.Equals(Error, other.Error)) return false;
       if (PayloadCase != other.PayloadCase) return false;
       return Equals(_unknownFields, other._unknownFields);
@@ -1223,6 +1243,7 @@ namespace Udb.Core.LiveQuery.Services.V1 {
       int hash = 1;
       if (payloadCase_ == PayloadOneofCase.Snapshot) hash ^= Snapshot.GetHashCode();
       if (payloadCase_ == PayloadOneofCase.Change) hash ^= Change.GetHashCode();
+      if (payloadCase_ == PayloadOneofCase.Heartbeat) hash ^= Heartbeat.GetHashCode();
       if (error_ != null) hash ^= Error.GetHashCode();
       hash ^= (int) payloadCase_;
       if (_unknownFields != null) {
@@ -1255,6 +1276,10 @@ namespace Udb.Core.LiveQuery.Services.V1 {
         output.WriteRawTag(26);
         output.WriteMessage(Error);
       }
+      if (payloadCase_ == PayloadOneofCase.Heartbeat) {
+        output.WriteRawTag(34);
+        output.WriteMessage(Heartbeat);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
       }
@@ -1277,6 +1302,10 @@ namespace Udb.Core.LiveQuery.Services.V1 {
         output.WriteRawTag(26);
         output.WriteMessage(Error);
       }
+      if (payloadCase_ == PayloadOneofCase.Heartbeat) {
+        output.WriteRawTag(34);
+        output.WriteMessage(Heartbeat);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(ref output);
       }
@@ -1292,6 +1321,9 @@ namespace Udb.Core.LiveQuery.Services.V1 {
       }
       if (payloadCase_ == PayloadOneofCase.Change) {
         size += 1 + pb::CodedOutputStream.ComputeMessageSize(Change);
+      }
+      if (payloadCase_ == PayloadOneofCase.Heartbeat) {
+        size += 1 + pb::CodedOutputStream.ComputeMessageSize(Heartbeat);
       }
       if (error_ != null) {
         size += 1 + pb::CodedOutputStream.ComputeMessageSize(Error);
@@ -1326,6 +1358,12 @@ namespace Udb.Core.LiveQuery.Services.V1 {
             Change = new global::Udb.Core.LiveQuery.Services.V1.LiveQueryChange();
           }
           Change.MergeFrom(other.Change);
+          break;
+        case PayloadOneofCase.Heartbeat:
+          if (Heartbeat == null) {
+            Heartbeat = new global::Udb.Core.LiveQuery.Services.V1.LiveQueryHeartbeat();
+          }
+          Heartbeat.MergeFrom(other.Heartbeat);
           break;
       }
 
@@ -1373,6 +1411,15 @@ namespace Udb.Core.LiveQuery.Services.V1 {
             input.ReadMessage(Error);
             break;
           }
+          case 34: {
+            global::Udb.Core.LiveQuery.Services.V1.LiveQueryHeartbeat subBuilder = new global::Udb.Core.LiveQuery.Services.V1.LiveQueryHeartbeat();
+            if (payloadCase_ == PayloadOneofCase.Heartbeat) {
+              subBuilder.MergeFrom(Heartbeat);
+            }
+            input.ReadMessage(subBuilder);
+            Heartbeat = subBuilder;
+            break;
+          }
         }
       }
     #endif
@@ -1415,6 +1462,15 @@ namespace Udb.Core.LiveQuery.Services.V1 {
               Error = new global::Udb.Core.Common.V1.ApiError();
             }
             input.ReadMessage(Error);
+            break;
+          }
+          case 34: {
+            global::Udb.Core.LiveQuery.Services.V1.LiveQueryHeartbeat subBuilder = new global::Udb.Core.LiveQuery.Services.V1.LiveQueryHeartbeat();
+            if (payloadCase_ == PayloadOneofCase.Heartbeat) {
+              subBuilder.MergeFrom(Heartbeat);
+            }
+            input.ReadMessage(subBuilder);
+            Heartbeat = subBuilder;
             break;
           }
         }
@@ -1922,6 +1978,171 @@ namespace Udb.Core.LiveQuery.Services.V1 {
             EventId = input.ReadString();
             break;
           }
+        }
+      }
+    }
+    #endif
+
+  }
+
+  /// <summary>
+  /// The subscription is still open. Carries no row or resume cursor: clients must
+  /// not deliver it as a data change or advance since_event_id when it arrives.
+  /// </summary>
+  [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
+  public sealed partial class LiveQueryHeartbeat : pb::IMessage<LiveQueryHeartbeat>
+  #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      , pb::IBufferMessage
+  #endif
+  {
+    private static readonly pb::MessageParser<LiveQueryHeartbeat> _parser = new pb::MessageParser<LiveQueryHeartbeat>(() => new LiveQueryHeartbeat());
+    private pb::UnknownFieldSet _unknownFields;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pb::MessageParser<LiveQueryHeartbeat> Parser { get { return _parser; } }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pbr::MessageDescriptor Descriptor {
+      get { return global::Udb.Core.LiveQuery.Services.V1.LivequeryServiceReflection.Descriptor.MessageTypes[6]; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    pbr::MessageDescriptor pb::IMessage.Descriptor {
+      get { return Descriptor; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public LiveQueryHeartbeat() {
+      OnConstruction();
+    }
+
+    partial void OnConstruction();
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public LiveQueryHeartbeat(LiveQueryHeartbeat other) : this() {
+      _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public LiveQueryHeartbeat Clone() {
+      return new LiveQueryHeartbeat(this);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override bool Equals(object other) {
+      return Equals(other as LiveQueryHeartbeat);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool Equals(LiveQueryHeartbeat other) {
+      if (ReferenceEquals(other, null)) {
+        return false;
+      }
+      if (ReferenceEquals(other, this)) {
+        return true;
+      }
+      return Equals(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override int GetHashCode() {
+      int hash = 1;
+      if (_unknownFields != null) {
+        hash ^= _unknownFields.GetHashCode();
+      }
+      return hash;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override string ToString() {
+      return pb::JsonFormatter.ToDiagnosticString(this);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void WriteTo(pb::CodedOutputStream output) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      output.WriteRawMessage(this);
+    #else
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(output);
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(ref output);
+      }
+    }
+    #endif
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public int CalculateSize() {
+      int size = 0;
+      if (_unknownFields != null) {
+        size += _unknownFields.CalculateSize();
+      }
+      return size;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(LiveQueryHeartbeat other) {
+      if (other == null) {
+        return;
+      }
+      _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(pb::CodedInputStream input) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      input.ReadRawMessage(this);
+    #else
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
+            break;
+        }
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
+            break;
         }
       }
     }

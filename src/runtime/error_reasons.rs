@@ -50,6 +50,9 @@ reasons! {
     REVISION_CONFLICT = "UDB_REVISION_CONFLICT", Conflict, FailedPrecondition,
         "An expected_revision did not match the row's current revision.",
         "Read the row again to get its current revision and retry.";
+    IDEMPOTENCY_REUSE = "UDB_IDEMPOTENCY_REUSE", Conflict, FailedPrecondition,
+        "An idempotency key was already used with different authoritative inputs; the new write was refused.",
+        "Reuse a key only to retry identical inputs; use a new key for a different write.";
     NO_ROWS_AFFECTED = "UDB_NO_ROWS_AFFECTED", NotFound, NotFound,
         "require_affected was set and the write matched a different number of rows; nothing was changed.",
         "Check the filter or key; read the row first if it may have been deleted.";
@@ -104,6 +107,9 @@ reasons! {
     ENVELOPE_VERSION_UNSUPPORTED = "UDB_ENVELOPE_VERSION_UNSUPPORTED", Schema, FailedPrecondition,
         "An event's envelope_version is newer than the consumer understands.",
         "Upgrade the consumer's SDK to the broker's version.";
+    POLICY_WRONG_SURFACE = "UDB_POLICY_WRONG_SURFACE", Validation, FailedPrecondition,
+        "DataBroker.PutPolicy writes the legacy ABAC table, which does not authorize requests.",
+        "Use AuthzService.PutAuthzPolicy or udb policy apply; UDB_ALLOW_LEGACY_PUT_POLICY=true is a temporary migration override.";
 }
 
 /// Builds a refusal status carrying a typed [`ErrorDetail`] with `reason`.

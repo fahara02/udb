@@ -214,6 +214,18 @@ mod workflow_service;
 
 const UDB_FILE_DESCRIPTOR_SET: &[u8] = tonic::include_file_descriptor_set!("udb_descriptor");
 
+const GRPC_HTTP2_KEEPALIVE_INTERVAL: Duration = Duration::from_secs(30);
+const GRPC_HTTP2_KEEPALIVE_TIMEOUT: Duration = Duration::from_secs(20);
+
+/// All broker listeners share transport liveness, including an idle streaming
+/// connection and the optional Unix socket. HTTP/2 pings complement LiveQuery's
+/// application heartbeat and close a connection whose peer stops acknowledging.
+fn grpc_server_builder() -> tonic::transport::Server {
+    tonic::transport::Server::builder()
+        .http2_keepalive_interval(Some(GRPC_HTTP2_KEEPALIVE_INTERVAL))
+        .http2_keepalive_timeout(Some(GRPC_HTTP2_KEEPALIVE_TIMEOUT))
+}
+
 /// The initial authorization snapshot for a fresh broker cell: EMPTY
 /// (deny-by-default), carrying only the dev `default_allow` escape hatch
 /// (`UDB_ABAC_DEFAULT_ALLOW`). The real policy set is PG-warmed into the shared
@@ -1788,7 +1800,7 @@ fn spawn_uds_data_plane(
                 return;
             }
         };
-        if let Err(err) = tonic::transport::Server::builder()
+        if let Err(err) = grpc_server_builder()
             .layer(layer)
             .add_service(reflection)
             .add_service(
@@ -2699,7 +2711,7 @@ pub async fn serve(
             .into_inner()
     };
 
-    let mut server = tonic::transport::Server::builder().layer(make_layer());
+    let mut server = grpc_server_builder().layer(make_layer());
     if let Some(tls) = tls_config_from_settings(&runtime_config.service.tls)? {
         server = server.tls_config(tls)?;
     }
@@ -3638,7 +3650,7 @@ pub async fn serve(
          UDB_WEBRTC_GRPC_ADDR to expose it on a trusted interface"
     );
 
-    let mut auth_server = tonic::transport::Server::builder().layer(make_layer());
+    let mut auth_server = grpc_server_builder().layer(make_layer());
     if let Some(tls) = tls_config_from_settings(&runtime_config.service.tls)? {
         auth_server = auth_server.tls_config(tls)?;
     }
@@ -3697,7 +3709,7 @@ pub async fn serve(
             listener_shutdown_signal(listener_shutdown_rx.clone()),
         );
 
-    let mut webrtc_peer_server = tonic::transport::Server::builder().layer(make_layer());
+    let mut webrtc_peer_server = grpc_server_builder().layer(make_layer());
     if let Some(tls) = tls_config_from_settings(&runtime_config.service.tls)? {
         webrtc_peer_server = webrtc_peer_server.tls_config(tls)?;
     }

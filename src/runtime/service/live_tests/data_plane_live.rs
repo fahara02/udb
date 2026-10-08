@@ -798,6 +798,11 @@ async fn served_idempotency_key_reuse_with_different_input_is_refused_live() {
             Code::FailedPrecondition,
             "input-mismatch replay must be FAILED_PRECONDITION, got {mismatch:?}"
         );
+        assert_eq!(
+            crate::runtime::error_reasons::reason_of(&mismatch).as_deref(),
+            Some("UDB_IDEMPOTENCY_REUSE"),
+            "callers must distinguish key reuse from CAS and validation without message matching"
+        );
         // The second request's target must NOT be applied (follow-up read of id_b).
         let id_b_rows = served_select_rows(
             &svc,
@@ -1314,7 +1319,7 @@ pub(super) async fn served_status_of(
 
 /// The broker's opaque revision for a single row (via the served `include_revision`
 /// read), used to prove a rejected write neither committed nor bumped the revision.
-async fn served_row_revision(
+pub(super) async fn served_row_revision(
     svc: &DataBrokerService,
     tenant: &str,
     message: &str,

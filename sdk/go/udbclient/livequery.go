@@ -205,6 +205,8 @@ func liveQueryOnce[T proto.Message](ctx context.Context, client livequeryv1.Live
 			return progressed, liveQueryStreamError(mapError(liveQuerySubscribePath, err, stream.Trailer()))
 		}
 		switch payload := frame.GetPayload().(type) {
+		case *livequeryv1.SubscribeResponse_Heartbeat:
+			continue // Liveness only: no callback or resume cursor change.
 		case *livequeryv1.SubscribeResponse_Snapshot:
 			rows := make([]T, 0, len(payload.Snapshot.GetRowsJson()))
 			for _, raw := range payload.Snapshot.GetRowsJson() {
@@ -221,7 +223,7 @@ func liveQueryOnce[T proto.Message](ctx context.Context, client livequeryv1.Live
 		case *livequeryv1.SubscribeResponse_Change:
 			change := payload.Change
 			if change.GetEventId() == "" && change.GetOp() == livequeryv1.LiveQueryChangeOp_LIVE_QUERY_CHANGE_OP_UNSPECIFIED {
-				continue // keepalive
+				continue // Legacy keepalive from brokers before explicit Heartbeat.
 			}
 			row, err := decodeLiveRow[T](change.GetRowJson())
 			if err != nil {

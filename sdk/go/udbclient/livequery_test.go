@@ -87,8 +87,10 @@ func TestLiveQueryOnceDeliversSnapshotAndChangesAndSkipsKeepalives(t *testing.T)
 	client := &scriptedLiveClient{streams: []*scriptedLiveStream{{
 		frames: []*livequeryv1.SubscribeResponse{
 			snapshotFrame(`{}`),
+			{Payload: &livequeryv1.SubscribeResponse_Heartbeat{Heartbeat: &livequeryv1.LiveQueryHeartbeat{}}},
 			changeFrame(livequeryv1.LiveQueryChangeOp_LIVE_QUERY_CHANGE_OP_UNSPECIFIED, "", ""),
 			changeFrame(insert, `{}`, "evt-1"),
+			{Payload: &livequeryv1.SubscribeResponse_Heartbeat{Heartbeat: &livequeryv1.LiveQueryHeartbeat{}}},
 		},
 		err: status.Error(codes.Unavailable, "replica going away"),
 	}}}

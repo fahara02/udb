@@ -2541,7 +2541,7 @@
     "op_kind": "DESTRUCTIVE",
     "request_msg": "PutPolicyRequest",
     "body": "`{ \"context\": { \"tenant_id\": \"<seed:tenant_id>\", \"project_id\": \"<seed:project>\", \"purpose\": \"sdk.live.perf\" }, \"policy\": { \"effect\": \"allow\", \"service_identity\": \"\", \"tenant_id\": \"<seed:tenant_id>\", \"message_type\": \"\", \"operation\": \"\", \"required_scope\": \"\", \"priority\": 1, \"enabled\": true } }`",
-    "notes": "PolicyRecord.policy_id omit/0 for create; set `<seed:policy_id>` to update. effect=allow/deny."
+    "notes": "PolicyRecord.policy_id omit/0 for create; set `<seed:policy_id>` to update. effect=allow/deny. Measured only with `UDB_ALLOW_LEGACY_PUT_POLICY=true`; normal calls refuse with `UDB_POLICY_WRONG_SURFACE` and use AuthzService.PutAuthzPolicy instead."
   },
   {
     "file": "data_broker.md",

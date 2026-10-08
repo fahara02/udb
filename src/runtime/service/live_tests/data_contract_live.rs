@@ -16,13 +16,60 @@ use super::data_plane_live::{
 };
 use crate::generation::{CatalogManifest, ManifestTable, ManifestTableSecurity};
 use crate::proto::data_broker_server::DataBroker;
-use crate::proto::{DeleteRequest, SelectRequest, UpdateRequest};
+use crate::proto::{DeleteRequest, PolicyRecord, PutPolicyRequest, SelectRequest, UpdateRequest};
 use crate::runtime::error_reasons::reason_of;
 use crate::runtime::executor_utils::json_to_struct;
 use crate::runtime::service::DataBrokerService;
 use crate::runtime::system::ensure_system_catalog;
 
 const MSG: &str = "acme.dc.v1.Task";
+
+/// The served RPC must refuse a write that cannot grant authorization, and the
+/// refusal must leave the legacy ABAC table untouched.
+#[tokio::test]
+#[ignore = "requires live Postgres (UDB_INTEGRATION_PG_DSN); runs in the CI --ignored live step"]
+async fn served_put_policy_refuses_the_legacy_authorization_surface_live() {
+    let Some(dsn) = dp_live_pg_dsn() else {
+        return;
+    };
+    let _guard = super::support::live_native_service_db_lock().lock().await;
+    install_dp_security();
+    let pool = dp_pool(&dsn).await;
+    ensure_system_catalog(&pool).await.expect("system catalog");
+    let svc = dp_service(&dsn, CatalogManifest::default()).await;
+    let tenant = Uuid::new_v4().to_string();
+    let err = svc
+        .put_policy(with_ctx(
+            PutPolicyRequest {
+                policy: Some(PolicyRecord {
+                    effect: "allow".into(),
+                    tenant_id: tenant.clone(),
+                    purpose: "admin".into(),
+                    message_type: MSG.into(),
+                    operation: "Select".into(),
+                    enabled: true,
+                    ..Default::default()
+                }),
+                ..Default::default()
+            },
+            &tenant,
+        ))
+        .await
+        .expect_err("the wrong policy surface must refuse rather than report success");
+    assert_eq!(err.code(), Code::FailedPrecondition);
+    assert_eq!(reason_of(&err).as_deref(), Some("UDB_POLICY_WRONG_SURFACE"));
+    assert!(err.message().contains("AuthzService.PutAuthzPolicy"));
+    let rows = svc
+        .runtime_snapshot()
+        .list_policies(true)
+        .await
+        .expect("legacy policy list");
+    assert!(
+        rows.iter()
+            .all(|row| row["tenant_id"].as_str() != Some(tenant.as_str())),
+        "refusal must not insert a legacy policy"
+    );
+}
 
 /// A tenant-scoped `tasks` table in a throwaway schema, served by a live broker.
 async fn task_service(dsn: &str, pool: &sqlx::PgPool, schema: &str) -> DataBrokerService {

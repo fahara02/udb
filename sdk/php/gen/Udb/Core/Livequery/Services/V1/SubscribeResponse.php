@@ -10,7 +10,7 @@ use Google\Protobuf\Internal\GPBUtil;
 use Google\Protobuf\RepeatedField;
 
 /**
- * One streamed frame: either the initial snapshot or a single change delta.
+ * One streamed frame: the initial snapshot, a change delta, or an idle heartbeat.
  *
  * Generated from protobuf message <code>udb.core.livequery.services.v1.SubscribeResponse</code>
  */
@@ -32,6 +32,7 @@ class SubscribeResponse extends \Google\Protobuf\Internal\Message
      *
      *     @type \Udb\Core\Livequery\Services\V1\LiveQuerySnapshot $snapshot
      *     @type \Udb\Core\Livequery\Services\V1\LiveQueryChange $change
+     *     @type \Udb\Core\Livequery\Services\V1\LiveQueryHeartbeat $heartbeat
      *     @type \Udb\Core\Common\V1\ApiError $error
      *           Error information if the stream is terminating abnormally.
      * }
@@ -91,6 +92,33 @@ class SubscribeResponse extends \Google\Protobuf\Internal\Message
     {
         GPBUtil::checkMessage($var, \Udb\Core\Livequery\Services\V1\LiveQueryChange::class);
         $this->writeOneof(2, $var);
+
+        return $this;
+    }
+
+    /**
+     * Generated from protobuf field <code>.udb.core.livequery.services.v1.LiveQueryHeartbeat heartbeat = 4 [json_name = "heartbeat"];</code>
+     * @return \Udb\Core\Livequery\Services\V1\LiveQueryHeartbeat|null
+     */
+    public function getHeartbeat()
+    {
+        return $this->readOneof(4);
+    }
+
+    public function hasHeartbeat()
+    {
+        return $this->hasOneof(4);
+    }
+
+    /**
+     * Generated from protobuf field <code>.udb.core.livequery.services.v1.LiveQueryHeartbeat heartbeat = 4 [json_name = "heartbeat"];</code>
+     * @param \Udb\Core\Livequery\Services\V1\LiveQueryHeartbeat $var
+     * @return $this
+     */
+    public function setHeartbeat($var)
+    {
+        GPBUtil::checkMessage($var, \Udb\Core\Livequery\Services\V1\LiveQueryHeartbeat::class);
+        $this->writeOneof(4, $var);
 
         return $this;
     }
