@@ -4974,10 +4974,8 @@ it('measures per-RPC latency', function () {
         return [(microtime(true) - $start) * 1000.0, $err, $detail];
     };
 
-    // All RPCs are measured. Unary = full round-trip. Streaming = STREAM-OPEN latency
-    // (initiate the call, then cancel WITHOUT draining): a subscription/upload stream
-    // emits a first message only on an event, so draining it in a passive run would
-    // just hit the deadline — that 20 s drain is what produced the bogus 272 ms.
+    // Unary calls measure the full response; streams require a served response.
+    // CDC measures delivery of a real write made after subscription is ready.
     $samples = [];
     // Auth-phase ordering (mirrors Go orderRPCsByAuthPhase): Phase 1 establishes/validates the
     // session FIRST, Phase 2 runs everything else (reads BEFORE mutations BEFORE destructive so a
@@ -5222,8 +5220,27 @@ it('measures per-RPC latency', function () {
                 $streamErr = 'OK';
                 $streamDetail = '';
                 $probe = null;
+                $cdcRecordId = null;
                 try {
                     $probe = $invoke($stub, $method, $hasRequest, $probeRequest, $callMeta);
+                    if ($svc === 'DataBroker' && $name === 'PublishCDC') {
+                        // Initial metadata is sent after the broker captures the
+                        // fresh journal cursor. Wait for it before producing the
+                        // event, so the write cannot land before subscription.
+                        $probe->getMetadata();
+                        $cdcRecordId = 'php-perf-cdc-'.bin2hex(random_bytes(8));
+                        $written = $s['data']->upsert((new \Udb\Entity\V1\UpsertRequest())
+                            ->setContext((new \Udb\Entity\V1\RequestContext())
+                                ->setTenantId($callMeta->tenantId)->setProjectId($callMeta->projectId)
+                                ->setPurpose('php.live.perf.cdc'))
+                            ->setMessageType('udb.sdk.live.v1.SdkLiveRecord')
+                            ->setRecordJson(liveRecordJson($cdcRecordId, $callMeta->tenantId,
+                                $callMeta->projectId, $cdcRecordId, 'php-perf-cdc', 1))
+                            ->setConflictFields(['record_id']), $callMeta);
+                        if ((int) $written->getAffectedRows() !== 1) {
+                            throw new RuntimeException('CDC trigger write did not affect exactly one row');
+                        }
+                    }
                     if (! $hasRequest) {
                         // Client/bidi stub signatures take metadata only; send
                         // the documented request on the returned writable call.
@@ -5237,6 +5254,9 @@ it('measures per-RPC latency', function () {
                     } elseif (str_contains($doc, 'ServerStreamingCall')) {
                         $firstResponse = null;
                         foreach ($probe->responses() as $response) {
+                            if ($cdcRecordId !== null && !str_contains($response->getPayloadJson(), $cdcRecordId)) {
+                                continue;
+                            }
                             $firstResponse = $response;
                             break;
                         }
@@ -5244,6 +5264,10 @@ it('measures per-RPC latency', function () {
                             $observedStatus = $probe->getStatus();
                             $streamErr = grpcStatusNamePhp((int) $observedStatus->code);
                             $streamDetail = (string) ($observedStatus->details ?? '');
+                            if ($cdcRecordId !== null && $streamErr === 'OK') {
+                                $streamErr = 'NO_CDC_EVENT';
+                                $streamDetail = 'CDC stream ended before delivering its trigger write';
+                            }
                         }
                     } else {
                         $firstResponse = $probe->read();
@@ -5253,6 +5277,9 @@ it('measures per-RPC latency', function () {
                             $streamDetail = (string) ($observedStatus->details ?? '');
                         }
                     }
+                } catch (\Fahara02\UdbLaravel\Exceptions\UdbRpcException $e) {
+                    $streamErr = grpcStatusNamePhp($e->status);
+                    $streamDetail = $e->getMessage();
                 } catch (\Throwable $e) {
                     $streamErr = 'UNKNOWN';
                     $streamDetail = $e->getMessage();

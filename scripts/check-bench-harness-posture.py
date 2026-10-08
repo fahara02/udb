@@ -75,6 +75,13 @@ CHECKS: tuple[SourceCheck, ...] = (
          "$blockSeedsOnFailure('DataBroker/PutObject', ['bucket'])"),
     ),
     SourceCheck(
+        "PHP CDC measures its own write after subscription admission",
+        "sdk/php/tests/Live/GeneratedRpcSurfaceTest.php",
+        ("$svc === 'DataBroker' && $name === 'PublishCDC'", "$probe->getMetadata();",
+         "$written->getAffectedRows() !== 1", "!str_contains($response->getPayloadJson(), $cdcRecordId)",
+         "$streamErr = 'NO_CDC_EVENT';"),
+    ),
+    SourceCheck(
         "TypeScript signaling has a disposable served peer",
         "sdk/typescript/live-auth.test.ts",
         ('await tryRun("JoinSignalPeer"', 'fix.set("signal_peer_id", joined.peer.peer_id);'),

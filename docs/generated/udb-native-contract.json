@@ -1,6 +1,6 @@
 {
   "schema_version": "1",
-  "descriptor_sha256": "4f116d73ebf36891f9243032dc45daf3be0e59354bf5fb3ad73e95a586b656f6",
+  "descriptor_sha256": "843ae11f7ebfb57b0f57e3fc3bf54acc48369765642aeac9eb24fb806aace157",
   "contract_version": "7.2.0",
   "udb_version": "0.5.29",
   "protocol_version": "1.0.0",
@@ -33253,7 +33253,7 @@
       ]
     }
   ],
-  "message_count": 1056,
+  "message_count": 1057,
   "messages": [
     {
       "message": "udb.core.analytics.entity.v1.ExecutorPerformanceSummary",
@@ -110248,6 +110248,16 @@
       ]
     },
     {
+      "message": "udb.core.livequery.services.v1.LiveQueryHeartbeat",
+      "file": "udb/core/livequery/services/v1/livequery_service.proto",
+      "sdk_surface": null,
+      "event_contract": null,
+      "dependency_contract": null,
+      "table_security": null,
+      "field_count": 0,
+      "fields": []
+    },
+    {
       "message": "udb.core.livequery.services.v1.LiveQueryPredicate",
       "file": "udb/core/livequery/services/v1/livequery_service.proto",
       "sdk_surface": null,
@@ -110562,7 +110572,7 @@
       "event_contract": null,
       "dependency_contract": null,
       "table_security": null,
-      "field_count": 3,
+      "field_count": 4,
       "fields": [
         {
           "name": "snapshot",
@@ -110587,6 +110597,25 @@
           "name": "change",
           "number": 2,
           "type": ".udb.core.livequery.services.v1.LiveQueryChange",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "heartbeat",
+          "number": 4,
+          "type": ".udb.core.livequery.services.v1.LiveQueryHeartbeat",
           "column_security": null,
           "scalar_security": {
             "pii": false,

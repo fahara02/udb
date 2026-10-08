@@ -163,6 +163,21 @@ pub(crate) fn metric_max_distinct_labels() -> usize {
 /// (`UDB_DISPATCH_ALLOW_RAW_<BACKEND>`, e.g. `UDB_DISPATCH_ALLOW_RAW_POSTGRES`).
 pub(crate) const RAW_DISPATCH_OPT_OUT_PREFIX: &str = "UDB_DISPATCH_ALLOW_RAW_";
 
+/// Temporary policy migration opt-in, resolved once at the config boundary.
+pub(crate) fn legacy_put_policy_enabled() -> bool {
+    static ENABLED: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+    *ENABLED.get_or_init(|| {
+        std::env::var("UDB_ALLOW_LEGACY_PUT_POLICY")
+            .map(|value| {
+                matches!(
+                    value.trim().to_ascii_lowercase().as_str(),
+                    "true" | "1" | "yes" | "on"
+                )
+            })
+            .unwrap_or(false)
+    })
+}
+
 /// True if the operator opted a specific mediated backend out of the raw-dispatch
 /// gate (master-plan item 2.1) via `UDB_DISPATCH_ALLOW_RAW_<BACKEND>` set truthy.
 /// Resolved ONCE into a static map (never re-read per request). It lives here, in
