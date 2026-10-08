@@ -1311,7 +1311,8 @@ jobs:
         # canonical-store containers are already consuming runner memory and disk.
         run: |
           set +e
-          docker compose -f docker-compose.integration.yml up -d --wait postgres kafka redis memcached qdrant minio &
+          bash -n scripts/ci-retry.sh || exit $?
+          bash scripts/ci-retry.sh -- docker compose -f docker-compose.integration.yml up -d --wait postgres kafka redis memcached qdrant minio &
           integration_stack_pid=$!
           cargo test --locked --no-run --lib --test integration_tests --test runtime_live_backends
           compile_status=$?
@@ -1345,7 +1346,7 @@ jobs:
         # up after the compile preflight because the canonical conformance step
         # below exports every live DSN; unset DSNs would silently skip those
         # contracts.
-        run: docker compose -f docker-compose.canonical.yml up -d --wait mysql mssql mongodb cassandra neo4j clickhouse elasticsearch weaviate
+        run: bash scripts/ci-retry.sh -- docker compose -f docker-compose.canonical.yml up -d --wait mysql mssql mongodb cassandra neo4j clickhouse elasticsearch weaviate
 
       - name: Initialize SQL Server database
         run: |

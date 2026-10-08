@@ -4285,6 +4285,7 @@ LINT_WORKFLOW_TRIGGER_PATHS = (
     ("scripts/check-versions.mjs", "version guard"),
     ("scripts/check-launcher-assets.mjs", "launcher asset guard"),
     ("scripts/ci_slim_dep_guard.sh", "CI slim dependency guard"),
+    ("scripts/ci-retry.sh", "bounded CI backend startup retries"),
     ("scripts/install-ci-native-deps.py", "bounded CI native dependency installer"),
     ("scripts/generate-codebase-map.py", "codebase map generator"),
     ("scripts/generate-error-reasons.py", "error reason registry generator"),
