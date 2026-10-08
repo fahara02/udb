@@ -24,14 +24,16 @@ type EnterpriseConfig struct {
 	Password   string // required
 	// TenantCode is the human tenant code hint used pre-login (e.g. "acme").
 	// The verified canonical tenant UUID replaces it after login.
-	TenantCode string
-	ProjectID  string
-	Purpose    string
-	Scopes     []string
-	UserID     string
-	TLS        *tls.Config
-	Deadline   time.Duration
-	Retry      RetryConfig
+	TenantCode          string
+	ProjectID           string
+	Purpose             string
+	Scopes              []string
+	UserID              string
+	TLS                 *tls.Config
+	Deadline            time.Duration
+	Retry               RetryConfig
+	StrictServerVersion bool
+	OnVersionWarning    func(error)
 }
 
 // EnterpriseSession bundles the authenticated Udb with the VERIFIED canonical
@@ -104,16 +106,18 @@ func ConnectEnterprise(ctx context.Context, cfg EnterpriseConfig) (*EnterpriseSe
 	}
 
 	u, err := NewUdb(ctx, Config{
-		Target:     cfg.Target,
-		AuthTarget: cfg.AuthTarget,
-		TenantID:   hint, // pre-login hint; replaced by the canonical UUID below
-		ProjectID:  cfg.ProjectID,
-		Purpose:    cfg.Purpose,
-		Scopes:     cfg.Scopes,
-		UserID:     cfg.UserID,
-		TLS:        cfg.TLS,
-		Deadline:   cfg.Deadline,
-		Retry:      cfg.Retry,
+		Target:              cfg.Target,
+		AuthTarget:          cfg.AuthTarget,
+		TenantID:            hint, // pre-login hint; replaced by the canonical UUID below
+		ProjectID:           cfg.ProjectID,
+		Purpose:             cfg.Purpose,
+		Scopes:              cfg.Scopes,
+		UserID:              cfg.UserID,
+		TLS:                 cfg.TLS,
+		Deadline:            cfg.Deadline,
+		Retry:               cfg.Retry,
+		StrictServerVersion: cfg.StrictServerVersion,
+		OnVersionWarning:    cfg.OnVersionWarning,
 	})
 	if err != nil {
 		return nil, err

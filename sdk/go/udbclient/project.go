@@ -71,6 +71,12 @@ type Config struct {
 	// context carries none.
 	Deadline time.Duration
 
+	// StrictServerVersion refuses responses from brokers outside this SDK's
+	// major.minor release, including missing or malformed release headers.
+	// By default the client warns. See Options for response-check semantics.
+	StrictServerVersion bool
+	OnVersionWarning    func(error)
+
 	// UserID / ServiceIdentity / CorrelationID seed the caller Metadata.
 	UserID          string
 	ServiceIdentity string
@@ -104,9 +110,11 @@ func (c Config) metadata() Metadata {
 
 func (c Config) options() Options {
 	o := Options{
-		Meta:        c.metadata(),
-		CallTimeout: c.Deadline,
-		Retry:       c.Retry,
+		Meta:                c.metadata(),
+		CallTimeout:         c.Deadline,
+		Retry:               c.Retry,
+		StrictServerVersion: c.StrictServerVersion,
+		OnVersionWarning:    c.OnVersionWarning,
 	}
 	if c.Credentials.RawAPIKey || c.Credentials.Bearer != "" {
 		o.APIKey = c.Credentials.APIKey

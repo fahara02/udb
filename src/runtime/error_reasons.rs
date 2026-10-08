@@ -186,10 +186,9 @@ impl From<Refusal> for tonic::Status {
 }
 
 /// Adds `reason` (with its fix hint, and the column / constraint when known) to
-/// an existing refusal, keeping its code, message, kind and every other detail
-/// field: callers that branch on today's kinds keep working while the reason
-/// becomes the stable contract. A status without a typed detail gets one built
-/// from the reason.
+/// an existing refusal. The registry supplies the canonical kind; code, message
+/// and detail fields valid for that kind are retained. A status without a typed
+/// detail gets one built from the reason.
 pub(crate) fn annotate(
     status: tonic::Status,
     reason: ErrorReason,

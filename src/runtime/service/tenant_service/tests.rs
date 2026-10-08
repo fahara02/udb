@@ -676,7 +676,14 @@ async fn admin_purge_without_scope_is_denied() {
     .await
     .expect_err("a caller lacking the admin-purge scope must be denied");
     assert_eq!(err.code(), tonic::Code::PermissionDenied);
-    assert_eq!(decode_detail(&err).policy_decision_id, "scope");
+    let detail = decode_detail(&err);
+    assert_eq!(detail.kind, ErrorKind::Permission as i32);
+    assert_eq!(detail.reason, "UDB_SCOPE_MISSING");
+    assert_eq!(
+        detail.missing.get("scope").map(String::as_str),
+        Some(SCOPE_ADMIN_PURGE)
+    );
+    assert_eq!(detail.policy_decision_id, "scope");
 }
 
 /// The Bug #2 fix: a caller HOLDING the distinct scope may target a DIFFERENT

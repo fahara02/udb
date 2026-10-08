@@ -3369,7 +3369,12 @@ mod tests {
             "PII/encrypted fields require purpose export, verification, or audit, or scope udb:pii:read"
         );
         let detail = decode_detail(&err);
-        assert_eq!(detail.kind, ErrorKind::Policy as i32);
+        assert_eq!(detail.kind, ErrorKind::Permission as i32);
+        assert_eq!(detail.reason, "UDB_SCOPE_MISSING");
+        assert_eq!(
+            detail.missing.get("scope").map(String::as_str),
+            Some("udb:pii:read")
+        );
         assert_eq!(detail.operation, "select_export_controls");
         assert_eq!(detail.policy_decision_id, "pii_export_scope_required");
         assert!(!detail.retryable);

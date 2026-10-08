@@ -323,7 +323,9 @@ fn sanitized_error_detail(mut detail: crate::proto::ErrorDetail) -> crate::proto
         })
         .filter(|(key, _)| !key.is_empty())
         .collect();
-    if detail.kind != crate::proto::ErrorKind::Policy as i32 {
+    if detail.kind != crate::proto::ErrorKind::Policy as i32
+        && detail.kind != crate::proto::ErrorKind::Permission as i32
+    {
         detail.policy_decision_id.clear();
     }
     if detail.kind != crate::proto::ErrorKind::Capability as i32

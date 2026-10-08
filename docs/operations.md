@@ -73,6 +73,16 @@ A mismatch refuses `serve` before proto parsing or backend startup. Every gRPC
 response carries `x-udb-version`, including refusals, so clients can identify the
 build that answered.
 
+Go clients send their compiled `SDKVersion` as `x-udb-sdk-version` on unary and
+streaming calls. A broker in the same major and minor release is compatible,
+including different patches and prereleases. A different, missing, malformed,
+or repeated `x-udb-version` warns by default; `OnVersionWarning` replaces the
+standard logger. Set `StrictServerVersion: true` in `Config`, `EnterpriseConfig`,
+or low-level `Options` to return a typed `VersionMismatchError` instead. This
+checks response headers: a write may already have completed when its mismatch
+is detected, so the SDK never retries that refusal. Existing RPC failures retain
+their original typed error and detail trailer.
+
 ### Auth-code delivery and invitation setup
 
 Auth issuance queues `authn.email_verification`, `authn.password_reset`, and

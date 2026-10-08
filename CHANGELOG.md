@@ -17,6 +17,9 @@ no-wrapper plan.
   delivery scrubs stored bodies. Tenant templates override defaults.
 - Passwordless invitations report `UDB_PASSWORD_SETUP_REQUIRED` before login
   and activate after the emailed code sets the first password.
+- Go clients send their SDK version on every call and check the broker response:
+  the same major/minor release is compatible; other or missing versions warn,
+  with an explicit strict option that returns `VersionMismatchError`.
 
 
 - **Rate-limit refusals identify the verified caller and effective budget.**

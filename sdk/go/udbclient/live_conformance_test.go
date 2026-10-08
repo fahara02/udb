@@ -1220,9 +1220,10 @@ func containsResource(resources []string, needle string) bool {
 
 func liveGeneratedOptions(meta Metadata, authz string) Options {
 	return Options{
-		Meta:          meta,
-		Authorization: authz,
-		CallTimeout:   2 * time.Second,
+		StrictServerVersion: true,
+		Meta:                meta,
+		Authorization:       authz,
+		CallTimeout:         2 * time.Second,
 		Retry: RetryConfig{
 			MaxAttempts:  1,
 			BaseBackoff:  1 * time.Millisecond,

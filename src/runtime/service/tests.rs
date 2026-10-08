@@ -1807,7 +1807,12 @@ async fn broker_v2_select_denied_without_policy() {
     let err = svc.authorize(&ctx, "Payment", "Select").await.unwrap_err();
     assert_eq!(err.code(), tonic::Code::PermissionDenied);
     let detail = decode_detail(&err);
-    assert_eq!(detail.kind, ErrorKind::Policy as i32);
+    assert_eq!(detail.kind, ErrorKind::Permission as i32);
+    assert_eq!(detail.reason, "UDB_POLICY_DENIED");
+    assert_eq!(
+        detail.missing.get("rule").map(String::as_str),
+        Some("Select Payment")
+    );
     assert_eq!(detail.operation, "data_plane_authorize");
     assert!(detail.policy_decision_id.starts_with("authz_"));
     assert!(
@@ -1845,7 +1850,12 @@ async fn broker_v2_admin_rpc_denied_without_grant() {
         .unwrap_err();
     assert_eq!(err.code(), tonic::Code::PermissionDenied);
     let detail = decode_detail(&err);
-    assert_eq!(detail.kind, ErrorKind::Policy as i32);
+    assert_eq!(detail.kind, ErrorKind::Permission as i32);
+    assert_eq!(detail.reason, "UDB_POLICY_DENIED");
+    assert_eq!(
+        detail.missing.get("rule").map(String::as_str),
+        Some("PutPolicy Policy")
+    );
     assert_eq!(detail.operation, "data_plane_authorize");
     assert!(detail.policy_decision_id.starts_with("authz_"));
 }
@@ -1860,7 +1870,12 @@ async fn broker_v2_batch_item_denial_carries_policy_detail() {
         .expect_err("batch item with no matching policy must be denied");
     assert_eq!(err.code(), tonic::Code::PermissionDenied);
     let detail = decode_detail(&err);
-    assert_eq!(detail.kind, ErrorKind::Policy as i32);
+    assert_eq!(detail.kind, ErrorKind::Permission as i32);
+    assert_eq!(detail.reason, "UDB_POLICY_DENIED");
+    assert_eq!(
+        detail.missing.get("rule").map(String::as_str),
+        Some("Select Payment")
+    );
     assert_eq!(detail.operation, "data_plane_authorize_item");
     assert!(detail.policy_decision_id.starts_with("authz_"));
     assert!(

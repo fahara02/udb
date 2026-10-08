@@ -3280,7 +3280,12 @@ mod tests {
                 .expect_err("non-admin without the action scope must be denied");
             assert_eq!(err.code(), tonic::Code::PermissionDenied);
             let detail = decode_detail(&err);
-            assert_eq!(detail.kind, ErrorKind::Policy as i32);
+            assert_eq!(detail.kind, ErrorKind::Permission as i32);
+            assert_eq!(detail.reason, "UDB_SCOPE_MISSING");
+            assert_eq!(
+                detail.missing.get("scope").map(String::as_str),
+                Some("authn.user.create")
+            );
             assert_eq!(detail.operation, "method_security");
             assert_eq!(detail.policy_decision_id, deny_reason::SCOPE);
         });

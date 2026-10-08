@@ -9086,19 +9086,23 @@ mod setup_data_consistency_tests {
 
     #[test]
     fn revision_and_fencing_refusals_are_typed_precondition_errors() {
-        for status in [
-            row_revision_precondition_failed_status(),
-            fencing_lock_absent_status("orders"),
-            fencing_lease_lost_status("orders"),
+        for (status, expected_kind) in [
+            (
+                row_revision_precondition_failed_status(),
+                ErrorKind::Conflict,
+            ),
+            (fencing_lock_absent_status("orders"), ErrorKind::Validation),
+            (fencing_lease_lost_status("orders"), ErrorKind::Validation),
         ] {
             assert_eq!(status.code(), tonic::Code::FailedPrecondition);
             let detail = decode_error_detail(&status);
-            assert_eq!(detail.kind, ErrorKind::Validation as i32);
+            assert_eq!(detail.kind, expected_kind as i32);
             assert!(!detail.retryable);
             assert_eq!(detail.field_violations.len(), 1);
         }
         // Non-disclosing: names only the contract, never a current revision/value.
         let rev = row_revision_precondition_failed_status();
+        assert_eq!(decode_error_detail(&rev).reason, "UDB_REVISION_CONFLICT");
         assert!(rev.message().contains("revision precondition failed"));
         assert!(
             !rev.message()
