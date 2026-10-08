@@ -256,6 +256,8 @@ pub trait MetricsRecorder: Send + Sync + std::fmt::Debug {
     /// A control-plane in-process reload was applied for `resource_type` (the
     /// subscriber detected a registry/world change and refreshed it).
     fn inc_control_reload_applied(&self, _resource_type: &str) {}
+    /// A successful full control registry resync, including its startup baseline.
+    fn inc_control_resync(&self) {}
     /// A control-plane node NACKed a pushed version for `resource_type` — it
     /// rejected the distributed config and kept its last-good version (the
     /// `store::record_nack` path: reject-without-silently-diverging). Default
@@ -502,6 +504,7 @@ pub struct PrometheusMetrics {
     cdc_journal_failures: prometheus::IntCounter,
     // Phase 9 (control-plane policy distribution + canary) collectors
     control_reload_applied: prometheus::IntCounterVec,
+    control_resync: prometheus::IntCounter,
     control_nack: prometheus::IntCounterVec,
     control_push_queue_depth: prometheus::IntGauge,
     control_push_throttled: prometheus::IntCounter,
@@ -899,6 +902,10 @@ impl PrometheusMetrics {
             "CDC delivery-journal write failures (lost publish evidence)",
         )?;
         // ── Phase 9: control-plane policy distribution + canary ──────────────
+        let control_resync = prometheus::IntCounter::new(
+            "udb_control_resync_total",
+            "Successful full control-plane registry resyncs including startup",
+        )?;
         let control_reload_applied = prometheus::IntCounterVec::new(
             prometheus::Opts::new(
                 "udb_control_reload_applied_total",
@@ -1041,6 +1048,7 @@ impl PrometheusMetrics {
             Box::new(compensation_failures.clone()),
             Box::new(cdc_journal_failures.clone()),
             Box::new(control_reload_applied.clone()),
+            Box::new(control_resync.clone()),
             Box::new(control_nack.clone()),
             Box::new(control_push_queue_depth.clone()),
             Box::new(control_push_throttled.clone()),
@@ -1126,6 +1134,7 @@ impl PrometheusMetrics {
             compensation_failures,
             cdc_journal_failures,
             control_reload_applied,
+            control_resync,
             control_nack,
             control_push_queue_depth,
             control_push_throttled,
@@ -1689,6 +1698,9 @@ impl MetricsRecorder for PrometheusMetrics {
     }
     fn inc_cdc_journal_failures_total(&self) {
         self.cdc_journal_failures.inc();
+    }
+    fn inc_control_resync(&self) {
+        self.control_resync.inc();
     }
     fn inc_control_reload_applied(&self, resource_type: &str) {
         self.control_reload_applied

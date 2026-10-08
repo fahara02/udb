@@ -775,16 +775,6 @@ impl DataBrokerService {
             .with_metrics(self.metrics.clone());
         if let Some(pool) = pg_pool {
             let config = Arc::new(runtime.config().clone());
-            // Populate the versioned registry from real config at startup so the
-            // service distributes actual backend-targets / native-enablement /
-            // method-security / routing / RLS policy (not an empty registry).
-            let seed_pool = pool.clone();
-            let seed_cfg = config.clone();
-            tokio::spawn(async move {
-                if let Err(e) = sourcing::resync(&seed_pool, seed_cfg.as_ref()).await {
-                    tracing::warn!(error = %e, "control-plane initial resource sync failed");
-                }
-            });
             // Keep the registry fresh and WAKE the push streams the instant a
             // change is applied (the subscriber owns the shared reload notify).
             // Wire the authz bundle-version probe so an authz-only policy/tuple

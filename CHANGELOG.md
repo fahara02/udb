@@ -12,6 +12,9 @@ no-wrapper plan.
 
 ### Added
 
+- **Control-plane reloads wake on committed PostgreSQL notifications.** A
+  30-second fallback recovers missed events; unchanged worlds skip config
+  re-sourcing. The resync counter includes startup for an observable idle budget.
 - LiveQuery idle frames have an explicit `Heartbeat` payload. The Go helper
   ignores them without delivering a row or advancing the resume cursor, and
   retains support for older brokers' empty Change heartbeat.

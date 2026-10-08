@@ -30,6 +30,8 @@ use super::resources::{
 
 pub const RESOURCE_MSG: &str = "udb.core.control.entity.v1.ControlPlaneResource";
 pub const NODE_STATE_MSG: &str = "udb.core.control.entity.v1.ControlPlaneNodeState";
+/// Committed resource changes wake every replica's local distribution loop.
+pub(crate) const RELOAD_CHANNEL: &str = "udb_control_reload";
 
 fn control_store_invalid_fields<I, F, D>(message: impl Into<String>, fields: I) -> Status
 where
@@ -401,13 +403,16 @@ pub async fn upsert_resource(
         ],
     );
     // 1. Content-addressed UPDATE: only mutate when the content actually changed.
+    // The notification shares this statement's transaction: only committed
+    // changes wake listeners. The no-op path emits nothing, including when a
+    // subscriber re-sources identical config.
     let update_sql = format!(
-        "UPDATE {rel} SET \
+        "WITH changed AS (UPDATE {rel} SET \
             {version} = $4, {chash} = $4, {payload} = $5::JSONB, {project} = $6, \
             {uby} = $7, {updated} = NOW() \
          WHERE {rtype} = $1 AND {name} = $2 AND {tenant} IS NOT DISTINCT FROM $3 \
            AND {chash} <> $4 \
-         RETURNING {cols}",
+         RETURNING {cols}) SELECT changed.*, pg_notify($8, '') FROM changed",
         rel = m.relation,
         version = m.q("version"),
         chash = m.q("content_hash"),
@@ -428,6 +433,7 @@ pub async fn upsert_resource(
         .bind(payload_json)
         .bind(project_opt.as_deref())
         .bind(updated_by)
+        .bind(RELOAD_CHANNEL)
         .fetch_optional(pool)
         .await
         .map_err(map_err("control resource update failed"))?
@@ -445,10 +451,10 @@ pub async fn upsert_resource(
 
     // 3. Brand-new resource → INSERT.
     let insert_sql = format!(
-        "INSERT INTO {rel} \
+        "WITH changed AS (INSERT INTO {rel} \
             ({rid}, {rtype}, {name}, {tenant}, {project}, {version}, {chash}, {payload}, {uby}) \
          VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $5, $6::JSONB, $7) \
-         RETURNING {cols}",
+         RETURNING {cols}) SELECT changed.*, pg_notify($8, '') FROM changed",
         rel = m.relation,
         rid = m.q("resource_id"),
         rtype = m.q("resource_type"),
@@ -469,6 +475,7 @@ pub async fn upsert_resource(
         .bind(&content_hash)
         .bind(payload_json)
         .bind(updated_by)
+        .bind(RELOAD_CHANNEL)
         .fetch_one(pool)
         .await
         .map_err(map_err("control resource insert failed"))?;

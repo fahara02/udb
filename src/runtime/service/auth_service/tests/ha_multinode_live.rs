@@ -585,6 +585,167 @@ async fn live_postgres_control_reload_metric_fires_on_served_path() {
     cleanup_native_auth_db(&pool).await;
 }
 
+/// A14: the real per-replica subscriber stays idle across a full fallback
+/// period, wakes promptly on a served rollback, and recovers an unnotified
+/// durable change through its fallback. No manually driven subscriber ticks.
+#[tokio::test]
+#[ignore = "requires live Postgres; exercised by the native CI lane"]
+async fn live_postgres_control_subscriber_notifications_and_idle_resync_budget() {
+    use super::super::control_plane::ControlPlaneServiceImpl;
+    use super::super::control_plane::subscriber::{self, SubscriberHandle};
+    use crate::proto::udb::core::control::services::v1 as control_pb;
+    use crate::proto::udb::core::control::services::v1::control_plane_service_server::ControlPlaneService;
+    use crate::runtime::config::UdbConfig;
+    use crate::runtime::metrics::{MetricsRecorder, PrometheusMetrics};
+    use crate::runtime::native_catalog::native_model;
+    use std::sync::Arc;
+    use std::time::Duration;
+
+    fn resync_count(metrics: &PrometheusMetrics) -> u64 {
+        metrics
+            .gather_text("")
+            .lines()
+            .find_map(|line| line.strip_prefix("udb_control_resync_total "))
+            .expect("resync counter is registered")
+            .parse()
+            .expect("integer resync counter")
+    }
+
+    let _guard = live_auth_db_lock().lock().await;
+    let pool = live_pg_pool().await;
+    migrate_native_auth_db(&pool).await;
+    assert_eq!(subscriber::reload_interval(), Duration::from_secs(30));
+    let rt = ResourceType::RoutingPolicy;
+    let name = format!("notify-routing-{}", Uuid::new_v4().simple());
+    let node = format!("notify-node-{}", Uuid::new_v4().simple());
+    let v1 = r#"{"route":"primary"}"#;
+    let v2 = r#"{"route":"secondary"}"#;
+    store::upsert_resource(&pool, rt, &name, "", "billing", v1, "notify-test")
+        .await
+        .expect("seed retained routing policy");
+    let resources = store::list_resources(&pool, rt, None, &[name.clone()])
+        .await
+        .expect("list retained routing policy");
+    let world_v1 = store::world_version(&pool, rt, None, &[name.clone()])
+        .await
+        .expect("retained world version");
+    store::ensure_node_state(&pool, &node, rt, &[name.clone()])
+        .await
+        .expect("seed rollback node");
+    store::retain_served_snapshot(&pool, &node, rt, &world_v1, &resources)
+        .await
+        .expect("retain rollback target");
+    let current = store::upsert_resource(&pool, rt, &name, "", "billing", v2, "notify-test")
+        .await
+        .expect("publish second routing policy");
+
+    let metrics = Arc::new(PrometheusMetrics::new().expect("real prometheus recorder"));
+    let metrics_sink: Arc<dyn MetricsRecorder> = metrics.clone();
+    let handle = SubscriberHandle::new(pool.clone(), Arc::new(UdbConfig::default()))
+        .with_metrics(metrics_sink);
+    let notify = handle.reload_notify();
+    let task = subscriber::spawn_control_plane_subscriber(handle);
+    // Abort the worker even if a later assertion unwinds, so it cannot touch the
+    // next live test's schema. On success await its shutdown before cleanup.
+    struct StopSubscriber(tokio::task::AbortHandle);
+    impl Drop for StopSubscriber {
+        fn drop(&mut self) {
+            self.0.abort();
+        }
+    }
+    let stop = StopSubscriber(task.abort_handle());
+    tokio::time::timeout(Duration::from_secs(15), async {
+        while resync_count(&metrics) == 0 {
+            assert!(!task.is_finished(), "subscriber exited before seeding");
+            tokio::time::sleep(Duration::from_millis(25)).await;
+        }
+    })
+    .await
+    .expect("subscriber completes its real startup resync");
+    assert_eq!(resync_count(&metrics), 1);
+    store::upsert_resource(&pool, rt, &name, "", "billing", v2, "notify-test")
+        .await
+        .expect("identical content is a no-op");
+    tokio::time::sleep(Duration::from_secs(31)).await;
+    assert_eq!(
+        resync_count(&metrics),
+        1,
+        "the unchanged world must not resync across a full idle fallback period"
+    );
+
+    let changed = notify.notified();
+    tokio::pin!(changed);
+    changed.as_mut().enable();
+    let svc = ControlPlaneServiceImpl::new().with_postgres(Some(pool.clone()));
+    let rollback = svc
+        .rollback_resources(Request::new(control_pb::RollbackResourcesRequest {
+            node_id: node,
+            resource_type: rt as i32,
+            target_version: world_v1.clone(),
+            ..Default::default()
+        }))
+        .await
+        .expect("served rollback commits the control write")
+        .into_inner();
+    assert_eq!(rollback.rolled_back_to_version, world_v1);
+    tokio::time::timeout(Duration::from_secs(5), &mut changed)
+        .await
+        .expect("committed control write must wake the replica before the 30s fallback");
+    assert_eq!(resync_count(&metrics), 2);
+
+    // Simulate a notification missed during an outage: change the durable row
+    // directly without NOTIFY. The next fallback must still observe the world.
+    let missed = notify.notified();
+    tokio::pin!(missed);
+    missed.as_mut().enable();
+    let v3 = r#"{"route":"recovered"}"#;
+    let version = content_version(v3);
+    let model = native_model(
+        store::RESOURCE_MSG,
+        &[
+            "resource_id",
+            "version",
+            "content_hash",
+            "payload_json",
+            "updated_at",
+        ],
+    );
+    let sql = format!(
+        "UPDATE {rel} SET {version}=$1, {hash}=$1, {payload}=$2::JSONB, {updated}=NOW() WHERE {id}=$3::UUID",
+        rel = model.relation,
+        version = model.q("version"),
+        hash = model.q("content_hash"),
+        payload = model.q("payload_json"),
+        updated = model.q("updated_at"),
+        id = model.q("resource_id"),
+    );
+    assert_eq!(
+        sqlx::query(&sql)
+            .bind(&version)
+            .bind(v3)
+            .bind(&current.resource_id)
+            .execute(&pool)
+            .await
+            .expect("write unnotified durable world change")
+            .rows_affected(),
+        1
+    );
+    tokio::time::timeout(Duration::from_secs(35), &mut missed)
+        .await
+        .expect("fallback must recover a missed change notification");
+    assert_eq!(resync_count(&metrics), 3);
+    assert!(metrics.gather_text("").lines().any(|line| {
+        line == "udb_control_reload_applied_total{resource_type=\"RESOURCE_TYPE_ROUTING_POLICY\"} 2"
+    }));
+    drop(stop);
+    assert!(
+        task.await
+            .expect_err("subscriber was stopped")
+            .is_cancelled()
+    );
+    cleanup_native_auth_db(&pool).await;
+}
+
 /// 6.2 snapshot retention + rollback: serve v1 then a bad v2 (both retained in the
 /// per-(node,type) ring), then `RollbackResources` to the retained v1 — the
 /// handler re-publishes the retained payloads through the same content-addressed

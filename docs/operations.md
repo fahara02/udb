@@ -24,6 +24,13 @@ things go wrong, and how to validate that a release is ready.
 
 ## Runtime Shape
 
+The control-plane distribution subscriber wakes on PostgreSQL notifications
+from committed resource writes. It checks for missed changes every 30 seconds
+(`UDB_CONTROL_RELOAD_INTERVAL_MS` overrides that fallback). An unchanged world
+skips full config re-sourcing; `udb_control_resync_total` counts completed resyncs,
+including the startup baseline. Listener reconnects check the durable world to
+recover changes from a connection gap.
+
 UDB runs two listeners. The **data plane** is the public gRPC endpoint your
 application clients talk to. Run it where those clients can reach it:
 

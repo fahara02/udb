@@ -1,26 +1,11 @@
-//! Phase 9 in-process reload SUBSCRIBER — closes the gap where Phase-K emits
-//! `udb.authz.policy.bundle.invalidated.v1` (and other authz/config changes) but
-//! NO node reloads. This background task periodically:
-//!   1. re-sources the registry from the live config + descriptor
-//!      ([`super::sourcing::resync`]) so config drift lands in the registry;
-//!   2. computes a cheap fleet fingerprint
-//!      ([`super::store::fleet_world_fingerprint`]) plus the authz bundle version;
-//!   3. when EITHER changed since the last tick, fires a [`tokio::sync::Notify`]
-//!      that the `ControlPlaneServiceImpl` push loop subscribes to, so every open
-//!      stream wakes and pushes the new versions immediately (instead of waiting
-//!      for its own poll interval), and increments
-//!      `metrics.inc_control_reload_applied(resource_type)` per changed type.
+//! In-process control-plane reload subscriber. Committed resource changes wake
+//! every replica through PostgreSQL LISTEN/NOTIFY; a 30-second fallback detects
+//! missed notifications and authz snapshot changes. Unchanged worlds skip the
+//! full config resync and per-type version reads.
 //!
-//! ## Singleton lease — intentionally OPTIONAL.
-//! `resync` is a pure read-snapshot: it reads config/descriptor and performs
-//! content-addressed [`super::store::upsert_resource`] writes that are idempotent
-//! (identical content is a no-op, no version bump). Two nodes resyncing
-//! concurrently converge to the same rows with no lost-update or double-bump
-//! hazard, so a singleton lease is NOT required for correctness. We therefore run
-//! the resync on every node (each node also needs the local *notify* fired so its
-//! own open streams wake). A lease is only warranted for NON-idempotent durable
-//! side effects, which this loop has none of; this mirrors the doctrine in
-//! `src/runtime/singleton.rs` (leases guard non-idempotent singleton work).
+//! This is per-replica distribution work: each replica must wake its own push
+//! streams. Config sourcing is content-addressed and idempotent, so this reader
+//! does not require a singleton lease.
 
 use std::sync::Arc;
 use std::time::Duration;
@@ -34,15 +19,10 @@ use crate::runtime::metrics::MetricsRecorder;
 use super::resources::{ordered_resource_types, resource_type_to_db};
 use super::{sourcing, store};
 
-/// Env knob: how often the subscriber re-sources + checks for changes. Default
-/// 1000ms, clamped into `[100ms, 60s]`.
+/// Env knob for the fallback change check. Defaults to 30 seconds, clamped
+/// into `[100ms, 60s]`; notifications do not wait for this interval.
 pub const ENV_RELOAD_INTERVAL_MS: &str = "UDB_CONTROL_RELOAD_INTERVAL_MS";
-const DEFAULT_RELOAD_INTERVAL_MS: u64 = 1_000;
-
-/// Re-source the registry from config only on every Nth tick (and the first).
-/// Config changes are rare and node-local; the per-tick work is the cheap
-/// change signal (one fingerprint query plus the in-memory authz version).
-const RESYNC_EVERY_TICKS: u64 = 30;
+const DEFAULT_RELOAD_INTERVAL_MS: u64 = 30_000;
 
 /// Resolve the reload interval from the environment, clamped to a safe range.
 pub fn reload_interval() -> Duration {
@@ -121,100 +101,116 @@ pub(crate) struct LastSeen {
 /// the process exits; the caller keeps [`SubscriberHandle::reload_notify`] to
 /// wake its streams. Idempotent resync ⇒ safe to run on every node (no lease).
 pub fn spawn_control_plane_subscriber(handle: SubscriberHandle) -> tokio::task::JoinHandle<()> {
+    let interval = reload_interval();
     tokio::spawn(async move {
-        let interval = reload_interval();
-        let mut ticker = tokio::time::interval(interval);
+        let mut ticker = tokio::time::interval_at(tokio::time::Instant::now() + interval, interval);
         ticker.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
         let mut last = LastSeen::default();
-        // Seed the baseline on the first pass WITHOUT firing a spurious reload:
-        // sources the registry, records versions, but only notifies on a real
-        // change thereafter.
         let mut seeded = false;
-        let mut tick: u64 = 0;
+        let mut listener: Option<sqlx::postgres::PgListener> = None;
         loop {
-            ticker.tick().await;
-            let full = tick % RESYNC_EVERY_TICKS == 0;
-            tick = tick.wrapping_add(1);
-            match run_tick(&handle, &last, seeded, full).await {
-                Ok(next) => {
-                    last = next;
-                    seeded = true;
+            // Source startup config once, before LISTEN, so its own notifications
+            // do not create a backlog. The check after LISTEN covers this gap.
+            if !seeded {
+                apply_reload(&handle, &mut last, &mut seeded).await;
+            }
+            if listener.is_none() {
+                match sqlx::postgres::PgListener::connect_with(&handle.pool).await {
+                    Ok(mut connected) => match connected.listen(store::RELOAD_CHANNEL).await {
+                        Ok(()) => listener = Some(connected),
+                        Err(err) => {
+                            tracing::warn!(error = %err, "control-plane LISTEN failed; using fallback");
+                        }
+                    },
+                    Err(err) => {
+                        tracing::warn!(error = %err, "control-plane listener connect failed; using fallback");
+                    }
                 }
-                Err(err) => {
-                    tracing::warn!(
-                        error = %err,
-                        "control-plane reload subscriber tick failed; will retry"
-                    );
+                // Notifications in a lost-connection or startup gap cannot be
+                // replayed. Re-read the durable world after subscribing.
+                if listener.is_some() {
+                    apply_reload(&handle, &mut last, &mut seeded).await;
                 }
             }
+            tokio::select! {
+                _ = ticker.tick() => {}
+                received = async {
+                    match listener.as_mut() {
+                        Some(connected) => connected.try_recv().await,
+                        None => std::future::pending().await,
+                    }
+                } => {
+                    match received {
+                        Ok(Some(_)) => {}
+                        Ok(None) => listener = None,
+                        Err(err) => {
+                            tracing::warn!(error = %err, "control-plane listener lost; reconnecting");
+                            listener = None;
+                        }
+                    }
+                }
+            }
+            apply_reload(&handle, &mut last, &mut seeded).await;
         }
     })
 }
 
-/// One subscriber tick: resync, then diff the fleet fingerprint + authz version.
-/// On a real change (and only after the baseline is seeded) fire the notify and
-/// record the per-type reload metric. Factored out for unit-testing the diff
-/// logic. Returns the new `LastSeen` baseline.
-///
-/// `pub(crate)` so the live integration suite can exercise the REAL served
-/// reload path (seed, mutate the registry, tick again, assert the reload metric).
+async fn apply_reload(handle: &SubscriberHandle, last: &mut LastSeen, seeded: &mut bool) {
+    match run_once(handle, last, *seeded).await {
+        Ok(next) => {
+            *last = next;
+            *seeded = true;
+        }
+        Err(err) => {
+            tracing::warn!(error = %err, "control-plane reload failed; will retry");
+        }
+    }
+}
+
+/// Check the durable fleet fingerprint and local authz version before sourcing
+/// config. An idle fallback or duplicate notification does no full resync.
+/// The initial pass seeds a baseline without reporting a spurious reload.
 pub(crate) async fn run_once(
     handle: &SubscriberHandle,
     last: &LastSeen,
     seeded: bool,
 ) -> Result<LastSeen, String> {
-    run_tick(handle, last, seeded, true).await
-}
-
-/// One tick. A `full` tick re-sources the registry from config first; every
-/// tick then reads the fleet fingerprint, and the per-type versions are only
-/// recomputed when the fingerprint or the authz version moved. An idle broker
-/// therefore costs one query per tick instead of a resync plus one query per
-/// resource type.
-async fn run_tick(
-    handle: &SubscriberHandle,
-    last: &LastSeen,
-    seeded: bool,
-    full: bool,
-) -> Result<LastSeen, String> {
-    // urgent_fix #27: time the reload cycle (resync → version recompute → apply) so
-    // `observe_policy_reload_seconds` is fed from the serving path, not just tests.
     let reload_started = std::time::Instant::now();
-    // 1. Re-source the registry from live config (idempotent, content-addressed).
-    if full || !seeded {
-        sourcing::resync(&handle.pool, &handle.config)
-            .await
-            .map_err(|status| format!("resync failed: {status}"))?;
-    } else {
-        let fingerprint = store::fleet_world_fingerprint(&handle.pool)
-            .await
-            .map_err(|status| format!("fleet fingerprint failed: {status}"))?;
-        let authz_version = handle
-            .authz_version
-            .as_ref()
-            .map(|probe| probe())
-            .unwrap_or_default();
-        if fingerprint == last.fingerprint && authz_version == last.authz_version {
-            return Ok(last.clone());
-        }
-    }
-
-    // 2. Capture per-type world versions + the combined fleet fingerprint.
-    let mut per_type = std::collections::BTreeMap::new();
-    for rt in ordered_resource_types() {
-        let version = store::world_version(&handle.pool, *rt, None, &[])
-            .await
-            .map_err(|status| format!("world_version failed: {status}"))?;
-        per_type.insert(resource_type_to_db(*rt), version);
-    }
-    let fingerprint = store::fleet_world_fingerprint(&handle.pool)
-        .await
-        .map_err(|status| format!("fleet fingerprint failed: {status}"))?;
     let authz_version = handle
         .authz_version
         .as_ref()
         .map(|probe| probe())
         .unwrap_or_default();
+    let mut fingerprint = String::new();
+    let needs_resync = if seeded {
+        fingerprint = store::fleet_world_fingerprint(&handle.pool)
+            .await
+            .map_err(|status| format!("fleet fingerprint failed: {status}"))?;
+        if fingerprint == last.fingerprint && authz_version == last.authz_version {
+            return Ok(last.clone());
+        }
+        fingerprint != last.fingerprint
+    } else {
+        true
+    };
+    let mut per_type = last.per_type.clone();
+    if needs_resync {
+        sourcing::resync(&handle.pool, &handle.config)
+            .await
+            .map_err(|status| format!("resync failed: {status}"))?;
+        // Only a registry change needs per-type world reads. An authz-only
+        // snapshot change wakes streams without re-sourcing unchanged config.
+        per_type.clear();
+        for rt in ordered_resource_types() {
+            let version = store::world_version(&handle.pool, *rt, None, &[])
+                .await
+                .map_err(|status| format!("world_version failed: {status}"))?;
+            per_type.insert(resource_type_to_db(*rt), version);
+        }
+        fingerprint = store::fleet_world_fingerprint(&handle.pool)
+            .await
+            .map_err(|status| format!("fleet fingerprint failed: {status}"))?;
+    }
 
     let next = LastSeen {
         fingerprint: fingerprint.clone(),
@@ -222,6 +218,11 @@ async fn run_tick(
         per_type: per_type.clone(),
     };
 
+    if needs_resync {
+        if let Some(metrics) = handle.metrics.as_ref() {
+            metrics.inc_control_resync();
+        }
+    }
     // 3. On the seeding pass, just record the baseline (no spurious reload).
     if !seeded {
         return Ok(next);
@@ -289,7 +290,7 @@ mod tests {
         unsafe {
             std::env::remove_var(ENV_RELOAD_INTERVAL_MS);
         }
-        assert_eq!(reload_interval(), Duration::from_millis(1_000));
+        assert_eq!(reload_interval(), Duration::from_millis(30_000));
     }
 
     // The change-detection predicate: a reload fires only when the fleet
