@@ -5,7 +5,7 @@ the package version in `Cargo.toml`; historical v0.3.2 audit material is folded
 into the v0.3.x entries because the codebase advanced to v0.3.7 before that
 release line was tagged.
 
-## [0.5.30] - 2026-10-08
+## [0.5.30] - 2026-10-09
 
 This release continues the server error, authorization and liveness work in the
 no-wrapper plan.
@@ -20,6 +20,11 @@ no-wrapper plan.
 
 ### Fixed
 
+- Cached Select responses retain `redacted_fields`, including physical column
+  names for masked aliases, and match the complete uncached response. PII scope
+  checks and refusal to write a mask sentinel are verified on the served path.
+- PHP's CDC benchmark waits for subscription readiness, writes a fresh scoped
+  record and requires delivery of that record's event.
 - Keyed retries preserve the original row revision and write receipt. Reusing a
   key with a changed opaque revision or required row count refuses with
   `UDB_IDEMPOTENCY_REUSE`; it cannot replay a success for different inputs.

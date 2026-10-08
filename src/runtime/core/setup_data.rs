@@ -1130,6 +1130,8 @@ impl DataBrokerRuntime {
             .await?;
         // P-1: paginated reads skip the read cache — a cache hit returns
         // `cached_record_set` with no next_page_token, which would break the walk.
+        let table = resolve_table_for_message(manifest, &request.message_type)
+            .map_err(|_| message_type_lookup_status(manifest, &request.message_type))?;
         if !bypass_read
             && !paginate
             // #5: an include_revision read skips the record cache — a cached
@@ -1147,13 +1149,11 @@ impl DataBrokerRuntime {
                 .cache_get_fresh(cache_key, &manifest.checksum_sha256, &context)
                 .await
         {
-            let mut cached = cached_record_set(cached);
+            let mut cached = cached_record_set(cached, table, &context);
             cached.has_more = (cached.records_json.len() as i32) >= request.limit;
             return Ok((cached, fence_warning));
         }
 
-        let table = resolve_table_for_message(manifest, &request.message_type)
-            .map_err(|_| message_type_lookup_status(manifest, &request.message_type))?;
         let routed_pool = self
             .pg_select_pool_for_table_routed(table, &context)
             .await?;

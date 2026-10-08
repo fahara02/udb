@@ -12,6 +12,8 @@ mod audit_sink_live;
 mod authz_deny_path_live;
 mod backup_live;
 mod catalog_authority_live;
+#[cfg(feature = "redis")]
+mod data_cache_redaction_live;
 mod data_contract_live;
 mod data_plane_live;
 mod data_plane_seam_live;

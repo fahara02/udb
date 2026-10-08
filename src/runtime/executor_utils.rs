@@ -18,7 +18,9 @@ use serde_json::Value as JsonValue;
 use sha2::{Digest, Sha256};
 
 use crate::broker::RequestContext;
-use crate::generation::{CatalogManifest, ManifestColumn, ManifestMaterializedView, ManifestStore};
+use crate::generation::{
+    CatalogManifest, ManifestColumn, ManifestMaterializedView, ManifestStore, ManifestTable,
+};
 use crate::proto::{RecordSet, RequestContext as ProtoRequestContext, Row as ProtoRow};
 
 // ── Object-store limits ──────────────────────────────────────────────────────
@@ -1382,7 +1384,11 @@ fn plan_error_reason(error: &str) -> Option<crate::runtime::error_reasons::Error
     }
 }
 
-pub(crate) fn cached_record_set(records_json: Vec<Vec<u8>>) -> RecordSet {
+pub(crate) fn cached_record_set(
+    records_json: Vec<Vec<u8>>,
+    table: &ManifestTable,
+    context: &RequestContext,
+) -> RecordSet {
     // Emit the SAME shape as the uncached relational path (`rows_to_record_set`):
     // records in `records_json`, one EMPTY compatibility row each.
     //
@@ -1405,11 +1411,39 @@ pub(crate) fn cached_record_set(records_json: Vec<Vec<u8>>) -> RecordSet {
     // Consumers read `records_json` (every SDK does; the Rust client's
     // `Records::decode` is the reference reader). `rows` stays in the message,
     // emitted empty, for wire compatibility.
+    let can_read_pii = context
+        .scopes
+        .iter()
+        .any(|scope| matches!(scope.as_str(), "udb:pii:read" | "udb:*" | "*"));
+    let masked_columns: std::collections::BTreeSet<&str> = table
+        .columns
+        .iter()
+        .filter(|column| !can_read_pii && (column.security.is_pii || column.security.mask_in_logs))
+        .map(|column| column.column_name.as_str())
+        .collect();
+    let mut redacted_fields = std::collections::BTreeSet::new();
+    if !masked_columns.is_empty() {
+        // Cache entries contain the canonical masked JSON. Recover the same
+        // descriptor-qualified signal as the database serializer; a literal
+        // sentinel in an ordinary column is not a redacted value.
+        for bytes in &records_json {
+            if let Ok(JsonValue::Object(record)) = serde_json::from_slice(bytes) {
+                for (name, value) in record {
+                    if masked_columns.contains(name.as_str())
+                        && value.as_str() == Some(REDACTION_PLACEHOLDER)
+                    {
+                        redacted_fields.insert(name);
+                    }
+                }
+            }
+        }
+    }
     let rows = vec![ProtoRow::default(); records_json.len()];
     RecordSet {
         total_count: records_json.len() as i32,
         rows,
         records_json,
+        redacted_fields: redacted_fields.into_iter().collect(),
         ..RecordSet::default()
     }
 }
@@ -3841,7 +3875,11 @@ mod cached_record_set_shape_tests {
             serde_json::to_vec(&json!({"id": 1, "big": 9007199254740993i64})).unwrap(),
             serde_json::to_vec(&json!({"id": 2})).unwrap(),
         ];
-        let set = cached_record_set(blobs.clone());
+        let set = cached_record_set(
+            blobs.clone(),
+            &crate::generation::ManifestTable::default(),
+            &crate::RequestContext::default(),
+        );
 
         assert_eq!(
             set.records_json, blobs,

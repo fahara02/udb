@@ -7,6 +7,13 @@ on:
   push:
     branches: [main]
     paths:
+      # A candidate must measure the actual changed broker and SDK surface.
+      - "src/**"
+      - "proto/**"
+      - "sdk/**"
+      - "sdk-templates/**"
+      - "Cargo.toml"
+      - "Cargo.lock"
       - ".github/workflows/benchmark-candidate.yml"
       - ".github/workflows/_live-sdk-suite.yml"
       - ".github/workflows/release-binaries.yml"
