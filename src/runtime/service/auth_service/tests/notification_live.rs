@@ -99,8 +99,14 @@ async fn authn_reset_codes_are_queued_but_never_returned_by_notification_apis() 
             subject_template: "Reset code {{code}}".into(),
             body_template:
                 "Hello {{user_name}}, use {{code}} within {{expires_in_minutes}} minutes".into(),
-            tenant_id: user.tenant_id.clone(),
-            project_id: user.project_id.clone(),
+            context: Some(crate::proto::udb::core::common::v1::RequestContext {
+                tenant: Some(crate::proto::udb::core::common::v1::TenantContext {
+                    tenant_id: user.tenant_id.clone(),
+                    project_id: user.project_id.clone(),
+                    ..Default::default()
+                }),
+                ..Default::default()
+            }),
             is_active: true,
             ..Default::default()
         }))
