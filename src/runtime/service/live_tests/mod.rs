@@ -35,6 +35,7 @@ mod rate_limit_live;
 mod scheduler_live;
 #[cfg(feature = "http-client")]
 mod search_tenant_iso_live;
+mod sql_generation_live;
 mod storage_live;
 #[cfg(feature = "http-client")]
 mod storage_object_live;
