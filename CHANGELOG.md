@@ -97,6 +97,18 @@ release line was tagged.
 - Go transactions read the terminal gRPC refusal after an error frame or early
   send EOF, retaining its original code and typed reason for `ErrConflict`.
 
+### Added
+
+- Go descriptors expose unconditional unique keys with effective partition
+  fields. Generated consumer adapters provide typed unique row keys and
+  predicates through the shared codec, preserving exact 64-bit values and
+  refusing invalid fields or unsafe numeric precision.
+- Partial unique indexes no longer suppress a separately declared unconditional
+  column constraint. Compiler consumers and PostgreSQL controls exercise the
+  generated metadata and emitted constraints.
+- CI preserves canonical SDK producer output, the exact source and binary
+  hashes, RPC surface digest, generation logs and a non-writing freshness check.
+
 ### Breaking for callers
 
 - Upgrade all CDC and LiveQuery readers together when adopting position-based

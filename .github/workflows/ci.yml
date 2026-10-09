@@ -287,6 +287,7 @@ jobs:
           # jobs retain the production official-first automatic behavior.
           force-nasm-package-fallback: ${{ github.event_name == 'pull_request' && matrix.os == 'windows-latest' && 'true' || 'false' }}
       - name: Build all targets
+        id: canonical-build
         run: cargo build --locked --all-targets
       - name: Compile tests and benches
         run: cargo test --locked --no-run --all-targets
@@ -373,15 +374,65 @@ jobs:
           fi
 
           echo "operator CLI checks passed - all commands behaved"
+      - name: Generate canonical SDKs and preserve producer evidence
+        id: sdk-producer
+        # A cache can contain an older executable. Only this checkout's
+        # successful build may produce an artifact attributed to this commit.
+        if: always() && runner.os == 'Linux' && steps.canonical-build.outcome == 'success'
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p ci-sdk-producer
+          target/debug/udb sdk generate --lang all --out sdk 2>&1 | tee ci-sdk-producer/sdk-generate.log
+          target/debug/udb sdk generate --lang all --out sdk --check 2>&1 | tee ci-sdk-producer/sdk-generate-check.log
+          node scripts/gen-bench-bodies-json.mjs
+          node scripts/gen-sdk-benchmark-docs.mjs
+          target/debug/udb sdk manifest > ci-sdk-producer/rpc-manifest.json
+          python3 - <<'PY'
+          import hashlib
+          import json
+          import os
+          from pathlib import Path
+
+          directory = Path("ci-sdk-producer")
+          digest = lambda path: hashlib.sha256(Path(path).read_bytes()).hexdigest()
+          generation = ["target/debug/udb", "sdk", "generate", "--lang", "all", "--out", "sdk"]
+          marker = {
+              "schema_version": 1,
+              "source_sha": os.environ["GITHUB_SHA"],
+              "binary_sha256": digest("target/debug/udb"),
+              "generation_exit_code": 0,
+              "check_exit_code": 0,
+              "generation_command": generation,
+              "check_command": generation + ["--check"],
+              "rpc_manifest_sha256": digest(directory / "rpc-manifest.json"),
+              "generation_log_sha256": digest(directory / "sdk-generate.log"),
+              "check_log_sha256": digest(directory / "sdk-generate-check.log"),
+          }
+          (directory / "generation-check.json").write_text(json.dumps(marker, indent=2) + "\n", encoding="utf-8")
+          PY
+          expected_rpc_count=$(python3 -c 'import json; print(len(json.load(open("docs/generated/bench-bodies.json"))))')
+          python3 scripts/package-sdk-producer-evidence.py \
+            --binary target/debug/udb \
+            --rpc-manifest ci-sdk-producer/rpc-manifest.json \
+            --canonical-manifest docs/generated/bench-bodies.json \
+            --generation-check-marker ci-sdk-producer/generation-check.json \
+            --generation-log ci-sdk-producer/sdk-generate.log \
+            --check-log ci-sdk-producer/sdk-generate-check.log \
+            --expected-rpc-count "$expected_rpc_count" \
+            --out ci-sdk-producer/evidence
+      - name: Upload canonical SDK producer evidence
+        if: always() && runner.os == 'Linux' && steps.sdk-producer.outcome == 'success'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-sdk-producer-${{ github.run_attempt }}
+          path: ci-sdk-producer/evidence/
+          if-no-files-found: error
+          retention-days: 14
       - name: SDK robustness clients + benchmark docs drift
         if: runner.os == 'Linux'
         run: |
-          target/debug/udb sdk generate --lang all --out sdk
-          # The bench manifest takes its RPC metadata from the generated Go
-          # client, so it must be rebuilt after `sdk generate` and before the
-          # benchmark docs validate against it — a new RPC otherwise fails here.
-          node scripts/gen-bench-bodies-json.mjs
-          node scripts/gen-sdk-benchmark-docs.mjs
+          # Generation and its non-writing check succeeded in sdk-producer.
           # Mark new generated files intent-to-add so `git diff` SEES them. Without
           # this, a template that emits a file nobody has committed yet leaves an
           # untracked file and this gate passes in silence — the generated client
@@ -460,7 +511,7 @@ jobs:
           target/debug/udb native contract-diff \
             --baseline docs/generated/contract-baseline.bin
       - name: Prepare CI-generated native documentation repair patch
-        if: failure() && runner.os == 'Linux'
+        if: failure() && runner.os == 'Linux' && steps.canonical-build.outcome == 'success'
         continue-on-error: true
         run: |
           test -x target/debug/udb
@@ -490,7 +541,7 @@ jobs:
             udb-skill/plugins/udb/skills/udb-coding/references/codebase-map.md \
             > ci-native-docs.patch
       - name: Upload CI-generated native documentation repair patch
-        if: failure() && runner.os == 'Linux'
+        if: failure() && runner.os == 'Linux' && steps.canonical-build.outcome == 'success'
         uses: actions/upload-artifact@v4
         with:
           name: ci-native-docs-repair-${{ github.run_attempt }}

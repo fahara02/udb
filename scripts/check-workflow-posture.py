@@ -1262,13 +1262,33 @@ CI_DOCS_LINKS_REQUIREMENTS = (
 
 CI_RUST_GENERATED_CONTRACT_DOC_GATES = (
     (
-        "SDK robustness clients + benchmark docs drift",
+        "Generate canonical SDKs and preserve producer evidence",
         "SDK robustness client/benchmark documentation drift",
         (
+            "id: sdk-producer",
+            "steps.canonical-build.outcome == 'success'",
             "target/debug/udb sdk generate --lang all --out sdk",
+            "target/debug/udb sdk generate --lang all --out sdk --check",
             "node scripts/gen-sdk-benchmark-docs.mjs",
-            "git diff --quiet -- sdk",
+            "target/debug/udb sdk manifest",
+            "python3 scripts/package-sdk-producer-evidence.py",
         ),
+    ),
+    (
+        "Upload canonical SDK producer evidence",
+        "canonical SDK producer artifact",
+        (
+            "steps.sdk-producer.outcome == 'success'",
+            "uses: actions/upload-artifact@v4",
+            "name: ci-sdk-producer-${{ github.run_attempt }}",
+            "path: ci-sdk-producer/evidence/",
+            "if-no-files-found: error",
+        ),
+    ),
+    (
+        "SDK robustness clients + benchmark docs drift",
+        "committed SDK freshness refusal",
+        ("git diff --quiet -- sdk",),
     ),
     (
         "Native contract manifest drift + lint (F13 hard gate)",
@@ -1307,6 +1327,7 @@ CI_RUST_GENERATED_CONTRACT_DOC_GATES = (
         "generated native/reference repair",
         (
             "if: failure() && runner.os == 'Linux'",
+            "steps.canonical-build.outcome == 'success'",
             "target/debug/udb sdk generate --lang all --out sdk",
             "node scripts/gen-sdk-benchmark-docs.mjs",
             "python3 scripts/generate-codebase-map.py",
@@ -4314,6 +4335,7 @@ LINT_WORKFLOW_TRIGGER_PATHS = (
     ("scripts/gen-bench-bodies-skeleton.mjs", "benchmark body skeleton generator"),
     ("scripts/gen-bench-bodies-json.mjs", "benchmark body generator"),
     ("scripts/gen-sdk-benchmark-docs.mjs", "SDK benchmark docs generator"),
+    ("scripts/package-sdk-producer-evidence.py", "canonical SDK producer provenance"),
     ("sdk/SDK_LIVE_TEST_COVERAGE.md", "SDK live coverage generated doc"),
     ("sdk/SDK_PERF_LISTING.md", "SDK performance generated doc"),
     ("scripts/ffmpeg_transcode_smoke.py", "ffmpeg transcode smoke"),
@@ -5493,6 +5515,14 @@ def check_ci_rust_generated_contract_doc_gates(root: Path = ROOT) -> list[str]:
             scoped.append(f"missing Linux-only gate for {label} step")
         for needle in needles:
             _require(step_block, needle, label, scoped)
+        if step_name == "Generate canonical SDKs and preserve producer evidence":
+            generation_line = re.compile(
+                r"^\s*target/debug/udb sdk generate --lang all --out sdk"
+                r"(?:\s+2>&1\s*\|\s*tee\s+ci-sdk-producer/sdk-generate\.log)?\s*$",
+                re.M,
+            )
+            if generation_line.search(step_block) is None:
+                scoped.append(f"missing actual generation command for {label}")
     return [f"ci.yml/rust-generated-contract-docs: {failure}" for failure in scoped]
 
 
@@ -6995,11 +7025,28 @@ jobs:
       - uses: ./.github/actions/setup-rust
         with:
           force-nasm-package-fallback: ${{ github.event_name == 'pull_request' && matrix.os == 'windows-latest' && 'true' || 'false' }}
+      - name: Build all targets
+        id: canonical-build
+        run: cargo build --locked --all-targets
+      - name: Generate canonical SDKs and preserve producer evidence
+        id: sdk-producer
+        if: always() && runner.os == 'Linux' && steps.canonical-build.outcome == 'success'
+        run: |
+          target/debug/udb sdk generate --lang all --out sdk
+          target/debug/udb sdk generate --lang all --out sdk --check
+          node scripts/gen-sdk-benchmark-docs.mjs
+          target/debug/udb sdk manifest
+          python3 scripts/package-sdk-producer-evidence.py
+      - name: Upload canonical SDK producer evidence
+        if: always() && runner.os == 'Linux' && steps.sdk-producer.outcome == 'success'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-sdk-producer-${{ github.run_attempt }}
+          path: ci-sdk-producer/evidence/
+          if-no-files-found: error
       - name: SDK robustness clients + benchmark docs drift
         if: runner.os == 'Linux'
         run: |
-          target/debug/udb sdk generate --lang all --out sdk
-          node scripts/gen-sdk-benchmark-docs.mjs
           if ! git diff --quiet -- sdk; then
             exit 1
           fi
@@ -7037,7 +7084,7 @@ jobs:
           target/debug/udb native contract-diff \
             --baseline docs/generated/contract-baseline.bin
       - name: Prepare CI-generated native documentation repair patch
-        if: failure() && runner.os == 'Linux'
+        if: failure() && runner.os == 'Linux' && steps.canonical-build.outcome == 'success'
         continue-on-error: true
         run: |
           target/debug/udb sdk generate --lang all --out sdk
