@@ -51,7 +51,7 @@ jobs:
       UDB_LIVE_PEER_TENANT: sdk-live-peer
     services:
       postgres:
-        image: postgres:16-alpine
+        image: public.ecr.aws/docker/library/postgres:16-alpine@sha256:721873c34ceb9f8d8fc265984940dc982404c105f19ad51be9fdc5970a6080ea
         env:
           POSTGRES_DB: udb_ci
           POSTGRES_USER: udb

@@ -55,6 +55,13 @@ env:
   # The broker feature tier the smoke job runs against. Built ONCE by
   # build-broker and downloaded by consumers (no per-job rebuild).
   LIVE_BROKER_FEATURES: postgres,mongodb-native,s3,kafka,qdrant,runtime-logging
+  # Original image digests verified against Google's Docker Hub cache.
+  UDB_INTEGRATION_PG_BASE_IMAGE: postgres:16-alpine@sha256:721873c34ceb9f8d8fc265984940dc982404c105f19ad51be9fdc5970a6080ea
+  UDB_INTEGRATION_POSTGIS_BASE_IMAGE: postgis/postgis:16-3.5-alpine@sha256:47e961a569fd52ff31f0fe205ed91eeab17d9f5fff6722e6d7ea6b588748b293
+  UDB_INTEGRATION_KAFKA_IMAGE: apache/kafka:3.9.0@sha256:fbc7d7c428e3755cf36518d4976596002477e4c052d1f80b5b9eafd06d0fff2f
+  UDB_INTEGRATION_REDIS_IMAGE: redis:7-alpine@sha256:858f009f9709ce576febc734aa78b8f6d624b82571f9ddb6bda4377c833b3499
+  UDB_INTEGRATION_MEMCACHED_IMAGE: memcached:1.6-alpine@sha256:9e4de012dc607573052061c0bcb38abc775e1dd59b24e7ac38d1892842094aaf
+  UDB_INTEGRATION_QDRANT_IMAGE: qdrant/qdrant:v1.18.2@sha256:75eab8c4ba42096724fdcfde8b4de0b5713d529dde32f285a1f86fdcb2c9e50c
 
 jobs:
   # ── Quick gate: the ONE fast dependency of every expensive job ─────
@@ -590,7 +597,7 @@ jobs:
     timeout-minutes: 30
     services:
       postgres:
-        image: postgres:16-alpine
+        image: public.ecr.aws/docker/library/postgres:16-alpine@sha256:721873c34ceb9f8d8fc265984940dc982404c105f19ad51be9fdc5970a6080ea
         env:
           POSTGRES_DB: udb_ci
           POSTGRES_USER: udb
@@ -879,24 +886,32 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: 1.88.0
+      - name: Install pinned native cargo-deny
+        # Same upstream binary/version and action defaults as the container action
+        # at 3c6349835b2b7b196a839186cb8b78e02f7b5f25, without its Docker Hub pull.
+        shell: bash
+        run: |
+          set -euo pipefail
+          archive="${RUNNER_TEMP}/cargo-deny-0.20.2-x86_64-unknown-linux-musl.tar.gz"
+          curl --fail --location --retry 3 --retry-all-errors \
+            https://github.com/EmbarkStudios/cargo-deny/releases/download/0.20.2/cargo-deny-0.20.2-x86_64-unknown-linux-musl.tar.gz \
+            --output "$archive"
+          printf '%s  %s\n' '9f12ed4c49936e09b48bf862b595cde2fe64fcbd9d74dfacac6131ca824c8d5f' "$archive" | sha256sum --check --strict
+          install_dir="${RUNNER_TEMP}/udb-cargo-deny"
+          mkdir -p "$install_dir"
+          tar --extract --gzip --file "$archive" --directory "$install_dir" --strip-components=1
+          "$install_dir/cargo-deny" --version | grep -Fx 'cargo-deny 0.20.2'
+          printf '%s\n' "$install_dir" >> "$GITHUB_PATH"
       - name: cargo-deny advisories (advisory)
         # RUSTSEC advisories can land against transitive dependencies
         # before upstream crates publish a compatible fix. Keep this
         # visible without blocking the stable policy gates below.
         continue-on-error: true
-        uses: EmbarkStudios/cargo-deny-action@v2
-        env:
-          RUSTUP_TOOLCHAIN: 1.88.0-x86_64-unknown-linux-musl
-        with:
-          manifest-path: Cargo.toml
-          command: check advisories
+        run: cargo-deny --log-level warn --manifest-path Cargo.toml --all-features check advisories
       - name: cargo-deny policy gates
-        uses: EmbarkStudios/cargo-deny-action@v2
-        env:
-          RUSTUP_TOOLCHAIN: 1.88.0-x86_64-unknown-linux-musl
-        with:
-          manifest-path: Cargo.toml
-          command: check bans licenses sources
+        run: cargo-deny --log-level warn --manifest-path Cargo.toml --all-features check bans licenses sources
       - name: Verify vendored postgres-replication provenance
         shell: bash
         run: |
@@ -1359,6 +1374,32 @@ jobs:
         run: |
           sudo python3 "${GITHUB_WORKSPACE}/scripts/install-ci-native-deps.py" --packages debugger
 
+      - name: Configure supported Docker Hub cache
+        # Google supports mirror.gcr.io through daemon registry-mirrors, rather
+        # than direct image references. Preserve other hosted-runner settings.
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo python3 - <<'PY'
+          import json
+          from pathlib import Path
+          path = Path("/etc/docker/daemon.json")
+          config = json.loads(path.read_text()) if path.exists() else {}
+          mirrors = config.get("registry-mirrors", [])
+          config["registry-mirrors"] = ["https://mirror.gcr.io"] + [item for item in mirrors if item.rstrip("/") != "https://mirror.gcr.io"]
+          path.write_text(json.dumps(config) + "\n")
+          PY
+          sudo systemctl restart docker
+          docker info --format '{{json .RegistryConfig.Mirrors}}' | grep -F 'https://mirror.gcr.io'
+          # Keep both build-stage bases inspectable in the daemon's image store.
+          # Container service pulls remain overlapped with native compilation.
+          docker pull "$UDB_INTEGRATION_PG_BASE_IMAGE" &
+          pg_base_pid=$!
+          docker pull "$UDB_INTEGRATION_POSTGIS_BASE_IMAGE" &
+          postgis_base_pid=$!
+          wait "$pg_base_pid"
+          wait "$postgis_base_pid"
+
       - name: Start integration stack while compiling tests
         # Start integration stack: postgres/kafka/redis/memcached/qdrant/minio only —
         # the `udb` and `spark` services are profile-gated and not needed for the
@@ -1386,6 +1427,14 @@ jobs:
             echo "::error::native/integration compile preflight failed"
             exit "$compile_status"
           fi
+
+      - name: Record integration image digest evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          for image in "$UDB_INTEGRATION_PG_BASE_IMAGE" "$UDB_INTEGRATION_POSTGIS_BASE_IMAGE" "$UDB_INTEGRATION_KAFKA_IMAGE" "$UDB_INTEGRATION_REDIS_IMAGE" "$UDB_INTEGRATION_MEMCACHED_IMAGE" "$UDB_INTEGRATION_QDRANT_IMAGE"; do
+            docker image inspect --format '{{json .RepoDigests}}' "$image"
+          done
 
       - name: Resolve live PostgreSQL address
         run: |

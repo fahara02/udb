@@ -22,6 +22,7 @@ from udb.services.v1 import data_broker_pb2, data_broker_pb2_grpc
 from udb.core.authn.services.v1 import core_pb2 as authn_pb2
 from udb.core.authn.services.v1 import authn_service_pb2 as authn_svc_pb2
 from udb.core.authn.services.v1 import authn_service_pb2_grpc as authn_grpc
+from udb.core.authn.entity.v1 import enums_pb2 as authn_enum_pb
 from udb.entity.v1 import admin_pb2, blob_pb2, cdc_pb2, operation_pb2, relational_pb2, stores_pb2, vector_pb2
 
 # Native control-plane service messages + stubs (real CRUD, not just mount probes).
@@ -86,6 +87,8 @@ from udb_client.generated_client import (
     VaultServiceClient,
     WebhookServiceClient,
     WorkflowServiceClient,
+    UdbDetailedRpcError,
+    _map_error,
 )
 from udb_client.metadata import Metadata
 
@@ -280,7 +283,7 @@ def run_live_edge_cases(stub, meta: Metadata) -> None:
         assert exc.code() not in _SERVER_FAULTS, f"invalid backend faulted the server ({exc.code()}): {exc.details()}"
 
 
-def run_live_backend_e2e(stub, meta: Metadata) -> None:
+def run_live_backend_e2e(stub, meta: Metadata, platform_meta: Metadata) -> None:
     suffix = uuid.uuid4().hex
     record_id = f"py-{suffix}"
     second_record_id = f"py-batch-{suffix}"
@@ -555,8 +558,31 @@ def run_live_backend_e2e(stub, meta: Metadata) -> None:
     # reads, catalog/schema/health. NOTE: PutPolicy is intentionally NOT called —
     # inserting an abac policy flips the data plane to default-deny.
     proj_id = f"sdklive_proj_py_{suffix}"
-    stub.EnsureProject(admin_pb2.EnsureProjectRequest(context=ctx, project_id=proj_id, name="SDK Live Project"), metadata=md, timeout=8.0)
-    projects = stub.ListProjects(admin_pb2.ProjectListRequest(context=ctx), metadata=md, timeout=8.0)
+    assert platform_meta.tenant_id == meta.tenant_id and platform_meta.project_id == meta.project_id
+
+    def require_refusal(operation: str, decision: str, perform) -> None:
+        with pytest.raises(grpc.RpcError) as refused:
+            perform()
+        assert refused.value.code() == grpc.StatusCode.PERMISSION_DENIED
+        mapped = _map_error(f"/udb.services.v1.DataBroker/{operation}", refused.value)
+        assert isinstance(mapped, UdbDetailedRpcError), "refusal must retain the actual broker trailer"
+        assert mapped.policy_decision_id == decision
+        assert mapped.error_detail.operation == operation
+
+    require_refusal("EnsureProject", "catalog_project_scope_mismatch", lambda: stub.EnsureProject(
+        admin_pb2.EnsureProjectRequest(context=ctx, project_id=proj_id, name="SDK Live Project"), metadata=md, timeout=8.0,
+    ))
+    scoped = stub.EnsureProject(
+        admin_pb2.EnsureProjectRequest(context=ctx, project_id=meta.project_id, name="SDK Live Verified Project"), metadata=md, timeout=8.0,
+    )
+    assert scoped.mutation_id == meta.project_id
+    require_refusal("ListProjects", "catalog_platform_authority_required", lambda: stub.ListProjects(
+        admin_pb2.ProjectListRequest(context=ctx), metadata=md, timeout=8.0,
+    ))
+    platform_md = platform_meta.to_grpc_metadata()
+    created = stub.EnsureProject(admin_pb2.EnsureProjectRequest(context=ctx, project_id=proj_id, name="SDK Live Project"), metadata=platform_md, timeout=8.0)
+    assert created.mutation_id == proj_id
+    projects = stub.ListProjects(admin_pb2.ProjectListRequest(context=ctx), metadata=platform_md, timeout=8.0)
     assert any(p.project_id == proj_id for p in projects.projects)
     stub.ListPolicies(admin_pb2.PolicyListRequest(context=ctx), metadata=md, timeout=8.0)
     stub.LintPolicies(admin_pb2.CapabilitiesRequest(context=ctx), metadata=md, timeout=8.0)
@@ -905,60 +931,122 @@ def rpc_path(method) -> str:
     return f"/{method.containing_service.full_name}/{method.name}"
 
 
-def run_auth_lifecycle(auth_target: str, meta: Metadata, username: str, password: str) -> None:
-    """Full session lifecycle: prove Logout invalidates the session — the access
-    token, refresh token and session-refresh must ALL fail afterwards. Mirrors the
-    Go reference; uses a throwaway login so the admin session is untouched."""
+def run_auth_lifecycle(auth_target: str, meta: Metadata) -> list[str]:
+    """Exercise replay invalidation on an owned person, preserving the operator."""
     channel = grpc.insecure_channel(auth_target)
+    authn = authn_grpc.AuthnServiceStub(channel)
+    md = meta.to_grpc_metadata()
+    failures = []
+    owned_user_id = ""
+    operator_context = None
     try:
-        authn = authn_grpc.AuthnServiceStub(channel)
-        md = meta.to_grpc_metadata()
-        login = authn.Login(
-            authn_pb2.LoginRequest(username=username, password=password, tenant_hint=meta.tenant_id, project_hint=meta.project_id, device_name="python-sdk-lifecycle"),
+        operator = authn.ValidateToken(
+            authn_pb2.ValidateTokenRequest(token=meta.bearer_token, token_type=authn_enum_pb.TOKEN_TYPE_JWT_ACCESS),
             metadata=md, timeout=8.0,
         )
+        assert operator.valid and operator.principal.user_id
+        assert operator.principal.tenant_id == meta.tenant_id and operator.principal.project_id == meta.project_id
+        actor_id = operator.principal.user_id
+        operator_context = common_pb.RequestContext(
+            tenant=common_pb.TenantContext(tenant_id=meta.tenant_id, project_id=meta.project_id),
+            user_id=actor_id, principal_id=actor_id, purpose="python.live.auth.lifecycle",
+        )
+        username, password = f"sdk-lifecycle-py-{uuid.uuid4().hex}", "CorrectHorse1!"
+        created = authn.CreateUser(
+            authn_pb2.CreateUserRequest(
+                username=username, email=f"{username}@example.invalid", password=password,
+                tenant_id=meta.tenant_id, project_id=meta.project_id, full_name="SDK owned lifecycle person",
+                account_kind=authn_enum_pb.ACCOUNT_KIND_PERSON, context=operator_context,
+            ), metadata=md, timeout=8.0,
+        ).user
+        assert created.user_id and created.user_id != actor_id and created.username == username
+        assert created.tenant_id == meta.tenant_id and created.project_id == meta.project_id
+        owned_user_id = created.user_id
+        assert created.account_kind == authn_enum_pb.ACCOUNT_KIND_PERSON
+        active = authn.ChangeUserStatus(
+            authn_pb2.ChangeUserStatusRequest(user_id=owned_user_id, new_status=authn_enum_pb.USER_STATUS_ACTIVE,
+                                            reason="python live lifecycle activation", context=operator_context),
+            metadata=md, timeout=8.0,
+        ).user
+        assert active.status == authn_enum_pb.USER_STATUS_ACTIVE
+        public_md = replace(meta, bearer_token="").to_grpc_metadata()
+
+        def login_owned(device_name: str):
+            login = authn.Login(
+                authn_pb2.LoginRequest(username=username, password=password, tenant_hint=meta.tenant_id,
+                                      project_hint=meta.project_id, device_name=device_name),
+                metadata=public_md, timeout=8.0,
+            )
+            assert login.user_id == owned_user_id and login.access_token and login.session_id and login.refresh_token
+            return login
+
+        def validate(token: str):
+            return authn.ValidateToken(
+                authn_pb2.ValidateTokenRequest(token=token, token_type=authn_enum_pb.TOKEN_TYPE_JWT_ACCESS),
+                metadata=md, timeout=8.0,
+            )
+
+        login = login_owned("python-sdk-lifecycle")
         token, sid, refresh = login.access_token, login.session_id, login.refresh_token
-        assert token and sid and refresh, "Login must return access_token+session_id+refresh_token"
-        pre = authn.ValidateToken(authn_pb2.ValidateTokenRequest(token=token, token_type=1), metadata=md, timeout=8.0)  # 1 = TOKEN_TYPE_JWT_ACCESS
-        assert pre.valid, "fresh access token must validate before logout"
+        pre = validate(token)
+        assert pre.valid and pre.principal.user_id == owned_user_id
+        assert pre.principal.tenant_id == meta.tenant_id and pre.principal.project_id == meta.project_id
         authn.GetSession(authn_pb2.GetSessionRequest(session_id=sid), metadata=md, timeout=8.0)
-        pre_intro = authn.IntrospectToken(authn_pb2.IntrospectTokenRequest(token=token), metadata=md, timeout=8.0)
-        assert pre_intro.active, "fresh access token must introspect active before logout"
+        assert authn.IntrospectToken(authn_pb2.IntrospectTokenRequest(token=token), metadata=md, timeout=8.0).active
+        sibling = login_owned("python-sdk-lifecycle-sibling")
+        assert validate(sibling.access_token).valid
         out = authn.Logout(authn_pb2.LogoutRequest(session_id=sid, revoke_reason="sdk_live_test"), metadata=md, timeout=8.0)
-        assert out.sessions_revoked >= 1, "Logout must revoke at least one session"
+        assert out.sessions_revoked >= 1
 
-        # Post-logout the session is gone: collect EVERY revocation gap in one run.
-        failures = []
-
-        # True ⇒ the op still reports the token as live (a revocation GAP). A raised
-        # RpcError (correctly denied) or a falsy valid/active counts as revoked.
-        # (Prior logic double-negated and flagged a correctly-revoked token as a gap —
-        # the broker actually invalidates ValidateToken/IntrospectToken on logout.)
-        def _still_live(fn) -> bool:
+        def require_inactive(label: str, perform) -> None:
             try:
-                return bool(fn())
-            except grpc.RpcError:
-                return False
+                if perform():
+                    failures.append(f"{label} still reports active")
+            except grpc.RpcError as exc:
+                if exc.code() != grpc.StatusCode.UNAUTHENTICATED:
+                    failures.append(f"{label} returned {exc.code().name}, expected inactive or UNAUTHENTICATED")
 
-        if _still_live(lambda: authn.ValidateToken(authn_pb2.ValidateTokenRequest(token=token, token_type=1), metadata=md, timeout=8.0).valid):
-            failures.append("access token still validates after logout")
-        if _still_live(lambda: authn.IntrospectToken(authn_pb2.IntrospectTokenRequest(token=token), metadata=md, timeout=8.0).active):
-            failures.append("token still introspects Active after logout")
-        try:
-            authn.RefreshToken(authn_pb2.RefreshTokenRequest(refresh_token=refresh, session_id=sid), metadata=md, timeout=8.0)
-            failures.append("refresh token still works after logout — token family not revoked")
-        except grpc.RpcError:
-            pass
-        try:
-            authn.RefreshSession(authn_pb2.RefreshSessionRequest(session_id=sid), metadata=md, timeout=8.0)
-            failures.append("RefreshSession still works after logout — session not revoked")
-        except grpc.RpcError:
-            pass
-        # Return (don't assert) so the caller can run the full-surface coverage
-        # probe before failing on a logout-revocation gap — mirrors the Go suite,
-        # where the lifecycle check is non-fatal and the run still completes.
+        require_inactive("post-logout access token", lambda: validate(token).valid)
+        require_inactive("post-logout introspection", lambda: authn.IntrospectToken(
+            authn_pb2.IntrospectTokenRequest(token=token), metadata=md, timeout=8.0,
+        ).active)
+        assert validate(sibling.access_token).valid, "single-session logout must preserve the owned sibling before replay"
+        for label, perform in [
+            ("revoked refresh replay", lambda: authn.RefreshToken(
+                authn_pb2.RefreshTokenRequest(refresh_token=refresh, session_id=sid), metadata=public_md, timeout=8.0,
+            )),
+            ("revoked RefreshSession", lambda: authn.RefreshSession(
+                authn_pb2.RefreshSessionRequest(session_id=sid), metadata=md, timeout=8.0,
+            )),
+        ]:
+            try:
+                perform()
+                failures.append(f"{label} was accepted")
+            except grpc.RpcError as exc:
+                if exc.code() != grpc.StatusCode.UNAUTHENTICATED:
+                    failures.append(f"{label} returned {exc.code().name}, expected UNAUTHENTICATED")
+        require_inactive("post-replay owned sibling", lambda: validate(sibling.access_token).valid)
+        operator_after = validate(meta.bearer_token)
+        assert operator_after.valid and operator_after.principal.user_id == actor_id, "operator must survive owned refresh replay"
         return failures
     finally:
+        if owned_user_id:
+            for label, perform in [
+                ("sessions", lambda: authn.RevokeSession(
+                    authn_pb2.RevokeSessionRequest(principal_id=owned_user_id, all_for_principal=True,
+                                                  revoke_reason="python live lifecycle cleanup", context=operator_context),
+                    metadata=md, timeout=5.0,
+                )),
+                ("identity", lambda: authn.ChangeUserStatus(
+                    authn_pb2.ChangeUserStatusRequest(user_id=owned_user_id, new_status=authn_enum_pb.USER_STATUS_DEACTIVATED,
+                                                    reason="python live lifecycle cleanup", context=operator_context),
+                    metadata=md, timeout=5.0,
+                )),
+            ]:
+                try:
+                    perform()
+                except grpc.RpcError as exc:
+                    failures.append(f"owned lifecycle cleanup {label} returned {exc.code().name}")
         channel.close()
 
 
@@ -4101,18 +4189,27 @@ def test_live_generated_rpc_surface():
     # Challenge every advertised backend KIND's per-operation claims in BOTH directions.
     run_backend_capability_challenge(caps_stub, authed_meta, caps)
 
-    # Full session lifecycle on a throwaway login: prove logout invalidates the
-    # session (access token + refresh token + session-refresh all rejected after).
+    # Full session lifecycle on an owned person: prove logout and replay invalidate
+    # that person's credentials while the unrelated operator remains usable.
     # Deferred so the full-surface coverage probe still runs before any logout gap
     # fails the test.
-    lifecycle_failures = run_auth_lifecycle(
-        auth_target, authed_meta, required_env("UDB_LIVE_USERNAME"), required_env("UDB_LIVE_PASSWORD")
-    )
+    lifecycle_failures = run_auth_lifecycle(auth_target, authed_meta)
 
     # Edge cases: the auth plane must fail CLOSED on bad credentials/forged bearers.
     run_auth_negative(auth_target, authed_meta, required_env("UDB_LIVE_USERNAME"))
 
-    run_live_backend_e2e(caps_stub, authed_meta)
+    with UdbAuthClient(auth_target, replace(meta, tenant_id=canonical_tenant), timeout=10.0) as platform_auth:
+        platform_login = platform_auth.login(
+            required_env("UDB_LIVE_PLATFORM_USERNAME"), required_env("UDB_LIVE_PLATFORM_PASSWORD"),
+            device_name="python-sdk-deep-platform",
+        )
+        platform_principal = platform_auth.authenticate_bearer(platform_login.access_token).principal
+        assert "platform_admin" in {role.lower() for role in platform_principal.roles}
+        assert platform_principal.subject and platform_principal.user_id
+        assert platform_principal.tenant_id == canonical_tenant and platform_principal.project_id == authed_meta.project_id
+        assert platform_principal.user_id != principal_resp.principal.user_id
+        platform_meta = replace(authed_meta, bearer_token=platform_login.access_token)
+        run_live_backend_e2e(caps_stub, authed_meta, platform_meta)
 
     # Per-RPC EDGE cases (fail-closed / no cross-tenant leak / no server fault).
     run_live_edge_cases(caps_stub, authed_meta)

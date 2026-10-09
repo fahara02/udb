@@ -4817,7 +4817,10 @@ def check_compose_support_inputs(root: Path = ROOT) -> list[str]:
         (
             "docker/postgres-pg-partman/Dockerfile",
             (
-                ("FROM postgres:16-alpine AS pg-partman-builder", "Postgres builder base"),
+                ("ARG PG_BASE_IMAGE=postgres:16-alpine", "Postgres builder default"),
+                ("ARG POSTGIS_BASE_IMAGE=postgis/postgis:16-3.5-alpine", "PostGIS runtime default"),
+                ("FROM ${PG_BASE_IMAGE} AS pg-partman-builder", "Postgres builder base"),
+                ("FROM ${POSTGIS_BASE_IMAGE}", "PostGIS runtime base"),
                 ("ARG PG_PARTMAN_VERSION=5.2.4", "pg_partman version pin"),
                 ("make NO_BGW=1 install", "pg_partman install command"),
                 ("COPY --from=pg-partman-builder", "pg_partman extension copy"),
@@ -5830,6 +5833,492 @@ def check_native_load_case_contract(root: Path = ROOT) -> list[str]:
     if not isinstance(threshold, dict) or threshold.get("max_regression_percent") != 15:
         scoped.append("baseline threshold must keep max_regression_percent at 15")
     return [f"native-load: {failure}" for failure in scoped]
+
+
+CI_INTEGRATION_IMAGE_PINS = {
+    "UDB_INTEGRATION_PG_BASE_IMAGE": "postgres:16-alpine@sha256:721873c34ceb9f8d8fc265984940dc982404c105f19ad51be9fdc5970a6080ea",
+    "UDB_INTEGRATION_POSTGIS_BASE_IMAGE": "postgis/postgis:16-3.5-alpine@sha256:47e961a569fd52ff31f0fe205ed91eeab17d9f5fff6722e6d7ea6b588748b293",
+    "UDB_INTEGRATION_KAFKA_IMAGE": "apache/kafka:3.9.0@sha256:fbc7d7c428e3755cf36518d4976596002477e4c052d1f80b5b9eafd06d0fff2f",
+    "UDB_INTEGRATION_REDIS_IMAGE": "redis:7-alpine@sha256:858f009f9709ce576febc734aa78b8f6d624b82571f9ddb6bda4377c833b3499",
+    "UDB_INTEGRATION_MEMCACHED_IMAGE": "memcached:1.6-alpine@sha256:9e4de012dc607573052061c0bcb38abc775e1dd59b24e7ac38d1892842094aaf",
+    "UDB_INTEGRATION_QDRANT_IMAGE": "qdrant/qdrant:v1.18.2@sha256:75eab8c4ba42096724fdcfde8b4de0b5713d529dde32f285a1f86fdcb2c9e50c",
+}
+CI_POSTGRES_SERVICE_IMAGE = "public.ecr.aws/docker/library/" + CI_INTEGRATION_IMAGE_PINS["UDB_INTEGRATION_PG_BASE_IMAGE"]
+
+
+def _workflow_step_block(text: str, name: str) -> str:
+    anchor = f"      - name: {name}\n"
+    start = text.find(anchor)
+    if start < 0:
+        return ""
+    end = text.find("\n      - ", start + len(anchor))
+    return text[start:] if end < 0 else text[start:end]
+
+
+def check_ci_registry_dependency_posture(root: Path = ROOT) -> list[str]:
+    """Keep exact dependency identities and policy gates when avoiding Hub pulls."""
+    workflow_dir = root / ".github" / "workflows"
+    required = [workflow_dir / name for name in ("ci.yml", "_live-sdk-suite.yml", "go-sdk-live.yml")]
+    required += [root / "docker-compose.integration.yml", root / "docker" / "postgres-pg-partman" / "Dockerfile"]
+    missing = [f"registry-dependencies: missing {path.relative_to(root)}" for path in required if not path.is_file()]
+    if missing:
+        return missing
+    ci = _non_comment_text(_read(required[0]))
+    scoped: list[str] = []
+    for variable, image in CI_INTEGRATION_IMAGE_PINS.items():
+        _require(ci, f"  {variable}: {image}", f"exact {variable} image pin", scoped)
+    _require(_workflow_job_block(ci, "smoke") or "", f"image: {CI_POSTGRES_SERVICE_IMAGE}", "pre-step smoke Postgres mirror pin", scoped)
+    for path in required[1:3]:
+        _require(_non_comment_text(_read(path)), f"image: {CI_POSTGRES_SERVICE_IMAGE}", f"pre-step {path.name} Postgres mirror pin", scoped)
+
+    native = _workflow_job_block(ci, "native-integration") or ""
+    mirror = _workflow_step_block(native, "Configure supported Docker Hub cache")
+    for needle, label in (
+        ('config["registry-mirrors"] = ["https://mirror.gcr.io"]', "supported daemon mirror configuration"),
+        ("sudo systemctl restart docker", "mirror daemon restart"),
+        ("docker info --format '{{json .RegistryConfig.Mirrors}}' | grep -F 'https://mirror.gcr.io'", "active daemon mirror proof"),
+        ('docker pull "$UDB_INTEGRATION_PG_BASE_IMAGE"', "actual pinned Postgres base pull"),
+        ('docker pull "$UDB_INTEGRATION_POSTGIS_BASE_IMAGE"', "actual pinned PostGIS base pull"),
+        ('wait "$pg_base_pid"', "Postgres pull failure propagation"),
+        ('wait "$postgis_base_pid"', "PostGIS pull failure propagation"),
+    ):
+        _require(mirror, needle, label, scoped)
+    positions = [native.find(anchor) for anchor in ("Configure supported Docker Hub cache", "Start integration stack while compiling tests", "Record integration image digest evidence")]
+    if min(positions) < 0 or positions != sorted(positions):
+        scoped.append("native mirror setup must precede actual dependency startup and image receipts")
+    receipt = _workflow_step_block(native, "Record integration image digest evidence")
+    _require(receipt, "docker image inspect --format '{{json .RepoDigests}}'", "actual image digest evidence", scoped)
+    for variable in CI_INTEGRATION_IMAGE_PINS:
+        _require(receipt, f'"${variable}"', f"{variable} image receipt", scoped)
+
+    supply = _workflow_job_block(ci, "supply-chain") or ""
+    install = _workflow_step_block(supply, "Install pinned native cargo-deny")
+    for needle, label in (
+        ("https://github.com/EmbarkStudios/cargo-deny/releases/download/0.20.2/cargo-deny-0.20.2-x86_64-unknown-linux-musl.tar.gz", "official pinned cargo-deny release"),
+        ("9f12ed4c49936e09b48bf862b595cde2fe64fcbd9d74dfacac6131ca824c8d5f", "official cargo-deny archive digest"),
+        ("sha256sum --check --strict", "cargo-deny digest verification"),
+        ("--strip-components=1", "official archive extraction layout"),
+        ("grep -Fx 'cargo-deny 0.20.2'", "executed cargo-deny version proof"),
+        ('>> "$GITHUB_PATH"', "verified native binary PATH"),
+        ("set -euo pipefail", "cargo-deny setup fail closed"),
+    ):
+        _require(install, needle, label, scoped)
+    _require(supply, "toolchain: 1.88.0", "existing policy analysis Rust version", scoped)
+    advisory = _workflow_step_block(supply, "cargo-deny advisories (advisory)")
+    policy = _workflow_step_block(supply, "cargo-deny policy gates")
+    _require(advisory, "continue-on-error: true", "advisory-only continuation", scoped)
+    _require(advisory, "cargo-deny --log-level warn --manifest-path Cargo.toml --all-features check advisories", "unchanged advisory action defaults", scoped)
+    _require(policy, "cargo-deny --log-level warn --manifest-path Cargo.toml --all-features check bans licenses sources", "unchanged blocking policy action defaults", scoped)
+    if "continue-on-error" in policy or "|| true" in policy:
+        scoped.append("supply-chain policy gates must fail closed")
+    if "EmbarkStudios/cargo-deny-action" in supply:
+        scoped.append("supply-chain must not restore the pre-step Docker Hub action pull")
+
+    compose = _non_comment_text(_read(required[3]))
+    for variable, default in (
+        ("UDB_INTEGRATION_PG_BASE_IMAGE", "postgres:16-alpine"),
+        ("UDB_INTEGRATION_POSTGIS_BASE_IMAGE", "postgis/postgis:16-3.5-alpine"),
+        ("UDB_INTEGRATION_KAFKA_IMAGE", "apache/kafka:3.9.0"),
+        ("UDB_INTEGRATION_REDIS_IMAGE", "redis:7-alpine"),
+        ("UDB_INTEGRATION_MEMCACHED_IMAGE", "memcached:1.6-alpine"),
+        ("UDB_INTEGRATION_QDRANT_IMAGE", "qdrant/qdrant:v1.18.2"),
+    ):
+        _require(compose, "${" + variable + ":-" + default + "}", f"preserved {variable} compose default", scoped)
+    dockerfile = _non_comment_text(_read(required[4]))
+    for needle in ("ARG PG_BASE_IMAGE=postgres:16-alpine", "ARG POSTGIS_BASE_IMAGE=postgis/postgis:16-3.5-alpine", "FROM ${PG_BASE_IMAGE} AS pg-partman-builder", "FROM ${POSTGIS_BASE_IMAGE}"):
+        _require(dockerfile, needle, "mirror-selectable original PostgreSQL/PostGIS base", scoped)
+    if any("image: mirror.gcr.io/" in _non_comment_text(_read(path)) for path in required[:4]):
+        scoped.append("Google Docker Hub cache must use the supported daemon interface")
+    return [f"registry-dependencies: {failure}" for failure in scoped]
+
+
+def selftest_ci_registry_dependencies() -> None:
+    # Real workflow fragments pin failure modes at service preparation, daemon
+    # configuration, native binary intake, and policy execution boundaries.
+    fixtures = {'.github/workflows/ci.yml': 'env:\n'
+                             '  CARGO_TERM_COLOR: always\n'
+                             '  RELEASE_BINARY_FEATURES: >-\n'
+                             '    '
+                             'postgres,mysql,sqlite,qdrant,s3,mongodb-native,neo4j,clickhouse,redis,elasticsearch,weaviate,pinecone,azureblob,gcs,otel,runtime-logging,http-client,oidc,webauthn,webrtc\n'
+                             '  # The broker feature tier the smoke job runs against. Built ONCE '
+                             'by\n'
+                             '  # build-broker and downloaded by consumers (no per-job rebuild).\n'
+                             '  LIVE_BROKER_FEATURES: '
+                             'postgres,mongodb-native,s3,kafka,qdrant,runtime-logging\n'
+                             "  # Original image digests verified against Google's Docker Hub "
+                             'cache.\n'
+                             '  UDB_INTEGRATION_PG_BASE_IMAGE: '
+                             'postgres:16-alpine@sha256:721873c34ceb9f8d8fc265984940dc982404c105f19ad51be9fdc5970a6080ea\n'
+                             '  UDB_INTEGRATION_POSTGIS_BASE_IMAGE: '
+                             'postgis/postgis:16-3.5-alpine@sha256:47e961a569fd52ff31f0fe205ed91eeab17d9f5fff6722e6d7ea6b588748b293\n'
+                             '  UDB_INTEGRATION_KAFKA_IMAGE: '
+                             'apache/kafka:3.9.0@sha256:fbc7d7c428e3755cf36518d4976596002477e4c052d1f80b5b9eafd06d0fff2f\n'
+                             '  UDB_INTEGRATION_REDIS_IMAGE: '
+                             'redis:7-alpine@sha256:858f009f9709ce576febc734aa78b8f6d624b82571f9ddb6bda4377c833b3499\n'
+                             '  UDB_INTEGRATION_MEMCACHED_IMAGE: '
+                             'memcached:1.6-alpine@sha256:9e4de012dc607573052061c0bcb38abc775e1dd59b24e7ac38d1892842094aaf\n'
+                             '  UDB_INTEGRATION_QDRANT_IMAGE: '
+                             'qdrant/qdrant:v1.18.2@sha256:75eab8c4ba42096724fdcfde8b4de0b5713d529dde32f285a1f86fdcb2c9e50c\n'
+                             '\n'
+                             'jobs:\n'
+                             '  supply-chain:\n'
+                             '    steps:\n'
+                             '      - uses: dtolnay/rust-toolchain@stable\n'
+                             '        with:\n'
+                             '          toolchain: 1.88.0\n'
+                             '      - name: Install pinned native cargo-deny\n'
+                             '        # Same upstream binary/version and action defaults as the '
+                             'container action\n'
+                             '        # at 3c6349835b2b7b196a839186cb8b78e02f7b5f25, without its '
+                             'Docker Hub pull.\n'
+                             '        shell: bash\n'
+                             '        run: |\n'
+                             '          set -euo pipefail\n'
+                             '          '
+                             'archive="${RUNNER_TEMP}/cargo-deny-0.20.2-x86_64-unknown-linux-musl.tar.gz"\n'
+                             '          curl --fail --location --retry 3 --retry-all-errors \\\n'
+                             '            '
+                             'https://github.com/EmbarkStudios/cargo-deny/releases/download/0.20.2/cargo-deny-0.20.2-x86_64-unknown-linux-musl.tar.gz '
+                             '\\\n'
+                             '            --output "$archive"\n'
+                             "          printf '%s  %s\\n' "
+                             "'9f12ed4c49936e09b48bf862b595cde2fe64fcbd9d74dfacac6131ca824c8d5f' "
+                             '"$archive" | sha256sum --check --strict\n'
+                             '          install_dir="${RUNNER_TEMP}/udb-cargo-deny"\n'
+                             '          mkdir -p "$install_dir"\n'
+                             '          tar --extract --gzip --file "$archive" --directory '
+                             '"$install_dir" --strip-components=1\n'
+                             '          "$install_dir/cargo-deny" --version | grep -Fx '
+                             "'cargo-deny 0.20.2'\n"
+                             '          printf \'%s\\n\' "$install_dir" >> "$GITHUB_PATH"\n'
+                             '      - name: cargo-deny advisories (advisory)\n'
+                             '        # RUSTSEC advisories can land against transitive '
+                             'dependencies\n'
+                             '        # before upstream crates publish a compatible fix. Keep '
+                             'this\n'
+                             '        # visible without blocking the stable policy gates below.\n'
+                             '        continue-on-error: true\n'
+                             '        run: cargo-deny --log-level warn --manifest-path Cargo.toml '
+                             '--all-features check advisories\n'
+                             '      - name: cargo-deny policy gates\n'
+                             '        run: cargo-deny --log-level warn --manifest-path Cargo.toml '
+                             '--all-features check bans licenses sources\n'
+                             '  native-integration:\n'
+                             '    steps:\n'
+                             '      - name: Configure supported Docker Hub cache\n'
+                             '        # Google supports mirror.gcr.io through daemon '
+                             'registry-mirrors, rather\n'
+                             '        # than direct image references. Preserve other hosted-runner '
+                             'settings.\n'
+                             '        shell: bash\n'
+                             '        run: |\n'
+                             '          set -euo pipefail\n'
+                             "          sudo python3 - <<'PY'\n"
+                             '          import json\n'
+                             '          from pathlib import Path\n'
+                             '          path = Path("/etc/docker/daemon.json")\n'
+                             '          config = json.loads(path.read_text()) if path.exists() '
+                             'else {}\n'
+                             '          mirrors = config.get("registry-mirrors", [])\n'
+                             '          config["registry-mirrors"] = ["https://mirror.gcr.io"] + '
+                             '[item for item in mirrors if item.rstrip("/") != '
+                             '"https://mirror.gcr.io"]\n'
+                             '          path.write_text(json.dumps(config) + "\\n")\n'
+                             '          PY\n'
+                             '          sudo systemctl restart docker\n'
+                             "          docker info --format '{{json .RegistryConfig.Mirrors}}' | "
+                             "grep -F 'https://mirror.gcr.io'\n"
+                             "          # Keep both build-stage bases inspectable in the daemon's "
+                             'image store.\n'
+                             '          # Container service pulls remain overlapped with native '
+                             'compilation.\n'
+                             '          docker pull "$UDB_INTEGRATION_PG_BASE_IMAGE" &\n'
+                             '          pg_base_pid=$!\n'
+                             '          docker pull "$UDB_INTEGRATION_POSTGIS_BASE_IMAGE" &\n'
+                             '          postgis_base_pid=$!\n'
+                             '          wait "$pg_base_pid"\n'
+                             '          wait "$postgis_base_pid"\n'
+                             '\n'
+                             '      - name: Start integration stack while compiling tests\n'
+                             '        # Start integration stack: '
+                             'postgres/kafka/redis/memcached/qdrant/minio only â€”\n'
+                             '        # the `udb` and `spark` services are profile-gated and not '
+                             'needed for the\n'
+                             '        # live tests.\n'
+                             '        #\n'
+                             '        # Compile native + integration tests while Docker services '
+                             'become healthy.\n'
+                             '        # The compile preflight does not need live sockets, so '
+                             'overlapping it with\n'
+                             '        # the lighter stack startup preserves most of the wall-time '
+                             'win without\n'
+                             '        # asking rust-lld to link the full test harness while the '
+                             'heavier\n'
+                             '        # canonical-store containers are already consuming runner '
+                             'memory and disk.\n'
+                             '        run: |\n'
+                             '          set +e\n'
+                             '          bash -n scripts/ci-retry.sh || exit $?\n'
+                             '          bash scripts/ci-retry.sh -- docker compose -f '
+                             'docker-compose.integration.yml up -d --wait postgres kafka redis '
+                             'memcached qdrant minio &\n'
+                             '          integration_stack_pid=$!\n'
+                             '          cargo test --locked --no-run --lib --test '
+                             'integration_tests --test runtime_live_backends\n'
+                             '          compile_status=$?\n'
+                             '          wait "$integration_stack_pid"\n'
+                             '          integration_status=$?\n'
+                             '          if [ "$integration_status" -ne 0 ]; then\n'
+                             '            echo "::error::integration stack startup failed"\n'
+                             '            exit "$integration_status"\n'
+                             '          fi\n'
+                             '          if [ "$compile_status" -ne 0 ]; then\n'
+                             '            echo "::error::native/integration compile preflight '
+                             'failed"\n'
+                             '            exit "$compile_status"\n'
+                             '          fi\n'
+                             '\n'
+                             '      - name: Record integration image digest evidence\n'
+                             '        shell: bash\n'
+                             '        run: |\n'
+                             '          set -euo pipefail\n'
+                             '          for image in "$UDB_INTEGRATION_PG_BASE_IMAGE" '
+                             '"$UDB_INTEGRATION_POSTGIS_BASE_IMAGE" "$UDB_INTEGRATION_KAFKA_IMAGE" '
+                             '"$UDB_INTEGRATION_REDIS_IMAGE" "$UDB_INTEGRATION_MEMCACHED_IMAGE" '
+                             '"$UDB_INTEGRATION_QDRANT_IMAGE"; do\n'
+                             "            docker image inspect --format '{{json .RepoDigests}}' "
+                             '"$image"\n'
+                             '          done\n'
+                             '\n'
+                             '  smoke:\n'
+                             '    services:\n'
+                             '      postgres:\n'
+                             '        image: '
+                             'public.ecr.aws/docker/library/postgres:16-alpine@sha256:721873c34ceb9f8d8fc265984940dc982404c105f19ad51be9fdc5970a6080ea\n',
+ '.github/workflows/_live-sdk-suite.yml': 'jobs:\n'
+                                          '  live:\n'
+                                          '    services:\n'
+                                          '      postgres:\n'
+                                          '        image: '
+                                          'public.ecr.aws/docker/library/postgres:16-alpine@sha256:721873c34ceb9f8d8fc265984940dc982404c105f19ad51be9fdc5970a6080ea\n',
+ '.github/workflows/go-sdk-live.yml': 'jobs:\n'
+                                      '  go-live:\n'
+                                      '    services:\n'
+                                      '      postgres:\n'
+                                      '        image: '
+                                      'public.ecr.aws/docker/library/postgres:16-alpine@sha256:721873c34ceb9f8d8fc265984940dc982404c105f19ad51be9fdc5970a6080ea\n',
+ 'docker-compose.integration.yml': 'x-udb-broker-env: &udb-broker-env\n'
+                                   '  UDB_PG_DSN: postgres://udb:udb@postgres:5432/udb\n'
+                                   '  UDB_REDIS_DSN: redis://redis:6379/0\n'
+                                   '  UDB_QDRANT_URL: http://qdrant:6333\n'
+                                   '  UDB_MINIO_ENDPOINT: http://minio:9000\n'
+                                   '  UDB_MINIO_ACCESS_KEY: minio\n'
+                                   '  UDB_MINIO_SECRET_KEY: minio123\n'
+                                   '  UDB_KAFKA_BROKERS: kafka:9092\n'
+                                   '  UDB_AUDIT_SINK: postgres\n'
+                                   '  UDB_AUDIT_PG_TABLE: public.udb_audit_log\n'
+                                   '  UDB_SESSION_ENABLED: "true"\n'
+                                   '  UDB_SESSION_HASH_SECRET: local-integration-session-secret\n'
+                                   '  UDB_ABAC_DEFAULT_ALLOW: "true"\n'
+                                   '  RUST_LOG: info\n'
+                                   '\n'
+                                   'x-udb-broker-depends: &udb-broker-depends\n'
+                                   '  postgres:\n'
+                                   '    condition: service_healthy\n'
+                                   '  redis:\n'
+                                   '    condition: service_healthy\n'
+                                   '  qdrant:\n'
+                                   '    condition: service_healthy\n'
+                                   '  minio:\n'
+                                   '    condition: service_healthy\n'
+                                   '  kafka:\n'
+                                   '    condition: service_healthy\n'
+                                   '\n'
+                                   'x-udb-broker-healthcheck: &udb-broker-healthcheck\n'
+                                   '  test: ["CMD", "/usr/local/bin/grpc_health_probe", '
+                                   '"-addr=127.0.0.1:50051"]\n'
+                                   '  interval: 10s\n'
+                                   '  timeout: 5s\n'
+                                   '  start_period: 30s\n'
+                                   '  retries: 6\n'
+                                   '\n'
+                                   'x-udb-broker-base: &udb-broker-base\n'
+                                   '  build:\n'
+                                   '    context: .\n'
+                                   '    dockerfile: Dockerfile\n'
+                                   '  environment: *udb-broker-env\n'
+                                   '  depends_on: *udb-broker-depends\n'
+                                   '  healthcheck: *udb-broker-healthcheck\n'
+                                   '\n'
+                                   'services:\n'
+                                   '  postgres:\n'
+                                   '    build:\n'
+                                   '      context: .\n'
+                                   '      dockerfile: docker/postgres-pg-partman/Dockerfile\n'
+                                   '      args:\n'
+                                   '        PG_BASE_IMAGE: '
+                                   '${UDB_INTEGRATION_PG_BASE_IMAGE:-postgres:16-alpine}\n'
+                                   '        POSTGIS_BASE_IMAGE: '
+                                   '${UDB_INTEGRATION_POSTGIS_BASE_IMAGE:-postgis/postgis:16-3.5-alpine}\n'
+                                   '    image: udb-postgres-pg-partman:16\n'
+                                   '    command:\n'
+                                   '      - postgres\n'
+                                   '      - -c\n'
+                                   '      - wal_level=logical\n'
+                                   '      - -c\n'
+                                   '      - max_replication_slots=10\n'
+                                   '      - -c\n'
+                                   '      - max_wal_senders=10\n'
+                                   '      - -c\n'
+                                   '      - max_prepared_transactions=32\n'
+                                   '    environment:\n'
+                                   '      POSTGRES_USER: udb\n'
+                                   '      POSTGRES_PASSWORD: udb\n'
+                                   '      POSTGRES_DB: udb\n'
+                                   '    ports:\n'
+                                   '      # CI supplies only the container port so Docker chooses '
+                                   'a free host port.\n'
+                                   '      - "${UDB_INTEGRATION_PG_BINDING:-55432:5432}"\n'
+                                   '    healthcheck:\n'
+                                   '      test: ["CMD-SHELL", "pg_isready -U udb -d udb"]\n'
+                                   '      interval: 5s\n'
+                                   '      timeout: 3s\n'
+                                   '      retries: 20\n'
+                                   '\n'
+                                   '  kafka:\n'
+                                   '    image: ${UDB_INTEGRATION_KAFKA_IMAGE:-apache/kafka:3.9.0}\n'
+                                   '    environment:\n'
+                                   '      KAFKA_NODE_ID: 1\n'
+                                   '      KAFKA_PROCESS_ROLES: broker,controller\n'
+                                   '      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093\n'
+                                   '      # Two broker listeners: INTERNAL (kafka:9092) for '
+                                   'in-Docker clients (the udb\n'
+                                   '      # broker), EXTERNAL (localhost:59192) advertised so host '
+                                   'clients â€” the\n'
+                                   '      # integration tests + Spark on the host â€” can both '
+                                   'bootstrap AND reach the\n'
+                                   '      # advertised address. Single-advertised-listener setups '
+                                   'break host clients\n'
+                                   '      # because the broker advertises its Docker-internal '
+                                   'name.\n'
+                                   '      KAFKA_LISTENERS: '
+                                   'INTERNAL://0.0.0.0:9092,CONTROLLER://kafka:9093,EXTERNAL://0.0.0.0:59192\n'
+                                   '      KAFKA_ADVERTISED_LISTENERS: '
+                                   'INTERNAL://kafka:9092,EXTERNAL://localhost:59192\n'
+                                   '      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: '
+                                   'CONTROLLER:PLAINTEXT,INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT\n'
+                                   '      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER\n'
+                                   '      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL\n'
+                                   '      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1\n'
+                                   '      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1\n'
+                                   '      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1\n'
+                                   '      # Local SDK-conformance convenience: auto-create topics '
+                                   'on first produce so\n'
+                                   '      # PublishCDC + the CDC relay work without an explicit '
+                                   'provisioning step.\n'
+                                   '      # Production keeps this false (explicit, governed topic '
+                                   'management).\n'
+                                   '      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"\n'
+                                   '      KAFKA_COMPRESSION_TYPE: lz4\n'
+                                   '    ports:\n'
+                                   '      - "59192:59192"\n'
+                                   '    healthcheck:\n'
+                                   '      test: ["CMD-SHELL", '
+                                   '"/opt/kafka/bin/kafka-broker-api-versions.sh '
+                                   '--bootstrap-server localhost:9092 >/dev/null 2>&1"]\n'
+                                   '      interval: 10s\n'
+                                   '      timeout: 5s\n'
+                                   '      retries: 20\n'
+                                   '\n'
+                                   '  redis:\n'
+                                   '    image: ${UDB_INTEGRATION_REDIS_IMAGE:-redis:7-alpine}\n'
+                                   '    # AOF on: the Redis canonical store fail-closes on '
+                                   '`appendonly no`\n'
+                                   '    # (aof_enabled:0) to guarantee durability, so the '
+                                   'integration instance\n'
+                                   '    # must run with it enabled.\n'
+                                   '    command: ["redis-server", "--appendonly", "yes"]\n'
+                                   '    ports:\n'
+                                   '      - "56379:6379"\n'
+                                   '    healthcheck:\n'
+                                   '      test: ["CMD", "redis-cli", "ping"]\n'
+                                   '      interval: 5s\n'
+                                   '      timeout: 3s\n'
+                                   '      retries: 20\n'
+                                   '\n'
+                                   '  memcached:\n'
+                                   '    image: '
+                                   '${UDB_INTEGRATION_MEMCACHED_IMAGE:-memcached:1.6-alpine}\n'
+                                   '    command: ["memcached", "-m", "64", "-I", "4m"]\n'
+                                   '    ports:\n'
+                                   '      - "51122:11211"\n'
+                                   '\n'
+                                   '\n'
+                                   '  qdrant:\n'
+                                   '    image: '
+                                   '${UDB_INTEGRATION_QDRANT_IMAGE:-qdrant/qdrant:v1.18.2}\n',
+ 'docker/postgres-pg-partman/Dockerfile': '# CI selects verified digest-pinned mirrors; the '
+                                          'ordinary image defaults remain\n'
+                                          '# the same PostgreSQL/PostGIS versions used by the '
+                                          'integration stack.\n'
+                                          'ARG PG_BASE_IMAGE=postgres:16-alpine\n'
+                                          'ARG POSTGIS_BASE_IMAGE=postgis/postgis:16-3.5-alpine\n'
+                                          'FROM ${PG_BASE_IMAGE} AS pg-partman-builder\n'
+                                          '\n'
+                                          'ARG PG_PARTMAN_VERSION=5.2.4\n'
+                                          '\n'
+                                          'RUN apk add --no-cache build-base clang git llvm\n'
+                                          'RUN git clone --depth 1 --branch '
+                                          '"v${PG_PARTMAN_VERSION}" '
+                                          'https://github.com/pgpartman/pg_partman.git '
+                                          '/tmp/pg_partman\n'
+                                          'RUN cd /tmp/pg_partman && make NO_BGW=1 && make '
+                                          'NO_BGW=1 install\n'
+                                          '\n'
+                                          '# PostGIS-enabled Postgres 16 (same official Alpine '
+                                          'base as the builder), so the\n'
+                                          '# served-path geography/PostGIS live tests have the '
+                                          'extension they declare.\n'
+                                          'FROM ${POSTGIS_BASE_IMAGE}\n'
+                                          '\n'
+                                          'COPY --from=pg-partman-builder '
+                                          '/usr/local/share/postgresql/extension/pg_partman* '
+                                          '/usr/local/share/postgresql/extension/\n'}
+    with tempfile.TemporaryDirectory(prefix="udb-registry-posture-") as directory:
+        root = Path(directory)
+        for relative, text in fixtures.items():
+            path = root / relative
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(text, encoding="utf-8")
+        assert not check_ci_registry_dependency_posture(root), check_ci_registry_dependency_posture(root)
+        mutations = (
+            (".github/workflows/ci.yml", 'config["registry-mirrors"] = ["https://mirror.gcr.io"]', 'config["registry-mirrors"] = []', "supported daemon mirror configuration"),
+            (".github/workflows/ci.yml", "sudo systemctl restart docker", "docker info", "mirror daemon restart"),
+            (".github/workflows/ci.yml", "sha256sum --check --strict", "sha256sum", "cargo-deny digest verification"),
+            (".github/workflows/ci.yml", "9f12ed4c49936e09b48bf862b595cde2fe64fcbd9d74dfacac6131ca824c8d5f", "0" * 64, "official cargo-deny archive digest"),
+            (".github/workflows/ci.yml", "--all-features check bans licenses sources", "check bans licenses sources", "unchanged blocking policy action defaults"),
+            (".github/workflows/ci.yml", "      - name: cargo-deny policy gates", "      - name: cargo-deny policy gates\n        continue-on-error: true", "policy gates must fail closed"),
+            (".github/workflows/ci.yml", "continue-on-error: true", "continue-on-error: false", "advisory-only continuation"),
+            (".github/workflows/ci.yml", 'wait "$postgis_base_pid"', "true", "PostGIS pull failure propagation"),
+            (".github/workflows/ci.yml", "docker image inspect --format '{{json .RepoDigests}}'", "echo", "actual image digest evidence"),
+            (".github/workflows/ci.yml", "qdrant/qdrant:v1.18.2@sha256:75eab8c4ba42096724fdcfde8b4de0b5713d529dde32f285a1f86fdcb2c9e50c", "qdrant/qdrant:latest", "exact UDB_INTEGRATION_QDRANT_IMAGE image pin"),
+            (".github/workflows/_live-sdk-suite.yml", "public.ecr.aws/docker/library/", "", "pre-step _live-sdk-suite.yml Postgres mirror pin"),
+            (".github/workflows/go-sdk-live.yml", "public.ecr.aws/docker/library/", "", "pre-step go-sdk-live.yml Postgres mirror pin"),
+            ("docker-compose.integration.yml", "${UDB_INTEGRATION_PG_BASE_IMAGE:-postgres:16-alpine}", "postgres:15-alpine", "preserved UDB_INTEGRATION_PG_BASE_IMAGE compose default"),
+            ("docker/postgres-pg-partman/Dockerfile", "FROM ${POSTGIS_BASE_IMAGE}", "FROM postgres:16-alpine", "mirror-selectable original PostgreSQL/PostGIS base"),
+        )
+        for relative, before, after, expected in mutations:
+            original = fixtures[relative]
+            assert before in original, (relative, before)
+            (root / relative).write_text(original.replace(before, after), encoding="utf-8")
+            failures = check_ci_registry_dependency_posture(root)
+            assert any(expected in failure for failure in failures), (expected, failures)
+            (root / relative).write_text(original, encoding="utf-8")
+        relative = ".github/workflows/ci.yml"
+        original = fixtures[relative]
+        altered = original.replace("      - name: Configure supported Docker Hub cache", "      - name: Start integration stack while compiling tests", 1)
+        (root / relative).write_text(altered, encoding="utf-8")
+        assert check_ci_registry_dependency_posture(root), "missing mirror setup must refuse"
 
 
 def check_ci_native_integration_gate(root: Path = ROOT) -> list[str]:
@@ -9045,10 +9534,12 @@ x-udb-xa-ha-env:
   UDB_MYSQL_DSN: mysql://udb:udb@mysql:3306/udb
   UDB_XA_RECOVERY_INTERVAL_SECS: "2"
 """
-        postgres_partman_dockerfile_good = """FROM postgres:16-alpine AS pg-partman-builder
+        postgres_partman_dockerfile_good = """ARG PG_BASE_IMAGE=postgres:16-alpine
+ARG POSTGIS_BASE_IMAGE=postgis/postgis:16-3.5-alpine
+FROM ${PG_BASE_IMAGE} AS pg-partman-builder
 ARG PG_PARTMAN_VERSION=5.2.4
 RUN cd /tmp/pg_partman && make NO_BGW=1 && make NO_BGW=1 install
-FROM postgres:16-alpine
+FROM ${POSTGIS_BASE_IMAGE}
 COPY --from=pg-partman-builder /usr/local/share/postgresql/extension/pg_partman* /usr/local/share/postgresql/extension/
 """
         mysql_init_good = """GRANT REPLICATION CLIENT ON *.* TO 'udb'@'%';
@@ -11368,6 +11859,7 @@ jobs:
         assert any("workflow files trigger path in pull_request" in failure for failure in failures), failures
 
     selftest_ci_producer_proofs()
+    selftest_ci_registry_dependencies()
     print("workflow posture selftest passed")
     return 0
 
@@ -11424,6 +11916,7 @@ def main(argv: list[str] | None = None) -> int:
         + check_ci_smoke_load_gate()
         + check_native_load_case_contract()
         + check_ci_native_integration_gate()
+        + check_ci_registry_dependency_posture()
         + check_benchmark_orchestrator_gate()
         + check_benchmark_workflow_gate()
         + check_pages_playground_wasm_gate()

@@ -11,7 +11,7 @@ import * as path from "node:path";
 import * as grpc from "@grpc/grpc-js";
 
 import { StoredToken, UdbProject } from "./project";
-import { RPC_API_ALIAS, RPC_OPERATION_ID, RPC_OPERATION_KIND } from "./generatedClient";
+import { RPC_API_ALIAS, RPC_OPERATION_ID, RPC_OPERATION_KIND, UdbError } from "./generatedClient";
 
 function requiredEnv(name: string): string {
   const value = process.env[name]?.trim();
@@ -3306,27 +3306,89 @@ async function runLiveBackendClaimCheck(data: any, ctx: any, enabled: string[]):
   }
 }
 
-// runLiveAuthLifecycle: prove Logout invalidates the session — the access token,
-// refresh token and session-refresh must ALL fail afterwards. Throwaway login.
-async function runLiveAuthLifecycle(authn: any, tenantId: string, projectId: string, username: string, password: string): Promise<void> {
+// Replay invalidation belongs to an owned person; the operator must remain usable.
+async function runLiveAuthLifecycle(authn: any, tenantId: string, projectId: string, operatorToken: string): Promise<void> {
   const opts = { deadlineMs: 8_000, noRetry: true };
-  const login = await authn.login({ username, password, tenant_hint: tenantId, project_hint: projectId, device_name: "ts-sdk-lifecycle" }, opts);
-  const token = login.access_token, sid = login.session_id, refresh = login.refresh_token;
-  assert.ok(token && sid && refresh, "Login must return access_token+session_id+refresh_token");
-  const pre = await authn.validate_token({ token, token_type: 1 }, opts); // 1 = TOKEN_TYPE_JWT_ACCESS
-  assert.ok(pre.valid, "fresh access token must validate before logout");
-  await authn.get_session({ session_id: sid }, opts);
-  const preIntro = await authn.introspect_token({ token }, opts);
-  assert.ok(preIntro.active, "fresh access token must introspect active before logout");
-  const out = await authn.logout({ session_id: sid, revoke_reason: "sdk_live_test" }, opts);
-  assert.ok(Number(out.sessions_revoked) >= 1, "Logout must revoke at least one session");
-
   const failures: string[] = [];
-  try { if ((await authn.validate_token({ token, token_type: 1 }, opts)).valid) failures.push("access token still validates after logout"); } catch { /* denied = correct */ }
-  try { if ((await authn.introspect_token({ token }, opts)).active) failures.push("token still introspects Active after logout"); } catch { /* denied = correct */ }
-  try { await authn.refresh_token({ refresh_token: refresh, session_id: sid }, opts); failures.push("refresh token still works after logout — token family not revoked"); } catch { /* denied = correct */ }
-  try { await authn.refresh_session({ session_id: sid }, opts); failures.push("RefreshSession still works after logout — session not revoked"); } catch { /* denied = correct */ }
-  assert.equal(failures.length, 0, `SECURITY (logout did not fully invalidate the session): ${failures.join("; ")}`);
+  const validate = (token: string) => authn.validate_token({ token, token_type: "TOKEN_TYPE_JWT_ACCESS" }, opts);
+  const operator = await validate(operatorToken);
+  assert.ok(operator.valid && operator.principal?.user_id);
+  assert.equal(operator.principal.tenant_id, tenantId);
+  assert.equal(operator.principal.project_id, projectId);
+  const actorId = operator.principal.user_id;
+  const context = {
+    tenant: { tenant_id: tenantId, project_id: projectId }, user_id: actorId,
+    principal_id: actorId, purpose: "ts.live.auth.lifecycle",
+  };
+  const username = `sdk-lifecycle-ts-${liveUuid()}`;
+  const password = "CorrectHorse1!";
+  const created = (await authn.create_user({
+    username, email: `${username}@example.invalid`, password, tenant_id: tenantId, project_id: projectId,
+    full_name: "SDK owned lifecycle person", account_kind: "ACCOUNT_KIND_PERSON", context,
+  }, opts)).user;
+  assert.ok(created?.user_id && created.user_id !== actorId);
+  assert.equal(created.username, username);
+  assert.equal(created.tenant_id, tenantId);
+  assert.equal(created.project_id, projectId);
+  const userId = created.user_id;
+  try {
+    assert.equal(created.account_kind, "ACCOUNT_KIND_PERSON");
+    const active = await authn.change_user_status({ user_id: userId, new_status: "USER_STATUS_ACTIVE", reason: "ts live lifecycle activation", context }, opts);
+    assert.equal(active.user.status, "USER_STATUS_ACTIVE");
+    const loginOwned = async (device_name: string) => {
+      const login = await authn.login({ username, password, tenant_hint: tenantId, project_hint: projectId, device_name }, opts);
+      assert.equal(login.user_id, userId);
+      assert.ok(login.access_token && login.session_id && login.refresh_token);
+      return login;
+    };
+    const login = await loginOwned("ts-sdk-lifecycle");
+    const token = login.access_token, sid = login.session_id, refresh = login.refresh_token;
+    const pre = await validate(token);
+    assert.ok(pre.valid);
+    assert.equal(pre.principal.user_id, userId);
+    assert.equal(pre.principal.tenant_id, tenantId);
+    assert.equal(pre.principal.project_id, projectId);
+    await authn.get_session({ session_id: sid }, opts);
+    assert.ok((await authn.introspect_token({ token }, opts)).active);
+    const sibling = await loginOwned("ts-sdk-lifecycle-sibling");
+    assert.ok((await validate(sibling.access_token)).valid);
+    const out = await authn.logout({ session_id: sid, revoke_reason: "sdk_live_test" }, opts);
+    assert.ok(Number(out.sessions_revoked) >= 1);
+    const requireInactive = async (label: string, perform: () => Promise<boolean>) => {
+      try {
+        if (await perform()) failures.push(`${label} still reports active`);
+      } catch (err) {
+        if (grpcCode(err) !== grpc.status.UNAUTHENTICATED) failures.push(`${label} returned ${grpcCode(err)}, expected inactive or UNAUTHENTICATED`);
+      }
+    };
+    await requireInactive("post-logout access token", async () => (await validate(token)).valid);
+    await requireInactive("post-logout introspection", async () => (await authn.introspect_token({ token }, opts)).active);
+    assert.ok((await validate(sibling.access_token)).valid, "single-session logout must preserve the owned sibling before replay");
+    for (const [label, perform] of [
+      ["revoked refresh replay", () => authn.refresh_token({ refresh_token: refresh, session_id: sid }, opts)],
+      ["revoked RefreshSession", () => authn.refresh_session({ session_id: sid }, opts)],
+    ] as const) {
+      try {
+        await perform();
+        failures.push(`${label} was accepted`);
+      } catch (err) {
+        if (grpcCode(err) !== grpc.status.UNAUTHENTICATED) failures.push(`${label} returned ${grpcCode(err)}, expected UNAUTHENTICATED`);
+      }
+    }
+    await requireInactive("post-replay owned sibling", async () => (await validate(sibling.access_token)).valid);
+    const operatorAfter = await validate(operatorToken);
+    assert.ok(operatorAfter.valid, "operator must survive owned refresh replay");
+    assert.equal(operatorAfter.principal.user_id, actorId);
+  } finally {
+    const cleanupOpts = { deadlineMs: 5_000, noRetry: true };
+    for (const [label, perform] of [
+      ["sessions", () => authn.revoke_session({ principal_id: userId, all_for_principal: true, revoke_reason: "ts live lifecycle cleanup", context }, cleanupOpts)],
+      ["identity", () => authn.change_user_status({ user_id: userId, new_status: "USER_STATUS_DEACTIVATED", reason: "ts live lifecycle cleanup", context }, cleanupOpts)],
+    ] as const) {
+      try { await perform(); } catch (err) { failures.push(`owned lifecycle cleanup ${label} returned ${grpcCode(err)}`); }
+    }
+  }
+  assert.equal(failures.length, 0, `owned lifecycle refusals: ${failures.join("; ")}`);
 }
 
 // runLiveAuthNegative: edge cases the happy-path suite skips — the auth plane must
@@ -3616,7 +3678,7 @@ async function graphKind(data: any, rc: (p: string) => any, backend: string, suf
   try { await data.graph_query({ context: rc("ts.live.kind.graph"), resource, query: `MATCH (n:${label}) RETURN n LIMIT 1`, read_only: true }, opts); } catch (err) { mountFatal(backend, "query", err); }
 }
 
-async function runLiveBackendE2E(project: UdbProject, tenantId: string, projectId: string): Promise<void> {
+async function runLiveBackendE2E(project: UdbProject, platformProject: UdbProject, tenantId: string, projectId: string): Promise<void> {
   const data = project.generated.DataBroker;
   const ctx = requestContext(tenantId, projectId, "ts.live.backend.e2e");
   const suffix = `${process.pid}-${Date.now()}`;
@@ -3818,8 +3880,25 @@ async function runLiveBackendE2E(project: UdbProject, tenantId: string, projectI
   // reads, catalog/schema/health. PutPolicy is intentionally NOT called — an abac
   // policy insert flips the data plane to default-deny.
   const projId = `sdklive_proj_ts_${suffix}`;
-  await data.ensure_project({ context: ctx, project_id: projId, name: "SDK Live Project" }, { deadlineMs: 8_000, noRetry: true });
-  const projects = await data.list_projects({ context: ctx }, { deadlineMs: 8_000, noRetry: true });
+  const requireRefusal = async (operation: string, decision: string, perform: () => Promise<unknown>) => {
+    await assert.rejects(perform, (err: unknown) => {
+      assert.ok(err instanceof UdbError, "refusal must retain the actual broker trailer");
+      assert.equal(err.code, grpc.status.PERMISSION_DENIED);
+      assert.equal(err.detail?.operation, operation);
+      assert.equal(err.detail?.policy_decision_id, decision);
+      return true;
+    });
+  };
+  await requireRefusal("EnsureProject", "catalog_project_scope_mismatch", () =>
+    data.ensure_project({ context: ctx, project_id: projId, name: "SDK Live Project" }, { deadlineMs: 8_000, noRetry: true }));
+  const scoped = await data.ensure_project({ context: ctx, project_id: projectId, name: "SDK Live Verified Project" }, { deadlineMs: 8_000, noRetry: true });
+  assert.equal(scoped.mutation_id, projectId);
+  await requireRefusal("ListProjects", "catalog_platform_authority_required", () =>
+    data.list_projects({ context: ctx }, { deadlineMs: 8_000, noRetry: true }));
+  const platformData = platformProject.generated.DataBroker;
+  const created = await platformData.ensure_project({ context: ctx, project_id: projId, name: "SDK Live Project" }, { deadlineMs: 8_000, noRetry: true });
+  assert.equal(created.mutation_id, projId);
+  const projects = await platformData.list_projects({ context: ctx }, { deadlineMs: 8_000, noRetry: true });
   assert.ok((projects.projects ?? []).some((p: any) => p.project_id === projId), "ListProjects must include the created project");
   await data.list_policies({ context: ctx }, { deadlineMs: 8_000, noRetry: true });
   await data.lint_policies({ context: ctx }, { deadlineMs: 8_000, noRetry: true });
@@ -4145,14 +4224,34 @@ test("live broker login refreshes once and hot-swaps SDK credentials", {
     // Challenge every advertised backend KIND's per-operation claims in BOTH directions.
     await runLiveBackendCapabilityChallenge(project.generated.DataBroker, requestContext(tenantId, projectId, "ts.live.backend.capability"), caps);
 
-    // Full session lifecycle on a throwaway login: prove logout invalidates the
-    // session (access token + refresh token + session-refresh all rejected after).
-    await runLiveAuthLifecycle((project as any).authGenerated?.AuthnService ?? project.generated.AuthnService, tenantId, projectId, username, password);
+    // Own a separate person for logout/replay checks, preserving the operator
+    // credential used by the rest of this conformance fixture.
+    const lifecycleOperatorToken = store.current()?.accessToken;
+    assert.ok(lifecycleOperatorToken, "lifecycle operator must retain a bearer");
+    await runLiveAuthLifecycle((project as any).authGenerated?.AuthnService ?? project.generated.AuthnService, tenantId, projectId, lifecycleOperatorToken);
 
     // Edge cases: the auth plane must fail CLOSED on bad credentials/forged bearers.
     await runLiveAuthNegative((project as any).authGenerated?.AuthnService ?? project.generated.AuthnService, tenantId, projectId, username);
 
-    await runLiveBackendE2E(project, tenantId, projectId);
+    const platformProject = new UdbProject({
+      target, authTarget, tenantId, projectId, purpose: "ts.live.deep.platform",
+      tokenStore: memoryStore(), deadlineMs: 10_000,
+    });
+    try {
+      const platformLogin = await platformProject.login({
+        username: requiredEnv("UDB_LIVE_PLATFORM_USERNAME"), password: requiredEnv("UDB_LIVE_PLATFORM_PASSWORD"),
+        tenant_hint: tenantId, project_hint: projectId, device_name: "ts-sdk-deep-platform",
+      });
+      const platformPrincipal = (await platformProject.auth.authenticateBearer(platformLogin.access_token))?.principal;
+      assert.ok((platformPrincipal?.roles ?? []).some((role: string) => role.toLowerCase() === "platform_admin"));
+      assert.ok(platformPrincipal?.subject && platformPrincipal?.user_id);
+      assert.equal(platformPrincipal.tenant_id, tenantId);
+      assert.equal(platformPrincipal.project_id, projectId);
+      assert.notEqual(platformPrincipal.user_id, authn.principal.user_id);
+      await runLiveBackendE2E(project, platformProject, tenantId, projectId);
+    } finally {
+      platformProject.close();
+    }
 
     // Per-RPC EDGE cases (malformed/hostile inputs + isolation boundaries): every one
     // must fail closed with a typed error and never leak cross-tenant data or fault.

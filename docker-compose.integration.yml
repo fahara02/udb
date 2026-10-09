@@ -45,6 +45,9 @@ services:
     build:
       context: .
       dockerfile: docker/postgres-pg-partman/Dockerfile
+      args:
+        PG_BASE_IMAGE: ${UDB_INTEGRATION_PG_BASE_IMAGE:-postgres:16-alpine}
+        POSTGIS_BASE_IMAGE: ${UDB_INTEGRATION_POSTGIS_BASE_IMAGE:-postgis/postgis:16-3.5-alpine}
     image: udb-postgres-pg-partman:16
     command:
       - postgres
@@ -70,7 +73,7 @@ services:
       retries: 20
 
   kafka:
-    image: apache/kafka:3.9.0
+    image: ${UDB_INTEGRATION_KAFKA_IMAGE:-apache/kafka:3.9.0}
     environment:
       KAFKA_NODE_ID: 1
       KAFKA_PROCESS_ROLES: broker,controller
@@ -102,7 +105,7 @@ services:
       retries: 20
 
   redis:
-    image: redis:7-alpine
+    image: ${UDB_INTEGRATION_REDIS_IMAGE:-redis:7-alpine}
     # AOF on: the Redis canonical store fail-closes on `appendonly no`
     # (aof_enabled:0) to guarantee durability, so the integration instance
     # must run with it enabled.
@@ -116,7 +119,7 @@ services:
       retries: 20
 
   memcached:
-    image: memcached:1.6-alpine
+    image: ${UDB_INTEGRATION_MEMCACHED_IMAGE:-memcached:1.6-alpine}
     command: ["memcached", "-m", "64", "-I", "4m"]
     ports:
       - "51122:11211"
@@ -266,7 +269,7 @@ services:
       - "49160-49200:49160-49200/udp"
 
   qdrant:
-    image: qdrant/qdrant:v1.18.2
+    image: ${UDB_INTEGRATION_QDRANT_IMAGE:-qdrant/qdrant:v1.18.2}
     ports:
       - "56333:6333"
     healthcheck:

@@ -1,4 +1,8 @@
-FROM postgres:16-alpine AS pg-partman-builder
+# CI selects verified digest-pinned mirrors; the ordinary image defaults remain
+# the same PostgreSQL/PostGIS versions used by the integration stack.
+ARG PG_BASE_IMAGE=postgres:16-alpine
+ARG POSTGIS_BASE_IMAGE=postgis/postgis:16-3.5-alpine
+FROM ${PG_BASE_IMAGE} AS pg-partman-builder
 
 ARG PG_PARTMAN_VERSION=5.2.4
 
@@ -8,6 +12,6 @@ RUN cd /tmp/pg_partman && make NO_BGW=1 && make NO_BGW=1 install
 
 # PostGIS-enabled Postgres 16 (same official Alpine base as the builder), so the
 # served-path geography/PostGIS live tests have the extension they declare.
-FROM postgis/postgis:16-3.5-alpine
+FROM ${POSTGIS_BASE_IMAGE}
 
 COPY --from=pg-partman-builder /usr/local/share/postgresql/extension/pg_partman* /usr/local/share/postgresql/extension/

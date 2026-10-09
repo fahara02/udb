@@ -214,7 +214,7 @@ function liveDocPayload($documentSet): string
  * over unary RPCs — proves the data plane actually reads/writes, not just that the
  * methods are mounted. Streaming RPCs remain covered by the mount probe.
  */
-function run_live_backend_e2e(GeneratedClient $data, UdbMetadata $meta, string $tenant, string $project): void
+function run_live_backend_e2e(GeneratedClient $data, UdbMetadata $meta, GeneratedClient $platformData, UdbMetadata $platformMeta, string $tenant, string $project): void
 {
     $suffix = bin2hex(random_bytes(8));
     $messageType = 'udb.sdk.live.v1.SdkLiveRecord';
@@ -289,9 +289,33 @@ function run_live_backend_e2e(GeneratedClient $data, UdbMetadata $meta, string $
     // health. PutPolicy is intentionally NOT called — an abac policy insert flips
     // the data plane to default-deny.
     $projId = "sdklive_proj_php_$suffix";
-    $data->ensure_project((new \Udb\Entity\V1\EnsureProjectRequest())
-        ->setContext($ctx)->setProjectId($projId)->setName('SDK Live Project'), $meta);
-    $projects = $data->list_projects((new \Udb\Entity\V1\ProjectListRequest())->setContext($ctx), $meta);
+    expect($platformMeta->tenantId)->toBe($tenant);
+    expect($platformMeta->projectId)->toBe($project);
+    $requireRefusal = static function (string $operation, string $decision, callable $perform): void {
+        try {
+            $perform();
+        } catch (\Fahara02\UdbLaravel\Exceptions\UdbRpcException $e) {
+            expect($e->status)->toBe(7); // PERMISSION_DENIED
+            expect($e->errorDetail)->not->toBeNull('refusal must retain the actual broker trailer');
+            expect($e->errorDetail->getOperation())->toBe($operation);
+            expect($e->errorDetail->getPolicyDecisionId())->toBe($decision);
+            return;
+        }
+        throw new RuntimeException("ordinary {$operation} was accepted");
+    };
+    $requireRefusal('EnsureProject', 'catalog_project_scope_mismatch', fn () => $data->ensure_project(
+        (new \Udb\Entity\V1\EnsureProjectRequest())->setContext($ctx)->setProjectId($projId)->setName('SDK Live Project'), $meta,
+    ));
+    $scoped = $data->ensure_project((new \Udb\Entity\V1\EnsureProjectRequest())
+        ->setContext($ctx)->setProjectId($project)->setName('SDK Live Verified Project'), $meta);
+    expect($scoped->getMutationId())->toBe($project);
+    $requireRefusal('ListProjects', 'catalog_platform_authority_required', fn () => $data->list_projects(
+        (new \Udb\Entity\V1\ProjectListRequest())->setContext($ctx), $meta,
+    ));
+    $created = $platformData->ensure_project((new \Udb\Entity\V1\EnsureProjectRequest())
+        ->setContext($ctx)->setProjectId($projId)->setName('SDK Live Project'), $platformMeta);
+    expect($created->getMutationId())->toBe($projId);
+    $projects = $platformData->list_projects((new \Udb\Entity\V1\ProjectListRequest())->setContext($ctx), $platformMeta);
     $foundProject = false;
     foreach ($projects->getProjects() as $p) {
         if ($p->getProjectId() === $projId) {
@@ -776,48 +800,113 @@ function run_backend_claim_check_php(GeneratedClient $data, \Udb\Entity\V1\Reque
 
 // Full session lifecycle: prove Logout invalidates the session — the access
 // token, refresh token and session-refresh must ALL fail afterwards.
-function run_auth_lifecycle_php(GeneratedClient $client, UdbMetadata $meta, string $username, string $password): void
+function run_auth_lifecycle_php(GeneratedClient $client, UdbMetadata $meta): void
 {
-    $login = $client->login((new \Udb\Core\Authn\Services\V1\LoginRequest())
-        ->setUsername($username)->setPassword($password)->setTenantHint($meta->tenantId)->setProjectHint($meta->projectId)->setDeviceName('php-sdk-lifecycle'), $meta);
-    $token = $login->getAccessToken();
-    $sid = $login->getSessionId();
-    $refresh = $login->getRefreshToken();
-    expect($token)->not->toBe('');
-    expect($sid)->not->toBe('');
-    expect($refresh)->not->toBe('');
-    $pre = $client->validate_token((new \Udb\Core\Authn\Services\V1\ValidateTokenRequest())->setToken($token)->setTokenType(1), $meta); // 1 = TOKEN_TYPE_JWT_ACCESS
-    expect($pre->getValid())->toBeTrue();
-    $client->get_session((new \Udb\Core\Authn\Services\V1\GetSessionRequest())->setSessionId($sid), $meta);
-    $preIntro = $client->introspect_token((new \Udb\Core\Authn\Services\V1\IntrospectTokenRequest())->setToken($token), $meta);
-    expect($preIntro->getActive())->toBeTrue();
-    $out = $client->logout((new \Udb\Core\Authn\Services\V1\LogoutRequest())->setSessionId($sid)->setRevokeReason('sdk_live_test'), $meta);
-    expect($out->getSessionsRevoked())->toBeGreaterThanOrEqual(1);
-
+    // A replay revokes every session for its person. Own that person separately
+    // so the verified operator remains usable for the rest of the fixture.
     $failures = [];
+    $validate = fn (string $token) => $client->validate_token((new \Udb\Core\Authn\Services\V1\ValidateTokenRequest())
+        ->setToken($token)->setTokenType(\Udb\Core\Authn\Entity\V1\TokenType::TOKEN_TYPE_JWT_ACCESS), $meta);
+    $operator = $validate($meta->bearerToken);
+    expect($operator->getValid())->toBeTrue();
+    $actorId = $operator->getPrincipal()->getUserId();
+    expect($actorId)->not->toBe('');
+    expect($operator->getPrincipal()->getTenantId())->toBe($meta->tenantId);
+    expect($operator->getPrincipal()->getProjectId())->toBe($meta->projectId);
+    $context = (new \Udb\Core\Common\V1\RequestContext())
+        ->setTenant((new \Udb\Core\Common\V1\TenantContext())->setTenantId($meta->tenantId)->setProjectId($meta->projectId))
+        ->setUserId($actorId)->setPrincipalId($actorId)->setPurpose('php.live.auth.lifecycle');
+    $username = 'sdk-lifecycle-php-'.bin2hex(random_bytes(16));
+    $password = 'CorrectHorse1!';
+    $created = $client->create_user((new \Udb\Core\Authn\Services\V1\CreateUserRequest())
+        ->setUsername($username)->setEmail("{$username}@example.invalid")->setPassword($password)
+        ->setTenantId($meta->tenantId)->setProjectId($meta->projectId)->setFullName('SDK owned lifecycle person')
+        ->setAccountKind(\Udb\Core\Authn\Entity\V1\AccountKind::ACCOUNT_KIND_PERSON)->setContext($context), $meta)->getUser();
+    $userId = $created->getUserId();
+    expect($userId)->not->toBe('');
+    expect($userId)->not->toBe($actorId);
+    expect($created->getUsername())->toBe($username);
+    expect($created->getTenantId())->toBe($meta->tenantId);
+    expect($created->getProjectId())->toBe($meta->projectId);
     try {
-        if ($client->validate_token((new \Udb\Core\Authn\Services\V1\ValidateTokenRequest())->setToken($token)->setTokenType(1), $meta)->getValid()) {
-            $failures[] = 'access token still validates after logout';
+        expect($created->getAccountKind())->toBe(\Udb\Core\Authn\Entity\V1\AccountKind::ACCOUNT_KIND_PERSON);
+        $active = $client->change_user_status((new \Udb\Core\Authn\Services\V1\ChangeUserStatusRequest())
+            ->setUserId($userId)->setNewStatus(\Udb\Core\Authn\Entity\V1\UserStatus::USER_STATUS_ACTIVE)
+            ->setReason('php live lifecycle activation')->setContext($context), $meta)->getUser();
+        expect($active->getStatus())->toBe(\Udb\Core\Authn\Entity\V1\UserStatus::USER_STATUS_ACTIVE);
+        $publicMeta = liveMeta('', $meta->tenantId);
+        $loginOwned = static function (string $deviceName) use ($client, $publicMeta, $username, $password, $userId, $meta) {
+            $login = $client->login((new LoginRequest())->setUsername($username)->setPassword($password)
+                ->setTenantHint($meta->tenantId)->setProjectHint($meta->projectId)->setDeviceName($deviceName), $publicMeta);
+            expect($login->getUserId())->toBe($userId);
+            expect($login->getAccessToken())->not->toBe('');
+            expect($login->getSessionId())->not->toBe('');
+            expect($login->getRefreshToken())->not->toBe('');
+            return $login;
+        };
+        $login = $loginOwned('php-sdk-lifecycle');
+        $token = $login->getAccessToken();
+        $sid = $login->getSessionId();
+        $refresh = $login->getRefreshToken();
+        $pre = $validate($token);
+        expect($pre->getValid())->toBeTrue();
+        expect($pre->getPrincipal()->getUserId())->toBe($userId);
+        expect($pre->getPrincipal()->getTenantId())->toBe($meta->tenantId);
+        expect($pre->getPrincipal()->getProjectId())->toBe($meta->projectId);
+        $client->get_session((new \Udb\Core\Authn\Services\V1\GetSessionRequest())->setSessionId($sid), $meta);
+        expect($client->introspect_token((new \Udb\Core\Authn\Services\V1\IntrospectTokenRequest())->setToken($token), $meta)->getActive())->toBeTrue();
+        $sibling = $loginOwned('php-sdk-lifecycle-sibling');
+        expect($validate($sibling->getAccessToken())->getValid())->toBeTrue();
+        $out = $client->logout((new \Udb\Core\Authn\Services\V1\LogoutRequest())->setSessionId($sid)->setRevokeReason('sdk_live_test'), $meta);
+        expect($out->getSessionsRevoked())->toBeGreaterThanOrEqual(1);
+        $requireInactive = static function (string $label, callable $perform) use (&$failures): void {
+            try {
+                if ($perform()) {
+                    $failures[] = "{$label} still reports active";
+                }
+            } catch (\Fahara02\UdbLaravel\Exceptions\UdbRpcException $e) {
+                if ($e->status !== 16) {
+                    $failures[] = "{$label} returned {$e->status}, expected inactive or UNAUTHENTICATED";
+                }
+            }
+        };
+        $requireInactive('post-logout access token', fn () => $validate($token)->getValid());
+        $requireInactive('post-logout introspection', fn () => $client->introspect_token(
+            (new \Udb\Core\Authn\Services\V1\IntrospectTokenRequest())->setToken($token), $meta)->getActive());
+        expect($validate($sibling->getAccessToken())->getValid())->toBeTrue('single-session logout must preserve the owned sibling before replay');
+        foreach ([
+            'revoked refresh replay' => fn () => $client->refresh_token((new RefreshTokenRequest())->setRefreshToken($refresh)->setSessionId($sid), $publicMeta),
+            'revoked RefreshSession' => fn () => $client->refresh_session((new \Udb\Core\Authn\Services\V1\RefreshSessionRequest())->setSessionId($sid), $meta),
+        ] as $label => $perform) {
+            try {
+                $perform();
+                $failures[] = "{$label} was accepted";
+            } catch (\Fahara02\UdbLaravel\Exceptions\UdbRpcException $e) {
+                if ($e->status !== 16) {
+                    $failures[] = "{$label} returned {$e->status}, expected UNAUTHENTICATED";
+                }
+            }
         }
-    } catch (\Throwable $e) {
-    }
-    try {
-        if ($client->introspect_token((new \Udb\Core\Authn\Services\V1\IntrospectTokenRequest())->setToken($token), $meta)->getActive()) {
-            $failures[] = 'token still introspects Active after logout';
+        $requireInactive('post-replay owned sibling', fn () => $validate($sibling->getAccessToken())->getValid());
+        $operatorAfter = $validate($meta->bearerToken);
+        expect($operatorAfter->getValid())->toBeTrue('operator must survive owned refresh replay');
+        expect($operatorAfter->getPrincipal()->getUserId())->toBe($actorId);
+    } finally {
+        foreach ([
+            'sessions' => fn () => $client->revoke_session((new \Udb\Core\Authn\Services\V1\RevokeSessionRequest())
+                ->setPrincipalId($userId)->setAllForPrincipal(true)->setRevokeReason('php live lifecycle cleanup')->setContext($context), $meta),
+            'identity' => fn () => $client->change_user_status((new \Udb\Core\Authn\Services\V1\ChangeUserStatusRequest())
+                ->setUserId($userId)->setNewStatus(\Udb\Core\Authn\Entity\V1\UserStatus::USER_STATUS_DEACTIVATED)
+                ->setReason('php live lifecycle cleanup')->setContext($context), $meta),
+        ] as $label => $perform) {
+            try {
+                $perform();
+            } catch (\Fahara02\UdbLaravel\Exceptions\UdbRpcException $e) {
+                $failures[] = "owned lifecycle cleanup {$label} returned {$e->status}";
+            }
         }
-    } catch (\Throwable $e) {
     }
-    try {
-        $client->refresh_token((new \Udb\Core\Authn\Services\V1\RefreshTokenRequest())->setRefreshToken($refresh)->setSessionId($sid), $meta);
-        $failures[] = 'refresh token still works after logout — token family not revoked';
-    } catch (\Throwable $e) {
-    }
-    try {
-        $client->refresh_session((new \Udb\Core\Authn\Services\V1\RefreshSessionRequest())->setSessionId($sid), $meta);
-        $failures[] = 'RefreshSession still works after logout — session not revoked';
-    } catch (\Throwable $e) {
-    }
-    expect(count($failures))->toBe(0, 'SECURITY (logout did not fully invalidate the session): '.implode('; ', $failures));
+    expect($failures)->toBe([], 'owned lifecycle refusals: '.implode('; ', $failures));
 }
 
 // Canonical generic-dispatch op vocabulary the broker gates per backend
@@ -1223,7 +1312,22 @@ it('covers the live generated RPC surface', function () {
     }
 
     // Real DataBroker backend round-trips (Postgres + Mongo, unary).
-    run_live_backend_e2e($data, $authedMeta, $authedMeta->tenantId, $meta->projectId);
+    $platformLogin = $openAuthGenerated->login((new LoginRequest())
+        ->setUsername(liveEnv('UDB_LIVE_PLATFORM_USERNAME'))->setPassword(liveEnv('UDB_LIVE_PLATFORM_PASSWORD'))
+        ->setTenantHint($canonicalTenant)->setProjectHint($meta->projectId)->setDeviceName('php-sdk-deep-platform'), $meta);
+    $platformPrincipal = $auth->authenticateBearer($platformLogin->getAccessToken(), $meta)?->getPrincipal();
+    expect($platformPrincipal)->not->toBeNull();
+    $platformRoles = array_map('strtolower', iterator_to_array($platformPrincipal->getRoles()));
+    expect($platformRoles)->toContain('platform_admin');
+    expect($platformPrincipal->getSubject())->not->toBe('');
+    expect($platformPrincipal->getUserId())->not->toBe('');
+    expect($platformPrincipal->getUserId())->not->toBe($authResp->getPrincipal()->getUserId());
+    expect($platformPrincipal->getTenantId())->toBe($canonicalTenant);
+    expect($platformPrincipal->getProjectId())->toBe($meta->projectId);
+    $platformMeta = liveMeta($platformLogin->getAccessToken(), $canonicalTenant);
+    $platformData = new GeneratedClient(['endpoint' => $target, 'deadline_ms' => 15_000, 'retry' => ['max_attempts' => 1]]);
+    $platformData->bindContext($platformMeta);
+    run_live_backend_e2e($data, $authedMeta, $platformData, $platformMeta, $authedMeta->tenantId, $meta->projectId);
 
     // Per-RPC EDGE cases (fail-closed / no cross-tenant leak / no server fault).
     run_edge_cases_php($data, $authedMeta, $authedMeta->tenantId, $meta->projectId);
@@ -1246,9 +1350,9 @@ it('covers the live generated RPC surface', function () {
     // Challenge every advertised backend KIND's per-operation claims in BOTH directions.
     run_backend_capability_challenge_php($data, $authedMeta, $capabilities);
 
-    // Full session lifecycle on a throwaway login: prove logout invalidates the
-    // session (access token + refresh token + session-refresh all rejected after).
-    run_auth_lifecycle_php($authGenerated, $authedMeta, liveEnv('UDB_LIVE_USERNAME'), liveEnv('UDB_LIVE_PASSWORD'));
+    // Own a separate person for logout/replay checks, preserving the operator
+    // credential used by the rest of this conformance fixture.
+    run_auth_lifecycle_php($authGenerated, $authedMeta);
 
     // Edge cases: the auth plane must fail CLOSED on bad credentials/forged bearers.
     run_auth_negative_php($authGenerated, $authedMeta, liveEnv('UDB_LIVE_USERNAME'));
