@@ -1802,6 +1802,9 @@ fn go_predicate_type(
         }
         if let Some((path, imported_alias, name)) = foreign.and_then(parse_go_type) {
             imports.push((path, imported_alias.clone()));
+            if let Some(name) = name.strip_prefix('*') {
+                return Ok(format!("*{imported_alias}.{name}"));
+            }
             return Ok(format!("{imported_alias}.{name}"));
         }
         let token = token.trim_start_matches('.');
@@ -1861,7 +1864,14 @@ fn go_predicate_type(
         )?;
         format!("map[{key}]{value}")
     } else {
-        value_type(token, column.enum_go_import.as_deref(), &mut imports)?
+        value_type(
+            token,
+            column
+                .predicate_go_import
+                .as_deref()
+                .or(column.enum_go_import.as_deref()),
+            &mut imports,
+        )?
     };
     if column.is_array {
         go_type = format!("[]{go_type}");
@@ -1937,59 +1947,9 @@ fn is_go_timestamp(proto_type: &str) -> bool {
         || proto_type == "Timestamp"
 }
 
-/// Camel-case a proto field name into its Go identifier EXACTLY as
-/// `protoc-gen-go` does (`google.golang.org/protobuf/internal/strs.GoCamelCase`),
-/// so the emitted accessors match the consumer's compiled protobuf Go. This is a
-/// faithful byte-for-byte port of the upstream algorithm — proto field names are
-/// ASCII (`[A-Za-z_][A-Za-z0-9_]*`), so byte and char processing coincide.
-///
-/// V23-1: the previous `split('_')` + first-char-uppercase approximation only
-/// capitalized the first letter of each underscore segment, so it mishandled
-/// letter/digit boundaries WITHIN a segment. A digit is its own word, so the
-/// letter that FOLLOWS a digit is uppercased: `proj4text` -> `Proj4Text` (not
-/// `Proj4text`), `checksum_sha256` -> `ChecksumSha256`, `s3_configured` ->
-/// `S3Configured`. `protoc-gen-go` emits `GetProj4Text`; the old code emitted the
-/// non-existent `GetProj4text`, so the generated Go did not compile.
+/// Reuse the runtime metadata naming rule for fields and declared message types.
 fn go_pascal(field_name: &str) -> String {
-    fn is_ascii_lower(c: u8) -> bool {
-        c.is_ascii_lowercase()
-    }
-    let s = field_name.as_bytes();
-    let mut b: Vec<u8> = Vec::with_capacity(s.len());
-    let mut i = 0;
-    while i < s.len() {
-        let c = s[i];
-        if c == b'.' && i + 1 < s.len() && is_ascii_lower(s[i + 1]) {
-            // Skip '.' in ".{lowercase}".
-        } else if c == b'.' {
-            b.push(b'_'); // convert '.' to '_'
-        } else if c == b'_' && (i == 0 || s[i - 1] == b'.') {
-            // Leading '_' (or '_' after '.') -> 'X', so we start with a capital.
-            b.push(b'X');
-        } else if c == b'_' && i + 1 < s.len() && is_ascii_lower(s[i + 1]) {
-            // Skip '_' in "_{lowercase}".
-        } else if c.is_ascii_digit() {
-            b.push(c); // digits are their own word
-        } else {
-            // A letter word: uppercase its first char, then take the trailing
-            // lowercase run verbatim. (A '_' that is neither leading nor followed
-            // by a lowercase letter falls here and is preserved as-is, matching
-            // the upstream `default` case.)
-            let up = if is_ascii_lower(c) {
-                c - (b'a' - b'A')
-            } else {
-                c
-            };
-            b.push(up);
-            while i + 1 < s.len() && is_ascii_lower(s[i + 1]) {
-                b.push(s[i + 1]);
-                i += 1;
-            }
-        }
-        i += 1;
-    }
-    // Input is ASCII, so the byte buffer is always valid UTF-8.
-    String::from_utf8(b).unwrap_or_else(|_| field_name.to_string())
+    udb::runtime::sdk_manifest::go_identifier(field_name)
 }
 
 /// Longest common `UPPER_SNAKE_` prefix of an enum's value names (e.g.
@@ -3823,10 +3783,73 @@ mod tests {
             "message map predicates must name their real Go type"
         );
         let template = include_str!("../../sdk-templates/go/udbclient/generated_client.go.tmpl");
-        let registry = render_text(template, &[], &entities, &[]);
+        let registry = render_text(template, &base_scalars(&[], 0), &entities, &[]);
         assert!(registry.contains("UniqueKeys: [][]string{{\"email\"}, {\"exact\"}, {\"external\", \"region\"}, {\"region\", \"email\"}}"), "actual Go template must retain nested unique metadata");
         assert!(!registry.contains("{{ENTITY_UNIQUE_KEYS_GO}}"));
         assert_eq!(first_unresolved_template_token(&registry), None);
+    }
+
+    #[test]
+    fn actual_udb_proto_producer_resolves_declared_foreign_message_predicates() {
+        let fixture = Path::new(env!("CARGO_MANIFEST_DIR")).join("proto");
+        let entities =
+            entity_manifest_from_proto_dir(&fixture).expect("parse actual UDB proto tree");
+        let out = render_go_entities_file(&entities, "udbentities")
+            .expect("the scaffold producer must resolve declared non-table messages");
+        assert!(out.contains("github.com/udb-project/udb/gen/go/udb/core/common/v1"));
+        assert!(out.contains("AuditInfo udbclient.Column[*commonv1.AuditInfo]"));
+        assert_eq!(first_unresolved_template_token(&out), None);
+    }
+
+    #[test]
+    fn actual_proto_producer_preserves_foreign_message_pointer_collection_types() {
+        let fixture = std::env::temp_dir().join(format!(
+            "udb-go-message-import-{}-{}",
+            std::process::id(),
+            uuid::Uuid::new_v4()
+        ));
+        std::fs::create_dir_all(&fixture).expect("create owned proto fixture");
+        std::fs::write(
+            fixture.join("payload.proto"),
+            r#"syntax = "proto3";
+package foreign.payload.v1;
+option go_package = "example.com/actual/payload;payloadpb";
+message Envelope {
+  message payload3info { string label = 1; }
+  message Payload3Info { string label = 1; }
+}
+"#,
+        )
+        .expect("write actual non-table declaration");
+        std::fs::write(
+            fixture.join("entity.proto"),
+            r#"syntax = "proto3";
+package consumer.entity.v1;
+option go_package = "example.com/actual/entity;entitypb";
+import "payload.proto";
+message Stored {
+  option (table) = { table_name: "stored" schema_name: "consumer" };
+  string id = 1 [(column) = { sql_type: "TEXT" primary_key: true not_null: true }];
+  foreign.payload.v1.Envelope.payload3info payload = 2 [(column) = { sql_type: "JSONB" }];
+  repeated foreign.payload.v1.Envelope.payload3info history = 3 [(column) = { sql_type: "JSONB" }];
+  map<string, foreign.payload.v1.Envelope.payload3info> by_name = 4 [(column) = { sql_type: "JSONB" }];
+  foreign.payload.v1.Envelope.Payload3Info upper = 5 [(column) = { sql_type: "JSONB" }];
+}
+"#,
+        )
+        .expect("write entity using actual declaration");
+        let entities =
+            entity_manifest_from_proto_dir(&fixture).expect("parse actual pointer fixture");
+        let out =
+            render_go_entities_file(&entities, "consumer").expect("render pointer collections");
+        std::fs::remove_dir_all(&fixture).expect("remove owned proto fixture");
+        assert!(out.contains("Payload udbclient.Column[*payloadpb.EnvelopePayload3Info]"));
+        assert!(out.contains("History udbclient.Column[[]*payloadpb.EnvelopePayload3Info]"));
+        assert!(
+            out.contains("ByName udbclient.Column[map[string]*payloadpb.EnvelopePayload3Info]")
+        );
+        assert!(out.contains("Upper udbclient.Column[*payloadpb.Envelope_Payload3Info]"));
+        assert!(out.contains("payloadpb \"example.com/actual/payload\""));
     }
 
     #[test]

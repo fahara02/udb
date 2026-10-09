@@ -176,7 +176,9 @@ pub struct EntityColumnDescriptor {
     /// `#[serde(skip)]` keeps the sdk-manifest JSON surface unchanged.
     #[serde(skip)]
     pub enum_go_import: Option<String>,
-    /// Enum-valued map fields need their element type for typed predicates.
+    /// Declared message or map-element Go type for typed predicates. Tokens are
+    /// `path;alias.Type` for enums and `path;alias.*Type` for message pointers.
+    /// The import comes from the declaring proto file's actual `go_package`.
     #[serde(skip)]
     pub predicate_go_import: Option<String>,
     pub is_json: bool,
@@ -424,6 +426,7 @@ pub fn entity_manifest() -> Vec<EntityDescriptor> {
             &catalog.tables,
             None,
             None,
+            None,
         ));
     }
     out.sort_by(|a, b| {
@@ -452,6 +455,140 @@ struct EnumRegistryEntry {
 }
 
 type EnumRegistry = BTreeMap<String, EnumRegistryEntry>;
+
+/// Camel-case a proto identifier into its Go identifier EXACTLY as
+/// `protoc-gen-go` does (`google.golang.org/protobuf/internal/strs.GoCamelCase`),
+/// so the emitted accessors match the consumer's compiled protobuf Go. This is a
+/// faithful byte-for-byte port of the upstream algorithm — proto identifiers are
+/// ASCII (`[A-Za-z_][A-Za-z0-9_]*`), so byte and char processing coincide.
+///
+/// V23-1: the previous `split('_')` + first-char-uppercase approximation only
+/// capitalized the first letter of each underscore segment, so it mishandled
+/// letter/digit boundaries WITHIN a segment. A digit is its own word, so the
+/// letter that FOLLOWS a digit is uppercased: `proj4text` -> `Proj4Text` (not
+/// `Proj4text`), `checksum_sha256` -> `ChecksumSha256`, `s3_configured` ->
+/// `S3Configured`. `protoc-gen-go` emits `GetProj4Text`; the old code emitted the
+/// non-existent `GetProj4text`, so the generated Go did not compile.
+pub fn go_identifier(field_name: &str) -> String {
+    fn is_ascii_lower(c: u8) -> bool {
+        c.is_ascii_lowercase()
+    }
+    let s = field_name.as_bytes();
+    let mut b: Vec<u8> = Vec::with_capacity(s.len());
+    let mut i = 0;
+    while i < s.len() {
+        let c = s[i];
+        if c == b'.' && i + 1 < s.len() && is_ascii_lower(s[i + 1]) {
+            // Skip '.' in ".{lowercase}".
+        } else if c == b'.' {
+            b.push(b'_'); // convert '.' to '_'
+        } else if c == b'_' && (i == 0 || s[i - 1] == b'.') {
+            // Leading '_' (or '_' after '.') -> 'X', so we start with a capital.
+            b.push(b'X');
+        } else if c == b'_' && i + 1 < s.len() && is_ascii_lower(s[i + 1]) {
+            // Skip '_' in "_{lowercase}".
+        } else if c.is_ascii_digit() {
+            b.push(c); // digits are their own word
+        } else {
+            // A letter word: uppercase its first char, then take the trailing
+            // lowercase run verbatim. (A '_' that is neither leading nor followed
+            // by a lowercase letter falls here and is preserved as-is, matching
+            // the upstream `default` case.)
+            let up = if is_ascii_lower(c) {
+                c - (b'a' - b'A')
+            } else {
+                c
+            };
+            b.push(up);
+            while i + 1 < s.len() && is_ascii_lower(s[i + 1]) {
+                b.push(s[i + 1]);
+                i += 1;
+            }
+        }
+        i += 1;
+    }
+    // Input is ASCII, so the byte buffer is always valid UTF-8.
+    String::from_utf8(b).unwrap_or_else(|_| field_name.to_string())
+}
+
+// Unlike the table parser, the AST retains non-table and nested messages.
+// Missing go_package stays unresolved; no import is inferred from a proto FQN.
+type MessageRegistry = BTreeMap<String, Option<String>>;
+
+fn collect_message_go_imports(
+    ast: &crate::ast::ProtoFileAst,
+    registry: &mut MessageRegistry,
+) -> Result<(), String> {
+    let go_package = ast
+        .options
+        .iter()
+        .find(|option| option.name == "go_package")
+        .and_then(|option| match &option.value {
+            crate::ast::ProtoOptionLiteral::Scalar(value) => Some(value.as_str()),
+            _ => None,
+        })
+        .unwrap_or_default();
+    fn visit(
+        definitions: &[crate::ast::ProtoDefinition],
+        proto_scope: &str,
+        message_scope: &str,
+        go_package: &str,
+        registry: &mut MessageRegistry,
+    ) -> Result<(), String> {
+        for definition in definitions {
+            let crate::ast::ProtoDefinition::Message(message) = definition else {
+                continue;
+            };
+            let fqn = enum_fqn(proto_scope, &message.name);
+            // protogen applies GoCamelCase to the complete package-relative
+            // descriptor name. A dot before a lowercase name is removed.
+            let relative_name = enum_fqn(message_scope, &message.name);
+            let go_name = go_identifier(&relative_name);
+            let imported = enum_go_import_from(&format!("*{go_name}"), go_package);
+            if let Some(previous) = registry.get(&fqn) {
+                if previous != &imported {
+                    return Err(format!(
+                        "message {fqn:?} has conflicting declared Go imports"
+                    ));
+                }
+            } else {
+                registry.insert(fqn.clone(), imported);
+            }
+            visit(&message.nested, &fqn, &relative_name, go_package, registry)?;
+        }
+        Ok(())
+    }
+    visit(&ast.definitions, &ast.package, "", go_package, registry)
+}
+
+fn resolve_message_go_import(
+    proto_type: &str,
+    entity_package: &str,
+    entity_name: &str,
+    registry: Option<&MessageRegistry>,
+) -> Option<String> {
+    let registry = registry?;
+    let token = proto_type.trim();
+    if let Some(absolute) = token.strip_prefix('.') {
+        return registry.get(absolute)?.clone();
+    }
+    // Protobuf relative names resolve from the enclosing message outwards.
+    // A declaration without go_package shadows outer names but stays unresolved.
+    let mut scope = enum_fqn(entity_package, entity_name);
+    loop {
+        let candidate = enum_fqn(&scope, token);
+        if let Some(imported) = registry.get(&candidate) {
+            return imported.clone();
+        }
+        if scope.is_empty() {
+            return None;
+        }
+        scope = scope
+            .rsplit_once('.')
+            .map(|(parent, _)| parent.to_string())
+            .unwrap_or_default();
+    }
+}
 
 /// The fully-qualified enum name used as an [`EnumRegistry`] key.
 fn enum_fqn(proto_package: &str, name: &str) -> String {
@@ -489,6 +626,7 @@ fn entity_descriptor_from_table(
     all_tables: &[crate::generation::manifest::ManifestTable],
     declared_fields: Option<&std::collections::BTreeSet<String>>,
     enum_registry: Option<&EnumRegistry>,
+    message_registry: Option<&MessageRegistry>,
 ) -> EntityDescriptor {
     let (unique_keys, unique_key_errors) = entity_unique_keys(table, declared_fields);
     EntityDescriptor {
@@ -566,16 +704,27 @@ fn entity_descriptor_from_table(
                     enum_values,
                     enum_cross_package,
                     enum_go_import,
-                    predicate_go_import: column
-                        .proto_type
-                        .trim()
-                        .strip_prefix("map<")
-                        .and_then(|inner| inner.strip_suffix('>'))
-                        .and_then(|inner| inner.split_once(','))
-                        .and_then(|(_, value)| {
-                            resolve_enum(value.trim(), &table.proto_package, enum_registry)
+                    predicate_go_import: {
+                        let token = column.proto_type.trim();
+                        let map_value = token
+                            .strip_prefix("map<")
+                            .and_then(|inner| inner.strip_suffix('>'))
+                            .and_then(|inner| inner.split_once(','))
+                            .map(|(_, value)| value.trim());
+                        resolve_message_go_import(
+                            map_value.unwrap_or(token),
+                            &table.proto_package,
+                            &table.message_name,
+                            message_registry,
+                        )
+                        .or_else(|| {
+                            map_value
+                                .and_then(|value| {
+                                    resolve_enum(value, &table.proto_package, enum_registry)
+                                })
+                                .and_then(|(fqn, _, package)| enum_go_import_from(&fqn, &package))
                         })
-                        .and_then(|(fqn, _, package)| enum_go_import_from(&fqn, &package)),
+                    },
                     is_json: column.is_json || column.sql_type.trim().eq_ignore_ascii_case("JSON"),
                     is_jsonb: column.is_jsonb
                         || column.sql_type.trim().eq_ignore_ascii_case("JSONB"),
@@ -712,7 +861,14 @@ pub fn entity_manifest_from_proto_dir(
     let config = crate::parser::ParserConfig::default();
     let mut schemas = Vec::new();
     let mut file_enums = Vec::new();
-    parse_project_proto_dir(dir, &config, &mut schemas, &mut file_enums)?;
+    let mut message_registry = MessageRegistry::new();
+    parse_project_proto_dir(
+        dir,
+        &config,
+        &mut schemas,
+        &mut file_enums,
+        &mut message_registry,
+    )?;
 
     // The proto-DECLARED field set per message, captured BEFORE the catalog
     // build injects audit columns into tables. Typed marshalling must only
@@ -783,6 +939,7 @@ pub fn entity_manifest_from_proto_dir(
             &catalog.tables,
             declared_fields,
             Some(&enum_registry),
+            Some(&message_registry),
         ));
     }
     if out.is_empty() {
@@ -881,6 +1038,7 @@ fn parse_project_proto_dir(
     config: &crate::parser::ParserConfig,
     out: &mut Vec<crate::ast::ProtoSchema>,
     file_enums: &mut Vec<crate::parser::FileEnumDecl>,
+    messages: &mut MessageRegistry,
 ) -> Result<(), String> {
     let entries = std::fs::read_dir(dir).map_err(|err| {
         format!(
@@ -892,10 +1050,15 @@ fn parse_project_proto_dir(
         let entry = entry.map_err(|err| format!("cannot read directory entry: {err}"))?;
         let path = entry.path();
         if path.is_dir() {
-            parse_project_proto_dir(&path, config, out, file_enums)?;
+            parse_project_proto_dir(&path, config, out, file_enums, messages)?;
         } else if path.extension().and_then(|ext| ext.to_str()) == Some("proto") {
             let source = std::fs::read(&path)
                 .map_err(|err| format!("cannot read {}: {err}", path.display()))?;
+            let ast = crate::parser::parse_ast_source(&source, path.to_string_lossy().to_string())
+                .map_err(|err| {
+                    format!("failed to parse declarations in {}: {err}", path.display())
+                })?;
+            collect_message_go_imports(&ast, messages)?;
             let mut report = crate::parser::parse_proto_source(
                 &source,
                 path.to_string_lossy().to_string(),
