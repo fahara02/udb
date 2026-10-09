@@ -96,7 +96,12 @@ mkdir -p "$SHAPE_DIR/adapters" "$WORK/protoc-bin"
 # v1.36.11 requires Go 1.23 and would silently upgrade an auto toolchain.
 export GOTOOLCHAIN=local
 GOBIN="$WORK/protoc-bin" go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.35.1
-protoc -I "$REPO/proto" -I "$REPO/tests/fixtures/consumer_protos" \
+# Debian packages the standard protobuf imports separately from protoc.
+# Allow a custom installation while making missing compiler inputs explicit.
+PROTOC_INCLUDE="${PROTOC_INCLUDE:-/usr/include}"
+require_file "$PROTOC_INCLUDE/google/protobuf/descriptor.proto"
+require_file "$PROTOC_INCLUDE/google/protobuf/timestamp.proto"
+protoc -I "$PROTOC_INCLUDE" -I "$REPO/proto" -I "$REPO/tests/fixtures/consumer_protos" \
   --plugin="protoc-gen-go=$WORK/protoc-bin/protoc-gen-go" \
   --go_out="$SHAPE_DIR" --go_opt=module=example.com/consumer \
   '--go_opt=Mudb/core/common/v1/db.proto=github.com/fahara02/udb/sdk/go/gen/udb/core/common/v1;commonv1' \

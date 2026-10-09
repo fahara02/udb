@@ -112,7 +112,7 @@ mod tests {
                 .await
                 .unwrap()
         );
-        let legacy = super::super::hash_secret("CorrectHorse1!", b"password-cpu-test-key");
+        let legacy = super::super::hash_secret("password:CorrectHorse1!", b"password-cpu-test-key");
         assert!(
             verify("CorrectHorse1!", b"password-cpu-test-key", &legacy)
                 .await

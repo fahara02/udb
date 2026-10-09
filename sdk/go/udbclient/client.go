@@ -22,6 +22,15 @@ type Metadata struct {
 	ClientCatalogVersion string
 }
 
+// Only AsUser installs this marker. It means a caller explicitly selected a
+// different bearer, whose identity the broker must verify. It carries no
+// trusted user claims and never changes the client's tenant/project binding.
+type asUserContextKey struct{}
+
+type asUserContext struct {
+	inheritedAudit Metadata
+}
+
 type Client struct {
 	Broker servicesv1.DataBrokerClient
 	Meta   Metadata
@@ -39,8 +48,9 @@ func (c *Client) Context(ctx context.Context) context.Context {
 	// purpose, client catalog version) from the context set via WithMetadata,
 	// so two concurrent operations carry their own audit values without
 	// mutating the shared Client.Meta. Identity — tenant, user, project,
-	// scopes, service identity — stays AUTHORITATIVE from the connected client
-	// and is never overridable per request. Each header is emitted exactly once
+	// scopes, service identity — stays authoritative from the connected client,
+	// except AsUser deliberately omits stale service identity hints. The broker
+	// verifies that explicit user bearer. Each header is emitted exactly once
 	// (this is the single point every Entity and direct op flows through).
 	m := MergeRequestScopedAudit(ctx, c.Meta)
 	pairs := []string{
@@ -63,10 +73,9 @@ func (c *Client) Context(ctx context.Context) context.Context {
 // caller attached to this context with WithMetadata over the connection-level
 // value, and returns the Metadata to emit as headers.
 //
-// Identity — tenant, user, project, scopes, service identity — is deliberately
-// NOT resolved here: it stays authoritative from the connected client and can
-// never be overridden per request, so a caller cannot smuggle another
-// principal's identity in through a context value.
+// Identity is never adopted from request metadata. AsUser explicitly selects a
+// different bearer and omits stale service user/service/scopes hints, leaving
+// the broker to verify the bearer. Tenant and project stay bound to the client.
 //
 // Every header-building path (the DataBroker client, the auth client, and the
 // generated dial interceptor that carries the native services) funnels through
@@ -76,9 +85,17 @@ func (c *Client) Context(ctx context.Context) context.Context {
 func MergeRequestScopedAudit(ctx context.Context, client Metadata) Metadata {
 	req := MetadataFromContext(ctx)
 	merged := client
-	merged.Purpose = firstNonEmptyValue(req.Purpose, client.Purpose)
-	merged.CorrelationID = firstNonEmptyValue(req.CorrelationID, client.CorrelationID)
-	merged.ClientCatalogVersion = firstNonEmptyValue(req.ClientCatalogVersion, client.ClientCatalogVersion)
+	if delegated, ok := ctx.Value(asUserContextKey{}).(asUserContext); ok {
+		merged.UserID = ""
+		merged.ServiceIdentity = ""
+		merged.Scopes = nil
+		merged.Purpose = firstNonEmptyValue(delegated.inheritedAudit.Purpose, merged.Purpose)
+		merged.CorrelationID = firstNonEmptyValue(delegated.inheritedAudit.CorrelationID, merged.CorrelationID)
+		merged.ClientCatalogVersion = firstNonEmptyValue(delegated.inheritedAudit.ClientCatalogVersion, merged.ClientCatalogVersion)
+	}
+	merged.Purpose = firstNonEmptyValue(req.Purpose, merged.Purpose)
+	merged.CorrelationID = firstNonEmptyValue(req.CorrelationID, merged.CorrelationID)
+	merged.ClientCatalogVersion = firstNonEmptyValue(req.ClientCatalogVersion, merged.ClientCatalogVersion)
 	return merged
 }
 

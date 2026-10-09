@@ -107,11 +107,44 @@ func (c *AuthClient) ValidateSession(ctx context.Context, token string) (*UserSe
 // AsUser returns a context whose calls carry the end user's bearer instead of
 // the service's own credential, for operations the broker must authorize as
 // that user (their files, their sessions). The token may carry the "Bearer "
-// prefix.
+// prefix. The broker verifies the token; AsUser does not adopt claims or change
+// the connected tenant/project. The user must belong to that same scope.
 func (u *Udb) AsUser(ctx context.Context, bearer string) context.Context {
-	bearer = strings.TrimSpace(bearer)
-	if !strings.HasPrefix(bearer, "Bearer ") {
-		bearer = "Bearer " + bearer
+	bearer = strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(bearer), "Bearer "))
+	existing, _ := metadata.FromOutgoingContext(ctx)
+	md := existing.Copy()
+	if md == nil {
+		md = metadata.MD{}
 	}
-	return metadata.AppendToOutgoingContext(ctx, "authorization", bearer)
+	first := func(key string) string {
+		if values := md.Get(key); len(values) > 0 {
+			return values[0]
+		}
+		return ""
+	}
+	audit := Metadata{
+		Purpose: first("x-purpose"), CorrelationID: first("x-correlation-id"),
+		ClientCatalogVersion: first("x-udb-client-catalog-version"),
+	}
+	if previous, ok := ctx.Value(asUserContextKey{}).(asUserContext); ok {
+		audit.Purpose = firstNonEmptyValue(audit.Purpose, previous.inheritedAudit.Purpose)
+		audit.CorrelationID = firstNonEmptyValue(audit.CorrelationID, previous.inheritedAudit.CorrelationID)
+		audit.ClientCatalogVersion = firstNonEmptyValue(audit.ClientCatalogVersion, previous.inheritedAudit.ClientCatalogVersion)
+	}
+	// A caller may already have a Data/Auth context. Rebuild its SDK defaults
+	// for delegation, preserving request audit values, rather than retaining or
+	// appending the connected service's principal. Other outgoing metadata stays.
+	for _, key := range []string{
+		"x-tenant-id", "x-udb-project-id", "x-user-id", "x-service-identity",
+		"x-scopes", "x-purpose", "x-correlation-id", "x-udb-client-catalog-version",
+	} {
+		md.Delete(key)
+	}
+	md.Set("authorization", "Bearer "+bearer)
+	// An explicit empty value prevents a generated interceptor from restoring
+	// a legacy raw-key default. It is not a second authentication credential.
+	md.Set("x-api-key", "")
+	md.Delete("x-udb-api-key")
+	ctx = context.WithValue(ctx, asUserContextKey{}, asUserContext{inheritedAudit: audit})
+	return metadata.NewOutgoingContext(ctx, md)
 }

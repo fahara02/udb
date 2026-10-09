@@ -1028,7 +1028,7 @@ jobs:
       #     header (no duplicated / stale pre-login tenant/project hint).
       - run: go test ./udbclient -run 'TestEntityRepoGeneratedContract|TestConnectEnterpriseEmitsCanonicalSingletonMetadata' -count=1
       - name: Session renewal and durable acknowledgement race regressions
-        run: go test -race ./udbclient -run 'TokenManager|EnterpriseSession|APIKey|ConsumeG6' -count=1 -timeout 2m
+        run: go test -race ./udbclient -run 'TokenManager|EnterpriseSession|APIKey|ConsumeG6|AsUser' -count=1 -timeout 2m
       # The steps above prove the declared floor (go.mod `go 1.22`). Re-run the
       # SDK on the newest release too, so a toolchain change (vet analyzers,
       # linkname restrictions, stdlib behavior) that breaks consumers on current
@@ -1212,7 +1212,7 @@ jobs:
       - name: Install consumer fixture protobuf compiler
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y --no-install-recommends protobuf-compiler
+          sudo apt-get install -y --no-install-recommends protobuf-compiler libprotobuf-dev
           protoc --version
       - name: Download broker binary
         uses: actions/download-artifact@v4

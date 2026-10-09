@@ -13,6 +13,7 @@ import (
 	authnv1 "github.com/fahara02/udb/sdk/go/gen/udb/core/authn/services/v1"
 	entityv1 "github.com/fahara02/udb/sdk/go/gen/udb/entity/v1"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
 )
@@ -505,5 +506,155 @@ func TestEnterpriseSession_CloseStopIdempotent(t *testing.T) {
 	case <-s.stopRefresh:
 	default:
 		t.Fatal("stopRefresh should be closed")
+	}
+}
+
+// The generated TCP fixture checks delegation on the actual owned enterprise
+// connection. Its expired credential is deliberate test state: explicit user
+// delegation must not touch that provider, while an ordinary call still renews.
+type enterpriseAsUserAuthn struct {
+	authnv1.UnimplementedAuthnServiceServer
+	wire      *asUserWireFixture
+	mu        sync.Mutex
+	refreshes int
+}
+
+func (a *enterpriseAsUserAuthn) Login(context.Context, *authnv1.LoginRequest) (*authnv1.LoginResponse, error) {
+	return &authnv1.LoginResponse{
+		AccessToken: "fixture-service-bearer", RefreshToken: "fixture-session-refresh",
+		SessionId: "fixture-session", AccessTokenExpiresIn: 3600,
+	}, nil
+}
+
+func (a *enterpriseAsUserAuthn) Authenticate(ctx context.Context, request *authnv1.AuthnRequest) (*authnv1.AuthnResponse, error) {
+	if request.GetBearerToken() != "fixture-service-bearer" {
+		return nil, status.Error(codes.Unauthenticated, "fixture enterprise bearer required")
+	}
+	return a.wire.Authenticate(ctx, &authnv1.AuthnRequest{ApiKey: "fixture-service-key"})
+}
+
+func (a *enterpriseAsUserAuthn) ValidateToken(ctx context.Context, request *authnv1.ValidateTokenRequest) (*authnv1.ValidateTokenResponse, error) {
+	return a.wire.ValidateToken(ctx, request)
+}
+
+func (a *enterpriseAsUserAuthn) RefreshToken(_ context.Context, request *authnv1.RefreshTokenRequest) (*authnv1.RefreshTokenResponse, error) {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	a.refreshes++
+	if request.GetRefreshToken() != "fixture-session-refresh" {
+		return nil, status.Error(codes.Unauthenticated, "fixture refresh required")
+	}
+	return &authnv1.RefreshTokenResponse{
+		AccessToken: "fixture-service-bearer", RefreshToken: "fixture-session-refresh", AccessTokenExpiresIn: 3600,
+	}, nil
+}
+
+func TestEnterpriseSessionAsUserPreservesDelegationAndSessionRefusals(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	wire := &asUserWireFixture{}
+	authn := &enterpriseAsUserAuthn{wire: wire}
+	sess, err := ConnectEnterprise(ctx, EnterpriseConfig{
+		Target: serveSessionAuthn(t, authn, wire), Username: "fixture", Password: "fixture",
+		TenantCode: "fixture-hint", Purpose: "service-purpose", Retry: RetryConfig{MaxAttempts: 1},
+	})
+	if err != nil {
+		t.Fatalf("production enterprise Connect failed: code=%s", status.Code(err))
+	}
+	defer sess.Close()
+	// Stop the idle test timer without closing the actual owned connection.
+	sess.stopOnce.Do(func() { close(sess.stopRefresh) })
+	select {
+	case <-sess.refreshDone:
+	case <-ctx.Done():
+		t.Fatal("owned enterprise background loop did not stop before the due-token probe")
+	}
+	token, err := sess.tm.store.Load(ctx)
+	if err != nil {
+		t.Fatal("could not inspect the fixture's initial credential")
+	}
+	token.ExpiresAt = time.Now().Add(-time.Second)
+	if err := sess.tm.store.Save(ctx, token); err != nil {
+		t.Fatal("could not make the service fixture credential due")
+	}
+	beforeOptions, beforeBearer := sess.Generated.options(), sess.Bearer()
+	audit := Metadata{Purpose: "delegated-purpose", CorrelationID: "delegated-correlation", ClientCatalogVersion: "delegated-catalog"}
+	delegated := sess.AsUser(WithMetadata(ctx, audit), "fixture-user-bearer")
+	dataCtx, nativeCtx := sess.DataContext(delegated), sess.NativeContext(delegated)
+	for _, callCtx := range []context.Context{dataCtx, nativeCtx} {
+		md, _ := metadata.FromOutgoingContext(callCtx)
+		if values := md.Get("authorization"); len(values) != 1 || values[0] != asUserFixtureBearer {
+			t.Fatal("enterprise context appended a service credential to delegation")
+		}
+		if values := md.Get("x-scopes"); len(values) != 0 {
+			t.Fatal("enterprise context retained service scopes")
+		}
+	}
+	if _, err := sess.Data.Broker.GetCapabilities(dataCtx, &entityv1.CapabilitiesRequest{}); err != nil {
+		t.Fatalf("enterprise delegated data call failed: code=%s", status.Code(err))
+	}
+	if _, err := sess.Auth.Authn.ValidateToken(nativeCtx, &authnv1.ValidateTokenRequest{Token: "fixture-user-bearer"}); err != nil {
+		t.Fatalf("enterprise delegated native call failed: code=%s", status.Code(err))
+	}
+	var caps entityv1.CapabilitiesResponse
+	if err := sess.Generated.InvokeUnary(dataCtx, "/udb.services.v1.DataBroker/GetCapabilities", &entityv1.CapabilitiesRequest{}, &caps); err != nil {
+		t.Fatalf("enterprise delegated generated call failed: code=%s", status.Code(err))
+	}
+	authn.mu.Lock()
+	refreshes := authn.refreshes
+	authn.mu.Unlock()
+	if refreshes != 0 || !reflect.DeepEqual(beforeOptions, sess.Generated.options()) || sess.Bearer() != beforeBearer {
+		t.Fatal("explicit delegation refreshed or installed the service provider credential")
+	}
+	if _, err := sess.Data.Broker.GetCapabilities(sess.DataContext(ctx), &entityv1.CapabilitiesRequest{}); err != nil {
+		t.Fatalf("ordinary enterprise data renewal failed: code=%s", status.Code(err))
+	}
+	if _, err := sess.Auth.Authn.ValidateToken(sess.NativeContext(ctx), &authnv1.ValidateTokenRequest{Token: "fixture-user-bearer"}); err != nil {
+		t.Fatalf("ordinary enterprise native call failed: code=%s", status.Code(err))
+	}
+	authn.mu.Lock()
+	refreshes = authn.refreshes
+	authn.mu.Unlock()
+	if refreshes != 1 {
+		t.Fatalf("ordinary service provider must still renew once, got %d attempts", refreshes)
+	}
+	refused := errors.New("fixture expired provider refusal")
+	sess.mu.Lock()
+	sess.poisoned, sess.lastRefreshErr = true, refused
+	sess.mu.Unlock()
+	for _, callCtx := range []context.Context{sess.DataContext(delegated), sess.NativeContext(delegated)} {
+		if callCtx.Err() == nil || !errors.Is(context.Cause(callCtx), refused) {
+			t.Fatal("explicit delegation bypassed local session poison refusal")
+		}
+		if _, err := sess.Data.Broker.GetCapabilities(callCtx, &entityv1.CapabilitiesRequest{}); status.Code(err) != codes.Canceled {
+			t.Fatalf("poisoned delegation must refuse before transport: code=%s", status.Code(err))
+		}
+	}
+	sess.mu.Lock()
+	sess.poisoned, sess.lastRefreshErr = false, nil
+	sess.mu.Unlock()
+	canceled, cancelCall := context.WithCancelCause(delegated)
+	cause := errors.New("fixture caller cancellation")
+	cancelCall(cause)
+	for _, callCtx := range []context.Context{sess.DataContext(canceled), sess.NativeContext(canceled)} {
+		if !errors.Is(context.Cause(callCtx), cause) {
+			t.Fatal("enterprise delegation lost caller cancellation")
+		}
+		if _, err := sess.Data.Broker.GetCapabilities(callCtx, &entityv1.CapabilitiesRequest{}); status.Code(err) != codes.Canceled {
+			t.Fatalf("canceled delegation must refuse before transport: code=%s", status.Code(err))
+		}
+	}
+	if err := sess.Close(); err != nil {
+		t.Fatal("could not close the owned enterprise connection")
+	}
+	for _, callCtx := range []context.Context{sess.DataContext(delegated), sess.NativeContext(delegated)} {
+		if _, err := sess.Data.Broker.GetCapabilities(callCtx, &entityv1.CapabilitiesRequest{}); status.Code(err) != codes.Canceled {
+			t.Fatalf("closed enterprise connection must refuse delegation: code=%s", status.Code(err))
+		}
+	}
+	wire.mu.Lock()
+	defer wire.mu.Unlock()
+	if wire.user != 3 || wire.service != 2 {
+		t.Fatalf("enterprise served coverage changed or a refused call reached the fixture: ordinary=%d delegated=%d", wire.service, wire.user)
 	}
 }

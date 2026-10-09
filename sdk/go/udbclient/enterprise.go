@@ -71,6 +71,9 @@ type EnterpriseSession struct {
 	// stopRefresh stops the background bearer refresher; closed once by Close.
 	stopRefresh chan struct{}
 	stopOnce    sync.Once
+	// refreshDone observes the owned loop exiting, without altering Close's
+	// existing nonblocking connection teardown or waiting on a caller's store.
+	refreshDone <-chan struct{}
 
 	// relogin logs in again with the credentials the session connected with.
 	// A refresh token that was revoked (or a session the broker no longer has)
@@ -193,18 +196,27 @@ func ConnectEnterprise(ctx context.Context, cfg EnterpriseConfig) (*EnterpriseSe
 // DataContext returns a context for DataBroker calls (s.Data.Broker.*) carrying
 // the verified metadata AND an explicit bearer. The connection interceptor
 // also carries the session's current installed bearer on an ordinary context.
+// Explicit AsUser delegation keeps its selected bearer without resolving or
+// appending the session bearer; poison/cancellation checks still apply.
 func (s *EnterpriseSession) DataContext(ctx context.Context) context.Context {
 	if pctx, poisoned := s.poisonedContext(ctx); poisoned {
 		return pctx
+	}
+	if _, delegated := ctx.Value(asUserContextKey{}).(asUserContext); delegated {
+		return s.Udb.Data.Context(ctx)
 	}
 	return metadata.AppendToOutgoingContext(s.Udb.Data.Context(ctx), "authorization", s.currentBearer(ctx))
 }
 
 // NativeContext returns a context for native control-plane calls (ApiKey/Tenant/
-// Notification/…) carrying the verified metadata AND the bearer.
+// Notification/…) carrying the verified metadata AND the bearer. Explicit
+// AsUser delegation retains its bearer and the session's local poison checks.
 func (s *EnterpriseSession) NativeContext(ctx context.Context) context.Context {
 	if pctx, poisoned := s.poisonedContext(ctx); poisoned {
 		return pctx
+	}
+	if _, delegated := ctx.Value(asUserContextKey{}).(asUserContext); delegated {
+		return s.Udb.Auth.Context(ctx)
 	}
 	return metadata.AppendToOutgoingContext(s.Udb.Auth.Context(ctx), "authorization", s.currentBearer(ctx))
 }
@@ -217,7 +229,10 @@ func (s *EnterpriseSession) startRefreshLoop() {
 	if s.tm == nil {
 		return
 	}
+	done := make(chan struct{})
+	s.refreshDone = done
 	go func() {
+		defer close(done)
 		for {
 			timer := time.NewTimer(s.nextRefreshWait())
 			select {
