@@ -253,6 +253,15 @@ async fn live_postgres_authz_admin_crud_and_audit_lifecycle() {
         .into_inner();
     assert!(audits.audits.iter().any(|audit| audit.object == "secret"));
 
+    let revision_model = crate::runtime::native_catalog::native_model(
+        "udb.core.authz.entity.v1.AuthzRevision",
+        &["tenant_id"],
+    );
+    let revision_count_sql = format!("SELECT COUNT(*) FROM {}", revision_model.relation);
+    let revisions_before: i64 = sqlx::query_scalar(&revision_count_sql)
+        .fetch_one(&pool)
+        .await
+        .expect("count revisions before foreign policy delete");
     let foreign_policy_delete = authz
         .delete_policy_rule(authz_tenant_request(
             authz_pb::DeletePolicyRuleRequest {
@@ -268,6 +277,24 @@ async fn live_postgres_authz_admin_crud_and_audit_lifecycle() {
         !foreign_policy_delete.deleted,
         "a foreign tenant must not delete a policy by identifier"
     );
+    let revisions_after: i64 = sqlx::query_scalar(&revision_count_sql)
+        .fetch_one(&pool)
+        .await
+        .expect("count revisions after foreign policy delete");
+    assert_eq!(
+        revisions_after, revisions_before,
+        "a foreign policy delete must not append an authz revision"
+    );
+    let retained_policy = authz
+        .get_policy_rule(Request::new(authz_pb::GetPolicyRuleRequest {
+            policy_id: direct_policy.policy_id.clone(),
+        }))
+        .await
+        .expect("foreign delete must retain the owner's policy")
+        .into_inner()
+        .policy
+        .expect("retained policy");
+    assert_eq!(retained_policy.policy_id, direct_policy.policy_id);
 
     let deleted_policy = authz
         .delete_policy_rule(authz_tenant_request(
@@ -289,6 +316,10 @@ async fn live_postgres_authz_admin_crud_and_audit_lifecycle() {
         .expect_err("deleted policy should not be returned");
     assert_eq!(missing_policy.code(), tonic::Code::NotFound);
 
+    let revisions_before: i64 = sqlx::query_scalar(&revision_count_sql)
+        .fetch_one(&pool)
+        .await
+        .expect("count revisions before foreign role delete");
     let foreign_role_delete = authz
         .delete_role(authz_tenant_request(
             authz_pb::DeleteRoleRequest {
@@ -304,6 +335,25 @@ async fn live_postgres_authz_admin_crud_and_audit_lifecycle() {
         !foreign_role_delete.deleted,
         "a foreign tenant must not delete a role by identifier"
     );
+    let revisions_after: i64 = sqlx::query_scalar(&revision_count_sql)
+        .fetch_one(&pool)
+        .await
+        .expect("count revisions after foreign role delete");
+    assert_eq!(
+        revisions_after, revisions_before,
+        "a foreign role delete must not append an authz revision"
+    );
+    let retained_role = authz
+        .get_role(Request::new(authz_pb::GetRoleRequest {
+            role_id: role.role_id.clone(),
+            ..Default::default()
+        }))
+        .await
+        .expect("foreign delete must retain the owner's role")
+        .into_inner()
+        .role
+        .expect("retained role");
+    assert!(retained_role.is_active);
 
     let deleted_role = authz
         .delete_role(authz_tenant_request(

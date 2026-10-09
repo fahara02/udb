@@ -1018,7 +1018,29 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
             "role_from_native_row(row)?",
             "fn authz_native_scope_filter(",
             "async fn read_authz_mutation_row(",
+            "let context = governance::authz_revision_context(runtime, tenant)?;",
             "crate::runtime::executor_utils::prefix_status(\"delete role failed\", err)",
+        ),
+    ),
+    TokenCheck(
+        "Foreign authz deletion leaves durable policies, roles and revisions intact",
+        "src/runtime/service/auth_service/tests/authz_admin_live.rs",
+        (
+            "a foreign policy delete must not append an authz revision",
+            "foreign delete must retain the owner's policy",
+            "a foreign role delete must not append an authz revision",
+            "foreign delete must retain the owner's role",
+            "sqlx::query_scalar(&revision_count_sql)",
+        ),
+    ),
+    TokenCheck(
+        "Foreign authz revocation leaves durable assignments and revisions intact",
+        "src/runtime/service/auth_service/tests/authz_rbac_live.rs",
+        (
+            "a foreign role revoke must not append an authz revision",
+            "foreign revoke must retain the owner's assignment",
+            "assert_eq!(retained_roles.user_roles[0].user_role_id, user_role.user_role_id);",
+            "sqlx::query_scalar(&revision_count_sql)",
         ),
     ),
     TokenCheck(
@@ -10268,6 +10290,11 @@ def authz_mutation_revision_cocommit_hits(root: Path) -> list[str]:
             hits.append(f"{prefix}/{file}: {function}: cannot discard revision mutation refusal")
         if function in ("seed_builtin_roles_impl", "invalidate_policy_bundles_impl") and "enforce_authz_body_scope(" not in body:
             hits.append(f"{prefix}/{file}: {function}: governance body scope must match the claim")
+        if file == "mod.rs" and function in ("revoke_role", "delete_role", "delete_policy_rule"):
+            context = f'let context = authz_tenant_mutation_context(&metadata, "{function}")?;'
+            scoped_read = "self.read_authz_mutation_row(&context.tenant_id,"
+            if not token_present(context, body) or not token_present(scoped_read, body):
+                hits.append(f"{prefix}/{file}: {function}: mutation scope reads must retain the resolved request tenant")
     text = read(root / prefix / "governance_sim.rs")
     methods = list(declarations.finditer(text))
     for index, method in enumerate(methods):
@@ -10528,6 +10555,11 @@ def write_fixture(root: Path) -> None:
         body = [f"self.{seam}().await?;" for _ in range(expected)]
         if function in ("seed_builtin_roles_impl", "invalidate_policy_bundles_impl"):
             body.append("super::enforce_authz_body_scope(&req.tenant_id, &req.project_id)?;")
+        if file == "mod.rs" and function in ("revoke_role", "delete_role", "delete_policy_rule"):
+            body.extend([
+                f'let context = authz_tenant_mutation_context(&metadata, "{function}")?;',
+                "self.read_authz_mutation_row(&context.tenant_id, model, filter, fields).await?;",
+            ])
         fixture_text_by_path.setdefault(path, []).append(
             f"    async fn {function}() {{ " + " ".join(body) + " }"
         )
@@ -10605,6 +10637,9 @@ def run_selftest() -> None:
             ("src/runtime/core/native_store.rs", "if require_affected && result.rows_affected() == 0"),
             ("src/runtime/service/live_tests/authz_deny_path_live.rs", "zero-row mutations must not commit any revision"),
             ("src/runtime/service/live_tests/authz_deny_path_live.rs", "revision refusal rolls back the actual policy replacement"),
+            ("src/runtime/service/auth_service/authz/mod.rs", "let context = governance::authz_revision_context(runtime, tenant)?;"),
+            ("src/runtime/service/auth_service/tests/authz_admin_live.rs", "a foreign policy delete must not append an authz revision"),
+            ("src/runtime/service/auth_service/tests/authz_rbac_live.rs", "a foreign role revoke must not append an authz revision"),
         ):
             write_fixture(root)
             target = root / source
@@ -10623,6 +10658,21 @@ def run_selftest() -> None:
             target.write_text(text[:start] + body + text[end:], encoding="utf-8")
             failures = check_root(root)
             assert any(function in failure and "mutation/revision transaction requires" in failure for failure in failures), failures
+        for function in ("revoke_role", "delete_role", "delete_policy_rule"):
+            for missing in ("context", "scope"):
+                write_fixture(root)
+                target = root / "src/runtime/service/auth_service/authz/mod.rs"
+                text = read(target)
+                start = text.index(f"    async fn {function}()")
+                end = text.index(" }", start) + 2
+                body = text[start:end]
+                if missing == "context":
+                    body = body.replace(f'let context = authz_tenant_mutation_context(&metadata, "{function}")?;', "")
+                else:
+                    body = body.replace("read_authz_mutation_row(&context.tenant_id,", 'read_authz_mutation_row("",')
+                target.write_text(text[:start] + body + text[end:], encoding="utf-8")
+                failures = check_root(root)
+                assert any(function in failure and "scope reads must retain" in failure for failure in failures), (function, missing, failures)
         write_fixture(root)
         target = root / "src/runtime/service/auth_service/authz/governance_sim.rs"
         text = read(target)

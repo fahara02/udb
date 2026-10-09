@@ -17,6 +17,10 @@ no-wrapper plan.
 - Candidate benchmarks now build the same `dist` profile, full WebRTC features
   and Linux CPU floor as the shipped binary, and record that profile explicitly.
   CI refuses a debug-profile or media-disabled candidate build.
+- UUID-addressed policy deletion, role deletion and assignment revocation keep
+  the resolved request tenant when reading their transaction scope. A foreign
+  tenant remains an idempotent no-op and cannot append a revision or remove the
+  owner's records, including on internal calls with tenant metadata.
 
 ### Added
 

@@ -130,6 +130,15 @@ async fn live_postgres_authz_role_policy_roundtrip() {
     assert_eq!(listed_roles.user_roles.len(), 1);
     assert!(listed_roles.user_roles[0].expires_at.is_some());
 
+    let revision_model = crate::runtime::native_catalog::native_model(
+        "udb.core.authz.entity.v1.AuthzRevision",
+        &["tenant_id"],
+    );
+    let revision_count_sql = format!("SELECT COUNT(*) FROM {}", revision_model.relation);
+    let revisions_before: i64 = sqlx::query_scalar(&revision_count_sql)
+        .fetch_one(&pool)
+        .await
+        .expect("count revisions before foreign role revoke");
     let foreign_revoke = authz
         .revoke_role(authz_tenant_request(
             authz_pb::RevokeRoleRequest {
@@ -146,6 +155,29 @@ async fn live_postgres_authz_role_policy_roundtrip() {
     assert!(
         !foreign_revoke.revoked,
         "a foreign tenant must not revoke a role assignment by identifier"
+    );
+    let revisions_after: i64 = sqlx::query_scalar(&revision_count_sql)
+        .fetch_one(&pool)
+        .await
+        .expect("count revisions after foreign role revoke");
+    assert_eq!(
+        revisions_after, revisions_before,
+        "a foreign role revoke must not append an authz revision"
+    );
+    let retained_roles = authz
+        .list_user_roles(Request::new(authz_pb::ListUserRolesRequest {
+            user_id: user.user_id.clone(),
+            domain: "acme".to_string(),
+            active_only: true,
+            ..Default::default()
+        }))
+        .await
+        .expect("foreign revoke must retain the owner's assignment")
+        .into_inner();
+    assert_eq!(retained_roles.user_roles.len(), 1);
+    assert_eq!(
+        retained_roles.user_roles[0].user_role_id,
+        user_role.user_role_id
     );
 
     let revoked = authz

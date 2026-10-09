@@ -1317,9 +1317,11 @@ impl AuthzServiceImpl {
     }
 
     /// Read one UUID-addressed mutation target from the same control primary
-    /// used by revision transactions. The verified caller still limits reads.
+    /// used by revision transactions. Preserve the resolved request tenant on
+    /// internal calls as well as the verified caller's tenant on public calls.
     async fn read_authz_mutation_row(
         &self,
+        tenant: &str,
         message_type: &str,
         filter: LogicalFilter,
         fields: &[&str],
@@ -1331,10 +1333,7 @@ impl AuthzServiceImpl {
                 "native authz requires runtime-backed scope reads",
             )
         })?;
-        let context = governance::authz_revision_context(
-            runtime,
-            &authz_record_tenant_scope().unwrap_or_default(),
-        )?;
+        let context = governance::authz_revision_context(runtime, tenant)?;
         let rows = runtime
             .native_entity_read_for_service(
                 "authz",
@@ -3515,6 +3514,7 @@ impl AuthzService for AuthzServiceImpl {
             ));
         }
         let user_role_id = parse_uuid_field("user_role_id", &req.user_role_id)?;
+        let context = authz_tenant_mutation_context(&metadata, "revoke_role")?;
         let _runtime = self.runtime.as_ref().ok_or_else(|| {
             authz_capability_status(
                 "user_role_persistence",
@@ -3544,6 +3544,7 @@ impl AuthzService for AuthzServiceImpl {
         }
         let Some(scope_row) = self
             .read_authz_mutation_row(
+                &context.tenant_id,
                 "udb.core.authz.entity.v1.UserRole",
                 filter.clone(),
                 &["tenant_id"],
@@ -3561,7 +3562,6 @@ impl AuthzService for AuthzServiceImpl {
             filter: LogicalFilter::And(vec![filter, scope_filter]),
             return_fields: vec!["tenant_id".to_string()],
         };
-        authz_tenant_mutation_context(&metadata, "revoke_role")?;
         let outcome = self
             .mutate_authz_with_revision(
                 &tenant,
@@ -3932,6 +3932,7 @@ impl AuthzService for AuthzServiceImpl {
         ];
         let Some(scope_row) = self
             .read_authz_mutation_row(
+                &authz_record_tenant_scope().unwrap_or_default(),
                 "udb.core.authz.entity.v1.Role",
                 id_filter.clone(),
                 &["tenant_id", "project_id"],
@@ -4060,7 +4061,7 @@ impl AuthzService for AuthzServiceImpl {
         }
         let role_id = parse_uuid_field("role_id", &req.role_id)?;
         let deleted_by = parse_uuid_field("deleted_by", &req.deleted_by)?;
-        let _context = authz_tenant_mutation_context(&metadata, "delete_role")?;
+        let context = authz_tenant_mutation_context(&metadata, "delete_role")?;
         self.enforce_role_authority_mutation(role_id, "delete_role")
             .await?;
         let id_filter = LogicalFilter::Comparison {
@@ -4070,6 +4071,7 @@ impl AuthzService for AuthzServiceImpl {
         };
         let Some(scope_row) = self
             .read_authz_mutation_row(
+                &context.tenant_id,
                 "udb.core.authz.entity.v1.Role",
                 id_filter.clone(),
                 &["tenant_id", "project_id"],
@@ -4367,9 +4369,10 @@ impl AuthzService for AuthzServiceImpl {
                 return_fields: vec!["tenant_id".to_string(), "project_id".to_string()],
                 require_affected: true,
             };
-            authz_tenant_mutation_context(&metadata, "delete_policy_rule")?;
+            let context = authz_tenant_mutation_context(&metadata, "delete_policy_rule")?;
             let Some(scope_row) = self
                 .read_authz_mutation_row(
+                    &context.tenant_id,
                     "udb.core.authz.entity.v1.PolicyRule",
                     op.filter.clone(),
                     &["tenant_id", "project_id"],
