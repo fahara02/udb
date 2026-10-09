@@ -150,7 +150,7 @@ impl AuthzServiceImpl {
         draft_id: &str,
     ) -> Result<PolicyDocument, Status> {
         let draft = self.load_draft(draft_id).await?;
-        Ok(draft_to_document(&draft))
+        draft_to_document(&draft)
     }
 
     /// Load a `PolicySet` row as the proto entity.
@@ -254,9 +254,9 @@ impl AuthzServiceImpl {
         version_id: &str,
     ) -> Result<PolicyDocument, Status> {
         let v = self.load_version(version_id).await?;
-        let value: serde_json::Value =
-            serde_json::from_str(&v.payload_json).unwrap_or_else(|_| serde_json::json!({}));
-        Ok(PolicyDocument::from_json(&value))
+        let value: serde_json::Value = serde_json::from_str(&v.payload_json)
+            .map_err(|_| document_decode_status("payload_json"))?;
+        PolicyDocument::from_json(&value).map_err(|_| document_decode_status("payload_json"))
     }
 
     pub(super) async fn load_approval(
@@ -304,7 +304,7 @@ impl AuthzServiceImpl {
         draft: &authz_entity_pb::PolicyDraft,
         actor: &str,
     ) -> Result<authz_entity_pb::PolicyVersion, Status> {
-        let document = draft_to_document(draft);
+        let document = draft_to_document(draft)?;
         let content_hash = document.content_hash();
         let policy_set_id = self
             .ensure_policy_set(&draft.tenant_id, &draft.project_id, "default", actor)
@@ -385,19 +385,48 @@ fn decode_err(e: sqlx::Error) -> Status {
     )
 }
 
-/// Reconstruct the candidate document from a draft entity.
-pub(super) fn draft_to_document(draft: &authz_entity_pb::PolicyDraft) -> PolicyDocument {
+fn document_decode_status(column: &str) -> Status {
+    crate::runtime::error_reasons::annotate(
+        governance_store_internal_status(
+            "decode_policy_document",
+            "stored policy document is invalid",
+        ),
+        crate::runtime::error_reasons::DECODE_FAILED,
+        Some(column),
+        None,
+    )
+}
+
+/// Reconstruct the candidate document from a draft entity without silent defaults.
+pub(super) fn draft_to_document(
+    draft: &authz_entity_pb::PolicyDraft,
+) -> Result<PolicyDocument, Status> {
     let policies_value: serde_json::Value = serde_json::from_str(&draft.proposed_policies_json)
-        .unwrap_or_else(|_| serde_json::json!([]));
-    let tuples_value: serde_json::Value =
-        serde_json::from_str(&draft.proposed_tuples_json).unwrap_or_else(|_| serde_json::json!({}));
+        .map_err(|_| document_decode_status("proposed_policies_json"))?;
+    // Legacy drafts may omit the tuple document entirely. An explicit invalid
+    // value must still refuse; it cannot remove bindings or relationship checks.
+    let tuples_value: serde_json::Value = if draft.proposed_tuples_json.trim().is_empty() {
+        serde_json::json!({})
+    } else {
+        serde_json::from_str(&draft.proposed_tuples_json)
+            .map_err(|_| document_decode_status("proposed_tuples_json"))?
+    };
+    if !tuples_value.is_object() {
+        return Err(document_decode_status("proposed_tuples_json"));
+    }
     // proposed_tuples_json carries { relationship_tuples, role_bindings }.
     let combined = serde_json::json!({
         "policies": policies_value,
         "relationship_tuples": tuples_value.get("relationship_tuples").cloned().unwrap_or(serde_json::json!([])),
         "role_bindings": tuples_value.get("role_bindings").cloned().unwrap_or(serde_json::json!([])),
     });
-    PolicyDocument::from_json(&combined)
+    PolicyDocument::from_json(&combined).map_err(|field| {
+        document_decode_status(if field == "policies" {
+            "proposed_policies_json"
+        } else {
+            "proposed_tuples_json"
+        })
+    })
 }
 
 /// Map a `policy_versions` row to the proto entity.
@@ -492,5 +521,37 @@ mod tests {
             "promote_draft_to_version",
             "promote draft to version failed: store closed",
         );
+    }
+
+    #[test]
+    fn draft_document_decode_refuses_corruption_with_the_affected_column() {
+        let mut draft = authz_entity_pb::PolicyDraft {
+            proposed_policies_json: "[]".to_string(),
+            ..Default::default()
+        };
+        assert_eq!(
+            draft_to_document(&draft).unwrap(),
+            PolicyDocument::default()
+        );
+        for (policies, tuples, column) in [
+            ("{", "", "proposed_policies_json"),
+            ("[]", "null", "proposed_tuples_json"),
+            ("[]", "{\"role_bindings\":[false]}", "proposed_tuples_json"),
+            ("[{}]", "{}", "proposed_policies_json"),
+        ] {
+            draft.proposed_policies_json = policies.to_string();
+            draft.proposed_tuples_json = tuples.to_string();
+            let err = draft_to_document(&draft).expect_err("corrupt draft must refuse");
+            assert_eq!(
+                err.code(),
+                crate::runtime::error_reasons::DECODE_FAILED.status
+            );
+            let detail = decode_detail(&err);
+            assert_eq!(
+                detail.reason,
+                crate::runtime::error_reasons::DECODE_FAILED.code
+            );
+            assert_eq!(detail.column, column);
+        }
     }
 }

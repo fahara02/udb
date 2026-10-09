@@ -42,6 +42,9 @@ no-wrapper plan.
   classification, preserving constraint and outage details at their boundaries.
 - A scoped authz upsert that affects no row refuses before its revision append.
   The original policy keeps its tenant, project and resource on that refusal.
+- Frozen governance policy documents refuse malformed arrays, policy fields,
+  bindings and tuples with `UDB_DECODE_FAILED` before activation changes policies
+  or revisions. Invalid fields no longer become defaults or disappear.
 
 ### Added
 

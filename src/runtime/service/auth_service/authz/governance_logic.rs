@@ -92,28 +92,35 @@ impl PolicyDocument {
         })
     }
 
-    /// Parse the JSON payload stored on a `PolicyVersion`.
-    pub fn from_json(value: &serde_json::Value) -> Self {
+    /// Decode the frozen document without dropping rules or weakening fields.
+    pub fn from_json(value: &serde_json::Value) -> Result<Self, &'static str> {
+        value.as_object().ok_or("document")?;
         let policies = value
             .get("policies")
             .and_then(|v| v.as_array())
-            .map(|arr| arr.iter().filter_map(policy_from_json).collect())
-            .unwrap_or_default();
+            .ok_or("policies")?
+            .iter()
+            .map(policy_from_json)
+            .collect::<Result<Vec<_>, _>>()?;
         let role_bindings = value
             .get("role_bindings")
             .and_then(|v| v.as_array())
-            .map(|arr| arr.iter().filter_map(binding_from_json).collect())
-            .unwrap_or_default();
+            .ok_or("role_bindings")?
+            .iter()
+            .map(binding_from_json)
+            .collect::<Result<Vec<_>, _>>()?;
         let tuples = value
             .get("relationship_tuples")
             .and_then(|v| v.as_array())
-            .map(|arr| arr.iter().filter_map(tuple_from_json).collect())
-            .unwrap_or_default();
-        Self {
+            .ok_or("relationship_tuples")?
+            .iter()
+            .map(tuple_from_json)
+            .collect::<Result<Vec<_>, _>>()?;
+        Ok(Self {
             policies,
             role_bindings,
             tuples,
-        }
+        })
     }
 
     /// Build a document from the governance `PolicyDocument` proto message.
@@ -344,56 +351,21 @@ pub fn policy_to_json(p: &AuthzPolicy) -> serde_json::Value {
     })
 }
 
-fn policy_from_json(value: &serde_json::Value) -> Option<AuthzPolicy> {
-    let s = |k: &str| {
-        value
-            .get(k)
-            .and_then(|v| v.as_str())
-            .unwrap_or("")
-            .to_string()
-    };
-    let effect = if s("effect").eq_ignore_ascii_case("deny") {
-        Effect::Deny
-    } else {
-        Effect::Allow
-    };
-    let conditions = value
-        .get("conditions")
-        .and_then(|v| v.as_object())
-        .map(|m| {
-            m.iter()
-                .map(|(k, v)| (k.clone(), v.as_str().unwrap_or("").to_string()))
-                .collect()
-        })
-        .unwrap_or_default();
-    let required_scopes = value
-        .get("required_scopes")
-        .and_then(|v| v.as_array())
-        .map(|a| {
-            a.iter()
-                .filter_map(|v| v.as_str().map(ToString::to_string))
-                .collect()
-        })
-        .unwrap_or_default();
-    Some(AuthzPolicy {
-        id: s("id"),
-        priority: value.get("priority").and_then(|v| v.as_i64()).unwrap_or(0) as i32,
-        enabled: value
-            .get("enabled")
-            .and_then(|v| v.as_bool())
-            .unwrap_or(true),
-        effect,
-        tenant: s("tenant"),
-        project: s("project"),
-        subject: s("subject"),
-        role: s("role"),
-        action: s("action"),
-        resource: s("resource"),
-        purpose: s("purpose"),
-        relationship: s("relationship"),
-        conditions,
-        required_scopes,
-    })
+fn policy_from_json(value: &serde_json::Value) -> Result<AuthzPolicy, &'static str> {
+    let supplied = value.as_object().ok_or("policies")?;
+    // AuthzPolicy's general JSON contract supports defaults. Frozen governance
+    // documents use every field written by this serializer: a missing tenant,
+    // scope, effect or condition cannot turn into a less restrictive policy.
+    let expected = policy_to_json(&AuthzPolicy::default());
+    if expected
+        .as_object()
+        .expect("policy serializer emits an object")
+        .keys()
+        .any(|field| !supplied.contains_key(field))
+    {
+        return Err("policies");
+    }
+    serde_json::from_value(value.clone()).map_err(|_| "policies")
 }
 
 fn binding_to_json(b: &RoleBinding) -> serde_json::Value {
@@ -405,19 +377,19 @@ fn binding_to_json(b: &RoleBinding) -> serde_json::Value {
     })
 }
 
-fn binding_from_json(value: &serde_json::Value) -> Option<RoleBinding> {
+fn binding_from_json(value: &serde_json::Value) -> Result<RoleBinding, &'static str> {
     let s = |k: &str| {
         value
             .get(k)
             .and_then(|v| v.as_str())
-            .unwrap_or("")
-            .to_string()
+            .map(ToString::to_string)
+            .ok_or("role_bindings")
     };
-    Some(RoleBinding {
-        subject: s("subject"),
-        role: s("role"),
-        tenant: s("tenant"),
-        project: s("project"),
+    Ok(RoleBinding {
+        subject: s("subject")?,
+        role: s("role")?,
+        tenant: s("tenant")?,
+        project: s("project")?,
     })
 }
 
@@ -431,20 +403,20 @@ fn tuple_to_json(t: &RelationshipTuple) -> serde_json::Value {
     })
 }
 
-fn tuple_from_json(value: &serde_json::Value) -> Option<RelationshipTuple> {
+fn tuple_from_json(value: &serde_json::Value) -> Result<RelationshipTuple, &'static str> {
     let s = |k: &str| {
         value
             .get(k)
             .and_then(|v| v.as_str())
-            .unwrap_or("")
-            .to_string()
+            .map(ToString::to_string)
+            .ok_or("relationship_tuples")
     };
-    Some(RelationshipTuple {
-        subject: s("subject"),
-        relation: s("relation"),
-        object: s("object"),
-        tenant: s("tenant"),
-        project: s("project"),
+    Ok(RelationshipTuple {
+        subject: s("subject")?,
+        relation: s("relation")?,
+        object: s("object")?,
+        tenant: s("tenant")?,
+        project: s("project")?,
     })
 }
 
@@ -705,8 +677,54 @@ mod tests {
             policies: vec![p.clone()],
             ..Default::default()
         };
-        let parsed = PolicyDocument::from_json(&doc.to_json());
+        let parsed = PolicyDocument::from_json(&doc.to_json()).expect("canonical document decodes");
         assert_eq!(parsed.policies[0], p);
+    }
+
+    #[test]
+    fn governance_document_refuses_malformed_fields_without_dropping_rules() {
+        let document = PolicyDocument {
+            policies: vec![AuthzPolicy {
+                id: "policy".to_string(),
+                tenant: "tenant".to_string(),
+                required_scopes: vec!["scope:read".to_string()],
+                conditions: BTreeMap::from([(
+                    "classification".to_string(),
+                    "restricted".to_string(),
+                )]),
+                ..Default::default()
+            }],
+            role_bindings: vec![RoleBinding::default()],
+            tuples: vec![RelationshipTuple::default()],
+        };
+        let canonical = document.to_json();
+        assert_eq!(PolicyDocument::from_json(&canonical), Ok(document));
+        for (field, bad) in [
+            ("effect", serde_json::json!("unknown")),
+            ("enabled", serde_json::json!("false")),
+            ("priority", serde_json::json!(i64::from(i32::MAX) + 1)),
+            ("tenant", serde_json::Value::Null),
+            ("conditions", serde_json::json!({"classification": 42})),
+            ("required_scopes", serde_json::json!(["scope:read", 42])),
+        ] {
+            let mut malformed = canonical.clone();
+            malformed["policies"][0][field] = bad;
+            assert!(PolicyDocument::from_json(&malformed).is_err(), "{field}");
+        }
+        let mut missing = canonical.clone();
+        missing["policies"][0]
+            .as_object_mut()
+            .unwrap()
+            .remove("tenant");
+        assert!(PolicyDocument::from_json(&missing).is_err());
+        for field in ["policies", "role_bindings", "relationship_tuples"] {
+            let mut malformed = canonical.clone();
+            malformed[field] = serde_json::json!({});
+            assert!(PolicyDocument::from_json(&malformed).is_err(), "{field}");
+            malformed[field] = serde_json::json!([false]);
+            assert!(PolicyDocument::from_json(&malformed).is_err(), "{field}");
+        }
+        assert!(PolicyDocument::from_json(&serde_json::Value::Null).is_err());
     }
 
     // K3: draft state-machine guards.

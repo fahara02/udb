@@ -3122,6 +3122,43 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
         ),
     ),
     TokenCheck(
+        "Frozen authorization documents refuse malformed fields instead of defaults",
+        "src/runtime/service/auth_service/authz/governance_logic.rs",
+        (
+            "pub fn from_json(value: &serde_json::Value) -> Result<Self, &'static str>",
+            ".collect::<Result<Vec<_>, _>>()?",
+            "serde_json::from_value(value.clone())",
+            "policy_to_json(&AuthzPolicy::default())",
+            "governance_document_refuses_malformed_fields_without_dropping_rules",
+        ),
+    ),
+    TokenCheck(
+        "Durable authorization document decodes preserve typed refusals",
+        "src/runtime/service/auth_service/authz/governance_store.rs",
+        (
+            "fn document_decode_status(column: &str) -> Status",
+            "crate::runtime::error_reasons::DECODE_FAILED",
+            'Some(column)',
+            '"stored policy document is invalid"',
+            'serde_json::from_str(&v.payload_json).map_err(|_| document_decode_status("payload_json"))?',
+            'PolicyDocument::from_json(&value).map_err(|_| document_decode_status("payload_json"))',
+            "let document = draft_to_document(draft)?;",
+        ),
+    ),
+    TokenCheck(
+        "Actual corrupt frozen policy activation refuses before policies and revisions change",
+        "src/runtime/service/auth_service/tests/authz_admin_live.rs",
+        (
+            '"corrupt frozen policy document must refuse activation"',
+            "crate::runtime::error_reasons::DECODE_FAILED.code",
+            '"payload_json"',
+            "assert_eq!(after_revisions, before_revisions",
+            '"corrupt activation must not append a revision"',
+            '"corrupt activation must retain the approved version"',
+            '"corrupt activation must not apply any policy"',
+        ),
+    ),
+    TokenCheck(
         "Authz policy-set runtime-backed persistence capability uses typed capability detail",
         "src/runtime/service/auth_service/authz/governance_drafts.rs",
         (
@@ -10715,6 +10752,9 @@ def run_selftest() -> None:
             ("src/runtime/service/auth_service/tests/authz_rbac_live.rs", "a foreign role revoke must not append an authz revision"),
             ("src/runtime/service/auth_service/tests/authz_admin_live.rs", "pool.close().await;"),
             ("src/runtime/service/auth_service/tests/authz_admin_live.rs", "crate::runtime::error_reasons::BACKEND_UNAVAILABLE.code"),
+            ("src/runtime/service/auth_service/authz/governance_logic.rs", ".collect::<Result<Vec<_>, _>>()?"),
+            ("src/runtime/service/auth_service/authz/governance_store.rs", "let document = draft_to_document(draft)?;"),
+            ("src/runtime/service/auth_service/tests/authz_admin_live.rs", "corrupt activation must not append a revision"),
         ):
             write_fixture(root)
             target = root / source

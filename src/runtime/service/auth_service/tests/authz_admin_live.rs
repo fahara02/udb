@@ -641,6 +641,136 @@ async fn live_postgres_authz_governance_activate_policy_read_after_write() {
         .version
         .expect("approved draft must produce a policy version");
 
+    // Corrupt the actual frozen store value, then call the served activation
+    // handler. No partial document may activate or advance durable revisions.
+    let versions = crate::runtime::native_catalog::native_model(
+        "udb.core.authz.entity.v1.PolicyVersion",
+        &["policy_version_id", "payload_json", "state"],
+    );
+    let revisions = crate::runtime::native_catalog::native_model(
+        "udb.core.authz.entity.v1.AuthzRevision",
+        &["tenant_id"],
+    );
+    let policies = authz.policies_model();
+    let revision_count_sql = format!("SELECT COUNT(*) FROM {}", revisions.relation);
+    let state_sql = format!(
+        "SELECT {} FROM {} WHERE {} = $1::UUID",
+        versions.q("state"),
+        versions.relation,
+        versions.q("policy_version_id"),
+    );
+    let policy_count_sql = format!(
+        "SELECT COUNT(*) FROM {} WHERE {} = $1::UUID",
+        policies.relation,
+        policies.q("policy_id"),
+    );
+    let payload_sql = format!(
+        "UPDATE {} SET {} = $1::JSONB WHERE {} = $2::UUID",
+        versions.relation,
+        versions.q("payload_json"),
+        versions.q("policy_version_id"),
+    );
+    let before_revisions: i64 = sqlx::query_scalar(&revision_count_sql)
+        .fetch_one(&pool)
+        .await
+        .expect("count revisions before corrupt activation");
+    let before_state: String = sqlx::query_scalar(&state_sql)
+        .bind(&version.policy_version_id)
+        .fetch_one(&pool)
+        .await
+        .expect("read approved version state");
+    let canonical: serde_json::Value =
+        serde_json::from_str(&version.payload_json).expect("canonical frozen policy document");
+    let mut bad_effect = canonical.clone();
+    bad_effect["policies"][0]["effect"] = serde_json::json!("private-invalid-effect");
+    let mut bad_condition = canonical.clone();
+    bad_condition["policies"][0]["conditions"] = serde_json::json!({"classification": 42});
+    let mut bad_array = canonical;
+    bad_array["policies"] = serde_json::json!({});
+    let mut refusals = Vec::new();
+    for malformed in [
+        serde_json::Value::Null,
+        bad_effect,
+        bad_condition,
+        bad_array,
+    ] {
+        sqlx::query(&payload_sql)
+            .bind(malformed.to_string())
+            .bind(&version.policy_version_id)
+            .execute(&pool)
+            .await
+            .expect("write actual corrupt frozen document");
+        refusals.push(
+            authz
+                .activate_policy_version(Request::new(authz_pb::ActivatePolicyVersionRequest {
+                    actor: Some(live_governance_actor(&reviewer.user_id)),
+                    policy_version_id: version.policy_version_id.clone(),
+                    expected_revision: version.revision,
+                    ..Default::default()
+                }))
+                .await,
+        );
+    }
+    let after_revisions: i64 = sqlx::query_scalar(&revision_count_sql)
+        .fetch_one(&pool)
+        .await
+        .expect("count revisions after corrupt activation");
+    let after_state: String = sqlx::query_scalar(&state_sql)
+        .bind(&version.policy_version_id)
+        .fetch_one(&pool)
+        .await
+        .expect("read version after corrupt activation");
+    let applied_policies: i64 = sqlx::query_scalar(&policy_count_sql)
+        .bind(&policy_id)
+        .fetch_one(&pool)
+        .await
+        .expect("count policies after corrupt activation");
+    sqlx::query(&payload_sql)
+        .bind(&version.payload_json)
+        .bind(&version.policy_version_id)
+        .execute(&pool)
+        .await
+        .expect("restore canonical frozen document");
+    let all_typed_refusals = refusals.iter().all(|result| {
+        let Err(err) = result else {
+            return false;
+        };
+        let detail = err
+            .metadata()
+            .get_bin(crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY)
+            .and_then(|raw| raw.to_bytes().ok())
+            .map(|raw| crate::runtime::executor_utils::decode_error_detail_from_raw(&raw));
+        err.code() == crate::runtime::error_reasons::DECODE_FAILED.status
+            && !err.message().contains("private-invalid-effect")
+            && detail.is_some_and(|detail| {
+                detail.reason == crate::runtime::error_reasons::DECODE_FAILED.code
+                    && detail.column == "payload_json"
+            })
+    });
+    if !all_typed_refusals
+        || after_revisions != before_revisions
+        || after_state != before_state
+        || applied_policies != 0
+    {
+        cleanup_native_auth_db(&pool).await;
+    }
+    assert!(
+        all_typed_refusals,
+        "corrupt frozen policy document must refuse activation"
+    );
+    assert_eq!(
+        after_revisions, before_revisions,
+        "corrupt activation must not append a revision"
+    );
+    assert_eq!(
+        after_state, before_state,
+        "corrupt activation must retain the approved version"
+    );
+    assert_eq!(
+        applied_policies, 0,
+        "corrupt activation must not apply any policy"
+    );
+
     authz
         .activate_policy_version(Request::new(authz_pb::ActivatePolicyVersionRequest {
             actor: Some(live_governance_actor(&reviewer.user_id)),
@@ -863,7 +993,10 @@ async fn live_postgres_put_authz_policy_refuses_foreign_policy_id_overwrite() {
     // The tenant ownership pre-read allows this caller. The shared compiler
     // must still skip the conflicting row because its project belongs to a
     // different scope; that skip must roll back before any revision append.
-    let revisions = authz.authz_revisions_model();
+    let revisions = crate::runtime::native_catalog::native_model(
+        "udb.core.authz.entity.v1.AuthzRevision",
+        &["tenant_id"],
+    );
     let revision_count_sql = format!("SELECT COUNT(*) FROM {}", revisions.relation);
     let revisions_before: i64 = sqlx::query_scalar(&revision_count_sql)
         .fetch_one(&pool)
