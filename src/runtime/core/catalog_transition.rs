@@ -1111,12 +1111,17 @@ impl DataBrokerRuntime {
         let mut tx = pool.begin().await.map_err(|err| {
             catalog_admin_internal_status("reviewed_shape_begin", err.to_string())
         })?;
-        sqlx::raw_sql("SET LOCAL lock_timeout='5s'; SET LOCAL statement_timeout='60s'")
-            .execute(&mut *tx)
-            .await
-            .map_err(|err| {
-                catalog_admin_internal_status("reviewed_shape_deadlines", err.to_string())
-            })?;
+        // Call the concrete connection executor directly: its Send BoxFuture
+        // keeps this verifier usable by tonic's Send handler futures without
+        // RawSql::execute's additional generic async lifetime boundary.
+        sqlx::Executor::execute(
+            &mut *tx,
+            sqlx::raw_sql("SET LOCAL lock_timeout='5s'; SET LOCAL statement_timeout='60s'"),
+        )
+        .await
+        .map_err(|err| {
+            catalog_admin_internal_status("reviewed_shape_deadlines", err.to_string())
+        })?;
         let live: Option<(i64, String, String, bool, bool)> = sqlx::query_as(
             "SELECT c.oid::BIGINT,c.relkind::TEXT,c.relpersistence::TEXT,c.relrowsecurity,c.relforcerowsecurity
              FROM pg_catalog.pg_class c JOIN pg_catalog.pg_namespace n ON n.oid=c.relnamespace
@@ -1376,8 +1381,7 @@ impl DataBrokerRuntime {
             expected_index.name = format!("udb_review_index_{}", Uuid::new_v4().simple());
             let expected_sql =
                 crate::generation::sql::render_index_in_tx(&expected_table, &expected_index);
-            sqlx::raw_sql(&expected_sql)
-                .execute(&mut *tx)
+            sqlx::Executor::execute(&mut *tx, sqlx::raw_sql(&expected_sql))
                 .await
                 .map_err(|err| {
                     catalog_admin_internal_status("reviewed_expected_index_parse", err.to_string())
