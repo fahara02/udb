@@ -1515,6 +1515,7 @@ impl fmt::Debug for CdcEngine {
 // Phase I: impl CdcEngine split into continuation impl modules.
 mod engine_dlq;
 mod engine_tail;
+pub(crate) mod journal;
 // U21: Kafka transactional exactly-once publish.
 #[cfg(feature = "kafka")]
 pub mod kafka_tx;

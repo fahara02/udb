@@ -22,15 +22,15 @@ use std::collections::HashMap;
 use std::sync::{Arc, Mutex, OnceLock};
 use std::time::Duration;
 
-use chrono::{DateTime, Utc};
 use tokio::sync::broadcast;
 use tokio::time::{Instant, MissedTickBehavior, interval_at};
 
-use crate::cdc::{CdcEngine, CdcEnvelope};
+use crate::cdc::CdcEngine;
 use crate::metrics::MetricsRecorder;
+use crate::runtime::cdc::journal::{JournalEntry, JournalPosition};
 
-/// A position in the journal's canonical `(published_at, event_id)` order.
-pub(crate) type Watermark = (DateTime<Utc>, String);
+/// A position in the journal's immutable database commit-prefix order.
+pub(crate) type Watermark = JournalPosition;
 
 /// How often a shared poller scans the journal.
 pub(crate) const JOURNAL_TAIL_POLL: Duration = Duration::from_millis(500);
@@ -52,7 +52,7 @@ pub(crate) struct FeedBatch {
     /// Watermark of the last row the scan covered (in scope or not).
     pub(crate) to: Watermark,
     /// The in-scope events in journal order.
-    pub(crate) events: Vec<CdcEnvelope>,
+    pub(crate) events: Vec<JournalEntry>,
     /// Set when the journal could not be read; the feed ends after it.
     pub(crate) error: Option<String>,
 }
@@ -61,7 +61,7 @@ impl FeedBatch {
     fn failed(error: String) -> Self {
         let epoch = epoch_watermark();
         Self {
-            from: epoch.clone(),
+            from: epoch,
             to: epoch,
             events: Vec::new(),
             error: Some(error),
@@ -71,15 +71,12 @@ impl FeedBatch {
 
 /// The journal's lower bound: every real row sorts after it.
 pub(crate) fn epoch_watermark() -> Watermark {
-    (
-        DateTime::<Utc>::from_timestamp(0, 0).expect("unix epoch is a valid timestamp"),
-        String::new(),
-    )
+    0
 }
 
-/// An envelope's journal position.
-pub(crate) fn envelope_watermark(envelope: &CdcEnvelope) -> Watermark {
-    (envelope.published_at, envelope.event_id.clone())
+/// Timestamp and UUID are metadata, never cursor authority.
+pub(crate) fn envelope_watermark(entry: &JournalEntry) -> Watermark {
+    entry.position
 }
 
 type FeedKey = (String, String, String);
@@ -100,28 +97,46 @@ pub(crate) fn active_feed_count() -> usize {
 /// none runs. Join BEFORE reading the subscriber's own journal head: every batch
 /// produced after this call reaches the returned receiver, so the head the
 /// subscriber reads next can never sit past the feed's first batch unseen.
-pub(crate) fn join(
+pub(crate) async fn join(
     cdc: &Arc<CdcEngine>,
     topic: &str,
     tenant_id: &str,
     project_id: &str,
     batch: i64,
     metrics: Arc<dyn MetricsRecorder>,
-) -> broadcast::Receiver<Arc<FeedBatch>> {
+) -> Result<broadcast::Receiver<Arc<FeedBatch>>, String> {
     let key: FeedKey = (
         topic.to_string(),
         tenant_id.to_string(),
         project_id.to_string(),
     );
+    {
+        let feeds = registry().lock().unwrap_or_else(|p| p.into_inner());
+        if let Some(sender) = feeds.get(&key) {
+            return Ok(sender.subscribe());
+        }
+    }
+    // Subscribe before resolving this feed's head, and finish its head before
+    // the caller reads the subscriber's head. No mutex is held across SQL.
+    let wakes = cdc.subscribe();
+    let initial = cdc.journal_head_watermark(topic).await?;
     let mut feeds = registry().lock().unwrap_or_else(|p| p.into_inner());
     if let Some(sender) = feeds.get(&key) {
-        return sender.subscribe();
+        return Ok(sender.subscribe());
     }
     let (sender, receiver) = broadcast::channel(FEED_CAPACITY);
     feeds.insert(key.clone(), sender.clone());
     drop(feeds);
-    tokio::spawn(run_feed(cdc.clone(), key, sender, batch, metrics));
-    receiver
+    tokio::spawn(run_feed(
+        cdc.clone(),
+        key,
+        sender,
+        batch,
+        metrics,
+        initial,
+        wakes,
+    ));
+    Ok(receiver)
 }
 
 /// Remove this poller's registry entry. With `only_if_idle`, only when no
@@ -147,40 +162,40 @@ async fn run_feed(
     sender: FeedSender,
     batch: i64,
     metrics: Arc<dyn MetricsRecorder>,
+    mut watermark: Watermark,
+    mut wakes: broadcast::Receiver<crate::cdc::CdcEnvelope>,
 ) {
     let (topic, tenant_id, project_id) = (&key.0, &key.1, &key.2);
-    let mut watermark = match cdc.journal_head_watermark(topic).await {
-        Ok(head) => head,
-        Err(err) => {
-            fail(&key, &sender, topic, err);
-            return;
-        }
-    };
+    let mut wakes_open = true;
     let mut ticker = interval_at(Instant::now() + JOURNAL_TAIL_POLL, JOURNAL_TAIL_POLL);
     ticker.set_missed_tick_behavior(MissedTickBehavior::Delay);
     loop {
-        ticker.tick().await;
+        tokio::select! {
+            _ = ticker.tick() => {},
+            wake = wakes.recv(), if wakes_open => match wake {
+                Ok(envelope) => {
+                    if !super::predicate::topic_matches_source(&envelope.topic, topic) { continue; }
+                    let Ok(payload) = serde_json::from_str::<serde_json::Value>(&envelope.payload_json) else { continue; };
+                    if !super::predicate::event_matches_tenant_scope(&envelope.topic, &payload, tenant_id, project_id) { continue; }
+                }
+                Err(broadcast::error::RecvError::Lagged(_)) => {},
+                Err(broadcast::error::RecvError::Closed) => { wakes_open=false; continue; }
+            },
+        }
         if retire(&key, &sender, true) {
             return;
         }
         for _ in 0..MAX_SCANS_PER_TICK {
             metrics.record_livequery_journal_scan("shared");
             let scan = cdc
-                .try_journal_scan_after(
-                    topic,
-                    tenant_id,
-                    project_id,
-                    watermark.0,
-                    watermark.1.clone(),
-                    batch,
-                )
+                .try_journal_scan_after(topic, tenant_id, project_id, watermark, batch)
                 .await;
             match scan {
                 Ok((events, Some(last))) => {
                     let from = std::mem::replace(&mut watermark, last);
                     let _ = sender.send(Arc::new(FeedBatch {
                         from,
-                        to: watermark.clone(),
+                        to: watermark,
                         events,
                         error: None,
                     }));
@@ -209,21 +224,25 @@ fn fail(key: &FeedKey, sender: &FeedSender, topic: &str, err: String) {
 mod shared_tail_tests {
     use super::{envelope_watermark, epoch_watermark};
 
-    /// Watermarks order like the journal: by publish time, then event id; the
+    /// Watermarks order like the journal: by committed position regardless of time or UUID; the
     /// epoch sorts before every real row.
     #[test]
     fn watermarks_order_like_the_journal() {
         let at = |secs: i64| chrono::DateTime::<chrono::Utc>::from_timestamp(secs, 0).unwrap();
-        let envelope = |secs: i64, id: &str| crate::cdc::CdcEnvelope {
-            event_id: id.to_string(),
-            topic: "udb.t".to_string(),
-            partition_key: String::new(),
-            payload_json: "{}".to_string(),
-            published_at: at(secs),
-        };
-        let a = envelope_watermark(&envelope(10, "0000-a"));
-        let b = envelope_watermark(&envelope(10, "0000-b"));
-        let c = envelope_watermark(&envelope(11, "0000-0"));
+        let envelope =
+            |position: i64, secs: i64, id: &str| crate::runtime::cdc::journal::JournalEntry {
+                position,
+                envelope: crate::cdc::CdcEnvelope {
+                    event_id: id.to_string(),
+                    topic: "udb.t".to_string(),
+                    partition_key: String::new(),
+                    payload_json: "{}".to_string(),
+                    published_at: at(secs),
+                },
+            };
+        let a = envelope_watermark(&envelope(1, 11, "0000-z"));
+        let b = envelope_watermark(&envelope(2, 10, "0000-b"));
+        let c = envelope_watermark(&envelope(3, 9, "0000-a"));
         assert!(epoch_watermark() < a);
         assert!(a < b);
         assert!(b < c);

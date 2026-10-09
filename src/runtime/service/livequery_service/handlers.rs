@@ -135,7 +135,7 @@ pub(crate) async fn subscribe(
     // project); join it BEFORE reading this subscriber's head so no batch
     // produced after the head can be missed.
     let journal_head = match svc.cdc_engine.as_ref() {
-        Some(cdc) => match {
+        Some(cdc) => match async {
             let feed = super::shared_tail::join(
                 cdc,
                 &source.cdc_topic,
@@ -143,11 +143,14 @@ pub(crate) async fn subscribe(
                 &project_id,
                 i64::from(resume_replay_limit()),
                 svc.metrics.clone(),
-            );
+            )
+            .await?;
             cdc.journal_head_watermark(&source.cdc_topic)
                 .await
                 .map(|head| (head, feed))
-        } {
+        }
+        .await
+        {
             Ok((head, feed)) => Some((cdc.clone(), head, feed)),
             Err(err) => {
                 tracing::warn!(
@@ -172,9 +175,10 @@ pub(crate) async fn subscribe(
     // from the client's new last-delivered cursor.
     // An unreadable journal refuses the resume rather than replaying an empty
     // backlog the client would take as "nothing was missed".
-    let resume_replay = match (resume_cursor.as_deref(), svc.cdc_engine.as_ref()) {
+    let (resume_replay, resume_position) = match (resume_cursor.as_deref(), svc.cdc_engine.as_ref())
+    {
         (Some(cursor), Some(cdc)) => cdc
-            .try_journal_replay_for_scope(
+            .try_positioned_replay_for_scope(
                 &source.cdc_topic,
                 &tenant_id,
                 &project_id,
@@ -188,9 +192,10 @@ pub(crate) async fn subscribe(
                     error = %err,
                     "live query resume refused: the CDC journal cannot be read"
                 );
-                super::errors::livequery_journal_unavailable_status("resume_replay")
-            })?,
-        _ => Vec::new(),
+                err
+            })
+            .map(|(events, position)| (events, Some(position)))?,
+        _ => (Vec::new(), None),
     };
 
     let limit = clamp_snapshot_limit(
@@ -270,7 +275,7 @@ pub(crate) async fn subscribe(
     if let Some(rx_delta) = delta_rx {
         let journal_tail = journal_head.map(|(cdc, watermark, feed)| JournalTail {
             cdc,
-            watermark,
+            watermark: resume_position.unwrap_or(watermark),
             batch: i64::from(resume_replay_limit()),
             feed,
         });

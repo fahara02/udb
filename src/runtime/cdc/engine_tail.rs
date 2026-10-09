@@ -130,54 +130,15 @@ fn cdc_stream_journal_decode_status(field: &'static str, err: &sqlx::Error) -> t
 
 async fn resolve_cdc_stream_cursor(
     pool: &PgPool,
-    journal_relation: &str,
+    _journal_relation: &str,
     since_event_id: Option<&str>,
-) -> Result<(DateTime<Utc>, String), tonic::Status> {
+) -> Result<i64, tonic::Status> {
     if let Some(raw_id) = since_event_id {
-        let since_uuid = Uuid::parse_str(raw_id.trim()).map_err(|_| {
-            crate::runtime::executor_utils::invalid_argument_fields(
-                "since_event_id must be a valid UUID",
-                [("since_event_id", "must be a valid UUID")],
-            )
-        })?;
-        let anchor_sql = format!("SELECT published_at FROM {journal_relation} WHERE event_id = $1");
-        let anchor = sqlx::query_as::<_, (DateTime<Utc>,)>(&anchor_sql)
-            .bind(since_uuid)
-            .fetch_optional(pool)
-            .await
-            .map_err(|err| cdc_stream_journal_unavailable("resolve_resume_cursor", &err))?;
-        return anchor
-            .map(|(published_at,)| (published_at, since_uuid.to_string()))
-            .ok_or_else(|| {
-                crate::runtime::executor_utils::schema_status(
-                    tonic::Code::NotFound,
-                    "cdc",
-                    "resolve_resume_cursor",
-                    "cdc_resume_cursor_not_found",
-                    "CDC resume cursor is unknown or no longer retained",
-                )
-            });
+        return super::journal::resolve_event_position(pool, raw_id).await;
     }
-
-    // Fresh subscription: anchor at the journal's current newest row using DB
-    // ordering, not the application clock. An empty journal legitimately starts
-    // at epoch; a dependency error does not masquerade as an empty journal.
-    let max_sql = format!(
-        "SELECT published_at, event_id FROM {journal_relation} \
-         ORDER BY published_at DESC, event_id DESC LIMIT 1"
-    );
-    let newest = sqlx::query_as::<_, (DateTime<Utc>, Uuid)>(&max_sql)
-        .fetch_optional(pool)
+    super::journal::head(pool, &SystemCatalogConfig::current())
         .await
-        .map_err(|err| cdc_stream_journal_unavailable("resolve_fresh_cursor", &err))?;
-    Ok(newest
-        .map(|(published_at, event_id)| (published_at, event_id.to_string()))
-        .unwrap_or_else(|| {
-            (
-                DateTime::<Utc>::from_timestamp(0, 0).unwrap_or_else(Utc::now),
-                String::new(),
-            )
-        }))
+        .map_err(|err| cdc_stream_journal_unavailable("resolve_fresh_cursor", &err))
 }
 
 /// Per-process CDC leader-lease identity (F-4). `HOSTNAME` alone is not a fencing
@@ -428,24 +389,14 @@ fn indoubt_sweep_applies(mode: CdcExactlyOnceMode) -> bool {
     mode != CdcExactlyOnceMode::AtLeastOnce
 }
 
-/// #19: replay query anchored at a known journal row. Binds: `$1` = the
-/// anchor row's `published_at`, `$2` = the anchor `event_id` as text. The
-/// compound comparison keeps events journalled in the same microsecond as
-/// the anchor from being silently skipped.
+/// Read only positions beyond the last committed prefix. Timestamp/UUID are
+/// public metadata and cannot establish a safe publication cursor.
 fn replay_sql_from_anchor(journal_relation: &str, limit: i64) -> String {
     format!(
-        "SELECT event_id, topic, partition_key, payload, published_at \
-         FROM {journal_relation} \
-         WHERE (published_at, event_id::TEXT) > ($1, $2) \
-         ORDER BY published_at ASC, event_id ASC \
-         LIMIT {limit}"
+        "SELECT event_id, topic, partition_key, payload, published_at, journal_position \
+         FROM {journal_relation} WHERE journal_position > $1 \
+         ORDER BY journal_position ASC LIMIT {limit}"
     )
-}
-
-// Named durable cursors compare native UUIDs, exactly as monotonic settlement
-// does. Keep the existing anonymous query/bind contract source-compatible.
-fn named_replay_sql_from_anchor(journal_relation: &str, limit: i64) -> String {
-    replay_sql_from_anchor(journal_relation, limit).replace("event_id::TEXT", "event_id")
 }
 
 /// Bounded per-stream de-dup window for `stream_cdc`'s hybrid delivery: returns
@@ -479,8 +430,7 @@ fn cdc_dedup_admit(
 async fn cdc_journal_poll(
     pool: &PgPool,
     sql: &str,
-    cursor_ts: &mut DateTime<Utc>,
-    cursor_id: &mut String,
+    cursor_position: &mut i64,
     matcher: &WildMatch,
     tenant_scope: &str,
     project_scope: &str,
@@ -489,27 +439,9 @@ async fn cdc_journal_poll(
     seen: &mut std::collections::HashSet<String>,
     order: &mut std::collections::VecDeque<String>,
     window: usize,
-    native_uuid_order: bool,
 ) -> Result<Vec<CdcEnvelope>, tonic::Status> {
     let mut out = Vec::new();
-    // Bind owned/copied cursor values so the live stream can mutate the cursor.
-    let query = sqlx::query(sql).bind(*cursor_ts);
-    let query = if native_uuid_order {
-        let event_id = if cursor_id.is_empty() {
-            Uuid::nil()
-        } else {
-            Uuid::parse_str(cursor_id).map_err(|_| {
-                crate::runtime::executor_utils::internal_status(
-                    "cdc",
-                    "stream_journal_cursor",
-                    "CDC durable journal cursor has an invalid event_id",
-                )
-            })?
-        };
-        query.bind(event_id)
-    } else {
-        query.bind(cursor_id.clone())
-    };
+    let query = sqlx::query(sql).bind(*cursor_position);
     let mut rows = query.fetch(pool);
     while let Some(row) = tokio_stream::StreamExt::next(&mut rows).await {
         let record = row.map_err(|err| cdc_stream_journal_unavailable("journal_poll", &err))?;
@@ -532,10 +464,18 @@ async fn cdc_journal_poll(
             .try_get("partition_key")
             .map_err(|err| cdc_stream_journal_decode_status("partition_key", &err))?;
 
-        // Advance past every fully-decoded row, matched or not, so a scoped
-        // subscription does not rescan foreign/unmatched history forever.
-        *cursor_ts = published_at;
-        *cursor_id = event_id.to_string();
+        let position: i64 = record
+            .try_get("journal_position")
+            .map_err(|err| cdc_stream_journal_decode_status("journal_position", &err))?;
+        if position <= *cursor_position {
+            return Err(crate::runtime::executor_utils::internal_status(
+                "cdc",
+                "stream_journal_cursor",
+                "CDC journal position failed to advance",
+            ));
+        }
+        // Decode every field before advancing, including foreign rows.
+        *cursor_position = position;
         if !matcher.matches(&topic) {
             continue;
         }
@@ -1035,8 +975,8 @@ mod tests {
     fn replay_sql_reads_cdc_journal() {
         let anchored = replay_sql_from_anchor("udb_system.udb_cdc_journal", 10_000);
         assert!(anchored.contains("FROM udb_system.udb_cdc_journal"));
-        assert!(anchored.contains("(published_at, event_id::TEXT) > ($1, $2)"));
-        assert!(anchored.contains("ORDER BY published_at ASC, event_id ASC"));
+        assert!(anchored.contains("journal_position > $1"));
+        assert!(anchored.contains("ORDER BY journal_position ASC"));
         assert!(!anchored.contains("outbox"));
     }
 
@@ -1279,7 +1219,7 @@ impl CdcEngine {
         let journal_relation = SystemCatalogConfig::current().cdc_journal_relation();
         sqlx::query_scalar::<_, String>(&format!(
             "SELECT event_id::TEXT FROM {journal_relation} WHERE topic = $1 \
-             ORDER BY published_at DESC, event_id::TEXT DESC LIMIT 1"
+             ORDER BY journal_position DESC LIMIT 1"
         ))
         .bind(topic)
         .fetch_optional(&self.pool)
@@ -1287,27 +1227,17 @@ impl CdcEngine {
         .map_err(|err| format!("journal head read failed: {err}"))
     }
 
-    /// [`Self::journal_head_event_id`] as a full journal watermark
-    /// `(published_at, event_id)`; the Unix epoch and an empty id when the topic
-    /// has no events yet (every real row sorts after it).
-    pub(crate) async fn journal_head_watermark(
-        &self,
-        topic: &str,
-    ) -> Result<(DateTime<Utc>, String), String> {
-        let journal_relation = SystemCatalogConfig::current().cdc_journal_relation();
-        let head: Option<(DateTime<Utc>, String)> = sqlx::query_as(&format!(
-            "SELECT published_at, event_id::TEXT FROM {journal_relation} WHERE topic = $1 ORDER BY published_at DESC, event_id::TEXT DESC LIMIT 1"
+    /// Head in immutable committed publication order, with zero for an empty
+    /// topic. Retention never changes any stored named position.
+    pub(crate) async fn journal_head_watermark(&self, topic: &str) -> Result<i64, String> {
+        let journal = SystemCatalogConfig::current().cdc_journal_relation();
+        sqlx::query_scalar(&format!(
+            "SELECT COALESCE(MAX(journal_position),0) FROM {journal} WHERE topic=$1"
         ))
         .bind(topic)
-        .fetch_optional(&self.pool)
+        .fetch_one(&self.pool)
         .await
-        .map_err(|err| format!("journal head read failed: {err}"))?;
-        Ok(head.unwrap_or_else(|| {
-            (
-                DateTime::<Utc>::from_timestamp(0, 0).expect("unix epoch is a valid timestamp"),
-                String::new(),
-            )
-        }))
+        .map_err(|err| format!("journal head read failed: {err}"))
     }
 
     /// [`Self::journal_replay_for_scope`], also returning the id of the LAST
@@ -1369,146 +1299,105 @@ impl CdcEngine {
             return Ok((Vec::new(), None));
         }
         let journal_relation = SystemCatalogConfig::current().cdc_journal_relation();
-        // Genesis floor for an unresolvable cursor: the Unix epoch, a valid
-        // `timestamptz` (chrono's `MIN_UTC` predates the Postgres range and would
-        // fail to bind). Journal `published_at` is always a publish-time "now", so
-        // the epoch is a safe lower bound that replays the retained backlog
-        // (bounded by `limit`) for a fresh/stale cursor.
-        let genesis =
-            DateTime::<Utc>::from_timestamp(0, 0).expect("unix epoch is a valid timestamp");
-        // Anchor the replay in the journal's canonical (published_at, event_id)
-        // order by resolving the cursor row's watermark. An unparseable/unknown
-        // cursor anchors at genesis so a fresh resume still streams the backlog.
-        let (anchor_ts, anchor_id): (DateTime<Utc>, String) =
-            match Uuid::parse_str(cursor_event_id.trim()) {
-                Ok(cursor_uuid) => {
-                    let resolved: Option<DateTime<Utc>> = sqlx::query_scalar(&format!(
-                        "SELECT published_at FROM {journal_relation} WHERE event_id = $1"
-                    ))
-                    .bind(cursor_uuid)
-                    .fetch_optional(&self.pool)
-                    .await
-                    .ok()
-                    .flatten();
-                    match resolved {
-                        Some(ts) => (ts, cursor_uuid.to_string()),
-                        None => (genesis, String::new()),
-                    }
-                }
-                Err(_) => (genesis, String::new()),
-            };
-        self.try_journal_scan_after(
-            topic,
-            tenant_scope,
-            project_scope,
-            anchor_ts,
-            anchor_id,
-            limit,
-        )
-        .await
-        .map(|(events, last)| (events, last.map(|(_, event_id)| event_id)))
+        // Existing internal compatibility wrapper: fresh/unknown UUIDs replay
+        // retained history, but a database error is never treated as genesis.
+        let anchor: i64 = match Uuid::parse_str(cursor_event_id.trim()) {
+            Ok(id) => sqlx::query_scalar(&format!(
+                "SELECT journal_position FROM {journal_relation} WHERE event_id=$1"
+            ))
+            .bind(id)
+            .fetch_optional(&self.pool)
+            .await
+            .map_err(|err| format!("journal anchor read failed: {err}"))?
+            .unwrap_or(0),
+            Err(_) => 0,
+        };
+        let (entries, last) = self
+            .try_journal_scan_after(topic, tenant_scope, project_scope, anchor, limit)
+            .await?;
+        let last_id = if let Some(position) = last {
+            sqlx::query_scalar(&format!(
+                "SELECT event_id::TEXT FROM {journal_relation} WHERE journal_position=$1"
+            ))
+            .bind(position)
+            .fetch_optional(&self.pool)
+            .await
+            .map_err(|err| format!("journal last row read failed: {err}"))?
+        } else {
+            None
+        };
+        Ok((
+            entries.into_iter().map(|entry| entry.envelope).collect(),
+            last_id,
+        ))
     }
 
-    /// The scan behind [`Self::try_journal_scan_for_scope`], anchored at an
-    /// already-resolved journal watermark `(published_at, event_id)` instead of
-    /// a cursor event id, so a caller that tracks its own watermark (the shared
-    /// LiveQuery journal poller) skips the per-poll cursor lookup. Returns the
-    /// in-scope events and the watermark of the LAST row scanned (in scope or
-    /// not), `None` when nothing was scanned.
+    /// Strict public LiveQuery resume: retain the same typed malformed/missing
+    /// UUID refusals as PublishCDC, and carry the actual position with each row.
+    pub(crate) async fn try_positioned_replay_for_scope(
+        &self,
+        topic: &str,
+        tenant_scope: &str,
+        project_scope: &str,
+        event_id: &str,
+        limit: i64,
+    ) -> Result<(Vec<super::journal::JournalEntry>, i64), tonic::Status> {
+        let anchor = super::journal::resolve_event_position(&self.pool, event_id).await?;
+        self.try_journal_scan_after(topic, tenant_scope, project_scope, anchor, limit)
+            .await
+            .map(|(events, last)| (events, last.unwrap_or(anchor)))
+            .map_err(|err| {
+                warn!(error=%err, "[cdc] positioned journal replay failed");
+                crate::runtime::executor_utils::retryable_status(
+                    "cdc",
+                    "journal_replay",
+                    crate::runtime::executor_utils::HTTP_RETRYABLE_BACKOFF_MS,
+                    "CDC durable journal is temporarily unavailable",
+                )
+            })
+    }
+
+    /// Bounded scan in database commit-prefix order. Decode the complete row
+    /// before advancing, so corrupt durable evidence cannot be silently skipped.
     pub(crate) async fn try_journal_scan_after(
         &self,
         topic: &str,
         tenant_scope: &str,
         project_scope: &str,
-        anchor_ts: DateTime<Utc>,
-        anchor_id: String,
+        anchor: i64,
         limit: i64,
-    ) -> Result<(Vec<CdcEnvelope>, Option<(DateTime<Utc>, String)>), String> {
+    ) -> Result<(Vec<super::journal::JournalEntry>, Option<i64>), String> {
         if topic.trim().is_empty() || limit <= 0 {
             return Ok((Vec::new(), None));
         }
-        let journal_relation = SystemCatalogConfig::current().cdc_journal_relation();
-        // Page size = `limit` in-scope rows worth of raw rows per fetch; the total
-        // raw scan is capped at `limit * REPLAY_SCAN_PAGES` so a tenant with little
-        // backlog on a busy shared topic can't walk the entire journal chasing rows
-        // that aren't there.
-        let page: i64 = limit;
-        let ceiling: i64 = limit.saturating_mul(REPLAY_SCAN_PAGES);
+        let journal = SystemCatalogConfig::current().cdc_journal_relation();
         let sql = format!(
-            "SELECT event_id, topic, partition_key, payload, published_at \
-             FROM {journal_relation} \
-             WHERE topic = $3 AND (published_at, event_id::TEXT) > ($1, $2) \
-             ORDER BY published_at ASC, event_id ASC \
-             LIMIT $4"
+            "SELECT event_id,topic,partition_key,payload,published_at,journal_position FROM {journal} WHERE topic=$2 AND journal_position>$1 ORDER BY journal_position LIMIT $3"
         );
-        let mut out: Vec<CdcEnvelope> = Vec::new();
-        let mut scanned: i64 = 0;
-        // The advancing compound anchor; each page continues strictly past the last
-        // scanned row (matched or filtered), guaranteeing forward progress.
-        let mut cursor_ts = anchor_ts;
-        let mut cursor_id = anchor_id;
-        loop {
-            if !replay_scan_wants_page(out.len(), scanned, limit, ceiling) {
-                break;
-            }
-            let page_rows = match sqlx::query(&sql)
-                .bind(cursor_ts)
-                .bind(cursor_id.as_str())
-                .bind(topic.to_string())
-                .bind(page)
+        let mut out = Vec::new();
+        let mut scanned = 0i64;
+        let mut position = anchor;
+        let ceiling = limit.saturating_mul(REPLAY_SCAN_PAGES);
+        while replay_scan_wants_page(out.len(), scanned, limit, ceiling) {
+            let rows = sqlx::query(&sql)
+                .bind(position)
+                .bind(topic)
+                .bind(limit)
                 .fetch_all(&self.pool)
                 .await
-            {
-                Ok(rows) => rows,
-                Err(err) if scanned == 0 => {
-                    return Err(format!("journal page fetch failed: {err}"));
+                .map_err(|err| format!("journal page fetch failed: {err}"))?;
+            let drained = (rows.len() as i64) < limit;
+            for row in rows {
+                let entry = super::journal::JournalEntry::from_row(&row)
+                    .map_err(|err| format!("journal row decode failed: {err}"))?;
+                if entry.position <= position {
+                    return Err("journal position failed to advance".into());
                 }
-                Err(err) => {
-                    warn!("[cdc] live-query resume journal page fetch failed: {err}");
-                    break;
-                }
-            };
-            let page_len = page_rows.len() as i64;
-            // A short page means the topic's retained backlog past the anchor is
-            // exhausted — nothing more to scan.
-            let backlog_drained = page_len < page;
-            let mut stop = false;
-            for record in page_rows {
-                // Decode the cursor columns FIRST: if either fails we cannot advance
-                // the anchor, so a `continue` here would re-fetch this same row on
-                // the next page forever. Stop the scan instead.
-                let event_id: Uuid = match record.try_get("event_id") {
-                    Ok(value) => value,
-                    Err(_) => {
-                        stop = true;
-                        break;
-                    }
-                };
-                let published_at: DateTime<Utc> = match record.try_get("published_at") {
-                    Ok(value) => value,
-                    Err(_) => {
-                        stop = true;
-                        break;
-                    }
-                };
-                // Advance the anchor to EVERY scanned row (even one dropped below) so
-                // the next page starts strictly after it — forward progress, no loop.
-                cursor_ts = published_at;
-                cursor_id = event_id.to_string();
+                position = entry.position;
                 scanned += 1;
-                let row_topic: String = match record.try_get("topic") {
-                    Ok(value) => value,
-                    Err(_) => continue,
-                };
-                let payload: serde_json::Value = match record.try_get("payload") {
-                    Ok(value) => value,
-                    Err(_) => continue,
-                };
-                // SECURITY: fail-closed tenant/project re-check with the canonical
-                // predicate — a foreign-tenant or tenant-less journal row is dropped.
-                if !payload_value_matches_stream_scope(
-                    &row_topic,
-                    &payload,
+                if !payload_string_matches_stream_scope(
+                    &entry.envelope.topic,
+                    &entry.envelope.payload_json,
                     tenant_scope,
                     project_scope,
                     false,
@@ -1516,28 +1405,16 @@ impl CdcEngine {
                 ) {
                     continue;
                 }
-                let partition_key: String = match record.try_get("partition_key") {
-                    Ok(value) => value,
-                    Err(_) => continue,
-                };
-                out.push(CdcEnvelope {
-                    event_id: event_id.to_string(),
-                    topic: row_topic,
-                    partition_key,
-                    payload_json: payload.to_string(),
-                    published_at,
-                });
-                if (out.len() as i64) >= limit {
-                    stop = true;
+                out.push(entry);
+                if out.len() as i64 >= limit {
                     break;
                 }
             }
-            if stop || backlog_drained {
+            if drained {
                 break;
             }
         }
-        let last_scanned = (scanned > 0).then_some((cursor_ts, cursor_id));
-        Ok((out, last_scanned))
+        Ok((out, (scanned > 0).then_some(position)))
     }
 
     /// U21 step 2: sweep in-doubt `publishing` rows from prior epochs.
@@ -1830,7 +1707,7 @@ impl CdcEngine {
         since_event_id: Option<String>,
         tenant_id: Option<String>,
         project_id: Option<String>,
-        watermark: Option<(DateTime<Utc>, String)>,
+        watermark: Option<i64>,
         named: bool,
     ) -> Result<
         Pin<
@@ -1883,15 +1760,11 @@ impl CdcEngine {
             const TAIL_BATCH: i64 = 1_000;
             const TAIL_POLL: std::time::Duration = std::time::Duration::from_millis(500);
             const DEDUP_WINDOW: usize = 16_384;
-            let tail_sql = if named {
-                named_replay_sql_from_anchor(&journal_relation, TAIL_BATCH)
-            } else {
-                replay_sql_from_anchor(&journal_relation, TAIL_BATCH)
-            };
+            let tail_sql = replay_sql_from_anchor(&journal_relation, TAIL_BATCH);
             let mut seen: std::collections::HashSet<String> = std::collections::HashSet::new();
             let mut order: std::collections::VecDeque<String> = std::collections::VecDeque::new();
 
-            let (mut cursor_ts, mut cursor_id) = initial_cursor;
+            let mut cursor_position = initial_cursor;
 
             // 1. Replay: drain the journal from the cursor (bounded per batch).
             loop {
@@ -1904,9 +1777,9 @@ impl CdcEngine {
                     privileged,
                 )?;
                 let batch = cdc_journal_poll(
-                    &pool, &tail_sql, &mut cursor_ts, &mut cursor_id, &matcher,
+                    &pool, &tail_sql, &mut cursor_position, &matcher,
                     &tenant_scope, &project_scope, privileged, &policy_snapshot,
-                    &mut seen, &mut order, DEDUP_WINDOW, named,
+                    &mut seen, &mut order, DEDUP_WINDOW,
                 )
                 .await?;
                 let caught_up = batch.len() < TAIL_BATCH as usize;
@@ -1957,9 +1830,9 @@ impl CdcEngine {
                     received = fast_path => StreamWake::Fast(received),
                     _ = journal_tick.tick() => StreamWake::Journal(
                         cdc_journal_poll(
-                            &pool, &tail_sql, &mut cursor_ts, &mut cursor_id, &matcher,
+                            &pool, &tail_sql, &mut cursor_position, &matcher,
                             &tenant_scope, &project_scope, privileged, &policy_snapshot,
-                            &mut seen, &mut order, DEDUP_WINDOW, named,
+                            &mut seen, &mut order, DEDUP_WINDOW,
                         )
                         .await
                     ),
@@ -1979,9 +1852,9 @@ impl CdcEngine {
                                 )
                             {
                                 let batch = cdc_journal_poll(
-                                    &pool, &tail_sql, &mut cursor_ts, &mut cursor_id, &matcher,
+                                    &pool, &tail_sql, &mut cursor_position, &matcher,
                                     &tenant_scope, &project_scope, privileged, &policy_snapshot,
-                                    &mut seen, &mut order, DEDUP_WINDOW, named,
+                                    &mut seen, &mut order, DEDUP_WINDOW,
                                 ).await?;
                                 for envelope in batch {
                                     yield envelope;
@@ -3094,63 +2967,45 @@ impl CdcEngine {
             event_id, partition, offset
         );
 
-        // F-6: write the JOURNAL (the only replay source) BEFORE broadcasting to
-        // live subscribers. The journal insert is durable; the broadcast is
-        // best-effort. If we broadcast first and the journal insert then fails, a
-        // reconnecting subscriber that anchors on the journal never sees the
-        // event, while live subscribers already did — a silent per-subscriber
-        // loss. Ordering journal→broadcast means a journal failure returns before
-        // anyone is told the event happened. (F-9: resolve the system-catalog
-        // config the same way the writer does — `current()`, not `default()` —
-        // so a schema override does not point writer and tailer at different
-        // relations.)
-        {
-            use crate::runtime::system::SystemCatalogConfig;
-            let sys = SystemCatalogConfig::current();
-            let journal = sys.cdc_journal_relation();
-            if let Err(err) = sqlx::query(&format!(
-                "INSERT INTO {journal} \
-                 (event_id, topic, partition_key, payload, published_at, kafka_partition, kafka_offset, delivery_state, producer_epoch, transactional_id) \
-                 VALUES ($1, $2, $3, $4::JSONB, NOW(), $5, $6, 'published', $7, $8) \
-                 ON CONFLICT (event_id) DO UPDATE SET \
-                   delivery_state = 'published', \
-                   kafka_partition = EXCLUDED.kafka_partition, \
-                   kafka_offset = EXCLUDED.kafka_offset, \
-                   producer_epoch = EXCLUDED.producer_epoch, \
-                   transactional_id = EXCLUDED.transactional_id"
-            ))
-            .bind(event_id)
-            .bind(topic)
-            .bind(partition_key)
-            .bind(payload_string)
-            .bind(partition)
-            .bind(offset)
-            .bind(self.config.fenced_producer_epoch())
-            .bind(self.config.transactional_id())
-            .execute(&self.pool)
-            .await
-            {
+        // Kafka has acknowledged already. Only database work runs while the
+        // journal head lock is owned; fan-out follows the committed insert.
+        let config = SystemCatalogConfig::current();
+        let retained = async {
+            let mut tx = self.pool.begin().await?;
+            let entry = super::journal::insert(
+                &mut tx,
+                &config,
+                event_id,
+                topic,
+                partition_key,
+                payload_string,
+                Some(partition),
+                Some(offset),
+                self.config.fenced_producer_epoch(),
+                &self.config.transactional_id(),
+            )
+            .await?;
+            tx.commit().await?;
+            Ok::<_, sqlx::Error>(entry)
+        }
+        .await;
+        let entry = match retained {
+            Ok(entry) => entry,
+            Err(err) => {
                 self.metrics.inc_cdc_journal_failures_total();
-                error!("[cdc] journal insert failed for event {}: {}", event_id, err);
+                error!(
+                    "[cdc] journal insert failed for event {}: {}",
+                    event_id, err
+                );
                 return;
             }
-        }
+        };
 
         // Live-subscription fan-out is best-effort, but a send error means zero
         // receivers / full buffer — surface it (the subscriber logs Lagged; the
         // publisher was silent). Durability is unaffected (Kafka + journal already
         // have it).
-        if self
-            .broadcast_tx
-            .send(CdcEnvelope {
-                event_id: event_id.to_string(),
-                topic: topic.to_string(),
-                partition_key: partition_key.to_string(),
-                payload_json: payload_string.to_string(),
-                published_at: Utc::now(),
-            })
-            .is_err()
-        {
+        if self.broadcast_tx.send(entry.envelope).is_err() {
             tracing::debug!(
                 event_id = %event_id,
                 topic = %topic,
@@ -3414,65 +3269,30 @@ impl CdcEngine {
                 label, topic, partition, kafka_offset
             );
             self.metrics.inc_cdc_wal_messages_received_total();
-            // Same delivery-proof shape as the outbox path: Kafka ack
-            // first, then durable CDC journal, then source offset advance.
-            // If the journal write fails, do NOT advance the offset; the
-            // source may replay and downstream consumers can dedupe by the
-            // deterministic source_event_id.
-            let sys = SystemCatalogConfig::current();
-            let journal = sys.cdc_journal_relation();
-            let journal_sql = format!(
-                "INSERT INTO {journal} \
-                 (event_id, topic, partition_key, payload, published_at, kafka_partition, kafka_offset, delivery_state, producer_epoch, transactional_id) \
-                 VALUES ($1, $2, $3, $4::JSONB, NOW(), $5, $6, 'published', $7, $8) \
-                 ON CONFLICT (event_id) DO UPDATE SET \
-                   delivery_state = 'published', \
-                   published_at = NOW(), \
-                   kafka_partition = EXCLUDED.kafka_partition, \
-                   kafka_offset = EXCLUDED.kafka_offset, \
-                   producer_epoch = EXCLUDED.producer_epoch, \
-                   transactional_id = EXCLUDED.transactional_id"
-            );
-            if let Err(err) = sqlx::query(&journal_sql)
-                .bind(source_event_id)
-                .bind(&topic)
-                .bind(&partition_key)
-                .bind(&payload_string)
-                .bind(partition)
-                .bind(kafka_offset)
-                .bind(self.config.fenced_producer_epoch())
-                .bind(self.config.transactional_id())
-                .execute(&self.pool)
-                .await
-            {
-                warn!(
-                    "[cdc] tail_source journal persist failed for {} at offset {}: {err}; \
-                     event published but source offset will not advance",
-                    label, evt.source_offset
-                );
-                self.metrics.inc_cdc_journal_failures_total();
-                continue;
-            }
-
-            // Persist the source offset so restart resumes only after
-            // delivery has durable evidence in `cdc_journal`.
-            let upsert_sql = format!(
-                "INSERT INTO {offsets_relation} (slot_name, last_offset, updated_at) \
-                 VALUES ($1, $2, NOW()) \
-                 ON CONFLICT (slot_name) DO UPDATE \
-                   SET last_offset = EXCLUDED.last_offset, updated_at = NOW()"
-            );
-            if let Err(err) = sqlx::query(&upsert_sql)
-                .bind(&slot_key)
-                .bind(&evt.source_offset)
-                .execute(&self.pool)
-                .await
-            {
-                warn!(
-                    "[cdc] tail_source offset persist failed for {}: {err}; \
-                     event published but resume may replay",
-                    slot_key
-                );
+            // The journal and source offset have one PG authority (self.pool),
+            // and therefore one commit. Abort this attempt on either failure;
+            // continuing would let a later source offset skip this event.
+            let config = SystemCatalogConfig::current();
+            let retained = async {
+                let mut tx = self.pool.begin().await?;
+                let entry = super::journal::insert(&mut tx, &config, source_event_id, &topic,
+                    &partition_key, &payload_string, Some(partition), Some(kafka_offset),
+                    self.config.fenced_producer_epoch(), &self.config.transactional_id()).await?;
+                sqlx::query(&format!("INSERT INTO {offsets_relation} (slot_name,last_offset,updated_at) VALUES ($1,$2,NOW()) ON CONFLICT (slot_name) DO UPDATE SET last_offset=EXCLUDED.last_offset,updated_at=NOW()"))
+                    .bind(&slot_key).bind(&evt.source_offset).execute(&mut *tx).await?;
+                tx.commit().await?;
+                Ok::<_, sqlx::Error>(entry)
+            }.await;
+            match retained {
+                Ok(entry) => {
+                    let _ = self.broadcast_tx.send(entry.envelope);
+                }
+                Err(err) => {
+                    self.metrics.inc_cdc_journal_failures_total();
+                    return Err(format!(
+                        "[cdc] source durable journal/offset commit failed for {label}: {err}"
+                    ));
+                }
             }
         }
 

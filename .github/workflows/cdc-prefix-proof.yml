@@ -1,0 +1,185 @@
+name: CDC committed prefix proof
+
+on:
+  workflow_dispatch:
+    inputs:
+      baseline_commit:
+        description: "Exact parent of the committed journal prefix change"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  committed-prefix:
+    name: Original and corrected durable CDC serving paths
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    services:
+      postgres:
+        image: postgis/postgis:16-3.5-alpine
+        env:
+          POSTGRES_DB: udb
+          POSTGRES_USER: udb
+          POSTGRES_PASSWORD: udb
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U udb -d udb"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      UDB_LIVE_AUTH_TESTS: "1"
+      UDB_LIVE_AUTH_PG_DSN: postgres://udb:udb@127.0.0.1:5432/udb
+      UDB_INTEGRATION_PG_DSN: postgres://udb:udb@127.0.0.1:5432/udb
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/setup-rust
+        with:
+          cache-key: rust-ubuntu-latest
+      - name: Prepare the original serving source with the identical regression
+        env:
+          BASELINE_COMMIT: ${{ inputs.baseline_commit }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import hashlib
+          import json
+          import os
+          from pathlib import Path
+          import re
+          import subprocess
+
+          paths = [
+              "src/runtime/system.rs",
+              "src/runtime/cdc/mod.rs",
+              "src/runtime/cdc/engine_tail.rs",
+              "src/runtime/service/handlers_tx.rs",
+              "src/runtime/service/livequery_service/handlers.rs",
+              "src/runtime/service/livequery_service/shared_tail.rs",
+              "src/runtime/service/livequery_service/stream.rs",
+              "src/runtime/cdc/live_tests.rs",
+              "src/runtime/service/live_tests/cdc_consumer_live.rs",
+              "src/runtime/service/live_tests/livequery_journal_live.rs",
+          ]
+          baseline = os.environ["BASELINE_COMMIT"]
+          if re.fullmatch(r"[0-9a-f]{40}", baseline) is None:
+              raise SystemExit("baseline_commit must be an exact commit SHA")
+          subprocess.run(["git", "merge-base", "--is-ancestor", baseline, "HEAD"], check=True)
+          introductions = subprocess.check_output([
+              "git", "log", "--reverse", "--format=%H", "-S", "pub(crate) mod journal;", "HEAD", "--", paths[1]
+          ]).decode().splitlines()
+          if not introductions:
+              raise SystemExit("committed journal prefix introduction was not found")
+          introduction = introductions[0]
+          expected_baseline = subprocess.check_output(["git", "rev-parse", f"{introduction}^"]).decode().strip()
+          if baseline != expected_baseline:
+              raise SystemExit("baseline must be the exact parent of the committed journal prefix change")
+          subprocess.run(["git", "diff", "--exit-code", introduction, "HEAD", "--", *paths, "src/runtime/cdc/journal.rs"], check=True)
+          proof_path = Path(paths[8])
+          fixed_proof = proof_path.read_bytes()
+          begin = b"// BEGIN CDC_PREFIX_CI_REPRO"
+          end = b"// END CDC_PREFIX_CI_REPRO"
+          if fixed_proof.count(begin) != 1 or fixed_proof.count(end) != 1:
+              raise SystemExit("expected one identical served CDC committed prefix regression")
+          start = fixed_proof.index(begin)
+          stop = fixed_proof.index(end, start) + len(end)
+          block = fixed_proof[start:stop] + b"\n"
+          if b"journal::" in block or b"journal_position" in block:
+              raise SystemExit("baseline proof must use the original serving APIs")
+          baseline_files = {path: subprocess.check_output(["git", "show", f"{baseline}:{path}"]) for path in paths}
+          if begin in baseline_files[proof_path.as_posix()]:
+              raise SystemExit("baseline already contains the regression")
+          if b"cdc-fixture-" not in baseline_files[proof_path.as_posix()]:
+              raise SystemExit("baseline must contain the corrected owned canonical-user fixture")
+          backup = Path(os.environ["RUNNER_TEMP"], "cdc-prefix-fixed")
+          backup.mkdir()
+          output = Path("cdc-prefix-proof")
+          output.mkdir()
+          evidence = {
+              "baseline": baseline,
+              "corrected_commit": os.environ["GITHUB_SHA"],
+              "prefix_commit": introduction,
+              "test": "runtime::service::live_tests::cdc_consumer_live::live_cdc_committed_prefix_survives_late_journal_transactions",
+              "proof_sha256": hashlib.sha256(block).hexdigest(),
+              "files": [],
+          }
+          # Back up all ten files before any baseline source writes. The new
+          # journal module is left unregistered by the original cdc/mod.rs.
+          for path in paths:
+              fixed = Path(path).read_bytes()
+              target = backup / path
+              target.parent.mkdir(parents=True, exist_ok=True)
+              target.write_bytes(fixed)
+              evidence["files"].append({"path": path, "original_sha256": hashlib.sha256(baseline_files[path]).hexdigest(), "corrected_sha256": hashlib.sha256(fixed).hexdigest()})
+          (output / "restore-paths.txt").write_text("\n".join(paths) + "\n", encoding="utf-8")
+          (output / "source-comparison.json").write_text(json.dumps(evidence, indent=2) + "\n", encoding="utf-8")
+          (output / "identical-regression.rs").write_bytes(block)
+          for path, body in baseline_files.items():
+              Path(path).write_bytes(body)
+          proof_path.write_bytes(baseline_files[proof_path.as_posix()] + b"\n\n" + block)
+          PY
+      - name: Require the original served durable cursor gap
+        shell: bash
+        run: |
+          set -euo pipefail
+          restore_prefix_sources() {
+            while IFS= read -r path; do
+              cp "$RUNNER_TEMP/cdc-prefix-fixed/$path" "$path"
+            done < cdc-prefix-proof/restore-paths.txt
+          }
+          trap restore_prefix_sources EXIT
+          set +e
+          cargo test --locked --lib runtime::service::live_tests::cdc_consumer_live::live_cdc_committed_prefix_survives_late_journal_transactions -- --exact --ignored --nocapture --test-threads=1 2>&1 | tee cdc-prefix-proof/original.log
+          original_exit=${PIPESTATUS[0]}
+          set -e
+          restore_prefix_sources
+          if [ "$original_exit" -ne 101 ]; then
+            echo "::error::Original CDC serving source did not produce the expected test failure."
+            exit 1
+          fi
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          log = Path("cdc-prefix-proof/original.log").read_text(encoding="utf-8")
+          if re.search(r"test result: FAILED\. 0 passed; 1 failed;", log) is None:
+              raise SystemExit("baseline must execute exactly one regression; compile or infrastructure failure is not reproduction")
+          if "live_cdc_committed_prefix_survives_late_journal_transactions" not in log:
+              raise SystemExit("the named serving regression was not executed")
+          if "g6-prefix: committed journal event must not fall behind a served durable ACK cursor" not in log:
+              raise SystemExit("baseline failed for another reason")
+          print("Original serving source reproduced the retained event behind a durable ACK cursor.")
+          PY
+          while IFS= read -r path; do
+            git diff --exit-code -- "$path"
+          done < cdc-prefix-proof/restore-paths.txt
+      - name: Require the same serving regression on corrected source
+        shell: bash
+        run: |
+          set -euo pipefail
+          cargo test --locked --lib runtime::service::live_tests::cdc_consumer_live::live_cdc_committed_prefix_survives_late_journal_transactions -- --exact --ignored --nocapture --test-threads=1 2>&1 | tee cdc-prefix-proof/corrected.log
+          grep -Fq 'test result: ok. 1 passed; 0 failed;' cdc-prefix-proof/corrected.log
+      - name: Restore corrected source after any interrupted preparation
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -f cdc-prefix-proof/restore-paths.txt ]; then
+            while IFS= read -r path; do
+              cp "$RUNNER_TEMP/cdc-prefix-fixed/$path" "$path"
+            done < cdc-prefix-proof/restore-paths.txt
+          fi
+      - name: Preserve original and corrected actual serving results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cdc-committed-prefix-proof
+          path: cdc-prefix-proof/
+          if-no-files-found: warn
+          retention-days: 14

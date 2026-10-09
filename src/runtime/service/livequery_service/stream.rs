@@ -135,7 +135,7 @@ pub(crate) async fn run_delta_forward(
     // Durable-resume backlog: change events the client missed while disconnected,
     // read from the CDC journal and already tenant re-checked at read time. Drained
     // (backpressure-aware) to the client BEFORE the live feed, then dropped.
-    resume_replay: Vec<crate::cdc::CdcEnvelope>,
+    resume_replay: Vec<crate::runtime::cdc::journal::JournalEntry>,
     // Delta-path metrics sink (per-outcome counters + per-tenant active gauge).
     metrics: Arc<dyn MetricsRecorder>,
     // Owned for the lifetime of the live stream; dropping it (on ANY exit path
@@ -145,7 +145,7 @@ pub(crate) async fn run_delta_forward(
     // Cross-replica journal tail. The subscribe handler refuses the stream when
     // the journal head cannot be read, so a live stream always has one; `None`
     // only in unit harnesses that drive the forwarder without a journal.
-    mut journal_tail: Option<JournalTail>,
+    journal_tail: Option<JournalTail>,
 ) {
     // Reflect this newly-active stream in the per-tenant gauge (the acquirer
     // already counted the slot before this task was spawned).
@@ -158,12 +158,10 @@ pub(crate) async fn run_delta_forward(
     // gone) ends the task. Each replayed frame carries its `event_id` so the client
     // dedups it against the snapshot / live feed and can advance its resume cursor.
     let mut ended = false;
-    for envelope in resume_replay {
-        // The journal tail continues after the backlog, and a replayed event
-        // the broadcast also carries is delivered once.
-        if let Some(tail) = journal_tail.as_mut() {
-            tail.watermark = envelope_watermark(&envelope);
-        }
+    for entry in resume_replay {
+        let envelope = entry.envelope;
+        // The handler carries the complete scanned prefix, including foreign
+        // rows, into JournalTail. Drain replay before accepting feed batches.
         if !seen.first_sighting(&envelope.event_id) {
             continue;
         }
@@ -253,7 +251,10 @@ async fn run_live_loop(
     });
     // Once the broadcast closes (or lags) the journal tail alone carries the
     // stream when it is configured.
-    let mut broadcast_open = true;
+    // Production subscribers consume one shared ordered journal feed. Direct
+    // local fan-out could overtake an older remote event and poison UUID resume.
+    // Unit harnesses without a journal retain their existing broadcast path.
+    let mut broadcast_open = journal_tail.is_none();
     loop {
         // Wake on subscriber hang-up too: without `tx.closed()` a disconnected
         // client whose source entity never mutates would park this task (and
@@ -396,7 +397,7 @@ async fn apply_feed_batch(
     if let Some(error) = batch.error.as_deref() {
         return close_journal_unavailable(tx, cdc_topic, error).await;
     }
-    let mut pending: Vec<crate::cdc::CdcEnvelope> = Vec::new();
+    let mut pending: Vec<crate::runtime::cdc::journal::JournalEntry> = Vec::new();
     if batch.from > tail.watermark {
         // Private catch-up from this subscriber's own watermark.
         for _ in 0..MAX_CATCH_UP_SCANS {
@@ -407,8 +408,7 @@ async fn apply_feed_batch(
                     cdc_topic,
                     tenant_id,
                     project_id,
-                    tail.watermark.0,
-                    tail.watermark.1.clone(),
+                    tail.watermark,
                     tail.batch,
                 )
                 .await;
@@ -434,10 +434,11 @@ async fn apply_feed_batch(
                 .cloned(),
         );
         if batch.to > tail.watermark {
-            tail.watermark = batch.to.clone();
+            tail.watermark = batch.to;
         }
     }
-    for envelope in pending {
+    for entry in pending {
+        let envelope = entry.envelope;
         if !seen.first_sighting(&envelope.event_id) {
             continue;
         }

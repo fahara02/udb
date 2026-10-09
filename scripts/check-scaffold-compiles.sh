@@ -91,6 +91,9 @@ echo "    Go entity adapters generated and gofmt-clean OK"
 # protoc, then exercise their adapters across a JSON wire round trip.
 echo "==> compiling and round-tripping Go consumer entity shapes"
 SHAPE_DIR="$WORK/consumer"
+# The generated client templates compose the existing SDK package. Keep them
+# outside the consumer module so ./... compiles only its messages and adapters.
+SHAPE_GENERATED_DIR="$WORK/consumer-generated"
 mkdir -p "$SHAPE_DIR/adapters" "$WORK/protoc-bin"
 # Match the SDK's protobuf runtime and keep the declared Go 1.22 floor honest.
 # v1.36.11 requires Go 1.23 and would silently upgrade an auto toolchain.
@@ -113,9 +116,9 @@ else
   GENERATOR=(cargo run --quiet --manifest-path "$REPO/Cargo.toml" --)
 fi
 "${GENERATOR[@]}" sdk generate --project-proto "$REPO/tests/fixtures/consumer_protos" \
-  --lang go --out "$SHAPE_DIR/generated"
-require_file "$SHAPE_DIR/generated/go/udb_entities_gen.go"
-cp "$SHAPE_DIR/generated/go/udb_entities_gen.go" "$SHAPE_DIR/adapters/"
+  --lang go --out "$SHAPE_GENERATED_DIR"
+require_file "$SHAPE_GENERATED_DIR/go/udb_entities_gen.go"
+cp "$SHAPE_GENERATED_DIR/go/udb_entities_gen.go" "$SHAPE_DIR/adapters/"
 cp "$REPO/tests/fixtures/consumer_protos_test.go" "$SHAPE_DIR/adapters/"
 cat > "$SHAPE_DIR/go.mod" <<EOF
 module example.com/consumer

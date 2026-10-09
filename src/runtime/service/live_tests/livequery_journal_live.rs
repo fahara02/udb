@@ -470,3 +470,146 @@ async fn live_livequery_thousand_watchers_share_scans_and_keep_filter_parity() {
         .await
         .expect("remove snapshot fixture rows");
 }
+
+/// A transaction can begin before another replica publishes and still insert
+/// its journal row afterwards. Timestamp metadata must never hide that late
+/// commit, and a local wake may not overtake an older remote publication.
+#[tokio::test]
+#[ignore = "requires live Postgres; runs in the CI native live lane"]
+async fn live_livequery_commit_prefix_and_local_wake_keep_cross_replica_order() {
+    use sqlx::Row;
+    async fn insert_change(
+        conn: &mut sqlx::PgConnection,
+        journal: &str,
+        topic: &str,
+        tenant: &str,
+        name: &str,
+    ) -> Uuid {
+        let id = Uuid::new_v4();
+        let payload = serde_json::json!({
+            "event_id": id.to_string(), "event_type": topic, "topic": topic,
+            "tenant_id": tenant, "project_id": PROJECT, "operation": "upsert",
+            "message_type": LOCK_MSG,
+            "payload": {"lock_id": Uuid::new_v4().to_string(), "tenant_id": tenant, "lock_name": name},
+        });
+        sqlx::query(&format!("INSERT INTO {journal} (event_id,topic,partition_key,payload,published_at,delivery_state) VALUES ($1,$2,$3,$4::JSONB,NOW(),'published')"))
+            .bind(id).bind(topic).bind(name).bind(payload.to_string()).execute(conn).await.unwrap();
+        id
+    }
+    async fn wake_retained(
+        pool: &sqlx::PgPool,
+        journal: &str,
+        engine: &crate::cdc::CdcEngine,
+        id: Uuid,
+    ) {
+        let row = sqlx::query(&format!(
+            "SELECT topic,partition_key,payload,published_at FROM {journal} WHERE event_id=$1"
+        ))
+        .bind(id)
+        .fetch_one(pool)
+        .await
+        .unwrap();
+        let payload: serde_json::Value = row.try_get("payload").unwrap();
+        engine
+            .broadcast_sender_for_live_test()
+            .send(crate::cdc::CdcEnvelope {
+                event_id: id.to_string(),
+                topic: row.try_get("topic").unwrap(),
+                partition_key: row.try_get("partition_key").unwrap(),
+                payload_json: payload.to_string(),
+                published_at: row.try_get("published_at").unwrap(),
+            })
+            .expect("the actual shared feed must listen for local wakes");
+    }
+    let _guard = live_native_service_db_lock().lock().await;
+    let pool = live_pg_pool().await;
+    migrate_native_service_db(&pool).await;
+    let runtime = live_runtime().await;
+    let engine = idle_cdc_engine(pool.clone());
+    let service = LiveQueryServiceImpl::new()
+        .with_runtime(Some(runtime.clone()))
+        .with_cdc_engine(Some(engine.clone()))
+        .with_channels(Some(runtime.channels().clone()));
+    let tenant = Uuid::new_v4().to_string();
+    let topic = lock_cdc_topic();
+    let journal = crate::runtime::system::SystemCatalogConfig::current().cdc_journal_relation();
+    let mut stream = service
+        .subscribe(subscribe_request(&tenant))
+        .await
+        .unwrap()
+        .into_inner();
+    let first = stream.next().await.unwrap().unwrap();
+    assert!(matches!(
+        first.payload,
+        Some(lq_pb::subscribe_response::Payload::Snapshot(_))
+    ));
+
+    // Establish the old transaction's actual timestamp before the other writer
+    // publishes. Do not hold the journal head while waiting for a subscriber.
+    let mut old_transaction = pool.begin().await.unwrap();
+    let old_timestamp: chrono::DateTime<chrono::Utc> = sqlx::query_scalar("SELECT NOW()")
+        .fetch_one(&mut *old_transaction)
+        .await
+        .unwrap();
+    let ahead = journal_lock_change(&pool, &topic, &tenant, "ahead").await;
+    wake_retained(&pool, &journal, &engine, ahead).await;
+    let ahead_change = tokio::time::timeout(Duration::from_secs(3), next_data_change(&mut stream))
+        .await
+        .expect("the committed local publication must be served");
+    assert_eq!(ahead_change.event_id, ahead.to_string());
+    let late = insert_change(&mut old_transaction, &journal, &topic, &tenant, "late").await;
+    old_transaction.commit().await.unwrap();
+    let retained_timestamp: chrono::DateTime<chrono::Utc> = sqlx::query_scalar(&format!(
+        "SELECT published_at FROM {journal} WHERE event_id=$1"
+    ))
+    .bind(late)
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+    assert_eq!(
+        retained_timestamp, old_timestamp,
+        "timestamp metadata retains the producer's actual transaction time"
+    );
+    // No local wake: this publication belongs to another replica.
+    let late_result =
+        tokio::time::timeout(Duration::from_secs(3), next_data_change(&mut stream)).await;
+    if late_result.is_err() {
+        drop(stream);
+        sqlx::query(&format!("DELETE FROM {journal} WHERE event_id=ANY($1)"))
+            .bind([ahead, late].as_slice())
+            .execute(&pool)
+            .await
+            .unwrap();
+        panic!(
+            "g6-livequery-prefix: late committed journal event must remain visible after an earlier timestamp"
+        );
+    }
+    assert_eq!(late_result.unwrap().event_id, late.to_string());
+
+    // Both rows become visible together. Only the newer local row wakes the
+    // process; the shared durable scan must serve the older remote row first.
+    let mut publication = pool.begin().await.unwrap();
+    let remote = insert_change(&mut publication, &journal, &topic, &tenant, "remote").await;
+    let local = insert_change(&mut publication, &journal, &topic, &tenant, "local").await;
+    publication.commit().await.unwrap();
+    wake_retained(&pool, &journal, &engine, local).await;
+    let order = tokio::time::timeout(Duration::from_secs(3), async {
+        [
+            next_data_change(&mut stream).await.event_id,
+            next_data_change(&mut stream).await.event_id,
+        ]
+    })
+    .await;
+    drop(stream);
+    sqlx::query(&format!("DELETE FROM {journal} WHERE event_id=ANY($1)"))
+        .bind([ahead, late, remote, local].as_slice())
+        .execute(&pool)
+        .await
+        .unwrap();
+    assert_eq!(
+        order.expect("both committed publications must be served"),
+        [remote.to_string(), local.to_string()],
+        "g6-livequery-prefix: local fan-out must not overtake the earlier remote journal publication"
+    );
+    eprintln!("cdc-prefix-livequery late_commits=1 ordered_remote_local=2 served_changes=4");
+}

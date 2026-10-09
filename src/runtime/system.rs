@@ -2032,6 +2032,7 @@ fn system_catalog_statements(config: &SystemCatalogConfig) -> Vec<String> {
             config.vector_resource_routes_relation()
         ),
     ]);
+    statements.extend(crate::runtime::cdc::journal::schema_statements(config));
     // UDB-owned native-service tables are migrated through the normal proto →
     // manifest → diff/apply engine (see `run_startup_lifecycle`, which merges the
     // native manifest), not created by hand here. Bootstrap only needs to ensure

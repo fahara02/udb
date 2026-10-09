@@ -799,3 +799,225 @@ async fn live_cdc_named_delivery_orders_cross_replica_journal_before_local_broad
     }
     f.close().await;
 }
+
+// BEGIN CDC_PREFIX_CI_REPRO
+// This block references only pre-fix APIs: transplant it unchanged for CI RED.
+#[tokio::test]
+#[ignore = "requires real PostgreSQL; CI runs all ignored native lib tests"]
+async fn live_cdc_committed_prefix_survives_late_journal_transactions() {
+    async fn write_row(
+        conn: &mut sqlx::PgConnection,
+        journal: &str,
+        event: Uuid,
+        topic: &str,
+        tenant: &str,
+    ) {
+        let payload = serde_json::json!({"event_id":event,"event_type":topic,
+            "tenant_id":tenant,"project_id":"default"});
+        sqlx::query(&format!("INSERT INTO {journal} (event_id,topic,partition_key,payload,published_at,delivery_state) VALUES ($1,$2,'prefix-ci',$3::JSONB,NOW(),'published')"))
+            .bind(event).bind(topic).bind(payload.to_string()).execute(conn).await
+            .expect("actual journal fixture commit must succeed");
+    }
+    let _guard = super::support::live_native_service_db_lock().lock().await;
+    let mut f = fixture().await;
+    let journal = SystemCatalogConfig::current().cdc_journal_relation();
+    let anchor = seed(&f, &f.topic, &f.tenant, "default", 0).await;
+    f.client
+        .ack_cdc_events(request(
+            acknowledgment("prefix-held", &f.topic, anchor),
+            &f.tokens[0],
+        ))
+        .await
+        .expect("claim actual verified durable consumer");
+    let mut stream = f
+        .client
+        .publish_cdc(request(subscription("prefix-held", &f.topic), &f.tokens[0]))
+        .await
+        .expect("actual named subscription")
+        .into_inner();
+    let salt = Uuid::new_v4().as_u128() & !255;
+    let a = Uuid::from_u128(salt | 1);
+    let b = Uuid::from_u128(salt | 2);
+    let mut first = f
+        .pool
+        .begin()
+        .await
+        .expect("begin held journal transaction");
+    let first_pid: i32 = sqlx::query_scalar("SELECT pg_backend_pid()")
+        .fetch_one(&mut *first)
+        .await
+        .unwrap();
+    write_row(&mut first, &journal, a, &f.topic, &f.tenant).await;
+    let (pid_tx, pid_rx) = tokio::sync::oneshot::channel();
+    let pool = f.pool.clone();
+    let relation = journal.clone();
+    let topic = f.topic.clone();
+    let tenant = f.tenant.clone();
+    let prefix_wait_started = tokio::time::Instant::now();
+    let mut second = tokio::spawn(async move {
+        let mut tx = pool.begin().await.unwrap();
+        let pid: i32 = sqlx::query_scalar("SELECT pg_backend_pid()")
+            .fetch_one(&mut *tx)
+            .await
+            .unwrap();
+        pid_tx.send(pid).unwrap();
+        write_row(&mut tx, &relation, b, &topic, &tenant).await;
+        tx.commit().await.expect("second actual journal commit");
+    });
+    let second_pid = pid_rx.await.unwrap();
+    let second_committed = tokio::time::timeout(Duration::from_secs(3), async {
+        loop {
+            tokio::select! {
+                result = &mut second => { result.expect("second publisher task"); break true; }
+                _ = tokio::time::sleep(Duration::from_millis(10)) => {
+                    let held: bool = sqlx::query_scalar("SELECT $1 = ANY(pg_blocking_pids($2))")
+                        .bind(first_pid).bind(second_pid).fetch_one(&f.pool).await.unwrap();
+                    if held { break false; }
+                }
+            }
+        }
+    })
+    .await
+    .expect("observe actual publisher commit or database prefix lock");
+    eprintln!(
+        "cdc-prefix-held publisher_committed_while_predecessor_held={second_committed} observed_wait_ms={}",
+        prefix_wait_started.elapsed().as_millis()
+    );
+    let mut a_delivered = false;
+    if second_committed {
+        // Baseline permits B to overtake the uncommitted A. The ACK is real.
+        assert_eq!(next(&mut stream).await, b.to_string());
+        f.client
+            .ack_cdc_events(request(
+                acknowledgment("prefix-held", &f.topic, b),
+                &f.tokens[0],
+            ))
+            .await
+            .expect("actual served B ACK before A commit");
+        first
+            .commit()
+            .await
+            .expect("late A is now actually committed");
+    } else {
+        // Corrected database authority blocks B before allocating its position.
+        // Release only after observing the real lock, not a guessed sleep.
+        first
+            .commit()
+            .await
+            .expect("release actual first journal commit");
+        second
+            .await
+            .expect("second publisher commits after prefix release");
+        assert_eq!(next(&mut stream).await, a.to_string());
+        a_delivered = true;
+        assert_eq!(next(&mut stream).await, b.to_string());
+        f.client
+            .ack_cdc_events(request(
+                acknowledgment("prefix-held", &f.topic, b),
+                &f.tokens[0],
+            ))
+            .await
+            .expect("monotonic ACK after committed A then B");
+    }
+    let retained: i64 = sqlx::query_scalar(&format!(
+        "SELECT COUNT(*) FROM {journal} WHERE event_id=$1 AND payload->>'tenant_id'=$2 AND topic=$3"
+    ))
+    .bind(a)
+    .bind(&f.tenant)
+    .bind(&f.topic)
+    .fetch_one(&f.pool)
+    .await
+    .unwrap();
+    assert_eq!(retained, 1, "A must be actual retained in-scope evidence");
+    drop(stream);
+    if !a_delivered {
+        let mut resumed = f
+            .client
+            .publish_cdc(request(subscription("prefix-held", &f.topic), &f.tokens[0]))
+            .await
+            .expect("actual reconnect from durable served B ACK")
+            .into_inner();
+        a_delivered = tokio::time::timeout(Duration::from_secs(3), async {
+            while let Some(event) = resumed.next().await {
+                if event.expect("served journal row").event_id == a.to_string() {
+                    return true;
+                }
+            }
+            false
+        })
+        .await
+        .unwrap_or(false);
+        drop(resumed);
+    }
+    if !a_delivered {
+        f.close().await;
+        assert!(
+            a_delivered,
+            "g6-prefix: committed journal event must not fall behind a served durable ACK cursor"
+        );
+        return;
+    }
+
+    // A transaction begun earlier but inserting only after B is acknowledged
+    // must receive a later publication position despite its older NOW().
+    let late = Uuid::new_v4();
+    let ahead = Uuid::new_v4();
+    f.client
+        .ack_cdc_events(request(
+            acknowledgment("prefix-late-insert", &f.topic, b),
+            &f.tokens[0],
+        ))
+        .await
+        .unwrap();
+    let mut resumed = f
+        .client
+        .publish_cdc(request(
+            subscription("prefix-late-insert", &f.topic),
+            &f.tokens[0],
+        ))
+        .await
+        .unwrap()
+        .into_inner();
+    let mut old_tx = f.pool.begin().await.unwrap();
+    let started: chrono::DateTime<chrono::Utc> = sqlx::query_scalar("SELECT NOW()")
+        .fetch_one(&mut *old_tx)
+        .await
+        .unwrap();
+    let mut ahead_tx = f.pool.begin().await.unwrap();
+    write_row(&mut ahead_tx, &journal, ahead, &f.topic, &f.tenant).await;
+    ahead_tx.commit().await.unwrap();
+    assert_eq!(next(&mut resumed).await, ahead.to_string());
+    f.client
+        .ack_cdc_events(request(
+            acknowledgment("prefix-late-insert", &f.topic, ahead),
+            &f.tokens[0],
+        ))
+        .await
+        .unwrap();
+    write_row(&mut old_tx, &journal, late, &f.topic, &f.tenant).await;
+    old_tx.commit().await.unwrap();
+    let published: chrono::DateTime<chrono::Utc> = sqlx::query_scalar(&format!(
+        "SELECT published_at FROM {journal} WHERE event_id=$1"
+    ))
+    .bind(late)
+    .fetch_one(&f.pool)
+    .await
+    .unwrap();
+    assert_eq!(
+        published, started,
+        "fixture preserves actual transaction-start timestamp"
+    );
+    let late_delivered = tokio::time::timeout(Duration::from_secs(3), resumed.next())
+        .await
+        .ok()
+        .flatten()
+        .map(|event| event.unwrap().event_id == late.to_string())
+        .unwrap_or(false);
+    drop(resumed);
+    f.close().await;
+    assert!(
+        late_delivered,
+        "g6-prefix: committed journal event must not fall behind a served durable ACK cursor"
+    );
+}
+// END CDC_PREFIX_CI_REPRO

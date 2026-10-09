@@ -9,6 +9,24 @@ release line was tagged.
 
 ### Fixed
 
+- CDC journal publication and durable cursors use immutable database positions.
+  Concurrent publishers cannot commit a later position while an earlier journal
+  publication remains uncommitted. Named CDC and shared LiveQuery feeds drain
+  this committed order after local broadcasts; retries preserve the original
+  retained event, and stored named cursors survive journal retention.
+- Journal enrollment migrates retained rows and cursors transactionally, checks
+  the actual PostgreSQL column/index authority, and refuses missing modern heads
+  or inconsistent positions. A dedicated CI comparison requires the original
+  served cursor gap and the identical corrected regression; producer contention,
+  migration and persistence-failure controls run in live CI.
+- Go delegated-user calls replace service authentication metadata with the
+  selected bearer while preserving connected tenant and project boundaries.
+  Enterprise renewal does not overwrite the delegated credential.
+- Every generated Go RPC documents its canonical listener, credential, scope,
+  operation and replay contract; generation refuses missing or ambiguous entries.
+- Live Go auth tests isolate refresh-token reuse from their operator session and
+  exercise sibling-session revocation. ORM fixtures persist both verified tenant
+  and project ownership before checking the normal scoped read path.
 - Password hashing and verification use one hardware-sized CPU admission budget
   and Tokio blocking workers. Running computations retain their permits after
   caller cancellation; queued cancellation never starts another computation.
@@ -81,7 +99,12 @@ release line was tagged.
 
 ### Breaking for callers
 
-- None.
+- Upgrade all CDC and LiveQuery readers together when adopting position-based
+  journal cursors. Older readers keep timestamp ordering; this change does not
+  guarantee mixed-version reader delivery. Enrollment recovers retained rows,
+  and cannot recover already deleted or historically skipped events.
+- The external PostgreSQL table-source sequence cursor and fresh anonymous CDC
+  direct-broadcast lane retain their existing ordering limitations in this change.
 
 ## [0.5.30] - 2026-10-09
 

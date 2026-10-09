@@ -637,12 +637,12 @@ impl DataBrokerService {
             let pool = runtime.pg_pool()?.clone();
             let config = crate::runtime::system::SystemCatalogConfig::current();
             let journal = config.cdc_journal_relation();
-            let event: Option<(String, serde_json::Value, chrono::DateTime<chrono::Utc>)> = sqlx::query_as(&format!(
-                "SELECT topic, payload, published_at FROM {journal} WHERE event_id = $1"
+            let event: Option<(String, serde_json::Value, chrono::DateTime<chrono::Utc>, i64)> = sqlx::query_as(&format!(
+                "SELECT topic, payload, published_at, journal_position FROM {journal} WHERE event_id = $1"
             )).bind(event_id).fetch_optional(&pool).await.map_err(|err| {
                 crate::runtime::executor_utils::sqlx_error_to_status("CDC journal read failed", &err)
             })?;
-            let Some((topic, payload, published_at)) = event else {
+            let Some((topic, payload, published_at, journal_position)) = event else {
                 return Err(crate::runtime::executor_utils::schema_status(
                     Code::NotFound, "cdc", "AckCdcEvents", "cdc_ack_event_not_found",
                     "acknowledged CDC event is unknown or no longer retained",
@@ -654,17 +654,18 @@ impl DataBrokerService {
             let consumer = request.consumer_name.trim().to_string();
             let relation = config.cdc_consumer_cursors_relation();
             let sql = format!(
-                "INSERT INTO {relation} AS current_cursor (tenant_id, project_id, consumer_name, topic_pattern, last_event_id, owner_identity, last_published_at, acked_at) \
-                 VALUES ($1, $2, $3, $4, $5, $6, $7, NOW()) \
+                "INSERT INTO {relation} AS current_cursor (tenant_id, project_id, consumer_name, topic_pattern, last_event_id, owner_identity, last_published_at, last_journal_position, acked_at) \
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW()) \
                  ON CONFLICT (tenant_id, project_id, consumer_name, topic_pattern) DO UPDATE SET \
-                   last_event_id = CASE WHEN (current_cursor.last_published_at, current_cursor.last_event_id) < (EXCLUDED.last_published_at, EXCLUDED.last_event_id) THEN EXCLUDED.last_event_id ELSE current_cursor.last_event_id END, \
-                   last_published_at = GREATEST(current_cursor.last_published_at, EXCLUDED.last_published_at), acked_at = NOW() \
+                   last_event_id = CASE WHEN current_cursor.last_journal_position < EXCLUDED.last_journal_position THEN EXCLUDED.last_event_id ELSE current_cursor.last_event_id END, \
+                   last_published_at = CASE WHEN current_cursor.last_journal_position < EXCLUDED.last_journal_position THEN EXCLUDED.last_published_at ELSE current_cursor.last_published_at END, \
+                   last_journal_position = GREATEST(current_cursor.last_journal_position, EXCLUDED.last_journal_position), acked_at = NOW() \
                  WHERE current_cursor.owner_identity = EXCLUDED.owner_identity \
                  RETURNING EXTRACT(EPOCH FROM acked_at)::BIGINT"
             );
             let acked_at: Option<i64> = sqlx::query_scalar(&sql)
                 .bind(&security.tenant_id).bind(&security.project_id).bind(&consumer)
-                .bind(&topic_pattern).bind(event_id).bind(&owner).bind(published_at)
+                .bind(&topic_pattern).bind(event_id).bind(&owner).bind(published_at).bind(journal_position)
                 .fetch_optional(&pool).await.map_err(|err| {
                     crate::runtime::executor_utils::sqlx_error_to_status("CDC consumer cursor write failed", &err)
                 })?;
@@ -684,7 +685,7 @@ impl DataBrokerService {
         consumer: &str,
         topic_pattern: &str,
         owner: &str,
-    ) -> Result<(chrono::DateTime<chrono::Utc>, String), Status> {
+    ) -> Result<i64, Status> {
         let runtime = self.runtime_snapshot();
         let pool = runtime.pg_pool()?.clone();
         let relation =
@@ -697,12 +698,8 @@ impl DataBrokerService {
             .bind(uuid::Uuid::nil()).bind(owner).execute(&pool).await.map_err(|err| {
                 crate::runtime::executor_utils::sqlx_error_to_status("CDC consumer claim failed", &err)
             })?;
-        let (event_id, published_at, stored_owner): (
-            uuid::Uuid,
-            chrono::DateTime<chrono::Utc>,
-            String,
-        ) = sqlx::query_as(&format!(
-            "SELECT last_event_id, last_published_at, owner_identity FROM {relation} \
+        let (journal_position, stored_owner): (i64, String) = sqlx::query_as(&format!(
+            "SELECT last_journal_position, owner_identity FROM {relation} \
              WHERE tenant_id = $1 AND project_id = $2 AND consumer_name = $3 AND topic_pattern = $4"
         ))
         .bind(&ctx.tenant_id)
@@ -720,7 +717,7 @@ impl DataBrokerService {
         if stored_owner != owner {
             return Err(cdc_consumer_owner_refusal());
         }
-        Ok((published_at, event_id.to_string()))
+        Ok(journal_position)
     }
 
     pub(crate) async fn enqueue_outbox_event_inner(
