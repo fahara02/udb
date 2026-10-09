@@ -1,0 +1,112 @@
+name: Reviewed catalog control-pool capacity proof
+
+on:
+  workflow_dispatch:
+    inputs:
+      baseline_commit:
+        description: "Exact audited original c666 source; other baselines are refused"
+        required: true
+        default: c6664a2e752338f36ef99b687d2eeb643de25c9d
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: catalog-control-capacity-proof-${{ github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  reviewed-capacity:
+    name: Original and corrected actual max1 catalog serving paths
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    services:
+      postgres:
+        # Same official PostgreSQL16 digest already used by the canonical
+        # served suite; initial service provisioning avoids Docker Hub throttling.
+        image: public.ecr.aws/docker/library/postgres:16-alpine@sha256:721873c34ceb9f8d8fc265984940dc982404c105f19ad51be9fdc5970a6080ea
+        env:
+          POSTGRES_DB: udb
+          POSTGRES_USER: udb
+          POSTGRES_PASSWORD: udb
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U udb -d udb"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      UDB_LIVE_AUTH_TESTS: "1"
+      UDB_LIVE_REQUIRED: "1"
+      UDB_LIVE_NATIVE_PG_DSN: postgres://udb:udb@127.0.0.1:5432/udb
+      UDB_LIVE_AUTH_PG_DSN: postgres://udb:udb@127.0.0.1:5432/udb
+      UDB_INTEGRATION_PG_DSN: postgres://udb:udb@127.0.0.1:5432/udb
+      CARGO_TERM_COLOR: never
+      CARGO_TARGET_DIR: ${{ github.workspace }}/target/catalog-control-capacity-proof
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/setup-rust
+        with:
+          cache-key: rust-ubuntu-latest
+      - name: Install actual PostgreSQL evidence client
+        timeout-minutes: 5
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+      - name: Validate source-only runtime proof admission
+        timeout-minutes: 2
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/catalog_control_capacity_proof.py selftest
+      - name: Pin immutable original and identical corrected serving fixture
+        id: prepare
+        timeout-minutes: 3
+        env:
+          BASELINE_COMMIT: ${{ inputs.baseline_commit }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/catalog-control-capacity-proof"
+          cp scripts/catalog_control_capacity_proof.py "$RUNNER_TEMP/catalog-capacity-runner.py"
+          python3 "$RUNNER_TEMP/catalog-capacity-runner.py" prepare
+          psql "$UDB_LIVE_NATIVE_PG_DSN" -X -v ON_ERROR_STOP=1 -Atc             "SELECT version(), current_database(), current_user, current_setting('server_version_num'), rolsuper, rolcreatedb FROM pg_roles WHERE rolname=current_user"             > "$RUNNER_TEMP/catalog-control-capacity-proof/postgres-receipt.txt"
+          psql "$UDB_LIVE_NATIVE_PG_DSN" -X -v ON_ERROR_STOP=1 -Atc             "SELECT CASE WHEN current_setting('server_version_num')::INTEGER BETWEEN 160000 AND 169999 AND rolsuper AND rolcreatedb THEN 1 ELSE 0 END FROM pg_roles WHERE rolname=current_user"             | grep -Fxq 1
+      - name: Require the exact original executed pool-capacity refusal
+        id: original
+        timeout-minutes: 55
+        shell: bash
+        run: |
+          set -euo pipefail
+          trap 'python3 "$RUNNER_TEMP/catalog-capacity-runner.py" restore' EXIT
+          python3 "$RUNNER_TEMP/catalog-capacity-runner.py" original
+      - name: Require corrected normal and both max1 served matrices
+        id: corrected
+        if: always() && steps.prepare.outcome == 'success'
+        timeout-minutes: 55
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 "$RUNNER_TEMP/catalog-capacity-runner.py" restore
+          python3 "$RUNNER_TEMP/catalog-capacity-runner.py" corrected
+      - name: Require exact actual baseline and corrected evidence
+        if: always() && steps.prepare.outcome == 'success'
+        timeout-minutes: 2
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 "$RUNNER_TEMP/catalog-capacity-runner.py" finish
+      - name: Preserve source identities and actual executed runtime evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: catalog-control-capacity-proof
+          path: ${{ runner.temp }}/catalog-control-capacity-proof/
+          if-no-files-found: error
+          retention-days: 14

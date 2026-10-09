@@ -17,6 +17,14 @@ release line was tagged.
   refusing blocked changes. The matching CLI provides authenticated discovery,
   plan, approve, apply, stage, activate and status commands; filesystem receipts
   require actual target verification and cannot establish approval authority.
+- Reviewed catalog planning, approval, application, staging and activation reuse
+  their owned control connection, including a primary pool configured with one
+  connection. Project authority survives each durable migration commit; cancelled
+  apply work closes its owned sessions and rolls back uncommitted target DDL.
+- Reviewed physical evidence checks immediate ordinary UNIQUE and PRIMARY KEY
+  semantics, exact key/operator/collation/null behavior and actual constraint
+  authority. Database index storage tuning remains compatible with ordinary
+  constraints; deferred or mismatched evidence cannot authorize activation.
 - CDC journal publication and durable cursors use immutable database positions.
   Concurrent publishers cannot commit a later position while an earlier journal
   publication remains uncommitted. Named CDC and shared LiveQuery feeds drain

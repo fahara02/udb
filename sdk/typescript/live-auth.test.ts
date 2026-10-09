@@ -3424,7 +3424,92 @@ async function runLiveAuthNegative(authn: any, tenantId: string, projectId: stri
 // sanitise), never leak cross-tenant data, and never surface a server fault
 // (UNKNOWN/INTERNAL/DATA_LOSS = the input crashed the handler). Mirrors the Go suite.
 const EDGE_SERVER_FAULTS = new Set([2, 13, 15]); // UNKNOWN, INTERNAL, DATA_LOSS
-async function runLiveEdgeCases(data: any, tenantId: string, projectId: string): Promise<void> {
+// This proto disables RLS: two served principals and actual rows exercise the
+// verified project predicates in the normal query path.
+async function runLiveProjectIsolationWitness(project: UdbProject, tenantId: string, projectId: string): Promise<void> {
+  const otherProjectId = requiredEnv("UDB_LIVE_ISOLATION_PROJECT");
+  assert.notEqual(otherProjectId, projectId, "isolation witness requires two projects");
+  const target = requiredEnv("UDB_GRPC_TARGET");
+  const peer = new UdbProject({
+    target, authTarget: process.env.UDB_AUTH_GRPC_TARGET?.trim() || target,
+    tenantId, projectId: otherProjectId, purpose: "ts.edge.isolation",
+    tokenStore: memoryStore(), deadlineMs: 8_000,
+  });
+  const opts = { deadlineMs: 8_000, noRetry: true };
+  const owned: Array<{ data: any; projectId: string; id: string }> = [];
+  let sessionId = "";
+  let peerSubject = "";
+  try {
+    const token = await project.currentToken();
+    assert.ok(token?.accessToken, "operator isolation witness requires a bearer");
+    const own = (await project.auth.authenticateBearer(token.accessToken))?.principal;
+    assert.ok(own?.subject);
+    assert.equal(own.tenant_id, tenantId);
+    assert.equal(own.project_id, projectId);
+    const login = await peer.login({
+      username: requiredEnv("UDB_LIVE_ISOLATION_USERNAME"), password: requiredEnv("UDB_LIVE_PASSWORD"),
+      tenant_hint: tenantId, project_hint: otherProjectId, device_name: "ts-project-isolation",
+    });
+    sessionId = login.session_id;
+    assert.ok(login.access_token && sessionId, "peer Login must issue an owned session");
+    const principal = (await peer.auth.authenticateBearer(login.access_token))?.principal;
+    assert.ok(principal?.subject);
+    peerSubject = principal.subject;
+    assert.notEqual(principal.subject, own.subject);
+    assert.equal(principal.tenant_id, tenantId);
+    assert.equal(principal.project_id, otherProjectId);
+    assert.ok(own.scopes.includes("udb:admin") && principal.scopes.includes("udb:admin"), "both signed fixture principals need the table's approved scope");
+    const suffix = `${process.pid}-${Date.now()}`;
+    const ownId = `edge-own-${suffix}`, peerId = `edge-peer-${suffix}`;
+    for (const row of [{ data: project.generated.DataBroker, projectId, id: ownId }, { data: peer.generated.DataBroker, projectId: otherProjectId, id: peerId }]) {
+      owned.push(row);
+      await row.data.upsert({
+        context: requestContext(tenantId, row.projectId, "ts.edge.seed"), message_type: LIVE_MESSAGE_TYPE,
+        record_json: jsonBytes({ record_id: row.id, tenant_id: tenantId, project_id: row.projectId, lookup_key: `lookup-${row.id}`, payload: row.id, revision: 1 }),
+        conflict_fields: ["record_id"],
+      }, opts);
+    }
+    const selectRows = (data: any, selectedProject: string, filter: any) => data.select({
+      context: requestContext(tenantId, selectedProject, "ts.edge.isolation"), message_type: LIVE_MESSAGE_TYPE, filter, limit: 10,
+    }, opts);
+    const assertOwned = (rows: any, id: string, selectedProject: string) => {
+      assert.equal(rows.records_json.length, 1, "project-scoped witness must return exactly its owned row");
+      const row = recordJson(rows);
+      assert.deepEqual([row.record_id, row.payload, row.tenant_id, row.project_id], [id, id, tenantId, selectedProject], "project-scoped witness returned a different row or scope");
+    };
+    assertOwned(await selectRows(peer.generated.DataBroker, otherProjectId, { tenant_id: tenantId, project_id: otherProjectId, record_id: peerId }), peerId, otherProjectId);
+    const ids = { $in: [ownId, peerId] };
+    assertOwned(await selectRows(project.generated.DataBroker, projectId, { tenant_id: tenantId, record_id: ids }), ownId, projectId);
+    const foreign = await selectRows(project.generated.DataBroker, projectId, { tenant_id: tenantId, project_id: otherProjectId, record_id: ids });
+    assert.equal(foreign.records_json.length, 0, "explicit foreign project must intersect verified project to zero rows");
+    let orRefused = false;
+    try {
+      await selectRows(project.generated.DataBroker, projectId, { tenant_id: tenantId, $or: [{ record_id: ownId }, { record_id: peerId, project_id: otherProjectId }] });
+    } catch (err) {
+      assert.equal(grpcCode(err), 3, "project predicate buried in OR must receive the planner's typed InvalidArgument refusal");
+      orRefused = true;
+    }
+    assert.ok(orRefused, "project predicate buried in OR bypassed the mandatory project guard");
+  } finally {
+    const errors: string[] = [];
+    try {
+      for (const row of [...owned].reverse()) {
+        try {
+          await row.data.delete({ context: requestContext(tenantId, row.projectId, "ts.edge.cleanup"), message_type: LIVE_MESSAGE_TYPE, filter: { tenant_id: tenantId, project_id: row.projectId, record_id: row.id } }, opts);
+        } catch (err) { errors.push(`row:${grpcCode(err)}`); }
+      }
+      if (sessionId) {
+        try {
+          await ((peer as any).authGenerated ?? peer.generated).AuthnService.logout({ session_id: sessionId, revoke_reason: "sdk_project_isolation", context: { tenant: { tenant_id: tenantId, project_id: otherProjectId }, user_id: peerSubject, principal_id: peerSubject, purpose: "ts.edge.cleanup" } }, opts);
+        } catch (err) { errors.push(`session:${grpcCode(err)}`); }
+      }
+    } finally { peer.close(); }
+    assert.equal(errors.length, 0, `owned isolation cleanup failed: ${errors.join(",")}`);
+  }
+}
+
+async function runLiveEdgeCases(project: UdbProject, tenantId: string, projectId: string): Promise<void> {
+  const data = project.generated.DataBroker;
   const ctx = requestContext(tenantId, projectId, "ts.live.edge");
   const opts = { deadlineMs: 8_000, noRetry: true };
   const suffix = `${tenantId}-edge`;
@@ -3435,13 +3520,10 @@ async function runLiveEdgeCases(data: any, tenantId: string, projectId: string):
     }
   };
 
-  // 1. missing project_id in the filter -> project isolation must reject.
-  let accepted1 = false;
-  try { await data.select({ context: ctx, message_type: LIVE_MESSAGE_TYPE, filter: { tenant_id: tenantId }, limit: 1 }, opts); accepted1 = true; }
-  catch (err) { notFault("missing project_id", err); }
-  assert.equal(accepted1, false, "Select without a project_id filter was ACCEPTED — project isolation not enforced");
+  // 1. Omitted project is filled from the verified bearer, never broadened.
+  await runLiveProjectIsolationWitness(project, tenantId, projectId);
 
-  // 2. cross-tenant read -> RLS scopes to the JWT tenant; a foreign filter leaks nothing.
+  // 2. cross-tenant read -> verified scope forbids a foreign tenant's rows.
   const foreign = "00000000-0000-0000-0000-0000deadbeef";
   try {
     const resp = await data.select({ context: ctx, message_type: LIVE_MESSAGE_TYPE, filter: { tenant_id: foreign, project_id: projectId }, limit: 10 }, opts);
@@ -4255,7 +4337,7 @@ test("live broker login refreshes once and hot-swaps SDK credentials", {
 
     // Per-RPC EDGE cases (malformed/hostile inputs + isolation boundaries): every one
     // must fail closed with a typed error and never leak cross-tenant data or fault.
-    await runLiveEdgeCases(project.generated.DataBroker, tenantId, projectId);
+    await runLiveEdgeCases(project, tenantId, projectId);
 
     // Breadth: a real category-appropriate round-trip against EVERY advertised backend
     // kind (relational SQL, object, document, cache, vector, graph) — not just the

@@ -2077,7 +2077,7 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
             '"save_manifest_upsert_commit"',
             '"pg_catalog_introspection_transaction_begin"',
             '"pg_catalog_schema_introspection"',
-            '"pg_catalog_introspection_transaction_commit"',
+            '"pg_catalog_introspection_transaction_rollback"',
             '"cdc_outbox_metrics_query"',
             "catalog_sql_internal_status_carries_typed_detail",
             "assert_internal_detail(",

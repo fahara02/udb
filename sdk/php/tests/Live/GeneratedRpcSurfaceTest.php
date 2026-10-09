@@ -1188,6 +1188,114 @@ function isServerFaultPhp(int $code): bool
  * never leak another tenant's rows, and never surface a server fault. Mirrors the Go
  * `runLiveEdgeCasesE2E` / Python `run_live_edge_cases` suites.
  */
+// SdkLiveRecord disables RLS. Two served principals and rows prove the query's
+// verified project injection independently of database row policies.
+function run_project_isolation_witness_php(GeneratedClient $data, UdbMetadata $meta, string $tenant, string $project, string $suffix): void
+{
+    $peerProject = liveEnv('UDB_LIVE_ISOLATION_PROJECT');
+    expect($peerProject)->not->toBe($project, 'isolation witness requires two projects');
+    $hint = new UdbMetadata(
+        tenantId: $tenant, userId: '', purpose: 'php.edge.isolation', correlationId: "php-isolation-$suffix",
+        scopes: [], serviceIdentity: '', projectId: $peerProject, clientCatalogVersion: $meta->clientCatalogVersion,
+    );
+    $peerAuth = new GeneratedClient(['endpoint' => liveEnv('UDB_AUTH_GRPC_TARGET', liveEnv('UDB_GRPC_TARGET')), 'deadline_ms' => 8_000, 'retry' => ['max_attempts' => 1]]);
+    $peerData = new GeneratedClient(['endpoint' => liveEnv('UDB_GRPC_TARGET'), 'deadline_ms' => 8_000, 'retry' => ['max_attempts' => 1]]);
+    $peerAuth->bindContext($hint);
+    $sessionId = '';
+    $peerSubject = '';
+    $peerMeta = $hint;
+    $owned = [];
+    try {
+        $own = $peerAuth->authenticate((new \Udb\Core\Authn\Services\V1\AuthnRequest())
+            ->setBearerToken($meta->bearerToken)->setTenantHint($tenant)->setProjectHint($project), $meta)->getPrincipal();
+        expect($own)->not->toBeNull();
+        expect($own->getSubject())->not->toBe('');
+        expect($own->getTenantId())->toBe($tenant);
+        expect($own->getProjectId())->toBe($project);
+        $login = $peerAuth->login((new LoginRequest())
+            ->setUsername(liveEnv('UDB_LIVE_ISOLATION_USERNAME'))->setPassword(liveEnv('UDB_LIVE_PASSWORD'))
+            ->setTenantHint($tenant)->setProjectHint($peerProject)->setDeviceName('php-project-isolation'), $hint);
+        $sessionId = $login->getSessionId();
+        expect($login->getAccessToken())->not->toBe('');
+        expect($sessionId)->not->toBe('');
+        $peerMeta = new UdbMetadata(
+            tenantId: $tenant, userId: '', purpose: $hint->purpose, correlationId: $hint->correlationId,
+            scopes: [], serviceIdentity: '', projectId: $peerProject, clientCatalogVersion: $hint->clientCatalogVersion,
+            bearerToken: $login->getAccessToken(),
+        );
+        $peerAuth->bindContext($peerMeta);
+        $peerData->bindContext($peerMeta);
+        $peer = $peerAuth->authenticate((new \Udb\Core\Authn\Services\V1\AuthnRequest())
+            ->setBearerToken($login->getAccessToken())->setTenantHint($tenant)->setProjectHint($peerProject), $peerMeta)->getPrincipal();
+        expect($peer)->not->toBeNull();
+        expect($peer->getSubject())->not->toBe('');
+        $peerSubject = $peer->getSubject();
+        expect($peer->getSubject())->not->toBe($own->getSubject());
+        expect($peer->getTenantId())->toBe($tenant);
+        expect($peer->getProjectId())->toBe($peerProject);
+        expect(iterator_to_array($own->getScopes()))->toContain('udb:admin');
+        expect(iterator_to_array($peer->getScopes()))->toContain('udb:admin');
+        $ownId = "edge-own-$suffix";
+        $peerId = "edge-peer-$suffix";
+        foreach ([[$data, $meta, $ownId], [$peerData, $peerMeta, $peerId]] as [$client, $rowMeta, $id]) {
+            $owned[] = [$client, $rowMeta, $id];
+            $client->upsert((new \Udb\Entity\V1\UpsertRequest())
+                ->setContext((new \Udb\Entity\V1\RequestContext())->setTenantId($tenant)->setProjectId($rowMeta->projectId)->setPurpose('php.edge.seed'))
+                ->setMessageType('udb.sdk.live.v1.SdkLiveRecord')->setRecordJson(json_encode([
+                    'record_id' => $id, 'tenant_id' => $tenant, 'project_id' => $rowMeta->projectId,
+                    'lookup_key' => "lookup-$id", 'payload' => $id, 'revision' => 1,
+                ], JSON_THROW_ON_ERROR))->setConflictFields(['record_id']), $rowMeta);
+        }
+        $selectRows = static fn (GeneratedClient $client, UdbMetadata $rowMeta, array $filter) => $client->select(
+            (new \Udb\Entity\V1\SelectRequest())->setContext((new \Udb\Entity\V1\RequestContext())
+                ->setTenantId($tenant)->setProjectId($rowMeta->projectId)->setPurpose('php.edge.isolation'))
+                ->setMessageType('udb.sdk.live.v1.SdkLiveRecord')->setFilter(liveStruct($filter))->setLimit(10), $rowMeta,
+        );
+        $assertOwned = static function ($rows, string $id, string $selectedProject) use ($tenant): void {
+            expect(count($rows->getRecordsJson()))->toBe(1, 'project-scoped witness must return exactly its owned row');
+            $row = json_decode($rows->getRecordsJson()[0], true, 512, JSON_THROW_ON_ERROR);
+            expect([$row['record_id'] ?? null, $row['payload'] ?? null, $row['tenant_id'] ?? null, $row['project_id'] ?? null])
+                ->toBe([$id, $id, $tenant, $selectedProject], 'project-scoped witness returned a different row or scope');
+        };
+        $assertOwned($selectRows($peerData, $peerMeta, ['tenant_id' => $tenant, 'project_id' => $peerProject, 'record_id' => $peerId]), $peerId, $peerProject);
+        $ids = ['$in' => [$ownId, $peerId]];
+        $assertOwned($selectRows($data, $meta, ['tenant_id' => $tenant, 'record_id' => $ids]), $ownId, $project);
+        $foreign = $selectRows($data, $meta, ['tenant_id' => $tenant, 'project_id' => $peerProject, 'record_id' => $ids]);
+        expect(count($foreign->getRecordsJson()))->toBe(0, 'explicit foreign project must intersect verified project to zero rows');
+        $orRefused = false;
+        try {
+            $selectRows($data, $meta, ['tenant_id' => $tenant, '$or' => [['record_id' => $ownId], ['record_id' => $peerId, 'project_id' => $peerProject]]]);
+        } catch (\Fahara02\UdbLaravel\Exceptions\UdbRpcException $e) {
+            expect($e->status)->toBe(3, "project predicate buried in OR must receive the planner's typed InvalidArgument refusal");
+            $orRefused = true;
+        }
+        expect($orRefused)->toBeTrue('project predicate buried in OR bypassed the mandatory project guard');
+    } finally {
+        $errors = [];
+        try {
+            foreach (array_reverse($owned) as [$client, $rowMeta, $id]) {
+                try {
+                    $client->delete((new \Udb\Entity\V1\DeleteRequest())->setContext((new \Udb\Entity\V1\RequestContext())
+                        ->setTenantId($tenant)->setProjectId($rowMeta->projectId)->setPurpose('php.edge.cleanup'))
+                        ->setMessageType('udb.sdk.live.v1.SdkLiveRecord')
+                        ->setFilter(liveStruct(['tenant_id' => $tenant, 'project_id' => $rowMeta->projectId, 'record_id' => $id])), $rowMeta);
+                } catch (\Fahara02\UdbLaravel\Exceptions\UdbRpcException $e) { $errors[] = 'row:'.$e->status; }
+            }
+            if ($sessionId !== '') {
+                try {
+                    $peerAuth->logout((new \Udb\Core\Authn\Services\V1\LogoutRequest())->setSessionId($sessionId)->setRevokeReason('sdk_project_isolation')
+                        ->setContext((new \Udb\Core\Common\V1\RequestContext())->setTenant((new \Udb\Core\Common\V1\TenantContext())->setTenantId($tenant)->setProjectId($peerProject))
+                            ->setUserId($peerSubject)->setPrincipalId($peerSubject)->setPurpose('php.edge.cleanup')), $peerMeta);
+                } catch (\Fahara02\UdbLaravel\Exceptions\UdbRpcException $e) { $errors[] = 'session:'.$e->status; }
+            }
+        } finally {
+            $peerAuth->AuthnServiceStub()->close();
+            $peerData->DataBrokerStub()->close();
+        }
+        expect($errors)->toBe([], 'owned isolation cleanup failed: '.implode(',', $errors));
+    }
+}
+
 function run_edge_cases_php(GeneratedClient $data, UdbMetadata $meta, string $tenant, string $project): void
 {
     $suffix = bin2hex(random_bytes(6));
@@ -1195,18 +1303,10 @@ function run_edge_cases_php(GeneratedClient $data, UdbMetadata $meta, string $te
     $ctx = fn (string $p) => (new \Udb\Entity\V1\RequestContext())
         ->setTenantId($tenant)->setProjectId($project)->setPurpose($p);
 
-    // 1. missing project_id in the filter -> project isolation must reject it.
-    $accepted = false;
-    try {
-        $data->select((new \Udb\Entity\V1\SelectRequest())->setContext($ctx('php.edge.no-project'))
-            ->setMessageType($mt)->setFilter(liveStruct(['tenant_id' => $tenant]))->setLimit(1), $meta);
-        $accepted = true;
-    } catch (\Fahara02\UdbLaravel\Exceptions\UdbRpcException $e) {
-        expect(isServerFaultPhp($e->status))->toBeFalse("missing project_id faulted the server: {$e->getMessage()}");
-    }
-    expect($accepted)->toBeFalse('Select without a project_id filter was ACCEPTED — project isolation not enforced');
+    // 1. Omitted project is filled from the verified bearer, never broadened.
+    run_project_isolation_witness_php($data, $meta, $tenant, $project, $suffix);
 
-    // 2. cross-tenant read -> RLS scopes to the JWT tenant; a foreign filter leaks nothing.
+    // 2. cross-tenant read -> verified scope forbids a foreign tenant's rows.
     $foreign = '00000000-0000-0000-0000-0000deadbeef';
     try {
         $resp = $data->select((new \Udb\Entity\V1\SelectRequest())->setContext($ctx('php.edge.cross-tenant'))

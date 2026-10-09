@@ -4342,6 +4342,7 @@ LINT_WORKFLOW_TRIGGER_PATHS = (
     ("scripts/gen-bench-bodies-json.mjs", "benchmark body generator"),
     ("scripts/gen-sdk-benchmark-docs.mjs", "SDK benchmark docs generator"),
     ("scripts/package-sdk-producer-evidence.py", "canonical SDK producer provenance"),
+    ("scripts/catalog_control_capacity_proof.py", "reviewed catalog control-pool capacity proof"),
     ("sdk/SDK_LIVE_TEST_COVERAGE.md", "SDK live coverage generated doc"),
     ("sdk/SDK_PERF_LISTING.md", "SDK performance generated doc"),
     ("scripts/ffmpeg_transcode_smoke.py", "ffmpeg transcode smoke"),

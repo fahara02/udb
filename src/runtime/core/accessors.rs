@@ -1,6 +1,14 @@
 //! Continuation `impl DataBrokerRuntime` block (Phase F split of core.rs).
 use super::*;
 
+/// SQLx 0.8.6 stores immutable PoolOptions inside its Arc-backed pool body;
+/// Clone shares that body. Compare those stable addresses, never DSNs or the
+/// replaceable connect_options Arc, to identify the same connection budget.
+/// https://github.com/launchbadge/sqlx/blob/v0.8.6/sqlx-core/src/pool/mod.rs#L541-L550
+pub(super) fn postgres_pools_share_connections(first: &PgPool, second: &PgPool) -> bool {
+    std::ptr::eq(first.options(), second.options())
+}
+
 fn invalid_backend_selector_status(selector: &str) -> tonic::Status {
     crate::runtime::executor_utils::invalid_argument_fields(
         format!("unknown backend '{selector}'"),
@@ -498,6 +506,16 @@ impl DataBrokerRuntime {
         project_id: &str,
         expected_instance: Option<&str>,
     ) -> Result<ProjectPostgresWriteTarget, tonic::Status> {
+        self.project_postgres_write_target_on_connection(project_id, expected_instance, None)
+            .await
+    }
+
+    pub(super) async fn project_postgres_write_target_on_connection(
+        &self,
+        project_id: &str,
+        expected_instance: Option<&str>,
+        control_connection: Option<&mut sqlx::PgConnection>,
+    ) -> Result<ProjectPostgresWriteTarget, tonic::Status> {
         use sha2::{Digest, Sha256};
 
         let project_id = project_id.trim();
@@ -617,12 +635,20 @@ impl DataBrokerRuntime {
             String,
             Option<String>,
             Option<i32>,
-        ) = sqlx::query_as(
-            "SELECT current_database()::TEXT, current_user::TEXT,
-                    inet_server_addr()::TEXT, inet_server_port()",
-        )
-        .fetch_one(&pool)
-        .await
+        ) = {
+            let query = sqlx::query_as(
+                "SELECT current_database()::TEXT, current_user::TEXT,
+                        inet_server_addr()::TEXT, inet_server_port()",
+            );
+            let same_pool = self
+                .pg_pool
+                .as_ref()
+                .is_some_and(|control| postgres_pools_share_connections(control, &pool));
+            match control_connection {
+                Some(connection) if same_pool => query.fetch_one(connection).await,
+                _ => query.fetch_one(&pool).await,
+            }
+        }
         .map_err(|err| {
             crate::runtime::executor_utils::retryable_status(
                 "postgres",

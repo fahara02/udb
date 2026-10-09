@@ -229,6 +229,7 @@ func TestLiveOrmConformance(t *testing.T) {
 			"retry_count":       0,
 			"tenant_id":         tenant,
 			"project_id":        project,
+			"created_at":        time.Now().UTC().Format(time.RFC3339Nano),
 		}
 	}
 	log1, log2 := mkLog(logID1), mkLog(logID2)

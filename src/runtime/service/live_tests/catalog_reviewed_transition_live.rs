@@ -1,5 +1,6 @@
 //! Real PostgreSQL + served, credential-resolved reviewed catalog transitions.
-//! The project owns a separate database. Review RPCs use signed operator bearers
+//! The project owns a database; capacity controls also use it as the primary.
+//! Review RPCs use signed operator bearers
 //! backed by real ACTIVE native PERSON accounts; header scopes cannot approve.
 
 use super::support::{live_native_service_db_lock, require_live_dsn_any};
@@ -142,6 +143,7 @@ message Receipt {{
   string project_id = 3 [(udb.core.common.v1.pg_column) = {{sql_type:"VARCHAR(80)" project_column:true not_null:true}}];
   string lookup_key = 4 [(udb.core.common.v1.pg_column) = {{sql_type:"VARCHAR(80)" not_null:true}}];
   string round_item_id = 5 [(udb.core.common.v1.pg_column) = {{sql_type:"VARCHAR(80)" not_null:true}}];
+  string external_key = 6 [(udb.core.common.v1.pg_column) = {{sql_type:"VARCHAR(80)" unique:true}}];
 }}
 message Round {{
   option (udb.core.common.v1.pg_table) = {{
@@ -243,15 +245,9 @@ async fn fixture_bearer(
     let username = format!("reviewed_{}", Uuid::new_v4().simple());
     // This test-only authority provisions owned fixture PERSON accounts. The
     // catalog requests below carry no task-local claim or header-scope authority.
-    let provisioning = || {
-        test_claim_context(
-            "catalog-fixture-provisioner",
-            tenant,
-            project,
-            &["udb:admin"],
-            &[],
-        )
-    };
+    let provisioner_subject = Uuid::new_v4().to_string();
+    let provisioning =
+        || test_claim_context(&provisioner_subject, tenant, project, &["udb:admin"], &[]);
     let user = scope_claim_context_for_test(
         provisioning(),
         authn.create_user(Request::new(authn::CreateUserRequest {
@@ -512,6 +508,24 @@ async fn cleanup_owned_authority(
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 #[ignore = "requires actual Postgres/CREATE DATABASE; unfiltered native CI live lane"]
 async fn live_reviewed_catalog_transition_requires_native_approval_and_verified_application() {
+    run_reviewed_catalog_fixture(false, false).await;
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+#[ignore = "requires actual Postgres/CREATE DATABASE; unfiltered native CI live lane"]
+async fn live_reviewed_catalog_transition_single_connection_distinct_target() {
+    run_reviewed_catalog_fixture(true, false).await;
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+#[ignore = "requires actual Postgres/CREATE DATABASE; unfiltered native CI live lane"]
+async fn live_reviewed_catalog_transition_single_connection_primary_target() {
+    run_reviewed_catalog_fixture(true, true).await;
+}
+
+// These fixtures deliberately use only the production APIs already present in
+// c6664a2e, so CI can overlay identical serving controls on the original source.
+async fn run_reviewed_catalog_fixture(single_connection: bool, primary_as_target: bool) {
     let Some(dsn) = require_live_dsn_any(&[
         "UDB_LIVE_NATIVE_PG_DSN",
         "UDB_LIVE_AUTH_PG_DSN",
@@ -522,15 +536,21 @@ async fn live_reviewed_catalog_transition_requires_native_approval_and_verified_
     };
     let _lock = live_native_service_db_lock().lock().await;
     let _restore = SecurityRestore(SecurityConfig::current());
-    let control = pool(&dsn).await;
-    super::support::migrate_native_service_db(&control).await;
+    let administration = pool(&dsn).await;
     let database = format!("udb_reviewed_{}", Uuid::new_v4().simple());
     sqlx::query(&format!("CREATE DATABASE \"{database}\""))
-        .execute(&control)
+        .execute(&administration)
         .await
         .expect("create owned routed project database");
     let target_dsn = project_dsn(&dsn, &database);
     let target = pool(&target_dsn).await;
+    // These administrative fixture pools never supply broker serving capacity.
+    let control = if primary_as_target {
+        pool(&target_dsn).await
+    } else {
+        administration.clone()
+    };
+    super::support::migrate_native_service_db(&control).await;
     let tenant = Uuid::new_v4().to_string();
     let project = Uuid::new_v4().to_string();
     let foreign_project = Uuid::new_v4().to_string();
@@ -573,6 +593,8 @@ async fn live_reviewed_catalog_transition_requires_native_approval_and_verified_
     assert_eq!(partial_index.columns, ["lookup_key"]);
     assert_eq!(partial_index.where_clause, "round_item_id IS NULL");
     let candidate_table = candidate.table(&schema, "records").unwrap();
+    let ordinary_unique = candidate_table.columns.iter().find(|column| column.column_name == "external_key").unwrap();
+    assert!(ordinary_unique.unique && !ordinary_unique.not_null && !ordinary_unique.is_primary);
     let foreign_key = candidate_table.foreign_keys.iter().find(|key| key.name == "fk_records_round_item")
         .expect("real parser-generated existing-table foreign key");
     assert_eq!(foreign_key.columns, ["round_item_id"]);
@@ -595,22 +617,43 @@ async fn live_reviewed_catalog_transition_requires_native_approval_and_verified_
         ..SecurityConfig::default()
     };
     let mut config = UdbConfig::from_env();
-    config.primary.direct_dsn = dsn.clone();
-    config.project_routing_mode = "strict".into();
+    config.primary.direct_dsn = if primary_as_target { target_dsn.clone() } else { dsn.clone() };
+    if single_connection {
+        config.primary.max_open_conns = 1;
+        config.primary.min_connections = 1;
+        config.primary.acquire_timeout_secs = 2;
+    }
+    config.project_routing_mode = if primary_as_target { "permissive" } else { "strict" }.into();
     config.security = security.clone();
     config.service.catalog_compatibility_level = "backward".into();
     config.service.abac_default_allow = false;
-    config.backend_instances = BackendInstanceConfig {
-        instances: vec![BackendInstance {
-            name: "reviewed-project-target".into(),
-            dsn: Some(target_dsn),
-            dsn_env: None,
-            labels: BTreeMap::from([("project_id".into(), project.clone())]),
-            ..Default::default()
-        }],
+    config.backend_instances = if primary_as_target {
+        BackendInstanceConfig { instances: vec![] }
+    } else {
+        BackendInstanceConfig {
+            instances: vec![BackendInstance {
+                name: "reviewed-project-target".into(),
+                dsn: Some(target_dsn.clone()),
+                dsn_env: None,
+                labels: BTreeMap::from([("project_id".into(), project.clone())]),
+                ..Default::default()
+            }],
+        }
     };
     let service = build_service(config.clone()).await;
     let runtime = service.runtime_snapshot();
+    if single_connection {
+        let serving_control = runtime.pg_pool_clone().expect("actual broker control pool");
+        let serving_target = runtime.pg_pool_for_instance(Some(if primary_as_target {
+            "primary"
+        } else {
+            "reviewed-project-target"
+        })).expect("actual broker project target");
+        assert_eq!(serving_control.options().get_max_connections(), 1);
+        assert_eq!(serving_target.options().get_max_connections(), 1);
+        assert_eq!(std::ptr::eq(serving_control.options(), serving_target.options()), primary_as_target,
+            "the serving target must have the claimed shared/distinct pool layout");
+    }
     let staged_base = runtime
         .stage_catalog(
             &project,
@@ -715,6 +758,26 @@ async fn live_reviewed_catalog_transition_requires_native_approval_and_verified_
         base.manifest_integrity_sha256
     );
     assert_ne!(base.manifest_integrity_sha256, original.checksum_sha256);
+    let native_plan = plan(
+        &mut served.client, &owner, &project, &base, &candidate_bytes, "candidate-plan",
+    ).await.expect(if single_connection {
+        "CATALOG_CONTROL_CAPACITY: served reviewed candidate planning must succeed within one configured control connection"
+    } else {
+        "native candidate plan before stage"
+    });
+    if single_connection {
+        let mut first_client = served.client.clone();
+        let mut second_client = served.client.clone();
+        let (first, second) = tokio::join!(
+            plan(&mut first_client, &owner, &project, &base, &candidate_bytes, "concurrent-plan-one"),
+            plan(&mut second_client, &owner, &project, &base, &candidate_bytes, "concurrent-plan-two"),
+        );
+        let first = first.expect("concurrent signed candidate plan one must use bounded capacity");
+        let second = second.expect("concurrent signed candidate plan two must use bounded capacity");
+        assert_ne!(first.run_id, second.run_id);
+        assert_eq!(first.operations_hash, native_plan.operations_hash);
+        assert_eq!(second.operations_hash, native_plan.operations_hash);
+    }
 
     let mut no_credential = Request::new(MigrationPlanRequest {
         project_id: project.clone(),
@@ -795,16 +858,7 @@ async fn live_reviewed_catalog_transition_requires_native_approval_and_verified_
     );
 
     assert_active(&control, &project, &base.catalog_id).await;
-    let native_plan = plan(
-        &mut served.client,
-        &owner,
-        &project,
-        &base,
-        &candidate_bytes,
-        "candidate-plan",
-    )
-    .await
-    .expect("native candidate plan before stage");
+
     let evidence = native_plan.reviewed_catalog_transition.as_ref().unwrap();
     assert!(
         !evidence.reviewed_operation_fingerprints.is_empty(),
@@ -1032,7 +1086,32 @@ async fn live_reviewed_catalog_transition_requires_native_approval_and_verified_
             .bytes()
             .all(|byte| byte.is_ascii_alphanumeric() || byte == b'_')
     );
-    for (name, corrupt, restore) in [
+    let unique_name: String = sqlx::query_scalar(
+        "SELECT c.conname::TEXT FROM pg_catalog.pg_constraint c
+         JOIN pg_catalog.pg_class r ON r.oid=c.conrelid
+         JOIN pg_catalog.pg_namespace n ON n.oid=r.relnamespace
+         JOIN pg_catalog.pg_attribute a ON a.attrelid=c.conrelid AND a.attnum=c.conkey[1]
+         WHERE n.nspname::TEXT=$1 AND r.relname='records' AND c.contype='u'
+         AND cardinality(c.conkey)=1 AND a.attname='external_key'",
+    )
+    .bind(&schema).fetch_one(&target).await.expect("discover actual producer ordinary UNIQUE constraint");
+    assert!(unique_name.bytes().all(|byte| byte.is_ascii_alphanumeric() || byte == b'_'));
+    let alternate_collation: String = sqlx::query_scalar(
+        "SELECT quote_ident(n.nspname)||'.'||quote_ident(c.collname)
+         FROM pg_catalog.pg_collation c JOIN pg_catalog.pg_namespace n ON n.oid=c.collnamespace
+         WHERE n.nspname='pg_catalog' AND c.collname IN ('C','POSIX') AND c.oid<>(
+             SELECT a.attcollation FROM pg_catalog.pg_attribute a
+             JOIN pg_catalog.pg_class r ON r.oid=a.attrelid
+             JOIN pg_catalog.pg_namespace n ON n.oid=r.relnamespace
+             WHERE n.nspname::TEXT=$1 AND r.relname='records' AND a.attname='external_key')
+         ORDER BY c.collname LIMIT 1",
+    )
+    .bind(&schema).fetch_one(&target).await.expect("choose a real alternate index collation");
+    let restore_unique = format!("ALTER TABLE \"{schema}\".records ADD CONSTRAINT \"{unique_name}\" UNIQUE (external_key)");
+    let drop_unique = format!("ALTER TABLE \"{schema}\".records DROP CONSTRAINT \"{unique_name}\"");
+    let restore_primary = format!("ALTER TABLE \"{schema}\".records ADD CONSTRAINT \"{primary_name}\" PRIMARY KEY (record_id)");
+    let drop_primary = format!("ALTER TABLE \"{schema}\".records DROP CONSTRAINT \"{primary_name}\"");
+    let mut physical_controls = vec![
         ("foreign-target", format!("ALTER TABLE \"{schema}\".records DROP CONSTRAINT fk_records_round_item; ALTER TABLE \"{schema}\".records ADD CONSTRAINT fk_records_round_item FOREIGN KEY (round_item_id) REFERENCES \"{schema}\".records (record_id) ON DELETE RESTRICT ON UPDATE CASCADE DEFERRABLE INITIALLY IMMEDIATE"),
             format!("ALTER TABLE \"{schema}\".records DROP CONSTRAINT fk_records_round_item; ALTER TABLE \"{schema}\".records ADD CONSTRAINT fk_records_round_item FOREIGN KEY (round_item_id) REFERENCES \"{schema}\".rounds (round_item_id) ON DELETE RESTRICT ON UPDATE CASCADE DEFERRABLE INITIALLY IMMEDIATE")),
         ("foreign-unvalidated", format!("ALTER TABLE \"{schema}\".records DROP CONSTRAINT fk_records_round_item; ALTER TABLE \"{schema}\".records ADD CONSTRAINT fk_records_round_item FOREIGN KEY (round_item_id) REFERENCES \"{schema}\".rounds (round_item_id) ON DELETE RESTRICT ON UPDATE CASCADE DEFERRABLE INITIALLY IMMEDIATE NOT VALID"),
@@ -1063,7 +1142,47 @@ async fn live_reviewed_catalog_transition_requires_native_approval_and_verified_
             format!("ALTER TABLE \"{schema}\".records DISABLE ROW LEVEL SECURITY"),
             format!("ALTER TABLE \"{schema}\".records ENABLE ROW LEVEL SECURITY"),
         ),
-    ] {
+        (
+            "unique-deferrable",
+            format!("{drop_unique}; ALTER TABLE \"{schema}\".records ADD CONSTRAINT \"{unique_name}\" UNIQUE (external_key) DEFERRABLE INITIALLY IMMEDIATE"),
+            format!("{drop_unique}; {restore_unique}"),
+        ),
+        (
+            "primary-deferrable",
+            format!("{drop_primary}; ALTER TABLE \"{schema}\".records ADD CONSTRAINT \"{primary_name}\" PRIMARY KEY (record_id) DEFERRABLE INITIALLY IMMEDIATE"),
+            format!("{drop_primary}; {restore_primary}"),
+        ),
+        (
+            "unique-opclass",
+            format!("{drop_unique}; CREATE UNIQUE INDEX idx_records_unique_control ON \"{schema}\".records (external_key varchar_pattern_ops)"),
+            format!("DROP INDEX \"{schema}\".idx_records_unique_control; {restore_unique}"),
+        ),
+        (
+            "unique-collation",
+            format!("{drop_unique}; CREATE UNIQUE INDEX idx_records_unique_control ON \"{schema}\".records (external_key COLLATE {alternate_collation})"),
+            format!("DROP INDEX \"{schema}\".idx_records_unique_control; {restore_unique}"),
+        ),
+        (
+            "unique-include",
+            format!("{drop_unique}; ALTER TABLE \"{schema}\".records ADD CONSTRAINT \"{unique_name}\" UNIQUE (external_key) INCLUDE (record_id)"),
+            format!("{drop_unique}; {restore_unique}"),
+        ),
+        (
+            "primary-include",
+            format!("{drop_primary}; ALTER TABLE \"{schema}\".records ADD CONSTRAINT \"{primary_name}\" PRIMARY KEY (record_id) INCLUDE (lookup_key)"),
+            format!("{drop_primary}; {restore_primary}"),
+        ),
+    ];
+    let server_version: i32 = sqlx::query_scalar("SELECT current_setting('server_version_num')::INTEGER")
+        .fetch_one(&target).await.expect("real PostgreSQL capability for NULLS NOT DISTINCT");
+    if server_version >= 150000 {
+        physical_controls.push((
+            "unique-nulls-not-distinct",
+            format!("{drop_unique}; ALTER TABLE \"{schema}\".records ADD CONSTRAINT \"{unique_name}\" UNIQUE NULLS NOT DISTINCT (external_key)"),
+            format!("{drop_unique}; {restore_unique}"),
+        ));
+    }
+    for (name, corrupt, restore) in physical_controls {
         let bad_plan = plan(
             &mut served.client,
             &owner,
@@ -1140,14 +1259,23 @@ async fn live_reviewed_catalog_transition_requires_native_approval_and_verified_
             .await
             .expect("restore only owned target physical shape");
     }
+    // Physical storage tuning does not change the ordinary UNIQUE/PK promise.
+    // Keep this positive alongside the semantic corruption refusal matrix.
+    sqlx::raw_sql(&format!(
+        "ALTER INDEX \"{schema}\".\"{unique_name}\" SET (fillfactor=70,deduplicate_items=off); \
+         ALTER INDEX \"{schema}\".\"{primary_name}\" SET (fillfactor=70,deduplicate_items=off)"
+    ))
+    .execute(&target)
+    .await
+    .expect("apply only owned ordinary-constraint storage tuning");
     let control_has_table: bool = sqlx::query_scalar("SELECT to_regclass($1) IS NOT NULL")
         .bind(format!("{schema}.records"))
         .fetch_one(&control)
         .await
         .unwrap();
-    assert!(
-        !control_has_table,
-        "physical verification must use the routed project database"
+    assert_eq!(
+        control_has_table, primary_as_target,
+        "physical target presence must match the actual shared/distinct database layout"
     );
     let applied = apply(&mut served.client, &owner, &approval)
         .await
@@ -1388,9 +1516,102 @@ async fn live_reviewed_catalog_transition_requires_native_approval_and_verified_
     let fresh_approval = approve(&mut served.client, &owner, &fresh_plan)
         .await
         .unwrap();
+    if single_connection {
+        // Hold only physical target CREATE INDEX after its command executes.
+        // PostgreSQL's TEMP expected-shape work uses another schema, so this
+        // owned-db hook cannot block preflight parse/deparse or mint receipts.
+        let ddl_gate = format!("catalog-ci-ddl-{}", Uuid::new_v4());
+        sqlx::raw_sql(&format!(
+            "CREATE FUNCTION \"{schema}\".hold_owned_catalog_ddl() RETURNS event_trigger LANGUAGE plpgsql AS $ci_hold$
+             BEGIN IF EXISTS(SELECT 1 FROM pg_event_trigger_ddl_commands() WHERE schema_name='{schema}' AND command_tag='CREATE INDEX')
+             THEN PERFORM pg_advisory_xact_lock(hashtextextended('{ddl_gate}',900731)); END IF; END $ci_hold$;
+             CREATE EVENT TRIGGER udb_owned_catalog_hold ON ddl_command_end EXECUTE FUNCTION \"{schema}\".hold_owned_catalog_ddl();"
+        )).execute(&target).await.expect("install only owned target physical-DDL blockade");
+        let mut held_target = target.begin().await.unwrap();
+        sqlx::query("SELECT pg_advisory_xact_lock(hashtextextended($1,900731))")
+            .bind(&ddl_gate).execute(&mut *held_target).await.unwrap();
+        let held_target_pid: i32 = sqlx::query_scalar("SELECT pg_backend_pid()")
+            .fetch_one(&mut *held_target).await.unwrap();
+        let mut timed_client = served.client.clone();
+        let mut timed_request = request(MigrationApplyRequest {
+            project_id: project.clone(),
+            run_id: fresh_approval.run_id.clone(),
+            approval_token: fresh_approval.approval_token.clone().unwrap(),
+            idempotency_key: format!("apply-{}", fresh_approval.run_id),
+            ..Default::default()
+        }, &owner);
+        // Native artifact lock_timeout is 5s; expiry at 4s cancels the served
+        // request before the intentional DDL gate can become an SQL failure.
+        timed_request.set_timeout(Duration::from_secs(4));
+        let pending_apply = tokio::spawn(async move {
+            timed_client.apply_migration(timed_request).await
+        });
+        let runs = SystemCatalogConfig::default().migration_runs_relation();
+        let active_run_id = Uuid::parse_str(&fresh_approval.run_id).unwrap();
+        tokio::time::timeout(Duration::from_secs(3), async {
+            loop {
+                let state: String = sqlx::query_scalar(&format!("SELECT state FROM {runs} WHERE run_id=$1"))
+                    .bind(active_run_id).fetch_one(&control).await.unwrap();
+                if state == "APPLYING" {
+                    break;
+                }
+                assert_eq!(state, "APPROVED", "blocked Apply must enter its durable running state");
+                tokio::time::sleep(Duration::from_millis(10)).await;
+            }
+        }).await.expect("actual served Apply must begin before its client deadline");
+        tokio::time::timeout(Duration::from_secs(2), async {
+            loop {
+                let physical_ddl_waiting: bool = sqlx::query_scalar(
+                    "SELECT EXISTS(SELECT 1 FROM pg_locks waiting JOIN pg_locks held
+                     ON waiting.locktype=held.locktype AND waiting.database=held.database
+                     AND waiting.classid=held.classid AND waiting.objid=held.objid
+                     AND waiting.objsubid=held.objsubid
+                     WHERE held.pid=$1 AND held.locktype='advisory' AND held.granted
+                     AND NOT waiting.granted AND waiting.pid<>held.pid)"
+                ).bind(held_target_pid).fetch_one(&target).await.unwrap();
+                if physical_ddl_waiting { break; }
+                tokio::time::sleep(Duration::from_millis(10)).await;
+            }
+        }).await.expect("actual target CREATE INDEX must wait in the owned DDL gate");
+        let mut observer = control.begin().await.unwrap();
+        let observer_pid: i32 = sqlx::query_scalar("SELECT pg_backend_pid()")
+            .fetch_one(&mut *observer).await.unwrap();
+        let acquired: bool = sqlx::query_scalar("SELECT pg_try_advisory_xact_lock(hashtextextended($1,534154))")
+            .bind(&project).fetch_one(&mut *observer).await.unwrap();
+        assert!(!acquired, "Apply must retain the project lock across its preflight COMMIT");
+        let waiter_project = project.clone();
+        let waiter = tokio::spawn(async move {
+            sqlx::query("SELECT pg_advisory_xact_lock(hashtextextended($1,534154))")
+                .bind(&waiter_project).execute(&mut *observer).await
+                .expect("independent project waiter query");
+            observer.commit().await.expect("release only observer project lock");
+        });
+        tokio::time::timeout(Duration::from_secs(1), async {
+            loop {
+                let blocked: bool = sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM pg_locks WHERE pid=$1 AND locktype='advisory' AND NOT granted)")
+                    .bind(observer_pid).fetch_one(&control).await.unwrap();
+                if blocked { break; }
+                tokio::time::sleep(Duration::from_millis(10)).await;
+            }
+        }).await.expect("real independent observer must be waiting on the project authority lock");
+        let refused = tokio::time::timeout(Duration::from_secs(6), pending_apply)
+            .await.expect("bounded served transport cancellation")
+            .expect("owned client task must finish")
+            .expect_err("target DDL gate must prevent Apply success before the deadline");
+        // Pinned tonic 0.12 maps transport TimeoutExpired to Cancelled.
+        assert_eq!(refused.code(), Code::Cancelled, "the actual transport deadline must cancel Apply");
+        tokio::time::timeout(Duration::from_secs(5), waiter).await
+            .expect("cancelled served Apply must release its owned project lock")
+            .expect("independent observer must finish");
+        // Remove the hook while its gate is still held: cancelled work cannot
+        // turn an uncommitted artifact into a successful continuation.
+        sqlx::query("DROP EVENT TRIGGER udb_owned_catalog_hold")
+            .execute(&target).await.expect("remove only owned target DDL hook");
+        held_target.rollback().await.unwrap();
+    }
     let fresh_applied = apply(&mut served.client, &owner, &fresh_approval)
         .await
-        .unwrap();
+        .expect("actual native apply must resume after a cancelled, uncommitted artifact");
     assert_eq!(
         fresh_applied
             .reviewed_catalog_transition
@@ -1508,8 +1729,13 @@ async fn live_reviewed_catalog_transition_requires_native_approval_and_verified_
     // resolve durable references into the soon-to-be-deleted routed database.
     let cleanup = cleanup_owned_authority(&control, &[project, foreign_project]).await;
     let closed = tokio::time::timeout(Duration::from_secs(10), target.close()).await;
+    if primary_as_target {
+        tokio::time::timeout(Duration::from_secs(10), control.close())
+            .await
+            .expect("owned primary fixture pool must close");
+    }
     let removed = sqlx::query(&format!("DROP DATABASE \"{database}\" WITH (FORCE)"))
-        .execute(&control)
+        .execute(&administration)
         .await;
     if let Err(payload) = fixture_result {
         if cleanup.is_err() || closed.is_err() || removed.is_err() {

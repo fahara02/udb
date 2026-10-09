@@ -111,7 +111,17 @@ func TestLivePerf(t *testing.T) {
 		t.Fatal("offline platform fixture did not issue the reserved platform_admin role")
 	}
 	platformAuthz := "Bearer " + platformLogin.GetAccessToken()
-	platformGen := NewGenerated(authConn, liveGeneratedOptions(meta, platformAuthz))
+	platformMeta := meta
+	platformMeta.TenantID = platformWho.GetPrincipal().GetTenantId()
+	platformMeta.ProjectID = platformWho.GetPrincipal().GetProjectId()
+	platformMeta.UserID = platformWho.GetPrincipal().GetUserId()
+	platformMeta.ServiceIdentity = platformWho.GetPrincipal().GetServiceIdentity()
+	platformMeta.Scopes = append([]string(nil), platformWho.GetPrincipal().GetScopes()...)
+	if platformMeta.TenantID != tenant || platformMeta.ProjectID != project || platformMeta.UserID == "" {
+		t.Fatal("verified platform fixture must retain the measured tenant/project and its own user identity")
+	}
+	platformGen := NewGenerated(authConn, liveGeneratedOptions(platformMeta, platformAuthz))
+	platformBrokerGen := NewGenerated(brokerConn, liveGeneratedOptions(platformMeta, platformAuthz))
 
 	// SEED PHASE (runs before any measurement): create real, disposable entities
 	// and capture their identifiers so every RPC can be driven down its SUCCESS
@@ -155,7 +165,12 @@ func TestLivePerf(t *testing.T) {
 		t.Fatal("fresh platform fixture lost the reserved platform_admin role")
 	}
 	platformAuthz = "Bearer " + platformLogin.GetAccessToken()
-	platformGen = NewGenerated(authConn, liveGeneratedOptions(meta, platformAuthz))
+	if platformWho.GetPrincipal().GetTenantId() != platformMeta.TenantID || platformWho.GetPrincipal().GetProjectId() != platformMeta.ProjectID || platformWho.GetPrincipal().GetUserId() != platformMeta.UserID {
+		t.Fatal("fresh platform principal changed its verified identity")
+	}
+	platformMeta.Scopes = append([]string(nil), platformWho.GetPrincipal().GetScopes()...)
+	platformGen = NewGenerated(authConn, liveGeneratedOptions(platformMeta, platformAuthz))
+	platformBrokerGen = NewGenerated(brokerConn, liveGeneratedOptions(platformMeta, platformAuthz))
 
 	// Re-mint FRESH credentials right before measurement, into THREE INDEPENDENT
 	// admin sessions — one per consumer — so the session-mutating Phase-1 RPCs don't
@@ -300,12 +315,7 @@ func TestLivePerf(t *testing.T) {
 				t.Logf("perf re-login before terminal tenant purge remained revoked: %v", reloginErr)
 			}
 		}
-		gen := authGen
-		if rpc.Service == "DataBroker" {
-			gen = brokerGen
-		} else if requiresPlatformBenchmarkIdentity(rpc) {
-			gen = platformGen
-		}
+		gen := liveBenchmarkClient(rpc, brokerGen, authGen, platformBrokerGen, platformGen)
 		iters, note := iterFor(rpc.OperationKind)
 		if isCdcSubscriptionRPC(rpc) {
 			// CDC first-event includes a real produce→deliver round-trip; keep the
@@ -513,11 +523,11 @@ func TestLivePerf(t *testing.T) {
 
 // Platform credentials are intentionally narrow in both live suites. Ordinary
 // tenant Authz CRUD remains claim-attributed to the tenant bootstrap user; only
-// governance, system-global analytics, and explicit cross-tenant movement use
+// global project enumeration, governance, system-global analytics, and explicit cross-tenant movement use
 // the separately offline-provisioned platform principal.
 func requiresPlatformBenchmarkIdentity(rpc RPCInfo) bool {
 	switch rpc.FullMethod {
-	case "/udb.core.analytics.services.v1.AnalyticsService/GetExecutorPerformance",
+	case "/udb.services.v1.DataBroker/ListProjects", "/udb.core.analytics.services.v1.AnalyticsService/GetExecutorPerformance",
 		"/udb.core.analytics.services.v1.AnalyticsService/GetReconciliationAnalytics",
 		"/udb.core.backup.services.v1.BackupService/RestoreTenant",
 		"/udb.core.tenant.services.v1.TenantService/AdminPurgeTenant":
@@ -539,8 +549,22 @@ func requiresPlatformBenchmarkIdentity(rpc RPCInfo) bool {
 	}
 }
 
+func liveBenchmarkClient(rpc RPCInfo, broker, auth, platformBroker, platformAuth *GeneratedClient) *GeneratedClient {
+	if rpc.Service == "DataBroker" {
+		if requiresPlatformBenchmarkIdentity(rpc) {
+			return platformBroker
+		}
+		return broker
+	}
+	if requiresPlatformBenchmarkIdentity(rpc) {
+		return platformAuth
+	}
+	return auth
+}
+
 func TestPlatformBenchmarkIdentityRoutingIsNarrow(t *testing.T) {
 	for _, rpc := range []RPCInfo{
+		{Service: "DataBroker", Name: "ListProjects", FullMethod: "/udb.services.v1.DataBroker/ListProjects"},
 		{Service: "AnalyticsService", Name: "GetExecutorPerformance", FullMethod: "/udb.core.analytics.services.v1.AnalyticsService/GetExecutorPerformance"},
 		{Service: "BackupService", Name: "RestoreTenant", FullMethod: "/udb.core.backup.services.v1.BackupService/RestoreTenant"},
 		{Service: "AuthzService", Name: "CreatePolicyDraft"},
@@ -551,12 +575,29 @@ func TestPlatformBenchmarkIdentityRoutingIsNarrow(t *testing.T) {
 		}
 	}
 	for _, rpc := range []RPCInfo{
+		{Service: "DataBroker", Name: "EnsureProject", FullMethod: "/udb.services.v1.DataBroker/EnsureProject"},
+		{Service: "DataBroker", Name: "Select", FullMethod: "/udb.services.v1.DataBroker/Select"},
 		{Service: "AuthzService", Name: "CreateRole"},
 		{Service: "AuthzService", Name: "AssignRole"},
 		{Service: "TenantService", Name: "PurgeTenant"},
 	} {
 		if requiresPlatformBenchmarkIdentity(rpc) {
 			t.Fatalf("%s/%s must retain ordinary tenant authority", rpc.Service, rpc.Name)
+		}
+	}
+	broker, auth, platformBroker, platformAuth := &GeneratedClient{}, &GeneratedClient{}, &GeneratedClient{}, &GeneratedClient{}
+	for _, test := range []struct {
+		rpc  RPCInfo
+		want *GeneratedClient
+	}{
+		{RPCInfo{Service: "DataBroker", FullMethod: "/udb.services.v1.DataBroker/ListProjects"}, platformBroker},
+		{RPCInfo{Service: "DataBroker", FullMethod: "/udb.services.v1.DataBroker/Select"}, broker},
+		{RPCInfo{Service: "DataBroker", FullMethod: "/udb.services.v1.DataBroker/EnsureProject"}, broker},
+		{RPCInfo{Service: "AnalyticsService", FullMethod: "/udb.core.analytics.services.v1.AnalyticsService/GetExecutorPerformance"}, platformAuth},
+		{RPCInfo{Service: "AuthnService", Name: "ValidateToken"}, auth},
+	} {
+		if got := liveBenchmarkClient(test.rpc, broker, auth, platformBroker, platformAuth); got != test.want {
+			t.Fatalf("%s must retain its actual listener and narrow verified credential", test.rpc.FullMethod)
 		}
 	}
 }

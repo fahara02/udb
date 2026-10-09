@@ -16,6 +16,8 @@ struct ReviewedIndexShape {
     unique_index: bool,
     immediate: bool,
     method: String,
+    key_width: i32,
+    total_width: i32,
     keys: Vec<String>,
     include_columns: Vec<String>,
     predicate: String,
@@ -25,6 +27,30 @@ struct ReviewedIndexShape {
     collations: String,
     parameters: Vec<String>,
     nulls_not_distinct: bool,
+}
+
+impl ReviewedIndexShape {
+    fn matches_ordinary_constraint(&self, expected: &Self) -> bool {
+        // Column UNIQUE/PRIMARY KEY annotations do not bind index storage
+        // tuning. Preserve every enforcement/key semantic while allowing
+        // fillfactor/deduplication choices on an otherwise equivalent index.
+        self.valid == expected.valid
+            && self.ready == expected.ready
+            && self.live == expected.live
+            && self.unique_index == expected.unique_index
+            && self.immediate == expected.immediate
+            && self.method == expected.method
+            && self.key_width == expected.key_width
+            && self.total_width == expected.total_width
+            && self.keys == expected.keys
+            && self.include_columns == expected.include_columns
+            && self.predicate == expected.predicate
+            && self.plain_keys == expected.plain_keys
+            && self.key_options == expected.key_options
+            && self.operator_classes == expected.operator_classes
+            && self.collations == expected.collations
+            && self.nulls_not_distinct == expected.nulls_not_distinct
+    }
 }
 
 impl<'row> sqlx::FromRow<'row, sqlx::postgres::PgRow> for ReviewedIndexShape {
@@ -37,6 +63,8 @@ impl<'row> sqlx::FromRow<'row, sqlx::postgres::PgRow> for ReviewedIndexShape {
             unique_index: row.try_get("unique_index")?,
             immediate: row.try_get("immediate")?,
             method: row.try_get("method")?,
+            key_width: row.try_get("key_width")?,
+            total_width: row.try_get("total_width")?,
             keys: row.try_get("keys")?,
             include_columns: row.try_get("include_columns")?,
             predicate: row.try_get("predicate")?,
@@ -518,7 +546,7 @@ impl DataBrokerRuntime {
             return Ok(id.to_string());
         }
         let active = self
-            .load_active_catalog_for_project(&project)
+            .load_active_catalog_for_project_on_connection(&project, &mut *tx)
             .await?
             .ok_or_else(|| {
                 refusal(
@@ -559,7 +587,9 @@ impl DataBrokerRuntime {
             .collect();
         reviewed_operation_fingerprints.sort();
         reviewed_operation_fingerprints.dedup();
-        let target_route = self.project_postgres_write_target(&project, None).await?;
+        let target_route = self
+            .project_postgres_write_target_on_connection(&project, None, Some(&mut *tx))
+            .await?;
         let plan = ReviewedCatalogPlan {
             tenant_id: request.tenant_id.clone(),
             project_id: project.clone(),
@@ -699,7 +729,7 @@ impl DataBrokerRuntime {
             ));
         }
         let active = self
-            .load_active_catalog_for_project(&project)
+            .load_active_catalog_for_project_on_connection(&project, &mut *tx)
             .await?
             .ok_or_else(|| refusal("reviewed_base_changed", "ACTIVE catalog is absent"))?;
         self.validate_reviewed_plan_base(&plan, &active)?;
@@ -857,10 +887,16 @@ impl DataBrokerRuntime {
             ));
         }
         let target = self
-            .project_postgres_write_target(project, Some(&plan.target_instance))
+            .project_postgres_write_target_on_connection(
+                project,
+                Some(&plan.target_instance),
+                Some(&mut **tx),
+            )
             .await?;
         if target.provenance_sha256 != plan.target_provenance_sha256
-            || !self.verified_reviewed_target(&plan, &target.pool).await?
+            || !self
+                .verified_reviewed_target(&plan, &target.pool, &mut **tx)
+                .await?
         {
             return Err(refusal(
                 "reviewed_target_verification_failed",
@@ -896,7 +932,7 @@ impl DataBrokerRuntime {
             ));
         }
         let active = self
-            .load_active_catalog_for_project(project)
+            .load_active_catalog_for_project_on_connection(project, &mut **tx)
             .await?
             .ok_or_else(|| {
                 refusal(
@@ -951,11 +987,23 @@ impl DataBrokerRuntime {
         pool: &PgPool,
         payload: &serde_json::Value,
     ) -> Result<bool, tonic::Status> {
+        let mut connection = pool.acquire().await.map_err(|err| {
+            catalog_admin_internal_status("reviewed_target_receipt_acquire", err.to_string())
+        })?;
+        self.reviewed_artifact_applied_on_connection(&mut connection, payload)
+            .await
+    }
+
+    pub(super) async fn reviewed_artifact_applied_on_connection(
+        &self,
+        connection: &mut sqlx::PgConnection,
+        payload: &serde_json::Value,
+    ) -> Result<bool, tonic::Status> {
         let artifact = reviewed_sql_artifact(payload)?;
         let row: Option<(String, String)> =
             sqlx::query_as("SELECT checksum,state FROM public.schema_migrations WHERE filename=$1")
                 .bind(&artifact.rel_path)
-                .fetch_optional(pool)
+                .fetch_optional(&mut *connection)
                 .await
                 .map_err(|err| {
                     catalog_admin_internal_status("reviewed_target_receipt", err.to_string())
@@ -979,9 +1027,27 @@ impl DataBrokerRuntime {
         &self,
         plan: &ReviewedCatalogPlan,
         pool: &PgPool,
+        control_connection: &mut sqlx::PgConnection,
+    ) -> Result<bool, tonic::Status> {
+        if super::accessors::postgres_pools_share_connections(self.pg_pool()?, pool) {
+            return self
+                .verified_reviewed_target_on_connection(plan, control_connection)
+                .await;
+        }
+        let mut connection = pool.acquire().await.map_err(|err| {
+            catalog_admin_internal_status("reviewed_target_verify_acquire", err.to_string())
+        })?;
+        self.verified_reviewed_target_on_connection(plan, &mut connection)
+            .await
+    }
+
+    async fn verified_reviewed_target_on_connection(
+        &self,
+        plan: &ReviewedCatalogPlan,
+        connection: &mut sqlx::PgConnection,
     ) -> Result<bool, tonic::Status> {
         if !self
-            .verify_postgres_manifest_drift_on_pool(&plan.target_manifest, pool)
+            .verify_postgres_manifest_drift_on_connection(&plan.target_manifest, connection)
             .await?
             .is_empty()
         {
@@ -996,7 +1062,7 @@ impl DataBrokerRuntime {
                 "SELECT EXISTS(SELECT 1 FROM pg_catalog.pg_namespace WHERE nspname::TEXT=$1)",
             )
             .bind(&change.schema)
-            .fetch_one(pool)
+            .fetch_one(&mut *connection)
             .await
             .map_err(|err| {
                 catalog_admin_internal_status("reviewed_schema_verification", err.to_string())
@@ -1017,7 +1083,7 @@ impl DataBrokerRuntime {
                  JOIN pg_catalog.pg_class x ON x.oid=i.indexrelid JOIN pg_catalog.pg_class t ON t.oid=i.indrelid
                  JOIN pg_catalog.pg_namespace n ON n.oid=t.relnamespace WHERE n.nspname::TEXT=ANY($1)
                  AND i.indisvalid AND i.indisready")
-                .bind(&schemas).fetch_all(pool).await.map_err(|err|
+                .bind(&schemas).fetch_all(&mut *connection).await.map_err(|err|
                     catalog_admin_internal_status("reviewed_scoped_index_verification", err.to_string()))?
                 .into_iter().collect();
         // The canonical desired-manifest verifier covers required objects. A
@@ -1028,7 +1094,7 @@ impl DataBrokerRuntime {
             .filter(|change| change.kind == ChangeKind::DropIndex)
         {
             let exists:bool = sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM pg_catalog.pg_class c JOIN pg_catalog.pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname::TEXT=$1 AND c.relname::TEXT=$2 AND c.relkind IN ('i','I'))")
-                .bind(&change.schema).bind(&change.object_name).fetch_one(pool).await.map_err(|err| catalog_admin_internal_status("reviewed_drop_verification",err.to_string()))?;
+                .bind(&change.schema).bind(&change.object_name).fetch_one(&mut *connection).await.map_err(|err| catalog_admin_internal_status("reviewed_drop_verification",err.to_string()))?;
             // A replacement can intentionally reuse the same index name. Its
             // exact desired shape is checked below, rather than demanding loss.
             let replacement = plan.changes.iter().any(|next| {
@@ -1076,7 +1142,7 @@ impl DataBrokerRuntime {
             if !added_columns.is_empty()
                 && !self
                     .verify_reviewed_table_shape(
-                        pool,
+                        connection,
                         table,
                         &added_columns,
                         affected_table,
@@ -1102,15 +1168,17 @@ impl DataBrokerRuntime {
 
     async fn verify_reviewed_table_shape(
         &self,
-        pool: &PgPool,
+        connection: &mut sqlx::PgConnection,
         table: &ManifestTable,
         columns: &[&crate::generation::manifest::ManifestColumn],
         complete_shape: bool,
         indexes: &[&crate::generation::manifest::ManifestIndex],
     ) -> Result<bool, tonic::Status> {
-        let mut tx = pool.begin().await.map_err(|err| {
-            catalog_admin_internal_status("reviewed_shape_begin", err.to_string())
-        })?;
+        let mut tx = sqlx::Connection::begin(&mut *connection)
+            .await
+            .map_err(|err| {
+                catalog_admin_internal_status("reviewed_shape_begin", err.to_string())
+            })?;
         // Call the concrete connection executor directly: its Send BoxFuture
         // keeps this verifier usable by tonic's Send handler futures without
         // RawSql::execute's additional generic async lifetime boundary.
@@ -1162,6 +1230,27 @@ impl DataBrokerRuntime {
             })
             .collect();
         if complete_shape {
+            // Use the canonical ordinary constraint grammar on the empty TEMP
+            // relation. Its backing indexes establish PostgreSQL's effective
+            // default opclasses, collation and immediate NULLS DISTINCT rules.
+            for column in table
+                .columns
+                .iter()
+                .filter(|column| column.unique && !column.is_primary)
+            {
+                definitions.push(format!("UNIQUE ({})", qi_runtime(&column.column_name)));
+            }
+            if !table.primary_key.is_empty() {
+                definitions.push(format!(
+                    "PRIMARY KEY ({})",
+                    table
+                        .primary_key
+                        .iter()
+                        .map(|name| qi_runtime(name))
+                        .collect::<Vec<_>>()
+                        .join(",")
+                ));
+            }
             definitions.extend(
                 table
                     .checks
@@ -1186,6 +1275,23 @@ impl DataBrokerRuntime {
             .map_err(|err| {
                 catalog_admin_internal_status("reviewed_expected_shape_lookup", err.to_string())
             })?;
+        let shape_sql = "SELECT i.indisvalid AS valid,i.indisready AS ready,i.indislive AS live,
+                i.indisunique AS unique_index,i.indimmediate AS immediate,am.amname::TEXT AS method,
+                i.indnkeyatts::INTEGER AS key_width,i.indnatts::INTEGER AS total_width,
+                ARRAY(SELECT a.attname::TEXT FROM unnest(i.indkey::SMALLINT[]) WITH ORDINALITY k(attnum,pos)
+                    JOIN pg_catalog.pg_attribute a ON a.attrelid=i.indrelid AND a.attnum=k.attnum
+                    WHERE k.pos<=i.indnkeyatts ORDER BY k.pos) AS keys,
+                ARRAY(SELECT a.attname::TEXT FROM unnest(i.indkey::SMALLINT[]) WITH ORDINALITY k(attnum,pos)
+                    JOIN pg_catalog.pg_attribute a ON a.attrelid=i.indrelid AND a.attnum=k.attnum
+                    WHERE k.pos>i.indnkeyatts ORDER BY k.pos) AS include_columns,
+                COALESCE(pg_catalog.pg_get_expr(i.indpred,i.indrelid),'') AS predicate,
+                i.indexprs IS NULL AS plain_keys,i.indoption::TEXT AS key_options,
+                i.indclass::TEXT AS operator_classes,i.indcollation::TEXT AS collations,
+                COALESCE(x.reloptions,ARRAY[]::TEXT[]) AS parameters,
+                COALESCE((to_jsonb(i)->>'indnullsnotdistinct')::BOOLEAN,false) AS nulls_not_distinct
+                FROM pg_catalog.pg_index i JOIN pg_catalog.pg_class x ON x.oid=i.indexrelid
+                JOIN pg_catalog.pg_am am ON am.oid=x.relam
+                WHERE i.indrelid::BIGINT=$1 AND ($2::TEXT IS NULL OR x.relname::TEXT=$2)";
         let column_rows:Vec<(i64,String,String,bool,String,i64)> = sqlx::query_as(
             "SELECT a.attrelid::BIGINT,a.attname::TEXT,pg_catalog.format_type(a.atttypid,a.atttypmod),a.attnotnull,
              COALESCE(pg_catalog.pg_get_expr(d.adbin,d.adrelid),''),a.attcollation::BIGINT FROM pg_catalog.pg_attribute a
@@ -1233,30 +1339,107 @@ impl DataBrokerRuntime {
             {
                 return Ok(false);
             }
-            for column in table
-                .columns
+            // A matching key list alone is insufficient: deferred constraints,
+            // alternate opclasses, INCLUDE columns and NULLS NOT DISTINCT have
+            // different semantics from the canonical column UNIQUE/PRIMARY KEY.
+            let constraints: Vec<(i64, String, String, bool, bool, bool, bool, bool)> = sqlx::query_as(
+                "SELECT c.conrelid::BIGINT,c.contype::TEXT,COALESCE(x.relname::TEXT,''),
+                 c.condeferrable,c.condeferred,COALESCE(i.indisprimary,false),c.convalidated,
+                 COALESCE((to_jsonb(c)->>'conenforced')::BOOLEAN,true)
+                 FROM pg_catalog.pg_constraint c
+                 LEFT JOIN pg_catalog.pg_index i ON i.indexrelid=c.conindid AND i.indrelid=c.conrelid
+                 LEFT JOIN pg_catalog.pg_class x ON x.oid=i.indexrelid
+                 WHERE c.conrelid::BIGINT=ANY($1) AND c.contype IN ('p','u')",
+            )
+            .bind(vec![live_oid, temp_oid])
+            .fetch_all(&mut *tx)
+            .await
+            .map_err(|err| catalog_admin_internal_status("reviewed_constraint_shape", err.to_string()))?;
+            // One snapshot covers every actual index; equality below also
+            // requires the canonical unique flag. Avoid a separate round trip
+            // for each existing index on an affected table.
+            let actual_index_shapes: Vec<ReviewedIndexShape> = sqlx::query_as(shape_sql)
+                .bind(live_oid)
+                .bind(None::<&str>)
+                .fetch_all(&mut *tx)
+                .await
+                .map_err(|err| {
+                    catalog_admin_internal_status("reviewed_unique_column_shape", err.to_string())
+                })?;
+            for expected_constraint in constraints
                 .iter()
-                .filter(|column| column.unique && !column.is_primary)
+                .filter(|row| row.0 == temp_oid && row.1 == "u")
             {
-                let unique:bool=sqlx::query_scalar(
-                    "SELECT EXISTS(SELECT 1 FROM pg_catalog.pg_index i JOIN pg_catalog.pg_attribute a
-                     ON a.attrelid=i.indrelid AND a.attnum=i.indkey[0] WHERE i.indrelid::BIGINT=$1
-                     AND i.indisunique AND i.indisvalid AND i.indisready AND i.indnkeyatts=1
-                     AND i.indpred IS NULL AND a.attname::TEXT=$2)")
-                    .bind(live_oid).bind(&column.column_name).fetch_one(&mut *tx).await.map_err(|err|
-                        catalog_admin_internal_status("reviewed_unique_column_shape",err.to_string()))?;
-                if !unique {
+                let expected: ReviewedIndexShape = sqlx::query_as(shape_sql)
+                    .bind(temp_oid)
+                    .bind(&expected_constraint.2)
+                    .fetch_one(&mut *tx)
+                    .await
+                    .map_err(|err| {
+                        catalog_admin_internal_status(
+                            "reviewed_expected_unique_column_shape",
+                            err.to_string(),
+                        )
+                    })?;
+                // The SQL renderer may substitute an equivalent full unique
+                // index for a column constraint. Compare its enforcement shape,
+                // retaining that established behavior without accepting a
+                // partial/custom/deferred index as an ordinary UNIQUE promise.
+                if !actual_index_shapes
+                    .iter()
+                    .any(|actual| actual.matches_ordinary_constraint(&expected))
+                {
                     return Ok(false);
                 }
             }
-            let primary:Option<Vec<String>> = sqlx::query_scalar(
-                "SELECT ARRAY(SELECT a.attname::TEXT FROM unnest(p.conkey) WITH ORDINALITY k(attnum,pos)
-                 JOIN pg_catalog.pg_attribute a ON a.attrelid=p.conrelid AND a.attnum=k.attnum ORDER BY k.pos)
-                 FROM pg_catalog.pg_constraint p WHERE p.conrelid::BIGINT=$1 AND p.contype='p'")
-                .bind(live_oid).fetch_optional(&mut *tx).await.map_err(|err|
-                    catalog_admin_internal_status("reviewed_primary_key_shape",err.to_string()))?;
-            if primary.unwrap_or_default() != table.primary_key {
-                return Ok(false);
+            let expected_primary = constraints
+                .iter()
+                .find(|row| row.0 == temp_oid && row.1 == "p");
+            let actual_primary = constraints
+                .iter()
+                .find(|row| row.0 == live_oid && row.1 == "p");
+            match (expected_primary, actual_primary) {
+                (None, None) => {}
+                (Some(expected_constraint), Some(actual_constraint)) => {
+                    if actual_constraint.3
+                        || actual_constraint.4
+                        || !actual_constraint.5
+                        || !actual_constraint.6
+                        || !actual_constraint.7
+                        || actual_constraint.2.is_empty()
+                    {
+                        return Ok(false);
+                    }
+                    let expected: ReviewedIndexShape = sqlx::query_as(shape_sql)
+                        .bind(temp_oid)
+                        .bind(&expected_constraint.2)
+                        .fetch_one(&mut *tx)
+                        .await
+                        .map_err(|err| {
+                            catalog_admin_internal_status(
+                                "reviewed_expected_primary_key_shape",
+                                err.to_string(),
+                            )
+                        })?;
+                    let actual: Option<ReviewedIndexShape> = sqlx::query_as(shape_sql)
+                        .bind(live_oid)
+                        .bind(&actual_constraint.2)
+                        .fetch_optional(&mut *tx)
+                        .await
+                        .map_err(|err| {
+                            catalog_admin_internal_status(
+                                "reviewed_primary_key_shape",
+                                err.to_string(),
+                            )
+                        })?;
+                    if !actual
+                        .as_ref()
+                        .is_some_and(|actual| actual.matches_ordinary_constraint(&expected))
+                    {
+                        return Ok(false);
+                    }
+                }
+                _ => return Ok(false),
             }
             // Resolve both column arrays through their own relation authority;
             // a constraint name or deparsed REFERENCES string cannot establish
@@ -1386,22 +1569,6 @@ impl DataBrokerRuntime {
                 .map_err(|err| {
                     catalog_admin_internal_status("reviewed_expected_index_parse", err.to_string())
                 })?;
-            let shape_sql = "SELECT i.indisvalid AS valid,i.indisready AS ready,i.indislive AS live,
-                i.indisunique AS unique_index,i.indimmediate AS immediate,am.amname::TEXT AS method,
-                ARRAY(SELECT a.attname::TEXT FROM unnest(i.indkey::SMALLINT[]) WITH ORDINALITY k(attnum,pos)
-                    JOIN pg_catalog.pg_attribute a ON a.attrelid=i.indrelid AND a.attnum=k.attnum
-                    WHERE k.pos<=i.indnkeyatts ORDER BY k.pos) AS keys,
-                ARRAY(SELECT a.attname::TEXT FROM unnest(i.indkey::SMALLINT[]) WITH ORDINALITY k(attnum,pos)
-                    JOIN pg_catalog.pg_attribute a ON a.attrelid=i.indrelid AND a.attnum=k.attnum
-                    WHERE k.pos>i.indnkeyatts ORDER BY k.pos) AS include_columns,
-                COALESCE(pg_catalog.pg_get_expr(i.indpred,i.indrelid),'') AS predicate,
-                i.indexprs IS NULL AS plain_keys,i.indoption::TEXT AS key_options,
-                i.indclass::TEXT AS operator_classes,i.indcollation::TEXT AS collations,
-                COALESCE(x.reloptions,ARRAY[]::TEXT[]) AS parameters,
-                COALESCE((to_jsonb(i)->>'indnullsnotdistinct')::BOOLEAN,false) AS nulls_not_distinct
-                FROM pg_catalog.pg_index i JOIN pg_catalog.pg_class x ON x.oid=i.indexrelid
-                JOIN pg_catalog.pg_am am ON am.oid=x.relam
-                WHERE i.indrelid::BIGINT=$1 AND x.relname::TEXT=$2";
             let expected: ReviewedIndexShape = sqlx::query_as(shape_sql)
                 .bind(temp_oid)
                 .bind(&expected_index.name)
@@ -1433,18 +1600,39 @@ impl DataBrokerRuntime {
         id: Uuid,
         plan: &ReviewedCatalogPlan,
         pool: &PgPool,
+        control_connection: &mut sqlx::PgConnection,
     ) -> Result<(), tonic::Status> {
-        pool.execute(crate::control::tracker::DDL_SCHEMA_MIGRATIONS)
-            .await
-            .map_err(|err| {
-                catalog_admin_internal_status("reviewed_target_ledger_bootstrap", err.to_string())
-            })?;
-        if !self.verified_reviewed_target(plan, pool).await? {
+        let mut target_connection =
+            if super::accessors::postgres_pools_share_connections(self.pg_pool()?, pool) {
+                None
+            } else {
+                Some(pool.acquire().await.map_err(|err| {
+                    catalog_admin_internal_status("reviewed_target_ledger_acquire", err.to_string())
+                })?)
+            };
+        let connection = match target_connection.as_mut() {
+            Some(connection) => &mut **connection,
+            None => control_connection,
+        };
+        sqlx::Executor::execute(
+            &mut *connection,
+            crate::control::tracker::DDL_SCHEMA_MIGRATIONS,
+        )
+        .await
+        .map_err(|err| {
+            catalog_admin_internal_status("reviewed_target_ledger_bootstrap", err.to_string())
+        })?;
+        if !self
+            .verified_reviewed_target_on_connection(plan, connection)
+            .await?
+        {
             return Ok(());
         }
-        let mut tx = pool.begin().await.map_err(|err| {
-            catalog_admin_internal_status("reviewed_native_verification_begin", err.to_string())
-        })?;
+        let mut tx = sqlx::Connection::begin(&mut *connection)
+            .await
+            .map_err(|err| {
+                catalog_admin_internal_status("reviewed_native_verification_begin", err.to_string())
+            })?;
         for artifact in native_artifacts(id, plan) {
             // This is an actual broker verification receipt, explicitly tagged
             // VERIFIED. It does not assert that the broker executed external DDL.
@@ -1468,7 +1656,7 @@ impl DataBrokerRuntime {
         actor: &str,
     ) -> Result<(), tonic::Status> {
         require_reviewed_identity(&plan.tenant_id, actor)?;
-        if !self.verified_reviewed_target(plan, pool).await? {
+        if !self.verified_reviewed_target(plan, pool, &mut **tx).await? {
             return Err(refusal(
                 "reviewed_target_verification_failed",
                 "native applied target does not exactly verify",
@@ -1551,7 +1739,12 @@ impl DataBrokerRuntime {
             if *position != index as i32
                 || !matches!(status.as_str(), "APPLIED" | "VERIFIED" | "SKIPPED")
                 || reviewed_sql_artifact(payload)? != *artifact
-                || !self.reviewed_artifact_applied(pool, payload).await?
+                || !if super::accessors::postgres_pools_share_connections(self.pg_pool()?, pool) {
+                    self.reviewed_artifact_applied_on_connection(&mut **tx, payload)
+                        .await?
+                } else {
+                    self.reviewed_artifact_applied(pool, payload).await?
+                }
             {
                 return Err(refusal(
                     "reviewed_application_incomplete",
@@ -1657,7 +1850,11 @@ impl DataBrokerRuntime {
             ));
         }
         let target_route = self
-            .project_postgres_write_target(project, Some(&plan.target_instance))
+            .project_postgres_write_target_on_connection(
+                project,
+                Some(&plan.target_instance),
+                Some(&mut **tx),
+            )
             .await?;
         if target_route.provenance_sha256 != plan.target_provenance_sha256 {
             return Err(refusal(
@@ -1679,7 +1876,7 @@ impl DataBrokerRuntime {
         // a license to publish after physical schema corruption or rollback.
         if operation != "catalog_provenance_upgrade"
             && !self
-                .verified_reviewed_target(&plan, &target_route.pool)
+                .verified_reviewed_target(&plan, &target_route.pool, &mut **tx)
                 .await?
         {
             return Err(refusal(
@@ -1750,10 +1947,10 @@ impl DataBrokerRuntime {
         operation: &'static str,
     ) -> Result<(), tonic::Status> {
         let target = self
-            .load_catalog_record_for_project(project, catalog_id)
+            .load_catalog_record_for_project_on_connection(project, catalog_id, &mut **tx)
             .await?;
         let active = self
-            .load_active_catalog_for_project(project)
+            .load_active_catalog_for_project_on_connection(project, &mut **tx)
             .await?
             .ok_or_else(|| {
                 refusal(

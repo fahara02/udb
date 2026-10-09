@@ -2,10 +2,15 @@ package udbclient
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	entityv1 "github.com/fahara02/udb/sdk/go/gen/udb/entity/v1"
 	servicesv1 "github.com/fahara02/udb/sdk/go/gen/udb/services/v1"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
 )
 
 // runLiveDataBrokerOpsE2E deepens the operational DataBroker RPCs from a surface
@@ -16,7 +21,7 @@ import (
 //
 // Goal (honest e2e per RPC): not just "it didn't mount-fail", but "it returned a
 // structurally valid, semantically sensible response".
-func runLiveDataBrokerOpsE2E(t *testing.T, broker servicesv1.DataBrokerClient, callCtx context.Context, tenant, project string) {
+func runLiveDataBrokerOpsE2E(t *testing.T, broker servicesv1.DataBrokerClient, callCtx, platformCtx context.Context, tenant, project string) {
 	t.Helper()
 	rc := func(purpose string) *entityv1.RequestContext { return liveRequestContext(tenant, project, purpose) }
 
@@ -66,18 +71,26 @@ func runLiveDataBrokerOpsE2E(t *testing.T, broker servicesv1.DataBrokerClient, c
 		}
 	})
 
-	t.Run("GetCdcStatus", func(t *testing.T) {
-		// The status query must SUCCEED (this caught a real broker bug: it used to
-		// query a non-existent `dispatched_at` column → Internal error) and return a
-		// structurally valid status. slot_name echoes the request's slot (empty here,
-		// since we don't target a specific slot), so we assert the durable invariants:
-		// lag and outbox depth are non-negative.
-		s, err := broker.GetCdcStatus(callCtx, &entityv1.CdcControlRequest{Context: rc("db.ops.cdc")})
-		if err != nil {
-			t.Fatalf("GetCdcStatus: %v", err)
-		}
-		if s.GetLagSeconds() < 0 || s.GetOutboxDepth() < 0 {
-			t.Fatalf("GetCdcStatus negative lag/depth: lag=%v depth=%d", s.GetLagSeconds(), s.GetOutboxDepth())
+	t.Run("GetCdcStatusRejectsUnknownSlot", func(t *testing.T) {
+		// This fixture has no registered WAL source. Unknown slots must return
+		// typed NotFound rather than fabricate a healthy empty pipeline. Actual
+		// registered-source status and WAL delivery are proved by the CDC lane.
+		for _, slot := range []string{"", "sdk_unknown_" + strings.ReplaceAll(uuid4(), "-", "")} {
+			var trailer metadata.MD
+			response, err := broker.GetCdcStatus(callCtx, &entityv1.CdcControlRequest{
+				Context: rc("db.ops.cdc.unknown"), SlotName: slot,
+			}, grpc.Trailer(&trailer))
+			if response != nil || status.Code(err) != codes.NotFound {
+				t.Fatalf("GetCdcStatus must refuse an unregistered slot: response=%v code=%s", response != nil, status.Code(err))
+			}
+			mapped, ok := AsError(mapError("/udb.services.v1.DataBroker/GetCdcStatus", err, trailer))
+			if !ok {
+				t.Fatal("unknown CDC status must retain typed broker details")
+			}
+			detail, ok := mapped.Detail()
+			if !ok || detail.GetPolicyDecisionId() != "cdc_slot_not_controllable" || detail.GetOperation() != "catalog_admin.get_cdc_status" {
+				t.Fatal("unknown CDC status must identify the actual owned-slot refusal")
+			}
 		}
 	})
 
@@ -142,7 +155,7 @@ func runLiveDataBrokerOpsE2E(t *testing.T, broker servicesv1.DataBrokerClient, c
 	})
 
 	t.Run("ListProjects", func(t *testing.T) {
-		p, err := broker.ListProjects(callCtx, &entityv1.ProjectListRequest{Context: rc("db.ops.projects")})
+		p, err := broker.ListProjects(platformCtx, &entityv1.ProjectListRequest{Context: rc("db.ops.projects")})
 		if err != nil {
 			t.Fatalf("ListProjects: %v", err)
 		}

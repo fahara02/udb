@@ -210,6 +210,78 @@ def contains_resource(resources, name: str) -> bool:
 _SERVER_FAULTS = {grpc.StatusCode.INTERNAL, grpc.StatusCode.UNKNOWN, grpc.StatusCode.DATA_LOSS}
 
 
+def run_live_project_isolation_witness(stub, meta: Metadata, suffix: str) -> None:
+    """Prove verified query scope with served rows; SdkLiveRecord disables RLS."""
+    peer_project = required_env("UDB_LIVE_ISOLATION_PROJECT")
+    assert peer_project != meta.project_id, "isolation witness needs two projects"
+    peer_hint = replace(meta, project_id=peer_project, bearer_token="", user_id="", service_identity="", scopes=())
+    auth_target = os.getenv("UDB_AUTH_GRPC_TARGET") or required_env("UDB_GRPC_TARGET")
+    with UdbAuthClient(auth_target, peer_hint, timeout=8.0) as peer_auth:
+        own = peer_auth.authenticate_bearer(meta.bearer_token, metadata=meta).principal
+        assert own.subject and own.tenant_id == meta.tenant_id and own.project_id == meta.project_id
+        login = peer_auth.login(required_env("UDB_LIVE_ISOLATION_USERNAME"), required_env("UDB_LIVE_PASSWORD"), device_name="python-project-isolation")
+        assert login.access_token and login.session_id, "peer Login must issue an owned session"
+        peer_meta = replace(peer_hint, bearer_token=login.access_token)
+        peer_subject = ""
+        owned_rows: list[tuple[Metadata, str]] = []
+        try:
+            peer = peer_auth.authenticate_bearer(login.access_token, metadata=peer_meta).principal
+            peer_subject = peer.subject
+            assert peer.subject and peer.subject != own.subject
+            assert peer.tenant_id == meta.tenant_id and peer.project_id == peer_project
+            assert "udb:admin" in own.scopes and "udb:admin" in peer.scopes, "both signed fixture principals need the table's approved scope"
+            own_id, peer_id = "edge-own-" + suffix, "edge-peer-" + suffix
+            for row_meta, record_id in ((meta, own_id), (peer_meta, peer_id)):
+                owned_rows.append((row_meta, record_id))
+                stub.Upsert(relational_pb2.UpsertRequest(
+                    context=row_meta.with_purpose("python.edge.seed").to_request_context(), message_type=LIVE_MESSAGE_TYPE,
+                    record_json=live_record_json(record_id, row_meta.tenant_id, row_meta.project_id, "lookup-" + record_id, record_id, 1),
+                    conflict_fields=["record_id"],
+                ), metadata=row_meta.to_grpc_metadata(), timeout=8.0)
+
+            def select_rows(row_meta: Metadata, filter_values: dict):
+                return stub.Select(relational_pb2.SelectRequest(
+                    context=row_meta.with_purpose("python.edge.isolation").to_request_context(),
+                    message_type=LIVE_MESSAGE_TYPE, filter=live_struct(filter_values), limit=10,
+                ), metadata=row_meta.to_grpc_metadata(), timeout=8.0)
+
+            def assert_owned(rows, record_id: str, project_id: str) -> None:
+                assert len(rows.records_json) == 1, "project-scoped witness must return exactly its owned row"
+                row = json.loads(bytes(rows.records_json[0]).decode())
+                assert (row.get("record_id"), row.get("payload"), row.get("tenant_id"), row.get("project_id")) == (record_id, record_id, meta.tenant_id, project_id), "project-scoped witness returned a different row or scope"
+
+            # Establish that the other project's row actually exists and is readable.
+            assert_owned(select_rows(peer_meta, {"tenant_id": meta.tenant_id, "project_id": peer_project, "record_id": peer_id}), peer_id, peer_project)
+            ids = {"$in": [own_id, peer_id]}
+            assert_owned(select_rows(meta, {"tenant_id": meta.tenant_id, "record_id": ids}), own_id, meta.project_id)
+            foreign = select_rows(meta, {"tenant_id": meta.tenant_id, "project_id": peer_project, "record_id": ids})
+            assert not foreign.records_json, "explicit foreign project must intersect verified project to zero rows"
+            try:
+                select_rows(meta, {"tenant_id": meta.tenant_id, "$or": [{"record_id": own_id}, {"record_id": peer_id, "project_id": peer_project}]})
+            except grpc.RpcError as exc:
+                assert exc.code() == grpc.StatusCode.INVALID_ARGUMENT, "project predicate buried in OR must receive the planner's typed InvalidArgument refusal"
+            else:
+                raise AssertionError("project predicate buried in OR bypassed the mandatory project guard")
+        finally:
+            cleanup_errors = []
+            for row_meta, record_id in reversed(owned_rows):
+                try:
+                    stub.Delete(relational_pb2.DeleteRequest(
+                        context=row_meta.with_purpose("python.edge.cleanup").to_request_context(), message_type=LIVE_MESSAGE_TYPE,
+                        filter=live_struct({"tenant_id": row_meta.tenant_id, "project_id": row_meta.project_id, "record_id": record_id}),
+                    ), metadata=row_meta.to_grpc_metadata(), timeout=8.0)
+                except grpc.RpcError as exc:
+                    cleanup_errors.append(exc.code().name)
+            try:
+                peer_auth.authn.Logout(authn_pb2.LogoutRequest(
+                    session_id=login.session_id, revoke_reason="sdk_project_isolation",
+                    context=common_pb.RequestContext(tenant=common_pb.TenantContext(tenant_id=meta.tenant_id, project_id=peer_project), user_id=peer_subject, principal_id=peer_subject, purpose="python.edge.cleanup"),
+                ), metadata=peer_meta.to_grpc_metadata(), timeout=8.0)
+            except grpc.RpcError as exc:
+                cleanup_errors.append(exc.code().name)
+            assert not cleanup_errors, "owned isolation cleanup failed: " + ",".join(cleanup_errors)
+
+
 def run_live_edge_cases(stub, meta: Metadata) -> None:
     """Per-RPC EDGE cases: malformed/hostile inputs + isolation-boundary probes.
 
@@ -222,17 +294,10 @@ def run_live_edge_cases(stub, meta: Metadata) -> None:
     ctx = meta.with_purpose("python.live.edge").to_request_context()
     md = meta.to_grpc_metadata()
 
-    # 1. missing project_id in the filter -> project isolation must reject it.
-    try:
-        stub.Select(relational_pb2.SelectRequest(
-            context=ctx, message_type=LIVE_MESSAGE_TYPE,
-            filter=live_struct({"tenant_id": meta.tenant_id}), limit=1,
-        ), metadata=md, timeout=8.0)
-        raise AssertionError("Select without a project_id filter was ACCEPTED — project isolation not enforced")
-    except grpc.RpcError as exc:
-        assert exc.code() not in _SERVER_FAULTS, f"missing project_id faulted the server ({exc.code()}): {exc.details()}"
+    # 1. An omitted project is filled from the verified bearer, never broadened.
+    run_live_project_isolation_witness(stub, meta, suffix)
 
-    # 2. cross-tenant read -> RLS scopes to the JWT tenant; a foreign filter leaks nothing.
+    # 2. cross-tenant read -> verified scope forbids a foreign tenant's rows.
     foreign = "00000000-0000-0000-0000-0000deadbeef"
     try:
         resp = stub.Select(relational_pb2.SelectRequest(

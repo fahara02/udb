@@ -13,15 +13,18 @@ import (
 	apikeyv1 "github.com/fahara02/udb/sdk/go/gen/udb/core/apikey/services/v1"
 	authnentpb "github.com/fahara02/udb/sdk/go/gen/udb/core/authn/entity/v1"
 	authnv1 "github.com/fahara02/udb/sdk/go/gen/udb/core/authn/services/v1"
+	authzpb "github.com/fahara02/udb/sdk/go/gen/udb/core/authz/services/v1"
 	commonpb "github.com/fahara02/udb/sdk/go/gen/udb/core/common/v1"
 	entityv1 "github.com/fahara02/udb/sdk/go/gen/udb/entity/v1"
+	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 )
 
 // Ordinary candidate TestLive discovery runs this proof on the same actual
 // broker/catalog fixture as the existing data/native conformance suite. It
-// changes no policy or broker configuration and creates only owned fixtures.
+// creates only owned fixtures, including one exact service read policy.
 func TestLiveAsUserPreservesVerifiedAuthority(t *testing.T) {
 	if os.Getenv("UDB_LIVE_SDK_TESTS") != "1" {
 		t.Skip("requires the actual live SDK broker fixture")
@@ -83,6 +86,7 @@ func TestLiveAsUserPreservesVerifiedAuthority(t *testing.T) {
 		}
 	}
 	serviceID, keyID, recordID, enterpriseSessionID := "", "", "", ""
+	policyID := ""
 	grantCreated := false
 	var delegated, peer *authnv1.LoginResponse
 	var peerPrincipal *authnv1.Principal
@@ -102,6 +106,12 @@ func TestLiveAsUserPreservesVerifiedAuthority(t *testing.T) {
 				_, err := operator.Data.Delete(cleanupCtx, &entityv1.DeleteRequest{
 					MessageType: liveMessageType, Filter: liveStruct(t, map[string]any{"record_id": recordID}),
 				})
+				return err
+			})
+		}
+		if policyID != "" {
+			cleanup("owned service read policy", func(cleanupCtx context.Context) error {
+				_, err := operator.Auth.Authz.DeletePolicyRule(cleanupCtx, &authzpb.DeletePolicyRuleRequest{PolicyId: policyID, DeletedBy: identity.UserID})
 				return err
 			})
 		}
@@ -188,7 +198,7 @@ func TestLiveAsUserPreservesVerifiedAuthority(t *testing.T) {
 	err = call(func(callCtx context.Context) error {
 		_, err := operator.Auth.Authn.CreateServiceAccountGrant(callCtx, &authnv1.CreateServiceAccountGrantRequest{
 			TenantId: identity.TenantID, ProjectId: identity.ProjectID, UserId: serviceID,
-			ServiceIdentity: name, ApprovedScopes: []string{"data:read"}, Reason: "go live AsUser narrow read fixture",
+			ServiceIdentity: name, ApprovedScopes: []string{"udb:read"}, Reason: "go live AsUser narrow read fixture",
 		})
 		grantCreated = err == nil
 		return err
@@ -200,7 +210,7 @@ func TestLiveAsUserPreservesVerifiedAuthority(t *testing.T) {
 	err = call(func(callCtx context.Context) error {
 		var err error
 		key, err = operator.ApiKey.Raw.CreateApiKey(callCtx, &apikeyv1.CreateApiKeyRequest{
-			Name: name, OwnerId: serviceID, Scopes: []string{"data:read"}, Context: commonContext(serviceID, identity.TenantID),
+			Name: name, OwnerId: serviceID, Scopes: []string{"udb:read"}, Context: commonContext(serviceID, identity.TenantID),
 		})
 		if err == nil {
 			keyID = key.GetKey().GetKeyId()
@@ -224,13 +234,16 @@ func TestLiveAsUserPreservesVerifiedAuthority(t *testing.T) {
 		t.Fatalf("actual service-key Connect failed: code=%s", status.Code(err))
 	}
 	defer service.Close()
+	if err := service.Verify(Expect{TenantID: identity.TenantID, ProjectID: identity.ProjectID, ServiceIdentity: name, RequiredScopes: []string{"udb:read"}}); err != nil {
+		t.Fatal("actual service connection must verify its exact approved read identity")
+	}
 	// API-key authority is the approved service principal, not a person user.
 	// The broker deliberately leaves UserId empty on this exchange path while
 	// PrincipalId retains the durable account owner and Subject names the grant.
 	principal := service.Principal()
 	if principal == nil || principal.GetAccountKind() != authnentpb.AccountKind_ACCOUNT_KIND_SERVICE_ACCOUNT ||
 		principal.GetPrincipalId() != serviceID || principal.GetServiceIdentity() != name || principal.GetSubject() != name || principal.GetUserId() != "" ||
-		principal.GetTenantId() != identity.TenantID || principal.GetProjectId() != identity.ProjectID || !slices.Equal(principal.GetScopes(), []string{"data:read"}) {
+		principal.GetTenantId() != identity.TenantID || principal.GetProjectId() != identity.ProjectID || !slices.Equal(principal.GetScopes(), []string{"udb:read"}) {
 		t.Fatal("service exchange must return exactly the approved canonical service principal")
 	}
 	if service.Meta.UserID != principal.GetUserId() || service.Meta.ServiceIdentity != principal.GetServiceIdentity() ||
@@ -285,9 +298,68 @@ func TestLiveAsUserPreservesVerifiedAuthority(t *testing.T) {
 			t.Fatal("delegated Select must return exactly its owned fixture row")
 		}
 		var row map[string]any
-		if json.Unmarshal(rows.GetRecordsJson()[0], &row) != nil || row["record_id"] != recordID || row["tenant_id"] != identity.TenantID || row["project_id"] != identity.ProjectID {
+		if json.Unmarshal(rows.GetRecordsJson()[0], &row) != nil || row["record_id"] != recordID || row["tenant_id"] != identity.TenantID || row["project_id"] != identity.ProjectID || row["payload"] != "as-user-live" {
 			t.Fatal("delegated Select returned another row or scope")
 		}
+	}
+	// Scopes and credential grants are distinct from data-plane PDP authority.
+	// Bind only the actual signed service subject to this one read resource.
+	service.apiKey.mu.Lock()
+	serviceToken := strings.TrimPrefix(service.apiKey.bearer, "Bearer ")
+	service.apiKey.mu.Unlock()
+	var signed *authnv1.Principal
+	err = call(func(callCtx context.Context) error {
+		who, err := service.Auth.AuthenticateBearer(callCtx, serviceToken)
+		if err == nil {
+			signed = who.GetPrincipal()
+		}
+		return err
+	})
+	if err != nil || signed.GetPrincipalId() != serviceID || signed.GetUserId() != serviceID || signed.GetSubject() != serviceID || signed.GetServiceIdentity() != name || signed.GetAccountKind() != authnentpb.AccountKind_ACCOUNT_KIND_SERVICE_ACCOUNT || signed.GetTenantId() != identity.TenantID || signed.GetProjectId() != identity.ProjectID || !slices.Equal(signed.GetScopes(), []string{"udb:read"}) {
+		t.Fatalf("own bearer must verify as the actual narrow service subject: code=%s", status.Code(err))
+	}
+	var pregrantTrailer metadata.MD
+	err = call(func(callCtx context.Context) error {
+		_, err := service.Data.Broker.Select(callCtx, selectRequest(), grpc.Trailer(&pregrantTrailer))
+		return err
+	})
+	liveOwnedServiceReadPolicyRefusal(t, err, pregrantTrailer)
+	policyID = uuid4()
+	err = call(func(callCtx context.Context) error {
+		result, err := operator.Auth.Authz.PutAuthzPolicy(callCtx, &authzpb.PutAuthzPolicyRequest{Policy: &authzpb.AuthzPolicyRecord{
+			Id: policyID, Enabled: true, Effect: "allow", Subject: signed.GetSubject(), Tenant: signed.GetTenantId(), Project: signed.GetProjectId(),
+			Action: "Select", Resource: liveMessageType, Purpose: identity.Purpose, RequiredScopes: []string{"udb:read"},
+		}})
+		if err == nil && !result.GetOk() {
+			t.Fatal("owned exact service read policy was not stored")
+		}
+		return err
+	})
+	if err != nil {
+		t.Fatalf("owned exact service read grant failed: code=%s", status.Code(err))
+	}
+	// An exact Select policy and read-only credential must never authorize a
+	// mutation, even to its own row. Confirm the typed real denial, then read
+	// the original payload through the same service below.
+	var writeTrailer metadata.MD
+	err = call(func(callCtx context.Context) error {
+		_, err := service.Data.Broker.Upsert(callCtx, &entityv1.UpsertRequest{
+			Context: selectRequest().GetContext(), MessageType: liveMessageType,
+			RecordJson:     liveRecordJSON(t, recordID, identity.TenantID, identity.ProjectID, recordID, "as-user-forbidden-write", 2),
+			ConflictFields: []string{"record_id"},
+		}, grpc.Trailer(&writeTrailer))
+		return err
+	})
+	liveOwnedServicePolicyRefusal(t, "Upsert", err, writeTrailer)
+	err = call(func(callCtx context.Context) error {
+		rows, err := service.Data.Select(callCtx, selectRequest())
+		if err == nil {
+			assertRows(rows)
+		}
+		return err
+	})
+	if err != nil {
+		t.Fatalf("actual service read after its exact PDP grant failed: %s", liveG1RefusalSummary(err, nil))
 	}
 	for _, inherited := range []bool{false, true} {
 		err = call(func(callCtx context.Context) error {
@@ -332,7 +404,7 @@ func TestLiveAsUserPreservesVerifiedAuthority(t *testing.T) {
 		}
 	}
 	// Verify the same explicit user bearer through the real password-connected
-	// enterprise service session. Its own approved authority is still data:read;
+	// enterprise service session. Its own approved authority is still udb:read;
 	// delegation must survive the additional DataContext/NativeContext wrappers.
 	var enterprise *EnterpriseSession
 	err = call(func(callCtx context.Context) error {
@@ -353,7 +425,7 @@ func TestLiveAsUserPreservesVerifiedAuthority(t *testing.T) {
 		t.Fatal("actual enterprise service login must own a session")
 	}
 	enterpriseSessionID = enterpriseToken.SessionID
-	if enterprise.Principal.GetAccountKind() != authnentpb.AccountKind_ACCOUNT_KIND_SERVICE_ACCOUNT || enterprise.Meta.UserID != serviceID || !slices.Equal(enterprise.Meta.Scopes, []string{"data:read"}) {
+	if enterprise.Principal.GetAccountKind() != authnentpb.AccountKind_ACCOUNT_KIND_SERVICE_ACCOUNT || enterprise.Meta.UserID != serviceID || !slices.Equal(enterprise.Meta.Scopes, []string{"udb:read"}) {
 		t.Fatal("enterprise service must retain the actual narrow grant")
 	}
 	beforeEnterpriseMeta, beforeEnterpriseData, beforeEnterpriseAuth := enterprise.Meta, enterprise.Data, enterprise.Auth
@@ -454,14 +526,24 @@ func TestLiveAsUserPreservesVerifiedAuthority(t *testing.T) {
 		t.Fatalf("revoked actual user session must not regain service authority: code=%s", status.Code(err))
 	}
 	err = call(func(callCtx context.Context) error {
-		caps, err := service.Data.Broker.GetCapabilities(callCtx, &entityv1.CapabilitiesRequest{})
-		if err == nil && len(caps.GetEnabledBackends()) == 0 {
-			t.Fatal("ordinary service capability call returned no configured backend")
+		rows, err := service.Data.Select(callCtx, selectRequest())
+		if err == nil {
+			assertRows(rows)
 		}
 		return err
 	})
 	if err != nil || !reflect.DeepEqual(beforeMeta, service.Meta) || service.Data != beforeData || service.Auth != beforeAuth {
-		t.Fatalf("delegation damaged ordinary service identity/calls: code=%s", status.Code(err))
+		t.Fatalf("delegation damaged ordinary service identity/calls: %s", liveG1RefusalSummary(err, nil))
+	}
+	var adminTrailer metadata.MD
+	err = call(func(callCtx context.Context) error {
+		_, err := service.Data.Broker.GetCapabilities(callCtx, &entityv1.CapabilitiesRequest{}, grpc.Trailer(&adminTrailer))
+		return err
+	})
+	mapped, ok := AsError(mapError("/udb.services.v1.DataBroker/GetCapabilities", err, adminTrailer))
+	detail, decoded := mapped.Detail()
+	if status.Code(err) != codes.PermissionDenied || !ok || !decoded || detail.GetOperation() != "admin_scope" || detail.GetPolicyDecisionId() != "admin_scope_required" {
+		t.Fatalf("ordinary read service must retain exact admin-control refusal: %s", liveG1RefusalSummary(err, adminTrailer))
 	}
 	t.Log("verified service-to-person delegation on data/native/generated paths; tenant, invalid and revoked-token refusals retained")
 }

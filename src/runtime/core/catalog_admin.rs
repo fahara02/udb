@@ -692,9 +692,44 @@ fn migration_artifact_payload(
     Ok((op_id, backend, resource_uri, operation_kind, payload))
 }
 
+type CatalogAuthorityConnection<'a> = Arc<tokio::sync::Mutex<&'a mut sqlx::PgConnection>>;
+const CATALOG_AUTHORITY_CLOSE_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(5);
+
+async fn release_catalog_apply_authority(
+    mut connection: sqlx::pool::PoolConnection<sqlx::Postgres>,
+    project: &str,
+) -> Result<(), tonic::Status> {
+    let released: bool =
+        sqlx::query_scalar("SELECT pg_advisory_unlock(hashtextextended($1, 534154))")
+            .bind(project)
+            .fetch_one(&mut *connection)
+            .await
+            .map_err(|err| {
+                catalog_admin_internal_status("apply_migration_authority_unlock", err.to_string())
+            })?;
+    if !released {
+        return Err(catalog_admin_internal_status(
+            "apply_migration_authority_unlock",
+            "owned project session lock disappeared",
+        ));
+    }
+    tokio::time::timeout(CATALOG_AUTHORITY_CLOSE_TIMEOUT, connection.close())
+        .await
+        .map_err(|_| {
+            catalog_admin_internal_status(
+                "apply_migration_authority_close",
+                "bounded connection close timed out",
+            )
+        })?
+        .map_err(|err| {
+            catalog_admin_internal_status("apply_migration_authority_close", err.to_string())
+        })
+}
+
 struct CatalogMigrationApplyTarget<'a> {
     runtime: &'a DataBrokerRuntime,
     pool: &'a PgPool,
+    shared_target_connection: Option<CatalogAuthorityConnection<'a>>,
 }
 
 impl crate::migration::ApplyTarget for CatalogMigrationApplyTarget<'_> {
@@ -709,6 +744,25 @@ impl crate::migration::ApplyTarget for CatalogMigrationApplyTarget<'_> {
         Box::pin(async move {
             let (op_id, backend, resource_uri, operation_kind, payload) =
                 migration_artifact_payload(artifact)?;
+            if let Some(connection) = &self.shared_target_connection {
+                let mut connection = connection.lock().await;
+                return self
+                    .runtime
+                    .execute_migration_apply_op_on_connection(
+                        &mut **connection,
+                        op_id,
+                        &backend,
+                        &resource_uri,
+                        &operation_kind,
+                        &payload,
+                    )
+                    .await
+                    .map(|_| ())
+                    .map_err(|message| crate::migration::ApplyError::BackendRejected {
+                        backend,
+                        message,
+                    });
+            }
             self.runtime
                 .execute_migration_apply_op(
                     self.pool,
@@ -744,16 +798,21 @@ impl crate::migration::ApplyTarget for CatalogMigrationApplyTarget<'_> {
                         .get("table")
                         .and_then(|v| v.as_str())
                         .unwrap_or_default();
-                    let exists: bool = sqlx::query_scalar(
+                    let query = sqlx::query_scalar(
                         "SELECT EXISTS (
                              SELECT 1 FROM information_schema.tables
                              WHERE table_schema = $1 AND table_name = $2
                          )",
                     )
                     .bind(schema)
-                    .bind(table)
-                    .fetch_one(self.pool)
-                    .await
+                    .bind(table);
+                    let exists: bool = match &self.shared_target_connection {
+                        Some(connection) => {
+                            let mut connection = connection.lock().await;
+                            query.fetch_one(&mut **connection).await
+                        }
+                        None => query.fetch_one(self.pool).await,
+                    }
                     .map_err(|err| crate::migration::ApplyError::Unreachable(err.to_string()))?;
                     Ok(exists)
                 }
@@ -779,11 +838,26 @@ impl crate::migration::ApplyTarget for CatalogMigrationApplyTarget<'_> {
                         })?;
                     Ok(!resources.iter().any(|value| value == &resource_name))
                 }
-                ("postgres", "reviewed_sql") => self
-                    .runtime
-                    .reviewed_artifact_applied(self.pool, &payload)
-                    .await
-                    .map_err(|err| crate::migration::ApplyError::Unreachable(err.to_string())),
+                ("postgres", "reviewed_sql") => {
+                    let applied = match &self.shared_target_connection {
+                        Some(connection) => {
+                            let mut connection = connection.lock().await;
+                            self.runtime
+                                .reviewed_artifact_applied_on_connection(
+                                    &mut **connection,
+                                    &payload,
+                                )
+                                .await
+                        }
+                        None => {
+                            self.runtime
+                                .reviewed_artifact_applied(self.pool, &payload)
+                                .await
+                        }
+                    };
+                    applied
+                        .map_err(|err| crate::migration::ApplyError::Unreachable(err.to_string()))
+                }
                 ("postgres", "apply_sql") => Ok(false),
                 _ => Err(crate::migration::ApplyError::BackendRejected {
                     backend,
@@ -795,7 +869,7 @@ impl crate::migration::ApplyTarget for CatalogMigrationApplyTarget<'_> {
 }
 
 struct ExistingRunMigrationAuditSink<'a> {
-    pool: &'a PgPool,
+    connection: CatalogAuthorityConnection<'a>,
     runs_rel: String,
     ledger_rel: String,
     run_id: Uuid,
@@ -838,6 +912,7 @@ impl crate::migration::MigrationAuditSink for ExistingRunMigrationAuditSink<'_> 
                 "APPLIED"
             };
             let error = result.error.clone().unwrap_or_default();
+            let mut connection = self.connection.lock().await;
             sqlx::query(&format!(
                 "UPDATE {}
                  SET status = $1,
@@ -849,7 +924,7 @@ impl crate::migration::MigrationAuditSink for ExistingRunMigrationAuditSink<'_> 
             .bind(status)
             .bind(error)
             .bind(op_id)
-            .execute(self.pool)
+            .execute(&mut **connection)
             .await
             .map_err(|err| crate::migration::ApplyError::Io(err.to_string()))?;
             Ok(())
@@ -883,11 +958,12 @@ impl crate::migration::MigrationAuditSink for ExistingRunMigrationAuditSink<'_> 
                     self.runs_rel
                 )
             };
+            let mut connection = self.connection.lock().await;
             sqlx::query(&sql)
                 .bind(next_state)
                 .bind(error)
                 .bind(self.run_id)
-                .execute(self.pool)
+                .execute(&mut **connection)
                 .await
                 .map_err(|err| crate::migration::ApplyError::Io(err.to_string()))?;
             Ok(())
@@ -985,6 +1061,67 @@ impl DataBrokerRuntime {
         }
     }
 
+    async fn execute_migration_apply_op_on_connection(
+        &self,
+        connection: &mut sqlx::PgConnection,
+        op_id: i64,
+        backend: &str,
+        resource_uri: &str,
+        operation_kind: &str,
+        payload: &serde_json::Value,
+    ) -> Result<MigrationApplyOutcome, String> {
+        self.validate_migration_apply_op(op_id, backend, resource_uri, operation_kind, payload)?;
+        match (backend, operation_kind) {
+            ("postgres", "reviewed_sql") => {
+                let artifact = super::catalog_transition::reviewed_sql_artifact(payload)
+                    .map_err(|err| err.to_string())?;
+                Self::apply_reviewed_sql_artifact_on_connection(connection, &artifact)
+                    .await
+                    .map(|_| MigrationApplyOutcome::Applied)
+                    .map_err(|err| err.to_string())
+            }
+            ("postgres", "apply_sql" | "create_table") => {
+                let content = payload
+                    .get("content")
+                    .and_then(|value| value.as_str())
+                    .unwrap_or_default();
+                match sqlx::Executor::execute(&mut *connection, sqlx::raw_sql(content)).await {
+                    Ok(_) => Ok(MigrationApplyOutcome::Applied),
+                    Err(error) => {
+                        // Legacy artifacts can embed BEGIN. Their failed native
+                        // transaction must finish before this same authority
+                        // connection writes the durable phase/error record.
+                        sqlx::Executor::execute(&mut *connection, "ROLLBACK").await
+                            .map_err(|rollback| format!("SQL execution failed for {resource_uri}: {error}; rollback failed: {rollback}"))?;
+                        Err(format!("SQL execution failed for {resource_uri}: {error}"))
+                    }
+                }
+            }
+            ("postgres", "verify_table") => {
+                let exists: bool = sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM information_schema.tables WHERE table_schema=$1 AND table_name=$2)")
+                    .bind(payload.get("schema").and_then(|value| value.as_str()).unwrap_or_default())
+                    .bind(payload.get("table").and_then(|value| value.as_str()).unwrap_or_default())
+                    .fetch_one(&mut *connection).await.map_err(|err| format!("table verification query failed for {resource_uri}: {err}"))?;
+                if exists {
+                    Ok(MigrationApplyOutcome::Verified)
+                } else {
+                    Err(format!("table {resource_uri} does not exist"))
+                }
+            }
+            _ => {
+                self.execute_migration_apply_op(
+                    self.pg_pool().map_err(|err| err.to_string())?,
+                    op_id,
+                    backend,
+                    resource_uri,
+                    operation_kind,
+                    payload,
+                )
+                .await
+            }
+        }
+    }
+
     async fn execute_migration_apply_op(
         &self,
         pool: &PgPool,
@@ -1010,15 +1147,19 @@ impl DataBrokerRuntime {
             ("postgres", "reviewed_sql") => {
                 let artifact = super::catalog_transition::reviewed_sql_artifact(payload)
                     .map_err(|err| err.to_string())?;
-                Self::apply_sql_artifact(
-                    pool,
-                    &artifact,
-                    false,
-                    crate::control::tracker::DEFAULT_LEDGER_SCHEMA,
-                )
-                .await
-                .map(|_| MigrationApplyOutcome::Applied)
-                .map_err(|err| err.to_string())
+                let mut connection = pool.acquire().await.map_err(|err| err.to_string())?;
+                // A distinct target also owns exactly one existing pool slot.
+                // Cancellation must discard its uncommitted artifact, never
+                // return an in-flight transaction to another target borrower.
+                connection.close_on_drop();
+                Self::apply_reviewed_sql_artifact_on_connection(&mut connection, &artifact)
+                    .await
+                    .map_err(|err| err.to_string())?;
+                tokio::time::timeout(CATALOG_AUTHORITY_CLOSE_TIMEOUT, connection.close())
+                    .await
+                    .map_err(|_| "bounded reviewed target connection close timed out".to_string())?
+                    .map_err(|err| err.to_string())?;
+                Ok(MigrationApplyOutcome::Applied)
             }
             ("postgres", "verify_table") => {
                 let schema = payload
@@ -2303,9 +2444,21 @@ impl DataBrokerRuntime {
         project_id: &str,
         catalog_id: Uuid,
     ) -> Result<ProjectCatalogRecord, tonic::Status> {
+        let mut connection = self.pg_pool()?.acquire().await.map_err(|err| {
+            catalog_admin_internal_status("load_catalog_record_for_project", err.to_string())
+        })?;
+        self.load_catalog_record_for_project_on_connection(project_id, catalog_id, &mut connection)
+            .await
+    }
+
+    pub(super) async fn load_catalog_record_for_project_on_connection(
+        &self,
+        project_id: &str,
+        catalog_id: Uuid,
+        connection: &mut sqlx::PgConnection,
+    ) -> Result<ProjectCatalogRecord, tonic::Status> {
         use crate::runtime::system::SystemCatalogConfig;
         let project_id = canonical_catalog_project_id(project_id)?;
-        let pool = self.pg_pool()?;
         let config = SystemCatalogConfig::default();
         let cat_rel = config.catalog_versions_relation();
         let row: Option<CatalogRecordRow> = sqlx::query_as(&format!(
@@ -2318,7 +2471,7 @@ impl DataBrokerRuntime {
         ))
         .bind(&project_id)
         .bind(catalog_id)
-        .fetch_optional(pool)
+        .fetch_optional(&mut *connection)
         .await
         .map_err(|err| {
             catalog_admin_internal_status(
@@ -2378,9 +2531,20 @@ impl DataBrokerRuntime {
         &self,
         project_id: &str,
     ) -> Result<Option<ProjectCatalogRecord>, tonic::Status> {
+        let mut connection = self.pg_pool()?.acquire().await.map_err(|err| {
+            catalog_admin_internal_status("load_active_catalog_for_project", err.to_string())
+        })?;
+        self.load_active_catalog_for_project_on_connection(project_id, &mut connection)
+            .await
+    }
+
+    pub(super) async fn load_active_catalog_for_project_on_connection(
+        &self,
+        project_id: &str,
+        connection: &mut sqlx::PgConnection,
+    ) -> Result<Option<ProjectCatalogRecord>, tonic::Status> {
         use crate::runtime::system::SystemCatalogConfig;
         let project_id = canonical_catalog_project_id(project_id)?;
-        let pool = self.pg_pool()?;
         let config = SystemCatalogConfig::default();
         let cat_rel = config.catalog_versions_relation();
         let binding_rel = config.project_catalog_bindings_relation();
@@ -2414,7 +2578,7 @@ impl DataBrokerRuntime {
              WHERE catalog.project_id = $1 AND catalog.status = 'ACTIVE'"
         ))
         .bind(&project_id)
-        .fetch_optional(pool)
+        .fetch_optional(&mut *connection)
         .await
         .map_err(|err| {
             catalog_admin_internal_status(
@@ -3177,7 +3341,7 @@ impl DataBrokerRuntime {
         // used by serving and hydration. A raw ACTIVE row is not sufficient
         // authority to plan or apply schema changes.
         let active_catalog = self
-            .load_active_catalog_for_project(&project_id)
+            .load_active_catalog_for_project_on_connection(&project_id, &mut *plan_tx)
             .await?
             .ok_or_else(|| {
                 catalog_admin_schema_status(
@@ -3194,7 +3358,7 @@ impl DataBrokerRuntime {
         })?;
         let catalog_checksum_sha256 = active_catalog.checksum_sha256.clone();
         let project_target = self
-            .project_postgres_write_target(&project_id, None)
+            .project_postgres_write_target_on_connection(&project_id, None, Some(&mut *plan_tx))
             .await?;
 
         // ── 2. Build operations list ──────────────────────────────────────────
@@ -3216,14 +3380,20 @@ impl DataBrokerRuntime {
             if schema_names.is_empty() {
                 Default::default()
             } else {
-                sqlx::query_as::<_, (String, String)>(
+                let query = sqlx::query_as::<_, (String, String)>(
                     "SELECT table_schema, table_name
                      FROM information_schema.tables
                      WHERE table_schema = ANY($1)",
                 )
-                .bind(&schema_names)
-                .fetch_all(&project_target.pool)
-                .await
+                .bind(&schema_names);
+                let same_pool = super::accessors::postgres_pools_share_connections(
+                    control_pool,
+                    &project_target.pool,
+                );
+                match same_pool {
+                    true => query.fetch_all(&mut *plan_tx).await,
+                    false => query.fetch_all(&project_target.pool).await,
+                }
                 .map_err(|err| {
                     catalog_admin_internal_status(
                         "plan_migration_schema_check",
@@ -3487,22 +3657,29 @@ impl DataBrokerRuntime {
         ensure_migration_run_provenance_columns(control_pool, &runs_rel).await?;
 
         // Keep the same project advisory lock held from authority verification
-        // through physical apply. Catalog transitions use this key too, so the
-        // exact catalog proven below cannot be superseded mid-DDL.
-        let mut authority_guard = control_pool.begin().await.map_err(|err| {
-            catalog_admin_internal_status(
-                "apply_migration_authority_begin",
-                format!("apply_migration authority transaction failed: {err}"),
-            )
+        // through physical apply. Session and transaction advisory locks for
+        // the same PostgreSQL key conflict, so existing catalog writers remain
+        // serialized even when each native artifact durably commits.
+        let mut owned_connection = control_pool.acquire().await.map_err(|err| {
+            catalog_admin_internal_status("apply_migration_authority_acquire", err.to_string())
         })?;
-        sqlx::query("SELECT pg_advisory_xact_lock(hashtextextended($1, 534154))")
+        // Mark BEFORE waiting for the session lock: cancellation can happen
+        // after PostgreSQL grants it but before the client sees the response.
+        // A locked/aborted connection must never return to the pool.
+        owned_connection.close_on_drop();
+        sqlx::query("SELECT pg_advisory_lock(hashtextextended($1, 534154))")
             .bind(&project_id)
-            .execute(&mut *authority_guard)
+            .execute(&mut *owned_connection)
+            .await
+            .map_err(|err| {
+                catalog_admin_internal_status("apply_migration_authority_lock", err.to_string())
+            })?;
+        let mut authority_guard = sqlx::Connection::begin(&mut *owned_connection)
             .await
             .map_err(|err| {
                 catalog_admin_internal_status(
-                    "apply_migration_authority_lock",
-                    format!("apply_migration project authority lock failed: {err}"),
+                    "apply_migration_authority_begin",
+                    format!("apply_migration authority transaction failed: {err}"),
                 )
             })?;
 
@@ -3515,7 +3692,7 @@ impl DataBrokerRuntime {
         ))
         .bind(id)
         .bind(&project_id)
-        .fetch_optional(control_pool)
+        .fetch_optional(&mut *authority_guard)
         .await
         .map_err(|err| {
             catalog_admin_internal_status(
@@ -3543,6 +3720,7 @@ impl DataBrokerRuntime {
             authority_guard.commit().await.map_err(|err| {
                 catalog_admin_internal_status("reviewed_apply_replay_commit", err.to_string())
             })?;
+            release_catalog_apply_authority(owned_connection, &project_id).await?;
             return Ok(());
         }
         validate_migration_apply_state_and_token(&state, approval_token, &stored_token)?;
@@ -3585,7 +3763,7 @@ impl DataBrokerRuntime {
         }
 
         let active_catalog = self
-            .load_active_catalog_for_project(&project_id)
+            .load_active_catalog_for_project_on_connection(&project_id, &mut *authority_guard)
             .await?
             .ok_or_else(|| {
                 migration_authority_status(
@@ -3603,7 +3781,11 @@ impl DataBrokerRuntime {
             ));
         }
         let project_target = self
-            .project_postgres_write_target(&project_id, Some(&stored_target_instance))
+            .project_postgres_write_target_on_connection(
+                &project_id,
+                Some(&stored_target_instance),
+                Some(&mut *authority_guard),
+            )
             .await?;
         if project_target.instance != stored_target_instance
             || project_target.provenance_sha256 != stored_target_provenance
@@ -3638,7 +3820,7 @@ impl DataBrokerRuntime {
                  ORDER BY operation_index ASC"
             ))
             .bind(id)
-            .fetch_all(control_pool)
+            .fetch_all(&mut *authority_guard)
             .await
             .map_err(|err| {
                 catalog_admin_internal_status(
@@ -3662,8 +3844,13 @@ impl DataBrokerRuntime {
             .collect();
         if let Some(plan) = &reviewed_plan {
             self.validate_reviewed_native_operations(id, plan, &planned)?;
-            self.record_verified_preapplied_catalog(id, plan, &project_target.pool)
-                .await?;
+            self.record_verified_preapplied_catalog(
+                id,
+                plan,
+                &project_target.pool,
+                &mut *authority_guard,
+            )
+            .await?;
         }
         let preflight_errors = self.preflight_migration_apply_ops(&preflight_ops);
         if !preflight_errors.is_empty() {
@@ -3693,7 +3880,7 @@ impl DataBrokerRuntime {
         .bind(&stored_target_backend)
         .bind(&stored_target_instance)
         .bind(&stored_target_provenance)
-        .execute(control_pool)
+        .execute(&mut *authority_guard)
         .await
         .map_err(|err| {
             catalog_admin_internal_status(
@@ -3704,6 +3891,10 @@ impl DataBrokerRuntime {
         if rows.rows_affected() == 0 {
             return Err(migration_apply_state_changed_status());
         }
+
+        authority_guard.commit().await.map_err(|err| {
+            catalog_admin_internal_status("apply_migration_preflight_commit", err.to_string())
+        })?;
 
         let artifacts: Vec<GeneratedArtifact> = planned
             .iter()
@@ -3751,32 +3942,41 @@ impl DataBrokerRuntime {
                 },
             )
             .collect();
-        let target = CatalogMigrationApplyTarget {
-            runtime: self,
-            pool: &project_target.pool,
+        let phased = {
+            let connection = Arc::new(tokio::sync::Mutex::new(&mut *owned_connection));
+            let shared_target = super::accessors::postgres_pools_share_connections(
+                control_pool,
+                &project_target.pool,
+            );
+            let target = CatalogMigrationApplyTarget {
+                runtime: self,
+                pool: &project_target.pool,
+                shared_target_connection: shared_target.then(|| connection.clone()),
+            };
+            let sink = ExistingRunMigrationAuditSink {
+                connection: connection.clone(),
+                runs_rel: runs_rel.clone(),
+                ledger_rel: ledger_rel.clone(),
+                run_id: id,
+                op_ids,
+                op_kinds,
+            };
+            let phase_ledger = crate::migration::phase_runner::PostgresPhaseLedger::on_connection(
+                (*control_pool).clone(),
+                phase_ledger_rel,
+                connection,
+            );
+            crate::migration::apply_artifacts_phased(
+                run_id,
+                &target,
+                &artifacts,
+                &sink,
+                &phase_ledger,
+                &catalog_version,
+                &operations_hash,
+            )
+            .await
         };
-        let sink = ExistingRunMigrationAuditSink {
-            pool: control_pool,
-            runs_rel: runs_rel.clone(),
-            ledger_rel: ledger_rel.clone(),
-            run_id: id,
-            op_ids,
-            op_kinds,
-        };
-        let phase_ledger = crate::migration::phase_runner::PostgresPhaseLedger::new(
-            (*control_pool).clone(),
-            phase_ledger_rel,
-        );
-        let phased = crate::migration::apply_artifacts_phased(
-            run_id,
-            &target,
-            &artifacts,
-            &sink,
-            &phase_ledger,
-            &catalog_version,
-            &operations_hash,
-        )
-        .await;
 
         let outcome = match phased {
             Ok((outcome, _results)) => outcome,
@@ -3788,7 +3988,7 @@ impl DataBrokerRuntime {
                 ))
                 .bind(&err)
                 .bind(id)
-                .execute(control_pool)
+                .execute(&mut *owned_connection)
                 .await
                 .map_err(|update_err| {
                     catalog_admin_internal_status(
@@ -3815,7 +4015,7 @@ impl DataBrokerRuntime {
                 ))
                 .bind(format!("phase {} paused: {error}", phase.as_str()))
                 .bind(id)
-                .execute(control_pool)
+                .execute(&mut *owned_connection)
                 .await
                 .map_err(|err| {
                     catalog_admin_internal_status(
@@ -3843,7 +4043,7 @@ impl DataBrokerRuntime {
                 ))
                 .bind(&error)
                 .bind(id)
-                .execute(control_pool)
+                .execute(&mut *owned_connection)
                 .await
                 .map_err(|err| {
                     catalog_admin_internal_status(
@@ -3855,6 +4055,11 @@ impl DataBrokerRuntime {
             }
         }
 
+        let mut authority_guard = sqlx::Connection::begin(&mut *owned_connection)
+            .await
+            .map_err(|err| {
+                catalog_admin_internal_status("apply_migration_completion_begin", err.to_string())
+            })?;
         if let Some(plan) = &reviewed_plan {
             if let Err(error) = self
                 .complete_reviewed_catalog_application(
@@ -3866,12 +4071,18 @@ impl DataBrokerRuntime {
                 )
                 .await
             {
+                authority_guard.rollback().await.map_err(|err| {
+                    catalog_admin_internal_status(
+                        "reviewed_apply_completion_rollback",
+                        err.to_string(),
+                    )
+                })?;
                 sqlx::query(&format!(
                     "UPDATE {runs_rel} SET state='ERROR',error=$2,finished_at=NOW() WHERE run_id=$1"
                 ))
                 .bind(id)
                 .bind(error.message())
-                .execute(control_pool)
+                .execute(&mut *owned_connection)
                 .await
                 .map_err(|err| {
                     catalog_admin_internal_status(
@@ -3902,6 +4113,7 @@ impl DataBrokerRuntime {
                 format!("apply_migration authority lock release failed: {err}"),
             )
         })?;
+        release_catalog_apply_authority(owned_connection, &project_id).await?;
         Ok(())
     }
 

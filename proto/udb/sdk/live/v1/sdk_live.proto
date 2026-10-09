@@ -23,7 +23,8 @@ message SdkLiveRecord {
     force_rls: false
     audit_fields: false
     soft_delete: false
-    required_scope: "udb:admin"
+    // Read proofs use a read credential. Writes independently require udb:write.
+    required_scope: "udb:read"
     cdc_topic: "udb.sdk.live.records.cdc"
     comment: "Ephemeral rows used by SDK live end-to-end conformance tests"
     indexes: {

@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	apikeyentpb "github.com/fahara02/udb/sdk/go/gen/udb/core/apikey/entity/v1"
 	authnv1 "github.com/fahara02/udb/sdk/go/gen/udb/core/authn/services/v1"
 	livev1 "github.com/fahara02/udb/sdk/go/gen/udb/sdk/live/v1"
 	"google.golang.org/grpc/status"
@@ -49,9 +50,12 @@ func TestLiveG2MetadataAndTypedPredicates(t *testing.T) {
 	if err != nil || !reflect.DeepEqual(keys, [][]string{{"lookup_key"}}) {
 		t.Fatal("actual served fixture descriptor must deduplicate its declared unique key")
 	}
-	generated, ok := Entities[liveMessageType]
-	if !ok || !reflect.DeepEqual(generated.UniqueKeys, keys) {
-		t.Fatal("actual SDK producer registry must retain the same effective UniqueKeys as its protobuf annotations")
+	// The default producer registry covers native entities. Project-local
+	// descriptors remain usable through TableOf without a fabricated registry entry.
+	nativeKeys, err := UniqueKeys((*apikeyentpb.ApiKey)(nil))
+	generated, ok := Entities["udb.core.apikey.entity.v1.ApiKey"]
+	if err != nil || !reflect.DeepEqual(nativeKeys, [][]string{{"key_hash"}}) || !ok || !reflect.DeepEqual(generated.UniqueKeys, nativeKeys) {
+		t.Fatal("actual native SDK producer registry must retain its descriptor's effective UniqueKeys")
 	}
 	table := TableOf[*livev1.SdkLiveRecord](sess.Udb)
 	id := "g2-" + uuid4()

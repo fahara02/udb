@@ -28,11 +28,13 @@ import (
 // tested across an actual gRPC listener, including generated typed bindings.
 type versionHandshakeBroker struct {
 	servicesv1.UnimplementedDataBrokerServer
-	t        *testing.T
-	versions []string
-	rpcError error
-	detail   []byte
-	calls    atomic.Int32
+	t            *testing.T
+	versions     []string
+	rpcError     error
+	detail       []byte
+	trailersOnly bool
+	streamEmpty  bool
+	calls        atomic.Int32
 }
 
 type versionHandshakeAuthn struct {
@@ -58,8 +60,10 @@ func (b *versionHandshakeBroker) headers(ctx context.Context) {
 	for _, version := range b.versions {
 		header.Append("x-udb-version", version)
 	}
-	if err := grpc.SendHeader(ctx, header); err != nil {
-		b.t.Errorf("send response metadata: %v", err)
+	if !b.trailersOnly {
+		if err := grpc.SendHeader(ctx, header); err != nil {
+			b.t.Errorf("send response metadata: %v", err)
+		}
 	}
 	trailer := metadata.Pairs("x-test-trailer", "response-trailer")
 	if b.detail != nil {
@@ -75,6 +79,9 @@ func (b *versionHandshakeBroker) Select(ctx context.Context, _ *entityv1.SelectR
 
 func (b *versionHandshakeBroker) PublishCDC(_ *entityv1.CDCSubscriptionRequest, stream grpc.ServerStreamingServer[eventsv1.CDCEnvelope]) error {
 	b.headers(stream.Context())
+	if b.rpcError != nil || b.streamEmpty {
+		return b.rpcError
+	}
 	return stream.Send(&eventsv1.CDCEnvelope{})
 }
 
@@ -85,6 +92,9 @@ func (b *versionHandshakeBroker) BatchUpsert(stream grpc.BidiStreamingServer[ent
 		return err
 	}
 	b.headers(stream.Context())
+	if b.rpcError != nil || b.streamEmpty {
+		return b.rpcError
+	}
 	return stream.Send(&entityv1.MutationResponse{})
 }
 
@@ -99,6 +109,9 @@ func (b *versionHandshakeBroker) PutObject(stream grpc.ClientStreamingServer[ent
 		}
 	}
 	b.headers(stream.Context())
+	if b.rpcError != nil || b.streamEmpty {
+		return b.rpcError
+	}
 	return stream.SendAndClose(&entityv1.MutationResponse{})
 }
 
@@ -354,6 +367,119 @@ func TestVersionHandshakeStreamWire(t *testing.T) {
 					}
 					if broker.calls.Load() != 1 {
 						t.Fatalf("stream retried: %d", broker.calls.Load())
+					}
+				})
+			}
+		}
+	}
+}
+
+func versionTestOpenStream(t *testing.T, g *GeneratedClient, conn *grpc.ClientConn, intercepted bool, kind string) (grpc.ClientStream, any) {
+	t.Helper()
+	ctx := versionTestContext(t)
+	var stream grpc.ClientStream
+	var err error
+	var response any = &entityv1.MutationResponse{}
+	switch kind {
+	case "server":
+		response = &eventsv1.CDCEnvelope{}
+		if intercepted {
+			stream, err = servicesv1.NewDataBrokerClient(conn).PublishCDC(ctx, &entityv1.CDCSubscriptionRequest{})
+		} else {
+			stream, err = g.NewServerStream(ctx, servicesv1.DataBroker_PublishCDC_FullMethodName, &grpc.StreamDesc{ServerStreams: true}, &entityv1.CDCSubscriptionRequest{})
+		}
+	case "bidi":
+		if intercepted {
+			stream, err = servicesv1.NewDataBrokerClient(conn).BatchUpsert(ctx)
+		} else {
+			stream, err = g.NewClientStream(ctx, servicesv1.DataBroker_BatchUpsert_FullMethodName, &grpc.StreamDesc{ClientStreams: true, ServerStreams: true})
+		}
+	case "client":
+		if intercepted {
+			stream, err = servicesv1.NewDataBrokerClient(conn).PutObject(ctx)
+		} else {
+			stream, err = g.NewClientStream(ctx, servicesv1.DataBroker_PutObject_FullMethodName, &grpc.StreamDesc{ClientStreams: true})
+		}
+	default:
+		t.Fatalf("unknown stream shape %q", kind)
+	}
+	if err != nil {
+		t.Fatalf("open actual stream: %v", err)
+	}
+	if kind != "server" {
+		var request any = &entityv1.UpsertRequest{}
+		if kind == "client" {
+			request = &entityv1.Chunk{}
+		}
+		if err := stream.SendMsg(request); err != nil {
+			t.Fatalf("send first request before version check: %v", err)
+		}
+		if err := stream.CloseSend(); err != nil {
+			t.Fatal(err)
+		}
+	}
+	return stream, response
+}
+
+func TestVersionHandshakeTrailersOnlyStreamRefusals(t *testing.T) {
+	detail, err := proto.Marshal(&entityv1.ErrorDetail{Kind: entityv1.ErrorKind_ERROR_KIND_POLICY, Operation: "stream-version-refusal"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, intercepted := range []bool{false, true} {
+		for _, code := range []codes.Code{codes.PermissionDenied, codes.Unimplemented} {
+			for _, kind := range []string{"server", "bidi", "client"} {
+				t.Run(strconv.FormatBool(intercepted)+"/"+code.String()+"/"+kind, func(t *testing.T) {
+					broker := &versionHandshakeBroker{t: t, trailersOnly: true, rpcError: status.Error(code, "served stream refusal"), detail: detail}
+					g, conn := versionTestConnection(t, broker, Options{StrictServerVersion: true, CallTimeout: time.Second}, intercepted)
+					stream, response := versionTestOpenStream(t, g, conn, intercepted, kind)
+					header, headerErr := stream.Header()
+					if headerErr != nil || header != nil {
+						t.Fatalf("trailers-only Header must defer the RPC status: header=%v err=%v", header, headerErr)
+					}
+					err := stream.RecvMsg(response)
+					var versionErr *VersionMismatchError
+					if status.Code(err) != code || errors.As(err, &versionErr) || status.Convert(err).Message() != "served stream refusal" {
+						t.Fatalf("actual stream refusal replaced: %v", err)
+					}
+					trailer := stream.Trailer()
+					if got := trailer.Get(errorDetailTrailer); len(got) != 1 || !bytes.Equal([]byte(got[0]), detail) {
+						t.Fatalf("actual binary refusal trailer lost: %v", trailer)
+					}
+					if broker.calls.Load() != 1 {
+						t.Fatalf("failed stream retried: %d", broker.calls.Load())
+					}
+				})
+			}
+		}
+	}
+}
+
+func TestVersionHandshakeSuccessfulStreamsStillRequireVersion(t *testing.T) {
+	for _, intercepted := range []bool{false, true} {
+		for _, kind := range []string{"server", "bidi", "client"} {
+			for _, mode := range []string{"missing-version", "mismatched-version", "empty-trailers-only"} {
+				t.Run(strconv.FormatBool(intercepted)+"/"+kind+"/"+mode, func(t *testing.T) {
+					broker := &versionHandshakeBroker{t: t}
+					if mode == "mismatched-version" {
+						broker.versions = []string{incompatibleTestVersion(t)}
+					} else if mode == "empty-trailers-only" {
+						broker.trailersOnly, broker.streamEmpty = true, true
+					}
+					g, conn := versionTestConnection(t, broker, Options{StrictServerVersion: true, CallTimeout: time.Second}, intercepted)
+					stream, response := versionTestOpenStream(t, g, conn, intercepted, kind)
+					if mode == "empty-trailers-only" {
+						if header, err := stream.Header(); header != nil || err != nil {
+							t.Fatalf("empty successful stream must resolve status before version: header=%v err=%v", header, err)
+						}
+					}
+					err := stream.RecvMsg(response)
+					var versionErr *VersionMismatchError
+					if !errors.As(err, &versionErr) {
+						t.Fatalf("successful stream without compatible initial version was admitted: %v", err)
+					}
+					if broker.calls.Load() != 1 {
+						t.Fatalf("successful version refusal retried: %d", broker.calls.Load())
 					}
 				})
 			}

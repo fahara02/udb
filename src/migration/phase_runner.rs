@@ -142,16 +142,33 @@ pub trait PhaseLedger: Send + Sync {
 /// The table is created lazily so older installations that already have
 /// `udb_migration_runs` / `udb_migration_op_ledger` can start recording phase
 /// progress without requiring a separate bootstrap migration first.
-pub struct PostgresPhaseLedger {
+pub struct PostgresPhaseLedger<'connection> {
     pool: PgPool,
     relation: String,
+    connection: Option<std::sync::Arc<tokio::sync::Mutex<&'connection mut sqlx::PgConnection>>>,
 }
 
-impl PostgresPhaseLedger {
+impl<'connection> PostgresPhaseLedger<'connection> {
     pub fn new(pool: PgPool, relation: impl Into<String>) -> Self {
         Self {
             pool,
             relation: relation.into(),
+            connection: None,
+        }
+    }
+
+    /// Reuse the catalog apply's already checked-out authority connection.
+    /// Each phase remains durably autocommitted while the session project lock
+    /// persists; this adapter never borrows another slot from the same pool.
+    pub(crate) fn on_connection(
+        pool: PgPool,
+        relation: impl Into<String>,
+        connection: std::sync::Arc<tokio::sync::Mutex<&'connection mut sqlx::PgConnection>>,
+    ) -> Self {
+        Self {
+            pool,
+            relation: relation.into(),
+            connection: Some(connection),
         }
     }
 
@@ -171,25 +188,35 @@ impl PostgresPhaseLedger {
                 UNIQUE (run_id, phase)
             )"
         );
-        sqlx::query(&ddl)
-            .execute(&self.pool)
-            .await
-            .map_err(|err| format!("ensure phase ledger table failed: {err}"))?;
+        let query = sqlx::query(&ddl);
+        match &self.connection {
+            Some(connection) => {
+                let mut connection = connection.lock().await;
+                query.execute(&mut **connection).await
+            }
+            None => query.execute(&self.pool).await,
+        }
+        .map_err(|err| format!("ensure phase ledger table failed: {err}"))?;
 
         let idx = format!(
             "CREATE INDEX IF NOT EXISTS \"idx_udb_migration_phase_ledger_run\"
              ON {rel} (run_id, phase)"
         );
-        sqlx::query(&idx)
-            .execute(&self.pool)
-            .await
-            .map_err(|err| format!("ensure phase ledger index failed: {err}"))?;
+        let query = sqlx::query(&idx);
+        match &self.connection {
+            Some(connection) => {
+                let mut connection = connection.lock().await;
+                query.execute(&mut **connection).await
+            }
+            None => query.execute(&self.pool).await,
+        }
+        .map_err(|err| format!("ensure phase ledger index failed: {err}"))?;
         Ok(())
     }
 }
 
 #[async_trait]
-impl PhaseLedger for PostgresPhaseLedger {
+impl PhaseLedger for PostgresPhaseLedger<'_> {
     async fn load(&self, run_id: &str) -> Result<Vec<PhaseRecord>, String> {
         self.ensure_table().await?;
         let rel = &self.relation;
@@ -209,11 +236,15 @@ impl PhaseLedger for PostgresPhaseLedger {
                  ELSE 99
              END"
         );
-        let rows = sqlx::query(&sql)
-            .bind(run_id)
-            .fetch_all(&self.pool)
-            .await
-            .map_err(|err| format!("load phase ledger failed: {err}"))?;
+        let query = sqlx::query(&sql).bind(run_id);
+        let rows = match &self.connection {
+            Some(connection) => {
+                let mut connection = connection.lock().await;
+                query.fetch_all(&mut **connection).await
+            }
+            None => query.fetch_all(&self.pool).await,
+        }
+        .map_err(|err| format!("load phase ledger failed: {err}"))?;
 
         let mut out = Vec::with_capacity(rows.len());
         for row in rows {
@@ -266,17 +297,22 @@ impl PhaseLedger for PostgresPhaseLedger {
                     attempt = EXCLUDED.attempt,
                     updated_at = NOW()"
         );
-        sqlx::query(&sql)
+        let query = sqlx::query(&sql)
             .bind(&record.run_id)
             .bind(record.phase.as_str())
             .bind(record.status.as_str())
             .bind(record.started_at_unix_ms)
             .bind(record.finished_at_unix_ms)
             .bind(&record.error)
-            .bind(i32::try_from(record.attempt).unwrap_or(i32::MAX))
-            .execute(&self.pool)
-            .await
-            .map_err(|err| format!("write phase ledger failed: {err}"))?;
+            .bind(i32::try_from(record.attempt).unwrap_or(i32::MAX));
+        match &self.connection {
+            Some(connection) => {
+                let mut connection = connection.lock().await;
+                query.execute(&mut **connection).await
+            }
+            None => query.execute(&self.pool).await,
+        }
+        .map_err(|err| format!("write phase ledger failed: {err}"))?;
         Ok(())
     }
 }

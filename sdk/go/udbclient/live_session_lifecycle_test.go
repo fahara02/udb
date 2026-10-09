@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"io"
 	"os"
 	"reflect"
@@ -15,6 +16,7 @@ import (
 	apikeyv1 "github.com/fahara02/udb/sdk/go/gen/udb/core/apikey/services/v1"
 	authnentpb "github.com/fahara02/udb/sdk/go/gen/udb/core/authn/entity/v1"
 	authnv1 "github.com/fahara02/udb/sdk/go/gen/udb/core/authn/services/v1"
+	authzpb "github.com/fahara02/udb/sdk/go/gen/udb/core/authz/services/v1"
 	commonpb "github.com/fahara02/udb/sdk/go/gen/udb/core/common/v1"
 	entityv1 "github.com/fahara02/udb/sdk/go/gen/udb/entity/v1"
 	"google.golang.org/grpc"
@@ -363,12 +365,18 @@ func TestLiveG1APIKeyCredentialLifecycle(t *testing.T) {
 		return &commonpb.RequestContext{Tenant: &commonpb.TenantContext{TenantId: identity.TenantID, ProjectId: identity.ProjectID}, UserId: principal, PrincipalId: principal, Purpose: identity.Purpose}
 	}
 	serviceID, keyID, recordID := "", "", "g1-api-key-"+uuid4()
+	policyID := ""
 	grantCreated := false
 	defer func() {
 		cleanupCtx, cleanupCancel := context.WithTimeout(context.Background(), 15*time.Second)
 		defer cleanupCancel()
 		if _, err := operator.Data.Delete(cleanupCtx, &entityv1.DeleteRequest{Context: liveRequestContext(identity.TenantID, identity.ProjectID, identity.Purpose), MessageType: liveMessageType, Filter: liveStruct(t, map[string]any{"record_id": recordID, "tenant_id": identity.TenantID, "project_id": identity.ProjectID})}); err != nil {
 			t.Errorf("owned row cleanup: code=%s", status.Code(err))
+		}
+		if policyID != "" {
+			if _, err := operator.Auth.Authz.DeletePolicyRule(cleanupCtx, &authzpb.DeletePolicyRuleRequest{PolicyId: policyID, DeletedBy: identity.UserID}); err != nil {
+				t.Errorf("owned exact read policy cleanup: code=%s", status.Code(err))
+			}
 		}
 		if keyID != "" {
 			if _, err := operator.ApiKey.Raw.RevokeApiKey(cleanupCtx, &apikeyv1.RevokeApiKeyRequest{KeyId: keyID, RevokeReason: "G1 owned fixture cleanup", Context: commonContext(serviceID)}); err != nil {
@@ -397,7 +405,7 @@ func TestLiveG1APIKeyCredentialLifecycle(t *testing.T) {
 	if _, err := operator.Auth.Authn.ChangeUserStatus(ctx, &authnv1.ChangeUserStatusRequest{UserId: serviceID, NewStatus: authnentpb.UserStatus_USER_STATUS_ACTIVE, Reason: "G1 owned fixture activation", Context: commonContext(identity.UserID)}); err != nil {
 		t.Fatalf("owned service activation: code=%s", status.Code(err))
 	}
-	scopes := []string{"data:read", "udb:authn:validate-token"}
+	scopes := []string{"udb:read", "udb:authn:validate-token"}
 	if _, err := operator.Auth.Authn.CreateServiceAccountGrant(ctx, &authnv1.CreateServiceAccountGrantRequest{TenantId: identity.TenantID, ProjectId: identity.ProjectID, UserId: serviceID, ServiceIdentity: name, ApprovedScopes: scopes, Reason: "G1 owned read and token verification"}); err != nil {
 		t.Fatalf("owned service grant: code=%s", status.Code(err))
 	}
@@ -414,8 +422,11 @@ func TestLiveG1APIKeyCredentialLifecycle(t *testing.T) {
 		t.Fatalf("actual API-key Connect: code=%s", status.Code(err))
 	}
 	defer service.Close()
+	if err := service.Verify(Expect{TenantID: identity.TenantID, ProjectID: identity.ProjectID, ServiceIdentity: name, RequiredScopes: scopes}); err != nil {
+		t.Fatal("actual API-key connection must verify its exact approved read/native identity")
+	}
 	principal := service.Principal()
-	if principal == nil || principal.GetPrincipalId() != serviceID || principal.GetUserId() != "" || principal.GetSubject() != name || principal.GetTenantId() != identity.TenantID || principal.GetProjectId() != identity.ProjectID || principal.GetServiceIdentity() != name || principal.GetAccountKind() != authnentpb.AccountKind_ACCOUNT_KIND_SERVICE_ACCOUNT {
+	if principal == nil || principal.GetPrincipalId() != serviceID || principal.GetUserId() != "" || principal.GetSubject() != name || principal.GetTenantId() != identity.TenantID || principal.GetProjectId() != identity.ProjectID || principal.GetServiceIdentity() != name || principal.GetAccountKind() != authnentpb.AccountKind_ACCOUNT_KIND_SERVICE_ACCOUNT || !slices.Equal(principal.GetScopes(), scopes) || !slices.Equal(service.Meta.Scopes, scopes) {
 		t.Fatal("actual key must return its owned canonical service principal")
 	}
 	beforeMeta, beforeData, beforeAuth := service.Meta, service.Data, service.Auth
@@ -463,6 +474,45 @@ func TestLiveG1APIKeyCredentialLifecycle(t *testing.T) {
 	}
 	previous := currentBearer()
 	previousClaims := verify(previous)
+	who, err := service.Auth.AuthenticateBearer(ctx, previous)
+	signed := who.GetPrincipal()
+	if err != nil || signed.GetPrincipalId() != serviceID || signed.GetSubject() != serviceID || signed.GetUserId() != serviceID || signed.GetServiceIdentity() != name || signed.GetAccountKind() != authnentpb.AccountKind_ACCOUNT_KIND_SERVICE_ACCOUNT {
+		t.Fatalf("actual signed service subject before its read grant: code=%s", status.Code(err))
+	}
+	claimIdentity := beforeMeta
+	claimIdentity.UserID = serviceID
+	liveG1AssertIdentity(t, claimIdentity, signed.GetTenantId(), signed.GetProjectId(), signed.GetUserId(), signed.GetServiceIdentity(), signed.GetScopes())
+	var pregrantTrailer metadata.MD
+	_, err = service.Data.Broker.Select(ctx, read, grpc.Trailer(&pregrantTrailer))
+	liveOwnedServiceReadPolicyRefusal(t, err, pregrantTrailer)
+	policyID = uuid4()
+	granted, err := operator.Auth.Authz.PutAuthzPolicy(ctx, &authzpb.PutAuthzPolicyRequest{Policy: &authzpb.AuthzPolicyRecord{
+		Id: policyID, Enabled: true, Effect: "allow", Subject: signed.GetSubject(), Tenant: signed.GetTenantId(), Project: signed.GetProjectId(),
+		Action: "Select", Resource: liveMessageType, Purpose: identity.Purpose, RequiredScopes: []string{"udb:read"},
+	}})
+	if err != nil || !granted.GetOk() {
+		t.Fatalf("owned exact API-key read policy: code=%s", status.Code(err))
+	}
+	// The real exchanged read/native credential has no mutation scope or PDP
+	// grant. A denied attempt must leave the independently read owned row intact.
+	var writeTrailer metadata.MD
+	_, err = service.Data.Broker.Upsert(ctx, &entityv1.UpsertRequest{
+		Context: requestCtx, MessageType: liveMessageType,
+		RecordJson:     liveRecordJSON(t, recordID, identity.TenantID, identity.ProjectID, recordID, "g1-api-key-forbidden-write", 2),
+		ConflictFields: []string{"record_id"},
+	}, grpc.Trailer(&writeTrailer))
+	liveOwnedServicePolicyRefusal(t, "Upsert", err, writeTrailer)
+	unchanged, err := service.Data.Select(ctx, read)
+	if err != nil || len(unchanged.GetRecordsJson()) != 1 || liveRecordPayload(t, unchanged, 0) != "g1-api-key-live" {
+		t.Fatalf("denied service write changed its owned row or read authority: %s", liveG1RefusalSummary(err, nil))
+	}
+	var adminTrailer metadata.MD
+	_, err = service.Data.Broker.GetCapabilities(ctx, &entityv1.CapabilitiesRequest{}, grpc.Trailer(&adminTrailer))
+	mapped, ok := AsError(mapError("/udb.services.v1.DataBroker/GetCapabilities", err, adminTrailer))
+	detail, decoded := mapped.Detail()
+	if status.Code(err) != codes.PermissionDenied || !ok || !decoded || detail.GetOperation() != "admin_scope" || detail.GetPolicyDecisionId() != "admin_scope_required" {
+		t.Fatalf("read/native service must retain exact admin-control refusal: %s", liveG1RefusalSummary(err, adminTrailer))
+	}
 	rotations := 0
 	horizon := time.Time{}
 	ticker := time.NewTicker(time.Second)
@@ -478,19 +528,27 @@ func TestLiveG1APIKeyCredentialLifecycle(t *testing.T) {
 			rotations++
 		}
 		for _, path := range []string{"data", "raw", "generated"} {
+			if read.GetContext().GetPurpose() != identity.Purpose || service.Meta.Purpose != identity.Purpose {
+				t.Fatal("each actual API-key read must retain the exact granted purpose")
+			}
 			var rows *entityv1.RecordSet
 			var err error
+			var trailer metadata.MD
 			switch path {
 			case "data":
 				rows, err = service.Data.Select(ctx, read)
 			case "raw":
-				rows, err = service.Data.Broker.Select(ctx, read)
+				rows, err = service.Data.Broker.Select(ctx, read, grpc.Trailer(&trailer))
 			case "generated":
 				rows = &entityv1.RecordSet{}
-				err = service.Generated.InvokeUnary(ctx, "/udb.services.v1.DataBroker/Select", read, rows)
+				err = service.Generated.InvokeUnary(ctx, "/udb.services.v1.DataBroker/Select", read, rows, grpc.Trailer(&trailer))
 			}
 			if err != nil || len(rows.GetRecordsJson()) != 1 || liveRecordPayload(t, rows, 0) != "g1-api-key-live" {
-				t.Fatalf("API key %s after renewal: code=%s", path, status.Code(err))
+				t.Fatalf("API key %s at rotation %d: %s", path, rotations, liveG1RefusalSummary(err, trailer))
+			}
+			var owned map[string]any
+			if json.Unmarshal(rows.GetRecordsJson()[0], &owned) != nil || owned["record_id"] != recordID || owned["tenant_id"] != identity.TenantID || owned["project_id"] != identity.ProjectID {
+				t.Fatal("actual API-key read must return exactly its owned scoped fixture")
 			}
 		}
 		if !reflect.DeepEqual(beforeMeta, service.Meta) || beforeData != service.Data || beforeAuth != service.Auth || service.CredentialErr() != nil {
@@ -528,6 +586,41 @@ func TestLiveG1APIKeyCredentialLifecycle(t *testing.T) {
 		t.Fatalf("revoked API native transport: code=%s", status.Code(err))
 	}
 	t.Logf("G1 API-key proof: %d natural actual20s renewals, immutable identity, direct/generated local refusal after real revocation", rotations)
+}
+
+func liveOwnedServiceReadPolicyRefusal(t *testing.T, err error, trailer metadata.MD) {
+	t.Helper()
+	liveOwnedServicePolicyRefusal(t, "Select", err, trailer)
+}
+
+func liveOwnedServicePolicyRefusal(t *testing.T, operation string, err error, trailer metadata.MD) {
+	t.Helper()
+	mapped, ok := AsError(mapError("/udb.services.v1.DataBroker/"+operation, err, trailer))
+	detail, decoded := mapped.Detail()
+	if status.Code(err) != codes.PermissionDenied || !ok || !decoded || detail.GetReason() != "UDB_POLICY_DENIED" || detail.GetOperation() != "data_plane_authorize" || detail.GetPolicyDecisionId() == "" {
+		t.Fatalf("ungranted actual service %s must have its typed PDP refusal: %s", operation, liveG1RefusalSummary(err, trailer))
+	}
+	if detail.GetMissing()["rule"] == operation+" "+liveMessageType {
+		return
+	}
+	t.Fatalf("typed service denial must identify the exact %s resource: %s", operation, liveG1RefusalSummary(err, trailer))
+}
+
+// Emit only typed diagnostic fields; credentials and arbitrary status messages
+// never enter the live proof artifact.
+func liveG1RefusalSummary(err error, trailer metadata.MD) string {
+	mapped, ok := AsError(err)
+	if !ok {
+		mapped, ok = AsError(mapError("/udb.services.v1.DataBroker/Select", err, trailer))
+	}
+	if !ok {
+		return fmt.Sprintf("code=%s detail=absent", status.Code(err))
+	}
+	detail, decoded := mapped.Detail()
+	if !decoded {
+		return fmt.Sprintf("code=%s detail=undecodable", mapped.Code)
+	}
+	return fmt.Sprintf("code=%s operation=%q reason=%q decision=%q missing=%v fields=%v", mapped.Code, detail.GetOperation(), detail.GetReason(), detail.GetPolicyDecisionId(), detail.GetMissing(), mapped.FieldViolations())
 }
 
 // Stop and join the real loop before revoking the owned login session, so

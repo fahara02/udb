@@ -152,7 +152,7 @@ func TestLiveGeneratedRPCSurface(t *testing.T) {
 	// Deep, result-asserted E2E for the operational DataBroker RPCs (CDC / DLQ / saga /
 	// catalog / schema / health / admin / projects) — these are NOT covered by the
 	// all-backend CRUD matrix and were previously surface-probe only.
-	runLiveDataBrokerOpsE2E(t, servicesv1.NewDataBrokerClient(brokerConn), brokerGen.outgoingContext(ctx), tenant, project)
+	runLiveDataBrokerOpsE2E(t, servicesv1.NewDataBrokerClient(brokerConn), brokerGen.outgoingContext(ctx), platformGen.outgoingContext(ctx), tenant, project)
 
 	// Per-RPC EDGE cases (malformed/hostile inputs + isolation-boundary probes):
 	// every one must fail closed with a typed error and never leak cross-tenant data
@@ -164,7 +164,7 @@ func TestLiveGeneratedRPCSurface(t *testing.T) {
 	// canonical tenant UUID) now serves the UUID-strict services
 	// (storage/webrtc/asset) and the free-text ones alike — no second "uuid tenant"
 	// admin needed (auth_fix.md tenant-identity fix).
-	runLiveNativeServiceE2E(t, ctx, nativeConn, authGen, tenant, project, authz, tenant, actorID)
+	runLiveNativeServiceE2E(t, ctx, nativeConn, authGen, platformGen.outgoingContext(ctx), tenant, project, authz, tenant, actorID)
 
 	probed := 0
 	populated := 0

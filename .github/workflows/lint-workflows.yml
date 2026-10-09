@@ -1,6 +1,6 @@
-name: Lint · Workflows
+name: Lint Â· Workflows
 
-# 15.0.1 — actionlint over every workflow + composite action. Catches the runner
+# 15.0.1 â€” actionlint over every workflow + composite action. Catches the runner
 # semantics YAML-parse can't (bad `uses:`, shell typos, expression errors,
 # undefined needs). Standalone + additive: does not alter any existing required
 # check. Make it a required check only after the consolidation lands clean.
@@ -46,6 +46,7 @@ on:
       - "scripts/gen-bench-bodies-json.mjs"
       - "scripts/gen-sdk-benchmark-docs.mjs"
       - "scripts/package-sdk-producer-evidence.py"
+      - "scripts/catalog_control_capacity_proof.py"
       - "sdk/SDK_LIVE_TEST_COVERAGE.md"
       - "sdk/SDK_PERF_LISTING.md"
       - "scripts/ffmpeg_transcode_smoke.py"
@@ -151,6 +152,7 @@ on:
       - "scripts/gen-bench-bodies-json.mjs"
       - "scripts/gen-sdk-benchmark-docs.mjs"
       - "scripts/package-sdk-producer-evidence.py"
+      - "scripts/catalog_control_capacity_proof.py"
       - "sdk/SDK_LIVE_TEST_COVERAGE.md"
       - "sdk/SDK_PERF_LISTING.md"
       - "scripts/ffmpeg_transcode_smoke.py"

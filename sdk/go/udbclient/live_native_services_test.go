@@ -85,7 +85,7 @@ func nativeCtx(parent context.Context, g *GeneratedClient, bearer, tenantID stri
 
 // runLiveNativeServiceE2E drives create→read→assert CRUD against every native
 // control-plane service that has a real Postgres/MinIO-backed implementation.
-func runLiveNativeServiceE2E(t *testing.T, ctx context.Context, authConn grpc.ClientConnInterface, authGen *GeneratedClient, tenant, project, uuidBearer, uuidTenant, actorID string) {
+func runLiveNativeServiceE2E(t *testing.T, ctx context.Context, authConn grpc.ClientConnInterface, authGen *GeneratedClient, platformCtx context.Context, tenant, project, uuidBearer, uuidTenant, actorID string) {
 	t.Helper()
 	suffix := strings.NewReplacer(".", "", ":", "", "+", "").Replace(time.Now().UTC().Format("20060102150405.000000000"))
 	// base carries the admin's own (code) tenant context; used by services whose
@@ -249,15 +249,20 @@ func runLiveNativeServiceE2E(t *testing.T, ctx context.Context, authConn grpc.Cl
 			_, err := c.DeletePolicyRule(cc, &authzpb.DeletePolicyRuleRequest{PolicyId: policyID, DeletedBy: actorID})
 			return err
 		})
-		allowed, err := c.CheckAccess(cc, &authzpb.CheckAccessRequest{
+		// Cross-user PDP queries require the separately authenticated platform
+		// principal. The ordinary bearer is correctly bound to its own subject,
+		// regardless of a different user_id supplied in the body.
+		subjectCtx, subjectCancel := context.WithTimeout(platformCtx, 8*time.Second)
+		defer subjectCancel()
+		allowed, err := c.CheckAccess(subjectCtx, &authzpb.CheckAccessRequest{
 			UserId: userID, Domain: tenant, TenantId: tenant, ProjectId: project,
 			Object: "invoice", Action: "data.select",
 		})
 		if err != nil {
 			t.Fatalf("CheckAccess (allow): %v", err)
 		}
-		if !allowed.GetAllowed() {
-			t.Fatalf("CheckAccess must allow the assigned role+policy, got deny (reason=%q)", allowed.GetReason())
+		if !allowed.GetAllowed() || allowed.GetMatchedRule() != policyID {
+			t.Fatalf("CheckAccess must allow the subject through the owned assigned role+policy, got allowed=%v matched_rule=%q reason=%q", allowed.GetAllowed(), allowed.GetMatchedRule(), allowed.GetReason())
 		}
 		userRoles, err := c.ListUserRoles(cc, &authzpb.ListUserRolesRequest{UserId: userID, Domain: tenant, ActiveOnly: true})
 		if err != nil {
@@ -271,7 +276,11 @@ func runLiveNativeServiceE2E(t *testing.T, ctx context.Context, authConn grpc.Cl
 		}); err != nil {
 			t.Fatalf("RevokeRole: %v", err)
 		}
-		denied, err := c.CheckAccess(cc, &authzpb.CheckAccessRequest{
+		revokedRoles, err := c.ListUserRoles(cc, &authzpb.ListUserRolesRequest{UserId: userID, Domain: tenant, ActiveOnly: true})
+		if err != nil || len(revokedRoles.GetUserRoles()) != 0 {
+			t.Fatalf("ListUserRoles must confirm the subject has no active roles after revoke: roles=%d code=%s", len(revokedRoles.GetUserRoles()), status.Code(err))
+		}
+		denied, err := c.CheckAccess(subjectCtx, &authzpb.CheckAccessRequest{
 			UserId: userID, Domain: tenant, TenantId: tenant, ProjectId: project,
 			Object: "invoice", Action: "data.select",
 		})

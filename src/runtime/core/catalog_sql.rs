@@ -389,6 +389,56 @@ impl DataBrokerRuntime {
         unreachable!("the final attempt always returns (Ok, named race, or other error)")
     }
 
+    /// Apply one canonical reviewed transactional artifact on the already owned
+    /// project-authority connection. The connection holds a SESSION advisory
+    /// lock, so this artifact's atomic commit cannot release project authority.
+    pub(super) async fn apply_reviewed_sql_artifact_on_connection(
+        connection: &mut sqlx::PgConnection,
+        artifact: &GeneratedArtifact,
+    ) -> Result<(), tonic::Status> {
+        super::catalog_transition::reviewed_sql_artifact(
+            &serde_json::json!({"artifact": artifact}),
+        )?;
+        let checksum = artifact_content_checksum(&artifact.content);
+        let schema_migrations = ledger_relation(DEFAULT_LEDGER_SCHEMA, "schema_migrations");
+        let body = artifact
+            .content
+            .trim_end()
+            .strip_suffix("COMMIT;")
+            .ok_or_else(|| {
+                catalog_sql_internal_status(
+                    "reviewed_apply_transaction",
+                    "missing canonical COMMIT",
+                )
+            })?
+            .replacen("\nBEGIN;\n", "\n", 1);
+        let folded = format!(
+            "{body}\n{}\n",
+            applied_ledger_upsert_sql(&schema_migrations, artifact, &checksum)
+        );
+        let mut transaction = sqlx::Connection::begin(&mut *connection)
+            .await
+            .map_err(|err| {
+                catalog_sql_internal_status("reviewed_apply_transaction_begin", err.to_string())
+            })?;
+        if let Err(err) = sqlx::Executor::execute(&mut *transaction, sqlx::raw_sql(&folded)).await {
+            transaction.rollback().await.map_err(|rollback| {
+                catalog_sql_internal_status(
+                    "reviewed_apply_transaction_rollback",
+                    format!("{err}; rollback failed: {rollback}"),
+                )
+            })?;
+            return Err(catalog_sql_internal_status(
+                "apply_sql_artifact",
+                format!("failed to apply SQL artifact {}: {err}", artifact.rel_path),
+            ));
+        }
+        transaction.commit().await.map_err(|err| {
+            catalog_sql_internal_status("reviewed_apply_transaction_commit", err.to_string())
+        })?;
+        Ok(())
+    }
+
     pub(crate) async fn apply_sql_artifact(
         pool: &PgPool,
         artifact: &GeneratedArtifact,
@@ -1648,6 +1698,18 @@ impl DataBrokerRuntime {
         manifest: &CatalogManifest,
         pool: &PgPool,
     ) -> Result<Vec<ManifestDrift>, tonic::Status> {
+        let mut connection = pool.acquire().await.map_err(|err| {
+            catalog_sql_internal_status("pg_catalog_introspection_acquire", err.to_string())
+        })?;
+        self.verify_postgres_manifest_drift_on_connection(manifest, &mut connection)
+            .await
+    }
+
+    pub(super) async fn verify_postgres_manifest_drift_on_connection(
+        &self,
+        manifest: &CatalogManifest,
+        connection: &mut sqlx::PgConnection,
+    ) -> Result<Vec<ManifestDrift>, tonic::Status> {
         let mut drift = Vec::new();
 
         // Collect all expected schema names so we can scope the bulk queries.
@@ -1691,12 +1753,15 @@ impl DataBrokerRuntime {
         // commit. A plain pool-level SET + reset could leak the timeout to the
         // next pool borrower, because the reset may land on a different
         // connection than the one that ran the query.
-        let mut introspection_tx = pool.begin().await.map_err(|err| {
-            catalog_sql_internal_status(
-                "pg_catalog_introspection_transaction_begin",
-                format!("pg_catalog introspection: failed to begin transaction: {err}"),
-            )
-        })?;
+        let mut introspection_tx =
+            sqlx::Connection::begin(&mut *connection)
+                .await
+                .map_err(|err| {
+                    catalog_sql_internal_status(
+                        "pg_catalog_introspection_transaction_begin",
+                        format!("pg_catalog introspection: failed to begin transaction: {err}"),
+                    )
+                })?;
         if let Err(err) = sqlx::query("SET LOCAL statement_timeout = '60s'")
             .execute(&mut *introspection_tx)
             .await
@@ -1784,10 +1849,12 @@ SELECT kind, schema_name, table_name, extra, detail FROM (
                     format!("pg_catalog schema introspection failed: {err}"),
                 )
             })?;
-        introspection_tx.commit().await.map_err(|err| {
+        introspection_tx.rollback().await.map_err(|err| {
             catalog_sql_internal_status(
-                "pg_catalog_introspection_transaction_commit",
-                format!("pg_catalog introspection: failed to commit transaction: {err}"),
+                "pg_catalog_introspection_transaction_rollback",
+                format!(
+                    "pg_catalog introspection: failed to roll back read-only introspection: {err}"
+                ),
             )
         })?;
 
