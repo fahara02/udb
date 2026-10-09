@@ -2860,11 +2860,16 @@ fn first_unresolved_template_token(text: &str) -> Option<String> {
             return Some(after_start.chars().take(48).collect());
         };
         let token = &after_start[..end + 2];
-        // Template docs intentionally mention the entity placeholder family.
-        if token != "{{ENTITY_*}}" {
+        // A nested Go string slice renders adjacent braces around quoted
+        // elements (or an empty inner slice). Those are language syntax.
+        // Continue inside skipped literals so a nested unknown placeholder is
+        // still refused; template docs also mention the entity token family.
+        let inner = after_start[2..end].trim();
+        let quoted_or_empty_literal = inner.starts_with('"') || inner.is_empty();
+        if token != "{{ENTITY_*}}" && !quoted_or_empty_literal {
             return Some(token.to_string());
         }
-        rest = &after_start[end + 2..];
+        rest = &after_start[2..];
     }
     None
 }
@@ -3821,6 +3826,7 @@ mod tests {
         let registry = render_text(template, &[], &entities, &[]);
         assert!(registry.contains("UniqueKeys: [][]string{{\"email\"}, {\"exact\"}, {\"external\", \"region\"}, {\"region\", \"email\"}}"), "actual Go template must retain nested unique metadata");
         assert!(!registry.contains("{{ENTITY_UNIQUE_KEYS_GO}}"));
+        assert_eq!(first_unresolved_template_token(&registry), None);
     }
 
     #[test]
@@ -4960,6 +4966,24 @@ mod tests {
             first_unresolved_template_token("bad {{RPC_UNKNOWN}} token").as_deref(),
             Some("{{RPC_UNKNOWN}}")
         );
+    }
+
+    #[test]
+    fn quoted_go_literals_preserve_unknown_and_dangling_token_refusal() {
+        assert_eq!(
+            first_unresolved_template_token(r#"[][]string{{"key"}, {"other"}}"#),
+            None
+        );
+        assert_eq!(first_unresolved_template_token("[][]string{{}}"), None);
+        assert_eq!(
+            first_unresolved_template_token(r#"[][]string{{"key"}} {{RPC_UNKNOWN}}"#).as_deref(),
+            Some("{{RPC_UNKNOWN}}")
+        );
+        assert_eq!(
+            first_unresolved_template_token(r#"[][]string{{"{{RPC_UNKNOWN}}"}}"#).as_deref(),
+            Some("{{RPC_UNKNOWN}}")
+        );
+        assert!(first_unresolved_template_token("dangling {{RPC_UNKNOWN").is_some());
     }
 
     #[test]

@@ -105,7 +105,7 @@ jobs:
           block = fixed_proof[start:stop] + b"\n"
           if any(token in block for token in [b"postgres_source::", b".prepare(", b".acknowledge(", b".bind_destination("]):
               raise SystemExit("baseline proof must use only the original source APIs")
-          if hashlib.sha256(block).hexdigest() != "3089a528794eb9a1740bb0acc6dde8d87528f75fc83b43f4307507c68cd39215":
+          if hashlib.sha256(block).hexdigest() != "9e538bf97035c68c26bf4d1af123595b02dc0469f53d0744f7bc71af7db5e180":
               raise SystemExit("the audited identical source regression changed")
           baseline_files = {path: subprocess.check_output(["git", "show", f"{baseline}:{path}"]) for path in paths}
           if begin in baseline_files[proof_path.as_posix()]:

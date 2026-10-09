@@ -4477,7 +4477,7 @@ CI_PRODUCER_PROOF_REQUIREMENTS = {'cdc-source-proof.yml': (('"git", "log", "--re
                            'b".bind_destination("',
                            'baseline-compatible regression APIs'),
                           ('if hashlib.sha256(block).hexdigest() != '
-                           '"3089a528794eb9a1740bb0acc6dde8d87528f75fc83b43f4307507c68cd39215":',
+                           '"9e538bf97035c68c26bf4d1af123595b02dc0469f53d0744f7bc71af7db5e180":',
                            'immutable identical regression'),
                           ('(backup, fixed), (output / "corrected-source", fixed), (output / '
                            '"original-source", executed)',
