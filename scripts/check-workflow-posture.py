@@ -1371,6 +1371,7 @@ CI_BUF_GENERATED_ARTIFACT_REQUIREMENTS = (
         "git diff -- sdk/php/gen sdk/go/gen sdk/typescript/gen sdk/python/gen sdk/java/gen sdk/csharp/gen api",
         "SDK/API generated-output diff diagnostic",
     ),
+    ("git add -AN -- sdk/php/gen sdk/go/gen sdk/typescript/gen sdk/python/gen sdk/java/gen sdk/csharp/gen api", "SDK/API repair includes new message files"),
     ("Authn/Authz inventory drift (Phase 0A)", "authn/authz inventory drift step"),
     ("node scripts/generate-authn-authz-inventory.mjs", "authn/authz inventory generator"),
     (
@@ -7390,6 +7391,11 @@ jobs:
           node scripts/sdk-codegen-postprocess.mjs
           git diff --quiet -- sdk/php/gen sdk/go/gen sdk/typescript/gen sdk/python/gen sdk/java/gen sdk/csharp/gen api
           git diff -- sdk/php/gen sdk/go/gen sdk/typescript/gen sdk/python/gen sdk/java/gen sdk/csharp/gen api
+      - name: Prepare CI-generated SDK repair patch
+        if: failure()
+        run: |
+          git add -AN -- sdk/php/gen sdk/go/gen sdk/typescript/gen sdk/python/gen sdk/java/gen sdk/csharp/gen api
+          git diff --binary -- sdk/php/gen sdk/go/gen sdk/typescript/gen sdk/python/gen sdk/java/gen sdk/csharp/gen api > ci-sdk-codegen.patch
       - name: Authn/Authz inventory drift (Phase 0A)
         run: |
           node scripts/generate-authn-authz-inventory.mjs
@@ -10764,6 +10770,13 @@ jobs:
         )
         failures = check_ci_rust_generated_contract_doc_gates(root)
         assert any("Linux-only gate for native contract breaking-change" in failure for failure in failures), failures
+
+        (wf / "ci.yml").write_text(
+            ci_good.replace("          git add -AN -- sdk/php/gen sdk/go/gen sdk/typescript/gen sdk/python/gen sdk/java/gen sdk/csharp/gen api\n", ""),
+            encoding="utf-8",
+        )
+        failures = check_ci_buf_generated_artifact_gate(root)
+        assert any("SDK/API repair includes new message files" in failure for failure in failures), failures
 
         (wf / "ci.yml").write_text(
             ci_good.replace("buf generate --include-imports", "buf generate"),

@@ -1012,6 +1012,8 @@ jobs:
       - name: Prepare CI-generated SDK repair patch
         if: failure()
         run: |
+          # Include newly generated message files in the complete repair patch.
+          git add -AN -- sdk/php/gen sdk/go/gen sdk/typescript/gen sdk/python/gen sdk/java/gen sdk/csharp/gen api
           git diff --binary -- sdk/php/gen sdk/go/gen sdk/typescript/gen sdk/python/gen sdk/java/gen sdk/csharp/gen api > ci-sdk-codegen.patch
       - name: Upload CI-generated SDK repair patch
         if: failure()
