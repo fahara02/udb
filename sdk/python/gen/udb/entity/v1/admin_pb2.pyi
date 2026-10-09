@@ -365,35 +365,39 @@ class ResourceListResponse(_message.Message):
     def __init__(self, backend: _Optional[str] = ..., resources: _Optional[_Iterable[str]] = ...) -> None: ...
 
 class StageCatalogRequest(_message.Message):
-    __slots__ = ("context", "manifest_json", "project_id", "reason", "idempotency_key")
+    __slots__ = ("context", "manifest_json", "project_id", "reason", "idempotency_key", "reviewed_migration_run_id")
     CONTEXT_FIELD_NUMBER: _ClassVar[int]
     MANIFEST_JSON_FIELD_NUMBER: _ClassVar[int]
     PROJECT_ID_FIELD_NUMBER: _ClassVar[int]
     REASON_FIELD_NUMBER: _ClassVar[int]
     IDEMPOTENCY_KEY_FIELD_NUMBER: _ClassVar[int]
+    REVIEWED_MIGRATION_RUN_ID_FIELD_NUMBER: _ClassVar[int]
     context: _context_pb2.RequestContext
     manifest_json: bytes
     project_id: str
     reason: str
     idempotency_key: str
-    def __init__(self, context: _Optional[_Union[_context_pb2.RequestContext, _Mapping]] = ..., manifest_json: _Optional[bytes] = ..., project_id: _Optional[str] = ..., reason: _Optional[str] = ..., idempotency_key: _Optional[str] = ...) -> None: ...
+    reviewed_migration_run_id: str
+    def __init__(self, context: _Optional[_Union[_context_pb2.RequestContext, _Mapping]] = ..., manifest_json: _Optional[bytes] = ..., project_id: _Optional[str] = ..., reason: _Optional[str] = ..., idempotency_key: _Optional[str] = ..., reviewed_migration_run_id: _Optional[str] = ...) -> None: ...
 
 class CatalogVersionRequest(_message.Message):
-    __slots__ = ("context", "project_id", "version", "reason", "idempotency_key")
+    __slots__ = ("context", "project_id", "version", "reason", "idempotency_key", "reviewed_migration_run_id")
     CONTEXT_FIELD_NUMBER: _ClassVar[int]
     PROJECT_ID_FIELD_NUMBER: _ClassVar[int]
     VERSION_FIELD_NUMBER: _ClassVar[int]
     REASON_FIELD_NUMBER: _ClassVar[int]
     IDEMPOTENCY_KEY_FIELD_NUMBER: _ClassVar[int]
+    REVIEWED_MIGRATION_RUN_ID_FIELD_NUMBER: _ClassVar[int]
     context: _context_pb2.RequestContext
     project_id: str
     version: str
     reason: str
     idempotency_key: str
-    def __init__(self, context: _Optional[_Union[_context_pb2.RequestContext, _Mapping]] = ..., project_id: _Optional[str] = ..., version: _Optional[str] = ..., reason: _Optional[str] = ..., idempotency_key: _Optional[str] = ...) -> None: ...
+    reviewed_migration_run_id: str
+    def __init__(self, context: _Optional[_Union[_context_pb2.RequestContext, _Mapping]] = ..., project_id: _Optional[str] = ..., version: _Optional[str] = ..., reason: _Optional[str] = ..., idempotency_key: _Optional[str] = ..., reviewed_migration_run_id: _Optional[str] = ...) -> None: ...
 
 class CatalogVersionResponse(_message.Message):
-    __slots__ = ("catalog_id", "project_id", "version", "status", "checksum_sha256", "created_at_unix", "errors", "warnings")
+    __slots__ = ("catalog_id", "project_id", "version", "status", "checksum_sha256", "created_at_unix", "errors", "warnings", "manifest_integrity_sha256")
     CATALOG_ID_FIELD_NUMBER: _ClassVar[int]
     PROJECT_ID_FIELD_NUMBER: _ClassVar[int]
     VERSION_FIELD_NUMBER: _ClassVar[int]
@@ -402,6 +406,7 @@ class CatalogVersionResponse(_message.Message):
     CREATED_AT_UNIX_FIELD_NUMBER: _ClassVar[int]
     ERRORS_FIELD_NUMBER: _ClassVar[int]
     WARNINGS_FIELD_NUMBER: _ClassVar[int]
+    MANIFEST_INTEGRITY_SHA256_FIELD_NUMBER: _ClassVar[int]
     catalog_id: str
     project_id: str
     version: str
@@ -410,7 +415,8 @@ class CatalogVersionResponse(_message.Message):
     created_at_unix: int
     errors: _containers.RepeatedScalarFieldContainer[str]
     warnings: _containers.RepeatedScalarFieldContainer[str]
-    def __init__(self, catalog_id: _Optional[str] = ..., project_id: _Optional[str] = ..., version: _Optional[str] = ..., status: _Optional[str] = ..., checksum_sha256: _Optional[str] = ..., created_at_unix: _Optional[int] = ..., errors: _Optional[_Iterable[str]] = ..., warnings: _Optional[_Iterable[str]] = ...) -> None: ...
+    manifest_integrity_sha256: str
+    def __init__(self, catalog_id: _Optional[str] = ..., project_id: _Optional[str] = ..., version: _Optional[str] = ..., status: _Optional[str] = ..., checksum_sha256: _Optional[str] = ..., created_at_unix: _Optional[int] = ..., errors: _Optional[_Iterable[str]] = ..., warnings: _Optional[_Iterable[str]] = ..., manifest_integrity_sha256: _Optional[str] = ...) -> None: ...
 
 class CatalogValidationResponse(_message.Message):
     __slots__ = ("valid", "checksum_sha256", "errors", "warnings")
@@ -435,17 +441,59 @@ class CatalogVersionListResponse(_message.Message):
     def __init__(self, project_id: _Optional[str] = ..., versions: _Optional[_Iterable[_Union[CatalogVersionResponse, _Mapping]]] = ..., active_version: _Optional[str] = ...) -> None: ...
 
 class MigrationPlanRequest(_message.Message):
-    __slots__ = ("context", "project_id", "dry_run")
+    __slots__ = ("context", "project_id", "dry_run", "expected_active_catalog_id", "expected_active_manifest_integrity_sha256", "idempotency_key", "candidate_manifest_json")
     CONTEXT_FIELD_NUMBER: _ClassVar[int]
     PROJECT_ID_FIELD_NUMBER: _ClassVar[int]
     DRY_RUN_FIELD_NUMBER: _ClassVar[int]
+    EXPECTED_ACTIVE_CATALOG_ID_FIELD_NUMBER: _ClassVar[int]
+    EXPECTED_ACTIVE_MANIFEST_INTEGRITY_SHA256_FIELD_NUMBER: _ClassVar[int]
+    IDEMPOTENCY_KEY_FIELD_NUMBER: _ClassVar[int]
+    CANDIDATE_MANIFEST_JSON_FIELD_NUMBER: _ClassVar[int]
     context: _context_pb2.RequestContext
     project_id: str
     dry_run: bool
-    def __init__(self, context: _Optional[_Union[_context_pb2.RequestContext, _Mapping]] = ..., project_id: _Optional[str] = ..., dry_run: bool = ...) -> None: ...
+    expected_active_catalog_id: str
+    expected_active_manifest_integrity_sha256: str
+    idempotency_key: str
+    candidate_manifest_json: bytes
+    def __init__(self, context: _Optional[_Union[_context_pb2.RequestContext, _Mapping]] = ..., project_id: _Optional[str] = ..., dry_run: bool = ..., expected_active_catalog_id: _Optional[str] = ..., expected_active_manifest_integrity_sha256: _Optional[str] = ..., idempotency_key: _Optional[str] = ..., candidate_manifest_json: _Optional[bytes] = ...) -> None: ...
+
+class ReviewedCatalogTransitionEvidence(_message.Message):
+    __slots__ = ("run_id", "tenant_id", "project_id", "expected_active_catalog_id", "expected_active_manifest_integrity_sha256", "target_manifest_integrity_sha256", "target_schema_checksum_sha256", "operations_hash", "reviewed_operation_fingerprints", "approved_by", "approved_at_unix", "application_state", "applied_operations_hash", "applied_at_unix", "application_evidence_sha256")
+    RUN_ID_FIELD_NUMBER: _ClassVar[int]
+    TENANT_ID_FIELD_NUMBER: _ClassVar[int]
+    PROJECT_ID_FIELD_NUMBER: _ClassVar[int]
+    EXPECTED_ACTIVE_CATALOG_ID_FIELD_NUMBER: _ClassVar[int]
+    EXPECTED_ACTIVE_MANIFEST_INTEGRITY_SHA256_FIELD_NUMBER: _ClassVar[int]
+    TARGET_MANIFEST_INTEGRITY_SHA256_FIELD_NUMBER: _ClassVar[int]
+    TARGET_SCHEMA_CHECKSUM_SHA256_FIELD_NUMBER: _ClassVar[int]
+    OPERATIONS_HASH_FIELD_NUMBER: _ClassVar[int]
+    REVIEWED_OPERATION_FINGERPRINTS_FIELD_NUMBER: _ClassVar[int]
+    APPROVED_BY_FIELD_NUMBER: _ClassVar[int]
+    APPROVED_AT_UNIX_FIELD_NUMBER: _ClassVar[int]
+    APPLICATION_STATE_FIELD_NUMBER: _ClassVar[int]
+    APPLIED_OPERATIONS_HASH_FIELD_NUMBER: _ClassVar[int]
+    APPLIED_AT_UNIX_FIELD_NUMBER: _ClassVar[int]
+    APPLICATION_EVIDENCE_SHA256_FIELD_NUMBER: _ClassVar[int]
+    run_id: str
+    tenant_id: str
+    project_id: str
+    expected_active_catalog_id: str
+    expected_active_manifest_integrity_sha256: str
+    target_manifest_integrity_sha256: str
+    target_schema_checksum_sha256: str
+    operations_hash: str
+    reviewed_operation_fingerprints: _containers.RepeatedScalarFieldContainer[str]
+    approved_by: str
+    approved_at_unix: int
+    application_state: str
+    applied_operations_hash: str
+    applied_at_unix: int
+    application_evidence_sha256: str
+    def __init__(self, run_id: _Optional[str] = ..., tenant_id: _Optional[str] = ..., project_id: _Optional[str] = ..., expected_active_catalog_id: _Optional[str] = ..., expected_active_manifest_integrity_sha256: _Optional[str] = ..., target_manifest_integrity_sha256: _Optional[str] = ..., target_schema_checksum_sha256: _Optional[str] = ..., operations_hash: _Optional[str] = ..., reviewed_operation_fingerprints: _Optional[_Iterable[str]] = ..., approved_by: _Optional[str] = ..., approved_at_unix: _Optional[int] = ..., application_state: _Optional[str] = ..., applied_operations_hash: _Optional[str] = ..., applied_at_unix: _Optional[int] = ..., application_evidence_sha256: _Optional[str] = ...) -> None: ...
 
 class MigrationPlanResponse(_message.Message):
-    __slots__ = ("run_id", "project_id", "catalog_version", "state", "operations", "requires_review", "blocked", "operations_hash")
+    __slots__ = ("run_id", "project_id", "catalog_version", "state", "operations", "requires_review", "blocked", "operations_hash", "reviewed_catalog_transition")
     RUN_ID_FIELD_NUMBER: _ClassVar[int]
     PROJECT_ID_FIELD_NUMBER: _ClassVar[int]
     CATALOG_VERSION_FIELD_NUMBER: _ClassVar[int]
@@ -454,6 +502,7 @@ class MigrationPlanResponse(_message.Message):
     REQUIRES_REVIEW_FIELD_NUMBER: _ClassVar[int]
     BLOCKED_FIELD_NUMBER: _ClassVar[int]
     OPERATIONS_HASH_FIELD_NUMBER: _ClassVar[int]
+    REVIEWED_CATALOG_TRANSITION_FIELD_NUMBER: _ClassVar[int]
     run_id: str
     project_id: str
     catalog_version: str
@@ -462,7 +511,8 @@ class MigrationPlanResponse(_message.Message):
     requires_review: _containers.RepeatedScalarFieldContainer[str]
     blocked: _containers.RepeatedScalarFieldContainer[str]
     operations_hash: str
-    def __init__(self, run_id: _Optional[str] = ..., project_id: _Optional[str] = ..., catalog_version: _Optional[str] = ..., state: _Optional[str] = ..., operations: _Optional[_Iterable[str]] = ..., requires_review: _Optional[_Iterable[str]] = ..., blocked: _Optional[_Iterable[str]] = ..., operations_hash: _Optional[str] = ...) -> None: ...
+    reviewed_catalog_transition: ReviewedCatalogTransitionEvidence
+    def __init__(self, run_id: _Optional[str] = ..., project_id: _Optional[str] = ..., catalog_version: _Optional[str] = ..., state: _Optional[str] = ..., operations: _Optional[_Iterable[str]] = ..., requires_review: _Optional[_Iterable[str]] = ..., blocked: _Optional[_Iterable[str]] = ..., operations_hash: _Optional[str] = ..., reviewed_catalog_transition: _Optional[_Union[ReviewedCatalogTransitionEvidence, _Mapping]] = ...) -> None: ...
 
 class MigrationApplyRequest(_message.Message):
     __slots__ = ("context", "run_id", "project_id", "approval_token", "idempotency_key")
@@ -479,16 +529,20 @@ class MigrationApplyRequest(_message.Message):
     def __init__(self, context: _Optional[_Union[_context_pb2.RequestContext, _Mapping]] = ..., run_id: _Optional[str] = ..., project_id: _Optional[str] = ..., approval_token: _Optional[str] = ..., idempotency_key: _Optional[str] = ...) -> None: ...
 
 class MigrationRunRequest(_message.Message):
-    __slots__ = ("context", "run_id", "project_id", "idempotency_key")
+    __slots__ = ("context", "run_id", "project_id", "idempotency_key", "expected_operations_hash", "reviewed_operation_fingerprints")
     CONTEXT_FIELD_NUMBER: _ClassVar[int]
     RUN_ID_FIELD_NUMBER: _ClassVar[int]
     PROJECT_ID_FIELD_NUMBER: _ClassVar[int]
     IDEMPOTENCY_KEY_FIELD_NUMBER: _ClassVar[int]
+    EXPECTED_OPERATIONS_HASH_FIELD_NUMBER: _ClassVar[int]
+    REVIEWED_OPERATION_FINGERPRINTS_FIELD_NUMBER: _ClassVar[int]
     context: _context_pb2.RequestContext
     run_id: str
     project_id: str
     idempotency_key: str
-    def __init__(self, context: _Optional[_Union[_context_pb2.RequestContext, _Mapping]] = ..., run_id: _Optional[str] = ..., project_id: _Optional[str] = ..., idempotency_key: _Optional[str] = ...) -> None: ...
+    expected_operations_hash: str
+    reviewed_operation_fingerprints: _containers.RepeatedScalarFieldContainer[str]
+    def __init__(self, context: _Optional[_Union[_context_pb2.RequestContext, _Mapping]] = ..., run_id: _Optional[str] = ..., project_id: _Optional[str] = ..., idempotency_key: _Optional[str] = ..., expected_operations_hash: _Optional[str] = ..., reviewed_operation_fingerprints: _Optional[_Iterable[str]] = ...) -> None: ...
 
 class MigrationRunListRequest(_message.Message):
     __slots__ = ("context", "project_id", "state_filter", "limit", "page_token")
@@ -515,7 +569,7 @@ class MigrationRunListResponse(_message.Message):
     def __init__(self, runs: _Optional[_Iterable[_Union[MigrationStatusResponse, _Mapping]]] = ..., next_page_token: _Optional[str] = ..., total_count: _Optional[int] = ...) -> None: ...
 
 class MigrationStatusResponse(_message.Message):
-    __slots__ = ("run_id", "project_id", "catalog_version", "state", "started_at", "finished_at", "operations", "error", "approval_token", "applyable")
+    __slots__ = ("run_id", "project_id", "catalog_version", "state", "started_at", "finished_at", "operations", "error", "approval_token", "applyable", "reviewed_catalog_transition")
     RUN_ID_FIELD_NUMBER: _ClassVar[int]
     PROJECT_ID_FIELD_NUMBER: _ClassVar[int]
     CATALOG_VERSION_FIELD_NUMBER: _ClassVar[int]
@@ -526,6 +580,7 @@ class MigrationStatusResponse(_message.Message):
     ERROR_FIELD_NUMBER: _ClassVar[int]
     APPROVAL_TOKEN_FIELD_NUMBER: _ClassVar[int]
     APPLYABLE_FIELD_NUMBER: _ClassVar[int]
+    REVIEWED_CATALOG_TRANSITION_FIELD_NUMBER: _ClassVar[int]
     run_id: str
     project_id: str
     catalog_version: str
@@ -536,7 +591,8 @@ class MigrationStatusResponse(_message.Message):
     error: str
     approval_token: str
     applyable: bool
-    def __init__(self, run_id: _Optional[str] = ..., project_id: _Optional[str] = ..., catalog_version: _Optional[str] = ..., state: _Optional[str] = ..., started_at: _Optional[str] = ..., finished_at: _Optional[str] = ..., operations: _Optional[_Iterable[_Union[MigrationOperationStatus, _Mapping]]] = ..., error: _Optional[str] = ..., approval_token: _Optional[str] = ..., applyable: bool = ...) -> None: ...
+    reviewed_catalog_transition: ReviewedCatalogTransitionEvidence
+    def __init__(self, run_id: _Optional[str] = ..., project_id: _Optional[str] = ..., catalog_version: _Optional[str] = ..., state: _Optional[str] = ..., started_at: _Optional[str] = ..., finished_at: _Optional[str] = ..., operations: _Optional[_Iterable[_Union[MigrationOperationStatus, _Mapping]]] = ..., error: _Optional[str] = ..., approval_token: _Optional[str] = ..., applyable: bool = ..., reviewed_catalog_transition: _Optional[_Union[ReviewedCatalogTransitionEvidence, _Mapping]] = ...) -> None: ...
 
 class MigrationOperationStatus(_message.Message):
     __slots__ = ("index", "backend", "resource_uri", "operation_kind", "status", "error")

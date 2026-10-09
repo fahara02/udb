@@ -60,4 +60,53 @@ public interface MigrationRunRequestOrBuilder extends
    */
   com.google.protobuf.ByteString
       getIdempotencyKeyBytes();
+
+  /**
+   * <pre>
+   * ApproveMigrationPlan candidate mode only: explicit echoes of the exact
+   * immutable native plan and complete review fingerprint set. Missing,
+   * duplicate, foreign or mismatched review evidence is refused.
+   * </pre>
+   *
+   * <code>string expected_operations_hash = 5 [json_name = "expectedOperationsHash"];</code>
+   * @return The expectedOperationsHash.
+   */
+  java.lang.String getExpectedOperationsHash();
+  /**
+   * <pre>
+   * ApproveMigrationPlan candidate mode only: explicit echoes of the exact
+   * immutable native plan and complete review fingerprint set. Missing,
+   * duplicate, foreign or mismatched review evidence is refused.
+   * </pre>
+   *
+   * <code>string expected_operations_hash = 5 [json_name = "expectedOperationsHash"];</code>
+   * @return The bytes for expectedOperationsHash.
+   */
+  com.google.protobuf.ByteString
+      getExpectedOperationsHashBytes();
+
+  /**
+   * <code>repeated string reviewed_operation_fingerprints = 6 [json_name = "reviewedOperationFingerprints"];</code>
+   * @return A list containing the reviewedOperationFingerprints.
+   */
+  java.util.List<java.lang.String>
+      getReviewedOperationFingerprintsList();
+  /**
+   * <code>repeated string reviewed_operation_fingerprints = 6 [json_name = "reviewedOperationFingerprints"];</code>
+   * @return The count of reviewedOperationFingerprints.
+   */
+  int getReviewedOperationFingerprintsCount();
+  /**
+   * <code>repeated string reviewed_operation_fingerprints = 6 [json_name = "reviewedOperationFingerprints"];</code>
+   * @param index The index of the element to return.
+   * @return The reviewedOperationFingerprints at the given index.
+   */
+  java.lang.String getReviewedOperationFingerprints(int index);
+  /**
+   * <code>repeated string reviewed_operation_fingerprints = 6 [json_name = "reviewedOperationFingerprints"];</code>
+   * @param index The index of the value to return.
+   * @return The bytes of the reviewedOperationFingerprints at the given index.
+   */
+  com.google.protobuf.ByteString
+      getReviewedOperationFingerprintsBytes(int index);
 }

@@ -28,6 +28,33 @@ class MigrationPlanRequest extends \Google\Protobuf\Internal\Message
      * Generated from protobuf field <code>bool dry_run = 3 [json_name = "dryRun"];</code>
      */
     protected $dry_run = false;
+    /**
+     * Candidate mode pins an exact already-proven ACTIVE base before planning.
+     * Both fields are required with candidate_manifest_json and refused without
+     * it. The outer stored manifest integrity differs from its inner semantic
+     * schema checksum; callers must not substitute one for the other.
+     *
+     * Generated from protobuf field <code>string expected_active_catalog_id = 4 [json_name = "expectedActiveCatalogId"];</code>
+     */
+    protected $expected_active_catalog_id = '';
+    /**
+     * Generated from protobuf field <code>string expected_active_manifest_integrity_sha256 = 5 [json_name = "expectedActiveManifestIntegritySha256"];</code>
+     */
+    protected $expected_active_manifest_integrity_sha256 = '';
+    /**
+     * Required in candidate mode; retries return the immutable committed plan.
+     *
+     * Generated from protobuf field <code>string idempotency_key = 6 [json_name = "idempotencyKey"];</code>
+     */
+    protected $idempotency_key = '';
+    /**
+     * Full unstaged CatalogManifest JSON. The broker computes the canonical
+     * change set, exact review fingerprints and actual application plan. Empty
+     * retains ordinary planning against the existing ACTIVE catalog.
+     *
+     * Generated from protobuf field <code>bytes candidate_manifest_json = 1000 [json_name = "candidateManifestJson"];</code>
+     */
+    protected $candidate_manifest_json = '';
 
     /**
      * Constructor.
@@ -39,6 +66,18 @@ class MigrationPlanRequest extends \Google\Protobuf\Internal\Message
      *     @type string $project_id
      *     @type bool $dry_run
      *           When true, apply only dry-run checks without touching the database.
+     *     @type string $expected_active_catalog_id
+     *           Candidate mode pins an exact already-proven ACTIVE base before planning.
+     *           Both fields are required with candidate_manifest_json and refused without
+     *           it. The outer stored manifest integrity differs from its inner semantic
+     *           schema checksum; callers must not substitute one for the other.
+     *     @type string $expected_active_manifest_integrity_sha256
+     *     @type string $idempotency_key
+     *           Required in candidate mode; retries return the immutable committed plan.
+     *     @type string $candidate_manifest_json
+     *           Full unstaged CatalogManifest JSON. The broker computes the canonical
+     *           change set, exact review fingerprints and actual application plan. Empty
+     *           retains ordinary planning against the existing ACTIVE catalog.
      * }
      */
     public function __construct($data = NULL) {
@@ -122,6 +161,116 @@ class MigrationPlanRequest extends \Google\Protobuf\Internal\Message
     {
         GPBUtil::checkBool($var);
         $this->dry_run = $var;
+
+        return $this;
+    }
+
+    /**
+     * Candidate mode pins an exact already-proven ACTIVE base before planning.
+     * Both fields are required with candidate_manifest_json and refused without
+     * it. The outer stored manifest integrity differs from its inner semantic
+     * schema checksum; callers must not substitute one for the other.
+     *
+     * Generated from protobuf field <code>string expected_active_catalog_id = 4 [json_name = "expectedActiveCatalogId"];</code>
+     * @return string
+     */
+    public function getExpectedActiveCatalogId()
+    {
+        return $this->expected_active_catalog_id;
+    }
+
+    /**
+     * Candidate mode pins an exact already-proven ACTIVE base before planning.
+     * Both fields are required with candidate_manifest_json and refused without
+     * it. The outer stored manifest integrity differs from its inner semantic
+     * schema checksum; callers must not substitute one for the other.
+     *
+     * Generated from protobuf field <code>string expected_active_catalog_id = 4 [json_name = "expectedActiveCatalogId"];</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setExpectedActiveCatalogId($var)
+    {
+        GPBUtil::checkString($var, True);
+        $this->expected_active_catalog_id = $var;
+
+        return $this;
+    }
+
+    /**
+     * Generated from protobuf field <code>string expected_active_manifest_integrity_sha256 = 5 [json_name = "expectedActiveManifestIntegritySha256"];</code>
+     * @return string
+     */
+    public function getExpectedActiveManifestIntegritySha256()
+    {
+        return $this->expected_active_manifest_integrity_sha256;
+    }
+
+    /**
+     * Generated from protobuf field <code>string expected_active_manifest_integrity_sha256 = 5 [json_name = "expectedActiveManifestIntegritySha256"];</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setExpectedActiveManifestIntegritySha256($var)
+    {
+        GPBUtil::checkString($var, True);
+        $this->expected_active_manifest_integrity_sha256 = $var;
+
+        return $this;
+    }
+
+    /**
+     * Required in candidate mode; retries return the immutable committed plan.
+     *
+     * Generated from protobuf field <code>string idempotency_key = 6 [json_name = "idempotencyKey"];</code>
+     * @return string
+     */
+    public function getIdempotencyKey()
+    {
+        return $this->idempotency_key;
+    }
+
+    /**
+     * Required in candidate mode; retries return the immutable committed plan.
+     *
+     * Generated from protobuf field <code>string idempotency_key = 6 [json_name = "idempotencyKey"];</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setIdempotencyKey($var)
+    {
+        GPBUtil::checkString($var, True);
+        $this->idempotency_key = $var;
+
+        return $this;
+    }
+
+    /**
+     * Full unstaged CatalogManifest JSON. The broker computes the canonical
+     * change set, exact review fingerprints and actual application plan. Empty
+     * retains ordinary planning against the existing ACTIVE catalog.
+     *
+     * Generated from protobuf field <code>bytes candidate_manifest_json = 1000 [json_name = "candidateManifestJson"];</code>
+     * @return string
+     */
+    public function getCandidateManifestJson()
+    {
+        return $this->candidate_manifest_json;
+    }
+
+    /**
+     * Full unstaged CatalogManifest JSON. The broker computes the canonical
+     * change set, exact review fingerprints and actual application plan. Empty
+     * retains ordinary planning against the existing ACTIVE catalog.
+     *
+     * Generated from protobuf field <code>bytes candidate_manifest_json = 1000 [json_name = "candidateManifestJson"];</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setCandidateManifestJson($var)
+    {
+        GPBUtil::checkString($var, False);
+        $this->candidate_manifest_json = $var;
 
         return $this;
     }

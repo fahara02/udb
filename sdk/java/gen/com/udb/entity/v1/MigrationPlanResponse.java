@@ -54,6 +54,7 @@ private static final long serialVersionUID = 0L;
             com.udb.entity.v1.MigrationPlanResponse.class, com.udb.entity.v1.MigrationPlanResponse.Builder.class);
   }
 
+  private int bitField0_;
   public static final int RUN_ID_FIELD_NUMBER = 1;
   @SuppressWarnings("serial")
   private volatile java.lang.Object runId_ = "";
@@ -360,6 +361,44 @@ private static final long serialVersionUID = 0L;
     }
   }
 
+  public static final int REVIEWED_CATALOG_TRANSITION_FIELD_NUMBER = 9;
+  private com.udb.entity.v1.ReviewedCatalogTransitionEvidence reviewedCatalogTransition_;
+  /**
+   * <pre>
+   * Present only when planning an explicit unstaged candidate.
+   * </pre>
+   *
+   * <code>.udb.entity.v1.ReviewedCatalogTransitionEvidence reviewed_catalog_transition = 9 [json_name = "reviewedCatalogTransition"];</code>
+   * @return Whether the reviewedCatalogTransition field is set.
+   */
+  @java.lang.Override
+  public boolean hasReviewedCatalogTransition() {
+    return ((bitField0_ & 0x00000001) != 0);
+  }
+  /**
+   * <pre>
+   * Present only when planning an explicit unstaged candidate.
+   * </pre>
+   *
+   * <code>.udb.entity.v1.ReviewedCatalogTransitionEvidence reviewed_catalog_transition = 9 [json_name = "reviewedCatalogTransition"];</code>
+   * @return The reviewedCatalogTransition.
+   */
+  @java.lang.Override
+  public com.udb.entity.v1.ReviewedCatalogTransitionEvidence getReviewedCatalogTransition() {
+    return reviewedCatalogTransition_ == null ? com.udb.entity.v1.ReviewedCatalogTransitionEvidence.getDefaultInstance() : reviewedCatalogTransition_;
+  }
+  /**
+   * <pre>
+   * Present only when planning an explicit unstaged candidate.
+   * </pre>
+   *
+   * <code>.udb.entity.v1.ReviewedCatalogTransitionEvidence reviewed_catalog_transition = 9 [json_name = "reviewedCatalogTransition"];</code>
+   */
+  @java.lang.Override
+  public com.udb.entity.v1.ReviewedCatalogTransitionEvidenceOrBuilder getReviewedCatalogTransitionOrBuilder() {
+    return reviewedCatalogTransition_ == null ? com.udb.entity.v1.ReviewedCatalogTransitionEvidence.getDefaultInstance() : reviewedCatalogTransition_;
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -397,6 +436,9 @@ private static final long serialVersionUID = 0L;
     }
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(operationsHash_)) {
       com.google.protobuf.GeneratedMessage.writeString(output, 8, operationsHash_);
+    }
+    if (((bitField0_ & 0x00000001) != 0)) {
+      output.writeMessage(9, getReviewedCatalogTransition());
     }
     getUnknownFields().writeTo(output);
   }
@@ -446,6 +488,10 @@ private static final long serialVersionUID = 0L;
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(operationsHash_)) {
       size += com.google.protobuf.GeneratedMessage.computeStringSize(8, operationsHash_);
     }
+    if (((bitField0_ & 0x00000001) != 0)) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeMessageSize(9, getReviewedCatalogTransition());
+    }
     size += getUnknownFields().getSerializedSize();
     memoizedSize = size;
     return size;
@@ -477,6 +523,11 @@ private static final long serialVersionUID = 0L;
         .equals(other.getBlockedList())) return false;
     if (!getOperationsHash()
         .equals(other.getOperationsHash())) return false;
+    if (hasReviewedCatalogTransition() != other.hasReviewedCatalogTransition()) return false;
+    if (hasReviewedCatalogTransition()) {
+      if (!getReviewedCatalogTransition()
+          .equals(other.getReviewedCatalogTransition())) return false;
+    }
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -510,6 +561,10 @@ private static final long serialVersionUID = 0L;
     }
     hash = (37 * hash) + OPERATIONS_HASH_FIELD_NUMBER;
     hash = (53 * hash) + getOperationsHash().hashCode();
+    if (hasReviewedCatalogTransition()) {
+      hash = (37 * hash) + REVIEWED_CATALOG_TRANSITION_FIELD_NUMBER;
+      hash = (53 * hash) + getReviewedCatalogTransition().hashCode();
+    }
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -629,13 +684,19 @@ private static final long serialVersionUID = 0L;
 
     // Construct using com.udb.entity.v1.MigrationPlanResponse.newBuilder()
     private Builder() {
-
+      maybeForceBuilderInitialization();
     }
 
     private Builder(
         com.google.protobuf.GeneratedMessage.BuilderParent parent) {
       super(parent);
-
+      maybeForceBuilderInitialization();
+    }
+    private void maybeForceBuilderInitialization() {
+      if (com.google.protobuf.GeneratedMessage
+              .alwaysUseFieldBuilders) {
+        internalGetReviewedCatalogTransitionFieldBuilder();
+      }
     }
     @java.lang.Override
     public Builder clear() {
@@ -652,6 +713,11 @@ private static final long serialVersionUID = 0L;
       blocked_ =
           com.google.protobuf.LazyStringArrayList.emptyList();
       operationsHash_ = "";
+      reviewedCatalogTransition_ = null;
+      if (reviewedCatalogTransitionBuilder_ != null) {
+        reviewedCatalogTransitionBuilder_.dispose();
+        reviewedCatalogTransitionBuilder_ = null;
+      }
       return this;
     }
 
@@ -712,6 +778,14 @@ private static final long serialVersionUID = 0L;
       if (((from_bitField0_ & 0x00000080) != 0)) {
         result.operationsHash_ = operationsHash_;
       }
+      int to_bitField0_ = 0;
+      if (((from_bitField0_ & 0x00000100) != 0)) {
+        result.reviewedCatalogTransition_ = reviewedCatalogTransitionBuilder_ == null
+            ? reviewedCatalogTransition_
+            : reviewedCatalogTransitionBuilder_.build();
+        to_bitField0_ |= 0x00000001;
+      }
+      result.bitField0_ |= to_bitField0_;
     }
 
     @java.lang.Override
@@ -780,6 +854,9 @@ private static final long serialVersionUID = 0L;
         operationsHash_ = other.operationsHash_;
         bitField0_ |= 0x00000080;
         onChanged();
+      }
+      if (other.hasReviewedCatalogTransition()) {
+        mergeReviewedCatalogTransition(other.getReviewedCatalogTransition());
       }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
@@ -850,6 +927,13 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00000080;
               break;
             } // case 66
+            case 74: {
+              input.readMessage(
+                  internalGetReviewedCatalogTransitionFieldBuilder().getBuilder(),
+                  extensionRegistry);
+              bitField0_ |= 0x00000100;
+              break;
+            } // case 74
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -1558,6 +1642,163 @@ private static final long serialVersionUID = 0L;
       bitField0_ |= 0x00000080;
       onChanged();
       return this;
+    }
+
+    private com.udb.entity.v1.ReviewedCatalogTransitionEvidence reviewedCatalogTransition_;
+    private com.google.protobuf.SingleFieldBuilder<
+        com.udb.entity.v1.ReviewedCatalogTransitionEvidence, com.udb.entity.v1.ReviewedCatalogTransitionEvidence.Builder, com.udb.entity.v1.ReviewedCatalogTransitionEvidenceOrBuilder> reviewedCatalogTransitionBuilder_;
+    /**
+     * <pre>
+     * Present only when planning an explicit unstaged candidate.
+     * </pre>
+     *
+     * <code>.udb.entity.v1.ReviewedCatalogTransitionEvidence reviewed_catalog_transition = 9 [json_name = "reviewedCatalogTransition"];</code>
+     * @return Whether the reviewedCatalogTransition field is set.
+     */
+    public boolean hasReviewedCatalogTransition() {
+      return ((bitField0_ & 0x00000100) != 0);
+    }
+    /**
+     * <pre>
+     * Present only when planning an explicit unstaged candidate.
+     * </pre>
+     *
+     * <code>.udb.entity.v1.ReviewedCatalogTransitionEvidence reviewed_catalog_transition = 9 [json_name = "reviewedCatalogTransition"];</code>
+     * @return The reviewedCatalogTransition.
+     */
+    public com.udb.entity.v1.ReviewedCatalogTransitionEvidence getReviewedCatalogTransition() {
+      if (reviewedCatalogTransitionBuilder_ == null) {
+        return reviewedCatalogTransition_ == null ? com.udb.entity.v1.ReviewedCatalogTransitionEvidence.getDefaultInstance() : reviewedCatalogTransition_;
+      } else {
+        return reviewedCatalogTransitionBuilder_.getMessage();
+      }
+    }
+    /**
+     * <pre>
+     * Present only when planning an explicit unstaged candidate.
+     * </pre>
+     *
+     * <code>.udb.entity.v1.ReviewedCatalogTransitionEvidence reviewed_catalog_transition = 9 [json_name = "reviewedCatalogTransition"];</code>
+     */
+    public Builder setReviewedCatalogTransition(com.udb.entity.v1.ReviewedCatalogTransitionEvidence value) {
+      if (reviewedCatalogTransitionBuilder_ == null) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        reviewedCatalogTransition_ = value;
+      } else {
+        reviewedCatalogTransitionBuilder_.setMessage(value);
+      }
+      bitField0_ |= 0x00000100;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Present only when planning an explicit unstaged candidate.
+     * </pre>
+     *
+     * <code>.udb.entity.v1.ReviewedCatalogTransitionEvidence reviewed_catalog_transition = 9 [json_name = "reviewedCatalogTransition"];</code>
+     */
+    public Builder setReviewedCatalogTransition(
+        com.udb.entity.v1.ReviewedCatalogTransitionEvidence.Builder builderForValue) {
+      if (reviewedCatalogTransitionBuilder_ == null) {
+        reviewedCatalogTransition_ = builderForValue.build();
+      } else {
+        reviewedCatalogTransitionBuilder_.setMessage(builderForValue.build());
+      }
+      bitField0_ |= 0x00000100;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Present only when planning an explicit unstaged candidate.
+     * </pre>
+     *
+     * <code>.udb.entity.v1.ReviewedCatalogTransitionEvidence reviewed_catalog_transition = 9 [json_name = "reviewedCatalogTransition"];</code>
+     */
+    public Builder mergeReviewedCatalogTransition(com.udb.entity.v1.ReviewedCatalogTransitionEvidence value) {
+      if (reviewedCatalogTransitionBuilder_ == null) {
+        if (((bitField0_ & 0x00000100) != 0) &&
+          reviewedCatalogTransition_ != null &&
+          reviewedCatalogTransition_ != com.udb.entity.v1.ReviewedCatalogTransitionEvidence.getDefaultInstance()) {
+          getReviewedCatalogTransitionBuilder().mergeFrom(value);
+        } else {
+          reviewedCatalogTransition_ = value;
+        }
+      } else {
+        reviewedCatalogTransitionBuilder_.mergeFrom(value);
+      }
+      if (reviewedCatalogTransition_ != null) {
+        bitField0_ |= 0x00000100;
+        onChanged();
+      }
+      return this;
+    }
+    /**
+     * <pre>
+     * Present only when planning an explicit unstaged candidate.
+     * </pre>
+     *
+     * <code>.udb.entity.v1.ReviewedCatalogTransitionEvidence reviewed_catalog_transition = 9 [json_name = "reviewedCatalogTransition"];</code>
+     */
+    public Builder clearReviewedCatalogTransition() {
+      bitField0_ = (bitField0_ & ~0x00000100);
+      reviewedCatalogTransition_ = null;
+      if (reviewedCatalogTransitionBuilder_ != null) {
+        reviewedCatalogTransitionBuilder_.dispose();
+        reviewedCatalogTransitionBuilder_ = null;
+      }
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Present only when planning an explicit unstaged candidate.
+     * </pre>
+     *
+     * <code>.udb.entity.v1.ReviewedCatalogTransitionEvidence reviewed_catalog_transition = 9 [json_name = "reviewedCatalogTransition"];</code>
+     */
+    public com.udb.entity.v1.ReviewedCatalogTransitionEvidence.Builder getReviewedCatalogTransitionBuilder() {
+      bitField0_ |= 0x00000100;
+      onChanged();
+      return internalGetReviewedCatalogTransitionFieldBuilder().getBuilder();
+    }
+    /**
+     * <pre>
+     * Present only when planning an explicit unstaged candidate.
+     * </pre>
+     *
+     * <code>.udb.entity.v1.ReviewedCatalogTransitionEvidence reviewed_catalog_transition = 9 [json_name = "reviewedCatalogTransition"];</code>
+     */
+    public com.udb.entity.v1.ReviewedCatalogTransitionEvidenceOrBuilder getReviewedCatalogTransitionOrBuilder() {
+      if (reviewedCatalogTransitionBuilder_ != null) {
+        return reviewedCatalogTransitionBuilder_.getMessageOrBuilder();
+      } else {
+        return reviewedCatalogTransition_ == null ?
+            com.udb.entity.v1.ReviewedCatalogTransitionEvidence.getDefaultInstance() : reviewedCatalogTransition_;
+      }
+    }
+    /**
+     * <pre>
+     * Present only when planning an explicit unstaged candidate.
+     * </pre>
+     *
+     * <code>.udb.entity.v1.ReviewedCatalogTransitionEvidence reviewed_catalog_transition = 9 [json_name = "reviewedCatalogTransition"];</code>
+     */
+    private com.google.protobuf.SingleFieldBuilder<
+        com.udb.entity.v1.ReviewedCatalogTransitionEvidence, com.udb.entity.v1.ReviewedCatalogTransitionEvidence.Builder, com.udb.entity.v1.ReviewedCatalogTransitionEvidenceOrBuilder>
+        internalGetReviewedCatalogTransitionFieldBuilder() {
+      if (reviewedCatalogTransitionBuilder_ == null) {
+        reviewedCatalogTransitionBuilder_ = new com.google.protobuf.SingleFieldBuilder<
+            com.udb.entity.v1.ReviewedCatalogTransitionEvidence, com.udb.entity.v1.ReviewedCatalogTransitionEvidence.Builder, com.udb.entity.v1.ReviewedCatalogTransitionEvidenceOrBuilder>(
+                getReviewedCatalogTransition(),
+                getParentForChildren(),
+                isClean());
+        reviewedCatalogTransition_ = null;
+      }
+      return reviewedCatalogTransitionBuilder_;
     }
 
     // @@protoc_insertion_point(builder_scope:udb.entity.v1.MigrationPlanResponse)

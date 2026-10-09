@@ -601,6 +601,8 @@ class DataBrokerClient extends \Grpc\BaseStub {
     /**
      * Catalog administration.
      * Stage a new catalog manifest version (validate + store as STAGED).
+     * Ordinary compatibility is unchanged. An explicit reviewed migration run
+     * must prove the exact authorized, approved and applied candidate transition.
      * Requires scope: udb:admin
      * @param \Udb\Entity\V1\StageCatalogRequest $argument input argument
      * @param array $metadata metadata
@@ -616,7 +618,8 @@ class DataBrokerClient extends \Grpc\BaseStub {
     }
 
     /**
-     * Activate a STAGED catalog version.
+     * Activate a STAGED catalog version. Reviewed candidates require the same
+     * durable run reference; approval/application/base evidence is checked again.
      * Requires scope: udb:admin
      * @param \Udb\Entity\V1\CatalogVersionRequest $argument input argument
      * @param array $metadata metadata
@@ -697,7 +700,9 @@ class DataBrokerClient extends \Grpc\BaseStub {
 
     /**
      * Migration planning and apply.
-     * Plan a migration against the active catalog without executing it.
+     * Plan a migration without executing it. Ordinary mode uses the ACTIVE
+     * catalog. Candidate mode durably binds an unstaged manifest to the exact
+     * proven ACTIVE base and computes the immutable native review/application plan.
      * Requires scope: udb:admin
      * @param \Udb\Entity\V1\MigrationPlanRequest $argument input argument
      * @param array $metadata metadata
@@ -713,7 +718,9 @@ class DataBrokerClient extends \Grpc\BaseStub {
     }
 
     /**
-     * Apply a previously planned (and optionally approved) migration.
+     * Apply a previously approved migration, or resume APPLYING/VERIFYING work
+     * with its exact durable token. Reviewed candidates also bind caller tenant
+     * and verified actor; their native application evidence is exposed in status.
      * Requires scope: udb:admin
      * @param \Udb\Entity\V1\MigrationApplyRequest $argument input argument
      * @param array $metadata metadata
@@ -761,7 +768,9 @@ class DataBrokerClient extends \Grpc\BaseStub {
     }
 
     /**
-     * Approve a migration plan that requires review.
+     * Approve a migration plan that requires review. Candidate approval records
+     * the verified authorized actor and exact operations hash/fingerprint echoes;
+     * it cannot authorize blocked work or accept a filesystem review receipt.
      * Requires scope: udb:admin
      * @param \Udb\Entity\V1\MigrationRunRequest $argument input argument
      * @param array $metadata metadata

@@ -32,6 +32,7 @@ private static final long serialVersionUID = 0L;
     projectId_ = "";
     reason_ = "";
     idempotencyKey_ = "";
+    reviewedMigrationRunId_ = "";
   }
 
   public static final com.google.protobuf.Descriptors.Descriptor
@@ -214,6 +215,61 @@ private static final long serialVersionUID = 0L;
     }
   }
 
+  public static final int REVIEWED_MIGRATION_RUN_ID_FIELD_NUMBER = 5;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object reviewedMigrationRunId_ = "";
+  /**
+   * <pre>
+   * Explicit durable candidate run approved and applied through the migration
+   * RPCs. Stage and activation revalidate its exact tenant/project, ACTIVE base,
+   * target integrity, reviewed fingerprints and native application evidence.
+   * Empty retains the ordinary compatibility policy; a caller receipt is not
+   * approval authority. ValidateCatalog performs lint only and does not use it.
+   * </pre>
+   *
+   * <code>string reviewed_migration_run_id = 5 [json_name = "reviewedMigrationRunId"];</code>
+   * @return The reviewedMigrationRunId.
+   */
+  @java.lang.Override
+  public java.lang.String getReviewedMigrationRunId() {
+    java.lang.Object ref = reviewedMigrationRunId_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs =
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      reviewedMigrationRunId_ = s;
+      return s;
+    }
+  }
+  /**
+   * <pre>
+   * Explicit durable candidate run approved and applied through the migration
+   * RPCs. Stage and activation revalidate its exact tenant/project, ACTIVE base,
+   * target integrity, reviewed fingerprints and native application evidence.
+   * Empty retains the ordinary compatibility policy; a caller receipt is not
+   * approval authority. ValidateCatalog performs lint only and does not use it.
+   * </pre>
+   *
+   * <code>string reviewed_migration_run_id = 5 [json_name = "reviewedMigrationRunId"];</code>
+   * @return The bytes for reviewedMigrationRunId.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getReviewedMigrationRunIdBytes() {
+    java.lang.Object ref = reviewedMigrationRunId_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b =
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      reviewedMigrationRunId_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -240,6 +296,9 @@ private static final long serialVersionUID = 0L;
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(idempotencyKey_)) {
       com.google.protobuf.GeneratedMessage.writeString(output, 4, idempotencyKey_);
     }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(reviewedMigrationRunId_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 5, reviewedMigrationRunId_);
+    }
     if (!manifestJson_.isEmpty()) {
       output.writeBytes(1000, manifestJson_);
     }
@@ -264,6 +323,9 @@ private static final long serialVersionUID = 0L;
     }
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(idempotencyKey_)) {
       size += com.google.protobuf.GeneratedMessage.computeStringSize(4, idempotencyKey_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(reviewedMigrationRunId_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(5, reviewedMigrationRunId_);
     }
     if (!manifestJson_.isEmpty()) {
       size += com.google.protobuf.CodedOutputStream
@@ -297,6 +359,8 @@ private static final long serialVersionUID = 0L;
         .equals(other.getReason())) return false;
     if (!getIdempotencyKey()
         .equals(other.getIdempotencyKey())) return false;
+    if (!getReviewedMigrationRunId()
+        .equals(other.getReviewedMigrationRunId())) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -320,6 +384,8 @@ private static final long serialVersionUID = 0L;
     hash = (53 * hash) + getReason().hashCode();
     hash = (37 * hash) + IDEMPOTENCY_KEY_FIELD_NUMBER;
     hash = (53 * hash) + getIdempotencyKey().hashCode();
+    hash = (37 * hash) + REVIEWED_MIGRATION_RUN_ID_FIELD_NUMBER;
+    hash = (53 * hash) + getReviewedMigrationRunId().hashCode();
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -466,6 +532,7 @@ private static final long serialVersionUID = 0L;
       projectId_ = "";
       reason_ = "";
       idempotencyKey_ = "";
+      reviewedMigrationRunId_ = "";
       return this;
     }
 
@@ -518,6 +585,9 @@ private static final long serialVersionUID = 0L;
       if (((from_bitField0_ & 0x00000010) != 0)) {
         result.idempotencyKey_ = idempotencyKey_;
       }
+      if (((from_bitField0_ & 0x00000020) != 0)) {
+        result.reviewedMigrationRunId_ = reviewedMigrationRunId_;
+      }
       result.bitField0_ |= to_bitField0_;
     }
 
@@ -552,6 +622,11 @@ private static final long serialVersionUID = 0L;
       if (!other.getIdempotencyKey().isEmpty()) {
         idempotencyKey_ = other.idempotencyKey_;
         bitField0_ |= 0x00000010;
+        onChanged();
+      }
+      if (!other.getReviewedMigrationRunId().isEmpty()) {
+        reviewedMigrationRunId_ = other.reviewedMigrationRunId_;
+        bitField0_ |= 0x00000020;
         onChanged();
       }
       this.mergeUnknownFields(other.getUnknownFields());
@@ -602,6 +677,11 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00000010;
               break;
             } // case 34
+            case 42: {
+              reviewedMigrationRunId_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00000020;
+              break;
+            } // case 42
             case 8002: {
               manifestJson_ = input.readBytes();
               bitField0_ |= 0x00000002;
@@ -1021,6 +1101,118 @@ private static final long serialVersionUID = 0L;
       checkByteStringIsUtf8(value);
       idempotencyKey_ = value;
       bitField0_ |= 0x00000010;
+      onChanged();
+      return this;
+    }
+
+    private java.lang.Object reviewedMigrationRunId_ = "";
+    /**
+     * <pre>
+     * Explicit durable candidate run approved and applied through the migration
+     * RPCs. Stage and activation revalidate its exact tenant/project, ACTIVE base,
+     * target integrity, reviewed fingerprints and native application evidence.
+     * Empty retains the ordinary compatibility policy; a caller receipt is not
+     * approval authority. ValidateCatalog performs lint only and does not use it.
+     * </pre>
+     *
+     * <code>string reviewed_migration_run_id = 5 [json_name = "reviewedMigrationRunId"];</code>
+     * @return The reviewedMigrationRunId.
+     */
+    public java.lang.String getReviewedMigrationRunId() {
+      java.lang.Object ref = reviewedMigrationRunId_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        reviewedMigrationRunId_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <pre>
+     * Explicit durable candidate run approved and applied through the migration
+     * RPCs. Stage and activation revalidate its exact tenant/project, ACTIVE base,
+     * target integrity, reviewed fingerprints and native application evidence.
+     * Empty retains the ordinary compatibility policy; a caller receipt is not
+     * approval authority. ValidateCatalog performs lint only and does not use it.
+     * </pre>
+     *
+     * <code>string reviewed_migration_run_id = 5 [json_name = "reviewedMigrationRunId"];</code>
+     * @return The bytes for reviewedMigrationRunId.
+     */
+    public com.google.protobuf.ByteString
+        getReviewedMigrationRunIdBytes() {
+      java.lang.Object ref = reviewedMigrationRunId_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b =
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        reviewedMigrationRunId_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <pre>
+     * Explicit durable candidate run approved and applied through the migration
+     * RPCs. Stage and activation revalidate its exact tenant/project, ACTIVE base,
+     * target integrity, reviewed fingerprints and native application evidence.
+     * Empty retains the ordinary compatibility policy; a caller receipt is not
+     * approval authority. ValidateCatalog performs lint only and does not use it.
+     * </pre>
+     *
+     * <code>string reviewed_migration_run_id = 5 [json_name = "reviewedMigrationRunId"];</code>
+     * @param value The reviewedMigrationRunId to set.
+     * @return This builder for chaining.
+     */
+    public Builder setReviewedMigrationRunId(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      reviewedMigrationRunId_ = value;
+      bitField0_ |= 0x00000020;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Explicit durable candidate run approved and applied through the migration
+     * RPCs. Stage and activation revalidate its exact tenant/project, ACTIVE base,
+     * target integrity, reviewed fingerprints and native application evidence.
+     * Empty retains the ordinary compatibility policy; a caller receipt is not
+     * approval authority. ValidateCatalog performs lint only and does not use it.
+     * </pre>
+     *
+     * <code>string reviewed_migration_run_id = 5 [json_name = "reviewedMigrationRunId"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearReviewedMigrationRunId() {
+      reviewedMigrationRunId_ = getDefaultInstance().getReviewedMigrationRunId();
+      bitField0_ = (bitField0_ & ~0x00000020);
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Explicit durable candidate run approved and applied through the migration
+     * RPCs. Stage and activation revalidate its exact tenant/project, ACTIVE base,
+     * target integrity, reviewed fingerprints and native application evidence.
+     * Empty retains the ordinary compatibility policy; a caller receipt is not
+     * approval authority. ValidateCatalog performs lint only and does not use it.
+     * </pre>
+     *
+     * <code>string reviewed_migration_run_id = 5 [json_name = "reviewedMigrationRunId"];</code>
+     * @param value The bytes for reviewedMigrationRunId to set.
+     * @return This builder for chaining.
+     */
+    public Builder setReviewedMigrationRunIdBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      reviewedMigrationRunId_ = value;
+      bitField0_ |= 0x00000020;
       onChanged();
       return this;
     }

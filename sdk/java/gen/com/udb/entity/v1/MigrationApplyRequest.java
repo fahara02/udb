@@ -157,7 +157,9 @@ private static final long serialVersionUID = 0L;
   private volatile java.lang.Object approvalToken_ = "";
   /**
    * <pre>
-   * Approval token from ApproveMigrationPlan (required for blocked operations).
+   * Approval token from ApproveMigrationPlan. Reviewed candidate approval does
+   * not permit blocked or destructive transitions; native application evidence
+   * is also required before catalog staging and activation.
    * </pre>
    *
    * <code>string approval_token = 4 [json_name = "approvalToken"];</code>
@@ -178,7 +180,9 @@ private static final long serialVersionUID = 0L;
   }
   /**
    * <pre>
-   * Approval token from ApproveMigrationPlan (required for blocked operations).
+   * Approval token from ApproveMigrationPlan. Reviewed candidate approval does
+   * not permit blocked or destructive transitions; native application evidence
+   * is also required before catalog staging and activation.
    * </pre>
    *
    * <code>string approval_token = 4 [json_name = "approvalToken"];</code>
@@ -917,7 +921,9 @@ private static final long serialVersionUID = 0L;
     private java.lang.Object approvalToken_ = "";
     /**
      * <pre>
-     * Approval token from ApproveMigrationPlan (required for blocked operations).
+     * Approval token from ApproveMigrationPlan. Reviewed candidate approval does
+     * not permit blocked or destructive transitions; native application evidence
+     * is also required before catalog staging and activation.
      * </pre>
      *
      * <code>string approval_token = 4 [json_name = "approvalToken"];</code>
@@ -937,7 +943,9 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * Approval token from ApproveMigrationPlan (required for blocked operations).
+     * Approval token from ApproveMigrationPlan. Reviewed candidate approval does
+     * not permit blocked or destructive transitions; native application evidence
+     * is also required before catalog staging and activation.
      * </pre>
      *
      * <code>string approval_token = 4 [json_name = "approvalToken"];</code>
@@ -958,7 +966,9 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * Approval token from ApproveMigrationPlan (required for blocked operations).
+     * Approval token from ApproveMigrationPlan. Reviewed candidate approval does
+     * not permit blocked or destructive transitions; native application evidence
+     * is also required before catalog staging and activation.
      * </pre>
      *
      * <code>string approval_token = 4 [json_name = "approvalToken"];</code>
@@ -975,7 +985,9 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * Approval token from ApproveMigrationPlan (required for blocked operations).
+     * Approval token from ApproveMigrationPlan. Reviewed candidate approval does
+     * not permit blocked or destructive transitions; native application evidence
+     * is also required before catalog staging and activation.
      * </pre>
      *
      * <code>string approval_token = 4 [json_name = "approvalToken"];</code>
@@ -989,7 +1001,9 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * Approval token from ApproveMigrationPlan (required for blocked operations).
+     * Approval token from ApproveMigrationPlan. Reviewed candidate approval does
+     * not permit blocked or destructive transitions; native application evidence
+     * is also required before catalog staging and activation.
      * </pre>
      *
      * <code>string approval_token = 4 [json_name = "approvalToken"];</code>

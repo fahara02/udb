@@ -38,6 +38,16 @@ class StageCatalogRequest extends \Google\Protobuf\Internal\Message
      * Generated from protobuf field <code>string idempotency_key = 4 [json_name = "idempotencyKey"];</code>
      */
     protected $idempotency_key = '';
+    /**
+     * Explicit durable candidate run approved and applied through the migration
+     * RPCs. Stage and activation revalidate its exact tenant/project, ACTIVE base,
+     * target integrity, reviewed fingerprints and native application evidence.
+     * Empty retains the ordinary compatibility policy; a caller receipt is not
+     * approval authority. ValidateCatalog performs lint only and does not use it.
+     *
+     * Generated from protobuf field <code>string reviewed_migration_run_id = 5 [json_name = "reviewedMigrationRunId"];</code>
+     */
+    protected $reviewed_migration_run_id = '';
 
     /**
      * Constructor.
@@ -52,6 +62,12 @@ class StageCatalogRequest extends \Google\Protobuf\Internal\Message
      *     @type string $reason
      *     @type string $idempotency_key
      *           Required for durable StageCatalog retries.
+     *     @type string $reviewed_migration_run_id
+     *           Explicit durable candidate run approved and applied through the migration
+     *           RPCs. Stage and activation revalidate its exact tenant/project, ACTIVE base,
+     *           target integrity, reviewed fingerprints and native application evidence.
+     *           Empty retains the ordinary compatibility policy; a caller receipt is not
+     *           approval authority. ValidateCatalog performs lint only and does not use it.
      * }
      */
     public function __construct($data = NULL) {
@@ -183,6 +199,40 @@ class StageCatalogRequest extends \Google\Protobuf\Internal\Message
     {
         GPBUtil::checkString($var, True);
         $this->idempotency_key = $var;
+
+        return $this;
+    }
+
+    /**
+     * Explicit durable candidate run approved and applied through the migration
+     * RPCs. Stage and activation revalidate its exact tenant/project, ACTIVE base,
+     * target integrity, reviewed fingerprints and native application evidence.
+     * Empty retains the ordinary compatibility policy; a caller receipt is not
+     * approval authority. ValidateCatalog performs lint only and does not use it.
+     *
+     * Generated from protobuf field <code>string reviewed_migration_run_id = 5 [json_name = "reviewedMigrationRunId"];</code>
+     * @return string
+     */
+    public function getReviewedMigrationRunId()
+    {
+        return $this->reviewed_migration_run_id;
+    }
+
+    /**
+     * Explicit durable candidate run approved and applied through the migration
+     * RPCs. Stage and activation revalidate its exact tenant/project, ACTIVE base,
+     * target integrity, reviewed fingerprints and native application evidence.
+     * Empty retains the ordinary compatibility policy; a caller receipt is not
+     * approval authority. ValidateCatalog performs lint only and does not use it.
+     *
+     * Generated from protobuf field <code>string reviewed_migration_run_id = 5 [json_name = "reviewedMigrationRunId"];</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setReviewedMigrationRunId($var)
+    {
+        GPBUtil::checkString($var, True);
+        $this->reviewed_migration_run_id = $var;
 
         return $this;
     }

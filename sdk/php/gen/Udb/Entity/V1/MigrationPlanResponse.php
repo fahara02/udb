@@ -46,6 +46,12 @@ class MigrationPlanResponse extends \Google\Protobuf\Internal\Message
      * Generated from protobuf field <code>string operations_hash = 8 [json_name = "operationsHash"];</code>
      */
     protected $operations_hash = '';
+    /**
+     * Present only when planning an explicit unstaged candidate.
+     *
+     * Generated from protobuf field <code>.udb.entity.v1.ReviewedCatalogTransitionEvidence reviewed_catalog_transition = 9 [json_name = "reviewedCatalogTransition"];</code>
+     */
+    protected $reviewed_catalog_transition = null;
 
     /**
      * Constructor.
@@ -61,6 +67,8 @@ class MigrationPlanResponse extends \Google\Protobuf\Internal\Message
      *     @type string[] $requires_review
      *     @type string[] $blocked
      *     @type string $operations_hash
+     *     @type \Udb\Entity\V1\ReviewedCatalogTransitionEvidence $reviewed_catalog_transition
+     *           Present only when planning an explicit unstaged candidate.
      * }
      */
     public function __construct($data = NULL) {
@@ -240,6 +248,42 @@ class MigrationPlanResponse extends \Google\Protobuf\Internal\Message
     {
         GPBUtil::checkString($var, True);
         $this->operations_hash = $var;
+
+        return $this;
+    }
+
+    /**
+     * Present only when planning an explicit unstaged candidate.
+     *
+     * Generated from protobuf field <code>.udb.entity.v1.ReviewedCatalogTransitionEvidence reviewed_catalog_transition = 9 [json_name = "reviewedCatalogTransition"];</code>
+     * @return \Udb\Entity\V1\ReviewedCatalogTransitionEvidence|null
+     */
+    public function getReviewedCatalogTransition()
+    {
+        return $this->reviewed_catalog_transition;
+    }
+
+    public function hasReviewedCatalogTransition()
+    {
+        return isset($this->reviewed_catalog_transition);
+    }
+
+    public function clearReviewedCatalogTransition()
+    {
+        unset($this->reviewed_catalog_transition);
+    }
+
+    /**
+     * Present only when planning an explicit unstaged candidate.
+     *
+     * Generated from protobuf field <code>.udb.entity.v1.ReviewedCatalogTransitionEvidence reviewed_catalog_transition = 9 [json_name = "reviewedCatalogTransition"];</code>
+     * @param \Udb\Entity\V1\ReviewedCatalogTransitionEvidence $var
+     * @return $this
+     */
+    public function setReviewedCatalogTransition($var)
+    {
+        GPBUtil::checkMessage($var, \Udb\Entity\V1\ReviewedCatalogTransitionEvidence::class);
+        $this->reviewed_catalog_transition = $var;
 
         return $this;
     }

@@ -54,7 +54,7 @@ public interface MigrationOperationStatusOrBuilder extends
 
   /**
    * <pre>
-   * States: PENDING, APPLIED, SKIPPED, FAILED, ROLLED_BACK
+   * States: PENDING, APPLIED, VERIFIED, SKIPPED, FAILED, ROLLED_BACK
    * </pre>
    *
    * <code>string status = 5 [json_name = "status"];</code>
@@ -63,7 +63,7 @@ public interface MigrationOperationStatusOrBuilder extends
   java.lang.String getStatus();
   /**
    * <pre>
-   * States: PENDING, APPLIED, SKIPPED, FAILED, ROLLED_BACK
+   * States: PENDING, APPLIED, VERIFIED, SKIPPED, FAILED, ROLLED_BACK
    * </pre>
    *
    * <code>string status = 5 [json_name = "status"];</code>

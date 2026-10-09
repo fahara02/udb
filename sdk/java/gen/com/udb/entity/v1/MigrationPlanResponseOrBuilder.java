@@ -144,4 +144,31 @@ public interface MigrationPlanResponseOrBuilder extends
    */
   com.google.protobuf.ByteString
       getOperationsHashBytes();
+
+  /**
+   * <pre>
+   * Present only when planning an explicit unstaged candidate.
+   * </pre>
+   *
+   * <code>.udb.entity.v1.ReviewedCatalogTransitionEvidence reviewed_catalog_transition = 9 [json_name = "reviewedCatalogTransition"];</code>
+   * @return Whether the reviewedCatalogTransition field is set.
+   */
+  boolean hasReviewedCatalogTransition();
+  /**
+   * <pre>
+   * Present only when planning an explicit unstaged candidate.
+   * </pre>
+   *
+   * <code>.udb.entity.v1.ReviewedCatalogTransitionEvidence reviewed_catalog_transition = 9 [json_name = "reviewedCatalogTransition"];</code>
+   * @return The reviewedCatalogTransition.
+   */
+  com.udb.entity.v1.ReviewedCatalogTransitionEvidence getReviewedCatalogTransition();
+  /**
+   * <pre>
+   * Present only when planning an explicit unstaged candidate.
+   * </pre>
+   *
+   * <code>.udb.entity.v1.ReviewedCatalogTransitionEvidence reviewed_catalog_transition = 9 [json_name = "reviewedCatalogTransition"];</code>
+   */
+  com.udb.entity.v1.ReviewedCatalogTransitionEvidenceOrBuilder getReviewedCatalogTransitionOrBuilder();
 }

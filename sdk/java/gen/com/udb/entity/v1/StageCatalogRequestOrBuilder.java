@@ -78,4 +78,32 @@ public interface StageCatalogRequestOrBuilder extends
    */
   com.google.protobuf.ByteString
       getIdempotencyKeyBytes();
+
+  /**
+   * <pre>
+   * Explicit durable candidate run approved and applied through the migration
+   * RPCs. Stage and activation revalidate its exact tenant/project, ACTIVE base,
+   * target integrity, reviewed fingerprints and native application evidence.
+   * Empty retains the ordinary compatibility policy; a caller receipt is not
+   * approval authority. ValidateCatalog performs lint only and does not use it.
+   * </pre>
+   *
+   * <code>string reviewed_migration_run_id = 5 [json_name = "reviewedMigrationRunId"];</code>
+   * @return The reviewedMigrationRunId.
+   */
+  java.lang.String getReviewedMigrationRunId();
+  /**
+   * <pre>
+   * Explicit durable candidate run approved and applied through the migration
+   * RPCs. Stage and activation revalidate its exact tenant/project, ACTIVE base,
+   * target integrity, reviewed fingerprints and native application evidence.
+   * Empty retains the ordinary compatibility policy; a caller receipt is not
+   * approval authority. ValidateCatalog performs lint only and does not use it.
+   * </pre>
+   *
+   * <code>string reviewed_migration_run_id = 5 [json_name = "reviewedMigrationRunId"];</code>
+   * @return The bytes for reviewedMigrationRunId.
+   */
+  com.google.protobuf.ByteString
+      getReviewedMigrationRunIdBytes();
 }

@@ -46,6 +46,15 @@ class CatalogVersionResponse extends \Google\Protobuf\Internal\Message
      * Generated from protobuf field <code>repeated string warnings = 8 [json_name = "warnings"];</code>
      */
     private $warnings;
+    /**
+     * Verified outer integrity of the complete durable manifest. Candidate
+     * planning pins this value with catalog_id; checksum_sha256 remains the
+     * existing catalog selector and must not be substituted for this integrity.
+     * Empty for an in-memory startup fallback without durable catalog authority.
+     *
+     * Generated from protobuf field <code>string manifest_integrity_sha256 = 9 [json_name = "manifestIntegritySha256"];</code>
+     */
+    protected $manifest_integrity_sha256 = '';
 
     /**
      * Constructor.
@@ -61,6 +70,11 @@ class CatalogVersionResponse extends \Google\Protobuf\Internal\Message
      *     @type int|string $created_at_unix
      *     @type string[] $errors
      *     @type string[] $warnings
+     *     @type string $manifest_integrity_sha256
+     *           Verified outer integrity of the complete durable manifest. Candidate
+     *           planning pins this value with catalog_id; checksum_sha256 remains the
+     *           existing catalog selector and must not be substituted for this integrity.
+     *           Empty for an in-memory startup fallback without durable catalog authority.
      * }
      */
     public function __construct($data = NULL) {
@@ -240,6 +254,38 @@ class CatalogVersionResponse extends \Google\Protobuf\Internal\Message
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::STRING);
         $this->warnings = $arr;
+
+        return $this;
+    }
+
+    /**
+     * Verified outer integrity of the complete durable manifest. Candidate
+     * planning pins this value with catalog_id; checksum_sha256 remains the
+     * existing catalog selector and must not be substituted for this integrity.
+     * Empty for an in-memory startup fallback without durable catalog authority.
+     *
+     * Generated from protobuf field <code>string manifest_integrity_sha256 = 9 [json_name = "manifestIntegritySha256"];</code>
+     * @return string
+     */
+    public function getManifestIntegritySha256()
+    {
+        return $this->manifest_integrity_sha256;
+    }
+
+    /**
+     * Verified outer integrity of the complete durable manifest. Candidate
+     * planning pins this value with catalog_id; checksum_sha256 remains the
+     * existing catalog selector and must not be substituted for this integrity.
+     * Empty for an in-memory startup fallback without durable catalog authority.
+     *
+     * Generated from protobuf field <code>string manifest_integrity_sha256 = 9 [json_name = "manifestIntegritySha256"];</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setManifestIntegritySha256($var)
+    {
+        GPBUtil::checkString($var, True);
+        $this->manifest_integrity_sha256 = $var;
 
         return $this;
     }

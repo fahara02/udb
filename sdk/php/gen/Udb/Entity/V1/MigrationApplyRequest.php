@@ -27,7 +27,9 @@ class MigrationApplyRequest extends \Google\Protobuf\Internal\Message
      */
     protected $project_id = '';
     /**
-     * Approval token from ApproveMigrationPlan (required for blocked operations).
+     * Approval token from ApproveMigrationPlan. Reviewed candidate approval does
+     * not permit blocked or destructive transitions; native application evidence
+     * is also required before catalog staging and activation.
      *
      * Generated from protobuf field <code>string approval_token = 4 [json_name = "approvalToken"];</code>
      */
@@ -47,7 +49,9 @@ class MigrationApplyRequest extends \Google\Protobuf\Internal\Message
      *     @type string $run_id
      *     @type string $project_id
      *     @type string $approval_token
-     *           Approval token from ApproveMigrationPlan (required for blocked operations).
+     *           Approval token from ApproveMigrationPlan. Reviewed candidate approval does
+     *           not permit blocked or destructive transitions; native application evidence
+     *           is also required before catalog staging and activation.
      *     @type string $idempotency_key
      * }
      */
@@ -133,7 +137,9 @@ class MigrationApplyRequest extends \Google\Protobuf\Internal\Message
     }
 
     /**
-     * Approval token from ApproveMigrationPlan (required for blocked operations).
+     * Approval token from ApproveMigrationPlan. Reviewed candidate approval does
+     * not permit blocked or destructive transitions; native application evidence
+     * is also required before catalog staging and activation.
      *
      * Generated from protobuf field <code>string approval_token = 4 [json_name = "approvalToken"];</code>
      * @return string
@@ -144,7 +150,9 @@ class MigrationApplyRequest extends \Google\Protobuf\Internal\Message
     }
 
     /**
-     * Approval token from ApproveMigrationPlan (required for blocked operations).
+     * Approval token from ApproveMigrationPlan. Reviewed candidate approval does
+     * not permit blocked or destructive transitions; native application evidence
+     * is also required before catalog staging and activation.
      *
      * Generated from protobuf field <code>string approval_token = 4 [json_name = "approvalToken"];</code>
      * @param string $var

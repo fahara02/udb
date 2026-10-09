@@ -37,6 +37,7 @@ private static final long serialVersionUID = 0L;
         com.google.protobuf.LazyStringArrayList.emptyList();
     warnings_ =
         com.google.protobuf.LazyStringArrayList.emptyList();
+    manifestIntegritySha256_ = "";
   }
 
   public static final com.google.protobuf.Descriptors.Descriptor
@@ -332,6 +333,59 @@ private static final long serialVersionUID = 0L;
     return warnings_.getByteString(index);
   }
 
+  public static final int MANIFEST_INTEGRITY_SHA256_FIELD_NUMBER = 9;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object manifestIntegritySha256_ = "";
+  /**
+   * <pre>
+   * Verified outer integrity of the complete durable manifest. Candidate
+   * planning pins this value with catalog_id; checksum_sha256 remains the
+   * existing catalog selector and must not be substituted for this integrity.
+   * Empty for an in-memory startup fallback without durable catalog authority.
+   * </pre>
+   *
+   * <code>string manifest_integrity_sha256 = 9 [json_name = "manifestIntegritySha256"];</code>
+   * @return The manifestIntegritySha256.
+   */
+  @java.lang.Override
+  public java.lang.String getManifestIntegritySha256() {
+    java.lang.Object ref = manifestIntegritySha256_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs =
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      manifestIntegritySha256_ = s;
+      return s;
+    }
+  }
+  /**
+   * <pre>
+   * Verified outer integrity of the complete durable manifest. Candidate
+   * planning pins this value with catalog_id; checksum_sha256 remains the
+   * existing catalog selector and must not be substituted for this integrity.
+   * Empty for an in-memory startup fallback without durable catalog authority.
+   * </pre>
+   *
+   * <code>string manifest_integrity_sha256 = 9 [json_name = "manifestIntegritySha256"];</code>
+   * @return The bytes for manifestIntegritySha256.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getManifestIntegritySha256Bytes() {
+    java.lang.Object ref = manifestIntegritySha256_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b =
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      manifestIntegritySha256_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -369,6 +423,9 @@ private static final long serialVersionUID = 0L;
     }
     for (int i = 0; i < warnings_.size(); i++) {
       com.google.protobuf.GeneratedMessage.writeString(output, 8, warnings_.getRaw(i));
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(manifestIntegritySha256_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 9, manifestIntegritySha256_);
     }
     getUnknownFields().writeTo(output);
   }
@@ -414,6 +471,9 @@ private static final long serialVersionUID = 0L;
       size += dataSize;
       size += 1 * getWarningsList().size();
     }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(manifestIntegritySha256_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(9, manifestIntegritySha256_);
+    }
     size += getUnknownFields().getSerializedSize();
     memoizedSize = size;
     return size;
@@ -445,6 +505,8 @@ private static final long serialVersionUID = 0L;
         .equals(other.getErrorsList())) return false;
     if (!getWarningsList()
         .equals(other.getWarningsList())) return false;
+    if (!getManifestIntegritySha256()
+        .equals(other.getManifestIntegritySha256())) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -477,6 +539,8 @@ private static final long serialVersionUID = 0L;
       hash = (37 * hash) + WARNINGS_FIELD_NUMBER;
       hash = (53 * hash) + getWarningsList().hashCode();
     }
+    hash = (37 * hash) + MANIFEST_INTEGRITY_SHA256_FIELD_NUMBER;
+    hash = (53 * hash) + getManifestIntegritySha256().hashCode();
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -618,6 +682,7 @@ private static final long serialVersionUID = 0L;
           com.google.protobuf.LazyStringArrayList.emptyList();
       warnings_ =
           com.google.protobuf.LazyStringArrayList.emptyList();
+      manifestIntegritySha256_ = "";
       return this;
     }
 
@@ -676,6 +741,9 @@ private static final long serialVersionUID = 0L;
       if (((from_bitField0_ & 0x00000080) != 0)) {
         warnings_.makeImmutable();
         result.warnings_ = warnings_;
+      }
+      if (((from_bitField0_ & 0x00000100) != 0)) {
+        result.manifestIntegritySha256_ = manifestIntegritySha256_;
       }
     }
 
@@ -737,6 +805,11 @@ private static final long serialVersionUID = 0L;
           ensureWarningsIsMutable();
           warnings_.addAll(other.warnings_);
         }
+        onChanged();
+      }
+      if (!other.getManifestIntegritySha256().isEmpty()) {
+        manifestIntegritySha256_ = other.manifestIntegritySha256_;
+        bitField0_ |= 0x00000100;
         onChanged();
       }
       this.mergeUnknownFields(other.getUnknownFields());
@@ -807,6 +880,11 @@ private static final long serialVersionUID = 0L;
               warnings_.add(s);
               break;
             } // case 66
+            case 74: {
+              manifestIntegritySha256_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00000100;
+              break;
+            } // case 74
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -1434,6 +1512,113 @@ private static final long serialVersionUID = 0L;
       ensureWarningsIsMutable();
       warnings_.add(value);
       bitField0_ |= 0x00000080;
+      onChanged();
+      return this;
+    }
+
+    private java.lang.Object manifestIntegritySha256_ = "";
+    /**
+     * <pre>
+     * Verified outer integrity of the complete durable manifest. Candidate
+     * planning pins this value with catalog_id; checksum_sha256 remains the
+     * existing catalog selector and must not be substituted for this integrity.
+     * Empty for an in-memory startup fallback without durable catalog authority.
+     * </pre>
+     *
+     * <code>string manifest_integrity_sha256 = 9 [json_name = "manifestIntegritySha256"];</code>
+     * @return The manifestIntegritySha256.
+     */
+    public java.lang.String getManifestIntegritySha256() {
+      java.lang.Object ref = manifestIntegritySha256_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        manifestIntegritySha256_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <pre>
+     * Verified outer integrity of the complete durable manifest. Candidate
+     * planning pins this value with catalog_id; checksum_sha256 remains the
+     * existing catalog selector and must not be substituted for this integrity.
+     * Empty for an in-memory startup fallback without durable catalog authority.
+     * </pre>
+     *
+     * <code>string manifest_integrity_sha256 = 9 [json_name = "manifestIntegritySha256"];</code>
+     * @return The bytes for manifestIntegritySha256.
+     */
+    public com.google.protobuf.ByteString
+        getManifestIntegritySha256Bytes() {
+      java.lang.Object ref = manifestIntegritySha256_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b =
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        manifestIntegritySha256_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <pre>
+     * Verified outer integrity of the complete durable manifest. Candidate
+     * planning pins this value with catalog_id; checksum_sha256 remains the
+     * existing catalog selector and must not be substituted for this integrity.
+     * Empty for an in-memory startup fallback without durable catalog authority.
+     * </pre>
+     *
+     * <code>string manifest_integrity_sha256 = 9 [json_name = "manifestIntegritySha256"];</code>
+     * @param value The manifestIntegritySha256 to set.
+     * @return This builder for chaining.
+     */
+    public Builder setManifestIntegritySha256(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      manifestIntegritySha256_ = value;
+      bitField0_ |= 0x00000100;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Verified outer integrity of the complete durable manifest. Candidate
+     * planning pins this value with catalog_id; checksum_sha256 remains the
+     * existing catalog selector and must not be substituted for this integrity.
+     * Empty for an in-memory startup fallback without durable catalog authority.
+     * </pre>
+     *
+     * <code>string manifest_integrity_sha256 = 9 [json_name = "manifestIntegritySha256"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearManifestIntegritySha256() {
+      manifestIntegritySha256_ = getDefaultInstance().getManifestIntegritySha256();
+      bitField0_ = (bitField0_ & ~0x00000100);
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Verified outer integrity of the complete durable manifest. Candidate
+     * planning pins this value with catalog_id; checksum_sha256 remains the
+     * existing catalog selector and must not be substituted for this integrity.
+     * Empty for an in-memory startup fallback without durable catalog authority.
+     * </pre>
+     *
+     * <code>string manifest_integrity_sha256 = 9 [json_name = "manifestIntegritySha256"];</code>
+     * @param value The bytes for manifestIntegritySha256 to set.
+     * @return This builder for chaining.
+     */
+    public Builder setManifestIntegritySha256Bytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      manifestIntegritySha256_ = value;
+      bitField0_ |= 0x00000100;
       onChanged();
       return this;
     }

@@ -30,6 +30,18 @@ class MigrationRunRequest extends \Google\Protobuf\Internal\Message
      * Generated from protobuf field <code>string idempotency_key = 4 [json_name = "idempotencyKey"];</code>
      */
     protected $idempotency_key = '';
+    /**
+     * ApproveMigrationPlan candidate mode only: explicit echoes of the exact
+     * immutable native plan and complete review fingerprint set. Missing,
+     * duplicate, foreign or mismatched review evidence is refused.
+     *
+     * Generated from protobuf field <code>string expected_operations_hash = 5 [json_name = "expectedOperationsHash"];</code>
+     */
+    protected $expected_operations_hash = '';
+    /**
+     * Generated from protobuf field <code>repeated string reviewed_operation_fingerprints = 6 [json_name = "reviewedOperationFingerprints"];</code>
+     */
+    private $reviewed_operation_fingerprints;
 
     /**
      * Constructor.
@@ -41,6 +53,11 @@ class MigrationRunRequest extends \Google\Protobuf\Internal\Message
      *     @type string $run_id
      *     @type string $project_id
      *     @type string $idempotency_key
+     *     @type string $expected_operations_hash
+     *           ApproveMigrationPlan candidate mode only: explicit echoes of the exact
+     *           immutable native plan and complete review fingerprint set. Missing,
+     *           duplicate, foreign or mismatched review evidence is refused.
+     *     @type string[] $reviewed_operation_fingerprints
      * }
      */
     public function __construct($data = NULL) {
@@ -142,6 +159,58 @@ class MigrationRunRequest extends \Google\Protobuf\Internal\Message
     {
         GPBUtil::checkString($var, True);
         $this->idempotency_key = $var;
+
+        return $this;
+    }
+
+    /**
+     * ApproveMigrationPlan candidate mode only: explicit echoes of the exact
+     * immutable native plan and complete review fingerprint set. Missing,
+     * duplicate, foreign or mismatched review evidence is refused.
+     *
+     * Generated from protobuf field <code>string expected_operations_hash = 5 [json_name = "expectedOperationsHash"];</code>
+     * @return string
+     */
+    public function getExpectedOperationsHash()
+    {
+        return $this->expected_operations_hash;
+    }
+
+    /**
+     * ApproveMigrationPlan candidate mode only: explicit echoes of the exact
+     * immutable native plan and complete review fingerprint set. Missing,
+     * duplicate, foreign or mismatched review evidence is refused.
+     *
+     * Generated from protobuf field <code>string expected_operations_hash = 5 [json_name = "expectedOperationsHash"];</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setExpectedOperationsHash($var)
+    {
+        GPBUtil::checkString($var, True);
+        $this->expected_operations_hash = $var;
+
+        return $this;
+    }
+
+    /**
+     * Generated from protobuf field <code>repeated string reviewed_operation_fingerprints = 6 [json_name = "reviewedOperationFingerprints"];</code>
+     * @return RepeatedField<string>
+     */
+    public function getReviewedOperationFingerprints()
+    {
+        return $this->reviewed_operation_fingerprints;
+    }
+
+    /**
+     * Generated from protobuf field <code>repeated string reviewed_operation_fingerprints = 6 [json_name = "reviewedOperationFingerprints"];</code>
+     * @param string[] $var
+     * @return $this
+     */
+    public function setReviewedOperationFingerprints($var)
+    {
+        $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::STRING);
+        $this->reviewed_operation_fingerprints = $arr;
 
         return $this;
     }

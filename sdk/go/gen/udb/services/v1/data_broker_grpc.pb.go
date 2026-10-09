@@ -511,6 +511,8 @@ type DataBrokerClient interface {
 	ListResources(ctx context.Context, in *v1.ResourceAdminRequest, opts ...grpc.CallOption) (*v1.ResourceListResponse, error)
 	// Catalog administration.
 	// Stage a new catalog manifest version (validate + store as STAGED).
+	// Ordinary compatibility is unchanged. An explicit reviewed migration run
+	// must prove the exact authorized, approved and applied candidate transition.
 	// Requires scope: udb:admin
 	// UDB contract: /udb.services.v1.DataBroker/StageCatalog
 	// Listener: data plane.
@@ -521,7 +523,8 @@ type DataBrokerClient interface {
 	// Idempotency fields: no declared method replay contract.
 	// End UDB contract.
 	StageCatalog(ctx context.Context, in *v1.StageCatalogRequest, opts ...grpc.CallOption) (*v1.CatalogVersionResponse, error)
-	// Activate a STAGED catalog version.
+	// Activate a STAGED catalog version. Reviewed candidates require the same
+	// durable run reference; approval/application/base evidence is checked again.
 	// Requires scope: udb:admin
 	// UDB contract: /udb.services.v1.DataBroker/ActivateCatalog
 	// Listener: data plane.
@@ -577,7 +580,9 @@ type DataBrokerClient interface {
 	// End UDB contract.
 	GetCatalogVersion(ctx context.Context, in *v1.CatalogVersionRequest, opts ...grpc.CallOption) (*v1.CatalogVersionResponse, error)
 	// Migration planning and apply.
-	// Plan a migration against the active catalog without executing it.
+	// Plan a migration without executing it. Ordinary mode uses the ACTIVE
+	// catalog. Candidate mode durably binds an unstaged manifest to the exact
+	// proven ACTIVE base and computes the immutable native review/application plan.
 	// Requires scope: udb:admin
 	// UDB contract: /udb.services.v1.DataBroker/PlanMigration
 	// Listener: data plane.
@@ -588,7 +593,9 @@ type DataBrokerClient interface {
 	// Idempotency fields: no declared method replay contract.
 	// End UDB contract.
 	PlanMigration(ctx context.Context, in *v1.MigrationPlanRequest, opts ...grpc.CallOption) (*v1.MigrationPlanResponse, error)
-	// Apply a previously planned (and optionally approved) migration.
+	// Apply a previously approved migration, or resume APPLYING/VERIFYING work
+	// with its exact durable token. Reviewed candidates also bind caller tenant
+	// and verified actor; their native application evidence is exposed in status.
 	// Requires scope: udb:admin
 	// UDB contract: /udb.services.v1.DataBroker/ApplyMigration
 	// Listener: data plane.
@@ -621,7 +628,9 @@ type DataBrokerClient interface {
 	// Idempotency fields: no declared method replay contract.
 	// End UDB contract.
 	ListMigrationRuns(ctx context.Context, in *v1.MigrationRunListRequest, opts ...grpc.CallOption) (*v1.MigrationRunListResponse, error)
-	// Approve a migration plan that requires review.
+	// Approve a migration plan that requires review. Candidate approval records
+	// the verified authorized actor and exact operations hash/fingerprint echoes;
+	// it cannot authorize blocked work or accept a filesystem review receipt.
 	// Requires scope: udb:admin
 	// UDB contract: /udb.services.v1.DataBroker/ApproveMigrationPlan
 	// Listener: data plane.
@@ -1894,9 +1903,12 @@ type DataBrokerServer interface {
 	ListResources(context.Context, *v1.ResourceAdminRequest) (*v1.ResourceListResponse, error)
 	// Catalog administration.
 	// Stage a new catalog manifest version (validate + store as STAGED).
+	// Ordinary compatibility is unchanged. An explicit reviewed migration run
+	// must prove the exact authorized, approved and applied candidate transition.
 	// Requires scope: udb:admin
 	StageCatalog(context.Context, *v1.StageCatalogRequest) (*v1.CatalogVersionResponse, error)
-	// Activate a STAGED catalog version.
+	// Activate a STAGED catalog version. Reviewed candidates require the same
+	// durable run reference; approval/application/base evidence is checked again.
 	// Requires scope: udb:admin
 	ActivateCatalog(context.Context, *v1.CatalogVersionRequest) (*v1.CatalogVersionResponse, error)
 	// Roll back to the previous ACTIVE catalog version.
@@ -1912,10 +1924,14 @@ type DataBrokerServer interface {
 	// Requires scope: udb:admin
 	GetCatalogVersion(context.Context, *v1.CatalogVersionRequest) (*v1.CatalogVersionResponse, error)
 	// Migration planning and apply.
-	// Plan a migration against the active catalog without executing it.
+	// Plan a migration without executing it. Ordinary mode uses the ACTIVE
+	// catalog. Candidate mode durably binds an unstaged manifest to the exact
+	// proven ACTIVE base and computes the immutable native review/application plan.
 	// Requires scope: udb:admin
 	PlanMigration(context.Context, *v1.MigrationPlanRequest) (*v1.MigrationPlanResponse, error)
-	// Apply a previously planned (and optionally approved) migration.
+	// Apply a previously approved migration, or resume APPLYING/VERIFYING work
+	// with its exact durable token. Reviewed candidates also bind caller tenant
+	// and verified actor; their native application evidence is exposed in status.
 	// Requires scope: udb:admin
 	ApplyMigration(context.Context, *v1.MigrationApplyRequest) (*v1.MigrationStatusResponse, error)
 	// Return the status of a migration run.
@@ -1924,7 +1940,9 @@ type DataBrokerServer interface {
 	// Return migration runs for an admin console page.
 	// Requires scope: udb:admin, udb:admin:viewer, or legacy udb:portal:viewer.
 	ListMigrationRuns(context.Context, *v1.MigrationRunListRequest) (*v1.MigrationRunListResponse, error)
-	// Approve a migration plan that requires review.
+	// Approve a migration plan that requires review. Candidate approval records
+	// the verified authorized actor and exact operations hash/fingerprint echoes;
+	// it cannot authorize blocked work or accept a filesystem review receipt.
 	// Requires scope: udb:admin
 	ApproveMigrationPlan(context.Context, *v1.MigrationRunRequest) (*v1.MigrationStatusResponse, error)
 	// DLQ management.

@@ -27,7 +27,7 @@ class MigrationStatusResponse extends \Google\Protobuf\Internal\Message
      */
     protected $catalog_version = '';
     /**
-     * States: DRY_RUN, PREFLIGHT, APPLYING, VERIFYING, COMPLETED, ERROR, DEAD_LETTER
+     * States: DRY_RUN, PREFLIGHT, APPROVED, APPLYING, VERIFYING, COMPLETED, ERROR, DEAD_LETTER
      *
      * Generated from protobuf field <code>string state = 4 [json_name = "state"];</code>
      */
@@ -56,6 +56,10 @@ class MigrationStatusResponse extends \Google\Protobuf\Internal\Message
      * Generated from protobuf field <code>optional bool applyable = 10 [json_name = "applyable"];</code>
      */
     protected $applyable = null;
+    /**
+     * Generated from protobuf field <code>.udb.entity.v1.ReviewedCatalogTransitionEvidence reviewed_catalog_transition = 11 [json_name = "reviewedCatalogTransition"];</code>
+     */
+    protected $reviewed_catalog_transition = null;
 
     /**
      * Constructor.
@@ -67,13 +71,14 @@ class MigrationStatusResponse extends \Google\Protobuf\Internal\Message
      *     @type string $project_id
      *     @type string $catalog_version
      *     @type string $state
-     *           States: DRY_RUN, PREFLIGHT, APPLYING, VERIFYING, COMPLETED, ERROR, DEAD_LETTER
+     *           States: DRY_RUN, PREFLIGHT, APPROVED, APPLYING, VERIFYING, COMPLETED, ERROR, DEAD_LETTER
      *     @type string $started_at
      *     @type string $finished_at
      *     @type \Udb\Entity\V1\MigrationOperationStatus[] $operations
      *     @type string $error
      *     @type string $approval_token
      *     @type bool $applyable
+     *     @type \Udb\Entity\V1\ReviewedCatalogTransitionEvidence $reviewed_catalog_transition
      * }
      */
     public function __construct($data = NULL) {
@@ -148,7 +153,7 @@ class MigrationStatusResponse extends \Google\Protobuf\Internal\Message
     }
 
     /**
-     * States: DRY_RUN, PREFLIGHT, APPLYING, VERIFYING, COMPLETED, ERROR, DEAD_LETTER
+     * States: DRY_RUN, PREFLIGHT, APPROVED, APPLYING, VERIFYING, COMPLETED, ERROR, DEAD_LETTER
      *
      * Generated from protobuf field <code>string state = 4 [json_name = "state"];</code>
      * @return string
@@ -159,7 +164,7 @@ class MigrationStatusResponse extends \Google\Protobuf\Internal\Message
     }
 
     /**
-     * States: DRY_RUN, PREFLIGHT, APPLYING, VERIFYING, COMPLETED, ERROR, DEAD_LETTER
+     * States: DRY_RUN, PREFLIGHT, APPROVED, APPLYING, VERIFYING, COMPLETED, ERROR, DEAD_LETTER
      *
      * Generated from protobuf field <code>string state = 4 [json_name = "state"];</code>
      * @param string $var
@@ -321,6 +326,38 @@ class MigrationStatusResponse extends \Google\Protobuf\Internal\Message
     {
         GPBUtil::checkBool($var);
         $this->applyable = $var;
+
+        return $this;
+    }
+
+    /**
+     * Generated from protobuf field <code>.udb.entity.v1.ReviewedCatalogTransitionEvidence reviewed_catalog_transition = 11 [json_name = "reviewedCatalogTransition"];</code>
+     * @return \Udb\Entity\V1\ReviewedCatalogTransitionEvidence|null
+     */
+    public function getReviewedCatalogTransition()
+    {
+        return $this->reviewed_catalog_transition;
+    }
+
+    public function hasReviewedCatalogTransition()
+    {
+        return isset($this->reviewed_catalog_transition);
+    }
+
+    public function clearReviewedCatalogTransition()
+    {
+        unset($this->reviewed_catalog_transition);
+    }
+
+    /**
+     * Generated from protobuf field <code>.udb.entity.v1.ReviewedCatalogTransitionEvidence reviewed_catalog_transition = 11 [json_name = "reviewedCatalogTransition"];</code>
+     * @param \Udb\Entity\V1\ReviewedCatalogTransitionEvidence $var
+     * @return $this
+     */
+    public function setReviewedCatalogTransition($var)
+    {
+        GPBUtil::checkMessage($var, \Udb\Entity\V1\ReviewedCatalogTransitionEvidence::class);
+        $this->reviewed_catalog_transition = $var;
 
         return $this;
     }

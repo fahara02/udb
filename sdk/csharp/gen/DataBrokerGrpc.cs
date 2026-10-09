@@ -1292,6 +1292,8 @@ namespace Udb.Services.V1 {
       /// <summary>
       /// Catalog administration.
       /// Stage a new catalog manifest version (validate + store as STAGED).
+      /// Ordinary compatibility is unchanged. An explicit reviewed migration run
+      /// must prove the exact authorized, approved and applied candidate transition.
       /// Requires scope: udb:admin
       /// </summary>
       /// <param name="request">The request received from the client.</param>
@@ -1304,7 +1306,8 @@ namespace Udb.Services.V1 {
       }
 
       /// <summary>
-      /// Activate a STAGED catalog version.
+      /// Activate a STAGED catalog version. Reviewed candidates require the same
+      /// durable run reference; approval/application/base evidence is checked again.
       /// Requires scope: udb:admin
       /// </summary>
       /// <param name="request">The request received from the client.</param>
@@ -1370,7 +1373,9 @@ namespace Udb.Services.V1 {
 
       /// <summary>
       /// Migration planning and apply.
-      /// Plan a migration against the active catalog without executing it.
+      /// Plan a migration without executing it. Ordinary mode uses the ACTIVE
+      /// catalog. Candidate mode durably binds an unstaged manifest to the exact
+      /// proven ACTIVE base and computes the immutable native review/application plan.
       /// Requires scope: udb:admin
       /// </summary>
       /// <param name="request">The request received from the client.</param>
@@ -1383,7 +1388,9 @@ namespace Udb.Services.V1 {
       }
 
       /// <summary>
-      /// Apply a previously planned (and optionally approved) migration.
+      /// Apply a previously approved migration, or resume APPLYING/VERIFYING work
+      /// with its exact durable token. Reviewed candidates also bind caller tenant
+      /// and verified actor; their native application evidence is exposed in status.
       /// Requires scope: udb:admin
       /// </summary>
       /// <param name="request">The request received from the client.</param>
@@ -1422,7 +1429,9 @@ namespace Udb.Services.V1 {
       }
 
       /// <summary>
-      /// Approve a migration plan that requires review.
+      /// Approve a migration plan that requires review. Candidate approval records
+      /// the verified authorized actor and exact operations hash/fingerprint echoes;
+      /// it cannot authorize blocked work or accept a filesystem review receipt.
       /// Requires scope: udb:admin
       /// </summary>
       /// <param name="request">The request received from the client.</param>
@@ -2937,6 +2946,8 @@ namespace Udb.Services.V1 {
       /// <summary>
       /// Catalog administration.
       /// Stage a new catalog manifest version (validate + store as STAGED).
+      /// Ordinary compatibility is unchanged. An explicit reviewed migration run
+      /// must prove the exact authorized, approved and applied candidate transition.
       /// Requires scope: udb:admin
       /// </summary>
       /// <param name="request">The request to send to the server.</param>
@@ -2952,6 +2963,8 @@ namespace Udb.Services.V1 {
       /// <summary>
       /// Catalog administration.
       /// Stage a new catalog manifest version (validate + store as STAGED).
+      /// Ordinary compatibility is unchanged. An explicit reviewed migration run
+      /// must prove the exact authorized, approved and applied candidate transition.
       /// Requires scope: udb:admin
       /// </summary>
       /// <param name="request">The request to send to the server.</param>
@@ -2965,6 +2978,8 @@ namespace Udb.Services.V1 {
       /// <summary>
       /// Catalog administration.
       /// Stage a new catalog manifest version (validate + store as STAGED).
+      /// Ordinary compatibility is unchanged. An explicit reviewed migration run
+      /// must prove the exact authorized, approved and applied candidate transition.
       /// Requires scope: udb:admin
       /// </summary>
       /// <param name="request">The request to send to the server.</param>
@@ -2980,6 +2995,8 @@ namespace Udb.Services.V1 {
       /// <summary>
       /// Catalog administration.
       /// Stage a new catalog manifest version (validate + store as STAGED).
+      /// Ordinary compatibility is unchanged. An explicit reviewed migration run
+      /// must prove the exact authorized, approved and applied candidate transition.
       /// Requires scope: udb:admin
       /// </summary>
       /// <param name="request">The request to send to the server.</param>
@@ -2991,7 +3008,8 @@ namespace Udb.Services.V1 {
         return CallInvoker.AsyncUnaryCall(__Method_StageCatalog, null, options, request);
       }
       /// <summary>
-      /// Activate a STAGED catalog version.
+      /// Activate a STAGED catalog version. Reviewed candidates require the same
+      /// durable run reference; approval/application/base evidence is checked again.
       /// Requires scope: udb:admin
       /// </summary>
       /// <param name="request">The request to send to the server.</param>
@@ -3005,7 +3023,8 @@ namespace Udb.Services.V1 {
         return ActivateCatalog(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
       /// <summary>
-      /// Activate a STAGED catalog version.
+      /// Activate a STAGED catalog version. Reviewed candidates require the same
+      /// durable run reference; approval/application/base evidence is checked again.
       /// Requires scope: udb:admin
       /// </summary>
       /// <param name="request">The request to send to the server.</param>
@@ -3017,7 +3036,8 @@ namespace Udb.Services.V1 {
         return CallInvoker.BlockingUnaryCall(__Method_ActivateCatalog, null, options, request);
       }
       /// <summary>
-      /// Activate a STAGED catalog version.
+      /// Activate a STAGED catalog version. Reviewed candidates require the same
+      /// durable run reference; approval/application/base evidence is checked again.
       /// Requires scope: udb:admin
       /// </summary>
       /// <param name="request">The request to send to the server.</param>
@@ -3031,7 +3051,8 @@ namespace Udb.Services.V1 {
         return ActivateCatalogAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
       /// <summary>
-      /// Activate a STAGED catalog version.
+      /// Activate a STAGED catalog version. Reviewed candidates require the same
+      /// durable run reference; approval/application/base evidence is checked again.
       /// Requires scope: udb:admin
       /// </summary>
       /// <param name="request">The request to send to the server.</param>
@@ -3252,7 +3273,9 @@ namespace Udb.Services.V1 {
       }
       /// <summary>
       /// Migration planning and apply.
-      /// Plan a migration against the active catalog without executing it.
+      /// Plan a migration without executing it. Ordinary mode uses the ACTIVE
+      /// catalog. Candidate mode durably binds an unstaged manifest to the exact
+      /// proven ACTIVE base and computes the immutable native review/application plan.
       /// Requires scope: udb:admin
       /// </summary>
       /// <param name="request">The request to send to the server.</param>
@@ -3267,7 +3290,9 @@ namespace Udb.Services.V1 {
       }
       /// <summary>
       /// Migration planning and apply.
-      /// Plan a migration against the active catalog without executing it.
+      /// Plan a migration without executing it. Ordinary mode uses the ACTIVE
+      /// catalog. Candidate mode durably binds an unstaged manifest to the exact
+      /// proven ACTIVE base and computes the immutable native review/application plan.
       /// Requires scope: udb:admin
       /// </summary>
       /// <param name="request">The request to send to the server.</param>
@@ -3280,7 +3305,9 @@ namespace Udb.Services.V1 {
       }
       /// <summary>
       /// Migration planning and apply.
-      /// Plan a migration against the active catalog without executing it.
+      /// Plan a migration without executing it. Ordinary mode uses the ACTIVE
+      /// catalog. Candidate mode durably binds an unstaged manifest to the exact
+      /// proven ACTIVE base and computes the immutable native review/application plan.
       /// Requires scope: udb:admin
       /// </summary>
       /// <param name="request">The request to send to the server.</param>
@@ -3295,7 +3322,9 @@ namespace Udb.Services.V1 {
       }
       /// <summary>
       /// Migration planning and apply.
-      /// Plan a migration against the active catalog without executing it.
+      /// Plan a migration without executing it. Ordinary mode uses the ACTIVE
+      /// catalog. Candidate mode durably binds an unstaged manifest to the exact
+      /// proven ACTIVE base and computes the immutable native review/application plan.
       /// Requires scope: udb:admin
       /// </summary>
       /// <param name="request">The request to send to the server.</param>
@@ -3307,7 +3336,9 @@ namespace Udb.Services.V1 {
         return CallInvoker.AsyncUnaryCall(__Method_PlanMigration, null, options, request);
       }
       /// <summary>
-      /// Apply a previously planned (and optionally approved) migration.
+      /// Apply a previously approved migration, or resume APPLYING/VERIFYING work
+      /// with its exact durable token. Reviewed candidates also bind caller tenant
+      /// and verified actor; their native application evidence is exposed in status.
       /// Requires scope: udb:admin
       /// </summary>
       /// <param name="request">The request to send to the server.</param>
@@ -3321,7 +3352,9 @@ namespace Udb.Services.V1 {
         return ApplyMigration(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
       /// <summary>
-      /// Apply a previously planned (and optionally approved) migration.
+      /// Apply a previously approved migration, or resume APPLYING/VERIFYING work
+      /// with its exact durable token. Reviewed candidates also bind caller tenant
+      /// and verified actor; their native application evidence is exposed in status.
       /// Requires scope: udb:admin
       /// </summary>
       /// <param name="request">The request to send to the server.</param>
@@ -3333,7 +3366,9 @@ namespace Udb.Services.V1 {
         return CallInvoker.BlockingUnaryCall(__Method_ApplyMigration, null, options, request);
       }
       /// <summary>
-      /// Apply a previously planned (and optionally approved) migration.
+      /// Apply a previously approved migration, or resume APPLYING/VERIFYING work
+      /// with its exact durable token. Reviewed candidates also bind caller tenant
+      /// and verified actor; their native application evidence is exposed in status.
       /// Requires scope: udb:admin
       /// </summary>
       /// <param name="request">The request to send to the server.</param>
@@ -3347,7 +3382,9 @@ namespace Udb.Services.V1 {
         return ApplyMigrationAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
       /// <summary>
-      /// Apply a previously planned (and optionally approved) migration.
+      /// Apply a previously approved migration, or resume APPLYING/VERIFYING work
+      /// with its exact durable token. Reviewed candidates also bind caller tenant
+      /// and verified actor; their native application evidence is exposed in status.
       /// Requires scope: udb:admin
       /// </summary>
       /// <param name="request">The request to send to the server.</param>
@@ -3463,7 +3500,9 @@ namespace Udb.Services.V1 {
         return CallInvoker.AsyncUnaryCall(__Method_ListMigrationRuns, null, options, request);
       }
       /// <summary>
-      /// Approve a migration plan that requires review.
+      /// Approve a migration plan that requires review. Candidate approval records
+      /// the verified authorized actor and exact operations hash/fingerprint echoes;
+      /// it cannot authorize blocked work or accept a filesystem review receipt.
       /// Requires scope: udb:admin
       /// </summary>
       /// <param name="request">The request to send to the server.</param>
@@ -3477,7 +3516,9 @@ namespace Udb.Services.V1 {
         return ApproveMigrationPlan(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
       /// <summary>
-      /// Approve a migration plan that requires review.
+      /// Approve a migration plan that requires review. Candidate approval records
+      /// the verified authorized actor and exact operations hash/fingerprint echoes;
+      /// it cannot authorize blocked work or accept a filesystem review receipt.
       /// Requires scope: udb:admin
       /// </summary>
       /// <param name="request">The request to send to the server.</param>
@@ -3489,7 +3530,9 @@ namespace Udb.Services.V1 {
         return CallInvoker.BlockingUnaryCall(__Method_ApproveMigrationPlan, null, options, request);
       }
       /// <summary>
-      /// Approve a migration plan that requires review.
+      /// Approve a migration plan that requires review. Candidate approval records
+      /// the verified authorized actor and exact operations hash/fingerprint echoes;
+      /// it cannot authorize blocked work or accept a filesystem review receipt.
       /// Requires scope: udb:admin
       /// </summary>
       /// <param name="request">The request to send to the server.</param>
@@ -3503,7 +3546,9 @@ namespace Udb.Services.V1 {
         return ApproveMigrationPlanAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
       /// <summary>
-      /// Approve a migration plan that requires review.
+      /// Approve a migration plan that requires review. Candidate approval records
+      /// the verified authorized actor and exact operations hash/fingerprint echoes;
+      /// it cannot authorize blocked work or accept a filesystem review receipt.
       /// Requires scope: udb:admin
       /// </summary>
       /// <param name="request">The request to send to the server.</param>

@@ -181,7 +181,7 @@ private static final long serialVersionUID = 0L;
   private volatile java.lang.Object status_ = "";
   /**
    * <pre>
-   * States: PENDING, APPLIED, SKIPPED, FAILED, ROLLED_BACK
+   * States: PENDING, APPLIED, VERIFIED, SKIPPED, FAILED, ROLLED_BACK
    * </pre>
    *
    * <code>string status = 5 [json_name = "status"];</code>
@@ -202,7 +202,7 @@ private static final long serialVersionUID = 0L;
   }
   /**
    * <pre>
-   * States: PENDING, APPLIED, SKIPPED, FAILED, ROLLED_BACK
+   * States: PENDING, APPLIED, VERIFIED, SKIPPED, FAILED, ROLLED_BACK
    * </pre>
    *
    * <code>string status = 5 [json_name = "status"];</code>
@@ -926,7 +926,7 @@ private static final long serialVersionUID = 0L;
     private java.lang.Object status_ = "";
     /**
      * <pre>
-     * States: PENDING, APPLIED, SKIPPED, FAILED, ROLLED_BACK
+     * States: PENDING, APPLIED, VERIFIED, SKIPPED, FAILED, ROLLED_BACK
      * </pre>
      *
      * <code>string status = 5 [json_name = "status"];</code>
@@ -946,7 +946,7 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * States: PENDING, APPLIED, SKIPPED, FAILED, ROLLED_BACK
+     * States: PENDING, APPLIED, VERIFIED, SKIPPED, FAILED, ROLLED_BACK
      * </pre>
      *
      * <code>string status = 5 [json_name = "status"];</code>
@@ -967,7 +967,7 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * States: PENDING, APPLIED, SKIPPED, FAILED, ROLLED_BACK
+     * States: PENDING, APPLIED, VERIFIED, SKIPPED, FAILED, ROLLED_BACK
      * </pre>
      *
      * <code>string status = 5 [json_name = "status"];</code>
@@ -984,7 +984,7 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * States: PENDING, APPLIED, SKIPPED, FAILED, ROLLED_BACK
+     * States: PENDING, APPLIED, VERIFIED, SKIPPED, FAILED, ROLLED_BACK
      * </pre>
      *
      * <code>string status = 5 [json_name = "status"];</code>
@@ -998,7 +998,7 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * States: PENDING, APPLIED, SKIPPED, FAILED, ROLLED_BACK
+     * States: PENDING, APPLIED, VERIFIED, SKIPPED, FAILED, ROLLED_BACK
      * </pre>
      *
      * <code>string status = 5 [json_name = "status"];</code>

@@ -48,7 +48,7 @@ public interface MigrationStatusResponseOrBuilder extends
 
   /**
    * <pre>
-   * States: DRY_RUN, PREFLIGHT, APPLYING, VERIFYING, COMPLETED, ERROR, DEAD_LETTER
+   * States: DRY_RUN, PREFLIGHT, APPROVED, APPLYING, VERIFYING, COMPLETED, ERROR, DEAD_LETTER
    * </pre>
    *
    * <code>string state = 4 [json_name = "state"];</code>
@@ -57,7 +57,7 @@ public interface MigrationStatusResponseOrBuilder extends
   java.lang.String getState();
   /**
    * <pre>
-   * States: DRY_RUN, PREFLIGHT, APPLYING, VERIFYING, COMPLETED, ERROR, DEAD_LETTER
+   * States: DRY_RUN, PREFLIGHT, APPROVED, APPLYING, VERIFYING, COMPLETED, ERROR, DEAD_LETTER
    * </pre>
    *
    * <code>string state = 4 [json_name = "state"];</code>
@@ -153,4 +153,19 @@ public interface MigrationStatusResponseOrBuilder extends
    * @return The applyable.
    */
   boolean getApplyable();
+
+  /**
+   * <code>.udb.entity.v1.ReviewedCatalogTransitionEvidence reviewed_catalog_transition = 11 [json_name = "reviewedCatalogTransition"];</code>
+   * @return Whether the reviewedCatalogTransition field is set.
+   */
+  boolean hasReviewedCatalogTransition();
+  /**
+   * <code>.udb.entity.v1.ReviewedCatalogTransitionEvidence reviewed_catalog_transition = 11 [json_name = "reviewedCatalogTransition"];</code>
+   * @return The reviewedCatalogTransition.
+   */
+  com.udb.entity.v1.ReviewedCatalogTransitionEvidence getReviewedCatalogTransition();
+  /**
+   * <code>.udb.entity.v1.ReviewedCatalogTransitionEvidence reviewed_catalog_transition = 11 [json_name = "reviewedCatalogTransition"];</code>
+   */
+  com.udb.entity.v1.ReviewedCatalogTransitionEvidenceOrBuilder getReviewedCatalogTransitionOrBuilder();
 }

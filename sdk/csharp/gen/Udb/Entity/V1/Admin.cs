@@ -159,270 +159,305 @@ namespace Udb.Entity.V1 {
             "Y19qc29uGAQgASgJUghzcGVjSnNvbhInCg9pZGVtcG90ZW5jeV9rZXkYBSAB",
             "KAlSDmlkZW1wb3RlbmN5S2V5EhcKB2RyeV9ydW4YBiABKAhSBmRyeVJ1biJO",
             "ChRSZXNvdXJjZUxpc3RSZXNwb25zZRIYCgdiYWNrZW5kGAEgASgJUgdiYWNr",
-            "ZW5kEhwKCXJlc291cmNlcxgCIAMoCVIJcmVzb3VyY2VzItQBChNTdGFnZUNh",
+            "ZW5kEhwKCXJlc291cmNlcxgCIAMoCVIJcmVzb3VyY2VzIo8CChNTdGFnZUNh",
             "dGFsb2dSZXF1ZXN0EjcKB2NvbnRleHQYASABKAsyHS51ZGIuZW50aXR5LnYx",
             "LlJlcXVlc3RDb250ZXh0Ugdjb250ZXh0EiQKDW1hbmlmZXN0X2pzb24Y6Acg",
             "ASgMUgxtYW5pZmVzdEpzb24SHQoKcHJvamVjdF9pZBgCIAEoCVIJcHJvamVj",
             "dElkEhYKBnJlYXNvbhgDIAEoCVIGcmVhc29uEicKD2lkZW1wb3RlbmN5X2tl",
-            "eRgEIAEoCVIOaWRlbXBvdGVuY3lLZXkiygEKFUNhdGFsb2dWZXJzaW9uUmVx",
-            "dWVzdBI3Cgdjb250ZXh0GAEgASgLMh0udWRiLmVudGl0eS52MS5SZXF1ZXN0",
-            "Q29udGV4dFIHY29udGV4dBIdCgpwcm9qZWN0X2lkGAIgASgJUglwcm9qZWN0",
-            "SWQSGAoHdmVyc2lvbhgDIAEoCVIHdmVyc2lvbhIWCgZyZWFzb24YBCABKAlS",
-            "BnJlYXNvbhInCg9pZGVtcG90ZW5jeV9rZXkYBSABKAlSDmlkZW1wb3RlbmN5",
-            "S2V5Io0CChZDYXRhbG9nVmVyc2lvblJlc3BvbnNlEh0KCmNhdGFsb2dfaWQY",
-            "ASABKAlSCWNhdGFsb2dJZBIdCgpwcm9qZWN0X2lkGAIgASgJUglwcm9qZWN0",
-            "SWQSGAoHdmVyc2lvbhgDIAEoCVIHdmVyc2lvbhIWCgZzdGF0dXMYBCABKAlS",
-            "BnN0YXR1cxInCg9jaGVja3N1bV9zaGEyNTYYBSABKAlSDmNoZWNrc3VtU2hh",
-            "MjU2EiYKD2NyZWF0ZWRfYXRfdW5peBgGIAEoA1INY3JlYXRlZEF0VW5peBIW",
-            "CgZlcnJvcnMYByADKAlSBmVycm9ycxIaCgh3YXJuaW5ncxgIIAMoCVIId2Fy",
-            "bmluZ3MijgEKGUNhdGFsb2dWYWxpZGF0aW9uUmVzcG9uc2USFAoFdmFsaWQY",
-            "ASABKAhSBXZhbGlkEicKD2NoZWNrc3VtX3NoYTI1NhgCIAEoCVIOY2hlY2tz",
-            "dW1TaGEyNTYSFgoGZXJyb3JzGAMgAygJUgZlcnJvcnMSGgoId2FybmluZ3MY",
-            "BCADKAlSCHdhcm5pbmdzIqUBChpDYXRhbG9nVmVyc2lvbkxpc3RSZXNwb25z",
-            "ZRIdCgpwcm9qZWN0X2lkGAEgASgJUglwcm9qZWN0SWQSQQoIdmVyc2lvbnMY",
-            "AiADKAsyJS51ZGIuZW50aXR5LnYxLkNhdGFsb2dWZXJzaW9uUmVzcG9uc2VS",
-            "CHZlcnNpb25zEiUKDmFjdGl2ZV92ZXJzaW9uGAMgASgJUg1hY3RpdmVWZXJz",
-            "aW9uIocBChRNaWdyYXRpb25QbGFuUmVxdWVzdBI3Cgdjb250ZXh0GAEgASgL",
-            "Mh0udWRiLmVudGl0eS52MS5SZXF1ZXN0Q29udGV4dFIHY29udGV4dBIdCgpw",
-            "cm9qZWN0X2lkGAIgASgJUglwcm9qZWN0SWQSFwoHZHJ5X3J1bhgDIAEoCFIG",
-            "ZHJ5UnVuIpgCChVNaWdyYXRpb25QbGFuUmVzcG9uc2USFQoGcnVuX2lkGAEg",
+            "eRgEIAEoCVIOaWRlbXBvdGVuY3lLZXkSOQoZcmV2aWV3ZWRfbWlncmF0aW9u",
+            "X3J1bl9pZBgFIAEoCVIWcmV2aWV3ZWRNaWdyYXRpb25SdW5JZCKFAgoVQ2F0",
+            "YWxvZ1ZlcnNpb25SZXF1ZXN0EjcKB2NvbnRleHQYASABKAsyHS51ZGIuZW50",
+            "aXR5LnYxLlJlcXVlc3RDb250ZXh0Ugdjb250ZXh0Eh0KCnByb2plY3RfaWQY",
+            "AiABKAlSCXByb2plY3RJZBIYCgd2ZXJzaW9uGAMgASgJUgd2ZXJzaW9uEhYK",
+            "BnJlYXNvbhgEIAEoCVIGcmVhc29uEicKD2lkZW1wb3RlbmN5X2tleRgFIAEo",
+            "CVIOaWRlbXBvdGVuY3lLZXkSOQoZcmV2aWV3ZWRfbWlncmF0aW9uX3J1bl9p",
+            "ZBgGIAEoCVIWcmV2aWV3ZWRNaWdyYXRpb25SdW5JZCLJAgoWQ2F0YWxvZ1Zl",
+            "cnNpb25SZXNwb25zZRIdCgpjYXRhbG9nX2lkGAEgASgJUgljYXRhbG9nSWQS",
+            "HQoKcHJvamVjdF9pZBgCIAEoCVIJcHJvamVjdElkEhgKB3ZlcnNpb24YAyAB",
+            "KAlSB3ZlcnNpb24SFgoGc3RhdHVzGAQgASgJUgZzdGF0dXMSJwoPY2hlY2tz",
+            "dW1fc2hhMjU2GAUgASgJUg5jaGVja3N1bVNoYTI1NhImCg9jcmVhdGVkX2F0",
+            "X3VuaXgYBiABKANSDWNyZWF0ZWRBdFVuaXgSFgoGZXJyb3JzGAcgAygJUgZl",
+            "cnJvcnMSGgoId2FybmluZ3MYCCADKAlSCHdhcm5pbmdzEjoKGW1hbmlmZXN0",
+            "X2ludGVncml0eV9zaGEyNTYYCSABKAlSF21hbmlmZXN0SW50ZWdyaXR5U2hh",
+            "MjU2Io4BChlDYXRhbG9nVmFsaWRhdGlvblJlc3BvbnNlEhQKBXZhbGlkGAEg",
+            "ASgIUgV2YWxpZBInCg9jaGVja3N1bV9zaGEyNTYYAiABKAlSDmNoZWNrc3Vt",
+            "U2hhMjU2EhYKBmVycm9ycxgDIAMoCVIGZXJyb3JzEhoKCHdhcm5pbmdzGAQg",
+            "AygJUgh3YXJuaW5ncyKlAQoaQ2F0YWxvZ1ZlcnNpb25MaXN0UmVzcG9uc2US",
+            "HQoKcHJvamVjdF9pZBgBIAEoCVIJcHJvamVjdElkEkEKCHZlcnNpb25zGAIg",
+            "AygLMiUudWRiLmVudGl0eS52MS5DYXRhbG9nVmVyc2lvblJlc3BvbnNlUgh2",
+            "ZXJzaW9ucxIlCg5hY3RpdmVfdmVyc2lvbhgDIAEoCVINYWN0aXZlVmVyc2lv",
+            "biKAAwoUTWlncmF0aW9uUGxhblJlcXVlc3QSNwoHY29udGV4dBgBIAEoCzId",
+            "LnVkYi5lbnRpdHkudjEuUmVxdWVzdENvbnRleHRSB2NvbnRleHQSHQoKcHJv",
+            "amVjdF9pZBgCIAEoCVIJcHJvamVjdElkEhcKB2RyeV9ydW4YAyABKAhSBmRy",
+            "eVJ1bhI7ChpleHBlY3RlZF9hY3RpdmVfY2F0YWxvZ19pZBgEIAEoCVIXZXhw",
+            "ZWN0ZWRBY3RpdmVDYXRhbG9nSWQSWAopZXhwZWN0ZWRfYWN0aXZlX21hbmlm",
+            "ZXN0X2ludGVncml0eV9zaGEyNTYYBSABKAlSJWV4cGVjdGVkQWN0aXZlTWFu",
+            "aWZlc3RJbnRlZ3JpdHlTaGEyNTYSJwoPaWRlbXBvdGVuY3lfa2V5GAYgASgJ",
+            "Ug5pZGVtcG90ZW5jeUtleRI3ChdjYW5kaWRhdGVfbWFuaWZlc3RfanNvbhjo",
+            "ByABKAxSFWNhbmRpZGF0ZU1hbmlmZXN0SnNvbiKiBgohUmV2aWV3ZWRDYXRh",
+            "bG9nVHJhbnNpdGlvbkV2aWRlbmNlEhUKBnJ1bl9pZBgBIAEoCVIFcnVuSWQS",
+            "GwoJdGVuYW50X2lkGAIgASgJUgh0ZW5hbnRJZBIdCgpwcm9qZWN0X2lkGAMg",
+            "ASgJUglwcm9qZWN0SWQSOwoaZXhwZWN0ZWRfYWN0aXZlX2NhdGFsb2dfaWQY",
+            "BCABKAlSF2V4cGVjdGVkQWN0aXZlQ2F0YWxvZ0lkElgKKWV4cGVjdGVkX2Fj",
+            "dGl2ZV9tYW5pZmVzdF9pbnRlZ3JpdHlfc2hhMjU2GAUgASgJUiVleHBlY3Rl",
+            "ZEFjdGl2ZU1hbmlmZXN0SW50ZWdyaXR5U2hhMjU2EkcKIHRhcmdldF9tYW5p",
+            "ZmVzdF9pbnRlZ3JpdHlfc2hhMjU2GAYgASgJUh10YXJnZXRNYW5pZmVzdElu",
+            "dGVncml0eVNoYTI1NhJBCh10YXJnZXRfc2NoZW1hX2NoZWNrc3VtX3NoYTI1",
+            "NhgHIAEoCVIadGFyZ2V0U2NoZW1hQ2hlY2tzdW1TaGEyNTYSJwoPb3BlcmF0",
+            "aW9uc19oYXNoGAggASgJUg5vcGVyYXRpb25zSGFzaBJGCh9yZXZpZXdlZF9v",
+            "cGVyYXRpb25fZmluZ2VycHJpbnRzGAkgAygJUh1yZXZpZXdlZE9wZXJhdGlv",
+            "bkZpbmdlcnByaW50cxIfCgthcHByb3ZlZF9ieRgKIAEoCVIKYXBwcm92ZWRC",
+            "eRIoChBhcHByb3ZlZF9hdF91bml4GAsgASgDUg5hcHByb3ZlZEF0VW5peBIr",
+            "ChFhcHBsaWNhdGlvbl9zdGF0ZRgMIAEoCVIQYXBwbGljYXRpb25TdGF0ZRI2",
+            "ChdhcHBsaWVkX29wZXJhdGlvbnNfaGFzaBgNIAEoCVIVYXBwbGllZE9wZXJh",
+            "dGlvbnNIYXNoEiYKD2FwcGxpZWRfYXRfdW5peBgOIAEoA1INYXBwbGllZEF0",
+            "VW5peBI+ChthcHBsaWNhdGlvbl9ldmlkZW5jZV9zaGEyNTYYDyABKAlSGWFw",
+            "cGxpY2F0aW9uRXZpZGVuY2VTaGEyNTYiigMKFU1pZ3JhdGlvblBsYW5SZXNw",
+            "b25zZRIVCgZydW5faWQYASABKAlSBXJ1bklkEh0KCnByb2plY3RfaWQYAiAB",
+            "KAlSCXByb2plY3RJZBInCg9jYXRhbG9nX3ZlcnNpb24YAyABKAlSDmNhdGFs",
+            "b2dWZXJzaW9uEhQKBXN0YXRlGAQgASgJUgVzdGF0ZRIeCgpvcGVyYXRpb25z",
+            "GAUgAygJUgpvcGVyYXRpb25zEicKD3JlcXVpcmVzX3JldmlldxgGIAMoCVIO",
+            "cmVxdWlyZXNSZXZpZXcSGAoHYmxvY2tlZBgHIAMoCVIHYmxvY2tlZBInCg9v",
+            "cGVyYXRpb25zX2hhc2gYCCABKAlSDm9wZXJhdGlvbnNIYXNoEnAKG3Jldmll",
+            "d2VkX2NhdGFsb2dfdHJhbnNpdGlvbhgJIAEoCzIwLnVkYi5lbnRpdHkudjEu",
+            "UmV2aWV3ZWRDYXRhbG9nVHJhbnNpdGlvbkV2aWRlbmNlUhlyZXZpZXdlZENh",
+            "dGFsb2dUcmFuc2l0aW9uItYBChVNaWdyYXRpb25BcHBseVJlcXVlc3QSNwoH",
+            "Y29udGV4dBgBIAEoCzIdLnVkYi5lbnRpdHkudjEuUmVxdWVzdENvbnRleHRS",
+            "B2NvbnRleHQSFQoGcnVuX2lkGAIgASgJUgVydW5JZBIdCgpwcm9qZWN0X2lk",
+            "GAMgASgJUglwcm9qZWN0SWQSJQoOYXBwcm92YWxfdG9rZW4YBCABKAlSDWFw",
+            "cHJvdmFsVG9rZW4SJwoPaWRlbXBvdGVuY3lfa2V5GAUgASgJUg5pZGVtcG90",
+            "ZW5jeUtleSKvAgoTTWlncmF0aW9uUnVuUmVxdWVzdBI3Cgdjb250ZXh0GAEg",
+            "ASgLMh0udWRiLmVudGl0eS52MS5SZXF1ZXN0Q29udGV4dFIHY29udGV4dBIV",
+            "CgZydW5faWQYAiABKAlSBXJ1bklkEh0KCnByb2plY3RfaWQYAyABKAlSCXBy",
+            "b2plY3RJZBInCg9pZGVtcG90ZW5jeV9rZXkYBCABKAlSDmlkZW1wb3RlbmN5",
+            "S2V5EjgKGGV4cGVjdGVkX29wZXJhdGlvbnNfaGFzaBgFIAEoCVIWZXhwZWN0",
+            "ZWRPcGVyYXRpb25zSGFzaBJGCh9yZXZpZXdlZF9vcGVyYXRpb25fZmluZ2Vy",
+            "cHJpbnRzGAYgAygJUh1yZXZpZXdlZE9wZXJhdGlvbkZpbmdlcnByaW50cyLJ",
+            "AQoXTWlncmF0aW9uUnVuTGlzdFJlcXVlc3QSNwoHY29udGV4dBgBIAEoCzId",
+            "LnVkYi5lbnRpdHkudjEuUmVxdWVzdENvbnRleHRSB2NvbnRleHQSHQoKcHJv",
+            "amVjdF9pZBgCIAEoCVIJcHJvamVjdElkEiEKDHN0YXRlX2ZpbHRlchgDIAEo",
+            "CVILc3RhdGVGaWx0ZXISFAoFbGltaXQYBCABKAVSBWxpbWl0Eh0KCnBhZ2Vf",
+            "dG9rZW4YBSABKAlSCXBhZ2VUb2tlbiKfAQoYTWlncmF0aW9uUnVuTGlzdFJl",
+            "c3BvbnNlEjoKBHJ1bnMYASADKAsyJi51ZGIuZW50aXR5LnYxLk1pZ3JhdGlv",
+            "blN0YXR1c1Jlc3BvbnNlUgRydW5zEiYKD25leHRfcGFnZV90b2tlbhgCIAEo",
+            "CVINbmV4dFBhZ2VUb2tlbhIfCgt0b3RhbF9jb3VudBgDIAEoBVIKdG90YWxD",
+            "b3VudCKPBAoXTWlncmF0aW9uU3RhdHVzUmVzcG9uc2USFQoGcnVuX2lkGAEg",
             "ASgJUgVydW5JZBIdCgpwcm9qZWN0X2lkGAIgASgJUglwcm9qZWN0SWQSJwoP",
             "Y2F0YWxvZ192ZXJzaW9uGAMgASgJUg5jYXRhbG9nVmVyc2lvbhIUCgVzdGF0",
-            "ZRgEIAEoCVIFc3RhdGUSHgoKb3BlcmF0aW9ucxgFIAMoCVIKb3BlcmF0aW9u",
-            "cxInCg9yZXF1aXJlc19yZXZpZXcYBiADKAlSDnJlcXVpcmVzUmV2aWV3EhgK",
-            "B2Jsb2NrZWQYByADKAlSB2Jsb2NrZWQSJwoPb3BlcmF0aW9uc19oYXNoGAgg",
-            "ASgJUg5vcGVyYXRpb25zSGFzaCLWAQoVTWlncmF0aW9uQXBwbHlSZXF1ZXN0",
-            "EjcKB2NvbnRleHQYASABKAsyHS51ZGIuZW50aXR5LnYxLlJlcXVlc3RDb250",
-            "ZXh0Ugdjb250ZXh0EhUKBnJ1bl9pZBgCIAEoCVIFcnVuSWQSHQoKcHJvamVj",
-            "dF9pZBgDIAEoCVIJcHJvamVjdElkEiUKDmFwcHJvdmFsX3Rva2VuGAQgASgJ",
-            "Ug1hcHByb3ZhbFRva2VuEicKD2lkZW1wb3RlbmN5X2tleRgFIAEoCVIOaWRl",
-            "bXBvdGVuY3lLZXkirQEKE01pZ3JhdGlvblJ1blJlcXVlc3QSNwoHY29udGV4",
-            "dBgBIAEoCzIdLnVkYi5lbnRpdHkudjEuUmVxdWVzdENvbnRleHRSB2NvbnRl",
-            "eHQSFQoGcnVuX2lkGAIgASgJUgVydW5JZBIdCgpwcm9qZWN0X2lkGAMgASgJ",
-            "Uglwcm9qZWN0SWQSJwoPaWRlbXBvdGVuY3lfa2V5GAQgASgJUg5pZGVtcG90",
-            "ZW5jeUtleSLJAQoXTWlncmF0aW9uUnVuTGlzdFJlcXVlc3QSNwoHY29udGV4",
-            "dBgBIAEoCzIdLnVkYi5lbnRpdHkudjEuUmVxdWVzdENvbnRleHRSB2NvbnRl",
-            "eHQSHQoKcHJvamVjdF9pZBgCIAEoCVIJcHJvamVjdElkEiEKDHN0YXRlX2Zp",
-            "bHRlchgDIAEoCVILc3RhdGVGaWx0ZXISFAoFbGltaXQYBCABKAVSBWxpbWl0",
-            "Eh0KCnBhZ2VfdG9rZW4YBSABKAlSCXBhZ2VUb2tlbiKfAQoYTWlncmF0aW9u",
-            "UnVuTGlzdFJlc3BvbnNlEjoKBHJ1bnMYASADKAsyJi51ZGIuZW50aXR5LnYx",
-            "Lk1pZ3JhdGlvblN0YXR1c1Jlc3BvbnNlUgRydW5zEiYKD25leHRfcGFnZV90",
-            "b2tlbhgCIAEoCVINbmV4dFBhZ2VUb2tlbhIfCgt0b3RhbF9jb3VudBgDIAEo",
-            "BVIKdG90YWxDb3VudCKdAwoXTWlncmF0aW9uU3RhdHVzUmVzcG9uc2USFQoG",
-            "cnVuX2lkGAEgASgJUgVydW5JZBIdCgpwcm9qZWN0X2lkGAIgASgJUglwcm9q",
-            "ZWN0SWQSJwoPY2F0YWxvZ192ZXJzaW9uGAMgASgJUg5jYXRhbG9nVmVyc2lv",
-            "bhIUCgVzdGF0ZRgEIAEoCVIFc3RhdGUSHQoKc3RhcnRlZF9hdBgFIAEoCVIJ",
-            "c3RhcnRlZEF0Eh8KC2ZpbmlzaGVkX2F0GAYgASgJUgpmaW5pc2hlZEF0EkcK",
-            "Cm9wZXJhdGlvbnMYByADKAsyJy51ZGIuZW50aXR5LnYxLk1pZ3JhdGlvbk9w",
-            "ZXJhdGlvblN0YXR1c1IKb3BlcmF0aW9ucxIUCgVlcnJvchgIIAEoCVIFZXJy",
-            "b3ISKgoOYXBwcm92YWxfdG9rZW4YCSABKAlIAFINYXBwcm92YWxUb2tlbogB",
-            "ARIhCglhcHBseWFibGUYCiABKAhIAVIJYXBwbHlhYmxliAEBQhEKD19hcHBy",
-            "b3ZhbF90b2tlbkIMCgpfYXBwbHlhYmxlIsIBChhNaWdyYXRpb25PcGVyYXRp",
-            "b25TdGF0dXMSFAoFaW5kZXgYASABKAVSBWluZGV4EhgKB2JhY2tlbmQYAiAB",
-            "KAlSB2JhY2tlbmQSIQoMcmVzb3VyY2VfdXJpGAMgASgJUgtyZXNvdXJjZVVy",
-            "aRIlCg5vcGVyYXRpb25fa2luZBgEIAEoCVINb3BlcmF0aW9uS2luZBIWCgZz",
-            "dGF0dXMYBSABKAlSBnN0YXR1cxIUCgVlcnJvchgGIAEoCVIFZXJyb3IiuQEK",
-            "DkRscUxpc3RSZXF1ZXN0EjcKB2NvbnRleHQYASABKAsyHS51ZGIuZW50aXR5",
-            "LnYxLlJlcXVlc3RDb250ZXh0Ugdjb250ZXh0EhQKBXRvcGljGAIgASgJUgV0",
-            "b3BpYxIjCg1zdGF0dXNfZmlsdGVyGAMgASgJUgxzdGF0dXNGaWx0ZXISFAoF",
-            "bGltaXQYBCABKAVSBWxpbWl0Eh0KCnBhZ2VfdG9rZW4YBSABKAlSCXBhZ2VU",
-            "b2tlbiKnAgoORGxxRXZlbnRSZWNvcmQSFQoGZGxxX2lkGAEgASgJUgVkbHFJ",
-            "ZBIZCghldmVudF9pZBgCIAEoCVIHZXZlbnRJZBIUCgV0b3BpYxgDIAEoCVIF",
-            "dG9waWMSIQoMcGF5bG9hZF9qc29uGAQgASgMUgtwYXlsb2FkSnNvbhIdCgpl",
-            "cnJvcl90eXBlGAUgASgJUgllcnJvclR5cGUSIwoNZXJyb3JfbWVzc2FnZRgG",
-            "IAEoCVIMZXJyb3JNZXNzYWdlEhYKBnN0YXR1cxgHIAEoCVIGc3RhdHVzEiYK",
-            "D2NyZWF0ZWRfYXRfdW5peBgIIAEoA1INY3JlYXRlZEF0VW5peBImCg91cGRh",
-            "dGVkX2F0X3VuaXgYCSABKANSDXVwZGF0ZWRBdFVuaXgikQEKD0RscUxpc3RS",
-            "ZXNwb25zZRI1CgZldmVudHMYASADKAsyHS51ZGIuZW50aXR5LnYxLkRscUV2",
-            "ZW50UmVjb3JkUgZldmVudHMSJgoPbmV4dF9wYWdlX3Rva2VuGAIgASgJUg1u",
-            "ZXh0UGFnZVRva2VuEh8KC3RvdGFsX2NvdW50GAMgASgFUgp0b3RhbENvdW50",
-            "ImEKD0RscUV2ZW50UmVxdWVzdBI3Cgdjb250ZXh0GAEgASgLMh0udWRiLmVu",
-            "dGl0eS52MS5SZXF1ZXN0Q29udGV4dFIHY29udGV4dBIVCgZkbHFfaWQYAiAB",
-            "KAlSBWRscUlkIkcKEERscUV2ZW50UmVzcG9uc2USMwoFZXZlbnQYASABKAsy",
-            "HS51ZGIuZW50aXR5LnYxLkRscUV2ZW50UmVjb3JkUgVldmVudCKmAQoQRGxx",
-            "QWN0aW9uUmVxdWVzdBI3Cgdjb250ZXh0GAEgASgLMh0udWRiLmVudGl0eS52",
-            "MS5SZXF1ZXN0Q29udGV4dFIHY29udGV4dBIVCgZkbHFfaWQYAiABKAlSBWRs",
-            "cUlkEioKEXByZXNlcnZlX2V2ZW50X2lkGAMgASgIUg9wcmVzZXJ2ZUV2ZW50",
-            "SWQSFgoGcmVhc29uGAQgASgJUgZyZWFzb24ipAIKGkNkY1JlZGFjdGlvblBy",
-            "ZXZpZXdSZXF1ZXN0EjcKB2NvbnRleHQYASABKAsyHS51ZGIuZW50aXR5LnYx",
-            "LlJlcXVlc3RDb250ZXh0Ugdjb250ZXh0EiEKDG1lc3NhZ2VfdHlwZRgCIAEo",
-            "CVILbWVzc2FnZVR5cGUSFAoFdG9waWMYAyABKAlSBXRvcGljEh0KCnNjaGVt",
-            "YV91cmkYBCABKAlSCXNjaGVtYVVyaRIhCgxwYXlsb2FkX2pzb24YBSABKAxS",
-            "C3BheWxvYWRKc29uEiUKDnJlZGFjdGlvbl9tb2RlGAYgASgJUg1yZWRhY3Rp",
-            "b25Nb2RlEisKEXJlZGFjdGlvbl92ZXJzaW9uGAcgASgFUhByZWRhY3Rpb25W",
-            "ZXJzaW9uIuABChtDZGNSZWRhY3Rpb25QcmV2aWV3UmVzcG9uc2USIQoMcGF5",
-            "bG9hZF9qc29uGAEgASgMUgtwYXlsb2FkSnNvbhInCg9yZWRhY3RlZF9maWVs",
-            "ZHMYAiADKAlSDnJlZGFjdGVkRmllbGRzEiUKDnJlZGFjdGlvbl9tb2RlGAMg",
-            "ASgJUg1yZWRhY3Rpb25Nb2RlEisKEXJlZGFjdGlvbl92ZXJzaW9uGAQgASgF",
-            "UhByZWRhY3Rpb25WZXJzaW9uEiEKDHdvdWxkX3JlZGFjdBgFIAEoCFILd291",
-            "bGRSZWRhY3QiigIKGlByb2plY3Rpb25EcmlmdFNjYW5SZXF1ZXN0EjcKB2Nv",
-            "bnRleHQYASABKAsyHS51ZGIuZW50aXR5LnYxLlJlcXVlc3RDb250ZXh0Ugdj",
-            "b250ZXh0Eh0KCnByb2plY3RfaWQYAiABKAlSCXByb2plY3RJZBIhCgxtZXNz",
-            "YWdlX3R5cGUYAyABKAlSC21lc3NhZ2VUeXBlEhsKCXNjYW5fbW9kZRgEIAEo",
-            "CVIIc2Nhbk1vZGUSJgoPcm93c19wZXJfdGFyZ2V0GAUgASgFUg1yb3dzUGVy",
-            "VGFyZ2V0EhYKBnJlcGFpchgGIAEoCFIGcmVwYWlyEhQKBWxpbWl0GAcgASgF",
-            "UgVsaW1pdCKlAQobUHJvamVjdGlvbkRyaWZ0RGl2ZXJnZW50Um93EiAKDHJv",
-            "d19rZXlfanNvbhgBIAEoDFIKcm93S2V5SnNvbhInCg9zb3VyY2VfY2hlY2tz",
-            "dW0YAiABKAlSDnNvdXJjZUNoZWNrc3VtEicKD3RhcmdldF9jaGVja3N1bRgD",
-            "IAEoCVIOdGFyZ2V0Q2hlY2tzdW0SEgoEa2luZBgEIAEoCVIEa2luZCLBAwob",
-            "UHJvamVjdGlvbkRyaWZ0VGFyZ2V0UmVwb3J0EiUKDnRhcmdldF9iYWNrZW5k",
-            "GAEgASgJUg10YXJnZXRCYWNrZW5kEicKD3RhcmdldF9pbnN0YW5jZRgCIAEo",
-            "CVIOdGFyZ2V0SW5zdGFuY2USJwoPdGFyZ2V0X3Jlc291cmNlGAMgASgJUg50",
-            "YXJnZXRSZXNvdXJjZRIuChNzb3VyY2Vfcm93c19zY2FubmVkGAQgASgFUhFz",
-            "b3VyY2VSb3dzU2Nhbm5lZBJRCg5kaXZlcmdlbnRfcm93cxgFIAMoCzIqLnVk",
-            "Yi5lbnRpdHkudjEuUHJvamVjdGlvbkRyaWZ0RGl2ZXJnZW50Um93Ug1kaXZl",
-            "cmdlbnRSb3dzEiQKDnJvd3NfdG9fcmVwYWlyGAYgASgFUgxyb3dzVG9SZXBh",
-            "aXISMAoUZXN0aW1hdGVkX2Nvc3RfdW5pdHMYByABKAFSEmVzdGltYXRlZENv",
-            "c3RVbml0cxIyChVyZXBhaXJfdGFza3NfZW5xdWV1ZWQYCCABKANSE3JlcGFp",
-            "clRhc2tzRW5xdWV1ZWQSGgoId2FybmluZ3MYCSADKAlSCHdhcm5pbmdzIq8C",
-            "ChtQcm9qZWN0aW9uRHJpZnRTY2FuUmVzcG9uc2USHQoKcHJvamVjdF9pZBgB",
-            "IAEoCVIJcHJvamVjdElkEiEKDG1lc3NhZ2VfdHlwZRgCIAEoCVILbWVzc2Fn",
-            "ZVR5cGUSGwoJc2Nhbl9tb2RlGAMgASgJUghzY2FuTW9kZRIsChJzb3VyY2Vf",
-            "cm93c19sb2FkZWQYBCABKAVSEHNvdXJjZVJvd3NMb2FkZWQSRAoHcmVwb3J0",
-            "cxgFIAMoCzIqLnVkYi5lbnRpdHkudjEuUHJvamVjdGlvbkRyaWZ0VGFyZ2V0",
-            "UmVwb3J0UgdyZXBvcnRzEiEKDHN1bW1hcnlfanNvbhgGIAEoDFILc3VtbWFy",
-            "eUpzb24SGgoId2FybmluZ3MYByADKAlSCHdhcm5pbmdzIqQCCg9TYWdhTGlz",
-            "dFJlcXVlc3QSNwoHY29udGV4dBgBIAEoCzIdLnVkYi5lbnRpdHkudjEuUmVx",
-            "dWVzdENvbnRleHRSB2NvbnRleHQSKAoQdGVuYW50X2lkX2ZpbHRlchgCIAEo",
-            "CVIOdGVuYW50SWRGaWx0ZXISIwoNc3RhdHVzX2ZpbHRlchgDIAEoCVIMc3Rh",
-            "dHVzRmlsdGVyEiAKDHR4X2lkX2ZpbHRlchgEIAEoCVIKdHhJZEZpbHRlchIy",
-            "ChVjb3JyZWxhdGlvbl9pZF9maWx0ZXIYBSABKAlSE2NvcnJlbGF0aW9uSWRG",
-            "aWx0ZXISFAoFbGltaXQYBiABKAVSBWxpbWl0Eh0KCnBhZ2VfdG9rZW4YByAB",
-            "KAlSCXBhZ2VUb2tlbiL2AgoKU2FnYVJlY29yZBIXCgdzYWdhX2lkGAEgASgJ",
-            "UgZzYWdhSWQSEwoFdHhfaWQYAiABKAlSBHR4SWQSGwoJdGVuYW50X2lkGAMg",
-            "ASgJUgh0ZW5hbnRJZBIlCg5jb3JyZWxhdGlvbl9pZBgEIAEoCVINY29ycmVs",
-            "YXRpb25JZBIWCgZzdGF0dXMYBSABKAlSBnN0YXR1cxIhCgxjdXJyZW50X3N0",
-            "ZXAYBiABKAVSC2N1cnJlbnRTdGVwEh0KCnN0ZXBzX2pzb24YByABKAxSCXN0",
-            "ZXBzSnNvbhItChJjb21wZW5zYXRpb25zX2pzb24YCCABKAxSEWNvbXBlbnNh",
-            "dGlvbnNKc29uEh0KCmxhc3RfZXJyb3IYCSABKAlSCWxhc3RFcnJvchImCg9j",
-            "cmVhdGVkX2F0X3VuaXgYCiABKANSDWNyZWF0ZWRBdFVuaXgSJgoPdXBkYXRl",
-            "ZF9hdF91bml4GAsgASgDUg11cGRhdGVkQXRVbml4IowBChBTYWdhTGlzdFJl",
-            "c3BvbnNlEi8KBXNhZ2FzGAEgAygLMhkudWRiLmVudGl0eS52MS5TYWdhUmVj",
-            "b3JkUgVzYWdhcxImCg9uZXh0X3BhZ2VfdG9rZW4YAiABKAlSDW5leHRQYWdl",
-            "VG9rZW4SHwoLdG90YWxfY291bnQYAyABKAVSCnRvdGFsQ291bnQioAEKC1Nh",
-            "Z2FSZXF1ZXN0EjcKB2NvbnRleHQYASABKAsyHS51ZGIuZW50aXR5LnYxLlJl",
-            "cXVlc3RDb250ZXh0Ugdjb250ZXh0EhcKB3NhZ2FfaWQYAiABKAlSBnNhZ2FJ",
-            "ZBIWCgZyZWFzb24YAyABKAlSBnJlYXNvbhInCg9pZGVtcG90ZW5jeV9rZXkY",
-            "BCABKAlSDmlkZW1wb3RlbmN5S2V5IlUKDFNhZ2FSZXNwb25zZRItCgRzYWdh",
-            "GAEgASgLMhkudWRiLmVudGl0eS52MS5TYWdhUmVjb3JkUgRzYWdhEhYKBmVy",
-            "cm9ycxgCIAMoCVIGZXJyb3JzIsMCCgxQb2xpY3lSZWNvcmQSGwoJcG9saWN5",
-            "X2lkGAEgASgDUghwb2xpY3lJZBIWCgZlZmZlY3QYAiABKAlSBmVmZmVjdBIp",
-            "ChBzZXJ2aWNlX2lkZW50aXR5GAMgASgJUg9zZXJ2aWNlSWRlbnRpdHkSGwoJ",
-            "dGVuYW50X2lkGAQgASgJUgh0ZW5hbnRJZBIYCgdwdXJwb3NlGAUgASgJUgdw",
-            "dXJwb3NlEiEKDG1lc3NhZ2VfdHlwZRgGIAEoCVILbWVzc2FnZVR5cGUSHAoJ",
-            "b3BlcmF0aW9uGAcgASgJUglvcGVyYXRpb24SJQoOcmVxdWlyZWRfc2NvcGUY",
-            "CCABKAlSDXJlcXVpcmVkU2NvcGUSGgoIcHJpb3JpdHkYCSABKAVSCHByaW9y",
-            "aXR5EhgKB2VuYWJsZWQYCiABKAhSB2VuYWJsZWQirAEKEVBvbGljeUxpc3RS",
-            "ZXF1ZXN0EjcKB2NvbnRleHQYASABKAsyHS51ZGIuZW50aXR5LnYxLlJlcXVl",
-            "c3RDb250ZXh0Ugdjb250ZXh0EikKEGluY2x1ZGVfZGlzYWJsZWQYAiABKAhS",
-            "D2luY2x1ZGVEaXNhYmxlZBIUCgVsaW1pdBgDIAEoBVIFbGltaXQSHQoKcGFn",
-            "ZV90b2tlbhgEIAEoCVIJcGFnZVRva2VuIpYBChJQb2xpY3lMaXN0UmVzcG9u",
-            "c2USNwoIcG9saWNpZXMYASADKAsyGy51ZGIuZW50aXR5LnYxLlBvbGljeVJl",
-            "Y29yZFIIcG9saWNpZXMSJgoPbmV4dF9wYWdlX3Rva2VuGAIgASgJUg1uZXh0",
-            "UGFnZVRva2VuEh8KC3RvdGFsX2NvdW50GAMgASgFUgp0b3RhbENvdW50IoAB",
-            "ChBQdXRQb2xpY3lSZXF1ZXN0EjcKB2NvbnRleHQYASABKAsyHS51ZGIuZW50",
-            "aXR5LnYxLlJlcXVlc3RDb250ZXh0Ugdjb250ZXh0EjMKBnBvbGljeRgCIAEo",
-            "CzIbLnVkYi5lbnRpdHkudjEuUG9saWN5UmVjb3JkUgZwb2xpY3kiZQoNUG9s",
-            "aWN5UmVxdWVzdBI3Cgdjb250ZXh0GAEgASgLMh0udWRiLmVudGl0eS52MS5S",
-            "ZXF1ZXN0Q29udGV4dFIHY29udGV4dBIbCglwb2xpY3lfaWQYAiABKANSCHBv",
-            "bGljeUlkIkgKElBvbGljeUxpbnRSZXNwb25zZRIWCgZwYXNzZWQYASABKAhS",
-            "BnBhc3NlZBIaCghmaW5kaW5ncxgCIAMoCVIIZmluZGluZ3MirAEKFEVuc3Vy",
-            "ZVByb2plY3RSZXF1ZXN0EjcKB2NvbnRleHQYASABKAsyHS51ZGIuZW50aXR5",
-            "LnYxLlJlcXVlc3RDb250ZXh0Ugdjb250ZXh0Eh0KCnByb2plY3RfaWQYAiAB",
-            "KAlSCXByb2plY3RJZBISCgRuYW1lGAMgASgJUgRuYW1lEigKEGNkY190b3Bp",
-            "Y19wcmVmaXgYBCABKAlSDmNkY1RvcGljUHJlZml4IsoBCg1Qcm9qZWN0UmVj",
-            "b3JkEh0KCnByb2plY3RfaWQYASABKAlSCXByb2plY3RJZBISCgRuYW1lGAIg",
-            "ASgJUgRuYW1lEigKEGNkY190b3BpY19wcmVmaXgYAyABKAlSDmNkY1RvcGlj",
-            "UHJlZml4EjQKFmFjdGl2ZV9jYXRhbG9nX3ZlcnNpb24YBCABKAlSFGFjdGl2",
-            "ZUNhdGFsb2dWZXJzaW9uEiYKD2NyZWF0ZWRfYXRfdW5peBgFIAEoA1INY3Jl",
-            "YXRlZEF0VW5peCKCAQoSUHJvamVjdExpc3RSZXF1ZXN0EjcKB2NvbnRleHQY",
+            "ZRgEIAEoCVIFc3RhdGUSHQoKc3RhcnRlZF9hdBgFIAEoCVIJc3RhcnRlZEF0",
+            "Eh8KC2ZpbmlzaGVkX2F0GAYgASgJUgpmaW5pc2hlZEF0EkcKCm9wZXJhdGlv",
+            "bnMYByADKAsyJy51ZGIuZW50aXR5LnYxLk1pZ3JhdGlvbk9wZXJhdGlvblN0",
+            "YXR1c1IKb3BlcmF0aW9ucxIUCgVlcnJvchgIIAEoCVIFZXJyb3ISKgoOYXBw",
+            "cm92YWxfdG9rZW4YCSABKAlIAFINYXBwcm92YWxUb2tlbogBARIhCglhcHBs",
+            "eWFibGUYCiABKAhIAVIJYXBwbHlhYmxliAEBEnAKG3Jldmlld2VkX2NhdGFs",
+            "b2dfdHJhbnNpdGlvbhgLIAEoCzIwLnVkYi5lbnRpdHkudjEuUmV2aWV3ZWRD",
+            "YXRhbG9nVHJhbnNpdGlvbkV2aWRlbmNlUhlyZXZpZXdlZENhdGFsb2dUcmFu",
+            "c2l0aW9uQhEKD19hcHByb3ZhbF90b2tlbkIMCgpfYXBwbHlhYmxlIsIBChhN",
+            "aWdyYXRpb25PcGVyYXRpb25TdGF0dXMSFAoFaW5kZXgYASABKAVSBWluZGV4",
+            "EhgKB2JhY2tlbmQYAiABKAlSB2JhY2tlbmQSIQoMcmVzb3VyY2VfdXJpGAMg",
+            "ASgJUgtyZXNvdXJjZVVyaRIlCg5vcGVyYXRpb25fa2luZBgEIAEoCVINb3Bl",
+            "cmF0aW9uS2luZBIWCgZzdGF0dXMYBSABKAlSBnN0YXR1cxIUCgVlcnJvchgG",
+            "IAEoCVIFZXJyb3IiuQEKDkRscUxpc3RSZXF1ZXN0EjcKB2NvbnRleHQYASAB",
+            "KAsyHS51ZGIuZW50aXR5LnYxLlJlcXVlc3RDb250ZXh0Ugdjb250ZXh0EhQK",
+            "BXRvcGljGAIgASgJUgV0b3BpYxIjCg1zdGF0dXNfZmlsdGVyGAMgASgJUgxz",
+            "dGF0dXNGaWx0ZXISFAoFbGltaXQYBCABKAVSBWxpbWl0Eh0KCnBhZ2VfdG9r",
+            "ZW4YBSABKAlSCXBhZ2VUb2tlbiKnAgoORGxxRXZlbnRSZWNvcmQSFQoGZGxx",
+            "X2lkGAEgASgJUgVkbHFJZBIZCghldmVudF9pZBgCIAEoCVIHZXZlbnRJZBIU",
+            "CgV0b3BpYxgDIAEoCVIFdG9waWMSIQoMcGF5bG9hZF9qc29uGAQgASgMUgtw",
+            "YXlsb2FkSnNvbhIdCgplcnJvcl90eXBlGAUgASgJUgllcnJvclR5cGUSIwoN",
+            "ZXJyb3JfbWVzc2FnZRgGIAEoCVIMZXJyb3JNZXNzYWdlEhYKBnN0YXR1cxgH",
+            "IAEoCVIGc3RhdHVzEiYKD2NyZWF0ZWRfYXRfdW5peBgIIAEoA1INY3JlYXRl",
+            "ZEF0VW5peBImCg91cGRhdGVkX2F0X3VuaXgYCSABKANSDXVwZGF0ZWRBdFVu",
+            "aXgikQEKD0RscUxpc3RSZXNwb25zZRI1CgZldmVudHMYASADKAsyHS51ZGIu",
+            "ZW50aXR5LnYxLkRscUV2ZW50UmVjb3JkUgZldmVudHMSJgoPbmV4dF9wYWdl",
+            "X3Rva2VuGAIgASgJUg1uZXh0UGFnZVRva2VuEh8KC3RvdGFsX2NvdW50GAMg",
+            "ASgFUgp0b3RhbENvdW50ImEKD0RscUV2ZW50UmVxdWVzdBI3Cgdjb250ZXh0",
+            "GAEgASgLMh0udWRiLmVudGl0eS52MS5SZXF1ZXN0Q29udGV4dFIHY29udGV4",
+            "dBIVCgZkbHFfaWQYAiABKAlSBWRscUlkIkcKEERscUV2ZW50UmVzcG9uc2US",
+            "MwoFZXZlbnQYASABKAsyHS51ZGIuZW50aXR5LnYxLkRscUV2ZW50UmVjb3Jk",
+            "UgVldmVudCKmAQoQRGxxQWN0aW9uUmVxdWVzdBI3Cgdjb250ZXh0GAEgASgL",
+            "Mh0udWRiLmVudGl0eS52MS5SZXF1ZXN0Q29udGV4dFIHY29udGV4dBIVCgZk",
+            "bHFfaWQYAiABKAlSBWRscUlkEioKEXByZXNlcnZlX2V2ZW50X2lkGAMgASgI",
+            "Ug9wcmVzZXJ2ZUV2ZW50SWQSFgoGcmVhc29uGAQgASgJUgZyZWFzb24ipAIK",
+            "GkNkY1JlZGFjdGlvblByZXZpZXdSZXF1ZXN0EjcKB2NvbnRleHQYASABKAsy",
+            "HS51ZGIuZW50aXR5LnYxLlJlcXVlc3RDb250ZXh0Ugdjb250ZXh0EiEKDG1l",
+            "c3NhZ2VfdHlwZRgCIAEoCVILbWVzc2FnZVR5cGUSFAoFdG9waWMYAyABKAlS",
+            "BXRvcGljEh0KCnNjaGVtYV91cmkYBCABKAlSCXNjaGVtYVVyaRIhCgxwYXls",
+            "b2FkX2pzb24YBSABKAxSC3BheWxvYWRKc29uEiUKDnJlZGFjdGlvbl9tb2Rl",
+            "GAYgASgJUg1yZWRhY3Rpb25Nb2RlEisKEXJlZGFjdGlvbl92ZXJzaW9uGAcg",
+            "ASgFUhByZWRhY3Rpb25WZXJzaW9uIuABChtDZGNSZWRhY3Rpb25QcmV2aWV3",
+            "UmVzcG9uc2USIQoMcGF5bG9hZF9qc29uGAEgASgMUgtwYXlsb2FkSnNvbhIn",
+            "Cg9yZWRhY3RlZF9maWVsZHMYAiADKAlSDnJlZGFjdGVkRmllbGRzEiUKDnJl",
+            "ZGFjdGlvbl9tb2RlGAMgASgJUg1yZWRhY3Rpb25Nb2RlEisKEXJlZGFjdGlv",
+            "bl92ZXJzaW9uGAQgASgFUhByZWRhY3Rpb25WZXJzaW9uEiEKDHdvdWxkX3Jl",
+            "ZGFjdBgFIAEoCFILd291bGRSZWRhY3QiigIKGlByb2plY3Rpb25EcmlmdFNj",
+            "YW5SZXF1ZXN0EjcKB2NvbnRleHQYASABKAsyHS51ZGIuZW50aXR5LnYxLlJl",
+            "cXVlc3RDb250ZXh0Ugdjb250ZXh0Eh0KCnByb2plY3RfaWQYAiABKAlSCXBy",
+            "b2plY3RJZBIhCgxtZXNzYWdlX3R5cGUYAyABKAlSC21lc3NhZ2VUeXBlEhsK",
+            "CXNjYW5fbW9kZRgEIAEoCVIIc2Nhbk1vZGUSJgoPcm93c19wZXJfdGFyZ2V0",
+            "GAUgASgFUg1yb3dzUGVyVGFyZ2V0EhYKBnJlcGFpchgGIAEoCFIGcmVwYWly",
+            "EhQKBWxpbWl0GAcgASgFUgVsaW1pdCKlAQobUHJvamVjdGlvbkRyaWZ0RGl2",
+            "ZXJnZW50Um93EiAKDHJvd19rZXlfanNvbhgBIAEoDFIKcm93S2V5SnNvbhIn",
+            "Cg9zb3VyY2VfY2hlY2tzdW0YAiABKAlSDnNvdXJjZUNoZWNrc3VtEicKD3Rh",
+            "cmdldF9jaGVja3N1bRgDIAEoCVIOdGFyZ2V0Q2hlY2tzdW0SEgoEa2luZBgE",
+            "IAEoCVIEa2luZCLBAwobUHJvamVjdGlvbkRyaWZ0VGFyZ2V0UmVwb3J0EiUK",
+            "DnRhcmdldF9iYWNrZW5kGAEgASgJUg10YXJnZXRCYWNrZW5kEicKD3Rhcmdl",
+            "dF9pbnN0YW5jZRgCIAEoCVIOdGFyZ2V0SW5zdGFuY2USJwoPdGFyZ2V0X3Jl",
+            "c291cmNlGAMgASgJUg50YXJnZXRSZXNvdXJjZRIuChNzb3VyY2Vfcm93c19z",
+            "Y2FubmVkGAQgASgFUhFzb3VyY2VSb3dzU2Nhbm5lZBJRCg5kaXZlcmdlbnRf",
+            "cm93cxgFIAMoCzIqLnVkYi5lbnRpdHkudjEuUHJvamVjdGlvbkRyaWZ0RGl2",
+            "ZXJnZW50Um93Ug1kaXZlcmdlbnRSb3dzEiQKDnJvd3NfdG9fcmVwYWlyGAYg",
+            "ASgFUgxyb3dzVG9SZXBhaXISMAoUZXN0aW1hdGVkX2Nvc3RfdW5pdHMYByAB",
+            "KAFSEmVzdGltYXRlZENvc3RVbml0cxIyChVyZXBhaXJfdGFza3NfZW5xdWV1",
+            "ZWQYCCABKANSE3JlcGFpclRhc2tzRW5xdWV1ZWQSGgoId2FybmluZ3MYCSAD",
+            "KAlSCHdhcm5pbmdzIq8CChtQcm9qZWN0aW9uRHJpZnRTY2FuUmVzcG9uc2US",
+            "HQoKcHJvamVjdF9pZBgBIAEoCVIJcHJvamVjdElkEiEKDG1lc3NhZ2VfdHlw",
+            "ZRgCIAEoCVILbWVzc2FnZVR5cGUSGwoJc2Nhbl9tb2RlGAMgASgJUghzY2Fu",
+            "TW9kZRIsChJzb3VyY2Vfcm93c19sb2FkZWQYBCABKAVSEHNvdXJjZVJvd3NM",
+            "b2FkZWQSRAoHcmVwb3J0cxgFIAMoCzIqLnVkYi5lbnRpdHkudjEuUHJvamVj",
+            "dGlvbkRyaWZ0VGFyZ2V0UmVwb3J0UgdyZXBvcnRzEiEKDHN1bW1hcnlfanNv",
+            "bhgGIAEoDFILc3VtbWFyeUpzb24SGgoId2FybmluZ3MYByADKAlSCHdhcm5p",
+            "bmdzIqQCCg9TYWdhTGlzdFJlcXVlc3QSNwoHY29udGV4dBgBIAEoCzIdLnVk",
+            "Yi5lbnRpdHkudjEuUmVxdWVzdENvbnRleHRSB2NvbnRleHQSKAoQdGVuYW50",
+            "X2lkX2ZpbHRlchgCIAEoCVIOdGVuYW50SWRGaWx0ZXISIwoNc3RhdHVzX2Zp",
+            "bHRlchgDIAEoCVIMc3RhdHVzRmlsdGVyEiAKDHR4X2lkX2ZpbHRlchgEIAEo",
+            "CVIKdHhJZEZpbHRlchIyChVjb3JyZWxhdGlvbl9pZF9maWx0ZXIYBSABKAlS",
+            "E2NvcnJlbGF0aW9uSWRGaWx0ZXISFAoFbGltaXQYBiABKAVSBWxpbWl0Eh0K",
+            "CnBhZ2VfdG9rZW4YByABKAlSCXBhZ2VUb2tlbiL2AgoKU2FnYVJlY29yZBIX",
+            "CgdzYWdhX2lkGAEgASgJUgZzYWdhSWQSEwoFdHhfaWQYAiABKAlSBHR4SWQS",
+            "GwoJdGVuYW50X2lkGAMgASgJUgh0ZW5hbnRJZBIlCg5jb3JyZWxhdGlvbl9p",
+            "ZBgEIAEoCVINY29ycmVsYXRpb25JZBIWCgZzdGF0dXMYBSABKAlSBnN0YXR1",
+            "cxIhCgxjdXJyZW50X3N0ZXAYBiABKAVSC2N1cnJlbnRTdGVwEh0KCnN0ZXBz",
+            "X2pzb24YByABKAxSCXN0ZXBzSnNvbhItChJjb21wZW5zYXRpb25zX2pzb24Y",
+            "CCABKAxSEWNvbXBlbnNhdGlvbnNKc29uEh0KCmxhc3RfZXJyb3IYCSABKAlS",
+            "CWxhc3RFcnJvchImCg9jcmVhdGVkX2F0X3VuaXgYCiABKANSDWNyZWF0ZWRB",
+            "dFVuaXgSJgoPdXBkYXRlZF9hdF91bml4GAsgASgDUg11cGRhdGVkQXRVbml4",
+            "IowBChBTYWdhTGlzdFJlc3BvbnNlEi8KBXNhZ2FzGAEgAygLMhkudWRiLmVu",
+            "dGl0eS52MS5TYWdhUmVjb3JkUgVzYWdhcxImCg9uZXh0X3BhZ2VfdG9rZW4Y",
+            "AiABKAlSDW5leHRQYWdlVG9rZW4SHwoLdG90YWxfY291bnQYAyABKAVSCnRv",
+            "dGFsQ291bnQioAEKC1NhZ2FSZXF1ZXN0EjcKB2NvbnRleHQYASABKAsyHS51",
+            "ZGIuZW50aXR5LnYxLlJlcXVlc3RDb250ZXh0Ugdjb250ZXh0EhcKB3NhZ2Ff",
+            "aWQYAiABKAlSBnNhZ2FJZBIWCgZyZWFzb24YAyABKAlSBnJlYXNvbhInCg9p",
+            "ZGVtcG90ZW5jeV9rZXkYBCABKAlSDmlkZW1wb3RlbmN5S2V5IlUKDFNhZ2FS",
+            "ZXNwb25zZRItCgRzYWdhGAEgASgLMhkudWRiLmVudGl0eS52MS5TYWdhUmVj",
+            "b3JkUgRzYWdhEhYKBmVycm9ycxgCIAMoCVIGZXJyb3JzIsMCCgxQb2xpY3lS",
+            "ZWNvcmQSGwoJcG9saWN5X2lkGAEgASgDUghwb2xpY3lJZBIWCgZlZmZlY3QY",
+            "AiABKAlSBmVmZmVjdBIpChBzZXJ2aWNlX2lkZW50aXR5GAMgASgJUg9zZXJ2",
+            "aWNlSWRlbnRpdHkSGwoJdGVuYW50X2lkGAQgASgJUgh0ZW5hbnRJZBIYCgdw",
+            "dXJwb3NlGAUgASgJUgdwdXJwb3NlEiEKDG1lc3NhZ2VfdHlwZRgGIAEoCVIL",
+            "bWVzc2FnZVR5cGUSHAoJb3BlcmF0aW9uGAcgASgJUglvcGVyYXRpb24SJQoO",
+            "cmVxdWlyZWRfc2NvcGUYCCABKAlSDXJlcXVpcmVkU2NvcGUSGgoIcHJpb3Jp",
+            "dHkYCSABKAVSCHByaW9yaXR5EhgKB2VuYWJsZWQYCiABKAhSB2VuYWJsZWQi",
+            "rAEKEVBvbGljeUxpc3RSZXF1ZXN0EjcKB2NvbnRleHQYASABKAsyHS51ZGIu",
+            "ZW50aXR5LnYxLlJlcXVlc3RDb250ZXh0Ugdjb250ZXh0EikKEGluY2x1ZGVf",
+            "ZGlzYWJsZWQYAiABKAhSD2luY2x1ZGVEaXNhYmxlZBIUCgVsaW1pdBgDIAEo",
+            "BVIFbGltaXQSHQoKcGFnZV90b2tlbhgEIAEoCVIJcGFnZVRva2VuIpYBChJQ",
+            "b2xpY3lMaXN0UmVzcG9uc2USNwoIcG9saWNpZXMYASADKAsyGy51ZGIuZW50",
+            "aXR5LnYxLlBvbGljeVJlY29yZFIIcG9saWNpZXMSJgoPbmV4dF9wYWdlX3Rv",
+            "a2VuGAIgASgJUg1uZXh0UGFnZVRva2VuEh8KC3RvdGFsX2NvdW50GAMgASgF",
+            "Ugp0b3RhbENvdW50IoABChBQdXRQb2xpY3lSZXF1ZXN0EjcKB2NvbnRleHQY",
             "ASABKAsyHS51ZGIuZW50aXR5LnYxLlJlcXVlc3RDb250ZXh0Ugdjb250ZXh0",
-            "EhQKBWxpbWl0GAIgASgFUgVsaW1pdBIdCgpwYWdlX3Rva2VuGAMgASgJUglw",
-            "YWdlVG9rZW4imAEKE1Byb2plY3RMaXN0UmVzcG9uc2USOAoIcHJvamVjdHMY",
-            "ASADKAsyHC51ZGIuZW50aXR5LnYxLlByb2plY3RSZWNvcmRSCHByb2plY3Rz",
-            "EiYKD25leHRfcGFnZV90b2tlbhgCIAEoCVINbmV4dFBhZ2VUb2tlbhIfCgt0",
-            "b3RhbF9jb3VudBgDIAEoBVIKdG90YWxDb3VudCKmAQoTQWRtaW5TdW1tYXJ5",
-            "UmVxdWVzdBI3Cgdjb250ZXh0GAEgASgLMh0udWRiLmVudGl0eS52MS5SZXF1",
-            "ZXN0Q29udGV4dFIHY29udGV4dBIdCgpwcm9qZWN0X2lkGAIgASgJUglwcm9q",
-            "ZWN0SWQSHwoLd2l0aF9wcm9iZXMYAyABKAhSCndpdGhQcm9iZXMSFgoGcmVk",
-            "YWN0GAQgASgIUgZyZWRhY3QiwAIKFEFkbWluQXVkaXRMb2dSZXF1ZXN0EjcK",
-            "B2NvbnRleHQYASABKAsyHS51ZGIuZW50aXR5LnYxLlJlcXVlc3RDb250ZXh0",
-            "Ugdjb250ZXh0EikKEG9wZXJhdGlvbl9maWx0ZXIYAiABKAlSD29wZXJhdGlv",
-            "bkZpbHRlchIhCgxhY3Rvcl9maWx0ZXIYAyABKAlSC2FjdG9yRmlsdGVyEigK",
-            "EHRlbmFudF9pZF9maWx0ZXIYBCABKAlSDnRlbmFudElkRmlsdGVyEioKEXBy",
-            "b2plY3RfaWRfZmlsdGVyGAUgASgJUg9wcm9qZWN0SWRGaWx0ZXISFAoFbGlt",
-            "aXQYBiABKAVSBWxpbWl0Eh0KCnBhZ2VfdG9rZW4YByABKAlSCXBhZ2VUb2tl",
-            "bhIWCgZyZWRhY3QYCCABKAhSBnJlZGFjdCLXAwoTQWRtaW5BdWRpdExvZ1Jl",
-            "Y29yZBIZCghhdWRpdF9pZBgBIAEoCVIHYXVkaXRJZBIUCgVhY3RvchgCIAEo",
-            "CVIFYWN0b3ISHAoJb3BlcmF0aW9uGAMgASgJUglvcGVyYXRpb24SFgoGdGFy",
-            "Z2V0GAQgASgJUgZ0YXJnZXQSIQoMcmVxdWVzdF9qc29uGAUgASgMUgtyZXF1",
-            "ZXN0SnNvbhIWCgZyZXN1bHQYBiABKAlSBnJlc3VsdBIbCgl0ZW5hbnRfaWQY",
-            "ByABKAlSCHRlbmFudElkEh0KCnByb2plY3RfaWQYCCABKAlSCXByb2plY3RJ",
-            "ZBIlCg5jb3JyZWxhdGlvbl9pZBgJIAEoCVINY29ycmVsYXRpb25JZBImCg9j",
-            "cmVhdGVkX2F0X3VuaXgYCiABKANSDWNyZWF0ZWRBdFVuaXgSIwoNcHJldmlv",
-            "dXNfaGFzaBgLIAEoCVIMcHJldmlvdXNIYXNoEiEKDGN1cnJlbnRfaGFzaBgM",
-            "IAEoCVILY3VycmVudEhhc2gSIgoNc2lnbmVyX2tleV9pZBgNIAEoCVILc2ln",
-            "bmVyS2V5SWQSJwoPZXh0ZXJuYWxfYW5jaG9yGA4gASgJUg5leHRlcm5hbEFu",
-            "Y2hvciKYAQoVQWRtaW5BdWRpdExvZ1Jlc3BvbnNlEjYKBGxvZ3MYASADKAsy",
-            "Ii51ZGIuZW50aXR5LnYxLkFkbWluQXVkaXRMb2dSZWNvcmRSBGxvZ3MSJgoP",
-            "bmV4dF9wYWdlX3Rva2VuGAIgASgJUg1uZXh0UGFnZVRva2VuEh8KC3RvdGFs",
-            "X2NvdW50GAMgASgFUgp0b3RhbENvdW50ImgKF0FkbWluQXVkaXRWZXJpZnlS",
-            "ZXF1ZXN0EjcKB2NvbnRleHQYASABKAsyHS51ZGIuZW50aXR5LnYxLlJlcXVl",
-            "c3RDb250ZXh0Ugdjb250ZXh0EhQKBWxpbWl0GAIgASgFUgVsaW1pdCKLAwoY",
-            "QWRtaW5BdWRpdFZlcmlmeVJlc3BvbnNlEhYKBnBhc3NlZBgBIAEoCFIGcGFz",
-            "c2VkEiMKDWNoZWNrZWRfY291bnQYAiABKAVSDGNoZWNrZWRDb3VudBIxChVm",
-            "aXJzdF9icm9rZW5fYXVkaXRfaWQYAyABKAlSEmZpcnN0QnJva2VuQXVkaXRJ",
-            "ZBIWCgZyZWFzb24YBCABKAlSBnJlYXNvbhI0ChZleHBlY3RlZF9wcmV2aW91",
-            "c19oYXNoGAUgASgJUhRleHBlY3RlZFByZXZpb3VzSGFzaBIwChRhY3R1YWxf",
-            "cHJldmlvdXNfaGFzaBgGIAEoCVISYWN0dWFsUHJldmlvdXNIYXNoEjIKFWV4",
-            "cGVjdGVkX2N1cnJlbnRfaGFzaBgHIAEoCVITZXhwZWN0ZWRDdXJyZW50SGFz",
-            "aBIuChNhY3R1YWxfY3VycmVudF9oYXNoGAggASgJUhFhY3R1YWxDdXJyZW50",
-            "SGFzaBIbCglsYXN0X2hhc2gYCSABKAlSCGxhc3RIYXNoIsMFChNBZG1pbkJh",
-            "Y2tlbmRTdW1tYXJ5EhgKB2JhY2tlbmQYASABKAlSB2JhY2tlbmQSFgoGc3Rh",
-            "dHVzGAIgASgJUgZzdGF0dXMSHAoJdHJhbnNwb3J0GAMgASgJUgl0cmFuc3Bv",
-            "cnQSKwoRY29uc2lzdGVuY3lfbW9kZWwYBCABKAlSEGNvbnNpc3RlbmN5TW9k",
-            "ZWwSMwoVc3VwcG9ydHNfdHJhbnNhY3Rpb25zGAUgASgIUhRzdXBwb3J0c1Ry",
-            "YW5zYWN0aW9ucxI6ChlzdXBwb3J0c19zY2hlbWFfbWlncmF0aW9uGAYgASgI",
-            "UhdzdXBwb3J0c1NjaGVtYU1pZ3JhdGlvbhI0ChZzdXBwb3J0c192ZWN0b3Jf",
-            "c2VhcmNoGAcgASgIUhRzdXBwb3J0c1ZlY3RvclNlYXJjaBI0ChZzdXBwb3J0",
-            "c19oeWJyaWRfc2VhcmNoGAggASgIUhRzdXBwb3J0c0h5YnJpZFNlYXJjaBIq",
-            "ChFtYXhfcGF5bG9hZF9ieXRlcxgJIAEoA1IPbWF4UGF5bG9hZEJ5dGVzEhkK",
-            "CHByb2JlX29rGAogASgIUgdwcm9iZU9rEigKEHByb2JlX2xhdGVuY3lfbXMY",
-            "CyABKANSDnByb2JlTGF0ZW5jeU1zEiMKDWluc3RhbmNlX25hbWUYDCABKAlS",
-            "DGluc3RhbmNlTmFtZRISCgRyb2xlGA0gASgJUgRyb2xlEkYKBmxhYmVscxgO",
-            "IAMoCzIuLnVkYi5lbnRpdHkudjEuQWRtaW5CYWNrZW5kU3VtbWFyeS5MYWJl",
-            "bHNFbnRyeVIGbGFiZWxzEiUKDnJvdXRpbmdfc3RhdHVzGA8gASgJUg1yb3V0",
-            "aW5nU3RhdHVzGjkKC0xhYmVsc0VudHJ5EhAKA2tleRgBIAEoCVIDa2V5EhQK",
-            "BXZhbHVlGAIgASgJUgV2YWx1ZToCOAEi8QEKD0FkbWluQ2RjU3VtbWFyeRIb",
-            "Cglpc19sZWFkZXIYASABKAhSCGlzTGVhZGVyEhYKBnBhdXNlZBgCIAEoCFIG",
-            "cGF1c2VkEhsKCXNsb3RfbmFtZRgDIAEoCVIIc2xvdE5hbWUSIgoNbGFzdF9l",
-            "dmVudF9pZBgEIAEoCVILbGFzdEV2ZW50SWQSHwoLbGFnX3NlY29uZHMYBSAB",
-            "KAFSCmxhZ1NlY29uZHMSIQoMb3V0Ym94X2RlcHRoGAYgASgDUgtvdXRib3hE",
-            "ZXB0aBIkCg5kbHFfb3Blbl9jb3VudBgHIAEoA1IMZGxxT3BlbkNvdW50IsgB",
-            "ChBBZG1pblNhZ2FTdW1tYXJ5EhYKBmFjdGl2ZRgBIAEoA1IGYWN0aXZlEiAK",
-            "C2NvbXBlbnNhdGVkGAIgASgDUgtjb21wZW5zYXRlZBIvChNmYWlsZWRfY29t",
-            "cGVuc2F0aW9uGAMgASgDUhJmYWlsZWRDb21wZW5zYXRpb24SIwoNbWFudWFs",
-            "X3JldmlldxgEIAEoA1IMbWFudWFsUmV2aWV3EiQKDWluZGV0ZXJtaW5hdGUY",
-            "BSABKANSDWluZGV0ZXJtaW5hdGUioQIKE0FkbWluQ2F0YWxvZ1N1bW1hcnkS",
-            "HQoKcHJvamVjdF9pZBgBIAEoCVIJcHJvamVjdElkEiUKDmFjdGl2ZV92ZXJz",
-            "aW9uGAIgASgJUg1hY3RpdmVWZXJzaW9uEicKD2FjdGl2ZV9jaGVja3N1bRgD",
-            "IAEoCVIOYWN0aXZlQ2hlY2tzdW0SIQoMYWN0aXZlX3NpbmNlGAQgASgJUgth",
-            "Y3RpdmVTaW5jZRIfCgt0YWJsZV9jb3VudBgFIAEoBVIKdGFibGVDb3VudBIf",
-            "CgtzdG9yZV9jb3VudBgGIAEoBVIKc3RvcmVDb3VudBI2ChdwZW5kaW5nX21p",
-            "Z3JhdGlvbl9zdGF0ZRgHIAEoCVIVcGVuZGluZ01pZ3JhdGlvblN0YXRlIvgC",
-            "ChRBZG1pblN1bW1hcnlSZXNwb25zZRI8CgdjYXRhbG9nGAEgAygLMiIudWRi",
-            "LmVudGl0eS52MS5BZG1pbkNhdGFsb2dTdW1tYXJ5UgdjYXRhbG9nEjAKA2Nk",
-            "YxgCIAEoCzIeLnVkYi5lbnRpdHkudjEuQWRtaW5DZGNTdW1tYXJ5UgNjZGMS",
-            "NQoFc2FnYXMYAyABKAsyHy51ZGIuZW50aXR5LnYxLkFkbWluU2FnYVN1bW1h",
-            "cnlSBXNhZ2FzEj4KCGJhY2tlbmRzGAQgAygLMiIudWRiLmVudGl0eS52MS5B",
-            "ZG1pbkJhY2tlbmRTdW1tYXJ5UghiYWNrZW5kcxIuChNhY3RpdmVfcG9saWN5",
-            "X2NvdW50GAUgASgFUhFhY3RpdmVQb2xpY3lDb3VudBItChNzbmFwc2hvdF9h",
-            "dF91bml4X21zGAYgASgDUhBzbmFwc2hvdEF0VW5peE1zEhoKCHdhcm5pbmdz",
-            "GAcgAygJUgh3YXJuaW5nc0KwAQoRY29tLnVkYi5lbnRpdHkudjFCCkFkbWlu",
-            "UHJvdG9QAVo5Z2l0aHViLmNvbS9mYWhhcmEwMi91ZGIvc2RrL2dvL2dlbi91",
-            "ZGIvZW50aXR5L3YxO2VudGl0eXYxogIDVUVYqgINVWRiLkVudGl0eS5WMcoC",
-            "DVVkYlxFbnRpdHlcVjHiAhlVZGJcR1BCTWV0YWRhdGFcRW50aXR5XFYx6gIP",
-            "VWRiOjpFbnRpdHk6OlYxYgZwcm90bzM="));
+            "EjMKBnBvbGljeRgCIAEoCzIbLnVkYi5lbnRpdHkudjEuUG9saWN5UmVjb3Jk",
+            "UgZwb2xpY3kiZQoNUG9saWN5UmVxdWVzdBI3Cgdjb250ZXh0GAEgASgLMh0u",
+            "dWRiLmVudGl0eS52MS5SZXF1ZXN0Q29udGV4dFIHY29udGV4dBIbCglwb2xp",
+            "Y3lfaWQYAiABKANSCHBvbGljeUlkIkgKElBvbGljeUxpbnRSZXNwb25zZRIW",
+            "CgZwYXNzZWQYASABKAhSBnBhc3NlZBIaCghmaW5kaW5ncxgCIAMoCVIIZmlu",
+            "ZGluZ3MirAEKFEVuc3VyZVByb2plY3RSZXF1ZXN0EjcKB2NvbnRleHQYASAB",
+            "KAsyHS51ZGIuZW50aXR5LnYxLlJlcXVlc3RDb250ZXh0Ugdjb250ZXh0Eh0K",
+            "CnByb2plY3RfaWQYAiABKAlSCXByb2plY3RJZBISCgRuYW1lGAMgASgJUgRu",
+            "YW1lEigKEGNkY190b3BpY19wcmVmaXgYBCABKAlSDmNkY1RvcGljUHJlZml4",
+            "IsoBCg1Qcm9qZWN0UmVjb3JkEh0KCnByb2plY3RfaWQYASABKAlSCXByb2pl",
+            "Y3RJZBISCgRuYW1lGAIgASgJUgRuYW1lEigKEGNkY190b3BpY19wcmVmaXgY",
+            "AyABKAlSDmNkY1RvcGljUHJlZml4EjQKFmFjdGl2ZV9jYXRhbG9nX3ZlcnNp",
+            "b24YBCABKAlSFGFjdGl2ZUNhdGFsb2dWZXJzaW9uEiYKD2NyZWF0ZWRfYXRf",
+            "dW5peBgFIAEoA1INY3JlYXRlZEF0VW5peCKCAQoSUHJvamVjdExpc3RSZXF1",
+            "ZXN0EjcKB2NvbnRleHQYASABKAsyHS51ZGIuZW50aXR5LnYxLlJlcXVlc3RD",
+            "b250ZXh0Ugdjb250ZXh0EhQKBWxpbWl0GAIgASgFUgVsaW1pdBIdCgpwYWdl",
+            "X3Rva2VuGAMgASgJUglwYWdlVG9rZW4imAEKE1Byb2plY3RMaXN0UmVzcG9u",
+            "c2USOAoIcHJvamVjdHMYASADKAsyHC51ZGIuZW50aXR5LnYxLlByb2plY3RS",
+            "ZWNvcmRSCHByb2plY3RzEiYKD25leHRfcGFnZV90b2tlbhgCIAEoCVINbmV4",
+            "dFBhZ2VUb2tlbhIfCgt0b3RhbF9jb3VudBgDIAEoBVIKdG90YWxDb3VudCKm",
+            "AQoTQWRtaW5TdW1tYXJ5UmVxdWVzdBI3Cgdjb250ZXh0GAEgASgLMh0udWRi",
+            "LmVudGl0eS52MS5SZXF1ZXN0Q29udGV4dFIHY29udGV4dBIdCgpwcm9qZWN0",
+            "X2lkGAIgASgJUglwcm9qZWN0SWQSHwoLd2l0aF9wcm9iZXMYAyABKAhSCndp",
+            "dGhQcm9iZXMSFgoGcmVkYWN0GAQgASgIUgZyZWRhY3QiwAIKFEFkbWluQXVk",
+            "aXRMb2dSZXF1ZXN0EjcKB2NvbnRleHQYASABKAsyHS51ZGIuZW50aXR5LnYx",
+            "LlJlcXVlc3RDb250ZXh0Ugdjb250ZXh0EikKEG9wZXJhdGlvbl9maWx0ZXIY",
+            "AiABKAlSD29wZXJhdGlvbkZpbHRlchIhCgxhY3Rvcl9maWx0ZXIYAyABKAlS",
+            "C2FjdG9yRmlsdGVyEigKEHRlbmFudF9pZF9maWx0ZXIYBCABKAlSDnRlbmFu",
+            "dElkRmlsdGVyEioKEXByb2plY3RfaWRfZmlsdGVyGAUgASgJUg9wcm9qZWN0",
+            "SWRGaWx0ZXISFAoFbGltaXQYBiABKAVSBWxpbWl0Eh0KCnBhZ2VfdG9rZW4Y",
+            "ByABKAlSCXBhZ2VUb2tlbhIWCgZyZWRhY3QYCCABKAhSBnJlZGFjdCLXAwoT",
+            "QWRtaW5BdWRpdExvZ1JlY29yZBIZCghhdWRpdF9pZBgBIAEoCVIHYXVkaXRJ",
+            "ZBIUCgVhY3RvchgCIAEoCVIFYWN0b3ISHAoJb3BlcmF0aW9uGAMgASgJUglv",
+            "cGVyYXRpb24SFgoGdGFyZ2V0GAQgASgJUgZ0YXJnZXQSIQoMcmVxdWVzdF9q",
+            "c29uGAUgASgMUgtyZXF1ZXN0SnNvbhIWCgZyZXN1bHQYBiABKAlSBnJlc3Vs",
+            "dBIbCgl0ZW5hbnRfaWQYByABKAlSCHRlbmFudElkEh0KCnByb2plY3RfaWQY",
+            "CCABKAlSCXByb2plY3RJZBIlCg5jb3JyZWxhdGlvbl9pZBgJIAEoCVINY29y",
+            "cmVsYXRpb25JZBImCg9jcmVhdGVkX2F0X3VuaXgYCiABKANSDWNyZWF0ZWRB",
+            "dFVuaXgSIwoNcHJldmlvdXNfaGFzaBgLIAEoCVIMcHJldmlvdXNIYXNoEiEK",
+            "DGN1cnJlbnRfaGFzaBgMIAEoCVILY3VycmVudEhhc2gSIgoNc2lnbmVyX2tl",
+            "eV9pZBgNIAEoCVILc2lnbmVyS2V5SWQSJwoPZXh0ZXJuYWxfYW5jaG9yGA4g",
+            "ASgJUg5leHRlcm5hbEFuY2hvciKYAQoVQWRtaW5BdWRpdExvZ1Jlc3BvbnNl",
+            "EjYKBGxvZ3MYASADKAsyIi51ZGIuZW50aXR5LnYxLkFkbWluQXVkaXRMb2dS",
+            "ZWNvcmRSBGxvZ3MSJgoPbmV4dF9wYWdlX3Rva2VuGAIgASgJUg1uZXh0UGFn",
+            "ZVRva2VuEh8KC3RvdGFsX2NvdW50GAMgASgFUgp0b3RhbENvdW50ImgKF0Fk",
+            "bWluQXVkaXRWZXJpZnlSZXF1ZXN0EjcKB2NvbnRleHQYASABKAsyHS51ZGIu",
+            "ZW50aXR5LnYxLlJlcXVlc3RDb250ZXh0Ugdjb250ZXh0EhQKBWxpbWl0GAIg",
+            "ASgFUgVsaW1pdCKLAwoYQWRtaW5BdWRpdFZlcmlmeVJlc3BvbnNlEhYKBnBh",
+            "c3NlZBgBIAEoCFIGcGFzc2VkEiMKDWNoZWNrZWRfY291bnQYAiABKAVSDGNo",
+            "ZWNrZWRDb3VudBIxChVmaXJzdF9icm9rZW5fYXVkaXRfaWQYAyABKAlSEmZp",
+            "cnN0QnJva2VuQXVkaXRJZBIWCgZyZWFzb24YBCABKAlSBnJlYXNvbhI0ChZl",
+            "eHBlY3RlZF9wcmV2aW91c19oYXNoGAUgASgJUhRleHBlY3RlZFByZXZpb3Vz",
+            "SGFzaBIwChRhY3R1YWxfcHJldmlvdXNfaGFzaBgGIAEoCVISYWN0dWFsUHJl",
+            "dmlvdXNIYXNoEjIKFWV4cGVjdGVkX2N1cnJlbnRfaGFzaBgHIAEoCVITZXhw",
+            "ZWN0ZWRDdXJyZW50SGFzaBIuChNhY3R1YWxfY3VycmVudF9oYXNoGAggASgJ",
+            "UhFhY3R1YWxDdXJyZW50SGFzaBIbCglsYXN0X2hhc2gYCSABKAlSCGxhc3RI",
+            "YXNoIsMFChNBZG1pbkJhY2tlbmRTdW1tYXJ5EhgKB2JhY2tlbmQYASABKAlS",
+            "B2JhY2tlbmQSFgoGc3RhdHVzGAIgASgJUgZzdGF0dXMSHAoJdHJhbnNwb3J0",
+            "GAMgASgJUgl0cmFuc3BvcnQSKwoRY29uc2lzdGVuY3lfbW9kZWwYBCABKAlS",
+            "EGNvbnNpc3RlbmN5TW9kZWwSMwoVc3VwcG9ydHNfdHJhbnNhY3Rpb25zGAUg",
+            "ASgIUhRzdXBwb3J0c1RyYW5zYWN0aW9ucxI6ChlzdXBwb3J0c19zY2hlbWFf",
+            "bWlncmF0aW9uGAYgASgIUhdzdXBwb3J0c1NjaGVtYU1pZ3JhdGlvbhI0ChZz",
+            "dXBwb3J0c192ZWN0b3Jfc2VhcmNoGAcgASgIUhRzdXBwb3J0c1ZlY3RvclNl",
+            "YXJjaBI0ChZzdXBwb3J0c19oeWJyaWRfc2VhcmNoGAggASgIUhRzdXBwb3J0",
+            "c0h5YnJpZFNlYXJjaBIqChFtYXhfcGF5bG9hZF9ieXRlcxgJIAEoA1IPbWF4",
+            "UGF5bG9hZEJ5dGVzEhkKCHByb2JlX29rGAogASgIUgdwcm9iZU9rEigKEHBy",
+            "b2JlX2xhdGVuY3lfbXMYCyABKANSDnByb2JlTGF0ZW5jeU1zEiMKDWluc3Rh",
+            "bmNlX25hbWUYDCABKAlSDGluc3RhbmNlTmFtZRISCgRyb2xlGA0gASgJUgRy",
+            "b2xlEkYKBmxhYmVscxgOIAMoCzIuLnVkYi5lbnRpdHkudjEuQWRtaW5CYWNr",
+            "ZW5kU3VtbWFyeS5MYWJlbHNFbnRyeVIGbGFiZWxzEiUKDnJvdXRpbmdfc3Rh",
+            "dHVzGA8gASgJUg1yb3V0aW5nU3RhdHVzGjkKC0xhYmVsc0VudHJ5EhAKA2tl",
+            "eRgBIAEoCVIDa2V5EhQKBXZhbHVlGAIgASgJUgV2YWx1ZToCOAEi8QEKD0Fk",
+            "bWluQ2RjU3VtbWFyeRIbCglpc19sZWFkZXIYASABKAhSCGlzTGVhZGVyEhYK",
+            "BnBhdXNlZBgCIAEoCFIGcGF1c2VkEhsKCXNsb3RfbmFtZRgDIAEoCVIIc2xv",
+            "dE5hbWUSIgoNbGFzdF9ldmVudF9pZBgEIAEoCVILbGFzdEV2ZW50SWQSHwoL",
+            "bGFnX3NlY29uZHMYBSABKAFSCmxhZ1NlY29uZHMSIQoMb3V0Ym94X2RlcHRo",
+            "GAYgASgDUgtvdXRib3hEZXB0aBIkCg5kbHFfb3Blbl9jb3VudBgHIAEoA1IM",
+            "ZGxxT3BlbkNvdW50IsgBChBBZG1pblNhZ2FTdW1tYXJ5EhYKBmFjdGl2ZRgB",
+            "IAEoA1IGYWN0aXZlEiAKC2NvbXBlbnNhdGVkGAIgASgDUgtjb21wZW5zYXRl",
+            "ZBIvChNmYWlsZWRfY29tcGVuc2F0aW9uGAMgASgDUhJmYWlsZWRDb21wZW5z",
+            "YXRpb24SIwoNbWFudWFsX3JldmlldxgEIAEoA1IMbWFudWFsUmV2aWV3EiQK",
+            "DWluZGV0ZXJtaW5hdGUYBSABKANSDWluZGV0ZXJtaW5hdGUioQIKE0FkbWlu",
+            "Q2F0YWxvZ1N1bW1hcnkSHQoKcHJvamVjdF9pZBgBIAEoCVIJcHJvamVjdElk",
+            "EiUKDmFjdGl2ZV92ZXJzaW9uGAIgASgJUg1hY3RpdmVWZXJzaW9uEicKD2Fj",
+            "dGl2ZV9jaGVja3N1bRgDIAEoCVIOYWN0aXZlQ2hlY2tzdW0SIQoMYWN0aXZl",
+            "X3NpbmNlGAQgASgJUgthY3RpdmVTaW5jZRIfCgt0YWJsZV9jb3VudBgFIAEo",
+            "BVIKdGFibGVDb3VudBIfCgtzdG9yZV9jb3VudBgGIAEoBVIKc3RvcmVDb3Vu",
+            "dBI2ChdwZW5kaW5nX21pZ3JhdGlvbl9zdGF0ZRgHIAEoCVIVcGVuZGluZ01p",
+            "Z3JhdGlvblN0YXRlIvgCChRBZG1pblN1bW1hcnlSZXNwb25zZRI8CgdjYXRh",
+            "bG9nGAEgAygLMiIudWRiLmVudGl0eS52MS5BZG1pbkNhdGFsb2dTdW1tYXJ5",
+            "UgdjYXRhbG9nEjAKA2NkYxgCIAEoCzIeLnVkYi5lbnRpdHkudjEuQWRtaW5D",
+            "ZGNTdW1tYXJ5UgNjZGMSNQoFc2FnYXMYAyABKAsyHy51ZGIuZW50aXR5LnYx",
+            "LkFkbWluU2FnYVN1bW1hcnlSBXNhZ2FzEj4KCGJhY2tlbmRzGAQgAygLMiIu",
+            "dWRiLmVudGl0eS52MS5BZG1pbkJhY2tlbmRTdW1tYXJ5UghiYWNrZW5kcxIu",
+            "ChNhY3RpdmVfcG9saWN5X2NvdW50GAUgASgFUhFhY3RpdmVQb2xpY3lDb3Vu",
+            "dBItChNzbmFwc2hvdF9hdF91bml4X21zGAYgASgDUhBzbmFwc2hvdEF0VW5p",
+            "eE1zEhoKCHdhcm5pbmdzGAcgAygJUgh3YXJuaW5nc0KwAQoRY29tLnVkYi5l",
+            "bnRpdHkudjFCCkFkbWluUHJvdG9QAVo5Z2l0aHViLmNvbS9mYWhhcmEwMi91",
+            "ZGIvc2RrL2dvL2dlbi91ZGIvZW50aXR5L3YxO2VudGl0eXYxogIDVUVYqgIN",
+            "VWRiLkVudGl0eS5WMcoCDVVkYlxFbnRpdHlcVjHiAhlVZGJcR1BCTWV0YWRh",
+            "dGFcRW50aXR5XFYx6gIPVWRiOjpFbnRpdHk6OlYxYgZwcm90bzM="));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { global::Udb.Entity.V1.ContextReflection.Descriptor, },
           new pbr::GeneratedClrTypeInfo(null, null, new pbr::GeneratedClrTypeInfo[] {
@@ -447,18 +482,19 @@ namespace Udb.Entity.V1 {
             new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Entity.V1.GenericDispatchResponse), global::Udb.Entity.V1.GenericDispatchResponse.Parser, new[]{ "Backend", "Operation", "ResourceUri", "ResultJson", "Errors" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Entity.V1.ResourceAdminRequest), global::Udb.Entity.V1.ResourceAdminRequest.Parser, new[]{ "Context", "Backend", "ResourceName", "SpecJson", "IdempotencyKey", "DryRun" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Entity.V1.ResourceListResponse), global::Udb.Entity.V1.ResourceListResponse.Parser, new[]{ "Backend", "Resources" }, null, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Entity.V1.StageCatalogRequest), global::Udb.Entity.V1.StageCatalogRequest.Parser, new[]{ "Context", "ManifestJson", "ProjectId", "Reason", "IdempotencyKey" }, null, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Entity.V1.CatalogVersionRequest), global::Udb.Entity.V1.CatalogVersionRequest.Parser, new[]{ "Context", "ProjectId", "Version", "Reason", "IdempotencyKey" }, null, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Entity.V1.CatalogVersionResponse), global::Udb.Entity.V1.CatalogVersionResponse.Parser, new[]{ "CatalogId", "ProjectId", "Version", "Status", "ChecksumSha256", "CreatedAtUnix", "Errors", "Warnings" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Entity.V1.StageCatalogRequest), global::Udb.Entity.V1.StageCatalogRequest.Parser, new[]{ "Context", "ManifestJson", "ProjectId", "Reason", "IdempotencyKey", "ReviewedMigrationRunId" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Entity.V1.CatalogVersionRequest), global::Udb.Entity.V1.CatalogVersionRequest.Parser, new[]{ "Context", "ProjectId", "Version", "Reason", "IdempotencyKey", "ReviewedMigrationRunId" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Entity.V1.CatalogVersionResponse), global::Udb.Entity.V1.CatalogVersionResponse.Parser, new[]{ "CatalogId", "ProjectId", "Version", "Status", "ChecksumSha256", "CreatedAtUnix", "Errors", "Warnings", "ManifestIntegritySha256" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Entity.V1.CatalogValidationResponse), global::Udb.Entity.V1.CatalogValidationResponse.Parser, new[]{ "Valid", "ChecksumSha256", "Errors", "Warnings" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Entity.V1.CatalogVersionListResponse), global::Udb.Entity.V1.CatalogVersionListResponse.Parser, new[]{ "ProjectId", "Versions", "ActiveVersion" }, null, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Entity.V1.MigrationPlanRequest), global::Udb.Entity.V1.MigrationPlanRequest.Parser, new[]{ "Context", "ProjectId", "DryRun" }, null, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Entity.V1.MigrationPlanResponse), global::Udb.Entity.V1.MigrationPlanResponse.Parser, new[]{ "RunId", "ProjectId", "CatalogVersion", "State", "Operations", "RequiresReview", "Blocked", "OperationsHash" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Entity.V1.MigrationPlanRequest), global::Udb.Entity.V1.MigrationPlanRequest.Parser, new[]{ "Context", "ProjectId", "DryRun", "ExpectedActiveCatalogId", "ExpectedActiveManifestIntegritySha256", "IdempotencyKey", "CandidateManifestJson" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Entity.V1.ReviewedCatalogTransitionEvidence), global::Udb.Entity.V1.ReviewedCatalogTransitionEvidence.Parser, new[]{ "RunId", "TenantId", "ProjectId", "ExpectedActiveCatalogId", "ExpectedActiveManifestIntegritySha256", "TargetManifestIntegritySha256", "TargetSchemaChecksumSha256", "OperationsHash", "ReviewedOperationFingerprints", "ApprovedBy", "ApprovedAtUnix", "ApplicationState", "AppliedOperationsHash", "AppliedAtUnix", "ApplicationEvidenceSha256" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Entity.V1.MigrationPlanResponse), global::Udb.Entity.V1.MigrationPlanResponse.Parser, new[]{ "RunId", "ProjectId", "CatalogVersion", "State", "Operations", "RequiresReview", "Blocked", "OperationsHash", "ReviewedCatalogTransition" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Entity.V1.MigrationApplyRequest), global::Udb.Entity.V1.MigrationApplyRequest.Parser, new[]{ "Context", "RunId", "ProjectId", "ApprovalToken", "IdempotencyKey" }, null, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Entity.V1.MigrationRunRequest), global::Udb.Entity.V1.MigrationRunRequest.Parser, new[]{ "Context", "RunId", "ProjectId", "IdempotencyKey" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Entity.V1.MigrationRunRequest), global::Udb.Entity.V1.MigrationRunRequest.Parser, new[]{ "Context", "RunId", "ProjectId", "IdempotencyKey", "ExpectedOperationsHash", "ReviewedOperationFingerprints" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Entity.V1.MigrationRunListRequest), global::Udb.Entity.V1.MigrationRunListRequest.Parser, new[]{ "Context", "ProjectId", "StateFilter", "Limit", "PageToken" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Entity.V1.MigrationRunListResponse), global::Udb.Entity.V1.MigrationRunListResponse.Parser, new[]{ "Runs", "NextPageToken", "TotalCount" }, null, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Entity.V1.MigrationStatusResponse), global::Udb.Entity.V1.MigrationStatusResponse.Parser, new[]{ "RunId", "ProjectId", "CatalogVersion", "State", "StartedAt", "FinishedAt", "Operations", "Error", "ApprovalToken", "Applyable" }, new[]{ "ApprovalToken", "Applyable" }, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Entity.V1.MigrationStatusResponse), global::Udb.Entity.V1.MigrationStatusResponse.Parser, new[]{ "RunId", "ProjectId", "CatalogVersion", "State", "StartedAt", "FinishedAt", "Operations", "Error", "ApprovalToken", "Applyable", "ReviewedCatalogTransition" }, new[]{ "ApprovalToken", "Applyable" }, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Entity.V1.MigrationOperationStatus), global::Udb.Entity.V1.MigrationOperationStatus.Parser, new[]{ "Index", "Backend", "ResourceUri", "OperationKind", "Status", "Error" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Entity.V1.DlqListRequest), global::Udb.Entity.V1.DlqListRequest.Parser, new[]{ "Context", "Topic", "StatusFilter", "Limit", "PageToken" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Entity.V1.DlqEventRecord), global::Udb.Entity.V1.DlqEventRecord.Parser, new[]{ "DlqId", "EventId", "Topic", "PayloadJson", "ErrorType", "ErrorMessage", "Status", "CreatedAtUnix", "UpdatedAtUnix" }, null, null, null, null),
@@ -8752,6 +8788,7 @@ namespace Udb.Entity.V1 {
       projectId_ = other.projectId_;
       reason_ = other.reason_;
       idempotencyKey_ = other.idempotencyKey_;
+      reviewedMigrationRunId_ = other.reviewedMigrationRunId_;
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
     }
 
@@ -8827,6 +8864,25 @@ namespace Udb.Entity.V1 {
       }
     }
 
+    /// <summary>Field number for the "reviewed_migration_run_id" field.</summary>
+    public const int ReviewedMigrationRunIdFieldNumber = 5;
+    private string reviewedMigrationRunId_ = "";
+    /// <summary>
+    /// Explicit durable candidate run approved and applied through the migration
+    /// RPCs. Stage and activation revalidate its exact tenant/project, ACTIVE base,
+    /// target integrity, reviewed fingerprints and native application evidence.
+    /// Empty retains the ordinary compatibility policy; a caller receipt is not
+    /// approval authority. ValidateCatalog performs lint only and does not use it.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string ReviewedMigrationRunId {
+      get { return reviewedMigrationRunId_; }
+      set {
+        reviewedMigrationRunId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public override bool Equals(object other) {
@@ -8847,6 +8903,7 @@ namespace Udb.Entity.V1 {
       if (ProjectId != other.ProjectId) return false;
       if (Reason != other.Reason) return false;
       if (IdempotencyKey != other.IdempotencyKey) return false;
+      if (ReviewedMigrationRunId != other.ReviewedMigrationRunId) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
 
@@ -8859,6 +8916,7 @@ namespace Udb.Entity.V1 {
       if (ProjectId.Length != 0) hash ^= ProjectId.GetHashCode();
       if (Reason.Length != 0) hash ^= Reason.GetHashCode();
       if (IdempotencyKey.Length != 0) hash ^= IdempotencyKey.GetHashCode();
+      if (ReviewedMigrationRunId.Length != 0) hash ^= ReviewedMigrationRunId.GetHashCode();
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
       }
@@ -8893,6 +8951,10 @@ namespace Udb.Entity.V1 {
         output.WriteRawTag(34);
         output.WriteString(IdempotencyKey);
       }
+      if (ReviewedMigrationRunId.Length != 0) {
+        output.WriteRawTag(42);
+        output.WriteString(ReviewedMigrationRunId);
+      }
       if (ManifestJson.Length != 0) {
         output.WriteRawTag(194, 62);
         output.WriteBytes(ManifestJson);
@@ -8923,6 +8985,10 @@ namespace Udb.Entity.V1 {
         output.WriteRawTag(34);
         output.WriteString(IdempotencyKey);
       }
+      if (ReviewedMigrationRunId.Length != 0) {
+        output.WriteRawTag(42);
+        output.WriteString(ReviewedMigrationRunId);
+      }
       if (ManifestJson.Length != 0) {
         output.WriteRawTag(194, 62);
         output.WriteBytes(ManifestJson);
@@ -8951,6 +9017,9 @@ namespace Udb.Entity.V1 {
       }
       if (IdempotencyKey.Length != 0) {
         size += 1 + pb::CodedOutputStream.ComputeStringSize(IdempotencyKey);
+      }
+      if (ReviewedMigrationRunId.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(ReviewedMigrationRunId);
       }
       if (_unknownFields != null) {
         size += _unknownFields.CalculateSize();
@@ -8981,6 +9050,9 @@ namespace Udb.Entity.V1 {
       }
       if (other.IdempotencyKey.Length != 0) {
         IdempotencyKey = other.IdempotencyKey;
+      }
+      if (other.ReviewedMigrationRunId.Length != 0) {
+        ReviewedMigrationRunId = other.ReviewedMigrationRunId;
       }
       _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
     }
@@ -9018,6 +9090,10 @@ namespace Udb.Entity.V1 {
           }
           case 34: {
             IdempotencyKey = input.ReadString();
+            break;
+          }
+          case 42: {
+            ReviewedMigrationRunId = input.ReadString();
             break;
           }
           case 8002: {
@@ -9060,6 +9136,10 @@ namespace Udb.Entity.V1 {
           }
           case 34: {
             IdempotencyKey = input.ReadString();
+            break;
+          }
+          case 42: {
+            ReviewedMigrationRunId = input.ReadString();
             break;
           }
           case 8002: {
@@ -9113,6 +9193,7 @@ namespace Udb.Entity.V1 {
       version_ = other.version_;
       reason_ = other.reason_;
       idempotencyKey_ = other.idempotencyKey_;
+      reviewedMigrationRunId_ = other.reviewedMigrationRunId_;
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
     }
 
@@ -9189,6 +9270,23 @@ namespace Udb.Entity.V1 {
       }
     }
 
+    /// <summary>Field number for the "reviewed_migration_run_id" field.</summary>
+    public const int ReviewedMigrationRunIdFieldNumber = 6;
+    private string reviewedMigrationRunId_ = "";
+    /// <summary>
+    /// ActivateCatalog only: the same durable reviewed candidate run used at
+    /// staging. The stored candidate and current ACTIVE base are checked again;
+    /// this reference cannot approve a foreign, stale or unapplied transition.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string ReviewedMigrationRunId {
+      get { return reviewedMigrationRunId_; }
+      set {
+        reviewedMigrationRunId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public override bool Equals(object other) {
@@ -9209,6 +9307,7 @@ namespace Udb.Entity.V1 {
       if (Version != other.Version) return false;
       if (Reason != other.Reason) return false;
       if (IdempotencyKey != other.IdempotencyKey) return false;
+      if (ReviewedMigrationRunId != other.ReviewedMigrationRunId) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
 
@@ -9221,6 +9320,7 @@ namespace Udb.Entity.V1 {
       if (Version.Length != 0) hash ^= Version.GetHashCode();
       if (Reason.Length != 0) hash ^= Reason.GetHashCode();
       if (IdempotencyKey.Length != 0) hash ^= IdempotencyKey.GetHashCode();
+      if (ReviewedMigrationRunId.Length != 0) hash ^= ReviewedMigrationRunId.GetHashCode();
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
       }
@@ -9259,6 +9359,10 @@ namespace Udb.Entity.V1 {
         output.WriteRawTag(42);
         output.WriteString(IdempotencyKey);
       }
+      if (ReviewedMigrationRunId.Length != 0) {
+        output.WriteRawTag(50);
+        output.WriteString(ReviewedMigrationRunId);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
       }
@@ -9289,6 +9393,10 @@ namespace Udb.Entity.V1 {
         output.WriteRawTag(42);
         output.WriteString(IdempotencyKey);
       }
+      if (ReviewedMigrationRunId.Length != 0) {
+        output.WriteRawTag(50);
+        output.WriteString(ReviewedMigrationRunId);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(ref output);
       }
@@ -9313,6 +9421,9 @@ namespace Udb.Entity.V1 {
       }
       if (IdempotencyKey.Length != 0) {
         size += 1 + pb::CodedOutputStream.ComputeStringSize(IdempotencyKey);
+      }
+      if (ReviewedMigrationRunId.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(ReviewedMigrationRunId);
       }
       if (_unknownFields != null) {
         size += _unknownFields.CalculateSize();
@@ -9343,6 +9454,9 @@ namespace Udb.Entity.V1 {
       }
       if (other.IdempotencyKey.Length != 0) {
         IdempotencyKey = other.IdempotencyKey;
+      }
+      if (other.ReviewedMigrationRunId.Length != 0) {
+        ReviewedMigrationRunId = other.ReviewedMigrationRunId;
       }
       _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
     }
@@ -9386,6 +9500,10 @@ namespace Udb.Entity.V1 {
             IdempotencyKey = input.ReadString();
             break;
           }
+          case 50: {
+            ReviewedMigrationRunId = input.ReadString();
+            break;
+          }
         }
       }
     #endif
@@ -9426,6 +9544,10 @@ namespace Udb.Entity.V1 {
           }
           case 42: {
             IdempotencyKey = input.ReadString();
+            break;
+          }
+          case 50: {
+            ReviewedMigrationRunId = input.ReadString();
             break;
           }
         }
@@ -9478,6 +9600,7 @@ namespace Udb.Entity.V1 {
       createdAtUnix_ = other.createdAtUnix_;
       errors_ = other.errors_.Clone();
       warnings_ = other.warnings_.Clone();
+      manifestIntegritySha256_ = other.manifestIntegritySha256_;
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
     }
 
@@ -9581,6 +9704,24 @@ namespace Udb.Entity.V1 {
       get { return warnings_; }
     }
 
+    /// <summary>Field number for the "manifest_integrity_sha256" field.</summary>
+    public const int ManifestIntegritySha256FieldNumber = 9;
+    private string manifestIntegritySha256_ = "";
+    /// <summary>
+    /// Verified outer integrity of the complete durable manifest. Candidate
+    /// planning pins this value with catalog_id; checksum_sha256 remains the
+    /// existing catalog selector and must not be substituted for this integrity.
+    /// Empty for an in-memory startup fallback without durable catalog authority.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string ManifestIntegritySha256 {
+      get { return manifestIntegritySha256_; }
+      set {
+        manifestIntegritySha256_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public override bool Equals(object other) {
@@ -9604,6 +9745,7 @@ namespace Udb.Entity.V1 {
       if (CreatedAtUnix != other.CreatedAtUnix) return false;
       if(!errors_.Equals(other.errors_)) return false;
       if(!warnings_.Equals(other.warnings_)) return false;
+      if (ManifestIntegritySha256 != other.ManifestIntegritySha256) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
 
@@ -9619,6 +9761,7 @@ namespace Udb.Entity.V1 {
       if (CreatedAtUnix != 0L) hash ^= CreatedAtUnix.GetHashCode();
       hash ^= errors_.GetHashCode();
       hash ^= warnings_.GetHashCode();
+      if (ManifestIntegritySha256.Length != 0) hash ^= ManifestIntegritySha256.GetHashCode();
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
       }
@@ -9663,6 +9806,10 @@ namespace Udb.Entity.V1 {
       }
       errors_.WriteTo(output, _repeated_errors_codec);
       warnings_.WriteTo(output, _repeated_warnings_codec);
+      if (ManifestIntegritySha256.Length != 0) {
+        output.WriteRawTag(74);
+        output.WriteString(ManifestIntegritySha256);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
       }
@@ -9699,6 +9846,10 @@ namespace Udb.Entity.V1 {
       }
       errors_.WriteTo(ref output, _repeated_errors_codec);
       warnings_.WriteTo(ref output, _repeated_warnings_codec);
+      if (ManifestIntegritySha256.Length != 0) {
+        output.WriteRawTag(74);
+        output.WriteString(ManifestIntegritySha256);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(ref output);
       }
@@ -9729,6 +9880,9 @@ namespace Udb.Entity.V1 {
       }
       size += errors_.CalculateSize(_repeated_errors_codec);
       size += warnings_.CalculateSize(_repeated_warnings_codec);
+      if (ManifestIntegritySha256.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(ManifestIntegritySha256);
+      }
       if (_unknownFields != null) {
         size += _unknownFields.CalculateSize();
       }
@@ -9761,6 +9915,9 @@ namespace Udb.Entity.V1 {
       }
       errors_.Add(other.errors_);
       warnings_.Add(other.warnings_);
+      if (other.ManifestIntegritySha256.Length != 0) {
+        ManifestIntegritySha256 = other.ManifestIntegritySha256;
+      }
       _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
     }
 
@@ -9812,6 +9969,10 @@ namespace Udb.Entity.V1 {
             warnings_.AddEntriesFrom(input, _repeated_warnings_codec);
             break;
           }
+          case 74: {
+            ManifestIntegritySha256 = input.ReadString();
+            break;
+          }
         }
       }
     #endif
@@ -9861,6 +10022,10 @@ namespace Udb.Entity.V1 {
           }
           case 66: {
             warnings_.AddEntriesFrom(ref input, _repeated_warnings_codec);
+            break;
+          }
+          case 74: {
+            ManifestIntegritySha256 = input.ReadString();
             break;
           }
         }
@@ -10456,6 +10621,10 @@ namespace Udb.Entity.V1 {
       context_ = other.context_ != null ? other.context_.Clone() : null;
       projectId_ = other.projectId_;
       dryRun_ = other.dryRun_;
+      expectedActiveCatalogId_ = other.expectedActiveCatalogId_;
+      expectedActiveManifestIntegritySha256_ = other.expectedActiveManifestIntegritySha256_;
+      idempotencyKey_ = other.idempotencyKey_;
+      candidateManifestJson_ = other.candidateManifestJson_;
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
     }
 
@@ -10504,6 +10673,68 @@ namespace Udb.Entity.V1 {
       }
     }
 
+    /// <summary>Field number for the "expected_active_catalog_id" field.</summary>
+    public const int ExpectedActiveCatalogIdFieldNumber = 4;
+    private string expectedActiveCatalogId_ = "";
+    /// <summary>
+    /// Candidate mode pins an exact already-proven ACTIVE base before planning.
+    /// Both fields are required with candidate_manifest_json and refused without
+    /// it. The outer stored manifest integrity differs from its inner semantic
+    /// schema checksum; callers must not substitute one for the other.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string ExpectedActiveCatalogId {
+      get { return expectedActiveCatalogId_; }
+      set {
+        expectedActiveCatalogId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "expected_active_manifest_integrity_sha256" field.</summary>
+    public const int ExpectedActiveManifestIntegritySha256FieldNumber = 5;
+    private string expectedActiveManifestIntegritySha256_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string ExpectedActiveManifestIntegritySha256 {
+      get { return expectedActiveManifestIntegritySha256_; }
+      set {
+        expectedActiveManifestIntegritySha256_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "idempotency_key" field.</summary>
+    public const int IdempotencyKeyFieldNumber = 6;
+    private string idempotencyKey_ = "";
+    /// <summary>
+    /// Required in candidate mode; retries return the immutable committed plan.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string IdempotencyKey {
+      get { return idempotencyKey_; }
+      set {
+        idempotencyKey_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "candidate_manifest_json" field.</summary>
+    public const int CandidateManifestJsonFieldNumber = 1000;
+    private pb::ByteString candidateManifestJson_ = pb::ByteString.Empty;
+    /// <summary>
+    /// Full unstaged CatalogManifest JSON. The broker computes the canonical
+    /// change set, exact review fingerprints and actual application plan. Empty
+    /// retains ordinary planning against the existing ACTIVE catalog.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public pb::ByteString CandidateManifestJson {
+      get { return candidateManifestJson_; }
+      set {
+        candidateManifestJson_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public override bool Equals(object other) {
@@ -10522,6 +10753,10 @@ namespace Udb.Entity.V1 {
       if (!object.Equals(Context, other.Context)) return false;
       if (ProjectId != other.ProjectId) return false;
       if (DryRun != other.DryRun) return false;
+      if (ExpectedActiveCatalogId != other.ExpectedActiveCatalogId) return false;
+      if (ExpectedActiveManifestIntegritySha256 != other.ExpectedActiveManifestIntegritySha256) return false;
+      if (IdempotencyKey != other.IdempotencyKey) return false;
+      if (CandidateManifestJson != other.CandidateManifestJson) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
 
@@ -10532,6 +10767,10 @@ namespace Udb.Entity.V1 {
       if (context_ != null) hash ^= Context.GetHashCode();
       if (ProjectId.Length != 0) hash ^= ProjectId.GetHashCode();
       if (DryRun != false) hash ^= DryRun.GetHashCode();
+      if (ExpectedActiveCatalogId.Length != 0) hash ^= ExpectedActiveCatalogId.GetHashCode();
+      if (ExpectedActiveManifestIntegritySha256.Length != 0) hash ^= ExpectedActiveManifestIntegritySha256.GetHashCode();
+      if (IdempotencyKey.Length != 0) hash ^= IdempotencyKey.GetHashCode();
+      if (CandidateManifestJson.Length != 0) hash ^= CandidateManifestJson.GetHashCode();
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
       }
@@ -10562,6 +10801,22 @@ namespace Udb.Entity.V1 {
         output.WriteRawTag(24);
         output.WriteBool(DryRun);
       }
+      if (ExpectedActiveCatalogId.Length != 0) {
+        output.WriteRawTag(34);
+        output.WriteString(ExpectedActiveCatalogId);
+      }
+      if (ExpectedActiveManifestIntegritySha256.Length != 0) {
+        output.WriteRawTag(42);
+        output.WriteString(ExpectedActiveManifestIntegritySha256);
+      }
+      if (IdempotencyKey.Length != 0) {
+        output.WriteRawTag(50);
+        output.WriteString(IdempotencyKey);
+      }
+      if (CandidateManifestJson.Length != 0) {
+        output.WriteRawTag(194, 62);
+        output.WriteBytes(CandidateManifestJson);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
       }
@@ -10584,6 +10839,22 @@ namespace Udb.Entity.V1 {
         output.WriteRawTag(24);
         output.WriteBool(DryRun);
       }
+      if (ExpectedActiveCatalogId.Length != 0) {
+        output.WriteRawTag(34);
+        output.WriteString(ExpectedActiveCatalogId);
+      }
+      if (ExpectedActiveManifestIntegritySha256.Length != 0) {
+        output.WriteRawTag(42);
+        output.WriteString(ExpectedActiveManifestIntegritySha256);
+      }
+      if (IdempotencyKey.Length != 0) {
+        output.WriteRawTag(50);
+        output.WriteString(IdempotencyKey);
+      }
+      if (CandidateManifestJson.Length != 0) {
+        output.WriteRawTag(194, 62);
+        output.WriteBytes(CandidateManifestJson);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(ref output);
       }
@@ -10602,6 +10873,18 @@ namespace Udb.Entity.V1 {
       }
       if (DryRun != false) {
         size += 1 + 1;
+      }
+      if (ExpectedActiveCatalogId.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(ExpectedActiveCatalogId);
+      }
+      if (ExpectedActiveManifestIntegritySha256.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(ExpectedActiveManifestIntegritySha256);
+      }
+      if (IdempotencyKey.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(IdempotencyKey);
+      }
+      if (CandidateManifestJson.Length != 0) {
+        size += 2 + pb::CodedOutputStream.ComputeBytesSize(CandidateManifestJson);
       }
       if (_unknownFields != null) {
         size += _unknownFields.CalculateSize();
@@ -10626,6 +10909,18 @@ namespace Udb.Entity.V1 {
       }
       if (other.DryRun != false) {
         DryRun = other.DryRun;
+      }
+      if (other.ExpectedActiveCatalogId.Length != 0) {
+        ExpectedActiveCatalogId = other.ExpectedActiveCatalogId;
+      }
+      if (other.ExpectedActiveManifestIntegritySha256.Length != 0) {
+        ExpectedActiveManifestIntegritySha256 = other.ExpectedActiveManifestIntegritySha256;
+      }
+      if (other.IdempotencyKey.Length != 0) {
+        IdempotencyKey = other.IdempotencyKey;
+      }
+      if (other.CandidateManifestJson.Length != 0) {
+        CandidateManifestJson = other.CandidateManifestJson;
       }
       _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
     }
@@ -10659,6 +10954,22 @@ namespace Udb.Entity.V1 {
           }
           case 24: {
             DryRun = input.ReadBool();
+            break;
+          }
+          case 34: {
+            ExpectedActiveCatalogId = input.ReadString();
+            break;
+          }
+          case 42: {
+            ExpectedActiveManifestIntegritySha256 = input.ReadString();
+            break;
+          }
+          case 50: {
+            IdempotencyKey = input.ReadString();
+            break;
+          }
+          case 8002: {
+            CandidateManifestJson = input.ReadBytes();
             break;
           }
         }
@@ -10695,6 +11006,741 @@ namespace Udb.Entity.V1 {
             DryRun = input.ReadBool();
             break;
           }
+          case 34: {
+            ExpectedActiveCatalogId = input.ReadString();
+            break;
+          }
+          case 42: {
+            ExpectedActiveManifestIntegritySha256 = input.ReadString();
+            break;
+          }
+          case 50: {
+            IdempotencyKey = input.ReadString();
+            break;
+          }
+          case 8002: {
+            CandidateManifestJson = input.ReadBytes();
+            break;
+          }
+        }
+      }
+    }
+    #endif
+
+  }
+
+  /// <summary>
+  /// Durable broker evidence for a candidate transition. These response fields
+  /// describe native authority; they are never accepted as caller approval data.
+  /// run_id is also the explicit reference supplied to stage and activation.
+  /// </summary>
+  [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
+  public sealed partial class ReviewedCatalogTransitionEvidence : pb::IMessage<ReviewedCatalogTransitionEvidence>
+  #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      , pb::IBufferMessage
+  #endif
+  {
+    private static readonly pb::MessageParser<ReviewedCatalogTransitionEvidence> _parser = new pb::MessageParser<ReviewedCatalogTransitionEvidence>(() => new ReviewedCatalogTransitionEvidence());
+    private pb::UnknownFieldSet _unknownFields;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pb::MessageParser<ReviewedCatalogTransitionEvidence> Parser { get { return _parser; } }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pbr::MessageDescriptor Descriptor {
+      get { return global::Udb.Entity.V1.AdminReflection.Descriptor.MessageTypes[27]; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    pbr::MessageDescriptor pb::IMessage.Descriptor {
+      get { return Descriptor; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public ReviewedCatalogTransitionEvidence() {
+      OnConstruction();
+    }
+
+    partial void OnConstruction();
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public ReviewedCatalogTransitionEvidence(ReviewedCatalogTransitionEvidence other) : this() {
+      runId_ = other.runId_;
+      tenantId_ = other.tenantId_;
+      projectId_ = other.projectId_;
+      expectedActiveCatalogId_ = other.expectedActiveCatalogId_;
+      expectedActiveManifestIntegritySha256_ = other.expectedActiveManifestIntegritySha256_;
+      targetManifestIntegritySha256_ = other.targetManifestIntegritySha256_;
+      targetSchemaChecksumSha256_ = other.targetSchemaChecksumSha256_;
+      operationsHash_ = other.operationsHash_;
+      reviewedOperationFingerprints_ = other.reviewedOperationFingerprints_.Clone();
+      approvedBy_ = other.approvedBy_;
+      approvedAtUnix_ = other.approvedAtUnix_;
+      applicationState_ = other.applicationState_;
+      appliedOperationsHash_ = other.appliedOperationsHash_;
+      appliedAtUnix_ = other.appliedAtUnix_;
+      applicationEvidenceSha256_ = other.applicationEvidenceSha256_;
+      _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public ReviewedCatalogTransitionEvidence Clone() {
+      return new ReviewedCatalogTransitionEvidence(this);
+    }
+
+    /// <summary>Field number for the "run_id" field.</summary>
+    public const int RunIdFieldNumber = 1;
+    private string runId_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string RunId {
+      get { return runId_; }
+      set {
+        runId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "tenant_id" field.</summary>
+    public const int TenantIdFieldNumber = 2;
+    private string tenantId_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string TenantId {
+      get { return tenantId_; }
+      set {
+        tenantId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "project_id" field.</summary>
+    public const int ProjectIdFieldNumber = 3;
+    private string projectId_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string ProjectId {
+      get { return projectId_; }
+      set {
+        projectId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "expected_active_catalog_id" field.</summary>
+    public const int ExpectedActiveCatalogIdFieldNumber = 4;
+    private string expectedActiveCatalogId_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string ExpectedActiveCatalogId {
+      get { return expectedActiveCatalogId_; }
+      set {
+        expectedActiveCatalogId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "expected_active_manifest_integrity_sha256" field.</summary>
+    public const int ExpectedActiveManifestIntegritySha256FieldNumber = 5;
+    private string expectedActiveManifestIntegritySha256_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string ExpectedActiveManifestIntegritySha256 {
+      get { return expectedActiveManifestIntegritySha256_; }
+      set {
+        expectedActiveManifestIntegritySha256_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "target_manifest_integrity_sha256" field.</summary>
+    public const int TargetManifestIntegritySha256FieldNumber = 6;
+    private string targetManifestIntegritySha256_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string TargetManifestIntegritySha256 {
+      get { return targetManifestIntegritySha256_; }
+      set {
+        targetManifestIntegritySha256_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "target_schema_checksum_sha256" field.</summary>
+    public const int TargetSchemaChecksumSha256FieldNumber = 7;
+    private string targetSchemaChecksumSha256_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string TargetSchemaChecksumSha256 {
+      get { return targetSchemaChecksumSha256_; }
+      set {
+        targetSchemaChecksumSha256_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "operations_hash" field.</summary>
+    public const int OperationsHashFieldNumber = 8;
+    private string operationsHash_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string OperationsHash {
+      get { return operationsHash_; }
+      set {
+        operationsHash_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "reviewed_operation_fingerprints" field.</summary>
+    public const int ReviewedOperationFingerprintsFieldNumber = 9;
+    private static readonly pb::FieldCodec<string> _repeated_reviewedOperationFingerprints_codec
+        = pb::FieldCodec.ForString(74);
+    private readonly pbc::RepeatedField<string> reviewedOperationFingerprints_ = new pbc::RepeatedField<string>();
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public pbc::RepeatedField<string> ReviewedOperationFingerprints {
+      get { return reviewedOperationFingerprints_; }
+    }
+
+    /// <summary>Field number for the "approved_by" field.</summary>
+    public const int ApprovedByFieldNumber = 10;
+    private string approvedBy_ = "";
+    /// <summary>
+    /// Verified actor recorded by the authorized approval handler; empty until
+    /// approval. No filesystem review receipt can populate this authority.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string ApprovedBy {
+      get { return approvedBy_; }
+      set {
+        approvedBy_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "approved_at_unix" field.</summary>
+    public const int ApprovedAtUnixFieldNumber = 11;
+    private long approvedAtUnix_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public long ApprovedAtUnix {
+      get { return approvedAtUnix_; }
+      set {
+        approvedAtUnix_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "application_state" field.</summary>
+    public const int ApplicationStateFieldNumber = 12;
+    private string applicationState_ = "";
+    /// <summary>
+    /// Native migration-run state (for example APPROVED or COMPLETED). Actual
+    /// operations separately report APPLIED or VERIFIED in MigrationStatusResponse;
+    /// a verified pre-applied target never fabricates an APPLIED operation receipt.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string ApplicationState {
+      get { return applicationState_; }
+      set {
+        applicationState_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "applied_operations_hash" field.</summary>
+    public const int AppliedOperationsHashFieldNumber = 13;
+    private string appliedOperationsHash_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string AppliedOperationsHash {
+      get { return appliedOperationsHash_; }
+      set {
+        appliedOperationsHash_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "applied_at_unix" field.</summary>
+    public const int AppliedAtUnixFieldNumber = 14;
+    private long appliedAtUnix_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public long AppliedAtUnix {
+      get { return appliedAtUnix_; }
+      set {
+        appliedAtUnix_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "application_evidence_sha256" field.</summary>
+    public const int ApplicationEvidenceSha256FieldNumber = 15;
+    private string applicationEvidenceSha256_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string ApplicationEvidenceSha256 {
+      get { return applicationEvidenceSha256_; }
+      set {
+        applicationEvidenceSha256_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override bool Equals(object other) {
+      return Equals(other as ReviewedCatalogTransitionEvidence);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool Equals(ReviewedCatalogTransitionEvidence other) {
+      if (ReferenceEquals(other, null)) {
+        return false;
+      }
+      if (ReferenceEquals(other, this)) {
+        return true;
+      }
+      if (RunId != other.RunId) return false;
+      if (TenantId != other.TenantId) return false;
+      if (ProjectId != other.ProjectId) return false;
+      if (ExpectedActiveCatalogId != other.ExpectedActiveCatalogId) return false;
+      if (ExpectedActiveManifestIntegritySha256 != other.ExpectedActiveManifestIntegritySha256) return false;
+      if (TargetManifestIntegritySha256 != other.TargetManifestIntegritySha256) return false;
+      if (TargetSchemaChecksumSha256 != other.TargetSchemaChecksumSha256) return false;
+      if (OperationsHash != other.OperationsHash) return false;
+      if(!reviewedOperationFingerprints_.Equals(other.reviewedOperationFingerprints_)) return false;
+      if (ApprovedBy != other.ApprovedBy) return false;
+      if (ApprovedAtUnix != other.ApprovedAtUnix) return false;
+      if (ApplicationState != other.ApplicationState) return false;
+      if (AppliedOperationsHash != other.AppliedOperationsHash) return false;
+      if (AppliedAtUnix != other.AppliedAtUnix) return false;
+      if (ApplicationEvidenceSha256 != other.ApplicationEvidenceSha256) return false;
+      return Equals(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override int GetHashCode() {
+      int hash = 1;
+      if (RunId.Length != 0) hash ^= RunId.GetHashCode();
+      if (TenantId.Length != 0) hash ^= TenantId.GetHashCode();
+      if (ProjectId.Length != 0) hash ^= ProjectId.GetHashCode();
+      if (ExpectedActiveCatalogId.Length != 0) hash ^= ExpectedActiveCatalogId.GetHashCode();
+      if (ExpectedActiveManifestIntegritySha256.Length != 0) hash ^= ExpectedActiveManifestIntegritySha256.GetHashCode();
+      if (TargetManifestIntegritySha256.Length != 0) hash ^= TargetManifestIntegritySha256.GetHashCode();
+      if (TargetSchemaChecksumSha256.Length != 0) hash ^= TargetSchemaChecksumSha256.GetHashCode();
+      if (OperationsHash.Length != 0) hash ^= OperationsHash.GetHashCode();
+      hash ^= reviewedOperationFingerprints_.GetHashCode();
+      if (ApprovedBy.Length != 0) hash ^= ApprovedBy.GetHashCode();
+      if (ApprovedAtUnix != 0L) hash ^= ApprovedAtUnix.GetHashCode();
+      if (ApplicationState.Length != 0) hash ^= ApplicationState.GetHashCode();
+      if (AppliedOperationsHash.Length != 0) hash ^= AppliedOperationsHash.GetHashCode();
+      if (AppliedAtUnix != 0L) hash ^= AppliedAtUnix.GetHashCode();
+      if (ApplicationEvidenceSha256.Length != 0) hash ^= ApplicationEvidenceSha256.GetHashCode();
+      if (_unknownFields != null) {
+        hash ^= _unknownFields.GetHashCode();
+      }
+      return hash;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override string ToString() {
+      return pb::JsonFormatter.ToDiagnosticString(this);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void WriteTo(pb::CodedOutputStream output) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      output.WriteRawMessage(this);
+    #else
+      if (RunId.Length != 0) {
+        output.WriteRawTag(10);
+        output.WriteString(RunId);
+      }
+      if (TenantId.Length != 0) {
+        output.WriteRawTag(18);
+        output.WriteString(TenantId);
+      }
+      if (ProjectId.Length != 0) {
+        output.WriteRawTag(26);
+        output.WriteString(ProjectId);
+      }
+      if (ExpectedActiveCatalogId.Length != 0) {
+        output.WriteRawTag(34);
+        output.WriteString(ExpectedActiveCatalogId);
+      }
+      if (ExpectedActiveManifestIntegritySha256.Length != 0) {
+        output.WriteRawTag(42);
+        output.WriteString(ExpectedActiveManifestIntegritySha256);
+      }
+      if (TargetManifestIntegritySha256.Length != 0) {
+        output.WriteRawTag(50);
+        output.WriteString(TargetManifestIntegritySha256);
+      }
+      if (TargetSchemaChecksumSha256.Length != 0) {
+        output.WriteRawTag(58);
+        output.WriteString(TargetSchemaChecksumSha256);
+      }
+      if (OperationsHash.Length != 0) {
+        output.WriteRawTag(66);
+        output.WriteString(OperationsHash);
+      }
+      reviewedOperationFingerprints_.WriteTo(output, _repeated_reviewedOperationFingerprints_codec);
+      if (ApprovedBy.Length != 0) {
+        output.WriteRawTag(82);
+        output.WriteString(ApprovedBy);
+      }
+      if (ApprovedAtUnix != 0L) {
+        output.WriteRawTag(88);
+        output.WriteInt64(ApprovedAtUnix);
+      }
+      if (ApplicationState.Length != 0) {
+        output.WriteRawTag(98);
+        output.WriteString(ApplicationState);
+      }
+      if (AppliedOperationsHash.Length != 0) {
+        output.WriteRawTag(106);
+        output.WriteString(AppliedOperationsHash);
+      }
+      if (AppliedAtUnix != 0L) {
+        output.WriteRawTag(112);
+        output.WriteInt64(AppliedAtUnix);
+      }
+      if (ApplicationEvidenceSha256.Length != 0) {
+        output.WriteRawTag(122);
+        output.WriteString(ApplicationEvidenceSha256);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(output);
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
+      if (RunId.Length != 0) {
+        output.WriteRawTag(10);
+        output.WriteString(RunId);
+      }
+      if (TenantId.Length != 0) {
+        output.WriteRawTag(18);
+        output.WriteString(TenantId);
+      }
+      if (ProjectId.Length != 0) {
+        output.WriteRawTag(26);
+        output.WriteString(ProjectId);
+      }
+      if (ExpectedActiveCatalogId.Length != 0) {
+        output.WriteRawTag(34);
+        output.WriteString(ExpectedActiveCatalogId);
+      }
+      if (ExpectedActiveManifestIntegritySha256.Length != 0) {
+        output.WriteRawTag(42);
+        output.WriteString(ExpectedActiveManifestIntegritySha256);
+      }
+      if (TargetManifestIntegritySha256.Length != 0) {
+        output.WriteRawTag(50);
+        output.WriteString(TargetManifestIntegritySha256);
+      }
+      if (TargetSchemaChecksumSha256.Length != 0) {
+        output.WriteRawTag(58);
+        output.WriteString(TargetSchemaChecksumSha256);
+      }
+      if (OperationsHash.Length != 0) {
+        output.WriteRawTag(66);
+        output.WriteString(OperationsHash);
+      }
+      reviewedOperationFingerprints_.WriteTo(ref output, _repeated_reviewedOperationFingerprints_codec);
+      if (ApprovedBy.Length != 0) {
+        output.WriteRawTag(82);
+        output.WriteString(ApprovedBy);
+      }
+      if (ApprovedAtUnix != 0L) {
+        output.WriteRawTag(88);
+        output.WriteInt64(ApprovedAtUnix);
+      }
+      if (ApplicationState.Length != 0) {
+        output.WriteRawTag(98);
+        output.WriteString(ApplicationState);
+      }
+      if (AppliedOperationsHash.Length != 0) {
+        output.WriteRawTag(106);
+        output.WriteString(AppliedOperationsHash);
+      }
+      if (AppliedAtUnix != 0L) {
+        output.WriteRawTag(112);
+        output.WriteInt64(AppliedAtUnix);
+      }
+      if (ApplicationEvidenceSha256.Length != 0) {
+        output.WriteRawTag(122);
+        output.WriteString(ApplicationEvidenceSha256);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(ref output);
+      }
+    }
+    #endif
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public int CalculateSize() {
+      int size = 0;
+      if (RunId.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(RunId);
+      }
+      if (TenantId.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(TenantId);
+      }
+      if (ProjectId.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(ProjectId);
+      }
+      if (ExpectedActiveCatalogId.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(ExpectedActiveCatalogId);
+      }
+      if (ExpectedActiveManifestIntegritySha256.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(ExpectedActiveManifestIntegritySha256);
+      }
+      if (TargetManifestIntegritySha256.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(TargetManifestIntegritySha256);
+      }
+      if (TargetSchemaChecksumSha256.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(TargetSchemaChecksumSha256);
+      }
+      if (OperationsHash.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(OperationsHash);
+      }
+      size += reviewedOperationFingerprints_.CalculateSize(_repeated_reviewedOperationFingerprints_codec);
+      if (ApprovedBy.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(ApprovedBy);
+      }
+      if (ApprovedAtUnix != 0L) {
+        size += 1 + pb::CodedOutputStream.ComputeInt64Size(ApprovedAtUnix);
+      }
+      if (ApplicationState.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(ApplicationState);
+      }
+      if (AppliedOperationsHash.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(AppliedOperationsHash);
+      }
+      if (AppliedAtUnix != 0L) {
+        size += 1 + pb::CodedOutputStream.ComputeInt64Size(AppliedAtUnix);
+      }
+      if (ApplicationEvidenceSha256.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(ApplicationEvidenceSha256);
+      }
+      if (_unknownFields != null) {
+        size += _unknownFields.CalculateSize();
+      }
+      return size;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(ReviewedCatalogTransitionEvidence other) {
+      if (other == null) {
+        return;
+      }
+      if (other.RunId.Length != 0) {
+        RunId = other.RunId;
+      }
+      if (other.TenantId.Length != 0) {
+        TenantId = other.TenantId;
+      }
+      if (other.ProjectId.Length != 0) {
+        ProjectId = other.ProjectId;
+      }
+      if (other.ExpectedActiveCatalogId.Length != 0) {
+        ExpectedActiveCatalogId = other.ExpectedActiveCatalogId;
+      }
+      if (other.ExpectedActiveManifestIntegritySha256.Length != 0) {
+        ExpectedActiveManifestIntegritySha256 = other.ExpectedActiveManifestIntegritySha256;
+      }
+      if (other.TargetManifestIntegritySha256.Length != 0) {
+        TargetManifestIntegritySha256 = other.TargetManifestIntegritySha256;
+      }
+      if (other.TargetSchemaChecksumSha256.Length != 0) {
+        TargetSchemaChecksumSha256 = other.TargetSchemaChecksumSha256;
+      }
+      if (other.OperationsHash.Length != 0) {
+        OperationsHash = other.OperationsHash;
+      }
+      reviewedOperationFingerprints_.Add(other.reviewedOperationFingerprints_);
+      if (other.ApprovedBy.Length != 0) {
+        ApprovedBy = other.ApprovedBy;
+      }
+      if (other.ApprovedAtUnix != 0L) {
+        ApprovedAtUnix = other.ApprovedAtUnix;
+      }
+      if (other.ApplicationState.Length != 0) {
+        ApplicationState = other.ApplicationState;
+      }
+      if (other.AppliedOperationsHash.Length != 0) {
+        AppliedOperationsHash = other.AppliedOperationsHash;
+      }
+      if (other.AppliedAtUnix != 0L) {
+        AppliedAtUnix = other.AppliedAtUnix;
+      }
+      if (other.ApplicationEvidenceSha256.Length != 0) {
+        ApplicationEvidenceSha256 = other.ApplicationEvidenceSha256;
+      }
+      _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(pb::CodedInputStream input) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      input.ReadRawMessage(this);
+    #else
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
+            break;
+          case 10: {
+            RunId = input.ReadString();
+            break;
+          }
+          case 18: {
+            TenantId = input.ReadString();
+            break;
+          }
+          case 26: {
+            ProjectId = input.ReadString();
+            break;
+          }
+          case 34: {
+            ExpectedActiveCatalogId = input.ReadString();
+            break;
+          }
+          case 42: {
+            ExpectedActiveManifestIntegritySha256 = input.ReadString();
+            break;
+          }
+          case 50: {
+            TargetManifestIntegritySha256 = input.ReadString();
+            break;
+          }
+          case 58: {
+            TargetSchemaChecksumSha256 = input.ReadString();
+            break;
+          }
+          case 66: {
+            OperationsHash = input.ReadString();
+            break;
+          }
+          case 74: {
+            reviewedOperationFingerprints_.AddEntriesFrom(input, _repeated_reviewedOperationFingerprints_codec);
+            break;
+          }
+          case 82: {
+            ApprovedBy = input.ReadString();
+            break;
+          }
+          case 88: {
+            ApprovedAtUnix = input.ReadInt64();
+            break;
+          }
+          case 98: {
+            ApplicationState = input.ReadString();
+            break;
+          }
+          case 106: {
+            AppliedOperationsHash = input.ReadString();
+            break;
+          }
+          case 112: {
+            AppliedAtUnix = input.ReadInt64();
+            break;
+          }
+          case 122: {
+            ApplicationEvidenceSha256 = input.ReadString();
+            break;
+          }
+        }
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
+            break;
+          case 10: {
+            RunId = input.ReadString();
+            break;
+          }
+          case 18: {
+            TenantId = input.ReadString();
+            break;
+          }
+          case 26: {
+            ProjectId = input.ReadString();
+            break;
+          }
+          case 34: {
+            ExpectedActiveCatalogId = input.ReadString();
+            break;
+          }
+          case 42: {
+            ExpectedActiveManifestIntegritySha256 = input.ReadString();
+            break;
+          }
+          case 50: {
+            TargetManifestIntegritySha256 = input.ReadString();
+            break;
+          }
+          case 58: {
+            TargetSchemaChecksumSha256 = input.ReadString();
+            break;
+          }
+          case 66: {
+            OperationsHash = input.ReadString();
+            break;
+          }
+          case 74: {
+            reviewedOperationFingerprints_.AddEntriesFrom(ref input, _repeated_reviewedOperationFingerprints_codec);
+            break;
+          }
+          case 82: {
+            ApprovedBy = input.ReadString();
+            break;
+          }
+          case 88: {
+            ApprovedAtUnix = input.ReadInt64();
+            break;
+          }
+          case 98: {
+            ApplicationState = input.ReadString();
+            break;
+          }
+          case 106: {
+            AppliedOperationsHash = input.ReadString();
+            break;
+          }
+          case 112: {
+            AppliedAtUnix = input.ReadInt64();
+            break;
+          }
+          case 122: {
+            ApplicationEvidenceSha256 = input.ReadString();
+            break;
+          }
         }
       }
     }
@@ -10717,7 +11763,7 @@ namespace Udb.Entity.V1 {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Udb.Entity.V1.AdminReflection.Descriptor.MessageTypes[27]; }
+      get { return global::Udb.Entity.V1.AdminReflection.Descriptor.MessageTypes[28]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -10745,6 +11791,7 @@ namespace Udb.Entity.V1 {
       requiresReview_ = other.requiresReview_.Clone();
       blocked_ = other.blocked_.Clone();
       operationsHash_ = other.operationsHash_;
+      reviewedCatalogTransition_ = other.reviewedCatalogTransition_ != null ? other.reviewedCatalogTransition_.Clone() : null;
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
     }
 
@@ -10847,6 +11894,21 @@ namespace Udb.Entity.V1 {
       }
     }
 
+    /// <summary>Field number for the "reviewed_catalog_transition" field.</summary>
+    public const int ReviewedCatalogTransitionFieldNumber = 9;
+    private global::Udb.Entity.V1.ReviewedCatalogTransitionEvidence reviewedCatalogTransition_;
+    /// <summary>
+    /// Present only when planning an explicit unstaged candidate.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public global::Udb.Entity.V1.ReviewedCatalogTransitionEvidence ReviewedCatalogTransition {
+      get { return reviewedCatalogTransition_; }
+      set {
+        reviewedCatalogTransition_ = value;
+      }
+    }
+
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public override bool Equals(object other) {
@@ -10870,6 +11932,7 @@ namespace Udb.Entity.V1 {
       if(!requiresReview_.Equals(other.requiresReview_)) return false;
       if(!blocked_.Equals(other.blocked_)) return false;
       if (OperationsHash != other.OperationsHash) return false;
+      if (!object.Equals(ReviewedCatalogTransition, other.ReviewedCatalogTransition)) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
 
@@ -10885,6 +11948,7 @@ namespace Udb.Entity.V1 {
       hash ^= requiresReview_.GetHashCode();
       hash ^= blocked_.GetHashCode();
       if (OperationsHash.Length != 0) hash ^= OperationsHash.GetHashCode();
+      if (reviewedCatalogTransition_ != null) hash ^= ReviewedCatalogTransition.GetHashCode();
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
       }
@@ -10926,6 +11990,10 @@ namespace Udb.Entity.V1 {
         output.WriteRawTag(66);
         output.WriteString(OperationsHash);
       }
+      if (reviewedCatalogTransition_ != null) {
+        output.WriteRawTag(74);
+        output.WriteMessage(ReviewedCatalogTransition);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
       }
@@ -10959,6 +12027,10 @@ namespace Udb.Entity.V1 {
         output.WriteRawTag(66);
         output.WriteString(OperationsHash);
       }
+      if (reviewedCatalogTransition_ != null) {
+        output.WriteRawTag(74);
+        output.WriteMessage(ReviewedCatalogTransition);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(ref output);
       }
@@ -10986,6 +12058,9 @@ namespace Udb.Entity.V1 {
       size += blocked_.CalculateSize(_repeated_blocked_codec);
       if (OperationsHash.Length != 0) {
         size += 1 + pb::CodedOutputStream.ComputeStringSize(OperationsHash);
+      }
+      if (reviewedCatalogTransition_ != null) {
+        size += 1 + pb::CodedOutputStream.ComputeMessageSize(ReviewedCatalogTransition);
       }
       if (_unknownFields != null) {
         size += _unknownFields.CalculateSize();
@@ -11016,6 +12091,12 @@ namespace Udb.Entity.V1 {
       blocked_.Add(other.blocked_);
       if (other.OperationsHash.Length != 0) {
         OperationsHash = other.OperationsHash;
+      }
+      if (other.reviewedCatalogTransition_ != null) {
+        if (reviewedCatalogTransition_ == null) {
+          ReviewedCatalogTransition = new global::Udb.Entity.V1.ReviewedCatalogTransitionEvidence();
+        }
+        ReviewedCatalogTransition.MergeFrom(other.ReviewedCatalogTransition);
       }
       _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
     }
@@ -11066,6 +12147,13 @@ namespace Udb.Entity.V1 {
           }
           case 66: {
             OperationsHash = input.ReadString();
+            break;
+          }
+          case 74: {
+            if (reviewedCatalogTransition_ == null) {
+              ReviewedCatalogTransition = new global::Udb.Entity.V1.ReviewedCatalogTransitionEvidence();
+            }
+            input.ReadMessage(ReviewedCatalogTransition);
             break;
           }
         }
@@ -11119,6 +12207,13 @@ namespace Udb.Entity.V1 {
             OperationsHash = input.ReadString();
             break;
           }
+          case 74: {
+            if (reviewedCatalogTransition_ == null) {
+              ReviewedCatalogTransition = new global::Udb.Entity.V1.ReviewedCatalogTransitionEvidence();
+            }
+            input.ReadMessage(ReviewedCatalogTransition);
+            break;
+          }
         }
       }
     }
@@ -11141,7 +12236,7 @@ namespace Udb.Entity.V1 {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Udb.Entity.V1.AdminReflection.Descriptor.MessageTypes[28]; }
+      get { return global::Udb.Entity.V1.AdminReflection.Descriptor.MessageTypes[29]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -11215,7 +12310,9 @@ namespace Udb.Entity.V1 {
     public const int ApprovalTokenFieldNumber = 4;
     private string approvalToken_ = "";
     /// <summary>
-    /// Approval token from ApproveMigrationPlan (required for blocked operations).
+    /// Approval token from ApproveMigrationPlan. Reviewed candidate approval does
+    /// not permit blocked or destructive transitions; native application evidence
+    /// is also required before catalog staging and activation.
     /// </summary>
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
@@ -11499,7 +12596,7 @@ namespace Udb.Entity.V1 {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Udb.Entity.V1.AdminReflection.Descriptor.MessageTypes[29]; }
+      get { return global::Udb.Entity.V1.AdminReflection.Descriptor.MessageTypes[30]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -11523,6 +12620,8 @@ namespace Udb.Entity.V1 {
       runId_ = other.runId_;
       projectId_ = other.projectId_;
       idempotencyKey_ = other.idempotencyKey_;
+      expectedOperationsHash_ = other.expectedOperationsHash_;
+      reviewedOperationFingerprints_ = other.reviewedOperationFingerprints_.Clone();
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
     }
 
@@ -11580,6 +12679,34 @@ namespace Udb.Entity.V1 {
       }
     }
 
+    /// <summary>Field number for the "expected_operations_hash" field.</summary>
+    public const int ExpectedOperationsHashFieldNumber = 5;
+    private string expectedOperationsHash_ = "";
+    /// <summary>
+    /// ApproveMigrationPlan candidate mode only: explicit echoes of the exact
+    /// immutable native plan and complete review fingerprint set. Missing,
+    /// duplicate, foreign or mismatched review evidence is refused.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string ExpectedOperationsHash {
+      get { return expectedOperationsHash_; }
+      set {
+        expectedOperationsHash_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "reviewed_operation_fingerprints" field.</summary>
+    public const int ReviewedOperationFingerprintsFieldNumber = 6;
+    private static readonly pb::FieldCodec<string> _repeated_reviewedOperationFingerprints_codec
+        = pb::FieldCodec.ForString(50);
+    private readonly pbc::RepeatedField<string> reviewedOperationFingerprints_ = new pbc::RepeatedField<string>();
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public pbc::RepeatedField<string> ReviewedOperationFingerprints {
+      get { return reviewedOperationFingerprints_; }
+    }
+
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public override bool Equals(object other) {
@@ -11599,6 +12726,8 @@ namespace Udb.Entity.V1 {
       if (RunId != other.RunId) return false;
       if (ProjectId != other.ProjectId) return false;
       if (IdempotencyKey != other.IdempotencyKey) return false;
+      if (ExpectedOperationsHash != other.ExpectedOperationsHash) return false;
+      if(!reviewedOperationFingerprints_.Equals(other.reviewedOperationFingerprints_)) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
 
@@ -11610,6 +12739,8 @@ namespace Udb.Entity.V1 {
       if (RunId.Length != 0) hash ^= RunId.GetHashCode();
       if (ProjectId.Length != 0) hash ^= ProjectId.GetHashCode();
       if (IdempotencyKey.Length != 0) hash ^= IdempotencyKey.GetHashCode();
+      if (ExpectedOperationsHash.Length != 0) hash ^= ExpectedOperationsHash.GetHashCode();
+      hash ^= reviewedOperationFingerprints_.GetHashCode();
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
       }
@@ -11644,6 +12775,11 @@ namespace Udb.Entity.V1 {
         output.WriteRawTag(34);
         output.WriteString(IdempotencyKey);
       }
+      if (ExpectedOperationsHash.Length != 0) {
+        output.WriteRawTag(42);
+        output.WriteString(ExpectedOperationsHash);
+      }
+      reviewedOperationFingerprints_.WriteTo(output, _repeated_reviewedOperationFingerprints_codec);
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
       }
@@ -11670,6 +12806,11 @@ namespace Udb.Entity.V1 {
         output.WriteRawTag(34);
         output.WriteString(IdempotencyKey);
       }
+      if (ExpectedOperationsHash.Length != 0) {
+        output.WriteRawTag(42);
+        output.WriteString(ExpectedOperationsHash);
+      }
+      reviewedOperationFingerprints_.WriteTo(ref output, _repeated_reviewedOperationFingerprints_codec);
       if (_unknownFields != null) {
         _unknownFields.WriteTo(ref output);
       }
@@ -11692,6 +12833,10 @@ namespace Udb.Entity.V1 {
       if (IdempotencyKey.Length != 0) {
         size += 1 + pb::CodedOutputStream.ComputeStringSize(IdempotencyKey);
       }
+      if (ExpectedOperationsHash.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(ExpectedOperationsHash);
+      }
+      size += reviewedOperationFingerprints_.CalculateSize(_repeated_reviewedOperationFingerprints_codec);
       if (_unknownFields != null) {
         size += _unknownFields.CalculateSize();
       }
@@ -11719,6 +12864,10 @@ namespace Udb.Entity.V1 {
       if (other.IdempotencyKey.Length != 0) {
         IdempotencyKey = other.IdempotencyKey;
       }
+      if (other.ExpectedOperationsHash.Length != 0) {
+        ExpectedOperationsHash = other.ExpectedOperationsHash;
+      }
+      reviewedOperationFingerprints_.Add(other.reviewedOperationFingerprints_);
       _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
     }
 
@@ -11755,6 +12904,14 @@ namespace Udb.Entity.V1 {
           }
           case 34: {
             IdempotencyKey = input.ReadString();
+            break;
+          }
+          case 42: {
+            ExpectedOperationsHash = input.ReadString();
+            break;
+          }
+          case 50: {
+            reviewedOperationFingerprints_.AddEntriesFrom(input, _repeated_reviewedOperationFingerprints_codec);
             break;
           }
         }
@@ -11795,6 +12952,14 @@ namespace Udb.Entity.V1 {
             IdempotencyKey = input.ReadString();
             break;
           }
+          case 42: {
+            ExpectedOperationsHash = input.ReadString();
+            break;
+          }
+          case 50: {
+            reviewedOperationFingerprints_.AddEntriesFrom(ref input, _repeated_reviewedOperationFingerprints_codec);
+            break;
+          }
         }
       }
     }
@@ -11817,7 +12982,7 @@ namespace Udb.Entity.V1 {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Udb.Entity.V1.AdminReflection.Descriptor.MessageTypes[30]; }
+      get { return global::Udb.Entity.V1.AdminReflection.Descriptor.MessageTypes[31]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -12172,7 +13337,7 @@ namespace Udb.Entity.V1 {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Udb.Entity.V1.AdminReflection.Descriptor.MessageTypes[31]; }
+      get { return global::Udb.Entity.V1.AdminReflection.Descriptor.MessageTypes[32]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -12434,7 +13599,7 @@ namespace Udb.Entity.V1 {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Udb.Entity.V1.AdminReflection.Descriptor.MessageTypes[32]; }
+      get { return global::Udb.Entity.V1.AdminReflection.Descriptor.MessageTypes[33]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -12465,6 +13630,7 @@ namespace Udb.Entity.V1 {
       error_ = other.error_;
       approvalToken_ = other.approvalToken_;
       applyable_ = other.applyable_;
+      reviewedCatalogTransition_ = other.reviewedCatalogTransition_ != null ? other.reviewedCatalogTransition_.Clone() : null;
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
     }
 
@@ -12514,7 +13680,7 @@ namespace Udb.Entity.V1 {
     public const int StateFieldNumber = 4;
     private string state_ = "";
     /// <summary>
-    /// States: DRY_RUN, PREFLIGHT, APPLYING, VERIFYING, COMPLETED, ERROR, DEAD_LETTER
+    /// States: DRY_RUN, PREFLIGHT, APPROVED, APPLYING, VERIFYING, COMPLETED, ERROR, DEAD_LETTER
     /// </summary>
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
@@ -12625,6 +13791,18 @@ namespace Udb.Entity.V1 {
       _hasBits0 &= ~1;
     }
 
+    /// <summary>Field number for the "reviewed_catalog_transition" field.</summary>
+    public const int ReviewedCatalogTransitionFieldNumber = 11;
+    private global::Udb.Entity.V1.ReviewedCatalogTransitionEvidence reviewedCatalogTransition_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public global::Udb.Entity.V1.ReviewedCatalogTransitionEvidence ReviewedCatalogTransition {
+      get { return reviewedCatalogTransition_; }
+      set {
+        reviewedCatalogTransition_ = value;
+      }
+    }
+
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public override bool Equals(object other) {
@@ -12650,6 +13828,7 @@ namespace Udb.Entity.V1 {
       if (Error != other.Error) return false;
       if (ApprovalToken != other.ApprovalToken) return false;
       if (Applyable != other.Applyable) return false;
+      if (!object.Equals(ReviewedCatalogTransition, other.ReviewedCatalogTransition)) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
 
@@ -12667,6 +13846,7 @@ namespace Udb.Entity.V1 {
       if (Error.Length != 0) hash ^= Error.GetHashCode();
       if (HasApprovalToken) hash ^= ApprovalToken.GetHashCode();
       if (HasApplyable) hash ^= Applyable.GetHashCode();
+      if (reviewedCatalogTransition_ != null) hash ^= ReviewedCatalogTransition.GetHashCode();
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
       }
@@ -12722,6 +13902,10 @@ namespace Udb.Entity.V1 {
         output.WriteRawTag(80);
         output.WriteBool(Applyable);
       }
+      if (reviewedCatalogTransition_ != null) {
+        output.WriteRawTag(90);
+        output.WriteMessage(ReviewedCatalogTransition);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
       }
@@ -12769,6 +13953,10 @@ namespace Udb.Entity.V1 {
         output.WriteRawTag(80);
         output.WriteBool(Applyable);
       }
+      if (reviewedCatalogTransition_ != null) {
+        output.WriteRawTag(90);
+        output.WriteMessage(ReviewedCatalogTransition);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(ref output);
       }
@@ -12806,6 +13994,9 @@ namespace Udb.Entity.V1 {
       }
       if (HasApplyable) {
         size += 1 + 1;
+      }
+      if (reviewedCatalogTransition_ != null) {
+        size += 1 + pb::CodedOutputStream.ComputeMessageSize(ReviewedCatalogTransition);
       }
       if (_unknownFields != null) {
         size += _unknownFields.CalculateSize();
@@ -12846,6 +14037,12 @@ namespace Udb.Entity.V1 {
       }
       if (other.HasApplyable) {
         Applyable = other.Applyable;
+      }
+      if (other.reviewedCatalogTransition_ != null) {
+        if (reviewedCatalogTransition_ == null) {
+          ReviewedCatalogTransition = new global::Udb.Entity.V1.ReviewedCatalogTransitionEvidence();
+        }
+        ReviewedCatalogTransition.MergeFrom(other.ReviewedCatalogTransition);
       }
       _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
     }
@@ -12904,6 +14101,13 @@ namespace Udb.Entity.V1 {
           }
           case 80: {
             Applyable = input.ReadBool();
+            break;
+          }
+          case 90: {
+            if (reviewedCatalogTransition_ == null) {
+              ReviewedCatalogTransition = new global::Udb.Entity.V1.ReviewedCatalogTransitionEvidence();
+            }
+            input.ReadMessage(ReviewedCatalogTransition);
             break;
           }
         }
@@ -12965,6 +14169,13 @@ namespace Udb.Entity.V1 {
             Applyable = input.ReadBool();
             break;
           }
+          case 90: {
+            if (reviewedCatalogTransition_ == null) {
+              ReviewedCatalogTransition = new global::Udb.Entity.V1.ReviewedCatalogTransitionEvidence();
+            }
+            input.ReadMessage(ReviewedCatalogTransition);
+            break;
+          }
         }
       }
     }
@@ -12987,7 +14198,7 @@ namespace Udb.Entity.V1 {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Udb.Entity.V1.AdminReflection.Descriptor.MessageTypes[33]; }
+      get { return global::Udb.Entity.V1.AdminReflection.Descriptor.MessageTypes[34]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -13074,7 +14285,7 @@ namespace Udb.Entity.V1 {
     public const int StatusFieldNumber = 5;
     private string status_ = "";
     /// <summary>
-    /// States: PENDING, APPLIED, SKIPPED, FAILED, ROLLED_BACK
+    /// States: PENDING, APPLIED, VERIFIED, SKIPPED, FAILED, ROLLED_BACK
     /// </summary>
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
@@ -13373,7 +14584,7 @@ namespace Udb.Entity.V1 {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Udb.Entity.V1.AdminReflection.Descriptor.MessageTypes[34]; }
+      get { return global::Udb.Entity.V1.AdminReflection.Descriptor.MessageTypes[35]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -13731,7 +14942,7 @@ namespace Udb.Entity.V1 {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Udb.Entity.V1.AdminReflection.Descriptor.MessageTypes[35]; }
+      get { return global::Udb.Entity.V1.AdminReflection.Descriptor.MessageTypes[36]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -14225,7 +15436,7 @@ namespace Udb.Entity.V1 {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Udb.Entity.V1.AdminReflection.Descriptor.MessageTypes[36]; }
+      get { return global::Udb.Entity.V1.AdminReflection.Descriptor.MessageTypes[37]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -14486,7 +15697,7 @@ namespace Udb.Entity.V1 {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Udb.Entity.V1.AdminReflection.Descriptor.MessageTypes[37]; }
+      get { return global::Udb.Entity.V1.AdminReflection.Descriptor.MessageTypes[38]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -14730,7 +15941,7 @@ namespace Udb.Entity.V1 {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Udb.Entity.V1.AdminReflection.Descriptor.MessageTypes[38]; }
+      get { return global::Udb.Entity.V1.AdminReflection.Descriptor.MessageTypes[39]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -14937,7 +16148,7 @@ namespace Udb.Entity.V1 {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Udb.Entity.V1.AdminReflection.Descriptor.MessageTypes[39]; }
+      get { return global::Udb.Entity.V1.AdminReflection.Descriptor.MessageTypes[40]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -15258,7 +16469,7 @@ namespace Udb.Entity.V1 {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Udb.Entity.V1.AdminReflection.Descriptor.MessageTypes[40]; }
+      get { return global::Udb.Entity.V1.AdminReflection.Descriptor.MessageTypes[41]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -15687,7 +16898,7 @@ namespace Udb.Entity.V1 {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Udb.Entity.V1.AdminReflection.Descriptor.MessageTypes[41]; }
+      get { return global::Udb.Entity.V1.AdminReflection.Descriptor.MessageTypes[42]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -16022,7 +17233,7 @@ namespace Udb.Entity.V1 {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Udb.Entity.V1.AdminReflection.Descriptor.MessageTypes[42]; }
+      get { return global::Udb.Entity.V1.AdminReflection.Descriptor.MessageTypes[43]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -16451,7 +17662,7 @@ namespace Udb.Entity.V1 {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Udb.Entity.V1.AdminReflection.Descriptor.MessageTypes[43]; }
+      get { return global::Udb.Entity.V1.AdminReflection.Descriptor.MessageTypes[44]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -16760,7 +17971,7 @@ namespace Udb.Entity.V1 {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Udb.Entity.V1.AdminReflection.Descriptor.MessageTypes[44]; }
+      get { return global::Udb.Entity.V1.AdminReflection.Descriptor.MessageTypes[45]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -17232,7 +18443,7 @@ namespace Udb.Entity.V1 {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Udb.Entity.V1.AdminReflection.Descriptor.MessageTypes[45]; }
+      get { return global::Udb.Entity.V1.AdminReflection.Descriptor.MessageTypes[46]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -17630,7 +18841,7 @@ namespace Udb.Entity.V1 {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Udb.Entity.V1.AdminReflection.Descriptor.MessageTypes[46]; }
+      get { return global::Udb.Entity.V1.AdminReflection.Descriptor.MessageTypes[47]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -18062,7 +19273,7 @@ namespace Udb.Entity.V1 {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Udb.Entity.V1.AdminReflection.Descriptor.MessageTypes[47]; }
+      get { return global::Udb.Entity.V1.AdminReflection.Descriptor.MessageTypes[48]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -18630,7 +19841,7 @@ namespace Udb.Entity.V1 {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Udb.Entity.V1.AdminReflection.Descriptor.MessageTypes[48]; }
+      get { return global::Udb.Entity.V1.AdminReflection.Descriptor.MessageTypes[49]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -18891,7 +20102,7 @@ namespace Udb.Entity.V1 {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Udb.Entity.V1.AdminReflection.Descriptor.MessageTypes[49]; }
+      get { return global::Udb.Entity.V1.AdminReflection.Descriptor.MessageTypes[50]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -19209,7 +20420,7 @@ namespace Udb.Entity.V1 {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Udb.Entity.V1.AdminReflection.Descriptor.MessageTypes[50]; }
+      get { return global::Udb.Entity.V1.AdminReflection.Descriptor.MessageTypes[51]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -19442,7 +20653,7 @@ namespace Udb.Entity.V1 {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Udb.Entity.V1.AdminReflection.Descriptor.MessageTypes[51]; }
+      get { return global::Udb.Entity.V1.AdminReflection.Descriptor.MessageTypes[52]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -19973,7 +21184,7 @@ namespace Udb.Entity.V1 {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Udb.Entity.V1.AdminReflection.Descriptor.MessageTypes[52]; }
+      get { return global::Udb.Entity.V1.AdminReflection.Descriptor.MessageTypes[53]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -20291,7 +21502,7 @@ namespace Udb.Entity.V1 {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Udb.Entity.V1.AdminReflection.Descriptor.MessageTypes[53]; }
+      get { return global::Udb.Entity.V1.AdminReflection.Descriptor.MessageTypes[54]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -20552,7 +21763,7 @@ namespace Udb.Entity.V1 {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Udb.Entity.V1.AdminReflection.Descriptor.MessageTypes[54]; }
+      get { return global::Udb.Entity.V1.AdminReflection.Descriptor.MessageTypes[55]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -20805,7 +22016,7 @@ namespace Udb.Entity.V1 {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Udb.Entity.V1.AdminReflection.Descriptor.MessageTypes[55]; }
+      get { return global::Udb.Entity.V1.AdminReflection.Descriptor.MessageTypes[56]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -21049,7 +22260,7 @@ namespace Udb.Entity.V1 {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Udb.Entity.V1.AdminReflection.Descriptor.MessageTypes[56]; }
+      get { return global::Udb.Entity.V1.AdminReflection.Descriptor.MessageTypes[57]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -21273,7 +22484,7 @@ namespace Udb.Entity.V1 {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Udb.Entity.V1.AdminReflection.Descriptor.MessageTypes[57]; }
+      get { return global::Udb.Entity.V1.AdminReflection.Descriptor.MessageTypes[58]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -21600,7 +22811,7 @@ namespace Udb.Entity.V1 {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Udb.Entity.V1.AdminReflection.Descriptor.MessageTypes[58]; }
+      get { return global::Udb.Entity.V1.AdminReflection.Descriptor.MessageTypes[59]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -21946,7 +23157,7 @@ namespace Udb.Entity.V1 {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Udb.Entity.V1.AdminReflection.Descriptor.MessageTypes[59]; }
+      get { return global::Udb.Entity.V1.AdminReflection.Descriptor.MessageTypes[60]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -22227,7 +23438,7 @@ namespace Udb.Entity.V1 {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Udb.Entity.V1.AdminReflection.Descriptor.MessageTypes[60]; }
+      get { return global::Udb.Entity.V1.AdminReflection.Descriptor.MessageTypes[61]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -22488,7 +23699,7 @@ namespace Udb.Entity.V1 {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Udb.Entity.V1.AdminReflection.Descriptor.MessageTypes[61]; }
+      get { return global::Udb.Entity.V1.AdminReflection.Descriptor.MessageTypes[62]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -22815,7 +24026,7 @@ namespace Udb.Entity.V1 {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Udb.Entity.V1.AdminReflection.Descriptor.MessageTypes[62]; }
+      get { return global::Udb.Entity.V1.AdminReflection.Descriptor.MessageTypes[63]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -23281,7 +24492,7 @@ namespace Udb.Entity.V1 {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Udb.Entity.V1.AdminReflection.Descriptor.MessageTypes[63]; }
+      get { return global::Udb.Entity.V1.AdminReflection.Descriptor.MessageTypes[64]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -23960,7 +25171,7 @@ namespace Udb.Entity.V1 {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Udb.Entity.V1.AdminReflection.Descriptor.MessageTypes[64]; }
+      get { return global::Udb.Entity.V1.AdminReflection.Descriptor.MessageTypes[65]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -24221,7 +25432,7 @@ namespace Udb.Entity.V1 {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Udb.Entity.V1.AdminReflection.Descriptor.MessageTypes[65]; }
+      get { return global::Udb.Entity.V1.AdminReflection.Descriptor.MessageTypes[66]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -24468,7 +25679,7 @@ namespace Udb.Entity.V1 {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Udb.Entity.V1.AdminReflection.Descriptor.MessageTypes[66]; }
+      get { return global::Udb.Entity.V1.AdminReflection.Descriptor.MessageTypes[67]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -24962,7 +26173,7 @@ namespace Udb.Entity.V1 {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Udb.Entity.V1.AdminReflection.Descriptor.MessageTypes[67]; }
+      get { return global::Udb.Entity.V1.AdminReflection.Descriptor.MessageTypes[68]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -25670,7 +26881,7 @@ namespace Udb.Entity.V1 {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Udb.Entity.V1.AdminReflection.Descriptor.MessageTypes[68]; }
+      get { return global::Udb.Entity.V1.AdminReflection.Descriptor.MessageTypes[69]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -26090,7 +27301,7 @@ namespace Udb.Entity.V1 {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Udb.Entity.V1.AdminReflection.Descriptor.MessageTypes[69]; }
+      get { return global::Udb.Entity.V1.AdminReflection.Descriptor.MessageTypes[70]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -26436,7 +27647,7 @@ namespace Udb.Entity.V1 {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Udb.Entity.V1.AdminReflection.Descriptor.MessageTypes[70]; }
+      get { return global::Udb.Entity.V1.AdminReflection.Descriptor.MessageTypes[71]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -26856,7 +28067,7 @@ namespace Udb.Entity.V1 {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Udb.Entity.V1.AdminReflection.Descriptor.MessageTypes[71]; }
+      get { return global::Udb.Entity.V1.AdminReflection.Descriptor.MessageTypes[72]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]

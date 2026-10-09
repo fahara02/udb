@@ -90,4 +90,28 @@ public interface CatalogVersionRequestOrBuilder extends
    */
   com.google.protobuf.ByteString
       getIdempotencyKeyBytes();
+
+  /**
+   * <pre>
+   * ActivateCatalog only: the same durable reviewed candidate run used at
+   * staging. The stored candidate and current ACTIVE base are checked again;
+   * this reference cannot approve a foreign, stale or unapplied transition.
+   * </pre>
+   *
+   * <code>string reviewed_migration_run_id = 6 [json_name = "reviewedMigrationRunId"];</code>
+   * @return The reviewedMigrationRunId.
+   */
+  java.lang.String getReviewedMigrationRunId();
+  /**
+   * <pre>
+   * ActivateCatalog only: the same durable reviewed candidate run used at
+   * staging. The stored candidate and current ACTIVE base are checked again;
+   * this reference cannot approve a foreign, stale or unapplied transition.
+   * </pre>
+   *
+   * <code>string reviewed_migration_run_id = 6 [json_name = "reviewedMigrationRunId"];</code>
+   * @return The bytes for reviewedMigrationRunId.
+   */
+  com.google.protobuf.ByteString
+      getReviewedMigrationRunIdBytes();
 }

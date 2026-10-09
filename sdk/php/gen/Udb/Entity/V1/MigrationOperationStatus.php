@@ -31,7 +31,7 @@ class MigrationOperationStatus extends \Google\Protobuf\Internal\Message
      */
     protected $operation_kind = '';
     /**
-     * States: PENDING, APPLIED, SKIPPED, FAILED, ROLLED_BACK
+     * States: PENDING, APPLIED, VERIFIED, SKIPPED, FAILED, ROLLED_BACK
      *
      * Generated from protobuf field <code>string status = 5 [json_name = "status"];</code>
      */
@@ -52,7 +52,7 @@ class MigrationOperationStatus extends \Google\Protobuf\Internal\Message
      *     @type string $resource_uri
      *     @type string $operation_kind
      *     @type string $status
-     *           States: PENDING, APPLIED, SKIPPED, FAILED, ROLLED_BACK
+     *           States: PENDING, APPLIED, VERIFIED, SKIPPED, FAILED, ROLLED_BACK
      *     @type string $error
      * }
      */
@@ -150,7 +150,7 @@ class MigrationOperationStatus extends \Google\Protobuf\Internal\Message
     }
 
     /**
-     * States: PENDING, APPLIED, SKIPPED, FAILED, ROLLED_BACK
+     * States: PENDING, APPLIED, VERIFIED, SKIPPED, FAILED, ROLLED_BACK
      *
      * Generated from protobuf field <code>string status = 5 [json_name = "status"];</code>
      * @return string
@@ -161,7 +161,7 @@ class MigrationOperationStatus extends \Google\Protobuf\Internal\Message
     }
 
     /**
-     * States: PENDING, APPLIED, SKIPPED, FAILED, ROLLED_BACK
+     * States: PENDING, APPLIED, VERIFIED, SKIPPED, FAILED, ROLLED_BACK
      *
      * Generated from protobuf field <code>string status = 5 [json_name = "status"];</code>
      * @param string $var

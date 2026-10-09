@@ -722,6 +722,8 @@ class DataBrokerServicer(object):
     def StageCatalog(self, request, context):
         """Catalog administration.
         Stage a new catalog manifest version (validate + store as STAGED).
+        Ordinary compatibility is unchanged. An explicit reviewed migration run
+        must prove the exact authorized, approved and applied candidate transition.
         Requires scope: udb:admin
         """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
@@ -729,7 +731,8 @@ class DataBrokerServicer(object):
         raise NotImplementedError('Method not implemented!')
 
     def ActivateCatalog(self, request, context):
-        """Activate a STAGED catalog version.
+        """Activate a STAGED catalog version. Reviewed candidates require the same
+        durable run reference; approval/application/base evidence is checked again.
         Requires scope: udb:admin
         """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
@@ -770,7 +773,9 @@ class DataBrokerServicer(object):
 
     def PlanMigration(self, request, context):
         """Migration planning and apply.
-        Plan a migration against the active catalog without executing it.
+        Plan a migration without executing it. Ordinary mode uses the ACTIVE
+        catalog. Candidate mode durably binds an unstaged manifest to the exact
+        proven ACTIVE base and computes the immutable native review/application plan.
         Requires scope: udb:admin
         """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
@@ -778,7 +783,9 @@ class DataBrokerServicer(object):
         raise NotImplementedError('Method not implemented!')
 
     def ApplyMigration(self, request, context):
-        """Apply a previously planned (and optionally approved) migration.
+        """Apply a previously approved migration, or resume APPLYING/VERIFYING work
+        with its exact durable token. Reviewed candidates also bind caller tenant
+        and verified actor; their native application evidence is exposed in status.
         Requires scope: udb:admin
         """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
@@ -802,7 +809,9 @@ class DataBrokerServicer(object):
         raise NotImplementedError('Method not implemented!')
 
     def ApproveMigrationPlan(self, request, context):
-        """Approve a migration plan that requires review.
+        """Approve a migration plan that requires review. Candidate approval records
+        the verified authorized actor and exact operations hash/fingerprint echoes;
+        it cannot authorize blocked work or accept a filesystem review receipt.
         Requires scope: udb:admin
         """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)

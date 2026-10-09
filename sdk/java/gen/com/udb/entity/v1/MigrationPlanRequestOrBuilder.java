@@ -46,4 +46,74 @@ public interface MigrationPlanRequestOrBuilder extends
    * @return The dryRun.
    */
   boolean getDryRun();
+
+  /**
+   * <pre>
+   * Candidate mode pins an exact already-proven ACTIVE base before planning.
+   * Both fields are required with candidate_manifest_json and refused without
+   * it. The outer stored manifest integrity differs from its inner semantic
+   * schema checksum; callers must not substitute one for the other.
+   * </pre>
+   *
+   * <code>string expected_active_catalog_id = 4 [json_name = "expectedActiveCatalogId"];</code>
+   * @return The expectedActiveCatalogId.
+   */
+  java.lang.String getExpectedActiveCatalogId();
+  /**
+   * <pre>
+   * Candidate mode pins an exact already-proven ACTIVE base before planning.
+   * Both fields are required with candidate_manifest_json and refused without
+   * it. The outer stored manifest integrity differs from its inner semantic
+   * schema checksum; callers must not substitute one for the other.
+   * </pre>
+   *
+   * <code>string expected_active_catalog_id = 4 [json_name = "expectedActiveCatalogId"];</code>
+   * @return The bytes for expectedActiveCatalogId.
+   */
+  com.google.protobuf.ByteString
+      getExpectedActiveCatalogIdBytes();
+
+  /**
+   * <code>string expected_active_manifest_integrity_sha256 = 5 [json_name = "expectedActiveManifestIntegritySha256"];</code>
+   * @return The expectedActiveManifestIntegritySha256.
+   */
+  java.lang.String getExpectedActiveManifestIntegritySha256();
+  /**
+   * <code>string expected_active_manifest_integrity_sha256 = 5 [json_name = "expectedActiveManifestIntegritySha256"];</code>
+   * @return The bytes for expectedActiveManifestIntegritySha256.
+   */
+  com.google.protobuf.ByteString
+      getExpectedActiveManifestIntegritySha256Bytes();
+
+  /**
+   * <pre>
+   * Required in candidate mode; retries return the immutable committed plan.
+   * </pre>
+   *
+   * <code>string idempotency_key = 6 [json_name = "idempotencyKey"];</code>
+   * @return The idempotencyKey.
+   */
+  java.lang.String getIdempotencyKey();
+  /**
+   * <pre>
+   * Required in candidate mode; retries return the immutable committed plan.
+   * </pre>
+   *
+   * <code>string idempotency_key = 6 [json_name = "idempotencyKey"];</code>
+   * @return The bytes for idempotencyKey.
+   */
+  com.google.protobuf.ByteString
+      getIdempotencyKeyBytes();
+
+  /**
+   * <pre>
+   * Full unstaged CatalogManifest JSON. The broker computes the canonical
+   * change set, exact review fingerprints and actual application plan. Empty
+   * retains ordinary planning against the existing ACTIVE catalog.
+   * </pre>
+   *
+   * <code>bytes candidate_manifest_json = 1000 [json_name = "candidateManifestJson"];</code>
+   * @return The candidateManifestJson.
+   */
+  com.google.protobuf.ByteString getCandidateManifestJson();
 }

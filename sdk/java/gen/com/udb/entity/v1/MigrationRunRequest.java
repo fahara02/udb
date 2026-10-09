@@ -31,6 +31,9 @@ private static final long serialVersionUID = 0L;
     runId_ = "";
     projectId_ = "";
     idempotencyKey_ = "";
+    expectedOperationsHash_ = "";
+    reviewedOperationFingerprints_ =
+        com.google.protobuf.LazyStringArrayList.emptyList();
   }
 
   public static final com.google.protobuf.Descriptors.Descriptor
@@ -190,6 +193,94 @@ private static final long serialVersionUID = 0L;
     }
   }
 
+  public static final int EXPECTED_OPERATIONS_HASH_FIELD_NUMBER = 5;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object expectedOperationsHash_ = "";
+  /**
+   * <pre>
+   * ApproveMigrationPlan candidate mode only: explicit echoes of the exact
+   * immutable native plan and complete review fingerprint set. Missing,
+   * duplicate, foreign or mismatched review evidence is refused.
+   * </pre>
+   *
+   * <code>string expected_operations_hash = 5 [json_name = "expectedOperationsHash"];</code>
+   * @return The expectedOperationsHash.
+   */
+  @java.lang.Override
+  public java.lang.String getExpectedOperationsHash() {
+    java.lang.Object ref = expectedOperationsHash_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs =
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      expectedOperationsHash_ = s;
+      return s;
+    }
+  }
+  /**
+   * <pre>
+   * ApproveMigrationPlan candidate mode only: explicit echoes of the exact
+   * immutable native plan and complete review fingerprint set. Missing,
+   * duplicate, foreign or mismatched review evidence is refused.
+   * </pre>
+   *
+   * <code>string expected_operations_hash = 5 [json_name = "expectedOperationsHash"];</code>
+   * @return The bytes for expectedOperationsHash.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getExpectedOperationsHashBytes() {
+    java.lang.Object ref = expectedOperationsHash_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b =
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      expectedOperationsHash_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
+  public static final int REVIEWED_OPERATION_FINGERPRINTS_FIELD_NUMBER = 6;
+  @SuppressWarnings("serial")
+  private com.google.protobuf.LazyStringArrayList reviewedOperationFingerprints_ =
+      com.google.protobuf.LazyStringArrayList.emptyList();
+  /**
+   * <code>repeated string reviewed_operation_fingerprints = 6 [json_name = "reviewedOperationFingerprints"];</code>
+   * @return A list containing the reviewedOperationFingerprints.
+   */
+  public com.google.protobuf.ProtocolStringList
+      getReviewedOperationFingerprintsList() {
+    return reviewedOperationFingerprints_;
+  }
+  /**
+   * <code>repeated string reviewed_operation_fingerprints = 6 [json_name = "reviewedOperationFingerprints"];</code>
+   * @return The count of reviewedOperationFingerprints.
+   */
+  public int getReviewedOperationFingerprintsCount() {
+    return reviewedOperationFingerprints_.size();
+  }
+  /**
+   * <code>repeated string reviewed_operation_fingerprints = 6 [json_name = "reviewedOperationFingerprints"];</code>
+   * @param index The index of the element to return.
+   * @return The reviewedOperationFingerprints at the given index.
+   */
+  public java.lang.String getReviewedOperationFingerprints(int index) {
+    return reviewedOperationFingerprints_.get(index);
+  }
+  /**
+   * <code>repeated string reviewed_operation_fingerprints = 6 [json_name = "reviewedOperationFingerprints"];</code>
+   * @param index The index of the value to return.
+   * @return The bytes of the reviewedOperationFingerprints at the given index.
+   */
+  public com.google.protobuf.ByteString
+      getReviewedOperationFingerprintsBytes(int index) {
+    return reviewedOperationFingerprints_.getByteString(index);
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -216,6 +307,12 @@ private static final long serialVersionUID = 0L;
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(idempotencyKey_)) {
       com.google.protobuf.GeneratedMessage.writeString(output, 4, idempotencyKey_);
     }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(expectedOperationsHash_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 5, expectedOperationsHash_);
+    }
+    for (int i = 0; i < reviewedOperationFingerprints_.size(); i++) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 6, reviewedOperationFingerprints_.getRaw(i));
+    }
     getUnknownFields().writeTo(output);
   }
 
@@ -237,6 +334,17 @@ private static final long serialVersionUID = 0L;
     }
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(idempotencyKey_)) {
       size += com.google.protobuf.GeneratedMessage.computeStringSize(4, idempotencyKey_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(expectedOperationsHash_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(5, expectedOperationsHash_);
+    }
+    {
+      int dataSize = 0;
+      for (int i = 0; i < reviewedOperationFingerprints_.size(); i++) {
+        dataSize += computeStringSizeNoTag(reviewedOperationFingerprints_.getRaw(i));
+      }
+      size += dataSize;
+      size += 1 * getReviewedOperationFingerprintsList().size();
     }
     size += getUnknownFields().getSerializedSize();
     memoizedSize = size;
@@ -264,6 +372,10 @@ private static final long serialVersionUID = 0L;
         .equals(other.getProjectId())) return false;
     if (!getIdempotencyKey()
         .equals(other.getIdempotencyKey())) return false;
+    if (!getExpectedOperationsHash()
+        .equals(other.getExpectedOperationsHash())) return false;
+    if (!getReviewedOperationFingerprintsList()
+        .equals(other.getReviewedOperationFingerprintsList())) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -285,6 +397,12 @@ private static final long serialVersionUID = 0L;
     hash = (53 * hash) + getProjectId().hashCode();
     hash = (37 * hash) + IDEMPOTENCY_KEY_FIELD_NUMBER;
     hash = (53 * hash) + getIdempotencyKey().hashCode();
+    hash = (37 * hash) + EXPECTED_OPERATIONS_HASH_FIELD_NUMBER;
+    hash = (53 * hash) + getExpectedOperationsHash().hashCode();
+    if (getReviewedOperationFingerprintsCount() > 0) {
+      hash = (37 * hash) + REVIEWED_OPERATION_FINGERPRINTS_FIELD_NUMBER;
+      hash = (53 * hash) + getReviewedOperationFingerprintsList().hashCode();
+    }
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -430,6 +548,9 @@ private static final long serialVersionUID = 0L;
       runId_ = "";
       projectId_ = "";
       idempotencyKey_ = "";
+      expectedOperationsHash_ = "";
+      reviewedOperationFingerprints_ =
+          com.google.protobuf.LazyStringArrayList.emptyList();
       return this;
     }
 
@@ -479,6 +600,13 @@ private static final long serialVersionUID = 0L;
       if (((from_bitField0_ & 0x00000008) != 0)) {
         result.idempotencyKey_ = idempotencyKey_;
       }
+      if (((from_bitField0_ & 0x00000010) != 0)) {
+        result.expectedOperationsHash_ = expectedOperationsHash_;
+      }
+      if (((from_bitField0_ & 0x00000020) != 0)) {
+        reviewedOperationFingerprints_.makeImmutable();
+        result.reviewedOperationFingerprints_ = reviewedOperationFingerprints_;
+      }
       result.bitField0_ |= to_bitField0_;
     }
 
@@ -510,6 +638,21 @@ private static final long serialVersionUID = 0L;
       if (!other.getIdempotencyKey().isEmpty()) {
         idempotencyKey_ = other.idempotencyKey_;
         bitField0_ |= 0x00000008;
+        onChanged();
+      }
+      if (!other.getExpectedOperationsHash().isEmpty()) {
+        expectedOperationsHash_ = other.expectedOperationsHash_;
+        bitField0_ |= 0x00000010;
+        onChanged();
+      }
+      if (!other.reviewedOperationFingerprints_.isEmpty()) {
+        if (reviewedOperationFingerprints_.isEmpty()) {
+          reviewedOperationFingerprints_ = other.reviewedOperationFingerprints_;
+          bitField0_ |= 0x00000020;
+        } else {
+          ensureReviewedOperationFingerprintsIsMutable();
+          reviewedOperationFingerprints_.addAll(other.reviewedOperationFingerprints_);
+        }
         onChanged();
       }
       this.mergeUnknownFields(other.getUnknownFields());
@@ -560,6 +703,17 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00000008;
               break;
             } // case 34
+            case 42: {
+              expectedOperationsHash_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00000010;
+              break;
+            } // case 42
+            case 50: {
+              java.lang.String s = input.readStringRequireUtf8();
+              ensureReviewedOperationFingerprintsIsMutable();
+              reviewedOperationFingerprints_.add(s);
+              break;
+            } // case 50
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -910,6 +1064,219 @@ private static final long serialVersionUID = 0L;
       checkByteStringIsUtf8(value);
       idempotencyKey_ = value;
       bitField0_ |= 0x00000008;
+      onChanged();
+      return this;
+    }
+
+    private java.lang.Object expectedOperationsHash_ = "";
+    /**
+     * <pre>
+     * ApproveMigrationPlan candidate mode only: explicit echoes of the exact
+     * immutable native plan and complete review fingerprint set. Missing,
+     * duplicate, foreign or mismatched review evidence is refused.
+     * </pre>
+     *
+     * <code>string expected_operations_hash = 5 [json_name = "expectedOperationsHash"];</code>
+     * @return The expectedOperationsHash.
+     */
+    public java.lang.String getExpectedOperationsHash() {
+      java.lang.Object ref = expectedOperationsHash_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        expectedOperationsHash_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <pre>
+     * ApproveMigrationPlan candidate mode only: explicit echoes of the exact
+     * immutable native plan and complete review fingerprint set. Missing,
+     * duplicate, foreign or mismatched review evidence is refused.
+     * </pre>
+     *
+     * <code>string expected_operations_hash = 5 [json_name = "expectedOperationsHash"];</code>
+     * @return The bytes for expectedOperationsHash.
+     */
+    public com.google.protobuf.ByteString
+        getExpectedOperationsHashBytes() {
+      java.lang.Object ref = expectedOperationsHash_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b =
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        expectedOperationsHash_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <pre>
+     * ApproveMigrationPlan candidate mode only: explicit echoes of the exact
+     * immutable native plan and complete review fingerprint set. Missing,
+     * duplicate, foreign or mismatched review evidence is refused.
+     * </pre>
+     *
+     * <code>string expected_operations_hash = 5 [json_name = "expectedOperationsHash"];</code>
+     * @param value The expectedOperationsHash to set.
+     * @return This builder for chaining.
+     */
+    public Builder setExpectedOperationsHash(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      expectedOperationsHash_ = value;
+      bitField0_ |= 0x00000010;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * ApproveMigrationPlan candidate mode only: explicit echoes of the exact
+     * immutable native plan and complete review fingerprint set. Missing,
+     * duplicate, foreign or mismatched review evidence is refused.
+     * </pre>
+     *
+     * <code>string expected_operations_hash = 5 [json_name = "expectedOperationsHash"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearExpectedOperationsHash() {
+      expectedOperationsHash_ = getDefaultInstance().getExpectedOperationsHash();
+      bitField0_ = (bitField0_ & ~0x00000010);
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * ApproveMigrationPlan candidate mode only: explicit echoes of the exact
+     * immutable native plan and complete review fingerprint set. Missing,
+     * duplicate, foreign or mismatched review evidence is refused.
+     * </pre>
+     *
+     * <code>string expected_operations_hash = 5 [json_name = "expectedOperationsHash"];</code>
+     * @param value The bytes for expectedOperationsHash to set.
+     * @return This builder for chaining.
+     */
+    public Builder setExpectedOperationsHashBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      expectedOperationsHash_ = value;
+      bitField0_ |= 0x00000010;
+      onChanged();
+      return this;
+    }
+
+    private com.google.protobuf.LazyStringArrayList reviewedOperationFingerprints_ =
+        com.google.protobuf.LazyStringArrayList.emptyList();
+    private void ensureReviewedOperationFingerprintsIsMutable() {
+      if (!reviewedOperationFingerprints_.isModifiable()) {
+        reviewedOperationFingerprints_ = new com.google.protobuf.LazyStringArrayList(reviewedOperationFingerprints_);
+      }
+      bitField0_ |= 0x00000020;
+    }
+    /**
+     * <code>repeated string reviewed_operation_fingerprints = 6 [json_name = "reviewedOperationFingerprints"];</code>
+     * @return A list containing the reviewedOperationFingerprints.
+     */
+    public com.google.protobuf.ProtocolStringList
+        getReviewedOperationFingerprintsList() {
+      reviewedOperationFingerprints_.makeImmutable();
+      return reviewedOperationFingerprints_;
+    }
+    /**
+     * <code>repeated string reviewed_operation_fingerprints = 6 [json_name = "reviewedOperationFingerprints"];</code>
+     * @return The count of reviewedOperationFingerprints.
+     */
+    public int getReviewedOperationFingerprintsCount() {
+      return reviewedOperationFingerprints_.size();
+    }
+    /**
+     * <code>repeated string reviewed_operation_fingerprints = 6 [json_name = "reviewedOperationFingerprints"];</code>
+     * @param index The index of the element to return.
+     * @return The reviewedOperationFingerprints at the given index.
+     */
+    public java.lang.String getReviewedOperationFingerprints(int index) {
+      return reviewedOperationFingerprints_.get(index);
+    }
+    /**
+     * <code>repeated string reviewed_operation_fingerprints = 6 [json_name = "reviewedOperationFingerprints"];</code>
+     * @param index The index of the value to return.
+     * @return The bytes of the reviewedOperationFingerprints at the given index.
+     */
+    public com.google.protobuf.ByteString
+        getReviewedOperationFingerprintsBytes(int index) {
+      return reviewedOperationFingerprints_.getByteString(index);
+    }
+    /**
+     * <code>repeated string reviewed_operation_fingerprints = 6 [json_name = "reviewedOperationFingerprints"];</code>
+     * @param index The index to set the value at.
+     * @param value The reviewedOperationFingerprints to set.
+     * @return This builder for chaining.
+     */
+    public Builder setReviewedOperationFingerprints(
+        int index, java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      ensureReviewedOperationFingerprintsIsMutable();
+      reviewedOperationFingerprints_.set(index, value);
+      bitField0_ |= 0x00000020;
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>repeated string reviewed_operation_fingerprints = 6 [json_name = "reviewedOperationFingerprints"];</code>
+     * @param value The reviewedOperationFingerprints to add.
+     * @return This builder for chaining.
+     */
+    public Builder addReviewedOperationFingerprints(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      ensureReviewedOperationFingerprintsIsMutable();
+      reviewedOperationFingerprints_.add(value);
+      bitField0_ |= 0x00000020;
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>repeated string reviewed_operation_fingerprints = 6 [json_name = "reviewedOperationFingerprints"];</code>
+     * @param values The reviewedOperationFingerprints to add.
+     * @return This builder for chaining.
+     */
+    public Builder addAllReviewedOperationFingerprints(
+        java.lang.Iterable<java.lang.String> values) {
+      ensureReviewedOperationFingerprintsIsMutable();
+      com.google.protobuf.AbstractMessageLite.Builder.addAll(
+          values, reviewedOperationFingerprints_);
+      bitField0_ |= 0x00000020;
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>repeated string reviewed_operation_fingerprints = 6 [json_name = "reviewedOperationFingerprints"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearReviewedOperationFingerprints() {
+      reviewedOperationFingerprints_ =
+        com.google.protobuf.LazyStringArrayList.emptyList();
+      bitField0_ = (bitField0_ & ~0x00000020);;
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>repeated string reviewed_operation_fingerprints = 6 [json_name = "reviewedOperationFingerprints"];</code>
+     * @param value The bytes of the reviewedOperationFingerprints to add.
+     * @return This builder for chaining.
+     */
+    public Builder addReviewedOperationFingerprintsBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      ensureReviewedOperationFingerprintsIsMutable();
+      reviewedOperationFingerprints_.add(value);
+      bitField0_ |= 0x00000020;
       onChanged();
       return this;
     }

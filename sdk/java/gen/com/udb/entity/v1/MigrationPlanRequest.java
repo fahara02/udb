@@ -29,6 +29,10 @@ private static final long serialVersionUID = 0L;
   }
   private MigrationPlanRequest() {
     projectId_ = "";
+    expectedActiveCatalogId_ = "";
+    expectedActiveManifestIntegritySha256_ = "";
+    idempotencyKey_ = "";
+    candidateManifestJson_ = com.google.protobuf.ByteString.EMPTY;
   }
 
   public static final com.google.protobuf.Descriptors.Descriptor
@@ -125,6 +129,162 @@ private static final long serialVersionUID = 0L;
     return dryRun_;
   }
 
+  public static final int EXPECTED_ACTIVE_CATALOG_ID_FIELD_NUMBER = 4;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object expectedActiveCatalogId_ = "";
+  /**
+   * <pre>
+   * Candidate mode pins an exact already-proven ACTIVE base before planning.
+   * Both fields are required with candidate_manifest_json and refused without
+   * it. The outer stored manifest integrity differs from its inner semantic
+   * schema checksum; callers must not substitute one for the other.
+   * </pre>
+   *
+   * <code>string expected_active_catalog_id = 4 [json_name = "expectedActiveCatalogId"];</code>
+   * @return The expectedActiveCatalogId.
+   */
+  @java.lang.Override
+  public java.lang.String getExpectedActiveCatalogId() {
+    java.lang.Object ref = expectedActiveCatalogId_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs =
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      expectedActiveCatalogId_ = s;
+      return s;
+    }
+  }
+  /**
+   * <pre>
+   * Candidate mode pins an exact already-proven ACTIVE base before planning.
+   * Both fields are required with candidate_manifest_json and refused without
+   * it. The outer stored manifest integrity differs from its inner semantic
+   * schema checksum; callers must not substitute one for the other.
+   * </pre>
+   *
+   * <code>string expected_active_catalog_id = 4 [json_name = "expectedActiveCatalogId"];</code>
+   * @return The bytes for expectedActiveCatalogId.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getExpectedActiveCatalogIdBytes() {
+    java.lang.Object ref = expectedActiveCatalogId_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b =
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      expectedActiveCatalogId_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
+  public static final int EXPECTED_ACTIVE_MANIFEST_INTEGRITY_SHA256_FIELD_NUMBER = 5;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object expectedActiveManifestIntegritySha256_ = "";
+  /**
+   * <code>string expected_active_manifest_integrity_sha256 = 5 [json_name = "expectedActiveManifestIntegritySha256"];</code>
+   * @return The expectedActiveManifestIntegritySha256.
+   */
+  @java.lang.Override
+  public java.lang.String getExpectedActiveManifestIntegritySha256() {
+    java.lang.Object ref = expectedActiveManifestIntegritySha256_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs =
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      expectedActiveManifestIntegritySha256_ = s;
+      return s;
+    }
+  }
+  /**
+   * <code>string expected_active_manifest_integrity_sha256 = 5 [json_name = "expectedActiveManifestIntegritySha256"];</code>
+   * @return The bytes for expectedActiveManifestIntegritySha256.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getExpectedActiveManifestIntegritySha256Bytes() {
+    java.lang.Object ref = expectedActiveManifestIntegritySha256_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b =
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      expectedActiveManifestIntegritySha256_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
+  public static final int IDEMPOTENCY_KEY_FIELD_NUMBER = 6;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object idempotencyKey_ = "";
+  /**
+   * <pre>
+   * Required in candidate mode; retries return the immutable committed plan.
+   * </pre>
+   *
+   * <code>string idempotency_key = 6 [json_name = "idempotencyKey"];</code>
+   * @return The idempotencyKey.
+   */
+  @java.lang.Override
+  public java.lang.String getIdempotencyKey() {
+    java.lang.Object ref = idempotencyKey_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs =
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      idempotencyKey_ = s;
+      return s;
+    }
+  }
+  /**
+   * <pre>
+   * Required in candidate mode; retries return the immutable committed plan.
+   * </pre>
+   *
+   * <code>string idempotency_key = 6 [json_name = "idempotencyKey"];</code>
+   * @return The bytes for idempotencyKey.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getIdempotencyKeyBytes() {
+    java.lang.Object ref = idempotencyKey_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b =
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      idempotencyKey_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
+  public static final int CANDIDATE_MANIFEST_JSON_FIELD_NUMBER = 1000;
+  private com.google.protobuf.ByteString candidateManifestJson_ = com.google.protobuf.ByteString.EMPTY;
+  /**
+   * <pre>
+   * Full unstaged CatalogManifest JSON. The broker computes the canonical
+   * change set, exact review fingerprints and actual application plan. Empty
+   * retains ordinary planning against the existing ACTIVE catalog.
+   * </pre>
+   *
+   * <code>bytes candidate_manifest_json = 1000 [json_name = "candidateManifestJson"];</code>
+   * @return The candidateManifestJson.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString getCandidateManifestJson() {
+    return candidateManifestJson_;
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -148,6 +308,18 @@ private static final long serialVersionUID = 0L;
     if (dryRun_ != false) {
       output.writeBool(3, dryRun_);
     }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(expectedActiveCatalogId_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 4, expectedActiveCatalogId_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(expectedActiveManifestIntegritySha256_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 5, expectedActiveManifestIntegritySha256_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(idempotencyKey_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 6, idempotencyKey_);
+    }
+    if (!candidateManifestJson_.isEmpty()) {
+      output.writeBytes(1000, candidateManifestJson_);
+    }
     getUnknownFields().writeTo(output);
   }
 
@@ -167,6 +339,19 @@ private static final long serialVersionUID = 0L;
     if (dryRun_ != false) {
       size += com.google.protobuf.CodedOutputStream
         .computeBoolSize(3, dryRun_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(expectedActiveCatalogId_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(4, expectedActiveCatalogId_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(expectedActiveManifestIntegritySha256_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(5, expectedActiveManifestIntegritySha256_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(idempotencyKey_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(6, idempotencyKey_);
+    }
+    if (!candidateManifestJson_.isEmpty()) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeBytesSize(1000, candidateManifestJson_);
     }
     size += getUnknownFields().getSerializedSize();
     memoizedSize = size;
@@ -192,6 +377,14 @@ private static final long serialVersionUID = 0L;
         .equals(other.getProjectId())) return false;
     if (getDryRun()
         != other.getDryRun()) return false;
+    if (!getExpectedActiveCatalogId()
+        .equals(other.getExpectedActiveCatalogId())) return false;
+    if (!getExpectedActiveManifestIntegritySha256()
+        .equals(other.getExpectedActiveManifestIntegritySha256())) return false;
+    if (!getIdempotencyKey()
+        .equals(other.getIdempotencyKey())) return false;
+    if (!getCandidateManifestJson()
+        .equals(other.getCandidateManifestJson())) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -212,6 +405,14 @@ private static final long serialVersionUID = 0L;
     hash = (37 * hash) + DRY_RUN_FIELD_NUMBER;
     hash = (53 * hash) + com.google.protobuf.Internal.hashBoolean(
         getDryRun());
+    hash = (37 * hash) + EXPECTED_ACTIVE_CATALOG_ID_FIELD_NUMBER;
+    hash = (53 * hash) + getExpectedActiveCatalogId().hashCode();
+    hash = (37 * hash) + EXPECTED_ACTIVE_MANIFEST_INTEGRITY_SHA256_FIELD_NUMBER;
+    hash = (53 * hash) + getExpectedActiveManifestIntegritySha256().hashCode();
+    hash = (37 * hash) + IDEMPOTENCY_KEY_FIELD_NUMBER;
+    hash = (53 * hash) + getIdempotencyKey().hashCode();
+    hash = (37 * hash) + CANDIDATE_MANIFEST_JSON_FIELD_NUMBER;
+    hash = (53 * hash) + getCandidateManifestJson().hashCode();
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -356,6 +557,10 @@ private static final long serialVersionUID = 0L;
       }
       projectId_ = "";
       dryRun_ = false;
+      expectedActiveCatalogId_ = "";
+      expectedActiveManifestIntegritySha256_ = "";
+      idempotencyKey_ = "";
+      candidateManifestJson_ = com.google.protobuf.ByteString.EMPTY;
       return this;
     }
 
@@ -402,6 +607,18 @@ private static final long serialVersionUID = 0L;
       if (((from_bitField0_ & 0x00000004) != 0)) {
         result.dryRun_ = dryRun_;
       }
+      if (((from_bitField0_ & 0x00000008) != 0)) {
+        result.expectedActiveCatalogId_ = expectedActiveCatalogId_;
+      }
+      if (((from_bitField0_ & 0x00000010) != 0)) {
+        result.expectedActiveManifestIntegritySha256_ = expectedActiveManifestIntegritySha256_;
+      }
+      if (((from_bitField0_ & 0x00000020) != 0)) {
+        result.idempotencyKey_ = idempotencyKey_;
+      }
+      if (((from_bitField0_ & 0x00000040) != 0)) {
+        result.candidateManifestJson_ = candidateManifestJson_;
+      }
       result.bitField0_ |= to_bitField0_;
     }
 
@@ -427,6 +644,24 @@ private static final long serialVersionUID = 0L;
       }
       if (other.getDryRun() != false) {
         setDryRun(other.getDryRun());
+      }
+      if (!other.getExpectedActiveCatalogId().isEmpty()) {
+        expectedActiveCatalogId_ = other.expectedActiveCatalogId_;
+        bitField0_ |= 0x00000008;
+        onChanged();
+      }
+      if (!other.getExpectedActiveManifestIntegritySha256().isEmpty()) {
+        expectedActiveManifestIntegritySha256_ = other.expectedActiveManifestIntegritySha256_;
+        bitField0_ |= 0x00000010;
+        onChanged();
+      }
+      if (!other.getIdempotencyKey().isEmpty()) {
+        idempotencyKey_ = other.idempotencyKey_;
+        bitField0_ |= 0x00000020;
+        onChanged();
+      }
+      if (!other.getCandidateManifestJson().isEmpty()) {
+        setCandidateManifestJson(other.getCandidateManifestJson());
       }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
@@ -471,6 +706,26 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00000004;
               break;
             } // case 24
+            case 34: {
+              expectedActiveCatalogId_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00000008;
+              break;
+            } // case 34
+            case 42: {
+              expectedActiveManifestIntegritySha256_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00000010;
+              break;
+            } // case 42
+            case 50: {
+              idempotencyKey_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00000020;
+              break;
+            } // case 50
+            case 8002: {
+              candidateManifestJson_ = input.readBytes();
+              bitField0_ |= 0x00000040;
+              break;
+            } // case 8002
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -721,6 +976,327 @@ private static final long serialVersionUID = 0L;
     public Builder clearDryRun() {
       bitField0_ = (bitField0_ & ~0x00000004);
       dryRun_ = false;
+      onChanged();
+      return this;
+    }
+
+    private java.lang.Object expectedActiveCatalogId_ = "";
+    /**
+     * <pre>
+     * Candidate mode pins an exact already-proven ACTIVE base before planning.
+     * Both fields are required with candidate_manifest_json and refused without
+     * it. The outer stored manifest integrity differs from its inner semantic
+     * schema checksum; callers must not substitute one for the other.
+     * </pre>
+     *
+     * <code>string expected_active_catalog_id = 4 [json_name = "expectedActiveCatalogId"];</code>
+     * @return The expectedActiveCatalogId.
+     */
+    public java.lang.String getExpectedActiveCatalogId() {
+      java.lang.Object ref = expectedActiveCatalogId_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        expectedActiveCatalogId_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <pre>
+     * Candidate mode pins an exact already-proven ACTIVE base before planning.
+     * Both fields are required with candidate_manifest_json and refused without
+     * it. The outer stored manifest integrity differs from its inner semantic
+     * schema checksum; callers must not substitute one for the other.
+     * </pre>
+     *
+     * <code>string expected_active_catalog_id = 4 [json_name = "expectedActiveCatalogId"];</code>
+     * @return The bytes for expectedActiveCatalogId.
+     */
+    public com.google.protobuf.ByteString
+        getExpectedActiveCatalogIdBytes() {
+      java.lang.Object ref = expectedActiveCatalogId_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b =
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        expectedActiveCatalogId_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <pre>
+     * Candidate mode pins an exact already-proven ACTIVE base before planning.
+     * Both fields are required with candidate_manifest_json and refused without
+     * it. The outer stored manifest integrity differs from its inner semantic
+     * schema checksum; callers must not substitute one for the other.
+     * </pre>
+     *
+     * <code>string expected_active_catalog_id = 4 [json_name = "expectedActiveCatalogId"];</code>
+     * @param value The expectedActiveCatalogId to set.
+     * @return This builder for chaining.
+     */
+    public Builder setExpectedActiveCatalogId(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      expectedActiveCatalogId_ = value;
+      bitField0_ |= 0x00000008;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Candidate mode pins an exact already-proven ACTIVE base before planning.
+     * Both fields are required with candidate_manifest_json and refused without
+     * it. The outer stored manifest integrity differs from its inner semantic
+     * schema checksum; callers must not substitute one for the other.
+     * </pre>
+     *
+     * <code>string expected_active_catalog_id = 4 [json_name = "expectedActiveCatalogId"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearExpectedActiveCatalogId() {
+      expectedActiveCatalogId_ = getDefaultInstance().getExpectedActiveCatalogId();
+      bitField0_ = (bitField0_ & ~0x00000008);
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Candidate mode pins an exact already-proven ACTIVE base before planning.
+     * Both fields are required with candidate_manifest_json and refused without
+     * it. The outer stored manifest integrity differs from its inner semantic
+     * schema checksum; callers must not substitute one for the other.
+     * </pre>
+     *
+     * <code>string expected_active_catalog_id = 4 [json_name = "expectedActiveCatalogId"];</code>
+     * @param value The bytes for expectedActiveCatalogId to set.
+     * @return This builder for chaining.
+     */
+    public Builder setExpectedActiveCatalogIdBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      expectedActiveCatalogId_ = value;
+      bitField0_ |= 0x00000008;
+      onChanged();
+      return this;
+    }
+
+    private java.lang.Object expectedActiveManifestIntegritySha256_ = "";
+    /**
+     * <code>string expected_active_manifest_integrity_sha256 = 5 [json_name = "expectedActiveManifestIntegritySha256"];</code>
+     * @return The expectedActiveManifestIntegritySha256.
+     */
+    public java.lang.String getExpectedActiveManifestIntegritySha256() {
+      java.lang.Object ref = expectedActiveManifestIntegritySha256_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        expectedActiveManifestIntegritySha256_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <code>string expected_active_manifest_integrity_sha256 = 5 [json_name = "expectedActiveManifestIntegritySha256"];</code>
+     * @return The bytes for expectedActiveManifestIntegritySha256.
+     */
+    public com.google.protobuf.ByteString
+        getExpectedActiveManifestIntegritySha256Bytes() {
+      java.lang.Object ref = expectedActiveManifestIntegritySha256_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b =
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        expectedActiveManifestIntegritySha256_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <code>string expected_active_manifest_integrity_sha256 = 5 [json_name = "expectedActiveManifestIntegritySha256"];</code>
+     * @param value The expectedActiveManifestIntegritySha256 to set.
+     * @return This builder for chaining.
+     */
+    public Builder setExpectedActiveManifestIntegritySha256(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      expectedActiveManifestIntegritySha256_ = value;
+      bitField0_ |= 0x00000010;
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>string expected_active_manifest_integrity_sha256 = 5 [json_name = "expectedActiveManifestIntegritySha256"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearExpectedActiveManifestIntegritySha256() {
+      expectedActiveManifestIntegritySha256_ = getDefaultInstance().getExpectedActiveManifestIntegritySha256();
+      bitField0_ = (bitField0_ & ~0x00000010);
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>string expected_active_manifest_integrity_sha256 = 5 [json_name = "expectedActiveManifestIntegritySha256"];</code>
+     * @param value The bytes for expectedActiveManifestIntegritySha256 to set.
+     * @return This builder for chaining.
+     */
+    public Builder setExpectedActiveManifestIntegritySha256Bytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      expectedActiveManifestIntegritySha256_ = value;
+      bitField0_ |= 0x00000010;
+      onChanged();
+      return this;
+    }
+
+    private java.lang.Object idempotencyKey_ = "";
+    /**
+     * <pre>
+     * Required in candidate mode; retries return the immutable committed plan.
+     * </pre>
+     *
+     * <code>string idempotency_key = 6 [json_name = "idempotencyKey"];</code>
+     * @return The idempotencyKey.
+     */
+    public java.lang.String getIdempotencyKey() {
+      java.lang.Object ref = idempotencyKey_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        idempotencyKey_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <pre>
+     * Required in candidate mode; retries return the immutable committed plan.
+     * </pre>
+     *
+     * <code>string idempotency_key = 6 [json_name = "idempotencyKey"];</code>
+     * @return The bytes for idempotencyKey.
+     */
+    public com.google.protobuf.ByteString
+        getIdempotencyKeyBytes() {
+      java.lang.Object ref = idempotencyKey_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b =
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        idempotencyKey_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <pre>
+     * Required in candidate mode; retries return the immutable committed plan.
+     * </pre>
+     *
+     * <code>string idempotency_key = 6 [json_name = "idempotencyKey"];</code>
+     * @param value The idempotencyKey to set.
+     * @return This builder for chaining.
+     */
+    public Builder setIdempotencyKey(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      idempotencyKey_ = value;
+      bitField0_ |= 0x00000020;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Required in candidate mode; retries return the immutable committed plan.
+     * </pre>
+     *
+     * <code>string idempotency_key = 6 [json_name = "idempotencyKey"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearIdempotencyKey() {
+      idempotencyKey_ = getDefaultInstance().getIdempotencyKey();
+      bitField0_ = (bitField0_ & ~0x00000020);
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Required in candidate mode; retries return the immutable committed plan.
+     * </pre>
+     *
+     * <code>string idempotency_key = 6 [json_name = "idempotencyKey"];</code>
+     * @param value The bytes for idempotencyKey to set.
+     * @return This builder for chaining.
+     */
+    public Builder setIdempotencyKeyBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      idempotencyKey_ = value;
+      bitField0_ |= 0x00000020;
+      onChanged();
+      return this;
+    }
+
+    private com.google.protobuf.ByteString candidateManifestJson_ = com.google.protobuf.ByteString.EMPTY;
+    /**
+     * <pre>
+     * Full unstaged CatalogManifest JSON. The broker computes the canonical
+     * change set, exact review fingerprints and actual application plan. Empty
+     * retains ordinary planning against the existing ACTIVE catalog.
+     * </pre>
+     *
+     * <code>bytes candidate_manifest_json = 1000 [json_name = "candidateManifestJson"];</code>
+     * @return The candidateManifestJson.
+     */
+    @java.lang.Override
+    public com.google.protobuf.ByteString getCandidateManifestJson() {
+      return candidateManifestJson_;
+    }
+    /**
+     * <pre>
+     * Full unstaged CatalogManifest JSON. The broker computes the canonical
+     * change set, exact review fingerprints and actual application plan. Empty
+     * retains ordinary planning against the existing ACTIVE catalog.
+     * </pre>
+     *
+     * <code>bytes candidate_manifest_json = 1000 [json_name = "candidateManifestJson"];</code>
+     * @param value The candidateManifestJson to set.
+     * @return This builder for chaining.
+     */
+    public Builder setCandidateManifestJson(com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      candidateManifestJson_ = value;
+      bitField0_ |= 0x00000040;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Full unstaged CatalogManifest JSON. The broker computes the canonical
+     * change set, exact review fingerprints and actual application plan. Empty
+     * retains ordinary planning against the existing ACTIVE catalog.
+     * </pre>
+     *
+     * <code>bytes candidate_manifest_json = 1000 [json_name = "candidateManifestJson"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearCandidateManifestJson() {
+      bitField0_ = (bitField0_ & ~0x00000040);
+      candidateManifestJson_ = getDefaultInstance().getCandidateManifestJson();
       onChanged();
       return this;
     }

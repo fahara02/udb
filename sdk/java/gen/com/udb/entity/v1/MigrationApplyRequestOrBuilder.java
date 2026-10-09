@@ -51,7 +51,9 @@ public interface MigrationApplyRequestOrBuilder extends
 
   /**
    * <pre>
-   * Approval token from ApproveMigrationPlan (required for blocked operations).
+   * Approval token from ApproveMigrationPlan. Reviewed candidate approval does
+   * not permit blocked or destructive transitions; native application evidence
+   * is also required before catalog staging and activation.
    * </pre>
    *
    * <code>string approval_token = 4 [json_name = "approvalToken"];</code>
@@ -60,7 +62,9 @@ public interface MigrationApplyRequestOrBuilder extends
   java.lang.String getApprovalToken();
   /**
    * <pre>
-   * Approval token from ApproveMigrationPlan (required for blocked operations).
+   * Approval token from ApproveMigrationPlan. Reviewed candidate approval does
+   * not permit blocked or destructive transitions; native application evidence
+   * is also required before catalog staging and activation.
    * </pre>
    *
    * <code>string approval_token = 4 [json_name = "approvalToken"];</code>

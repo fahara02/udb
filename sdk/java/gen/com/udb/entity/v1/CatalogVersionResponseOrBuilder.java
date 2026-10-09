@@ -125,4 +125,30 @@ public interface CatalogVersionResponseOrBuilder extends
    */
   com.google.protobuf.ByteString
       getWarningsBytes(int index);
+
+  /**
+   * <pre>
+   * Verified outer integrity of the complete durable manifest. Candidate
+   * planning pins this value with catalog_id; checksum_sha256 remains the
+   * existing catalog selector and must not be substituted for this integrity.
+   * Empty for an in-memory startup fallback without durable catalog authority.
+   * </pre>
+   *
+   * <code>string manifest_integrity_sha256 = 9 [json_name = "manifestIntegritySha256"];</code>
+   * @return The manifestIntegritySha256.
+   */
+  java.lang.String getManifestIntegritySha256();
+  /**
+   * <pre>
+   * Verified outer integrity of the complete durable manifest. Candidate
+   * planning pins this value with catalog_id; checksum_sha256 remains the
+   * existing catalog selector and must not be substituted for this integrity.
+   * Empty for an in-memory startup fallback without durable catalog authority.
+   * </pre>
+   *
+   * <code>string manifest_integrity_sha256 = 9 [json_name = "manifestIntegritySha256"];</code>
+   * @return The bytes for manifestIntegritySha256.
+   */
+  com.google.protobuf.ByteString
+      getManifestIntegritySha256Bytes();
 }

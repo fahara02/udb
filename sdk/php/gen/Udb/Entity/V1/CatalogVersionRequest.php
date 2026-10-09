@@ -39,6 +39,14 @@ class CatalogVersionRequest extends \Google\Protobuf\Internal\Message
      * Generated from protobuf field <code>string idempotency_key = 5 [json_name = "idempotencyKey"];</code>
      */
     protected $idempotency_key = '';
+    /**
+     * ActivateCatalog only: the same durable reviewed candidate run used at
+     * staging. The stored candidate and current ACTIVE base are checked again;
+     * this reference cannot approve a foreign, stale or unapplied transition.
+     *
+     * Generated from protobuf field <code>string reviewed_migration_run_id = 6 [json_name = "reviewedMigrationRunId"];</code>
+     */
+    protected $reviewed_migration_run_id = '';
 
     /**
      * Constructor.
@@ -54,6 +62,10 @@ class CatalogVersionRequest extends \Google\Protobuf\Internal\Message
      *     @type string $reason
      *     @type string $idempotency_key
      *           Required for ActivateCatalog and RollbackCatalog retries.
+     *     @type string $reviewed_migration_run_id
+     *           ActivateCatalog only: the same durable reviewed candidate run used at
+     *           staging. The stored candidate and current ACTIVE base are checked again;
+     *           this reference cannot approve a foreign, stale or unapplied transition.
      * }
      */
     public function __construct($data = NULL) {
@@ -187,6 +199,36 @@ class CatalogVersionRequest extends \Google\Protobuf\Internal\Message
     {
         GPBUtil::checkString($var, True);
         $this->idempotency_key = $var;
+
+        return $this;
+    }
+
+    /**
+     * ActivateCatalog only: the same durable reviewed candidate run used at
+     * staging. The stored candidate and current ACTIVE base are checked again;
+     * this reference cannot approve a foreign, stale or unapplied transition.
+     *
+     * Generated from protobuf field <code>string reviewed_migration_run_id = 6 [json_name = "reviewedMigrationRunId"];</code>
+     * @return string
+     */
+    public function getReviewedMigrationRunId()
+    {
+        return $this->reviewed_migration_run_id;
+    }
+
+    /**
+     * ActivateCatalog only: the same durable reviewed candidate run used at
+     * staging. The stored candidate and current ACTIVE base are checked again;
+     * this reference cannot approve a foreign, stale or unapplied transition.
+     *
+     * Generated from protobuf field <code>string reviewed_migration_run_id = 6 [json_name = "reviewedMigrationRunId"];</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setReviewedMigrationRunId($var)
+    {
+        GPBUtil::checkString($var, True);
+        $this->reviewed_migration_run_id = $var;
 
         return $this;
     }

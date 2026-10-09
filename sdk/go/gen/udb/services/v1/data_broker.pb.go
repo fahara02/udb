@@ -142,7 +142,7 @@ const file_udb_services_v1_data_broker_proto_rawDesc = "" +
 	"\x16EnsureBaselineResponse\x12\x19\n" +
 	"\bsaga_ids\x18\x01 \x03(\tR\asagaIds\x12\x17\n" +
 	"\adlq_ids\x18\x02 \x03(\tR\x06dlqIds\x12\x1b\n" +
-	"\tdevice_id\x18\x03 \x01(\tR\bdeviceId2\x89X\n" +
+	"\tdevice_id\x18\x03 \x01(\tR\bdeviceId2\x96X\n" +
 	"\n" +
 	"DataBroker\x12\\\n" +
 	"\x06Select\x12\x1c.udb.entity.v1.SelectRequest\x1a\x18.udb.entity.v1.RecordSet\"\x1a\xda\xf3\x18\x12\b\x01\x12\x06selectZ\x06select\xf8\xf3\x18\x01\x12p\n" +
@@ -202,13 +202,13 @@ const file_udb_services_v1_data_broker_proto_rawDesc = "" +
 	"\x12GetCatalogVersions\x12%.udb.entity.v1.CatalogManifestRequest\x1a).udb.entity.v1.CatalogVersionListResponse\"4\xda\xf3\x18,\b\x01\x12\x14get_catalog_versionsZ\x12getCatalogVersions\xf8\xf3\x18\x01\x12\x94\x01\n" +
 	"\x11GetCatalogVersion\x12$.udb.entity.v1.CatalogVersionRequest\x1a%.udb.entity.v1.CatalogVersionResponse\"2\xda\xf3\x18*\b\x01\x12\x13get_catalog_versionZ\x11getCatalogVersion\xf8\xf3\x18\x01\x12\xbf\x01\n" +
 	"\rPlanMigration\x12#.udb.entity.v1.MigrationPlanRequest\x1a$.udb.entity.v1.MigrationPlanResponse\"c\xda\xf3\x18!\b\x01\x12\x0eplan_migrationZ\rplanMigration\xf8\xf3\x18\x02\x92\xf4\x186\n" +
-	"\fMigrationRun\x1a\aDRY_RUN\"\tCOMPLETED\"\x05ERROR\"\vDEAD_LETTER\x12\xde\x01\n" +
-	"\x0eApplyMigration\x12$.udb.entity.v1.MigrationApplyRequest\x1a&.udb.entity.v1.MigrationStatusResponse\"~\xda\xf3\x18#\b\x01\x12\x0fapply_migrationZ\x0eapplyMigration\xf8\xf3\x18\x02\x92\xf4\x18O\n" +
-	"\fMigrationRun\x12\aDRY_RUN\x12\tPREFLIGHT\x1a\bAPPLYING\"\tCOMPLETED\"\x05ERROR\"\vDEAD_LETTER(\x010\x01\x12\x96\x01\n" +
+	"\fMigrationRun\x1a\aDRY_RUN\"\tCOMPLETED\"\x05ERROR\"\vDEAD_LETTER\x12\xea\x01\n" +
+	"\x0eApplyMigration\x12$.udb.entity.v1.MigrationApplyRequest\x1a&.udb.entity.v1.MigrationStatusResponse\"\x89\x01\xda\xf3\x18#\b\x01\x12\x0fapply_migrationZ\x0eapplyMigration\xf8\xf3\x18\x02\x92\xf4\x18Z\n" +
+	"\fMigrationRun\x12\bAPPROVED\x12\bAPPLYING\x12\tVERIFYING\x1a\bAPPLYING\"\tCOMPLETED\"\x05ERROR\"\vDEAD_LETTER(\x010\x01\x12\x96\x01\n" +
 	"\x12GetMigrationStatus\x12\".udb.entity.v1.MigrationRunRequest\x1a&.udb.entity.v1.MigrationStatusResponse\"4\xda\xf3\x18,\b\x01\x12\x14get_migration_statusZ\x12getMigrationStatus\xf8\xf3\x18\x01\x12\x98\x01\n" +
-	"\x11ListMigrationRuns\x12&.udb.entity.v1.MigrationRunListRequest\x1a'.udb.entity.v1.MigrationRunListResponse\"2\xda\xf3\x18*\b\x01\x12\x13list_migration_runsZ\x11listMigrationRuns\xf8\xf3\x18\x01\x12\xe1\x01\n" +
-	"\x14ApproveMigrationPlan\x12\".udb.entity.v1.MigrationRunRequest\x1a&.udb.entity.v1.MigrationStatusResponse\"}\xda\xf3\x180\b\x01\x12\x16approve_migration_planZ\x14approveMigrationPlan\xf8\xf3\x18\x02\x92\xf4\x18A\n" +
-	"\fMigrationRun\x12\aDRY_RUN\x1a\tPREFLIGHT\"\tCOMPLETED\"\x05ERROR\"\vDEAD_LETTER\x12z\n" +
+	"\x11ListMigrationRuns\x12&.udb.entity.v1.MigrationRunListRequest\x1a'.udb.entity.v1.MigrationRunListResponse\"2\xda\xf3\x18*\b\x01\x12\x13list_migration_runsZ\x11listMigrationRuns\xf8\xf3\x18\x01\x12\xe2\x01\n" +
+	"\x14ApproveMigrationPlan\x12\".udb.entity.v1.MigrationRunRequest\x1a&.udb.entity.v1.MigrationStatusResponse\"~\xda\xf3\x180\b\x01\x12\x16approve_migration_planZ\x14approveMigrationPlan\xf8\xf3\x18\x02\x92\xf4\x18B\n" +
+	"\fMigrationRun\x12\tPREFLIGHT\x1a\bAPPROVED\"\tCOMPLETED\"\x05ERROR\"\vDEAD_LETTER\x12z\n" +
 	"\rListDlqEvents\x12\x1d.udb.entity.v1.DlqListRequest\x1a\x1e.udb.entity.v1.DlqListResponse\"*\xda\xf3\x18\"\b\x01\x12\x0flist_dlq_eventsZ\rlistDlqEvents\xf8\xf3\x18\x01\x12v\n" +
 	"\vGetDlqEvent\x12\x1e.udb.entity.v1.DlqEventRequest\x1a\x1f.udb.entity.v1.DlqEventResponse\"&\xda\xf3\x18\x1e\b\x01\x12\rget_dlq_eventZ\vgetDlqEvent\xf8\xf3\x18\x01\x12\x80\x01\n" +
 	"\x0eReplayDlqEvent\x12\x1f.udb.entity.v1.DlqActionRequest\x1a\x1f.udb.entity.v1.MutationResponse\",\xda\xf3\x18$\b\x01\x12\x10replay_dlq_eventZ\x0ereplayDlqEvent\xf8\xf3\x18\x02\x12\x83\x01\n" +

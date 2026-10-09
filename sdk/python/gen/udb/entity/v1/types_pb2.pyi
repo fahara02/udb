@@ -110,6 +110,7 @@ from udb.entity.v1.admin_pb2 import CatalogVersionResponse as CatalogVersionResp
 from udb.entity.v1.admin_pb2 import CatalogValidationResponse as CatalogValidationResponse
 from udb.entity.v1.admin_pb2 import CatalogVersionListResponse as CatalogVersionListResponse
 from udb.entity.v1.admin_pb2 import MigrationPlanRequest as MigrationPlanRequest
+from udb.entity.v1.admin_pb2 import ReviewedCatalogTransitionEvidence as ReviewedCatalogTransitionEvidence
 from udb.entity.v1.admin_pb2 import MigrationPlanResponse as MigrationPlanResponse
 from udb.entity.v1.admin_pb2 import MigrationApplyRequest as MigrationApplyRequest
 from udb.entity.v1.admin_pb2 import MigrationRunRequest as MigrationRunRequest
