@@ -115,7 +115,7 @@ impl AuthzServiceImpl {
         .fetch_optional(pool)
         .await
         .map_err(|err| {
-            governance_store_internal_status("load_draft", format!("load draft failed: {err}"))
+            crate::runtime::executor_utils::sqlx_error_to_status("load_draft", &err)
         })?
         .ok_or_else(|| {
             authz_not_found_status(
@@ -182,10 +182,7 @@ impl AuthzServiceImpl {
         .fetch_optional(pool)
         .await
         .map_err(|err| {
-            governance_store_internal_status(
-                "load_policy_set",
-                format!("load policy set failed: {err}"),
-            )
+            crate::runtime::executor_utils::sqlx_error_to_status("load_policy_set", &err)
         })?;
         Ok(row.map(|row| authz_entity_pb::PolicySet {
             policy_set_id: row.try_get("policy_set_id").unwrap_or_default(),
@@ -240,7 +237,7 @@ impl AuthzServiceImpl {
         .fetch_optional(pool)
         .await
         .map_err(|err| {
-            governance_store_internal_status("load_version", format!("load version failed: {err}"))
+            crate::runtime::executor_utils::sqlx_error_to_status("load_version", &err)
         })?
         .ok_or_else(|| {
             authz_not_found_status(
@@ -285,10 +282,7 @@ impl AuthzServiceImpl {
         .fetch_optional(pool)
         .await
         .map_err(|err| {
-            governance_store_internal_status(
-                "load_approval",
-                format!("load approval failed: {err}"),
-            )
+            crate::runtime::executor_utils::sqlx_error_to_status("load_approval", &err)
         })?;
         Ok(row.map(|row| authz_entity_pb::PolicyApproval {
             approval_id: row.try_get("approval_id").unwrap_or_default(),
@@ -357,10 +351,7 @@ impl AuthzServiceImpl {
         .fetch_one(pool)
         .await
         .map_err(|err| {
-            governance_store_internal_status(
-                "promote_draft_to_version",
-                format!("promote draft to version failed: {err}"),
-            )
+            crate::runtime::executor_utils::sqlx_error_to_status("promote_draft_to_version", &err)
         })?;
         let version_number: i64 = row.try_get("version_number").unwrap_or(1);
         Ok(authz_entity_pb::PolicyVersion {

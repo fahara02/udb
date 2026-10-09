@@ -960,8 +960,8 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
             '"list_access_audits"',
             '"count_access_audits"',
             '"decode access audit failed: {e}"',
-            '"list access audits failed: {err}"',
-            '"count access audits failed: {err}"',
+            'crate::runtime::executor_utils::sqlx_error_to_status("list_access_audits", &err)',
+            'crate::runtime::executor_utils::sqlx_error_to_status("count_access_audits", &err)',
             "authz_audit_internal_status_carries_typed_detail",
             "fn assert_internal_detail(",
             "ErrorKind::Internal",
@@ -1055,6 +1055,7 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
             "authz.get_policy_rule(",
             "authz.list_policy_rules(",
             "authz.list_user_roles(",
+            "authz.list_access_decision_audits(",
             "authz.check_access(",
             "authz.update_role(",
             '"{rpc} must preserve the store\'s retryable code"',
@@ -1178,7 +1179,7 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
             "fn governance_sim_internal_status(",
             "crate::runtime::executor_utils::internal_status(\"authz\", operation, message)",
             "\"list_policy_versions\"",
-            "\"list policy versions failed: {err}\"",
+            'crate::runtime::executor_utils::sqlx_error_to_status("list_policy_versions", &err)',
             "governance_sim_internal_status_carries_typed_detail",
             "fn assert_internal_detail(",
             "ErrorKind::Internal",
@@ -3107,11 +3108,11 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
             '"load_approval"',
             '"promote_draft_to_version"',
             '"decode_governance_row"',
-            '"load draft failed: {err}"',
-            '"load policy set failed: {err}"',
-            '"load version failed: {err}"',
-            '"load approval failed: {err}"',
-            '"promote draft to version failed: {err}"',
+            'crate::runtime::executor_utils::sqlx_error_to_status("load_draft", &err)',
+            'crate::runtime::executor_utils::sqlx_error_to_status("load_policy_set", &err)',
+            'crate::runtime::executor_utils::sqlx_error_to_status("load_version", &err)',
+            'crate::runtime::executor_utils::sqlx_error_to_status("load_approval", &err)',
+            'crate::runtime::executor_utils::sqlx_error_to_status("promote_draft_to_version", &err)',
             '"decode governance row failed: {e}"',
             "governance_store_internal_status_carries_typed_detail",
             "fn assert_internal_detail(",
@@ -3143,11 +3144,11 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
             '"update_draft_status"',
             '"ensure policy set failed: {err}"',
             '"ensure policy set returned no id"',
-            '"create policy draft failed: {err}"',
-            '"update policy draft failed: {err}"',
-            '"submit policy draft failed: {err}"',
-            '"record approval failed: {err}"',
-            '"update draft status failed: {err}"',
+            'crate::runtime::executor_utils::sqlx_error_to_status("create_policy_draft", &err)',
+            'crate::runtime::executor_utils::sqlx_error_to_status("update_policy_draft", &err)',
+            'crate::runtime::executor_utils::sqlx_error_to_status("submit_policy_draft", &err)',
+            'crate::runtime::executor_utils::sqlx_error_to_status("record_policy_approval", &err)',
+            'crate::runtime::executor_utils::sqlx_error_to_status("update_draft_status", &err)',
             "governance_draft_internal_status_carries_typed_detail",
             "fn assert_internal_detail(",
             "ErrorKind::Internal",
@@ -3222,12 +3223,12 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
             "\"list_active_canaries\"",
             "crate::runtime::executor_utils::prefix_status(\"update canary state failed\", err)",
             "\"read_node_state_ledger\"",
-            "\"read active version failed: {err}\"",
-            "\"create canary failed: {err}\"",
+            'crate::runtime::executor_utils::sqlx_error_to_status("read_active_version", &err)',
+            'crate::runtime::executor_utils::sqlx_error_to_status("create_canary", &err)',
             "\"create canary returned no id: {err}\"",
-            "\"load canary failed: {err}\"",
-            "\"list active canaries failed: {err}\"",
-            "\"read node-state ledger failed: {err}\"",
+            'crate::runtime::executor_utils::sqlx_error_to_status("load_canary", &err)',
+            'crate::runtime::executor_utils::sqlx_error_to_status("list_active_canaries", &err)',
+            'crate::runtime::executor_utils::sqlx_error_to_status("read_node_state_ledger", &err)',
             "activation_internal_status_carries_typed_detail",
             "fn assert_internal_detail(",
             "ErrorKind::Internal",
@@ -10247,28 +10248,28 @@ def native_auth_refusal_reclassification_hits(root: Path) -> list[str]:
 
 
 def authz_raw_sql_refusal_reclassification_hits(root: Path) -> list[str]:
-    path = root / AUTHZ_INTERNAL_STATUS_PATH
-    text = "\n".join(
-        "" if line.lstrip().startswith("//") else line
-        for line in read(path).splitlines()
-    )
     hits: list[str] = []
     boundaries = re.compile(r"\.(?:fetch_one|fetch_optional|fetch_all|execute)\s*\(")
-    for match in boundaries.finditer(text):
-        end = rust_call_end(text, match.end() - 1)
-        if end is None:
-            continue
-        mapped = re.match(r"\s*\.await\s*\.map_err\s*\(", text[end:])
-        if mapped is None:
-            continue
-        start = end + mapped.end() - 1
-        finish = rust_call_end(text, start)
-        if finish is not None and "sqlx_error_to_status(" not in whitespace_insensitive(text[start:finish]):
-            line = text.count("\n", 0, match.start()) + 1
-            hits.append(
-                f"{path.relative_to(root).as_posix()}:{line}: "
-                "raw Authz SQL refusal must use the shared SQLSTATE/transport classifier"
-            )
+    for path in sorted((root / AUTHZ_INTERNAL_STATUS_PATH).parent.glob("*.rs")):
+        text = "\n".join(
+            "" if line.lstrip().startswith("//") else line
+            for line in read(path).splitlines()
+        )
+        for match in boundaries.finditer(text):
+            end = rust_call_end(text, match.end() - 1)
+            if end is None:
+                continue
+            mapped = re.match(r"\s*\.await\s*\.map_err\s*\(", text[end:])
+            if mapped is None:
+                continue
+            start = end + mapped.end() - 1
+            finish = rust_call_end(text, start)
+            if finish is not None and "sqlx_error_to_status(" not in whitespace_insensitive(text[start:finish]):
+                line = text.count("\n", 0, match.start()) + 1
+                hits.append(
+                    f"{path.relative_to(root).as_posix()}:{line}: "
+                    "raw Authz SQL refusal must use the shared SQLSTATE/transport classifier"
+                )
     return hits
 
 
@@ -10761,9 +10762,22 @@ def run_selftest() -> None:
             failures = check_root(root)
             assert any("must propagate revision publication refusal" in failure for failure in failures), failures
 
-        for boundary in ("fetch_one", "fetch_optional", "fetch_all", "execute"):
+        sql_adapter_cases = [
+            (AUTHZ_INTERNAL_STATUS_PATH, boundary)
+            for boundary in ("fetch_one", "fetch_optional", "fetch_all", "execute")
+        ] + [
+            (path, "fetch_all")
+            for path in (
+                AUTHZ_AUDIT_INTERNAL_STATUS_PATH,
+                AUTHZ_GOVERNANCE_ACTIVATE_INTERNAL_STATUS_PATH,
+                AUTHZ_GOVERNANCE_DRAFTS_INTERNAL_STATUS_PATH,
+                AUTHZ_GOVERNANCE_SIM_INTERNAL_STATUS_PATH,
+                AUTHZ_GOVERNANCE_STORE_INTERNAL_STATUS_PATH,
+            )
+        ]
+        for source, boundary in sql_adapter_cases:
             write_fixture(root)
-            target = root / AUTHZ_INTERNAL_STATUS_PATH
+            target = root / source
             query = f'sqlx::query("SELECT 1").{boundary}(pool).await.map_err(|err| '
             target.write_text(
                 read(target) + "\n" + query + 'authz_internal_status("read", err.to_string()))?;\n',

@@ -446,6 +446,15 @@ async fn live_postgres_authz_reads_preserve_retryable_store_refusals() {
                 .expect_err("closed assignment store must refuse the actual list"),
         ),
         (
+            "ListAccessDecisionAudits",
+            authz
+                .list_access_decision_audits(Request::new(
+                    authz_pb::ListAccessDecisionAuditsRequest::default(),
+                ))
+                .await
+                .expect_err("closed audit store must refuse the actual list"),
+        ),
+        (
             "CheckAccess",
             authz
                 .check_access(Request::new(authz_pb::CheckAccessRequest {

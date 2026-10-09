@@ -302,10 +302,7 @@ impl AuthzServiceImpl {
         .fetch_all(pool)
         .await
         .map_err(|err| {
-            governance_sim_internal_status(
-                "list_policy_versions",
-                format!("list policy versions failed: {err}"),
-            )
+            crate::runtime::executor_utils::sqlx_error_to_status("list_policy_versions", &err)
         })?;
         let all: Vec<_> = rows
             .iter()

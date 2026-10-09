@@ -261,10 +261,7 @@ impl AuthzServiceImpl {
         .fetch_all(pool)
         .await
         .map_err(|err| {
-            authz_audit_internal_status(
-                "list_access_audits",
-                format!("list access audits failed: {err}"),
-            )
+            crate::runtime::executor_utils::sqlx_error_to_status("list_access_audits", &err)
         })?;
         let mut all = Vec::with_capacity(rows.len());
         for row in &rows {
@@ -288,10 +285,7 @@ impl AuthzServiceImpl {
         .fetch_one(pool)
         .await
         .map_err(|err| {
-            authz_audit_internal_status(
-                "count_access_audits",
-                format!("count access audits failed: {err}"),
-            )
+            crate::runtime::executor_utils::sqlx_error_to_status("count_access_audits", &err)
         })?;
         Ok(Response::new(authz_pb::ListAccessDecisionAuditsResponse {
             page: Some(page_response(total as usize, req.page.as_ref())),

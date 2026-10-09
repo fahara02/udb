@@ -657,10 +657,7 @@ impl AuthzServiceImpl {
         .fetch_optional(pool)
         .await
         .map_err(|err| {
-            activation_internal_status(
-                "read_active_version",
-                format!("read active version failed: {err}"),
-            )
+            crate::runtime::executor_utils::sqlx_error_to_status("read_active_version", &err)
         })?;
         Ok(row
             .and_then(|r| r.try_get::<String, _>("active").ok())
@@ -875,7 +872,7 @@ impl AuthzServiceImpl {
         .fetch_one(pool)
         .await
         .map_err(|err| {
-            activation_internal_status("create_canary", format!("create canary failed: {err}"))
+            crate::runtime::executor_utils::sqlx_error_to_status("create_canary", &err)
         })?
         .try_get("canary_id")
         .map_err(|err| {
@@ -1077,7 +1074,7 @@ impl AuthzServiceImpl {
         .fetch_optional(pool)
         .await
         .map_err(|err| {
-            activation_internal_status("load_canary", format!("load canary failed: {err}"))
+            crate::runtime::executor_utils::sqlx_error_to_status("load_canary", &err)
         })?
         .ok_or_else(|| {
             authz_not_found_status(
@@ -1128,10 +1125,7 @@ impl AuthzServiceImpl {
         .fetch_all(pool)
         .await
         .map_err(|err| {
-            activation_internal_status(
-                "list_active_canaries",
-                format!("list active canaries failed: {err}"),
-            )
+            crate::runtime::executor_utils::sqlx_error_to_status("list_active_canaries", &err)
         })?;
         Ok(rows.iter().map(canary_from_row).collect())
     }
@@ -1434,10 +1428,7 @@ impl NackRateMetricSource {
         .fetch_all(&self.pool)
         .await
         .map_err(|err| {
-            activation_internal_status(
-                "read_node_state_ledger",
-                format!("read node-state ledger failed: {err}"),
-            )
+            crate::runtime::executor_utils::sqlx_error_to_status("read_node_state_ledger", &err)
         })?;
 
         let mut samples = 0i64;

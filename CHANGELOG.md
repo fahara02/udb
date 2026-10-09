@@ -24,6 +24,8 @@ no-wrapper plan.
 - Authz SQL reads retain database-specific codes and machine-readable details
   through the shared classifier. A closed or unavailable policy store returns
   retryable `UNAVAILABLE` instead of a generic `INTERNAL` refusal.
+- Governance draft, version, canary and audit SQL operations use that same error
+  classification, preserving constraint and outage details at their boundaries.
 
 ### Added
 

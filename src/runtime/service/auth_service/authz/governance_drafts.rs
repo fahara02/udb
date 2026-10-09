@@ -289,10 +289,7 @@ impl AuthzServiceImpl {
         .execute(pool)
         .await
         .map_err(|err| {
-            governance_draft_internal_status(
-                "create_policy_draft",
-                format!("create policy draft failed: {err}"),
-            )
+            crate::runtime::executor_utils::sqlx_error_to_status("create_policy_draft", &err)
         })?;
 
         // Store the full document (incl. role bindings) on the draft payload via a
@@ -404,10 +401,7 @@ impl AuthzServiceImpl {
         .execute(pool)
         .await
         .map_err(|err| {
-            governance_draft_internal_status(
-                "update_policy_draft",
-                format!("update policy draft failed: {err}"),
-            )
+            crate::runtime::executor_utils::sqlx_error_to_status("update_policy_draft", &err)
         })?;
         if result.rows_affected() == 0 {
             return Err(draft_not_editable_static_status());
@@ -508,10 +502,7 @@ impl AuthzServiceImpl {
         .execute(pool)
         .await
         .map_err(|err| {
-            governance_draft_internal_status(
-                "submit_policy_draft",
-                format!("submit policy draft failed: {err}"),
-            )
+            crate::runtime::executor_utils::sqlx_error_to_status("submit_policy_draft", &err)
         })?;
         self.emit_event(AuthEvent::new(
             topics::POLICY_DRAFT_SUBMITTED,
@@ -635,10 +626,7 @@ impl AuthzServiceImpl {
         .execute(pool)
         .await
         .map_err(|err| {
-            governance_draft_internal_status(
-                "record_policy_approval",
-                format!("record approval failed: {err}"),
-            )
+            crate::runtime::executor_utils::sqlx_error_to_status("record_policy_approval", &err)
         })?;
 
         let new_status = if approve {
@@ -659,10 +647,7 @@ impl AuthzServiceImpl {
         .execute(pool)
         .await
         .map_err(|err| {
-            governance_draft_internal_status(
-                "update_draft_status",
-                format!("update draft status failed: {err}"),
-            )
+            crate::runtime::executor_utils::sqlx_error_to_status("update_draft_status", &err)
         })?;
 
         // On approval, promote the draft into an immutable APPROVED PolicyVersion
