@@ -236,6 +236,7 @@ async fn serve(service: DataBrokerService) -> Serving {
 }
 
 async fn fixture_bearer(
+    pool: &sqlx::PgPool,
     authn: &AuthnServiceImpl,
     security: &SecurityConfig,
     tenant: &str,
@@ -243,11 +244,70 @@ async fn fixture_bearer(
     scopes: &[&str],
 ) -> String {
     let username = format!("reviewed_{}", Uuid::new_v4().simple());
-    // This test-only authority provisions owned fixture PERSON accounts. The
-    // catalog requests below carry no task-local claim or header-scope authority.
-    let provisioner_subject = Uuid::new_v4().to_string();
+    // Bootstrap an actual owned PERSON through the existing trusted in-process
+    // native API. No claim is installed, so optional created_by remains SQL NULL;
+    // scoped provisioning below attributes every operator to this durable user.
+    // Catalog requests still use signed credentials through the TCP resolver.
+    assert!(
+        !crate::runtime::service::method_security::claim_context_present(),
+        "owned PERSON bootstrap must precede any task-local claim"
+    );
+    let provisioner_username = format!("reviewed_provisioner_{}", Uuid::new_v4().simple());
+    let provisioner = authn
+        .create_user(Request::new(authn::CreateUserRequest {
+            username: provisioner_username.clone(),
+            email: format!("{provisioner_username}@example.test"),
+            password: "FixturePassword1!".into(),
+            tenant_id: tenant.into(),
+            project_id: project.into(),
+            account_kind: authn_entity::AccountKind::Person as i32,
+            ..Default::default()
+        }))
+        .await
+        .expect("bootstrap owned native PERSON provisioner without attribution")
+        .into_inner()
+        .user
+        .expect("bootstrap returns the persisted PERSON provisioner");
+    assert!(provisioner.created_by.is_empty());
+    assert_eq!(provisioner.tenant_id, tenant);
+    assert_eq!(provisioner.project_id, project);
+    assert_eq!(
+        provisioner.account_kind,
+        authn_entity::AccountKind::Person as i32
+    );
+    let provisioner_subject = provisioner.user_id;
+    assert!(Uuid::parse_str(&provisioner_subject).is_ok());
+    // This administrative pool verifies fixture state only; catalog serving
+    // capacity remains the configured runtime pool, including both max1 layouts.
+    let users =
+        native_catalog::native_model("udb.core.authn.entity.v1.User", &["user_id", "created_by"]);
+    let unattributed: bool = sqlx::query_scalar(&format!(
+        "SELECT {} IS NULL FROM {} WHERE {}=$1::UUID",
+        users.q("created_by"),
+        users.relation,
+        users.q("user_id")
+    ))
+    .bind(&provisioner_subject)
+    .fetch_one(pool)
+    .await
+    .expect("read durable native PERSON provisioner attribution");
+    assert!(
+        unattributed,
+        "bootstrap provisioner created_by must be SQL NULL"
+    );
     let provisioning =
         || test_claim_context(&provisioner_subject, tenant, project, &["udb:admin"], &[]);
+    scope_claim_context_for_test(
+        provisioning(),
+        authn.change_user_status(Request::new(authn::ChangeUserStatusRequest {
+            user_id: provisioner_subject.clone(),
+            new_status: authn_entity::UserStatus::Active as i32,
+            reason: "owned native catalog provisioner".into(),
+            ..Default::default()
+        })),
+    )
+    .await
+    .expect("activate durable native PERSON provisioner");
     let user = scope_claim_context_for_test(
         provisioning(),
         authn.create_user(Request::new(authn::CreateUserRequest {
@@ -704,9 +764,10 @@ async fn run_reviewed_catalog_fixture(single_connection: bool, primary_as_target
     )
     .with_runtime(Some(runtime.clone()))
     .with_authz_snapshot(Some(service.authz_snapshot()));
-    let owner = fixture_bearer(&authn, &security, &tenant, &project, &["udb:admin"]).await;
-    let reader = fixture_bearer(&authn, &security, &tenant, &project, &["catalog:read"]).await;
+    let owner = fixture_bearer(&control, &authn, &security, &tenant, &project, &["udb:admin"]).await;
+    let reader = fixture_bearer(&control, &authn, &security, &tenant, &project, &["catalog:read"]).await;
     let foreign_tenant = fixture_bearer(
+        &control,
         &authn,
         &security,
         &Uuid::new_v4().to_string(),
@@ -715,7 +776,7 @@ async fn run_reviewed_catalog_fixture(single_connection: bool, primary_as_target
     )
     .await;
     let foreign_project_bearer =
-        fixture_bearer(&authn, &security, &tenant, &foreign_project, &["udb:admin"]).await;
+        fixture_bearer(&control, &authn, &security, &tenant, &foreign_project, &["udb:admin"]).await;
     crate::runtime::service::auth_service::install_data_plane_credential_resolvers(
         control.clone(),
         &authn_config,

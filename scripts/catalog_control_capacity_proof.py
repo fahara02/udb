@@ -88,8 +88,14 @@ def validate_fixture(data: bytes) -> None:
     require(ASSERTION in text, "corrected fixture lacks the named real capacity assertion")
     names = re.findall(r"async fn (live_reviewed_catalog_transition_[A-Za-z0-9_]+)\(\)", text)
     require(sorted(names) == sorted(CASES), "corrected fixture must retain exactly the three reviewed served cases")
-    require("let provisioner_subject = Uuid::new_v4().to_string();" in text,
-            "both phases require canonical UUID PERSON provisioning")
+    require(
+        "let provisioner_subject = provisioner.user_id;" in text
+        and "bootstrap owned native PERSON provisioner without attribution" in text
+        and "assert!(provisioner.created_by.is_empty());" in text
+        and "bootstrap provisioner created_by must be SQL NULL" in text
+        and "activate durable native PERSON provisioner" in text,
+        "both phases require a persisted native PERSON provisioner with null bootstrap attribution",
+    )
     require("config.primary.max_open_conns = 1;" in text and
             "config.primary.min_connections = 1;" in text and
             "config.primary.acquire_timeout_secs = 2;" in text,
