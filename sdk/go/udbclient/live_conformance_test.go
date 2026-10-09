@@ -55,14 +55,16 @@ func TestLiveGeneratedRPCSurface(t *testing.T) {
 	if err != nil {
 		t.Fatalf("dial broker: %v", err)
 	}
-	defer brokerConn.Close()
+	// Register channel ownership first so later fixture cleanup runs while
+	// both channels remain open, including after failed nested subtests.
+	t.Cleanup(func() { _ = brokerConn.Close() })
 	authConn := brokerConn
 	if authTarget != target {
 		authConn, err = grpc.NewClient(authTarget, grpc.WithTransportCredentials(insecure.NewCredentials()))
 		if err != nil {
 			t.Fatalf("dial auth: %v", err)
 		}
-		defer authConn.Close()
+		t.Cleanup(func() { _ = authConn.Close() })
 	}
 
 	login, err := authnv1.NewAuthnServiceClient(authConn).Login(ctx, &authnv1.LoginRequest{
