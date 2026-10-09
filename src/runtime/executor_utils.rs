@@ -2604,7 +2604,7 @@ mod error_detail_tests {
                 "UDB_CAPABILITY_UNSUPPORTED",
             ),
             (
-                capability_status_with_code(
+                super::capability_status_with_code(
                     tonic::Code::NotFound,
                     "storage",
                     "read",
@@ -2616,7 +2616,7 @@ mod error_detail_tests {
                 "UDB_CAPABILITY_UNSUPPORTED",
             ),
             (
-                unauthenticated_status("missing_bearer", "authenticate"),
+                super::unauthenticated_status("missing_bearer", "authenticate"),
                 tonic::Code::Unauthenticated,
                 ErrorKind::Policy,
                 "UDB_AUTHENTICATION_FAILED",
@@ -2710,7 +2710,7 @@ mod error_detail_tests {
     #[test]
     fn serializer_replaces_unregistered_reasons_and_preserves_domain_diagnostics() {
         for reason in ["", "not stable", "UDB_UNREGISTERED", "udb_lowercase"] {
-            let status = status_with_typed_detail(
+            let status = super::status_with_typed_detail(
                 tonic::Code::ResourceExhausted,
                 "budget exhausted",
                 ErrorDetail {
@@ -2730,7 +2730,7 @@ mod error_detail_tests {
             assert_eq!(detail.retry_after_ms, 1_000);
             assert!(detail.retryable);
         }
-        let status = status_with_typed_detail(
+        let status = super::status_with_typed_detail(
             tonic::Code::FailedPrecondition,
             "row changed",
             ErrorDetail {
