@@ -49,6 +49,10 @@ no-wrapper plan.
 
 ### Fixed
 
+- The live native transaction refusal proof decodes the broker's actual
+  `udb-error-detail-bin` trailer. Immediate, deferred and outbox UNIQUE checks
+  retain strict wire-detail and durable rollback assertions.
+
 - Separate broker nodes serialize authz revision appends, including an initially
   empty scope. Revision reads use the selected write instance, preserve large
   integer counters and refuse malformed stored values instead of returning zero.

@@ -4463,6 +4463,9 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
             "notification_native_deferred_unique",
             "DEFERRABLE INITIALLY DEFERRED",
             "notification_native_outbox_unique",
+            "crate::runtime::executor_utils::decode_error_detail_from_raw(",
+            ".get_bin(crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY)",
+            '"native transaction refusal has an ErrorDetail trailer"',
             "crate::runtime::error_reasons::UNIQUE_VIOLATION",
             "assert_eq!(detail.constraint, constraint);",
             "assert_eq!(after_logs, before_logs",
@@ -10497,6 +10500,7 @@ def run_selftest() -> None:
             ("src/runtime/core/setup_data.rs", '"PostgreSQL bulk CAS commit failed"'),
             ("src/runtime/service/live_tests/data_error_matrix_live.rs", "DEFERRABLE INITIALLY DEFERRED"),
             ("src/runtime/service/live_tests/data_error_matrix_live.rs", "assert_eq!(refusal.code, code as i32);"),
+            ("src/runtime/service/notification_service/project_store_live.rs", ".get_bin(crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY)"),
         ):
             write_fixture(root)
             target = root / source

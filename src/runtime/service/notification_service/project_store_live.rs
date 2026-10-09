@@ -240,8 +240,12 @@ async fn assert_native_transaction_refusals_over_transport(
             .await
             .expect_err("real native SQL refusal must reach the gRPC caller");
         assert_eq!(status.code(), tonic::Code::AlreadyExists, "{constraint}");
-        let detail = <crate::proto::ErrorDetail as prost::Message>::decode(status.details())
-            .expect("native transaction refusal has a wire ErrorDetail");
+        let detail = crate::runtime::executor_utils::decode_error_detail_from_raw(
+            status
+                .metadata()
+                .get_bin(crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY)
+                .expect("native transaction refusal has an ErrorDetail trailer"),
+        );
         assert_eq!(detail.kind, crate::proto::ErrorKind::Unique as i32);
         assert_eq!(
             detail.reason,
