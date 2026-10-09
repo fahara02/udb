@@ -1,0 +1,265 @@
+name: PostgreSQL CDC source receipt proof
+
+on:
+  workflow_dispatch:
+    inputs:
+      baseline_commit:
+        description: "Exact parent of the committed PostgreSQL source capture change"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cdc-source-proof-${{ github.sha }}-${{ inputs.baseline_commit }}
+  cancel-in-progress: false
+
+jobs:
+  source-receipts:
+    name: Original and corrected actual PostgreSQL source paths
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    services:
+      postgres:
+        image: postgis/postgis:16-3.5-alpine
+        env:
+          POSTGRES_DB: udb
+          POSTGRES_USER: udb
+          POSTGRES_PASSWORD: udb
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U udb -d udb"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      UDB_LIVE_CDC_TESTS: "1"
+      UDB_LIVE_CDC_PG_DSN: postgres://udb:udb@127.0.0.1:5432/udb
+      UDB_INTEGRATION_PG_DSN: postgres://udb:udb@127.0.0.1:5432/udb
+      CARGO_TERM_COLOR: never
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/setup-rust
+        with:
+          cache-key: rust-ubuntu-latest
+      - name: Install the actual PostgreSQL evidence client
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+          psql --version
+      - name: Prepare the original source with the identical regression
+        env:
+          BASELINE_COMMIT: ${{ inputs.baseline_commit }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import hashlib
+          import json
+          import os
+          from pathlib import Path
+          import re
+          import subprocess
+
+          paths = [
+              "src/runtime/cdc/source.rs",
+              "src/runtime/cdc/mod.rs",
+              "src/runtime/cdc/engine_tail.rs",
+              "src/runtime/service/mod.rs",
+              "src/runtime/cdc/live_tests.rs",
+              "src/runtime/service/live_tests/cdc_consumer_live.rs",
+          ]
+          helper = "src/runtime/cdc/postgres_source.rs"
+          baseline = os.environ["BASELINE_COMMIT"]
+          if re.fullmatch(r"[0-9a-f]{40}", baseline) is None:
+              raise SystemExit("baseline_commit must be an exact commit SHA")
+          if baseline != "d426059d94aa059e3965700618bdf15052aaf11e":
+              raise SystemExit("baseline must preserve the audited journal CI prerequisite")
+          subprocess.run(["git", "merge-base", "--is-ancestor", baseline, "HEAD"], check=True)
+          introductions = subprocess.check_output([
+              "git", "log", "--reverse", "--diff-filter=A", "--format=%H", "HEAD", "--", helper
+          ]).decode().splitlines()
+          if not introductions:
+              raise SystemExit("committed PostgreSQL source capture introduction was not found")
+          introduction = introductions[0]
+          expected_baseline = subprocess.check_output(["git", "rev-parse", f"{introduction}^"]).decode().strip()
+          if baseline != expected_baseline:
+              raise SystemExit("baseline must be the exact parent of the committed source capture change")
+          subprocess.run(["git", "diff", "--exit-code", introduction, "HEAD", "--", *paths, helper], check=True)
+          if subprocess.run(["git", "cat-file", "-e", f"{baseline}:{helper}"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0:
+              raise SystemExit("baseline already contains the new source helper")
+          proof_path = Path(paths[4])
+          fixed_proof = proof_path.read_bytes()
+          begin = b"// BEGIN CDC_SOURCE_CI_REPRO"
+          end = b"// END CDC_SOURCE_CI_REPRO"
+          if fixed_proof.count(begin) != 1 or fixed_proof.count(end) != 1:
+              raise SystemExit("expected one identical actual PostgreSQL source regression")
+          start = fixed_proof.index(begin)
+          stop = fixed_proof.index(end, start) + len(end)
+          block = fixed_proof[start:stop] + b"\n"
+          if any(token in block for token in [b"postgres_source::", b".prepare(", b".acknowledge(", b".bind_destination("]):
+              raise SystemExit("baseline proof must use only the original source APIs")
+          if hashlib.sha256(block).hexdigest() != "3089a528794eb9a1740bb0acc6dde8d87528f75fc83b43f4307507c68cd39215":
+              raise SystemExit("the audited identical source regression changed")
+          baseline_files = {path: subprocess.check_output(["git", "show", f"{baseline}:{path}"]) for path in paths}
+          if begin in baseline_files[proof_path.as_posix()]:
+              raise SystemExit("baseline already contains the source regression")
+          if b"mod postgres_source" in baseline_files[paths[1]]:
+              raise SystemExit("the original module must leave the new helper unregistered")
+          backup = Path(os.environ["RUNNER_TEMP"], "cdc-source-fixed")
+          backup.mkdir()
+          output = Path("cdc-source-proof")
+          output.mkdir()
+          evidence = {
+              "baseline": baseline,
+              "corrected_commit": os.environ["GITHUB_SHA"],
+              "source_commit": introduction,
+              "test": "runtime::cdc::live_tests::live_postgres_source_late_commit_is_not_lost_after_scalar_cursor",
+              "proof_sha256": hashlib.sha256(block).hexdigest(),
+              "files": [],
+              "new_helper_excluded_from_original_registration": True,
+          }
+          # Back up every existing source path before the first baseline write.
+          # The new helper stays present but unreachable through old cdc/mod.rs.
+          for path in paths:
+              fixed = Path(path).read_bytes()
+              original = baseline_files[path]
+              executed = original + b"\n\n" + block if path == proof_path.as_posix() else original
+              for folder, body in [(backup, fixed), (output / "corrected-source", fixed), (output / "original-source", executed)]:
+                  target = folder / path
+                  target.parent.mkdir(parents=True, exist_ok=True)
+                  target.write_bytes(body)
+              evidence["files"].append({"path": path, "baseline_sha256": hashlib.sha256(original).hexdigest(), "original_executed_sha256": hashlib.sha256(executed).hexdigest(), "corrected_sha256": hashlib.sha256(fixed).hexdigest()})
+          helper_bytes = Path(helper).read_bytes()
+          helper_artifact = output / "corrected-source" / helper
+          helper_artifact.parent.mkdir(parents=True, exist_ok=True)
+          helper_artifact.write_bytes(helper_bytes)
+          evidence["new_helper"] = {"path": helper, "sha256": hashlib.sha256(helper_bytes).hexdigest()}
+          (output / "restore-paths.txt").write_text("\n".join(paths) + "\n", encoding="utf-8")
+          (output / "source-comparison.json").write_text(json.dumps(evidence, indent=2) + "\n", encoding="utf-8")
+          (output / "identical-regression.rs").write_bytes(block)
+          for path in paths:
+              Path(path).write_bytes((output / "original-source" / path).read_bytes())
+          PY
+          cat > cdc-source-proof/record-result.py <<'PY'
+          import hashlib
+          import json
+          import os
+          from pathlib import Path
+          import re
+          import subprocess
+          import sys
+
+          output = Path("cdc-source-proof")
+          phase = sys.argv[1]
+          exit_code = int(sys.argv[2])
+          if phase not in ("original", "corrected"):
+              raise SystemExit("unknown proof result phase")
+          comparison = json.loads((output / "source-comparison.json").read_text(encoding="utf-8"))
+          log_path = output / f"{phase}.log"
+          log = log_path.read_text(encoding="utf-8")
+          def sha(path):
+              hasher = hashlib.sha256()
+              with path.open("rb") as handle:
+                  for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+                      hasher.update(chunk)
+              return hasher.hexdigest()
+          def query(sql):
+              try:
+                  return subprocess.check_output(["psql", "-X", "-v", "ON_ERROR_STOP=1", "--dbname", os.environ["UDB_LIVE_CDC_PG_DSN"], "-At", "--command", sql], stderr=subprocess.PIPE).decode().strip()
+              except (OSError, subprocess.CalledProcessError):
+                  raise SystemExit("actual PostgreSQL source receipt evidence query failed") from None
+          relations = json.loads(query("SELECT COALESCE(json_agg(json_build_object('schema',n.nspname::TEXT,'table',c.relname::TEXT)),'[]'::JSON) FROM pg_catalog.pg_class c JOIN pg_catalog.pg_namespace n ON n.oid=c.relnamespace WHERE c.relkind='r' AND c.relname::TEXT IN ('udb_cdc_source_registry','udb_cdc_source_consumers','udb_cdc_source_capture','udb_cdc_source_receipts','udb_cdc_source_destinations')"))
+          receipts = []
+          for relation in relations:
+              qi = lambda value: '"' + value.replace('"', '""') + '"'
+              count = int(query(f"SELECT COUNT(*) FROM {qi(relation['schema'])}.{qi(relation['table'])}"))
+              receipts.append({**relation, "rows": count})
+          receipt_path = output / f"{phase}-receipt-state.json"
+          receipt_path.write_text(json.dumps(receipts, indent=2) + "\n", encoding="utf-8")
+          binary_match = re.search(r"Running unittests .*? \(([^)\n]+)\)", log)
+          binary = Path(binary_match.group(1)) if binary_match else None
+          executed = re.search(r"\brunning 1 test\b", log) is not None and comparison["test"] in log
+          expected = (exit_code == 101 and re.search(r"test result: FAILED\. 0 passed; 1 failed;", log) is not None and "g6-source: late committed source event must not disappear behind a persisted scalar offset" in log) if phase == "original" else (exit_code == 0 and re.search(r"test result: ok\. 1 passed; 0 failed;", log) is not None)
+          valid_binary = binary is not None and binary.is_file()
+          result = {
+              "phase": phase,
+              "exit_code": exit_code,
+              "test": comparison["test"],
+              "proof_sha256": comparison["proof_sha256"],
+              "log_sha256": sha(log_path),
+              "receipt_state_sha256": sha(receipt_path),
+              "executed_exactly_one_named_test": executed,
+              "accepted_expected_result": bool(executed and expected and valid_binary),
+              "test_binary": {"path": str(binary), "bytes": binary.stat().st_size, "sha256": sha(binary)} if valid_binary else None,
+          }
+          (output / f"{phase}-result.json").write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")
+          if not result["accepted_expected_result"]:
+              raise SystemExit("actual named source regression did not produce the required result; compile/infra failure is not RED")
+          counts = {r["table"]: r["rows"] for r in receipts}
+          if phase == "original" and receipts:
+              raise SystemExit("original fixture unexpectedly used new source catalog authority")
+          if phase == "corrected":
+              if counts.get("udb_cdc_source_capture") != 3 or counts.get("udb_cdc_source_receipts") != 0:
+                  raise SystemExit("corrected fixture must actually capture all three source rows without inventing completed receipts")
+              original = json.loads((output / "original-result.json").read_text(encoding="utf-8"))
+              if not original["accepted_expected_result"] or original["proof_sha256"] != result["proof_sha256"]:
+                  raise SystemExit("same executed regression must have proven the original gap")
+              if original["test_binary"]["sha256"] == result["test_binary"]["sha256"]:
+                  raise SystemExit("original and corrected test executable hashes unexpectedly match")
+              (output / "comparison-result.json").write_text(json.dumps({"actual_original_red": original, "actual_corrected_green": result, "identical_regression": True}, indent=2) + "\n", encoding="utf-8")
+          print(f"Accepted actual {phase} source regression; receipt state and test binary hashes preserved.")
+          PY
+      - name: Require the actual original late-commit source gap
+        shell: bash
+        run: |
+          set -euo pipefail
+          restore_source_files() {
+            while IFS= read -r path; do
+              cp "$RUNNER_TEMP/cdc-source-fixed/$path" "$path"
+            done < cdc-source-proof/restore-paths.txt
+          }
+          trap restore_source_files EXIT
+          set +e
+          cargo test --locked --lib runtime::cdc::live_tests::live_postgres_source_late_commit_is_not_lost_after_scalar_cursor -- --exact --ignored --nocapture --test-threads=1 2>&1 | tee cdc-source-proof/original.log
+          original_exit=${PIPESTATUS[0]}
+          set -e
+          restore_source_files
+          python3 cdc-source-proof/record-result.py original "$original_exit"
+          while IFS= read -r path; do
+            git diff --exit-code -- "$path"
+          done < cdc-source-proof/restore-paths.txt
+          git diff --exit-code -- src/runtime/cdc/postgres_source.rs
+      - name: Require the same source regression on corrected code
+        shell: bash
+        run: |
+          set -euo pipefail
+          set +e
+          cargo test --locked --lib runtime::cdc::live_tests::live_postgres_source_late_commit_is_not_lost_after_scalar_cursor -- --exact --ignored --nocapture --test-threads=1 2>&1 | tee cdc-source-proof/corrected.log
+          corrected_exit=${PIPESTATUS[0]}
+          set -e
+          python3 cdc-source-proof/record-result.py corrected "$corrected_exit"
+      - name: Restore corrected source after any interrupted preparation
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -f cdc-source-proof/restore-paths.txt ]; then
+            while IFS= read -r path; do
+              cp "$RUNNER_TEMP/cdc-source-fixed/$path" "$path"
+            done < cdc-source-proof/restore-paths.txt
+          fi
+      - name: Preserve identical proof, source snapshots and actual results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cdc-postgres-source-proof
+          path: cdc-source-proof/
+          if-no-files-found: warn
+          retention-days: 14

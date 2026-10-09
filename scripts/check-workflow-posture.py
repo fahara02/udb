@@ -10,6 +10,7 @@ remain single-owned by pages.yml.
 from __future__ import annotations
 
 import argparse
+import ast
 import json
 import re
 import sys
@@ -21,6 +22,8 @@ ROOT = Path(__file__).resolve().parents[1]
 
 PROOF_WORKFLOWS = (
     "branch-protection-audit.yml",
+    "cdc-source-proof.yml",
+    "sdk-producer-preview.yml",
     "clickhouse-canonical-smoke.yml",
     "error-detail-served-smoke.yml",
     "ffmpeg-transcode-smoke.yml",
@@ -47,6 +50,8 @@ DOCKER_PROOF_WORKFLOWS = {
 }
 
 ARTIFACT_PROOF_WORKFLOWS = DOCKER_PROOF_WORKFLOWS | {
+    "cdc-source-proof.yml",
+    "sdk-producer-preview.yml",
     "ffmpeg-transcode-smoke.yml",
 }
 
@@ -4454,6 +4459,174 @@ def _has_push_tag_trigger(text: str) -> bool:
         if in_push and indent > push_indent and stripped == "tags:":
             return True
     return False
+
+
+
+CI_PRODUCER_PROOF_REQUIREMENTS = {'cdc-source-proof.yml': (('"git", "log", "--reverse", "--diff-filter=A", "--format=%H", "HEAD", '
+                           '"--", helper',
+                           'source introduction lookup'),
+                          ('if baseline != "d426059d94aa059e3965700618bdf15052aaf11e":',
+                           'audited source prerequisite'),
+                          ('if baseline != expected_baseline:', 'exact introduction parent'),
+                          ('"git", "diff", "--exit-code", introduction, "HEAD", "--", *paths, '
+                           'helper',
+                           'unchanged source fence'),
+                          ('if b"mod postgres_source" in baseline_files[paths[1]]:',
+                           'new helper excluded from original registration'),
+                          ('b"postgres_source::", b".prepare(", b".acknowledge(", '
+                           'b".bind_destination("',
+                           'baseline-compatible regression APIs'),
+                          ('if hashlib.sha256(block).hexdigest() != '
+                           '"3089a528794eb9a1740bb0acc6dde8d87528f75fc83b43f4307507c68cd39215":',
+                           'immutable identical regression'),
+                          ('(backup, fixed), (output / "corrected-source", fixed), (output / '
+                           '"original-source", executed)',
+                           'both executed source snapshots'),
+                          ('"original_executed_sha256": hashlib.sha256(executed).hexdigest()',
+                           'executed source digest'),
+                          ('(output / "identical-regression.rs").write_bytes(block)',
+                           'preserved regression bytes'),
+                          ('original_exit=${PIPESTATUS[0]}', 'original process exit capture'),
+                          ('corrected_exit=${PIPESTATUS[0]}', 'corrected process exit capture'),
+                          ('exit_code == 101 and re.search(r"test result: FAILED\\. 0 passed; 1 '
+                           'failed;", log) is not None',
+                           'executed RED result'),
+                          ('"g6-source: late committed source event must not disappear behind a '
+                           'persisted scalar offset" in log',
+                           'exact original gap assertion'),
+                          ('exit_code == 0 and re.search(r"test result: ok\\. 1 passed; 0 '
+                           'failed;", log) is not None',
+                           'executed GREEN result'),
+                          ('re.search(r"\\brunning 1 test\\b", log) is not None and '
+                           'comparison["test"] in log',
+                           'one named regression executed'),
+                          ('bool(executed and expected and valid_binary)',
+                           'compilation failures cannot establish RED'),
+                          ('"log_sha256": sha(log_path)', 'executed log digest'),
+                          ('"receipt_state_sha256": sha(receipt_path)',
+                           'actual receipt-state digest'),
+                          ('"sha256": sha(binary)', 'executed binary digest'),
+                          ('if counts.get("udb_cdc_source_capture") != 3 or '
+                           'counts.get("udb_cdc_source_receipts") != 0:',
+                           'actual three captures without fabricated receipts'),
+                          ('if phase == "original" and receipts:',
+                           'original uses no new catalog authority'),
+                          ('if original["test_binary"]["sha256"] == '
+                           'result["test_binary"]["sha256"]:',
+                           'distinct executed binaries'),
+                          ('(output / "comparison-result.json").write_text',
+                           'sealed paired execution results'),
+                          ('trap restore_source_files EXIT', 'baseline restoration trap'),
+                          ('cp "$RUNNER_TEMP/cdc-source-fixed/$path" "$path"',
+                           'restore corrected source'),
+                          ('psql", "-X", "-v", "ON_ERROR_STOP=1"',
+                           'actual PostgreSQL receipt inspection')),
+ 'sdk-producer-preview.yml': (('source.read(limit + 1)', 'bounded decoded template'),
+                              ('if hashlib.sha256(supplied).hexdigest() != expected:',
+                               'exact supplied template digest'),
+                              ('head != source_sha', 'exact producer checkout'),
+                              ('"output_pairs_with_canonical_head_sdk_source": False',
+                               'preview is not canonical pairing evidence'),
+                              ('"future_go_helper_compilation_performed": False',
+                               'preview does not assert future helper compilation'),
+                              ('cargo build --locked --bin udb', 'actual producer build'),
+                              ('target/debug/udb sdk generate --lang all --out preview-sdk '
+                               '--templates preview-templates',
+                               'actual all-language producer'),
+                              ('--templates preview-templates --check', 'same preview drift check'),
+                              ('if generated_surface != expected_surface or len(rows) != '
+                               'len(expected_surface):',
+                               'actual generated canonical RPC identities'),
+                              ('"log_sha256": digest(diagnostics / "producer-build.log")',
+                               'producer build evidence'),
+                              ('"ledger_sha256": digest(output / "preview-sdk-files.json")',
+                               'actual generated file ledger'),
+                              ("if: success() && steps.producer.outcome == 'success' && "
+                               "steps.evidence.outcome == 'success'",
+                               'successful producer-only output upload'))}
+CDC_SOURCE_PROOF_PATHS = ('src/runtime/cdc/source.rs',
+ 'src/runtime/cdc/mod.rs',
+ 'src/runtime/cdc/engine_tail.rs',
+ 'src/runtime/service/mod.rs',
+ 'src/runtime/cdc/live_tests.rs',
+ 'src/runtime/service/live_tests/cdc_consumer_live.rs')
+
+
+def check_ci_producer_proofs(root: Path = ROOT) -> list[str]:
+    failures: list[str] = []
+    for name, requirements in CI_PRODUCER_PROOF_REQUIREMENTS.items():
+        path = root / ".github" / "workflows" / name
+        if not path.is_file():
+            failures.append(f"{name}: producer proof workflow is missing")
+            continue
+        text = _read(path)
+        scoped: list[str] = []
+        for needle, label in requirements:
+            _require(text, needle, label, scoped)
+        inputs = ("baseline_commit",) if name == "cdc-source-proof.yml" else ("template_gzip_base64", "template_sha256")
+        for input_name in inputs:
+            _require_workflow_dispatch_input_required(text, input_name, scoped)
+            _require_workflow_dispatch_input_has_no_default(text, input_name, scoped)
+        _require(text, "cancel-in-progress: false", "preserve concurrent proof evidence", scoped)
+        _require(text, "actions/upload-artifact@v4", "proof artifact upload", scoped)
+        if name == "cdc-source-proof.yml":
+            match = re.search(r"(?ms)^          paths = (\[.*?^          \])", text)
+            try:
+                paths = tuple(ast.literal_eval(match.group(1))) if match else ()
+            except (SyntaxError, ValueError):
+                paths = ()
+            if paths != CDC_SOURCE_PROOF_PATHS:
+                scoped.append("restore/source fence must contain exactly the six audited existing paths")
+            command = "cargo test --locked --lib runtime::cdc::live_tests::live_postgres_source_late_commit_is_not_lost_after_scalar_cursor -- --exact --ignored --nocapture --test-threads=1"
+            for phase in ("original", "corrected"):
+                _require(text, command + f" 2>&1 | tee cdc-source-proof/{phase}.log", f"actual {phase} exact regression execution", scoped)
+            if text.count(command) != 2:
+                scoped.append("exact regression must execute once in each phase")
+            for name_step in ("Restore corrected source after any interrupted preparation", "Preserve identical proof, source snapshots and actual results"):
+                _require(text, f"- name: {name_step}\n        if: always()", f"always-run {name_step}", scoped)
+        else:
+            _require(text, "- name: Preserve preview diagnostics after any result\n        if: always()", "always-run preview diagnostics", scoped)
+        failures.extend(f"{name}: {failure}" for failure in scoped)
+    return failures
+
+
+def selftest_ci_producer_proofs() -> None:
+    # Self-contained fixtures test loss/weakening of evidence gates without a broker.
+    with tempfile.TemporaryDirectory() as temp:
+        root = Path(temp)
+        folder = root / ".github" / "workflows"
+        folder.mkdir(parents=True)
+        fixtures = {}
+        for name, requirements in CI_PRODUCER_PROOF_REQUIREMENTS.items():
+            inputs = ("baseline_commit",) if name == "cdc-source-proof.yml" else ("template_gzip_base64", "template_sha256")
+            text = "on:\n  workflow_dispatch:\n    inputs:\n"
+            text += "".join(f"      {field}:\n        required: true\n        type: string\n" for field in inputs)
+            text += "cancel-in-progress: false\nactions/upload-artifact@v4\n"
+            text += "\n".join(needle for needle, _ in requirements) + "\n"
+            if name == "cdc-source-proof.yml":
+                text += "          paths = [\n" + "".join(f"              {path!r},\n" for path in CDC_SOURCE_PROOF_PATHS) + "          ]\n"
+                command = "cargo test --locked --lib runtime::cdc::live_tests::live_postgres_source_late_commit_is_not_lost_after_scalar_cursor -- --exact --ignored --nocapture --test-threads=1"
+                text += "\n".join(command + f" 2>&1 | tee cdc-source-proof/{phase}.log" for phase in ("original", "corrected")) + "\n"
+                text += "- name: Restore corrected source after any interrupted preparation\n        if: always()\n- name: Preserve identical proof, source snapshots and actual results\n        if: always()\n"
+            else:
+                text += "- name: Preserve preview diagnostics after any result\n        if: always()\n"
+            fixtures[name] = text
+            (folder / name).write_text(text, encoding="utf-8")
+        assert not check_ci_producer_proofs(root), check_ci_producer_proofs(root)
+        for name, text in fixtures.items():
+            file = folder / name
+            mutations = [(needle, "REMOVED_EVIDENCE_GATE") for needle, _ in CI_PRODUCER_PROOF_REQUIREMENTS[name]]
+            mutations += [("required: true", "required: false"), ("        type: string", "        type: string\n        default: guessed"), ("cancel-in-progress: false", "cancel-in-progress: true"), ("actions/upload-artifact@v4", "no-upload"), ("if: always()", "if: success()")]
+            if name == "cdc-source-proof.yml":
+                mutations += [(CDC_SOURCE_PROOF_PATHS[0], "src/runtime/cdc/wrong.rs"), ("--test-threads=1", "--test-threads=2")]
+            for before, after in mutations:
+                assert before in text
+                file.write_text(text.replace(before, after, 1), encoding="utf-8")
+                assert check_ci_producer_proofs(root), (name, before)
+            file.write_text(text, encoding="utf-8")
+            file.unlink()
+            assert check_ci_producer_proofs(root), name
+            file.write_text(text, encoding="utf-8")
 
 
 def check_proof_workflows(root: Path = ROOT) -> list[str]:
@@ -11181,6 +11354,7 @@ jobs:
         failures = check_lint_workflow_trigger_paths(root)
         assert any("workflow files trigger path in pull_request" in failure for failure in failures), failures
 
+    selftest_ci_producer_proofs()
     print("workflow posture selftest passed")
     return 0
 
@@ -11194,6 +11368,7 @@ def main(argv: list[str] | None = None) -> int:
 
     failures = (
         check_proof_workflows()
+        + check_ci_producer_proofs()
         + check_resilience_smoke_workflow()
         + check_xa_recovery_smoke_script()
         + check_sidecar_smoke_workflow()

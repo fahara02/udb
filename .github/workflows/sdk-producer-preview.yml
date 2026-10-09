@@ -1,0 +1,266 @@
+name: Frozen Go template SDK producer preview
+
+on:
+  workflow_dispatch:
+    inputs:
+      template_gzip_base64:
+        description: "Gzip then base64 of the frozen Go generated-client template (maximum 128 KiB decoded)"
+        required: true
+        type: string
+      template_sha256:
+        description: "Expected lowercase SHA-256 of the exact decoded template bytes"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sdk-producer-preview-${{ github.sha }}-${{ inputs.template_sha256 }}
+  cancel-in-progress: false
+
+jobs:
+  frozen-template-preview:
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    env:
+      CARGO_TERM_COLOR: never
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-rust
+        with:
+          cache-key: rust-ubuntu-latest
+      - name: Verify and preserve the bounded frozen template input
+        id: input
+        env:
+          TEMPLATE_GZIP_BASE64: ${{ inputs.template_gzip_base64 }}
+          EXPECTED_TEMPLATE_SHA256: ${{ inputs.template_sha256 }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import base64
+          import gzip
+          import hashlib
+          import importlib.util
+          import io
+          import json
+          import os
+          from pathlib import Path
+          import re
+          import shutil
+          import subprocess
+          import sys
+
+          root = Path.cwd()
+          output = root / "sdk-preview-diagnostics"
+          output.mkdir()
+          expected = os.environ["EXPECTED_TEMPLATE_SHA256"]
+          encoded = os.environ["TEMPLATE_GZIP_BASE64"]
+          limit = 128 * 1024
+          if re.fullmatch(r"[0-9a-f]{64}", expected) is None:
+              raise SystemExit("template_sha256 must be an exact lowercase SHA-256")
+          if not encoded or len(encoded) > 4 * ((limit + 2) // 3):
+              raise SystemExit("encoded template exceeds the bounded input size")
+          try:
+              compressed = base64.b64decode(encoded, validate=True)
+              if len(compressed) > limit:
+                  raise ValueError("compressed input exceeds 128 KiB")
+              with gzip.GzipFile(fileobj=io.BytesIO(compressed)) as source:
+                  supplied = source.read(limit + 1)
+              if not supplied or len(supplied) > limit:
+                  raise ValueError("decoded template must be nonempty and at most 128 KiB")
+              supplied.decode("utf-8")
+              if b"\0" in supplied:
+                  raise ValueError("template must not contain NUL bytes")
+          except (ValueError, OSError, EOFError, UnicodeError):
+              raise SystemExit("template input must be bounded base64/gzip UTF-8 bytes") from None
+          if hashlib.sha256(supplied).hexdigest() != expected:
+              raise SystemExit("decoded frozen template SHA-256 does not match")
+          source_sha = os.environ["GITHUB_SHA"]
+          head = subprocess.check_output(["git", "rev-parse", "HEAD"]).decode().strip()
+          if re.fullmatch(r"[0-9a-f]{40}", source_sha) is None or head != source_sha:
+              raise SystemExit("producer checkout HEAD must equal GITHUB_SHA")
+          sys.path.insert(0, str(root / "scripts"))
+          spec = importlib.util.spec_from_file_location("producer_evidence", root / "scripts/package-sdk-producer-evidence.py")
+          evidence = importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(evidence)
+          inputs = evidence.source_ledger()
+          (output / "producer-input-files.json").write_text(json.dumps(inputs, indent=2) + "\n", encoding="utf-8")
+          canonical = root / "sdk-templates"
+          preview = root / "preview-templates"
+          for path in canonical.rglob("*"):
+              if path.is_symlink() or (not path.is_dir() and not path.is_file()):
+                  raise SystemExit("canonical templates must contain only regular files and directories")
+          shutil.copytree(canonical, preview)
+          relative = Path("go/udbclient/generated_client.go.tmpl")
+          original = (canonical / relative).read_bytes()
+          (preview / relative).write_bytes(supplied)
+          (output / "supplied-go-template.tmpl").write_bytes(supplied)
+          (output / "supplied-go-template.gz").write_bytes(compressed)
+          (output / "canonical-go-template.tmpl").write_bytes(original)
+          templates = []
+          for path in sorted(canonical.rglob("*")):
+              if not path.is_file():
+                  continue
+              name = path.relative_to(canonical)
+              before = path.read_bytes()
+              after = (preview / name).read_bytes()
+              if name != relative and before != after:
+                  raise SystemExit("only the requested Go template may differ in the preview")
+              templates.append({"path": name.as_posix(), "canonical_sha256": hashlib.sha256(before).hexdigest(), "preview_sha256": hashlib.sha256(after).hexdigest(), "preview_size": len(after)})
+          (output / "template-files.json").write_text(json.dumps(templates, indent=2) + "\n", encoding="utf-8")
+          metadata = {
+              "schema_version": 1,
+              "purpose": "frozen-template-preview",
+              "source_sha": source_sha,
+              "run_id": os.environ["GITHUB_RUN_ID"],
+              "run_attempt": os.environ["GITHUB_RUN_ATTEMPT"],
+              "supplied_template": {"path": relative.as_posix(), "size": len(supplied), "sha256": expected},
+              "canonical_template_sha256": hashlib.sha256(original).hexdigest(),
+              "compressed_input_sha256": hashlib.sha256(compressed).hexdigest(),
+              "output_pairs_with_canonical_head_sdk_source": False,
+              "future_go_helper_compilation_performed": False,
+              "languages": sorted(path.name for path in canonical.iterdir() if path.is_dir()),
+          }
+          (output / "input.json").write_text(json.dumps(metadata, indent=2) + "\n", encoding="utf-8")
+          print("Verified bounded frozen-template input; canonical SDK source is untouched.")
+          PY
+      - name: Build the exact checkout producer
+        id: build
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          cargo build --locked --bin udb 2>&1 | tee sdk-preview-diagnostics/producer-build.log
+      - name: Generate and check the actual frozen-template preview
+        id: producer
+        shell: bash
+        run: |
+          set -euo pipefail
+          target/debug/udb sdk generate --lang all --out preview-sdk --templates preview-templates 2>&1 | tee sdk-preview-diagnostics/sdk-generate.log
+          target/debug/udb sdk generate --lang all --out preview-sdk --templates preview-templates --check 2>&1 | tee sdk-preview-diagnostics/sdk-generate-check.log
+          target/debug/udb sdk manifest > sdk-preview-diagnostics/rpc-manifest.json 2> sdk-preview-diagnostics/rpc-manifest.stderr.log
+      - name: Verify canonical RPC identities and seal preview output evidence
+        id: evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import hashlib
+          import importlib.util
+          import json
+          import os
+          from pathlib import Path
+          import re
+          import shutil
+          import stat
+          import subprocess
+          import sys
+          import zipfile
+
+          root = Path.cwd()
+          diagnostics = root / "sdk-preview-diagnostics"
+          output = root / "sdk-preview-output"
+          generated = root / "preview-sdk"
+          sys.path.insert(0, str(root / "scripts"))
+          spec = importlib.util.spec_from_file_location("producer_evidence", root / "scripts/package-sdk-producer-evidence.py")
+          helper = importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(helper)
+          digest = helper.digest
+          metadata = json.loads((diagnostics / "input.json").read_text(encoding="utf-8"))
+          if metadata["source_sha"] != os.environ["GITHUB_SHA"] or subprocess.check_output(["git", "rev-parse", "HEAD"]).decode().strip() != metadata["source_sha"]:
+              raise SystemExit("producer source identity changed")
+          before = json.loads((diagnostics / "producer-input-files.json").read_text(encoding="utf-8"))
+          if helper.source_ledger() != before:
+              raise SystemExit("canonical producer inputs changed during the preview")
+          template = root / "preview-templates/go/udbclient/generated_client.go.tmpl"
+          if digest(template) != metadata["supplied_template"]["sha256"]:
+              raise SystemExit("frozen preview template changed during generation")
+          for row in json.loads((diagnostics / "template-files.json").read_text(encoding="utf-8")):
+              if digest(root / "sdk-templates" / row["path"]) != row["canonical_sha256"] or digest(root / "preview-templates" / row["path"]) != row["preview_sha256"]:
+                  raise SystemExit("canonical or preview template input changed")
+          canonical = root / "docs/generated/bench-bodies.json"
+          if hashlib.sha256(subprocess.check_output(["git", "show", "HEAD:docs/generated/bench-bodies.json"])).hexdigest() != digest(canonical):
+              raise SystemExit("canonical benchmark RPC manifest changed")
+          contract, expected_surface = helper._load_canonical_rpc_contract(canonical)
+          actual_manifest = json.loads((diagnostics / "rpc-manifest.json").read_text(encoding="utf-8"))
+          actual_surface = helper.rpc_surface(actual_manifest, len(expected_surface))
+          if actual_surface != expected_surface:
+              raise SystemExit("producer RPC wire identities, aliases or operation IDs differ from the canonical contract")
+          go_output = generated / "go/udbclient/generated_client.go"
+          text = go_output.read_text(encoding="utf-8")
+          block = re.search(r"var AllRPCs = \[\]RPCInfo\{([\s\S]*?)\n\}", text)
+          if block is None:
+              raise SystemExit("actual preview Go output has no AllRPCs registry")
+          # Match the canonical benchmark producer's real generated Go fields.
+          rows = re.findall(r'\{Service:\s*"([^"]+)",\s*ServicePkg:\s*"([^"]+)",\s*FullMethod:\s*"([^"]+)",\s*Name:\s*"([^"]+)",\s*APIAlias:\s*"([^"]*)",\s*OperationID:\s*"([^"]*)"', block.group(1))
+          generated_surface = {}
+          for service, package, full_method, name, alias, operation_id in rows:
+              wire = f"{service}/{name}"
+              if wire in generated_surface or full_method != f"/{package}.{service}/{name}":
+                  raise SystemExit("actual preview Go RPC registry has an invalid or duplicate wire identity")
+              generated_surface[wire] = (alias, operation_id)
+          if generated_surface != expected_surface or len(rows) != len(expected_surface):
+              raise SystemExit("actual preview Go output does not retain the canonical RPC surface")
+          if generated.is_symlink() or not generated.is_dir():
+              raise SystemExit("preview output must be a new regular directory")
+          languages = sorted(path.name for path in generated.iterdir() if path.is_dir())
+          if languages != metadata["languages"]:
+              raise SystemExit("all-language preview did not produce every canonical language")
+          files = []
+          output.mkdir()
+          archive_path = output / "preview-sdk.zip"
+          with zipfile.ZipFile(archive_path, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=6) as archive:
+              for path in sorted(generated.rglob("*")):
+                  if path.is_symlink():
+                      raise SystemExit("preview output must not contain symlinks")
+                  if path.is_dir():
+                      continue
+                  if not path.is_file():
+                      raise SystemExit("preview output must contain only regular files")
+                  relative = path.relative_to(generated).as_posix()
+                  mode = stat.S_IMODE(path.stat().st_mode)
+                  info = zipfile.ZipInfo(relative, date_time=(1980, 1, 1, 0, 0, 0))
+                  info.compress_type = zipfile.ZIP_DEFLATED
+                  info.create_system = 3
+                  info.external_attr = (stat.S_IFREG | mode) << 16
+                  with path.open("rb") as source, archive.open(info, "w") as target:
+                      shutil.copyfileobj(source, target)
+                  files.append({"path": relative, "size": path.stat().st_size, "mode": mode, "sha256": digest(path)})
+          if not files:
+              raise SystemExit("actual generated preview is empty")
+          (output / "preview-sdk-files.json").write_text(json.dumps(files, indent=2) + "\n", encoding="utf-8")
+          command = ["target/debug/udb", "sdk", "generate", "--lang", "all", "--out", "preview-sdk", "--templates", "preview-templates"]
+          metadata.update({
+              "build": {"command": ["cargo", "build", "--locked", "--bin", "udb"], "exit_code": 0, "log_sha256": digest(diagnostics / "producer-build.log")},
+              "binary": {"path": "target/debug/udb", "size": (root / "target/debug/udb").stat().st_size, "sha256": digest(root / "target/debug/udb")},
+              "generation": {"command": command, "exit_code": 0, "log_sha256": digest(diagnostics / "sdk-generate.log")},
+              "check": {"command": command + ["--check"], "exit_code": 0, "log_sha256": digest(diagnostics / "sdk-generate-check.log")},
+              "manifest": {"command": ["target/debug/udb", "sdk", "manifest"], "exit_code": 0, "sha256": digest(diagnostics / "rpc-manifest.json"), "canonical_manifest_sha256": digest(canonical), "rpc_count": len(expected_surface), "wire_alias_operation_id_match": True, "generated_go_surface_match": True, "canonical_contract": contract},
+              "output": {"archive": "preview-sdk.zip", "sha256": digest(archive_path), "size": archive_path.stat().st_size, "file_count": len(files), "ledger": "preview-sdk-files.json", "ledger_sha256": digest(output / "preview-sdk-files.json"), "archive_paths_relative_to": "preview-sdk"},
+              "workflow_sha256": digest(root / ".github/workflows/sdk-producer-preview.yml"),
+              "setup_action_sha256": digest(root / ".github/actions/setup-rust/action.yml"),
+          })
+          for name in ["input.json", "producer-input-files.json", "template-files.json", "supplied-go-template.tmpl", "supplied-go-template.gz", "canonical-go-template.tmpl", "producer-build.log", "sdk-generate.log", "sdk-generate-check.log", "rpc-manifest.json", "rpc-manifest.stderr.log"]:
+              shutil.copyfile(diagnostics / name, output / name)
+          shutil.copyfile(canonical, output / "canonical-bench-bodies.json")
+          (output / "provenance.json").write_text(json.dumps(metadata, indent=2) + "\n", encoding="utf-8")
+          print("Sealed actual frozen-template preview; future helper compilation and canonical SDK pairing are not claimed.")
+          PY
+      - name: Preserve successful frozen-template preview output
+        if: success() && steps.producer.outcome == 'success' && steps.evidence.outcome == 'success'
+        uses: actions/upload-artifact@v4
+        with:
+          name: sdk-frozen-template-preview-${{ github.run_attempt }}
+          path: sdk-preview-output/
+          if-no-files-found: error
+          retention-days: 14
+      - name: Preserve preview diagnostics after any result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sdk-frozen-template-preview-diagnostics-${{ github.run_attempt }}
+          path: sdk-preview-diagnostics/
+          if-no-files-found: warn
+          retention-days: 14

@@ -202,7 +202,7 @@ func liveG1RevokeCurrentSession(t *testing.T, ctx context.Context, sess *Enterpr
 	// A plain native channel avoids any credential resolver awaiting the same
 	// manager lock. Revoke retains the genuine verified ordinary bearer; the
 	// PUBLIC refresh probe carries only metadata and the refresh credential.
-	publicCtx := probeAuth.Context(probeCtx)
+	publicCtx := metadata.AppendToOutgoingContext(probeAuth.Context(probeCtx), "x-request-id", uuid4())
 	authorizedCtx := metadata.AppendToOutgoingContext(publicCtx, "authorization", "Bearer "+current.AccessToken)
 	verified, err := probeAuth.Authn.ValidateToken(authorizedCtx, &authnv1.ValidateTokenRequest{
 		Token: current.AccessToken, TokenType: authnentpb.TokenType_TOKEN_TYPE_JWT_ACCESS,
