@@ -325,6 +325,7 @@ jobs:
 
       # ── PERF: per-SDK fresh-DB + broker reset, then all four benches ──
       - name: Prepare per-SDK reset script (fresh DB + broker + bootstrap + seed)
+        id: reset-script
         shell: bash
         run: |
           set -euo pipefail
@@ -601,7 +602,7 @@ jobs:
           ( cd sdk/go && go test ./... -p 1 -run '^TestLive' -skip '^TestLivePerf$' -count=1 -v -timeout 15m ) 2>&1 | tee bench-output/logs/go-correctness.log
 
       - name: Profile warmed RPCs during idle and concurrent password work
-        if: always() && inputs.candidate-build
+        if: always() && inputs.candidate-build && steps.reset-script.outcome == 'success'
         timeout-minutes: 8
         shell: bash
         env:
@@ -611,7 +612,8 @@ jobs:
         run: |
           set -euo pipefail
           bash bench-output/reset.sh latency-profile 2>&1 | tee bench-output/logs/latency-profile-reset.log
-          export UDB_BROKER_PID="$(cat /tmp/udb-bench.pid)"
+          UDB_BROKER_PID="$(cat /tmp/udb-bench.pid)"
+          export UDB_BROKER_PID
           ( cd sdk/go && go test ./udbclient -run '^TestLiveLatencyProfile$' -count=1 -v -timeout 5m ) 2>&1 | tee bench-output/logs/latency-profile.log
 
       # A separate proof broker retains the prepared DB/catalog and exact private

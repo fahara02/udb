@@ -1,5 +1,7 @@
 //! Real DataBroker settlement and named delivery against PostgreSQL. Signed
 //! credentials traverse the production resolver; ordinary scopes stay narrow.
+//! Building the existing idle CdcEngine requires the Kafka feature, as in the
+//! LiveQuery journal tests. No tailer or Kafka delivery runs in this fixture.
 use super::data_plane_live::{
     dp_insert_allow_rule, dp_live_pg_dsn, dp_pool, dp_prepare_deny_db, dp_service_deny,
     dp_warm_authz,
@@ -87,15 +89,25 @@ struct Fixture {
 
 async fn build_engine(pool: &sqlx::PgPool, dsn: &str, load_policy: bool) -> Arc<CdcEngine> {
     let metrics: Arc<dyn crate::metrics::MetricsRecorder> = Arc::new(crate::metrics::NoopMetrics);
-    let config = CdcConfig {
-        journal_only: true,
-        ..CdcConfig::default()
-    };
+    let config = CdcConfig::default();
     #[cfg(feature = "redis")]
-    let engine = CdcEngine::new(pool.clone(), None, "", dsn.to_string(), metrics, config);
+    let engine = CdcEngine::new(
+        pool.clone(),
+        None,
+        "127.0.0.1:1",
+        dsn.to_string(),
+        metrics,
+        config,
+    );
     #[cfg(not(feature = "redis"))]
-    let engine = CdcEngine::new(pool.clone(), "", dsn.to_string(), metrics, config);
-    let engine = Arc::new(engine.expect("journal-only CDC engine"));
+    let engine = CdcEngine::new(
+        pool.clone(),
+        "127.0.0.1:1",
+        dsn.to_string(),
+        metrics,
+        config,
+    );
+    let engine = Arc::new(engine.expect("idle CDC engine for actual journal reads"));
     if load_policy {
         engine
             .load_topic_policies()
@@ -318,6 +330,34 @@ async fn seed(f: &Fixture, topic: &str, tenant: &str, project: &str, second: i32
     sqlx::query(&format!("INSERT INTO {journal} (event_id, topic, payload, published_at) VALUES ($1,$2,$3,'2026-01-01'::timestamptz + make_interval(secs => $4::double precision))"))
         .bind(id).bind(topic).bind(payload).bind(f64::from(second)).execute(&f.pool).await.expect("seed retained event");
     id
+}
+
+/// Deliver a retained fixture row through the engine's actual fast-path sender.
+/// The row is committed before this wake; the named stream must still drain the
+/// durable journal instead of accepting this envelope ahead of an older row.
+async fn broadcast_retained_fixture(f: &Fixture, engine: &CdcEngine, event: Uuid) {
+    let journal = SystemCatalogConfig::current().cdc_journal_relation();
+    let (topic, partition_key, payload, published_at): (
+        String,
+        String,
+        serde_json::Value,
+        chrono::DateTime<chrono::Utc>,
+    ) = sqlx::query_as(&format!(
+        "SELECT topic, partition_key, payload, published_at FROM {journal} WHERE event_id=$1"
+    ))
+    .bind(event)
+    .fetch_one(&f.pool)
+    .await
+    .expect("broadcast uses the actual retained journal row");
+    let _ = engine
+        .broadcast_sender_for_live_test()
+        .send(crate::runtime::cdc::CdcEnvelope {
+            event_id: event.to_string(),
+            topic,
+            partition_key,
+            payload_json: payload.to_string(),
+            published_at,
+        });
 }
 async fn cursor(f: &Fixture, name: &str) -> (Uuid, String) {
     let table = SystemCatalogConfig::current().cdc_consumer_cursors_relation();
@@ -647,14 +687,7 @@ async fn live_cdc_named_delivery_orders_cross_replica_journal_before_local_broad
     let mut f = fixture().await;
     for round in 0..4 {
         let name = format!("ordered-{round}");
-        let anchor = Uuid::new_v4();
-        let payload = |id: Uuid| {
-            serde_json::json!({"event_id":id,"event_type":f.topic,"tenant_id":f.tenant,"project_id":"default"}).to_string()
-        };
-        f.remote
-            .publish_to_journal(anchor, &f.topic, "fixture", &payload(anchor), None, None)
-            .await
-            .unwrap();
+        let anchor = seed(&f, &f.topic, &f.tenant, "default", round * 3).await;
         f.client
             .ack_cdc_events(request(
                 acknowledgment(&name, &f.topic, anchor),
@@ -688,17 +721,11 @@ async fn live_cdc_named_delivery_orders_cross_replica_journal_before_local_broad
                 .is_err(),
             "fixture begins caught up before either publisher writes"
         );
-        let older = Uuid::new_v4();
-        let newer = Uuid::new_v4();
         let started = tokio::time::Instant::now();
-        f.remote
-            .publish_to_journal(older, &f.topic, "fixture", &payload(older), None, None)
-            .await
-            .unwrap();
-        f.engine
-            .publish_to_journal(newer, &f.topic, "fixture", &payload(newer), None, None)
-            .await
-            .unwrap();
+        let older = seed(&f, &f.topic, &f.tenant, "default", round * 3 + 1).await;
+        broadcast_retained_fixture(&f, f.remote.as_ref(), older).await;
+        let newer = seed(&f, &f.topic, &f.tenant, "default", round * 3 + 2).await;
+        broadcast_retained_fixture(&f, f.engine.as_ref(), newer).await;
         let delivered = tokio::time::timeout(Duration::from_secs(3), stream.next())
             .await
             .unwrap()

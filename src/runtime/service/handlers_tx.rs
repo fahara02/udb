@@ -1,5 +1,6 @@
 //! service.rs split — tx RPC handlers (Phase G).
 use super::*;
+use tonic::Code;
 
 fn tx_refusal_frame(status: &Status) -> TxStatus {
     use prost::Message as _;
