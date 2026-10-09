@@ -203,8 +203,8 @@ CHECKS: tuple[SourceCheck, ...] = (
             "u.Generated.opt.Store(&opt)",
             "type AdoptedLogin struct",
             "func (u *Udb) LoginAndAdoptTenant(ctx context.Context, req *authnv1.LoginRequest)",
-            "u.Auth.Authn.Login(u.Auth.Context(ctx), req)",
-            "u.Auth.AuthenticateBearer(ctx, token)",
+            "u.Auth.Authn.Login(u.Auth.Context(u.recoveryContext(ctx, credentialLogin)), req)",
+            "u.Auth.AuthenticateBearer(u.recoveryContext(ctx, credentialAuthenticate), token)",
             "u.adoptMetadata(meta, bearer)",
             "opt.Authorization = \"Bearer \" + bearer",
             "func (u *Udb) loginAndVerify(ctx context.Context, req *authnv1.LoginRequest)",
@@ -294,6 +294,66 @@ CHECKS: tuple[SourceCheck, ...] = (
 )
 
 
+
+CHECKS += (
+    SourceCheck(
+        "go private owned credential preflight",
+        "sdk/go/udbclient/credential_lifecycle.go",
+        (
+            "type credentialOwner struct",
+            "type credentialPrincipalBinding struct",
+            "func (b credentialPrincipalBinding) validate(p *authnv1.Principal) error",
+            "func (g *GeneratedClient) prepareCredential(ctx context.Context, method string)",
+            "prepared.used.CompareAndSwap(false, true)",
+            "capability.owner == o && capability.method == method",
+            "method == credentialAuthenticate || method == credentialLogin || method == credentialRefresh",
+            "func (o *credentialOwner) closedError() error",
+            "if err := o.closedError(); err != nil",
+            "bearer, err := provider.resolve(resolveCtx)",
+            "context.AfterFunc(o.ctx, cancel)",
+            'md.Delete("x-api-key")',
+        ),
+    ),
+    SourceCheck(
+        "go generated owned credential transport",
+        "sdk/go/udbclient/generated_client.go",
+        (
+            "credential atomic.Pointer[credentialResolver]",
+            "callCtx, err := g.prepareCredential(callCtx, fullMethod)",
+            "callCtx, retireHandoff := g.credentialHandoff(callCtx, fullMethod)",
+            "attemptCtx = context.WithValue(ctx, credentialPreparedKey{}, nil)",
+            'hasNonempty := func(key string) bool',
+        ),
+    ),
+    SourceCheck(
+        "go tenant pool generation fence",
+        "sdk/go/udbclient/tenant_pool.go",
+        (
+            "func (p *TenantSessionPool) completeDialLocked",
+            "p.pending[tenantID] == dial",
+            "dial.stopCancellation()",
+            "if !installed && u != nil",
+            "_ = u.Close()",
+        ),
+    ),
+    SourceCheck(
+        "go real login and API-key renewal proofs",
+        ".github/workflows/_live-sdk-suite.yml",
+        (
+            "^TestLiveG1(SessionLifecycle|APIKeyCredentialLifecycle)$",
+            "-count=1 -v -timeout 5m",
+        ),
+    ),
+    SourceCheck(
+        "go credential and pool race proofs",
+        ".github/workflows/ci.yml",
+        (
+            "TokenManager|EnterpriseSession|APIKey|ConsumeG6|AsUser|CredentialLifecycle|TenantSessionPool",
+        ),
+    ),
+)
+
+
 def check_source(root: Path = ROOT) -> list[str]:
     failures: list[str] = []
     for check in CHECKS:
@@ -343,6 +403,10 @@ def run_selftest() -> int:
             raise AssertionError(f"expected approval-token body-field failure, got {failures}")
 
         for rel_path, missing_token, expected in (
+            ("sdk/go/udbclient/credential_lifecycle.go", "capability.owner == o && capability.method == method", "go private owned credential preflight"),
+            ("sdk/go/udbclient/generated_client.go", "callCtx, err := g.prepareCredential(callCtx, fullMethod)", "go generated owned credential transport"),
+            ("sdk/go/udbclient/tenant_pool.go", "p.pending[tenantID] == dial", "go tenant pool generation fence"),
+            (".github/workflows/_live-sdk-suite.yml", "^TestLiveG1(SessionLifecycle|APIKeyCredentialLifecycle)$", "go real login and API-key renewal proofs"),
             ("sdk/go/udbtest/live_test.go", 'required("UDB_LIVE_PEER_USERNAME")', "go live provisioned tenant identities"),
             (".github/workflows/go-sdk-live.yml", '--tenant "${UDB_LIVE_PEER_TENANT}"', "go live second tenant provisioning"),
         ):

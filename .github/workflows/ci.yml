@@ -1081,7 +1081,7 @@ jobs:
       #     header (no duplicated / stale pre-login tenant/project hint).
       - run: go test ./udbclient -run 'TestEntityRepoGeneratedContract|TestConnectEnterpriseEmitsCanonicalSingletonMetadata' -count=1
       - name: Session renewal and durable acknowledgement race regressions
-        run: go test -race ./udbclient -run 'TokenManager|EnterpriseSession|APIKey|ConsumeG6|AsUser' -count=1 -timeout 2m
+        run: go test -race ./udbclient -run 'TokenManager|EnterpriseSession|APIKey|ConsumeG6|AsUser|CredentialLifecycle|TenantSessionPool' -count=1 -timeout 2m
       # The steps above prove the declared floor (go.mod `go 1.22`). Re-run the
       # SDK on the newest release too, so a toolchain change (vet analyzers,
       # linkname restrictions, stdlib behavior) that breaks consumers on current

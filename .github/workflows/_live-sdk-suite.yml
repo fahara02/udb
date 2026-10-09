@@ -689,7 +689,7 @@ jobs:
                   channel.close()
           print("Dedicated candidate broker ready: access TTL=20s; runtime settings preserved")
           PY
-          ( cd sdk/go && go test ./udbclient -run '^TestLiveG1SessionLifecycle$' -count=1 -v -timeout 3m ) 2>&1 | tee bench-output/logs/go-g1-session.log
+          ( cd sdk/go && go test ./udbclient -run '^TestLiveG1(SessionLifecycle|APIKeyCredentialLifecycle)$' -count=1 -v -timeout 5m ) 2>&1 | tee bench-output/logs/go-g1-session.log
 
       - name: Fetch previous benchmark history
         if: always()

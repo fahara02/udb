@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	authnentpb "github.com/fahara02/udb/sdk/go/gen/udb/core/authn/entity/v1"
 	authnv1 "github.com/fahara02/udb/sdk/go/gen/udb/core/authn/services/v1"
 	entityv1 "github.com/fahara02/udb/sdk/go/gen/udb/entity/v1"
 	"google.golang.org/grpc/codes"
@@ -52,7 +53,10 @@ func TestEnterpriseSession_CurrentBearerPropagatesToGeneratedClient(t *testing.T
 	u := &Udb{Generated: NewGenerated(nil, Options{Authorization: "Bearer stale-initial"})}
 	s := &EnterpriseSession{Udb: u, tm: NewTokenManager(nil, store), bearer: "Bearer stale-initial"}
 
-	got := s.currentBearer(context.Background())
+	got, err := s.currentBearer(context.Background())
+	if err != nil {
+		t.Fatalf("current bearer: %v", err)
+	}
 
 	if got != "Bearer fresh" {
 		t.Fatalf("currentBearer returned %q, want %q", got, "Bearer fresh")
@@ -382,7 +386,8 @@ func TestEnterpriseSessionDelayedCallerCannotRestoreOlderBearer(t *testing.T) {
 	workers.Add(1)
 	go func() {
 		defer workers.Done()
-		done <- sess.currentBearer(context.WithValue(ctx, refreshLoadGateKey{}, true))
+		bearer, _ := sess.currentBearer(context.WithValue(ctx, refreshLoadGateKey{}, true))
+		done <- bearer
 	}()
 	select {
 	case <-store.loaded:
@@ -482,7 +487,7 @@ func TestEnterpriseSessionBackgroundPublicationSerializesStoreReload(t *testing.
 	}
 	done := make(chan string, 1)
 	workers.Add(1)
-	go func() { defer workers.Done(); done <- sess.currentBearer(ctx) }()
+	go func() { defer workers.Done(); bearer, _ := sess.currentBearer(ctx); done <- bearer }()
 	release()
 	select {
 	case got := <-done:
@@ -593,7 +598,7 @@ func TestEnterpriseSessionAsUserPreservesDelegationAndSessionRefusals(t *testing
 	if _, err := sess.Data.Broker.GetCapabilities(dataCtx, &entityv1.CapabilitiesRequest{}); err != nil {
 		t.Fatalf("enterprise delegated data call failed: code=%s", status.Code(err))
 	}
-	if _, err := sess.Auth.Authn.ValidateToken(nativeCtx, &authnv1.ValidateTokenRequest{Token: "fixture-user-bearer"}); err != nil {
+	if _, err := sess.Auth.Authn.ValidateToken(nativeCtx, &authnv1.ValidateTokenRequest{Token: "fixture-user-bearer", TokenType: authnentpb.TokenType_TOKEN_TYPE_JWT_ACCESS}); err != nil {
 		t.Fatalf("enterprise delegated native call failed: code=%s", status.Code(err))
 	}
 	var caps entityv1.CapabilitiesResponse
@@ -609,7 +614,7 @@ func TestEnterpriseSessionAsUserPreservesDelegationAndSessionRefusals(t *testing
 	if _, err := sess.Data.Broker.GetCapabilities(sess.DataContext(ctx), &entityv1.CapabilitiesRequest{}); err != nil {
 		t.Fatalf("ordinary enterprise data renewal failed: code=%s", status.Code(err))
 	}
-	if _, err := sess.Auth.Authn.ValidateToken(sess.NativeContext(ctx), &authnv1.ValidateTokenRequest{Token: "fixture-user-bearer"}); err != nil {
+	if _, err := sess.Auth.Authn.ValidateToken(sess.NativeContext(ctx), &authnv1.ValidateTokenRequest{Token: "fixture-user-bearer", TokenType: authnentpb.TokenType_TOKEN_TYPE_JWT_ACCESS}); err != nil {
 		t.Fatalf("ordinary enterprise native call failed: code=%s", status.Code(err))
 	}
 	authn.mu.Lock()

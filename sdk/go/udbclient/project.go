@@ -91,9 +91,8 @@ type Credentials struct {
 	// a service bearer at connect and keeps that bearer fresh in the background;
 	// the raw key is never sent on a call.
 	APIKey string
-	// RawAPIKey restores the pre-0.5.31 behaviour of sending APIKey as an
-	// `x-api-key` header on every call instead of exchanging it. Deprecated:
-	// removed in 0.6.0 (the native control plane refuses raw keys).
+	// RawAPIKey is retained for source compatibility but Connect refuses it:
+	// service API keys must be exchanged and cannot be sent as request headers.
 	RawAPIKey bool
 }
 
@@ -116,9 +115,6 @@ func (c Config) options() Options {
 		Retry:               c.Retry,
 		StrictServerVersion: c.StrictServerVersion,
 		OnVersionWarning:    c.OnVersionWarning,
-	}
-	if c.Credentials.RawAPIKey || c.Credentials.Bearer != "" {
-		o.APIKey = c.Credentials.APIKey
 	}
 	if c.Credentials.Bearer != "" {
 		o.Authorization = "Bearer " + c.Credentials.Bearer
@@ -160,7 +156,10 @@ type Udb struct {
 
 	// apiKey is the exchanged service-account key state (nil when the
 	// connection does not exchange one); see apikey_session.go.
-	apiKey *apiKeySession
+	apiKey     *apiKeySession
+	credential *credentialOwner
+	closeOnce  sync.Once
+	closeErr   error
 	// fence is the latest Table write's receipt; see session_fence.go.
 	fence writeFence
 }
@@ -176,6 +175,15 @@ func Connect(ctx context.Context, cfg Config) (*Udb, error) {
 // NewUdb dials the broker (and the auth endpoint, if different), builds the
 // generated robustness layer, and wires every available per-domain client.
 func NewUdb(ctx context.Context, cfg Config) (*Udb, error) {
+	if cfg.Credentials.RawAPIKey {
+		return nil, fmt.Errorf("udb: Credentials.RawAPIKey is unsupported; APIKey must be exchanged")
+	}
+	if cfg.Credentials.APIKey != "" && cfg.Credentials.Bearer != "" {
+		return nil, fmt.Errorf("udb: Credentials.APIKey and Credentials.Bearer are mutually exclusive")
+	}
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
 	if cfg.Target == "" {
 		return nil, fmt.Errorf("udb: Config.Target is required")
 	}
@@ -215,6 +223,7 @@ func NewUdb(ctx context.Context, cfg Config) (*Udb, error) {
 	// original gen, which nothing updated, duplicating a stale x-tenant-id.)
 	gen.rebindConn(brokerConn)
 	u.Generated = gen
+	u.credential = newCredentialOwner(u)
 
 	authConn := brokerConn
 	if cfg.AuthTarget != cfg.Target {
@@ -263,7 +272,7 @@ func NewUdb(ctx context.Context, cfg Config) (*Udb, error) {
 	u.webrtcConn = webrtcConn
 	u.WebRTC = newWebRTCFacade(webrtcConn, meta)
 
-	if cfg.Credentials.APIKey != "" && cfg.Credentials.Bearer == "" && !cfg.Credentials.RawAPIKey {
+	if cfg.Credentials.APIKey != "" {
 		if err := u.startAPIKeyExchange(ctx, cfg.Credentials.APIKey, cfg.Deadline); err != nil {
 			_ = u.Close()
 			return nil, err
@@ -436,7 +445,7 @@ func (u *Udb) LoginAndAdoptTenant(ctx context.Context, req *authnv1.LoginRequest
 // client. A session can validate a renewal's identity before installing it.
 func (u *Udb) loginAndVerify(ctx context.Context, req *authnv1.LoginRequest) (*AdoptedLogin, error) {
 	// RPC 1: native login.
-	loginResp, err := u.Auth.Authn.Login(u.Auth.Context(ctx), req)
+	loginResp, err := u.Auth.Authn.Login(u.Auth.Context(u.recoveryContext(ctx, credentialLogin)), req)
 	if err != nil {
 		return nil, err
 	}
@@ -447,7 +456,7 @@ func (u *Udb) loginAndVerify(ctx context.Context, req *authnv1.LoginRequest) (*A
 	}
 
 	// RPC 2: verify the bearer and resolve the canonical principal.
-	authResp, err := u.Auth.AuthenticateBearer(ctx, token)
+	authResp, err := u.Auth.AuthenticateBearer(u.recoveryContext(ctx, credentialAuthenticate), token)
 	if err != nil {
 		return nil, err
 	}
@@ -459,20 +468,32 @@ func (u *Udb) loginAndVerify(ctx context.Context, req *authnv1.LoginRequest) (*A
 	// Verification may take time; do not extend the login bearer lifetime by
 	// counting it again from the end of that second RPC.
 	tok := tokenFromLogin(loginResp, receivedAt)
+	if expiry := authResp.GetExpiresAtUnix(); expiry > 0 {
+		tok.ExpiresAt = time.Unix(expiry, 0)
+	}
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	if !tok.Valid(time.Now(), 0) {
+		return nil, fmt.Errorf("udb: verified Login bearer is empty or expired")
+	}
 	return &AdoptedLogin{Token: tok, Principal: principal}, nil
 }
 
 // Close closes every connection NewUdb owns. Safe to call once.
 func (u *Udb) Close() error {
-	u.stopAPIKeyRefresh()
-	var firstErr error
-	for _, c := range u.conns {
-		if err := c.Close(); err != nil && firstErr == nil {
-			firstErr = err
+	u.closeOnce.Do(func() {
+		if u.credential != nil {
+			u.credential.cancel()
 		}
-	}
-	u.conns = nil
-	return firstErr
+		u.stopAPIKeyRefresh()
+		for _, c := range u.conns {
+			if err := c.Close(); err != nil && u.closeErr == nil {
+				u.closeErr = err
+			}
+		}
+	})
+	return u.closeErr
 }
 
 func transportCreds(cfg *tls.Config) credentials.TransportCredentials {

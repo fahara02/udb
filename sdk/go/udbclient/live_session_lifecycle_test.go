@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"io"
 	"os"
 	"reflect"
 	"slices"
@@ -11,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	apikeyv1 "github.com/fahara02/udb/sdk/go/gen/udb/core/apikey/services/v1"
 	authnentpb "github.com/fahara02/udb/sdk/go/gen/udb/core/authn/entity/v1"
 	authnv1 "github.com/fahara02/udb/sdk/go/gen/udb/core/authn/services/v1"
 	commonpb "github.com/fahara02/udb/sdk/go/gen/udb/core/common/v1"
@@ -51,6 +53,7 @@ func TestLiveG1SessionLifecycle(t *testing.T) {
 	if identity.TenantID == "" || identity.ProjectID == "" || identity.UserID == "" {
 		t.Fatal("initial login did not adopt verified tenant/project/user identity")
 	}
+	defer liveG1CleanupOwnedSession(t, sess)
 	initial, err := sess.tm.store.Load(ctx)
 	if err != nil || initial.AccessToken == "" || initial.RefreshToken == "" || initial.SessionID == "" {
 		t.Fatal("fresh login must persist access, refresh and session credentials")
@@ -111,6 +114,7 @@ func TestLiveG1SessionLifecycle(t *testing.T) {
 			previousExpiryHorizon = time.Unix(previousClaims.ExpiresAt, 0).Add(time.Second)
 			previous, previousClaims = current, claims
 			rotations++
+			liveG1ExerciseTransactionStream(t, ctx, sess, identity, recordID)
 			t.Logf("verified automatic renewal %d: issued TTL=20s, identity unchanged", rotations)
 		}
 		liveG1ExercisePaths(t, ctx, sess, selectReq, identity)
@@ -151,6 +155,7 @@ func TestLiveG1SessionLifecycle(t *testing.T) {
 				t.Fatal("automatic re-login did not restore the original stable identity")
 			}
 			liveG1ExercisePaths(t, ctx, sess, selectReq, identity)
+			liveG1ExerciseTransactionStream(t, ctx, sess, identity, recordID)
 			break
 		}
 		select {
@@ -333,4 +338,256 @@ func liveG1ExercisePaths(t *testing.T, ctx context.Context, sess *EnterpriseSess
 		t.Fatal("could not inspect the token for a native path sweep")
 	}
 	liveG1VerifyToken(t, ctx, sess, tok, identity)
+}
+
+// This independent served proof runs beside the password-session proof after
+// the same dedicated 20s-TTL restart. It owns its service account, grant, key and
+// row; three natural exchanges and a real key revocation require no fake clock.
+func TestLiveG1APIKeyCredentialLifecycle(t *testing.T) {
+	if os.Getenv("UDB_LIVE_G1_SESSION_PROOF") != "1" {
+		t.Skip("requires dedicated 20-second candidate broker restart")
+	}
+	if os.Getenv("UDB_LIVE_SDK_TESTS") != "1" || os.Getenv("UDB_JWT_ACCESS_TTL_SECONDS") != "20" {
+		t.Fatal("API-key proof requires actual live opt-in and 20-second TTL")
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
+	defer cancel()
+	operator, err := ConnectEnterprise(ctx, EnterpriseConfig{Target: requiredLiveEnv(t, "UDB_GRPC_TARGET"), AuthTarget: requiredLiveEnv(t, "UDB_AUTH_GRPC_TARGET"), Username: requiredLiveEnv(t, "UDB_LIVE_USERNAME"), Password: requiredLiveEnv(t, "UDB_LIVE_PASSWORD"), TenantCode: requiredLiveEnv(t, "UDB_LIVE_TENANT"), ProjectID: requiredLiveEnv(t, "UDB_LIVE_PROJECT"), Purpose: "go.live.g1.api-key", Deadline: 5 * time.Second, Retry: RetryConfig{MaxAttempts: 1}})
+	if err != nil {
+		t.Fatalf("owned operator ConnectEnterprise: code=%s", status.Code(err))
+	}
+	defer operator.Close()
+	identity := operator.Meta
+	defer liveG1CleanupOwnedSession(t, operator)
+	commonContext := func(principal string) *commonpb.RequestContext {
+		return &commonpb.RequestContext{Tenant: &commonpb.TenantContext{TenantId: identity.TenantID, ProjectId: identity.ProjectID}, UserId: principal, PrincipalId: principal, Purpose: identity.Purpose}
+	}
+	serviceID, keyID, recordID := "", "", "g1-api-key-"+uuid4()
+	grantCreated := false
+	defer func() {
+		cleanupCtx, cleanupCancel := context.WithTimeout(context.Background(), 15*time.Second)
+		defer cleanupCancel()
+		if _, err := operator.Data.Delete(cleanupCtx, &entityv1.DeleteRequest{Context: liveRequestContext(identity.TenantID, identity.ProjectID, identity.Purpose), MessageType: liveMessageType, Filter: liveStruct(t, map[string]any{"record_id": recordID, "tenant_id": identity.TenantID, "project_id": identity.ProjectID})}); err != nil {
+			t.Errorf("owned row cleanup: code=%s", status.Code(err))
+		}
+		if keyID != "" {
+			if _, err := operator.ApiKey.Raw.RevokeApiKey(cleanupCtx, &apikeyv1.RevokeApiKeyRequest{KeyId: keyID, RevokeReason: "G1 owned fixture cleanup", Context: commonContext(serviceID)}); err != nil {
+				t.Errorf("owned key cleanup: code=%s", status.Code(err))
+			}
+		}
+		if grantCreated {
+			if _, err := operator.Auth.Authn.RevokeServiceAccountGrant(cleanupCtx, &authnv1.RevokeServiceAccountGrantRequest{TenantId: identity.TenantID, UserId: serviceID, Reason: "G1 owned fixture cleanup"}); err != nil {
+				t.Errorf("owned grant cleanup: code=%s", status.Code(err))
+			}
+		}
+		if serviceID != "" {
+			if _, err := operator.Auth.Authn.ChangeUserStatus(cleanupCtx, &authnv1.ChangeUserStatusRequest{UserId: serviceID, NewStatus: authnentpb.UserStatus_USER_STATUS_DEACTIVATED, Reason: "G1 owned fixture cleanup", Context: commonContext(identity.UserID)}); err != nil {
+				t.Errorf("owned account cleanup: code=%s", status.Code(err))
+			}
+		}
+	}()
+	name := "go-g1-key-" + strings.ReplaceAll(uuid4(), "-", "")
+	created, err := operator.Auth.Authn.CreateUser(ctx, &authnv1.CreateUserRequest{Username: name, Email: name + "@example.invalid", Password: "CorrectHorse1!", TenantId: identity.TenantID, ProjectId: identity.ProjectID, FullName: "G1 owned service credential", AccountKind: authnentpb.AccountKind_ACCOUNT_KIND_SERVICE_ACCOUNT})
+	if err == nil {
+		serviceID = created.GetUser().GetUserId()
+	}
+	if err != nil || serviceID == "" || serviceID == identity.UserID {
+		t.Fatalf("owned service creation: code=%s", status.Code(err))
+	}
+	if _, err := operator.Auth.Authn.ChangeUserStatus(ctx, &authnv1.ChangeUserStatusRequest{UserId: serviceID, NewStatus: authnentpb.UserStatus_USER_STATUS_ACTIVE, Reason: "G1 owned fixture activation", Context: commonContext(identity.UserID)}); err != nil {
+		t.Fatalf("owned service activation: code=%s", status.Code(err))
+	}
+	scopes := []string{"data:read", "udb:authn:validate-token"}
+	if _, err := operator.Auth.Authn.CreateServiceAccountGrant(ctx, &authnv1.CreateServiceAccountGrantRequest{TenantId: identity.TenantID, ProjectId: identity.ProjectID, UserId: serviceID, ServiceIdentity: name, ApprovedScopes: scopes, Reason: "G1 owned read and token verification"}); err != nil {
+		t.Fatalf("owned service grant: code=%s", status.Code(err))
+	}
+	grantCreated = true
+	key, err := operator.ApiKey.Raw.CreateApiKey(ctx, &apikeyv1.CreateApiKeyRequest{Name: name, OwnerId: serviceID, Scopes: scopes, Context: commonContext(serviceID)})
+	if err == nil {
+		keyID = key.GetKey().GetKeyId()
+	}
+	if err != nil || keyID == "" || key.GetPlainKey() == "" {
+		t.Fatalf("owned key creation: code=%s", status.Code(err))
+	}
+	service, err := Connect(ctx, Config{Target: requiredLiveEnv(t, "UDB_GRPC_TARGET"), AuthTarget: requiredLiveEnv(t, "UDB_AUTH_GRPC_TARGET"), TenantID: identity.TenantID, ProjectID: identity.ProjectID, Purpose: identity.Purpose, Credentials: Credentials{APIKey: key.GetPlainKey()}, Deadline: 5 * time.Second, Retry: RetryConfig{MaxAttempts: 1}})
+	if err != nil {
+		t.Fatalf("actual API-key Connect: code=%s", status.Code(err))
+	}
+	defer service.Close()
+	principal := service.Principal()
+	if principal == nil || principal.GetPrincipalId() != serviceID || principal.GetUserId() != "" || principal.GetSubject() != name || principal.GetTenantId() != identity.TenantID || principal.GetProjectId() != identity.ProjectID || principal.GetServiceIdentity() != name || principal.GetAccountKind() != authnentpb.AccountKind_ACCOUNT_KIND_SERVICE_ACCOUNT {
+		t.Fatal("actual key must return its owned canonical service principal")
+	}
+	beforeMeta, beforeData, beforeAuth := service.Meta, service.Data, service.Auth
+	beforeMeta.Scopes = slices.Clone(service.Meta.Scopes)
+	requestCtx := liveRequestContext(identity.TenantID, identity.ProjectID, identity.Purpose)
+	if result, err := operator.Data.Upsert(ctx, &entityv1.UpsertRequest{Context: requestCtx, MessageType: liveMessageType, RecordJson: liveRecordJSON(t, recordID, identity.TenantID, identity.ProjectID, recordID, "g1-api-key-live", 1), ConflictFields: []string{"record_id"}}); err != nil || result.GetAffectedRows() != 1 {
+		t.Fatalf("owned API-key row: code=%s", status.Code(err))
+	}
+	read := &entityv1.SelectRequest{Context: requestCtx, MessageType: liveMessageType, Limit: 1, Filter: liveStruct(t, map[string]any{"record_id": recordID, "tenant_id": identity.TenantID, "project_id": identity.ProjectID})}
+	currentBearer := func() string {
+		service.apiKey.mu.Lock()
+		defer service.apiKey.mu.Unlock()
+		return strings.TrimPrefix(service.apiKey.bearer, "Bearer ")
+	}
+	verify := func(token string) liveG1Claims {
+		parts := strings.Split(token, ".")
+		if len(parts) != 3 {
+			t.Fatal("API exchange did not issue actual JWT")
+		}
+		raw, err := base64.RawURLEncoding.DecodeString(parts[1])
+		if err != nil {
+			t.Fatal("API JWT claims decoding")
+		}
+		var claims liveG1Claims
+		if json.Unmarshal(raw, &claims) != nil || claims.ExpiresAt-claims.IssuedAt != 20 || claims.IssuedAt <= 0 || !time.Now().Before(time.Unix(claims.ExpiresAt, 0)) || claims.UserID != serviceID || claims.TenantID != identity.TenantID || claims.ProjectID != identity.ProjectID || claims.ServiceIdentity != name {
+			t.Fatal("API JWT must have actual20s TTL and owned identity")
+		}
+		claimIdentity := beforeMeta
+		claimIdentity.UserID = serviceID
+		liveG1AssertIdentity(t, claimIdentity, claims.TenantID, claims.ProjectID, claims.UserID, claims.ServiceIdentity, claims.Scopes)
+		// Exercise the managed service's native transport with its own narrow
+		// validate-token grant, rather than verifying through the operator channel.
+		verified, err := service.Auth.Authn.ValidateToken(ctx, &authnv1.ValidateTokenRequest{Token: token, TokenType: authnentpb.TokenType_TOKEN_TYPE_JWT_ACCESS})
+		if err != nil || !verified.GetValid() || verified.GetPrincipal() == nil {
+			t.Fatalf("native verification of actual API JWT: code=%s", status.Code(err))
+		}
+		p := verified.GetPrincipal()
+		if p.GetPrincipalId() != serviceID || p.GetAccountKind() != authnentpb.AccountKind_ACCOUNT_KIND_SERVICE_ACCOUNT {
+			t.Fatal("native API JWT principal changed")
+		}
+		// JWT verification names its durable subject as UserId; the initial
+		// API-key exchange deliberately leaves the service facade UserID empty.
+		liveG1AssertIdentity(t, claimIdentity, p.GetTenantId(), p.GetProjectId(), p.GetUserId(), p.GetServiceIdentity(), p.GetScopes())
+		return claims
+	}
+	previous := currentBearer()
+	previousClaims := verify(previous)
+	rotations := 0
+	horizon := time.Time{}
+	ticker := time.NewTicker(time.Second)
+	defer ticker.Stop()
+	for {
+		if current := currentBearer(); current != previous {
+			claims := verify(current)
+			if claims.IssuedAt <= previousClaims.IssuedAt {
+				t.Fatal("API exchange did not advance actual JWT issuance")
+			}
+			horizon = time.Unix(previousClaims.ExpiresAt, 0).Add(time.Second)
+			previous, previousClaims = current, claims
+			rotations++
+		}
+		for _, path := range []string{"data", "raw", "generated"} {
+			var rows *entityv1.RecordSet
+			var err error
+			switch path {
+			case "data":
+				rows, err = service.Data.Select(ctx, read)
+			case "raw":
+				rows, err = service.Data.Broker.Select(ctx, read)
+			case "generated":
+				rows = &entityv1.RecordSet{}
+				err = service.Generated.InvokeUnary(ctx, "/udb.services.v1.DataBroker/Select", read, rows)
+			}
+			if err != nil || len(rows.GetRecordsJson()) != 1 || liveRecordPayload(t, rows, 0) != "g1-api-key-live" {
+				t.Fatalf("API key %s after renewal: code=%s", path, status.Code(err))
+			}
+		}
+		if !reflect.DeepEqual(beforeMeta, service.Meta) || beforeData != service.Data || beforeAuth != service.Auth || service.CredentialErr() != nil {
+			t.Fatal("automatic API exchange changed identity/facades or failed")
+		}
+		if rotations >= 3 && time.Now().After(horizon) {
+			break
+		}
+		select {
+		case <-ticker.C:
+		case <-ctx.Done():
+			t.Fatalf("three actual API exchanges incomplete: %d", rotations)
+		}
+	}
+	if _, err := operator.ApiKey.Raw.RevokeApiKey(ctx, &apikeyv1.RevokeApiKeyRequest{KeyId: keyID, RevokeReason: "G1 actual renewal refusal", Context: commonContext(serviceID)}); err != nil {
+		t.Fatalf("real key revocation: code=%s", status.Code(err))
+	}
+	keyID = "" // The owned key was already successfully revoked.
+	// Wait for the natural renewal error; no fake expiry/store mutation. Once
+	// recorded, direct transports must not emit the prior still-live bearer.
+	for service.CredentialErr() == nil {
+		select {
+		case <-ticker.C:
+		case <-ctx.Done():
+			t.Fatal("revoked key never reached natural exchange refusal")
+		}
+	}
+	if _, err := service.Data.Broker.Select(ctx, read); status.Code(err) != codes.Unauthenticated {
+		t.Fatalf("revoked API direct transport: code=%s", status.Code(err))
+	}
+	if err := service.Generated.InvokeUnary(ctx, "/udb.services.v1.DataBroker/Select", read, &entityv1.RecordSet{}); status.Code(err) != codes.Unauthenticated {
+		t.Fatalf("revoked API generated transport: code=%s", status.Code(err))
+	}
+	if _, err := service.Auth.Authn.ValidateToken(ctx, &authnv1.ValidateTokenRequest{Token: previous, TokenType: authnentpb.TokenType_TOKEN_TYPE_JWT_ACCESS}); status.Code(err) != codes.Unauthenticated {
+		t.Fatalf("revoked API native transport: code=%s", status.Code(err))
+	}
+	t.Logf("G1 API-key proof: %d natural actual20s renewals, immutable identity, direct/generated local refusal after real revocation", rotations)
+}
+
+// Stop and join the real loop before revoking the owned login session, so
+// cleanup cannot trigger a background re-login after its successful revocation.
+func liveG1CleanupOwnedSession(t *testing.T, sess *EnterpriseSession) {
+	t.Helper()
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	sess.stopOnce.Do(func() { close(sess.stopRefresh) })
+	select {
+	case <-sess.refreshDone:
+	case <-ctx.Done():
+		t.Error("owned session renewal loop did not stop for cleanup")
+		return
+	}
+	tok, err := sess.tm.Token(ctx)
+	if err != nil || tok.SessionID == "" {
+		t.Errorf("owned session cleanup credential: code=%s", status.Code(err))
+		return
+	}
+	identity := sess.Meta
+	if _, err := sess.Auth.Authn.RevokeSession(ctx, &authnv1.RevokeSessionRequest{SessionId: tok.SessionID, PrincipalId: identity.UserID, RevokeReason: "G1 owned lifecycle cleanup", Context: &commonpb.RequestContext{Tenant: &commonpb.TenantContext{TenantId: identity.TenantID, ProjectId: identity.ProjectID}, UserId: identity.UserID, PrincipalId: identity.UserID, Purpose: identity.Purpose}}); err != nil {
+		t.Errorf("owned session cleanup: code=%s", status.Code(err))
+	}
+}
+
+// A real native BeginTx opening is repeated across each natural password
+// rotation; its COMMITTED frame proves successful stream authentication.
+func liveG1ExerciseTransactionStream(t *testing.T, ctx context.Context, sess *EnterpriseSession, identity Metadata, recordID string) {
+	t.Helper()
+	streamCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+	stream, err := sess.Data.Broker.BeginTx(streamCtx)
+	if err != nil {
+		t.Fatalf("actual transaction stream opening: code=%s", status.Code(err))
+	}
+	txID := uuid4()
+	requestCtx := liveRequestContext(identity.TenantID, identity.ProjectID, identity.Purpose)
+	if err := stream.Send(&entityv1.Mutation{Context: requestCtx, TxId: txID, Operation: "upsert", MessageType: liveMessageType, RecordJson: liveRecordJSON(t, recordID, identity.TenantID, identity.ProjectID, recordID, "g1-session-live", 1)}); err != nil {
+		t.Fatalf("transaction stream send: code=%s", status.Code(err))
+	}
+	if err := stream.Send(&entityv1.Mutation{Context: requestCtx, TxId: txID, Commit: true}); err != nil {
+		t.Fatalf("transaction stream commit send: code=%s", status.Code(err))
+	}
+	_ = stream.CloseSend()
+	committed := false
+	for {
+		frame, err := stream.Recv()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			t.Fatalf("transaction stream receive: code=%s", status.Code(err))
+		}
+		if frame.GetState() == entityv1.TxStatus_TX_STATE_ERROR || frame.GetState() == entityv1.TxStatus_TX_STATE_ROLLED_BACK {
+			t.Fatal("transaction stream refused owned write")
+		}
+		committed = committed || frame.GetState() == entityv1.TxStatus_TX_STATE_COMMITTED
+	}
+	if !committed {
+		t.Fatal("transaction stream did not return COMMITTED")
+	}
 }

@@ -3,6 +3,7 @@ package udbclient
 import (
 	"context"
 	"crypto/tls"
+	"errors"
 	"fmt"
 	"sync"
 	"time"
@@ -10,7 +11,6 @@ import (
 	authnv1 "github.com/fahara02/udb/sdk/go/gen/udb/core/authn/services/v1"
 	lockv1 "github.com/fahara02/udb/sdk/go/gen/udb/core/lock/services/v1"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/metadata"
 )
 
 // EnterpriseConfig drives ConnectEnterprise, the one-call production-path setup:
@@ -171,6 +171,7 @@ func ConnectEnterprise(ctx context.Context, cfg EnterpriseConfig) (*EnterpriseSe
 	}
 	identity := u.Meta
 	identity.Scopes = append([]string(nil), identity.Scopes...)
+	principalBinding := principalCredentialBinding(principal)
 	sess.relogin = func(ctx context.Context) (Token, error) {
 		again, err := u.loginAndVerify(ctx, &authnv1.LoginRequest{
 			Username:    cfg.Username,
@@ -181,11 +182,34 @@ func ConnectEnterprise(ctx context.Context, cfg EnterpriseConfig) (*EnterpriseSe
 		if err != nil {
 			return Token{}, err
 		}
+		if err := principalBinding.validate(again.Principal); err != nil {
+			return Token{}, &credentialBindingError{cause: err}
+		}
 		if err := u.validateRenewalPrincipal(again.Principal, identity); err != nil {
-			return Token{}, fmt.Errorf("udb: re-login: %w", err)
+			return Token{}, &credentialBindingError{cause: fmt.Errorf("udb: re-login: %w", err)}
 		}
 		return again.Token, nil
 	}
+	sess.tm.recoveryOwner = u.credential
+	sess.tm.recover = sess.relogin
+	sess.tm.validate = func(ctx context.Context, tok *Token) error {
+		who, err := u.Auth.AuthenticateBearer(u.recoveryContext(ctx, credentialAuthenticate), tok.AccessToken)
+		if err != nil {
+			return err
+		}
+		if err := principalBinding.validate(who.GetPrincipal()); err != nil {
+			return &credentialBindingError{cause: err}
+		}
+		if err := u.validateRenewalPrincipal(who.GetPrincipal(), identity); err != nil {
+			return &credentialBindingError{cause: err}
+		}
+		if expiry := who.GetExpiresAtUnix(); expiry > 0 {
+			tok.ExpiresAt = time.Unix(expiry, 0)
+		}
+		return nil
+	}
+	sess.tm.publish = sess.publishBearer
+	u.credential.provider.Store(&credentialProvider{resolve: sess.currentBearer, refusal: sess.credentialError})
 	// Refresh the bearer proactively in the background so no data-plane call pays
 	// the RefreshToken round-trip, and so an unrefreshable (revoked/expired) token
 	// fails closed locally. Stopped by Close.
@@ -193,11 +217,9 @@ func ConnectEnterprise(ctx context.Context, cfg EnterpriseConfig) (*EnterpriseSe
 	return sess, nil
 }
 
-// DataContext returns a context for DataBroker calls (s.Data.Broker.*) carrying
-// the verified metadata AND an explicit bearer. The connection interceptor
-// also carries the session's current installed bearer on an ordinary context.
-// Explicit AsUser delegation keeps its selected bearer without resolving or
-// appending the session bearer; poison/cancellation checks still apply.
+// DataContext carries verified metadata for DataBroker calls. The owned
+// transport resolves the current credential at invocation. AsUser keeps its
+// selected bearer while the owner's poison and cancellation checks still apply.
 func (s *EnterpriseSession) DataContext(ctx context.Context) context.Context {
 	if pctx, poisoned := s.poisonedContext(ctx); poisoned {
 		return pctx
@@ -205,12 +227,11 @@ func (s *EnterpriseSession) DataContext(ctx context.Context) context.Context {
 	if _, delegated := ctx.Value(asUserContextKey{}).(asUserContext); delegated {
 		return s.Udb.Data.Context(ctx)
 	}
-	return metadata.AppendToOutgoingContext(s.Udb.Data.Context(ctx), "authorization", s.currentBearer(ctx))
+	return s.Udb.Data.Context(ctx)
 }
 
-// NativeContext returns a context for native control-plane calls (ApiKey/Tenant/
-// Notification/…) carrying the verified metadata AND the bearer. Explicit
-// AsUser delegation retains its bearer and the session's local poison checks.
+// NativeContext carries verified metadata for native calls. The owned transport
+// resolves the credential at invocation; AsUser retains its selected bearer.
 func (s *EnterpriseSession) NativeContext(ctx context.Context) context.Context {
 	if pctx, poisoned := s.poisonedContext(ctx); poisoned {
 		return pctx
@@ -218,7 +239,7 @@ func (s *EnterpriseSession) NativeContext(ctx context.Context) context.Context {
 	if _, delegated := ctx.Value(asUserContextKey{}).(asUserContext); delegated {
 		return s.Udb.Auth.Context(ctx)
 	}
-	return metadata.AppendToOutgoingContext(s.Udb.Auth.Context(ctx), "authorization", s.currentBearer(ctx))
+	return s.Udb.Auth.Context(ctx)
 }
 
 // startRefreshLoop launches the background bearer refresher: it wakes shortly
@@ -271,43 +292,20 @@ func (s *EnterpriseSession) nextRefreshWait() time.Duration {
 // is actually expired (a transient blip while the token is still valid must not
 // fail closed).
 func (s *EnterpriseSession) backgroundRefresh() {
-	ctx, cancel := context.WithTimeout(context.Background(), bgRefreshTimeout)
+	base := context.Background()
+	if s.Udb != nil && s.Udb.credential != nil {
+		base = s.Udb.credential.ctx
+	}
+	ctx, cancel := context.WithTimeout(base, bgRefreshTimeout)
 	defer cancel()
 	refErr := s.tm.RefreshIfNeeded(ctx)
 
-	// The refresh token itself is unusable (revoked, expired, session gone):
-	// log in again instead of holding a bearer that can no longer be renewed.
-	if refErr != nil && s.relogin != nil {
-		if fresh, err := s.relogin(ctx); err == nil {
-			if err := s.tm.store.Save(ctx, fresh); err == nil {
-				refErr = nil
-			} else {
-				refErr = err
-			}
-		} else {
-			refErr = fmt.Errorf("%w (re-login also failed: %v)", refErr, err)
-		}
+	if refErr == nil {
+		refErr = s.publishBearer(ctx)
 	}
-
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	// Reload after acquiring the publication lock. A caller may have refreshed
-	// and installed a newer stored credential while this attempt was delayed.
-	tok, loadErr := s.tm.store.Load(ctx)
-	now := s.tm.now()
-	if refErr == nil && loadErr == nil && tok.AccessToken != "" {
-		s.setBearerLocked("Bearer " + tok.AccessToken)
-		s.lastRefreshErr = nil
-		s.poisoned = false
-		return
+	if refErr != nil {
+		s.recordCredentialError(ctx, refErr)
 	}
-	switch {
-	case refErr != nil:
-		s.lastRefreshErr = refErr
-	case loadErr != nil:
-		s.lastRefreshErr = loadErr
-	}
-	s.poisoned = loadErr != nil || !tok.Valid(now, 0)
 }
 
 // poisonedContext returns an already-cancelled context whose cancel cause is the
@@ -356,35 +354,73 @@ func (s *EnterpriseSession) Bearer() string {
 	return s.bearer
 }
 
-// currentBearer resolves the live bearer, refreshing the access token once when it
-// is expired or within the manager's refresh skew (concurrent callers share ONE
-// RefreshToken RPC via the TokenManager's single-flight). On success it atomically
-// updates the cached bearer AND the generated client's authorization (setBearerLocked)
-// so Bearer() and generated-client calls both reflect the refreshed token too. If
-// refresh fails it returns the last-known bearer, which the broker rejects as
-// Unauthenticated — so a call never silently succeeds on an expired credential
-// (fail closed) rather than proceeding with a stale-but-valid-looking token.
-func (s *EnterpriseSession) currentBearer(ctx context.Context) string {
+// currentBearer joins the owned renewal flight and publishes its verified store
+// snapshot. A failed renewal returns an error without returning the old bearer.
+func (s *EnterpriseSession) currentBearer(ctx context.Context) (string, error) {
+	if err := ctx.Err(); err != nil {
+		return "", credentialRefusal(err)
+	}
 	if s.tm == nil {
 		s.mu.Lock()
 		defer s.mu.Unlock()
-		return s.bearer
+		if s.bearer == "" {
+			return "", fmt.Errorf("udb: session has no bearer")
+		}
+		return s.bearer, nil
 	}
 	_, err := s.tm.Token(ctx)
 	if err != nil {
-		s.mu.Lock()
-		defer s.mu.Unlock()
-		return s.bearer
+		s.recordCredentialError(ctx, err)
+		return "", credentialRefusal(err)
+	}
+	if err := s.publishBearer(ctx); err != nil {
+		s.recordCredentialError(ctx, err)
+		return "", credentialRefusal(err)
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	// Resolving/refreshing above may block; never publish its earlier snapshot
-	// after another caller has already installed the current stored token.
-	tok, err := s.tm.store.Load(ctx)
-	if err == nil && tok.AccessToken != "" {
-		s.setBearerLocked("Bearer " + tok.AccessToken)
+	return s.bearer, nil
+}
+
+func (s *EnterpriseSession) publishBearer(ctx context.Context) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if err := ctx.Err(); err != nil {
+		return err
 	}
-	return s.bearer
+	// The store is reloaded under publication ownership; never install the
+	// earlier snapshot obtained before waiting for a competing publisher.
+	tok, err := s.tm.store.Load(ctx)
+	if err != nil {
+		return err
+	}
+	if !tok.Valid(s.tm.now(), 0) {
+		return fmt.Errorf("udb: session bearer is empty or expired")
+	}
+	s.setBearerLocked("Bearer " + tok.AccessToken)
+	s.lastRefreshErr, s.poisoned = nil, false
+	return nil
+}
+
+func (s *EnterpriseSession) recordCredentialError(ctx context.Context, err error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.lastRefreshErr = err
+	tok, loadErr := s.tm.store.Load(ctx)
+	var binding *credentialBindingError
+	s.poisoned = errors.As(err, &binding) || loadErr != nil || !tok.Valid(s.tm.now(), 0)
+}
+
+func (s *EnterpriseSession) credentialError() error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.poisoned {
+		if s.lastRefreshErr == nil {
+			return credentialRefusal(fmt.Errorf("session is not authorized"))
+		}
+		return credentialRefusal(s.lastRefreshErr)
+	}
+	return nil
 }
 
 // setBearerLocked caches the refreshed bearer AND propagates it to the embedded
@@ -422,10 +458,9 @@ func (s *EnterpriseSession) ValidateTenant(recordTenantID string) error {
 // session's Close tears it down. Its dial-time interceptors read the SAME
 // GeneratedClient that tenant adoption (SetMeta) and the background bearer
 // refresher (SetAuthorization) keep current, so a bare-context call still carries
-// the canonical adopted identity and the live bearer. For the strongest guarantee
-// — a single-flight-refreshed bearer AND local fail-closed when the session is
-// poisoned — pair every call with NativeContext (as above), which is exactly what
-// the typed LockService facade below does. The return type mirrors
+// the canonical adopted identity and resolves the live bearer, including local
+// refusal for a poisoned owner. NativeContext supplies explicit audit metadata.
+// The return type mirrors
 // GeneratedClient.Conn(): a grpc.ClientConnInterface is all any generated
 // NewXxxClient constructor needs.
 func (s *EnterpriseSession) NativeConn() grpc.ClientConnInterface {

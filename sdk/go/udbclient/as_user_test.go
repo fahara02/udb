@@ -133,6 +133,9 @@ func (f *asUserWireFixture) GetCapabilities(ctx context.Context, _ *entityv1.Cap
 }
 
 func (f *asUserWireFixture) ValidateToken(ctx context.Context, request *authnv1.ValidateTokenRequest) (*authnv1.ValidateTokenResponse, error) {
+	if request.GetTokenType() != authnentpb.TokenType_TOKEN_TYPE_JWT_ACCESS {
+		return nil, status.Error(codes.InvalidArgument, "token_type must identify a JWT access token")
+	}
 	if err := f.admit(ctx); err != nil {
 		return nil, err
 	}
@@ -267,14 +270,19 @@ func TestAsUserUsesOneBearerWithoutServiceHintsOnOwnedConnections(t *testing.T) 
 		Credentials: Credentials{APIKey: "fixture-legacy-key", RawAPIKey: true},
 		Purpose:     "service-purpose", Retry: RetryConfig{MaxAttempts: 1}, Deadline: 3 * time.Second,
 	})
-	if err != nil {
-		t.Fatalf("production legacy Connect failed: code=%s", status.Code(err))
+	if err == nil || legacy != nil {
+		if legacy != nil {
+			_ = legacy.Close()
+		}
+		t.Fatal("Connect must refuse legacy raw API-key mode")
 	}
-	t.Cleanup(func() { _ = legacy.Close() })
-	if _, err := legacy.Data.Broker.GetCapabilities(legacy.AsUser(WithMetadata(ctx, delegatedAudit), "fixture-user-bearer"), &entityv1.CapabilitiesRequest{}); err != nil {
+	// The low-level explicit static option remains caller-owned. Delegation
+	// must suppress it without changing the default or adding another credential.
+	legacyGenerated := NewGenerated(u.brokerConn, Options{APIKey: "fixture-legacy-key", Meta: u.Meta, Retry: RetryConfig{MaxAttempts: 1}})
+	if err := legacyGenerated.InvokeUnary(u.AsUser(WithMetadata(ctx, delegatedAudit), "fixture-user-bearer"), "/udb.services.v1.DataBroker/GetCapabilities", &entityv1.CapabilitiesRequest{}, &entityv1.CapabilitiesResponse{}); err != nil {
 		t.Fatalf("legacy raw-key default overrode delegation: code=%s", status.Code(err))
 	}
-	if legacy.Generated.options().APIKey != "fixture-legacy-key" {
+	if legacyGenerated.options().APIKey != "fixture-legacy-key" {
 		t.Fatal("request delegation changed the ordinary legacy credential default")
 	}
 	for _, invalid := range []string{"", "not-a-token"} {

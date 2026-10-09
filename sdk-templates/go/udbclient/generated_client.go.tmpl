@@ -330,6 +330,8 @@ type GeneratedClient struct {
 	// tenant/authorization header pair to a concurrent call. Reads go through
 	// options() (a single atomic load); the read-mostly path stays lock-free.
 	opt atomic.Pointer[Options]
+	// One owner-bound resolver governs all owned transports and escape hatches.
+	credential atomic.Pointer[credentialResolver]
 	// Retain only the latest warned version, rather than an unbounded set of
 	// versions seen across reconnects or a rolling broker deployment.
 	serverVersion atomic.Pointer[serverVersionObservation]
@@ -529,18 +531,30 @@ func (g *GeneratedClient) outgoingContext(ctx context.Context) context.Context {
 	if o.APIKey != "" {
 		add("x-api-key", o.APIKey)
 	}
-	if rid := o.RequestID; rid != "" {
-		add("x-request-id", rid)
-	} else if m.CorrelationID != "" {
-		// m is the MERGED metadata, so a per-request correlation id also
-		// satisfies the server's request-context requirement here.
-		add("x-request-id", m.CorrelationID)
-	} else if len(existing.Get("x-request-id")) == 0 &&
-		len(existing.Get("x-correlation-id")) == 0 &&
-		len(existing.Get("traceparent")) == 0 {
-		// Native methods require request context; a caller that set no id
-		// still gets a fresh per-call one instead of a PERMISSION_DENIED.
-		add("x-request-id", fmt.Sprintf("%016x%016x", rand.Uint64(), rand.Uint64()))
+	hasNonempty := func(key string) bool {
+		for _, value := range existing.Get(key) {
+			if strings.TrimSpace(value) != "" {
+				return true
+			}
+		}
+		return false
+	}
+	requestID := o.RequestID
+	if strings.TrimSpace(requestID) == "" {
+		requestID = m.CorrelationID
+	}
+	if strings.TrimSpace(requestID) == "" && !hasNonempty("x-request-id") &&
+		!hasNonempty("x-correlation-id") && !hasNonempty("traceparent") {
+		// Typed contexts may contain empty audit headers. They do not satisfy
+		// the native request-context guard; generate a real identifier.
+		requestID = fmt.Sprintf("%016x%016x", rand.Uint64(), rand.Uint64())
+	}
+	if strings.TrimSpace(requestID) != "" && !hasNonempty("x-request-id") {
+		// Replace an empty request-id singleton instead of letting add() keep
+		// it. Copy first so the caller's outgoing metadata stays unchanged.
+		existing = existing.Copy()
+		existing.Set("x-request-id", requestID)
+		ctx = metadata.NewOutgoingContext(ctx, existing)
 	}
 	if len(pairs) == 0 {
 		return ctx
@@ -574,12 +588,19 @@ func (g *GeneratedClient) InvokeUnary(ctx context.Context, fullMethod string, re
 			select {
 			case <-time.After(rc.backoff(attempt - 1)):
 			case <-ctx.Done():
-				return mapError(fullMethod, ctx.Err(), nil)
+				return mapError(fullMethod, credentialContextError(ctx), nil)
 			}
 		}
-		callCtx, cancel := g.withDeadline(g.outgoingContext(ctx))
+		callCtx, cancel := g.withDeadline(ctx)
+		callCtx, err := g.prepareCredential(callCtx, fullMethod)
+		if err != nil {
+			cancel()
+			return mapError(fullMethod, err, nil)
+		}
 		capture, callOpts := captureResponseMetadata(opts)
-		err := g.conn.Invoke(callCtx, fullMethod, req, reply, callOpts...)
+		callCtx, retireHandoff := g.credentialHandoff(callCtx, fullMethod)
+		err = g.conn.Invoke(callCtx, fullMethod, req, reply, callOpts...)
+		retireHandoff()
 		cancel()
 		capture.publish()
 		var versionErr error
@@ -603,8 +624,13 @@ func (g *GeneratedClient) InvokeUnary(ctx context.Context, fullMethod string, re
 // stream (LiveQuery, PublishCDC, downloads) is long-lived and the unary call
 // budget would kill it. The caller's own context deadline still applies.
 func (g *GeneratedClient) NewServerStream(ctx context.Context, fullMethod string, desc *grpc.StreamDesc, req any, opts ...grpc.CallOption) (grpc.ClientStream, error) {
-	callCtx, cancel := g.streamContext(ctx, true)
+	callCtx, cancel, err := g.streamContext(ctx, fullMethod, true)
+	if err != nil {
+		return nil, mapError(fullMethod, err, nil)
+	}
+	callCtx, retireHandoff := g.credentialHandoff(callCtx, fullMethod)
 	cs, err := g.conn.NewStream(callCtx, desc, fullMethod, opts...)
+	retireHandoff()
 	if err != nil {
 		cancel()
 		return nil, mapError(fullMethod, err, nil)
@@ -628,8 +654,13 @@ func (g *GeneratedClient) NewServerStream(ctx context.Context, fullMethod string
 // e.g. WebRTC Signal) is long-lived and gets no implicit deadline; the caller's
 // own context deadline still applies.
 func (g *GeneratedClient) NewClientStream(ctx context.Context, fullMethod string, desc *grpc.StreamDesc, opts ...grpc.CallOption) (grpc.ClientStream, error) {
-	callCtx, cancel := g.streamContext(ctx, desc != nil && desc.ServerStreams)
+	callCtx, cancel, err := g.streamContext(ctx, fullMethod, desc != nil && desc.ServerStreams)
+	if err != nil {
+		return nil, mapError(fullMethod, err, nil)
+	}
+	callCtx, retireHandoff := g.credentialHandoff(callCtx, fullMethod)
 	cs, err := g.conn.NewStream(callCtx, desc, fullMethod, opts...)
+	retireHandoff()
 	if err != nil {
 		cancel()
 		return nil, mapError(fullMethod, err, nil)
@@ -637,13 +668,20 @@ func (g *GeneratedClient) NewClientStream(ctx context.Context, fullMethod string
 	return &cancelOnCloseStream{ClientStream: g.versionStream(cs, cancel), cancel: cancel}, nil
 }
 
-func (g *GeneratedClient) streamContext(ctx context.Context, serverStreams bool) (context.Context, context.CancelFunc) {
-	callCtx, cancel := context.WithCancel(g.outgoingContext(ctx))
-	if serverStreams {
-		return callCtx, cancel
+func (g *GeneratedClient) streamContext(ctx context.Context, method string, serverStreams bool) (context.Context, context.CancelFunc, error) {
+	callCtx, cancel := context.WithCancel(ctx)
+	if !serverStreams {
+		deadlineCtx, deadlineCancel := g.withDeadline(callCtx)
+		callCtx = deadlineCtx
+		plainCancel := cancel
+		cancel = func() { deadlineCancel(); plainCancel() }
 	}
-	deadlineCtx, deadlineCancel := g.withDeadline(callCtx)
-	return deadlineCtx, func() { deadlineCancel(); cancel() }
+	prepared, err := g.prepareCredential(callCtx, method)
+	if err != nil {
+		cancel()
+		return nil, cancel, err
+	}
+	return prepared, cancel, nil
 }
 
 func (g *GeneratedClient) versionStream(stream grpc.ClientStream, cancel context.CancelFunc) grpc.ClientStream {
@@ -744,12 +782,21 @@ func (g *GeneratedClient) unaryInterceptor() grpc.UnaryClientInterceptor {
 				select {
 				case <-time.After(rc.backoff(attempt - 1)):
 				case <-ctx.Done():
-					return mapError(method, ctx.Err(), nil)
+					return mapError(method, credentialContextError(ctx), nil)
 				}
 			}
-			callCtx, cancel := g.withDeadline(g.outgoingContext(ctx))
+			attemptCtx := ctx
+			if attempt > 0 {
+				attemptCtx = context.WithValue(ctx, credentialPreparedKey{}, nil)
+			}
+			callCtx, cancel := g.withDeadline(attemptCtx)
+			callCtx, err := g.prepareCredential(callCtx, method)
+			if err != nil {
+				cancel()
+				return mapError(method, err, nil)
+			}
 			capture, callOpts := captureResponseMetadata(opts)
-			err := invoker(callCtx, method, req, reply, cc, callOpts...)
+			err = invoker(callCtx, method, req, reply, cc, callOpts...)
 			cancel()
 			capture.publish()
 			var versionErr error
@@ -778,7 +825,10 @@ func (g *GeneratedClient) streamInterceptor() grpc.StreamClientInterceptor {
 		// the timeout would kill after a few seconds, so it gets no implicit
 		// deadline; the caller's own context deadline still applies.
 		// Client-streaming uploads (BeginTx, PutObject) keep the call timeout.
-		callCtx, cancel := g.streamContext(ctx, desc != nil && desc.ServerStreams)
+		callCtx, cancel, err := g.streamContext(ctx, method, desc != nil && desc.ServerStreams)
+		if err != nil {
+			return nil, mapError(method, err, nil)
+		}
 		cs, err := streamer(callCtx, desc, cc, method, opts...)
 		if err != nil {
 			cancel()
@@ -787,6 +837,7 @@ func (g *GeneratedClient) streamInterceptor() grpc.StreamClientInterceptor {
 		return &cancelOnCloseStream{ClientStream: g.versionStream(cs, cancel), cancel: cancel}, nil
 	}
 }
+
 // AsError extracts a *Error from any error returned by this layer, if present.
 func AsError(err error) (*Error, bool) {
 	var e *Error

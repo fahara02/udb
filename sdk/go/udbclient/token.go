@@ -2,6 +2,8 @@ package udbclient
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"sync"
 	"time"
 
@@ -102,6 +104,14 @@ type TokenManager struct {
 
 	mu       sync.Mutex
 	inflight *tokenRefreshFlight // non-nil while a refresh is running
+	// Owned enterprise lifecycle callbacks are installed before publication.
+	// Refresh, permitted recovery, validation and publication share this flight.
+	recoveryOwner *credentialOwner
+	validate      func(context.Context, *Token) error
+	recover       func(context.Context) (Token, error)
+	publish       func(context.Context) error
+	needsRecovery bool
+	terminalErr   error
 }
 
 // A completed flight retains its own result for every waiter. A later refresh
@@ -195,6 +205,15 @@ func tokenFromAuthn(resp *authnv1.AuthnResponse, now time.Time) Token {
 // within RefreshSkew of expiry. Concurrent callers that all see a stale token
 // share exactly one RefreshToken RPC.
 func (m *TokenManager) Token(ctx context.Context) (Token, error) {
+	if err := ctx.Err(); err != nil {
+		return Token{}, err
+	}
+	m.mu.Lock()
+	terminal := m.terminalErr
+	m.mu.Unlock()
+	if terminal != nil {
+		return Token{}, terminal
+	}
 	tok, err := m.store.Load(ctx)
 	if err != nil {
 		return Token{}, err
@@ -205,13 +224,26 @@ func (m *TokenManager) Token(ctx context.Context) (Token, error) {
 	if err := m.RefreshIfNeeded(ctx); err != nil {
 		return Token{}, err
 	}
-	return m.store.Load(ctx)
+	tok, err = m.store.Load(ctx)
+	if err == nil && !tok.Valid(m.now(), 0) {
+		return Token{}, fmt.Errorf("udb: renewed bearer is empty or expired")
+	}
+	return tok, err
 }
 
 // RefreshIfNeeded refreshes the stored token if it is stale, sharing one
 // in-flight refresh among concurrent callers. If the token is already fresh it
 // returns immediately.
 func (m *TokenManager) RefreshIfNeeded(ctx context.Context) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	m.mu.Lock()
+	terminal := m.terminalErr
+	m.mu.Unlock()
+	if terminal != nil {
+		return terminal
+	}
 	tok, err := m.store.Load(ctx)
 	if err != nil {
 		return err
@@ -221,6 +253,11 @@ func (m *TokenManager) RefreshIfNeeded(ctx context.Context) error {
 	}
 
 	m.mu.Lock()
+	if m.terminalErr != nil {
+		err := m.terminalErr
+		m.mu.Unlock()
+		return err
+	}
 	if m.inflight != nil {
 		// A refresh is already running; wait for it and adopt its result.
 		flight := m.inflight
@@ -248,11 +285,46 @@ func (m *TokenManager) RefreshIfNeeded(ctx context.Context) error {
 	// We are the leader: start the in-flight refresh with the current credential.
 	flight := &tokenRefreshFlight{done: make(chan struct{})}
 	m.inflight = flight
+	needsRecovery := m.needsRecovery
 	m.mu.Unlock()
 
-	rerr := m.doRefresh(ctx, tok)
+	var rerr error
+	if needsRecovery && m.recover != nil {
+		rerr = fmt.Errorf("udb: prior refresh outcome requires re-login")
+	} else {
+		rerr = m.doRefresh(ctx, tok)
+	}
+	var binding *credentialBindingError
+	if rerr != nil && !errors.As(rerr, &binding) && ctx.Err() == nil && m.recover != nil {
+		fresh, err := m.recover(ctx)
+		if err == nil && !fresh.Valid(m.now(), 0) {
+			err = fmt.Errorf("udb: recovery returned an empty or expired bearer")
+		}
+		if err == nil {
+			err = ctx.Err()
+		}
+		if err == nil {
+			err = m.store.Save(ctx, fresh)
+		}
+		if err == nil {
+			rerr = nil
+		} else {
+			rerr = fmt.Errorf("udb: renewal and re-login failed: %w", errors.Join(rerr, err))
+		}
+	}
+	if rerr == nil && m.publish != nil {
+		rerr = m.publish(ctx)
+	}
 
 	m.mu.Lock()
+	if errors.As(rerr, &binding) {
+		m.terminalErr = rerr
+	}
+	// A managed next flight must not resubmit an ambiguously consumed token.
+	// Successful login/verification/publication clears this retirement state.
+	if m.recover != nil {
+		m.needsRecovery = rerr != nil
+	}
 	flight.err = rerr
 	m.inflight = nil
 	close(flight.done)
@@ -262,6 +334,13 @@ func (m *TokenManager) RefreshIfNeeded(ctx context.Context) error {
 
 // doRefresh performs the actual RefreshToken RPC and persists the new token.
 func (m *TokenManager) doRefresh(ctx context.Context, prev Token) error {
+	if m.auth == nil {
+		return fmt.Errorf("udb: token refresh has no authentication client")
+	}
+	if m.recoveryOwner != nil {
+		ctx = m.recoveryOwner.recoveryContext(ctx, credentialRefresh)
+	}
+	receivedAt := m.now()
 	resp, err := m.auth.Authn.RefreshToken(m.auth.Context(ctx), &authnv1.RefreshTokenRequest{
 		RefreshToken: prev.RefreshToken,
 		SessionId:    prev.SessionID,
@@ -272,7 +351,7 @@ func (m *TokenManager) doRefresh(ctx context.Context, prev Token) error {
 	next := prev
 	next.AccessToken = resp.GetAccessToken()
 	if secs := resp.GetAccessTokenExpiresIn(); secs > 0 {
-		next.IssuedAt = m.now()
+		next.IssuedAt = receivedAt
 		next.ExpiresAt = next.IssuedAt.Add(time.Duration(secs) * time.Second)
 	}
 	// Persist the ROTATED refresh token. The broker mints a new one on every
@@ -287,6 +366,17 @@ func (m *TokenManager) doRefresh(ctx context.Context, prev Token) error {
 	// blindly assigning would erase a working credential.
 	if rotated := resp.GetRefreshToken(); rotated != "" {
 		next.RefreshToken = rotated
+	}
+	if m.validate != nil {
+		if err := m.validate(ctx, &next); err != nil {
+			return err
+		}
+	}
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	if !next.Valid(m.now(), 0) {
+		return fmt.Errorf("udb: refresh returned an empty or expired bearer")
 	}
 	return m.store.Save(ctx, next)
 }
