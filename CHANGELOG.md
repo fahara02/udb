@@ -49,6 +49,8 @@ no-wrapper plan.
 
 ### Fixed
 
+- PostgreSQL 2PC preparation preserves deferred UNIQUE/FK refusal codes and
+  complete typed diagnostics through the coordinator and served BeginTx stream.
 - SQL store errors preserve their original typed reason, column, constraint and
   retry diagnostics across string-returning store interfaces. Legacy tags retain
   their codes, and malformed typed envelopes fail with a bounded internal error.
@@ -81,6 +83,10 @@ no-wrapper plan.
 
 ### Breaking for callers
 
+- Rust XA participant code has a new `PrepareVote::Refused` variant that retains
+  the original status code and protobuf error detail.
+  - detect: code: PrepareVote
+  - fix: handle the Refused variant in exhaustive matches; preserve its code and detail when reporting a failure.
 - `DataBroker.PutPolicy` refuses writes to the obsolete authorization table.
   - detect: code: PutPolicy
   - fix: use AuthzService.PutAuthzPolicy or `udb policy apply`; UDB_ALLOW_LEGACY_PUT_POLICY=true temporarily permits legacy migration writes only.

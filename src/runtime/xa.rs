@@ -141,8 +141,65 @@ impl XaParticipantHandle {
 pub enum PrepareVote {
     /// Participant successfully prepared and is ready to commit.
     Prepared,
-    /// Participant refused (typed reason).
+    /// Participant aborted without a driver-specific refusal.
     Aborted { reason: String },
+    /// A driver refusal retains its original gRPC code and protobuf detail.
+    Refused {
+        reason: String,
+        code: i32,
+        error_detail: Vec<u8>,
+    },
+}
+
+impl PrepareVote {
+    pub(crate) fn refused(status: tonic::Status) -> Self {
+        let error_detail = status
+            .metadata()
+            .get_bin(crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY)
+            .and_then(|value| value.to_bytes().ok())
+            .map(|raw| raw.to_vec())
+            .unwrap_or_default();
+        Self::Refused {
+            reason: status.message().to_owned(),
+            code: status.code() as i32,
+            error_detail,
+        }
+    }
+
+    fn refusal_reason(&self) -> Option<&str> {
+        match self {
+            Self::Prepared => None,
+            Self::Aborted { reason } | Self::Refused { reason, .. } => Some(reason),
+        }
+    }
+
+    pub(crate) fn refusal_status(&self) -> Option<tonic::Status> {
+        use prost::Message as _;
+        let Self::Refused {
+            reason,
+            code,
+            error_detail,
+        } = self
+        else {
+            return None;
+        };
+        let grpc_code = tonic::Code::from(*code);
+        let detail = crate::proto::ErrorDetail::decode(error_detail.as_slice());
+        Some(match detail {
+            Ok(detail) if grpc_code != tonic::Code::Ok && grpc_code as i32 == *code => {
+                crate::runtime::executor_utils::status_with_typed_detail(
+                    grpc_code,
+                    reason.as_str(),
+                    detail,
+                )
+            }
+            _ => crate::runtime::executor_utils::internal_status(
+                "transaction",
+                "xa_refusal",
+                "invalid XA refusal detail",
+            ),
+        })
+    }
 }
 
 /// What the coordinator decided at PHASE 2. Stored in `XaLedgerEntry`
@@ -260,9 +317,8 @@ pub struct ParticipantOutcome {
 }
 
 /// Error from the coordinator. Mapped to `tonic::Status` by the gRPC
-/// handler — `CapabilityRefused` → `FailedPrecondition`, `PrepareFailed`
-/// → `Aborted`, `InDoubt` → `Internal` (operator must consult the
-/// recovery worker logs).
+/// handler. `PrepareFailed` retains the original driver refusal in its
+/// participant outcomes; a non-driver abort uses the coordinator fallback.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum XaError {
     /// At least one participant doesn't support 2PC. Refused before any
@@ -421,10 +477,10 @@ impl XaCoordinator {
         let mut first_failure_reason = String::new();
         for p in &participants {
             let vote = p.prepare(&xid).await;
-            if let PrepareVote::Aborted { reason } = &vote {
+            if let Some(reason) = vote.refusal_reason() {
                 had_failure = true;
                 if first_failure_reason.is_empty() {
-                    first_failure_reason = reason.clone();
+                    first_failure_reason = reason.to_owned();
                 }
             }
             outcomes.push(ParticipantOutcome {
@@ -851,7 +907,7 @@ mod tests {
         handle: XaParticipantHandle,
         prepare_outcome: PrepareVote,
         commit_outcome: Result<(), String>,
-        log: Mutex<Vec<String>>,
+        log: std::sync::Arc<Mutex<Vec<String>>>,
     }
 
     impl StubParticipant {
@@ -860,7 +916,7 @@ mod tests {
                 handle: XaParticipantHandle::new("postgres", label),
                 prepare_outcome: prepare,
                 commit_outcome: commit,
-                log: Mutex::new(Vec::new()),
+                log: std::sync::Arc::new(Mutex::new(Vec::new())),
             }
         }
     }
@@ -963,7 +1019,7 @@ mod tests {
             handle: mongo_handle,
             prepare_outcome: PrepareVote::Prepared,
             commit_outcome: Ok(()),
-            log: Mutex::new(Vec::new()),
+            log: std::sync::Arc::new(Mutex::new(Vec::new())),
         };
         let matrix = vec![
             matrix_with_two_phase("postgres", true),
@@ -1018,6 +1074,63 @@ mod tests {
             }
             other => panic!("expected PrepareFailed, got {other:?}"),
         }
+    }
+
+    #[tokio::test]
+    async fn prepare_refusal_preserves_original_status_and_rolls_back() {
+        let original = crate::runtime::error_reasons::Refusal::new(
+            crate::runtime::error_reasons::UNIQUE_VIOLATION,
+            "deferred unique refused",
+        )
+        .column("unique_key")
+        .constraint("widgets_unique_key")
+        .into_status();
+        let p1 = StubParticipant::new("p1", PrepareVote::Prepared, Ok(()));
+        let p3 = StubParticipant::new("p3", PrepareVote::Prepared, Ok(()));
+        let p1_log = p1.log.clone();
+        let p3_log = p3.log.clone();
+        let participants: Vec<Box<dyn XaParticipant>> = vec![
+            Box::new(p1),
+            Box::new(StubParticipant::new(
+                "p2",
+                PrepareVote::refused(original.clone()),
+                Ok(()),
+            )),
+            Box::new(p3),
+        ];
+        let error = XaCoordinator::execute(
+            request(),
+            participants,
+            &[matrix_with_two_phase("postgres", true)],
+        )
+        .await
+        .expect_err("driver refusal must abort phase one");
+        let XaError::PrepareFailed { ledger, failures } = error else {
+            panic!("driver refusal must stay a prepare failure");
+        };
+        assert_eq!(ledger.decision, XaDecision::RolledBack);
+        assert_eq!(ledger.reason, original.message());
+        assert!(failures.iter().all(|outcome| !outcome.committed));
+        for log in [p1_log, p3_log] {
+            assert_eq!(
+                *log.lock().unwrap(),
+                vec![
+                    format!("prepare({})", ledger.xid),
+                    format!("rollback_prepared({})", ledger.xid),
+                ]
+            );
+        }
+        let restored = failures[1].vote.refusal_status().expect("typed vote");
+        assert_eq!(restored.code(), original.code());
+        assert_eq!(restored.message(), original.message());
+        assert_eq!(
+            restored
+                .metadata()
+                .get_bin(crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY),
+            original
+                .metadata()
+                .get_bin(crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY)
+        );
     }
 
     /// Happy path: all participants vote Prepared, all commit, the

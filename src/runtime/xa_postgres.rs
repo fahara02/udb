@@ -120,19 +120,18 @@ impl XaParticipant for PostgresXaParticipant {
         let mut tx = match self.pool.begin().await {
             Ok(tx) => tx,
             Err(err) => {
-                return PrepareVote::Aborted {
-                    reason: format!("BEGIN failed: {err}"),
-                };
+                return PrepareVote::refused(crate::runtime::executor_utils::sqlx_error_to_status(
+                    "XA BEGIN", &err,
+                ));
             }
         };
         // Apply each buffered mutation inside the transaction.
         for sql in &self.mutations_sql {
             if let Err(err) = sqlx::query(sql).execute(&mut *tx).await {
-                // Rollback happens implicitly when `tx` is dropped on
-                // the error path; surface the reason to the coordinator.
-                return PrepareVote::Aborted {
-                    reason: format!("mutation failed: {err}"),
-                };
+                let status =
+                    crate::runtime::executor_utils::sqlx_error_to_status("XA mutation", &err);
+                let _ = tx.rollback().await;
+                return PrepareVote::refused(status);
             }
         }
         // `sqlx` doesn't expose `PREPARE TRANSACTION` directly because
@@ -143,9 +142,10 @@ impl XaParticipant for PostgresXaParticipant {
         // fail because the transaction is already prepared).
         let prepare_sql = format!("PREPARE TRANSACTION {}", Self::quote_xid(xid));
         if let Err(err) = sqlx::query(&prepare_sql).execute(&mut *tx).await {
-            return PrepareVote::Aborted {
-                reason: format!("PREPARE TRANSACTION failed: {err}"),
-            };
+            let status =
+                crate::runtime::executor_utils::sqlx_error_to_status("PREPARE TRANSACTION", &err);
+            let _ = tx.rollback().await;
+            return PrepareVote::refused(status);
         }
         // sqlx's tx object is now in an odd state — the transaction is
         // prepared, no longer abortable via this handle. We forget the
@@ -199,9 +199,10 @@ impl XaParticipant for ActivePostgresXaParticipant {
         );
         if let Err(err) = sqlx::query(&prepare_sql).execute(&mut *tx).await {
             let _ = tx.rollback().await;
-            return PrepareVote::Aborted {
-                reason: format!("PREPARE TRANSACTION failed: {err}"),
-            };
+            return PrepareVote::refused(crate::runtime::executor_utils::sqlx_error_to_status(
+                "PREPARE TRANSACTION",
+                &err,
+            ));
         }
         // After PREPARE the transaction is owned by PostgreSQL's prepared-xact
         // catalog. Dropping the sqlx wrapper may attempt a best-effort rollback;

@@ -211,6 +211,26 @@ async fn served_unary_and_transaction_errors_preserve_every_reason_and_original_
             detail(&original),
             "complete SQL refusal survives String leaf"
         );
+        let participant = crate::runtime::xa_postgres::PostgresXaParticipant::new(
+            crate::runtime::xa::XaParticipantHandle::new("postgres", "constraint-proof"),
+            pool.clone(),
+            vec![format!(
+                "UPDATE \"{schema}\".widgets SET {changes} WHERE id = 'seed'"
+            )],
+        );
+        let vote = crate::runtime::xa::XaParticipant::prepare(
+            &participant,
+            &crate::runtime::xa::XaCoordinator::new_xid(),
+        )
+        .await;
+        let buffered_refusal = vote
+            .refusal_status()
+            .expect("buffered PostgreSQL participant preserves real refusal");
+        assert_eq!(buffered_refusal.code(), code);
+        let buffered_detail = detail(&buffered_refusal);
+        assert_eq!(buffered_detail.reason, reason);
+        assert_eq!(buffered_detail.column, column);
+        assert_eq!(buffered_detail.constraint, constraint);
     }
     client
         .update(with_ctx(
@@ -398,6 +418,107 @@ async fn served_unary_and_transaction_errors_preserve_every_reason_and_original_
             markers, 0,
             "an earlier write must also roll back for {reason}"
         );
+    }
+
+    // Deferred constraints also fire at PREPARE, not only at plain COMMIT.
+    // Drive the same real gRPC stream through the configured 2PC protocol.
+    {
+        let _two_phase = super::ops_seams_live::EnvRestore::set("UDB_2PC_ENABLED", "true");
+        let prepared_capacity: i32 =
+            sqlx::query_scalar("SELECT current_setting('max_prepared_transactions')::int")
+                .fetch_one(&pool)
+                .await
+                .expect("PostgreSQL prepared transaction capacity");
+        assert!(
+            prepared_capacity > 0,
+            "CI must enable real PREPARE TRANSACTION"
+        );
+        let ledger_relation =
+            crate::runtime::system::SystemCatalogConfig::current().xa_ledger_relation();
+        for (index, changes, code, kind, reason, column, constraint) in [
+            (
+                0,
+                json!({"unique_key":"taken"}),
+                Code::AlreadyExists,
+                ErrorKind::Unique,
+                "UDB_UNIQUE_VIOLATION",
+                "unique_key",
+                "widgets_unique_key",
+            ),
+            (
+                1,
+                json!({"parent_deferred":"absent-parent"}),
+                Code::FailedPrecondition,
+                ErrorKind::ForeignKey,
+                "UDB_FOREIGN_KEY_VIOLATION",
+                "parent_deferred",
+                "widgets_parent_deferred_fk",
+            ),
+        ] {
+            let mut mutation = update(changes);
+            mutation.context = Some(crate::proto::RequestContext {
+                routing_policy: "tx_strategy=two_phase".into(),
+                ..Default::default()
+            });
+            mutation.commit = true;
+            let marker = format!("prepare-rolled-back-{index}");
+            let (frames, error) = transaction(
+                &mut client,
+                &tenant,
+                vec![
+                    upsert(&marker, &format!("prepare-marker-key-{index}")),
+                    mutation,
+                ],
+            )
+            .await;
+            let error = error.expect("real PREPARE must report the deferred refusal");
+            assert_eq!(error.code(), code);
+            let terminal_detail = detail(&error);
+            assert_eq!(terminal_detail.reason, reason);
+            assert_eq!(terminal_detail.kind, kind as i32);
+            assert_eq!(terminal_detail.column, column);
+            assert_eq!(terminal_detail.constraint, constraint);
+            assert!(!terminal_detail.fix_hint.is_empty());
+            assert!(
+                !terminal_detail.retryable,
+                "constraint failure is not transient"
+            );
+            let refusal = frames
+                .iter()
+                .find(|frame| frame.state == tx_status::State::TxStateError as i32)
+                .expect("PREPARE refusal frame reaches the served client");
+            assert_eq!(refusal.code, code as i32);
+            assert_eq!(refusal.error_detail.as_ref(), Some(&terminal_detail));
+            assert!(
+                !frames
+                    .iter()
+                    .any(|frame| { frame.state == tx_status::State::TxStateCommitted as i32 })
+            );
+            let markers: i64 = sqlx::query_scalar(&format!(
+                "SELECT count(*) FROM \"{schema}\".widgets WHERE id = $1"
+            ))
+            .bind(&marker)
+            .fetch_one(&pool)
+            .await
+            .expect("read PREPARE rollback");
+            assert_eq!(markers, 0, "PREPARE refusal rolls back earlier writes");
+            let ledgers: i64 = sqlx::query_scalar(&format!(
+                "SELECT count(*) FROM {ledger_relation} WHERE tenant_id = $1 AND decision = 'rolled_back'"
+            ))
+            .bind(&tenant)
+            .fetch_one(&pool)
+            .await
+            .expect("read actual phase-one rollback ledger");
+            assert_eq!(ledgers, index + 1, "proof must reach the XA coordinator");
+            let prepared: i64 = sqlx::query_scalar(&format!(
+                "SELECT count(*) FROM pg_prepared_xacts p JOIN {ledger_relation} l ON p.gid = l.xid WHERE l.tenant_id = $1"
+            ))
+            .bind(&tenant)
+            .fetch_one(&pool)
+            .await
+            .expect("check prepared transaction cleanup");
+            assert_eq!(prepared, 0, "refusal must not leak a prepared transaction");
+        }
     }
 
     // A replay must skip CAS, increments, revisions and SQL side effects. The

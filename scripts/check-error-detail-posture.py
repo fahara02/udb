@@ -4811,6 +4811,50 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
         ),
     ),
     TokenCheck(
+        "XA driver votes preserve original protobuf refusals through phase one",
+        "src/runtime/xa.rs",
+        (
+            "Refused {",
+            "error_detail: Vec<u8>",
+            "pub(crate) fn refusal_status(",
+            "if let Some(reason) = vote.refusal_reason()",
+            "prepare_refusal_preserves_original_status_and_rolls_back",
+            "assert_eq!(restored.code(), original.code());",
+            'format!("rollback_prepared({})", ledger.xid)',
+        ),
+    ),
+    TokenCheck(
+        "both PostgreSQL XA participants classify real PREPARE failures",
+        "src/runtime/xa_postgres.rs",
+        (
+            'sqlx_error_to_status("XA BEGIN", &err)',
+            'sqlx_error_to_status("XA mutation", &err)',
+            'sqlx_error_to_status("PREPARE TRANSACTION", &err)',
+            "return PrepareVote::refused(",
+        ),
+    ),
+    TokenCheck(
+        "BeginTx prefers original first-participant PREPARE refusal",
+        "src/runtime/core/tx_object.rs",
+        (
+            "XaError::PrepareFailed { ledger, failures }",
+            "outcome.vote.refusal_status()",
+            "refusal.unwrap_or_else(||",
+        ),
+    ),
+    TokenCheck(
+        "served PostgreSQL PREPARE proof verifies frame trailer rollback and ledger",
+        "src/runtime/service/live_tests/data_error_matrix_live.rs",
+        (
+            'routing_policy: "tx_strategy=two_phase".into()',
+            "PREPARE refusal frame reaches the served client",
+            "buffered PostgreSQL participant preserves real refusal",
+            "assert_eq!(refusal.error_detail.as_ref(), Some(&terminal_detail));",
+            "proof must reach the XA coordinator",
+            "refusal must not leak a prepared transaction",
+        ),
+    ),
+    TokenCheck(
         "served relational transaction key proof commits, replays and rolls back changed inputs",
         "src/runtime/service/live_tests/data_plane_seam_live.rs",
         (
@@ -10141,6 +10185,10 @@ def run_selftest() -> None:
             ("src/runtime/core/setup_data.rs", '"PostgreSQL delete commit failed"'),
             ("src/runtime/executor_utils.rs", "typed_status_store_string(&status, status.message())"),
             ("src/runtime/service/live_tests/data_error_matrix_live.rs", "complete SQL refusal survives String leaf"),
+            ("src/runtime/xa.rs", "if let Some(reason) = vote.refusal_reason()"),
+            ("src/runtime/xa_postgres.rs", 'sqlx_error_to_status("PREPARE TRANSACTION", &err)'),
+            ("src/runtime/core/tx_object.rs", "outcome.vote.refusal_status()"),
+            ("src/runtime/service/live_tests/data_error_matrix_live.rs", "proof must reach the XA coordinator"),
             ("src/runtime/executor_utils.rs", "let detail = crate::runtime::error_reasons::ensure_registered_reason(code, detail);"),
             ("src/runtime/error_reasons.rs", "ErrorKind::Quota => QUOTA_EXCEEDED"),
             ("scripts/generate-error-reasons.py", 'ROOT / "docs/reference/error-reasons.md"'),

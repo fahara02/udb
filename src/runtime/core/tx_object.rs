@@ -1269,7 +1269,7 @@ impl DataBrokerRuntime {
                         }
                         statuses.push(Err(xa_unsupported_participants_status(&unsupported)));
                     }
-                    Err(crate::runtime::xa::XaError::PrepareFailed { ledger, .. }) => {
+                    Err(crate::runtime::xa::XaError::PrepareFailed { ledger, failures }) => {
                         let _ = crate::runtime::xa_recovery::record_xa_ledger_entry(
                             pool,
                             &sys_config,
@@ -1279,7 +1279,13 @@ impl DataBrokerRuntime {
                         if let Some(ref sid) = saga_id {
                             self.saga_set_status(sid, "failed").await;
                         }
-                        statuses.push(Err(
+                        let refusal = failures
+                            .iter()
+                            .find(|outcome| {
+                                !matches!(outcome.vote, crate::runtime::xa::PrepareVote::Prepared)
+                            })
+                            .and_then(|outcome| outcome.vote.refusal_status());
+                        statuses.push(Err(refusal.unwrap_or_else(|| {
                             crate::runtime::executor_utils::retryable_aborted_status(
                                 "transaction",
                                 "xa prepare",
@@ -1288,8 +1294,8 @@ impl DataBrokerRuntime {
                                     "2PC PREPARE failed for xid {}: {}",
                                     ledger.xid, ledger.reason
                                 ),
-                            ),
-                        ));
+                            )
+                        })));
                     }
                     Err(crate::runtime::xa::XaError::InDoubt { ledger }) => {
                         let ledger_err = crate::runtime::xa_recovery::record_xa_ledger_entry(
