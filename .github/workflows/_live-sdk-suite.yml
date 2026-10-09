@@ -65,7 +65,9 @@ jobs:
   live-suite:
     name: Live SDK benchmark
     runs-on: ubuntu-latest
-    timeout-minutes: 75
+    # Three separately bounded 15-minute candidate proofs extend the prior
+    # 75-minute build/measurement/correctness envelope; no phase is unbounded.
+    timeout-minutes: 120
     env:
       # Pass inputs through env (script-injection-safe — never interpolate
       # inputs.* directly into a run: shell body).
@@ -96,7 +98,7 @@ jobs:
           --health-timeout 5s
           --health-retries 20
       mongodb:
-        image: mongo:7
+        image: public.ecr.aws/docker/library/mongo:7@sha256:1f995ad6fdb93244a1addab1b58f934a0bc2f5643c38e02f5e9d7f0c7d227a7b
         ports:
           - 27017:27017
         options: >-
@@ -274,6 +276,50 @@ jobs:
           echo "Backend provisioning commit: $bootstrap_sha"
 
       # ── Backend stack (docker-run backends; pg/mongo are services above) ──
+      - name: Reload backend registry mirror without restarting services
+        timeout-minutes: 5
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p bench-output/backend-images
+          mapfile -t active_services < <(docker ps --quiet)
+          test "${#active_services[@]}" -ge 2
+          docker inspect --format '{"id":{{json .Id}},"started_at":{{json .State.StartedAt}},"running":{{json .State.Running}}}' "${active_services[@]}" > bench-output/backend-images/services-before.jsonl
+          # registry-mirrors supports SIGHUP reload; preserve PG/Mongo service containers.
+          sudo python3 - <<'PY'
+          import json
+          from pathlib import Path
+          path = Path('/etc/docker/daemon.json')
+          config = json.loads(path.read_text()) if path.exists() else {}
+          mirrors = config.get('registry-mirrors', [])
+          if not isinstance(mirrors, list) or not all(isinstance(item, str) for item in mirrors):
+              raise SystemExit('Existing Docker registry-mirrors is not a string array')
+          config['registry-mirrors'] = list(dict.fromkeys(['https://mirror.gcr.io', *mirrors]))
+          path.parent.mkdir(parents=True, exist_ok=True)
+          path.write_text(json.dumps(config, indent=2) + '\n')
+          PY
+          sudo dockerd --validate --config-file /etc/docker/daemon.json
+          sudo systemctl kill --kill-who=main --signal=HUP docker.service
+          for attempt in {1..30}; do
+            docker info --format '{{json .RegistryConfig.Mirrors}}' > bench-output/backend-images/active-mirrors.json
+            if python3 -c 'import json; from pathlib import Path; assert "https://mirror.gcr.io" in [item.rstrip("/") for item in json.loads(Path("bench-output/backend-images/active-mirrors.json").read_text())]'; then
+              break
+            fi
+            sleep 2
+          done
+          python3 -c 'import json; from pathlib import Path; assert "https://mirror.gcr.io" in [item.rstrip("/") for item in json.loads(Path("bench-output/backend-images/active-mirrors.json").read_text())]'
+          docker inspect --format '{"id":{{json .Id}},"started_at":{{json .State.StartedAt}},"running":{{json .State.Running}}}' "${active_services[@]}" > bench-output/backend-images/services-after.jsonl
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          root = Path('bench-output/backend-images')
+          before = [json.loads(line) for line in (root / 'services-before.jsonl').read_text().splitlines()]
+          after = [json.loads(line) for line in (root / 'services-after.jsonl').read_text().splitlines()]
+          if before != after or not all(item['running'] for item in after):
+              raise SystemExit('Docker mirror reload interrupted an already-running service')
+          print(f'Registry mirror active; {len(after)} running services retain their original start time')
+          PY
+
       - name: Start backends
         uses: ./.github/actions/start-backends
         with:
@@ -283,6 +329,40 @@ jobs:
           redis: "true"
           clickhouse: "true"
           neo4j: "true"
+          minio-image: "cgr.dev/chainguard/minio@sha256:4cf4831a2bbcf13ddca09c1cbcc9faff716dd3c4247e0babc32864b8ee8e0034"
+          kafka-image: "apache/kafka:3.9.0@sha256:fbc7d7c428e3755cf36518d4976596002477e4c052d1f80b5b9eafd06d0fff2f"
+          qdrant-image: "qdrant/qdrant:v1.18.2@sha256:75eab8c4ba42096724fdcfde8b4de0b5713d529dde32f285a1f86fdcb2c9e50c"
+          redis-image: "redis:7-alpine@sha256:858f009f9709ce576febc734aa78b8f6d624b82571f9ddb6bda4377c833b3499"
+          clickhouse-image: "clickhouse/clickhouse-server:24.8@sha256:1ffa82edee000a42c09313bd9f1293d94c570aee74babc1b3ca9983a35fa597b"
+          neo4j-image: "neo4j:5@sha256:c7d25c0eeebfe125718d58b72ed5d663c85d0479047733845eb2237c67ce8069"
+
+      - name: Verify running backend image pins
+        timeout-minutes: 2
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          import subprocess
+          from pathlib import Path
+          expected = {
+              'minio': 'cgr.dev/chainguard/minio@sha256:4cf4831a2bbcf13ddca09c1cbcc9faff716dd3c4247e0babc32864b8ee8e0034',
+              'kafka': 'apache/kafka:3.9.0@sha256:fbc7d7c428e3755cf36518d4976596002477e4c052d1f80b5b9eafd06d0fff2f',
+              'qdrant': 'qdrant/qdrant:v1.18.2@sha256:75eab8c4ba42096724fdcfde8b4de0b5713d529dde32f285a1f86fdcb2c9e50c',
+              'redis': 'redis:7-alpine@sha256:858f009f9709ce576febc734aa78b8f6d624b82571f9ddb6bda4377c833b3499',
+              'clickhouse': 'clickhouse/clickhouse-server:24.8@sha256:1ffa82edee000a42c09313bd9f1293d94c570aee74babc1b3ca9983a35fa597b',
+              'neo4j': 'neo4j:5@sha256:c7d25c0eeebfe125718d58b72ed5d663c85d0479047733845eb2237c67ce8069',
+          }
+          receipts = []
+          for backend, reference in expected.items():
+              container = json.loads(subprocess.check_output(['docker', 'inspect', f'udb-bench-{backend}'], text=True))[0]
+              image = json.loads(subprocess.check_output(['docker', 'image', 'inspect', reference], text=True))[0]
+              if not container['State']['Running'] or container['Config']['Image'] != reference or container['Image'] != image['Id']:
+                  raise SystemExit(f'{backend}: running backend does not match its verified immutable image')
+              receipts.append({'backend': backend, 'reference': reference, 'image_id': image['Id'], 'repo_digests': image.get('RepoDigests', [])})
+          Path('bench-output/backend-images/running-image-receipts.json').write_text(json.dumps(receipts, indent=2) + '\n')
+          print(f'Verified {len(receipts)} running backend image pins')
+          PY
 
       # ── Canonical broker env (single source; fixes the env-drift bug) ──
       - name: Write broker env
@@ -396,6 +476,7 @@ jobs:
           chmod +x bench-output/reset.sh
 
       - name: Benchmark Go SDK
+        if: always()
         shell: bash
         env:
           # Measure the retained migration surface; native CI proves default refusal.
@@ -442,7 +523,52 @@ jobs:
           printf '{"exit_code":%d,"note":"%s"}\n' "$code" "$([ "${reset_code:-0}" -ne 0 ] && echo "reset failed before Go benchmark" || echo "")" > bench-output/status/go.json
           exit 0
 
+      - name: Prepare served SDK deep proof checks
+        if: always() && inputs.candidate-build
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p bench-output/deep bench-output/logs
+          cat > bench-output/deep/verify-executed.py <<'PY'
+          import argparse
+          import hashlib
+          import json
+          from pathlib import Path
+          import xml.etree.ElementTree as ET
+
+          fixtures = {
+              "python": ("sdk/python/perf_report_python.md", "test_live_generated_rpc_surface"),
+              "typescript": ("sdk/typescript/perf_report_ts.md", "live broker login refreshes once and hot-swaps SDK credentials"),
+              "php": ("sdk/php/perf_report_php.md", "covers the live generated RPC surface"),
+          }
+          parser = argparse.ArgumentParser()
+          parser.add_argument("mode", choices=("snapshot", "canonical", "executed"))
+          parser.add_argument("sdk", choices=tuple(fixtures))
+          args = parser.parse_args()
+          report, expected = fixtures[args.sdk]
+          canonical_paths = (report, f"bench-output/status/{args.sdk}.json")
+          snapshot_path = Path(f"bench-output/deep/{args.sdk}-canonical.json")
+          if args.mode == "snapshot":
+              snapshot = {path: hashlib.sha256(Path(path).read_bytes()).hexdigest() for path in canonical_paths}
+              snapshot_path.write_text(json.dumps(snapshot, indent=2) + "\n")
+          elif args.mode == "canonical":
+              snapshot = json.loads(snapshot_path.read_text())
+              for path in canonical_paths:
+                  actual = hashlib.sha256(Path(path).read_bytes()).hexdigest()
+                  if snapshot.get(path) != actual:
+                      raise SystemExit(f"Deep correctness changed canonical benchmark evidence: {path}")
+              print(f"{args.sdk}: canonical bare report and status digests unchanged")
+          else:
+              junit = Path(f"bench-output/deep/{args.sdk}-junit.xml")
+              cases = list(ET.parse(junit).getroot().iter("testcase"))
+              selected = [case for case in cases if case.get("name") == expected or (args.sdk == "php" and expected in case.get("name", ""))]
+              if len(selected) != 1 or any(selected[0].find(tag) is not None for tag in ("skipped", "failure", "error")):
+                  raise SystemExit(f"{args.sdk}: exactly one named served deep test must execute and pass")
+              print(f"{args.sdk}: one named served deep test executed and passed")
+          PY
+
       - name: Benchmark Python SDK
+        if: always()
         shell: bash
         env:
           UDB_ALLOW_LEGACY_PUT_POLICY: "true"
@@ -488,7 +614,37 @@ jobs:
           printf '{"exit_code":%d,"note":"%s"}\n' "$code" "$([ "${reset_code:-0}" -ne 0 ] && echo "reset failed before Python benchmark" || echo "")" > bench-output/status/python.json
           exit 0
 
+      - name: Run Python served deep correctness
+        if: always() && inputs.candidate-build
+        timeout-minutes: 15
+        shell: bash
+        env:
+          UDB_LIVE_PERF: "0"
+          UDB_SCENARIO_PERF: "0"
+        run: |
+          set -euo pipefail
+          test "${UDB_LIVE_SDK_TESTS:-}" = "1"
+          for fixture in UDB_GRPC_TARGET UDB_AUTH_GRPC_TARGET UDB_LIVE_USERNAME UDB_LIVE_PASSWORD UDB_LIVE_TENANT UDB_LIVE_PROJECT UDB_LIVE_PLATFORM_USERNAME UDB_LIVE_PLATFORM_PASSWORD; do
+            if [ -z "${!fixture:-}" ]; then
+              printf '::error::Missing served deep fixture %s\n' "$fixture"
+              exit 1
+            fi
+          done
+          mkdir -p bench-output/deep bench-output/logs
+          python bench-output/deep/verify-executed.py snapshot python
+          preserve_canonical_on_exit() {
+            result=$?
+            trap - EXIT
+            python bench-output/deep/verify-executed.py canonical python || result=1
+            exit "$result"
+          }
+          trap preserve_canonical_on_exit EXIT
+          bash bench-output/reset.sh python-deep 2>&1 | tee bench-output/logs/python-deep-reset.log
+          ( cd sdk/python && timeout --signal=TERM --kill-after=30s 10m python -m pytest -q tests/test_live_conformance.py -k test_live_generated_rpc_surface --junitxml="${GITHUB_WORKSPACE}/bench-output/deep/python-junit.xml" ) 2>&1 | tee bench-output/logs/python-deep.log
+          python bench-output/deep/verify-executed.py executed python
+
       - name: Benchmark TypeScript SDK
+        if: always()
         shell: bash
         env:
           UDB_ALLOW_LEGACY_PUT_POLICY: "true"
@@ -534,7 +690,37 @@ jobs:
           printf '{"exit_code":%d,"note":"%s"}\n' "$code" "$([ "${reset_code:-0}" -ne 0 ] && echo "reset failed before TypeScript benchmark" || echo "")" > bench-output/status/typescript.json
           exit 0
 
+      - name: Run TypeScript served deep correctness
+        if: always() && inputs.candidate-build
+        timeout-minutes: 15
+        shell: bash
+        env:
+          UDB_LIVE_PERF: "0"
+          UDB_SCENARIO_PERF: "0"
+        run: |
+          set -euo pipefail
+          test "${UDB_LIVE_SDK_TESTS:-}" = "1"
+          for fixture in UDB_GRPC_TARGET UDB_AUTH_GRPC_TARGET UDB_LIVE_USERNAME UDB_LIVE_PASSWORD UDB_LIVE_TENANT UDB_LIVE_PROJECT UDB_LIVE_PLATFORM_USERNAME UDB_LIVE_PLATFORM_PASSWORD; do
+            if [ -z "${!fixture:-}" ]; then
+              printf '::error::Missing served deep fixture %s\n' "$fixture"
+              exit 1
+            fi
+          done
+          mkdir -p bench-output/deep bench-output/logs
+          python bench-output/deep/verify-executed.py snapshot typescript
+          preserve_canonical_on_exit() {
+            result=$?
+            trap - EXIT
+            python bench-output/deep/verify-executed.py canonical typescript || result=1
+            exit "$result"
+          }
+          trap preserve_canonical_on_exit EXIT
+          bash bench-output/reset.sh typescript-deep 2>&1 | tee bench-output/logs/typescript-deep-reset.log
+          ( cd sdk/typescript && npm run bundle-proto && npx tsc -p tsconfig.test.json && timeout --signal=TERM --kill-after=30s 10m node --test --test-name-pattern '^live broker login refreshes once and hot-swaps SDK credentials$' --test-reporter=tap --test-reporter-destination=stdout --test-reporter=junit --test-reporter-destination="${GITHUB_WORKSPACE}/bench-output/deep/typescript-junit.xml" dist-test/live-auth.test.js ) 2>&1 | tee bench-output/logs/typescript-deep.log
+          python bench-output/deep/verify-executed.py executed typescript
+
       - name: Benchmark PHP SDK
+        if: always()
         shell: bash
         env:
           UDB_ALLOW_LEGACY_PUT_POLICY: "true"
@@ -580,6 +766,35 @@ jobs:
           fi
           printf '{"exit_code":%d,"note":"%s"}\n' "$code" "$([ "${reset_code:-0}" -ne 0 ] && echo "reset failed before PHP benchmark" || echo "")" > bench-output/status/php.json
           exit 0
+
+      - name: Run PHP served deep correctness
+        if: always() && inputs.candidate-build
+        timeout-minutes: 15
+        shell: bash
+        env:
+          UDB_LIVE_PERF: "0"
+          UDB_SCENARIO_PERF: "0"
+        run: |
+          set -euo pipefail
+          test "${UDB_LIVE_SDK_TESTS:-}" = "1"
+          for fixture in UDB_GRPC_TARGET UDB_AUTH_GRPC_TARGET UDB_LIVE_USERNAME UDB_LIVE_PASSWORD UDB_LIVE_TENANT UDB_LIVE_PROJECT UDB_LIVE_PLATFORM_USERNAME UDB_LIVE_PLATFORM_PASSWORD; do
+            if [ -z "${!fixture:-}" ]; then
+              printf '::error::Missing served deep fixture %s\n' "$fixture"
+              exit 1
+            fi
+          done
+          mkdir -p bench-output/deep bench-output/logs
+          python bench-output/deep/verify-executed.py snapshot php
+          preserve_canonical_on_exit() {
+            result=$?
+            trap - EXIT
+            python bench-output/deep/verify-executed.py canonical php || result=1
+            exit "$result"
+          }
+          trap preserve_canonical_on_exit EXIT
+          bash bench-output/reset.sh php-deep 2>&1 | tee bench-output/logs/php-deep-reset.log
+          ( cd sdk/php && timeout --signal=TERM --kill-after=30s 10m vendor/bin/pest tests/Live/GeneratedRpcSurfaceTest.php --filter 'covers the live generated RPC surface' --log-junit "${GITHUB_WORKSPACE}/bench-output/deep/php-junit.xml" ) 2>&1 | tee bench-output/logs/php-deep.log
+          python bench-output/deep/verify-executed.py executed php
 
       # Run correctness after all measured SDKs so its state and output cannot
       # change canonical per-RPC measurements. Released tag harnesses remain exact.
@@ -726,6 +941,8 @@ jobs:
             sdk/php/perf_report_php.md
             bench-output/logs/**
             bench-output/status/**
+            bench-output/deep/**
+            bench-output/backend-images/**
             bench-output/backend-bootstrap.json
             bench-output/candidate-provenance.json
             bench-output/latency-profile.json

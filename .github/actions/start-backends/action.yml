@@ -31,6 +31,30 @@ inputs:
     description: "Start Neo4j (graph backend)."
     required: false
     default: "false"
+  minio-image:
+    description: "Immutable minio image; defaults preserve the verified backend version."
+    required: false
+    default: "cgr.dev/chainguard/minio@sha256:4cf4831a2bbcf13ddca09c1cbcc9faff716dd3c4247e0babc32864b8ee8e0034"
+  kafka-image:
+    description: "Immutable kafka image; defaults preserve the verified backend version."
+    required: false
+    default: "apache/kafka:3.9.0@sha256:fbc7d7c428e3755cf36518d4976596002477e4c052d1f80b5b9eafd06d0fff2f"
+  qdrant-image:
+    description: "Immutable qdrant image; defaults preserve the verified backend version."
+    required: false
+    default: "qdrant/qdrant:v1.18.2@sha256:75eab8c4ba42096724fdcfde8b4de0b5713d529dde32f285a1f86fdcb2c9e50c"
+  redis-image:
+    description: "Immutable redis image; defaults preserve the verified backend version."
+    required: false
+    default: "redis:7-alpine@sha256:858f009f9709ce576febc734aa78b8f6d624b82571f9ddb6bda4377c833b3499"
+  clickhouse-image:
+    description: "Immutable clickhouse image; defaults preserve the verified backend version."
+    required: false
+    default: "clickhouse/clickhouse-server:24.8@sha256:1ffa82edee000a42c09313bd9f1293d94c570aee74babc1b3ca9983a35fa597b"
+  neo4j-image:
+    description: "Immutable neo4j image; defaults preserve the verified backend version."
+    required: false
+    default: "neo4j:5@sha256:c7d25c0eeebfe125718d58b72ed5d663c85d0479047733845eb2237c67ce8069"
   kafka-topics:
     description: "Space-separated Kafka topics to create when kafka is enabled."
     required: false
@@ -52,13 +76,16 @@ runs:
     - name: Start MinIO
       if: inputs.minio == 'true'
       shell: bash
+      env:
+        BACKEND_IMAGE: ${{ inputs.minio-image }}
       run: |
         set -euo pipefail
+        [[ "$BACKEND_IMAGE" =~ @sha256:[a-f0-9]{64}$ ]] || { echo "::error::Backend image must be digest-pinned"; exit 1; }
         docker run -d --name udb-bench-minio \
           -p 9000:9000 \
           -e MINIO_ROOT_USER=minio \
           -e MINIO_ROOT_PASSWORD=minio123 \
-          cgr.dev/chainguard/minio@sha256:4cf4831a2bbcf13ddca09c1cbcc9faff716dd3c4247e0babc32864b8ee8e0034 \
+          "$BACKEND_IMAGE" \
           server /data --console-address ":9001"
         for _ in {1..60}; do
           curl -fsS http://localhost:9000/minio/health/live >/dev/null && exit 0
@@ -75,9 +102,11 @@ runs:
       if: inputs.kafka == 'true'
       shell: bash
       env:
+        BACKEND_IMAGE: ${{ inputs.kafka-image }}
         KAFKA_TOPICS: ${{ inputs.kafka-topics }}
       run: |
         set -euo pipefail
+        [[ "$BACKEND_IMAGE" =~ @sha256:[a-f0-9]{64}$ ]] || { echo "::error::Backend image must be digest-pinned"; exit 1; }
         docker run -d --name udb-bench-kafka --hostname kafka \
           -p 59192:59192 \
           -e KAFKA_NODE_ID=1 \
@@ -93,7 +122,7 @@ runs:
           -e KAFKA_TRANSACTION_STATE_LOG_MIN_ISR=1 \
           -e KAFKA_AUTO_CREATE_TOPICS_ENABLE=true \
           -e KAFKA_COMPRESSION_TYPE=lz4 \
-          apache/kafka:3.9.0
+          "$BACKEND_IMAGE"
         for _ in {1..60}; do
           if docker exec udb-bench-kafka \
             /opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092 >/dev/null 2>&1; then
@@ -117,11 +146,14 @@ runs:
     - name: Start Qdrant (vector backend)
       if: inputs.qdrant == 'true'
       shell: bash
+      env:
+        BACKEND_IMAGE: ${{ inputs.qdrant-image }}
       run: |
         set -euo pipefail
+        [[ "$BACKEND_IMAGE" =~ @sha256:[a-f0-9]{64}$ ]] || { echo "::error::Backend image must be digest-pinned"; exit 1; }
         docker run -d --name udb-bench-qdrant \
           -p 6333:6333 \
-          qdrant/qdrant:v1.18.2
+          "$BACKEND_IMAGE"
         for _ in {1..60}; do
           curl -fsS http://localhost:6333/readyz >/dev/null 2>&1 && exit 0
           docker ps --filter name=udb-bench-qdrant --filter status=running --quiet | grep -q . || {
@@ -136,9 +168,12 @@ runs:
     - name: Start Redis (cache backend)
       if: inputs.redis == 'true'
       shell: bash
+      env:
+        BACKEND_IMAGE: ${{ inputs.redis-image }}
       run: |
         set -euo pipefail
-        docker run -d --name udb-bench-redis -p 6379:6379 redis:7-alpine
+        [[ "$BACKEND_IMAGE" =~ @sha256:[a-f0-9]{64}$ ]] || { echo "::error::Backend image must be digest-pinned"; exit 1; }
+        docker run -d --name udb-bench-redis -p 6379:6379 "$BACKEND_IMAGE"
         for _ in {1..30}; do
           docker exec udb-bench-redis redis-cli ping 2>/dev/null | grep -q PONG && exit 0
           docker ps --filter name=udb-bench-redis --filter status=running --quiet | grep -q . || {
@@ -153,13 +188,16 @@ runs:
     - name: Start ClickHouse (column backend)
       if: inputs.clickhouse == 'true'
       shell: bash
+      env:
+        BACKEND_IMAGE: ${{ inputs.clickhouse-image }}
       run: |
         set -euo pipefail
+        [[ "$BACKEND_IMAGE" =~ @sha256:[a-f0-9]{64}$ ]] || { echo "::error::Backend image must be digest-pinned"; exit 1; }
         # Zero-config default user (no password, `default` db) — the broker resolves CH
         # auth from UDB_COLUMN_USER/PASSWORD (unset → default/empty), not the DSN userinfo.
         docker run -d --name udb-bench-clickhouse -p 8123:8123 \
           -e CLICKHOUSE_SKIP_USER_SETUP=1 \
-          clickhouse/clickhouse-server:24.8
+          "$BACKEND_IMAGE"
         for _ in {1..60}; do
           # Query-level gate (not /ping): the broker issues SQL, so wait until the HTTP
           # interface actually answers a SELECT, not just liveness.
@@ -176,14 +214,17 @@ runs:
     - name: Start Neo4j (graph backend)
       if: inputs.neo4j == 'true'
       shell: bash
+      env:
+        BACKEND_IMAGE: ${{ inputs.neo4j-image }}
       run: |
         set -euo pipefail
+        [[ "$BACKEND_IMAGE" =~ @sha256:[a-f0-9]{64}$ ]] || { echo "::error::Backend image must be digest-pinned"; exit 1; }
         # GraphMutate/GraphQuery resolve to the 'neo4j:default' executor; without a live
         # neo4j they fail "backend executor 'neo4j:default' is not registered". Broker reads
         # UDB_GRAPH_DSN (HTTP :7474) + UDB_GRAPH_USER/PASSWORD.
         docker run -d --name udb-bench-neo4j -p 7474:7474 -p 7687:7687 \
           -e NEO4J_AUTH=neo4j/test1234 \
-          neo4j:5
+          "$BACKEND_IMAGE"
         # REAL query-readiness gate (not just HTTP 200): neo4j:5 serves :7474 ~30s before it
         # accepts Cypher, and the broker's executor talks to the SAME HTTP tx endpoint. If we
         # let the broker mount neo4j before it answers queries, Graph* degrade for the whole run.
