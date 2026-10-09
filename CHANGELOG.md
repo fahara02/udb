@@ -49,6 +49,9 @@ no-wrapper plan.
 
 ### Fixed
 
+- Public RPC throttles carry `UDB_RATE_LIMITED`, the actual budget and transport
+  caller, with a window-based retry delay. Password-reset RPCs enforce their
+  shared abuse budget through the descriptor-driven gate.
 - PostgreSQL 2PC preparation preserves deferred UNIQUE/FK refusal codes and
   complete typed diagnostics through the coordinator and served BeginTx stream.
 - SQL store errors preserve their original typed reason, column, constraint and

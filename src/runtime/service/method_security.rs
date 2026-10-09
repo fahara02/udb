@@ -738,16 +738,29 @@ fn check_public_bootstrap_rate_limit(
         )
     })?;
     let current_minute = key.2;
+    let bucket = key.0.clone();
+    let caller = key.1.clone();
     guard.retain(|(_, _, minute), _| *minute + 2 >= current_minute);
     let count = guard.entry(key).or_insert(0);
     *count = count.saturating_add(1);
-    if *count > public_bootstrap_rate_limit_for(policy_ref) {
+    let limit = public_bootstrap_rate_limit_for(policy_ref);
+    if *count > limit {
         return Err((
-            crate::runtime::executor_utils::quota_status(
-                "method_security",
-                "public_bootstrap_rate_limit",
-                public_bootstrap_retry_after_ms(),
-                "public bootstrap rate limit exceeded",
+            crate::runtime::error_reasons::annotate_with(
+                crate::runtime::executor_utils::quota_status(
+                    "method_security",
+                    "public_bootstrap_rate_limit",
+                    public_bootstrap_retry_after_ms(),
+                    "public bootstrap rate limit exceeded",
+                ),
+                crate::runtime::error_reasons::RATE_LIMITED,
+                None,
+                None,
+                &[
+                    ("bucket", &bucket),
+                    ("caller", &caller),
+                    ("limit_per_minute", &limit.to_string()),
+                ],
             ),
             deny_reason::PUBLIC_RATE_LIMIT,
         ));
@@ -2217,29 +2230,53 @@ mod tests {
     /// cannot double its budget by alternating between them.
     #[test]
     fn sibling_rpcs_share_one_abuse_budget() {
+        let security = SecurityConfig::current();
         let headers = http::HeaderMap::new();
         let peer = peer_from("203.0.113.77");
-        let limit = abuse_policy_limit("authn.password_reset.abuse");
-        // The bucket is keyed by the policy, never the RPC path, so the
-        // ForgotPassword/ResetPassword mix of a real attack lands in one bucket.
-        for _ in 0..limit {
-            check_abuse_policy("authn.password_reset.abuse", &headers, &peer)
-                .expect("within the shared budget");
+        let paths = [
+            format!("{AUTHN}/ForgotPassword"),
+            format!("{AUTHN}/ResetPassword"),
+        ];
+        let reference = "authn.password_reset.abuse";
+        for path in &paths {
+            let declared = method_security(path).expect("actual descriptor security");
+            assert_eq!(declared.mode, AuthMode::Public);
+            assert_eq!(declared.abuse_policy_ref.as_deref(), Some(reference));
         }
-        let (err, reason) = check_abuse_policy("authn.password_reset.abuse", &headers, &peer)
-            .expect_err("the shared budget is exhausted");
+        let limit = abuse_policy_limit(reference);
+        // These are actual distinct RPC paths and descriptor contracts. Removing
+        // the policy's call site from the public gate must fail this proof.
+        for index in 0..limit {
+            enforce(&security, &paths[index as usize % 2], &headers, &peer, None)
+                .expect("alternating reset RPCs stay within the shared budget");
+        }
+        let (err, reason) = enforce(&security, &paths[0], &headers, &peer, None)
+            .expect_err("alternating RPCs cannot multiply the abuse budget");
         assert_eq!(err.code(), tonic::Code::ResourceExhausted);
         assert_eq!(reason, deny_reason::ABUSE_POLICY);
         assert_eq!(
             crate::runtime::error_reasons::reason_of(&err).as_deref(),
             Some("UDB_RATE_LIMITED")
         );
+        let detail = decode_detail(&err);
+        assert_eq!(detail.kind, ErrorKind::RateLimited as i32);
+        assert_eq!(
+            detail.missing.get("bucket").map(String::as_str),
+            Some(reference)
+        );
+        assert_eq!(
+            detail.missing.get("limit_per_minute"),
+            Some(&limit.to_string())
+        );
+        assert!(detail.retryable && (1_000..=60_000).contains(&detail.retry_after_ms));
         // Another client has its own budget.
         assert!(
-            check_abuse_policy(
-                "authn.password_reset.abuse",
+            enforce(
+                &security,
+                &paths[0],
                 &headers,
-                &peer_from("203.0.113.78")
+                &peer_from("203.0.113.78"),
+                None,
             )
             .is_ok()
         );
@@ -2269,7 +2306,20 @@ mod tests {
         assert_eq!(err.code(), tonic::Code::ResourceExhausted);
         assert_eq!(reason, deny_reason::PUBLIC_RATE_LIMIT);
         let detail = decode_detail(&err);
-        assert_eq!(detail.kind, ErrorKind::Quota as i32);
+        assert_eq!(detail.kind, ErrorKind::RateLimited as i32);
+        assert_eq!(detail.reason, "UDB_RATE_LIMITED");
+        assert_eq!(
+            detail.missing.get("caller").map(String::as_str),
+            Some("203.0.113.9")
+        );
+        assert_eq!(
+            detail.missing.get("bucket"),
+            Some(&format!("authn.password.forgot.public|{path}")),
+        );
+        assert_eq!(
+            detail.missing.get("limit_per_minute"),
+            Some(&limit.to_string())
+        );
         assert!(detail.retryable);
         assert!(detail.retry_after_ms >= 1_000);
         assert!(detail.retry_after_ms <= 60_000);
