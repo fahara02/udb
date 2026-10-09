@@ -1219,7 +1219,7 @@ impl AuthzServiceImpl {
         .fetch_optional(pool)
         .await
         .map_err(|err| {
-            authz_internal_status("resolve_role_code", format!("resolve role code failed: {err}"))
+            crate::runtime::executor_utils::sqlx_error_to_status("resolve_role_code", &err)
         })?;
         Ok(row.and_then(|r| r.try_get::<String, _>("role").ok()))
     }
@@ -1252,9 +1252,9 @@ impl AuthzServiceImpl {
         .fetch_optional(pool)
         .await
         .map_err(|err| {
-            authz_internal_status(
+            crate::runtime::executor_utils::sqlx_error_to_status(
                 "resolve_role_authority_provenance",
-                format!("resolve role authority provenance failed: {err}"),
+                &err,
             )
         })?;
         row.map(|row| {
@@ -1621,10 +1621,7 @@ impl AuthzServiceImpl {
         .fetch_all(pool)
         .await
         .map_err(|err| {
-            authz_internal_status(
-                "read_authz_revision_fence",
-                format!("read authz revision fence failed: {err}"),
-            )
+            crate::runtime::executor_utils::sqlx_error_to_status("read_authz_revision_fence", &err)
         })?;
 
         let mut hasher = Sha256::new();
@@ -1704,10 +1701,7 @@ impl AuthzServiceImpl {
         .fetch_all(pool)
         .await
         .map_err(|err| {
-            authz_internal_status(
-                "load_authz_policies",
-                format!("load authz policies failed: {err}"),
-            )
+            crate::runtime::executor_utils::sqlx_error_to_status("load_authz_policies", &err)
         })?;
 
         let mut policies = Vec::with_capacity(policy_rows.len());
@@ -1747,10 +1741,7 @@ impl AuthzServiceImpl {
         .fetch_all(pool)
         .await
         .map_err(|err| {
-            authz_internal_status(
-                "load_role_bindings",
-                format!("load role bindings failed: {err}"),
-            )
+            crate::runtime::executor_utils::sqlx_error_to_status("load_role_bindings", &err)
         })?;
         let mut role_bindings = Vec::with_capacity(binding_rows.len());
         for row in binding_rows {
@@ -1833,10 +1824,7 @@ impl AuthzServiceImpl {
         .fetch_all(pool)
         .await
         .map_err(|err| {
-            authz_internal_status(
-                "load_grouping_tuples",
-                format!("load grouping tuples failed: {err}"),
-            )
+            crate::runtime::executor_utils::sqlx_error_to_status("load_grouping_tuples", &err)
         })?;
         let now = now_unix();
         for row in grouping_rows {
@@ -1900,10 +1888,7 @@ impl AuthzServiceImpl {
         .fetch_all(pool)
         .await
         .map_err(|err| {
-            authz_internal_status(
-                "load_relationship_tuples",
-                format!("load relationship tuples failed: {err}"),
-            )
+            crate::runtime::executor_utils::sqlx_error_to_status("load_relationship_tuples", &err)
         })?;
         let mut tuples = Vec::with_capacity(tuple_rows.len());
         for row in tuple_rows {
@@ -2347,10 +2332,7 @@ impl AuthzService for AuthzServiceImpl {
                 .fetch_optional(pool)
                 .await
                 .map_err(|err| {
-                    authz_internal_status(
-                        "store_authz_policy",
-                        format!("policy ownership lookup failed: {err}"),
-                    )
+                    crate::runtime::executor_utils::sqlx_error_to_status("store_authz_policy", &err)
                 })?;
                 check_policy_overwrite_boundary(
                     caller_scope.as_deref(),
@@ -3669,7 +3651,7 @@ impl AuthzService for AuthzServiceImpl {
         .fetch_all(pool)
         .await
         .map_err(|err| {
-            authz_internal_status("list_user_roles", format!("list user roles failed: {err}"))
+            crate::runtime::executor_utils::sqlx_error_to_status("list_user_roles", &err)
         })?;
         let mut user_roles = Vec::with_capacity(rows.len());
         for row in &rows {
@@ -3736,7 +3718,9 @@ impl AuthzService for AuthzServiceImpl {
         .bind(authz_record_tenant_scope())
         .fetch_optional(pool)
         .await
-        .map_err(|err| authz_internal_status("get_role", format!("get role failed: {err}")))?;
+        .map_err(|err| {
+            crate::runtime::executor_utils::sqlx_error_to_status("get_role", &err)
+        })?;
         match row {
             Some(row) => Ok(Response::new(authz_pb::GetRoleResponse {
                 role: Some(role_from_row(&row)?),
@@ -3778,7 +3762,7 @@ impl AuthzService for AuthzServiceImpl {
         .bind(authz_record_tenant_scope())
         .fetch_all(pool)
         .await
-        .map_err(|err| authz_internal_status("list_roles", format!("list roles failed: {err}")))?;
+        .map_err(|err| crate::runtime::executor_utils::sqlx_error_to_status("list_roles", &err))?;
         let mut all = Vec::with_capacity(rows.len());
         for row in &rows {
             all.push(role_from_row(row)?);
@@ -4190,7 +4174,7 @@ impl AuthzService for AuthzServiceImpl {
             .fetch_optional(pool)
             .await
             .map_err(|err| {
-                authz_internal_status("get_policy_rule", format!("get policy rule failed: {err}"))
+                crate::runtime::executor_utils::sqlx_error_to_status("get_policy_rule", &err)
             })?;
             return match row {
                 Some(row) => Ok(Response::new(authz_pb::GetPolicyRuleResponse {
@@ -4249,10 +4233,7 @@ impl AuthzService for AuthzServiceImpl {
             .fetch_all(pool)
             .await
             .map_err(|err| {
-                authz_internal_status(
-                    "list_policy_rules",
-                    format!("list policy rules failed: {err}"),
-                )
+                crate::runtime::executor_utils::sqlx_error_to_status("list_policy_rules", &err)
             })?;
             let all = rows
                 .iter()

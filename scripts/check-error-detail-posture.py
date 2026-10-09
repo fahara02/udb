@@ -1044,6 +1044,27 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
         ),
     ),
     TokenCheck(
+        "Authz raw SQL reads retain real retryable store refusals",
+        "src/runtime/service/auth_service/tests/authz_admin_live.rs",
+        (
+            "live_postgres_authz_reads_preserve_retryable_store_refusals",
+            ".with_postgres(Some(pool.clone()))",
+            "pool.close().await;",
+            "authz.get_role(",
+            "authz.list_roles(",
+            "authz.get_policy_rule(",
+            "authz.list_policy_rules(",
+            "authz.list_user_roles(",
+            "authz.check_access(",
+            "authz.update_role(",
+            '"{rpc} must preserve the store\'s retryable code"',
+            "crate::runtime::error_reasons::BACKEND_UNAVAILABLE.code",
+            ".get_bin(crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY)",
+            "crate::runtime::executor_utils::decode_error_detail_from_raw(&raw)",
+            "crate::runtime::executor_utils::HTTP_RETRYABLE_BACKOFF_MS",
+        ),
+    ),
+    TokenCheck(
         "Authz governance revision reads preserve store refusals and reject invalid counters",
         "src/runtime/service/auth_service/authz/governance.rs",
         (
@@ -10225,6 +10246,32 @@ def native_auth_refusal_reclassification_hits(root: Path) -> list[str]:
     return hits
 
 
+def authz_raw_sql_refusal_reclassification_hits(root: Path) -> list[str]:
+    path = root / AUTHZ_INTERNAL_STATUS_PATH
+    text = "\n".join(
+        "" if line.lstrip().startswith("//") else line
+        for line in read(path).splitlines()
+    )
+    hits: list[str] = []
+    boundaries = re.compile(r"\.(?:fetch_one|fetch_optional|fetch_all|execute)\s*\(")
+    for match in boundaries.finditer(text):
+        end = rust_call_end(text, match.end() - 1)
+        if end is None:
+            continue
+        mapped = re.match(r"\s*\.await\s*\.map_err\s*\(", text[end:])
+        if mapped is None:
+            continue
+        start = end + mapped.end() - 1
+        finish = rust_call_end(text, start)
+        if finish is not None and "sqlx_error_to_status(" not in whitespace_insensitive(text[start:finish]):
+            line = text.count("\n", 0, match.start()) + 1
+            hits.append(
+                f"{path.relative_to(root).as_posix()}:{line}: "
+                "raw Authz SQL refusal must use the shared SQLSTATE/transport classifier"
+            )
+    return hits
+
+
 def authz_revision_refusal_suppression_hits(root: Path) -> list[str]:
     hits: list[str] = []
     call = re.compile(
@@ -10368,6 +10415,7 @@ def _check_root_cached(root: Path) -> list[str]:
 
     failures.extend(authz_revision_refusal_suppression_hits(root))
     failures.extend(authz_mutation_revision_cocommit_hits(root))
+    failures.extend(authz_raw_sql_refusal_reclassification_hits(root))
     failures.extend(native_auth_refusal_reclassification_hits(root))
     failures.extend(native_transaction_refusal_reclassification_hits(root))
 
@@ -10640,6 +10688,8 @@ def run_selftest() -> None:
             ("src/runtime/service/auth_service/authz/mod.rs", "let context = governance::authz_revision_context(runtime, tenant)?;"),
             ("src/runtime/service/auth_service/tests/authz_admin_live.rs", "a foreign policy delete must not append an authz revision"),
             ("src/runtime/service/auth_service/tests/authz_rbac_live.rs", "a foreign role revoke must not append an authz revision"),
+            ("src/runtime/service/auth_service/tests/authz_admin_live.rs", "pool.close().await;"),
+            ("src/runtime/service/auth_service/tests/authz_admin_live.rs", "crate::runtime::error_reasons::BACKEND_UNAVAILABLE.code"),
         ):
             write_fixture(root)
             target = root / source
@@ -10711,6 +10761,22 @@ def run_selftest() -> None:
             failures = check_root(root)
             assert any("must propagate revision publication refusal" in failure for failure in failures), failures
 
+        for boundary in ("fetch_one", "fetch_optional", "fetch_all", "execute"):
+            write_fixture(root)
+            target = root / AUTHZ_INTERNAL_STATUS_PATH
+            query = f'sqlx::query("SELECT 1").{boundary}(pool).await.map_err(|err| '
+            target.write_text(
+                read(target) + "\n" + query + 'authz_internal_status("read", err.to_string()))?;\n',
+                encoding="utf-8",
+            )
+            failures = check_root(root)
+            assert any("raw Authz SQL refusal must use" in failure for failure in failures), (boundary, failures)
+            target.write_text(
+                read(target).replace('authz_internal_status("read", err.to_string())', 'crate::runtime::executor_utils::sqlx_error_to_status("read", &err)'),
+                encoding="utf-8",
+            )
+            failures = check_root(root)
+            assert not any("raw Authz SQL refusal must use" in failure for failure in failures), (boundary, failures)
         for helper in ("authz_internal_status", "authn_schema_already_exists_status"):
             write_fixture(root)
             target = root / AUTHZ_INTERNAL_STATUS_PATH

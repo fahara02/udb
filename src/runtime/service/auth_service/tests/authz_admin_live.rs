@@ -387,6 +387,120 @@ async fn live_postgres_authz_admin_crud_and_audit_lifecycle() {
     cleanup_native_auth_db(&pool).await;
 }
 
+/// Raw SQL read adapters must retain the shared retryable database refusal.
+/// Closing the actual configured PG pool exercises the handler/store boundary;
+/// reverting a mapper to generic Internal fails the corresponding assertion.
+#[tokio::test]
+#[ignore = "requires live Postgres; run with UDB_LIVE_AUTH_TESTS=1 cargo test --lib live_postgres_authz_reads_preserve_retryable_store_refusals -- --ignored --nocapture"]
+async fn live_postgres_authz_reads_preserve_retryable_store_refusals() {
+    let _guard = live_auth_db_lock().lock().await;
+    let pool = live_pg_pool().await;
+    migrate_native_auth_db(&pool).await;
+    let authz = authz_service(pool.clone())
+        .await
+        .with_postgres(Some(pool.clone()));
+    let id = Uuid::new_v4().to_string();
+    pool.close().await;
+    let refusals = [
+        (
+            "GetRole",
+            authz
+                .get_role(Request::new(authz_pb::GetRoleRequest {
+                    role_id: id.clone(),
+                    ..Default::default()
+                }))
+                .await
+                .expect_err("closed role store must refuse the actual read"),
+        ),
+        (
+            "ListRoles",
+            authz
+                .list_roles(Request::new(authz_pb::ListRolesRequest::default()))
+                .await
+                .expect_err("closed role store must refuse the actual list"),
+        ),
+        (
+            "GetPolicyRule",
+            authz
+                .get_policy_rule(Request::new(authz_pb::GetPolicyRuleRequest {
+                    policy_id: id.clone(),
+                }))
+                .await
+                .expect_err("closed policy store must refuse the actual read"),
+        ),
+        (
+            "ListPolicyRules",
+            authz
+                .list_policy_rules(Request::new(authz_pb::ListPolicyRulesRequest::default()))
+                .await
+                .expect_err("closed policy store must refuse the actual list"),
+        ),
+        (
+            "ListUserRoles",
+            authz
+                .list_user_roles(Request::new(authz_pb::ListUserRolesRequest {
+                    user_id: id.clone(),
+                    ..Default::default()
+                }))
+                .await
+                .expect_err("closed assignment store must refuse the actual list"),
+        ),
+        (
+            "CheckAccess",
+            authz
+                .check_access(Request::new(authz_pb::CheckAccessRequest {
+                    user_id: id.clone(),
+                    tenant_id: "acme".to_string(),
+                    domain: "acme".to_string(),
+                    object: "invoice".to_string(),
+                    action: "data.select".to_string(),
+                    ..Default::default()
+                }))
+                .await
+                .expect_err("closed snapshot store must refuse the actual decision"),
+        ),
+        (
+            "UpdateRole",
+            authz
+                .update_role(Request::new(authz_pb::UpdateRoleRequest {
+                    role_id: id.clone(),
+                    name: "Updated role".to_string(),
+                    updated_by: id,
+                    ..Default::default()
+                }))
+                .await
+                .expect_err("closed authority store must refuse before any mutation"),
+        ),
+    ];
+    let cleanup_pool = live_pg_pool().await;
+    cleanup_native_auth_db(&cleanup_pool).await;
+    for (rpc, refusal) in refusals {
+        assert_eq!(
+            refusal.code(),
+            tonic::Code::Unavailable,
+            "{rpc} must preserve the store's retryable code"
+        );
+        let raw = refusal
+            .metadata()
+            .get_bin(crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY)
+            .expect("actual refusal retains its typed trailer");
+        let detail = crate::runtime::executor_utils::decode_error_detail_from_raw(&raw);
+        assert_eq!(
+            detail.reason,
+            crate::runtime::error_reasons::BACKEND_UNAVAILABLE.code,
+            "{rpc} must preserve the stable store reason"
+        );
+        assert_eq!(detail.kind, crate::proto::ErrorKind::Retryable as i32);
+        assert!(detail.retryable, "{rpc} must retain retry advice");
+        assert_eq!(
+            detail.retry_after_ms,
+            crate::runtime::executor_utils::HTTP_RETRYABLE_BACKOFF_MS
+        );
+        assert_eq!(detail.backend, "database");
+        assert!(!detail.operation.is_empty());
+    }
+}
+
 /// §1 read-after-write served-path contract (13.7.1.1): the `policy_id`
 /// `CreatePolicyRule` returns is IMMEDIATELY readable by `GetPolicyRule` on the SAME
 /// served path with the SAME tenant metadata a client uses. Reverting that broker

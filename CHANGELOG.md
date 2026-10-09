@@ -21,6 +21,9 @@ no-wrapper plan.
   the resolved request tenant when reading their transaction scope. A foreign
   tenant remains an idempotent no-op and cannot append a revision or remove the
   owner's records, including on internal calls with tenant metadata.
+- Authz SQL reads retain database-specific codes and machine-readable details
+  through the shared classifier. A closed or unavailable policy store returns
+  retryable `UNAVAILABLE` instead of a generic `INTERNAL` refusal.
 
 ### Added
 
