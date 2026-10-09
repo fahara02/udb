@@ -11,6 +11,7 @@ import (
 
 	authnentpb "github.com/fahara02/udb/sdk/go/gen/udb/core/authn/entity/v1"
 	authnv1 "github.com/fahara02/udb/sdk/go/gen/udb/core/authn/services/v1"
+	commonpb "github.com/fahara02/udb/sdk/go/gen/udb/core/common/v1"
 	entityv1 "github.com/fahara02/udb/sdk/go/gen/udb/entity/v1"
 	servicesv1 "github.com/fahara02/udb/sdk/go/gen/udb/services/v1"
 	"google.golang.org/grpc"
@@ -129,10 +130,9 @@ func TestLiveGeneratedRPCSurface(t *testing.T) {
 	// directions (claimed ops admitted, unclaimed ops refused with the declared code).
 	runLiveBackendCapabilityChallenge(t, servicesv1.NewDataBrokerClient(brokerConn), brokerGen.outgoingContext(ctx), liveRequestContext(tenant, project, "go.live.backend.capability"), caps)
 
-	// Full session lifecycle on a throwaway login: prove logout actually
-	// invalidates the session (token rejected + refresh fails afterwards).
-	runLiveAuthLifecycle(t, ctx, authConn, authGen.outgoingContext(ctx),
-		requiredLiveEnv(t, "UDB_LIVE_USERNAME"), requiredLiveEnv(t, "UDB_LIVE_PASSWORD"), tenant, project)
+	// The negative refresh replay intentionally revokes every session belonging
+	// to its principal. Use a separately owned person rather than the operator.
+	runLiveAuthLifecycle(t, ctx, authConn, authGen.outgoingContext(ctx), tenant, project)
 
 	// Edge cases: the auth plane must fail CLOSED on bad input — a wrong password
 	// mints no token, a garbage bearer never validates/introspects-active.
@@ -325,11 +325,80 @@ func TestLiveMethodCredentialRoutingRetainsTenantAuthority(t *testing.T) {
 // asserts CORRECT post-logout behavior: once the session is revoked, the access
 // token must no longer validate/introspect-active and its refresh token must be
 // rejected. This catches the classic "logout doesn't actually invalidate the
-// session" bug (a stateless bearer that ignores revocation). It logs in a fresh
-// session so it never disturbs the admin session used by the rest of the suite.
-func runLiveAuthLifecycle(t *testing.T, ctx context.Context, authConn grpc.ClientConnInterface, adminCtx context.Context, username, password, tenant, project string) {
+// session" bug (a stateless bearer that ignores revocation). Refresh replay
+// revokes ALL sessions for its principal, so this owns a separate active person
+// and proves the operator remains usable after that actual security response.
+func runLiveAuthLifecycle(t *testing.T, ctx context.Context, authConn grpc.ClientConnInterface, adminCtx context.Context, tenant, project string) {
 	t.Helper()
 	authn := authnv1.NewAuthnServiceClient(authConn)
+	adminMD, _ := metadata.FromOutgoingContext(adminCtx)
+	authorizations := adminMD.Get("authorization")
+	if len(authorizations) != 1 || !strings.HasPrefix(authorizations[0], "Bearer ") {
+		t.Fatal("lifecycle operator must have exactly one bearer credential")
+	}
+	adminToken := strings.TrimPrefix(authorizations[0], "Bearer ")
+	adminBefore, err := authn.ValidateToken(adminCtx, &authnv1.ValidateTokenRequest{
+		Token: adminToken, TokenType: authnentpb.TokenType_TOKEN_TYPE_JWT_ACCESS,
+	})
+	if err != nil || !adminBefore.GetValid() || adminBefore.GetPrincipal().GetUserId() == "" ||
+		adminBefore.GetPrincipal().GetTenantId() != tenant || adminBefore.GetPrincipal().GetProjectId() != project {
+		t.Fatalf("lifecycle operator must validate in the requested tenant/project: code=%s", status.Code(err))
+	}
+	actorID := adminBefore.GetPrincipal().GetUserId()
+	operatorContext := &commonpb.RequestContext{
+		Tenant: &commonpb.TenantContext{TenantId: tenant, ProjectId: project},
+		UserId: actorID, PrincipalId: actorID, Purpose: "go.live.auth.lifecycle",
+	}
+	username := "sdk-lifecycle-" + strings.ReplaceAll(uuid4(), "-", "")
+	password := "CorrectHorse1!"
+	created, err := authn.CreateUser(adminCtx, &authnv1.CreateUserRequest{
+		Username: username, Email: username + "@example.invalid", Password: password,
+		TenantId: tenant, ProjectId: project, FullName: "SDK owned lifecycle person",
+		AccountKind: authnentpb.AccountKind_ACCOUNT_KIND_PERSON, Context: operatorContext,
+	})
+	if err != nil || created.GetUser().GetUserId() == "" {
+		t.Fatalf("lifecycle owned person creation failed: code=%s", status.Code(err))
+	}
+	userID := created.GetUser().GetUserId()
+	if userID == actorID || created.GetUser().GetUsername() != username ||
+		created.GetUser().GetTenantId() != tenant || created.GetUser().GetProjectId() != project {
+		t.Fatal("lifecycle created identity must be the distinct owned person in its requested tenant/project")
+	}
+	// Register scoped cleanup before activation or any further assertion. Each
+	// operation gets a fresh bounded context retaining only the real operator
+	// credential; a canceled test context cannot leave the owned identity active.
+	defer func() {
+		cleanup := func(label string, perform func(context.Context) error) {
+			cleanupCtx, cleanupCancel := context.WithTimeout(context.WithoutCancel(adminCtx), 5*time.Second)
+			defer cleanupCancel()
+			if err := perform(cleanupCtx); err != nil {
+				t.Errorf("lifecycle owned person cleanup %s failed: code=%s", label, status.Code(err))
+			}
+		}
+		cleanup("sessions", func(cleanupCtx context.Context) error {
+			_, err := authn.RevokeSession(cleanupCtx, &authnv1.RevokeSessionRequest{
+				PrincipalId: userID, AllForPrincipal: true, RevokeReason: "go live lifecycle cleanup", Context: operatorContext,
+			})
+			return err
+		})
+		cleanup("identity", func(cleanupCtx context.Context) error {
+			_, err := authn.ChangeUserStatus(cleanupCtx, &authnv1.ChangeUserStatusRequest{
+				UserId: userID, NewStatus: authnentpb.UserStatus_USER_STATUS_DEACTIVATED,
+				Reason: "go live lifecycle cleanup", Context: operatorContext,
+			})
+			return err
+		})
+	}()
+	if created.GetUser().GetAccountKind() != authnentpb.AccountKind_ACCOUNT_KIND_PERSON {
+		t.Fatal("lifecycle fixture must own a person distinct from the operator")
+	}
+	active, err := authn.ChangeUserStatus(adminCtx, &authnv1.ChangeUserStatusRequest{
+		UserId: userID, NewStatus: authnentpb.UserStatus_USER_STATUS_ACTIVE,
+		Reason: "go live lifecycle activation", Context: operatorContext,
+	})
+	if err != nil || active.GetUser().GetStatus() != authnentpb.UserStatus_USER_STATUS_ACTIVE {
+		t.Fatalf("lifecycle person activation failed: code=%s", status.Code(err))
+	}
 	login, err := authn.Login(ctx, &authnv1.LoginRequest{
 		Username: username, Password: password, TenantHint: tenant, ProjectHint: project, DeviceName: "go-sdk-lifecycle",
 	})
@@ -342,6 +411,9 @@ func runLiveAuthLifecycle(t *testing.T, ctx context.Context, authConn grpc.Clien
 	if token == "" || sessionID == "" || refresh == "" {
 		t.Fatalf("Login must return access_token+session_id+refresh_token (got token=%v session=%v refresh=%v)", token != "", sessionID != "", refresh != "")
 	}
+	if login.GetUserId() != userID {
+		t.Fatal("lifecycle password Login must belong to the owned person")
+	}
 
 	// Pre-logout: the token validates, the session exists, introspection is active.
 	preValid, err := authn.ValidateToken(adminCtx, &authnv1.ValidateTokenRequest{
@@ -350,8 +422,9 @@ func runLiveAuthLifecycle(t *testing.T, ctx context.Context, authConn grpc.Clien
 	if err != nil {
 		t.Fatalf("ValidateToken (pre-logout): %v", err)
 	}
-	if !preValid.GetValid() {
-		t.Fatalf("fresh access token must validate before logout")
+	if !preValid.GetValid() || preValid.GetPrincipal().GetUserId() != userID ||
+		preValid.GetPrincipal().GetTenantId() != tenant || preValid.GetPrincipal().GetProjectId() != project {
+		t.Fatal("fresh owned access token must validate in its tenant/project before logout")
 	}
 	if _, err := authn.GetSession(adminCtx, &authnv1.GetSessionRequest{SessionId: sessionID}); err != nil {
 		t.Fatalf("GetSession (pre-logout): %v", err)
@@ -362,6 +435,20 @@ func runLiveAuthLifecycle(t *testing.T, ctx context.Context, authConn grpc.Clien
 	}
 	if !preIntro.GetActive() {
 		t.Fatalf("fresh access token must introspect Active before logout")
+	}
+	// A sibling login proves that the revoked refresh probe still invokes the
+	// production all-principal replay response rather than a session-only check.
+	sibling, err := authn.Login(ctx, &authnv1.LoginRequest{
+		Username: username, Password: password, TenantHint: tenant, ProjectHint: project, DeviceName: "go-sdk-lifecycle-sibling",
+	})
+	if err != nil || sibling.GetUserId() != userID || sibling.GetAccessToken() == "" {
+		t.Fatalf("lifecycle sibling Login failed: code=%s", status.Code(err))
+	}
+	siblingBefore, err := authn.ValidateToken(adminCtx, &authnv1.ValidateTokenRequest{
+		Token: sibling.GetAccessToken(), TokenType: authnentpb.TokenType_TOKEN_TYPE_JWT_ACCESS,
+	})
+	if err != nil || !siblingBefore.GetValid() || siblingBefore.GetPrincipal().GetUserId() != userID {
+		t.Fatalf("lifecycle sibling bearer must validate before replay: code=%s", status.Code(err))
 	}
 
 	// Logout revokes the session.
@@ -379,20 +466,44 @@ func runLiveAuthLifecycle(t *testing.T, ctx context.Context, authConn grpc.Clien
 	postValid, err := authn.ValidateToken(adminCtx, &authnv1.ValidateTokenRequest{
 		Token: token, TokenType: authnentpb.TokenType_TOKEN_TYPE_JWT_ACCESS,
 	})
-	if err == nil && postValid.GetValid() {
+	if err != nil && status.Code(err) != codes.Unauthenticated {
+		t.Errorf("post-logout ValidateToken must return invalid or Unauthenticated: code=%s", status.Code(err))
+	} else if err == nil && postValid.GetValid() {
 		t.Errorf("SECURITY: access token still validates after logout — logout did not invalidate the session")
 	}
 	postIntro, err := authn.IntrospectToken(adminCtx, &authnv1.IntrospectTokenRequest{Token: token})
-	if err == nil && postIntro.GetActive() {
+	if err != nil && status.Code(err) != codes.Unauthenticated {
+		t.Errorf("post-logout IntrospectToken must return inactive or Unauthenticated: code=%s", status.Code(err))
+	} else if err == nil && postIntro.GetActive() {
 		t.Errorf("SECURITY: token still introspects Active after logout (revocation_reason=%q)", postIntro.GetRevocationReason())
 	}
-	if _, err := authn.RefreshToken(adminCtx, &authnv1.RefreshTokenRequest{RefreshToken: refresh, SessionId: sessionID}); err == nil {
-		t.Errorf("SECURITY: refresh token still works after logout — the token family was not revoked")
+	siblingAfterLogout, err := authn.ValidateToken(adminCtx, &authnv1.ValidateTokenRequest{
+		Token: sibling.GetAccessToken(), TokenType: authnentpb.TokenType_TOKEN_TYPE_JWT_ACCESS,
+	})
+	if err != nil || !siblingAfterLogout.GetValid() {
+		t.Fatalf("single-session logout must preserve the owned sibling until refresh replay: code=%s", status.Code(err))
+	}
+	if _, err := authn.RefreshToken(adminCtx, &authnv1.RefreshTokenRequest{RefreshToken: refresh, SessionId: sessionID}); status.Code(err) != codes.Unauthenticated {
+		t.Errorf("revoked refresh replay must fail Unauthenticated: code=%s", status.Code(err))
 	}
 	// Post-logout the revoked session should also no longer be refreshable as a
 	// session, and a stale GetSession should reflect a revoked/inactive state.
-	if _, err := authn.RefreshSession(adminCtx, &authnv1.RefreshSessionRequest{SessionId: sessionID}); err == nil {
-		t.Errorf("SECURITY: RefreshSession still works after logout — the session was not revoked")
+	if _, err := authn.RefreshSession(adminCtx, &authnv1.RefreshSessionRequest{SessionId: sessionID}); status.Code(err) != codes.Unauthenticated {
+		t.Errorf("revoked RefreshSession must fail Unauthenticated: code=%s", status.Code(err))
+	}
+	siblingAfter, err := authn.ValidateToken(adminCtx, &authnv1.ValidateTokenRequest{
+		Token: sibling.GetAccessToken(), TokenType: authnentpb.TokenType_TOKEN_TYPE_JWT_ACCESS,
+	})
+	if err != nil && status.Code(err) != codes.Unauthenticated {
+		t.Errorf("post-replay sibling ValidateToken must return invalid or Unauthenticated: code=%s", status.Code(err))
+	} else if err == nil && siblingAfter.GetValid() {
+		t.Error("SECURITY: sibling bearer still validates after refresh replay — all-principal invalidation failed")
+	}
+	adminAfter, err := authn.ValidateToken(adminCtx, &authnv1.ValidateTokenRequest{
+		Token: adminToken, TokenType: authnentpb.TokenType_TOKEN_TYPE_JWT_ACCESS,
+	})
+	if err != nil || !adminAfter.GetValid() || adminAfter.GetPrincipal().GetUserId() != actorID {
+		t.Fatalf("unrelated operator bearer must remain usable after owned refresh replay: code=%s", status.Code(err))
 	}
 }
 

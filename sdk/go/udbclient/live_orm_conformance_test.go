@@ -100,12 +100,16 @@ func TestLiveOrmConformance(t *testing.T) {
 	if err != nil {
 		t.Fatalf("AuthenticateBearer rejected Login access token: %v", err)
 	}
-	// Bind every record body to the canonical tenant UUID from the validated
-	// principal, so body tenant == claim tenant (fail-closed handlers).
-	if pt := authResp.GetPrincipal().GetTenantId(); pt != "" {
-		tenant = pt
-		meta.TenantID = tenant
+	// GenericDispatch IR writes preserve caller record fields. Resolve both
+	// owners from the served principal before building records; an omitted
+	// project_id persists a quarantined blank that scoped reads cannot see.
+	principal := authResp.GetPrincipal()
+	if principal.GetUserId() == "" || principal.GetUserId() != login.GetUserId() ||
+		principal.GetTenantId() == "" || principal.GetProjectId() == "" {
+		t.Fatal("live ORM fixture requires the verified login user and canonical tenant/project")
 	}
+	tenant, project = principal.GetTenantId(), principal.GetProjectId()
+	meta.TenantID, meta.ProjectID, meta.UserID = tenant, project, principal.GetUserId()
 
 	authz := "Bearer " + login.GetAccessToken()
 	brokerGen := NewGenerated(brokerConn, liveGeneratedOptions(meta, authz))
@@ -132,16 +136,20 @@ func TestLiveOrmConformance(t *testing.T) {
 		"locale":           "en",
 		"is_active":        true,
 		"tenant_id":        tenant,
+		"project_id":       project,
 	}
 	if _, err := tmplRepo.Upsert(callCtx, dispatch, template); err != nil {
 		t.Fatalf("repository upsert (insert) failed on served GenericDispatch: %v", err)
 	}
 	assertEmittedConflictMatchesDescriptorPK(t, dispatch.last, tmplRepo)
+	assertLiveOrmEmittedRecordScope(t, dispatch.last, tenant, project)
 
-	rows := liveOrmQueryRows(t, dispatch.last, mustFind(t, tmplRepo, callCtx, dispatch, map[string]any{"template_id": templateID}))
+	findResult := mustFind(t, tmplRepo, callCtx, dispatch, map[string]any{"template_id": templateID})
+	rows := liveOrmQueryRows(t, dispatch.last, findResult)
 	if len(rows) != 1 {
 		t.Fatalf("repository Find after insert: want exactly 1 row, got %d", len(rows))
 	}
+	assertLiveOrmReturnedScope(t, rows, tenant, project)
 	if got := stringField(rows[0], "event_type"); got != eventType {
 		t.Fatalf("repository Find returned wrong row: event_type=%q want %q", got, eventType)
 	}
@@ -153,6 +161,7 @@ func TestLiveOrmConformance(t *testing.T) {
 		t.Fatalf("repository upsert (update) failed: %v", err)
 	}
 	assertEmittedConflictMatchesDescriptorPK(t, dispatch.last, tmplRepo)
+	assertLiveOrmEmittedRecordScope(t, dispatch.last, tenant, project)
 
 	byEvent, err := Query(tmplRepo.MessageType).
 		Where("event_type", "eq", eventType).
@@ -164,6 +173,7 @@ func TestLiveOrmConformance(t *testing.T) {
 	if len(eventRows) != 1 {
 		t.Fatalf("conflict-on-PK upsert must UPDATE, not duplicate: got %d rows for event_type %q", len(eventRows), eventType)
 	}
+	assertLiveOrmReturnedScope(t, eventRows, tenant, project)
 	if got := stringField(eventRows[0], "body_template"); got != "orm live body v2" {
 		t.Fatalf("second upsert did not update body_template: got %q", got)
 	}
@@ -218,6 +228,7 @@ func TestLiveOrmConformance(t *testing.T) {
 			"status":            "PENDING",
 			"retry_count":       0,
 			"tenant_id":         tenant,
+			"project_id":        project,
 		}
 	}
 	log1, log2 := mkLog(logID1), mkLog(logID2)
@@ -225,6 +236,7 @@ func TestLiveOrmConformance(t *testing.T) {
 		if _, err := logRepo.Upsert(callCtx, dispatch, record); err != nil {
 			t.Fatalf("seed notification_log failed: %v", err)
 		}
+		assertLiveOrmEmittedRecordScope(t, dispatch.last, tenant, project)
 	}
 
 	// Lazy belongs_to: one child -> parent template, one served query.
@@ -240,6 +252,7 @@ func TestLiveOrmConformance(t *testing.T) {
 	if len(lazyRows) != 1 || stringField(lazyRows[0], "template_id") != templateID {
 		t.Fatalf("lazy belongs_to must load exactly the parent template, got %v", lazyRows)
 	}
+	assertLiveOrmReturnedScope(t, lazyRows, tenant, project)
 
 	// Batch secondary fetch (N+1-safe): BOTH parents resolved by ONE deduped
 	// WhereIn child query — a single served dispatch.
@@ -268,6 +281,7 @@ func TestLiveOrmConformance(t *testing.T) {
 	if len(childRows) != 2 {
 		t.Fatalf("has_many secondary fetch must return both children in ONE query, got %d rows", len(childRows))
 	}
+	assertLiveOrmReturnedScope(t, childRows, tenant, project)
 
 	// Eager include: one compiled SQL query returns child rows with the parent
 	// embedded under the relation name.
@@ -283,8 +297,10 @@ func TestLiveOrmConformance(t *testing.T) {
 	if len(incRows) != 2 {
 		t.Fatalf("eager include: want 2 child rows, got %d", len(incRows))
 	}
+	assertLiveOrmReturnedScope(t, incRows, tenant, project)
 	for _, row := range incRows {
 		embedded := embeddedObject(t, row, "template")
+		assertLiveOrmReturnedScope(t, []map[string]any{embedded}, tenant, project)
 		if stringField(embedded, "template_id") != templateID {
 			t.Fatalf("eager include row missing embedded parent template: %v", row)
 		}
@@ -429,6 +445,44 @@ func TestLiveOrmConformance(t *testing.T) {
 	}
 
 	t.Logf("live ORM conformance green: builders+repository+relations+include+UnitOfWork over served GenericDispatch/BeginTx (tenant=%s)", tenant)
+}
+
+// Decode the actual forwarded request rather than reconstructing the builder.
+// Every notification write must explicitly carry the verified owners in its IR.
+func assertLiveOrmEmittedRecordScope(t *testing.T, req *entityv1.GenericDispatchRequest, tenant, project string) {
+	t.Helper()
+	if req == nil {
+		t.Fatal("live ORM ownership assertion requires the captured dispatch")
+	}
+	var spec struct {
+		IR struct {
+			Op      string                       `json:"op"`
+			Records []map[string]json.RawMessage `json:"records"`
+		} `json:"ir"`
+	}
+	if err := json.Unmarshal([]byte(req.GetSpecJson()), &spec); err != nil {
+		t.Fatalf("live ORM ownership request must be an IR envelope: %v", err)
+	}
+	if spec.IR.Op != "write" || len(spec.IR.Records) != 1 {
+		t.Fatal("live ORM ownership assertion requires exactly one emitted write record")
+	}
+	for field, want := range map[string]string{"tenant_id": tenant, "project_id": project} {
+		var logical struct {
+			String *string `json:"String"`
+		}
+		if err := json.Unmarshal(spec.IR.Records[0][field], &logical); err != nil || logical.String == nil || *logical.String != want {
+			t.Fatalf("actual live ORM write must encode verified %s", field)
+		}
+	}
+}
+
+func assertLiveOrmReturnedScope(t *testing.T, rows []map[string]any, tenant, project string) {
+	t.Helper()
+	for _, row := range rows {
+		if stringField(row, "tenant_id") != tenant || stringField(row, "project_id") != project {
+			t.Fatal("live ORM served row must retain the verified tenant/project owners")
+		}
+	}
 }
 
 // assertEmittedConflictMatchesDescriptorPK decodes the actually-emitted wire

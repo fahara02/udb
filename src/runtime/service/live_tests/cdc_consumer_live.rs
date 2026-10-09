@@ -194,7 +194,43 @@ async fn fixture() -> Fixture {
     sqlx::query(&format!("INSERT INTO {policies} (topic, tenant_id, owning_project, owning_service, enabled) VALUES ($1, $2, 'default', 'consumer-ci', TRUE)"))
         .bind(&topic).bind(&tenant).execute(&pool).await.expect("narrow topic policy");
     let mut service = dp_service_deny(&dsn, CatalogManifest::default()).await;
-    let (authn_service, _, _) = service.build_auth_services();
+    // Own the fixture's hash key before constructing any authn adapter. The
+    // production constructor reads process environment; this fixture instead
+    // supplies its real PostgreSQL stores and the same resolver/runtime wiring.
+    let authn_config = crate::runtime::authn::AuthnConfig {
+        session_hash_secret: format!("cdc-fixture-{}", Uuid::new_v4()),
+        ..crate::runtime::authn::AuthnConfig::from_env()
+    };
+    let runtime = service.runtime_snapshot();
+    let authn_service = crate::runtime::service::auth_service::AuthnServiceImpl::with_stores(
+        authn_config.clone(),
+        SecurityConfig::current(),
+        Arc::new(crate::runtime::authn::PostgresSessionStore::new(
+            pool.clone(),
+            "",
+        )),
+        Arc::new(crate::runtime::authn::PostgresApiKeyStore::new(
+            pool.clone(),
+            "",
+        )),
+        Arc::new(crate::runtime::authn::PostgresUserStore::new(
+            pool.clone(),
+            "",
+        )),
+    )
+    .with_runtime(Some(runtime.clone()))
+    .with_authz_snapshot(Some(service.authz_snapshot()))
+    .with_event_sink(Arc::new(
+        crate::runtime::service::auth_service::events::OutboxAuthEventSink::new(
+            pool.clone(),
+            runtime.config().cdc.outbox_relation(),
+        ),
+    ));
+    crate::runtime::service::auth_service::install_data_plane_credential_resolvers(
+        pool.clone(),
+        &authn_config,
+        Arc::new(authn_service.clone()),
+    );
     let mut users = Vec::new();
     for identity in ["", "", "unknown"] {
         let label = format!("cdc_{}", Uuid::new_v4().simple());

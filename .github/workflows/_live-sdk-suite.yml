@@ -620,7 +620,7 @@ jobs:
       # runtime environment. Never shorten tokens used by the measured sweeps or
       # the broad correctness fixtures above.
       - name: Prove Go sessions across three real 20-second renewals and re-login
-        if: inputs.candidate-build
+        if: always() && inputs.candidate-build && steps.reset-script.outcome == 'success'
         timeout-minutes: 8
         shell: bash
         env:
@@ -728,6 +728,7 @@ jobs:
             bench-output/status/**
             bench-output/backend-bootstrap.json
             bench-output/candidate-provenance.json
+            bench-output/latency-profile.json
             /tmp/udb-bench.log
             /tmp/udb-g1-session.log
           if-no-files-found: ignore
