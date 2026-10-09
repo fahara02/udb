@@ -17,10 +17,6 @@ fn authz_tuple_invalid_fields<const N: usize>(
     crate::runtime::executor_utils::invalid_argument_fields(message, fields)
 }
 
-fn authz_tuple_internal_status(operation: impl Into<String>, message: impl Into<String>) -> Status {
-    crate::runtime::executor_utils::internal_status("authz", operation, message)
-}
-
 fn policy_tuple_record(
     tuple_kind: &str,
     subject: &str,
@@ -181,10 +177,7 @@ impl AuthzServiceImpl {
             )
             .await
             .map_err(|err| {
-                authz_tuple_internal_status(
-                    "store_role_binding",
-                    format!("store role binding failed: {err}"),
-                )
+                crate::runtime::executor_utils::prefix_status("store role binding failed", err)
             })?;
         self.bump_authz_revision(
             &scope_tenant,
@@ -287,9 +280,9 @@ impl AuthzServiceImpl {
             )
             .await
             .map_err(|err| {
-                authz_tuple_internal_status(
-                    "store_relationship_tuple",
-                    format!("store relationship tuple failed: {err}"),
+                crate::runtime::executor_utils::prefix_status(
+                    "store relationship tuple failed",
+                    err,
                 )
             })?;
         self.bump_authz_revision(
@@ -366,31 +359,6 @@ mod tests {
             assert_eq!(actual.field, *field);
             assert_eq!(actual.description, *description);
         }
-    }
-
-    fn assert_internal_detail(status: &Status, operation: &str, message: &str) {
-        assert_eq!(status.code(), Code::Internal);
-        assert_eq!(status.message(), message);
-        let detail = decode_detail(status);
-        assert_eq!(detail.kind, ErrorKind::Internal as i32);
-        assert_eq!(detail.backend, "authz");
-        assert_eq!(detail.operation, operation);
-        assert!(!detail.retryable);
-        assert_eq!(detail.retry_after_ms, 0);
-        assert!(detail.field_violations.is_empty());
-    }
-
-    #[test]
-    fn authz_tuple_internal_status_carries_typed_detail() {
-        let status = authz_tuple_internal_status(
-            "store_relationship_tuple",
-            "store relationship tuple failed: dispatch down",
-        );
-        assert_internal_detail(
-            &status,
-            "store_relationship_tuple",
-            "store relationship tuple failed: dispatch down",
-        );
     }
 
     #[tokio::test]

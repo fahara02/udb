@@ -3016,9 +3016,9 @@ impl AuthnServiceImpl {
                 .native_entity_update_for_service("authn", &context, op)
                 .await
                 .map_err(|err| {
-                    authn_internal_status(
-                        "consume_webauthn_challenge_runtime",
-                        format!("consume WebAuthn challenge failed: {err}"),
+                    crate::runtime::executor_utils::prefix_status(
+                        "consume WebAuthn challenge failed",
+                        err,
                     )
                 })?;
             return Ok(());
@@ -3134,10 +3134,9 @@ impl AuthnServiceImpl {
                 )
                 .await
                 .map_err(|err| {
-                    authn_schema_already_exists_status(
-                        "store_webauthn_passkey",
-                        "webauthn_passkey_already_exists",
-                        format!("store WebAuthn passkey failed: {err}"),
+                    crate::runtime::executor_utils::prefix_status(
+                        "store WebAuthn passkey failed",
+                        err,
                     )
                 })?;
             return Ok(());
@@ -3208,9 +3207,9 @@ impl AuthnServiceImpl {
                 .native_entity_update_for_service("authn", &context, op)
                 .await
                 .map_err(|err| {
-                    authn_internal_status(
-                        "update_webauthn_passkey_runtime",
-                        format!("update WebAuthn passkey failed: {err}"),
+                    crate::runtime::executor_utils::prefix_status(
+                        "update WebAuthn passkey failed",
+                        err,
                     )
                 })?;
             return Ok(());

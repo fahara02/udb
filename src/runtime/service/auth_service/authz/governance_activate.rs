@@ -1219,10 +1219,7 @@ impl AuthzServiceImpl {
             )
             .await
             .map_err(|err| {
-                activation_internal_status(
-                    "update_canary_state",
-                    format!("update canary state failed: {err}"),
-                )
+                crate::runtime::executor_utils::prefix_status("update canary state failed", err)
             })?;
         Ok(affected > 0)
     }

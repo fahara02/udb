@@ -969,19 +969,11 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
         ),
     ),
     TokenCheck(
-        "Authz tuple internal failures use typed internal detail",
+        "Authz tuple store failures preserve the original typed refusal",
         "src/runtime/service/auth_service/authz/tuples.rs",
         (
-            "fn authz_tuple_internal_status(",
-            'crate::runtime::executor_utils::internal_status("authz", operation, message)',
-            '"store_role_binding"',
-            '"store_relationship_tuple"',
-            '"store role binding failed: {err}"',
-            '"store relationship tuple failed: {err}"',
-            "authz_tuple_internal_status_carries_typed_detail",
-            "fn assert_internal_detail(",
-            "ErrorKind::Internal",
-            'detail.backend, "authz"',
+            'crate::runtime::executor_utils::prefix_status("store role binding failed", err)',
+            'crate::runtime::executor_utils::prefix_status("store relationship tuple failed", err)',
         ),
     ),
     TokenCheck(
@@ -1003,7 +995,7 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
             '"load_relationship_tuples"',
             '"decode_relationship_tuple"',
             '"store_authz_policy"',
-            '"assign_role_principal"',
+            'crate::runtime::executor_utils::prefix_status("assign role (principal) failed", err)',
             '"assign_role"',
             '"encode_policy_conditions"',
             '"create_policy_rule"',
@@ -1013,7 +1005,7 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
             '"list_roles"',
             '"read_role_scope"',
             '"delete_role"',
-            '"delete_role_assignments"',
+            'crate::runtime::executor_utils::prefix_status("delete role assignments failed", err)',
             '"get_policy_rule"',
             '"list_policy_rules"',
             '"delete_policy_rule"',
@@ -1071,7 +1063,7 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
         ),
     ),
     TokenCheck(
-        "Actual native policy publication is immediate, durable, and refuses revision-store errors",
+        "Actual native policy publication is immediate, durable, and preserves store refusals",
         "src/runtime/service/live_tests/authz_deny_path_live.rs",
         (
             "authz_policy_mutations_publish_before_return_and_survive_restart_live",
@@ -1083,6 +1075,10 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
             "assert_eq!(refused.code(), tonic::Code::AlreadyExists)",
             'assert_eq!(detail.reason, "UDB_UNIQUE_VIOLATION")',
             'assert_eq!(detail.constraint, "authz_revision_gate")',
+            "CREATE TRIGGER authz_policy_write_gate BEFORE INSERT ON",
+            "native policy refusal must retain its original store status",
+            'refused.message().starts_with("store authz policy failed: ")',
+            'assert_eq!(detail.constraint, "authz_policy_write_gate")',
             "drop(authz);",
             "drop(svc);",
             "let restarted = deny_path_broker().await;",
@@ -3018,14 +3014,13 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
         (
             "fn governance_store_internal_status(",
             'crate::runtime::executor_utils::internal_status("authz", operation, message)',
-            '"persist_draft_document"',
+            'crate::runtime::executor_utils::prefix_status("persist draft document failed", err)',
             '"load_draft"',
             '"load_policy_set"',
             '"load_version"',
             '"load_approval"',
             '"promote_draft_to_version"',
             '"decode_governance_row"',
-            '"persist draft document failed: {err}"',
             '"load draft failed: {err}"',
             '"load policy set failed: {err}"',
             '"load version failed: {err}"',
@@ -3148,7 +3143,7 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
             '"create_canary_id_decode"',
             '"load_canary"',
             '"list_active_canaries"',
-            '"update_canary_state"',
+            'crate::runtime::executor_utils::prefix_status("update canary state failed", err)',
             '"read_node_state_ledger"',
             '"activation tx begin failed: {err}"',
             '"clear policies failed: {err}"',
@@ -3165,7 +3160,6 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
             '"create canary returned no id: {err}"',
             '"load canary failed: {err}"',
             '"list active canaries failed: {err}"',
-            '"update canary state failed: {err}"',
             '"read node-state ledger failed: {err}"',
             "activation_internal_status_carries_typed_detail",
             "fn assert_internal_detail(",
@@ -5307,7 +5301,7 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
             '"revoke_family"',
             '"issue_mfa_challenge_user_load"',
             '"issue_mfa_challenge_expiry"',
-            '"issue_mfa_challenge_runtime_write"',
+            'crate::runtime::executor_utils::prefix_status("issue MFA challenge failed", err)',
             '"issue_mfa_challenge_pg_insert"',
             '"verify_mfa_challenge_time"',
             '"verify_mfa_proof_user_load"',
@@ -5319,12 +5313,12 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
             '"revoke_recovery_codes_replace"',
             '"admin_reset_mfa_user_load"',
             '"admin_reset_mfa_store"',
-            '"delete_webauthn_credentials_runtime"',
+            'crate::runtime::executor_utils::prefix_status("delete WebAuthn credentials failed", err)',
             '"delete_webauthn_credentials_pg"',
             '"list_webauthn_credentials"',
-            '"delete_webauthn_credential_runtime"',
+            'crate::runtime::executor_utils::prefix_status("delete WebAuthn credential failed", err)',
             '"delete_webauthn_credential_pg"',
-            '"rename_passkey_runtime"',
+            'crate::runtime::executor_utils::prefix_status("rename passkey failed", err)',
             '"rename_passkey_pg"',
             "lifecycle_internal_status_carries_typed_detail",
             "fn assert_internal_detail(",
@@ -5576,14 +5570,15 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
             '"load_webauthn_challenge_state_json"',
             '"load_webauthn_challenge_tenant_id"',
             '"load_webauthn_challenge_project_id"',
-            '"consume_webauthn_challenge_runtime"',
+            'crate::runtime::executor_utils::prefix_status("consume WebAuthn challenge failed", err)',
             '"consume_webauthn_challenge_pg"',
             '"load_webauthn_passkeys_query"',
             '"load_webauthn_passkeys_decode_json"',
             '"webauthn_credential_id_serialize"',
             '"insert_webauthn_passkey_decode_json"',
             '"update_webauthn_passkey_decode_json"',
-            '"update_webauthn_passkey_runtime"',
+            'crate::runtime::executor_utils::prefix_status("update WebAuthn passkey failed", err)',
+            'crate::runtime::executor_utils::prefix_status("store WebAuthn passkey failed", err)',
             '"update_webauthn_passkey_pg"',
             '"start_webauthn_registration_user_load"',
             '"start_webauthn_registration_decode_passkey"',
@@ -10044,6 +10039,60 @@ def webrtc_raw_internal_constructor_hits(root: Path) -> list[str]:
     return hits
 
 
+def rust_call_end(text: str, start: int) -> int | None:
+    depth = 0
+    quoted = False
+    escaped = False
+    for index in range(start, len(text)):
+        char = text[index]
+        if quoted:
+            if escaped:
+                escaped = False
+            elif char == "\\":
+                escaped = True
+            elif char == '"':
+                quoted = False
+            continue
+        if char == '"':
+            quoted = True
+        elif char == "(":
+            depth += 1
+        elif char == ")":
+            depth -= 1
+            if depth == 0:
+                return index + 1
+    return None
+
+
+def native_auth_refusal_reclassification_hits(root: Path) -> list[str]:
+    hits: list[str] = []
+    native_call = re.compile(r"\.native_entity_[a-z_]+_for_service\s*\(")
+    reclassifies = re.compile(
+        r"\b(?:[a-z_]*internal_status|[a-z_]*schema_already_exists_status)\s*\("
+    )
+    for path in sorted((root / "src/runtime/service/auth_service").rglob("*.rs")):
+        text = "\n".join(
+            "" if line.lstrip().startswith("//") else line
+            for line in read(path).splitlines()
+        )
+        for match in native_call.finditer(text):
+            end = rust_call_end(text, match.end() - 1)
+            if end is None:
+                continue
+            mapped = re.match(r"\s*\.await\s*\.map_err\s*\(", text[end:])
+            if mapped is None:
+                continue
+            start = end + mapped.end() - 1
+            finish = rust_call_end(text, start)
+            if finish is not None and reclassifies.search(text[start:finish]):
+                line = text.count("\n", 0, match.start()) + 1
+                hits.append(
+                    f"{path.relative_to(root).as_posix()}:{line}: "
+                    "native auth refusal must preserve the original store status"
+                )
+    return hits
+
+
 def authz_revision_refusal_suppression_hits(root: Path) -> list[str]:
     hits: list[str] = []
     call = re.compile(
@@ -10106,6 +10155,7 @@ def _check_root_cached(root: Path) -> list[str]:
                 failures.append(f"{check.label}: missing token {token!r} in {check.path}")
 
     failures.extend(authz_revision_refusal_suppression_hits(root))
+    failures.extend(native_auth_refusal_reclassification_hits(root))
 
     api_rules = read(root / "docs/api-rules.md")
     if "### Stable String Reason Registry" not in api_rules:
@@ -10334,6 +10384,7 @@ def run_selftest() -> None:
             ("src/runtime/service/method_security.rs", "alternating RPCs cannot multiply the abuse budget"),
             ("src/runtime/service/live_tests/authz_deny_path_live.rs", "denial diagnostics cannot enumerate"),
             ("src/runtime/service/live_tests/authz_deny_path_live.rs", "revision append refusal cannot report mutation success"),
+            ("src/runtime/service/live_tests/authz_deny_path_live.rs", "native policy refusal must retain its original store status"),
             ("src/runtime/service/auth_service/authz/governance.rs", "self.current_snapshot_locked().await?;"),
             ("src/runtime/executor_utils.rs", "let detail = crate::runtime::error_reasons::ensure_registered_reason(code, detail);"),
             ("src/runtime/error_reasons.rs", "ErrorKind::Quota => QUOTA_EXCEEDED"),
@@ -10378,6 +10429,17 @@ def run_selftest() -> None:
             target.write_text(read(target) + "\n" + ignored + "\n", encoding="utf-8")
             failures = check_root(root)
             assert any("must propagate revision publication refusal" in failure for failure in failures), failures
+
+        for helper in ("authz_internal_status", "authn_schema_already_exists_status"):
+            write_fixture(root)
+            target = root / AUTHZ_INTERNAL_STATUS_PATH
+            target.write_text(
+                read(target) + '\nruntime.native_entity_write_for_service("authz", &ctx, "M", record, conflict)'
+                + '.await.map_err(|err| ' + helper + '("write", err.to_string()))?;\n',
+                encoding="utf-8",
+            )
+            failures = check_root(root)
+            assert any("must preserve the original store status" in failure for failure in failures), failures
 
         write_fixture(root)
         stale = root / "docs/api-rules.md"

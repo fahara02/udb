@@ -49,6 +49,9 @@ no-wrapper plan.
 
 ### Fixed
 
+- Native authn/authz writes keep the store's original refusal code, reason and
+  diagnostics when adding operation context, including WebAuthn, refresh-family,
+  policy, role, relationship and governance changes.
 - Active authorization mutations publish the durable shared snapshot before
   returning success. Revision-store refusals retain their typed diagnostics;
   policy deletion advances the owning tenant and project's revision.

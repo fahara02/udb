@@ -2326,10 +2326,7 @@ impl AuthzService for AuthzServiceImpl {
                 )
                 .await
                 .map_err(|err| {
-                    authz_internal_status(
-                        "store_authz_policy",
-                        format!("store authz policy failed: {err}"),
-                    )
+                    crate::runtime::executor_utils::prefix_status("store authz policy failed", err)
                 })?;
             self.bump_authz_revision(
                 &policy.tenant,
@@ -2895,9 +2892,9 @@ impl AuthzService for AuthzServiceImpl {
                 )
                 .await
                 .map_err(|err| {
-                    authz_internal_status(
-                        "assign_role_principal",
-                        format!("assign role (principal) failed: {err}"),
+                    crate::runtime::executor_utils::prefix_status(
+                        "assign role (principal) failed",
+                        err,
                     )
                 })?;
             self.emit_event(
@@ -3469,7 +3466,7 @@ impl AuthzService for AuthzServiceImpl {
             .native_entity_delete_rows_for_service("authz", &context, op)
             .await
             .map_err(|err| {
-                authz_internal_status("revoke_role", format!("revoke role failed: {err}"))
+                crate::runtime::executor_utils::prefix_status("revoke role failed", err)
             })?;
         let revoked = !deleted_rows.is_empty();
         if let Some(row) = deleted_rows.first() {
@@ -3987,7 +3984,7 @@ impl AuthzService for AuthzServiceImpl {
             )
             .await
             .map_err(|err| {
-                authz_internal_status("delete_role", format!("delete role failed: {err}"))
+                crate::runtime::executor_utils::prefix_status("delete role failed", err)
             })?;
         if affected > 0 {
             runtime
@@ -4006,9 +4003,9 @@ impl AuthzService for AuthzServiceImpl {
                 )
                 .await
                 .map_err(|err| {
-                    authz_internal_status(
-                        "delete_role_assignments",
-                        format!("delete role assignments failed: {err}"),
+                    crate::runtime::executor_utils::prefix_status(
+                        "delete role assignments failed",
+                        err,
                     )
                 })?;
         }
@@ -4241,10 +4238,7 @@ impl AuthzService for AuthzServiceImpl {
                 .native_entity_update_for_service("authz", &context, op)
                 .await
                 .map_err(|err| {
-                    authz_internal_status(
-                        "delete_policy_rule",
-                        format!("delete policy rule failed: {err}"),
-                    )
+                    crate::runtime::executor_utils::prefix_status("delete policy rule failed", err)
                 })?;
             deleted = affected > 0;
             if deleted {

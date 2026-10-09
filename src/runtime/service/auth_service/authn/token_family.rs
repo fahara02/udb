@@ -231,10 +231,7 @@ impl AuthnServiceImpl {
                 )
                 .await
                 .map_err(|err| {
-                    token_family_internal_status(
-                        "mint_refresh_family",
-                        format!("mint refresh family failed: {err}"),
-                    )
+                    crate::runtime::executor_utils::prefix_status("mint refresh family failed", err)
                 })?;
             return Ok(authn::token_family::format_refresh_token(&family_id, &jti));
         }
@@ -437,9 +434,9 @@ impl AuthnServiceImpl {
                     .native_entity_update_for_service("authn", &context, op)
                     .await
                     .map_err(|err| {
-                        token_family_internal_status(
-                            "revoke_families_for_principal",
-                            format!("revoke families for principal failed: {err}"),
+                        crate::runtime::executor_utils::prefix_status(
+                            "revoke families for principal failed",
+                            err,
                         )
                     })?;
                 total += affected;

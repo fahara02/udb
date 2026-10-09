@@ -568,6 +568,50 @@ async fn authz_policy_mutations_publish_before_return_and_survive_restart_live()
         .execute(&pool)
         .await
         .expect("remove actual revision refusal function");
+    // Native policy writes must preserve the store's classification too. A
+    // real SQL refusal at this earlier boundary must not become Internal.
+    let policy_model =
+        native_catalog::native_model("udb.core.authz.entity.v1.PolicyRule", &["policy_id"]);
+    let function = format!("udb_policy_write_refusal_{}", Uuid::new_v4().simple());
+    sqlx::query(&format!(
+        "CREATE FUNCTION {function}() RETURNS trigger LANGUAGE plpgsql AS $$ \
+         BEGIN RAISE SQLSTATE '23505' USING MESSAGE = 'forced policy refusal', \
+         CONSTRAINT = 'authz_policy_write_gate'; END; $$",
+    ))
+    .execute(&pool)
+    .await
+    .expect("install actual policy refusal function");
+    sqlx::query(&format!(
+        "CREATE TRIGGER authz_policy_write_gate BEFORE INSERT ON {} \
+         FOR EACH ROW EXECUTE FUNCTION {function}()",
+        policy_model.relation,
+    ))
+    .execute(&pool)
+    .await
+    .expect("install actual policy refusal trigger");
+    let refused = scope_claim_context_for_test(
+        claim.clone(),
+        authz.put_authz_policy(Request::new(policy("Select"))),
+    )
+    .await
+    .expect_err("native policy refusal must retain its original store status");
+    assert_eq!(refused.code(), tonic::Code::AlreadyExists);
+    assert!(refused.message().starts_with("store authz policy failed: "));
+    let detail = denial_detail(&refused);
+    assert_eq!(detail.reason, "UDB_UNIQUE_VIOLATION");
+    assert_eq!(detail.constraint, "authz_policy_write_gate");
+    assert_eq!(revision().await, 2);
+    sqlx::query(&format!(
+        "DROP TRIGGER authz_policy_write_gate ON {}",
+        policy_model.relation
+    ))
+    .execute(&pool)
+    .await
+    .expect("remove actual policy refusal trigger");
+    sqlx::query(&format!("DROP FUNCTION {function}()"))
+        .execute(&pool)
+        .await
+        .expect("remove actual policy refusal function");
     scope_claim_context_for_test(
         claim.clone(),
         authz.put_authz_policy(Request::new(policy("Update"))),

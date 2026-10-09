@@ -1580,10 +1580,7 @@ impl AuthnServiceImpl {
                 )
                 .await
                 .map_err(|err| {
-                    lifecycle_internal_status(
-                        "issue_mfa_challenge_runtime_write",
-                        format!("issue MFA challenge failed: {err}"),
-                    )
+                    crate::runtime::executor_utils::prefix_status("issue MFA challenge failed", err)
                 })?;
             return Ok(Response::new(authn_pb::IssueMfaChallengeResponse {
                 challenge_id,
@@ -2058,9 +2055,9 @@ impl AuthnServiceImpl {
                 .native_entity_delete_rows_for_service("authn", &context, op)
                 .await
                 .map_err(|err| {
-                    lifecycle_internal_status(
-                        "delete_webauthn_credentials_runtime",
-                        format!("delete WebAuthn credentials failed: {err}"),
+                    crate::runtime::executor_utils::prefix_status(
+                        "delete WebAuthn credentials failed",
+                        err,
                     )
                 })?;
             return Ok(rows.len() as u64);
@@ -2203,9 +2200,9 @@ impl AuthnServiceImpl {
                 .native_entity_delete_rows_for_service("authn", &context, op)
                 .await
                 .map_err(|err| {
-                    lifecycle_internal_status(
-                        "delete_webauthn_credential_runtime",
-                        format!("delete WebAuthn credential failed: {err}"),
+                    crate::runtime::executor_utils::prefix_status(
+                        "delete WebAuthn credential failed",
+                        err,
                     )
                 })?;
             return Ok(Response::new(authn_pb::DeleteWebAuthnCredentialResponse {
@@ -2290,10 +2287,7 @@ impl AuthnServiceImpl {
                 .native_entity_update_for_service("authn", &context, op)
                 .await
                 .map_err(|err| {
-                    lifecycle_internal_status(
-                        "rename_passkey_runtime",
-                        format!("rename passkey failed: {err}"),
-                    )
+                    crate::runtime::executor_utils::prefix_status("rename passkey failed", err)
                 })?;
             return Ok(Response::new(authn_pb::RenamePasskeyResponse {
                 renamed: !rows.is_empty(),

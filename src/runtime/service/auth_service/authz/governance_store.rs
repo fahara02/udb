@@ -78,10 +78,7 @@ impl AuthzServiceImpl {
             )
             .await
             .map_err(|err| {
-                governance_store_internal_status(
-                    "persist_draft_document",
-                    format!("persist draft document failed: {err}"),
-                )
+                crate::runtime::executor_utils::prefix_status("persist draft document failed", err)
             })?;
         Ok(())
     }
