@@ -38,6 +38,8 @@ no-wrapper plan.
   retryable `UNAVAILABLE` instead of a generic `INTERNAL` refusal.
 - Governance draft, version, canary and audit SQL operations use that same error
   classification, preserving constraint and outage details at their boundaries.
+- A scoped authz upsert that affects no row refuses before its revision append.
+  The original policy keeps its tenant, project and resource on that refusal.
 
 ### Added
 

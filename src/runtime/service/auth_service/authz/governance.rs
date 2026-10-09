@@ -899,7 +899,16 @@ impl AuthzServiceImpl {
                 read: read.clone(),
                 expected_rows,
             });
-            transaction_ops.extend(ops.iter().cloned());
+            // A scoped upsert may skip a conflicting row owned by another
+            // tenant/project. It must refuse before the revision append, just
+            // like required updates and deletes, rather than acknowledge a
+            // policy change that did not happen.
+            transaction_ops.extend(ops.iter().cloned().map(|op| match op {
+                NativeEntityTransactionOp::Write(write) => {
+                    NativeEntityTransactionOp::WriteRequired(write)
+                }
+                other => other,
+            }));
             transaction_ops.push(NativeEntityTransactionOp::Write(LogicalWrite {
                 message_type: read.message_type.clone(),
                 records: vec![record],

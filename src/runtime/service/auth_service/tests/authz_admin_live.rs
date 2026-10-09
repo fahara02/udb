@@ -807,12 +807,13 @@ async fn live_postgres_put_authz_policy_refuses_foreign_policy_id_overwrite() {
     let tenant_a = Uuid::new_v4().to_string();
     let tenant_b = Uuid::new_v4().to_string();
     let policy_id = Uuid::new_v4().to_string();
-    let record = |tenant: &str, resource: &str| authz_pb::PutAuthzPolicyRequest {
+    let record = |tenant: &str, project: &str, resource: &str| authz_pb::PutAuthzPolicyRequest {
         policy: Some(authz_pb::AuthzPolicyRecord {
             id: policy_id.clone(),
             enabled: true,
             effect: "allow".to_string(),
             tenant: tenant.to_string(),
+            project: project.to_string(),
             subject: "svc-b3".to_string(),
             action: "Select".to_string(),
             resource: resource.to_string(),
@@ -822,7 +823,11 @@ async fn live_postgres_put_authz_policy_refuses_foreign_policy_id_overwrite() {
 
     // Tenant B's policy, written in-process (no claim = unrestricted).
     authz
-        .put_authz_policy(Request::new(record(&tenant_b, "acme.b3.v1.Invoice")))
+        .put_authz_policy(Request::new(record(
+            &tenant_b,
+            "owner-project",
+            "acme.b3.v1.Invoice",
+        )))
         .await
         .expect("seed the tenant B policy");
     assert_eq!(
@@ -842,7 +847,7 @@ async fn live_postgres_put_authz_policy_refuses_foreign_policy_id_overwrite() {
     );
     let err = crate::runtime::service::method_security::scope_claim_context_for_test(
         ctx,
-        authz.put_authz_policy(Request::new(record(&tenant_a, "acme.b3.v1.Payroll"))),
+        authz.put_authz_policy(Request::new(record(&tenant_a, "", "acme.b3.v1.Payroll"))),
     )
     .await
     .expect_err("a tenant-bound admin must not overwrite another tenant's policy id");
@@ -851,11 +856,82 @@ async fn live_postgres_put_authz_policy_refuses_foreign_policy_id_overwrite() {
         raw_policy_tenant_and_domain(&pool, &policy_id)
             .await
             .map(|(tenant, _)| tenant),
-        Some(tenant_b),
+        Some(tenant_b.clone()),
         "the stored policy must keep tenant B"
     );
 
+    // The tenant ownership pre-read allows this caller. The shared compiler
+    // must still skip the conflicting row because its project belongs to a
+    // different scope; that skip must roll back before any revision append.
+    let revisions = authz.authz_revisions_model();
+    let revision_count_sql = format!("SELECT COUNT(*) FROM {}", revisions.relation);
+    let revisions_before: i64 = sqlx::query_scalar(&revision_count_sql)
+        .fetch_one(&pool)
+        .await
+        .expect("count revisions before scope-skipped upsert");
+    let project_context = crate::runtime::service::method_security::test_claim_context(
+        "policy-admin-b",
+        &tenant_b,
+        "other-project",
+        &["udb:authz:admin"],
+        &[],
+    );
+    let skipped = crate::runtime::service::method_security::scope_claim_context_for_test(
+        project_context,
+        authz.put_authz_policy(Request::new(record(
+            &tenant_b,
+            "other-project",
+            "acme.b3.v1.Payroll",
+        ))),
+    )
+    .await;
+    let revisions_after: i64 = sqlx::query_scalar(&revision_count_sql)
+        .fetch_one(&pool)
+        .await
+        .expect("count revisions after scope-skipped upsert");
+    let policy = authz.policies_model();
+    let retained: (String, String, String) = sqlx::query_as(&format!(
+        "SELECT {tenant}::TEXT, {project}, {resource} FROM {rel} WHERE {id} = $1::UUID",
+        tenant = policy.q("tenant_id"),
+        project = policy.q("project_id"),
+        resource = policy.q("object"),
+        rel = policy.relation,
+        id = policy.q("policy_id"),
+    ))
+    .bind(Uuid::parse_str(&policy_id).expect("valid policy id"))
+    .fetch_one(&pool)
+    .await
+    .expect("read back the original owner policy");
     cleanup_native_auth_db(&pool).await;
+    let err = skipped.expect_err("scope-skipped policy replacement must refuse");
+    assert_eq!(
+        err.code(),
+        crate::runtime::error_reasons::NO_ROWS_AFFECTED.status
+    );
+    let raw = err
+        .metadata()
+        .get_bin(crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY)
+        .expect("scope refusal must carry the actual ErrorDetail")
+        .to_bytes()
+        .expect("valid detail metadata");
+    let detail = crate::runtime::executor_utils::decode_error_detail_from_raw(&raw);
+    assert_eq!(
+        detail.reason,
+        crate::runtime::error_reasons::NO_ROWS_AFFECTED.code
+    );
+    assert_eq!(
+        revisions_after, revisions_before,
+        "scope-skipped upsert must not append a revision"
+    );
+    assert_eq!(
+        retained,
+        (
+            tenant_b,
+            "owner-project".to_string(),
+            "acme.b3.v1.Invoice".to_string()
+        ),
+        "owner policy must retain its project and resource",
+    );
 }
 
 /// B7 — CreatePolicyRule with a `tenant:<uuid>` domain (any spacing) stores

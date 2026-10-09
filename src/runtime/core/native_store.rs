@@ -38,6 +38,8 @@ pub(crate) enum NativeEntityTransactionOp {
         expected_rows: Vec<serde_json::Value>,
     },
     Write(LogicalWrite),
+    /// Refuse a skipped scoped upsert before any later revision or outbox commits.
+    WriteRequired(LogicalWrite),
     Update(LogicalUpdate),
     Delete(LogicalDelete),
     /// Refuse an empty delete before any later mutation or outbox can commit.
@@ -754,6 +756,7 @@ impl DataBrokerRuntime {
 
         let mut prepared_steps = Vec::with_capacity(ops.len());
         for op in ops {
+            let require_affected = matches!(&op, NativeEntityTransactionOp::WriteRequired(_));
             let prepared = match op {
                 NativeEntityTransactionOp::ReadGuard {
                     read,
@@ -809,14 +812,15 @@ impl DataBrokerRuntime {
                         lock_key: i64::from_be_bytes(key),
                     }
                 }
-                NativeEntityTransactionOp::Write(op) => PreparedStep::Mutation {
+                NativeEntityTransactionOp::Write(op)
+                | NativeEntityTransactionOp::WriteRequired(op) => PreparedStep::Mutation {
                     compiled:
                         crate::runtime::service::handlers_data::compile_logical_write_dispatch(
                             &kind,
                             &op,
                             &compile_ctx,
                         )?,
-                    require_affected: false,
+                    require_affected,
                 },
                 NativeEntityTransactionOp::Update(op) => PreparedStep::Mutation {
                     compiled:
