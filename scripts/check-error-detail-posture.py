@@ -3156,6 +3156,43 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
         ),
     ),
     TokenCheck(
+        "Incoming governance documents cannot default unknown effects to allow",
+        "src/runtime/service/auth_service/authz/governance_logic.rs",
+        (
+            "pub fn from_proto(doc: &authz_pb::PolicyDocument) -> Result<Self, tonic::Status>",
+            "pub fn record_to_policy(r: &authz_pb::AuthzPolicyRecord) -> Result<AuthzPolicy, tonic::Status>",
+            "super::policy_record_effect(&r.effect)?",
+            "governance_proto_document_refuses_unknown_effects",
+        ),
+    ),
+    TokenCheck(
+        "Governance handlers propagate incoming document refusal before storage or evaluation",
+        "src/runtime/service/auth_service/authz/governance_drafts.rs",
+        (
+            ".map(PolicyDocument::from_proto) .transpose()? .unwrap_or_default()",
+        ),
+    ),
+    TokenCheck(
+        "Governance simulation propagates incoming candidate refusal",
+        "src/runtime/service/auth_service/authz/governance_sim.rs",
+        (
+            "PolicyDocument::from_proto(candidate)?",
+        ),
+    ),
+    TokenCheck(
+        "Live governance refuses unknown policy effects without draft writes",
+        "src/runtime/service/auth_service/tests/authz_admin_live.rs",
+        (
+            "unknown effect must refuse draft creation",
+            "unknown effect must refuse stored draft update",
+            "unknown effect must refuse policy simulation",
+            "unknown effect must refuse policy explanation",
+            "invalid effect must not create a policy set",
+            "invalid effect must not replace stored draft policies",
+            "invalid effect must not advance draft update time",
+        ),
+    ),
+    TokenCheck(
         "Frozen authorization documents refuse malformed fields instead of defaults",
         "src/runtime/service/auth_service/authz/governance_logic.rs",
         (
@@ -10792,6 +10829,7 @@ def run_selftest() -> None:
             ("src/runtime/executor_utils.rs", "decode_column,"),
             ("src/runtime/service/auth_service/authz/governance_store.rs", "revision: row.try_get(\"revision\").map_err(decode_err)?"),
             ("src/runtime/service/auth_service/authz/governance_activate.rs", "min_samples: row.try_get(\"min_samples\").map_err(map)?"),
+            ("src/runtime/service/auth_service/authz/governance_logic.rs", "super::policy_record_effect(&r.effect)?"),
         ):
             write_fixture(root)
             target = root / source

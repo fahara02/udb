@@ -41,6 +41,9 @@ no-wrapper plan.
 - Authz row decoding refuses corrupt governance, role, audit and canary data with
   `UDB_DECODE_FAILED` and the affected column. Decode errors cannot become empty
   identities, invented revisions or a healthy canary signal.
+- Governance draft and simulation documents share `PutAuthzPolicy` effect
+  validation. An unknown effect refuses with a typed `policy.effect` violation
+  before it can become an allow policy.
 - Governance draft, version, canary and audit SQL operations use that same error
   classification, preserving constraint and outage details at their boundaries.
 - A scoped authz upsert that affects no row refuses before its revision append.

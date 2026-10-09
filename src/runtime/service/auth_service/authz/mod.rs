@@ -762,6 +762,20 @@ fn effect_to_db(effect: Effect) -> &'static str {
     }
 }
 
+/// Direct mutations and governed documents share the same effect contract.
+fn policy_record_effect(value: &str) -> Result<Effect, Status> {
+    if value.eq_ignore_ascii_case("deny") {
+        Ok(Effect::Deny)
+    } else if value.eq_ignore_ascii_case("allow") {
+        Ok(Effect::Allow)
+    } else {
+        Err(authz_invalid_fields(
+            format!("policy effect must be 'allow' or 'deny', got '{}'", value),
+            [("policy.effect", "must be either 'allow' or 'deny'")],
+        ))
+    }
+}
+
 pub(super) fn effect_from_db(value: &str) -> i32 {
     match value {
         "ALLOW" | "allow" | "POLICY_EFFECT_ALLOW" => authz_entity_pb::PolicyEffect::Allow as i32,
@@ -2286,19 +2300,7 @@ impl AuthzService for AuthzServiceImpl {
         }
         // Reject unknown effect strings rather than silently defaulting to Allow:
         // a typo'd effect must never become a permissive policy.
-        let effect = if p.effect.eq_ignore_ascii_case("deny") {
-            Effect::Deny
-        } else if p.effect.eq_ignore_ascii_case("allow") {
-            Effect::Allow
-        } else {
-            return Err(authz_invalid_fields(
-                format!(
-                    "policy effect must be 'allow' or 'deny', got '{}'",
-                    p.effect
-                ),
-                [("policy.effect", "must be either 'allow' or 'deny'")],
-            ));
-        };
+        let effect = policy_record_effect(&p.effect)?;
         let policy = AuthzPolicy {
             id: p.id,
             priority: p.priority,

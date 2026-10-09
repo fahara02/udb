@@ -619,6 +619,121 @@ async fn live_postgres_authz_governance_activate_policy_read_after_write() {
         .draft
         .expect("created policy draft");
 
+    // Incoming documents must use the same effect validation as direct policy
+    // writes. Exercise all four governance handlers, including the update of
+    // this actual stored draft, before continuing the successful lifecycle.
+    let rejected_set_name = format!("invalid-effect-{suffix}");
+    for effect in ["", "maybe", "ALLOW "] {
+        let document = authz_pb::PolicyDocument {
+            policies: vec![authz_pb::AuthzPolicyRecord {
+                id: policy_id.clone(),
+                enabled: true,
+                effect: effect.to_string(),
+                tenant: "acme".to_string(),
+                project: "billing".to_string(),
+                ..Default::default()
+            }],
+            ..Default::default()
+        };
+        let refusals = [
+            authz
+                .create_policy_draft(Request::new(authz_pb::CreatePolicyDraftRequest {
+                    actor: Some(live_governance_actor(&author.user_id)),
+                    tenant_id: "acme".to_string(),
+                    project_id: "billing".to_string(),
+                    policy_set_name: rejected_set_name.clone(),
+                    document: Some(document.clone()),
+                    ..Default::default()
+                }))
+                .await
+                .expect_err("unknown effect must refuse draft creation"),
+            authz
+                .update_policy_draft(Request::new(authz_pb::UpdatePolicyDraftRequest {
+                    actor: Some(live_governance_actor(&author.user_id)),
+                    draft_id: draft.draft_id.clone(),
+                    document: Some(document.clone()),
+                    ..Default::default()
+                }))
+                .await
+                .expect_err("unknown effect must refuse stored draft update"),
+            authz
+                .simulate_policy(Request::new(authz_pb::SimulatePolicyRequest {
+                    actor: Some(live_governance_actor(&author.user_id)),
+                    tenant_id: "acme".to_string(),
+                    project_id: "billing".to_string(),
+                    candidate: Some(document.clone()),
+                    ..Default::default()
+                }))
+                .await
+                .expect_err("unknown effect must refuse policy simulation"),
+            authz
+                .explain_policy(Request::new(authz_pb::ExplainPolicyRequest {
+                    actor: Some(live_governance_actor(&author.user_id)),
+                    tenant_id: "acme".to_string(),
+                    project_id: "billing".to_string(),
+                    candidate: Some(document),
+                    ..Default::default()
+                }))
+                .await
+                .expect_err("unknown effect must refuse policy explanation"),
+        ];
+        for err in refusals {
+            assert_eq!(err.code(), tonic::Code::InvalidArgument);
+            let detail = crate::runtime::executor_utils::decode_error_detail_from_raw(
+                err.metadata()
+                    .get_bin(crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY)
+                    .expect("typed invalid effect detail"),
+            );
+            assert_eq!(detail.field_violations.len(), 1);
+            assert_eq!(detail.field_violations[0].field, "policy.effect");
+        }
+    }
+    let policy_sets = crate::runtime::native_catalog::native_model(
+        "udb.core.authz.entity.v1.PolicySet",
+        &["name"],
+    );
+    let rejected_sets: i64 = sqlx::query_scalar(&format!(
+        "SELECT COUNT(*) FROM {} WHERE {} = $1",
+        policy_sets.relation,
+        policy_sets.q("name"),
+    ))
+    .bind(&rejected_set_name)
+    .fetch_one(&pool)
+    .await
+    .expect("inspect rejected draft policy sets");
+    assert_eq!(
+        rejected_sets, 0,
+        "invalid effect must not create a policy set"
+    );
+    let drafts = crate::runtime::native_catalog::native_model(
+        "udb.core.authz.entity.v1.PolicyDraft",
+        &["draft_id", "proposed_policies_json", "updated_at"],
+    );
+    let unchanged: (String, i64) = sqlx::query_as(&format!(
+        "SELECT {}, EXTRACT(EPOCH FROM {})::BIGINT FROM {} WHERE {} = $1::UUID",
+        drafts.json_text_as("proposed_policies_json", "proposed_policies_json"),
+        drafts.q("updated_at"),
+        drafts.relation,
+        drafts.q("draft_id"),
+    ))
+    .bind(&draft.draft_id)
+    .fetch_one(&pool)
+    .await
+    .expect("read stored draft after invalid effect refusals");
+    assert_eq!(
+        unchanged.0, draft.proposed_policies_json,
+        "invalid effect must not replace stored draft policies"
+    );
+    assert_eq!(
+        unchanged.1,
+        draft
+            .updated_at
+            .as_ref()
+            .expect("draft update time")
+            .seconds,
+        "invalid effect must not advance draft update time"
+    );
+
     authz
         .submit_policy_draft(Request::new(authz_pb::SubmitPolicyDraftRequest {
             actor: Some(live_governance_actor(&author.user_id)),

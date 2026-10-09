@@ -231,6 +231,7 @@ impl AuthzServiceImpl {
             .document
             .as_ref()
             .map(PolicyDocument::from_proto)
+            .transpose()?
             .unwrap_or_default();
         if req.branch_from_active && document.policies.is_empty() {
             let snap = self.current_snapshot().await?;
@@ -361,6 +362,7 @@ impl AuthzServiceImpl {
             .document
             .as_ref()
             .map(PolicyDocument::from_proto)
+            .transpose()?
             .unwrap_or_default();
         reject_reserved_platform_bindings(&document, "update_policy_draft")?;
         let pool = self.require_pool()?;

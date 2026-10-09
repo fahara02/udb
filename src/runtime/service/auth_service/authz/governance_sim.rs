@@ -53,7 +53,7 @@ impl AuthzServiceImpl {
         let draft_doc = if !req.draft_id.trim().is_empty() {
             self.load_draft_document(&req.draft_id).await?
         } else if let Some(candidate) = req.candidate.as_ref() {
-            PolicyDocument::from_proto(candidate)
+            PolicyDocument::from_proto(candidate)?
         } else {
             active_doc.clone()
         };
@@ -184,7 +184,7 @@ impl AuthzServiceImpl {
         let doc = if !req.draft_id.trim().is_empty() {
             self.load_draft_document(&req.draft_id).await?
         } else if let Some(candidate) = req.candidate.as_ref() {
-            PolicyDocument::from_proto(candidate)
+            PolicyDocument::from_proto(candidate)?
         } else {
             let snap = self.current_snapshot().await?;
             PolicyDocument::from_snapshot(&snap, &tenant, &project)

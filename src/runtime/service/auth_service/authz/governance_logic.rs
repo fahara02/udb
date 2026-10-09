@@ -124,9 +124,13 @@ impl PolicyDocument {
     }
 
     /// Build a document from the governance `PolicyDocument` proto message.
-    pub fn from_proto(doc: &authz_pb::PolicyDocument) -> Self {
-        Self {
-            policies: doc.policies.iter().map(record_to_policy).collect(),
+    pub fn from_proto(doc: &authz_pb::PolicyDocument) -> Result<Self, tonic::Status> {
+        Ok(Self {
+            policies: doc
+                .policies
+                .iter()
+                .map(record_to_policy)
+                .collect::<Result<_, _>>()?,
             role_bindings: doc
                 .role_bindings
                 .iter()
@@ -137,7 +141,7 @@ impl PolicyDocument {
                 .iter()
                 .map(pb_tuple_to_runtime)
                 .collect(),
-        }
+        })
     }
 }
 
@@ -145,13 +149,9 @@ impl PolicyDocument {
 /// PutAuthzPolicy mapping so CreatePolicyRule/PutAuthzPolicy parity holds (K8):
 /// role, purpose, relationship, priority, required scopes, conditions, tenant,
 /// project are all carried.
-pub fn record_to_policy(r: &authz_pb::AuthzPolicyRecord) -> AuthzPolicy {
-    let effect = if r.effect.eq_ignore_ascii_case("deny") {
-        Effect::Deny
-    } else {
-        Effect::Allow
-    };
-    AuthzPolicy {
+pub fn record_to_policy(r: &authz_pb::AuthzPolicyRecord) -> Result<AuthzPolicy, tonic::Status> {
+    let effect = super::policy_record_effect(&r.effect)?;
+    Ok(AuthzPolicy {
         id: if r.id.trim().is_empty() {
             uuid::Uuid::new_v4().to_string()
         } else {
@@ -170,7 +170,7 @@ pub fn record_to_policy(r: &authz_pb::AuthzPolicyRecord) -> AuthzPolicy {
         relationship: r.relationship.clone(),
         conditions: r.conditions.clone().into_iter().collect(),
         required_scopes: r.required_scopes.clone(),
-    }
+    })
 }
 
 pub fn pb_binding_to_runtime(b: &authz_pb::RoleBinding) -> RoleBinding {
@@ -665,7 +665,7 @@ mod tests {
             conditions: std::collections::HashMap::from([("k".to_string(), "v".to_string())]),
             required_scopes: vec!["udb:read".to_string()],
         };
-        let p = record_to_policy(&rec);
+        let p = record_to_policy(&rec).expect("valid policy record");
         assert_eq!(p.priority, 7);
         assert_eq!(p.role, "reader");
         assert_eq!(p.purpose, "ops");
@@ -679,6 +679,41 @@ mod tests {
         };
         let parsed = PolicyDocument::from_json(&doc.to_json()).expect("canonical document decodes");
         assert_eq!(parsed.policies[0], p);
+    }
+
+    #[test]
+    fn governance_proto_document_refuses_unknown_effects() {
+        for effect in ["", "maybe", "ALLOW "] {
+            let doc = authz_pb::PolicyDocument {
+                policies: vec![authz_pb::AuthzPolicyRecord {
+                    effect: effect.to_string(),
+                    ..Default::default()
+                }],
+                ..Default::default()
+            };
+            let err = PolicyDocument::from_proto(&doc).expect_err("unknown effect must refuse");
+            assert_eq!(err.code(), tonic::Code::InvalidArgument);
+            let detail = crate::runtime::executor_utils::decode_error_detail_from_raw(
+                err.metadata()
+                    .get_bin(crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY)
+                    .expect("typed validation detail"),
+            );
+            assert_eq!(detail.field_violations.len(), 1);
+            assert_eq!(detail.field_violations[0].field, "policy.effect");
+        }
+        for (effect, expected) in [("allow", Effect::Allow), ("DENY", Effect::Deny)] {
+            let doc = authz_pb::PolicyDocument {
+                policies: vec![authz_pb::AuthzPolicyRecord {
+                    effect: effect.to_string(),
+                    ..Default::default()
+                }],
+                ..Default::default()
+            };
+            assert_eq!(
+                PolicyDocument::from_proto(&doc).unwrap().policies[0].effect,
+                expected
+            );
+        }
     }
 
     #[test]
