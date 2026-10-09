@@ -50,6 +50,9 @@ no-wrapper plan.
 - Role revocation binds its actor to the verified caller and reads its audit
   target from the stored assignment. An omitted actor is derived from the claim;
   a forged actor refuses before deletion or revision append.
+- Role assignments refuse unknown principal-kind numbers with a typed field
+  violation before persistence. The declared unspecified value keeps the
+  existing user-binding behavior.
 - Governance draft, version, canary and audit SQL operations use that same error
   classification, preserving constraint and outage details at their boundaries.
 - A scoped authz upsert that affects no row refuses before its revision append.

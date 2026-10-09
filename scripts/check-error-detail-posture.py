@@ -3494,6 +3494,25 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
         ),
     ),
     TokenCheck(
+        "unknown role principal kinds refuse before persistence",
+        "src/runtime/service/auth_service/authz/mod.rs",
+        (
+            "PrincipalKind::try_from(req.principal_kind).map_err(|_|",
+            '"principal_kind must be a declared PrincipalKind value"',
+            '[("principal_kind", "must be a declared PrincipalKind value")]',
+            "assign_role_unknown_principal_kind_carries_field_violation",
+        ),
+    ),
+    TokenCheck(
+        "live role binding rejects unknown principal kinds without mutation",
+        "src/runtime/service/auth_service/tests/authz_rbac_live.rs",
+        (
+            "unknown principal kind must refuse before assignment",
+            "unknown principal kind must not append an authz revision",
+            "unknown principal kind must not persist a user role",
+        ),
+    ),
+    TokenCheck(
         "authz mapping validation uses typed field violations",
         "src/runtime/service/auth_service/mappings.rs",
         (
@@ -10859,6 +10878,8 @@ def run_selftest() -> None:
             ("src/runtime/service/auth_service/authz/mod.rs", 'parse_uuid_field("revoked_by", &req.revoked_by)?'),
             ("src/runtime/service/auth_service/authz/mod.rs", 'let user_id = authz_native_text(&scope_row, "user_id")?;'),
             ("src/runtime/service/auth_service/tests/authz_rbac_live.rs", "forged role revoker must not append an authz revision"),
+            ("src/runtime/service/auth_service/authz/mod.rs", "PrincipalKind::try_from(req.principal_kind).map_err(|_|"),
+            ("src/runtime/service/auth_service/tests/authz_rbac_live.rs", "unknown principal kind must not append an authz revision"),
         ):
             write_fixture(root)
             target = root / source

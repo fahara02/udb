@@ -2813,7 +2813,12 @@ impl AuthzService for AuthzServiceImpl {
         // so the same principal always resolves to the same row). Groups may be
         // bound only through an explicit principal_id (IdP/SCIM mapping policy).
         use authz_entity_pb::PrincipalKind;
-        let principal_kind = PrincipalKind::try_from(req.principal_kind).unwrap_or_default();
+        let principal_kind = PrincipalKind::try_from(req.principal_kind).map_err(|_| {
+            authz_invalid_fields(
+                "principal_kind must be a declared PrincipalKind value",
+                [("principal_kind", "must be a declared PrincipalKind value")],
+            )
+        })?;
         let principal_ref = if !req.principal_id.trim().is_empty() {
             req.principal_id.clone()
         } else {
@@ -5666,6 +5671,24 @@ mod validation_tests {
             tonic::Code::PermissionDenied,
             "a same-tenant write must not be refused as cross-tenant: {err:?}"
         );
+    }
+
+    #[tokio::test]
+    async fn assign_role_unknown_principal_kind_carries_field_violation() {
+        for principal_kind in [-1, i32::MAX] {
+            let err = svc()
+                .assign_role(Request::new(authz_pb::AssignRoleRequest {
+                    principal_kind,
+                    tenant_id: "tenant-a".to_string(),
+                    ..Default::default()
+                }))
+                .await
+                .expect_err("unknown principal kind must fail before runtime access");
+            assert_validation_fields(
+                &err,
+                &[("principal_kind", "must be a declared PrincipalKind value")],
+            );
+        }
     }
 
     #[tokio::test]

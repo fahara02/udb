@@ -57,6 +57,58 @@ async fn live_postgres_authz_role_policy_roundtrip() {
         .role
         .expect("role");
 
+    let revisions = crate::runtime::native_catalog::native_model(
+        "udb.core.authz.entity.v1.AuthzRevision",
+        &["tenant_id"],
+    );
+    let revision_count = format!("SELECT COUNT(*) FROM {}", revisions.relation);
+    let before_unknown: i64 = sqlx::query_scalar(&revision_count)
+        .fetch_one(&pool)
+        .await
+        .expect("count revisions before unknown principal kinds");
+    for principal_kind in [-1, i32::MAX] {
+        let err = authz
+            .assign_role(Request::new(authz_pb::AssignRoleRequest {
+                user_id: user.user_id.clone(),
+                role_id: role.role_id.clone(),
+                domain: "acme".to_string(),
+                assigned_by: user.user_id.clone(),
+                tenant_id: "acme".to_string(),
+                project_id: "billing".to_string(),
+                principal_kind,
+                ..Default::default()
+            }))
+            .await
+            .expect_err("unknown principal kind must refuse before assignment");
+        assert_eq!(err.code(), tonic::Code::InvalidArgument);
+        assert_eq!(
+            crate::runtime::error_reasons::reason_of(&err).as_deref(),
+            Some(crate::runtime::error_reasons::VALIDATION_FAILED.code),
+        );
+    }
+    let after_unknown: i64 = sqlx::query_scalar(&revision_count)
+        .fetch_one(&pool)
+        .await
+        .expect("count revisions after unknown principal kinds");
+    assert_eq!(
+        after_unknown, before_unknown,
+        "unknown principal kind must not append an authz revision"
+    );
+    let unknown_assignments = authz
+        .list_user_roles(Request::new(authz_pb::ListUserRolesRequest {
+            user_id: user.user_id.clone(),
+            domain: "acme".to_string(),
+            active_only: true,
+            ..Default::default()
+        }))
+        .await
+        .expect("list assignments after unknown principal kind refusal")
+        .into_inner();
+    assert!(
+        unknown_assignments.user_roles.is_empty(),
+        "unknown principal kind must not persist a user role"
+    );
+
     let expires_at = now_unix() + 3600;
     let user_role = authz
         .assign_role(Request::new(authz_pb::AssignRoleRequest {
