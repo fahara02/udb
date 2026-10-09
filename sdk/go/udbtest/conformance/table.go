@@ -19,9 +19,9 @@ import (
 // isolated).
 type Connect func(t testing.TB, tenant string) *udbclient.Udb
 
-// newUUID is a random version-4 UUID: every tenant and row of a run is distinct,
+// NewID is a random version-4 UUID: every tenant and row of a run is distinct,
 // so runs against a shared live broker never collide.
-func newUUID() string {
+func NewID() string {
 	var b [16]byte
 	if _, err := rand.Read(b[:]); err != nil {
 		panic(err)
@@ -31,13 +31,12 @@ func newUUID() string {
 	return fmt.Sprintf("%x-%x-%x-%x-%x", b[0:4], b[4:6], b[6:8], b[8:10], b[10:16])
 }
 
-func newTenant() string { return newUUID() }
+func newTenant() string { return NewID() }
 
-func newID(int) string { return newUUID() }
+func newID(int) string { return NewID() }
 
 // file builds a row without a tenant: the broker fills the caller's verified
-// tenant in, which is what the suite relies on (and what lets it run as the
-// one live test login).
+// tenant in, which is what the suite relies on for each verified live login.
 func file(_, id, name string) *storagev1.File {
 	return &storagev1.File{
 		FileId:    id,
@@ -50,18 +49,28 @@ func file(_, id, name string) *storagev1.File {
 // Option adjusts a run for the environment it targets.
 type Option func(*options)
 
-type options struct{ singleTenant bool }
+type options struct{ tenants [2]string }
 
-// SingleTenant marks a target that can only connect as one tenant (a live
-// broker with one test login): the cross-tenant checks are skipped there and
-// run against the fake instead.
-func SingleTenant() Option { return func(o *options) { o.singleTenant = true } }
+// Tenants selects two actually provisioned canonical tenant UUIDs. Without
+// this option the fake provisions fresh tenants. Cross-tenant cases never skip.
+func Tenants(first, second string) Option {
+	return func(o *options) { o.tenants = [2]string{first, second} }
+}
 
 // RunTable runs the typed-store contract.
 func RunTable(t *testing.T, connect Connect, opts ...Option) {
 	var o options
 	for _, opt := range opts {
 		opt(&o)
+	}
+	if (o.tenants[0] != "" || o.tenants[1] != "") && (o.tenants[0] == "" || o.tenants[1] == "" || o.tenants[0] == o.tenants[1]) {
+		t.Fatal("conformance requires two distinct provisioned tenants")
+	}
+	newTenant := func() string {
+		if o.tenants[0] != "" {
+			return o.tenants[0]
+		}
+		return NewID()
 	}
 	t.Run("get missing is ErrNotFound", func(t *testing.T) {
 		u := connect(t, newTenant())
@@ -91,10 +100,10 @@ func RunTable(t *testing.T, connect Connect, opts ...Option) {
 	})
 
 	t.Run("tenants never see each other's rows", func(t *testing.T) {
-		if o.singleTenant {
-			t.Skip("the target connects as one tenant; the fake runs this check")
-		}
 		a, b := newTenant(), newTenant()
+		if o.tenants[1] != "" {
+			b = o.tenants[1]
+		}
 		ua, ub := connect(t, a), connect(t, b)
 		id := newID(3)
 		if err := udbclient.TableOf[*storagev1.File](ua).Upsert(context.Background(), file(a, id, "secret.pdf")); err != nil {

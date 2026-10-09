@@ -46,6 +46,9 @@ jobs:
       RELEASE_TAG: ${{ inputs.release_tag || 'latest' }}
       RELEASE_ASSET: ${{ inputs.release_asset || 'udb-linux-amd64-full' }}
       UDB_LIVE_SDK_TESTS: "1"
+      UDB_LIVE_PEER_USERNAME: sdk-live-peer
+      UDB_LIVE_PEER_PASSWORD: "SdkLivePeer#2026Pass"
+      UDB_LIVE_PEER_TENANT: sdk-live-peer
     services:
       postgres:
         image: postgres:16-alpine
@@ -109,6 +112,17 @@ jobs:
             --email "${UDB_LIVE_USERNAME}" \
             --password "${UDB_LIVE_PASSWORD}" \
             --tenant "${UDB_LIVE_TENANT}" \
+            --project "${UDB_LIVE_PROJECT}"
+
+      - name: Provision the second conformance tenant
+        shell: bash
+        run: |
+          set -euo pipefail
+          "${UDB_SERVED_BIN}" auth bootstrap user \
+            --username "${UDB_LIVE_PEER_USERNAME}" \
+            --email "${UDB_LIVE_PEER_USERNAME}@udbtest.invalid" \
+            --password "${UDB_LIVE_PEER_PASSWORD}" \
+            --tenant "${UDB_LIVE_PEER_TENANT}" \
             --project "${UDB_LIVE_PROJECT}"
 
       - name: Launch broker

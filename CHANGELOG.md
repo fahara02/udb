@@ -9,6 +9,9 @@ release line was tagged.
 
 ### Fixed
 
+- The Go live store contract uses two independently authenticated tenants and
+  runs the shared cross-tenant read and filter checks. Missing or identical
+  verified tenant IDs fail the proof instead of skipping it.
 - Go record and field encoders preserve an explicitly present empty optional or
   oneof text value. Incremental field decoding refuses conflicting oneof members
   and retains the previously decoded message on refusal.

@@ -245,6 +245,48 @@ CHECKS: tuple[SourceCheck, ...] = (
             "ApprovalToken: token",
         ),
     ),
+    SourceCheck(
+        "go shared tenant isolation contract",
+        "sdk/go/udbtest/conformance/table.go",
+        (
+            "func Tenants(first, second string) Option",
+            "conformance requires two distinct provisioned tenants",
+            "b = o.tenants[1]",
+            't.Run("tenants never see each other\'s rows"',
+            "another tenant read the row",
+            "naming another tenant in a filter must be refused",
+        ),
+        ("SingleTenant", "singleTenant", "t.Skip("),
+    ),
+    SourceCheck(
+        "go live provisioned tenant identities",
+        "sdk/go/udbtest/live_test.go",
+        (
+            'required("UDB_LIVE_PEER_USERNAME")',
+            'required("UDB_LIVE_PEER_PASSWORD")',
+            'required("UDB_LIVE_PEER_TENANT")',
+            "peer := connectLiveIdentity(t, ctx, true)",
+            "tenant == peer.CanonicalTenantID",
+            "return peer.Udb",
+            "live conformance requires two distinct verified tenant IDs",
+            "conformance.Tenants(sess.CanonicalTenantID, peer.CanonicalTenantID)",
+        ),
+        ("conformance.SingleTenant()",),
+    ),
+    SourceCheck(
+        "go live second tenant provisioning",
+        ".github/workflows/go-sdk-live.yml",
+        (
+            "UDB_LIVE_PEER_USERNAME: sdk-live-peer",
+            "UDB_LIVE_PEER_TENANT: sdk-live-peer",
+            "name: Provision the second conformance tenant",
+            '--username "${UDB_LIVE_PEER_USERNAME}"',
+            '--password "${UDB_LIVE_PEER_PASSWORD}"',
+            '--tenant "${UDB_LIVE_PEER_TENANT}"',
+            "go test ./udbtest -run '^TestLiveBrokerMeetsTheTableContract$' -count=1 -v -timeout 10m",
+        ),
+        ("--platform-admin",),
+    ),
 )
 
 
@@ -295,6 +337,24 @@ def run_selftest() -> int:
         failures = check_source(root)
         if not any("approve.GetApprovalToken()" in failure for failure in failures):
             raise AssertionError(f"expected approval-token body-field failure, got {failures}")
+
+        for rel_path, missing_token, expected in (
+            ("sdk/go/udbtest/live_test.go", 'required("UDB_LIVE_PEER_USERNAME")', "go live provisioned tenant identities"),
+            (".github/workflows/go-sdk-live.yml", '--tenant "${UDB_LIVE_PEER_TENANT}"', "go live second tenant provisioning"),
+        ):
+            path = root / rel_path
+            original = path.read_text(encoding="utf-8")
+            path.write_text(original.replace(missing_token, "removed"), encoding="utf-8")
+            failures = check_source(root)
+            if not any(expected in failure for failure in failures):
+                raise AssertionError(f"expected second-tenant drift failure, got {failures}")
+            path.write_text(original, encoding="utf-8")
+
+        table = root / "sdk/go/udbtest/conformance/table.go"
+        table.write_text(table.read_text(encoding="utf-8") + '\nt.Skip("one tenant")\n', encoding="utf-8")
+        failures = check_source(root)
+        if not any("go shared tenant isolation contract: forbidden" in failure for failure in failures):
+            raise AssertionError(f"expected skipped tenant proof failure, got {failures}")
 
     print("Go SDK posture selftest passed")
     return 0
