@@ -3783,7 +3783,7 @@ mod tests {
             "message map predicates must name their real Go type"
         );
         let template = include_str!("../../sdk-templates/go/udbclient/generated_client.go.tmpl");
-        let registry = render_text(template, &base_scalars(&[], 0), &entities, &[]);
+        let registry = render_text(template, &[], &entities, &base_scalars(&[], 0));
         assert!(registry.contains("UniqueKeys: [][]string{{\"email\"}, {\"exact\"}, {\"external\", \"region\"}, {\"region\", \"email\"}}"), "actual Go template must retain nested unique metadata");
         assert!(!registry.contains("{{ENTITY_UNIQUE_KEYS_GO}}"));
         assert_eq!(first_unresolved_template_token(&registry), None);

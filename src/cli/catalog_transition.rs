@@ -310,7 +310,7 @@ fn write_new_json(path: &str, value: &Value) -> Result<(), String> {
     file.write_all(&bytes)
         .and_then(|()| file.write_all(b"\n"))
         .and_then(|()| file.sync_all())
-        .map_err(|_| "could not persist the transition response file")
+        .map_err(|_| "could not persist the transition response file".to_string())
 }
 
 fn evidence_json(evidence: &ReviewedCatalogTransitionEvidence) -> Value {
