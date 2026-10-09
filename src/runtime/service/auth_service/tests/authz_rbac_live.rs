@@ -180,20 +180,99 @@ async fn live_postgres_authz_role_policy_roundtrip() {
         user_role.user_role_id
     );
 
-    let revoked = authz
-        .revoke_role(authz_tenant_request(
+    let claim = crate::runtime::service::method_security::test_claim_context(
+        &user.user_id,
+        "acme",
+        "billing",
+        &["udb:authz:admin"],
+        &[],
+    );
+    let forged = crate::runtime::service::method_security::scope_claim_context_for_test(
+        claim.clone(),
+        authz.revoke_role(authz_tenant_request(
             authz_pb::RevokeRoleRequest {
-                user_role_id: user_role.user_role_id,
+                user_role_id: user_role.user_role_id.clone(),
                 user_id: user.user_id.clone(),
-                reason: "live_test".to_string(),
-                revoked_by: user.user_id.clone(),
+                reason: "forged_actor".to_string(),
+                revoked_by: Uuid::new_v4().to_string(),
             },
             "acme",
-        ))
+        )),
+    )
+    .await
+    .expect_err("forged role revoker must refuse before mutation");
+    assert_eq!(forged.code(), tonic::Code::PermissionDenied);
+    assert_eq!(
+        crate::runtime::error_reasons::reason_of(&forged).as_deref(),
+        Some(crate::runtime::error_reasons::POLICY_REFUSED.code),
+    );
+    let after_forged: i64 = sqlx::query_scalar(&revision_count_sql)
+        .fetch_one(&pool)
         .await
-        .expect("revoke Postgres role")
+        .expect("count revisions after forged revoker");
+    assert_eq!(
+        after_forged, revisions_after,
+        "forged role revoker must not append an authz revision"
+    );
+    let after_forged = authz
+        .list_user_roles(Request::new(authz_pb::ListUserRolesRequest {
+            user_id: user.user_id.clone(),
+            domain: "acme".to_string(),
+            active_only: true,
+            ..Default::default()
+        }))
+        .await
+        .expect("read assignment after forged revoker")
         .into_inner();
+    assert_eq!(
+        after_forged.user_roles.len(),
+        1,
+        "forged role revoker must retain the assignment"
+    );
+
+    // Omitted actor derives from the claim; omitted target derives from storage.
+    let revoked = crate::runtime::service::method_security::scope_claim_context_for_test(
+        claim,
+        authz.revoke_role(authz_tenant_request(
+            authz_pb::RevokeRoleRequest {
+                user_role_id: user_role.user_role_id,
+                reason: "live_test".to_string(),
+                ..Default::default()
+            },
+            "acme",
+        )),
+    )
+    .await
+    .expect("revoke Postgres role")
+    .into_inner();
     assert!(revoked.revoked);
+    let revision_model = crate::runtime::native_catalog::native_model(
+        "udb.core.authz.entity.v1.AuthzRevision",
+        &["changed_by", "content_hash", "tenant_id", "changed_at"],
+    );
+    let changed_by: String = sqlx::query_scalar(&format!(
+        "SELECT {changed_by} FROM {relation} \
+         WHERE {tenant} = $1 AND {content_hash} = $2 ORDER BY {changed_at} DESC LIMIT 1",
+        changed_by = revision_model.q("changed_by"),
+        relation = revision_model.relation,
+        tenant = revision_model.q("tenant_id"),
+        content_hash = revision_model.q("content_hash"),
+        changed_at = revision_model.q("changed_at"),
+    ))
+    .bind("acme")
+    .bind("role-revoked")
+    .fetch_one(&pool)
+    .await
+    .expect("read committed revocation actor");
+    assert_eq!(
+        changed_by, user.user_id,
+        "revocation revision records the verified actor"
+    );
+    let after_revocation: i64 = sqlx::query_scalar(&revision_count_sql)
+        .fetch_one(&pool)
+        .await
+        .expect("count revisions after valid revocation");
+    assert_eq!(after_revocation, revisions_after + 1);
 
     let denied = authz
         .check_access(Request::new(authz_pb::CheckAccessRequest {

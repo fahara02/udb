@@ -3468,6 +3468,32 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
         ),
     ),
     TokenCheck(
+        "role revocation binds audit actor and target to trusted identities",
+        "src/runtime/service/auth_service/authz/mod.rs",
+        (
+            "let revoked_by = if crate::runtime::service::method_security::claim_context_present()",
+            'parse_uuid_field("revoked_by", &req.revoked_by)?',
+            '"revoked_by_caller_mismatch"',
+            '"revoked_by must match the authenticated caller"',
+            'let user_id = authz_native_text(&scope_row, "user_id")?;',
+            'authz_native_scope_filter(&scope_row, &["tenant_id", "user_id"])?',
+            "&revoked_by,",
+            "actor: revoked_by.clone(),",
+            "target_resource: user_id.clone(),",
+            "revoke_role_revoked_by_mismatch_carries_policy_detail",
+        ),
+    ),
+    TokenCheck(
+        "live role revocation refuses a forged actor without a revision",
+        "src/runtime/service/auth_service/tests/authz_rbac_live.rs",
+        (
+            "forged role revoker must refuse before mutation",
+            "forged role revoker must not append an authz revision",
+            "forged role revoker must retain the assignment",
+            "revocation revision records the verified actor",
+        ),
+    ),
+    TokenCheck(
         "authz mapping validation uses typed field violations",
         "src/runtime/service/auth_service/mappings.rs",
         (
@@ -10830,6 +10856,9 @@ def run_selftest() -> None:
             ("src/runtime/service/auth_service/authz/governance_store.rs", "revision: row.try_get(\"revision\").map_err(decode_err)?"),
             ("src/runtime/service/auth_service/authz/governance_activate.rs", "min_samples: row.try_get(\"min_samples\").map_err(map)?"),
             ("src/runtime/service/auth_service/authz/governance_logic.rs", "super::policy_record_effect(&r.effect)?"),
+            ("src/runtime/service/auth_service/authz/mod.rs", 'parse_uuid_field("revoked_by", &req.revoked_by)?'),
+            ("src/runtime/service/auth_service/authz/mod.rs", 'let user_id = authz_native_text(&scope_row, "user_id")?;'),
+            ("src/runtime/service/auth_service/tests/authz_rbac_live.rs", "forged role revoker must not append an authz revision"),
         ):
             write_fixture(root)
             target = root / source

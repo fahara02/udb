@@ -47,6 +47,9 @@ no-wrapper plan.
 - Governance draft and simulation documents share `PutAuthzPolicy` effect
   validation. An unknown effect refuses with a typed `policy.effect` violation
   before it can become an allow policy.
+- Role revocation binds its actor to the verified caller and reads its audit
+  target from the stored assignment. An omitted actor is derived from the claim;
+  a forged actor refuses before deletion or revision append.
 - Governance draft, version, canary and audit SQL operations use that same error
   classification, preserving constraint and outage details at their boundaries.
 - A scoped authz upsert that affects no row refuses before its revision append.

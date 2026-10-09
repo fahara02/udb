@@ -3506,6 +3506,27 @@ impl AuthzService for AuthzServiceImpl {
             ));
         }
         let user_role_id = parse_uuid_field("user_role_id", &req.user_role_id)?;
+        // Use the same claim-derived UUID and impersonation guard as assignment.
+        // The affected user is read from the assignment, independently of the actor.
+        let revoked_by = if crate::runtime::service::method_security::claim_context_present() {
+            let ctx = crate::runtime::service::method_security::current_claim_context();
+            let claim_id = stable_uuid_from_subject(&ctx.subject);
+            if req.revoked_by.trim().is_empty() {
+                claim_id.to_string()
+            } else {
+                let supplied = parse_uuid_field("revoked_by", &req.revoked_by)?;
+                if supplied != claim_id && !ctx.is_cross_tenant_admin() {
+                    return Err(authz_attribution_policy_status(
+                        "revoke_role",
+                        "revoked_by_caller_mismatch",
+                        "revoked_by must match the authenticated caller",
+                    ));
+                }
+                supplied.to_string()
+            }
+        } else {
+            req.revoked_by.clone()
+        };
         let context = authz_tenant_mutation_context(&metadata, "revoke_role")?;
         let _runtime = self.runtime.as_ref().ok_or_else(|| {
             authz_capability_status(
@@ -3514,8 +3535,8 @@ impl AuthzService for AuthzServiceImpl {
                 "native authz requires runtime-backed user-role persistence",
             )
         })?;
-        // P6.10 Wave 1: typed DELETE returning the tenant so the revocation can bump
-        // the tenant-scoped authz revision (K2.1). project stays '' (raw literal).
+        // Return the persisted tenant and target user, and keep both in the delete
+        // guard. UserRole has no project column; its revision remains tenant-wide.
         // A user_role_id is globally unique, so an id alone addresses any tenant's
         // assignment. Confine the delete to the caller's verified tenant; a
         // cross-tenant admin and the claim-less loopback path stay unconstrained.
@@ -3539,7 +3560,7 @@ impl AuthzService for AuthzServiceImpl {
                 &context.tenant_id,
                 "udb.core.authz.entity.v1.UserRole",
                 filter.clone(),
-                &["tenant_id"],
+                &["tenant_id", "user_id"],
             )
             .await?
         else {
@@ -3548,11 +3569,12 @@ impl AuthzService for AuthzServiceImpl {
             }));
         };
         let tenant = authz_native_text(&scope_row, "tenant_id")?;
-        let scope_filter = authz_native_scope_filter(&scope_row, &["tenant_id"])?;
+        let user_id = authz_native_text(&scope_row, "user_id")?;
+        let scope_filter = authz_native_scope_filter(&scope_row, &["tenant_id", "user_id"])?;
         let op = LogicalDelete {
             message_type: "udb.core.authz.entity.v1.UserRole".to_string(),
             filter: LogicalFilter::And(vec![filter, scope_filter]),
-            return_fields: vec!["tenant_id".to_string()],
+            return_fields: vec!["tenant_id".to_string(), "user_id".to_string()],
         };
         let outcome = self
             .mutate_authz_with_revision(
@@ -3560,7 +3582,7 @@ impl AuthzService for AuthzServiceImpl {
                 "",
                 authz_entity_pb::AuthzChangeType::RoleAssignment,
                 "role-revoked",
-                &req.revoked_by,
+                &revoked_by,
                 vec![NativeEntityTransactionOp::DeleteRequired(op)],
             )
             .await;
@@ -3588,32 +3610,23 @@ impl AuthzService for AuthzServiceImpl {
             })?
             .rows;
         let revoked = !deleted_rows.is_empty();
-        if let Some(row) = deleted_rows.first() {
-            let tenant: String = row
-                .get("tenant_id")
-                .and_then(|v| v.as_str())
-                .unwrap_or_default()
-                .to_string();
+        if revoked {
             self.emit_event(
                 AuthEvent::new(
                     topics::ROLE_REVOKED,
-                    req.user_id.clone(),
+                    user_id.clone(),
                     tenant.clone(),
                     serde_json::json!({
                         "user_role_id": req.user_role_id.clone(),
-                        "user_id": req.user_id.clone(),
+                        "user_id": user_id.clone(),
                         "reason": req.reason.clone(),
-                        "revoked_by": req.revoked_by.clone(),
+                        "revoked_by": revoked_by.clone(),
                     }),
                 )
                 .with_correlation(format!("role_revoke:{}", req.user_role_id))
                 .with_compliance(events::ComplianceEnvelope {
-                    actor: if req.revoked_by.trim().is_empty() {
-                        req.user_id.clone()
-                    } else {
-                        req.revoked_by.clone()
-                    },
-                    target_resource: req.user_id.clone(),
+                    actor: revoked_by.clone(),
+                    target_resource: user_id.clone(),
                     operation: "role_revoke".to_string(),
                     outcome: "success".to_string(),
                     reason_code: if req.reason.trim().is_empty() {
@@ -5852,6 +5865,34 @@ mod validation_tests {
                 "user_role_id",
                 "must be a non-empty user-role assignment id",
             )],
+        );
+    }
+
+    #[tokio::test]
+    async fn revoke_role_revoked_by_mismatch_carries_policy_detail() {
+        let ctx = crate::runtime::service::method_security::test_claim_context(
+            "role-admin",
+            "tenant-a",
+            "",
+            &["udb:authz:admin"],
+            &[],
+        );
+        let request = Request::new(authz_pb::RevokeRoleRequest {
+            user_role_id: "2a75f9e0-11b2-4625-80a3-1f47e4b45151".to_string(),
+            revoked_by: "4b0d3c76-16d1-4c91-9831-d62a25d6e37b".to_string(),
+            ..Default::default()
+        });
+        let err = crate::runtime::service::method_security::scope_claim_context_for_test(
+            ctx,
+            svc().revoke_role(request),
+        )
+        .await
+        .expect_err("revoked_by mismatch must fail before runtime access");
+        assert_permission_policy_detail(
+            &err,
+            "revoke_role",
+            "revoked_by_caller_mismatch",
+            "revoked_by must match the authenticated caller",
         );
     }
 
