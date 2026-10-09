@@ -1127,6 +1127,69 @@ pub(crate) async fn set_request_local_settings(
     apply_request_local_settings(&mut **tx, context, /* is_local = */ true).await
 }
 
+/// Own a read connection from before installing SESSION context until RESET.
+/// A cancelled future or an early error must discard its dirty session instead
+/// of letting SQLx's asynchronous return-to-pool task recycle request GUCs.
+/// Successful reads keep their connection and its prepared-statement cache.
+pub(crate) struct PgRequestConnection {
+    connection: Option<sqlx::pool::PoolConnection<sqlx::Postgres>>,
+    context_is_clear: bool,
+}
+
+impl PgRequestConnection {
+    pub(crate) fn new(connection: sqlx::pool::PoolConnection<sqlx::Postgres>) -> Self {
+        Self {
+            connection: Some(connection),
+            context_is_clear: false,
+        }
+    }
+
+    fn pooled_mut(
+        &mut self,
+    ) -> Result<&mut sqlx::pool::PoolConnection<sqlx::Postgres>, tonic::Status> {
+        self.connection.as_mut().ok_or_else(|| {
+            core_internal_status(
+                "request_connection",
+                "request database connection is no longer available",
+            )
+        })
+    }
+
+    pub(crate) fn connection_mut(&mut self) -> Result<&mut sqlx::PgConnection, tonic::Status> {
+        self.pooled_mut().map(|connection| &mut **connection)
+    }
+
+    pub(crate) async fn install_context(
+        &mut self,
+        context: &RequestContext,
+    ) -> Result<(), tonic::Status> {
+        self.context_is_clear = false;
+        set_request_local_settings_conn(self.pooled_mut()?, context).await
+    }
+
+    pub(crate) async fn reset_context(
+        &mut self,
+        context: &RequestContext,
+    ) -> Result<(), tonic::Status> {
+        reset_request_local_settings_conn(self.pooled_mut()?, context).await?;
+        self.context_is_clear = true;
+        Ok(())
+    }
+}
+
+impl Drop for PgRequestConnection {
+    fn drop(&mut self) {
+        if !self.context_is_clear
+            && let Some(connection) = self.connection.take()
+        {
+            // Detach releases pool accounting immediately. Dropping the raw
+            // connection closes its socket without waiting for SQLx's ping to
+            // drain a still-running query or for another runtime task to run.
+            drop(connection.detach());
+        }
+    }
+}
+
 /// READ-path entry point: install the request's RLS context as SESSION-level
 /// settings on a single pooled connection (the read path no longer opens a
 /// transaction). Because session GUCs PERSIST on a pooled connection after it
@@ -1264,6 +1327,353 @@ mod rls_conn_leak_tests {
         reset_request_local_settings_conn(&mut conn, &ctx_for("tenant-B"))
             .await
             .expect("reset B");
+    }
+
+    fn cancellation_live_dsn() -> Option<String> {
+        crate::runtime::service::live_tests::support::require_live_dsn_any(&[
+            "UDB_LIVE_NATIVE_PG_DSN",
+            "UDB_LIVE_AUTH_PG_DSN",
+            "UDB_INTEGRATION_PG_DSN",
+            "UDB_PG_DSN",
+        ])
+    }
+
+    fn cancellation_context() -> RequestContext {
+        RequestContext {
+            tenant_id: Uuid::new_v4().to_string(),
+            project_id: crate::runtime::catalog::DEFAULT_PROJECT_ID.to_string(),
+            purpose: "admin".to_string(),
+            scopes: vec!["udb:read".to_string()],
+            correlation_id: format!("rls-cancel-{}", Uuid::new_v4().simple()),
+            user_id: Uuid::new_v4().to_string(),
+            service_identity: "session-cancellation-proof".to_string(),
+            decision_id: Uuid::new_v4().to_string(),
+            ..Default::default()
+        }
+    }
+
+    async fn cancellation_pool(dsn: &str) -> PgPool {
+        let options = dsn
+            .parse::<sqlx::postgres::PgConnectOptions>()
+            .expect("parse live PostgreSQL options")
+            .application_name("udb-session-cancellation-ci");
+        PgPoolOptions::new()
+            .min_connections(0)
+            .max_connections(1)
+            .acquire_timeout(Duration::from_secs(2))
+            .connect_with(options)
+            .await
+            .expect("connect single-slot live PostgreSQL pool")
+    }
+
+    async fn request_settings(
+        conn: &mut sqlx::PgConnection,
+        context: &RequestContext,
+    ) -> Vec<(String, String)> {
+        let keys: Vec<String> = request_local_setting_pairs(context)
+            .into_iter()
+            .map(|(key, _)| key.to_string())
+            .collect();
+        sqlx::query_as(
+            "SELECT key, COALESCE(current_setting(key, true), '') \
+             FROM unnest($1::TEXT[]) AS settings(key)",
+        )
+        .bind(keys)
+        .fetch_all(conn)
+        .await
+        .expect("read all canonical request settings")
+    }
+
+    async fn backend_pid(conn: &mut sqlx::PgConnection) -> i32 {
+        sqlx::query_scalar("SELECT pg_backend_pid()")
+            .fetch_one(conn)
+            .await
+            .expect("read backend PID")
+    }
+
+    async fn acquire_clean_connection(pool: &PgPool, context: &RequestContext) -> i32 {
+        let mut conn = tokio::time::timeout(Duration::from_secs(3), pool.acquire())
+            .await
+            .expect("cancelled read must promptly restore the pool slot")
+            .expect("reacquire serving connection");
+        let settings = request_settings(&mut conn, context).await;
+        assert_eq!(settings.len(), request_local_setting_pairs(context).len());
+        for (key, value) in settings {
+            if key == "application_name" {
+                assert_eq!(value, "udb-session-cancellation-ci");
+            } else {
+                assert!(value.is_empty(), "a pool user inherited stale {key}");
+            }
+        }
+        let pid = backend_pid(&mut conn).await;
+        assert_eq!(pool.size(), 1, "the single pool slot must remain usable");
+        pid
+    }
+
+    async fn error_after_context(
+        pool: &PgPool,
+        context: &RequestContext,
+    ) -> Result<(), tonic::Status> {
+        let raw = pool.acquire().await.map_err(|error| {
+            crate::runtime::executor_utils::sqlx_error_to_status("test acquire failed", &error)
+        })?;
+        let mut conn = PgRequestConnection::new(raw);
+        conn.install_context(context).await?;
+        // This is the same early-`?` shape as binding a malformed read input
+        // after SESSION settings have already been installed.
+        Err::<(), _>(crate::runtime::executor_utils::invalid_argument_fields(
+            "injected invalid read input",
+            [("filter", "injected invalid read input")],
+        ))?;
+        conn.reset_context(context).await
+    }
+
+    #[tokio::test]
+    #[ignore = "requires live Postgres; runs in the CI --ignored native live step"]
+    async fn rls_request_connection_discards_cancelled_or_failed_context_live() {
+        let Some(dsn) = cancellation_live_dsn() else {
+            return;
+        };
+        let pool = cancellation_pool(&dsn).await;
+        let context = cancellation_context();
+        let initial_pid = acquire_clean_connection(&pool, &context).await;
+
+        // Successful RESET preserves the physical connection and all nine
+        // canonical settings, including application_name, return to defaults.
+        let mut conn = PgRequestConnection::new(pool.acquire().await.expect("acquire for reset"));
+        conn.install_context(&context)
+            .await
+            .expect("install context");
+        let expected: HashMap<_, _> = request_local_setting_pairs(&context)
+            .into_iter()
+            .map(|(key, value)| (key.to_string(), value))
+            .collect();
+        let actual: HashMap<_, _> = request_settings(
+            conn.connection_mut().expect("guard owns connection"),
+            &context,
+        )
+        .await
+        .into_iter()
+        .collect();
+        assert_eq!(actual, expected, "every request GUC must be installed");
+        conn.reset_context(&context).await.expect("reset context");
+        drop(conn);
+        assert_eq!(acquire_clean_connection(&pool, &context).await, initial_pid);
+
+        let refusal = error_after_context(&pool, &context)
+            .await
+            .expect_err("injected invalid input must refuse");
+        assert_eq!(refusal.code(), tonic::Code::InvalidArgument);
+        let after_error_pid = acquire_clean_connection(&pool, &context).await;
+        assert_ne!(
+            after_error_pid, initial_pid,
+            "early error must discard dirty session"
+        );
+
+        // Signal AFTER the real settings write has completed, then cancel the
+        // pending future. No guessed sleep decides when the session is dirty.
+        let (installed_tx, installed_rx) = tokio::sync::oneshot::channel();
+        let task_pool = pool.clone();
+        let task_context = context.clone();
+        let pending = tokio::spawn(async move {
+            let raw = task_pool.acquire().await.expect("acquire pending read");
+            let mut conn = PgRequestConnection::new(raw);
+            conn.install_context(&task_context)
+                .await
+                .expect("install pending context");
+            let pid = backend_pid(conn.connection_mut().expect("pending connection")).await;
+            installed_tx.send(pid).expect("signal installed context");
+            std::future::pending::<()>().await;
+            conn.reset_context(&task_context)
+                .await
+                .expect("reset if completed");
+        });
+        let pending_pid = tokio::time::timeout(Duration::from_secs(3), installed_rx)
+            .await
+            .expect("context installation must complete")
+            .expect("receive installed context");
+        pending.abort();
+        assert!(
+            pending
+                .await
+                .expect_err("pending read must be cancelled")
+                .is_cancelled()
+        );
+        let after_cancel_pid = acquire_clean_connection(&pool, &context).await;
+        assert_ne!(
+            after_cancel_pid, pending_pid,
+            "cancellation must discard dirty session"
+        );
+
+        // An error in context installation also discards the connection. An
+        // aborted PG transaction is a deterministic setter refusal, without
+        // relying on provider-specific configuration or partial network I/O.
+        let mut conn =
+            PgRequestConnection::new(pool.acquire().await.expect("acquire failed setter"));
+        sqlx::query("BEGIN")
+            .execute(conn.connection_mut().expect("setter connection"))
+            .await
+            .expect("begin failed-setter transaction");
+        sqlx::query("SELECT 1 / 0")
+            .execute(conn.connection_mut().expect("setter connection"))
+            .await
+            .expect_err("abort transaction before setter");
+        assert!(conn.install_context(&context).await.is_err());
+        drop(conn);
+        assert_ne!(
+            acquire_clean_connection(&pool, &context).await,
+            after_cancel_pid
+        );
+        pool.close().await;
+    }
+
+    #[tokio::test]
+    #[ignore = "requires live Postgres; runs in the CI --ignored native live step"]
+    async fn rls_cancelled_runtime_select_discards_session_and_reuses_clean_reads_live() {
+        let Some(dsn) = cancellation_live_dsn() else {
+            return;
+        };
+        let pool = cancellation_pool(&dsn).await;
+        let admin = PgPoolOptions::new()
+            .max_connections(2)
+            .acquire_timeout(Duration::from_secs(2))
+            .connect(&dsn)
+            .await
+            .expect("connect independent lock observer");
+        let schema = format!("udb_rlscancel_{}", Uuid::new_v4().simple());
+        let relation = format!("\"{schema}\".\"widgets\"");
+        admin
+            .execute(format!("CREATE SCHEMA \"{schema}\"").as_str())
+            .await
+            .expect("create cancellation schema");
+        admin
+            .execute(
+                format!("CREATE TABLE {relation} (id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL)")
+                    .as_str(),
+            )
+            .await
+            .expect("create cancellation table");
+        let context = cancellation_context();
+        sqlx::query(&format!(
+            "INSERT INTO {relation} (id, tenant_id) VALUES ($1, $2)"
+        ))
+        .bind("row-1")
+        .bind(&context.tenant_id)
+        .execute(&admin)
+        .await
+        .expect("seed cancellation row");
+        let manifest = CatalogManifest {
+            checksum_sha256: format!("rls-cancel-{schema}"),
+            tables: vec![ManifestTable {
+                proto_package: "udb.cancellation.v1".to_string(),
+                message_name: "Widget".to_string(),
+                schema: schema.clone(),
+                table: "widgets".to_string(),
+                primary_key: vec!["id".to_string()],
+                columns: ["id", "tenant_id"]
+                    .into_iter()
+                    .map(|name| crate::generation::ManifestColumn {
+                        field_name: name.to_string(),
+                        column_name: name.to_string(),
+                        proto_type: "string".to_string(),
+                        sql_type: "TEXT".to_string(),
+                        is_primary: name == "id",
+                        is_tenant_column: name == "tenant_id",
+                        not_null: true,
+                        ..Default::default()
+                    })
+                    .collect(),
+                ..Default::default()
+            }],
+            ..Default::default()
+        };
+        let runtime = Arc::new(DataBrokerRuntime {
+            pg_pool: Some(pool.clone()),
+            ..DataBrokerRuntime::planning_only()
+        });
+        let initial_pid = acquire_clean_connection(&pool, &context).await;
+        let mut blocker = admin.begin().await.expect("begin table blocker");
+        sqlx::query(&format!("LOCK TABLE {relation} IN ACCESS EXCLUSIVE MODE"))
+            .execute(&mut *blocker)
+            .await
+            .expect("hold table lock before read");
+        let read_runtime = runtime.clone();
+        let read_manifest = manifest.clone();
+        let read_context = context.clone();
+        let read = tokio::spawn(async move {
+            read_runtime
+                .select(
+                    &read_manifest,
+                    SelectRequest {
+                        message_type: "udb.cancellation.v1.Widget".to_string(),
+                        ..Default::default()
+                    },
+                    read_context,
+                )
+                .await
+        });
+        // Observe the actual serving query waiting on our table lock. The
+        // request's application_name proves SESSION settings were installed.
+        let application_name = format!("udb/{}", context.correlation_id);
+        let blocked_pid = tokio::time::timeout(Duration::from_secs(5), async {
+            loop {
+                let pid: Option<i32> = sqlx::query_scalar(
+                    "SELECT pid FROM pg_stat_activity WHERE datname = current_database() \
+                     AND application_name = $1 AND state = 'active' \
+                     AND wait_event_type = 'Lock' AND query LIKE $2 LIMIT 1",
+                )
+                .bind(&application_name)
+                .bind(format!("%{schema}%"))
+                .fetch_optional(&admin)
+                .await
+                .expect("observe serving Select lock wait");
+                if let Some(pid) = pid {
+                    break pid;
+                }
+                tokio::time::sleep(Duration::from_millis(10)).await;
+            }
+        })
+        .await
+        .expect("Select must reach the real PostgreSQL lock wait");
+        assert_eq!(blocked_pid, initial_pid);
+        read.abort();
+        assert!(
+            read.await
+                .expect_err("blocked Select must be cancelled")
+                .is_cancelled()
+        );
+        blocker.rollback().await.expect("release table blocker");
+        let clean_pid = acquire_clean_connection(&pool, &context).await;
+        assert_ne!(
+            clean_pid, blocked_pid,
+            "cancelled Select must not recycle dirty session"
+        );
+
+        let (rows, _) = runtime
+            .select(
+                &manifest,
+                SelectRequest {
+                    message_type: "udb.cancellation.v1.Widget".to_string(),
+                    include_total: true,
+                    ..Default::default()
+                },
+                context.clone(),
+            )
+            .await
+            .expect("next Select must succeed with the one pool slot");
+        assert_eq!(rows.records_json.len(), 1);
+        assert_eq!(rows.exact_total, 1);
+        assert_eq!(
+            acquire_clean_connection(&pool, &context).await,
+            clean_pid,
+            "successful Select and COUNT must retain the clean physical connection"
+        );
+        admin
+            .execute(format!("DROP SCHEMA \"{schema}\" CASCADE").as_str())
+            .await
+            .expect("drop cancellation schema");
+        pool.close().await;
+        admin.close().await;
     }
 }
 

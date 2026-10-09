@@ -470,6 +470,210 @@ async fn live_cdc_stream_replay_filters_by_scope_topic_and_anchor() {
 
 #[tokio::test]
 #[ignore = "requires live Postgres + Kafka. UDB_LIVE_AUTH_TESTS=1 \
+            UDB_INTEGRATION_KAFKA_BROKERS=localhost:59192 cargo test --lib cdc_live -- --ignored --nocapture"]
+async fn live_cdc_journal_backstop_runs_during_unrelated_broadcast_traffic() {
+    let _guard = live_auth_db_lock().lock().await;
+    let pool = live_pg_pool().await;
+    migrate_native_auth_db(&pool).await;
+    crate::runtime::system::ensure_system_catalog(&pool)
+        .await
+        .expect("ensure live UDB system catalog");
+    let engine = CdcEngine::new(
+        pool.clone(),
+        None,
+        &kafka_brokers(),
+        live_pg_dsn(),
+        Arc::new(NoopMetrics),
+        cdc_config_for_live_outbox("udb.cdc.dlq.journal.timer.v1"),
+    )
+    .expect("build CDC engine");
+    engine
+        .load_topic_policies()
+        .await
+        .expect("load live CDC topic policies");
+
+    let topic = format!("udb.authn.journal.timer.{}.v1", Uuid::new_v4().simple());
+    let other_topic = format!("{topic}.other");
+    let anchor_id = Uuid::new_v4();
+    let replay_id = Uuid::new_v4();
+    let target_id = Uuid::new_v4();
+    let foreign_tenant_id = Uuid::new_v4();
+    let foreign_project_id = Uuid::new_v4();
+    let other_topic_id = Uuid::new_v4();
+    let payload = |tenant: &str, project: &str| {
+        serde_json::json!({
+            "tenant_id": tenant,
+            "project_id": project,
+            "payload": {}
+        })
+    };
+    insert_cdc_journal_envelope(
+        &pool,
+        anchor_id,
+        &topic,
+        "anchor",
+        payload("tenant-a", "project-a"),
+    )
+    .await;
+    insert_cdc_journal_envelope(
+        &pool,
+        replay_id,
+        &topic,
+        "replay",
+        payload("tenant-a", "project-a"),
+    )
+    .await;
+    let mut stream = engine
+        .stream_cdc(
+            vec!["udb:cdc:read".to_string()],
+            topic.clone(),
+            Some(anchor_id.to_string()),
+            Some("tenant-a".to_string()),
+            Some("project-a".to_string()),
+        )
+        .await
+        .expect("open scoped journal-backstop stream");
+    assert_eq!(
+        next_cdc_item(&mut stream).await.event_id,
+        replay_id.to_string()
+    );
+    // Finish the replay and park in the live loop before the target is written:
+    // a target found by initial replay would not test the live journal deadline.
+    assert!(
+        tokio::time::timeout(Duration::from_millis(150), stream.next())
+            .await
+            .is_err(),
+        "initial replay must be exhausted before starting live-only proof"
+    );
+
+    // Feed the genuine in-process fast path without depending on Kafka's ack
+    // timing. Expected deltas and scope controls below are real journal rows.
+    let broadcast = engine.broadcast_sender_for_live_test();
+    let noise_broadcast = broadcast.clone();
+    let noise = CdcEnvelope {
+        event_id: Uuid::new_v4().to_string(),
+        topic: other_topic.clone(),
+        partition_key: "unrelated-fast-path".to_string(),
+        payload_json: payload("tenant-a", "project-a").to_string(),
+        published_at: chrono::Utc::now(),
+    };
+    let (noise_stop, mut stop) = tokio::sync::oneshot::channel::<()>();
+    let (noise_started, started) = tokio::sync::oneshot::channel::<()>();
+    struct TaskOwner<T>(tokio::task::JoinHandle<T>);
+    impl<T> Drop for TaskOwner<T> {
+        fn drop(&mut self) {
+            // Early fixture/assertion failure must not leave detached work.
+            self.0.abort();
+        }
+    }
+    let mut pump = TaskOwner(tokio::spawn(async move {
+        let mut ticker = tokio::time::interval(Duration::from_millis(100));
+        ticker.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
+        let mut started = Some(noise_started);
+        let mut sent = 0_u64;
+        let mut previous = None;
+        let mut max_gap = Duration::ZERO;
+        loop {
+            tokio::select! {
+                biased;
+                _ = &mut stop => break,
+                _ = ticker.tick() => {
+                    let now = tokio::time::Instant::now();
+                    if let Some(previous) = previous.replace(now) {
+                        max_gap = max_gap.max(now.duration_since(previous));
+                    }
+                    noise_broadcast.send(noise.clone()).expect("live stream owns fast-path receiver");
+                    sent += 1;
+                    if let Some(started) = started.take() {
+                        let _ = started.send(());
+                    }
+                }
+            }
+        }
+        if let Some(previous) = previous {
+            max_gap = max_gap.max(tokio::time::Instant::now().duration_since(previous));
+        }
+        (sent, max_gap)
+    }));
+    started.await.expect("unrelated broadcast pump started");
+
+    let (reader_started, reader_ready) = tokio::sync::oneshot::channel::<()>();
+    let mut reader = TaskOwner(tokio::spawn(async move {
+        let _ = reader_started.send(());
+        // Continuously poll the real stream while the fixture writes rows.
+        // Leaving it unpolled during DB writes could create a false idle gap.
+        let delivered = tokio::time::timeout(Duration::from_secs(3), stream.next()).await;
+        let duplicate = if let Ok(Some(Ok(envelope))) = &delivered {
+            broadcast
+                .send(envelope.clone())
+                .expect("live stream still owns fast-path receiver");
+            Some(tokio::time::timeout(Duration::from_millis(750), stream.next()).await)
+        } else {
+            None
+        };
+        (delivered, duplicate, stream)
+    }));
+    reader_ready.await.expect("live stream reader started");
+
+    for (id, row_topic, tenant, project) in [
+        (foreign_tenant_id, &topic, "tenant-b", "project-a"),
+        (foreign_project_id, &topic, "tenant-a", "project-b"),
+        (other_topic_id, &other_topic, "tenant-a", "project-a"),
+        (target_id, &topic, "tenant-a", "project-a"),
+    ] {
+        insert_cdc_journal_envelope(
+            &pool,
+            id,
+            row_topic,
+            "journal-only",
+            payload(tenant, project),
+        )
+        .await;
+    }
+    // The noise continues for the entire deadline. Stop it only AFTER the
+    // result is captured, so an idle window cannot make the old loop pass.
+    let (delivered, duplicate, stream) = (&mut reader.0).await.expect("live stream reader stopped");
+    let _ = noise_stop.send(());
+    let (sent, max_gap) = (&mut pump.0)
+        .await
+        .expect("unrelated broadcast pump stopped");
+    drop(stream);
+    sqlx::query("DELETE FROM udb_system.udb_cdc_event_journal WHERE event_id = ANY($1)")
+        .bind([
+            anchor_id,
+            replay_id,
+            target_id,
+            foreign_tenant_id,
+            foreign_project_id,
+            other_topic_id,
+        ])
+        .execute(&pool)
+        .await
+        .expect("remove journal timer proof rows");
+    cleanup_native_auth_db(&pool).await;
+
+    assert!(
+        sent >= 4,
+        "proof must overlap several unrelated broadcast wakes"
+    );
+    assert!(
+        max_gap < Duration::from_millis(500),
+        "noise must leave no journal-poll-sized idle window; largest gap was {max_gap:?}"
+    );
+    let envelope = delivered
+        .expect("journal-only target must arrive while unrelated broadcasts continue")
+        .expect("journal stream must remain open")
+        .expect("journal delivery must succeed");
+    assert_eq!(envelope.event_id, target_id.to_string());
+    assert_eq!(envelope.topic, topic);
+    assert!(
+        matches!(duplicate, Some(Err(_))),
+        "journal and fast path must deduplicate and exclude foreign tenant/project/topic rows"
+    );
+}
+
+#[tokio::test]
+#[ignore = "requires live Postgres + Kafka. UDB_LIVE_AUTH_TESTS=1 \
             UDB_INTEGRATION_KAFKA_BROKERS=localhost:59192 cargo test --lib \
             live_served_cdc_stream_revalidates_bearer_api_key_and_policy -- --ignored --nocapture"]
 async fn live_served_cdc_stream_revalidates_bearer_api_key_and_policy() {

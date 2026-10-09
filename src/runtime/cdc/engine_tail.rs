@@ -1174,6 +1174,14 @@ impl CdcEngine {
         self.broadcast_tx.subscribe()
     }
 
+    /// The real fast-path sender for live journal-backstop tests. The fixture
+    /// controls unrelated traffic without depending on Kafka delivery latency;
+    /// expected events still come from the durable PostgreSQL journal.
+    #[cfg(test)]
+    pub(crate) fn broadcast_sender_for_live_test(&self) -> broadcast::Sender<CdcEnvelope> {
+        self.broadcast_tx.clone()
+    }
+
     /// Canonical fail-closed tenant/project scope check for a single CDC event,
     /// exposed as an associated fn so tenant-scoped subscriber paths OUTSIDE this
     /// module (the native LiveQuery delta forwarder) reuse the ONE tenant-leak
@@ -1790,6 +1798,15 @@ impl CdcEngine {
                 Journal(Result<Vec<CdcEnvelope>, tonic::Status>),
             }
             let mut rx = Some(rx);
+            // Keep the journal deadline across broadcast wakes. Recreating a
+            // sleep here let unrelated traffic postpone lag/cross-replica
+            // recovery indefinitely. Replay just ran, so first poll is one
+            // cadence away; missed polls do not accumulate after starvation.
+            let mut journal_tick = tokio::time::interval_at(
+                tokio::time::Instant::now() + TAIL_POLL,
+                TAIL_POLL,
+            );
+            journal_tick.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
             loop {
                 let policy_snapshot = topic_policies.load_full();
                 ensure_cdc_stream_policy_current(
@@ -1812,7 +1829,7 @@ impl CdcEngine {
                 };
                 let wake = tokio::select! {
                     received = fast_path => StreamWake::Fast(received),
-                    _ = tokio::time::sleep(TAIL_POLL) => StreamWake::Journal(
+                    _ = journal_tick.tick() => StreamWake::Journal(
                         cdc_journal_poll(
                             &pool, &tail_sql, &mut cursor_ts, &mut cursor_id, &matcher,
                             &tenant_scope, &project_scope, privileged, &policy_snapshot,

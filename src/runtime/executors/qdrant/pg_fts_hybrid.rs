@@ -527,34 +527,31 @@ impl crate::runtime::DataBrokerRuntime {
     ) -> Result<Vec<(JsonValue, JsonValue)>, tonic::Status> {
         let routed = self.pg_select_pool_for_table_routed(table, context).await?;
         let pool = routed.pool();
-        let mut conn = pool.acquire().await.map_err(|err| {
+        let conn = pool.acquire().await.map_err(|err| {
             internal_status(
                 "postgres",
                 "vector_hybrid_text_leg",
                 format!("PG connection acquire failed: {err}"),
             )
         })?;
-        crate::runtime::core::set_request_local_settings_conn(&mut conn, context).await?;
+        let mut conn = crate::runtime::core::PgRequestConnection::new(conn);
+        conn.install_context(context).await?;
         let mut statement = sqlx::query(&query.sql);
         for bind in &query.binds {
             statement = statement.bind(bind.clone());
         }
-        let rows_result = statement.fetch_all(&mut *conn).await.map_err(|err| {
-            internal_status(
-                "postgres",
-                "vector_hybrid_text_leg",
-                format!("PostgreSQL full-text query failed: {err}"),
-            )
-        });
-        let reset_result =
-            crate::runtime::core::reset_request_local_settings_conn(&mut conn, context).await;
-        // A connection whose GUC reset failed may still carry this tenant's
-        // settings: close it instead of recycling it.
-        if reset_result.is_ok() {
-            drop(conn);
-        } else {
-            drop(conn.detach());
-        }
+        let rows_result = statement
+            .fetch_all(conn.connection_mut()?)
+            .await
+            .map_err(|err| {
+                internal_status(
+                    "postgres",
+                    "vector_hybrid_text_leg",
+                    format!("PostgreSQL full-text query failed: {err}"),
+                )
+            });
+        let reset_result = conn.reset_context(context).await;
+        drop(conn);
         let rows = rows_result?;
         reset_result?;
         drop(routed);

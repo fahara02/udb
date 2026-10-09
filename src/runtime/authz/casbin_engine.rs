@@ -184,11 +184,46 @@ pub(crate) fn udb_match(value: &str, pattern: &str) -> bool {
 
 /// Empty selector → Casbin wildcard token.
 fn slot(value: &str) -> String {
-    if value.trim().is_empty() {
-        "*".to_string()
-    } else {
-        value.to_string()
+    slot_ref(value).to_string()
+}
+
+fn slot_ref(value: &str) -> &str {
+    if value.trim().is_empty() { "*" } else { value }
+}
+
+/// Equivalent object requests must not repeat an entire Casbin policy scan.
+/// Keep the same trimmed selector values and empty-resource wildcard used by
+/// enforcement; only duplicate alternatives are removed.
+fn decision_resource_selectors(req: &AuthzQuery<'_>) -> Vec<String> {
+    let mut selectors = Vec::new();
+    for selector in req.resource.selectors().into_iter().map(str::trim) {
+        if !selector.is_empty() && !selectors.iter().any(|s| s == selector) {
+            selectors.push(selector.to_string());
+        }
     }
+    if selectors.is_empty() {
+        selectors.push("*".to_string());
+    }
+    selectors
+}
+
+/// For the exact embedded model, these independent matcher terms cannot become
+/// true through any subject or role candidate. Exclude only such Allow rows
+/// from the enforcer, using the model's raw domain slots and its registered
+/// object/action matcher. Custom model matchers are never pre-filtered here.
+fn default_model_candidate(
+    policy: &AuthzPolicy,
+    req: &AuthzQuery<'_>,
+    selectors: &[String],
+) -> bool {
+    let domain = slot_ref(&policy.tenant);
+    let action = slot_ref(&policy.action);
+    let object = slot_ref(&policy.resource);
+    (domain == "*" || domain == "" || domain == slot_ref(&req.principal.tenant_id))
+        && (action == "*" || action == req.action || udb_match(req.action, action))
+        && selectors
+            .iter()
+            .any(|selector| object == "*" || udb_match(selector, object))
 }
 
 /// Resolve precedence once: an operator-supplied file
@@ -374,18 +409,37 @@ impl AuthzSnapshot {
             Ok(model) => model,
             Err(err) => return self.casbin_error(decision_id, &err),
         };
-        let enforcer = match cached_enforcer(model, model_text, &applicable).await {
-            Ok(enforcer) => enforcer,
-            Err(err) => return self.casbin_error(decision_id, &err),
+        let selectors = decision_resource_selectors(req);
+        let enforcement_policies: Vec<&AuthzPolicy> = applicable
+            .iter()
+            .copied()
+            .filter(|policy| {
+                policy.effect == Effect::Allow
+                    && (model_text != CASBIN_MODEL
+                        || default_model_candidate(policy, req, &selectors))
+            })
+            .collect();
+        let enforcer = if model_text == CASBIN_MODEL && enforcement_policies.is_empty() {
+            // A zero-policy Casbin enforcer still evaluates its matcher with
+            // empty policy slots. The default matcher could then grant an empty
+            // request identity. No applicable Allow must stay default-deny.
+            None
+        } else {
+            match cached_enforcer(model, model_text, &enforcement_policies).await {
+                Ok(enforcer) => Some(enforcer),
+                Err(err) => return self.casbin_error(decision_id, &err),
+            }
         };
 
-        // The remainder is fully synchronous once the enforcer is in hand; it is
-        // shared with any other caller that has already resolved an `Enforcer`
-        // (DRY: one enforce/Decision implementation, never duplicated).
-        self.enforce_decision(decision_id, &enforcer, &applicable, &roles, req)
+        // Keep the original ABAC-applicable set for diagnostics and granting
+        // policy attribution. Only the enforcer's provably irrelevant default-
+        // model rows were removed. One shared enforcement tail yields between
+        // synchronous Casbin calls so unrelated requests and timers can run.
+        self.enforce_decision(decision_id, enforcer.as_deref(), &applicable, &roles, req)
+            .await
     }
 
-    /// Synchronous Casbin enforce + `Decision` construction over a *pre-built*
+    /// Casbin enforce + `Decision` construction over a *pre-built*
     /// enforcer. This is the single, shared enforce tail: subject/identity/role
     /// candidate expansion, per-selector enforce, granting-policy resolution and
     /// `Decision` assembly. [`casbin_authorize_with_model`] is its only caller in
@@ -394,10 +448,10 @@ impl AuthzSnapshot {
     ///
     /// Fail-closed: `enforce()` errors collapse to `false` (deny) per candidate;
     /// a request that matches no Allow line denies with the Casbin PERM reason.
-    fn enforce_decision(
+    async fn enforce_decision(
         &self,
         decision_id: String,
-        enforcer: &Enforcer,
+        enforcer: Option<&Enforcer>,
         applicable: &[&AuthzPolicy],
         roles: &[String],
         req: &AuthzQuery<'_>,
@@ -438,29 +492,30 @@ impl AuthzSnapshot {
         // selector and allow if any enforce() succeeds, so the two engines agree
         // (the prior single-`obj` check could deny a request the snapshot engine
         // would allow via a different selector).
-        let mut selectors: Vec<String> = req
-            .resource
-            .selectors()
-            .into_iter()
-            .map(str::trim)
-            .filter(|s| !s.is_empty())
-            .map(str::to_string)
-            .collect();
-        if selectors.is_empty() {
-            selectors.push("*".to_string());
+        let selectors = decision_resource_selectors(req);
+        let mut allowed = false;
+        'subjects: for sub in &request_subjects {
+            for obj in &selectors {
+                let granted = enforcer.is_some_and(|enforcer| {
+                    enforcer
+                        .enforce((
+                            sub.clone(),
+                            dom.clone(),
+                            obj.clone(),
+                            req.action.to_string(),
+                        ))
+                        .unwrap_or(false)
+                });
+                // Casbin's matcher evaluation is synchronous. An .await on an
+                // uncontended cache lock does not necessarily yield, so provide
+                // an explicit scheduling boundary between actual evaluations.
+                tokio::task::yield_now().await;
+                if granted {
+                    allowed = true;
+                    break 'subjects;
+                }
+            }
         }
-        let allowed = request_subjects.iter().any(|sub| {
-            selectors.iter().any(|obj| {
-                enforcer
-                    .enforce((
-                        sub.clone(),
-                        dom.clone(),
-                        obj.clone(),
-                        req.action.to_string(),
-                    ))
-                    .unwrap_or(false)
-            })
-        });
 
         // Resolve the actual granting policy once: the highest-priority
         // applicable Allow whose full selector set matches the request. Both
@@ -565,6 +620,9 @@ impl AuthzSnapshot {
 /// distinct policy sets cannot evict every hot enforcer at once.
 const ENFORCER_CACHE_CAP: usize = 256;
 
+/// Bound uninterrupted policy loading for operator models and cold caches.
+const POLICY_LOAD_YIELD_INTERVAL: usize = 64;
+
 /// Minimal bounded LRU. `tick` is a monotonic use counter: lookups and inserts
 /// stamp the entry, and a capacity-exceeding insert evicts the smallest stamp.
 /// Eviction is O(cap) but cap is small (256) and inserts are cache misses only.
@@ -654,7 +712,11 @@ async fn cached_enforcer(
             udb_match(&value.to_string(), &pattern.to_string()).into()
         }),
     );
-    for p in applicable.iter().filter(|p| p.effect == Effect::Allow) {
+    for (index, p) in applicable
+        .iter()
+        .filter(|p| p.effect == Effect::Allow)
+        .enumerate()
+    {
         let sub = if !p.role.trim().is_empty() {
             p.role.clone()
         } else {
@@ -671,6 +733,9 @@ async fn cached_enforcer(
             .add_policy(rule)
             .await
             .map_err(|err| format!("policy load: {err}"))?;
+        if (index + 1) % POLICY_LOAD_YIELD_INTERVAL == 0 {
+            tokio::task::yield_now().await;
+        }
     }
 
     let enforcer = Arc::new(enforcer);
@@ -1143,4 +1208,375 @@ m = (p.dom == "*" || r.dom == p.dom)
             "cached model text must be the same allocation across decisions"
         );
     }
+
+    #[tokio::test]
+    async fn casbin_default_candidates_preserve_raw_domains_and_path_matchers() {
+        let attrs = BTreeMap::new();
+        for (policy_tenant, request_tenant, expected) in [
+            ("tenant-a", "tenant-a", true),
+            (" tenant-a ", "tenant-a", false),
+            ("tenant-a", " tenant-a ", false),
+            (" tenant-a ", " tenant-a ", true),
+            (" * ", "tenant-a", false),
+            ("", "tenant-a", true),
+            (" \t", "tenant-a", true),
+        ] {
+            let snap = AuthzSnapshot {
+                policies: vec![AuthzPolicy {
+                    id: "path-rule".to_string(),
+                    tenant: policy_tenant.to_string(),
+                    subject: "reader".to_string(),
+                    resource: "/api/items/:id".to_string(),
+                    action: "/ops/:action".to_string(),
+                    ..Default::default()
+                }],
+                ..Default::default()
+            };
+            let principal = Principal {
+                subject: "reader".to_string(),
+                tenant_id: request_tenant.to_string(),
+                ..Default::default()
+            };
+            let resource = ResourceRef::message("/api/items/7");
+            let decision = snap
+                .casbin_authorize_with_model(
+                    CASBIN_MODEL,
+                    &query(&principal, &resource, "/ops/read", &attrs),
+                )
+                .await;
+            assert_eq!(
+                decision.allowed, expected,
+                "raw Casbin domain slots and path-style udbMatch must retain their semantics"
+            );
+        }
+        let snap = AuthzSnapshot {
+            policies: vec![AuthzPolicy {
+                id: "empty-object".to_string(),
+                ..Default::default()
+            }],
+            ..Default::default()
+        };
+        assert!(
+            snap.casbin_authorize_with_model(
+                CASBIN_MODEL,
+                &query(
+                    &Principal::default(),
+                    &ResourceRef::default(),
+                    "Select",
+                    &attrs
+                ),
+            )
+            .await
+            .allowed,
+            "empty resource selectors must retain their wildcard request slot"
+        );
+    }
+
+    #[tokio::test]
+    async fn casbin_custom_model_retains_unmatched_domain_action_and_object() {
+        let snap = AuthzSnapshot {
+            policies: vec![AuthzPolicy {
+                id: "operator-rule".to_string(),
+                subject: "configured-user".to_string(),
+                tenant: "configured-tenant".to_string(),
+                action: "Select".to_string(),
+                resource: "configured.entity.v1.Invoice".to_string(),
+                ..Default::default()
+            }],
+            ..Default::default()
+        };
+        let principal = Principal {
+            subject: "other-user".to_string(),
+            tenant_id: "other-tenant".to_string(),
+            ..Default::default()
+        };
+        let resource = ResourceRef::message("other.entity.v1.Item");
+        let attrs = BTreeMap::new();
+        let req = query(&principal, &resource, "Delete", &attrs);
+        assert!(
+            !snap
+                .casbin_authorize_with_model(CASBIN_MODEL, &req)
+                .await
+                .allowed
+        );
+        let custom = CASBIN_MODEL.replace(
+            CASBIN_MODEL
+                .lines()
+                .find(|line| line.starts_with("m = "))
+                .unwrap(),
+            "m = true",
+        );
+        assert!(
+            snap.casbin_authorize_with_model(&custom, &req)
+                .await
+                .allowed,
+            "operator models must retain every ABAC-applicable Allow row even when default domain/action/object terms do not match"
+        );
+    }
+
+    #[tokio::test]
+    async fn casbin_empty_default_candidate_set_cannot_grant_empty_identity() {
+        let attrs = BTreeMap::new();
+        let principal = Principal {
+            tenant_id: "tenant-a".to_string(),
+            ..Default::default()
+        };
+        let resource = ResourceRef::message("app.entity.v1.Item");
+        for (tenant, action, object) in [
+            ("tenant-b", "Select", "app.entity.v1.Item"),
+            ("tenant-a", "Delete", "app.entity.v1.Item"),
+            ("tenant-a", "Select", "other.entity.v1.Item"),
+        ] {
+            let snap = AuthzSnapshot {
+                policies: vec![AuthzPolicy {
+                    id: "nonmatching-allow".to_string(),
+                    tenant: tenant.to_string(),
+                    action: action.to_string(),
+                    resource: object.to_string(),
+                    ..Default::default()
+                }],
+                ..Default::default()
+            };
+            let decision = snap
+                .casbin_authorize_with_model(
+                    CASBIN_MODEL,
+                    &query(&principal, &resource, "Select", &attrs),
+                )
+                .await;
+            assert!(
+                !decision.allowed,
+                "an empty default candidate set must deny even when the request has an empty identity"
+            );
+            assert_eq!(decision.matched_policy_ids, vec!["nonmatching-allow"]);
+            assert!(decision.audit_required);
+        }
+    }
+
+    #[tokio::test]
+    async fn casbin_candidate_reduction_preserves_scope_deny_and_diagnostics() {
+        let mut snap = AuthzSnapshot {
+            policies: vec![
+                AuthzPolicy {
+                    id: "scoped-allow".to_string(),
+                    tenant: "tenant-a".to_string(),
+                    role: "reader".to_string(),
+                    action: "Select".to_string(),
+                    resource: "app.entity.v1.*".to_string(),
+                    required_scopes: vec!["udb:read".to_string()],
+                    ..Default::default()
+                },
+                AuthzPolicy {
+                    id: "other-object".to_string(),
+                    tenant: "tenant-a".to_string(),
+                    action: "Delete".to_string(),
+                    resource: "other.entity.v1.Item".to_string(),
+                    ..Default::default()
+                },
+            ],
+            ..Default::default()
+        };
+        let mut principal = Principal {
+            subject: "alice".to_string(),
+            tenant_id: "tenant-a".to_string(),
+            roles: vec!["reader".to_string()],
+            ..Default::default()
+        };
+        let resource = ResourceRef::message("app.entity.v1.Item");
+        let attrs = BTreeMap::new();
+        let missing_scope = snap
+            .casbin_authorize_with_model(
+                CASBIN_MODEL,
+                &query(&principal, &resource, "Select", &attrs),
+            )
+            .await;
+        assert!(!missing_scope.allowed);
+        assert_eq!(
+            missing_scope
+                .missing
+                .get("candidate_rule")
+                .map(String::as_str),
+            Some("scoped-allow")
+        );
+        assert_eq!(
+            missing_scope.missing.get("scope").map(String::as_str),
+            Some("udb:read")
+        );
+        principal.scopes.push("udb:read".to_string());
+        let allow = snap
+            .casbin_authorize_with_model(
+                CASBIN_MODEL,
+                &query(&principal, &resource, "Select", &attrs),
+            )
+            .await;
+        assert!(allow.allowed);
+        assert_eq!(allow.required_scopes, vec!["udb:read"]);
+        assert!(allow.via_role);
+        assert_eq!(
+            allow.matched_policy_ids,
+            vec!["scoped-allow", "other-object"]
+        );
+        snap.policies.push(AuthzPolicy {
+            id: "explicit-deny".to_string(),
+            effect: Effect::Deny,
+            tenant: "tenant-a".to_string(),
+            subject: "alice".to_string(),
+            resource: "app.entity.v1.*".to_string(),
+            action: "Select".to_string(),
+            required_scopes: vec!["scope-the-caller-does-not-have".to_string()],
+            ..Default::default()
+        });
+        let deny = snap
+            .casbin_authorize_with_model(
+                CASBIN_MODEL,
+                &query(&principal, &resource, "Select", &attrs),
+            )
+            .await;
+        assert!(!deny.allowed);
+        assert!(deny.is_explicit_deny());
+        assert_eq!(deny.matched_policy_ids, vec!["explicit-deny"]);
+    }
+
+    // BEGIN ISSUE40_CI_REPRO
+    /// Drive the real decision entry point at the reported catalog/policy/burst
+    /// sizes on one executor worker. This isolates scheduling under CPU pressure;
+    /// it does not claim to reproduce the reporter's hypervisor CPU-steal cause.
+    /// The block uses only pre-fix APIs so CI can transplant it unchanged onto
+    /// the actual previous source and require the same heartbeat assertion RED.
+    #[tokio::test(flavor = "current_thread")]
+    async fn casbin_issue40_policy_load_preserves_three_second_deadline_and_timer() {
+        use std::sync::atomic::{AtomicBool, Ordering};
+        use std::time::{Duration, Instant};
+
+        const POLICY_COUNT: usize = 1482;
+        const RESOURCE_COUNT: usize = 257;
+        const IDENTITY_COUNT: usize = 22;
+        const BURST_SIZE: usize = 96;
+        const REQUEST_DEADLINE: Duration = Duration::from_secs(3);
+        const TIMER_INTERVAL: Duration = Duration::from_millis(10);
+        const MAX_TIMER_GAP: Duration = Duration::from_millis(500);
+
+        let mut snapshot = AuthzSnapshot {
+            version: "issue40-scheduling-fixture".to_string(),
+            ..Default::default()
+        };
+        for index in 0..POLICY_COUNT {
+            snapshot.policies.push(AuthzPolicy {
+                id: format!("issue40-policy-{index}"),
+                tenant: "issue40-tenant".to_string(),
+                project: "issue40-project".to_string(),
+                role: format!("issue40-reader-{}", index % IDENTITY_COUNT),
+                action: ["Select", "Upsert", "Update", "Delete"][(index / RESOURCE_COUNT) % 4]
+                    .to_string(),
+                resource: format!("issue40.entity.v1.Table{}", index % RESOURCE_COUNT),
+                required_scopes: vec!["udb:read".to_string()],
+                ..Default::default()
+            });
+        }
+        for index in 0..IDENTITY_COUNT {
+            snapshot.role_bindings.push(RoleBinding {
+                subject: format!("issue40-service-{index}"),
+                role: format!("issue40-reader-{index}"),
+                tenant: "issue40-tenant".to_string(),
+                project: "issue40-project".to_string(),
+            });
+        }
+        let snapshot = Arc::new(snapshot);
+        let principal_for = |index: usize| Principal {
+            principal_id: format!("issue40-user-{}", index % IDENTITY_COUNT),
+            subject: format!("issue40-user-{}", index % IDENTITY_COUNT),
+            user_id: format!("issue40-user-{}", index % IDENTITY_COUNT),
+            service_identity: format!("issue40-service-{}", index % IDENTITY_COUNT),
+            tenant_id: "issue40-tenant".to_string(),
+            project_id: "issue40-project".to_string(),
+            scopes: vec!["udb:read".to_string()],
+            ..Default::default()
+        };
+        let warm_principal = principal_for(0);
+        let warm_resource = ResourceRef::message("issue40.entity.v1.Table0");
+        let warm_attrs = BTreeMap::new();
+        assert!(
+            snapshot
+                .casbin_authorize_with_model(
+                    CASBIN_MODEL,
+                    &query(&warm_principal, &warm_resource, "Select", &warm_attrs),
+                )
+                .await
+                .allowed,
+            "the full reported-size policy fixture must allow its warmup query"
+        );
+
+        let stop = Arc::new(AtomicBool::new(false));
+        let heartbeat_stop = stop.clone();
+        let (ready_tx, ready_rx) = tokio::sync::oneshot::channel();
+        let heartbeat = tokio::spawn(async move {
+            let mut previous = Instant::now();
+            let mut max_gap = Duration::ZERO;
+            ready_tx.send(()).unwrap();
+            loop {
+                tokio::time::sleep(TIMER_INTERVAL).await;
+                let now = Instant::now();
+                max_gap = max_gap.max(now.duration_since(previous));
+                previous = now;
+                if heartbeat_stop.load(Ordering::Acquire) {
+                    return max_gap;
+                }
+            }
+        });
+        ready_rx.await.unwrap();
+        let burst_started = Instant::now();
+        let mut requests = tokio::task::JoinSet::new();
+        for index in 0..BURST_SIZE {
+            let snapshot = snapshot.clone();
+            let principal = principal_for(index);
+            requests.spawn(async move {
+                let resource = ResourceRef::message(format!("issue40.entity.v1.Table{index}"));
+                let attrs = BTreeMap::new();
+                let decision = tokio::time::timeout(
+                    REQUEST_DEADLINE,
+                    snapshot.casbin_authorize_with_model(
+                        CASBIN_MODEL,
+                        &query(&principal, &resource, "Select", &attrs),
+                    ),
+                )
+                .await;
+                (
+                    decision.is_ok_and(|decision| decision.allowed),
+                    burst_started.elapsed(),
+                )
+            });
+        }
+        let mut allowed = 0;
+        let mut completed = 0;
+        let mut max_completion = Duration::ZERO;
+        while let Some(result) = requests.join_next().await {
+            let (granted, completion) =
+                result.expect("authorization task must complete without panicking");
+            completed += 1;
+            allowed += usize::from(granted);
+            max_completion = max_completion.max(completion);
+        }
+        stop.store(true, Ordering::Release);
+        let max_gap = heartbeat.await.unwrap();
+        println!(
+            "issue40 scheduling policies={POLICY_COUNT} resources={RESOURCE_COUNT} identities={IDENTITY_COUNT} completed={completed} allowed={allowed} burst_ms={} max_timer_gap_ms={}",
+            max_completion.as_millis(),
+            max_gap.as_millis(),
+        );
+        assert!(
+            max_gap <= MAX_TIMER_GAP,
+            "issue40: authorization burst must not starve the runtime timer; maximum gap {:?}",
+            max_gap
+        );
+        assert_eq!(completed, BURST_SIZE);
+        assert_eq!(
+            allowed, BURST_SIZE,
+            "all scoped authorization requests must actually be allowed"
+        );
+        assert!(
+            max_completion <= REQUEST_DEADLINE,
+            "issue40: authorization burst must finish within the existing three-second deadline; maximum completion {:?}",
+            max_completion
+        );
+    }
+    // END ISSUE40_CI_REPRO
 }

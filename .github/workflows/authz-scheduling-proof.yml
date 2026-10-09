@@ -1,0 +1,99 @@
+name: Authorization CPU regression proof
+
+on:
+  workflow_dispatch:
+    inputs:
+      baseline_commit:
+        description: "Exact ancestor commit before the issue 40 authorization fix"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  authorization-scheduling:
+    name: Original failure and corrected authorization
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/setup-rust
+        with:
+          cache-key: rust-ubuntu-latest
+      - name: Transplant the same regression onto the original serving code
+        env:
+          BASELINE_COMMIT: ${{ inputs.baseline_commit }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
+          import re
+          import subprocess
+
+          baseline = os.environ["BASELINE_COMMIT"]
+          if re.fullmatch(r"[0-9a-f]{40}", baseline) is None:
+              raise SystemExit("baseline_commit must be an exact commit SHA")
+          subprocess.run(["git", "merge-base", "--is-ancestor", baseline, "HEAD"], check=True)
+          source = Path("src/runtime/authz/casbin_engine.rs")
+          current = source.read_text(encoding="utf-8")
+          begin = "// BEGIN ISSUE40_CI_REPRO"
+          end = "// END ISSUE40_CI_REPRO"
+          if current.count(begin) != 1 or current.count(end) != 1:
+              raise SystemExit("expected exactly one self-contained issue 40 regression")
+          regression = current[current.index(begin):current.index(end) + len(end)]
+          original = subprocess.check_output(
+              ["git", "show", f"{baseline}:{source.as_posix()}"], text=True
+          )
+          if begin in original or not original.rstrip().endswith("}"):
+              raise SystemExit("baseline must precede the regression and retain its test module")
+          backup = Path(os.environ["RUNNER_TEMP"], "issue40-fixed-casbin.rs")
+          backup.write_bytes(source.read_bytes())
+          closing = original.rfind("}")
+          source.write_text(original[:closing] + "\n" + regression + "\n" + original[closing:], encoding="utf-8")
+          PY
+      - name: Require the original runtime starvation failure
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p issue40-proof
+          trap 'cp "$RUNNER_TEMP/issue40-fixed-casbin.rs" src/runtime/authz/casbin_engine.rs' EXIT
+          set +e
+          cargo test --locked --lib runtime::authz::casbin_engine::tests::casbin_issue40_policy_load_preserves_three_second_deadline_and_timer -- --exact --nocapture --test-threads=1 2>&1 | tee issue40-proof/original.log
+          original_exit=${PIPESTATUS[0]}
+          set -e
+          cp "$RUNNER_TEMP/issue40-fixed-casbin.rs" src/runtime/authz/casbin_engine.rs
+          if [ "$original_exit" -ne 101 ]; then
+            echo "::error::The original code did not produce the expected test failure."
+            exit 1
+          fi
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          log = Path("issue40-proof/original.log").read_text(encoding="utf-8")
+          if re.search(r"test result: FAILED\. 0 passed; 1 failed;", log) is None:
+              raise SystemExit("the baseline must execute and fail exactly one regression; compiler and infrastructure failures are not reproduction")
+          if "issue40: authorization burst must not starve the runtime timer" not in log:
+              raise SystemExit("the baseline failed for a different reason")
+          print("Original serving code reproduced authorization timer starvation.")
+          PY
+          git diff --exit-code -- src/runtime/authz/casbin_engine.rs
+      - name: Require the same regression to pass on the corrected source
+        shell: bash
+        run: |
+          set -euo pipefail
+          cargo test --locked --lib runtime::authz::casbin_engine::tests::casbin_issue40_policy_load_preserves_three_second_deadline_and_timer -- --exact --nocapture --test-threads=1 2>&1 | tee issue40-proof/corrected.log
+          grep -Fq 'test result: ok. 1 passed; 0 failed;' issue40-proof/corrected.log
+      - name: Preserve both actual runtime results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue40-authorization-scheduling-proof
+          path: issue40-proof/
+          if-no-files-found: warn
+          retention-days: 14

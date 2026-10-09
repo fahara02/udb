@@ -9,6 +9,18 @@ release line was tagged.
 
 ### Fixed
 
+- PostgreSQL Select, joins and hybrid full-text reads discard a connection if
+  cancellation or an early error interrupts its request settings or cleanup.
+  Successful reads still reuse the physical connection and prepared statements.
+- CDC journal polling retains its deadline during unrelated broadcast traffic,
+  preserving durable delivery, scope filtering and duplicate suppression.
+- Default-model authorization excludes policy rows that cannot match the
+  request domain, action or resource, and yields between Casbin evaluations and
+  bounded policy-loading batches. Custom models retain their policy semantics;
+  explicit denies, scope checks and decision diagnostics remain enforced.
+- Live PostgreSQL cancellation and CDC regressions cover the serving paths.
+  A separate CI workflow compares the same authorization scheduling regression
+  against the previous source and requires the specific original timer failure.
 - The Go live store contract uses two independently authenticated tenants and
   runs the shared cross-tenant read and filter checks. Missing or identical
   verified tenant IDs fail the proof instead of skipping it.

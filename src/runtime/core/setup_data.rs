@@ -1167,13 +1167,14 @@ impl DataBrokerRuntime {
         // connection returns to the pool — on BOTH the success and error path.
         // This drops the BEGIN+COMMIT round-trips while keeping RLS isolation
         // byte-identical (same keys/values as the write path).
-        let mut conn = pool.acquire().await.map_err(|e| {
+        let conn = pool.acquire().await.map_err(|e| {
             setup_data_internal_status(
                 "select_connection_acquire",
                 format!("PG connection acquire failed: {e}"),
             )
         })?;
-        set_request_local_settings_conn(&mut conn, &context).await?;
+        let mut conn = PgRequestConnection::new(conn);
+        conn.install_context(&context).await?;
         // 2.4 merge: prefer the bridged neutral-IR emission (live row parity is
         // pinned by the planner/IR A-B oracle); the planner SQL stays as the
         // fallback for planner-only filter shapes neutral IR cannot represent.
@@ -1213,32 +1214,35 @@ impl DataBrokerRuntime {
         };
         // Capture the SELECT result WITHOUT early-`?`-returning, so the reset
         // below runs unconditionally even on query failure (leak-safety).
-        let rows_result = query.fetch_all(&mut *conn).await.map_err(|err| {
-            setup_data_internal_status("select_query", format!("PostgreSQL select failed: {err}"))
-        });
+        let rows_result = query
+            .fetch_all(conn.connection_mut()?)
+            .await
+            .map_err(|err| {
+                setup_data_internal_status(
+                    "select_query",
+                    format!("PostgreSQL select failed: {err}"),
+                )
+            });
         // include_total: COUNT the same scoped filter (no page cursor, no sort,
         // no limit) on the same connection, under the same RLS settings.
         let total_result = if request.include_total && rows_result.is_ok() {
             Some(
-                self.exact_select_total(manifest, table, &plan_request, &total_filter, &mut *conn)
-                    .await,
+                self.exact_select_total(
+                    manifest,
+                    table,
+                    &plan_request,
+                    &total_filter,
+                    conn.connection_mut()?,
+                )
+                .await,
             )
         } else {
             None
         };
-        let reset_result = reset_request_local_settings_conn(&mut conn, &context).await;
-        // Leak-safety teardown: if the RESET succeeded the connection is clean
-        // and may recycle into the pool (plain drop). If the RESET FAILED the
-        // connection may still carry this request's tenant GUCs, so we MUST NOT
-        // hand it back clean — `detach()` removes it from pool accounting and
-        // dropping the detached connection closes the underlying socket instead
-        // of recycling a dirty session. (Defense in depth only — every path
-        // re-applies its own context before querying.)
-        if reset_result.is_ok() {
-            drop(conn);
-        } else {
-            drop(conn.detach());
-        }
+        let reset_result = conn.reset_context(&context).await;
+        // The guard recycles only after a completed RESET. Cancellation during
+        // set/query/count/reset and every early `?` discard the dirty session.
+        drop(conn);
         let rows = rows_result?;
         let exact_total = total_result.transpose()?;
         reset_result?;
@@ -1380,29 +1384,27 @@ impl DataBrokerRuntime {
         // connection, install RLS context as SESSION settings, run the join
         // SELECT, then ALWAYS reset the session GUCs before the connection
         // returns to the pool — on success AND error.
-        let mut conn = pool.acquire().await.map_err(|e| {
+        let conn = pool.acquire().await.map_err(|e| {
             setup_data_internal_status(
                 "join_connection_acquire",
                 format!("PG connection acquire failed: {e}"),
             )
         })?;
-        set_request_local_settings_conn(&mut conn, &context).await?;
+        let mut conn = PgRequestConnection::new(conn);
+        conn.install_context(&context).await?;
         // Capture the SELECT result WITHOUT early-`?`-returning so the reset
         // runs unconditionally even on query failure (leak-safety).
-        let rows_result = query.fetch_all(&mut *conn).await.map_err(|err| {
-            setup_data_internal_status(
-                "join_query",
-                format!("PostgreSQL join select failed: {err}"),
-            )
-        });
-        let reset_result = reset_request_local_settings_conn(&mut conn, &context).await;
-        // Recycle the connection only if it was cleaned; otherwise close it
-        // (detach) so a dirty session is never handed to the next request.
-        if reset_result.is_ok() {
-            drop(conn);
-        } else {
-            drop(conn.detach());
-        }
+        let rows_result = query
+            .fetch_all(conn.connection_mut()?)
+            .await
+            .map_err(|err| {
+                setup_data_internal_status(
+                    "join_query",
+                    format!("PostgreSQL join select failed: {err}"),
+                )
+            });
+        let reset_result = conn.reset_context(&context).await;
+        drop(conn);
         let rows = rows_result?;
         reset_result?;
         let record_set = rows_to_record_set(
