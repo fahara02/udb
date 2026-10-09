@@ -49,6 +49,11 @@ no-wrapper plan.
 
 ### Fixed
 
+- Separate broker nodes serialize authz revision appends, including an initially
+  empty scope. Revision reads use the selected write instance, preserve large
+  integer counters and refuse malformed stored values instead of returning zero.
+  Snapshot publication retries bounded concurrent revision changes.
+
 - Native typed transactions retain SQLSTATE refusals from mutation, outbox and
   deferred commit failures; refused transactions roll back entity and event rows.
 

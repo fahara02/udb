@@ -28,7 +28,15 @@ use crate::runtime::service::native_entity_store::NativeEntityStore;
 use std::sync::OnceLock;
 
 #[allow(dead_code)]
+#[derive(Clone)]
 pub(crate) enum NativeEntityTransactionOp {
+    /// A bounded read whose result must still match the caller's observation.
+    /// Put it first. All writers of the scope must use the same entity/filter;
+    /// the transaction lock also protects a scope with no existing row.
+    ReadGuard {
+        read: LogicalRead,
+        expected_rows: Vec<serde_json::Value>,
+    },
     Write(LogicalWrite),
     Update(LogicalUpdate),
     Delete(LogicalDelete),
@@ -39,6 +47,7 @@ pub(crate) enum NativeEntityTransactionOp {
 }
 
 #[allow(dead_code)]
+#[derive(Clone)]
 pub(crate) struct NativeOutboxTransactionWrite {
     pub(crate) relation: String,
     pub(crate) event_id: uuid::Uuid,
@@ -728,6 +737,11 @@ impl DataBrokerRuntime {
         }
         let compile_ctx = Self::native_entity_compile_context(context, target.instance.as_deref());
         enum PreparedStep {
+            ReadGuard {
+                compiled: crate::runtime::service::handlers_data::CompiledDispatchRequest,
+                expected_rows: Vec<serde_json::Value>,
+                lock_key: i64,
+            },
             Mutation(crate::runtime::service::handlers_data::CompiledDispatchRequest),
             Outbox(NativeOutboxTransactionWrite),
         }
@@ -735,6 +749,60 @@ impl DataBrokerRuntime {
         let mut prepared_steps = Vec::with_capacity(ops.len());
         for op in ops {
             let prepared = match op {
+                NativeEntityTransactionOp::ReadGuard {
+                    read,
+                    expected_rows,
+                } => {
+                    if !prepared_steps.is_empty()
+                        || !read
+                            .pagination
+                            .as_ref()
+                            .is_some_and(|page| page.limit.is_some_and(|limit| limit > 0))
+                    {
+                        return Err(crate::runtime::executor_utils::invalid_argument_fields(
+                            "a native transaction read guard must be first and bounded",
+                            [(
+                                "ops",
+                                "put one read guard first with a positive pagination limit",
+                            )],
+                        ));
+                    }
+                    let scope = serde_json::to_vec(&(
+                        service_id,
+                        &context.tenant_id,
+                        &context.project_id,
+                        &read.message_type,
+                        &read.filter,
+                    ))
+                    .map_err(|_| {
+                        native_store_internal_status(
+                            "native_entity_read_guard_scope",
+                            "native transaction read guard scope could not be encoded",
+                        )
+                    })?;
+                    let hash = <sha2::Sha256 as sha2::Digest>::digest(scope);
+                    let mut key = [0_u8; std::mem::size_of::<i64>()];
+                    key.copy_from_slice(&hash[..std::mem::size_of::<i64>()]);
+                    let compiled =
+                        crate::runtime::service::handlers_data::compile_logical_read_dispatch(
+                            &kind,
+                            &read,
+                            &compile_ctx,
+                        )?;
+                    if compiled.operation != "query" {
+                        return Err(native_store_capability_status(
+                            target.backend.clone(),
+                            "typed_transaction_read_guard",
+                            "native_entity_query_dispatch",
+                            "native transaction read guard compiled a non-query operation",
+                        ));
+                    }
+                    PreparedStep::ReadGuard {
+                        compiled,
+                        expected_rows,
+                        lock_key: i64::from_be_bytes(key),
+                    }
+                }
                 NativeEntityTransactionOp::Write(op) => PreparedStep::Mutation(
                     crate::runtime::service::handlers_data::compile_logical_write_dispatch(
                         &kind,
@@ -783,11 +851,96 @@ impl DataBrokerRuntime {
                 &err,
             )
         })?;
+        if matches!(prepared_steps.first(), Some(PreparedStep::ReadGuard { .. })) {
+            // A guard must see the preceding lock owner's commit after waiting,
+            // even when the connection's configured default is repeatable read.
+            sqlx::query("SET TRANSACTION ISOLATION LEVEL READ COMMITTED")
+                .execute(&mut *tx)
+                .await
+                .map_err(|err| {
+                    crate::runtime::executor_utils::sqlx_error_to_status(
+                        "native_entity_read_guard_isolation",
+                        &err,
+                    )
+                })?;
+        }
         crate::runtime::core::set_request_local_settings(&mut tx, context).await?;
 
         let mut results = Vec::with_capacity(prepared_steps.len());
         for prepared in prepared_steps {
             let compiled = match prepared {
+                PreparedStep::ReadGuard {
+                    compiled,
+                    expected_rows,
+                    lock_key,
+                } => {
+                    sqlx::query("/* native_entity_read_guard */ SELECT pg_advisory_xact_lock($1)")
+                        .bind(lock_key)
+                        .execute(&mut *tx)
+                        .await
+                        .map_err(|err| {
+                            crate::runtime::executor_utils::sqlx_error_to_status(
+                                "native_entity_read_guard_lock",
+                                &err,
+                            )
+                        })?;
+                    let spec: serde_json::Value = serde_json::from_str(&compiled.spec_json)
+                        .map_err(|_| {
+                            native_store_internal_status(
+                                "native_entity_read_guard_json",
+                                "compiled native read guard JSON could not be decoded",
+                            )
+                        })?;
+                    let sql = spec
+                        .get("sql")
+                        .and_then(serde_json::Value::as_str)
+                        .ok_or_else(|| {
+                            native_store_capability_status(
+                                target.backend.clone(),
+                                "typed_transaction_read_guard",
+                                "postgres_sql_query",
+                                "native transaction read guard compiled a non-SQL query",
+                            )
+                        })?;
+                    crate::runtime::core::validate_pg_read_sql(sql)?;
+                    let params = crate::runtime::core::dispatch_params(&spec)?;
+                    let param_types = crate::runtime::core::dispatch_param_types(&spec)?;
+                    let rows = crate::runtime::core::bind_typed_generic_pg_params(
+                        sqlx::query(sql),
+                        &params,
+                        param_types.as_deref(),
+                    )?
+                    .fetch_all(&mut *tx)
+                    .await
+                    .map_err(|err| {
+                        crate::runtime::executor_utils::sqlx_error_to_status(
+                            "native_entity_read_guard_query",
+                            &err,
+                        )
+                    })?;
+                    let rows = crate::runtime::core::pg_rows_to_json(rows)?;
+                    if rows != expected_rows {
+                        return Err(crate::runtime::executor_utils::status_with_typed_detail(
+                            crate::runtime::error_reasons::CAS_CONFLICT.status,
+                            "native transaction read guard changed concurrently",
+                            crate::proto::ErrorDetail {
+                                backend: target.backend.clone(),
+                                operation: "native_entity_read_guard".to_string(),
+                                kind: crate::proto::ErrorKind::Conflict as i32,
+                                reason: crate::runtime::error_reasons::CAS_CONFLICT
+                                    .code
+                                    .to_string(),
+                                retryable: true,
+                                ..Default::default()
+                            },
+                        ));
+                    }
+                    results.push(NativeEntityTransactionStepResult {
+                        affected_rows: 0,
+                        rows,
+                    });
+                    continue;
+                }
                 PreparedStep::Mutation(compiled) => compiled,
                 PreparedStep::Outbox(write) => {
                     crate::runtime::cdc::insert_outbox_row(

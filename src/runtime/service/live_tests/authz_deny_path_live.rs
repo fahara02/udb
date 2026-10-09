@@ -437,6 +437,300 @@ async fn authz_deny_path_narrow_policy_is_enforced_as_narrow_live() {
 
 #[tokio::test]
 #[ignore = "requires live Postgres; native CI runs all ignored live proofs"]
+async fn authz_revision_appends_serialize_across_two_served_nodes_live() {
+    use crate::proto::udb::core::authz::services::v1 as authz_pb;
+    use crate::proto::udb::core::authz::services::v1::authz_service_server::AuthzService;
+    use crate::runtime::service::method_security::{
+        scope_claim_context_for_test, test_claim_context,
+    };
+    use sqlx::Connection;
+    use std::time::Duration;
+    use tonic::Request;
+
+    let _guard = live_native_service_db_lock().lock().await;
+    let pool = live_pg_pool().await;
+    migrate_native_service_db(&pool).await;
+    let tenant = Uuid::new_v4().to_string();
+    let actor = Uuid::new_v4().to_string();
+    let claim = test_claim_context(
+        &actor,
+        &tenant,
+        DEFAULT_PROJECT_ID,
+        &["udb:authz:put-authz-policy", "udb:authz:get-authz-revision"],
+        &[],
+    );
+    let first_broker = deny_path_broker().await;
+    let second_broker = deny_path_broker().await;
+    let (_, first_authz, _) = first_broker.build_auth_services();
+    let (_, second_authz, _) = second_broker.build_auth_services();
+    first_authz.warm_shared_snapshot().await;
+    second_authz.warm_shared_snapshot().await;
+    let revision = native_catalog::native_model(
+        "udb.core.authz.entity.v1.AuthzRevision",
+        &["policy_revision", "tenant_id", "project_id"],
+    );
+    let policy = |action: &str| authz_pb::PutAuthzPolicyRequest {
+        policy: Some(authz_pb::AuthzPolicyRecord {
+            id: Uuid::new_v4().to_string(),
+            enabled: true,
+            effect: "allow".to_string(),
+            tenant: tenant.clone(),
+            project: DEFAULT_PROJECT_ID.to_string(),
+            subject: SUBJECT.to_string(),
+            action: action.to_string(),
+            resource: INVOICE.to_string(),
+            purpose: "b11-deny-path".to_string(),
+            required_scopes: vec!["udb:read".to_string()],
+            ..Default::default()
+        }),
+    };
+
+    // Block the first real revision INSERT. The second node must have observed
+    // the same initially empty scope and reached the durable scope lock before
+    // it is released. Without the guard both nodes append policy_revision = 1.
+    let key_bytes = Uuid::new_v4();
+    let mut lock_bytes = [0_u8; std::mem::size_of::<i64>()];
+    lock_bytes.copy_from_slice(&key_bytes.as_bytes()[..std::mem::size_of::<i64>()]);
+    let lock_key = i64::from_be_bytes(lock_bytes);
+    let function = format!("udb_revision_barrier_{}", Uuid::new_v4().simple());
+    sqlx::query(&format!(
+        "CREATE FUNCTION {function}() RETURNS trigger LANGUAGE plpgsql AS $$ \
+         BEGIN IF NEW.{tenant_column}::TEXT = '{tenant}' THEN \
+         PERFORM pg_advisory_xact_lock({lock_key}); END IF; RETURN NEW; END; $$",
+        tenant_column = revision.q("tenant_id"),
+    ))
+    .execute(&pool)
+    .await
+    .expect("install actual cross-node revision barrier function");
+    sqlx::query(&format!(
+        "CREATE TRIGGER {function} BEFORE INSERT ON {} \
+         FOR EACH ROW EXECUTE FUNCTION {function}()",
+        revision.relation,
+    ))
+    .execute(&pool)
+    .await
+    .expect("install actual cross-node revision barrier trigger");
+    // These independent connections cannot consume the native service's pool
+    // slots and hide writers waiting on the real PostgreSQL locks.
+    let mut gate_connection = sqlx::PgConnection::connect(&live_pg_dsn())
+        .await
+        .expect("connect independent authz revision barrier");
+    let mut observer = sqlx::PgConnection::connect(&live_pg_dsn())
+        .await
+        .expect("connect independent authz revision observer");
+    let mut gate = gate_connection
+        .begin()
+        .await
+        .expect("begin actual revision barrier");
+    sqlx::query("SELECT pg_advisory_xact_lock($1)")
+        .bind(lock_key)
+        .execute(&mut *gate)
+        .await
+        .expect("hold actual revision INSERT barrier");
+    let release = async {
+        let mut observed = (0_i64, 0_i64);
+        let barrier =
+            tokio::time::timeout(Duration::from_secs(10), async {
+                loop {
+                    observed = sqlx::query_as::<_, (i64, i64)>(
+                    "SELECT count(*) FILTER (WHERE query LIKE '/* native_entity_read_guard */%'), \
+                     count(*) FILTER (WHERE query ILIKE '%authz_revisions%') \
+                     FROM pg_stat_activity WHERE datname = current_database() \
+                     AND wait_event_type = 'Lock' AND wait_event = 'advisory' \
+                     AND pid <> pg_backend_pid()",
+                ).fetch_one(&mut observer).await.expect("observe actual cross-node revision waits");
+                    if observed == (1, 1) {
+                        break;
+                    }
+                    tokio::time::sleep(Duration::from_millis(20)).await;
+                }
+            })
+            .await
+            .is_ok();
+        // Release even on an observation timeout, so cleanup and safe diagnostics
+        // remain possible. A timeout never becomes a successful proof.
+        gate.commit()
+            .await
+            .expect("release actual revision INSERT barrier");
+        (barrier, observed)
+    };
+    let (first, second, (barrier, observed)) = tokio::join!(
+        tokio::time::timeout(
+            Duration::from_secs(15),
+            scope_claim_context_for_test(
+                claim.clone(),
+                first_authz.put_authz_policy(Request::new(policy("Select"))),
+            )
+        ),
+        tokio::time::timeout(
+            Duration::from_secs(15),
+            scope_claim_context_for_test(
+                claim.clone(),
+                second_authz.put_authz_policy(Request::new(policy("Update"))),
+            )
+        ),
+        release,
+    );
+    sqlx::query(&format!("DROP TRIGGER {function} ON {}", revision.relation))
+        .execute(&pool)
+        .await
+        .expect("remove actual revision barrier trigger");
+    sqlx::query(&format!("DROP FUNCTION {function}()"))
+        .execute(&pool)
+        .await
+        .expect("remove actual revision barrier function");
+    assert!(
+        barrier,
+        "both nodes must reach durable revision serialization; guard/insert waits={observed:?}"
+    );
+    first
+        .expect("first served node must finish before deadline")
+        .expect("first served mutation publishes its revision");
+    second
+        .expect("second served node must finish before deadline")
+        .expect("second served mutation retries the stale revision observation");
+    let counters = sqlx::query_scalar::<_, i64>(&format!(
+        "SELECT {counter} FROM {relation} WHERE {tenant_column} = $1 \
+         AND {project_column} = $2 ORDER BY {counter}",
+        counter = revision.q("policy_revision"),
+        relation = revision.relation,
+        tenant_column = revision.q("tenant_id"),
+        project_column = revision.q("project_id"),
+    ))
+    .bind(&tenant)
+    .bind(DEFAULT_PROJECT_ID)
+    .fetch_all(&pool)
+    .await
+    .expect("read the actual immutable revision rows");
+    assert_eq!(
+        counters,
+        vec![1, 2],
+        "separate nodes cannot append duplicate revision counters"
+    );
+    let caller = caller(&tenant, DEFAULT_PROJECT_ID, SUBJECT);
+    first_broker
+        .authorize(&caller, INVOICE, "Select")
+        .await
+        .expect("first node's returned mutation is immediately visible");
+    second_broker
+        .authorize(&caller, INVOICE, "Update")
+        .await
+        .expect("second node's returned mutation is immediately visible");
+    for authz in [&first_authz, &second_authz] {
+        let result = scope_claim_context_for_test(
+            claim.clone(),
+            authz.get_authz_revision(Request::new(authz_pb::GetAuthzRevisionRequest {
+                tenant_id: tenant.clone(),
+                project_id: DEFAULT_PROJECT_ID.to_string(),
+                ..Default::default()
+            })),
+        )
+        .await
+        .expect("each served node reads the durable current revision")
+        .into_inner();
+        assert_eq!(result.policy_revision, 2);
+        assert_eq!(result.relationship_revision, 0);
+    }
+    observer
+        .close()
+        .await
+        .expect("close independent revision observer");
+    gate_connection
+        .close()
+        .await
+        .expect("close independent revision barrier");
+    pool.close().await;
+}
+
+#[tokio::test]
+#[ignore = "requires live Postgres; native CI runs all ignored live proofs"]
+async fn authz_revision_reads_preserve_int64_and_refuse_invalid_counters_live() {
+    use crate::proto::udb::core::authz::services::v1 as authz_pb;
+    use crate::proto::udb::core::authz::services::v1::authz_service_server::AuthzService;
+    use crate::runtime::service::method_security::{
+        scope_claim_context_for_test, test_claim_context,
+    };
+    use tonic::Request;
+
+    let _guard = live_native_service_db_lock().lock().await;
+    let pool = live_pg_pool().await;
+    migrate_native_service_db(&pool).await;
+    let broker = deny_path_broker().await;
+    let (_, authz, _) = broker.build_auth_services();
+    let model = native_catalog::native_model(
+        "udb.core.authz.entity.v1.AuthzRevision",
+        &[
+            "revision_id",
+            "tenant_id",
+            "project_id",
+            "policy_revision",
+            "relationship_revision",
+            "content_hash",
+        ],
+    );
+    for counter in [i64::MAX - 1, -1] {
+        let tenant = Uuid::new_v4().to_string();
+        sqlx::query(&format!(
+            "INSERT INTO {relation} ({id}, {tenant_column}, {project_column}, \
+             {policy}, {relationship}, {hash}) VALUES ($1, $2, $3, $4, 0, 'int64-proof')",
+            relation = model.relation,
+            id = model.q("revision_id"),
+            tenant_column = model.q("tenant_id"),
+            project_column = model.q("project_id"),
+            policy = model.q("policy_revision"),
+            relationship = model.q("relationship_revision"),
+            hash = model.q("content_hash"),
+        ))
+        .bind(Uuid::new_v4())
+        .bind(&tenant)
+        .bind(DEFAULT_PROJECT_ID)
+        .bind(counter)
+        .execute(&pool)
+        .await
+        .expect("seed actual durable revision decoder boundary");
+        let claim = test_claim_context(
+            &Uuid::new_v4().to_string(),
+            &tenant,
+            DEFAULT_PROJECT_ID,
+            &["udb:authz:get-authz-revision"],
+            &[],
+        );
+        let result = scope_claim_context_for_test(
+            claim,
+            authz.get_authz_revision(Request::new(authz_pb::GetAuthzRevisionRequest {
+                tenant_id: tenant,
+                project_id: DEFAULT_PROJECT_ID.to_string(),
+                ..Default::default()
+            })),
+        )
+        .await;
+        if counter >= 0 {
+            let revision = result
+                .expect("served revision read preserves the full signed integer")
+                .into_inner();
+            assert_eq!(revision.policy_revision, i64::MAX - 1);
+            assert_eq!(revision.relationship_revision, 0);
+            assert_eq!(revision.content_hash, "int64-proof");
+        } else {
+            let refusal = result.expect_err("malformed stored counters cannot become zero");
+            assert_eq!(
+                refusal.code(),
+                crate::runtime::error_reasons::DECODE_FAILED.status
+            );
+            let detail = denial_detail(&refusal);
+            assert_eq!(
+                detail.reason,
+                crate::runtime::error_reasons::DECODE_FAILED.code
+            );
+            assert_eq!(detail.column, "policy_revision");
+            assert!(!detail.retryable);
+        }
+    }
+    pool.close().await;
+}
+
+#[tokio::test]
+#[ignore = "requires live Postgres; native CI runs all ignored live proofs"]
 async fn authz_policy_mutations_publish_before_return_and_survive_restart_live() {
     use crate::proto::udb::core::authz::services::v1 as authz_pb;
     use crate::proto::udb::core::authz::services::v1::authz_service_server::AuthzService;

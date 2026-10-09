@@ -1876,35 +1876,42 @@ impl AuthzServiceImpl {
         // authz reload path. The histogram + recorder already exist; this is the
         // missing call site. Covers the real DB round-trip + decode in
         // `load_snapshot_from_postgres`.
-        let reload_started = Instant::now();
-        let revision_before = self.authz_revision_fingerprint().await?;
-        let loaded = self.load_snapshot_from_postgres().await?;
-        let revision_after = self.authz_revision_fingerprint().await?;
-        self.metrics
-            .observe_policy_reload_seconds(reload_started.elapsed().as_secs_f64());
-        if revision_before != revision_after {
-            return Err(crate::runtime::executor_utils::retryable_aborted_status(
-                "authz",
-                "snapshot reload revision",
-                0,
-                "authz revision changed while loading snapshot; retry snapshot load",
-            ));
-        }
-        if let Some(snapshot) = loaded {
-            self.snapshot.store(Arc::new(snapshot));
+        let mut revision_retries = 0;
+        loop {
+            let reload_started = Instant::now();
+            let revision_before = self.authz_revision_fingerprint().await?;
+            let loaded = self.load_snapshot_from_postgres().await?;
+            let revision_after = self.authz_revision_fingerprint().await?;
+            self.metrics
+                .observe_policy_reload_seconds(reload_started.elapsed().as_secs_f64());
+            if revision_before != revision_after {
+                if revision_retries < crate::engine::MAX_RETRIES {
+                    revision_retries += 1;
+                    continue;
+                }
+                return Err(crate::runtime::executor_utils::retryable_aborted_status(
+                    "authz",
+                    "snapshot reload revision",
+                    0,
+                    "authz revision changed while loading snapshot; retry snapshot load",
+                ));
+            }
+            if let Some(snapshot) = loaded {
+                self.snapshot.store(Arc::new(snapshot));
+                if let Ok(mut guard) = self.snapshot_loaded_at.lock() {
+                    *guard = Some(Instant::now());
+                }
+                // Staleness bound: the data plane fails closed once the last good
+                // durable load is older than UDB_AUTHZ_SNAPSHOT_MAX_STALENESS_SECS.
+                crate::runtime::authz::record_snapshot_reload_success();
+                return Ok(self.snapshot.load_full());
+            }
+            self.require_snapshot_fallback()?;
             if let Ok(mut guard) = self.snapshot_loaded_at.lock() {
                 *guard = Some(Instant::now());
             }
-            // Staleness bound: the data plane fails closed once the last good
-            // durable load is older than UDB_AUTHZ_SNAPSHOT_MAX_STALENESS_SECS.
-            crate::runtime::authz::record_snapshot_reload_success();
             return Ok(self.snapshot.load_full());
         }
-        self.require_snapshot_fallback()?;
-        if let Ok(mut guard) = self.snapshot_loaded_at.lock() {
-            *guard = Some(Instant::now());
-        }
-        Ok(self.snapshot.load_full())
     }
 }
 

@@ -16,7 +16,12 @@
 //!   * Separation of duties: the author of a high-risk draft cannot approve it.
 
 use super::*;
+use crate::ir::{
+    LogicalPagination, LogicalProjection, LogicalRead, LogicalSort, LogicalWrite, NullOrder,
+    SortDirection,
+};
 use crate::runtime::authz::PolicyEngine;
+use crate::runtime::core::native_store::NativeEntityTransactionOp;
 
 // ── Governance scopes / SoD constants ──────────────────────────────────────
 
@@ -666,6 +671,94 @@ impl AuthzServiceImpl {
     }
 }
 
+fn authz_revision_read(tenant: &str, project: &str) -> LogicalRead {
+    LogicalRead {
+        message_type: "udb.core.authz.entity.v1.AuthzRevision".to_string(),
+        filter: Some(LogicalFilter::And(vec![
+            LogicalFilter::Comparison {
+                field: "tenant_id".to_string(),
+                op: ComparisonOp::Eq,
+                value: LogicalValue::String(tenant.to_string()),
+            },
+            LogicalFilter::Comparison {
+                field: "project_id".to_string(),
+                op: ComparisonOp::Eq,
+                value: LogicalValue::String(project.to_string()),
+            },
+        ])),
+        projection: Some(LogicalProjection::fields(
+            ["policy_revision", "relationship_revision", "content_hash"].map(str::to_string),
+        )),
+        sort: ["policy_revision", "relationship_revision", "changed_at"]
+            .map(|field| LogicalSort {
+                field: field.to_string(),
+                direction: SortDirection::Desc,
+                nulls: NullOrder::Default,
+            })
+            .to_vec(),
+        pagination: Some(LogicalPagination::limit(1)),
+        ..LogicalRead::default()
+    }
+}
+
+fn authz_revision_context(
+    runtime: &DataBrokerRuntime,
+    tenant: &str,
+    project: &str,
+) -> Result<crate::RequestContext, Status> {
+    let mut context = crate::RequestContext {
+        tenant_id: tenant.to_string(),
+        project_id: project.to_string(),
+        ..crate::RequestContext::default()
+    };
+    // Read from the same authoritative instance as the guarded append. A read
+    // replica may lag and repeatedly produce a stale observation.
+    let (_, instance) =
+        runtime.native_store_postgres_binding_for_service("authz", true, &context)?;
+    context.target_instance = instance.unwrap_or_default();
+    Ok(context)
+}
+
+fn decode_authz_revision(rows: &[serde_json::Value]) -> Result<(i64, i64, String), Status> {
+    let Some(row) = rows.first() else {
+        return Ok((0, 0, String::new()));
+    };
+    let invalid_column = |column: &str| {
+        crate::runtime::executor_utils::status_with_typed_detail(
+            crate::runtime::error_reasons::DECODE_FAILED.status,
+            "stored authz revision has an invalid column",
+            crate::proto::ErrorDetail {
+                backend: "authz".to_string(),
+                operation: "read_authz_revision".to_string(),
+                column: column.to_string(),
+                reason: crate::runtime::error_reasons::DECODE_FAILED
+                    .code
+                    .to_string(),
+                kind: crate::runtime::error_reasons::DECODE_FAILED.kind as i32,
+                ..Default::default()
+            },
+        )
+    };
+    let counter = |column: &str| {
+        row.get(column)
+            .and_then(|value| {
+                value
+                    .as_i64()
+                    .or_else(|| value.as_str()?.parse::<i64>().ok())
+            })
+            .filter(|value| *value >= 0)
+            .ok_or_else(|| invalid_column(column))
+    };
+    Ok((
+        counter("policy_revision")?,
+        counter("relationship_revision")?,
+        row.get("content_hash")
+            .and_then(serde_json::Value::as_str)
+            .ok_or_else(|| invalid_column("content_hash"))?
+            .to_string(),
+    ))
+}
+
 impl AuthzServiceImpl {
     // ── AuthzRevision (K2.1): one durable revision spanning policies, roles,
     //    assignments, and tuples. The latest row per tenant/project is current. ─
@@ -677,38 +770,18 @@ impl AuthzServiceImpl {
         tenant: &str,
         project: &str,
     ) -> Result<(i64, i64, String), Status> {
-        let pool = self.require_pool()?;
-        let m = self.authz_revisions_model();
-        let rel = m.relation.clone();
-        let row = sqlx::query(&format!(
-            "SELECT {policy_revision}, {relationship_revision}, COALESCE({content_hash}, '') AS content_hash \
-             FROM {rel} WHERE {tenant_id} = $1 AND {project_id} = $2 \
-             ORDER BY {policy_revision} DESC, {relationship_revision} DESC, {changed_at} DESC LIMIT 1",
-            policy_revision = m.q("policy_revision"),
-            relationship_revision = m.q("relationship_revision"),
-            content_hash = m.q("content_hash"),
-            tenant_id = m.q("tenant_id"),
-            project_id = m.q("project_id"),
-            changed_at = m.q("changed_at"),
-        ))
-        .bind(tenant)
-        .bind(project)
-        .fetch_optional(pool)
-        .await
-        .map_err(|err| {
-            governance_internal_status(
-                "read_authz_revision",
-                format!("read authz revision failed: {err}"),
+        let runtime = self.runtime.as_ref().ok_or_else(|| {
+            authz_capability_status(
+                "revision_persistence",
+                "runtime_native_entity_dispatch",
+                "native authz requires runtime-backed revision persistence",
             )
         })?;
-        match row {
-            Some(row) => Ok((
-                row.try_get("policy_revision").unwrap_or(0),
-                row.try_get("relationship_revision").unwrap_or(0),
-                row.try_get("content_hash").unwrap_or_default(),
-            )),
-            None => Ok((0, 0, String::new())),
-        }
+        let context = authz_revision_context(runtime, tenant, project)?;
+        let rows = runtime
+            .native_entity_read_for_service("authz", &context, authz_revision_read(tenant, project))
+            .await?;
+        decode_authz_revision(&rows)
     }
 
     /// Append a new `AuthzRevision` row, bumping the policy and/or relationship
@@ -727,21 +800,12 @@ impl AuthzServiceImpl {
         changed_by: &str,
     ) -> Result<(i64, i64), Status> {
         let _publication_guard = self.snapshot_reload_lock.lock().await;
-        let (cur_policy, cur_rel, _) = self.current_authz_revision(tenant, project).await?;
         let bumps_relationship = matches!(
             change_type,
             authz_entity_pb::AuthzChangeType::Relationship
                 | authz_entity_pb::AuthzChangeType::Activation
                 | authz_entity_pb::AuthzChangeType::Rollback
         );
-        // Policy/role/assignment/activation/rollback all bump the policy counter;
-        // relationship + activation + rollback also bump the relationship counter.
-        let new_policy = cur_policy + 1;
-        let new_rel = if bumps_relationship {
-            cur_rel + 1
-        } else {
-            cur_rel
-        };
         let runtime = self.runtime.as_ref().ok_or_else(|| {
             authz_capability_status(
                 "revision_persistence",
@@ -749,53 +813,90 @@ impl AuthzServiceImpl {
                 "native authz requires runtime-backed revision persistence",
             )
         })?;
-        // P6.10 Wave 0: revision append via the typed native write (no raw SQL).
-        // `revision_id` is server-generated in Rust (was `gen_random_uuid()`);
-        // `ConflictStrategy::Error` preserves the immutable append-only contract.
-        let mut record = LogicalRecord::new();
-        record.insert(
-            "revision_id".to_string(),
-            LogicalValue::String(Uuid::new_v4().to_string()),
-        );
-        record.insert(
-            "tenant_id".to_string(),
-            LogicalValue::String(tenant.to_string()),
-        );
-        record.insert(
-            "project_id".to_string(),
-            LogicalValue::String(project.to_string()),
-        );
-        record.insert("policy_revision".to_string(), LogicalValue::Int(new_policy));
-        record.insert(
-            "relationship_revision".to_string(),
-            LogicalValue::Int(new_rel),
-        );
-        record.insert(
-            "content_hash".to_string(),
-            LogicalValue::String(content_hash.to_string()),
-        );
-        record.insert(
-            "changed_by".to_string(),
-            LogicalValue::String(changed_by.to_string()),
-        );
-        record.insert(
-            "change_type".to_string(),
-            LogicalValue::String(change_type_to_db(change_type).to_string()),
-        );
-        let context = crate::RequestContext {
-            tenant_id: tenant.to_string(),
-            project_id: project.to_string(),
-            ..crate::RequestContext::default()
+        let context = authz_revision_context(runtime, tenant, project)?;
+        let read = authz_revision_read(tenant, project);
+        let mut retries = 0;
+        let (new_policy, new_rel) = loop {
+            let expected_rows = runtime
+                .native_entity_read_for_service("authz", &context, read.clone())
+                .await?;
+            let (cur_policy, cur_rel, _) = decode_authz_revision(&expected_rows)?;
+            let exhausted = || {
+                governance_internal_status(
+                    "bump_authz_revision",
+                    "authz revision counter is exhausted",
+                )
+            };
+            let new_policy = cur_policy.checked_add(1).ok_or_else(exhausted)?;
+            let new_rel = if bumps_relationship {
+                cur_rel.checked_add(1).ok_or_else(exhausted)?
+            } else {
+                cur_rel
+            };
+            // Revision append and the observed-row guard share one transaction.
+            // `revision_id` is server-generated in Rust (was `gen_random_uuid()`);
+            // `ConflictStrategy::Error` preserves the immutable append-only contract.
+            let mut record = LogicalRecord::new();
+            record.insert(
+                "revision_id".to_string(),
+                LogicalValue::String(Uuid::new_v4().to_string()),
+            );
+            record.insert(
+                "tenant_id".to_string(),
+                LogicalValue::String(tenant.to_string()),
+            );
+            record.insert(
+                "project_id".to_string(),
+                LogicalValue::String(project.to_string()),
+            );
+            record.insert("policy_revision".to_string(), LogicalValue::Int(new_policy));
+            record.insert(
+                "relationship_revision".to_string(),
+                LogicalValue::Int(new_rel),
+            );
+            record.insert(
+                "content_hash".to_string(),
+                LogicalValue::String(content_hash.to_string()),
+            );
+            record.insert(
+                "changed_by".to_string(),
+                LogicalValue::String(changed_by.to_string()),
+            );
+            record.insert(
+                "change_type".to_string(),
+                LogicalValue::String(change_type_to_db(change_type).to_string()),
+            );
+            let result = runtime
+                .native_entity_transaction_for_service(
+                    "authz",
+                    &context,
+                    vec![
+                        NativeEntityTransactionOp::ReadGuard {
+                            read: read.clone(),
+                            expected_rows,
+                        },
+                        NativeEntityTransactionOp::Write(LogicalWrite {
+                            message_type: read.message_type.clone(),
+                            records: vec![record],
+                            conflict: ConflictStrategy::Error,
+                            return_fields: Vec::new(),
+                        }),
+                    ],
+                )
+                .await;
+            match result {
+                Ok(_) => break (new_policy, new_rel),
+                Err(err)
+                    if retries < crate::engine::MAX_RETRIES
+                        && err.code() == crate::runtime::error_reasons::CAS_CONFLICT.status
+                        && crate::runtime::error_reasons::reason_of(&err).as_deref()
+                            == Some(crate::runtime::error_reasons::CAS_CONFLICT.code) =>
+                {
+                    retries += 1;
+                }
+                Err(err) => return Err(err),
+            }
         };
-        runtime
-            .native_entity_write_for_service(
-                "authz",
-                &context,
-                "udb.core.authz.entity.v1.AuthzRevision",
-                record,
-                ConflictStrategy::Error,
-            )
-            .await?;
         self.invalidate_snapshot_cache();
         self.current_snapshot_locked().await?;
         Ok((new_policy, new_rel))
