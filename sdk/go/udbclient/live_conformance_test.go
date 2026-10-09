@@ -142,7 +142,7 @@ func TestLiveGeneratedRPCSurface(t *testing.T) {
 	// Deep AuthnService user/session/credential lifecycle.
 	runLiveAuthnDeepE2E(t, ctx, authConn, authGen.outgoingContext(ctx), tenant, project)
 
-	runLiveBackendE2E(t, ctx, servicesv1.NewDataBrokerClient(brokerConn), brokerGen.outgoingContext(ctx), tenant, project)
+	runLiveBackendE2E(t, ctx, servicesv1.NewDataBrokerClient(brokerConn), brokerGen.outgoingContext(ctx), platformGen.outgoingContext(ctx), tenant, project)
 
 	// Breadth: drive a real, category-appropriate data-plane round-trip against
 	// EVERY backend kind the broker advertises (relational SQL, object, document,
@@ -1052,7 +1052,7 @@ func runLiveBackendCapabilityChallenge(t *testing.T, broker servicesv1.DataBroke
 	// legitimate naming/scope differences as false positives.
 }
 
-func runLiveBackendE2E(t *testing.T, ctx context.Context, broker servicesv1.DataBrokerClient, callCtx context.Context, tenant, project string) {
+func runLiveBackendE2E(t *testing.T, ctx context.Context, broker servicesv1.DataBrokerClient, callCtx, platformCtx context.Context, tenant, project string) {
 	t.Helper()
 	suffix := strings.NewReplacer(".", "-", ":", "-", "+", "-").Replace(time.Now().UTC().Format("20060102T150405.000000000"))
 	recordID := "go-" + suffix
@@ -1293,21 +1293,58 @@ func runLiveBackendE2E(t *testing.T, ctx context.Context, broker servicesv1.Data
 		t.Fatalf("deleted row is still selectable: %s", string(afterDelete.GetRecordsJson()[0]))
 	}
 
-	runLiveControlPlaneE2E(t, broker, callCtx, requestCtx, project, suffix)
+	runLiveControlPlaneE2E(t, broker, callCtx, platformCtx, requestCtx, project, suffix)
 }
 
 // runLiveControlPlaneE2E exercises the DataBroker control-plane data ops with real
-// assertions: project create+list, an inert method-security policy put+list+lint,
-// and catalog/schema/health reads — RPCs that were previously only mount-probed.
-func runLiveControlPlaneE2E(t *testing.T, broker servicesv1.DataBrokerClient, callCtx context.Context, requestCtx *entityv1.RequestContext, project, suffix string) {
+// assertions: scoped project mutation, refused tenant-only global operations,
+// explicitly authenticated platform project create/list, and scoped policy,
+// catalog/schema/health reads. Each caller retains its verified authority.
+func runLiveControlPlaneE2E(t *testing.T, broker servicesv1.DataBrokerClient, callCtx, platformCtx context.Context, requestCtx *entityv1.RequestContext, project, suffix string) {
 	t.Helper()
 	projID := "sdklive_proj_" + strings.NewReplacer("-", "", ".", "", ":", "").Replace(suffix)
-	if _, err := broker.EnsureProject(callCtx, &entityv1.EnsureProjectRequest{
-		Context: requestCtx, ProjectId: projID, Name: "SDK Live Project",
-	}); err != nil {
-		t.Fatalf("EnsureProject: %v", err)
+	if project == "" || requestCtx.GetProjectId() != project {
+		t.Fatal("control-plane fixture must retain its verified project")
 	}
-	projects, err := broker.ListProjects(callCtx, &entityv1.ProjectListRequest{Context: requestCtx})
+	platformMetadata, _ := metadata.FromOutgoingContext(platformCtx)
+	if bound := platformMetadata.Get("x-udb-project-id"); len(bound) != 1 || bound[0] != project {
+		t.Fatal("platform catalog fixture must retain the verified request project")
+	}
+	requireRefusal := func(operation, decision string, err error, trailer metadata.MD) {
+		t.Helper()
+		if status.Code(err) != codes.PermissionDenied {
+			t.Fatalf("tenant caller must refuse %s: code=%s", operation, status.Code(err))
+		}
+		mapped, ok := AsError(mapError("/udb.services.v1.DataBroker/"+operation, err, trailer))
+		if !ok {
+			t.Fatalf("%s refusal must retain typed broker details", operation)
+		}
+		detail, ok := mapped.Detail()
+		if !ok || detail.GetPolicyDecisionId() != decision || detail.GetOperation() != operation {
+			t.Fatalf("%s refusal must name the actual policy decision %s", operation, decision)
+		}
+	}
+	var ensureRefusalTrailer metadata.MD
+	_, ensureRefusal := broker.EnsureProject(callCtx, &entityv1.EnsureProjectRequest{
+		Context: requestCtx, ProjectId: projID, Name: "SDK Live Project",
+	}, grpc.Trailer(&ensureRefusalTrailer))
+	requireRefusal("EnsureProject", "catalog_project_scope_mismatch", ensureRefusal, ensureRefusalTrailer)
+	if scoped, err := broker.EnsureProject(callCtx, &entityv1.EnsureProjectRequest{
+		Context: requestCtx, ProjectId: project, Name: "SDK Live Verified Project",
+	}); err != nil || scoped.GetMutationId() != project {
+		t.Fatalf("verified-project EnsureProject: code=%s", status.Code(err))
+	}
+	var listRefusalTrailer metadata.MD
+	_, listRefusal := broker.ListProjects(callCtx, &entityv1.ProjectListRequest{Context: requestCtx}, grpc.Trailer(&listRefusalTrailer))
+	requireRefusal("ListProjects", "catalog_platform_authority_required", listRefusal, listRefusalTrailer)
+	platformCallCtx, platformCancel := context.WithTimeout(platformCtx, 15*time.Second)
+	defer platformCancel()
+	if created, err := broker.EnsureProject(platformCallCtx, &entityv1.EnsureProjectRequest{
+		Context: requestCtx, ProjectId: projID, Name: "SDK Live Project",
+	}); err != nil || created.GetMutationId() != projID {
+		t.Fatalf("explicit-platform EnsureProject: code=%s", status.Code(err))
+	}
+	projects, err := broker.ListProjects(platformCallCtx, &entityv1.ProjectListRequest{Context: requestCtx})
 	if err != nil {
 		t.Fatalf("ListProjects: %v", err)
 	}

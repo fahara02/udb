@@ -224,7 +224,17 @@ func TestLiveAsUserPreservesVerifiedAuthority(t *testing.T) {
 		t.Fatalf("actual service-key Connect failed: code=%s", status.Code(err))
 	}
 	defer service.Close()
-	if service.Principal().GetAccountKind() != authnentpb.AccountKind_ACCOUNT_KIND_SERVICE_ACCOUNT || service.Meta.UserID != serviceID || service.Meta.TenantID != identity.TenantID || service.Meta.ProjectID != identity.ProjectID || !slices.Equal(service.Meta.Scopes, []string{"data:read"}) {
+	// API-key authority is the approved service principal, not a person user.
+	// The broker deliberately leaves UserId empty on this exchange path while
+	// PrincipalId retains the durable account owner and Subject names the grant.
+	principal := service.Principal()
+	if principal == nil || principal.GetAccountKind() != authnentpb.AccountKind_ACCOUNT_KIND_SERVICE_ACCOUNT ||
+		principal.GetPrincipalId() != serviceID || principal.GetServiceIdentity() != name || principal.GetSubject() != name || principal.GetUserId() != "" ||
+		principal.GetTenantId() != identity.TenantID || principal.GetProjectId() != identity.ProjectID || !slices.Equal(principal.GetScopes(), []string{"data:read"}) {
+		t.Fatal("service exchange must return exactly the approved canonical service principal")
+	}
+	if service.Meta.UserID != principal.GetUserId() || service.Meta.ServiceIdentity != principal.GetServiceIdentity() ||
+		service.Meta.TenantID != principal.GetTenantId() || service.Meta.ProjectID != principal.GetProjectId() || !slices.Equal(service.Meta.Scopes, principal.GetScopes()) {
 		t.Fatal("service Connect did not adopt exactly the approved verified principal")
 	}
 	beforeMeta, beforeData, beforeAuth := service.Meta, service.Data, service.Auth

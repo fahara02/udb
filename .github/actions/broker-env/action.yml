@@ -217,7 +217,11 @@ runs:
         echo "UDB_FAIR_BURST=10000" >> "$env_file"
 
         # Audit sink + secrets (JWT/encryption/session/hash). Test fixtures only.
-        echo "UDB_AUDIT_SINK_URL=file:///tmp/udb-bench-audit.jsonl" >> "$env_file"
+        # The URL setting is an HTTP endpoint. Use the actual file exporter and
+        # durable PostgreSQL export so both listeners retain healthy auditing.
+        echo "UDB_AUDIT_SINK_URL=" >> "$env_file"
+        echo "UDB_AUDIT_EXPORT_FILE=/tmp/udb-bench-audit.jsonl" >> "$env_file"
+        echo "UDB_AUDIT_EXPORT_POSTGRES=1" >> "$env_file"
         echo "UDB_ENCRYPTION_KEY=QkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkI=" >> "$env_file"
         echo "UDB_JWT_PRIVATE_KEY=src/runtime/testdata/jwt_rs256_private.pem" >> "$env_file"
         echo "UDB_JWT_PUBLIC_KEY=src/runtime/testdata/jwt_rs256_public.pem" >> "$env_file"
