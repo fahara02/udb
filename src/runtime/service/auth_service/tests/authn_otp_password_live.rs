@@ -4,6 +4,7 @@ use crate::proto::udb::core::authn::services::v1 as authn_pb;
 use crate::proto::udb::core::authn::services::v1::authn_service_server::AuthnService;
 use crate::proto::{ErrorDetail, ErrorKind};
 use crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY;
+use sqlx::Connection;
 use tonic::Request;
 use uuid::Uuid;
 
@@ -551,6 +552,7 @@ where
 /// boundary. A check-then-insert implementation cannot satisfy this barrier.
 async fn release_owner_after_concurrent_otp_waiters(
     pool: &sqlx::PgPool,
+    observer: &mut sqlx::PgConnection,
     gate: sqlx::Transaction<'_, sqlx::Postgres>,
     phase: &str,
     completed: &std::sync::Mutex<[Option<String>; 2]>,
@@ -563,7 +565,7 @@ async fn release_owner_after_concurrent_otp_waiters(
                  WHERE datname = current_database() AND wait_event_type = 'Lock' \
                  AND query LIKE '/* udb_otp_cooldown_lock */%'",
             )
-            .fetch_one(pool)
+            .fetch_one(&mut *observer)
             .await
             .expect("observe actual PostgreSQL issuance locks");
             observed_waiters = waiters;
@@ -575,15 +577,33 @@ async fn release_owner_after_concurrent_otp_waiters(
     })
     .await;
     if barrier.is_err() {
-        // Inspect only session state, never query text or bound OTP values.
+        // The observer has its own connection, so a saturated issuer pool
+        // cannot hide the blocker. Classify SQL on the server and return only
+        // operation labels, session state and PIDs, never queries or OTP values.
         let states = tokio::time::timeout(
             std::time::Duration::from_secs(2),
-            sqlx::query_as::<_, (Option<String>, Option<String>, Option<String>)>(
-                "SELECT state, wait_event_type, wait_event FROM pg_stat_activity \
+            sqlx::query_as::<
+                _,
+                (
+                    i32,
+                    Option<String>,
+                    Option<String>,
+                    Option<String>,
+                    String,
+                    Vec<i32>,
+                ),
+            >(
+                "SELECT pid, state, wait_event_type, wait_event, \
+                 CASE WHEN query LIKE '/* udb_otp_cooldown_lock */%' THEN 'otp_owner_lock' \
+                      WHEN query ILIKE '%MAX(%' THEN 'cooldown_lookup' \
+                      WHEN query ILIKE '%FROM%users%' THEN 'user_lookup' \
+                      WHEN query ILIKE 'BEGIN%' THEN 'transaction_begin' \
+                      ELSE 'other' END, pg_blocking_pids(pid) FROM pg_stat_activity \
                  WHERE datname = current_database() \
-                 AND query LIKE '/* udb_otp_cooldown_lock */%'",
+                 AND pid <> pg_backend_pid() \
+                 ORDER BY (wait_event_type = 'Lock') DESC NULLS LAST, pid LIMIT 16",
             )
-            .fetch_all(pool),
+            .fetch_all(&mut *observer),
         )
         .await;
         panic!(
@@ -630,6 +650,11 @@ async fn live_postgres_concurrent_otp_and_reset_issue_one_code_per_cooldown() {
             .expect("count durable codes without exposing proof material")
     };
     let before = count().await;
+    // Diagnostics must not compete with the owner gate and concurrent issuers
+    // for the four-connection service pool. The observer performs no mutation.
+    let mut observer = sqlx::PgConnection::connect(&live_pg_dsn())
+        .await
+        .expect("connect independent OTP lock observer");
     let mut gate = pool.begin().await.expect("issuance barrier transaction");
     sqlx::query("SELECT user_id FROM udb_authn.users WHERE user_id = $1::UUID FOR UPDATE")
         .bind(&user.user_id)
@@ -647,7 +672,13 @@ async fn live_postgres_concurrent_otp_and_reset_issue_one_code_per_cooldown() {
     let (left, right, ()) = tokio::join!(
         observe_otp_issuer(svc.send_otp(request()), &completed, 0),
         observe_otp_issuer(svc.send_otp(request()), &completed, 1),
-        release_owner_after_concurrent_otp_waiters(&pool, gate, "SendOtp", &completed),
+        release_owner_after_concurrent_otp_waiters(
+            &pool,
+            &mut observer,
+            gate,
+            "SendOtp",
+            &completed,
+        ),
     );
     let mut winners = 0;
     for result in [left, right] {
@@ -713,7 +744,13 @@ async fn live_postgres_concurrent_otp_and_reset_issue_one_code_per_cooldown() {
     let (admin, public, ()) = tokio::join!(
         observe_otp_issuer(admin, &completed, 0),
         observe_otp_issuer(public, &completed, 1),
-        release_owner_after_concurrent_otp_waiters(&pool, gate, "PasswordReset", &completed),
+        release_owner_after_concurrent_otp_waiters(
+            &pool,
+            &mut observer,
+            gate,
+            "PasswordReset",
+            &completed,
+        ),
     );
     let public = public
         .expect("public reset keeps its non-enumerating shape")
@@ -738,5 +775,9 @@ async fn live_postgres_concurrent_otp_and_reset_issue_one_code_per_cooldown() {
         }
     }
     assert_eq!(count().await, before + 1);
+    observer
+        .close()
+        .await
+        .expect("close independent OTP observer");
     cleanup_native_auth_db(&pool).await;
 }
