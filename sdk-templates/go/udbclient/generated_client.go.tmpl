@@ -924,7 +924,7 @@ var ServiceRPCCounts = map[string]int{
 // generator, so they drop straight inside the []string{...} literal.
 var Entities = map[string]EntityDescriptor{
 	// @@UDB_ENTITY_BEGIN
-	"{{ENTITY_MESSAGE_TYPE}}": {Table: "{{ENTITY_TABLE}}", PrimaryKeys: []string{{{ENTITY_PRIMARY_KEYS}}}, Fields: []string{{{ENTITY_JSON_FIELDS}}}, Relations: mustEntityRelations(`{{ENTITY_RELATIONS_JSON}}`), VersionField: "{{ENTITY_VERSION_FIELD}}", TenantField: "{{ENTITY_TENANT_FIELD}}", ProjectField: "{{ENTITY_PROJECT_FIELD}}", GoType: "{{ENTITY_GO_TYPE}}"},
+	"{{ENTITY_MESSAGE_TYPE}}": {Table: "{{ENTITY_TABLE}}", PrimaryKeys: []string{{{ENTITY_PRIMARY_KEYS}}}, UniqueKeys: [][]string{{{ENTITY_UNIQUE_KEYS_GO}}}, Fields: []string{{{ENTITY_JSON_FIELDS}}}, Relations: mustEntityRelations(`{{ENTITY_RELATIONS_JSON}}`), VersionField: "{{ENTITY_VERSION_FIELD}}", TenantField: "{{ENTITY_TENANT_FIELD}}", ProjectField: "{{ENTITY_PROJECT_FIELD}}", GoType: "{{ENTITY_GO_TYPE}}"},
 	// @@UDB_ENTITY_END
 }
 

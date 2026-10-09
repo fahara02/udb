@@ -725,6 +725,7 @@ pub(crate) fn has_explicit_unique_index_for_columns(
     let generated = partition_aware_unique_columns(table, columns);
     table.indexes.iter().any(|index| {
         index.unique
+            && index.where_clause.trim().is_empty()
             && same_column_set(
                 &partition_aware_unique_columns(table, &index.columns),
                 &generated,

@@ -118,6 +118,11 @@ pub struct EntityDescriptor {
     pub short_name: String,
     pub table: String,
     pub primary_keys: Vec<String>,
+    /// Unconditional effective unique keys, expressed as proto field names.
+    pub unique_keys: Vec<Vec<String>>,
+    /// Invalid ordinary-column declarations must refuse typed generation.
+    #[serde(skip)]
+    pub unique_key_errors: Vec<String>,
     pub tenant_field: String,
     pub project_field: String,
     pub soft_delete_field: String,
@@ -155,21 +160,25 @@ pub struct EntityColumnDescriptor {
     pub enum_values: Vec<String>,
     /// True when this column's enum type lives in a DIFFERENT proto package than
     /// the owning entity — so its Go type needs a distinct import alias the
-    /// co-located-enum emit path does not have. FQN registry rekeying (V19-1
-    /// follow-up) now resolves such an enum's `enum_values`, but the Go emitter
-    /// cannot yet qualify the type across packages, so it FAILS CLOSED on a NOT
-    /// NULL cross-package enum (never a silent comment-only TODO). Emitter-only;
+    /// co-located-enum emit path does not have. Resolved Go imports qualify
+    /// foreign enums; unresolved types retain the reflective record codec and
+    /// numeric protobuf enum predicates. Emitter-only;
     /// `#[serde(skip)]` keeps the sdk-manifest JSON surface unchanged.
     #[serde(skip)]
     pub enum_cross_package: bool,
     /// For a CROSS-package enum column whose foreign proto file declared a
     /// `go_package`, the `path;alias.TypeName` token used to import the enum's
     /// package and qualify its Go type on the read path. `None` ⇒ same-package
-    /// (the entity's own alias qualifies it) OR unresolvable, in which case the
-    /// generator fails closed on a NOT NULL such column. Emitter-only;
+    /// (the entity's own alias qualifies it) OR unresolvable. An unresolved
+    /// foreign enum uses reflective record conversion and numeric predicates;
+    /// a text-valued unique key refuses generation without a resolvable import.
+    /// Emitter-only;
     /// `#[serde(skip)]` keeps the sdk-manifest JSON surface unchanged.
     #[serde(skip)]
     pub enum_go_import: Option<String>,
+    /// Enum-valued map fields need their element type for typed predicates.
+    #[serde(skip)]
+    pub predicate_go_import: Option<String>,
     pub is_json: bool,
     pub is_jsonb: bool,
     /// Column is server-populated (e.g. default/PK); omit from generated INSERTs.
@@ -481,13 +490,24 @@ fn entity_descriptor_from_table(
     declared_fields: Option<&std::collections::BTreeSet<String>>,
     enum_registry: Option<&EnumRegistry>,
 ) -> EntityDescriptor {
+    let (unique_keys, unique_key_errors) = entity_unique_keys(table, declared_fields);
     EntityDescriptor {
         message_type,
         short_name,
         table: table.table.clone(),
-        primary_keys: table.primary_key.clone(),
-        tenant_field: table.table_security.tenant_column.clone(),
-        project_field: table.table_security.project_column.clone(),
+        primary_keys: if table.primary_key.is_empty() {
+            Vec::new()
+        } else {
+            crate::generation::sql::partition_aware_unique_columns(table, &table.primary_key)
+        },
+        unique_keys,
+        unique_key_errors,
+        tenant_field: crate::generation::sql::resolve_tenant_column_ref(table)
+            .map(|column| column.field_name.clone())
+            .unwrap_or_default(),
+        project_field: crate::generation::sql::resolve_project_column_ref(table)
+            .map(|column| column.field_name.clone())
+            .unwrap_or_default(),
         soft_delete_field: if table.soft_delete {
             table.soft_delete_column.clone()
         } else {
@@ -546,6 +566,16 @@ fn entity_descriptor_from_table(
                     enum_values,
                     enum_cross_package,
                     enum_go_import,
+                    predicate_go_import: column
+                        .proto_type
+                        .trim()
+                        .strip_prefix("map<")
+                        .and_then(|inner| inner.strip_suffix('>'))
+                        .and_then(|inner| inner.split_once(','))
+                        .and_then(|(_, value)| {
+                            resolve_enum(value.trim(), &table.proto_package, enum_registry)
+                        })
+                        .and_then(|(fqn, _, package)| enum_go_import_from(&fqn, &package)),
                     is_json: column.is_json || column.sql_type.trim().eq_ignore_ascii_case("JSON"),
                     is_jsonb: column.is_jsonb
                         || column.sql_type.trim().eq_ignore_ascii_case("JSONB"),
@@ -560,6 +590,111 @@ fn entity_descriptor_from_table(
             })
             .collect(),
     }
+}
+
+fn entity_unique_keys(
+    table: &crate::generation::manifest::ManifestTable,
+    declared: Option<&std::collections::BTreeSet<String>>,
+) -> (Vec<Vec<String>>, Vec<String>) {
+    use crate::generation::sql::{partition_aware_unique_columns, same_column_set};
+    let mut keys: Vec<Vec<String>> = Vec::new();
+    let mut errors = Vec::new();
+    let primary = if table.primary_key.is_empty() {
+        Vec::new()
+    } else {
+        partition_aware_unique_columns(table, &table.primary_key)
+    };
+    let primary_fields: Vec<String> = primary
+        .iter()
+        .filter_map(|name| {
+            table
+                .columns
+                .iter()
+                .find(|column| {
+                    column.column_name.eq_ignore_ascii_case(name)
+                        || column.field_name.eq_ignore_ascii_case(name)
+                })
+                .map(|column| column.field_name.clone())
+        })
+        .collect();
+    let candidates = table
+        .columns
+        .iter()
+        .filter(|column| column.unique && !column.is_primary)
+        .map(|column| vec![column.column_name.clone()])
+        .chain(
+            table
+                .indexes
+                .iter()
+                .filter(|index| index.unique && index.where_clause.trim().is_empty())
+                .filter(|index| {
+                    index.columns.iter().all(|name| {
+                        !name.is_empty()
+                            && name.chars().enumerate().all(|(i, c)| {
+                                c == '_' || c.is_ascii_alphabetic() || (i > 0 && c.is_ascii_digit())
+                            })
+                    })
+                })
+                .map(|index| index.columns.clone()),
+        );
+    for candidate in candidates {
+        if candidate.is_empty() {
+            errors.push(format!(
+                "{}.{} unique index has no columns",
+                table.schema, table.table
+            ));
+            continue;
+        }
+        let effective = partition_aware_unique_columns(table, &candidate);
+        if same_column_set(&effective, &primary) {
+            continue;
+        }
+        let mut key = Vec::new();
+        let mut invalid = false;
+        for name in &effective {
+            let matches: Vec<_> = table
+                .columns
+                .iter()
+                .filter(|column| {
+                    column.column_name.eq_ignore_ascii_case(name)
+                        || column.field_name.eq_ignore_ascii_case(name)
+                })
+                .collect();
+            if matches.len() != 1
+                || matches.first().is_some_and(|column| {
+                    declared.is_some_and(|fields| !fields.contains(&column.field_name))
+                })
+            {
+                errors.push(format!(
+                    "{}.{} unique key column {name:?} does not resolve to one declared proto field",
+                    table.schema, table.table
+                ));
+                invalid = true;
+                break;
+            }
+            let field = &matches[0].field_name;
+            if key.contains(field) {
+                errors.push(format!(
+                    "{}.{} unique key repeats field {field:?}",
+                    table.schema, table.table
+                ));
+                invalid = true;
+                break;
+            }
+            key.push(field.clone());
+        }
+        if !invalid && !same_column_set(&key, &primary_fields) {
+            keys.push(key);
+        }
+    }
+    keys.sort();
+    let mut seen = std::collections::BTreeSet::new();
+    keys.retain(|key| {
+        let mut set = key.clone();
+        set.sort();
+        seen.insert(set)
+    });
+    (keys, errors)
 }
 
 /// Build the entity manifest from a CONSUMER's own `.proto` tree (B1 —
@@ -1023,6 +1158,84 @@ fn alias_camel_case(value: &str) -> String {
 mod tests {
     use super::*;
     use crate::generation::manifest::{ManifestColumn, ManifestForeignKey, ManifestTable};
+
+    #[test]
+    fn consumer_unique_keys_preserve_alias_order_and_partition_scope() {
+        let fixture =
+            std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/consumer_protos");
+        let entities =
+            entity_manifest_from_proto_dir(&fixture).expect("parse actual metadata consumer");
+        let metadata = entities
+            .iter()
+            .find(|entity| entity.short_name == "Metadata")
+            .expect("Metadata");
+        assert!(
+            metadata.unique_key_errors.is_empty(),
+            "{:?}",
+            metadata.unique_key_errors
+        );
+        for (field, sql_name) in [
+            ("id", "stored_id"),
+            ("email", "email_address"),
+            ("region", "region_code"),
+            ("external", "external_code"),
+        ] {
+            assert_eq!(
+                metadata
+                    .columns
+                    .iter()
+                    .find(|column| column.field_name == field)
+                    .expect("actual normalized alias field")
+                    .column_name,
+                sql_name
+            );
+        }
+        assert_eq!(
+            metadata.unique_keys,
+            vec![
+                vec!["email".to_string()],
+                vec!["exact".to_string()],
+                vec!["external".to_string(), "region".to_string()],
+                vec!["region".to_string(), "email".to_string()]
+            ]
+        );
+        let partition = entities
+            .iter()
+            .find(|entity| entity.short_name == "PartitionMetadata")
+            .expect("PartitionMetadata");
+        assert_eq!(
+            partition.primary_keys,
+            vec!["id".to_string(), "part_key".to_string()]
+        );
+        assert_eq!(
+            partition.unique_keys,
+            vec![vec!["lookup".to_string(), "shard".to_string()]]
+        );
+    }
+
+    #[test]
+    fn ambiguous_unique_column_is_an_explicit_generation_error() {
+        let table = ManifestTable {
+            columns: vec![
+                ManifestColumn {
+                    field_name: "a".into(),
+                    column_name: "lookup".into(),
+                    unique: true,
+                    ..Default::default()
+                },
+                ManifestColumn {
+                    field_name: "lookup".into(),
+                    column_name: "other".into(),
+                    ..Default::default()
+                },
+            ],
+            ..Default::default()
+        };
+        let (keys, errors) = entity_unique_keys(&table, None);
+        assert!(keys.is_empty());
+        assert_eq!(errors.len(), 1);
+        assert!(errors[0].contains("does not resolve to one declared proto field"));
+    }
 
     fn manifest_column(field_name: &str, column_name: &str) -> ManifestColumn {
         ManifestColumn {

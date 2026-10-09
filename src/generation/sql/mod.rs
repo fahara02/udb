@@ -632,6 +632,127 @@ pub(crate) use render_ext::*;
 mod tests {
     use super::*;
 
+    fn partial_unique_fixture(schema: &str, table: &str, unconditional: bool) -> ManifestTable {
+        ManifestTable {
+            schema: schema.to_string(),
+            table: table.to_string(),
+            columns: vec![
+                ManifestColumn {
+                    field_name: "key".into(),
+                    column_name: "key".into(),
+                    sql_type: "TEXT".into(),
+                    not_null: true,
+                    unique: unconditional,
+                    ..Default::default()
+                },
+                ManifestColumn {
+                    field_name: "active".into(),
+                    column_name: "active".into(),
+                    sql_type: "BOOLEAN".into(),
+                    not_null: true,
+                    ..Default::default()
+                },
+            ],
+            indexes: vec![ManifestIndex {
+                name: format!("idx_{table}_partial"),
+                columns: vec!["key".into()],
+                unique: true,
+                where_clause: "active = true".into(),
+                ..Default::default()
+            }],
+            ..Default::default()
+        }
+    }
+
+    #[test]
+    fn partial_unique_index_cannot_replace_unconditional_column_constraint() {
+        let full = partial_unique_fixture("fixture", "full", true);
+        let sql = render_bootstrap_table(&full, "fixture", &SqlGenerationConfig::default());
+        assert!(
+            sql.contains("uidx_fixture_full_key"),
+            "unconditional column index must be emitted alongside its partial index: {sql}"
+        );
+        assert!(
+            sql.contains("idx_full_partial"),
+            "the separately declared partial index must remain: {sql}"
+        );
+        let partial = partial_unique_fixture("fixture", "partial", false);
+        let sql = render_bootstrap_table(&partial, "fixture", &SqlGenerationConfig::default());
+        assert!(
+            !sql.contains("uidx_fixture_partial_key"),
+            "a partial-only declaration must not gain global uniqueness: {sql}"
+        );
+    }
+
+    // Execute the actual generator's DDL, with both schema and rows owned by
+    // one rollback transaction. A failed assertion also rolls back its schema.
+    #[tokio::test]
+    #[ignore = "requires actual PostgreSQL; Native CI supplies UDB_INTEGRATION_PG_DSN"]
+    async fn unconditional_unique_survives_partial_index_live() {
+        let dsn = std::env::var("UDB_INTEGRATION_PG_DSN")
+            .or_else(|_| std::env::var("UDB_PG_DSN"))
+            .expect("live uniqueness proof requires a configured PostgreSQL DSN");
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .max_connections(1)
+            .acquire_timeout(std::time::Duration::from_secs(10))
+            .connect(&dsn)
+            .await
+            .unwrap_or_else(|_| panic!("connect configured live PostgreSQL"));
+        let mut tx = pool
+            .begin()
+            .await
+            .expect("begin owned uniqueness proof transaction");
+        let schema = format!("ug2_{}", &uuid::Uuid::new_v4().simple().to_string()[..12]);
+        for (table, unconditional) in [("partial", false), ("full", true)] {
+            let manifest = partial_unique_fixture(&schema, table, unconditional);
+            let ddl =
+                render_bootstrap_table(&manifest, "live-fixture", &SqlGenerationConfig::default());
+            sqlx::raw_sql(&ddl)
+                .execute(&mut *tx)
+                .await
+                .expect("apply actual generated uniqueness DDL");
+        }
+        sqlx::raw_sql(&format!(
+            "INSERT INTO {}.\"partial\" (\"key\", active) VALUES ('same', false), ('same', false)",
+            qi(&schema)
+        ))
+        .execute(&mut *tx)
+        .await
+        .expect("partial-only index permits duplicate values outside its predicate");
+        sqlx::raw_sql(&format!(
+            "INSERT INTO {}.\"full\" (\"key\", active) VALUES ('same', false)",
+            qi(&schema)
+        ))
+        .execute(&mut *tx)
+        .await
+        .expect("first full unique row succeeds outside partial predicate");
+        let error = sqlx::raw_sql(&format!(
+            "INSERT INTO {}.\"full\" (\"key\", active) VALUES ('same', false)",
+            qi(&schema)
+        ))
+        .execute(&mut *tx)
+        .await
+        .expect_err("unconditional_unique_outside_partial_predicate must refuse the duplicate");
+        let database = error
+            .as_database_error()
+            .expect("duplicate refusal is an actual database error");
+        assert_eq!(
+            database.code().as_deref(),
+            Some("23505"),
+            "duplicate must fail as unique_violation"
+        );
+        let constraint = format!("uidx_{schema}_full_key");
+        assert_eq!(
+            database.constraint(),
+            Some(constraint.as_str()),
+            "refusal must name the emitted unconditional constraint"
+        );
+        tx.rollback()
+            .await
+            .expect("rollback owned proof schema and rows");
+        pool.close().await;
+    }
+
     #[test]
     fn review_delta_emits_reviewed_drop_but_never_blocked_operations() {
         let reviewed_drop = ChangeOperation {

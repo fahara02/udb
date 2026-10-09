@@ -12,6 +12,53 @@ message Details {
   consumer.foreign.v1.State state = 3;
 }
 
+// Metadata fixtures use only existing annotations. The generated Go consumer
+// must compile the actual unique-key and predicate types, including SQL aliases.
+message Metadata {
+  option (udb.core.common.v1.pg_table) = {
+    table_name: "metadata"
+    schema_name: "consumer_fixture"
+    is_table: true
+    indexes: { index_name: "email_duplicate" unique: true columns: "EMAILAddress" }
+    indexes: { index_name: "region_email" unique: true columns: "Region-Code, EMAILAddress" }
+    indexes: { index_name: "primary_duplicate" unique: true columns: "stored_id" }
+    indexes: { index_name: "nickname_partial" unique: true columns: "nickname" where_clause: "active = true" }
+    indexes: { index_name: "email_expression" unique: true columns: "lower(email_address)" }
+  };
+  string id = 1 [(udb.core.common.v1.pg_column) = { column_name: "_Stored__ID_" sql_type: "TEXT" primary_key: true not_null: true }];
+  string email = 2 [(udb.core.common.v1.pg_column) = { column_name: " Email__Address " sql_type: "TEXT" unique: true not_null: true }];
+  string region = 3 [(udb.core.common.v1.pg_column) = { column_name: "Region-Code" sql_type: "TEXT" not_null: true }];
+  optional string nickname = 4 [(udb.core.common.v1.pg_column) = { sql_type: "TEXT" }];
+  bool active = 5 [(udb.core.common.v1.pg_column) = { sql_type: "BOOLEAN" not_null: true }];
+  string external = 6 [(udb.core.common.v1.pg_column) = { column_name: "ExternalCode" sql_type: "TEXT" not_null: true index: { index_name: "external_region" unique: true columns: "external_code, region_code" } }];
+  int64 exact = 7 [(udb.core.common.v1.pg_column) = { sql_type: "BIGINT" not_null: true unique: true }];
+}
+
+message PartitionMetadata {
+  option (udb.core.common.v1.pg_table) = {
+    table_name: "partition_metadata"
+    schema_name: "consumer_fixture"
+    is_table: true
+    partition_strategy: PARTITION_STRATEGY_HASH
+    partition_column: "part_key"
+  };
+  string id = 1 [(udb.core.common.v1.pg_column) = { sql_type: "TEXT" primary_key: true not_null: true }];
+  string shard = 2 [(udb.core.common.v1.pg_column) = { column_name: "part_key" sql_type: "TEXT" not_null: true }];
+  string lookup = 3 [(udb.core.common.v1.pg_column) = { sql_type: "TEXT" unique: true not_null: true }];
+}
+
+// Numeric SQL enum storage must keep protobuf numbers in generated keys and
+// record adapters, while the existing Shape fixture verifies text enum tokens.
+message NumericMetadata {
+  option (udb.core.common.v1.pg_table) = {
+    table_name: "numeric_metadata"
+    schema_name: "consumer_fixture"
+    is_table: true
+  };
+  consumer.foreign.v1.State state = 1 [(udb.core.common.v1.pg_column) = { sql_type: "INTEGER" primary_key: true not_null: true }];
+  consumer.foreign.v1.State alternate = 2 [(udb.core.common.v1.pg_column) = { sql_type: "SMALLINT" unique: true not_null: true }];
+}
+
 message Shape {
   option (udb.core.common.v1.pg_table) = {
     table_name: "shapes"

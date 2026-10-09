@@ -546,8 +546,11 @@ func decodeRecordJSON(raw []byte) (map[string]any, error) {
 // message so (*Client).Entity can default conflict_fields/PK from the manifest
 // instead of the caller passing Key(...).
 type EntityDescriptor struct {
-	Table        string
-	PrimaryKeys  []string
+	Table       string
+	PrimaryKeys []string
+	// UniqueKeys contains unconditional effective keys as proto field names.
+	// Partition columns are included; partial/expression indexes are excluded.
+	UniqueKeys   [][]string
 	Fields       []string
 	Relations    []EntityRelationDescriptor
 	VersionField string

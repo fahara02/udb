@@ -330,6 +330,13 @@ fn validate_repository_entities(entities: &[EntityDescriptor]) -> Result<(), Str
         ));
     }
     for entity in entities {
+        if !entity.unique_key_errors.is_empty() {
+            return Err(format!(
+                "entity `{}`: {}",
+                entity.short_name,
+                entity.unique_key_errors.join("; ")
+            ));
+        }
         if entity.primary_keys.is_empty() {
             let name = if entity.message_type.trim().is_empty() {
                 entity.short_name.as_str()
@@ -1261,11 +1268,10 @@ fn render_go_entities_file(entities: &[EntityDescriptor], package: &str) -> Resu
                 needs_timestamppb = true;
             }
             if !column.enum_values.is_empty() {
-                // The write path uses `strings.TrimPrefix` for BOTH a same-package
-                // enum AND a cross-package enum we can qualify; only an
-                // unqualifiable cross-package enum is skipped (imports nothing).
+                // Text enum storage uses TrimPrefix when the type is known.
+                // Numeric enum storage and unresolved types use the codec.
                 let qualifiable = !column.enum_cross_package || column.enum_go_import.is_some();
-                if qualifiable {
+                if qualifiable && go_enum_text_column(column) {
                     needs_strings = true;
                 }
                 // A qualifiable cross-package enum imports its OWN Go package so the
@@ -1286,7 +1292,14 @@ fn render_go_entities_file(entities: &[EntityDescriptor], package: &str) -> Resu
     // (`udbclient.EncodeField` / `DecodeField`), so every remaining shape has a
     // round-trip except a message stored in a column that is not JSON: there
     // is no column value to hold it, and dropping it would lose data silently.
-    for (entity, _, _) in &renderable {
+    for (entity, alias, _) in &renderable {
+        if !entity.unique_key_errors.is_empty() {
+            return Err(format!(
+                "entity `{}`: {}",
+                entity.short_name,
+                entity.unique_key_errors.join("; ")
+            ));
+        }
         for column in &entity.columns {
             if column.declared_in_proto
                 && !column.is_array
@@ -1302,6 +1315,16 @@ fn render_go_entities_file(entities: &[EntityDescriptor], package: &str) -> Resu
                      flatten it into scalar fields.",
                     entity.short_name, column.field_name, column.proto_type, column.sql_type,
                 ));
+            }
+            if column.declared_in_proto {
+                let (_, imports) = go_predicate_type(column, entity, alias)?;
+                for (path, imported_alias) in imports {
+                    if path == "google.golang.org/protobuf/types/known/timestamppb" {
+                        needs_timestamppb = true;
+                    } else {
+                        proto_imports.insert(path, imported_alias);
+                    }
+                }
             }
         }
     }
@@ -1616,49 +1639,234 @@ func (r {name}Repo) DeleteGuarded(ctx context.Context, where, expected map[strin
         out.push_str(&render_go_table_and_key(
             entity,
             &format!("{alias}.{type_name}"),
-        ));
+            alias,
+        )?);
     }
 
     out.push_str(&go_coercion_helpers(needs_time, needs_json_message));
     Ok(out)
 }
 
-/// `<Entity>Table(u)` and `<Entity>Key` for one entity. A primary-key column
-/// whose Go type is not a plain scalar is typed `any` (still a valid key).
-fn render_go_table_and_key(entity: &EntityDescriptor, qualified: &str) -> String {
+/// Typed row keys and predicates reuse the public Table/descriptor codec.
+fn render_go_table_and_key(
+    entity: &EntityDescriptor,
+    qualified: &str,
+    alias: &str,
+) -> Result<String, String> {
     let name = &entity.short_name;
-    let mut fields = String::new();
-    let mut entries = Vec::new();
-    for pk in &entity.primary_keys {
-        let column = entity
-            .columns
-            .iter()
-            .find(|column| column.column_name == *pk || column.field_name == *pk);
-        let field_name = column
-            .map(|column| column.field_name.clone())
-            .unwrap_or_else(|| pk.clone());
-        let go_type = column
-            .and_then(|column| go_scalar_type_name(&column.proto_type))
-            .unwrap_or("any");
-        let go_field = go_pascal(&field_name);
-        fields.push_str(&format!("\t{go_field} {go_type}\n"));
-        entries.push(format!("{pk:?}: k.{go_field}"));
+    let mut out = format!(
+        "// {name}Table is the typed store for {name}.\nfunc {name}Table(u *udbclient.Udb) *udbclient.Table[*{qualified}] {{\n\treturn udbclient.TableOf[*{qualified}](u)\n}}\n\n"
+    );
+    let mut emitted = std::collections::BTreeSet::new();
+    let keys = std::iter::once((format!("{name}Key"), &entity.primary_keys)).chain(
+        entity.unique_keys.iter().map(|key| {
+            (
+                format!(
+                    "{name}By{}",
+                    key.iter().map(|field| go_pascal(field)).collect::<String>()
+                ),
+                key,
+            )
+        }),
+    );
+    for (type_name, key) in keys {
+        if !emitted.insert(type_name.clone()) {
+            return Err(format!(
+                "entity `{name}`: generated key name {type_name:?} is ambiguous"
+            ));
+        }
+        let mut fields = String::new();
+        let mut entries = Vec::new();
+        let mut field_names = std::collections::BTreeSet::new();
+        for field in key {
+            let matches: Vec<_> = entity
+                .columns
+                .iter()
+                .filter(|column| {
+                    column.column_name.eq_ignore_ascii_case(field)
+                        || column.field_name.eq_ignore_ascii_case(field)
+                })
+                .collect();
+            if matches.len() != 1 {
+                return Err(format!(
+                    "entity `{name}`: key column {field:?} resolves to {} declared fields",
+                    matches.len()
+                ));
+            }
+            let column = matches[0];
+            if !column.declared_in_proto
+                || column.is_array
+                || is_complex_map_column(column)
+                || go_map_types(&column.proto_type).is_some()
+                || is_message_json_column(column)
+            {
+                return Err(format!(
+                    "entity `{name}`: key column {field:?} has unsupported composite value type {}",
+                    column.proto_type
+                ));
+            }
+            if column.enum_cross_package
+                && column.enum_go_import.is_none()
+                && !column.enum_values.is_empty()
+                && go_enum_text_column(column)
+            {
+                return Err(format!(
+                    "entity `{name}`: key field {:?} has no resolvable enum Go import",
+                    column.field_name
+                ));
+            }
+            let (go_type, _) = go_predicate_type(column, entity, alias)?;
+            let go_field = go_pascal(&column.field_name);
+            if !field_names.insert(go_field.clone()) {
+                return Err(format!(
+                    "entity `{name}`: key fields collide as {go_field:?}"
+                ));
+            }
+            fields.push_str(&format!("\t{go_field} {go_type}\n"));
+            let value = match go_scalar_kind(&column.proto_type) {
+                GoScalar::Int64 => format!("strconv.FormatInt(k.{go_field}, 10)"),
+                GoScalar::Uint64 => format!("strconv.FormatUint(k.{go_field}, 10)"),
+                GoScalar::Bytes => format!("base64.StdEncoding.EncodeToString(k.{go_field})"),
+                _ if !column.enum_values.is_empty() && go_enum_text_column(column) => format!(
+                    "strings.TrimPrefix(k.{go_field}.String(), {:?})",
+                    enum_common_prefix(&column.enum_values)
+                ),
+                _ if !column.enum_values.is_empty() => {
+                    format!("json.Number(strconv.FormatInt(int64(k.{go_field}), 10))")
+                }
+                _ if is_go_timestamp(&column.proto_type) => {
+                    let layout = if column.sql_type.eq_ignore_ascii_case("DATE") {
+                        "2006-01-02"
+                    } else {
+                        "2006-01-02T15:04:05.999999999Z07:00"
+                    };
+                    format!(
+                        "func() any {{ if k.{go_field} == nil || k.{go_field}.CheckValid() != nil {{ return nil }}; return k.{go_field}.AsTime().UTC().Format({layout:?}) }}()"
+                    )
+                }
+                _ => format!("k.{go_field}"),
+            };
+            entries.push(format!("{:?}: {value}", column.field_name));
+        }
+        out.push_str(&format!("// {type_name} addresses {name} by a declared effective key.\ntype {type_name} struct {{\n{fields}}}\n\n// Row converts the key for Table calls without losing 64-bit precision.\nfunc (k {type_name}) Row() udbclient.RowKey {{\n\treturn udbclient.RowKey{{{}}}\n}}\n\n", entries.join(", ")));
     }
-    format!(
-        "// {name}Table is the typed store for {name}: typed reads and writes,\n\
-         // conditional updates and transactions, with the caller's tenant filled in\n\
-         // by the broker.\n\
-         func {name}Table(u *udbclient.Udb) *udbclient.Table[*{qualified}] {{\n\
-         \treturn udbclient.TableOf[*{qualified}](u)\n\
-         }}\n\n\
-         // {name}Key addresses one {name} row by its primary key.\n\
-         type {name}Key struct {{\n{fields}}}\n\n\
-         // Row converts the key for udbclient.Table calls.\n\
-         func (k {name}Key) Row() udbclient.RowKey {{\n\
-         \treturn udbclient.RowKey{{{entries}}}\n\
-         }}\n\n",
-        entries = entries.join(", "),
-    )
+    let mut fields = String::new();
+    let mut values = Vec::new();
+    let mut names = std::collections::BTreeSet::new();
+    for column in entity
+        .columns
+        .iter()
+        .filter(|column| column.declared_in_proto)
+    {
+        let (go_type, _) = go_predicate_type(column, entity, alias)?;
+        let go_field = go_pascal(&column.field_name);
+        if !names.insert(go_field.clone()) {
+            return Err(format!(
+                "entity `{name}`: predicate fields collide as {go_field:?}"
+            ));
+        }
+        if column.enum_cross_package
+            && column.enum_go_import.is_none()
+            && !column.enum_values.is_empty()
+        {
+            fields.push_str(&format!("\t// {go_field} accepts numeric protobuf enum values; the descriptor codec validates and encodes them.\n"));
+        }
+        fields.push_str(&format!("\t{go_field} udbclient.Column[{go_type}]\n"));
+        values.push(format!(
+            "{go_field}: udbclient.ColumnOf[{go_type}]((*{qualified})(nil), {:?})",
+            column.field_name
+        ));
+    }
+    let values = values
+        .into_iter()
+        .map(|value| format!("\t{value},"))
+        .collect::<Vec<_>>()
+        .join("\n");
+    out.push_str(&format!("// {name}Where supplies descriptor-backed typed predicates for Table.Select.\n// Value and null predicates return a filter and an encoding error.\nvar {name}Where = struct {{\n{fields}}}{{\n{values}\n}}\n\n"));
+    Ok(out)
+}
+
+/// Name an actual protobuf getter value type, including repeated/map values.
+fn go_predicate_type(
+    column: &EntityColumnDescriptor,
+    entity: &EntityDescriptor,
+    alias: &str,
+) -> Result<(String, Vec<(String, String)>), String> {
+    let mut imports = Vec::new();
+    let value_type = |token: &str,
+                      foreign: Option<&str>,
+                      imports: &mut Vec<(String, String)>|
+     -> Result<String, String> {
+        if let Some(scalar) = go_scalar_type_name(token) {
+            return Ok(scalar.to_string());
+        }
+        if let Some((path, imported_alias, name)) = foreign.and_then(parse_go_type) {
+            imports.push((path, imported_alias.clone()));
+            return Ok(format!("{imported_alias}.{name}"));
+        }
+        let token = token.trim_start_matches('.');
+        // A consumer may supply protoc import mappings without go_package.
+        // Preserve its reflective codec; int32 is the protobuf enum number.
+        if column.enum_cross_package
+            && column.enum_go_import.is_none()
+            && !column.enum_values.is_empty()
+            && token == column.proto_type.trim_start_matches('.')
+        {
+            return Ok("int32".to_string());
+        }
+        let well_known = match token {
+            "google.protobuf.Timestamp" => Some(("timestamppb", "Timestamp")),
+            "google.protobuf.Struct" => Some(("structpb", "Struct")),
+            "google.protobuf.Value" => Some(("structpb", "Value")),
+            "google.protobuf.ListValue" => Some(("structpb", "ListValue")),
+            _ => None,
+        };
+        if let Some((pkg, name)) = well_known {
+            imports.push((
+                format!("google.golang.org/protobuf/types/known/{pkg}"),
+                pkg.to_string(),
+            ));
+            return Ok(format!("*{pkg}.{name}"));
+        }
+        let local = token
+            .strip_prefix(&format!("{}.", entity.proto_package))
+            .unwrap_or(token);
+        if local.contains('.') && !token.starts_with(&format!("{}.", entity.proto_package)) {
+            return Err(format!(
+                "entity `{}`: predicate field {:?} type {token:?} has no resolvable Go import",
+                entity.short_name, column.field_name
+            ));
+        }
+        let name = local.replace('.', "_");
+        if !column.enum_values.is_empty() && token == column.proto_type.trim_start_matches('.') {
+            Ok(format!("{alias}.{name}"))
+        } else {
+            Ok(format!("*{alias}.{name}"))
+        }
+    };
+    let token = column.proto_type.trim();
+    let mut go_type = if let Some(inner) = token
+        .strip_prefix("map<")
+        .and_then(|inner| inner.strip_suffix('>'))
+    {
+        let (key, value) = inner
+            .split_once(',')
+            .ok_or_else(|| format!("invalid map type {token:?}"))?;
+        let key = go_scalar_type_name(key.trim())
+            .ok_or_else(|| format!("invalid map key type {token:?}"))?;
+        let value = value_type(
+            value.trim(),
+            column.predicate_go_import.as_deref(),
+            &mut imports,
+        )?;
+        format!("map[{key}]{value}")
+    } else {
+        value_type(token, column.enum_go_import.as_deref(), &mut imports)?
+    };
+    if column.is_array {
+        go_type = format!("[]{go_type}");
+    }
+    Ok((go_type, imports))
 }
 
 /// Render the typed Go entity file AND canonicalize it with gofmt (#8). Used by
@@ -1809,6 +2017,14 @@ pub(crate) fn enum_common_prefix(values: &[String]) -> String {
     }
 }
 
+/// Match the descriptor codec's SQL storage rule for protobuf enums.
+fn go_enum_text_column(column: &EntityColumnDescriptor) -> bool {
+    let sql_type = column.sql_type.trim().to_ascii_uppercase();
+    ["VARCHAR", "CHARACTER VARYING", "TEXT", "CHAR", "CITEXT"]
+        .iter()
+        .any(|prefix| sql_type.starts_with(prefix))
+}
+
 /// The `r["field"] = …` statement for one column (proto -> record).
 ///
 /// THE SYMMETRY RULE: this function must never write a column that
@@ -1920,14 +2136,11 @@ fn go_to_record_stmt(column: &EntityColumnDescriptor) -> String {
         );
     }
     if !column.enum_values.is_empty() {
-        if column.enum_cross_package && column.enum_go_import.is_none() {
-            // A cross-package enum whose foreign proto file declared no
-            // go_package: NOT NULL already failed closed in the render pre-scan; a
-            // nullable one lands here and is skipped (NULL is legal). A qualifiable
-            // cross-package enum falls through — the write path only calls
-            // `.String()` on the getter and needs no type name.
-            // Its Go type cannot be named here; the reflective codec needs no
-            // type name.
+        if !go_enum_text_column(column)
+            || (column.enum_cross_package && column.enum_go_import.is_none())
+        {
+            // Numeric SQL enum storage must retain the protobuf number.
+            // The same codec also supports foreign types without a Go import.
             return format!(
                 "\tif v, ok, err := udbclient.EncodeField(m, \"{key}\"); err != nil {{\n\t\treturn nil, fmt.Errorf(\"encode column %q: %w\", \"{key}\", err)\n\t}} else if ok {{\n\t\tr[\"{key}\"] = v\n\t}}\n"
             );
@@ -2035,10 +2248,11 @@ fn go_from_row_stmt(column: &EntityColumnDescriptor, alias: &str) -> String {
         );
     }
     if !column.enum_values.is_empty() {
-        if column.enum_cross_package && column.enum_go_import.is_none() {
-            // A cross-package enum whose foreign proto file declared no go_package:
-            // NOT NULL already failed closed in the render pre-scan; a nullable one
-            // lands here and is skipped (NULL is legal).
+        if !go_enum_text_column(column)
+            || (column.enum_cross_package && column.enum_go_import.is_none())
+        {
+            // Decode numeric enum values and unresolved foreign types through
+            // the same descriptor codec used by ordinary typed Table reads.
             return format!(
                 "\tif err := udbclient.DecodeField(m, \"{key}\", row[\"{key}\"]); err != nil {{\n{fail}\t}}\n",
                 fail = fail("\t\t"),
@@ -3279,6 +3493,20 @@ fn entity_relation_accessors_php(entity: &EntityDescriptor) -> String {
 }
 
 fn substitute_entity(body: &str, entity: &EntityDescriptor) -> String {
+    let unique_keys = entity
+        .unique_keys
+        .iter()
+        .map(|key| {
+            format!(
+                "{{{}}}",
+                key.iter()
+                    .map(|field| code_string(field))
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            )
+        })
+        .collect::<Vec<_>>()
+        .join(", ");
     let primary_keys = entity
         .primary_keys
         .iter()
@@ -3363,6 +3591,7 @@ fn substitute_entity(body: &str, entity: &EntityDescriptor) -> String {
         ("{{ENTITY_ALIAS_PASCAL}}", alias_pascal_case(&short_name)),
         ("{{ENTITY_TABLE}}", entity.table.clone()),
         ("{{ENTITY_PRIMARY_KEYS}}", primary_keys),
+        ("{{ENTITY_UNIQUE_KEYS_GO}}", unique_keys),
         ("{{ENTITY_JSON_FIELDS}}", json_fields),
         ("{{ENTITY_RELATIONS_JSON}}", relations_json),
         ("{{ENTITY_RELATIONS_JSON_STRING}}", relations_json_string),
@@ -3546,6 +3775,7 @@ mod tests {
             enum_values: Vec::new(),
             enum_cross_package: false,
             enum_go_import: None,
+            predicate_go_import: None,
             is_json: false,
             is_jsonb: false,
             exclude_from_insert: false,
@@ -3554,6 +3784,117 @@ mod tests {
             is_encrypted: false,
             declared_in_proto: true,
         }
+    }
+
+    #[test]
+    fn actual_consumer_producer_emits_unique_keys_predicates_and_registry_metadata() {
+        let fixture = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/consumer_protos");
+        let entities =
+            entity_manifest_from_proto_dir(&fixture).expect("parse real consumer metadata fixture");
+        let out = render_go_entities_file(&entities, "udbentities")
+            .expect("render actual typed consumer output");
+        assert_eq!(
+            out.matches("type MetadataByEmail struct").count(),
+            1,
+            "column and table declarations must deduplicate"
+        );
+        assert!(out.contains("type MetadataByRegionEmail struct"));
+        assert!(out.contains("type MetadataByExact struct"));
+        assert!(out.contains("type PartitionMetadataByLookupShard struct"));
+        assert!(
+            !out.contains("type MetadataByNickname struct"),
+            "partial index cannot become an unconditional lookup"
+        );
+        assert!(
+            !out.contains("type MetadataById struct"),
+            "primary duplicate must be excluded"
+        );
+        assert!(
+            out.contains("map[string]foreignpb.State"),
+            "foreign enum map predicates must name their real Go type"
+        );
+        assert!(
+            out.contains("map[string]*fixturepb.Details"),
+            "message map predicates must name their real Go type"
+        );
+        let template = include_str!("../../sdk-templates/go/udbclient/generated_client.go.tmpl");
+        let registry = render_text(template, &[], &entities, &[]);
+        assert!(registry.contains("UniqueKeys: [][]string{{\"email\"}, {\"exact\"}, {\"external\", \"region\"}, {\"region\", \"email\"}}"), "actual Go template must retain nested unique metadata");
+        assert!(!registry.contains("{{ENTITY_UNIQUE_KEYS_GO}}"));
+    }
+
+    #[test]
+    fn unresolvable_enum_key_refuses_output_without_broken_string_method() {
+        let mut state = column("state", "foreign.State");
+        state.sql_type = "TEXT".into();
+        state.enum_values = vec!["STATE_UNSPECIFIED".into(), "STATE_READY".into()];
+        state.enum_cross_package = true;
+        let mut entities = widget_entity(vec!["id".into()], vec![column("id", "string"), state]);
+        entities[0].unique_keys = vec![vec!["state".into()]];
+        let error = render_go_entities_file(&entities, "fixture")
+            .expect_err("unresolved enum keys cannot safely name enum values");
+        assert!(
+            error.contains("key field")
+                && error.contains("state")
+                && error.contains("enum Go import")
+        );
+    }
+
+    #[test]
+    fn primary_key_alias_collision_refuses_arbitrary_first_field() {
+        let mut first = column("lookup", "string");
+        first.column_name = "other".into();
+        let mut primary = column("actual", "string");
+        primary.column_name = "lookup".into();
+        let error = render_go_entities_file(
+            &widget_entity(vec!["lookup".into()], vec![first, primary]),
+            "fixture",
+        )
+        .expect_err("ambiguous primary alias must not select the first non-primary field");
+        assert!(
+            error.contains("key column")
+                && error.contains("lookup")
+                && error.contains("2 declared fields")
+        );
+    }
+
+    #[test]
+    fn actual_numeric_only_consumer_output_uses_codec_without_unused_strings_import() {
+        let fixture = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/consumer_protos");
+        let entities: Vec<_> = entity_manifest_from_proto_dir(&fixture)
+            .expect("parse actual consumer fixture")
+            .into_iter()
+            .filter(|entity| entity.short_name == "NumericMetadata")
+            .collect();
+        assert_eq!(entities.len(), 1);
+        let out = render_go_entities_file(&entities, "udbentities")
+            .expect("numeric enum-only entity must render");
+        assert!(
+            !out.contains("\"strings\""),
+            "numeric-only output must not import unused strings"
+        );
+        assert!(
+            out.contains("udbclient.EncodeField(m, \"state\")")
+                && out.contains("udbclient.DecodeField(m, \"state\", row[\"state\"])")
+        );
+        assert!(out.contains("json.Number(strconv.FormatInt(int64(k.State), 10))"));
+    }
+
+    #[test]
+    fn generated_unique_key_name_collision_refuses_output() {
+        let mut entities = widget_entity(
+            vec!["id".into()],
+            vec![
+                column("id", "string"),
+                column("a", "string"),
+                column("b", "string"),
+                column("a_b", "string"),
+            ],
+        );
+        entities[0].unique_keys = vec![vec!["a".into(), "b".into()], vec!["a_b".into()]];
+        let error = render_go_entities_file(&entities, "fixture")
+            .expect_err("colliding By structs must never be emitted");
+        assert!(error.contains("generated key name") && error.contains("ambiguous"));
     }
 
     // proto3 `optional` renders as a Go pointer. Emitting a plain assignment
@@ -3615,6 +3956,7 @@ mod tests {
     fn presence_enum_emits_pointer_aware_go() {
         let mut col = column("status", "acme.authn.entity.v1.UserStatus");
         col.has_presence = true;
+        col.sql_type = "TEXT".into();
         col.enum_values = vec![
             "USER_STATUS_ACTIVE".to_string(),
             "USER_STATUS_SUSPENDED".to_string(),
@@ -3710,6 +4052,7 @@ mod tests {
     #[test]
     fn resolved_enum_round_trips_short_tokens() {
         let mut col = column("status", "acme.order.v1.OrderStatus");
+        col.sql_type = "TEXT".into();
         col.enum_values = vec![
             "ORDER_STATUS_ACTIVE".to_string(),
             "ORDER_STATUS_CLOSED".to_string(),
@@ -3743,6 +4086,8 @@ mod tests {
             short_name: "Profile".to_string(),
             table: "profiles".to_string(),
             primary_keys: vec!["id".to_string()],
+            unique_keys: Vec::new(),
+            unique_key_errors: Vec::new(),
             tenant_field: String::new(),
             project_field: String::new(),
             soft_delete_field: String::new(),
@@ -3826,6 +4171,8 @@ mod tests {
             short_name: "SpatialRefSys".to_string(),
             table: "spatial_ref_sys".to_string(),
             primary_keys: vec!["srid".to_string()],
+            unique_keys: Vec::new(),
+            unique_key_errors: Vec::new(),
             tenant_field: String::new(),
             project_field: String::new(),
             soft_delete_field: String::new(),
@@ -3880,6 +4227,8 @@ mod tests {
             short_name: "Widget".to_string(),
             table: "widgets".to_string(),
             primary_keys,
+            unique_keys: Vec::new(),
+            unique_key_errors: Vec::new(),
             tenant_field: String::new(),
             project_field: String::new(),
             soft_delete_field: String::new(),
@@ -4071,6 +4420,8 @@ mod tests {
             short_name: message.to_string(),
             table: message.to_lowercase(),
             primary_keys: vec!["id".to_string()],
+            unique_keys: Vec::new(),
+            unique_key_errors: Vec::new(),
             tenant_field: String::new(),
             project_field: String::new(),
             soft_delete_field: String::new(),
@@ -4133,6 +4484,7 @@ mod tests {
     fn json_message_arm_does_not_capture_enums_or_text() {
         let mut enum_col = column("status", "acme.v1.Status");
         enum_col.is_jsonb = true;
+        enum_col.sql_type = "TEXT".into();
         enum_col.enum_values = vec!["STATUS_UNSPECIFIED".into(), "STATUS_OPEN".into()];
         assert!(
             !is_message_json_column(&enum_col),
@@ -4166,6 +4518,7 @@ mod tests {
     #[test]
     fn cross_package_enum_qualifies_when_go_package_known() {
         let mut region = column("region", "acme.geo.v1.Region");
+        region.sql_type = "TEXT".into();
         region.enum_values = vec!["REGION_UNSPECIFIED".to_string(), "REGION_EAST".to_string()];
         region.enum_cross_package = true;
         region.enum_go_import = Some("github.com/acme/geo/v1;geov1.Region".to_string());
@@ -4213,6 +4566,10 @@ mod tests {
 {out}"
             );
             assert!(
+                out.contains("Region udbclient.Column[int32]"),
+                "unresolvable foreign enum predicates must preserve numeric protobuf enum semantics"
+            );
+            assert!(
                 !out.contains("TODO(udb-b3)"),
                 "got:
 {out}"
@@ -4235,6 +4592,23 @@ mod tests {
         assert!(
             err.contains("wallet_balance") && err.contains("JSON"),
             "got: {err}"
+        );
+    }
+
+    #[test]
+    fn foreign_message_predicate_without_import_refuses_field_named_output() {
+        let mut payload = column("foreign_payload", "acme.foreign.v1.Payload");
+        payload.sql_type = "JSONB".into();
+        payload.is_jsonb = true;
+        let error = render_go_entities_file(
+            &widget_entity(vec!["id".into()], vec![column("id", "string"), payload]),
+            "acmegen",
+        )
+        .expect_err("a foreign message cannot be silently typed as a local message");
+        assert!(
+            error.contains("predicate field")
+                && error.contains("foreign_payload")
+                && error.contains("no resolvable Go import")
         );
     }
 
@@ -4297,6 +4671,7 @@ mod tests {
     #[test]
     fn emitted_column_policy_is_gofmt_clean() {
         let mut status = column("status", "acme.v1.WidgetStatus");
+        status.sql_type = "TEXT".into();
         status.enum_values = vec![
             "WIDGET_STATUS_UNSPECIFIED".to_string(),
             "WIDGET_STATUS_ACTIVE".to_string(),
@@ -4757,6 +5132,8 @@ public function {{PHP_RPC_METHOD_CAMEL}}(): void {}
             short_name: "Policy".to_string(),
             table: "policies".to_string(),
             primary_keys: vec!["id".to_string(), "tenant_id".to_string()],
+            unique_keys: Vec::new(),
+            unique_key_errors: Vec::new(),
             tenant_field: "tenant_id".to_string(),
             project_field: "project_id".to_string(),
             soft_delete_field: "deleted_at".to_string(),
@@ -4817,6 +5194,8 @@ public function {{PHP_RPC_METHOD_CAMEL}}(): void {}
             short_name: message.to_string(),
             table: table.to_string(),
             primary_keys: vec!["id".to_string()],
+            unique_keys: Vec::new(),
+            unique_key_errors: Vec::new(),
             tenant_field: "tenant_id".to_string(),
             project_field: String::new(),
             soft_delete_field: String::new(),

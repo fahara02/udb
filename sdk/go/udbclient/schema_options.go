@@ -2,8 +2,10 @@ package udbclient
 
 import (
 	"fmt"
+	"sort"
 	"strconv"
 	"strings"
+	"unicode"
 
 	udbcommonv1 "github.com/fahara02/udb/sdk/go/gen/udb/core/common/v1"
 	"google.golang.org/protobuf/proto"
@@ -96,6 +98,251 @@ func PrimaryKey(m proto.Message) string {
 		return pk[0]
 	}
 	return ""
+}
+
+// UniqueKeys lists unconditional unique lookup keys as protobuf field names.
+// Composite order is preserved. Primary keys, duplicates, partial indexes and
+// expression indexes are excluded. Partition columns are included because the
+// generated SQL enforces uniqueness within a partition. Ambiguous or unknown
+// ordinary columns return an error instead of advertising an unsafe lookup.
+// Lookup components must be non-NULL; SQL unique constraints permit NULL rows.
+func UniqueKeys(m proto.Message) ([][]string, error) {
+	if m == nil {
+		return nil, fmt.Errorf("udb: UniqueKeys: nil message")
+	}
+	fields := m.ProtoReflect().Descriptor().Fields()
+	resolve := func(name string) (string, error) {
+		name = strings.TrimSpace(name)
+		var matches []string
+		for i := 0; i < fields.Len(); i++ {
+			fd := fields.Get(i)
+			c := columnOptions(fd)
+			if c != nil && (strings.EqualFold(string(fd.Name()), name) || strings.EqualFold(schemaColumnSQLName(fd), name)) {
+				matches = append(matches, string(fd.Name()))
+			}
+		}
+		if len(matches) != 1 {
+			return "", fmt.Errorf("udb: %s unique key column %q resolves to %d fields", MessageType(m), name, len(matches))
+		}
+		return matches[0], nil
+	}
+	table := tableOptions(m)
+	partition := ""
+	if table.GetPartitionStrategy() != udbcommonv1.PartitionStrategy_PARTITION_STRATEGY_UNSPECIFIED &&
+		table.GetPartitionStrategy() != udbcommonv1.PartitionStrategy_PARTITION_STRATEGY_NONE && table.GetPartitionColumn() != "" {
+		var err error
+		partition, err = resolve(table.GetPartitionColumn())
+		if err != nil {
+			return nil, err
+		}
+	}
+	effective := func(names []string) ([]string, error) {
+		key := make([]string, 0, len(names)+1)
+		seen := map[string]bool{}
+		for _, name := range names {
+			field, err := resolve(name)
+			if err != nil {
+				return nil, err
+			}
+			if seen[field] {
+				return nil, fmt.Errorf("udb: %s unique key repeats field %q", MessageType(m), field)
+			}
+			seen[field] = true
+			key = append(key, field)
+		}
+		if partition != "" && !seen[partition] {
+			key = append(key, partition)
+		}
+		return key, nil
+	}
+	var primary []string
+	if names := PrimaryKeys(m); len(names) > 0 {
+		var err error
+		primary, err = effective(names)
+		if err != nil {
+			return nil, err
+		}
+	}
+	seen := map[string]bool{uniqueKeySetID(primary): true}
+	out := make([][]string, 0)
+	add := func(names []string) error {
+		if len(names) == 0 {
+			return fmt.Errorf("udb: %s unique index has no columns", MessageType(m))
+		}
+		key, err := effective(names)
+		if err != nil {
+			return err
+		}
+		id := uniqueKeySetID(key)
+		if !seen[id] {
+			out = append(out, key)
+		}
+		return nil
+	}
+	type declaredIndex struct {
+		options *udbcommonv1.IndexOptions
+		local   string
+	}
+	var indexes []declaredIndex
+	for _, index := range table.GetIndexes() {
+		indexes = append(indexes, declaredIndex{options: index})
+	}
+	for i := 0; i < fields.Len(); i++ {
+		fd := fields.Get(i)
+		c := columnOptions(fd)
+		if c.GetUnique() && !c.GetPrimaryKey() {
+			if err := add([]string{string(fd.Name())}); err != nil {
+				return nil, err
+			}
+		}
+		if index := c.GetIndex(); index != nil {
+			// The actual parser seeds a field index with its owning SQL column,
+			// and omits explicit repetitions of that same SQL name.
+			local := schemaColumnSQLName(fd)
+			indexes = append(indexes, declaredIndex{options: index, local: local})
+		}
+	}
+	sort.SliceStable(indexes, func(i, j int) bool { return indexes[i].options.GetIndexName() < indexes[j].options.GetIndexName() })
+	for _, declared := range indexes {
+		index := declared.options
+		if !index.GetUnique() || strings.TrimSpace(index.GetWhereClause()) != "" {
+			continue
+		}
+		var names []string
+		if declared.local != "" {
+			names = append(names, declared.local)
+		}
+		expression := declared.local != "" && !plainIndexColumn(declared.local)
+		for _, raw := range append(append([]string{}, index.GetColumns()...), index.GetCompositeFields()...) {
+			for _, name := range splitIndexColumns(raw) {
+				// index_from_values leaves expressions intact and normalizes
+				// ordinary SQL names through the same parser naming rule.
+				if strings.ContainsAny(name, "('") {
+					expression = true
+					continue
+				}
+				name = schemaSQLName(name)
+				if !plainIndexColumn(name) {
+					expression = true
+				}
+				if declared.local == "" || !strings.EqualFold(declared.local, name) {
+					names = append(names, name)
+				}
+			}
+		}
+		if expression {
+			continue
+		}
+		if err := add(names); err != nil {
+			return nil, err
+		}
+	}
+	sort.Slice(out, func(i, j int) bool { return strings.Join(out[i], "\x00") < strings.Join(out[j], "\x00") })
+	unique := out[:0]
+	for _, key := range out {
+		id := uniqueKeySetID(key)
+		if !seen[id] {
+			seen[id] = true
+			unique = append(unique, key)
+		}
+	}
+	return unique, nil
+}
+
+// schemaSQLName follows src/parser/naming.rs:to_snake_case, shared by
+// apply_column_value and index_from_values. It handles acronym boundaries,
+// separators and repeated underscores before comparing descriptor aliases.
+func schemaSQLName(raw string) string {
+	chars := []rune(strings.TrimSpace(raw))
+	upper := func(ch rune) bool { return unicode.IsUpper(ch) || unicode.Is(unicode.Other_Uppercase, ch) }
+	lower := func(ch rune) bool { return unicode.IsLower(ch) || unicode.Is(unicode.Other_Lowercase, ch) }
+	var out strings.Builder
+	for i, ch := range chars {
+		if upper(ch) {
+			if i > 0 && (!upper(chars[i-1]) || i+1 < len(chars) && lower(chars[i+1])) {
+				out.WriteByte('_')
+			}
+			// Rust char::to_lowercase uses the full Unicode lowercase mapping.
+			// This is the unconditional lowercase expansion in SpecialCasing.
+			if ch == '\u0130' {
+				out.WriteString("i\u0307")
+			} else {
+				out.WriteRune(unicode.ToLower(ch))
+			}
+		} else if ch == '-' || ch == ' ' {
+			out.WriteByte('_')
+		} else {
+			out.WriteRune(ch)
+		}
+	}
+	name := out.String()
+	for strings.Contains(name, "__") {
+		name = strings.ReplaceAll(name, "__", "_")
+	}
+	return strings.Trim(name, "_")
+}
+
+func schemaColumnSQLName(fd protoreflect.FieldDescriptor) string {
+	name := columnOptions(fd).GetColumnName()
+	if name == "" {
+		name = string(fd.Name())
+	}
+	return schemaSQLName(name)
+}
+
+func uniqueKeySetID(key []string) string {
+	copy := append([]string{}, key...)
+	sort.Strings(copy)
+	return strings.Join(copy, "\x00")
+}
+
+func plainIndexColumn(name string) bool {
+	if name == "" {
+		return false
+	}
+	for i, char := range name {
+		if char != '_' && !(char >= 'a' && char <= 'z') && !(char >= 'A' && char <= 'Z') && !(i > 0 && char >= '0' && char <= '9') {
+			return false
+		}
+	}
+	return true
+}
+
+// Match the proto parser's comma splitting: commas in expressions or SQL
+// quoted strings do not split a column entry. Such expressions are excluded.
+func splitIndexColumns(raw string) []string {
+	var out []string
+	depth, start := 0, 0
+	quoted := false
+	for i := 0; i < len(raw); i++ {
+		switch raw[i] {
+		case '\'':
+			if quoted && i+1 < len(raw) && raw[i+1] == '\'' {
+				i++
+				continue
+			}
+			quoted = !quoted
+		case '(':
+			if !quoted {
+				depth++
+			}
+		case ')':
+			if !quoted {
+				depth--
+			}
+		case ',':
+			if !quoted && depth == 0 {
+				if name := strings.TrimSpace(raw[start:i]); name != "" {
+					out = append(out, name)
+				}
+				start = i + 1
+			}
+		}
+	}
+	if name := strings.TrimSpace(raw[start:]); name != "" {
+		out = append(out, name)
+	}
+	return out
 }
 
 var tenantColumnCandidates = []string{"tenant_id", "_tenant_id", "org_id", "institution_id"}
