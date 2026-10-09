@@ -236,7 +236,7 @@ async fn assert_native_transaction_refusals_over_transport(
         assert_eq!(detail.kind, crate::proto::ErrorKind::Unique as i32);
         assert_eq!(
             detail.reason,
-            crate::runtime::error_reasons::UNIQUE_VIOLATION
+            crate::runtime::error_reasons::UNIQUE_VIOLATION.code
         );
         assert_eq!(detail.constraint, constraint);
         assert!(!detail.fix_hint.is_empty());
