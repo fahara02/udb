@@ -49,6 +49,9 @@ no-wrapper plan.
 
 ### Fixed
 
+- Authorization denials name the closest caller-tenant rule and the action,
+  object, purpose, scope or other attribute that failed. Unrelated policies
+  cannot hide that diagnosis; unary and batch denials carry the same details.
 - Public RPC throttles carry `UDB_RATE_LIMITED`, the actual budget and transport
   caller, with a window-based retry delay. Password-reset RPCs enforce their
   shared abuse budget through the descriptor-driven gate.
@@ -86,6 +89,9 @@ no-wrapper plan.
 
 ### Breaking for callers
 
+- Rust authorization `Decision` values include a `missing` diagnostic map.
+  - detect: code: Decision
+  - fix: include missing in explicit struct literals or use Default; preserve the map when reporting a refusal.
 - Rust XA participant code has a new `PrepareVote::Refused` variant that retains
   the original status code and protobuf error detail.
   - detect: code: PrepareVote

@@ -345,6 +345,9 @@ pub struct Decision {
     pub allowed: bool,
     pub effect: Effect,
     pub deny_reason: String,
+    /// Safe denial diagnostics: closest caller-tenant rule and failed
+    /// attributes. Empty on allow; never contains another tenant's rule.
+    pub missing: BTreeMap<String, String>,
     pub matched_policy_ids: Vec<String>,
     pub required_scopes: Vec<String>,
     pub policy_version: String,

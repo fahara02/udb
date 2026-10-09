@@ -115,18 +115,75 @@ fn caller(tenant: &str, project: &str, subject: &str) -> SecurityContext {
     }
 }
 
+async fn set_rule_attributes(pool: &sqlx::PgPool, policy_id: &str, attributes: serde_json::Value) {
+    let model = native_catalog::native_model(
+        "udb.core.authz.entity.v1.PolicyRule",
+        &["policy_id", "attributes_json"],
+    );
+    sqlx::query(&format!(
+        "UPDATE {rel} SET {attributes} = $2 WHERE {policy_id} = $1::UUID",
+        rel = model.relation,
+        attributes = model.q("attributes_json"),
+        policy_id = model.q("policy_id"),
+    ))
+    .bind(policy_id)
+    .bind(attributes)
+    .execute(pool)
+    .await
+    .expect("set actual durable policy predicates");
+}
+
+fn denial_detail(status: &tonic::Status) -> crate::proto::ErrorDetail {
+    let raw = status
+        .metadata()
+        .get_bin(crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY)
+        .expect("actual denial carries typed detail")
+        .to_bytes()
+        .expect("denial metadata decodes");
+    crate::runtime::executor_utils::decode_error_detail_from_raw(&raw)
+}
+
 async fn assert_denied(
     svc: &DataBrokerService,
     ctx: &SecurityContext,
     message_type: &str,
     action: &str,
     why: &str,
-) {
+    expected: &[(&str, &str)],
+) -> tonic::Status {
     let err = svc
         .authorize(ctx, message_type, action)
         .await
         .expect_err(why);
     assert_eq!(err.code(), tonic::Code::PermissionDenied, "{why}: {err:?}");
+    let detail = denial_detail(&err);
+    assert_eq!(detail.kind, crate::proto::ErrorKind::Permission as i32);
+    assert_eq!(detail.reason, "UDB_POLICY_DENIED");
+    assert_eq!(
+        detail.missing.get("rule"),
+        Some(&format!("{action} {message_type}"))
+    );
+    for (attribute, expected) in expected {
+        assert_eq!(
+            detail.missing.get(*attribute).map(String::as_str),
+            Some(*expected),
+            "{why}: failed attribute {attribute}",
+        );
+    }
+    let item = DataBrokerService::authorize_message_item(
+        &svc.current_authz_snapshot(),
+        ctx,
+        message_type,
+        action,
+    )
+    .await
+    .expect_err("the batch item must refuse the same policy tuple");
+    assert_eq!(item.code(), err.code());
+    let item_detail = denial_detail(&item);
+    assert_eq!(item_detail.reason, detail.reason);
+    assert_eq!(item_detail.missing, detail.missing);
+    assert_eq!(item_detail.policy_decision_id, detail.policy_decision_id);
+    err
 }
 
 #[tokio::test]
@@ -144,6 +201,23 @@ async fn authz_deny_path_narrow_policy_is_enforced_as_narrow_live() {
         DEFAULT_PROJECT_ID,
         SUBJECT,
         INVOICE,
+        "Select",
+    )
+    .await;
+    set_rule_attributes(
+        &pool,
+        &policy_id,
+        serde_json::json!({"priority": 10, "purpose": "b11-deny-path", "required_scopes": "udb:read"}),
+    )
+    .await;
+    // An unrelated but ABAC-applicable policy must not suppress the diagnosis
+    // of the closest rule that failed the caller's real tuple.
+    insert_allow_rule(
+        &pool,
+        &tenant,
+        DEFAULT_PROJECT_ID,
+        SUBJECT,
+        "acme.b11.v1.Unrelated",
         "Select",
     )
     .await;
@@ -191,31 +265,161 @@ async fn authz_deny_path_narrow_policy_is_enforced_as_narrow_live() {
         .expect("the narrow grant must allow exactly its own tuple");
 
     // Everything outside the tuple is denied.
-    assert_denied(&svc, &granted, INVOICE, "Upsert", "another action").await;
-    assert_denied(&svc, &granted, INVOICE, "Delete", "a destructive action").await;
-    assert_denied(&svc, &granted, SALARY, "Select", "another table").await;
+    for action in ["Upsert", "Delete"] {
+        assert_denied(
+            &svc,
+            &granted,
+            INVOICE,
+            action,
+            "another action",
+            &[("candidate_rule", &policy_id), ("action", "Select")],
+        )
+        .await;
+    }
+    assert_denied(
+        &svc,
+        &granted,
+        SALARY,
+        "Select",
+        "another table",
+        &[("candidate_rule", &policy_id), ("object", INVOICE)],
+    )
+    .await;
     assert_denied(
         &svc,
         &caller(&tenant, DEFAULT_PROJECT_ID, "svc-b11-intruder"),
         INVOICE,
         "Select",
         "another subject",
+        &[
+            ("candidate_rule", &policy_id),
+            ("identity", "subject or role binding"),
+        ],
     )
     .await;
-    assert_denied(
+    let foreign = assert_denied(
         &svc,
         &caller(&foreign_tenant, DEFAULT_PROJECT_ID, SUBJECT),
         INVOICE,
         "Select",
         "another tenant",
+        &[("tenant", &foreign_tenant)],
     )
     .await;
+    assert!(
+        !denial_detail(&foreign)
+            .missing
+            .contains_key("candidate_rule")
+            && !foreign.message().contains(&policy_id)
+            && !foreign.message().contains(&tenant),
+        "denial diagnostics cannot enumerate another tenant's rule",
+    );
     assert_denied(
         &svc,
         &caller(&tenant, OTHER_PROJECT, SUBJECT),
         INVOICE,
         "Select",
         "another project (project-bound allow rules must be honored)",
+        &[
+            ("candidate_rule", &policy_id),
+            ("project", DEFAULT_PROJECT_ID),
+        ],
+    )
+    .await;
+
+    let mut purpose = granted.clone();
+    purpose.purpose = "different-purpose".to_string();
+    assert_denied(
+        &svc,
+        &purpose,
+        INVOICE,
+        "Select",
+        "another purpose",
+        &[("candidate_rule", &policy_id), ("purpose", "b11-deny-path")],
+    )
+    .await;
+    let mut without_scope = granted.clone();
+    without_scope.scopes.clear();
+    assert_denied(
+        &svc,
+        &without_scope,
+        INVOICE,
+        "Select",
+        "missing scope",
+        &[("candidate_rule", &policy_id), ("scope", "udb:read")],
+    )
+    .await;
+    let mut empty_purpose = granted.clone();
+    empty_purpose.purpose.clear();
+    assert_denied(
+        &svc,
+        &empty_purpose,
+        INVOICE,
+        "Select",
+        "missing purpose",
+        &[("purpose", "")],
+    )
+    .await;
+
+    // Purpose '*' grants arbitrary nonempty purposes through the real loader
+    // and gate. It does not bypass required-scope predicates.
+    set_rule_attributes(
+        &pool,
+        &policy_id,
+        serde_json::json!({"priority": 10, "purpose": "*", "required_scopes": "udb:read"}),
+    )
+    .await;
+    authz.warm_shared_snapshot().await;
+    svc.authorize(&purpose, INVOICE, "Select")
+        .await
+        .expect("wildcard purpose allows the actual alternate purpose");
+    assert_denied(
+        &svc,
+        &without_scope,
+        INVOICE,
+        "Select",
+        "wildcard purpose keeps scope checks",
+        &[("candidate_rule", &policy_id), ("scope", "udb:read")],
+    )
+    .await;
+
+    let deny_id = insert_allow_rule(
+        &pool,
+        &tenant,
+        DEFAULT_PROJECT_ID,
+        SUBJECT,
+        INVOICE,
+        "Select",
+    )
+    .await;
+    set_rule_attributes(
+        &pool,
+        &deny_id,
+        serde_json::json!({"required_scopes": "udb:admin"}),
+    )
+    .await;
+    let model = native_catalog::native_model(
+        "udb.core.authz.entity.v1.PolicyRule",
+        &["policy_id", "effect"],
+    );
+    sqlx::query(&format!(
+        "UPDATE {rel} SET {effect} = 'DENY' WHERE {policy_id} = $1::UUID",
+        rel = model.relation,
+        effect = model.q("effect"),
+        policy_id = model.q("policy_id"),
+    ))
+    .bind(&deny_id)
+    .execute(&pool)
+    .await
+    .expect("persist explicit deny");
+    authz.warm_shared_snapshot().await;
+    assert_denied(
+        &svc,
+        &granted,
+        INVOICE,
+        "Select",
+        "missing scope cannot cancel an explicit deny",
+        &[("candidate_rule", &deny_id), ("effect", "deny")],
     )
     .await;
 

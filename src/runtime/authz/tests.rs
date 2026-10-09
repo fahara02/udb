@@ -309,12 +309,81 @@ async fn required_scope_must_be_present() {
     );
 
     let without = principal("svc", "acme", &["udb:read"], &[]);
-    assert!(
-        !snap
-            .casbin_authorize(&query(&without, &res, "data.upsert", "x", &attrs))
-            .await
-            .allowed
+    let denied = snap
+        .casbin_authorize(&query(&without, &res, "data.upsert", "x", &attrs))
+        .await;
+    assert!(!denied.allowed);
+    assert_eq!(
+        denied.missing.get("scope").map(String::as_str),
+        Some("udb:write")
     );
+    assert_eq!(
+        denied.missing.get("candidate_rule").map(String::as_str),
+        Some("p1")
+    );
+}
+
+#[tokio::test]
+async fn denial_diagnostics_honor_matched_relationships_and_name_only_failed_conditions() {
+    let snap = AuthzSnapshot {
+        policies: vec![
+            AuthzPolicy {
+                id: "closest".into(),
+                tenant: "acme".into(),
+                subject: "svc".into(),
+                action: "Select".into(),
+                resource: "acme.Invoice".into(),
+                purpose: "billing".into(),
+                relationship: "owns".into(),
+                conditions: BTreeMap::from([("department".into(), "billing".into())]),
+                ..Default::default()
+            },
+            AuthzPolicy {
+                id: "unrelated".into(),
+                tenant: "acme".into(),
+                subject: "other".into(),
+                resource: "acme.Other".into(),
+                ..Default::default()
+            },
+        ],
+        tuples: vec![RelationshipTuple {
+            subject: "svc".into(),
+            tenant: "acme".into(),
+            relation: "owns".into(),
+            object: "acme.Invoice".into(),
+            ..Default::default()
+        }],
+        ..Default::default()
+    };
+    let caller = principal("svc", "acme", &[], &[]);
+    let resource = ResourceRef::message("acme.Invoice");
+    let attributes = no_attrs();
+    let denied = snap
+        .casbin_authorize(&query(&caller, &resource, "Select", "billing", &attributes))
+        .await;
+    assert!(!denied.allowed);
+    assert_eq!(
+        denied.missing.get("candidate_rule").map(String::as_str),
+        Some("closest")
+    );
+    assert_eq!(
+        denied.missing.get("attributes").map(String::as_str),
+        Some("department")
+    );
+    assert!(
+        !denied.missing.contains_key("relationship"),
+        "the real tuple already matches"
+    );
+    assert!(
+        denied.deny_reason.contains("Diagnosis:"),
+        "an unrelated applicable rule cannot hide the closest miss"
+    );
+    let attributes = BTreeMap::from([("department".into(), "billing".into())]);
+    let allowed = snap
+        .casbin_authorize(&query(&caller, &resource, "Select", "billing", &attributes))
+        .await;
+    assert!(allowed.allowed);
+    assert!(allowed.missing.is_empty());
 }
 
 #[tokio::test]

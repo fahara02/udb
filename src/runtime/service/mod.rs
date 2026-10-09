@@ -865,10 +865,10 @@ impl DataBrokerService {
             return Err(Status::unauthenticated("tenant_id is required"));
         }
         if security.purpose.trim().is_empty() {
-            return Err(service_policy_denied(
+            return Err(data_plane_purpose_required(
                 "data_plane_authorize",
-                "purpose_required",
-                "purpose is required",
+                operation,
+                message_type,
             ));
         }
         let principal = Principal::from_security_context(security, Vec::new());
@@ -921,16 +921,10 @@ impl DataBrokerService {
             return Err(Status::unauthenticated("tenant_id is required"));
         }
         if security.purpose.trim().is_empty() {
-            return Err(crate::runtime::error_reasons::annotate_with(
-                service_policy_denied(
-                    "data_plane_authorize_item",
-                    "purpose_required",
-                    "purpose is required",
-                ),
-                crate::runtime::error_reasons::POLICY_DENIED,
-                None,
-                None,
-                &[("purpose", "")],
+            return Err(data_plane_purpose_required(
+                "data_plane_authorize_item",
+                operation,
+                message_type,
             ));
         }
         let principal = Principal::from_security_context(security, Vec::new());
@@ -1478,7 +1472,8 @@ fn catalog_compatibility_status(operation: &str, message: String) -> Status {
 
 /// A data-plane authorization denial carrying reason `UDB_POLICY_DENIED` and
 /// `missing.rule`: the action + object an allow rule must name for this call
-/// (the Casbin action is the RPC method, the object the message type).
+/// (the Casbin action is the RPC method, the object the message type), plus
+/// the decision's closest caller-tenant rule and failed attributes.
 fn data_plane_denial(
     operation: &str,
     decision: crate::runtime::authz::Decision,
@@ -1486,12 +1481,29 @@ fn data_plane_denial(
     resource: &crate::runtime::authz::ResourceRef,
 ) -> Status {
     let rule = format!("{action} {}", resource.resource_name);
+    let mut missing = decision.missing;
+    missing.insert("rule".to_string(), rule);
+    let fields: Vec<(&str, &str)> = missing
+        .iter()
+        .map(|(key, value)| (key.as_str(), value.as_str()))
+        .collect();
     crate::runtime::error_reasons::annotate_with(
         service_policy_denied(operation, decision.decision_id, decision.deny_reason),
         crate::runtime::error_reasons::POLICY_DENIED,
         None,
         None,
-        &[("rule", rule.as_str())],
+        &fields,
+    )
+}
+
+fn data_plane_purpose_required(operation: &str, action: &str, message_type: &str) -> Status {
+    let rule = format!("{action} {message_type}");
+    crate::runtime::error_reasons::annotate_with(
+        service_policy_denied(operation, "purpose_required", "purpose is required"),
+        crate::runtime::error_reasons::POLICY_DENIED,
+        None,
+        None,
+        &[("purpose", ""), ("rule", rule.as_str())],
     )
 }
 

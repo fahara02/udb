@@ -27,7 +27,7 @@
 //! (matchers, effect, functions) is free. [`validate_casbin_model`] parse-checks
 //! the configured model at startup so a malformed override fails fast.
 
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, OnceLock};
 
 use casbin::function_map::OperatorFunction;
@@ -37,36 +37,45 @@ use sha2::{Digest, Sha256};
 
 use super::{AuthzPolicy, AuthzQuery, AuthzSnapshot, Decision, Effect, conditions_match, wildcard};
 
-/// For a denial with no applicable allow: the same-tenant allow rule for this
-/// action and resource that comes closest to matching, and the attributes it
-/// fails on (purpose, project, scopes, subject/role, conditions,
-/// relationship). Only rules of the caller's own tenant are considered and
-/// only attribute names plus the rule's expected purpose/scopes are named,
-/// so a denial never describes another tenant's policy.
+/// For a denial with no matching allow: the same-tenant allow rule that comes
+/// closest to matching, and the attributes it fails on (action, object,
+/// purpose, project, scopes, subject/role, conditions, relationship).
+/// Only rules of the caller's own tenant are considered. Selector expectations
+/// and failed attribute names are safe to report; condition values and other
+/// identities are omitted. A denial never describes another tenant's policy.
 fn closest_allow_miss(
-    policies: &[AuthzPolicy],
+    snapshot: &AuthzSnapshot,
     roles: &[String],
     req: &AuthzQuery<'_>,
-) -> Option<String> {
+) -> Option<(String, BTreeMap<String, String>)> {
     let principal = req.principal;
     let selectors = req.resource.selectors();
-    let mut best: Option<(&AuthzPolicy, Vec<String>)> = None;
-    for policy in policies.iter().filter(|p| {
+    let mut best: Option<(&AuthzPolicy, Vec<String>, BTreeMap<String, String>)> = None;
+    for policy in snapshot.policies.iter().filter(|p| {
         p.enabled
             && p.effect == Effect::Allow
             && super::domain_match(&p.tenant, &principal.tenant_id)
-            && super::pattern_match(&p.action, req.action)
-            && super::resource_match(&p.resource, &selectors)
     }) {
         let mut misses = Vec::new();
+        let mut missing = BTreeMap::new();
+        if !super::pattern_match(&policy.action, req.action) {
+            misses.push("action".to_string());
+            missing.insert("action".to_string(), policy.action.clone());
+        }
+        if !super::resource_match(&policy.resource, &selectors) {
+            misses.push("object".to_string());
+            missing.insert("object".to_string(), policy.resource.clone());
+        }
         if !wildcard(&policy.purpose, req.purpose) {
             misses.push(format!(
                 "purpose (the rule allows '{}', the request sent '{}')",
                 policy.purpose, req.purpose
             ));
+            missing.insert("purpose".to_string(), policy.purpose.clone());
         }
         if !super::domain_match(&policy.project, &principal.project_id) {
             misses.push("project".to_string());
+            missing.insert("project".to_string(), policy.project.clone());
         }
         let missing_scopes: Vec<&str> = policy
             .required_scopes
@@ -76,6 +85,7 @@ fn closest_allow_miss(
             .collect();
         if !missing_scopes.is_empty() {
             misses.push(format!("scopes (missing {})", missing_scopes.join(", ")));
+            missing.insert("scope".to_string(), missing_scopes.join(", "));
         }
         if !super::subject_match(&policy.subject, &principal.identities())
             || !super::role_match(&policy.role, roles)
@@ -83,33 +93,53 @@ fn closest_allow_miss(
             misses.push(
                 "subject/role (bind this principal to the rule's role or subject)".to_string(),
             );
+            missing.insert(
+                "identity".to_string(),
+                "subject or role binding".to_string(),
+            );
         }
         if !conditions_match(&policy.conditions, req.attributes) {
             misses.push("attribute conditions".to_string());
+            let attributes: Vec<&str> = policy
+                .conditions
+                .iter()
+                .filter(|(key, want)| req.attributes.get(*key) != Some(*want))
+                .map(|(key, _)| key.as_str())
+                .collect();
+            missing.insert("attributes".to_string(), attributes.join(", "));
         }
-        if !policy.relationship.is_empty() {
+        if !policy.relationship.is_empty()
+            && !snapshot.has_tuple(principal, &policy.relationship, &req.resource.resource_name)
+        {
             misses.push("relationship tuple".to_string());
+            missing.insert("relationship".to_string(), policy.relationship.clone());
         }
         if misses.is_empty() {
             continue;
         }
-        if best
-            .as_ref()
-            .is_none_or(|(_, current)| misses.len() < current.len())
-        {
-            best = Some((policy, misses));
+        if best.as_ref().is_none_or(|(current_policy, current, _)| {
+            (misses.len(), std::cmp::Reverse(policy.priority), &policy.id)
+                < (
+                    current.len(),
+                    std::cmp::Reverse(current_policy.priority),
+                    &current_policy.id,
+                )
+        }) {
+            best = Some((policy, misses, missing));
         }
     }
-    best.map(|(policy, misses)| {
-        format!(
-            "the closest rule for this action and resource ({}) fails on: {}",
+    best.map(|(policy, misses, mut missing)| {
+        missing.insert("candidate_rule".to_string(), policy.id.clone());
+        let reason = format!(
+            "the closest rule in this tenant ({}) fails on: {}",
             if policy.id.is_empty() {
                 "unnamed"
             } else {
                 policy.id.as_str()
             },
             misses.join("; ")
-        )
+        );
+        (reason, missing)
     })
 }
 
@@ -326,6 +356,10 @@ impl AuthzSnapshot {
                 allowed: false,
                 effect: Effect::Deny,
                 deny_reason: format!("{}{}", super::EXPLICIT_DENY_REASON_PREFIX, policy.id),
+                missing: BTreeMap::from([
+                    ("candidate_rule".to_string(), policy.id.clone()),
+                    ("effect".to_string(), "deny".to_string()),
+                ]),
                 matched_policy_ids: deny_matches.iter().map(|p| p.id.clone()).collect(),
                 required_scopes: policy.required_scopes.clone(),
                 policy_version: self.version.clone(),
@@ -444,43 +478,61 @@ impl AuthzSnapshot {
             None
         };
 
+        let closest = if allowed {
+            None
+        } else {
+            closest_allow_miss(self, roles, req)
+        };
+        let missing = if allowed {
+            BTreeMap::new()
+        } else {
+            closest
+                .as_ref()
+                .map(|(_, missing)| missing.clone())
+                .unwrap_or_else(|| {
+                    BTreeMap::from([("tenant".to_string(), principal.tenant_id.clone())])
+                })
+        };
         Decision {
             decision_id,
             allowed,
             effect: if allowed { Effect::Allow } else { Effect::Deny },
             deny_reason: if allowed {
                 String::new()
-            } else if applicable.is_empty() {
+            } else {
                 // W5 (consumer tip 2): name the evaluated tuple and the miss
                 // class so a denial is diagnosable from the error alone.
                 // Anti-enumeration-safe: echoes only the caller's own request
                 // (their action/resource/tenant) plus counts — never another
                 // principal's policies.
                 {
-                    let base = format!(
-                        "denied by Casbin PERM model: no applicable allow policy for action '{}' on '{}' (tenant '{}'). Check the three token traps: the policy action must be exactly '{}' (the RPC method name, or the typed store RPC's dotted token — NOT a data.* alias), the policy's tenant_id must be this tenant UUID, and its object must match the resource. Seed it with `udb authz seed --tenant {} --role app_rw --action {}` (+ bind this principal to the role)",
-                        req.action,
-                        selectors.join("|"),
-                        principal.tenant_id,
-                        req.action,
-                        principal.tenant_id,
-                        req.action,
-                    );
-                    match closest_allow_miss(&self.policies, &roles, req) {
-                        Some(miss) => format!("{base}. Diagnosis: {miss}"),
+                    let base = if applicable.is_empty() {
+                        format!(
+                            "denied by Casbin PERM model: no applicable allow policy for action '{}' on '{}' (tenant '{}'). Check the three token traps: the policy action must be exactly '{}' (the RPC method name, or the typed store RPC's dotted token — NOT a data.* alias), the policy's tenant_id must be this tenant UUID, and its object must match the resource. Seed it with `udb authz seed --tenant {} --role app_rw --action {}` (+ bind this principal to the role)",
+                            req.action,
+                            selectors.join("|"),
+                            principal.tenant_id,
+                            req.action,
+                            principal.tenant_id,
+                            req.action,
+                        )
+                    } else {
+                        format!(
+                            "denied by Casbin PERM model: {} candidate polic{} evaluated, none granted action '{}' on '{}' (tenant '{}') for the caller's identities/roles",
+                            applicable.len(),
+                            if applicable.len() == 1 { "y" } else { "ies" },
+                            req.action,
+                            selectors.join("|"),
+                            principal.tenant_id,
+                        )
+                    };
+                    match &closest {
+                        Some((miss, _)) => format!("{base}. Diagnosis: {miss}"),
                         None => base,
                     }
                 }
-            } else {
-                format!(
-                    "denied by Casbin PERM model: {} candidate polic{} evaluated, none granted action '{}' on '{}' (tenant '{}') for the caller's identities/roles",
-                    applicable.len(),
-                    if applicable.len() == 1 { "y" } else { "ies" },
-                    req.action,
-                    selectors.join("|"),
-                    principal.tenant_id,
-                )
             },
+            missing,
             // Candidate policy set Casbin evaluated (post ABAC pre-filter).
             matched_policy_ids: applicable.iter().map(|p| p.id.clone()).collect(),
             required_scopes: granting
