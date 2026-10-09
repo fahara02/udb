@@ -40,9 +40,9 @@ func TestColumnPredicatesUseTheActualRecordCodec(t *testing.T) {
 		t.Fatal("enum predicates must preserve descriptor codec refusal of unknown names")
 	}
 	when := timestamppb.New(time.Date(2026, 10, 9, 12, 13, 14, 0, time.UTC))
-	created := ColumnOf[*timestamppb.Timestamp]((*storagev1.File)(nil), "created_at")
-	filter, err = created.Gt(when)
-	if err != nil || !reflect.DeepEqual(filter, Filter{"created_at": map[string]any{"$gt": "2026-10-09T12:13:14Z"}}) {
+	expires := ColumnOf[*timestamppb.Timestamp]((*storagev1.File)(nil), "expires_at")
+	filter, err = expires.Gt(when)
+	if err != nil || !reflect.DeepEqual(filter, Filter{"expires_at": map[string]any{"$gt": "2026-10-09T12:13:14Z"}}) {
 		t.Fatalf("timestamp predicate must use the protobuf field codec: filter=%v err=%v", filter, err)
 	}
 	optional := ColumnOf[string](codecPresenceMessage(t, "JSONB"), "note")
