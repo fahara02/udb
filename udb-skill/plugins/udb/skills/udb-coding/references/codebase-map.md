@@ -683,7 +683,7 @@ graph LR
 - **src/runtime/service/embedding_service/vector_store.rs** — traits: `VectorStore` · types: `RuntimeVectorStore`, `TenantVectorTarget` · fns: `for_routing`, `for_model`, `new`, `tenant_vector_purge_filter`, `purge_tenant_vectors`, `tenant_embedding_vector_targets`
 - **src/runtime/service/embedding_service/workers.rs** — Leader-owned background passes (change-driven work emit / backfill / vector teardown) for the native `EmbeddingService`, plus the CDC-envelope decoders and the shared vector-delete seam. Extracted verbatim from the fo… · fns: `embedding_work_jobs_sql`, `embedding_teardown_jobs_sql`, `embedding_teardown_point_ids_sql`, `backfill_read_context`, `backfill_select_request`, `source_change_row`, `source_change_row_pk`, `source_change_is_delete`, `parse_source_text_fields`, `run_embedding_work_emitter_once`, `extract_source_text`
 
-### runtime/service/live_tests  (38 files)
+### runtime/service/live_tests  (39 files)
 
 - **src/runtime/service/live_tests/asset_image_live.rs** — Live verification of the asset THUMBNAIL byte-step (feature `asset-image`): a source image is stored in the object store, an asset wraps it, and a THUMBNAIL pipeline fetches → resizes → stores a derived object. Requir…
 - **src/runtime/service/live_tests/asset_live.rs** — (no public items)
@@ -711,6 +711,7 @@ graph LR
 - **src/runtime/service/live_tests/rate_limit_live.rs** — Actual gRPC refusals retain the effective operation limit and caller while both the distributed Redis limiter and its local fallback enforce it.
 - **src/runtime/service/live_tests/scheduler_live.rs** — (no public items)
 - **src/runtime/service/live_tests/search_tenant_iso_live.rs** — SRCH1 — LIVE tenant-isolation of the native SearchService vector path. Reproduces the customer-reported cross-tenant CLOBBER against a REAL Qdrant (+ Postgres): two tenants ingest a document with the SAME source prima…
+- **src/runtime/service/live_tests/sql_generation_live.rs** — Actual generated PostgreSQL uniqueness proof; the portable compiler stays runtime-free.
 - **src/runtime/service/live_tests/storage_live.rs** — (no public items)
 - **src/runtime/service/live_tests/storage_object_live.rs** — Live MinIO verification of the object-byte path the storage service uses for `DeleteFile` / orphan-reaper GC (`DataBrokerRuntime::*_object_backend_target` + `object_request_json`). Proves put → get → delete → get-fail…
 - **src/runtime/service/live_tests/storage_object_tenant_iso_live.rs** — OBJ1/2/3 — LIVE tenant-isolation of the SERVED data-plane OBJECT path. Reproduces the customer-reported cross-tenant object leak against a REAL S3/MinIO. Every served object entrypoint physically namespaces the object…
