@@ -121,7 +121,7 @@ func runLiveNativeServiceE2E(t *testing.T, ctx context.Context, authConn grpc.Cl
 		c := tenantpb.NewTenantServiceClient(authConn)
 		cc, cancel := call()
 		defer cancel()
-		// CreateTenant is a platform write (verified to insert a udb_tenant.tenants
+		// CreateTenant uses ordinary tenant authority and inserts a udb_tenant.tenants
 		// row). Get/Update/List are tenant-self-scoped (request.tenant_id must equal
 		// the bearer's tenant), and the bootstrap admin's own tenant is a free-text
 		// code with no tenants-table row, so a created tenant cannot be read back
@@ -809,7 +809,7 @@ func runLiveNativeServiceE2E(t *testing.T, ctx context.Context, authConn grpc.Cl
 		cc, cancel := wcall()
 		defer cancel()
 		created, err := rooms.CreateRoom(cc, &webrtcpb.CreateRoomRequest{
-			TenantId: uuidTenant, Name: "sdk-room-" + suffix, MaxParticipants: 8, Config: `{}`, CreatedBy: uuid4(),
+			TenantId: uuidTenant, Name: "sdk-room-" + suffix, MaxParticipants: 8, Config: `{}`, CreatedBy: actorID,
 		})
 		if err != nil {
 			t.Fatalf("CreateRoom: %v", err)
@@ -956,7 +956,7 @@ func runLiveNativeServiceE2E(t *testing.T, ctx context.Context, authConn grpc.Cl
 		if !foundProvider {
 			t.Fatalf("ListProviders did not include created provider %s", providerID)
 		}
-		if _, err := c.DisableProvider(cc, &idppb.DisableProviderRequest{ProviderId: providerID, TenantId: uuidTenant, UpdatedBy: uuid4()}); err != nil {
+		if _, err := c.DisableProvider(cc, &idppb.DisableProviderRequest{ProviderId: providerID, TenantId: uuidTenant, UpdatedBy: actorID}); err != nil {
 			t.Fatalf("DisableProvider: %v", err)
 		}
 	})

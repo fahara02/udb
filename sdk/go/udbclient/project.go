@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"slices"
 	"sync"
 	"time"
 
@@ -145,9 +146,9 @@ type Udb struct {
 	WebRTC  *WebRTCFacade  // WebRTC Room/Peer/Track/Turn sub-facades + Signal stream
 	Events  *EventsFacade  // DataBroker PublishCDC/EnqueueOutboxEvent ready/publish-and-wait
 
-	// adoptMu guards the atomic metadata adoption (adoptMetadata): every facade is
-	// rebuilt over the existing connections under this lock so a concurrent call
-	// sees either the old tenant or the new one in full, never a mix.
+	// adoptMu serializes explicit identity adoption and credential renewal.
+	// Initial adoption precedes Connect returning; explicit later adoption must
+	// be coordinated with callers. Renewal never writes public facade fields.
 	adoptMu sync.Mutex
 	// Connections retained so adoptMetadata can rebuild facades over them.
 	brokerConn grpc.ClientConnInterface
@@ -274,15 +275,21 @@ func NewUdb(ctx context.Context, cfg Config) (*Udb, error) {
 
 // ── Mutable metadata adoption (chapter 08.5) ─────────────────────────────────
 
-// adoptMetadata atomically re-seeds Udb.Meta and rebuilds every sub-facade over
-// the existing connections with the new metadata, and swaps the generated
-// layer's metadata. Holding adoptMu makes the swap all-or-nothing so a
-// concurrent request can never carry a mixed old/new tenant header pair. The
-// raw generated clients (.Raw) are recreated cheaply over the same conns — no
-// new connection is dialed.
-func (u *Udb) adoptMetadata(meta Metadata) {
-	u.adoptMu.Lock()
-	defer u.adoptMu.Unlock()
+// adoptMetadata re-seeds Udb.Meta and rebuilds facades over existing connections
+// when the verified metadata changes. adoptMu serializes installations; the
+// generated interceptors receive identity and bearer as one atomic snapshot.
+// Explicit adoption must be coordinated with facade readers. Credential renewal
+// uses renewPrincipal instead and leaves public metadata/facades alone. Caller
+// holds adoptMu.
+func (u *Udb) adoptMetadata(meta Metadata, bearer string) {
+	unchanged := u.Data != nil && u.Auth != nil && u.Meta.TenantID == meta.TenantID && u.Meta.ProjectID == meta.ProjectID &&
+		u.Meta.UserID == meta.UserID && u.Meta.ServiceIdentity == meta.ServiceIdentity &&
+		u.Meta.Purpose == meta.Purpose && u.Meta.CorrelationID == meta.CorrelationID &&
+		u.Meta.ClientCatalogVersion == meta.ClientCatalogVersion && slices.Equal(u.Meta.Scopes, meta.Scopes)
+	if unchanged {
+		u.installGeneratedIdentity(meta, bearer)
+		return
+	}
 
 	u.Meta = meta
 
@@ -309,10 +316,91 @@ func (u *Udb) adoptMetadata(meta Metadata) {
 	u.Asset = &AssetFacade{Raw: assetv1.NewAssetServiceClient(u.authConn), meta: meta}
 	u.WebRTC = newWebRTCFacade(u.webrtcConn, meta)
 
-	// Generated robustness layer: atomic swap of the header metadata.
+	u.installGeneratedIdentity(meta, bearer)
+}
+
+func (u *Udb) installGeneratedIdentity(meta Metadata, bearer string) {
 	if u.Generated != nil {
-		u.Generated.SetMeta(meta)
+		opt := u.Generated.options()
+		opt.Meta = meta
+		if bearer != "" {
+			opt.Authorization = "Bearer " + bearer
+		}
+		u.Generated.opt.Store(&opt)
 	}
+}
+
+// adoptPrincipal derives identity exclusively from the verified principal,
+// retaining only request/audit configuration from the connected client.
+func (u *Udb) adoptPrincipal(principal *authnv1.Principal, bearer string) {
+	u.adoptMu.Lock()
+	defer u.adoptMu.Unlock()
+	meta := u.Meta
+	meta.TenantID = principal.GetTenantId()
+	meta.ProjectID = principal.GetProjectId()
+	meta.UserID = principal.GetUserId()
+	meta.ServiceIdentity = principal.GetServiceIdentity()
+	meta.Scopes = append([]string(nil), principal.GetScopes()...)
+	u.adoptMetadata(meta, bearer)
+}
+
+// renewPrincipal installs only a new bearer for the connected identity. Both
+// the original identity and the current facade identity must still match the
+// verified response. Preserve existing scope ordering and all facade handles;
+// changing identity requires an explicit adoption coordinated with callers.
+func (u *Udb) renewPrincipal(principal *authnv1.Principal, bearer string, pinned Metadata) error {
+	u.adoptMu.Lock()
+	defer u.adoptMu.Unlock()
+	if err := u.checkRenewalPrincipalLocked(principal, pinned); err != nil {
+		return err
+	}
+	if u.Generated != nil {
+		u.Generated.SetAuthorization("Bearer " + bearer)
+	}
+	return nil
+}
+
+// Enterprise re-login validates before storing the token; its session publishes
+// the current stored bearer separately under the bearer installation lock.
+func (u *Udb) validateRenewalPrincipal(principal *authnv1.Principal, pinned Metadata) error {
+	u.adoptMu.Lock()
+	defer u.adoptMu.Unlock()
+	return u.checkRenewalPrincipalLocked(principal, pinned)
+}
+
+func (u *Udb) checkRenewalPrincipalLocked(principal *authnv1.Principal, pinned Metadata) error {
+	if err := checkPrincipalIdentity(principal, pinned); err != nil {
+		return err
+	}
+	if err := checkPrincipalIdentity(principal, u.Meta); err != nil {
+		return err
+	}
+	return nil
+}
+
+// Renewal must not switch the connected principal or its scope set. Scope
+// ordering and duplicates carry no additional permissions.
+func checkPrincipalIdentity(principal *authnv1.Principal, expected Metadata) error {
+	if principal == nil {
+		return fmt.Errorf("udb: authentication returned no verified principal")
+	}
+	for _, field := range []struct{ name, actual, expected string }{
+		{"tenant", principal.GetTenantId(), expected.TenantID},
+		{"project", principal.GetProjectId(), expected.ProjectID},
+		{"user", principal.GetUserId(), expected.UserID},
+		{"service identity", principal.GetServiceIdentity(), expected.ServiceIdentity},
+	} {
+		if field.actual != field.expected {
+			return fmt.Errorf("udb: renewed principal changed %s", field.name)
+		}
+	}
+	actualScopes, expectedScopes := slices.Clone(principal.GetScopes()), slices.Clone(expected.Scopes)
+	slices.Sort(actualScopes)
+	slices.Sort(expectedScopes)
+	if !slices.Equal(slices.Compact(actualScopes), slices.Compact(expectedScopes)) {
+		return fmt.Errorf("udb: renewed principal changed scopes")
+	}
+	return nil
 }
 
 // AdoptedLogin is the result of LoginAndAdoptTenant: the bearer token set as the
@@ -330,17 +418,29 @@ type AdoptedLogin struct {
 //
 // It then derives the FULL identity {tenant_id, project_id, user_id,
 // service_identity, scopes} FROM THE VERIFIED PRINCIPAL (never a body hint),
-// atomically adopts that metadata across every facade (adoptMetadata), and
-// installs the bearer as the authorization credential. Both RPCs ALWAYS run —
+// adopts that metadata across the facades (adoptMetadata), and installs the
+// generated identity/bearer snapshot atomically. Both RPCs ALWAYS run —
 // there is no "skip authenticate if a principal is already present" branch. No
 // body tenant copying afterward (the broker derives identity from the verified
 // claim).
 func (u *Udb) LoginAndAdoptTenant(ctx context.Context, req *authnv1.LoginRequest) (*AdoptedLogin, error) {
+	adopted, err := u.loginAndVerify(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	u.adoptPrincipal(adopted.Principal, adopted.Token.AccessToken)
+	return adopted, nil
+}
+
+// loginAndVerify performs both authentication RPCs without mutating the live
+// client. A session can validate a renewal's identity before installing it.
+func (u *Udb) loginAndVerify(ctx context.Context, req *authnv1.LoginRequest) (*AdoptedLogin, error) {
 	// RPC 1: native login.
 	loginResp, err := u.Auth.Authn.Login(u.Auth.Context(ctx), req)
 	if err != nil {
 		return nil, err
 	}
+	receivedAt := time.Now()
 	token := loginResp.GetAccessToken()
 	if token == "" {
 		return nil, fmt.Errorf("udb: Login returned no access token (MFA required: %v)", loginResp.GetMfaRequired())
@@ -356,32 +456,9 @@ func (u *Udb) LoginAndAdoptTenant(ctx context.Context, req *authnv1.LoginRequest
 		return nil, fmt.Errorf("udb: AuthenticateBearer returned no principal")
 	}
 
-	// Adopt the FULL canonical identity from the verified principal — never a
-	// caller hint. tenant/project PLUS the user, the service identity, and the
-	// scope set are ALL taken from the principal, UNCONDITIONALLY: a caller UserID
-	// hint (or a stale value carried from a previous login) must not survive when
-	// the verified principal's user is empty, and the reconciled scopes are exactly
-	// the principal's — never merged with a caller-requested set. The verified
-	// Principal is the single source of truth for who this bearer is.
-	meta := u.Meta
-	meta.TenantID = principal.GetTenantId()
-	meta.ProjectID = principal.GetProjectId()
-	meta.UserID = principal.GetUserId()
-	meta.ServiceIdentity = principal.GetServiceIdentity()
-	meta.Scopes = principal.GetScopes()
-	u.adoptMetadata(meta)
-	if u.Generated != nil {
-		u.Generated.SetAuthorization("Bearer " + token)
-	}
-
-	tok := Token{
-		AccessToken: token,
-		SessionID:   loginResp.GetSessionId(),
-	}
-	if secs := loginResp.GetAccessTokenExpiresIn(); secs > 0 {
-		tok.ExpiresAt = time.Now().Add(time.Duration(secs) * time.Second)
-	}
-	tok.RefreshToken = loginResp.GetRefreshToken()
+	// Verification may take time; do not extend the login bearer lifetime by
+	// counting it again from the end of that second RPC.
+	tok := tokenFromLogin(loginResp, receivedAt)
 	return &AdoptedLogin{Token: tok, Principal: principal}, nil
 }
 

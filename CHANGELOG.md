@@ -9,6 +9,24 @@ release line was tagged.
 
 ### Fixed
 
+- Go sessions retain the issued token lifetime when scheduling renewal, including
+  short-lived bearers. Concurrent refresh callers share their own flight result
+  and cannot reinstall a retired credential. Automatic renewal preserves the
+  verified identity and scope set without replacing public service facades.
+- API-key sessions adopt the authenticated principal before returning the
+  client, and refuse a changed principal or scope set on later renewal.
+- Go durable consumers retry acknowledgements on redelivery without repeating
+  completed handler work. A failed acknowledgement closes that stream attempt
+  before another event can advance its cursor; permanent refusals stop retries.
+- `udb sdk generate --check` compares all selected generated and copied outputs
+  without writing them, and fails for missing or changed files. Other languages
+  and consumer-owned files remain outside the selected generation check.
+- Pages accepts one canonical benchmark report within an artifact whose archive
+  includes the runner workspace prefix, while preserving checksum, release,
+  canonical coverage and publication provenance checks.
+- Go live fixtures replace the complete verified identity when selecting a
+  platform-only method and retain the caller's audit context. CDC stream
+  accounting retains the recorder used by the existing lifetime binding.
 - Periodic workers and shared lease heartbeats retain their startup behavior
   while avoiding catch-up bursts after a delayed scheduler.
 - Replica health checks await bounded probe batches and prevent overlapping

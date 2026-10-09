@@ -108,7 +108,22 @@ pub(crate) fn run(
         SdkAction::Manifest => emit_manifest_json(),
         SdkAction::ListLangs => list_languages(templates_dir),
         SdkAction::Init => init_sdk(lang),
-        SdkAction::Generate => generate(lang, templates_dir, out_dir, selector, None),
+        SdkAction::Generate => generate(
+            lang,
+            templates_dir,
+            out_dir,
+            selector,
+            None,
+            OutputMode::Write,
+        ),
+        SdkAction::GenerateCheck => generate(
+            lang,
+            templates_dir,
+            out_dir,
+            selector,
+            None,
+            OutputMode::Check,
+        ),
         SdkAction::Diff => sdk_diff(selector, against),
     }
 }
@@ -252,6 +267,7 @@ pub(crate) fn run_orm_scaffold(
         out_dir,
         &SdkSelector::default(),
         entity,
+        OutputMode::Write,
     )
 }
 
@@ -1009,6 +1025,7 @@ fn generate(
     out_dir: &str,
     selector: &SdkSelector,
     entity_filter: Option<&str>,
+    output_mode: OutputMode,
 ) -> i32 {
     let mut fsm = Fsm::new();
 
@@ -1113,6 +1130,7 @@ fn generate(
         return 1;
     }
     let scalars = base_scalars(&manifest, service_count);
+    let mut output = GenerationOutput::new(output_mode);
     let mut total_rendered = 0usize;
     let mut total_copied = 0usize;
     for lang_name in &langs {
@@ -1126,6 +1144,7 @@ fn generate(
             &manifest,
             &entities,
             &lang_scalars,
+            &mut output,
         ) {
             Ok((rendered, copied)) => {
                 total_rendered += rendered;
@@ -1154,10 +1173,8 @@ fn generate(
                 Err(err) => return fsm.fail(err),
             };
             let file_path = lang_out_dir.join("udb_entities_gen.go");
-            if let Err(err) = std::fs::create_dir_all(&lang_out_dir)
-                .and_then(|_| std::fs::write(&file_path, content))
-            {
-                return fsm.fail(format!("failed to write {}: {err}", file_path.display()));
+            if let Err(err) = output.emit(&file_path, content.as_bytes()) {
+                return fsm.fail(err);
             }
             total_rendered += 1;
             fsm.note(format!(
@@ -1167,16 +1184,34 @@ fn generate(
         }
     }
 
+    if !output.stale.is_empty() {
+        for path in &output.stale {
+            eprintln!("sdk generate --check: missing or stale {}", path.display());
+        }
+        return fsm.fail(format!(
+            "{} generated file(s) are missing or stale; regenerate with the same options",
+            output.stale.len()
+        ));
+    }
+
     // ── Render ─▶ Completed ─────────────────────────────────────────────────
     if fsm.go(SdkGenState::Completed).is_err() {
         return 1;
     }
-    println!(
-        "\nsdk generate {} — {total_rendered} file(s) rendered, {total_copied} copied across \
-         {} language(s).\nRaw proto stubs are produced separately by `buf generate`.",
-        fsm.state.as_str(),
-        langs.len()
-    );
+    if output_mode == OutputMode::Check {
+        println!(
+            "\nsdk generate --check: {} generated file(s) are current across {} language(s).",
+            total_rendered + total_copied,
+            langs.len()
+        );
+    } else {
+        println!(
+            "\nsdk generate {} — {total_rendered} file(s) rendered, {total_copied} copied across \
+             {} language(s).\nRaw proto stubs are produced separately by `buf generate`.",
+            fsm.state.as_str(),
+            langs.len()
+        );
+    }
     0
 }
 
@@ -2444,6 +2479,7 @@ fn render_language(
     manifest: &[RpcDescriptor],
     entities: &[EntityDescriptor],
     scalars: &[(String, String)],
+    output: &mut GenerationOutput,
 ) -> Result<(usize, usize), String> {
     let mut files: Vec<PathBuf> = Vec::new();
     collect_files(tmpl_dir, &mut files).map_err(|e| e.to_string())?;
@@ -2470,12 +2506,12 @@ fn render_language(
             }
             let dest_rel = rel_str.trim_end_matches(".tmpl");
             let dest = out_dir.join(dest_rel);
-            write_file(&dest, body.as_bytes())?;
+            output.emit(&dest, body.as_bytes())?;
             rendered += 1;
         } else {
             let bytes = std::fs::read(src).map_err(|e| format!("read {}: {e}", src.display()))?;
             let dest = out_dir.join(&rel_str);
-            write_file(&dest, &bytes)?;
+            output.emit(&dest, &bytes)?;
             copied += 1;
         }
     }
@@ -2512,6 +2548,50 @@ fn write_file(dest: &Path, contents: &[u8]) -> Result<(), String> {
         std::fs::create_dir_all(parent).map_err(|e| format!("mkdir {}: {e}", parent.display()))?;
     }
     std::fs::write(dest, contents).map_err(|e| format!("write {}: {e}", dest.display()))
+}
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum OutputMode {
+    Write,
+    Check,
+}
+
+/// Both template files and the canonical Go entity renderer emit here. Check
+/// mode reads only the destinations generation owns; unrelated files are left
+/// alone, and no destination directory is created for missing output.
+struct GenerationOutput {
+    mode: OutputMode,
+    stale: BTreeSet<PathBuf>,
+}
+
+impl GenerationOutput {
+    fn new(mode: OutputMode) -> Self {
+        Self {
+            mode,
+            stale: BTreeSet::new(),
+        }
+    }
+
+    fn emit(&mut self, dest: &Path, contents: &[u8]) -> Result<(), String> {
+        if self.mode == OutputMode::Write {
+            return write_file(dest, contents);
+        }
+        match std::fs::read(dest) {
+            Ok(existing) if existing.as_slice() == contents => {
+                // If multiple templates emit the same path, the final emission
+                // wins, exactly as it does during ordinary generation.
+                self.stale.remove(dest);
+            }
+            Ok(_) => {
+                self.stale.insert(dest.to_path_buf());
+            }
+            Err(err) if err.kind() == std::io::ErrorKind::NotFound => {
+                self.stale.insert(dest.to_path_buf());
+            }
+            Err(err) => return Err(format!("read {}: {err}", dest.display())),
+        }
+        Ok(())
+    }
 }
 
 // ── Rendering engine ────────────────────────────────────────────────────────

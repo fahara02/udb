@@ -33,6 +33,9 @@ type Token struct {
 	RefreshToken string
 	SessionID    string
 	ExpiresAt    time.Time
+	// IssuedAt records when this credential was received, allowing the refresh
+	// margin to be bounded by its lifetime. Older stored tokens may omit it.
+	IssuedAt time.Time
 }
 
 // Valid reports whether the token is non-empty and not within skew of expiry.
@@ -43,7 +46,19 @@ func (t Token) Valid(now time.Time, skew time.Duration) bool {
 	if t.ExpiresAt.IsZero() {
 		return true // no expiry info; treat as valid until an explicit refresh
 	}
-	return now.Add(skew).Before(t.ExpiresAt)
+	return now.Add(t.refreshSkew(skew)).Before(t.ExpiresAt)
+}
+
+// refreshSkew shares the same renewal boundary with demand and background
+// refresh. A configured margin must not consume a short token's entire life.
+func (t Token) refreshSkew(skew time.Duration) time.Duration {
+	skew = max(skew, 0)
+	if !t.IssuedAt.IsZero() && !t.ExpiresAt.IsZero() {
+		if lifetime := t.ExpiresAt.Sub(t.IssuedAt); lifetime > 0 {
+			skew = min(skew, lifetime/5)
+		}
+	}
+	return skew
 }
 
 // TokenStore persists a Token across calls (and, optionally, processes). The
@@ -79,14 +94,21 @@ type TokenManager struct {
 	auth  *AuthClient
 	store TokenStore
 
-	// RefreshSkew refreshes this long before actual expiry. Default 30s.
+	// RefreshSkew is the maximum margin before expiry. Default 30s; tokens with
+	// known issuance time cap it at one fifth of their lifetime.
 	RefreshSkew time.Duration
 	// now is injectable for tests.
 	now func() time.Time
 
 	mu       sync.Mutex
-	inflight chan struct{} // non-nil while a refresh is running
-	refErr   error         // result of the in-flight refresh
+	inflight *tokenRefreshFlight // non-nil while a refresh is running
+}
+
+// A completed flight retains its own result for every waiter. A later refresh
+// must not replace the result a delayed follower is about to observe.
+type tokenRefreshFlight struct {
+	done chan struct{}
+	err  error // written before done closes, then immutable
 }
 
 // NewTokenManager builds a manager over an AuthClient. A nil store defaults to
@@ -149,6 +171,7 @@ func tokenFromLogin(resp *authnv1.LoginResponse, now time.Time) Token {
 		AccessToken:  resp.GetAccessToken(),
 		RefreshToken: resp.GetRefreshToken(),
 		SessionID:    resp.GetSessionId(),
+		IssuedAt:     now,
 	}
 	if secs := resp.GetAccessTokenExpiresIn(); secs > 0 {
 		tok.ExpiresAt = now.Add(time.Duration(secs) * time.Second)
@@ -160,6 +183,7 @@ func tokenFromAuthn(resp *authnv1.AuthnResponse, now time.Time) Token {
 	tok := Token{
 		AccessToken: resp.GetAccessToken(),
 		SessionID:   resp.GetSessionId(),
+		IssuedAt:    now,
 	}
 	if exp := resp.GetExpiresAtUnix(); exp > 0 {
 		tok.ExpiresAt = time.Unix(exp, 0)
@@ -199,30 +223,40 @@ func (m *TokenManager) RefreshIfNeeded(ctx context.Context) error {
 	m.mu.Lock()
 	if m.inflight != nil {
 		// A refresh is already running; wait for it and adopt its result.
-		done := m.inflight
+		flight := m.inflight
 		m.mu.Unlock()
 		select {
-		case <-done:
-			m.mu.Lock()
-			rerr := m.refErr
-			m.mu.Unlock()
-			return rerr
+		case <-flight.done:
+			return flight.err
 		case <-ctx.Done():
 			return ctx.Err()
 		}
 	}
-	// We are the leader: start the in-flight refresh.
-	done := make(chan struct{})
-	m.inflight = done
+	// Another caller may have rotated the credential after our initial Load,
+	// completed its refresh, and cleared inflight before we acquired this lock.
+	// Recheck the current token before becoming leader, never submit that retired
+	// refresh token (the broker treats reuse as a revoked token family).
+	tok, err = m.store.Load(ctx)
+	if err != nil {
+		m.mu.Unlock()
+		return err
+	}
+	if tok.Valid(m.now(), m.RefreshSkew) {
+		m.mu.Unlock()
+		return nil
+	}
+	// We are the leader: start the in-flight refresh with the current credential.
+	flight := &tokenRefreshFlight{done: make(chan struct{})}
+	m.inflight = flight
 	m.mu.Unlock()
 
 	rerr := m.doRefresh(ctx, tok)
 
 	m.mu.Lock()
-	m.refErr = rerr
+	flight.err = rerr
 	m.inflight = nil
+	close(flight.done)
 	m.mu.Unlock()
-	close(done)
 	return rerr
 }
 
@@ -238,7 +272,8 @@ func (m *TokenManager) doRefresh(ctx context.Context, prev Token) error {
 	next := prev
 	next.AccessToken = resp.GetAccessToken()
 	if secs := resp.GetAccessTokenExpiresIn(); secs > 0 {
-		next.ExpiresAt = m.now().Add(time.Duration(secs) * time.Second)
+		next.IssuedAt = m.now()
+		next.ExpiresAt = next.IssuedAt.Add(time.Duration(secs) * time.Second)
 	}
 	// Persist the ROTATED refresh token. The broker mints a new one on every
 	// successful refresh and invalidates the presented one atomically — it is

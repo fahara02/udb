@@ -339,6 +339,8 @@ pub(crate) struct SdkSelector {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum SdkAction {
     Generate,
+    /// `sdk generate --check` renders the same output without changing it.
+    GenerateCheck,
     Manifest,
     ListLangs,
     Init,
@@ -1631,6 +1633,11 @@ pub(crate) fn parse_args(args: &[String]) -> (Command, String, String, String) {
                         DEFAULT_GRPC_BIND_ADDR.to_string(),
                     );
                 }
+            };
+            let action = if action == SdkAction::Generate && has_flag("--check") {
+                SdkAction::GenerateCheck
+            } else {
+                action
             };
             let services: Vec<String> = flag_value("--service")
                 .map(|value| split_csv(&value))

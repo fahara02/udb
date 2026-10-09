@@ -3,8 +3,18 @@ package udbclient
 import (
 	"context"
 	"errors"
+	"fmt"
+	"reflect"
+	"strings"
+	"sync"
 	"testing"
 	"time"
+
+	authnv1 "github.com/fahara02/udb/sdk/go/gen/udb/core/authn/services/v1"
+	entityv1 "github.com/fahara02/udb/sdk/go/gen/udb/entity/v1"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/proto"
 )
 
 // A valid (unexpired) token: the background refresher must cache the bearer and
@@ -126,6 +136,361 @@ func TestEnterpriseSession_NextRefreshWait(t *testing.T) {
 	_ = store.Save(context.Background(), Token{AccessToken: "a"})
 	if got := s.nextRefreshWait(); got != bgRefreshIdle {
 		t.Fatalf("no-expiry token: want bgRefreshIdle, got %v", got)
+	}
+
+	_ = store.Save(context.Background(), Token{
+		AccessToken: "a", IssuedAt: fixed, ExpiresAt: fixed.Add(20 * time.Second),
+	})
+	if got := s.nextRefreshWait(); got != 16*time.Second {
+		t.Fatalf("20s token must wait for its actual renewal boundary, got %v", got)
+	}
+	_ = store.Save(context.Background(), Token{AccessToken: "a", IssuedAt: fixed, ExpiresAt: fixed.Add(time.Second)})
+	if got := s.nextRefreshWait(); got != 800*time.Millisecond {
+		t.Fatalf("a healthy 1s token must renew before expiry, got %v", got)
+	}
+}
+
+// sessionIdentityAuthn returns a verified, mutable fixture principal. It uses
+// the real Connect/ConnectEnterprise transport so rejection must occur before
+// live facade metadata or interceptor credentials are installed.
+type sessionIdentityAuthn struct {
+	authnv1.UnimplementedAuthnServiceServer
+	mu            sync.Mutex
+	principal     *authnv1.Principal
+	authenticate  int
+	logins        int
+	omitPrincipal bool
+}
+
+func (a *sessionIdentityAuthn) Login(context.Context, *authnv1.LoginRequest) (*authnv1.LoginResponse, error) {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	a.logins++
+	return &authnv1.LoginResponse{
+		AccessToken: fmt.Sprintf("test-login-access-%d", a.logins), RefreshToken: "test-login-refresh",
+		SessionId: "test-login-session", AccessTokenExpiresIn: 3600,
+	}, nil
+}
+
+func (a *sessionIdentityAuthn) Authenticate(context.Context, *authnv1.AuthnRequest) (*authnv1.AuthnResponse, error) {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	a.authenticate++
+	res := &authnv1.AuthnResponse{
+		AccessToken:   fmt.Sprintf("test-exchange-access-%d", a.authenticate),
+		ExpiresAtUnix: time.Now().Add(time.Hour).Unix(),
+	}
+	if !a.omitPrincipal && a.principal != nil {
+		res.Principal = proto.Clone(a.principal).(*authnv1.Principal)
+	}
+	return res, nil
+}
+
+func (a *sessionIdentityAuthn) RefreshToken(context.Context, *authnv1.RefreshTokenRequest) (*authnv1.RefreshTokenResponse, error) {
+	return nil, status.Error(codes.Unauthenticated, "refresh fixture refusal")
+}
+
+func sessionTestPrincipal() *authnv1.Principal {
+	return &authnv1.Principal{
+		TenantId: v232Tenant, ProjectId: v232Project, UserId: v232User,
+		ServiceIdentity: "session-fixture", Scopes: []string{"data:read", "data:write"},
+	}
+}
+
+func TestEnterpriseSessionReloginRejectsChangedIdentityBeforeInstallation(t *testing.T) {
+	for _, tc := range []struct {
+		name   string
+		change func(*authnv1.Principal)
+	}{
+		{"tenant", func(p *authnv1.Principal) { p.TenantId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa" }},
+		{"project", func(p *authnv1.Principal) { p.ProjectId = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb" }},
+		{"user", func(p *authnv1.Principal) { p.UserId = "cccccccc-cccc-4ccc-8ccc-cccccccccccc" }},
+		{"service identity", func(p *authnv1.Principal) { p.ServiceIdentity = "other-service" }},
+		{"scopes", func(p *authnv1.Principal) { p.Scopes = []string{"data:read"} }},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			authn := &sessionIdentityAuthn{principal: sessionTestPrincipal()}
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			sess, err := ConnectEnterprise(ctx, EnterpriseConfig{
+				Target: serveSessionAuthn(t, authn, nil), Username: "fixture", Password: "fixture", TenantCode: "hint",
+			})
+			if err != nil {
+				t.Fatalf("connect: %v", err)
+			}
+			defer sess.Close()
+			// Drive the exact background recovery pass ourselves after expiring the
+			// stored bearer; the fixture's normal one-hour timer is stopped.
+			sess.stopOnce.Do(func() { close(sess.stopRefresh) })
+			beforeMeta, beforeOpts := sess.Meta, sess.Generated.options()
+			beforeData, beforeAuth := sess.Data, sess.Auth
+			beforeBearer := sess.Bearer()
+			tok, err := sess.tm.store.Load(ctx)
+			if err != nil {
+				t.Fatalf("load token: %v", err)
+			}
+			tok.ExpiresAt = time.Now().Add(-time.Minute)
+			if err := sess.tm.store.Save(ctx, tok); err != nil {
+				t.Fatalf("expire fixture token: %v", err)
+			}
+			authn.mu.Lock()
+			tc.change(authn.principal)
+			authn.mu.Unlock()
+			sess.backgroundRefresh()
+
+			if err := sess.RefreshErr(); err == nil || !strings.Contains(err.Error(), tc.name) {
+				t.Fatalf("renewal must name the rejected identity field %s", tc.name)
+			}
+			if !reflect.DeepEqual(sess.Meta, beforeMeta) || !reflect.DeepEqual(sess.Generated.options(), beforeOpts) {
+				t.Fatal("rejected renewal changed live metadata or credentials")
+			}
+			if sess.Data != beforeData || sess.Auth != beforeAuth || sess.Bearer() != beforeBearer {
+				t.Fatal("rejected renewal replaced live facade or bearer state")
+			}
+			if _, poisoned := sess.poisonedContext(ctx); !poisoned {
+				t.Fatal("expired rejected renewal must leave the session locally poisoned")
+			}
+		})
+	}
+}
+
+// Keep real facade calls active during credential renewal. In the race-enabled
+// CI run, any renewal write to public metadata or facade fields is observable;
+// every invocation must also retain the original canonical metadata order.
+func exerciseStableFacadesDuringRenewal(t *testing.T, u *Udb, renew func(context.Context, int) error) {
+	t.Helper()
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	beforeMeta := u.Meta
+	beforeData, beforeAuth, beforeEvents, beforeAuthz := u.Data, u.Auth, u.Events, u.Authz
+	ready := make(chan struct{})
+	readerErr := make(chan error, 1)
+	var reader sync.WaitGroup
+	reader.Add(1)
+	go func() {
+		defer reader.Done()
+		first := true
+		for ctx.Err() == nil {
+			if !reflect.DeepEqual(u.Meta, beforeMeta) || !reflect.DeepEqual(u.Generated.Meta(), beforeMeta) ||
+				u.Data != beforeData || u.Auth != beforeAuth || u.Events != beforeEvents || u.Authz != beforeAuthz {
+				readerErr <- errors.New("renewal wrote public facade identity or handles")
+				return
+			}
+			if _, err := u.Data.Select(ctx, &entityv1.SelectRequest{MessageType: "fixture"}); err != nil {
+				if ctx.Err() == nil {
+					readerErr <- errors.New("data call failed during same-identity renewal")
+				}
+				return
+			}
+			if _, err := u.Auth.AuthenticateBearer(ctx, "fixture-request"); err != nil {
+				if ctx.Err() == nil {
+					readerErr <- errors.New("native call failed during same-identity renewal")
+				}
+				return
+			}
+			if first {
+				close(ready)
+				first = false
+			}
+		}
+	}()
+	defer func() { cancel(); reader.Wait() }()
+	select {
+	case <-ready:
+	case err := <-readerErr:
+		t.Fatal(err)
+	case <-ctx.Done():
+		t.Fatal("facade reader did not become ready")
+	}
+	for i := 0; i < 12; i++ {
+		if err := renew(ctx, i); err != nil {
+			t.Fatalf("same-scope renewal %d failed: %v", i, err)
+		}
+	}
+	cancel()
+	reader.Wait()
+	select {
+	case err := <-readerErr:
+		t.Fatal(err)
+	default:
+	}
+	if !reflect.DeepEqual(u.Meta, beforeMeta) || !reflect.DeepEqual(u.Generated.Meta(), beforeMeta) ||
+		u.Data != beforeData || u.Auth != beforeAuth || u.Events != beforeEvents || u.Authz != beforeAuthz {
+		t.Fatal("renewal changed original canonical ordering or facade handles")
+	}
+}
+
+func TestEnterpriseSessionReloginKeepsFacadesForReorderedScopes(t *testing.T) {
+	authn := &sessionIdentityAuthn{principal: sessionTestPrincipal()}
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	sess, err := ConnectEnterprise(ctx, EnterpriseConfig{
+		Target: serveSessionAuthn(t, authn, &mdBroker{}), Username: "fixture", Password: "fixture", TenantCode: "hint",
+	})
+	if err != nil {
+		t.Fatalf("connect: %v", err)
+	}
+	defer sess.Close()
+	sess.stopOnce.Do(func() { close(sess.stopRefresh) })
+	exerciseStableFacadesDuringRenewal(t, sess.Udb, func(ctx context.Context, i int) error {
+		authn.mu.Lock()
+		if i%2 == 0 {
+			authn.principal.Scopes = []string{"data:write", "data:read", "data:read"}
+		} else {
+			authn.principal.Scopes = []string{"data:read", "data:write"}
+		}
+		authn.mu.Unlock()
+		tok, err := sess.tm.store.Load(ctx)
+		if err != nil {
+			return err
+		}
+		tok.ExpiresAt = time.Now().Add(-time.Second)
+		if err := sess.tm.store.Save(ctx, tok); err != nil {
+			return err
+		}
+		sess.backgroundRefresh()
+		return sess.RefreshErr()
+	})
+}
+
+func TestEnterpriseSessionDelayedCallerCannotRestoreOlderBearer(t *testing.T) {
+	authn := &rotatingRefreshAuthn{current: "test-refresh-initial"}
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	u, err := Connect(ctx, Config{
+		Target: serveSessionAuthn(t, authn, nil), Credentials: Credentials{Bearer: "test-access-initial"},
+	})
+	if err != nil {
+		cancel()
+		t.Fatalf("connect: %v", err)
+	}
+	defer u.Close()
+	store := &gatedRefreshStore{loaded: make(chan struct{}), release: make(chan struct{})}
+	tm := NewTokenManager(u.Auth, store)
+	fixed := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	tm.now = func() time.Time { return fixed }
+	old := Token{
+		AccessToken: "test-access-initial", RefreshToken: "test-refresh-initial", SessionID: "test-session",
+		IssuedAt: fixed, ExpiresAt: fixed.Add(time.Hour),
+	}
+	_ = store.Save(ctx, old)
+	sess := &EnterpriseSession{Udb: u, tm: tm, bearer: "Bearer " + old.AccessToken}
+	var workers sync.WaitGroup
+	var releaseOnce sync.Once
+	release := func() { releaseOnce.Do(func() { close(store.release) }) }
+	defer func() { release(); cancel(); workers.Wait() }()
+	done := make(chan string, 1)
+	workers.Add(1)
+	go func() {
+		defer workers.Done()
+		done <- sess.currentBearer(context.WithValue(ctx, refreshLoadGateKey{}, true))
+	}()
+	select {
+	case <-store.loaded:
+	case <-ctx.Done():
+		t.Fatal("delayed caller did not snapshot the original bearer")
+	}
+	// Rotate through the actual manager/RPC while the caller retains a valid old
+	// snapshot. The shared TokenStore is the supported source of current state.
+	expired := old
+	expired.ExpiresAt = fixed.Add(-time.Second)
+	_ = store.Save(ctx, expired)
+	sess.backgroundRefresh()
+	want := sess.Bearer()
+	if want == "Bearer "+old.AccessToken || sess.RefreshErr() != nil || authn.refreshCount() != 1 {
+		t.Fatal("background did not install the single rotated credential")
+	}
+	release()
+	select {
+	case got := <-done:
+		if got != want || sess.Bearer() != want || u.Generated.options().Authorization != want {
+			t.Fatal("delayed caller restored an older credential after rotation")
+		}
+	case <-ctx.Done():
+		t.Fatal("delayed caller did not finish")
+	}
+}
+
+type gatedPublicationStore struct {
+	MemoryTokenStore
+	mu      sync.Mutex
+	loads   int
+	loaded  chan struct{}
+	release chan struct{}
+}
+
+func (s *gatedPublicationStore) Load(ctx context.Context) (Token, error) {
+	tok, err := s.MemoryTokenStore.Load(ctx)
+	s.mu.Lock()
+	s.loads++
+	gate := s.loads == 2
+	s.mu.Unlock()
+	if gate {
+		close(s.loaded)
+		select {
+		case <-s.release:
+		case <-ctx.Done():
+			return Token{}, ctx.Err()
+		}
+	}
+	return tok, err
+}
+
+func TestEnterpriseSessionBackgroundPublicationSerializesStoreReload(t *testing.T) {
+	authn := &rotatingRefreshAuthn{current: "test-refresh-initial"}
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	u, err := Connect(ctx, Config{
+		Target: serveSessionAuthn(t, authn, nil), Credentials: Credentials{Bearer: "test-access-initial"},
+	})
+	if err != nil {
+		cancel()
+		t.Fatalf("connect: %v", err)
+	}
+	defer u.Close()
+	store := &gatedPublicationStore{loaded: make(chan struct{}), release: make(chan struct{})}
+	fixed := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	old := Token{
+		AccessToken: "test-access-initial", RefreshToken: "test-refresh-initial", SessionID: "test-session",
+		IssuedAt: fixed, ExpiresAt: fixed.Add(time.Hour),
+	}
+	_ = store.Save(ctx, old)
+	tm := NewTokenManager(u.Auth, store)
+	tm.now = func() time.Time { return fixed }
+	sess := &EnterpriseSession{Udb: u, tm: tm, bearer: "Bearer " + old.AccessToken}
+	var workers sync.WaitGroup
+	var releaseOnce sync.Once
+	release := func() { releaseOnce.Do(func() { close(store.release) }) }
+	defer func() { release(); cancel(); workers.Wait() }()
+	workers.Add(1)
+	go func() { defer workers.Done(); sess.backgroundRefresh() }()
+	select {
+	case <-store.loaded:
+	case <-ctx.Done():
+		t.Fatal("background publication did not reach its store reload")
+	}
+	// Reload and publication must form one serialized operation. If the load
+	// precedes the lock, another publisher can install B before this pass writes A.
+	if sess.mu.TryLock() {
+		sess.mu.Unlock()
+		t.Fatal("background snapshot was loaded outside publication serialization")
+	}
+	expired := old
+	expired.ExpiresAt = fixed.Add(-time.Second)
+	_ = store.Save(ctx, expired)
+	rotated, err := tm.Token(ctx) // real RPC; no refresh waits under sess.mu
+	if err != nil || authn.refreshCount() != 1 {
+		t.Fatalf("concurrent credential rotation: %v", err)
+	}
+	done := make(chan string, 1)
+	workers.Add(1)
+	go func() { defer workers.Done(); done <- sess.currentBearer(ctx) }()
+	release()
+	select {
+	case got := <-done:
+		want := "Bearer " + rotated.AccessToken
+		if got != want || sess.Bearer() != want || u.Generated.options().Authorization != want {
+			t.Fatal("background publication overtook a newer installed credential")
+		}
+	case <-ctx.Done():
+		t.Fatal("serialized publications did not finish")
 	}
 }
 

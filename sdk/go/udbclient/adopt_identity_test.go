@@ -4,6 +4,7 @@ import (
 	"context"
 	"reflect"
 	"testing"
+	"time"
 
 	authnv1 "github.com/fahara02/udb/sdk/go/gen/udb/core/authn/services/v1"
 )
@@ -39,8 +40,12 @@ func TestLoginAndAdoptTenantCanonicalIdentity(t *testing.T) {
 	auth := &AuthClient{Authn: fa, Meta: hints}
 	u := &Udb{Meta: hints, Auth: auth, Generated: NewGenerated(nil, Options{Meta: hints})}
 
-	if _, err := u.LoginAndAdoptTenant(context.Background(), &authnv1.LoginRequest{Username: "u", Password: "p"}); err != nil {
+	adopted, err := u.LoginAndAdoptTenant(context.Background(), &authnv1.LoginRequest{Username: "u", Password: "p"})
+	if err != nil {
 		t.Fatalf("LoginAndAdoptTenant (login): %v", err)
+	}
+	if adopted.Token.IssuedAt.IsZero() || adopted.Token.ExpiresAt.Sub(adopted.Token.IssuedAt) != time.Hour {
+		t.Fatal("initial login must retain the issued lifetime for session pacing")
 	}
 	// Exactly ONE canonical set, entirely from the verified principal — every
 	// caller hint rejected.

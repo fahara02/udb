@@ -10,7 +10,6 @@ import (
 
 	entityv1 "github.com/fahara02/udb/sdk/go/gen/udb/entity/v1"
 	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 )
@@ -53,9 +52,10 @@ type ConsumeOptions struct {
 // Consume delivers every event on topicPattern to handle, as the durable
 // consumer name, until ctx ends or handle keeps failing on one event. An event
 // is acknowledged after handle returns nil, so a crash redelivers at most the
-// event in flight (at-least-once); events a reconnect redelivers are skipped by
-// id. Envelopes newer than this SDK understands stop the consumer with an
-// error rather than being misread.
+// event in flight (at-least-once). Recently completed handlers are deduplicated,
+// but redelivered events are still acknowledged. A failed acknowledgement stops
+// the stream before later events can advance the cursor. Envelopes newer than
+// this SDK understands stop the consumer rather than being misread.
 func Consume[T proto.Message](ctx context.Context, u *Udb, name, topicPattern string, handle func(context.Context, ConsumedEvent[T]) error, opts ...ConsumeOptions) error {
 	var o ConsumeOptions
 	if len(opts) > 0 {
@@ -100,13 +100,27 @@ func (f *consumeFatal) Error() string { return f.err.Error() }
 
 func (f *consumeFatal) Unwrap() error { return f.err }
 
+func consumeAttemptError(err error) error {
+	switch Inspect(err).GRPC {
+	case codes.InvalidArgument, codes.PermissionDenied, codes.NotFound,
+		codes.FailedPrecondition, codes.OutOfRange, codes.Unimplemented:
+		// Invalid consumer/cursor, missing authority, and unavailable contracts
+		// require caller intervention; reconnecting cannot repair these refusals.
+		return &consumeFatal{err: err}
+	default:
+		return err
+	}
+}
+
 func consumeOnce[T proto.Message](ctx context.Context, u *Udb, name, topicPattern string, handle func(context.Context, ConsumedEvent[T]) error, o ConsumeOptions, seen *recentIDs) error {
-	stream, err := u.Data.Broker.PublishCDC(ctx, &entityv1.CDCSubscriptionRequest{
+	attemptCtx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	stream, err := u.Data.Broker.PublishCDC(attemptCtx, &entityv1.CDCSubscriptionRequest{
 		TopicPattern: topicPattern,
 		ConsumerName: name,
 	})
 	if err != nil {
-		return err
+		return consumeAttemptError(fmt.Errorf("udb: consumer %s: %w", name, err))
 	}
 	for {
 		envelope, err := stream.Recv()
@@ -114,39 +128,31 @@ func consumeOnce[T proto.Message](ctx context.Context, u *Udb, name, topicPatter
 			return errors.New("the event stream ended")
 		}
 		if err != nil {
-			switch status.Code(err) {
-			case codes.InvalidArgument, codes.PermissionDenied, codes.NotFound:
-				// A bad consumer name, a missing grant or a cursor the journal
-				// no longer retains will not fix itself by reconnecting.
-				return &consumeFatal{err: fmt.Errorf("udb: consumer %s: %w", name, err)}
+			return consumeAttemptError(fmt.Errorf("udb: consumer %s: %w", name, err))
+		}
+		id := envelope.GetEventId()
+		if !seen.has(id) {
+			event, err := decodeConsumedEvent[T](id, envelope.GetTopic(), envelope.GetPartitionKey(), envelope.GetPayloadJson())
+			if err != nil {
+				return &consumeFatal{err: fmt.Errorf("udb: consumer %s: event %s: %w", name, id, err)}
 			}
-			return err
+			if ts := envelope.GetPublishedAt(); ts != nil {
+				event.PublishedAt = ts.AsTime()
+			}
+			if err := handleWithRetry(attemptCtx, event, handle, o); err != nil {
+				return &consumeFatal{err: fmt.Errorf("udb: consumer %s gave up on event %s: %w", name, id, err)}
+			}
+			// The handler completed even if the ACK response is subsequently lost.
+			// Remember its work so redelivery retries only the acknowledgement.
+			seen.add(id)
 		}
-		if seen.has(envelope.GetEventId()) {
-			continue
-		}
-		event, err := decodeConsumedEvent[T](envelope.GetEventId(), envelope.GetTopic(), envelope.GetPartitionKey(), envelope.GetPayloadJson())
-		if err != nil {
-			return &consumeFatal{err: fmt.Errorf("udb: consumer %s: event %s: %w", name, envelope.GetEventId(), err)}
-		}
-		if ts := envelope.GetPublishedAt(); ts != nil {
-			event.PublishedAt = ts.AsTime()
-		}
-		if err := handleWithRetry(ctx, event, handle, o); err != nil {
-			return &consumeFatal{err: fmt.Errorf("udb: consumer %s gave up on event %s: %w", name, event.ID, err)}
-		}
-		if _, err := u.Data.Broker.AckCdcEvents(ctx, &entityv1.AckCdcEventsRequest{
+		if _, err := u.Data.Broker.AckCdcEvents(attemptCtx, &entityv1.AckCdcEventsRequest{
 			ConsumerName: name,
 			TopicPattern: topicPattern,
-			EventId:      event.ID,
+			EventId:      id,
 		}); err != nil {
-			// The event was handled; a lost ack only means it may be delivered
-			// once more after a reconnect, which `seen` absorbs.
-			if o.OnError != nil {
-				o.OnError(fmt.Errorf("udb: consumer %s ack %s: %w", name, event.ID, err))
-			}
+			return consumeAttemptError(fmt.Errorf("udb: consumer %s ack %s: %w", name, id, err))
 		}
-		seen.add(event.ID)
 	}
 }
 

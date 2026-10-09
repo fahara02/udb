@@ -1580,7 +1580,9 @@ PAGES_PLAYGROUND_REQUIREMENTS = (
     ('--repo "${GITHUB_REPOSITORY}"', "benchmark artifact repository scope"),
     ("--name sdk-benchmark-results", "benchmark artifact name"),
     ("--dir bench-artifact", "benchmark artifact staging directory"),
-    ("bench-artifact/docs/site/bench-results.json", "benchmark artifact JSON source path"),
+    ("python3 scripts/locate_benchmark_report.py --selftest", "benchmark artifact layout refusal tests"),
+    ('report_path="$(python3 scripts/locate_benchmark_report.py bench-artifact)"', "unique canonical benchmark artifact JSON source"),
+    ('cp -v "${report_path}" docs/site/bench-results.json', "located benchmark artifact copy"),
     ("docs/site/bench-results.json", "site benchmark JSON destination"),
     ("got_fresh=0", "benchmark fallback state initialization"),
     ("got_fresh=1", "benchmark fresh artifact state"),
@@ -4316,6 +4318,7 @@ LINT_WORKFLOW_TRIGGER_PATHS = (
     ("scripts/playground_wasm_smoke.mjs", "playground WASM smoke"),
     ("scripts/collect_sdk_bench_results.py", "benchmark collector"),
     ("scripts/validate_benchmark_publication.py", "released benchmark publication validator"),
+    ("scripts/locate_benchmark_report.py", "canonical benchmark artifact locator"),
     ("scripts/bootstrap_benchmark_project_catalog.py", "benchmark catalog bootstrap"),
     ("scripts/prepare-benchmark-fixtures.py", "served benchmark fixture preparation"),
     ("scripts/fixtures/benchmark-analytics.sql", "stored analytics benchmark fixtures"),
@@ -5988,8 +5991,10 @@ def check_lint_workflow_covers_referenced_helpers(root: Path = ROOT) -> list[str
 
 def run_selftest() -> int:
     from validate_benchmark_publication import selftest as publication_selftest
+    from locate_benchmark_report import selftest as artifact_layout_selftest
 
     publication_selftest()
+    artifact_layout_selftest()
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp)
         wf = root / ".github" / "workflows"
@@ -7623,8 +7628,10 @@ jobs:
           PINNED_LEGACY_BENCH_SHA256: 52461f66687c1bfbdaa7c49d192ca3a3eb94fdf9ed0c19a9a6c9c34bff1708c6
         run: |
           got_fresh=0
+          python3 scripts/locate_benchmark_report.py --selftest
           gh run download "${TRIGGER_RUN_ID}" --repo "${GITHUB_REPOSITORY}" --name sdk-benchmark-results --dir bench-artifact
-          cp -v bench-artifact/docs/site/bench-results.json docs/site/bench-results.json
+          report_path="$(python3 scripts/locate_benchmark_report.py bench-artifact)"
+          cp -v "${report_path}" docs/site/bench-results.json
           got_fresh=1
           if [ -n "${TRIGGER_RUN_ID:-}" ] && [ "$got_fresh" != 1 ]; then
             echo "completed without a fresh sdk-benchmark-results artifact"

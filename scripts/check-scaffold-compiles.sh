@@ -87,6 +87,84 @@ if grep -q "{{" "$ENT_DIR/go/udb_entities_gen.go"; then
 fi
 echo "    Go entity adapters generated and gofmt-clean OK"
 
+# Exercise the actual project-proto/gofmt producer and prove --check preserves
+# its output. Rust CLI integration tests cover generic templates and copied files.
+echo "==> checking Go entity generator drift without output writes"
+python - "$REPO" "$WORK" "${UDB_BIN:-}" <<'PY'
+import os
+from pathlib import Path
+import subprocess
+import sys
+
+repo = Path(sys.argv[1]).resolve()
+work = Path(sys.argv[2]).resolve() / "generate-check"
+work.mkdir()
+output = work / "requested output"
+if sys.argv[3]:
+    generator = [str(Path(sys.argv[3]).resolve())]
+else:
+    generator = ["cargo", "run", "--quiet", "--manifest-path", str(repo / "Cargo.toml"), "--"]
+
+def arguments(out=output, package="checkentities", check=False):
+    args = generator + [
+        "sdk", "generate", "--project-proto", str(repo / "proto"),
+        "--lang", "go", "--templates", str(repo / "sdk-templates"),
+        "--go-package", package, "--out", str(out),
+    ]
+    if check:
+        args.append("--check")
+    return args
+
+def run(args, expected):
+    result = subprocess.run(args, cwd=work, capture_output=True, text=True, timeout=120)
+    assert result.returncode == expected, (
+        f"expected exit {expected}, got {result.returncode}\n"
+        f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
+    )
+    return result
+
+def snapshot():
+    entries = {}
+    for path in [work, *sorted(work.rglob("*"))]:
+        metadata = path.stat()
+        entries[str(path.relative_to(work))] = (
+            path.is_dir(), metadata.st_mtime_ns,
+            None if path.is_dir() else path.read_bytes(),
+        )
+    return entries
+
+def check(expected, out=output, package="checkentities"):
+    # A same-byte rewrite must still fail this check, even on coarse filesystems.
+    for path in work.rglob("*"):
+        if path.is_file():
+            os.utime(path, ns=(1_234_567_890_000_000_000,) * 2)
+    before = snapshot()
+    result = run(arguments(out, package, check=True), expected)
+    assert snapshot() == before, "sdk generate --check changed output paths, bytes or mtimes"
+    return result
+
+run(arguments(), 0)
+entity_file = output / "go" / "udb_entities_gen.go"
+assert "\npackage checkentities\n" in entity_file.read_text()
+check(0)
+check(1, package="differententities")
+with entity_file.open("ab") as stream:
+    stream.write(b"\n// Deliberately stale output for the CI regression.\n")
+assert "udb_entities_gen.go" in check(1).stderr
+run(arguments(), 0)
+check(0)
+entity_file.unlink()
+check(1)
+assert not entity_file.exists(), "check recreated the missing entity file"
+run(arguments(), 0)
+check(0)
+missing = work / "missing output" / "never created"
+check(1, out=missing)
+assert not missing.parent.exists(), "check created the missing output directory"
+assert not (work / "sdk").exists(), "generator ignored the requested output directory"
+print("    Actual Go entity output checks fresh, package drift, stale, missing and repair paths")
+PY
+
 # ── TypeScript: type-check the emitted example ────────────────────────────────
 echo "==> type-checking TypeScript scaffold example"
 TS_DIR="$WORK/tscheck"

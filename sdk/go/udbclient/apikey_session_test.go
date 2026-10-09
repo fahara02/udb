@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"net"
+	"reflect"
 	"strings"
 	"sync"
 	"testing"
@@ -43,6 +44,9 @@ func (a *keyAuthn) Authenticate(ctx context.Context, req *authnv1.AuthnRequest) 
 	return &authnv1.AuthnResponse{
 		AccessToken:   "bearer-" + time.Now().Format("150405.000000"),
 		ExpiresAtUnix: time.Now().Add(a.ttl).Unix(),
+		Principal: &authnv1.Principal{
+			TenantId: "00000000-0000-0000-0000-000000000001",
+		},
 	}, nil
 }
 
@@ -405,5 +409,224 @@ func TestTenantSessionPoolSharesOneClientPerTenant(t *testing.T) {
 	}
 	if got := pool.Tenants(); len(got) != 1 || got[0] != tenant {
 		t.Fatalf("Tenants() = %v", got)
+	}
+}
+
+func TestAPIKeyConnectAdoptsVerifiedIdentityOnEveryFacade(t *testing.T) {
+	authn := &sessionIdentityAuthn{principal: sessionTestPrincipal()}
+	broker := &mdBroker{}
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	u, err := Connect(ctx, Config{
+		Target: serveSessionAuthn(t, authn, broker), TenantID: "tenant-hint", ProjectID: "project-hint",
+		UserID: "user-hint", ServiceIdentity: "service-hint", Scopes: []string{"ungranted-hint"},
+		Purpose: "request-purpose", CorrelationID: "request-correlation", Credentials: Credentials{APIKey: "fixture-key"},
+	})
+	if err != nil {
+		t.Fatalf("connect: %v", err)
+	}
+	defer u.Close()
+	want := Metadata{
+		TenantID: v232Tenant, ProjectID: v232Project, UserID: v232User,
+		ServiceIdentity: "session-fixture", Scopes: []string{"data:read", "data:write"},
+		Purpose: "request-purpose", CorrelationID: "request-correlation",
+	}
+	for name, got := range map[string]Metadata{
+		"project": u.Meta, "generated": u.Generated.Meta(), "data": u.Data.Meta, "auth": u.Auth.Meta,
+		"api key": u.ApiKey.meta, "tenant": u.Tenant.meta, "notification": u.Notification.meta,
+		"storage": u.Storage.meta, "asset": u.Asset.meta,
+	} {
+		if !reflect.DeepEqual(got, want) {
+			t.Errorf("%s retained caller identity instead of the verified principal", name)
+		}
+	}
+	beforeData, beforeAuth := u.Data, u.Auth
+	if _, err := u.exchangeAPIKey(ctx, u.apiKey); err != nil {
+		t.Fatalf("same-identity renewal: %v", err)
+	}
+	if u.Data != beforeData || u.Auth != beforeAuth {
+		t.Fatal("routine renewal rebuilt unchanged facade handles")
+	}
+	for _, direct := range []bool{true, false} {
+		if direct {
+			_, err = u.Data.Broker.Select(ctx, &entityv1.SelectRequest{MessageType: "fixture"})
+		} else {
+			_, err = u.Data.Select(ctx, &entityv1.SelectRequest{MessageType: "fixture"})
+		}
+		if err != nil {
+			t.Fatalf("canonical data call: %v", err)
+		}
+		broker.mu.Lock()
+		md := broker.md.Copy()
+		broker.mu.Unlock()
+		for key, expected := range map[string]string{
+			"x-tenant-id": want.TenantID, "x-udb-project-id": want.ProjectID, "x-user-id": want.UserID,
+			"x-service-identity": want.ServiceIdentity, "x-scopes": "data:read,data:write",
+		} {
+			if got := md.Get(key); len(got) != 1 || got[0] != expected {
+				t.Errorf("%s must carry one canonical principal value", key)
+			}
+		}
+		if len(md.Get("x-api-key")) != 0 || len(md.Get("authorization")) != 1 {
+			t.Fatal("canonical call must carry one exchanged bearer and no raw key")
+		}
+	}
+}
+
+func TestAPIKeyRenewalRejectsChangedIdentityBeforeInstallation(t *testing.T) {
+	for _, field := range []string{"project", "scopes"} {
+		t.Run(field, func(t *testing.T) {
+			authn := &sessionIdentityAuthn{principal: sessionTestPrincipal()}
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			u, err := Connect(ctx, Config{
+				Target: serveSessionAuthn(t, authn, nil), Credentials: Credentials{APIKey: "fixture-key"},
+			})
+			if err != nil {
+				t.Fatalf("connect: %v", err)
+			}
+			defer u.Close()
+			beforeMeta, beforeOptions := u.Meta, u.Generated.options()
+			beforeData, beforeAuth := u.Data, u.Auth
+			beforePrincipal := u.Principal()
+			beforeExpiry := u.BearerExpiresAt()
+			authn.mu.Lock()
+			if field == "project" {
+				authn.principal.ProjectId = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"
+			} else {
+				authn.principal.Scopes = []string{"data:read"}
+			}
+			authn.mu.Unlock()
+			if _, err := u.exchangeAPIKey(ctx, u.apiKey); err == nil || !strings.Contains(err.Error(), field) {
+				t.Fatal("renewal must be rejected with a named identity error")
+			}
+			if !reflect.DeepEqual(u.Meta, beforeMeta) || !reflect.DeepEqual(u.Generated.options(), beforeOptions) ||
+				!reflect.DeepEqual(u.Principal(), beforePrincipal) || u.BearerExpiresAt() != beforeExpiry ||
+				u.Data != beforeData || u.Auth != beforeAuth {
+				t.Fatal("rejected key renewal replaced a connected identity, credential, expiry or facade")
+			}
+		})
+	}
+}
+
+func TestAPIKeyRenewalKeepsFacadesForReorderedScopes(t *testing.T) {
+	authn := &sessionIdentityAuthn{principal: sessionTestPrincipal()}
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	u, err := Connect(ctx, Config{
+		Target: serveSessionAuthn(t, authn, &mdBroker{}), Credentials: Credentials{APIKey: "fixture-key"},
+	})
+	if err != nil {
+		t.Fatalf("connect: %v", err)
+	}
+	defer u.Close()
+	exerciseStableFacadesDuringRenewal(t, u, func(ctx context.Context, i int) error {
+		authn.mu.Lock()
+		if i%2 == 0 {
+			authn.principal.Scopes = []string{"data:write", "data:read", "data:read"}
+		} else {
+			authn.principal.Scopes = []string{"data:read", "data:write"}
+		}
+		authn.mu.Unlock()
+		_, err := u.exchangeAPIKey(ctx, u.apiKey)
+		return err
+	})
+}
+
+func TestAPIKeyRenewalTreatsNilAndEmptyScopesAsSameSet(t *testing.T) {
+	principal := sessionTestPrincipal()
+	principal.Scopes = nil
+	authn := &sessionIdentityAuthn{principal: principal}
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	u, err := Connect(ctx, Config{
+		Target: serveSessionAuthn(t, authn, nil), Credentials: Credentials{APIKey: "fixture-key"},
+	})
+	if err != nil {
+		t.Fatalf("connect: %v", err)
+	}
+	defer u.Close()
+	beforeMeta, beforeData, beforeAuth := u.Meta, u.Data, u.Auth
+	authn.mu.Lock()
+	authn.principal.Scopes = []string{}
+	authn.mu.Unlock()
+	if _, err := u.exchangeAPIKey(ctx, u.apiKey); err != nil {
+		t.Fatalf("empty scope-set renewal: %v", err)
+	}
+	if !reflect.DeepEqual(u.Meta, beforeMeta) || u.Data != beforeData || u.Auth != beforeAuth {
+		t.Fatal("empty-set renewal wrote public metadata or facades")
+	}
+}
+
+func TestAPIKeyRefreshWaitPreservesHealthyShortLifetime(t *testing.T) {
+	for _, tc := range []struct {
+		remaining time.Duration
+		want      time.Duration
+	}{
+		{time.Hour, 48 * time.Minute},
+		{time.Second, 800 * time.Millisecond},
+		{250 * time.Millisecond, 200 * time.Millisecond},
+		{time.Nanosecond, time.Nanosecond},
+		{0, apiKeyRefreshFloor},
+		{-time.Second, apiKeyRefreshFloor},
+	} {
+		if got := apiKeyRefreshWait(tc.remaining); got != tc.want {
+			t.Errorf("remaining=%v renewal wait=%v, want %v", tc.remaining, got, tc.want)
+		}
+	}
+}
+
+func TestAPIKeyRenewalRejectsChangedCurrentAdoption(t *testing.T) {
+	for _, field := range []string{"project", "scopes"} {
+		t.Run(field, func(t *testing.T) {
+			authn := &sessionIdentityAuthn{principal: sessionTestPrincipal()}
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			u, err := Connect(ctx, Config{
+				Target: serveSessionAuthn(t, authn, nil), Credentials: Credentials{APIKey: "fixture-key"},
+			})
+			if err != nil {
+				t.Fatalf("connect: %v", err)
+			}
+			defer u.Close()
+			authn.mu.Lock()
+			if field == "project" {
+				authn.principal.ProjectId = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"
+			} else {
+				authn.principal.Scopes = []string{"data:read"}
+			}
+			authn.mu.Unlock()
+			if _, err := u.LoginAndAdoptTenant(ctx, &authnv1.LoginRequest{Username: "fixture", Password: "fixture"}); err != nil {
+				t.Fatalf("explicit adoption: %v", err)
+			}
+			beforeMeta, beforeOptions := u.Meta, u.Generated.options()
+			beforeData, beforeAuth := u.Data, u.Auth
+			beforePrincipal, beforeExpiry := u.Principal(), u.BearerExpiresAt()
+			authn.mu.Lock()
+			authn.principal = sessionTestPrincipal()
+			authn.mu.Unlock()
+			if _, err := u.exchangeAPIKey(ctx, u.apiKey); err == nil || !strings.Contains(err.Error(), field) {
+				t.Fatal("renewal must validate the current adoption as well as the pinned identity")
+			}
+			if !reflect.DeepEqual(u.Meta, beforeMeta) || !reflect.DeepEqual(u.Generated.options(), beforeOptions) ||
+				!reflect.DeepEqual(u.Principal(), beforePrincipal) || u.BearerExpiresAt() != beforeExpiry ||
+				u.Data != beforeData || u.Auth != beforeAuth {
+				t.Fatal("rejected current-identity renewal replaced installed state")
+			}
+		})
+	}
+}
+
+func TestAPIKeyConnectRequiresVerifiedPrincipal(t *testing.T) {
+	authn := &sessionIdentityAuthn{omitPrincipal: true}
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if u, err := Connect(ctx, Config{
+		Target: serveSessionAuthn(t, authn, nil), Credentials: Credentials{APIKey: "fixture-key"},
+	}); err == nil {
+		_ = u.Close()
+		t.Fatal("exchange without a verified principal must not return a connected client")
+	} else if !strings.Contains(err.Error(), "verified principal") || strings.Contains(err.Error(), "fixture-key") {
+		t.Fatal("missing-principal error must identify the contract without exposing the key")
 	}
 }

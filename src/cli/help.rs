@@ -535,8 +535,11 @@ const COMMANDS: &[CmdHelp] = &[
         name: "sdk generate",
         group: "SDK & native",
         summary: "Generate/refresh a language SDK from the embedded RPC manifest + templates.",
-        usage: "udb sdk generate --lang <ts|python|go|java|csharp|php|all> [--out <dir>] [--surface <…>]",
+        usage: "udb sdk generate --lang <ts|python|go|java|csharp|php|all> [--out <dir>] [--surface <…>] [--check]",
         details: "\
+  --check renders the requested output and exits 1 if any generated file is
+  missing or stale, without changing the output tree. Use the same selectors,
+  --templates, --project-proto and --go-package as normal generation.
   Sibling verbs: `udb sdk manifest` (dump the RPC surface as JSON),
   `udb sdk list-langs` (available template dirs).",
     },

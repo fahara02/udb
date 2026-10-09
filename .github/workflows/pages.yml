@@ -124,6 +124,7 @@ jobs:
             echo "::error::benchmark recovery commits require an exact benchmark_run_id"
             exit 1
           fi
+          python3 scripts/locate_benchmark_report.py --selftest
           got_fresh=0
           if [ -n "${TRIGGER_RUN_ID:-}" ]; then
             # The uploaded artifact can lag a few seconds behind the triggering
@@ -136,8 +137,9 @@ jobs:
                    --repo "${GITHUB_REPOSITORY}" \
                    --name sdk-benchmark-results \
                    --dir bench-artifact 2>/dev/null \
-                 && [ -s bench-artifact/docs/site/bench-results.json ]; then
-                cp -v bench-artifact/docs/site/bench-results.json docs/site/bench-results.json
+                 && report_path="$(python3 scripts/locate_benchmark_report.py bench-artifact)" \
+                 && [ -s "${report_path}" ]; then
+                cp -v "${report_path}" docs/site/bench-results.json
                 got_fresh=1
                 break
               fi

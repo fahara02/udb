@@ -102,6 +102,7 @@ fn cdc_stream_budget(
 
 struct CdcStreamLifetimeGuard {
     _permit: Option<crate::runtime::channels::ChannelPermit>,
+    metrics: Arc<dyn MetricsRecorder>,
     _metrics: crate::runtime::metrics::ChannelExecutionMetrics,
 }
 
@@ -112,6 +113,7 @@ impl CdcStreamLifetimeGuard {
     ) -> Self {
         Self {
             _permit: permit,
+            metrics: metrics.clone(),
             _metrics: crate::runtime::metrics::ChannelExecutionMetrics::new(metrics, "cdc"),
         }
     }

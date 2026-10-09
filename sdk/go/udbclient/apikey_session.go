@@ -31,6 +31,7 @@ type apiKeySession struct {
 	expiresAt  time.Time
 	refreshErr error
 	principal  *authnv1.Principal
+	identity   *Metadata
 
 	stop     chan struct{}
 	stopOnce sync.Once
@@ -73,15 +74,26 @@ func (u *Udb) exchangeAPIKey(ctx context.Context, s *apiKeySession) (time.Time, 
 	if res.GetAccessToken() == "" || res.GetExpiresAtUnix() == 0 {
 		return time.Time{}, errors.New("udb: exchange API key: the broker returned no bearer (is the key active and bound to a service account grant?)")
 	}
-	u.Generated.SetAuthorization("Bearer " + res.GetAccessToken())
+	principal := res.GetPrincipal()
+	if principal == nil {
+		return time.Time{}, errors.New("udb: exchange API key: the broker returned no verified principal")
+	}
 	exp := time.Unix(res.GetExpiresAtUnix(), 0)
 	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.identity != nil {
+		if err := u.renewPrincipal(principal, res.GetAccessToken(), *s.identity); err != nil {
+			return time.Time{}, fmt.Errorf("udb: exchange API key: %w", err)
+		}
+	} else {
+		u.adoptPrincipal(principal, res.GetAccessToken())
+		identity := u.Meta
+		identity.Scopes = append([]string(nil), identity.Scopes...)
+		s.identity = &identity
+	}
 	s.expiresAt = exp
 	s.refreshErr = nil
-	if res.GetPrincipal() != nil {
-		s.principal = res.GetPrincipal()
-	}
-	s.mu.Unlock()
+	s.principal = principal
 	return exp, nil
 }
 
@@ -91,7 +103,7 @@ func (u *Udb) exchangeAPIKey(ctx context.Context, s *apiKeySession) (time.Time, 
 // exchange succeeds again.
 func (u *Udb) keepAPIKeyBearer(s *apiKeySession, exp time.Time) {
 	for {
-		wait := max(time.Until(exp)*4/5, apiKeyRefreshFloor)
+		wait := apiKeyRefreshWait(time.Until(exp))
 		select {
 		case <-s.stop:
 			return
@@ -113,6 +125,16 @@ func (u *Udb) keepAPIKeyBearer(s *apiKeySession, exp time.Time) {
 			}
 		}
 	}
+}
+
+// A healthy bearer must reach its renewal boundary before expiry even when the
+// absolute Unix expiry leaves less than one second. Floor only an already-due
+// attempt; failed exchanges retain the separate retry cadence above.
+func apiKeyRefreshWait(remaining time.Duration) time.Duration {
+	if remaining <= 0 {
+		return apiKeyRefreshFloor
+	}
+	return remaining - remaining/5
 }
 
 // CredentialErr reports why the background credential refresh is failing, or

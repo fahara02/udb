@@ -39,10 +39,9 @@ type EnterpriseConfig struct {
 // EnterpriseSession bundles the authenticated Udb with the VERIFIED canonical
 // tenant state and the bearer.
 //
-// IMPORTANT: after login the broker connection's interceptor (set at dial time)
-// does NOT pick up the post-login token, so raw u.Data / native calls would be
-// Unauthenticated. Use DataContext / NativeContext (which append the bearer
-// explicitly) for any call you make through the embedded *Udb, and use
+// Login and background refresh update the connection interceptors, so calls
+// through the embedded Udb carry the current bearer. DataContext / NativeContext
+// also resolve it on demand and check the session's poison state. Use
 // CanonicalTenantID — never the human code — in tenant-scoped records/filters.
 type EnterpriseSession struct {
 	*Udb
@@ -167,9 +166,10 @@ func ConnectEnterprise(ctx context.Context, cfg EnterpriseConfig) (*EnterpriseSe
 		bearer:             "Bearer " + adopted.Token.AccessToken,
 		stopRefresh:        make(chan struct{}),
 	}
-	canonicalTenant := principal.GetTenantId()
+	identity := u.Meta
+	identity.Scopes = append([]string(nil), identity.Scopes...)
 	sess.relogin = func(ctx context.Context) (Token, error) {
-		again, err := u.LoginAndAdoptTenant(ctx, &authnv1.LoginRequest{
+		again, err := u.loginAndVerify(ctx, &authnv1.LoginRequest{
 			Username:    cfg.Username,
 			Password:    cfg.Password,
 			TenantHint:  cfg.TenantCode,
@@ -178,8 +178,8 @@ func ConnectEnterprise(ctx context.Context, cfg EnterpriseConfig) (*EnterpriseSe
 		if err != nil {
 			return Token{}, err
 		}
-		if again.Principal == nil || again.Principal.GetTenantId() != canonicalTenant {
-			return Token{}, fmt.Errorf("udb: re-login resolved a different tenant than the session's %s", canonicalTenant)
+		if err := u.validateRenewalPrincipal(again.Principal, identity); err != nil {
+			return Token{}, fmt.Errorf("udb: re-login: %w", err)
 		}
 		return again.Token, nil
 	}
@@ -191,8 +191,8 @@ func ConnectEnterprise(ctx context.Context, cfg EnterpriseConfig) (*EnterpriseSe
 }
 
 // DataContext returns a context for DataBroker calls (s.Data.Broker.*) carrying
-// the verified metadata AND the bearer. Use it for every data-plane call so the
-// post-login token is sent (the dial-time interceptor does not carry it).
+// the verified metadata AND an explicit bearer. The connection interceptor
+// also carries the session's current installed bearer on an ordinary context.
 func (s *EnterpriseSession) DataContext(ctx context.Context) context.Context {
 	if pctx, poisoned := s.poisonedContext(ctx); poisoned {
 		return pctx
@@ -232,8 +232,9 @@ func (s *EnterpriseSession) startRefreshLoop() {
 }
 
 // nextRefreshWait returns how long to sleep before the next refresh attempt: just
-// before (expiry - RefreshSkew), floored so a repeatedly-failing refresh never
-// busy-loops, and a fixed idle cadence when the token carries no expiry.
+// before (expiry - RefreshSkew). Only an already-due attempt is floored so failed
+// refreshes never busy-loop; a healthy short-lived token keeps its actual
+// boundary. Tokens without expiry use a fixed idle cadence.
 func (s *EnterpriseSession) nextRefreshWait() time.Duration {
 	tok, err := s.tm.store.Load(context.Background())
 	if err != nil {
@@ -242,8 +243,8 @@ func (s *EnterpriseSession) nextRefreshWait() time.Duration {
 	if tok.ExpiresAt.IsZero() {
 		return bgRefreshIdle
 	}
-	d := tok.ExpiresAt.Add(-s.tm.RefreshSkew).Sub(s.tm.now())
-	if d < bgRefreshMin {
+	d := tok.ExpiresAt.Add(-tok.refreshSkew(s.tm.RefreshSkew)).Sub(s.tm.now())
+	if d <= 0 {
 		return bgRefreshMin
 	}
 	return d
@@ -258,15 +259,15 @@ func (s *EnterpriseSession) backgroundRefresh() {
 	ctx, cancel := context.WithTimeout(context.Background(), bgRefreshTimeout)
 	defer cancel()
 	refErr := s.tm.RefreshIfNeeded(ctx)
-	tok, loadErr := s.tm.store.Load(context.Background())
-	now := s.tm.now()
 
 	// The refresh token itself is unusable (revoked, expired, session gone):
 	// log in again instead of holding a bearer that can no longer be renewed.
 	if refErr != nil && s.relogin != nil {
 		if fresh, err := s.relogin(ctx); err == nil {
 			if err := s.tm.store.Save(ctx, fresh); err == nil {
-				tok, loadErr, refErr = fresh, nil, nil
+				refErr = nil
+			} else {
+				refErr = err
 			}
 		} else {
 			refErr = fmt.Errorf("%w (re-login also failed: %v)", refErr, err)
@@ -275,6 +276,10 @@ func (s *EnterpriseSession) backgroundRefresh() {
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	// Reload after acquiring the publication lock. A caller may have refreshed
+	// and installed a newer stored credential while this attempt was delayed.
+	tok, loadErr := s.tm.store.Load(ctx)
+	now := s.tm.now()
 	if refErr == nil && loadErr == nil && tok.AccessToken != "" {
 		s.setBearerLocked("Bearer " + tok.AccessToken)
 		s.lastRefreshErr = nil
@@ -350,17 +355,21 @@ func (s *EnterpriseSession) currentBearer(ctx context.Context) string {
 		defer s.mu.Unlock()
 		return s.bearer
 	}
-	tok, err := s.tm.Token(ctx)
-	if err != nil || tok.AccessToken == "" {
+	_, err := s.tm.Token(ctx)
+	if err != nil {
 		s.mu.Lock()
 		defer s.mu.Unlock()
 		return s.bearer
 	}
-	bearer := "Bearer " + tok.AccessToken
 	s.mu.Lock()
-	s.setBearerLocked(bearer)
-	s.mu.Unlock()
-	return bearer
+	defer s.mu.Unlock()
+	// Resolving/refreshing above may block; never publish its earlier snapshot
+	// after another caller has already installed the current stored token.
+	tok, err := s.tm.store.Load(ctx)
+	if err == nil && tok.AccessToken != "" {
+		s.setBearerLocked("Bearer " + tok.AccessToken)
+	}
+	return s.bearer
 }
 
 // setBearerLocked caches the refreshed bearer AND propagates it to the embedded

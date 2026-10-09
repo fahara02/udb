@@ -97,6 +97,10 @@ func TestLiveGeneratedRPCSurface(t *testing.T) {
 	if actorID == "" || actorID != login.GetUserId() || authResp.GetPrincipal().GetTenantId() == "" {
 		t.Fatal("ordinary live fixture must return the verified login user and canonical tenant")
 	}
+	meta.UserID = actorID
+	if verifiedProject := authResp.GetPrincipal().GetProjectId(); verifiedProject != "" {
+		project, meta.ProjectID = verifiedProject, verifiedProject
+	}
 	if refreshed, err := auth.Authn.RefreshToken(auth.Context(ctx), &authnv1.RefreshTokenRequest{RefreshToken: login.GetRefreshToken()}); err != nil {
 		t.Fatalf("RefreshToken failed: %v", err)
 	} else if refreshed.GetAccessToken() == "" {
@@ -205,6 +209,15 @@ type liveMethodCredentialConn struct {
 func (c *liveMethodCredentialConn) methodContext(ctx context.Context, method string) context.Context {
 	for _, rpc := range AllRPCs {
 		if rpc.FullMethod == method && requiresPlatformBenchmarkIdentity(rpc) {
+			// outgoingContext deliberately preserves caller headers. Remove the
+			// ordinary identity only for this explicit global-method allowlist;
+			// preserve correlation, purpose and other request audit metadata.
+			md, _ := metadata.FromOutgoingContext(ctx)
+			md = md.Copy()
+			for _, key := range []string{"authorization", "x-api-key", "x-tenant-id", "x-user-id", "x-service-identity", "x-udb-project-id", "x-scopes"} {
+				md.Delete(key)
+			}
+			ctx = metadata.NewOutgoingContext(ctx, md)
 			return c.platform.outgoingContext(ctx)
 		}
 	}
@@ -238,6 +251,10 @@ func livePlatformFixture(t *testing.T, ctx context.Context, conn grpc.ClientConn
 	}
 	for _, role := range who.GetPrincipal().GetRoles() {
 		if strings.EqualFold(strings.TrimSpace(role), "platform_admin") {
+			meta.UserID = who.GetPrincipal().GetUserId()
+			meta.ProjectID = who.GetPrincipal().GetProjectId()
+			meta.ServiceIdentity = who.GetPrincipal().GetServiceIdentity()
+			meta.Scopes = append([]string(nil), who.GetPrincipal().GetScopes()...)
 			return NewGenerated(conn, liveGeneratedOptions(meta, "Bearer "+login.GetAccessToken()))
 		}
 	}
@@ -259,9 +276,12 @@ func (c *liveCredentialProbeConn) NewStream(ctx context.Context, _ *grpc.StreamD
 
 func TestLiveMethodCredentialRoutingRetainsTenantAuthority(t *testing.T) {
 	base := &liveCredentialProbeConn{}
-	meta := Metadata{TenantID: "fixture-tenant", ProjectID: "fixture-project"}
+	meta := Metadata{TenantID: "fixture-tenant", ProjectID: "fixture-project", UserID: "ordinary-user", Scopes: []string{"ordinary-scope"}, Purpose: "fixture-audit"}
 	ordinary := NewGenerated(base, liveGeneratedOptions(meta, "Bearer ordinary-fixture"))
-	conn := &liveMethodCredentialConn{base: base, platform: NewGenerated(base, liveGeneratedOptions(meta, "Bearer platform-fixture"))}
+	platformMeta := meta
+	platformMeta.UserID = "platform-user"
+	platformMeta.Scopes = []string{"platform-scope"}
+	conn := &liveMethodCredentialConn{base: base, platform: NewGenerated(base, liveGeneratedOptions(platformMeta, "Bearer platform-fixture"))}
 	for _, tc := range []struct{ method, bearer string }{
 		{"/udb.core.authz.services.v1.AuthzService/CreatePolicyDraft", "Bearer platform-fixture"},
 		{"/udb.core.analytics.services.v1.AnalyticsService/GetExecutorPerformance", "Bearer platform-fixture"},
@@ -276,14 +296,27 @@ func TestLiveMethodCredentialRoutingRetainsTenantAuthority(t *testing.T) {
 		}
 		md, _ := metadata.FromOutgoingContext(base.ctx)
 		if got := md.Get("authorization"); len(got) != 1 || got[0] != tc.bearer {
-			t.Fatalf("%s routed unexpected authority: %v", tc.method, got)
+			t.Fatalf("%s routed unexpected credential authority", tc.method)
+		}
+		wantUser, wantScope := "ordinary-user", "ordinary-scope"
+		if tc.bearer == "Bearer platform-fixture" {
+			wantUser, wantScope = "platform-user", "platform-scope"
+		}
+		if got := md.Get("x-user-id"); len(got) != 1 || got[0] != wantUser {
+			t.Fatalf("%s must carry the selected fixture identity", tc.method)
+		}
+		if got := md.Get("x-scopes"); len(got) != 1 || got[0] != wantScope {
+			t.Fatalf("%s must carry the selected fixture scopes", tc.method)
+		}
+		if got := md.Get("x-purpose"); len(got) != 1 || got[0] != "fixture-audit" {
+			t.Fatalf("%s must preserve request audit purpose", tc.method)
 		}
 		if _, err := conn.NewStream(ctx, &grpc.StreamDesc{}, tc.method); err != nil {
 			t.Fatal(err)
 		}
 		md, _ = metadata.FromOutgoingContext(base.ctx)
 		if got := md.Get("authorization"); len(got) != 1 || got[0] != tc.bearer {
-			t.Fatalf("%s streamed with unexpected authority: %v", tc.method, got)
+			t.Fatalf("%s streamed with unexpected credential authority", tc.method)
 		}
 	}
 }
