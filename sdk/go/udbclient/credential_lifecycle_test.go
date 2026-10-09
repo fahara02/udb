@@ -218,7 +218,7 @@ func lifecycleBusinessCalls(u *Udb) []struct {
 	}
 	for _, channel := range []struct {
 		name string
-		conn *grpc.ClientConn
+		conn grpc.ClientConnInterface
 	}{{"broker", u.brokerConn}, {"native", u.authConn}, {"media", u.webrtcConn}} {
 		for _, desc := range []grpc.StreamDesc{{StreamName: "Server", ServerStreams: true}, {StreamName: "Client", ClientStreams: true}, {StreamName: "Bidi", ClientStreams: true, ServerStreams: true}} {
 			channel, desc := channel, desc

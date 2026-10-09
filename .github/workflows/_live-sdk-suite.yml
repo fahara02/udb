@@ -300,7 +300,7 @@ jobs:
           PY
           sudo dockerd --validate --config-file /etc/docker/daemon.json
           sudo systemctl kill --kill-who=main --signal=HUP docker.service
-          for attempt in {1..30}; do
+          for _ in {1..30}; do
             docker info --format '{{json .RegistryConfig.Mirrors}}' > bench-output/backend-images/active-mirrors.json
             if python3 -c 'import json; from pathlib import Path; assert "https://mirror.gcr.io" in [item.rstrip("/") for item in json.loads(Path("bench-output/backend-images/active-mirrors.json").read_text())]'; then
               break
