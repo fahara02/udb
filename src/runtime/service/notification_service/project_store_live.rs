@@ -146,6 +146,125 @@ async fn activate_project_catalogs(service: &DataBrokerService) {
     }
 }
 
+async fn assert_native_transaction_refusals_over_transport(
+    client: &mut NotificationServiceClient<tonic::transport::Channel>,
+    dsn: &str,
+) {
+    const OUTBOX: &str = "udb_system.outbox_events";
+    const OUTBOX_GATE: &str = "udb_system.notification_native_outbox_gate";
+    let pool = PgPoolOptions::new()
+        .max_connections(2)
+        .acquire_timeout(Duration::from_secs(10))
+        .connect(dsn)
+        .await
+        .expect("inspect real native transaction rollback");
+    let log = log_model();
+    let log_count_sql = format!("SELECT COUNT(*) FROM {}", log.relation);
+    let outbox_count_sql = format!("SELECT COUNT(*) FROM {OUTBOX}");
+    let before_logs: i64 = sqlx::query_scalar(&log_count_sql)
+        .fetch_one(&pool)
+        .await
+        .expect("native transaction baseline logs");
+    let before_events: i64 = sqlx::query_scalar(&outbox_count_sql)
+        .fetch_one(&pool)
+        .await
+        .expect("native transaction baseline outbox");
+
+    for (constraint, deferred, outbox_gate) in [
+        ("notification_native_immediate_unique", "", false),
+        (
+            "notification_native_deferred_unique",
+            "DEFERRABLE INITIALLY DEFERRED",
+            false,
+        ),
+        ("notification_native_outbox_unique", "", true),
+    ] {
+        let quoted_constraint = quote_ident(constraint);
+        let (install, remove) = if outbox_gate {
+            (
+                format!(
+                    "CREATE FUNCTION {OUTBOX_GATE}() RETURNS trigger LANGUAGE plpgsql AS $$ \
+                     BEGIN RAISE EXCEPTION USING ERRCODE = '23505', \
+                     CONSTRAINT = '{constraint}'; END; $$; \
+                     CREATE TRIGGER {quoted_constraint} BEFORE INSERT ON {OUTBOX} \
+                     FOR EACH ROW EXECUTE FUNCTION {OUTBOX_GATE}()"
+                ),
+                format!(
+                    "DROP TRIGGER {quoted_constraint} ON {OUTBOX}; \
+                     DROP FUNCTION {OUTBOX_GATE}()"
+                ),
+            )
+        } else {
+            (
+                format!(
+                    "ALTER TABLE {} ADD CONSTRAINT {quoted_constraint} \
+                     UNIQUE ({}, {}, {}) {deferred}",
+                    log.relation,
+                    log.q("project_id"),
+                    log.q("event_type"),
+                    log.q("recipient_address"),
+                ),
+                format!(
+                    "ALTER TABLE {} DROP CONSTRAINT {quoted_constraint}",
+                    log.relation
+                ),
+            )
+        };
+        sqlx::raw_sql(&install)
+            .execute(&pool)
+            .await
+            .expect("install actual native SQL refusal gate");
+        let mut request = scoped_request(
+            notification_pb::SendNotificationRequest {
+                event_type: EVENT_TYPE.to_string(),
+                recipient_address: format!("{PROJECT_A}@example.test"),
+                tenant_id: TENANT.to_string(),
+                project_id: PROJECT_A.to_string(),
+                channels: vec![entity_pb::NotificationChannel::Email as i32],
+                ..Default::default()
+            },
+            PROJECT_A,
+        );
+        request.set_timeout(Duration::from_secs(10));
+        let status = client
+            .send_notification(request)
+            .await
+            .expect_err("real native SQL refusal must reach the gRPC caller");
+        assert_eq!(status.code(), tonic::Code::AlreadyExists, "{constraint}");
+        let detail = <crate::proto::ErrorDetail as prost::Message>::decode(status.details())
+            .expect("native transaction refusal has a wire ErrorDetail");
+        assert_eq!(detail.kind, crate::proto::ErrorKind::Unique as i32);
+        assert_eq!(
+            detail.reason,
+            crate::runtime::error_reasons::UNIQUE_VIOLATION
+        );
+        assert_eq!(detail.constraint, constraint);
+        assert!(!detail.fix_hint.is_empty());
+
+        let after_logs: i64 = sqlx::query_scalar(&log_count_sql)
+            .fetch_one(&pool)
+            .await
+            .expect("read native transaction log rollback");
+        let after_events: i64 = sqlx::query_scalar(&outbox_count_sql)
+            .fetch_one(&pool)
+            .await
+            .expect("read native transaction outbox rollback");
+        assert_eq!(
+            after_logs, before_logs,
+            "{constraint}: no partial log write"
+        );
+        assert_eq!(
+            after_events, before_events,
+            "{constraint}: no partial outbox write"
+        );
+        sqlx::raw_sql(&remove)
+            .execute(&pool)
+            .await
+            .expect("remove actual native SQL refusal gate");
+    }
+    pool.close().await;
+}
+
 #[tokio::test]
 #[ignore = "requires live PostgreSQL with CREATE DATABASE privilege"]
 async fn served_notification_pins_all_paths_to_each_project_instance() {
@@ -435,6 +554,7 @@ async fn served_notification_pins_all_paths_to_each_project_instance() {
         log_ids.insert(project_id, log_id);
     }
 
+    assert_native_transaction_refusals_over_transport(&mut client, &dsn_a).await;
     drop(client);
     let _ = shutdown_tx.send(());
     server.await.expect("join Notification live server");

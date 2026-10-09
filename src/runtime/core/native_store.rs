@@ -778,9 +778,9 @@ impl DataBrokerRuntime {
             .pg_pool_for_instance(target.instance.as_deref())?
             .clone();
         let mut tx = pool.begin().await.map_err(|err| {
-            native_store_internal_status(
+            crate::runtime::executor_utils::sqlx_error_to_status(
                 "native_entity_transaction_start",
-                format!("native entity transaction start failed: {err}"),
+                &err,
             )
         })?;
         crate::runtime::core::set_request_local_settings(&mut tx, context).await?;
@@ -800,9 +800,9 @@ impl DataBrokerRuntime {
                     )
                     .await
                     .map_err(|err| {
-                        native_store_internal_status(
+                        crate::runtime::executor_utils::sqlx_error_to_status(
                             "native_entity_transaction_outbox",
-                            format!("native entity transaction outbox insert failed: {err}"),
+                            &err,
                         )
                     })?;
                     results.push(NativeEntityTransactionStepResult {
@@ -847,9 +847,9 @@ impl DataBrokerRuntime {
                 .fetch_all(&mut *tx)
                 .await
                 .map_err(|err| {
-                    native_store_internal_status(
+                    crate::runtime::executor_utils::sqlx_error_to_status(
                         "native_entity_transaction_mutation",
-                        format!("native entity transaction mutation failed: {err}"),
+                        &err,
                     )
                 })?;
                 let rows = crate::runtime::core::pg_rows_to_json(rows)?;
@@ -866,9 +866,9 @@ impl DataBrokerRuntime {
                 .execute(&mut *tx)
                 .await
                 .map_err(|err| {
-                    native_store_internal_status(
+                    crate::runtime::executor_utils::sqlx_error_to_status(
                         "native_entity_transaction_mutation",
-                        format!("native entity transaction mutation failed: {err}"),
+                        &err,
                     )
                 })?;
                 results.push(NativeEntityTransactionStepResult {
@@ -879,9 +879,9 @@ impl DataBrokerRuntime {
         }
 
         tx.commit().await.map_err(|err| {
-            native_store_internal_status(
+            crate::runtime::executor_utils::sqlx_error_to_status(
                 "native_entity_transaction_commit",
-                format!("native entity transaction commit failed: {err}"),
+                &err,
             )
         })?;
         Ok(results)
@@ -1291,16 +1291,6 @@ mod tests {
             &status,
             "native_entity_rows_decode",
             "native entity JSON decode failed: expected value",
-        );
-
-        let status = native_store_internal_status(
-            "native_entity_transaction_commit",
-            "native entity transaction commit failed: closed",
-        );
-        assert_internal_detail(
-            &status,
-            "native_entity_transaction_commit",
-            "native entity transaction commit failed: closed",
         );
     }
 

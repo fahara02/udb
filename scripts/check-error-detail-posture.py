@@ -4391,6 +4391,32 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
         ),
     ),
     TokenCheck(
+        "native transaction database refusals keep SQLSTATE diagnostics",
+        "src/runtime/core/native_store.rs",
+        (
+            'sqlx_error_to_status("native_entity_transaction_start", &err)',
+            'sqlx_error_to_status("native_entity_transaction_mutation", &err)',
+            'sqlx_error_to_status("native_entity_transaction_outbox", &err)',
+            'sqlx_error_to_status("native_entity_transaction_commit", &err)',
+        ),
+    ),
+    TokenCheck(
+        "native transaction refusal and rollback proof uses real notification transport",
+        "src/runtime/service/notification_service/project_store_live.rs",
+        (
+            "assert_native_transaction_refusals_over_transport(&mut client, &dsn_a).await;",
+            "client\n            .send_notification(request)",
+            "notification_native_immediate_unique",
+            "notification_native_deferred_unique",
+            "DEFERRABLE INITIALLY DEFERRED",
+            "notification_native_outbox_unique",
+            "crate::runtime::error_reasons::UNIQUE_VIOLATION",
+            "assert_eq!(detail.constraint, constraint);",
+            "assert_eq!(after_logs, before_logs",
+            "after_events, before_events",
+        ),
+    ),
+    TokenCheck(
         "core native store internals use typed internal detail",
         "src/runtime/core/native_store.rs",
         (
@@ -10114,6 +10140,23 @@ def authz_revision_refusal_suppression_hits(root: Path) -> list[str]:
     return hits
 
 
+def native_transaction_refusal_reclassification_hits(root: Path) -> list[str]:
+    path = root / CORE_NATIVE_STORE_INTERNAL_STATUS_PATH
+    text = "\n".join(
+        "" if line.lstrip().startswith("//") else line
+        for line in read(path).splitlines()
+    )
+    calls = re.compile(
+        r'native_store_internal_status\(\s*"native_entity_transaction_'
+        r'(start|mutation|outbox|commit)"\s*,'
+    )
+    return [
+        f"{path.relative_to(root).as_posix()}:{text.count(chr(10), 0, match.start()) + 1}: "
+        "native transaction database refusal must preserve SQLSTATE diagnostics"
+        for match in calls.finditer(text)
+    ]
+
+
 def check_root(root: Path) -> list[str]:
     global _READ_CACHE
     previous_read_cache = _READ_CACHE
@@ -10156,6 +10199,7 @@ def _check_root_cached(root: Path) -> list[str]:
 
     failures.extend(authz_revision_refusal_suppression_hits(root))
     failures.extend(native_auth_refusal_reclassification_hits(root))
+    failures.extend(native_transaction_refusal_reclassification_hits(root))
 
     api_rules = read(root / "docs/api-rules.md")
     if "### Stable String Reason Registry" not in api_rules:
@@ -11763,6 +11807,22 @@ def run_selftest() -> None:
         )
         failures = check_root(root)
         assert not any("core native store" in failure and "Internal" in failure for failure in failures), failures
+
+        for operation in ("start", "mutation", "outbox", "commit"):
+            write_fixture(root)
+            path = root / CORE_NATIVE_STORE_INTERNAL_STATUS_PATH
+            path.write_text(
+                read(path)
+                + '\nfn bad() { native_store_internal_status("native_entity_transaction_'
+                + operation
+                + '", "reclassified SQL refusal"); }\n',
+                encoding="utf-8",
+            )
+            failures = check_root(root)
+            assert any(
+                "native transaction database refusal must preserve SQLSTATE diagnostics" in failure
+                for failure in failures
+            ), failures
 
         write_fixture(root)
         system_catalog_internal = root / SYSTEM_CATALOG_INTERNAL_STATUS_PATH

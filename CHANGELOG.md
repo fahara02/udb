@@ -49,6 +49,9 @@ no-wrapper plan.
 
 ### Fixed
 
+- Native typed transactions retain SQLSTATE refusals from mutation, outbox and
+  deferred commit failures; refused transactions roll back entity and event rows.
+
 - Blocked column-removal hints distinguish data-preserving renames from protobuf
   field reservations. Reserving a removed field number does not retain SQL data.
 
