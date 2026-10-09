@@ -194,7 +194,15 @@ cat > "$JAVA_DIR/pom.xml" <<EOF
 </project>
 EOF
 # Recheck missing releases so a transient registry miss is not retained.
-( cd "$JAVA_DIR" && mvn -U -B -ntp compile )
+(
+  cd "$JAVA_DIR"
+  if [[ "${CI:-}" == "true" ]]; then
+    # Resolve plugin downloads through the shared bounded CI setup retry. The
+    # compile itself runs once after dependencies have been fetched.
+    bash "$REPO/scripts/ci-retry.sh" -- mvn -U -B -ntp dependency:resolve-plugins
+  fi
+  mvn -U -B -ntp compile
+)
 echo "    Java scaffold example built OK"
 
 # ── PHP: resolve the local package, lint the example, prove referenced classes ─
