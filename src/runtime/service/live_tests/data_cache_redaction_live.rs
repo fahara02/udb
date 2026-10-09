@@ -162,7 +162,7 @@ async fn served_cached_select_preserves_redacted_fields_live() {
         .expect("typed denial trailer")
         .to_bytes()
         .expect("binary denial detail");
-    let detail = decode_error_detail_from_raw(&raw).expect("decode served denial");
+    let detail = decode_error_detail_from_raw(&raw);
     assert_eq!(detail.kind, crate::proto::ErrorKind::Permission as i32);
     assert_eq!(detail.column, "private_data");
     assert_eq!(
