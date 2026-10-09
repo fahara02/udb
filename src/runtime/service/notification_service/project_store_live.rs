@@ -152,6 +152,8 @@ async fn assert_native_transaction_refusals_over_transport(
 ) {
     const OUTBOX: &str = "udb_system.outbox_events";
     const OUTBOX_GATE: &str = "udb_system.notification_native_outbox_gate";
+    const UNIQUE_FIXTURE: &str = "udb_system.notification_native_unique_refusal";
+    const UNIQUE_GATE: &str = "udb_system.notification_native_log_unique_gate";
     let pool = PgPoolOptions::new()
         .max_connections(2)
         .acquire_timeout(Duration::from_secs(10))
@@ -195,17 +197,24 @@ async fn assert_native_transaction_refusals_over_transport(
                 ),
             )
         } else {
+            // The log is partitioned, so a parent UNIQUE without every partition
+            // key is invalid PostgreSQL DDL. Enforce the real UNIQUE on a fixture
+            // relation and reach it from the actual log INSERT in this same native
+            // transaction. The deferred case fails at COMMIT after the outbox write.
             (
                 format!(
-                    "ALTER TABLE {} ADD CONSTRAINT {quoted_constraint} \
-                     UNIQUE ({}, {}, {}) {deferred}",
+                    "CREATE TABLE {UNIQUE_FIXTURE} (refusal_key INTEGER NOT NULL, \
+                     CONSTRAINT {quoted_constraint} UNIQUE (refusal_key) {deferred}); \
+                     INSERT INTO {UNIQUE_FIXTURE} (refusal_key) VALUES (1); \
+                     CREATE FUNCTION {UNIQUE_GATE}() RETURNS trigger LANGUAGE plpgsql AS $$ \
+                     BEGIN INSERT INTO {UNIQUE_FIXTURE} (refusal_key) VALUES (1); RETURN NEW; END; $$; \
+                     CREATE TRIGGER {quoted_constraint} BEFORE INSERT ON {} \
+                     FOR EACH ROW EXECUTE FUNCTION {UNIQUE_GATE}()",
                     log.relation,
-                    log.q("project_id"),
-                    log.q("event_type"),
-                    log.q("recipient_address"),
                 ),
                 format!(
-                    "ALTER TABLE {} DROP CONSTRAINT {quoted_constraint}",
+                    "DROP TRIGGER {quoted_constraint} ON {}; \
+                     DROP FUNCTION {UNIQUE_GATE}(); DROP TABLE {UNIQUE_FIXTURE}",
                     log.relation
                 ),
             )
@@ -257,6 +266,17 @@ async fn assert_native_transaction_refusals_over_transport(
             after_events, before_events,
             "{constraint}: no partial outbox write"
         );
+        if !outbox_gate {
+            let fixture_rows: i64 =
+                sqlx::query_scalar(&format!("SELECT COUNT(*) FROM {UNIQUE_FIXTURE}",))
+                    .fetch_one(&pool)
+                    .await
+                    .expect("read actual UNIQUE fixture rollback");
+            assert_eq!(
+                fixture_rows, 1,
+                "{constraint}: no partial UNIQUE fixture write"
+            );
+        }
         sqlx::raw_sql(&remove)
             .execute(&pool)
             .await
