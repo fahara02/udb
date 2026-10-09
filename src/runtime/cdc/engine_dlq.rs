@@ -314,9 +314,9 @@ impl CdcEngine {
     /// an explicit unavailable sentinel so publishers retain pending rows and
     /// subscribers terminate instead of enforcing an indefinitely stale allow.
     pub async fn run_topic_policy_reload_loop(&self) {
-        let mut tick = tokio::time::interval(std::time::Duration::from_millis(
-            self.config.topic_policy_reload_interval_ms.max(1),
-        ));
+        let mut tick = crate::runtime::singleton::periodic_worker_interval(
+            std::time::Duration::from_millis(self.config.topic_policy_reload_interval_ms.max(1)),
+        );
         // The startup path already loaded generation 1; do not immediately issue
         // a duplicate query before the configured interval elapses.
         tick.tick().await;

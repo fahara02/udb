@@ -1252,15 +1252,15 @@ impl DataBrokerService {
             }
         };
 
-        self.metrics.inc_channel_inflight(op.as_str());
-        let start = Instant::now();
+        let execution_metrics = crate::runtime::metrics::ChannelExecutionMetrics::new(
+            self.metrics.clone(),
+            op.as_str(),
+        );
 
         let timeout_secs = channels.deadline_secs(op, backend);
         let res = tokio::time::timeout(Duration::from_secs(timeout_secs), f()).await;
 
-        self.metrics.dec_channel_inflight(op.as_str());
-        self.metrics
-            .observe_channel_latency(op.as_str(), start.elapsed().as_secs_f64());
+        drop(execution_metrics);
 
         match res {
             Ok(Ok(val)) => Ok(val),

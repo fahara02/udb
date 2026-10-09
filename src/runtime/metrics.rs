@@ -15,6 +15,38 @@
 
 // ── Trait ─────────────────────────────────────────────────────────────────────
 
+/// Own channel execution accounting until completion, refusal or cancellation.
+/// Admission queue time remains outside this lifetime, matching the existing
+/// channel histogram boundary. Drop records every admitted execution exactly
+/// once, including an outer deadline dropping the request future.
+pub(crate) struct ChannelExecutionMetrics {
+    recorder: std::sync::Arc<dyn MetricsRecorder>,
+    channel: &'static str,
+    started: std::time::Instant,
+}
+
+impl ChannelExecutionMetrics {
+    pub(crate) fn new(
+        recorder: std::sync::Arc<dyn MetricsRecorder>,
+        channel: &'static str,
+    ) -> Self {
+        recorder.inc_channel_inflight(channel);
+        Self {
+            recorder,
+            channel,
+            started: std::time::Instant::now(),
+        }
+    }
+}
+
+impl Drop for ChannelExecutionMetrics {
+    fn drop(&mut self) {
+        self.recorder.dec_channel_inflight(self.channel);
+        self.recorder
+            .observe_channel_latency(self.channel, self.started.elapsed().as_secs_f64());
+    }
+}
+
 /// Interface for emitting migration engine metrics.
 ///
 /// Implement this trait and supply it via `MigrationOptions::metrics` to wire

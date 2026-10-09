@@ -9,6 +9,124 @@ use serde_json::json;
 use std::sync::Arc;
 use tonic::Status;
 
+fn assert_read_execution_metrics(metrics: &PrometheusMetrics, inflight: i64, executions: u64) {
+    let text = metrics.gather_text("");
+    assert!(
+        text.lines()
+            .any(|line| { line == format!("udb_channel_inflight{{channel=\"read\"}} {inflight}") })
+    );
+    if executions > 0 {
+        assert!(text.lines().any(|line| {
+            line == format!("udb_channel_latency_seconds_count{{channel=\"read\"}} {executions}")
+        }));
+    }
+}
+
+#[tokio::test]
+async fn channel_execution_metrics_balance_cancellation_and_success() {
+    let metrics = Arc::new(PrometheusMetrics::new().expect("build independent channel metrics"));
+    let service = Arc::new(DataBrokerService::with_runtime_and_state(
+        CatalogManifest::default(),
+        DataBrokerRuntime::planning_only(),
+        Arc::new(RwLock::new(FsmState::Completed)),
+        metrics.clone(),
+        None,
+        false,
+    ));
+    let (entered_tx, entered_rx) = tokio::sync::oneshot::channel();
+    let serving = service.clone();
+    let pending = tokio::spawn(async move {
+        serving
+            .execute_with_channel(crate::runtime::channels::OperationChannel::Read, || async {
+                entered_tx.send(()).expect("signal admitted read execution");
+                std::future::pending::<Result<(), Status>>().await
+            })
+            .await
+    });
+    tokio::time::timeout(Duration::from_secs(5), entered_rx)
+        .await
+        .expect("read must be admitted")
+        .expect("receive execution boundary");
+    assert_read_execution_metrics(metrics.as_ref(), 1, 0);
+    pending.abort();
+    assert!(
+        pending
+            .await
+            .expect_err("read was cancelled")
+            .is_cancelled()
+    );
+    assert_read_execution_metrics(metrics.as_ref(), 0, 1);
+    let value = service
+        .execute_with_channel(crate::runtime::channels::OperationChannel::Read, || async {
+            Ok(7_u32)
+        })
+        .await
+        .expect("next admitted read succeeds");
+    assert_eq!(value, 7);
+    assert_read_execution_metrics(metrics.as_ref(), 0, 2);
+    let error = service
+        .execute_with_channel(crate::runtime::channels::OperationChannel::Read, || async {
+            Err::<(), _>(crate::runtime::executor_utils::invalid_argument_fields(
+                "injected read refusal",
+                [("filter", "injected read refusal")],
+            ))
+        })
+        .await
+        .expect_err("admitted refusal is returned");
+    assert_eq!(error.code(), tonic::Code::InvalidArgument);
+    assert_read_execution_metrics(metrics.as_ref(), 0, 3);
+}
+
+#[tokio::test]
+async fn stream_batch_execution_metrics_balance_cancellation_and_success() {
+    let metrics = Arc::new(PrometheusMetrics::new().expect("build independent batch metrics"));
+    let recorder: Arc<dyn MetricsRecorder> = metrics.clone();
+    let runtime = DataBrokerRuntime::planning_only();
+    let channels = runtime.channels().clone();
+    let (entered_tx, entered_rx) = tokio::sync::oneshot::channel();
+    let pending_channels = channels.clone();
+    let pending_recorder = recorder.clone();
+    let pending = tokio::spawn(async move {
+        native_helpers::execute_stream_batch_item(
+            &pending_channels,
+            &pending_recorder,
+            &crate::RequestContext::default(),
+            crate::runtime::channels::OperationChannel::Read,
+            "postgres",
+            async {
+                entered_tx.send(()).expect("signal admitted batch item");
+                std::future::pending::<Result<(), Status>>().await
+            },
+        )
+        .await
+    });
+    tokio::time::timeout(Duration::from_secs(5), entered_rx)
+        .await
+        .expect("batch item must be admitted")
+        .expect("receive batch execution boundary");
+    assert_read_execution_metrics(metrics.as_ref(), 1, 0);
+    pending.abort();
+    assert!(
+        pending
+            .await
+            .expect_err("batch item was cancelled")
+            .is_cancelled()
+    );
+    assert_read_execution_metrics(metrics.as_ref(), 0, 1);
+    let value = native_helpers::execute_stream_batch_item(
+        &channels,
+        &recorder,
+        &crate::RequestContext::default(),
+        crate::runtime::channels::OperationChannel::Read,
+        "postgres",
+        async { Ok(7_u32) },
+    )
+    .await
+    .expect("next batch item succeeds");
+    assert_eq!(value, 7);
+    assert_read_execution_metrics(metrics.as_ref(), 0, 2);
+}
+
 fn install_test_security() {
     crate::runtime::security::SecurityConfig::install_global(
         crate::runtime::security::SecurityConfig {

@@ -23,6 +23,59 @@ class SourceCheck:
 
 CHECKS: tuple[SourceCheck, ...] = (
     SourceCheck(
+        "candidate Go live correctness is separate and fail-closed",
+        ".github/workflows/_live-sdk-suite.yml",
+        (
+            "Run every Go live correctness test",
+            "if: always() && inputs.candidate-build",
+            "go test ./... -p 1 -run '^TestLive' -skip '^TestLivePerf$' -count=1 -v -timeout 15m",
+            'test "${UDB_LIVE_SDK_TESTS:-}" = "1"',
+            'if [ "${1:-}" = "go-correctness" ]; then',
+            '--username "${UDB_LIVE_PEER_USERNAME}" --password "${UDB_LIVE_PEER_PASSWORD}" --tenant "${UDB_LIVE_PEER_TENANT}"',
+            "bash bench-output/reset.sh go-correctness",
+            'UDB_LIVE_TENANT="${UDB_LIVE_PEER_TENANT}" python scripts/bootstrap_benchmark_project_catalog.py',
+            "bench-output/logs/go-correctness-reset.log",
+            "bench-output/logs/go-correctness.log",
+            "Missing live correctness fixture %s",
+        ),
+    ),
+    SourceCheck(
+        "Go live correctness preserves method-specific authority",
+        "sdk/go/udbclient/live_conformance_test.go",
+        (
+            "type liveMethodCredentialConn struct",
+            "rpc.FullMethod == method && requiresPlatformBenchmarkIdentity(rpc)",
+            "return c.platform.outgoingContext(ctx)",
+            "return ctx",
+            'requiredLiveEnv(t, "UDB_LIVE_PLATFORM_USERNAME")',
+            'requiredLiveEnv(t, "UDB_LIVE_PLATFORM_PASSWORD")',
+            "platform bearer validation failed",
+            'strings.EqualFold(strings.TrimSpace(role), "platform_admin")',
+            "TestLiveMethodCredentialRoutingRetainsTenantAuthority",
+            '"/udb.core.authz.services.v1.AuthzService/CreateRole", "Bearer ordinary-fixture"',
+            '"/udb.core.tenant.services.v1.TenantService/CreateTenant", "Bearer ordinary-fixture"',
+        ),
+    ),
+    SourceCheck(
+        "Go native fixtures use real actors and durable API-key grants",
+        "sdk/go/udbclient/live_native_services_test.go",
+        (
+            "CreatedBy:   actorID",
+            "AssignedBy: actorID",
+            "RevokedBy: actorID",
+            "DeletePolicyRule (decision policy cleanup)",
+            "PolicyId: policyID, DeletedBy: actorID",
+            "AccountKind: authnentpb.AccountKind_ACCOUNT_KIND_SERVICE_ACCOUNT",
+            "NewStatus: authnentpb.UserStatus_USER_STATUS_ACTIVE",
+            "CreateServiceAccountGrant (API key service account)",
+            "authn.RevokeServiceAccountGrant",
+            "UserStatus_USER_STATUS_DEACTIVATED",
+            'cleanup("decision policy"',
+            'cleanup("API key"',
+        ),
+        forbidden=('principal := "sdk-live-svc-" + suffix', "AssignedBy: userID"),
+    ),
+    SourceCheck(
         "PutAuthzPolicy benchmark retains its seeded project scope",
         "docs/bench-bodies/authz.md",
         (
@@ -1643,6 +1696,16 @@ def run_selftest() -> int:
         failures = check_source(root)
         if failures:
             raise AssertionError(f"expected clean fixture, got {failures}")
+
+        for check in CHECKS[:3]:
+            path = root / check.path
+            original = path.read_text(encoding="utf-8")
+            for token in check.required:
+                path.write_text(original.replace(token, "removed live contract"), encoding="utf-8")
+                failures = check_source(root)
+                if not any(check.label in failure for failure in failures):
+                    raise AssertionError(f"expected live correctness refusal for {token!r}, got {failures}")
+            path.write_text(original, encoding="utf-8")
 
         workflow = root / "docs/bench-bodies/workflow-sequences.md"
         workflow.write_text(

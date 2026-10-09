@@ -4,7 +4,12 @@ use std::sync::{
 };
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
+use futures::StreamExt;
 use sqlx::PgPool;
+
+/// Replica probes are background I/O. Do not start an unbounded batch of pool
+/// waiters when a deployment has many configured replicas.
+const MAX_CONCURRENT_REPLICA_HEALTH_PROBES: usize = 4;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PgReplicaStrategy {
@@ -144,6 +149,7 @@ pub struct PgReplicaManager {
     next: Arc<AtomicUsize>,
     query_total: Arc<AtomicU64>,
     fallback_total: Arc<AtomicU64>,
+    health_refresh: Arc<tokio::sync::Mutex<()>>,
 }
 
 impl Default for PgReplicaManager {
@@ -162,6 +168,7 @@ impl PgReplicaManager {
             next: Arc::new(AtomicUsize::new(0)),
             query_total: Arc::new(AtomicU64::new(0)),
             fallback_total: Arc::new(AtomicU64::new(0)),
+            health_refresh: Arc::new(tokio::sync::Mutex::new(())),
         }
     }
 
@@ -179,6 +186,7 @@ impl PgReplicaManager {
             next: Arc::new(AtomicUsize::new(0)),
             query_total: Arc::new(AtomicU64::new(0)),
             fallback_total: Arc::new(AtomicU64::new(0)),
+            health_refresh: Arc::new(tokio::sync::Mutex::new(())),
         }
     }
 
@@ -324,11 +332,14 @@ impl PgReplicaManager {
     }
 
     pub async fn refresh_health_once(&self) {
-        for replica in self.replicas.iter().cloned() {
-            tokio::spawn(async move {
-                probe_replica(replica).await;
-            });
-        }
+        // Clones share this guard. A slow refresh must not leave detached probes
+        // running while the next tick starts a newer generation of results.
+        let Ok(_refresh) = self.health_refresh.try_lock() else {
+            return;
+        };
+        futures::stream::iter(self.replicas.iter().cloned())
+            .for_each_concurrent(MAX_CONCURRENT_REPLICA_HEALTH_PROBES, probe_replica)
+            .await;
     }
 
     pub fn start_health_task(&self, interval: Duration) {
@@ -337,7 +348,7 @@ impl PgReplicaManager {
         }
         let manager = self.clone();
         tokio::spawn(async move {
-            let mut tick = tokio::time::interval(interval);
+            let mut tick = replica_health_ticks(interval);
             loop {
                 tick.tick().await;
                 manager.refresh_health_once().await;
@@ -420,20 +431,86 @@ fn split_replica_dsns(value: &str) -> Vec<String> {
         .collect()
 }
 
+fn replica_health_ticks(interval: Duration) -> tokio::time::Interval {
+    let interval = interval.max(Duration::from_millis(1));
+    // Startup already awaited its initial refresh. Start periodic work one
+    // interval later, and skip missed ticks instead of issuing catch-up bursts.
+    let mut tick = tokio::time::interval_at(tokio::time::Instant::now() + interval, interval);
+    tick.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
+    tick
+}
+
+fn replica_probe_budget(pool: &PgPool) -> Duration {
+    pool.options()
+        .get_acquire_timeout()
+        .min(Duration::from_secs(
+            crate::runtime::config::DEFAULT_DB_ACQUIRE_TIMEOUT_SECS,
+        ))
+}
+
+/// A cancelled query must not retain a pool slot while SQLx's return task
+/// drains its PostgreSQL protocol. Completed queries keep normal pool reuse.
+/// These probes install no SESSION request context: protocol completion is
+/// distinct from the canonical RESET required by `PgRequestConnection`.
+struct ReplicaQueryConnection {
+    connection: Option<sqlx::pool::PoolConnection<sqlx::Postgres>>,
+    query_completed: bool,
+}
+
+impl ReplicaQueryConnection {
+    fn new(connection: sqlx::pool::PoolConnection<sqlx::Postgres>) -> Self {
+        Self {
+            connection: Some(connection),
+            query_completed: false,
+        }
+    }
+
+    fn connection_mut(&mut self) -> Result<&mut sqlx::PgConnection, sqlx::Error> {
+        self.connection
+            .as_mut()
+            .map(|connection| &mut **connection)
+            .ok_or(sqlx::Error::PoolClosed)
+    }
+}
+
+impl Drop for ReplicaQueryConnection {
+    fn drop(&mut self) {
+        if !self.query_completed
+            && let Some(connection) = self.connection.take()
+        {
+            drop(connection.detach());
+        }
+    }
+}
+
 async fn probe_replica(replica: PgReplicaPool) {
     let started = Instant::now();
-    let result: Result<(Option<f64>,), sqlx::Error> = sqlx::query_as(
-        "SELECT COALESCE(EXTRACT(EPOCH FROM (NOW() - pg_last_xact_replay_timestamp())), 0)::float8",
-    )
-    .fetch_one(&replica.pool)
+    let budget = replica_probe_budget(&replica.pool);
+    // One budget includes waiting for a pool slot AND executing the query.
+    let result = tokio::time::timeout(budget, async {
+        let mut connection = ReplicaQueryConnection::new(replica.pool.acquire().await?);
+        let result = sqlx::query_as::<_, (Option<f64>,)>(
+            "SELECT COALESCE(EXTRACT(EPOCH FROM (NOW() - pg_last_xact_replay_timestamp())), 0)::float8",
+        )
+        .fetch_one(connection.connection_mut()?)
+        .await;
+        connection.query_completed = true;
+        result
+    })
     .await;
     let latency_millis = started.elapsed().as_millis() as u64;
     match result {
-        Ok((lag_seconds,)) => {
+        Ok(Ok((lag_seconds,))) if started.elapsed() < budget => {
             let lag_millis = lag_seconds.unwrap_or(0.0).max(0.0).mul_add(1000.0, 0.0) as u64;
             replica.mark_healthy(lag_millis, latency_millis);
         }
-        Err(err) => replica.mark_unhealthy(latency_millis, err.to_string()),
+        Ok(Err(err)) => replica.mark_unhealthy(latency_millis, err.to_string()),
+        // Cooperative timers can resume late. A Ready query on that late poll
+        // still cannot certify health beyond the configured probe budget.
+        Ok(Ok(_)) | Err(_) => replica.mark_unhealthy(
+            latency_millis,
+            "PostgreSQL replica health probe exceeded its deadline".to_string(),
+        ),
     }
 }
 
@@ -467,21 +544,36 @@ async fn wait_for_replica_replay_lsn(
     timeout: Duration,
 ) -> Result<bool, sqlx::Error> {
     let started = Instant::now();
+    let Some(deadline) = started.checked_add(timeout).filter(|_| !timeout.is_zero()) else {
+        return Ok(false);
+    };
     let poll = replica_lsn_poll_interval(timeout);
-    loop {
-        let cleared: bool =
-            sqlx::query_scalar("SELECT COALESCE($1::pg_lsn <= pg_last_wal_replay_lsn(), false)")
-                .bind(target_lsn)
-                .fetch_one(pool)
-                .await?;
-        if cleared {
-            return Ok(true);
+    // The former elapsed check happened only AFTER fetch_one completed, so
+    // waiting for a pool or a slow query could exceed max_staleness by minutes.
+    tokio::time::timeout_at(tokio::time::Instant::from_std(deadline), async {
+        loop {
+            let mut connection = ReplicaQueryConnection::new(pool.acquire().await?);
+            let result: Result<bool, sqlx::Error> = sqlx::query_scalar(
+                "SELECT COALESCE($1::pg_lsn <= pg_last_wal_replay_lsn(), false)",
+            )
+            .bind(target_lsn)
+            .fetch_one(connection.connection_mut()?)
+            .await;
+            connection.query_completed = true;
+            drop(connection);
+            let cleared = result?;
+            if started.elapsed() >= timeout {
+                return Ok(false);
+            }
+            if cleared {
+                return Ok(true);
+            }
+            let remaining = timeout.saturating_sub(started.elapsed());
+            tokio::time::sleep(poll.min(remaining)).await;
         }
-        if started.elapsed() >= timeout {
-            return Ok(false);
-        }
-        tokio::time::sleep(poll).await;
-    }
+    })
+    .await
+    .unwrap_or(Ok(false))
 }
 
 fn escape_prom_label(value: &str) -> String {
@@ -498,6 +590,371 @@ fn unix_now_millis() -> u64 {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn replica_live_dsn() -> Option<String> {
+        crate::runtime::service::live_tests::support::require_live_dsn_any(&[
+            "UDB_LIVE_NATIVE_PG_DSN",
+            "UDB_LIVE_AUTH_PG_DSN",
+            "UDB_INTEGRATION_PG_DSN",
+            "UDB_PG_DSN",
+        ])
+    }
+
+    async fn wait_for_replica_query_lock(admin: &PgPool, pid: i32, function: &str) {
+        tokio::time::timeout(Duration::from_secs(2), async {
+            loop {
+                let waiting: bool = sqlx::query_scalar(
+                    "SELECT EXISTS (SELECT 1 FROM pg_stat_activity \
+                     WHERE pid = $1 AND wait_event_type = 'Lock' AND query LIKE $2)",
+                )
+                .bind(pid)
+                .bind(format!("%{function}%"))
+                .fetch_one(admin)
+                .await
+                .expect("observe blocked replica query");
+                if waiting {
+                    return;
+                }
+                tokio::time::sleep(Duration::from_millis(5)).await;
+            }
+        })
+        .await
+        .expect("replica query must reach the held PostgreSQL advisory lock");
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn health_ticks_delay_start_and_skip_missed_intervals() {
+        let mut tick = replica_health_ticks(Duration::from_secs(1));
+        assert!(
+            tokio::time::timeout(Duration::from_millis(100), tick.tick())
+                .await
+                .is_err(),
+            "startup must not immediately repeat its completed initial probe"
+        );
+        tokio::time::advance(Duration::from_secs(5)).await;
+        tick.tick().await;
+        assert!(
+            tokio::time::timeout(Duration::from_millis(100), tick.tick())
+                .await
+                .is_err(),
+            "missed periods must not generate a burst of catch-up probes"
+        );
+    }
+
+    #[tokio::test]
+    #[ignore = "requires live PostgreSQL; exercised by the Native CI live lane"]
+    async fn replica_refresh_awaits_bounded_fanout_live() {
+        let Some(dsn) = replica_live_dsn() else {
+            return;
+        };
+        let armed = Arc::new(AtomicBool::new(false));
+        let gate = Arc::new(tokio::sync::Semaphore::new(0));
+        let (entered, mut entries) = tokio::sync::mpsc::unbounded_channel();
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .min_connections(0)
+            .max_connections(8)
+            .acquire_timeout(Duration::from_secs(3))
+            .before_acquire({
+                let armed = armed.clone();
+                let gate = gate.clone();
+                move |_, _| {
+                    let armed = armed.clone();
+                    let gate = gate.clone();
+                    let entered = entered.clone();
+                    Box::pin(async move {
+                        if armed.load(Ordering::SeqCst) {
+                            entered.send(()).expect("live fanout observer is open");
+                            let permit = gate.acquire_owned().await.expect("open probe gate");
+                            permit.forget();
+                        }
+                        Ok(true)
+                    })
+                }
+            })
+            .connect(&dsn)
+            .await
+            .expect("connect replica fanout pool");
+        // Every probe must take the actual idle-connection acquisition hook.
+        let mut warm = Vec::new();
+        for _ in 0..8 {
+            warm.push(pool.acquire().await.expect("warm replica connection"));
+        }
+        drop(warm);
+        tokio::time::timeout(Duration::from_secs(2), async {
+            while pool.num_idle() != 8 {
+                tokio::task::yield_now().await;
+            }
+        })
+        .await
+        .expect("all fanout connections must return idle");
+        armed.store(true, Ordering::SeqCst);
+        let manager = PgReplicaManager::new(
+            (0..8)
+                .map(|index| PgReplicaPool::new(format!("fanout-{index}"), pool.clone()))
+                .collect(),
+            PgReplicaStrategy::RoundRobin,
+            Duration::from_secs(3),
+            false,
+        );
+        let refresh = tokio::spawn({
+            let manager = manager.clone();
+            async move { manager.refresh_health_once().await }
+        });
+        for _ in 0..4 {
+            tokio::time::timeout(Duration::from_secs(1), entries.recv())
+                .await
+                .expect("first probe batch must enter pool acquisition")
+                .expect("fanout observer is open");
+        }
+        assert!(!refresh.is_finished(), "refresh must await its probes");
+        assert!(
+            tokio::time::timeout(Duration::from_millis(100), entries.recv())
+                .await
+                .is_err(),
+            "only four probes may be in flight before the first batch completes"
+        );
+        tokio::time::timeout(Duration::from_millis(100), manager.refresh_health_once())
+            .await
+            .expect("an overlapping refresh must skip instead of queueing more probes");
+        gate.add_permits(8);
+        tokio::time::timeout(Duration::from_secs(2), refresh)
+            .await
+            .expect("bounded refresh must complete after its pool gate opens")
+            .expect("replica refresh task succeeds");
+        assert!(manager.snapshots().iter().all(|snapshot| snapshot.healthy));
+        assert!(manager.choose_pool().is_some());
+        armed.store(false, Ordering::SeqCst);
+        pool.close().await;
+    }
+
+    #[tokio::test]
+    #[ignore = "requires live PostgreSQL; exercised by the Native CI live lane"]
+    async fn replica_refresh_and_lsn_deadline_handle_held_single_slot_live() {
+        use crate::runtime::consistency::StaleReadWarning;
+        let Some(dsn) = replica_live_dsn() else {
+            return;
+        };
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .min_connections(0)
+            .max_connections(1)
+            .acquire_timeout(Duration::from_millis(500))
+            .connect(&dsn)
+            .await
+            .expect("connect single-slot replica pool");
+        let manager = PgReplicaManager::new(
+            vec![PgReplicaPool::new("held-slot".to_string(), pool.clone())],
+            PgReplicaStrategy::RoundRobin,
+            Duration::from_secs(3),
+            false,
+        );
+        let held = pool.acquire().await.expect("hold the only replica slot");
+        let outcome = tokio::time::timeout(
+            Duration::from_millis(250),
+            manager.choose_bounded_replica(Some("0/100"), Duration::from_millis(50)),
+        )
+        .await
+        .expect("the LSN deadline must include waiting for a pool slot");
+        assert!(matches!(
+            outcome,
+            BoundedReplicaRead::FailoverToPrimary(StaleReadWarning::FenceTimedOut { .. })
+        ));
+        for _ in 0..2 {
+            tokio::time::timeout(Duration::from_secs(2), manager.refresh_health_once())
+                .await
+                .expect("held-slot health refresh must make bounded progress");
+            let snapshot = manager.snapshots().remove(0);
+            assert!(
+                !snapshot.healthy,
+                "a deadline must revoke replica eligibility"
+            );
+            assert!(snapshot.last_error.is_some());
+            assert!(snapshot.last_failure_unix_ms > 0);
+            assert!(
+                manager.choose_pool().is_none(),
+                "unhealthy routing fails closed"
+            );
+        }
+        drop(held);
+        tokio::time::timeout(Duration::from_secs(2), manager.refresh_health_once())
+            .await
+            .expect("released capacity must let a fresh health probe recover");
+        let snapshot = manager.snapshots().remove(0);
+        assert!(snapshot.healthy);
+        assert!(snapshot.last_error.is_none());
+        assert!(manager.choose_pool().is_some());
+        assert_eq!(
+            pool.size(),
+            1,
+            "refreshes must preserve the configured pool bound"
+        );
+        pool.close().await;
+    }
+
+    #[tokio::test]
+    #[ignore = "requires live PostgreSQL; exercised by the Native CI live lane"]
+    async fn replica_query_deadlines_discard_pending_connections_and_recover_live() {
+        let Some(dsn) = replica_live_dsn() else {
+            return;
+        };
+        let admin = sqlx::postgres::PgPoolOptions::new()
+            .max_connections(2)
+            .connect(&dsn)
+            .await
+            .expect("connect replica deadline observer");
+        let suffix = uuid::Uuid::new_v4().simple().to_string();
+        let schema = format!("udb_replica_deadline_{suffix}");
+        let lock_id = uuid::Uuid::new_v4().as_u128() as i64;
+        sqlx::query(&format!("CREATE SCHEMA {schema}"))
+            .execute(&admin)
+            .await
+            .expect("create isolated replica deadline fixture");
+        for (function, result_type, result) in [
+            ("pg_last_xact_replay_timestamp", "timestamptz", "NULL"),
+            ("pg_last_wal_replay_lsn", "pg_lsn", "'0/100'::pg_lsn"),
+        ] {
+            sqlx::query(&format!(
+                "CREATE FUNCTION {schema}.{function}() RETURNS {result_type} \
+                 LANGUAGE plpgsql VOLATILE AS $body$ BEGIN \
+                 PERFORM pg_catalog.pg_advisory_xact_lock({lock_id}); \
+                 RETURN {result}; END $body$"
+            ))
+            .execute(&admin)
+            .await
+            .expect("install a lock-synchronized replica query fixture");
+        }
+        let mut lock = admin
+            .acquire()
+            .await
+            .expect("acquire replica fixture lock owner");
+        sqlx::query("SELECT pg_advisory_lock($1)")
+            .bind(lock_id)
+            .execute(&mut *lock)
+            .await
+            .expect("hold the query fixture's advisory lock");
+        let options = dsn
+            .parse::<sqlx::postgres::PgConnectOptions>()
+            .expect("parse live replica connection options")
+            .application_name(&format!("udb-replica-deadline-{suffix}"));
+        let search_path = format!("SET search_path TO {schema}, pg_catalog");
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .min_connections(0)
+            .max_connections(1)
+            .acquire_timeout(Duration::from_secs(2))
+            .after_connect(move |connection, _| {
+                let search_path = search_path.clone();
+                Box::pin(async move {
+                    sqlx::query(&search_path).execute(connection).await?;
+                    Ok(())
+                })
+            })
+            .connect_with(options)
+            .await
+            .expect("connect single-slot query deadline fixture");
+        let manager = PgReplicaManager::new(
+            vec![PgReplicaPool::new(
+                "query-deadline".to_string(),
+                pool.clone(),
+            )],
+            PgReplicaStrategy::RoundRobin,
+            Duration::from_secs(3),
+            false,
+        );
+        let initial_pid: i32 = sqlx::query_scalar("SELECT pg_backend_pid()")
+            .fetch_one(&pool)
+            .await
+            .expect("observe initial replica backend");
+        let refresh = tokio::spawn({
+            let manager = manager.clone();
+            async move { manager.refresh_health_once().await }
+        });
+        wait_for_replica_query_lock(&admin, initial_pid, "pg_last_xact_replay_timestamp").await;
+        tokio::time::timeout(Duration::from_secs(3), refresh)
+            .await
+            .expect("a blocked health QUERY must obey the complete probe budget")
+            .expect("health query deadline task completes");
+        assert!(!manager.snapshots()[0].healthy);
+        assert!(
+            manager.snapshots()[0]
+                .last_error
+                .as_deref()
+                .is_some_and(|error| error.contains("deadline"))
+        );
+        let replacement_pid: i32 = tokio::time::timeout(
+            Duration::from_secs(1),
+            sqlx::query_scalar("SELECT pg_backend_pid()").fetch_one(&pool),
+        )
+        .await
+        .expect("query timeout must immediately free single-slot pool capacity")
+        .expect("acquire replacement replica backend");
+        assert_ne!(initial_pid, replacement_pid);
+        let fence = tokio::spawn({
+            let pool = pool.clone();
+            async move { wait_for_replica_replay_lsn(&pool, "0/100", Duration::from_millis(250)).await }
+        });
+        wait_for_replica_query_lock(&admin, replacement_pid, "pg_last_wal_replay_lsn").await;
+        assert!(
+            !tokio::time::timeout(Duration::from_secs(1), fence)
+                .await
+                .expect("a blocked LSN QUERY must obey max_staleness")
+                .expect("LSN query deadline task completes")
+                .expect("an expired LSN fence is a fail-closed timeout")
+        );
+        let cancelled_pid: i32 = sqlx::query_scalar("SELECT pg_backend_pid()")
+            .fetch_one(&pool)
+            .await
+            .expect("observe fresh cancellation fixture backend");
+        assert_ne!(replacement_pid, cancelled_pid);
+        let cancelled = tokio::spawn({
+            let manager = manager.clone();
+            async move { manager.refresh_health_once().await }
+        });
+        wait_for_replica_query_lock(&admin, cancelled_pid, "pg_last_xact_replay_timestamp").await;
+        cancelled.abort();
+        assert!(
+            cancelled
+                .await
+                .expect_err("cancelled refresh must stop")
+                .is_cancelled()
+        );
+        let recovered_pid: i32 = tokio::time::timeout(
+            Duration::from_secs(1),
+            sqlx::query_scalar("SELECT pg_backend_pid()").fetch_one(&pool),
+        )
+        .await
+        .expect("caller cancellation must immediately free replica pool capacity")
+        .expect("acquire a backend after cancelled refresh");
+        assert_ne!(cancelled_pid, recovered_pid);
+        sqlx::query("SELECT pg_advisory_unlock($1)")
+            .bind(lock_id)
+            .execute(&mut *lock)
+            .await
+            .expect("release blocked replica queries");
+        drop(lock);
+        tokio::time::timeout(Duration::from_secs(3), manager.refresh_health_once())
+            .await
+            .expect("a fresh successful probe must restore replica health");
+        assert!(manager.snapshots()[0].healthy);
+        assert!(manager.snapshots()[0].last_error.is_none());
+        let reused_pid: i32 = sqlx::query_scalar("SELECT pg_backend_pid()")
+            .fetch_one(&pool)
+            .await
+            .expect("observe successful-probe backend reuse");
+        assert_eq!(
+            reused_pid, recovered_pid,
+            "completed probes must retain pool reuse"
+        );
+        assert!(
+            wait_for_replica_replay_lsn(&pool, "0/100", Duration::from_secs(1))
+                .await
+                .expect("a fresh LSN fence must clear after lock release")
+        );
+        pool.close().await;
+        sqlx::query(&format!("DROP SCHEMA {schema} CASCADE"))
+            .execute(&admin)
+            .await
+            .expect("remove isolated replica deadline fixture");
+        admin.close().await;
+    }
 
     #[test]
     fn replica_dsns_prefers_multi_value() {

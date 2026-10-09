@@ -20,8 +20,6 @@ use tokio::sync::broadcast;
 
 use crate::runtime::executor_utils::{env_identifier, qi_runtime as qi};
 #[cfg(feature = "kafka")]
-use tokio::time::interval;
-#[cfg(feature = "kafka")]
 use tracing::error;
 use tracing::{info, warn};
 use uuid::Uuid;

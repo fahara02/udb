@@ -30,6 +30,7 @@ import (
 	apikeyentpb "github.com/fahara02/udb/sdk/go/gen/udb/core/apikey/entity/v1"
 	apikeypb "github.com/fahara02/udb/sdk/go/gen/udb/core/apikey/services/v1"
 	assetpb "github.com/fahara02/udb/sdk/go/gen/udb/core/asset/services/v1"
+	authnentpb "github.com/fahara02/udb/sdk/go/gen/udb/core/authn/entity/v1"
 	authnpb "github.com/fahara02/udb/sdk/go/gen/udb/core/authn/services/v1"
 	authzentpb "github.com/fahara02/udb/sdk/go/gen/udb/core/authz/entity/v1"
 	authzpb "github.com/fahara02/udb/sdk/go/gen/udb/core/authz/services/v1"
@@ -84,7 +85,7 @@ func nativeCtx(parent context.Context, g *GeneratedClient, bearer, tenantID stri
 
 // runLiveNativeServiceE2E drives create→read→assert CRUD against every native
 // control-plane service that has a real Postgres/MinIO-backed implementation.
-func runLiveNativeServiceE2E(t *testing.T, ctx context.Context, authConn grpc.ClientConnInterface, authGen *GeneratedClient, tenant, project, uuidBearer, uuidTenant string) {
+func runLiveNativeServiceE2E(t *testing.T, ctx context.Context, authConn grpc.ClientConnInterface, authGen *GeneratedClient, tenant, project, uuidBearer, uuidTenant, actorID string) {
 	t.Helper()
 	suffix := strings.NewReplacer(".", "", ":", "", "+", "").Replace(time.Now().UTC().Format("20060102150405.000000000"))
 	// base carries the admin's own (code) tenant context; used by services whose
@@ -92,6 +93,24 @@ func runLiveNativeServiceE2E(t *testing.T, ctx context.Context, authConn grpc.Cl
 	// tenant administration).
 	base := authGen.outgoingContext(ctx)
 	call := func() (context.Context, context.CancelFunc) { return context.WithTimeout(base, 8*time.Second) }
+	cleanup := func(name string, remove func(context.Context) error) {
+		t.Cleanup(func() {
+			cc, cancel := context.WithTimeout(authGen.outgoingContext(context.Background()), 8*time.Second)
+			defer cancel()
+			if err := remove(cc); err != nil {
+				t.Errorf("native fixture cleanup %s: %v", name, err)
+			}
+		})
+	}
+	cleanupUser := func(userID string) {
+		cleanup("user", func(cc context.Context) error {
+			_, err := authnpb.NewAuthnServiceClient(authConn).ChangeUserStatus(cc, &authnpb.ChangeUserStatusRequest{
+				UserId: userID, NewStatus: authnentpb.UserStatus_USER_STATUS_DEACTIVATED, Reason: "sdk live fixture cleanup",
+				Context: &commonpb.RequestContext{Tenant: &commonpb.TenantContext{TenantId: tenant, ProjectId: project}},
+			})
+			return err
+		})
+	}
 	// wcall is scoped to the UUID-tenant admin, required by storage/webrtc/asset
 	// whose tenant_id is a UUID column and is cross-checked against the bearer.
 	wcall := func() (context.Context, context.CancelFunc) {
@@ -152,7 +171,7 @@ func runLiveNativeServiceE2E(t *testing.T, ctx context.Context, authConn grpc.Cl
 		created, err := c.CreateRole(cc, &authzpb.CreateRoleRequest{
 			Name:        "SDK Reader " + suffix,
 			Description: "Live SDK conformance reader role",
-			CreatedBy:   uuid4(),
+			CreatedBy:   actorID,
 			RoleCode:    roleCode,
 			Domain:      tenant,
 			TenantId:    tenant,
@@ -162,6 +181,14 @@ func runLiveNativeServiceE2E(t *testing.T, ctx context.Context, authConn grpc.Cl
 			t.Fatalf("CreateRole: %v", err)
 		}
 		role := created.GetRole()
+		roleDeleted := false
+		cleanup("role", func(cc context.Context) error {
+			if roleDeleted {
+				return nil
+			}
+			_, err := c.DeleteRole(cc, &authzpb.DeleteRoleRequest{RoleId: role.GetRoleId(), DeletedBy: actorID})
+			return err
+		})
 		if role.GetRoleCode() != roleCode {
 			t.Fatalf("CreateRole role_code = %q", role.GetRoleCode())
 		}
@@ -199,9 +226,10 @@ func runLiveNativeServiceE2E(t *testing.T, ctx context.Context, authConn grpc.Cl
 			t.Fatalf("CreateUser (authz subject): %v", err)
 		}
 		userID := decisionUser.GetUser().GetUserId()
+		cleanupUser(userID)
 		assigned, err := c.AssignRole(cc, &authzpb.AssignRoleRequest{
 			UserId: userID, RoleId: role.GetRoleId(), Domain: tenant,
-			AssignedBy: userID, TenantId: tenant, ProjectId: project,
+			AssignedBy: actorID, TenantId: tenant, ProjectId: project,
 		})
 		if err != nil {
 			t.Fatalf("AssignRole: %v", err)
@@ -217,6 +245,10 @@ func runLiveNativeServiceE2E(t *testing.T, ctx context.Context, authConn grpc.Cl
 		}); err != nil {
 			t.Fatalf("PutAuthzPolicy: %v", err)
 		}
+		cleanup("decision policy", func(cc context.Context) error {
+			_, err := c.DeletePolicyRule(cc, &authzpb.DeletePolicyRuleRequest{PolicyId: policyID, DeletedBy: actorID})
+			return err
+		})
 		allowed, err := c.CheckAccess(cc, &authzpb.CheckAccessRequest{
 			UserId: userID, Domain: tenant, TenantId: tenant, ProjectId: project,
 			Object: "invoice", Action: "data.select",
@@ -235,7 +267,7 @@ func runLiveNativeServiceE2E(t *testing.T, ctx context.Context, authConn grpc.Cl
 			t.Fatalf("ListUserRoles = %d, want 1", len(userRoles.GetUserRoles()))
 		}
 		if _, err := c.RevokeRole(cc, &authzpb.RevokeRoleRequest{
-			UserRoleId: userRoleID, UserId: userID, Reason: "sdk_live_test", RevokedBy: userID,
+			UserRoleId: userRoleID, UserId: userID, Reason: "sdk_live_test", RevokedBy: actorID,
 		}); err != nil {
 			t.Fatalf("RevokeRole: %v", err)
 		}
@@ -250,12 +282,18 @@ func runLiveNativeServiceE2E(t *testing.T, ctx context.Context, authConn grpc.Cl
 			t.Fatalf("CheckAccess must deny after the role was revoked")
 		}
 
-		// Policy-rule CRUD (the RBAC policy_rules table, distinct from the ABAC
-		// PutAuthzPolicy used above): create → get → list → delete.
+		// Both policy APIs use the canonical PolicyRule store. Remove this
+		// test-owned decision policy before later ORM/table cases run.
+		deleted, err := c.DeletePolicyRule(cc, &authzpb.DeletePolicyRuleRequest{PolicyId: policyID, DeletedBy: actorID})
+		if err != nil || !deleted.GetDeleted() {
+			t.Fatalf("DeletePolicyRule (decision policy cleanup): deleted=%v err=%v", deleted.GetDeleted(), err)
+		}
+
+		// Independent policy-rule CRUD: create → get → list → delete.
 		ruleCreated, err := c.CreatePolicyRule(cc, &authzpb.CreatePolicyRuleRequest{
 			Subject: role.GetRoleCode(), Domain: tenant, Object: "ledger", Action: "data.update",
 			Effect: authzentpb.PolicyEffect_POLICY_EFFECT_ALLOW, Description: "Live SDK policy rule",
-			CreatedBy: userID, TenantId: tenant, ProjectId: project,
+			CreatedBy: actorID, TenantId: tenant, ProjectId: project,
 		})
 		if err != nil {
 			t.Fatalf("CreatePolicyRule: %v", err)
@@ -264,6 +302,10 @@ func runLiveNativeServiceE2E(t *testing.T, ctx context.Context, authConn grpc.Cl
 		if ruleID == "" {
 			t.Fatalf("CreatePolicyRule returned empty policy_id")
 		}
+		cleanup("policy rule", func(cc context.Context) error {
+			_, err := c.DeletePolicyRule(cc, &authzpb.DeletePolicyRuleRequest{PolicyId: ruleID, DeletedBy: actorID})
+			return err
+		})
 		if _, err := c.GetPolicyRule(cc, &authzpb.GetPolicyRuleRequest{PolicyId: ruleID}); err != nil {
 			t.Fatalf("GetPolicyRule: %v", err)
 		}
@@ -281,7 +323,7 @@ func runLiveNativeServiceE2E(t *testing.T, ctx context.Context, authConn grpc.Cl
 		if !foundRule {
 			t.Fatalf("ListPolicyRules did not include created rule %s", ruleID)
 		}
-		if _, err := c.DeletePolicyRule(cc, &authzpb.DeletePolicyRuleRequest{PolicyId: ruleID, DeletedBy: userID}); err != nil {
+		if _, err := c.DeletePolicyRule(cc, &authzpb.DeletePolicyRuleRequest{PolicyId: ruleID, DeletedBy: actorID}); err != nil {
 			t.Fatalf("DeletePolicyRule: %v", err)
 		}
 
@@ -325,7 +367,7 @@ func runLiveNativeServiceE2E(t *testing.T, ctx context.Context, authConn grpc.Cl
 		}
 
 		// Role rename + delete (lifecycle close-out).
-		if _, err := c.UpdateRole(cc, &authzpb.UpdateRoleRequest{RoleId: role.GetRoleId(), Name: "SDK Reader Renamed " + suffix, UpdatedBy: userID}); err != nil {
+		if _, err := c.UpdateRole(cc, &authzpb.UpdateRoleRequest{RoleId: role.GetRoleId(), Name: "SDK Reader Renamed " + suffix, UpdatedBy: actorID}); err != nil {
 			t.Fatalf("UpdateRole: %v", err)
 		}
 		renamedRole, err := c.GetRole(cc, &authzpb.GetRoleRequest{RoleId: role.GetRoleId()})
@@ -335,16 +377,49 @@ func runLiveNativeServiceE2E(t *testing.T, ctx context.Context, authConn grpc.Cl
 		if renamedRole.GetRole().GetName() != "SDK Reader Renamed "+suffix {
 			t.Fatalf("UpdateRole rename did not persist: %q", renamedRole.GetRole().GetName())
 		}
-		if _, err := c.DeleteRole(cc, &authzpb.DeleteRoleRequest{RoleId: role.GetRoleId(), DeletedBy: userID}); err != nil {
+		if _, err := c.DeleteRole(cc, &authzpb.DeleteRoleRequest{RoleId: role.GetRoleId(), DeletedBy: actorID}); err != nil {
 			t.Fatalf("DeleteRole: %v", err)
 		}
+		roleDeleted = true
 	})
 
 	t.Run("ApiKeyService", func(t *testing.T) {
 		c := apikeypb.NewApiKeyServiceClient(authConn)
 		cc, cancel := call()
 		defer cancel()
-		principal := "sdk-live-svc-" + suffix
+		authn := authnpb.NewAuthnServiceClient(authConn)
+		serviceName := "sdk-live-svc-" + suffix
+		service, err := authn.CreateUser(cc, &authnpb.CreateUserRequest{
+			Username: serviceName, Email: serviceName + "@example.com", Password: "CorrectHorse1!",
+			TenantId: tenant, ProjectId: project, FullName: "SDK Live Service Account",
+			AccountKind: authnentpb.AccountKind_ACCOUNT_KIND_SERVICE_ACCOUNT,
+		})
+		if err != nil {
+			t.Fatalf("CreateUser (API key service account): %v", err)
+		}
+		principal := service.GetUser().GetUserId()
+		if principal == "" {
+			t.Fatal("API key service account must have a canonical user ID")
+		}
+		cleanupUser(principal)
+		if _, err := authn.ChangeUserStatus(cc, &authnpb.ChangeUserStatusRequest{
+			UserId: principal, NewStatus: authnentpb.UserStatus_USER_STATUS_ACTIVE, Reason: "sdk live activate service account",
+			Context: &commonpb.RequestContext{Tenant: &commonpb.TenantContext{TenantId: tenant, ProjectId: project}},
+		}); err != nil {
+			t.Fatalf("ChangeUserStatus (API key service account): %v", err)
+		}
+		if _, err := authn.CreateServiceAccountGrant(cc, &authnpb.CreateServiceAccountGrantRequest{
+			TenantId: tenant, ProjectId: project, UserId: principal, ServiceIdentity: serviceName,
+			ApprovedScopes: []string{"data:read", "data:write"}, Reason: "sdk live API key fixture",
+		}); err != nil {
+			t.Fatalf("CreateServiceAccountGrant (API key service account): %v", err)
+		}
+		cleanup("service-account grant", func(cc context.Context) error {
+			_, err := authn.RevokeServiceAccountGrant(cc, &authnpb.RevokeServiceAccountGrantRequest{
+				TenantId: tenant, UserId: principal, Reason: "sdk live fixture cleanup",
+			})
+			return err
+		})
 		keyCtx := &commonpb.RequestContext{
 			UserId: principal,
 			Tenant: &commonpb.TenantContext{TenantId: tenant, ProjectId: project},
@@ -359,9 +434,17 @@ func runLiveNativeServiceE2E(t *testing.T, ctx context.Context, authConn grpc.Cl
 			t.Fatalf("CreateApiKey: %v", err)
 		}
 		if !strings.HasPrefix(created.GetPlainKey(), "udbk_") {
-			t.Fatalf("CreateApiKey plain_key = %q (want udbk_ prefix)", created.GetPlainKey())
+			t.Fatal("CreateApiKey must return a udbk_ key prefix")
 		}
 		keyID := created.GetKey().GetKeyId()
+		keyRevoked := false
+		cleanup("API key", func(cc context.Context) error {
+			if keyRevoked {
+				return nil
+			}
+			_, err := c.RevokeApiKey(cc, &apikeypb.RevokeApiKeyRequest{KeyId: keyID, RevokeReason: "sdk live fixture cleanup", Context: keyCtx})
+			return err
+		})
 		valid, err := c.ValidateApiKey(cc, &apikeypb.ValidateApiKeyRequest{
 			PlainKey:      created.GetPlainKey(),
 			RequiredScope: "data:read",
@@ -408,6 +491,7 @@ func runLiveNativeServiceE2E(t *testing.T, ctx context.Context, authConn grpc.Cl
 		}); err != nil {
 			t.Fatalf("RevokeApiKey: %v", err)
 		}
+		keyRevoked = true
 		after, err := c.ValidateApiKey(cc, &apikeypb.ValidateApiKeyRequest{PlainKey: created.GetPlainKey(), RequiredScope: "data:read"})
 		if err != nil {
 			t.Fatalf("ValidateApiKey after revoke: %v", err)
@@ -484,6 +568,7 @@ func runLiveNativeServiceE2E(t *testing.T, ctx context.Context, authConn grpc.Cl
 			t.Fatalf("CreateUser (notification recipient): %v", err)
 		}
 		recipientID := createdUser.GetUser().GetUserId()
+		cleanupUser(recipientID)
 		event := "sdk.live." + suffix
 		body := "sdk-live-body-" + suffix
 		if _, err := c.UpsertTemplate(cc, &notifpb.UpsertTemplateRequest{

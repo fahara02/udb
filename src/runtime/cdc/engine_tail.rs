@@ -1898,7 +1898,8 @@ impl CdcEngine {
     /// held by a live peer.
     #[cfg(feature = "kafka")]
     pub async fn run_advisory_lock_loop(&self) {
-        let mut check_interval = interval(Duration::from_secs(30));
+        let mut check_interval =
+            crate::runtime::singleton::periodic_worker_interval(Duration::from_secs(30));
         let lock_rel = self.config.lock_log_relation();
         let hostname = cdc_lease_identity();
 
@@ -1950,8 +1951,10 @@ impl CdcEngine {
     pub(crate) async fn run_tailer(&self, mut lock_conn: PgConnection) {
         info!("[cdc] logical replication tailer started");
 
-        let mut heartbeat = interval(Duration::from_secs(10));
-        let mut metrics_poll = interval(Duration::from_secs(5));
+        let mut heartbeat =
+            crate::runtime::singleton::periodic_worker_interval(Duration::from_secs(10));
+        let mut metrics_poll =
+            crate::runtime::singleton::periodic_worker_interval(Duration::from_secs(5));
         let mut tail_loop = Box::pin(self.tail_outbox());
         let pool = self.pool.clone();
         let metrics = self.metrics.clone();
@@ -2181,7 +2184,11 @@ impl CdcEngine {
              FROM {outbox} WHERE delivery_state = 'pending' \
              ORDER BY event_seq ASC LIMIT {poll_batch}"
         );
-        let mut tick = interval(Duration::from_millis(self.config.poll_interval_ms));
+        // Pending durable rows remain eligible on the next pass; replaying
+        // elapsed poll ticks after a slow batch only adds catch-up DB traffic.
+        let mut tick = crate::runtime::singleton::periodic_worker_interval(Duration::from_millis(
+            self.config.poll_interval_ms,
+        ));
         let poll_timeout = Duration::from_secs(self.config.kafka_tx_timeout_secs.max(30));
         // #215: hold one reconnecting Redis manager across polls instead of
         // re-acquiring a raw connection every `poll_interval_ms`. A failed guard

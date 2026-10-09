@@ -511,7 +511,7 @@ func TestLivePerf(t *testing.T) {
 		len(samples), len(failed), (grand / time.Duration(len(samples))).Round(time.Microsecond))
 }
 
-// Platform credentials are intentionally narrow in the benchmark. Ordinary
+// Platform credentials are intentionally narrow in both live suites. Ordinary
 // tenant Authz CRUD remains claim-attributed to the tenant bootstrap user; only
 // governance, system-global analytics, and explicit cross-tenant movement use
 // the separately offline-provisioned platform principal.

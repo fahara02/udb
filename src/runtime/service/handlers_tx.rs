@@ -102,8 +102,7 @@ fn cdc_stream_budget(
 
 struct CdcStreamLifetimeGuard {
     _permit: Option<crate::runtime::channels::ChannelPermit>,
-    metrics: Arc<dyn MetricsRecorder>,
-    started: Instant,
+    _metrics: crate::runtime::metrics::ChannelExecutionMetrics,
 }
 
 impl CdcStreamLifetimeGuard {
@@ -111,20 +110,10 @@ impl CdcStreamLifetimeGuard {
         permit: Option<crate::runtime::channels::ChannelPermit>,
         metrics: Arc<dyn MetricsRecorder>,
     ) -> Self {
-        metrics.inc_channel_inflight("cdc");
         Self {
             _permit: permit,
-            metrics,
-            started: Instant::now(),
+            _metrics: crate::runtime::metrics::ChannelExecutionMetrics::new(metrics, "cdc"),
         }
-    }
-}
-
-impl Drop for CdcStreamLifetimeGuard {
-    fn drop(&mut self) {
-        self.metrics.dec_channel_inflight("cdc");
-        self.metrics
-            .observe_channel_latency("cdc", self.started.elapsed().as_secs_f64());
     }
 }
 

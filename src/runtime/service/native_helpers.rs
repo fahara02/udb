@@ -7,7 +7,7 @@
 use sqlx::PgPool;
 use std::collections::BTreeSet;
 use std::sync::Arc;
-use std::time::{Duration, Instant};
+use std::time::Duration;
 use tonic::{Status, metadata::MetadataMap};
 use uuid::Uuid;
 
@@ -288,8 +288,8 @@ where
     Fut: std::future::Future<Output = Result<T, Status>>,
 {
     let _permit = super::admit_stream_batch_item(channels, metrics, context, op, backend).await?;
-    metrics.inc_channel_inflight(op.as_str());
-    let start = Instant::now();
+    let execution_metrics =
+        crate::runtime::metrics::ChannelExecutionMetrics::new(metrics.clone(), op.as_str());
 
     let res = tokio::time::timeout(
         Duration::from_secs(channels.deadline_secs(op, Some(backend))),
@@ -297,8 +297,7 @@ where
     )
     .await;
 
-    metrics.dec_channel_inflight(op.as_str());
-    metrics.observe_channel_latency(op.as_str(), start.elapsed().as_secs_f64());
+    drop(execution_metrics);
 
     match res {
         Ok(result) => result,

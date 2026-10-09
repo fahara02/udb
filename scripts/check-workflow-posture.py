@@ -5683,6 +5683,53 @@ def check_benchmark_workflow_gate(root: Path = ROOT) -> list[str]:
     fail_block = text[fail_at:] if fail_at >= 0 else ""
     if "if: always()" not in fail_block:
         scoped.append("missing always-run final benchmark failure gate")
+    correctness_blocks = re.findall(
+        r"(?ms)^      - name: Run every Go live correctness test\n.*?(?=^      - |\Z)",
+        text,
+    )
+    if len(correctness_blocks) != 1:
+        scoped.append("candidate Go live correctness must have exactly one mandatory step")
+    else:
+        correctness = _non_comment_text(correctness_blocks[0])
+        if not re.search(r"(?m)^        if: always\(\) && inputs\.candidate-build$", correctness):
+            scoped.append("candidate Go live correctness must run always and only for candidate builds")
+        for needle in (
+            "if: always() && inputs.candidate-build",
+            "set -euo pipefail",
+            'test "${UDB_LIVE_SDK_TESTS:-}" = "1"',
+            "go test ./... -p 1 -run '^TestLive' -skip '^TestLivePerf$' -count=1 -v -timeout 15m",
+            "bash bench-output/reset.sh go-correctness",
+            "bench-output/logs/go-correctness-reset.log",
+            "bench-output/logs/go-correctness.log",
+            'if [ -z "${!fixture:-}" ]; then',
+            "Missing live correctness fixture %s",
+            "exit 1",
+        ):
+            if needle not in correctness:
+                scoped.append(f"candidate Go live correctness missing fail-closed contract {needle!r}")
+        for fixture in (
+            "UDB_GRPC_TARGET", "UDB_AUTH_GRPC_TARGET", "UDB_LIVE_USERNAME",
+            "UDB_LIVE_PASSWORD", "UDB_LIVE_TENANT", "UDB_LIVE_PROJECT",
+            "UDB_LIVE_PLATFORM_USERNAME", "UDB_LIVE_PLATFORM_PASSWORD",
+            "UDB_LIVE_PEER_USERNAME", "UDB_LIVE_PEER_PASSWORD", "UDB_LIVE_PEER_TENANT",
+        ):
+            if fixture not in correctness:
+                scoped.append(f"candidate Go live correctness missing required fixture {fixture}")
+        if re.search(r"continue-on-error:\s*true|\|\|\s*true|\bexit\s+0\b|set\s+\+e|UDB_ALLOW_LEGACY_PUT_POLICY", correctness):
+            scoped.append("candidate Go live correctness must propagate failures and preserve production policy gates")
+        correctness_at = text.find("Run every Go live correctness test")
+        php_at = text.find("Benchmark PHP SDK")
+        if not (0 <= php_at < correctness_at < collect_at):
+            scoped.append("candidate Go live correctness must run after measured SDKs and before always-run collection")
+    for needle in (
+        'UDB_LIVE_SDK_TESTS: "1"',
+        'if [ "${1:-}" = "go-correctness" ]; then',
+        '--username "${UDB_LIVE_PEER_USERNAME}" --password "${UDB_LIVE_PEER_PASSWORD}" --tenant "${UDB_LIVE_PEER_TENANT}"',
+        'UDB_LIVE_TENANT="${UDB_LIVE_PEER_TENANT}" python scripts/bootstrap_benchmark_project_catalog.py',
+        "go test ./udbclient -run '^TestLivePerf$'",
+    ):
+        if needle not in _non_comment_text(text):
+            scoped.append(f"candidate Go live correctness missing fixture/measurement separation {needle!r}")
     # Release benchmarks always download immutable assets. The manual candidate
     # lane may build only the exact workflow commit, without release provenance.
     candidate_blocks = re.findall(
@@ -7246,9 +7293,14 @@ on:
         default: latest
       release-asset:
         default: udb-linux-amd64-full
+      candidate-build:
+        type: boolean
+        default: false
 jobs:
   live-suite:
     runs-on: ubuntu-latest
+    env:
+      UDB_LIVE_SDK_TESTS: "1"
     steps:
       - name: Resolve release binary (perf)
         run: |
@@ -7274,9 +7326,33 @@ jobs:
       - name: Enable perf opt-in
         run: echo "UDB_LIVE_PERF=1" >> "$GITHUB_ENV"
       - name: Prepare per-SDK reset script
-        run: mkdir -p bench-output/status bench-output/logs
+        run: |
+          mkdir -p bench-output/status bench-output/logs
+          if [ "${1:-}" = "go-correctness" ]; then
+            bootstrap --username "${UDB_LIVE_PEER_USERNAME}" --password "${UDB_LIVE_PEER_PASSWORD}" --tenant "${UDB_LIVE_PEER_TENANT}"
+          fi
       - name: Bootstrap exact benchmark project catalog
-        run: python scripts/bootstrap_benchmark_project_catalog.py
+        run: |
+          python scripts/bootstrap_benchmark_project_catalog.py
+          UDB_LIVE_TENANT="${UDB_LIVE_PEER_TENANT}" python scripts/bootstrap_benchmark_project_catalog.py
+      - name: Benchmark Go SDK
+        run: go test ./udbclient -run '^TestLivePerf$'
+      - name: Benchmark PHP SDK
+        run: benchmark-php
+      - name: Run every Go live correctness test
+        if: always() && inputs.candidate-build
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "${UDB_LIVE_SDK_TESTS:-}" = "1"
+          for fixture in UDB_GRPC_TARGET UDB_AUTH_GRPC_TARGET UDB_LIVE_USERNAME UDB_LIVE_PASSWORD UDB_LIVE_TENANT UDB_LIVE_PROJECT UDB_LIVE_PLATFORM_USERNAME UDB_LIVE_PLATFORM_PASSWORD UDB_LIVE_PEER_USERNAME UDB_LIVE_PEER_PASSWORD UDB_LIVE_PEER_TENANT; do
+            if [ -z "${!fixture:-}" ]; then
+              printf '::error::Missing live correctness fixture %s\n' "$fixture"
+              exit 1
+            fi
+          done
+          bash bench-output/reset.sh go-correctness 2>&1 | tee bench-output/logs/go-correctness-reset.log
+          ( cd sdk/go && go test ./... -p 1 -run '^TestLive' -skip '^TestLivePerf$' -count=1 -v -timeout 15m ) 2>&1 | tee bench-output/logs/go-correctness.log
       - name: Collect benchmark JSON
         if: always()
         run: |
@@ -10569,10 +10645,7 @@ jobs:
         assert any("release asset download command" in failure for failure in failures), failures
         assert any("must consume a release binary" in failure for failure in failures), failures
 
-        candidate_suite_good = live_sdk_suite_good.replace(
-            "    inputs:\n",
-            "    inputs:\n      candidate-build:\n        type: boolean\n        default: false\n",
-        ) + r'''      - name: Build and identify candidate broker
+        candidate_suite_good = live_sdk_suite_good + r'''      - name: Build and identify candidate broker
         if: inputs.candidate-build
         run: |
           candidate_sha="$(git rev-parse HEAD)"
@@ -10595,6 +10668,30 @@ jobs:
         ]:
             (wf / "_live-sdk-suite.yml").write_text(candidate_suite_good.replace(before, after), encoding="utf-8")
             assert any("must consume a release binary" in failure for failure in check_benchmark_workflow_gate(root))
+        (wf / "_live-sdk-suite.yml").write_text(live_sdk_suite_good, encoding="utf-8")
+        for before, after in (
+            ("Run every Go live correctness test", "Removed Go live correctness test"),
+            ("if: always() && inputs.candidate-build", "if: always()"),
+            ("go test ./... -p 1 -run '^TestLive'", "go test ./udbclient -run '^TestLiveOrmConformance$'"),
+            ("-skip '^TestLivePerf$'", "-skip '^TestLive'"),
+            ('test "${UDB_LIVE_SDK_TESTS:-}" = "1"', "test true"),
+            ('if [ -z "${!fixture:-}" ]; then', "if false; then"),
+            ("UDB_LIVE_PEER_PASSWORD", "UNWIRED_PEER_PASSWORD"),
+            ("bash bench-output/reset.sh go-correctness", "bash bench-output/reset.sh"),
+            ("tee bench-output/logs/go-correctness.log", "tee bench-output/logs/go-correctness.log || true"),
+            ("        shell: bash\n        run: |\n          set -euo pipefail\n          test", "        shell: bash\n        continue-on-error: true\n        run: |\n          set -euo pipefail\n          test"),
+        ):
+            assert before in live_sdk_suite_good, before
+            (wf / "_live-sdk-suite.yml").write_text(live_sdk_suite_good.replace(before, after), encoding="utf-8")
+            failures = check_benchmark_workflow_gate(root)
+            assert any("candidate Go live correctness" in failure for failure in failures), (before, failures)
+        moved = re.search(
+            r"(?ms)^      - name: Run every Go live correctness test\n.*?(?=^      - |\Z)",
+            live_sdk_suite_good,
+        ).group(0)
+        reordered = live_sdk_suite_good.replace(moved, "").replace("      - name: Benchmark PHP SDK", moved + "      - name: Benchmark PHP SDK")
+        (wf / "_live-sdk-suite.yml").write_text(reordered, encoding="utf-8")
+        assert any("after measured SDKs" in failure for failure in check_benchmark_workflow_gate(root))
         (wf / "_live-sdk-suite.yml").write_text(live_sdk_suite_good, encoding="utf-8")
         (wf / "_live-sdk-suite.yml").write_text(
             live_sdk_suite_good.replace(

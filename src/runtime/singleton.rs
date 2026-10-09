@@ -10,6 +10,15 @@ use std::time::Duration;
 
 use sqlx::{PgPool, Row};
 
+/// Pace periodic freshness checks and bounded worker passes without replaying
+/// obsolete ticks after a slow pass or scheduler stall. The first tick remains
+/// immediate; callers that already performed startup work can consume it.
+pub(crate) fn periodic_worker_interval(period: Duration) -> tokio::time::Interval {
+    let mut interval = tokio::time::interval(period);
+    interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
+    interval
+}
+
 pub const WORKER_CDC_POSTGRES_SOURCE: &str = "udb:cdc:source:postgres";
 pub const WORKER_CDC_MYSQL_SOURCE: &str = "udb:cdc:source:mysql";
 pub const WORKER_CDC_MONGODB_SOURCE: &str = "udb:cdc:source:mongodb";
@@ -350,7 +359,7 @@ async fn drive_with_heartbeat<T, Fut>(
 where
     Fut: Future<Output = T>,
 {
-    let mut heartbeat = tokio::time::interval(heartbeat_period(ttl));
+    let mut heartbeat = periodic_worker_interval(heartbeat_period(ttl));
     // The first tick fires immediately; the lease was just acquired.
     heartbeat.tick().await;
     let mut task = Box::pin(task);
@@ -484,6 +493,53 @@ fn release_sql(relation: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use futures::FutureExt;
+
+    #[tokio::test(start_paused = true)]
+    async fn periodic_worker_interval_does_not_replay_missed_passes() {
+        let period = Duration::from_millis(100);
+        let started = tokio::time::Instant::now();
+        let mut tick = periodic_worker_interval(period);
+        tick.tick().await;
+        assert_eq!(
+            tokio::time::Instant::now(),
+            started,
+            "startup stays immediate"
+        );
+
+        // A pass or runtime stall spans several cadences. One overdue pass is
+        // still due, but the elapsed periods must not become extra ready work.
+        tokio::time::advance(period * 8 + Duration::from_millis(17)).await;
+        tick.tick().await;
+        let resumed = tokio::time::Instant::now();
+        assert!(tick.tick().now_or_never().is_none(), "no catch-up burst");
+        tokio::time::advance(period - Duration::from_millis(1)).await;
+        assert!(
+            tick.tick().now_or_never().is_none(),
+            "a full cadence is owed"
+        );
+        tokio::time::advance(Duration::from_millis(1)).await;
+        tick.tick().await;
+        assert_eq!(tokio::time::Instant::now(), resumed + period);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn periodic_worker_interval_retains_deadline_across_cancelled_waits() {
+        let period = Duration::from_millis(100);
+        let started = tokio::time::Instant::now();
+        let mut tick = periodic_worker_interval(period);
+        tick.tick().await;
+
+        // Heartbeats and metrics share a select loop with other ready work.
+        // Dropping the pending tick future must not postpone its deadline.
+        for _ in 0..4 {
+            tokio::time::advance(Duration::from_millis(20)).await;
+            assert!(tick.tick().now_or_never().is_none());
+        }
+        tokio::time::advance(Duration::from_millis(20)).await;
+        tick.tick().await;
+        assert_eq!(tokio::time::Instant::now(), started + period);
+    }
 
     #[derive(Debug, Clone, PartialEq, Eq)]
     struct LeaseState {

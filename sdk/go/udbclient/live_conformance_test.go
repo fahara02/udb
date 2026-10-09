@@ -16,6 +16,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/structpb"
 )
@@ -87,10 +88,14 @@ func TestLiveGeneratedRPCSurface(t *testing.T) {
 	// it from our own principal and use it for every request body (and the metadata
 	// header, before the generated clients are built below), so the body tenant
 	// matches the claim and the UUID-strict services (storage/webrtc/asset) accept
-	// it. ONE admin now serves the full AllRPCs surface.
+	// it. Global RPCs use a separately verified platform fixture below.
 	if pt := authResp.GetPrincipal().GetTenantId(); pt != "" {
 		tenant = pt
 		meta.TenantID = tenant
+	}
+	actorID := authResp.GetPrincipal().GetUserId()
+	if actorID == "" || actorID != login.GetUserId() || authResp.GetPrincipal().GetTenantId() == "" {
+		t.Fatal("ordinary live fixture must return the verified login user and canonical tenant")
 	}
 	if refreshed, err := auth.Authn.RefreshToken(auth.Context(ctx), &authnv1.RefreshTokenRequest{RefreshToken: login.GetRefreshToken()}); err != nil {
 		t.Fatalf("RefreshToken failed: %v", err)
@@ -100,7 +105,9 @@ func TestLiveGeneratedRPCSurface(t *testing.T) {
 
 	authz := "Bearer " + login.GetAccessToken()
 	brokerGen := NewGenerated(brokerConn, liveGeneratedOptions(meta, authz))
-	authGen := NewGenerated(authConn, liveGeneratedOptions(meta, authz))
+	platformGen := livePlatformFixture(t, ctx, authConn, meta)
+	nativeConn := &liveMethodCredentialConn{base: authConn, platform: platformGen}
+	authGen := NewGenerated(nativeConn, liveGeneratedOptions(meta, authz))
 
 	caps, err := servicesv1.NewDataBrokerClient(brokerConn).GetCapabilities(
 		brokerGen.outgoingContext(ctx),
@@ -153,7 +160,7 @@ func TestLiveGeneratedRPCSurface(t *testing.T) {
 	// canonical tenant UUID) now serves the UUID-strict services
 	// (storage/webrtc/asset) and the free-text ones alike — no second "uuid tenant"
 	// admin needed (auth_fix.md tenant-identity fix).
-	runLiveNativeServiceE2E(t, ctx, authConn, authGen, tenant, project, authz, tenant)
+	runLiveNativeServiceE2E(t, ctx, nativeConn, authGen, tenant, project, authz, tenant, actorID)
 
 	probed := 0
 	populated := 0
@@ -185,6 +192,100 @@ func TestLiveGeneratedRPCSurface(t *testing.T) {
 		t.Fatalf("only %d/%d RPCs received a populated typed request; full-surface coverage regressed", populated, probed)
 	}
 	t.Logf("full-surface probe: %d/%d RPCs reached, %d sent populated typed requests (%d dangerous/unresolved sent typed-empty)", probed, len(AllRPCs), populated, probed-populated)
+}
+
+// Use the same exact global-method routing as the canonical perf harness. Typed
+// native clients and generated surface probes retain ordinary tenant authority
+// for every other method; client-asserted roles/scopes never elevate the caller.
+type liveMethodCredentialConn struct {
+	base     grpc.ClientConnInterface
+	platform *GeneratedClient
+}
+
+func (c *liveMethodCredentialConn) methodContext(ctx context.Context, method string) context.Context {
+	for _, rpc := range AllRPCs {
+		if rpc.FullMethod == method && requiresPlatformBenchmarkIdentity(rpc) {
+			return c.platform.outgoingContext(ctx)
+		}
+	}
+	return ctx
+}
+
+func (c *liveMethodCredentialConn) Invoke(ctx context.Context, method string, args, reply any, opts ...grpc.CallOption) error {
+	return c.base.Invoke(c.methodContext(ctx, method), method, args, reply, opts...)
+}
+
+func (c *liveMethodCredentialConn) NewStream(ctx context.Context, desc *grpc.StreamDesc, method string, opts ...grpc.CallOption) (grpc.ClientStream, error) {
+	return c.base.NewStream(c.methodContext(ctx, method), desc, method, opts...)
+}
+
+func livePlatformFixture(t *testing.T, ctx context.Context, conn grpc.ClientConnInterface, meta Metadata) *GeneratedClient {
+	t.Helper()
+	login, err := authnv1.NewAuthnServiceClient(conn).Login(ctx, &authnv1.LoginRequest{
+		Username:   requiredLiveEnv(t, "UDB_LIVE_PLATFORM_USERNAME"),
+		Password:   requiredLiveEnv(t, "UDB_LIVE_PLATFORM_PASSWORD"),
+		TenantHint: meta.TenantID, ProjectHint: meta.ProjectID, DeviceName: "go-sdk-live-platform",
+	})
+	if err != nil {
+		t.Fatalf("platform Login failed: %v", err)
+	}
+	who, err := NewAuthClient(conn, meta).AuthenticateBearer(ctx, login.GetAccessToken())
+	if err != nil {
+		t.Fatalf("platform bearer validation failed: %v", err)
+	}
+	if login.GetAccessToken() == "" || who.GetPrincipal().GetUserId() != login.GetUserId() || who.GetPrincipal().GetTenantId() != meta.TenantID {
+		t.Fatal("platform live fixture must return its verified login user and matching canonical tenant")
+	}
+	for _, role := range who.GetPrincipal().GetRoles() {
+		if strings.EqualFold(strings.TrimSpace(role), "platform_admin") {
+			return NewGenerated(conn, liveGeneratedOptions(meta, "Bearer "+login.GetAccessToken()))
+		}
+	}
+	t.Fatal("offline platform fixture did not issue the reserved platform_admin role")
+	return nil
+}
+
+type liveCredentialProbeConn struct{ ctx context.Context }
+
+func (c *liveCredentialProbeConn) Invoke(ctx context.Context, _ string, _, _ any, _ ...grpc.CallOption) error {
+	c.ctx = ctx
+	return nil
+}
+
+func (c *liveCredentialProbeConn) NewStream(ctx context.Context, _ *grpc.StreamDesc, _ string, _ ...grpc.CallOption) (grpc.ClientStream, error) {
+	c.ctx = ctx
+	return nil, nil
+}
+
+func TestLiveMethodCredentialRoutingRetainsTenantAuthority(t *testing.T) {
+	base := &liveCredentialProbeConn{}
+	meta := Metadata{TenantID: "fixture-tenant", ProjectID: "fixture-project"}
+	ordinary := NewGenerated(base, liveGeneratedOptions(meta, "Bearer ordinary-fixture"))
+	conn := &liveMethodCredentialConn{base: base, platform: NewGenerated(base, liveGeneratedOptions(meta, "Bearer platform-fixture"))}
+	for _, tc := range []struct{ method, bearer string }{
+		{"/udb.core.authz.services.v1.AuthzService/CreatePolicyDraft", "Bearer platform-fixture"},
+		{"/udb.core.analytics.services.v1.AnalyticsService/GetExecutorPerformance", "Bearer platform-fixture"},
+		{"/udb.core.authz.services.v1.AuthzService/CreateRole", "Bearer ordinary-fixture"},
+		{"/udb.core.authz.services.v1.AuthzService/AssignRole", "Bearer ordinary-fixture"},
+		{"/udb.core.tenant.services.v1.TenantService/CreateTenant", "Bearer ordinary-fixture"},
+		{"/unknown.Service/CreatePolicyDraft", "Bearer ordinary-fixture"},
+	} {
+		ctx := ordinary.outgoingContext(context.Background())
+		if err := conn.Invoke(ctx, tc.method, nil, nil); err != nil {
+			t.Fatal(err)
+		}
+		md, _ := metadata.FromOutgoingContext(base.ctx)
+		if got := md.Get("authorization"); len(got) != 1 || got[0] != tc.bearer {
+			t.Fatalf("%s routed unexpected authority: %v", tc.method, got)
+		}
+		if _, err := conn.NewStream(ctx, &grpc.StreamDesc{}, tc.method); err != nil {
+			t.Fatal(err)
+		}
+		md, _ = metadata.FromOutgoingContext(base.ctx)
+		if got := md.Get("authorization"); len(got) != 1 || got[0] != tc.bearer {
+			t.Fatalf("%s streamed with unexpected authority: %v", tc.method, got)
+		}
+	}
 }
 
 // runLiveAuthLifecycle drives a full session lifecycle on a throwaway login and

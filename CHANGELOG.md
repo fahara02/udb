@@ -9,6 +9,17 @@ release line was tagged.
 
 ### Fixed
 
+- Periodic workers and shared lease heartbeats retain their startup behavior
+  while avoiding catch-up bursts after a delayed scheduler.
+- Replica health checks await bounded probe batches and prevent overlapping
+  refreshes. Read fences bound connection acquisition, query execution and
+  retries; interrupted probe queries discard their unfinished connection.
+- Channel execution metrics balance inflight counts and record elapsed time
+  when unary or batch execution is cancelled, succeeds or refuses a request.
+- Candidate benchmarks run every Go live correctness test after the measured
+  SDK sweeps, with independently authenticated tenant and platform fixtures.
+  Fixture cleanup, verified actors and durable service-account grants preserve
+  normal authorization while the final benchmark gate remains mandatory.
 - PostgreSQL Select, joins and hybrid full-text reads discard a connection if
   cancellation or an early error interrupts its request settings or cleanup.
   Successful reads still reuse the physical connection and prepared statements.

@@ -32,6 +32,8 @@ impl NativeWorkerHost {
     ///
     /// `task` is a factory invoked once per tick so each run gets a fresh future
     /// (callers typically `clone()` their service handle inside it).
+    /// A slow pass leaves one overdue tick; elapsed ticks are not replayed as
+    /// repeated lease acquisitions and identical freshness checks.
     pub(crate) fn spawn_while_leader<F, Fut, E>(
         worker_name: &'static str,
         label: &'static str,
@@ -45,7 +47,7 @@ impl NativeWorkerHost {
         E: std::fmt::Display + Send + 'static,
     {
         tokio::spawn(async move {
-            let mut ticker = tokio::time::interval(interval);
+            let mut ticker = crate::runtime::singleton::periodic_worker_interval(interval);
             loop {
                 ticker.tick().await;
                 let fut = task();
