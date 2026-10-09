@@ -3124,6 +3124,8 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
         (
             "sqlx::Error::ColumnDecode { index, .. }",
             "sqlx::Error::ColumnNotFound(index)",
+            "serde_json::from_str::<String>(index)",
+            "let decode_column = decoded_column.as_deref();",
             "sqlx::Error::Decode(_) | sqlx::Error::ColumnIndexOutOfBounds { .. }",
             "crate::runtime::error_reasons::DECODE_FAILED",
             "decode_column,",
@@ -3190,6 +3192,10 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
             "invalid effect must not create a policy set",
             "invalid effect must not replace stored draft policies",
             "invalid effect must not advance draft update time",
+            "read stored draft before invalid effect refusals",
+            "let before_invalid: (String, Option<chrono::DateTime<chrono::Utc>>)",
+            "unchanged.0, before_invalid.0,",
+            "before_invalid.1,",
         ),
     ),
     TokenCheck(
@@ -10880,6 +10886,8 @@ def run_selftest() -> None:
             ("src/runtime/service/auth_service/tests/authz_rbac_live.rs", "forged role revoker must not append an authz revision"),
             ("src/runtime/service/auth_service/authz/mod.rs", "PrincipalKind::try_from(req.principal_kind).map_err(|_|"),
             ("src/runtime/service/auth_service/tests/authz_rbac_live.rs", "unknown principal kind must not append an authz revision"),
+            ("src/runtime/executor_utils.rs", "serde_json::from_str::<String>(index)"),
+            ("src/runtime/service/auth_service/tests/authz_admin_live.rs", "read stored draft before invalid effect refusals"),
         ):
             write_fixture(root)
             target = root / source

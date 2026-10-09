@@ -44,6 +44,8 @@ no-wrapper plan.
 - Authz row decoding refuses corrupt governance, role, audit and canary data with
   `UDB_DECODE_FAILED` and the affected column. Decode errors cannot become empty
   identities, invented revisions or a healthy canary signal.
+- SQLx decode details expose the column name after decoding the driver's quoted
+  index representation, while preserving positional and missing-column indices.
 - Governance draft and simulation documents share `PutAuthzPolicy` effect
   validation. An unknown effect refuses with a typed `policy.effect` violation
   before it can become an allow policy.

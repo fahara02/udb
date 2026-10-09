@@ -619,6 +619,24 @@ async fn live_postgres_authz_governance_activate_policy_read_after_write() {
         .draft
         .expect("created policy draft");
 
+    let drafts = crate::runtime::native_catalog::native_model(
+        "udb.core.authz.entity.v1.PolicyDraft",
+        &["draft_id", "proposed_policies_json", "updated_at"],
+    );
+    let draft_state_sql = format!(
+        "SELECT {}, {} FROM {} WHERE {} = $1::UUID",
+        drafts.json_text_as("proposed_policies_json", "proposed_policies_json"),
+        drafts.q("updated_at"),
+        drafts.relation,
+        drafts.q("draft_id"),
+    );
+    let before_invalid: (String, Option<chrono::DateTime<chrono::Utc>>) =
+        sqlx::query_as(&draft_state_sql)
+            .bind(&draft.draft_id)
+            .fetch_one(&pool)
+            .await
+            .expect("read stored draft before invalid effect refusals");
+
     // Incoming documents must use the same effect validation as direct policy
     // writes. Exercise all four governance handlers, including the update of
     // this actual stored draft, before continuing the successful lifecycle.
@@ -705,32 +723,18 @@ async fn live_postgres_authz_governance_activate_policy_read_after_write() {
         rejected_sets, 0,
         "invalid effect must not create a policy set"
     );
-    let drafts = crate::runtime::native_catalog::native_model(
-        "udb.core.authz.entity.v1.PolicyDraft",
-        &["draft_id", "proposed_policies_json", "updated_at"],
-    );
-    let unchanged: (String, i64) = sqlx::query_as(&format!(
-        "SELECT {}, EXTRACT(EPOCH FROM {})::BIGINT FROM {} WHERE {} = $1::UUID",
-        drafts.json_text_as("proposed_policies_json", "proposed_policies_json"),
-        drafts.q("updated_at"),
-        drafts.relation,
-        drafts.q("draft_id"),
-    ))
-    .bind(&draft.draft_id)
-    .fetch_one(&pool)
-    .await
-    .expect("read stored draft after invalid effect refusals");
+    let unchanged: (String, Option<chrono::DateTime<chrono::Utc>>) =
+        sqlx::query_as(&draft_state_sql)
+            .bind(&draft.draft_id)
+            .fetch_one(&pool)
+            .await
+            .expect("read stored draft after invalid effect refusals");
     assert_eq!(
-        unchanged.0, draft.proposed_policies_json,
+        unchanged.0, before_invalid.0,
         "invalid effect must not replace stored draft policies"
     );
     assert_eq!(
-        unchanged.1,
-        draft
-            .updated_at
-            .as_ref()
-            .expect("draft update time")
-            .seconds,
+        unchanged.1, before_invalid.1,
         "invalid effect must not advance draft update time"
     );
 

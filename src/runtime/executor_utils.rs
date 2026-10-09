@@ -908,12 +908,19 @@ pub(crate) fn sqlx_error_to_status(context: &str, err: &sqlx::Error) -> tonic::S
     }
     // Decode sources can contain stored values. Report the operation and column
     // without forwarding that source to either callers or server logs.
-    let decode_column = match err {
-        sqlx::Error::ColumnDecode { index, .. } | sqlx::Error::ColumnNotFound(index) => {
-            Some(index.as_str())
+    let decoded_column = match err {
+        // SQLx formats a named ColumnDecode index with Debug, including quotes.
+        // Decode that string representation; positional indices remain unchanged.
+        sqlx::Error::ColumnDecode { index, .. } => {
+            Some(serde_json::from_str::<String>(index).map_or_else(
+                |_| std::borrow::Cow::Borrowed(index.as_str()),
+                std::borrow::Cow::Owned,
+            ))
         }
+        sqlx::Error::ColumnNotFound(index) => Some(std::borrow::Cow::Borrowed(index.as_str())),
         _ => None,
     };
+    let decode_column = decoded_column.as_deref();
     if decode_column.is_some()
         || matches!(
             err,
@@ -3845,6 +3852,31 @@ mod error_detail_tests {
                     source: "stored-private-value".into(),
                 },
                 "revision",
+            ),
+            (
+                sqlx::Error::ColumnDecode {
+                    index: r#""revision""#.to_string(),
+                    source: "stored-private-value".into(),
+                },
+                "revision",
+            ),
+            (
+                sqlx::Error::ColumnDecode {
+                    index: r#""exposed\"field""#.to_string(),
+                    source: "stored-private-value".into(),
+                },
+                "exposed\"field",
+            ),
+            (
+                sqlx::Error::ColumnDecode {
+                    index: "1".to_string(),
+                    source: "stored-private-value".into(),
+                },
+                "1",
+            ),
+            (
+                sqlx::Error::ColumnNotFound("literal\"field".to_string()),
+                "literal\"field",
             ),
             (sqlx::Error::Decode("stored-private-value".into()), ""),
             (sqlx::Error::ColumnIndexOutOfBounds { index: 9, len: 2 }, ""),
