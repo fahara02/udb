@@ -49,6 +49,9 @@ no-wrapper plan.
 
 ### Fixed
 
+- Blocked column-removal hints distinguish data-preserving renames from protobuf
+  field reservations. Reserving a removed field number does not retain SQL data.
+
 - Native authn/authz writes keep the store's original refusal code, reason and
   diagnostics when adding operation context, including WebAuthn, refresh-family,
   policy, role, relationship and governance changes.

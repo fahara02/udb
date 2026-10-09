@@ -859,7 +859,7 @@ fn diff_columns(old: &ManifestTable, new: &ManifestTable, ops: &mut Vec<ChangeOp
             })
             .map(|candidate| {
                 format!(
-                    "; if {} is {} renamed, set previous_column_name = \"{}\" on it (or reserve the old field number) to keep the data",
+                    "; if {} is {} renamed, set previous_column_name = \"{}\" on it to keep the data; for an intentional removal, reserve the old field number to prevent protobuf reuse (this does not preserve the column data)",
                     candidate.column_name, old_col.column_name, old_col.column_name
                 )
             })
@@ -2123,6 +2123,78 @@ mod tests {
             tables: vec![table],
             ..CatalogManifest::default()
         }
+    }
+
+    #[test]
+    fn blocked_drop_add_hint_distinguishes_rename_from_reserved_removal() {
+        let mut old_column = column("display_name", "TEXT");
+        old_column.field_number = 5;
+        let old = manifest(table(vec![old_column]), "old", "old-table");
+        let mut new_column = column("full_name", "text");
+        new_column.field_number = 6;
+        let mut desired = manifest(table(vec![new_column]), "new", "new-table");
+
+        let changes = diff_manifests(Some(&old), &desired);
+        let drop = changes
+            .iter()
+            .find(|change| change.kind == ChangeKind::DropColumn)
+            .expect("an undeclared rename still plans a destructive drop");
+        assert_eq!(drop.column, "display_name");
+        assert_eq!(drop.safety, ChangeSafety::Blocked);
+        assert!(drop.data_destructive);
+        assert!(
+            drop.blocked_reason
+                .contains("previous_column_name = \"display_name\" on it to keep the data")
+        );
+        assert!(drop.blocked_reason.contains("reserve the old field number"));
+        assert!(
+            drop.blocked_reason
+                .contains("this does not preserve the column data")
+        );
+
+        desired.tables[0].reserved_numbers = vec![ManifestReservedRange { start: 5, end: 5 }];
+        let reserved_changes = diff_manifests(Some(&old), &desired);
+        assert!(reserved_changes.iter().any(|change| {
+            change.kind == ChangeKind::DropColumn
+                && change.safety == ChangeSafety::Blocked
+                && change.data_destructive
+        }));
+
+        desired.tables[0].reserved_numbers.clear();
+        desired.tables[0].columns[0].previous_column_name = "display_name".to_string();
+        desired.tables[0].columns[0].field_number = 5;
+        let rename_changes = diff_manifests(Some(&old), &desired);
+        let rename = rename_changes
+            .iter()
+            .find(|change| change.kind == ChangeKind::RenameColumn)
+            .expect("the declared rename preserves the column");
+        assert_eq!(rename.column, "full_name");
+        assert_eq!(rename.object_name, "display_name");
+        assert_eq!(rename.safety, ChangeSafety::SafeAuto);
+        assert!(!rename.data_destructive);
+        assert!(!rename_changes.iter().any(|change| {
+            matches!(
+                change.kind,
+                ChangeKind::DropColumn | ChangeKind::AddColumn | ChangeKind::ValidationError
+            )
+        }));
+    }
+
+    #[test]
+    fn blocked_drop_add_does_not_suggest_rename_for_different_sql_types() {
+        let mut old_column = column("display_name", "TEXT");
+        old_column.field_number = 5;
+        let old = manifest(table(vec![old_column]), "old", "old-table");
+        let mut new_column = column("age", "BIGINT");
+        new_column.field_number = 6;
+        let desired = manifest(table(vec![new_column]), "new", "new-table");
+        let changes = diff_manifests(Some(&old), &desired);
+        let drop = changes
+            .iter()
+            .find(|change| change.kind == ChangeKind::DropColumn)
+            .expect("the removed column is still blocked");
+        assert_eq!(drop.safety, ChangeSafety::Blocked);
+        assert!(!drop.blocked_reason.contains("previous_column_name"));
     }
 
     /// The verb is not the signal. A downstream guard written as "reject anything

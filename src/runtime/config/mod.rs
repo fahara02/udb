@@ -1079,6 +1079,7 @@ impl MigrationOptions {
     /// - `UDB_DB_OPS_ROOT`, `UDB_LEDGER_SCHEMA`
     /// - `UDB_FORCE_RESEED`, `UDB_SKIP_UNCHANGED_VERIFY`,
     ///   `UDB_STARTUP_SKIP_IF_UNCHANGED`, `UDB_MIGRATION_EMERGENCY_AUTO_ALTER`
+    /// - `UDB_MIGRATION_APPROVAL_PLAN` (nonempty trimmed path overrides the file)
     pub fn from_env() -> Self {
         let mut opts = Self::default();
         opts.merge_env();
@@ -1086,8 +1087,9 @@ impl MigrationOptions {
     }
 
     /// Overlay env-provided fields onto an existing (e.g. file-loaded) config,
-    /// touching ONLY fields whose env var is present — so file-configured safety
-    /// flags (`require_approval_plan`, hooks, `strict_verify`, `dry_run`) survive.
+    /// touching only fields whose env override is supplied. Approval-plan paths
+    /// override file values only when nonempty; empty paths cannot clear the gate.
+    /// Hooks, `strict_verify` and `dry_run` remain file-configured.
     pub fn merge_env(&mut self) {
         if let Some(path) = std::env::var("UDB_SEEDERS_PATH")
             .ok()

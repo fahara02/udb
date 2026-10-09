@@ -15,6 +15,63 @@ fn default_migration_options() {
 }
 
 #[test]
+fn migration_approval_plan_env_override_preserves_required_gate() {
+    const EXPECTED: &str = "UDB_TEST_MIGRATION_APPROVAL_EXPECTED";
+    const FILE_PLAN: &str = "UDB_TEST_MIGRATION_APPROVAL_FILE_PLAN";
+
+    if let Ok(expected) = std::env::var(EXPECTED) {
+        let mut config = UdbConfig {
+            migration: MigrationOptions {
+                require_approval_plan: std::env::var(FILE_PLAN).expect("child file plan"),
+                ..MigrationOptions::default()
+            },
+            ..UdbConfig::default()
+        };
+        config.merge_env();
+        assert_eq!(config.migration.require_approval_plan, expected);
+        assert_eq!(config.migration.requires_approval(), !expected.is_empty());
+        return;
+    }
+
+    // Each case exercises the actual config overlay in a fresh process, so an
+    // empty override cannot disable approval and parallel tests share no env writes.
+    for (value, file_plan, expected) in [
+        (
+            Some("  approved/release-plan.json  "),
+            "file-plan.json",
+            "approved/release-plan.json",
+        ),
+        (Some(""), "file-plan.json", "file-plan.json"),
+        (Some(" \t\n "), "file-plan.json", "file-plan.json"),
+        (None, "file-plan.json", "file-plan.json"),
+        (Some(" \t "), "", ""),
+    ] {
+        let mut child = std::process::Command::new(std::env::current_exe().expect("test binary"));
+        child
+            .args([
+                "--exact",
+                "runtime::config::tests::migration_approval_plan_env_override_preserves_required_gate",
+            ])
+            .env(EXPECTED, expected)
+            .env(FILE_PLAN, file_plan)
+            .env_remove("UDB_MIGRATION_APPROVAL_PLAN");
+        if let Some(value) = value {
+            child.env("UDB_MIGRATION_APPROVAL_PLAN", value);
+        }
+        let output = child.output().expect("run isolated config overlay case");
+        assert!(
+            output.status.success(),
+            "approval-plan overlay case {value:?} exited {}",
+            output.status
+        );
+        assert!(
+            String::from_utf8_lossy(&output.stdout).contains("1 passed; 0 failed;"),
+            "the child must execute exactly the selected config test"
+        );
+    }
+}
+
+#[test]
 fn migration_options_seeders_path_from_env() {
     let prior_seeders = std::env::var("UDB_SEEDERS_PATH").ok();
     #[allow(unused_unsafe)]
