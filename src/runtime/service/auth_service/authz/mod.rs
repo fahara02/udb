@@ -23,8 +23,9 @@ use super::mappings::{
 };
 use super::now_unix;
 use crate::ir::{
-    ComparisonOp, ConflictStrategy, LogicalAssignment, LogicalDelete, LogicalFilter, LogicalRecord,
-    LogicalUpdate, LogicalValue,
+    ComparisonOp, ConflictStrategy, LogicalAssignment, LogicalDelete, LogicalFilter,
+    LogicalPagination, LogicalProjection, LogicalRead, LogicalRecord, LogicalUpdate, LogicalValue,
+    LogicalWrite,
 };
 use crate::runtime::DataBrokerRuntime;
 use crate::runtime::authz::Effect;
@@ -33,6 +34,7 @@ use crate::runtime::authz::{
     ResourceRef, RoleBinding,
 };
 use crate::runtime::channels::{ChannelManager, ChannelPermit, OperationChannel};
+use crate::runtime::core::native_store::NativeEntityTransactionOp;
 use crate::runtime::native_catalog::{NativeModel, native_model};
 use crate::runtime::service::native_helpers::{
     metadata_tenant_id, native_next_page_token_for_total, native_offset_page_window,
@@ -794,6 +796,89 @@ fn role_from_row(row: &sqlx::postgres::PgRow) -> Result<authz_entity_pb::Role, S
     })
 }
 
+fn authz_native_text(row: &serde_json::Value, field: &str) -> Result<String, Status> {
+    match row.get(field) {
+        Some(serde_json::Value::String(value)) => Ok(value.clone()),
+        Some(serde_json::Value::Null) => Ok(String::new()),
+        _ => Err(crate::runtime::executor_utils::status_with_typed_detail(
+            crate::runtime::error_reasons::DECODE_FAILED.status,
+            "stored authz field is not text",
+            crate::proto::ErrorDetail {
+                backend: "authz".to_string(),
+                operation: "decode_authz_mutation_row".to_string(),
+                column: field.to_string(),
+                kind: crate::runtime::error_reasons::DECODE_FAILED.kind as i32,
+                reason: crate::runtime::error_reasons::DECODE_FAILED
+                    .code
+                    .to_string(),
+                ..Default::default()
+            },
+        )),
+    }
+}
+
+/// Keep the mutation in the scope observed before choosing its revision lock.
+/// A concurrent rehome must become a typed miss, not append to the old scope.
+fn authz_native_scope_filter(
+    row: &serde_json::Value,
+    fields: &[&str],
+) -> Result<LogicalFilter, Status> {
+    let parts = fields
+        .iter()
+        .map(|field| {
+            let value = authz_native_text(row, field)?;
+            Ok(if row.get(*field).is_some_and(serde_json::Value::is_null) {
+                LogicalFilter::IsNull((*field).to_string())
+            } else {
+                LogicalFilter::Comparison {
+                    field: (*field).to_string(),
+                    op: ComparisonOp::Eq,
+                    value: LogicalValue::String(value),
+                }
+            })
+        })
+        .collect::<Result<Vec<_>, Status>>()?;
+    Ok(LogicalFilter::And(parts))
+}
+
+/// The same logical role fields as `role_from_row`, from the transaction's
+/// actual RETURNING row. Optional SQL text remains empty; booleans stay typed.
+fn role_from_native_row(row: &serde_json::Value) -> Result<authz_entity_pb::Role, Status> {
+    let boolean = |field| {
+        row.get(field)
+            .and_then(serde_json::Value::as_bool)
+            .ok_or_else(|| authz_internal_status("decode_role", "returned role boolean is invalid"))
+    };
+    Ok(authz_entity_pb::Role {
+        role_id: authz_native_text(row, "role_id")?,
+        name: authz_native_text(row, "name")?,
+        description: authz_native_text(row, "description")?,
+        is_system: boolean("is_system")?,
+        is_active: boolean("is_active")?,
+        created_by: authz_native_text(row, "created_by")?,
+        tenant_id: authz_native_text(row, "tenant_id")?,
+        project_id: authz_native_text(row, "project_id")?,
+        deleted_by: authz_native_text(row, "deleted_by")?,
+        role_code: authz_native_text(row, "role_code")?,
+        domain: authz_native_text(row, "domain")?,
+        scope_type: role_scope_type_from_db(&authz_native_text(row, "scope_type")?),
+        access_surface: authz_native_text(row, "access_surface")?,
+        metadata_json: match row.get("metadata_json") {
+            Some(serde_json::Value::Null) => "{}".to_string(),
+            Some(value) => value.to_string(),
+            None => {
+                return Err(authz_internal_status(
+                    "decode_role",
+                    "returned role metadata is missing",
+                ));
+            }
+        },
+        created_at: None,
+        updated_at: None,
+        deleted_at: None,
+    })
+}
+
 /// Map a `user_roles` row to the `UserRole` entity.
 fn user_role_from_row(row: &sqlx::postgres::PgRow) -> Result<authz_entity_pb::UserRole, Status> {
     let map = |e: sqlx::Error| {
@@ -1229,6 +1314,43 @@ impl AuthzServiceImpl {
                 "this operation requires a Postgres-backed auth store (no PG pool configured)",
             )
         })
+    }
+
+    /// Read one UUID-addressed mutation target from the same control primary
+    /// used by revision transactions. The verified caller still limits reads.
+    async fn read_authz_mutation_row(
+        &self,
+        message_type: &str,
+        filter: LogicalFilter,
+        fields: &[&str],
+    ) -> Result<Option<serde_json::Value>, Status> {
+        let runtime = self.runtime.as_ref().ok_or_else(|| {
+            authz_capability_status(
+                "mutation_scope",
+                "runtime_native_entity_dispatch",
+                "native authz requires runtime-backed scope reads",
+            )
+        })?;
+        let context = governance::authz_revision_context(
+            runtime,
+            &authz_record_tenant_scope().unwrap_or_default(),
+        )?;
+        let rows = runtime
+            .native_entity_read_for_service(
+                "authz",
+                &context,
+                LogicalRead {
+                    message_type: message_type.to_string(),
+                    filter: Some(filter),
+                    projection: Some(LogicalProjection::fields(
+                        fields.iter().map(|field| (*field).to_string()),
+                    )),
+                    pagination: Some(LogicalPagination::limit(1)),
+                    ..LogicalRead::default()
+                },
+            )
+            .await?;
+        Ok(rows.into_iter().next())
     }
 
     /// Best-effort access-decision audit write (items 84–86): records denies and
@@ -2202,7 +2324,7 @@ impl AuthzService for AuthzServiceImpl {
             required_scopes: p.required_scopes,
         };
         if self.pg_pool.is_some() {
-            let runtime = self.runtime.as_ref().ok_or_else(|| {
+            let _runtime = self.runtime.as_ref().ok_or_else(|| {
                 authz_capability_status(
                     "policy_persistence",
                     "runtime_native_entity_dispatch",
@@ -2308,18 +2430,16 @@ impl AuthzService for AuthzServiceImpl {
                 "attributes_json".to_string(),
                 LogicalValue::Json(serde_json::Value::Object(attributes)),
             );
-            let context = crate::RequestContext {
-                tenant_id: policy.tenant.clone(),
-                project_id: policy.project.clone(),
-                ..crate::RequestContext::default()
-            };
-            runtime
-                .native_entity_write_for_service(
-                    "authz",
-                    &context,
-                    "udb.core.authz.entity.v1.PolicyRule",
-                    record,
-                    ConflictStrategy::update(vec![
+            self.mutate_authz_with_revision(
+                &policy.tenant,
+                &policy.project,
+                authz_entity_pb::AuthzChangeType::Policy,
+                "policy-put",
+                "",
+                vec![NativeEntityTransactionOp::Write(LogicalWrite {
+                    message_type: "udb.core.authz.entity.v1.PolicyRule".to_string(),
+                    records: vec![record],
+                    conflict: ConflictStrategy::update(vec![
                         "subject".to_string(),
                         "domain".to_string(),
                         "object".to_string(),
@@ -2330,19 +2450,13 @@ impl AuthzService for AuthzServiceImpl {
                         "project_id".to_string(),
                         "attributes_json".to_string(),
                     ]),
-                )
-                .await
-                .map_err(|err| {
-                    crate::runtime::executor_utils::prefix_status("store authz policy failed", err)
-                })?;
-            self.bump_authz_revision(
-                &policy.tenant,
-                &policy.project,
-                authz_entity_pb::AuthzChangeType::Policy,
-                "policy-put",
-                "",
+                    return_fields: Vec::new(),
+                })],
             )
-            .await?;
+            .await
+            .map_err(|err| {
+                crate::runtime::executor_utils::prefix_status("store authz policy failed", err)
+            })?;
         } else {
             self.require_snapshot_fallback()?;
         }
@@ -2563,7 +2677,7 @@ impl AuthzService for AuthzServiceImpl {
             }
             parse_uuid_field("created_by", &req.created_by)?
         };
-        let runtime = self.runtime.as_ref().ok_or_else(|| {
+        let _runtime = self.runtime.as_ref().ok_or_else(|| {
             authz_capability_status(
                 "role_persistence",
                 "runtime_native_entity_dispatch",
@@ -2621,23 +2735,21 @@ impl AuthzService for AuthzServiceImpl {
                     .unwrap_or_else(|_| serde_json::Value::Object(Default::default())),
             ),
         );
-        let context = crate::RequestContext {
-            tenant_id: tenant_id.clone(),
-            project_id: req.project_id.clone(),
-            ..crate::RequestContext::default()
-        };
-        runtime
-            .native_entity_write_for_service(
-                "authz",
-                &context,
-                "udb.core.authz.entity.v1.Role",
-                record,
-                ConflictStrategy::Error,
-            )
-            .await
-            .map_err(|err| {
-                crate::runtime::executor_utils::prefix_status("create role failed", err)
-            })?;
+        self.mutate_authz_with_revision(
+            &tenant_id,
+            &req.project_id,
+            authz_entity_pb::AuthzChangeType::Role,
+            "role-created",
+            &created_by.to_string(),
+            vec![NativeEntityTransactionOp::Write(LogicalWrite {
+                message_type: "udb.core.authz.entity.v1.Role".to_string(),
+                records: vec![record],
+                conflict: ConflictStrategy::Error,
+                return_fields: Vec::new(),
+            })],
+        )
+        .await
+        .map_err(|err| crate::runtime::executor_utils::prefix_status("create role failed", err))?;
         self.emit_event(
             AuthEvent::new(
                 topics::ROLE_CREATED,
@@ -2667,14 +2779,6 @@ impl AuthzService for AuthzServiceImpl {
             }),
         )
         .await;
-        self.bump_authz_revision(
-            &tenant_id,
-            &req.project_id,
-            authz_entity_pb::AuthzChangeType::Role,
-            "role-created",
-            &req.created_by,
-        )
-        .await?;
         Ok(Response::new(authz_pb::CreateRoleResponse {
             role: Some(authz_entity_pb::Role {
                 role_id,
@@ -2836,7 +2940,7 @@ impl AuthzService for AuthzServiceImpl {
             // (tuple_kind,subject,domain,object,action,effect); only condition+tenant_id
             // update on conflict. domain and tenant_id both = tenant_id (raw `$3` reuse);
             // object/effect are insert literals ''.
-            let runtime = self.runtime.as_ref().ok_or_else(|| {
+            let _runtime = self.runtime.as_ref().ok_or_else(|| {
                 authz_capability_status(
                     "tuple_persistence",
                     "runtime_native_entity_dispatch",
@@ -2874,18 +2978,16 @@ impl AuthzService for AuthzServiceImpl {
                 "project_id".to_string(),
                 LogicalValue::String(req.project_id.clone()),
             );
-            let context = crate::RequestContext {
-                tenant_id: tenant_id.clone(),
-                project_id: req.project_id.clone(),
-                ..crate::RequestContext::default()
-            };
-            runtime
-                .native_entity_write_for_service(
-                    "authz",
-                    &context,
-                    "udb.core.authz.entity.v1.PolicyTuple",
-                    record,
-                    ConflictStrategy::update_on(
+            self.mutate_authz_with_revision(
+                &tenant_id,
+                &req.project_id,
+                authz_entity_pb::AuthzChangeType::RoleAssignment,
+                "role-assignment",
+                &assigned_by.to_string(),
+                vec![NativeEntityTransactionOp::Write(LogicalWrite {
+                    message_type: "udb.core.authz.entity.v1.PolicyTuple".to_string(),
+                    records: vec![record],
+                    conflict: ConflictStrategy::update_on(
                         vec!["condition".to_string(), "tenant_id".to_string()],
                         vec![
                             "tuple_kind".to_string(),
@@ -2896,14 +2998,13 @@ impl AuthzService for AuthzServiceImpl {
                             "effect".to_string(),
                         ],
                     ),
-                )
-                .await
-                .map_err(|err| {
-                    crate::runtime::executor_utils::prefix_status(
-                        "assign role (principal) failed",
-                        err,
-                    )
-                })?;
+                    return_fields: Vec::new(),
+                })],
+            )
+            .await
+            .map_err(|err| {
+                crate::runtime::executor_utils::prefix_status("assign role (principal) failed", err)
+            })?;
             self.emit_event(
                 AuthEvent::new(
                     topics::ROLE_ASSIGNED,
@@ -2935,14 +3036,6 @@ impl AuthzService for AuthzServiceImpl {
                 }),
             )
             .await;
-            self.bump_authz_revision(
-                &tenant_id,
-                &req.project_id,
-                authz_entity_pb::AuthzChangeType::RoleAssignment,
-                "role-assignment",
-                &req.assigned_by,
-            )
-            .await?;
             return Ok(Response::new(authz_pb::AssignRoleResponse {
                 user_role: Some(authz_entity_pb::UserRole {
                     user_role_id: stable_uuid_from_subject(&format!(
@@ -2976,7 +3069,7 @@ impl AuthzService for AuthzServiceImpl {
                 .unwrap_or(LogicalValue::Null),
             _ => LogicalValue::Null,
         };
-        let runtime = self.runtime.as_ref().ok_or_else(|| {
+        let _runtime = self.runtime.as_ref().ok_or_else(|| {
             authz_capability_status(
                 "user_role_persistence",
                 "runtime_native_entity_dispatch",
@@ -3013,36 +3106,42 @@ impl AuthzService for AuthzServiceImpl {
             LogicalValue::String(req.assigned_by.clone()),
         );
         record.insert("expires_at".to_string(), expires_value);
-        let context = crate::RequestContext {
-            tenant_id: tenant_id.clone(),
-            project_id: req.project_id.clone(),
-            ..crate::RequestContext::default()
-        };
-        let returned = runtime
-            .native_entity_write_for_service_returning(
-                "authz",
-                &context,
-                "udb.core.authz.entity.v1.UserRole",
-                record,
-                ConflictStrategy::update_on(
-                    vec![
-                        "assigned_by".to_string(),
-                        "tenant_id".to_string(),
-                        "created_by".to_string(),
-                        "expires_at".to_string(),
-                    ],
-                    vec![
-                        "user_id".to_string(),
-                        "role_id".to_string(),
-                        "domain".to_string(),
-                    ],
-                ),
-                vec!["user_role_id".to_string()],
+        let (_, _, results) = self
+            .mutate_authz_with_revision(
+                &tenant_id,
+                &req.project_id,
+                authz_entity_pb::AuthzChangeType::RoleAssignment,
+                "role-assignment",
+                &assigned_by.to_string(),
+                vec![NativeEntityTransactionOp::Write(LogicalWrite {
+                    message_type: "udb.core.authz.entity.v1.UserRole".to_string(),
+                    records: vec![record],
+                    conflict: ConflictStrategy::update_on(
+                        vec![
+                            "assigned_by".to_string(),
+                            "tenant_id".to_string(),
+                            "created_by".to_string(),
+                            "expires_at".to_string(),
+                        ],
+                        vec![
+                            "user_id".to_string(),
+                            "role_id".to_string(),
+                            "domain".to_string(),
+                        ],
+                    ),
+                    return_fields: vec!["user_role_id".to_string()],
+                })],
             )
             .await
             .map_err(|err| {
-                authz_internal_status("assign_role", format!("assign role failed: {err}"))
+                crate::runtime::executor_utils::prefix_status("assign role failed", err)
             })?;
+        let returned = &results
+            .first()
+            .ok_or_else(|| {
+                authz_internal_status("assign_role", "assignment receipt is unavailable")
+            })?
+            .rows;
         let user_role_id = returned
             .first()
             .and_then(|r| r.get("user_role_id"))
@@ -3079,16 +3178,6 @@ impl AuthzService for AuthzServiceImpl {
             }),
         )
         .await;
-        // K2.1: role assignment bumps the active authz revision so cached bundles
-        // invalidate (not only policy/tuple edits).
-        self.bump_authz_revision(
-            &tenant_id,
-            &req.project_id,
-            authz_entity_pb::AuthzChangeType::RoleAssignment,
-            "role-assignment",
-            &req.assigned_by,
-        )
-        .await?;
         Ok(Response::new(authz_pb::AssignRoleResponse {
             user_role: Some(authz_entity_pb::UserRole {
                 user_role_id,
@@ -3209,7 +3298,7 @@ impl AuthzService for AuthzServiceImpl {
         };
         let policy_rule = policy_to_rule_pb(&policy);
         if self.pg_pool.is_some() {
-            let runtime = self.runtime.as_ref().ok_or_else(|| {
+            let _runtime = self.runtime.as_ref().ok_or_else(|| {
                 authz_capability_status(
                     "policy_persistence",
                     "runtime_native_entity_dispatch",
@@ -3280,32 +3369,30 @@ impl AuthzService for AuthzServiceImpl {
                 "attributes_json".to_string(),
                 LogicalValue::Json(attributes),
             );
-            let context = crate::RequestContext {
-                tenant_id: policy.tenant.clone(),
-                // `GetPolicyRule`/`ListPolicyRules` read the authz control table
-                // from the service Postgres pool. Store the caller's project_id in
-                // the row, but do not use it for native-store placement here or a
-                // project-scoped backend can receive the write while the served
-                // read path checks the primary control table.
-                project_id: String::new(),
-                ..crate::RequestContext::default()
-            };
-            let returned = runtime
-                .native_entity_write_for_service_returning(
-                    "authz",
-                    &context,
-                    "udb.core.authz.entity.v1.PolicyRule",
-                    record,
-                    ConflictStrategy::Error,
-                    vec!["policy_id".to_string()],
+            let (_, _, results) = self
+                .mutate_authz_with_revision(
+                    &policy.tenant,
+                    &policy.project,
+                    authz_entity_pb::AuthzChangeType::Policy,
+                    "policy-created",
+                    &created_by.to_string(),
+                    vec![NativeEntityTransactionOp::Write(LogicalWrite {
+                        message_type: "udb.core.authz.entity.v1.PolicyRule".to_string(),
+                        records: vec![record],
+                        conflict: ConflictStrategy::Error,
+                        return_fields: vec!["policy_id".to_string()],
+                    })],
                 )
                 .await
                 .map_err(|err| {
-                    authz_internal_status(
-                        "create_policy_rule",
-                        format!("create policy rule failed: {err}"),
-                    )
+                    crate::runtime::executor_utils::prefix_status("create policy rule failed", err)
                 })?;
+            let returned = &results
+                .first()
+                .ok_or_else(|| {
+                    authz_internal_status("create_policy_rule", "policy receipt is unavailable")
+                })?
+                .rows;
             let created_policy_id = returned
                 .first()
                 .and_then(|r| r.get("policy_id"))
@@ -3323,14 +3410,6 @@ impl AuthzService for AuthzServiceImpl {
                     "create policy rule returned mismatched policy_id",
                 ));
             }
-            self.bump_authz_revision(
-                &policy.tenant,
-                &policy.project,
-                authz_entity_pb::AuthzChangeType::Policy,
-                "policy-created",
-                &req.created_by,
-            )
-            .await?;
         } else {
             self.require_snapshot_fallback()?;
         }
@@ -3436,7 +3515,7 @@ impl AuthzService for AuthzServiceImpl {
             ));
         }
         let user_role_id = parse_uuid_field("user_role_id", &req.user_role_id)?;
-        let runtime = self.runtime.as_ref().ok_or_else(|| {
+        let _runtime = self.runtime.as_ref().ok_or_else(|| {
             authz_capability_status(
                 "user_role_persistence",
                 "runtime_native_entity_dispatch",
@@ -3463,18 +3542,59 @@ impl AuthzService for AuthzServiceImpl {
                 },
             ]);
         }
+        let Some(scope_row) = self
+            .read_authz_mutation_row(
+                "udb.core.authz.entity.v1.UserRole",
+                filter.clone(),
+                &["tenant_id"],
+            )
+            .await?
+        else {
+            return Ok(Response::new(authz_pb::RevokeRoleResponse {
+                revoked: false,
+            }));
+        };
+        let tenant = authz_native_text(&scope_row, "tenant_id")?;
+        let scope_filter = authz_native_scope_filter(&scope_row, &["tenant_id"])?;
         let op = LogicalDelete {
             message_type: "udb.core.authz.entity.v1.UserRole".to_string(),
-            filter,
+            filter: LogicalFilter::And(vec![filter, scope_filter]),
             return_fields: vec!["tenant_id".to_string()],
         };
-        let context = authz_tenant_mutation_context(&metadata, "revoke_role")?;
-        let deleted_rows = runtime
-            .native_entity_delete_rows_for_service("authz", &context, op)
-            .await
-            .map_err(|err| {
-                crate::runtime::executor_utils::prefix_status("revoke role failed", err)
-            })?;
+        authz_tenant_mutation_context(&metadata, "revoke_role")?;
+        let outcome = self
+            .mutate_authz_with_revision(
+                &tenant,
+                "",
+                authz_entity_pb::AuthzChangeType::RoleAssignment,
+                "role-revoked",
+                &req.revoked_by,
+                vec![NativeEntityTransactionOp::DeleteRequired(op)],
+            )
+            .await;
+        let results = match outcome {
+            Ok((_, _, results)) => results,
+            Err(err)
+                if crate::runtime::error_reasons::reason_of(&err).as_deref()
+                    == Some(crate::runtime::error_reasons::NO_ROWS_AFFECTED.code) =>
+            {
+                return Ok(Response::new(authz_pb::RevokeRoleResponse {
+                    revoked: false,
+                }));
+            }
+            Err(err) => {
+                return Err(crate::runtime::executor_utils::prefix_status(
+                    "revoke role failed",
+                    err,
+                ));
+            }
+        };
+        let deleted_rows = &results
+            .first()
+            .ok_or_else(|| {
+                authz_internal_status("revoke_role", "revocation receipt is unavailable")
+            })?
+            .rows;
         let revoked = !deleted_rows.is_empty();
         if let Some(row) = deleted_rows.first() {
             let tenant: String = row
@@ -3482,7 +3602,6 @@ impl AuthzService for AuthzServiceImpl {
                 .and_then(|v| v.as_str())
                 .unwrap_or_default()
                 .to_string();
-            let project = String::new();
             self.emit_event(
                 AuthEvent::new(
                     topics::ROLE_REVOKED,
@@ -3514,16 +3633,6 @@ impl AuthzService for AuthzServiceImpl {
                 }),
             )
             .await;
-            if !tenant.trim().is_empty() {
-                self.bump_authz_revision(
-                    &tenant,
-                    &project,
-                    authz_entity_pb::AuthzChangeType::RoleAssignment,
-                    "role-revoked",
-                    &req.revoked_by,
-                )
-                .await?;
-            }
         }
         Ok(Response::new(authz_pb::RevokeRoleResponse { revoked }))
     }
@@ -3800,46 +3909,102 @@ impl AuthzService for AuthzServiceImpl {
         );
         self.enforce_role_authority_mutation(role_id, "update_role")
             .await?;
-        let pool = self.require_pool()?;
-        let role_model = self.roles_model();
-        let rel = role_model.relation.clone();
-        let projection = role_select_projection(&role_model);
-        let row = sqlx::query(&format!(
-            "UPDATE {rel} SET \
-               {name} = CASE WHEN $2 THEN $3 ELSE {name} END, \
-               {description} = CASE WHEN $4 THEN $5 ELSE {description} END, \
-               {is_active} = CASE WHEN $6 THEN $7 ELSE {is_active} END \
-             WHERE {role_id} = $1::UUID AND {deleted_at} IS NULL \
-               AND ($8::TEXT IS NULL OR {tenant_id} = $8) \
-             RETURNING {projection}",
-            name = role_model.q("name"),
-            description = role_model.q("description"),
-            is_active = role_model.q("is_active"),
-            role_id = role_model.q("role_id"),
-            deleted_at = role_model.q("deleted_at"),
-            tenant_id = role_model.q("tenant_id"),
-        ))
-        .bind(role_id)
-        .bind(update_name)
-        .bind(&req.name)
-        .bind(update_description)
-        .bind(&req.description)
-        .bind(update_is_active)
-        .bind(req.is_active.unwrap_or(false))
-        .bind(authz_record_tenant_scope())
-        .fetch_optional(pool)
-        .await
-        .map_err(|err| {
-            crate::runtime::executor_utils::sqlx_error_to_status("update role failed", &err)
-        })?;
-        let Some(row) = row else {
+        let id_filter = LogicalFilter::Comparison {
+            field: "role_id".to_string(),
+            op: ComparisonOp::Eq,
+            value: LogicalValue::String(role_id.to_string()),
+        };
+        let fields = [
+            "role_id",
+            "name",
+            "description",
+            "is_system",
+            "is_active",
+            "created_by",
+            "tenant_id",
+            "project_id",
+            "deleted_by",
+            "role_code",
+            "domain",
+            "scope_type",
+            "access_surface",
+            "metadata_json",
+        ];
+        let Some(scope_row) = self
+            .read_authz_mutation_row(
+                "udb.core.authz.entity.v1.Role",
+                id_filter.clone(),
+                &["tenant_id", "project_id"],
+            )
+            .await?
+        else {
             return Err(authz_not_found_status(
                 "update_role",
                 "role_not_found",
                 "role not found",
             ));
         };
-        let role = role_from_row(&row)?;
+        let tenant = authz_native_text(&scope_row, "tenant_id")?;
+        let project = authz_native_text(&scope_row, "project_id")?;
+        enforce_authz_body_scope(&tenant, &project)?;
+        let mut assignments = BTreeMap::new();
+        for (field, enabled, value) in [
+            ("name", update_name, LogicalValue::String(req.name.clone())),
+            (
+                "description",
+                update_description,
+                LogicalValue::String(req.description.clone()),
+            ),
+            (
+                "is_active",
+                update_is_active,
+                LogicalValue::Bool(req.is_active.unwrap_or(false)),
+            ),
+        ] {
+            if enabled {
+                assignments.insert(field.to_string(), LogicalAssignment::Set { value });
+            }
+        }
+        // An empty patch still checks the live row without overwriting a field
+        // another writer may have changed since the scope read.
+        if assignments.is_empty() {
+            assignments.insert(
+                "is_active".to_string(),
+                LogicalAssignment::Coalesce {
+                    value: LogicalValue::Null,
+                },
+            );
+        }
+        let (_, _, results) = self
+            .mutate_authz_with_revision(
+                &tenant,
+                &project,
+                authz_entity_pb::AuthzChangeType::Role,
+                "role-updated",
+                &req.updated_by,
+                vec![NativeEntityTransactionOp::Update(LogicalUpdate {
+                    message_type: "udb.core.authz.entity.v1.Role".to_string(),
+                    filter: LogicalFilter::And(vec![
+                        id_filter,
+                        LogicalFilter::IsNull("deleted_at".to_string()),
+                        authz_native_scope_filter(&scope_row, &["tenant_id", "project_id"])?,
+                    ]),
+                    assignments,
+                    return_fields: fields.map(str::to_string).to_vec(),
+                    require_affected: true,
+                })],
+            )
+            .await
+            .map_err(|err| {
+                crate::runtime::executor_utils::prefix_status("update role failed", err)
+            })?;
+        let row = results
+            .first()
+            .and_then(|result| result.rows.first())
+            .ok_or_else(|| {
+                authz_internal_status("update_role", "updated role receipt is unavailable")
+            })?;
+        let role = role_from_native_row(row)?;
         self.emit_event(
             AuthEvent::new(
                 topics::ROLE_UPDATED,
@@ -3868,14 +4033,6 @@ impl AuthzService for AuthzServiceImpl {
             }),
         )
         .await;
-        self.bump_authz_revision(
-            &role.tenant_id,
-            &role.project_id,
-            authz_entity_pb::AuthzChangeType::Role,
-            "role-updated",
-            &req.updated_by,
-        )
-        .await?;
         Ok(Response::new(authz_pb::UpdateRoleResponse {
             role: Some(role),
         }))
@@ -3903,56 +4060,37 @@ impl AuthzService for AuthzServiceImpl {
         }
         let role_id = parse_uuid_field("role_id", &req.role_id)?;
         let deleted_by = parse_uuid_field("deleted_by", &req.deleted_by)?;
-        let context = authz_tenant_mutation_context(&metadata, "delete_role")?;
+        let _context = authz_tenant_mutation_context(&metadata, "delete_role")?;
         self.enforce_role_authority_mutation(role_id, "delete_role")
             .await?;
-        let pool = self.require_pool()?;
-        let role_model = self.roles_model();
-        let role_rel = role_model.relation.clone();
-        // Capture the role's tenant/project before the soft delete so the authz
-        // revision bump is scoped correctly. (Scope read stays a raw read.)
-        let scope_row = sqlx::query(&format!(
-            "SELECT {tenant_id}::TEXT AS tenant, COALESCE({project_id}, '') AS project FROM {role_rel} WHERE {role_id} = $1::UUID",
-            tenant_id = role_model.q("tenant_id"),
-            project_id = role_model.q("project_id"),
-            role_id = role_model.q("role_id"),
-        ))
-        .bind(role_id)
-        .fetch_optional(pool)
-        .await
-        .map_err(|err| {
-            authz_internal_status(
-                "read_role_scope",
-                format!("read role scope failed: {err}"),
+        let id_filter = LogicalFilter::Comparison {
+            field: "role_id".to_string(),
+            op: ComparisonOp::Eq,
+            value: LogicalValue::String(role_id.to_string()),
+        };
+        let Some(scope_row) = self
+            .read_authz_mutation_row(
+                "udb.core.authz.entity.v1.Role",
+                id_filter.clone(),
+                &["tenant_id", "project_id"],
             )
-        })?;
-        let (role_tenant, role_project) = scope_row
-            .map(|r| {
-                (
-                    r.try_get::<String, _>("tenant").unwrap_or_default(),
-                    r.try_get::<String, _>("project").unwrap_or_default(),
-                )
-            })
-            .unwrap_or_default();
-        // The role is addressed by globally unique UUID, so confine the delete to
-        // the caller's tenant. Reported as not-found rather than denied: a caller
-        // has no business learning that another tenant's role exists.
-        if let Some(scope) = authz_record_tenant_scope()
-            && scope != role_tenant
-        {
-            return Err(authz_not_found_status(
-                "delete_role",
-                "role_not_found",
-                "role not found",
-            ));
-        }
-        let runtime = self.runtime.as_ref().ok_or_else(|| {
-            authz_capability_status(
-                "role_persistence",
-                "runtime_native_entity_dispatch",
-                "native authz requires runtime-backed role persistence",
-            )
-        })?;
+            .await?
+        else {
+            if authz_record_tenant_scope().is_some() {
+                return Err(authz_not_found_status(
+                    "delete_role",
+                    "role_not_found",
+                    "role not found",
+                ));
+            }
+            return Ok(Response::new(authz_pb::DeleteRoleResponse {
+                deleted: false,
+            }));
+        };
+        let role_tenant = authz_native_text(&scope_row, "tenant_id")?;
+        let role_project = authz_native_text(&scope_row, "project_id")?;
+        enforce_authz_body_scope(&role_tenant, &role_project)?;
+        let scope_filter = authz_native_scope_filter(&scope_row, &["tenant_id", "project_id"])?;
         // P6.10 Wave 1: typed soft-delete (deleted_at=NOW, deleted_by, is_active=FALSE)
         // with the `deleted_at IS NULL` idempotency guard, then the typed cascade
         // delete of the role's user_role assignments.
@@ -3970,35 +4108,26 @@ impl AuthzService for AuthzServiceImpl {
                 value: LogicalValue::Bool(false),
             },
         );
-        let (affected, _) = runtime
-            .native_entity_update_for_service(
-                "authz",
-                &context,
-                LogicalUpdate {
-                    message_type: "udb.core.authz.entity.v1.Role".to_string(),
-                    filter: LogicalFilter::And(vec![
-                        LogicalFilter::Comparison {
-                            field: "role_id".to_string(),
-                            op: ComparisonOp::Eq,
-                            value: LogicalValue::String(role_id.to_string()),
-                        },
-                        LogicalFilter::IsNull("deleted_at".to_string()),
-                    ]),
-                    assignments,
-                    return_fields: Vec::new(),
-                    require_affected: false,
-                },
-            )
-            .await
-            .map_err(|err| {
-                crate::runtime::executor_utils::prefix_status("delete role failed", err)
-            })?;
-        if affected > 0 {
-            runtime
-                .native_entity_delete_for_service(
-                    "authz",
-                    &context,
-                    LogicalDelete {
+        let outcome = self
+            .mutate_authz_with_revision(
+                &role_tenant,
+                &role_project,
+                authz_entity_pb::AuthzChangeType::Role,
+                "role-deleted",
+                &req.deleted_by,
+                vec![
+                    NativeEntityTransactionOp::Update(LogicalUpdate {
+                        message_type: "udb.core.authz.entity.v1.Role".to_string(),
+                        filter: LogicalFilter::And(vec![
+                            id_filter,
+                            LogicalFilter::IsNull("deleted_at".to_string()),
+                            scope_filter,
+                        ]),
+                        assignments,
+                        return_fields: Vec::new(),
+                        require_affected: true,
+                    }),
+                    NativeEntityTransactionOp::Delete(LogicalDelete {
                         message_type: "udb.core.authz.entity.v1.UserRole".to_string(),
                         filter: LogicalFilter::Comparison {
                             field: "role_id".to_string(),
@@ -4006,29 +4135,26 @@ impl AuthzService for AuthzServiceImpl {
                             value: LogicalValue::String(role_id.to_string()),
                         },
                         return_fields: Vec::new(),
-                    },
-                )
-                .await
-                .map_err(|err| {
-                    crate::runtime::executor_utils::prefix_status(
-                        "delete role assignments failed",
-                        err,
-                    )
-                })?;
-        }
-        if affected > 0 && !role_tenant.trim().is_empty() {
-            self.bump_authz_revision(
-                &role_tenant,
-                &role_project,
-                authz_entity_pb::AuthzChangeType::Role,
-                "role-deleted",
-                &req.deleted_by,
+                    }),
+                ],
             )
-            .await?;
-        }
-        Ok(Response::new(authz_pb::DeleteRoleResponse {
-            deleted: affected > 0,
-        }))
+            .await;
+        let deleted = match outcome {
+            Ok(_) => true,
+            Err(err)
+                if crate::runtime::error_reasons::reason_of(&err).as_deref()
+                    == Some(crate::runtime::error_reasons::NO_ROWS_AFFECTED.code) =>
+            {
+                false
+            }
+            Err(err) => {
+                return Err(crate::runtime::executor_utils::prefix_status(
+                    "delete role failed",
+                    err,
+                ));
+            }
+        };
+        Ok(Response::new(authz_pb::DeleteRoleResponse { deleted }))
     }
     async fn get_policy_rule(
         &self,
@@ -4181,7 +4307,7 @@ impl AuthzService for AuthzServiceImpl {
         }
         let mut deleted = false;
         if self.pg_pool.is_some() {
-            let runtime = self.runtime.as_ref().ok_or_else(|| {
+            let _runtime = self.runtime.as_ref().ok_or_else(|| {
                 authz_capability_status(
                     "policy_persistence",
                     "runtime_native_entity_dispatch",
@@ -4196,7 +4322,8 @@ impl AuthzService for AuthzServiceImpl {
             };
             // P6.10 Wave 1: typed conditional soft-delete (was raw UPDATE). The
             // `deleted_at IS NULL` guard preserves idempotency; `deleted_by` is NULL
-            // when absent; `require_affected=false` (caller reports deleted=affected>0).
+            // when absent. A typed zero-row refusal rolls back the revision and
+            // becomes the caller's idempotent deleted=false response.
             let mut assignments = std::collections::BTreeMap::new();
             assignments.insert("deleted_at".to_string(), LogicalAssignment::ServerNow);
             assignments.insert(
@@ -4214,7 +4341,7 @@ impl AuthzService for AuthzServiceImpl {
                     value: LogicalValue::Bool(false),
                 },
             );
-            let op = LogicalUpdate {
+            let mut op = LogicalUpdate {
                 message_type: "udb.core.authz.entity.v1.PolicyRule".to_string(),
                 filter: LogicalFilter::And({
                     // A policy_id is globally unique, so confine the soft delete
@@ -4238,39 +4365,49 @@ impl AuthzService for AuthzServiceImpl {
                 }),
                 assignments,
                 return_fields: vec!["tenant_id".to_string(), "project_id".to_string()],
-                require_affected: false,
+                require_affected: true,
             };
-            let context = authz_tenant_mutation_context(&metadata, "delete_policy_rule")?;
-            let (affected, rows) = runtime
-                .native_entity_update_for_service("authz", &context, op)
-                .await
-                .map_err(|err| {
-                    crate::runtime::executor_utils::prefix_status("delete policy rule failed", err)
-                })?;
-            deleted = affected > 0;
-            if deleted {
-                let row = rows.first().ok_or_else(|| {
-                    authz_internal_status(
-                        "delete_policy_rule",
-                        "deleted policy scope is unavailable",
-                    )
-                })?;
-                let scope = |field| match row.get(field) {
-                    Some(serde_json::Value::String(value)) => Ok(value.as_str()),
-                    Some(serde_json::Value::Null) => Ok(""),
-                    _ => Err(authz_internal_status(
-                        "delete_policy_rule",
-                        "deleted policy scope has an invalid field",
-                    )),
-                };
-                self.bump_authz_revision(
-                    scope("tenant_id")?,
-                    scope("project_id")?,
+            authz_tenant_mutation_context(&metadata, "delete_policy_rule")?;
+            let Some(scope_row) = self
+                .read_authz_mutation_row(
+                    "udb.core.authz.entity.v1.PolicyRule",
+                    op.filter.clone(),
+                    &["tenant_id", "project_id"],
+                )
+                .await?
+            else {
+                return Ok(Response::new(authz_pb::DeletePolicyRuleResponse {
+                    deleted: false,
+                }));
+            };
+            let tenant = authz_native_text(&scope_row, "tenant_id")?;
+            let project = authz_native_text(&scope_row, "project_id")?;
+            enforce_authz_body_scope(&tenant, &project)?;
+            op.filter = LogicalFilter::And(vec![
+                op.filter,
+                authz_native_scope_filter(&scope_row, &["tenant_id", "project_id"])?,
+            ]);
+            match self
+                .mutate_authz_with_revision(
+                    &tenant,
+                    &project,
                     authz_entity_pb::AuthzChangeType::Policy,
                     "policy-delete",
                     &req.deleted_by,
+                    vec![NativeEntityTransactionOp::Update(op)],
                 )
-                .await?;
+                .await
+            {
+                Ok(_) => deleted = true,
+                Err(err)
+                    if crate::runtime::error_reasons::reason_of(&err).as_deref()
+                        == Some(crate::runtime::error_reasons::NO_ROWS_AFFECTED.code) => {}
+                Err(err) => {
+                    return Err(crate::runtime::executor_utils::prefix_status(
+                        "delete policy rule failed",
+                        err,
+                    ));
+                }
             }
         } else {
             self.require_snapshot_fallback()?;

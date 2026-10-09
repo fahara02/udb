@@ -695,10 +695,44 @@ async fn authz_revision_reads_preserve_int64_and_refuse_invalid_counters_live() 
             &["udb:authz:get-authz-revision"],
             &[],
         );
+        // Both foreign bodies must be rejected before the stored counter is
+        // read, including the invalid counter that would otherwise be Internal.
+        for (claim_tenant, claim_project, expected) in [
+            (
+                Uuid::new_v4().to_string(),
+                DEFAULT_PROJECT_ID.to_string(),
+                "tenant_mismatch",
+            ),
+            (
+                tenant.clone(),
+                Uuid::new_v4().to_string(),
+                "project_mismatch",
+            ),
+        ] {
+            let foreign_claim = test_claim_context(
+                &Uuid::new_v4().to_string(),
+                &claim_tenant,
+                &claim_project,
+                &["udb:authz:get-authz-revision"],
+                &[],
+            );
+            let refusal = scope_claim_context_for_test(
+                foreign_claim,
+                authz.get_authz_revision(Request::new(authz_pb::GetAuthzRevisionRequest {
+                    tenant_id: tenant.clone(),
+                    project_id: DEFAULT_PROJECT_ID.to_string(),
+                })),
+            )
+            .await
+            .expect_err("foreign revision scope must refuse before reading durable values");
+            assert_eq!(refusal.code(), tonic::Code::PermissionDenied);
+            assert_eq!(denial_detail(&refusal).policy_decision_id, expected);
+            assert!(!refusal.message().contains("int64-proof"));
+        }
         let result = scope_claim_context_for_test(
-            claim,
+            claim.clone(),
             authz.get_authz_revision(Request::new(authz_pb::GetAuthzRevisionRequest {
-                tenant_id: tenant,
+                tenant_id: tenant.clone(),
                 project_id: DEFAULT_PROJECT_ID.to_string(),
                 ..Default::default()
             })),
@@ -711,6 +745,18 @@ async fn authz_revision_reads_preserve_int64_and_refuse_invalid_counters_live() 
             assert_eq!(revision.policy_revision, i64::MAX - 1);
             assert_eq!(revision.relationship_revision, 0);
             assert_eq!(revision.content_hash, "int64-proof");
+            let inherited = scope_claim_context_for_test(
+                claim,
+                authz.get_authz_revision(Request::new(authz_pb::GetAuthzRevisionRequest {
+                    tenant_id: String::new(),
+                    project_id: DEFAULT_PROJECT_ID.to_string(),
+                })),
+            )
+            .await
+            .expect("omitted tenant inherits the verified caller instead of global scope")
+            .into_inner();
+            assert_eq!(inherited.policy_revision, i64::MAX - 1);
+            assert_eq!(inherited.content_hash, "int64-proof");
         } else {
             let refusal = result.expect_err("malformed stored counters cannot become zero");
             assert_eq!(
@@ -821,13 +867,19 @@ async fn authz_policy_mutations_publish_before_return_and_survive_restart_live()
         .expect("first data request sees the replacement action");
     assert_eq!(revision().await, 2);
 
+    let policy_model = native_catalog::native_model(
+        "udb.core.authz.entity.v1.PolicyRule",
+        &["policy_id", "action", "deleted_at", "is_active"],
+    );
     // The real revision-store refusal must not be swallowed or lose its typed
     // SQL status at the shared publication boundary.
     let function = format!("udb_authz_revision_refusal_{}", Uuid::new_v4().simple());
     sqlx::query(&format!(
         "CREATE FUNCTION {function}() RETURNS trigger LANGUAGE plpgsql AS $$ \
-         BEGIN RAISE SQLSTATE '23505' USING MESSAGE = 'forced revision refusal', \
-         CONSTRAINT = 'authz_revision_gate'; END; $$",
+         BEGIN IF NEW.{tenant_column} = '{tenant}' THEN \
+         RAISE SQLSTATE '23505' USING MESSAGE = 'forced revision refusal', \
+         CONSTRAINT = 'authz_revision_gate'; END IF; RETURN NEW; END; $$",
+        tenant_column = revision_model.q("tenant_id"),
     ))
     .execute(&pool)
     .await
@@ -851,6 +903,55 @@ async fn authz_policy_mutations_publish_before_return_and_survive_restart_live()
     assert_eq!(detail.reason, "UDB_UNIQUE_VIOLATION");
     assert_eq!(detail.constraint, "authz_revision_gate");
     assert_eq!(revision().await, 2);
+    let stored_action: String = sqlx::query_scalar(&format!(
+        "SELECT {action} FROM {relation} WHERE {id} = $1",
+        action = policy_model.q("action"),
+        relation = policy_model.relation,
+        id = policy_model.q("policy_id"),
+    ))
+    .bind(Uuid::parse_str(&policy_id).unwrap())
+    .fetch_one(&pool)
+    .await
+    .expect("read actual policy after refused revision append");
+    assert_eq!(
+        stored_action, "Delete",
+        "revision refusal rolls back the actual policy replacement"
+    );
+    let mut delete_request = Request::new(authz_pb::DeletePolicyRuleRequest {
+        policy_id: policy_id.clone(),
+        ..Default::default()
+    });
+    delete_request
+        .metadata_mut()
+        .insert("x-tenant-id", tenant.parse().unwrap());
+    let refused_delete =
+        scope_claim_context_for_test(claim.clone(), authz.delete_policy_rule(delete_request))
+            .await
+            .expect_err("revision refusal must roll back the conditional policy delete");
+    assert_eq!(refused_delete.code(), tonic::Code::AlreadyExists);
+    assert_eq!(
+        denial_detail(&refused_delete).constraint,
+        "authz_revision_gate"
+    );
+    let persisted_live: bool = sqlx::query_scalar(&format!(
+        "SELECT {deleted} IS NULL AND {active} FROM {relation} WHERE {id} = $1",
+        deleted = policy_model.q("deleted_at"),
+        active = policy_model.q("is_active"),
+        relation = policy_model.relation,
+        id = policy_model.q("policy_id"),
+    ))
+    .bind(Uuid::parse_str(&policy_id).unwrap())
+    .fetch_one(&pool)
+    .await
+    .expect("inspect actual conditional delete rollback");
+    assert!(
+        persisted_live,
+        "refused revision leaves the policy live and undeleted"
+    );
+    assert_eq!(revision().await, 2);
+    svc.authorize(&caller, INVOICE, "Delete")
+        .await
+        .expect("refused changes do not revoke the previously committed action");
     sqlx::query(&format!(
         "DROP TRIGGER authz_revision_gate ON {}",
         revision_model.relation
@@ -864,8 +965,6 @@ async fn authz_policy_mutations_publish_before_return_and_survive_restart_live()
         .expect("remove actual revision refusal function");
     // Native policy writes must preserve the store's classification too. A
     // real SQL refusal at this earlier boundary must not become Internal.
-    let policy_model =
-        native_catalog::native_model("udb.core.authz.entity.v1.PolicyRule", &["policy_id"]);
     let function = format!("udb_policy_write_refusal_{}", Uuid::new_v4().simple());
     sqlx::query(&format!(
         "CREATE FUNCTION {function}() RETURNS trigger LANGUAGE plpgsql AS $$ \
@@ -962,4 +1061,228 @@ async fn authz_policy_mutations_publish_before_return_and_survive_restart_live()
         "a zero-row delete cannot append a policy revision"
     );
     pool.close().await;
+}
+
+#[tokio::test]
+#[ignore = "requires live Postgres; native CI runs all ignored live proofs"]
+async fn authz_required_mutations_refuse_zero_rows_before_revision_live() {
+    use crate::proto::udb::core::authz::services::v1 as authz_pb;
+    use crate::proto::udb::core::authz::services::v1::authz_service_server::AuthzService;
+    use crate::runtime::service::method_security::{
+        scope_claim_context_for_test, test_claim_context,
+    };
+    use tonic::Request;
+
+    let _guard = live_native_service_db_lock().lock().await;
+    let pool = live_pg_pool().await;
+    migrate_native_service_db(&pool).await;
+    let tenant = Uuid::new_v4().to_string();
+    let actor = Uuid::new_v4().to_string();
+    let role_id = Uuid::new_v4();
+    let policy_id = Uuid::new_v4();
+    let user_id = Uuid::new_v4();
+    let assignment_id = Uuid::new_v4();
+    let role = native_catalog::native_model(
+        "udb.core.authz.entity.v1.Role",
+        &[
+            "role_id",
+            "name",
+            "tenant_id",
+            "project_id",
+            "domain",
+            "deleted_at",
+        ],
+    );
+    let policy = native_catalog::native_model(
+        "udb.core.authz.entity.v1.PolicyRule",
+        &[
+            "policy_id",
+            "subject",
+            "domain",
+            "object",
+            "action",
+            "effect",
+            "tenant_id",
+            "project_id",
+            "deleted_at",
+        ],
+    );
+    let user = native_catalog::native_model(
+        "udb.core.authn.entity.v1.User",
+        &[
+            "user_id",
+            "username",
+            "email",
+            "password_hash",
+            "tenant_id",
+            "full_name",
+        ],
+    );
+    let assignment = native_catalog::native_model(
+        "udb.core.authz.entity.v1.UserRole",
+        &["user_role_id", "user_id", "role_id", "domain", "tenant_id"],
+    );
+    let revision =
+        native_catalog::native_model("udb.core.authz.entity.v1.AuthzRevision", &["tenant_id"]);
+    sqlx::query(&format!("INSERT INTO {relation} ({id}, {name}, {tenant}, {project}, {domain}) VALUES ($1, $2, $3, $4, $3)",
+        relation = role.relation, id = role.q("role_id"), name = role.q("name"),
+        tenant = role.q("tenant_id"), project = role.q("project_id"), domain = role.q("domain")))
+        .bind(role_id).bind(format!("required-{role_id}")).bind(&tenant).bind(DEFAULT_PROJECT_ID)
+        .execute(&pool).await.expect("seed actual role for conditional zero-row proof");
+    sqlx::query(&format!("INSERT INTO {relation} ({id}, {subject}, {domain}, {object}, {action}, {effect}, {tenant}, {project}) VALUES ($1, '*', $2, '*', 'Select', 'ALLOW', $2, $3)",
+        relation = policy.relation, id = policy.q("policy_id"), subject = policy.q("subject"),
+        domain = policy.q("domain"), object = policy.q("object"), action = policy.q("action"),
+        effect = policy.q("effect"), tenant = policy.q("tenant_id"), project = policy.q("project_id")))
+        .bind(policy_id).bind(&tenant).bind(DEFAULT_PROJECT_ID)
+        .execute(&pool).await.expect("seed actual policy for returning zero-row proof");
+    // The pending account is a real FK target; no login or password fixture is
+    // involved in this authorization mutation proof.
+    sqlx::query(&format!("INSERT INTO {relation} ({id}, {username}, {email}, {password}, {tenant}, {name}) VALUES ($1, $2, $3, '', $4, 'required mutation FK target')",
+        relation = user.relation, id = user.q("user_id"), username = user.q("username"), email = user.q("email"),
+        password = user.q("password_hash"), tenant = user.q("tenant_id"), name = user.q("full_name")))
+        .bind(user_id).bind(format!("required_{}", user_id.simple())).bind(format!("{user_id}@example.test")).bind(&tenant)
+        .execute(&pool).await.expect("seed actual user-role foreign-key target");
+    sqlx::query(&format!("INSERT INTO {relation} ({id}, {user}, {role}, {domain}, {tenant}) VALUES ($1, $2, $3, $4, $4)",
+        relation = assignment.relation, id = assignment.q("user_role_id"), user = assignment.q("user_id"),
+        role = assignment.q("role_id"), domain = assignment.q("domain"), tenant = assignment.q("tenant_id")))
+        .bind(assignment_id).bind(user_id).bind(role_id).bind(&tenant)
+        .execute(&pool).await.expect("seed actual assignment for required-delete proof");
+    let function = format!("udb_authz_zero_rows_{}", Uuid::new_v4().simple());
+    let trigger = format!("authz_zero_rows_{}", Uuid::new_v4().simple());
+    sqlx::query(&format!(
+        "CREATE FUNCTION {function}() RETURNS trigger LANGUAGE plpgsql AS $$
+        BEGIN IF TG_OP = 'DELETE' THEN
+            IF OLD.{tenant_column} = '{tenant}' THEN RETURN NULL; END IF; RETURN OLD;
+        ELSE IF NEW.{tenant_column} = '{tenant}' THEN RETURN NULL; END IF; RETURN NEW;
+        END IF; END; $$",
+        tenant_column = role.q("tenant_id")
+    ))
+    .execute(&pool)
+    .await
+    .expect("install actual tenant-scoped skipped-mutation gate");
+    for (relation, verb) in [
+        (&role.relation, "UPDATE"),
+        (&policy.relation, "UPDATE"),
+        (&assignment.relation, "DELETE"),
+    ] {
+        sqlx::query(&format!("CREATE TRIGGER {trigger} BEFORE {verb} ON {relation} FOR EACH ROW EXECUTE FUNCTION {function}()"))
+            .execute(&pool).await.expect("install actual returning/nonreturning/delete zero-row gate");
+    }
+    let broker = deny_path_broker().await;
+    let (_, authz, _) = broker.build_auth_services();
+    let claim = test_claim_context(
+        &actor,
+        &tenant,
+        DEFAULT_PROJECT_ID,
+        &[
+            "udb:authz:delete-role",
+            "udb:authz:delete-policy-rule",
+            "udb:authz:revoke-role",
+        ],
+        &[],
+    );
+    let mut request = Request::new(authz_pb::DeleteRoleRequest {
+        role_id: role_id.to_string(),
+        deleted_by: actor.clone(),
+        ..Default::default()
+    });
+    request
+        .metadata_mut()
+        .insert("x-tenant-id", tenant.parse().unwrap());
+    let role_result = scope_claim_context_for_test(claim.clone(), authz.delete_role(request)).await;
+    let mut request = Request::new(authz_pb::DeletePolicyRuleRequest {
+        policy_id: policy_id.to_string(),
+        deleted_by: actor.clone(),
+        ..Default::default()
+    });
+    request
+        .metadata_mut()
+        .insert("x-tenant-id", tenant.parse().unwrap());
+    let policy_result =
+        scope_claim_context_for_test(claim.clone(), authz.delete_policy_rule(request)).await;
+    let mut request = Request::new(authz_pb::RevokeRoleRequest {
+        user_role_id: assignment_id.to_string(),
+        revoked_by: actor,
+        ..Default::default()
+    });
+    request
+        .metadata_mut()
+        .insert("x-tenant-id", tenant.parse().unwrap());
+    let assignment_result = scope_claim_context_for_test(claim, authz.revoke_role(request)).await;
+    // Remove all gates before inspecting results, even if a served call refused.
+    for relation in [&role.relation, &policy.relation, &assignment.relation] {
+        sqlx::query(&format!("DROP TRIGGER {trigger} ON {relation}"))
+            .execute(&pool)
+            .await
+            .expect("remove actual zero-row gate");
+    }
+    sqlx::query(&format!("DROP FUNCTION {function}()"))
+        .execute(&pool)
+        .await
+        .expect("remove actual zero-row function");
+    assert!(
+        !role_result
+            .expect("zero-row role mutation remains an idempotent no-op")
+            .into_inner()
+            .deleted
+    );
+    assert!(
+        !policy_result
+            .expect("zero-row policy mutation remains an idempotent no-op")
+            .into_inner()
+            .deleted
+    );
+    assert!(
+        !assignment_result
+            .expect("zero-row assignment mutation remains an idempotent no-op")
+            .into_inner()
+            .revoked
+    );
+    let revisions: i64 = sqlx::query_scalar(&format!(
+        "SELECT COUNT(*) FROM {relation} WHERE {tenant_column} = $1",
+        relation = revision.relation,
+        tenant_column = revision.q("tenant_id")
+    ))
+    .bind(&tenant)
+    .fetch_one(&pool)
+    .await
+    .expect("inspect actual revision rows after skipped mutations");
+    assert_eq!(
+        revisions, 0,
+        "zero-row mutations must not commit any revision"
+    );
+    let retained_role: bool = sqlx::query_scalar(&format!(
+        "SELECT {deleted} IS NULL FROM {relation} WHERE {id} = $1",
+        deleted = role.q("deleted_at"),
+        relation = role.relation,
+        id = role.q("role_id")
+    ))
+    .bind(role_id)
+    .fetch_one(&pool)
+    .await
+    .expect("inspect durable role after skipped mutation");
+    let retained_policy: bool = sqlx::query_scalar(&format!(
+        "SELECT {deleted} IS NULL FROM {relation} WHERE {id} = $1",
+        deleted = policy.q("deleted_at"),
+        relation = policy.relation,
+        id = policy.q("policy_id")
+    ))
+    .bind(policy_id)
+    .fetch_one(&pool)
+    .await
+    .expect("inspect durable policy after skipped mutation");
+    let retained_assignment: i64 = sqlx::query_scalar(&format!(
+        "SELECT COUNT(*) FROM {relation} WHERE {id} = $1",
+        relation = assignment.relation,
+        id = assignment.q("user_role_id")
+    ))
+    .bind(assignment_id)
+    .fetch_one(&pool)
+    .await
+    .expect("inspect durable assignment and cascade after skipped mutation");
+    assert!(retained_role && retained_policy);
+    assert_eq!(
+        retained_assignment, 1,
+        "a skipped role delete cannot commit its assignment cascade"
+    );
 }

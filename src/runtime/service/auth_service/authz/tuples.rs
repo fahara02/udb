@@ -17,7 +17,7 @@ fn authz_tuple_invalid_fields<const N: usize>(
     crate::runtime::executor_utils::invalid_argument_fields(message, fields)
 }
 
-fn policy_tuple_record(
+pub(super) fn policy_tuple_record(
     tuple_kind: &str,
     subject: &str,
     domain: &str,
@@ -145,24 +145,22 @@ impl AuthzServiceImpl {
             "expires_at_unix": binding.expires_at_unix,
         })
         .to_string();
-        let runtime = self.runtime.as_ref().ok_or_else(|| {
+        let _runtime = self.runtime.as_ref().ok_or_else(|| {
             authz_capability_status(
                 "tuple_persistence",
                 "runtime_native_entity_dispatch",
                 "native authz requires runtime-backed tuple persistence",
             )
         })?;
-        let context = crate::RequestContext {
-            tenant_id: scope_tenant.clone(),
-            project_id: binding.project.clone(),
-            ..crate::RequestContext::default()
-        };
-        runtime
-            .native_entity_write_for_service(
-                "authz",
-                &context,
-                "udb.core.authz.entity.v1.PolicyTuple",
-                policy_tuple_record(
+        self.mutate_authz_with_revision(
+            &scope_tenant,
+            &binding.project,
+            authz_entity_pb::AuthzChangeType::RoleAssignment,
+            "role-binding-put",
+            &binding.source,
+            vec![NativeEntityTransactionOp::Write(LogicalWrite {
+                message_type: "udb.core.authz.entity.v1.PolicyTuple".to_string(),
+                records: vec![policy_tuple_record(
                     "grouping",
                     &binding.subject,
                     &scope_tenant,
@@ -172,21 +170,15 @@ impl AuthzServiceImpl {
                     &condition,
                     &scope_tenant,
                     &binding.project,
-                ),
-                policy_tuple_conflict(),
-            )
-            .await
-            .map_err(|err| {
-                crate::runtime::executor_utils::prefix_status("store role binding failed", err)
-            })?;
-        self.bump_authz_revision(
-            &scope_tenant,
-            &binding.project,
-            authz_entity_pb::AuthzChangeType::RoleAssignment,
-            "role-binding-put",
-            &binding.source,
+                )],
+                conflict: policy_tuple_conflict(),
+                return_fields: Vec::new(),
+            })],
         )
-        .await?;
+        .await
+        .map_err(|err| {
+            crate::runtime::executor_utils::prefix_status("store role binding failed", err)
+        })?;
         Ok(Response::new(authz_pb::AuthMutationResponse {
             ok: true,
             message: "role binding stored".to_string(),
@@ -248,24 +240,22 @@ impl AuthzServiceImpl {
             "expires_at_unix": tuple.expires_at_unix,
         })
         .to_string();
-        let runtime = self.runtime.as_ref().ok_or_else(|| {
+        let _runtime = self.runtime.as_ref().ok_or_else(|| {
             authz_capability_status(
                 "tuple_persistence",
                 "runtime_native_entity_dispatch",
                 "native authz requires runtime-backed tuple persistence",
             )
         })?;
-        let context = crate::RequestContext {
-            tenant_id: scope_tenant.clone(),
-            project_id: tuple.project.clone(),
-            ..crate::RequestContext::default()
-        };
-        runtime
-            .native_entity_write_for_service(
-                "authz",
-                &context,
-                "udb.core.authz.entity.v1.PolicyTuple",
-                policy_tuple_record(
+        self.mutate_authz_with_revision(
+            &scope_tenant,
+            &tuple.project,
+            authz_entity_pb::AuthzChangeType::Relationship,
+            "relationship-put",
+            &tuple.source,
+            vec![NativeEntityTransactionOp::Write(LogicalWrite {
+                message_type: "udb.core.authz.entity.v1.PolicyTuple".to_string(),
+                records: vec![policy_tuple_record(
                     "relationship",
                     &tuple.subject,
                     &scope_tenant,
@@ -275,24 +265,15 @@ impl AuthzServiceImpl {
                     &condition,
                     &scope_tenant,
                     &tuple.project,
-                ),
-                policy_tuple_conflict(),
-            )
-            .await
-            .map_err(|err| {
-                crate::runtime::executor_utils::prefix_status(
-                    "store relationship tuple failed",
-                    err,
-                )
-            })?;
-        self.bump_authz_revision(
-            &scope_tenant,
-            &tuple.project,
-            authz_entity_pb::AuthzChangeType::Relationship,
-            "relationship-put",
-            &tuple.source,
+                )],
+                conflict: policy_tuple_conflict(),
+                return_fields: Vec::new(),
+            })],
         )
-        .await?;
+        .await
+        .map_err(|err| {
+            crate::runtime::executor_utils::prefix_status("store relationship tuple failed", err)
+        })?;
         // Phase L2/L3 task5: publish the relationship-tuple change so security
         // dashboards and the audit plane observe ReBAC edits (no raw condition
         // material in the body — the outbox sink scrubs credential-shaped keys).

@@ -981,39 +981,44 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
         "src/runtime/service/auth_service/authz/mod.rs",
         (
             "fn authz_internal_status(",
-            'crate::runtime::executor_utils::internal_status("authz", operation, message)',
-            '"decode_role"',
-            '"decode_user_role"',
-            '"decode_policy_rule"',
-            '"read_authz_revision_fence"',
-            '"load_authz_policies"',
-            '"decode_authz_policy"',
-            '"load_role_bindings"',
-            '"decode_role_binding"',
-            '"load_grouping_tuples"',
-            '"decode_grouping_tuple"',
-            '"load_relationship_tuples"',
-            '"decode_relationship_tuple"',
-            '"store_authz_policy"',
-            'crate::runtime::executor_utils::prefix_status("assign role (principal) failed", err)',
-            '"assign_role"',
-            '"encode_policy_conditions"',
-            '"create_policy_rule"',
-            '"revoke_role"',
-            '"list_user_roles"',
-            '"get_role"',
-            '"list_roles"',
-            '"read_role_scope"',
-            '"delete_role"',
-            'crate::runtime::executor_utils::prefix_status("delete role assignments failed", err)',
-            '"get_policy_rule"',
-            '"list_policy_rules"',
-            '"delete_policy_rule"',
-            '"sign_policy_bundle"',
+            "crate::runtime::executor_utils::internal_status(\"authz\", operation, message)",
+            "\"decode_role\"",
+            "\"decode_user_role\"",
+            "\"decode_policy_rule\"",
+            "\"read_authz_revision_fence\"",
+            "\"load_authz_policies\"",
+            "\"decode_authz_policy\"",
+            "\"load_role_bindings\"",
+            "\"decode_role_binding\"",
+            "\"load_grouping_tuples\"",
+            "\"decode_grouping_tuple\"",
+            "\"load_relationship_tuples\"",
+            "\"decode_relationship_tuple\"",
+            "\"store_authz_policy\"",
+            "crate::runtime::executor_utils::prefix_status(\"assign role (principal) failed\", err)",
+            "\"assign_role\"",
+            "\"encode_policy_conditions\"",
+            "\"create_policy_rule\"",
+            "\"revoke_role\"",
+            "\"list_user_roles\"",
+            "\"get_role\"",
+            "\"list_roles\"",
+            "\"delete_role\"",
+            "\"get_policy_rule\"",
+            "\"list_policy_rules\"",
+            "\"delete_policy_rule\"",
+            "\"sign_policy_bundle\"",
             "authz_internal_status_carries_typed_detail",
             "fn assert_internal_detail(",
             "ErrorKind::Internal",
-            'detail.backend, "authz"',
+            "detail.backend, \"authz\"",
+            "fn authz_native_text(",
+            "crate::runtime::error_reasons::DECODE_FAILED.code.to_string()",
+            "fn role_from_native_row(",
+            "role_from_native_row(row)?",
+            "fn authz_native_scope_filter(",
+            "async fn read_authz_mutation_row(",
+            "crate::runtime::executor_utils::prefix_status(\"delete role failed\", err)",
         ),
     ),
     TokenCheck(
@@ -1051,9 +1056,11 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
             "Some(crate::runtime::error_reasons::CAS_CONFLICT.code)",
             "cur_policy.checked_add(1).ok_or_else(exhausted)?",
             "Err(err) => return Err(err)",
-            '''self.invalidate_snapshot_cache();
-            self.current_snapshot_locked().await?;
-            Ok((new_policy, new_rel))''',
+            "pub(super) async fn mutate_authz_with_revision(",
+            "transaction_ops.extend(ops.iter().cloned());",
+            "Ok(results) if results.len() == ops.len() + 2",
+            "self.invalidate_snapshot_cache();\n self.current_snapshot_locked().await?;",
+            "results.into_iter().skip(1).take(ops.len()).collect()",
         ),
     ),
     TokenCheck(
@@ -1066,12 +1073,12 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
             "self.current_snapshot_locked().await",
             "async fn current_snapshot_locked(&self)",
             "revision_retries < crate::engine::MAX_RETRIES",
-            'return_fields: vec!["tenant_id".to_string(), "project_id".to_string()]',
-            '"deleted policy scope is unavailable"',
-            '''self.bump_authz_revision(
-                scope("tenant_id")?, scope("project_id")?,
-                authz_entity_pb::AuthzChangeType::Policy, "policy-delete", &req.deleted_by,
-            ).await?;''',
+            "return_fields: vec![\"tenant_id\".to_string(), \"project_id\".to_string()]",
+            "authz_native_text(&scope_row, \"tenant_id\")?",
+            "authz_native_text(&scope_row, \"project_id\")?",
+            "authz_native_scope_filter(&scope_row, &[\"tenant_id\", \"project_id\"])?",
+            "Some(crate::runtime::error_reasons::NO_ROWS_AFFECTED.code)",
+            "NativeEntityTransactionOp::DeleteRequired(op)",
         ),
     ),
     TokenCheck(
@@ -1126,15 +1133,18 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
         "src/runtime/service/auth_service/authz/governance_sim.rs",
         (
             "fn governance_sim_internal_status(",
-            'crate::runtime::executor_utils::internal_status("authz", operation, message)',
-            '"list_policy_versions"',
-            '"seed_builtin_role"',
-            '"list policy versions failed: {err}"',
-            '"seed role failed: {err}"',
+            "crate::runtime::executor_utils::internal_status(\"authz\", operation, message)",
+            "\"list_policy_versions\"",
+            "\"list policy versions failed: {err}\"",
             "governance_sim_internal_status_carries_typed_detail",
             "fn assert_internal_detail(",
             "ErrorKind::Internal",
-            'detail.backend, "authz"',
+            "detail.backend, \"authz\"",
+            "ops.push(NativeEntityTransactionOp::Write(LogicalWrite {",
+            "conflict: ConflictStrategy::Ignore,",
+            "if result.affected_rows > 0",
+            "super::enforce_authz_body_scope(&req.tenant_id, &req.project_id)?;",
+            "req.tenant_id = claim.tenant_id.clone();",
         ),
     ),
     TokenCheck(
@@ -3160,44 +3170,36 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
         "src/runtime/service/auth_service/authz/governance_activate.rs",
         (
             "fn activation_internal_status(",
-            'crate::runtime::executor_utils::internal_status("authz", operation, message)',
-            '"activation_tx_begin"',
-            '"clear_policies"',
-            '"insert_policy"',
-            '"clear_tuples"',
-            '"insert_grouping_tuple"',
-            '"insert_relationship_tuple"',
-            '"supersede_prior_version"',
-            '"activate_version"',
-            '"update_policy_set_pointers"',
-            '"activation_tx_commit"',
-            '"read_active_version"',
-            '"create_canary"',
-            '"create_canary_id_decode"',
-            '"load_canary"',
-            '"list_active_canaries"',
-            'crate::runtime::executor_utils::prefix_status("update canary state failed", err)',
-            '"read_node_state_ledger"',
-            '"activation tx begin failed: {err}"',
-            '"clear policies failed: {err}"',
-            '"insert policy failed: {err}"',
-            '"clear tuples failed: {err}"',
-            '"insert grouping tuple failed: {err}"',
-            '"insert relationship tuple failed: {err}"',
-            '"supersede prior version failed: {err}"',
-            '"activate version failed: {err}"',
-            '"update policy set pointers failed: {err}"',
-            '"activation tx commit failed: {err}"',
-            '"read active version failed: {err}"',
-            '"create canary failed: {err}"',
-            '"create canary returned no id: {err}"',
-            '"load canary failed: {err}"',
-            '"list active canaries failed: {err}"',
-            '"read node-state ledger failed: {err}"',
+            "crate::runtime::executor_utils::internal_status(\"authz\", operation, message)",
+            "\"activate_version\"",
+            "\"read_active_version\"",
+            "\"create_canary\"",
+            "\"create_canary_id_decode\"",
+            "\"load_canary\"",
+            "\"list_active_canaries\"",
+            "crate::runtime::executor_utils::prefix_status(\"update canary state failed\", err)",
+            "\"read_node_state_ledger\"",
+            "\"read active version failed: {err}\"",
+            "\"create canary failed: {err}\"",
+            "\"create canary returned no id: {err}\"",
+            "\"load canary failed: {err}\"",
+            "\"list active canaries failed: {err}\"",
+            "\"read node-state ledger failed: {err}\"",
             "activation_internal_status_carries_typed_detail",
             "fn assert_internal_detail(",
             "ErrorKind::Internal",
-            'detail.backend, "authz"',
+            "detail.backend, \"authz\"",
+            "validate_unique_document_policy_ids(document)?",
+            "NativeEntityTransactionOp::Delete(LogicalDelete {",
+            "\"udb.core.authz.entity.v1.PolicyRule\"",
+            "\"udb.core.authz.entity.v1.PolicyTuple\"",
+            "super::tuples::policy_tuple_record(",
+            "\"udb.core.authz.entity.v1.PolicyVersion\"",
+            "\"udb.core.authz.entity.v1.PolicySet\"",
+            "LogicalAssignment::Increment {",
+            "let expected_pointer = match &prior_active",
+            "require_affected: true,",
+            "self.mutate_authz_with_revision(",
         ),
     ),
     TokenCheck(
@@ -4470,6 +4472,32 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
             "assert_eq!(detail.constraint, constraint);",
             "assert_eq!(after_logs, before_logs",
             "after_events, before_events",
+        ),
+    ),
+    TokenCheck(
+        "Required native transaction mutations abort before subsequent steps",
+        "src/runtime/core/native_store.rs",
+        (
+            "require_affected: op.require_affected,",
+            "NativeEntityTransactionOp::DeleteRequired(op) => PreparedStep::Mutation {",
+            "if require_affected && rows.is_empty() { super::setup_data::enforce_require_affected(1, 0)?; }",
+            "if require_affected && result.rows_affected() == 0 { super::setup_data::enforce_require_affected(1, 0)?; }",
+        ),
+    ),
+    TokenCheck(
+        "Actual served authz rollback, zero-row and foreign revision-scope proofs",
+        "src/runtime/service/live_tests/authz_deny_path_live.rs",
+        (
+            "authz_required_mutations_refuse_zero_rows_before_revision_live",
+            "authz.delete_role(request)",
+            "authz.delete_policy_rule(request)",
+            "authz.revoke_role(request)",
+            "zero-row mutations must not commit any revision",
+            "a skipped role delete cannot commit its assignment cascade",
+            "revision refusal rolls back the actual policy replacement",
+            "revision refusal must roll back the conditional policy delete",
+            "foreign revision scope must refuse before reading durable values",
+            "omitted tenant inherits the verified caller instead of global scope",
         ),
     ),
     TokenCheck(
@@ -10196,6 +10224,64 @@ def authz_revision_refusal_suppression_hits(root: Path) -> list[str]:
     return hits
 
 
+AUTHZ_MUTATION_REVISION_PATHS: tuple[tuple[str, str, int, str], ...] = (
+    ("mod.rs", "put_authz_policy", 1, "mutate_authz_with_revision"),
+    ("mod.rs", "create_role", 1, "mutate_authz_with_revision"),
+    ("mod.rs", "assign_role", 2, "mutate_authz_with_revision"),
+    ("mod.rs", "create_policy_rule", 1, "mutate_authz_with_revision"),
+    ("mod.rs", "revoke_role", 1, "mutate_authz_with_revision"),
+    ("mod.rs", "update_role", 1, "mutate_authz_with_revision"),
+    ("mod.rs", "delete_role", 1, "mutate_authz_with_revision"),
+    ("mod.rs", "delete_policy_rule", 1, "mutate_authz_with_revision"),
+    ("tuples.rs", "put_role_binding_impl", 1, "mutate_authz_with_revision"),
+    ("tuples.rs", "put_relationship_impl", 1, "mutate_authz_with_revision"),
+    ("governance_activate.rs", "apply_document_and_activate", 1, "mutate_authz_with_revision"),
+    ("governance_sim.rs", "seed_builtin_roles_impl", 1, "mutate_authz_with_revision"),
+    ("governance_sim.rs", "invalidate_policy_bundles_impl", 1, "bump_authz_revision"),
+    ("governance.rs", "bump_authz_revision", 1, "mutate_authz_with_revision"),
+)
+
+
+def authz_mutation_revision_cocommit_hits(root: Path) -> list[str]:
+    hits: list[str] = []
+    prefix = "src/runtime/service/auth_service/authz"
+    declarations = re.compile(r"(?m)^    (?:pub(?:\([^)]*\))?\s+)?async fn (\w+)\b")
+    for file, function, expected, seam in AUTHZ_MUTATION_REVISION_PATHS:
+        text = read(root / prefix / file)
+        methods = list(declarations.finditer(text))
+        matches = [index for index, item in enumerate(methods) if item.group(1) == function]
+        if len(matches) != 1:
+            hits.append(f"{prefix}/{file}: {function}: missing unique served mutation method")
+            continue
+        index = matches[0]
+        start = methods[index].start()
+        end = methods[index + 1].start() if index + 1 < len(methods) else len(text)
+        body = "\n".join(line for line in text[start:end].splitlines() if not line.lstrip().startswith("//"))
+        calls = len(re.findall(r"\." + seam + r"\s*\(", body))
+        if calls != expected:
+            hits.append(f"{prefix}/{file}: {function}: mutation/revision transaction requires {expected} {seam} caller(s), got {calls}")
+        if re.search(r"\.native_entity_(?:write|update|delete)\w*_for_service\b", body):
+            hits.append(f"{prefix}/{file}: {function}: entity mutation must share the revision transaction")
+        if re.search(r"sqlx::(?:query|query_as|query_scalar|raw_sql)\b.*?\.execute\s*\(", body, re.DOTALL):
+            hits.append(f"{prefix}/{file}: {function}: raw mutation cannot commit outside the revision transaction")
+        if re.search(r"let\s+_\s*=.*?\." + seam + r"\s*\(", body, re.DOTALL):
+            hits.append(f"{prefix}/{file}: {function}: cannot discard revision mutation refusal")
+        if function in ("seed_builtin_roles_impl", "invalidate_policy_bundles_impl") and "enforce_authz_body_scope(" not in body:
+            hits.append(f"{prefix}/{file}: {function}: governance body scope must match the claim")
+    text = read(root / prefix / "governance_sim.rs")
+    methods = list(declarations.finditer(text))
+    for index, method in enumerate(methods):
+        if method.group(1) == "get_authz_revision_impl":
+            end = methods[index + 1].start() if index + 1 < len(methods) else len(text)
+            body = text[method.start():end]
+            if "enforce_authz_body_scope(" not in body or "req.tenant_id = claim.tenant_id.clone();" not in body:
+                hits.append(f"{prefix}/governance_sim.rs: get_authz_revision_impl: revision reads bind explicit and omitted body tenants to the claim")
+            break
+    else:
+        hits.append(f"{prefix}/governance_sim.rs: get_authz_revision_impl: missing served scope gate")
+    return hits
+
+
 def native_transaction_refusal_reclassification_hits(root: Path) -> list[str]:
     path = root / CORE_NATIVE_STORE_INTERNAL_STATUS_PATH
     text = "\n".join(
@@ -10254,6 +10340,7 @@ def _check_root_cached(root: Path) -> list[str]:
                 failures.append(f"{check.label}: missing token {token!r} in {check.path}")
 
     failures.extend(authz_revision_refusal_suppression_hits(root))
+    failures.extend(authz_mutation_revision_cocommit_hits(root))
     failures.extend(native_auth_refusal_reclassification_hits(root))
     failures.extend(native_transaction_refusal_reclassification_hits(root))
 
@@ -10436,6 +10523,18 @@ def write_fixture(root: Path) -> None:
     for check in TOKEN_CHECKS:
         path = root / check.path
         fixture_text_by_path.setdefault(path, []).extend(check.tokens)
+    for file, function, expected, seam in AUTHZ_MUTATION_REVISION_PATHS:
+        path = root / "src/runtime/service/auth_service/authz" / file
+        body = [f"self.{seam}().await?;" for _ in range(expected)]
+        if function in ("seed_builtin_roles_impl", "invalidate_policy_bundles_impl"):
+            body.append("super::enforce_authz_body_scope(&req.tenant_id, &req.project_id)?;")
+        fixture_text_by_path.setdefault(path, []).append(
+            f"    async fn {function}() {{ " + " ".join(body) + " }"
+        )
+    path = root / "src/runtime/service/auth_service/authz/governance_sim.rs"
+    fixture_text_by_path.setdefault(path, []).append(
+        "    async fn get_authz_revision_impl() { enforce_authz_body_scope(); req.tenant_id = claim.tenant_id.clone(); }"
+    )
     api_rules = root / "docs/api-rules.md"
     reason_rows = ["### Stable String Reason Registry", "`error-reason` gRPC metadata trailer"]
     for _, reasons in ERROR_REASON_REGISTRY:
@@ -10501,12 +10600,36 @@ def run_selftest() -> None:
             ("src/runtime/service/live_tests/data_error_matrix_live.rs", "DEFERRABLE INITIALLY DEFERRED"),
             ("src/runtime/service/live_tests/data_error_matrix_live.rs", "assert_eq!(refusal.code, code as i32);"),
             ("src/runtime/service/notification_service/project_store_live.rs", ".get_bin(crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY)"),
+            ("src/runtime/service/auth_service/authz/governance.rs", "transaction_ops.extend(ops.iter().cloned());"),
+            ("src/runtime/core/native_store.rs", "if require_affected && rows.is_empty()"),
+            ("src/runtime/core/native_store.rs", "if require_affected && result.rows_affected() == 0"),
+            ("src/runtime/service/live_tests/authz_deny_path_live.rs", "zero-row mutations must not commit any revision"),
+            ("src/runtime/service/live_tests/authz_deny_path_live.rs", "revision refusal rolls back the actual policy replacement"),
         ):
             write_fixture(root)
             target = root / source
             target.write_text(read(target).replace(token, ""), encoding="utf-8")
             failures = check_root(root)
             assert any(token in failure for failure in failures), (source, token, failures)
+        write_fixture(root)
+
+        for file, function, _, seam in AUTHZ_MUTATION_REVISION_PATHS:
+            write_fixture(root)
+            target = root / "src/runtime/service/auth_service/authz" / file
+            text = read(target)
+            start = text.index(f"    async fn {function}()")
+            end = text.index(" }", start) + 2
+            body = text[start:end].replace(f"self.{seam}()", "self.separate_revision_transaction()", 1)
+            target.write_text(text[:start] + body + text[end:], encoding="utf-8")
+            failures = check_root(root)
+            assert any(function in failure and "mutation/revision transaction requires" in failure for failure in failures), failures
+        write_fixture(root)
+        target = root / "src/runtime/service/auth_service/authz/governance_sim.rs"
+        text = read(target)
+        text = text.replace("    async fn get_authz_revision_impl() { enforce_authz_body_scope();", "    async fn get_authz_revision_impl() {")
+        target.write_text(text, encoding="utf-8")
+        failures = check_root(root)
+        assert any("revision reads bind explicit and omitted body tenants" in failure for failure in failures), failures
         write_fixture(root)
 
         original_check_root_cached = _check_root_cached

@@ -40,6 +40,9 @@ pub(crate) enum NativeEntityTransactionOp {
     Write(LogicalWrite),
     Update(LogicalUpdate),
     Delete(LogicalDelete),
+    /// Refuse an empty delete before any later mutation or outbox can commit.
+    /// Callers can translate the typed miss to their idempotent no-op response.
+    DeleteRequired(LogicalDelete),
     /// A pre-enriched native event row that must commit with the entity writes.
     /// The shared native-event helper builds the envelope; this substrate only
     /// owns transaction ordering and the canonical CDC outbox insert.
@@ -742,7 +745,10 @@ impl DataBrokerRuntime {
                 expected_rows: Vec<serde_json::Value>,
                 lock_key: i64,
             },
-            Mutation(crate::runtime::service::handlers_data::CompiledDispatchRequest),
+            Mutation {
+                compiled: crate::runtime::service::handlers_data::CompiledDispatchRequest,
+                require_affected: bool,
+            },
             Outbox(NativeOutboxTransactionWrite),
         }
 
@@ -803,30 +809,45 @@ impl DataBrokerRuntime {
                         lock_key: i64::from_be_bytes(key),
                     }
                 }
-                NativeEntityTransactionOp::Write(op) => PreparedStep::Mutation(
-                    crate::runtime::service::handlers_data::compile_logical_write_dispatch(
-                        &kind,
-                        &op,
-                        &compile_ctx,
-                    )?,
-                ),
-                NativeEntityTransactionOp::Update(op) => PreparedStep::Mutation(
-                    crate::runtime::service::handlers_data::compile_logical_update_dispatch(
-                        &kind,
-                        &op,
-                        &compile_ctx,
-                    )?,
-                ),
-                NativeEntityTransactionOp::Delete(op) => PreparedStep::Mutation(
-                    crate::runtime::service::handlers_data::compile_logical_delete_dispatch(
-                        &kind,
-                        &op,
-                        &compile_ctx,
-                    )?,
-                ),
+                NativeEntityTransactionOp::Write(op) => PreparedStep::Mutation {
+                    compiled:
+                        crate::runtime::service::handlers_data::compile_logical_write_dispatch(
+                            &kind,
+                            &op,
+                            &compile_ctx,
+                        )?,
+                    require_affected: false,
+                },
+                NativeEntityTransactionOp::Update(op) => PreparedStep::Mutation {
+                    compiled:
+                        crate::runtime::service::handlers_data::compile_logical_update_dispatch(
+                            &kind,
+                            &op,
+                            &compile_ctx,
+                        )?,
+                    require_affected: op.require_affected,
+                },
+                NativeEntityTransactionOp::Delete(op) => PreparedStep::Mutation {
+                    compiled:
+                        crate::runtime::service::handlers_data::compile_logical_delete_dispatch(
+                            &kind,
+                            &op,
+                            &compile_ctx,
+                        )?,
+                    require_affected: false,
+                },
+                NativeEntityTransactionOp::DeleteRequired(op) => PreparedStep::Mutation {
+                    compiled:
+                        crate::runtime::service::handlers_data::compile_logical_delete_dispatch(
+                            &kind,
+                            &op,
+                            &compile_ctx,
+                        )?,
+                    require_affected: true,
+                },
                 NativeEntityTransactionOp::Outbox(write) => PreparedStep::Outbox(write),
             };
-            if let PreparedStep::Mutation(compiled) = &prepared
+            if let PreparedStep::Mutation { compiled, .. } = &prepared
                 && compiled.operation != "mutate"
             {
                 return Err(native_store_capability_status(
@@ -868,7 +889,7 @@ impl DataBrokerRuntime {
 
         let mut results = Vec::with_capacity(prepared_steps.len());
         for prepared in prepared_steps {
-            let compiled = match prepared {
+            let (compiled, require_affected) = match prepared {
                 PreparedStep::ReadGuard {
                     compiled,
                     expected_rows,
@@ -941,7 +962,10 @@ impl DataBrokerRuntime {
                     });
                     continue;
                 }
-                PreparedStep::Mutation(compiled) => compiled,
+                PreparedStep::Mutation {
+                    compiled,
+                    require_affected,
+                } => (compiled, require_affected),
                 PreparedStep::Outbox(write) => {
                     crate::runtime::cdc::insert_outbox_row(
                         &mut *tx,
@@ -1006,6 +1030,9 @@ impl DataBrokerRuntime {
                     )
                 })?;
                 let rows = crate::runtime::core::pg_rows_to_json(rows)?;
+                if require_affected && rows.is_empty() {
+                    super::setup_data::enforce_require_affected(1, 0)?;
+                }
                 results.push(NativeEntityTransactionStepResult {
                     affected_rows: rows.len() as u64,
                     rows,
@@ -1024,6 +1051,9 @@ impl DataBrokerRuntime {
                         &err,
                     )
                 })?;
+                if require_affected && result.rows_affected() == 0 {
+                    super::setup_data::enforce_require_affected(1, 0)?;
+                }
                 results.push(NativeEntityTransactionStepResult {
                     affected_rows: result.rows_affected(),
                     rows: Vec::new(),

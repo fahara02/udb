@@ -21,7 +21,9 @@ use crate::ir::{
     SortDirection,
 };
 use crate::runtime::authz::PolicyEngine;
-use crate::runtime::core::native_store::NativeEntityTransactionOp;
+use crate::runtime::core::native_store::{
+    NativeEntityTransactionOp, NativeEntityTransactionStepResult,
+};
 
 // ── Governance scopes / SoD constants ──────────────────────────────────────
 
@@ -701,18 +703,20 @@ fn authz_revision_read(tenant: &str, project: &str) -> LogicalRead {
     }
 }
 
-fn authz_revision_context(
+pub(super) fn authz_revision_context(
     runtime: &DataBrokerRuntime,
     tenant: &str,
-    project: &str,
 ) -> Result<crate::RequestContext, Status> {
     let mut context = crate::RequestContext {
         tenant_id: tenant.to_string(),
-        project_id: project.to_string(),
+        // Project scope lives in the revision filter and entity records. Authz
+        // persists to its control store even for a project with its own data DB.
+        project_id: String::new(),
         ..crate::RequestContext::default()
     };
-    // Read from the same authoritative instance as the guarded append. A read
-    // replica may lag and repeatedly produce a stale observation.
+    // Read from the same control primary as the guarded append. Keeping the
+    // placement project empty also pins the unnamed/default-pool case, where
+    // there is no physical instance name to copy into target_instance.
     let (_, instance) =
         runtime.native_store_postgres_binding_for_service("authz", true, &context)?;
     context.target_instance = instance.unwrap_or_default();
@@ -777,7 +781,7 @@ impl AuthzServiceImpl {
                 "native authz requires runtime-backed revision persistence",
             )
         })?;
-        let context = authz_revision_context(runtime, tenant, project)?;
+        let context = authz_revision_context(runtime, tenant)?;
         let rows = runtime
             .native_entity_read_for_service("authz", &context, authz_revision_read(tenant, project))
             .await?;
@@ -799,6 +803,30 @@ impl AuthzServiceImpl {
         content_hash: &str,
         changed_by: &str,
     ) -> Result<(i64, i64), Status> {
+        let (policy_revision, relationship_revision, _) = self
+            .mutate_authz_with_revision(
+                tenant,
+                project,
+                change_type,
+                content_hash,
+                changed_by,
+                Vec::new(),
+            )
+            .await?;
+        Ok((policy_revision, relationship_revision))
+    }
+
+    /// Commit the actual entity mutations with their immutable revision, then
+    /// publish the durable snapshot before returning their mutation receipts.
+    pub(super) async fn mutate_authz_with_revision(
+        &self,
+        tenant: &str,
+        project: &str,
+        change_type: authz_entity_pb::AuthzChangeType,
+        content_hash: &str,
+        changed_by: &str,
+        ops: Vec<NativeEntityTransactionOp>,
+    ) -> Result<(i64, i64, Vec<NativeEntityTransactionStepResult>), Status> {
         let _publication_guard = self.snapshot_reload_lock.lock().await;
         let bumps_relationship = matches!(
             change_type,
@@ -813,10 +841,10 @@ impl AuthzServiceImpl {
                 "native authz requires runtime-backed revision persistence",
             )
         })?;
-        let context = authz_revision_context(runtime, tenant, project)?;
+        let context = authz_revision_context(runtime, tenant)?;
         let read = authz_revision_read(tenant, project);
         let mut retries = 0;
-        let (new_policy, new_rel) = loop {
+        let (new_policy, new_rel, results) = loop {
             let expected_rows = runtime
                 .native_entity_read_for_service("authz", &context, read.clone())
                 .await?;
@@ -866,26 +894,31 @@ impl AuthzServiceImpl {
                 "change_type".to_string(),
                 LogicalValue::String(change_type_to_db(change_type).to_string()),
             );
+            let mut transaction_ops = Vec::with_capacity(ops.len() + 2);
+            transaction_ops.push(NativeEntityTransactionOp::ReadGuard {
+                read: read.clone(),
+                expected_rows,
+            });
+            transaction_ops.extend(ops.iter().cloned());
+            transaction_ops.push(NativeEntityTransactionOp::Write(LogicalWrite {
+                message_type: read.message_type.clone(),
+                records: vec![record],
+                conflict: ConflictStrategy::Error,
+                return_fields: Vec::new(),
+            }));
             let result = runtime
-                .native_entity_transaction_for_service(
-                    "authz",
-                    &context,
-                    vec![
-                        NativeEntityTransactionOp::ReadGuard {
-                            read: read.clone(),
-                            expected_rows,
-                        },
-                        NativeEntityTransactionOp::Write(LogicalWrite {
-                            message_type: read.message_type.clone(),
-                            records: vec![record],
-                            conflict: ConflictStrategy::Error,
-                            return_fields: Vec::new(),
-                        }),
-                    ],
-                )
+                .native_entity_transaction_for_service("authz", &context, transaction_ops)
                 .await;
             match result {
-                Ok(_) => break (new_policy, new_rel),
+                Ok(results) if results.len() == ops.len() + 2 => {
+                    break (new_policy, new_rel, results);
+                }
+                Ok(_) => {
+                    return Err(governance_internal_status(
+                        "bump_authz_revision",
+                        "native authz mutation receipts are incomplete",
+                    ));
+                }
                 Err(err)
                     if retries < crate::engine::MAX_RETRIES
                         && err.code() == crate::runtime::error_reasons::CAS_CONFLICT.status
@@ -899,7 +932,11 @@ impl AuthzServiceImpl {
         };
         self.invalidate_snapshot_cache();
         self.current_snapshot_locked().await?;
-        Ok((new_policy, new_rel))
+        Ok((
+            new_policy,
+            new_rel,
+            results.into_iter().skip(1).take(ops.len()).collect(),
+        ))
     }
 
     /// Emit the durable cluster-invalidation event (K2.4). Every node tailing the

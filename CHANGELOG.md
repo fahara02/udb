@@ -49,6 +49,13 @@ no-wrapper plan.
 
 ### Fixed
 
+- Authz entity changes and their immutable revision commit in one guarded
+  native transaction, including role CRUD/assignments, tuples, bulk role seeding
+  and governed activation/rollback bookkeeping. Skipped conditional mutations
+  roll back before any revision or cascade; retry deletes retain their no-op
+  responses. Revision reads bind body scope to the verified caller and inherit
+  its tenant when omitted. Project scope stays in the control-store records.
+
 - The live native transaction refusal proof decodes the broker's actual
   `udb-error-detail-bin` trailer. Immediate, deferred and outbox UNIQUE checks
   retain strict wire-detail and durable rollback assertions.

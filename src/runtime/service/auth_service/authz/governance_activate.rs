@@ -353,228 +353,194 @@ impl AuthzServiceImpl {
                 "stored governance document contains a provenance-free reserved platform role binding",
             ));
         }
-        let pool = self.require_pool()?;
+        self.require_pool()?;
         let tenant = version.tenant_id.clone();
         let project = version.project_id.clone();
-
-        // Record the currently-active version (for rollback bookkeeping) before
-        // we replace it.
+        super::enforce_authz_body_scope(&tenant, &project)?;
+        validate_unique_document_policy_ids(document)?;
         let prior_active = self
             .policy_set_active_version(&version.policy_set_id)
             .await?;
-
-        let mut tx = pool.begin().await.map_err(|err| {
-            activation_internal_status(
-                "activation_tx_begin",
-                format!("activation tx begin failed: {err}"),
-            )
-        })?;
-        // P6.10 carve-out: install request-local tenant/project context as the FIRST
-        // tx statement so the replace-all legs run with the same RLS/audit context the
-        // typed path would set (defense-in-depth — the legs are already explicitly
-        // tenant-scoped, and authz tables are enable_rls-not-force so the broker owner
-        // bypasses RLS, but this keeps the context correct and audit-attributable).
-        crate::runtime::core::set_request_local_settings(
-            &mut tx,
-            &crate::RequestContext {
-                tenant_id: tenant.clone(),
-                project_id: project.clone(),
-                ..crate::RequestContext::default()
-            },
-        )
-        .await?;
-
-        // 1. Replace policy_rules for this tenant/project with the version's.
-        let pm = self.policies_model();
-        sqlx::query(&format!(
-            "DELETE FROM {rel} WHERE {tenant_id} = $1 AND COALESCE({project_id}, '') = $2",
-            rel = pm.relation,
-            tenant_id = pm.q("tenant_id"),
-            project_id = pm.q("project_id"),
-        ))
-        .bind(&tenant)
-        .bind(&project)
-        .execute(&mut *tx)
-        .await
-        .map_err(|err| {
-            activation_internal_status("clear_policies", format!("clear policies failed: {err}"))
-        })?;
-        // Fail closed on duplicate non-empty policy ids within the document: each
-        // policy's own id is bound on re-insert (below), so two policies sharing
-        // a non-empty id would collide on the primary key / lose identity.
-        validate_unique_document_policy_ids(document)?;
-        // NOTE: the atomic DELETE-all above is load-bearing and intentionally
-        // retained — it preserves the "live set == version document" invariant, so
-        // a manual rule NOT present in the activated document is still (correctly)
-        // removed here even though we now preserve each document policy's own id.
-        for p in &document.policies {
-            let mut attrs = serde_json::Map::new();
-            for (k, v) in &p.conditions {
-                attrs.insert(k.clone(), serde_json::Value::String(v.clone()));
+        let eq = |field: &str, value: &str| LogicalFilter::Comparison {
+            field: field.to_string(),
+            op: ComparisonOp::Eq,
+            value: LogicalValue::String(value.to_string()),
+        };
+        // Preserve the old COALESCE(project_id, '') scope on legacy NULL rows.
+        let project_filter = if project.is_empty() {
+            LogicalFilter::Or(vec![
+                eq("project_id", &project),
+                LogicalFilter::IsNull("project_id".to_string()),
+            ])
+        } else {
+            eq("project_id", &project)
+        };
+        let scope = LogicalFilter::And(vec![eq("tenant_id", &tenant), project_filter]);
+        let mut ops = Vec::new();
+        // Replacing every row remains load-bearing: a manual policy absent from
+        // the governed document must disappear, in the same revision transaction.
+        ops.push(NativeEntityTransactionOp::Delete(LogicalDelete {
+            message_type: "udb.core.authz.entity.v1.PolicyRule".to_string(),
+            filter: scope.clone(),
+            return_fields: Vec::new(),
+        }));
+        for policy in &document.policies {
+            let mut attributes = serde_json::Map::new();
+            for (key, value) in &policy.conditions {
+                attributes.insert(key.clone(), serde_json::Value::String(value.clone()));
             }
-            attrs.insert(
-                "priority".into(),
-                serde_json::Value::String(p.priority.to_string()),
-            );
-            attrs.insert("role".into(), serde_json::Value::String(p.role.clone()));
-            attrs.insert(
-                "purpose".into(),
-                serde_json::Value::String(p.purpose.clone()),
-            );
-            attrs.insert(
-                "relationship".into(),
-                serde_json::Value::String(p.relationship.clone()),
-            );
-            attrs.insert(
-                "required_scopes".into(),
-                serde_json::Value::String(
-                    crate::runtime::service::auth_service::mappings::scopes_to_db(
-                        &p.required_scopes,
-                    ),
+            for (key, value) in [
+                ("priority", policy.priority.to_string()),
+                ("role", policy.role.clone()),
+                ("purpose", policy.purpose.clone()),
+                ("relationship", policy.relationship.clone()),
+                ("required_scopes", scopes_to_db(&policy.required_scopes)),
+            ] {
+                attributes.insert(key.to_string(), serde_json::Value::String(value));
+            }
+            let policy_id = if policy.id.trim().is_empty() {
+                Uuid::new_v4().to_string()
+            } else {
+                policy.id.clone()
+            };
+            let policy_tenant = if policy.tenant.trim().is_empty() {
+                &tenant
+            } else {
+                &policy.tenant
+            };
+            let policy_project = if policy.project.trim().is_empty() {
+                &project
+            } else {
+                &policy.project
+            };
+            let record = LogicalRecord::from([
+                ("policy_id".to_string(), LogicalValue::String(policy_id)),
+                (
+                    "subject".to_string(),
+                    LogicalValue::String(policy.subject.clone()),
                 ),
-            );
-            sqlx::query(&format!(
-                "INSERT INTO {rel} ({policy_id}, {subject}, {domain_col}, {object_col}, {action_col}, {effect_col}, {condition}, {description}, {is_active}, {tenant_id}, {project_id}, {attributes_json}) \
-                 VALUES (COALESCE(NULLIF($1,'')::uuid, gen_random_uuid()), $2, $3, $4, $5, $6, '', '', $7, $3, $8, $9::JSONB)",
-                rel = pm.relation,
-                policy_id = pm.q("policy_id"),
-                subject = pm.q("subject"),
-                domain_col = pm.q("domain"),
-                object_col = pm.q("object"),
-                action_col = pm.q("action"),
-                effect_col = pm.q("effect"),
-                condition = pm.q("condition"),
-                description = pm.q("description"),
-                is_active = pm.q("is_active"),
-                tenant_id = pm.q("tenant_id"),
-                project_id = pm.q("project_id"),
-                attributes_json = pm.q("attributes_json"),
-            ))
-            .bind(&p.id)
-            .bind(&p.subject)
-            .bind(if p.tenant.trim().is_empty() { &tenant } else { &p.tenant })
-            .bind(&p.resource)
-            .bind(&p.action)
-            .bind(effect_to_db(p.effect))
-            .bind(p.enabled)
-            .bind(if p.project.trim().is_empty() { &project } else { &p.project })
-            .bind(serde_json::Value::Object(attrs))
-            .execute(&mut *tx)
-            .await
-            .map_err(|err| {
-                activation_internal_status(
-                    "insert_policy",
-                    format!("insert policy failed: {err}"),
-                )
-            })?;
+                (
+                    "domain".to_string(),
+                    LogicalValue::String(policy_tenant.clone()),
+                ),
+                (
+                    "object".to_string(),
+                    LogicalValue::String(policy.resource.clone()),
+                ),
+                (
+                    "action".to_string(),
+                    LogicalValue::String(policy.action.clone()),
+                ),
+                (
+                    "effect".to_string(),
+                    LogicalValue::String(effect_to_db(policy.effect).to_string()),
+                ),
+                ("condition".to_string(), LogicalValue::String(String::new())),
+                (
+                    "description".to_string(),
+                    LogicalValue::String(String::new()),
+                ),
+                ("is_active".to_string(), LogicalValue::Bool(policy.enabled)),
+                (
+                    "tenant_id".to_string(),
+                    LogicalValue::String(policy_tenant.clone()),
+                ),
+                (
+                    "project_id".to_string(),
+                    LogicalValue::String(policy_project.clone()),
+                ),
+                (
+                    "attributes_json".to_string(),
+                    LogicalValue::Json(serde_json::Value::Object(attributes)),
+                ),
+            ]);
+            ops.push(NativeEntityTransactionOp::Write(LogicalWrite {
+                message_type: "udb.core.authz.entity.v1.PolicyRule".to_string(),
+                records: vec![record],
+                conflict: ConflictStrategy::Error,
+                return_fields: Vec::new(),
+            }));
         }
-
-        // 2. Replace relationship/grouping tuples for this tenant/project.
-        let tm = self.relationship_tuples_model();
-        sqlx::query(&format!(
-            "DELETE FROM {rel} WHERE {tenant_id} = $1 AND COALESCE({project_id}, '') = $2",
-            rel = tm.relation,
-            tenant_id = tm.q("tenant_id"),
-            project_id = tm.q("project_id"),
-        ))
-        .bind(&tenant)
-        .bind(&project)
-        .execute(&mut *tx)
-        .await
-        .map_err(|err| {
-            activation_internal_status("clear_tuples", format!("clear tuples failed: {err}"))
-        })?;
-        for b in &document.role_bindings {
-            let scope_tenant = if b.tenant.trim().is_empty() {
+        ops.push(NativeEntityTransactionOp::Delete(LogicalDelete {
+            message_type: "udb.core.authz.entity.v1.PolicyTuple".to_string(),
+            filter: scope,
+            return_fields: Vec::new(),
+        }));
+        for binding in &document.role_bindings {
+            let scope_tenant = if binding.tenant.trim().is_empty() {
                 &tenant
             } else {
-                &b.tenant
+                &binding.tenant
             };
-            sqlx::query(&format!(
-                "INSERT INTO {rel} ({tuple_kind}, {subject}, {domain_col}, {object_col}, {action_col}, {effect_col}, {condition}, {tenant_id}, {project_id}) \
-                 VALUES ('grouping', $1, $2, '', $3, '', '{{}}', $2, $4) \
-                 ON CONFLICT ({tuple_kind}, {subject}, {domain_col}, {object_col}, {action_col}, {effect_col}) DO NOTHING",
-                rel = tm.relation,
-                tuple_kind = tm.q("tuple_kind"),
-                subject = tm.q("subject"),
-                domain_col = tm.q("domain"),
-                object_col = tm.q("object"),
-                action_col = tm.q("action"),
-                effect_col = tm.q("effect"),
-                condition = tm.q("condition"),
-                tenant_id = tm.q("tenant_id"),
-                project_id = tm.q("project_id"),
-            ))
-            .bind(&b.subject)
-            .bind(scope_tenant)
-            .bind(&b.role)
-            .bind(if b.project.trim().is_empty() { &project } else { &b.project })
-            .execute(&mut *tx)
-            .await
-            .map_err(|err| {
-                activation_internal_status(
-                    "insert_grouping_tuple",
-                    format!("insert grouping tuple failed: {err}"),
-                )
-            })?;
+            let scope_project = if binding.project.trim().is_empty() {
+                &project
+            } else {
+                &binding.project
+            };
+            ops.push(NativeEntityTransactionOp::Write(LogicalWrite {
+                message_type: "udb.core.authz.entity.v1.PolicyTuple".to_string(),
+                records: vec![super::tuples::policy_tuple_record(
+                    "grouping",
+                    &binding.subject,
+                    scope_tenant,
+                    "",
+                    &binding.role,
+                    "",
+                    "{}",
+                    scope_tenant,
+                    scope_project,
+                )],
+                conflict: ConflictStrategy::Ignore,
+                return_fields: Vec::new(),
+            }));
         }
-        for t in &document.tuples {
-            let scope_tenant = if t.tenant.trim().is_empty() {
+        for tuple in &document.tuples {
+            let scope_tenant = if tuple.tenant.trim().is_empty() {
                 &tenant
             } else {
-                &t.tenant
+                &tuple.tenant
             };
-            sqlx::query(&format!(
-                "INSERT INTO {rel} ({tuple_kind}, {subject}, {domain_col}, {object_col}, {action_col}, {effect_col}, {condition}, {tenant_id}, {project_id}) \
-                 VALUES ('relationship', $1, $2, $3, $4, '', '{{}}', $2, $5) \
-                 ON CONFLICT ({tuple_kind}, {subject}, {domain_col}, {object_col}, {action_col}, {effect_col}) DO NOTHING",
-                rel = tm.relation,
-                tuple_kind = tm.q("tuple_kind"),
-                subject = tm.q("subject"),
-                domain_col = tm.q("domain"),
-                object_col = tm.q("object"),
-                action_col = tm.q("action"),
-                effect_col = tm.q("effect"),
-                condition = tm.q("condition"),
-                tenant_id = tm.q("tenant_id"),
-                project_id = tm.q("project_id"),
-            ))
-            .bind(&t.subject)
-            .bind(scope_tenant)
-            .bind(&t.object)
-            .bind(&t.relation)
-            .bind(if t.project.trim().is_empty() { &project } else { &t.project })
-            .execute(&mut *tx)
-            .await
-            .map_err(|err| {
-                activation_internal_status(
-                    "insert_relationship_tuple",
-                    format!("insert relationship tuple failed: {err}"),
-                )
-            })?;
+            let scope_project = if tuple.project.trim().is_empty() {
+                &project
+            } else {
+                &tuple.project
+            };
+            ops.push(NativeEntityTransactionOp::Write(LogicalWrite {
+                message_type: "udb.core.authz.entity.v1.PolicyTuple".to_string(),
+                records: vec![super::tuples::policy_tuple_record(
+                    "relationship",
+                    &tuple.subject,
+                    scope_tenant,
+                    &tuple.object,
+                    &tuple.relation,
+                    "",
+                    "{}",
+                    scope_tenant,
+                    scope_project,
+                )],
+                conflict: ConflictStrategy::Ignore,
+                return_fields: Vec::new(),
+            }));
         }
-
-        // 3. Version state bookkeeping: supersede the previously-active version,
-        //    flip this version ACTIVE, set rollback lineage.
-        let vm = self.policy_versions_model();
         if let Some(prior) = &prior_active {
             if prior != &version.policy_version_id {
-                sqlx::query(&format!(
-                    "UPDATE {rel} SET {state} = '{superseded}' WHERE {policy_version_id} = $1::UUID",
-                    rel = vm.relation,
-                    state = vm.q("state"),
-                    superseded = version_state_to_db(authz_entity_pb::PolicyVersionState::Superseded),
-                    policy_version_id = vm.q("policy_version_id"),
-                ))
-                .bind(prior)
-                .execute(&mut *tx)
-                .await
-                .map_err(|err| {
-                    activation_internal_status(
-                        "supersede_prior_version",
-                        format!("supersede prior version failed: {err}"),
-                    )
-                })?;
+                ops.push(NativeEntityTransactionOp::Update(LogicalUpdate {
+                    message_type: "udb.core.authz.entity.v1.PolicyVersion".to_string(),
+                    filter: eq("policy_version_id", prior),
+                    assignments: BTreeMap::from([(
+                        "state".to_string(),
+                        LogicalAssignment::Set {
+                            value: LogicalValue::String(
+                                version_state_to_db(
+                                    authz_entity_pb::PolicyVersionState::Superseded,
+                                )
+                                .to_string(),
+                            ),
+                        },
+                    )]),
+                    return_fields: Vec::new(),
+                    require_affected: true,
+                }));
             }
         }
         let new_state = if is_rollback {
@@ -582,80 +548,96 @@ impl AuthzServiceImpl {
         } else {
             authz_entity_pb::PolicyVersionState::Active
         };
-        sqlx::query(&format!(
-            "UPDATE {rel} SET {state} = $2, {activated_by} = $3, {activated_at} = NOW(), {revision} = {revision} + 1, {rollback_of} = $4::UUID \
-             WHERE {policy_version_id} = $1::UUID",
-            rel = vm.relation,
-            state = vm.q("state"),
-            activated_by = vm.q("activated_by"),
-            activated_at = vm.q("activated_at"),
-            revision = vm.q("revision"),
-            rollback_of = vm.q("rollback_of"),
-            policy_version_id = vm.q("policy_version_id"),
-        ))
-        .bind(&version.policy_version_id)
-        .bind(version_state_to_db(new_state))
-        .bind(actor)
-        // K1-EXPANDED (bug_report.md): rollback_of is a nullable UUID column.
-        // prior_active is Option<String> (the prior active version id, or None) —
-        // bind it as Option<&str> so None→NULL and a real id→text, with $4::UUID
-        // casting it into the uuid column instead of leaking "column is uuid but
-        // expression is text".
-        .bind(prior_active.as_deref())
-        .execute(&mut *tx)
-        .await
-        .map_err(|err| {
-            activation_internal_status(
-                "activate_version",
-                format!("activate version failed: {err}"),
-            )
-        })?;
-
-        // 4. PolicySet pointers: active = this version, rollback = prior active.
-        let sm = self.policy_sets_model();
-        sqlx::query(&format!(
-            "UPDATE {rel} SET {active_version_id} = $2::UUID, {rollback_version_id} = $3::UUID WHERE {policy_set_id} = $1::UUID",
-            rel = sm.relation,
-            active_version_id = sm.q("active_version_id"),
-            rollback_version_id = sm.q("rollback_version_id"),
-            policy_set_id = sm.q("policy_set_id"),
-        ))
-        .bind(&version.policy_set_id)
-        .bind(&version.policy_version_id)
-        .bind(prior_active.as_deref())
-        .execute(&mut *tx)
-        .await
-        .map_err(|err| {
-            activation_internal_status(
-                "update_policy_set_pointers",
-                format!("update policy set pointers failed: {err}"),
-            )
-        })?;
-
-        tx.commit().await.map_err(|err| {
-            activation_internal_status(
-                "activation_tx_commit",
-                format!("activation tx commit failed: {err}"),
-            )
-        })?;
-
-        // 5. Bump the durable authz revision (covers policy + tuples) and force
-        //    a local snapshot reload so this node enforces immediately.
+        let assignments = BTreeMap::from([
+            (
+                "state".to_string(),
+                LogicalAssignment::Set {
+                    value: LogicalValue::String(version_state_to_db(new_state).to_string()),
+                },
+            ),
+            (
+                "activated_by".to_string(),
+                LogicalAssignment::Set {
+                    value: LogicalValue::String(actor.to_string()),
+                },
+            ),
+            ("activated_at".to_string(), LogicalAssignment::ServerNow),
+            (
+                "revision".to_string(),
+                LogicalAssignment::Increment {
+                    by: LogicalValue::Int(1),
+                },
+            ),
+            (
+                "rollback_of".to_string(),
+                LogicalAssignment::Set {
+                    value: prior_active
+                        .as_ref()
+                        .map(|value| LogicalValue::String(value.clone()))
+                        .unwrap_or(LogicalValue::Null),
+                },
+            ),
+        ]);
+        ops.push(NativeEntityTransactionOp::Update(LogicalUpdate {
+            message_type: "udb.core.authz.entity.v1.PolicyVersion".to_string(),
+            filter: LogicalFilter::And(vec![
+                eq("policy_version_id", &version.policy_version_id),
+                LogicalFilter::Comparison {
+                    field: "revision".to_string(),
+                    op: ComparisonOp::Eq,
+                    value: LogicalValue::Int(version.revision),
+                },
+            ]),
+            assignments,
+            return_fields: Vec::new(),
+            require_affected: true,
+        }));
+        let expected_pointer = match &prior_active {
+            Some(value) => eq("active_version_id", value),
+            None => LogicalFilter::IsNull("active_version_id".to_string()),
+        };
+        ops.push(NativeEntityTransactionOp::Update(LogicalUpdate {
+            message_type: "udb.core.authz.entity.v1.PolicySet".to_string(),
+            filter: LogicalFilter::And(vec![
+                eq("policy_set_id", &version.policy_set_id),
+                expected_pointer,
+            ]),
+            assignments: BTreeMap::from([
+                (
+                    "active_version_id".to_string(),
+                    LogicalAssignment::Set {
+                        value: LogicalValue::String(version.policy_version_id.clone()),
+                    },
+                ),
+                (
+                    "rollback_version_id".to_string(),
+                    LogicalAssignment::Set {
+                        value: prior_active
+                            .as_ref()
+                            .map(|value| LogicalValue::String(value.clone()))
+                            .unwrap_or(LogicalValue::Null),
+                    },
+                ),
+            ]),
+            return_fields: Vec::new(),
+            require_affected: true,
+        }));
         let change_type = if is_rollback {
             authz_entity_pb::AuthzChangeType::Rollback
         } else {
             authz_entity_pb::AuthzChangeType::Activation
         };
-        let (policy_rev, rel_rev) = self
-            .bump_authz_revision(
+        let (policy_revision, relationship_revision, _) = self
+            .mutate_authz_with_revision(
                 &tenant,
                 &project,
                 change_type,
                 &document.content_hash(),
                 actor,
+                ops,
             )
             .await?;
-        Ok((policy_rev, rel_rev))
+        Ok((policy_revision, relationship_revision))
     }
 
     /// The policy set's currently-active version id, if any.

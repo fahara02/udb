@@ -330,7 +330,16 @@ impl AuthzServiceImpl {
         &self,
         request: Request<authz_pb::GetAuthzRevisionRequest>,
     ) -> Result<Response<authz_pb::GetAuthzRevisionResponse>, Status> {
-        let req = request.into_inner();
+        let mut req = request.into_inner();
+        super::enforce_authz_body_scope(&req.tenant_id, &req.project_id)?;
+        // An omitted tenant must inherit the verified caller, never read the
+        // global revision scope on behalf of an ordinary tenant principal.
+        if crate::runtime::service::method_security::claim_context_present() {
+            let claim = crate::runtime::service::method_security::current_claim_context();
+            if !claim.is_cross_tenant_admin() && req.tenant_id.trim().is_empty() {
+                req.tenant_id = claim.tenant_id.clone();
+            }
+        }
         let (policy_rev, rel_rev, content_hash) = self
             .current_authz_revision(&req.tenant_id, &req.project_id)
             .await?;
@@ -348,6 +357,7 @@ impl AuthzServiceImpl {
     ) -> Result<Response<authz_pb::InvalidatePolicyBundlesResponse>, Status> {
         let now = now_unix() as i64;
         let req = request.into_inner();
+        super::enforce_authz_body_scope(&req.tenant_id, &req.project_id)?;
         let actor = self
             .authorize_governance(
                 req.actor.as_ref(),
@@ -357,6 +367,17 @@ impl AuthzServiceImpl {
                 now,
             )
             .await?;
+        if req.tenant_id.trim().is_empty()
+            && crate::runtime::service::method_security::claim_context_present()
+            && !crate::runtime::service::method_security::current_claim_context()
+                .is_cross_tenant_admin()
+        {
+            return Err(simulation_required_field(
+                "tenant_id",
+                "must be a non-empty tenant id",
+                "tenant_id is required",
+            ));
+        }
         // Bumping the policy revision without changing rows is enough to revoke
         // every cached bundle below the new revision (bundles are version-pinned).
         let (policy_rev, rel_rev) = self
@@ -428,6 +449,7 @@ impl AuthzServiceImpl {
     ) -> Result<Response<authz_pb::SeedBuiltinRolesResponse>, Status> {
         let now = now_unix() as i64;
         let req = request.into_inner();
+        super::enforce_authz_body_scope(&req.tenant_id, &req.project_id)?;
         let actor = self
             .authorize_governance(
                 req.actor.as_ref(),
@@ -444,56 +466,69 @@ impl AuthzServiceImpl {
                 "tenant_id is required",
             ));
         }
-        let pool = self.require_pool()?;
-        let m = self.roles_model();
-        let rel = m.relation.clone();
+        self.require_pool()?;
+        let mut ops = Vec::with_capacity(BUILTIN_ROLES.len());
+        let mut seeded = Vec::with_capacity(BUILTIN_ROLES.len());
+        for (code, name, description) in BUILTIN_ROLES {
+            let record = LogicalRecord::from([
+                (
+                    "role_id".to_string(),
+                    LogicalValue::String(Uuid::new_v4().to_string()),
+                ),
+                (
+                    "name".to_string(),
+                    LogicalValue::String((*name).to_string()),
+                ),
+                (
+                    "description".to_string(),
+                    LogicalValue::String((*description).to_string()),
+                ),
+                ("is_system".to_string(), LogicalValue::Bool(true)),
+                ("is_active".to_string(), LogicalValue::Bool(true)),
+                (
+                    "tenant_id".to_string(),
+                    LogicalValue::String(req.tenant_id.clone()),
+                ),
+                (
+                    "project_id".to_string(),
+                    LogicalValue::String(req.project_id.clone()),
+                ),
+                (
+                    "role_code".to_string(),
+                    LogicalValue::String((*code).to_string()),
+                ),
+                (
+                    "scope_type".to_string(),
+                    LogicalValue::String("TENANT".to_string()),
+                ),
+            ]);
+            ops.push(NativeEntityTransactionOp::Write(LogicalWrite {
+                message_type: "udb.core.authz.entity.v1.Role".to_string(),
+                records: vec![record],
+                conflict: ConflictStrategy::Ignore,
+                return_fields: Vec::new(),
+            }));
+            seeded.push((*code).to_string());
+        }
+        let (_, _, results) = self
+            .mutate_authz_with_revision(
+                &req.tenant_id,
+                &req.project_id,
+                authz_entity_pb::AuthzChangeType::Role,
+                "builtin-role-seed",
+                &actor,
+                ops,
+            )
+            .await?;
         let mut created = 0;
         let mut existing = 0;
-        let mut seeded = Vec::new();
-        for (code, name, description) in BUILTIN_ROLES {
-            let result = sqlx::query(&format!(
-                "INSERT INTO {rel} ({role_id}, {name}, {description}, {is_system}, {is_active}, {tenant_id}, {project_id}, {role_code}, {scope_type}) \
-                 VALUES (gen_random_uuid(), $1, $2, TRUE, TRUE, $3, $4, $5, 'TENANT') \
-                 ON CONFLICT DO NOTHING",
-                role_id = m.q("role_id"),
-                name = m.q("name"),
-                description = m.q("description"),
-                is_system = m.q("is_system"),
-                is_active = m.q("is_active"),
-                tenant_id = m.q("tenant_id"),
-                project_id = m.q("project_id"),
-                role_code = m.q("role_code"),
-                scope_type = m.q("scope_type"),
-            ))
-            .bind(name)
-            .bind(description)
-            .bind(&req.tenant_id)
-            .bind(&req.project_id)
-            .bind(code)
-            .execute(pool)
-            .await
-            .map_err(|err| {
-                governance_sim_internal_status(
-                    "seed_builtin_role",
-                    format!("seed role failed: {err}"),
-                )
-            })?;
-            if result.rows_affected() > 0 {
+        for result in results {
+            if result.affected_rows > 0 {
                 created += 1;
             } else {
                 existing += 1;
             }
-            seeded.push((*code).to_string());
         }
-        // Bump the authz revision so any caches refresh after seeding.
-        self.bump_authz_revision(
-            &req.tenant_id,
-            &req.project_id,
-            authz_entity_pb::AuthzChangeType::Role,
-            "builtin-role-seed",
-            &actor,
-        )
-        .await?;
         Ok(Response::new(authz_pb::SeedBuiltinRolesResponse {
             seeded_role_codes: seeded,
             created,
