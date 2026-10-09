@@ -1333,6 +1333,8 @@ function phpLiveSession(): array
     $platformCallerAttributionId = phpStableAttributionId($platformCallerSubject);
     $platformTenant = $platformPrincipal?->getTenantId() ?: $canonicalTenant;
     $platformMeta = liveMeta($platformLogin->getAccessToken(), $platformTenant);
+    $platformData = new GeneratedClient(['endpoint' => $target, 'deadline_ms' => 15_000, 'retry' => ['max_attempts' => 1]]);
+    $platformData->bindContext($platformMeta);
     $platformAuthGenerated = new GeneratedClient(['endpoint' => $authTarget, 'deadline_ms' => 15_000, 'retry' => ['max_attempts' => 1]]);
     $platformAuthGenerated->bindContext($platformMeta);
 
@@ -1343,6 +1345,7 @@ function phpLiveSession(): array
         'meta',
         'callerSubject',
         'callerAttributionId',
+        'platformData',
         'platformAuthGenerated',
         'platformMeta',
         'platformCallerSubject',
@@ -1354,6 +1357,7 @@ function phpLiveSession(): array
 function phpRequiresPlatformPerfIdentity(string $serviceName, string $methodName): bool
 {
     static $rpcs = [
+        'databroker/list_projects' => true,
         'analyticsservice/get_executor_performance' => true,
         'analyticsservice/get_reconciliation_analytics' => true,
         'backupservice/restore_tenant' => true,
@@ -3323,11 +3327,15 @@ it('manifest JSON body hydrates AuthzService create-policy-draft request', funct
 });
 
 it('routes only global benchmark RPCs to the platform identity', function () {
-    expect(phpRequiresPlatformPerfIdentity('AnalyticsService', 'GetExecutorPerformance'))->toBeTrue()
+    expect(phpRequiresPlatformPerfIdentity('DataBroker', 'ListProjects'))->toBeTrue()
+        ->and(phpRequiresPlatformPerfIdentity('DataBroker', 'list_projects'))->toBeTrue()
+        ->and(phpRequiresPlatformPerfIdentity('AnalyticsService', 'GetExecutorPerformance'))->toBeTrue()
         ->and(phpRequiresPlatformPerfIdentity('BackupService', 'restore_tenant'))->toBeTrue()
         ->and(phpRequiresPlatformPerfIdentity('TenantService', 'AdminPurgeTenant'))->toBeTrue()
         ->and(phpRequiresPlatformPerfIdentity('AuthzService', 'CreatePolicyDraft'))->toBeTrue()
         ->and(phpRequiresPlatformPerfIdentity('AuthzService', 'CreateRole'))->toBeFalse()
+        ->and(phpRequiresPlatformPerfIdentity('DataBroker', 'Select'))->toBeFalse()
+        ->and(phpRequiresPlatformPerfIdentity('DataBroker', 'EnsureProject'))->toBeFalse()
         ->and(phpRequiresPlatformPerfIdentity('TenantService', 'PurgeTenant'))->toBeFalse();
 });
 
@@ -4924,6 +4932,7 @@ it('measures per-RPC latency', function () {
         $freshPlatformAuth?->getPrincipal()?->getTenantId() ?: $authedMeta->tenantId,
     );
     $s['platformAuthGenerated']->bindContext($s['platformMeta']);
+    $s['platformData']->bindContext($s['platformMeta']);
 
     $itersFor = fn (string $kind) => $kind === 'read_only' ? 25 : 1;
 
@@ -4991,7 +5000,7 @@ it('measures per-RPC latency', function () {
     $operationIdOf = fn (string $svc, string $name) => \Fahara02\UdbLaravel\Generated\GeneratedClient::OPERATION_ID[$apiKeyOf($svc, $name)] ?? lcfirst($name);
     // Collect every (stub, method) unit, then sort into phases before measuring.
     $units = [];
-    $platformStubs = stubAccessors($s['data'], $s['platformAuthGenerated']);
+    $platformStubs = stubAccessors($s['platformData'], $s['platformAuthGenerated']);
     foreach (stubAccessors($s['data'], $s['authGenerated']) as $stubName => $stub) {
         $svc = preg_replace('/Stub$/', '', $stubName);
         foreach (generatedStubMethods($stub) as $method) {
@@ -5001,7 +5010,7 @@ it('measures per-RPC latency', function () {
                 throw new RuntimeException("platform benchmark surface is missing $stubName");
             }
             $sdkClient = $stubName === 'DataBrokerStub'
-                ? $s['data']
+                ? ($usePlatform ? $s['platformData'] : $s['data'])
                 : ($usePlatform ? $s['platformAuthGenerated'] : $s['authGenerated']);
             $units[] = [
                 'stub' => $selectedStub,

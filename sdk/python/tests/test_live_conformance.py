@@ -1467,7 +1467,8 @@ def requires_platform_perf_identity(client_cls, method_name: str) -> bool:
     if client_cls is AuthzServiceClient:
         return method_name in PLATFORM_AUTHZ_PERF_METHODS
     return (
-        (client_cls is AnalyticsServiceClient and method_name in {
+        (client_cls is DataBrokerClient and method_name == "ListProjects")
+        or (client_cls is AnalyticsServiceClient and method_name in {
             "GetExecutorPerformance", "GetReconciliationAnalytics",
         })
         or (client_cls is BackupServiceClient and method_name == "RestoreTenant")
@@ -1476,6 +1477,7 @@ def requires_platform_perf_identity(client_cls, method_name: str) -> bool:
 
 
 def test_platform_perf_identity_routing_is_narrow():
+    assert requires_platform_perf_identity(DataBrokerClient, "ListProjects")
     assert requires_platform_perf_identity(AnalyticsServiceClient, "GetExecutorPerformance")
     assert requires_platform_perf_identity(BackupServiceClient, "RestoreTenant")
     assert requires_platform_perf_identity(AuthzServiceClient, "CreatePolicyDraft")
@@ -1483,6 +1485,8 @@ def test_platform_perf_identity_routing_is_narrow():
     assert not requires_platform_perf_identity(AuthzServiceClient, "CreateRole")
     assert not requires_platform_perf_identity(AuthzServiceClient, "AssignRole")
     assert not requires_platform_perf_identity(TenantServiceClient, "PurgeTenant")
+    assert not requires_platform_perf_identity(DataBrokerClient, "Select")
+    assert not requires_platform_perf_identity(DataBrokerClient, "EnsureProject")
 
 
 def test_timeseries_benchmark_body_keeps_resource_authority():
@@ -4310,16 +4314,19 @@ def test_live_perf():
         platform_principal = auth.authenticate_bearer(platform_login.access_token).principal
         if not any(role.strip().lower() == "platform_admin" for role in platform_principal.roles):
             raise AssertionError("offline platform fixture did not issue platform_admin role")
+        if not platform_principal.subject or not platform_principal.tenant_id:
+            raise AssertionError("platform benchmark principal must expose verified subject and tenant")
         platform_meta = replace(
             metadata(bearer_token=platform_login.access_token),
-            tenant_id=canonical_tenant,
+            tenant_id=platform_principal.tenant_id,
             client_catalog_version="",
         )
         for client_cls in SERVICE_CLIENTS:
             endpoint = target if client_cls is DataBrokerClient else auth_target
             clients[client_cls] = client_cls(endpoint, authed_meta, timeout=20.0)
-        for client_cls in (AuthzServiceClient, AnalyticsServiceClient, BackupServiceClient, TenantServiceClient):
-            platform_clients[client_cls] = client_cls(auth_target, platform_meta, timeout=20.0)
+        for client_cls in (DataBrokerClient, AuthzServiceClient, AnalyticsServiceClient, BackupServiceClient, TenantServiceClient):
+            endpoint = target if client_cls is DataBrokerClient else auth_target
+            platform_clients[client_cls] = client_cls(endpoint, platform_meta, timeout=20.0)
 
         # SEED PHASE (runs before any measurement): create real, disposable entities and
         # capture their identifiers so every RPC can be driven down its SUCCESS path with
@@ -4340,6 +4347,13 @@ def test_live_perf():
             required_env("UDB_LIVE_PLATFORM_PASSWORD"),
             device_name="python-sdk-perf-platform-measure",
         )
+        platform_measure_principal = auth.authenticate_bearer(platform_measure_login.access_token).principal
+        if not any(role.strip().lower() == "platform_admin" for role in platform_measure_principal.roles):
+            raise AssertionError("fresh platform benchmark principal must retain platform_admin")
+        if (platform_measure_principal.subject, platform_measure_principal.tenant_id) != (
+            platform_principal.subject, platform_principal.tenant_id,
+        ):
+            raise AssertionError("fresh platform benchmark principal changed verified subject or tenant")
         platform_meta = replace(
             platform_meta,
             bearer_token=platform_measure_login.access_token,

@@ -102,6 +102,7 @@ const FATAL_CONNECTIVITY_CODES = new Set([
 const LIVE_MESSAGE_TYPE = "udb.sdk.live.v1.SdkLiveRecord";
 
 const PLATFORM_BENCHMARK_RPCS = new Set([
+  "DataBroker/list_projects",
   "AnalyticsService/get_executor_performance",
   "AnalyticsService/get_reconciliation_analytics",
   "BackupService/restore_tenant",
@@ -1973,12 +1974,15 @@ test("manifest JSON body hydrates AuthzService create-policy-draft row", () => {
 });
 
 test("benchmark platform routing is exact and preserves ordinary Authz CRUD", () => {
+  assert.equal(requiresPlatformBenchmarkIdentity("DataBroker", "list_projects"), true);
   assert.equal(requiresPlatformBenchmarkIdentity("AnalyticsService", "get_executor_performance"), true);
   assert.equal(requiresPlatformBenchmarkIdentity("BackupService", "restore_tenant"), true);
   assert.equal(requiresPlatformBenchmarkIdentity("TenantService", "admin_purge_tenant"), true);
   assert.equal(requiresPlatformBenchmarkIdentity("AuthzService", "create_policy_draft"), true);
   assert.equal(requiresPlatformBenchmarkIdentity("AuthzService", "create_role"), false);
   assert.equal(requiresPlatformBenchmarkIdentity("TenantService", "purge_tenant"), false);
+  assert.equal(requiresPlatformBenchmarkIdentity("DataBroker", "select"), false);
+  assert.equal(requiresPlatformBenchmarkIdentity("DataBroker", "ensure_project"), false);
 
   const fixtures = fullSurfaceManifestFixtures();
   const draft = perfRealBody("AuthzService", "create_policy_draft", "tenant-1", "project-1", fixtures);
@@ -4693,7 +4697,7 @@ test("live per-RPC perf", {
           // names point to the same RPC function, otherwise the perf count doubles.
           if (!methodName.includes("_") && Object.entries(api).some(([otherName, otherFn]) => otherName.includes("_") && otherFn === fn)) continue;
           const selectedApi = requiresPlatformBenchmarkIdentity(serviceName, methodName)
-            ? platformAuthGenerated[serviceName]
+            ? (serviceName === "DataBroker" ? platformProject.generated : platformAuthGenerated)[serviceName]
             : api;
           if (!selectedApi) throw new Error(`platform benchmark surface is missing ${serviceName}`);
           const selectedFn = selectedApi[methodName];
