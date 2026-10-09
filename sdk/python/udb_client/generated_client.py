@@ -13462,7 +13462,7 @@ ENTITY_REGISTRY: dict[str, EntityBinding] = {
     "udb.core.analytics.entity.v1.ExecutorPerformanceSummary": EntityBinding(
         message_type="udb.core.analytics.entity.v1.ExecutorPerformanceSummary",
         table="executor_performance_summaries",
-        primary_keys=("summary_id",),
+        primary_keys=("summary_id", "summary_date",),
         fields=("summary_id", "summary_date", "executor_identity", "workload_kind", "total_dispatches", "successful_results", "timeout_count", "error_count", "avg_execution_ms", "p99_execution_ms", "avg_confidence", "success_rate", "avg_capacity_utilisation", "recorded_at", "created_at", "updated_at", "created_by",),
         relations=tuple([]),
         version_field="",
@@ -13473,7 +13473,7 @@ ENTITY_REGISTRY: dict[str, EntityBinding] = {
     "udb.core.analytics.entity.v1.PipelineMetricSnapshot": EntityBinding(
         message_type="udb.core.analytics.entity.v1.PipelineMetricSnapshot",
         table="pipeline_metric_snapshots",
-        primary_keys=("snapshot_id",),
+        primary_keys=("snapshot_id", "snapshot_hour",),
         fields=("snapshot_id", "snapshot_hour", "stage_name", "tenant_id", "total_requests", "successful", "failed", "p50_latency_ms", "p95_latency_ms", "p99_latency_ms", "avg_latency_ms", "error_rate", "throughput_rps", "recorded_at", "created_at", "updated_at", "created_by",),
         relations=tuple([]),
         version_field="",
@@ -13484,7 +13484,7 @@ ENTITY_REGISTRY: dict[str, EntityBinding] = {
     "udb.core.analytics.entity.v1.ReconciliationAnalyticsSummary": EntityBinding(
         message_type="udb.core.analytics.entity.v1.ReconciliationAnalyticsSummary",
         table="reconciliation_analytics_summaries",
-        primary_keys=("summary_id",),
+        primary_keys=("summary_id", "summary_date",),
         fields=("summary_id", "summary_date", "total_reconciliations", "exact_matches", "partial_conflicts", "hard_conflicts", "low_confidence_flagged", "avg_reconciliation_ms", "resolution_rate", "avg_record_confidence", "recorded_at", "created_at", "updated_at", "created_by",),
         relations=tuple([]),
         version_field="",
@@ -13501,12 +13501,12 @@ ENTITY_REGISTRY: dict[str, EntityBinding] = {
         version_field="",
         py_type="",
         tenant_field="tenant_id",
-        project_field="",
+        project_field="project_id",
     ),
     "udb.core.apikey.entity.v1.ApiKeyUsage": EntityBinding(
         message_type="udb.core.apikey.entity.v1.ApiKeyUsage",
         table="api_key_usages",
-        primary_keys=("usage_id",),
+        primary_keys=("usage_id", "requested_at",),
         fields=("usage_id", "key_id", "endpoint", "ip_address", "http_status", "latency_ms", "rate_limited", "requested_at", "tenant_id", "created_at", "updated_at", "created_by",),
         relations=tuple([{"name":"key","kind":"belongs_to","local_fields":["key_id"],"target_message_type":"udb.core.apikey.entity.v1.ApiKey","target_table":"udb_authn.api_keys","target_fields":["key_id"],"on_delete":"CASCADE","on_update":"NO ACTION"}]),
         version_field="",
@@ -13523,7 +13523,7 @@ ENTITY_REGISTRY: dict[str, EntityBinding] = {
         version_field="",
         py_type="",
         tenant_field="tenant_id",
-        project_field="",
+        project_field="project_id",
     ),
     "udb.core.asset.entity.v1.PipelineDefinition": EntityBinding(
         message_type="udb.core.asset.entity.v1.PipelineDefinition",
@@ -13578,7 +13578,7 @@ ENTITY_REGISTRY: dict[str, EntityBinding] = {
         version_field="",
         py_type="",
         tenant_field="tenant_id",
-        project_field="",
+        project_field="project_id",
     ),
     "udb.core.authn.entity.v1.MfaChallenge": EntityBinding(
         message_type="udb.core.authn.entity.v1.MfaChallenge",
@@ -13589,7 +13589,7 @@ ENTITY_REGISTRY: dict[str, EntityBinding] = {
         version_field="",
         py_type="",
         tenant_field="tenant_id",
-        project_field="",
+        project_field="project_id",
     ),
     "udb.core.authn.entity.v1.MfaPolicy": EntityBinding(
         message_type="udb.core.authn.entity.v1.MfaPolicy",
@@ -13633,18 +13633,18 @@ ENTITY_REGISTRY: dict[str, EntityBinding] = {
         version_field="revision",
         py_type="",
         tenant_field="tenant_id",
-        project_field="",
+        project_field="project_id",
     ),
     "udb.core.authn.entity.v1.Session": EntityBinding(
         message_type="udb.core.authn.entity.v1.Session",
         table="sessions",
-        primary_keys=("session_id",),
+        primary_keys=("session_id", "created_at",),
         fields=("session_id", "user_id", "session_type", "session_token_lookup", "session_token_hash", "csrf_token_hash", "access_token_jti", "refresh_token_jti", "device_type", "device_name", "ip_address", "user_agent", "is_active", "expires_at", "last_active_at", "revoked_by", "revoke_reason", "created_at", "tenant_id", "project_id", "principal_id", "provider_id", "auth_method", "scopes_json", "metadata_json", "updated_at", "created_by",),
         relations=tuple([{"name":"revoked_by","kind":"belongs_to","local_fields":["revoked_by"],"target_message_type":"udb.core.authn.entity.v1.User","target_table":"udb_authn.users","target_fields":["user_id"],"on_delete":"SET NULL","on_update":"NO ACTION"},{"name":"user","kind":"belongs_to","local_fields":["user_id"],"target_message_type":"udb.core.authn.entity.v1.User","target_table":"udb_authn.users","target_fields":["user_id"],"on_delete":"CASCADE","on_update":"NO ACTION"}]),
         version_field="",
         py_type="",
         tenant_field="tenant_id",
-        project_field="",
+        project_field="project_id",
     ),
     "udb.core.authn.entity.v1.SigningKey": EntityBinding(
         message_type="udb.core.authn.entity.v1.SigningKey",
@@ -13666,7 +13666,7 @@ ENTITY_REGISTRY: dict[str, EntityBinding] = {
         version_field="",
         py_type="",
         tenant_field="tenant_id",
-        project_field="",
+        project_field="project_id",
     ),
     "udb.core.authn.entity.v1.TokenRevocation": EntityBinding(
         message_type="udb.core.authn.entity.v1.TokenRevocation",
@@ -13688,7 +13688,7 @@ ENTITY_REGISTRY: dict[str, EntityBinding] = {
         version_field="",
         py_type="",
         tenant_field="tenant_id",
-        project_field="",
+        project_field="project_id",
     ),
     "udb.core.authn.entity.v1.WebAuthnCredential": EntityBinding(
         message_type="udb.core.authn.entity.v1.WebAuthnCredential",
@@ -13699,7 +13699,7 @@ ENTITY_REGISTRY: dict[str, EntityBinding] = {
         version_field="",
         py_type="",
         tenant_field="tenant_id",
-        project_field="",
+        project_field="project_id",
     ),
     "udb.core.authn.entity.v1.WebAuthnPolicy": EntityBinding(
         message_type="udb.core.authn.entity.v1.WebAuthnPolicy",
@@ -13715,13 +13715,13 @@ ENTITY_REGISTRY: dict[str, EntityBinding] = {
     "udb.core.authz.entity.v1.AccessDecisionAudit": EntityBinding(
         message_type="udb.core.authz.entity.v1.AccessDecisionAudit",
         table="access_decision_audits",
-        primary_keys=("decision_audit_id",),
+        primary_keys=("decision_audit_id", "decided_at",),
         fields=("decision_audit_id", "user_id", "domain", "object", "action", "effect", "decision_source", "matched_rule", "reason", "ip_address", "correlation_id", "decided_at", "tenant_id", "decision_id", "policy_version", "relationship_version", "purpose", "scopes", "matched_policy_ids", "project_id", "actor_kind", "resource_type", "trace_id", "span_id", "user_agent_hash", "decision_input", "created_at", "updated_at", "created_by",),
         relations=tuple([]),
         version_field="",
         py_type="",
         tenant_field="tenant_id",
-        project_field="",
+        project_field="project_id",
     ),
     "udb.core.authz.entity.v1.AuthzRevision": EntityBinding(
         message_type="udb.core.authz.entity.v1.AuthzRevision",
@@ -13732,7 +13732,7 @@ ENTITY_REGISTRY: dict[str, EntityBinding] = {
         version_field="",
         py_type="",
         tenant_field="tenant_id",
-        project_field="",
+        project_field="project_id",
     ),
     "udb.core.authz.entity.v1.PolicyApproval": EntityBinding(
         message_type="udb.core.authz.entity.v1.PolicyApproval",
@@ -13754,7 +13754,7 @@ ENTITY_REGISTRY: dict[str, EntityBinding] = {
         version_field="revision",
         py_type="",
         tenant_field="tenant_id",
-        project_field="",
+        project_field="project_id",
     ),
     "udb.core.authz.entity.v1.PolicyDraft": EntityBinding(
         message_type="udb.core.authz.entity.v1.PolicyDraft",
@@ -13765,7 +13765,7 @@ ENTITY_REGISTRY: dict[str, EntityBinding] = {
         version_field="",
         py_type="",
         tenant_field="tenant_id",
-        project_field="",
+        project_field="project_id",
     ),
     "udb.core.authz.entity.v1.PolicyRule": EntityBinding(
         message_type="udb.core.authz.entity.v1.PolicyRule",
@@ -13776,7 +13776,7 @@ ENTITY_REGISTRY: dict[str, EntityBinding] = {
         version_field="",
         py_type="",
         tenant_field="tenant_id",
-        project_field="",
+        project_field="project_id",
     ),
     "udb.core.authz.entity.v1.PolicySet": EntityBinding(
         message_type="udb.core.authz.entity.v1.PolicySet",
@@ -13787,7 +13787,7 @@ ENTITY_REGISTRY: dict[str, EntityBinding] = {
         version_field="",
         py_type="",
         tenant_field="tenant_id",
-        project_field="",
+        project_field="project_id",
     ),
     "udb.core.authz.entity.v1.PolicySimulation": EntityBinding(
         message_type="udb.core.authz.entity.v1.PolicySimulation",
@@ -13798,7 +13798,7 @@ ENTITY_REGISTRY: dict[str, EntityBinding] = {
         version_field="",
         py_type="",
         tenant_field="tenant_id",
-        project_field="",
+        project_field="project_id",
     ),
     "udb.core.authz.entity.v1.PolicyTuple": EntityBinding(
         message_type="udb.core.authz.entity.v1.PolicyTuple",
@@ -13809,7 +13809,7 @@ ENTITY_REGISTRY: dict[str, EntityBinding] = {
         version_field="",
         py_type="",
         tenant_field="tenant_id",
-        project_field="",
+        project_field="project_id",
     ),
     "udb.core.authz.entity.v1.PolicyVersion": EntityBinding(
         message_type="udb.core.authz.entity.v1.PolicyVersion",
@@ -13820,7 +13820,7 @@ ENTITY_REGISTRY: dict[str, EntityBinding] = {
         version_field="revision",
         py_type="",
         tenant_field="tenant_id",
-        project_field="",
+        project_field="project_id",
     ),
     "udb.core.authz.entity.v1.Role": EntityBinding(
         message_type="udb.core.authz.entity.v1.Role",
@@ -13831,7 +13831,7 @@ ENTITY_REGISTRY: dict[str, EntityBinding] = {
         version_field="",
         py_type="",
         tenant_field="tenant_id",
-        project_field="",
+        project_field="project_id",
     ),
     "udb.core.authz.entity.v1.RolePermission": EntityBinding(
         message_type="udb.core.authz.entity.v1.RolePermission",
@@ -13886,7 +13886,7 @@ ENTITY_REGISTRY: dict[str, EntityBinding] = {
         version_field="revision",
         py_type="",
         tenant_field="tenant_id",
-        project_field="",
+        project_field="project_id",
     ),
     "udb.core.control.entity.v1.ControlPlaneNodeState": EntityBinding(
         message_type="udb.core.control.entity.v1.ControlPlaneNodeState",
@@ -13908,7 +13908,7 @@ ENTITY_REGISTRY: dict[str, EntityBinding] = {
         version_field="version",
         py_type="",
         tenant_field="tenant_id",
-        project_field="",
+        project_field="project_id",
     ),
     "udb.core.embedding.entity.v1.EmbeddingDocument": EntityBinding(
         message_type="udb.core.embedding.entity.v1.EmbeddingDocument",
@@ -13919,7 +13919,7 @@ ENTITY_REGISTRY: dict[str, EntityBinding] = {
         version_field="",
         py_type="",
         tenant_field="tenant_id",
-        project_field="",
+        project_field="project_id",
     ),
     "udb.core.embedding.entity.v1.EmbeddingJob": EntityBinding(
         message_type="udb.core.embedding.entity.v1.EmbeddingJob",
@@ -13930,7 +13930,7 @@ ENTITY_REGISTRY: dict[str, EntityBinding] = {
         version_field="",
         py_type="",
         tenant_field="tenant_id",
-        project_field="",
+        project_field="project_id",
     ),
     "udb.core.embedding.entity.v1.EmbeddingModel": EntityBinding(
         message_type="udb.core.embedding.entity.v1.EmbeddingModel",
@@ -13963,7 +13963,7 @@ ENTITY_REGISTRY: dict[str, EntityBinding] = {
         version_field="",
         py_type="",
         tenant_field="tenant_id",
-        project_field="",
+        project_field="project_id",
     ),
     "udb.core.idp.entity.v1.ExternalIdentity": EntityBinding(
         message_type="udb.core.idp.entity.v1.ExternalIdentity",
@@ -14029,7 +14029,7 @@ ENTITY_REGISTRY: dict[str, EntityBinding] = {
         version_field="revision",
         py_type="",
         tenant_field="tenant_id",
-        project_field="",
+        project_field="project_id",
     ),
     "udb.core.metering.entity.v1.UsageEvent": EntityBinding(
         message_type="udb.core.metering.entity.v1.UsageEvent",
@@ -14067,7 +14067,7 @@ ENTITY_REGISTRY: dict[str, EntityBinding] = {
     "udb.core.notification.entity.v1.NotificationLog": EntityBinding(
         message_type="udb.core.notification.entity.v1.NotificationLog",
         table="notification_logs",
-        primary_keys=("log_id",),
+        primary_keys=("log_id", "created_at",),
         fields=("log_id", "template_id", "event_type", "channel", "recipient_id", "recipient_address", "tenant_id", "project_id", "resource_type", "resource_id", "resource_name", "correlation_id", "status", "error_message", "provider_message_id", "retry_count", "sent_at", "delivered_at", "created_at", "rendered_subject", "rendered_body", "updated_at", "created_by",),
         relations=tuple([{"name":"recipient","kind":"belongs_to","local_fields":["recipient_id"],"target_message_type":"udb.core.authn.entity.v1.User","target_table":"udb_authn.users","target_fields":["user_id"],"on_delete":"SET NULL","on_update":"NO ACTION"},{"name":"template","kind":"belongs_to","local_fields":["template_id"],"target_message_type":"udb.core.notification.entity.v1.NotificationTemplate","target_table":"udb_notification.notification_templates","target_fields":["template_id"],"on_delete":"SET NULL","on_update":"NO ACTION"}]),
         version_field="",
@@ -14106,7 +14106,7 @@ ENTITY_REGISTRY: dict[str, EntityBinding] = {
         version_field="",
         py_type="",
         tenant_field="tenant_id",
-        project_field="",
+        project_field="project_id",
     ),
     "udb.core.search.entity.v1.SearchIndex": EntityBinding(
         message_type="udb.core.search.entity.v1.SearchIndex",
@@ -14128,7 +14128,7 @@ ENTITY_REGISTRY: dict[str, EntityBinding] = {
         version_field="",
         py_type="",
         tenant_field="tenant_id",
-        project_field="",
+        project_field="project_id",
     ),
     "udb.core.tenant.entity.v1.Tenant": EntityBinding(
         message_type="udb.core.tenant.entity.v1.Tenant",
@@ -14249,7 +14249,7 @@ ENTITY_REGISTRY: dict[str, EntityBinding] = {
         version_field="",
         py_type="",
         tenant_field="tenant_id",
-        project_field="",
+        project_field="project_id",
     ),
 }
 

@@ -9827,7 +9827,7 @@ public static class UdbIr
         entities["udb.core.analytics.entity.v1.ExecutorPerformanceSummary"] = new EntityBinding(
             "udb.core.analytics.entity.v1.ExecutorPerformanceSummary",
             "executor_performance_summaries",
-            new List<string> { "summary_id" },
+            new List<string> { "summary_id", "summary_date" },
             new List<string> { "summary_id", "summary_date", "executor_identity", "workload_kind", "total_dispatches", "successful_results", "timeout_count", "error_count", "avg_execution_ms", "p99_execution_ms", "avg_confidence", "success_rate", "avg_capacity_utilisation", "recorded_at", "created_at", "updated_at", "created_by" },
             "[]",
             "",
@@ -9837,7 +9837,7 @@ public static class UdbIr
         entities["udb.core.analytics.entity.v1.PipelineMetricSnapshot"] = new EntityBinding(
             "udb.core.analytics.entity.v1.PipelineMetricSnapshot",
             "pipeline_metric_snapshots",
-            new List<string> { "snapshot_id" },
+            new List<string> { "snapshot_id", "snapshot_hour" },
             new List<string> { "snapshot_id", "snapshot_hour", "stage_name", "tenant_id", "total_requests", "successful", "failed", "p50_latency_ms", "p95_latency_ms", "p99_latency_ms", "avg_latency_ms", "error_rate", "throughput_rps", "recorded_at", "created_at", "updated_at", "created_by" },
             "[]",
             "",
@@ -9847,7 +9847,7 @@ public static class UdbIr
         entities["udb.core.analytics.entity.v1.ReconciliationAnalyticsSummary"] = new EntityBinding(
             "udb.core.analytics.entity.v1.ReconciliationAnalyticsSummary",
             "reconciliation_analytics_summaries",
-            new List<string> { "summary_id" },
+            new List<string> { "summary_id", "summary_date" },
             new List<string> { "summary_id", "summary_date", "total_reconciliations", "exact_matches", "partial_conflicts", "hard_conflicts", "low_confidence_flagged", "avg_reconciliation_ms", "resolution_rate", "avg_record_confidence", "recorded_at", "created_at", "updated_at", "created_by" },
             "[]",
             "",
@@ -9862,12 +9862,12 @@ public static class UdbIr
             "[{\"name\":\"api_key_usages\",\"kind\":\"has_many\",\"local_fields\":[\"key_id\"],\"target_message_type\":\"udb.core.apikey.entity.v1.ApiKeyUsage\",\"target_table\":\"udb_authn.api_key_usages\",\"target_fields\":[\"key_id\"],\"on_delete\":\"CASCADE\",\"on_update\":\"NO ACTION\"}]",
             "",
             "tenant_id",
-            "",
+            "project_id",
             "Udb.Core.Apikey.Entity.V1.ApiKey");
         entities["udb.core.apikey.entity.v1.ApiKeyUsage"] = new EntityBinding(
             "udb.core.apikey.entity.v1.ApiKeyUsage",
             "api_key_usages",
-            new List<string> { "usage_id" },
+            new List<string> { "usage_id", "requested_at" },
             new List<string> { "usage_id", "key_id", "endpoint", "ip_address", "http_status", "latency_ms", "rate_limited", "requested_at", "tenant_id", "created_at", "updated_at", "created_by" },
             "[{\"name\":\"key\",\"kind\":\"belongs_to\",\"local_fields\":[\"key_id\"],\"target_message_type\":\"udb.core.apikey.entity.v1.ApiKey\",\"target_table\":\"udb_authn.api_keys\",\"target_fields\":[\"key_id\"],\"on_delete\":\"CASCADE\",\"on_update\":\"NO ACTION\"}]",
             "",
@@ -9882,7 +9882,7 @@ public static class UdbIr
             "[]",
             "",
             "tenant_id",
-            "",
+            "project_id",
             "Udb.Core.Asset.Entity.V1.Asset");
         entities["udb.core.asset.entity.v1.PipelineDefinition"] = new EntityBinding(
             "udb.core.asset.entity.v1.PipelineDefinition",
@@ -9932,7 +9932,7 @@ public static class UdbIr
             "[]",
             "",
             "tenant_id",
-            "",
+            "project_id",
             "Udb.Core.Authn.Entity.V1.Device");
         entities["udb.core.authn.entity.v1.MfaChallenge"] = new EntityBinding(
             "udb.core.authn.entity.v1.MfaChallenge",
@@ -9942,7 +9942,7 @@ public static class UdbIr
             "[]",
             "",
             "tenant_id",
-            "",
+            "project_id",
             "Udb.Core.Authn.Entity.V1.MfaChallenge");
         entities["udb.core.authn.entity.v1.MfaPolicy"] = new EntityBinding(
             "udb.core.authn.entity.v1.MfaPolicy",
@@ -9982,17 +9982,17 @@ public static class UdbIr
             "[{\"name\":\"user\",\"kind\":\"belongs_to\",\"local_fields\":[\"user_id\"],\"target_message_type\":\"udb.core.authn.entity.v1.User\",\"target_table\":\"udb_authn.users\",\"target_fields\":[\"user_id\"],\"on_delete\":\"CASCADE\",\"on_update\":\"NO ACTION\"}]",
             "revision",
             "tenant_id",
-            "",
+            "project_id",
             "Udb.Core.Authn.Entity.V1.ServiceAccountGrant");
         entities["udb.core.authn.entity.v1.Session"] = new EntityBinding(
             "udb.core.authn.entity.v1.Session",
             "sessions",
-            new List<string> { "session_id" },
+            new List<string> { "session_id", "created_at" },
             new List<string> { "session_id", "user_id", "session_type", "session_token_lookup", "session_token_hash", "csrf_token_hash", "access_token_jti", "refresh_token_jti", "device_type", "device_name", "ip_address", "user_agent", "is_active", "expires_at", "last_active_at", "revoked_by", "revoke_reason", "created_at", "tenant_id", "project_id", "principal_id", "provider_id", "auth_method", "scopes_json", "metadata_json", "updated_at", "created_by" },
             "[{\"name\":\"revoked_by\",\"kind\":\"belongs_to\",\"local_fields\":[\"revoked_by\"],\"target_message_type\":\"udb.core.authn.entity.v1.User\",\"target_table\":\"udb_authn.users\",\"target_fields\":[\"user_id\"],\"on_delete\":\"SET NULL\",\"on_update\":\"NO ACTION\"},{\"name\":\"user\",\"kind\":\"belongs_to\",\"local_fields\":[\"user_id\"],\"target_message_type\":\"udb.core.authn.entity.v1.User\",\"target_table\":\"udb_authn.users\",\"target_fields\":[\"user_id\"],\"on_delete\":\"CASCADE\",\"on_update\":\"NO ACTION\"}]",
             "",
             "tenant_id",
-            "",
+            "project_id",
             "Udb.Core.Authn.Entity.V1.Session");
         entities["udb.core.authn.entity.v1.SigningKey"] = new EntityBinding(
             "udb.core.authn.entity.v1.SigningKey",
@@ -10012,7 +10012,7 @@ public static class UdbIr
             "[]",
             "",
             "tenant_id",
-            "",
+            "project_id",
             "Udb.Core.Authn.Entity.V1.TokenFamily");
         entities["udb.core.authn.entity.v1.TokenRevocation"] = new EntityBinding(
             "udb.core.authn.entity.v1.TokenRevocation",
@@ -10032,7 +10032,7 @@ public static class UdbIr
             "[{\"name\":\"certificate_bindings\",\"kind\":\"has_many\",\"local_fields\":[\"user_id\"],\"target_message_type\":\"udb.core.authn.entity.v1.CertificateBinding\",\"target_table\":\"udb_authn.certificate_bindings\",\"target_fields\":[\"user_id\"],\"on_delete\":\"CASCADE\",\"on_update\":\"NO ACTION\"},{\"name\":\"created_by\",\"kind\":\"belongs_to\",\"local_fields\":[\"created_by\"],\"target_message_type\":\"udb.core.authn.entity.v1.User\",\"target_table\":\"udb_authn.users\",\"target_fields\":[\"user_id\"],\"on_delete\":\"SET NULL\",\"on_update\":\"NO ACTION\"},{\"name\":\"notification_logs\",\"kind\":\"has_many\",\"local_fields\":[\"user_id\"],\"target_message_type\":\"udb.core.notification.entity.v1.NotificationLog\",\"target_table\":\"udb_notification.notification_logs\",\"target_fields\":[\"recipient_id\"],\"on_delete\":\"SET NULL\",\"on_update\":\"NO ACTION\"},{\"name\":\"otps\",\"kind\":\"has_many\",\"local_fields\":[\"user_id\"],\"target_message_type\":\"udb.core.authn.entity.v1.OTP\",\"target_table\":\"udb_authn.otps\",\"target_fields\":[\"user_id\"],\"on_delete\":\"CASCADE\",\"on_update\":\"NO ACTION\"},{\"name\":\"recovery_codes\",\"kind\":\"has_many\",\"local_fields\":[\"user_id\"],\"target_message_type\":\"udb.core.authn.entity.v1.RecoveryCode\",\"target_table\":\"udb_authn.recovery_codes\",\"target_fields\":[\"user_id\"],\"on_delete\":\"CASCADE\",\"on_update\":\"NO ACTION\"},{\"name\":\"role_permissions\",\"kind\":\"has_many\",\"local_fields\":[\"user_id\"],\"target_message_type\":\"udb.core.authz.entity.v1.RolePermission\",\"target_table\":\"udb_authz.role_permissions\",\"target_fields\":[\"granted_by\"],\"on_delete\":\"SET NULL\",\"on_update\":\"NO ACTION\"},{\"name\":\"service_account_grants\",\"kind\":\"has_many\",\"local_fields\":[\"user_id\"],\"target_message_type\":\"udb.core.authn.entity.v1.ServiceAccountGrant\",\"target_table\":\"udb_authn.service_account_grants\",\"target_fields\":[\"user_id\"],\"on_delete\":\"CASCADE\",\"on_update\":\"NO ACTION\"},{\"name\":\"sessions\",\"kind\":\"has_many\",\"local_fields\":[\"user_id\"],\"target_message_type\":\"udb.core.authn.entity.v1.Session\",\"target_table\":\"udb_authn.sessions\",\"target_fields\":[\"revoked_by\"],\"on_delete\":\"SET NULL\",\"on_update\":\"NO ACTION\"},{\"name\":\"sessions\",\"kind\":\"has_many\",\"local_fields\":[\"user_id\"],\"target_message_type\":\"udb.core.authn.entity.v1.Session\",\"target_table\":\"udb_authn.sessions\",\"target_fields\":[\"user_id\"],\"on_delete\":\"CASCADE\",\"on_update\":\"NO ACTION\"},{\"name\":\"user_roles\",\"kind\":\"has_many\",\"local_fields\":[\"user_id\"],\"target_message_type\":\"udb.core.authz.entity.v1.UserRole\",\"target_table\":\"udb_authz.user_roles\",\"target_fields\":[\"user_id\"],\"on_delete\":\"CASCADE\",\"on_update\":\"NO ACTION\"},{\"name\":\"users\",\"kind\":\"has_many\",\"local_fields\":[\"user_id\"],\"target_message_type\":\"udb.core.authn.entity.v1.User\",\"target_table\":\"udb_authn.users\",\"target_fields\":[\"created_by\"],\"on_delete\":\"SET NULL\",\"on_update\":\"NO ACTION\"},{\"name\":\"webauthn_credentials\",\"kind\":\"has_many\",\"local_fields\":[\"user_id\"],\"target_message_type\":\"udb.core.authn.entity.v1.WebAuthnCredential\",\"target_table\":\"udb_authn.webauthn_credentials\",\"target_fields\":[\"user_id\"],\"on_delete\":\"CASCADE\",\"on_update\":\"NO ACTION\"}]",
             "",
             "tenant_id",
-            "",
+            "project_id",
             "Udb.Core.Authn.Entity.V1.User");
         entities["udb.core.authn.entity.v1.WebAuthnCredential"] = new EntityBinding(
             "udb.core.authn.entity.v1.WebAuthnCredential",
@@ -10042,7 +10042,7 @@ public static class UdbIr
             "[{\"name\":\"user\",\"kind\":\"belongs_to\",\"local_fields\":[\"user_id\"],\"target_message_type\":\"udb.core.authn.entity.v1.User\",\"target_table\":\"udb_authn.users\",\"target_fields\":[\"user_id\"],\"on_delete\":\"CASCADE\",\"on_update\":\"NO ACTION\"}]",
             "",
             "tenant_id",
-            "",
+            "project_id",
             "Udb.Core.Authn.Entity.V1.WebAuthnCredential");
         entities["udb.core.authn.entity.v1.WebAuthnPolicy"] = new EntityBinding(
             "udb.core.authn.entity.v1.WebAuthnPolicy",
@@ -10057,12 +10057,12 @@ public static class UdbIr
         entities["udb.core.authz.entity.v1.AccessDecisionAudit"] = new EntityBinding(
             "udb.core.authz.entity.v1.AccessDecisionAudit",
             "access_decision_audits",
-            new List<string> { "decision_audit_id" },
+            new List<string> { "decision_audit_id", "decided_at" },
             new List<string> { "decision_audit_id", "user_id", "domain", "object", "action", "effect", "decision_source", "matched_rule", "reason", "ip_address", "correlation_id", "decided_at", "tenant_id", "decision_id", "policy_version", "relationship_version", "purpose", "scopes", "matched_policy_ids", "project_id", "actor_kind", "resource_type", "trace_id", "span_id", "user_agent_hash", "decision_input", "created_at", "updated_at", "created_by" },
             "[]",
             "",
             "tenant_id",
-            "",
+            "project_id",
             "Udb.Core.Authz.Entity.V1.AccessDecisionAudit");
         entities["udb.core.authz.entity.v1.AuthzRevision"] = new EntityBinding(
             "udb.core.authz.entity.v1.AuthzRevision",
@@ -10072,7 +10072,7 @@ public static class UdbIr
             "[]",
             "",
             "tenant_id",
-            "",
+            "project_id",
             "Udb.Core.Authz.Entity.V1.AuthzRevision");
         entities["udb.core.authz.entity.v1.PolicyApproval"] = new EntityBinding(
             "udb.core.authz.entity.v1.PolicyApproval",
@@ -10092,7 +10092,7 @@ public static class UdbIr
             "[{\"name\":\"policy_set\",\"kind\":\"belongs_to\",\"local_fields\":[\"policy_set_id\"],\"target_message_type\":\"udb.core.authz.entity.v1.PolicySet\",\"target_table\":\"udb_authz.policy_sets\",\"target_fields\":[\"policy_set_id\"],\"on_delete\":\"CASCADE\",\"on_update\":\"NO ACTION\"},{\"name\":\"policy_version\",\"kind\":\"belongs_to\",\"local_fields\":[\"policy_version_id\"],\"target_message_type\":\"udb.core.authz.entity.v1.PolicyVersion\",\"target_table\":\"udb_authz.policy_versions\",\"target_fields\":[\"policy_version_id\"],\"on_delete\":\"CASCADE\",\"on_update\":\"NO ACTION\"}]",
             "revision",
             "tenant_id",
-            "",
+            "project_id",
             "Udb.Core.Authz.Entity.V1.PolicyCanary");
         entities["udb.core.authz.entity.v1.PolicyDraft"] = new EntityBinding(
             "udb.core.authz.entity.v1.PolicyDraft",
@@ -10102,7 +10102,7 @@ public static class UdbIr
             "[{\"name\":\"policy_approvals\",\"kind\":\"has_many\",\"local_fields\":[\"draft_id\"],\"target_message_type\":\"udb.core.authz.entity.v1.PolicyApproval\",\"target_table\":\"udb_authz.policy_approvals\",\"target_fields\":[\"draft_id\"],\"on_delete\":\"CASCADE\",\"on_update\":\"NO ACTION\"}]",
             "",
             "tenant_id",
-            "",
+            "project_id",
             "Udb.Core.Authz.Entity.V1.PolicyDraft");
         entities["udb.core.authz.entity.v1.PolicyRule"] = new EntityBinding(
             "udb.core.authz.entity.v1.PolicyRule",
@@ -10112,7 +10112,7 @@ public static class UdbIr
             "[]",
             "",
             "tenant_id",
-            "",
+            "project_id",
             "Udb.Core.Authz.Entity.V1.PolicyRule");
         entities["udb.core.authz.entity.v1.PolicySet"] = new EntityBinding(
             "udb.core.authz.entity.v1.PolicySet",
@@ -10122,7 +10122,7 @@ public static class UdbIr
             "[{\"name\":\"policy_canaries\",\"kind\":\"has_many\",\"local_fields\":[\"policy_set_id\"],\"target_message_type\":\"udb.core.authz.entity.v1.PolicyCanary\",\"target_table\":\"udb_authz.policy_canaries\",\"target_fields\":[\"policy_set_id\"],\"on_delete\":\"CASCADE\",\"on_update\":\"NO ACTION\"},{\"name\":\"policy_versions\",\"kind\":\"has_many\",\"local_fields\":[\"policy_set_id\"],\"target_message_type\":\"udb.core.authz.entity.v1.PolicyVersion\",\"target_table\":\"udb_authz.policy_versions\",\"target_fields\":[\"policy_set_id\"],\"on_delete\":\"CASCADE\",\"on_update\":\"NO ACTION\"}]",
             "",
             "tenant_id",
-            "",
+            "project_id",
             "Udb.Core.Authz.Entity.V1.PolicySet");
         entities["udb.core.authz.entity.v1.PolicySimulation"] = new EntityBinding(
             "udb.core.authz.entity.v1.PolicySimulation",
@@ -10132,7 +10132,7 @@ public static class UdbIr
             "[]",
             "",
             "tenant_id",
-            "",
+            "project_id",
             "Udb.Core.Authz.Entity.V1.PolicySimulation");
         entities["udb.core.authz.entity.v1.PolicyTuple"] = new EntityBinding(
             "udb.core.authz.entity.v1.PolicyTuple",
@@ -10142,7 +10142,7 @@ public static class UdbIr
             "[]",
             "",
             "tenant_id",
-            "",
+            "project_id",
             "Udb.Core.Authz.Entity.V1.PolicyTuple");
         entities["udb.core.authz.entity.v1.PolicyVersion"] = new EntityBinding(
             "udb.core.authz.entity.v1.PolicyVersion",
@@ -10152,7 +10152,7 @@ public static class UdbIr
             "[{\"name\":\"policy_canaries\",\"kind\":\"has_many\",\"local_fields\":[\"policy_version_id\"],\"target_message_type\":\"udb.core.authz.entity.v1.PolicyCanary\",\"target_table\":\"udb_authz.policy_canaries\",\"target_fields\":[\"policy_version_id\"],\"on_delete\":\"CASCADE\",\"on_update\":\"NO ACTION\"},{\"name\":\"policy_set\",\"kind\":\"belongs_to\",\"local_fields\":[\"policy_set_id\"],\"target_message_type\":\"udb.core.authz.entity.v1.PolicySet\",\"target_table\":\"udb_authz.policy_sets\",\"target_fields\":[\"policy_set_id\"],\"on_delete\":\"CASCADE\",\"on_update\":\"NO ACTION\"}]",
             "revision",
             "tenant_id",
-            "",
+            "project_id",
             "Udb.Core.Authz.Entity.V1.PolicyVersion");
         entities["udb.core.authz.entity.v1.Role"] = new EntityBinding(
             "udb.core.authz.entity.v1.Role",
@@ -10162,7 +10162,7 @@ public static class UdbIr
             "[{\"name\":\"role_permissions\",\"kind\":\"has_many\",\"local_fields\":[\"role_id\"],\"target_message_type\":\"udb.core.authz.entity.v1.RolePermission\",\"target_table\":\"udb_authz.role_permissions\",\"target_fields\":[\"role_id\"],\"on_delete\":\"CASCADE\",\"on_update\":\"NO ACTION\"},{\"name\":\"user_roles\",\"kind\":\"has_many\",\"local_fields\":[\"role_id\"],\"target_message_type\":\"udb.core.authz.entity.v1.UserRole\",\"target_table\":\"udb_authz.user_roles\",\"target_fields\":[\"role_id\"],\"on_delete\":\"CASCADE\",\"on_update\":\"NO ACTION\"}]",
             "",
             "tenant_id",
-            "",
+            "project_id",
             "Udb.Core.Authz.Entity.V1.Role");
         entities["udb.core.authz.entity.v1.RolePermission"] = new EntityBinding(
             "udb.core.authz.entity.v1.RolePermission",
@@ -10212,7 +10212,7 @@ public static class UdbIr
             "[]",
             "revision",
             "tenant_id",
-            "",
+            "project_id",
             "Udb.Core.Config.Entity.V1.Flag");
         entities["udb.core.control.entity.v1.ControlPlaneNodeState"] = new EntityBinding(
             "udb.core.control.entity.v1.ControlPlaneNodeState",
@@ -10232,7 +10232,7 @@ public static class UdbIr
             "[]",
             "version",
             "tenant_id",
-            "",
+            "project_id",
             "Udb.Core.Control.Entity.V1.ControlPlaneResource");
         entities["udb.core.embedding.entity.v1.EmbeddingDocument"] = new EntityBinding(
             "udb.core.embedding.entity.v1.EmbeddingDocument",
@@ -10242,7 +10242,7 @@ public static class UdbIr
             "[{\"name\":\"model\",\"kind\":\"belongs_to\",\"local_fields\":[\"model_id\",\"tenant_id\"],\"target_message_type\":\"udb.core.embedding.entity.v1.EmbeddingModel\",\"target_table\":\"udb_embedding.embedding_models\",\"target_fields\":[\"model_id\",\"tenant_id\"],\"on_delete\":\"RESTRICT\",\"on_update\":\"NO ACTION\"}]",
             "",
             "tenant_id",
-            "",
+            "project_id",
             "Udb.Core.Embedding.Entity.V1.EmbeddingDocument");
         entities["udb.core.embedding.entity.v1.EmbeddingJob"] = new EntityBinding(
             "udb.core.embedding.entity.v1.EmbeddingJob",
@@ -10252,7 +10252,7 @@ public static class UdbIr
             "[{\"name\":\"embedding_work_items\",\"kind\":\"has_many\",\"local_fields\":[\"job_id\"],\"target_message_type\":\"udb.core.embedding.entity.v1.EmbeddingWorkItem\",\"target_table\":\"udb_embedding.embedding_work_items\",\"target_fields\":[\"job_id\"],\"on_delete\":\"CASCADE\",\"on_update\":\"NO ACTION\"}]",
             "",
             "tenant_id",
-            "",
+            "project_id",
             "Udb.Core.Embedding.Entity.V1.EmbeddingJob");
         entities["udb.core.embedding.entity.v1.EmbeddingModel"] = new EntityBinding(
             "udb.core.embedding.entity.v1.EmbeddingModel",
@@ -10282,7 +10282,7 @@ public static class UdbIr
             "[{\"name\":\"job\",\"kind\":\"belongs_to\",\"local_fields\":[\"job_id\"],\"target_message_type\":\"udb.core.embedding.entity.v1.EmbeddingJob\",\"target_table\":\"udb_embedding.embedding_jobs\",\"target_fields\":[\"job_id\"],\"on_delete\":\"CASCADE\",\"on_update\":\"NO ACTION\"},{\"name\":\"model\",\"kind\":\"belongs_to\",\"local_fields\":[\"model_id\",\"tenant_id\"],\"target_message_type\":\"udb.core.embedding.entity.v1.EmbeddingModel\",\"target_table\":\"udb_embedding.embedding_models\",\"target_fields\":[\"model_id\",\"tenant_id\"],\"on_delete\":\"RESTRICT\",\"on_update\":\"NO ACTION\"}]",
             "",
             "tenant_id",
-            "",
+            "project_id",
             "Udb.Core.Embedding.Entity.V1.EmbeddingWorkItem");
         entities["udb.core.idp.entity.v1.ExternalIdentity"] = new EntityBinding(
             "udb.core.idp.entity.v1.ExternalIdentity",
@@ -10342,7 +10342,7 @@ public static class UdbIr
             "[]",
             "revision",
             "tenant_id",
-            "",
+            "project_id",
             "Udb.Core.Metering.Entity.V1.QuotaRule");
         entities["udb.core.metering.entity.v1.UsageEvent"] = new EntityBinding(
             "udb.core.metering.entity.v1.UsageEvent",
@@ -10377,7 +10377,7 @@ public static class UdbIr
         entities["udb.core.notification.entity.v1.NotificationLog"] = new EntityBinding(
             "udb.core.notification.entity.v1.NotificationLog",
             "notification_logs",
-            new List<string> { "log_id" },
+            new List<string> { "log_id", "created_at" },
             new List<string> { "log_id", "template_id", "event_type", "channel", "recipient_id", "recipient_address", "tenant_id", "project_id", "resource_type", "resource_id", "resource_name", "correlation_id", "status", "error_message", "provider_message_id", "retry_count", "sent_at", "delivered_at", "created_at", "rendered_subject", "rendered_body", "updated_at", "created_by" },
             "[{\"name\":\"recipient\",\"kind\":\"belongs_to\",\"local_fields\":[\"recipient_id\"],\"target_message_type\":\"udb.core.authn.entity.v1.User\",\"target_table\":\"udb_authn.users\",\"target_fields\":[\"user_id\"],\"on_delete\":\"SET NULL\",\"on_update\":\"NO ACTION\"},{\"name\":\"template\",\"kind\":\"belongs_to\",\"local_fields\":[\"template_id\"],\"target_message_type\":\"udb.core.notification.entity.v1.NotificationTemplate\",\"target_table\":\"udb_notification.notification_templates\",\"target_fields\":[\"template_id\"],\"on_delete\":\"SET NULL\",\"on_update\":\"NO ACTION\"}]",
             "",
@@ -10412,7 +10412,7 @@ public static class UdbIr
             "[]",
             "",
             "tenant_id",
-            "",
+            "project_id",
             "Udb.Core.Scheduler.Entity.V1.ScheduledJob");
         entities["udb.core.search.entity.v1.SearchIndex"] = new EntityBinding(
             "udb.core.search.entity.v1.SearchIndex",
@@ -10432,7 +10432,7 @@ public static class UdbIr
             "[]",
             "",
             "tenant_id",
-            "",
+            "project_id",
             "Udb.Core.Storage.Entity.V1.File");
         entities["udb.core.tenant.entity.v1.Tenant"] = new EntityBinding(
             "udb.core.tenant.entity.v1.Tenant",
@@ -10542,7 +10542,7 @@ public static class UdbIr
             "[]",
             "",
             "tenant_id",
-            "",
+            "project_id",
             "Udb.Core.Workflow.Entity.V1.WorkflowInstance");
         return entities;
     }

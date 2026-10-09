@@ -2790,8 +2790,8 @@ export const ENTITY_REGISTRY: Record<string, EntityBinding> = {
   "udb.core.analytics.entity.v1.ExecutorPerformanceSummary": {
     messageType: "udb.core.analytics.entity.v1.ExecutorPerformanceSummary",
     table: "executor_performance_summaries",
-    primaryKeys: ["summary_id"],
-    key: ["summary_id"],
+    primaryKeys: ["summary_id", "summary_date"],
+    key: ["summary_id", "summary_date"],
     fields: ["summary_id", "summary_date", "executor_identity", "workload_kind", "total_dispatches", "successful_results", "timeout_count", "error_count", "avg_execution_ms", "p99_execution_ms", "avg_confidence", "success_rate", "avg_capacity_utilisation", "recorded_at", "created_at", "updated_at", "created_by"],
     relations: [],
     versionField: "",
@@ -2802,8 +2802,8 @@ export const ENTITY_REGISTRY: Record<string, EntityBinding> = {
   "udb.core.analytics.entity.v1.PipelineMetricSnapshot": {
     messageType: "udb.core.analytics.entity.v1.PipelineMetricSnapshot",
     table: "pipeline_metric_snapshots",
-    primaryKeys: ["snapshot_id"],
-    key: ["snapshot_id"],
+    primaryKeys: ["snapshot_id", "snapshot_hour"],
+    key: ["snapshot_id", "snapshot_hour"],
     fields: ["snapshot_id", "snapshot_hour", "stage_name", "tenant_id", "total_requests", "successful", "failed", "p50_latency_ms", "p95_latency_ms", "p99_latency_ms", "avg_latency_ms", "error_rate", "throughput_rps", "recorded_at", "created_at", "updated_at", "created_by"],
     relations: [],
     versionField: "",
@@ -2814,8 +2814,8 @@ export const ENTITY_REGISTRY: Record<string, EntityBinding> = {
   "udb.core.analytics.entity.v1.ReconciliationAnalyticsSummary": {
     messageType: "udb.core.analytics.entity.v1.ReconciliationAnalyticsSummary",
     table: "reconciliation_analytics_summaries",
-    primaryKeys: ["summary_id"],
-    key: ["summary_id"],
+    primaryKeys: ["summary_id", "summary_date"],
+    key: ["summary_id", "summary_date"],
     fields: ["summary_id", "summary_date", "total_reconciliations", "exact_matches", "partial_conflicts", "hard_conflicts", "low_confidence_flagged", "avg_reconciliation_ms", "resolution_rate", "avg_record_confidence", "recorded_at", "created_at", "updated_at", "created_by"],
     relations: [],
     versionField: "",
@@ -2833,13 +2833,13 @@ export const ENTITY_REGISTRY: Record<string, EntityBinding> = {
     versionField: "",
     tsType: "Record<string, unknown>",
     tenantField: "tenant_id",
-    projectField: "",
+    projectField: "project_id",
   },
   "udb.core.apikey.entity.v1.ApiKeyUsage": {
     messageType: "udb.core.apikey.entity.v1.ApiKeyUsage",
     table: "api_key_usages",
-    primaryKeys: ["usage_id"],
-    key: ["usage_id"],
+    primaryKeys: ["usage_id", "requested_at"],
+    key: ["usage_id", "requested_at"],
     fields: ["usage_id", "key_id", "endpoint", "ip_address", "http_status", "latency_ms", "rate_limited", "requested_at", "tenant_id", "created_at", "updated_at", "created_by"],
     relations: [{"name":"key","kind":"belongs_to","local_fields":["key_id"],"target_message_type":"udb.core.apikey.entity.v1.ApiKey","target_table":"udb_authn.api_keys","target_fields":["key_id"],"on_delete":"CASCADE","on_update":"NO ACTION"}],
     versionField: "",
@@ -2857,7 +2857,7 @@ export const ENTITY_REGISTRY: Record<string, EntityBinding> = {
     versionField: "",
     tsType: "Record<string, unknown>",
     tenantField: "tenant_id",
-    projectField: "",
+    projectField: "project_id",
   },
   "udb.core.asset.entity.v1.PipelineDefinition": {
     messageType: "udb.core.asset.entity.v1.PipelineDefinition",
@@ -2917,7 +2917,7 @@ export const ENTITY_REGISTRY: Record<string, EntityBinding> = {
     versionField: "",
     tsType: "Record<string, unknown>",
     tenantField: "tenant_id",
-    projectField: "",
+    projectField: "project_id",
   },
   "udb.core.authn.entity.v1.MfaChallenge": {
     messageType: "udb.core.authn.entity.v1.MfaChallenge",
@@ -2929,7 +2929,7 @@ export const ENTITY_REGISTRY: Record<string, EntityBinding> = {
     versionField: "",
     tsType: "Record<string, unknown>",
     tenantField: "tenant_id",
-    projectField: "",
+    projectField: "project_id",
   },
   "udb.core.authn.entity.v1.MfaPolicy": {
     messageType: "udb.core.authn.entity.v1.MfaPolicy",
@@ -2977,19 +2977,19 @@ export const ENTITY_REGISTRY: Record<string, EntityBinding> = {
     versionField: "revision",
     tsType: "Record<string, unknown>",
     tenantField: "tenant_id",
-    projectField: "",
+    projectField: "project_id",
   },
   "udb.core.authn.entity.v1.Session": {
     messageType: "udb.core.authn.entity.v1.Session",
     table: "sessions",
-    primaryKeys: ["session_id"],
-    key: ["session_id"],
+    primaryKeys: ["session_id", "created_at"],
+    key: ["session_id", "created_at"],
     fields: ["session_id", "user_id", "session_type", "session_token_lookup", "session_token_hash", "csrf_token_hash", "access_token_jti", "refresh_token_jti", "device_type", "device_name", "ip_address", "user_agent", "is_active", "expires_at", "last_active_at", "revoked_by", "revoke_reason", "created_at", "tenant_id", "project_id", "principal_id", "provider_id", "auth_method", "scopes_json", "metadata_json", "updated_at", "created_by"],
     relations: [{"name":"revoked_by","kind":"belongs_to","local_fields":["revoked_by"],"target_message_type":"udb.core.authn.entity.v1.User","target_table":"udb_authn.users","target_fields":["user_id"],"on_delete":"SET NULL","on_update":"NO ACTION"},{"name":"user","kind":"belongs_to","local_fields":["user_id"],"target_message_type":"udb.core.authn.entity.v1.User","target_table":"udb_authn.users","target_fields":["user_id"],"on_delete":"CASCADE","on_update":"NO ACTION"}],
     versionField: "",
     tsType: "Record<string, unknown>",
     tenantField: "tenant_id",
-    projectField: "",
+    projectField: "project_id",
   },
   "udb.core.authn.entity.v1.SigningKey": {
     messageType: "udb.core.authn.entity.v1.SigningKey",
@@ -3013,7 +3013,7 @@ export const ENTITY_REGISTRY: Record<string, EntityBinding> = {
     versionField: "",
     tsType: "Record<string, unknown>",
     tenantField: "tenant_id",
-    projectField: "",
+    projectField: "project_id",
   },
   "udb.core.authn.entity.v1.TokenRevocation": {
     messageType: "udb.core.authn.entity.v1.TokenRevocation",
@@ -3037,7 +3037,7 @@ export const ENTITY_REGISTRY: Record<string, EntityBinding> = {
     versionField: "",
     tsType: "Record<string, unknown>",
     tenantField: "tenant_id",
-    projectField: "",
+    projectField: "project_id",
   },
   "udb.core.authn.entity.v1.WebAuthnCredential": {
     messageType: "udb.core.authn.entity.v1.WebAuthnCredential",
@@ -3049,7 +3049,7 @@ export const ENTITY_REGISTRY: Record<string, EntityBinding> = {
     versionField: "",
     tsType: "Record<string, unknown>",
     tenantField: "tenant_id",
-    projectField: "",
+    projectField: "project_id",
   },
   "udb.core.authn.entity.v1.WebAuthnPolicy": {
     messageType: "udb.core.authn.entity.v1.WebAuthnPolicy",
@@ -3066,14 +3066,14 @@ export const ENTITY_REGISTRY: Record<string, EntityBinding> = {
   "udb.core.authz.entity.v1.AccessDecisionAudit": {
     messageType: "udb.core.authz.entity.v1.AccessDecisionAudit",
     table: "access_decision_audits",
-    primaryKeys: ["decision_audit_id"],
-    key: ["decision_audit_id"],
+    primaryKeys: ["decision_audit_id", "decided_at"],
+    key: ["decision_audit_id", "decided_at"],
     fields: ["decision_audit_id", "user_id", "domain", "object", "action", "effect", "decision_source", "matched_rule", "reason", "ip_address", "correlation_id", "decided_at", "tenant_id", "decision_id", "policy_version", "relationship_version", "purpose", "scopes", "matched_policy_ids", "project_id", "actor_kind", "resource_type", "trace_id", "span_id", "user_agent_hash", "decision_input", "created_at", "updated_at", "created_by"],
     relations: [],
     versionField: "",
     tsType: "Record<string, unknown>",
     tenantField: "tenant_id",
-    projectField: "",
+    projectField: "project_id",
   },
   "udb.core.authz.entity.v1.AuthzRevision": {
     messageType: "udb.core.authz.entity.v1.AuthzRevision",
@@ -3085,7 +3085,7 @@ export const ENTITY_REGISTRY: Record<string, EntityBinding> = {
     versionField: "",
     tsType: "Record<string, unknown>",
     tenantField: "tenant_id",
-    projectField: "",
+    projectField: "project_id",
   },
   "udb.core.authz.entity.v1.PolicyApproval": {
     messageType: "udb.core.authz.entity.v1.PolicyApproval",
@@ -3109,7 +3109,7 @@ export const ENTITY_REGISTRY: Record<string, EntityBinding> = {
     versionField: "revision",
     tsType: "Record<string, unknown>",
     tenantField: "tenant_id",
-    projectField: "",
+    projectField: "project_id",
   },
   "udb.core.authz.entity.v1.PolicyDraft": {
     messageType: "udb.core.authz.entity.v1.PolicyDraft",
@@ -3121,7 +3121,7 @@ export const ENTITY_REGISTRY: Record<string, EntityBinding> = {
     versionField: "",
     tsType: "Record<string, unknown>",
     tenantField: "tenant_id",
-    projectField: "",
+    projectField: "project_id",
   },
   "udb.core.authz.entity.v1.PolicyRule": {
     messageType: "udb.core.authz.entity.v1.PolicyRule",
@@ -3133,7 +3133,7 @@ export const ENTITY_REGISTRY: Record<string, EntityBinding> = {
     versionField: "",
     tsType: "Record<string, unknown>",
     tenantField: "tenant_id",
-    projectField: "",
+    projectField: "project_id",
   },
   "udb.core.authz.entity.v1.PolicySet": {
     messageType: "udb.core.authz.entity.v1.PolicySet",
@@ -3145,7 +3145,7 @@ export const ENTITY_REGISTRY: Record<string, EntityBinding> = {
     versionField: "",
     tsType: "Record<string, unknown>",
     tenantField: "tenant_id",
-    projectField: "",
+    projectField: "project_id",
   },
   "udb.core.authz.entity.v1.PolicySimulation": {
     messageType: "udb.core.authz.entity.v1.PolicySimulation",
@@ -3157,7 +3157,7 @@ export const ENTITY_REGISTRY: Record<string, EntityBinding> = {
     versionField: "",
     tsType: "Record<string, unknown>",
     tenantField: "tenant_id",
-    projectField: "",
+    projectField: "project_id",
   },
   "udb.core.authz.entity.v1.PolicyTuple": {
     messageType: "udb.core.authz.entity.v1.PolicyTuple",
@@ -3169,7 +3169,7 @@ export const ENTITY_REGISTRY: Record<string, EntityBinding> = {
     versionField: "",
     tsType: "Record<string, unknown>",
     tenantField: "tenant_id",
-    projectField: "",
+    projectField: "project_id",
   },
   "udb.core.authz.entity.v1.PolicyVersion": {
     messageType: "udb.core.authz.entity.v1.PolicyVersion",
@@ -3181,7 +3181,7 @@ export const ENTITY_REGISTRY: Record<string, EntityBinding> = {
     versionField: "revision",
     tsType: "Record<string, unknown>",
     tenantField: "tenant_id",
-    projectField: "",
+    projectField: "project_id",
   },
   "udb.core.authz.entity.v1.Role": {
     messageType: "udb.core.authz.entity.v1.Role",
@@ -3193,7 +3193,7 @@ export const ENTITY_REGISTRY: Record<string, EntityBinding> = {
     versionField: "",
     tsType: "Record<string, unknown>",
     tenantField: "tenant_id",
-    projectField: "",
+    projectField: "project_id",
   },
   "udb.core.authz.entity.v1.RolePermission": {
     messageType: "udb.core.authz.entity.v1.RolePermission",
@@ -3253,7 +3253,7 @@ export const ENTITY_REGISTRY: Record<string, EntityBinding> = {
     versionField: "revision",
     tsType: "Record<string, unknown>",
     tenantField: "tenant_id",
-    projectField: "",
+    projectField: "project_id",
   },
   "udb.core.control.entity.v1.ControlPlaneNodeState": {
     messageType: "udb.core.control.entity.v1.ControlPlaneNodeState",
@@ -3277,7 +3277,7 @@ export const ENTITY_REGISTRY: Record<string, EntityBinding> = {
     versionField: "version",
     tsType: "Record<string, unknown>",
     tenantField: "tenant_id",
-    projectField: "",
+    projectField: "project_id",
   },
   "udb.core.embedding.entity.v1.EmbeddingDocument": {
     messageType: "udb.core.embedding.entity.v1.EmbeddingDocument",
@@ -3289,7 +3289,7 @@ export const ENTITY_REGISTRY: Record<string, EntityBinding> = {
     versionField: "",
     tsType: "Record<string, unknown>",
     tenantField: "tenant_id",
-    projectField: "",
+    projectField: "project_id",
   },
   "udb.core.embedding.entity.v1.EmbeddingJob": {
     messageType: "udb.core.embedding.entity.v1.EmbeddingJob",
@@ -3301,7 +3301,7 @@ export const ENTITY_REGISTRY: Record<string, EntityBinding> = {
     versionField: "",
     tsType: "Record<string, unknown>",
     tenantField: "tenant_id",
-    projectField: "",
+    projectField: "project_id",
   },
   "udb.core.embedding.entity.v1.EmbeddingModel": {
     messageType: "udb.core.embedding.entity.v1.EmbeddingModel",
@@ -3337,7 +3337,7 @@ export const ENTITY_REGISTRY: Record<string, EntityBinding> = {
     versionField: "",
     tsType: "Record<string, unknown>",
     tenantField: "tenant_id",
-    projectField: "",
+    projectField: "project_id",
   },
   "udb.core.idp.entity.v1.ExternalIdentity": {
     messageType: "udb.core.idp.entity.v1.ExternalIdentity",
@@ -3409,7 +3409,7 @@ export const ENTITY_REGISTRY: Record<string, EntityBinding> = {
     versionField: "revision",
     tsType: "Record<string, unknown>",
     tenantField: "tenant_id",
-    projectField: "",
+    projectField: "project_id",
   },
   "udb.core.metering.entity.v1.UsageEvent": {
     messageType: "udb.core.metering.entity.v1.UsageEvent",
@@ -3450,8 +3450,8 @@ export const ENTITY_REGISTRY: Record<string, EntityBinding> = {
   "udb.core.notification.entity.v1.NotificationLog": {
     messageType: "udb.core.notification.entity.v1.NotificationLog",
     table: "notification_logs",
-    primaryKeys: ["log_id"],
-    key: ["log_id"],
+    primaryKeys: ["log_id", "created_at"],
+    key: ["log_id", "created_at"],
     fields: ["log_id", "template_id", "event_type", "channel", "recipient_id", "recipient_address", "tenant_id", "project_id", "resource_type", "resource_id", "resource_name", "correlation_id", "status", "error_message", "provider_message_id", "retry_count", "sent_at", "delivered_at", "created_at", "rendered_subject", "rendered_body", "updated_at", "created_by"],
     relations: [{"name":"recipient","kind":"belongs_to","local_fields":["recipient_id"],"target_message_type":"udb.core.authn.entity.v1.User","target_table":"udb_authn.users","target_fields":["user_id"],"on_delete":"SET NULL","on_update":"NO ACTION"},{"name":"template","kind":"belongs_to","local_fields":["template_id"],"target_message_type":"udb.core.notification.entity.v1.NotificationTemplate","target_table":"udb_notification.notification_templates","target_fields":["template_id"],"on_delete":"SET NULL","on_update":"NO ACTION"}],
     versionField: "",
@@ -3493,7 +3493,7 @@ export const ENTITY_REGISTRY: Record<string, EntityBinding> = {
     versionField: "",
     tsType: "Record<string, unknown>",
     tenantField: "tenant_id",
-    projectField: "",
+    projectField: "project_id",
   },
   "udb.core.search.entity.v1.SearchIndex": {
     messageType: "udb.core.search.entity.v1.SearchIndex",
@@ -3517,7 +3517,7 @@ export const ENTITY_REGISTRY: Record<string, EntityBinding> = {
     versionField: "",
     tsType: "Record<string, unknown>",
     tenantField: "tenant_id",
-    projectField: "",
+    projectField: "project_id",
   },
   "udb.core.tenant.entity.v1.Tenant": {
     messageType: "udb.core.tenant.entity.v1.Tenant",
@@ -3649,7 +3649,7 @@ export const ENTITY_REGISTRY: Record<string, EntityBinding> = {
     versionField: "",
     tsType: "Record<string, unknown>",
     tenantField: "tenant_id",
-    projectField: "",
+    projectField: "project_id",
   },
 };
 
