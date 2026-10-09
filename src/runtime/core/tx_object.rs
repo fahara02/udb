@@ -336,26 +336,39 @@ fn is_bare_commit_marker(mutation: &Mutation) -> bool {
     mutation.commit && mutation.operation.trim().is_empty()
 }
 
-/// A relational mutation (upsert / update / delete) inside BeginTx cannot honour
-/// a per-mutation `idempotency_key`: replaying it would need a stored per-mutation
-/// receipt the transaction does not keep, and the key used to be accepted and
-/// silently ignored — a retried transaction then wrote twice while the caller
-/// believed it was deduplicated. Refuse it up front, before any saga row or
-/// transaction exists. Use the unary verbs (which do honour the key) when a
-/// write must be deduplicated; `vector_upsert` and `enqueue_outbox_event` keep
-/// using the field as before.
-fn reject_relational_tx_idempotency_keys(mutations: &[Mutation]) -> Result<(), tonic::Status> {
+/// Refuse ignored keys and unsupported guards before any transaction or saga
+/// exists. Relational keys now use same-transaction durable replay receipts.
+fn validate_tx_mutation_guards(mutations: &[Mutation]) -> Result<(), tonic::Status> {
     for (index, mutation) in mutations.iter().enumerate() {
         let operation = mutation.operation.trim().to_ascii_lowercase();
-        if matches!(operation.as_str(), "upsert" | "update" | "delete")
-            && !mutation.idempotency_key.trim().is_empty()
+        let relational = matches!(operation.as_str(), "upsert" | "update" | "delete");
+        if !mutation.idempotency_key.is_empty()
+            && !matches!(
+                operation.as_str(),
+                "upsert" | "update" | "delete" | "vector_upsert"
+            )
         {
             return Err(tx_object_invalid_field(
                 format!("mutations[{index}].idempotency_key"),
-                "not supported on upsert/update/delete inside BeginTx; leave it empty",
+                "this operation has no replay receipt; leave the key empty",
                 format!(
-                    "BeginTx mutation {index} ({operation}) sets idempotency_key, which a transactional relational mutation cannot honour; nothing was written"
+                    "BeginTx mutation {index} ({operation}) cannot honour an idempotency_key; nothing was written"
                 ),
+            ));
+        }
+        super::setup_data::idempotency_key_for_dedup(&mutation.idempotency_key)?;
+        if mutation.require_affected != 0 && !relational {
+            return Err(tx_object_invalid_field(
+                format!("mutations[{index}].require_affected"),
+                "only supported on relational mutations",
+                "require_affected requires an upsert, update or delete mutation",
+            ));
+        }
+        if !mutation.conflict_fields.is_empty() && operation != "upsert" {
+            return Err(tx_object_invalid_field(
+                format!("mutations[{index}].conflict_fields"),
+                "only supported on upsert mutations",
+                "conflict_fields requires an upsert mutation",
             ));
         }
     }
@@ -436,7 +449,7 @@ impl DataBrokerRuntime {
         if let Err(err) = validate_tx_strategy(strategy, &mutations) {
             return vec![Err(err)];
         }
-        if let Err(err) = reject_relational_tx_idempotency_keys(&mutations) {
+        if let Err(err) = validate_tx_mutation_guards(&mutations) {
             return vec![Err(err)];
         }
         let commit = mutations.iter().any(|mutation| mutation.commit);
@@ -520,7 +533,7 @@ impl DataBrokerRuntime {
         let mut mysql_xa_statements: Vec<(String, Vec<JsonValue>)> = Vec::new();
         for (mutation_index, mutation) in tx_mutations.iter().enumerate() {
             let context = merge_context(mutation.context.as_ref(), metadata_context.clone());
-            let operation = mutation.operation.to_ascii_lowercase();
+            let operation = mutation.operation.trim().to_ascii_lowercase();
             // bug #8.1: transactional compare-and-swap. When the mutation carries a
             // non-empty `expected`, assert it against the current row under this
             // tx's row lock + RLS fencing BEFORE the write, reusing the SAME unary
@@ -549,7 +562,24 @@ impl DataBrokerRuntime {
                 Ok(()) => set_request_local_settings(&mut tx, &context).await,
                 Err(err) => Err(err),
             };
-            let cas_check = match installed {
+            let mut idempotency = super::setup_data::RelationalTxIdempotency::Keyless;
+            let prepared = match installed {
+                Ok(()) => match self
+                    .claim_relational_tx_idempotency(
+                        &mut tx, manifest, mutation, &operation, &context,
+                    )
+                    .await
+                {
+                    Ok(claim) => {
+                        idempotency = claim;
+                        Ok(())
+                    }
+                    Err(err) => Err(err),
+                },
+                Err(err) => Err(err),
+            };
+            let cas_check = match prepared {
+                Ok(()) if idempotency.is_replay() => Ok(()),
                 Ok(()) => {
                     self.enforce_tx_cas_precondition(
                         &mut tx, manifest, mutation, &operation, &context,
@@ -560,6 +590,11 @@ impl DataBrokerRuntime {
             };
             let result = if let Err(err) = cas_check {
                 Err(err)
+            } else if let super::setup_data::RelationalTxIdempotency::Replay {
+                affected_rows, ..
+            } = &idempotency
+            {
+                Ok(*affected_rows)
             } else if operation == "upsert" {
                 let record = mutation_record_json(mutation);
                 match record {
@@ -591,6 +626,7 @@ impl DataBrokerRuntime {
                                         context: context.clone(),
                                         message_type: mutation.message_type.clone(),
                                         record: record.clone(),
+                                        conflict_fields: mutation.conflict_fields.clone(),
                                         ..UpsertPlanRequest::default()
                                     },
                                 );
@@ -992,26 +1028,51 @@ impl DataBrokerRuntime {
                     format!("unsupported transaction operation {}", mutation.operation),
                 ))
             };
+            let mutation_id = match &idempotency {
+                super::setup_data::RelationalTxIdempotency::Replay { mutation_id, .. } => {
+                    mutation_id.clone()
+                }
+                _ => Uuid::new_v4().to_string(),
+            };
             let result = match result {
-                Ok(affected) if affected > 0 => self
-                    .bump_tx_row_revision(&mut tx, manifest, mutation, &context)
+                Ok(affected) if !idempotency.is_replay() => {
+                    async {
+                        super::setup_data::enforce_require_affected(
+                            mutation.require_affected,
+                            affected,
+                        )?;
+                        if affected > 0 {
+                            self.bump_tx_row_revision(&mut tx, manifest, mutation, &context)
+                                .await?;
+                        }
+                        super::setup_data::persist_relational_tx_idempotency(
+                            &mut tx,
+                            &idempotency,
+                            &mutation_id,
+                            affected,
+                        )
+                        .await?;
+                        Ok(affected)
+                    }
                     .await
-                    .map(|()| affected),
+                }
                 result => result,
             };
             match result {
                 Ok(affected) => {
-                    audit_affected[mutation_index] = affected;
-                    pending_saga_steps.push(PendingSagaStep {
-                        step_index: pending_saga_steps.len(),
-                        operation: operation.clone(),
-                        message_type: mutation.message_type.clone(),
-                        compensation_json: saga_compensation_for_mutation(&operation, mutation),
-                    });
+                    if !idempotency.is_replay() {
+                        audit_affected[mutation_index] = affected;
+                        pending_saga_steps.push(PendingSagaStep {
+                            step_index: pending_saga_steps.len(),
+                            operation: operation.clone(),
+                            message_type: mutation.message_type.clone(),
+                            compensation_json: saga_compensation_for_mutation(&operation, mutation),
+                        });
+                    }
                     statuses.push(Ok(TxStatus {
                         state: crate::proto::tx_status::State::TxStateOpen as i32,
                         tx_id: tx_id.clone(),
-                        mutation_id: Uuid::new_v4().to_string(),
+                        mutation_id,
                         message: format!("{affected} row(s) affected"),
                         ..TxStatus::default()
                     }))
@@ -1036,10 +1097,9 @@ impl DataBrokerRuntime {
                     // a CAS miss stays FAILED_PRECONDITION with its reason) and
                     // only extend the message with the compensation outcome.
                     // Re-wrapping it as INTERNAL hid every one of those.
-                    statuses.push(Err(tonic::Status::with_metadata(
-                        err.code(),
-                        format!("{}; {}", err.message(), compensation_message),
-                        err.metadata().clone(),
+                    statuses.push(Err(crate::runtime::executor_utils::prefix_status(
+                        &compensation_message,
+                        err,
                     )));
                     for skipped in tx_mutations.iter().skip(mutation_index + 1) {
                         statuses.push(Ok(TxStatus {
@@ -1290,9 +1350,12 @@ impl DataBrokerRuntime {
                                 self.saga_set_status(sid, "compensated").await;
                             }
                         }
-                        statuses.push(Err(tx_object_internal_status(
-                            "postgres_commit_compensation",
-                            format!("PostgreSQL commit failed: {err}; {comp_msg}"),
+                        statuses.push(Err(crate::runtime::executor_utils::prefix_status(
+                            &comp_msg,
+                            crate::runtime::executor_utils::sqlx_error_to_status(
+                                "PostgreSQL transaction commit failed",
+                                &err,
+                            ),
                         )))
                     }
                 }
@@ -1416,10 +1479,8 @@ impl DataBrokerRuntime {
 
     /// bug #8.1 — enforce the transactional compare-and-swap precondition for one
     /// mutation, reusing the exact unary CAS helpers so the two write paths cannot
-    /// drift: `enforce_cas_precondition` (upsert, keyed by the primary key — the
-    /// transactional upsert carries no conflict_fields, so its conflict target is
-    /// always the PK, matching `enforce_upsert_precondition`'s empty-conflict_fields
-    /// branch) and `enforce_conditional_mutation_precondition` (update/delete, keyed
+    /// drift: `enforce_upsert_precondition` (upsert, including its explicit
+    /// conflict target) and `enforce_conditional_mutation_precondition` (update/delete, keyed
     /// by PK — or else a declared unique key — equality from the
     /// encryption-rewritten, normalized filter — identical to the unary
     /// update/delete CAS). The SELECT ... FOR UPDATE is tenant/RLS-fenced by
@@ -1457,19 +1518,18 @@ impl DataBrokerRuntime {
         if operation == "upsert" {
             let record = mutation_record_json(mutation)?;
             let normalized = crate::broker::normalize_record_keys(table, &record);
-            let key_columns = table.primary_key.clone();
-            if key_columns.is_empty() {
-                return Err(crate::runtime::executor_utils::failed_precondition_fields(
-                    "compare-and-swap precondition requires a manifest primary key",
-                    [(
-                        "expected".to_string(),
-                        "no key columns are available to locate the current row".to_string(),
-                    )],
-                ));
-            }
-            let key_values = record_values(&normalized, &key_columns)?;
-            self.enforce_cas_precondition(tx, table, expected, &key_columns, &key_values, context)
-                .await
+            self.enforce_upsert_precondition(
+                tx,
+                table,
+                &UpsertRequest {
+                    expected: Some(expected.clone()),
+                    conflict_fields: mutation.conflict_fields.clone(),
+                    ..Default::default()
+                },
+                &normalized,
+                context,
+            )
+            .await
         } else {
             // update | delete: locate the row by primary-key equality from the
             // encryption-rewritten, normalized filter — the same helper + filter
@@ -3277,25 +3337,28 @@ mod relational_tx_idempotency_key_tests {
     }
 
     #[test]
-    fn relational_mutations_with_a_key_are_refused() {
-        for operation in ["upsert", "UPDATE", "delete"] {
-            let status = reject_relational_tx_idempotency_keys(&[
+    fn unsupported_mutations_with_a_key_are_refused() {
+        for operation in ["put_object", "enqueue_outbox_event"] {
+            let status = validate_tx_mutation_guards(&[
                 mutation("upsert", ""),
                 mutation(operation, "retry-1"),
             ])
-            .expect_err("a relational idempotency_key must be refused");
+            .expect_err("a mutation without a replay receipt must refuse the key");
             assert_eq!(status.code(), tonic::Code::InvalidArgument);
             assert!(status.message().contains("mutation 1"), "{status:?}");
         }
     }
 
     #[test]
-    fn keyless_and_non_relational_mutations_are_admitted() {
+    fn keyless_and_deduplicating_mutations_are_admitted() {
         assert!(
-            reject_relational_tx_idempotency_keys(&[
+            validate_tx_mutation_guards(&[
                 mutation("upsert", ""),
+                mutation("upsert", "upsert-1"),
+                mutation("UPDATE", "update-1"),
+                mutation("delete", "delete-1"),
                 mutation("vector_upsert", "vec-1"),
-                mutation("enqueue_outbox_event", "evt-1"),
+                mutation("enqueue_outbox_event", ""),
             ])
             .is_ok()
         );

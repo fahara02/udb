@@ -12,6 +12,11 @@ no-wrapper plan.
 
 ### Added
 
+- Relational BeginTx mutations keep atomic replay receipts; identical retries
+  reuse the original mutation ID and changed inputs refuse with
+  `UDB_IDEMPOTENCY_REUSE`. Transaction refusal frames carry the original code
+  and typed detail. Exact row-count guards and upsert conflict targets work
+  inside transactions; database refusals name exposed columns and constraints.
 - Auth codes route through the listener's NotificationService with shipped
   reset, verification and OTP templates; API responses redact codes and terminal
   delivery scrubs stored bodies. Tenant templates override defaults.

@@ -1,6 +1,46 @@
 //! service.rs split — tx RPC handlers (Phase G).
 use super::*;
 
+fn tx_refusal_frame(status: &Status) -> TxStatus {
+    use prost::Message as _;
+    let error_detail = status
+        .metadata()
+        .get_bin(crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY)
+        .and_then(|raw| raw.to_bytes().ok())
+        .and_then(|bytes| crate::proto::ErrorDetail::decode(bytes).ok());
+    TxStatus {
+        state: crate::proto::tx_status::State::TxStateError as i32,
+        message: status.message().to_string(),
+        code: status.code() as i32,
+        error_detail,
+        ..Default::default()
+    }
+}
+
+fn tx_status_response_stream(statuses: Vec<Result<TxStatus, Status>>) -> ResponseStream<TxStatus> {
+    Box::pin(async_stream::stream! {
+        let mut tx_id = String::new();
+        for item in statuses {
+            match item {
+                Ok(status) => {
+                    tx_id.clone_from(&status.tx_id);
+                    yield Ok(status);
+                }
+                Err(status) => {
+                    let mut frame = tx_refusal_frame(&status);
+                    frame.tx_id = tx_id;
+                    yield Ok(frame);
+                    // Let tonic flush the error frame before the terminal
+                    // refusal, which retains its original code and metadata.
+                    tokio::task::yield_now().await;
+                    yield Err(status);
+                    break;
+                }
+            }
+        }
+    })
+}
+
 type CdcEngineResponseStream = Pin<
     Box<
         dyn tokio_stream::Stream<Item = Result<crate::runtime::cdc::CdcEnvelope, Status>>
@@ -312,9 +352,7 @@ impl DataBrokerService {
                 "BeginTx",
                 started,
                 Ok(self.with_catalog_response_headers(
-                    Response::new(
-                        Box::pin(tokio_stream::iter(statuses)) as ResponseStream<TxStatus>
-                    ),
+                    Response::new(tx_status_response_stream(statuses)),
                     &response_context,
                 )),
             ),

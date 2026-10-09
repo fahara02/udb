@@ -4749,10 +4749,11 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
             # A failed mutation keeps its own code and typed detail (UNIQUE,
             # CAS conflict, policy denial, ...); it is no longer re-wrapped as
             # INTERNAL "mutation_failure_compensation".
-            "err.metadata().clone()",
+            "crate::runtime::executor_utils::prefix_status(",
+            "crate::runtime::executor_utils::sqlx_error_to_status(",
             '"xa_ledger_unavailable"',
             '"xa_ledger_commit_record"',
-            '"postgres_commit_compensation"',
+            '"PostgreSQL transaction commit failed"',
             '"create_materialized_view"',
             '"refresh_materialized_view"',
             '"initial_refresh_materialized_view"',
@@ -5727,12 +5728,15 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
             '"join_query"',
             '"upsert_transaction_begin"',
             '"upsert_projection_task_enqueue"',
-            '"upsert_commit"',
+            '"PostgreSQL upsert commit failed"',
             '"cdc_outbox_emit"',
             '"delete_transaction_begin"',
             '"delete_query"',
             '"delete_projection_task_enqueue"',
-            '"delete_commit"',
+            '"PostgreSQL delete commit failed"',
+            '"PostgreSQL update commit failed"',
+            '"PostgreSQL bulk CAS commit failed"',
+            "crate::runtime::executor_utils::sqlx_error_to_status(",
             '"idempotency_dedup_claim_shape"',
             '"idempotency_response_summary_shape"',
             '"idempotency_response_write_receipt_missing"',
@@ -5754,6 +5758,24 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
             "assert_internal_detail(",
             "ErrorKind::Internal",
             'detail.backend, "setup_data"',
+        ),
+    ),
+    TokenCheck(
+        "served transaction refusal matrix covers immediate and deferred constraints",
+        "src/runtime/service/live_tests/data_error_matrix_live.rs",
+        (
+            "served_unary_and_transaction_errors_preserve_every_reason_and_original_code_live",
+            "DEFERRABLE INITIALLY DEFERRED",
+            '"widgets_immediate_unique"',
+            '"widgets_parent_deferred_fk"',
+            '"UDB_NOT_NULL_VIOLATION"',
+            '"UDB_NO_ROWS_AFFECTED"',
+            '"UDB_CAS_CONFLICT"',
+            '"UDB_IDEMPOTENCY_REUSE"',
+            "assert_eq!(refusal.error_detail.as_ref(), Some(&terminal_detail));",
+            "assert_eq!(refusal.code, code as i32);",
+            '"retry-after-rollback"',
+            '"concurrent-retry"',
         ),
     ),
     TokenCheck(
@@ -9970,6 +9992,23 @@ def run_selftest() -> None:
         write_fixture(root)
         failures = check_root(root)
         assert not failures, failures
+
+        for source, token in (
+            ("src/runtime/core/tx_object.rs", '"PostgreSQL transaction commit failed"'),
+            ("src/runtime/core/tx_object.rs", "crate::runtime::executor_utils::prefix_status("),
+            ("src/runtime/core/setup_data.rs", '"PostgreSQL upsert commit failed"'),
+            ("src/runtime/core/setup_data.rs", '"PostgreSQL delete commit failed"'),
+            ("src/runtime/core/setup_data.rs", '"PostgreSQL update commit failed"'),
+            ("src/runtime/core/setup_data.rs", '"PostgreSQL bulk CAS commit failed"'),
+            ("src/runtime/service/live_tests/data_error_matrix_live.rs", "DEFERRABLE INITIALLY DEFERRED"),
+            ("src/runtime/service/live_tests/data_error_matrix_live.rs", "assert_eq!(refusal.code, code as i32);"),
+        ):
+            write_fixture(root)
+            target = root / source
+            target.write_text(read(target).replace(token, ""), encoding="utf-8")
+            failures = check_root(root)
+            assert any(token in failure for failure in failures), (source, token, failures)
+        write_fixture(root)
 
         original_check_root_cached = _check_root_cached
         sentinel_cache: dict[Path, str] = {root / "sentinel": "cached"}

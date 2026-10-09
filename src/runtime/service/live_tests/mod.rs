@@ -15,6 +15,7 @@ mod catalog_authority_live;
 #[cfg(feature = "redis")]
 mod data_cache_redaction_live;
 mod data_contract_live;
+mod data_error_matrix_live;
 mod data_plane_live;
 mod data_plane_seam_live;
 mod data_plane_tenant_rls_live;

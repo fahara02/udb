@@ -713,6 +713,7 @@ pub(crate) fn sqlx_error_to_status(context: &str, err: &sqlx::Error) -> tonic::S
                         }
                         None => "resource already exists".to_string(),
                     };
+                    let column = database_error_column(db);
                     return crate::runtime::error_reasons::annotate(
                         schema_status(
                             tonic::Code::AlreadyExists,
@@ -722,18 +723,19 @@ pub(crate) fn sqlx_error_to_status(context: &str, err: &sqlx::Error) -> tonic::S
                             msg,
                         ),
                         crate::runtime::error_reasons::UNIQUE_VIOLATION,
-                        None,
+                        column.as_deref(),
                         db.constraint(),
                     );
                 }
                 "23502" => {
                     // NOT NULL violation. Name the column when the driver exposes
                     // it so the client knows which required field is missing.
-                    let msg = match not_null_column(db.message()) {
+                    let column =
+                        database_error_column(db).or_else(|| not_null_column(db.message()));
+                    let msg = match &column {
                         Some(c) => format!("required field '{c}' is missing"),
                         None => "a required field is missing".to_string(),
                     };
-                    let column = not_null_column(db.message());
                     let field = column.clone().unwrap_or_else(|| "database".to_string());
                     // An Upsert inserts a whole row: a NOT NULL column it left out
                     // is the "send the full row or use Update" mistake, not a
@@ -818,10 +820,11 @@ pub(crate) fn sqlx_error_to_status(context: &str, err: &sqlx::Error) -> tonic::S
                     );
                 }
                 "23503" => {
+                    let column = database_error_column(db);
                     return crate::runtime::error_reasons::annotate(
                         referential_constraint_status(),
                         crate::runtime::error_reasons::FOREIGN_KEY_VIOLATION,
-                        None,
+                        column.as_deref(),
                         db.constraint(),
                     );
                 }
@@ -1049,9 +1052,38 @@ fn tagged_status_to_typed_status(code: tonic::Code, message: &str) -> tonic::Sta
     }
 }
 
-/// Extract the offending column name from a Postgres NOT NULL violation message
-/// of the form: `null value in column "lookup_key" of relation "..." violates
-/// not-null constraint`. Returns the bare column name when present.
+/// Prefer the driver's structured column, with a value-free constraint-detail
+/// fallback for PostgreSQL's unique and foreign-key diagnostics.
+fn database_error_column(db: &(dyn sqlx::error::DatabaseError + 'static)) -> Option<String> {
+    let postgres = db.try_downcast_ref::<sqlx::postgres::PgDatabaseError>()?;
+    postgres
+        .column()
+        .map(str::to_string)
+        .or_else(|| postgres.detail().and_then(constraint_detail_column))
+}
+
+/// PostgreSQL omits its structured column field for unique/FK violations, but
+/// reports `Key (column)=(value)` in DETAIL. Copy only a single identifier from
+/// before the value boundary; never copy values or guess a composite column.
+fn constraint_detail_column(detail: &str) -> Option<String> {
+    let (column, _) = detail.strip_prefix("Key (")?.split_once(")=(")?;
+    let column = column
+        .strip_prefix('"')
+        .and_then(|s| s.strip_suffix('"'))
+        .unwrap_or(column);
+    if column.is_empty()
+        || column.len() > MAX_ERROR_DETAIL_STRING_BYTES
+        || !column
+            .chars()
+            .all(|ch| ch.is_ascii_alphanumeric() || ch == '_')
+    {
+        return None;
+    }
+    Some(column.to_string())
+}
+
+/// Extract the column from a PostgreSQL-style NOT NULL diagnostic when the
+/// driver does not expose a structured column field.
 fn not_null_column(message: &str) -> Option<String> {
     let after = message.split("column \"").nth(1)?;
     let name = after.split('"').next()?;
@@ -2526,6 +2558,28 @@ mod error_detail_tests {
     use crate::proto::{ErrorDetail, ErrorKind};
     use prost_types::Value as ProstValue;
     use serde_json::json;
+
+    #[test]
+    fn constraint_column_diagnostics_do_not_include_row_values() {
+        assert_eq!(
+            super::constraint_detail_column("Key (email)=(PRIVATE_VALUE) already exists."),
+            Some("email".into())
+        );
+        assert_eq!(
+            super::constraint_detail_column(
+                "Key (\"parent_id\")=(PRIVATE_VALUE) is not present in table."
+            ),
+            Some("parent_id".into())
+        );
+        for detail in [
+            "Key (tenant_id, email)=(PRIVATE_VALUE) already exists.",
+            "Key ()=(PRIVATE_VALUE)",
+            "PRIVATE_VALUE",
+            "Key (bad column)=(PRIVATE_VALUE)",
+        ] {
+            assert_eq!(super::constraint_detail_column(detail), None);
+        }
+    }
 
     /// Decode the prost `ErrorDetail` from the binary trailer the way an SDK
     /// would, so the test proves the typed detail is recoverable end-to-end.

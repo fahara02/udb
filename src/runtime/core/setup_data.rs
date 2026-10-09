@@ -1788,9 +1788,9 @@ impl DataBrokerRuntime {
             persist_idempotency_response_in_tx(&mut tx, dedup_ctx, &response).await?;
         }
         tx.commit().await.map_err(|err| {
-            setup_data_internal_status(
-                "upsert_commit",
-                format!("PostgreSQL upsert commit failed: {err}"),
+            crate::runtime::executor_utils::sqlx_error_to_status(
+                "PostgreSQL upsert commit failed",
+                &err,
             )
         })?;
 
@@ -1827,7 +1827,7 @@ impl DataBrokerRuntime {
     /// each `expected` field equals the current value. A missing row or any
     /// mismatch is a `FAILED_PRECONDITION`; the caller returns before the write,
     /// so nothing is mutated, projected, or emitted to the CDC outbox.
-    async fn enforce_upsert_precondition(
+    pub(super) async fn enforce_upsert_precondition(
         &self,
         tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
         table: &ManifestTable,
@@ -2585,9 +2585,9 @@ impl DataBrokerRuntime {
             persist_idempotency_response_in_tx(&mut tx, dedup_ctx, &response).await?;
         }
         tx.commit().await.map_err(|err| {
-            setup_data_internal_status(
-                "delete_commit",
-                format!("PostgreSQL delete commit failed: {err}"),
+            crate::runtime::executor_utils::sqlx_error_to_status(
+                "PostgreSQL delete commit failed",
+                &err,
             )
         })?;
         let _ = self
@@ -3139,9 +3139,9 @@ impl DataBrokerRuntime {
             persist_idempotency_response_in_tx(&mut tx, dedup_ctx, &response).await?;
         }
         tx.commit().await.map_err(|err| {
-            setup_data_internal_status(
-                "update_commit",
-                format!("PostgreSQL update commit failed: {err}"),
+            crate::runtime::executor_utils::sqlx_error_to_status(
+                "PostgreSQL update commit failed",
+                &err,
             )
         })?;
         let _ = self
@@ -3422,9 +3422,9 @@ impl DataBrokerRuntime {
             .await?;
         }
         tx.commit().await.map_err(|err| {
-            setup_data_internal_status(
-                "bulk_cas_commit",
-                format!("PostgreSQL bulk CAS commit failed: {err}"),
+            crate::runtime::executor_utils::sqlx_error_to_status(
+                "PostgreSQL bulk CAS commit failed",
+                &err,
             )
         })?;
         let _ = self
@@ -5665,7 +5665,10 @@ fn read_must_see_primary(context: &RequestContext) -> bool {
 /// Refuses a write whose row count differs from a non-zero `require_affected`.
 /// Called inside the write transaction BEFORE commit, so the `?` rolls the
 /// whole write back: nothing is changed, projected or emitted.
-fn enforce_require_affected(require_affected: u32, affected: u64) -> Result<(), tonic::Status> {
+pub(super) fn enforce_require_affected(
+    require_affected: u32,
+    affected: u64,
+) -> Result<(), tonic::Status> {
     if require_affected == 0 || affected == u64::from(require_affected) {
         return Ok(());
     }
@@ -6490,6 +6493,179 @@ struct IdempotencyPersistContext {
     operation: &'static str,
 }
 
+/// Per-mutation BeginTx receipts use the unary store and atomic claim, but a
+/// distinct operation namespace: a unary write cannot replay part of a tx.
+pub(super) enum RelationalTxIdempotency {
+    Keyless,
+    Fresh(RelationalTxIdempotencyContext),
+    Replay {
+        mutation_id: String,
+        affected_rows: u64,
+    },
+}
+
+pub(super) struct RelationalTxIdempotencyContext(IdempotencyPersistContext);
+
+impl RelationalTxIdempotency {
+    pub(super) fn is_replay(&self) -> bool {
+        matches!(self, Self::Replay { .. })
+    }
+}
+
+const RELATIONAL_TX_RECEIPT_FORMAT: &str = "relational_tx_v1";
+
+impl DataBrokerRuntime {
+    /// Claim before CAS so an identical retry is not rejected by the state its
+    /// first execution changed. Keyless mutations issue no dedup SQL.
+    pub(super) async fn claim_relational_tx_idempotency(
+        &self,
+        tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+        manifest: &CatalogManifest,
+        mutation: &Mutation,
+        operation: &str,
+        context: &RequestContext,
+    ) -> Result<RelationalTxIdempotency, tonic::Status> {
+        let namespace = match operation {
+            "upsert" => "begin_tx/upsert",
+            "update" => "begin_tx/update",
+            "delete" => "begin_tx/delete",
+            _ => return Ok(RelationalTxIdempotency::Keyless),
+        };
+        let Some(key) = idempotency_key_for_dedup(&mutation.idempotency_key)? else {
+            return Ok(RelationalTxIdempotency::Keyless);
+        };
+        let table = resolve_table_for_message(manifest, &mutation.message_type)
+            .map_err(|_| message_type_lookup_status(manifest, &mutation.message_type))?;
+        let resolver = crate::planning::broker::column_resolver(table);
+        let mut authoritative = serde_json::json!({
+            "expected": idempotency_expected_json(mutation.expected.as_ref()),
+            "require_affected": mutation.require_affected,
+            "cdc_required": mutation.cdc_required,
+        });
+        if operation == "upsert" {
+            authoritative["record"] =
+                crate::broker::normalize_record_keys(table, &mutation_record_json(mutation)?);
+            authoritative["conflict_fields"] = JsonValue::from(
+                mutation
+                    .conflict_fields
+                    .iter()
+                    .map(|field| crate::planning::broker::resolve_column(&resolver, field))
+                    .collect::<Vec<_>>(),
+            );
+        } else {
+            let filter = mutation
+                .filter
+                .as_ref()
+                .map(struct_to_json)
+                .unwrap_or(JsonValue::Null);
+            let filter =
+                self.rewrite_encrypted_equality_filters(table, &filter, &context.tenant_id);
+            authoritative["filter"] =
+                crate::planning::broker::normalize_filter_keys(&resolver, &filter);
+            if operation == "update" {
+                let changes = mutation
+                    .changes
+                    .as_ref()
+                    .map(struct_to_json)
+                    .unwrap_or(JsonValue::Null);
+                authoritative["changes"] = crate::broker::normalize_record_keys(table, &changes);
+                authoritative["increments"] = JsonValue::Array(
+                    mutation
+                        .increments
+                        .iter()
+                        .map(|increment| {
+                            serde_json::json!([
+                                crate::planning::broker::resolve_column(
+                                    &resolver,
+                                    &increment.column
+                                ),
+                                increment.delta,
+                            ])
+                        })
+                        .collect(),
+                );
+            }
+        }
+        let request_hash = idempotency_request_hash(namespace, &authoritative);
+        let config = crate::runtime::system::SystemCatalogConfig::current();
+        let dedup_key = idempotency_dedup_key(
+            &context.tenant_id,
+            &context.project_id,
+            &mutation.message_type,
+            namespace,
+            key,
+        );
+        let claim = claim_idempotency_key_in_tx(
+            tx,
+            &config,
+            &dedup_key,
+            &context.tenant_id,
+            &context.project_id,
+            &mutation.message_type,
+            namespace,
+            &request_hash,
+        )
+        .await?;
+        if !claim.fresh {
+            // This namespace has no legacy receipts: missing fingerprints fail
+            // closed instead of replaying an unproven request.
+            if claim.prior_request_hash.as_deref() != Some(request_hash.as_str()) {
+                return Err(idempotency_request_mismatch_status());
+            }
+            let prior = &claim.prior_response_json;
+            if idempotency_replay_string(prior, "format", false)? != RELATIONAL_TX_RECEIPT_FORMAT {
+                return Err(idempotency_replay_response_status(
+                    "unexpected transaction receipt format",
+                ));
+            }
+            idempotency_replay_scope_matches_claim(
+                prior,
+                &context.tenant_id,
+                &context.project_id,
+                &mutation.message_type,
+            )?;
+            return Ok(RelationalTxIdempotency::Replay {
+                mutation_id: idempotency_replay_mutation_id(prior)?,
+                affected_rows: idempotency_replay_i64(prior, "affected_rows")? as u64,
+            });
+        }
+        Ok(RelationalTxIdempotency::Fresh(
+            RelationalTxIdempotencyContext(IdempotencyPersistContext {
+                config,
+                dedup_key,
+                tenant_id: context.tenant_id.clone(),
+                project_id: context.project_id.clone(),
+                message_type: mutation.message_type.clone(),
+                operation: namespace,
+            }),
+        ))
+    }
+}
+
+pub(super) async fn persist_relational_tx_idempotency(
+    tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    claim: &RelationalTxIdempotency,
+    mutation_id: &str,
+    affected_rows: u64,
+) -> Result<(), tonic::Status> {
+    let RelationalTxIdempotency::Fresh(RelationalTxIdempotencyContext(context)) = claim else {
+        return Ok(());
+    };
+    let affected_rows = i64::try_from(affected_rows).map_err(|_| {
+        idempotency_replay_response_status("affected_rows exceeds signed integer range")
+    })?;
+    let summary = serde_json::json!({
+        "format": RELATIONAL_TX_RECEIPT_FORMAT,
+        "tenant_id": context.tenant_id,
+        "project_id": context.project_id,
+        "message_type": context.message_type,
+        "mutation_id": mutation_id,
+        "affected_rows": affected_rows,
+    });
+    idempotency_replay_mutation_id(&summary)?;
+    persist_idempotency_summary_in_tx(tx, context, &summary).await
+}
+
 /// Tenant+project-scoped salted dedup key. Returns the hex SHA-256 of
 /// `"{tenant}\0{project}\0{message_type}\0{operation}\0{key}"` — NEVER the bare
 /// client key, so two tenants (or projects) reusing `"key-1"` cannot collide
@@ -6508,7 +6684,7 @@ fn idempotency_dedup_key(
     ))
 }
 
-fn idempotency_key_for_dedup(key: &str) -> Result<Option<&str>, tonic::Status> {
+pub(super) fn idempotency_key_for_dedup(key: &str) -> Result<Option<&str>, tonic::Status> {
     if key.is_empty() {
         return Ok(None);
     }
@@ -7338,10 +7514,18 @@ async fn persist_idempotency_response_in_tx(
         &dedup_ctx.project_id,
         &dedup_ctx.message_type,
     )?;
+    persist_idempotency_summary_in_tx(tx, dedup_ctx, &summary).await
+}
+
+async fn persist_idempotency_summary_in_tx(
+    tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    dedup_ctx: &IdempotencyPersistContext,
+    summary: &JsonValue,
+) -> Result<(), tonic::Status> {
     let rel = dedup_ctx.config.idempotency_keys_relation();
     let sql = idempotency_response_persist_sql(&rel);
     let result = sqlx::query(&sql)
-        .bind(&summary)
+        .bind(summary)
         .bind(&dedup_ctx.dedup_key)
         .bind(&dedup_ctx.tenant_id)
         .bind(&dedup_ctx.project_id)

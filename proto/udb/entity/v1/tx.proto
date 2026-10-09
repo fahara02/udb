@@ -13,6 +13,7 @@ import "udb/entity/v1/context.proto";
 import "udb/entity/v1/vector.proto";
 import "udb/entity/v1/relational.proto";
 import "udb/entity/v1/consistency.proto";
+import "udb/entity/v1/error.proto";
 
 message Mutation {
   RequestContext context = 1;
@@ -40,12 +41,14 @@ message Mutation {
   string object_key = 13;
   bytes object_data = 14;
   string content_type = 15;
-  // Honoured only by `vector_upsert` and `enqueue_outbox_event` mutations.
-  // Setting it on an `upsert`, `update` or `delete` mutation is REJECTED with
-  // INVALID_ARGUMENT before the transaction opens (a transactional relational
-  // mutation keeps no per-mutation replay receipt, so the key cannot be
-  // honoured, and it is never silently ignored). Use the unary verb's
-  // `idempotency_key` when a relational write must be deduplicated.
+  // Per-mutation replay key for upsert/update/delete and vector_upsert.
+  // Relational receipts commit atomically with the whole transaction. A retry
+  // with identical inputs reuses its original mutation ID and affected count
+  // without repeating the write, revision, projection, CDC or audit effects.
+  // Reuse with different inputs fails with UDB_IDEMPOTENCY_REUSE and rolls the
+  // transaction back. Relational keys are scoped to tenant/project/entity and
+  // BeginTx operation, independently of unary replay keys. Other operations
+  // reject a non-empty key before the transaction opens.
   string idempotency_key = 16;
   // Partial-update payload for `operation = "update"` — the SET columns and the
   // atomic increments. Same semantics as the unary UpdateRequest (SETs named
@@ -72,6 +75,12 @@ message Mutation {
   // fails. Default false preserves best-effort emission (an event is emitted
   // when CDC is enabled and the entity is CDC-mapped, and skipped otherwise).
   bool cdc_required = 20;
+  // Exact affected-row count for a relational mutation. Non-zero mismatches
+  // roll back the whole transaction with NOT_FOUND/UDB_NO_ROWS_AFFECTED.
+  uint32 require_affected = 21;
+  // Upsert conflict target, with the same semantics as UpsertRequest. Ignored
+  // values are never accepted: only an upsert may set this field.
+  repeated string conflict_fields = 22;
 }
 
 message TxStatus {
@@ -93,4 +102,8 @@ message TxStatus {
   // on the unary verbs. Set only on the TX_STATE_COMMITTED status; unset for
   // open/rolled-back/error statuses.
   WriteReceipt write_receipt = 5;
+  // Original refusal, also carried in the terminal gRPC trailer. Classify this
+  // detail/code instead of matching the human-readable message.
+  ErrorDetail error_detail = 6;
+  int32 code = 7;
 }

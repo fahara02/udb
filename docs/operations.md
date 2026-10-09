@@ -211,6 +211,28 @@ And these point the broker at whichever backends your deployment uses:
 | Google Cloud Storage | `UDB_GCS_DSN` |
 | Kafka / CDC | `UDB_KAFKA_BROKERS` |
 
+### Transaction refusals and replay
+
+`BeginTx` emits a `TX_STATE_ERROR` frame with the original gRPC `code` and
+`error_detail`, then ends with the same refusal in its trailer. Classify the
+stable detail reason; an earlier `TX_STATE_OPEN` frame does not prove commit.
+Any failed mutation rolls the whole transaction back.
+
+Relational `upsert`, `update` and `delete` mutations may set an
+`idempotency_key`. The receipt commits in the same PostgreSQL transaction as
+the writes. An identical retry returns its original mutation ID and affected
+count before checking CAS, without repeating entity writes, revisions,
+projection tasks, CDC events or write audit. A changed payload, predicate,
+precondition, conflict target or delivery/count requirement returns
+`UDB_IDEMPOTENCY_REUSE`. Keys are scoped to tenant, project, entity and BeginTx
+operation; unary keys have a separate namespace. A rolled-back transaction
+keeps no fresh receipts, so retrying it can execute the writes.
+
+Set `require_affected` to a non-zero exact count when a relational mutation must
+match rows. A mismatch returns `NOT_FOUND`/`UDB_NO_ROWS_AFFECTED` and rolls the
+transaction back. An upsert's `conflict_fields` select its conflict target and
+the row its CAS precondition checks, with the same semantics as unary Upsert.
+
 ### Two-phase commit and MySQL mirrors
 
 With `UDB_2PC_ENABLED=true`, a two-phase `BeginTx` commits PostgreSQL through
