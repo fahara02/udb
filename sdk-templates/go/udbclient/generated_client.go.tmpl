@@ -877,12 +877,17 @@ func (r RPCInfo) Describe() string {
 		fmt.Fprintf(&b, "  credentials: %s\n", strings.Join(r.CredentialTypes, ", "))
 	}
 	switch {
+	case r.Kind != KindUnary:
+		b.WriteString("  retries: streams are not automatically replayed; reconnect with the RPC's application resume contract\n")
 	case r.ReadOnly:
 		b.WriteString("  retries: safe to retry on transient failure\n")
 	case r.ReplaySafe:
-		b.WriteString("  retries: retried on transient failure only with the same idempotency key; inside a transaction per-mutation idempotency keys are refused (the transaction is the unit)\n")
+		b.WriteString("  retries: retried on transient failure only with the same idempotency key and unchanged request semantics and tenant/project\n")
 	default:
 		b.WriteString("  retries: not retried automatically (not replay-safe)\n")
+	}
+	if r.FullMethod == "/udb.services.v1.DataBroker/BeginTx" {
+		b.WriteString("  transaction keys: relational mutations retain durable per-key replay receipts; changed inputs refuse the whole transaction. Unsupported operations refuse per-mutation keys; never automatically replay a partially submitted transaction\n")
 	}
 	return b.String()
 }

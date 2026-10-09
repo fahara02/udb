@@ -729,12 +729,12 @@ async fn served_ciphertext_and_blind_index_inputs_are_refused_live() {
     teardown(&pool, &schema, &tenant).await;
 }
 
-/// A4 — a BeginTx relational mutation carrying `idempotency_key` is refused
-/// with InvalidArgument before the transaction opens, and nothing is written
-/// (it used to be accepted and silently ignored).
+/// A1 replaces the old blanket refusal with durable relational replay. The
+/// key must commit, replay identical inputs, and refuse changed inputs while
+/// rolling back every other mutation in that transaction.
 #[tokio::test]
 #[ignore = "requires live Postgres; run in the CI live lane"]
-async fn served_begin_tx_relational_idempotency_key_is_refused_live() {
+async fn served_begin_tx_relational_idempotency_key_commits_and_replays_live() {
     let Some(dsn) = dp_live_pg_dsn() else {
         return;
     };
@@ -764,13 +764,54 @@ async fn served_begin_tx_relational_idempotency_key_is_refused_live() {
     let id = format!("a4-{}", Uuid::new_v4().simple());
     let mut mutation = upsert_mutation(MSG, json!({"id": id, "tenant_id": tenant, "status": "X"}));
     mutation.idempotency_key = format!("retry-{}", Uuid::new_v4().simple());
-    let (committed, error) =
-        begin_tx_outcome(&mut client, with_ctx(stream::iter(vec![mutation]), &tenant)).await;
-    assert!(!committed, "the keyed relational mutation must not commit");
-    let error = error.expect("BeginTx must refuse the relational idempotency_key");
-    assert_eq!(error.code(), Code::InvalidArgument, "{error:?}");
-    assert!(error.message().contains("idempotency_key"), "{error:?}");
-    assert_eq!(raw_count(&pool, &schema, "widgets", &id).await, 0);
+    for _ in 0..2 {
+        let (committed, error) = begin_tx_outcome(
+            &mut client,
+            with_ctx(stream::iter(vec![mutation.clone()]), &tenant),
+        )
+        .await;
+        assert!(
+            committed,
+            "the keyed relational mutation must commit: {error:?}"
+        );
+        assert!(error.is_none(), "identical inputs must replay: {error:?}");
+        assert_eq!(raw_count(&pool, &schema, "widgets", &id).await, 1);
+    }
+
+    let marker = format!("a4-marker-{}", Uuid::new_v4().simple());
+    let mut changed = upsert_mutation(MSG, json!({"id": id, "tenant_id": tenant, "status": "Y"}));
+    changed.idempotency_key = mutation.idempotency_key;
+    let (committed, error) = begin_tx_outcome(
+        &mut client,
+        with_ctx(
+            stream::iter(vec![
+                upsert_mutation(
+                    MSG,
+                    json!({"id": marker, "tenant_id": tenant, "status": "MARKER"}),
+                ),
+                changed,
+            ]),
+            &tenant,
+        ),
+    )
+    .await;
+    assert!(!committed, "changed inputs cannot commit");
+    let error = error.expect("BeginTx must refuse changed idempotency inputs");
+    assert_eq!(error.code(), Code::FailedPrecondition, "{error:?}");
+    assert_eq!(
+        crate::runtime::error_reasons::reason_of(&error).as_deref(),
+        Some("UDB_IDEMPOTENCY_REUSE")
+    );
+    assert_eq!(raw_count(&pool, &schema, "widgets", &marker).await, 0);
+    assert_eq!(raw_count(&pool, &schema, "widgets", &id).await, 1);
+    let status: String = sqlx::query_scalar(&format!(
+        "SELECT status FROM \"{schema}\".widgets WHERE id = $1"
+    ))
+    .bind(&id)
+    .fetch_one(&pool)
+    .await
+    .expect("read original durable payload");
+    assert_eq!(status, "X");
 
     let _ = shutdown.send(());
     let _ = handle.await;

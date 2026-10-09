@@ -13,7 +13,7 @@ import re
 
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / "src/runtime/error_reasons.rs"
-OUTPUT = ROOT / "docs/error-reasons.md"
+OUTPUTS = (ROOT / "docs/error-reasons.md", ROOT / "docs/reference/error-reasons.md")
 LITERAL = r'"(?:\\.|[^"\\])*"'
 ENTRY = re.compile(
     rf'\s*[A-Z_]+\s*=\s*({LITERAL}),\s*(\w+),\s*(\w+),\s*'
@@ -26,7 +26,10 @@ HEADER = (
     "`udb-error-detail-bin` trailer). Its `reason` is one of the codes below. "
     "A code is never renamed once shipped: branch on it, never on the message "
     "text. The SDKs expose it as `Reason()` / `reason`.\n\n"
-    "| Reason | gRPC code | Kind | When | Fix |\n"
+    "Shared helper reasons retain the original gRPC code and kind. The "
+    "table lists each reason's default code; a specific domain reason takes "
+    "precedence over a shared helper reason.\n\n"
+    "| Reason | Default gRPC code | Kind | When | Fix |\n"
     "|---|---|---|---|---|\n"
 )
 
@@ -59,12 +62,15 @@ def main():
     arguments = parser.parse_args()
     output = render(SOURCE.read_text(encoding="utf-8"))
     if arguments.check:
-        if OUTPUT.read_text(encoding="utf-8") != output:
-            raise SystemExit("error reasons stale; run python scripts/generate-error-reasons.py")
+        for target in OUTPUTS:
+            if not target.exists() or target.read_text(encoding="utf-8") != output:
+                raise SystemExit(f"{target.relative_to(ROOT)} stale; run python scripts/generate-error-reasons.py")
         print("error reasons up to date")
     else:
-        OUTPUT.write_text(output, encoding="utf-8", newline="\n")
-        print("rendered docs/error-reasons.md from the Rust registry")
+        for target in OUTPUTS:
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text(output, encoding="utf-8", newline="\n")
+        print("rendered both error-reason references from the Rust registry")
 
 
 if __name__ == "__main__":

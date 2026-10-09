@@ -147,6 +147,7 @@ fn status_with_error_detail(
     use prost::Message as _;
     let message = bounded_error_detail_string(message.into(), "error");
     let detail = sanitized_error_detail(detail);
+    let detail = crate::runtime::error_reasons::ensure_registered_reason(code, detail);
     let mut metadata = tonic::metadata::MetadataMap::new();
     let encoded = detail.encode_to_vec();
     let value = tonic::metadata::MetadataValue::from_bytes(&encoded);
@@ -2591,6 +2592,173 @@ mod error_detail_tests {
             .to_bytes()
             .expect("trailer decodes to bytes");
         crate::runtime::executor_utils::decode_error_detail_from_raw(&raw)
+    }
+
+    #[test]
+    fn helper_refusals_encode_registered_reasons_and_preserve_codes_and_kinds() {
+        let cases = [
+            (
+                capability_status("postgres", "read", "capability", "unsupported"),
+                tonic::Code::FailedPrecondition,
+                ErrorKind::Capability,
+                "UDB_CAPABILITY_UNSUPPORTED",
+            ),
+            (
+                capability_status_with_code(
+                    tonic::Code::NotFound,
+                    "storage",
+                    "read",
+                    "object",
+                    "unsupported object",
+                ),
+                tonic::Code::NotFound,
+                ErrorKind::Capability,
+                "UDB_CAPABILITY_UNSUPPORTED",
+            ),
+            (
+                unauthenticated_status("missing_bearer", "authenticate"),
+                tonic::Code::Unauthenticated,
+                ErrorKind::Policy,
+                "UDB_AUTHENTICATION_FAILED",
+            ),
+            (
+                policy_status_with_code(
+                    tonic::Code::PermissionDenied,
+                    "read",
+                    "policy_denied",
+                    "refused",
+                ),
+                tonic::Code::PermissionDenied,
+                ErrorKind::Policy,
+                "UDB_POLICY_REFUSED",
+            ),
+            (
+                quota_status("channel", "read_fair_admission", 1_000, "wait"),
+                tonic::Code::ResourceExhausted,
+                ErrorKind::Quota,
+                "UDB_QUOTA_EXCEEDED",
+            ),
+            (
+                quota_refusal_status("channel", "stream_capacity", "free capacity"),
+                tonic::Code::ResourceExhausted,
+                ErrorKind::Quota,
+                "UDB_QUOTA_EXCEEDED",
+            ),
+            (
+                retryable_status("postgres", "read", 100, "unavailable"),
+                tonic::Code::Unavailable,
+                ErrorKind::Retryable,
+                "UDB_BACKEND_UNAVAILABLE",
+            ),
+            (
+                deadline_exceeded_status("postgres", "write", 100, "timed out"),
+                tonic::Code::DeadlineExceeded,
+                ErrorKind::Retryable,
+                "UDB_DEADLINE_EXCEEDED",
+            ),
+            (
+                retryable_aborted_status("postgres", "write", 100, "aborted"),
+                tonic::Code::Aborted,
+                ErrorKind::Retryable,
+                "UDB_RETRY_ABORTED",
+            ),
+            (
+                schema_status(
+                    tonic::Code::NotFound,
+                    "catalog",
+                    "read",
+                    "missing_resource",
+                    "resource absent",
+                ),
+                tonic::Code::NotFound,
+                ErrorKind::Schema,
+                "UDB_SCHEMA_REFUSED",
+            ),
+            (
+                invalid_argument_fields("invalid", [("filter", "required")]),
+                tonic::Code::InvalidArgument,
+                ErrorKind::Validation,
+                "UDB_VALIDATION_FAILED",
+            ),
+            (
+                failed_precondition_fields("invalid precondition", [("key", "required")]),
+                tonic::Code::FailedPrecondition,
+                ErrorKind::Validation,
+                "UDB_VALIDATION_FAILED",
+            ),
+            (
+                internal_status("postgres", "read", "unexpected error"),
+                tonic::Code::Internal,
+                ErrorKind::Internal,
+                "UDB_INTERNAL_ERROR",
+            ),
+        ];
+        for (status, code, kind, reason) in cases {
+            assert_eq!(status.code(), code);
+            let detail = decode_detail(&status);
+            assert_eq!(detail.kind, kind as i32);
+            assert_eq!(detail.reason, reason);
+            assert!(!detail.fix_hint.is_empty());
+            assert!(
+                crate::runtime::error_reasons::ALL
+                    .iter()
+                    .any(|registered| registered.code == detail.reason)
+            );
+        }
+    }
+
+    #[test]
+    fn serializer_replaces_unregistered_reasons_and_preserves_domain_diagnostics() {
+        for reason in ["", "not stable", "UDB_UNREGISTERED", "udb_lowercase"] {
+            let status = status_with_typed_detail(
+                tonic::Code::ResourceExhausted,
+                "budget exhausted",
+                ErrorDetail {
+                    kind: ErrorKind::Quota as i32,
+                    backend: "channel".into(),
+                    operation: "read_fair_admission".into(),
+                    reason: reason.into(),
+                    retryable: true,
+                    retry_after_ms: 1_000,
+                    ..Default::default()
+                },
+            );
+            let detail = decode_detail(&status);
+            assert_eq!(detail.reason, "UDB_QUOTA_EXCEEDED");
+            assert_eq!(detail.backend, "channel");
+            assert_eq!(detail.operation, "read_fair_admission");
+            assert_eq!(detail.retry_after_ms, 1_000);
+            assert!(detail.retryable);
+        }
+        let status = status_with_typed_detail(
+            tonic::Code::FailedPrecondition,
+            "row changed",
+            ErrorDetail {
+                kind: ErrorKind::Conflict as i32,
+                reason: "UDB_CAS_CONFLICT".into(),
+                constraint: "patients_pkey".into(),
+                column: "revision".into(),
+                correlation_id: "request-42".into(),
+                missing: [("revision".into(), "42".into())].into(),
+                ..Default::default()
+            },
+        );
+        let detail = decode_detail(&status);
+        assert_eq!(status.code(), tonic::Code::FailedPrecondition);
+        assert_eq!(status.message(), "row changed");
+        assert_eq!(detail.kind, ErrorKind::Conflict as i32);
+        assert_eq!(detail.reason, "UDB_CAS_CONFLICT");
+        assert_eq!(detail.constraint, "patients_pkey");
+        assert_eq!(detail.column, "revision");
+        assert_eq!(detail.correlation_id, "request-42");
+        assert_eq!(
+            detail.missing.get("revision").map(String::as_str),
+            Some("42")
+        );
+        assert_eq!(
+            detail.fix_hint,
+            crate::runtime::error_reasons::CAS_CONFLICT.fix_hint
+        );
     }
 
     #[test]

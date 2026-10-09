@@ -49,6 +49,9 @@ no-wrapper plan.
 
 ### Fixed
 
+- Common capability, policy, quota, validation and transport refusals now carry
+  a registered machine reason and fix hint while retaining their original code
+  and kind. Specific domain reasons remain authoritative.
 - Rate-limit detail keeps the verified principal while log output retains its
   privacy mask. OTP cooldown refusals report `UDB_RATE_LIMITED` and the canonical
   rate-limit kind with a bounded retry delay.

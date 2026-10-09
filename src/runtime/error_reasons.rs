@@ -113,6 +113,87 @@ reasons! {
     POLICY_WRONG_SURFACE = "UDB_POLICY_WRONG_SURFACE", Validation, FailedPrecondition,
         "DataBroker.PutPolicy writes the legacy ABAC table, which does not authorize requests.",
         "Use AuthzService.PutAuthzPolicy or udb policy apply; UDB_ALLOW_LEGACY_PUT_POLICY=true is a temporary migration override.";
+    CAPABILITY_UNSUPPORTED = "UDB_CAPABILITY_UNSUPPORTED", Capability, FailedPrecondition,
+        "The backend or service cannot perform the requested capability; capability_required names it.",
+        "Use a backend or enabled service that supports the named capability.";
+    AUTHENTICATION_FAILED = "UDB_AUTHENTICATION_FAILED", Policy, Unauthenticated,
+        "The request could not be authenticated; policy_decision_id identifies the refusal.",
+        "Authenticate again and send a valid credential for this listener.";
+    POLICY_REFUSED = "UDB_POLICY_REFUSED", Policy, FailedPrecondition,
+        "A policy precondition refused the request; policy_decision_id identifies the decision.",
+        "Satisfy the named policy decision before repeating the request.";
+    QUOTA_EXCEEDED = "UDB_QUOTA_EXCEEDED", Quota, ResourceExhausted,
+        "The operation exceeded a capacity or admission budget.",
+        "Honor retry_after_ms when retryable, or free capacity before retrying.";
+    SCHEMA_REFUSED = "UDB_SCHEMA_REFUSED", Schema, FailedPrecondition,
+        "The schema or catalog cannot satisfy the request; capability_required identifies the mismatch.",
+        "Correct the request or activate a compatible catalog before retrying.";
+    BACKEND_UNAVAILABLE = "UDB_BACKEND_UNAVAILABLE", Retryable, Unavailable,
+        "A transient backend or transport failure prevented the operation.",
+        "Retry after retry_after_ms using the same idempotency key for a mutation.";
+    DEADLINE_EXCEEDED = "UDB_DEADLINE_EXCEEDED", Retryable, DeadlineExceeded,
+        "The operation exceeded its deadline; a mutation may have completed.",
+        "Retry after retry_after_ms using the same idempotency key for a mutation.";
+    RETRY_ABORTED = "UDB_RETRY_ABORTED", Retryable, Aborted,
+        "A transient concurrency failure aborted the operation.",
+        "Retry after retry_after_ms using the same idempotency key for a mutation.";
+    INTERNAL_ERROR = "UDB_INTERNAL_ERROR", Internal, Internal,
+        "An unexpected broker or storage failure prevented the operation.",
+        "Report the correlation ID and operation to the operator before repeating a mutation.";
+    VALIDATION_FAILED = "UDB_VALIDATION_FAILED", Validation, InvalidArgument,
+        "The request failed field validation; field_violations identifies the invalid input.",
+        "Correct the named fields before repeating the request.";
+    PRECONDITION_CONFLICT = "UDB_PRECONDITION_CONFLICT", Conflict, FailedPrecondition,
+        "A concurrency precondition refused the operation without a more specific reason.",
+        "Read current state and satisfy the precondition before retrying.";
+    RESOURCE_NOT_FOUND = "UDB_RESOURCE_NOT_FOUND", NotFound, NotFound,
+        "The requested resource does not exist or is not visible to the caller.",
+        "Check the resource identifier and the caller's tenant and permissions.";
+    PERMISSION_DENIED = "UDB_PERMISSION_DENIED", Permission, PermissionDenied,
+        "The caller is not permitted to perform the operation.",
+        "Check the caller's scopes, grants and policy; missing contains available diagnostics.";
+    VALUE_REDACTED = "UDB_VALUE_REDACTED", Redacted, FailedPrecondition,
+        "A protected value is redacted for the caller.",
+        "Request the required PII read scope, or omit the protected value.";
+    FAILURE = "UDB_FAILURE", Unspecified, Unknown,
+        "A refusal has no recognized error kind; the original gRPC code is retained.",
+        "Report the original code, correlation ID and operation to the operator.";
+}
+
+/// Fill the shared legacy helpers' missing reason from the same registry as
+/// domain refusals. This runs after sanitization and before wire encoding.
+/// Specific registered reasons retain their kind, code and diagnostics.
+pub(crate) fn ensure_registered_reason(code: tonic::Code, mut detail: ErrorDetail) -> ErrorDetail {
+    if let Some(reason) = ALL.iter().find(|reason| reason.code == detail.reason) {
+        if detail.fix_hint.is_empty() {
+            detail.fix_hint = reason.fix_hint.to_string();
+        }
+        return detail;
+    }
+    let reason = match ErrorKind::try_from(detail.kind).unwrap_or(ErrorKind::Unspecified) {
+        ErrorKind::Capability => CAPABILITY_UNSUPPORTED,
+        ErrorKind::Policy if code == tonic::Code::Unauthenticated => AUTHENTICATION_FAILED,
+        ErrorKind::Policy => POLICY_REFUSED,
+        ErrorKind::Quota => QUOTA_EXCEEDED,
+        ErrorKind::Schema => SCHEMA_REFUSED,
+        ErrorKind::Retryable if code == tonic::Code::DeadlineExceeded => DEADLINE_EXCEEDED,
+        ErrorKind::Retryable if code == tonic::Code::Aborted => RETRY_ABORTED,
+        ErrorKind::Retryable => BACKEND_UNAVAILABLE,
+        ErrorKind::Internal => INTERNAL_ERROR,
+        ErrorKind::Validation => VALIDATION_FAILED,
+        ErrorKind::Conflict => PRECONDITION_CONFLICT,
+        ErrorKind::NotFound => RESOURCE_NOT_FOUND,
+        ErrorKind::Unique => UNIQUE_VIOLATION,
+        ErrorKind::NotNull => NOT_NULL_VIOLATION,
+        ErrorKind::ForeignKey => FOREIGN_KEY_VIOLATION,
+        ErrorKind::Permission => PERMISSION_DENIED,
+        ErrorKind::Redacted => VALUE_REDACTED,
+        ErrorKind::RateLimited => RATE_LIMITED,
+        ErrorKind::Unspecified => FAILURE,
+    };
+    detail.reason = reason.code.to_string();
+    detail.fix_hint = reason.fix_hint.to_string();
+    detail
 }
 
 /// Builds a refusal status carrying a typed [`ErrorDetail`] with `reason`.
@@ -261,7 +342,10 @@ pub(crate) fn render_reasons_markdown() -> String {
          `udb-error-detail-bin` trailer). Its `reason` is one of the codes below. \
          A code is never renamed once shipped: branch on it, never on the message \
          text. The SDKs expose it as `Reason()` / `reason`.\n\n\
-         | Reason | gRPC code | Kind | When | Fix |\n\
+         Shared helper reasons retain the original gRPC code and kind. The \
+         table lists each reason's default code; a specific domain reason takes \
+         precedence over a shared helper reason.\n\n\
+         | Reason | Default gRPC code | Kind | When | Fix |\n\
          |---|---|---|---|---|\n",
     );
     for reason in ALL {
@@ -308,6 +392,11 @@ mod tests {
             render_reasons_markdown(),
             "docs/error-reasons.md is stale; regenerate it from src/runtime/error_reasons.rs \
              (cargo test prints the expected content above)"
+        );
+        assert_eq!(
+            include_str!("../../docs/reference/error-reasons.md").replace("\r\n", "\n"),
+            committed,
+            "the planned reference artifact must match the same registry output"
         );
     }
 
