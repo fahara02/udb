@@ -3583,7 +3583,7 @@ fn substitute_entity(body: &str, entity: &EntityDescriptor) -> String {
         .or_else(|| entity.language_classes.get("python"))
         .cloned()
         .unwrap_or_default();
-    let pairs: [(&str, String); 27] = [
+    let pairs = [
         ("{{ENTITY_MESSAGE_TYPE}}", entity.message_type.clone()),
         ("{{ENTITY_SHORT_NAME}}", short_name.clone()),
         ("{{ENTITY_ALIAS_SNAKE}}", alias_snake_case(&short_name)),

@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	authnentpb "github.com/fahara02/udb/sdk/go/gen/udb/core/authn/entity/v1"
 	authnv1 "github.com/fahara02/udb/sdk/go/gen/udb/core/authn/services/v1"
 	configv1 "github.com/fahara02/udb/sdk/go/gen/udb/core/config/services/v1"
 	storagev1 "github.com/fahara02/udb/sdk/go/gen/udb/core/storage/services/v1"
@@ -82,7 +83,7 @@ type UserSession struct {
 // prefix). An invalid or expired token is an error.
 func (c *AuthClient) ValidateSession(ctx context.Context, token string) (*UserSession, error) {
 	token = strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(token), "Bearer "))
-	res, err := c.Authn.ValidateToken(c.Context(ctx), &authnv1.ValidateTokenRequest{Token: token})
+	res, err := c.Authn.ValidateToken(c.Context(ctx), &authnv1.ValidateTokenRequest{Token: token, TokenType: authnentpb.TokenType_TOKEN_TYPE_JWT_ACCESS})
 	if err != nil {
 		return nil, err
 	}

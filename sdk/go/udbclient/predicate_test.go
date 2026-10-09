@@ -68,9 +68,9 @@ type predicateWireServer struct {
 	requests chan *entityv1.SelectRequest
 }
 
-func (s *predicateWireServer) Select(_ context.Context, request *entityv1.SelectRequest) (*entityv1.SelectResponse, error) {
+func (s *predicateWireServer) Select(_ context.Context, request *entityv1.SelectRequest) (*entityv1.RecordSet, error) {
 	s.requests <- request
-	return &entityv1.SelectResponse{}, nil
+	return &entityv1.RecordSet{}, nil
 }
 
 // Exercise Table.Select and the generated TCP client, not only a helper map:

@@ -119,10 +119,13 @@ fn request_has_explicit_catalog_platform_authority(security: &SecurityContext) -
     }
 }
 
-pub(crate) fn require_catalog_platform_authority(operation: &'static str) -> Result<(), Status> {
-    if crate::runtime::service::method_security::claim_context_present()
-        && !explicit_catalog_platform_authority()
-    {
+pub(crate) fn require_catalog_platform_authority(
+    security: &SecurityContext,
+    operation: &'static str,
+) -> Result<(), Status> {
+    // The data listener supplies verified SecurityContext without the native
+    // listener's task-local claim carrier; absence cannot grant global access.
+    if !request_has_explicit_catalog_platform_authority(security) {
         return Err(service_policy_denied(
             operation,
             "catalog_platform_authority_required",
@@ -1216,5 +1219,69 @@ impl DataBrokerService {
             }
             Err(err) => self.record_grpc("ApproveMigrationPlan", started, Err(err)),
         }
+    }
+}
+
+#[cfg(test)]
+mod catalog_platform_authority_tests {
+    use super::*;
+
+    #[test]
+    fn data_listener_tenant_admin_cannot_enumerate_global_projects() {
+        assert!(!method_security::claim_context_present());
+        for scope in ["", "*", "udb:*", "udb:admin", "udb:auth:admin"] {
+            let security = SecurityContext {
+                tenant_id: "tenant-one".into(),
+                project_id: "project-one".into(),
+                scopes: vec![scope.into()],
+                ..Default::default()
+            };
+            assert_eq!(
+                require_catalog_platform_authority(&security, "ListProjects")
+                    .expect_err("tenant action scopes cannot grant global enumeration")
+                    .code(),
+                tonic::Code::PermissionDenied
+            );
+        }
+        let platform = SecurityContext {
+            scopes: vec!["udb:platform_admin".into()],
+            ..Default::default()
+        };
+        require_catalog_platform_authority(&platform, "ListProjects")
+            .expect("verified explicit platform scope admits global enumeration");
+    }
+
+    #[tokio::test]
+    async fn native_listener_verified_claim_controls_platform_authority() {
+        let fallback = SecurityContext {
+            scopes: vec!["udb:platform_admin".into()],
+            ..Default::default()
+        };
+        let tenant = method_security::VerifiedClaimContext {
+            authenticated: true,
+            tenant_id: "tenant-one".into(),
+            project_id: "project-one".into(),
+            scopes: vec!["udb:admin".into()],
+            ..Default::default()
+        };
+        method_security::scope_claim_context_for_test(tenant, async {
+            assert_eq!(
+                require_catalog_platform_authority(&fallback, "ListProjects")
+                    .expect_err("a present verified tenant claim overrides fallback scopes")
+                    .code(),
+                tonic::Code::PermissionDenied
+            );
+        })
+        .await;
+        let platform = method_security::VerifiedClaimContext {
+            authenticated: true,
+            roles: vec!["platform_admin".into()],
+            ..Default::default()
+        };
+        method_security::scope_claim_context_for_test(platform, async {
+            require_catalog_platform_authority(&SecurityContext::default(), "ListProjects")
+                .expect("actual verified platform role admits enumeration");
+        })
+        .await;
     }
 }

@@ -369,7 +369,7 @@ func TestLiveAsUserPreservesVerifiedAuthority(t *testing.T) {
 		t.Fatalf("actual enterprise DataContext delegation failed: code=%s", status.Code(err))
 	}
 	err = call(func(callCtx context.Context) error {
-		verified, err := enterprise.Auth.Authn.ValidateToken(enterprise.NativeContext(enterprise.AsUser(callCtx, delegated.GetAccessToken())), &authnv1.ValidateTokenRequest{Token: delegated.GetAccessToken()})
+		verified, err := enterprise.Auth.Authn.ValidateToken(enterprise.NativeContext(enterprise.AsUser(callCtx, delegated.GetAccessToken())), &authnv1.ValidateTokenRequest{Token: delegated.GetAccessToken(), TokenType: authnentpb.TokenType_TOKEN_TYPE_JWT_ACCESS})
 		if err == nil && (!verified.GetValid() || verified.GetUserId() != identity.UserID || verified.GetTenantId() != identity.TenantID || verified.GetProjectId() != identity.ProjectID) {
 			t.Fatal("enterprise native delegation returned another verified principal")
 		}

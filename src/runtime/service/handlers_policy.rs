@@ -316,7 +316,7 @@ impl DataBrokerService {
             return self.record_grpc("ListProjects", started, Err(err));
         }
         if let Err(err) =
-            super::handlers_catalog::require_catalog_platform_authority("ListProjects")
+            super::handlers_catalog::require_catalog_platform_authority(&security, "ListProjects")
         {
             return self.record_grpc("ListProjects", started, Err(err));
         }
