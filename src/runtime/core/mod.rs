@@ -594,6 +594,7 @@ pub(crate) struct ProjectCatalogRecord {
     pub(crate) catalog_id: String,
     pub(crate) version: String,
     pub(crate) checksum_sha256: String,
+    pub(crate) manifest_integrity_sha256: String,
     pub(crate) manifest: CatalogManifest,
     pub(crate) status: String,
     pub(crate) compatibility_level: String,
@@ -620,6 +621,8 @@ mod accessors;
 pub(crate) use accessors::RoutedReadPool;
 mod catalog_admin;
 mod catalog_sql;
+mod catalog_transition;
+pub use catalog_transition::ReviewedCatalogPlanRequest;
 pub mod delivery_health;
 pub(crate) mod native_store;
 pub use catalog_sql::ManifestDrift;

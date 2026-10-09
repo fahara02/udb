@@ -77,6 +77,9 @@ pub(crate) enum Command {
         project: String,
         dsn: Option<String>,
     },
+    /// Explicit authenticated reviewed transition over the broker's native
+    /// migration/catalog RPCs. Ordinary catalog commands retain their policy.
+    CatalogTransition(super::catalog_transition::TransitionCommand),
     /// Compare the proto manifest against a LIVE database, read-only, using the
     /// same comparison startup runs — so drift is found before any DDL is
     /// applied rather than after.
@@ -1229,6 +1232,15 @@ const VALUE_FLAGS: &[&str] = &[
     "--repo",
     "--max",
     "--version",
+    "--manifest",
+    "--plan",
+    "--approval",
+    "--run-id",
+    "--expected-active-catalog-id",
+    "--expected-active-manifest-integrity-sha256",
+    "--idempotency-key",
+    "--target",
+    "--timeout-secs",
 ];
 
 /// Collect positional (non-flag) tokens after `start`, skipping any token that
@@ -1280,6 +1292,13 @@ pub(crate) fn parse_args(args: &[String]) -> (Command, String, String, String) {
     let _ = prior_manifest_path; // used by Drift/Plan handlers via env fallback below
 
     let command = match args.first().map(|value| value.as_str()) {
+        Some("catalog") if args.get(1).map(String::as_str) == Some("transition") => {
+            offset = args.len();
+            match super::catalog_transition::parse(args) {
+                Ok(command) => Command::CatalogTransition(command),
+                Err(message) => Command::InvalidUsage { message },
+            }
+        }
         Some("catalog") if matches!(args.get(1).map(String::as_str), Some("bootstrap")) => {
             offset = 2;
             Command::CatalogBootstrap {

@@ -515,3 +515,61 @@ Before you call a release ready, gather evidence: the SDK conformance runner
 (`scripts/native-load-test.sh` or `scripts/native-load-test.ps1`), a multi-node
 broker exercise, and compliance-mode checks that confirm audit, method security,
 and redaction all behave.
+
+## Reviewed catalog transitions
+
+A `backward` catalog transition may contain operations classified `RequiresReview`.
+Use `udb catalog transition` with the matching broker/CLI release to review an
+immutable candidate **before staging**. Ordinary `catalog stage` and `activate`
+retain their compatibility checks. Blocked or data-destructive changes cannot use
+this workflow.
+
+Set `UDB_AUTH_TOKEN` (or `UDB_BEARER_TOKEN`) to an authorized operator bearer,
+`UDB_TENANT_ID` to its tenant and `UDB_GRPC_TARGET` to its project broker. For an
+HTTPS endpoint, set `UDB_TLS_CA_FILE` to the trusted CA file. The broker verifies
+the actual actor, tenant, project and permissions. Every mutation needs its own
+stable `--idempotency-key`; retries of that same request reuse the same key.
+
+1. Discover the current durable ACTIVE catalog with
+   `udb catalog transition status --project PROJECT`. Retain its `catalog_id` and
+   `manifest_integrity_sha256`. The latter is the stored **outer integrity hash**;
+   `checksum_sha256` is a different selector and cannot substitute for it.
+2. Plan the exact generated candidate:
+   `udb catalog transition plan --project PROJECT --manifest candidate.json --expected-active-catalog-id ACTIVE_ID --expected-active-manifest-integrity-sha256 OUTER_HASH --idempotency-key PLAN_KEY --out plan.json`.
+   The broker stores the candidate, original ACTIVE binding, complete operation
+   hash and reviewed fingerprint set. It does not require a staged target.
+3. Review the actual operations, safety classifications and fingerprints in that
+   response. Then authorize that exact plan:
+   `udb catalog transition approve --project PROJECT --plan plan.json --idempotency-key APPROVAL_KEY --out approval.json`.
+   The broker persists approval from the verified actor. The opaque approval
+   token is written to a new file with Unix mode `0600`; stdout omits it.
+4. Apply or verify the real routed PostgreSQL target:
+   `udb catalog transition apply --project PROJECT --approval approval.json --idempotency-key APPLY_KEY`.
+   Continue only after the native run reaches `COMPLETED`. Actual broker DDL
+   records `APPLIED`; an already-applied exact target records `VERIFIED` after
+   native shape verification. A filesystem receipt cannot authorize either.
+5. Stage the same immutable candidate with that run reference:
+   `udb catalog transition stage --project PROJECT --manifest candidate.json --run-id RUN_ID --idempotency-key STAGE_KEY`.
+   Retain the returned staged `catalog_id`.
+6. Activate that exact staged catalog:
+   `udb catalog transition activate --project PROJECT --catalog-id STAGED_ID --run-id RUN_ID --idempotency-key ACTIVATE_KEY`.
+   Inspect the durable run with
+   `udb catalog transition status --project PROJECT --run-id RUN_ID`.
+
+The broker checks native approval and application evidence under the project
+lock at staging and activation. Missing or foreign evidence, changed candidate
+content, incomplete/failed application, altered target authority, or a changed
+ACTIVE base are refused. After a base change, create and review a new plan;
+reusing the old receipt cannot establish authority. Restart/retry consumes the
+durable run and its verified native target receipts, preserving transactional
+audit and idempotency.
+
+The initial reviewed application path supports transactional PostgreSQL schema,
+table and column changes, existing-table foreign-key additions, nullable
+widening and plain-index changes, plus retention-class metadata changes.
+Partial indexes require native PostgreSQL predicate verification. Concurrent or
+expression indexes, custom operator classes/parameters, unsupported physical
+objects and other table-security changes are refused until their application
+and verification paths exist. Keep approval files private and retain the exact
+candidate and plan for release review. Response files cache server evidence;
+they are not canonical stores.

@@ -1,6 +1,133 @@
 use super::*;
 
 #[test]
+fn reviewed_catalog_cli_requires_exact_native_base_and_explicit_review_workflow() {
+    let args = [
+        "catalog",
+        "transition",
+        "plan",
+        "--project",
+        "owned",
+        "--manifest",
+        "candidate.json",
+        "--expected-active-catalog-id",
+        "active-id",
+        "--expected-active-manifest-integrity-sha256",
+        "outer-hash",
+        "--out",
+        "new-plan.json",
+        "--idempotency-key",
+        "plan-once",
+    ]
+    .map(str::to_string);
+    let (command, proto_root, _, _) = parse_args(&args);
+    let Command::CatalogTransition(command) = command else {
+        panic!("authenticated transition was not parsed")
+    };
+    assert_eq!(command.action, catalog_transition::TransitionAction::Plan);
+    assert_eq!(
+        command.expected_active_catalog_id.as_deref(),
+        Some("active-id")
+    );
+    assert_eq!(
+        command.expected_active_manifest_integrity_sha256.as_deref(),
+        Some("outer-hash")
+    );
+    assert_eq!(command.manifest.as_deref(), Some("candidate.json"));
+    assert_eq!(
+        proto_root, "proto",
+        "review inputs must not become a proto directory"
+    );
+    for omitted in [
+        "--expected-active-catalog-id",
+        "--expected-active-manifest-integrity-sha256",
+        "--idempotency-key",
+    ] {
+        let mut missing = args.to_vec();
+        let index = missing
+            .iter()
+            .position(|argument| argument == omitted)
+            .unwrap();
+        missing.drain(index..index + 2);
+        let (command, _, _, _) = parse_args(&missing);
+        assert!(matches!(command, Command::InvalidUsage { message } if message.contains(omitted)));
+    }
+}
+
+#[test]
+fn reviewed_catalog_cli_discovers_active_authority_before_planning() {
+    let args = ["catalog", "transition", "status", "--project", "owned"].map(str::to_string);
+    let Command::CatalogTransition(discovery) = parse_args(&args).0 else {
+        panic!("ACTIVE discovery must parse");
+    };
+    assert_eq!(
+        discovery.action,
+        catalog_transition::TransitionAction::Status
+    );
+    assert!(discovery.run_id.is_none());
+    let args = [
+        "catalog",
+        "transition",
+        "status",
+        "--project",
+        "owned",
+        "--run-id",
+        "native-run",
+    ]
+    .map(str::to_string);
+    let Command::CatalogTransition(status) = parse_args(&args).0 else {
+        panic!("durable run status must parse");
+    };
+    assert_eq!(status.run_id.as_deref(), Some("native-run"));
+}
+
+#[test]
+fn reviewed_catalog_cli_refuses_unchecked_receipts_and_ambiguous_arguments() {
+    for values in [
+        vec![
+            "catalog",
+            "transition",
+            "approve",
+            "--project",
+            "owned",
+            "--receipt",
+            "filesystem.json",
+        ],
+        vec![
+            "catalog",
+            "transition",
+            "status",
+            "--project",
+            "owned",
+            "--run-id",
+            "run",
+            "--project",
+            "foreign",
+        ],
+        vec![
+            "catalog",
+            "transition",
+            "status",
+            "--project",
+            "owned",
+            "--run-id",
+            "run",
+            "--timeout-secs",
+            "0",
+        ],
+        vec!["catalog", "transition", "unknown"],
+    ] {
+        let args = values.into_iter().map(str::to_string).collect::<Vec<_>>();
+        assert!(matches!(parse_args(&args).0, Command::InvalidUsage { .. }));
+    }
+    // No reviewed reference is introduced into the existing direct-PG path.
+    let args = ["catalog", "stage", "--project", "owned"].map(str::to_string);
+    assert!(
+        matches!(parse_args(&args).0, Command::CatalogStage { project, .. } if project == "owned")
+    );
+}
+
+#[test]
 fn parse_args_recognizes_doctor_without_proto_root() {
     let args = vec!["doctor".to_string()];
     let (command, proto_root, namespace, serve_addr) = parse_args(&args);

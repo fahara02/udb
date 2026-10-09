@@ -21,7 +21,7 @@ type CatalogRecordRow = (
     i64,
 );
 
-fn migration_approval_tokens_match(provided: &str, stored: &str) -> bool {
+pub(super) fn migration_approval_tokens_match(provided: &str, stored: &str) -> bool {
     !provided.trim().is_empty()
         && !stored.trim().is_empty()
         && crate::runtime::authn::constant_time_eq(provided.trim(), stored.trim())
@@ -35,7 +35,7 @@ fn migration_has_native_resource_lifecycle(kind: &crate::backend::BackendKind) -
     kind.capabilities_v2().lifecycle.is_native_executor()
 }
 
-fn catalog_admin_invalid_field(
+pub(super) fn catalog_admin_invalid_field(
     field: impl Into<String>,
     description: impl Into<String>,
     message: impl Into<String>,
@@ -67,7 +67,7 @@ fn catalog_admin_policy_not_found_status(
     )
 }
 
-fn catalog_admin_schema_status(
+pub(super) fn catalog_admin_schema_status(
     operation: &'static str,
     schema_code: &'static str,
     message: impl Into<String>,
@@ -131,7 +131,7 @@ fn catalog_admin_capability_status(
     )
 }
 
-fn catalog_admin_internal_status(
+pub(super) fn catalog_admin_internal_status(
     operation: impl Into<String>,
     message: impl Into<String>,
 ) -> tonic::Status {
@@ -172,7 +172,7 @@ fn catalog_idempotency_conflict_status(operation: &'static str) -> tonic::Status
     )
 }
 
-fn catalog_request_fingerprint(parts: &[&[u8]]) -> String {
+pub(super) fn catalog_request_fingerprint(parts: &[&[u8]]) -> String {
     use sha2::{Digest, Sha256};
 
     let mut hasher = Sha256::new();
@@ -183,7 +183,7 @@ fn catalog_request_fingerprint(parts: &[&[u8]]) -> String {
     format!("{:x}", hasher.finalize())
 }
 
-fn canonical_catalog_project_id(project_id: &str) -> Result<String, tonic::Status> {
+pub(super) fn canonical_catalog_project_id(project_id: &str) -> Result<String, tonic::Status> {
     let project_id = project_id.trim();
     if project_id.is_empty() {
         return Err(catalog_admin_invalid_field(
@@ -195,7 +195,7 @@ fn canonical_catalog_project_id(project_id: &str) -> Result<String, tonic::Statu
     Ok(project_id.to_string())
 }
 
-fn catalog_manifest_integrity_sha256(
+pub(super) fn catalog_manifest_integrity_sha256(
     operation: &'static str,
     project_id: &str,
     manifest: &CatalogManifest,
@@ -275,7 +275,7 @@ fn catalog_semver(version: &str) -> Option<(u64, u64, u64)> {
     Some((major, minor, patch))
 }
 
-fn catalog_transition_is_compatible(level: &str, from: &str, to: &str) -> bool {
+pub(super) fn catalog_transition_is_compatible(level: &str, from: &str, to: &str) -> bool {
     if from.trim().is_empty() {
         return true;
     }
@@ -290,7 +290,7 @@ fn catalog_transition_is_compatible(level: &str, from: &str, to: &str) -> bool {
     }
 }
 
-fn catalog_compatibility_evidence(
+pub(super) fn catalog_compatibility_evidence(
     operation: &'static str,
     level: &str,
     from_version: &str,
@@ -427,7 +427,7 @@ fn parse_catalog_manifest_json(manifest_json: &[u8]) -> Result<serde_json::Value
     })
 }
 
-fn validate_approval_token_for_plan(approval_token: &str) -> Result<(), tonic::Status> {
+pub(super) fn validate_approval_token_for_plan(approval_token: &str) -> Result<(), tonic::Status> {
     if approval_token.trim().is_empty() {
         return Err(catalog_admin_invalid_field(
             "approval_token",
@@ -438,7 +438,7 @@ fn validate_approval_token_for_plan(approval_token: &str) -> Result<(), tonic::S
     Ok(())
 }
 
-fn parse_migration_run_id(run_id: &str) -> Result<Uuid, tonic::Status> {
+pub(super) fn parse_migration_run_id(run_id: &str) -> Result<Uuid, tonic::Status> {
     run_id.parse().map_err(|_| {
         catalog_admin_invalid_field("run_id", "must be a UUID", "run_id must be a UUID")
     })
@@ -523,7 +523,7 @@ fn migration_resource_spec_json(payload: &serde_json::Value) -> String {
         .to_string()
 }
 
-async fn ensure_migration_payload_json_column(
+pub(super) async fn ensure_migration_payload_json_column(
     pool: &sqlx::PgPool,
     ledger_rel: &str,
 ) -> Result<(), tonic::Status> {
@@ -572,7 +572,7 @@ async fn ensure_migration_payload_json_column(
     Ok(())
 }
 
-async fn ensure_migration_run_provenance_columns(
+pub(super) async fn ensure_migration_run_provenance_columns(
     pool: &sqlx::PgPool,
     runs_rel: &str,
 ) -> Result<(), tonic::Status> {
@@ -601,7 +601,7 @@ async fn ensure_migration_run_provenance_columns(
     Ok(())
 }
 
-async fn ensure_migration_runs_approved_state(
+pub(super) async fn ensure_migration_runs_approved_state(
     pool: &sqlx::PgPool,
     runs_rel: &str,
     runs_table: &str,
@@ -644,7 +644,9 @@ fn postgres_create_table_payload(
     })
 }
 
-fn migration_phase_ledger_relation(config: &crate::runtime::system::SystemCatalogConfig) -> String {
+pub(super) fn migration_phase_ledger_relation(
+    config: &crate::runtime::system::SystemCatalogConfig,
+) -> String {
     format!(
         "{}.{}",
         qi_runtime(&config.cdc.system_schema),
@@ -777,6 +779,11 @@ impl crate::migration::ApplyTarget for CatalogMigrationApplyTarget<'_> {
                         })?;
                     Ok(!resources.iter().any(|value| value == &resource_name))
                 }
+                ("postgres", "reviewed_sql") => self
+                    .runtime
+                    .reviewed_artifact_applied(self.pool, &payload)
+                    .await
+                    .map_err(|err| crate::migration::ApplyError::Unreachable(err.to_string())),
                 ("postgres", "apply_sql") => Ok(false),
                 _ => Err(crate::migration::ApplyError::BackendRejected {
                     backend,
@@ -820,7 +827,8 @@ impl crate::migration::MigrationAuditSink for ExistingRunMigrationAuditSink<'_> 
             let op_kind = self.op_kinds.get(index).map(String::as_str).unwrap_or("");
             let status = if result.error.is_some() {
                 "FAILED"
-            } else if result.skipped && op_kind.starts_with("verify") {
+            } else if result.skipped && (op_kind.starts_with("verify") || op_kind == "reviewed_sql")
+            {
                 "VERIFIED"
             } else if result.skipped {
                 "SKIPPED"
@@ -942,6 +950,11 @@ impl DataBrokerRuntime {
                     Ok(())
                 }
             }
+            ("postgres", "reviewed_sql") => {
+                super::catalog_transition::reviewed_sql_artifact(payload)
+                    .map(|_| ())
+                    .map_err(|err| err.to_string())
+            }
             ("postgres", "verify_table") => Ok(()),
             (_, "ensure_resource" | "verify_resource" | "drop_resource") => {
                 let plugin = crate::backend::plugin_for(backend).ok_or_else(|| {
@@ -993,6 +1006,19 @@ impl DataBrokerRuntime {
                     .await
                     .map(|_| MigrationApplyOutcome::Applied)
                     .map_err(|err| format!("SQL execution failed for {resource_uri}: {err}"))
+            }
+            ("postgres", "reviewed_sql") => {
+                let artifact = super::catalog_transition::reviewed_sql_artifact(payload)
+                    .map_err(|err| err.to_string())?;
+                Self::apply_sql_artifact(
+                    pool,
+                    &artifact,
+                    false,
+                    crate::control::tracker::DEFAULT_LEDGER_SCHEMA,
+                )
+                .await
+                .map(|_| MigrationApplyOutcome::Applied)
+                .map_err(|err| err.to_string())
             }
             ("postgres", "verify_table") => {
                 let schema = payload
@@ -1066,6 +1092,57 @@ impl DataBrokerRuntime {
         actor: &str,
         compatibility_level: &str,
         idempotency_key: &str,
+    ) -> Result<CatalogMutationResult, tonic::Status> {
+        self.stage_catalog_with_review(
+            project_id,
+            version,
+            manifest_json,
+            reason,
+            actor,
+            compatibility_level,
+            idempotency_key,
+            None,
+        )
+        .await
+    }
+
+    pub(crate) async fn stage_catalog_reviewed(
+        &self,
+        project_id: &str,
+        version: &str,
+        manifest_json: &[u8],
+        reason: &str,
+        actor: &str,
+        compatibility_level: &str,
+        idempotency_key: &str,
+        tenant_id: &str,
+        reviewed_run_id: &str,
+    ) -> Result<CatalogMutationResult, tonic::Status> {
+        super::catalog_transition::require_reviewed_identity(tenant_id, actor)?;
+        self.ensure_catalog_transition_storage().await?;
+        self.stage_catalog_with_review(
+            project_id,
+            version,
+            manifest_json,
+            reason,
+            actor,
+            compatibility_level,
+            idempotency_key,
+            Some((tenant_id, reviewed_run_id)),
+        )
+        .await
+    }
+
+    async fn stage_catalog_with_review(
+        &self,
+        project_id: &str,
+        version: &str,
+        manifest_json: &[u8],
+        reason: &str,
+        actor: &str,
+        compatibility_level: &str,
+        idempotency_key: &str,
+        review: Option<(&str, &str)>,
     ) -> Result<CatalogMutationResult, tonic::Status> {
         use crate::runtime::system::SystemCatalogConfig;
         let project_id = canonical_catalog_project_id(project_id)?;
@@ -1141,7 +1218,7 @@ impl DataBrokerRuntime {
                 "manifest checksum_sha256 does not match the decoded catalog content",
             ));
         }
-        let request_fingerprint = catalog_request_fingerprint(&[
+        let ordinary_request_fingerprint = catalog_request_fingerprint(&[
             b"STAGE",
             project_id.as_bytes(),
             version.as_bytes(),
@@ -1151,6 +1228,15 @@ impl DataBrokerRuntime {
             reason.as_bytes(),
             actor.as_bytes(),
         ]);
+        let request_fingerprint = match review {
+            Some((tenant, run)) => catalog_request_fingerprint(&[
+                b"REVIEWED_STAGE_V1",
+                ordinary_request_fingerprint.as_bytes(),
+                tenant.as_bytes(),
+                run.as_bytes(),
+            ]),
+            None => ordinary_request_fingerprint,
+        };
         let cat_rel = config.catalog_versions_relation();
         let reload_rel = config.catalog_reload_log_relation();
         let mut tx = pool.begin().await.map_err(|err| {
@@ -1194,6 +1280,17 @@ impl DataBrokerRuntime {
                     "stage_catalog idempotency row has no catalog_id",
                 )
             })?;
+            if let Some((tenant, run)) = review {
+                self.validate_reviewed_catalog_replay(
+                    &mut tx,
+                    tenant,
+                    &project_id,
+                    run,
+                    catalog_id,
+                    "stage_catalog",
+                )
+                .await?;
+            }
             tx.commit().await.map_err(|err| {
                 catalog_admin_internal_status(
                     "stage_catalog_commit",
@@ -1204,7 +1301,9 @@ impl DataBrokerRuntime {
                 .load_catalog_record_for_project(&project_id, catalog_id)
                 .await?;
             let mut catalog = catalog;
-            catalog.status = "STAGED".to_string();
+            if review.is_none() {
+                catalog.status = "STAGED".to_string();
+            }
             return Ok(CatalogMutationResult {
                 catalog,
                 replayed: true,
@@ -1294,22 +1393,46 @@ impl DataBrokerRuntime {
                 )
             })
             .transpose()?;
-        let compatibility_evidence_sha256 = catalog_compatibility_evidence(
-            "stage_catalog",
-            compatibility_level,
-            validated_against
-                .as_ref()
-                .map(|row| row.1.as_str())
-                .unwrap_or_default(),
-            validated_against
-                .as_ref()
-                .map(|row| row.4.as_str())
-                .unwrap_or_default(),
-            validated_against_manifest.as_ref(),
-            version,
-            &manifest_integrity_sha256,
-            &manifest,
-        )?;
+        let compatibility_evidence_sha256 = match review {
+            Some((tenant, run)) => {
+                self.reviewed_catalog_compatibility_evidence(
+                    &mut tx,
+                    "stage_catalog",
+                    tenant,
+                    &project_id,
+                    run,
+                    None,
+                    compatibility_level,
+                    validated_against.as_ref().map(|row| row.0),
+                    validated_against
+                        .as_ref()
+                        .map(|row| row.4.as_str())
+                        .unwrap_or_default(),
+                    validated_against_manifest.as_ref(),
+                    version,
+                    &manifest_integrity_sha256,
+                    &manifest,
+                    true,
+                )
+                .await?
+            }
+            None => catalog_compatibility_evidence(
+                "stage_catalog",
+                compatibility_level,
+                validated_against
+                    .as_ref()
+                    .map(|row| row.1.as_str())
+                    .unwrap_or_default(),
+                validated_against
+                    .as_ref()
+                    .map(|row| row.4.as_str())
+                    .unwrap_or_default(),
+                validated_against_manifest.as_ref(),
+                version,
+                &manifest_integrity_sha256,
+                &manifest,
+            )?,
+        };
         let validated_against_id = validated_against.as_ref().map(|row| row.0);
         let validated_against_checksum = validated_against
             .as_ref()
@@ -1364,6 +1487,17 @@ impl DataBrokerRuntime {
                 format!("stage_catalog reload log failed: {err}"),
             )
         })?;
+        if let Some((tenant, run)) = review {
+            self.bind_reviewed_staged_catalog(
+                &mut tx,
+                tenant,
+                &project_id,
+                run,
+                catalog_id,
+                &compatibility_evidence_sha256,
+            )
+            .await?;
+        }
         tx.commit().await.map_err(|err| {
             catalog_admin_internal_status(
                 "stage_catalog_commit",
@@ -1554,6 +1688,33 @@ impl DataBrokerRuntime {
             "ACTIVATE",
             "activate_catalog",
             idempotency_key,
+            None,
+        )
+        .await
+    }
+
+    pub(crate) async fn activate_catalog_reviewed(
+        &self,
+        project_id: &str,
+        catalog_id: &str,
+        reason: &str,
+        actor: &str,
+        idempotency_key: &str,
+        tenant_id: &str,
+        reviewed_run_id: &str,
+    ) -> Result<CatalogMutationResult, tonic::Status> {
+        super::catalog_transition::require_reviewed_identity(tenant_id, actor)?;
+        self.ensure_catalog_transition_storage().await?;
+        self.transition_catalog(
+            project_id,
+            catalog_id,
+            reason,
+            actor,
+            "STAGED",
+            "ACTIVATE",
+            "activate_catalog",
+            idempotency_key,
+            Some((tenant_id, reviewed_run_id)),
         )
         .await
     }
@@ -1568,6 +1729,7 @@ impl DataBrokerRuntime {
         reload_action: &'static str,
         operation: &'static str,
         idempotency_key: &str,
+        review: Option<(&str, &str)>,
     ) -> Result<CatalogMutationResult, tonic::Status> {
         use crate::runtime::system::SystemCatalogConfig;
         let project_id = canonical_catalog_project_id(project_id)?;
@@ -1581,13 +1743,22 @@ impl DataBrokerRuntime {
         let log_rel = config.catalog_activation_log_relation();
         let binding_rel = config.project_catalog_bindings_relation();
         let reload_rel = config.catalog_reload_log_relation();
-        let request_fingerprint = catalog_request_fingerprint(&[
+        let ordinary_request_fingerprint = catalog_request_fingerprint(&[
             reload_action.as_bytes(),
             project_id.as_bytes(),
             catalog_id.as_bytes(),
             reason.as_bytes(),
             actor.as_bytes(),
         ]);
+        let request_fingerprint = match review {
+            Some((tenant, run)) => catalog_request_fingerprint(&[
+                b"REVIEWED_ACTIVATE_V1",
+                ordinary_request_fingerprint.as_bytes(),
+                tenant.as_bytes(),
+                run.as_bytes(),
+            ]),
+            None => ordinary_request_fingerprint,
+        };
         // Activation mutates five tables; run them in a single transaction so a
         // mid-sequence failure cannot leave the catalog with no ACTIVE row (or
         // two). The transaction is dropped (rolled back) on any early return.
@@ -1633,6 +1804,17 @@ impl DataBrokerRuntime {
                     "catalog transition idempotency row has no catalog_id",
                 )
             })?;
+            if let Some((tenant, run)) = review {
+                self.validate_reviewed_catalog_replay(
+                    &mut tx,
+                    tenant,
+                    &project_id,
+                    run,
+                    catalog_id,
+                    operation,
+                )
+                .await?;
+            }
             tx.commit().await.map_err(|err| {
                 catalog_admin_internal_status(
                     "activate_catalog_commit",
@@ -1643,7 +1825,9 @@ impl DataBrokerRuntime {
                 .load_catalog_record_for_project(&project_id, catalog_id)
                 .await?;
             let mut catalog = catalog;
-            catalog.status = "ACTIVE".to_string();
+            if review.is_none() {
+                catalog.status = "ACTIVE".to_string();
+            }
             return Ok(CatalogMutationResult {
                 catalog,
                 replayed: true,
@@ -1768,6 +1952,10 @@ impl DataBrokerRuntime {
             &target_provenance.6,
         )?;
 
+        if review.is_none() {
+            self.require_ordinary_catalog_transition(&mut tx, id)
+                .await?;
+        }
         // Find and lock the exact current active version for this project.
         let current_active: Option<(
             Uuid,
@@ -1866,7 +2054,30 @@ impl DataBrokerRuntime {
                 ));
             }
         }
-        let transition_compatibility_evidence = if target_already_active {
+        let transition_compatibility_evidence = if let Some((tenant, run)) = review {
+            self.reviewed_catalog_compatibility_evidence(
+                &mut tx,
+                operation,
+                tenant,
+                &project_id,
+                run,
+                Some(id),
+                &target_provenance.2,
+                current_active.as_ref().map(|row| row.0),
+                current_active
+                    .as_ref()
+                    .map(|row| row.4.as_str())
+                    .unwrap_or_default(),
+                current_active_manifest.as_ref(),
+                &target_provenance.5,
+                &target_provenance.1,
+                &target_manifest,
+                !target_already_active,
+            )
+            .await?
+        } else if target_already_active {
+            self.require_ordinary_catalog_transition(&mut tx, id)
+                .await?;
             target_provenance.6.clone()
         } else {
             catalog_compatibility_evidence(
@@ -2082,11 +2293,12 @@ impl DataBrokerRuntime {
             "ROLLBACK",
             "rollback_catalog",
             idempotency_key,
+            None,
         )
         .await
     }
 
-    async fn load_catalog_record_for_project(
+    pub(super) async fn load_catalog_record_for_project(
         &self,
         project_id: &str,
         catalog_id: Uuid,
@@ -2148,6 +2360,7 @@ impl DataBrokerRuntime {
             catalog_id: catalog_id.to_string(),
             version,
             checksum_sha256,
+            manifest_integrity_sha256,
             manifest,
             status,
             compatibility_level,
@@ -2239,6 +2452,7 @@ impl DataBrokerRuntime {
                     catalog_id: catalog_id.to_string(),
                     version,
                     checksum_sha256,
+                    manifest_integrity_sha256,
                     manifest,
                     status,
                     compatibility_level,
@@ -2413,6 +2627,7 @@ impl DataBrokerRuntime {
                             catalog_id: catalog_id.to_string(),
                             version,
                             checksum_sha256,
+                            manifest_integrity_sha256,
                             manifest,
                             status,
                             compatibility_level,
@@ -2437,6 +2652,7 @@ impl DataBrokerRuntime {
         let cat_rel = config.catalog_versions_relation();
         let binding_rel = config.project_catalog_bindings_relation();
         let reload_rel = config.catalog_reload_log_relation();
+        self.ensure_catalog_transition_storage().await?;
         let mut tx = pool.begin().await.map_err(|err| {
             catalog_admin_internal_status(
                 "catalog_provenance_begin",
@@ -2676,22 +2892,47 @@ impl DataBrokerRuntime {
                     }
                     Some((baseline_version, baseline_integrity, baseline_manifest))
                 };
-            let compatibility_evidence = catalog_compatibility_evidence(
-                "catalog_provenance_upgrade",
-                &compatibility_level,
-                baseline
-                    .as_ref()
-                    .map(|row| row.0.as_str())
-                    .unwrap_or_default(),
-                baseline
-                    .as_ref()
-                    .map(|row| row.1.as_str())
-                    .unwrap_or_default(),
-                baseline.as_ref().map(|row| &row.2),
-                &version,
-                &integrity,
-                &manifest,
-            )?;
+            let compatibility_evidence = if let Some((tenant, run)) =
+                self.reviewed_catalog_binding(&mut tx, catalog_id).await?
+            {
+                self.reviewed_catalog_compatibility_evidence(
+                    &mut tx,
+                    "catalog_provenance_upgrade",
+                    &tenant,
+                    &project_id,
+                    &run,
+                    Some(catalog_id),
+                    &compatibility_level,
+                    validated_against_catalog_id,
+                    baseline
+                        .as_ref()
+                        .map(|row| row.1.as_str())
+                        .unwrap_or_default(),
+                    baseline.as_ref().map(|row| &row.2),
+                    &version,
+                    &integrity,
+                    &manifest,
+                    true,
+                )
+                .await?
+            } else {
+                catalog_compatibility_evidence(
+                    "catalog_provenance_upgrade",
+                    &compatibility_level,
+                    baseline
+                        .as_ref()
+                        .map(|row| row.0.as_str())
+                        .unwrap_or_default(),
+                    baseline
+                        .as_ref()
+                        .map(|row| row.1.as_str())
+                        .unwrap_or_default(),
+                    baseline.as_ref().map(|row| &row.2),
+                    &version,
+                    &integrity,
+                    &manifest,
+                )?
+            };
             if !stored_compatibility_evidence.is_empty()
                 && stored_compatibility_evidence != compatibility_evidence
             {
@@ -2827,6 +3068,8 @@ impl DataBrokerRuntime {
         let cat_rel = config.catalog_versions_relation();
         let rows = sqlx::query(&format!(
             "SELECT catalog_id, version, status, checksum_sha256,
+                    manifest_json::TEXT,manifest_integrity_sha256,schema_checksum_sha256,
+                    checksum_kind,validation_checksum_sha256,compatibility_evidence_sha256,
                     EXTRACT(EPOCH FROM created_at)::BIGINT AS created_at_unix,
                     EXTRACT(EPOCH FROM activated_at)::BIGINT AS activated_at_unix
              FROM {cat_rel}
@@ -2844,11 +3087,38 @@ impl DataBrokerRuntime {
         })?;
         let mut out = Vec::new();
         for row in rows {
+            let read = |field: &str| {
+                row.try_get::<String, _>(field).map_err(|err| {
+                    catalog_admin_internal_status(
+                        "get_catalog_versions_provenance",
+                        err.to_string(),
+                    )
+                })
+            };
+            let stored_integrity = read("manifest_integrity_sha256")?;
+            let validated = validated_catalog_manifest(
+                "get_catalog_versions",
+                &project_id,
+                &read("manifest_json")?,
+                &stored_integrity,
+                &read("schema_checksum_sha256")?,
+                &read("checksum_kind")?,
+                &read("validation_checksum_sha256")?,
+                &read("compatibility_evidence_sha256")?,
+            );
+            let integrity = match validated {
+                Ok(_) => stored_integrity,
+                // Quarantined historical rows remain diagnostic list entries;
+                // they never advertise an integrity usable as ACTIVE authority.
+                Err(_) if read("status")? == "REJECTED" => String::new(),
+                Err(error) => return Err(error),
+            };
             out.push(serde_json::json!({
                 "catalog_id": row.try_get::<Uuid,_>("catalog_id").map(|u| u.to_string()).unwrap_or_default(),
                 "version": row.try_get::<String,_>("version").unwrap_or_default(),
                 "status": row.try_get::<String,_>("status").unwrap_or_default(),
                 "checksum_sha256": row.try_get::<String,_>("checksum_sha256").unwrap_or_default(),
+                "manifest_integrity_sha256": integrity,
                 "created_at_unix": row.try_get::<i64,_>("created_at_unix").unwrap_or_default(),
                 "activated_at_unix": row.try_get::<Option<i64>,_>("activated_at_unix").unwrap_or_default(),
             }));
@@ -3125,6 +3395,13 @@ impl DataBrokerRuntime {
         let project_id = canonical_catalog_project_id(project_id)?;
         validate_approval_token_for_plan(approval_token)?;
         let id: Uuid = parse_migration_run_id(run_id)?;
+        if self.reviewed_catalog_plan_exists(id).await? {
+            return Err(catalog_admin_schema_status(
+                "approve_migration_plan",
+                "reviewed_approval_required",
+                "candidate approval requires exact reviewed operation coverage and a verified actor",
+            ));
+        }
         let pool = self.pg_pool()?;
         let config = SystemCatalogConfig::default();
         let runs_rel = config.migration_runs_relation();
@@ -3166,6 +3443,34 @@ impl DataBrokerRuntime {
         project_id: &str,
         run_id: &str,
         approval_token: &str,
+    ) -> Result<(), tonic::Status> {
+        self.apply_migration_with_caller(project_id, run_id, approval_token, None)
+            .await
+    }
+
+    pub async fn apply_migration_for_caller(
+        &self,
+        project_id: &str,
+        run_id: &str,
+        approval_token: &str,
+        tenant_id: &str,
+        actor: &str,
+    ) -> Result<(), tonic::Status> {
+        self.apply_migration_with_caller(
+            project_id,
+            run_id,
+            approval_token,
+            Some((tenant_id, actor)),
+        )
+        .await
+    }
+
+    async fn apply_migration_with_caller(
+        &self,
+        project_id: &str,
+        run_id: &str,
+        approval_token: &str,
+        caller_tenant: Option<(&str, &str)>,
     ) -> Result<(), tonic::Status> {
         use crate::runtime::system::SystemCatalogConfig;
         let project_id = canonical_catalog_project_id(project_id)?;
@@ -3223,6 +3528,23 @@ impl DataBrokerRuntime {
         let stored_token = run_row
             .try_get::<String, _>("approval_token")
             .unwrap_or_default();
+        if state == "COMPLETED"
+            && self
+                .replay_reviewed_completed_application(
+                    &mut authority_guard,
+                    &project_id,
+                    id,
+                    caller_tenant,
+                    approval_token,
+                    &stored_token,
+                )
+                .await?
+        {
+            authority_guard.commit().await.map_err(|err| {
+                catalog_admin_internal_status("reviewed_apply_replay_commit", err.to_string())
+            })?;
+            return Ok(());
+        }
         validate_migration_apply_state_and_token(&state, approval_token, &stored_token)?;
         let catalog_version = run_row
             .try_get::<String, _>("catalog_version")
@@ -3292,6 +3614,17 @@ impl DataBrokerRuntime {
             ));
         }
 
+        let reviewed_plan = self
+            .reviewed_catalog_apply_preflight(
+                &mut authority_guard,
+                &project_id,
+                id,
+                caller_tenant,
+                &active_catalog,
+                &project_target,
+            )
+            .await?;
+
         // Fetch and preflight all planned operations before moving the run into
         // APPLYING. On resume, previously APPLIED/VERIFIED/SKIPPED rows are
         // included so the phased engine can validate them without losing the
@@ -3327,6 +3660,11 @@ impl DataBrokerRuntime {
                 },
             )
             .collect();
+        if let Some(plan) = &reviewed_plan {
+            self.validate_reviewed_native_operations(id, plan, &planned)?;
+            self.record_verified_preapplied_catalog(id, plan, &project_target.pool)
+                .await?;
+        }
         let preflight_errors = self.preflight_migration_apply_ops(&preflight_ops);
         if !preflight_errors.is_empty() {
             return Err(migration_apply_preflight_status(&preflight_errors));
@@ -3517,13 +3855,40 @@ impl DataBrokerRuntime {
             }
         }
 
+        if let Some(plan) = &reviewed_plan {
+            if let Err(error) = self
+                .complete_reviewed_catalog_application(
+                    &mut authority_guard,
+                    id,
+                    plan,
+                    &project_target.pool,
+                    caller_tenant.map(|(_, actor)| actor).unwrap_or_default(),
+                )
+                .await
+            {
+                sqlx::query(&format!(
+                    "UPDATE {runs_rel} SET state='ERROR',error=$2,finished_at=NOW() WHERE run_id=$1"
+                ))
+                .bind(id)
+                .bind(error.message())
+                .execute(control_pool)
+                .await
+                .map_err(|err| {
+                    catalog_admin_internal_status(
+                        "reviewed_apply_failure_finalize",
+                        err.to_string(),
+                    )
+                })?;
+                return Err(error);
+            }
+        }
         sqlx::query(&format!(
             "UPDATE {runs_rel}
              SET state = 'COMPLETED', finished_at = NOW(), error = ''
              WHERE run_id = $1"
         ))
         .bind(id)
-        .execute(control_pool)
+        .execute(&mut *authority_guard)
         .await
         .map_err(|err| {
             catalog_admin_internal_status(
@@ -3567,13 +3932,38 @@ impl DataBrokerRuntime {
             )
         })?
         .ok_or_else(|| migration_run_not_found_status("get_migration_status"))?;
-        Ok(serde_json::json!({
+        let mut result = serde_json::json!({
             "run_id": row.try_get::<Uuid,_>("run_id").map(|u| u.to_string()).unwrap_or_default(),
             "project_id": row.try_get::<String,_>("project_id").unwrap_or_default(),
             "catalog_version": row.try_get::<String,_>("catalog_version").unwrap_or_default(),
             "state": row.try_get::<String,_>("state").unwrap_or_default(),
             "error": row.try_get::<String,_>("error").unwrap_or_default(),
-        }))
+            "started_at": row.try_get::<DateTime<Utc>,_>("started_at").map(|v|v.to_rfc3339()).unwrap_or_default(),
+            "finished_at": row.try_get::<Option<DateTime<Utc>>,_>("finished_at").ok().flatten().map(|v|v.to_rfc3339()).unwrap_or_default(),
+        });
+        let operations = sqlx::query(&format!(
+            "SELECT operation_index,backend,resource_uri,operation_kind,status,error
+             FROM {} WHERE run_id=$1 ORDER BY operation_index",
+            config.migration_op_ledger_relation()
+        ))
+        .bind(id)
+        .fetch_all(pool)
+        .await
+        .map_err(|err| {
+            catalog_admin_internal_status("get_migration_status_operations", err.to_string())
+        })?;
+        result["operations"] = serde_json::Value::Array(operations.iter().map(|op| serde_json::json!({
+            "index":op.try_get::<i32,_>("operation_index").unwrap_or_default(),
+            "backend":op.try_get::<String,_>("backend").unwrap_or_default(),
+            "resource_uri":op.try_get::<String,_>("resource_uri").unwrap_or_default(),
+            "operation_kind":op.try_get::<String,_>("operation_kind").unwrap_or_default(),
+            "status":op.try_get::<String,_>("status").unwrap_or_default(),
+            "error":op.try_get::<String,_>("error").unwrap_or_default(),
+        })).collect());
+        if let Some(evidence) = self.reviewed_catalog_status(project_id, id).await? {
+            result["reviewed_catalog_transition"] = evidence;
+        }
+        Ok(result)
     }
 
     // ── Phase 2.2 — DLQ management ───────────────────────────────────────────

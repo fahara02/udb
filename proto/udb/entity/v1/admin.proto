@@ -289,6 +289,12 @@ message StageCatalogRequest {
   string reason = 3;
   // Required for durable StageCatalog retries.
   string idempotency_key = 4;
+  // Explicit durable candidate run approved and applied through the migration
+  // RPCs. Stage and activation revalidate its exact tenant/project, ACTIVE base,
+  // target integrity, reviewed fingerprints and native application evidence.
+  // Empty retains the ordinary compatibility policy; a caller receipt is not
+  // approval authority. ValidateCatalog performs lint only and does not use it.
+  string reviewed_migration_run_id = 5;
 }
 
 message CatalogVersionRequest {
@@ -300,6 +306,10 @@ message CatalogVersionRequest {
   string reason = 4;
   // Required for ActivateCatalog and RollbackCatalog retries.
   string idempotency_key = 5;
+  // ActivateCatalog only: the same durable reviewed candidate run used at
+  // staging. The stored candidate and current ACTIVE base are checked again;
+  // this reference cannot approve a foreign, stale or unapplied transition.
+  string reviewed_migration_run_id = 6;
 }
 
 message CatalogVersionResponse {
@@ -311,6 +321,11 @@ message CatalogVersionResponse {
   int64 created_at_unix = 6;
   repeated string errors = 7;
   repeated string warnings = 8;
+  // Verified outer integrity of the complete durable manifest. Candidate
+  // planning pins this value with catalog_id; checksum_sha256 remains the
+  // existing catalog selector and must not be substituted for this integrity.
+  // Empty for an in-memory startup fallback without durable catalog authority.
+  string manifest_integrity_sha256 = 9;
 }
 
 message CatalogValidationResponse {
@@ -333,6 +348,44 @@ message MigrationPlanRequest {
   string project_id = 2;
   // When true, apply only dry-run checks without touching the database.
   bool dry_run = 3;
+  // Candidate mode pins an exact already-proven ACTIVE base before planning.
+  // Both fields are required with candidate_manifest_json and refused without
+  // it. The outer stored manifest integrity differs from its inner semantic
+  // schema checksum; callers must not substitute one for the other.
+  string expected_active_catalog_id = 4;
+  string expected_active_manifest_integrity_sha256 = 5;
+  // Required in candidate mode; retries return the immutable committed plan.
+  string idempotency_key = 6;
+  // Full unstaged CatalogManifest JSON. The broker computes the canonical
+  // change set, exact review fingerprints and actual application plan. Empty
+  // retains ordinary planning against the existing ACTIVE catalog.
+  bytes candidate_manifest_json = 1000;
+}
+
+// Durable broker evidence for a candidate transition. These response fields
+// describe native authority; they are never accepted as caller approval data.
+// run_id is also the explicit reference supplied to stage and activation.
+message ReviewedCatalogTransitionEvidence {
+  string run_id = 1;
+  string tenant_id = 2;
+  string project_id = 3;
+  string expected_active_catalog_id = 4;
+  string expected_active_manifest_integrity_sha256 = 5;
+  string target_manifest_integrity_sha256 = 6;
+  string target_schema_checksum_sha256 = 7;
+  string operations_hash = 8;
+  repeated string reviewed_operation_fingerprints = 9;
+  // Verified actor recorded by the authorized approval handler; empty until
+  // approval. No filesystem review receipt can populate this authority.
+  string approved_by = 10;
+  int64 approved_at_unix = 11;
+  // Native migration-run state (for example APPROVED or COMPLETED). Actual
+  // operations separately report APPLIED or VERIFIED in MigrationStatusResponse;
+  // a verified pre-applied target never fabricates an APPLIED operation receipt.
+  string application_state = 12;
+  string applied_operations_hash = 13;
+  int64 applied_at_unix = 14;
+  string application_evidence_sha256 = 15;
 }
 
 message MigrationPlanResponse {
@@ -344,13 +397,17 @@ message MigrationPlanResponse {
   repeated string requires_review = 6;
   repeated string blocked = 7;
   string operations_hash = 8;
+  // Present only when planning an explicit unstaged candidate.
+  ReviewedCatalogTransitionEvidence reviewed_catalog_transition = 9;
 }
 
 message MigrationApplyRequest {
   RequestContext context = 1;
   string run_id = 2;
   string project_id = 3;
-  // Approval token from ApproveMigrationPlan (required for blocked operations).
+  // Approval token from ApproveMigrationPlan. Reviewed candidate approval does
+  // not permit blocked or destructive transitions; native application evidence
+  // is also required before catalog staging and activation.
   string approval_token = 4;
   string idempotency_key = 5;
 }
@@ -360,6 +417,11 @@ message MigrationRunRequest {
   string run_id = 2;
   string project_id = 3;
   string idempotency_key = 4;
+  // ApproveMigrationPlan candidate mode only: explicit echoes of the exact
+  // immutable native plan and complete review fingerprint set. Missing,
+  // duplicate, foreign or mismatched review evidence is refused.
+  string expected_operations_hash = 5;
+  repeated string reviewed_operation_fingerprints = 6;
 }
 
 message MigrationRunListRequest {
@@ -380,7 +442,7 @@ message MigrationStatusResponse {
   string run_id = 1;
   string project_id = 2;
   string catalog_version = 3;
-  // States: DRY_RUN, PREFLIGHT, APPLYING, VERIFYING, COMPLETED, ERROR, DEAD_LETTER
+  // States: DRY_RUN, PREFLIGHT, APPROVED, APPLYING, VERIFYING, COMPLETED, ERROR, DEAD_LETTER
   string state = 4;
   string started_at = 5;
   string finished_at = 6;
@@ -388,6 +450,7 @@ message MigrationStatusResponse {
   string error = 8;
   optional string approval_token = 9;
   optional bool applyable = 10;
+  ReviewedCatalogTransitionEvidence reviewed_catalog_transition = 11;
 }
 
 message MigrationOperationStatus {
@@ -395,7 +458,7 @@ message MigrationOperationStatus {
   string backend = 2;
   string resource_uri = 3;
   string operation_kind = 4;
-  // States: PENDING, APPLIED, SKIPPED, FAILED, ROLLED_BACK
+  // States: PENDING, APPLIED, VERIFIED, SKIPPED, FAILED, ROLLED_BACK
   string status = 5;
   string error = 6;
 }

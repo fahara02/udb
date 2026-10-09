@@ -9,6 +9,14 @@ release line was tagged.
 
 ### Fixed
 
+- Reviewed catalog changes can be planned against an immutable candidate before
+  staging. Native approval binds the verified actor, tenant/project, exact ACTIVE
+  catalog ID and outer integrity, target integrity and reviewed fingerprints.
+  Stage and activation require the explicit durable run and successful native
+  application evidence while preserving ordinary backward compatibility and
+  refusing blocked changes. The matching CLI provides authenticated discovery,
+  plan, approve, apply, stage, activate and status commands; filesystem receipts
+  require actual target verification and cannot establish approval authority.
 - CDC journal publication and durable cursors use immutable database positions.
   Concurrent publishers cannot commit a later position while an earlier journal
   publication remains uncommitted. Named CDC and shared LiveQuery feeds drain

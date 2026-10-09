@@ -1638,6 +1638,16 @@ impl DataBrokerRuntime {
         manifest: &CatalogManifest,
     ) -> Result<Vec<ManifestDrift>, tonic::Status> {
         let pool = self.pg_pool()?;
+        self.verify_postgres_manifest_drift_on_pool(manifest, pool)
+            .await
+    }
+
+    /// Verify the exact routed write target used by a durable migration plan.
+    pub(crate) async fn verify_postgres_manifest_drift_on_pool(
+        &self,
+        manifest: &CatalogManifest,
+        pool: &PgPool,
+    ) -> Result<Vec<ManifestDrift>, tonic::Status> {
         let mut drift = Vec::new();
 
         // Collect all expected schema names so we can scope the bulk queries.

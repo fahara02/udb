@@ -25,6 +25,7 @@ use udb::{
 mod args;
 mod auth;
 mod authz_cli;
+mod catalog_transition;
 mod doctor;
 mod env_setup;
 mod env_template;
@@ -565,6 +566,9 @@ pub fn run() {
             confirmed,
         } => {
             process::exit(run_dev_sandbox(action, service.as_deref(), confirmed));
+        }
+        Command::CatalogTransition(command) => {
+            process::exit(catalog_transition::run(command));
         }
         Command::CatalogActivate {
             project,
@@ -1748,6 +1752,7 @@ pub fn run() {
         | Command::Dev { .. }
         | Command::CatalogActivate { .. }
         | Command::CatalogStatus { .. }
+        | Command::CatalogTransition(_)
         | Command::Auth(_)
         | Command::Authz(_)
         | Command::Compliance(_)

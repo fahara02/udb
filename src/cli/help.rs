@@ -95,6 +95,34 @@ const COMMANDS: &[CmdHelp] = &[
   notification, so no restart is needed. Re-running is a no-op.",
     },
     CmdHelp {
+        name: "catalog transition",
+        group: "Core",
+        summary: "Review, apply, stage and activate an exact candidate through authorized broker RPCs.",
+        usage: "udb catalog transition <plan|approve|apply|stage|activate|status> --project <id> [--tenant <id>] [--target <broker>]",
+        details: "  Set UDB_AUTH_TOKEN (or UDB_BEARER_TOKEN) to an authorized operator bearer.\n\
+  --tenant / UDB_TENANT_ID and --target / UDB_GRPC_TARGET identify the serving\n\
+  broker. HTTPS requires UDB_TLS_CA_FILE; identity and scopes are verified there.\n\
+  Every mutation requires --idempotency-key. Each RPC has a bounded deadline\n\
+  (--timeout-secs 1..3600, default 300). Ordinary backward checks stay enabled.\n\n\
+  plan: --manifest <exact-manifest.json> --expected-active-catalog-id <id>\n\
+        --expected-active-manifest-integrity-sha256 <outer-integrity> --out <new-plan.json>\n\
+        Use the stored catalog integrity, not the inner schema checksum.\n\
+  approve: --plan <reviewed-plan.json> --out <new-approval.json>\n\
+        Review the native operations/fingerprints first. The broker records\n\
+        the verified approver and returns an opaque token; stdout omits it.\n\
+  apply: --approval <approval.json>\n\
+        The broker applies/verifies the actual target and records evidence.\n\
+  stage: --manifest <same-manifest.json> --run-id <native-run-id> [--reason <text>]\n\
+  activate: --catalog-id <staged-id> --run-id <same-native-run-id> [--reason <text>]\n\
+  status: [--run-id <native-run-id>] [--out <new-status.json>]\n\
+    Without --run-id, discover the exact durable ACTIVE catalog id and outer manifest integrity.\n\n\
+  Files are response caches and review inputs, never canonical authority.\n\
+  Output files are new-only (0600 on Unix); do not commit approval tokens.\n\
+  Missing/foreign/mismatched/unfinished evidence, a changed ACTIVE base, and\n\
+  blocked or destructive changes are refused by the broker. Restart/retry\n\
+  uses the same durable run and idempotency keys.",
+    },
+    CmdHelp {
         name: "catalog status",
         group: "Core",
         summary: "Show the project's ACTIVE catalog (exit 3 when it has none).",
