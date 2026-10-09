@@ -43,8 +43,8 @@ const (
 //     booleans and repeated fields are JSON arrays;
 //   - an unset optional field (proto3 presence) is NULL, or is dropped when its column is NOT NULL so
 //     the stored value (update) or the column default (insert) stays;
-//   - an empty string in a nullable column is NULL (Postgres can hold no "" UUID, timestamp or date;
-//     an empty text value is "absent" the same way). In a NOT NULL UUID, CHAR(n), DATE, TIMESTAMP(TZ)
+//   - an empty string without proto presence in a nullable column is NULL; an explicitly present
+//     optional or oneof text string keeps its empty value. In a NOT NULL UUID, CHAR(n), DATE, TIMESTAMP(TZ)
 //     or JSON column it is dropped (it is no value of those types: the default applies, or the write
 //     fails closed); a NOT NULL VARCHAR/TEXT column keeps it, an empty string being a value there;
 //   - a JSON column (is_json, JSON/JSONB) carries its text as a JSON value; text that is not JSON is
@@ -106,11 +106,11 @@ func encodeColumn(pr protoreflect.Message, fd protoreflect.FieldDescriptor, c *u
 		return nil
 	}
 	switch {
-	case s == "" && !c.GetNotNull():
+	case s == "" && !c.GetNotNull() && !fd.HasPresence():
 		rec[name] = nil
-	case s == "" && noEmptyValue(c):
+	case s == "" && noEmptyValue(c) && !fd.HasPresence():
 		delete(rec, name)
-	case s != "" && isJSON(c):
+	case isJSON(c) && (s != "" || fd.HasPresence()):
 		if !json.Valid([]byte(s)) {
 			return fmt.Errorf("udb: encode %s.%s: JSON column holds text that is not JSON", MessageType(pr.Interface()), name)
 		}
@@ -165,6 +165,11 @@ func DecodeField(m proto.Message, field string, raw any) error {
 		return err
 	}
 	if tmp.Has(fd) {
+		if group := fd.ContainingOneof(); group != nil {
+			if previous := pr.WhichOneof(group); previous != nil && previous != fd {
+				return fmt.Errorf("udb: decode %s: oneof %s has both %s and %s", MessageType(m), group.Name(), previous.Name(), fd.Name())
+			}
+		}
 		pr.Set(fd, tmp.Get(fd))
 	}
 	return nil

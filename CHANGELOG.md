@@ -5,6 +5,18 @@ the package version in `Cargo.toml`; historical v0.3.2 audit material is folded
 into the v0.3.x entries because the codebase advanced to v0.3.7 before that
 release line was tagged.
 
+## [0.5.31] - Unreleased
+
+### Fixed
+
+- Go record and field encoders preserve an explicitly present empty optional or
+  oneof text value. Incremental field decoding refuses conflicting oneof members
+  and retains the previously decoded message on refusal.
+
+### Breaking for callers
+
+- None.
+
 ## [0.5.30] - 2026-10-09
 
 This release continues the server error, authorization and liveness work in the

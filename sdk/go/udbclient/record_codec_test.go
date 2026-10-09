@@ -12,6 +12,7 @@ import (
 	"google.golang.org/protobuf/reflect/protodesc"
 	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/reflect/protoregistry"
+	"google.golang.org/protobuf/types/descriptorpb"
 	"google.golang.org/protobuf/types/dynamicpb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
@@ -228,5 +229,118 @@ func TestEncodeAndDecodeFieldMatchTheRecordCodec(t *testing.T) {
 	}
 	if err := DecodeField(out, "status", nil); err != nil || out.GetStatus() != storagev1.FileStatus_FILE_STATUS_ACTIVE {
 		t.Fatalf("NULL must leave the field unchanged: %v %v", out.GetStatus(), err)
+	}
+}
+
+func codecPresenceMessage(t *testing.T, textType string) *dynamicpb.Message {
+	t.Helper()
+	column := func(sqlType string) *descriptorpb.FieldOptions {
+		opts := &descriptorpb.FieldOptions{}
+		proto.SetExtension(opts, commonv1.E_PgColumn, &commonv1.ColumnOptions{SqlType: sqlType})
+		return opts
+	}
+	descriptor, err := protodesc.NewFile(&descriptorpb.FileDescriptorProto{
+		Name:       proto.String("udb_codec_presence_test.proto"),
+		Package:    proto.String("udb.test.codec"),
+		Syntax:     proto.String("proto3"),
+		Dependency: []string{(&commonv1.ColumnOptions{}).ProtoReflect().Descriptor().ParentFile().Path()},
+		MessageType: []*descriptorpb.DescriptorProto{{
+			Name: proto.String("Row"),
+			OneofDecl: []*descriptorpb.OneofDescriptorProto{
+				{Name: proto.String("choice")},
+				{Name: proto.String("_note")},
+			},
+			Field: []*descriptorpb.FieldDescriptorProto{
+				{Name: proto.String("note"), Number: proto.Int32(1), Label: descriptorpb.FieldDescriptorProto_LABEL_OPTIONAL.Enum(), Type: descriptorpb.FieldDescriptorProto_TYPE_STRING.Enum(), OneofIndex: proto.Int32(1), Proto3Optional: proto.Bool(true), Options: column(textType)},
+				{Name: proto.String("text_choice"), Number: proto.Int32(2), Label: descriptorpb.FieldDescriptorProto_LABEL_OPTIONAL.Enum(), Type: descriptorpb.FieldDescriptorProto_TYPE_STRING.Enum(), OneofIndex: proto.Int32(0), Options: column(textType)},
+				{Name: proto.String("count_choice"), Number: proto.Int32(3), Label: descriptorpb.FieldDescriptorProto_LABEL_OPTIONAL.Enum(), Type: descriptorpb.FieldDescriptorProto_TYPE_INT64.Enum(), OneofIndex: proto.Int32(0), Options: column("BIGINT")},
+				{Name: proto.String("plain"), Number: proto.Int32(4), Label: descriptorpb.FieldDescriptorProto_LABEL_OPTIONAL.Enum(), Type: descriptorpb.FieldDescriptorProto_TYPE_STRING.Enum(), Options: column("TEXT")},
+			},
+		}},
+	}, protoregistry.GlobalFiles)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return dynamicpb.NewMessage(descriptor.Messages().ByName("Row"))
+}
+
+func TestRecordCodecPreservesPresentEmptyStrings(t *testing.T) {
+	for _, mode := range []WriteMode{WriteInsert, WriteUpdate} {
+		for _, sqlType := range []string{"TEXT", "VARCHAR(64)", "CHAR(8)", "UUID", "DATE"} {
+			for _, name := range []string{"note", "text_choice"} {
+				message := codecPresenceMessage(t, sqlType)
+				field := message.Descriptor().Fields().ByName(protoreflect.Name(name))
+				absent, err := EncodeRecord(message, mode)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if value, ok := absent[name]; !ok || value != nil {
+					t.Fatalf("unset %s must encode as NULL: value=%v present=%v", name, value, ok)
+				}
+				message.Set(field, protoreflect.ValueOfString(""))
+				record, err := EncodeRecord(message, mode)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if value, ok := record[name]; !ok || value != "" {
+					t.Fatalf("present empty %s must stay empty: value=%v present=%v", name, value, ok)
+				}
+				if value, ok, err := EncodeField(message, name); err != nil || !ok || value != "" {
+					t.Fatalf("field encoder lost %s presence: value=%v present=%v err=%v", name, value, ok, err)
+				}
+				if value, ok := record["plain"]; !ok || value != nil {
+					t.Fatalf("ordinary empty nullable text must retain its NULL shape: %v %v", value, ok)
+				}
+				decoded := dynamicpb.NewMessage(message.Descriptor())
+				if err := DecodeRecord(record, decoded); err != nil {
+					t.Fatal(err)
+				}
+				if !decoded.Has(field) || decoded.Get(field).String() != "" {
+					t.Fatalf("round trip lost explicit %s presence", name)
+				}
+			}
+		}
+	}
+}
+
+func TestRecordCodecRefusesPresentEmptyJSON(t *testing.T) {
+	message := codecPresenceMessage(t, "JSONB")
+	field := message.Descriptor().Fields().ByName("note")
+	message.Set(field, protoreflect.ValueOfString(""))
+	for _, mode := range []WriteMode{WriteInsert, WriteUpdate} {
+		if _, err := EncodeRecord(message, mode); err == nil {
+			t.Fatal("explicit empty JSON must be refused instead of becoming NULL or a dropped field")
+		}
+	}
+	if _, _, err := EncodeField(message, "note"); err == nil {
+		t.Fatal("field encoder must also refuse explicit empty JSON")
+	}
+}
+
+func TestDecodeFieldRefusesConflictingOneofWithoutChangingMessage(t *testing.T) {
+	for _, first := range []string{"text_choice", "count_choice"} {
+		message := codecPresenceMessage(t, "TEXT")
+		second := "count_choice"
+		values := map[string]any{"text_choice": "", "count_choice": int64(7)}
+		if first == second {
+			second = "text_choice"
+		}
+		if err := DecodeField(message, first, values[first]); err != nil {
+			t.Fatal(err)
+		}
+		before := proto.Clone(message)
+		err := DecodeField(message, second, values[second])
+		if err == nil || !strings.Contains(err.Error(), "oneof choice") {
+			t.Fatalf("both oneof members must be refused: %v", err)
+		}
+		if !proto.Equal(before, message) {
+			t.Fatal("refused column replaced the existing oneof member")
+		}
+		if err := DecodeField(message, second, nil); err != nil || !proto.Equal(before, message) {
+			t.Fatalf("a NULL alternative must retain the existing member: %v", err)
+		}
+		if err := DecodeField(message, first, values[first]); err != nil || !proto.Equal(before, message) {
+			t.Fatalf("the same member must remain writable: %v", err)
+		}
 	}
 }
