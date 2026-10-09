@@ -38,17 +38,57 @@ const (
 type SearchServiceClient interface {
 	// Register a tenant-scoped index over a source entity. Fails closed
 	// (failed_precondition) when the source table has no resolvable tenant column.
+	// UDB contract: /udb.core.search.services.v1.SearchService/CreateIndex
+	// Listener: control plane.
+	// Scopes: udb:search:create-index.
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	CreateIndex(ctx context.Context, in *CreateIndexRequest, opts ...grpc.CallOption) (*CreateIndexResponse, error)
 	// Delete a tenant-scoped index registration (destructive: drops the engine
 	// index resource on the follow-up worker).
+	// UDB contract: /udb.core.search.services.v1.SearchService/DeleteIndex
+	// Listener: control plane.
+	// Scopes: udb:search:delete-index.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: destructive.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	DeleteIndex(ctx context.Context, in *DeleteIndexRequest, opts ...grpc.CallOption) (*DeleteIndexResponse, error)
 	// List the calling tenant's registered indexes.
+	// UDB contract: /udb.core.search.services.v1.SearchService/ListIndexes
+	// Listener: control plane.
+	// Scopes: udb:search:list-indexes.
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	ListIndexes(ctx context.Context, in *ListIndexesRequest, opts ...grpc.CallOption) (*ListIndexesResponse, error)
 	// Run a full-text / vector / hybrid query. The tenant predicate is injected
 	// server-side from the verified claim into every engine query.
+	// UDB contract: /udb.core.search.services.v1.SearchService/Search
+	// Listener: control plane.
+	// Scopes: udb:search:search.
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	Search(ctx context.Context, in *SearchRequest, opts ...grpc.CallOption) (*SearchResponse, error)
 	// Request a full rebuild of an index from the source entity. The backfill
 	// reads source rows ONLY through the mediated IR path.
+	// UDB contract: /udb.core.search.services.v1.SearchService/Reindex
+	// Listener: control plane.
+	// Scopes: udb:search:reindex.
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	Reindex(ctx context.Context, in *ReindexRequest, opts ...grpc.CallOption) (*ReindexResponse, error)
 }
 

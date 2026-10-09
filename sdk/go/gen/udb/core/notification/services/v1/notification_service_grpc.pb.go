@@ -38,31 +38,127 @@ const (
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type NotificationServiceClient interface {
 	// Send a notification (or enqueue it for async delivery).
+	// UDB contract: /udb.core.notification.services.v1.NotificationService/SendNotification
+	// Listener: control plane.
+	// Scopes: udb:notification:send-notification.
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	SendNotification(ctx context.Context, in *SendNotificationRequest, opts ...grpc.CallOption) (*SendNotificationResponse, error)
 	// Get delivery status for a specific log entry.
+	// UDB contract: /udb.core.notification.services.v1.NotificationService/GetNotification
+	// Listener: control plane.
+	// Scopes: udb:notification:get-notification.
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	GetNotification(ctx context.Context, in *GetNotificationRequest, opts ...grpc.CallOption) (*GetNotificationResponse, error)
 	// List notification logs with rich filters.
+	// UDB contract: /udb.core.notification.services.v1.NotificationService/ListNotifications
+	// Listener: control plane.
+	// Scopes: udb:notification:list-notifications.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	ListNotifications(ctx context.Context, in *ListNotificationsRequest, opts ...grpc.CallOption) (*ListNotificationsResponse, error)
 	// Retry a failed notification.
+	// UDB contract: /udb.core.notification.services.v1.NotificationService/RetryNotification
+	// Listener: control plane.
+	// Scopes: udb:notification:retry-notification.
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	RetryNotification(ctx context.Context, in *RetryNotificationRequest, opts ...grpc.CallOption) (*RetryNotificationResponse, error)
 	// Report the terminal per-channel delivery outcome for a sent notification.
 	// Internal seam: the leader-elected delivery worker — or a provider webhook
 	// bridge — reports queued/sent/delivered/failed; the handler upserts the
 	// NotificationDeliveryAttempt row and emits `udb.notification.delivery.<status>.v1`.
+	// UDB contract: /udb.core.notification.services.v1.NotificationService/ReportDelivery
+	// Listener: internal loopback.
+	// Scopes: udb:notification:report-delivery.
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	ReportDelivery(ctx context.Context, in *ReportDeliveryRequest, opts ...grpc.CallOption) (*ReportDeliveryResponse, error)
 	// Upsert a notification template.
+	// UDB contract: /udb.core.notification.services.v1.NotificationService/UpsertTemplate
+	// Listener: control plane.
+	// Scopes: udb:notification:upsert-template.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	UpsertTemplate(ctx context.Context, in *UpsertTemplateRequest, opts ...grpc.CallOption) (*UpsertTemplateResponse, error)
 	// Get a template by event_type + channel + locale.
+	// UDB contract: /udb.core.notification.services.v1.NotificationService/GetTemplate
+	// Listener: control plane.
+	// Scopes: udb:notification:get-template.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	GetTemplate(ctx context.Context, in *GetTemplateRequest, opts ...grpc.CallOption) (*GetTemplateResponse, error)
 	// List all templates.
+	// UDB contract: /udb.core.notification.services.v1.NotificationService/ListTemplates
+	// Listener: control plane.
+	// Scopes: udb:notification:list-templates.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	ListTemplates(ctx context.Context, in *ListTemplatesRequest, opts ...grpc.CallOption) (*ListTemplatesResponse, error)
 	// Get delivery statistics.
+	// UDB contract: /udb.core.notification.services.v1.NotificationService/GetDeliveryStats
+	// Listener: control plane.
+	// Scopes: udb:notification:get-delivery-stats.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	GetDeliveryStats(ctx context.Context, in *GetDeliveryStatsRequest, opts ...grpc.CallOption) (*GetDeliveryStatsResponse, error)
 	// Set (upsert) a per-user channel/event opt-out preference.
+	// UDB contract: /udb.core.notification.services.v1.NotificationService/SetPreference
+	// Listener: control plane.
+	// Scopes: udb:notification:set-preference.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	SetPreference(ctx context.Context, in *SetPreferenceRequest, opts ...grpc.CallOption) (*SetPreferenceResponse, error)
 	// Get a single preference entry.
+	// UDB contract: /udb.core.notification.services.v1.NotificationService/GetPreference
+	// Listener: control plane.
+	// Scopes: udb:notification:get-preference.
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	GetPreference(ctx context.Context, in *GetPreferenceRequest, opts ...grpc.CallOption) (*GetPreferenceResponse, error)
 	// List all preferences for a user.
+	// UDB contract: /udb.core.notification.services.v1.NotificationService/ListPreferences
+	// Listener: control plane.
+	// Scopes: udb:notification:list-preferences.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	ListPreferences(ctx context.Context, in *ListPreferencesRequest, opts ...grpc.CallOption) (*ListPreferencesResponse, error)
 }
 

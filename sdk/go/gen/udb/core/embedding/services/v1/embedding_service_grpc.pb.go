@@ -56,40 +56,192 @@ const (
 type EmbeddingServiceClient interface {
 	// Register a tenant-scoped source to vector-index on change. Fails closed
 	// (failed_precondition) when the source table has no resolvable tenant column.
+	// UDB contract: /udb.core.embedding.services.v1.EmbeddingService/RegisterSource
+	// Listener: control plane.
+	// Scopes: udb:embedding:register-source.
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	RegisterSource(ctx context.Context, in *RegisterSourceRequest, opts ...grpc.CallOption) (*RegisterSourceResponse, error)
 	// List the calling tenant's registered sources.
+	// UDB contract: /udb.core.embedding.services.v1.EmbeddingService/ListSources
+	// Listener: control plane.
+	// Scopes: udb:embedding:list-sources.
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	ListSources(ctx context.Context, in *ListSourcesRequest, opts ...grpc.CallOption) (*ListSourcesResponse, error)
 	// Delete a tenant-scoped source registration (destructive: stops indexing on
 	// change; the engine collection teardown runs on the follow-up worker).
+	// UDB contract: /udb.core.embedding.services.v1.EmbeddingService/DeleteSource
+	// Listener: control plane.
+	// Scopes: udb:embedding:delete-source.
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
+	// Operation kind: destructive.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	DeleteSource(ctx context.Context, in *DeleteSourceRequest, opts ...grpc.CallOption) (*DeleteSourceResponse, error)
 	// Enqueue embedding work for the source's EXISTING rows. The per-row work
 	// enumeration runs in the leader-spawned work emitter, which calls the same
 	// `udb.embedding.work.v1` emit path the CDC change handler uses.
+	// UDB contract: /udb.core.embedding.services.v1.EmbeddingService/Backfill
+	// Listener: control plane.
+	// Scopes: udb:embedding:backfill.
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	Backfill(ctx context.Context, in *BackfillRequest, opts ...grpc.CallOption) (*BackfillResponse, error)
 	// SIDECAR CALLBACK (internal only). A sidecar that computed an embedding for a
 	// source row returns the dense vector here; the broker upserts it through the
 	// shared asset vector-upsert seam, tagged with the VERIFIED claim tenant (a
 	// vector with no/foreign tenant is rejected — no fail-open). `internal_grpc_only`
 	// restricts this to a loopback peer; it is never exposed in an SDK facade.
+	// UDB contract: /udb.core.embedding.services.v1.EmbeddingService/ReportEmbedding
+	// Listener: internal loopback.
+	// Scopes: udb:embedding:report-embedding.
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	ReportEmbedding(ctx context.Context, in *ReportEmbeddingRequest, opts ...grpc.CallOption) (*ReportEmbeddingResponse, error)
 	// Deadline-bounded semantic search over a source's vector collection. DELEGATES
 	// to the SearchService (9.5) hybrid-search seam with a server-side tenant filter
 	// injected from the verified claim. The broker never embeds the query (the
 	// caller supplies an already-embedded `query_vector`); it never issues a raw
 	// engine query. Returns `deadline_exceeded` if the gRPC deadline is past.
+	// UDB contract: /udb.core.embedding.services.v1.EmbeddingService/Retrieve
+	// Listener: control plane.
+	// Scopes: udb:embedding:retrieve.
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	Retrieve(ctx context.Context, in *RetrieveRequest, opts ...grpc.CallOption) (*RetrieveResponse, error)
+	// UDB contract: /udb.core.embedding.services.v1.EmbeddingService/RegisterModel
+	// Listener: control plane.
+	// Scopes: udb:embedding:register-model.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	RegisterModel(ctx context.Context, in *RegisterModelRequest, opts ...grpc.CallOption) (*RegisterModelResponse, error)
+	// UDB contract: /udb.core.embedding.services.v1.EmbeddingService/ListModels
+	// Listener: control plane.
+	// Scopes: udb:embedding:list-models.
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	ListModels(ctx context.Context, in *ListModelsRequest, opts ...grpc.CallOption) (*ListModelsResponse, error)
+	// UDB contract: /udb.core.embedding.services.v1.EmbeddingService/DeleteModel
+	// Listener: control plane.
+	// Scopes: udb:embedding:delete-model.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: destructive.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	DeleteModel(ctx context.Context, in *DeleteModelRequest, opts ...grpc.CallOption) (*DeleteModelResponse, error)
+	// UDB contract: /udb.core.embedding.services.v1.EmbeddingService/SetModelStatus
+	// Listener: control plane.
+	// Scopes: udb:embedding:update-model.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	SetModelStatus(ctx context.Context, in *SetModelStatusRequest, opts ...grpc.CallOption) (*SetModelStatusResponse, error)
+	// UDB contract: /udb.core.embedding.services.v1.EmbeddingService/CutoverModelAlias
+	// Listener: control plane.
+	// Scopes: udb:embedding:cutover-model.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	CutoverModelAlias(ctx context.Context, in *CutoverModelAliasRequest, opts ...grpc.CallOption) (*CutoverModelAliasResponse, error)
+	// UDB contract: /udb.core.embedding.services.v1.EmbeddingService/GetEmbeddingJobStatus
+	// Listener: control plane.
+	// Scopes: udb:embedding:get-job.
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	GetEmbeddingJobStatus(ctx context.Context, in *GetEmbeddingJobStatusRequest, opts ...grpc.CallOption) (*GetEmbeddingJobStatusResponse, error)
+	// UDB contract: /udb.core.embedding.services.v1.EmbeddingService/ListEmbeddingWorkItems
+	// Listener: control plane.
+	// Scopes: udb:embedding:list-work.
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	ListEmbeddingWorkItems(ctx context.Context, in *ListEmbeddingWorkItemsRequest, opts ...grpc.CallOption) (*ListEmbeddingWorkItemsResponse, error)
+	// UDB contract: /udb.core.embedding.services.v1.EmbeddingService/ReportEmbeddingBatch
+	// Listener: internal loopback.
+	// Scopes: udb:embedding:report-embedding.
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	ReportEmbeddingBatch(ctx context.Context, in *ReportEmbeddingBatchRequest, opts ...grpc.CallOption) (*ReportEmbeddingBatchResponse, error)
+	// UDB contract: /udb.core.embedding.services.v1.EmbeddingService/ReportEmbeddingFailure
+	// Listener: internal loopback.
+	// Scopes: udb:embedding:report-embedding.
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	ReportEmbeddingFailure(ctx context.Context, in *ReportEmbeddingFailureRequest, opts ...grpc.CallOption) (*ReportEmbeddingFailureResponse, error)
+	// UDB contract: /udb.core.embedding.services.v1.EmbeddingService/IngestDocument
+	// Listener: control plane.
+	// Scopes: udb:embedding:ingest-document.
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	IngestDocument(ctx context.Context, in *IngestDocumentRequest, opts ...grpc.CallOption) (*IngestDocumentResponse, error)
+	// UDB contract: /udb.core.embedding.services.v1.EmbeddingService/IngestDocumentBatch
+	// Listener: control plane.
+	// Scopes: udb:embedding:ingest-document.
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	IngestDocumentBatch(ctx context.Context, in *IngestDocumentBatchRequest, opts ...grpc.CallOption) (*IngestDocumentBatchResponse, error)
+	// UDB contract: /udb.core.embedding.services.v1.EmbeddingService/ReportParsedDocument
+	// Listener: internal loopback.
+	// Scopes: udb:embedding:report-document.
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	ReportParsedDocument(ctx context.Context, in *ReportParsedDocumentRequest, opts ...grpc.CallOption) (*ReportParsedDocumentResponse, error)
+	// UDB contract: /udb.core.embedding.services.v1.EmbeddingService/ReportRetrievalEvaluation
+	// Listener: internal loopback.
+	// Scopes: udb:embedding:report-evaluation.
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	ReportRetrievalEvaluation(ctx context.Context, in *ReportRetrievalEvaluationRequest, opts ...grpc.CallOption) (*ReportRetrievalEvaluationResponse, error)
 }
 

@@ -45,22 +45,86 @@ type BackupServiceClient interface {
 	// Start a logical backup of the calling tenant. Enumerates tenant-owned tables
 	// via the shared resolver, encrypts each table's rows to object storage, and
 	// journals the run. Tenant-less tables are reported as excluded.
+	// UDB contract: /udb.core.backup.services.v1.BackupService/StartTenantBackup
+	// Listener: control plane.
+	// Scopes: udb:backup:start-tenant-backup.
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	StartTenantBackup(ctx context.Context, in *StartTenantBackupRequest, opts ...grpc.CallOption) (*StartTenantBackupResponse, error)
 	// Restore a tenant's backup into a FRESH target tenant. DESTRUCTIVE: requires
 	// an explicit confirmation token, the cross-tenant movement scope check, and a
 	// target tenant that holds no rows (restoring over a live tenant is refused).
+	// UDB contract: /udb.core.backup.services.v1.BackupService/RestoreTenant
+	// Listener: control plane.
+	// Scopes: udb:backup:restore-tenant.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: destructive.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	RestoreTenant(ctx context.Context, in *RestoreTenantRequest, opts ...grpc.CallOption) (*RestoreTenantResponse, error)
 	// List the calling tenant's backup/restore journal runs (most recent first).
+	// UDB contract: /udb.core.backup.services.v1.BackupService/ListBackups
+	// Listener: control plane.
+	// Scopes: udb:backup:list-backups.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	ListBackups(ctx context.Context, in *ListBackupsRequest, opts ...grpc.CallOption) (*ListBackupsResponse, error)
 	// Fetch one backup run plus its per-table manifest detail.
+	// UDB contract: /udb.core.backup.services.v1.BackupService/GetBackup
+	// Listener: control plane.
+	// Scopes: udb:backup:get-backup.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	GetBackup(ctx context.Context, in *GetBackupRequest, opts ...grpc.CallOption) (*GetBackupResponse, error)
 	// Create or update the calling tenant's backup retention/schedule policy.
+	// UDB contract: /udb.core.backup.services.v1.BackupService/PutBackupPolicy
+	// Listener: control plane.
+	// Scopes: udb:backup:put-backup-policy.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	PutBackupPolicy(ctx context.Context, in *PutBackupPolicyRequest, opts ...grpc.CallOption) (*PutBackupPolicyResponse, error)
 	// Fetch a tenant's backup retention/schedule policy by name.
+	// UDB contract: /udb.core.backup.services.v1.BackupService/GetBackupPolicy
+	// Listener: control plane.
+	// Scopes: udb:backup:get-backup-policy.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	GetBackupPolicy(ctx context.Context, in *GetBackupPolicyRequest, opts ...grpc.CallOption) (*GetBackupPolicyResponse, error)
 	// List the calling tenant's backup retention policies.
+	// UDB contract: /udb.core.backup.services.v1.BackupService/ListBackupPolicies
+	// Listener: control plane.
+	// Scopes: udb:backup:list-backup-policies.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	ListBackupPolicies(ctx context.Context, in *ListBackupPoliciesRequest, opts ...grpc.CallOption) (*ListBackupPoliciesResponse, error)
 	// Delete a tenant's backup retention policy by name.
+	// UDB contract: /udb.core.backup.services.v1.BackupService/DeleteBackupPolicy
+	// Listener: control plane.
+	// Scopes: udb:backup:delete-backup-policy.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	DeleteBackupPolicy(ctx context.Context, in *DeleteBackupPolicyRequest, opts ...grpc.CallOption) (*DeleteBackupPolicyResponse, error)
 }
 

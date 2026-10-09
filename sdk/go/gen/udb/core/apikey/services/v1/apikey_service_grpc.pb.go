@@ -50,19 +50,91 @@ const (
 type ApiKeyServiceClient interface {
 	// ── Key lifecycle (admin-only) ────────────────────────────────────────────
 	// Returns the plain key ONCE in CreateApiKeyResponse — never again.
+	// UDB contract: /udb.core.apikey.services.v1.ApiKeyService/CreateApiKey
+	// Listener: control plane.
+	// Scopes: udb:apikey:create-api-key.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	CreateApiKey(ctx context.Context, in *CreateApiKeyRequest, opts ...grpc.CallOption) (*CreateApiKeyResponse, error)
+	// UDB contract: /udb.core.apikey.services.v1.ApiKeyService/GetApiKey
+	// Listener: control plane.
+	// Scopes: udb:apikey:get-api-key.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	GetApiKey(ctx context.Context, in *GetApiKeyRequest, opts ...grpc.CallOption) (*GetApiKeyResponse, error)
+	// UDB contract: /udb.core.apikey.services.v1.ApiKeyService/ListApiKeys
+	// Listener: control plane.
+	// Scopes: udb:apikey:list-api-keys.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	ListApiKeys(ctx context.Context, in *ListApiKeysRequest, opts ...grpc.CallOption) (*ListApiKeysResponse, error)
+	// UDB contract: /udb.core.apikey.services.v1.ApiKeyService/UpdateApiKey
+	// Listener: control plane.
+	// Scopes: udb:apikey:update-api-key.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	UpdateApiKey(ctx context.Context, in *UpdateApiKeyRequest, opts ...grpc.CallOption) (*UpdateApiKeyResponse, error)
+	// UDB contract: /udb.core.apikey.services.v1.ApiKeyService/RevokeApiKey
+	// Listener: control plane.
+	// Scopes: udb:apikey:revoke-api-key.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	RevokeApiKey(ctx context.Context, in *RevokeApiKeyRequest, opts ...grpc.CallOption) (*RevokeApiKeyResponse, error)
 	// Rotate a key's secret in place (same key_id + lineage). Returns the new
 	// plain key ONCE; the old secret is invalidated immediately.
+	// UDB contract: /udb.core.apikey.services.v1.ApiKeyService/RotateApiKey
+	// Listener: control plane.
+	// Scopes: udb:apikey:rotate-api-key.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	RotateApiKey(ctx context.Context, in *RotateApiKeyRequest, opts ...grpc.CallOption) (*RotateApiKeyResponse, error)
 	// Emergency bulk revoke by selector (prefix/owner/tenant/project/scope/before).
+	// UDB contract: /udb.core.apikey.services.v1.ApiKeyService/EmergencyRevokeApiKeys
+	// Listener: control plane.
+	// Scopes: udb:apikey:emergency-revoke-api-keys.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: destructive.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	EmergencyRevokeApiKeys(ctx context.Context, in *EmergencyRevokeApiKeysRequest, opts ...grpc.CallOption) (*EmergencyRevokeApiKeysResponse, error)
 	// ── Validation (called by API gateway — internal, not public HTTP) ────────
+	// UDB contract: /udb.core.apikey.services.v1.ApiKeyService/ValidateApiKey
+	// Listener: control plane.
+	// Scopes: udb:apikey:validate-api-key.
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	ValidateApiKey(ctx context.Context, in *ValidateApiKeyRequest, opts ...grpc.CallOption) (*ValidateApiKeyResponse, error)
 	// ── Usage stats ───────────────────────────────────────────────────────────
+	// UDB contract: /udb.core.apikey.services.v1.ApiKeyService/GetApiKeyUsageStats
+	// Listener: control plane.
+	// Scopes: udb:apikey:get-api-key-usage-stats.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	GetApiKeyUsageStats(ctx context.Context, in *GetApiKeyUsageStatsRequest, opts ...grpc.CallOption) (*GetApiKeyUsageStatsResponse, error)
 }
 

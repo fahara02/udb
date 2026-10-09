@@ -43,17 +43,65 @@ type WebhookServiceClient interface {
 	// Register an external webhook endpoint. The target URL is SSRF-validated
 	// (https-only, no private/loopback/link-local/CGNAT host). The per-endpoint
 	// signing secret is returned exactly once in the response and never again.
+	// UDB contract: /udb.core.webhook.services.v1.WebhookService/CreateEndpoint
+	// Listener: control plane.
+	// Scopes: udb:webhook:create-endpoint.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	CreateEndpoint(ctx context.Context, in *CreateEndpointRequest, opts ...grpc.CallOption) (*CreateEndpointResponse, error)
 	// Fetch one webhook endpoint (the signing secret is NEVER returned on read).
+	// UDB contract: /udb.core.webhook.services.v1.WebhookService/GetEndpoint
+	// Listener: control plane.
+	// Scopes: udb:webhook:get-endpoint.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	GetEndpoint(ctx context.Context, in *GetEndpointRequest, opts ...grpc.CallOption) (*GetEndpointResponse, error)
 	// List a tenant's webhook endpoints (signing secrets are NEVER returned).
+	// UDB contract: /udb.core.webhook.services.v1.WebhookService/ListEndpoints
+	// Listener: control plane.
+	// Scopes: udb:webhook:list-endpoints.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	ListEndpoints(ctx context.Context, in *ListEndpointsRequest, opts ...grpc.CallOption) (*ListEndpointsResponse, error)
 	// Update an endpoint. A changed URL is SSRF-revalidated before it is stored.
+	// UDB contract: /udb.core.webhook.services.v1.WebhookService/UpdateEndpoint
+	// Listener: control plane.
+	// Scopes: udb:webhook:update-endpoint.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	UpdateEndpoint(ctx context.Context, in *UpdateEndpointRequest, opts ...grpc.CallOption) (*UpdateEndpointResponse, error)
 	// Delete (soft) a webhook endpoint; no further events are delivered to it.
+	// UDB contract: /udb.core.webhook.services.v1.WebhookService/DeleteEndpoint
+	// Listener: control plane.
+	// Scopes: udb:webhook:delete-endpoint.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: destructive.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	DeleteEndpoint(ctx context.Context, in *DeleteEndpointRequest, opts ...grpc.CallOption) (*DeleteEndpointResponse, error)
 	// List the delivery journal for a tenant, optionally narrowed to one endpoint
 	// or one delivery status.
+	// UDB contract: /udb.core.webhook.services.v1.WebhookService/ListDeliveries
+	// Listener: control plane.
+	// Scopes: udb:webhook:list-deliveries.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	ListDeliveries(ctx context.Context, in *ListDeliveriesRequest, opts ...grpc.CallOption) (*ListDeliveriesResponse, error)
 }
 

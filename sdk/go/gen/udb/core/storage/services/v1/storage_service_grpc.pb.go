@@ -36,32 +36,104 @@ const (
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type StorageServiceClient interface {
 	// Register a new upload and obtain a pre-signed upload URL
+	// UDB contract: /udb.core.storage.services.v1.StorageService/RegisterUpload
+	// Listener: control plane.
+	// Scopes: udb:storage:register-upload.
+	// Credential types: BEARER_JWT (1), SESSION (2), API_KEY (3), SERVICE_ACCOUNT (4).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	RegisterUpload(ctx context.Context, in *RegisterUploadRequest, opts ...grpc.CallOption) (*RegisterUploadResponse, error)
 	// Finalize an upload after the object has been written to the store
+	// UDB contract: /udb.core.storage.services.v1.StorageService/FinalizeUpload
+	// Listener: control plane.
+	// Scopes: udb:storage:finalize-upload.
+	// Credential types: BEARER_JWT (1), SESSION (2), API_KEY (3), SERVICE_ACCOUNT (4).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	FinalizeUpload(ctx context.Context, in *FinalizeUploadRequest, opts ...grpc.CallOption) (*FinalizeUploadResponse, error)
 	// Get a pre-signed download URL for a file
+	// UDB contract: /udb.core.storage.services.v1.StorageService/GetDownloadUrl
+	// Listener: control plane.
+	// Scopes: udb:storage:get-download-url.
+	// Credential types: BEARER_JWT (1), SESSION (2), API_KEY (3), SERVICE_ACCOUNT (4).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	GetDownloadUrl(ctx context.Context, in *GetDownloadUrlRequest, opts ...grpc.CallOption) (*GetDownloadUrlResponse, error)
 	// Reissue a presigned PUT URL for an existing PENDING upload — the resume path
 	// when a RegisterUpload response was lost in flight (the client kept the file_id
 	// but not the secret upload URL). The File row + object_key are unchanged; only
 	// a fresh short-lived upload URL is minted. Rejected fail-closed for a
 	// non-PENDING (already-finalized or removed) file. READ-ONLY (no state change).
+	// UDB contract: /udb.core.storage.services.v1.StorageService/ReissueUploadUrl
+	// Listener: control plane.
+	// Scopes: udb:storage:reissue-upload-url.
+	// Credential types: BEARER_JWT (1), SESSION (2), API_KEY (3), SERVICE_ACCOUNT (4).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	ReissueUploadUrl(ctx context.Context, in *ReissueUploadUrlRequest, opts ...grpc.CallOption) (*ReissueUploadUrlResponse, error)
 	// Stream a file's bytes directly through the broker. FALLBACK for clients
 	// that cannot use the presigned `GetDownloadUrl` HTTP GET (no egress to the
 	// object store, corporate proxy, etc.). The broker streams the object bytes
 	// in bounded chunks server-side; it never buffers the whole object.
+	// UDB contract: /udb.core.storage.services.v1.StorageService/DownloadFile
+	// Listener: control plane.
+	// Scopes: udb:storage:get-download-url.
+	// Credential types: BEARER_JWT (1), SESSION (2), API_KEY (3), SERVICE_ACCOUNT (4).
+	// Operation kind: read_only.
+	// Idempotency: streams are not automatically replayed; use the RPC resume contract.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	DownloadFile(ctx context.Context, in *DownloadFileRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[DownloadFileChunk], error)
 	// Get file metadata
+	// UDB contract: /udb.core.storage.services.v1.StorageService/GetFile
+	// Listener: control plane.
+	// Scopes: udb:storage:get-file.
+	// Credential types: BEARER_JWT (1), SESSION (2), API_KEY (3), SERVICE_ACCOUNT (4).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	GetFile(ctx context.Context, in *GetFileRequest, opts ...grpc.CallOption) (*GetFileResponse, error)
 	// Update file metadata
+	// UDB contract: /udb.core.storage.services.v1.StorageService/UpdateFile
+	// Listener: control plane.
+	// Scopes: udb:storage:update-file.
+	// Credential types: BEARER_JWT (1), SESSION (2), API_KEY (3), SERVICE_ACCOUNT (4).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	UpdateFile(ctx context.Context, in *UpdateFileRequest, opts ...grpc.CallOption) (*UpdateFileResponse, error)
 	// Delete a file. `mode` selects soft-delete (default, metadata tombstone +
 	// best-effort byte removal) or hard-delete (durable object-GC intent committed
 	// atomically with the tombstone, then driven to convergence — a byte-delete
 	// failure returns an error, never success, and leaves the intent for the sweep).
+	// UDB contract: /udb.core.storage.services.v1.StorageService/DeleteFile
+	// Listener: control plane.
+	// Scopes: udb:storage:delete-file.
+	// Credential types: BEARER_JWT (1), SESSION (2), API_KEY (3), SERVICE_ACCOUNT (4).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	DeleteFile(ctx context.Context, in *DeleteFileRequest, opts ...grpc.CallOption) (*DeleteFileResponse, error)
 	// List files
+	// UDB contract: /udb.core.storage.services.v1.StorageService/ListFiles
+	// Listener: control plane.
+	// Scopes: udb:storage:list-files.
+	// Credential types: BEARER_JWT (1), SESSION (2), API_KEY (3), SERVICE_ACCOUNT (4).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	ListFiles(ctx context.Context, in *ListFilesRequest, opts ...grpc.CallOption) (*ListFilesResponse, error)
 	// Record a content-scan verdict for a stored file (V050-3).
 	//
@@ -70,6 +142,14 @@ type StorageServiceClient interface {
 	// upload or read files must not be able to declare its own upload clean. The
 	// recorded `scanned_by` is taken from the verified principal, never from the
 	// request body, so a verdict cannot be attributed to another scanner.
+	// UDB contract: /udb.core.storage.services.v1.StorageService/SetScanVerdict
+	// Listener: control plane.
+	// Scopes: udb:storage:set-scan-verdict.
+	// Credential types: BEARER_JWT (1), API_KEY (3), SERVICE_ACCOUNT (4).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	SetScanVerdict(ctx context.Context, in *SetScanVerdictRequest, opts ...grpc.CallOption) (*SetScanVerdictResponse, error)
 }
 

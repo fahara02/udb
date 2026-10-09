@@ -35,22 +35,94 @@ const (
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type RoomServiceClient interface {
 	// Create a room
+	// UDB contract: /udb.core.webrtc.services.v1.RoomService/CreateRoom
+	// Listener: control plane.
+	// Scopes: udb:webrtc:room:create-room.
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	CreateRoom(ctx context.Context, in *CreateRoomRequest, opts ...grpc.CallOption) (*CreateRoomResponse, error)
 	// Get a room
+	// UDB contract: /udb.core.webrtc.services.v1.RoomService/GetRoom
+	// Listener: control plane.
+	// Scopes: udb:webrtc:room:get-room.
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	GetRoom(ctx context.Context, in *GetRoomRequest, opts ...grpc.CallOption) (*GetRoomResponse, error)
 	// Update a room
+	// UDB contract: /udb.core.webrtc.services.v1.RoomService/UpdateRoom
+	// Listener: control plane.
+	// Scopes: udb:webrtc:room:update-room.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	UpdateRoom(ctx context.Context, in *UpdateRoomRequest, opts ...grpc.CallOption) (*UpdateRoomResponse, error)
 	// Close a room
+	// UDB contract: /udb.core.webrtc.services.v1.RoomService/CloseRoom
+	// Listener: control plane.
+	// Scopes: udb:webrtc:room:close-room.
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	CloseRoom(ctx context.Context, in *CloseRoomRequest, opts ...grpc.CallOption) (*CloseRoomResponse, error)
 	// List rooms
+	// UDB contract: /udb.core.webrtc.services.v1.RoomService/ListRooms
+	// Listener: control plane.
+	// Scopes: udb:webrtc:room:list-rooms.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	ListRooms(ctx context.Context, in *ListRoomsRequest, opts ...grpc.CallOption) (*ListRoomsResponse, error)
 	// Start a composite recording/egress of a whole room.
+	// UDB contract: /udb.core.webrtc.services.v1.RoomService/StartRoomComposite
+	// Listener: control plane.
+	// Scopes: udb:webrtc:room:start-room-composite.
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	StartRoomComposite(ctx context.Context, in *StartRoomCompositeRequest, opts ...grpc.CallOption) (*StartRoomCompositeResponse, error)
 	// Start an egress of a single published track.
+	// UDB contract: /udb.core.webrtc.services.v1.RoomService/StartTrackEgress
+	// Listener: control plane.
+	// Scopes: udb:webrtc:room:start-track-egress.
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	StartTrackEgress(ctx context.Context, in *StartTrackEgressRequest, opts ...grpc.CallOption) (*StartTrackEgressResponse, error)
 	// Stop a running egress. `egress_id` must belong to the verified tenant.
+	// UDB contract: /udb.core.webrtc.services.v1.RoomService/StopEgress
+	// Listener: control plane.
+	// Scopes: udb:webrtc:room:stop-egress.
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	StopEgress(ctx context.Context, in *StopEgressRequest, opts ...grpc.CallOption) (*StopEgressResponse, error)
 	// List egress jobs for the verified tenant.
+	// UDB contract: /udb.core.webrtc.services.v1.RoomService/ListEgress
+	// Listener: control plane.
+	// Scopes: udb:webrtc:room:list-egress.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	ListEgress(ctx context.Context, in *ListEgressRequest, opts ...grpc.CallOption) (*ListEgressResponse, error)
 }
 
@@ -453,14 +525,54 @@ const (
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type PeerServiceClient interface {
 	// Join a room
+	// UDB contract: /udb.core.webrtc.services.v1.PeerService/JoinRoom
+	// Listener: control plane, peer.
+	// Scopes: udb:webrtc:peer:join-room.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	JoinRoom(ctx context.Context, in *JoinRoomRequest, opts ...grpc.CallOption) (*JoinRoomResponse, error)
 	// Join a room and atomically mint TURN credentials for the freshly-inserted peer
+	// UDB contract: /udb.core.webrtc.services.v1.PeerService/JoinSession
+	// Listener: control plane, peer.
+	// Scopes: udb:webrtc:peer:join-room.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	JoinSession(ctx context.Context, in *JoinSessionRequest, opts ...grpc.CallOption) (*JoinSessionResponse, error)
 	// Leave a room
+	// UDB contract: /udb.core.webrtc.services.v1.PeerService/LeaveRoom
+	// Listener: control plane, peer.
+	// Scopes: udb:webrtc:peer:leave-room.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	LeaveRoom(ctx context.Context, in *LeaveRoomRequest, opts ...grpc.CallOption) (*LeaveRoomResponse, error)
 	// Get a peer
+	// UDB contract: /udb.core.webrtc.services.v1.PeerService/GetPeer
+	// Listener: control plane, peer.
+	// Scopes: udb:webrtc:peer:get-peer.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	GetPeer(ctx context.Context, in *GetPeerRequest, opts ...grpc.CallOption) (*GetPeerResponse, error)
 	// List peers
+	// UDB contract: /udb.core.webrtc.services.v1.PeerService/ListPeers
+	// Listener: control plane, peer.
+	// Scopes: udb:webrtc:peer:list-peers.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	ListPeers(ctx context.Context, in *ListPeersRequest, opts ...grpc.CallOption) (*ListPeersResponse, error)
 }
 
@@ -714,12 +826,44 @@ const (
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type TrackServiceClient interface {
 	// Publish a track
+	// UDB contract: /udb.core.webrtc.services.v1.TrackService/PublishTrack
+	// Listener: control plane, peer.
+	// Scopes: udb:webrtc:track:publish-track.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	PublishTrack(ctx context.Context, in *PublishTrackRequest, opts ...grpc.CallOption) (*PublishTrackResponse, error)
 	// Unpublish a track
+	// UDB contract: /udb.core.webrtc.services.v1.TrackService/UnpublishTrack
+	// Listener: control plane, peer.
+	// Scopes: udb:webrtc:track:unpublish-track.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	UnpublishTrack(ctx context.Context, in *UnpublishTrackRequest, opts ...grpc.CallOption) (*UnpublishTrackResponse, error)
 	// Mute or unmute a track
+	// UDB contract: /udb.core.webrtc.services.v1.TrackService/MuteTrack
+	// Listener: control plane, peer.
+	// Scopes: udb:webrtc:track:mute-track.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	MuteTrack(ctx context.Context, in *MuteTrackRequest, opts ...grpc.CallOption) (*MuteTrackResponse, error)
 	// List tracks
+	// UDB contract: /udb.core.webrtc.services.v1.TrackService/ListTracks
+	// Listener: control plane, peer.
+	// Scopes: udb:webrtc:track:list-tracks.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	ListTracks(ctx context.Context, in *ListTracksRequest, opts ...grpc.CallOption) (*ListTracksResponse, error)
 }
 
@@ -933,6 +1077,14 @@ const (
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type TurnServiceClient interface {
 	// Issue ephemeral TURN/STUN credentials
+	// UDB contract: /udb.core.webrtc.services.v1.TurnService/IssueCredentials
+	// Listener: control plane, peer.
+	// Scopes: udb:webrtc:turn:issue-credentials.
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	IssueCredentials(ctx context.Context, in *IssueCredentialsRequest, opts ...grpc.CallOption) (*IssueCredentialsResponse, error)
 }
 
@@ -1039,6 +1191,14 @@ type SignalingServiceClient interface {
 	// streaming methods) and no rest_contract.
 	// Named `Signal` (not `Connect`) because tonic generates a client `connect`
 	// associated constructor; an RPC named `Connect` collides with it.
+	// UDB contract: /udb.core.webrtc.services.v1.SignalingService/Signal
+	// Listener: control plane, peer.
+	// Scopes: udb:webrtc:signal.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: mutation.
+	// Idempotency: streams are not automatically replayed; use the RPC resume contract.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	Signal(ctx context.Context, opts ...grpc.CallOption) (grpc.BidiStreamingClient[SignalRequest, SignalResponse], error)
 }
 

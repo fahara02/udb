@@ -38,18 +38,58 @@ type LockServiceClient interface {
 	// Acquire a distributed lock. Quota-aware: a tenant cannot exceed its active
 	// lock budget. Returns the monotone fencing token the holder must present on
 	// Renew/Release.
+	// UDB contract: /udb.core.lock.services.v1.LockService/AcquireLock
+	// Listener: control plane.
+	// Scopes: udb:lock:acquire-lock.
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	AcquireLock(ctx context.Context, in *AcquireLockRequest, opts ...grpc.CallOption) (*AcquireLockResponse, error)
 	// Renew (extend the lease of) a lock the caller currently holds. The presented
 	// fencing token must not be stale; a lower token is rejected.
+	// UDB contract: /udb.core.lock.services.v1.LockService/RenewLock
+	// Listener: control plane.
+	// Scopes: udb:lock:renew-lock.
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	RenewLock(ctx context.Context, in *RenewLockRequest, opts ...grpc.CallOption) (*RenewLockResponse, error)
 	// Release a lock the caller currently holds. The presented fencing token must
 	// not be stale; a lower token is rejected.
+	// UDB contract: /udb.core.lock.services.v1.LockService/ReleaseLock
+	// Listener: control plane.
+	// Scopes: udb:lock:release-lock.
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	ReleaseLock(ctx context.Context, in *ReleaseLockRequest, opts ...grpc.CallOption) (*ReleaseLockResponse, error)
 	// Fetch a single lock by name within the caller's tenant. Read-only; an absent
 	// lock returns found=false (not an error) — a tenant-scoped read miss is normal.
+	// UDB contract: /udb.core.lock.services.v1.LockService/GetLock
+	// Listener: control plane.
+	// Scopes: udb:lock:get-lock.
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	GetLock(ctx context.Context, in *GetLockRequest, opts ...grpc.CallOption) (*GetLockResponse, error)
 	// List the caller tenant's locks, optionally narrowed by status. Paginated
 	// (page_size + opaque page_token). Read-only.
+	// UDB contract: /udb.core.lock.services.v1.LockService/ListLocks
+	// Listener: control plane.
+	// Scopes: udb:lock:list-locks.
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	ListLocks(ctx context.Context, in *ListLocksRequest, opts ...grpc.CallOption) (*ListLocksResponse, error)
 }
 

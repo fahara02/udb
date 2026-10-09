@@ -34,16 +34,64 @@ const (
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type TenantServiceClient interface {
 	// Create tenant
+	// UDB contract: /udb.core.tenant.services.v1.TenantService/CreateTenant
+	// Listener: control plane.
+	// Scopes: udb:tenant:create-tenant.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	CreateTenant(ctx context.Context, in *CreateTenantRequest, opts ...grpc.CallOption) (*CreateTenantResponse, error)
 	// Get tenant
+	// UDB contract: /udb.core.tenant.services.v1.TenantService/GetTenant
+	// Listener: control plane.
+	// Scopes: udb:tenant:get-tenant.
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	GetTenant(ctx context.Context, in *GetTenantRequest, opts ...grpc.CallOption) (*GetTenantResponse, error)
 	// List tenants
+	// UDB contract: /udb.core.tenant.services.v1.TenantService/ListTenants
+	// Listener: control plane.
+	// Scopes: udb:tenant:list-tenants.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	ListTenants(ctx context.Context, in *ListTenantsRequest, opts ...grpc.CallOption) (*ListTenantsResponse, error)
 	// Update tenant
+	// UDB contract: /udb.core.tenant.services.v1.TenantService/UpdateTenant
+	// Listener: control plane.
+	// Scopes: udb:tenant:update-tenant.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	UpdateTenant(ctx context.Context, in *UpdateTenantRequest, opts ...grpc.CallOption) (*UpdateTenantResponse, error)
 	// Get tenant config
+	// UDB contract: /udb.core.tenant.services.v1.TenantService/GetTenantConfig
+	// Listener: control plane.
+	// Scopes: udb:tenant:get-tenant-config.
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	GetTenantConfig(ctx context.Context, in *GetTenantConfigRequest, opts ...grpc.CallOption) (*GetTenantConfigResponse, error)
 	// Update tenant config
+	// UDB contract: /udb.core.tenant.services.v1.TenantService/UpdateTenantConfig
+	// Listener: control plane.
+	// Scopes: udb:tenant:update-tenant-config.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	UpdateTenantConfig(ctx context.Context, in *UpdateTenantConfigRequest, opts ...grpc.CallOption) (*UpdateTenantConfigResponse, error)
 	// Purge tenant (GDPR right-to-be-forgotten). HARD-deletes every row the tenant
 	// owns across all tenant-columned entity tables, then revokes the tenant's and
@@ -51,6 +99,14 @@ type TenantServiceClient interface {
 	// confirmation token gate it. Mirrors the destructive-RPC endpoint_security of
 	// siblings like authn.ChangeUserStatus (AUTH_MODE_BEARER, tenant_required,
 	// request_context_required).
+	// UDB contract: /udb.core.tenant.services.v1.TenantService/PurgeTenant
+	// Listener: control plane.
+	// Scopes: udb:tenant:purge-tenant.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: destructive.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	PurgeTenant(ctx context.Context, in *PurgeTenantRequest, opts ...grpc.CallOption) (*PurgeTenantResponse, error)
 	// PRIVILEGED cross-tenant purge (Bug #2). Unlike PurgeTenant — which forces the
 	// body tenant to equal the verified claim (self-purge only) — this RPC lets a
@@ -63,6 +119,15 @@ type TenantServiceClient interface {
 	// blind-deleted), and writes an immutable audit/outcome record. `tenant_field`
 	// names the body tenant the action targets (`target_tenant_id`); the handler —
 	// not the transport gate — authorizes the cross-tenant reach via the scope.
+	// UDB contract: /udb.core.tenant.services.v1.TenantService/AdminPurgeTenant
+	// Listener: control plane.
+	// Scopes: udb:tenant:admin-purge.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: destructive.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// The endpoint requires an idempotency key.
+	// End UDB contract.
 	AdminPurgeTenant(ctx context.Context, in *AdminPurgeTenantRequest, opts ...grpc.CallOption) (*AdminPurgeTenantResponse, error)
 }
 

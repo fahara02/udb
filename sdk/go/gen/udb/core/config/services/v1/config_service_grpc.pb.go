@@ -40,19 +40,59 @@ const (
 type ConfigServiceClient interface {
 	// Create or update a flag at a (tenant, project, environment) scope. Bumps the
 	// flag's monotone revision and emits `udb.config.flag.changed.v1`.
+	// UDB contract: /udb.core.config.services.v1.ConfigService/PutFlag
+	// Listener: control plane.
+	// Scopes: udb:config:put-flag.
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	PutFlag(ctx context.Context, in *PutFlagRequest, opts ...grpc.CallOption) (*PutFlagResponse, error)
 	// Fetch a single flag's stored definition at an exact (tenant, project,
 	// environment, key) scope. Read-only; performs no rollout evaluation.
+	// UDB contract: /udb.core.config.services.v1.ConfigService/GetFlag
+	// Listener: control plane.
+	// Scopes: udb:config:get-flag.
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	GetFlag(ctx context.Context, in *GetFlagRequest, opts ...grpc.CallOption) (*GetFlagResponse, error)
 	// List a tenant's flags, optionally narrowed to a project and/or environment.
+	// UDB contract: /udb.core.config.services.v1.ConfigService/ListFlags
+	// Listener: control plane.
+	// Scopes: udb:config:list-flags.
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	ListFlags(ctx context.Context, in *ListFlagsRequest, opts ...grpc.CallOption) (*ListFlagsResponse, error)
 	// Delete a flag at an exact scope. Destructive; bumps the revision in the
 	// emitted change event.
+	// UDB contract: /udb.core.config.services.v1.ConfigService/DeleteFlag
+	// Listener: control plane.
+	// Scopes: udb:config:delete-flag.
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
+	// Operation kind: destructive.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	DeleteFlag(ctx context.Context, in *DeleteFlagRequest, opts ...grpc.CallOption) (*DeleteFlagResponse, error)
 	// Evaluate a set of flag keys for an evaluation context. The server applies the
 	// SAME pure algorithm the SDK uses (scope precedence + stable-hash percentage
 	// rollout) and returns the resolved typed values plus a server-authoritative
 	// cache TTL and the observed config revision. Read-only.
+	// UDB contract: /udb.core.config.services.v1.ConfigService/EvaluateFlags
+	// Listener: control plane.
+	// Scopes: udb:config:evaluate-flags.
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	EvaluateFlags(ctx context.Context, in *EvaluateFlagsRequest, opts ...grpc.CallOption) (*EvaluateFlagsResponse, error)
 }
 

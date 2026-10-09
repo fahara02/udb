@@ -51,18 +51,66 @@ type ControlPlaneServiceClient interface {
 	// human/session credential, no REST surface, and is never part of an application
 	// CRUD facade — so it is gated to internal callers (a loopback node or a node
 	// presenting a verified mTLS identity); an untrusted remote caller is rejected.
+	// UDB contract: /udb.core.control.services.v1.ControlPlaneService/StreamResources
+	// Listener: internal loopback.
+	// Scopes: udb:control:stream-resources.
+	// Credential types: BEARER_JWT (1), SERVICE_ACCOUNT (4).
+	// Operation kind: mutation.
+	// Idempotency: streams are not automatically replayed; use the RPC resume contract.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	StreamResources(ctx context.Context, opts ...grpc.CallOption) (grpc.BidiStreamingClient[DiscoveryRequest, DiscoveryResponse], error)
 	// ── Incremental / delta discovery ─────────────────────────────────────────
 	// Same node↔broker push semantics as StreamResources (incremental form). Only a
 	// data-plane node should open it; restricted to internal callers for the same
 	// reasons (no session credential, no REST surface, not an application facade RPC).
+	// UDB contract: /udb.core.control.services.v1.ControlPlaneService/DeltaResources
+	// Listener: internal loopback.
+	// Scopes: udb:control:delta-resources.
+	// Credential types: BEARER_JWT (1), SERVICE_ACCOUNT (4).
+	// Operation kind: mutation.
+	// Idempotency: streams are not automatically replayed; use the RPC resume contract.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	DeltaResources(ctx context.Context, opts ...grpc.CallOption) (grpc.BidiStreamingClient[DeltaDiscoveryRequest, DeltaDiscoveryResponse], error)
 	// ── On-demand fetch (incl. by tenant) ─────────────────────────────────────
+	// UDB contract: /udb.core.control.services.v1.ControlPlaneService/GetResources
+	// Listener: control plane.
+	// Scopes: udb:control:get-resources.
+	// Credential types: BEARER_JWT (1), SERVICE_ACCOUNT (4).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	GetResources(ctx context.Context, in *GetResourcesRequest, opts ...grpc.CallOption) (*GetResourcesResponse, error)
 	// ── Admin visibility ──────────────────────────────────────────────────────
+	// UDB contract: /udb.core.control.services.v1.ControlPlaneService/ListNodeStates
+	// Listener: control plane.
+	// Scopes: udb:control:list-node-states.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	ListNodeStates(ctx context.Context, in *ListNodeStatesRequest, opts ...grpc.CallOption) (*ListNodeStatesResponse, error)
+	// UDB contract: /udb.core.control.services.v1.ControlPlaneService/AckStatus
+	// Listener: control plane.
+	// Scopes: udb:control:ack-status.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	AckStatus(ctx context.Context, in *AckStatusRequest, opts ...grpc.CallOption) (*AckStatusResponse, error)
 	// ── Rollback a node/resource-type to a retained served snapshot ────────────
+	// UDB contract: /udb.core.control.services.v1.ControlPlaneService/RollbackResources
+	// Listener: control plane.
+	// Scopes: udb:control:rollback-resources.
+	// Credential types: BEARER_JWT (1), SERVICE_ACCOUNT (4).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	RollbackResources(ctx context.Context, in *RollbackResourcesRequest, opts ...grpc.CallOption) (*RollbackResourcesResponse, error)
 }
 

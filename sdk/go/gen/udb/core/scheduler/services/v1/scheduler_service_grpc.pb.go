@@ -37,16 +37,64 @@ const (
 // jobs as outbox events only (consumers do the work).
 type SchedulerServiceClient interface {
 	// Create a cron or one-shot job.
+	// UDB contract: /udb.core.scheduler.services.v1.SchedulerService/CreateJob
+	// Listener: control plane.
+	// Scopes: udb:scheduler:create-job.
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	CreateJob(ctx context.Context, in *CreateJobRequest, opts ...grpc.CallOption) (*CreateJobResponse, error)
 	// Get a job by id.
+	// UDB contract: /udb.core.scheduler.services.v1.SchedulerService/GetJob
+	// Listener: control plane.
+	// Scopes: udb:scheduler:get-job.
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	GetJob(ctx context.Context, in *GetJobRequest, opts ...grpc.CallOption) (*GetJobResponse, error)
 	// List jobs for the caller's tenant.
+	// UDB contract: /udb.core.scheduler.services.v1.SchedulerService/ListJobs
+	// Listener: control plane.
+	// Scopes: udb:scheduler:list-jobs.
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	ListJobs(ctx context.Context, in *ListJobsRequest, opts ...grpc.CallOption) (*ListJobsResponse, error)
 	// Delete (soft-delete) a job.
+	// UDB contract: /udb.core.scheduler.services.v1.SchedulerService/DeleteJob
+	// Listener: control plane.
+	// Scopes: udb:scheduler:delete-job.
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
+	// Operation kind: destructive.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	DeleteJob(ctx context.Context, in *DeleteJobRequest, opts ...grpc.CallOption) (*DeleteJobResponse, error)
 	// Pause a job so the tick stops claiming it.
+	// UDB contract: /udb.core.scheduler.services.v1.SchedulerService/PauseJob
+	// Listener: control plane.
+	// Scopes: udb:scheduler:pause-job.
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	PauseJob(ctx context.Context, in *PauseJobRequest, opts ...grpc.CallOption) (*PauseJobResponse, error)
 	// Resume a paused job.
+	// UDB contract: /udb.core.scheduler.services.v1.SchedulerService/ResumeJob
+	// Listener: control plane.
+	// Scopes: udb:scheduler:resume-job.
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	ResumeJob(ctx context.Context, in *ResumeJobRequest, opts ...grpc.CallOption) (*ResumeJobResponse, error)
 }
 

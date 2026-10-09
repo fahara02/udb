@@ -1,7 +1,20 @@
 import fs from "node:fs";
 import path from "node:path";
+import { GoRPCContractDocs, credentialTypeNames } from "./go-rpc-contract-docs.mjs";
+
+const goRpcDocsOnly = process.argv.includes("--go-rpc-docs-only");
+const goRpcDocs = new GoRPCContractDocs(
+  JSON.parse(fs.readFileSync(new URL("../docs/generated/udb-native-contract.json", import.meta.url), "utf8")),
+  credentialTypeNames(fs.readFileSync(new URL("../sdk/go/gen/udb/core/common/v1/security.pb.go", import.meta.url), "utf8")),
+);
+
+function isUdbGoGrpcFile(file) {
+  return path.normalize(file).startsWith(path.normalize("sdk/go/gen/udb") + path.sep)
+    && file.endsWith("_grpc.pb.go");
+}
 
 function rewrite(path, transform) {
+  if (goRpcDocsOnly && !isUdbGoGrpcFile(path)) return;
   const before = fs.readFileSync(path, "utf8");
   const after = transform(before);
   if (after !== before) {
@@ -278,14 +291,17 @@ const PHP_COMMENT_DRIFT_FILES = new Set([
   path.normalize("sdk/php/gen/Udb/Core/Authz/Services/V1/PolicyBundleRequest.php"),
 ]);
 
-dropPrivateGoGoogleApiStubs();
+if (!goRpcDocsOnly) dropPrivateGoGoogleApiStubs();
 
 for (const root of GENERATED_ROOTS) {
   for (const file of walkFiles(root)) {
     if (GENERATED_TEXT_EXTENSIONS.has(path.extname(file))) {
       const ext = path.extname(file);
       if (ext === ".go") {
-        rewrite(file, normalizeGoGeneratedText);
+        rewrite(file, (text) => {
+          const normalized = goRpcDocsOnly ? text : normalizeGoGeneratedText(text);
+          return isUdbGoGrpcFile(file) ? goRpcDocs.annotate(normalized, file) : normalized;
+        });
       } else if (ext === ".java") {
         rewrite(file, normalizeJavaGeneratedText);
       } else if (ext === ".php") {
@@ -302,4 +318,5 @@ for (const root of GENERATED_ROOTS) {
   }
 }
 
-console.log("sdk-codegen-postprocess: normalized generated SDK whitespace/import drift and Go google/api imports");
+const documentedMethods = goRpcDocs.finish();
+console.log(`sdk-codegen-postprocess: documented ${documentedMethods} canonical Go Client methods${goRpcDocsOnly ? " (comments only)" : "; normalized generated SDK whitespace/import drift and Go google/api imports"}`);

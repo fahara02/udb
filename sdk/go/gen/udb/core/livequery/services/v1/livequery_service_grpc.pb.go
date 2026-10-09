@@ -45,6 +45,14 @@ type LiveQueryServiceClient interface {
 	// through the mediated path with the tenant predicate injected server-side);
 	// subsequent messages carry a Change delta or an idle Heartbeat. Fails closed
 	// (failed_precondition) when the source entity has no resolvable tenant column.
+	// UDB contract: /udb.core.livequery.services.v1.LiveQueryService/Subscribe
+	// Listener: control plane.
+	// Scopes: udb:livequery:subscribe.
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
+	// Operation kind: read_only.
+	// Idempotency: streams are not automatically replayed; use the RPC resume contract.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	Subscribe(ctx context.Context, in *SubscribeRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[SubscribeResponse], error)
 }
 

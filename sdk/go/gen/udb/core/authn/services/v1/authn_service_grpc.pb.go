@@ -97,100 +97,540 @@ const (
 // ---------------------------------------------------------------------------
 type AuthnServiceClient interface {
 	// ── User management (admin-only) ─────────────────────────────────────────
+	// UDB contract: /udb.core.authn.services.v1.AuthnService/CreateUser
+	// Listener: control plane.
+	// Scopes: udb:authn:create-user.
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	CreateUser(ctx context.Context, in *CreateUserRequest, opts ...grpc.CallOption) (*CreateUserResponse, error)
+	// UDB contract: /udb.core.authn.services.v1.AuthnService/GetUser
+	// Listener: control plane.
+	// Scopes: udb:authn:get-user.
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	GetUser(ctx context.Context, in *GetUserRequest, opts ...grpc.CallOption) (*GetUserResponse, error)
+	// UDB contract: /udb.core.authn.services.v1.AuthnService/ListUsers
+	// Listener: control plane.
+	// Scopes: udb:authn:list-users.
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	ListUsers(ctx context.Context, in *ListUsersRequest, opts ...grpc.CallOption) (*ListUsersResponse, error)
+	// UDB contract: /udb.core.authn.services.v1.AuthnService/UpdateUser
+	// Listener: control plane.
+	// Scopes: udb:authn:update-user.
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	UpdateUser(ctx context.Context, in *UpdateUserRequest, opts ...grpc.CallOption) (*UpdateUserResponse, error)
+	// UDB contract: /udb.core.authn.services.v1.AuthnService/ChangeUserStatus
+	// Listener: control plane.
+	// Scopes: udb:authn:change-user-status.
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
+	// Operation kind: destructive.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	ChangeUserStatus(ctx context.Context, in *ChangeUserStatusRequest, opts ...grpc.CallOption) (*ChangeUserStatusResponse, error)
 	// Admin-triggered password reset — sends email OTP to complete flow
+	// UDB contract: /udb.core.authn.services.v1.AuthnService/AdminResetPassword
+	// Listener: control plane.
+	// Scopes: udb:authn:admin-reset-password.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: destructive.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	AdminResetPassword(ctx context.Context, in *AdminResetPasswordRequest, opts ...grpc.CallOption) (*AdminResetPasswordResponse, error)
 	// ── OTP ──────────────────────────────────────────────────────────────────
+	// UDB contract: /udb.core.authn.services.v1.AuthnService/SendOTP
+	// Listener: control plane.
+	// Scopes: udb:authn:send-otp.
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	SendOTP(ctx context.Context, in *SendOTPRequest, opts ...grpc.CallOption) (*SendOTPResponse, error)
+	// UDB contract: /udb.core.authn.services.v1.AuthnService/VerifyOTP
+	// Listener: control plane.
+	// Scopes: udb:authn:verify-otp.
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	VerifyOTP(ctx context.Context, in *VerifyOTPRequest, opts ...grpc.CallOption) (*VerifyOTPResponse, error)
+	// UDB contract: /udb.core.authn.services.v1.AuthnService/ResendOTP
+	// Listener: control plane.
+	// Scopes: udb:authn:resend-otp.
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	ResendOTP(ctx context.Context, in *ResendOTPRequest, opts ...grpc.CallOption) (*ResendOTPResponse, error)
 	// ── Authentication ───────────────────────────────────────────────────────
+	// UDB contract: /udb.core.authn.services.v1.AuthnService/Authenticate
+	// Listener: control plane.
+	// Scopes: no endpoint scopes (PUBLIC); method-specific authorization still applies.
+	// Credential types: PUBLIC endpoint; method-specific request credentials.
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	Authenticate(ctx context.Context, in *AuthnRequest, opts ...grpc.CallOption) (*AuthnResponse, error)
+	// UDB contract: /udb.core.authn.services.v1.AuthnService/Login
+	// Listener: control plane.
+	// Scopes: no endpoint scopes (PUBLIC); method-specific authorization still applies.
+	// Credential types: PUBLIC endpoint; method-specific request credentials.
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	Login(ctx context.Context, in *LoginRequest, opts ...grpc.CallOption) (*LoginResponse, error)
+	// UDB contract: /udb.core.authn.services.v1.AuthnService/RefreshToken
+	// Listener: control plane.
+	// Scopes: no endpoint scopes (PUBLIC); method-specific authorization still applies.
+	// Credential types: PUBLIC endpoint; method-specific request credentials.
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	RefreshToken(ctx context.Context, in *RefreshTokenRequest, opts ...grpc.CallOption) (*RefreshTokenResponse, error)
+	// UDB contract: /udb.core.authn.services.v1.AuthnService/Logout
+	// Listener: control plane.
+	// Scopes: udb:authn:logout.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	Logout(ctx context.Context, in *LogoutRequest, opts ...grpc.CallOption) (*LogoutResponse, error)
+	// UDB contract: /udb.core.authn.services.v1.AuthnService/ChangePassword
+	// Listener: control plane.
+	// Scopes: udb:authn:change-password.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	ChangePassword(ctx context.Context, in *ChangePasswordRequest, opts ...grpc.CallOption) (*ChangePasswordResponse, error)
 	// ── Token validation (called by gateway + per-service interceptors) ───────
+	// UDB contract: /udb.core.authn.services.v1.AuthnService/ValidateToken
+	// Listener: control plane.
+	// Scopes: udb:authn:validate-token.
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4), MTLS (5).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	ValidateToken(ctx context.Context, in *ValidateTokenRequest, opts ...grpc.CallOption) (*ValidateTokenResponse, error)
 	// ── Session management ───────────────────────────────────────────────────
+	// UDB contract: /udb.core.authn.services.v1.AuthnService/CreateSession
+	// Listener: control plane.
+	// Scopes: udb:authn:create-session.
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	CreateSession(ctx context.Context, in *CreateSessionRequest, opts ...grpc.CallOption) (*CreateSessionResponse, error)
+	// UDB contract: /udb.core.authn.services.v1.AuthnService/RefreshSession
+	// Listener: control plane.
+	// Scopes: udb:authn:refresh-session.
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	RefreshSession(ctx context.Context, in *RefreshSessionRequest, opts ...grpc.CallOption) (*RefreshSessionResponse, error)
+	// UDB contract: /udb.core.authn.services.v1.AuthnService/GetSession
+	// Listener: control plane.
+	// Scopes: udb:authn:get-session.
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	GetSession(ctx context.Context, in *GetSessionRequest, opts ...grpc.CallOption) (*GetSessionResponse, error)
+	// UDB contract: /udb.core.authn.services.v1.AuthnService/ListSessions
+	// Listener: control plane.
+	// Scopes: udb:authn:list-sessions.
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	ListSessions(ctx context.Context, in *ListSessionsRequest, opts ...grpc.CallOption) (*ListSessionsResponse, error)
+	// UDB contract: /udb.core.authn.services.v1.AuthnService/RevokeSession
+	// Listener: control plane.
+	// Scopes: udb:authn:revoke-session.
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	RevokeSession(ctx context.Context, in *RevokeSessionRequest, opts ...grpc.CallOption) (*RevokeSessionResponse, error)
 	// ── CSRF (server-side sessions only) ────────────────────────────────────
+	// UDB contract: /udb.core.authn.services.v1.AuthnService/ValidateCSRF
+	// Listener: control plane.
+	// Scopes: udb:authn:validate-csrf.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	ValidateCSRF(ctx context.Context, in *ValidateCSRFRequest, opts ...grpc.CallOption) (*ValidateCSRFResponse, error)
 	// ── MFA enrollment ───────────────────────────────────────────────────────
 	// Step 1: initiate enrollment — returns TOTP secret / QR URI
+	// UDB contract: /udb.core.authn.services.v1.AuthnService/EnrollMFA
+	// Listener: control plane.
+	// Scopes: udb:authn:enroll-mfa.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	EnrollMFA(ctx context.Context, in *EnrollMFARequest, opts ...grpc.CallOption) (*EnrollMFAResponse, error)
 	// Step 2: confirm with first TOTP code (or email OTP)
+	// UDB contract: /udb.core.authn.services.v1.AuthnService/ConfirmMFAEnrollment
+	// Listener: control plane.
+	// Scopes: udb:authn:confirm-mfa-enrollment.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	ConfirmMFAEnrollment(ctx context.Context, in *ConfirmMFAEnrollmentRequest, opts ...grpc.CallOption) (*ConfirmMFAEnrollmentResponse, error)
 	// Generate a fresh set of single-use MFA recovery/backup codes (returned once;
 	// any prior codes for the user are invalidated).
+	// UDB contract: /udb.core.authn.services.v1.AuthnService/GenerateRecoveryCodes
+	// Listener: control plane.
+	// Scopes: udb:authn:generate-recovery-codes.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	GenerateRecoveryCodes(ctx context.Context, in *GenerateRecoveryCodesRequest, opts ...grpc.CallOption) (*GenerateRecoveryCodesResponse, error)
 	// Set the per-tenant MFA enforcement policy.
+	// UDB contract: /udb.core.authn.services.v1.AuthnService/PutMfaPolicy
+	// Listener: control plane.
+	// Scopes: udb:authn:put-mfa-policy.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	PutMfaPolicy(ctx context.Context, in *PutMfaPolicyRequest, opts ...grpc.CallOption) (*PutMfaPolicyResponse, error)
 	// Read the per-tenant MFA enforcement policy.
+	// UDB contract: /udb.core.authn.services.v1.AuthnService/GetMfaPolicy
+	// Listener: control plane.
+	// Scopes: udb:authn:get-mfa-policy.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	GetMfaPolicy(ctx context.Context, in *GetMfaPolicyRequest, opts ...grpc.CallOption) (*GetMfaPolicyResponse, error)
 	// User-initiated password reset: issues a PASSWORD_RESET OTP (delivered to the
 	// account's channel). Public — no bearer required.
+	// UDB contract: /udb.core.authn.services.v1.AuthnService/ForgotPassword
+	// Listener: control plane.
+	// Scopes: no endpoint scopes (PUBLIC); method-specific authorization still applies.
+	// Credential types: PUBLIC endpoint; method-specific request credentials.
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	ForgotPassword(ctx context.Context, in *ForgotPasswordRequest, opts ...grpc.CallOption) (*ForgotPasswordResponse, error)
 	// Complete a password reset with the OTP from ForgotPassword (no current
 	// password required). Public — the OTP is the proof of control.
+	// UDB contract: /udb.core.authn.services.v1.AuthnService/ResetPassword
+	// Listener: control plane.
+	// Scopes: no endpoint scopes (PUBLIC); method-specific authorization still applies.
+	// Credential types: PUBLIC endpoint; method-specific request credentials.
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	ResetPassword(ctx context.Context, in *ResetPasswordRequest, opts ...grpc.CallOption) (*ResetPasswordResponse, error)
 	// OAuth2-style token introspection for a UDB-issued JWT.
+	// UDB contract: /udb.core.authn.services.v1.AuthnService/IntrospectToken
+	// Listener: control plane.
+	// Scopes: udb:authn:introspect-token.
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	IntrospectToken(ctx context.Context, in *IntrospectTokenRequest, opts ...grpc.CallOption) (*IntrospectTokenResponse, error)
 	// Set the user's phone number and send an SMS verification OTP. Complete with
 	// VerifyOTP (the response is verified the same way as email).
+	// UDB contract: /udb.core.authn.services.v1.AuthnService/SendPhoneVerification
+	// Listener: control plane.
+	// Scopes: udb:authn:send-phone-verification.
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	SendPhoneVerification(ctx context.Context, in *SendPhoneVerificationRequest, opts ...grpc.CallOption) (*SendPhoneVerificationResponse, error)
 	// JSON Web Key Set for verifying UDB-issued JWTs. Public.
+	// UDB contract: /udb.core.authn.services.v1.AuthnService/GetJwks
+	// Listener: control plane.
+	// Scopes: no endpoint scopes (PUBLIC); method-specific authorization still applies.
+	// Credential types: PUBLIC endpoint; method-specific request credentials.
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	GetJwks(ctx context.Context, in *GetJwksRequest, opts ...grpc.CallOption) (*GetJwksResponse, error)
 	// ── WebAuthn / passkeys ─────────────────────────────────────────────────
+	// UDB contract: /udb.core.authn.services.v1.AuthnService/StartWebAuthnRegistration
+	// Listener: control plane.
+	// Scopes: udb:authn:start-web-authn-registration.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	StartWebAuthnRegistration(ctx context.Context, in *StartWebAuthnRegistrationRequest, opts ...grpc.CallOption) (*StartWebAuthnRegistrationResponse, error)
+	// UDB contract: /udb.core.authn.services.v1.AuthnService/FinishWebAuthnRegistration
+	// Listener: control plane.
+	// Scopes: udb:authn:finish-web-authn-registration.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	FinishWebAuthnRegistration(ctx context.Context, in *FinishWebAuthnRegistrationRequest, opts ...grpc.CallOption) (*FinishWebAuthnRegistrationResponse, error)
+	// UDB contract: /udb.core.authn.services.v1.AuthnService/StartWebAuthnAuthentication
+	// Listener: control plane.
+	// Scopes: no endpoint scopes (PUBLIC); method-specific authorization still applies.
+	// Credential types: PUBLIC endpoint; method-specific request credentials.
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	StartWebAuthnAuthentication(ctx context.Context, in *StartWebAuthnAuthenticationRequest, opts ...grpc.CallOption) (*StartWebAuthnAuthenticationResponse, error)
+	// UDB contract: /udb.core.authn.services.v1.AuthnService/FinishWebAuthnAuthentication
+	// Listener: control plane.
+	// Scopes: no endpoint scopes (PUBLIC); method-specific authorization still applies.
+	// Credential types: PUBLIC endpoint; method-specific request credentials.
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	FinishWebAuthnAuthentication(ctx context.Context, in *FinishWebAuthnAuthenticationRequest, opts ...grpc.CallOption) (*FinishWebAuthnAuthenticationResponse, error)
 	// ── Device + session revocation lifecycle (Phase 3 / I2.4) ───────────────
+	// UDB contract: /udb.core.authn.services.v1.AuthnService/ListDevices
+	// Listener: control plane.
+	// Scopes: udb:authn:list-devices.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	ListDevices(ctx context.Context, in *ListDevicesRequest, opts ...grpc.CallOption) (*ListDevicesResponse, error)
+	// UDB contract: /udb.core.authn.services.v1.AuthnService/RevokeDevice
+	// Listener: control plane.
+	// Scopes: udb:authn:revoke-device.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	RevokeDevice(ctx context.Context, in *RevokeDeviceRequest, opts ...grpc.CallOption) (*RevokeDeviceResponse, error)
+	// UDB contract: /udb.core.authn.services.v1.AuthnService/AdminRevokeSession
+	// Listener: control plane.
+	// Scopes: udb:authn:admin-revoke-session.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: destructive.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	AdminRevokeSession(ctx context.Context, in *AdminRevokeSessionRequest, opts ...grpc.CallOption) (*AdminRevokeSessionResponse, error)
+	// UDB contract: /udb.core.authn.services.v1.AuthnService/AdminRevokeAllUserSessions
+	// Listener: control plane.
+	// Scopes: udb:authn:admin-revoke-all-user-sessions.
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
+	// Operation kind: destructive.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	AdminRevokeAllUserSessions(ctx context.Context, in *AdminRevokeAllUserSessionsRequest, opts ...grpc.CallOption) (*AdminRevokeAllUserSessionsResponse, error)
+	// UDB contract: /udb.core.authn.services.v1.AuthnService/AdminRevokeAllTenantSessions
+	// Listener: control plane.
+	// Scopes: udb:authn:admin-revoke-all-tenant-sessions.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: destructive.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	AdminRevokeAllTenantSessions(ctx context.Context, in *AdminRevokeAllTenantSessionsRequest, opts ...grpc.CallOption) (*AdminRevokeAllTenantSessionsResponse, error)
+	// UDB contract: /udb.core.authn.services.v1.AuthnService/EmergencyRevoke
+	// Listener: control plane.
+	// Scopes: udb:authn:emergency-revoke.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: destructive.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	EmergencyRevoke(ctx context.Context, in *EmergencyRevokeRequest, opts ...grpc.CallOption) (*EmergencyRevokeResponse, error)
 	// ── MFA challenge + factor lifecycle (Phase 3 / I2.6) ────────────────────
+	// UDB contract: /udb.core.authn.services.v1.AuthnService/IssueMfaChallenge
+	// Listener: control plane.
+	// Scopes: udb:authn:issue-mfa-challenge.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	IssueMfaChallenge(ctx context.Context, in *IssueMfaChallengeRequest, opts ...grpc.CallOption) (*IssueMfaChallengeResponse, error)
+	// UDB contract: /udb.core.authn.services.v1.AuthnService/VerifyMfaChallenge
+	// Listener: control plane.
+	// Scopes: udb:authn:verify-mfa-challenge.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	VerifyMfaChallenge(ctx context.Context, in *VerifyMfaChallengeRequest, opts ...grpc.CallOption) (*VerifyMfaChallengeResponse, error)
+	// UDB contract: /udb.core.authn.services.v1.AuthnService/ListMfaFactors
+	// Listener: control plane.
+	// Scopes: udb:authn:list-mfa-factors.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	ListMfaFactors(ctx context.Context, in *ListMfaFactorsRequest, opts ...grpc.CallOption) (*ListMfaFactorsResponse, error)
+	// UDB contract: /udb.core.authn.services.v1.AuthnService/DisableMfaFactor
+	// Listener: control plane.
+	// Scopes: udb:authn:disable-mfa-factor.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	DisableMfaFactor(ctx context.Context, in *DisableMfaFactorRequest, opts ...grpc.CallOption) (*DisableMfaFactorResponse, error)
+	// UDB contract: /udb.core.authn.services.v1.AuthnService/RenamePasskey
+	// Listener: control plane.
+	// Scopes: udb:authn:rename-passkey.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	RenamePasskey(ctx context.Context, in *RenamePasskeyRequest, opts ...grpc.CallOption) (*RenamePasskeyResponse, error)
+	// UDB contract: /udb.core.authn.services.v1.AuthnService/RevokeRecoveryCodes
+	// Listener: control plane.
+	// Scopes: udb:authn:revoke-recovery-codes.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	RevokeRecoveryCodes(ctx context.Context, in *RevokeRecoveryCodesRequest, opts ...grpc.CallOption) (*RevokeRecoveryCodesResponse, error)
+	// UDB contract: /udb.core.authn.services.v1.AuthnService/AdminResetMfa
+	// Listener: control plane.
+	// Scopes: udb:authn:admin-reset-mfa.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: destructive.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	AdminResetMfa(ctx context.Context, in *AdminResetMfaRequest, opts ...grpc.CallOption) (*AdminResetMfaResponse, error)
 	// ── WebAuthn enterprise credential lifecycle (Phase 3 / I2.7) ────────────
+	// UDB contract: /udb.core.authn.services.v1.AuthnService/ListWebAuthnCredentials
+	// Listener: control plane.
+	// Scopes: udb:authn:list-web-authn-credentials.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	ListWebAuthnCredentials(ctx context.Context, in *ListWebAuthnCredentialsRequest, opts ...grpc.CallOption) (*ListWebAuthnCredentialsResponse, error)
+	// UDB contract: /udb.core.authn.services.v1.AuthnService/DeleteWebAuthnCredential
+	// Listener: control plane.
+	// Scopes: udb:authn:delete-web-authn-credential.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	DeleteWebAuthnCredential(ctx context.Context, in *DeleteWebAuthnCredentialRequest, opts ...grpc.CallOption) (*DeleteWebAuthnCredentialResponse, error)
 	// ── Typed service-account grants + mTLS certificate bindings (UDB-AUTH-003/007) ──
 	// Create the single typed grant for a service account: immutable service
 	// identity, tenant/project binding, and operator-approved scopes.
 	// Admin/owner/wildcard scopes are rejected at write time (fail closed).
+	// UDB contract: /udb.core.authn.services.v1.AuthnService/CreateServiceAccountGrant
+	// Listener: control plane.
+	// Scopes: udb:authn:manage-grants.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	CreateServiceAccountGrant(ctx context.Context, in *CreateServiceAccountGrantRequest, opts ...grpc.CallOption) (*CreateServiceAccountGrantResponse, error)
 	// Read the current typed grant for a service account; NOT_FOUND when the
 	// account has no grant (the account then cannot authenticate — fail closed).
+	// UDB contract: /udb.core.authn.services.v1.AuthnService/GetServiceAccountGrant
+	// Listener: control plane.
+	// Scopes: udb:authn:read-grants.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	GetServiceAccountGrant(ctx context.Context, in *GetServiceAccountGrantRequest, opts ...grpc.CallOption) (*GetServiceAccountGrantResponse, error)
 	// Page through the tenant's typed service-account grants (tenant-scoped;
 	// cross-tenant reads are rejected).
+	// UDB contract: /udb.core.authn.services.v1.AuthnService/ListServiceAccountGrants
+	// Listener: control plane.
+	// Scopes: udb:authn:read-grants.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	ListServiceAccountGrants(ctx context.Context, in *ListServiceAccountGrantsRequest, opts ...grpc.CallOption) (*ListServiceAccountGrantsResponse, error)
 	// Replace a grant's approved scopes/project atomically, bumping `revision` so
 	// dependent credentials and bindings detect staleness. A stale
 	// expected_revision fails with FAILED_PRECONDITION (fail closed).
+	// UDB contract: /udb.core.authn.services.v1.AuthnService/ReplaceServiceAccountGrant
+	// Listener: control plane.
+	// Scopes: udb:authn:manage-grants.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	ReplaceServiceAccountGrant(ctx context.Context, in *ReplaceServiceAccountGrantRequest, opts ...grpc.CallOption) (*ReplaceServiceAccountGrantResponse, error)
 	// Rotate the immutable service identity through an explicit audited CAS.
 	// The revision bump invalidates all API keys and certificate bindings
 	// reviewed against the prior identity; already-issued service JWTs fail the
 	// current-grant identity check immediately.
+	// UDB contract: /udb.core.authn.services.v1.AuthnService/RotateServiceAccountIdentity
+	// Listener: control plane.
+	// Scopes: udb:authn:manage-grants.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: destructive.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	RotateServiceAccountIdentity(ctx context.Context, in *RotateServiceAccountIdentityRequest, opts ...grpc.CallOption) (*RotateServiceAccountIdentityResponse, error)
 	// Atomically transfer an ACTIVE service-account grant (its stable
 	// service_identity and approved scopes) from one service account to another,
@@ -202,20 +642,60 @@ type AuthnServiceClient interface {
 	// the identity); the move is a deterministic inverse of itself. This is the
 	// supported recovery path when the currently-bound account's credentials are
 	// unavailable, replacing a non-atomic rotate-then-create.
+	// UDB contract: /udb.core.authn.services.v1.AuthnService/TransferServiceAccountGrant
+	// Listener: control plane.
+	// Scopes: udb:authn:manage-grants.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: destructive.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	TransferServiceAccountGrant(ctx context.Context, in *TransferServiceAccountGrantRequest, opts ...grpc.CallOption) (*TransferServiceAccountGrantResponse, error)
 	// Revoke a service account's grant. The account (and every credential or
 	// certificate binding that resolves through the grant) stops authenticating
 	// immediately — fail closed, audited.
+	// UDB contract: /udb.core.authn.services.v1.AuthnService/RevokeServiceAccountGrant
+	// Listener: control plane.
+	// Scopes: udb:authn:manage-grants.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: destructive.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	RevokeServiceAccountGrant(ctx context.Context, in *RevokeServiceAccountGrantRequest, opts ...grpc.CallOption) (*RevokeServiceAccountGrantResponse, error)
 	// Bind an mTLS certificate selector to a service account. The principal is
 	// always derived from the account's CURRENT grant at request time (optionally
 	// attenuated by scope_subset); an unknown or misbound certificate fails closed.
+	// UDB contract: /udb.core.authn.services.v1.AuthnService/CreateCertificateBinding
+	// Listener: control plane.
+	// Scopes: udb:authn:manage-grants.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	CreateCertificateBinding(ctx context.Context, in *CreateCertificateBindingRequest, opts ...grpc.CallOption) (*CreateCertificateBindingResponse, error)
 	// Page through the tenant's mTLS certificate bindings (tenant-scoped;
 	// cross-tenant reads are rejected).
+	// UDB contract: /udb.core.authn.services.v1.AuthnService/ListCertificateBindings
+	// Listener: control plane.
+	// Scopes: udb:authn:read-grants.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	ListCertificateBindings(ctx context.Context, in *ListCertificateBindingsRequest, opts ...grpc.CallOption) (*ListCertificateBindingsResponse, error)
 	// Revoke a certificate binding. Certificates matching the selector stop
 	// authenticating immediately — fail closed, audited.
+	// UDB contract: /udb.core.authn.services.v1.AuthnService/RevokeCertificateBinding
+	// Listener: control plane.
+	// Scopes: udb:authn:manage-grants.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: destructive.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	RevokeCertificateBinding(ctx context.Context, in *RevokeCertificateBindingRequest, opts ...grpc.CallOption) (*RevokeCertificateBindingResponse, error)
 }
 

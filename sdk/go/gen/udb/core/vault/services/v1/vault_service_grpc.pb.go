@@ -62,51 +62,163 @@ const (
 type VaultServiceClient interface {
 	// Write a new secret version. Compare-and-swap: `expected_version` must equal
 	// the current latest version (0 for a brand-new path) or the write is rejected.
+	// UDB contract: /udb.core.vault.services.v1.VaultService/PutSecret
+	// Listener: control plane.
+	// Scopes: udb:vault:put-secret.
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	PutSecret(ctx context.Context, in *PutSecretRequest, opts ...grpc.CallOption) (*PutSecretResponse, error)
 	// Read the secret value (latest active version, or a specific version). This
 	// is the sensitive vault read: it is AUDITED via the outbox compliance envelope.
+	// UDB contract: /udb.core.vault.services.v1.VaultService/GetSecret
+	// Listener: control plane.
+	// Scopes: udb:vault:get-secret.
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	GetSecret(ctx context.Context, in *GetSecretRequest, opts ...grpc.CallOption) (*GetSecretResponse, error)
 	// List secret paths under an optional prefix. Returns metadata only — NEVER
 	// any secret value.
+	// UDB contract: /udb.core.vault.services.v1.VaultService/ListSecrets
+	// Listener: control plane.
+	// Scopes: udb:vault:list-secrets.
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	ListSecrets(ctx context.Context, in *ListSecretsRequest, opts ...grpc.CallOption) (*ListSecretsResponse, error)
 	// Soft-delete the latest version (recoverable bookkeeping state). The ciphertext
 	// is retained; use DestroySecret to crypto-shred.
+	// UDB contract: /udb.core.vault.services.v1.VaultService/DeleteSecret
+	// Listener: control plane.
+	// Scopes: udb:vault:delete-secret.
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	DeleteSecret(ctx context.Context, in *DeleteSecretRequest, opts ...grpc.CallOption) (*DeleteSecretResponse, error)
 	// Restore a soft-DELETED secret: flip its latest deleted version back to ACTIVE.
 	// A soft delete keeps the ciphertext + wrapped key, so recovery is exact. A
 	// crypto-shredded (DestroySecret) version can NEVER be restored.
+	// UDB contract: /udb.core.vault.services.v1.VaultService/UndeleteSecret
+	// Listener: control plane.
+	// Scopes: udb:vault:undelete-secret.
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	UndeleteSecret(ctx context.Context, in *UndeleteSecretRequest, opts ...grpc.CallOption) (*UndeleteSecretResponse, error)
 	// Crypto-shred every version of a secret: clears the wrapped DEK + ciphertext
 	// so the value is irrecoverable. DESTRUCTIVE + irreversible — a confirmation
 	// token is required and an empty token fails closed.
+	// UDB contract: /udb.core.vault.services.v1.VaultService/DestroySecret
+	// Listener: control plane.
+	// Scopes: udb:vault:destroy-secret.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: destructive.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	DestroySecret(ctx context.Context, in *DestroySecretRequest, opts ...grpc.CallOption) (*DestroySecretResponse, error)
 	// Create a named transit key (version 1, ACTIVE). Key material is generated
 	// server-side and never returned.
+	// UDB contract: /udb.core.vault.services.v1.VaultService/CreateTransitKey
+	// Listener: control plane.
+	// Scopes: udb:vault:create-transit-key.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	CreateTransitKey(ctx context.Context, in *CreateTransitKeyRequest, opts ...grpc.CallOption) (*CreateTransitKeyResponse, error)
 	// Rotate a named transit key: the current ACTIVE version is demoted to
 	// VERIFYING (still decrypts/verifies during the overlap) and a fresh ACTIVE
 	// version is generated. New encryptions/signatures use the new version.
+	// UDB contract: /udb.core.vault.services.v1.VaultService/RotateTransitKey
+	// Listener: control plane.
+	// Scopes: udb:vault:rotate-transit-key.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	RotateTransitKey(ctx context.Context, in *RotateTransitKeyRequest, opts ...grpc.CallOption) (*RotateTransitKeyResponse, error)
 	// Encrypt plaintext under the ACTIVE version of a named key. Returns a
 	// versioned ciphertext envelope; the key material is never returned.
+	// UDB contract: /udb.core.vault.services.v1.VaultService/Encrypt
+	// Listener: control plane.
+	// Scopes: udb:vault:encrypt.
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	Encrypt(ctx context.Context, in *EncryptRequest, opts ...grpc.CallOption) (*EncryptResponse, error)
 	// Decrypt a transit ciphertext envelope. The version is read from the envelope
 	// and ACTIVE or VERIFYING versions are accepted. This is a sensitive read and is
 	// AUDITED via the outbox compliance envelope.
+	// UDB contract: /udb.core.vault.services.v1.VaultService/Decrypt
+	// Listener: control plane.
+	// Scopes: udb:vault:decrypt.
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	Decrypt(ctx context.Context, in *DecryptRequest, opts ...grpc.CallOption) (*DecryptResponse, error)
 	// Produce a detached MAC ("signature") over the input under the ACTIVE key
 	// version. Implemented as HMAC-SHA256 from the version DEK (symmetric);
 	// asymmetric signing is a follow-up. Key material is never returned.
+	// UDB contract: /udb.core.vault.services.v1.VaultService/Sign
+	// Listener: control plane.
+	// Scopes: udb:vault:sign.
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	Sign(ctx context.Context, in *SignRequest, opts ...grpc.CallOption) (*SignResponse, error)
 	// Verify a MAC/signature over the input. The version is read from the
 	// signature and ACTIVE or VERIFYING versions are accepted; comparison is
 	// constant-time.
+	// UDB contract: /udb.core.vault.services.v1.VaultService/Verify
+	// Listener: control plane.
+	// Scopes: udb:vault:verify.
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	Verify(ctx context.Context, in *VerifyRequest, opts ...grpc.CallOption) (*VerifyResponse, error)
 	// Compute an HMAC-SHA256 over the input under the ACTIVE key version. Key
 	// material is never returned.
+	// UDB contract: /udb.core.vault.services.v1.VaultService/Hmac
+	// Listener: control plane.
+	// Scopes: udb:vault:hmac.
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	Hmac(ctx context.Context, in *HmacRequest, opts ...grpc.CallOption) (*HmacResponse, error)
 	// Report whether the vault is sealed (master key unavailable). Always answers,
 	// even when sealed, so operators can diagnose a sealed vault.
+	// UDB contract: /udb.core.vault.services.v1.VaultService/SealStatus
+	// Listener: control plane.
+	// Scopes: udb:vault:seal-status.
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	SealStatus(ctx context.Context, in *SealStatusRequest, opts ...grpc.CallOption) (*SealStatusResponse, error)
 	// Mint short-lived, per-request Postgres credentials with a durable lease.
 	// The requested role_name is an operator-configured alias resolved from
@@ -114,38 +226,104 @@ type VaultServiceClient interface {
 	// The authenticated tenant/project/caller and idempotency_key are durably
 	// deduplicated in the same transaction that activates the issued lease.
 	// WORKER_VAULT_LEASE_REAPER revokes and drops expired generated login roles.
+	// UDB contract: /udb.core.vault.services.v1.VaultService/GenerateDatabaseCredentials
+	// Listener: control plane.
+	// Scopes: udb:vault:generate-db-credentials.
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
+	// Operation kind: mutation.
+	// Idempotency: automatic transient retry requires the declared request key; reuse it only for unchanged request semantics and the same tenant/project.
+	// Idempotency fields: request key=idempotency_key; server-generated key=false; duplicate response=replayed; replay-safe=true.
+	// The endpoint requires an idempotency key.
+	// End UDB contract.
 	GenerateDatabaseCredentials(ctx context.Context, in *GenerateDatabaseCredentialsRequest, opts ...grpc.CallOption) (*GenerateDatabaseCredentialsResponse, error)
 	// Revoke one lease in the authenticated tenant/project. The durable state is
 	// moved to REVOKING before physical session fencing and becomes REVOKED only
 	// after the generated role is proven absent. The tenant/project/caller and
 	// lease_id dedup record transition in one transaction, so replay is safe.
+	// UDB contract: /udb.core.vault.services.v1.VaultService/RevokeDatabaseCredentials
+	// Listener: control plane.
+	// Scopes: udb:vault:revoke-db-credentials.
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
+	// Operation kind: destructive.
+	// Idempotency: automatic transient retry requires the declared request key; reuse it only for unchanged request semantics and the same tenant/project.
+	// Idempotency fields: request key=lease_id; server-generated key=false; duplicate response=replayed; replay-safe=true.
+	// The endpoint requires an idempotency key.
+	// End UDB contract.
 	RevokeDatabaseCredentials(ctx context.Context, in *RevokeDatabaseCredentialsRequest, opts ...grpc.CallOption) (*RevokeDatabaseCredentialsResponse, error)
 	// Emergency kill-switch for every non-terminal lease in exactly one verified
 	// tenant/project. A confirmation token bound to both scope dimensions prevents
 	// an accidental tenant-wide or cross-project credential wipe.
+	// UDB contract: /udb.core.vault.services.v1.VaultService/EmergencyRevokeDatabaseCredentials
+	// Listener: control plane.
+	// Scopes: udb:vault:emergency-revoke-db-credentials.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: destructive.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	EmergencyRevokeDatabaseCredentials(ctx context.Context, in *EmergencyRevokeDatabaseCredentialsRequest, opts ...grpc.CallOption) (*EmergencyRevokeDatabaseCredentialsResponse, error)
 	// Generate a fresh 256-bit data key, returned BOTH plaintext (for the caller to
 	// encrypt data locally) AND wrapped under the named transit key (store this and
 	// Decrypt/Rewrap it later). Envelope-encryption without exposing the transit
 	// key. Reuses the transit seal path; AUDITED via the outbox compliance envelope.
+	// UDB contract: /udb.core.vault.services.v1.VaultService/GenerateDataKey
+	// Listener: control plane.
+	// Scopes: udb:vault:generate-data-key.
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	GenerateDataKey(ctx context.Context, in *GenerateDataKeyRequest, opts ...grpc.CallOption) (*GenerateDataKeyResponse, error)
 	// Re-wrap a transit ciphertext under the key's CURRENT active version: decrypt
 	// with the version embedded in the envelope, then re-seal with the active
 	// version. The post-rotation migration primitive (no plaintext leaves the
 	// broker). AUDITED via the outbox compliance envelope.
+	// UDB contract: /udb.core.vault.services.v1.VaultService/Rewrap
+	// Listener: control plane.
+	// Scopes: udb:vault:rewrap.
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	Rewrap(ctx context.Context, in *RewrapRequest, opts ...grpc.CallOption) (*RewrapResponse, error)
 	// Export the Ed25519 PUBLIC key(s) of a signing transit key so an external
 	// party can verify broker-produced signatures without ever holding the private
 	// key — the missing half that makes Sign/Verify genuinely asymmetric. Only
 	// valid for keys created with the ed25519 algorithm; READ-ONLY (public keys are
 	// not secret). Returns one entry per usable (ACTIVE/VERIFYING) version.
+	// UDB contract: /udb.core.vault.services.v1.VaultService/GetTransitPublicKey
+	// Listener: control plane.
+	// Scopes: udb:vault:get-public-key.
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	GetTransitPublicKey(ctx context.Context, in *GetTransitPublicKeyRequest, opts ...grpc.CallOption) (*GetTransitPublicKeyResponse, error)
 	// Encrypt MANY plaintexts under one transit key in a single call: the key is
 	// unwrapped ONCE and each plaintext sealed with the active version, amortizing
 	// the master-key unwrap over the batch. Order-preserving. AUDITED.
+	// UDB contract: /udb.core.vault.services.v1.VaultService/BatchEncrypt
+	// Listener: control plane.
+	// Scopes: udb:vault:encrypt.
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	BatchEncrypt(ctx context.Context, in *BatchEncryptRequest, opts ...grpc.CallOption) (*BatchEncryptResponse, error)
 	// Decrypt MANY transit ciphertexts under one key in a single call; each
 	// ciphertext carries its own key version in the envelope. Order-preserving.
+	// UDB contract: /udb.core.vault.services.v1.VaultService/BatchDecrypt
+	// Listener: control plane.
+	// Scopes: udb:vault:decrypt.
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	BatchDecrypt(ctx context.Context, in *BatchDecryptRequest, opts ...grpc.CallOption) (*BatchDecryptResponse, error)
 }
 

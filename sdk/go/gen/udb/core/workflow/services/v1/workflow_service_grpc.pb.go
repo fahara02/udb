@@ -42,17 +42,57 @@ const (
 type WorkflowServiceClient interface {
 	// Start a durable workflow instance and hand it to the saga engine. The instance
 	// is persisted before any forward step runs, so it survives a restart.
+	// UDB contract: /udb.core.workflow.services.v1.WorkflowService/StartWorkflow
+	// Listener: control plane.
+	// Scopes: udb:workflow:start-workflow.
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	StartWorkflow(ctx context.Context, in *StartWorkflowRequest, opts ...grpc.CallOption) (*StartWorkflowResponse, error)
 	// Fetch a single workflow instance by id (tenant-scoped).
+	// UDB contract: /udb.core.workflow.services.v1.WorkflowService/GetWorkflow
+	// Listener: control plane.
+	// Scopes: udb:workflow:get-workflow.
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	GetWorkflow(ctx context.Context, in *GetWorkflowRequest, opts ...grpc.CallOption) (*GetWorkflowResponse, error)
 	// List workflow instances for the verified tenant, optionally filtered by status.
+	// UDB contract: /udb.core.workflow.services.v1.WorkflowService/ListWorkflows
+	// Listener: control plane.
+	// Scopes: udb:workflow:list-workflows.
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	ListWorkflows(ctx context.Context, in *ListWorkflowsRequest, opts ...grpc.CallOption) (*ListWorkflowsResponse, error)
 	// Cancel a workflow and trigger the saga compensation path (reverse-order). The
 	// instance moves to COMPENSATING and the EXISTING recovery worker undoes the
 	// recorded side effects — this RPC never reimplements compensation.
+	// UDB contract: /udb.core.workflow.services.v1.WorkflowService/CancelWorkflow
+	// Listener: control plane.
+	// Scopes: udb:workflow:cancel-workflow.
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
+	// Operation kind: destructive.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	CancelWorkflow(ctx context.Context, in *CancelWorkflowRequest, opts ...grpc.CallOption) (*CancelWorkflowResponse, error)
 	// Deliver an external signal to a waiting workflow step, resuming forward
 	// progress (the durable equivalent of completing a blocked step).
+	// UDB contract: /udb.core.workflow.services.v1.WorkflowService/SignalWorkflow
+	// Listener: control plane.
+	// Scopes: udb:workflow:signal-workflow.
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	SignalWorkflow(ctx context.Context, in *SignalWorkflowRequest, opts ...grpc.CallOption) (*SignalWorkflowResponse, error)
 	// Acknowledge the outcome of the step the workflow tick dispatched
 	// (`udb.workflow.step.dispatched.v1`). A step is NEVER completed by a timer:
@@ -61,6 +101,14 @@ type WorkflowServiceClient interface {
 	// any completed steps). SUCCEEDED advances to the next step (or COMPLETED on
 	// the last one); FAILED fails the workflow through the same
 	// failed/compensating path as a timeout.
+	// UDB contract: /udb.core.workflow.services.v1.WorkflowService/AckWorkflowStep
+	// Listener: control plane.
+	// Scopes: udb:workflow:ack-workflow-step.
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	AckWorkflowStep(ctx context.Context, in *AckWorkflowStepRequest, opts ...grpc.CallOption) (*AckWorkflowStepResponse, error)
 }
 

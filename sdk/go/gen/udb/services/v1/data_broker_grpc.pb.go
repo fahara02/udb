@@ -113,15 +113,63 @@ const (
 // schema input; they do not need to contain or import this service contract.
 type DataBrokerClient interface {
 	// ── Relational ─────────────────────────────────────────────────────────────
+	// UDB contract: /udb.services.v1.DataBroker/Select
+	// Listener: data plane.
+	// Scopes: listener and resource policy defaults (no explicit endpoint scopes).
+	// Credential types: listener credential policy defaults (no explicit allowlist).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	Select(ctx context.Context, in *v1.SelectRequest, opts ...grpc.CallOption) (*v1.RecordSet, error)
+	// UDB contract: /udb.services.v1.DataBroker/BatchSelect
+	// Listener: data plane.
+	// Scopes: listener and resource policy defaults (no explicit endpoint scopes).
+	// Credential types: listener credential policy defaults (no explicit allowlist).
+	// Operation kind: mutation.
+	// Idempotency: streams are not automatically replayed; use the RPC resume contract.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	BatchSelect(ctx context.Context, opts ...grpc.CallOption) (grpc.BidiStreamingClient[v1.SelectRequest, v1.RecordSet], error)
 	// Additive typed columnar read. Reuses SelectRequest; streams RecordBatchV2.
 	// Clients use this only when ProtocolSupport.encodings advertises
 	// "record_batch_v2" and otherwise fall back to Select/RecordSet.
+	// UDB contract: /udb.services.v1.DataBroker/SelectV2
+	// Listener: data plane.
+	// Scopes: listener and resource policy defaults (no explicit endpoint scopes).
+	// Credential types: listener credential policy defaults (no explicit allowlist).
+	// Operation kind: read_only.
+	// Idempotency: streams are not automatically replayed; use the RPC resume contract.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	SelectV2(ctx context.Context, in *v1.SelectRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[v1.RecordBatchV2], error)
+	// UDB contract: /udb.services.v1.DataBroker/Upsert
+	// Listener: data plane.
+	// Scopes: listener and resource policy defaults (no explicit endpoint scopes).
+	// Credential types: listener credential policy defaults (no explicit allowlist).
+	// Operation kind: mutation.
+	// Idempotency: automatic transient retry requires the declared request key; reuse it only for unchanged request semantics and the same tenant/project.
+	// Idempotency fields: request key=idempotency_key; server-generated key=false; duplicate response=was_duplicate; replay-safe=true.
+	// End UDB contract.
 	Upsert(ctx context.Context, in *v1.UpsertRequest, opts ...grpc.CallOption) (*v1.MutationResponse, error)
+	// UDB contract: /udb.services.v1.DataBroker/BatchUpsert
+	// Listener: data plane.
+	// Scopes: listener and resource policy defaults (no explicit endpoint scopes).
+	// Credential types: listener credential policy defaults (no explicit allowlist).
+	// Operation kind: mutation.
+	// Idempotency: streams are not automatically replayed; use the RPC resume contract.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	BatchUpsert(ctx context.Context, opts ...grpc.CallOption) (grpc.BidiStreamingClient[v1.UpsertRequest, v1.MutationResponse], error)
 	// Delete rows without raw SQL.
+	// UDB contract: /udb.services.v1.DataBroker/Delete
+	// Listener: data plane.
+	// Scopes: listener and resource policy defaults (no explicit endpoint scopes).
+	// Credential types: listener credential policy defaults (no explicit allowlist).
+	// Operation kind: mutation.
+	// Idempotency: automatic transient retry requires the declared request key; reuse it only for unchanged request semantics and the same tenant/project.
+	// Idempotency fields: request key=idempotency_key; server-generated key=false; duplicate response=was_duplicate; replay-safe=true.
+	// End UDB contract.
 	Delete(ctx context.Context, in *v1.DeleteRequest, opts ...grpc.CallOption) (*v1.MutationResponse, error)
 	// Partial update: SET named columns and/or apply atomic increments on the
 	// matched rows — no full-record resend, no read-modify-write counter window.
@@ -129,6 +177,14 @@ type DataBrokerClient interface {
 	// Upsert/Delete. A retried keyed Update is deduped in the write tx
 	// (fail-closed, tenant+project-scoped durable dedup) and returns
 	// was_duplicate=true with the original body.
+	// UDB contract: /udb.services.v1.DataBroker/Update
+	// Listener: data plane.
+	// Scopes: listener and resource policy defaults (no explicit endpoint scopes).
+	// Credential types: listener credential policy defaults (no explicit allowlist).
+	// Operation kind: mutation.
+	// Idempotency: automatic transient retry requires the declared request key; reuse it only for unchanged request semantics and the same tenant/project.
+	// Idempotency fields: request key=idempotency_key; server-generated key=false; duplicate response=was_duplicate; replay-safe=true.
+	// End UDB contract.
 	Update(ctx context.Context, in *v1.UpdateRequest, opts ...grpc.CallOption) (*v1.MutationResponse, error)
 	// gate 23 (bounded bulk compare-and-swap): apply a tenant-scoped, explicitly
 	// bounded batch of single-row conditional updates in ONE write transaction.
@@ -138,146 +194,748 @@ type DataBrokerClient interface {
 	// `idempotency_key`. Same tenant isolation, authorization (deny-by-default
 	// Casbin gate) and per-row projection / CDC-outbox / audit side effects as the
 	// unary Update path.
+	// UDB contract: /udb.services.v1.DataBroker/BulkCas
+	// Listener: data plane.
+	// Scopes: listener and resource policy defaults (no explicit endpoint scopes).
+	// Credential types: listener credential policy defaults (no explicit allowlist).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	BulkCas(ctx context.Context, in *v1.BulkCasRequest, opts ...grpc.CallOption) (*v1.BulkCasResponse, error)
 	// ── Vector ──────────────────────────────────────────────────────────────────
+	// UDB contract: /udb.services.v1.DataBroker/VectorSearch
+	// Listener: data plane.
+	// Scopes: listener and resource policy defaults (no explicit endpoint scopes).
+	// Credential types: listener credential policy defaults (no explicit allowlist).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	VectorSearch(ctx context.Context, in *v1.VectorSearchRequest, opts ...grpc.CallOption) (*v1.VectorSet, error)
+	// UDB contract: /udb.services.v1.DataBroker/VectorHybridSearch
+	// Listener: data plane.
+	// Scopes: listener and resource policy defaults (no explicit endpoint scopes).
+	// Credential types: listener credential policy defaults (no explicit allowlist).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	VectorHybridSearch(ctx context.Context, in *v1.VectorHybridSearchRequest, opts ...grpc.CallOption) (*v1.VectorSet, error)
+	// UDB contract: /udb.services.v1.DataBroker/VectorUpsert
+	// Listener: data plane.
+	// Scopes: listener and resource policy defaults (no explicit endpoint scopes).
+	// Credential types: listener credential policy defaults (no explicit allowlist).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	VectorUpsert(ctx context.Context, in *v1.VectorUpsertRequest, opts ...grpc.CallOption) (*v1.MutationResponse, error)
+	// UDB contract: /udb.services.v1.DataBroker/VectorBatchUpsert
+	// Listener: data plane.
+	// Scopes: listener and resource policy defaults (no explicit endpoint scopes).
+	// Credential types: listener credential policy defaults (no explicit allowlist).
+	// Operation kind: mutation.
+	// Idempotency: streams are not automatically replayed; use the RPC resume contract.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	VectorBatchUpsert(ctx context.Context, opts ...grpc.CallOption) (grpc.BidiStreamingClient[v1.VectorUpsertRequest, v1.MutationResponse], error)
 	// ── Blob ───────────────────────────────────────────────────────────────────
+	// UDB contract: /udb.services.v1.DataBroker/PutObject
+	// Listener: data plane.
+	// Scopes: listener and resource policy defaults (no explicit endpoint scopes).
+	// Credential types: listener credential policy defaults (no explicit allowlist).
+	// Operation kind: mutation.
+	// Idempotency: streams are not automatically replayed; use the RPC resume contract.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	PutObject(ctx context.Context, opts ...grpc.CallOption) (grpc.ClientStreamingClient[v1.Chunk, v1.MutationResponse], error)
+	// UDB contract: /udb.services.v1.DataBroker/GetObject
+	// Listener: data plane.
+	// Scopes: listener and resource policy defaults (no explicit endpoint scopes).
+	// Credential types: listener credential policy defaults (no explicit allowlist).
+	// Operation kind: read_only.
+	// Idempotency: streams are not automatically replayed; use the RPC resume contract.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	GetObject(ctx context.Context, in *v1.ObjectRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[v1.Chunk], error)
+	// UDB contract: /udb.services.v1.DataBroker/GeneratePresignedUrl
+	// Listener: data plane.
+	// Scopes: listener and resource policy defaults (no explicit endpoint scopes).
+	// Credential types: listener credential policy defaults (no explicit allowlist).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	GeneratePresignedUrl(ctx context.Context, in *v1.UrlRequest, opts ...grpc.CallOption) (*v1.UrlResponse, error)
+	// UDB contract: /udb.services.v1.DataBroker/InitiateMultipartUpload
+	// Listener: data plane.
+	// Scopes: listener and resource policy defaults (no explicit endpoint scopes).
+	// Credential types: listener credential policy defaults (no explicit allowlist).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	InitiateMultipartUpload(ctx context.Context, in *v1.MultipartUploadRequest, opts ...grpc.CallOption) (*v1.MultipartUploadResponse, error)
+	// UDB contract: /udb.services.v1.DataBroker/CompleteMultipartUpload
+	// Listener: data plane.
+	// Scopes: listener and resource policy defaults (no explicit endpoint scopes).
+	// Credential types: listener credential policy defaults (no explicit allowlist).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	CompleteMultipartUpload(ctx context.Context, in *v1.CompleteMultipartUploadRequest, opts ...grpc.CallOption) (*v1.CompleteMultipartUploadResponse, error)
+	// UDB contract: /udb.services.v1.DataBroker/AbortMultipartUpload
+	// Listener: data plane.
+	// Scopes: listener and resource policy defaults (no explicit endpoint scopes).
+	// Credential types: listener credential policy defaults (no explicit allowlist).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	AbortMultipartUpload(ctx context.Context, in *v1.AbortMultipartUploadRequest, opts ...grpc.CallOption) (*v1.AbortMultipartUploadResponse, error)
 	// ── Cache / KV ─────────────────────────────────────────────────────────────
+	// UDB contract: /udb.services.v1.DataBroker/CacheGet
+	// Listener: data plane.
+	// Scopes: listener and resource policy defaults (no explicit endpoint scopes).
+	// Credential types: listener credential policy defaults (no explicit allowlist).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	CacheGet(ctx context.Context, in *v1.CacheGetRequest, opts ...grpc.CallOption) (*v1.CacheGetResponse, error)
+	// UDB contract: /udb.services.v1.DataBroker/CacheSet
+	// Listener: data plane.
+	// Scopes: listener and resource policy defaults (no explicit endpoint scopes).
+	// Credential types: listener credential policy defaults (no explicit allowlist).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	CacheSet(ctx context.Context, in *v1.CacheSetRequest, opts ...grpc.CallOption) (*v1.MutationResponse, error)
+	// UDB contract: /udb.services.v1.DataBroker/CacheDelete
+	// Listener: data plane.
+	// Scopes: listener and resource policy defaults (no explicit endpoint scopes).
+	// Credential types: listener credential policy defaults (no explicit allowlist).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	CacheDelete(ctx context.Context, in *v1.CacheDeleteRequest, opts ...grpc.CallOption) (*v1.MutationResponse, error)
+	// UDB contract: /udb.services.v1.DataBroker/CacheScan
+	// Listener: data plane.
+	// Scopes: listener and resource policy defaults (no explicit endpoint scopes).
+	// Credential types: listener credential policy defaults (no explicit allowlist).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	CacheScan(ctx context.Context, in *v1.CacheScanRequest, opts ...grpc.CallOption) (*v1.CacheScanResponse, error)
 	// ── Document / Graph / Time-Series / Analytical Stores ────────────────────
+	// UDB contract: /udb.services.v1.DataBroker/DocumentGet
+	// Listener: data plane.
+	// Scopes: listener and resource policy defaults (no explicit endpoint scopes).
+	// Credential types: listener credential policy defaults (no explicit allowlist).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	DocumentGet(ctx context.Context, in *v1.DocumentGetRequest, opts ...grpc.CallOption) (*v1.DocumentSet, error)
+	// UDB contract: /udb.services.v1.DataBroker/DocumentFind
+	// Listener: data plane.
+	// Scopes: listener and resource policy defaults (no explicit endpoint scopes).
+	// Credential types: listener credential policy defaults (no explicit allowlist).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	DocumentFind(ctx context.Context, in *v1.DocumentFindRequest, opts ...grpc.CallOption) (*v1.DocumentSet, error)
+	// UDB contract: /udb.services.v1.DataBroker/DocumentUpsert
+	// Listener: data plane.
+	// Scopes: listener and resource policy defaults (no explicit endpoint scopes).
+	// Credential types: listener credential policy defaults (no explicit allowlist).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	DocumentUpsert(ctx context.Context, in *v1.DocumentUpsertRequest, opts ...grpc.CallOption) (*v1.MutationResponse, error)
+	// UDB contract: /udb.services.v1.DataBroker/DocumentDelete
+	// Listener: data plane.
+	// Scopes: listener and resource policy defaults (no explicit endpoint scopes).
+	// Credential types: listener credential policy defaults (no explicit allowlist).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	DocumentDelete(ctx context.Context, in *v1.DocumentDeleteRequest, opts ...grpc.CallOption) (*v1.MutationResponse, error)
+	// UDB contract: /udb.services.v1.DataBroker/GraphQuery
+	// Listener: data plane.
+	// Scopes: listener and resource policy defaults (no explicit endpoint scopes).
+	// Credential types: listener credential policy defaults (no explicit allowlist).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	GraphQuery(ctx context.Context, in *v1.GraphQueryRequest, opts ...grpc.CallOption) (*v1.GraphResultSet, error)
+	// UDB contract: /udb.services.v1.DataBroker/GraphMutate
+	// Listener: data plane.
+	// Scopes: listener and resource policy defaults (no explicit endpoint scopes).
+	// Credential types: listener credential policy defaults (no explicit allowlist).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	GraphMutate(ctx context.Context, in *v1.GraphMutationRequest, opts ...grpc.CallOption) (*v1.MutationResponse, error)
+	// UDB contract: /udb.services.v1.DataBroker/TimeSeriesWrite
+	// Listener: data plane.
+	// Scopes: listener and resource policy defaults (no explicit endpoint scopes).
+	// Credential types: listener credential policy defaults (no explicit allowlist).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	TimeSeriesWrite(ctx context.Context, in *v1.TimeSeriesWriteRequest, opts ...grpc.CallOption) (*v1.MutationResponse, error)
+	// UDB contract: /udb.services.v1.DataBroker/TimeSeriesQuery
+	// Listener: data plane.
+	// Scopes: listener and resource policy defaults (no explicit endpoint scopes).
+	// Credential types: listener credential policy defaults (no explicit allowlist).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	TimeSeriesQuery(ctx context.Context, in *v1.TimeSeriesQueryRequest, opts ...grpc.CallOption) (*v1.TimeSeriesQueryResponse, error)
+	// UDB contract: /udb.services.v1.DataBroker/AnalyticalQuery
+	// Listener: data plane.
+	// Scopes: listener and resource policy defaults (no explicit endpoint scopes).
+	// Credential types: listener credential policy defaults (no explicit allowlist).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	AnalyticalQuery(ctx context.Context, in *v1.AnalyticalQueryRequest, opts ...grpc.CallOption) (*v1.AnalyticalQueryResponse, error)
 	// ── Tx / CDC ───────────────────────────────────────────────────────────────
+	// UDB contract: /udb.services.v1.DataBroker/BeginTx
+	// Listener: data plane.
+	// Scopes: listener and resource policy defaults (no explicit endpoint scopes).
+	// Credential types: listener credential policy defaults (no explicit allowlist).
+	// Operation kind: mutation.
+	// Idempotency: streams are not automatically replayed; use the RPC resume contract.
+	// Idempotency fields: no declared method replay contract.
+	// BeginTx validates transaction guards and per-mutation keys for upsert, update, delete and vector_upsert; unsupported keyed operations are refused.
+	// Relational mutation keys use durable replay receipts; changed replay inputs refuse the whole transaction.
+	// End UDB contract.
 	BeginTx(ctx context.Context, opts ...grpc.CallOption) (grpc.BidiStreamingClient[v1.Mutation, v1.TxStatus], error)
+	// UDB contract: /udb.services.v1.DataBroker/PublishCDC
+	// Listener: data plane.
+	// Scopes: listener and resource policy defaults (no explicit endpoint scopes).
+	// Credential types: listener credential policy defaults (no explicit allowlist).
+	// Operation kind: mutation.
+	// Idempotency: streams are not automatically replayed; use the RPC resume contract.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	PublishCDC(ctx context.Context, in *v1.CDCSubscriptionRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[v11.CDCEnvelope], error)
 	// Record a durable consumer's position (see CDCSubscriptionRequest.consumer_name).
+	// UDB contract: /udb.services.v1.DataBroker/AckCdcEvents
+	// Listener: data plane.
+	// Scopes: listener and resource policy defaults (no explicit endpoint scopes).
+	// Credential types: listener credential policy defaults (no explicit allowlist).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	AckCdcEvents(ctx context.Context, in *v1.AckCdcEventsRequest, opts ...grpc.CallOption) (*v1.AckCdcEventsResponse, error)
+	// UDB contract: /udb.services.v1.DataBroker/CreateMaterializedView
+	// Listener: data plane.
+	// Scopes: listener and resource policy defaults (no explicit endpoint scopes).
+	// Credential types: listener credential policy defaults (no explicit allowlist).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	CreateMaterializedView(ctx context.Context, in *v1.ViewDefinition, opts ...grpc.CallOption) (*v1.MutationResponse, error)
 	// ── First-Class Event API ─────────────────────────────────────────────────
+	// UDB contract: /udb.services.v1.DataBroker/EnqueueOutboxEvent
+	// Listener: data plane.
+	// Scopes: listener and resource policy defaults (no explicit endpoint scopes).
+	// Credential types: listener credential policy defaults (no explicit allowlist).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	EnqueueOutboxEvent(ctx context.Context, in *v1.EnqueueOutboxEventRequest, opts ...grpc.CallOption) (*v1.EnqueueOutboxEventResponse, error)
 	// Generic resource administration.
 	// Dispatch a lifecycle operation to any configured backend executor.
 	// Requires scope: udb:dispatch
+	// UDB contract: /udb.services.v1.DataBroker/GenericDispatch
+	// Listener: data plane.
+	// Scopes: listener and resource policy defaults (no explicit endpoint scopes).
+	// Credential types: listener credential policy defaults (no explicit allowlist).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	GenericDispatch(ctx context.Context, in *v1.GenericDispatchRequest, opts ...grpc.CallOption) (*v1.GenericDispatchResponse, error)
 	// Ensure a named resource exists on the target backend.
 	// Requires scope: udb:admin
+	// UDB contract: /udb.services.v1.DataBroker/EnsureResource
+	// Listener: data plane.
+	// Scopes: listener and resource policy defaults (no explicit endpoint scopes).
+	// Credential types: listener credential policy defaults (no explicit allowlist).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	EnsureResource(ctx context.Context, in *v1.ResourceAdminRequest, opts ...grpc.CallOption) (*v1.MutationResponse, error)
 	// Drop a named resource on the target backend.
 	// Requires scope: udb:admin
+	// UDB contract: /udb.services.v1.DataBroker/DropResource
+	// Listener: data plane.
+	// Scopes: listener and resource policy defaults (no explicit endpoint scopes).
+	// Credential types: listener credential policy defaults (no explicit allowlist).
+	// Operation kind: destructive.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	DropResource(ctx context.Context, in *v1.ResourceAdminRequest, opts ...grpc.CallOption) (*v1.MutationResponse, error)
 	// List all resources managed by the target backend.
 	// Requires scope: udb:admin
+	// UDB contract: /udb.services.v1.DataBroker/ListResources
+	// Listener: data plane.
+	// Scopes: listener and resource policy defaults (no explicit endpoint scopes).
+	// Credential types: listener credential policy defaults (no explicit allowlist).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	ListResources(ctx context.Context, in *v1.ResourceAdminRequest, opts ...grpc.CallOption) (*v1.ResourceListResponse, error)
 	// Catalog administration.
 	// Stage a new catalog manifest version (validate + store as STAGED).
 	// Requires scope: udb:admin
+	// UDB contract: /udb.services.v1.DataBroker/StageCatalog
+	// Listener: data plane.
+	// Scopes: listener and resource policy defaults (no explicit endpoint scopes).
+	// Credential types: listener credential policy defaults (no explicit allowlist).
+	// Operation kind: destructive.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	StageCatalog(ctx context.Context, in *v1.StageCatalogRequest, opts ...grpc.CallOption) (*v1.CatalogVersionResponse, error)
 	// Activate a STAGED catalog version.
 	// Requires scope: udb:admin
+	// UDB contract: /udb.services.v1.DataBroker/ActivateCatalog
+	// Listener: data plane.
+	// Scopes: listener and resource policy defaults (no explicit endpoint scopes).
+	// Credential types: listener credential policy defaults (no explicit allowlist).
+	// Operation kind: destructive.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	ActivateCatalog(ctx context.Context, in *v1.CatalogVersionRequest, opts ...grpc.CallOption) (*v1.CatalogVersionResponse, error)
 	// Roll back to the previous ACTIVE catalog version.
 	// Requires scope: udb:admin
+	// UDB contract: /udb.services.v1.DataBroker/RollbackCatalog
+	// Listener: data plane.
+	// Scopes: listener and resource policy defaults (no explicit endpoint scopes).
+	// Credential types: listener credential policy defaults (no explicit allowlist).
+	// Operation kind: destructive.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	RollbackCatalog(ctx context.Context, in *v1.CatalogVersionRequest, opts ...grpc.CallOption) (*v1.CatalogVersionResponse, error)
 	// Validate a catalog manifest JSON without storing it.
 	// Requires scope: udb:admin
+	// UDB contract: /udb.services.v1.DataBroker/ValidateCatalog
+	// Listener: data plane.
+	// Scopes: listener and resource policy defaults (no explicit endpoint scopes).
+	// Credential types: listener credential policy defaults (no explicit allowlist).
+	// Operation kind: destructive.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	ValidateCatalog(ctx context.Context, in *v1.StageCatalogRequest, opts ...grpc.CallOption) (*v1.CatalogValidationResponse, error)
 	// Return the list of known catalog versions.
 	// Requires scope: udb:admin
+	// UDB contract: /udb.services.v1.DataBroker/GetCatalogVersions
+	// Listener: data plane.
+	// Scopes: listener and resource policy defaults (no explicit endpoint scopes).
+	// Credential types: listener credential policy defaults (no explicit allowlist).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	GetCatalogVersions(ctx context.Context, in *v1.CatalogManifestRequest, opts ...grpc.CallOption) (*v1.CatalogVersionListResponse, error)
 	// Return one catalog version by catalog_id/version, or active version when empty.
 	// Requires scope: udb:admin
+	// UDB contract: /udb.services.v1.DataBroker/GetCatalogVersion
+	// Listener: data plane.
+	// Scopes: listener and resource policy defaults (no explicit endpoint scopes).
+	// Credential types: listener credential policy defaults (no explicit allowlist).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	GetCatalogVersion(ctx context.Context, in *v1.CatalogVersionRequest, opts ...grpc.CallOption) (*v1.CatalogVersionResponse, error)
 	// Migration planning and apply.
 	// Plan a migration against the active catalog without executing it.
 	// Requires scope: udb:admin
+	// UDB contract: /udb.services.v1.DataBroker/PlanMigration
+	// Listener: data plane.
+	// Scopes: listener and resource policy defaults (no explicit endpoint scopes).
+	// Credential types: listener credential policy defaults (no explicit allowlist).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	PlanMigration(ctx context.Context, in *v1.MigrationPlanRequest, opts ...grpc.CallOption) (*v1.MigrationPlanResponse, error)
 	// Apply a previously planned (and optionally approved) migration.
 	// Requires scope: udb:admin
+	// UDB contract: /udb.services.v1.DataBroker/ApplyMigration
+	// Listener: data plane.
+	// Scopes: listener and resource policy defaults (no explicit endpoint scopes).
+	// Credential types: listener credential policy defaults (no explicit allowlist).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	ApplyMigration(ctx context.Context, in *v1.MigrationApplyRequest, opts ...grpc.CallOption) (*v1.MigrationStatusResponse, error)
 	// Return the status of a migration run.
 	// Requires scope: udb:admin
+	// UDB contract: /udb.services.v1.DataBroker/GetMigrationStatus
+	// Listener: data plane.
+	// Scopes: listener and resource policy defaults (no explicit endpoint scopes).
+	// Credential types: listener credential policy defaults (no explicit allowlist).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	GetMigrationStatus(ctx context.Context, in *v1.MigrationRunRequest, opts ...grpc.CallOption) (*v1.MigrationStatusResponse, error)
 	// Return migration runs for an admin console page.
 	// Requires scope: udb:admin, udb:admin:viewer, or legacy udb:portal:viewer.
+	// UDB contract: /udb.services.v1.DataBroker/ListMigrationRuns
+	// Listener: data plane.
+	// Scopes: listener and resource policy defaults (no explicit endpoint scopes).
+	// Credential types: listener credential policy defaults (no explicit allowlist).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	ListMigrationRuns(ctx context.Context, in *v1.MigrationRunListRequest, opts ...grpc.CallOption) (*v1.MigrationRunListResponse, error)
 	// Approve a migration plan that requires review.
 	// Requires scope: udb:admin
+	// UDB contract: /udb.services.v1.DataBroker/ApproveMigrationPlan
+	// Listener: data plane.
+	// Scopes: listener and resource policy defaults (no explicit endpoint scopes).
+	// Credential types: listener credential policy defaults (no explicit allowlist).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	ApproveMigrationPlan(ctx context.Context, in *v1.MigrationRunRequest, opts ...grpc.CallOption) (*v1.MigrationStatusResponse, error)
 	// DLQ management.
+	// UDB contract: /udb.services.v1.DataBroker/ListDlqEvents
+	// Listener: data plane.
+	// Scopes: listener and resource policy defaults (no explicit endpoint scopes).
+	// Credential types: listener credential policy defaults (no explicit allowlist).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	ListDlqEvents(ctx context.Context, in *v1.DlqListRequest, opts ...grpc.CallOption) (*v1.DlqListResponse, error)
+	// UDB contract: /udb.services.v1.DataBroker/GetDlqEvent
+	// Listener: data plane.
+	// Scopes: listener and resource policy defaults (no explicit endpoint scopes).
+	// Credential types: listener credential policy defaults (no explicit allowlist).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	GetDlqEvent(ctx context.Context, in *v1.DlqEventRequest, opts ...grpc.CallOption) (*v1.DlqEventResponse, error)
+	// UDB contract: /udb.services.v1.DataBroker/ReplayDlqEvent
+	// Listener: data plane.
+	// Scopes: listener and resource policy defaults (no explicit endpoint scopes).
+	// Credential types: listener credential policy defaults (no explicit allowlist).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	ReplayDlqEvent(ctx context.Context, in *v1.DlqActionRequest, opts ...grpc.CallOption) (*v1.MutationResponse, error)
+	// UDB contract: /udb.services.v1.DataBroker/DismissDlqEvent
+	// Listener: data plane.
+	// Scopes: listener and resource policy defaults (no explicit endpoint scopes).
+	// Credential types: listener credential policy defaults (no explicit allowlist).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	DismissDlqEvent(ctx context.Context, in *v1.DlqActionRequest, opts ...grpc.CallOption) (*v1.MutationResponse, error)
+	// UDB contract: /udb.services.v1.DataBroker/QuarantineDlqEvent
+	// Listener: data plane.
+	// Scopes: listener and resource policy defaults (no explicit endpoint scopes).
+	// Credential types: listener credential policy defaults (no explicit allowlist).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	QuarantineDlqEvent(ctx context.Context, in *v1.DlqActionRequest, opts ...grpc.CallOption) (*v1.MutationResponse, error)
 	// CDC control plane.
+	// UDB contract: /udb.services.v1.DataBroker/GetCdcStatus
+	// Listener: data plane.
+	// Scopes: listener and resource policy defaults (no explicit endpoint scopes).
+	// Credential types: listener credential policy defaults (no explicit allowlist).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	GetCdcStatus(ctx context.Context, in *v1.CdcControlRequest, opts ...grpc.CallOption) (*v1.CdcStatusResponse, error)
+	// UDB contract: /udb.services.v1.DataBroker/PauseCdc
+	// Listener: data plane.
+	// Scopes: listener and resource policy defaults (no explicit endpoint scopes).
+	// Credential types: listener credential policy defaults (no explicit allowlist).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	PauseCdc(ctx context.Context, in *v1.CdcControlRequest, opts ...grpc.CallOption) (*v1.CdcStatusResponse, error)
+	// UDB contract: /udb.services.v1.DataBroker/ResumeCdc
+	// Listener: data plane.
+	// Scopes: listener and resource policy defaults (no explicit endpoint scopes).
+	// Credential types: listener credential policy defaults (no explicit allowlist).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	ResumeCdc(ctx context.Context, in *v1.CdcControlRequest, opts ...grpc.CallOption) (*v1.CdcStatusResponse, error)
+	// UDB contract: /udb.services.v1.DataBroker/StepDownCdcLeader
+	// Listener: data plane.
+	// Scopes: listener and resource policy defaults (no explicit endpoint scopes).
+	// Credential types: listener credential policy defaults (no explicit allowlist).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	StepDownCdcLeader(ctx context.Context, in *v1.CdcControlRequest, opts ...grpc.CallOption) (*v1.CdcStatusResponse, error)
+	// UDB contract: /udb.services.v1.DataBroker/PreviewCdcRedaction
+	// Listener: data plane.
+	// Scopes: listener and resource policy defaults (no explicit endpoint scopes).
+	// Credential types: listener credential policy defaults (no explicit allowlist).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	PreviewCdcRedaction(ctx context.Context, in *v1.CdcRedactionPreviewRequest, opts ...grpc.CallOption) (*v1.CdcRedactionPreviewResponse, error)
+	// UDB contract: /udb.services.v1.DataBroker/ScanProjectionDrift
+	// Listener: data plane.
+	// Scopes: listener and resource policy defaults (no explicit endpoint scopes).
+	// Credential types: listener credential policy defaults (no explicit allowlist).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	ScanProjectionDrift(ctx context.Context, in *v1.ProjectionDriftScanRequest, opts ...grpc.CallOption) (*v1.ProjectionDriftScanResponse, error)
 	// Saga administration.
+	// UDB contract: /udb.services.v1.DataBroker/ListSagas
+	// Listener: data plane.
+	// Scopes: listener and resource policy defaults (no explicit endpoint scopes).
+	// Credential types: listener credential policy defaults (no explicit allowlist).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	ListSagas(ctx context.Context, in *v1.SagaListRequest, opts ...grpc.CallOption) (*v1.SagaListResponse, error)
+	// UDB contract: /udb.services.v1.DataBroker/GetSaga
+	// Listener: data plane.
+	// Scopes: listener and resource policy defaults (no explicit endpoint scopes).
+	// Credential types: listener credential policy defaults (no explicit allowlist).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	GetSaga(ctx context.Context, in *v1.SagaRequest, opts ...grpc.CallOption) (*v1.SagaResponse, error)
+	// UDB contract: /udb.services.v1.DataBroker/RetrySagaCompensation
+	// Listener: data plane.
+	// Scopes: listener and resource policy defaults (no explicit endpoint scopes).
+	// Credential types: listener credential policy defaults (no explicit allowlist).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	RetrySagaCompensation(ctx context.Context, in *v1.SagaRequest, opts ...grpc.CallOption) (*v1.SagaResponse, error)
+	// UDB contract: /udb.services.v1.DataBroker/MarkSagaReviewed
+	// Listener: data plane.
+	// Scopes: listener and resource policy defaults (no explicit endpoint scopes).
+	// Credential types: listener credential policy defaults (no explicit allowlist).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	MarkSagaReviewed(ctx context.Context, in *v1.SagaRequest, opts ...grpc.CallOption) (*v1.SagaResponse, error)
 	// Idempotently seed a baseline manual-review saga row and a retryable DLQ row
 	// for the VERIFIED principal's tenant/project. Privilege-creating: fail-closed,
 	// env-gated (UDB_ENABLE_ADMIN_SEED) and requires scope: udb:admin.
+	// UDB contract: /udb.services.v1.DataBroker/EnsureBaseline
+	// Listener: data plane.
+	// Scopes: listener and resource policy defaults (no explicit endpoint scopes).
+	// Credential types: listener credential policy defaults (no explicit allowlist).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	EnsureBaseline(ctx context.Context, in *EnsureBaselineRequest, opts ...grpc.CallOption) (*EnsureBaselineResponse, error)
 	// Policy administration.
+	// UDB contract: /udb.services.v1.DataBroker/ListPolicies
+	// Listener: data plane.
+	// Scopes: listener and resource policy defaults (no explicit endpoint scopes).
+	// Credential types: listener credential policy defaults (no explicit allowlist).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	ListPolicies(ctx context.Context, in *v1.PolicyListRequest, opts ...grpc.CallOption) (*v1.PolicyListResponse, error)
 	// Deprecated: Do not use.
 	// DEPRECATED: writes the legacy ABAC table, which does NOT authorize
 	// requests. Authorization comes from the Casbin governance table: use
 	// AuthzService.PutAuthzPolicy (or `udb authz seed` / `udb policy apply`).
 	// Every response carries an `x-udb-deprecated` header; removed in 0.6.0.
+	// UDB contract: /udb.services.v1.DataBroker/PutPolicy
+	// Listener: data plane.
+	// Scopes: listener and resource policy defaults (no explicit endpoint scopes).
+	// Credential types: listener credential policy defaults (no explicit allowlist).
+	// Operation kind: destructive.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	PutPolicy(ctx context.Context, in *v1.PutPolicyRequest, opts ...grpc.CallOption) (*v1.MutationResponse, error)
+	// UDB contract: /udb.services.v1.DataBroker/DeletePolicy
+	// Listener: data plane.
+	// Scopes: listener and resource policy defaults (no explicit endpoint scopes).
+	// Credential types: listener credential policy defaults (no explicit allowlist).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	DeletePolicy(ctx context.Context, in *v1.PolicyRequest, opts ...grpc.CallOption) (*v1.MutationResponse, error)
+	// UDB contract: /udb.services.v1.DataBroker/ReloadPolicies
+	// Listener: data plane.
+	// Scopes: listener and resource policy defaults (no explicit endpoint scopes).
+	// Credential types: listener credential policy defaults (no explicit allowlist).
+	// Operation kind: destructive.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	ReloadPolicies(ctx context.Context, in *v1.CapabilitiesRequest, opts ...grpc.CallOption) (*v1.MutationResponse, error)
+	// UDB contract: /udb.services.v1.DataBroker/LintPolicies
+	// Listener: data plane.
+	// Scopes: listener and resource policy defaults (no explicit endpoint scopes).
+	// Credential types: listener credential policy defaults (no explicit allowlist).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	LintPolicies(ctx context.Context, in *v1.CapabilitiesRequest, opts ...grpc.CallOption) (*v1.PolicyLintResponse, error)
 	// ── Admin API ─────────────────────────────────────────────────────────────
+	// UDB contract: /udb.services.v1.DataBroker/GetCapabilities
+	// Listener: data plane.
+	// Scopes: listener and resource policy defaults (no explicit endpoint scopes).
+	// Credential types: listener credential policy defaults (no explicit allowlist).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	GetCapabilities(ctx context.Context, in *v1.CapabilitiesRequest, opts ...grpc.CallOption) (*v1.CapabilitiesResponse, error)
+	// UDB contract: /udb.services.v1.DataBroker/GetCatalogManifest
+	// Listener: data plane.
+	// Scopes: listener and resource policy defaults (no explicit endpoint scopes).
+	// Credential types: listener credential policy defaults (no explicit allowlist).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	GetCatalogManifest(ctx context.Context, in *v1.CatalogManifestRequest, opts ...grpc.CallOption) (*v1.CatalogManifestResponse, error)
 	// Runtime schema lookup for SDK/data operation compatibility negotiation.
+	// UDB contract: /udb.services.v1.DataBroker/LookupMessageSchema
+	// Listener: data plane.
+	// Scopes: listener and resource policy defaults (no explicit endpoint scopes).
+	// Credential types: listener credential policy defaults (no explicit allowlist).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	LookupMessageSchema(ctx context.Context, in *v1.MessageSchemaLookupRequest, opts ...grpc.CallOption) (*v1.MessageSchemaLookupResponse, error)
+	// UDB contract: /udb.services.v1.DataBroker/ListMessageSchemas
+	// Listener: data plane.
+	// Scopes: listener and resource policy defaults (no explicit endpoint scopes).
+	// Credential types: listener credential policy defaults (no explicit allowlist).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	ListMessageSchemas(ctx context.Context, in *v1.MessageSchemaListRequest, opts ...grpc.CallOption) (*v1.MessageSchemaListResponse, error)
+	// UDB contract: /udb.services.v1.DataBroker/GetHealthReport
+	// Listener: data plane.
+	// Scopes: listener and resource policy defaults (no explicit endpoint scopes).
+	// Credential types: listener credential policy defaults (no explicit allowlist).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	GetHealthReport(ctx context.Context, in *v1.HealthReportRequest, opts ...grpc.CallOption) (*v1.HealthReportResponse, error)
 	// Multi-project registry.
 	// Ensure a project namespace exists (idempotent).
 	// Requires scope: udb:admin
+	// UDB contract: /udb.services.v1.DataBroker/EnsureProject
+	// Listener: data plane.
+	// Scopes: listener and resource policy defaults (no explicit endpoint scopes).
+	// Credential types: listener credential policy defaults (no explicit allowlist).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	EnsureProject(ctx context.Context, in *v1.EnsureProjectRequest, opts ...grpc.CallOption) (*v1.MutationResponse, error)
 	// List all registered project namespaces.
 	// Requires scope: udb:admin
+	// UDB contract: /udb.services.v1.DataBroker/ListProjects
+	// Listener: data plane.
+	// Scopes: listener and resource policy defaults (no explicit endpoint scopes).
+	// Credential types: listener credential policy defaults (no explicit allowlist).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	ListProjects(ctx context.Context, in *v1.ProjectListRequest, opts ...grpc.CallOption) (*v1.ProjectListResponse, error)
 	// ── Unified Admin Surface ────────────────────────────────────────────────
 	// Returns a single snapshot covering catalog, CDC, saga, backend, and policy
 	// state for the admin console. Requires scope: udb:admin.
+	// UDB contract: /udb.services.v1.DataBroker/GetAdminSummary
+	// Listener: data plane.
+	// Scopes: listener and resource policy defaults (no explicit endpoint scopes).
+	// Credential types: listener credential policy defaults (no explicit allowlist).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	GetAdminSummary(ctx context.Context, in *v1.AdminSummaryRequest, opts ...grpc.CallOption) (*v1.AdminSummaryResponse, error)
 	// Paginated admin audit log view for the admin console.
 	// Requires scope: udb:admin, udb:admin:viewer, or legacy udb:portal:viewer.
+	// UDB contract: /udb.services.v1.DataBroker/ListAdminAuditLogs
+	// Listener: data plane.
+	// Scopes: listener and resource policy defaults (no explicit endpoint scopes).
+	// Credential types: listener credential policy defaults (no explicit allowlist).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	ListAdminAuditLogs(ctx context.Context, in *v1.AdminAuditLogRequest, opts ...grpc.CallOption) (*v1.AdminAuditLogResponse, error)
 	// Verifies the admin audit log hash chain and reports the first broken link.
 	// Requires scope: udb:admin, udb:admin:viewer, or legacy udb:portal:viewer.
+	// UDB contract: /udb.services.v1.DataBroker/VerifyAdminAuditLog
+	// Listener: data plane.
+	// Scopes: listener and resource policy defaults (no explicit endpoint scopes).
+	// Credential types: listener credential policy defaults (no explicit allowlist).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	VerifyAdminAuditLog(ctx context.Context, in *v1.AdminAuditVerifyRequest, opts ...grpc.CallOption) (*v1.AdminAuditVerifyResponse, error)
 }
 

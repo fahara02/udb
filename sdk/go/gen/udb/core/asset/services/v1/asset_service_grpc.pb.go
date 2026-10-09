@@ -34,20 +34,84 @@ const (
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type AssetServiceClient interface {
 	// Create a reusable pipeline definition
+	// UDB contract: /udb.core.asset.services.v1.AssetService/CreatePipelineDefinition
+	// Listener: control plane.
+	// Scopes: udb:asset:create-pipeline-definition.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	CreatePipelineDefinition(ctx context.Context, in *CreatePipelineDefinitionRequest, opts ...grpc.CallOption) (*CreatePipelineDefinitionResponse, error)
 	// Get a pipeline definition
+	// UDB contract: /udb.core.asset.services.v1.AssetService/GetPipelineDefinition
+	// Listener: control plane.
+	// Scopes: udb:asset:get-pipeline-definition.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	GetPipelineDefinition(ctx context.Context, in *GetPipelineDefinitionRequest, opts ...grpc.CallOption) (*GetPipelineDefinitionResponse, error)
 	// Register a managed asset wrapping a storage file
+	// UDB contract: /udb.core.asset.services.v1.AssetService/RegisterAsset
+	// Listener: control plane.
+	// Scopes: udb:asset:register-asset.
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	RegisterAsset(ctx context.Context, in *RegisterAssetRequest, opts ...grpc.CallOption) (*RegisterAssetResponse, error)
 	// Start a pipeline instance for an asset
+	// UDB contract: /udb.core.asset.services.v1.AssetService/StartPipeline
+	// Listener: control plane.
+	// Scopes: udb:asset:start-pipeline.
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
+	// Operation kind: mutation.
+	// Idempotency: automatic transient retry requires the declared request key; reuse it only for unchanged request semantics and the same tenant/project.
+	// Idempotency fields: request key=correlation_id; server-generated key=false; duplicate response=none; replay-safe=true.
+	// End UDB contract.
 	StartPipeline(ctx context.Context, in *StartPipelineRequest, opts ...grpc.CallOption) (*StartPipelineResponse, error)
 	// Get a pipeline instance with its steps
+	// UDB contract: /udb.core.asset.services.v1.AssetService/GetPipeline
+	// Listener: control plane.
+	// Scopes: udb:asset:get-pipeline.
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	GetPipeline(ctx context.Context, in *GetPipelineRequest, opts ...grpc.CallOption) (*GetPipelineResponse, error)
 	// Complete (or skip/fail) a pipeline step
+	// UDB contract: /udb.core.asset.services.v1.AssetService/CompleteStep
+	// Listener: control plane.
+	// Scopes: udb:asset:complete-step.
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	CompleteStep(ctx context.Context, in *CompleteStepRequest, opts ...grpc.CallOption) (*CompleteStepResponse, error)
 	// List assets
+	// UDB contract: /udb.core.asset.services.v1.AssetService/ListAssets
+	// Listener: control plane.
+	// Scopes: udb:asset:list-assets.
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	ListAssets(ctx context.Context, in *ListAssetsRequest, opts ...grpc.CallOption) (*ListAssetsResponse, error)
 	// Get an asset
+	// UDB contract: /udb.core.asset.services.v1.AssetService/GetAsset
+	// Listener: control plane.
+	// Scopes: udb:asset:get-asset.
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	GetAsset(ctx context.Context, in *GetAssetRequest, opts ...grpc.CallOption) (*GetAssetResponse, error)
 }
 

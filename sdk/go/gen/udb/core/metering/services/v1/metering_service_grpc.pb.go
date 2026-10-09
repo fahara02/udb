@@ -43,20 +43,68 @@ const (
 type MeteringServiceClient interface {
 	// Explicitly ingest a usage event. Durable append (single INSERT, no read);
 	// attribution-only — it never blocks the caller's real operation.
+	// UDB contract: /udb.core.metering.services.v1.MeteringService/RecordUsage
+	// Listener: control plane.
+	// Scopes: udb:metering:record-usage.
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	RecordUsage(ctx context.Context, in *RecordUsageRequest, opts ...grpc.CallOption) (*RecordUsageResponse, error)
 	// Aggregate a tenant's usage for a metric over a rolling window (durable SUM).
+	// UDB contract: /udb.core.metering.services.v1.MeteringService/QueryUsage
+	// Listener: control plane.
+	// Scopes: udb:metering:query-usage.
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	QueryUsage(ctx context.Context, in *QueryUsageRequest, opts ...grpc.CallOption) (*QueryUsageResponse, error)
 	// Create or update a quota rule at a (tenant, project, metric) scope. Bumps the
 	// rule's monotone revision and emits `udb.metering.quota.changed.v1`.
+	// UDB contract: /udb.core.metering.services.v1.MeteringService/PutQuota
+	// Listener: control plane.
+	// Scopes: udb:metering:put-quota.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	PutQuota(ctx context.Context, in *PutQuotaRequest, opts ...grpc.CallOption) (*PutQuotaResponse, error)
 	// Fetch a single quota rule at an exact (tenant, project, metric) scope.
+	// UDB contract: /udb.core.metering.services.v1.MeteringService/GetQuota
+	// Listener: control plane.
+	// Scopes: udb:metering:get-quota.
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	GetQuota(ctx context.Context, in *GetQuotaRequest, opts ...grpc.CallOption) (*GetQuotaResponse, error)
 	// List a tenant's quota rules, optionally narrowed to a project.
+	// UDB contract: /udb.core.metering.services.v1.MeteringService/ListQuotas
+	// Listener: control plane.
+	// Scopes: udb:metering:list-quotas.
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	ListQuotas(ctx context.Context, in *ListQuotasRequest, opts ...grpc.CallOption) (*ListQuotasResponse, error)
 	// Check a quota: sum durable usage in the rule's window and compare against the
 	// limit. Returns {allowed, used, limit, remaining}. The ingest hook remains
 	// best-effort, but explicit quota checks fail closed when the durable aggregate
 	// is unavailable, so an outage cannot silently bypass an enabled quota.
+	// UDB contract: /udb.core.metering.services.v1.MeteringService/CheckQuota
+	// Listener: control plane.
+	// Scopes: udb:metering:check-quota.
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	CheckQuota(ctx context.Context, in *CheckQuotaRequest, opts ...grpc.CallOption) (*CheckQuotaResponse, error)
 }
 

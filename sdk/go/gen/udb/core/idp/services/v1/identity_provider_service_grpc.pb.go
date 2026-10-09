@@ -60,35 +60,251 @@ const (
 // ---------------------------------------------------------------------------
 type IdentityProviderServiceClient interface {
 	// ── Provider administration (J2.6) ────────────────────────────────────────
+	// UDB contract: /udb.core.idp.services.v1.IdentityProviderService/CreateProvider
+	// Listener: control plane.
+	// Scopes: udb:idp:create-provider.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	CreateProvider(ctx context.Context, in *CreateProviderRequest, opts ...grpc.CallOption) (*CreateProviderResponse, error)
+	// UDB contract: /udb.core.idp.services.v1.IdentityProviderService/UpdateProvider
+	// Listener: control plane.
+	// Scopes: udb:idp:update-provider.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	UpdateProvider(ctx context.Context, in *UpdateProviderRequest, opts ...grpc.CallOption) (*UpdateProviderResponse, error)
+	// UDB contract: /udb.core.idp.services.v1.IdentityProviderService/DisableProvider
+	// Listener: control plane.
+	// Scopes: udb:idp:disable-provider.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	DisableProvider(ctx context.Context, in *DisableProviderRequest, opts ...grpc.CallOption) (*DisableProviderResponse, error)
+	// UDB contract: /udb.core.idp.services.v1.IdentityProviderService/GetProvider
+	// Listener: control plane.
+	// Scopes: udb:idp:get-provider.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	GetProvider(ctx context.Context, in *GetProviderRequest, opts ...grpc.CallOption) (*GetProviderResponse, error)
+	// UDB contract: /udb.core.idp.services.v1.IdentityProviderService/ListProviders
+	// Listener: control plane.
+	// Scopes: udb:idp:list-providers.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	ListProviders(ctx context.Context, in *ListProvidersRequest, opts ...grpc.CallOption) (*ListProvidersResponse, error)
+	// UDB contract: /udb.core.idp.services.v1.IdentityProviderService/TestProviderDiscovery
+	// Listener: control plane.
+	// Scopes: udb:idp:test-provider-discovery.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	TestProviderDiscovery(ctx context.Context, in *TestProviderDiscoveryRequest, opts ...grpc.CallOption) (*TestProviderDiscoveryResponse, error)
+	// UDB contract: /udb.core.idp.services.v1.IdentityProviderService/ForceJwksRefresh
+	// Listener: control plane.
+	// Scopes: udb:idp:force-jwks-refresh.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	ForceJwksRefresh(ctx context.Context, in *ForceJwksRefreshRequest, opts ...grpc.CallOption) (*ForceJwksRefreshResponse, error)
+	// UDB contract: /udb.core.idp.services.v1.IdentityProviderService/PreviewClaimMapping
+	// Listener: control plane.
+	// Scopes: udb:idp:preview-claim-mapping.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	PreviewClaimMapping(ctx context.Context, in *PreviewClaimMappingRequest, opts ...grpc.CallOption) (*PreviewClaimMappingResponse, error)
+	// UDB contract: /udb.core.idp.services.v1.IdentityProviderService/PreviewGroupMapping
+	// Listener: control plane.
+	// Scopes: udb:idp:preview-group-mapping.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	PreviewGroupMapping(ctx context.Context, in *PreviewGroupMappingRequest, opts ...grpc.CallOption) (*PreviewGroupMappingResponse, error)
+	// UDB contract: /udb.core.idp.services.v1.IdentityProviderService/ListExternalIdentities
+	// Listener: control plane.
+	// Scopes: udb:idp:list-external-identities.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	ListExternalIdentities(ctx context.Context, in *ListExternalIdentitiesRequest, opts ...grpc.CallOption) (*ListExternalIdentitiesResponse, error)
+	// UDB contract: /udb.core.idp.services.v1.IdentityProviderService/LinkIdentity
+	// Listener: control plane.
+	// Scopes: udb:idp:link-identity.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	LinkIdentity(ctx context.Context, in *LinkIdentityRequest, opts ...grpc.CallOption) (*LinkIdentityResponse, error)
+	// UDB contract: /udb.core.idp.services.v1.IdentityProviderService/UnlinkIdentity
+	// Listener: control plane.
+	// Scopes: udb:idp:unlink-identity.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	UnlinkIdentity(ctx context.Context, in *UnlinkIdentityRequest, opts ...grpc.CallOption) (*UnlinkIdentityResponse, error)
 	// ── SAML 2.0 (J2.2) ───────────────────────────────────────────────────────
+	// UDB contract: /udb.core.idp.services.v1.IdentityProviderService/ImportSamlMetadata
+	// Listener: control plane.
+	// Scopes: udb:idp:import-saml-metadata.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	ImportSamlMetadata(ctx context.Context, in *ImportSamlMetadataRequest, opts ...grpc.CallOption) (*ImportSamlMetadataResponse, error)
+	// UDB contract: /udb.core.idp.services.v1.IdentityProviderService/StartSamlLogin
+	// Listener: control plane.
+	// Scopes: udb:idp:start-saml-login.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	StartSamlLogin(ctx context.Context, in *StartSamlLoginRequest, opts ...grpc.CallOption) (*StartSamlLoginResponse, error)
+	// UDB contract: /udb.core.idp.services.v1.IdentityProviderService/SamlAcs
+	// Listener: control plane.
+	// Scopes: udb:idp:saml-acs.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	SamlAcs(ctx context.Context, in *SamlAcsRequest, opts ...grpc.CallOption) (*SamlAcsResponse, error)
 	// ── JIT provisioning + assurance (J2.4 / J2.5) ────────────────────────────
+	// UDB contract: /udb.core.idp.services.v1.IdentityProviderService/ResolveExternalIdentity
+	// Listener: control plane.
+	// Scopes: udb:idp:resolve-external-identity.
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	ResolveExternalIdentity(ctx context.Context, in *ResolveExternalIdentityRequest, opts ...grpc.CallOption) (*ResolveExternalIdentityResponse, error)
 	// ── SCIM 2.0 (J2.3) ───────────────────────────────────────────────────────
+	// UDB contract: /udb.core.idp.services.v1.IdentityProviderService/ScimCreateUser
+	// Listener: control plane.
+	// Scopes: udb:idp:scim-create-user.
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	ScimCreateUser(ctx context.Context, in *ScimCreateUserRequest, opts ...grpc.CallOption) (*ScimCreateUserResponse, error)
+	// UDB contract: /udb.core.idp.services.v1.IdentityProviderService/ScimGetUser
+	// Listener: control plane.
+	// Scopes: udb:idp:scim-get-user.
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	ScimGetUser(ctx context.Context, in *ScimGetUserRequest, opts ...grpc.CallOption) (*ScimGetUserResponse, error)
+	// UDB contract: /udb.core.idp.services.v1.IdentityProviderService/ScimListUsers
+	// Listener: control plane.
+	// Scopes: udb:idp:scim-list-users.
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	ScimListUsers(ctx context.Context, in *ScimListUsersRequest, opts ...grpc.CallOption) (*ScimListUsersResponse, error)
+	// UDB contract: /udb.core.idp.services.v1.IdentityProviderService/ScimReplaceUser
+	// Listener: control plane.
+	// Scopes: udb:idp:scim-replace-user.
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	ScimReplaceUser(ctx context.Context, in *ScimReplaceUserRequest, opts ...grpc.CallOption) (*ScimReplaceUserResponse, error)
+	// UDB contract: /udb.core.idp.services.v1.IdentityProviderService/ScimPatchUser
+	// Listener: control plane.
+	// Scopes: udb:idp:scim-patch-user.
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	ScimPatchUser(ctx context.Context, in *ScimPatchUserRequest, opts ...grpc.CallOption) (*ScimPatchUserResponse, error)
+	// UDB contract: /udb.core.idp.services.v1.IdentityProviderService/ScimDeleteUser
+	// Listener: control plane.
+	// Scopes: udb:idp:scim-delete-user.
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	ScimDeleteUser(ctx context.Context, in *ScimDeleteUserRequest, opts ...grpc.CallOption) (*ScimDeleteUserResponse, error)
+	// UDB contract: /udb.core.idp.services.v1.IdentityProviderService/ScimCreateGroup
+	// Listener: control plane.
+	// Scopes: udb:idp:scim-create-group.
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	ScimCreateGroup(ctx context.Context, in *ScimCreateGroupRequest, opts ...grpc.CallOption) (*ScimCreateGroupResponse, error)
+	// UDB contract: /udb.core.idp.services.v1.IdentityProviderService/ScimGetGroup
+	// Listener: control plane.
+	// Scopes: udb:idp:scim-get-group.
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	ScimGetGroup(ctx context.Context, in *ScimGetGroupRequest, opts ...grpc.CallOption) (*ScimGetGroupResponse, error)
+	// UDB contract: /udb.core.idp.services.v1.IdentityProviderService/ScimListGroups
+	// Listener: control plane.
+	// Scopes: udb:idp:scim-list-groups.
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	ScimListGroups(ctx context.Context, in *ScimListGroupsRequest, opts ...grpc.CallOption) (*ScimListGroupsResponse, error)
+	// UDB contract: /udb.core.idp.services.v1.IdentityProviderService/ScimPatchGroup
+	// Listener: control plane.
+	// Scopes: udb:idp:scim-patch-group.
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	ScimPatchGroup(ctx context.Context, in *ScimPatchGroupRequest, opts ...grpc.CallOption) (*ScimPatchGroupResponse, error)
+	// UDB contract: /udb.core.idp.services.v1.IdentityProviderService/ScimDeleteGroup
+	// Listener: control plane.
+	// Scopes: udb:idp:scim-delete-group.
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	ScimDeleteGroup(ctx context.Context, in *ScimDeleteGroupRequest, opts ...grpc.CallOption) (*ScimDeleteGroupResponse, error)
 }
 

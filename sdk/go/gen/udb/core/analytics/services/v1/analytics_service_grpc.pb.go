@@ -33,18 +33,74 @@ const (
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type AnalyticsServiceClient interface {
 	// Record a single pipeline stage request observation (called per-request).
+	// UDB contract: /udb.core.analytics.services.v1.AnalyticsService/RecordPipelineMetric
+	// Listener: control plane.
+	// Scopes: udb:analytics:record-pipeline-metric.
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	RecordPipelineMetric(ctx context.Context, in *RecordPipelineMetricRequest, opts ...grpc.CallOption) (*RecordPipelineMetricResponse, error)
 	// Query aggregated pipeline stage performance snapshots.
+	// UDB contract: /udb.core.analytics.services.v1.AnalyticsService/GetPipelineSummary
+	// Listener: control plane.
+	// Scopes: udb:analytics:get-pipeline-summary.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	GetPipelineSummary(ctx context.Context, in *GetPipelineSummaryRequest, opts ...grpc.CallOption) (*GetPipelineSummaryResponse, error)
 	// Query daily executor performance roll-ups.
+	// UDB contract: /udb.core.analytics.services.v1.AnalyticsService/GetExecutorPerformance
+	// Listener: control plane.
+	// Scopes: udb:analytics:get-executor-performance.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	GetExecutorPerformance(ctx context.Context, in *GetExecutorPerformanceRequest, opts ...grpc.CallOption) (*GetExecutorPerformanceResponse, error)
 	// Query daily reconciliation and conflict analytics.
+	// UDB contract: /udb.core.analytics.services.v1.AnalyticsService/GetReconciliationAnalytics
+	// Listener: control plane.
+	// Scopes: udb:analytics:get-reconciliation-analytics.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	GetReconciliationAnalytics(ctx context.Context, in *GetReconciliationAnalyticsRequest, opts ...grpc.CallOption) (*GetReconciliationAnalyticsResponse, error)
 	// Get throughput statistics over a time window.
+	// UDB contract: /udb.core.analytics.services.v1.AnalyticsService/GetThroughput
+	// Listener: control plane.
+	// Scopes: udb:analytics:get-throughput.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	GetThroughput(ctx context.Context, in *GetThroughputRequest, opts ...grpc.CallOption) (*GetThroughputResponse, error)
 	// Get SLA compliance report for a stage and time period.
+	// UDB contract: /udb.core.analytics.services.v1.AnalyticsService/GetSlaCompliance
+	// Listener: control plane.
+	// Scopes: udb:analytics:get-sla-compliance.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	GetSlaCompliance(ctx context.Context, in *GetSlaComplianceRequest, opts ...grpc.CallOption) (*GetSlaComplianceResponse, error)
 	// Manually trigger hourly snapshot aggregation (normally a cron job).
+	// UDB contract: /udb.core.analytics.services.v1.AnalyticsService/TriggerSnapshot
+	// Listener: control plane.
+	// Scopes: udb:analytics:trigger-snapshot.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	TriggerSnapshot(ctx context.Context, in *TriggerSnapshotRequest, opts ...grpc.CallOption) (*TriggerSnapshotResponse, error)
 }
 

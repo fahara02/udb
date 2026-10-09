@@ -69,63 +69,391 @@ const (
 // UDB-owned authorization service for RBAC, ABAC, ReBAC, tenant/project
 // domains, and audit-ready access decisions.
 type AuthzServiceClient interface {
+	// UDB contract: /udb.core.authz.services.v1.AuthzService/Authorize
+	// Listener: control plane.
+	// Scopes: udb:authz:authorize.
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	Authorize(ctx context.Context, in *AuthzRequest, opts ...grpc.CallOption) (*AuthzResponse, error)
+	// UDB contract: /udb.core.authz.services.v1.AuthzService/CheckAccess
+	// Listener: control plane.
+	// Scopes: udb:authz:check-access.
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	CheckAccess(ctx context.Context, in *CheckAccessRequest, opts ...grpc.CallOption) (*CheckAccessResponse, error)
+	// UDB contract: /udb.core.authz.services.v1.AuthzService/CreateRole
+	// Listener: control plane.
+	// Scopes: udb:authz:create-role.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	CreateRole(ctx context.Context, in *CreateRoleRequest, opts ...grpc.CallOption) (*CreateRoleResponse, error)
+	// UDB contract: /udb.core.authz.services.v1.AuthzService/AssignRole
+	// Listener: control plane.
+	// Scopes: udb:authz:assign-role.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	AssignRole(ctx context.Context, in *AssignRoleRequest, opts ...grpc.CallOption) (*AssignRoleResponse, error)
+	// UDB contract: /udb.core.authz.services.v1.AuthzService/CreatePolicyRule
+	// Listener: control plane.
+	// Scopes: udb:authz:create-policy-rule.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	CreatePolicyRule(ctx context.Context, in *CreatePolicyRuleRequest, opts ...grpc.CallOption) (*CreatePolicyRuleResponse, error)
+	// UDB contract: /udb.core.authz.services.v1.AuthzService/ListUserPermissions
+	// Listener: control plane.
+	// Scopes: udb:authz:list-user-permissions.
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	ListUserPermissions(ctx context.Context, in *ListUserPermissionsRequest, opts ...grpc.CallOption) (*ListUserPermissionsResponse, error)
+	// UDB contract: /udb.core.authz.services.v1.AuthzService/ListAccessDecisionAudits
+	// Listener: control plane.
+	// Scopes: udb:authz:list-access-decision-audits.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	ListAccessDecisionAudits(ctx context.Context, in *ListAccessDecisionAuditsRequest, opts ...grpc.CallOption) (*ListAccessDecisionAuditsResponse, error)
 	// Revoke a role from a user.
+	// UDB contract: /udb.core.authz.services.v1.AuthzService/RevokeRole
+	// Listener: control plane.
+	// Scopes: udb:authz:revoke-role.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	RevokeRole(ctx context.Context, in *RevokeRoleRequest, opts ...grpc.CallOption) (*RevokeRoleResponse, error)
 	// List all role assignments for a user.
+	// UDB contract: /udb.core.authz.services.v1.AuthzService/ListUserRoles
+	// Listener: control plane.
+	// Scopes: udb:authz:list-user-roles.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	ListUserRoles(ctx context.Context, in *ListUserRolesRequest, opts ...grpc.CallOption) (*ListUserRolesResponse, error)
 	// Get a role by ID.
+	// UDB contract: /udb.core.authz.services.v1.AuthzService/GetRole
+	// Listener: control plane.
+	// Scopes: udb:authz:get-role.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	GetRole(ctx context.Context, in *GetRoleRequest, opts ...grpc.CallOption) (*GetRoleResponse, error)
 	// List all roles for a domain/tenant.
+	// UDB contract: /udb.core.authz.services.v1.AuthzService/ListRoles
+	// Listener: control plane.
+	// Scopes: udb:authz:list-roles.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	ListRoles(ctx context.Context, in *ListRolesRequest, opts ...grpc.CallOption) (*ListRolesResponse, error)
 	// Batch check multiple permissions at once.
+	// UDB contract: /udb.core.authz.services.v1.AuthzService/BatchCheckPermissions
+	// Listener: control plane.
+	// Scopes: udb:authz:batch-check-permissions.
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	BatchCheckPermissions(ctx context.Context, in *BatchCheckPermissionsRequest, opts ...grpc.CallOption) (*BatchCheckPermissionsResponse, error)
 	// Update a role's name, description, or active status.
+	// UDB contract: /udb.core.authz.services.v1.AuthzService/UpdateRole
+	// Listener: control plane.
+	// Scopes: udb:authz:update-role.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	UpdateRole(ctx context.Context, in *UpdateRoleRequest, opts ...grpc.CallOption) (*UpdateRoleResponse, error)
 	// Delete a role (soft-delete; existing assignments are revoked).
+	// UDB contract: /udb.core.authz.services.v1.AuthzService/DeleteRole
+	// Listener: control plane.
+	// Scopes: udb:authz:delete-role.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	DeleteRole(ctx context.Context, in *DeleteRoleRequest, opts ...grpc.CallOption) (*DeleteRoleResponse, error)
 	// Get a single policy rule by ID.
+	// UDB contract: /udb.core.authz.services.v1.AuthzService/GetPolicyRule
+	// Listener: control plane.
+	// Scopes: udb:authz:get-policy-rule.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	GetPolicyRule(ctx context.Context, in *GetPolicyRuleRequest, opts ...grpc.CallOption) (*GetPolicyRuleResponse, error)
 	// List policy rules with optional domain/subject/object filters.
+	// UDB contract: /udb.core.authz.services.v1.AuthzService/ListPolicyRules
+	// Listener: control plane.
+	// Scopes: udb:authz:list-policy-rules.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	ListPolicyRules(ctx context.Context, in *ListPolicyRulesRequest, opts ...grpc.CallOption) (*ListPolicyRulesResponse, error)
 	// Delete a policy rule.
+	// UDB contract: /udb.core.authz.services.v1.AuthzService/DeletePolicyRule
+	// Listener: control plane.
+	// Scopes: udb:authz:delete-policy-rule.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	DeletePolicyRule(ctx context.Context, in *DeletePolicyRuleRequest, opts ...grpc.CallOption) (*DeletePolicyRuleResponse, error)
+	// UDB contract: /udb.core.authz.services.v1.AuthzService/PutRoleBinding
+	// Listener: control plane.
+	// Scopes: udb:authz:put-role-binding.
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	PutRoleBinding(ctx context.Context, in *PutRoleBindingRequest, opts ...grpc.CallOption) (*AuthMutationResponse, error)
+	// UDB contract: /udb.core.authz.services.v1.AuthzService/PutRelationship
+	// Listener: control plane.
+	// Scopes: udb:authz:put-relationship.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	PutRelationship(ctx context.Context, in *PutRelationshipRequest, opts ...grpc.CallOption) (*AuthMutationResponse, error)
+	// UDB contract: /udb.core.authz.services.v1.AuthzService/PutAuthzPolicy
+	// Listener: control plane.
+	// Scopes: udb:authz:put-authz-policy.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	PutAuthzPolicy(ctx context.Context, in *PutAuthzPolicyRequest, opts ...grpc.CallOption) (*AuthMutationResponse, error)
+	// UDB contract: /udb.core.authz.services.v1.AuthzService/LintAuthzPolicies
+	// Listener: control plane.
+	// Scopes: udb:authz:lint-authz-policies.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	LintAuthzPolicies(ctx context.Context, in *LintAuthzPoliciesRequest, opts ...grpc.CallOption) (*LintAuthzPoliciesResponse, error)
 	// Stage 2: authorize and, when allowed, mint a short-lived native-access
 	// contract (restricted role + scoped DSN + RLS session variables).
+	// UDB contract: /udb.core.authz.services.v1.AuthzService/GetNativeAccess
+	// Listener: control plane.
+	// Scopes: udb:authz:get-native-access.
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	GetNativeAccess(ctx context.Context, in *NativeAccessRequest, opts ...grpc.CallOption) (*NativeAccessResponse, error)
 	// Stage 2: return a signed policy bundle for local SDK authorization caches.
+	// UDB contract: /udb.core.authz.services.v1.AuthzService/GetPolicyBundle
+	// Listener: control plane.
+	// Scopes: udb:authz:get-policy-bundle.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	GetPolicyBundle(ctx context.Context, in *PolicyBundleRequest, opts ...grpc.CallOption) (*PolicyBundleResponse, error)
+	// UDB contract: /udb.core.authz.services.v1.AuthzService/CreatePolicyDraft
+	// Listener: control plane.
+	// Scopes: udb:authz:policy:write.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	CreatePolicyDraft(ctx context.Context, in *CreatePolicyDraftRequest, opts ...grpc.CallOption) (*PolicyDraftResponse, error)
+	// UDB contract: /udb.core.authz.services.v1.AuthzService/UpdatePolicyDraft
+	// Listener: control plane.
+	// Scopes: udb:authz:policy:write.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	UpdatePolicyDraft(ctx context.Context, in *UpdatePolicyDraftRequest, opts ...grpc.CallOption) (*PolicyDraftResponse, error)
+	// UDB contract: /udb.core.authz.services.v1.AuthzService/DiffPolicyDraft
+	// Listener: control plane.
+	// Scopes: udb:authz:policy:read.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	DiffPolicyDraft(ctx context.Context, in *DiffPolicyDraftRequest, opts ...grpc.CallOption) (*DiffPolicyDraftResponse, error)
+	// UDB contract: /udb.core.authz.services.v1.AuthzService/SubmitPolicyDraft
+	// Listener: control plane.
+	// Scopes: udb:authz:policy:write.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	SubmitPolicyDraft(ctx context.Context, in *SubmitPolicyDraftRequest, opts ...grpc.CallOption) (*PolicyDraftResponse, error)
+	// UDB contract: /udb.core.authz.services.v1.AuthzService/ApprovePolicyDraft
+	// Listener: control plane.
+	// Scopes: udb:authz:policy:approve.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	ApprovePolicyDraft(ctx context.Context, in *ApprovePolicyDraftRequest, opts ...grpc.CallOption) (*PolicyApprovalResponse, error)
+	// UDB contract: /udb.core.authz.services.v1.AuthzService/RejectPolicyDraft
+	// Listener: control plane.
+	// Scopes: udb:authz:policy:approve.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	RejectPolicyDraft(ctx context.Context, in *RejectPolicyDraftRequest, opts ...grpc.CallOption) (*PolicyApprovalResponse, error)
+	// UDB contract: /udb.core.authz.services.v1.AuthzService/ActivatePolicyVersion
+	// Listener: control plane.
+	// Scopes: udb:authz:admin.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: destructive.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	ActivatePolicyVersion(ctx context.Context, in *ActivatePolicyVersionRequest, opts ...grpc.CallOption) (*ActivationResponse, error)
+	// UDB contract: /udb.core.authz.services.v1.AuthzService/RollbackPolicyVersion
+	// Listener: control plane.
+	// Scopes: udb:authz:admin.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: destructive.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	RollbackPolicyVersion(ctx context.Context, in *RollbackPolicyVersionRequest, opts ...grpc.CallOption) (*ActivationResponse, error)
 	// Activate a policy version to a canary scope (subset of the fleet) before
 	// fleet-wide. A metric-based evaluator then auto-rolls back on breach.
+	// UDB contract: /udb.core.authz.services.v1.AuthzService/ActivateCanary
+	// Listener: control plane.
+	// Scopes: udb:authz:admin.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: destructive.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	ActivateCanary(ctx context.Context, in *ActivateCanaryRequest, opts ...grpc.CallOption) (*CanaryResponse, error)
 	// Promote a baked, within-threshold canary to fleet-wide enforcement.
+	// UDB contract: /udb.core.authz.services.v1.AuthzService/PromoteCanary
+	// Listener: control plane.
+	// Scopes: udb:authz:admin.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: destructive.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	PromoteCanary(ctx context.Context, in *PromoteCanaryRequest, opts ...grpc.CallOption) (*CanaryResponse, error)
 	// Read a canary's current state + promote-eligibility.
+	// UDB contract: /udb.core.authz.services.v1.AuthzService/GetCanaryStatus
+	// Listener: control plane.
+	// Scopes: udb:authz:policy:read.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	GetCanaryStatus(ctx context.Context, in *GetCanaryStatusRequest, opts ...grpc.CallOption) (*GetCanaryStatusResponse, error)
+	// UDB contract: /udb.core.authz.services.v1.AuthzService/ListPolicyVersions
+	// Listener: control plane.
+	// Scopes: udb:authz:policy:read.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	ListPolicyVersions(ctx context.Context, in *ListPolicyVersionsRequest, opts ...grpc.CallOption) (*ListPolicyVersionsResponse, error)
+	// UDB contract: /udb.core.authz.services.v1.AuthzService/SimulatePolicy
+	// Listener: control plane.
+	// Scopes: udb:authz:policy:read.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	SimulatePolicy(ctx context.Context, in *SimulatePolicyRequest, opts ...grpc.CallOption) (*SimulatePolicyResponse, error)
+	// UDB contract: /udb.core.authz.services.v1.AuthzService/ExplainPolicy
+	// Listener: control plane.
+	// Scopes: udb:authz:policy:read.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	ExplainPolicy(ctx context.Context, in *ExplainPolicyRequest, opts ...grpc.CallOption) (*ExplainPolicyResponse, error)
+	// UDB contract: /udb.core.authz.services.v1.AuthzService/GetAuthzRevision
+	// Listener: control plane.
+	// Scopes: udb:authz:policy:read.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	GetAuthzRevision(ctx context.Context, in *GetAuthzRevisionRequest, opts ...grpc.CallOption) (*GetAuthzRevisionResponse, error)
+	// UDB contract: /udb.core.authz.services.v1.AuthzService/InvalidatePolicyBundles
+	// Listener: control plane.
+	// Scopes: udb:authz:admin.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: destructive.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	InvalidatePolicyBundles(ctx context.Context, in *InvalidatePolicyBundlesRequest, opts ...grpc.CallOption) (*InvalidatePolicyBundlesResponse, error)
+	// UDB contract: /udb.core.authz.services.v1.AuthzService/SeedBuiltinRoles
+	// Listener: control plane.
+	// Scopes: udb:authz:admin.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	SeedBuiltinRoles(ctx context.Context, in *SeedBuiltinRolesRequest, opts ...grpc.CallOption) (*SeedBuiltinRolesResponse, error)
+	// UDB contract: /udb.core.authz.services.v1.AuthzService/MigrateLegacyPolicies
+	// Listener: control plane.
+	// Scopes: udb:authz:admin.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: destructive.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	MigrateLegacyPolicies(ctx context.Context, in *MigrateLegacyPoliciesRequest, opts ...grpc.CallOption) (*MigrateLegacyPoliciesResponse, error)
 }
 

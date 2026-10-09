@@ -49,23 +49,79 @@ type CacheServiceClient interface {
 	// Read a value from a namespaced cache key. Tenant-scoped: the key is derived
 	// from the verified claim tenant, so a caller can never read another tenant's
 	// entry by spoofing the body tenant_id.
+	// UDB contract: /udb.core.cache.services.v1.CacheService/Get
+	// Listener: control plane.
+	// Scopes: udb:cache:get.
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	Get(ctx context.Context, in *GetRequest, opts ...grpc.CallOption) (*GetResponse, error)
 	// Write a value with an optional TTL. Bounded: a write that would push the
 	// namespace over its per-tenant `max_bytes` budget fails closed with
 	// `resource_exhausted`.
+	// UDB contract: /udb.core.cache.services.v1.CacheService/Set
+	// Listener: control plane.
+	// Scopes: udb:cache:set.
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	Set(ctx context.Context, in *SetRequest, opts ...grpc.CallOption) (*SetResponse, error)
 	// Delete a single namespaced key. Idempotent.
+	// UDB contract: /udb.core.cache.services.v1.CacheService/Delete
+	// Listener: control plane.
+	// Scopes: udb:cache:delete.
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	Delete(ctx context.Context, in *DeleteRequest, opts ...grpc.CallOption) (*DeleteResponse, error)
 	// Cursor-paged scan over a namespace key prefix. Implemented with Redis SCAN
 	// (never KEYS), so it never blocks the server on a large keyspace.
+	// UDB contract: /udb.core.cache.services.v1.CacheService/Scan
+	// Listener: control plane.
+	// Scopes: udb:cache:scan.
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	Scan(ctx context.Context, in *ScanRequest, opts ...grpc.CallOption) (*ScanResponse, error)
 	// Declare (or update) a namespace and its per-tenant byte budget + default TTL.
+	// UDB contract: /udb.core.cache.services.v1.CacheService/CreateNamespace
+	// Listener: control plane.
+	// Scopes: udb:cache:create-namespace.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	CreateNamespace(ctx context.Context, in *CreateNamespaceRequest, opts ...grpc.CallOption) (*CreateNamespaceResponse, error)
 	// Flush an entire namespace for the caller's tenant (SCAN+DEL sweep) and emit
 	// an invalidation event. DESTRUCTIVE — gated by a confirmation token.
+	// UDB contract: /udb.core.cache.services.v1.CacheService/DeleteNamespace
+	// Listener: control plane.
+	// Scopes: udb:cache:delete-namespace.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: destructive.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	DeleteNamespace(ctx context.Context, in *DeleteNamespaceRequest, opts ...grpc.CallOption) (*DeleteNamespaceResponse, error)
 	// Report a namespace's current used-bytes counter, configured budget, and item
 	// count for the caller's tenant.
+	// UDB contract: /udb.core.cache.services.v1.CacheService/GetNamespaceStats
+	// Listener: control plane.
+	// Scopes: udb:cache:get-namespace-stats.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
 	GetNamespaceStats(ctx context.Context, in *GetNamespaceStatsRequest, opts ...grpc.CallOption) (*GetNamespaceStatsResponse, error)
 }
 
