@@ -701,9 +701,11 @@ mod journal_prefix_controls {
         let config = legacy_catalog(&pool).await;
         let journal = config.cdc_journal_relation();
         let cursors = config.cdc_consumer_cursors_relation();
-        let a = Uuid::new_v4();
-        let b = Uuid::new_v4();
-        let missing = Uuid::new_v4();
+        // Missing retained IDs must exercise both sides of the UUID tie-break.
+        let before = Uuid::from_u128(1);
+        let a = Uuid::from_u128(2);
+        let b = Uuid::from_u128(3);
+        let missing = Uuid::from_u128(4);
         for (id, second) in [(b, 2i32), (a, 1)] {
             sqlx::query(&format!("INSERT INTO {journal} (event_id,topic,payload,published_at) VALUES ($1,'udb.prefix.control','{{}}','2026-01-01'::TIMESTAMPTZ + make_interval(secs=>$2::DOUBLE PRECISION))"))
                 .bind(id).bind(f64::from(second)).execute(&pool).await.unwrap();
@@ -711,6 +713,7 @@ mod journal_prefix_controls {
         for (name, id, second, owner) in [
             ("retained", b, 2i32, "user:canonical-ci"),
             ("pruned", missing, 1, "user:canonical-ci"),
+            ("pruned-before", before, 1, "user:canonical-ci"),
             ("legacy", a, 1, ""),
         ] {
             sqlx::query(&format!("INSERT INTO {cursors} (tenant_id,project_id,consumer_name,topic_pattern,last_event_id,owner_identity,last_published_at) VALUES ('prefix-control','default',$1,'udb.prefix.control',$2,$3,'2026-01-01'::TIMESTAMPTZ + make_interval(secs=>$4::DOUBLE PRECISION))"))
@@ -737,6 +740,7 @@ mod journal_prefix_controls {
             vec![
                 ("legacy".into(), 1, "".into()),
                 ("pruned".into(), 1, "user:canonical-ci".into()),
+                ("pruned-before".into(), 0, "user:canonical-ci".into()),
                 ("retained".into(), 2, "user:canonical-ci".into())
             ]
         );
@@ -902,17 +906,36 @@ mod journal_prefix_controls {
             );
             remove(&pool, &config).await;
         }
-        {
+        for case in [
+            "journal-ascii",
+            "journal-unicode",
+            "schema-ascii",
+            "schema-unicode",
+        ] {
             let mut config = legacy_catalog(&pool).await;
-            let old = config.cdc_journal_relation();
-            let long_name = "j".repeat(80);
-            pool.execute(format!("ALTER TABLE {old} RENAME TO {}", qi(&long_name)).as_str())
-                .await
-                .unwrap();
-            config.cdc_journal_table = long_name;
+            // PostgreSQL truncates identifiers by bytes, including quoted UTF-8 names.
+            let suffix = if case.ends_with("unicode") {
+                "界".repeat(20)
+            } else {
+                "j".repeat(48)
+            };
+            let long_name = format!("{}_{}", Uuid::new_v4().simple(), suffix);
+            if case.starts_with("schema") {
+                let old = qi(&config.cdc.system_schema);
+                pool.execute(format!("ALTER SCHEMA {old} RENAME TO {}", qi(&long_name)).as_str())
+                    .await
+                    .unwrap();
+                config.cdc.system_schema = long_name;
+            } else {
+                let old = config.cdc_journal_relation();
+                pool.execute(format!("ALTER TABLE {old} RENAME TO {}", qi(&long_name)).as_str())
+                    .await
+                    .unwrap();
+                config.cdc_journal_table = long_name;
+            }
             assert!(
                 migrate(&pool, &config).await.is_err(),
-                "truncated configured identifiers must be rejected before claiming head authority"
+                "{case}: truncated configured identifiers must be rejected before claiming head authority"
             );
             remove(&pool, &config).await;
         }

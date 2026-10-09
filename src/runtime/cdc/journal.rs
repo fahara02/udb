@@ -57,6 +57,8 @@ pub(crate) fn schema_statements(config: &SystemCatalogConfig) -> Vec<String> {
     let schema = qi(&config.cdc.system_schema);
     let schema_value = ql(&config.cdc.system_schema);
     let table_value = ql(&config.cdc_journal_table);
+    let cursors_table_value = ql(crate::runtime::system::CDC_CONSUMER_CURSORS_TABLE);
+    let heads_table_value = ql(HEAD_TABLE);
     let allocator = format!("{schema}.{}", qi(ALLOCATOR));
     let immutable = format!("{schema}.{}", qi(IMMUTABLE));
     let journal_literal = ql(&journal);
@@ -79,8 +81,12 @@ pub(crate) fn schema_statements(config: &SystemCatalogConfig) -> Vec<String> {
         BEGIN
           LOCK TABLE {journal} IN ACCESS EXCLUSIVE MODE;
           LOCK TABLE {cursors} IN SHARE ROW EXCLUSIVE MODE;
-          IF NOT EXISTS (SELECT 1 FROM pg_catalog.pg_class c JOIN pg_catalog.pg_namespace n ON n.oid=c.relnamespace WHERE c.oid={journal_literal}::regclass AND n.nspname={schema_value} AND c.relname={table_value}) THEN
+          IF NOT EXISTS (SELECT 1 FROM pg_catalog.pg_class c JOIN pg_catalog.pg_namespace n ON n.oid=c.relnamespace WHERE c.oid={journal_literal}::regclass AND n.nspname::TEXT={schema_value} AND c.relname::TEXT={table_value}) THEN
             RAISE EXCEPTION 'CDC journal configured identifier exceeds PostgreSQL name authority';
+          END IF;
+          IF NOT EXISTS (SELECT 1 FROM pg_catalog.pg_class c JOIN pg_catalog.pg_namespace n ON n.oid=c.relnamespace WHERE c.oid={cursors_literal}::regclass AND n.nspname::TEXT={schema_value} AND c.relname::TEXT={cursors_table_value}) OR
+             NOT EXISTS (SELECT 1 FROM pg_catalog.pg_class c JOIN pg_catalog.pg_namespace n ON n.oid=c.relnamespace WHERE c.oid={heads_literal}::regclass AND n.nspname::TEXT={schema_value} AND c.relname::TEXT={heads_table_value}) THEN
+            RAISE EXCEPTION 'CDC durable cursor/head configured identifier exceeds PostgreSQL name authority';
           END IF;
           IF NOT EXISTS (SELECT 1 FROM pg_catalog.pg_attribute WHERE attrelid={journal_literal}::regclass AND attname='journal_position' AND atttypid='pg_catalog.int8'::regtype AND NOT attisdropped) OR
              NOT EXISTS (SELECT 1 FROM pg_catalog.pg_attribute WHERE attrelid={cursors_literal}::regclass AND attname='last_journal_position' AND atttypid='pg_catalog.int8'::regtype AND NOT attisdropped) OR
