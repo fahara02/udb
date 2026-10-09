@@ -2,10 +2,6 @@
 
 use super::*;
 
-fn authz_audit_internal_status(operation: impl Into<String>, message: impl Into<String>) -> Status {
-    crate::runtime::executor_utils::internal_status("authz", operation, message)
-}
-
 fn decision_source_from_db(value: &str) -> i32 {
     match value {
         "ROLE_POLICY" | "DECISION_SOURCE_ROLE_POLICY" => {
@@ -82,10 +78,7 @@ fn audit_from_row(
     row: &sqlx::postgres::PgRow,
 ) -> Result<authz_entity_pb::AccessDecisionAudit, Status> {
     let map = |e: sqlx::Error| {
-        authz_audit_internal_status(
-            "decode_access_audit",
-            format!("decode access audit failed: {e}"),
-        )
+        crate::runtime::executor_utils::sqlx_error_to_status("decode_access_audit", &e)
     };
     Ok(authz_entity_pb::AccessDecisionAudit {
         decision_audit_id: row.try_get("decision_audit_id").map_err(map)?,
@@ -106,21 +99,21 @@ fn audit_from_row(
         // Phase L3 task4 expanded compliance columns. These were written through
         // the redacting decision-input path, so they carry no credential material;
         // text columns still pass through `redact_audit_text` as defense in depth.
-        decision_id: row.try_get("decision_id").unwrap_or_default(),
-        policy_version: row.try_get("policy_version").unwrap_or_default(),
-        relationship_version: row.try_get("relationship_version").unwrap_or_default(),
-        purpose: row.try_get("purpose").unwrap_or_default(),
-        scopes: row.try_get("scopes").unwrap_or_default(),
+        decision_id: row.try_get("decision_id").map_err(map)?,
+        policy_version: row.try_get("policy_version").map_err(map)?,
+        relationship_version: row.try_get("relationship_version").map_err(map)?,
+        purpose: row.try_get("purpose").map_err(map)?,
+        scopes: row.try_get("scopes").map_err(map)?,
         matched_policy_ids: row
             .try_get::<Vec<String>, _>("matched_policy_ids")
-            .unwrap_or_default(),
-        project_id: row.try_get("project_id").unwrap_or_default(),
-        actor_kind: row.try_get("actor_kind").unwrap_or_default(),
-        resource_type: row.try_get("resource_type").unwrap_or_default(),
-        trace_id: row.try_get("trace_id").unwrap_or_default(),
-        span_id: row.try_get("span_id").unwrap_or_default(),
-        user_agent_hash: row.try_get("user_agent_hash").unwrap_or_default(),
-        decision_input: redact_audit_text(row.try_get("decision_input").unwrap_or_default()),
+            .map_err(map)?,
+        project_id: row.try_get("project_id").map_err(map)?,
+        actor_kind: row.try_get("actor_kind").map_err(map)?,
+        resource_type: row.try_get("resource_type").map_err(map)?,
+        trace_id: row.try_get("trace_id").map_err(map)?,
+        span_id: row.try_get("span_id").map_err(map)?,
+        user_agent_hash: row.try_get("user_agent_hash").map_err(map)?,
+        decision_input: redact_audit_text(row.try_get("decision_input").map_err(map)?),
     })
 }
 
@@ -137,18 +130,6 @@ mod tests {
             .get_bin(ERROR_DETAIL_METADATA_KEY)
             .expect("typed detail trailer is present");
         crate::runtime::executor_utils::decode_error_detail_from_raw(&raw)
-    }
-
-    fn assert_internal_detail(status: &Status, operation: &str, message: &str) {
-        assert_eq!(status.code(), Code::Internal);
-        assert_eq!(status.message(), message);
-        let detail = decode_detail(status);
-        assert_eq!(detail.kind, ErrorKind::Internal as i32);
-        assert_eq!(detail.backend, "authz");
-        assert_eq!(detail.operation, operation);
-        assert!(!detail.retryable);
-        assert_eq!(detail.retry_after_ms, 0);
-        assert!(detail.field_violations.is_empty());
     }
 
     #[test]
@@ -194,17 +175,39 @@ mod tests {
         assert!(!ctx.decision_input.contains("203.0.113.9"));
     }
 
-    #[test]
-    fn authz_audit_internal_status_carries_typed_detail() {
-        let status = authz_audit_internal_status(
-            "list_access_audits",
-            "list access audits failed: db closed",
+    #[tokio::test]
+    #[ignore = "requires live Postgres"]
+    async fn access_audit_decode_refuses_missing_decision_id_live() {
+        let pool = crate::runtime::service::live_tests::support::live_pg_pool().await;
+        let row = sqlx::query(
+            "SELECT ''::TEXT AS decision_audit_id, ''::TEXT AS user_id, \
+             ''::TEXT AS domain, ''::TEXT AS object, ''::TEXT AS action, \
+             'ALLOW'::TEXT AS effect, 'NO_MATCH'::TEXT AS decision_source, \
+             ''::TEXT AS matched_rule, ''::TEXT AS reason, ''::TEXT AS ip_address, \
+             ''::TEXT AS correlation_id, ''::TEXT AS tenant_id, \
+             NULL::TEXT AS decision_id, ''::TEXT AS policy_version, \
+             ''::TEXT AS relationship_version, ''::TEXT AS purpose, \
+             ''::TEXT AS scopes, ARRAY[]::TEXT[] AS matched_policy_ids, \
+             ''::TEXT AS project_id, ''::TEXT AS actor_kind, \
+             ''::TEXT AS resource_type, ''::TEXT AS trace_id, ''::TEXT AS span_id, \
+             ''::TEXT AS user_agent_hash, '{}'::TEXT AS decision_input",
+        )
+        .fetch_one(&pool)
+        .await
+        .expect("live audit decoder fixture");
+        let status =
+            audit_from_row(&row).expect_err("audit decode must retain the decision id refusal");
+        assert_eq!(status.code(), Code::Internal);
+        let detail = decode_detail(&status);
+        assert_eq!(detail.kind, ErrorKind::Internal as i32);
+        assert_eq!(detail.operation, "decode_access_audit");
+        assert_eq!(
+            detail.reason,
+            crate::runtime::error_reasons::DECODE_FAILED.code
         );
-        assert_internal_detail(
-            &status,
-            "list_access_audits",
-            "list access audits failed: db closed",
-        );
+        assert_eq!(detail.column, "decision_id");
+        assert!(!detail.retryable);
+        pool.close().await;
     }
 }
 

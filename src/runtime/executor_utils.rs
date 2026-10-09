@@ -906,8 +906,28 @@ pub(crate) fn sqlx_error_to_status(context: &str, err: &sqlx::Error) -> tonic::S
             format!("{context}: database temporarily unavailable"),
         );
     }
-    // A genuinely non-transient non-database error (decode/column/protocol bug).
-    // Still log it — these were equally invisible before — and keep Internal.
+    // Decode sources can contain stored values. Report the operation and column
+    // without forwarding that source to either callers or server logs.
+    let decode_column = match err {
+        sqlx::Error::ColumnDecode { index, .. } | sqlx::Error::ColumnNotFound(index) => {
+            Some(index.as_str())
+        }
+        _ => None,
+    };
+    if decode_column.is_some()
+        || matches!(
+            err,
+            sqlx::Error::Decode(_) | sqlx::Error::ColumnIndexOutOfBounds { .. }
+        )
+    {
+        tracing::error!(context = %context, column = ?decode_column, "database row decode failed");
+        return crate::runtime::error_reasons::annotate(
+            internal_status("database", context, context.to_string()),
+            crate::runtime::error_reasons::DECODE_FAILED,
+            decode_column,
+            None,
+        );
+    }
     tracing::error!(context = %context, error = %err, "database call failed (non-database error)");
     internal_status("database", context, context.to_string())
 }
@@ -3806,9 +3826,45 @@ mod error_detail_tests {
         assert_eq!(detail.kind, ErrorKind::Internal as i32);
         assert_eq!(detail.backend, "database");
         assert_eq!(detail.operation, "decode row");
+        assert_eq!(
+            detail.reason,
+            crate::runtime::error_reasons::DECODE_FAILED.code
+        );
+        assert_eq!(detail.column, "missing_col");
         assert!(!detail.retryable);
         assert_eq!(detail.retry_after_ms, 0);
         assert!(detail.field_violations.is_empty());
+    }
+
+    #[test]
+    fn sqlx_decode_failure_names_column_without_stored_values() {
+        for (err, column) in [
+            (
+                sqlx::Error::ColumnDecode {
+                    index: "revision".to_string(),
+                    source: "stored-private-value".into(),
+                },
+                "revision",
+            ),
+            (sqlx::Error::Decode("stored-private-value".into()), ""),
+            (sqlx::Error::ColumnIndexOutOfBounds { index: 9, len: 2 }, ""),
+        ] {
+            let status = sqlx_error_to_status("decode_stored_row", &err);
+            assert_eq!(
+                status.code(),
+                crate::runtime::error_reasons::DECODE_FAILED.status
+            );
+            assert!(!status.message().contains("stored-private-value"));
+            let detail = decode_detail(&status);
+            assert_eq!(
+                detail.reason,
+                crate::runtime::error_reasons::DECODE_FAILED.code
+            );
+            assert_eq!(detail.column, column);
+            assert!(!detail.retryable);
+            assert_eq!(detail.retry_after_ms, 0);
+            assert!(!detail.fix_hint.is_empty());
+        }
     }
 
     #[test]

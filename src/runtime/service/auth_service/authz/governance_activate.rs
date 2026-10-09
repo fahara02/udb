@@ -660,7 +660,15 @@ impl AuthzServiceImpl {
             crate::runtime::executor_utils::sqlx_error_to_status("read_active_version", &err)
         })?;
         Ok(row
-            .and_then(|r| r.try_get::<String, _>("active").ok())
+            .map(|r| {
+                r.try_get::<String, _>("active").map_err(|err| {
+                    crate::runtime::executor_utils::sqlx_error_to_status(
+                        "decode_active_version",
+                        &err,
+                    )
+                })
+            })
+            .transpose()?
             .filter(|s| !s.trim().is_empty()))
     }
 }
@@ -1083,7 +1091,7 @@ impl AuthzServiceImpl {
                 "canary not found",
             )
         })?;
-        Ok(canary_from_row(&row))
+        canary_from_row(&row)
     }
 
     /// Every ACTIVE canary (evaluator input).
@@ -1127,7 +1135,7 @@ impl AuthzServiceImpl {
         .map_err(|err| {
             crate::runtime::executor_utils::sqlx_error_to_status("list_active_canaries", &err)
         })?;
-        Ok(rows.iter().map(canary_from_row).collect())
+        rows.iter().map(canary_from_row).collect()
     }
 
     /// Transition a canary to `new_state` (revision-bumped, records the reason).
@@ -1433,8 +1441,11 @@ impl NackRateMetricSource {
 
         let mut samples = 0i64;
         let mut nacked = 0i64;
+        let map = |err: sqlx::Error| {
+            crate::runtime::executor_utils::sqlx_error_to_status("decode_node_state_ledger", &err)
+        };
         for row in &rows {
-            let node_id: String = row.try_get("node_id").unwrap_or_default();
+            let node_id: String = row.try_get("node_id").map_err(map)?;
             // Percent/Node scoping selects nodes; tenant-scoped canaries have no
             // node projection here, so they yield no node samples (→ PAUSE until a
             // metric backend with tenant-addressed signal is wired). The
@@ -1448,7 +1459,7 @@ impl NackRateMetricSource {
                 continue;
             }
             samples += 1;
-            if row.try_get::<bool, _>("nacked").unwrap_or(false) {
+            if row.try_get::<bool, _>("nacked").map_err(map)? {
                 nacked += 1;
             }
         }
@@ -1463,30 +1474,31 @@ impl NackRateMetricSource {
 
 // ── row decode / enum mapping ───────────────────────────────────────────────
 
-fn canary_from_row(row: &sqlx::postgres::PgRow) -> authz_entity_pb::PolicyCanary {
-    let started_at_unix: i64 = row.try_get("started_at_unix").unwrap_or(0);
-    authz_entity_pb::PolicyCanary {
-        canary_id: row.try_get("canary_id").unwrap_or_default(),
-        policy_set_id: row.try_get("policy_set_id").unwrap_or_default(),
-        policy_version_id: row.try_get("policy_version_id").unwrap_or_default(),
+fn canary_from_row(row: &sqlx::postgres::PgRow) -> Result<authz_entity_pb::PolicyCanary, Status> {
+    let map = |err: sqlx::Error| {
+        crate::runtime::executor_utils::sqlx_error_to_status("decode_canary_row", &err)
+    };
+    let started_at_unix: i64 = row.try_get("started_at_unix").map_err(map)?;
+    Ok(authz_entity_pb::PolicyCanary {
+        canary_id: row.try_get("canary_id").map_err(map)?,
+        policy_set_id: row.try_get("policy_set_id").map_err(map)?,
+        policy_version_id: row.try_get("policy_version_id").map_err(map)?,
         scope_kind: canary_scope_kind_from_db(
-            &row.try_get::<String, _>("scope_kind").unwrap_or_default(),
+            &row.try_get::<String, _>("scope_kind").map_err(map)?,
         ),
-        scope_values: row
-            .try_get("scope_values")
-            .unwrap_or_else(|_| "[]".to_string()),
-        state: canary_state_from_db(&row.try_get::<String, _>("state").unwrap_or_default()),
+        scope_values: row.try_get("scope_values").map_err(map)?,
+        state: canary_state_from_db(&row.try_get::<String, _>("state").map_err(map)?),
         started_at: timestamp_from_unix(started_at_unix.max(0) as u64),
-        success_window_secs: row.try_get("success_window_secs").unwrap_or(0),
-        metric_threshold: row.try_get("metric_threshold").unwrap_or(0.0),
-        created_by: row.try_get("created_by").unwrap_or_default(),
-        tenant_id: row.try_get("tenant_id").unwrap_or_default(),
-        project_id: row.try_get("project_id").unwrap_or_default(),
-        min_samples: row.try_get("min_samples").unwrap_or(1),
-        rollback_version_id: row.try_get("rollback_version_id").unwrap_or_default(),
-        outcome_reason: row.try_get("outcome_reason").unwrap_or_default(),
-        revision: row.try_get("revision").unwrap_or(1),
-    }
+        success_window_secs: row.try_get("success_window_secs").map_err(map)?,
+        metric_threshold: row.try_get("metric_threshold").map_err(map)?,
+        created_by: row.try_get("created_by").map_err(map)?,
+        tenant_id: row.try_get("tenant_id").map_err(map)?,
+        project_id: row.try_get("project_id").map_err(map)?,
+        min_samples: row.try_get("min_samples").map_err(map)?,
+        rollback_version_id: row.try_get("rollback_version_id").map_err(map)?,
+        outcome_reason: row.try_get("outcome_reason").map_err(map)?,
+        revision: row.try_get("revision").map_err(map)?,
+    })
 }
 
 fn canary_state_to_db(state: authz_entity_pb::CanaryState) -> &'static str {
@@ -1599,6 +1611,46 @@ mod tests {
 
     fn svc() -> AuthzServiceImpl {
         AuthzServiceImpl::new(AuthzSnapshot::default())
+    }
+
+    #[tokio::test]
+    #[ignore = "requires live Postgres"]
+    async fn canary_decode_refuses_missing_samples_or_revision_live() {
+        let pool = crate::runtime::service::live_tests::support::live_pg_pool().await;
+        for (samples, revision, column) in [
+            ("NULL::BIGINT", "9::BIGINT", Some("min_samples")),
+            ("3::BIGINT", "NULL::BIGINT", Some("revision")),
+            ("3::BIGINT", "9::BIGINT", None),
+        ] {
+            let row = sqlx::query(&format!(
+                "SELECT 1::BIGINT AS started_at_unix, ''::TEXT AS canary_id, \
+                 ''::TEXT AS policy_set_id, ''::TEXT AS policy_version_id, \
+                 'CANARY_SCOPE_KIND_NODE'::TEXT AS scope_kind, '[]'::TEXT AS scope_values, \
+                 'CANARY_STATE_ACTIVE'::TEXT AS state, 300::BIGINT AS success_window_secs, \
+                 0.1::DOUBLE PRECISION AS metric_threshold, ''::TEXT AS created_by, \
+                 ''::TEXT AS tenant_id, ''::TEXT AS project_id, {samples} AS min_samples, \
+                 ''::TEXT AS rollback_version_id, ''::TEXT AS outcome_reason, {revision} AS revision"
+            ))
+            .fetch_one(&pool)
+            .await
+            .expect("live canary decoder fixture");
+            if let Some(column) = column {
+                let err = canary_from_row(&row).expect_err("corrupt canary must refuse");
+                assert_eq!(err.code(), Code::Internal);
+                let detail = decode_detail(&err);
+                assert_eq!(
+                    detail.reason,
+                    crate::runtime::error_reasons::DECODE_FAILED.code
+                );
+                assert_eq!(detail.column, column);
+                assert!(!detail.retryable);
+            } else {
+                let canary = canary_from_row(&row).expect("valid canary must remain readable");
+                assert_eq!(canary.min_samples, 3);
+                assert_eq!(canary.revision, 9);
+            }
+        }
+        pool.close().await;
     }
 
     #[test]

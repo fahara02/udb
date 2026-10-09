@@ -307,7 +307,7 @@ impl AuthzServiceImpl {
         let all: Vec<_> = rows
             .iter()
             .map(super::governance_store::version_from_row)
-            .collect();
+            .collect::<Result<_, _>>()?;
         let page = req.page.as_ref();
         let page_number = page.map(|p| p.page).filter(|p| *p > 0).unwrap_or(1) as usize;
         let page_size = page

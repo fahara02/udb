@@ -38,6 +38,9 @@ no-wrapper plan.
 - Authz SQL reads retain database-specific codes and machine-readable details
   through the shared classifier. A closed or unavailable policy store returns
   retryable `UNAVAILABLE` instead of a generic `INTERNAL` refusal.
+- Authz row decoding refuses corrupt governance, role, audit and canary data with
+  `UDB_DECODE_FAILED` and the affected column. Decode errors cannot become empty
+  identities, invented revisions or a healthy canary signal.
 - Governance draft, version, canary and audit SQL operations use that same error
   classification, preserving constraint and outage details at their boundaries.
 - A scoped authz upsert that affects no row refuses before its revision append.

@@ -774,7 +774,7 @@ pub(super) fn effect_from_db(value: &str) -> i32 {
 /// (left `None`); the durable columns carry the role's logical state.
 fn role_from_row(row: &sqlx::postgres::PgRow) -> Result<authz_entity_pb::Role, Status> {
     let map =
-        |e: sqlx::Error| authz_internal_status("decode_role", format!("decode role failed: {e}"));
+        |e: sqlx::Error| crate::runtime::executor_utils::sqlx_error_to_status("decode_role", &e);
     Ok(authz_entity_pb::Role {
         role_id: row.try_get("role_id").map_err(map)?,
         name: row.try_get("name").map_err(map)?,
@@ -882,7 +882,7 @@ fn role_from_native_row(row: &serde_json::Value) -> Result<authz_entity_pb::Role
 /// Map a `user_roles` row to the `UserRole` entity.
 fn user_role_from_row(row: &sqlx::postgres::PgRow) -> Result<authz_entity_pb::UserRole, Status> {
     let map = |e: sqlx::Error| {
-        authz_internal_status("decode_user_role", format!("decode user role failed: {e}"))
+        crate::runtime::executor_utils::sqlx_error_to_status("decode_user_role", &e)
     };
     Ok(authz_entity_pb::UserRole {
         user_role_id: row.try_get("user_role_id").map_err(map)?,
@@ -910,10 +910,7 @@ fn policy_rule_from_row(
     row: &sqlx::postgres::PgRow,
 ) -> Result<authz_entity_pb::PolicyRule, Status> {
     let map = |e: sqlx::Error| {
-        authz_internal_status(
-            "decode_policy_rule",
-            format!("decode policy rule failed: {e}"),
-        )
+        crate::runtime::executor_utils::sqlx_error_to_status("decode_policy_rule", &e)
     };
     Ok(authz_entity_pb::PolicyRule {
         policy_id: row.try_get("policy_id").map_err(map)?,
@@ -1221,7 +1218,12 @@ impl AuthzServiceImpl {
         .map_err(|err| {
             crate::runtime::executor_utils::sqlx_error_to_status("resolve_role_code", &err)
         })?;
-        Ok(row.and_then(|r| r.try_get::<String, _>("role").ok()))
+        row.map(|r| {
+            r.try_get::<String, _>("role").map_err(|err| {
+                crate::runtime::executor_utils::sqlx_error_to_status("decode_role_code", &err)
+            })
+        })
+        .transpose()
     }
 
     /// Resolve the authority-sensitive provenance of a role before assignment or
@@ -1260,19 +1262,34 @@ impl AuthzServiceImpl {
         row.map(|row| {
             Ok((
                 row.try_get("role").map_err(|err| {
-                    authz_internal_status("decode_role_authority", err.to_string())
+                    crate::runtime::executor_utils::sqlx_error_to_status(
+                        "decode_role_authority",
+                        &err,
+                    )
                 })?,
                 row.try_get("is_system").map_err(|err| {
-                    authz_internal_status("decode_role_authority", err.to_string())
+                    crate::runtime::executor_utils::sqlx_error_to_status(
+                        "decode_role_authority",
+                        &err,
+                    )
                 })?,
                 row.try_get("role_tenant").map_err(|err| {
-                    authz_internal_status("decode_role_authority", err.to_string())
+                    crate::runtime::executor_utils::sqlx_error_to_status(
+                        "decode_role_authority",
+                        &err,
+                    )
                 })?,
                 row.try_get("role_project").map_err(|err| {
-                    authz_internal_status("decode_role_authority", err.to_string())
+                    crate::runtime::executor_utils::sqlx_error_to_status(
+                        "decode_role_authority",
+                        &err,
+                    )
                 })?,
                 row.try_get("role_scope_type").map_err(|err| {
-                    authz_internal_status("decode_role_authority", err.to_string())
+                    crate::runtime::executor_utils::sqlx_error_to_status(
+                        "decode_role_authority",
+                        &err,
+                    )
                 })?,
             ))
         })
@@ -1627,34 +1644,34 @@ impl AuthzServiceImpl {
         let mut hasher = Sha256::new();
         for row in rows {
             let tenant_id: String = row.try_get("tenant_id").map_err(|err| {
-                authz_internal_status(
+                crate::runtime::executor_utils::sqlx_error_to_status(
                     "decode_authz_revision_fence",
-                    format!("decode authz fence failed: {err}"),
+                    &err,
                 )
             })?;
             let project_id: String = row.try_get("project_id").map_err(|err| {
-                authz_internal_status(
+                crate::runtime::executor_utils::sqlx_error_to_status(
                     "decode_authz_revision_fence",
-                    format!("decode authz fence failed: {err}"),
+                    &err,
                 )
             })?;
             let policy_revision: i64 = row.try_get("policy_revision").map_err(|err| {
-                authz_internal_status(
+                crate::runtime::executor_utils::sqlx_error_to_status(
                     "decode_authz_revision_fence",
-                    format!("decode authz fence failed: {err}"),
+                    &err,
                 )
             })?;
             let relationship_revision: i64 =
                 row.try_get("relationship_revision").map_err(|err| {
-                    authz_internal_status(
+                    crate::runtime::executor_utils::sqlx_error_to_status(
                         "decode_authz_revision_fence",
-                        format!("decode authz fence failed: {err}"),
+                        &err,
                     )
                 })?;
             let content_hash: String = row.try_get("content_hash").map_err(|err| {
-                authz_internal_status(
+                crate::runtime::executor_utils::sqlx_error_to_status(
                     "decode_authz_revision_fence",
-                    format!("decode authz fence failed: {err}"),
+                    &err,
                 )
             })?;
             hasher.update(tenant_id.as_bytes());
@@ -1746,33 +1763,30 @@ impl AuthzServiceImpl {
         let mut role_bindings = Vec::with_capacity(binding_rows.len());
         for row in binding_rows {
             let role: String = row.try_get("role").map_err(|err| {
-                authz_internal_status(
-                    "decode_role_binding",
-                    format!("decode role binding failed: {err}"),
-                )
+                crate::runtime::executor_utils::sqlx_error_to_status("decode_role_binding", &err)
             })?;
             let role_is_system: bool = row.try_get("role_is_system").map_err(|err| {
-                authz_internal_status(
+                crate::runtime::executor_utils::sqlx_error_to_status(
                     "decode_role_binding_provenance",
-                    format!("decode role binding provenance failed: {err}"),
+                    &err,
                 )
             })?;
             let role_tenant: String = row.try_get("role_tenant").map_err(|err| {
-                authz_internal_status(
+                crate::runtime::executor_utils::sqlx_error_to_status(
                     "decode_role_binding_provenance",
-                    format!("decode role binding provenance failed: {err}"),
+                    &err,
                 )
             })?;
             let role_project: String = row.try_get("project").map_err(|err| {
-                authz_internal_status(
+                crate::runtime::executor_utils::sqlx_error_to_status(
                     "decode_role_binding_provenance",
-                    format!("decode role binding provenance failed: {err}"),
+                    &err,
                 )
             })?;
             let role_scope_type: String = row.try_get("role_scope_type").map_err(|err| {
-                authz_internal_status(
+                crate::runtime::executor_utils::sqlx_error_to_status(
                     "decode_role_binding_provenance",
-                    format!("decode role binding provenance failed: {err}"),
+                    &err,
                 )
             })?;
             if !platform_role_has_system_provenance(
@@ -1793,16 +1807,16 @@ impl AuthzServiceImpl {
             }
             role_bindings.push(RoleBinding {
                 subject: row.try_get("subject").map_err(|err| {
-                    authz_internal_status(
+                    crate::runtime::executor_utils::sqlx_error_to_status(
                         "decode_role_binding",
-                        format!("decode role binding failed: {err}"),
+                        &err,
                     )
                 })?,
                 role,
                 tenant: row.try_get("tenant").map_err(|err| {
-                    authz_internal_status(
+                    crate::runtime::executor_utils::sqlx_error_to_status(
                         "decode_role_binding",
-                        format!("decode role binding failed: {err}"),
+                        &err,
                     )
                 })?,
                 project: role_project,
@@ -1829,19 +1843,13 @@ impl AuthzServiceImpl {
         let now = now_unix();
         for row in grouping_rows {
             let condition: String = row.try_get("condition").map_err(|err| {
-                authz_internal_status(
-                    "decode_grouping_tuple",
-                    format!("decode grouping tuple failed: {err}"),
-                )
+                crate::runtime::executor_utils::sqlx_error_to_status("decode_grouping_tuple", &err)
             })?;
             if tuple_condition_expired(&condition, now) {
                 continue;
             }
             let role: String = row.try_get("role").map_err(|err| {
-                authz_internal_status(
-                    "decode_grouping_tuple",
-                    format!("decode grouping tuple failed: {err}"),
-                )
+                crate::runtime::executor_utils::sqlx_error_to_status("decode_grouping_tuple", &err)
             })?;
             if is_reserved_platform_role(&role) {
                 tracing::error!(
@@ -1852,22 +1860,22 @@ impl AuthzServiceImpl {
             }
             role_bindings.push(RoleBinding {
                 subject: row.try_get("subject").map_err(|err| {
-                    authz_internal_status(
+                    crate::runtime::executor_utils::sqlx_error_to_status(
                         "decode_grouping_tuple",
-                        format!("decode grouping tuple failed: {err}"),
+                        &err,
                     )
                 })?,
                 role,
                 tenant: row.try_get("tenant").map_err(|err| {
-                    authz_internal_status(
+                    crate::runtime::executor_utils::sqlx_error_to_status(
                         "decode_grouping_tuple",
-                        format!("decode grouping tuple failed: {err}"),
+                        &err,
                     )
                 })?,
                 project: row.try_get("project").map_err(|err| {
-                    authz_internal_status(
+                    crate::runtime::executor_utils::sqlx_error_to_status(
                         "decode_grouping_tuple",
-                        format!("decode grouping tuple failed: {err}"),
+                        &err,
                     )
                 })?,
             });
@@ -1893,9 +1901,9 @@ impl AuthzServiceImpl {
         let mut tuples = Vec::with_capacity(tuple_rows.len());
         for row in tuple_rows {
             let condition: String = row.try_get("condition").map_err(|err| {
-                authz_internal_status(
+                crate::runtime::executor_utils::sqlx_error_to_status(
                     "decode_relationship_tuple",
-                    format!("decode relationship tuple failed: {err}"),
+                    &err,
                 )
             })?;
             if tuple_condition_expired(&condition, now) {
@@ -1903,33 +1911,33 @@ impl AuthzServiceImpl {
             }
             tuples.push(RelationshipTuple {
                 subject: row.try_get("subject").map_err(|err| {
-                    authz_internal_status(
+                    crate::runtime::executor_utils::sqlx_error_to_status(
                         "decode_relationship_tuple",
-                        format!("decode relationship tuple failed: {err}"),
+                        &err,
                     )
                 })?,
                 relation: row.try_get("relation").map_err(|err| {
-                    authz_internal_status(
+                    crate::runtime::executor_utils::sqlx_error_to_status(
                         "decode_relationship_tuple",
-                        format!("decode relationship tuple failed: {err}"),
+                        &err,
                     )
                 })?,
                 object: row.try_get("object").map_err(|err| {
-                    authz_internal_status(
+                    crate::runtime::executor_utils::sqlx_error_to_status(
                         "decode_relationship_tuple",
-                        format!("decode relationship tuple failed: {err}"),
+                        &err,
                     )
                 })?,
                 tenant: row.try_get("tenant").map_err(|err| {
-                    authz_internal_status(
+                    crate::runtime::executor_utils::sqlx_error_to_status(
                         "decode_relationship_tuple",
-                        format!("decode relationship tuple failed: {err}"),
+                        &err,
                     )
                 })?,
                 project: row.try_get("project").map_err(|err| {
-                    authz_internal_status(
+                    crate::runtime::executor_utils::sqlx_error_to_status(
                         "decode_relationship_tuple",
-                        format!("decode relationship tuple failed: {err}"),
+                        &err,
                     )
                 })?,
             });

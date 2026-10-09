@@ -124,7 +124,7 @@ impl AuthzServiceImpl {
                 "policy draft not found",
             )
         })?;
-        let updated_unix: i64 = row.try_get("updated_at_unix").unwrap_or(0);
+        let updated_unix: i64 = row.try_get("updated_at_unix").map_err(decode_err)?;
         Ok(authz_entity_pb::PolicyDraft {
             draft_id: row.try_get("draft_id").map_err(decode_err)?,
             tenant_id: row.try_get("tenant_id").map_err(decode_err)?,
@@ -184,19 +184,22 @@ impl AuthzServiceImpl {
         .map_err(|err| {
             crate::runtime::executor_utils::sqlx_error_to_status("load_policy_set", &err)
         })?;
-        Ok(row.map(|row| authz_entity_pb::PolicySet {
-            policy_set_id: row.try_get("policy_set_id").unwrap_or_default(),
-            tenant_id: row.try_get("tenant_id").unwrap_or_default(),
-            project_id: row.try_get("project_id").unwrap_or_default(),
-            name: row.try_get("name").unwrap_or_default(),
-            active_version_id: row.try_get("active_version_id").unwrap_or_default(),
-            rollback_version_id: row.try_get("rollback_version_id").unwrap_or_default(),
-            description: row.try_get("description").unwrap_or_default(),
-            created_by: row.try_get("created_by").unwrap_or_default(),
-            created_at: None,
-            updated_at: None,
-            deleted_at: None,
-        }))
+        row.map(|row| {
+            Ok(authz_entity_pb::PolicySet {
+                policy_set_id: row.try_get("policy_set_id").map_err(decode_err)?,
+                tenant_id: row.try_get("tenant_id").map_err(decode_err)?,
+                project_id: row.try_get("project_id").map_err(decode_err)?,
+                name: row.try_get("name").map_err(decode_err)?,
+                active_version_id: row.try_get("active_version_id").map_err(decode_err)?,
+                rollback_version_id: row.try_get("rollback_version_id").map_err(decode_err)?,
+                description: row.try_get("description").map_err(decode_err)?,
+                created_by: row.try_get("created_by").map_err(decode_err)?,
+                created_at: None,
+                updated_at: None,
+                deleted_at: None,
+            })
+        })
+        .transpose()
     }
 
     /// Load a `PolicyVersion` row as the proto entity.
@@ -246,7 +249,7 @@ impl AuthzServiceImpl {
                 "policy version not found",
             )
         })?;
-        Ok(version_from_row(&row))
+        version_from_row(&row)
     }
 
     pub(super) async fn load_version_document(
@@ -284,16 +287,19 @@ impl AuthzServiceImpl {
         .map_err(|err| {
             crate::runtime::executor_utils::sqlx_error_to_status("load_approval", &err)
         })?;
-        Ok(row.map(|row| authz_entity_pb::PolicyApproval {
-            approval_id: row.try_get("approval_id").unwrap_or_default(),
-            draft_id: row.try_get("draft_id").unwrap_or_default(),
-            tenant_id: row.try_get("tenant_id").unwrap_or_default(),
-            actor: row.try_get("actor").unwrap_or_default(),
-            role: row.try_get("role").unwrap_or_default(),
-            decision: row.try_get("decision").unwrap_or_default(),
-            reason: row.try_get("reason").unwrap_or_default(),
-            created_at: None,
-        }))
+        row.map(|row| {
+            Ok(authz_entity_pb::PolicyApproval {
+                approval_id: row.try_get("approval_id").map_err(decode_err)?,
+                draft_id: row.try_get("draft_id").map_err(decode_err)?,
+                tenant_id: row.try_get("tenant_id").map_err(decode_err)?,
+                actor: row.try_get("actor").map_err(decode_err)?,
+                role: row.try_get("role").map_err(decode_err)?,
+                decision: row.try_get("decision").map_err(decode_err)?,
+                reason: row.try_get("reason").map_err(decode_err)?,
+                created_at: None,
+            })
+        })
+        .transpose()
     }
 
     /// Promote an approved draft into an immutable APPROVED `PolicyVersion`,
@@ -353,7 +359,7 @@ impl AuthzServiceImpl {
         .map_err(|err| {
             crate::runtime::executor_utils::sqlx_error_to_status("promote_draft_to_version", &err)
         })?;
-        let version_number: i64 = row.try_get("version_number").unwrap_or(1);
+        let version_number: i64 = row.try_get("version_number").map_err(decode_err)?;
         Ok(authz_entity_pb::PolicyVersion {
             policy_version_id: version_id,
             policy_set_id,
@@ -379,10 +385,7 @@ impl AuthzServiceImpl {
 }
 
 fn decode_err(e: sqlx::Error) -> Status {
-    governance_store_internal_status(
-        "decode_governance_row",
-        format!("decode governance row failed: {e}"),
-    )
+    crate::runtime::executor_utils::sqlx_error_to_status("decode_governance_row", &e)
 }
 
 fn document_decode_status(column: &str) -> Status {
@@ -430,28 +433,30 @@ pub(super) fn draft_to_document(
 }
 
 /// Map a `policy_versions` row to the proto entity.
-pub(super) fn version_from_row(row: &sqlx::postgres::PgRow) -> authz_entity_pb::PolicyVersion {
-    authz_entity_pb::PolicyVersion {
-        policy_version_id: row.try_get("policy_version_id").unwrap_or_default(),
-        policy_set_id: row.try_get("policy_set_id").unwrap_or_default(),
-        version_number: row.try_get("version_number").unwrap_or(0),
-        state: version_state_from_db(&row.try_get::<String, _>("state").unwrap_or_default()),
-        snapshot_hash: row.try_get("snapshot_hash").unwrap_or_default(),
-        created_by: row.try_get("created_by").unwrap_or_default(),
+pub(super) fn version_from_row(
+    row: &sqlx::postgres::PgRow,
+) -> Result<authz_entity_pb::PolicyVersion, Status> {
+    Ok(authz_entity_pb::PolicyVersion {
+        policy_version_id: row.try_get("policy_version_id").map_err(decode_err)?,
+        policy_set_id: row.try_get("policy_set_id").map_err(decode_err)?,
+        version_number: row.try_get("version_number").map_err(decode_err)?,
+        state: version_state_from_db(&row.try_get::<String, _>("state").map_err(decode_err)?),
+        snapshot_hash: row.try_get("snapshot_hash").map_err(decode_err)?,
+        created_by: row.try_get("created_by").map_err(decode_err)?,
         created_at: None,
-        activated_by: row.try_get("activated_by").unwrap_or_default(),
+        activated_by: row.try_get("activated_by").map_err(decode_err)?,
         activated_at: None,
-        rollback_of: row.try_get("rollback_of").unwrap_or_default(),
-        change_reason: row.try_get("change_reason").unwrap_or_default(),
-        revision: row.try_get("revision").unwrap_or(1),
-        content_hash: row.try_get("content_hash").unwrap_or_default(),
-        tenant_id: row.try_get("tenant_id").unwrap_or_default(),
-        project_id: row.try_get("project_id").unwrap_or_default(),
-        payload_json: row.try_get("payload_json").unwrap_or_default(),
-        high_risk: row.try_get("high_risk").unwrap_or(false),
-        submitted_by: row.try_get("submitted_by").unwrap_or_default(),
-        source_draft_id: row.try_get("source_draft_id").unwrap_or_default(),
-    }
+        rollback_of: row.try_get("rollback_of").map_err(decode_err)?,
+        change_reason: row.try_get("change_reason").map_err(decode_err)?,
+        revision: row.try_get("revision").map_err(decode_err)?,
+        content_hash: row.try_get("content_hash").map_err(decode_err)?,
+        tenant_id: row.try_get("tenant_id").map_err(decode_err)?,
+        project_id: row.try_get("project_id").map_err(decode_err)?,
+        payload_json: row.try_get("payload_json").map_err(decode_err)?,
+        high_risk: row.try_get("high_risk").map_err(decode_err)?,
+        submitted_by: row.try_get("submitted_by").map_err(decode_err)?,
+        source_draft_id: row.try_get("source_draft_id").map_err(decode_err)?,
+    })
 }
 
 pub(super) fn version_state_from_db(value: &str) -> i32 {
@@ -553,5 +558,48 @@ mod tests {
             );
             assert_eq!(detail.column, column);
         }
+    }
+
+    #[tokio::test]
+    #[ignore = "requires live Postgres"]
+    async fn policy_version_decode_refuses_invalid_revision_live() {
+        let pool = crate::runtime::service::live_tests::support::live_pg_pool().await;
+        // Use the actual driver row at the decoder shared by version loads and
+        // list RPCs. A NULL revision used to silently become revision 1; a wrong
+        // version type used to become version 0, hiding catalog/data corruption.
+        for (version, revision, column) in [
+            ("1::BIGINT", "NULL::BIGINT", "revision"),
+            (
+                "'stored-private-value'::TEXT",
+                "1::BIGINT",
+                "version_number",
+            ),
+        ] {
+            let row = sqlx::query(&format!(
+                "SELECT ''::TEXT AS policy_version_id, ''::TEXT AS policy_set_id, \
+                 {version} AS version_number, 'APPROVED'::TEXT AS state, \
+                 ''::TEXT AS snapshot_hash, ''::TEXT AS created_by, \
+                 ''::TEXT AS activated_by, ''::TEXT AS rollback_of, \
+                 ''::TEXT AS change_reason, {revision} AS revision, \
+                 ''::TEXT AS content_hash, ''::TEXT AS tenant_id, \
+                 ''::TEXT AS project_id, '{{}}'::TEXT AS payload_json, \
+                 FALSE AS high_risk, ''::TEXT AS submitted_by, ''::TEXT AS source_draft_id"
+            ))
+            .fetch_one(&pool)
+            .await
+            .expect("live decoder fixture row");
+            let err = version_from_row(&row).expect_err("invalid version row must refuse");
+            assert_eq!(err.code(), Code::Internal);
+            let detail = decode_detail(&err);
+            assert_eq!(
+                detail.reason,
+                crate::runtime::error_reasons::DECODE_FAILED.code
+            );
+            assert_eq!(detail.column, column);
+            assert!(!err.message().contains("stored-private-value"));
+            assert!(!detail.fix_hint.contains("stored-private-value"));
+            assert!(!detail.retryable);
+        }
+        pool.close().await;
     }
 }
