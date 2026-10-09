@@ -4,6 +4,7 @@ name: Benchmark · candidate
 # tagging. The marker makes expensive live sweeps explicit in normal commits.
 # Published release evidence still comes from Release -> Benchmark -> Pages.
 on:
+  workflow_dispatch:
   push:
     branches: [main]
     paths:
@@ -33,7 +34,7 @@ permissions:
 jobs:
   benchmark:
     name: Current broker + all SDK benchmarks
-    if: contains(github.event.head_commit.message, '(benchmark)')
+    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '(benchmark)')
     uses: ./.github/workflows/_live-sdk-suite.yml
     with:
       candidate-build: true
