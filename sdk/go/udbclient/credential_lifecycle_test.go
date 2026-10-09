@@ -168,7 +168,7 @@ func serveLifecycleWire(t *testing.T, f *lifecycleWireFixture) string {
 }
 
 func lifecyclePrincipal() *authnv1.Principal {
-	return &authnv1.Principal{TenantId: "fixture-tenant", ProjectId: "fixture-project", UserId: "fixture-user", ServiceIdentity: "fixture-service", Scopes: []string{"data:read"}}
+	return &authnv1.Principal{TenantId: v232Tenant, ProjectId: v232Project, UserId: v232User, ServiceIdentity: "fixture-service", Scopes: []string{"data:read"}}
 }
 
 func lifecycleAssertWireBearer(t *testing.T, f *lifecycleWireFixture, start int, want string) {

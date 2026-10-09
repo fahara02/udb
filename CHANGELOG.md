@@ -119,6 +119,9 @@ release line was tagged.
 
 ### Breaking for callers
 
+- Go `Credentials.RawAPIKey` now refuses raw header mode. Use `Connect` with
+  `Credentials{APIKey: ...}` and the auth listener to exchange the key and adopt
+  the broker-verified principal.
 - Upgrade all CDC and LiveQuery readers together when adopting position-based
   journal cursors. Older readers keep timestamp ordering; this change does not
   guarantee mixed-version reader delivery. Enrollment recovers retained rows,

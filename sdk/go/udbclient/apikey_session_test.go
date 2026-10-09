@@ -180,8 +180,8 @@ func TestConnectFailsWhenTheKeyCannotBeExchanged(t *testing.T) {
 	}
 }
 
-// RawAPIKey keeps the legacy header mode for callers that need it until 0.6.0.
-func TestRawAPIKeyModeSendsTheHeaderAndDoesNotExchange(t *testing.T) {
+// Unsupported raw keys must fail before either auth or business transport.
+func TestRawAPIKeyModeRefusesBeforeTransport(t *testing.T) {
 	authn := &keyAuthn{ttl: time.Minute}
 	broker := &mdBroker{}
 	target := serveKeyFakes(t, authn, broker)
@@ -189,20 +189,20 @@ func TestRawAPIKeyModeSendsTheHeaderAndDoesNotExchange(t *testing.T) {
 		Target:      target,
 		Credentials: Credentials{APIKey: "svc-key", RawAPIKey: true},
 	})
-	if err != nil {
-		t.Fatalf("connect: %v", err)
+	if u != nil {
+		defer u.Close()
+		t.Fatal("unsupported raw API-key mode returned a client")
 	}
-	defer u.Close()
-	if n, _ := authn.snapshot(); n != 0 {
-		t.Fatalf("raw mode exchanged the key %d times", n)
+	if err == nil || !strings.Contains(err.Error(), "Credentials.RawAPIKey is unsupported") {
+		t.Fatal("raw API-key mode must return its named refusal")
 	}
-	if _, err := u.Data.Broker.Select(context.Background(), &entityv1.SelectRequest{MessageType: "x"}); err != nil {
-		t.Fatalf("select: %v", err)
+	if n, raw := authn.snapshot(); n != 0 || raw {
+		t.Fatal("unsupported raw API-key mode reached authentication transport")
 	}
 	broker.mu.Lock()
 	defer broker.mu.Unlock()
-	if got := broker.md.Get("x-api-key"); len(got) != 1 || got[0] != "svc-key" {
-		t.Fatalf("raw mode x-api-key = %v", got)
+	if len(broker.md) != 0 {
+		t.Fatal("unsupported raw API-key mode reached business transport")
 	}
 }
 

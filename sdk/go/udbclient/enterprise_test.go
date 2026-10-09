@@ -164,6 +164,9 @@ type sessionIdentityAuthn struct {
 	principal     *authnv1.Principal
 	authenticate  int
 	logins        int
+	refreshes     int
+	nativeWire    []metadata.MD
+	verifiedLogin map[string]bool
 	omitPrincipal bool
 }
 
@@ -177,9 +180,29 @@ func (a *sessionIdentityAuthn) Login(context.Context, *authnv1.LoginRequest) (*a
 	}, nil
 }
 
-func (a *sessionIdentityAuthn) Authenticate(context.Context, *authnv1.AuthnRequest) (*authnv1.AuthnResponse, error) {
+func (a *sessionIdentityAuthn) Authenticate(ctx context.Context, req *authnv1.AuthnRequest) (*authnv1.AuthnResponse, error) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
+	if req.GetBearerToken() == "fixture-request" {
+		md, _ := metadata.FromIncomingContext(ctx)
+		if values := md.Get("authorization"); len(values) != 1 || !strings.HasPrefix(values[0], "Bearer ") || strings.TrimSpace(strings.TrimPrefix(values[0], "Bearer ")) == "" {
+			return nil, status.Error(codes.Unauthenticated, "native fixture requires one nonempty owned bearer")
+		}
+		for _, key := range []string{"x-api-key", "x-udb-api-key"} {
+			for _, value := range md.Get(key) {
+				if value != "" {
+					return nil, status.Error(codes.InvalidArgument, "native fixture received a raw API key")
+				}
+			}
+		}
+		a.nativeWire = append(a.nativeWire, md.Copy())
+	}
+	if strings.HasPrefix(req.GetBearerToken(), "test-login-access-") {
+		if a.verifiedLogin == nil {
+			a.verifiedLogin = make(map[string]bool)
+		}
+		a.verifiedLogin[req.GetBearerToken()] = true
+	}
 	a.authenticate++
 	res := &authnv1.AuthnResponse{
 		AccessToken:   fmt.Sprintf("test-exchange-access-%d", a.authenticate),
@@ -192,6 +215,9 @@ func (a *sessionIdentityAuthn) Authenticate(context.Context, *authnv1.AuthnReque
 }
 
 func (a *sessionIdentityAuthn) RefreshToken(context.Context, *authnv1.RefreshTokenRequest) (*authnv1.RefreshTokenResponse, error) {
+	a.mu.Lock()
+	a.refreshes++
+	a.mu.Unlock()
 	return nil, status.Error(codes.Unauthenticated, "refresh fixture refusal")
 }
 
@@ -282,13 +308,13 @@ func exerciseStableFacadesDuringRenewal(t *testing.T, u *Udb, renew func(context
 			}
 			if _, err := u.Data.Select(ctx, &entityv1.SelectRequest{MessageType: "fixture"}); err != nil {
 				if ctx.Err() == nil {
-					readerErr <- errors.New("data call failed during same-identity renewal")
+					readerErr <- fmt.Errorf("data call failed during same-identity renewal: %w", err)
 				}
 				return
 			}
 			if _, err := u.Auth.AuthenticateBearer(ctx, "fixture-request"); err != nil {
 				if ctx.Err() == nil {
-					readerErr <- errors.New("native call failed during same-identity renewal")
+					readerErr <- fmt.Errorf("native call failed during same-identity renewal: %w", err)
 				}
 				return
 			}
@@ -326,16 +352,23 @@ func exerciseStableFacadesDuringRenewal(t *testing.T, u *Udb, renew func(context
 
 func TestEnterpriseSessionReloginKeepsFacadesForReorderedScopes(t *testing.T) {
 	authn := &sessionIdentityAuthn{principal: sessionTestPrincipal()}
+	broker := &mdBroker{}
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	sess, err := ConnectEnterprise(ctx, EnterpriseConfig{
-		Target: serveSessionAuthn(t, authn, &mdBroker{}), Username: "fixture", Password: "fixture", TenantCode: "hint",
+		Target: serveSessionAuthn(t, authn, broker), Username: "fixture", Password: "fixture", TenantCode: "hint",
 	})
 	if err != nil {
 		t.Fatalf("connect: %v", err)
 	}
 	defer sess.Close()
 	sess.stopOnce.Do(func() { close(sess.stopRefresh) })
+	select {
+	case <-sess.refreshDone:
+	case <-ctx.Done():
+		t.Fatal("owned background loop did not stop before the fixture deadline")
+	}
+	initialBearer := sess.Bearer()
 	exerciseStableFacadesDuringRenewal(t, sess.Udb, func(ctx context.Context, i int) error {
 		authn.mu.Lock()
 		if i%2 == 0 {
@@ -348,13 +381,50 @@ func TestEnterpriseSessionReloginKeepsFacadesForReorderedScopes(t *testing.T) {
 		if err != nil {
 			return err
 		}
-		tok.ExpiresAt = time.Now().Add(-time.Second)
+		// Enter the real proactive renewal window while the prior bearer remains
+		// valid. Expiring it outside the flight races publication and correctly
+		// refuses concurrent callers before the scope-order behavior is tested.
+		boundary := time.Now()
+		tok.IssuedAt = boundary.Add(-time.Hour)
+		tok.ExpiresAt = boundary.Add(10 * time.Second)
+		if tok.Valid(boundary, sess.tm.RefreshSkew) || !tok.Valid(boundary, 0) {
+			return errors.New("fixture must be renewal-due and still valid")
+		}
 		if err := sess.tm.store.Save(ctx, tok); err != nil {
 			return err
 		}
 		sess.backgroundRefresh()
 		return sess.RefreshErr()
 	})
+	if sess.Bearer() == initialBearer {
+		t.Fatal("twelve real recovery passes retained the initial bearer")
+	}
+	if _, err := sess.Data.Select(ctx, &entityv1.SelectRequest{MessageType: "fixture"}); err != nil {
+		t.Fatalf("final data call: %v", err)
+	}
+	if _, err := sess.Auth.AuthenticateBearer(ctx, "fixture-request"); err != nil {
+		t.Fatalf("final native call: %v", err)
+	}
+	want := sess.Bearer()
+	broker.mu.Lock()
+	dataBearer := append([]string(nil), broker.md.Get("authorization")...)
+	broker.mu.Unlock()
+	if len(dataBearer) != 1 || dataBearer[0] != want {
+		t.Fatal("final data transport did not emit the recovered singleton bearer")
+	}
+	authn.mu.Lock()
+	defer authn.mu.Unlock()
+	if authn.logins < 13 || authn.refreshes < 12 || authn.authenticate < 13 || len(authn.nativeWire) < 2 {
+		t.Fatalf("real recovery/native calls missing: login=%d refresh=%d authenticate=%d native=%d", authn.logins, authn.refreshes, authn.authenticate, len(authn.nativeWire))
+	}
+	for login := 1; login <= authn.logins; login++ {
+		if !authn.verifiedLogin[fmt.Sprintf("test-login-access-%d", login)] {
+			t.Fatalf("owned login %d was not actually verified over native transport", login)
+		}
+	}
+	if values := authn.nativeWire[len(authn.nativeWire)-1].Get("authorization"); len(values) != 1 || values[0] != want {
+		t.Fatal("final native transport did not emit the recovered singleton bearer")
+	}
 }
 
 func TestEnterpriseSessionDelayedCallerCannotRestoreOlderBearer(t *testing.T) {
