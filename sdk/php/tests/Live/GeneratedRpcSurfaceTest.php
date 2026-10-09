@@ -3674,7 +3674,7 @@ function perfSeedPhp(array $s): array
             || ($prepared['project_id'] ?? null) !== $project) {
             throw new RuntimeException('prepared benchmark fixtures do not match the verified tenant/project');
         }
-        foreach (['multipart_bucket', 'multipart_object_key', 'multipart_upload_id', 'multipart_etag', 'ack_workflow_id'] as $key) {
+        foreach (['multipart_bucket', 'multipart_object_key', 'multipart_upload_id', 'multipart_etag', 'ack_workflow_id', 'cdc_ack_event_id', 'cdc_ack_topic'] as $key) {
             $value = $prepared['fixtures'][$key] ?? null;
             if (!is_string($value) || $value === '') throw new RuntimeException("prepared benchmark fixtures missing {$key}");
             $fix->set($key, $value);

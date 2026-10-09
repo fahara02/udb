@@ -479,6 +479,21 @@ python scripts/bench_snapshot.py --label "release-0.5.30"
 Once you record a snapshot, its history is kept under `bench-history/`, and the
 raw Criterion output lands under `target/criterion/`.
 
+## Password CPU budget
+
+Password hashes and verification run on Tokio blocking workers behind one shared
+admission semaphore. Its default concurrency is the detected available CPU count
+minus one, with a minimum of one. Detection happens once. Set
+`UDB_PASSWORD_KDF_MAX_CONCURRENCY` to a positive integer to lower that budget;
+values above the detected budget do not increase it. Invalid values refuse
+password operations with a typed internal error.
+
+Available parallelism estimates affinity and container CPU limits where the host
+exposes them. It does not measure VM steal or changing host contention. On a
+throttled host, lower the operator cap and compare concurrent login/read latency
+with CPU steal and quota measurements. Request cancellation releases queued work;
+already running hashes retain their admission slot until computation finishes.
+
 ## Validation
 
 These run quickly and catch most regressions before they leave your machine:

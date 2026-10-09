@@ -1650,6 +1650,35 @@ pub(crate) fn enforce_certificate_credential_composition(
 }
 
 pub fn security_from_request<T>(request: &Request<T>) -> Result<SecurityContext, Status> {
+    resolve_request_security(request, false).map(|(security, _)| security)
+}
+
+/// Return the exact credential lineage that produced the security context.
+/// Durable ownership must use this raw identity, not the audit display fallback
+/// used by `SecurityContext.service_identity` when a human has no service claim.
+/// Header-only development requests intentionally have no verified principal.
+pub(crate) fn security_and_verified_principal_from_request<T>(
+    request: &Request<T>,
+) -> Result<
+    (
+        SecurityContext,
+        Option<crate::runtime::credential_layer::VerifiedPrincipal>,
+    ),
+    Status,
+> {
+    resolve_request_security(request, true)
+}
+
+fn resolve_request_security<T>(
+    request: &Request<T>,
+    retain_principal: bool,
+) -> Result<
+    (
+        SecurityContext,
+        Option<crate::runtime::credential_layer::VerifiedPrincipal>,
+    ),
+    Status,
+> {
     let config = SecurityConfig::current();
     let metadata = request.metadata();
     let header = |name: &str| {
@@ -1810,30 +1839,34 @@ pub fn security_from_request<T>(request: &Request<T>) -> Result<SecurityContext,
                                 "x-udb-project-id disagrees with the certificate-bound project",
                             ));
                         }
-                        return Ok(SecurityContext {
-                            tenant_id: principal.tenant_id,
-                            purpose: header("x-purpose"),
-                            correlation_id: correlation_id.clone(),
-                            user_id: principal.subject,
-                            scopes: principal.scopes,
-                            service_identity: principal.service_identity,
-                            credential_type: principal.credential_type,
-                            credential_id: principal.credential_id,
-                            auth_method: principal.auth_method,
-                            expires_at_unix: principal.expires_at_unix,
-                            trace_id: trace_id.clone(),
-                            project_id: principal.project_id,
-                            consistency: consistency.clone(),
-                            max_replica_lag_ms,
-                            client_catalog_version: client_catalog_version.clone(),
-                            target_backend: target_backend.clone(),
-                            target_instance: target_instance.clone(),
-                            routing_policy: routing_policy.clone(),
-                            primary_read,
-                            eventual_consistency_allowed,
-                            read_fence_json: read_fence_json.clone(),
-                            rate_limit_per_minute: principal.rate_limit_per_minute,
-                        });
+                        let verified_principal = retain_principal.then(|| principal.clone());
+                        return Ok((
+                            SecurityContext {
+                                tenant_id: principal.tenant_id,
+                                purpose: header("x-purpose"),
+                                correlation_id: correlation_id.clone(),
+                                user_id: principal.subject,
+                                scopes: principal.scopes,
+                                service_identity: principal.service_identity,
+                                credential_type: principal.credential_type,
+                                credential_id: principal.credential_id,
+                                auth_method: principal.auth_method,
+                                expires_at_unix: principal.expires_at_unix,
+                                trace_id: trace_id.clone(),
+                                project_id: principal.project_id,
+                                consistency: consistency.clone(),
+                                max_replica_lag_ms,
+                                client_catalog_version: client_catalog_version.clone(),
+                                target_backend: target_backend.clone(),
+                                target_instance: target_instance.clone(),
+                                routing_policy: routing_policy.clone(),
+                                primary_read,
+                                eventual_consistency_allowed,
+                                read_fence_json: read_fence_json.clone(),
+                                rate_limit_per_minute: principal.rate_limit_per_minute,
+                            },
+                            verified_principal,
+                        ));
                     }
                     // CRIT-1: the durable certificate-binding chain (resolved
                     // asynchronously by the credential layer above) is the ONLY
@@ -1886,32 +1919,36 @@ pub fn security_from_request<T>(request: &Request<T>) -> Result<SecurityContext,
                 // caller can never widen a key through request metadata.
                 let service_identity = non_empty(principal.service_identity.clone())
                     .unwrap_or_else(|| principal.subject.clone());
-                return Ok(SecurityContext {
-                    tenant_id: principal.tenant_id,
-                    purpose: header("x-purpose"),
-                    correlation_id: correlation_id.clone(),
-                    user_id: principal.subject,
-                    scopes: principal.scopes,
-                    service_identity,
-                    credential_type: principal.credential_type,
-                    credential_id: principal.credential_id,
-                    auth_method: principal.auth_method,
-                    expires_at_unix: principal.expires_at_unix,
-                    trace_id: trace_id.clone(),
-                    project_id: principal.project_id,
-                    consistency: consistency.clone(),
-                    max_replica_lag_ms,
-                    client_catalog_version: client_catalog_version.clone(),
-                    target_backend: target_backend.clone(),
-                    target_instance: target_instance.clone(),
-                    routing_policy: routing_policy.clone(),
-                    primary_read,
-                    eventual_consistency_allowed,
-                    read_fence_json: read_fence_json.clone(),
-                    // Carry the key's per-minute budget so the opt-in per-key
-                    // limiter can raise this credential without a store lookup.
-                    rate_limit_per_minute: principal.rate_limit_per_minute,
-                });
+                let verified_principal = retain_principal.then(|| principal.clone());
+                return Ok((
+                    SecurityContext {
+                        tenant_id: principal.tenant_id,
+                        purpose: header("x-purpose"),
+                        correlation_id: correlation_id.clone(),
+                        user_id: principal.subject,
+                        scopes: principal.scopes,
+                        service_identity,
+                        credential_type: principal.credential_type,
+                        credential_id: principal.credential_id,
+                        auth_method: principal.auth_method,
+                        expires_at_unix: principal.expires_at_unix,
+                        trace_id: trace_id.clone(),
+                        project_id: principal.project_id,
+                        consistency: consistency.clone(),
+                        max_replica_lag_ms,
+                        client_catalog_version: client_catalog_version.clone(),
+                        target_backend: target_backend.clone(),
+                        target_instance: target_instance.clone(),
+                        routing_policy: routing_policy.clone(),
+                        primary_read,
+                        eventual_consistency_allowed,
+                        read_fence_json: read_fence_json.clone(),
+                        // Carry the key's per-minute budget so the opt-in per-key
+                        // limiter can raise this credential without a store lookup.
+                        rate_limit_per_minute: principal.rate_limit_per_minute,
+                    },
+                    verified_principal,
+                ));
             }
         };
 
@@ -2035,33 +2072,37 @@ pub fn security_from_request<T>(request: &Request<T>) -> Result<SecurityContext,
         let resolved_scopes = claims.resolved_scopes();
         let expires_at_unix = claims.exp.unwrap_or_default();
 
-        return Ok(SecurityContext {
-            tenant_id: claim_tenant.to_string(),
-            purpose: claims.purpose.unwrap_or_else(|| header("x-purpose")),
-            correlation_id,
-            user_id,
-            scopes: resolved_scopes,
-            service_identity: claims
-                .service_identity
-                .unwrap_or_else(|| "unknown".to_string()),
-            credential_type: bearer_lineage.credential_type,
-            credential_id: bearer_lineage.credential_id,
-            auth_method: bearer_lineage.auth_method,
-            expires_at_unix,
-            trace_id,
-            project_id: claim_project.to_string(),
-            consistency,
-            max_replica_lag_ms,
-            client_catalog_version: client_catalog_version.clone(),
-            target_backend,
-            target_instance,
-            routing_policy,
-            primary_read,
-            eventual_consistency_allowed,
-            read_fence_json,
-            // Bearer/JWT principals carry no per-key budget — tenant default.
-            rate_limit_per_minute: bearer_lineage.rate_limit_per_minute,
-        });
+        let verified_principal = retain_principal.then(|| bearer_lineage.clone());
+        return Ok((
+            SecurityContext {
+                tenant_id: claim_tenant.to_string(),
+                purpose: claims.purpose.unwrap_or_else(|| header("x-purpose")),
+                correlation_id,
+                user_id,
+                scopes: resolved_scopes,
+                service_identity: claims
+                    .service_identity
+                    .unwrap_or_else(|| "unknown".to_string()),
+                credential_type: bearer_lineage.credential_type,
+                credential_id: bearer_lineage.credential_id,
+                auth_method: bearer_lineage.auth_method,
+                expires_at_unix,
+                trace_id,
+                project_id: claim_project.to_string(),
+                consistency,
+                max_replica_lag_ms,
+                client_catalog_version: client_catalog_version.clone(),
+                target_backend,
+                target_instance,
+                routing_policy,
+                primary_read,
+                eventual_consistency_allowed,
+                read_fence_json,
+                // Bearer/JWT principals carry no per-key budget — tenant default.
+                rate_limit_per_minute: bearer_lineage.rate_limit_per_minute,
+            },
+            verified_principal,
+        ));
     }
 
     // Development / local-test identity — the original pre-verified-principal
@@ -2102,31 +2143,34 @@ pub fn security_from_request<T>(request: &Request<T>) -> Result<SecurityContext,
             .filter(|scope| !scope.is_empty())
             .map(ToString::to_string)
             .collect();
-        return Ok(SecurityContext {
-            tenant_id: header("x-tenant-id"),
-            purpose: header("x-purpose"),
-            correlation_id,
-            user_id,
-            scopes,
-            service_identity,
-            credential_type: 0,
-            credential_id: String::new(),
-            auth_method: "header".to_string(),
-            expires_at_unix: 0,
-            trace_id,
-            project_id: project_id_header,
-            consistency,
-            max_replica_lag_ms,
-            client_catalog_version: client_catalog_version.clone(),
-            target_backend,
-            target_instance,
-            routing_policy,
-            primary_read,
-            eventual_consistency_allowed,
-            read_fence_json,
-            // Dev header path (no verified credential) — tenant default.
-            rate_limit_per_minute: 0,
-        });
+        return Ok((
+            SecurityContext {
+                tenant_id: header("x-tenant-id"),
+                purpose: header("x-purpose"),
+                correlation_id,
+                user_id,
+                scopes,
+                service_identity,
+                credential_type: 0,
+                credential_id: String::new(),
+                auth_method: "header".to_string(),
+                expires_at_unix: 0,
+                trace_id,
+                project_id: project_id_header,
+                consistency,
+                max_replica_lag_ms,
+                client_catalog_version: client_catalog_version.clone(),
+                target_backend,
+                target_instance,
+                routing_policy,
+                primary_read,
+                eventual_consistency_allowed,
+                read_fence_json,
+                // Dev header path (no verified credential) — tenant default.
+                rate_limit_per_minute: 0,
+            },
+            None,
+        ));
     }
 
     // The VERIFIED peer certificate (never a header) is the authoritative
@@ -2190,35 +2234,39 @@ pub fn security_from_request<T>(request: &Request<T>) -> Result<SecurityContext,
             "x-udb-project-id disagrees with the certificate-bound project",
         ));
     }
+    let verified_principal = retain_principal.then(|| grant.clone());
     let tenant_id = grant.tenant_id;
     let project_id = grant.project_id;
     let scopes = grant.scopes;
 
-    Ok(SecurityContext {
-        tenant_id,
-        purpose: header("x-purpose"),
-        correlation_id,
-        user_id,
-        scopes,
-        service_identity,
-        credential_type: grant.credential_type,
-        credential_id: grant.credential_id,
-        auth_method: grant.auth_method,
-        expires_at_unix: grant.expires_at_unix,
-        trace_id,
-        project_id,
-        consistency,
-        max_replica_lag_ms,
-        client_catalog_version: client_catalog_version.clone(),
-        target_backend,
-        target_instance,
-        routing_policy,
-        primary_read,
-        eventual_consistency_allowed,
-        read_fence_json,
-        // mTLS-grant principals carry no per-key budget — tenant default.
-        rate_limit_per_minute: grant.rate_limit_per_minute,
-    })
+    Ok((
+        SecurityContext {
+            tenant_id,
+            purpose: header("x-purpose"),
+            correlation_id,
+            user_id,
+            scopes,
+            service_identity,
+            credential_type: grant.credential_type,
+            credential_id: grant.credential_id,
+            auth_method: grant.auth_method,
+            expires_at_unix: grant.expires_at_unix,
+            trace_id,
+            project_id,
+            consistency,
+            max_replica_lag_ms,
+            client_catalog_version: client_catalog_version.clone(),
+            target_backend,
+            target_instance,
+            routing_policy,
+            primary_read,
+            eventual_consistency_allowed,
+            read_fence_json,
+            // mTLS-grant principals carry no per-key budget — tenant default.
+            rate_limit_per_minute: grant.rate_limit_per_minute,
+        },
+        verified_principal,
+    ))
 }
 
 fn header_bool(name: &str, header: &impl Fn(&str) -> String) -> bool {

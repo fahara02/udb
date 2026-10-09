@@ -5727,7 +5727,7 @@ def check_benchmark_workflow_gate(root: Path = ROOT) -> list[str]:
     for needle in (
         'UDB_LIVE_SDK_TESTS: "1"',
         'if [ "${1:-}" = "go-correctness" ]; then',
-        '--username "${UDB_LIVE_PEER_USERNAME}" --password "${UDB_LIVE_PEER_PASSWORD}" --tenant "${UDB_LIVE_PEER_TENANT}"',
+        '--username "${UDB_LIVE_PEER_USERNAME}" --email "sdk-live-peer@example.invalid" --password "${UDB_LIVE_PEER_PASSWORD}" --tenant "${UDB_LIVE_PEER_TENANT}"',
         'UDB_LIVE_TENANT="${UDB_LIVE_PEER_TENANT}" python scripts/bootstrap_benchmark_project_catalog.py',
         "go test ./udbclient -run '^TestLivePerf$'",
     ):
@@ -5746,7 +5746,7 @@ def check_benchmark_workflow_gate(root: Path = ROOT) -> list[str]:
             "if: inputs.candidate-build",
             'if [ "$candidate_sha" != "$GITHUB_SHA" ]; then',
             "cargo build --profile dist --locked --bin udb --features oidc,webauthn,webrtc",
-            'export RUSTFLAGS="-C target-cpu=x86-64 ${RUSTFLAGS:-}"',
+            'export RUSTFLAGS="-C target-cpu=x86-64-v2 ${RUSTFLAGS:-}"',
             "cp target/dist/udb bench-output/bin/udb-candidate",
             '"profile":"dist"',
             "bench-output/candidate-provenance.json",
@@ -7334,7 +7334,7 @@ jobs:
         run: |
           mkdir -p bench-output/status bench-output/logs
           if [ "${1:-}" = "go-correctness" ]; then
-            bootstrap --username "${UDB_LIVE_PEER_USERNAME}" --password "${UDB_LIVE_PEER_PASSWORD}" --tenant "${UDB_LIVE_PEER_TENANT}"
+            bootstrap --username "${UDB_LIVE_PEER_USERNAME}" --email "sdk-live-peer@example.invalid" --password "${UDB_LIVE_PEER_PASSWORD}" --tenant "${UDB_LIVE_PEER_TENANT}"
           fi
       - name: Bootstrap exact benchmark project catalog
         run: |
@@ -10657,7 +10657,7 @@ jobs:
         run: |
           candidate_sha="$(git rev-parse HEAD)"
           if [ "$candidate_sha" != "$GITHUB_SHA" ]; then exit 1; fi
-          export RUSTFLAGS="-C target-cpu=x86-64 ${RUSTFLAGS:-}"
+          export RUSTFLAGS="-C target-cpu=x86-64-v2 ${RUSTFLAGS:-}"
           cargo build --profile dist --locked --bin udb --features oidc,webauthn,webrtc
           cp target/dist/udb bench-output/bin/udb-candidate
           echo '{"profile":"dist"}' > bench-output/candidate-provenance.json

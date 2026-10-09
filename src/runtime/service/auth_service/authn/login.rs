@@ -497,11 +497,14 @@ impl AuthnServiceImpl {
         // unknown / inactive / locked accounts apart) AND before any MFA second
         // factor is considered. An MFA code (totp_code / mfa_otp_id) is purely
         // additive — it can never stand in for the password.
-        if !authn::verify_password(
+        if !authn::password_cpu::verify(
             &req.password,
             &self.password_hash_key(),
             &user.password_hash,
-        ) {
+        )
+        .await
+        .map_err(|err| login_internal_status("password_login_verify", err))?
+        {
             user.failed_login_count += 1;
             let now_locked = user.failed_login_count >= MAX_FAILED_LOGINS;
             let attempt_count = user.failed_login_count;
@@ -598,7 +601,10 @@ impl AuthnServiceImpl {
         // Transparently re-hash legacy keyed-HMAC passwords with Argon2id on
         // the first successful login after the KDF upgrade.
         if authn::password_hash_needs_upgrade(&user.password_hash) {
-            user.password_hash = authn::hash_password(&req.password, &self.password_hash_key());
+            user.password_hash =
+                authn::password_cpu::hash(&req.password, &self.password_hash_key())
+                    .await
+                    .map_err(|err| login_internal_status("password_login_hash_upgrade", err))?;
         }
         self.users.put_user(user.clone()).await.map_err(|err| {
             login_internal_status("password_login_success_update", err.to_string())
@@ -912,11 +918,14 @@ impl AuthnServiceImpl {
             .await
             .map_err(|err| login_internal_status("change_password_user_load", err.to_string()))?
             .ok_or_else(super::authn_user_not_found_status)?;
-        if !authn::verify_password(
+        if !authn::password_cpu::verify(
             &req.current_password,
             &self.password_hash_key(),
             &user.password_hash,
-        ) {
+        )
+        .await
+        .map_err(|err| login_internal_status("change_password_verify", err))?
+        {
             return Err(crate::runtime::executor_utils::unauthenticated_status(
                 "invalid_current_password",
                 "invalid current password",
@@ -943,7 +952,10 @@ impl AuthnServiceImpl {
         }
         let now = now_unix();
         let event_tenant = user.tenant_id.clone();
-        user.password_hash = authn::hash_password(&req.new_password, &self.password_hash_key());
+        user.password_hash =
+            authn::password_cpu::hash(&req.new_password, &self.password_hash_key())
+                .await
+                .map_err(|err| login_internal_status("change_password_hash", err))?;
         user.updated_at_unix = now;
         self.users
             .put_user(user)
@@ -1120,7 +1132,10 @@ impl AuthnServiceImpl {
             .await
             .map_err(|err| login_internal_status("reset_password_user_load", err.to_string()))?
             .ok_or_else(super::authn_user_not_found_status)?;
-        user.password_hash = authn::hash_password(&req.new_password, &self.password_hash_key());
+        user.password_hash =
+            authn::password_cpu::hash(&req.new_password, &self.password_hash_key())
+                .await
+                .map_err(|err| login_internal_status("reset_password_hash", err))?;
         user.failed_login_count = 0;
         user.locked_until_unix = 0;
         user.updated_at_unix = now;

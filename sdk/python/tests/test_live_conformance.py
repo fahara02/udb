@@ -2314,7 +2314,7 @@ def perf_seed(
                 or prepared.get("project_id") != project):
             raise ValueError("prepared benchmark fixtures do not match the verified tenant/project")
         for key in ("multipart_bucket", "multipart_object_key", "multipart_upload_id",
-                    "multipart_etag", "ack_workflow_id"):
+                    "multipart_etag", "ack_workflow_id", "cdc_ack_event_id", "cdc_ack_topic"):
             value = prepared.get("fixtures", {}).get(key)
             if not isinstance(value, str) or not value:
                 raise ValueError(f"prepared benchmark fixtures missing {key}")

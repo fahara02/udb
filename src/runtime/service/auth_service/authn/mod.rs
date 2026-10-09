@@ -2414,12 +2414,19 @@ impl AuthnServiceImpl {
             return Ok(false);
         }
         if let Some(jti) = claims.jti.as_deref().filter(|j| j.starts_with("sess_")) {
-            match authn::validate_session(
+            let expected = authn::SessionValidationScope {
+                principal_id: claims.sub.clone().unwrap_or_default(),
+                tenant_id: claims.tenant_id.clone().unwrap_or_default(),
+                project_id: claims.project_id.clone().unwrap_or_default(),
+                service_identity: claims.service_identity.clone().unwrap_or_default(),
+            };
+            match authn::validate_session_for_scope(
                 self.sessions.as_ref(),
                 jti,
                 &self.hash_key(),
                 now,
                 self.config.session_idle_ttl_secs,
+                &expected,
             )
             .await
             {
@@ -2427,6 +2434,21 @@ impl AuthnServiceImpl {
                 Ok(None) => return Ok(false),
                 Err(err) => return Err(authn_internal_status("jwt_session_validate", err)),
             }
+        }
+        if let Some(family_id) = claims
+            .jti
+            .as_deref()
+            .and_then(|jti| jti.strip_prefix("rtf_"))
+            && !self
+                .access_family_active(
+                    family_id,
+                    claims.sub.as_deref().unwrap_or_default(),
+                    claims.tenant_id.as_deref().unwrap_or_default(),
+                    claims.project_id.as_deref().unwrap_or_default(),
+                )
+                .await?
+        {
+            return Ok(false);
         }
         Ok(true)
     }

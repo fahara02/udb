@@ -65,6 +65,7 @@ func TestLivePerfExplicitBodyCoverage(t *testing.T) {
 		"message_type":                liveMessageType, "record_id": "record-1", "bucket": "bucket-1", "object_key": "object-1",
 		"multipart_bucket": "bucket-1", "multipart_object_key": "multipart-1", "multipart_upload_id": "upload-1",
 		"multipart_etag": "etag-1", "ack_workflow_id": "workflow-ack-1",
+		"cdc_ack_event_id": "00000000-0000-4000-8000-000000000003", "cdc_ack_topic": "udb.sdk.benchmark.ack",
 		"document_id": "document-1", "mongo_collection": "collection_1", "node_id": "node-1",
 		"user_id": "user-1", "subject": "user:user-1", "session_id": "session-1", "token": "token-1",
 		"refresh_token": "refresh-1", "csrf_token": "csrf-1", "code": "123456", "role_id": "role-1",

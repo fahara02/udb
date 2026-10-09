@@ -1832,8 +1832,8 @@
     "operation_id": "ackCdcEvents",
     "op_kind": "MUTATION",
     "request_msg": "AckCdcEventsRequest",
-    "body": "`{ \"context\": { \"tenant_id\": \"<seed:tenant_id>\", \"project_id\": \"<seed:project>\", \"purpose\": \"sdk.live.perf\" }, \"consumer_name\": \"sdk-perf-consumer\", \"topic_pattern\": \"<seed:event_type>\", \"event_id\": \"00000000-0000-4000-8000-000000000001\" }`",
-    "notes": "records the consumer position; `event_id` is any delivered event UUID (not checked against the journal). Same authorization as PublishCDC on the topic pattern."
+    "body": "`{ \"context\": { \"tenant_id\": \"<seed:tenant_id>\", \"project_id\": \"<seed:project>\", \"purpose\": \"sdk.live.perf\" }, \"consumer_name\": \"sdk-perf-consumer\", \"topic_pattern\": \"<seed:cdc_ack_topic>\", \"event_id\": \"<seed:cdc_ack_event_id>\" }`",
+    "notes": "acknowledges the retained, matching journal event prepared through EnqueueOutboxEvent and PublishCDC before the sweep. Requires CDC read scope and the PublishCDC topic grant; the durable cursor belongs to the verified caller. Setup is excluded from latency."
   },
   {
     "file": "data_broker.md",

@@ -1016,7 +1016,9 @@ impl AuthnServiceImpl {
             user_id: user_id.clone(),
             username: req.username.trim().to_ascii_lowercase(),
             email: req.email.trim().to_ascii_lowercase(),
-            password_hash: authn::hash_password(&initial_password, &self.password_hash_key()),
+            password_hash: authn::password_cpu::hash(&initial_password, &self.password_hash_key())
+                .await
+                .map_err(|err| authn_core_internal_status("create_user_password_hash", err))?,
             account_kind,
             status: if invite {
                 crate::runtime::authn::AccountStatus::PasswordSetupRequired

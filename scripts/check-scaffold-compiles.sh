@@ -87,6 +87,48 @@ if grep -q "{{" "$ENT_DIR/go/udb_entities_gen.go"; then
 fi
 echo "    Go entity adapters generated and gofmt-clean OK"
 
+# Compile the real generator's output against consumer messages produced by
+# protoc, then exercise their adapters across a JSON wire round trip.
+echo "==> compiling and round-tripping Go consumer entity shapes"
+SHAPE_DIR="$WORK/consumer"
+mkdir -p "$SHAPE_DIR/adapters" "$WORK/protoc-bin"
+# Match the SDK's protobuf runtime and keep the declared Go 1.22 floor honest.
+# v1.36.11 requires Go 1.23 and would silently upgrade an auto toolchain.
+export GOTOOLCHAIN=local
+GOBIN="$WORK/protoc-bin" go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.35.1
+protoc -I "$REPO/proto" -I "$REPO/tests/fixtures/consumer_protos" \
+  --plugin="protoc-gen-go=$WORK/protoc-bin/protoc-gen-go" \
+  --go_out="$SHAPE_DIR" --go_opt=module=example.com/consumer \
+  '--go_opt=Mudb/core/common/v1/db.proto=github.com/fahara02/udb/sdk/go/gen/udb/core/common/v1;commonv1' \
+  "$REPO/tests/fixtures/consumer_protos/foreign.proto" \
+  "$REPO/tests/fixtures/consumer_protos/shape.proto"
+if [[ -n "${UDB_BIN:-}" ]]; then
+  GENERATOR=("$UDB_BIN")
+else
+  GENERATOR=(cargo run --quiet --manifest-path "$REPO/Cargo.toml" --)
+fi
+"${GENERATOR[@]}" sdk generate --project-proto "$REPO/tests/fixtures/consumer_protos" \
+  --lang go --out "$SHAPE_DIR/generated"
+require_file "$SHAPE_DIR/generated/go/udb_entities_gen.go"
+cp "$SHAPE_DIR/generated/go/udb_entities_gen.go" "$SHAPE_DIR/adapters/"
+cp "$REPO/tests/fixtures/consumer_protos_test.go" "$SHAPE_DIR/adapters/"
+cat > "$SHAPE_DIR/go.mod" <<EOF
+module example.com/consumer
+
+go 1.22
+
+require github.com/fahara02/udb/sdk/go v0.0.0
+replace github.com/fahara02/udb/sdk/go => $REPO/sdk/go
+EOF
+( cd "$SHAPE_DIR" && go mod tidy && go build ./... && go vet ./... && go test ./... -count=1 )
+if "${GENERATOR[@]}" sdk generate --project-proto "$REPO/tests/fixtures/consumer_protos_invalid" \
+  --lang go --out "$SHAPE_DIR/invalid" > "$SHAPE_DIR/refusal.log" 2>&1; then
+  echo "generator accepted a message stored outside JSON" >&2
+  exit 1
+fi
+grep -q 'field.*payload.*message.*Payload.*TEXT column' "$SHAPE_DIR/refusal.log"
+echo "    Go consumer adapters compiled, round-tripped and refused unsupported storage"
+
 # Exercise the actual project-proto/gofmt producer and prove --check preserves
 # its output. Rust CLI integration tests cover generic templates and copied files.
 echo "==> checking Go entity generator drift without output writes"

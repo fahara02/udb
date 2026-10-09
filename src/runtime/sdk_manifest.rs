@@ -147,6 +147,9 @@ pub struct EntityColumnDescriptor {
     /// proto3 `optional` ⇒ protoc-gen-go renders this field as a POINTER, and an
     /// unset value must be omitted from the record rather than written as a zero.
     pub has_presence: bool,
+    /// Real oneof membership; its Go field is a wrapper on the owning group.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub oneof_group: String,
     /// Non-empty ⇒ this column is a proto enum; the generator emits a
     /// short-token ⇄ enum map from these values.
     pub enum_values: Vec<String>,
@@ -539,11 +542,13 @@ fn entity_descriptor_from_table(
                     not_null: column.not_null,
                     is_array: column.is_array,
                     has_presence: column.has_presence,
+                    oneof_group: column.oneof_group.clone(),
                     enum_values,
                     enum_cross_package,
                     enum_go_import,
-                    is_json: column.is_json,
-                    is_jsonb: column.is_jsonb,
+                    is_json: column.is_json || column.sql_type.trim().eq_ignore_ascii_case("JSON"),
+                    is_jsonb: column.is_jsonb
+                        || column.sql_type.trim().eq_ignore_ascii_case("JSONB"),
                     exclude_from_insert: column.exclude_from_insert,
                     is_blind_index: column.security.is_blind_index,
                     is_pii: column.security.is_pii,
@@ -1025,6 +1030,38 @@ mod tests {
             column_name: column_name.to_string(),
             ..ManifestColumn::default()
         }
+    }
+
+    #[test]
+    fn consumer_shape_descriptors_keep_oneofs_and_declared_json_types() {
+        let fixture =
+            std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/consumer_protos");
+        let entities = entity_manifest_from_proto_dir(&fixture).expect("parse consumer fixture");
+        let shape = entities
+            .iter()
+            .find(|entity| entity.short_name == "Shape")
+            .expect("Shape entity");
+        let column = |name: &str| {
+            shape
+                .columns
+                .iter()
+                .find(|column| column.field_name == name)
+                .unwrap_or_else(|| panic!("fixture column {name} missing"))
+        };
+        for field in ["choice_text", "choice_number", "choice_details"] {
+            assert_eq!(column(field).oneof_group, "choice", "oneof field {field}");
+        }
+        assert!(column("nickname").has_presence);
+        assert!(column("nickname").oneof_group.is_empty());
+        for field in ["labels", "details_by_name", "states_by_name", "details"] {
+            assert!(column(field).is_jsonb, "SQL JSONB column {field}");
+        }
+        assert!(column("json_details").is_json, "SQL JSON column");
+        assert!(column("states").is_array);
+        assert_eq!(
+            column("state").enum_go_import.as_deref(),
+            Some("example.com/consumer/gen/foreign;foreignpb.State")
+        );
     }
 
     // End-to-end V19-1/V19-3/V19-4 shapes through the REAL `--project-proto`

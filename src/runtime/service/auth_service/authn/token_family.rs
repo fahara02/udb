@@ -119,6 +119,55 @@ impl AuthnServiceImpl {
         })
     }
 
+    /// Refreshed access JWTs carry a family JTI rather than a session handle.
+    /// Their verified subject and scope must still match a live durable family.
+    pub(super) async fn access_family_active(
+        &self,
+        family_id: &str,
+        subject: &str,
+        tenant_id: &str,
+        project_id: &str,
+    ) -> Result<bool, Status> {
+        let Ok(family_id) = Uuid::parse_str(family_id) else {
+            return Ok(false);
+        };
+        if subject.is_empty() || tenant_id.is_empty() {
+            return Ok(false);
+        }
+        let pool = self.require_family_pool()?;
+        let m = token_family_model();
+        let sql = format!(
+            "SELECT EXISTS (SELECT 1 FROM {rel} \
+             WHERE {id} = $1 AND {user} = $2 AND {tenant} = $3 \
+               AND COALESCE({project}, '') = $4 AND {revoked} IS NULL)",
+            rel = m.relation,
+            id = m.q("family_id"),
+            user = m.q("user_id"),
+            tenant = m.q("tenant_id"),
+            project = m.q("project_id"),
+            revoked = m.q("revoked_at"),
+        );
+        let classify = |err: sqlx::Error| {
+            crate::runtime::executor_utils::sqlx_error_to_status("access_family_validate", &err)
+        };
+        let mut tx = pool.begin().await.map_err(classify)?;
+        sqlx::query("SELECT set_config('app.current_tenant_id', $1, true)")
+            .bind(tenant_id)
+            .execute(&mut *tx)
+            .await
+            .map_err(classify)?;
+        let active: bool = sqlx::query_scalar(&sql)
+            .bind(family_id)
+            .bind(subject)
+            .bind(tenant_id)
+            .bind(project_id)
+            .fetch_one(&mut *tx)
+            .await
+            .map_err(classify)?;
+        tx.commit().await.map_err(classify)?;
+        Ok(active)
+    }
+
     /// The stable public id (`sesspub_…`) of the login session a refresh family
     /// was minted from, derived from the session hash the family row stores.
     /// Best-effort: empty when there is no backing pool, the family is unknown

@@ -1,0 +1,11 @@
+syntax = "proto3";
+package consumer.invalid.v1;
+option go_package = "example.com/consumer/invalid;invalidpb";
+import "udb/core/common/v1/db.proto";
+
+message Payload { string text = 1; }
+message InvalidShape {
+  option (udb.core.common.v1.pg_table) = { table_name: "invalid_shapes" is_table: true };
+  string id = 1 [(udb.core.common.v1.pg_column) = { sql_type: "TEXT" primary_key: true not_null: true }];
+  Payload payload = 2 [(udb.core.common.v1.pg_column) = { sql_type: "TEXT" }];
+}

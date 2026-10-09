@@ -1244,10 +1244,13 @@ fn render_go_entities_file(entities: &[EntityDescriptor], package: &str) -> Resu
         };
         proto_imports.insert(path, alias.clone());
         for column in &entity.columns {
-            // Mirror the emit rules exactly: a column that emits no marshalling
-            // (injected audit column, repeated field) must not count toward the
-            // imports, or the generated file carries an unused import.
-            if !column.declared_in_proto || column.is_array {
+            // Reflective fields need no inline type imports. Keep this scan in
+            // step with the emit arms or the generated file will not compile.
+            if !column.declared_in_proto
+                || column.is_array
+                || !column.oneof_group.is_empty()
+                || is_complex_map_column(column)
+            {
                 continue;
             }
             if is_message_json_column(column) {
@@ -1809,11 +1812,8 @@ pub(crate) fn enum_common_prefix(values: &[String]) -> String {
 /// The `r["field"] = …` statement for one column (proto -> record).
 ///
 /// THE SYMMETRY RULE: this function must never write a column that
-/// [`go_from_row_stmt`] cannot read back. An unsupported column (repeated
-/// field, message type, unresolved enum) is omitted with a TODO on BOTH sides —
-/// a raw `m.Get…()` write of an unsupported Go value silently corrupts the
-/// column (enum → JSON number in a VARCHAR CHECK, message → struct into a
-/// numeric column).
+/// [`go_from_row_stmt`] cannot read back. Complex fields use the reflective
+/// codec; a message stored outside JSON fails the render pre-scan.
 /// A protobuf MESSAGE stored in a JSON/JSONB column.
 ///
 /// The JSON arms assume the getter yields TEXT. For a message field it yields
@@ -1861,8 +1861,7 @@ fn go_scalar_type_name(proto_type: &str) -> Option<&'static str> {
 ///
 /// The lexer normalises a map field to a single `map<K,V>` token, so this parses
 /// that token rather than a synthetic map-entry message. Returns `None` for a map
-/// with a message/enum value, which has no plain Go map form here and is skipped
-/// with a TODO like the repeated case.
+/// with a message/enum value, which uses the reflective field codec instead.
 fn go_map_types(proto_type: &str) -> Option<String> {
     let inner = proto_type
         .trim()
@@ -1885,13 +1884,23 @@ fn is_map_json_column(column: &EntityColumnDescriptor) -> bool {
         && !column.is_array
         && go_map_types(&column.proto_type).is_some()
 }
+
+fn is_complex_map_column(column: &EntityColumnDescriptor) -> bool {
+    column
+        .proto_type
+        .trim()
+        .trim_start_matches('.')
+        .starts_with("map<")
+        && go_map_types(&column.proto_type).is_none()
+}
+
 fn go_to_record_stmt(column: &EntityColumnDescriptor) -> String {
     let key = &column.field_name;
     let field = go_pascal(&column.field_name);
     let getter = format!("Get{field}");
-    if column.is_array {
-        // Repeated fields: the reflective codec writes the JSON array the
-        // broker binds to the array column (enum tokens, exact 64-bit ints).
+    if column.is_array || !column.oneof_group.is_empty() || is_complex_map_column(column) {
+        // The field codec preserves arrays, oneof presence and complex map
+        // values without naming generated wrappers or losing exact integers.
         return format!(
             "\tif v, ok, err := udbclient.EncodeField(m, \"{key}\"); err != nil {{\n\t\treturn nil, fmt.Errorf(\"encode column %q: %w\", \"{key}\", err)\n\t}} else if ok {{\n\t\tr[\"{key}\"] = v\n\t}}\n"
         );
@@ -1965,7 +1974,6 @@ fn go_to_record_stmt(column: &EntityColumnDescriptor) -> String {
     }
     if matches!(go_scalar_kind(&column.proto_type), GoScalar::Unknown) {
         // Message-typed (or unresolved-enum) column: no scalar round-trip.
-        // Skipped on write AND read — go_from_row_stmt emits the matching TODO.
         // Checked BEFORE the presence arm: an `optional` message field would
         // otherwise write a raw struct pointer.
         // Unreachable for declared fields (the render pre-scan refuses a
@@ -2009,8 +2017,8 @@ fn go_from_row_stmt(column: &EntityColumnDescriptor, alias: &str) -> String {
     let fail = |indent: &str| {
         format!("{indent}return nil, fmt.Errorf(\"decode column %q: %w\", \"{key}\", err)\n")
     };
-    if column.is_array {
-        // Mirrors go_to_record_stmt's repeated-field skip (symmetry rule).
+    if column.is_array || !column.oneof_group.is_empty() || is_complex_map_column(column) {
+        // Match the reflective write arm without naming oneof wrappers or map values.
         return format!(
             "\tif err := udbclient.DecodeField(m, \"{key}\", row[\"{key}\"]); err != nil {{\n{fail}\t}}\n",
             fail = fail("\t\t"),
@@ -2055,22 +2063,26 @@ fn go_from_row_stmt(column: &EntityColumnDescriptor, alias: &str) -> String {
         if column.has_presence {
             return format!(
                 "\tif s, err := udbAsString(row[\"{key}\"]); err != nil {{\n{fail}\
-                 \t}} else if s != \"\" {{\n\
+                 \t}} else if row[\"{key}\"] != nil {{\n\
                  \t\tif v, ok := {enum_alias}.{enum_type}_value[\"{prefix}\"+s]; ok {{\n\
                  \t\t\te := {enum_alias}.{enum_type}(v)\n\t\t\tm.{field} = &e\n\
                  \t\t}} else if v, ok := {enum_alias}.{enum_type}_value[s]; ok {{\n\
-                 \t\t\te := {enum_alias}.{enum_type}(v)\n\t\t\tm.{field} = &e\n\t\t}}\n\t}}\n",
+                 \t\t\te := {enum_alias}.{enum_type}(v)\n\t\t\tm.{field} = &e\n\
+                 \t\t}} else {{\n\t\t\terr := fmt.Errorf(\"unknown enum token %q\", s)\n{unknown}\t\t}}\n\t}}\n",
                 fail = fail("\t\t"),
+                unknown = fail("\t\t\t"),
             );
         }
         return format!(
             "\tif s, err := udbAsString(row[\"{key}\"]); err != nil {{\n{fail}\
-             \t}} else if s != \"\" {{\n\
+             \t}} else if row[\"{key}\"] != nil {{\n\
              \t\tif v, ok := {enum_alias}.{enum_type}_value[\"{prefix}\"+s]; ok {{\n\
              \t\t\tm.{field} = {enum_alias}.{enum_type}(v)\n\
              \t\t}} else if v, ok := {enum_alias}.{enum_type}_value[s]; ok {{\n\
-             \t\t\tm.{field} = {enum_alias}.{enum_type}(v)\n\t\t}}\n\t}}\n",
+             \t\t\tm.{field} = {enum_alias}.{enum_type}(v)\n\
+             \t\t}} else {{\n\t\t\terr := fmt.Errorf(\"unknown enum token %q\", s)\n{unknown}\t\t}}\n\t}}\n",
             fail = fail("\t\t"),
+            unknown = fail("\t\t\t"),
         );
     }
     // #10: a JSON/JSONB textual column serializes the structured value back to
@@ -3530,6 +3542,7 @@ mod tests {
             not_null: true,
             is_array: false,
             has_presence: false,
+            oneof_group: String::new(),
             enum_values: Vec::new(),
             enum_cross_package: false,
             enum_go_import: None,

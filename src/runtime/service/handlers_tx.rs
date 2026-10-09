@@ -54,6 +54,37 @@ type CdcEngineResponseStream = Pin<
 /// again. The existing channel timeout remains a bounded reconnect backstop.
 const CDC_AUTHORIZATION_RECHECK_INTERVAL: Duration = Duration::from_secs(5);
 
+fn cdc_consumer_owner(
+    principal: Option<&crate::runtime::credential_layer::VerifiedPrincipal>,
+) -> Result<String, Status> {
+    let principal = principal
+        .filter(|principal| !principal.subject.trim().is_empty())
+        .ok_or_else(|| {
+            crate::runtime::executor_utils::unauthenticated_status(
+                "cdc_consumer_verified_identity_required",
+                "named CDC consumers require a verified bearer, API key or registered certificate",
+            )
+        })?;
+    if !principal.service_identity.is_empty() {
+        Ok(format!("service:{}", principal.service_identity))
+    } else if matches!(principal.credential_type, 3 | 4 | 5) {
+        // A key without an explicit service identity already uses its verified
+        // stored owner. Never turn the audit sentinel into an ownership key.
+        Ok(format!("service:{}", principal.subject))
+    } else {
+        Ok(format!("user:{}", principal.subject))
+    }
+}
+
+fn cdc_consumer_owner_refusal() -> Status {
+    crate::runtime::executor_utils::policy_status_with_code(
+        Code::PermissionDenied,
+        "cdc",
+        "cdc_consumer_owner_mismatch",
+        "consumer name belongs to another verified principal or needs explicit legacy-owner migration",
+    )
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum CdcStreamDeadlineReason {
     CredentialExpired,
@@ -361,10 +392,11 @@ impl DataBrokerService {
             .extensions()
             .get::<crate::runtime::credential_layer::PreresolvedCredentials>()
             .and_then(|credentials| credentials.revalidator.clone());
-        let security = match security_from_request(&request) {
-            Ok(s) => s,
-            Err(e) => return self.record_grpc("PublishCDC", started, Err(e)),
-        };
+        let (security, verified_principal) =
+            match crate::runtime::security::security_and_verified_principal_from_request(&request) {
+                Ok(s) => s,
+                Err(e) => return self.record_grpc("PublishCDC", started, Err(e)),
+            };
         if let Err(status) = super::tenant_service::tenant_status_gate(&security.tenant_id) {
             return self.record_grpc("PublishCDC", started, Err(status));
         }
@@ -379,11 +411,19 @@ impl DataBrokerService {
             );
         }
         let request = request.into_inner();
+        let named = !request.consumer_name.trim().is_empty();
+        let topic_pattern = if request.topic_pattern.trim().is_empty() {
+            "*".to_string()
+        } else if named {
+            request.topic_pattern.trim().to_string()
+        } else {
+            request.topic_pattern.clone()
+        };
         // The topic pattern is a PATTERN: "*"/empty means "every topic" and is
         // evaluated BY the data policy (only a `*`-object grant allows it) —
         // the same object the in-stream recheck below re-authorizes.
         if let Err(err) = self
-            .authorize_pattern(&security, &request.topic_pattern, "PublishCDC")
+            .authorize_pattern(&security, &topic_pattern, "PublishCDC")
             .await
         {
             return self.record_grpc("PublishCDC", started, Err(err));
@@ -400,34 +440,39 @@ impl DataBrokerService {
                 )),
             );
         };
-        let topic_pattern = if request.topic_pattern.trim().is_empty() {
-            "*".to_string()
-        } else {
-            request.topic_pattern
-        };
         let since_event_id = if request.since_event_id.trim().is_empty() {
             None
         } else {
             Some(request.since_event_id)
         };
-        // A named durable consumer with no explicit position resumes after the
-        // last event it acknowledged.
-        let since_event_id = match since_event_id {
-            Some(id) => Some(id),
-            None if !request.consumer_name.trim().is_empty() => {
-                if let Err(err) = validate_cdc_consumer_name(&request.consumer_name) {
-                    return self.record_grpc("PublishCDC", started, Err(err));
-                }
-                let ctx = security.request_context();
-                match self
-                    .load_cdc_consumer_cursor(&ctx, request.consumer_name.trim(), &topic_pattern)
-                    .await
-                {
-                    Ok(cursor) => cursor,
-                    Err(err) => return self.record_grpc("PublishCDC", started, Err(err)),
-                }
+        // Claim every named subscription, including an explicit resume UUID,
+        // before delivery. Anonymous subscriptions retain their existing anchor.
+        let watermark = if named {
+            let claim = async {
+                validate_cdc_consumer_name(&request.consumer_name)?;
+                cdc_engine.validate_consumer_subscription(
+                    &security.scopes,
+                    &topic_pattern,
+                    &security.tenant_id,
+                    &security.project_id,
+                )?;
+                let owner = cdc_consumer_owner(verified_principal.as_ref())?;
+                self.load_cdc_consumer_cursor(
+                    &security.request_context(),
+                    request.consumer_name.trim(),
+                    &topic_pattern,
+                    &owner,
+                )
+                .await
             }
-            None => None,
+            .await;
+            match claim {
+                Ok(cursor) if since_event_id.is_none() => Some(cursor),
+                Ok(_) => None,
+                Err(err) => return self.record_grpc("PublishCDC", started, Err(err)),
+            }
+        } else {
+            None
         };
         let cdc_ctx = security.request_context();
         let runtime = self.runtime_snapshot();
@@ -464,12 +509,14 @@ impl DataBrokerService {
         let recheck_topic_pattern = topic_pattern.clone();
         let result = tokio::time::timeout_at(
             deadline,
-            cdc_engine.stream_cdc(
+            cdc_engine.stream_cdc_with_cursor(
                 security.scopes.clone(),
                 topic_pattern,
                 since_event_id,
                 Some(security.tenant_id.clone()),
                 Some(security.project_id.clone()),
+                watermark,
+                named,
             ),
         )
         .await;
@@ -553,120 +600,126 @@ impl DataBrokerService {
         }
     }
 
-    /// AckCdcEvents: record a durable consumer's position. Allowed to whoever
-    /// may subscribe to the same topic pattern (the same PublishCDC policy);
-    /// the cursor is keyed by the caller's VERIFIED tenant and project.
+    /// Settle only a retained event authorized for this verified consumer.
     pub(crate) async fn ack_cdc_events_inner(
         &self,
         request: Request<crate::proto::AckCdcEventsRequest>,
     ) -> Result<Response<crate::proto::AckCdcEventsResponse>, Status> {
         let started = Instant::now();
-        let security = match security_from_request(&request) {
-            Ok(s) => s,
-            Err(e) => return self.record_grpc("AckCdcEvents", started, Err(e)),
-        };
-        if let Err(status) = super::tenant_service::tenant_status_gate(&security.tenant_id) {
-            return self.record_grpc("AckCdcEvents", started, Err(status));
-        }
-        let request = request.into_inner();
-        let topic_pattern = if request.topic_pattern.trim().is_empty() {
-            "*".to_string()
-        } else {
-            request.topic_pattern.trim().to_string()
-        };
-        if let Err(err) = self
-            .authorize_pattern(&security, &topic_pattern, "PublishCDC")
-            .await
-        {
-            return self.record_grpc("AckCdcEvents", started, Err(err));
-        }
-        if let Err(err) = validate_cdc_consumer_name(&request.consumer_name) {
-            return self.record_grpc("AckCdcEvents", started, Err(err));
-        }
-        let event_id = match uuid::Uuid::parse_str(request.event_id.trim()) {
-            Ok(id) => id,
-            Err(_) => {
-                return self.record_grpc(
-                    "AckCdcEvents",
-                    started,
-                    Err(crate::runtime::executor_utils::invalid_argument_fields(
-                        "event_id must be the UUID of a delivered event",
-                        [("event_id", "must be a UUID")],
-                    )),
-                );
-            }
-        };
-        let ctx = security.request_context();
-        let consumer = request.consumer_name.trim().to_string();
-        let runtime = self.runtime_snapshot();
-        let pool = match runtime.pg_pool() {
-            Ok(pool) => pool.clone(),
-            Err(err) => return self.record_grpc("AckCdcEvents", started, Err(err)),
-        };
-        let relation =
-            crate::runtime::system::SystemCatalogConfig::current().cdc_consumer_cursors_relation();
-        let sql = format!(
-            "INSERT INTO {relation} (tenant_id, project_id, consumer_name, topic_pattern, last_event_id, acked_at) VALUES ($1, $2, $3, $4, $5, NOW()) ON CONFLICT (tenant_id, project_id, consumer_name, topic_pattern) DO UPDATE SET last_event_id = EXCLUDED.last_event_id, acked_at = EXCLUDED.acked_at RETURNING EXTRACT(EPOCH FROM acked_at)::BIGINT"
-        );
-        let acked_at: Result<i64, sqlx::Error> = sqlx::query_scalar(&sql)
-            .bind(&ctx.tenant_id)
-            .bind(&ctx.project_id)
-            .bind(&consumer)
-            .bind(&topic_pattern)
-            .bind(event_id)
-            .fetch_one(&pool)
-            .await;
-        match acked_at {
-            Ok(acked_at_unix) => self.record_grpc(
-                "AckCdcEvents",
-                started,
-                Ok(Response::new(crate::proto::AckCdcEventsResponse {
-                    consumer_name: consumer,
-                    topic_pattern,
-                    event_id: event_id.to_string(),
-                    acked_at_unix,
-                })),
-            ),
-            Err(err) => self.record_grpc(
-                "AckCdcEvents",
-                started,
-                Err(crate::runtime::executor_utils::sqlx_error_to_status(
-                    "CDC consumer cursor write failed",
-                    &err,
-                )),
-            ),
-        }
+        let result = async {
+            let (security, principal) = crate::runtime::security::security_and_verified_principal_from_request(&request)?;
+            super::tenant_service::tenant_status_gate(&security.tenant_id)?;
+            let owner = cdc_consumer_owner(principal.as_ref())?;
+            let request = request.into_inner();
+            validate_cdc_consumer_name(&request.consumer_name)?;
+            let topic_pattern = match request.topic_pattern.trim() {
+                "" => "*".to_string(),
+                value => value.to_string(),
+            };
+            self.authorize_pattern(&security, &topic_pattern, "PublishCDC").await?;
+            let engine = self.cdc_engine.as_ref().ok_or_else(|| {
+                crate::runtime::executor_utils::capability_status(
+                    "cdc", "AckCdcEvents", "cdc_tailer",
+                    "CDC tailer is not configured for consumer event authorization",
+                )
+            })?;
+            engine.validate_consumer_subscription(
+                &security.scopes, &topic_pattern, &security.tenant_id, &security.project_id,
+            )?;
+            let event_id = uuid::Uuid::parse_str(request.event_id.trim()).map_err(|_| {
+                crate::runtime::executor_utils::invalid_argument_fields(
+                    "event_id must be the UUID of a retained authorized event",
+                    [("event_id", "must be a UUID")],
+                )
+            })?;
+            let runtime = self.runtime_snapshot();
+            let pool = runtime.pg_pool()?.clone();
+            let config = crate::runtime::system::SystemCatalogConfig::current();
+            let journal = config.cdc_journal_relation();
+            let event: Option<(String, serde_json::Value, chrono::DateTime<chrono::Utc>)> = sqlx::query_as(&format!(
+                "SELECT topic, payload, published_at FROM {journal} WHERE event_id = $1"
+            )).bind(event_id).fetch_optional(&pool).await.map_err(|err| {
+                crate::runtime::executor_utils::sqlx_error_to_status("CDC journal read failed", &err)
+            })?;
+            let Some((topic, payload, published_at)) = event else {
+                return Err(crate::runtime::executor_utils::schema_status(
+                    Code::NotFound, "cdc", "AckCdcEvents", "cdc_ack_event_not_found",
+                    "acknowledged CDC event is unknown or no longer retained",
+                ));
+            };
+            engine.validate_consumer_event(
+                &security.scopes, &topic_pattern, &topic, &payload, &security.tenant_id, &security.project_id,
+            )?;
+            let consumer = request.consumer_name.trim().to_string();
+            let relation = config.cdc_consumer_cursors_relation();
+            let sql = format!(
+                "INSERT INTO {relation} AS current_cursor (tenant_id, project_id, consumer_name, topic_pattern, last_event_id, owner_identity, last_published_at, acked_at) \
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, NOW()) \
+                 ON CONFLICT (tenant_id, project_id, consumer_name, topic_pattern) DO UPDATE SET \
+                   last_event_id = CASE WHEN (current_cursor.last_published_at, current_cursor.last_event_id) < (EXCLUDED.last_published_at, EXCLUDED.last_event_id) THEN EXCLUDED.last_event_id ELSE current_cursor.last_event_id END, \
+                   last_published_at = GREATEST(current_cursor.last_published_at, EXCLUDED.last_published_at), acked_at = NOW() \
+                 WHERE current_cursor.owner_identity = EXCLUDED.owner_identity \
+                 RETURNING EXTRACT(EPOCH FROM acked_at)::BIGINT"
+            );
+            let acked_at: Option<i64> = sqlx::query_scalar(&sql)
+                .bind(&security.tenant_id).bind(&security.project_id).bind(&consumer)
+                .bind(&topic_pattern).bind(event_id).bind(&owner).bind(published_at)
+                .fetch_optional(&pool).await.map_err(|err| {
+                    crate::runtime::executor_utils::sqlx_error_to_status("CDC consumer cursor write failed", &err)
+                })?;
+            let acked_at_unix = acked_at.ok_or_else(cdc_consumer_owner_refusal)?;
+            Ok(Response::new(crate::proto::AckCdcEventsResponse {
+                consumer_name: consumer, topic_pattern, event_id: event_id.to_string(), acked_at_unix,
+            }))
+        }.await;
+        self.record_grpc("AckCdcEvents", started, result)
     }
 
-    /// The last event `consumer` acknowledged for `topic_pattern` in the
-    /// caller's tenant/project, if any.
+    /// Claim a name once and retain its ordered watermark independently of
+    /// journal retention. Legacy unowned rows require explicit operator mapping.
     async fn load_cdc_consumer_cursor(
         &self,
         ctx: &crate::broker::RequestContext,
         consumer: &str,
         topic_pattern: &str,
-    ) -> Result<Option<String>, Status> {
+        owner: &str,
+    ) -> Result<(chrono::DateTime<chrono::Utc>, String), Status> {
         let runtime = self.runtime_snapshot();
         let pool = runtime.pg_pool()?.clone();
         let relation =
             crate::runtime::system::SystemCatalogConfig::current().cdc_consumer_cursors_relation();
-        let sql = format!(
-            "SELECT last_event_id FROM {relation} WHERE tenant_id = $1 AND project_id = $2 AND consumer_name = $3 AND topic_pattern = $4"
-        );
-        let cursor: Option<uuid::Uuid> = sqlx::query_scalar(&sql)
-            .bind(&ctx.tenant_id)
-            .bind(&ctx.project_id)
-            .bind(consumer)
-            .bind(topic_pattern)
-            .fetch_optional(&pool)
-            .await
-            .map_err(|err| {
-                crate::runtime::executor_utils::sqlx_error_to_status(
-                    "CDC consumer cursor read failed",
-                    &err,
-                )
+        sqlx::query(&format!(
+            "INSERT INTO {relation} (tenant_id, project_id, consumer_name, topic_pattern, last_event_id, owner_identity, last_published_at) \
+             VALUES ($1, $2, $3, $4, $5, $6, 'epoch') \
+             ON CONFLICT (tenant_id, project_id, consumer_name, topic_pattern) DO NOTHING"
+        )).bind(&ctx.tenant_id).bind(&ctx.project_id).bind(consumer).bind(topic_pattern)
+            .bind(uuid::Uuid::nil()).bind(owner).execute(&pool).await.map_err(|err| {
+                crate::runtime::executor_utils::sqlx_error_to_status("CDC consumer claim failed", &err)
             })?;
-        Ok(cursor.map(|id| id.to_string()))
+        let (event_id, published_at, stored_owner): (
+            uuid::Uuid,
+            chrono::DateTime<chrono::Utc>,
+            String,
+        ) = sqlx::query_as(&format!(
+            "SELECT last_event_id, last_published_at, owner_identity FROM {relation} \
+             WHERE tenant_id = $1 AND project_id = $2 AND consumer_name = $3 AND topic_pattern = $4"
+        ))
+        .bind(&ctx.tenant_id)
+        .bind(&ctx.project_id)
+        .bind(consumer)
+        .bind(topic_pattern)
+        .fetch_one(&pool)
+        .await
+        .map_err(|err| {
+            crate::runtime::executor_utils::sqlx_error_to_status(
+                "CDC consumer cursor read failed",
+                &err,
+            )
+        })?;
+        if stored_owner != owner {
+            return Err(cdc_consumer_owner_refusal());
+        }
+        Ok((published_at, event_id.to_string()))
     }
 
     pub(crate) async fn enqueue_outbox_event_inner(

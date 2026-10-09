@@ -8,6 +8,197 @@ use crate::proto::udb::core::authn::services::v1 as authn_pb;
 use crate::proto::udb::core::authn::services::v1::authn_service_server::AuthnService;
 use tonic::Request;
 
+fn revocation_fixture_context() -> crate::proto::udb::core::common::v1::RequestContext {
+    crate::proto::udb::core::common::v1::RequestContext {
+        tenant: Some(crate::proto::udb::core::common::v1::TenantContext {
+            tenant_id: "acme".to_string(),
+            project_id: "billing".to_string(),
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
+#[tokio::test]
+#[ignore = "requires live Postgres; run in the unfiltered native live lane"]
+async fn live_postgres_revoke_session_closes_refresh_family_and_partial_retry() {
+    use crate::runtime::authn::{PostgresSessionStore, SessionStore};
+
+    let _guard = live_auth_db_lock().lock().await;
+    let pool = live_pg_pool().await;
+    migrate_native_auth_db(&pool).await;
+    let authn = authn_service_with_jwt(pool.clone());
+    for session_already_revoked in [false, true] {
+        let user = create_verified_user(&authn, "revoke-family", "CorrectHorse1!").await;
+        let login = authn
+            .login(Request::new(authn_pb::LoginRequest {
+                username: user.email.clone(),
+                password: "CorrectHorse1!".to_string(),
+                device_name: "revoke-family".to_string(),
+                ..Default::default()
+            }))
+            .await
+            .expect("login before session revocation")
+            .into_inner();
+        assert!(login.refresh_token.starts_with("rt_"));
+        let rotated = authn
+            .refresh_token(Request::new(authn_pb::RefreshTokenRequest {
+                refresh_token: login.refresh_token.clone(),
+                ..Default::default()
+            }))
+            .await
+            .expect("rotate a live family before revocation")
+            .into_inner();
+        let active = authn
+            .validate_token(Request::new(authn_pb::ValidateTokenRequest {
+                token: rotated.access_token.clone(),
+                token_type: authn_entity_pb::TokenType::JwtAccess as i32,
+            }))
+            .await
+            .expect("validate refreshed bearer before revocation")
+            .into_inner();
+        assert!(active.valid, "a live family's bearer must validate");
+        if session_already_revoked {
+            // Model a partial previous request: the durable session change
+            // committed, but the family side effect did not complete.
+            let hash = crate::runtime::authn::hash_secret(&login.session_id, &authn.hash_key());
+            let now = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .expect("clock after epoch")
+                .as_secs();
+            assert!(
+                PostgresSessionStore::new(pool.clone(), "")
+                    .revoke(&hash, now)
+                    .await
+                    .expect("prepare partially revoked session")
+            );
+        }
+        let request = authn_pb::RevokeSessionRequest {
+            session_id: login.session_id.clone(),
+            revoke_reason: "live family revocation regression".to_string(),
+            context: Some(revocation_fixture_context()),
+            ..Default::default()
+        };
+        let revoked = authn
+            .revoke_session(Request::new(request.clone()))
+            .await
+            .expect("revoke session and its family")
+            .into_inner();
+        assert_eq!(revoked.revoked_count, i32::from(!session_already_revoked));
+        let validated = authn
+            .validate_token(Request::new(authn_pb::ValidateTokenRequest {
+                token: rotated.access_token.clone(),
+                token_type: authn_entity_pb::TokenType::JwtAccess as i32,
+            }))
+            .await
+            .expect("validate previously refreshed bearer")
+            .into_inner();
+        assert!(
+            !validated.valid,
+            "family-issued bearer must also be revoked"
+        );
+        let bearer_denied = authn
+            .authenticate(Request::new(authn_pb::AuthnRequest {
+                bearer_token: rotated.access_token,
+                ..Default::default()
+            }))
+            .await
+            .expect_err("ordinary bearer authentication must see family revocation");
+        assert_eq!(bearer_denied.code(), tonic::Code::Unauthenticated);
+        let denied = authn
+            .refresh_token(Request::new(authn_pb::RefreshTokenRequest {
+                refresh_token: rotated.refresh_token.clone(),
+                ..Default::default()
+            }))
+            .await
+            .expect_err("a revoked session family cannot mint another bearer");
+        assert_eq!(denied.code(), tonic::Code::Unauthenticated);
+        let retry = authn
+            .revoke_session(Request::new(request))
+            .await
+            .expect("repeat complete revocation")
+            .into_inner();
+        assert_eq!(retry.revoked_count, 0);
+    }
+    cleanup_native_auth_db(&pool).await;
+}
+
+#[tokio::test]
+#[ignore = "requires live Postgres; run in the unfiltered native live lane"]
+async fn live_postgres_revoke_principal_closes_every_family_preserves_other_user() {
+    let _guard = live_auth_db_lock().lock().await;
+    let pool = live_pg_pool().await;
+    migrate_native_auth_db(&pool).await;
+    let authn = authn_service_with_jwt(pool.clone());
+    let target = create_verified_user(&authn, "revoke-principal", "CorrectHorse1!").await;
+    let survivor = create_verified_user(&authn, "surviving-principal", "CorrectHorse1!").await;
+    let mut target_refresh = Vec::new();
+    let mut survivor_refresh = String::new();
+    for user in [&target, &target, &survivor] {
+        let login = authn
+            .login(Request::new(authn_pb::LoginRequest {
+                username: user.email.clone(),
+                password: "CorrectHorse1!".to_string(),
+                device_name: uuid::Uuid::new_v4().to_string(),
+                ..Default::default()
+            }))
+            .await
+            .expect("login before principal revocation")
+            .into_inner();
+        assert!(login.refresh_token.starts_with("rt_"));
+        if user.user_id == target.user_id {
+            target_refresh.push(login.refresh_token);
+        } else {
+            survivor_refresh = login.refresh_token;
+        }
+    }
+    let request = authn_pb::RevokeSessionRequest {
+        all_for_principal: true,
+        principal_id: target.user_id,
+        context: Some(revocation_fixture_context()),
+        ..Default::default()
+    };
+    let revoked = authn
+        .revoke_session(Request::new(request.clone()))
+        .await
+        .expect("revoke both target sessions and families")
+        .into_inner();
+    assert_eq!(revoked.revoked_count, 2);
+    for refresh_token in target_refresh {
+        let denied = authn
+            .refresh_token(Request::new(authn_pb::RefreshTokenRequest {
+                refresh_token,
+                ..Default::default()
+            }))
+            .await
+            .expect_err("every target family must refuse refresh");
+        assert_eq!(denied.code(), tonic::Code::Unauthenticated);
+    }
+    let survivor_rotated = authn
+        .refresh_token(Request::new(authn_pb::RefreshTokenRequest {
+            refresh_token: survivor_refresh,
+            ..Default::default()
+        }))
+        .await
+        .expect("another principal's family remains active")
+        .into_inner();
+    assert!(!survivor_rotated.access_token.is_empty());
+    let retry = authn
+        .revoke_session(Request::new(request))
+        .await
+        .expect("repeat principal revocation")
+        .into_inner();
+    assert_eq!(retry.revoked_count, 0);
+    authn
+        .refresh_token(Request::new(authn_pb::RefreshTokenRequest {
+            refresh_token: survivor_rotated.refresh_token,
+            ..Default::default()
+        }))
+        .await
+        .expect("idempotent retry preserves the unrelated family");
+    cleanup_native_auth_db(&pool).await;
+}
+
 #[tokio::test]
 #[ignore = "requires live Postgres; run with UDB_LIVE_AUTH_TESTS=1 cargo test --lib live_postgres_jwt_validation_binds_user_status -- --ignored --nocapture"]
 async fn live_postgres_jwt_validation_binds_user_status() {

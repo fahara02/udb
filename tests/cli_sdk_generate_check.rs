@@ -151,7 +151,7 @@ fn assert_exit(output: &Output, code: i32) {
 #[test]
 fn generate_check_honors_templates_output_language_selectors_and_aliases() {
     let fixture = Fixture::new();
-    let selectors = ["--surface", "public"];
+    let selectors = ["--surface", "control_plane"];
     assert_exit(
         &fixture.run(Some("generate"), "python", &fixture.output, &selectors),
         0,

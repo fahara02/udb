@@ -695,6 +695,7 @@ function fullSurfaceManifestFixtures(): PerfFixtures {
     message_type: LIVE_MESSAGE_TYPE, record_id: "record-1", bucket: "bucket-1", object_key: "object-1",
     multipart_bucket: "bucket-1", multipart_object_key: "multipart-1", multipart_upload_id: "upload-1",
     multipart_etag: "etag-1", ack_workflow_id: "workflow-ack-1",
+    cdc_ack_event_id: "00000000-0000-4000-8000-000000000003", cdc_ack_topic: "udb.sdk.benchmark.ack",
     document_id: "document-1", mongo_collection: "collection_1", node_id: "node-1",
     user_id: "user-1", subject: "user:user-1", session_id: "session-1", token: "token-1",
     grant_binding_id: "grant-binding-1", grant_create_user_id: "grant-create-user-1",
@@ -2121,13 +2122,13 @@ async function seedPerfFixtures(
   platformActorUserId: string,
 ): Promise<SeedResult> {
   const fix = fullSurfaceManifestFixtures();
-  for (const key of ["multipart_bucket", "multipart_object_key", "multipart_upload_id", "multipart_etag", "ack_workflow_id"]) fix.clear(key);
+  for (const key of ["multipart_bucket", "multipart_object_key", "multipart_upload_id", "multipart_etag", "ack_workflow_id", "cdc_ack_event_id", "cdc_ack_topic"]) fix.clear(key);
   if (process.env.UDB_BENCH_FIXTURES) {
     const prepared = JSON.parse(readFileSync(process.env.UDB_BENCH_FIXTURES, "utf8"));
     if (prepared.schema_version !== 1 || prepared.tenant_id !== tenantId || prepared.project_id !== projectId) {
       throw new Error("prepared benchmark fixtures do not match the verified tenant/project");
     }
-    for (const key of ["multipart_bucket", "multipart_object_key", "multipart_upload_id", "multipart_etag", "ack_workflow_id"]) {
+    for (const key of ["multipart_bucket", "multipart_object_key", "multipart_upload_id", "multipart_etag", "ack_workflow_id", "cdc_ack_event_id", "cdc_ack_topic"]) {
       const value = prepared.fixtures?.[key];
       if (typeof value !== "string" || !value) throw new Error(`prepared benchmark fixtures missing ${key}`);
       fix.set(key, value);

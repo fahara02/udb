@@ -16,6 +16,7 @@ mod authn_otp_password_live;
 mod authn_redis_live;
 mod authn_security_live;
 mod authn_session_live;
+mod authn_session_validate_touch_live;
 mod authn_user_live;
 mod authn_webauthn_noleak_live;
 mod authz_admin_live;
@@ -36,6 +37,7 @@ mod jwks_bearer_dos_live;
 #[cfg(feature = "kafka")]
 mod notification_events_live;
 mod notification_live;
+mod password_cpu_live;
 mod service_caller_conformance_live;
 mod support;
 mod tenant_live;

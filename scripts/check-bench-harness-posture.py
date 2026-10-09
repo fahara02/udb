@@ -31,7 +31,7 @@ CHECKS: tuple[SourceCheck, ...] = (
             "go test ./... -p 1 -run '^TestLive' -skip '^TestLivePerf$' -count=1 -v -timeout 15m",
             'test "${UDB_LIVE_SDK_TESTS:-}" = "1"',
             'if [ "${1:-}" = "go-correctness" ]; then',
-            '--username "${UDB_LIVE_PEER_USERNAME}" --password "${UDB_LIVE_PEER_PASSWORD}" --tenant "${UDB_LIVE_PEER_TENANT}"',
+            '--username "${UDB_LIVE_PEER_USERNAME}" --email "sdk-live-peer@example.invalid" --password "${UDB_LIVE_PEER_PASSWORD}" --tenant "${UDB_LIVE_PEER_TENANT}"',
             "bash bench-output/reset.sh go-correctness",
             'UDB_LIVE_TENANT="${UDB_LIVE_PEER_TENANT}" python scripts/bootstrap_benchmark_project_catalog.py',
             "bench-output/logs/go-correctness-reset.log",

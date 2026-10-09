@@ -31,7 +31,7 @@ func loadPreparedBenchmarkFixtures(t testing.TB, fix *perfFixtures, tenant, proj
 	if prepared.SchemaVersion != 1 || prepared.TenantID != tenant || prepared.ProjectID != project {
 		t.Fatal("prepared benchmark fixtures do not match the verified tenant/project")
 	}
-	for _, key := range []string{"multipart_bucket", "multipart_object_key", "multipart_upload_id", "multipart_etag", "ack_workflow_id"} {
+	for _, key := range []string{"multipart_bucket", "multipart_object_key", "multipart_upload_id", "multipart_etag", "ack_workflow_id", "cdc_ack_event_id", "cdc_ack_topic"} {
 		value := prepared.Fixtures[key]
 		if value == "" {
 			t.Fatalf("prepared benchmark fixtures missing %s", key)

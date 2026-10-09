@@ -1,0 +1,9 @@
+syntax = "proto3";
+package consumer.foreign.v1;
+option go_package = "example.com/consumer/gen/foreign;foreignpb";
+
+enum State {
+  STATE_UNSPECIFIED = 0;
+  STATE_READY = 1;
+  STATE_CLOSED = 2;
+}

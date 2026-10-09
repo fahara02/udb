@@ -87,7 +87,7 @@ fn session_internal_status(operation: impl Into<String>, message: impl Into<Stri
 }
 
 /// Bind token-family side effects to the same validated tenant/project authority
-/// as the Logout request. A served request with no body scope inherits the
+/// as the Logout or RevokeSession request. A served request with no body scope inherits the
 /// bearer claim; a conflicting body scope is rejected. Direct in-process callers
 /// retain their explicit body scope through the shared resolver contract.
 fn logout_family_scope(
@@ -843,8 +843,11 @@ impl AuthnServiceImpl {
     ) -> Result<Response<authn_pb::RevokeSessionResponse>, Status> {
         let req = request.into_inner();
         let now = now_unix();
+        let (tenant_id, project_id) = logout_family_scope(req.context.as_ref())?;
         if req.all_for_principal && !req.principal_id.trim().is_empty() {
             let propagation_started = std::time::Instant::now();
+            self.revoke_families_for_principal(&req.principal_id, &tenant_id, &project_id)
+                .await?;
             let n = self
                 .sessions
                 .revoke_all_for_principal(&req.principal_id, now)
@@ -867,6 +870,11 @@ impl AuthnServiceImpl {
             .revoke(&hash, now)
             .await
             .map_err(|err| session_internal_status("revoke_session", err))?;
+        // A family rotation authenticates its own credential, so invalidating
+        // the session alone cannot stop it minting another access token. Replay
+        // this idempotent revoke even after a partially completed earlier call.
+        self.revoke_families_for_session(&req.session_id, &tenant_id, &project_id)
+            .await?;
         if ok {
             // I2.3 — push the revoked session handle (which is the JWT `jti` for any
             // access token issued against this session) onto the durable cluster-wide

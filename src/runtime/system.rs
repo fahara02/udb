@@ -1752,9 +1752,17 @@ fn system_catalog_statements(config: &SystemCatalogConfig) -> Vec<String> {
                 consumer_name TEXT NOT NULL,
                 topic_pattern TEXT NOT NULL,
                 last_event_id UUID NOT NULL,
+                owner_identity TEXT NOT NULL DEFAULT '',
+                last_published_at TIMESTAMPTZ NOT NULL DEFAULT 'epoch',
                 acked_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
                 PRIMARY KEY (tenant_id, project_id, consumer_name, topic_pattern)
             )",
+            config.cdc_consumer_cursors_relation()
+        ),
+        // Legacy rows stay unowned until an operator explicitly migrates them.
+        format!(
+            "ALTER TABLE {} ADD COLUMN IF NOT EXISTS owner_identity TEXT NOT NULL DEFAULT '', \
+             ADD COLUMN IF NOT EXISTS last_published_at TIMESTAMPTZ NOT NULL DEFAULT 'epoch'",
             config.cdc_consumer_cursors_relation()
         ),
         // ── Phase 7 — Topic policy ────────────────────────────────────────────

@@ -26,6 +26,7 @@ use crate::runtime::native_catalog::{NativeModel, native_model};
 
 /// RFC 6238 TOTP for native MFA (enrollment, verification, secret-at-rest).
 pub mod mfa_challenge;
+pub(crate) mod password_cpu;
 pub mod profile;
 pub mod revocation;
 pub mod signing_keys;
@@ -285,6 +286,25 @@ impl SessionRecord {
     }
     pub fn is_active_with_idle(&self, now_unix: u64, idle_ttl_secs: u64) -> bool {
         self.is_active(now_unix) && !self.is_idle_expired(now_unix, idle_ttl_secs)
+    }
+}
+
+/// Verified identity a JWT-backed session must retain while it is validated.
+/// Raw-session authentication has no prior verified identity and omits this.
+#[derive(Debug, Clone)]
+pub struct SessionValidationScope {
+    pub principal_id: String,
+    pub tenant_id: String,
+    pub project_id: String,
+    pub service_identity: String,
+}
+
+impl SessionValidationScope {
+    fn matches(&self, record: &SessionRecord) -> bool {
+        self.principal_id == record.principal_id
+            && self.tenant_id == record.tenant_id
+            && self.project_id == record.project_id
+            && self.service_identity == record.service_identity
     }
 }
 
@@ -1008,6 +1028,28 @@ pub trait SessionStore: Send + Sync {
         record.updated_at_unix = now_unix;
         self.put(&record).await
     }
+    /// Validate and touch through the configured adapter. Transactional stores
+    /// can override this to return only the row whose activity they updated.
+    /// The default preserves the existing non-Postgres adapter operations.
+    async fn validate_and_touch(
+        &self,
+        session_id_hash: &str,
+        now_unix: u64,
+        idle_ttl_secs: u64,
+        expected: Option<&SessionValidationScope>,
+    ) -> Result<Option<SessionRecord>, String> {
+        let Some(mut record) = self.get(session_id_hash).await? else {
+            return Ok(None);
+        };
+        if !record.is_active_with_idle(now_unix, idle_ttl_secs)
+            || expected.is_some_and(|scope| !scope.matches(&record))
+        {
+            return Ok(None);
+        }
+        self.touch_last_active(session_id_hash, now_unix).await?;
+        record.updated_at_unix = now_unix;
+        Ok(Some(record))
+    }
     async fn revoke_all_for_principal(
         &self,
         principal_id: &str,
@@ -1687,6 +1729,37 @@ impl PostgresSessionStore {
     fn relation(&self) -> String {
         self.model.relation.clone()
     }
+
+    fn record_projection(&self) -> String {
+        let m = &self.model;
+        let session_token_lookup = m.q("session_token_lookup");
+        let principal_id_select = m.select("principal_id");
+        let user_id_select = m.text("user_id");
+        let service_identity =
+            m.json_get_as("metadata_json", "service_identity", "service_identity");
+        let tenant_id_select = m.select("tenant_id");
+        let project_id = m.select("project_id");
+        let scopes = m.json_text_as("scopes_json", "scopes");
+        let roles = m.json_coalesce_as("metadata_json", "roles", "[]", "roles");
+        let relationship_version = m.json_get_as(
+            "metadata_json",
+            "relationship_version",
+            "relationship_version",
+        );
+        let client_fingerprint =
+            m.json_get_as("metadata_json", "client_fingerprint", "client_fingerprint");
+        let created_at_unix = m.timestamp_unix_as("created_at", "created_at_unix");
+        let updated_at_unix = m.timestamp_unix_as("last_active_at", "updated_at_unix");
+        let expires_at_unix = m.timestamp_unix_as("expires_at", "expires_at_unix");
+        let is_active = m.q("is_active");
+        let last_active_at = m.q("last_active_at");
+        format!(
+            "{session_token_lookup} AS session_id_hash, {principal_id_select}, {user_id_select}, {service_identity}, {tenant_id_select}, {project_id}, {scopes}, \
+             {roles}, {relationship_version}, {client_fingerprint}, \
+             {created_at_unix}, {updated_at_unix}, {expires_at_unix}, \
+             CASE WHEN {is_active} THEN 0 ELSE COALESCE(EXTRACT(EPOCH FROM {last_active_at})::BIGINT, 1) END AS revoked_at_unix"
+        )
+    }
 }
 
 impl PostgresSessionStore {
@@ -1805,32 +1878,9 @@ impl SessionStore for PostgresSessionStore {
         let rel = self.relation();
         let m = &self.model;
         let session_token_lookup = m.q("session_token_lookup");
-        let principal_id_select = m.select("principal_id");
-        let user_id_select = m.text("user_id");
-        let service_identity =
-            m.json_get_as("metadata_json", "service_identity", "service_identity");
-        let tenant_id_select = m.select("tenant_id");
-        let project_id = m.select("project_id");
-        let scopes = m.json_text_as("scopes_json", "scopes");
-        let roles = m.json_coalesce_as("metadata_json", "roles", "[]", "roles");
-        let relationship_version = m.json_get_as(
-            "metadata_json",
-            "relationship_version",
-            "relationship_version",
-        );
-        let client_fingerprint =
-            m.json_get_as("metadata_json", "client_fingerprint", "client_fingerprint");
-        let created_at_unix = m.timestamp_unix_as("created_at", "created_at_unix");
-        let updated_at_unix = m.timestamp_unix_as("last_active_at", "updated_at_unix");
-        let expires_at_unix = m.timestamp_unix_as("expires_at", "expires_at_unix");
-        let is_active = m.q("is_active");
-        let last_active_at = m.q("last_active_at");
+        let projection = self.record_projection();
         let row = sqlx::query(&format!(
-            "SELECT {session_token_lookup} AS session_id_hash, {principal_id_select}, {user_id_select}, {service_identity}, {tenant_id_select}, {project_id}, {scopes}, \
-                    {roles}, {relationship_version}, {client_fingerprint}, \
-                    {created_at_unix}, {updated_at_unix}, {expires_at_unix}, \
-                    CASE WHEN {is_active} THEN 0 ELSE COALESCE(EXTRACT(EPOCH FROM {last_active_at})::BIGINT, 1) END AS revoked_at_unix \
-             FROM {rel} WHERE {session_token_lookup} = $1"
+            "SELECT {projection} FROM {rel} WHERE {session_token_lookup} = $1"
         ))
         .bind(session_id_hash)
         .fetch_optional(&self.pool)
@@ -1840,6 +1890,86 @@ impl SessionStore for PostgresSessionStore {
             .map(session_from_row)
             .transpose()
             .map_err(|err| format!("decode session failed: {err}"))
+    }
+
+    async fn validate_and_touch(
+        &self,
+        session_id_hash: &str,
+        now_unix: u64,
+        idle_ttl_secs: u64,
+        expected: Option<&SessionValidationScope>,
+    ) -> Result<Option<SessionRecord>, String> {
+        let now = i64::try_from(now_unix).map_err(|_| {
+            crate::runtime::executor_utils::store_string_from_status(
+                "session_validate_and_touch",
+                &crate::runtime::executor_utils::invalid_argument_fields(
+                    "session validation time exceeds the supported range",
+                    [(
+                        "now_unix",
+                        "must fit within the supported signed Unix time range",
+                    )],
+                ),
+            )
+        })?;
+        // The decoded epoch values are clamped to zero. Use those same integer
+        // expressions in the predicate, including the zero/indefinite and
+        // future-last-active cases, rather than changing timestamp boundaries.
+        let m = &self.model;
+        let token = m.q("session_token_lookup");
+        let active = m.q("is_active");
+        let last_active = m.q("last_active_at");
+        let expires = m.q("expires_at");
+        let principal = m.q("principal_id");
+        let tenant = m.q("tenant_id");
+        let project = m.q("project_id");
+        let metadata = m.q("metadata_json");
+        let expires_epoch =
+            format!("GREATEST(COALESCE(EXTRACT(EPOCH FROM {expires})::BIGINT, 0), 0)");
+        let active_epoch =
+            format!("GREATEST(COALESCE(EXTRACT(EPOCH FROM {last_active})::BIGINT, 0), 0)");
+        let projection = self.record_projection();
+        // UPDATE rechecks its predicates after a concurrent revocation's row
+        // lock is released. RETURNING is therefore the validation result; a
+        // stale SELECT followed by an update affecting zero rows cannot succeed.
+        // This canonical store retains its existing pool/RLS authority. Verified
+        // JWT scope is also bound explicitly, without changing raw-session calls.
+        let sql = format!(
+            "/* udb_session_validate_and_touch */ UPDATE {rel} \
+             SET {last_active} = to_timestamp($2::BIGINT::DOUBLE PRECISION) \
+             WHERE {token} = $1 AND {active} \
+               AND ({expires_epoch} = 0 OR $2::BIGINT < {expires_epoch}) \
+               AND ($3::BIGINT = 0 OR {active_epoch} = 0 OR $2::BIGINT - {active_epoch} <= $3::BIGINT) \
+               AND ($4::TEXT IS NULL OR ({principal}::TEXT = $4 AND {tenant}::TEXT = $5 \
+                    AND COALESCE({project}::TEXT, '') = $6 \
+                    AND COALESCE({metadata}->>'service_identity', '') = $7)) \
+             RETURNING {projection}",
+            rel = self.relation(),
+        );
+        let row = sqlx::query(&sql)
+            .bind(session_id_hash)
+            .bind(now)
+            .bind(i64::try_from(idle_ttl_secs).unwrap_or(i64::MAX))
+            .bind(expected.map(|scope| scope.principal_id.as_str()))
+            .bind(expected.map(|scope| scope.tenant_id.as_str()))
+            .bind(expected.map(|scope| scope.project_id.as_str()))
+            .bind(expected.map(|scope| scope.service_identity.as_str()))
+            .fetch_optional(&self.pool)
+            .await
+            .map_err(|err| {
+                crate::runtime::executor_utils::sqlx_error_to_tagged_string(
+                    "session_validate_and_touch",
+                    &err,
+                )
+            })?;
+        row.as_ref()
+            .map(session_from_row)
+            .transpose()
+            .map_err(|err| {
+                crate::runtime::executor_utils::sqlx_error_to_tagged_string(
+                    "session_validate_and_touch_decode",
+                    &err,
+                )
+            })
     }
 
     async fn revoke(&self, session_id_hash: &str, now_unix: u64) -> Result<bool, String> {
@@ -3720,15 +3850,24 @@ pub async fn validate_session(
     idle_ttl_secs: u64,
 ) -> Result<Option<SessionRecord>, String> {
     let hash = hash_secret(raw_session_id, hash_key);
-    let Some(mut rec) = store.get(&hash).await? else {
-        return Ok(None);
-    };
-    if !rec.is_active_with_idle(now_unix, idle_ttl_secs) {
-        return Ok(None);
-    }
-    rec.updated_at_unix = now_unix;
-    store.touch_last_active(&hash, now_unix).await?;
-    Ok(Some(rec))
+    store
+        .validate_and_touch(&hash, now_unix, idle_ttl_secs, None)
+        .await
+}
+
+/// Validate a session-backed JWT without touching a different durable identity.
+pub async fn validate_session_for_scope(
+    store: &dyn SessionStore,
+    raw_session_id: &str,
+    hash_key: &[u8],
+    now_unix: u64,
+    idle_ttl_secs: u64,
+    expected: &SessionValidationScope,
+) -> Result<Option<SessionRecord>, String> {
+    let hash = hash_secret(raw_session_id, hash_key);
+    store
+        .validate_and_touch(&hash, now_unix, idle_ttl_secs, Some(expected))
+        .await
 }
 
 /// Refresh an active session: extend its absolute expiry to `now_unix +

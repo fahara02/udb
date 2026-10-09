@@ -1,0 +1,43 @@
+syntax = "proto3";
+package consumer.fixture.v1;
+option go_package = "example.com/consumer/gen;fixturepb";
+
+import "google/protobuf/timestamp.proto";
+import "udb/core/common/v1/db.proto";
+import "foreign.proto";
+
+message Details {
+  string label = 1;
+  int64 exact = 2;
+  consumer.foreign.v1.State state = 3;
+}
+
+message Shape {
+  option (udb.core.common.v1.pg_table) = {
+    table_name: "shapes"
+    schema_name: "consumer_fixture"
+    is_table: true
+  };
+  string id = 1 [(udb.core.common.v1.pg_column) = { sql_type: "TEXT" primary_key: true not_null: true }];
+  string tenant_id = 2 [(udb.core.common.v1.pg_column) = { sql_type: "TEXT" tenant_column: true not_null: true }];
+  int64 exact = 3 [(udb.core.common.v1.pg_column) = { sql_type: "BIGINT" not_null: true }];
+  optional string nickname = 4 [(udb.core.common.v1.pg_column) = { sql_type: "TEXT" }];
+  repeated string tags = 5 [(udb.core.common.v1.pg_column) = { sql_type: "TEXT[]" }];
+  repeated int64 counters = 6 [(udb.core.common.v1.pg_column) = { sql_type: "BIGINT[]" }];
+  repeated consumer.foreign.v1.State states = 7 [(udb.core.common.v1.pg_column) = { sql_type: "TEXT[]" }];
+  map<string, string> labels = 8 [(udb.core.common.v1.pg_column) = { sql_type: "JSONB" }];
+  map<string, Details> details_by_name = 9 [(udb.core.common.v1.pg_column) = { sql_type: "JSONB" }];
+  map<string, consumer.foreign.v1.State> states_by_name = 10 [(udb.core.common.v1.pg_column) = { sql_type: "JSONB" }];
+  consumer.foreign.v1.State state = 11 [(udb.core.common.v1.pg_column) = { sql_type: "TEXT" not_null: true }];
+  oneof choice {
+    string choice_text = 12 [(udb.core.common.v1.pg_column) = { sql_type: "TEXT" }];
+    int64 choice_number = 13 [(udb.core.common.v1.pg_column) = { sql_type: "BIGINT" }];
+    Details choice_details = 14 [(udb.core.common.v1.pg_column) = { sql_type: "JSONB" }];
+  }
+  google.protobuf.Timestamp observed_at = 15 [(udb.core.common.v1.pg_column) = { sql_type: "TIMESTAMPTZ" }];
+  bytes payload = 16 [(udb.core.common.v1.pg_column) = { sql_type: "BYTEA" }];
+  Details details = 17 [(udb.core.common.v1.pg_column) = { sql_type: "JSONB" }];
+  uint32 port = 18 [(udb.core.common.v1.pg_column) = { sql_type: "BIGINT" not_null: true }];
+  optional consumer.foreign.v1.State optional_state = 19 [(udb.core.common.v1.pg_column) = { sql_type: "TEXT" }];
+  Details json_details = 20 [(udb.core.common.v1.pg_column) = { sql_type: "JSON" }];
+}

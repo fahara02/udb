@@ -235,12 +235,12 @@ jobs:
             exit 1
           fi
           # Match the shipped full Linux profile, features and CPU floor.
-          export RUSTFLAGS="-C target-cpu=x86-64 ${RUSTFLAGS:-}"
+          export RUSTFLAGS="-C target-cpu=x86-64-v2 ${RUSTFLAGS:-}"
           cargo build --profile dist --locked --bin udb --features oidc,webauthn,webrtc
           cp target/dist/udb bench-output/bin/udb-candidate
           binary_sha256="$(sha256sum bench-output/bin/udb-candidate | cut -d' ' -f1)"
           binary_version="$(bench-output/bin/udb-candidate --version)"
-          printf '{"commit":"%s","sha256":"%s","version":"%s","profile":"dist","purpose":"pre-release correctness"}\n' \
+          printf '{"commit":"%s","sha256":"%s","version":"%s","profile":"dist","target_cpu":"x86-64-v2","purpose":"pre-release correctness"}\n' \
             "$candidate_sha" "$binary_sha256" "$binary_version" > bench-output/candidate-provenance.json
           echo "UDB_BENCH_BIN=${GITHUB_WORKSPACE}/bench-output/bin/udb-candidate" >> "$GITHUB_ENV"
           echo "Candidate broker: $binary_version at $candidate_sha"
@@ -352,7 +352,7 @@ jobs:
           "${UDB_BENCH_BIN}" auth bootstrap user --username "${UDB_LIVE_PLATFORM_USERNAME}" --email "sdk-live-platform@example.invalid" --password "${UDB_LIVE_PLATFORM_PASSWORD}" --tenant "${UDB_LIVE_TENANT}" --project "${UDB_LIVE_PROJECT}" --platform-admin
           # The candidate correctness suite also proves a real peer-tenant boundary.
           if [ "${1:-}" = "go-correctness" ]; then
-            "${UDB_BENCH_BIN}" auth bootstrap user --username "${UDB_LIVE_PEER_USERNAME}" --password "${UDB_LIVE_PEER_PASSWORD}" --tenant "${UDB_LIVE_PEER_TENANT}" --project "${UDB_LIVE_PROJECT}"
+            "${UDB_BENCH_BIN}" auth bootstrap user --username "${UDB_LIVE_PEER_USERNAME}" --email "sdk-live-peer@example.invalid" --password "${UDB_LIVE_PEER_PASSWORD}" --tenant "${UDB_LIVE_PEER_TENANT}" --project "${UDB_LIVE_PROJECT}"
           fi
           tid="$(psql -h localhost -p 5432 -U udb -d udb_ci -tAq -c "SELECT tenant_id::text FROM udb_tenant.tenants WHERE code='sdk-live' OR name='sdk-live' LIMIT 1;")"
           [ -n "$tid" ] || { echo "no tenant_id for sdk-live"; exit 1; }
@@ -600,6 +600,95 @@ jobs:
           # already measured canonical performance sweep is excluded.
           ( cd sdk/go && go test ./... -p 1 -run '^TestLive' -skip '^TestLivePerf$' -count=1 -v -timeout 15m ) 2>&1 | tee bench-output/logs/go-correctness.log
 
+      - name: Profile warmed RPCs during idle and concurrent password work
+        if: always() && inputs.candidate-build
+        timeout-minutes: 8
+        shell: bash
+        env:
+          UDB_LIVE_LATENCY_PROFILE: "1"
+          UDB_LIVE_LATENCY_REPORT: ${{ github.workspace }}/bench-output/latency-profile.json
+          UDB_METRICS_URL: http://127.0.0.1:19092/metrics
+        run: |
+          set -euo pipefail
+          bash bench-output/reset.sh latency-profile 2>&1 | tee bench-output/logs/latency-profile-reset.log
+          export UDB_BROKER_PID="$(cat /tmp/udb-bench.pid)"
+          ( cd sdk/go && go test ./udbclient -run '^TestLiveLatencyProfile$' -count=1 -v -timeout 5m ) 2>&1 | tee bench-output/logs/latency-profile.log
+
+      # A separate proof broker retains the prepared DB/catalog and exact private
+      # runtime environment. Never shorten tokens used by the measured sweeps or
+      # the broad correctness fixtures above.
+      - name: Prove Go sessions across three real 20-second renewals and re-login
+        if: inputs.candidate-build
+        timeout-minutes: 8
+        shell: bash
+        env:
+          UDB_LIVE_G1_SESSION_PROOF: "1"
+          UDB_JWT_ACCESS_TTL_SECONDS: "20"
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import os
+          from pathlib import Path
+          import signal
+          import subprocess
+          import time
+
+          import grpc
+
+          pid_path = Path("/tmp/udb-bench.pid")
+          pid = int(pid_path.read_text().strip())
+          if pid <= 1:
+              raise SystemExit("Invalid workflow-owned broker PID")
+          proc = Path(f"/proc/{pid}")
+          # Read these only in memory; credentials never enter logs/artifacts.
+          argv = [os.fsdecode(value) for value in (proc / "cmdline").read_bytes().split(b"\0")[:-1]]
+          expected = Path(os.environ["UDB_BENCH_BIN"]).resolve()
+          if not argv or Path(argv[0]).resolve() != expected or argv[1:] != ["serve", "proto", "", "127.0.0.1:50051"]:
+              raise SystemExit("PID does not identify this workflow's configured broker")
+          broker_env = dict(os.fsdecode(value).split("=", 1) for value in (proc / "environ").read_bytes().split(b"\0") if value)
+          broker_cwd = os.readlink(proc / "cwd")
+          broker_env["UDB_JWT_ACCESS_TTL_SECONDS"] = "20"
+          os.kill(pid, signal.SIGTERM)
+          stop_deadline = time.monotonic() + 20
+          while proc.exists():
+              try:
+                  state = (proc / "stat").read_text().rsplit(")", 1)[1].split()[0]
+              except FileNotFoundError:
+                  break
+              if state == "Z":
+                  break
+              if time.monotonic() >= stop_deadline:
+                  raise SystemExit("Workflow broker did not stop for the dedicated session proof")
+              time.sleep(0.1)
+          with Path("/tmp/udb-g1-session.log").open("wb") as output:
+              broker = subprocess.Popen(argv, cwd=broker_cwd, env=broker_env, stdout=output, stderr=subprocess.STDOUT, start_new_session=True)
+          # Always-run cleanup already owns this PID file.
+          pid_path.write_text(str(broker.pid) + "\n")
+          channels = [grpc.insecure_channel(broker_env[name]) for name in ("UDB_GRPC_TARGET", "UDB_AUTH_GRPC_TARGET")]
+          try:
+              deadline = time.monotonic() + 120
+              while True:
+                  if broker.poll() is not None:
+                      raise SystemExit("Dedicated session-proof broker exited before readiness")
+                  ready = True
+                  for channel in channels:
+                      try:
+                          # Empty service request; HealthCheckResponse status=SERVING.
+                          ready = channel.unary_unary("/grpc.health.v1.Health/Check")(b"", timeout=1) == b"\x08\x01" and ready
+                      except grpc.RpcError:
+                          ready = False
+                  if ready:
+                      break
+                  if time.monotonic() >= deadline:
+                      raise SystemExit("Dedicated broker listeners did not report SERVING")
+                  time.sleep(0.5)
+          finally:
+              for channel in channels:
+                  channel.close()
+          print("Dedicated candidate broker ready: access TTL=20s; runtime settings preserved")
+          PY
+          ( cd sdk/go && go test ./udbclient -run '^TestLiveG1SessionLifecycle$' -count=1 -v -timeout 3m ) 2>&1 | tee bench-output/logs/go-g1-session.log
+
       - name: Fetch previous benchmark history
         if: always()
         shell: bash
@@ -638,6 +727,7 @@ jobs:
             bench-output/backend-bootstrap.json
             bench-output/candidate-provenance.json
             /tmp/udb-bench.log
+            /tmp/udb-g1-session.log
           if-no-files-found: ignore
 
       - name: Fail on benchmark failures

@@ -9,6 +9,26 @@ release line was tagged.
 
 ### Fixed
 
+- Password hashing and verification use one hardware-sized CPU admission budget
+  and Tokio blocking workers. Running computations retain their permits after
+  caller cancellation; queued cancellation never starts another computation.
+- Session revocation closes its refresh-token families, including retries after
+  an earlier partial failure. Rotated access tokens check durable family state.
+- PostgreSQL session validation binds the verified identity and updates activity
+  in one atomic statement. Concurrent revocation cannot turn a stale validation
+  read into success, and successful validation uses one fewer query and pool borrow.
+- Durable CDC acknowledgements bind the verified credential owner, validate the
+  retained event and current read policy, and retain a monotonic named cursor.
+  Named delivery drains retained journal order when local broadcasts wake it.
+- SDK benchmark acknowledgement bodies use a real retained event prepared
+  through the serving APIs. Candidate correctness fixtures use distinct emails.
+- Go consumer adapters encode maps and oneofs through the shared record codec,
+  identify JSON columns and refuse unknown enum tokens. CI generates and compiles
+  consumer fixtures using the pinned protobuf toolchain.
+- Candidate CI records warmed Select and capability latency both idle and during
+  concurrent password logins, with individual samples and host/metrics evidence.
+  A separate CI comparison requires the original password timer starvation and
+  the corrected serving result using the same real PostgreSQL fixture.
 - Go sessions retain the issued token lifetime when scheduling renewal, including
   short-lived bearers. Concurrent refresh callers share their own flight result
   and cannot reinstall a retired credential. Automatic renewal preserves the

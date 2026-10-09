@@ -442,6 +442,12 @@ fn replay_sql_from_anchor(journal_relation: &str, limit: i64) -> String {
     )
 }
 
+// Named durable cursors compare native UUIDs, exactly as monotonic settlement
+// does. Keep the existing anonymous query/bind contract source-compatible.
+fn named_replay_sql_from_anchor(journal_relation: &str, limit: i64) -> String {
+    replay_sql_from_anchor(journal_relation, limit).replace("event_id::TEXT", "event_id")
+}
+
 /// Bounded per-stream de-dup window for `stream_cdc`'s hybrid delivery: returns
 /// `true` if `id` is newly admitted (first time seen), `false` if it was already
 /// delivered (via the other source). Evicts the oldest id past `window`. This is
@@ -483,13 +489,28 @@ async fn cdc_journal_poll(
     seen: &mut std::collections::HashSet<String>,
     order: &mut std::collections::VecDeque<String>,
     window: usize,
+    native_uuid_order: bool,
 ) -> Result<Vec<CdcEnvelope>, tonic::Status> {
     let mut out = Vec::new();
     // Bind owned/copied cursor values so the live stream can mutate the cursor.
-    let mut rows = sqlx::query(sql)
-        .bind(*cursor_ts)
-        .bind(cursor_id.clone())
-        .fetch(pool);
+    let query = sqlx::query(sql).bind(*cursor_ts);
+    let query = if native_uuid_order {
+        let event_id = if cursor_id.is_empty() {
+            Uuid::nil()
+        } else {
+            Uuid::parse_str(cursor_id).map_err(|_| {
+                crate::runtime::executor_utils::internal_status(
+                    "cdc",
+                    "stream_journal_cursor",
+                    "CDC durable journal cursor has an invalid event_id",
+                )
+            })?
+        };
+        query.bind(event_id)
+    } else {
+        query.bind(cursor_id.clone())
+    };
+    let mut rows = query.fetch(pool);
     while let Some(row) = tokio_stream::StreamExt::next(&mut rows).await {
         let record = row.map_err(|err| cdc_stream_journal_unavailable("journal_poll", &err))?;
         // Decode the ENTIRE durable row before advancing. A corrupt/shape-drifted
@@ -1696,6 +1717,80 @@ impl CdcEngine {
         }
     }
 
+    pub(crate) fn validate_consumer_subscription(
+        &self,
+        scopes: &[String],
+        topic_pattern: &str,
+        tenant_scope: &str,
+        project_scope: &str,
+    ) -> Result<(), tonic::Status> {
+        Self::ensure_stream_read_scope(scopes)?;
+        let privileged = cdc_stream_privileged(scopes);
+        let snapshot = self.topic_policies.load_full();
+        ensure_cdc_stream_policy_current(
+            &snapshot,
+            topic_pattern,
+            tenant_scope,
+            project_scope,
+            privileged,
+        )?;
+        if !privileged
+            && tenant_scope.is_empty()
+            && topic_pattern_may_match_tenant_scoped(topic_pattern)
+        {
+            return Err(cdc_stream_policy_status(
+                "tenant_scope_required",
+                "tenant_id is required to stream tenant-scoped CDC topics",
+            ));
+        }
+        Ok(())
+    }
+
+    /// Validate a retained event against the same current authorization world
+    /// used for delivery; settlement must never authorize a broader event set.
+    #[allow(clippy::too_many_arguments)]
+    pub(crate) fn validate_consumer_event(
+        &self,
+        scopes: &[String],
+        topic_pattern: &str,
+        topic: &str,
+        payload: &serde_json::Value,
+        tenant_scope: &str,
+        project_scope: &str,
+    ) -> Result<(), tonic::Status> {
+        Self::ensure_stream_read_scope(scopes)?;
+        let privileged = cdc_stream_privileged(scopes);
+        let snapshot = self.topic_policies.load_full();
+        ensure_cdc_stream_policy_current(
+            &snapshot,
+            topic_pattern,
+            tenant_scope,
+            project_scope,
+            privileged,
+        )?;
+        if !WildMatch::new(topic_pattern).matches(topic)
+            || (snapshot.configured()
+                && snapshot
+                    .active_policy_for(topic, tenant_scope, project_scope, privileged)
+                    .is_none())
+            || !payload_value_matches_stream_scope(
+                topic,
+                payload,
+                tenant_scope,
+                project_scope,
+                privileged,
+                snapshot.active_topic_is_policy_owned(topic),
+            )
+        {
+            return Err(cdc_stream_policy_status(
+                "cdc_ack_event_scope_mismatch",
+                "acknowledged event is not authorized for this consumer's topic, tenant and project",
+            ));
+        }
+        Ok(())
+    }
+
+    /// Preserve the anonymous hybrid delivery contract.
     pub async fn stream_cdc(
         &self,
         scopes: Vec<String>,
@@ -1713,28 +1808,50 @@ impl CdcEngine {
         >,
         tonic::Status,
     > {
-        Self::ensure_stream_read_scope(&scopes)?;
+        self.stream_cdc_with_cursor(
+            scopes,
+            topic_pattern,
+            since_event_id,
+            tenant_id,
+            project_id,
+            None,
+            false,
+        )
+        .await
+    }
+
+    /// A named consumer drains durable journal order; broadcast only wakes that
+    /// drain. A stored watermark remains usable after its anchor row is pruned.
+    #[allow(clippy::too_many_arguments)]
+    pub(crate) async fn stream_cdc_with_cursor(
+        &self,
+        scopes: Vec<String>,
+        topic_pattern: String,
+        since_event_id: Option<String>,
+        tenant_id: Option<String>,
+        project_id: Option<String>,
+        watermark: Option<(DateTime<Utc>, String)>,
+        named: bool,
+    ) -> Result<
+        Pin<
+            Box<
+                dyn tokio_stream::Stream<Item = Result<CdcEnvelope, tonic::Status>>
+                    + Send
+                    + 'static,
+            >,
+        >,
+        tonic::Status,
+    > {
         let tenant_scope = scope_text(tenant_id);
         let project_scope = scope_text(project_id);
-        let privileged = cdc_stream_privileged(&scopes);
-        let matcher = WildMatch::new(&topic_pattern);
-        let initial_policy_snapshot = self.topic_policies.load_full();
-        ensure_cdc_stream_policy_current(
-            &initial_policy_snapshot,
+        self.validate_consumer_subscription(
+            &scopes,
             &topic_pattern,
             &tenant_scope,
             &project_scope,
-            privileged,
         )?;
-        if !privileged
-            && tenant_scope.is_empty()
-            && topic_pattern_may_match_tenant_scoped(&topic_pattern)
-        {
-            return Err(cdc_stream_policy_status(
-                "tenant_scope_required",
-                "tenant_id is required to stream tenant-scoped CDC topics",
-            ));
-        }
+        let privileged = cdc_stream_privileged(&scopes);
+        let matcher = WildMatch::new(&topic_pattern);
 
         use async_stream::try_stream;
 
@@ -1747,8 +1864,13 @@ impl CdcEngine {
         // Resolve and validate before returning the lazy stream. A malformed,
         // unknown, pruned, or temporarily unreadable cursor must fail this RPC;
         // none of those states may silently become a full-history epoch replay.
-        let initial_cursor =
-            resolve_cdc_stream_cursor(&pool, &journal_relation, since_event_id.as_deref()).await?;
+        let initial_cursor = match watermark {
+            Some(cursor) => cursor,
+            None => {
+                resolve_cdc_stream_cursor(&pool, &journal_relation, since_event_id.as_deref())
+                    .await?
+            }
+        };
 
         Ok(Box::pin(try_stream! {
             // Hybrid delivery (bug_report.md §R "kafka is not used"): an in-process
@@ -1761,7 +1883,11 @@ impl CdcEngine {
             const TAIL_BATCH: i64 = 1_000;
             const TAIL_POLL: std::time::Duration = std::time::Duration::from_millis(500);
             const DEDUP_WINDOW: usize = 16_384;
-            let tail_sql = replay_sql_from_anchor(&journal_relation, TAIL_BATCH);
+            let tail_sql = if named {
+                named_replay_sql_from_anchor(&journal_relation, TAIL_BATCH)
+            } else {
+                replay_sql_from_anchor(&journal_relation, TAIL_BATCH)
+            };
             let mut seen: std::collections::HashSet<String> = std::collections::HashSet::new();
             let mut order: std::collections::VecDeque<String> = std::collections::VecDeque::new();
 
@@ -1780,7 +1906,7 @@ impl CdcEngine {
                 let batch = cdc_journal_poll(
                     &pool, &tail_sql, &mut cursor_ts, &mut cursor_id, &matcher,
                     &tenant_scope, &project_scope, privileged, &policy_snapshot,
-                    &mut seen, &mut order, DEDUP_WINDOW,
+                    &mut seen, &mut order, DEDUP_WINDOW, named,
                 )
                 .await?;
                 let caught_up = batch.len() < TAIL_BATCH as usize;
@@ -1833,13 +1959,35 @@ impl CdcEngine {
                         cdc_journal_poll(
                             &pool, &tail_sql, &mut cursor_ts, &mut cursor_id, &matcher,
                             &tenant_scope, &project_scope, privileged, &policy_snapshot,
-                            &mut seen, &mut order, DEDUP_WINDOW,
+                            &mut seen, &mut order, DEDUP_WINDOW, named,
                         )
                         .await
                     ),
                 };
                 match wake {
                     StreamWake::Fast(received) => match received {
+                        Ok(envelope) if named => {
+                            // Unrelated traffic must not cause per-event database
+                            // polls. Matching traffic wakes a durable ordered drain.
+                            if matcher.matches(&envelope.topic)
+                                && (!policy_snapshot.configured() || policy_snapshot.active_policy_for(
+                                    &envelope.topic, &tenant_scope, &project_scope, privileged,
+                                ).is_some())
+                                && payload_string_matches_stream_scope(
+                                    &envelope.topic, &envelope.payload_json, &tenant_scope, &project_scope,
+                                    privileged, policy_snapshot.active_topic_is_policy_owned(&envelope.topic),
+                                )
+                            {
+                                let batch = cdc_journal_poll(
+                                    &pool, &tail_sql, &mut cursor_ts, &mut cursor_id, &matcher,
+                                    &tenant_scope, &project_scope, privileged, &policy_snapshot,
+                                    &mut seen, &mut order, DEDUP_WINDOW, named,
+                                ).await?;
+                                for envelope in batch {
+                                    yield envelope;
+                                }
+                            }
+                        }
                         Ok(envelope) => {
                             let policy_allowed = !policy_snapshot.configured()
                                 || policy_snapshot

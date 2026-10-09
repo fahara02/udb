@@ -21,7 +21,7 @@ import grpc
 from bootstrap_benchmark_project_catalog import required_env
 from udb.core.workflow.services.v1 import workflow_service_pb2 as workflow_pb
 from udb.core.workflow.services.v1 import workflow_service_pb2_grpc as workflow_grpc
-from udb.entity.v1 import admin_pb2, blob_pb2
+from udb.entity.v1 import admin_pb2, blob_pb2, cdc_pb2, outbox_pb2
 from udb.services.v1 import data_broker_pb2_grpc
 from udb_client.auth import UdbAuthClient
 from udb_client.metadata import Metadata
@@ -49,6 +49,37 @@ def main() -> int:
             grpc.insecure_channel(required_env("UDB_AUTH_GRPC_TARGET")) as native_channel:
         broker = data_broker_pb2_grpc.DataBrokerStub(data_channel)
         workflow = workflow_grpc.WorkflowServiceStub(native_channel)
+        # ACK measures a real retained event in this exact verified scope.
+        # Open the stream first and wait for its response headers so the event
+        # cannot race a fresh subscription's journal anchor.
+        ack_topic = "udb.sdk.benchmark.ack"
+        ack_document = str(uuid.uuid4())
+        events = broker.PublishCDC(cdc_pb2.CDCSubscriptionRequest(
+            context=context, topic_pattern=ack_topic), metadata=headers, timeout=30.0)
+        try:
+            events.initial_metadata()
+            event = broker.EnqueueOutboxEvent(outbox_pb2.EnqueueOutboxEventRequest(
+                context=context, topic=ack_topic, partition_key=ack_document,
+                payload={
+                    "event_id": str(uuid.uuid4()), "event_type": ack_topic,
+                    "correlation_id": str(uuid.uuid4()), "document_id": ack_document,
+                    "tenant_id": principal.tenant_id, "project_id": principal.project_id,
+                }), metadata=headers, timeout=15.0)
+            if not event.enqueued or not event.event_id:
+                raise RuntimeError("CDC acknowledgement fixture was not enqueued")
+            for envelope in events:
+                if envelope.event_id != event.event_id:
+                    continue
+                payload = json.loads(envelope.payload_json)
+                if (envelope.topic != ack_topic or payload.get("tenant_id") != principal.tenant_id
+                        or payload.get("project_id") != principal.project_id):
+                    raise RuntimeError("CDC acknowledgement event has a foreign scope")
+                break
+            else:
+                raise RuntimeError("CDC acknowledgement event was not delivered")
+            ack_event_id = event.event_id
+        finally:
+            events.cancel()
         bucket = os.getenv("UDB_LIVE_S3_BUCKET", "udb-live-sdk")
         broker.EnsureResource(admin_pb2.ResourceAdminRequest(
             context=context, backend="minio", resource_name=bucket, spec_json="{}"),
@@ -96,9 +127,10 @@ def main() -> int:
                 "multipart_bucket": bucket, "multipart_object_key": object_key,
                 "multipart_upload_id": upload.upload_id, "multipart_etag": etag,
                 "ack_workflow_id": instance.workflow_id,
+                "cdc_ack_event_id": ack_event_id, "cdc_ack_topic": ack_topic,
             },
         }, sort_keys=True) + "\n", encoding="utf-8")
-    print("Prepared real multipart and dispatched workflow benchmark fixtures")
+    print("Prepared real CDC event, multipart and dispatched workflow benchmark fixtures")
     return 0
 
 
