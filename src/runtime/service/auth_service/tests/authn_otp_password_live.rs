@@ -524,13 +524,39 @@ async fn live_postgres_admin_and_forgot_reset_share_cooldown() {
     cleanup_native_auth_db(&pool).await;
 }
 
+/// Capture only status codes and registered reasons; OTP responses contain
+/// secret proof material and must never be included in barrier diagnostics.
+async fn observe_otp_issuer<F, T>(
+    issuer: F,
+    completed: &std::sync::Mutex<[Option<String>; 2]>,
+    index: usize,
+) -> Result<tonic::Response<T>, tonic::Status>
+where
+    F: std::future::Future<Output = Result<tonic::Response<T>, tonic::Status>>,
+{
+    let result = issuer.await;
+    let summary = match &result {
+        Ok(_) => "completed successfully before the barrier".to_string(),
+        Err(status) => format!(
+            "{:?}/{}",
+            status.code(),
+            crate::runtime::error_reasons::reason_of(status).unwrap_or_default(),
+        ),
+    };
+    completed.lock().expect("issuer completion diagnostics")[index] = Some(summary);
+    result
+}
+
 /// Hold the real owner row until both issuers have reached the atomic store
 /// boundary. A check-then-insert implementation cannot satisfy this barrier.
 async fn release_owner_after_concurrent_otp_waiters(
     pool: &sqlx::PgPool,
     gate: sqlx::Transaction<'_, sqlx::Postgres>,
+    phase: &str,
+    completed: &std::sync::Mutex<[Option<String>; 2]>,
 ) {
-    tokio::time::timeout(std::time::Duration::from_secs(10), async {
+    let mut observed_waiters = 0;
+    let barrier = tokio::time::timeout(std::time::Duration::from_secs(10), async {
         loop {
             let waiters: i64 = sqlx::query_scalar(
                 "SELECT count(*) FROM pg_stat_activity \
@@ -540,14 +566,35 @@ async fn release_owner_after_concurrent_otp_waiters(
             .fetch_one(pool)
             .await
             .expect("observe actual PostgreSQL issuance locks");
+            observed_waiters = waiters;
             if waiters == 2 {
                 break;
             }
             tokio::time::sleep(std::time::Duration::from_millis(20)).await;
         }
     })
-    .await
-    .expect("both issuers must serialize at the durable owner lock");
+    .await;
+    if barrier.is_err() {
+        // Inspect only session state, never query text or bound OTP values.
+        let states = tokio::time::timeout(
+            std::time::Duration::from_secs(2),
+            sqlx::query_as::<_, (Option<String>, Option<String>, Option<String>)>(
+                "SELECT state, wait_event_type, wait_event FROM pg_stat_activity \
+                 WHERE datname = current_database() \
+                 AND query LIKE '/* udb_otp_cooldown_lock */%'",
+            )
+            .fetch_all(pool),
+        )
+        .await;
+        panic!(
+            "both issuers must serialize at the durable owner lock: \
+             phase={phase}; waiters={observed_waiters}; completed={:?}; \
+             pool_size={}; pool_idle={}; session_states={states:?}",
+            completed.lock().expect("issuer completion diagnostics"),
+            pool.size(),
+            pool.num_idle(),
+        );
+    }
     gate.commit().await.expect("release issuance barrier");
 }
 
@@ -564,6 +611,17 @@ async fn live_postgres_concurrent_otp_and_reset_issue_one_code_per_cooldown() {
     let svc = authn_service_with_cooldown(pool.clone(), 300);
     let user = create_verified_user(&svc, "concurrent-cooldown", "CorrectHorse1!").await;
     let store = PostgresUserStore::new(pool.clone(), "");
+    assert!(
+        store
+            .latest_otp_created_at(
+                &user.user_id,
+                authn_entity_pb::OtpType::SensitiveOperation as i32,
+            )
+            .await
+            .expect("read sensitive-operation fixture cooldown")
+            .is_none(),
+        "both sensitive-operation issuers start without an earlier code",
+    );
     let count = || async {
         sqlx::query_scalar::<_, i64>("SELECT count(*) FROM udb_authn.otps WHERE user_id = $1::UUID")
             .bind(&user.user_id)
@@ -585,10 +643,11 @@ async fn live_postgres_concurrent_otp_and_reset_issue_one_code_per_cooldown() {
             ..Default::default()
         })
     };
+    let completed = std::sync::Mutex::new([None, None]);
     let (left, right, ()) = tokio::join!(
-        svc.send_otp(request()),
-        svc.send_otp(request()),
-        release_owner_after_concurrent_otp_waiters(&pool, gate),
+        observe_otp_issuer(svc.send_otp(request()), &completed, 0),
+        observe_otp_issuer(svc.send_otp(request()), &completed, 1),
+        release_owner_after_concurrent_otp_waiters(&pool, gate, "SendOtp", &completed),
     );
     let mut winners = 0;
     for result in [left, right] {
@@ -615,6 +674,17 @@ async fn live_postgres_concurrent_otp_and_reset_issue_one_code_per_cooldown() {
 
     // AdminResetPassword and public ForgotPassword share the same durable
     // PasswordReset cooldown. A public loser must retain its opaque success.
+    assert!(
+        store
+            .latest_otp_created_at(
+                &user.user_id,
+                authn_entity_pb::OtpType::PasswordReset as i32,
+            )
+            .await
+            .expect("read password-reset fixture cooldown")
+            .is_none(),
+        "both password-reset issuers start without an earlier code",
+    );
     let before = count().await;
     let mut gate = pool.begin().await.expect("reset barrier transaction");
     sqlx::query("SELECT user_id FROM udb_authn.users WHERE user_id = $1::UUID FOR UPDATE")
@@ -639,10 +709,11 @@ async fn live_postgres_concurrent_otp_and_reset_issue_one_code_per_cooldown() {
         identifier: user.email.clone(),
         ..Default::default()
     }));
+    let completed = std::sync::Mutex::new([None, None]);
     let (admin, public, ()) = tokio::join!(
-        admin,
-        public,
-        release_owner_after_concurrent_otp_waiters(&pool, gate),
+        observe_otp_issuer(admin, &completed, 0),
+        observe_otp_issuer(public, &completed, 1),
+        release_owner_after_concurrent_otp_waiters(&pool, gate, "PasswordReset", &completed),
     );
     let public = public
         .expect("public reset keeps its non-enumerating shape")
