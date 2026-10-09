@@ -95,4 +95,40 @@ public interface TxStatusOrBuilder extends
    * <code>.udb.entity.v1.WriteReceipt write_receipt = 5 [json_name = "writeReceipt"];</code>
    */
   com.udb.entity.v1.WriteReceiptOrBuilder getWriteReceiptOrBuilder();
+
+  /**
+   * <pre>
+   * Original refusal, also carried in the terminal gRPC trailer. Classify this
+   * detail/code instead of matching the human-readable message.
+   * </pre>
+   *
+   * <code>.udb.entity.v1.ErrorDetail error_detail = 6 [json_name = "errorDetail"];</code>
+   * @return Whether the errorDetail field is set.
+   */
+  boolean hasErrorDetail();
+  /**
+   * <pre>
+   * Original refusal, also carried in the terminal gRPC trailer. Classify this
+   * detail/code instead of matching the human-readable message.
+   * </pre>
+   *
+   * <code>.udb.entity.v1.ErrorDetail error_detail = 6 [json_name = "errorDetail"];</code>
+   * @return The errorDetail.
+   */
+  com.udb.entity.v1.ErrorDetail getErrorDetail();
+  /**
+   * <pre>
+   * Original refusal, also carried in the terminal gRPC trailer. Classify this
+   * detail/code instead of matching the human-readable message.
+   * </pre>
+   *
+   * <code>.udb.entity.v1.ErrorDetail error_detail = 6 [json_name = "errorDetail"];</code>
+   */
+  com.udb.entity.v1.ErrorDetailOrBuilder getErrorDetailOrBuilder();
+
+  /**
+   * <code>int32 code = 7 [json_name = "code"];</code>
+   * @return The code.
+   */
+  int getCode();
 }

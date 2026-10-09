@@ -323,11 +323,33 @@ async fn live_livequery_thousand_watchers_share_scans_and_keep_filter_parity() {
     let mut streams = Vec::with_capacity(WATCHERS);
     tokio::time::timeout(Duration::from_secs(120), async {
         for watcher in 0..WATCHERS {
-            let mut stream = service
-                .subscribe(filtered_watch_request(&tenant, watcher))
-                .await
-                .unwrap_or_else(|err| panic!("watcher {watcher} must be admitted: {err:?}"))
-                .into_inner();
+            let mut stream = loop {
+                match service
+                    .subscribe(filtered_watch_request(&tenant, watcher))
+                    .await
+                {
+                    Ok(response) => break response.into_inner(),
+                    Err(status) => {
+                        // Connection rate and concurrent stream capacity are
+                        // separate budgets. Respect the real admission delay
+                        // while still requiring all 1,000 active subscriptions.
+                        assert_eq!(status.code(), tonic::Code::ResourceExhausted);
+                        let raw = status
+                            .metadata()
+                            .get_bin(crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY)
+                            .expect("typed admission refusal")
+                            .to_bytes()
+                            .expect("binary admission detail");
+                        let detail =
+                            crate::runtime::executor_utils::decode_error_detail_from_raw(&raw);
+                        assert_eq!(detail.backend, "channel");
+                        assert_eq!(detail.operation, "read_fair_admission");
+                        assert!(detail.retryable && detail.retry_after_ms > 0);
+                        tokio::time::sleep(Duration::from_millis(detail.retry_after_ms as u64))
+                            .await;
+                    }
+                }
+            };
             let first = stream
                 .next()
                 .await

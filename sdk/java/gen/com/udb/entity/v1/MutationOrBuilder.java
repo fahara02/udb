@@ -202,12 +202,14 @@ public interface MutationOrBuilder extends
 
   /**
    * <pre>
-   * Honoured only by `vector_upsert` and `enqueue_outbox_event` mutations.
-   * Setting it on an `upsert`, `update` or `delete` mutation is REJECTED with
-   * INVALID_ARGUMENT before the transaction opens (a transactional relational
-   * mutation keeps no per-mutation replay receipt, so the key cannot be
-   * honoured, and it is never silently ignored). Use the unary verb's
-   * `idempotency_key` when a relational write must be deduplicated.
+   * Per-mutation replay key for upsert/update/delete and vector_upsert.
+   * Relational receipts commit atomically with the whole transaction. A retry
+   * with identical inputs reuses its original mutation ID and affected count
+   * without repeating the write, revision, projection, CDC or audit effects.
+   * Reuse with different inputs fails with UDB_IDEMPOTENCY_REUSE and rolls the
+   * transaction back. Relational keys are scoped to tenant/project/entity and
+   * BeginTx operation, independently of unary replay keys. Other operations
+   * reject a non-empty key before the transaction opens.
    * </pre>
    *
    * <code>string idempotency_key = 16 [json_name = "idempotencyKey"];</code>
@@ -216,12 +218,14 @@ public interface MutationOrBuilder extends
   java.lang.String getIdempotencyKey();
   /**
    * <pre>
-   * Honoured only by `vector_upsert` and `enqueue_outbox_event` mutations.
-   * Setting it on an `upsert`, `update` or `delete` mutation is REJECTED with
-   * INVALID_ARGUMENT before the transaction opens (a transactional relational
-   * mutation keeps no per-mutation replay receipt, so the key cannot be
-   * honoured, and it is never silently ignored). Use the unary verb's
-   * `idempotency_key` when a relational write must be deduplicated.
+   * Per-mutation replay key for upsert/update/delete and vector_upsert.
+   * Relational receipts commit atomically with the whole transaction. A retry
+   * with identical inputs reuses its original mutation ID and affected count
+   * without repeating the write, revision, projection, CDC or audit effects.
+   * Reuse with different inputs fails with UDB_IDEMPOTENCY_REUSE and rolls the
+   * transaction back. Relational keys are scoped to tenant/project/entity and
+   * BeginTx operation, independently of unary replay keys. Other operations
+   * reject a non-empty key before the transaction opens.
    * </pre>
    *
    * <code>string idempotency_key = 16 [json_name = "idempotencyKey"];</code>
@@ -359,4 +363,60 @@ public interface MutationOrBuilder extends
    * @return The cdcRequired.
    */
   boolean getCdcRequired();
+
+  /**
+   * <pre>
+   * Exact affected-row count for a relational mutation. Non-zero mismatches
+   * roll back the whole transaction with NOT_FOUND/UDB_NO_ROWS_AFFECTED.
+   * </pre>
+   *
+   * <code>uint32 require_affected = 21 [json_name = "requireAffected"];</code>
+   * @return The requireAffected.
+   */
+  int getRequireAffected();
+
+  /**
+   * <pre>
+   * Upsert conflict target, with the same semantics as UpsertRequest. Ignored
+   * values are never accepted: only an upsert may set this field.
+   * </pre>
+   *
+   * <code>repeated string conflict_fields = 22 [json_name = "conflictFields"];</code>
+   * @return A list containing the conflictFields.
+   */
+  java.util.List<java.lang.String>
+      getConflictFieldsList();
+  /**
+   * <pre>
+   * Upsert conflict target, with the same semantics as UpsertRequest. Ignored
+   * values are never accepted: only an upsert may set this field.
+   * </pre>
+   *
+   * <code>repeated string conflict_fields = 22 [json_name = "conflictFields"];</code>
+   * @return The count of conflictFields.
+   */
+  int getConflictFieldsCount();
+  /**
+   * <pre>
+   * Upsert conflict target, with the same semantics as UpsertRequest. Ignored
+   * values are never accepted: only an upsert may set this field.
+   * </pre>
+   *
+   * <code>repeated string conflict_fields = 22 [json_name = "conflictFields"];</code>
+   * @param index The index of the element to return.
+   * @return The conflictFields at the given index.
+   */
+  java.lang.String getConflictFields(int index);
+  /**
+   * <pre>
+   * Upsert conflict target, with the same semantics as UpsertRequest. Ignored
+   * values are never accepted: only an upsert may set this field.
+   * </pre>
+   *
+   * <code>repeated string conflict_fields = 22 [json_name = "conflictFields"];</code>
+   * @param index The index of the value to return.
+   * @return The bytes of the conflictFields at the given index.
+   */
+  com.google.protobuf.ByteString
+      getConflictFieldsBytes(int index);
 }

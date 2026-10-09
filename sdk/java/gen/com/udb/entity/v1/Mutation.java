@@ -40,6 +40,8 @@ private static final long serialVersionUID = 0L;
     contentType_ = "";
     idempotencyKey_ = "";
     increments_ = java.util.Collections.emptyList();
+    conflictFields_ =
+        com.google.protobuf.LazyStringArrayList.emptyList();
   }
 
   public static final com.google.protobuf.Descriptors.Descriptor
@@ -510,12 +512,14 @@ private static final long serialVersionUID = 0L;
   private volatile java.lang.Object idempotencyKey_ = "";
   /**
    * <pre>
-   * Honoured only by `vector_upsert` and `enqueue_outbox_event` mutations.
-   * Setting it on an `upsert`, `update` or `delete` mutation is REJECTED with
-   * INVALID_ARGUMENT before the transaction opens (a transactional relational
-   * mutation keeps no per-mutation replay receipt, so the key cannot be
-   * honoured, and it is never silently ignored). Use the unary verb's
-   * `idempotency_key` when a relational write must be deduplicated.
+   * Per-mutation replay key for upsert/update/delete and vector_upsert.
+   * Relational receipts commit atomically with the whole transaction. A retry
+   * with identical inputs reuses its original mutation ID and affected count
+   * without repeating the write, revision, projection, CDC or audit effects.
+   * Reuse with different inputs fails with UDB_IDEMPOTENCY_REUSE and rolls the
+   * transaction back. Relational keys are scoped to tenant/project/entity and
+   * BeginTx operation, independently of unary replay keys. Other operations
+   * reject a non-empty key before the transaction opens.
    * </pre>
    *
    * <code>string idempotency_key = 16 [json_name = "idempotencyKey"];</code>
@@ -536,12 +540,14 @@ private static final long serialVersionUID = 0L;
   }
   /**
    * <pre>
-   * Honoured only by `vector_upsert` and `enqueue_outbox_event` mutations.
-   * Setting it on an `upsert`, `update` or `delete` mutation is REJECTED with
-   * INVALID_ARGUMENT before the transaction opens (a transactional relational
-   * mutation keeps no per-mutation replay receipt, so the key cannot be
-   * honoured, and it is never silently ignored). Use the unary verb's
-   * `idempotency_key` when a relational write must be deduplicated.
+   * Per-mutation replay key for upsert/update/delete and vector_upsert.
+   * Relational receipts commit atomically with the whole transaction. A retry
+   * with identical inputs reuses its original mutation ID and affected count
+   * without repeating the write, revision, projection, CDC or audit effects.
+   * Reuse with different inputs fails with UDB_IDEMPOTENCY_REUSE and rolls the
+   * transaction back. Relational keys are scoped to tenant/project/entity and
+   * BeginTx operation, independently of unary replay keys. Other operations
+   * reject a non-empty key before the transaction opens.
    * </pre>
    *
    * <code>string idempotency_key = 16 [json_name = "idempotencyKey"];</code>
@@ -736,6 +742,79 @@ private static final long serialVersionUID = 0L;
     return cdcRequired_;
   }
 
+  public static final int REQUIRE_AFFECTED_FIELD_NUMBER = 21;
+  private int requireAffected_ = 0;
+  /**
+   * <pre>
+   * Exact affected-row count for a relational mutation. Non-zero mismatches
+   * roll back the whole transaction with NOT_FOUND/UDB_NO_ROWS_AFFECTED.
+   * </pre>
+   *
+   * <code>uint32 require_affected = 21 [json_name = "requireAffected"];</code>
+   * @return The requireAffected.
+   */
+  @java.lang.Override
+  public int getRequireAffected() {
+    return requireAffected_;
+  }
+
+  public static final int CONFLICT_FIELDS_FIELD_NUMBER = 22;
+  @SuppressWarnings("serial")
+  private com.google.protobuf.LazyStringArrayList conflictFields_ =
+      com.google.protobuf.LazyStringArrayList.emptyList();
+  /**
+   * <pre>
+   * Upsert conflict target, with the same semantics as UpsertRequest. Ignored
+   * values are never accepted: only an upsert may set this field.
+   * </pre>
+   *
+   * <code>repeated string conflict_fields = 22 [json_name = "conflictFields"];</code>
+   * @return A list containing the conflictFields.
+   */
+  public com.google.protobuf.ProtocolStringList
+      getConflictFieldsList() {
+    return conflictFields_;
+  }
+  /**
+   * <pre>
+   * Upsert conflict target, with the same semantics as UpsertRequest. Ignored
+   * values are never accepted: only an upsert may set this field.
+   * </pre>
+   *
+   * <code>repeated string conflict_fields = 22 [json_name = "conflictFields"];</code>
+   * @return The count of conflictFields.
+   */
+  public int getConflictFieldsCount() {
+    return conflictFields_.size();
+  }
+  /**
+   * <pre>
+   * Upsert conflict target, with the same semantics as UpsertRequest. Ignored
+   * values are never accepted: only an upsert may set this field.
+   * </pre>
+   *
+   * <code>repeated string conflict_fields = 22 [json_name = "conflictFields"];</code>
+   * @param index The index of the element to return.
+   * @return The conflictFields at the given index.
+   */
+  public java.lang.String getConflictFields(int index) {
+    return conflictFields_.get(index);
+  }
+  /**
+   * <pre>
+   * Upsert conflict target, with the same semantics as UpsertRequest. Ignored
+   * values are never accepted: only an upsert may set this field.
+   * </pre>
+   *
+   * <code>repeated string conflict_fields = 22 [json_name = "conflictFields"];</code>
+   * @param index The index of the value to return.
+   * @return The bytes of the conflictFields at the given index.
+   */
+  public com.google.protobuf.ByteString
+      getConflictFieldsBytes(int index) {
+    return conflictFields_.getByteString(index);
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -809,6 +888,12 @@ private static final long serialVersionUID = 0L;
     }
     if (cdcRequired_ != false) {
       output.writeBool(20, cdcRequired_);
+    }
+    if (requireAffected_ != 0) {
+      output.writeUInt32(21, requireAffected_);
+    }
+    for (int i = 0; i < conflictFields_.size(); i++) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 22, conflictFields_.getRaw(i));
     }
     getUnknownFields().writeTo(output);
   }
@@ -891,6 +976,18 @@ private static final long serialVersionUID = 0L;
       size += com.google.protobuf.CodedOutputStream
         .computeBoolSize(20, cdcRequired_);
     }
+    if (requireAffected_ != 0) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeUInt32Size(21, requireAffected_);
+    }
+    {
+      int dataSize = 0;
+      for (int i = 0; i < conflictFields_.size(); i++) {
+        dataSize += computeStringSizeNoTag(conflictFields_.getRaw(i));
+      }
+      size += dataSize;
+      size += 2 * getConflictFieldsList().size();
+    }
     size += getUnknownFields().getSerializedSize();
     memoizedSize = size;
     return size;
@@ -961,6 +1058,10 @@ private static final long serialVersionUID = 0L;
     }
     if (getCdcRequired()
         != other.getCdcRequired()) return false;
+    if (getRequireAffected()
+        != other.getRequireAffected()) return false;
+    if (!getConflictFieldsList()
+        .equals(other.getConflictFieldsList())) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -1029,6 +1130,12 @@ private static final long serialVersionUID = 0L;
     hash = (37 * hash) + CDC_REQUIRED_FIELD_NUMBER;
     hash = (53 * hash) + com.google.protobuf.Internal.hashBoolean(
         getCdcRequired());
+    hash = (37 * hash) + REQUIRE_AFFECTED_FIELD_NUMBER;
+    hash = (53 * hash) + getRequireAffected();
+    if (getConflictFieldsCount() > 0) {
+      hash = (37 * hash) + CONFLICT_FIELDS_FIELD_NUMBER;
+      hash = (53 * hash) + getConflictFieldsList().hashCode();
+    }
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -1224,6 +1331,9 @@ private static final long serialVersionUID = 0L;
         expectedBuilder_ = null;
       }
       cdcRequired_ = false;
+      requireAffected_ = 0;
+      conflictFields_ =
+          com.google.protobuf.LazyStringArrayList.emptyList();
       return this;
     }
 
@@ -1348,6 +1458,13 @@ private static final long serialVersionUID = 0L;
       }
       if (((from_bitField0_ & 0x00080000) != 0)) {
         result.cdcRequired_ = cdcRequired_;
+      }
+      if (((from_bitField0_ & 0x00100000) != 0)) {
+        result.requireAffected_ = requireAffected_;
+      }
+      if (((from_bitField0_ & 0x00200000) != 0)) {
+        conflictFields_.makeImmutable();
+        result.conflictFields_ = conflictFields_;
       }
       result.bitField0_ |= to_bitField0_;
     }
@@ -1485,6 +1602,19 @@ private static final long serialVersionUID = 0L;
       }
       if (other.getCdcRequired() != false) {
         setCdcRequired(other.getCdcRequired());
+      }
+      if (other.getRequireAffected() != 0) {
+        setRequireAffected(other.getRequireAffected());
+      }
+      if (!other.conflictFields_.isEmpty()) {
+        if (conflictFields_.isEmpty()) {
+          conflictFields_ = other.conflictFields_;
+          bitField0_ |= 0x00200000;
+        } else {
+          ensureConflictFieldsIsMutable();
+          conflictFields_.addAll(other.conflictFields_);
+        }
+        onChanged();
       }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
@@ -1638,6 +1768,17 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00080000;
               break;
             } // case 160
+            case 168: {
+              requireAffected_ = input.readUInt32();
+              bitField0_ |= 0x00100000;
+              break;
+            } // case 168
+            case 178: {
+              java.lang.String s = input.readStringRequireUtf8();
+              ensureConflictFieldsIsMutable();
+              conflictFields_.add(s);
+              break;
+            } // case 178
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -2932,12 +3073,14 @@ private static final long serialVersionUID = 0L;
     private java.lang.Object idempotencyKey_ = "";
     /**
      * <pre>
-     * Honoured only by `vector_upsert` and `enqueue_outbox_event` mutations.
-     * Setting it on an `upsert`, `update` or `delete` mutation is REJECTED with
-     * INVALID_ARGUMENT before the transaction opens (a transactional relational
-     * mutation keeps no per-mutation replay receipt, so the key cannot be
-     * honoured, and it is never silently ignored). Use the unary verb's
-     * `idempotency_key` when a relational write must be deduplicated.
+     * Per-mutation replay key for upsert/update/delete and vector_upsert.
+     * Relational receipts commit atomically with the whole transaction. A retry
+     * with identical inputs reuses its original mutation ID and affected count
+     * without repeating the write, revision, projection, CDC or audit effects.
+     * Reuse with different inputs fails with UDB_IDEMPOTENCY_REUSE and rolls the
+     * transaction back. Relational keys are scoped to tenant/project/entity and
+     * BeginTx operation, independently of unary replay keys. Other operations
+     * reject a non-empty key before the transaction opens.
      * </pre>
      *
      * <code>string idempotency_key = 16 [json_name = "idempotencyKey"];</code>
@@ -2957,12 +3100,14 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * Honoured only by `vector_upsert` and `enqueue_outbox_event` mutations.
-     * Setting it on an `upsert`, `update` or `delete` mutation is REJECTED with
-     * INVALID_ARGUMENT before the transaction opens (a transactional relational
-     * mutation keeps no per-mutation replay receipt, so the key cannot be
-     * honoured, and it is never silently ignored). Use the unary verb's
-     * `idempotency_key` when a relational write must be deduplicated.
+     * Per-mutation replay key for upsert/update/delete and vector_upsert.
+     * Relational receipts commit atomically with the whole transaction. A retry
+     * with identical inputs reuses its original mutation ID and affected count
+     * without repeating the write, revision, projection, CDC or audit effects.
+     * Reuse with different inputs fails with UDB_IDEMPOTENCY_REUSE and rolls the
+     * transaction back. Relational keys are scoped to tenant/project/entity and
+     * BeginTx operation, independently of unary replay keys. Other operations
+     * reject a non-empty key before the transaction opens.
      * </pre>
      *
      * <code>string idempotency_key = 16 [json_name = "idempotencyKey"];</code>
@@ -2983,12 +3128,14 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * Honoured only by `vector_upsert` and `enqueue_outbox_event` mutations.
-     * Setting it on an `upsert`, `update` or `delete` mutation is REJECTED with
-     * INVALID_ARGUMENT before the transaction opens (a transactional relational
-     * mutation keeps no per-mutation replay receipt, so the key cannot be
-     * honoured, and it is never silently ignored). Use the unary verb's
-     * `idempotency_key` when a relational write must be deduplicated.
+     * Per-mutation replay key for upsert/update/delete and vector_upsert.
+     * Relational receipts commit atomically with the whole transaction. A retry
+     * with identical inputs reuses its original mutation ID and affected count
+     * without repeating the write, revision, projection, CDC or audit effects.
+     * Reuse with different inputs fails with UDB_IDEMPOTENCY_REUSE and rolls the
+     * transaction back. Relational keys are scoped to tenant/project/entity and
+     * BeginTx operation, independently of unary replay keys. Other operations
+     * reject a non-empty key before the transaction opens.
      * </pre>
      *
      * <code>string idempotency_key = 16 [json_name = "idempotencyKey"];</code>
@@ -3005,12 +3152,14 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * Honoured only by `vector_upsert` and `enqueue_outbox_event` mutations.
-     * Setting it on an `upsert`, `update` or `delete` mutation is REJECTED with
-     * INVALID_ARGUMENT before the transaction opens (a transactional relational
-     * mutation keeps no per-mutation replay receipt, so the key cannot be
-     * honoured, and it is never silently ignored). Use the unary verb's
-     * `idempotency_key` when a relational write must be deduplicated.
+     * Per-mutation replay key for upsert/update/delete and vector_upsert.
+     * Relational receipts commit atomically with the whole transaction. A retry
+     * with identical inputs reuses its original mutation ID and affected count
+     * without repeating the write, revision, projection, CDC or audit effects.
+     * Reuse with different inputs fails with UDB_IDEMPOTENCY_REUSE and rolls the
+     * transaction back. Relational keys are scoped to tenant/project/entity and
+     * BeginTx operation, independently of unary replay keys. Other operations
+     * reject a non-empty key before the transaction opens.
      * </pre>
      *
      * <code>string idempotency_key = 16 [json_name = "idempotencyKey"];</code>
@@ -3024,12 +3173,14 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * Honoured only by `vector_upsert` and `enqueue_outbox_event` mutations.
-     * Setting it on an `upsert`, `update` or `delete` mutation is REJECTED with
-     * INVALID_ARGUMENT before the transaction opens (a transactional relational
-     * mutation keeps no per-mutation replay receipt, so the key cannot be
-     * honoured, and it is never silently ignored). Use the unary verb's
-     * `idempotency_key` when a relational write must be deduplicated.
+     * Per-mutation replay key for upsert/update/delete and vector_upsert.
+     * Relational receipts commit atomically with the whole transaction. A retry
+     * with identical inputs reuses its original mutation ID and affected count
+     * without repeating the write, revision, projection, CDC or audit effects.
+     * Reuse with different inputs fails with UDB_IDEMPOTENCY_REUSE and rolls the
+     * transaction back. Relational keys are scoped to tenant/project/entity and
+     * BeginTx operation, independently of unary replay keys. Other operations
+     * reject a non-empty key before the transaction opens.
      * </pre>
      *
      * <code>string idempotency_key = 16 [json_name = "idempotencyKey"];</code>
@@ -3766,6 +3917,209 @@ private static final long serialVersionUID = 0L;
     public Builder clearCdcRequired() {
       bitField0_ = (bitField0_ & ~0x00080000);
       cdcRequired_ = false;
+      onChanged();
+      return this;
+    }
+
+    private int requireAffected_ ;
+    /**
+     * <pre>
+     * Exact affected-row count for a relational mutation. Non-zero mismatches
+     * roll back the whole transaction with NOT_FOUND/UDB_NO_ROWS_AFFECTED.
+     * </pre>
+     *
+     * <code>uint32 require_affected = 21 [json_name = "requireAffected"];</code>
+     * @return The requireAffected.
+     */
+    @java.lang.Override
+    public int getRequireAffected() {
+      return requireAffected_;
+    }
+    /**
+     * <pre>
+     * Exact affected-row count for a relational mutation. Non-zero mismatches
+     * roll back the whole transaction with NOT_FOUND/UDB_NO_ROWS_AFFECTED.
+     * </pre>
+     *
+     * <code>uint32 require_affected = 21 [json_name = "requireAffected"];</code>
+     * @param value The requireAffected to set.
+     * @return This builder for chaining.
+     */
+    public Builder setRequireAffected(int value) {
+
+      requireAffected_ = value;
+      bitField0_ |= 0x00100000;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Exact affected-row count for a relational mutation. Non-zero mismatches
+     * roll back the whole transaction with NOT_FOUND/UDB_NO_ROWS_AFFECTED.
+     * </pre>
+     *
+     * <code>uint32 require_affected = 21 [json_name = "requireAffected"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearRequireAffected() {
+      bitField0_ = (bitField0_ & ~0x00100000);
+      requireAffected_ = 0;
+      onChanged();
+      return this;
+    }
+
+    private com.google.protobuf.LazyStringArrayList conflictFields_ =
+        com.google.protobuf.LazyStringArrayList.emptyList();
+    private void ensureConflictFieldsIsMutable() {
+      if (!conflictFields_.isModifiable()) {
+        conflictFields_ = new com.google.protobuf.LazyStringArrayList(conflictFields_);
+      }
+      bitField0_ |= 0x00200000;
+    }
+    /**
+     * <pre>
+     * Upsert conflict target, with the same semantics as UpsertRequest. Ignored
+     * values are never accepted: only an upsert may set this field.
+     * </pre>
+     *
+     * <code>repeated string conflict_fields = 22 [json_name = "conflictFields"];</code>
+     * @return A list containing the conflictFields.
+     */
+    public com.google.protobuf.ProtocolStringList
+        getConflictFieldsList() {
+      conflictFields_.makeImmutable();
+      return conflictFields_;
+    }
+    /**
+     * <pre>
+     * Upsert conflict target, with the same semantics as UpsertRequest. Ignored
+     * values are never accepted: only an upsert may set this field.
+     * </pre>
+     *
+     * <code>repeated string conflict_fields = 22 [json_name = "conflictFields"];</code>
+     * @return The count of conflictFields.
+     */
+    public int getConflictFieldsCount() {
+      return conflictFields_.size();
+    }
+    /**
+     * <pre>
+     * Upsert conflict target, with the same semantics as UpsertRequest. Ignored
+     * values are never accepted: only an upsert may set this field.
+     * </pre>
+     *
+     * <code>repeated string conflict_fields = 22 [json_name = "conflictFields"];</code>
+     * @param index The index of the element to return.
+     * @return The conflictFields at the given index.
+     */
+    public java.lang.String getConflictFields(int index) {
+      return conflictFields_.get(index);
+    }
+    /**
+     * <pre>
+     * Upsert conflict target, with the same semantics as UpsertRequest. Ignored
+     * values are never accepted: only an upsert may set this field.
+     * </pre>
+     *
+     * <code>repeated string conflict_fields = 22 [json_name = "conflictFields"];</code>
+     * @param index The index of the value to return.
+     * @return The bytes of the conflictFields at the given index.
+     */
+    public com.google.protobuf.ByteString
+        getConflictFieldsBytes(int index) {
+      return conflictFields_.getByteString(index);
+    }
+    /**
+     * <pre>
+     * Upsert conflict target, with the same semantics as UpsertRequest. Ignored
+     * values are never accepted: only an upsert may set this field.
+     * </pre>
+     *
+     * <code>repeated string conflict_fields = 22 [json_name = "conflictFields"];</code>
+     * @param index The index to set the value at.
+     * @param value The conflictFields to set.
+     * @return This builder for chaining.
+     */
+    public Builder setConflictFields(
+        int index, java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      ensureConflictFieldsIsMutable();
+      conflictFields_.set(index, value);
+      bitField0_ |= 0x00200000;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Upsert conflict target, with the same semantics as UpsertRequest. Ignored
+     * values are never accepted: only an upsert may set this field.
+     * </pre>
+     *
+     * <code>repeated string conflict_fields = 22 [json_name = "conflictFields"];</code>
+     * @param value The conflictFields to add.
+     * @return This builder for chaining.
+     */
+    public Builder addConflictFields(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      ensureConflictFieldsIsMutable();
+      conflictFields_.add(value);
+      bitField0_ |= 0x00200000;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Upsert conflict target, with the same semantics as UpsertRequest. Ignored
+     * values are never accepted: only an upsert may set this field.
+     * </pre>
+     *
+     * <code>repeated string conflict_fields = 22 [json_name = "conflictFields"];</code>
+     * @param values The conflictFields to add.
+     * @return This builder for chaining.
+     */
+    public Builder addAllConflictFields(
+        java.lang.Iterable<java.lang.String> values) {
+      ensureConflictFieldsIsMutable();
+      com.google.protobuf.AbstractMessageLite.Builder.addAll(
+          values, conflictFields_);
+      bitField0_ |= 0x00200000;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Upsert conflict target, with the same semantics as UpsertRequest. Ignored
+     * values are never accepted: only an upsert may set this field.
+     * </pre>
+     *
+     * <code>repeated string conflict_fields = 22 [json_name = "conflictFields"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearConflictFields() {
+      conflictFields_ =
+        com.google.protobuf.LazyStringArrayList.emptyList();
+      bitField0_ = (bitField0_ & ~0x00200000);;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Upsert conflict target, with the same semantics as UpsertRequest. Ignored
+     * values are never accepted: only an upsert may set this field.
+     * </pre>
+     *
+     * <code>repeated string conflict_fields = 22 [json_name = "conflictFields"];</code>
+     * @param value The bytes of the conflictFields to add.
+     * @return This builder for chaining.
+     */
+    public Builder addConflictFieldsBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      ensureConflictFieldsIsMutable();
+      conflictFields_.add(value);
+      bitField0_ |= 0x00200000;
       onChanged();
       return this;
     }

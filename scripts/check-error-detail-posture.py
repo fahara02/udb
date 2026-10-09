@@ -4788,7 +4788,64 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
             "crate::runtime::executor_utils::quota_status",
             '"authn"',
             '"otp_cooldown"',
-            "retry_after_secs as i64 * 1_000",
+            "fn otp_cooldown_status(",
+            "i64::try_from(retry_after_secs.saturating_mul(1_000))",
+            ".put_otp_with_cooldown(rec, self.config.otp_cooldown_secs)",
+            "crate::runtime::error_reasons::RATE_LIMITED",
+        ),
+    ),
+    TokenCheck(
+        "OTP issuance serializes cooldown and persistence on its durable owner",
+        "src/runtime/authn/mod.rs",
+        (
+            "async fn put_otp_with_cooldown(",
+            "atomic OTP cooldown is not supported by this user store",
+            "/* udb_otp_cooldown_lock */",
+            "WHERE {user_col} = $1::UUID FOR UPDATE",
+            ".latest_otp_created_at_on(&mut *tx, &record.user_id, record.otp_type)",
+            "self.put_otp_on(&mut *tx, record).await?;",
+            "OTP cooldown commit failed",
+        ),
+    ),
+    TokenCheck(
+        "concurrent OTP/reset live proof observes actual database locks",
+        "src/runtime/service/auth_service/tests/authn_otp_password_live.rs",
+        (
+            "live_postgres_concurrent_otp_and_reset_issue_one_code_per_cooldown",
+            "release_owner_after_concurrent_otp_waiters",
+            "wait_event_type = 'Lock'",
+            "if waiters == 2",
+            "assert_eq!(winners, 1);",
+            "public loser cannot persist a second code",
+            '"UDB_RATE_LIMITED"',
+        ),
+    ),
+    TokenCheck(
+        "Go LiveQuery respects the broker retry delay",
+        "sdk/go/udbclient/livequery.go",
+        (
+            "wait := max(delay, Inspect(err).RetryAfter)",
+            "case <-time.After(wait):",
+        ),
+    ),
+    TokenCheck(
+        "Go LiveQuery retry proof runs the public loop against served trailers",
+        "sdk/go/udbclient/livequery_test.go",
+        (
+            "TestLiveQueryReconnectHonorsServedRetryAfter",
+            "stream.SetTrailer(s.trailer)",
+            "RetryAfterMs: 2000",
+            "if calls := served.calls.Load(); calls != 1",
+        ),
+    ),
+    TokenCheck(
+        "served smoke verifies canonical and explicit legacy quota kinds",
+        "scripts/error_detail_served_smoke.py",
+        (
+            'default="ERROR_KIND_RATE_LIMITED"',
+            "rate limit detail requires reason UDB_RATE_LIMITED",
+            "missing stable rate-limit reason was accepted",
+            "args.quota_kind",
         ),
     ),
     TokenCheck(
@@ -5593,7 +5650,8 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
         "src/runtime/service/auth_service/tests/authn_otp_password_live.rs",
         (
             "decode_detail(&throttled)",
-            "ErrorKind::Quota",
+            "ErrorKind::RateLimited",
+            'detail.reason, "UDB_RATE_LIMITED"',
             'detail.backend, "authn"',
             'detail.operation, "otp_cooldown"',
             "detail.retry_after_ms > 0",
@@ -9994,6 +10052,12 @@ def run_selftest() -> None:
         assert not failures, failures
 
         for source, token in (
+            ("src/runtime/authn/mod.rs", "WHERE {user_col} = $1::UUID FOR UPDATE"),
+            ("sdk/go/udbclient/livequery.go", "wait := max(delay, Inspect(err).RetryAfter)"),
+            ("scripts/error_detail_served_smoke.py", "rate limit detail requires reason UDB_RATE_LIMITED"),
+            ("src/runtime/authn/mod.rs", ".latest_otp_created_at_on(&mut *tx, &record.user_id, record.otp_type)"),
+            ("src/runtime/service/auth_service/authn/mfa.rs", ".put_otp_with_cooldown(rec, self.config.otp_cooldown_secs)"),
+            ("src/runtime/service/auth_service/tests/authn_otp_password_live.rs", "if waiters == 2"),
             ("src/runtime/core/tx_object.rs", '"PostgreSQL transaction commit failed"'),
             ("src/runtime/core/tx_object.rs", "crate::runtime::executor_utils::prefix_status("),
             ("src/runtime/core/setup_data.rs", '"PostgreSQL upsert commit failed"'),

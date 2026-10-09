@@ -40,6 +40,17 @@ class TxStatus extends \Google\Protobuf\Internal\Message
      * Generated from protobuf field <code>.udb.entity.v1.WriteReceipt write_receipt = 5 [json_name = "writeReceipt"];</code>
      */
     protected $write_receipt = null;
+    /**
+     * Original refusal, also carried in the terminal gRPC trailer. Classify this
+     * detail/code instead of matching the human-readable message.
+     *
+     * Generated from protobuf field <code>.udb.entity.v1.ErrorDetail error_detail = 6 [json_name = "errorDetail"];</code>
+     */
+    protected $error_detail = null;
+    /**
+     * Generated from protobuf field <code>int32 code = 7 [json_name = "code"];</code>
+     */
+    protected $code = 0;
 
     /**
      * Constructor.
@@ -57,6 +68,10 @@ class TxStatus extends \Google\Protobuf\Internal\Message
      *           fence a following read exactly as it does with MutationResponse.write_receipt
      *           on the unary verbs. Set only on the TX_STATE_COMMITTED status; unset for
      *           open/rolled-back/error statuses.
+     *     @type \Udb\Entity\V1\ErrorDetail $error_detail
+     *           Original refusal, also carried in the terminal gRPC trailer. Classify this
+     *           detail/code instead of matching the human-readable message.
+     *     @type int $code
      * }
      */
     public function __construct($data = NULL) {
@@ -192,6 +207,66 @@ class TxStatus extends \Google\Protobuf\Internal\Message
     {
         GPBUtil::checkMessage($var, \Udb\Entity\V1\WriteReceipt::class);
         $this->write_receipt = $var;
+
+        return $this;
+    }
+
+    /**
+     * Original refusal, also carried in the terminal gRPC trailer. Classify this
+     * detail/code instead of matching the human-readable message.
+     *
+     * Generated from protobuf field <code>.udb.entity.v1.ErrorDetail error_detail = 6 [json_name = "errorDetail"];</code>
+     * @return \Udb\Entity\V1\ErrorDetail|null
+     */
+    public function getErrorDetail()
+    {
+        return $this->error_detail;
+    }
+
+    public function hasErrorDetail()
+    {
+        return isset($this->error_detail);
+    }
+
+    public function clearErrorDetail()
+    {
+        unset($this->error_detail);
+    }
+
+    /**
+     * Original refusal, also carried in the terminal gRPC trailer. Classify this
+     * detail/code instead of matching the human-readable message.
+     *
+     * Generated from protobuf field <code>.udb.entity.v1.ErrorDetail error_detail = 6 [json_name = "errorDetail"];</code>
+     * @param \Udb\Entity\V1\ErrorDetail $var
+     * @return $this
+     */
+    public function setErrorDetail($var)
+    {
+        GPBUtil::checkMessage($var, \Udb\Entity\V1\ErrorDetail::class);
+        $this->error_detail = $var;
+
+        return $this;
+    }
+
+    /**
+     * Generated from protobuf field <code>int32 code = 7 [json_name = "code"];</code>
+     * @return int
+     */
+    public function getCode()
+    {
+        return $this->code;
+    }
+
+    /**
+     * Generated from protobuf field <code>int32 code = 7 [json_name = "code"];</code>
+     * @param int $var
+     * @return $this
+     */
+    public function setCode($var)
+    {
+        GPBUtil::checkInt32($var);
+        $this->code = $var;
 
         return $this;
     }

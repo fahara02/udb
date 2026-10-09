@@ -42,6 +42,22 @@ fn mfa_internal_status(operation: impl Into<String>, message: impl Into<String>)
     crate::runtime::executor_utils::internal_status("authn", operation, message)
 }
 
+fn otp_cooldown_status(ready_at: u64, now: u64) -> Status {
+    let retry_after_secs = ready_at.saturating_sub(now).max(1);
+    let retry_after_ms = i64::try_from(retry_after_secs.saturating_mul(1_000)).unwrap_or(i64::MAX);
+    crate::runtime::error_reasons::annotate(
+        crate::runtime::executor_utils::quota_status(
+            "authn",
+            "otp_cooldown",
+            retry_after_ms,
+            format!("OTP cooldown active; retry in {retry_after_secs} seconds"),
+        ),
+        crate::runtime::error_reasons::RATE_LIMITED,
+        None,
+        None,
+    )
+}
+
 fn mfa_webauthn_enrollment_rpc_required_status() -> Status {
     crate::runtime::executor_utils::policy_status(
         "mfa_enrollment",
@@ -76,10 +92,14 @@ impl AuthnServiceImpl {
         let (rec, code) =
             self.prepare_otp_record(user, otp_type, channel, address, correlation_id, now)?;
         let otp_id = rec.otp_id.clone();
-        self.users
-            .put_otp(rec)
+        if let Some(ready_at) = self
+            .users
+            .put_otp_with_cooldown(rec, self.config.otp_cooldown_secs)
             .await
-            .map_err(|err| mfa_internal_status("issue_otp_store", err.to_string()))?;
+            .map_err(|err| mfa_internal_status("issue_otp_store", err.to_string()))?
+        {
+            return Err(otp_cooldown_status(ready_at, now));
+        }
         // Best-effort outbound delivery to the operator's channel gateway. A
         // delivery failure (or no configured webhook) never fails issuance — the
         // OTP is persisted and the caller holds the otp_id.
@@ -249,13 +269,7 @@ impl AuthnServiceImpl {
         {
             let ready_at = last.saturating_add(cooldown);
             if now < ready_at {
-                let retry_after_secs = ready_at - now;
-                return Err(crate::runtime::executor_utils::quota_status(
-                    "authn",
-                    "otp_cooldown",
-                    retry_after_secs as i64 * 1_000,
-                    format!("OTP cooldown active; retry in {retry_after_secs} seconds"),
-                ));
+                return Err(otp_cooldown_status(ready_at, now));
             }
         }
         Ok(())

@@ -1212,6 +1212,22 @@ pub trait UserStore: Send + Sync {
     ) -> Result<bool, String>;
     async fn put_otp(&self, record: OtpRecord) -> Result<(), String>;
 
+    /// Persist a new OTP while atomically enforcing the per-(user, type)
+    /// cooldown. `Some(ready_at)` refuses issuance without writing a row;
+    /// `None` means the OTP is durable. Stores without atomic support fail
+    /// closed when a cooldown is configured.
+    async fn put_otp_with_cooldown(
+        &self,
+        record: OtpRecord,
+        cooldown_secs: u64,
+    ) -> Result<Option<u64>, String> {
+        if cooldown_secs != 0 {
+            return Err("atomic OTP cooldown is not supported by this user store".into());
+        }
+        self.put_otp(record).await?;
+        Ok(None)
+    }
+
     /// Persist `record` on an existing transaction connection so the OTP row
     /// commits atomically with the caller's other writes (e.g. the `create_user`
     /// upsert + its audit/outbox event). Default: non-atomic `put_otp` for stores
@@ -3107,6 +3123,32 @@ impl PostgresUserStore {
         .await?;
         Ok(())
     }
+    async fn latest_otp_created_at_on<'c, E>(
+        &self,
+        executor: E,
+        user_id: &str,
+        otp_type: i32,
+    ) -> Result<Option<u64>, String>
+    where
+        E: sqlx::Executor<'c, Database = sqlx::Postgres>,
+    {
+        let rel = self.otps_relation();
+        let user_col = self.otps_model.q("user_id");
+        let type_col = self.otps_model.q("otp_type");
+        let created_col = self.otps_model.q("created_at");
+        // The same query serves preflight reads and the authoritative read on
+        // the locked issuance connection. OTP types use their short DB token.
+        let epoch: Option<i64> = sqlx::query_scalar(&format!(
+            "SELECT EXTRACT(EPOCH FROM MAX({created_col}))::BIGINT \
+             FROM {rel} WHERE {user_col} = $1::UUID AND {type_col} = $2"
+        ))
+        .bind(user_id)
+        .bind(otp_type_to_db(otp_type))
+        .fetch_one(executor)
+        .await
+        .map_err(|err| format!("latest otp lookup failed: {err}"))?;
+        Ok(epoch.map(|v| v.max(0) as u64))
+    }
 }
 
 #[async_trait]
@@ -3295,6 +3337,52 @@ impl UserStore for PostgresUserStore {
         self.put_otp_on(&self.pool, record).await
     }
 
+    async fn put_otp_with_cooldown(
+        &self,
+        record: OtpRecord,
+        cooldown_secs: u64,
+    ) -> Result<Option<u64>, String> {
+        if cooldown_secs == 0 {
+            self.put_otp(record).await?;
+            return Ok(None);
+        }
+        let mut tx = self
+            .pool
+            .begin()
+            .await
+            .map_err(|err| format!("OTP cooldown transaction begin failed: {err}"))?;
+        // A durable owner-row lock serializes issuance across broker nodes,
+        // including when no OTP of this type exists yet. The lookup and write
+        // must use this same transaction; a separate preflight can race.
+        let rel = self.users_relation();
+        let user_col = self.users_model.q("user_id");
+        let owner = sqlx::query(&format!(
+            "/* udb_otp_cooldown_lock */ SELECT {user_col} FROM {rel} \
+             WHERE {user_col} = $1::UUID FOR UPDATE"
+        ))
+        .bind(&record.user_id)
+        .fetch_optional(&mut *tx)
+        .await
+        .map_err(|err| format!("OTP cooldown owner lock failed: {err}"))?;
+        if owner.is_none() {
+            return Err("OTP cooldown owner no longer exists".into());
+        }
+        if let Some(last) = self
+            .latest_otp_created_at_on(&mut *tx, &record.user_id, record.otp_type)
+            .await?
+        {
+            let ready_at = last.saturating_add(cooldown_secs);
+            if record.created_at_unix < ready_at {
+                return Ok(Some(ready_at));
+            }
+        }
+        self.put_otp_on(&mut *tx, record).await?;
+        tx.commit()
+            .await
+            .map_err(|err| format!("OTP cooldown commit failed: {err}"))?;
+        Ok(None)
+    }
+
     /// Atomic variant: upsert the OTP on the caller's transaction connection so
     /// it commits with the caller's other writes (e.g. `create_user`'s user
     /// upsert + audit/outbox event).
@@ -3332,22 +3420,8 @@ impl UserStore for PostgresUserStore {
         user_id: &str,
         otp_type: i32,
     ) -> Result<Option<u64>, String> {
-        let rel = self.otps_relation();
-        let user_col = self.otps_model.q("user_id");
-        let type_col = self.otps_model.q("otp_type");
-        let created_col = self.otps_model.q("created_at");
-        // `created_at` is a TIMESTAMP and `otp_type` is stored as its short token
-        // (see `otp_type_to_db`), so match on the token and project the max as epoch.
-        let epoch: Option<i64> = sqlx::query_scalar(&format!(
-            "SELECT EXTRACT(EPOCH FROM MAX({created_col}))::BIGINT \
-             FROM {rel} WHERE {user_col} = $1::UUID AND {type_col} = $2"
-        ))
-        .bind(user_id)
-        .bind(otp_type_to_db(otp_type))
-        .fetch_one(&self.pool)
-        .await
-        .map_err(|err| format!("latest otp lookup failed: {err}"))?;
-        Ok(epoch.map(|v| v.max(0) as u64))
+        self.latest_otp_created_at_on(&self.pool, user_id, otp_type)
+            .await
     }
 
     async fn consume_otp_pending(&self, otp_id: &str, now_unix: u64) -> Result<bool, String> {

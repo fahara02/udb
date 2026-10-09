@@ -377,6 +377,58 @@ private static final long serialVersionUID = 0L;
     return writeReceipt_ == null ? com.udb.entity.v1.WriteReceipt.getDefaultInstance() : writeReceipt_;
   }
 
+  public static final int ERROR_DETAIL_FIELD_NUMBER = 6;
+  private com.udb.entity.v1.ErrorDetail errorDetail_;
+  /**
+   * <pre>
+   * Original refusal, also carried in the terminal gRPC trailer. Classify this
+   * detail/code instead of matching the human-readable message.
+   * </pre>
+   *
+   * <code>.udb.entity.v1.ErrorDetail error_detail = 6 [json_name = "errorDetail"];</code>
+   * @return Whether the errorDetail field is set.
+   */
+  @java.lang.Override
+  public boolean hasErrorDetail() {
+    return ((bitField0_ & 0x00000002) != 0);
+  }
+  /**
+   * <pre>
+   * Original refusal, also carried in the terminal gRPC trailer. Classify this
+   * detail/code instead of matching the human-readable message.
+   * </pre>
+   *
+   * <code>.udb.entity.v1.ErrorDetail error_detail = 6 [json_name = "errorDetail"];</code>
+   * @return The errorDetail.
+   */
+  @java.lang.Override
+  public com.udb.entity.v1.ErrorDetail getErrorDetail() {
+    return errorDetail_ == null ? com.udb.entity.v1.ErrorDetail.getDefaultInstance() : errorDetail_;
+  }
+  /**
+   * <pre>
+   * Original refusal, also carried in the terminal gRPC trailer. Classify this
+   * detail/code instead of matching the human-readable message.
+   * </pre>
+   *
+   * <code>.udb.entity.v1.ErrorDetail error_detail = 6 [json_name = "errorDetail"];</code>
+   */
+  @java.lang.Override
+  public com.udb.entity.v1.ErrorDetailOrBuilder getErrorDetailOrBuilder() {
+    return errorDetail_ == null ? com.udb.entity.v1.ErrorDetail.getDefaultInstance() : errorDetail_;
+  }
+
+  public static final int CODE_FIELD_NUMBER = 7;
+  private int code_ = 0;
+  /**
+   * <code>int32 code = 7 [json_name = "code"];</code>
+   * @return The code.
+   */
+  @java.lang.Override
+  public int getCode() {
+    return code_;
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -406,6 +458,12 @@ private static final long serialVersionUID = 0L;
     if (((bitField0_ & 0x00000001) != 0)) {
       output.writeMessage(5, getWriteReceipt());
     }
+    if (((bitField0_ & 0x00000002) != 0)) {
+      output.writeMessage(6, getErrorDetail());
+    }
+    if (code_ != 0) {
+      output.writeInt32(7, code_);
+    }
     getUnknownFields().writeTo(output);
   }
 
@@ -431,6 +489,14 @@ private static final long serialVersionUID = 0L;
     if (((bitField0_ & 0x00000001) != 0)) {
       size += com.google.protobuf.CodedOutputStream
         .computeMessageSize(5, getWriteReceipt());
+    }
+    if (((bitField0_ & 0x00000002) != 0)) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeMessageSize(6, getErrorDetail());
+    }
+    if (code_ != 0) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeInt32Size(7, code_);
     }
     size += getUnknownFields().getSerializedSize();
     memoizedSize = size;
@@ -459,6 +525,13 @@ private static final long serialVersionUID = 0L;
       if (!getWriteReceipt()
           .equals(other.getWriteReceipt())) return false;
     }
+    if (hasErrorDetail() != other.hasErrorDetail()) return false;
+    if (hasErrorDetail()) {
+      if (!getErrorDetail()
+          .equals(other.getErrorDetail())) return false;
+    }
+    if (getCode()
+        != other.getCode()) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -482,6 +555,12 @@ private static final long serialVersionUID = 0L;
       hash = (37 * hash) + WRITE_RECEIPT_FIELD_NUMBER;
       hash = (53 * hash) + getWriteReceipt().hashCode();
     }
+    if (hasErrorDetail()) {
+      hash = (37 * hash) + ERROR_DETAIL_FIELD_NUMBER;
+      hash = (53 * hash) + getErrorDetail().hashCode();
+    }
+    hash = (37 * hash) + CODE_FIELD_NUMBER;
+    hash = (53 * hash) + getCode();
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -613,6 +692,7 @@ private static final long serialVersionUID = 0L;
       if (com.google.protobuf.GeneratedMessage
               .alwaysUseFieldBuilders) {
         internalGetWriteReceiptFieldBuilder();
+        internalGetErrorDetailFieldBuilder();
       }
     }
     @java.lang.Override
@@ -628,6 +708,12 @@ private static final long serialVersionUID = 0L;
         writeReceiptBuilder_.dispose();
         writeReceiptBuilder_ = null;
       }
+      errorDetail_ = null;
+      if (errorDetailBuilder_ != null) {
+        errorDetailBuilder_.dispose();
+        errorDetailBuilder_ = null;
+      }
+      code_ = 0;
       return this;
     }
 
@@ -680,6 +766,15 @@ private static final long serialVersionUID = 0L;
             : writeReceiptBuilder_.build();
         to_bitField0_ |= 0x00000001;
       }
+      if (((from_bitField0_ & 0x00000020) != 0)) {
+        result.errorDetail_ = errorDetailBuilder_ == null
+            ? errorDetail_
+            : errorDetailBuilder_.build();
+        to_bitField0_ |= 0x00000002;
+      }
+      if (((from_bitField0_ & 0x00000040) != 0)) {
+        result.code_ = code_;
+      }
       result.bitField0_ |= to_bitField0_;
     }
 
@@ -715,6 +810,12 @@ private static final long serialVersionUID = 0L;
       }
       if (other.hasWriteReceipt()) {
         mergeWriteReceipt(other.getWriteReceipt());
+      }
+      if (other.hasErrorDetail()) {
+        mergeErrorDetail(other.getErrorDetail());
+      }
+      if (other.getCode() != 0) {
+        setCode(other.getCode());
       }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
@@ -769,6 +870,18 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00000010;
               break;
             } // case 42
+            case 50: {
+              input.readMessage(
+                  internalGetErrorDetailFieldBuilder().getBuilder(),
+                  extensionRegistry);
+              bitField0_ |= 0x00000020;
+              break;
+            } // case 50
+            case 56: {
+              code_ = input.readInt32();
+              bitField0_ |= 0x00000040;
+              break;
+            } // case 56
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -1244,6 +1357,204 @@ private static final long serialVersionUID = 0L;
         writeReceipt_ = null;
       }
       return writeReceiptBuilder_;
+    }
+
+    private com.udb.entity.v1.ErrorDetail errorDetail_;
+    private com.google.protobuf.SingleFieldBuilder<
+        com.udb.entity.v1.ErrorDetail, com.udb.entity.v1.ErrorDetail.Builder, com.udb.entity.v1.ErrorDetailOrBuilder> errorDetailBuilder_;
+    /**
+     * <pre>
+     * Original refusal, also carried in the terminal gRPC trailer. Classify this
+     * detail/code instead of matching the human-readable message.
+     * </pre>
+     *
+     * <code>.udb.entity.v1.ErrorDetail error_detail = 6 [json_name = "errorDetail"];</code>
+     * @return Whether the errorDetail field is set.
+     */
+    public boolean hasErrorDetail() {
+      return ((bitField0_ & 0x00000020) != 0);
+    }
+    /**
+     * <pre>
+     * Original refusal, also carried in the terminal gRPC trailer. Classify this
+     * detail/code instead of matching the human-readable message.
+     * </pre>
+     *
+     * <code>.udb.entity.v1.ErrorDetail error_detail = 6 [json_name = "errorDetail"];</code>
+     * @return The errorDetail.
+     */
+    public com.udb.entity.v1.ErrorDetail getErrorDetail() {
+      if (errorDetailBuilder_ == null) {
+        return errorDetail_ == null ? com.udb.entity.v1.ErrorDetail.getDefaultInstance() : errorDetail_;
+      } else {
+        return errorDetailBuilder_.getMessage();
+      }
+    }
+    /**
+     * <pre>
+     * Original refusal, also carried in the terminal gRPC trailer. Classify this
+     * detail/code instead of matching the human-readable message.
+     * </pre>
+     *
+     * <code>.udb.entity.v1.ErrorDetail error_detail = 6 [json_name = "errorDetail"];</code>
+     */
+    public Builder setErrorDetail(com.udb.entity.v1.ErrorDetail value) {
+      if (errorDetailBuilder_ == null) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        errorDetail_ = value;
+      } else {
+        errorDetailBuilder_.setMessage(value);
+      }
+      bitField0_ |= 0x00000020;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Original refusal, also carried in the terminal gRPC trailer. Classify this
+     * detail/code instead of matching the human-readable message.
+     * </pre>
+     *
+     * <code>.udb.entity.v1.ErrorDetail error_detail = 6 [json_name = "errorDetail"];</code>
+     */
+    public Builder setErrorDetail(
+        com.udb.entity.v1.ErrorDetail.Builder builderForValue) {
+      if (errorDetailBuilder_ == null) {
+        errorDetail_ = builderForValue.build();
+      } else {
+        errorDetailBuilder_.setMessage(builderForValue.build());
+      }
+      bitField0_ |= 0x00000020;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Original refusal, also carried in the terminal gRPC trailer. Classify this
+     * detail/code instead of matching the human-readable message.
+     * </pre>
+     *
+     * <code>.udb.entity.v1.ErrorDetail error_detail = 6 [json_name = "errorDetail"];</code>
+     */
+    public Builder mergeErrorDetail(com.udb.entity.v1.ErrorDetail value) {
+      if (errorDetailBuilder_ == null) {
+        if (((bitField0_ & 0x00000020) != 0) &&
+          errorDetail_ != null &&
+          errorDetail_ != com.udb.entity.v1.ErrorDetail.getDefaultInstance()) {
+          getErrorDetailBuilder().mergeFrom(value);
+        } else {
+          errorDetail_ = value;
+        }
+      } else {
+        errorDetailBuilder_.mergeFrom(value);
+      }
+      if (errorDetail_ != null) {
+        bitField0_ |= 0x00000020;
+        onChanged();
+      }
+      return this;
+    }
+    /**
+     * <pre>
+     * Original refusal, also carried in the terminal gRPC trailer. Classify this
+     * detail/code instead of matching the human-readable message.
+     * </pre>
+     *
+     * <code>.udb.entity.v1.ErrorDetail error_detail = 6 [json_name = "errorDetail"];</code>
+     */
+    public Builder clearErrorDetail() {
+      bitField0_ = (bitField0_ & ~0x00000020);
+      errorDetail_ = null;
+      if (errorDetailBuilder_ != null) {
+        errorDetailBuilder_.dispose();
+        errorDetailBuilder_ = null;
+      }
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Original refusal, also carried in the terminal gRPC trailer. Classify this
+     * detail/code instead of matching the human-readable message.
+     * </pre>
+     *
+     * <code>.udb.entity.v1.ErrorDetail error_detail = 6 [json_name = "errorDetail"];</code>
+     */
+    public com.udb.entity.v1.ErrorDetail.Builder getErrorDetailBuilder() {
+      bitField0_ |= 0x00000020;
+      onChanged();
+      return internalGetErrorDetailFieldBuilder().getBuilder();
+    }
+    /**
+     * <pre>
+     * Original refusal, also carried in the terminal gRPC trailer. Classify this
+     * detail/code instead of matching the human-readable message.
+     * </pre>
+     *
+     * <code>.udb.entity.v1.ErrorDetail error_detail = 6 [json_name = "errorDetail"];</code>
+     */
+    public com.udb.entity.v1.ErrorDetailOrBuilder getErrorDetailOrBuilder() {
+      if (errorDetailBuilder_ != null) {
+        return errorDetailBuilder_.getMessageOrBuilder();
+      } else {
+        return errorDetail_ == null ?
+            com.udb.entity.v1.ErrorDetail.getDefaultInstance() : errorDetail_;
+      }
+    }
+    /**
+     * <pre>
+     * Original refusal, also carried in the terminal gRPC trailer. Classify this
+     * detail/code instead of matching the human-readable message.
+     * </pre>
+     *
+     * <code>.udb.entity.v1.ErrorDetail error_detail = 6 [json_name = "errorDetail"];</code>
+     */
+    private com.google.protobuf.SingleFieldBuilder<
+        com.udb.entity.v1.ErrorDetail, com.udb.entity.v1.ErrorDetail.Builder, com.udb.entity.v1.ErrorDetailOrBuilder>
+        internalGetErrorDetailFieldBuilder() {
+      if (errorDetailBuilder_ == null) {
+        errorDetailBuilder_ = new com.google.protobuf.SingleFieldBuilder<
+            com.udb.entity.v1.ErrorDetail, com.udb.entity.v1.ErrorDetail.Builder, com.udb.entity.v1.ErrorDetailOrBuilder>(
+                getErrorDetail(),
+                getParentForChildren(),
+                isClean());
+        errorDetail_ = null;
+      }
+      return errorDetailBuilder_;
+    }
+
+    private int code_ ;
+    /**
+     * <code>int32 code = 7 [json_name = "code"];</code>
+     * @return The code.
+     */
+    @java.lang.Override
+    public int getCode() {
+      return code_;
+    }
+    /**
+     * <code>int32 code = 7 [json_name = "code"];</code>
+     * @param value The code to set.
+     * @return This builder for chaining.
+     */
+    public Builder setCode(int value) {
+
+      code_ = value;
+      bitField0_ |= 0x00000040;
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>int32 code = 7 [json_name = "code"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearCode() {
+      bitField0_ = (bitField0_ & ~0x00000040);
+      code_ = 0;
+      onChanged();
+      return this;
     }
 
     // @@protoc_insertion_point(builder_scope:udb.entity.v1.TxStatus)

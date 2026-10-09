@@ -828,7 +828,7 @@ impl DataBrokerService {
                 operation,
                 &safe.credential_id,
                 security.rate_limit_per_minute,
-                &safe.user_id,
+                &security.user_id,
             )
             .await?;
         }

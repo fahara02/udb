@@ -104,12 +104,14 @@ type Mutation struct {
 	ObjectKey    string                 `protobuf:"bytes,13,opt,name=object_key,json=objectKey,proto3" json:"object_key,omitempty"`
 	ObjectData   []byte                 `protobuf:"bytes,14,opt,name=object_data,json=objectData,proto3" json:"object_data,omitempty"`
 	ContentType  string                 `protobuf:"bytes,15,opt,name=content_type,json=contentType,proto3" json:"content_type,omitempty"`
-	// Honoured only by `vector_upsert` and `enqueue_outbox_event` mutations.
-	// Setting it on an `upsert`, `update` or `delete` mutation is REJECTED with
-	// INVALID_ARGUMENT before the transaction opens (a transactional relational
-	// mutation keeps no per-mutation replay receipt, so the key cannot be
-	// honoured, and it is never silently ignored). Use the unary verb's
-	// `idempotency_key` when a relational write must be deduplicated.
+	// Per-mutation replay key for upsert/update/delete and vector_upsert.
+	// Relational receipts commit atomically with the whole transaction. A retry
+	// with identical inputs reuses its original mutation ID and affected count
+	// without repeating the write, revision, projection, CDC or audit effects.
+	// Reuse with different inputs fails with UDB_IDEMPOTENCY_REUSE and rolls the
+	// transaction back. Relational keys are scoped to tenant/project/entity and
+	// BeginTx operation, independently of unary replay keys. Other operations
+	// reject a non-empty key before the transaction opens.
 	IdempotencyKey string `protobuf:"bytes,16,opt,name=idempotency_key,json=idempotencyKey,proto3" json:"idempotency_key,omitempty"`
 	// Partial-update payload for `operation = "update"` — the SET columns and the
 	// atomic increments. Same semantics as the unary UpdateRequest (SETs named
@@ -135,9 +137,15 @@ type Mutation struct {
 	// if a tenant-scoped topic has no tenant to route to, or if the outbox INSERT
 	// fails. Default false preserves best-effort emission (an event is emitted
 	// when CDC is enabled and the entity is CDC-mapped, and skipped otherwise).
-	CdcRequired   bool `protobuf:"varint,20,opt,name=cdc_required,json=cdcRequired,proto3" json:"cdc_required,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	CdcRequired bool `protobuf:"varint,20,opt,name=cdc_required,json=cdcRequired,proto3" json:"cdc_required,omitempty"`
+	// Exact affected-row count for a relational mutation. Non-zero mismatches
+	// roll back the whole transaction with NOT_FOUND/UDB_NO_ROWS_AFFECTED.
+	RequireAffected uint32 `protobuf:"varint,21,opt,name=require_affected,json=requireAffected,proto3" json:"require_affected,omitempty"`
+	// Upsert conflict target, with the same semantics as UpsertRequest. Ignored
+	// values are never accepted: only an upsert may set this field.
+	ConflictFields []string `protobuf:"bytes,22,rep,name=conflict_fields,json=conflictFields,proto3" json:"conflict_fields,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *Mutation) Reset() {
@@ -310,6 +318,20 @@ func (x *Mutation) GetCdcRequired() bool {
 	return false
 }
 
+func (x *Mutation) GetRequireAffected() uint32 {
+	if x != nil {
+		return x.RequireAffected
+	}
+	return 0
+}
+
+func (x *Mutation) GetConflictFields() []string {
+	if x != nil {
+		return x.ConflictFields
+	}
+	return nil
+}
+
 type TxStatus struct {
 	state      protoimpl.MessageState `protogen:"open.v1"`
 	State      TxStatus_State         `protobuf:"varint,1,opt,name=state,proto3,enum=udb.entity.v1.TxStatus_State" json:"state,omitempty"`
@@ -321,7 +343,11 @@ type TxStatus struct {
 	// fence a following read exactly as it does with MutationResponse.write_receipt
 	// on the unary verbs. Set only on the TX_STATE_COMMITTED status; unset for
 	// open/rolled-back/error statuses.
-	WriteReceipt  *WriteReceipt `protobuf:"bytes,5,opt,name=write_receipt,json=writeReceipt,proto3" json:"write_receipt,omitempty"`
+	WriteReceipt *WriteReceipt `protobuf:"bytes,5,opt,name=write_receipt,json=writeReceipt,proto3" json:"write_receipt,omitempty"`
+	// Original refusal, also carried in the terminal gRPC trailer. Classify this
+	// detail/code instead of matching the human-readable message.
+	ErrorDetail   *ErrorDetail `protobuf:"bytes,6,opt,name=error_detail,json=errorDetail,proto3" json:"error_detail,omitempty"`
+	Code          int32        `protobuf:"varint,7,opt,name=code,proto3" json:"code,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -391,11 +417,25 @@ func (x *TxStatus) GetWriteReceipt() *WriteReceipt {
 	return nil
 }
 
+func (x *TxStatus) GetErrorDetail() *ErrorDetail {
+	if x != nil {
+		return x.ErrorDetail
+	}
+	return nil
+}
+
+func (x *TxStatus) GetCode() int32 {
+	if x != nil {
+		return x.Code
+	}
+	return 0
+}
+
 var File_udb_entity_v1_tx_proto protoreflect.FileDescriptor
 
 const file_udb_entity_v1_tx_proto_rawDesc = "" +
 	"\n" +
-	"\x16udb/entity/v1/tx.proto\x12\rudb.entity.v1\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1budb/entity/v1/context.proto\x1a\x1audb/entity/v1/vector.proto\x1a\x1eudb/entity/v1/relational.proto\x1a\x1fudb/entity/v1/consistency.proto\"\xb2\x06\n" +
+	"\x16udb/entity/v1/tx.proto\x12\rudb.entity.v1\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1budb/entity/v1/context.proto\x1a\x1audb/entity/v1/vector.proto\x1a\x1eudb/entity/v1/relational.proto\x1a\x1fudb/entity/v1/consistency.proto\x1a\x19udb/entity/v1/error.proto\"\x86\a\n" +
 	"\bMutation\x127\n" +
 	"\acontext\x18\x01 \x01(\v2\x1d.udb.entity.v1.RequestContextR\acontext\x12\x13\n" +
 	"\x05tx_id\x18\x02 \x01(\tR\x04txId\x12\x1c\n" +
@@ -424,14 +464,18 @@ const file_udb_entity_v1_tx_proto_rawDesc = "" +
 	"increments\x18\x12 \x03(\v2&.udb.entity.v1.UpdateRequest.IncrementR\n" +
 	"increments\x123\n" +
 	"\bexpected\x18\x13 \x01(\v2\x17.google.protobuf.StructR\bexpected\x12!\n" +
-	"\fcdc_required\x18\x14 \x01(\bR\vcdcRequired\"\xcd\x02\n" +
+	"\fcdc_required\x18\x14 \x01(\bR\vcdcRequired\x12)\n" +
+	"\x10require_affected\x18\x15 \x01(\rR\x0frequireAffected\x12'\n" +
+	"\x0fconflict_fields\x18\x16 \x03(\tR\x0econflictFields\"\xa0\x03\n" +
 	"\bTxStatus\x123\n" +
 	"\x05state\x18\x01 \x01(\x0e2\x1d.udb.entity.v1.TxStatus.StateR\x05state\x12\x13\n" +
 	"\x05tx_id\x18\x02 \x01(\tR\x04txId\x12\x1f\n" +
 	"\vmutation_id\x18\x03 \x01(\tR\n" +
 	"mutationId\x12\x18\n" +
 	"\amessage\x18\x04 \x01(\tR\amessage\x12@\n" +
-	"\rwrite_receipt\x18\x05 \x01(\v2\x1b.udb.entity.v1.WriteReceiptR\fwriteReceipt\"z\n" +
+	"\rwrite_receipt\x18\x05 \x01(\v2\x1b.udb.entity.v1.WriteReceiptR\fwriteReceipt\x12=\n" +
+	"\ferror_detail\x18\x06 \x01(\v2\x1a.udb.entity.v1.ErrorDetailR\verrorDetail\x12\x12\n" +
+	"\x04code\x18\a \x01(\x05R\x04code\"z\n" +
 	"\x05State\x12\x18\n" +
 	"\x14TX_STATE_UNSPECIFIED\x10\x00\x12\x11\n" +
 	"\rTX_STATE_OPEN\x10\x01\x12\x16\n" +
@@ -463,22 +507,24 @@ var file_udb_entity_v1_tx_proto_goTypes = []any{
 	(*VectorPointMutation)(nil),     // 5: udb.entity.v1.VectorPointMutation
 	(*UpdateRequest_Increment)(nil), // 6: udb.entity.v1.UpdateRequest.Increment
 	(*WriteReceipt)(nil),            // 7: udb.entity.v1.WriteReceipt
+	(*ErrorDetail)(nil),             // 8: udb.entity.v1.ErrorDetail
 }
 var file_udb_entity_v1_tx_proto_depIdxs = []int32{
-	3, // 0: udb.entity.v1.Mutation.context:type_name -> udb.entity.v1.RequestContext
-	4, // 1: udb.entity.v1.Mutation.payload:type_name -> google.protobuf.Struct
-	4, // 2: udb.entity.v1.Mutation.filter:type_name -> google.protobuf.Struct
-	5, // 3: udb.entity.v1.Mutation.vector_points:type_name -> udb.entity.v1.VectorPointMutation
-	4, // 4: udb.entity.v1.Mutation.changes:type_name -> google.protobuf.Struct
-	6, // 5: udb.entity.v1.Mutation.increments:type_name -> udb.entity.v1.UpdateRequest.Increment
-	4, // 6: udb.entity.v1.Mutation.expected:type_name -> google.protobuf.Struct
-	0, // 7: udb.entity.v1.TxStatus.state:type_name -> udb.entity.v1.TxStatus.State
-	7, // 8: udb.entity.v1.TxStatus.write_receipt:type_name -> udb.entity.v1.WriteReceipt
-	9, // [9:9] is the sub-list for method output_type
-	9, // [9:9] is the sub-list for method input_type
-	9, // [9:9] is the sub-list for extension type_name
-	9, // [9:9] is the sub-list for extension extendee
-	0, // [0:9] is the sub-list for field type_name
+	3,  // 0: udb.entity.v1.Mutation.context:type_name -> udb.entity.v1.RequestContext
+	4,  // 1: udb.entity.v1.Mutation.payload:type_name -> google.protobuf.Struct
+	4,  // 2: udb.entity.v1.Mutation.filter:type_name -> google.protobuf.Struct
+	5,  // 3: udb.entity.v1.Mutation.vector_points:type_name -> udb.entity.v1.VectorPointMutation
+	4,  // 4: udb.entity.v1.Mutation.changes:type_name -> google.protobuf.Struct
+	6,  // 5: udb.entity.v1.Mutation.increments:type_name -> udb.entity.v1.UpdateRequest.Increment
+	4,  // 6: udb.entity.v1.Mutation.expected:type_name -> google.protobuf.Struct
+	0,  // 7: udb.entity.v1.TxStatus.state:type_name -> udb.entity.v1.TxStatus.State
+	7,  // 8: udb.entity.v1.TxStatus.write_receipt:type_name -> udb.entity.v1.WriteReceipt
+	8,  // 9: udb.entity.v1.TxStatus.error_detail:type_name -> udb.entity.v1.ErrorDetail
+	10, // [10:10] is the sub-list for method output_type
+	10, // [10:10] is the sub-list for method input_type
+	10, // [10:10] is the sub-list for extension type_name
+	10, // [10:10] is the sub-list for extension extendee
+	0,  // [0:10] is the sub-list for field type_name
 }
 
 func init() { file_udb_entity_v1_tx_proto_init() }
@@ -490,6 +536,7 @@ func file_udb_entity_v1_tx_proto_init() {
 	file_udb_entity_v1_vector_proto_init()
 	file_udb_entity_v1_relational_proto_init()
 	file_udb_entity_v1_consistency_proto_init()
+	file_udb_entity_v1_error_proto_init()
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{

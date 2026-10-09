@@ -3,6 +3,7 @@ from udb.entity.v1 import context_pb2 as _context_pb2
 from udb.entity.v1 import vector_pb2 as _vector_pb2
 from udb.entity.v1 import relational_pb2 as _relational_pb2
 from udb.entity.v1 import consistency_pb2 as _consistency_pb2
+from udb.entity.v1 import error_pb2 as _error_pb2
 from google.protobuf.internal import containers as _containers
 from google.protobuf.internal import enum_type_wrapper as _enum_type_wrapper
 from google.protobuf import descriptor as _descriptor
@@ -13,7 +14,7 @@ from typing import ClassVar as _ClassVar, Optional as _Optional, Union as _Union
 DESCRIPTOR: _descriptor.FileDescriptor
 
 class Mutation(_message.Message):
-    __slots__ = ("context", "tx_id", "operation", "message_type", "record_json", "payload", "filter", "collection", "vector_points", "commit", "rollback", "bucket", "object_key", "object_data", "content_type", "idempotency_key", "changes", "increments", "expected", "cdc_required")
+    __slots__ = ("context", "tx_id", "operation", "message_type", "record_json", "payload", "filter", "collection", "vector_points", "commit", "rollback", "bucket", "object_key", "object_data", "content_type", "idempotency_key", "changes", "increments", "expected", "cdc_required", "require_affected", "conflict_fields")
     CONTEXT_FIELD_NUMBER: _ClassVar[int]
     TX_ID_FIELD_NUMBER: _ClassVar[int]
     OPERATION_FIELD_NUMBER: _ClassVar[int]
@@ -34,6 +35,8 @@ class Mutation(_message.Message):
     INCREMENTS_FIELD_NUMBER: _ClassVar[int]
     EXPECTED_FIELD_NUMBER: _ClassVar[int]
     CDC_REQUIRED_FIELD_NUMBER: _ClassVar[int]
+    REQUIRE_AFFECTED_FIELD_NUMBER: _ClassVar[int]
+    CONFLICT_FIELDS_FIELD_NUMBER: _ClassVar[int]
     context: _context_pb2.RequestContext
     tx_id: str
     operation: str
@@ -54,10 +57,12 @@ class Mutation(_message.Message):
     increments: _containers.RepeatedCompositeFieldContainer[_relational_pb2.UpdateRequest.Increment]
     expected: _struct_pb2.Struct
     cdc_required: bool
-    def __init__(self, context: _Optional[_Union[_context_pb2.RequestContext, _Mapping]] = ..., tx_id: _Optional[str] = ..., operation: _Optional[str] = ..., message_type: _Optional[str] = ..., record_json: _Optional[bytes] = ..., payload: _Optional[_Union[_struct_pb2.Struct, _Mapping]] = ..., filter: _Optional[_Union[_struct_pb2.Struct, _Mapping]] = ..., collection: _Optional[str] = ..., vector_points: _Optional[_Iterable[_Union[_vector_pb2.VectorPointMutation, _Mapping]]] = ..., commit: bool = ..., rollback: bool = ..., bucket: _Optional[str] = ..., object_key: _Optional[str] = ..., object_data: _Optional[bytes] = ..., content_type: _Optional[str] = ..., idempotency_key: _Optional[str] = ..., changes: _Optional[_Union[_struct_pb2.Struct, _Mapping]] = ..., increments: _Optional[_Iterable[_Union[_relational_pb2.UpdateRequest.Increment, _Mapping]]] = ..., expected: _Optional[_Union[_struct_pb2.Struct, _Mapping]] = ..., cdc_required: bool = ...) -> None: ...
+    require_affected: int
+    conflict_fields: _containers.RepeatedScalarFieldContainer[str]
+    def __init__(self, context: _Optional[_Union[_context_pb2.RequestContext, _Mapping]] = ..., tx_id: _Optional[str] = ..., operation: _Optional[str] = ..., message_type: _Optional[str] = ..., record_json: _Optional[bytes] = ..., payload: _Optional[_Union[_struct_pb2.Struct, _Mapping]] = ..., filter: _Optional[_Union[_struct_pb2.Struct, _Mapping]] = ..., collection: _Optional[str] = ..., vector_points: _Optional[_Iterable[_Union[_vector_pb2.VectorPointMutation, _Mapping]]] = ..., commit: bool = ..., rollback: bool = ..., bucket: _Optional[str] = ..., object_key: _Optional[str] = ..., object_data: _Optional[bytes] = ..., content_type: _Optional[str] = ..., idempotency_key: _Optional[str] = ..., changes: _Optional[_Union[_struct_pb2.Struct, _Mapping]] = ..., increments: _Optional[_Iterable[_Union[_relational_pb2.UpdateRequest.Increment, _Mapping]]] = ..., expected: _Optional[_Union[_struct_pb2.Struct, _Mapping]] = ..., cdc_required: bool = ..., require_affected: _Optional[int] = ..., conflict_fields: _Optional[_Iterable[str]] = ...) -> None: ...
 
 class TxStatus(_message.Message):
-    __slots__ = ("state", "tx_id", "mutation_id", "message", "write_receipt")
+    __slots__ = ("state", "tx_id", "mutation_id", "message", "write_receipt", "error_detail", "code")
     class State(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
         __slots__ = ()
         TX_STATE_UNSPECIFIED: _ClassVar[TxStatus.State]
@@ -75,9 +80,13 @@ class TxStatus(_message.Message):
     MUTATION_ID_FIELD_NUMBER: _ClassVar[int]
     MESSAGE_FIELD_NUMBER: _ClassVar[int]
     WRITE_RECEIPT_FIELD_NUMBER: _ClassVar[int]
+    ERROR_DETAIL_FIELD_NUMBER: _ClassVar[int]
+    CODE_FIELD_NUMBER: _ClassVar[int]
     state: TxStatus.State
     tx_id: str
     mutation_id: str
     message: str
     write_receipt: _consistency_pb2.WriteReceipt
-    def __init__(self, state: _Optional[_Union[TxStatus.State, str]] = ..., tx_id: _Optional[str] = ..., mutation_id: _Optional[str] = ..., message: _Optional[str] = ..., write_receipt: _Optional[_Union[_consistency_pb2.WriteReceipt, _Mapping]] = ...) -> None: ...
+    error_detail: _error_pb2.ErrorDetail
+    code: int
+    def __init__(self, state: _Optional[_Union[TxStatus.State, str]] = ..., tx_id: _Optional[str] = ..., mutation_id: _Optional[str] = ..., message: _Optional[str] = ..., write_receipt: _Optional[_Union[_consistency_pb2.WriteReceipt, _Mapping]] = ..., error_detail: _Optional[_Union[_error_pb2.ErrorDetail, _Mapping]] = ..., code: _Optional[int] = ...) -> None: ...

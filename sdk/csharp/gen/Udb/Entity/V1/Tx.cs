@@ -28,42 +28,46 @@ namespace Udb.Entity.V1 {
             "bGUvcHJvdG9idWYvc3RydWN0LnByb3RvGht1ZGIvZW50aXR5L3YxL2NvbnRl",
             "eHQucHJvdG8aGnVkYi9lbnRpdHkvdjEvdmVjdG9yLnByb3RvGh51ZGIvZW50",
             "aXR5L3YxL3JlbGF0aW9uYWwucHJvdG8aH3VkYi9lbnRpdHkvdjEvY29uc2lz",
-            "dGVuY3kucHJvdG8isgYKCE11dGF0aW9uEjcKB2NvbnRleHQYASABKAsyHS51",
-            "ZGIuZW50aXR5LnYxLlJlcXVlc3RDb250ZXh0Ugdjb250ZXh0EhMKBXR4X2lk",
-            "GAIgASgJUgR0eElkEhwKCW9wZXJhdGlvbhgDIAEoCVIJb3BlcmF0aW9uEiEK",
-            "DG1lc3NhZ2VfdHlwZRgEIAEoCVILbWVzc2FnZVR5cGUSHwoLcmVjb3JkX2pz",
-            "b24YBSABKAxSCnJlY29yZEpzb24SMQoHcGF5bG9hZBgGIAEoCzIXLmdvb2ds",
-            "ZS5wcm90b2J1Zi5TdHJ1Y3RSB3BheWxvYWQSLwoGZmlsdGVyGAcgASgLMhcu",
-            "Z29vZ2xlLnByb3RvYnVmLlN0cnVjdFIGZmlsdGVyEh4KCmNvbGxlY3Rpb24Y",
-            "CCABKAlSCmNvbGxlY3Rpb24SRwoNdmVjdG9yX3BvaW50cxgJIAMoCzIiLnVk",
-            "Yi5lbnRpdHkudjEuVmVjdG9yUG9pbnRNdXRhdGlvblIMdmVjdG9yUG9pbnRz",
-            "EhYKBmNvbW1pdBgKIAEoCFIGY29tbWl0EhoKCHJvbGxiYWNrGAsgASgIUghy",
-            "b2xsYmFjaxIWCgZidWNrZXQYDCABKAlSBmJ1Y2tldBIdCgpvYmplY3Rfa2V5",
-            "GA0gASgJUglvYmplY3RLZXkSHwoLb2JqZWN0X2RhdGEYDiABKAxSCm9iamVj",
-            "dERhdGESIQoMY29udGVudF90eXBlGA8gASgJUgtjb250ZW50VHlwZRInCg9p",
-            "ZGVtcG90ZW5jeV9rZXkYECABKAlSDmlkZW1wb3RlbmN5S2V5EjEKB2NoYW5n",
-            "ZXMYESABKAsyFy5nb29nbGUucHJvdG9idWYuU3RydWN0UgdjaGFuZ2VzEkYK",
-            "CmluY3JlbWVudHMYEiADKAsyJi51ZGIuZW50aXR5LnYxLlVwZGF0ZVJlcXVl",
-            "c3QuSW5jcmVtZW50UgppbmNyZW1lbnRzEjMKCGV4cGVjdGVkGBMgASgLMhcu",
-            "Z29vZ2xlLnByb3RvYnVmLlN0cnVjdFIIZXhwZWN0ZWQSIQoMY2RjX3JlcXVp",
-            "cmVkGBQgASgIUgtjZGNSZXF1aXJlZCLNAgoIVHhTdGF0dXMSMwoFc3RhdGUY",
-            "ASABKA4yHS51ZGIuZW50aXR5LnYxLlR4U3RhdHVzLlN0YXRlUgVzdGF0ZRIT",
-            "CgV0eF9pZBgCIAEoCVIEdHhJZBIfCgttdXRhdGlvbl9pZBgDIAEoCVIKbXV0",
-            "YXRpb25JZBIYCgdtZXNzYWdlGAQgASgJUgdtZXNzYWdlEkAKDXdyaXRlX3Jl",
-            "Y2VpcHQYBSABKAsyGy51ZGIuZW50aXR5LnYxLldyaXRlUmVjZWlwdFIMd3Jp",
-            "dGVSZWNlaXB0InoKBVN0YXRlEhgKFFRYX1NUQVRFX1VOU1BFQ0lGSUVEEAAS",
-            "EQoNVFhfU1RBVEVfT1BFThABEhYKElRYX1NUQVRFX0NPTU1JVFRFRBACEhgK",
-            "FFRYX1NUQVRFX1JPTExFRF9CQUNLEAMSEgoOVFhfU1RBVEVfRVJST1IQBEKt",
-            "AQoRY29tLnVkYi5lbnRpdHkudjFCB1R4UHJvdG9QAVo5Z2l0aHViLmNvbS9m",
-            "YWhhcmEwMi91ZGIvc2RrL2dvL2dlbi91ZGIvZW50aXR5L3YxO2VudGl0eXYx",
-            "ogIDVUVYqgINVWRiLkVudGl0eS5WMcoCDVVkYlxFbnRpdHlcVjHiAhlVZGJc",
-            "R1BCTWV0YWRhdGFcRW50aXR5XFYx6gIPVWRiOjpFbnRpdHk6OlYxYgZwcm90",
-            "bzM="));
+            "dGVuY3kucHJvdG8aGXVkYi9lbnRpdHkvdjEvZXJyb3IucHJvdG8ihgcKCE11",
+            "dGF0aW9uEjcKB2NvbnRleHQYASABKAsyHS51ZGIuZW50aXR5LnYxLlJlcXVl",
+            "c3RDb250ZXh0Ugdjb250ZXh0EhMKBXR4X2lkGAIgASgJUgR0eElkEhwKCW9w",
+            "ZXJhdGlvbhgDIAEoCVIJb3BlcmF0aW9uEiEKDG1lc3NhZ2VfdHlwZRgEIAEo",
+            "CVILbWVzc2FnZVR5cGUSHwoLcmVjb3JkX2pzb24YBSABKAxSCnJlY29yZEpz",
+            "b24SMQoHcGF5bG9hZBgGIAEoCzIXLmdvb2dsZS5wcm90b2J1Zi5TdHJ1Y3RS",
+            "B3BheWxvYWQSLwoGZmlsdGVyGAcgASgLMhcuZ29vZ2xlLnByb3RvYnVmLlN0",
+            "cnVjdFIGZmlsdGVyEh4KCmNvbGxlY3Rpb24YCCABKAlSCmNvbGxlY3Rpb24S",
+            "RwoNdmVjdG9yX3BvaW50cxgJIAMoCzIiLnVkYi5lbnRpdHkudjEuVmVjdG9y",
+            "UG9pbnRNdXRhdGlvblIMdmVjdG9yUG9pbnRzEhYKBmNvbW1pdBgKIAEoCFIG",
+            "Y29tbWl0EhoKCHJvbGxiYWNrGAsgASgIUghyb2xsYmFjaxIWCgZidWNrZXQY",
+            "DCABKAlSBmJ1Y2tldBIdCgpvYmplY3Rfa2V5GA0gASgJUglvYmplY3RLZXkS",
+            "HwoLb2JqZWN0X2RhdGEYDiABKAxSCm9iamVjdERhdGESIQoMY29udGVudF90",
+            "eXBlGA8gASgJUgtjb250ZW50VHlwZRInCg9pZGVtcG90ZW5jeV9rZXkYECAB",
+            "KAlSDmlkZW1wb3RlbmN5S2V5EjEKB2NoYW5nZXMYESABKAsyFy5nb29nbGUu",
+            "cHJvdG9idWYuU3RydWN0UgdjaGFuZ2VzEkYKCmluY3JlbWVudHMYEiADKAsy",
+            "Ji51ZGIuZW50aXR5LnYxLlVwZGF0ZVJlcXVlc3QuSW5jcmVtZW50UgppbmNy",
+            "ZW1lbnRzEjMKCGV4cGVjdGVkGBMgASgLMhcuZ29vZ2xlLnByb3RvYnVmLlN0",
+            "cnVjdFIIZXhwZWN0ZWQSIQoMY2RjX3JlcXVpcmVkGBQgASgIUgtjZGNSZXF1",
+            "aXJlZBIpChByZXF1aXJlX2FmZmVjdGVkGBUgASgNUg9yZXF1aXJlQWZmZWN0",
+            "ZWQSJwoPY29uZmxpY3RfZmllbGRzGBYgAygJUg5jb25mbGljdEZpZWxkcyKg",
+            "AwoIVHhTdGF0dXMSMwoFc3RhdGUYASABKA4yHS51ZGIuZW50aXR5LnYxLlR4",
+            "U3RhdHVzLlN0YXRlUgVzdGF0ZRITCgV0eF9pZBgCIAEoCVIEdHhJZBIfCgtt",
+            "dXRhdGlvbl9pZBgDIAEoCVIKbXV0YXRpb25JZBIYCgdtZXNzYWdlGAQgASgJ",
+            "UgdtZXNzYWdlEkAKDXdyaXRlX3JlY2VpcHQYBSABKAsyGy51ZGIuZW50aXR5",
+            "LnYxLldyaXRlUmVjZWlwdFIMd3JpdGVSZWNlaXB0Ej0KDGVycm9yX2RldGFp",
+            "bBgGIAEoCzIaLnVkYi5lbnRpdHkudjEuRXJyb3JEZXRhaWxSC2Vycm9yRGV0",
+            "YWlsEhIKBGNvZGUYByABKAVSBGNvZGUiegoFU3RhdGUSGAoUVFhfU1RBVEVf",
+            "VU5TUEVDSUZJRUQQABIRCg1UWF9TVEFURV9PUEVOEAESFgoSVFhfU1RBVEVf",
+            "Q09NTUlUVEVEEAISGAoUVFhfU1RBVEVfUk9MTEVEX0JBQ0sQAxISCg5UWF9T",
+            "VEFURV9FUlJPUhAEQq0BChFjb20udWRiLmVudGl0eS52MUIHVHhQcm90b1AB",
+            "WjlnaXRodWIuY29tL2ZhaGFyYTAyL3VkYi9zZGsvZ28vZ2VuL3VkYi9lbnRp",
+            "dHkvdjE7ZW50aXR5djGiAgNVRViqAg1VZGIuRW50aXR5LlYxygINVWRiXEVu",
+            "dGl0eVxWMeICGVVkYlxHUEJNZXRhZGF0YVxFbnRpdHlcVjHqAg9VZGI6OkVu",
+            "dGl0eTo6VjFiBnByb3RvMw=="));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
-          new pbr::FileDescriptor[] { global::Google.Protobuf.WellKnownTypes.StructReflection.Descriptor, global::Udb.Entity.V1.ContextReflection.Descriptor, global::Udb.Entity.V1.VectorReflection.Descriptor, global::Udb.Entity.V1.RelationalReflection.Descriptor, global::Udb.Entity.V1.ConsistencyReflection.Descriptor, },
+          new pbr::FileDescriptor[] { global::Google.Protobuf.WellKnownTypes.StructReflection.Descriptor, global::Udb.Entity.V1.ContextReflection.Descriptor, global::Udb.Entity.V1.VectorReflection.Descriptor, global::Udb.Entity.V1.RelationalReflection.Descriptor, global::Udb.Entity.V1.ConsistencyReflection.Descriptor, global::Udb.Entity.V1.ErrorReflection.Descriptor, },
           new pbr::GeneratedClrTypeInfo(null, null, new pbr::GeneratedClrTypeInfo[] {
-            new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Entity.V1.Mutation), global::Udb.Entity.V1.Mutation.Parser, new[]{ "Context", "TxId", "Operation", "MessageType", "RecordJson", "Payload", "Filter", "Collection", "VectorPoints", "Commit", "Rollback", "Bucket", "ObjectKey", "ObjectData", "ContentType", "IdempotencyKey", "Changes", "Increments", "Expected", "CdcRequired" }, null, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Entity.V1.TxStatus), global::Udb.Entity.V1.TxStatus.Parser, new[]{ "State", "TxId", "MutationId", "Message", "WriteReceipt" }, null, new[]{ typeof(global::Udb.Entity.V1.TxStatus.Types.State) }, null, null)
+            new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Entity.V1.Mutation), global::Udb.Entity.V1.Mutation.Parser, new[]{ "Context", "TxId", "Operation", "MessageType", "RecordJson", "Payload", "Filter", "Collection", "VectorPoints", "Commit", "Rollback", "Bucket", "ObjectKey", "ObjectData", "ContentType", "IdempotencyKey", "Changes", "Increments", "Expected", "CdcRequired", "RequireAffected", "ConflictFields" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Entity.V1.TxStatus), global::Udb.Entity.V1.TxStatus.Parser, new[]{ "State", "TxId", "MutationId", "Message", "WriteReceipt", "ErrorDetail", "Code" }, null, new[]{ typeof(global::Udb.Entity.V1.TxStatus.Types.State) }, null, null)
           }));
     }
     #endregion
@@ -125,6 +129,8 @@ namespace Udb.Entity.V1 {
       increments_ = other.increments_.Clone();
       expected_ = other.expected_ != null ? other.expected_.Clone() : null;
       cdcRequired_ = other.cdcRequired_;
+      requireAffected_ = other.requireAffected_;
+      conflictFields_ = other.conflictFields_.Clone();
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
     }
 
@@ -329,12 +335,14 @@ namespace Udb.Entity.V1 {
     public const int IdempotencyKeyFieldNumber = 16;
     private string idempotencyKey_ = "";
     /// <summary>
-    /// Honoured only by `vector_upsert` and `enqueue_outbox_event` mutations.
-    /// Setting it on an `upsert`, `update` or `delete` mutation is REJECTED with
-    /// INVALID_ARGUMENT before the transaction opens (a transactional relational
-    /// mutation keeps no per-mutation replay receipt, so the key cannot be
-    /// honoured, and it is never silently ignored). Use the unary verb's
-    /// `idempotency_key` when a relational write must be deduplicated.
+    /// Per-mutation replay key for upsert/update/delete and vector_upsert.
+    /// Relational receipts commit atomically with the whole transaction. A retry
+    /// with identical inputs reuses its original mutation ID and affected count
+    /// without repeating the write, revision, projection, CDC or audit effects.
+    /// Reuse with different inputs fails with UDB_IDEMPOTENCY_REUSE and rolls the
+    /// transaction back. Relational keys are scoped to tenant/project/entity and
+    /// BeginTx operation, independently of unary replay keys. Other operations
+    /// reject a non-empty key before the transaction opens.
     /// </summary>
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
@@ -419,6 +427,37 @@ namespace Udb.Entity.V1 {
       }
     }
 
+    /// <summary>Field number for the "require_affected" field.</summary>
+    public const int RequireAffectedFieldNumber = 21;
+    private uint requireAffected_;
+    /// <summary>
+    /// Exact affected-row count for a relational mutation. Non-zero mismatches
+    /// roll back the whole transaction with NOT_FOUND/UDB_NO_ROWS_AFFECTED.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public uint RequireAffected {
+      get { return requireAffected_; }
+      set {
+        requireAffected_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "conflict_fields" field.</summary>
+    public const int ConflictFieldsFieldNumber = 22;
+    private static readonly pb::FieldCodec<string> _repeated_conflictFields_codec
+        = pb::FieldCodec.ForString(178);
+    private readonly pbc::RepeatedField<string> conflictFields_ = new pbc::RepeatedField<string>();
+    /// <summary>
+    /// Upsert conflict target, with the same semantics as UpsertRequest. Ignored
+    /// values are never accepted: only an upsert may set this field.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public pbc::RepeatedField<string> ConflictFields {
+      get { return conflictFields_; }
+    }
+
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public override bool Equals(object other) {
@@ -454,6 +493,8 @@ namespace Udb.Entity.V1 {
       if(!increments_.Equals(other.increments_)) return false;
       if (!object.Equals(Expected, other.Expected)) return false;
       if (CdcRequired != other.CdcRequired) return false;
+      if (RequireAffected != other.RequireAffected) return false;
+      if(!conflictFields_.Equals(other.conflictFields_)) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
 
@@ -481,6 +522,8 @@ namespace Udb.Entity.V1 {
       hash ^= increments_.GetHashCode();
       if (expected_ != null) hash ^= Expected.GetHashCode();
       if (CdcRequired != false) hash ^= CdcRequired.GetHashCode();
+      if (RequireAffected != 0) hash ^= RequireAffected.GetHashCode();
+      hash ^= conflictFields_.GetHashCode();
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
       }
@@ -573,6 +616,11 @@ namespace Udb.Entity.V1 {
         output.WriteRawTag(160, 1);
         output.WriteBool(CdcRequired);
       }
+      if (RequireAffected != 0) {
+        output.WriteRawTag(168, 1);
+        output.WriteUInt32(RequireAffected);
+      }
+      conflictFields_.WriteTo(output, _repeated_conflictFields_codec);
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
       }
@@ -657,6 +705,11 @@ namespace Udb.Entity.V1 {
         output.WriteRawTag(160, 1);
         output.WriteBool(CdcRequired);
       }
+      if (RequireAffected != 0) {
+        output.WriteRawTag(168, 1);
+        output.WriteUInt32(RequireAffected);
+      }
+      conflictFields_.WriteTo(ref output, _repeated_conflictFields_codec);
       if (_unknownFields != null) {
         _unknownFields.WriteTo(ref output);
       }
@@ -723,6 +776,10 @@ namespace Udb.Entity.V1 {
       if (CdcRequired != false) {
         size += 2 + 1;
       }
+      if (RequireAffected != 0) {
+        size += 2 + pb::CodedOutputStream.ComputeUInt32Size(RequireAffected);
+      }
+      size += conflictFields_.CalculateSize(_repeated_conflictFields_codec);
       if (_unknownFields != null) {
         size += _unknownFields.CalculateSize();
       }
@@ -806,6 +863,10 @@ namespace Udb.Entity.V1 {
       if (other.CdcRequired != false) {
         CdcRequired = other.CdcRequired;
       }
+      if (other.RequireAffected != 0) {
+        RequireAffected = other.RequireAffected;
+      }
+      conflictFields_.Add(other.conflictFields_);
       _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
     }
 
@@ -918,6 +979,14 @@ namespace Udb.Entity.V1 {
           }
           case 160: {
             CdcRequired = input.ReadBool();
+            break;
+          }
+          case 168: {
+            RequireAffected = input.ReadUInt32();
+            break;
+          }
+          case 178: {
+            conflictFields_.AddEntriesFrom(input, _repeated_conflictFields_codec);
             break;
           }
         }
@@ -1034,6 +1103,14 @@ namespace Udb.Entity.V1 {
             CdcRequired = input.ReadBool();
             break;
           }
+          case 168: {
+            RequireAffected = input.ReadUInt32();
+            break;
+          }
+          case 178: {
+            conflictFields_.AddEntriesFrom(ref input, _repeated_conflictFields_codec);
+            break;
+          }
         }
       }
     }
@@ -1081,6 +1158,8 @@ namespace Udb.Entity.V1 {
       mutationId_ = other.mutationId_;
       message_ = other.message_;
       writeReceipt_ = other.writeReceipt_ != null ? other.writeReceipt_.Clone() : null;
+      errorDetail_ = other.errorDetail_ != null ? other.errorDetail_.Clone() : null;
+      code_ = other.code_;
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
     }
 
@@ -1157,6 +1236,34 @@ namespace Udb.Entity.V1 {
       }
     }
 
+    /// <summary>Field number for the "error_detail" field.</summary>
+    public const int ErrorDetailFieldNumber = 6;
+    private global::Udb.Entity.V1.ErrorDetail errorDetail_;
+    /// <summary>
+    /// Original refusal, also carried in the terminal gRPC trailer. Classify this
+    /// detail/code instead of matching the human-readable message.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public global::Udb.Entity.V1.ErrorDetail ErrorDetail {
+      get { return errorDetail_; }
+      set {
+        errorDetail_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "code" field.</summary>
+    public const int CodeFieldNumber = 7;
+    private int code_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public int Code {
+      get { return code_; }
+      set {
+        code_ = value;
+      }
+    }
+
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public override bool Equals(object other) {
@@ -1177,6 +1284,8 @@ namespace Udb.Entity.V1 {
       if (MutationId != other.MutationId) return false;
       if (Message != other.Message) return false;
       if (!object.Equals(WriteReceipt, other.WriteReceipt)) return false;
+      if (!object.Equals(ErrorDetail, other.ErrorDetail)) return false;
+      if (Code != other.Code) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
 
@@ -1189,6 +1298,8 @@ namespace Udb.Entity.V1 {
       if (MutationId.Length != 0) hash ^= MutationId.GetHashCode();
       if (Message.Length != 0) hash ^= Message.GetHashCode();
       if (writeReceipt_ != null) hash ^= WriteReceipt.GetHashCode();
+      if (errorDetail_ != null) hash ^= ErrorDetail.GetHashCode();
+      if (Code != 0) hash ^= Code.GetHashCode();
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
       }
@@ -1227,6 +1338,14 @@ namespace Udb.Entity.V1 {
         output.WriteRawTag(42);
         output.WriteMessage(WriteReceipt);
       }
+      if (errorDetail_ != null) {
+        output.WriteRawTag(50);
+        output.WriteMessage(ErrorDetail);
+      }
+      if (Code != 0) {
+        output.WriteRawTag(56);
+        output.WriteInt32(Code);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
       }
@@ -1257,6 +1376,14 @@ namespace Udb.Entity.V1 {
         output.WriteRawTag(42);
         output.WriteMessage(WriteReceipt);
       }
+      if (errorDetail_ != null) {
+        output.WriteRawTag(50);
+        output.WriteMessage(ErrorDetail);
+      }
+      if (Code != 0) {
+        output.WriteRawTag(56);
+        output.WriteInt32(Code);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(ref output);
       }
@@ -1281,6 +1408,12 @@ namespace Udb.Entity.V1 {
       }
       if (writeReceipt_ != null) {
         size += 1 + pb::CodedOutputStream.ComputeMessageSize(WriteReceipt);
+      }
+      if (errorDetail_ != null) {
+        size += 1 + pb::CodedOutputStream.ComputeMessageSize(ErrorDetail);
+      }
+      if (Code != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeInt32Size(Code);
       }
       if (_unknownFields != null) {
         size += _unknownFields.CalculateSize();
@@ -1311,6 +1444,15 @@ namespace Udb.Entity.V1 {
           WriteReceipt = new global::Udb.Entity.V1.WriteReceipt();
         }
         WriteReceipt.MergeFrom(other.WriteReceipt);
+      }
+      if (other.errorDetail_ != null) {
+        if (errorDetail_ == null) {
+          ErrorDetail = new global::Udb.Entity.V1.ErrorDetail();
+        }
+        ErrorDetail.MergeFrom(other.ErrorDetail);
+      }
+      if (other.Code != 0) {
+        Code = other.Code;
       }
       _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
     }
@@ -1354,6 +1496,17 @@ namespace Udb.Entity.V1 {
             input.ReadMessage(WriteReceipt);
             break;
           }
+          case 50: {
+            if (errorDetail_ == null) {
+              ErrorDetail = new global::Udb.Entity.V1.ErrorDetail();
+            }
+            input.ReadMessage(ErrorDetail);
+            break;
+          }
+          case 56: {
+            Code = input.ReadInt32();
+            break;
+          }
         }
       }
     #endif
@@ -1394,6 +1547,17 @@ namespace Udb.Entity.V1 {
               WriteReceipt = new global::Udb.Entity.V1.WriteReceipt();
             }
             input.ReadMessage(WriteReceipt);
+            break;
+          }
+          case 50: {
+            if (errorDetail_ == null) {
+              ErrorDetail = new global::Udb.Entity.V1.ErrorDetail();
+            }
+            input.ReadMessage(ErrorDetail);
+            break;
+          }
+          case 56: {
+            Code = input.ReadInt32();
             break;
           }
         }

@@ -4,17 +4,94 @@ import (
 	"context"
 	"errors"
 	"io"
+	"net"
+	"sync/atomic"
 	"testing"
+	"time"
 
 	livequeryv1 "github.com/fahara02/udb/sdk/go/gen/udb/core/livequery/services/v1"
 	entityv1 "github.com/fahara02/udb/sdk/go/gen/udb/entity/v1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
+	"google.golang.org/grpc/test/bufconn"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/structpb"
 )
+
+type admissionLimitedLiveQueryServer struct {
+	livequeryv1.UnimplementedLiveQueryServiceServer
+	calls   atomic.Int32
+	trailer metadata.MD
+}
+
+func (s *admissionLimitedLiveQueryServer) Subscribe(_ *livequeryv1.SubscribeRequest, stream livequeryv1.LiveQueryService_SubscribeServer) error {
+	s.calls.Add(1)
+	stream.SetTrailer(s.trailer)
+	return status.Error(codes.ResourceExhausted, "connection admission window")
+}
+
+// Exercise the real public reconnect loop and served binary trailer. A short
+// local backoff must not send another RPC before the broker's retry window.
+func TestLiveQueryReconnectHonorsServedRetryAfter(t *testing.T) {
+	listener := bufconn.Listen(1024 * 1024)
+	server := grpc.NewServer()
+	served := &admissionLimitedLiveQueryServer{trailer: detailTrailer(t, &entityv1.ErrorDetail{
+		Backend: "channel", Operation: "read_fair_admission",
+		Kind: entityv1.ErrorKind_ERROR_KIND_QUOTA, Retryable: true, RetryAfterMs: 2000,
+	})}
+	livequeryv1.RegisterLiveQueryServiceServer(server, served)
+	go func() { _ = server.Serve(listener) }()
+	t.Cleanup(server.Stop)
+	conn, err := grpc.NewClient("passthrough:///live-query-retry",
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithContextDialer(func(context.Context, string) (net.Conn, error) { return listener.Dial() }))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = conn.Close() })
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	notified := make(chan struct{})
+	var first atomic.Bool
+	finished := make(chan error, 1)
+	go func() {
+		finished <- LiveQuery[*structpb.Struct](ctx, &Udb{authConn: conn}, LiveQueryOptions{
+			Backoff: time.Millisecond,
+			OnError: func(err error) {
+				if first.CompareAndSwap(false, true) {
+					if got := Inspect(err).RetryAfter; got != 2*time.Second {
+						t.Errorf("served retry delay = %s, want 2s", got)
+					}
+					close(notified)
+				}
+			},
+		}, func(context.Context, LiveQueryEvent[*structpb.Struct]) error {
+			t.Error("an admission refusal cannot deliver rows")
+			return nil
+		})
+	}()
+	select {
+	case <-notified:
+	case <-time.After(5 * time.Second):
+		t.Fatal("no served admission refusal reached the client")
+	}
+	time.Sleep(300 * time.Millisecond)
+	cancel()
+	select {
+	case err := <-finished:
+		if !errors.Is(err, context.Canceled) {
+			t.Errorf("watch returned %v, want context cancellation", err)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("watch did not stop after cancellation")
+	}
+	if calls := served.calls.Load(); calls != 1 {
+		t.Fatalf("sent %d subscriptions inside the broker's retry window, want 1", calls)
+	}
+}
 
 // scriptedLiveStream replays frames, then ends with err and trailer.
 type scriptedLiveStream struct {

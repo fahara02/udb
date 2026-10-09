@@ -84,12 +84,14 @@ class Mutation extends \Google\Protobuf\Internal\Message
      */
     protected $content_type = '';
     /**
-     * Honoured only by `vector_upsert` and `enqueue_outbox_event` mutations.
-     * Setting it on an `upsert`, `update` or `delete` mutation is REJECTED with
-     * INVALID_ARGUMENT before the transaction opens (a transactional relational
-     * mutation keeps no per-mutation replay receipt, so the key cannot be
-     * honoured, and it is never silently ignored). Use the unary verb's
-     * `idempotency_key` when a relational write must be deduplicated.
+     * Per-mutation replay key for upsert/update/delete and vector_upsert.
+     * Relational receipts commit atomically with the whole transaction. A retry
+     * with identical inputs reuses its original mutation ID and affected count
+     * without repeating the write, revision, projection, CDC or audit effects.
+     * Reuse with different inputs fails with UDB_IDEMPOTENCY_REUSE and rolls the
+     * transaction back. Relational keys are scoped to tenant/project/entity and
+     * BeginTx operation, independently of unary replay keys. Other operations
+     * reject a non-empty key before the transaction opens.
      *
      * Generated from protobuf field <code>string idempotency_key = 16 [json_name = "idempotencyKey"];</code>
      */
@@ -134,6 +136,20 @@ class Mutation extends \Google\Protobuf\Internal\Message
      * Generated from protobuf field <code>bool cdc_required = 20 [json_name = "cdcRequired"];</code>
      */
     protected $cdc_required = false;
+    /**
+     * Exact affected-row count for a relational mutation. Non-zero mismatches
+     * roll back the whole transaction with NOT_FOUND/UDB_NO_ROWS_AFFECTED.
+     *
+     * Generated from protobuf field <code>uint32 require_affected = 21 [json_name = "requireAffected"];</code>
+     */
+    protected $require_affected = 0;
+    /**
+     * Upsert conflict target, with the same semantics as UpsertRequest. Ignored
+     * values are never accepted: only an upsert may set this field.
+     *
+     * Generated from protobuf field <code>repeated string conflict_fields = 22 [json_name = "conflictFields"];</code>
+     */
+    private $conflict_fields;
 
     /**
      * Constructor.
@@ -165,12 +181,14 @@ class Mutation extends \Google\Protobuf\Internal\Message
      *     @type string $object_data
      *     @type string $content_type
      *     @type string $idempotency_key
-     *           Honoured only by `vector_upsert` and `enqueue_outbox_event` mutations.
-     *           Setting it on an `upsert`, `update` or `delete` mutation is REJECTED with
-     *           INVALID_ARGUMENT before the transaction opens (a transactional relational
-     *           mutation keeps no per-mutation replay receipt, so the key cannot be
-     *           honoured, and it is never silently ignored). Use the unary verb's
-     *           `idempotency_key` when a relational write must be deduplicated.
+     *           Per-mutation replay key for upsert/update/delete and vector_upsert.
+     *           Relational receipts commit atomically with the whole transaction. A retry
+     *           with identical inputs reuses its original mutation ID and affected count
+     *           without repeating the write, revision, projection, CDC or audit effects.
+     *           Reuse with different inputs fails with UDB_IDEMPOTENCY_REUSE and rolls the
+     *           transaction back. Relational keys are scoped to tenant/project/entity and
+     *           BeginTx operation, independently of unary replay keys. Other operations
+     *           reject a non-empty key before the transaction opens.
      *     @type \Google\Protobuf\Struct $changes
      *           Partial-update payload for `operation = "update"` — the SET columns and the
      *           atomic increments. Same semantics as the unary UpdateRequest (SETs named
@@ -196,6 +214,12 @@ class Mutation extends \Google\Protobuf\Internal\Message
      *           if a tenant-scoped topic has no tenant to route to, or if the outbox INSERT
      *           fails. Default false preserves best-effort emission (an event is emitted
      *           when CDC is enabled and the entity is CDC-mapped, and skipped otherwise).
+     *     @type int $require_affected
+     *           Exact affected-row count for a relational mutation. Non-zero mismatches
+     *           roll back the whole transaction with NOT_FOUND/UDB_NO_ROWS_AFFECTED.
+     *     @type string[] $conflict_fields
+     *           Upsert conflict target, with the same semantics as UpsertRequest. Ignored
+     *           values are never accepted: only an upsert may set this field.
      * }
      */
     public function __construct($data = NULL) {
@@ -582,12 +606,14 @@ class Mutation extends \Google\Protobuf\Internal\Message
     }
 
     /**
-     * Honoured only by `vector_upsert` and `enqueue_outbox_event` mutations.
-     * Setting it on an `upsert`, `update` or `delete` mutation is REJECTED with
-     * INVALID_ARGUMENT before the transaction opens (a transactional relational
-     * mutation keeps no per-mutation replay receipt, so the key cannot be
-     * honoured, and it is never silently ignored). Use the unary verb's
-     * `idempotency_key` when a relational write must be deduplicated.
+     * Per-mutation replay key for upsert/update/delete and vector_upsert.
+     * Relational receipts commit atomically with the whole transaction. A retry
+     * with identical inputs reuses its original mutation ID and affected count
+     * without repeating the write, revision, projection, CDC or audit effects.
+     * Reuse with different inputs fails with UDB_IDEMPOTENCY_REUSE and rolls the
+     * transaction back. Relational keys are scoped to tenant/project/entity and
+     * BeginTx operation, independently of unary replay keys. Other operations
+     * reject a non-empty key before the transaction opens.
      *
      * Generated from protobuf field <code>string idempotency_key = 16 [json_name = "idempotencyKey"];</code>
      * @return string
@@ -598,12 +624,14 @@ class Mutation extends \Google\Protobuf\Internal\Message
     }
 
     /**
-     * Honoured only by `vector_upsert` and `enqueue_outbox_event` mutations.
-     * Setting it on an `upsert`, `update` or `delete` mutation is REJECTED with
-     * INVALID_ARGUMENT before the transaction opens (a transactional relational
-     * mutation keeps no per-mutation replay receipt, so the key cannot be
-     * honoured, and it is never silently ignored). Use the unary verb's
-     * `idempotency_key` when a relational write must be deduplicated.
+     * Per-mutation replay key for upsert/update/delete and vector_upsert.
+     * Relational receipts commit atomically with the whole transaction. A retry
+     * with identical inputs reuses its original mutation ID and affected count
+     * without repeating the write, revision, projection, CDC or audit effects.
+     * Reuse with different inputs fails with UDB_IDEMPOTENCY_REUSE and rolls the
+     * transaction back. Relational keys are scoped to tenant/project/entity and
+     * BeginTx operation, independently of unary replay keys. Other operations
+     * reject a non-empty key before the transaction opens.
      *
      * Generated from protobuf field <code>string idempotency_key = 16 [json_name = "idempotencyKey"];</code>
      * @param string $var
@@ -769,6 +797,62 @@ class Mutation extends \Google\Protobuf\Internal\Message
     {
         GPBUtil::checkBool($var);
         $this->cdc_required = $var;
+
+        return $this;
+    }
+
+    /**
+     * Exact affected-row count for a relational mutation. Non-zero mismatches
+     * roll back the whole transaction with NOT_FOUND/UDB_NO_ROWS_AFFECTED.
+     *
+     * Generated from protobuf field <code>uint32 require_affected = 21 [json_name = "requireAffected"];</code>
+     * @return int
+     */
+    public function getRequireAffected()
+    {
+        return $this->require_affected;
+    }
+
+    /**
+     * Exact affected-row count for a relational mutation. Non-zero mismatches
+     * roll back the whole transaction with NOT_FOUND/UDB_NO_ROWS_AFFECTED.
+     *
+     * Generated from protobuf field <code>uint32 require_affected = 21 [json_name = "requireAffected"];</code>
+     * @param int $var
+     * @return $this
+     */
+    public function setRequireAffected($var)
+    {
+        GPBUtil::checkUint32($var);
+        $this->require_affected = $var;
+
+        return $this;
+    }
+
+    /**
+     * Upsert conflict target, with the same semantics as UpsertRequest. Ignored
+     * values are never accepted: only an upsert may set this field.
+     *
+     * Generated from protobuf field <code>repeated string conflict_fields = 22 [json_name = "conflictFields"];</code>
+     * @return RepeatedField<string>
+     */
+    public function getConflictFields()
+    {
+        return $this->conflict_fields;
+    }
+
+    /**
+     * Upsert conflict target, with the same semantics as UpsertRequest. Ignored
+     * values are never accepted: only an upsert may set this field.
+     *
+     * Generated from protobuf field <code>repeated string conflict_fields = 22 [json_name = "conflictFields"];</code>
+     * @param string[] $var
+     * @return $this
+     */
+    public function setConflictFields($var)
+    {
+        $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::STRING);
+        $this->conflict_fields = $arr;
 
         return $this;
     }

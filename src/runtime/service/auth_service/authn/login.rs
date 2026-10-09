@@ -1023,40 +1023,51 @@ impl AuthnServiceImpl {
             None => None,
         };
         let (otp_id, code) = if let Some(user) = user {
-            let (otp_id, code) = self
+            let issued = self
                 .issue_otp(
                     &user,
                     authn_entity_pb::OtpType::PasswordReset as i32,
                     format!("forgot_password:{}", user.user_id),
                     now_unix(),
                 )
-                .await?;
-            // Audit the reset request (only for a real account — emitting on a
-            // miss would both leak account existence and lack a tenant/actor for
-            // the compliance envelope).
-            self.emit_event(
-                AuthEvent::new(
-                    topics::PASSWORD_RESET_REQUESTED,
-                    user.user_id.clone(),
-                    user.tenant_id.clone(),
-                    serde_json::json!({
-                        "user_id": user.user_id.clone(),
-                        "otp_id": otp_id.clone(),
-                    }),
-                )
-                .with_correlation(format!("password_reset:{}", user.user_id))
-                .with_compliance(ComplianceEnvelope {
-                    actor: user.user_id.clone(),
-                    target_resource: user.user_id.clone(),
-                    operation: "password_reset_request".to_string(),
-                    outcome: "success".to_string(),
-                    reason_code: "reset_otp_issued".to_string(),
-                    auth_method: "otp".to_string(),
-                    ..ComplianceEnvelope::default()
-                }),
-            )
-            .await;
-            (otp_id, code)
+                .await;
+            match issued {
+                Ok((otp_id, code)) => {
+                    // Audit the reset request (only for a real account — emitting on a
+                    // miss would both leak account existence and lack a tenant/actor for
+                    // the compliance envelope).
+                    self.emit_event(
+                        AuthEvent::new(
+                            topics::PASSWORD_RESET_REQUESTED,
+                            user.user_id.clone(),
+                            user.tenant_id.clone(),
+                            serde_json::json!({
+                                "user_id": user.user_id.clone(),
+                                "otp_id": otp_id.clone(),
+                            }),
+                        )
+                        .with_correlation(format!("password_reset:{}", user.user_id))
+                        .with_compliance(ComplianceEnvelope {
+                            actor: user.user_id.clone(),
+                            target_resource: user.user_id.clone(),
+                            operation: "password_reset_request".to_string(),
+                            outcome: "success".to_string(),
+                            reason_code: "reset_otp_issued".to_string(),
+                            auth_method: "otp".to_string(),
+                            ..ComplianceEnvelope::default()
+                        }),
+                    )
+                    .await;
+                    (otp_id, code)
+                }
+                // Another request can win after the preflight read. Keep the
+                // atomic cooldown refusal indistinguishable from an unknown
+                // address, just like the earlier cooldown check.
+                Err(status) if status.code() == tonic::Code::ResourceExhausted => {
+                    (Uuid::new_v4().to_string(), String::new())
+                }
+                Err(status) => return Err(status),
+            }
         } else {
             // Uniform (non-enumerating) miss branch: a throwaway otp_id and NO echo.
             (Uuid::new_v4().to_string(), String::new())

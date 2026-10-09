@@ -130,7 +130,8 @@ async fn live_postgres_authn_otp_cooldown() {
         .expect_err("second OTP within cooldown must be rejected");
     assert_eq!(throttled.code(), tonic::Code::ResourceExhausted);
     let detail = decode_detail(&throttled);
-    assert_eq!(detail.kind, ErrorKind::Quota as i32);
+    assert_eq!(detail.kind, ErrorKind::RateLimited as i32);
+    assert_eq!(detail.reason, "UDB_RATE_LIMITED");
     assert!(detail.retryable);
     assert_eq!(detail.backend, "authn");
     assert_eq!(detail.operation, "otp_cooldown");
@@ -520,5 +521,151 @@ async fn live_postgres_admin_and_forgot_reset_share_cooldown() {
         store.get_otp(&first.otp_id).await.unwrap().is_some(),
         "the original code remains valid"
     );
+    cleanup_native_auth_db(&pool).await;
+}
+
+/// Hold the real owner row until both issuers have reached the atomic store
+/// boundary. A check-then-insert implementation cannot satisfy this barrier.
+async fn release_owner_after_concurrent_otp_waiters(
+    pool: &sqlx::PgPool,
+    gate: sqlx::Transaction<'_, sqlx::Postgres>,
+) {
+    tokio::time::timeout(std::time::Duration::from_secs(10), async {
+        loop {
+            let waiters: i64 = sqlx::query_scalar(
+                "SELECT count(*) FROM pg_stat_activity \
+                 WHERE datname = current_database() AND wait_event_type = 'Lock' \
+                 AND query LIKE '/* udb_otp_cooldown_lock */%'",
+            )
+            .fetch_one(pool)
+            .await
+            .expect("observe actual PostgreSQL issuance locks");
+            if waiters == 2 {
+                break;
+            }
+            tokio::time::sleep(std::time::Duration::from_millis(20)).await;
+        }
+    })
+    .await
+    .expect("both issuers must serialize at the durable owner lock");
+    gate.commit().await.expect("release issuance barrier");
+}
+
+#[tokio::test]
+#[ignore = "requires live Postgres; native CI runs every ignored auth test"]
+async fn live_postgres_concurrent_otp_and_reset_issue_one_code_per_cooldown() {
+    use crate::runtime::authn::{PostgresUserStore, UserStore};
+    use crate::runtime::service::method_security::{
+        scope_claim_context_for_test, test_claim_context,
+    };
+    let _guard = live_auth_db_lock().lock().await;
+    let pool = live_pg_pool().await;
+    migrate_native_auth_db(&pool).await;
+    let svc = authn_service_with_cooldown(pool.clone(), 300);
+    let user = create_verified_user(&svc, "concurrent-cooldown", "CorrectHorse1!").await;
+    let store = PostgresUserStore::new(pool.clone(), "");
+    let count = || async {
+        sqlx::query_scalar::<_, i64>("SELECT count(*) FROM udb_authn.otps WHERE user_id = $1::UUID")
+            .bind(&user.user_id)
+            .fetch_one(&pool)
+            .await
+            .expect("count durable codes without exposing proof material")
+    };
+    let before = count().await;
+    let mut gate = pool.begin().await.expect("issuance barrier transaction");
+    sqlx::query("SELECT user_id FROM udb_authn.users WHERE user_id = $1::UUID FOR UPDATE")
+        .bind(&user.user_id)
+        .fetch_one(&mut *gate)
+        .await
+        .expect("hold OTP owner");
+    let request = || {
+        Request::new(authn_pb::SendOtpRequest {
+            user_id: user.user_id.clone(),
+            otp_type: authn_entity_pb::OtpType::SensitiveOperation as i32,
+            ..Default::default()
+        })
+    };
+    let (left, right, ()) = tokio::join!(
+        svc.send_otp(request()),
+        svc.send_otp(request()),
+        release_owner_after_concurrent_otp_waiters(&pool, gate),
+    );
+    let mut winners = 0;
+    for result in [left, right] {
+        match result {
+            Ok(response) => {
+                winners += 1;
+                assert!(
+                    store
+                        .get_otp(&response.into_inner().otp_id)
+                        .await
+                        .unwrap()
+                        .is_some()
+                );
+            }
+            Err(status) => {
+                assert_eq!(status.code(), tonic::Code::ResourceExhausted);
+                assert_eq!(decode_detail(&status).reason, "UDB_RATE_LIMITED");
+                assert!(decode_detail(&status).retry_after_ms > 0);
+            }
+        }
+    }
+    assert_eq!(winners, 1);
+    assert_eq!(count().await, before + 1);
+
+    // AdminResetPassword and public ForgotPassword share the same durable
+    // PasswordReset cooldown. A public loser must retain its opaque success.
+    let before = count().await;
+    let mut gate = pool.begin().await.expect("reset barrier transaction");
+    sqlx::query("SELECT user_id FROM udb_authn.users WHERE user_id = $1::UUID FOR UPDATE")
+        .bind(&user.user_id)
+        .fetch_one(&mut *gate)
+        .await
+        .expect("hold reset owner");
+    let admin = scope_claim_context_for_test(
+        test_claim_context(
+            &user.user_id,
+            &user.tenant_id,
+            &user.project_id,
+            &["udb:authn:admin-reset-password"],
+            &[],
+        ),
+        svc.admin_reset_password(Request::new(authn_pb::AdminResetPasswordRequest {
+            user_id: user.user_id.clone(),
+            ..Default::default()
+        })),
+    );
+    let public = svc.forgot_password(Request::new(authn_pb::ForgotPasswordRequest {
+        identifier: user.email.clone(),
+        ..Default::default()
+    }));
+    let (admin, public, ()) = tokio::join!(
+        admin,
+        public,
+        release_owner_after_concurrent_otp_waiters(&pool, gate),
+    );
+    let public = public
+        .expect("public reset keeps its non-enumerating shape")
+        .into_inner();
+    let public_issued = store.get_otp(&public.otp_id).await.unwrap().is_some();
+    match admin {
+        Ok(response) => {
+            assert!(!public_issued, "public loser cannot persist a second code");
+            assert!(
+                store
+                    .get_otp(&response.into_inner().otp_id)
+                    .await
+                    .unwrap()
+                    .is_some()
+            );
+            assert!(public.dev_otp_code.is_empty());
+        }
+        Err(status) => {
+            assert!(public_issued, "exactly one competing reset must issue");
+            assert_eq!(status.code(), tonic::Code::ResourceExhausted);
+            assert_eq!(decode_detail(&status).reason, "UDB_RATE_LIMITED");
+        }
+    }
+    assert_eq!(count().await, before + 1);
     cleanup_native_auth_db(&pool).await;
 }

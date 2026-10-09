@@ -12,6 +12,9 @@ no-wrapper plan.
 
 ### Added
 
+- OTP cooldown checks commit atomically with issuance under a durable owner
+  lock. Concurrent send/reset requests issue one code, and public reset losers
+  retain the non-enumerating response shape.
 - Relational BeginTx mutations keep atomic replay receipts; identical retries
   reuse the original mutation ID and changed inputs refuse with
   `UDB_IDEMPOTENCY_REUSE`. Transaction refusal frames carry the original code
@@ -46,6 +49,12 @@ no-wrapper plan.
 
 ### Fixed
 
+- Rate-limit detail keeps the verified principal while log output retains its
+  privacy mask. OTP cooldown refusals report `UDB_RATE_LIMITED` and the canonical
+  rate-limit kind with a bounded retry delay.
+- Go LiveQuery reconnects wait for the broker's retry delay when it exceeds
+  the client's backoff. The thousand-watcher proof respects connection-rate
+  admission while retaining all 1,000 simultaneous subscriptions.
 - PII selection denials name `udb:pii:read` in `missing.scope`, retain the
   physical column and carry the canonical Permission error kind.
 - Cached Select responses retain `redacted_fields`, including physical column

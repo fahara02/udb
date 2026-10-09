@@ -113,6 +113,15 @@ Login returns `UDB_PASSWORD_SETUP_REQUIRED` until ResetPassword consumes the
 emailed invitation code and sets the first password. ForgotPassword and
 AdminResetPassword share the configured OTP cooldown; public repeat requests
 keep the non-enumerating response shape and do not issue another code.
+Cooldown checks and OTP persistence serialize on the durable user row, so
+concurrent requests across broker replicas issue one code per user/type window.
+SendOTP, ResendOTP and phone verification use the same issuance boundary.
+
+Public auth RPCs also enforce a per-client-IP budget using the transport peer.
+Forwarded IP headers affect the budget when `UDB_TRUST_PROXY_IP_HEADERS=true`
+is configured for a trusted gateway. RPCs declaring the same `abuse_policy_ref` share an additional
+budget; `UDB_ABUSE_POLICY_<REF>` sets its per-minute ceiling (uppercase the
+reference and replace punctuation with underscores).
 
 ## Local Playground
 

@@ -173,10 +173,11 @@ func LiveQuery[T proto.Message](ctx context.Context, u *Udb, opts LiveQueryOptio
 		if opts.OnError != nil {
 			opts.OnError(fmt.Errorf("udb: live query %s reconnecting: %w", messageType, err))
 		}
+		wait := max(delay, Inspect(err).RetryAfter)
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
-		case <-time.After(delay):
+		case <-time.After(wait):
 		}
 		delay = min(delay*2, 30*time.Second)
 	}

@@ -425,6 +425,8 @@ def check_error_detail(
         raise AssertionError(f"{label}: got unknown ErrorDetail.kind {detail.kind}") from error
     if actual_kind != expected_kind:
         raise AssertionError(f"{label}: got ErrorDetail.kind {actual_kind}, want {expected_kind}")
+    if expected_kind == "ERROR_KIND_RATE_LIMITED" and detail.reason != "UDB_RATE_LIMITED":
+        raise AssertionError(f"{label}: rate limit detail requires reason UDB_RATE_LIMITED")
     if expected_backend is not None:
         _assert_error_detail_token(label, "backend", detail.backend)
         if detail.backend != expected_backend:
@@ -834,7 +836,7 @@ def validate_live_check_expectations(
             raise ValueError(f"{label} validation runtime proof requires an expected field")
         if expected_backend is not None or expected_operation is not None:
             raise ValueError(f"{label} validation runtime proof must not expect backend/operation")
-    elif kind == "ERROR_KIND_QUOTA":
+    elif kind in {"ERROR_KIND_QUOTA", "ERROR_KIND_RATE_LIMITED"}:
         if status != QUOTA_STATUS:
             raise ValueError(f"{label} quota runtime proof must expect {QUOTA_STATUS}")
         if expected_retryable is not True:
@@ -846,7 +848,7 @@ def validate_live_check_expectations(
         if expected_backend is None or expected_operation is None:
             raise ValueError(f"{label} quota runtime proof requires expected backend and operation")
     else:
-        raise ValueError(f"{label} runtime proof kind must be ERROR_KIND_VALIDATION or ERROR_KIND_QUOTA")
+        raise ValueError(f"{label} runtime proof kind must be ERROR_KIND_VALIDATION, ERROR_KIND_QUOTA or ERROR_KIND_RATE_LIMITED")
 
 
 def validate_runtime_request_message(label: str, request: object) -> None:
@@ -1438,6 +1440,32 @@ def run_selftest() -> None:
         expected_backend="admission",
         expected_operation="fair_queue",
     )
+    rate_limit = ErrorDetail(
+        backend="authn", operation="otp_cooldown",
+        kind=ErrorKind.ERROR_KIND_RATE_LIMITED, reason="UDB_RATE_LIMITED",
+        retryable=True, retry_after_ms=1000,
+    )
+    check_error_detail(
+        "canonical rate-limit fixture",
+        _FakeRpcError(grpc.StatusCode.RESOURCE_EXHAUSTED, rate_limit),
+        QUOTA_STATUS, "ERROR_KIND_RATE_LIMITED", expected_retryable=True,
+        min_retry_after_ms=1000, expected_backend="authn", expected_operation="otp_cooldown",
+    )
+    validate_live_check_expectations(
+        "canonical rate-limit fixture", QUOTA_STATUS, "ERROR_KIND_RATE_LIMITED",
+        True, 1000, None, "authn", "otp_cooldown",
+    )
+    rate_limit.reason = ""
+    try:
+        check_error_detail(
+            "missing rate-limit reason fixture",
+            _FakeRpcError(grpc.StatusCode.RESOURCE_EXHAUSTED, rate_limit),
+            QUOTA_STATUS, "ERROR_KIND_RATE_LIMITED",
+        )
+    except AssertionError as error:
+        assert "requires reason UDB_RATE_LIMITED" in str(error), error
+    else:
+        raise AssertionError("missing stable rate-limit reason was accepted")
     try:
         check_error_detail(
             "quota identity fixture",
@@ -2385,6 +2413,7 @@ def main() -> int:
     parser.add_argument("--quota-request-message", help="generated Python request message class")
     parser.add_argument("--quota-request-json", type=Path, help="quota request JSON expected to fail")
     parser.add_argument("--quota-status", default=QUOTA_STATUS, help="expected quota gRPC status")
+    parser.add_argument("--quota-kind", choices=("ERROR_KIND_RATE_LIMITED", "ERROR_KIND_QUOTA"), default="ERROR_KIND_RATE_LIMITED", help="expected rate-limit kind; select ERROR_KIND_QUOTA for legacy brokers")
     parser.add_argument("--quota-retry-after-min-ms", type=int, default=0, help="minimum retry_after_ms")
     parser.add_argument("--quota-backend", help="expected ErrorDetail.backend for quota/backpressure proof")
     parser.add_argument("--quota-operation", help="expected ErrorDetail.operation for quota/backpressure proof")
@@ -2470,7 +2499,7 @@ def main() -> int:
             metadata,
             timeout,
             args.quota_status,
-            "ERROR_KIND_QUOTA",
+            args.quota_kind,
             True,
             args.quota_retry_after_min_ms,
             None,

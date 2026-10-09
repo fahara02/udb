@@ -13,13 +13,15 @@ import type { UpdateRequest_Increment } from "./relational_pb";
 import { file_udb_entity_v1_relational } from "./relational_pb";
 import type { WriteReceipt } from "./consistency_pb";
 import { file_udb_entity_v1_consistency } from "./consistency_pb";
+import type { ErrorDetail } from "./error_pb";
+import { file_udb_entity_v1_error } from "./error_pb";
 import type { JsonObject, Message } from "@bufbuild/protobuf";
 
 /**
  * Describes the file udb/entity/v1/tx.proto.
  */
 export const file_udb_entity_v1_tx: GenFile = /*@__PURE__*/
-  fileDesc("ChZ1ZGIvZW50aXR5L3YxL3R4LnByb3RvEg11ZGIuZW50aXR5LnYxItoECghNdXRhdGlvbhIuCgdjb250ZXh0GAEgASgLMh0udWRiLmVudGl0eS52MS5SZXF1ZXN0Q29udGV4dBINCgV0eF9pZBgCIAEoCRIRCglvcGVyYXRpb24YAyABKAkSFAoMbWVzc2FnZV90eXBlGAQgASgJEhMKC3JlY29yZF9qc29uGAUgASgMEigKB3BheWxvYWQYBiABKAsyFy5nb29nbGUucHJvdG9idWYuU3RydWN0EicKBmZpbHRlchgHIAEoCzIXLmdvb2dsZS5wcm90b2J1Zi5TdHJ1Y3QSEgoKY29sbGVjdGlvbhgIIAEoCRI5Cg12ZWN0b3JfcG9pbnRzGAkgAygLMiIudWRiLmVudGl0eS52MS5WZWN0b3JQb2ludE11dGF0aW9uEg4KBmNvbW1pdBgKIAEoCBIQCghyb2xsYmFjaxgLIAEoCBIOCgZidWNrZXQYDCABKAkSEgoKb2JqZWN0X2tleRgNIAEoCRITCgtvYmplY3RfZGF0YRgOIAEoDBIUCgxjb250ZW50X3R5cGUYDyABKAkSFwoPaWRlbXBvdGVuY3lfa2V5GBAgASgJEigKB2NoYW5nZXMYESABKAsyFy5nb29nbGUucHJvdG9idWYuU3RydWN0EjoKCmluY3JlbWVudHMYEiADKAsyJi51ZGIuZW50aXR5LnYxLlVwZGF0ZVJlcXVlc3QuSW5jcmVtZW50EikKCGV4cGVjdGVkGBMgASgLMhcuZ29vZ2xlLnByb3RvYnVmLlN0cnVjdBIUCgxjZGNfcmVxdWlyZWQYFCABKAginQIKCFR4U3RhdHVzEiwKBXN0YXRlGAEgASgOMh0udWRiLmVudGl0eS52MS5UeFN0YXR1cy5TdGF0ZRINCgV0eF9pZBgCIAEoCRITCgttdXRhdGlvbl9pZBgDIAEoCRIPCgdtZXNzYWdlGAQgASgJEjIKDXdyaXRlX3JlY2VpcHQYBSABKAsyGy51ZGIuZW50aXR5LnYxLldyaXRlUmVjZWlwdCJ6CgVTdGF0ZRIYChRUWF9TVEFURV9VTlNQRUNJRklFRBAAEhEKDVRYX1NUQVRFX09QRU4QARIWChJUWF9TVEFURV9DT01NSVRURUQQAhIYChRUWF9TVEFURV9ST0xMRURfQkFDSxADEhIKDlRYX1NUQVRFX0VSUk9SEARCrQEKEWNvbS51ZGIuZW50aXR5LnYxQgdUeFByb3RvUAFaOWdpdGh1Yi5jb20vZmFoYXJhMDIvdWRiL3Nkay9nby9nZW4vdWRiL2VudGl0eS92MTtlbnRpdHl2MaICA1VFWKoCDVVkYi5FbnRpdHkuVjHKAg1VZGJcRW50aXR5XFYx4gIZVWRiXEdQQk1ldGFkYXRhXEVudGl0eVxWMeoCD1VkYjo6RW50aXR5OjpWMWIGcHJvdG8z", [file_google_protobuf_struct, file_udb_entity_v1_context, file_udb_entity_v1_vector, file_udb_entity_v1_relational, file_udb_entity_v1_consistency]);
+  fileDesc("ChZ1ZGIvZW50aXR5L3YxL3R4LnByb3RvEg11ZGIuZW50aXR5LnYxIo0FCghNdXRhdGlvbhIuCgdjb250ZXh0GAEgASgLMh0udWRiLmVudGl0eS52MS5SZXF1ZXN0Q29udGV4dBINCgV0eF9pZBgCIAEoCRIRCglvcGVyYXRpb24YAyABKAkSFAoMbWVzc2FnZV90eXBlGAQgASgJEhMKC3JlY29yZF9qc29uGAUgASgMEigKB3BheWxvYWQYBiABKAsyFy5nb29nbGUucHJvdG9idWYuU3RydWN0EicKBmZpbHRlchgHIAEoCzIXLmdvb2dsZS5wcm90b2J1Zi5TdHJ1Y3QSEgoKY29sbGVjdGlvbhgIIAEoCRI5Cg12ZWN0b3JfcG9pbnRzGAkgAygLMiIudWRiLmVudGl0eS52MS5WZWN0b3JQb2ludE11dGF0aW9uEg4KBmNvbW1pdBgKIAEoCBIQCghyb2xsYmFjaxgLIAEoCBIOCgZidWNrZXQYDCABKAkSEgoKb2JqZWN0X2tleRgNIAEoCRITCgtvYmplY3RfZGF0YRgOIAEoDBIUCgxjb250ZW50X3R5cGUYDyABKAkSFwoPaWRlbXBvdGVuY3lfa2V5GBAgASgJEigKB2NoYW5nZXMYESABKAsyFy5nb29nbGUucHJvdG9idWYuU3RydWN0EjoKCmluY3JlbWVudHMYEiADKAsyJi51ZGIuZW50aXR5LnYxLlVwZGF0ZVJlcXVlc3QuSW5jcmVtZW50EikKCGV4cGVjdGVkGBMgASgLMhcuZ29vZ2xlLnByb3RvYnVmLlN0cnVjdBIUCgxjZGNfcmVxdWlyZWQYFCABKAgSGAoQcmVxdWlyZV9hZmZlY3RlZBgVIAEoDRIXCg9jb25mbGljdF9maWVsZHMYFiADKAki3QIKCFR4U3RhdHVzEiwKBXN0YXRlGAEgASgOMh0udWRiLmVudGl0eS52MS5UeFN0YXR1cy5TdGF0ZRINCgV0eF9pZBgCIAEoCRITCgttdXRhdGlvbl9pZBgDIAEoCRIPCgdtZXNzYWdlGAQgASgJEjIKDXdyaXRlX3JlY2VpcHQYBSABKAsyGy51ZGIuZW50aXR5LnYxLldyaXRlUmVjZWlwdBIwCgxlcnJvcl9kZXRhaWwYBiABKAsyGi51ZGIuZW50aXR5LnYxLkVycm9yRGV0YWlsEgwKBGNvZGUYByABKAUiegoFU3RhdGUSGAoUVFhfU1RBVEVfVU5TUEVDSUZJRUQQABIRCg1UWF9TVEFURV9PUEVOEAESFgoSVFhfU1RBVEVfQ09NTUlUVEVEEAISGAoUVFhfU1RBVEVfUk9MTEVEX0JBQ0sQAxISCg5UWF9TVEFURV9FUlJPUhAEQq0BChFjb20udWRiLmVudGl0eS52MUIHVHhQcm90b1ABWjlnaXRodWIuY29tL2ZhaGFyYTAyL3VkYi9zZGsvZ28vZ2VuL3VkYi9lbnRpdHkvdjE7ZW50aXR5djGiAgNVRViqAg1VZGIuRW50aXR5LlYxygINVWRiXEVudGl0eVxWMeICGVVkYlxHUEJNZXRhZGF0YVxFbnRpdHlcVjHqAg9VZGI6OkVudGl0eTo6VjFiBnByb3RvMw", [file_google_protobuf_struct, file_udb_entity_v1_context, file_udb_entity_v1_vector, file_udb_entity_v1_relational, file_udb_entity_v1_consistency, file_udb_entity_v1_error]);
 
 /**
  * @generated from message udb.entity.v1.Mutation
@@ -112,12 +114,14 @@ export type Mutation = Message<"udb.entity.v1.Mutation"> & {
   contentType: string;
 
   /**
-   * Honoured only by `vector_upsert` and `enqueue_outbox_event` mutations.
-   * Setting it on an `upsert`, `update` or `delete` mutation is REJECTED with
-   * INVALID_ARGUMENT before the transaction opens (a transactional relational
-   * mutation keeps no per-mutation replay receipt, so the key cannot be
-   * honoured, and it is never silently ignored). Use the unary verb's
-   * `idempotency_key` when a relational write must be deduplicated.
+   * Per-mutation replay key for upsert/update/delete and vector_upsert.
+   * Relational receipts commit atomically with the whole transaction. A retry
+   * with identical inputs reuses its original mutation ID and affected count
+   * without repeating the write, revision, projection, CDC or audit effects.
+   * Reuse with different inputs fails with UDB_IDEMPOTENCY_REUSE and rolls the
+   * transaction back. Relational keys are scoped to tenant/project/entity and
+   * BeginTx operation, independently of unary replay keys. Other operations
+   * reject a non-empty key before the transaction opens.
    *
    * @generated from field: string idempotency_key = 16;
    */
@@ -166,6 +170,22 @@ export type Mutation = Message<"udb.entity.v1.Mutation"> & {
    * @generated from field: bool cdc_required = 20;
    */
   cdcRequired: boolean;
+
+  /**
+   * Exact affected-row count for a relational mutation. Non-zero mismatches
+   * roll back the whole transaction with NOT_FOUND/UDB_NO_ROWS_AFFECTED.
+   *
+   * @generated from field: uint32 require_affected = 21;
+   */
+  requireAffected: number;
+
+  /**
+   * Upsert conflict target, with the same semantics as UpsertRequest. Ignored
+   * values are never accepted: only an upsert may set this field.
+   *
+   * @generated from field: repeated string conflict_fields = 22;
+   */
+  conflictFields: string[];
 };
 
 /**
@@ -209,6 +229,19 @@ export type TxStatus = Message<"udb.entity.v1.TxStatus"> & {
    * @generated from field: udb.entity.v1.WriteReceipt write_receipt = 5;
    */
   writeReceipt?: WriteReceipt | undefined;
+
+  /**
+   * Original refusal, also carried in the terminal gRPC trailer. Classify this
+   * detail/code instead of matching the human-readable message.
+   *
+   * @generated from field: udb.entity.v1.ErrorDetail error_detail = 6;
+   */
+  errorDetail?: ErrorDetail | undefined;
+
+  /**
+   * @generated from field: int32 code = 7;
+   */
+  code: number;
 };
 
 /**
