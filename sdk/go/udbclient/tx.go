@@ -56,19 +56,24 @@ func (u *Udb) Tx(ctx context.Context, fn func(tx *TxScope) error) error {
 	if err != nil {
 		return classify(err)
 	}
+	var sendErr error
 	for _, mutation := range tx.muts {
 		mutation.TxId = tx.txID
 		if err := stream.Send(mutation); err != nil {
-			return classify(err)
+			sendErr = err
+			break
 		}
 	}
-	if err := stream.Send(&entityv1.Mutation{TxId: tx.txID, Commit: true}); err != nil {
-		return classify(err)
+	if sendErr == nil {
+		sendErr = stream.Send(&entityv1.Mutation{TxId: tx.txID, Commit: true})
 	}
-	if err := stream.CloseSend(); err != nil {
-		return classify(err)
+	if err := stream.CloseSend(); sendErr == nil {
+		sendErr = err
 	}
+	// Send can return EOF when the server refused the stream early. Recv owns
+	// the actual status and trailers, so drain it even after a send failure.
 	committed := false
+	var refused error
 	for {
 		st, err := stream.Recv()
 		if errors.Is(err, io.EOF) {
@@ -84,8 +89,14 @@ func (u *Udb) Tx(ctx context.Context, fn func(tx *TxScope) error) error {
 			committed = true
 			u.rememberReceipt(st.GetWriteReceipt())
 		case entityv1.TxStatus_TX_STATE_ERROR, entityv1.TxStatus_TX_STATE_ROLLED_BACK:
-			return fmt.Errorf("udb: transaction %s: %s", st.GetState(), st.GetMessage())
+			refused = txStatusError(st)
 		}
+	}
+	if refused != nil {
+		return classify(refused)
+	}
+	if sendErr != nil {
+		return classify(mapError("/udb.services.v1.DataBroker/BeginTx", sendErr, stream.Trailer()))
 	}
 	if !committed {
 		return errors.New("udb: transaction ended without a COMMITTED status")

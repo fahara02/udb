@@ -11,6 +11,18 @@ import (
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
+// txStatusError preserves the original broker status and structured refusal
+// in a transaction frame. The terminal trailer remains authoritative when sent.
+func txStatusError(frame *entityv1.TxStatus) error {
+	code := codes.Code(frame.GetCode())
+	if code == codes.OK {
+		code = codes.Unknown
+	}
+	detail, _ := proto.Marshal(frame.GetErrorDetail())
+	return &Error{RPC: "/udb.services.v1.DataBroker/BeginTx", Code: code,
+		Message: frame.GetMessage(), DetailBin: detail}
+}
+
 // ── Typed error-detail trailer decode (chapter 08.2) ─────────────────────────
 //
 // The broker encodes a udb.entity.v1.ErrorDetail into the udb-error-detail-bin

@@ -1,6 +1,7 @@
 package udbclient
 
 import (
+	"errors"
 	"testing"
 
 	entityv1 "github.com/fahara02/udb/sdk/go/gen/udb/entity/v1"
@@ -9,6 +10,19 @@ import (
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
 )
+
+func TestTransactionFramePreservesTypedConflictWithUnrelatedMessage(t *testing.T) {
+	frame := &entityv1.TxStatus{State: entityv1.TxStatus_TX_STATE_ERROR, Code: int32(codes.FailedPrecondition),
+		Message: "opaque operator text", ErrorDetail: &entityv1.ErrorDetail{Reason: "UDB_CAS_CONFLICT"}}
+	err := classify(txStatusError(frame))
+	if !errors.Is(err, ErrConflict) {
+		t.Fatalf("typed conflict lost: %v", err)
+	}
+	typed, ok := AsError(err)
+	if !ok || typed.Code != codes.FailedPrecondition || typed.Reason() != "UDB_CAS_CONFLICT" {
+		t.Fatalf("original code/detail lost: %v", err)
+	}
+}
 
 func marshalDetail(t *testing.T, d *entityv1.ErrorDetail) []byte {
 	t.Helper()

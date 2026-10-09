@@ -12,6 +12,8 @@ release line was tagged.
 - Go record and field encoders preserve an explicitly present empty optional or
   oneof text value. Incremental field decoding refuses conflicting oneof members
   and retains the previously decoded message on refusal.
+- Go transactions read the terminal gRPC refusal after an error frame or early
+  send EOF, retaining its original code and typed reason for `ErrConflict`.
 
 ### Breaking for callers
 
