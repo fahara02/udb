@@ -965,6 +965,35 @@ pub(crate) fn prefix_status(context: &str, status: tonic::Status) -> tonic::Stat
 /// can reconstruct the correct code instead of forcing every store String into
 /// `Status::internal`. Format: `"<TAG><code-number>:<message>"`. bug_report.md B2/B3.
 const STATUS_TAG_PREFIX: &str = "\u{1}udb-status:";
+const STATUS_DETAIL_TAG_PREFIX: &str = "\u{1}udb-error-detail-v1:";
+const MAX_STORED_ERROR_DETAIL_BYTES: usize = 512 * 1024;
+
+/// Preserve the original typed wire detail across a `Result<_, String>` leaf.
+/// The control-character prefix is internal; the public message stays readable
+/// and legacy code-only tags remain accepted by the decoder.
+fn typed_status_store_string(status: &tonic::Status, message: &str) -> String {
+    use base64::Engine as _;
+    let detail = status
+        .metadata()
+        .get_bin(ERROR_DETAIL_METADATA_KEY)
+        .and_then(|value| value.to_bytes().ok());
+    match detail {
+        Some(raw) if raw.len() <= MAX_STORED_ERROR_DETAIL_BYTES => format!(
+            "{STATUS_TAG_PREFIX}{}:{STATUS_DETAIL_TAG_PREFIX}{}:{message}",
+            status.code() as i32,
+            base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(raw)
+        ),
+        Some(_) => typed_status_store_string(
+            &internal_status(
+                "store",
+                "status_envelope",
+                "stored error detail exceeds its limit",
+            ),
+            "stored error detail exceeds its limit",
+        ),
+        None => format!("{STATUS_TAG_PREFIX}{}:{message}", status.code() as i32),
+    }
+}
 
 /// Render a typed gRPC code + message as a tagged String (see
 /// [`STATUS_TAG_PREFIX`]) so a `Result<_, String>` leaf can carry the code
@@ -975,20 +1004,11 @@ pub(crate) fn tagged_status_string(code: tonic::Code, message: &str) -> String {
 }
 
 /// Classify a leaf `sqlx::Error` and render it as a tagged String carrying the
-/// typed gRPC code, for the `String`-returning authn store layer. Recognised
-/// SQLSTATEs become a tagged code; anything else is the plain `{context}: {err}`
-/// (untagged → decodes to `Internal`).
+/// typed gRPC code and complete detail, for the `String`-returning authn store
+/// layer. Constraint/column diagnostics and specific reasons survive this leaf.
 pub(crate) fn sqlx_error_to_tagged_string(context: &str, err: &sqlx::Error) -> String {
     let status = sqlx_error_to_status(context, err);
-    if status.code() == tonic::Code::Internal {
-        // Preserve existing behaviour/diagnostics for unrecognised errors.
-        return format!("{context}: {err}");
-    }
-    format!(
-        "{STATUS_TAG_PREFIX}{}:{}",
-        status.code() as i32,
-        status.message()
-    )
+    typed_status_store_string(&status, status.message())
 }
 
 /// Render a downstream `tonic::Status` as a String for the `Result<_, String>`
@@ -1002,11 +1022,7 @@ pub(crate) fn sqlx_error_to_tagged_string(context: &str, err: &sqlx::Error) -> S
 /// authentication denial exactly as before).
 pub(crate) fn store_string_from_status(context: &str, status: &tonic::Status) -> String {
     if status.code() == tonic::Code::Unavailable {
-        format!(
-            "{STATUS_TAG_PREFIX}{}:{context}: {}",
-            tonic::Code::Unavailable as i32,
-            status.message()
-        )
+        typed_status_store_string(status, &format!("{context}: {}", status.message()))
     } else {
         format!("{context}: {}", status.message())
     }
@@ -1014,16 +1030,45 @@ pub(crate) fn store_string_from_status(context: &str, status: &tonic::Status) ->
 
 /// Decode a String produced by [`sqlx_error_to_tagged_string`] (or any other
 /// store String) into a typed `Status`. Tagged strings restore their original
-/// gRPC code + clean message; untagged strings become typed internal store
-/// failures instead of losing ErrorDetail at the String boundary.
+/// gRPC code + clean message and, for new envelopes, the original typed detail.
+/// Untagged strings become typed internal store failures. Malformed envelopes
+/// fail closed without exposing their encoded contents.
 pub(crate) fn status_from_store_string(s: String) -> tonic::Status {
+    use base64::Engine as _;
+    use prost::Message as _;
     if let Some(rest) = s.strip_prefix(STATUS_TAG_PREFIX) {
         if let Some((code_str, msg)) = rest.split_once(':') {
             if let Ok(code_num) = code_str.parse::<i32>() {
                 let code = tonic::Code::from(code_num);
+                if code == tonic::Code::Ok || code as i32 != code_num {
+                    return internal_status(
+                        "store",
+                        "status_envelope",
+                        "invalid stored status code",
+                    );
+                }
+                if let Some(envelope) = msg.strip_prefix(STATUS_DETAIL_TAG_PREFIX) {
+                    let detail = envelope.split_once(':').and_then(|(encoded, message)| {
+                        if encoded.len() > MAX_STORED_ERROR_DETAIL_BYTES.div_ceil(3) * 4 {
+                            return None;
+                        }
+                        let raw = base64::engine::general_purpose::URL_SAFE_NO_PAD
+                            .decode(encoded)
+                            .ok()?;
+                        if raw.is_empty() || raw.len() > MAX_STORED_ERROR_DETAIL_BYTES {
+                            return None;
+                        }
+                        let detail = crate::proto::ErrorDetail::decode(raw.as_slice()).ok()?;
+                        Some(status_with_typed_detail(code, message, detail))
+                    });
+                    return detail.unwrap_or_else(|| {
+                        internal_status("store", "status_envelope", "invalid stored error detail")
+                    });
+                }
                 return tagged_status_to_typed_status(code, msg);
             }
         }
+        return internal_status("store", "status_envelope", "invalid stored status envelope");
     }
     internal_status("store", "string_status", s)
 }
@@ -1049,7 +1094,7 @@ fn tagged_status_to_typed_status(code: tonic::Code, message: &str) -> tonic::Sta
         tonic::Code::Unavailable => {
             retryable_status("store", "tagged_status", HTTP_RETRYABLE_BACKOFF_MS, message)
         }
-        _ => tonic::Status::new(code, message.to_string()),
+        _ => status_with_typed_detail(code, message, crate::proto::ErrorDetail::default()),
     }
 }
 
@@ -3853,6 +3898,66 @@ mod error_detail_tests {
         assert!(!detail.retryable);
         assert_eq!(detail.retry_after_ms, 0);
         assert!(detail.field_violations.is_empty());
+    }
+
+    #[test]
+    fn typed_store_envelope_preserves_complete_detail_and_rejects_corruption() {
+        for reason in [
+            crate::runtime::error_reasons::UNIQUE_VIOLATION,
+            crate::runtime::error_reasons::NOT_NULL_VIOLATION,
+            crate::runtime::error_reasons::FOREIGN_KEY_VIOLATION,
+        ] {
+            let original = crate::runtime::error_reasons::Refusal::new(reason, "store refused")
+                .constraint("widgets_constraint")
+                .column("parent_id")
+                .missing("field", "parent_id")
+                .into_status();
+            let encoded = super::typed_status_store_string(&original, original.message());
+            let restored = status_from_store_string(encoded);
+            assert_eq!(restored.code(), original.code());
+            assert_eq!(restored.message(), original.message());
+            assert_eq!(decode_detail(&restored), decode_detail(&original));
+        }
+        let unavailable = retryable_status("postgres", "authn_lookup", 2_000, "reconnect");
+        let restored =
+            status_from_store_string(super::store_string_from_status("authn", &unavailable));
+        assert_eq!(restored.code(), tonic::Code::Unavailable);
+        assert_eq!(restored.message(), "authn: reconnect");
+        assert_eq!(decode_detail(&restored), decode_detail(&unavailable));
+
+        for malformed in [
+            "broken",
+            "@@@@:private-marker",
+            "AA:private-marker",
+            ":private-marker",
+        ] {
+            let restored = status_from_store_string(format!(
+                "{STATUS_TAG_PREFIX}6:{}{malformed}",
+                super::STATUS_DETAIL_TAG_PREFIX
+            ));
+            assert_eq!(restored.code(), tonic::Code::Internal);
+            assert_eq!(restored.message(), "invalid stored error detail");
+            assert_eq!(decode_detail(&restored).reason, "UDB_INTERNAL_ERROR");
+            assert!(!restored.message().contains("private-marker"));
+        }
+        for code in [
+            tonic::Code::PermissionDenied,
+            tonic::Code::Aborted,
+            tonic::Code::NotFound,
+        ] {
+            let restored = status_from_store_string(format!(
+                "{STATUS_TAG_PREFIX}{}:legacy refusal",
+                code as i32
+            ));
+            assert_eq!(restored.code(), code);
+            assert_eq!(decode_detail(&restored).reason, "UDB_FAILURE");
+        }
+        for code in [0, -1, 99] {
+            let restored =
+                status_from_store_string(format!("{STATUS_TAG_PREFIX}{code}:private-marker"));
+            assert_eq!(restored.code(), tonic::Code::Internal);
+            assert_eq!(restored.message(), "invalid stored status code");
+        }
     }
 
     #[test]

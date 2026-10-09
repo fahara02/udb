@@ -4785,6 +4785,32 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
         ),
     ),
     TokenCheck(
+        "store String boundary keeps original typed detail and rejects corrupt envelopes",
+        "src/runtime/executor_utils.rs",
+        (
+            'const STATUS_DETAIL_TAG_PREFIX: &str = "\\u{1}udb-error-detail-v1:";',
+            "fn typed_status_store_string(",
+            "typed_status_store_string(&status, status.message())",
+            "msg.strip_prefix(STATUS_DETAIL_TAG_PREFIX)",
+            "crate::proto::ErrorDetail::decode(raw.as_slice()).ok()?",
+            "code == tonic::Code::Ok || code as i32 != code_num",
+            "MAX_STORED_ERROR_DETAIL_BYTES.div_ceil(3) * 4",
+            "typed_store_envelope_preserves_complete_detail_and_rejects_corruption",
+            "assert_eq!(decode_detail(&restored), decode_detail(&original));",
+        ),
+    ),
+    TokenCheck(
+        "real SQL leaves retain constraints and fields across String envelopes",
+        "src/runtime/service/live_tests/data_error_matrix_live.rs",
+        (
+            "complete SQL refusal survives String leaf",
+            "sqlx_error_to_tagged_string(\"store boundary\", &error)",
+            "assert_eq!(restored_detail.reason, reason);",
+            "assert_eq!(restored_detail.column, column);",
+            "assert_eq!(restored_detail.constraint, constraint);",
+        ),
+    ),
+    TokenCheck(
         "served relational transaction key proof commits, replays and rolls back changed inputs",
         "src/runtime/service/live_tests/data_plane_seam_live.rs",
         (
@@ -10113,6 +10139,8 @@ def run_selftest() -> None:
             ("src/runtime/core/tx_object.rs", "crate::runtime::executor_utils::prefix_status("),
             ("src/runtime/core/setup_data.rs", '"PostgreSQL upsert commit failed"'),
             ("src/runtime/core/setup_data.rs", '"PostgreSQL delete commit failed"'),
+            ("src/runtime/executor_utils.rs", "typed_status_store_string(&status, status.message())"),
+            ("src/runtime/service/live_tests/data_error_matrix_live.rs", "complete SQL refusal survives String leaf"),
             ("src/runtime/executor_utils.rs", "let detail = crate::runtime::error_reasons::ensure_registered_reason(code, detail);"),
             ("src/runtime/error_reasons.rs", "ErrorKind::Quota => QUOTA_EXCEEDED"),
             ("scripts/generate-error-reasons.py", 'ROOT / "docs/reference/error-reasons.md"'),

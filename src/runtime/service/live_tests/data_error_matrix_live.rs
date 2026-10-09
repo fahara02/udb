@@ -150,6 +150,68 @@ async fn served_unary_and_transaction_errors_preserve_every_reason_and_original_
             .await
             .expect("served seed");
     }
+    // Real store leaves return String: prove the driver's complete detail
+    // survives that boundary for immediate and deferred constraints.
+    for (changes, code, reason, column, constraint) in [
+        (
+            "immediate_unique = 'taken'",
+            Code::AlreadyExists,
+            "UDB_UNIQUE_VIOLATION",
+            "immediate_unique",
+            "widgets_immediate_unique",
+        ),
+        (
+            "unique_key = 'taken'",
+            Code::AlreadyExists,
+            "UDB_UNIQUE_VIOLATION",
+            "unique_key",
+            "widgets_unique_key",
+        ),
+        (
+            "status = NULL",
+            Code::InvalidArgument,
+            "UDB_NOT_NULL_VIOLATION",
+            "status",
+            "",
+        ),
+        (
+            "parent_id = 'absent-parent'",
+            Code::FailedPrecondition,
+            "UDB_FOREIGN_KEY_VIOLATION",
+            "parent_id",
+            "widgets_parent_fk",
+        ),
+        (
+            "parent_deferred = 'absent-parent'",
+            Code::FailedPrecondition,
+            "UDB_FOREIGN_KEY_VIOLATION",
+            "parent_deferred",
+            "widgets_parent_deferred_fk",
+        ),
+    ] {
+        let error = sqlx::query(&format!(
+            "UPDATE \"{schema}\".widgets SET {changes} WHERE id = 'seed'"
+        ))
+        .execute(&pool)
+        .await
+        .expect_err("real store leaf must report the constraint");
+        let original =
+            crate::runtime::executor_utils::sqlx_error_to_status("store boundary", &error);
+        let tagged =
+            crate::runtime::executor_utils::sqlx_error_to_tagged_string("store boundary", &error);
+        let restored = crate::runtime::executor_utils::status_from_store_string(tagged);
+        assert_eq!(restored.code(), code);
+        assert_eq!(restored.message(), original.message());
+        let restored_detail = detail(&restored);
+        assert_eq!(restored_detail.reason, reason);
+        assert_eq!(restored_detail.column, column);
+        assert_eq!(restored_detail.constraint, constraint);
+        assert_eq!(
+            restored_detail,
+            detail(&original),
+            "complete SQL refusal survives String leaf"
+        );
+    }
     client
         .update(with_ctx(
             UpdateRequest {

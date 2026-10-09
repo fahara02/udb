@@ -49,6 +49,9 @@ no-wrapper plan.
 
 ### Fixed
 
+- SQL store errors preserve their original typed reason, column, constraint and
+  retry diagnostics across string-returning store interfaces. Legacy tags retain
+  their codes, and malformed typed envelopes fail with a bounded internal error.
 - Common capability, policy, quota, validation and transport refusals now carry
   a registered machine reason and fix hint while retaining their original code
   and kind. Specific domain reasons remain authoritative.
