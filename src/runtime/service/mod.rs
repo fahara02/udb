@@ -3967,6 +3967,38 @@ async fn start_cdc_engine(
                 tracing::error!("CDC engine start refused: topic policy load failed: {err}");
                 return None;
             }
+            // Capture enrollment must complete before native ACK can delete
+            // original outbox rows. A configured but unready source refuses the
+            // CDC engine rather than advertising an incomplete source guarantee.
+            let postgres_source = match std::env::var("UDB_CDC_POSTGRES_SOURCE_DSN") {
+                Ok(dsn) if !dsn.trim().is_empty() => {
+                    let factory = crate::runtime::cdc::source::PostgresCdcSource {
+                        dsn,
+                        publication: std::env::var("UDB_CDC_POSTGRES_SOURCE_TABLE")
+                            .unwrap_or_else(|_| runtime.config().cdc.outbox_relation()),
+                        slot: std::env::var("UDB_CDC_POSTGRES_SOURCE_SLOT")
+                            .unwrap_or_else(|_| "udb-postgres-source".into()),
+                    };
+                    match crate::runtime::cdc::postgres_source::prepare(&factory).await {
+                        Ok(source) => Some(source),
+                        Err(err) => {
+                            tracing::error!(
+                                "CDC engine start refused: source capture enrollment failed: {err}"
+                            );
+                            return None;
+                        }
+                    }
+                }
+                _ => None,
+            };
+            if let Some(source) = postgres_source.as_ref() {
+                if let Err(err) = engine.bind_source_destination(source.as_ref()).await {
+                    tracing::error!(
+                        "CDC engine start refused: source destination binding failed: {err}"
+                    );
+                    return None;
+                }
+            }
             let engine = Arc::new(engine);
             tokio::spawn({
                 let engine = engine.clone();
@@ -3988,24 +4020,15 @@ async fn start_cdc_engine(
             // Item 6: wire the generic `CdcSource` path for configured native
             // source adapters. Each source persists offsets through the same
             // `tail_source` loop; operators opt in per backend with env config.
-            if let Ok(dsn) = std::env::var("UDB_CDC_POSTGRES_SOURCE_DSN") {
-                if !dsn.trim().is_empty() {
-                    let relation = std::env::var("UDB_CDC_POSTGRES_SOURCE_TABLE")
-                        .unwrap_or_else(|_| "udb_system.udb_cdc_outbox".to_string());
-                    let source: std::sync::Arc<dyn crate::runtime::cdc::CdcSource> =
-                        std::sync::Arc::new(crate::runtime::cdc::source::PostgresCdcSource {
-                            dsn,
-                            publication: relation,
-                            slot: "udb-postgres-source".to_string(),
-                        });
-                    let engine = engine.clone();
-                    let singleton_pool = singleton_pool.clone();
-                    let singleton_relation = singleton_relation.clone();
-                    tokio::spawn(async move {
-                        loop {
-                            let engine = engine.clone();
-                            let source = source.clone();
-                            match crate::runtime::singleton::run_while_leader_fenced(
+            if let Some(source) = postgres_source {
+                let engine = engine.clone();
+                let singleton_pool = singleton_pool.clone();
+                let singleton_relation = singleton_relation.clone();
+                tokio::spawn(async move {
+                    loop {
+                        let engine = engine.clone();
+                        let source = source.clone();
+                        match crate::runtime::singleton::run_while_leader_fenced(
                                 &singleton_pool,
                                 &singleton_relation,
                                 crate::runtime::singleton::WORKER_CDC_POSTGRES_SOURCE,
@@ -4017,6 +4040,10 @@ async fn start_cdc_engine(
                             .await
                             {
                                 Ok(Some(Ok(()))) => {}
+                                Ok(Some(Err(err))) if err.starts_with("CDC_SOURCE_DESTINATION_REFUSED:") || err.starts_with("CDC_SOURCE_BINDING_REFUSED:") => {
+                                    tracing::error!("CDC Postgres source tailer refused its durable binding: {err}");
+                                    break;
+                                }
                                 Ok(Some(Err(err))) => {
                                     tracing::warn!("CDC Postgres source tailer exited: {err}")
                                 }
@@ -4027,14 +4054,11 @@ async fn start_cdc_engine(
                                     tracing::warn!("CDC Postgres source tailer lease failed: {err}")
                                 }
                             }
-                            tokio::time::sleep(
-                                crate::runtime::singleton::WORKER_SINGLETON_RETRY_SLEEP,
-                            )
+                        tokio::time::sleep(crate::runtime::singleton::WORKER_SINGLETON_RETRY_SLEEP)
                             .await;
-                        }
-                    });
-                    tracing::info!("CDC Postgres table source tailer started");
-                }
+                    }
+                });
+                tracing::info!("CDC Postgres captured table source tailer started");
             }
             #[cfg(feature = "mysql")]
             if let Ok(dsn) = std::env::var("UDB_CDC_MYSQL_SOURCE_DSN") {

@@ -800,6 +800,131 @@ async fn live_cdc_named_delivery_orders_cross_replica_journal_before_local_broad
     f.close().await;
 }
 
+#[tokio::test]
+#[ignore = "requires actual signed broker and PostgreSQL; native CI"]
+async fn live_cdc_anonymous_checkpoint_preserves_remote_order_from_fresh_head_and_resume() {
+    let _guard = super::support::live_native_service_db_lock().lock().await;
+    let mut f = fixture().await;
+    for round in 0..4 {
+        let anchor = seed(&f, &f.topic, &f.tenant, "default", round * 3).await;
+        let prime = f
+            .client
+            .publish_cdc(request(subscription("", &f.topic), &f.tokens[0]))
+            .await
+            .expect("actual anonymous credential resolution")
+            .into_inner();
+        let resolved = f
+            .captured
+            .lock()
+            .unwrap()
+            .clone()
+            .expect("actual resolved credential evidence");
+        assert_eq!(
+            resolved.bearer.as_ref().unwrap().as_ref().unwrap().subject,
+            f.users[0]
+        );
+        drop(prime);
+        let mut body = subscription("", &f.topic);
+        if round % 2 == 1 {
+            body.since_event_id = anchor.to_string();
+        }
+        let mut req = request(body, &f.tokens[0]);
+        req.extensions_mut().insert(resolved);
+        let mut stream = f.service.publish_cdc(req).await.unwrap().into_inner();
+        assert!(
+            tokio::time::timeout(Duration::from_millis(5), stream.next())
+                .await
+                .is_err(),
+            "fresh anonymous stream keeps its current-head anchor rather than replaying old history"
+        );
+        let started = tokio::time::Instant::now();
+        let remote = seed(&f, &f.topic, &f.tenant, "default", round * 3 + 1).await;
+        broadcast_retained_fixture(&f, f.remote.as_ref(), remote).await;
+        let local = seed(&f, &f.topic, &f.tenant, "default", round * 3 + 2).await;
+        broadcast_retained_fixture(&f, f.engine.as_ref(), local).await;
+        let first = tokio::time::timeout(Duration::from_secs(3), stream.next())
+            .await
+            .unwrap()
+            .unwrap()
+            .unwrap();
+        assert_eq!(
+            first.event_id,
+            remote.to_string(),
+            "g6-anonymous: a local checkpoint must not overtake an older remote committed event"
+        );
+        eprintln!(
+            "g6-anonymous round={round} explicit={} first-delivery-ms={}",
+            round % 2 == 1,
+            started.elapsed().as_millis()
+        );
+        drop(stream);
+        let mut body = subscription("", &f.topic);
+        body.since_event_id = remote.to_string();
+        let mut resumed = f
+            .client
+            .publish_cdc(request(body, &f.tokens[0]))
+            .await
+            .unwrap()
+            .into_inner();
+        assert_eq!(
+            next(&mut resumed).await,
+            local.to_string(),
+            "anonymous UUID reconnect must preserve the remaining committed event"
+        );
+        drop(resumed);
+    }
+    let config = SystemCatalogConfig::current();
+    let registered: i64 = sqlx::query_scalar(&format!(
+        "SELECT COUNT(*) FROM {} WHERE tenant_id=$1",
+        config.cdc_consumer_cursors_relation()
+    ))
+    .bind(&f.tenant)
+    .fetch_one(&f.pool)
+    .await
+    .unwrap();
+    assert_eq!(
+        registered, 0,
+        "anonymous ordering must not claim a durable named consumer"
+    );
+    for (anchor, expected) in [
+        (Uuid::nil().to_string(), Code::NotFound),
+        ("invalid-event-uuid".into(), Code::InvalidArgument),
+    ] {
+        let mut body = subscription("", &f.topic);
+        body.since_event_id = anchor;
+        assert_eq!(
+            f.client
+                .publish_cdc(request(body, &f.tokens[0]))
+                .await
+                .err()
+                .unwrap()
+                .code(),
+            expected
+        );
+    }
+    let pruned = seed(&f, &f.topic, &f.tenant, "default", 99).await;
+    sqlx::query(&format!(
+        "DELETE FROM {} WHERE event_id=$1",
+        config.cdc_journal_relation()
+    ))
+    .bind(pruned)
+    .execute(&f.pool)
+    .await
+    .unwrap();
+    let mut body = subscription("", &f.topic);
+    body.since_event_id = pruned.to_string();
+    assert_eq!(
+        f.client
+            .publish_cdc(request(body, &f.tokens[0]))
+            .await
+            .err()
+            .unwrap()
+            .code(),
+        Code::NotFound
+    );
+    f.close().await;
+}
+
 // BEGIN CDC_PREFIX_CI_REPRO
 // This block references only pre-fix APIs: transplant it unchanged for CI RED.
 #[tokio::test]

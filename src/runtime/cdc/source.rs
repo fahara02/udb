@@ -9,8 +9,8 @@
 //! This module supplies the abstract `CdcSource` contract so the
 //! engine can host:
 //!
-//! - **`PostgresCdcSource`** — the existing WAL tailer adapted to the
-//!   trait surface. C2 step 1.
+//! - **`PostgresCdcSource`** — transactional INSERT capture from a source
+//!   event/outbox table, with immutable images and per-slot durable receipts.
 //! - **`MongoCdcSource`** — uses the `mongodb` driver's change-stream
 //!   API (`db.watch()`) when the `mongodb-native` feature is on. C2
 //!   step 2.
@@ -27,17 +27,17 @@
 //!
 //! The Kafka producer, schema-registry interaction, and outbox table
 //! advancement are backend-agnostic and stay in `engine_tail.rs`. The
-//! refactor introduces the trait + adapter pattern; pre-existing
-//! Postgres-specific code lives inside `PostgresCdcSource`.
+//! PostgreSQL table capture lives in `postgres_source`; the existing raw
+//! logical replication protocol remains a separate engine path.
 
-use std::pin::Pin;
+use std::{pin::Pin, sync::Arc};
 
-#[cfg(any(feature = "kafka", feature = "mysql"))]
+#[cfg(feature = "mysql")]
 use async_stream::stream;
 use async_trait::async_trait;
 use futures::Stream;
 use serde::{Deserialize, Serialize};
-#[cfg(any(feature = "kafka", feature = "mysql"))]
+#[cfg(feature = "mysql")]
 use sqlx::Row;
 
 /// One change event surfaced by a CDC source. Backend-agnostic: the
@@ -65,7 +65,7 @@ pub struct CdcEvent {
     pub after: Option<serde_json::Value>,
     /// The pre-image (update / delete). `None` for insert events.
     pub before: Option<serde_json::Value>,
-    /// Source-specific offset (PG: LSN string, Mongo: resume token,
+    /// Source-specific offset (PG capture: immutable identity, Mongo: resume token,
     /// MySQL: binlog file:position). The engine persists this in
     /// `udb_cdc_offsets` so a restart picks up where the previous
     /// process left off.
@@ -180,6 +180,7 @@ fn now_ms() -> i64 {
         .unwrap_or(0)
 }
 
+#[cfg(feature = "mysql")]
 fn configured_relation(env_key: &str, fallback: &str) -> String {
     std::env::var(env_key)
         .ok()
@@ -188,6 +189,7 @@ fn configured_relation(env_key: &str, fallback: &str) -> String {
         .unwrap_or_else(|| fallback.to_string())
 }
 
+#[cfg(feature = "mysql")]
 fn safe_relation(raw: &str) -> Result<String, String> {
     let relation = raw.trim();
     if relation.is_empty() {
@@ -205,6 +207,7 @@ fn safe_relation(raw: &str) -> Result<String, String> {
     }
 }
 
+#[cfg(feature = "mysql")]
 fn offset_as_i64(from_offset: &str) -> i64 {
     from_offset.trim().parse::<i64>().unwrap_or(0)
 }
@@ -216,8 +219,37 @@ fn offset_as_i64(from_offset: &str) -> i64 {
 #[async_trait]
 pub trait CdcSource: Send + Sync {
     /// Stable backend label (`"postgres"`, `"mongodb"`, `"mysql"`).
-    /// The engine uses this in metrics and the offset table.
+    /// The engine uses this for metrics and topic naming; durable namespaces
+    /// can distinguish multiple sources/consumers of the same backend.
     fn backend_label(&self) -> &str;
+
+    /// Resolve one owned adapter/pool before opening or acknowledging events.
+    /// Existing adapters retain their current lifecycle through this default.
+    async fn prepare(&self) -> Result<Option<Arc<dyn CdcSource>>, String> {
+        Ok(None)
+    }
+
+    /// Durable cursor identity, separate from the backend metrics/topic label.
+    fn offset_namespace(&self) -> &str {
+        self.backend_label()
+    }
+
+    /// Stable configured source binding and its immutable generation. The
+    /// destination pins this pair to detect destruction of all source markers.
+    fn enrollment_binding(&self) -> Option<(&str, &str)> {
+        None
+    }
+
+    /// Bind a durable consumer group to one configured destination before any
+    /// event is read. Sources without receipt groups retain their old behavior.
+    async fn bind_destination(&self, _destination: &str) -> Result<(), String> {
+        Ok(())
+    }
+
+    /// Complete an actual captured event only after confirmed durable processing.
+    async fn acknowledge(&self, _event: &CdcEvent) -> Result<(), String> {
+        Ok(())
+    }
 
     /// Open a stream of `CdcEvent`s starting at the given offset.
     /// `from_offset` is empty on first start — the source picks its
@@ -239,10 +271,9 @@ pub trait CdcSource: Send + Sync {
     async fn health(&self) -> Result<(), String>;
 
     /// Optional capability check: does this source need a write-ahead
-    /// log / replication slot that the operator must create
-    /// out-of-band? PG returns true (operator must `CREATE PUBLICATION`
-    /// + `CREATE_REPLICATION_SLOT`); Mongo + MySQL return false
-    /// (change streams / binlog are server-side defaults).
+    /// log / replication slot that the operator must create out-of-band?
+    /// Transactional PostgreSQL table capture uses source enrollment instead;
+    /// its raw logical replication protocol is a separate engine path.
     fn requires_replication_setup(&self) -> bool {
         false
     }
@@ -254,11 +285,11 @@ pub trait CdcSource: Send + Sync {
 
 /// Postgres CDC source.
 ///
-/// This adapter tails a configured Postgres CDC journal/outbox relation with
-/// monotonically increasing `event_seq` and JSONB `payload` columns. Raw WAL
-/// decoding remains out of scope for the published `tokio-postgres` APIs, but
-/// this is a real `CdcSource` implementation with offset resume instead of an
-/// always-failing stub.
+/// This adapter transactionally captures INSERT images from an event/outbox
+/// relation in the source database. Durable per-slot receipts govern resume;
+/// numerical event_seq values never imply every lower transaction committed.
+/// Enrollment requires source-side DDL/write authority, and captured rows are
+/// retained conservatively. Raw WAL decoding is a separate source protocol.
 #[cfg(feature = "kafka")]
 pub struct PostgresCdcSource {
     pub dsn: String,
@@ -275,93 +306,30 @@ impl CdcSource for PostgresCdcSource {
         "postgres"
     }
 
-    fn requires_replication_setup(&self) -> bool {
-        true
+    async fn prepare(&self) -> Result<Option<Arc<dyn CdcSource>>, String> {
+        super::postgres_source::prepare(self).await.map(Some)
     }
 
     async fn open(
         &self,
         from_offset: &str,
     ) -> Result<Pin<Box<dyn Stream<Item = Result<CdcEvent, String>> + Send>>, String> {
-        let relation = if self.publication.trim().is_empty() {
-            configured_relation("UDB_CDC_POSTGRES_SOURCE_TABLE", "udb_system.udb_cdc_outbox")
-        } else {
-            self.publication.trim().to_string()
-        };
-        let relation = safe_relation(&relation)?;
-        let dsn = self.dsn.clone();
-        let mut last_seen = offset_as_i64(from_offset);
-        let stream = stream! {
-            let pool = match sqlx::PgPool::connect(&dsn).await {
-                Ok(pool) => pool,
-                Err(err) => {
-                    yield Err(format!("postgres cdc source connect failed: {err}"));
-                    return;
-                }
-            };
-            loop {
-                let sql = format!(
-                    "SELECT event_seq, topic, payload, created_at
-                     FROM {relation}
-                     WHERE event_seq > $1
-                     ORDER BY event_seq ASC
-                     LIMIT 100"
-                );
-                match sqlx::query(&sql).bind(last_seen).fetch_all(&pool).await {
-                    Ok(rows) => {
-                        if rows.is_empty() {
-                            tokio::time::sleep(std::time::Duration::from_millis(500)).await;
-                            continue;
-                        }
-                        for row in rows {
-                            let seq: i64 = match row.try_get("event_seq") {
-                                Ok(seq) => seq,
-                                Err(err) => {
-                                    yield Err(format!("postgres cdc source event_seq decode failed: {err}"));
-                                    continue;
-                                }
-                            };
-                            let topic: String = row.try_get("topic").unwrap_or_else(|_| relation.clone());
-                            let payload: serde_json::Value = row
-                                .try_get("payload")
-                                .unwrap_or_else(|_| serde_json::Value::Null);
-                            last_seen = seq;
-                            let mut event = CdcEvent::insert(topic, payload, seq.to_string());
-                            event.source_ts_unix_ms = row
-                                .try_get::<chrono::DateTime<chrono::Utc>, _>("created_at")
-                                .map(|ts| ts.timestamp_millis())
-                                .unwrap_or_else(|_| now_ms());
-                            yield Ok(event);
-                        }
-                    }
-                    Err(err) => {
-                        yield Err(format!("postgres cdc source poll failed: {err}"));
-                        tokio::time::sleep(std::time::Duration::from_secs(1)).await;
-                    }
-                }
-            }
-        };
-        Ok(Box::pin(stream))
+        super::postgres_source::prepare(self)
+            .await?
+            .open(from_offset)
+            .await
     }
 
     async fn health(&self) -> Result<(), String> {
-        // Probe the configured source relation. Slot checks are still useful
-        // for WAL deployments, but the concrete `open()` adapter tails a table.
-        use sqlx::Connection;
-        let mut conn = sqlx::PgConnection::connect(&self.dsn)
-            .await
-            .map_err(|e| format!("postgres cdc health: connect failed: {e}"))?;
-        let relation = if self.publication.trim().is_empty() {
-            configured_relation("UDB_CDC_POSTGRES_SOURCE_TABLE", "udb_system.udb_cdc_outbox")
-        } else {
-            self.publication.trim().to_string()
-        };
-        let relation = safe_relation(&relation)?;
-        sqlx::query(&format!("SELECT 1 FROM {relation} LIMIT 1"))
-            .execute(&mut conn)
-            .await
-            .map(|_| ())
-            .map_err(|e| format!("postgres cdc health: source relation probe failed: {e}"))
+        super::postgres_source::prepare(self).await?.health().await
+    }
+
+    async fn bind_destination(&self, _destination: &str) -> Result<(), String> {
+        Err("CDC_SOURCE_DESTINATION_REFUSED: prepare the PostgreSQL source before binding its durable consumer".into())
+    }
+
+    async fn acknowledge(&self, _event: &CdcEvent) -> Result<(), String> {
+        Err("CDC_SOURCE_DESTINATION_REFUSED: prepare the PostgreSQL source before acknowledging its durable consumer".into())
     }
 }
 
@@ -671,7 +639,7 @@ mod tests {
     }
 
     // In-memory `CdcSource` removed: the source/offset path is exercised by the
-    // live Postgres-WAL + Kafka integration test, not an in-memory replay double
+    // live PostgreSQL capture + Kafka integration tests, not an in-memory replay double
     // (in-memory doubles can pass while the real WAL/Kafka path is broken).
 
     #[test]

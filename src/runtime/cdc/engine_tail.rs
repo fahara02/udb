@@ -1697,7 +1697,7 @@ impl CdcEngine {
         .await
     }
 
-    /// A named consumer drains durable journal order; broadcast only wakes that
+    /// Every consumer drains durable journal order; broadcast only wakes that
     /// drain. A stored watermark remains usable after its anchor row is pruned.
     #[allow(clippy::too_many_arguments)]
     pub(crate) async fn stream_cdc_with_cursor(
@@ -1708,7 +1708,7 @@ impl CdcEngine {
         tenant_id: Option<String>,
         project_id: Option<String>,
         watermark: Option<i64>,
-        named: bool,
+        _named: bool,
     ) -> Result<
         Pin<
             Box<
@@ -1791,7 +1791,7 @@ impl CdcEngine {
                 }
             }
 
-            // 2. Live: broadcast fast-path + journal backstop, de-duped by event_id.
+            // 2. Live: broadcast wake + ordered journal polling, de-duped by event_id.
             enum StreamWake {
                 Fast(Result<CdcEnvelope, broadcast::error::RecvError>),
                 Journal(Result<Vec<CdcEnvelope>, tonic::Status>),
@@ -1839,7 +1839,7 @@ impl CdcEngine {
                 };
                 match wake {
                     StreamWake::Fast(received) => match received {
-                        Ok(envelope) if named => {
+                        Ok(envelope) => {
                             // Unrelated traffic must not cause per-event database
                             // polls. Matching traffic wakes a durable ordered drain.
                             if matcher.matches(&envelope.topic)
@@ -1859,31 +1859,6 @@ impl CdcEngine {
                                 for envelope in batch {
                                     yield envelope;
                                 }
-                            }
-                        }
-                        Ok(envelope) => {
-                            let policy_allowed = !policy_snapshot.configured()
-                                || policy_snapshot
-                                    .active_policy_for(
-                                        &envelope.topic,
-                                        &tenant_scope,
-                                        &project_scope,
-                                        privileged,
-                                    )
-                                    .is_some();
-                            if matcher.matches(&envelope.topic)
-                                && policy_allowed
-                                && payload_string_matches_stream_scope(
-                                    &envelope.topic,
-                                    &envelope.payload_json,
-                                    &tenant_scope,
-                                    &project_scope,
-                                    privileged,
-                                    policy_snapshot.active_topic_is_policy_owned(&envelope.topic),
-                                )
-                                && cdc_dedup_admit(&mut seen, &mut order, &envelope.event_id, DEDUP_WINDOW)
-                            {
-                                yield envelope;
                             }
                         }
                         // Dropped on lag — the journal backstop backfills them, so
@@ -3080,6 +3055,45 @@ impl CdcEngine {
         self.tail_source_fenced(source, None).await
     }
 
+    /// Bind a prepared source before any publisher starts. Destination catalog
+    /// authority commits before source claim I/O; neither lock spans Kafka work.
+    #[cfg(feature = "kafka")]
+    pub(crate) async fn bind_source_destination(
+        &self,
+        source: &dyn super::source::CdcSource,
+    ) -> Result<(), String> {
+        let Some((binding, generation)) = source.enrollment_binding() else {
+            return Ok(());
+        };
+        tokio::time::timeout(std::time::Duration::from_secs(30), async {
+            let offsets = self.config.offsets_relation();
+            let options = self.pool.connect_options();
+            let endpoint = format!("{}:{}:{}",options.get_host(),options.get_port(),options.get_socket().map(|p|p.to_string_lossy().into_owned()).unwrap_or_default());
+            let logical = std::env::var("UDB_CDC_POSTGRES_DESTINATION_ID").ok().filter(|v|!v.trim().is_empty()).unwrap_or(endpoint);
+            let mut tx=self.pool.begin().await.map_err(|e|format!("cdc source destination registration I/O: {e}"))?;
+            let installation_key="cdc_destination_identity:v1";
+            let candidate=uuid::Uuid::new_v4().to_string();
+            sqlx::query(&format!("INSERT INTO {offsets}(slot_name,last_offset,updated_at) VALUES ($1,$2,NOW()) ON CONFLICT(slot_name) DO NOTHING"))
+                .bind(installation_key).bind(&candidate).execute(&mut *tx).await.map_err(|e|format!("cdc source destination registration I/O: {e}"))?;
+            let installation:String=sqlx::query_scalar(&format!("SELECT last_offset FROM {offsets} WHERE slot_name=$1 FOR UPDATE"))
+                .bind(installation_key).fetch_one(&mut *tx).await.map_err(|e|format!("cdc source destination registration I/O: {e}"))?;
+            uuid::Uuid::parse_str(&installation).map_err(|_|"CDC_SOURCE_BINDING_REFUSED: destination installation identity is invalid".to_string())?;
+            let (database,schema,table):(String,String,String)=sqlx::query_as("SELECT current_database()::TEXT,n.nspname::TEXT,c.relname::TEXT FROM pg_catalog.pg_class c JOIN pg_catalog.pg_namespace n ON n.oid=c.relnamespace WHERE c.oid=pg_catalog.to_regclass($1)")
+                .bind(&offsets).fetch_one(&mut *tx).await.map_err(|e|format!("cdc source destination relation authority I/O: {e}"))?;
+            let registration_key=format!("cdc_source_binding:{binding}");
+            sqlx::query(&format!("INSERT INTO {offsets}(slot_name,last_offset,updated_at) VALUES ($1,$2,NOW()) ON CONFLICT(slot_name) DO NOTHING"))
+                .bind(&registration_key).bind(generation).execute(&mut *tx).await.map_err(|e|format!("cdc source generation registration I/O: {e}"))?;
+            let expected:String=sqlx::query_scalar(&format!("SELECT last_offset FROM {offsets} WHERE slot_name=$1 FOR UPDATE"))
+                .bind(&registration_key).fetch_one(&mut *tx).await.map_err(|e|format!("cdc source generation authority I/O: {e}"))?;
+            if expected!=generation {
+                return Err("CDC_SOURCE_BINDING_REFUSED: cdc source generation differs from durable destination binding".into());
+            }
+            let destination=super::postgres_source::identity_digest(&["udb.destination-binding.v1",&logical,&database,&schema,&table,&installation]);
+            tx.commit().await.map_err(|e|format!("cdc source destination registration commit I/O: {e}"))?;
+            source.bind_destination(&destination).await
+        }).await.map_err(|_|"cdc source destination registration deadline exceeded".to_string())?
+    }
+
     /// H5: [`Self::tail_source`] under a singleton lease. Before every publish
     /// the lease's fencing token is re-verified; a superseded leader returns
     /// `Err` WITHOUT publishing or advancing the persisted source offset, so a
@@ -3092,12 +3106,21 @@ impl CdcEngine {
     ) -> Result<(), String> {
         use futures::StreamExt;
 
+        if let Some(fence) = fence {
+            fence
+                .check()
+                .await
+                .map_err(|e| format!("cdc source lease before enrollment: {e}"))?;
+        }
+        let source = match source.prepare().await? {
+            Some(prepared) => prepared,
+            None => source,
+        };
         let label = source.backend_label().to_string();
-        // Use the source's backend label as the offset key. Multiple
-        // sources from the same backend (e.g. two Mongo databases)
-        // should expose distinct labels via the constructor.
-        let slot_key = format!("cdc_source:{label}");
+        let namespace = source.offset_namespace().to_string();
+        let slot_key = format!("cdc_source:{namespace}");
         let offsets_relation = self.config.offsets_relation();
+        self.bind_source_destination(source.as_ref()).await?;
 
         // 1. Load last persisted offset (empty if first run).
         let offset_sql = format!("SELECT last_offset FROM {offsets_relation} WHERE slot_name = $1");
@@ -3135,24 +3158,41 @@ impl CdcEngine {
                     return Err(err);
                 }
             };
+            let original_event = evt.clone();
+            if let Some(fence) = fence {
+                fence
+                    .check()
+                    .await
+                    .map_err(|e| format!("cdc source lease before processing: {e}"))?;
+            }
             if let Err(err) = evt.validate_identity() {
                 error!("[cdc] tail_source rejected invalid event from {label}: {err}");
                 self.metrics.inc_cdc_errors_total("source_identity_missing");
                 // CDC pipeline parity (final_task.md §9): route the malformed
                 // source event to the DLQ — the same as the Postgres outbox path —
-                // and CONTINUE tailing. A single invalid event must not tear down
-                // the whole source stream (previously this returned Err and the
-                // supervisor restarted the tail, replaying from the last offset).
+                // Continue only after actual durable quarantine and its source
+                // receipt. A failed quarantine stops before any later event.
                 self.metrics.inc_cdc_errors_total("dlq_routed");
                 let payload = serde_json::to_value(&evt).unwrap_or(serde_json::Value::Null);
-                let source_event_id = source_cdc_event_id(&label, &evt);
-                self.route_to_dlq(
-                    source_event_id,
-                    payload,
-                    "SourceIdentityMissing",
-                    &err.to_string(),
-                )
-                .await;
+                let source_event_id = source_cdc_event_id(&namespace, &evt);
+                let quarantined = self
+                    .route_to_dlq(
+                        source_event_id,
+                        payload,
+                        "SourceIdentityMissing",
+                        &err.to_string(),
+                    )
+                    .await;
+                if !quarantined {
+                    return Err("cdc source identity quarantine was not durably completed".into());
+                }
+                if let Some(fence) = fence {
+                    fence
+                        .check()
+                        .await
+                        .map_err(|e| format!("cdc source lease before quarantine receipt: {e}"))?;
+                }
+                source.acknowledge(&original_event).await?;
                 continue;
             }
             let topic = format!("udb.cdc.{}.{}", label, evt.source);
@@ -3165,14 +3205,25 @@ impl CdcEngine {
                     .inc_cdc_errors_total("source_topic_policy_denied");
                 self.metrics.inc_cdc_errors_total("dlq_routed");
                 let payload = serde_json::to_value(&evt).unwrap_or(serde_json::Value::Null);
-                let source_event_id = source_cdc_event_id(&label, &evt);
-                self.route_to_dlq(
-                    source_event_id,
-                    payload,
-                    "TopicPolicyDenied",
-                    &format!("topic {topic} not permitted by policy"),
-                )
-                .await;
+                let source_event_id = source_cdc_event_id(&namespace, &evt);
+                let quarantined = self
+                    .route_to_dlq(
+                        source_event_id,
+                        payload,
+                        "TopicPolicyDenied",
+                        &format!("topic {topic} not permitted by policy"),
+                    )
+                    .await;
+                if !quarantined {
+                    return Err("cdc source topic quarantine was not durably completed".into());
+                }
+                if let Some(fence) = fence {
+                    fence
+                        .check()
+                        .await
+                        .map_err(|e| format!("cdc source lease before quarantine receipt: {e}"))?;
+                }
+                source.acknowledge(&original_event).await?;
                 continue;
             }
             let partition_key = evt
@@ -3199,7 +3250,7 @@ impl CdcEngine {
                 }
             }
             let payload_string = serde_json::to_string(&evt).unwrap_or_else(|_| "{}".to_string());
-            let source_event_id = source_cdc_event_id(&label, &evt);
+            let source_event_id = source_cdc_event_id(&namespace, &evt);
 
             if let Some(fence) = fence
                 && let Err(err) = fence.check().await
@@ -3294,6 +3345,13 @@ impl CdcEngine {
                     ));
                 }
             }
+            if let Some(fence) = fence {
+                fence
+                    .check()
+                    .await
+                    .map_err(|e| format!("cdc source lease before publication receipt: {e}"))?;
+            }
+            source.acknowledge(&original_event).await?;
         }
 
         info!("[cdc] generic source tail ended: label={label}");

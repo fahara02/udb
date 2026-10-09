@@ -92,6 +92,9 @@ fn strip_nul_json(value: &serde_json::Value) -> serde_json::Value {
     }
 }
 
+#[cfg(feature = "kafka")]
+pub(crate) mod postgres_source;
+
 pub mod source; // C2 + C3: per-backend CDC source trait + Postgres / MongoDB / MySQL impls
 pub use source::{CdcEvent, CdcSource};
 

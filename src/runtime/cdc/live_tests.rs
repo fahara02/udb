@@ -14,6 +14,8 @@
 //! or point at a specific database with `UDB_LIVE_CDC_PG_DSN=postgres://…`.
 
 use super::*;
+#[cfg(feature = "kafka")]
+use futures::StreamExt;
 
 const LIVE_GATE_HINT: &str = "skipping: set UDB_LIVE_CDC_TESTS=1 (or UDB_LIVE_CDC_PG_DSN=postgres://…) to run live CDC tests";
 
@@ -1054,7 +1056,7 @@ async fn live_generic_source_durable_failure_never_advances_a_later_offset() {
     use crate::generation::sql::ql;
     struct IsolatedSource {
         label: String,
-        postgres: PostgresCdcSource,
+        postgres: Arc<dyn CdcSource>,
     }
     #[async_trait::async_trait]
     impl CdcSource for IsolatedSource {
@@ -1070,6 +1072,9 @@ async fn live_generic_source_durable_failure_never_advances_a_later_offset() {
         }
         async fn health(&self) -> Result<(), String> {
             self.postgres.health().await
+        }
+        async fn acknowledge(&self, event: &CdcEvent) -> Result<(), String> {
+            self.postgres.acknowledge(event).await
         }
     }
     let _guard = live_cdc_db_lock().lock().await;
@@ -1102,6 +1107,20 @@ async fn live_generic_source_durable_failure_never_advances_a_later_offset() {
             .await
             .unwrap();
         }
+        let factory = PostgresCdcSource {
+            dsn: dsn.clone(),
+            publication: source_relation.clone(),
+            slot: slot.clone(),
+        };
+        let prepared = factory.prepare().await.unwrap().unwrap();
+        let mut probe = prepared.open("").await.unwrap();
+        let first_event = tokio::time::timeout(Duration::from_secs(3), probe.next())
+            .await
+            .unwrap()
+            .unwrap()
+            .unwrap();
+        let first_offset = first_event.source_offset;
+        drop(probe);
         let config = CdcConfig {
             valid_topics: vec![topic.clone()],
             ..CdcConfig::default()
@@ -1116,13 +1135,15 @@ async fn live_generic_source_durable_failure_never_advances_a_later_offset() {
         };
         let predicate = if failure == "journal" {
             format!(
-                "topic <> {} OR payload->>'source_offset' IS DISTINCT FROM '1'",
-                ql(&topic)
+                "topic <> {} OR payload->>'source_offset' IS DISTINCT FROM {}",
+                ql(&topic),
+                ql(&first_offset)
             )
         } else {
             format!(
-                "slot_name <> {} OR last_offset IS DISTINCT FROM '1'",
-                ql(&slot)
+                "slot_name <> {} OR last_offset IS DISTINCT FROM {}",
+                ql(&slot),
+                ql(&first_offset)
             )
         };
         sqlx::query(&format!(
@@ -1140,11 +1161,7 @@ async fn live_generic_source_durable_failure_never_advances_a_later_offset() {
         let engine = CdcEngine::new(pool.clone(), &brokers, dsn.clone(), metrics, config).unwrap();
         let source = Arc::new(IsolatedSource {
             label,
-            postgres: PostgresCdcSource {
-                dsn: dsn.clone(),
-                publication: source_relation.clone(),
-                slot: slot.clone(),
-            },
+            postgres: prepared,
         });
         let result = tokio::time::timeout(
             std::time::Duration::from_secs(15),
@@ -1200,5 +1217,1310 @@ async fn live_generic_source_durable_failure_never_advances_a_later_offset() {
             retained, 0,
             "journal and source offset must roll back together on either failure"
         );
+    }
+}
+
+// BEGIN CDC_SOURCE_CI_REPRO
+// Transplant this unchanged into the baseline module: only existing APIs are
+// referenced, and enrollment is warmed before intentionally holding a producer.
+#[cfg(feature = "kafka")]
+#[tokio::test]
+#[ignore = "requires actual PostgreSQL; native CI runs ignored live tests"]
+async fn live_postgres_source_late_commit_is_not_lost_after_scalar_cursor() {
+    use super::source::{CdcSource, PostgresCdcSource};
+    use futures::StreamExt;
+    let _guard = live_cdc_db_lock().lock().await;
+    let pool = live_cdc_pool()
+        .await
+        .expect("real PostgreSQL source fixture");
+    let config = crate::runtime::system::SystemCatalogConfig::current();
+    let relation = format!(
+        "{}.{}",
+        qi(&config.cdc.system_schema),
+        qi(&format!("source_late_{}", Uuid::new_v4().simple()))
+    );
+    sqlx::query(&format!("CREATE TABLE {relation}(event_seq BIGSERIAL PRIMARY KEY,topic TEXT NOT NULL,payload JSONB NOT NULL,created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())"))
+        .execute(&pool).await.unwrap();
+    let insert = format!("INSERT INTO {relation}(topic,payload) VALUES ('rows',$1)");
+    let image = |id: &str| serde_json::json!({"id":id,"tenant_id":"source-prefix-ci","project_id":"default"});
+    sqlx::query(&insert)
+        .bind(image("anchor"))
+        .execute(&pool)
+        .await
+        .unwrap();
+    let factory = PostgresCdcSource {
+        dsn: live_pg_dsn().unwrap(),
+        publication: relation.clone(),
+        slot: format!("source-late-{}", Uuid::new_v4()),
+    };
+    let mut warm = factory.open("").await.unwrap();
+    let anchor = tokio::time::timeout(Duration::from_secs(3), warm.next())
+        .await
+        .unwrap()
+        .unwrap()
+        .unwrap();
+    assert_eq!(anchor.after.as_ref().unwrap()["id"], "anchor");
+    drop(warm);
+    let mut held = pool.begin().await.unwrap();
+    sqlx::query(&insert)
+        .bind(image("late-a"))
+        .execute(&mut *held)
+        .await
+        .unwrap();
+    sqlx::query(&insert)
+        .bind(image("committed-b"))
+        .execute(&pool)
+        .await
+        .unwrap();
+    let mut stream = factory.open("1").await.unwrap();
+    tokio::time::timeout(Duration::from_secs(3), async {
+        loop {
+            let event = stream.next().await.unwrap().unwrap();
+            if event.after.as_ref().unwrap()["id"] == "committed-b" {
+                break;
+            }
+        }
+    })
+    .await
+    .expect("actually observe B before committing held A");
+    held.commit().await.unwrap();
+    let late = tokio::time::timeout(Duration::from_secs(3), async {
+        loop {
+            let event = stream.next().await.unwrap().unwrap();
+            if event.after.as_ref().unwrap()["id"] == "late-a" {
+                break;
+            }
+        }
+    })
+    .await
+    .is_ok();
+    drop(stream);
+    let retained: i64 = sqlx::query_scalar(&format!(
+        "SELECT COUNT(*) FROM {relation} WHERE payload->>'id'='late-a'"
+    ))
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+    sqlx::query(&format!("DROP TABLE {relation}"))
+        .execute(&pool)
+        .await
+        .unwrap();
+    assert_eq!(retained, 1, "late A is actual committed source evidence");
+    assert!(
+        late,
+        "g6-source: late committed source event must not disappear behind a persisted scalar offset"
+    );
+}
+// END CDC_SOURCE_CI_REPRO
+
+#[cfg(feature = "kafka")]
+mod source_capture_controls {
+    use super::*;
+    use crate::runtime::cdc::source::{CdcEvent, CdcSource, PostgresCdcSource};
+    use sqlx::{ConnectOptions, postgres::PgConnectOptions};
+    use std::str::FromStr;
+
+    struct SourceDatabase {
+        admin: PgPool,
+        pool: PgPool,
+        dsn: String,
+        database: String,
+        relation: String,
+        topic: String,
+    }
+    impl SourceDatabase {
+        async fn new() -> Self {
+            let admin = live_cdc_pool()
+                .await
+                .expect("destination PostgreSQL fixture required");
+            let database = format!("udb_source_{}", Uuid::new_v4().simple());
+            sqlx::query(&format!("CREATE DATABASE {}", qi(&database)))
+                .execute(&admin)
+                .await
+                .expect("CI owns a separate source database");
+            let options = PgConnectOptions::from_str(&live_pg_dsn().unwrap())
+                .unwrap()
+                .database(&database);
+            let dsn = options.to_url_lossy().to_string();
+            let pool = sqlx::postgres::PgPoolOptions::new()
+                .max_connections(26)
+                .acquire_timeout(Duration::from_secs(10))
+                .connect_with(options)
+                .await
+                .expect("separate source database connection");
+            let relation = format!(
+                "{}.{}",
+                qi("public"),
+                qi(&format!("events_{}", Uuid::new_v4().simple()))
+            );
+            sqlx::query(&format!("CREATE TABLE {relation}(event_seq BIGSERIAL PRIMARY KEY,topic TEXT NOT NULL,payload JSONB NOT NULL,created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())"))
+                .execute(&pool).await.unwrap();
+            Self {
+                admin,
+                pool,
+                dsn,
+                database,
+                relation,
+                topic: format!("src_{}", Uuid::new_v4().simple()),
+            }
+        }
+        fn factory(&self, slot: &str) -> PostgresCdcSource {
+            PostgresCdcSource {
+                dsn: self.dsn.clone(),
+                publication: self.relation.clone(),
+                slot: slot.into(),
+            }
+        }
+        async fn prepared(&self, slot: &str) -> Arc<dyn CdcSource> {
+            self.factory(slot).prepare().await.unwrap().unwrap()
+        }
+        async fn insert(&self, id: &str) {
+            sqlx::query(&format!(
+                "INSERT INTO {}(topic,payload) VALUES ($1,$2)",
+                self.relation
+            ))
+            .bind(&self.topic)
+            .bind(
+                serde_json::json!({"id":id,"tenant_id":"source-capture-ci","project_id":"default"}),
+            )
+            .execute(&self.pool)
+            .await
+            .unwrap();
+        }
+        fn authority(&self, name: &str) -> String {
+            format!(
+                "{}.{}",
+                qi(&crate::runtime::system::SystemCatalogConfig::current()
+                    .cdc
+                    .system_schema),
+                qi(name)
+            )
+        }
+        async fn close(self) {
+            self.pool.close().await;
+            sqlx::query(&format!("DROP DATABASE {} WITH(FORCE)", qi(&self.database)))
+                .execute(&self.admin)
+                .await
+                .expect("remove owned source database and remaining source pool connections");
+        }
+    }
+    async fn next(source: &Arc<dyn CdcSource>) -> CdcEvent {
+        let mut stream = source.open("").await.unwrap();
+        tokio::time::timeout(Duration::from_secs(3), stream.next())
+            .await
+            .unwrap()
+            .unwrap()
+            .unwrap()
+    }
+
+    #[tokio::test]
+    #[ignore = "requires actual separate PostgreSQL databases; native CI"]
+    async fn live_source_capture_survives_delete_rollback_and_two_slot_restart() {
+        let _guard = live_cdc_db_lock().lock().await;
+        let f = SourceDatabase::new().await;
+        f.insert("backfill").await;
+        let a = f.prepared("a").await;
+        let b = f.prepared("b").await;
+        let factory = f.factory("a");
+        assert!(
+            factory
+                .bind_destination("test")
+                .await
+                .unwrap_err()
+                .contains("prepare")
+        );
+        assert_ne!(a.offset_namespace(), b.offset_namespace());
+        let original = next(&a).await;
+        assert!(
+            factory
+                .acknowledge(&original)
+                .await
+                .unwrap_err()
+                .contains("prepare")
+        );
+        assert_eq!(original.after.as_ref().unwrap()["id"], "backfill");
+        assert!(
+            b.acknowledge(&original)
+                .await
+                .unwrap_err()
+                .contains("consumer")
+        );
+        sqlx::query(&format!("DELETE FROM {}", f.relation))
+            .execute(&f.pool)
+            .await
+            .unwrap();
+        a.acknowledge(&original).await.unwrap();
+        a.acknowledge(&original).await.unwrap();
+        let b_event = next(&b).await;
+        assert_eq!(b_event.after, original.after);
+        b.acknowledge(&b_event).await.unwrap();
+        let mut rollback = f.pool.begin().await.unwrap();
+        sqlx::query(&format!("INSERT INTO {}(topic,payload) VALUES ($1,$2)",f.relation))
+            .bind(&f.topic).bind(serde_json::json!({"id":"rolled-back","tenant_id":"source-capture-ci","project_id":"default"}))
+            .execute(&mut *rollback).await.unwrap();
+        rollback.rollback().await.unwrap();
+        let capture = f.authority(super::super::postgres_source::CAPTURE);
+        let count: i64 = sqlx::query_scalar(&format!("SELECT COUNT(*) FROM {capture}"))
+            .fetch_one(&f.pool)
+            .await
+            .unwrap();
+        assert_eq!(
+            count, 1,
+            "producer rollback must not leave a captured event"
+        );
+        f.insert("after-delete").await;
+        let restarted = f.prepared("a").await;
+        let event = next(&restarted).await;
+        assert_eq!(event.after.as_ref().unwrap()["id"], "after-delete");
+        restarted.acknowledge(&event).await.unwrap();
+        let mut forged = event.clone();
+        forged.after.as_mut().unwrap()["id"] = serde_json::json!("forged");
+        assert!(
+            restarted
+                .acknowledge(&forged)
+                .await
+                .unwrap_err()
+                .contains("immutable captured image")
+        );
+        let mut caught_up = restarted.open(&event.source_offset).await.unwrap();
+        assert!(
+            tokio::time::timeout(Duration::from_millis(650), caught_up.next())
+                .await
+                .is_err()
+        );
+        drop(caught_up);
+        drop(a);
+        drop(b);
+        drop(restarted);
+        f.close().await;
+    }
+
+    #[tokio::test]
+    #[ignore = "requires real source role privileges and PostgreSQL; native CI"]
+    async fn live_source_capture_role_and_generation_authority_fail_closed() {
+        let _guard = live_cdc_db_lock().lock().await;
+        let f = SourceDatabase::new().await;
+        let source = f.prepared("authority").await;
+        let role = format!("source_writer_{}", Uuid::new_v4().simple());
+        let password = Uuid::new_v4().to_string();
+        sqlx::query(&format!(
+            "CREATE ROLE {} LOGIN PASSWORD {}",
+            qi(&role),
+            crate::generation::sql::ql(&password)
+        ))
+        .execute(&f.admin)
+        .await
+        .unwrap();
+        sqlx::query(&format!(
+            "GRANT CONNECT ON DATABASE {} TO {}",
+            qi(&f.database),
+            qi(&role)
+        ))
+        .execute(&f.admin)
+        .await
+        .unwrap();
+        sqlx::query(&format!("GRANT USAGE ON SCHEMA public TO {}", qi(&role)))
+            .execute(&f.pool)
+            .await
+            .unwrap();
+        sqlx::query(&format!("GRANT INSERT ON {} TO {}", f.relation, qi(&role)))
+            .execute(&f.pool)
+            .await
+            .unwrap();
+        let sequence: String = sqlx::query_scalar("SELECT pg_get_serial_sequence($1,'event_seq')")
+            .bind(&f.relation)
+            .fetch_one(&f.pool)
+            .await
+            .unwrap();
+        sqlx::query(&format!(
+            "GRANT USAGE ON SEQUENCE {sequence} TO {}",
+            qi(&role)
+        ))
+        .execute(&f.pool)
+        .await
+        .unwrap();
+        let writer = sqlx::postgres::PgPoolOptions::new()
+            .max_connections(1)
+            .connect_with(
+                PgConnectOptions::from_str(&f.dsn)
+                    .unwrap()
+                    .username(&role)
+                    .password(&password),
+            )
+            .await
+            .unwrap();
+        sqlx::query(&format!("INSERT INTO {}(topic,payload) VALUES ($1,$2)",f.relation))
+            .bind(&f.topic).bind(serde_json::json!({"id":"ordinary-write","tenant_id":"source-capture-ci","project_id":"default"}))
+            .execute(&writer).await.expect("ordinary producer fires protected capture without queue grants");
+        let event = next(&source).await;
+        let schema = crate::runtime::system::SystemCatalogConfig::current()
+            .cdc
+            .system_schema;
+        sqlx::query(&format!(
+            "GRANT USAGE ON SCHEMA {} TO {}",
+            qi(&schema),
+            qi(&role)
+        ))
+        .execute(&f.pool)
+        .await
+        .unwrap();
+        let capture = f.authority(super::super::postgres_source::CAPTURE);
+        let receipts = f.authority(super::super::postgres_source::RECEIPTS);
+        for statement in [
+            format!("DELETE FROM {capture}"),
+            format!(
+                "INSERT INTO {receipts}(generation,slot,capture_id) VALUES (gen_random_uuid(),'authority',gen_random_uuid())"
+            ),
+        ] {
+            let error = sqlx::query(&statement).execute(&writer).await.unwrap_err();
+            assert_eq!(error.as_database_error().unwrap().code().unwrap(), "42501");
+        }
+        sqlx::query(&format!("GRANT INSERT ON {capture} TO {}", qi(&role)))
+            .execute(&f.pool)
+            .await
+            .unwrap();
+        assert!(
+            source
+                .health()
+                .await
+                .unwrap_err()
+                .contains("untrusted storage privilege")
+        );
+        sqlx::query(&format!("REVOKE INSERT ON {capture} FROM {}", qi(&role)))
+            .execute(&f.pool)
+            .await
+            .unwrap();
+        sqlx::query(&format!(
+            "GRANT INSERT(generation,slot,capture_id) ON {receipts} TO {}",
+            qi(&role)
+        ))
+        .execute(&f.pool)
+        .await
+        .unwrap();
+        assert!(
+            source
+                .health()
+                .await
+                .unwrap_err()
+                .contains("untrusted column privilege")
+        );
+        sqlx::query(&format!(
+            "REVOKE INSERT(generation,slot,capture_id) ON {receipts} FROM {}",
+            qi(&role)
+        ))
+        .execute(&f.pool)
+        .await
+        .unwrap();
+        let refused = sqlx::query(&format!("TRUNCATE {capture},{receipts}"))
+            .execute(&f.pool)
+            .await
+            .unwrap_err();
+        assert!(
+            refused
+                .to_string()
+                .contains("durable authority is immutable")
+        );
+        let retained: i64 = sqlx::query_scalar(&format!("SELECT COUNT(*) FROM {capture}"))
+            .fetch_one(&f.pool)
+            .await
+            .unwrap();
+        assert_eq!(
+            retained, 1,
+            "TRUNCATE cannot silently erase captured authority"
+        );
+        source.acknowledge(&event).await.unwrap();
+        sqlx::query(&format!("DROP TABLE {}", f.relation))
+            .execute(&f.pool)
+            .await
+            .unwrap();
+        sqlx::query(&format!("CREATE TABLE {}(event_seq BIGSERIAL PRIMARY KEY,topic TEXT NOT NULL,payload JSONB NOT NULL,created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())",f.relation)).execute(&f.pool).await.unwrap();
+        assert!(
+            f.factory("authority")
+                .prepare()
+                .await
+                .err()
+                .unwrap()
+                .contains("registered generation")
+        );
+        writer.close().await;
+        drop(source);
+        f.close().await;
+        sqlx::query(&format!("DROP ROLE {}", qi(&role)))
+            .execute(&live_cdc_pool().await.unwrap())
+            .await
+            .unwrap();
+    }
+
+    #[tokio::test]
+    #[ignore = "requires actual malformed source catalogs and quoted identifiers; native CI"]
+    async fn live_source_catalog_shape_trigger_and_positive_position_authority_are_enforced() {
+        let _guard = live_cdc_db_lock().lock().await;
+        let mut f = SourceDatabase::new().await;
+        sqlx::query(&format!("DROP TABLE {}", f.relation))
+            .execute(&f.pool)
+            .await
+            .unwrap();
+        sqlx::query(&format!(
+            "ALTER DATABASE {} SET standard_conforming_strings=off",
+            qi(&f.database)
+        ))
+        .execute(&f.admin)
+        .await
+        .unwrap();
+        let schema = "source$udb_allocate$'\"\\namespace";
+        let table = "events$udb_prefix$'\"\\table";
+        sqlx::query(&format!("CREATE SCHEMA {}", qi(schema)))
+            .execute(&f.pool)
+            .await
+            .unwrap();
+        f.relation = format!("{}.{}", qi(schema), qi(table));
+        sqlx::query(&format!("CREATE TABLE {}(event_seq BIGSERIAL PRIMARY KEY,topic TEXT NOT NULL,payload JSONB NOT NULL,created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())",f.relation))
+            .execute(&f.pool).await.unwrap();
+        let source = f.prepared("quoted").await;
+        f.insert("quoted-authority").await;
+        let event = next(&source).await;
+        source.acknowledge(&event).await.unwrap();
+        let capture = f.authority(super::super::postgres_source::CAPTURE);
+        let (trigger,function):(String,String)=sqlx::query_as("SELECT t.tgname::TEXT,p.oid::regprocedure::TEXT FROM pg_catalog.pg_trigger t JOIN pg_catalog.pg_proc p ON p.oid=t.tgfoid WHERE t.tgrelid=$1::regclass AND t.tgtype=27")
+            .bind(&capture).fetch_one(&f.pool).await.unwrap();
+        sqlx::query(&format!("DROP TRIGGER {} ON {capture}", qi(&trigger)))
+            .execute(&f.pool)
+            .await
+            .unwrap();
+        sqlx::query(&format!("CREATE TRIGGER {} BEFORE UPDATE OR DELETE ON {capture} FOR EACH ROW WHEN(FALSE) EXECUTE FUNCTION {function}",qi(&trigger)))
+            .execute(&f.pool).await.unwrap();
+        sqlx::query(&format!(
+            "ALTER TABLE {capture} ENABLE ALWAYS TRIGGER {}",
+            qi(&trigger)
+        ))
+        .execute(&f.pool)
+        .await
+        .unwrap();
+        assert!(
+            source
+                .health()
+                .await
+                .unwrap_err()
+                .contains("immutable trigger authority")
+        );
+        sqlx::query(&format!("DROP TRIGGER {} ON {capture}", qi(&trigger)))
+            .execute(&f.pool)
+            .await
+            .unwrap();
+        sqlx::query(&format!("CREATE TRIGGER {} BEFORE UPDATE OR DELETE ON {capture} FOR EACH ROW EXECUTE FUNCTION {function}",qi(&trigger)))
+            .execute(&f.pool).await.unwrap();
+        sqlx::query(&format!(
+            "ALTER TABLE {capture} ENABLE ALWAYS TRIGGER {}",
+            qi(&trigger)
+        ))
+        .execute(&f.pool)
+        .await
+        .unwrap();
+        sqlx::query(&format!(
+            "ALTER TABLE {capture} ALTER COLUMN source_event_seq TYPE INTEGER"
+        ))
+        .execute(&f.pool)
+        .await
+        .unwrap();
+        assert!(
+            source
+                .health()
+                .await
+                .unwrap_err()
+                .contains("storage type mismatch")
+        );
+        sqlx::query(&format!(
+            "ALTER TABLE {capture} ALTER COLUMN source_event_seq TYPE BIGINT"
+        ))
+        .execute(&f.pool)
+        .await
+        .unwrap();
+        let receipts = f.authority(super::super::postgres_source::RECEIPTS);
+        let consumers = f.authority(super::super::postgres_source::CONSUMERS);
+        let key:String=sqlx::query_scalar("SELECT conname::TEXT FROM pg_catalog.pg_constraint WHERE conrelid=$1::regclass AND confrelid=$2::regclass AND contype='f'")
+            .bind(&receipts).bind(&consumers).fetch_one(&f.pool).await.unwrap();
+        sqlx::query(&format!(
+            "ALTER TABLE {receipts} DROP CONSTRAINT {}",
+            qi(&key)
+        ))
+        .execute(&f.pool)
+        .await
+        .unwrap();
+        assert!(
+            source
+                .health()
+                .await
+                .unwrap_err()
+                .contains("foreign identity authority")
+        );
+        sqlx::query(&format!("ALTER TABLE {receipts} ADD FOREIGN KEY(generation,slot) REFERENCES {consumers}(generation,slot)"))
+            .execute(&f.pool).await.unwrap();
+        source.health().await.unwrap();
+        let pending_index = f.authority("udb_cdc_source_pending_order");
+        sqlx::query(&format!("DROP INDEX {pending_index}"))
+            .execute(&f.pool)
+            .await
+            .unwrap();
+        assert!(
+            source
+                .health()
+                .await
+                .unwrap_err()
+                .contains("pending scan index authority")
+        );
+        sqlx::query(&format!(
+            "CREATE INDEX udb_cdc_source_pending_order ON {capture}(generation,capture_order)"
+        ))
+        .execute(&f.pool)
+        .await
+        .unwrap();
+        source.health().await.unwrap();
+        sqlx::query(&format!(
+            "ALTER TABLE {capture} DROP CONSTRAINT udb_cdc_source_capture_positive"
+        ))
+        .execute(&f.pool)
+        .await
+        .unwrap();
+        let registry = f.authority(super::super::postgres_source::REGISTRY);
+        let generation: Uuid = sqlx::query_scalar(&format!("SELECT generation FROM {registry}"))
+            .fetch_one(&f.pool)
+            .await
+            .unwrap();
+        sqlx::query(&format!("INSERT INTO {capture}(generation,capture_id,capture_order,source_event_seq,topic,payload,created_at) VALUES ($1,$2,0,0,'bad','{{}}',NOW())"))
+            .bind(generation).bind(Uuid::new_v4()).execute(&f.pool).await.unwrap();
+        let invalid: i64 = sqlx::query_scalar(&format!(
+            "SELECT COUNT(*) FROM {capture} WHERE capture_order=0"
+        ))
+        .fetch_one(&f.pool)
+        .await
+        .unwrap();
+        assert_eq!(invalid, 1, "real incompatible durable row is present");
+        assert!(
+            source
+                .health()
+                .await
+                .unwrap_err()
+                .contains("positive capture order authority")
+        );
+        drop(source);
+        f.close().await;
+    }
+
+    #[tokio::test]
+    #[ignore = "requires real PostgreSQL capture load; native CI"]
+    async fn live_source_capture_bounded_cycles_handle_more_than_one_page_and_load() {
+        let _guard = live_cdc_db_lock().lock().await;
+        let f = SourceDatabase::new().await;
+        let source = f.prepared("load").await;
+        for producers in [1_usize, 4, 22] {
+            let started = tokio::time::Instant::now();
+            let mut tasks = tokio::task::JoinSet::new();
+            for producer in 0..producers {
+                let pool = f.pool.clone();
+                let relation = f.relation.clone();
+                let topic = f.topic.clone();
+                tasks.spawn(async move {
+                    let mut timings=Vec::new();
+                    for row in 0..96 {
+                        let began=tokio::time::Instant::now();
+                        sqlx::query(&format!("INSERT INTO {relation}(topic,payload) VALUES ($1,$2)"))
+                            .bind(&topic).bind(serde_json::json!({"id":format!("{producers}-{producer}-{row}"),"tenant_id":"source-capture-ci","project_id":"default"}))
+                            .execute(&pool).await.unwrap();
+                        timings.push(began.elapsed().as_micros());
+                    }
+                    timings
+                });
+            }
+            let mut insertion = Vec::new();
+            while let Some(result) = tasks.join_next().await {
+                insertion.extend(result.unwrap());
+            }
+            insertion.sort_unstable();
+            let mut stream = source.open("").await.unwrap();
+            let drain = tokio::time::Instant::now();
+            let mut receipts = Vec::new();
+            let mut ids = std::collections::HashSet::new();
+            for _ in 0..producers * 96 {
+                let event = tokio::time::timeout(Duration::from_secs(10), stream.next())
+                    .await
+                    .unwrap()
+                    .unwrap()
+                    .unwrap();
+                assert!(
+                    ids.insert(event.source_offset.clone()),
+                    "durably receipted captures cannot duplicate within a scan cycle"
+                );
+                let began = tokio::time::Instant::now();
+                source.acknowledge(&event).await.unwrap();
+                receipts.push(began.elapsed().as_micros());
+            }
+            drop(stream);
+            receipts.sort_unstable();
+            eprintln!(
+                "g6-source-load producers={producers} count={} insert-p50-us={} insert-p95-us={} insert-max-us={} receipt-p50-us={} receipt-p95-us={} receipt-max-us={} drain-ms={} total-ms={}",
+                producers * 96,
+                insertion[insertion.len() / 2],
+                insertion[insertion.len() * 95 / 100],
+                insertion.last().unwrap(),
+                receipts[receipts.len() / 2],
+                receipts[receipts.len() * 95 / 100],
+                receipts.last().unwrap(),
+                drain.elapsed().as_millis(),
+                started.elapsed().as_millis()
+            );
+            let mut quiet = source.open("").await.unwrap();
+            assert!(
+                tokio::time::timeout(Duration::from_millis(650), quiet.next())
+                    .await
+                    .is_err()
+            );
+            drop(quiet);
+        }
+        drop(source);
+        f.close().await;
+    }
+
+    fn engine(f: &SourceDatabase, brokers: &str, config: CdcConfig) -> Arc<CdcEngine> {
+        engine_on(f.admin.clone(), live_pg_dsn().unwrap(), brokers, config)
+    }
+    fn engine_on(pool: PgPool, dsn: String, brokers: &str, config: CdcConfig) -> Arc<CdcEngine> {
+        let metrics: Arc<dyn MetricsRecorder> = Arc::new(crate::metrics::NoopMetrics);
+        #[cfg(feature = "redis")]
+        let engine = CdcEngine::new(pool, None, brokers, dsn, metrics, config).unwrap();
+        #[cfg(not(feature = "redis"))]
+        let engine = CdcEngine::new(pool, brokers, dsn, metrics, config).unwrap();
+        Arc::new(engine)
+    }
+    async fn receipt_count(f: &SourceDatabase) -> i64 {
+        sqlx::query_scalar(&format!(
+            "SELECT COUNT(*) FROM {}",
+            f.authority(super::super::postgres_source::RECEIPTS)
+        ))
+        .fetch_one(&f.pool)
+        .await
+        .unwrap()
+    }
+    async fn wait_receipts(f: &SourceDatabase, count: i64) {
+        tokio::time::timeout(Duration::from_secs(15), async {
+            while receipt_count(f).await < count {
+                tokio::time::sleep(Duration::from_millis(20)).await;
+            }
+        })
+        .await
+        .expect("actual source terminal receipts must appear");
+    }
+    async fn clear_destination(f: &SourceDatabase, topic: &str) {
+        let config = crate::runtime::system::SystemCatalogConfig::current();
+        sqlx::query(&format!(
+            "DELETE FROM {} WHERE topic=$1",
+            config.cdc_journal_relation()
+        ))
+        .bind(topic)
+        .execute(&f.admin)
+        .await
+        .unwrap();
+    }
+
+    #[tokio::test]
+    #[ignore = "requires actual held source transaction, destination PostgreSQL and Kafka; native CI"]
+    async fn live_source_late_commit_survives_actual_b_ack_delete_and_engine_restart() {
+        let _guard = live_cdc_db_lock().lock().await;
+        let f = SourceDatabase::new().await;
+        let source = f.prepared("restart").await;
+        let topic = format!("udb.cdc.postgres.{}", f.topic);
+        let brokers = live_kafka_brokers();
+        ensure_live_kafka_topic(&brokers, &topic).await;
+        let runtime = engine(
+            &f,
+            &brokers,
+            CdcConfig {
+                valid_topics: vec![topic.clone()],
+                ..CdcConfig::default()
+            },
+        );
+        let mut held = f.pool.begin().await.unwrap();
+        sqlx::query(&format!("INSERT INTO {}(topic,payload) VALUES ($1,$2)",f.relation))
+            .bind(&f.topic).bind(serde_json::json!({"id":"late-a","tenant_id":"source-capture-ci","project_id":"default"}))
+            .execute(&mut *held).await.unwrap();
+        f.insert("committed-b").await;
+        let before = {
+            let runtime = runtime.clone();
+            let source = source.clone();
+            tokio::spawn(async move { runtime.tail_source(source).await })
+        };
+        wait_receipts(&f, 1).await;
+        let offsets = runtime.config.offsets_relation();
+        let last: String = sqlx::query_scalar(&format!(
+            "SELECT last_offset FROM {offsets} WHERE slot_name=$1"
+        ))
+        .bind(format!("cdc_source:{}", source.offset_namespace()))
+        .fetch_one(&f.admin)
+        .await
+        .unwrap();
+        assert!(
+            last.starts_with("capture-v1:"),
+            "B is actually durably published and acknowledged before A commits"
+        );
+        before.abort();
+        let _ = before.await;
+        sqlx::query(&format!(
+            "DELETE FROM {} WHERE payload->>'id'='committed-b'",
+            f.relation
+        ))
+        .execute(&f.pool)
+        .await
+        .unwrap();
+        held.commit().await.unwrap();
+        let resumed = {
+            let runtime = runtime.clone();
+            let source = source.clone();
+            tokio::spawn(async move { runtime.tail_source(source).await })
+        };
+        wait_receipts(&f, 2).await;
+        resumed.abort();
+        let _ = resumed.await;
+        let journal = crate::runtime::system::SystemCatalogConfig::current().cdc_journal_relation();
+        let ids: Vec<String> = sqlx::query_scalar(&format!(
+            "SELECT payload->'after'->>'id' FROM {journal} WHERE topic=$1 ORDER BY journal_position"
+        ))
+        .bind(&topic)
+        .fetch_all(&f.admin)
+        .await
+        .unwrap();
+        assert_eq!(
+            ids,
+            vec!["committed-b", "late-a"],
+            "source receipts must recover late A after actual B publication/deletion and restart"
+        );
+        clear_destination(&f, &topic).await;
+        drop(source);
+        drop(runtime);
+        f.close().await;
+    }
+
+    #[tokio::test]
+    #[ignore = "requires actual source/destination PostgreSQL and Kafka; native CI"]
+    async fn live_source_ack_failure_and_cancellation_stop_before_later_publication() {
+        let _guard = live_cdc_db_lock().lock().await;
+        let f = SourceDatabase::new().await;
+        let source = f.prepared("engine").await;
+        sqlx::query(&format!("INSERT INTO {}(topic,payload) VALUES ($1,$2)",f.relation))
+            .bind(&f.topic).bind(serde_json::json!({"id":"first","tenant_id":"source-capture-ci","project_id":"default","password":"private-ci-image"}))
+            .execute(&f.pool).await.unwrap();
+        f.insert("second").await;
+        let topic = format!("udb.cdc.postgres.{}", f.topic);
+        let brokers = live_kafka_brokers();
+        ensure_live_kafka_topic(&brokers, &topic).await;
+        let config = CdcConfig {
+            valid_topics: vec![topic.clone()],
+            source_sensitive_fields: vec!["password".into()],
+            ..CdcConfig::default()
+        };
+        let runtime = engine(&f, &brokers, config);
+        let receipts = f.authority(super::super::postgres_source::RECEIPTS);
+        sqlx::query(&format!(
+            "ALTER TABLE {receipts} ADD CONSTRAINT reject_source_receipt CHECK(slot<>'engine')"
+        ))
+        .execute(&f.pool)
+        .await
+        .unwrap();
+        let error =
+            tokio::time::timeout(Duration::from_secs(20), runtime.tail_source(source.clone()))
+                .await
+                .unwrap()
+                .unwrap_err();
+        assert!(
+            error.contains("reject_source_receipt"),
+            "must reach actual source ACK failure after destination commit: {error}"
+        );
+        assert_eq!(receipt_count(&f).await, 0);
+        let journal = crate::runtime::system::SystemCatalogConfig::current().cdc_journal_relation();
+        let published: i64 =
+            sqlx::query_scalar(&format!("SELECT COUNT(*) FROM {journal} WHERE topic=$1"))
+                .bind(&topic)
+                .fetch_one(&f.admin)
+                .await
+                .unwrap();
+        assert_eq!(
+            published, 1,
+            "failed source ACK must stop before publishing the second event"
+        );
+        let image: serde_json::Value =
+            sqlx::query_scalar(&format!("SELECT payload FROM {journal} WHERE topic=$1"))
+                .bind(&topic)
+                .fetch_one(&f.admin)
+                .await
+                .unwrap();
+        assert_ne!(
+            image["after"]["password"], "private-ci-image",
+            "external publication must retain real redaction"
+        );
+        sqlx::query(&format!(
+            "ALTER TABLE {receipts} DROP CONSTRAINT reject_source_receipt"
+        ))
+        .execute(&f.pool)
+        .await
+        .unwrap();
+        // A real capture-row lock holds the receipt FK check after destination
+        // publication, without blocking the earlier consumer destination claim.
+        // Cancellation must roll back ACK and release its serving pool capacity.
+        let capture = f.authority(super::super::postgres_source::CAPTURE);
+        let mut held = f.pool.begin().await.unwrap();
+        let blocker: i32 = sqlx::query_scalar("SELECT pg_backend_pid()")
+            .fetch_one(&mut *held)
+            .await
+            .unwrap();
+        sqlx::query(&format!(
+            "SELECT capture_id FROM {capture} ORDER BY capture_order LIMIT 1 FOR UPDATE"
+        ))
+        .fetch_one(&mut *held)
+        .await
+        .unwrap();
+        let task = {
+            let runtime = runtime.clone();
+            let source = source.clone();
+            tokio::spawn(async move { runtime.tail_source(source).await })
+        };
+        tokio::time::timeout(Duration::from_secs(5),async {
+            loop {
+                let blocked:bool=sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM pg_stat_activity WHERE datname=$1 AND application_name='udb-cdc-source-capture' AND $2=ANY(pg_blocking_pids(pid)))")
+                    .bind(&f.database).bind(blocker).fetch_one(&f.pool).await.unwrap();
+                if blocked {break;} tokio::time::sleep(Duration::from_millis(20)).await;
+            }
+        }).await.expect("observe actual source receipt blocked behind owned row lock");
+        task.abort();
+        assert!(task.await.unwrap_err().is_cancelled());
+        held.commit().await.unwrap();
+        tokio::time::timeout(Duration::from_secs(5),async {
+            loop {
+                let active:i64=sqlx::query_scalar("SELECT COUNT(*) FROM pg_stat_activity WHERE datname=$1 AND application_name='udb-cdc-source-capture' AND state='active'")
+                    .bind(&f.database).fetch_one(&f.pool).await.unwrap();
+                if active==0 {break;} tokio::time::sleep(Duration::from_millis(20)).await;
+            }
+        }).await.expect("cancelled source attempt must release active database work");
+        assert_eq!(
+            receipt_count(&f).await,
+            0,
+            "cancelled transaction cannot acknowledge the event"
+        );
+        let resumed = {
+            let runtime = runtime.clone();
+            let source = source.clone();
+            tokio::spawn(async move { runtime.tail_source(source).await })
+        };
+        wait_receipts(&f, 2).await;
+        resumed.abort();
+        let _ = resumed.await;
+        let published: i64 =
+            sqlx::query_scalar(&format!("SELECT COUNT(*) FROM {journal} WHERE topic=$1"))
+                .bind(&topic)
+                .fetch_one(&f.admin)
+                .await
+                .unwrap();
+        assert_eq!(
+            published, 2,
+            "immutable capture IDs must deduplicate destination journal retries"
+        );
+        clear_destination(&f, &topic).await;
+        drop(source);
+        drop(runtime);
+        f.close().await;
+    }
+
+    #[tokio::test]
+    #[ignore = "requires actual separate source databases and Kafka; native CI"]
+    async fn live_source_database_identity_and_destination_generation_binding_are_durable() {
+        let _guard = live_cdc_db_lock().lock().await;
+        let first = SourceDatabase::new().await;
+        let mut second = SourceDatabase::new().await;
+        second.topic = first.topic.clone();
+        sqlx::query(&format!("DROP TABLE {}", second.relation))
+            .execute(&second.pool)
+            .await
+            .unwrap();
+        second.relation = first.relation.clone();
+        sqlx::query(&format!("CREATE TABLE {}(event_seq BIGSERIAL PRIMARY KEY,topic TEXT NOT NULL,payload JSONB NOT NULL,created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())",second.relation))
+            .execute(&second.pool).await.unwrap();
+        let a = first.prepared("same-slot").await;
+        let b = second.prepared("same-slot").await;
+        first.insert("same-original-tuple").await;
+        second.insert("same-original-tuple").await;
+        assert_ne!(a.offset_namespace(), b.offset_namespace());
+        assert_ne!(a.enrollment_binding(), b.enrollment_binding());
+        let topic = format!("udb.cdc.postgres.{}", first.topic);
+        let brokers = live_kafka_brokers();
+        ensure_live_kafka_topic(&brokers, &topic).await;
+        let runtime = engine(
+            &first,
+            &brokers,
+            CdcConfig {
+                valid_topics: vec![topic.clone()],
+                ..CdcConfig::default()
+            },
+        );
+        for (f, source) in [(&first, a.clone()), (&second, b.clone())] {
+            let task = {
+                let runtime = runtime.clone();
+                tokio::spawn(async move { runtime.tail_source(source).await })
+            };
+            wait_receipts(f, 1).await;
+            task.abort();
+            let _ = task.await;
+        }
+        let journal = crate::runtime::system::SystemCatalogConfig::current().cdc_journal_relation();
+        let count: i64 =
+            sqlx::query_scalar(&format!("SELECT COUNT(*) FROM {journal} WHERE topic=$1"))
+                .bind(&topic)
+                .fetch_one(&first.admin)
+                .await
+                .unwrap();
+        assert_eq!(
+            count, 2,
+            "different source databases cannot collide on backend/topic/sequence tuples"
+        );
+        let schema = crate::runtime::system::SystemCatalogConfig::current()
+            .cdc
+            .system_schema;
+        sqlx::query(&format!("DROP SCHEMA {} CASCADE", qi(&schema)))
+            .execute(&first.pool)
+            .await
+            .unwrap();
+        assert!(
+            first
+                .factory("same-slot")
+                .prepare()
+                .await
+                .err()
+                .unwrap()
+                .contains("capture catalog was removed")
+        );
+        // Destroy even the independent source marker and recreate the same
+        // original relation. The destination still refuses the new generation.
+        sqlx::query(&format!("DROP TABLE {}", first.relation))
+            .execute(&first.pool)
+            .await
+            .unwrap();
+        sqlx::query(&format!("CREATE TABLE {}(event_seq BIGSERIAL PRIMARY KEY,topic TEXT NOT NULL,payload JSONB NOT NULL,created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())",first.relation))
+            .execute(&first.pool).await.unwrap();
+        let reset = first.prepared("same-slot").await;
+        first.insert("reset-row").await;
+        let error = runtime.tail_source(reset.clone()).await.unwrap_err();
+        assert!(
+            error.contains("durable destination binding"),
+            "must refuse publishing after source authority reset: {error}"
+        );
+        assert_eq!(receipt_count(&first).await, 0);
+        let count_after: i64 =
+            sqlx::query_scalar(&format!("SELECT COUNT(*) FROM {journal} WHERE topic=$1"))
+                .bind(&topic)
+                .fetch_one(&first.admin)
+                .await
+                .unwrap();
+        assert_eq!(count_after, 2);
+        clear_destination(&first, &topic).await;
+        drop(a);
+        drop(b);
+        drop(reset);
+        drop(runtime);
+        first.close().await;
+        second.close().await;
+    }
+
+    #[tokio::test]
+    #[ignore = "requires actual source and two destination databases plus Kafka; native CI"]
+    async fn live_source_destination_claim_refuses_competition_standalone_receipts_and_reset() {
+        let _guard = live_cdc_db_lock().lock().await;
+        let f = SourceDatabase::new().await;
+        let d1 = SourceDatabase::new().await;
+        let d2 = SourceDatabase::new().await;
+        for destination in [&d1, &d2] {
+            crate::runtime::system::ensure_system_catalog(&destination.pool)
+                .await
+                .unwrap();
+        }
+        let a = f.prepared("bound").await;
+        let b = f.prepared("bound").await;
+        let stale = f.prepared("bound").await;
+        f.insert("before-binding").await;
+        let original = next(&stale).await;
+        let brokers = live_kafka_brokers();
+        let topic = format!("udb.cdc.postgres.{}", f.topic);
+        ensure_live_kafka_topic(&brokers, &topic).await;
+        let config = CdcConfig {
+            valid_topics: vec![topic.clone()],
+            ..CdcConfig::default()
+        };
+        let first = engine_on(d1.pool.clone(), d1.dsn.clone(), &brokers, config.clone());
+        let second = engine_on(d2.pool.clone(), d2.dsn.clone(), &brokers, config.clone());
+        let (one, two) = tokio::join!(
+            first.bind_source_destination(a.as_ref()),
+            second.bind_source_destination(b.as_ref())
+        );
+        assert_ne!(
+            one.is_ok(),
+            two.is_ok(),
+            "exactly one actual destination may atomically own a source generation and slot"
+        );
+        let (winner, source, target, loser, losing_source, losing_target) = if one.is_ok() {
+            assert!(
+                two.unwrap_err()
+                    .starts_with("CDC_SOURCE_DESTINATION_REFUSED:")
+            );
+            (first, a, &d1, second, b, &d2)
+        } else {
+            assert!(
+                one.unwrap_err()
+                    .starts_with("CDC_SOURCE_DESTINATION_REFUSED:")
+            );
+            (second, b, &d2, first, a, &d1)
+        };
+        let claims = f.authority(super::super::postgres_source::DESTINATIONS);
+        let owned: i64 =
+            sqlx::query_scalar(&format!("SELECT COUNT(*) FROM {claims} WHERE slot='bound'"))
+                .fetch_one(&f.pool)
+                .await
+                .unwrap();
+        assert_eq!(owned, 1, "competing claims cannot fork receipt authority");
+        assert!(
+            stale
+                .acknowledge(&original)
+                .await
+                .unwrap_err()
+                .starts_with("CDC_SOURCE_DESTINATION_REFUSED:"),
+            "a previously prepared standalone adapter cannot forge bound completion"
+        );
+        assert_eq!(receipt_count(&f).await, 0);
+        assert!(
+            loser
+                .tail_source(losing_source.clone())
+                .await
+                .unwrap_err()
+                .starts_with("CDC_SOURCE_DESTINATION_REFUSED:")
+        );
+        let task = {
+            let runtime = winner.clone();
+            let source = source.clone();
+            tokio::spawn(async move { runtime.tail_source(source).await })
+        };
+        wait_receipts(&f, 1).await;
+        task.abort();
+        let _ = task.await;
+        let journal = crate::runtime::system::SystemCatalogConfig::current().cdc_journal_relation();
+        let winner_rows: i64 =
+            sqlx::query_scalar(&format!("SELECT COUNT(*) FROM {journal} WHERE topic=$1"))
+                .bind(&topic)
+                .fetch_one(&target.pool)
+                .await
+                .unwrap();
+        let loser_rows: i64 =
+            sqlx::query_scalar(&format!("SELECT COUNT(*) FROM {journal} WHERE topic=$1"))
+                .bind(&topic)
+                .fetch_one(&losing_target.pool)
+                .await
+                .unwrap();
+        assert_eq!(winner_rows, 1);
+        assert_eq!(
+            loser_rows, 0,
+            "refused destination must publish no source event"
+        );
+        // Re-open both actual databases through fresh adapter/engine pools. The
+        // immutable destination installation and consumer claim must survive.
+        let restarted_source = f.prepared("bound").await;
+        let reopened = sqlx::postgres::PgPoolOptions::new()
+            .max_connections(4)
+            .connect(&target.dsn)
+            .await
+            .unwrap();
+        let restarted = engine_on(reopened.clone(), target.dsn.clone(), &brokers, config);
+        restarted
+            .bind_source_destination(restarted_source.as_ref())
+            .await
+            .unwrap();
+        let mut quiet = restarted_source.open("").await.unwrap();
+        assert!(
+            tokio::time::timeout(Duration::from_millis(200), quiet.next())
+                .await
+                .is_err(),
+            "committed bound receipts survive reconnection"
+        );
+        drop(quiet);
+        f.insert("after-restart").await;
+        let task = {
+            let runtime = restarted.clone();
+            let source = restarted_source.clone();
+            tokio::spawn(async move { runtime.tail_source(source).await })
+        };
+        wait_receipts(&f, 2).await;
+        task.abort();
+        let _ = task.await;
+        let standalone = f.prepared("standalone").await;
+        let event = next(&standalone).await;
+        standalone.acknowledge(&event).await.unwrap();
+        let refused = restarted
+            .bind_source_destination(standalone.as_ref())
+            .await
+            .unwrap_err();
+        assert!(
+            refused.contains("standalone receipts"),
+            "first broker claim cannot reinterpret previous standalone completion: {refused}"
+        );
+        let standalone_claims: i64 = sqlx::query_scalar(&format!(
+            "SELECT COUNT(*) FROM {claims} WHERE slot='standalone'"
+        ))
+        .fetch_one(&f.pool)
+        .await
+        .unwrap();
+        assert_eq!(standalone_claims, 0);
+        let before = receipt_count(&f).await;
+        // A new destination catalog installation at the same database/name
+        // cannot silently reuse another installation's completed source queue.
+        let offsets = CdcConfig::default().offsets_relation();
+        sqlx::query(&format!("DROP TABLE {offsets}"))
+            .execute(&target.pool)
+            .await
+            .unwrap();
+        crate::runtime::system::ensure_system_catalog(&target.pool)
+            .await
+            .unwrap();
+        let refused = restarted
+            .bind_source_destination(restarted_source.as_ref())
+            .await
+            .unwrap_err();
+        assert!(
+            refused.starts_with("CDC_SOURCE_DESTINATION_REFUSED:"),
+            "destination reset must require a new consumer slot: {refused}"
+        );
+        assert_eq!(
+            receipt_count(&f).await,
+            before,
+            "destination refusal cannot clear immutable receipts"
+        );
+        drop(stale);
+        drop(source);
+        drop(losing_source);
+        drop(standalone);
+        drop(restarted_source);
+        drop(winner);
+        drop(loser);
+        drop(restarted);
+        reopened.close().await;
+        f.close().await;
+        d1.close().await;
+        d2.close().await;
+    }
+
+    #[tokio::test]
+    #[ignore = "requires actual PostgreSQL/Kafka quarantine outcomes; native CI"]
+    async fn live_source_failed_quarantine_never_receipts_or_skips_the_event() {
+        let _guard = live_cdc_db_lock().lock().await;
+        for mode in ["identity-db", "topic-db", "identity-kafka"] {
+            let f = SourceDatabase::new().await;
+            let source = f.prepared("quarantine").await;
+            let identity = mode.starts_with("identity");
+            sqlx::query(&format!("INSERT INTO {}(topic,payload) VALUES ($1,$2)",f.relation))
+                .bind(&f.topic).bind(serde_json::json!({"id":"first","tenant_id":if identity {""} else {"source-capture-ci"},"project_id":"default"}))
+                .execute(&f.pool).await.unwrap();
+            f.insert("later").await;
+            let topic = format!("udb.cdc.postgres.{}", f.topic);
+            let brokers = live_kafka_brokers();
+            ensure_live_kafka_topic(&brokers, &topic).await;
+            let dlq_topic = format!("udb.cdc.source.dlq.{}", Uuid::new_v4().simple());
+            ensure_live_kafka_topic(&brokers, &dlq_topic).await;
+            let config = CdcConfig {
+                valid_topics: if identity {
+                    vec![topic.clone()]
+                } else {
+                    vec!["denied.source.v1".into()]
+                },
+                dlq_topic,
+                ..CdcConfig::default()
+            };
+            let runtime = engine(
+                &f,
+                if mode.ends_with("kafka") {
+                    "127.0.0.1:1"
+                } else {
+                    &brokers
+                },
+                config,
+            );
+            let dlq = crate::runtime::system::SystemCatalogConfig::current().dlq_relation();
+            let constraint = format!("source_quarantine_{}", Uuid::new_v4().simple());
+            if mode.ends_with("db") {
+                sqlx::query(&format!("ALTER TABLE {dlq} ADD CONSTRAINT {} CHECK(payload->'failed_event'->>'source' IS DISTINCT FROM {})",qi(&constraint),crate::generation::sql::ql(&f.topic)))
+                    .execute(&f.admin).await.unwrap();
+            }
+            let error =
+                tokio::time::timeout(Duration::from_secs(45), runtime.tail_source(source.clone()))
+                    .await
+                    .unwrap()
+                    .unwrap_err();
+            assert!(
+                error.contains("quarantine was not durably completed"),
+                "must observe failed actual quarantine: {error}"
+            );
+            assert_eq!(receipt_count(&f).await, 0);
+            let journal =
+                crate::runtime::system::SystemCatalogConfig::current().cdc_journal_relation();
+            let count: i64 =
+                sqlx::query_scalar(&format!("SELECT COUNT(*) FROM {journal} WHERE topic=$1"))
+                    .bind(&topic)
+                    .fetch_one(&f.admin)
+                    .await
+                    .unwrap();
+            assert_eq!(
+                count, 0,
+                "later event cannot publish past failed quarantine"
+            );
+            if mode.ends_with("db") {
+                sqlx::query(&format!(
+                    "ALTER TABLE {dlq} DROP CONSTRAINT {}",
+                    qi(&constraint)
+                ))
+                .execute(&f.admin)
+                .await
+                .unwrap();
+            }
+            let recovery = engine(&f, &brokers, runtime.config.clone());
+            let recovered = {
+                let recovery = recovery.clone();
+                let source = source.clone();
+                tokio::spawn(async move { recovery.tail_source(source).await })
+            };
+            wait_receipts(&f, 2).await;
+            recovered.abort();
+            let _ = recovered.await;
+            let quarantined: i64 = sqlx::query_scalar(&format!(
+                "SELECT COUNT(*) FROM {dlq} WHERE payload->'failed_event'->>'source'=$1"
+            ))
+            .bind(&f.topic)
+            .fetch_one(&f.admin)
+            .await
+            .unwrap();
+            assert_eq!(quarantined, if identity { 1 } else { 2 });
+            let later: i64 =
+                sqlx::query_scalar(&format!("SELECT COUNT(*) FROM {journal} WHERE topic=$1"))
+                    .bind(&topic)
+                    .fetch_one(&f.admin)
+                    .await
+                    .unwrap();
+            assert_eq!(
+                later,
+                if identity { 1 } else { 0 },
+                "only confirmed quarantine permits later processing"
+            );
+            clear_destination(&f, &topic).await;
+            sqlx::query(&format!(
+                "DELETE FROM {dlq} WHERE payload->'failed_event'->>'source'=$1"
+            ))
+            .bind(&f.topic)
+            .execute(&f.admin)
+            .await
+            .unwrap();
+            drop(source);
+            drop(runtime);
+            drop(recovery);
+            f.close().await;
+        }
     }
 }
