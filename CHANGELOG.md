@@ -5,7 +5,7 @@ the package version in `Cargo.toml`; historical v0.3.2 audit material is folded
 into the v0.3.x entries because the codebase advanced to v0.3.7 before that
 release line was tagged.
 
-## [0.5.31] - Unreleased
+## [0.5.31] - 2026-10-10
 
 ### Fixed
 
@@ -123,8 +123,10 @@ release line was tagged.
   journal cursors. Older readers keep timestamp ordering; this change does not
   guarantee mixed-version reader delivery. Enrollment recovers retained rows,
   and cannot recover already deleted or historically skipped events.
-- The external PostgreSQL table-source sequence cursor and fresh anonymous CDC
-  direct-broadcast lane retain their existing ordering limitations in this change.
+- PostgreSQL table-source enrollment installs transactional capture and durable
+  per-consumer receipts. Operators must allow its verified capture trigger and
+  source catalog objects. Historical events lost before enrollment cannot be
+  recovered. Fresh anonymous CDC direct-broadcast ordering remains unchanged.
 
 ## [0.5.30] - 2026-10-09
 
