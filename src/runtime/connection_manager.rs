@@ -1490,6 +1490,65 @@ mod tests {
         );
     }
 
+    fn runtime_env_scan_content(rel: &str, content: &str) -> Result<String, &'static str> {
+        if rel != "src/runtime/cdc/postgres_source.rs" {
+            return Ok(content.to_string());
+        }
+        // The PostgreSQL source split moved enrollment configuration out of
+        // cdc/source.rs. Exempt only its constructor; prepared polling, health,
+        // destination binding and receipts must keep using stored values.
+        // Top-level function boundaries are explicit after rustfmt. A renamed
+        // or ambiguous boundary refuses until this guard is reviewed again.
+        let lines: Vec<&str> = content.lines().collect();
+        let starts: Vec<usize> = lines
+            .iter()
+            .enumerate()
+            .filter_map(|(index, line)| {
+                line.starts_with("async fn prepare_inner(factory: &PostgresCdcSource)")
+                    .then_some(index)
+            })
+            .collect();
+        let [start] = starts.as_slice() else {
+            return Err("expected one explicit PostgreSQL source enrollment constructor");
+        };
+        let end = lines[*start + 1..]
+            .iter()
+            .position(|line| *line == "}")
+            .map(|index| *start + 1 + index)
+            .ok_or("PostgreSQL source enrollment constructor has no top-level end")?;
+        Ok(lines[..*start]
+            .iter()
+            .chain(lines[end + 1..].iter())
+            .copied()
+            .collect::<Vec<_>>()
+            .join("\n"))
+    }
+
+    #[test]
+    fn postgres_source_env_exception_keeps_prepared_methods_guarded() {
+        let rel = "src/runtime/cdc/postgres_source.rs";
+        let source = include_str!("cdc/postgres_source.rs");
+        let scan = runtime_env_scan_content(rel, source).expect("actual constructor boundary");
+        for pattern in ["std::env::var", "env::var", "from_env("] {
+            assert!(
+                !scan.contains(pattern),
+                "the actual prepared source has no environment reads"
+            );
+        }
+        for method in ["open", "health", "acknowledge"] {
+            let drift = format!(
+                "{source}\nasync fn {method}() {{ let _ = std::env::var(\"UDB_FUTURE_DRIFT\"); }}\n"
+            );
+            let scan = runtime_env_scan_content(rel, &drift).expect("same constructor boundary");
+            assert!(
+                scan.contains("std::env::var"),
+                "a future {method} environment read must remain visible to the runtime guard"
+            );
+        }
+        assert!(runtime_env_scan_content(rel, "async fn health() {}\n").is_err());
+        assert!(runtime_env_scan_content(rel, &format!("{source}\n{source}")).is_err());
+    }
+
     #[test]
     fn runtime_env_reads_are_confined_to_startup_config_or_compat_boundaries() {
         let manifest_dir = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"));
@@ -1628,6 +1687,13 @@ mod tests {
                     continue;
                 }
                 let content = std::fs::read_to_string(&path).expect("read runtime source");
+                let content = match runtime_env_scan_content(&rel, &content) {
+                    Ok(content) => content,
+                    Err(reason) => {
+                        violations.push(format!("{rel}: {reason}"));
+                        continue;
+                    }
+                };
                 for pattern in ["std::env::var", "env::var", "from_env("] {
                     if content.contains(pattern) {
                         violations.push(format!("{rel} contains {pattern}"));
