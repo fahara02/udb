@@ -26,6 +26,22 @@ class SourceCheck:
 
 CHECKS: tuple[SourceCheck, ...] = (
     SourceCheck(
+        "Broker version crosses actual unary success, refusal and stream transport",
+        "src/runtime/otel.rs",
+        (
+            "version_header_crosses_real_unary_refusal_and_stream_transport",
+            ".layer(TraceExtractLayer::new())",
+            "HealthClient::new(channel)",
+            "actual response advertises broker version",
+            "caller-spoofed-version",
+            "assert_version(response.metadata())",
+            "assert_eq!(refusal.code(), tonic::Code::NotFound)",
+            "assert_version(refusal.metadata())",
+            ".watch(HealthCheckRequest",
+            "stream.message()",
+        ),
+    ),
+    SourceCheck(
         "OTP dev-echo fail-closed gate",
         "src/runtime/service/auth_service/authn/mfa.rs",
         (

@@ -467,6 +467,96 @@ mod tests {
     use super::*;
 
     #[tokio::test]
+    async fn version_header_crosses_real_unary_refusal_and_stream_transport() {
+        use std::time::Duration;
+        use tokio_stream::wrappers::TcpListenerStream;
+        use tonic_health::pb::HealthCheckRequest;
+        use tonic_health::pb::health_check_response::ServingStatus;
+        use tonic_health::pb::health_client::HealthClient;
+
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
+            .await
+            .expect("bind version-header transport");
+        let address = listener.local_addr().expect("bound transport address");
+        let (mut reporter, health) = tonic_health::server::health_reporter();
+        reporter
+            .set_service_status("version-wire", tonic_health::ServingStatus::Serving)
+            .await;
+        let (stop, stopped) = tokio::sync::oneshot::channel();
+        let server = tokio::spawn(async move {
+            tonic::transport::Server::builder()
+                .layer(TraceExtractLayer::new())
+                .add_service(health)
+                .serve_with_incoming_shutdown(TcpListenerStream::new(listener), async move {
+                    let _ = stopped.await;
+                })
+                .await
+        });
+        let channel = tonic::transport::Endpoint::from_shared(format!("http://{address}"))
+            .expect("version-header endpoint")
+            .connect_timeout(Duration::from_secs(5))
+            .timeout(Duration::from_secs(5))
+            .connect()
+            .await
+            .expect("connect actual version-header transport");
+        let mut client = HealthClient::new(channel);
+        let assert_version = |metadata: &tonic::metadata::MetadataMap| {
+            let versions = metadata.get_all(UDB_VERSION_HEADER);
+            let mut values = versions.iter();
+            let version = values
+                .next()
+                .expect("actual response advertises broker version");
+            assert_eq!(version.to_str().unwrap(), env!("CARGO_PKG_VERSION"));
+            assert!(
+                values.next().is_none(),
+                "broker version is a singleton header"
+            );
+        };
+        let mut request = tonic::Request::new(HealthCheckRequest {
+            service: "version-wire".to_string(),
+        });
+        request.metadata_mut().insert(
+            UDB_VERSION_HEADER,
+            "caller-spoofed-version".parse().unwrap(),
+        );
+        let response = client.check(request).await.expect("real unary success");
+        assert_version(response.metadata());
+        assert_eq!(response.into_inner().status, ServingStatus::Serving as i32);
+
+        let refusal = client
+            .check(HealthCheckRequest {
+                service: "missing-version-wire-service".to_string(),
+            })
+            .await
+            .expect_err("real health service refuses an unknown service");
+        assert_eq!(refusal.code(), tonic::Code::NotFound);
+        assert_version(refusal.metadata());
+
+        let response = client
+            .watch(HealthCheckRequest {
+                service: "version-wire".to_string(),
+            })
+            .await
+            .expect("real streaming response");
+        assert_version(response.metadata());
+        let mut stream = response.into_inner();
+        let first = tokio::time::timeout(Duration::from_secs(5), stream.message())
+            .await
+            .expect("first health message arrives")
+            .expect("health stream remains successful")
+            .expect("health stream emits current status");
+        assert_eq!(first.status, ServingStatus::Serving as i32);
+        drop(stream);
+        drop(client);
+        stop.send(()).expect("stop version-header transport");
+        tokio::time::timeout(Duration::from_secs(5), server)
+            .await
+            .expect("version-header transport shuts down")
+            .expect("version-header server task joins")
+            .expect("version-header server shuts down successfully");
+    }
+
+    #[tokio::test]
     async fn current_trace_context_is_empty_outside_scope() {
         let tc = current_trace_context();
         assert!(!tc.is_present(), "no scope ⇒ empty trace context");
