@@ -240,7 +240,7 @@
     draw();
   }
 
-  function render(data) {
+  function render(data, provenance) {
     var hasSdkRows = Array.isArray(data.sdks) && data.sdks.length > 0;
     var hasMeasurements = !!(data.summary && data.summary.measured_rpc_count);
     var summary = data.summary || {};
@@ -274,7 +274,9 @@
     var metaText = [
       data.generated_at ? "Generated " + esc(data.generated_at) : "",
       release.asset ? "binary " + esc(release.asset) : "",
-      data.git && data.git.short_commit ? "commit " + esc(data.git.short_commit) : ""
+      provenance && provenance.run_id === String((data.environment || {}).run_id)
+        ? "release commit " + esc(provenance.release_commit.slice(0, 8)) : "",
+      data.git && data.git.short_commit ? "harness commit " + esc(data.git.short_commit) : ""
     ].filter(Boolean).join(" · ");
     $("bench-meta").innerHTML = metaText || "No release run has been published into bench-results.json yet.";
 
@@ -319,7 +321,12 @@
       if (!r.ok) throw new Error("bench-results.json not found");
       return r.json();
     })
-    .then(render)
+    .then(function (data) {
+      return fetch("./bench-provenance.json", { cache: "no-store" })
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .catch(function () { return null; })
+        .then(function (provenance) { render(data, provenance); });
+    })
     .catch(function (err) {
       $("bench-status").className = "callout";
       $("bench-status").textContent = "No benchmark JSON is published yet: " + err.message;

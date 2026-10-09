@@ -1541,6 +1541,20 @@ BENCHMARK_ORCHESTRATOR_TRIGGER_PATHS = (
     (("docs/site/README.md",), "site benchmark README trigger path"),
 )
 
+PAGES_BENCHMARK_RECOVERY_REQUIREMENTS = (
+    ("benchmark_run_id:", "explicit audited benchmark recovery input"),
+    ("RECOVERY_BENCHMARK_RUN_ID: ${{ inputs.benchmark_run_id }}", "exact recovery run input handoff"),
+    ("RECOVERY_RELEASE_COMMIT: ${{ inputs.release_commit }}", "immutable recovery release commit handoff"),
+    ("RECOVERY_HARNESS_COMMIT: ${{ inputs.harness_commit }}", "immutable recovery harness commit handoff"),
+    ("PUBLICATION_EVENT: ${{ github.event_name }}", "actual Pages event handoff"),
+    ('gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${TRIGGER_RUN_ID}"', "actual recovery benchmark metadata resolution"),
+    ('gh api "repos/${GITHUB_REPOSITORY}/releases/latest" --jq .tag_name', "latest released benchmark identity resolution"),
+    ("python3 scripts/validate_benchmark_publication.py --selftest", "benchmark publication refusal selftests"),
+    ("--release-manifest release-proof/bench-bodies.json", "immutable released wire contract validation"),
+    ('--harness-manifest "${harness_manifest}"', "reviewed harness wire contract validation"),
+    ("--out docs/site/bench-provenance.json", "separate release and harness provenance artifact"),
+)
+
 PAGES_PLAYGROUND_REQUIREMENTS = (
     ("workflow_dispatch:", "manual Pages trigger"),
     ('workflows: ["Benchmark · SDKs"]', "benchmark-completion Pages trigger"),
@@ -4301,6 +4315,7 @@ LINT_WORKFLOW_TRIGGER_PATHS = (
     ("scripts/ffmpeg_transcode_smoke.py", "ffmpeg transcode smoke"),
     ("scripts/playground_wasm_smoke.mjs", "playground WASM smoke"),
     ("scripts/collect_sdk_bench_results.py", "benchmark collector"),
+    ("scripts/validate_benchmark_publication.py", "released benchmark publication validator"),
     ("scripts/bootstrap_benchmark_project_catalog.py", "benchmark catalog bootstrap"),
     ("scripts/prepare-benchmark-fixtures.py", "served benchmark fixture preparation"),
     ("scripts/fixtures/benchmark-analytics.sql", "stored analytics benchmark fixtures"),
@@ -5680,7 +5695,10 @@ def check_benchmark_workflow_gate(root: Path = ROOT) -> list[str]:
         candidate_requirements = (
             "if: inputs.candidate-build",
             'if [ "$candidate_sha" != "$GITHUB_SHA" ]; then',
-            "cargo build --locked --bin udb --features oidc,webauthn",
+            "cargo build --profile dist --locked --bin udb --features oidc,webauthn,webrtc",
+            'export RUSTFLAGS="-C target-cpu=x86-64 ${RUSTFLAGS:-}"',
+            "cp target/dist/udb bench-output/bin/udb-candidate",
+            '"profile":"dist"',
             "bench-output/candidate-provenance.json",
         )
         candidate_input = re.search(
@@ -5743,7 +5761,7 @@ def check_pages_playground_wasm_gate(root: Path = ROOT) -> list[str]:
     playground_js = _read(playground_js_path)
     readme = _read(readme_path)
     scoped: list[str] = []
-    for needle, label in PAGES_PLAYGROUND_REQUIREMENTS:
+    for needle, label in PAGES_PLAYGROUND_REQUIREMENTS + PAGES_BENCHMARK_RECOVERY_REQUIREMENTS:
         _require(workflow, needle, label, scoped)
     for needle, label in PAGES_PLAYGROUND_SCRIPT_REQUIREMENTS:
         _require(smoke, needle, label, scoped)
@@ -5922,6 +5940,9 @@ def check_lint_workflow_covers_referenced_helpers(root: Path = ROOT) -> list[str
 
 
 def run_selftest() -> int:
+    from validate_benchmark_publication import selftest as publication_selftest
+
+    publication_selftest()
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp)
         wf = root / ".github" / "workflows"
@@ -9117,6 +9138,24 @@ jobs:
         (wf / "publish-skill.yml").write_text(publish_skill_good, encoding="utf-8")
         (wf / "_shadow-live-sdk.yml").write_text(shadow_live_sdk_good, encoding="utf-8")
         (wf / "_selftest.yml").write_text(composite_selftest_good, encoding="utf-8")
+        pages_good = pages_good.replace(
+            "  workflow_dispatch:\n", "  workflow_dispatch:\n    inputs:\n      benchmark_run_id:\n"
+        ).replace(
+            "          TRIGGER_EVENT: ${{ github.event.workflow_run.event }}\n",
+            "          TRIGGER_EVENT: ${{ github.event.workflow_run.event }}\n"
+            "          RECOVERY_BENCHMARK_RUN_ID: ${{ inputs.benchmark_run_id }}\n"
+            "          RECOVERY_RELEASE_COMMIT: ${{ inputs.release_commit }}\n"
+            "          RECOVERY_HARNESS_COMMIT: ${{ inputs.harness_commit }}\n"
+            "          PUBLICATION_EVENT: ${{ github.event_name }}\n",
+        ).replace(
+            '            published_commit="$(gh api',
+            '            gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${TRIGGER_RUN_ID}"\n'
+            '            latest_tag="$(gh api "repos/${GITHUB_REPOSITORY}/releases/latest" --jq .tag_name)"\n'
+            '            python3 scripts/validate_benchmark_publication.py --selftest\n'
+            '            python3 scripts/validate_benchmark_publication.py --release-manifest release-proof/bench-bodies.json '
+            '--harness-manifest "${harness_manifest}" --out docs/site/bench-provenance.json\n'
+            '            published_commit="$(gh api',
+        )
         (wf / "pages.yml").write_text(pages_good, encoding="utf-8")
         (wf / "lint-workflows.yml").write_text(lint_good, encoding="utf-8")
         (root / "docs").mkdir(parents=True)
@@ -9265,6 +9304,11 @@ jobs:
         assert not check_benchmark_orchestrator_gate(root), "good benchmark orchestrator gate failed"
         assert not check_benchmark_workflow_gate(root), "good benchmark workflow gate failed"
         assert not check_pages_playground_wasm_gate(root), "good Pages playground WASM gate failed"
+        for recovery_needle, recovery_label in PAGES_BENCHMARK_RECOVERY_REQUIREMENTS:
+            (wf / "pages.yml").write_text(pages_good.replace(recovery_needle, "removed_recovery_gate"), encoding="utf-8")
+            failures = check_pages_playground_wasm_gate(root)
+            assert any(recovery_label in failure for failure in failures), (recovery_label, failures)
+        (wf / "pages.yml").write_text(pages_good, encoding="utf-8")
         assert not check_pages_single_owner(root), "good pages owner failed"
         assert not check_cleanup_packages_ownership(root), "good cleanup packages ownership failed"
         assert not check_publish_skill_workflow(root), "good publish-skill workflow failed"
@@ -10533,8 +10577,10 @@ jobs:
         run: |
           candidate_sha="$(git rev-parse HEAD)"
           if [ "$candidate_sha" != "$GITHUB_SHA" ]; then exit 1; fi
-          cargo build --locked --bin udb --features oidc,webauthn
-          echo '{}' > bench-output/candidate-provenance.json
+          export RUSTFLAGS="-C target-cpu=x86-64 ${RUSTFLAGS:-}"
+          cargo build --profile dist --locked --bin udb --features oidc,webauthn,webrtc
+          cp target/dist/udb bench-output/bin/udb-candidate
+          echo '{"profile":"dist"}' > bench-output/candidate-provenance.json
 '''
         (wf / "_live-sdk-suite.yml").write_text(candidate_suite_good, encoding="utf-8")
         assert not check_benchmark_workflow_gate(root), check_benchmark_workflow_gate(root)
@@ -10542,6 +10588,10 @@ jobs:
             ("default: false", "default: true"),
             ("if: inputs.candidate-build", "if: always()"),
             ('if [ "$candidate_sha" != "$GITHUB_SHA" ]; then', 'if false; then'),
+            ("--profile dist", "--profile debug"),
+            ("oidc,webauthn,webrtc", "oidc,webauthn"),
+            ("target/dist/udb", "target/debug/udb"),
+            ('"profile":"dist"', '"profile":"debug"'),
         ]:
             (wf / "_live-sdk-suite.yml").write_text(candidate_suite_good.replace(before, after), encoding="utf-8")
             assert any("must consume a release binary" in failure for failure in check_benchmark_workflow_gate(root))

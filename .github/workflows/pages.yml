@@ -29,6 +29,19 @@ on:
       - "scripts/playground_wasm_smoke.mjs"
       - ".github/workflows/pages.yml"
   workflow_dispatch:
+    inputs:
+      benchmark_run_id:
+        description: "Exact successful released-binary benchmark run to recover; empty keeps historical data"
+        required: false
+        default: ""
+      release_commit:
+        description: "Audited immutable released tag commit for recovery"
+        required: false
+        default: ""
+      harness_commit:
+        description: "Audited immutable benchmark harness commit for recovery"
+        required: false
+        default: ""
   # Re-publish the site (and refresh the benchmark dashboard) after a benchmark
   # run completes. pages.yml is the SOLE Pages deployer (Chapter 15.8.2); the
   # benchmark workflow only produces the `sdk-benchmark-results` artifact, which
@@ -86,12 +99,31 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           TRIGGER_RUN_ID: ${{ github.event.workflow_run.id }}
           TRIGGER_EVENT: ${{ github.event.workflow_run.event }}
+          RECOVERY_BENCHMARK_RUN_ID: ${{ inputs.benchmark_run_id }}
+          RECOVERY_RELEASE_COMMIT: ${{ inputs.release_commit }}
+          RECOVERY_HARNESS_COMMIT: ${{ inputs.harness_commit }}
+          PUBLICATION_EVENT: ${{ github.event_name }}
           # Exact SHA-256 of the committed v0.4.28 historical artifact. Any new
           # benchmark evidence must arrive through Release -> Benchmark.
           PINNED_LEGACY_BENCH_SHA256: 52461f66687c1bfbdaa7c49d192ca3a3eb94fdf9ed0c19a9a6c9c34bff1708c6
         run: |
           set -euo pipefail
           mkdir -p docs/site
+          rm -f docs/site/bench-provenance.json
+          if [ -n "${RECOVERY_BENCHMARK_RUN_ID:-}" ]; then
+            if [ "${PUBLICATION_EVENT}" != "workflow_dispatch" ] ||
+               [[ ! "${RECOVERY_BENCHMARK_RUN_ID}" =~ ^[1-9][0-9]*$ ]] ||
+               [[ ! "${RECOVERY_RELEASE_COMMIT}" =~ ^[0-9a-f]{40}$ ]] ||
+               [[ ! "${RECOVERY_HARNESS_COMMIT}" =~ ^[0-9a-f]{40}$ ]]; then
+              echo "::error::benchmark recovery requires an exact run id and both audited commits"
+              exit 1
+            fi
+            TRIGGER_RUN_ID="${RECOVERY_BENCHMARK_RUN_ID}"
+            export TRIGGER_RUN_ID
+          elif [ -n "${RECOVERY_RELEASE_COMMIT:-}${RECOVERY_HARNESS_COMMIT:-}" ]; then
+            echo "::error::benchmark recovery commits require an exact benchmark_run_id"
+            exit 1
+          fi
           got_fresh=0
           if [ -n "${TRIGGER_RUN_ID:-}" ]; then
             # The uploaded artifact can lag a few seconds behind the triggering
@@ -136,6 +168,9 @@ jobs:
           asset = str(release.get("asset") or "")
           digest = str(release.get("sha256") or "")
           commit = str(git.get("commit") or "")
+          if os.environ.get("RECOVERY_BENCHMARK_RUN_ID"):
+              require_recovery_event = os.environ.get("PUBLICATION_EVENT") == "workflow_dispatch"
+              commit = os.environ.get("RECOVERY_RELEASE_COMMIT", "")
           run_id = str(environment.get("run_id") or "")
           trigger_run_id = os.environ.get("TRIGGER_RUN_ID", "")
           repository = os.environ.get("GITHUB_REPOSITORY", "")
@@ -144,7 +179,11 @@ jobs:
               if not condition:
                   raise SystemExit(message)
 
-          require(os.environ.get("TRIGGER_EVENT") == "workflow_run", "benchmark was not triggered by Release workflow_run")
+          if os.environ.get("RECOVERY_BENCHMARK_RUN_ID"):
+              require(require_recovery_event, "benchmark recovery requires manual Pages dispatch")
+              require(git.get("commit") == os.environ.get("RECOVERY_HARNESS_COMMIT"), "benchmark artifact harness commit mismatch")
+          else:
+              require(os.environ.get("TRIGGER_EVENT") == "workflow_run", "benchmark was not triggered by Release workflow_run")
           require(bench.get("source") == "github-actions", "benchmark artifact source is not github-actions")
           require(environment.get("workflow") == "Benchmark · SDKs", "benchmark artifact workflow identity mismatch")
           require(run_id == trigger_run_id and run_id.isdigit(), "benchmark artifact run_id does not match triggering run")
@@ -196,9 +235,36 @@ jobs:
             gh api -H "Accept: application/vnd.github.raw+json" \
               "repos/${GITHUB_REPOSITORY}/contents/docs/generated/bench-bodies.json?ref=${artifact_commit}" \
               > release-proof/bench-bodies.json
-            python3 scripts/collect_sdk_bench_results.py \
-              --gate docs/site/bench-results.json \
-              --canonical-manifest release-proof/bench-bodies.json
+            gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${TRIGGER_RUN_ID}" > release-proof/benchmark-run.json
+            latest_tag="$(gh api "repos/${GITHUB_REPOSITORY}/releases/latest" --jq .tag_name)"
+            harness_commit="${artifact_commit}"
+            harness_manifest="release-proof/bench-bodies.json"
+            recovery_args=()
+            if [ -n "${RECOVERY_BENCHMARK_RUN_ID:-}" ]; then
+              harness_commit="${RECOVERY_HARNESS_COMMIT}"
+              harness_manifest="release-proof/harness-bench-bodies.json"
+              recovery_args=(--recovery)
+              gh api -H "Accept: application/vnd.github.raw+json" \
+                "repos/${GITHUB_REPOSITORY}/contents/docs/generated/bench-bodies.json?ref=${harness_commit}" \
+                > "${harness_manifest}"
+              python3 scripts/collect_sdk_bench_results.py \
+                --gate docs/site/bench-results.json \
+                --canonical-manifest "${harness_manifest}"
+            else
+              python3 scripts/collect_sdk_bench_results.py \
+                --gate docs/site/bench-results.json \
+                --canonical-manifest release-proof/bench-bodies.json
+            fi
+            python3 scripts/validate_benchmark_publication.py --selftest
+            python3 scripts/validate_benchmark_publication.py \
+              --benchmark docs/site/bench-results.json \
+              --run release-proof/benchmark-run.json \
+              --release-manifest release-proof/bench-bodies.json \
+              --harness-manifest "${harness_manifest}" \
+              --repository "${GITHUB_REPOSITORY}" --run-id "${TRIGGER_RUN_ID}" \
+              --release-commit "${artifact_commit}" --harness-commit "${harness_commit}" \
+              --latest-tag "${latest_tag}" "${recovery_args[@]}" \
+              --out docs/site/bench-provenance.json
           else
             # Push and workflow_dispatch have no fresh immutable artifact. They
             # may publish only the exact committed v0.4.28 historical bytes.

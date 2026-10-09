@@ -10,6 +10,14 @@ release line was tagged.
 This release continues the server error, authorization and liveness work in the
 no-wrapper plan.
 
+- A successful released-binary benchmark can refresh Pages through an explicit
+  audited recovery run. Release and harness commits remain separate; published
+  checksum, canonical RPC coverage and released RPC surface checks still gate
+  deployment. Fixture corrections no longer require replacing a released binary.
+- Candidate benchmarks now build the same `dist` profile, full WebRTC features
+  and Linux CPU floor as the shipped binary, and record that profile explicitly.
+  CI refuses a debug-profile or media-disabled candidate build.
+
 ### Added
 
 - OTP cooldown checks commit atomically with issuance under a durable owner

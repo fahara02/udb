@@ -219,7 +219,7 @@ jobs:
         if: inputs.candidate-build
         uses: ./.github/actions/setup-rust
         with:
-          cache-key: sdk-candidate-full
+          cache-key: sdk-candidate-full-dist
 
       - name: Build and identify candidate broker
         if: inputs.candidate-build
@@ -231,11 +231,13 @@ jobs:
             echo "::error::Candidate SDK harness must match the workflow commit"
             exit 1
           fi
-          cargo build --locked --bin udb --features oidc,webauthn,webrtc
-          cp target/debug/udb bench-output/bin/udb-candidate
+          # Match the shipped full Linux profile, features and CPU floor.
+          export RUSTFLAGS="-C target-cpu=x86-64 ${RUSTFLAGS:-}"
+          cargo build --profile dist --locked --bin udb --features oidc,webauthn,webrtc
+          cp target/dist/udb bench-output/bin/udb-candidate
           binary_sha256="$(sha256sum bench-output/bin/udb-candidate | cut -d' ' -f1)"
           binary_version="$(bench-output/bin/udb-candidate --version)"
-          printf '{"commit":"%s","sha256":"%s","version":"%s","profile":"debug","purpose":"pre-release correctness"}\n' \
+          printf '{"commit":"%s","sha256":"%s","version":"%s","profile":"dist","purpose":"pre-release correctness"}\n' \
             "$candidate_sha" "$binary_sha256" "$binary_version" > bench-output/candidate-provenance.json
           echo "UDB_BENCH_BIN=${GITHUB_WORKSPACE}/bench-output/bin/udb-candidate" >> "$GITHUB_ENV"
           echo "Candidate broker: $binary_version at $candidate_sha"

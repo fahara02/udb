@@ -60,9 +60,17 @@ SDK Markdown reports. The post-release benchmark workflow uploads it as the
 `sdk-benchmark-results` artifact; `pages.yml` consumes that artifact on benchmark
 completion and fails closed if a real benchmark has no fresh artifact.
 Validation-only benchmark runs do not deploy Pages. Direct pushes and manual
-deploys may publish only the exact pinned SHA-256 of the committed v0.4.28
-historical JSON; committed schema-v2/canonical evidence is rejected, and new
-evidence is published only by the Release -> Benchmark artifact chain. The
+deploys without an audited run may publish only the exact pinned SHA-256 of the
+committed v0.4.28 historical JSON;
+committed schema-v2/canonical evidence is rejected. New evidence normally follows
+the Release -> Benchmark artifact chain.
+To recover a released-binary sweep, dispatch `pages.yml` with `benchmark_run_id`,
+`release_commit` and `harness_commit`. The selected run must be successful and
+measure the latest immutable released binary. Pages verifies its actual run,
+tag commit, published checksum, full RPC coverage and the same canonical RPC
+surface. A reviewed harness may correct fixture bodies while retaining the RPC
+identities and declared request types. `bench-provenance.json` records both commits without rewriting measured
+benchmark bytes. Candidate artifacts cannot pass these release checks. The
 historical JSON is visibly marked legacy/incomplete and never rendered as green
 proof. Before tagging, a normal main commit marked `(benchmark)` runs the same
 strict suite against its exact source binary in CI. Candidate results cannot
