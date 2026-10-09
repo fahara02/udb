@@ -40,11 +40,7 @@ func TestLiveG2MetadataAndTypedPredicates(t *testing.T) {
 	defer func() {
 		cleanupCtx, cleanupCancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cleanupCancel()
-		callCtx, contextErr := sess.NativeContext(cleanupCtx)
-		if contextErr != nil {
-			t.Errorf("G2 session cleanup context failed: code=%s", status.Code(contextErr))
-			return
-		}
+		callCtx := sess.NativeContext(cleanupCtx)
 		if _, cleanupErr := sess.Auth.Authn.Logout(callCtx, &authnv1.LogoutRequest{SessionId: token.SessionID, RevokeReason: "go live G2 cleanup"}); cleanupErr != nil {
 			t.Errorf("G2 session cleanup failed: code=%s", status.Code(cleanupErr))
 		}
