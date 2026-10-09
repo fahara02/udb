@@ -23,6 +23,13 @@ class SourceCheck:
 
 CHECKS: tuple[SourceCheck, ...] = (
     SourceCheck(
+        "PutAuthzPolicy benchmark retains its seeded project scope",
+        "docs/bench-bodies/authz.md",
+        (
+            '| [ ] | PutAuthzPolicy | MUTATION | PutAuthzPolicyRequest | `{"policy":{"id":"<seed:policy_id>", "priority":100, "enabled":true, "effect":"allow", "tenant":"<seed:tenant_id>", "project":"<seed:project>",',
+        ),
+    ),
+    SourceCheck(
         "Go lock fixtures survive the full measured RPC sweep",
         "sdk/go/udbclient/live_perf_seed_test.go",
         (
@@ -1781,6 +1788,17 @@ def run_selftest() -> int:
         failures = check_source(root)
         if not any("PHP live benchmark service-qualified operation ordering" in failure for failure in failures):
             raise AssertionError(f"expected PHP service-qualified operation ordering failure, got {failures}")
+
+        authz_body = root / "docs/bench-bodies/authz.md"
+        authz_body.write_text(
+            authz_body.read_text(encoding="utf-8").replace(
+                '"project":"<seed:project>",', "", 1
+            ),
+            encoding="utf-8",
+        )
+        failures = check_source(root)
+        if not any("PutAuthzPolicy benchmark retains its seeded project scope" in failure for failure in failures):
+            raise AssertionError(f"expected policy upsert project scope failure, got {failures}")
 
     print("bench harness posture selftest passed")
     return 0
