@@ -49,6 +49,9 @@ no-wrapper plan.
 
 ### Fixed
 
+- Active authorization mutations publish the durable shared snapshot before
+  returning success. Revision-store refusals retain their typed diagnostics;
+  policy deletion advances the owning tenant and project's revision.
 - Authorization denials name the closest caller-tenant rule and the action,
   object, purpose, scope or other attribute that failed. Unrelated policies
   cannot hide that diagnosis; unary and batch denials carry the same details.

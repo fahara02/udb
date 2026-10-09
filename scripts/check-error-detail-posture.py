@@ -1025,7 +1025,7 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
         ),
     ),
     TokenCheck(
-        "Authz governance revision internals use typed internal detail",
+        "Authz governance revision reads use typed internal detail",
         "src/runtime/service/auth_service/authz/governance.rs",
         (
             "fn governance_internal_status(",
@@ -1033,11 +1033,63 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
             '"read_authz_revision"',
             '"bump_authz_revision"',
             '"read authz revision failed: {err}"',
-            '"bump authz revision failed: {err}"',
             "governance_internal_status_carries_typed_detail",
             "fn assert_internal_detail(",
             "ErrorKind::Internal",
             'detail.backend, "authz"',
+        ),
+    ),
+    TokenCheck(
+        "Authz revision appends propagate the store refusal and publish before success",
+        "src/runtime/service/auth_service/authz/governance.rs",
+        (
+            "let _publication_guard = self.snapshot_reload_lock.lock().await;",
+            '''runtime.native_entity_write_for_service(
+                "authz", &context, "udb.core.authz.entity.v1.AuthzRevision",
+                record, ConflictStrategy::Error,
+            ).await?;
+            self.invalidate_snapshot_cache();
+            self.current_snapshot_locked().await?;
+            Ok((new_policy, new_rel))''',
+        ),
+    ),
+    TokenCheck(
+        "Authz reloads serialize with mutation publication and deletion uses the written scope",
+        "src/runtime/service/auth_service/authz/mod.rs",
+        (
+            "snapshot_reload_lock: Arc<tokio::sync::Mutex<()>>",
+            "snapshot_reload_lock: Arc::new(tokio::sync::Mutex::new(()))",
+            "let _reload_guard = self.snapshot_reload_lock.lock().await;",
+            "self.current_snapshot_locked().await",
+            "async fn current_snapshot_locked(&self)",
+            'return_fields: vec!["tenant_id".to_string(), "project_id".to_string()]',
+            '"deleted policy scope is unavailable"',
+            '''self.bump_authz_revision(
+                scope("tenant_id")?, scope("project_id")?,
+                authz_entity_pb::AuthzChangeType::Policy, "policy-delete", &req.deleted_by,
+            ).await?;''',
+        ),
+    ),
+    TokenCheck(
+        "Actual native policy publication is immediate, durable, and refuses revision-store errors",
+        "src/runtime/service/live_tests/authz_deny_path_live.rs",
+        (
+            "authz_policy_mutations_publish_before_return_and_survive_restart_live",
+            "authz.put_authz_policy(Request::new(policy",
+            "first data request sees the returned policy write",
+            "policy replacement revokes the earlier action immediately",
+            "CREATE TRIGGER authz_revision_gate BEFORE INSERT ON",
+            "revision append refusal cannot report mutation success",
+            "assert_eq!(refused.code(), tonic::Code::AlreadyExists)",
+            'assert_eq!(detail.reason, "UDB_UNIQUE_VIOLATION")',
+            'assert_eq!(detail.constraint, "authz_revision_gate")',
+            "drop(authz);",
+            "drop(svc);",
+            "let restarted = deny_path_broker().await;",
+            "assert!(restarted.current_authz_snapshot().policies.is_empty())",
+            "restarted broker loads the persisted policy",
+            "first data request observes the committed revocation",
+            "a zero-row delete cannot append a policy revision",
         ),
     ),
     TokenCheck(
@@ -9986,6 +10038,27 @@ def webrtc_raw_internal_constructor_hits(root: Path) -> list[str]:
     return hits
 
 
+def authz_revision_refusal_suppression_hits(root: Path) -> list[str]:
+    hits: list[str] = []
+    call = re.compile(
+        r"\.bump_authz_revision\s*\(.*?\)\s*\.await\b(?P<propagate>\s*\?)?",
+        re.DOTALL,
+    )
+    for path in sorted((root / "src/runtime/service/auth_service/authz").glob("*.rs")):
+        text = "\n".join(
+            "" if line.lstrip().startswith("//") else line
+            for line in read(path).splitlines()
+        )
+        for match in call.finditer(text):
+            if not match.group("propagate"):
+                line = text.count("\n", 0, match.start()) + 1
+                hits.append(
+                    f"{path.relative_to(root).as_posix()}:{line}: "
+                    "authz mutation must propagate revision publication refusal"
+                )
+    return hits
+
+
 def check_root(root: Path) -> list[str]:
     global _READ_CACHE
     previous_read_cache = _READ_CACHE
@@ -10025,6 +10098,8 @@ def _check_root_cached(root: Path) -> list[str]:
         for token in check.tokens:
             if not token_present(token, text):
                 failures.append(f"{check.label}: missing token {token!r} in {check.path}")
+
+    failures.extend(authz_revision_refusal_suppression_hits(root))
 
     api_rules = read(root / "docs/api-rules.md")
     if "### Stable String Reason Registry" not in api_rules:
@@ -10251,6 +10326,8 @@ def run_selftest() -> None:
             ("src/runtime/service/live_tests/data_error_matrix_live.rs", "proof must reach the XA coordinator"),
             ("src/runtime/service/method_security.rs", "alternating RPCs cannot multiply the abuse budget"),
             ("src/runtime/service/live_tests/authz_deny_path_live.rs", "denial diagnostics cannot enumerate"),
+            ("src/runtime/service/live_tests/authz_deny_path_live.rs", "revision append refusal cannot report mutation success"),
+            ("src/runtime/service/auth_service/authz/governance.rs", "self.current_snapshot_locked().await?;"),
             ("src/runtime/executor_utils.rs", "let detail = crate::runtime::error_reasons::ensure_registered_reason(code, detail);"),
             ("src/runtime/error_reasons.rs", "ErrorKind::Quota => QUOTA_EXCEEDED"),
             ("scripts/generate-error-reasons.py", 'ROOT / "docs/reference/error-reasons.md"'),
@@ -10285,6 +10362,17 @@ def run_selftest() -> None:
             globals()["_check_root_cached"] = original_check_root_cached
             _READ_CACHE = None
 
+        for ignored in (
+            'let _ = self.bump_authz_revision("t", "p", kind, "h", "u").await;',
+            'self.bump_authz_revision("t", "p", kind, "h", "u").await.ok();',
+        ):
+            write_fixture(root)
+            target = root / AUTHZ_INTERNAL_STATUS_PATH
+            target.write_text(read(target) + "\n" + ignored + "\n", encoding="utf-8")
+            failures = check_root(root)
+            assert any("must propagate revision publication refusal" in failure for failure in failures), failures
+
+        write_fixture(root)
         stale = root / "docs/api-rules.md"
         stale.write_text(
             read(stale) + "\nThe error body is `ApiError` mapped from `google.rpc.Status`.\n",

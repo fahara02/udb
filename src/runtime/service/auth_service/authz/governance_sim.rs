@@ -368,7 +368,6 @@ impl AuthzServiceImpl {
                 &actor,
             )
             .await?;
-        self.invalidate_snapshot_cache();
         let reason = if req.reason.trim().is_empty() {
             "manual bundle invalidation".to_string()
         } else {
@@ -487,16 +486,14 @@ impl AuthzServiceImpl {
             seeded.push((*code).to_string());
         }
         // Bump the authz revision so any caches refresh after seeding.
-        let _ = self
-            .bump_authz_revision(
-                &req.tenant_id,
-                &req.project_id,
-                authz_entity_pb::AuthzChangeType::Role,
-                "builtin-role-seed",
-                &actor,
-            )
-            .await;
-        self.invalidate_snapshot_cache();
+        self.bump_authz_revision(
+            &req.tenant_id,
+            &req.project_id,
+            authz_entity_pb::AuthzChangeType::Role,
+            "builtin-role-seed",
+            &actor,
+        )
+        .await?;
         Ok(Response::new(authz_pb::SeedBuiltinRolesResponse {
             seeded_role_codes: seeded,
             created,

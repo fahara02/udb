@@ -186,16 +186,14 @@ impl AuthzServiceImpl {
                     format!("store role binding failed: {err}"),
                 )
             })?;
-        let _ = self
-            .bump_authz_revision(
-                &scope_tenant,
-                &binding.project,
-                authz_entity_pb::AuthzChangeType::RoleAssignment,
-                "role-binding-put",
-                &binding.source,
-            )
-            .await;
-        self.invalidate_snapshot_cache();
+        self.bump_authz_revision(
+            &scope_tenant,
+            &binding.project,
+            authz_entity_pb::AuthzChangeType::RoleAssignment,
+            "role-binding-put",
+            &binding.source,
+        )
+        .await?;
         Ok(Response::new(authz_pb::AuthMutationResponse {
             ok: true,
             message: "role binding stored".to_string(),
@@ -294,16 +292,14 @@ impl AuthzServiceImpl {
                     format!("store relationship tuple failed: {err}"),
                 )
             })?;
-        let _ = self
-            .bump_authz_revision(
-                &scope_tenant,
-                &tuple.project,
-                authz_entity_pb::AuthzChangeType::Relationship,
-                "relationship-put",
-                &tuple.source,
-            )
-            .await;
-        self.invalidate_snapshot_cache();
+        self.bump_authz_revision(
+            &scope_tenant,
+            &tuple.project,
+            authz_entity_pb::AuthzChangeType::Relationship,
+            "relationship-put",
+            &tuple.source,
+        )
+        .await?;
         // Phase L2/L3 task5: publish the relationship-tuple change so security
         // dashboards and the audit plane observe ReBAC edits (no raw condition
         // material in the body — the outbox sink scrubs credential-shaped keys).

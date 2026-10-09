@@ -716,7 +716,8 @@ impl AuthzServiceImpl {
     /// is the single revision-bump point invoked by EVERY active authz mutation
     /// — policy edits, role create/update/delete, role assignment/revocation,
     /// relationship/grouping tuple writes, activation, and rollback — so cached
-    /// bundles invalidate on any of them, not only policy/tuple edits.
+    /// bundles invalidate on any of them, not only policy/tuple edits. Publish
+    /// the durable snapshot before reporting success to every mutation caller.
     pub(super) async fn bump_authz_revision(
         &self,
         tenant: &str,
@@ -725,6 +726,7 @@ impl AuthzServiceImpl {
         content_hash: &str,
         changed_by: &str,
     ) -> Result<(i64, i64), Status> {
+        let _publication_guard = self.snapshot_reload_lock.lock().await;
         let (cur_policy, cur_rel, _) = self.current_authz_revision(tenant, project).await?;
         let bumps_relationship = matches!(
             change_type,
@@ -793,13 +795,9 @@ impl AuthzServiceImpl {
                 record,
                 ConflictStrategy::Error,
             )
-            .await
-            .map_err(|err| {
-                governance_internal_status(
-                    "bump_authz_revision",
-                    format!("bump authz revision failed: {err}"),
-                )
-            })?;
+            .await?;
+        self.invalidate_snapshot_cache();
+        self.current_snapshot_locked().await?;
         Ok((new_policy, new_rel))
     }
 

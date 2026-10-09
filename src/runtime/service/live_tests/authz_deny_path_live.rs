@@ -434,3 +434,194 @@ async fn authz_deny_path_narrow_policy_is_enforced_as_narrow_live() {
 
     pool.close().await;
 }
+
+#[tokio::test]
+#[ignore = "requires live Postgres; native CI runs all ignored live proofs"]
+async fn authz_policy_mutations_publish_before_return_and_survive_restart_live() {
+    use crate::proto::udb::core::authz::services::v1 as authz_pb;
+    use crate::proto::udb::core::authz::services::v1::authz_service_server::AuthzService;
+    use crate::runtime::service::method_security::{
+        scope_claim_context_for_test, test_claim_context,
+    };
+    use tonic::Request;
+
+    let _guard = live_native_service_db_lock().lock().await;
+    let pool = live_pg_pool().await;
+    migrate_native_service_db(&pool).await;
+    let tenant = Uuid::new_v4().to_string();
+    let subject = Uuid::new_v4().to_string();
+    let policy_id = Uuid::new_v4().to_string();
+    let claim = test_claim_context(
+        &subject,
+        &tenant,
+        DEFAULT_PROJECT_ID,
+        &["udb:authz:put-authz-policy", "udb:authz:delete-policy-rule"],
+        &[],
+    );
+    let revision_model = native_catalog::native_model(
+        "udb.core.authz.entity.v1.AuthzRevision",
+        &["policy_revision", "tenant_id", "project_id"],
+    );
+    let revision = || async {
+        sqlx::query_scalar::<_, i64>(&format!(
+            "SELECT COALESCE(MAX({revision}), 0)::BIGINT FROM {rel} \
+             WHERE {tenant} = $1 AND {project} = $2",
+            revision = revision_model.q("policy_revision"),
+            rel = revision_model.relation,
+            tenant = revision_model.q("tenant_id"),
+            project = revision_model.q("project_id"),
+        ))
+        .bind(&tenant)
+        .bind(DEFAULT_PROJECT_ID)
+        .fetch_one(&pool)
+        .await
+        .expect("read actual durable policy revision")
+    };
+    let policy = |action: &str| authz_pb::PutAuthzPolicyRequest {
+        policy: Some(authz_pb::AuthzPolicyRecord {
+            id: policy_id.clone(),
+            enabled: true,
+            effect: "allow".to_string(),
+            tenant: tenant.clone(),
+            project: DEFAULT_PROJECT_ID.to_string(),
+            subject: SUBJECT.to_string(),
+            action: action.to_string(),
+            resource: INVOICE.to_string(),
+            purpose: "b11-deny-path".to_string(),
+            required_scopes: vec!["udb:read".to_string()],
+            ..Default::default()
+        }),
+    };
+    let svc = deny_path_broker().await;
+    let (_, authz, _) = svc.build_auth_services();
+    authz.warm_shared_snapshot().await;
+    let caller = caller(&tenant, DEFAULT_PROJECT_ID, SUBJECT);
+    assert_eq!(revision().await, 0);
+    svc.authorize(&caller, INVOICE, "Select")
+        .await
+        .expect_err("there is no grant before the native policy write");
+
+    scope_claim_context_for_test(
+        claim.clone(),
+        authz.put_authz_policy(Request::new(policy("Select"))),
+    )
+    .await
+    .expect("native policy write must finish publication");
+    // No warmer, invalidation RPC, CheckAccess or retry loop between the write
+    // and the very next data-plane decision.
+    svc.authorize(&caller, INVOICE, "Select")
+        .await
+        .expect("first data request sees the returned policy write");
+    assert_eq!(revision().await, 1);
+    scope_claim_context_for_test(
+        claim.clone(),
+        authz.put_authz_policy(Request::new(policy("Delete"))),
+    )
+    .await
+    .expect("replace the native policy");
+    svc.authorize(&caller, INVOICE, "Select")
+        .await
+        .expect_err("policy replacement revokes the earlier action immediately");
+    svc.authorize(&caller, INVOICE, "Delete")
+        .await
+        .expect("first data request sees the replacement action");
+    assert_eq!(revision().await, 2);
+
+    // The real revision-store refusal must not be swallowed or lose its typed
+    // SQL status at the shared publication boundary.
+    let function = format!("udb_authz_revision_refusal_{}", Uuid::new_v4().simple());
+    sqlx::query(&format!(
+        "CREATE FUNCTION {function}() RETURNS trigger LANGUAGE plpgsql AS $$ \
+         BEGIN RAISE SQLSTATE '23505' USING MESSAGE = 'forced revision refusal', \
+         CONSTRAINT = 'authz_revision_gate'; END; $$",
+    ))
+    .execute(&pool)
+    .await
+    .expect("install actual revision refusal function");
+    sqlx::query(&format!(
+        "CREATE TRIGGER authz_revision_gate BEFORE INSERT ON {} \
+         FOR EACH ROW EXECUTE FUNCTION {function}()",
+        revision_model.relation,
+    ))
+    .execute(&pool)
+    .await
+    .expect("install actual revision refusal trigger");
+    let refused = scope_claim_context_for_test(
+        claim.clone(),
+        authz.put_authz_policy(Request::new(policy("Update"))),
+    )
+    .await
+    .expect_err("revision append refusal cannot report mutation success");
+    assert_eq!(refused.code(), tonic::Code::AlreadyExists);
+    let detail = denial_detail(&refused);
+    assert_eq!(detail.reason, "UDB_UNIQUE_VIOLATION");
+    assert_eq!(detail.constraint, "authz_revision_gate");
+    assert_eq!(revision().await, 2);
+    sqlx::query(&format!(
+        "DROP TRIGGER authz_revision_gate ON {}",
+        revision_model.relation
+    ))
+    .execute(&pool)
+    .await
+    .expect("remove actual revision refusal trigger");
+    sqlx::query(&format!("DROP FUNCTION {function}()"))
+        .execute(&pool)
+        .await
+        .expect("remove actual revision refusal function");
+    scope_claim_context_for_test(
+        claim.clone(),
+        authz.put_authz_policy(Request::new(policy("Update"))),
+    )
+    .await
+    .expect("retry the same policy after revision recovery");
+    svc.authorize(&caller, INVOICE, "Update")
+        .await
+        .expect("recovered publication is visible on the first data request");
+    assert_eq!(revision().await, 3);
+    let version = svc.current_authz_snapshot().version.clone();
+    drop(authz);
+    drop(svc);
+
+    // Reconstruct the actual broker and its shared auth services from durable
+    // storage, exactly as startup does. No snapshot is copied from the old node.
+    let restarted = deny_path_broker().await;
+    assert!(restarted.current_authz_snapshot().policies.is_empty());
+    let (_, authz, _) = restarted.build_auth_services();
+    authz.warm_shared_snapshot().await;
+    restarted
+        .authorize(&caller, INVOICE, "Update")
+        .await
+        .expect("restarted broker loads the persisted policy");
+    assert_eq!(restarted.current_authz_snapshot().version, version);
+    let delete = || {
+        let mut request = Request::new(authz_pb::DeletePolicyRuleRequest {
+            policy_id: policy_id.clone(),
+            ..Default::default()
+        });
+        request
+            .metadata_mut()
+            .insert("x-tenant-id", tenant.parse().unwrap());
+        request
+    };
+    let deleted = scope_claim_context_for_test(claim.clone(), authz.delete_policy_rule(delete()))
+        .await
+        .expect("delete policy publishes its revision")
+        .into_inner();
+    assert!(deleted.deleted);
+    restarted
+        .authorize(&caller, INVOICE, "Update")
+        .await
+        .expect_err("first data request observes the committed revocation");
+    assert_eq!(revision().await, 4);
+    let duplicate = scope_claim_context_for_test(claim, authz.delete_policy_rule(delete()))
+        .await
+        .expect("duplicate delete remains idempotent")
+        .into_inner();
+    assert!(!duplicate.deleted);
+    assert_eq!(
+        revision().await,
+        4,
+        "a zero-row delete cannot append a policy revision"
+    );
+    pool.close().await;
+}

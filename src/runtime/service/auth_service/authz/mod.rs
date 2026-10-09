@@ -859,6 +859,9 @@ fn policy_rule_from_row(
 pub struct AuthzServiceImpl {
     snapshot: Arc<ArcSwap<AuthzSnapshot>>,
     snapshot_loaded_at: Arc<Mutex<Option<Instant>>>,
+    /// Serialize durable reloads and mutation publication so an older load
+    /// cannot overwrite the snapshot published by a completed mutation.
+    snapshot_reload_lock: Arc<tokio::sync::Mutex<()>>,
     snapshot_ttl: Duration,
     pg_pool: Option<PgPool>,
     event_sink: Arc<dyn AuthEventSink>,
@@ -889,6 +892,7 @@ impl AuthzServiceImpl {
         Self {
             snapshot: Arc::new(ArcSwap::from_pointee(snapshot)),
             snapshot_loaded_at: Arc::new(Mutex::new(Some(Instant::now()))),
+            snapshot_reload_lock: Arc::new(tokio::sync::Mutex::new(())),
             snapshot_ttl: authz_snapshot_ttl(),
             pg_pool: None,
             event_sink: events::noop_sink(),
@@ -903,6 +907,7 @@ impl AuthzServiceImpl {
         Self {
             snapshot,
             snapshot_loaded_at: Arc::new(Mutex::new(None)),
+            snapshot_reload_lock: Arc::new(tokio::sync::Mutex::new(())),
             snapshot_ttl: authz_snapshot_ttl(),
             pg_pool: None,
             event_sink: events::noop_sink(),
@@ -1004,10 +1009,9 @@ impl AuthzServiceImpl {
         self
     }
 
-    /// Invalidate the cached authz snapshot so the next `current_snapshot()`
-    /// reloads from Postgres. Called after every authz mutation so the writing
-    /// node enforces its own writes immediately (read-your-writes) instead of
-    /// serving a stale snapshot until the TTL elapses.
+    /// Invalidate the local reload timestamp. Constructors and the explicit
+    /// warmer use this; mutation publication invalidates under the reload lock
+    /// and loads the durable snapshot before returning to the caller.
     pub(super) fn invalidate_snapshot_cache(&self) {
         if let Ok(mut guard) = self.snapshot_loaded_at.lock() {
             *guard = None;
@@ -1843,17 +1847,29 @@ impl AuthzServiceImpl {
         }))
     }
 
-    pub(super) async fn current_snapshot(&self) -> Result<Arc<AuthzSnapshot>, Status> {
-        let cached_is_fresh = self
-            .snapshot_loaded_at
+    fn snapshot_cache_is_fresh(&self) -> bool {
+        self.snapshot_loaded_at
             .lock()
             .map(|guard| {
                 guard
                     .map(|t| t.elapsed() < self.snapshot_ttl)
                     .unwrap_or(false)
             })
-            .unwrap_or(false);
-        if cached_is_fresh {
+            .unwrap_or(false)
+    }
+
+    pub(super) async fn current_snapshot(&self) -> Result<Arc<AuthzSnapshot>, Status> {
+        if self.snapshot_cache_is_fresh() {
+            return Ok(self.snapshot.load_full());
+        }
+        let _reload_guard = self.snapshot_reload_lock.lock().await;
+        self.current_snapshot_locked().await
+    }
+
+    /// Called with snapshot_reload_lock held, including by the revision append
+    /// path after it commits. Recheck freshness after waiting for another loader.
+    async fn current_snapshot_locked(&self) -> Result<Arc<AuthzSnapshot>, Status> {
+        if self.snapshot_cache_is_fresh() {
             return Ok(self.snapshot.load_full());
         }
         // H1: time the policy-snapshot (re)load so operators can alert on a slow
@@ -2315,19 +2331,17 @@ impl AuthzService for AuthzServiceImpl {
                         format!("store authz policy failed: {err}"),
                     )
                 })?;
-            let _ = self
-                .bump_authz_revision(
-                    &policy.tenant,
-                    &policy.project,
-                    authz_entity_pb::AuthzChangeType::Policy,
-                    "policy-put",
-                    "",
-                )
-                .await;
+            self.bump_authz_revision(
+                &policy.tenant,
+                &policy.project,
+                authz_entity_pb::AuthzChangeType::Policy,
+                "policy-put",
+                "",
+            )
+            .await?;
         } else {
             self.require_snapshot_fallback()?;
         }
-        self.invalidate_snapshot_cache();
         Ok(Response::new(authz_pb::AuthMutationResponse {
             ok: true,
             message: "authz policy stored".to_string(),
@@ -2649,16 +2663,14 @@ impl AuthzService for AuthzServiceImpl {
             }),
         )
         .await;
-        let _ = self
-            .bump_authz_revision(
-                &tenant_id,
-                &req.project_id,
-                authz_entity_pb::AuthzChangeType::Role,
-                "role-created",
-                &req.created_by,
-            )
-            .await;
-        self.invalidate_snapshot_cache();
+        self.bump_authz_revision(
+            &tenant_id,
+            &req.project_id,
+            authz_entity_pb::AuthzChangeType::Role,
+            "role-created",
+            &req.created_by,
+        )
+        .await?;
         Ok(Response::new(authz_pb::CreateRoleResponse {
             role: Some(authz_entity_pb::Role {
                 role_id,
@@ -2919,16 +2931,14 @@ impl AuthzService for AuthzServiceImpl {
                 }),
             )
             .await;
-            let _ = self
-                .bump_authz_revision(
-                    &tenant_id,
-                    &req.project_id,
-                    authz_entity_pb::AuthzChangeType::RoleAssignment,
-                    "role-assignment",
-                    &req.assigned_by,
-                )
-                .await;
-            self.invalidate_snapshot_cache();
+            self.bump_authz_revision(
+                &tenant_id,
+                &req.project_id,
+                authz_entity_pb::AuthzChangeType::RoleAssignment,
+                "role-assignment",
+                &req.assigned_by,
+            )
+            .await?;
             return Ok(Response::new(authz_pb::AssignRoleResponse {
                 user_role: Some(authz_entity_pb::UserRole {
                     user_role_id: stable_uuid_from_subject(&format!(
@@ -3067,16 +3077,14 @@ impl AuthzService for AuthzServiceImpl {
         .await;
         // K2.1: role assignment bumps the active authz revision so cached bundles
         // invalidate (not only policy/tuple edits).
-        let _ = self
-            .bump_authz_revision(
-                &tenant_id,
-                &req.project_id,
-                authz_entity_pb::AuthzChangeType::RoleAssignment,
-                "role-assignment",
-                &req.assigned_by,
-            )
-            .await;
-        self.invalidate_snapshot_cache();
+        self.bump_authz_revision(
+            &tenant_id,
+            &req.project_id,
+            authz_entity_pb::AuthzChangeType::RoleAssignment,
+            "role-assignment",
+            &req.assigned_by,
+        )
+        .await?;
         Ok(Response::new(authz_pb::AssignRoleResponse {
             user_role: Some(authz_entity_pb::UserRole {
                 user_role_id,
@@ -3311,19 +3319,17 @@ impl AuthzService for AuthzServiceImpl {
                     "create policy rule returned mismatched policy_id",
                 ));
             }
-            let _ = self
-                .bump_authz_revision(
-                    &policy.tenant,
-                    &policy.project,
-                    authz_entity_pb::AuthzChangeType::Policy,
-                    "policy-created",
-                    &req.created_by,
-                )
-                .await;
+            self.bump_authz_revision(
+                &policy.tenant,
+                &policy.project,
+                authz_entity_pb::AuthzChangeType::Policy,
+                "policy-created",
+                &req.created_by,
+            )
+            .await?;
         } else {
             self.require_snapshot_fallback()?;
         }
-        self.invalidate_snapshot_cache();
         Ok(Response::new(authz_pb::CreatePolicyRuleResponse {
             policy: Some(authz_entity_pb::PolicyRule {
                 domain: stored_domain,
@@ -3505,18 +3511,16 @@ impl AuthzService for AuthzServiceImpl {
             )
             .await;
             if !tenant.trim().is_empty() {
-                let _ = self
-                    .bump_authz_revision(
-                        &tenant,
-                        &project,
-                        authz_entity_pb::AuthzChangeType::RoleAssignment,
-                        "role-revoked",
-                        &req.revoked_by,
-                    )
-                    .await;
+                self.bump_authz_revision(
+                    &tenant,
+                    &project,
+                    authz_entity_pb::AuthzChangeType::RoleAssignment,
+                    "role-revoked",
+                    &req.revoked_by,
+                )
+                .await?;
             }
         }
-        self.invalidate_snapshot_cache();
         Ok(Response::new(authz_pb::RevokeRoleResponse { revoked }))
     }
     async fn list_user_roles(
@@ -3860,16 +3864,14 @@ impl AuthzService for AuthzServiceImpl {
             }),
         )
         .await;
-        let _ = self
-            .bump_authz_revision(
-                &role.tenant_id,
-                &role.project_id,
-                authz_entity_pb::AuthzChangeType::Role,
-                "role-updated",
-                &req.updated_by,
-            )
-            .await;
-        self.invalidate_snapshot_cache();
+        self.bump_authz_revision(
+            &role.tenant_id,
+            &role.project_id,
+            authz_entity_pb::AuthzChangeType::Role,
+            "role-updated",
+            &req.updated_by,
+        )
+        .await?;
         Ok(Response::new(authz_pb::UpdateRoleResponse {
             role: Some(role),
         }))
@@ -4011,17 +4013,15 @@ impl AuthzService for AuthzServiceImpl {
                 })?;
         }
         if affected > 0 && !role_tenant.trim().is_empty() {
-            let _ = self
-                .bump_authz_revision(
-                    &role_tenant,
-                    &role_project,
-                    authz_entity_pb::AuthzChangeType::Role,
-                    "role-deleted",
-                    &req.deleted_by,
-                )
-                .await;
+            self.bump_authz_revision(
+                &role_tenant,
+                &role_project,
+                authz_entity_pb::AuthzChangeType::Role,
+                "role-deleted",
+                &req.deleted_by,
+            )
+            .await?;
         }
-        self.invalidate_snapshot_cache();
         Ok(Response::new(authz_pb::DeleteRoleResponse {
             deleted: affected > 0,
         }))
@@ -4160,6 +4160,12 @@ impl AuthzService for AuthzServiceImpl {
         &self,
         request: Request<authz_pb::DeletePolicyRuleRequest>,
     ) -> Result<Response<authz_pb::DeletePolicyRuleResponse>, Status> {
+        if governance::governed_mode_enabled() {
+            return Err(governed_direct_mutation_status(
+                "DeletePolicyRule",
+                "delete_policy_rule_disabled",
+            ));
+        }
         let metadata = request.metadata().clone();
         let req = request.into_inner();
         if req.policy_id.trim().is_empty() {
@@ -4227,11 +4233,11 @@ impl AuthzService for AuthzServiceImpl {
                     parts
                 }),
                 assignments,
-                return_fields: Vec::new(),
+                return_fields: vec!["tenant_id".to_string(), "project_id".to_string()],
                 require_affected: false,
             };
             let context = authz_tenant_mutation_context(&metadata, "delete_policy_rule")?;
-            let (affected, _) = runtime
+            let (affected, rows) = runtime
                 .native_entity_update_for_service("authz", &context, op)
                 .await
                 .map_err(|err| {
@@ -4241,10 +4247,33 @@ impl AuthzService for AuthzServiceImpl {
                     )
                 })?;
             deleted = affected > 0;
+            if deleted {
+                let row = rows.first().ok_or_else(|| {
+                    authz_internal_status(
+                        "delete_policy_rule",
+                        "deleted policy scope is unavailable",
+                    )
+                })?;
+                let scope = |field| match row.get(field) {
+                    Some(serde_json::Value::String(value)) => Ok(value.as_str()),
+                    Some(serde_json::Value::Null) => Ok(""),
+                    _ => Err(authz_internal_status(
+                        "delete_policy_rule",
+                        "deleted policy scope has an invalid field",
+                    )),
+                };
+                self.bump_authz_revision(
+                    scope("tenant_id")?,
+                    scope("project_id")?,
+                    authz_entity_pb::AuthzChangeType::Policy,
+                    "policy-delete",
+                    &req.deleted_by,
+                )
+                .await?;
+            }
         } else {
             self.require_snapshot_fallback()?;
         }
-        self.invalidate_snapshot_cache();
         Ok(Response::new(authz_pb::DeletePolicyRuleResponse {
             deleted,
         }))

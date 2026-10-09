@@ -655,7 +655,6 @@ impl AuthzServiceImpl {
                 actor,
             )
             .await?;
-        self.invalidate_snapshot_cache();
         Ok((policy_rev, rel_rev))
     }
 
