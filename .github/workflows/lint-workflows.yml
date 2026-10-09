@@ -1,6 +1,6 @@
-name: Lint Â· Workflows
+name: Lint · Workflows
 
-# 15.0.1 â€” actionlint over every workflow + composite action. Catches the runner
+# 15.0.1 — actionlint over every workflow + composite action. Catches the runner
 # semantics YAML-parse can't (bad `uses:`, shell typos, expression errors,
 # undefined needs). Standalone + additive: does not alter any existing required
 # check. Make it a required check only after the consolidation lands clean.
