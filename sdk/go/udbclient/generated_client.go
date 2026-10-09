@@ -700,7 +700,10 @@ type versionClientStream struct {
 func (s *versionClientStream) Header() (metadata.MD, error) {
 	s.once.Do(func() {
 		s.header, s.err = s.ClientStream.Header()
-		if s.err == nil {
+		// A nil header and nil error means a trailers-only termination in
+		// grpc-go. Its actual RPC status is available from RecvMsg, so an
+		// absent initial version must not replace that server refusal.
+		if s.err == nil && s.header != nil {
 			s.err = s.client.checkServerVersion(s.header)
 		}
 		if s.err != nil {
@@ -716,7 +719,16 @@ func (s *versionClientStream) RecvMsg(message any) error {
 	if _, err := s.Header(); err != nil {
 		return err
 	}
-	return s.ClientStream.RecvMsg(message)
+	err := s.ClientStream.RecvMsg(message)
+	if s.header == nil && (err == nil || err == io.EOF) {
+		// Even an empty successful stream must satisfy strict version
+		// negotiation. Failed streams retain their actual status/trailers.
+		if versionErr := s.client.checkServerVersion(nil); versionErr != nil {
+			s.cancel()
+			return versionErr
+		}
+	}
+	return err
 }
 
 type cancelOnRecvStream struct {
