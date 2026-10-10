@@ -67,8 +67,14 @@ if (!wrappers[".google.protobuf.Struct"]?.__udb) {
     fromObject(this: any, object: any, depth = 0) {
       const structMessage = object instanceof protobuf.Message
         && object.$type?.fullName === ".google.protobuf.Struct";
-      if (object instanceof this.ctor || structMessage || normalizedStructs.has(object)) {
+      if (object instanceof this.ctor || normalizedStructs.has(object)) {
         return this.fromObject(object, depth);
+      }
+      if (structMessage) {
+        // A foreign constructor's Value prototypes expose inactive oneof
+        // defaults. Passing them to this converter would install false/0/""
+        // as real fields. Decode its active members before target conversion.
+        return this.fromObject(jsToStruct(structWireToObject(object, depth), depth), depth);
       }
       return this.fromObject(jsToStruct(object, depth), depth);
     },
@@ -80,12 +86,22 @@ if (!wrappers[".google.protobuf.Struct"]?.__udb) {
 
 /** Read a google.protobuf.Struct response (explicit wire shape) into plain JS. */
 export function structToObject(struct: any): Record<string, unknown> {
+  return structWireToObject(struct, 0);
+}
+
+function structWireToObject(struct: any, depth: number): Record<string, unknown> {
+  checkDepth(depth);
   const out: Record<string, unknown> = {};
-  for (const [k, v] of Object.entries(struct?.fields ?? {})) out[k] = valueToJs(v);
+  for (const [k, v] of Object.entries(struct?.fields ?? {})) {
+    Object.defineProperty(out, k, {
+      value: valueToJs(v, depth + 1), enumerable: true, configurable: true, writable: true,
+    });
+  }
   return out;
 }
 
-function valueToJs(v: any): unknown {
+function valueToJs(v: any, depth: number): unknown {
+  checkDepth(depth);
   if (v == null) return undefined;
   switch (v.kind) {
     case "nullValue":
@@ -97,15 +113,22 @@ function valueToJs(v: any): unknown {
     case "boolValue":
       return v.boolValue;
     case "structValue":
-      return structToObject(v.structValue);
+      return structWireToObject(v.structValue, depth + 1);
     case "listValue":
-      return (v.listValue?.values ?? []).map(valueToJs);
+      checkDepth(depth + 1);
+      return (v.listValue?.values ?? []).map((value: any) => valueToJs(value, depth + 2));
   }
-  if (v.stringValue !== undefined) return v.stringValue;
-  if (v.numberValue !== undefined) return v.numberValue;
-  if (v.boolValue !== undefined) return v.boolValue;
-  if (v.structValue !== undefined) return structToObject(v.structValue);
-  if (v.listValue !== undefined) return (v.listValue.values ?? []).map(valueToJs);
-  if (v.nullValue !== undefined) return null;
+  // Plain wire responses need not carry the oneof discriminator. Inherited
+  // protobuf defaults are never evidence that a member is actually present.
+  const owns = (field: string) => Object.prototype.hasOwnProperty.call(v, field);
+  if (owns("stringValue") && v.stringValue !== undefined) return v.stringValue;
+  if (owns("numberValue") && v.numberValue !== undefined) return v.numberValue;
+  if (owns("boolValue") && v.boolValue !== undefined) return v.boolValue;
+  if (owns("structValue") && v.structValue != null) return structWireToObject(v.structValue, depth + 1);
+  if (owns("listValue") && v.listValue != null) {
+    checkDepth(depth + 1);
+    return (v.listValue.values ?? []).map((value: any) => valueToJs(value, depth + 2));
+  }
+  if (owns("nullValue") && v.nullValue !== undefined) return null;
   return undefined;
 }

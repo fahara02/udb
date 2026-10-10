@@ -602,6 +602,251 @@ mod tests {
     use super::*;
 
     #[test]
+    fn embedded_sdk_live_vector_surface_preserves_direct_api_without_row_projection() {
+        use crate::planning::broker::{
+            RequestContext, VectorSearchPlanRequest, VectorUpsertPlanRequest,
+            build_vector_search_plan, build_vector_upsert_plan,
+        };
+
+        const PATH: &str = "udb/sdk/live/v1/sdk_live.proto";
+        const COLLECTION: &str = "sdk_live_records";
+        let descriptors = <prost_types::FileDescriptorSet as prost::Message>::decode(
+            embedded_file_descriptor_set(),
+        )
+        .expect("actual compiled broker descriptor must decode");
+        let file = descriptors
+            .file
+            .iter()
+            .find(|file| file.name.as_deref() == Some(PATH))
+            .expect("compiled descriptor must include the SDK live contract");
+        let vector_message = file
+            .message_type
+            .iter()
+            .find(|message| message.name.as_deref() == Some("SdkLiveVectorSurface"))
+            .expect("the independent vector declaration must enter the actual descriptor");
+        assert!(vector_message.field.is_empty());
+
+        // The serving manifest is produced from annotated source, not from the
+        // descriptor's unknown extension bytes. Exercise that real parser path.
+        let (_, source) = embedded_broker_protos()
+            .into_iter()
+            .find(|(path, _)| path == PATH)
+            .expect("actual embedded SDK source must exist");
+        let report = parse_proto_source(source, PATH, &ParserConfig::default())
+            .expect("actual SDK live source must parse");
+        let surface = report
+            .schemas
+            .iter()
+            .find(|schema| schema.message_name == "SdkLiveVectorSurface")
+            .expect("source parser must retain a non-table vector declaration");
+        assert!(!surface.is_table);
+        assert!(surface.columns.is_empty());
+        let manifest = CatalogManifest::from_schemas(&report.schemas)
+            .expect("actual SDK source must produce the serving manifest");
+        assert!(
+            manifest.validation_errors.is_empty(),
+            "{:?}",
+            manifest.validation_errors
+        );
+        assert_eq!(
+            manifest.tables.len(),
+            1,
+            "the vector surface creates no extra canonical table"
+        );
+        let table = manifest
+            .table("udb_sdk_live", COLLECTION)
+            .expect("relational SDK table is retained");
+        assert_eq!(table.message_name, "SdkLiveRecord");
+        assert_eq!(table.primary_key, ["record_id"]);
+        assert_eq!(
+            table
+                .columns
+                .iter()
+                .map(|column| column.column_name.as_str())
+                .collect::<Vec<_>>(),
+            [
+                "record_id",
+                "tenant_id",
+                "project_id",
+                "lookup_key",
+                "payload",
+                "revision",
+                "blob_ref"
+            ],
+        );
+        assert_eq!(table.required_scope, "udb:read");
+        assert_eq!(table.cdc_topic, "udb.sdk.live.records.cdc");
+        assert!(!table.enable_rls && !table.force_rls && !table.audit_fields);
+        assert!(table.indexes.iter().any(|index| {
+            index.name == "idx_sdk_live_records_lookup"
+                && index.unique
+                && index.columns == ["lookup_key"]
+        }));
+        assert!(
+            table
+                .columns
+                .iter()
+                .any(|column| column.column_name == "lookup_key" && column.unique)
+        );
+        assert!(
+            table
+                .materialized_views
+                .iter()
+                .any(|view| view.name == "mv_test" && view.schema == "public")
+        );
+
+        let vector_stores = manifest
+            .stores
+            .iter()
+            .filter(|store| store.store_kind == "vector")
+            .collect::<Vec<_>>();
+        assert_eq!(vector_stores.len(), 1);
+        let vector = vector_stores[0];
+        assert_eq!(vector.logical_name, "SdkLiveVectorSurface");
+        assert_eq!(vector.resource_name, COLLECTION);
+        assert_eq!(vector.backend, "qdrant");
+        assert!(vector.owner_schema != table.schema || vector.owner_table != table.table);
+        assert!(
+            vector
+                .options
+                .iter()
+                .any(|option| option.key == "dimension" && option.value == "3")
+        );
+        assert!(
+            vector
+                .options
+                .iter()
+                .any(|option| option.key == "distance" && option.value == "VECTOR_DISTANCE_COSINE")
+        );
+        assert!(
+            table
+                .projections
+                .iter()
+                .any(|projection| projection.projection_kind == "relational"
+                    && projection.backend == "postgres")
+        );
+        assert!(
+            table
+                .projections
+                .iter()
+                .any(|projection| projection.projection_kind == "object"
+                    && projection.resource_name == "udb-live-sdk")
+        );
+        assert!(
+            !manifest
+                .projections
+                .iter()
+                .any(|projection| projection.projection_kind == "vector"
+                    || projection.backend == "qdrant")
+        );
+        let row_plans = crate::runtime::projection::ProjectionPlan::from_manifest(&manifest);
+        let row_plan = row_plans
+            .iter()
+            .find(|plan| plan.source_schema == table.schema && plan.source_table == table.table)
+            .expect("actual object row-projection plan remains");
+        assert_eq!(row_plan.targets.len(), 1);
+        assert_eq!(row_plan.targets[0].projection_kind, "object");
+        assert_eq!(row_plan.targets[0].resource_name, "udb-live-sdk");
+        #[cfg(feature = "qdrant")]
+        assert!(
+            crate::runtime::executors::qdrant::pg_fts_hybrid::PgFtsHybridSource::for_collection(
+                &manifest, COLLECTION
+            )
+            .expect("direct vector surface cannot select an invalid FTS source")
+            .is_none()
+        );
+
+        // Force-sync/provisioning consumes the declared stores independently of
+        // canonical tables. It must still create the exact direct collection.
+        let artifacts = crate::generation::backends::qdrant::generate_qdrant_artifacts(
+            &manifest,
+            &SqlGenerationConfig::default(),
+        )
+        .expect("real Qdrant producer must generate the declared collection");
+        assert_eq!(artifacts.len(), 1);
+        assert_eq!(artifacts[0].rel_path, "sdk_live_records.json");
+        let body: serde_json::Value = serde_json::from_str(&artifacts[0].content)
+            .expect("generated collection body must be JSON");
+        assert_eq!(body["collection_name"], COLLECTION);
+        assert_eq!(body["vectors"]["size"], 3);
+        assert_eq!(body["vectors"]["distance"], "Cosine");
+        assert_eq!(
+            body["_udb_meta"]["proto_manifest_checksum"],
+            manifest.checksum_sha256
+        );
+
+        let context = RequestContext {
+            tenant_id: "sdk-owned-tenant".to_string(),
+            project_id: "sdk-owned-project".to_string(),
+            scopes: vec![
+                "udb:vector:read".to_string(),
+                "udb:vector:write".to_string(),
+            ],
+            ..Default::default()
+        };
+        let search = VectorSearchPlanRequest {
+            context: context.clone(),
+            collection: COLLECTION.to_string(),
+            vector_dimension: 3,
+            filter: serde_json::json!({}),
+            limit: 5,
+        };
+        let query_plan = build_vector_search_plan(&manifest, &search);
+        assert!(query_plan.passed(), "{:?}", query_plan.errors);
+        assert_eq!(query_plan.backend, "qdrant");
+        assert_eq!(query_plan.expected_dimension, 3);
+        let upsert = VectorUpsertPlanRequest {
+            context,
+            collection: COLLECTION.to_string(),
+            point_dimensions: vec![3],
+            payloads: vec![serde_json::json!({"label": "owned point"})],
+        };
+        let write_plan = build_vector_upsert_plan(&manifest, &upsert);
+        assert!(write_plan.passed(), "{:?}", write_plan.errors);
+        assert_eq!(write_plan.backend, "qdrant");
+        for check in 0..3 {
+            let mut invalid_search = search.clone();
+            let mut invalid_upsert = upsert.clone();
+            let expected = match check {
+                0 => {
+                    invalid_search.context.tenant_id.clear();
+                    invalid_upsert.context.tenant_id.clear();
+                    "tenant_id is required"
+                }
+                1 => {
+                    invalid_search.context.scopes = vec!["udb:read".to_string()];
+                    invalid_upsert.context.scopes = vec!["udb:write".to_string()];
+                    "scope udb:vector:"
+                }
+                _ => {
+                    invalid_search.vector_dimension = 2;
+                    invalid_upsert.point_dimensions = vec![2];
+                    "dimension mismatch"
+                }
+            };
+            let refused_read = build_vector_search_plan(&manifest, &invalid_search);
+            let refused_write = build_vector_upsert_plan(&manifest, &invalid_upsert);
+            assert!(!refused_read.passed() && !refused_write.passed());
+            assert!(
+                refused_read
+                    .errors
+                    .iter()
+                    .any(|error| error.contains(expected)),
+                "{:?}",
+                refused_read.errors
+            );
+            assert!(
+                refused_write
+                    .errors
+                    .iter()
+                    .any(|error| error.contains(expected)),
+                "{:?}",
+                refused_write.errors
+            );
+        }
+    }
+
+    #[test]
     fn native_services_global_switch_defaults_on() {
         assert!(NativeServicesSettings::default().enabled);
     }

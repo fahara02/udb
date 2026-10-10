@@ -2,6 +2,8 @@ package udbclient
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
 	"os"
 	"reflect"
 	"testing"
@@ -83,9 +85,55 @@ func TestLiveG2MetadataAndTypedPredicates(t *testing.T) {
 		t.Fatalf("G2 typed fixture Upsert failed: code=%s", status.Code(err))
 	}
 	written = true
+	// Diagnostics retain the actual receipt, fence and default retries. Only
+	// non-secret identity/position and typed refusal fields leave the process.
+	writeEvidence := func(phase string, elapsed time.Duration, callErr error) {
+		sess.fence.mu.Lock()
+		receipt := sess.fence.receipt
+		receipt.ProjectionTaskIds = append([]string(nil), receipt.ProjectionTaskIds...)
+		sess.fence.mu.Unlock()
+		evidence := map[string]any{
+			"phase": phase, "record_id": id, "tenant_id": sess.CanonicalTenantID,
+			"project_id": sess.CanonicalProjectID, "receipt": receipt,
+			"fence_max_wait_ms": readFenceWaitMs, "get_deadline_ms": 5000,
+			"elapsed_ms": float64(elapsed) / float64(time.Millisecond),
+			"code":       status.Code(callErr).String(),
+		}
+		var typed *Error
+		if errors.As(callErr, &typed) {
+			if detail, ok := typed.Detail(); ok {
+				evidence["error_detail"] = map[string]any{
+					"backend": detail.GetBackend(), "operation": detail.GetOperation(),
+					"kind": detail.GetKind().String(), "reason": detail.GetReason(),
+					"retryable": detail.GetRetryable(), "retry_after_ms": detail.GetRetryAfterMs(),
+				}
+			}
+		}
+		encoded, encodeErr := json.Marshal(evidence)
+		if encodeErr != nil {
+			t.Log("G2 diagnostic JSON could not be encoded")
+			return
+		}
+		t.Logf("G2 fenced lookup evidence: %s", encoded)
+		if reportPath := os.Getenv("UDB_G2_DIAGNOSTIC_REPORT"); reportPath != "" {
+			// The workflow samples this file during the real pending Table.Get.
+			// Rename prevents it from observing a partially written JSON object.
+			pending := reportPath + ".pending"
+			if writeErr := os.WriteFile(pending, encoded, 0600); writeErr != nil {
+				t.Log("G2 diagnostic report could not be written")
+				return
+			}
+			if renameErr := os.Rename(pending, reportPath); renameErr != nil {
+				t.Log("G2 diagnostic report could not be published")
+			}
+		}
+	}
+	writeEvidence("before_get", 0, nil)
 	getCtx, getCancel := context.WithTimeout(ctx, 5*time.Second)
+	getStarted := time.Now()
 	got, err := table.Get(getCtx, RowKey{keys[0][0]: lookup})
 	getCancel()
+	writeEvidence("after_get", time.Since(getStarted), err)
 	if err != nil || got.GetRecordId() != id || got.GetRevision() != exact || got.GetTenantId() != sess.CanonicalTenantID || got.GetProjectId() != sess.CanonicalProjectID {
 		t.Fatalf("G2 real unique lookup must return the owned exact row: code=%s", status.Code(err))
 	}

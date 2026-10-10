@@ -53,23 +53,6 @@ message SdkLiveRecord {
     pii_profile: "none"
     export_eligible: false
   };
-  // Message-level vector projection so the live suite's Vector{Search,Hybrid
-  // Search,Upsert,BatchUpsert} resolve a declared vector store.
-  // collection_name MUST be a Qdrant-valid token (ASCII letters/digits/hyphens/
-  // underscores, NO DOTS): a dotted name ("udb.sdk.live.v1.SdkLiveRecord") makes
-  // STARTUP force-sync abort with "Qdrant collection name may only contain ASCII
-  // letters, digits, hyphens, and underscores" and the whole broker fails to boot
-  // (verified twice). `sdk_live_records` matches the owner pg_table; the harness
-  // Vector bodies send this same string as request.collection so the manifest
-  // lookup (resource_name == request.collection) matches. dimension 3 matches the
-  // harness vector [0.1,0.2,0.3]. bug_report.md F/Lane-1.
-  option (udb.core.common.v1.vector_store) = {
-    backend: VECTOR_BACKEND_QDRANT
-    collection_name: "sdk_live_records"
-    dimension: 3
-    distance: VECTOR_DISTANCE_COSINE
-  };
-
   string record_id = 1 [(udb.core.common.v1.pg_column) = { column_name: "record_id" sql_type: "VARCHAR(80)" primary_key: true not_null: true }];
   string tenant_id = 2 [(udb.core.common.v1.pg_column) = { column_name: "tenant_id" tenant_column: true sql_type: "VARCHAR(120)" not_null: true }];
   string project_id = 3 [(udb.core.common.v1.pg_column) = { column_name: "project_id" project_column: true sql_type: "VARCHAR(120)" not_null: true }];
@@ -83,4 +66,20 @@ message SdkLiveRecord {
   // PutObject / GetObject / GeneratePresignedUrl against that bucket. The column
   // itself is a nullable object-key reference; the relational CRUD path ignores it.
   string blob_ref = 7 [(udb.core.common.v1.pg_column) = { column_name: "blob_ref" sql_type: "TEXT" }, (udb.core.common.v1.storage) = { backend: STORAGE_BACKEND_MINIO bucket_env_key: "udb-live-sdk" key_prefix: "go/" presigned_read: true presigned_write: true presigned_ttl_seconds: 60 }];
+}
+
+// Declared direct-vector API surface used by the live SDK conformance suite.
+// This collection is independent of SdkLiveRecord relational writes: that row
+// has no vector/embedding field and therefore cannot materialize a vector point.
+// Keep the harness collection token and dimension stable. Native vector planners
+// still require a tenant plus udb:vector:read or udb:vector:write, respectively.
+// With no pg_table, this declaration creates no canonical row table or automatic
+// row projection. Collection provisioning still comes from vector_store.
+message SdkLiveVectorSurface {
+  option (udb.core.common.v1.vector_store) = {
+    backend: VECTOR_BACKEND_QDRANT
+    collection_name: "sdk_live_records"
+    dimension: 3
+    distance: VECTOR_DISTANCE_COSINE
+  };
 }

@@ -81,12 +81,27 @@ test("actual Struct messages serialize unchanged and wrapper converters preserve
     fromObject(value: unknown, depth?: number): protobuf.Message;
     toObject(value: protobuf.Message, options?: protobuf.IConversionOptions, depth?: number): object;
   };
-  const input = { fields: { stringValue: "literal" }, predicate: { $in: ["a", "b"] } };
+  const input = {
+    fields: { stringValue: "literal" }, predicate: { $in: ["a", "b"] },
+    emptyString: "", zero: 0, falseValue: false, nullValue: null,
+    number: 1.5, trueValue: true,
+    literalKeys: JSON.parse('{"__proto__":{"stringValue":"own data"},"constructor":false,"prototype":0}'),
+    nested: [{ text: "", count: 0, enabled: false, missing: null }, [false, 0, "", null]],
+  };
   const message = struct.fromObject(input);
   assert.equal(struct.fromObject(message), message, "a genuine protobuf message remains the same instance");
+  assert.deepEqual(structToObject(message), input, "only actual oneof members decode from a genuine message");
+  const literalKeys = structToObject(message).literalKeys as Record<string, unknown>;
+  assert.equal(Object.getPrototypeOf(literalKeys), Object.prototype);
+  assert.ok(Object.prototype.hasOwnProperty.call(literalKeys, "__proto__"));
+  assert.deepEqual(literalKeys["__proto__"], { stringValue: "own data" });
+  const before = JSON.stringify(struct.toObject(message, { oneofs: true }));
   const method = selectWireMethod();
-  const decoded = method.requestDeserialize(method.requestSerialize({ filter: message }));
+  const bytes = method.requestSerialize({ filter: message });
+  assert.deepEqual(bytes, method.requestSerialize({ filter: input }), "foreign-root and plain JSON Select bytes match");
+  const decoded = method.requestDeserialize(bytes);
   assert.deepEqual(structToObject(decoded.filter), input);
+  assert.equal(JSON.stringify(struct.toObject(message, { oneofs: true })), before, "foreign-root conversion leaves its message untouched");
   const limit = (protobuf.util as unknown as { recursionLimit: number }).recursionLimit;
   assert.ok(Number.isInteger(limit) && limit > 0);
   assert.throws(() => converter.fromObject({}, limit + 1), /maximum nesting depth exceeded/);
@@ -97,6 +112,11 @@ test("actual Struct messages serialize unchanged and wrapper converters preserve
   const cycle: Record<string, unknown> = {};
   cycle.self = cycle;
   assert.throws(() => method.requestSerialize({ filter: cycle }), /maximum nesting depth exceeded/);
+  const messageCycle = struct.fromObject({ nested: {} }) as protobuf.Message & {
+    fields: Record<string, { structValue: protobuf.Message }>;
+  };
+  messageCycle.fields.nested.structValue = messageCycle;
+  assert.throws(() => method.requestSerialize({ filter: messageCycle }), /maximum nesting depth exceeded/);
 });
 
 // ── 09.1: ErrorDetail decode + UdbError.kind/kindName/retryable accessors ─────

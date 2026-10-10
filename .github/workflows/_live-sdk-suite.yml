@@ -826,6 +826,173 @@ jobs:
           done
           mkdir -p bench-output/logs
           bash bench-output/reset.sh go-correctness 2>&1 | tee bench-output/logs/go-correctness-reset.log
+          # Sample the actual G2 receipt's owned tasks during the unchanged 5s
+          # lookup, then retain this broker phase before subsequent resets.
+          export UDB_G2_DIAGNOSTIC_REPORT="${GITHUB_WORKSPACE}/bench-output/logs/go-g2-evidence.json"
+          rm -f "$UDB_G2_DIAGNOSTIC_REPORT" "${UDB_G2_DIAGNOSTIC_REPORT}.pending"
+          cat > bench-output/g2-capture.py <<'PY'
+          import json
+          import os
+          from pathlib import Path
+          import re
+          import signal
+          import subprocess
+          import time
+
+          report_path = Path(os.environ["UDB_G2_DIAGNOSTIC_REPORT"])
+          output_path = report_path.with_name("go-g2-pg-samples.jsonl")
+          stop = False
+
+          def stop_owned_capture(signum, frame):
+              global stop
+              stop = True
+
+          signal.signal(signal.SIGTERM, stop_owned_capture)
+          signal.signal(signal.SIGINT, stop_owned_capture)
+          wait_deadline = time.monotonic() + 15 * 60
+          report = None
+          while not stop and time.monotonic() < wait_deadline:
+              if report_path.exists():
+                  try:
+                      raw = report_path.read_bytes()
+                      if len(raw) > 128 * 1024:
+                          raise ValueError("bounded report exceeded")
+                      report = json.loads(raw)
+                      break
+                  except (OSError, ValueError):
+                      pass
+              time.sleep(0.1)
+
+          if report is None:
+              output_path.write_text(json.dumps({"evidence_status": "G2 report not observed"}) + "\n")
+              raise SystemExit(0)
+
+          keys = report["receipt"]["projection_task_ids"] or []
+          if len(keys) > 64 or any(not re.fullmatch(r"[0-9a-f]{64}", key) for key in keys):
+              raise SystemExit("G2 receipt keys are not bounded natural keys")
+          project = report["project_id"]
+          record = report["record_id"]
+          if not re.fullmatch(r"[0-9a-fA-F-]{36}", project) or not re.fullmatch(r"g2-[0-9a-fA-F-]{36}", record):
+              raise SystemExit("G2 owned scope/record identity is invalid")
+          # Values use psql's SQL-literal quoting. No query text, payload, credentials,
+          # free-form backend error, or environment values enter diagnostic artifacts.
+          sql = r"""
+          SELECT jsonb_build_object(
+           'observed_at',clock_timestamp(),
+           'database',current_database(),
+           'in_recovery',pg_is_in_recovery(),
+           'current_wal_lsn',pg_current_wal_lsn()::TEXT,
+           'replay_wal_lsn',pg_last_wal_replay_lsn()::TEXT,
+           'tasks',COALESCE((SELECT jsonb_agg(jsonb_build_object(
+             'task_id',t.task_id,'idempotency_key',t.idempotency_key,
+             'project_id',t.project_id,'record_id',t.source_row_key->>'record_id',
+             'backend',t.target_backend,'instance',t.target_instance,
+             'kind',t.projection_kind,'operation',t.operation,'status',t.status,
+             'retry_count',t.retry_count,'updated_at',t.updated_at,
+             'next_retry_at',t.next_retry_at,
+             'error_class',CASE
+                WHEN t.last_error LIKE '%vector projection requires a vector_field/embedding_field option or vector payload field%'
+                  THEN 'missing_vector_payload'
+                WHEN COALESCE(t.last_error,'')='' THEN 'none'
+                ELSE 'other_redacted' END))
+            FROM udb_system.udb_projection_tasks AS t
+            WHERE t.idempotency_key IN
+               (SELECT jsonb_array_elements_text(:'receipt_keys'::JSONB))
+              AND t.project_id=:'project_id'
+              AND t.source_row_key->>'record_id'=:'record_id'),'[]'::JSONB),
+           'pg_waits',COALESCE((SELECT jsonb_agg(jsonb_build_object(
+              'pid',a.pid,'state',a.state,'wait_event_type',a.wait_event_type,
+              'wait_event',a.wait_event,'query_start',a.query_start,'xact_start',a.xact_start,
+              'blocking_pids',pg_blocking_pids(a.pid)))
+            FROM pg_stat_activity AS a
+            WHERE a.datname=current_database() AND a.pid<>pg_backend_pid()
+              AND a.backend_type='client backend'),'[]'::JSONB)
+          );
+          """
+          env = dict(os.environ)
+          env["PGPASSWORD"] = "udb"
+          env["PGCONNECT_TIMEOUT"] = "1"
+          env["PGOPTIONS"] = "-c statement_timeout=750 -c lock_timeout=250"
+          args = ["psql", "-X", "--no-password", "-At", "-h", "localhost", "-p", "5432",
+                  "-U", "udb", "-d", "udb_ci", "-v", "ON_ERROR_STOP=1",
+                  "-v", "receipt_keys="+json.dumps(keys), "-v", "project_id="+project,
+                  "-v", "record_id="+record]
+          sample_deadline = time.monotonic() + 10
+          post_get_samples = 0
+          with output_path.open("w") as output:
+              for sample in range(40):
+                  if stop or time.monotonic() >= sample_deadline:
+                      break
+                  try:
+                      result = subprocess.run(args, input=sql, text=True, capture_output=True,
+                                              env=env, timeout=2, check=False)
+                      value = json.loads(result.stdout) if result.returncode == 0 else {"capture_exit_code":result.returncode}
+                      value["sample"] = sample
+                      output.write(json.dumps(value, separators=(",",":"))+"\n")
+                      output.flush()
+                  except (subprocess.TimeoutExpired, OSError, ValueError):
+                      output.write(json.dumps({"sample":sample,"evidence_status":"bounded PG capture failed"})+"\n")
+                      output.flush()
+                  try:
+                      latest = json.loads(report_path.read_bytes())
+                      if latest.get("phase") == "after_get":
+                          post_get_samples += 1
+                          if post_get_samples >= 2:
+                              break
+                  except (OSError, ValueError):
+                      pass
+                  time.sleep(0.25)
+          PY
+          python bench-output/g2-capture.py &
+          g2_capture_pid=$!
+          preserve_g2_evidence() {
+            result=$?
+            trap - EXIT
+            kill -TERM "$g2_capture_pid" 2>/dev/null || true
+            capture_result=0
+            wait "$g2_capture_pid" || capture_result=$?
+            if [ "$capture_result" -ne 0 ]; then
+              echo "::error::Bounded G2 state capture failed; projection state proof is missing"
+              printf '{"evidence_status":"bounded capture process failed","capture_exit_code":%d}\n' "$capture_result" > bench-output/logs/go-g2-capture-status.json
+              if [ "$result" -eq 0 ]; then result=1; fi
+            fi
+            if python - <<'PY'
+          import os
+          from pathlib import Path
+          import re
+          source = Path("/tmp/udb-bench.log")
+          output = Path("bench-output/logs/go-correctness-broker.log")
+          if source.exists():
+              text = re.sub(r"\x1b\[[0-9;]*[A-Za-z]", "", source.read_text(encoding="utf-8", errors="replace"))
+              for key,value in os.environ.items():
+                  if re.search(r"PASSWORD|SECRET|TOKEN|API.?KEY|PRIVATE.?KEY",key,re.I) and len(value)>=8:
+                      text = text.replace(value,"[redacted]")
+              text = re.sub(r"(?i)Bearer\s+[^\s\"']+", "Bearer [redacted]", text)
+              text = re.sub(r"\beyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\b", "[redacted JWT]", text)
+              text = re.sub(r"(?i)((?:postgres(?:ql)?|mongodb(?:\+srv)?|redis|https?)://)[^/\s@]+@",r"\1[redacted]@",text)
+              # Preserve only structured tracing lines. SQL-bearing records and
+              # unstructured continuations may contain multiline query text.
+              lines = []
+              omitted = 0
+              for line in text.splitlines():
+                  if not re.match(r"^\d{4}-\d{2}-\d{2}T", line) or re.search(r"\b(?:sql|query|statement)\s*=", line, re.I):
+                      omitted += 1
+                      continue
+                  lines.append(line)
+              lines.append(f"[omitted {omitted} SQL-bearing or unstructured diagnostic lines]")
+              output.write_text("\n".join(lines)+"\n", encoding="utf-8")
+          else:
+              output.write_text("No owned broker phase log available\n", encoding="utf-8")
+          PY
+            then
+              :
+            else
+              echo "::error::Go-correctness broker log capture failed; phase log proof is missing"
+              if [ "$result" -eq 0 ]; then result=1; fi
+            fi
+            exit "$result"
+          }
+          trap preserve_g2_evidence EXIT
           # Packages share a broker; serialize their mutable fixtures. Only the
           # already measured canonical performance sweep is excluded.
           ( cd sdk/go && go test ./... -p 1 -run '^TestLive' -skip '^TestLivePerf$' -count=1 -v -timeout 15m ) 2>&1 | tee bench-output/logs/go-correctness.log
