@@ -74,7 +74,7 @@ test("actual Select serializer preserves nested predicates and literal fields da
 });
 
 test("actual Struct messages serialize unchanged and wrapper converters preserve depth", () => {
-  const schema = protobuf.common["google/protobuf/struct.proto"];
+  const schema = protobuf.common.get("google/protobuf/struct.proto");
   assert.ok(schema, "protobufjs's canonical Struct descriptor must exist");
   const struct = protobuf.Root.fromJSON(schema).lookupType("google.protobuf.Struct");
   const converter = struct as unknown as {
