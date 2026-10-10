@@ -26,7 +26,8 @@ name: CI
 # branch that is merged directly (the normal flow here) got zero checks. One
 # broke the lib test target, the other broke every build with the `redis`
 # feature; both were found only after landing. `cancel-in-progress` below keeps
-# repeated pushes to the same branch from piling up.
+# repeated pushes to a work branch from piling up. Main retains its active
+# evidence-producing run while the latest commit waits in the same group.
 on:
   push:
     branches:
@@ -43,7 +44,7 @@ on:
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 permissions:
   contents: read
@@ -560,7 +561,13 @@ jobs:
         # Match the unsuffixed release assets: this proof must also work when
         # Kafka and its native client are absent from the binary.
         shell: bash
-        run: cargo build --locked --no-default-features --features "$RELEASE_BINARY_FEATURES" --bin udb
+        run: |
+          if [ "${{ runner.os }}" = "Windows" ]; then
+            msvc_bin="$(cygpath -u "${VCToolsInstallDir}bin\\Hostx64\\x64")"
+            export PATH="${msvc_bin}:/c/Strawberry/perl/bin:/c/Program Files/NASM:${PATH}"
+            export CARGO_TARGET_X86_64_PC_WINDOWS_MSVC_LINKER="${msvc_bin}/link.exe"
+          fi
+          cargo build --locked --no-default-features --features "$RELEASE_BINARY_FEATURES" --bin udb
       - name: Upload portable embedded dev broker
         uses: actions/upload-artifact@v4
         with:

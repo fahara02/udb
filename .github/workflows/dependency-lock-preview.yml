@@ -6,7 +6,7 @@ on:
       base_commit:
         description: "Exact immutable reviewed source commit"
         required: true
-        default: "678fec4160236f7f392f47b89d03f87012591d77"
+        default: "df2f100f20374eaf9748500b3715dc22c7f4969c"
         type: string
       manifest_gzip_base64:
         description: "Gzip then base64 of the frozen Cargo.toml; maximum 128 KiB decoded"
@@ -15,7 +15,7 @@ on:
       manifest_sha256:
         description: "Expected lowercase SHA-256 of the frozen manifest bytes"
         required: true
-        default: "b2ba648db11408d5ae73e7b8bd18eb7208d63e64b47d418dc070fbf6bf6d7778"
+        default: "0d25b63963da6b02c18f6d2dbed0e58bb0d6dabd27db9994ee899199d3a8dafd"
         type: string
 
 permissions:
@@ -30,8 +30,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
-      LOCK_PREVIEW_BASE_SHA: 678fec4160236f7f392f47b89d03f87012591d77
-      LOCK_PREVIEW_MANIFEST_SHA256: b2ba648db11408d5ae73e7b8bd18eb7208d63e64b47d418dc070fbf6bf6d7778
+      LOCK_PREVIEW_BASE_SHA: df2f100f20374eaf9748500b3715dc22c7f4969c
+      LOCK_PREVIEW_MANIFEST_SHA256: 0d25b63963da6b02c18f6d2dbed0e58bb0d6dabd27db9994ee899199d3a8dafd
       LOCK_PREVIEW_TOOLCHAIN: 1.88.0
       CARGO_RESOLVER_INCOMPATIBLE_RUST_VERSIONS: fallback
       CARGO_TERM_COLOR: never
@@ -166,15 +166,16 @@ jobs:
               raise SystemExit("unreviewed repository Cargo configuration in the preview")
           canonical = tomllib.loads(original.decode("utf-8"))
           expected = copy.deepcopy(canonical)
-          expected["features"]["postgres"] = ["dep:postgresql_embedded"]
-          expected["dependencies"]["postgresql_embedded"] = {
-              "version": "=0.19.0", "default-features": False,
-              "features": ["tokio", "rustls", "theseus"], "optional": True,
-          }
+          expected["target"] = {"cfg(windows)": {"dependencies": {"windows-sys": {
+              "version": "=0.61.2", "features": [
+                  "Win32_Foundation", "Win32_Security", "Win32_Security_Authorization",
+                  "Win32_Storage_FileSystem", "Win32_System_Threading",
+              ],
+          }}}}
           if candidate != expected:
-              raise SystemExit("manifest has changes beyond the reviewed optional dependency and feature")
-          if any(package["name"] == "postgresql_embedded" for package in tomllib.loads(baseline_lock.decode())["package"]):
-              raise SystemExit("baseline already contains the proposed dependency")
+              raise SystemExit("manifest has changes beyond the reviewed Windows-only native file adapter dependency")
+          if not any(package["name"] == "windows-sys" and package["version"] == "0.61.2" for package in tomllib.loads(baseline_lock.decode())["package"]):
+              raise SystemExit("baseline must already contain the exact official windows-sys package")
           (diagnostics / "Cargo.original.toml").write_bytes(original)
           (diagnostics / "Cargo.frozen.toml").write_bytes(supplied)
           (diagnostics / "Cargo.baseline.lock").write_bytes(baseline_lock)
@@ -265,12 +266,15 @@ jobs:
               if Path(metadata["workspace_root"]).resolve() != root.resolve() or metadata.get("resolve") is None:
                   raise SystemExit("metadata must describe the actual resolved workspace")
               own = [package for package in metadata["packages"] if package["name"] == "udb" and Path(package["manifest_path"]).resolve() == root / "Cargo.toml"]
-              embedded = [package for package in metadata["packages"] if package["name"] == "postgresql_embedded"]
-              if len(own) != 1 or own[0]["version"] != "0.5.31" or len(embedded) != 1 or embedded[0]["version"] != "0.19.0":
-                  raise SystemExit("metadata does not contain the reviewed workspace and exact dependency")
+              windows = [package for package in metadata["packages"] if package["name"] == "windows-sys" and package["version"] == "0.61.2"]
+              if len(own) != 1 or own[0]["version"] != "0.5.31" or len(windows) != 1:
+                  raise SystemExit("metadata does not contain the reviewed workspace and exact native Windows dependency")
               node = next((node for node in metadata["resolve"]["nodes"] if node["id"] == own[0]["id"]), None)
-              if node is None or "postgres" not in node["features"] or not any(dep["pkg"] == embedded[0]["id"] for dep in node["deps"]):
-                  raise SystemExit("metadata must enable the actual postgres optional dependency edge")
+              if node is None or "postgres" not in node["features"] or not any(dep["pkg"] == windows[0]["id"] for dep in node["deps"]):
+                  raise SystemExit("metadata must contain the actual reviewed Windows-only root dependency edge")
+              declared = [dep for dep in own[0]["dependencies"] if dep["name"] == "windows-sys"]
+              if len(declared) != 1 or declared[0]["target"] != "cfg(windows)" or declared[0]["req"] != "=0.61.2":
+                  raise SystemExit("native adapter dependency must remain exact and Windows only")
           if (root / "Cargo.lock").read_bytes() != resolved:
               raise SystemExit("locked metadata modified the resolved lock")
           before = tomllib.loads((diagnostics / "Cargo.baseline.lock").read_text(encoding="utf-8"))
@@ -293,8 +297,15 @@ jobs:
               "lock_header_after": {key: value for key, value in after.items() if key != "package"},
               "existing_package_changes_require_review": True,
           }
-          if not any(package["name"] == "postgresql_embedded" and package["version"] == "0.19.0" for package in new.values()):
-              raise SystemExit("resolved lock lacks the reviewed exact dependency")
+          if changes["added"] or changes["removed"]:
+              raise SystemExit("native Windows edge must reuse existing official registry packages without package replacement")
+          if len(changes["changed_existing"]) != 1 or changes["changed_existing"][0]["identity"][:2] != ["udb", "0.5.31"]:
+              raise SystemExit("only the existing root dependency edge may change")
+          delta = changes["changed_existing"][0]
+          expected = dict(delta["before"])
+          expected["dependencies"] = sorted(expected["dependencies"] + ["windows-sys 0.61.2"])
+          if delta["after"] != expected:
+              raise SystemExit("resolved root lock delta differs from the exact reviewed native Windows edge")
           (diagnostics / "lock-changes.json").write_text(json.dumps(changes, indent=2) + "\n", encoding="utf-8")
           tracked = subprocess.check_output(["git", "diff", "--name-only", "-z"], cwd=root).decode().split("\0")
           if set(filter(None, tracked)) != {"Cargo.toml", "Cargo.lock"}:
@@ -338,7 +349,7 @@ jobs:
               file_ledger_sha256=hashlib.sha256((output / "file-ledger.json").read_bytes()).hexdigest(),
               compilation_executed=False, application_execution=False, integration_authorized=False,
               claims=["actual CI dependency resolution", "actual default and postgres-only locked metadata"],
-              proof_owed=["package-change review", "frozen manifest and lock normal-commit integration", "MSRV and platform compilation", "embedded PostgreSQL lifecycle and Windows process proof"])
+              proof_owed=["package-change review", "frozen manifest and lock normal-commit integration", "MSRV and platform compilation", "actual Windows owner/DACL filesystem proof", "actual Windows native broker onboarding proof"])
           (output / "provenance.json").write_text(json.dumps(provenance, indent=2) + "\n", encoding="utf-8")
           PY
       - name: Preserve the successful resolved lock and provenance

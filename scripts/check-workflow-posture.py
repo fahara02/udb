@@ -1187,7 +1187,7 @@ CI_TOPOLOGY_REQUIREMENTS = (
     ("      - 'feat/**'", "work-branch push trigger (feat/**)"),
     ("      - 'release/**'", "work-branch push trigger (release/**)"),
     ("  pull_request:" + chr(10) + "    branches: [main]", "pull requests target main"),
-    ("concurrency:\n  group: ci-${{ github.workflow }}-${{ github.ref }}\n  cancel-in-progress: true", "CI concurrency cancellation"),
+    ("concurrency:\n  group: ci-${{ github.workflow }}-${{ github.ref }}\n  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}", "CI retains active main proof and cancels superseded work branches"),
     ("permissions:\n  contents: read", "read-only CI permissions"),
     ("LIVE_BROKER_FEATURES:", "single live broker feature tier"),
     ("UDB skill wrapper drift guard", "skill wrapper drift CI step"),
@@ -7678,7 +7678,7 @@ on:
     branches: [main]
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 permissions:
   contents: read
 env:

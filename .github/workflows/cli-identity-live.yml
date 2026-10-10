@@ -37,7 +37,7 @@ jobs:
       UDB_GRPC_ADDR: 127.0.0.1:50051
       UDB_LIVE_TENANT: 10000000-0000-0000-0000-000000000004
       UDB_LIVE_PROJECT: default
-      UDB_LIVE_USERNAME: o4-operator@example.invalid
+      UDB_LIVE_USERNAME: o4-operator
       UDB_TLS_REQUIRED: "false"
       UDB_SERVICE_IDENTITY_REQUIRED: "false"
       UDB_ALLOW_DEGRADED_BACKENDS: "true"
@@ -104,7 +104,7 @@ jobs:
           }
           trap cleanup EXIT
           target/debug/udb auth bootstrap user \
-            --username "$UDB_LIVE_USERNAME" --email "$UDB_LIVE_USERNAME" \
+            --username "$UDB_LIVE_USERNAME" --email "o4-operator@example.invalid" \
             --password "$O4_OPERATOR_PASSWORD" --tenant "$UDB_LIVE_TENANT" \
             --project "$UDB_LIVE_PROJECT" > "$RUNNER_TEMP/o4-bootstrap.json"
           target/debug/udb serve proto "" "$UDB_GRPC_ADDR" > "$RUNNER_TEMP/o4-broker.log" 2>&1 &
