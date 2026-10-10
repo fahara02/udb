@@ -948,7 +948,7 @@ jobs:
           preserve_g2_evidence() {
             result=$?
             trap - EXIT
-            kill -TERM "$g2_capture_pid" 2>/dev/null || true
+            if kill -TERM "$g2_capture_pid" 2>/dev/null; then :; else :; fi
             capture_result=0
             wait "$g2_capture_pid" || capture_result=$?
             if [ "$capture_result" -ne 0 ]; then
