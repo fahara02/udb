@@ -21,6 +21,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 
 PROOF_WORKFLOWS = (
+    "cli-identity-live.yml",
     "capabilities-history-aba.yml",
     "branch-protection-audit.yml",
     "cdc-source-proof.yml",
@@ -51,6 +52,7 @@ DOCKER_PROOF_WORKFLOWS = {
 }
 
 ARTIFACT_PROOF_WORKFLOWS = DOCKER_PROOF_WORKFLOWS | {
+    "cli-identity-live.yml",
     "capabilities-history-aba.yml",
     "cdc-source-proof.yml",
     "sdk-producer-preview.yml",
@@ -249,6 +251,26 @@ INTEGRATION_COMPOSE_PROFILE_REQUIREMENTS = (
 )
 
 TARGETED_PROOF_WORKFLOW_REQUIREMENTS = {
+    "cli-identity-live.yml": (
+        ('cancel-in-progress: false', 'retained identity proof'),
+        ('postgres:16-alpine@sha256:', 'pinned actual PostgreSQL service'),
+        ('cargo build --locked --no-default-features --features postgres,runtime-logging --bin udb', 'actual CLI build'),
+        ('cli::identity_ops::tests::', 'identity source regression selector'),
+        ('8 passed; 0 failed; 0 ignored;', 'exact source regression count'),
+        ('broker_pid=$!', 'owned actual broker process'),
+        ('trap cleanup EXIT', 'owned broker cleanup'),
+        ('wait "$broker_pid"', 'owned process termination wait'),
+        ('python3 scripts/cli_identity_live.py', 'real native executable proof'),
+        ('Require actual completed cases and owned cleanup', 'always completed-case gate'),
+        ('len(cases) == len(required)', 'exact unique case count'),
+        ('proof["source_sha"] == os.environ["GITHUB_SHA"]', 'exact source receipt'),
+        ('proof["public_rpc_count_changed"] is False', 'unchanged public RPC contract'),
+        ('proof["cleanup_success"] is True', 'successful owned cleanup'),
+        ('"stale-key-native-rereview-and-replay"', 'real stale-key review'),
+        ('"up-preserves-inline-and-external-relative-references"', 'actual separate source reference test'),
+        ('if-no-files-found: error', 'required original receipt'),
+        ('retention-days: 14', 'bounded artifact retention'),
+    ),
     "capabilities-history-aba.yml": (
         ("baseline_commit:", "immutable source input"),
         ("default: 678fec4160236f7f392f47b89d03f87012591d77", "audited baseline"),
@@ -4319,6 +4341,7 @@ RETRY_SAFE_SERVED_SMOKE_REQUIREMENTS = (
 )
 
 LINT_WORKFLOW_TRIGGER_PATHS = (
+    ("scripts/cli_identity_live.py", "actual declarative identity proof"),
     ("scripts/capabilities_history_aba.py", "matched capabilities history runner"),
     ("scripts/extract-changelog-section.mjs", "release-notes extractor"),
     (".github/workflows/**", "workflow files"),
@@ -10014,6 +10037,13 @@ jobs:
 """
         for name in PROOF_WORKFLOWS:
             (wf / name).write_text(good, encoding="utf-8")
+        identity_good = good + "\n".join(needle for needle, _label in TARGETED_PROOF_WORKFLOW_REQUIREMENTS["cli-identity-live.yml"]) + "\n"
+        identity_path = wf / "cli-identity-live.yml"
+        identity_path.write_text(identity_good, encoding="utf-8")
+        for needle, label in TARGETED_PROOF_WORKFLOW_REQUIREMENTS["cli-identity-live.yml"]:
+            identity_path.write_text(identity_good.replace(needle, ""), encoding="utf-8")
+            assert any(label in failure for failure in check_targeted_proof_workflows(root)), label
+        identity_path.write_text(identity_good, encoding="utf-8")
         capabilities_good = good + "\n".join(
             needle for needle, _label in TARGETED_PROOF_WORKFLOW_REQUIREMENTS["capabilities-history-aba.yml"]
         ) + "\n"

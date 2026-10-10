@@ -33,6 +33,7 @@ mod env_template;
 mod evidence;
 mod gen_edge;
 mod help;
+mod identity_ops;
 mod init;
 mod init_prompt;
 mod native_app;

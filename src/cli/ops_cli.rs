@@ -2,10 +2,8 @@
 //! `udb data seed`. Each reads a declared state, shows how the live state
 //! differs, and (with `apply`) reconciles it; applying twice is a no-op.
 
+use super::identity_ops::{DeclaredAccount, IdentityFile, identity_command};
 use super::*;
-use udb::proto::udb::core::authn::entity::v1 as authn_entity_pb;
-use udb::proto::udb::core::authn::services::v1 as authn_pb;
-use udb::proto::udb::core::authn::services::v1::authn_service_client::AuthnServiceClient;
 
 pub(crate) fn run_ops_command(command: OpsCommand) -> i32 {
     let runtime = match tokio::runtime::Runtime::new() {
@@ -136,358 +134,6 @@ pub(super) fn load_policy_file(
             })
             .collect(),
     })
-}
-
-// ── udb identity diff|apply ─────────────────────────────────────────────────
-
-/// One declared service account in an identities file.
-#[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
-struct DeclaredAccount {
-    /// The service-account principal id (its UUID).
-    account: String,
-    /// The service identity the grant binds (unique across the deployment).
-    identity: String,
-    #[serde(default)]
-    project: String,
-    scopes: Vec<String>,
-    #[serde(default)]
-    reason: String,
-}
-
-#[derive(Debug, Clone, serde::Deserialize)]
-struct IdentityFile {
-    #[serde(default)]
-    tenant: String,
-    service_accounts: Vec<DeclaredAccount>,
-}
-
-/// The live grant facts the planner compares against.
-#[derive(Debug, Clone, PartialEq, Eq)]
-struct LiveGrant {
-    account: String,
-    identity: String,
-    project: String,
-    scopes: Vec<String>,
-    active: bool,
-    revision: i64,
-}
-
-/// What reconciling one declared account takes. Steps run in order; each
-/// later step uses the revision the previous one returned.
-#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize)]
-#[serde(tag = "step", rename_all = "snake_case")]
-enum IdentityStep {
-    Unchanged,
-    Create,
-    /// Move the identity's grant from another account (only with
-    /// `--allow-transfer`).
-    Transfer {
-        from: String,
-        expected_revision: i64,
-    },
-    RotateIdentity {
-        expected_revision: i64,
-    },
-    ReplaceScopes {
-        expected_revision: i64,
-    },
-    Refused {
-        reason: String,
-        detail: String,
-    },
-}
-
-fn sorted_scopes(scopes: &[String]) -> Vec<String> {
-    let mut out: Vec<String> = scopes
-        .iter()
-        .map(|scope| scope.trim().to_string())
-        .filter(|scope| !scope.is_empty())
-        .collect();
-    out.sort();
-    out.dedup();
-    out
-}
-
-/// Plan the steps for one declared account against the tenant's live grants.
-/// A grant is never moved unless `allow_transfer`; nothing is ever revoked.
-fn plan_identity(
-    declared: &DeclaredAccount,
-    live: &[LiveGrant],
-    allow_transfer: bool,
-) -> Vec<IdentityStep> {
-    let own = live.iter().find(|grant| grant.account == declared.account);
-    let holder = live
-        .iter()
-        .find(|grant| grant.identity == declared.identity && grant.account != declared.account);
-    let want_scopes = sorted_scopes(&declared.scopes);
-    let scopes_differ = |grant: &LiveGrant| {
-        sorted_scopes(&grant.scopes) != want_scopes
-            || (!declared.project.trim().is_empty() && grant.project != declared.project.trim())
-    };
-    match (own, holder) {
-        (Some(own), _) if !own.active => vec![IdentityStep::Refused {
-            reason: "grant_revoked".to_string(),
-            detail: format!(
-                "account {} holds a revoked grant; a revoked grant is final, use a new service account",
-                declared.account
-            ),
-        }],
-        (Some(_), Some(holder)) => vec![IdentityStep::Refused {
-            reason: "UDB_GRANT_OWNED_BY_OTHER".to_string(),
-            detail: format!(
-                "identity '{}' belongs to account {} and account {} already holds another grant; revoke one of them first",
-                declared.identity, holder.account, declared.account
-            ),
-        }],
-        (Some(own), None) => {
-            let mut steps = Vec::new();
-            if own.identity != declared.identity {
-                steps.push(IdentityStep::RotateIdentity {
-                    expected_revision: own.revision,
-                });
-            }
-            if scopes_differ(own) {
-                steps.push(IdentityStep::ReplaceScopes {
-                    expected_revision: own.revision,
-                });
-            }
-            if steps.is_empty() {
-                steps.push(IdentityStep::Unchanged);
-            }
-            steps
-        }
-        (None, Some(holder)) if !allow_transfer => vec![IdentityStep::Refused {
-            reason: "UDB_GRANT_OWNED_BY_OTHER".to_string(),
-            detail: format!(
-                "identity '{}' is granted to account {}; pass --allow-transfer to move it to {} on purpose",
-                declared.identity, holder.account, declared.account
-            ),
-        }],
-        (None, Some(holder)) => {
-            let mut steps = vec![IdentityStep::Transfer {
-                from: holder.account.clone(),
-                expected_revision: holder.revision,
-            }];
-            if scopes_differ(holder) {
-                steps.push(IdentityStep::ReplaceScopes {
-                    expected_revision: holder.revision + 1,
-                });
-            }
-            steps
-        }
-        (None, None) => vec![IdentityStep::Create],
-    }
-}
-
-fn live_grant(grant: &authn_entity_pb::ServiceAccountGrant) -> LiveGrant {
-    LiveGrant {
-        account: grant.user_id.clone(),
-        identity: grant.service_identity.clone(),
-        project: grant.project_id.clone(),
-        scopes: serde_json::from_str::<Vec<String>>(&grant.approved_scopes_json)
-            .unwrap_or_default(),
-        active: grant.status.eq_ignore_ascii_case("ACTIVE"),
-        revision: grant.revision,
-    }
-}
-
-async fn identity_command(
-    apply: bool,
-    file: &str,
-    tenant: &str,
-    allow_transfer: bool,
-) -> Result<serde_json::Value, String> {
-    if file.trim().is_empty() {
-        return Err("provide -f <identities.yaml>".to_string());
-    }
-    let parsed: IdentityFile = read_structured(file)?;
-    let tenant = [tenant, parsed.tenant.as_str()]
-        .into_iter()
-        .map(str::trim)
-        .find(|value| !value.is_empty())
-        .map(str::to_string)
-        .or_else(|| {
-            env::var("UDB_TENANT_ID")
-                .ok()
-                .filter(|v| !v.trim().is_empty())
-        })
-        .ok_or_else(|| "pass --tenant <uuid> or set `tenant:` in the file".to_string())?;
-    if !parsed.tenant.trim().is_empty() && parsed.tenant.trim() != tenant {
-        return Err(format!(
-            "the file is for tenant '{}' but --tenant is '{tenant}'",
-            parsed.tenant.trim()
-        ));
-    }
-    let mut client = AuthnServiceClient::connect(super::authz_cli::auth_target())
-        .await
-        .map_err(|err| format!("failed to connect to authn service: {err}"))?;
-    let mut live = Vec::new();
-    let mut page_token = String::new();
-    loop {
-        let page = client
-            .list_service_account_grants(super::authz_cli::with_metadata(
-                authn_pb::ListServiceAccountGrantsRequest {
-                    tenant_id: tenant.clone(),
-                    page_size: 200,
-                    page_token: page_token.clone(),
-                },
-            ))
-            .await
-            .map_err(|err| format!("list grants failed: {err}"))?
-            .into_inner();
-        live.extend(page.grants.iter().map(live_grant));
-        if page.next_page_token.is_empty() {
-            break;
-        }
-        page_token = page.next_page_token;
-    }
-
-    let mut plan = Vec::new();
-    let mut refused = 0usize;
-    for declared in &parsed.service_accounts {
-        let steps = plan_identity(declared, &live, allow_transfer);
-        refused += steps
-            .iter()
-            .filter(|step| matches!(step, IdentityStep::Refused { .. }))
-            .count();
-        plan.push((declared.clone(), steps));
-    }
-    let declared_accounts: std::collections::HashSet<&str> = parsed
-        .service_accounts
-        .iter()
-        .map(|account| account.account.as_str())
-        .collect();
-    let undeclared: Vec<&LiveGrant> = live
-        .iter()
-        .filter(|grant| grant.active && !declared_accounts.contains(grant.account.as_str()))
-        .collect();
-
-    let mut results = Vec::new();
-    if apply {
-        if refused > 0 {
-            return Err(format!(
-                "{refused} account(s) cannot be reconciled; run `udb identity diff` to see why. Nothing was changed"
-            ));
-        }
-        for (declared, steps) in &plan {
-            let mut revision = 0i64;
-            for step in steps {
-                let reason = if declared.reason.trim().is_empty() {
-                    "udb identity apply".to_string()
-                } else {
-                    declared.reason.clone()
-                };
-                let grant = match step {
-                    IdentityStep::Unchanged | IdentityStep::Refused { .. } => continue,
-                    IdentityStep::Create => {
-                        client
-                            .create_service_account_grant(super::authz_cli::with_metadata(
-                                authn_pb::CreateServiceAccountGrantRequest {
-                                    tenant_id: tenant.clone(),
-                                    user_id: declared.account.clone(),
-                                    service_identity: declared.identity.clone(),
-                                    project_id: declared.project.clone(),
-                                    approved_scopes: sorted_scopes(&declared.scopes),
-                                    reason,
-                                },
-                            ))
-                            .await
-                            .map_err(|err| {
-                                format!("create grant for {} failed: {err}", declared.account)
-                            })?
-                            .into_inner()
-                            .grant
-                    }
-                    IdentityStep::Transfer {
-                        from,
-                        expected_revision,
-                    } => {
-                        client
-                            .transfer_service_account_grant(super::authz_cli::with_metadata(
-                                authn_pb::TransferServiceAccountGrantRequest {
-                                    tenant_id: tenant.clone(),
-                                    from_user_id: from.clone(),
-                                    to_user_id: declared.account.clone(),
-                                    expected_revision: *expected_revision,
-                                    reason,
-                                },
-                            ))
-                            .await
-                            .map_err(|err| {
-                                format!("transfer grant to {} failed: {err}", declared.account)
-                            })?
-                            .into_inner()
-                            .grant
-                    }
-                    IdentityStep::RotateIdentity { expected_revision } => {
-                        client
-                            .rotate_service_account_identity(super::authz_cli::with_metadata(
-                                authn_pb::RotateServiceAccountIdentityRequest {
-                                    tenant_id: tenant.clone(),
-                                    user_id: declared.account.clone(),
-                                    new_service_identity: declared.identity.clone(),
-                                    expected_revision: revision.max(*expected_revision),
-                                    reason,
-                                },
-                            ))
-                            .await
-                            .map_err(|err| {
-                                format!("rotate identity for {} failed: {err}", declared.account)
-                            })?
-                            .into_inner()
-                            .grant
-                    }
-                    IdentityStep::ReplaceScopes { expected_revision } => {
-                        client
-                            .replace_service_account_grant(super::authz_cli::with_metadata(
-                                authn_pb::ReplaceServiceAccountGrantRequest {
-                                    tenant_id: tenant.clone(),
-                                    user_id: declared.account.clone(),
-                                    approved_scopes: sorted_scopes(&declared.scopes),
-                                    project_id: declared.project.clone(),
-                                    reason,
-                                    expected_revision: revision.max(*expected_revision),
-                                },
-                            ))
-                            .await
-                            .map_err(|err| {
-                                format!("replace scopes for {} failed: {err}", declared.account)
-                            })?
-                            .into_inner()
-                            .grant
-                    }
-                };
-                if let Some(grant) = grant {
-                    revision = grant.revision;
-                }
-            }
-            results.push(serde_json::json!({
-                "account": declared.account,
-                "identity": declared.identity,
-                "revision": revision,
-            }));
-        }
-    }
-    Ok(serde_json::json!({
-        "tenant_id": tenant,
-        "applied": apply,
-        "plan": plan
-            .iter()
-            .map(|(declared, steps)| serde_json::json!({
-                "account": declared.account,
-                "identity": declared.identity,
-                "steps": steps,
-            }))
-            .collect::<Vec<_>>(),
-        "refused": refused,
-        "results": results,
-        // Reported, never revoked: removing access is an explicit
-        // `udb auth grant revoke`.
-        "undeclared_active_grants": undeclared
-            .iter()
-            .map(|grant| serde_json::json!({"account": grant.account, "identity": grant.identity}))
-            .collect::<Vec<_>>(),
-    }))
 }
 
 // ── udb data seed ───────────────────────────────────────────────────────────
@@ -738,6 +384,33 @@ async fn up_command(
         return Err(format!("{file}: set `tenant:` (the canonical tenant UUID)"));
     }
     let tenant = project.tenant.trim().to_string();
+    // Resolve references before serializing the combined declarations. Inline
+    // declarations belong to udb.yaml; external declarations belong to their
+    // own source file, even when the bridge writes a temporary JSON document.
+    let source_base = |path: &str| {
+        fs::canonicalize(
+            std::path::Path::new(path)
+                .parent()
+                .filter(|parent| !parent.as_os_str().is_empty())
+                .unwrap_or(std::path::Path::new(".")),
+        )
+        .map_err(|_| "identity declaration directory is unavailable".to_string())
+    };
+    let mut accounts = project.service_accounts.clone();
+    for account in &mut accounts {
+        account.resolve_file_references(&source_base(file)?)?;
+    }
+    if !project.service_accounts_file.trim().is_empty() {
+        let nested_path = relative_to(file, project.service_accounts_file.trim());
+        let mut nested: IdentityFile = read_structured(&nested_path)?;
+        if !nested.tenant.is_empty() && nested.tenant != tenant {
+            return Err("external identity declaration tenant differs from udb.yaml".into());
+        }
+        for account in &mut nested.service_accounts {
+            account.resolve_file_references(&source_base(&nested_path)?)?;
+        }
+        accounts.extend(nested.service_accounts);
+    }
     let mut report = serde_json::Map::new();
     report.insert(
         "tenant_id".into(),
@@ -776,12 +449,6 @@ async fn up_command(
         );
     }
 
-    let mut accounts = project.service_accounts.clone();
-    if !project.service_accounts_file.trim().is_empty() {
-        let nested: IdentityFile =
-            read_structured(&relative_to(file, project.service_accounts_file.trim()))?;
-        accounts.extend(nested.service_accounts);
-    }
     if !accounts.is_empty() {
         let staged =
             std::env::temp_dir().join(format!("udb-up-identities-{}.json", uuid::Uuid::new_v4()));
@@ -935,99 +602,5 @@ fn read_structured<T: serde::de::DeserializeOwned>(path: &str) -> Result<T, Stri
         serde_json::from_str(&raw).map_err(|err| format!("parse {path} failed: {err}"))
     } else {
         serde_yaml::from_str(&raw).map_err(|err| format!("parse {path} failed: {err}"))
-    }
-}
-
-#[cfg(test)]
-mod ops_cli_tests {
-    use super::{DeclaredAccount, IdentityStep, LiveGrant, plan_identity};
-
-    fn declared(account: &str, identity: &str, scopes: &[&str]) -> DeclaredAccount {
-        DeclaredAccount {
-            account: account.into(),
-            identity: identity.into(),
-            project: String::new(),
-            scopes: scopes.iter().map(|s| s.to_string()).collect(),
-            reason: String::new(),
-        }
-    }
-
-    fn grant(account: &str, identity: &str, scopes: &[&str], revision: i64) -> LiveGrant {
-        LiveGrant {
-            account: account.into(),
-            identity: identity.into(),
-            project: String::new(),
-            scopes: scopes.iter().map(|s| s.to_string()).collect(),
-            active: true,
-            revision,
-        }
-    }
-
-    /// Applying the same file twice is a no-op: a matching grant is unchanged
-    /// (scope order and duplicates do not matter).
-    #[test]
-    fn matching_grant_is_unchanged() {
-        let live = [grant(
-            "a",
-            "billing",
-            &["udb:data:read", "udb:data:write"],
-            3,
-        )];
-        assert_eq!(
-            plan_identity(
-                &declared(
-                    "a",
-                    "billing",
-                    &["udb:data:write", "udb:data:read", "udb:data:read"]
-                ),
-                &live,
-                false
-            ),
-            vec![IdentityStep::Unchanged]
-        );
-    }
-
-    /// A declared identity held by another account is never moved implicitly
-    /// (a bootstrap once took over a production grant this way); --allow-transfer
-    /// moves it explicitly.
-    #[test]
-    fn identity_held_by_another_account_needs_allow_transfer() {
-        let live = [grant("prod", "billing", &["udb:data:read"], 7)];
-        let refused = plan_identity(
-            &declared("dev", "billing", &["udb:data:read"]),
-            &live,
-            false,
-        );
-        assert!(
-            matches!(&refused[..], [IdentityStep::Refused { reason, .. }] if reason == "UDB_GRANT_OWNED_BY_OTHER")
-        );
-        assert_eq!(
-            plan_identity(&declared("dev", "billing", &["udb:data:read"]), &live, true),
-            vec![IdentityStep::Transfer {
-                from: "prod".into(),
-                expected_revision: 7
-            }]
-        );
-    }
-
-    /// New accounts are created; drifted ones rotate and/or replace scopes.
-    #[test]
-    fn create_rotate_and_replace() {
-        assert_eq!(
-            plan_identity(&declared("n", "new", &["udb:data:read"]), &[], false),
-            vec![IdentityStep::Create]
-        );
-        let live = [grant("a", "old", &["udb:data:read"], 2)];
-        assert_eq!(
-            plan_identity(&declared("a", "new", &["udb:data:write"]), &live, false),
-            vec![
-                IdentityStep::RotateIdentity {
-                    expected_revision: 2
-                },
-                IdentityStep::ReplaceScopes {
-                    expected_revision: 2
-                },
-            ]
-        );
     }
 }

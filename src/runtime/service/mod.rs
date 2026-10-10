@@ -99,6 +99,16 @@ pub use auth_service::{
 pub use auth_service::{
     PolicyReconcileReport, normalize_declared_policies, reconcile_authz_policies_offline,
 };
+/// Validate declarative CLI scopes through the same canonical service-account
+/// validator used by serving create/replace/key attenuation. This preflight does
+/// not authorize a caller or replace the native handler's own validation.
+pub fn validate_declared_service_scopes(
+    requested: &[String],
+    approved: &[String],
+) -> Result<Vec<String>, tonic::Status> {
+    auth_service::grants::validate_service_scopes(requested, approved)
+}
+
 // W17: native LiveQueryService (master-plan 9.7). Server-streaming tenant-scoped
 // live queries: an initial mediated Snapshot then a fail-closed-filtered stream
 // of CDC Change deltas. The leader wires `build_livequery_service`
