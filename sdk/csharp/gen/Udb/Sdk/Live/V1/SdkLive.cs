@@ -26,7 +26,7 @@ namespace Udb.Sdk.Live.V1 {
           string.Concat(
             "Ch51ZGIvc2RrL2xpdmUvdjEvc2RrX2xpdmUucHJvdG8SD3VkYi5zZGsubGl2",
             "ZS52MRobdWRiL2NvcmUvY29tbW9uL3YxL2RiLnByb3RvGiF1ZGIvY29yZS9j",
-            "b21tb24vdjEvc2VjdXJpdHkucHJvdG8ihQYKDVNka0xpdmVSZWNvcmQSPQoJ",
+            "b21tb24vdjEvc2VjdXJpdHkucHJvdG8i6QUKDVNka0xpdmVSZWNvcmQSPQoJ",
             "cmVjb3JkX2lkGAEgASgJQiCCtxgcCglyZWNvcmRfaWQSC1ZBUkNIQVIoODAp",
             "GAEoAVIIcmVjb3JkSWQSPwoJdGVuYW50X2lkGAIgASgJQiKCtxgeCgl0ZW5h",
             "bnRfaWQSDFZBUkNIQVIoMTIwKRgBmAIBUgh0ZW5hbnRJZBJCCgpwcm9qZWN0",
@@ -36,23 +36,24 @@ namespace Udb.Sdk.Live.V1 {
             "GAUgASgJQhWCtxgRCgdwYXlsb2FkEgRURVhUGAFSB3BheWxvYWQSNwoIcmV2",
             "aXNpb24YBiABKANCG4K3GBcKCHJldmlzaW9uEgZCSUdJTlQYAToBMFIIcmV2",
             "aXNpb24STgoIYmxvYl9yZWYYByABKAlCM7K1GBsIAhIMdWRiLWxpdmUtc2Rr",
-            "GgNnby8gASgBMDyCtxgQCghibG9iX3JlZhIEVEVYVFIHYmxvYlJlZjqyApq1",
-            "GBgIARIQc2RrX2xpdmVfcmVjb3JkcxgDIAH6thjdAQoQc2RrX2xpdmVfcmVj",
-            "b3JkcxIMdWRiX3Nka19saXZlGAEgASo8RXBoZW1lcmFsIHJvd3MgdXNlZCBi",
-            "eSBTREsgbGl2ZSBlbmQtdG8tZW5kIGNvbmZvcm1hbmNlIHRlc3RzigEyChtp",
-            "ZHhfc2RrX2xpdmVfcmVjb3Jkc19sb29rdXASBUJUUkVFGAFaCmxvb2t1cF9r",
-            "ZXmiAR0KB212X3Rlc3QSBnB1YmxpYxoIU0VMRUNUIDEgAfIBGHVkYi5zZGsu",
-            "bGl2ZS5yZWNvcmRzLmNkY/oBCHVkYjpyZWFkirIZMAoEbm9uZRIEbm9uZTIE",
-            "bm9uZToOdGVzdC5lcGhlbWVyYWxIAVIEbm9uZVoEbm9uZUK9AQoTY29tLnVk",
-            "Yi5zZGsubGl2ZS52MUIMU2RrTGl2ZVByb3RvUAFaOWdpdGh1Yi5jb20vZmFo",
-            "YXJhMDIvdWRiL3Nkay9nby9nZW4vdWRiL3Nkay9saXZlL3YxO2xpdmV2MaIC",
-            "A1VTTKoCD1VkYi5TZGsuTGl2ZS5WMcoCD1VkYlxTZGtcTGl2ZVxWMeICG1Vk",
-            "YlxHUEJNZXRhZGF0YVxTZGtcTGl2ZVxWMeoCElVkYjo6U2RrOjpMaXZlOjpW",
-            "MWIGcHJvdG8z"));
+            "GgNnby8gASgBMDyCtxgQCghibG9iX3JlZhIEVEVYVFIHYmxvYlJlZjqWAvq2",
+            "GN0BChBzZGtfbGl2ZV9yZWNvcmRzEgx1ZGJfc2RrX2xpdmUYASABKjxFcGhl",
+            "bWVyYWwgcm93cyB1c2VkIGJ5IFNESyBsaXZlIGVuZC10by1lbmQgY29uZm9y",
+            "bWFuY2UgdGVzdHOKATIKG2lkeF9zZGtfbGl2ZV9yZWNvcmRzX2xvb2t1cBIF",
+            "QlRSRUUYAVoKbG9va3VwX2tleaIBHQoHbXZfdGVzdBIGcHVibGljGghTRUxF",
+            "Q1QgMSAB8gEYdWRiLnNkay5saXZlLnJlY29yZHMuY2Rj+gEIdWRiOnJlYWSK",
+            "shkwCgRub25lEgRub25lMgRub25lOg50ZXN0LmVwaGVtZXJhbEgBUgRub25l",
+            "WgRub25lIjQKFFNka0xpdmVWZWN0b3JTdXJmYWNlOhyatRgYCAESEHNka19s",
+            "aXZlX3JlY29yZHMYAyABQr0BChNjb20udWRiLnNkay5saXZlLnYxQgxTZGtM",
+            "aXZlUHJvdG9QAVo5Z2l0aHViLmNvbS9mYWhhcmEwMi91ZGIvc2RrL2dvL2dl",
+            "bi91ZGIvc2RrL2xpdmUvdjE7bGl2ZXYxogIDVVNMqgIPVWRiLlNkay5MaXZl",
+            "LlYxygIPVWRiXFNka1xMaXZlXFYx4gIbVWRiXEdQQk1ldGFkYXRhXFNka1xM",
+            "aXZlXFYx6gISVWRiOjpTZGs6OkxpdmU6OlYxYgZwcm90bzM="));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { global::Udb.Core.Common.V1.DbReflection.Descriptor, global::Udb.Core.Common.V1.SecurityReflection.Descriptor, },
           new pbr::GeneratedClrTypeInfo(null, null, new pbr::GeneratedClrTypeInfo[] {
-            new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Sdk.Live.V1.SdkLiveRecord), global::Udb.Sdk.Live.V1.SdkLiveRecord.Parser, new[]{ "RecordId", "TenantId", "ProjectId", "LookupKey", "Payload", "Revision", "BlobRef" }, null, null, null, null)
+            new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Sdk.Live.V1.SdkLiveRecord), global::Udb.Sdk.Live.V1.SdkLiveRecord.Parser, new[]{ "RecordId", "TenantId", "ProjectId", "LookupKey", "Payload", "Revision", "BlobRef" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Sdk.Live.V1.SdkLiveVectorSurface), global::Udb.Sdk.Live.V1.SdkLiveVectorSurface.Parser, null, null, null, null, null)
           }));
     }
     #endregion
@@ -483,6 +484,176 @@ namespace Udb.Sdk.Live.V1 {
             BlobRef = input.ReadString();
             break;
           }
+        }
+      }
+    }
+    #endif
+
+  }
+
+  /// <summary>
+  /// Declared direct-vector API surface used by the live SDK conformance suite.
+  /// This collection is independent of SdkLiveRecord relational writes: that row
+  /// has no vector/embedding field and therefore cannot materialize a vector point.
+  /// Keep the harness collection token and dimension stable. Native vector planners
+  /// still require a tenant plus udb:vector:read or udb:vector:write, respectively.
+  /// With no pg_table, this declaration creates no canonical row table or automatic
+  /// row projection. Collection provisioning still comes from vector_store.
+  /// </summary>
+  [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
+  public sealed partial class SdkLiveVectorSurface : pb::IMessage<SdkLiveVectorSurface>
+  #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      , pb::IBufferMessage
+  #endif
+  {
+    private static readonly pb::MessageParser<SdkLiveVectorSurface> _parser = new pb::MessageParser<SdkLiveVectorSurface>(() => new SdkLiveVectorSurface());
+    private pb::UnknownFieldSet _unknownFields;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pb::MessageParser<SdkLiveVectorSurface> Parser { get { return _parser; } }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pbr::MessageDescriptor Descriptor {
+      get { return global::Udb.Sdk.Live.V1.SdkLiveReflection.Descriptor.MessageTypes[1]; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    pbr::MessageDescriptor pb::IMessage.Descriptor {
+      get { return Descriptor; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public SdkLiveVectorSurface() {
+      OnConstruction();
+    }
+
+    partial void OnConstruction();
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public SdkLiveVectorSurface(SdkLiveVectorSurface other) : this() {
+      _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public SdkLiveVectorSurface Clone() {
+      return new SdkLiveVectorSurface(this);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override bool Equals(object other) {
+      return Equals(other as SdkLiveVectorSurface);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool Equals(SdkLiveVectorSurface other) {
+      if (ReferenceEquals(other, null)) {
+        return false;
+      }
+      if (ReferenceEquals(other, this)) {
+        return true;
+      }
+      return Equals(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override int GetHashCode() {
+      int hash = 1;
+      if (_unknownFields != null) {
+        hash ^= _unknownFields.GetHashCode();
+      }
+      return hash;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override string ToString() {
+      return pb::JsonFormatter.ToDiagnosticString(this);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void WriteTo(pb::CodedOutputStream output) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      output.WriteRawMessage(this);
+    #else
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(output);
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(ref output);
+      }
+    }
+    #endif
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public int CalculateSize() {
+      int size = 0;
+      if (_unknownFields != null) {
+        size += _unknownFields.CalculateSize();
+      }
+      return size;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(SdkLiveVectorSurface other) {
+      if (other == null) {
+        return;
+      }
+      _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(pb::CodedInputStream input) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      input.ReadRawMessage(this);
+    #else
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
+            break;
+        }
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
+            break;
         }
       }
     }

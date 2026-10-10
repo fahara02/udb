@@ -121,11 +121,54 @@ func (x *SdkLiveRecord) GetBlobRef() string {
 	return ""
 }
 
+// Declared direct-vector API surface used by the live SDK conformance suite.
+// This collection is independent of SdkLiveRecord relational writes: that row
+// has no vector/embedding field and therefore cannot materialize a vector point.
+// Keep the harness collection token and dimension stable. Native vector planners
+// still require a tenant plus udb:vector:read or udb:vector:write, respectively.
+// With no pg_table, this declaration creates no canonical row table or automatic
+// row projection. Collection provisioning still comes from vector_store.
+type SdkLiveVectorSurface struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SdkLiveVectorSurface) Reset() {
+	*x = SdkLiveVectorSurface{}
+	mi := &file_udb_sdk_live_v1_sdk_live_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SdkLiveVectorSurface) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SdkLiveVectorSurface) ProtoMessage() {}
+
+func (x *SdkLiveVectorSurface) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_sdk_live_v1_sdk_live_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SdkLiveVectorSurface.ProtoReflect.Descriptor instead.
+func (*SdkLiveVectorSurface) Descriptor() ([]byte, []int) {
+	return file_udb_sdk_live_v1_sdk_live_proto_rawDescGZIP(), []int{1}
+}
+
 var File_udb_sdk_live_v1_sdk_live_proto protoreflect.FileDescriptor
 
 const file_udb_sdk_live_v1_sdk_live_proto_rawDesc = "" +
 	"\n" +
-	"\x1eudb/sdk/live/v1/sdk_live.proto\x12\x0fudb.sdk.live.v1\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\"\x85\x06\n" +
+	"\x1eudb/sdk/live/v1/sdk_live.proto\x12\x0fudb.sdk.live.v1\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\"\xe9\x05\n" +
 	"\rSdkLiveRecord\x12=\n" +
 	"\trecord_id\x18\x01 \x01(\tB \x82\xb7\x18\x1c\n" +
 	"\trecord_id\x12\vVARCHAR(80)\x18\x01(\x01R\brecordId\x12?\n" +
@@ -144,12 +187,13 @@ const file_udb_sdk_live_v1_sdk_live_proto_rawDesc = "" +
 	"\brevision\x18\x06 \x01(\x03B\x1b\x82\xb7\x18\x17\n" +
 	"\brevision\x12\x06BIGINT\x18\x01:\x010R\brevision\x12N\n" +
 	"\bblob_ref\x18\a \x01(\tB3\xb2\xb5\x18\x1b\b\x02\x12\fudb-live-sdk\x1a\x03go/ \x01(\x010<\x82\xb7\x18\x10\n" +
-	"\bblob_ref\x12\x04TEXTR\ablobRef:\xb2\x02\x9a\xb5\x18\x18\b\x01\x12\x10sdk_live_records\x18\x03 \x01\xfa\xb6\x18\xdd\x01\n" +
+	"\bblob_ref\x12\x04TEXTR\ablobRef:\x96\x02\xfa\xb6\x18\xdd\x01\n" +
 	"\x10sdk_live_records\x12\fudb_sdk_live\x18\x01 \x01*<Ephemeral rows used by SDK live end-to-end conformance tests\x8a\x012\n" +
 	"\x1bidx_sdk_live_records_lookup\x12\x05BTREE\x18\x01Z\n" +
 	"lookup_key\xa2\x01\x1d\n" +
 	"\amv_test\x12\x06public\x1a\bSELECT 1 \x01\xf2\x01\x18udb.sdk.live.records.cdc\xfa\x01\budb:read\x8a\xb2\x190\n" +
-	"\x04none\x12\x04none2\x04none:\x0etest.ephemeralH\x01R\x04noneZ\x04noneB\xbd\x01\n" +
+	"\x04none\x12\x04none2\x04none:\x0etest.ephemeralH\x01R\x04noneZ\x04none\"4\n" +
+	"\x14SdkLiveVectorSurface:\x1c\x9a\xb5\x18\x18\b\x01\x12\x10sdk_live_records\x18\x03 \x01B\xbd\x01\n" +
 	"\x13com.udb.sdk.live.v1B\fSdkLiveProtoP\x01Z9github.com/fahara02/udb/sdk/go/gen/udb/sdk/live/v1;livev1\xa2\x02\x03USL\xaa\x02\x0fUdb.Sdk.Live.V1\xca\x02\x0fUdb\\Sdk\\Live\\V1\xe2\x02\x1bUdb\\GPBMetadata\\Sdk\\Live\\V1\xea\x02\x12Udb::Sdk::Live::V1b\x06proto3"
 
 var (
@@ -164,9 +208,10 @@ func file_udb_sdk_live_v1_sdk_live_proto_rawDescGZIP() []byte {
 	return file_udb_sdk_live_v1_sdk_live_proto_rawDescData
 }
 
-var file_udb_sdk_live_v1_sdk_live_proto_msgTypes = make([]protoimpl.MessageInfo, 1)
+var file_udb_sdk_live_v1_sdk_live_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
 var file_udb_sdk_live_v1_sdk_live_proto_goTypes = []any{
-	(*SdkLiveRecord)(nil), // 0: udb.sdk.live.v1.SdkLiveRecord
+	(*SdkLiveRecord)(nil),        // 0: udb.sdk.live.v1.SdkLiveRecord
+	(*SdkLiveVectorSurface)(nil), // 1: udb.sdk.live.v1.SdkLiveVectorSurface
 }
 var file_udb_sdk_live_v1_sdk_live_proto_depIdxs = []int32{
 	0, // [0:0] is the sub-list for method output_type
@@ -187,7 +232,7 @@ func file_udb_sdk_live_v1_sdk_live_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_udb_sdk_live_v1_sdk_live_proto_rawDesc), len(file_udb_sdk_live_v1_sdk_live_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   1,
+			NumMessages:   2,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

@@ -23,3 +23,7 @@ class SdkLiveRecord(_message.Message):
     revision: int
     blob_ref: str
     def __init__(self, record_id: _Optional[str] = ..., tenant_id: _Optional[str] = ..., project_id: _Optional[str] = ..., lookup_key: _Optional[str] = ..., payload: _Optional[str] = ..., revision: _Optional[int] = ..., blob_ref: _Optional[str] = ...) -> None: ...
+
+class SdkLiveVectorSurface(_message.Message):
+    __slots__ = ()
+    def __init__(self) -> None: ...

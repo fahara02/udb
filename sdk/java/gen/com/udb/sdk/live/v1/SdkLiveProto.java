@@ -31,6 +31,11 @@ public final class SdkLiveProto {
   static final
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_udb_sdk_live_v1_SdkLiveRecord_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_udb_sdk_live_v1_SdkLiveVectorSurface_descriptor;
+  static final
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_udb_sdk_live_v1_SdkLiveVectorSurface_fieldAccessorTable;
 
   public static com.google.protobuf.Descriptors.FileDescriptor
       getDescriptor() {
@@ -42,7 +47,7 @@ public final class SdkLiveProto {
     java.lang.String[] descriptorData = {
       "\n\036udb/sdk/live/v1/sdk_live.proto\022\017udb.sd" +
       "k.live.v1\032\033udb/core/common/v1/db.proto\032!" +
-      "udb/core/common/v1/security.proto\"\205\006\n\rSd" +
+      "udb/core/common/v1/security.proto\"\351\005\n\rSd" +
       "kLiveRecord\022=\n\trecord_id\030\001 \001(\tB \202\267\030\034\n\tre" +
       "cord_id\022\013VARCHAR(80)\030\001(\001R\010recordId\022?\n\tte" +
       "nant_id\030\002 \001(\tB\"\202\267\030\036\n\ttenant_id\022\014VARCHAR(" +
@@ -54,20 +59,20 @@ public final class SdkLiveProto {
       "oad\0227\n\010revision\030\006 \001(\003B\033\202\267\030\027\n\010revision\022\006B" +
       "IGINT\030\001:\0010R\010revision\022N\n\010blob_ref\030\007 \001(\tB3" +
       "\262\265\030\033\010\002\022\014udb-live-sdk\032\003go/ \001(\0010<\202\267\030\020\n\010blo" +
-      "b_ref\022\004TEXTR\007blobRef:\262\002\232\265\030\030\010\001\022\020sdk_live_" +
-      "records\030\003 \001\372\266\030\335\001\n\020sdk_live_records\022\014udb_" +
-      "sdk_live\030\001 \001*<Ephemeral rows used by SDK" +
-      " live end-to-end conformance tests\212\0012\n\033i" +
-      "dx_sdk_live_records_lookup\022\005BTREE\030\001Z\nloo" +
-      "kup_key\242\001\035\n\007mv_test\022\006public\032\010SELECT 1 \001\362" +
-      "\001\030udb.sdk.live.records.cdc\372\001\010udb:read\212\262\031" +
-      "0\n\004none\022\004none2\004none:\016test.ephemeralH\001R\004n" +
-      "oneZ\004noneB\275\001\n\023com.udb.sdk.live.v1B\014SdkLi" +
-      "veProtoP\001Z9github.com/fahara02/udb/sdk/g" +
-      "o/gen/udb/sdk/live/v1;livev1\242\002\003USL\252\002\017Udb" +
-      ".Sdk.Live.V1\312\002\017Udb\\Sdk\\Live\\V1\342\002\033Udb\\GPB" +
-      "Metadata\\Sdk\\Live\\V1\352\002\022Udb::Sdk::Live::V" +
-      "1b\006proto3"
+      "b_ref\022\004TEXTR\007blobRef:\226\002\372\266\030\335\001\n\020sdk_live_r" +
+      "ecords\022\014udb_sdk_live\030\001 \001*<Ephemeral rows" +
+      " used by SDK live end-to-end conformance" +
+      " tests\212\0012\n\033idx_sdk_live_records_lookup\022\005" +
+      "BTREE\030\001Z\nlookup_key\242\001\035\n\007mv_test\022\006public\032" +
+      "\010SELECT 1 \001\362\001\030udb.sdk.live.records.cdc\372\001" +
+      "\010udb:read\212\262\0310\n\004none\022\004none2\004none:\016test.ep" +
+      "hemeralH\001R\004noneZ\004none\"4\n\024SdkLiveVectorSu" +
+      "rface:\034\232\265\030\030\010\001\022\020sdk_live_records\030\003 \001B\275\001\n\023" +
+      "com.udb.sdk.live.v1B\014SdkLiveProtoP\001Z9git" +
+      "hub.com/fahara02/udb/sdk/go/gen/udb/sdk/" +
+      "live/v1;livev1\242\002\003USL\252\002\017Udb.Sdk.Live.V1\312\002" +
+      "\017Udb\\Sdk\\Live\\V1\342\002\033Udb\\GPBMetadata\\Sdk\\L" +
+      "ive\\V1\352\002\022Udb::Sdk::Live::V1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -81,6 +86,12 @@ public final class SdkLiveProto {
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_sdk_live_v1_SdkLiveRecord_descriptor,
         new java.lang.String[] { "RecordId", "TenantId", "ProjectId", "LookupKey", "Payload", "Revision", "BlobRef", });
+    internal_static_udb_sdk_live_v1_SdkLiveVectorSurface_descriptor =
+      getDescriptor().getMessageTypes().get(1);
+    internal_static_udb_sdk_live_v1_SdkLiveVectorSurface_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_udb_sdk_live_v1_SdkLiveVectorSurface_descriptor,
+        new java.lang.String[] { });
     descriptor.resolveAllFeaturesImmutable();
     com.udb.core.common.v1.DbProto.getDescriptor();
     com.udb.core.common.v1.SecurityProto.getDescriptor();
