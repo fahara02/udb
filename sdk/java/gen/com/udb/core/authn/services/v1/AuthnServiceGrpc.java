@@ -5256,422 +5256,422 @@ public final class AuthnServiceGrpc {
 
   public static final io.grpc.ServerServiceDefinition bindService(AsyncService service) {
     return io.grpc.ServerServiceDefinition.builder(getServiceDescriptor())
-        .addMethod(
+        .<com.udb.core.authn.services.v1.CreateUserRequest, com.udb.core.authn.services.v1.CreateUserResponse>addMethod(
           getCreateUserMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.authn.services.v1.CreateUserRequest, com.udb.core.authn.services.v1.CreateUserResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.authn.services.v1.CreateUserRequest,
               com.udb.core.authn.services.v1.CreateUserResponse>(
                 service, METHODID_CREATE_USER)))
-        .addMethod(
+        .<com.udb.core.authn.services.v1.GetUserRequest, com.udb.core.authn.services.v1.GetUserResponse>addMethod(
           getGetUserMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.authn.services.v1.GetUserRequest, com.udb.core.authn.services.v1.GetUserResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.authn.services.v1.GetUserRequest,
               com.udb.core.authn.services.v1.GetUserResponse>(
                 service, METHODID_GET_USER)))
-        .addMethod(
+        .<com.udb.core.authn.services.v1.ListUsersRequest, com.udb.core.authn.services.v1.ListUsersResponse>addMethod(
           getListUsersMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.authn.services.v1.ListUsersRequest, com.udb.core.authn.services.v1.ListUsersResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.authn.services.v1.ListUsersRequest,
               com.udb.core.authn.services.v1.ListUsersResponse>(
                 service, METHODID_LIST_USERS)))
-        .addMethod(
+        .<com.udb.core.authn.services.v1.UpdateUserRequest, com.udb.core.authn.services.v1.UpdateUserResponse>addMethod(
           getUpdateUserMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.authn.services.v1.UpdateUserRequest, com.udb.core.authn.services.v1.UpdateUserResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.authn.services.v1.UpdateUserRequest,
               com.udb.core.authn.services.v1.UpdateUserResponse>(
                 service, METHODID_UPDATE_USER)))
-        .addMethod(
+        .<com.udb.core.authn.services.v1.ChangeUserStatusRequest, com.udb.core.authn.services.v1.ChangeUserStatusResponse>addMethod(
           getChangeUserStatusMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.authn.services.v1.ChangeUserStatusRequest, com.udb.core.authn.services.v1.ChangeUserStatusResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.authn.services.v1.ChangeUserStatusRequest,
               com.udb.core.authn.services.v1.ChangeUserStatusResponse>(
                 service, METHODID_CHANGE_USER_STATUS)))
-        .addMethod(
+        .<com.udb.core.authn.services.v1.AdminResetPasswordRequest, com.udb.core.authn.services.v1.AdminResetPasswordResponse>addMethod(
           getAdminResetPasswordMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.authn.services.v1.AdminResetPasswordRequest, com.udb.core.authn.services.v1.AdminResetPasswordResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.authn.services.v1.AdminResetPasswordRequest,
               com.udb.core.authn.services.v1.AdminResetPasswordResponse>(
                 service, METHODID_ADMIN_RESET_PASSWORD)))
-        .addMethod(
+        .<com.udb.core.authn.services.v1.SendOTPRequest, com.udb.core.authn.services.v1.SendOTPResponse>addMethod(
           getSendOTPMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.authn.services.v1.SendOTPRequest, com.udb.core.authn.services.v1.SendOTPResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.authn.services.v1.SendOTPRequest,
               com.udb.core.authn.services.v1.SendOTPResponse>(
                 service, METHODID_SEND_OTP)))
-        .addMethod(
+        .<com.udb.core.authn.services.v1.VerifyOTPRequest, com.udb.core.authn.services.v1.VerifyOTPResponse>addMethod(
           getVerifyOTPMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.authn.services.v1.VerifyOTPRequest, com.udb.core.authn.services.v1.VerifyOTPResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.authn.services.v1.VerifyOTPRequest,
               com.udb.core.authn.services.v1.VerifyOTPResponse>(
                 service, METHODID_VERIFY_OTP)))
-        .addMethod(
+        .<com.udb.core.authn.services.v1.ResendOTPRequest, com.udb.core.authn.services.v1.ResendOTPResponse>addMethod(
           getResendOTPMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.authn.services.v1.ResendOTPRequest, com.udb.core.authn.services.v1.ResendOTPResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.authn.services.v1.ResendOTPRequest,
               com.udb.core.authn.services.v1.ResendOTPResponse>(
                 service, METHODID_RESEND_OTP)))
-        .addMethod(
+        .<com.udb.core.authn.services.v1.AuthnRequest, com.udb.core.authn.services.v1.AuthnResponse>addMethod(
           getAuthenticateMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.authn.services.v1.AuthnRequest, com.udb.core.authn.services.v1.AuthnResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.authn.services.v1.AuthnRequest,
               com.udb.core.authn.services.v1.AuthnResponse>(
                 service, METHODID_AUTHENTICATE)))
-        .addMethod(
+        .<com.udb.core.authn.services.v1.LoginRequest, com.udb.core.authn.services.v1.LoginResponse>addMethod(
           getLoginMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.authn.services.v1.LoginRequest, com.udb.core.authn.services.v1.LoginResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.authn.services.v1.LoginRequest,
               com.udb.core.authn.services.v1.LoginResponse>(
                 service, METHODID_LOGIN)))
-        .addMethod(
+        .<com.udb.core.authn.services.v1.RefreshTokenRequest, com.udb.core.authn.services.v1.RefreshTokenResponse>addMethod(
           getRefreshTokenMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.authn.services.v1.RefreshTokenRequest, com.udb.core.authn.services.v1.RefreshTokenResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.authn.services.v1.RefreshTokenRequest,
               com.udb.core.authn.services.v1.RefreshTokenResponse>(
                 service, METHODID_REFRESH_TOKEN)))
-        .addMethod(
+        .<com.udb.core.authn.services.v1.LogoutRequest, com.udb.core.authn.services.v1.LogoutResponse>addMethod(
           getLogoutMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.authn.services.v1.LogoutRequest, com.udb.core.authn.services.v1.LogoutResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.authn.services.v1.LogoutRequest,
               com.udb.core.authn.services.v1.LogoutResponse>(
                 service, METHODID_LOGOUT)))
-        .addMethod(
+        .<com.udb.core.authn.services.v1.ChangePasswordRequest, com.udb.core.authn.services.v1.ChangePasswordResponse>addMethod(
           getChangePasswordMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.authn.services.v1.ChangePasswordRequest, com.udb.core.authn.services.v1.ChangePasswordResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.authn.services.v1.ChangePasswordRequest,
               com.udb.core.authn.services.v1.ChangePasswordResponse>(
                 service, METHODID_CHANGE_PASSWORD)))
-        .addMethod(
+        .<com.udb.core.authn.services.v1.ValidateTokenRequest, com.udb.core.authn.services.v1.ValidateTokenResponse>addMethod(
           getValidateTokenMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.authn.services.v1.ValidateTokenRequest, com.udb.core.authn.services.v1.ValidateTokenResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.authn.services.v1.ValidateTokenRequest,
               com.udb.core.authn.services.v1.ValidateTokenResponse>(
                 service, METHODID_VALIDATE_TOKEN)))
-        .addMethod(
+        .<com.udb.core.authn.services.v1.CreateSessionRequest, com.udb.core.authn.services.v1.CreateSessionResponse>addMethod(
           getCreateSessionMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.authn.services.v1.CreateSessionRequest, com.udb.core.authn.services.v1.CreateSessionResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.authn.services.v1.CreateSessionRequest,
               com.udb.core.authn.services.v1.CreateSessionResponse>(
                 service, METHODID_CREATE_SESSION)))
-        .addMethod(
+        .<com.udb.core.authn.services.v1.RefreshSessionRequest, com.udb.core.authn.services.v1.RefreshSessionResponse>addMethod(
           getRefreshSessionMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.authn.services.v1.RefreshSessionRequest, com.udb.core.authn.services.v1.RefreshSessionResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.authn.services.v1.RefreshSessionRequest,
               com.udb.core.authn.services.v1.RefreshSessionResponse>(
                 service, METHODID_REFRESH_SESSION)))
-        .addMethod(
+        .<com.udb.core.authn.services.v1.GetSessionRequest, com.udb.core.authn.services.v1.GetSessionResponse>addMethod(
           getGetSessionMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.authn.services.v1.GetSessionRequest, com.udb.core.authn.services.v1.GetSessionResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.authn.services.v1.GetSessionRequest,
               com.udb.core.authn.services.v1.GetSessionResponse>(
                 service, METHODID_GET_SESSION)))
-        .addMethod(
+        .<com.udb.core.authn.services.v1.ListSessionsRequest, com.udb.core.authn.services.v1.ListSessionsResponse>addMethod(
           getListSessionsMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.authn.services.v1.ListSessionsRequest, com.udb.core.authn.services.v1.ListSessionsResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.authn.services.v1.ListSessionsRequest,
               com.udb.core.authn.services.v1.ListSessionsResponse>(
                 service, METHODID_LIST_SESSIONS)))
-        .addMethod(
+        .<com.udb.core.authn.services.v1.RevokeSessionRequest, com.udb.core.authn.services.v1.RevokeSessionResponse>addMethod(
           getRevokeSessionMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.authn.services.v1.RevokeSessionRequest, com.udb.core.authn.services.v1.RevokeSessionResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.authn.services.v1.RevokeSessionRequest,
               com.udb.core.authn.services.v1.RevokeSessionResponse>(
                 service, METHODID_REVOKE_SESSION)))
-        .addMethod(
+        .<com.udb.core.authn.services.v1.ValidateCSRFRequest, com.udb.core.authn.services.v1.ValidateCSRFResponse>addMethod(
           getValidateCSRFMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.authn.services.v1.ValidateCSRFRequest, com.udb.core.authn.services.v1.ValidateCSRFResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.authn.services.v1.ValidateCSRFRequest,
               com.udb.core.authn.services.v1.ValidateCSRFResponse>(
                 service, METHODID_VALIDATE_CSRF)))
-        .addMethod(
+        .<com.udb.core.authn.services.v1.EnrollMFARequest, com.udb.core.authn.services.v1.EnrollMFAResponse>addMethod(
           getEnrollMFAMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.authn.services.v1.EnrollMFARequest, com.udb.core.authn.services.v1.EnrollMFAResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.authn.services.v1.EnrollMFARequest,
               com.udb.core.authn.services.v1.EnrollMFAResponse>(
                 service, METHODID_ENROLL_MFA)))
-        .addMethod(
+        .<com.udb.core.authn.services.v1.ConfirmMFAEnrollmentRequest, com.udb.core.authn.services.v1.ConfirmMFAEnrollmentResponse>addMethod(
           getConfirmMFAEnrollmentMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.authn.services.v1.ConfirmMFAEnrollmentRequest, com.udb.core.authn.services.v1.ConfirmMFAEnrollmentResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.authn.services.v1.ConfirmMFAEnrollmentRequest,
               com.udb.core.authn.services.v1.ConfirmMFAEnrollmentResponse>(
                 service, METHODID_CONFIRM_MFAENROLLMENT)))
-        .addMethod(
+        .<com.udb.core.authn.services.v1.GenerateRecoveryCodesRequest, com.udb.core.authn.services.v1.GenerateRecoveryCodesResponse>addMethod(
           getGenerateRecoveryCodesMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.authn.services.v1.GenerateRecoveryCodesRequest, com.udb.core.authn.services.v1.GenerateRecoveryCodesResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.authn.services.v1.GenerateRecoveryCodesRequest,
               com.udb.core.authn.services.v1.GenerateRecoveryCodesResponse>(
                 service, METHODID_GENERATE_RECOVERY_CODES)))
-        .addMethod(
+        .<com.udb.core.authn.services.v1.PutMfaPolicyRequest, com.udb.core.authn.services.v1.PutMfaPolicyResponse>addMethod(
           getPutMfaPolicyMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.authn.services.v1.PutMfaPolicyRequest, com.udb.core.authn.services.v1.PutMfaPolicyResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.authn.services.v1.PutMfaPolicyRequest,
               com.udb.core.authn.services.v1.PutMfaPolicyResponse>(
                 service, METHODID_PUT_MFA_POLICY)))
-        .addMethod(
+        .<com.udb.core.authn.services.v1.GetMfaPolicyRequest, com.udb.core.authn.services.v1.GetMfaPolicyResponse>addMethod(
           getGetMfaPolicyMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.authn.services.v1.GetMfaPolicyRequest, com.udb.core.authn.services.v1.GetMfaPolicyResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.authn.services.v1.GetMfaPolicyRequest,
               com.udb.core.authn.services.v1.GetMfaPolicyResponse>(
                 service, METHODID_GET_MFA_POLICY)))
-        .addMethod(
+        .<com.udb.core.authn.services.v1.ForgotPasswordRequest, com.udb.core.authn.services.v1.ForgotPasswordResponse>addMethod(
           getForgotPasswordMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.authn.services.v1.ForgotPasswordRequest, com.udb.core.authn.services.v1.ForgotPasswordResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.authn.services.v1.ForgotPasswordRequest,
               com.udb.core.authn.services.v1.ForgotPasswordResponse>(
                 service, METHODID_FORGOT_PASSWORD)))
-        .addMethod(
+        .<com.udb.core.authn.services.v1.ResetPasswordRequest, com.udb.core.authn.services.v1.ResetPasswordResponse>addMethod(
           getResetPasswordMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.authn.services.v1.ResetPasswordRequest, com.udb.core.authn.services.v1.ResetPasswordResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.authn.services.v1.ResetPasswordRequest,
               com.udb.core.authn.services.v1.ResetPasswordResponse>(
                 service, METHODID_RESET_PASSWORD)))
-        .addMethod(
+        .<com.udb.core.authn.services.v1.IntrospectTokenRequest, com.udb.core.authn.services.v1.IntrospectTokenResponse>addMethod(
           getIntrospectTokenMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.authn.services.v1.IntrospectTokenRequest, com.udb.core.authn.services.v1.IntrospectTokenResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.authn.services.v1.IntrospectTokenRequest,
               com.udb.core.authn.services.v1.IntrospectTokenResponse>(
                 service, METHODID_INTROSPECT_TOKEN)))
-        .addMethod(
+        .<com.udb.core.authn.services.v1.SendPhoneVerificationRequest, com.udb.core.authn.services.v1.SendPhoneVerificationResponse>addMethod(
           getSendPhoneVerificationMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.authn.services.v1.SendPhoneVerificationRequest, com.udb.core.authn.services.v1.SendPhoneVerificationResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.authn.services.v1.SendPhoneVerificationRequest,
               com.udb.core.authn.services.v1.SendPhoneVerificationResponse>(
                 service, METHODID_SEND_PHONE_VERIFICATION)))
-        .addMethod(
+        .<com.udb.core.authn.services.v1.GetJwksRequest, com.udb.core.authn.services.v1.GetJwksResponse>addMethod(
           getGetJwksMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.authn.services.v1.GetJwksRequest, com.udb.core.authn.services.v1.GetJwksResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.authn.services.v1.GetJwksRequest,
               com.udb.core.authn.services.v1.GetJwksResponse>(
                 service, METHODID_GET_JWKS)))
-        .addMethod(
+        .<com.udb.core.authn.services.v1.StartWebAuthnRegistrationRequest, com.udb.core.authn.services.v1.StartWebAuthnRegistrationResponse>addMethod(
           getStartWebAuthnRegistrationMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.authn.services.v1.StartWebAuthnRegistrationRequest, com.udb.core.authn.services.v1.StartWebAuthnRegistrationResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.authn.services.v1.StartWebAuthnRegistrationRequest,
               com.udb.core.authn.services.v1.StartWebAuthnRegistrationResponse>(
                 service, METHODID_START_WEB_AUTHN_REGISTRATION)))
-        .addMethod(
+        .<com.udb.core.authn.services.v1.FinishWebAuthnRegistrationRequest, com.udb.core.authn.services.v1.FinishWebAuthnRegistrationResponse>addMethod(
           getFinishWebAuthnRegistrationMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.authn.services.v1.FinishWebAuthnRegistrationRequest, com.udb.core.authn.services.v1.FinishWebAuthnRegistrationResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.authn.services.v1.FinishWebAuthnRegistrationRequest,
               com.udb.core.authn.services.v1.FinishWebAuthnRegistrationResponse>(
                 service, METHODID_FINISH_WEB_AUTHN_REGISTRATION)))
-        .addMethod(
+        .<com.udb.core.authn.services.v1.StartWebAuthnAuthenticationRequest, com.udb.core.authn.services.v1.StartWebAuthnAuthenticationResponse>addMethod(
           getStartWebAuthnAuthenticationMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.authn.services.v1.StartWebAuthnAuthenticationRequest, com.udb.core.authn.services.v1.StartWebAuthnAuthenticationResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.authn.services.v1.StartWebAuthnAuthenticationRequest,
               com.udb.core.authn.services.v1.StartWebAuthnAuthenticationResponse>(
                 service, METHODID_START_WEB_AUTHN_AUTHENTICATION)))
-        .addMethod(
+        .<com.udb.core.authn.services.v1.FinishWebAuthnAuthenticationRequest, com.udb.core.authn.services.v1.FinishWebAuthnAuthenticationResponse>addMethod(
           getFinishWebAuthnAuthenticationMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.authn.services.v1.FinishWebAuthnAuthenticationRequest, com.udb.core.authn.services.v1.FinishWebAuthnAuthenticationResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.authn.services.v1.FinishWebAuthnAuthenticationRequest,
               com.udb.core.authn.services.v1.FinishWebAuthnAuthenticationResponse>(
                 service, METHODID_FINISH_WEB_AUTHN_AUTHENTICATION)))
-        .addMethod(
+        .<com.udb.core.authn.services.v1.ListDevicesRequest, com.udb.core.authn.services.v1.ListDevicesResponse>addMethod(
           getListDevicesMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.authn.services.v1.ListDevicesRequest, com.udb.core.authn.services.v1.ListDevicesResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.authn.services.v1.ListDevicesRequest,
               com.udb.core.authn.services.v1.ListDevicesResponse>(
                 service, METHODID_LIST_DEVICES)))
-        .addMethod(
+        .<com.udb.core.authn.services.v1.RevokeDeviceRequest, com.udb.core.authn.services.v1.RevokeDeviceResponse>addMethod(
           getRevokeDeviceMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.authn.services.v1.RevokeDeviceRequest, com.udb.core.authn.services.v1.RevokeDeviceResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.authn.services.v1.RevokeDeviceRequest,
               com.udb.core.authn.services.v1.RevokeDeviceResponse>(
                 service, METHODID_REVOKE_DEVICE)))
-        .addMethod(
+        .<com.udb.core.authn.services.v1.AdminRevokeSessionRequest, com.udb.core.authn.services.v1.AdminRevokeSessionResponse>addMethod(
           getAdminRevokeSessionMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.authn.services.v1.AdminRevokeSessionRequest, com.udb.core.authn.services.v1.AdminRevokeSessionResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.authn.services.v1.AdminRevokeSessionRequest,
               com.udb.core.authn.services.v1.AdminRevokeSessionResponse>(
                 service, METHODID_ADMIN_REVOKE_SESSION)))
-        .addMethod(
+        .<com.udb.core.authn.services.v1.AdminRevokeAllUserSessionsRequest, com.udb.core.authn.services.v1.AdminRevokeAllUserSessionsResponse>addMethod(
           getAdminRevokeAllUserSessionsMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.authn.services.v1.AdminRevokeAllUserSessionsRequest, com.udb.core.authn.services.v1.AdminRevokeAllUserSessionsResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.authn.services.v1.AdminRevokeAllUserSessionsRequest,
               com.udb.core.authn.services.v1.AdminRevokeAllUserSessionsResponse>(
                 service, METHODID_ADMIN_REVOKE_ALL_USER_SESSIONS)))
-        .addMethod(
+        .<com.udb.core.authn.services.v1.AdminRevokeAllTenantSessionsRequest, com.udb.core.authn.services.v1.AdminRevokeAllTenantSessionsResponse>addMethod(
           getAdminRevokeAllTenantSessionsMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.authn.services.v1.AdminRevokeAllTenantSessionsRequest, com.udb.core.authn.services.v1.AdminRevokeAllTenantSessionsResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.authn.services.v1.AdminRevokeAllTenantSessionsRequest,
               com.udb.core.authn.services.v1.AdminRevokeAllTenantSessionsResponse>(
                 service, METHODID_ADMIN_REVOKE_ALL_TENANT_SESSIONS)))
-        .addMethod(
+        .<com.udb.core.authn.services.v1.EmergencyRevokeRequest, com.udb.core.authn.services.v1.EmergencyRevokeResponse>addMethod(
           getEmergencyRevokeMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.authn.services.v1.EmergencyRevokeRequest, com.udb.core.authn.services.v1.EmergencyRevokeResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.authn.services.v1.EmergencyRevokeRequest,
               com.udb.core.authn.services.v1.EmergencyRevokeResponse>(
                 service, METHODID_EMERGENCY_REVOKE)))
-        .addMethod(
+        .<com.udb.core.authn.services.v1.IssueMfaChallengeRequest, com.udb.core.authn.services.v1.IssueMfaChallengeResponse>addMethod(
           getIssueMfaChallengeMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.authn.services.v1.IssueMfaChallengeRequest, com.udb.core.authn.services.v1.IssueMfaChallengeResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.authn.services.v1.IssueMfaChallengeRequest,
               com.udb.core.authn.services.v1.IssueMfaChallengeResponse>(
                 service, METHODID_ISSUE_MFA_CHALLENGE)))
-        .addMethod(
+        .<com.udb.core.authn.services.v1.VerifyMfaChallengeRequest, com.udb.core.authn.services.v1.VerifyMfaChallengeResponse>addMethod(
           getVerifyMfaChallengeMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.authn.services.v1.VerifyMfaChallengeRequest, com.udb.core.authn.services.v1.VerifyMfaChallengeResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.authn.services.v1.VerifyMfaChallengeRequest,
               com.udb.core.authn.services.v1.VerifyMfaChallengeResponse>(
                 service, METHODID_VERIFY_MFA_CHALLENGE)))
-        .addMethod(
+        .<com.udb.core.authn.services.v1.ListMfaFactorsRequest, com.udb.core.authn.services.v1.ListMfaFactorsResponse>addMethod(
           getListMfaFactorsMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.authn.services.v1.ListMfaFactorsRequest, com.udb.core.authn.services.v1.ListMfaFactorsResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.authn.services.v1.ListMfaFactorsRequest,
               com.udb.core.authn.services.v1.ListMfaFactorsResponse>(
                 service, METHODID_LIST_MFA_FACTORS)))
-        .addMethod(
+        .<com.udb.core.authn.services.v1.DisableMfaFactorRequest, com.udb.core.authn.services.v1.DisableMfaFactorResponse>addMethod(
           getDisableMfaFactorMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.authn.services.v1.DisableMfaFactorRequest, com.udb.core.authn.services.v1.DisableMfaFactorResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.authn.services.v1.DisableMfaFactorRequest,
               com.udb.core.authn.services.v1.DisableMfaFactorResponse>(
                 service, METHODID_DISABLE_MFA_FACTOR)))
-        .addMethod(
+        .<com.udb.core.authn.services.v1.RenamePasskeyRequest, com.udb.core.authn.services.v1.RenamePasskeyResponse>addMethod(
           getRenamePasskeyMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.authn.services.v1.RenamePasskeyRequest, com.udb.core.authn.services.v1.RenamePasskeyResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.authn.services.v1.RenamePasskeyRequest,
               com.udb.core.authn.services.v1.RenamePasskeyResponse>(
                 service, METHODID_RENAME_PASSKEY)))
-        .addMethod(
+        .<com.udb.core.authn.services.v1.RevokeRecoveryCodesRequest, com.udb.core.authn.services.v1.RevokeRecoveryCodesResponse>addMethod(
           getRevokeRecoveryCodesMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.authn.services.v1.RevokeRecoveryCodesRequest, com.udb.core.authn.services.v1.RevokeRecoveryCodesResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.authn.services.v1.RevokeRecoveryCodesRequest,
               com.udb.core.authn.services.v1.RevokeRecoveryCodesResponse>(
                 service, METHODID_REVOKE_RECOVERY_CODES)))
-        .addMethod(
+        .<com.udb.core.authn.services.v1.AdminResetMfaRequest, com.udb.core.authn.services.v1.AdminResetMfaResponse>addMethod(
           getAdminResetMfaMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.authn.services.v1.AdminResetMfaRequest, com.udb.core.authn.services.v1.AdminResetMfaResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.authn.services.v1.AdminResetMfaRequest,
               com.udb.core.authn.services.v1.AdminResetMfaResponse>(
                 service, METHODID_ADMIN_RESET_MFA)))
-        .addMethod(
+        .<com.udb.core.authn.services.v1.ListWebAuthnCredentialsRequest, com.udb.core.authn.services.v1.ListWebAuthnCredentialsResponse>addMethod(
           getListWebAuthnCredentialsMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.authn.services.v1.ListWebAuthnCredentialsRequest, com.udb.core.authn.services.v1.ListWebAuthnCredentialsResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.authn.services.v1.ListWebAuthnCredentialsRequest,
               com.udb.core.authn.services.v1.ListWebAuthnCredentialsResponse>(
                 service, METHODID_LIST_WEB_AUTHN_CREDENTIALS)))
-        .addMethod(
+        .<com.udb.core.authn.services.v1.DeleteWebAuthnCredentialRequest, com.udb.core.authn.services.v1.DeleteWebAuthnCredentialResponse>addMethod(
           getDeleteWebAuthnCredentialMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.authn.services.v1.DeleteWebAuthnCredentialRequest, com.udb.core.authn.services.v1.DeleteWebAuthnCredentialResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.authn.services.v1.DeleteWebAuthnCredentialRequest,
               com.udb.core.authn.services.v1.DeleteWebAuthnCredentialResponse>(
                 service, METHODID_DELETE_WEB_AUTHN_CREDENTIAL)))
-        .addMethod(
+        .<com.udb.core.authn.services.v1.CreateServiceAccountGrantRequest, com.udb.core.authn.services.v1.CreateServiceAccountGrantResponse>addMethod(
           getCreateServiceAccountGrantMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.authn.services.v1.CreateServiceAccountGrantRequest, com.udb.core.authn.services.v1.CreateServiceAccountGrantResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.authn.services.v1.CreateServiceAccountGrantRequest,
               com.udb.core.authn.services.v1.CreateServiceAccountGrantResponse>(
                 service, METHODID_CREATE_SERVICE_ACCOUNT_GRANT)))
-        .addMethod(
+        .<com.udb.core.authn.services.v1.GetServiceAccountGrantRequest, com.udb.core.authn.services.v1.GetServiceAccountGrantResponse>addMethod(
           getGetServiceAccountGrantMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.authn.services.v1.GetServiceAccountGrantRequest, com.udb.core.authn.services.v1.GetServiceAccountGrantResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.authn.services.v1.GetServiceAccountGrantRequest,
               com.udb.core.authn.services.v1.GetServiceAccountGrantResponse>(
                 service, METHODID_GET_SERVICE_ACCOUNT_GRANT)))
-        .addMethod(
+        .<com.udb.core.authn.services.v1.ListServiceAccountGrantsRequest, com.udb.core.authn.services.v1.ListServiceAccountGrantsResponse>addMethod(
           getListServiceAccountGrantsMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.authn.services.v1.ListServiceAccountGrantsRequest, com.udb.core.authn.services.v1.ListServiceAccountGrantsResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.authn.services.v1.ListServiceAccountGrantsRequest,
               com.udb.core.authn.services.v1.ListServiceAccountGrantsResponse>(
                 service, METHODID_LIST_SERVICE_ACCOUNT_GRANTS)))
-        .addMethod(
+        .<com.udb.core.authn.services.v1.ReplaceServiceAccountGrantRequest, com.udb.core.authn.services.v1.ReplaceServiceAccountGrantResponse>addMethod(
           getReplaceServiceAccountGrantMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.authn.services.v1.ReplaceServiceAccountGrantRequest, com.udb.core.authn.services.v1.ReplaceServiceAccountGrantResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.authn.services.v1.ReplaceServiceAccountGrantRequest,
               com.udb.core.authn.services.v1.ReplaceServiceAccountGrantResponse>(
                 service, METHODID_REPLACE_SERVICE_ACCOUNT_GRANT)))
-        .addMethod(
+        .<com.udb.core.authn.services.v1.RotateServiceAccountIdentityRequest, com.udb.core.authn.services.v1.RotateServiceAccountIdentityResponse>addMethod(
           getRotateServiceAccountIdentityMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.authn.services.v1.RotateServiceAccountIdentityRequest, com.udb.core.authn.services.v1.RotateServiceAccountIdentityResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.authn.services.v1.RotateServiceAccountIdentityRequest,
               com.udb.core.authn.services.v1.RotateServiceAccountIdentityResponse>(
                 service, METHODID_ROTATE_SERVICE_ACCOUNT_IDENTITY)))
-        .addMethod(
+        .<com.udb.core.authn.services.v1.TransferServiceAccountGrantRequest, com.udb.core.authn.services.v1.TransferServiceAccountGrantResponse>addMethod(
           getTransferServiceAccountGrantMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.authn.services.v1.TransferServiceAccountGrantRequest, com.udb.core.authn.services.v1.TransferServiceAccountGrantResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.authn.services.v1.TransferServiceAccountGrantRequest,
               com.udb.core.authn.services.v1.TransferServiceAccountGrantResponse>(
                 service, METHODID_TRANSFER_SERVICE_ACCOUNT_GRANT)))
-        .addMethod(
+        .<com.udb.core.authn.services.v1.RevokeServiceAccountGrantRequest, com.udb.core.authn.services.v1.RevokeServiceAccountGrantResponse>addMethod(
           getRevokeServiceAccountGrantMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.authn.services.v1.RevokeServiceAccountGrantRequest, com.udb.core.authn.services.v1.RevokeServiceAccountGrantResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.authn.services.v1.RevokeServiceAccountGrantRequest,
               com.udb.core.authn.services.v1.RevokeServiceAccountGrantResponse>(
                 service, METHODID_REVOKE_SERVICE_ACCOUNT_GRANT)))
-        .addMethod(
+        .<com.udb.core.authn.services.v1.CreateCertificateBindingRequest, com.udb.core.authn.services.v1.CreateCertificateBindingResponse>addMethod(
           getCreateCertificateBindingMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.authn.services.v1.CreateCertificateBindingRequest, com.udb.core.authn.services.v1.CreateCertificateBindingResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.authn.services.v1.CreateCertificateBindingRequest,
               com.udb.core.authn.services.v1.CreateCertificateBindingResponse>(
                 service, METHODID_CREATE_CERTIFICATE_BINDING)))
-        .addMethod(
+        .<com.udb.core.authn.services.v1.ListCertificateBindingsRequest, com.udb.core.authn.services.v1.ListCertificateBindingsResponse>addMethod(
           getListCertificateBindingsMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.authn.services.v1.ListCertificateBindingsRequest, com.udb.core.authn.services.v1.ListCertificateBindingsResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.authn.services.v1.ListCertificateBindingsRequest,
               com.udb.core.authn.services.v1.ListCertificateBindingsResponse>(
                 service, METHODID_LIST_CERTIFICATE_BINDINGS)))
-        .addMethod(
+        .<com.udb.core.authn.services.v1.RevokeCertificateBindingRequest, com.udb.core.authn.services.v1.RevokeCertificateBindingResponse>addMethod(
           getRevokeCertificateBindingMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.authn.services.v1.RevokeCertificateBindingRequest, com.udb.core.authn.services.v1.RevokeCertificateBindingResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.authn.services.v1.RevokeCertificateBindingRequest,
               com.udb.core.authn.services.v1.RevokeCertificateBindingResponse>(

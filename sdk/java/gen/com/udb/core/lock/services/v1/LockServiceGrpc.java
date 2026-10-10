@@ -703,37 +703,37 @@ public final class LockServiceGrpc {
 
   public static final io.grpc.ServerServiceDefinition bindService(AsyncService service) {
     return io.grpc.ServerServiceDefinition.builder(getServiceDescriptor())
-        .addMethod(
+        .<com.udb.core.lock.services.v1.AcquireLockRequest, com.udb.core.lock.services.v1.AcquireLockResponse>addMethod(
           getAcquireLockMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.lock.services.v1.AcquireLockRequest, com.udb.core.lock.services.v1.AcquireLockResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.lock.services.v1.AcquireLockRequest,
               com.udb.core.lock.services.v1.AcquireLockResponse>(
                 service, METHODID_ACQUIRE_LOCK)))
-        .addMethod(
+        .<com.udb.core.lock.services.v1.RenewLockRequest, com.udb.core.lock.services.v1.RenewLockResponse>addMethod(
           getRenewLockMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.lock.services.v1.RenewLockRequest, com.udb.core.lock.services.v1.RenewLockResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.lock.services.v1.RenewLockRequest,
               com.udb.core.lock.services.v1.RenewLockResponse>(
                 service, METHODID_RENEW_LOCK)))
-        .addMethod(
+        .<com.udb.core.lock.services.v1.ReleaseLockRequest, com.udb.core.lock.services.v1.ReleaseLockResponse>addMethod(
           getReleaseLockMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.lock.services.v1.ReleaseLockRequest, com.udb.core.lock.services.v1.ReleaseLockResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.lock.services.v1.ReleaseLockRequest,
               com.udb.core.lock.services.v1.ReleaseLockResponse>(
                 service, METHODID_RELEASE_LOCK)))
-        .addMethod(
+        .<com.udb.core.lock.services.v1.GetLockRequest, com.udb.core.lock.services.v1.GetLockResponse>addMethod(
           getGetLockMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.lock.services.v1.GetLockRequest, com.udb.core.lock.services.v1.GetLockResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.lock.services.v1.GetLockRequest,
               com.udb.core.lock.services.v1.GetLockResponse>(
                 service, METHODID_GET_LOCK)))
-        .addMethod(
+        .<com.udb.core.lock.services.v1.ListLocksRequest, com.udb.core.lock.services.v1.ListLocksResponse>addMethod(
           getListLocksMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.lock.services.v1.ListLocksRequest, com.udb.core.lock.services.v1.ListLocksResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.lock.services.v1.ListLocksRequest,
               com.udb.core.lock.services.v1.ListLocksResponse>(

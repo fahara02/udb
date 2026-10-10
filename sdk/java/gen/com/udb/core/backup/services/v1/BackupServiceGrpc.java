@@ -985,58 +985,58 @@ public final class BackupServiceGrpc {
 
   public static final io.grpc.ServerServiceDefinition bindService(AsyncService service) {
     return io.grpc.ServerServiceDefinition.builder(getServiceDescriptor())
-        .addMethod(
+        .<com.udb.core.backup.services.v1.StartTenantBackupRequest, com.udb.core.backup.services.v1.StartTenantBackupResponse>addMethod(
           getStartTenantBackupMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.backup.services.v1.StartTenantBackupRequest, com.udb.core.backup.services.v1.StartTenantBackupResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.backup.services.v1.StartTenantBackupRequest,
               com.udb.core.backup.services.v1.StartTenantBackupResponse>(
                 service, METHODID_START_TENANT_BACKUP)))
-        .addMethod(
+        .<com.udb.core.backup.services.v1.RestoreTenantRequest, com.udb.core.backup.services.v1.RestoreTenantResponse>addMethod(
           getRestoreTenantMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.backup.services.v1.RestoreTenantRequest, com.udb.core.backup.services.v1.RestoreTenantResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.backup.services.v1.RestoreTenantRequest,
               com.udb.core.backup.services.v1.RestoreTenantResponse>(
                 service, METHODID_RESTORE_TENANT)))
-        .addMethod(
+        .<com.udb.core.backup.services.v1.ListBackupsRequest, com.udb.core.backup.services.v1.ListBackupsResponse>addMethod(
           getListBackupsMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.backup.services.v1.ListBackupsRequest, com.udb.core.backup.services.v1.ListBackupsResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.backup.services.v1.ListBackupsRequest,
               com.udb.core.backup.services.v1.ListBackupsResponse>(
                 service, METHODID_LIST_BACKUPS)))
-        .addMethod(
+        .<com.udb.core.backup.services.v1.GetBackupRequest, com.udb.core.backup.services.v1.GetBackupResponse>addMethod(
           getGetBackupMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.backup.services.v1.GetBackupRequest, com.udb.core.backup.services.v1.GetBackupResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.backup.services.v1.GetBackupRequest,
               com.udb.core.backup.services.v1.GetBackupResponse>(
                 service, METHODID_GET_BACKUP)))
-        .addMethod(
+        .<com.udb.core.backup.services.v1.PutBackupPolicyRequest, com.udb.core.backup.services.v1.PutBackupPolicyResponse>addMethod(
           getPutBackupPolicyMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.backup.services.v1.PutBackupPolicyRequest, com.udb.core.backup.services.v1.PutBackupPolicyResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.backup.services.v1.PutBackupPolicyRequest,
               com.udb.core.backup.services.v1.PutBackupPolicyResponse>(
                 service, METHODID_PUT_BACKUP_POLICY)))
-        .addMethod(
+        .<com.udb.core.backup.services.v1.GetBackupPolicyRequest, com.udb.core.backup.services.v1.GetBackupPolicyResponse>addMethod(
           getGetBackupPolicyMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.backup.services.v1.GetBackupPolicyRequest, com.udb.core.backup.services.v1.GetBackupPolicyResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.backup.services.v1.GetBackupPolicyRequest,
               com.udb.core.backup.services.v1.GetBackupPolicyResponse>(
                 service, METHODID_GET_BACKUP_POLICY)))
-        .addMethod(
+        .<com.udb.core.backup.services.v1.ListBackupPoliciesRequest, com.udb.core.backup.services.v1.ListBackupPoliciesResponse>addMethod(
           getListBackupPoliciesMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.backup.services.v1.ListBackupPoliciesRequest, com.udb.core.backup.services.v1.ListBackupPoliciesResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.backup.services.v1.ListBackupPoliciesRequest,
               com.udb.core.backup.services.v1.ListBackupPoliciesResponse>(
                 service, METHODID_LIST_BACKUP_POLICIES)))
-        .addMethod(
+        .<com.udb.core.backup.services.v1.DeleteBackupPolicyRequest, com.udb.core.backup.services.v1.DeleteBackupPolicyResponse>addMethod(
           getDeleteBackupPolicyMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.backup.services.v1.DeleteBackupPolicyRequest, com.udb.core.backup.services.v1.DeleteBackupPolicyResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.backup.services.v1.DeleteBackupPolicyRequest,
               com.udb.core.backup.services.v1.DeleteBackupPolicyResponse>(

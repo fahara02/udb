@@ -807,51 +807,51 @@ public final class AnalyticsServiceGrpc {
 
   public static final io.grpc.ServerServiceDefinition bindService(AsyncService service) {
     return io.grpc.ServerServiceDefinition.builder(getServiceDescriptor())
-        .addMethod(
+        .<com.udb.core.analytics.services.v1.RecordPipelineMetricRequest, com.udb.core.analytics.services.v1.RecordPipelineMetricResponse>addMethod(
           getRecordPipelineMetricMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.analytics.services.v1.RecordPipelineMetricRequest, com.udb.core.analytics.services.v1.RecordPipelineMetricResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.analytics.services.v1.RecordPipelineMetricRequest,
               com.udb.core.analytics.services.v1.RecordPipelineMetricResponse>(
                 service, METHODID_RECORD_PIPELINE_METRIC)))
-        .addMethod(
+        .<com.udb.core.analytics.services.v1.GetPipelineSummaryRequest, com.udb.core.analytics.services.v1.GetPipelineSummaryResponse>addMethod(
           getGetPipelineSummaryMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.analytics.services.v1.GetPipelineSummaryRequest, com.udb.core.analytics.services.v1.GetPipelineSummaryResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.analytics.services.v1.GetPipelineSummaryRequest,
               com.udb.core.analytics.services.v1.GetPipelineSummaryResponse>(
                 service, METHODID_GET_PIPELINE_SUMMARY)))
-        .addMethod(
+        .<com.udb.core.analytics.services.v1.GetExecutorPerformanceRequest, com.udb.core.analytics.services.v1.GetExecutorPerformanceResponse>addMethod(
           getGetExecutorPerformanceMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.analytics.services.v1.GetExecutorPerformanceRequest, com.udb.core.analytics.services.v1.GetExecutorPerformanceResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.analytics.services.v1.GetExecutorPerformanceRequest,
               com.udb.core.analytics.services.v1.GetExecutorPerformanceResponse>(
                 service, METHODID_GET_EXECUTOR_PERFORMANCE)))
-        .addMethod(
+        .<com.udb.core.analytics.services.v1.GetReconciliationAnalyticsRequest, com.udb.core.analytics.services.v1.GetReconciliationAnalyticsResponse>addMethod(
           getGetReconciliationAnalyticsMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.analytics.services.v1.GetReconciliationAnalyticsRequest, com.udb.core.analytics.services.v1.GetReconciliationAnalyticsResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.analytics.services.v1.GetReconciliationAnalyticsRequest,
               com.udb.core.analytics.services.v1.GetReconciliationAnalyticsResponse>(
                 service, METHODID_GET_RECONCILIATION_ANALYTICS)))
-        .addMethod(
+        .<com.udb.core.analytics.services.v1.GetThroughputRequest, com.udb.core.analytics.services.v1.GetThroughputResponse>addMethod(
           getGetThroughputMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.analytics.services.v1.GetThroughputRequest, com.udb.core.analytics.services.v1.GetThroughputResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.analytics.services.v1.GetThroughputRequest,
               com.udb.core.analytics.services.v1.GetThroughputResponse>(
                 service, METHODID_GET_THROUGHPUT)))
-        .addMethod(
+        .<com.udb.core.analytics.services.v1.GetSlaComplianceRequest, com.udb.core.analytics.services.v1.GetSlaComplianceResponse>addMethod(
           getGetSlaComplianceMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.analytics.services.v1.GetSlaComplianceRequest, com.udb.core.analytics.services.v1.GetSlaComplianceResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.analytics.services.v1.GetSlaComplianceRequest,
               com.udb.core.analytics.services.v1.GetSlaComplianceResponse>(
                 service, METHODID_GET_SLA_COMPLIANCE)))
-        .addMethod(
+        .<com.udb.core.analytics.services.v1.TriggerSnapshotRequest, com.udb.core.analytics.services.v1.TriggerSnapshotResponse>addMethod(
           getTriggerSnapshotMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.analytics.services.v1.TriggerSnapshotRequest, com.udb.core.analytics.services.v1.TriggerSnapshotResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.analytics.services.v1.TriggerSnapshotRequest,
               com.udb.core.analytics.services.v1.TriggerSnapshotResponse>(

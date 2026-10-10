@@ -786,44 +786,44 @@ public final class ControlPlaneServiceGrpc {
 
   public static final io.grpc.ServerServiceDefinition bindService(AsyncService service) {
     return io.grpc.ServerServiceDefinition.builder(getServiceDescriptor())
-        .addMethod(
+        .<com.udb.core.control.services.v1.DiscoveryRequest, com.udb.core.control.services.v1.DiscoveryResponse>addMethod(
           getStreamResourcesMethod(),
-          io.grpc.stub.ServerCalls.asyncBidiStreamingCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.control.services.v1.DiscoveryRequest, com.udb.core.control.services.v1.DiscoveryResponse>asyncBidiStreamingCall(
             new MethodHandlers<
               com.udb.core.control.services.v1.DiscoveryRequest,
               com.udb.core.control.services.v1.DiscoveryResponse>(
                 service, METHODID_STREAM_RESOURCES)))
-        .addMethod(
+        .<com.udb.core.control.services.v1.DeltaDiscoveryRequest, com.udb.core.control.services.v1.DeltaDiscoveryResponse>addMethod(
           getDeltaResourcesMethod(),
-          io.grpc.stub.ServerCalls.asyncBidiStreamingCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.control.services.v1.DeltaDiscoveryRequest, com.udb.core.control.services.v1.DeltaDiscoveryResponse>asyncBidiStreamingCall(
             new MethodHandlers<
               com.udb.core.control.services.v1.DeltaDiscoveryRequest,
               com.udb.core.control.services.v1.DeltaDiscoveryResponse>(
                 service, METHODID_DELTA_RESOURCES)))
-        .addMethod(
+        .<com.udb.core.control.services.v1.GetResourcesRequest, com.udb.core.control.services.v1.GetResourcesResponse>addMethod(
           getGetResourcesMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.control.services.v1.GetResourcesRequest, com.udb.core.control.services.v1.GetResourcesResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.control.services.v1.GetResourcesRequest,
               com.udb.core.control.services.v1.GetResourcesResponse>(
                 service, METHODID_GET_RESOURCES)))
-        .addMethod(
+        .<com.udb.core.control.services.v1.ListNodeStatesRequest, com.udb.core.control.services.v1.ListNodeStatesResponse>addMethod(
           getListNodeStatesMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.control.services.v1.ListNodeStatesRequest, com.udb.core.control.services.v1.ListNodeStatesResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.control.services.v1.ListNodeStatesRequest,
               com.udb.core.control.services.v1.ListNodeStatesResponse>(
                 service, METHODID_LIST_NODE_STATES)))
-        .addMethod(
+        .<com.udb.core.control.services.v1.AckStatusRequest, com.udb.core.control.services.v1.AckStatusResponse>addMethod(
           getAckStatusMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.control.services.v1.AckStatusRequest, com.udb.core.control.services.v1.AckStatusResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.control.services.v1.AckStatusRequest,
               com.udb.core.control.services.v1.AckStatusResponse>(
                 service, METHODID_ACK_STATUS)))
-        .addMethod(
+        .<com.udb.core.control.services.v1.RollbackResourcesRequest, com.udb.core.control.services.v1.RollbackResourcesResponse>addMethod(
           getRollbackResourcesMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.control.services.v1.RollbackResourcesRequest, com.udb.core.control.services.v1.RollbackResourcesResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.control.services.v1.RollbackResourcesRequest,
               com.udb.core.control.services.v1.RollbackResourcesResponse>(

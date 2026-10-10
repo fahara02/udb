@@ -1805,135 +1805,135 @@ public final class EmbeddingServiceGrpc {
 
   public static final io.grpc.ServerServiceDefinition bindService(AsyncService service) {
     return io.grpc.ServerServiceDefinition.builder(getServiceDescriptor())
-        .addMethod(
+        .<com.udb.core.embedding.services.v1.RegisterSourceRequest, com.udb.core.embedding.services.v1.RegisterSourceResponse>addMethod(
           getRegisterSourceMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.embedding.services.v1.RegisterSourceRequest, com.udb.core.embedding.services.v1.RegisterSourceResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.embedding.services.v1.RegisterSourceRequest,
               com.udb.core.embedding.services.v1.RegisterSourceResponse>(
                 service, METHODID_REGISTER_SOURCE)))
-        .addMethod(
+        .<com.udb.core.embedding.services.v1.ListSourcesRequest, com.udb.core.embedding.services.v1.ListSourcesResponse>addMethod(
           getListSourcesMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.embedding.services.v1.ListSourcesRequest, com.udb.core.embedding.services.v1.ListSourcesResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.embedding.services.v1.ListSourcesRequest,
               com.udb.core.embedding.services.v1.ListSourcesResponse>(
                 service, METHODID_LIST_SOURCES)))
-        .addMethod(
+        .<com.udb.core.embedding.services.v1.DeleteSourceRequest, com.udb.core.embedding.services.v1.DeleteSourceResponse>addMethod(
           getDeleteSourceMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.embedding.services.v1.DeleteSourceRequest, com.udb.core.embedding.services.v1.DeleteSourceResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.embedding.services.v1.DeleteSourceRequest,
               com.udb.core.embedding.services.v1.DeleteSourceResponse>(
                 service, METHODID_DELETE_SOURCE)))
-        .addMethod(
+        .<com.udb.core.embedding.services.v1.BackfillRequest, com.udb.core.embedding.services.v1.BackfillResponse>addMethod(
           getBackfillMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.embedding.services.v1.BackfillRequest, com.udb.core.embedding.services.v1.BackfillResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.embedding.services.v1.BackfillRequest,
               com.udb.core.embedding.services.v1.BackfillResponse>(
                 service, METHODID_BACKFILL)))
-        .addMethod(
+        .<com.udb.core.embedding.services.v1.ReportEmbeddingRequest, com.udb.core.embedding.services.v1.ReportEmbeddingResponse>addMethod(
           getReportEmbeddingMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.embedding.services.v1.ReportEmbeddingRequest, com.udb.core.embedding.services.v1.ReportEmbeddingResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.embedding.services.v1.ReportEmbeddingRequest,
               com.udb.core.embedding.services.v1.ReportEmbeddingResponse>(
                 service, METHODID_REPORT_EMBEDDING)))
-        .addMethod(
+        .<com.udb.core.embedding.services.v1.RetrieveRequest, com.udb.core.embedding.services.v1.RetrieveResponse>addMethod(
           getRetrieveMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.embedding.services.v1.RetrieveRequest, com.udb.core.embedding.services.v1.RetrieveResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.embedding.services.v1.RetrieveRequest,
               com.udb.core.embedding.services.v1.RetrieveResponse>(
                 service, METHODID_RETRIEVE)))
-        .addMethod(
+        .<com.udb.core.embedding.services.v1.RegisterModelRequest, com.udb.core.embedding.services.v1.RegisterModelResponse>addMethod(
           getRegisterModelMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.embedding.services.v1.RegisterModelRequest, com.udb.core.embedding.services.v1.RegisterModelResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.embedding.services.v1.RegisterModelRequest,
               com.udb.core.embedding.services.v1.RegisterModelResponse>(
                 service, METHODID_REGISTER_MODEL)))
-        .addMethod(
+        .<com.udb.core.embedding.services.v1.ListModelsRequest, com.udb.core.embedding.services.v1.ListModelsResponse>addMethod(
           getListModelsMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.embedding.services.v1.ListModelsRequest, com.udb.core.embedding.services.v1.ListModelsResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.embedding.services.v1.ListModelsRequest,
               com.udb.core.embedding.services.v1.ListModelsResponse>(
                 service, METHODID_LIST_MODELS)))
-        .addMethod(
+        .<com.udb.core.embedding.services.v1.DeleteModelRequest, com.udb.core.embedding.services.v1.DeleteModelResponse>addMethod(
           getDeleteModelMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.embedding.services.v1.DeleteModelRequest, com.udb.core.embedding.services.v1.DeleteModelResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.embedding.services.v1.DeleteModelRequest,
               com.udb.core.embedding.services.v1.DeleteModelResponse>(
                 service, METHODID_DELETE_MODEL)))
-        .addMethod(
+        .<com.udb.core.embedding.services.v1.SetModelStatusRequest, com.udb.core.embedding.services.v1.SetModelStatusResponse>addMethod(
           getSetModelStatusMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.embedding.services.v1.SetModelStatusRequest, com.udb.core.embedding.services.v1.SetModelStatusResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.embedding.services.v1.SetModelStatusRequest,
               com.udb.core.embedding.services.v1.SetModelStatusResponse>(
                 service, METHODID_SET_MODEL_STATUS)))
-        .addMethod(
+        .<com.udb.core.embedding.services.v1.CutoverModelAliasRequest, com.udb.core.embedding.services.v1.CutoverModelAliasResponse>addMethod(
           getCutoverModelAliasMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.embedding.services.v1.CutoverModelAliasRequest, com.udb.core.embedding.services.v1.CutoverModelAliasResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.embedding.services.v1.CutoverModelAliasRequest,
               com.udb.core.embedding.services.v1.CutoverModelAliasResponse>(
                 service, METHODID_CUTOVER_MODEL_ALIAS)))
-        .addMethod(
+        .<com.udb.core.embedding.services.v1.GetEmbeddingJobStatusRequest, com.udb.core.embedding.services.v1.GetEmbeddingJobStatusResponse>addMethod(
           getGetEmbeddingJobStatusMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.embedding.services.v1.GetEmbeddingJobStatusRequest, com.udb.core.embedding.services.v1.GetEmbeddingJobStatusResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.embedding.services.v1.GetEmbeddingJobStatusRequest,
               com.udb.core.embedding.services.v1.GetEmbeddingJobStatusResponse>(
                 service, METHODID_GET_EMBEDDING_JOB_STATUS)))
-        .addMethod(
+        .<com.udb.core.embedding.services.v1.ListEmbeddingWorkItemsRequest, com.udb.core.embedding.services.v1.ListEmbeddingWorkItemsResponse>addMethod(
           getListEmbeddingWorkItemsMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.embedding.services.v1.ListEmbeddingWorkItemsRequest, com.udb.core.embedding.services.v1.ListEmbeddingWorkItemsResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.embedding.services.v1.ListEmbeddingWorkItemsRequest,
               com.udb.core.embedding.services.v1.ListEmbeddingWorkItemsResponse>(
                 service, METHODID_LIST_EMBEDDING_WORK_ITEMS)))
-        .addMethod(
+        .<com.udb.core.embedding.services.v1.ReportEmbeddingBatchRequest, com.udb.core.embedding.services.v1.ReportEmbeddingBatchResponse>addMethod(
           getReportEmbeddingBatchMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.embedding.services.v1.ReportEmbeddingBatchRequest, com.udb.core.embedding.services.v1.ReportEmbeddingBatchResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.embedding.services.v1.ReportEmbeddingBatchRequest,
               com.udb.core.embedding.services.v1.ReportEmbeddingBatchResponse>(
                 service, METHODID_REPORT_EMBEDDING_BATCH)))
-        .addMethod(
+        .<com.udb.core.embedding.services.v1.ReportEmbeddingFailureRequest, com.udb.core.embedding.services.v1.ReportEmbeddingFailureResponse>addMethod(
           getReportEmbeddingFailureMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.embedding.services.v1.ReportEmbeddingFailureRequest, com.udb.core.embedding.services.v1.ReportEmbeddingFailureResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.embedding.services.v1.ReportEmbeddingFailureRequest,
               com.udb.core.embedding.services.v1.ReportEmbeddingFailureResponse>(
                 service, METHODID_REPORT_EMBEDDING_FAILURE)))
-        .addMethod(
+        .<com.udb.core.embedding.services.v1.IngestDocumentRequest, com.udb.core.embedding.services.v1.IngestDocumentResponse>addMethod(
           getIngestDocumentMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.embedding.services.v1.IngestDocumentRequest, com.udb.core.embedding.services.v1.IngestDocumentResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.embedding.services.v1.IngestDocumentRequest,
               com.udb.core.embedding.services.v1.IngestDocumentResponse>(
                 service, METHODID_INGEST_DOCUMENT)))
-        .addMethod(
+        .<com.udb.core.embedding.services.v1.IngestDocumentBatchRequest, com.udb.core.embedding.services.v1.IngestDocumentBatchResponse>addMethod(
           getIngestDocumentBatchMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.embedding.services.v1.IngestDocumentBatchRequest, com.udb.core.embedding.services.v1.IngestDocumentBatchResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.embedding.services.v1.IngestDocumentBatchRequest,
               com.udb.core.embedding.services.v1.IngestDocumentBatchResponse>(
                 service, METHODID_INGEST_DOCUMENT_BATCH)))
-        .addMethod(
+        .<com.udb.core.embedding.services.v1.ReportParsedDocumentRequest, com.udb.core.embedding.services.v1.ReportParsedDocumentResponse>addMethod(
           getReportParsedDocumentMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.embedding.services.v1.ReportParsedDocumentRequest, com.udb.core.embedding.services.v1.ReportParsedDocumentResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.embedding.services.v1.ReportParsedDocumentRequest,
               com.udb.core.embedding.services.v1.ReportParsedDocumentResponse>(
                 service, METHODID_REPORT_PARSED_DOCUMENT)))
-        .addMethod(
+        .<com.udb.core.embedding.services.v1.ReportRetrievalEvaluationRequest, com.udb.core.embedding.services.v1.ReportRetrievalEvaluationResponse>addMethod(
           getReportRetrievalEvaluationMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.embedding.services.v1.ReportRetrievalEvaluationRequest, com.udb.core.embedding.services.v1.ReportRetrievalEvaluationResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.embedding.services.v1.ReportRetrievalEvaluationRequest,
               com.udb.core.embedding.services.v1.ReportRetrievalEvaluationResponse>(

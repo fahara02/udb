@@ -431,8 +431,8 @@ func TestLiveOrmConformance(t *testing.T) {
 		repo *Repository
 		key  map[string]any
 	}{
-		{logRepo, map[string]any{"log_id": logID1}},
-		{logRepo, map[string]any{"log_id": logID2}},
+		{logRepo, map[string]any{"log_id": logID1, "created_at": log1["created_at"]}},
+		{logRepo, map[string]any{"log_id": logID2, "created_at": log2["created_at"]}},
 		{tmplRepo, map[string]any{"template_id": templateID}},
 		{flagRepo, map[string]any{"flag_id": flagID}},
 	} {

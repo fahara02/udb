@@ -983,65 +983,65 @@ public final class RoomServiceGrpc {
 
   public static final io.grpc.ServerServiceDefinition bindService(AsyncService service) {
     return io.grpc.ServerServiceDefinition.builder(getServiceDescriptor())
-        .addMethod(
+        .<com.udb.core.webrtc.services.v1.CreateRoomRequest, com.udb.core.webrtc.services.v1.CreateRoomResponse>addMethod(
           getCreateRoomMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.webrtc.services.v1.CreateRoomRequest, com.udb.core.webrtc.services.v1.CreateRoomResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.webrtc.services.v1.CreateRoomRequest,
               com.udb.core.webrtc.services.v1.CreateRoomResponse>(
                 service, METHODID_CREATE_ROOM)))
-        .addMethod(
+        .<com.udb.core.webrtc.services.v1.GetRoomRequest, com.udb.core.webrtc.services.v1.GetRoomResponse>addMethod(
           getGetRoomMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.webrtc.services.v1.GetRoomRequest, com.udb.core.webrtc.services.v1.GetRoomResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.webrtc.services.v1.GetRoomRequest,
               com.udb.core.webrtc.services.v1.GetRoomResponse>(
                 service, METHODID_GET_ROOM)))
-        .addMethod(
+        .<com.udb.core.webrtc.services.v1.UpdateRoomRequest, com.udb.core.webrtc.services.v1.UpdateRoomResponse>addMethod(
           getUpdateRoomMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.webrtc.services.v1.UpdateRoomRequest, com.udb.core.webrtc.services.v1.UpdateRoomResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.webrtc.services.v1.UpdateRoomRequest,
               com.udb.core.webrtc.services.v1.UpdateRoomResponse>(
                 service, METHODID_UPDATE_ROOM)))
-        .addMethod(
+        .<com.udb.core.webrtc.services.v1.CloseRoomRequest, com.udb.core.webrtc.services.v1.CloseRoomResponse>addMethod(
           getCloseRoomMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.webrtc.services.v1.CloseRoomRequest, com.udb.core.webrtc.services.v1.CloseRoomResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.webrtc.services.v1.CloseRoomRequest,
               com.udb.core.webrtc.services.v1.CloseRoomResponse>(
                 service, METHODID_CLOSE_ROOM)))
-        .addMethod(
+        .<com.udb.core.webrtc.services.v1.ListRoomsRequest, com.udb.core.webrtc.services.v1.ListRoomsResponse>addMethod(
           getListRoomsMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.webrtc.services.v1.ListRoomsRequest, com.udb.core.webrtc.services.v1.ListRoomsResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.webrtc.services.v1.ListRoomsRequest,
               com.udb.core.webrtc.services.v1.ListRoomsResponse>(
                 service, METHODID_LIST_ROOMS)))
-        .addMethod(
+        .<com.udb.core.webrtc.services.v1.StartRoomCompositeRequest, com.udb.core.webrtc.services.v1.StartRoomCompositeResponse>addMethod(
           getStartRoomCompositeMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.webrtc.services.v1.StartRoomCompositeRequest, com.udb.core.webrtc.services.v1.StartRoomCompositeResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.webrtc.services.v1.StartRoomCompositeRequest,
               com.udb.core.webrtc.services.v1.StartRoomCompositeResponse>(
                 service, METHODID_START_ROOM_COMPOSITE)))
-        .addMethod(
+        .<com.udb.core.webrtc.services.v1.StartTrackEgressRequest, com.udb.core.webrtc.services.v1.StartTrackEgressResponse>addMethod(
           getStartTrackEgressMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.webrtc.services.v1.StartTrackEgressRequest, com.udb.core.webrtc.services.v1.StartTrackEgressResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.webrtc.services.v1.StartTrackEgressRequest,
               com.udb.core.webrtc.services.v1.StartTrackEgressResponse>(
                 service, METHODID_START_TRACK_EGRESS)))
-        .addMethod(
+        .<com.udb.core.webrtc.services.v1.StopEgressRequest, com.udb.core.webrtc.services.v1.StopEgressResponse>addMethod(
           getStopEgressMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.webrtc.services.v1.StopEgressRequest, com.udb.core.webrtc.services.v1.StopEgressResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.webrtc.services.v1.StopEgressRequest,
               com.udb.core.webrtc.services.v1.StopEgressResponse>(
                 service, METHODID_STOP_EGRESS)))
-        .addMethod(
+        .<com.udb.core.webrtc.services.v1.ListEgressRequest, com.udb.core.webrtc.services.v1.ListEgressResponse>addMethod(
           getListEgressMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.webrtc.services.v1.ListEgressRequest, com.udb.core.webrtc.services.v1.ListEgressResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.webrtc.services.v1.ListEgressRequest,
               com.udb.core.webrtc.services.v1.ListEgressResponse>(

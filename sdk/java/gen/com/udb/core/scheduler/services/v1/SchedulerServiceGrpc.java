@@ -761,44 +761,44 @@ public final class SchedulerServiceGrpc {
 
   public static final io.grpc.ServerServiceDefinition bindService(AsyncService service) {
     return io.grpc.ServerServiceDefinition.builder(getServiceDescriptor())
-        .addMethod(
+        .<com.udb.core.scheduler.services.v1.CreateJobRequest, com.udb.core.scheduler.services.v1.CreateJobResponse>addMethod(
           getCreateJobMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.scheduler.services.v1.CreateJobRequest, com.udb.core.scheduler.services.v1.CreateJobResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.scheduler.services.v1.CreateJobRequest,
               com.udb.core.scheduler.services.v1.CreateJobResponse>(
                 service, METHODID_CREATE_JOB)))
-        .addMethod(
+        .<com.udb.core.scheduler.services.v1.GetJobRequest, com.udb.core.scheduler.services.v1.GetJobResponse>addMethod(
           getGetJobMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.scheduler.services.v1.GetJobRequest, com.udb.core.scheduler.services.v1.GetJobResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.scheduler.services.v1.GetJobRequest,
               com.udb.core.scheduler.services.v1.GetJobResponse>(
                 service, METHODID_GET_JOB)))
-        .addMethod(
+        .<com.udb.core.scheduler.services.v1.ListJobsRequest, com.udb.core.scheduler.services.v1.ListJobsResponse>addMethod(
           getListJobsMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.scheduler.services.v1.ListJobsRequest, com.udb.core.scheduler.services.v1.ListJobsResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.scheduler.services.v1.ListJobsRequest,
               com.udb.core.scheduler.services.v1.ListJobsResponse>(
                 service, METHODID_LIST_JOBS)))
-        .addMethod(
+        .<com.udb.core.scheduler.services.v1.DeleteJobRequest, com.udb.core.scheduler.services.v1.DeleteJobResponse>addMethod(
           getDeleteJobMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.scheduler.services.v1.DeleteJobRequest, com.udb.core.scheduler.services.v1.DeleteJobResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.scheduler.services.v1.DeleteJobRequest,
               com.udb.core.scheduler.services.v1.DeleteJobResponse>(
                 service, METHODID_DELETE_JOB)))
-        .addMethod(
+        .<com.udb.core.scheduler.services.v1.PauseJobRequest, com.udb.core.scheduler.services.v1.PauseJobResponse>addMethod(
           getPauseJobMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.scheduler.services.v1.PauseJobRequest, com.udb.core.scheduler.services.v1.PauseJobResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.scheduler.services.v1.PauseJobRequest,
               com.udb.core.scheduler.services.v1.PauseJobResponse>(
                 service, METHODID_PAUSE_JOB)))
-        .addMethod(
+        .<com.udb.core.scheduler.services.v1.ResumeJobRequest, com.udb.core.scheduler.services.v1.ResumeJobResponse>addMethod(
           getResumeJobMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.scheduler.services.v1.ResumeJobRequest, com.udb.core.scheduler.services.v1.ResumeJobResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.scheduler.services.v1.ResumeJobRequest,
               com.udb.core.scheduler.services.v1.ResumeJobResponse>(

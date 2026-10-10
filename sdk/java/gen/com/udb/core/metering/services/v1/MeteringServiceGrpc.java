@@ -821,44 +821,44 @@ public final class MeteringServiceGrpc {
 
   public static final io.grpc.ServerServiceDefinition bindService(AsyncService service) {
     return io.grpc.ServerServiceDefinition.builder(getServiceDescriptor())
-        .addMethod(
+        .<com.udb.core.metering.services.v1.RecordUsageRequest, com.udb.core.metering.services.v1.RecordUsageResponse>addMethod(
           getRecordUsageMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.metering.services.v1.RecordUsageRequest, com.udb.core.metering.services.v1.RecordUsageResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.metering.services.v1.RecordUsageRequest,
               com.udb.core.metering.services.v1.RecordUsageResponse>(
                 service, METHODID_RECORD_USAGE)))
-        .addMethod(
+        .<com.udb.core.metering.services.v1.QueryUsageRequest, com.udb.core.metering.services.v1.QueryUsageResponse>addMethod(
           getQueryUsageMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.metering.services.v1.QueryUsageRequest, com.udb.core.metering.services.v1.QueryUsageResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.metering.services.v1.QueryUsageRequest,
               com.udb.core.metering.services.v1.QueryUsageResponse>(
                 service, METHODID_QUERY_USAGE)))
-        .addMethod(
+        .<com.udb.core.metering.services.v1.PutQuotaRequest, com.udb.core.metering.services.v1.PutQuotaResponse>addMethod(
           getPutQuotaMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.metering.services.v1.PutQuotaRequest, com.udb.core.metering.services.v1.PutQuotaResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.metering.services.v1.PutQuotaRequest,
               com.udb.core.metering.services.v1.PutQuotaResponse>(
                 service, METHODID_PUT_QUOTA)))
-        .addMethod(
+        .<com.udb.core.metering.services.v1.GetQuotaRequest, com.udb.core.metering.services.v1.GetQuotaResponse>addMethod(
           getGetQuotaMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.metering.services.v1.GetQuotaRequest, com.udb.core.metering.services.v1.GetQuotaResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.metering.services.v1.GetQuotaRequest,
               com.udb.core.metering.services.v1.GetQuotaResponse>(
                 service, METHODID_GET_QUOTA)))
-        .addMethod(
+        .<com.udb.core.metering.services.v1.ListQuotasRequest, com.udb.core.metering.services.v1.ListQuotasResponse>addMethod(
           getListQuotasMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.metering.services.v1.ListQuotasRequest, com.udb.core.metering.services.v1.ListQuotasResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.metering.services.v1.ListQuotasRequest,
               com.udb.core.metering.services.v1.ListQuotasResponse>(
                 service, METHODID_LIST_QUOTAS)))
-        .addMethod(
+        .<com.udb.core.metering.services.v1.CheckQuotaRequest, com.udb.core.metering.services.v1.CheckQuotaResponse>addMethod(
           getCheckQuotaMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.metering.services.v1.CheckQuotaRequest, com.udb.core.metering.services.v1.CheckQuotaResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.metering.services.v1.CheckQuotaRequest,
               com.udb.core.metering.services.v1.CheckQuotaResponse>(

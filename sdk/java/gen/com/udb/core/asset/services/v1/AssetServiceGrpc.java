@@ -895,58 +895,58 @@ public final class AssetServiceGrpc {
 
   public static final io.grpc.ServerServiceDefinition bindService(AsyncService service) {
     return io.grpc.ServerServiceDefinition.builder(getServiceDescriptor())
-        .addMethod(
+        .<com.udb.core.asset.services.v1.CreatePipelineDefinitionRequest, com.udb.core.asset.services.v1.CreatePipelineDefinitionResponse>addMethod(
           getCreatePipelineDefinitionMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.asset.services.v1.CreatePipelineDefinitionRequest, com.udb.core.asset.services.v1.CreatePipelineDefinitionResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.asset.services.v1.CreatePipelineDefinitionRequest,
               com.udb.core.asset.services.v1.CreatePipelineDefinitionResponse>(
                 service, METHODID_CREATE_PIPELINE_DEFINITION)))
-        .addMethod(
+        .<com.udb.core.asset.services.v1.GetPipelineDefinitionRequest, com.udb.core.asset.services.v1.GetPipelineDefinitionResponse>addMethod(
           getGetPipelineDefinitionMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.asset.services.v1.GetPipelineDefinitionRequest, com.udb.core.asset.services.v1.GetPipelineDefinitionResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.asset.services.v1.GetPipelineDefinitionRequest,
               com.udb.core.asset.services.v1.GetPipelineDefinitionResponse>(
                 service, METHODID_GET_PIPELINE_DEFINITION)))
-        .addMethod(
+        .<com.udb.core.asset.services.v1.RegisterAssetRequest, com.udb.core.asset.services.v1.RegisterAssetResponse>addMethod(
           getRegisterAssetMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.asset.services.v1.RegisterAssetRequest, com.udb.core.asset.services.v1.RegisterAssetResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.asset.services.v1.RegisterAssetRequest,
               com.udb.core.asset.services.v1.RegisterAssetResponse>(
                 service, METHODID_REGISTER_ASSET)))
-        .addMethod(
+        .<com.udb.core.asset.services.v1.StartPipelineRequest, com.udb.core.asset.services.v1.StartPipelineResponse>addMethod(
           getStartPipelineMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.asset.services.v1.StartPipelineRequest, com.udb.core.asset.services.v1.StartPipelineResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.asset.services.v1.StartPipelineRequest,
               com.udb.core.asset.services.v1.StartPipelineResponse>(
                 service, METHODID_START_PIPELINE)))
-        .addMethod(
+        .<com.udb.core.asset.services.v1.GetPipelineRequest, com.udb.core.asset.services.v1.GetPipelineResponse>addMethod(
           getGetPipelineMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.asset.services.v1.GetPipelineRequest, com.udb.core.asset.services.v1.GetPipelineResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.asset.services.v1.GetPipelineRequest,
               com.udb.core.asset.services.v1.GetPipelineResponse>(
                 service, METHODID_GET_PIPELINE)))
-        .addMethod(
+        .<com.udb.core.asset.services.v1.CompleteStepRequest, com.udb.core.asset.services.v1.CompleteStepResponse>addMethod(
           getCompleteStepMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.asset.services.v1.CompleteStepRequest, com.udb.core.asset.services.v1.CompleteStepResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.asset.services.v1.CompleteStepRequest,
               com.udb.core.asset.services.v1.CompleteStepResponse>(
                 service, METHODID_COMPLETE_STEP)))
-        .addMethod(
+        .<com.udb.core.asset.services.v1.ListAssetsRequest, com.udb.core.asset.services.v1.ListAssetsResponse>addMethod(
           getListAssetsMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.asset.services.v1.ListAssetsRequest, com.udb.core.asset.services.v1.ListAssetsResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.asset.services.v1.ListAssetsRequest,
               com.udb.core.asset.services.v1.ListAssetsResponse>(
                 service, METHODID_LIST_ASSETS)))
-        .addMethod(
+        .<com.udb.core.asset.services.v1.GetAssetRequest, com.udb.core.asset.services.v1.GetAssetResponse>addMethod(
           getGetAssetMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.asset.services.v1.GetAssetRequest, com.udb.core.asset.services.v1.GetAssetResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.asset.services.v1.GetAssetRequest,
               com.udb.core.asset.services.v1.GetAssetResponse>(

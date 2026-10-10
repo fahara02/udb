@@ -101,8 +101,62 @@ function normalizeGoGeneratedText(text) {
     .replace(/\(WHERE email <> ”\)/gu, "(WHERE email <> '')");
 }
 
+// The gRPC API accepts these exact method type arguments. Naming the already
+// declared pairs keeps javac from inferring nested ReqT/RespT variables while
+// attributing large bindService chains; it changes no wire or handler identity.
+function explicitJavaServerBindings(text) {
+  if (!text.includes("bindService(AsyncService service)")) return text;
+  const functions = [...text.matchAll(
+    /  public static final io\.grpc\.ServerServiceDefinition bindService\(AsyncService service\) \{\n([\s\S]*?)\n  \}/gu,
+  )];
+  if (functions.length !== 1) throw new Error("ambiguous generated Java bindService shape");
+  const declared = new Map();
+  for (const match of text.matchAll(
+    /public static io\.grpc\.MethodDescriptor<\s*([\w.$]+),\s*([\w.$]+)>\s+(get[\w$]+Method)\(\)/gu,
+  )) {
+    if (declared.has(match[3])) throw new Error(`duplicate generated Java descriptor ${match[3]}`);
+    declared.set(match[3], [match[1], match[2]]);
+  }
+  const ids = new Set([...text.matchAll(/private static final int (METHODID_[\w$]+)\s*=/gu)]
+    .map((match) => match[1]));
+  const body = functions[0][1];
+  const expected = [...body.matchAll(/\.(?:<[^()\n]*>)?addMethod\s*\(/gu)].length;
+  const seen = new Set();
+  const seenIds = new Set();
+  const typed = body.replace(
+    /\.(?:<(?<builderRequest>[\w.$]+),\s*(?<builderResponse>[\w.$]+)>)?addMethod\(\s*(?<getter>get[\w$]+Method)\(\),\s*io\.grpc\.stub\.ServerCalls\.(?:<(?<callRequest>[\w.$]+),\s*(?<callResponse>[\w.$]+)>)?(?<call>async(?:Unary|ServerStreaming|ClientStreaming|BidiStreaming)Call)\(\s*new MethodHandlers<\s*(?<request>[\w.$]+),\s*(?<response>[\w.$]+)>\(\s*service,\s*(?<id>METHODID_[\w$]+)\)\)\)/gu,
+    (binding, ...args) => {
+      const pair = args.at(-1);
+      const declaredPair = declared.get(pair.getter);
+      if (!declaredPair || declaredPair[0] !== pair.request || declaredPair[1] !== pair.response) {
+        throw new Error(`generated Java descriptor/handler pair mismatch ${pair.getter}`);
+      }
+      if (seen.has(pair.getter) || seenIds.has(pair.id) || !ids.has(pair.id)) {
+        throw new Error(`duplicate or undeclared generated Java binding ${pair.getter}/${pair.id}`);
+      }
+      for (const [request, response] of [
+        [pair.builderRequest, pair.builderResponse], [pair.callRequest, pair.callResponse],
+      ]) {
+        if (request !== undefined && (request !== pair.request || response !== pair.response)) {
+          throw new Error(`generated Java explicit type witness mismatch ${pair.getter}`);
+        }
+      }
+      seen.add(pair.getter);
+      seenIds.add(pair.id);
+      return binding
+        .replace(/^\.(?:<[^>]+>)?addMethod/u, `.<${pair.request}, ${pair.response}>addMethod`)
+        .replace(/io\.grpc\.stub\.ServerCalls\.(?:<[^>]+>)?async/u,
+          `io.grpc.stub.ServerCalls.<${pair.request}, ${pair.response}>async`);
+    },
+  );
+  if (seen.size !== expected || seen.size !== declared.size || seenIds.size !== ids.size) {
+    throw new Error("unmatched generated Java server bindings; refusing partial type witnesses");
+  }
+  return text.replace(functions[0][0], functions[0][0].replace(body, typed));
+}
+
 function normalizeJavaGeneratedText(text) {
-  return normalizeGeneratedText(text).replace(
+  return explicitJavaServerBindings(normalizeGeneratedText(text)).replace(
     /^[ \t]*\*[ \t]*\n(?=[ \t]*\* (?:HTTP prefix:|The gateway calls|Auth method routing|The native fast-path|Signed policy bundles|Server-only control plane:))/gmu,
     "",
   );

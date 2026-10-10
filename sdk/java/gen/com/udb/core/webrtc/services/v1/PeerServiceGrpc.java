@@ -631,37 +631,37 @@ public final class PeerServiceGrpc {
 
   public static final io.grpc.ServerServiceDefinition bindService(AsyncService service) {
     return io.grpc.ServerServiceDefinition.builder(getServiceDescriptor())
-        .addMethod(
+        .<com.udb.core.webrtc.services.v1.JoinRoomRequest, com.udb.core.webrtc.services.v1.JoinRoomResponse>addMethod(
           getJoinRoomMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.webrtc.services.v1.JoinRoomRequest, com.udb.core.webrtc.services.v1.JoinRoomResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.webrtc.services.v1.JoinRoomRequest,
               com.udb.core.webrtc.services.v1.JoinRoomResponse>(
                 service, METHODID_JOIN_ROOM)))
-        .addMethod(
+        .<com.udb.core.webrtc.services.v1.JoinSessionRequest, com.udb.core.webrtc.services.v1.JoinSessionResponse>addMethod(
           getJoinSessionMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.webrtc.services.v1.JoinSessionRequest, com.udb.core.webrtc.services.v1.JoinSessionResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.webrtc.services.v1.JoinSessionRequest,
               com.udb.core.webrtc.services.v1.JoinSessionResponse>(
                 service, METHODID_JOIN_SESSION)))
-        .addMethod(
+        .<com.udb.core.webrtc.services.v1.LeaveRoomRequest, com.udb.core.webrtc.services.v1.LeaveRoomResponse>addMethod(
           getLeaveRoomMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.webrtc.services.v1.LeaveRoomRequest, com.udb.core.webrtc.services.v1.LeaveRoomResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.webrtc.services.v1.LeaveRoomRequest,
               com.udb.core.webrtc.services.v1.LeaveRoomResponse>(
                 service, METHODID_LEAVE_ROOM)))
-        .addMethod(
+        .<com.udb.core.webrtc.services.v1.GetPeerRequest, com.udb.core.webrtc.services.v1.GetPeerResponse>addMethod(
           getGetPeerMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.webrtc.services.v1.GetPeerRequest, com.udb.core.webrtc.services.v1.GetPeerResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.webrtc.services.v1.GetPeerRequest,
               com.udb.core.webrtc.services.v1.GetPeerResponse>(
                 service, METHODID_GET_PEER)))
-        .addMethod(
+        .<com.udb.core.webrtc.services.v1.ListPeersRequest, com.udb.core.webrtc.services.v1.ListPeersResponse>addMethod(
           getListPeersMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.webrtc.services.v1.ListPeersRequest, com.udb.core.webrtc.services.v1.ListPeersResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.webrtc.services.v1.ListPeersRequest,
               com.udb.core.webrtc.services.v1.ListPeersResponse>(

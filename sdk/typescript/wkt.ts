@@ -16,8 +16,18 @@
 // so via a top-of-file `import "./wkt"`.
 import * as protobuf from "protobufjs";
 
+// Only wire objects produced here bypass normalization. A user's literal
+// `fields` key is ordinary JSON data, so its shape cannot identify a wire Struct.
+const normalizedStructs = new WeakSet<object>();
+
+function checkDepth(depth: number): void {
+  const limit = (protobuf.util as unknown as { recursionLimit: number }).recursionLimit;
+  if (depth > limit) throw new Error("maximum nesting depth exceeded");
+}
+
 /** Recursively convert a JS value to a google.protobuf.Value (camelCase oneof). */
-function jsToValue(v: unknown): Record<string, unknown> {
+function jsToValue(v: unknown, depth: number): Record<string, unknown> {
+  checkDepth(depth);
   if (v === null || v === undefined) return { nullValue: 0 };
   switch (typeof v) {
     case "string":
@@ -27,16 +37,22 @@ function jsToValue(v: unknown): Record<string, unknown> {
     case "boolean":
       return { boolValue: v };
   }
-  if (Array.isArray(v)) return { listValue: { values: v.map(jsToValue) } };
-  if (typeof v === "object") return { structValue: jsToStruct(v as Record<string, unknown>) };
+  if (Array.isArray(v)) {
+    checkDepth(depth + 1); // ListValue adds one message before each nested Value.
+    return { listValue: { values: v.map((value) => jsToValue(value, depth + 2)) } };
+  }
+  if (typeof v === "object") return { structValue: jsToStruct(v as Record<string, unknown>, depth + 1) };
   return { nullValue: 0 };
 }
 
 /** Convert a plain JS object to the explicit google.protobuf.Struct wire shape. */
-function jsToStruct(o: Record<string, unknown>): { fields: Record<string, unknown> } {
-  const fields: Record<string, unknown> = {};
-  for (const [k, val] of Object.entries(o ?? {})) fields[k] = jsToValue(val);
-  return { fields };
+function jsToStruct(o: Record<string, unknown>, depth: number): { fields: Record<string, unknown> } {
+  checkDepth(depth);
+  const fields: Record<string, unknown> = Object.create(null);
+  for (const [k, val] of Object.entries(o ?? {})) fields[k] = jsToValue(val, depth + 1);
+  const wire = { fields };
+  normalizedStructs.add(wire);
+  return wire;
 }
 
 const wrappers = (protobuf as unknown as { wrappers: Record<string, any> }).wrappers;
@@ -45,14 +61,19 @@ const wrappers = (protobuf as unknown as { wrappers: Record<string, any> }).wrap
 if (!wrappers[".google.protobuf.Struct"]?.__udb) {
   wrappers[".google.protobuf.Struct"] = {
     __udb: true,
-    // `this.fromObject` is the ORIGINAL (protobufjs binds it), so we normalize a
-    // plain JS object into the explicit {fields:{k:{<value>}}} form and hand it
-    // back to the real decoder — no recursion.
-    fromObject(this: any, object: any) {
-      return this.fromObject(jsToStruct(object));
+    // protobufjs binds the original converter here, but that converter calls
+    // wrapped Type.fromObject again for nested Structs. Preserve our normalized
+    // objects and genuine message instances instead of wrapping `fields` again.
+    fromObject(this: any, object: any, depth = 0) {
+      const structMessage = object instanceof protobuf.Message
+        && object.$type?.fullName === ".google.protobuf.Struct";
+      if (object instanceof this.ctor || structMessage || normalizedStructs.has(object)) {
+        return this.fromObject(object, depth);
+      }
+      return this.fromObject(jsToStruct(object, depth), depth);
     },
-    toObject(this: any, message: any, options: any) {
-      return this.toObject(message, options);
+    toObject(this: any, message: any, options: any, depth?: number) {
+      return this.toObject(message, options, depth);
     },
   };
 }

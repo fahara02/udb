@@ -166,20 +166,7 @@ function rpcSnake(string $name): string
 
 function liveStruct(array $fields): \Google\Protobuf\Struct
 {
-    $struct = new \Google\Protobuf\Struct();
-    $map = $struct->getFields();
-    foreach ($fields as $key => $value) {
-        $v = new \Google\Protobuf\Value();
-        if (is_bool($value)) {
-            $v->setBoolValue($value);
-        } elseif (is_int($value) || is_float($value)) {
-            $v->setNumberValue($value);
-        } else {
-            $v->setStringValue((string) $value);
-        }
-        $map[$key] = $v;
-    }
-    return $struct;
+    return \Fahara02\UdbLaravel\UdbClient::toStruct($fields);
 }
 
 function liveRecordJson(string $recordId, string $tenant, string $project, string $lookupKey, string $payload, int $revision): string

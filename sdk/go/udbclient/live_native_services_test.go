@@ -235,6 +235,19 @@ func runLiveNativeServiceE2E(t *testing.T, ctx context.Context, authConn grpc.Cl
 			t.Fatalf("AssignRole: %v", err)
 		}
 		userRoleID := assigned.GetUserRole().GetUserRoleId()
+		// Cross-user PDP queries require the separately verified platform bearer.
+		checkSubject := func() (*authzpb.CheckAccessResponse, error) {
+			subjectCtx, subjectCancel := context.WithTimeout(platformCtx, 8*time.Second)
+			defer subjectCancel()
+			return c.CheckAccess(subjectCtx, &authzpb.CheckAccessRequest{
+				UserId: userID, Domain: tenant, TenantId: tenant, ProjectId: project,
+				Object: "invoice", Action: "data.select",
+			})
+		}
+		beforePolicy, err := checkSubject()
+		if err != nil || beforePolicy.GetAllowed() {
+			t.Fatalf("CheckAccess must deny before the exact owned policy exists: allowed=%v code=%s", beforePolicy.GetAllowed(), status.Code(err))
+		}
 		policyID := uuid4()
 		if _, err := c.PutAuthzPolicy(cc, &authzpb.PutAuthzPolicyRequest{
 			Policy: &authzpb.AuthzPolicyRecord{
@@ -249,20 +262,19 @@ func runLiveNativeServiceE2E(t *testing.T, ctx context.Context, authConn grpc.Cl
 			_, err := c.DeletePolicyRule(cc, &authzpb.DeletePolicyRuleRequest{PolicyId: policyID, DeletedBy: actorID})
 			return err
 		})
-		// Cross-user PDP queries require the separately authenticated platform
-		// principal. The ordinary bearer is correctly bound to its own subject,
-		// regardless of a different user_id supplied in the body.
-		subjectCtx, subjectCancel := context.WithTimeout(platformCtx, 8*time.Second)
-		defer subjectCancel()
-		allowed, err := c.CheckAccess(subjectCtx, &authzpb.CheckAccessRequest{
-			UserId: userID, Domain: tenant, TenantId: tenant, ProjectId: project,
-			Object: "invoice", Action: "data.select",
-		})
+		allowed, err := checkSubject()
 		if err != nil {
 			t.Fatalf("CheckAccess (allow): %v", err)
 		}
-		if !allowed.GetAllowed() || allowed.GetMatchedRule() != policyID {
-			t.Fatalf("CheckAccess must allow the subject through the owned assigned role+policy, got allowed=%v matched_rule=%q reason=%q", allowed.GetAllowed(), allowed.GetMatchedRule(), allowed.GetReason())
+		// matched_rule identifies the first evaluated candidate, not the granting rule.
+		// The deny-before-policy / allow-after-policy / deny-after-revoke sequence
+		// proves the exact owned grant, while this checks its candidate evidence.
+		ownedCandidate := false
+		for _, candidateID := range allowed.GetDecision().GetMatchedPolicyIds() {
+			ownedCandidate = ownedCandidate || candidateID == policyID
+		}
+		if !allowed.GetAllowed() || !ownedCandidate {
+			t.Fatalf("CheckAccess must allow the subject with the exact owned policy evaluated: allowed=%v owned_candidate=%v reason=%q", allowed.GetAllowed(), ownedCandidate, allowed.GetReason())
 		}
 		userRoles, err := c.ListUserRoles(cc, &authzpb.ListUserRolesRequest{UserId: userID, Domain: tenant, ActiveOnly: true})
 		if err != nil {
@@ -280,10 +292,7 @@ func runLiveNativeServiceE2E(t *testing.T, ctx context.Context, authConn grpc.Cl
 		if err != nil || len(revokedRoles.GetUserRoles()) != 0 {
 			t.Fatalf("ListUserRoles must confirm the subject has no active roles after revoke: roles=%d code=%s", len(revokedRoles.GetUserRoles()), status.Code(err))
 		}
-		denied, err := c.CheckAccess(subjectCtx, &authzpb.CheckAccessRequest{
-			UserId: userID, Domain: tenant, TenantId: tenant, ProjectId: project,
-			Object: "invoice", Action: "data.select",
-		})
+		denied, err := checkSubject()
 		if err != nil {
 			t.Fatalf("CheckAccess (deny): %v", err)
 		}

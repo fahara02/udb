@@ -700,37 +700,37 @@ public final class SearchServiceGrpc {
 
   public static final io.grpc.ServerServiceDefinition bindService(AsyncService service) {
     return io.grpc.ServerServiceDefinition.builder(getServiceDescriptor())
-        .addMethod(
+        .<com.udb.core.search.services.v1.CreateIndexRequest, com.udb.core.search.services.v1.CreateIndexResponse>addMethod(
           getCreateIndexMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.search.services.v1.CreateIndexRequest, com.udb.core.search.services.v1.CreateIndexResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.search.services.v1.CreateIndexRequest,
               com.udb.core.search.services.v1.CreateIndexResponse>(
                 service, METHODID_CREATE_INDEX)))
-        .addMethod(
+        .<com.udb.core.search.services.v1.DeleteIndexRequest, com.udb.core.search.services.v1.DeleteIndexResponse>addMethod(
           getDeleteIndexMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.search.services.v1.DeleteIndexRequest, com.udb.core.search.services.v1.DeleteIndexResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.search.services.v1.DeleteIndexRequest,
               com.udb.core.search.services.v1.DeleteIndexResponse>(
                 service, METHODID_DELETE_INDEX)))
-        .addMethod(
+        .<com.udb.core.search.services.v1.ListIndexesRequest, com.udb.core.search.services.v1.ListIndexesResponse>addMethod(
           getListIndexesMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.search.services.v1.ListIndexesRequest, com.udb.core.search.services.v1.ListIndexesResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.search.services.v1.ListIndexesRequest,
               com.udb.core.search.services.v1.ListIndexesResponse>(
                 service, METHODID_LIST_INDEXES)))
-        .addMethod(
+        .<com.udb.core.search.services.v1.SearchRequest, com.udb.core.search.services.v1.SearchResponse>addMethod(
           getSearchMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.search.services.v1.SearchRequest, com.udb.core.search.services.v1.SearchResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.search.services.v1.SearchRequest,
               com.udb.core.search.services.v1.SearchResponse>(
                 service, METHODID_SEARCH)))
-        .addMethod(
+        .<com.udb.core.search.services.v1.ReindexRequest, com.udb.core.search.services.v1.ReindexResponse>addMethod(
           getReindexMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.search.services.v1.ReindexRequest, com.udb.core.search.services.v1.ReindexResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.search.services.v1.ReindexRequest,
               com.udb.core.search.services.v1.ReindexResponse>(

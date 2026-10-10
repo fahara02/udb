@@ -271,9 +271,9 @@ public final class SignalingServiceGrpc {
 
   public static final io.grpc.ServerServiceDefinition bindService(AsyncService service) {
     return io.grpc.ServerServiceDefinition.builder(getServiceDescriptor())
-        .addMethod(
+        .<com.udb.core.webrtc.services.v1.SignalRequest, com.udb.core.webrtc.services.v1.SignalResponse>addMethod(
           getSignalMethod(),
-          io.grpc.stub.ServerCalls.asyncBidiStreamingCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.webrtc.services.v1.SignalRequest, com.udb.core.webrtc.services.v1.SignalResponse>asyncBidiStreamingCall(
             new MethodHandlers<
               com.udb.core.webrtc.services.v1.SignalRequest,
               com.udb.core.webrtc.services.v1.SignalResponse>(

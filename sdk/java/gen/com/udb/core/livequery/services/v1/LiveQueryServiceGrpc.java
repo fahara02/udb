@@ -385,9 +385,9 @@ public final class LiveQueryServiceGrpc {
 
   public static final io.grpc.ServerServiceDefinition bindService(AsyncService service) {
     return io.grpc.ServerServiceDefinition.builder(getServiceDescriptor())
-        .addMethod(
+        .<com.udb.core.livequery.services.v1.SubscribeRequest, com.udb.core.livequery.services.v1.SubscribeResponse>addMethod(
           getSubscribeMethod(),
-          io.grpc.stub.ServerCalls.asyncServerStreamingCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.livequery.services.v1.SubscribeRequest, com.udb.core.livequery.services.v1.SubscribeResponse>asyncServerStreamingCall(
             new MethodHandlers<
               com.udb.core.livequery.services.v1.SubscribeRequest,
               com.udb.core.livequery.services.v1.SubscribeResponse>(

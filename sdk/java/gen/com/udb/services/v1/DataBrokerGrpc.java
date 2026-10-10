@@ -6973,576 +6973,576 @@ public final class DataBrokerGrpc {
 
   public static final io.grpc.ServerServiceDefinition bindService(AsyncService service) {
     return io.grpc.ServerServiceDefinition.builder(getServiceDescriptor())
-        .addMethod(
+        .<com.udb.entity.v1.SelectRequest, com.udb.entity.v1.RecordSet>addMethod(
           getSelectMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.entity.v1.SelectRequest, com.udb.entity.v1.RecordSet>asyncUnaryCall(
             new MethodHandlers<
               com.udb.entity.v1.SelectRequest,
               com.udb.entity.v1.RecordSet>(
                 service, METHODID_SELECT)))
-        .addMethod(
+        .<com.udb.entity.v1.SelectRequest, com.udb.entity.v1.RecordSet>addMethod(
           getBatchSelectMethod(),
-          io.grpc.stub.ServerCalls.asyncBidiStreamingCall(
+          io.grpc.stub.ServerCalls.<com.udb.entity.v1.SelectRequest, com.udb.entity.v1.RecordSet>asyncBidiStreamingCall(
             new MethodHandlers<
               com.udb.entity.v1.SelectRequest,
               com.udb.entity.v1.RecordSet>(
                 service, METHODID_BATCH_SELECT)))
-        .addMethod(
+        .<com.udb.entity.v1.SelectRequest, com.udb.entity.v1.RecordBatchV2>addMethod(
           getSelectV2Method(),
-          io.grpc.stub.ServerCalls.asyncServerStreamingCall(
+          io.grpc.stub.ServerCalls.<com.udb.entity.v1.SelectRequest, com.udb.entity.v1.RecordBatchV2>asyncServerStreamingCall(
             new MethodHandlers<
               com.udb.entity.v1.SelectRequest,
               com.udb.entity.v1.RecordBatchV2>(
                 service, METHODID_SELECT_V2)))
-        .addMethod(
+        .<com.udb.entity.v1.UpsertRequest, com.udb.entity.v1.MutationResponse>addMethod(
           getUpsertMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.entity.v1.UpsertRequest, com.udb.entity.v1.MutationResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.entity.v1.UpsertRequest,
               com.udb.entity.v1.MutationResponse>(
                 service, METHODID_UPSERT)))
-        .addMethod(
+        .<com.udb.entity.v1.UpsertRequest, com.udb.entity.v1.MutationResponse>addMethod(
           getBatchUpsertMethod(),
-          io.grpc.stub.ServerCalls.asyncBidiStreamingCall(
+          io.grpc.stub.ServerCalls.<com.udb.entity.v1.UpsertRequest, com.udb.entity.v1.MutationResponse>asyncBidiStreamingCall(
             new MethodHandlers<
               com.udb.entity.v1.UpsertRequest,
               com.udb.entity.v1.MutationResponse>(
                 service, METHODID_BATCH_UPSERT)))
-        .addMethod(
+        .<com.udb.entity.v1.DeleteRequest, com.udb.entity.v1.MutationResponse>addMethod(
           getDeleteMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.entity.v1.DeleteRequest, com.udb.entity.v1.MutationResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.entity.v1.DeleteRequest,
               com.udb.entity.v1.MutationResponse>(
                 service, METHODID_DELETE)))
-        .addMethod(
+        .<com.udb.entity.v1.UpdateRequest, com.udb.entity.v1.MutationResponse>addMethod(
           getUpdateMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.entity.v1.UpdateRequest, com.udb.entity.v1.MutationResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.entity.v1.UpdateRequest,
               com.udb.entity.v1.MutationResponse>(
                 service, METHODID_UPDATE)))
-        .addMethod(
+        .<com.udb.entity.v1.BulkCasRequest, com.udb.entity.v1.BulkCasResponse>addMethod(
           getBulkCasMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.entity.v1.BulkCasRequest, com.udb.entity.v1.BulkCasResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.entity.v1.BulkCasRequest,
               com.udb.entity.v1.BulkCasResponse>(
                 service, METHODID_BULK_CAS)))
-        .addMethod(
+        .<com.udb.entity.v1.VectorSearchRequest, com.udb.entity.v1.VectorSet>addMethod(
           getVectorSearchMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.entity.v1.VectorSearchRequest, com.udb.entity.v1.VectorSet>asyncUnaryCall(
             new MethodHandlers<
               com.udb.entity.v1.VectorSearchRequest,
               com.udb.entity.v1.VectorSet>(
                 service, METHODID_VECTOR_SEARCH)))
-        .addMethod(
+        .<com.udb.entity.v1.VectorHybridSearchRequest, com.udb.entity.v1.VectorSet>addMethod(
           getVectorHybridSearchMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.entity.v1.VectorHybridSearchRequest, com.udb.entity.v1.VectorSet>asyncUnaryCall(
             new MethodHandlers<
               com.udb.entity.v1.VectorHybridSearchRequest,
               com.udb.entity.v1.VectorSet>(
                 service, METHODID_VECTOR_HYBRID_SEARCH)))
-        .addMethod(
+        .<com.udb.entity.v1.VectorUpsertRequest, com.udb.entity.v1.MutationResponse>addMethod(
           getVectorUpsertMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.entity.v1.VectorUpsertRequest, com.udb.entity.v1.MutationResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.entity.v1.VectorUpsertRequest,
               com.udb.entity.v1.MutationResponse>(
                 service, METHODID_VECTOR_UPSERT)))
-        .addMethod(
+        .<com.udb.entity.v1.VectorUpsertRequest, com.udb.entity.v1.MutationResponse>addMethod(
           getVectorBatchUpsertMethod(),
-          io.grpc.stub.ServerCalls.asyncBidiStreamingCall(
+          io.grpc.stub.ServerCalls.<com.udb.entity.v1.VectorUpsertRequest, com.udb.entity.v1.MutationResponse>asyncBidiStreamingCall(
             new MethodHandlers<
               com.udb.entity.v1.VectorUpsertRequest,
               com.udb.entity.v1.MutationResponse>(
                 service, METHODID_VECTOR_BATCH_UPSERT)))
-        .addMethod(
+        .<com.udb.entity.v1.Chunk, com.udb.entity.v1.MutationResponse>addMethod(
           getPutObjectMethod(),
-          io.grpc.stub.ServerCalls.asyncClientStreamingCall(
+          io.grpc.stub.ServerCalls.<com.udb.entity.v1.Chunk, com.udb.entity.v1.MutationResponse>asyncClientStreamingCall(
             new MethodHandlers<
               com.udb.entity.v1.Chunk,
               com.udb.entity.v1.MutationResponse>(
                 service, METHODID_PUT_OBJECT)))
-        .addMethod(
+        .<com.udb.entity.v1.ObjectRequest, com.udb.entity.v1.Chunk>addMethod(
           getGetObjectMethod(),
-          io.grpc.stub.ServerCalls.asyncServerStreamingCall(
+          io.grpc.stub.ServerCalls.<com.udb.entity.v1.ObjectRequest, com.udb.entity.v1.Chunk>asyncServerStreamingCall(
             new MethodHandlers<
               com.udb.entity.v1.ObjectRequest,
               com.udb.entity.v1.Chunk>(
                 service, METHODID_GET_OBJECT)))
-        .addMethod(
+        .<com.udb.entity.v1.UrlRequest, com.udb.entity.v1.UrlResponse>addMethod(
           getGeneratePresignedUrlMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.entity.v1.UrlRequest, com.udb.entity.v1.UrlResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.entity.v1.UrlRequest,
               com.udb.entity.v1.UrlResponse>(
                 service, METHODID_GENERATE_PRESIGNED_URL)))
-        .addMethod(
+        .<com.udb.entity.v1.MultipartUploadRequest, com.udb.entity.v1.MultipartUploadResponse>addMethod(
           getInitiateMultipartUploadMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.entity.v1.MultipartUploadRequest, com.udb.entity.v1.MultipartUploadResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.entity.v1.MultipartUploadRequest,
               com.udb.entity.v1.MultipartUploadResponse>(
                 service, METHODID_INITIATE_MULTIPART_UPLOAD)))
-        .addMethod(
+        .<com.udb.entity.v1.CompleteMultipartUploadRequest, com.udb.entity.v1.CompleteMultipartUploadResponse>addMethod(
           getCompleteMultipartUploadMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.entity.v1.CompleteMultipartUploadRequest, com.udb.entity.v1.CompleteMultipartUploadResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.entity.v1.CompleteMultipartUploadRequest,
               com.udb.entity.v1.CompleteMultipartUploadResponse>(
                 service, METHODID_COMPLETE_MULTIPART_UPLOAD)))
-        .addMethod(
+        .<com.udb.entity.v1.AbortMultipartUploadRequest, com.udb.entity.v1.AbortMultipartUploadResponse>addMethod(
           getAbortMultipartUploadMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.entity.v1.AbortMultipartUploadRequest, com.udb.entity.v1.AbortMultipartUploadResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.entity.v1.AbortMultipartUploadRequest,
               com.udb.entity.v1.AbortMultipartUploadResponse>(
                 service, METHODID_ABORT_MULTIPART_UPLOAD)))
-        .addMethod(
+        .<com.udb.entity.v1.CacheGetRequest, com.udb.entity.v1.CacheGetResponse>addMethod(
           getCacheGetMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.entity.v1.CacheGetRequest, com.udb.entity.v1.CacheGetResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.entity.v1.CacheGetRequest,
               com.udb.entity.v1.CacheGetResponse>(
                 service, METHODID_CACHE_GET)))
-        .addMethod(
+        .<com.udb.entity.v1.CacheSetRequest, com.udb.entity.v1.MutationResponse>addMethod(
           getCacheSetMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.entity.v1.CacheSetRequest, com.udb.entity.v1.MutationResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.entity.v1.CacheSetRequest,
               com.udb.entity.v1.MutationResponse>(
                 service, METHODID_CACHE_SET)))
-        .addMethod(
+        .<com.udb.entity.v1.CacheDeleteRequest, com.udb.entity.v1.MutationResponse>addMethod(
           getCacheDeleteMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.entity.v1.CacheDeleteRequest, com.udb.entity.v1.MutationResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.entity.v1.CacheDeleteRequest,
               com.udb.entity.v1.MutationResponse>(
                 service, METHODID_CACHE_DELETE)))
-        .addMethod(
+        .<com.udb.entity.v1.CacheScanRequest, com.udb.entity.v1.CacheScanResponse>addMethod(
           getCacheScanMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.entity.v1.CacheScanRequest, com.udb.entity.v1.CacheScanResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.entity.v1.CacheScanRequest,
               com.udb.entity.v1.CacheScanResponse>(
                 service, METHODID_CACHE_SCAN)))
-        .addMethod(
+        .<com.udb.entity.v1.DocumentGetRequest, com.udb.entity.v1.DocumentSet>addMethod(
           getDocumentGetMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.entity.v1.DocumentGetRequest, com.udb.entity.v1.DocumentSet>asyncUnaryCall(
             new MethodHandlers<
               com.udb.entity.v1.DocumentGetRequest,
               com.udb.entity.v1.DocumentSet>(
                 service, METHODID_DOCUMENT_GET)))
-        .addMethod(
+        .<com.udb.entity.v1.DocumentFindRequest, com.udb.entity.v1.DocumentSet>addMethod(
           getDocumentFindMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.entity.v1.DocumentFindRequest, com.udb.entity.v1.DocumentSet>asyncUnaryCall(
             new MethodHandlers<
               com.udb.entity.v1.DocumentFindRequest,
               com.udb.entity.v1.DocumentSet>(
                 service, METHODID_DOCUMENT_FIND)))
-        .addMethod(
+        .<com.udb.entity.v1.DocumentUpsertRequest, com.udb.entity.v1.MutationResponse>addMethod(
           getDocumentUpsertMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.entity.v1.DocumentUpsertRequest, com.udb.entity.v1.MutationResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.entity.v1.DocumentUpsertRequest,
               com.udb.entity.v1.MutationResponse>(
                 service, METHODID_DOCUMENT_UPSERT)))
-        .addMethod(
+        .<com.udb.entity.v1.DocumentDeleteRequest, com.udb.entity.v1.MutationResponse>addMethod(
           getDocumentDeleteMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.entity.v1.DocumentDeleteRequest, com.udb.entity.v1.MutationResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.entity.v1.DocumentDeleteRequest,
               com.udb.entity.v1.MutationResponse>(
                 service, METHODID_DOCUMENT_DELETE)))
-        .addMethod(
+        .<com.udb.entity.v1.GraphQueryRequest, com.udb.entity.v1.GraphResultSet>addMethod(
           getGraphQueryMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.entity.v1.GraphQueryRequest, com.udb.entity.v1.GraphResultSet>asyncUnaryCall(
             new MethodHandlers<
               com.udb.entity.v1.GraphQueryRequest,
               com.udb.entity.v1.GraphResultSet>(
                 service, METHODID_GRAPH_QUERY)))
-        .addMethod(
+        .<com.udb.entity.v1.GraphMutationRequest, com.udb.entity.v1.MutationResponse>addMethod(
           getGraphMutateMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.entity.v1.GraphMutationRequest, com.udb.entity.v1.MutationResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.entity.v1.GraphMutationRequest,
               com.udb.entity.v1.MutationResponse>(
                 service, METHODID_GRAPH_MUTATE)))
-        .addMethod(
+        .<com.udb.entity.v1.TimeSeriesWriteRequest, com.udb.entity.v1.MutationResponse>addMethod(
           getTimeSeriesWriteMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.entity.v1.TimeSeriesWriteRequest, com.udb.entity.v1.MutationResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.entity.v1.TimeSeriesWriteRequest,
               com.udb.entity.v1.MutationResponse>(
                 service, METHODID_TIME_SERIES_WRITE)))
-        .addMethod(
+        .<com.udb.entity.v1.TimeSeriesQueryRequest, com.udb.entity.v1.TimeSeriesQueryResponse>addMethod(
           getTimeSeriesQueryMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.entity.v1.TimeSeriesQueryRequest, com.udb.entity.v1.TimeSeriesQueryResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.entity.v1.TimeSeriesQueryRequest,
               com.udb.entity.v1.TimeSeriesQueryResponse>(
                 service, METHODID_TIME_SERIES_QUERY)))
-        .addMethod(
+        .<com.udb.entity.v1.AnalyticalQueryRequest, com.udb.entity.v1.AnalyticalQueryResponse>addMethod(
           getAnalyticalQueryMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.entity.v1.AnalyticalQueryRequest, com.udb.entity.v1.AnalyticalQueryResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.entity.v1.AnalyticalQueryRequest,
               com.udb.entity.v1.AnalyticalQueryResponse>(
                 service, METHODID_ANALYTICAL_QUERY)))
-        .addMethod(
+        .<com.udb.entity.v1.Mutation, com.udb.entity.v1.TxStatus>addMethod(
           getBeginTxMethod(),
-          io.grpc.stub.ServerCalls.asyncBidiStreamingCall(
+          io.grpc.stub.ServerCalls.<com.udb.entity.v1.Mutation, com.udb.entity.v1.TxStatus>asyncBidiStreamingCall(
             new MethodHandlers<
               com.udb.entity.v1.Mutation,
               com.udb.entity.v1.TxStatus>(
                 service, METHODID_BEGIN_TX)))
-        .addMethod(
+        .<com.udb.entity.v1.CDCSubscriptionRequest, com.udb.events.v1.CDCEnvelope>addMethod(
           getPublishCDCMethod(),
-          io.grpc.stub.ServerCalls.asyncServerStreamingCall(
+          io.grpc.stub.ServerCalls.<com.udb.entity.v1.CDCSubscriptionRequest, com.udb.events.v1.CDCEnvelope>asyncServerStreamingCall(
             new MethodHandlers<
               com.udb.entity.v1.CDCSubscriptionRequest,
               com.udb.events.v1.CDCEnvelope>(
                 service, METHODID_PUBLISH_CDC)))
-        .addMethod(
+        .<com.udb.entity.v1.AckCdcEventsRequest, com.udb.entity.v1.AckCdcEventsResponse>addMethod(
           getAckCdcEventsMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.entity.v1.AckCdcEventsRequest, com.udb.entity.v1.AckCdcEventsResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.entity.v1.AckCdcEventsRequest,
               com.udb.entity.v1.AckCdcEventsResponse>(
                 service, METHODID_ACK_CDC_EVENTS)))
-        .addMethod(
+        .<com.udb.entity.v1.ViewDefinition, com.udb.entity.v1.MutationResponse>addMethod(
           getCreateMaterializedViewMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.entity.v1.ViewDefinition, com.udb.entity.v1.MutationResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.entity.v1.ViewDefinition,
               com.udb.entity.v1.MutationResponse>(
                 service, METHODID_CREATE_MATERIALIZED_VIEW)))
-        .addMethod(
+        .<com.udb.entity.v1.EnqueueOutboxEventRequest, com.udb.entity.v1.EnqueueOutboxEventResponse>addMethod(
           getEnqueueOutboxEventMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.entity.v1.EnqueueOutboxEventRequest, com.udb.entity.v1.EnqueueOutboxEventResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.entity.v1.EnqueueOutboxEventRequest,
               com.udb.entity.v1.EnqueueOutboxEventResponse>(
                 service, METHODID_ENQUEUE_OUTBOX_EVENT)))
-        .addMethod(
+        .<com.udb.entity.v1.GenericDispatchRequest, com.udb.entity.v1.GenericDispatchResponse>addMethod(
           getGenericDispatchMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.entity.v1.GenericDispatchRequest, com.udb.entity.v1.GenericDispatchResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.entity.v1.GenericDispatchRequest,
               com.udb.entity.v1.GenericDispatchResponse>(
                 service, METHODID_GENERIC_DISPATCH)))
-        .addMethod(
+        .<com.udb.entity.v1.ResourceAdminRequest, com.udb.entity.v1.MutationResponse>addMethod(
           getEnsureResourceMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.entity.v1.ResourceAdminRequest, com.udb.entity.v1.MutationResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.entity.v1.ResourceAdminRequest,
               com.udb.entity.v1.MutationResponse>(
                 service, METHODID_ENSURE_RESOURCE)))
-        .addMethod(
+        .<com.udb.entity.v1.ResourceAdminRequest, com.udb.entity.v1.MutationResponse>addMethod(
           getDropResourceMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.entity.v1.ResourceAdminRequest, com.udb.entity.v1.MutationResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.entity.v1.ResourceAdminRequest,
               com.udb.entity.v1.MutationResponse>(
                 service, METHODID_DROP_RESOURCE)))
-        .addMethod(
+        .<com.udb.entity.v1.ResourceAdminRequest, com.udb.entity.v1.ResourceListResponse>addMethod(
           getListResourcesMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.entity.v1.ResourceAdminRequest, com.udb.entity.v1.ResourceListResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.entity.v1.ResourceAdminRequest,
               com.udb.entity.v1.ResourceListResponse>(
                 service, METHODID_LIST_RESOURCES)))
-        .addMethod(
+        .<com.udb.entity.v1.StageCatalogRequest, com.udb.entity.v1.CatalogVersionResponse>addMethod(
           getStageCatalogMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.entity.v1.StageCatalogRequest, com.udb.entity.v1.CatalogVersionResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.entity.v1.StageCatalogRequest,
               com.udb.entity.v1.CatalogVersionResponse>(
                 service, METHODID_STAGE_CATALOG)))
-        .addMethod(
+        .<com.udb.entity.v1.CatalogVersionRequest, com.udb.entity.v1.CatalogVersionResponse>addMethod(
           getActivateCatalogMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.entity.v1.CatalogVersionRequest, com.udb.entity.v1.CatalogVersionResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.entity.v1.CatalogVersionRequest,
               com.udb.entity.v1.CatalogVersionResponse>(
                 service, METHODID_ACTIVATE_CATALOG)))
-        .addMethod(
+        .<com.udb.entity.v1.CatalogVersionRequest, com.udb.entity.v1.CatalogVersionResponse>addMethod(
           getRollbackCatalogMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.entity.v1.CatalogVersionRequest, com.udb.entity.v1.CatalogVersionResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.entity.v1.CatalogVersionRequest,
               com.udb.entity.v1.CatalogVersionResponse>(
                 service, METHODID_ROLLBACK_CATALOG)))
-        .addMethod(
+        .<com.udb.entity.v1.StageCatalogRequest, com.udb.entity.v1.CatalogValidationResponse>addMethod(
           getValidateCatalogMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.entity.v1.StageCatalogRequest, com.udb.entity.v1.CatalogValidationResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.entity.v1.StageCatalogRequest,
               com.udb.entity.v1.CatalogValidationResponse>(
                 service, METHODID_VALIDATE_CATALOG)))
-        .addMethod(
+        .<com.udb.entity.v1.CatalogManifestRequest, com.udb.entity.v1.CatalogVersionListResponse>addMethod(
           getGetCatalogVersionsMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.entity.v1.CatalogManifestRequest, com.udb.entity.v1.CatalogVersionListResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.entity.v1.CatalogManifestRequest,
               com.udb.entity.v1.CatalogVersionListResponse>(
                 service, METHODID_GET_CATALOG_VERSIONS)))
-        .addMethod(
+        .<com.udb.entity.v1.CatalogVersionRequest, com.udb.entity.v1.CatalogVersionResponse>addMethod(
           getGetCatalogVersionMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.entity.v1.CatalogVersionRequest, com.udb.entity.v1.CatalogVersionResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.entity.v1.CatalogVersionRequest,
               com.udb.entity.v1.CatalogVersionResponse>(
                 service, METHODID_GET_CATALOG_VERSION)))
-        .addMethod(
+        .<com.udb.entity.v1.MigrationPlanRequest, com.udb.entity.v1.MigrationPlanResponse>addMethod(
           getPlanMigrationMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.entity.v1.MigrationPlanRequest, com.udb.entity.v1.MigrationPlanResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.entity.v1.MigrationPlanRequest,
               com.udb.entity.v1.MigrationPlanResponse>(
                 service, METHODID_PLAN_MIGRATION)))
-        .addMethod(
+        .<com.udb.entity.v1.MigrationApplyRequest, com.udb.entity.v1.MigrationStatusResponse>addMethod(
           getApplyMigrationMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.entity.v1.MigrationApplyRequest, com.udb.entity.v1.MigrationStatusResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.entity.v1.MigrationApplyRequest,
               com.udb.entity.v1.MigrationStatusResponse>(
                 service, METHODID_APPLY_MIGRATION)))
-        .addMethod(
+        .<com.udb.entity.v1.MigrationRunRequest, com.udb.entity.v1.MigrationStatusResponse>addMethod(
           getGetMigrationStatusMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.entity.v1.MigrationRunRequest, com.udb.entity.v1.MigrationStatusResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.entity.v1.MigrationRunRequest,
               com.udb.entity.v1.MigrationStatusResponse>(
                 service, METHODID_GET_MIGRATION_STATUS)))
-        .addMethod(
+        .<com.udb.entity.v1.MigrationRunListRequest, com.udb.entity.v1.MigrationRunListResponse>addMethod(
           getListMigrationRunsMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.entity.v1.MigrationRunListRequest, com.udb.entity.v1.MigrationRunListResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.entity.v1.MigrationRunListRequest,
               com.udb.entity.v1.MigrationRunListResponse>(
                 service, METHODID_LIST_MIGRATION_RUNS)))
-        .addMethod(
+        .<com.udb.entity.v1.MigrationRunRequest, com.udb.entity.v1.MigrationStatusResponse>addMethod(
           getApproveMigrationPlanMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.entity.v1.MigrationRunRequest, com.udb.entity.v1.MigrationStatusResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.entity.v1.MigrationRunRequest,
               com.udb.entity.v1.MigrationStatusResponse>(
                 service, METHODID_APPROVE_MIGRATION_PLAN)))
-        .addMethod(
+        .<com.udb.entity.v1.DlqListRequest, com.udb.entity.v1.DlqListResponse>addMethod(
           getListDlqEventsMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.entity.v1.DlqListRequest, com.udb.entity.v1.DlqListResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.entity.v1.DlqListRequest,
               com.udb.entity.v1.DlqListResponse>(
                 service, METHODID_LIST_DLQ_EVENTS)))
-        .addMethod(
+        .<com.udb.entity.v1.DlqEventRequest, com.udb.entity.v1.DlqEventResponse>addMethod(
           getGetDlqEventMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.entity.v1.DlqEventRequest, com.udb.entity.v1.DlqEventResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.entity.v1.DlqEventRequest,
               com.udb.entity.v1.DlqEventResponse>(
                 service, METHODID_GET_DLQ_EVENT)))
-        .addMethod(
+        .<com.udb.entity.v1.DlqActionRequest, com.udb.entity.v1.MutationResponse>addMethod(
           getReplayDlqEventMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.entity.v1.DlqActionRequest, com.udb.entity.v1.MutationResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.entity.v1.DlqActionRequest,
               com.udb.entity.v1.MutationResponse>(
                 service, METHODID_REPLAY_DLQ_EVENT)))
-        .addMethod(
+        .<com.udb.entity.v1.DlqActionRequest, com.udb.entity.v1.MutationResponse>addMethod(
           getDismissDlqEventMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.entity.v1.DlqActionRequest, com.udb.entity.v1.MutationResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.entity.v1.DlqActionRequest,
               com.udb.entity.v1.MutationResponse>(
                 service, METHODID_DISMISS_DLQ_EVENT)))
-        .addMethod(
+        .<com.udb.entity.v1.DlqActionRequest, com.udb.entity.v1.MutationResponse>addMethod(
           getQuarantineDlqEventMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.entity.v1.DlqActionRequest, com.udb.entity.v1.MutationResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.entity.v1.DlqActionRequest,
               com.udb.entity.v1.MutationResponse>(
                 service, METHODID_QUARANTINE_DLQ_EVENT)))
-        .addMethod(
+        .<com.udb.entity.v1.CdcControlRequest, com.udb.entity.v1.CdcStatusResponse>addMethod(
           getGetCdcStatusMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.entity.v1.CdcControlRequest, com.udb.entity.v1.CdcStatusResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.entity.v1.CdcControlRequest,
               com.udb.entity.v1.CdcStatusResponse>(
                 service, METHODID_GET_CDC_STATUS)))
-        .addMethod(
+        .<com.udb.entity.v1.CdcControlRequest, com.udb.entity.v1.CdcStatusResponse>addMethod(
           getPauseCdcMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.entity.v1.CdcControlRequest, com.udb.entity.v1.CdcStatusResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.entity.v1.CdcControlRequest,
               com.udb.entity.v1.CdcStatusResponse>(
                 service, METHODID_PAUSE_CDC)))
-        .addMethod(
+        .<com.udb.entity.v1.CdcControlRequest, com.udb.entity.v1.CdcStatusResponse>addMethod(
           getResumeCdcMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.entity.v1.CdcControlRequest, com.udb.entity.v1.CdcStatusResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.entity.v1.CdcControlRequest,
               com.udb.entity.v1.CdcStatusResponse>(
                 service, METHODID_RESUME_CDC)))
-        .addMethod(
+        .<com.udb.entity.v1.CdcControlRequest, com.udb.entity.v1.CdcStatusResponse>addMethod(
           getStepDownCdcLeaderMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.entity.v1.CdcControlRequest, com.udb.entity.v1.CdcStatusResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.entity.v1.CdcControlRequest,
               com.udb.entity.v1.CdcStatusResponse>(
                 service, METHODID_STEP_DOWN_CDC_LEADER)))
-        .addMethod(
+        .<com.udb.entity.v1.CdcRedactionPreviewRequest, com.udb.entity.v1.CdcRedactionPreviewResponse>addMethod(
           getPreviewCdcRedactionMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.entity.v1.CdcRedactionPreviewRequest, com.udb.entity.v1.CdcRedactionPreviewResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.entity.v1.CdcRedactionPreviewRequest,
               com.udb.entity.v1.CdcRedactionPreviewResponse>(
                 service, METHODID_PREVIEW_CDC_REDACTION)))
-        .addMethod(
+        .<com.udb.entity.v1.ProjectionDriftScanRequest, com.udb.entity.v1.ProjectionDriftScanResponse>addMethod(
           getScanProjectionDriftMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.entity.v1.ProjectionDriftScanRequest, com.udb.entity.v1.ProjectionDriftScanResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.entity.v1.ProjectionDriftScanRequest,
               com.udb.entity.v1.ProjectionDriftScanResponse>(
                 service, METHODID_SCAN_PROJECTION_DRIFT)))
-        .addMethod(
+        .<com.udb.entity.v1.SagaListRequest, com.udb.entity.v1.SagaListResponse>addMethod(
           getListSagasMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.entity.v1.SagaListRequest, com.udb.entity.v1.SagaListResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.entity.v1.SagaListRequest,
               com.udb.entity.v1.SagaListResponse>(
                 service, METHODID_LIST_SAGAS)))
-        .addMethod(
+        .<com.udb.entity.v1.SagaRequest, com.udb.entity.v1.SagaResponse>addMethod(
           getGetSagaMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.entity.v1.SagaRequest, com.udb.entity.v1.SagaResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.entity.v1.SagaRequest,
               com.udb.entity.v1.SagaResponse>(
                 service, METHODID_GET_SAGA)))
-        .addMethod(
+        .<com.udb.entity.v1.SagaRequest, com.udb.entity.v1.SagaResponse>addMethod(
           getRetrySagaCompensationMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.entity.v1.SagaRequest, com.udb.entity.v1.SagaResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.entity.v1.SagaRequest,
               com.udb.entity.v1.SagaResponse>(
                 service, METHODID_RETRY_SAGA_COMPENSATION)))
-        .addMethod(
+        .<com.udb.entity.v1.SagaRequest, com.udb.entity.v1.SagaResponse>addMethod(
           getMarkSagaReviewedMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.entity.v1.SagaRequest, com.udb.entity.v1.SagaResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.entity.v1.SagaRequest,
               com.udb.entity.v1.SagaResponse>(
                 service, METHODID_MARK_SAGA_REVIEWED)))
-        .addMethod(
+        .<com.udb.services.v1.EnsureBaselineRequest, com.udb.services.v1.EnsureBaselineResponse>addMethod(
           getEnsureBaselineMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.services.v1.EnsureBaselineRequest, com.udb.services.v1.EnsureBaselineResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.services.v1.EnsureBaselineRequest,
               com.udb.services.v1.EnsureBaselineResponse>(
                 service, METHODID_ENSURE_BASELINE)))
-        .addMethod(
+        .<com.udb.entity.v1.PolicyListRequest, com.udb.entity.v1.PolicyListResponse>addMethod(
           getListPoliciesMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.entity.v1.PolicyListRequest, com.udb.entity.v1.PolicyListResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.entity.v1.PolicyListRequest,
               com.udb.entity.v1.PolicyListResponse>(
                 service, METHODID_LIST_POLICIES)))
-        .addMethod(
+        .<com.udb.entity.v1.PutPolicyRequest, com.udb.entity.v1.MutationResponse>addMethod(
           getPutPolicyMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.entity.v1.PutPolicyRequest, com.udb.entity.v1.MutationResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.entity.v1.PutPolicyRequest,
               com.udb.entity.v1.MutationResponse>(
                 service, METHODID_PUT_POLICY)))
-        .addMethod(
+        .<com.udb.entity.v1.PolicyRequest, com.udb.entity.v1.MutationResponse>addMethod(
           getDeletePolicyMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.entity.v1.PolicyRequest, com.udb.entity.v1.MutationResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.entity.v1.PolicyRequest,
               com.udb.entity.v1.MutationResponse>(
                 service, METHODID_DELETE_POLICY)))
-        .addMethod(
+        .<com.udb.entity.v1.CapabilitiesRequest, com.udb.entity.v1.MutationResponse>addMethod(
           getReloadPoliciesMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.entity.v1.CapabilitiesRequest, com.udb.entity.v1.MutationResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.entity.v1.CapabilitiesRequest,
               com.udb.entity.v1.MutationResponse>(
                 service, METHODID_RELOAD_POLICIES)))
-        .addMethod(
+        .<com.udb.entity.v1.CapabilitiesRequest, com.udb.entity.v1.PolicyLintResponse>addMethod(
           getLintPoliciesMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.entity.v1.CapabilitiesRequest, com.udb.entity.v1.PolicyLintResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.entity.v1.CapabilitiesRequest,
               com.udb.entity.v1.PolicyLintResponse>(
                 service, METHODID_LINT_POLICIES)))
-        .addMethod(
+        .<com.udb.entity.v1.CapabilitiesRequest, com.udb.entity.v1.CapabilitiesResponse>addMethod(
           getGetCapabilitiesMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.entity.v1.CapabilitiesRequest, com.udb.entity.v1.CapabilitiesResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.entity.v1.CapabilitiesRequest,
               com.udb.entity.v1.CapabilitiesResponse>(
                 service, METHODID_GET_CAPABILITIES)))
-        .addMethod(
+        .<com.udb.entity.v1.CatalogManifestRequest, com.udb.entity.v1.CatalogManifestResponse>addMethod(
           getGetCatalogManifestMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.entity.v1.CatalogManifestRequest, com.udb.entity.v1.CatalogManifestResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.entity.v1.CatalogManifestRequest,
               com.udb.entity.v1.CatalogManifestResponse>(
                 service, METHODID_GET_CATALOG_MANIFEST)))
-        .addMethod(
+        .<com.udb.entity.v1.MessageSchemaLookupRequest, com.udb.entity.v1.MessageSchemaLookupResponse>addMethod(
           getLookupMessageSchemaMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.entity.v1.MessageSchemaLookupRequest, com.udb.entity.v1.MessageSchemaLookupResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.entity.v1.MessageSchemaLookupRequest,
               com.udb.entity.v1.MessageSchemaLookupResponse>(
                 service, METHODID_LOOKUP_MESSAGE_SCHEMA)))
-        .addMethod(
+        .<com.udb.entity.v1.MessageSchemaListRequest, com.udb.entity.v1.MessageSchemaListResponse>addMethod(
           getListMessageSchemasMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.entity.v1.MessageSchemaListRequest, com.udb.entity.v1.MessageSchemaListResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.entity.v1.MessageSchemaListRequest,
               com.udb.entity.v1.MessageSchemaListResponse>(
                 service, METHODID_LIST_MESSAGE_SCHEMAS)))
-        .addMethod(
+        .<com.udb.entity.v1.HealthReportRequest, com.udb.entity.v1.HealthReportResponse>addMethod(
           getGetHealthReportMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.entity.v1.HealthReportRequest, com.udb.entity.v1.HealthReportResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.entity.v1.HealthReportRequest,
               com.udb.entity.v1.HealthReportResponse>(
                 service, METHODID_GET_HEALTH_REPORT)))
-        .addMethod(
+        .<com.udb.entity.v1.EnsureProjectRequest, com.udb.entity.v1.MutationResponse>addMethod(
           getEnsureProjectMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.entity.v1.EnsureProjectRequest, com.udb.entity.v1.MutationResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.entity.v1.EnsureProjectRequest,
               com.udb.entity.v1.MutationResponse>(
                 service, METHODID_ENSURE_PROJECT)))
-        .addMethod(
+        .<com.udb.entity.v1.ProjectListRequest, com.udb.entity.v1.ProjectListResponse>addMethod(
           getListProjectsMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.entity.v1.ProjectListRequest, com.udb.entity.v1.ProjectListResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.entity.v1.ProjectListRequest,
               com.udb.entity.v1.ProjectListResponse>(
                 service, METHODID_LIST_PROJECTS)))
-        .addMethod(
+        .<com.udb.entity.v1.AdminSummaryRequest, com.udb.entity.v1.AdminSummaryResponse>addMethod(
           getGetAdminSummaryMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.entity.v1.AdminSummaryRequest, com.udb.entity.v1.AdminSummaryResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.entity.v1.AdminSummaryRequest,
               com.udb.entity.v1.AdminSummaryResponse>(
                 service, METHODID_GET_ADMIN_SUMMARY)))
-        .addMethod(
+        .<com.udb.entity.v1.AdminAuditLogRequest, com.udb.entity.v1.AdminAuditLogResponse>addMethod(
           getListAdminAuditLogsMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.entity.v1.AdminAuditLogRequest, com.udb.entity.v1.AdminAuditLogResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.entity.v1.AdminAuditLogRequest,
               com.udb.entity.v1.AdminAuditLogResponse>(
                 service, METHODID_LIST_ADMIN_AUDIT_LOGS)))
-        .addMethod(
+        .<com.udb.entity.v1.AdminAuditVerifyRequest, com.udb.entity.v1.AdminAuditVerifyResponse>addMethod(
           getVerifyAdminAuditLogMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.entity.v1.AdminAuditVerifyRequest, com.udb.entity.v1.AdminAuditVerifyResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.entity.v1.AdminAuditVerifyRequest,
               com.udb.entity.v1.AdminAuditVerifyResponse>(

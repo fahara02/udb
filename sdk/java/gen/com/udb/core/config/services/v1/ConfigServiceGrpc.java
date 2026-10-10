@@ -724,37 +724,37 @@ public final class ConfigServiceGrpc {
 
   public static final io.grpc.ServerServiceDefinition bindService(AsyncService service) {
     return io.grpc.ServerServiceDefinition.builder(getServiceDescriptor())
-        .addMethod(
+        .<com.udb.core.config.services.v1.PutFlagRequest, com.udb.core.config.services.v1.PutFlagResponse>addMethod(
           getPutFlagMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.config.services.v1.PutFlagRequest, com.udb.core.config.services.v1.PutFlagResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.config.services.v1.PutFlagRequest,
               com.udb.core.config.services.v1.PutFlagResponse>(
                 service, METHODID_PUT_FLAG)))
-        .addMethod(
+        .<com.udb.core.config.services.v1.GetFlagRequest, com.udb.core.config.services.v1.GetFlagResponse>addMethod(
           getGetFlagMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.config.services.v1.GetFlagRequest, com.udb.core.config.services.v1.GetFlagResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.config.services.v1.GetFlagRequest,
               com.udb.core.config.services.v1.GetFlagResponse>(
                 service, METHODID_GET_FLAG)))
-        .addMethod(
+        .<com.udb.core.config.services.v1.ListFlagsRequest, com.udb.core.config.services.v1.ListFlagsResponse>addMethod(
           getListFlagsMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.config.services.v1.ListFlagsRequest, com.udb.core.config.services.v1.ListFlagsResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.config.services.v1.ListFlagsRequest,
               com.udb.core.config.services.v1.ListFlagsResponse>(
                 service, METHODID_LIST_FLAGS)))
-        .addMethod(
+        .<com.udb.core.config.services.v1.DeleteFlagRequest, com.udb.core.config.services.v1.DeleteFlagResponse>addMethod(
           getDeleteFlagMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.config.services.v1.DeleteFlagRequest, com.udb.core.config.services.v1.DeleteFlagResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.config.services.v1.DeleteFlagRequest,
               com.udb.core.config.services.v1.DeleteFlagResponse>(
                 service, METHODID_DELETE_FLAG)))
-        .addMethod(
+        .<com.udb.core.config.services.v1.EvaluateFlagsRequest, com.udb.core.config.services.v1.EvaluateFlagsResponse>addMethod(
           getEvaluateFlagsMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.config.services.v1.EvaluateFlagsRequest, com.udb.core.config.services.v1.EvaluateFlagsResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.config.services.v1.EvaluateFlagsRequest,
               com.udb.core.config.services.v1.EvaluateFlagsResponse>(

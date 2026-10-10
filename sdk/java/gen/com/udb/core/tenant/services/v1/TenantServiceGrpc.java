@@ -970,58 +970,58 @@ public final class TenantServiceGrpc {
 
   public static final io.grpc.ServerServiceDefinition bindService(AsyncService service) {
     return io.grpc.ServerServiceDefinition.builder(getServiceDescriptor())
-        .addMethod(
+        .<com.udb.core.tenant.services.v1.CreateTenantRequest, com.udb.core.tenant.services.v1.CreateTenantResponse>addMethod(
           getCreateTenantMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.tenant.services.v1.CreateTenantRequest, com.udb.core.tenant.services.v1.CreateTenantResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.tenant.services.v1.CreateTenantRequest,
               com.udb.core.tenant.services.v1.CreateTenantResponse>(
                 service, METHODID_CREATE_TENANT)))
-        .addMethod(
+        .<com.udb.core.tenant.services.v1.GetTenantRequest, com.udb.core.tenant.services.v1.GetTenantResponse>addMethod(
           getGetTenantMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.tenant.services.v1.GetTenantRequest, com.udb.core.tenant.services.v1.GetTenantResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.tenant.services.v1.GetTenantRequest,
               com.udb.core.tenant.services.v1.GetTenantResponse>(
                 service, METHODID_GET_TENANT)))
-        .addMethod(
+        .<com.udb.core.tenant.services.v1.ListTenantsRequest, com.udb.core.tenant.services.v1.ListTenantsResponse>addMethod(
           getListTenantsMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.tenant.services.v1.ListTenantsRequest, com.udb.core.tenant.services.v1.ListTenantsResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.tenant.services.v1.ListTenantsRequest,
               com.udb.core.tenant.services.v1.ListTenantsResponse>(
                 service, METHODID_LIST_TENANTS)))
-        .addMethod(
+        .<com.udb.core.tenant.services.v1.UpdateTenantRequest, com.udb.core.tenant.services.v1.UpdateTenantResponse>addMethod(
           getUpdateTenantMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.tenant.services.v1.UpdateTenantRequest, com.udb.core.tenant.services.v1.UpdateTenantResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.tenant.services.v1.UpdateTenantRequest,
               com.udb.core.tenant.services.v1.UpdateTenantResponse>(
                 service, METHODID_UPDATE_TENANT)))
-        .addMethod(
+        .<com.udb.core.tenant.services.v1.GetTenantConfigRequest, com.udb.core.tenant.services.v1.GetTenantConfigResponse>addMethod(
           getGetTenantConfigMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.tenant.services.v1.GetTenantConfigRequest, com.udb.core.tenant.services.v1.GetTenantConfigResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.tenant.services.v1.GetTenantConfigRequest,
               com.udb.core.tenant.services.v1.GetTenantConfigResponse>(
                 service, METHODID_GET_TENANT_CONFIG)))
-        .addMethod(
+        .<com.udb.core.tenant.services.v1.UpdateTenantConfigRequest, com.udb.core.tenant.services.v1.UpdateTenantConfigResponse>addMethod(
           getUpdateTenantConfigMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.tenant.services.v1.UpdateTenantConfigRequest, com.udb.core.tenant.services.v1.UpdateTenantConfigResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.tenant.services.v1.UpdateTenantConfigRequest,
               com.udb.core.tenant.services.v1.UpdateTenantConfigResponse>(
                 service, METHODID_UPDATE_TENANT_CONFIG)))
-        .addMethod(
+        .<com.udb.core.tenant.services.v1.PurgeTenantRequest, com.udb.core.tenant.services.v1.PurgeTenantResponse>addMethod(
           getPurgeTenantMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.tenant.services.v1.PurgeTenantRequest, com.udb.core.tenant.services.v1.PurgeTenantResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.tenant.services.v1.PurgeTenantRequest,
               com.udb.core.tenant.services.v1.PurgeTenantResponse>(
                 service, METHODID_PURGE_TENANT)))
-        .addMethod(
+        .<com.udb.core.tenant.services.v1.AdminPurgeTenantRequest, com.udb.core.tenant.services.v1.AdminPurgeTenantResponse>addMethod(
           getAdminPurgeTenantMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.tenant.services.v1.AdminPurgeTenantRequest, com.udb.core.tenant.services.v1.AdminPurgeTenantResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.tenant.services.v1.AdminPurgeTenantRequest,
               com.udb.core.tenant.services.v1.AdminPurgeTenantResponse>(

@@ -100,6 +100,11 @@ def validate_fixture(data: bytes) -> None:
             "config.primary.min_connections = 1;" in text and
             "config.primary.acquire_timeout_secs = 2;" in text,
             "actual serving max1 budget must be explicit")
+    require("config.channels.migration_max_concurrent = 2;" in text,
+            "concurrent fixture migration RPCs need explicit admission without enlarging max1 database pools")
+    require('"standalone-producer-unique"' in text and '"owned-promoted-unique"' in text
+            and "assert_native_unique_base(" in text and "UNIQUE USING INDEX" in text,
+            "both phases must retain actual native standalone producer verification and deliberate owned promotion")
     require("get_max_connections()" in text and
             "run_reviewed_catalog_fixture(true, true)" in text and
             "run_reviewed_catalog_fixture(true, false)" in text,
@@ -374,7 +379,15 @@ def selftest() -> None:
         except RuntimeError:
             continue
         raise AssertionError("negative log admission unexpectedly passed")
-    print("capacity proof log admission: 2 positive + 12 negative source-only controls passed")
+    fixture = (Path(__file__).resolve().parent.parent / FIXTURE).read_bytes()
+    validate_fixture(fixture)
+    for token in (b"config.channels.migration_max_concurrent = 2;", b'"standalone-producer-unique"', b"UNIQUE USING INDEX"):
+        try:
+            validate_fixture(fixture.replace(token, b"removed_fixture_control"))
+        except RuntimeError:
+            continue
+        raise AssertionError("negative fixture admission unexpectedly passed")
+    print("capacity proof admission: 2 positive + 12 negative log controls; 1 positive + 3 negative fixture controls passed")
 
 
 def main() -> None:

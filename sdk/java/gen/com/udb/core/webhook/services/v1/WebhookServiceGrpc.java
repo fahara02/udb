@@ -804,44 +804,44 @@ public final class WebhookServiceGrpc {
 
   public static final io.grpc.ServerServiceDefinition bindService(AsyncService service) {
     return io.grpc.ServerServiceDefinition.builder(getServiceDescriptor())
-        .addMethod(
+        .<com.udb.core.webhook.services.v1.CreateEndpointRequest, com.udb.core.webhook.services.v1.CreateEndpointResponse>addMethod(
           getCreateEndpointMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.webhook.services.v1.CreateEndpointRequest, com.udb.core.webhook.services.v1.CreateEndpointResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.webhook.services.v1.CreateEndpointRequest,
               com.udb.core.webhook.services.v1.CreateEndpointResponse>(
                 service, METHODID_CREATE_ENDPOINT)))
-        .addMethod(
+        .<com.udb.core.webhook.services.v1.GetEndpointRequest, com.udb.core.webhook.services.v1.GetEndpointResponse>addMethod(
           getGetEndpointMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.webhook.services.v1.GetEndpointRequest, com.udb.core.webhook.services.v1.GetEndpointResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.webhook.services.v1.GetEndpointRequest,
               com.udb.core.webhook.services.v1.GetEndpointResponse>(
                 service, METHODID_GET_ENDPOINT)))
-        .addMethod(
+        .<com.udb.core.webhook.services.v1.ListEndpointsRequest, com.udb.core.webhook.services.v1.ListEndpointsResponse>addMethod(
           getListEndpointsMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.webhook.services.v1.ListEndpointsRequest, com.udb.core.webhook.services.v1.ListEndpointsResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.webhook.services.v1.ListEndpointsRequest,
               com.udb.core.webhook.services.v1.ListEndpointsResponse>(
                 service, METHODID_LIST_ENDPOINTS)))
-        .addMethod(
+        .<com.udb.core.webhook.services.v1.UpdateEndpointRequest, com.udb.core.webhook.services.v1.UpdateEndpointResponse>addMethod(
           getUpdateEndpointMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.webhook.services.v1.UpdateEndpointRequest, com.udb.core.webhook.services.v1.UpdateEndpointResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.webhook.services.v1.UpdateEndpointRequest,
               com.udb.core.webhook.services.v1.UpdateEndpointResponse>(
                 service, METHODID_UPDATE_ENDPOINT)))
-        .addMethod(
+        .<com.udb.core.webhook.services.v1.DeleteEndpointRequest, com.udb.core.webhook.services.v1.DeleteEndpointResponse>addMethod(
           getDeleteEndpointMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.webhook.services.v1.DeleteEndpointRequest, com.udb.core.webhook.services.v1.DeleteEndpointResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.webhook.services.v1.DeleteEndpointRequest,
               com.udb.core.webhook.services.v1.DeleteEndpointResponse>(
                 service, METHODID_DELETE_ENDPOINT)))
-        .addMethod(
+        .<com.udb.core.webhook.services.v1.ListDeliveriesRequest, com.udb.core.webhook.services.v1.ListDeliveriesResponse>addMethod(
           getListDeliveriesMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.webhook.services.v1.ListDeliveriesRequest, com.udb.core.webhook.services.v1.ListDeliveriesResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.webhook.services.v1.ListDeliveriesRequest,
               com.udb.core.webhook.services.v1.ListDeliveriesResponse>(

@@ -1262,86 +1262,86 @@ public final class NotificationServiceGrpc {
 
   public static final io.grpc.ServerServiceDefinition bindService(AsyncService service) {
     return io.grpc.ServerServiceDefinition.builder(getServiceDescriptor())
-        .addMethod(
+        .<com.udb.core.notification.services.v1.SendNotificationRequest, com.udb.core.notification.services.v1.SendNotificationResponse>addMethod(
           getSendNotificationMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.notification.services.v1.SendNotificationRequest, com.udb.core.notification.services.v1.SendNotificationResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.notification.services.v1.SendNotificationRequest,
               com.udb.core.notification.services.v1.SendNotificationResponse>(
                 service, METHODID_SEND_NOTIFICATION)))
-        .addMethod(
+        .<com.udb.core.notification.services.v1.GetNotificationRequest, com.udb.core.notification.services.v1.GetNotificationResponse>addMethod(
           getGetNotificationMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.notification.services.v1.GetNotificationRequest, com.udb.core.notification.services.v1.GetNotificationResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.notification.services.v1.GetNotificationRequest,
               com.udb.core.notification.services.v1.GetNotificationResponse>(
                 service, METHODID_GET_NOTIFICATION)))
-        .addMethod(
+        .<com.udb.core.notification.services.v1.ListNotificationsRequest, com.udb.core.notification.services.v1.ListNotificationsResponse>addMethod(
           getListNotificationsMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.notification.services.v1.ListNotificationsRequest, com.udb.core.notification.services.v1.ListNotificationsResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.notification.services.v1.ListNotificationsRequest,
               com.udb.core.notification.services.v1.ListNotificationsResponse>(
                 service, METHODID_LIST_NOTIFICATIONS)))
-        .addMethod(
+        .<com.udb.core.notification.services.v1.RetryNotificationRequest, com.udb.core.notification.services.v1.RetryNotificationResponse>addMethod(
           getRetryNotificationMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.notification.services.v1.RetryNotificationRequest, com.udb.core.notification.services.v1.RetryNotificationResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.notification.services.v1.RetryNotificationRequest,
               com.udb.core.notification.services.v1.RetryNotificationResponse>(
                 service, METHODID_RETRY_NOTIFICATION)))
-        .addMethod(
+        .<com.udb.core.notification.services.v1.ReportDeliveryRequest, com.udb.core.notification.services.v1.ReportDeliveryResponse>addMethod(
           getReportDeliveryMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.notification.services.v1.ReportDeliveryRequest, com.udb.core.notification.services.v1.ReportDeliveryResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.notification.services.v1.ReportDeliveryRequest,
               com.udb.core.notification.services.v1.ReportDeliveryResponse>(
                 service, METHODID_REPORT_DELIVERY)))
-        .addMethod(
+        .<com.udb.core.notification.services.v1.UpsertTemplateRequest, com.udb.core.notification.services.v1.UpsertTemplateResponse>addMethod(
           getUpsertTemplateMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.notification.services.v1.UpsertTemplateRequest, com.udb.core.notification.services.v1.UpsertTemplateResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.notification.services.v1.UpsertTemplateRequest,
               com.udb.core.notification.services.v1.UpsertTemplateResponse>(
                 service, METHODID_UPSERT_TEMPLATE)))
-        .addMethod(
+        .<com.udb.core.notification.services.v1.GetTemplateRequest, com.udb.core.notification.services.v1.GetTemplateResponse>addMethod(
           getGetTemplateMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.notification.services.v1.GetTemplateRequest, com.udb.core.notification.services.v1.GetTemplateResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.notification.services.v1.GetTemplateRequest,
               com.udb.core.notification.services.v1.GetTemplateResponse>(
                 service, METHODID_GET_TEMPLATE)))
-        .addMethod(
+        .<com.udb.core.notification.services.v1.ListTemplatesRequest, com.udb.core.notification.services.v1.ListTemplatesResponse>addMethod(
           getListTemplatesMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.notification.services.v1.ListTemplatesRequest, com.udb.core.notification.services.v1.ListTemplatesResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.notification.services.v1.ListTemplatesRequest,
               com.udb.core.notification.services.v1.ListTemplatesResponse>(
                 service, METHODID_LIST_TEMPLATES)))
-        .addMethod(
+        .<com.udb.core.notification.services.v1.GetDeliveryStatsRequest, com.udb.core.notification.services.v1.GetDeliveryStatsResponse>addMethod(
           getGetDeliveryStatsMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.notification.services.v1.GetDeliveryStatsRequest, com.udb.core.notification.services.v1.GetDeliveryStatsResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.notification.services.v1.GetDeliveryStatsRequest,
               com.udb.core.notification.services.v1.GetDeliveryStatsResponse>(
                 service, METHODID_GET_DELIVERY_STATS)))
-        .addMethod(
+        .<com.udb.core.notification.services.v1.SetPreferenceRequest, com.udb.core.notification.services.v1.SetPreferenceResponse>addMethod(
           getSetPreferenceMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.notification.services.v1.SetPreferenceRequest, com.udb.core.notification.services.v1.SetPreferenceResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.notification.services.v1.SetPreferenceRequest,
               com.udb.core.notification.services.v1.SetPreferenceResponse>(
                 service, METHODID_SET_PREFERENCE)))
-        .addMethod(
+        .<com.udb.core.notification.services.v1.GetPreferenceRequest, com.udb.core.notification.services.v1.GetPreferenceResponse>addMethod(
           getGetPreferenceMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.notification.services.v1.GetPreferenceRequest, com.udb.core.notification.services.v1.GetPreferenceResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.notification.services.v1.GetPreferenceRequest,
               com.udb.core.notification.services.v1.GetPreferenceResponse>(
                 service, METHODID_GET_PREFERENCE)))
-        .addMethod(
+        .<com.udb.core.notification.services.v1.ListPreferencesRequest, com.udb.core.notification.services.v1.ListPreferencesResponse>addMethod(
           getListPreferencesMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.notification.services.v1.ListPreferencesRequest, com.udb.core.notification.services.v1.ListPreferencesResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.notification.services.v1.ListPreferencesRequest,
               com.udb.core.notification.services.v1.ListPreferencesResponse>(

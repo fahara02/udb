@@ -839,44 +839,44 @@ public final class WorkflowServiceGrpc {
 
   public static final io.grpc.ServerServiceDefinition bindService(AsyncService service) {
     return io.grpc.ServerServiceDefinition.builder(getServiceDescriptor())
-        .addMethod(
+        .<com.udb.core.workflow.services.v1.StartWorkflowRequest, com.udb.core.workflow.services.v1.StartWorkflowResponse>addMethod(
           getStartWorkflowMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.workflow.services.v1.StartWorkflowRequest, com.udb.core.workflow.services.v1.StartWorkflowResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.workflow.services.v1.StartWorkflowRequest,
               com.udb.core.workflow.services.v1.StartWorkflowResponse>(
                 service, METHODID_START_WORKFLOW)))
-        .addMethod(
+        .<com.udb.core.workflow.services.v1.GetWorkflowRequest, com.udb.core.workflow.services.v1.GetWorkflowResponse>addMethod(
           getGetWorkflowMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.workflow.services.v1.GetWorkflowRequest, com.udb.core.workflow.services.v1.GetWorkflowResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.workflow.services.v1.GetWorkflowRequest,
               com.udb.core.workflow.services.v1.GetWorkflowResponse>(
                 service, METHODID_GET_WORKFLOW)))
-        .addMethod(
+        .<com.udb.core.workflow.services.v1.ListWorkflowsRequest, com.udb.core.workflow.services.v1.ListWorkflowsResponse>addMethod(
           getListWorkflowsMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.workflow.services.v1.ListWorkflowsRequest, com.udb.core.workflow.services.v1.ListWorkflowsResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.workflow.services.v1.ListWorkflowsRequest,
               com.udb.core.workflow.services.v1.ListWorkflowsResponse>(
                 service, METHODID_LIST_WORKFLOWS)))
-        .addMethod(
+        .<com.udb.core.workflow.services.v1.CancelWorkflowRequest, com.udb.core.workflow.services.v1.CancelWorkflowResponse>addMethod(
           getCancelWorkflowMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.workflow.services.v1.CancelWorkflowRequest, com.udb.core.workflow.services.v1.CancelWorkflowResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.workflow.services.v1.CancelWorkflowRequest,
               com.udb.core.workflow.services.v1.CancelWorkflowResponse>(
                 service, METHODID_CANCEL_WORKFLOW)))
-        .addMethod(
+        .<com.udb.core.workflow.services.v1.SignalWorkflowRequest, com.udb.core.workflow.services.v1.SignalWorkflowResponse>addMethod(
           getSignalWorkflowMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.workflow.services.v1.SignalWorkflowRequest, com.udb.core.workflow.services.v1.SignalWorkflowResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.workflow.services.v1.SignalWorkflowRequest,
               com.udb.core.workflow.services.v1.SignalWorkflowResponse>(
                 service, METHODID_SIGNAL_WORKFLOW)))
-        .addMethod(
+        .<com.udb.core.workflow.services.v1.AckWorkflowStepRequest, com.udb.core.workflow.services.v1.AckWorkflowStepResponse>addMethod(
           getAckWorkflowStepMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.workflow.services.v1.AckWorkflowStepRequest, com.udb.core.workflow.services.v1.AckWorkflowStepResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.workflow.services.v1.AckWorkflowStepRequest,
               com.udb.core.workflow.services.v1.AckWorkflowStepResponse>(

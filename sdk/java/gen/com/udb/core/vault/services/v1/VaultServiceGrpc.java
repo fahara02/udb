@@ -2433,156 +2433,156 @@ public final class VaultServiceGrpc {
 
   public static final io.grpc.ServerServiceDefinition bindService(AsyncService service) {
     return io.grpc.ServerServiceDefinition.builder(getServiceDescriptor())
-        .addMethod(
+        .<com.udb.core.vault.services.v1.PutSecretRequest, com.udb.core.vault.services.v1.PutSecretResponse>addMethod(
           getPutSecretMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.vault.services.v1.PutSecretRequest, com.udb.core.vault.services.v1.PutSecretResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.vault.services.v1.PutSecretRequest,
               com.udb.core.vault.services.v1.PutSecretResponse>(
                 service, METHODID_PUT_SECRET)))
-        .addMethod(
+        .<com.udb.core.vault.services.v1.GetSecretRequest, com.udb.core.vault.services.v1.GetSecretResponse>addMethod(
           getGetSecretMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.vault.services.v1.GetSecretRequest, com.udb.core.vault.services.v1.GetSecretResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.vault.services.v1.GetSecretRequest,
               com.udb.core.vault.services.v1.GetSecretResponse>(
                 service, METHODID_GET_SECRET)))
-        .addMethod(
+        .<com.udb.core.vault.services.v1.ListSecretsRequest, com.udb.core.vault.services.v1.ListSecretsResponse>addMethod(
           getListSecretsMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.vault.services.v1.ListSecretsRequest, com.udb.core.vault.services.v1.ListSecretsResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.vault.services.v1.ListSecretsRequest,
               com.udb.core.vault.services.v1.ListSecretsResponse>(
                 service, METHODID_LIST_SECRETS)))
-        .addMethod(
+        .<com.udb.core.vault.services.v1.DeleteSecretRequest, com.udb.core.vault.services.v1.DeleteSecretResponse>addMethod(
           getDeleteSecretMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.vault.services.v1.DeleteSecretRequest, com.udb.core.vault.services.v1.DeleteSecretResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.vault.services.v1.DeleteSecretRequest,
               com.udb.core.vault.services.v1.DeleteSecretResponse>(
                 service, METHODID_DELETE_SECRET)))
-        .addMethod(
+        .<com.udb.core.vault.services.v1.UndeleteSecretRequest, com.udb.core.vault.services.v1.UndeleteSecretResponse>addMethod(
           getUndeleteSecretMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.vault.services.v1.UndeleteSecretRequest, com.udb.core.vault.services.v1.UndeleteSecretResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.vault.services.v1.UndeleteSecretRequest,
               com.udb.core.vault.services.v1.UndeleteSecretResponse>(
                 service, METHODID_UNDELETE_SECRET)))
-        .addMethod(
+        .<com.udb.core.vault.services.v1.DestroySecretRequest, com.udb.core.vault.services.v1.DestroySecretResponse>addMethod(
           getDestroySecretMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.vault.services.v1.DestroySecretRequest, com.udb.core.vault.services.v1.DestroySecretResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.vault.services.v1.DestroySecretRequest,
               com.udb.core.vault.services.v1.DestroySecretResponse>(
                 service, METHODID_DESTROY_SECRET)))
-        .addMethod(
+        .<com.udb.core.vault.services.v1.CreateTransitKeyRequest, com.udb.core.vault.services.v1.CreateTransitKeyResponse>addMethod(
           getCreateTransitKeyMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.vault.services.v1.CreateTransitKeyRequest, com.udb.core.vault.services.v1.CreateTransitKeyResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.vault.services.v1.CreateTransitKeyRequest,
               com.udb.core.vault.services.v1.CreateTransitKeyResponse>(
                 service, METHODID_CREATE_TRANSIT_KEY)))
-        .addMethod(
+        .<com.udb.core.vault.services.v1.RotateTransitKeyRequest, com.udb.core.vault.services.v1.RotateTransitKeyResponse>addMethod(
           getRotateTransitKeyMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.vault.services.v1.RotateTransitKeyRequest, com.udb.core.vault.services.v1.RotateTransitKeyResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.vault.services.v1.RotateTransitKeyRequest,
               com.udb.core.vault.services.v1.RotateTransitKeyResponse>(
                 service, METHODID_ROTATE_TRANSIT_KEY)))
-        .addMethod(
+        .<com.udb.core.vault.services.v1.EncryptRequest, com.udb.core.vault.services.v1.EncryptResponse>addMethod(
           getEncryptMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.vault.services.v1.EncryptRequest, com.udb.core.vault.services.v1.EncryptResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.vault.services.v1.EncryptRequest,
               com.udb.core.vault.services.v1.EncryptResponse>(
                 service, METHODID_ENCRYPT)))
-        .addMethod(
+        .<com.udb.core.vault.services.v1.DecryptRequest, com.udb.core.vault.services.v1.DecryptResponse>addMethod(
           getDecryptMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.vault.services.v1.DecryptRequest, com.udb.core.vault.services.v1.DecryptResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.vault.services.v1.DecryptRequest,
               com.udb.core.vault.services.v1.DecryptResponse>(
                 service, METHODID_DECRYPT)))
-        .addMethod(
+        .<com.udb.core.vault.services.v1.SignRequest, com.udb.core.vault.services.v1.SignResponse>addMethod(
           getSignMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.vault.services.v1.SignRequest, com.udb.core.vault.services.v1.SignResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.vault.services.v1.SignRequest,
               com.udb.core.vault.services.v1.SignResponse>(
                 service, METHODID_SIGN)))
-        .addMethod(
+        .<com.udb.core.vault.services.v1.VerifyRequest, com.udb.core.vault.services.v1.VerifyResponse>addMethod(
           getVerifyMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.vault.services.v1.VerifyRequest, com.udb.core.vault.services.v1.VerifyResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.vault.services.v1.VerifyRequest,
               com.udb.core.vault.services.v1.VerifyResponse>(
                 service, METHODID_VERIFY)))
-        .addMethod(
+        .<com.udb.core.vault.services.v1.HmacRequest, com.udb.core.vault.services.v1.HmacResponse>addMethod(
           getHmacMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.vault.services.v1.HmacRequest, com.udb.core.vault.services.v1.HmacResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.vault.services.v1.HmacRequest,
               com.udb.core.vault.services.v1.HmacResponse>(
                 service, METHODID_HMAC)))
-        .addMethod(
+        .<com.udb.core.vault.services.v1.SealStatusRequest, com.udb.core.vault.services.v1.SealStatusResponse>addMethod(
           getSealStatusMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.vault.services.v1.SealStatusRequest, com.udb.core.vault.services.v1.SealStatusResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.vault.services.v1.SealStatusRequest,
               com.udb.core.vault.services.v1.SealStatusResponse>(
                 service, METHODID_SEAL_STATUS)))
-        .addMethod(
+        .<com.udb.core.vault.services.v1.GenerateDatabaseCredentialsRequest, com.udb.core.vault.services.v1.GenerateDatabaseCredentialsResponse>addMethod(
           getGenerateDatabaseCredentialsMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.vault.services.v1.GenerateDatabaseCredentialsRequest, com.udb.core.vault.services.v1.GenerateDatabaseCredentialsResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.vault.services.v1.GenerateDatabaseCredentialsRequest,
               com.udb.core.vault.services.v1.GenerateDatabaseCredentialsResponse>(
                 service, METHODID_GENERATE_DATABASE_CREDENTIALS)))
-        .addMethod(
+        .<com.udb.core.vault.services.v1.RevokeDatabaseCredentialsRequest, com.udb.core.vault.services.v1.RevokeDatabaseCredentialsResponse>addMethod(
           getRevokeDatabaseCredentialsMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.vault.services.v1.RevokeDatabaseCredentialsRequest, com.udb.core.vault.services.v1.RevokeDatabaseCredentialsResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.vault.services.v1.RevokeDatabaseCredentialsRequest,
               com.udb.core.vault.services.v1.RevokeDatabaseCredentialsResponse>(
                 service, METHODID_REVOKE_DATABASE_CREDENTIALS)))
-        .addMethod(
+        .<com.udb.core.vault.services.v1.EmergencyRevokeDatabaseCredentialsRequest, com.udb.core.vault.services.v1.EmergencyRevokeDatabaseCredentialsResponse>addMethod(
           getEmergencyRevokeDatabaseCredentialsMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.vault.services.v1.EmergencyRevokeDatabaseCredentialsRequest, com.udb.core.vault.services.v1.EmergencyRevokeDatabaseCredentialsResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.vault.services.v1.EmergencyRevokeDatabaseCredentialsRequest,
               com.udb.core.vault.services.v1.EmergencyRevokeDatabaseCredentialsResponse>(
                 service, METHODID_EMERGENCY_REVOKE_DATABASE_CREDENTIALS)))
-        .addMethod(
+        .<com.udb.core.vault.services.v1.GenerateDataKeyRequest, com.udb.core.vault.services.v1.GenerateDataKeyResponse>addMethod(
           getGenerateDataKeyMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.vault.services.v1.GenerateDataKeyRequest, com.udb.core.vault.services.v1.GenerateDataKeyResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.vault.services.v1.GenerateDataKeyRequest,
               com.udb.core.vault.services.v1.GenerateDataKeyResponse>(
                 service, METHODID_GENERATE_DATA_KEY)))
-        .addMethod(
+        .<com.udb.core.vault.services.v1.RewrapRequest, com.udb.core.vault.services.v1.RewrapResponse>addMethod(
           getRewrapMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.vault.services.v1.RewrapRequest, com.udb.core.vault.services.v1.RewrapResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.vault.services.v1.RewrapRequest,
               com.udb.core.vault.services.v1.RewrapResponse>(
                 service, METHODID_REWRAP)))
-        .addMethod(
+        .<com.udb.core.vault.services.v1.GetTransitPublicKeyRequest, com.udb.core.vault.services.v1.GetTransitPublicKeyResponse>addMethod(
           getGetTransitPublicKeyMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.vault.services.v1.GetTransitPublicKeyRequest, com.udb.core.vault.services.v1.GetTransitPublicKeyResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.vault.services.v1.GetTransitPublicKeyRequest,
               com.udb.core.vault.services.v1.GetTransitPublicKeyResponse>(
                 service, METHODID_GET_TRANSIT_PUBLIC_KEY)))
-        .addMethod(
+        .<com.udb.core.vault.services.v1.BatchEncryptRequest, com.udb.core.vault.services.v1.BatchEncryptResponse>addMethod(
           getBatchEncryptMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.vault.services.v1.BatchEncryptRequest, com.udb.core.vault.services.v1.BatchEncryptResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.vault.services.v1.BatchEncryptRequest,
               com.udb.core.vault.services.v1.BatchEncryptResponse>(
                 service, METHODID_BATCH_ENCRYPT)))
-        .addMethod(
+        .<com.udb.core.vault.services.v1.BatchDecryptRequest, com.udb.core.vault.services.v1.BatchDecryptResponse>addMethod(
           getBatchDecryptMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.vault.services.v1.BatchDecryptRequest, com.udb.core.vault.services.v1.BatchDecryptResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.vault.services.v1.BatchDecryptRequest,
               com.udb.core.vault.services.v1.BatchDecryptResponse>(

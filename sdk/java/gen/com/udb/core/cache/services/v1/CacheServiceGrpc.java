@@ -940,51 +940,51 @@ public final class CacheServiceGrpc {
 
   public static final io.grpc.ServerServiceDefinition bindService(AsyncService service) {
     return io.grpc.ServerServiceDefinition.builder(getServiceDescriptor())
-        .addMethod(
+        .<com.udb.core.cache.services.v1.GetRequest, com.udb.core.cache.services.v1.GetResponse>addMethod(
           getGetMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.cache.services.v1.GetRequest, com.udb.core.cache.services.v1.GetResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.cache.services.v1.GetRequest,
               com.udb.core.cache.services.v1.GetResponse>(
                 service, METHODID_GET)))
-        .addMethod(
+        .<com.udb.core.cache.services.v1.SetRequest, com.udb.core.cache.services.v1.SetResponse>addMethod(
           getSetMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.cache.services.v1.SetRequest, com.udb.core.cache.services.v1.SetResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.cache.services.v1.SetRequest,
               com.udb.core.cache.services.v1.SetResponse>(
                 service, METHODID_SET)))
-        .addMethod(
+        .<com.udb.core.cache.services.v1.DeleteRequest, com.udb.core.cache.services.v1.DeleteResponse>addMethod(
           getDeleteMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.cache.services.v1.DeleteRequest, com.udb.core.cache.services.v1.DeleteResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.cache.services.v1.DeleteRequest,
               com.udb.core.cache.services.v1.DeleteResponse>(
                 service, METHODID_DELETE)))
-        .addMethod(
+        .<com.udb.core.cache.services.v1.ScanRequest, com.udb.core.cache.services.v1.ScanResponse>addMethod(
           getScanMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.cache.services.v1.ScanRequest, com.udb.core.cache.services.v1.ScanResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.cache.services.v1.ScanRequest,
               com.udb.core.cache.services.v1.ScanResponse>(
                 service, METHODID_SCAN)))
-        .addMethod(
+        .<com.udb.core.cache.services.v1.CreateNamespaceRequest, com.udb.core.cache.services.v1.CreateNamespaceResponse>addMethod(
           getCreateNamespaceMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.cache.services.v1.CreateNamespaceRequest, com.udb.core.cache.services.v1.CreateNamespaceResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.cache.services.v1.CreateNamespaceRequest,
               com.udb.core.cache.services.v1.CreateNamespaceResponse>(
                 service, METHODID_CREATE_NAMESPACE)))
-        .addMethod(
+        .<com.udb.core.cache.services.v1.DeleteNamespaceRequest, com.udb.core.cache.services.v1.DeleteNamespaceResponse>addMethod(
           getDeleteNamespaceMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.cache.services.v1.DeleteNamespaceRequest, com.udb.core.cache.services.v1.DeleteNamespaceResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.cache.services.v1.DeleteNamespaceRequest,
               com.udb.core.cache.services.v1.DeleteNamespaceResponse>(
                 service, METHODID_DELETE_NAMESPACE)))
-        .addMethod(
+        .<com.udb.core.cache.services.v1.GetNamespaceStatsRequest, com.udb.core.cache.services.v1.GetNamespaceStatsResponse>addMethod(
           getGetNamespaceStatsMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.cache.services.v1.GetNamespaceStatsRequest, com.udb.core.cache.services.v1.GetNamespaceStatsResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.cache.services.v1.GetNamespaceStatsRequest,
               com.udb.core.cache.services.v1.GetNamespaceStatsResponse>(

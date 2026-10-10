@@ -14,6 +14,8 @@ import * as path from "node:path";
 import { test } from "node:test";
 
 import * as grpc from "@grpc/grpc-js";
+import * as protoLoader from "@grpc/proto-loader";
+import * as protobuf from "protobufjs";
 
 import {
   ERROR_KIND_NAMES,
@@ -31,6 +33,71 @@ import {
   type WriteReceipt,
 } from "./consistency";
 import { sendOneBidiAwaitFirst, sendOneClientStream } from "./stream";
+import { defaultProtoRoot } from "./protoRoot";
+import { structToObject } from "./wkt";
+
+// Exercise the real DataBroker request serializer rather than a capturing stub:
+// nested filters must cross protobufjs's Struct -> Value -> Struct converters.
+function selectWireMethod(): grpc.MethodDefinition<any, any> {
+  const root = defaultProtoRoot();
+  const definition = protoLoader.loadSync(path.join(root, "udb/services/v1/data_broker.proto"), {
+    keepCase: true,
+    longs: String,
+    enums: String,
+    defaults: true,
+    oneofs: true,
+    includeDirs: [root, path.resolve(root, "../third_party/googleapis")],
+  });
+  const service = definition["udb.services.v1.DataBroker"] as grpc.ServiceDefinition;
+  assert.ok(service.Select, "actual canonical Select serializer must exist");
+  return service.Select;
+}
+
+test("actual Select serializer preserves nested predicates and literal fields data", () => {
+  const method = selectWireMethod();
+  const filter = {
+    tenant_id: "owned-tenant",
+    record_id: { $in: ["own-row", "peer-row"] },
+    $or: [{ project_id: "own-project" }, { project_id: "peer-project" }],
+    fields: { stringValue: "ordinary user data", nested: { fields: { numberValue: 7 } } },
+    values: [null, false, true, 0, 1.5, "", [], {}, ["nested", { accepted: true }]],
+  };
+  const before = JSON.stringify(filter);
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const bytes = method.requestSerialize({
+      message_type: "udb.sdk.live.v1.SdkLiveRecord", filter, limit: 10,
+    });
+    const decoded = method.requestDeserialize(bytes);
+    assert.deepEqual(structToObject(decoded.filter), filter);
+  }
+  assert.equal(JSON.stringify(filter), before, "normalization must not mutate caller predicates");
+});
+
+test("actual Struct messages serialize unchanged and wrapper converters preserve depth", () => {
+  const schema = protobuf.common["google/protobuf/struct.proto"];
+  assert.ok(schema, "protobufjs's canonical Struct descriptor must exist");
+  const struct = protobuf.Root.fromJSON(schema).lookupType("google.protobuf.Struct");
+  const converter = struct as unknown as {
+    fromObject(value: unknown, depth?: number): protobuf.Message;
+    toObject(value: protobuf.Message, options?: protobuf.IConversionOptions, depth?: number): object;
+  };
+  const input = { fields: { stringValue: "literal" }, predicate: { $in: ["a", "b"] } };
+  const message = struct.fromObject(input);
+  assert.equal(struct.fromObject(message), message, "a genuine protobuf message remains the same instance");
+  const method = selectWireMethod();
+  const decoded = method.requestDeserialize(method.requestSerialize({ filter: message }));
+  assert.deepEqual(structToObject(decoded.filter), input);
+  const limit = (protobuf.util as unknown as { recursionLimit: number }).recursionLimit;
+  assert.ok(Number.isInteger(limit) && limit > 0);
+  assert.throws(() => converter.fromObject({}, limit + 1), /maximum nesting depth exceeded/);
+  assert.throws(() => converter.toObject(message, {}, limit + 1), /max depth exceeded/);
+  let nested: object = { leaf: "value" };
+  for (let depth = 0; depth <= limit; depth++) nested = { nested };
+  assert.throws(() => method.requestSerialize({ filter: nested }), /maximum nesting depth exceeded/);
+  const cycle: Record<string, unknown> = {};
+  cycle.self = cycle;
+  assert.throws(() => method.requestSerialize({ filter: cycle }), /maximum nesting depth exceeded/);
+});
 
 // ── 09.1: ErrorDetail decode + UdbError.kind/kindName/retryable accessors ─────
 

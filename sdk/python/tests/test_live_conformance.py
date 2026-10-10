@@ -678,7 +678,7 @@ SAML_IDP_METADATA_XML = (
 )
 
 
-def run_native_service_e2e(auth_channel, meta: Metadata, uuid_meta: Metadata | None = None) -> None:
+def run_native_service_e2e(auth_channel, meta: Metadata, platform_meta: Metadata, uuid_meta: Metadata | None = None) -> None:
     """Real create→read→assert CRUD against every native control-plane service.
 
     Tenant-identity fix (auth_fix.md): ``meta.tenant_id`` is the CANONICAL tenant
@@ -692,7 +692,12 @@ def run_native_service_e2e(auth_channel, meta: Metadata, uuid_meta: Metadata | N
     if uuid_meta is None:
         uuid_meta = meta
     suffix = uuid.uuid4().hex
+    actor_id = str(uuid.UUID(meta.user_id))
+    assert actor_id == meta.user_id, "native mutations require the verified canonical operator"
+    assert platform_meta.user_id and platform_meta.user_id != actor_id
+    assert platform_meta.tenant_id == meta.tenant_id and platform_meta.project_id == meta.project_id
     md = meta.to_grpc_metadata()
+    platform_md = platform_meta.to_grpc_metadata()
     wmd = uuid_meta.to_grpc_metadata()
     uuid_tenant = uuid_meta.tenant_id
 
@@ -711,7 +716,7 @@ def run_native_service_e2e(auth_channel, meta: Metadata, uuid_meta: Metadata | N
     created_role = authz_stub.CreateRole(
         authz_pb.CreateRoleRequest(
             name=f"SDK Reader Py {suffix}", description="Live SDK reader role",
-            created_by=str(uuid.uuid4()), role_code=role_code,
+            created_by=actor_id, role_code=role_code,
             domain=meta.tenant_id, tenant_id=meta.tenant_id, project_id=meta.project_id,
         ),
         metadata=md, timeout=8.0,
@@ -735,10 +740,17 @@ def run_native_service_e2e(auth_channel, meta: Metadata, uuid_meta: Metadata | N
     assigned = authz_stub.AssignRole(
         authz_pb.AssignRoleRequest(
             user_id=subject.user_id, role_id=created_role.role_id, domain=meta.tenant_id,
-            assigned_by=subject.user_id, tenant_id=meta.tenant_id, project_id=meta.project_id,
+            assigned_by=actor_id, tenant_id=meta.tenant_id, project_id=meta.project_id,
         ),
         metadata=md, timeout=8.0,
     ).user_role
+    # Administrative subject evaluation uses only the separately verified platform bearer.
+    access_request = authz_pb.CheckAccessRequest(
+        user_id=subject.user_id, domain=meta.tenant_id, tenant_id=meta.tenant_id, project_id=meta.project_id,
+        object="invoice", action="data.select",
+    )
+    before_policy = authz_stub.CheckAccess(access_request, metadata=platform_md, timeout=8.0)
+    assert not before_policy.allowed, "the owned role must not grant access before its policy exists"
     policy_id = str(uuid.uuid4())
     authz_stub.PutAuthzPolicy(
         authz_pb.PutAuthzPolicyRequest(policy=authz_pb.AuthzPolicyRecord(
@@ -747,68 +759,144 @@ def run_native_service_e2e(auth_channel, meta: Metadata, uuid_meta: Metadata | N
         )),
         metadata=md, timeout=8.0,
     )
-    allowed = authz_stub.CheckAccess(
-        authz_pb.CheckAccessRequest(
-            user_id=subject.user_id, domain=meta.tenant_id, tenant_id=meta.tenant_id, project_id=meta.project_id,
-            object="invoice", action="data.select",
-        ),
-        metadata=md, timeout=8.0,
-    )
+    allowed = authz_stub.CheckAccess(access_request, metadata=platform_md, timeout=8.0)
     assert allowed.allowed, "CheckAccess must allow the assigned role+policy"
+    # matched_rule is the first candidate, not the identity of the granting policy.
+    assert policy_id in allowed.decision.matched_policy_ids, "PDP must evaluate the exact owned policy"
     user_roles = authz_stub.ListUserRoles(
         authz_pb.ListUserRolesRequest(user_id=subject.user_id, domain=meta.tenant_id, active_only=True), metadata=md, timeout=8.0,
     )
     assert len(user_roles.user_roles) == 1
     authz_stub.RevokeRole(
-        authz_pb.RevokeRoleRequest(user_role_id=assigned.user_role_id, user_id=subject.user_id, reason="sdk_live_test", revoked_by=subject.user_id),
+        authz_pb.RevokeRoleRequest(user_role_id=assigned.user_role_id, user_id=subject.user_id, reason="sdk_live_test", revoked_by=actor_id),
         metadata=md, timeout=8.0,
     )
-    denied = authz_stub.CheckAccess(
-        authz_pb.CheckAccessRequest(
-            user_id=subject.user_id, domain=meta.tenant_id, tenant_id=meta.tenant_id, project_id=meta.project_id,
-            object="invoice", action="data.select",
-        ),
+    revoked_roles = authz_stub.ListUserRoles(
+        authz_pb.ListUserRolesRequest(user_id=subject.user_id, domain=meta.tenant_id, active_only=True),
         metadata=md, timeout=8.0,
     )
+    assert not revoked_roles.user_roles, "the owned subject must have no active roles after revoke"
+    denied = authz_stub.CheckAccess(access_request, metadata=platform_md, timeout=8.0)
     assert not denied.allowed, "CheckAccess must deny after the role was revoked"
+    deleted = authz_stub.DeletePolicyRule(
+        authz_pb.DeletePolicyRuleRequest(policy_id=policy_id, deleted_by=actor_id), metadata=md, timeout=8.0,
+    )
+    assert deleted.deleted, "the exact owned decision policy must be removed"
+    authz_stub.DeleteRole(
+        authz_pb.DeleteRoleRequest(role_id=created_role.role_id, deleted_by=actor_id), metadata=md, timeout=8.0,
+    )
 
-    # ApiKeyService — create/validate/list/revoke lifecycle.
+    # ApiKeyService: only a real active SERVICE_ACCOUNT with an exact
+    # durable typed grant can own the persisted key, as on the Go live path.
     apikey_stub = apikey_grpc.ApiKeyServiceStub(auth_channel)
-    principal = f"sdk-live-svc-{suffix}"
-    key_ctx = common_pb.RequestContext(
-        user_id=principal,
+    service_name = f"sdk-live-svc-{suffix}"
+    operator_context = common_pb.RequestContext(
+        user_id=actor_id,
         tenant=common_pb.TenantContext(tenant_id=meta.tenant_id, project_id=meta.project_id),
     )
-    created_key = apikey_stub.CreateApiKey(
-        apikey_pb.CreateApiKeyRequest(name=f"sdk-live-key-{suffix}", owner_id=principal, scopes=["data:read"], context=key_ctx),
+    service = authn_stub.CreateUser(
+        authn_pb2.CreateUserRequest(
+            username=service_name, email=f"{service_name}@example.com", password="CorrectHorse1!",
+            tenant_id=meta.tenant_id, project_id=meta.project_id, full_name="SDK Live Service Account",
+            account_kind=authn_enum_pb.ACCOUNT_KIND_SERVICE_ACCOUNT, context=operator_context,
+        ),
         metadata=md, timeout=8.0,
+    ).user
+    principal = str(uuid.UUID(service.user_id))
+    assert principal == service.user_id and principal != actor_id
+    assert service.tenant_id == meta.tenant_id and service.project_id == meta.project_id
+    assert service.account_kind == authn_enum_pb.ACCOUNT_KIND_SERVICE_ACCOUNT
+    key_ctx = common_pb.RequestContext(
+        user_id=actor_id,
+        tenant=common_pb.TenantContext(tenant_id=meta.tenant_id, project_id=meta.project_id),
     )
-    assert created_key.plain_key.startswith("udbk_")
-    key_id = created_key.key.key_id
-    valid = apikey_stub.ValidateApiKey(
-        apikey_pb.ValidateApiKeyRequest(plain_key=created_key.plain_key, required_scope="data:read"), metadata=md, timeout=8.0,
-    )
-    assert valid.valid and valid.owner_id == principal
-    listed_keys = apikey_stub.ListApiKeys(
-        apikey_pb.ListApiKeysRequest(owner_id=principal, status=API_KEY_STATUS_ACTIVE), metadata=md, timeout=8.0,
-    )
-    assert len(listed_keys.keys) == 1 and listed_keys.keys[0].key_id == key_id
-    got_key = apikey_stub.GetApiKey(apikey_pb.GetApiKeyRequest(key_id=key_id), metadata=md, timeout=8.0)
-    assert got_key.key.owner_id == principal
-    apikey_stub.UpdateApiKey(
-        apikey_pb.UpdateApiKeyRequest(key_id=key_id, scopes=["data:read", "data:write"], context=key_ctx), metadata=md, timeout=8.0,
-    )
-    write_ok = apikey_stub.ValidateApiKey(
-        apikey_pb.ValidateApiKeyRequest(plain_key=created_key.plain_key, required_scope="data:write"), metadata=md, timeout=8.0,
-    )
-    assert write_ok.valid, "ValidateApiKey must honor the updated data:write scope"
-    apikey_stub.RevokeApiKey(
-        apikey_pb.RevokeApiKeyRequest(key_id=key_id, revoke_reason="sdk_live_test", context=key_ctx), metadata=md, timeout=8.0,
-    )
-    after = apikey_stub.ValidateApiKey(
-        apikey_pb.ValidateApiKeyRequest(plain_key=created_key.plain_key, required_scope="data:read"), metadata=md, timeout=8.0,
-    )
-    assert not after.valid, "revoked API key must not validate"
+    key_id = ""
+    key_revoked = False
+    primary_failure = None
+    try:
+        active = authn_stub.ChangeUserStatus(
+            authn_pb2.ChangeUserStatusRequest(
+                user_id=principal, new_status=authn_enum_pb.USER_STATUS_ACTIVE,
+                reason="sdk live activate service account", context=operator_context,
+            ), metadata=md, timeout=8.0,
+        ).user
+        assert active.user_id == principal and active.status == authn_enum_pb.USER_STATUS_ACTIVE
+        authn_stub.CreateServiceAccountGrant(
+            authn_svc_pb2.CreateServiceAccountGrantRequest(
+                tenant_id=meta.tenant_id, project_id=meta.project_id, user_id=principal,
+                service_identity=service_name, approved_scopes=["data:read", "data:write"],
+                reason="sdk live API key fixture",
+            ), metadata=md, timeout=8.0,
+        )
+        created_key = apikey_stub.CreateApiKey(
+            apikey_pb.CreateApiKeyRequest(name=f"sdk-live-key-{suffix}", owner_id=principal, scopes=["data:read"], context=key_ctx),
+            metadata=md, timeout=8.0,
+        )
+        assert created_key.plain_key.startswith("udbk_")
+        key_id = created_key.key.key_id
+        valid = apikey_stub.ValidateApiKey(
+            apikey_pb.ValidateApiKeyRequest(plain_key=created_key.plain_key, required_scope="data:read"), metadata=md, timeout=8.0,
+        )
+        assert valid.valid and valid.owner_id == principal
+        listed_keys = apikey_stub.ListApiKeys(
+            apikey_pb.ListApiKeysRequest(owner_id=principal, status=API_KEY_STATUS_ACTIVE), metadata=md, timeout=8.0,
+        )
+        assert len(listed_keys.keys) == 1 and listed_keys.keys[0].key_id == key_id
+        got_key = apikey_stub.GetApiKey(apikey_pb.GetApiKeyRequest(key_id=key_id), metadata=md, timeout=8.0)
+        assert got_key.key.owner_id == principal
+        apikey_stub.UpdateApiKey(
+            apikey_pb.UpdateApiKeyRequest(key_id=key_id, scopes=["data:read", "data:write"], context=key_ctx), metadata=md, timeout=8.0,
+        )
+        write_ok = apikey_stub.ValidateApiKey(
+            apikey_pb.ValidateApiKeyRequest(plain_key=created_key.plain_key, required_scope="data:write"), metadata=md, timeout=8.0,
+        )
+        assert write_ok.valid, "ValidateApiKey must honor the updated data:write scope"
+        apikey_stub.RevokeApiKey(
+            apikey_pb.RevokeApiKeyRequest(key_id=key_id, revoke_reason="sdk_live_test", context=key_ctx), metadata=md, timeout=8.0,
+        )
+        after = apikey_stub.ValidateApiKey(
+            apikey_pb.ValidateApiKeyRequest(plain_key=created_key.plain_key, required_scope="data:read"), metadata=md, timeout=8.0,
+        )
+        assert not after.valid, "revoked API key must not validate"
+        key_revoked = True
+
+    except BaseException as exc:
+        primary_failure = exc
+        raise
+    finally:
+        # Clean only the verified, test-owned service and its exact grant/key;
+        # keep the unrelated authenticated operator active for the remaining RPCs.
+        cleanup_errors = []
+        operations = []
+        if key_id and not key_revoked:
+            operations.append(("key", lambda: apikey_stub.RevokeApiKey(
+                apikey_pb.RevokeApiKeyRequest(key_id=key_id, revoke_reason="sdk live fixture cleanup", context=key_ctx),
+                metadata=md, timeout=8.0,
+            )))
+        operations.extend([
+            ("grant", lambda: authn_stub.RevokeServiceAccountGrant(
+                authn_svc_pb2.RevokeServiceAccountGrantRequest(
+                    tenant_id=meta.tenant_id, user_id=principal, reason="sdk live fixture cleanup",
+                ), metadata=md, timeout=8.0,
+            )),
+            ("service", lambda: authn_stub.ChangeUserStatus(
+                authn_pb2.ChangeUserStatusRequest(
+                    user_id=principal, new_status=authn_enum_pb.USER_STATUS_DEACTIVATED,
+                    reason="sdk live fixture cleanup", context=operator_context,
+                ), metadata=md, timeout=8.0,
+            )),
+        ])
+        for label, cleanup in operations:
+            try:
+                cleanup()
+            except grpc.RpcError as exc:
+                cleanup_errors.append(f"{label}:{exc.code().name}")
+        if cleanup_errors:
+            detail = "owned API key fixture cleanup failed: " + ",".join(cleanup_errors)
+            if primary_failure is None:
+                raise AssertionError(detail)
+            if hasattr(primary_failure, "add_note"):
+                primary_failure.add_note(detail)
 
     # AnalyticsService — record metrics then roll up.
     analytics_stub = analytics_grpc.AnalyticsServiceStub(auth_channel)
@@ -4233,7 +4321,13 @@ def test_live_generated_rpc_surface():
     refreshed = auth.refresh_token(login.refresh_token)
     assert refreshed.access_token
 
-    authed_meta = replace(metadata(bearer_token=login.access_token), tenant_id=canonical_tenant, client_catalog_version="")
+    operator = principal_resp.principal
+    assert operator.subject and operator.user_id == login.user_id and operator.project_id
+    authed_meta = replace(
+        metadata(bearer_token=login.access_token), tenant_id=canonical_tenant, project_id=operator.project_id,
+        user_id=operator.user_id, service_identity=operator.service_identity, scopes=tuple(operator.scopes),
+        api_key="", client_catalog_version="",
+    )
     caps_stub = data_broker_pb2_grpc.DataBrokerStub(grpc.insecure_channel(target))
     caps = caps_stub.GetCapabilities(
         admin_pb2.CapabilitiesRequest(context=authed_meta.to_request_context(), project_id=authed_meta.project_id),
@@ -4273,7 +4367,10 @@ def test_live_generated_rpc_surface():
         assert platform_principal.subject and platform_principal.user_id
         assert platform_principal.tenant_id == canonical_tenant and platform_principal.project_id == authed_meta.project_id
         assert platform_principal.user_id != principal_resp.principal.user_id
-        platform_meta = replace(authed_meta, bearer_token=platform_login.access_token)
+        platform_meta = replace(
+            authed_meta, bearer_token=platform_login.access_token, user_id=platform_principal.user_id,
+            service_identity=platform_principal.service_identity, scopes=tuple(platform_principal.scopes),
+        )
         run_live_backend_e2e(caps_stub, authed_meta, platform_meta)
 
     # Per-RPC EDGE cases (fail-closed / no cross-tenant leak / no server fault).
@@ -4290,7 +4387,7 @@ def test_live_generated_rpc_surface():
     # "uuid tenant" admin needed (auth_fix.md tenant-identity fix).
     auth_channel = grpc.insecure_channel(auth_target)
     try:
-        run_native_service_e2e(auth_channel, authed_meta)
+        run_native_service_e2e(auth_channel, authed_meta, platform_meta)
     finally:
         auth_channel.close()
 

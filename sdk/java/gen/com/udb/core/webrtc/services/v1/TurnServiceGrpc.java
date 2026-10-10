@@ -279,9 +279,9 @@ public final class TurnServiceGrpc {
 
   public static final io.grpc.ServerServiceDefinition bindService(AsyncService service) {
     return io.grpc.ServerServiceDefinition.builder(getServiceDescriptor())
-        .addMethod(
+        .<com.udb.core.webrtc.services.v1.IssueCredentialsRequest, com.udb.core.webrtc.services.v1.IssueCredentialsResponse>addMethod(
           getIssueCredentialsMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.webrtc.services.v1.IssueCredentialsRequest, com.udb.core.webrtc.services.v1.IssueCredentialsResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.webrtc.services.v1.IssueCredentialsRequest,
               com.udb.core.webrtc.services.v1.IssueCredentialsResponse>(

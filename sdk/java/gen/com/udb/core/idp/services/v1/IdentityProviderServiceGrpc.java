@@ -2278,191 +2278,191 @@ public final class IdentityProviderServiceGrpc {
 
   public static final io.grpc.ServerServiceDefinition bindService(AsyncService service) {
     return io.grpc.ServerServiceDefinition.builder(getServiceDescriptor())
-        .addMethod(
+        .<com.udb.core.idp.services.v1.CreateProviderRequest, com.udb.core.idp.services.v1.CreateProviderResponse>addMethod(
           getCreateProviderMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.idp.services.v1.CreateProviderRequest, com.udb.core.idp.services.v1.CreateProviderResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.idp.services.v1.CreateProviderRequest,
               com.udb.core.idp.services.v1.CreateProviderResponse>(
                 service, METHODID_CREATE_PROVIDER)))
-        .addMethod(
+        .<com.udb.core.idp.services.v1.UpdateProviderRequest, com.udb.core.idp.services.v1.UpdateProviderResponse>addMethod(
           getUpdateProviderMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.idp.services.v1.UpdateProviderRequest, com.udb.core.idp.services.v1.UpdateProviderResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.idp.services.v1.UpdateProviderRequest,
               com.udb.core.idp.services.v1.UpdateProviderResponse>(
                 service, METHODID_UPDATE_PROVIDER)))
-        .addMethod(
+        .<com.udb.core.idp.services.v1.DisableProviderRequest, com.udb.core.idp.services.v1.DisableProviderResponse>addMethod(
           getDisableProviderMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.idp.services.v1.DisableProviderRequest, com.udb.core.idp.services.v1.DisableProviderResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.idp.services.v1.DisableProviderRequest,
               com.udb.core.idp.services.v1.DisableProviderResponse>(
                 service, METHODID_DISABLE_PROVIDER)))
-        .addMethod(
+        .<com.udb.core.idp.services.v1.GetProviderRequest, com.udb.core.idp.services.v1.GetProviderResponse>addMethod(
           getGetProviderMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.idp.services.v1.GetProviderRequest, com.udb.core.idp.services.v1.GetProviderResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.idp.services.v1.GetProviderRequest,
               com.udb.core.idp.services.v1.GetProviderResponse>(
                 service, METHODID_GET_PROVIDER)))
-        .addMethod(
+        .<com.udb.core.idp.services.v1.ListProvidersRequest, com.udb.core.idp.services.v1.ListProvidersResponse>addMethod(
           getListProvidersMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.idp.services.v1.ListProvidersRequest, com.udb.core.idp.services.v1.ListProvidersResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.idp.services.v1.ListProvidersRequest,
               com.udb.core.idp.services.v1.ListProvidersResponse>(
                 service, METHODID_LIST_PROVIDERS)))
-        .addMethod(
+        .<com.udb.core.idp.services.v1.TestProviderDiscoveryRequest, com.udb.core.idp.services.v1.TestProviderDiscoveryResponse>addMethod(
           getTestProviderDiscoveryMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.idp.services.v1.TestProviderDiscoveryRequest, com.udb.core.idp.services.v1.TestProviderDiscoveryResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.idp.services.v1.TestProviderDiscoveryRequest,
               com.udb.core.idp.services.v1.TestProviderDiscoveryResponse>(
                 service, METHODID_TEST_PROVIDER_DISCOVERY)))
-        .addMethod(
+        .<com.udb.core.idp.services.v1.ForceJwksRefreshRequest, com.udb.core.idp.services.v1.ForceJwksRefreshResponse>addMethod(
           getForceJwksRefreshMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.idp.services.v1.ForceJwksRefreshRequest, com.udb.core.idp.services.v1.ForceJwksRefreshResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.idp.services.v1.ForceJwksRefreshRequest,
               com.udb.core.idp.services.v1.ForceJwksRefreshResponse>(
                 service, METHODID_FORCE_JWKS_REFRESH)))
-        .addMethod(
+        .<com.udb.core.idp.services.v1.PreviewClaimMappingRequest, com.udb.core.idp.services.v1.PreviewClaimMappingResponse>addMethod(
           getPreviewClaimMappingMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.idp.services.v1.PreviewClaimMappingRequest, com.udb.core.idp.services.v1.PreviewClaimMappingResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.idp.services.v1.PreviewClaimMappingRequest,
               com.udb.core.idp.services.v1.PreviewClaimMappingResponse>(
                 service, METHODID_PREVIEW_CLAIM_MAPPING)))
-        .addMethod(
+        .<com.udb.core.idp.services.v1.PreviewGroupMappingRequest, com.udb.core.idp.services.v1.PreviewGroupMappingResponse>addMethod(
           getPreviewGroupMappingMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.idp.services.v1.PreviewGroupMappingRequest, com.udb.core.idp.services.v1.PreviewGroupMappingResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.idp.services.v1.PreviewGroupMappingRequest,
               com.udb.core.idp.services.v1.PreviewGroupMappingResponse>(
                 service, METHODID_PREVIEW_GROUP_MAPPING)))
-        .addMethod(
+        .<com.udb.core.idp.services.v1.ListExternalIdentitiesRequest, com.udb.core.idp.services.v1.ListExternalIdentitiesResponse>addMethod(
           getListExternalIdentitiesMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.idp.services.v1.ListExternalIdentitiesRequest, com.udb.core.idp.services.v1.ListExternalIdentitiesResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.idp.services.v1.ListExternalIdentitiesRequest,
               com.udb.core.idp.services.v1.ListExternalIdentitiesResponse>(
                 service, METHODID_LIST_EXTERNAL_IDENTITIES)))
-        .addMethod(
+        .<com.udb.core.idp.services.v1.LinkIdentityRequest, com.udb.core.idp.services.v1.LinkIdentityResponse>addMethod(
           getLinkIdentityMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.idp.services.v1.LinkIdentityRequest, com.udb.core.idp.services.v1.LinkIdentityResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.idp.services.v1.LinkIdentityRequest,
               com.udb.core.idp.services.v1.LinkIdentityResponse>(
                 service, METHODID_LINK_IDENTITY)))
-        .addMethod(
+        .<com.udb.core.idp.services.v1.UnlinkIdentityRequest, com.udb.core.idp.services.v1.UnlinkIdentityResponse>addMethod(
           getUnlinkIdentityMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.idp.services.v1.UnlinkIdentityRequest, com.udb.core.idp.services.v1.UnlinkIdentityResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.idp.services.v1.UnlinkIdentityRequest,
               com.udb.core.idp.services.v1.UnlinkIdentityResponse>(
                 service, METHODID_UNLINK_IDENTITY)))
-        .addMethod(
+        .<com.udb.core.idp.services.v1.ImportSamlMetadataRequest, com.udb.core.idp.services.v1.ImportSamlMetadataResponse>addMethod(
           getImportSamlMetadataMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.idp.services.v1.ImportSamlMetadataRequest, com.udb.core.idp.services.v1.ImportSamlMetadataResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.idp.services.v1.ImportSamlMetadataRequest,
               com.udb.core.idp.services.v1.ImportSamlMetadataResponse>(
                 service, METHODID_IMPORT_SAML_METADATA)))
-        .addMethod(
+        .<com.udb.core.idp.services.v1.StartSamlLoginRequest, com.udb.core.idp.services.v1.StartSamlLoginResponse>addMethod(
           getStartSamlLoginMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.idp.services.v1.StartSamlLoginRequest, com.udb.core.idp.services.v1.StartSamlLoginResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.idp.services.v1.StartSamlLoginRequest,
               com.udb.core.idp.services.v1.StartSamlLoginResponse>(
                 service, METHODID_START_SAML_LOGIN)))
-        .addMethod(
+        .<com.udb.core.idp.services.v1.SamlAcsRequest, com.udb.core.idp.services.v1.SamlAcsResponse>addMethod(
           getSamlAcsMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.idp.services.v1.SamlAcsRequest, com.udb.core.idp.services.v1.SamlAcsResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.idp.services.v1.SamlAcsRequest,
               com.udb.core.idp.services.v1.SamlAcsResponse>(
                 service, METHODID_SAML_ACS)))
-        .addMethod(
+        .<com.udb.core.idp.services.v1.ResolveExternalIdentityRequest, com.udb.core.idp.services.v1.ResolveExternalIdentityResponse>addMethod(
           getResolveExternalIdentityMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.idp.services.v1.ResolveExternalIdentityRequest, com.udb.core.idp.services.v1.ResolveExternalIdentityResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.idp.services.v1.ResolveExternalIdentityRequest,
               com.udb.core.idp.services.v1.ResolveExternalIdentityResponse>(
                 service, METHODID_RESOLVE_EXTERNAL_IDENTITY)))
-        .addMethod(
+        .<com.udb.core.idp.services.v1.ScimCreateUserRequest, com.udb.core.idp.services.v1.ScimCreateUserResponse>addMethod(
           getScimCreateUserMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.idp.services.v1.ScimCreateUserRequest, com.udb.core.idp.services.v1.ScimCreateUserResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.idp.services.v1.ScimCreateUserRequest,
               com.udb.core.idp.services.v1.ScimCreateUserResponse>(
                 service, METHODID_SCIM_CREATE_USER)))
-        .addMethod(
+        .<com.udb.core.idp.services.v1.ScimGetUserRequest, com.udb.core.idp.services.v1.ScimGetUserResponse>addMethod(
           getScimGetUserMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.idp.services.v1.ScimGetUserRequest, com.udb.core.idp.services.v1.ScimGetUserResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.idp.services.v1.ScimGetUserRequest,
               com.udb.core.idp.services.v1.ScimGetUserResponse>(
                 service, METHODID_SCIM_GET_USER)))
-        .addMethod(
+        .<com.udb.core.idp.services.v1.ScimListUsersRequest, com.udb.core.idp.services.v1.ScimListUsersResponse>addMethod(
           getScimListUsersMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.idp.services.v1.ScimListUsersRequest, com.udb.core.idp.services.v1.ScimListUsersResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.idp.services.v1.ScimListUsersRequest,
               com.udb.core.idp.services.v1.ScimListUsersResponse>(
                 service, METHODID_SCIM_LIST_USERS)))
-        .addMethod(
+        .<com.udb.core.idp.services.v1.ScimReplaceUserRequest, com.udb.core.idp.services.v1.ScimReplaceUserResponse>addMethod(
           getScimReplaceUserMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.idp.services.v1.ScimReplaceUserRequest, com.udb.core.idp.services.v1.ScimReplaceUserResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.idp.services.v1.ScimReplaceUserRequest,
               com.udb.core.idp.services.v1.ScimReplaceUserResponse>(
                 service, METHODID_SCIM_REPLACE_USER)))
-        .addMethod(
+        .<com.udb.core.idp.services.v1.ScimPatchUserRequest, com.udb.core.idp.services.v1.ScimPatchUserResponse>addMethod(
           getScimPatchUserMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.idp.services.v1.ScimPatchUserRequest, com.udb.core.idp.services.v1.ScimPatchUserResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.idp.services.v1.ScimPatchUserRequest,
               com.udb.core.idp.services.v1.ScimPatchUserResponse>(
                 service, METHODID_SCIM_PATCH_USER)))
-        .addMethod(
+        .<com.udb.core.idp.services.v1.ScimDeleteUserRequest, com.udb.core.idp.services.v1.ScimDeleteUserResponse>addMethod(
           getScimDeleteUserMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.idp.services.v1.ScimDeleteUserRequest, com.udb.core.idp.services.v1.ScimDeleteUserResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.idp.services.v1.ScimDeleteUserRequest,
               com.udb.core.idp.services.v1.ScimDeleteUserResponse>(
                 service, METHODID_SCIM_DELETE_USER)))
-        .addMethod(
+        .<com.udb.core.idp.services.v1.ScimCreateGroupRequest, com.udb.core.idp.services.v1.ScimCreateGroupResponse>addMethod(
           getScimCreateGroupMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.idp.services.v1.ScimCreateGroupRequest, com.udb.core.idp.services.v1.ScimCreateGroupResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.idp.services.v1.ScimCreateGroupRequest,
               com.udb.core.idp.services.v1.ScimCreateGroupResponse>(
                 service, METHODID_SCIM_CREATE_GROUP)))
-        .addMethod(
+        .<com.udb.core.idp.services.v1.ScimGetGroupRequest, com.udb.core.idp.services.v1.ScimGetGroupResponse>addMethod(
           getScimGetGroupMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.idp.services.v1.ScimGetGroupRequest, com.udb.core.idp.services.v1.ScimGetGroupResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.idp.services.v1.ScimGetGroupRequest,
               com.udb.core.idp.services.v1.ScimGetGroupResponse>(
                 service, METHODID_SCIM_GET_GROUP)))
-        .addMethod(
+        .<com.udb.core.idp.services.v1.ScimListGroupsRequest, com.udb.core.idp.services.v1.ScimListGroupsResponse>addMethod(
           getScimListGroupsMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.idp.services.v1.ScimListGroupsRequest, com.udb.core.idp.services.v1.ScimListGroupsResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.idp.services.v1.ScimListGroupsRequest,
               com.udb.core.idp.services.v1.ScimListGroupsResponse>(
                 service, METHODID_SCIM_LIST_GROUPS)))
-        .addMethod(
+        .<com.udb.core.idp.services.v1.ScimPatchGroupRequest, com.udb.core.idp.services.v1.ScimPatchGroupResponse>addMethod(
           getScimPatchGroupMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.idp.services.v1.ScimPatchGroupRequest, com.udb.core.idp.services.v1.ScimPatchGroupResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.idp.services.v1.ScimPatchGroupRequest,
               com.udb.core.idp.services.v1.ScimPatchGroupResponse>(
                 service, METHODID_SCIM_PATCH_GROUP)))
-        .addMethod(
+        .<com.udb.core.idp.services.v1.ScimDeleteGroupRequest, com.udb.core.idp.services.v1.ScimDeleteGroupResponse>addMethod(
           getScimDeleteGroupMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.idp.services.v1.ScimDeleteGroupRequest, com.udb.core.idp.services.v1.ScimDeleteGroupResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.idp.services.v1.ScimDeleteGroupRequest,
               com.udb.core.idp.services.v1.ScimDeleteGroupResponse>(

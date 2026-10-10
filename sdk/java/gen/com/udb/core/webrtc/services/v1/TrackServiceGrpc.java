@@ -543,30 +543,30 @@ public final class TrackServiceGrpc {
 
   public static final io.grpc.ServerServiceDefinition bindService(AsyncService service) {
     return io.grpc.ServerServiceDefinition.builder(getServiceDescriptor())
-        .addMethod(
+        .<com.udb.core.webrtc.services.v1.PublishTrackRequest, com.udb.core.webrtc.services.v1.PublishTrackResponse>addMethod(
           getPublishTrackMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.webrtc.services.v1.PublishTrackRequest, com.udb.core.webrtc.services.v1.PublishTrackResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.webrtc.services.v1.PublishTrackRequest,
               com.udb.core.webrtc.services.v1.PublishTrackResponse>(
                 service, METHODID_PUBLISH_TRACK)))
-        .addMethod(
+        .<com.udb.core.webrtc.services.v1.UnpublishTrackRequest, com.udb.core.webrtc.services.v1.UnpublishTrackResponse>addMethod(
           getUnpublishTrackMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.webrtc.services.v1.UnpublishTrackRequest, com.udb.core.webrtc.services.v1.UnpublishTrackResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.webrtc.services.v1.UnpublishTrackRequest,
               com.udb.core.webrtc.services.v1.UnpublishTrackResponse>(
                 service, METHODID_UNPUBLISH_TRACK)))
-        .addMethod(
+        .<com.udb.core.webrtc.services.v1.MuteTrackRequest, com.udb.core.webrtc.services.v1.MuteTrackResponse>addMethod(
           getMuteTrackMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.webrtc.services.v1.MuteTrackRequest, com.udb.core.webrtc.services.v1.MuteTrackResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.webrtc.services.v1.MuteTrackRequest,
               com.udb.core.webrtc.services.v1.MuteTrackResponse>(
                 service, METHODID_MUTE_TRACK)))
-        .addMethod(
+        .<com.udb.core.webrtc.services.v1.ListTracksRequest, com.udb.core.webrtc.services.v1.ListTracksResponse>addMethod(
           getListTracksMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.webrtc.services.v1.ListTracksRequest, com.udb.core.webrtc.services.v1.ListTracksResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.webrtc.services.v1.ListTracksRequest,
               com.udb.core.webrtc.services.v1.ListTracksResponse>(

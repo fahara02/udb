@@ -1017,65 +1017,65 @@ public final class ApiKeyServiceGrpc {
 
   public static final io.grpc.ServerServiceDefinition bindService(AsyncService service) {
     return io.grpc.ServerServiceDefinition.builder(getServiceDescriptor())
-        .addMethod(
+        .<com.udb.core.apikey.services.v1.CreateApiKeyRequest, com.udb.core.apikey.services.v1.CreateApiKeyResponse>addMethod(
           getCreateApiKeyMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.apikey.services.v1.CreateApiKeyRequest, com.udb.core.apikey.services.v1.CreateApiKeyResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.apikey.services.v1.CreateApiKeyRequest,
               com.udb.core.apikey.services.v1.CreateApiKeyResponse>(
                 service, METHODID_CREATE_API_KEY)))
-        .addMethod(
+        .<com.udb.core.apikey.services.v1.GetApiKeyRequest, com.udb.core.apikey.services.v1.GetApiKeyResponse>addMethod(
           getGetApiKeyMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.apikey.services.v1.GetApiKeyRequest, com.udb.core.apikey.services.v1.GetApiKeyResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.apikey.services.v1.GetApiKeyRequest,
               com.udb.core.apikey.services.v1.GetApiKeyResponse>(
                 service, METHODID_GET_API_KEY)))
-        .addMethod(
+        .<com.udb.core.apikey.services.v1.ListApiKeysRequest, com.udb.core.apikey.services.v1.ListApiKeysResponse>addMethod(
           getListApiKeysMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.apikey.services.v1.ListApiKeysRequest, com.udb.core.apikey.services.v1.ListApiKeysResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.apikey.services.v1.ListApiKeysRequest,
               com.udb.core.apikey.services.v1.ListApiKeysResponse>(
                 service, METHODID_LIST_API_KEYS)))
-        .addMethod(
+        .<com.udb.core.apikey.services.v1.UpdateApiKeyRequest, com.udb.core.apikey.services.v1.UpdateApiKeyResponse>addMethod(
           getUpdateApiKeyMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.apikey.services.v1.UpdateApiKeyRequest, com.udb.core.apikey.services.v1.UpdateApiKeyResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.apikey.services.v1.UpdateApiKeyRequest,
               com.udb.core.apikey.services.v1.UpdateApiKeyResponse>(
                 service, METHODID_UPDATE_API_KEY)))
-        .addMethod(
+        .<com.udb.core.apikey.services.v1.RevokeApiKeyRequest, com.udb.core.apikey.services.v1.RevokeApiKeyResponse>addMethod(
           getRevokeApiKeyMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.apikey.services.v1.RevokeApiKeyRequest, com.udb.core.apikey.services.v1.RevokeApiKeyResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.apikey.services.v1.RevokeApiKeyRequest,
               com.udb.core.apikey.services.v1.RevokeApiKeyResponse>(
                 service, METHODID_REVOKE_API_KEY)))
-        .addMethod(
+        .<com.udb.core.apikey.services.v1.RotateApiKeyRequest, com.udb.core.apikey.services.v1.RotateApiKeyResponse>addMethod(
           getRotateApiKeyMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.apikey.services.v1.RotateApiKeyRequest, com.udb.core.apikey.services.v1.RotateApiKeyResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.apikey.services.v1.RotateApiKeyRequest,
               com.udb.core.apikey.services.v1.RotateApiKeyResponse>(
                 service, METHODID_ROTATE_API_KEY)))
-        .addMethod(
+        .<com.udb.core.apikey.services.v1.EmergencyRevokeApiKeysRequest, com.udb.core.apikey.services.v1.EmergencyRevokeApiKeysResponse>addMethod(
           getEmergencyRevokeApiKeysMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.apikey.services.v1.EmergencyRevokeApiKeysRequest, com.udb.core.apikey.services.v1.EmergencyRevokeApiKeysResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.apikey.services.v1.EmergencyRevokeApiKeysRequest,
               com.udb.core.apikey.services.v1.EmergencyRevokeApiKeysResponse>(
                 service, METHODID_EMERGENCY_REVOKE_API_KEYS)))
-        .addMethod(
+        .<com.udb.core.apikey.services.v1.ValidateApiKeyRequest, com.udb.core.apikey.services.v1.ValidateApiKeyResponse>addMethod(
           getValidateApiKeyMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.apikey.services.v1.ValidateApiKeyRequest, com.udb.core.apikey.services.v1.ValidateApiKeyResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.apikey.services.v1.ValidateApiKeyRequest,
               com.udb.core.apikey.services.v1.ValidateApiKeyResponse>(
                 service, METHODID_VALIDATE_API_KEY)))
-        .addMethod(
+        .<com.udb.core.apikey.services.v1.GetApiKeyUsageStatsRequest, com.udb.core.apikey.services.v1.GetApiKeyUsageStatsResponse>addMethod(
           getGetApiKeyUsageStatsMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.apikey.services.v1.GetApiKeyUsageStatsRequest, com.udb.core.apikey.services.v1.GetApiKeyUsageStatsResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.apikey.services.v1.GetApiKeyUsageStatsRequest,
               com.udb.core.apikey.services.v1.GetApiKeyUsageStatsResponse>(

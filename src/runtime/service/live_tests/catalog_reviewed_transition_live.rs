@@ -433,6 +433,53 @@ async fn apply(
         .map(tonic::Response::into_inner)
 }
 
+async fn assert_native_unique_base(
+    client: &mut DataBrokerClient<tonic::transport::Channel>,
+    bearer: &str,
+    base: &CatalogVersionResponse,
+    bytes: &[u8],
+    target: &sqlx::PgPool,
+    key: &str,
+) {
+    let verified_plan = plan(client, bearer, &base.project_id, base, bytes, key)
+        .await
+        .expect("plan native verification of the actual owned UNIQUE base");
+    let verified_approval = approve(client, bearer, &verified_plan)
+        .await
+        .expect("authorize exact native UNIQUE-base verification");
+    let verified = apply(client, bearer, &verified_approval)
+        .await
+        .expect("verify actual owned UNIQUE base before semantic corruption");
+    assert_eq!(verified.state, "COMPLETED");
+    assert!(!verified.operations.is_empty());
+    assert!(
+        verified
+            .operations
+            .iter()
+            .all(|operation| operation.status == "VERIFIED"),
+        "the already-applied UNIQUE base must produce real VERIFIED, rather than APPLIED, evidence"
+    );
+    let evidence = verified.reviewed_catalog_transition.as_ref().unwrap();
+    assert_eq!(evidence.application_state, "COMPLETED");
+    assert_eq!(
+        evidence.applied_operations_hash,
+        verified_plan.operations_hash
+    );
+    assert!(!evidence.application_evidence_sha256.is_empty());
+    let receipts: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*) FROM public.schema_migrations WHERE filename LIKE $1 AND operation_kind='verified_preapplied'",
+    )
+    .bind(format!("catalog-transition/{}/%", verified_plan.run_id))
+    .fetch_one(target)
+    .await
+    .expect("read actual target UNIQUE-base verification receipts");
+    assert!(
+        receipts > 0,
+        "native UNIQUE-base verification must issue actual routed target receipts"
+    );
+    println!("CATALOG_UNIQUE_BASE phase={key} native_verified_receipts={receipts}");
+}
+
 async fn stage(
     client: &mut DataBrokerClient<tonic::transport::Channel>,
     bearer: &str,
@@ -682,6 +729,9 @@ async fn run_reviewed_catalog_fixture(single_connection: bool, primary_as_target
         config.primary.max_open_conns = 1;
         config.primary.min_connections = 1;
         config.primary.acquire_timeout_secs = 2;
+        // Admit both concurrent migration RPCs; their control/target database
+        // pools deliberately remain max1. The production admission default is 1.
+        config.channels.migration_max_concurrent = 2;
     }
     config.project_routing_mode = if primary_as_target { "permissive" } else { "strict" }.into();
     config.security = security.clone();
@@ -1147,16 +1197,45 @@ async fn run_reviewed_catalog_fixture(single_connection: bool, primary_as_target
             .bytes()
             .all(|byte| byte.is_ascii_alphanumeric() || byte == b'_')
     );
-    let unique_name: String = sqlx::query_scalar(
-        "SELECT c.conname::TEXT FROM pg_catalog.pg_constraint c
-         JOIN pg_catalog.pg_class r ON r.oid=c.conrelid
+    // The canonical unique:true producer emits a standalone UNIQUE index.
+    // Verify that untouched producer shape through the real signed workflow
+    // before deliberately adapting this owned fixture for constraint-only cases.
+    let mut producer_unique_indexes: Vec<(String, i64)> = sqlx::query_as(
+        "SELECT x.relname::TEXT, x.oid::BIGINT FROM pg_catalog.pg_index i
+         JOIN pg_catalog.pg_class r ON r.oid=i.indrelid
          JOIN pg_catalog.pg_namespace n ON n.oid=r.relnamespace
-         JOIN pg_catalog.pg_attribute a ON a.attrelid=c.conrelid AND a.attnum=c.conkey[1]
-         WHERE n.nspname::TEXT=$1 AND r.relname='records' AND c.contype='u'
-         AND cardinality(c.conkey)=1 AND a.attname='external_key'",
+         JOIN pg_catalog.pg_class x ON x.oid=i.indexrelid
+         JOIN pg_catalog.pg_am am ON am.oid=x.relam
+         JOIN pg_catalog.pg_attribute a ON a.attrelid=r.oid AND a.attnum=i.indkey[0]
+         WHERE n.nspname::TEXT=$1 AND r.relname::TEXT='records' AND a.attname='external_key'
+         AND am.amname='btree' AND i.indnkeyatts=1 AND i.indnatts=1
+         AND i.indisunique AND NOT i.indisprimary AND i.indimmediate
+         AND i.indisvalid AND i.indisready AND i.indislive
+         AND i.indpred IS NULL AND i.indexprs IS NULL
+         AND NOT EXISTS (SELECT 1 FROM pg_catalog.pg_constraint c WHERE c.conindid=i.indexrelid)",
     )
-    .bind(&schema).fetch_one(&target).await.expect("discover actual producer ordinary UNIQUE constraint");
+    .bind(&schema).fetch_all(&target).await.expect("discover actual producer standalone UNIQUE index");
+    assert_eq!(producer_unique_indexes.len(), 1, "owned external_key must have exactly one standalone producer UNIQUE index");
+    let (unique_name, producer_unique_oid) = producer_unique_indexes.pop().unwrap();
     assert!(unique_name.bytes().all(|byte| byte.is_ascii_alphanumeric() || byte == b'_'));
+    assert_native_unique_base(&mut served.client, &owner, &base, &candidate_bytes, &target,
+        "standalone-producer-unique").await;
+    sqlx::raw_sql(&format!(
+        "ALTER TABLE \"{schema}\".records ADD CONSTRAINT \"{unique_name}\" UNIQUE USING INDEX \"{unique_name}\""
+    ))
+    .execute(&target).await.expect("deliberately promote only the owned producer UNIQUE index for constraint controls");
+    let promoted: (i64, bool, bool, bool, bool) = sqlx::query_as(
+        "SELECT c.conindid::BIGINT, c.condeferrable, c.condeferred, c.convalidated, i.indimmediate
+         FROM pg_catalog.pg_constraint c JOIN pg_catalog.pg_class r ON r.oid=c.conrelid
+         JOIN pg_catalog.pg_namespace n ON n.oid=r.relnamespace
+         JOIN pg_catalog.pg_index i ON i.indexrelid=c.conindid
+         WHERE n.nspname::TEXT=$1 AND r.relname::TEXT='records' AND c.contype='u' AND c.conname::TEXT=$2",
+    )
+    .bind(&schema).bind(&unique_name).fetch_one(&target).await.expect("read actual owned UNIQUE promotion authority");
+    assert_eq!(promoted, (producer_unique_oid, false, false, true, true),
+        "deliberate fixture promotion must retain the producer index OID and immediate validated uniqueness");
+    assert_native_unique_base(&mut served.client, &owner, &base, &candidate_bytes, &target,
+        "owned-promoted-unique").await;
     let alternate_collation: String = sqlx::query_scalar(
         "SELECT quote_ident(n.nspname)||'.'||quote_ident(c.collname)
          FROM pg_catalog.pg_collation c JOIN pg_catalog.pg_namespace n ON n.oid=c.collnamespace

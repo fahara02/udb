@@ -3447,289 +3447,289 @@ public final class AuthzServiceGrpc {
 
   public static final io.grpc.ServerServiceDefinition bindService(AsyncService service) {
     return io.grpc.ServerServiceDefinition.builder(getServiceDescriptor())
-        .addMethod(
+        .<com.udb.core.authz.services.v1.AuthzRequest, com.udb.core.authz.services.v1.AuthzResponse>addMethod(
           getAuthorizeMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.authz.services.v1.AuthzRequest, com.udb.core.authz.services.v1.AuthzResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.authz.services.v1.AuthzRequest,
               com.udb.core.authz.services.v1.AuthzResponse>(
                 service, METHODID_AUTHORIZE)))
-        .addMethod(
+        .<com.udb.core.authz.services.v1.CheckAccessRequest, com.udb.core.authz.services.v1.CheckAccessResponse>addMethod(
           getCheckAccessMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.authz.services.v1.CheckAccessRequest, com.udb.core.authz.services.v1.CheckAccessResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.authz.services.v1.CheckAccessRequest,
               com.udb.core.authz.services.v1.CheckAccessResponse>(
                 service, METHODID_CHECK_ACCESS)))
-        .addMethod(
+        .<com.udb.core.authz.services.v1.CreateRoleRequest, com.udb.core.authz.services.v1.CreateRoleResponse>addMethod(
           getCreateRoleMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.authz.services.v1.CreateRoleRequest, com.udb.core.authz.services.v1.CreateRoleResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.authz.services.v1.CreateRoleRequest,
               com.udb.core.authz.services.v1.CreateRoleResponse>(
                 service, METHODID_CREATE_ROLE)))
-        .addMethod(
+        .<com.udb.core.authz.services.v1.AssignRoleRequest, com.udb.core.authz.services.v1.AssignRoleResponse>addMethod(
           getAssignRoleMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.authz.services.v1.AssignRoleRequest, com.udb.core.authz.services.v1.AssignRoleResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.authz.services.v1.AssignRoleRequest,
               com.udb.core.authz.services.v1.AssignRoleResponse>(
                 service, METHODID_ASSIGN_ROLE)))
-        .addMethod(
+        .<com.udb.core.authz.services.v1.CreatePolicyRuleRequest, com.udb.core.authz.services.v1.CreatePolicyRuleResponse>addMethod(
           getCreatePolicyRuleMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.authz.services.v1.CreatePolicyRuleRequest, com.udb.core.authz.services.v1.CreatePolicyRuleResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.authz.services.v1.CreatePolicyRuleRequest,
               com.udb.core.authz.services.v1.CreatePolicyRuleResponse>(
                 service, METHODID_CREATE_POLICY_RULE)))
-        .addMethod(
+        .<com.udb.core.authz.services.v1.ListUserPermissionsRequest, com.udb.core.authz.services.v1.ListUserPermissionsResponse>addMethod(
           getListUserPermissionsMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.authz.services.v1.ListUserPermissionsRequest, com.udb.core.authz.services.v1.ListUserPermissionsResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.authz.services.v1.ListUserPermissionsRequest,
               com.udb.core.authz.services.v1.ListUserPermissionsResponse>(
                 service, METHODID_LIST_USER_PERMISSIONS)))
-        .addMethod(
+        .<com.udb.core.authz.services.v1.ListAccessDecisionAuditsRequest, com.udb.core.authz.services.v1.ListAccessDecisionAuditsResponse>addMethod(
           getListAccessDecisionAuditsMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.authz.services.v1.ListAccessDecisionAuditsRequest, com.udb.core.authz.services.v1.ListAccessDecisionAuditsResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.authz.services.v1.ListAccessDecisionAuditsRequest,
               com.udb.core.authz.services.v1.ListAccessDecisionAuditsResponse>(
                 service, METHODID_LIST_ACCESS_DECISION_AUDITS)))
-        .addMethod(
+        .<com.udb.core.authz.services.v1.RevokeRoleRequest, com.udb.core.authz.services.v1.RevokeRoleResponse>addMethod(
           getRevokeRoleMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.authz.services.v1.RevokeRoleRequest, com.udb.core.authz.services.v1.RevokeRoleResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.authz.services.v1.RevokeRoleRequest,
               com.udb.core.authz.services.v1.RevokeRoleResponse>(
                 service, METHODID_REVOKE_ROLE)))
-        .addMethod(
+        .<com.udb.core.authz.services.v1.ListUserRolesRequest, com.udb.core.authz.services.v1.ListUserRolesResponse>addMethod(
           getListUserRolesMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.authz.services.v1.ListUserRolesRequest, com.udb.core.authz.services.v1.ListUserRolesResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.authz.services.v1.ListUserRolesRequest,
               com.udb.core.authz.services.v1.ListUserRolesResponse>(
                 service, METHODID_LIST_USER_ROLES)))
-        .addMethod(
+        .<com.udb.core.authz.services.v1.GetRoleRequest, com.udb.core.authz.services.v1.GetRoleResponse>addMethod(
           getGetRoleMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.authz.services.v1.GetRoleRequest, com.udb.core.authz.services.v1.GetRoleResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.authz.services.v1.GetRoleRequest,
               com.udb.core.authz.services.v1.GetRoleResponse>(
                 service, METHODID_GET_ROLE)))
-        .addMethod(
+        .<com.udb.core.authz.services.v1.ListRolesRequest, com.udb.core.authz.services.v1.ListRolesResponse>addMethod(
           getListRolesMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.authz.services.v1.ListRolesRequest, com.udb.core.authz.services.v1.ListRolesResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.authz.services.v1.ListRolesRequest,
               com.udb.core.authz.services.v1.ListRolesResponse>(
                 service, METHODID_LIST_ROLES)))
-        .addMethod(
+        .<com.udb.core.authz.services.v1.BatchCheckPermissionsRequest, com.udb.core.authz.services.v1.BatchCheckPermissionsResponse>addMethod(
           getBatchCheckPermissionsMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.authz.services.v1.BatchCheckPermissionsRequest, com.udb.core.authz.services.v1.BatchCheckPermissionsResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.authz.services.v1.BatchCheckPermissionsRequest,
               com.udb.core.authz.services.v1.BatchCheckPermissionsResponse>(
                 service, METHODID_BATCH_CHECK_PERMISSIONS)))
-        .addMethod(
+        .<com.udb.core.authz.services.v1.UpdateRoleRequest, com.udb.core.authz.services.v1.UpdateRoleResponse>addMethod(
           getUpdateRoleMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.authz.services.v1.UpdateRoleRequest, com.udb.core.authz.services.v1.UpdateRoleResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.authz.services.v1.UpdateRoleRequest,
               com.udb.core.authz.services.v1.UpdateRoleResponse>(
                 service, METHODID_UPDATE_ROLE)))
-        .addMethod(
+        .<com.udb.core.authz.services.v1.DeleteRoleRequest, com.udb.core.authz.services.v1.DeleteRoleResponse>addMethod(
           getDeleteRoleMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.authz.services.v1.DeleteRoleRequest, com.udb.core.authz.services.v1.DeleteRoleResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.authz.services.v1.DeleteRoleRequest,
               com.udb.core.authz.services.v1.DeleteRoleResponse>(
                 service, METHODID_DELETE_ROLE)))
-        .addMethod(
+        .<com.udb.core.authz.services.v1.GetPolicyRuleRequest, com.udb.core.authz.services.v1.GetPolicyRuleResponse>addMethod(
           getGetPolicyRuleMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.authz.services.v1.GetPolicyRuleRequest, com.udb.core.authz.services.v1.GetPolicyRuleResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.authz.services.v1.GetPolicyRuleRequest,
               com.udb.core.authz.services.v1.GetPolicyRuleResponse>(
                 service, METHODID_GET_POLICY_RULE)))
-        .addMethod(
+        .<com.udb.core.authz.services.v1.ListPolicyRulesRequest, com.udb.core.authz.services.v1.ListPolicyRulesResponse>addMethod(
           getListPolicyRulesMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.authz.services.v1.ListPolicyRulesRequest, com.udb.core.authz.services.v1.ListPolicyRulesResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.authz.services.v1.ListPolicyRulesRequest,
               com.udb.core.authz.services.v1.ListPolicyRulesResponse>(
                 service, METHODID_LIST_POLICY_RULES)))
-        .addMethod(
+        .<com.udb.core.authz.services.v1.DeletePolicyRuleRequest, com.udb.core.authz.services.v1.DeletePolicyRuleResponse>addMethod(
           getDeletePolicyRuleMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.authz.services.v1.DeletePolicyRuleRequest, com.udb.core.authz.services.v1.DeletePolicyRuleResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.authz.services.v1.DeletePolicyRuleRequest,
               com.udb.core.authz.services.v1.DeletePolicyRuleResponse>(
                 service, METHODID_DELETE_POLICY_RULE)))
-        .addMethod(
+        .<com.udb.core.authz.services.v1.PutRoleBindingRequest, com.udb.core.authz.services.v1.AuthMutationResponse>addMethod(
           getPutRoleBindingMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.authz.services.v1.PutRoleBindingRequest, com.udb.core.authz.services.v1.AuthMutationResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.authz.services.v1.PutRoleBindingRequest,
               com.udb.core.authz.services.v1.AuthMutationResponse>(
                 service, METHODID_PUT_ROLE_BINDING)))
-        .addMethod(
+        .<com.udb.core.authz.services.v1.PutRelationshipRequest, com.udb.core.authz.services.v1.AuthMutationResponse>addMethod(
           getPutRelationshipMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.authz.services.v1.PutRelationshipRequest, com.udb.core.authz.services.v1.AuthMutationResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.authz.services.v1.PutRelationshipRequest,
               com.udb.core.authz.services.v1.AuthMutationResponse>(
                 service, METHODID_PUT_RELATIONSHIP)))
-        .addMethod(
+        .<com.udb.core.authz.services.v1.PutAuthzPolicyRequest, com.udb.core.authz.services.v1.AuthMutationResponse>addMethod(
           getPutAuthzPolicyMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.authz.services.v1.PutAuthzPolicyRequest, com.udb.core.authz.services.v1.AuthMutationResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.authz.services.v1.PutAuthzPolicyRequest,
               com.udb.core.authz.services.v1.AuthMutationResponse>(
                 service, METHODID_PUT_AUTHZ_POLICY)))
-        .addMethod(
+        .<com.udb.core.authz.services.v1.LintAuthzPoliciesRequest, com.udb.core.authz.services.v1.LintAuthzPoliciesResponse>addMethod(
           getLintAuthzPoliciesMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.authz.services.v1.LintAuthzPoliciesRequest, com.udb.core.authz.services.v1.LintAuthzPoliciesResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.authz.services.v1.LintAuthzPoliciesRequest,
               com.udb.core.authz.services.v1.LintAuthzPoliciesResponse>(
                 service, METHODID_LINT_AUTHZ_POLICIES)))
-        .addMethod(
+        .<com.udb.core.authz.services.v1.NativeAccessRequest, com.udb.core.authz.services.v1.NativeAccessResponse>addMethod(
           getGetNativeAccessMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.authz.services.v1.NativeAccessRequest, com.udb.core.authz.services.v1.NativeAccessResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.authz.services.v1.NativeAccessRequest,
               com.udb.core.authz.services.v1.NativeAccessResponse>(
                 service, METHODID_GET_NATIVE_ACCESS)))
-        .addMethod(
+        .<com.udb.core.authz.services.v1.PolicyBundleRequest, com.udb.core.authz.services.v1.PolicyBundleResponse>addMethod(
           getGetPolicyBundleMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.authz.services.v1.PolicyBundleRequest, com.udb.core.authz.services.v1.PolicyBundleResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.authz.services.v1.PolicyBundleRequest,
               com.udb.core.authz.services.v1.PolicyBundleResponse>(
                 service, METHODID_GET_POLICY_BUNDLE)))
-        .addMethod(
+        .<com.udb.core.authz.services.v1.CreatePolicyDraftRequest, com.udb.core.authz.services.v1.PolicyDraftResponse>addMethod(
           getCreatePolicyDraftMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.authz.services.v1.CreatePolicyDraftRequest, com.udb.core.authz.services.v1.PolicyDraftResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.authz.services.v1.CreatePolicyDraftRequest,
               com.udb.core.authz.services.v1.PolicyDraftResponse>(
                 service, METHODID_CREATE_POLICY_DRAFT)))
-        .addMethod(
+        .<com.udb.core.authz.services.v1.UpdatePolicyDraftRequest, com.udb.core.authz.services.v1.PolicyDraftResponse>addMethod(
           getUpdatePolicyDraftMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.authz.services.v1.UpdatePolicyDraftRequest, com.udb.core.authz.services.v1.PolicyDraftResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.authz.services.v1.UpdatePolicyDraftRequest,
               com.udb.core.authz.services.v1.PolicyDraftResponse>(
                 service, METHODID_UPDATE_POLICY_DRAFT)))
-        .addMethod(
+        .<com.udb.core.authz.services.v1.DiffPolicyDraftRequest, com.udb.core.authz.services.v1.DiffPolicyDraftResponse>addMethod(
           getDiffPolicyDraftMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.authz.services.v1.DiffPolicyDraftRequest, com.udb.core.authz.services.v1.DiffPolicyDraftResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.authz.services.v1.DiffPolicyDraftRequest,
               com.udb.core.authz.services.v1.DiffPolicyDraftResponse>(
                 service, METHODID_DIFF_POLICY_DRAFT)))
-        .addMethod(
+        .<com.udb.core.authz.services.v1.SubmitPolicyDraftRequest, com.udb.core.authz.services.v1.PolicyDraftResponse>addMethod(
           getSubmitPolicyDraftMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.authz.services.v1.SubmitPolicyDraftRequest, com.udb.core.authz.services.v1.PolicyDraftResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.authz.services.v1.SubmitPolicyDraftRequest,
               com.udb.core.authz.services.v1.PolicyDraftResponse>(
                 service, METHODID_SUBMIT_POLICY_DRAFT)))
-        .addMethod(
+        .<com.udb.core.authz.services.v1.ApprovePolicyDraftRequest, com.udb.core.authz.services.v1.PolicyApprovalResponse>addMethod(
           getApprovePolicyDraftMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.authz.services.v1.ApprovePolicyDraftRequest, com.udb.core.authz.services.v1.PolicyApprovalResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.authz.services.v1.ApprovePolicyDraftRequest,
               com.udb.core.authz.services.v1.PolicyApprovalResponse>(
                 service, METHODID_APPROVE_POLICY_DRAFT)))
-        .addMethod(
+        .<com.udb.core.authz.services.v1.RejectPolicyDraftRequest, com.udb.core.authz.services.v1.PolicyApprovalResponse>addMethod(
           getRejectPolicyDraftMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.authz.services.v1.RejectPolicyDraftRequest, com.udb.core.authz.services.v1.PolicyApprovalResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.authz.services.v1.RejectPolicyDraftRequest,
               com.udb.core.authz.services.v1.PolicyApprovalResponse>(
                 service, METHODID_REJECT_POLICY_DRAFT)))
-        .addMethod(
+        .<com.udb.core.authz.services.v1.ActivatePolicyVersionRequest, com.udb.core.authz.services.v1.ActivationResponse>addMethod(
           getActivatePolicyVersionMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.authz.services.v1.ActivatePolicyVersionRequest, com.udb.core.authz.services.v1.ActivationResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.authz.services.v1.ActivatePolicyVersionRequest,
               com.udb.core.authz.services.v1.ActivationResponse>(
                 service, METHODID_ACTIVATE_POLICY_VERSION)))
-        .addMethod(
+        .<com.udb.core.authz.services.v1.RollbackPolicyVersionRequest, com.udb.core.authz.services.v1.ActivationResponse>addMethod(
           getRollbackPolicyVersionMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.authz.services.v1.RollbackPolicyVersionRequest, com.udb.core.authz.services.v1.ActivationResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.authz.services.v1.RollbackPolicyVersionRequest,
               com.udb.core.authz.services.v1.ActivationResponse>(
                 service, METHODID_ROLLBACK_POLICY_VERSION)))
-        .addMethod(
+        .<com.udb.core.authz.services.v1.ActivateCanaryRequest, com.udb.core.authz.services.v1.CanaryResponse>addMethod(
           getActivateCanaryMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.authz.services.v1.ActivateCanaryRequest, com.udb.core.authz.services.v1.CanaryResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.authz.services.v1.ActivateCanaryRequest,
               com.udb.core.authz.services.v1.CanaryResponse>(
                 service, METHODID_ACTIVATE_CANARY)))
-        .addMethod(
+        .<com.udb.core.authz.services.v1.PromoteCanaryRequest, com.udb.core.authz.services.v1.CanaryResponse>addMethod(
           getPromoteCanaryMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.authz.services.v1.PromoteCanaryRequest, com.udb.core.authz.services.v1.CanaryResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.authz.services.v1.PromoteCanaryRequest,
               com.udb.core.authz.services.v1.CanaryResponse>(
                 service, METHODID_PROMOTE_CANARY)))
-        .addMethod(
+        .<com.udb.core.authz.services.v1.GetCanaryStatusRequest, com.udb.core.authz.services.v1.GetCanaryStatusResponse>addMethod(
           getGetCanaryStatusMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.authz.services.v1.GetCanaryStatusRequest, com.udb.core.authz.services.v1.GetCanaryStatusResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.authz.services.v1.GetCanaryStatusRequest,
               com.udb.core.authz.services.v1.GetCanaryStatusResponse>(
                 service, METHODID_GET_CANARY_STATUS)))
-        .addMethod(
+        .<com.udb.core.authz.services.v1.ListPolicyVersionsRequest, com.udb.core.authz.services.v1.ListPolicyVersionsResponse>addMethod(
           getListPolicyVersionsMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.authz.services.v1.ListPolicyVersionsRequest, com.udb.core.authz.services.v1.ListPolicyVersionsResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.authz.services.v1.ListPolicyVersionsRequest,
               com.udb.core.authz.services.v1.ListPolicyVersionsResponse>(
                 service, METHODID_LIST_POLICY_VERSIONS)))
-        .addMethod(
+        .<com.udb.core.authz.services.v1.SimulatePolicyRequest, com.udb.core.authz.services.v1.SimulatePolicyResponse>addMethod(
           getSimulatePolicyMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.authz.services.v1.SimulatePolicyRequest, com.udb.core.authz.services.v1.SimulatePolicyResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.authz.services.v1.SimulatePolicyRequest,
               com.udb.core.authz.services.v1.SimulatePolicyResponse>(
                 service, METHODID_SIMULATE_POLICY)))
-        .addMethod(
+        .<com.udb.core.authz.services.v1.ExplainPolicyRequest, com.udb.core.authz.services.v1.ExplainPolicyResponse>addMethod(
           getExplainPolicyMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.authz.services.v1.ExplainPolicyRequest, com.udb.core.authz.services.v1.ExplainPolicyResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.authz.services.v1.ExplainPolicyRequest,
               com.udb.core.authz.services.v1.ExplainPolicyResponse>(
                 service, METHODID_EXPLAIN_POLICY)))
-        .addMethod(
+        .<com.udb.core.authz.services.v1.GetAuthzRevisionRequest, com.udb.core.authz.services.v1.GetAuthzRevisionResponse>addMethod(
           getGetAuthzRevisionMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.authz.services.v1.GetAuthzRevisionRequest, com.udb.core.authz.services.v1.GetAuthzRevisionResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.authz.services.v1.GetAuthzRevisionRequest,
               com.udb.core.authz.services.v1.GetAuthzRevisionResponse>(
                 service, METHODID_GET_AUTHZ_REVISION)))
-        .addMethod(
+        .<com.udb.core.authz.services.v1.InvalidatePolicyBundlesRequest, com.udb.core.authz.services.v1.InvalidatePolicyBundlesResponse>addMethod(
           getInvalidatePolicyBundlesMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.authz.services.v1.InvalidatePolicyBundlesRequest, com.udb.core.authz.services.v1.InvalidatePolicyBundlesResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.authz.services.v1.InvalidatePolicyBundlesRequest,
               com.udb.core.authz.services.v1.InvalidatePolicyBundlesResponse>(
                 service, METHODID_INVALIDATE_POLICY_BUNDLES)))
-        .addMethod(
+        .<com.udb.core.authz.services.v1.SeedBuiltinRolesRequest, com.udb.core.authz.services.v1.SeedBuiltinRolesResponse>addMethod(
           getSeedBuiltinRolesMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.authz.services.v1.SeedBuiltinRolesRequest, com.udb.core.authz.services.v1.SeedBuiltinRolesResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.authz.services.v1.SeedBuiltinRolesRequest,
               com.udb.core.authz.services.v1.SeedBuiltinRolesResponse>(
                 service, METHODID_SEED_BUILTIN_ROLES)))
-        .addMethod(
+        .<com.udb.core.authz.services.v1.MigrateLegacyPoliciesRequest, com.udb.core.authz.services.v1.MigrateLegacyPoliciesResponse>addMethod(
           getMigrateLegacyPoliciesMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.authz.services.v1.MigrateLegacyPoliciesRequest, com.udb.core.authz.services.v1.MigrateLegacyPoliciesResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.authz.services.v1.MigrateLegacyPoliciesRequest,
               com.udb.core.authz.services.v1.MigrateLegacyPoliciesResponse>(

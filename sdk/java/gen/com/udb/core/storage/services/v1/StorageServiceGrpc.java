@@ -1135,72 +1135,72 @@ public final class StorageServiceGrpc {
 
   public static final io.grpc.ServerServiceDefinition bindService(AsyncService service) {
     return io.grpc.ServerServiceDefinition.builder(getServiceDescriptor())
-        .addMethod(
+        .<com.udb.core.storage.services.v1.RegisterUploadRequest, com.udb.core.storage.services.v1.RegisterUploadResponse>addMethod(
           getRegisterUploadMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.storage.services.v1.RegisterUploadRequest, com.udb.core.storage.services.v1.RegisterUploadResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.storage.services.v1.RegisterUploadRequest,
               com.udb.core.storage.services.v1.RegisterUploadResponse>(
                 service, METHODID_REGISTER_UPLOAD)))
-        .addMethod(
+        .<com.udb.core.storage.services.v1.FinalizeUploadRequest, com.udb.core.storage.services.v1.FinalizeUploadResponse>addMethod(
           getFinalizeUploadMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.storage.services.v1.FinalizeUploadRequest, com.udb.core.storage.services.v1.FinalizeUploadResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.storage.services.v1.FinalizeUploadRequest,
               com.udb.core.storage.services.v1.FinalizeUploadResponse>(
                 service, METHODID_FINALIZE_UPLOAD)))
-        .addMethod(
+        .<com.udb.core.storage.services.v1.GetDownloadUrlRequest, com.udb.core.storage.services.v1.GetDownloadUrlResponse>addMethod(
           getGetDownloadUrlMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.storage.services.v1.GetDownloadUrlRequest, com.udb.core.storage.services.v1.GetDownloadUrlResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.storage.services.v1.GetDownloadUrlRequest,
               com.udb.core.storage.services.v1.GetDownloadUrlResponse>(
                 service, METHODID_GET_DOWNLOAD_URL)))
-        .addMethod(
+        .<com.udb.core.storage.services.v1.ReissueUploadUrlRequest, com.udb.core.storage.services.v1.ReissueUploadUrlResponse>addMethod(
           getReissueUploadUrlMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.storage.services.v1.ReissueUploadUrlRequest, com.udb.core.storage.services.v1.ReissueUploadUrlResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.storage.services.v1.ReissueUploadUrlRequest,
               com.udb.core.storage.services.v1.ReissueUploadUrlResponse>(
                 service, METHODID_REISSUE_UPLOAD_URL)))
-        .addMethod(
+        .<com.udb.core.storage.services.v1.DownloadFileRequest, com.udb.core.storage.services.v1.DownloadFileChunk>addMethod(
           getDownloadFileMethod(),
-          io.grpc.stub.ServerCalls.asyncServerStreamingCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.storage.services.v1.DownloadFileRequest, com.udb.core.storage.services.v1.DownloadFileChunk>asyncServerStreamingCall(
             new MethodHandlers<
               com.udb.core.storage.services.v1.DownloadFileRequest,
               com.udb.core.storage.services.v1.DownloadFileChunk>(
                 service, METHODID_DOWNLOAD_FILE)))
-        .addMethod(
+        .<com.udb.core.storage.services.v1.GetFileRequest, com.udb.core.storage.services.v1.GetFileResponse>addMethod(
           getGetFileMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.storage.services.v1.GetFileRequest, com.udb.core.storage.services.v1.GetFileResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.storage.services.v1.GetFileRequest,
               com.udb.core.storage.services.v1.GetFileResponse>(
                 service, METHODID_GET_FILE)))
-        .addMethod(
+        .<com.udb.core.storage.services.v1.UpdateFileRequest, com.udb.core.storage.services.v1.UpdateFileResponse>addMethod(
           getUpdateFileMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.storage.services.v1.UpdateFileRequest, com.udb.core.storage.services.v1.UpdateFileResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.storage.services.v1.UpdateFileRequest,
               com.udb.core.storage.services.v1.UpdateFileResponse>(
                 service, METHODID_UPDATE_FILE)))
-        .addMethod(
+        .<com.udb.core.storage.services.v1.DeleteFileRequest, com.udb.core.storage.services.v1.DeleteFileResponse>addMethod(
           getDeleteFileMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.storage.services.v1.DeleteFileRequest, com.udb.core.storage.services.v1.DeleteFileResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.storage.services.v1.DeleteFileRequest,
               com.udb.core.storage.services.v1.DeleteFileResponse>(
                 service, METHODID_DELETE_FILE)))
-        .addMethod(
+        .<com.udb.core.storage.services.v1.ListFilesRequest, com.udb.core.storage.services.v1.ListFilesResponse>addMethod(
           getListFilesMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.storage.services.v1.ListFilesRequest, com.udb.core.storage.services.v1.ListFilesResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.storage.services.v1.ListFilesRequest,
               com.udb.core.storage.services.v1.ListFilesResponse>(
                 service, METHODID_LIST_FILES)))
-        .addMethod(
+        .<com.udb.core.storage.services.v1.SetScanVerdictRequest, com.udb.core.storage.services.v1.SetScanVerdictResponse>addMethod(
           getSetScanVerdictMethod(),
-          io.grpc.stub.ServerCalls.asyncUnaryCall(
+          io.grpc.stub.ServerCalls.<com.udb.core.storage.services.v1.SetScanVerdictRequest, com.udb.core.storage.services.v1.SetScanVerdictResponse>asyncUnaryCall(
             new MethodHandlers<
               com.udb.core.storage.services.v1.SetScanVerdictRequest,
               com.udb.core.storage.services.v1.SetScanVerdictResponse>(
