@@ -1,0 +1,359 @@
+name: Frozen Cargo manifest lock preview
+
+on:
+  workflow_dispatch:
+    inputs:
+      base_commit:
+        description: "Exact immutable reviewed source commit"
+        required: true
+        default: "678fec4160236f7f392f47b89d03f87012591d77"
+        type: string
+      manifest_gzip_base64:
+        description: "Gzip then base64 of the frozen Cargo.toml; maximum 128 KiB decoded"
+        required: true
+        type: string
+      manifest_sha256:
+        description: "Expected lowercase SHA-256 of the frozen manifest bytes"
+        required: true
+        default: "b2ba648db11408d5ae73e7b8bd18eb7208d63e64b47d418dc070fbf6bf6d7778"
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dependency-lock-preview-${{ inputs.base_commit }}-${{ inputs.manifest_sha256 }}
+  cancel-in-progress: false
+
+jobs:
+  frozen-manifest-lock-preview:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      LOCK_PREVIEW_BASE_SHA: 678fec4160236f7f392f47b89d03f87012591d77
+      LOCK_PREVIEW_MANIFEST_SHA256: b2ba648db11408d5ae73e7b8bd18eb7208d63e64b47d418dc070fbf6bf6d7778
+      LOCK_PREVIEW_TOOLCHAIN: 1.88.0
+      CARGO_RESOLVER_INCOMPATIBLE_RUST_VERSIONS: fallback
+      CARGO_TERM_COLOR: never
+      CARGO_NET_RETRY: 3
+      CARGO_HTTP_TIMEOUT: 60
+    steps:
+      - name: Validate the immutable preview request
+        env:
+          REQUESTED_BASE_SHA: ${{ inputs.base_commit }}
+          EXPECTED_MANIFEST_SHA256: ${{ inputs.manifest_sha256 }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import os
+          import re
+          from pathlib import Path
+          if os.environ.get("GITHUB_REPOSITORY") != "fahara02/udb":
+              raise SystemExit("the preview must run in the canonical repository")
+          for requested, approved, expression in [
+              ("REQUESTED_BASE_SHA", "LOCK_PREVIEW_BASE_SHA", r"[0-9a-f]{40}"),
+              ("EXPECTED_MANIFEST_SHA256", "LOCK_PREVIEW_MANIFEST_SHA256", r"[0-9a-f]{64}"),
+          ]:
+              value = os.environ[requested]
+              if re.fullmatch(expression, value) is None or value != os.environ[approved]:
+                  raise SystemExit("request differs from the immutable reviewed preview input")
+          cargo_home = Path(os.environ["RUNNER_TEMP"]) / "udb-lock-preview-cargo-home"
+          cargo_home.mkdir(exist_ok=False)
+          with Path(os.environ["GITHUB_ENV"]).open("a", encoding="utf-8") as stream:
+              stream.write("CARGO_HOME=" + str(cargo_home) + "\n")
+          PY
+      - name: Preserve the exact executing workflow source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.workflow_sha }}
+          path: lock-preview-workflow-source
+          sparse-checkout: .github/workflows/dependency-lock-preview.yml
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.LOCK_PREVIEW_BASE_SHA }}
+          path: lock-preview-source
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.88.0
+      - name: Preserve and validate the bounded frozen manifest
+        id: input
+        working-directory: lock-preview-source
+        env:
+          MANIFEST_GZIP_BASE64: ${{ inputs.manifest_gzip_base64 }}
+          EXPECTED_MANIFEST_SHA256: ${{ inputs.manifest_sha256 }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import base64
+          import copy
+          import gzip
+          import hashlib
+          import io
+          import json
+          import os
+          from pathlib import Path
+          import subprocess
+          import tomllib
+
+          root = Path.cwd()
+          diagnostics = root / "lock-preview-diagnostics"
+          diagnostics.mkdir()
+          def digest(data):
+              return hashlib.sha256(data).hexdigest()
+          def git(*arguments):
+              return subprocess.check_output(["git", *arguments], cwd=root)
+          workflow_root = root.parent / "lock-preview-workflow-source"
+          workflow_head = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=workflow_root).decode().strip()
+          if workflow_head != os.environ["GITHUB_WORKFLOW_SHA"]:
+              raise SystemExit("executing workflow source commit differs")
+          workflow_path = workflow_root / ".github/workflows/dependency-lock-preview.yml"
+          if workflow_path.is_symlink() or not workflow_path.is_file():
+              raise SystemExit("executing workflow source must be a regular file")
+          workflow_bytes = workflow_path.read_bytes()
+          (diagnostics / "dependency-lock-preview.executed.yml").write_bytes(workflow_bytes)
+          source = os.environ["LOCK_PREVIEW_BASE_SHA"]
+          if git("rev-parse", "HEAD").decode().strip() != source:
+              raise SystemExit("checkout does not match the immutable source commit")
+          if git("status", "--porcelain", "--untracked-files=no").strip():
+              raise SystemExit("tracked producer inputs must start clean")
+          limit = 128 * 1024
+          encoded = os.environ["MANIFEST_GZIP_BASE64"]
+          try:
+              if not encoded or len(encoded) > 4 * ((limit + 2) // 3):
+                  raise ValueError("encoded manifest exceeds its bound")
+              compressed = base64.b64decode(encoded, validate=True)
+              if len(compressed) > limit:
+                  raise ValueError("compressed manifest exceeds its bound")
+              with gzip.GzipFile(fileobj=io.BytesIO(compressed)) as stream:
+                  supplied = stream.read(limit + 1)
+              if not supplied or len(supplied) > limit or b"\0" in supplied:
+                  raise ValueError("manifest must be bounded, nonempty UTF-8 without NUL")
+              candidate = tomllib.loads(supplied.decode("utf-8"))
+          except (ValueError, OSError, EOFError, UnicodeError):
+              raise SystemExit("invalid bounded gzip/base64 UTF-8 TOML manifest") from None
+          expected_digest = os.environ["EXPECTED_MANIFEST_SHA256"]
+          if digest(supplied) != expected_digest or expected_digest != os.environ["LOCK_PREVIEW_MANIFEST_SHA256"]:
+              raise SystemExit("frozen manifest byte digest differs")
+          original = (root / "Cargo.toml").read_bytes()
+          baseline_lock = (root / "Cargo.lock").read_bytes()
+          required = {
+              "Cargo.toml": "ae83cad37436f6ee8d41d32a08b75025a056768ef4582afbf67e2c16f316d84c",
+              "Cargo.lock": "a56a5f48df0e2f6678136cd67a15e0f52d3415e2e0c697d22824cfddb24a40bb",
+              "rust-toolchain.toml": "c9226d63d4297d3da1adb912ec62b7e78d4e3055331098b9dee221f4acb9b9fa",
+              "crates/udb-portable/Cargo.toml": "f2b9e0eb69af789e1453f8dad64d71d9562d4a4808f6fc1518bbd7f697a6ce13",
+              "crates/udb-wasm/Cargo.toml": "7222f580991ba82dc62c1784df446e1ddbe4283cce2786ad4bbf2f58b880cea1",
+          }
+          inputs = []
+          for relative, expected in required.items():
+              path = root / relative
+              if path.is_symlink() or not path.is_file():
+                  raise SystemExit("source inputs must be regular files")
+              data = path.read_bytes()
+              if digest(data) != expected:
+                  raise SystemExit("immutable source input digest differs: " + relative)
+              preserved = diagnostics / "source-inputs" / relative
+              preserved.parent.mkdir(parents=True, exist_ok=True)
+              preserved.write_bytes(data)
+              inputs.append({"path": relative, "sha256": expected, "size": len(data)})
+          tracked = git("ls-files", "-z").decode().split("\0")
+          extra = [name for name in tracked if name.startswith(".cargo/")]
+          if extra:
+              raise SystemExit("unreviewed repository Cargo configuration in the preview")
+          canonical = tomllib.loads(original.decode("utf-8"))
+          expected = copy.deepcopy(canonical)
+          expected["features"]["postgres"] = ["dep:postgresql_embedded"]
+          expected["dependencies"]["postgresql_embedded"] = {
+              "version": "=0.19.0", "default-features": False,
+              "features": ["tokio", "rustls", "theseus"], "optional": True,
+          }
+          if candidate != expected:
+              raise SystemExit("manifest has changes beyond the reviewed optional dependency and feature")
+          if any(package["name"] == "postgresql_embedded" for package in tomllib.loads(baseline_lock.decode())["package"]):
+              raise SystemExit("baseline already contains the proposed dependency")
+          (diagnostics / "Cargo.original.toml").write_bytes(original)
+          (diagnostics / "Cargo.frozen.toml").write_bytes(supplied)
+          (diagnostics / "Cargo.baseline.lock").write_bytes(baseline_lock)
+          (diagnostics / "supplied-manifest.gz").write_bytes(compressed)
+          request = {
+              "schema_version": 1, "purpose": "frozen-cargo-lock-preview",
+              "repository": os.environ["GITHUB_REPOSITORY"], "source_commit": source,
+              "source_tree": git("rev-parse", "HEAD^{tree}").decode().strip(),
+              "workflow_commit": os.environ["GITHUB_SHA"],
+              "workflow_ref": os.environ["GITHUB_WORKFLOW_REF"],
+              "workflow_sha": os.environ["GITHUB_WORKFLOW_SHA"],
+              "executing_workflow_sha256": digest(workflow_bytes),
+              "run_id": os.environ["GITHUB_RUN_ID"], "run_attempt": os.environ["GITHUB_RUN_ATTEMPT"],
+              "toolchain_requested": os.environ["LOCK_PREVIEW_TOOLCHAIN"],
+              "rust_version_required": candidate["package"]["rust-version"],
+              "resolver_incompatible_rust_versions": os.environ["CARGO_RESOLVER_INCOMPATIBLE_RUST_VERSIONS"],
+              "original_manifest_sha256": digest(original), "frozen_manifest_sha256": digest(supplied),
+              "baseline_lock_sha256": digest(baseline_lock), "source_inputs": inputs,
+          }
+          (diagnostics / "input.json").write_text(json.dumps(request, indent=2) + "\n", encoding="utf-8")
+          (root / "Cargo.toml").write_bytes(supplied)
+          PY
+      - name: Resolve in CI and verify real locked metadata
+        id: resolve
+        working-directory: lock-preview-source
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import hashlib
+          import json
+          import os
+          from pathlib import Path
+          import subprocess
+          import tomllib
+
+          root = Path.cwd()
+          diagnostics = root / "lock-preview-diagnostics"
+          commands = []
+          def execute(arguments, output, timeout):
+              receipt = {"command": arguments, "output": output, "timeout_seconds": timeout}
+              path = diagnostics / output
+              try:
+                  with path.open("wb") as stream:
+                      result = subprocess.run(arguments, cwd=root, stdout=stream, stderr=subprocess.STDOUT, timeout=timeout)
+                  receipt["exit_code"] = result.returncode
+                  if result.returncode:
+                      raise RuntimeError("required CI command failed: " + arguments[0])
+              except subprocess.TimeoutExpired:
+                  receipt["timed_out"] = True
+                  raise
+              finally:
+                  if path.exists():
+                      receipt["output_sha256"] = hashlib.sha256(path.read_bytes()).hexdigest()
+                  commands.append(receipt)
+                  (diagnostics / "commands.json").write_text(json.dumps(commands, indent=2) + "\n", encoding="utf-8")
+          toolchain = os.environ["LOCK_PREVIEW_TOOLCHAIN"]
+          execute(["rustc", "+" + toolchain, "-Vv"], "rustc-version.txt", 30)
+          execute(["cargo", "+" + toolchain, "-Vv"], "cargo-version.txt", 30)
+          execute(["cargo", "+" + toolchain, "update", "--workspace"], "cargo-update.log", 480)
+          resolved = (root / "Cargo.lock").read_bytes()
+          (diagnostics / "Cargo.resolved.lock").write_bytes(resolved)
+          frozen_digest = hashlib.sha256((root / "Cargo.toml").read_bytes()).hexdigest()
+          if frozen_digest != os.environ["LOCK_PREVIEW_MANIFEST_SHA256"]:
+              raise SystemExit("resolution modified the frozen input manifest")
+          for label, selectors in [("default", []), ("postgres", ["--no-default-features", "--features", "postgres"])]:
+              arguments = ["cargo", "+" + toolchain, "metadata", "--locked", "--format-version", "1", *selectors]
+              output = "metadata-" + label + ".json"
+              # Keep stderr separate so stdout remains the actual Cargo metadata JSON.
+              receipt = {"command": arguments, "output": output, "stderr": output + ".stderr.log", "timeout_seconds": 180}
+              try:
+                  with (diagnostics / output).open("wb") as stdout, (diagnostics / receipt["stderr"]).open("wb") as stderr:
+                      result = subprocess.run(arguments, cwd=root, stdout=stdout, stderr=stderr, timeout=180)
+                  receipt["exit_code"] = result.returncode
+                  if result.returncode:
+                      raise RuntimeError("locked Cargo metadata failed")
+              except subprocess.TimeoutExpired:
+                  receipt["timed_out"] = True
+                  raise
+              finally:
+                  for key in ["output", "stderr"]:
+                      path = diagnostics / receipt[key]
+                      if path.exists():
+                          receipt[key + "_sha256"] = hashlib.sha256(path.read_bytes()).hexdigest()
+                  commands.append(receipt)
+                  (diagnostics / "commands.json").write_text(json.dumps(commands, indent=2) + "\n", encoding="utf-8")
+              metadata = json.loads((diagnostics / output).read_text(encoding="utf-8"))
+              if Path(metadata["workspace_root"]).resolve() != root.resolve() or metadata.get("resolve") is None:
+                  raise SystemExit("metadata must describe the actual resolved workspace")
+              own = [package for package in metadata["packages"] if package["name"] == "udb" and Path(package["manifest_path"]).resolve() == root / "Cargo.toml"]
+              embedded = [package for package in metadata["packages"] if package["name"] == "postgresql_embedded"]
+              if len(own) != 1 or own[0]["version"] != "0.5.31" or len(embedded) != 1 or embedded[0]["version"] != "0.19.0":
+                  raise SystemExit("metadata does not contain the reviewed workspace and exact dependency")
+              node = next((node for node in metadata["resolve"]["nodes"] if node["id"] == own[0]["id"]), None)
+              if node is None or "postgres" not in node["features"] or not any(dep["pkg"] == embedded[0]["id"] for dep in node["deps"]):
+                  raise SystemExit("metadata must enable the actual postgres optional dependency edge")
+          if (root / "Cargo.lock").read_bytes() != resolved:
+              raise SystemExit("locked metadata modified the resolved lock")
+          before = tomllib.loads((diagnostics / "Cargo.baseline.lock").read_text(encoding="utf-8"))
+          after = tomllib.loads(resolved.decode("utf-8"))
+          def package_map(lock):
+              result = {}
+              for package in lock["package"]:
+                  identity = (package["name"], package["version"], package.get("source", ""))
+                  if identity in result:
+                      raise SystemExit("ambiguous lock package identity")
+                  result[identity] = package
+              return result
+          old, new = package_map(before), package_map(after)
+          changes = {
+              "added": [new[key] for key in sorted(new.keys() - old.keys())],
+              "removed": [old[key] for key in sorted(old.keys() - new.keys())],
+              "changed_existing": [{"identity": list(key), "before": old[key], "after": new[key]} for key in sorted(old.keys() & new.keys()) if old[key] != new[key]],
+              "unchanged_existing_count": sum(old[key] == new[key] for key in old.keys() & new.keys()),
+              "lock_header_before": {key: value for key, value in before.items() if key != "package"},
+              "lock_header_after": {key: value for key, value in after.items() if key != "package"},
+              "existing_package_changes_require_review": True,
+          }
+          if not any(package["name"] == "postgresql_embedded" and package["version"] == "0.19.0" for package in new.values()):
+              raise SystemExit("resolved lock lacks the reviewed exact dependency")
+          (diagnostics / "lock-changes.json").write_text(json.dumps(changes, indent=2) + "\n", encoding="utf-8")
+          tracked = subprocess.check_output(["git", "diff", "--name-only", "-z"], cwd=root).decode().split("\0")
+          if set(filter(None, tracked)) != {"Cargo.toml", "Cargo.lock"}:
+              raise SystemExit("only the input manifest and resolved lock may differ in the preview checkout")
+          print("CI resolved the frozen manifest and checked locked metadata; compilation and embedded runtime proof remain pending.")
+          PY
+      - name: Seal the successful lock preview
+        id: evidence
+        working-directory: lock-preview-source
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import hashlib
+          import json
+          from pathlib import Path
+          import shutil
+          root = Path.cwd()
+          diagnostics = root / "lock-preview-diagnostics"
+          output = root / "lock-preview-output"
+          output.mkdir()
+          request = json.loads((diagnostics / "input.json").read_text(encoding="utf-8"))
+          commands = json.loads((diagnostics / "commands.json").read_text(encoding="utf-8"))
+          if len(commands) != 5 or any(command.get("exit_code") != 0 or command.get("timed_out") for command in commands):
+              raise SystemExit("every required actual CI command must have succeeded")
+          files = []
+          for path in sorted(diagnostics.rglob("*")):
+              if path.is_symlink() or (not path.is_file() and not path.is_dir()):
+                  raise SystemExit("preview output contains a nonregular entry")
+              if not path.is_file():
+                  continue
+              name = path.relative_to(diagnostics)
+              target = output / name
+              target.parent.mkdir(parents=True, exist_ok=True)
+              shutil.copyfile(path, target)
+              data = target.read_bytes()
+              files.append({"path": name.as_posix(), "size": len(data), "sha256": hashlib.sha256(data).hexdigest()})
+          (output / "file-ledger.json").write_text(json.dumps(files, indent=2) + "\n", encoding="utf-8")
+          provenance = dict(request, result="LOCK_RESOLVED_METADATA_CHECKED", commands=commands,
+              resolved_lock_sha256=hashlib.sha256((output / "Cargo.resolved.lock").read_bytes()).hexdigest(),
+              file_ledger_sha256=hashlib.sha256((output / "file-ledger.json").read_bytes()).hexdigest(),
+              compilation_executed=False, application_execution=False, integration_authorized=False,
+              claims=["actual CI dependency resolution", "actual default and postgres-only locked metadata"],
+              proof_owed=["package-change review", "frozen manifest and lock normal-commit integration", "MSRV and platform compilation", "embedded PostgreSQL lifecycle and Windows process proof"])
+          (output / "provenance.json").write_text(json.dumps(provenance, indent=2) + "\n", encoding="utf-8")
+          PY
+      - name: Preserve the successful resolved lock and provenance
+        if: success() && steps.resolve.outcome == 'success' && steps.evidence.outcome == 'success'
+        uses: actions/upload-artifact@v4
+        with:
+          name: frozen-cargo-lock-preview-${{ github.run_attempt }}
+          path: lock-preview-source/lock-preview-output/
+          if-no-files-found: error
+          retention-days: 14
+      - name: Preserve diagnostics after any result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frozen-cargo-lock-preview-diagnostics-${{ github.run_attempt }}
+          path: lock-preview-source/lock-preview-diagnostics/
+          if-no-files-found: warn
+          retention-days: 14
