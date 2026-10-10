@@ -1960,9 +1960,14 @@ fn capabilities_profile_authn(
     namespace: Uuid,
 ) -> (AuthnServiceImpl, AuthnConfig) {
     let authn_config = AuthnConfig {
+        session_enabled: true,
         session_hash_secret: format!("owned-capabilities-profile-{namespace}"),
         ..AuthnConfig::from_env()
     };
+    assert!(
+        authn_config.sessions_usable(),
+        "matched real Login requires enabled durable sessions and an owned hash secret"
+    );
     let authn = AuthnServiceImpl::with_stores(
         authn_config.clone(),
         security.clone(),
@@ -2785,7 +2790,7 @@ async fn live_capabilities_catalog_history_profile() {
                 for attempt in 0..2 {
                     let row=capabilities_profile_login(&mut login,&security,namespace,&actor,&username,&project,
                         &warm,0,attempt,None).await;
-                    assert_eq!(row["ok"],true,"warm real Argon2 Login before timing");
+                    assert_eq!(row["ok"],true,"warm real Argon2 Login before timing: {row}");
                 }
                 let idle=CapabilitiesProfileTraffic::new();
                 let process_before=capabilities_profile_process_receipt();
