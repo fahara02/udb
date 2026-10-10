@@ -6,6 +6,7 @@
 
 import { strict as assert } from "node:assert";
 import { test } from "node:test";
+import { createHash } from "node:crypto";
 import { writeFileSync, readFileSync, readdirSync } from "node:fs";
 import * as path from "node:path";
 import * as grpc from "@grpc/grpc-js";
@@ -1989,6 +1990,19 @@ test("benchmark platform routing is exact and preserves ordinary Authz CRUD", ()
   const role = perfRealBody("AuthzService", "create_role", "tenant-1", "project-1", fixtures);
   assert.equal(draft?.actor?.subject, "platform-actor-user-1");
   assert.equal(role?.created_by, "actor-user-1");
+  const principal = {
+    subject: "c65e8cbd-2f62-4c44-89b7-502b77418d14", user_id: "039c134f-e3ad-4b01-bd0e-aea4849df619",
+    tenant_id: "tenant-1", project_id: "project-1",
+  };
+  const actor = verifiedNativeFixtureActor(principal, "tenant-1", "project-1");
+  assert.notEqual(actor, principal.user_id);
+  fixtures.set("actor_user_id", actor);
+  fixtures.set("user_id", principal.user_id);
+  const attributedRole = perfRealBody("AuthzService", "create_role", "tenant-1", "project-1", fixtures);
+  assert.equal(attributedRole.created_by, principal.subject);
+  assert.equal(fixtures.lookup("user_id"), principal.user_id);
+  assert.throws(() => verifiedNativeFixtureActor(principal, "foreign-tenant", "project-1"), /foreign authenticated tenant/);
+  assert.throws(() => verifiedNativeFixtureActor(principal, "tenant-1", "foreign-project"), /foreign authenticated project/);
 });
 
 // A "kitchen-sink" request: protobufjs (under proto-loader) drops keys that the
@@ -4003,14 +4017,35 @@ function liveUuid(): string {
 // against the bearer claim, so they run through `uuidProject` (a second admin
 // bootstrapped on a UUID tenant). Authz created_by must be a UUID; the
 // notification recipient_id is an FK to a real users row.
+function verifiedNativeFixtureActor(
+  principal: { subject?: string; user_id?: string; tenant_id?: string; project_id?: string } | undefined,
+  tenantId: string,
+  projectId: string,
+): string {
+  assert.ok(principal?.subject?.trim(), "native fixture requires the AuthenticateBearer subject");
+  assert.ok(principal?.user_id?.trim(), "native fixture requires the persisted authenticated user");
+  assert.equal(principal.tenant_id, tenantId, "native fixture refuses a foreign authenticated tenant");
+  assert.equal(principal.project_id, projectId, "native fixture refuses a foreign authenticated project");
+  assert.equal(principal.subject, principal.subject.trim(), "native fixture requires the exact unpadded verified subject");
+  const subject = principal.subject;
+  // Match authz::stable_uuid_from_subject; attribution follows the verified
+  // claim subject even when the response's persisted user_id is different.
+  if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(subject)) return subject.toLowerCase();
+  const hex = createHash("sha256").update(subject).digest("hex").slice(0, 32);
+  return [hex.slice(0, 8), hex.slice(8, 12), hex.slice(12, 16), hex.slice(16, 20), hex.slice(20)].join("-");
+}
+
 async function runLiveNativeServiceE2E(
   project: UdbProject,
   uuidProject: UdbProject,
   tenantId: string,
   projectId: string,
   uuidTenant: string,
+  platformProject: UdbProject,
+  actorId: string,
 ): Promise<void> {
   const gen = (project as any).authGenerated ?? project.generated;
+  const platformGen = (platformProject as any).authGenerated ?? platformProject.generated;
   const ugen = (uuidProject as any).authGenerated ?? uuidProject.generated;
   const opts = { deadlineMs: 8_000, noRetry: true };
   const suffix = `${process.pid}${Date.now()}`;
@@ -4024,10 +4059,11 @@ async function runLiveNativeServiceE2E(
   // AuthzService — role create/get/list.
   const roleCode = `sdk_reader_ts_${suffix}`;
   const createdRole = (await gen.AuthzService.create_role({
-    name: `SDK Reader TS ${suffix}`, description: "Live SDK reader role", created_by: liveUuid(),
+    name: `SDK Reader TS ${suffix}`, description: "Live SDK reader role", created_by: actorId,
     role_code: roleCode, domain: tenantId, tenant_id: tenantId, project_id: projectId,
   }, opts)).role;
   assert.equal(createdRole.role_code, roleCode);
+  assert.equal(createdRole.created_by, actorId, "role creator must be the verified caller subject");
   const gotRole = (await gen.AuthzService.get_role({ role_id: createdRole.role_id }, opts)).role;
   assert.equal(gotRole.role_code, roleCode);
   const roles = await gen.AuthzService.list_roles({ domain: tenantId, active_only: true }, opts);
@@ -4041,46 +4077,104 @@ async function runLiveNativeServiceE2E(
   }, opts)).user;
   const assignedRole = (await gen.AuthzService.assign_role({
     user_id: subject.user_id, role_id: createdRole.role_id, domain: tenantId,
-    assigned_by: subject.user_id, tenant_id: tenantId, project_id: projectId,
+    assigned_by: actorId, tenant_id: tenantId, project_id: projectId,
   }, opts)).user_role;
+  assert.equal(assignedRole.assigned_by, actorId);
+  const accessRequest = {
+    user_id: subject.user_id, domain: tenantId, tenant_id: tenantId, project_id: projectId, object: "invoice", action: "data.select",
+  };
+  const beforePolicy = await platformGen.AuthzService.check_access(accessRequest, opts);
+  assert.equal(beforePolicy.allowed, false, "owned role must deny before its policy exists");
+  const policyId = liveUuid();
   await gen.AuthzService.put_authz_policy({
     policy: {
-      id: liveUuid(), enabled: true, effect: "allow", tenant: tenantId, project: projectId,
+      id: policyId, enabled: true, effect: "allow", tenant: tenantId, project: projectId,
       role: createdRole.role_code, action: "data.select", resource: "invoice",
     },
   }, opts);
-  const allowed = await gen.AuthzService.check_access({
-    user_id: subject.user_id, domain: tenantId, tenant_id: tenantId, project_id: projectId, object: "invoice", action: "data.select",
-  }, opts);
+  const allowed = await platformGen.AuthzService.check_access(accessRequest, opts);
   assert.ok(allowed.allowed, "CheckAccess must allow the assigned role+policy");
+  assert.ok((allowed.decision?.matched_policy_ids ?? []).includes(policyId), "PDP must evaluate the exact owned policy");
   const userRoles = await gen.AuthzService.list_user_roles({ user_id: subject.user_id, domain: tenantId, active_only: true }, opts);
   assert.equal((userRoles.user_roles ?? []).length, 1);
-  await gen.AuthzService.revoke_role({ user_role_id: assignedRole.user_role_id, user_id: subject.user_id, reason: "sdk_live_test", revoked_by: subject.user_id }, opts);
-  const denied = await gen.AuthzService.check_access({
-    user_id: subject.user_id, domain: tenantId, tenant_id: tenantId, project_id: projectId, object: "invoice", action: "data.select",
-  }, opts);
+  await gen.AuthzService.revoke_role({ user_role_id: assignedRole.user_role_id, user_id: subject.user_id, reason: "sdk_live_test", revoked_by: actorId }, opts);
+  const denied = await platformGen.AuthzService.check_access(accessRequest, opts);
   assert.ok(!denied.allowed, "CheckAccess must deny after the role was revoked");
+  const revokedRoles = await gen.AuthzService.list_user_roles({ user_id: subject.user_id, domain: tenantId, active_only: true }, opts);
+  assert.equal((revokedRoles.user_roles ?? []).length, 0);
+  const deletedPolicy = await gen.AuthzService.delete_policy_rule({ policy_id: policyId, deleted_by: actorId }, opts);
+  assert.equal(deletedPolicy.deleted, true);
+  await gen.AuthzService.delete_role({ role_id: createdRole.role_id, deleted_by: actorId }, opts);
 
-  // ApiKeyService — create/validate/list/revoke lifecycle.
-  const principal = `sdk-live-svc-${suffix}`;
-  const keyCtx = { user_id: principal, tenant: { tenant_id: tenantId, project_id: projectId } };
-  const createdKey = await gen.ApiKeyService.create_api_key(
-    { name: `sdk-live-key-${suffix}`, owner_id: principal, scopes: ["data:read"], context: keyCtx }, opts);
-  assert.ok(String(createdKey.plain_key).startsWith("udbk_"), "plain_key must have udbk_ prefix");
-  const keyId = createdKey.key.key_id;
-  const valid = await gen.ApiKeyService.validate_api_key({ plain_key: createdKey.plain_key, required_scope: "data:read" }, opts);
-  assert.ok(valid.valid && valid.owner_id === principal, "ValidateApiKey must accept the fresh key");
-  const listedKeys = await gen.ApiKeyService.list_api_keys({ owner_id: principal, status: 1 }, opts); // 1 = ACTIVE
-  assert.equal((listedKeys.keys ?? []).length, 1);
-  assert.equal(listedKeys.keys[0].key_id, keyId);
-  const gotKey = await gen.ApiKeyService.get_api_key({ key_id: keyId }, opts);
-  assert.equal(gotKey.key.owner_id, principal);
-  await gen.ApiKeyService.update_api_key({ key_id: keyId, scopes: ["data:read", "data:write"], context: keyCtx }, opts);
-  const writeOK = await gen.ApiKeyService.validate_api_key({ plain_key: createdKey.plain_key, required_scope: "data:write" }, opts);
-  assert.ok(writeOK.valid, "ValidateApiKey must honor the updated data:write scope");
-  await gen.ApiKeyService.revoke_api_key({ key_id: keyId, revoke_reason: "sdk_live_test", context: keyCtx }, opts);
-  const afterRevoke = await gen.ApiKeyService.validate_api_key({ plain_key: createdKey.plain_key, required_scope: "data:read" }, opts);
-  assert.ok(!afterRevoke.valid, "revoked API key must not validate");
+  // ApiKeyService: a persisted active SERVICE_ACCOUNT with its exact typed
+  // grant owns the key. The request context remains the verified ordinary actor.
+  const serviceName = "sdk-live-svc-" + suffix;
+  const keyCtx = { user_id: actorId, tenant: { tenant_id: tenantId, project_id: projectId } };
+  const service = (await gen.AuthnService.create_user({
+    username: serviceName, email: serviceName + "@example.com", password: "CorrectHorse1!",
+    tenant_id: tenantId, project_id: projectId, full_name: "SDK Live Service Account",
+    account_kind: "ACCOUNT_KIND_SERVICE_ACCOUNT", context: keyCtx,
+  }, opts)).user;
+  const principal = service.user_id;
+  assert.match(principal, /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
+  assert.notEqual(principal, actorId);
+  assert.equal(service.tenant_id, tenantId);
+  assert.equal(service.project_id, projectId);
+  assert.equal(service.account_kind, "ACCOUNT_KIND_SERVICE_ACCOUNT");
+  let keyId = "";
+  let keyRevoked = false;
+  let primaryFailure: unknown;
+  try {
+    const active = (await gen.AuthnService.change_user_status({
+      user_id: principal, new_status: "USER_STATUS_ACTIVE", reason: "sdk live activate service account", context: keyCtx,
+    }, opts)).user;
+    assert.equal(active.user_id, principal);
+    assert.equal(active.status, "USER_STATUS_ACTIVE");
+    await gen.AuthnService.create_service_account_grant({
+      tenant_id: tenantId, project_id: projectId, user_id: principal, service_identity: serviceName,
+      approved_scopes: ["data:read", "data:write"], reason: "sdk live API key fixture",
+    }, opts);
+    const createdKey = await gen.ApiKeyService.create_api_key(
+      { name: `sdk-live-key-${suffix}`, owner_id: principal, scopes: ["data:read"], context: keyCtx }, opts);
+    assert.ok(String(createdKey.plain_key).startsWith("udbk_"), "plain_key must have udbk_ prefix");
+    keyId = createdKey.key.key_id;
+    const valid = await gen.ApiKeyService.validate_api_key({ plain_key: createdKey.plain_key, required_scope: "data:read" }, opts);
+    assert.ok(valid.valid && valid.owner_id === principal, "ValidateApiKey must accept the fresh key");
+    const listedKeys = await gen.ApiKeyService.list_api_keys({ owner_id: principal, status: 1 }, opts); // 1 = ACTIVE
+    assert.equal((listedKeys.keys ?? []).length, 1);
+    assert.equal(listedKeys.keys[0].key_id, keyId);
+    const gotKey = await gen.ApiKeyService.get_api_key({ key_id: keyId }, opts);
+    assert.equal(gotKey.key.owner_id, principal);
+    await gen.ApiKeyService.update_api_key({ key_id: keyId, scopes: ["data:read", "data:write"], context: keyCtx }, opts);
+    const writeOK = await gen.ApiKeyService.validate_api_key({ plain_key: createdKey.plain_key, required_scope: "data:write" }, opts);
+    assert.ok(writeOK.valid, "ValidateApiKey must honor the updated data:write scope");
+    await gen.ApiKeyService.revoke_api_key({ key_id: keyId, revoke_reason: "sdk_live_test", context: keyCtx }, opts);
+    const afterRevoke = await gen.ApiKeyService.validate_api_key({ plain_key: createdKey.plain_key, required_scope: "data:read" }, opts);
+    assert.ok(!afterRevoke.valid, "revoked API key must not validate");
+    keyRevoked = true;
+  } catch (error) {
+    primaryFailure = error;
+    throw error;
+  } finally {
+    const cleanups: [string, () => Promise<unknown>][] = [];
+    if (keyId && !keyRevoked) cleanups.push(["key", () => gen.ApiKeyService.revoke_api_key({
+      key_id: keyId, revoke_reason: "sdk live fixture cleanup", context: keyCtx,
+    }, opts)]);
+    cleanups.push(
+      ["grant", () => gen.AuthnService.revoke_service_account_grant({ tenant_id: tenantId, user_id: principal, reason: "sdk live fixture cleanup" }, opts)],
+      ["service", () => gen.AuthnService.change_user_status({ user_id: principal, new_status: "USER_STATUS_DEACTIVATED", reason: "sdk live fixture cleanup", context: keyCtx }, opts)],
+    );
+    const cleanupErrors: string[] = [];
+    for (const [label, cleanup] of cleanups) {
+      try { await cleanup(); }
+      catch (error) { cleanupErrors.push(label + ":" + Number((error as any)?.code ?? grpc.status.UNKNOWN)); }
+    }
+    if (cleanupErrors.length) {
+      const detail = "owned API key fixture cleanup failed: " + cleanupErrors.join(",");
+      if (primaryFailure === undefined) throw new Error(detail);
+      console.error(detail); // Keep the original failure; emit only labels/codes.
+    }
+  }
 
   // AnalyticsService — record metrics then roll up.
   const stage = `sdk_live_stage_ts_${suffix}`;
@@ -4280,6 +4374,7 @@ test("live broker login refreshes once and hot-swaps SDK credentials", {
     // tenantId is already the canonical UUID (resolved by the pre-login probe above),
     // so the project's x-tenant-id header AND all request bodies match the JWT claim.
     assert.equal(authn.principal.tenant_id, tenantId, "principal tenant must match the resolved canonical UUID");
+    const actorId = verifiedNativeFixtureActor(authn.principal, tenantId, projectId);
 
     await store.save({
       accessToken: login.access_token,
@@ -4327,28 +4422,29 @@ test("live broker login refreshes once and hot-swaps SDK credentials", {
       const platformPrincipal = (await platformProject.auth.authenticateBearer(platformLogin.access_token))?.principal;
       assert.ok((platformPrincipal?.roles ?? []).some((role: string) => role.toLowerCase() === "platform_admin"));
       assert.ok(platformPrincipal?.subject && platformPrincipal?.user_id);
+      const platformActor = verifiedNativeFixtureActor(platformPrincipal, tenantId, projectId);
+      assert.notEqual(platformActor, actorId);
       assert.equal(platformPrincipal.tenant_id, tenantId);
       assert.equal(platformPrincipal.project_id, projectId);
       assert.notEqual(platformPrincipal.user_id, authn.principal.user_id);
       await runLiveBackendE2E(project, platformProject, tenantId, projectId);
+      // Per-RPC EDGE cases (malformed/hostile inputs + isolation boundaries): every one
+      // must fail closed with a typed error and never leak cross-tenant data or fault.
+      await runLiveEdgeCases(project, tenantId, projectId);
+
+      // Breadth: a real category-appropriate round-trip against EVERY advertised backend
+      // kind (relational SQL, object, document, cache, vector, graph) — not just the
+      // canonical postgres/mongodb/minio trio. Adapts to whatever the broker enabled.
+      await runLiveAllBackendKindsMatrix(project.generated.DataBroker, tenantId, projectId, caps);
+
+      // A SINGLE admin (bound to the canonical tenant UUID) now serves the UUID-strict
+      // services (storage/webrtc/asset) and the free-text ones alike — no second
+      // "uuid tenant" admin needed (auth_fix.md tenant-identity fix). The same project
+      // and canonical tenant id are used for both arguments.
+      await runLiveNativeServiceE2E(project, project, tenantId, projectId, tenantId, platformProject, actorId);
     } finally {
       platformProject.close();
     }
-
-    // Per-RPC EDGE cases (malformed/hostile inputs + isolation boundaries): every one
-    // must fail closed with a typed error and never leak cross-tenant data or fault.
-    await runLiveEdgeCases(project, tenantId, projectId);
-
-    // Breadth: a real category-appropriate round-trip against EVERY advertised backend
-    // kind (relational SQL, object, document, cache, vector, graph) — not just the
-    // canonical postgres/mongodb/minio trio. Adapts to whatever the broker enabled.
-    await runLiveAllBackendKindsMatrix(project.generated.DataBroker, tenantId, projectId, caps);
-
-    // A SINGLE admin (bound to the canonical tenant UUID) now serves the UUID-strict
-    // services (storage/webrtc/asset) and the free-text ones alike — no second
-    // "uuid tenant" admin needed (auth_fix.md tenant-identity fix). The same project
-    // and canonical tenant id are used for both arguments.
-    await runLiveNativeServiceE2E(project, project, tenantId, projectId, tenantId);
 
     const authGenerated = (project as any).authGenerated ?? project.generated;
     const probeCounters = { populated: 0 };

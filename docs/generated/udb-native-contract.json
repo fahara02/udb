@@ -1,6 +1,6 @@
 {
   "schema_version": "1",
-  "descriptor_sha256": "6cdf19738f6ccad7dde6c8056239f8b9d3eefea86431d91f9bff6c5aa51641c8",
+  "descriptor_sha256": "e704062824bb461d0124d78c3ea2a112a577f0e9720d54ed232f807cb51fef9e",
   "contract_version": "7.2.0",
   "udb_version": "0.5.31",
   "protocol_version": "1.0.0",
@@ -33254,7 +33254,7 @@
       ]
     }
   ],
-  "message_count": 1058,
+  "message_count": 1059,
   "messages": [
     {
       "message": "udb.core.analytics.entity.v1.ExecutorPerformanceSummary",
@@ -162174,6 +162174,16 @@
           }
         }
       ]
+    },
+    {
+      "message": "udb.sdk.live.v1.SdkLiveVectorSurface",
+      "file": "udb/sdk/live/v1/sdk_live.proto",
+      "sdk_surface": null,
+      "event_contract": null,
+      "dependency_contract": null,
+      "table_security": null,
+      "field_count": 0,
+      "fields": []
     },
     {
       "message": "udb.services.v1.EnsureBaselineRequest",

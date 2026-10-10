@@ -57,14 +57,14 @@ function liveEnv(string $name, ?string $fallback = null): string
     throw new RuntimeException("{$name} is required when UDB_LIVE_SDK_TESTS=1");
 }
 
-function liveMeta(string $bearerToken = '', string $tenantId = ''): UdbMetadata
+function liveMeta(string $bearerToken = '', string $tenantId = '', string $userId = ''): UdbMetadata
 {
     return new UdbMetadata(
         // Tenant-identity fix (auth_fix.md): once authenticated, callers pass the
         // CANONICAL tenant UUID (discovered from the principal) so request bodies
         // match the bearer claim; falls back to the human code pre-auth.
         tenantId: $tenantId !== '' ? $tenantId : liveEnv('UDB_LIVE_TENANT', 'sdk-live'),
-        userId: '',
+        userId: $userId,
         purpose: 'php.live.conformance',
         correlationId: 'php-live-conformance',
         // No client-asserted scopes: admin authority comes from the Login JWT
@@ -332,9 +332,30 @@ function run_live_backend_e2e(GeneratedClient $data, UdbMetadata $meta, Generate
  * on a UUID tenant). Authz created_by must be a UUID; the notification
  * recipient_id is an FK to a real users row.
  */
-function run_native_service_e2e(GeneratedClient $authGenerated, GeneratedClient $uuidGenerated, UdbMetadata $meta, UdbMetadata $uuidMeta, string $tenant, string $project, string $uuidTenant): void
+function phpVerifiedNativeFixtureActor(\Udb\Core\Authn\Services\V1\Principal $principal, string $tenant, string $project): string
+{
+    if (trim($principal->getSubject()) === '' || trim($principal->getUserId()) === '') {
+        throw new InvalidArgumentException('native fixture requires the verified subject and persisted user');
+    }
+    if ($principal->getTenantId() !== $tenant || $principal->getProjectId() !== $project) {
+        throw new InvalidArgumentException('native fixture refuses a foreign authenticated scope');
+    }
+
+    if ($principal->getSubject() !== trim($principal->getSubject())) {
+        throw new InvalidArgumentException('native fixture requires the exact unpadded verified subject');
+    }
+
+    // Mutation attribution follows the verified claim subject, not a target ID.
+    return phpStableAttributionId($principal->getSubject());
+}
+
+function run_native_service_e2e(GeneratedClient $authGenerated, GeneratedClient $uuidGenerated, UdbMetadata $meta, UdbMetadata $uuidMeta, string $tenant, string $project, string $uuidTenant, GeneratedClient $platformAuthGenerated, UdbMetadata $platformMeta, string $actorId): void
 {
     $suffix = bin2hex(random_bytes(8));
+    expect($meta->userId)->toBe($actorId);
+    expect($platformMeta->userId)->not->toBe($actorId);
+    expect($platformMeta->tenantId)->toBe($tenant);
+    expect($platformMeta->projectId)->toBe($project);
 
     // TenantService — CreateTenant is a platform write.
     $createdTenant = $authGenerated->create_tenant((new \Udb\Core\Tenant\Services\V1\CreateTenantRequest())
@@ -345,9 +366,10 @@ function run_native_service_e2e(GeneratedClient $authGenerated, GeneratedClient 
     $roleCode = "sdk_reader_php_$suffix";
     $createdRole = $authGenerated->create_role((new \Udb\Core\Authz\Services\V1\CreateRoleRequest())
         ->setName("SDK Reader PHP $suffix")->setDescription('Live SDK reader role')
-        ->setCreatedBy(liveUuidV4())->setRoleCode($roleCode)
+        ->setCreatedBy($actorId)->setRoleCode($roleCode)
         ->setDomain($tenant)->setTenantId($tenant)->setProjectId($project), $meta)->getRole();
     expect($createdRole->getRoleCode())->toBe($roleCode);
+    expect($createdRole->getCreatedBy())->toBe($actorId);
     $gotRole = $authGenerated->get_role((new \Udb\Core\Authz\Services\V1\GetRoleRequest())
         ->setRoleId($createdRole->getRoleId()), $meta)->getRole();
     expect($gotRole->getRoleCode())->toBe($roleCode);
@@ -369,53 +391,120 @@ function run_native_service_e2e(GeneratedClient $authGenerated, GeneratedClient 
         ->setPassword('CorrectHorse1!')->setTenantId($tenant)->setProjectId($project)->setFullName('SDK Authz Subject'), $meta)->getUser();
     $assigned = $authGenerated->assign_role((new \Udb\Core\Authz\Services\V1\AssignRoleRequest())
         ->setUserId($subject->getUserId())->setRoleId($createdRole->getRoleId())->setDomain($tenant)
-        ->setAssignedBy($subject->getUserId())->setTenantId($tenant)->setProjectId($project), $meta)->getUserRole();
+        ->setAssignedBy($actorId)->setTenantId($tenant)->setProjectId($project), $meta)->getUserRole();
+    expect($assigned->getAssignedBy())->toBe($actorId);
+    $accessRequest = (new \Udb\Core\Authz\Services\V1\CheckAccessRequest())
+        ->setUserId($subject->getUserId())->setDomain($tenant)->setTenantId($tenant)->setProjectId($project)
+        ->setObject('invoice')->setAction('data.select');
+    $beforePolicy = $platformAuthGenerated->check_access($accessRequest, $platformMeta);
+    expect($beforePolicy->getAllowed())->toBeFalse();
+    $policyId = liveUuidV4();
     $authGenerated->put_authz_policy((new \Udb\Core\Authz\Services\V1\PutAuthzPolicyRequest())
         ->setPolicy((new \Udb\Core\Authz\Services\V1\AuthzPolicyRecord())
-            ->setId(liveUuidV4())->setEnabled(true)->setEffect('allow')->setTenant($tenant)->setProject($project)
+            ->setId($policyId)->setEnabled(true)->setEffect('allow')->setTenant($tenant)->setProject($project)
             ->setRole($createdRole->getRoleCode())->setAction('data.select')->setResource('invoice')), $meta);
-    $allowed = $authGenerated->check_access((new \Udb\Core\Authz\Services\V1\CheckAccessRequest())
-        ->setUserId($subject->getUserId())->setDomain($tenant)->setTenantId($tenant)->setProjectId($project)
-        ->setObject('invoice')->setAction('data.select'), $meta);
+    $allowed = $platformAuthGenerated->check_access($accessRequest, $platformMeta);
     expect($allowed->getAllowed())->toBeTrue();
+    expect(iterator_to_array($allowed->getDecision()->getMatchedPolicyIds()))->toContain($policyId);
     $userRoles = $authGenerated->list_user_roles((new \Udb\Core\Authz\Services\V1\ListUserRolesRequest())
         ->setUserId($subject->getUserId())->setDomain($tenant)->setActiveOnly(true), $meta);
     expect(count($userRoles->getUserRoles()))->toBe(1);
     $authGenerated->revoke_role((new \Udb\Core\Authz\Services\V1\RevokeRoleRequest())
-        ->setUserRoleId($assigned->getUserRoleId())->setUserId($subject->getUserId())->setReason('sdk_live_test')->setRevokedBy($subject->getUserId()), $meta);
-    $denied = $authGenerated->check_access((new \Udb\Core\Authz\Services\V1\CheckAccessRequest())
-        ->setUserId($subject->getUserId())->setDomain($tenant)->setTenantId($tenant)->setProjectId($project)
-        ->setObject('invoice')->setAction('data.select'), $meta);
+        ->setUserRoleId($assigned->getUserRoleId())->setUserId($subject->getUserId())->setReason('sdk_live_test')->setRevokedBy($actorId), $meta);
+    $denied = $platformAuthGenerated->check_access($accessRequest, $platformMeta);
     expect($denied->getAllowed())->toBeFalse();
+    $revokedRoles = $authGenerated->list_user_roles((new \Udb\Core\Authz\Services\V1\ListUserRolesRequest())
+        ->setUserId($subject->getUserId())->setDomain($tenant)->setActiveOnly(true), $meta);
+    expect(count($revokedRoles->getUserRoles()))->toBe(0);
+    $deletedPolicy = $authGenerated->delete_policy_rule((new \Udb\Core\Authz\Services\V1\DeletePolicyRuleRequest())
+        ->setPolicyId($policyId)->setDeletedBy($actorId), $meta);
+    expect($deletedPolicy->getDeleted())->toBeTrue();
+    $authGenerated->delete_role((new \Udb\Core\Authz\Services\V1\DeleteRoleRequest())
+        ->setRoleId($createdRole->getRoleId())->setDeletedBy($actorId), $meta);
 
-    // ApiKeyService — create/validate/list/revoke lifecycle.
-    $principal = "sdk-live-svc-$suffix";
-    $keyCtx = (new \Udb\Core\Common\V1\RequestContext())->setUserId($principal)
+    // ApiKeyService: persist and activate a real SERVICE_ACCOUNT with its
+    // exact typed grant; the ordinary verified actor remains the request context.
+    $serviceName = "sdk-live-svc-$suffix";
+    $keyCtx = (new \Udb\Core\Common\V1\RequestContext())->setUserId($actorId)
         ->setTenant((new \Udb\Core\Common\V1\TenantContext())->setTenantId($tenant)->setProjectId($project));
-    $createdKey = $authGenerated->create_api_key((new \Udb\Core\Apikey\Services\V1\CreateApiKeyRequest())
-        ->setName("sdk-live-key-$suffix")->setOwnerId($principal)->setScopes(['data:read'])->setContext($keyCtx), $meta);
-    expect(str_starts_with($createdKey->getPlainKey(), 'udbk_'))->toBeTrue();
-    $keyId = $createdKey->getKey()->getKeyId();
-    $valid = $authGenerated->validate_api_key((new \Udb\Core\Apikey\Services\V1\ValidateApiKeyRequest())
-        ->setPlainKey($createdKey->getPlainKey())->setRequiredScope('data:read'), $meta);
-    expect($valid->getValid())->toBeTrue();
-    expect($valid->getOwnerId())->toBe($principal);
-    $listedKeys = $authGenerated->list_api_keys((new \Udb\Core\Apikey\Services\V1\ListApiKeysRequest())
-        ->setOwnerId($principal)->setStatus(1), $meta); // 1 = ACTIVE
-    expect(count($listedKeys->getKeys()))->toBe(1);
-    expect($listedKeys->getKeys()[0]->getKeyId())->toBe($keyId);
-    $gotKey = $authGenerated->get_api_key((new \Udb\Core\Apikey\Services\V1\GetApiKeyRequest())->setKeyId($keyId), $meta);
-    expect($gotKey->getKey()->getOwnerId())->toBe($principal);
-    $authGenerated->update_api_key((new \Udb\Core\Apikey\Services\V1\UpdateApiKeyRequest())
-        ->setKeyId($keyId)->setScopes(['data:read', 'data:write'])->setContext($keyCtx), $meta);
-    $writeOk = $authGenerated->validate_api_key((new \Udb\Core\Apikey\Services\V1\ValidateApiKeyRequest())
-        ->setPlainKey($createdKey->getPlainKey())->setRequiredScope('data:write'), $meta);
-    expect($writeOk->getValid())->toBeTrue();
-    $authGenerated->revoke_api_key((new \Udb\Core\Apikey\Services\V1\RevokeApiKeyRequest())
-        ->setKeyId($keyId)->setRevokeReason('sdk_live_test')->setContext($keyCtx), $meta);
-    $afterRevoke = $authGenerated->validate_api_key((new \Udb\Core\Apikey\Services\V1\ValidateApiKeyRequest())
-        ->setPlainKey($createdKey->getPlainKey())->setRequiredScope('data:read'), $meta);
-    expect($afterRevoke->getValid())->toBeFalse();
+    $service = $authGenerated->create_user((new \Udb\Core\Authn\Services\V1\CreateUserRequest())
+        ->setUsername($serviceName)->setEmail("$serviceName@example.com")->setPassword('CorrectHorse1!')
+        ->setTenantId($tenant)->setProjectId($project)->setFullName('SDK Live Service Account')
+        ->setAccountKind(\Udb\Core\Authn\Entity\V1\AccountKind::ACCOUNT_KIND_SERVICE_ACCOUNT)->setContext($keyCtx), $meta)->getUser();
+    $principal = $service->getUserId();
+    expect($principal)->toMatch('/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/');
+    expect($principal)->not->toBe($actorId);
+    expect($service->getTenantId())->toBe($tenant);
+    expect($service->getProjectId())->toBe($project);
+    expect($service->getAccountKind())->toBe(\Udb\Core\Authn\Entity\V1\AccountKind::ACCOUNT_KIND_SERVICE_ACCOUNT);
+    $keyId = '';
+    $keyRevoked = false;
+    $primaryFailure = null;
+    try {
+        $active = $authGenerated->change_user_status((new \Udb\Core\Authn\Services\V1\ChangeUserStatusRequest())
+            ->setUserId($principal)->setNewStatus(\Udb\Core\Authn\Entity\V1\UserStatus::USER_STATUS_ACTIVE)
+            ->setReason('sdk live activate service account')->setContext($keyCtx), $meta)->getUser();
+        expect($active->getUserId())->toBe($principal);
+        expect($active->getStatus())->toBe(\Udb\Core\Authn\Entity\V1\UserStatus::USER_STATUS_ACTIVE);
+        $authGenerated->create_service_account_grant((new \Udb\Core\Authn\Services\V1\CreateServiceAccountGrantRequest())
+            ->setTenantId($tenant)->setProjectId($project)->setUserId($principal)->setServiceIdentity($serviceName)
+            ->setApprovedScopes(['data:read', 'data:write'])->setReason('sdk live API key fixture'), $meta);
+        $createdKey = $authGenerated->create_api_key((new \Udb\Core\Apikey\Services\V1\CreateApiKeyRequest())
+            ->setName("sdk-live-key-$suffix")->setOwnerId($principal)->setScopes(['data:read'])->setContext($keyCtx), $meta);
+        expect(str_starts_with($createdKey->getPlainKey(), 'udbk_'))->toBeTrue();
+        $keyId = $createdKey->getKey()->getKeyId();
+        $valid = $authGenerated->validate_api_key((new \Udb\Core\Apikey\Services\V1\ValidateApiKeyRequest())
+            ->setPlainKey($createdKey->getPlainKey())->setRequiredScope('data:read'), $meta);
+        expect($valid->getValid())->toBeTrue();
+        expect($valid->getOwnerId())->toBe($principal);
+        $listedKeys = $authGenerated->list_api_keys((new \Udb\Core\Apikey\Services\V1\ListApiKeysRequest())
+            ->setOwnerId($principal)->setStatus(1), $meta); // 1 = ACTIVE
+        expect(count($listedKeys->getKeys()))->toBe(1);
+        expect($listedKeys->getKeys()[0]->getKeyId())->toBe($keyId);
+        $gotKey = $authGenerated->get_api_key((new \Udb\Core\Apikey\Services\V1\GetApiKeyRequest())->setKeyId($keyId), $meta);
+        expect($gotKey->getKey()->getOwnerId())->toBe($principal);
+        $authGenerated->update_api_key((new \Udb\Core\Apikey\Services\V1\UpdateApiKeyRequest())
+            ->setKeyId($keyId)->setScopes(['data:read', 'data:write'])->setContext($keyCtx), $meta);
+        $writeOk = $authGenerated->validate_api_key((new \Udb\Core\Apikey\Services\V1\ValidateApiKeyRequest())
+            ->setPlainKey($createdKey->getPlainKey())->setRequiredScope('data:write'), $meta);
+        expect($writeOk->getValid())->toBeTrue();
+        $authGenerated->revoke_api_key((new \Udb\Core\Apikey\Services\V1\RevokeApiKeyRequest())
+            ->setKeyId($keyId)->setRevokeReason('sdk_live_test')->setContext($keyCtx), $meta);
+        $afterRevoke = $authGenerated->validate_api_key((new \Udb\Core\Apikey\Services\V1\ValidateApiKeyRequest())
+            ->setPlainKey($createdKey->getPlainKey())->setRequiredScope('data:read'), $meta);
+        expect($afterRevoke->getValid())->toBeFalse();
+        $keyRevoked = true;
+    } catch (\Throwable $error) {
+        $primaryFailure = $error;
+        throw $error;
+    } finally {
+        $cleanups = [];
+        if ($keyId !== '' && !$keyRevoked) {
+            $cleanups['key'] = fn () => $authGenerated->revoke_api_key((new \Udb\Core\Apikey\Services\V1\RevokeApiKeyRequest())
+                ->setKeyId($keyId)->setRevokeReason('sdk live fixture cleanup')->setContext($keyCtx), $meta);
+        }
+        $cleanups['grant'] = fn () => $authGenerated->revoke_service_account_grant((new \Udb\Core\Authn\Services\V1\RevokeServiceAccountGrantRequest())
+            ->setTenantId($tenant)->setUserId($principal)->setReason('sdk live fixture cleanup'), $meta);
+        $cleanups['service'] = fn () => $authGenerated->change_user_status((new \Udb\Core\Authn\Services\V1\ChangeUserStatusRequest())
+            ->setUserId($principal)->setNewStatus(\Udb\Core\Authn\Entity\V1\UserStatus::USER_STATUS_DEACTIVATED)
+            ->setReason('sdk live fixture cleanup')->setContext($keyCtx), $meta);
+        $cleanupErrors = [];
+        foreach ($cleanups as $label => $cleanup) {
+            try {
+                $cleanup();
+            } catch (\Throwable $error) {
+                $code = $error instanceof \Fahara02\UdbLaravel\Exceptions\UdbRpcException ? $error->status : 2;
+                $cleanupErrors[] = "$label:$code";
+            }
+        }
+        if ($cleanupErrors !== []) {
+            $detail = 'owned API key fixture cleanup failed: '.implode(',', $cleanupErrors);
+            if ($primaryFailure === null) {
+                throw new RuntimeException($detail);
+            }
+            fwrite(STDERR, $detail.PHP_EOL); // Preserve the original failure; only labels/codes.
+        }
+    }
 
     // AnalyticsService — record metrics then roll up.
     $stage = "sdk_live_stage_php_$suffix";
@@ -1368,6 +1457,7 @@ it('covers the live generated RPC surface', function () {
     $auth = new UdbAuthClient(['endpoint' => $authTarget, 'deadline_ms' => 10_000]);
     $auth->bindContext($meta);
     $authResp = $auth->authenticateBearer($login->getAccessToken(), $meta);
+    expect($authResp?->getPrincipal())->not->toBeNull();
     // Discover our CANONICAL tenant UUID from the authenticated principal — bootstrap
     // binds the admin to the tenant's UUID, so the Login JWT claim is a UUID, not the
     // human code. Use it for every request body so the body matches the claim and the
@@ -1380,7 +1470,8 @@ it('covers the live generated RPC surface', function () {
     );
     expect($refresh?->getAccessToken())->not->toBe('');
 
-    $authedMeta = liveMeta($login->getAccessToken(), $canonicalTenant);
+    $actorId = phpVerifiedNativeFixtureActor($authResp->getPrincipal(), $canonicalTenant, $meta->projectId);
+    $authedMeta = liveMeta($login->getAccessToken(), $canonicalTenant, $actorId);
     // 15s, not 2s: against a full 14-backend broker the heavy RPCs legitimately take
     // longer than a 3-backend CI broker — GetHealthReport probes every backend (incl.
     // the slow mssql/cassandra) and GetCatalogManifest returns the whole manifest — and
@@ -1411,9 +1502,13 @@ it('covers the live generated RPC surface', function () {
     expect($platformPrincipal->getUserId())->not->toBe($authResp->getPrincipal()->getUserId());
     expect($platformPrincipal->getTenantId())->toBe($canonicalTenant);
     expect($platformPrincipal->getProjectId())->toBe($meta->projectId);
-    $platformMeta = liveMeta($platformLogin->getAccessToken(), $canonicalTenant);
+    $platformActor = phpVerifiedNativeFixtureActor($platformPrincipal, $canonicalTenant, $meta->projectId);
+    expect($platformActor)->not->toBe($actorId);
+    $platformMeta = liveMeta($platformLogin->getAccessToken(), $canonicalTenant, $platformActor);
     $platformData = new GeneratedClient(['endpoint' => $target, 'deadline_ms' => 15_000, 'retry' => ['max_attempts' => 1]]);
     $platformData->bindContext($platformMeta);
+    $platformAuthGenerated = new GeneratedClient(['endpoint' => $authTarget, 'deadline_ms' => 15_000, 'retry' => ['max_attempts' => 1]]);
+    $platformAuthGenerated->bindContext($platformMeta);
     run_live_backend_e2e($data, $authedMeta, $platformData, $platformMeta, $authedMeta->tenantId, $meta->projectId);
 
     // Per-RPC EDGE cases (fail-closed / no cross-tenant leak / no server fault).
@@ -1428,7 +1523,7 @@ it('covers the live generated RPC surface', function () {
     // SINGLE admin (bound to the canonical tenant UUID) now serves the UUID-strict
     // services (storage/webrtc/asset) and the free-text ones alike — no second "uuid
     // tenant" admin needed (auth_fix.md tenant-identity fix).
-    run_native_service_e2e($authGenerated, $authGenerated, $authedMeta, $authedMeta, $authedMeta->tenantId, $meta->projectId, $authedMeta->tenantId);
+    run_native_service_e2e($authGenerated, $authGenerated, $authedMeta, $authedMeta, $authedMeta->tenantId, $meta->projectId, $authedMeta->tenantId, $platformAuthGenerated, $platformMeta, $actorId);
 
     // Don't trust the capability claim — exercise every advertised backend.
     $claimCtx = (new \Udb\Entity\V1\RequestContext())->setTenantId($authedMeta->tenantId)->setProjectId($meta->projectId)->setPurpose('php.live.backend.claim');
@@ -3533,7 +3628,13 @@ it('routes only global benchmark RPCs to the platform identity', function () {
 it('derives PHP authz attribution from the verified caller without changing target IDs', function () {
     $caller = 'caller@example.test';
     $target = '039c134f-e3ad-4b01-bd0e-aea4849df619';
-    $attribution = phpStableAttributionId($caller);
+    $principal = (new \Udb\Core\Authn\Services\V1\Principal())
+        ->setSubject($caller)->setUserId($target)->setTenantId('tenant-php')->setProjectId('project-php');
+    $attribution = phpVerifiedNativeFixtureActor($principal, 'tenant-php', 'project-php');
+    expect(fn () => phpVerifiedNativeFixtureActor($principal, 'foreign-tenant', 'project-php'))
+        ->toThrow(InvalidArgumentException::class);
+    expect(fn () => phpVerifiedNativeFixtureActor($principal, 'tenant-php', 'foreign-project'))
+        ->toThrow(InvalidArgumentException::class);
     $fix = new PerfFixturesPhp();
     $fix->set('tenant_id', 'tenant-php');
     $fix->set('user_id', $target);
