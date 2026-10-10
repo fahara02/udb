@@ -156,10 +156,22 @@ def database_service_receipt() -> dict:
 def psql(sql: str, dsn: str | None = None) -> str:
     # The CI fixture DSN is never echoed or copied into a receipt/error.
     result = subprocess.run(["psql", dsn or os.environ["UDB_LIVE_NATIVE_PG_DSN"],
-        "-X", "-v", "ON_ERROR_STOP=1", "-At"], input=sql, text=True,
+        "-X", "-q", "-v", "ON_ERROR_STOP=1", "-At"], input=sql, text=True,
         stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=120)
     require(result.returncode == 0, "owned PostgreSQL setup/restore query failed; no performance admission")
     return result.stdout.strip()
+
+
+def quiet_receipt_preflight() -> dict:
+    # Execute in CI before compiling: DO's status tag must not contaminate the
+    # following JSON row. Do not discard output lines to conceal a bad command.
+    sql = """DO $quiet_receipt$ BEGIN PERFORM 1; END $quiet_receipt$;
+SELECT json_build_object('schema_version', 1, 'quiet_command_tags', TRUE);
+"""
+    value = json.loads(psql(sql))
+    require(value == {"schema_version": 1, "quiet_command_tags": True},
+            "actual DO+SELECT JSON receipt preflight failed; no performance admission")
+    return value
 
 
 def owned_dsn(database: str) -> str:
@@ -460,6 +472,7 @@ def run() -> None:
     try:
         require(psql("SELECT CASE WHEN current_setting('server_version_num')::INTEGER BETWEEN 160000 AND 169999 AND rolsuper AND rolcreatedb THEN 1 ELSE 0 END FROM pg_roles WHERE rolname=current_user") == "1",
                 "actual PostgreSQL16 fixture must permit owned database creation")
+        write("psql-quiet-receipt-preflight.json", quiet_receipt_preflight())
         initial_host = host_receipt()
         state["stable_host_identity"] = stable_host(initial_host)
         state["postgres_service_identity"] = database_service_receipt()
@@ -607,6 +620,44 @@ def selftest() -> None:
             refused += 1
     require(refused == 14, "all source-only negative controls must refuse")
     print("capabilities-history-aba: 5 positive and 14 negative source-only controls passed; no runtime evidence")
+    quiet_receipt_selftest()
+
+
+def quiet_receipt_selftest() -> None:
+    # Exercise the real psql entrypoint with a standard-library subprocess mock;
+    # neither psql nor a database is started by these source-only controls.
+    from unittest.mock import patch
+    dsn = "postgresql://source-only.invalid/owned"
+    good = '{"schema_version":1,"quiet_command_tags":true}\n'
+    calls = []
+
+    def capture(command, **kwargs):
+        require(command == ["psql", dsn, "-X", "-q", "-v", "ON_ERROR_STOP=1", "-At"],
+                "psql must use the exact quiet, unaligned, tuples-only, fail-closed argument contract")
+        require(kwargs == {"input": sql, "text": True, "stdout": subprocess.PIPE,
+                           "stderr": subprocess.PIPE, "timeout": 120},
+                "psql must preserve bounded subprocess IO and private SQL input")
+        calls.append(command)
+        return subprocess.CompletedProcess(command, 0, good, "")
+
+    sql = "DO $quiet_receipt$ BEGIN PERFORM 1; END $quiet_receipt$;\nSELECT json_build_object('schema_version', 1, 'quiet_command_tags', TRUE);\n"
+    with patch.dict(os.environ, {"UDB_LIVE_NATIVE_PG_DSN": dsn}), \
+            patch.object(subprocess, "run", side_effect=capture):
+        require(quiet_receipt_preflight() == json.loads(good) and len(calls) == 1,
+                "real psql argument/DO+SELECT receipt positive control failed")
+    refused = 0
+    for code, stdout in ((1, good), (0, "DO\n" + good), (0, ""),
+                         (0, '{"schema_version":1,"quiet_command_tags":false}'),
+                         (0, '{"schema_version":2,"quiet_command_tags":true}'),
+                         (0, good + good)):
+        with patch.dict(os.environ, {"UDB_LIVE_NATIVE_PG_DSN": dsn}), \
+                patch.object(subprocess, "run", return_value=subprocess.CompletedProcess([], code, stdout, "private-error")):
+            try:
+                quiet_receipt_preflight()
+            except (RuntimeError, json.JSONDecodeError):
+                refused += 1
+    require(refused == 6, "all quiet receipt/error negative controls must refuse")
+    print("capabilities-history-aba: 1 exact-argument positive and 6 quiet-receipt negative source-only controls passed; no database evidence")
 
 
 if __name__ == "__main__":
