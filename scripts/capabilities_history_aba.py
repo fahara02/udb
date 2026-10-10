@@ -37,7 +37,7 @@ TEST = "runtime::service::live_tests::catalog_reviewed_transition_live::live_cap
 START = b"// BEGIN CAPABILITIES_HISTORY_CI_PROFILE"
 END = b"// END CAPABILITIES_HISTORY_CI_PROFILE"
 # Filled only from the final private measurement-block bytes at freeze.
-BLOCK_SHA256 = "ff3af7c6cbe4f3462472c992b303fa66a38bceb44cadf79e385f733a4db5777d"
+BLOCK_SHA256 = "263eca3cbd125e4418b0a41c0a8faebdbb3999ddd57df2c099443ec640495f89"
 POLICY_ENV = {
     "UDB_RATE_LIMIT_POLICY_AUTHN_LOGIN_PUBLIC": "20000",
     "UDB_ABUSE_POLICY_AUTHN_LOGIN_ABUSE": "20000",
@@ -93,6 +93,11 @@ def block(data: bytes) -> bytes:
     require(data.count(START) == data.count(END) == 1,
             "identical fixture must have one delimited measurement block")
     return data[data.index(START):data.index(END) + len(END)]
+
+
+def validate_frozen_fixture(data: bytes) -> None:
+    require(sha(block(data)) == BLOCK_SHA256,
+            "fixture must be the identical exact committed frozen measurement bytes")
 
 
 def source_snapshot(label: str) -> dict:
@@ -445,8 +450,9 @@ def run() -> None:
     require(proof == os.environ["GITHUB_SHA"], "dispatch and checkout identities differ")
     subprocess.run(["git", "merge-base", "--is-ancestor", BASELINE, proof], check=True)
     fixture = Path(FIXTURE).read_bytes()
-    require(fixture == git("show", proof + ":" + FIXTURE) and sha(block(fixture)) == BLOCK_SHA256,
-            "fixture must be the identical exact committed frozen measurement bytes")
+    require(fixture == git("show", proof + ":" + FIXTURE),
+            "fixture must match exact committed proof source")
+    validate_frozen_fixture(fixture)
     require(Path(__file__).read_bytes() == git("show", proof + ":" + SCRIPT),
             "copied runner must match exact committed proof source")
     require(b"mod catalog_reviewed_transition_live;" in git("show", BASELINE + ":src/runtime/service/live_tests/mod.rs"),
@@ -556,7 +562,30 @@ def run() -> None:
             raise RuntimeError("owned fixture cleanup failed; retained receipt; no comparison admission")
 
 
+def frozen_fixture_selftest() -> None:
+    # Exercise the same source guard as run() against the actual owned source.
+    # These bytes and controls provide no runtime or latency evidence.
+    fixture = Path(FIXTURE).read_bytes()
+    validate_frozen_fixture(fixture)
+    measurement = block(fixture)
+    refused = 0
+    for altered in (
+        measurement.replace(b"session_enabled: true,", b"session_enabled: false,", 1),
+        measurement + START,
+        measurement.replace(END, b"// MISSING_END", 1),
+        measurement.replace(b"warm real Argon2 Login", b"changed real Argon2 Login", 1),
+    ):
+        require(altered != measurement, "frozen-source control must change actual measurement bytes")
+        try:
+            validate_frozen_fixture(altered)
+        except RuntimeError:
+            refused += 1
+    require(refused == 4, "all actual frozen-source mutations must refuse")
+    print("capabilities-history-aba: actual frozen fixture and 4 source mutation controls passed; no runtime evidence")
+
+
 def selftest() -> None:
+    frozen_fixture_selftest()
     # Pure receipt/log controls only. These synthetic objects cannot be serving,
     # binary, database, baseline RED or performance evidence.
     log = f"running 1 test\ntest {TEST} ... ok\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured;\n"
