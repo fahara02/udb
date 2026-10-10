@@ -84,6 +84,17 @@ pub(super) trait SqlDialect {
     fn cast_compare_placeholder(_column_sql_type: &str, placeholder: &str) -> String {
         placeholder.to_string()
     }
+
+    /// Refine a comparison cast when the bound value's type matters. The default
+    /// retains each dialect's existing casts; integer string operands must not
+    /// cause numeric or floating-point operands to be narrowed to integers.
+    fn cast_compare_value_placeholder(
+        column_sql_type: &str,
+        _value: &LogicalValue,
+        placeholder: &str,
+    ) -> String {
+        Self::cast_compare_placeholder(column_sql_type, placeholder)
+    }
 }
 
 /// Generic SQL compiler parameterised over a [`SqlDialect`]. Holds no
@@ -213,12 +224,13 @@ impl<D: SqlDialect> SqlCompiler<D> {
             let Some(value) = context_value.map(str::trim).filter(|v| !v.is_empty()) else {
                 continue;
             };
-            let placeholder = Self::push_param(params, LogicalValue::String(value.to_string()));
+            let value = LogicalValue::String(value.to_string());
+            let placeholder = Self::push_param(params, value.clone());
             let placeholder = table
                 .columns
                 .iter()
                 .find(|c| c.column_name == column)
-                .map(|c| D::cast_compare_placeholder(&c.sql_type, &placeholder))
+                .map(|c| D::cast_compare_value_placeholder(&c.sql_type, &value, &placeholder))
                 .unwrap_or(placeholder);
             parts.push(format!("{} = {placeholder}", existing(column)));
         }
@@ -264,9 +276,10 @@ impl<D: SqlDialect> SqlCompiler<D> {
                 .columns
                 .iter()
                 .find(|c| c.column_name == col_name || c.field_name.eq_ignore_ascii_case(col_name));
-            let placeholder = Self::push_param(params, LogicalValue::String(tid.to_string()));
+            let value = LogicalValue::String(tid.to_string());
+            let placeholder = Self::push_param(params, value.clone());
             let placeholder = col
-                .map(|c| D::cast_compare_placeholder(&c.sql_type, &placeholder))
+                .map(|c| D::cast_compare_value_placeholder(&c.sql_type, &value, &placeholder))
                 .unwrap_or(placeholder);
             let quoted = D::quote(col_name);
             if ctx.allow_global_tenant {
@@ -286,9 +299,10 @@ impl<D: SqlDialect> SqlCompiler<D> {
                 .columns
                 .iter()
                 .find(|c| c.column_name == col_name || c.field_name.eq_ignore_ascii_case(col_name));
-            let placeholder = Self::push_param(params, LogicalValue::String(pid.to_string()));
+            let value = LogicalValue::String(pid.to_string());
+            let placeholder = Self::push_param(params, value.clone());
             let placeholder = col
-                .map(|c| D::cast_compare_placeholder(&c.sql_type, &placeholder))
+                .map(|c| D::cast_compare_value_placeholder(&c.sql_type, &value, &placeholder))
                 .unwrap_or(placeholder);
             let quoted = D::quote(col_name);
             if ctx.allow_global_tenant {
@@ -397,7 +411,8 @@ impl<D: SqlDialect> SqlCompiler<D> {
                 let placeholder = Self::push_param(params, value.clone());
                 // Cast the placeholder to the column's SQL type when the dialect needs
                 // it (Postgres `uuid = $1::UUID`); a no-op for the coercing dialects.
-                let placeholder = D::cast_compare_placeholder(&col.sql_type, &placeholder);
+                let placeholder =
+                    D::cast_compare_value_placeholder(&col.sql_type, value, &placeholder);
                 let sql_op = D::sql_op_for(*op);
                 let rhs = D::wrap_value_for_op(*op, &placeholder);
                 Ok(format!("{} {sql_op} {rhs}", D::quote(&col.column_name)))
@@ -432,7 +447,7 @@ impl<D: SqlDialect> SqlCompiler<D> {
                     .iter()
                     .map(|v| {
                         let p = Self::push_param(params, v.clone());
-                        D::cast_compare_placeholder(&col.sql_type, &p)
+                        D::cast_compare_value_placeholder(&col.sql_type, v, &p)
                     })
                     .collect::<Vec<_>>()
                     .join(", ");

@@ -141,6 +141,35 @@ impl SqlDialect for Postgres {
         }
     }
 
+    fn cast_compare_value_placeholder(
+        column_sql_type: &str,
+        value: &LogicalValue,
+        placeholder: &str,
+    ) -> String {
+        if let LogicalValue::String(value) = value {
+            let digits = value
+                .strip_prefix('-')
+                .or_else(|| value.strip_prefix('+'))
+                .unwrap_or(value);
+            if !digits.is_empty() && digits.bytes().all(|byte| byte.is_ascii_digit()) {
+                let cast = match column_sql_type.trim().to_ascii_uppercase().as_str() {
+                    "SMALLINT" | "INT2" | "SMALLSERIAL" | "SERIAL2" => Some("SMALLINT"),
+                    "INTEGER" | "INT" | "INT4" | "SERIAL" | "SERIAL4" => Some("INTEGER"),
+                    "BIGINT" | "INT8" | "BIGSERIAL" | "SERIAL8" => Some("BIGINT"),
+                    _ => None,
+                };
+                if let Some(cast) = cast {
+                    // SDKs preserve 64-bit precision as decimal strings, which
+                    // the generic executor binds as TEXT. Cast the parameter,
+                    // leaving the integer column/index and non-string numeric
+                    // comparisons unchanged. PostgreSQL still checks range.
+                    return format!("{placeholder}::{cast}");
+                }
+            }
+        }
+        Self::cast_compare_placeholder(column_sql_type, placeholder)
+    }
+
     /// Postgres operators and assignments are type-exact — there is no `uuid = text`
     /// nor `timestamptz < text` operator, and `INSERT ... VALUES ($1)` / `UPDATE ...
     /// SET col = $1` reject a `text`-bound parameter for a `uuid`/`timestamptz`

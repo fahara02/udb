@@ -33,6 +33,415 @@ fn bind<'q>(
 
 #[tokio::test]
 #[ignore = "requires UDB_IR_LIVE_GOLDEN_TESTS=1 and UDB_PG_DSN"]
+async fn postgres_bridged_integer_string_predicates_preserve_exact_values_live() {
+    if !live_ir_enabled() {
+        return;
+    }
+    let dsn = std::env::var("UDB_PG_DSN")
+        .or_else(|_| std::env::var("DATABASE_URL"))
+        .expect("live integer predicate proof requires a PostgreSQL DSN");
+    let pool = sqlx::postgres::PgPoolOptions::new()
+        .max_connections(1)
+        .connect(&dsn)
+        .await
+        .expect("connect to live Postgres");
+    let mut transaction = pool.begin().await.expect("begin owned fixture transaction");
+    let table_name = format!("udb_ir_integer_{}", uuid::Uuid::new_v4().simple());
+    sqlx::query(&format!(
+        "CREATE TEMP TABLE \"{table_name}\" (id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, \
+         project_id TEXT NOT NULL, revision BIGINT, narrow SMALLINT, medium INTEGER, \
+         lexical TEXT NOT NULL, amount NUMERIC NOT NULL) ON COMMIT DROP"
+    ))
+    .execute(&mut *transaction)
+    .await
+    .expect("create transaction-owned integer predicate fixture");
+    for (id, project, tenant, revision) in [
+        (
+            "exact",
+            "project-a",
+            "tenant-a",
+            Some(9_007_199_254_740_993_i64),
+        ),
+        (
+            "neighbor",
+            "project-a",
+            "tenant-a",
+            Some(9_007_199_254_740_995),
+        ),
+        ("minimum", "project-a", "tenant-a", Some(i64::MIN)),
+        ("maximum", "project-a", "tenant-a", Some(i64::MAX)),
+        ("null", "project-a", "tenant-a", None),
+        ("one", "project-a", "tenant-a", Some(1)),
+        ("two", "project-a", "tenant-a", Some(2)),
+        (
+            "foreign-project",
+            "project-b",
+            "tenant-a",
+            Some(9_007_199_254_740_993),
+        ),
+        (
+            "foreign-tenant",
+            "project-a",
+            "tenant-b",
+            Some(9_007_199_254_740_993),
+        ),
+    ] {
+        sqlx::query(&format!(
+            "INSERT INTO \"{table_name}\" (id, tenant_id, project_id, revision, narrow, medium, lexical, amount) \
+             VALUES ($1, $2, $3, $4, 7, 70000, '02', 1.5)"
+        ))
+        .bind(id)
+        .bind(tenant)
+        .bind(project)
+        .bind(revision)
+        .execute(&mut *transaction)
+        .await
+        .expect("seed exact native integer values");
+    }
+    let mut manifest = CatalogManifest {
+        tables: vec![ManifestTable {
+            message_name: "ir.live.ExactInteger".to_string(),
+            schema: "pg_temp".to_string(),
+            table: table_name,
+            primary_key: vec!["id".to_string()],
+            columns: [
+                ("id", "TEXT"),
+                ("tenant_id", "TEXT"),
+                ("project_id", "TEXT"),
+                ("revision", "BIGINT"),
+                ("narrow", "SMALLINT"),
+                ("medium", "INTEGER"),
+                ("lexical", "TEXT"),
+                ("amount", "NUMERIC"),
+            ]
+            .into_iter()
+            .map(|(name, sql_type)| ManifestColumn {
+                field_name: name.to_string(),
+                column_name: name.to_string(),
+                sql_type: sql_type.to_string(),
+                is_primary: name == "id",
+                is_tenant_column: name == "tenant_id",
+                is_project_column: name == "project_id",
+                ..Default::default()
+            })
+            .collect(),
+            ..Default::default()
+        }],
+        ..Default::default()
+    };
+
+    async fn fetch(
+        connection: &mut sqlx::PgConnection,
+        manifest: &CatalogManifest,
+        predicate: serde_json::Value,
+    ) -> Result<Vec<String>, sqlx::Error> {
+        fetch_in_context(
+            connection,
+            manifest,
+            predicate,
+            &RequestContext {
+                tenant_id: "tenant-a".to_string(),
+                project_id: "project-a".to_string(),
+                purpose: "live-exact-integer".to_string(),
+                scopes: vec!["udb:read".to_string()],
+                ..Default::default()
+            },
+        )
+        .await
+    }
+
+    async fn fetch_in_context(
+        connection: &mut sqlx::PgConnection,
+        manifest: &CatalogManifest,
+        predicate: serde_json::Value,
+        context: &RequestContext,
+    ) -> Result<Vec<String>, sqlx::Error> {
+        use crate::runtime::core::{bind_typed_generic_pg_params, bridged_pg_select_statement};
+        use sqlx::Row;
+
+        let mut filter = predicate.as_object().expect("object predicate").clone();
+        filter
+            .entry("tenant_id")
+            .or_insert_with(|| serde_json::json!(context.tenant_id));
+        filter
+            .entry("project_id")
+            .or_insert_with(|| serde_json::json!(context.project_id));
+        let request = SelectPlanRequest {
+            context: context.clone(),
+            message_type: "ir.live.ExactInteger".to_string(),
+            filter: serde_json::Value::Object(filter),
+            fields: vec!["id".to_string()],
+            sort: vec![SortSpec {
+                field: "id".to_string(),
+                descending: false,
+            }],
+            limit: 100,
+        };
+        // Exercise the serving planner -> IR compiler -> production JSON binder,
+        // rather than rebinding strings as native integers inside this test.
+        let statement = bridged_pg_select_statement(manifest, &request)
+            .expect("integer predicate must use the real bridged data-plane emitter");
+        let query = bind_typed_generic_pg_params(
+            sqlx::query(&statement.sql),
+            &statement.params,
+            Some(&statement.param_types),
+        )
+        .expect("production parameter binding");
+        query.fetch_all(connection).await.map(|rows| {
+            rows.into_iter()
+                .map(|row| row.try_get("id").expect("selected id"))
+                .collect()
+        })
+    }
+
+    for (predicate, expected) in [
+        // Plain equality is also used by generated 64-bit Key.Row/ByUnique.
+        (
+            serde_json::json!({"revision": "9007199254740993"}),
+            vec!["exact"],
+        ),
+        (
+            serde_json::json!({"revision": {"$eq": "9007199254740993"}}),
+            vec!["exact"],
+        ),
+        (
+            serde_json::json!({"revision": {"$between": ["9007199254740993", "9007199254740995"]}}),
+            vec!["exact", "neighbor"],
+        ),
+        (
+            serde_json::json!({"revision": {"$gt": "9007199254740993"}}),
+            vec!["maximum", "neighbor"],
+        ),
+        (
+            serde_json::json!({"revision": {"$in": ["9007199254740993", "9007199254740995"]}}),
+            vec!["exact", "neighbor"],
+        ),
+        (
+            serde_json::json!({"id": "exact", "revision": {"$nin": ["9007199254740995"]}}),
+            vec!["exact"],
+        ),
+        (serde_json::json!({"revision": {"$in": []}}), vec![]),
+        (
+            serde_json::json!({"revision": "+9007199254740993"}),
+            vec!["exact"],
+        ),
+        (
+            serde_json::json!({"revision": i64::MIN.to_string()}),
+            vec!["minimum"],
+        ),
+        (
+            serde_json::json!({"revision": i64::MAX.to_string()}),
+            vec!["maximum"],
+        ),
+        (
+            serde_json::json!({"revision": {"$lt": "-9007199254740993"}}),
+            vec!["minimum"],
+        ),
+        (
+            serde_json::json!({"revision": {"$is_null": true}}),
+            vec!["null"],
+        ),
+        (
+            serde_json::json!({"id": "null", "revision": {"$not_null": true}}),
+            vec![],
+        ),
+        (serde_json::json!({"revision": 2}), vec!["two"]),
+        // Wide native Int endpoints must compare, rather than overflow a cast
+        // to the narrower column type.
+        (
+            serde_json::json!({"id": "exact", "narrow": {"$lt": 32768}}),
+            vec!["exact"],
+        ),
+        (
+            serde_json::json!({"id": "exact", "medium": {"$lt": 2147483648_i64}}),
+            vec!["exact"],
+        ),
+        // Casting this Float to INTEGER would round 1.5 to 2 and lose the row.
+        (
+            serde_json::json!({"id": "two", "revision": {"$gt": 1.5}}),
+            vec!["two"],
+        ),
+        (
+            serde_json::json!({"id": "two", "revision": {"$in": [1.5, 2]}}),
+            vec!["two"],
+        ),
+        (serde_json::json!({"id": "two", "lexical": "2"}), vec![]),
+        (
+            serde_json::json!({"id": "two", "lexical": "02"}),
+            vec!["two"],
+        ),
+        (
+            serde_json::json!({"id": "two", "amount": {"$gt": "1.4"}}),
+            vec!["two"],
+        ),
+        (
+            serde_json::json!({"project_id": "project-b", "revision": "9007199254740993"}),
+            vec![],
+        ),
+        (
+            serde_json::json!({"tenant_id": "tenant-b", "revision": "9007199254740993"}),
+            vec![],
+        ),
+    ] {
+        assert_eq!(
+            fetch(&mut transaction, &manifest, predicate.clone())
+                .await
+                .expect("execute exact predicate"),
+            expected,
+            "predicate {predicate}"
+        );
+    }
+    // Pseudo-types and SQL aliases must resolve to the same real integer types.
+    for (field, aliases, value) in [
+        (
+            "revision",
+            &["BIGINT", "INT8", "BIGSERIAL", "SERIAL8"][..],
+            "9007199254740993",
+        ),
+        (
+            "narrow",
+            &["SMALLINT", "INT2", "SMALLSERIAL", "SERIAL2"][..],
+            "7",
+        ),
+        (
+            "medium",
+            &["INTEGER", "INT", "INT4", "SERIAL", "SERIAL4"][..],
+            "70000",
+        ),
+    ] {
+        for alias in aliases {
+            manifest.tables[0]
+                .columns
+                .iter_mut()
+                .find(|column| column.field_name == field)
+                .expect("integer column")
+                .sql_type = alias.to_string();
+            let mut predicate = serde_json::json!({"id": "exact"});
+            predicate[field] = serde_json::json!(value);
+            assert_eq!(
+                fetch(&mut transaction, &manifest, predicate)
+                    .await
+                    .expect("execute native integer alias"),
+                vec!["exact"],
+                "alias {alias}"
+            );
+        }
+    }
+    for (field, value) in [
+        ("revision", "9223372036854775808"),
+        ("revision", "-9223372036854775809"),
+        ("narrow", "32768"),
+        ("medium", "2147483648"),
+    ] {
+        sqlx::query("SAVEPOINT integer_range_control")
+            .execute(&mut *transaction)
+            .await
+            .expect("range savepoint");
+        let mut predicate = serde_json::json!({"id": "exact"});
+        predicate[field] = serde_json::json!(value);
+        let error = fetch(&mut transaction, &manifest, predicate)
+            .await
+            .expect_err("out-of-range strings must not round or match");
+        assert_eq!(
+            error
+                .as_database_error()
+                .and_then(|error| error.code())
+                .as_deref(),
+            Some("22003")
+        );
+        sqlx::query("ROLLBACK TO SAVEPOINT integer_range_control")
+            .execute(&mut *transaction)
+            .await
+            .expect("restore owned transaction after range refusal");
+    }
+    let null_request = SelectPlanRequest {
+        context: RequestContext {
+            project_id: "project-a".to_string(),
+            ..read_context()
+        },
+        message_type: "ir.live.ExactInteger".to_string(),
+        filter: serde_json::json!({"tenant_id": "tenant-a", "project_id": "project-a", "revision": {"$eq": null}}),
+        fields: vec!["id".to_string()],
+        sort: vec![],
+        limit: 10,
+    };
+    let null_read = build_select_logical_read(&manifest, &null_request)
+        .expect("NULL filter lowers to the existing logical comparison");
+    let compile_context = CompileContext::new(&manifest)
+        .with_tenant("tenant-a")
+        .with_project("project-a");
+    assert!(
+        matches!(
+            compile_for_backend(
+                &BackendKind::Postgres,
+                CompileOperation::Read(&null_read),
+                &compile_context
+            ),
+            Some(Err(crate::ir::compile::CompileError::Malformed { .. }))
+        ),
+        "NULL equality must remain refused by the compiler"
+    );
+    // Integer isolation columns use the same value-aware hook for both the
+    // caller's predicates and the mandatory injected context predicates.
+    sqlx::query(&format!(
+        "ALTER TABLE \"{}\" ALTER COLUMN tenant_id TYPE BIGINT USING \
+         (CASE tenant_id WHEN 'tenant-a' THEN 1 ELSE 2 END)",
+        manifest.tables[0].table
+    ))
+    .execute(&mut *transaction)
+    .await
+    .expect("owned integer tenant column");
+    sqlx::query(&format!(
+        "ALTER TABLE \"{}\" ALTER COLUMN project_id TYPE INTEGER USING \
+         (CASE project_id WHEN 'project-a' THEN 1 ELSE 2 END)",
+        manifest.tables[0].table
+    ))
+    .execute(&mut *transaction)
+    .await
+    .expect("owned integer project column");
+    for (field, sql_type) in [("tenant_id", "BIGINT"), ("project_id", "INTEGER")] {
+        manifest.tables[0]
+            .columns
+            .iter_mut()
+            .find(|column| column.field_name == field)
+            .expect("scope column")
+            .sql_type = sql_type.to_string();
+    }
+    let integer_context = RequestContext {
+        tenant_id: "1".to_string(),
+        project_id: "1".to_string(),
+        ..read_context()
+    };
+    for (predicate, expected) in [
+        (
+            serde_json::json!({"revision": "9007199254740993"}),
+            vec!["exact"],
+        ),
+        (
+            serde_json::json!({"tenant_id": "2", "revision": "9007199254740993"}),
+            vec![],
+        ),
+        (
+            serde_json::json!({"project_id": "2", "revision": "9007199254740993"}),
+            vec![],
+        ),
+    ] {
+        assert_eq!(
+            fetch_in_context(&mut transaction, &manifest, predicate, &integer_context)
+                .await
+                .expect("execute native integer scope predicates"),
+            expected
+        );
+    }
+    transaction
+        .rollback()
+        .await
+        .expect("remove every owned temporary fixture row/table");
+    pool.close().await;
+}
+
+#[tokio::test]
+#[ignore = "requires UDB_IR_LIVE_GOLDEN_TESTS=1 and UDB_PG_DSN"]
 async fn postgres_compiled_read_write_delete_match_live_golden_rows() {
     if !live_ir_enabled() {
         eprintln!("skipping: set UDB_IR_LIVE_GOLDEN_TESTS=1 to run live IR golden tests");
