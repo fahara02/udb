@@ -434,7 +434,7 @@ func TestVersionHandshakeTrailersOnlyStreamRefusals(t *testing.T) {
 					g, conn := versionTestConnection(t, broker, Options{StrictServerVersion: true, CallTimeout: time.Second}, intercepted)
 					stream, response := versionTestOpenStream(t, g, conn, intercepted, kind)
 					header, headerErr := stream.Header()
-					if headerErr != nil || header != nil {
+					if headerErr != nil || len(header) != 0 {
 						t.Fatalf("trailers-only Header must defer the RPC status: header=%v err=%v", header, headerErr)
 					}
 					err := stream.RecvMsg(response)
@@ -469,7 +469,7 @@ func TestVersionHandshakeSuccessfulStreamsStillRequireVersion(t *testing.T) {
 					g, conn := versionTestConnection(t, broker, Options{StrictServerVersion: true, CallTimeout: time.Second}, intercepted)
 					stream, response := versionTestOpenStream(t, g, conn, intercepted, kind)
 					if mode == "empty-trailers-only" {
-						if header, err := stream.Header(); header != nil || err != nil {
+						if header, err := stream.Header(); len(header) != 0 || err != nil {
 							t.Fatalf("empty successful stream must resolve status before version: header=%v err=%v", header, err)
 						}
 					}
