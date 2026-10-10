@@ -549,6 +549,7 @@ jobs:
           import json
           from pathlib import Path
           import xml.etree.ElementTree as ET
+          import re
 
           fixtures = {
               "python": ("sdk/python/perf_report_python.md", "test_live_generated_rpc_surface"),
@@ -574,10 +575,28 @@ jobs:
               print(f"{args.sdk}: canonical bare report and status digests unchanged")
           else:
               junit = Path(f"bench-output/deep/{args.sdk}-junit.xml")
-              cases = list(ET.parse(junit).getroot().iter("testcase"))
-              selected = [case for case in cases if case.get("name") == expected or (args.sdk == "php" and expected in case.get("name", ""))]
-              if len(selected) != 1 or any(selected[0].find(tag) is not None for tag in ("skipped", "failure", "error")):
-                  raise SystemExit(f"{args.sdk}: exactly one named served deep test must execute and pass")
+              if args.sdk == "typescript":
+                  xml_root = ET.parse(junit).getroot()
+                  named = [node for node in xml_root.iter() if node.tag in ("testcase", "testsuite") and node.get("name") == expected]
+                  if len(named) != 1 or named[0].tag != "testsuite":
+                      raise SystemExit("typescript: exactly one named served deep suite must execute")
+                  suite = named[0]
+                  leaves = list(suite.iter("testcase"))
+                  if not leaves or any(node.tag in ("skipped", "failure", "error") for node in suite.iter()):
+                      raise SystemExit("typescript: every named suite descendant must execute and pass")
+                  for child_suite in suite.iter("testsuite"):
+                      children = [node for node in child_suite if node.tag in ("testcase", "testsuite")]
+                      if child_suite.get("tests") != str(len(children)) or any(child_suite.get(key, "0") != "0" for key in ("disabled", "errors", "failures", "skipped")):
+                          raise SystemExit("typescript: named suite execution counts must match passing children")
+                  tap_lines = Path("bench-output/logs/typescript-deep.log").read_text().splitlines()
+                  tap_named = [line for line in tap_lines if re.fullmatch(rf"(?:not )?ok \d+ - {re.escape(expected)}(?:\s+#.*)?", line)]
+                  if len(tap_named) != 1 or re.fullmatch(rf"ok \d+ - {re.escape(expected)}", tap_named[0]) is None:
+                      raise SystemExit("typescript: exactly one named TAP parent must pass without SKIP or TODO")
+              else:
+                  cases = list(ET.parse(junit).getroot().iter("testcase"))
+                  selected = [case for case in cases if case.get("name") == expected or (args.sdk == "php" and expected in case.get("name", ""))]
+                  if len(selected) != 1 or any(selected[0].find(tag) is not None for tag in ("skipped", "failure", "error")):
+                      raise SystemExit(f"{args.sdk}: exactly one named served deep test must execute and pass")
               print(f"{args.sdk}: one named served deep test executed and passed")
           PY
 
@@ -815,6 +834,9 @@ jobs:
       - name: Run every Go live correctness test
         if: always() && inputs.candidate-build
         shell: bash
+        env:
+          UDB_PROJECTION_ENABLED: "true"
+          UDB_PROJECTION_POLL_INTERVAL_SECS: "1"
         run: |
           set -euo pipefail
           test "${UDB_LIVE_SDK_TESTS:-}" = "1"
