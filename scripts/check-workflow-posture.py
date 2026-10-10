@@ -967,7 +967,7 @@ RELEASE_BINARY_MATRIX_REQUIREMENTS = (
     ("component: udb", "UDB version guard component"),
     ("build:", "binary build matrix job"),
     ("needs: vendored-ffmpeg", "binary build waits for ffmpeg gate"),
-    ("fail-fast: true", "release binary matrix fail-fast"),
+    ("fail-fast: false", "preserve independent release binary builds"),
     ("- os: ubuntu-22.04", "Linux glibc-floor runner pin"),
     ("target: x86_64-unknown-linux-gnu", "Linux amd64 target"),
     ("asset: udb-linux-amd64", "portable Linux asset"),
@@ -5198,6 +5198,43 @@ def check_release_binary_matrix_contract(root: Path = ROOT) -> list[str]:
         scoped.append("release-binaries must not own Pages deployment")
     if "actions/delete-package-versions" in active_text or "/packages/container/udb/versions" in active_text:
         scoped.append("release-binaries must not own package cleanup")
+    build = _workflow_job_block(active_text, "build") or ""
+    names = ("Attest build provenance", "Attest build provenance retry 2", "Attest build provenance retry 3")
+    ids = ("attest_first", "attest_second", "attest_third")
+    conditions = (
+        "if: startsWith(github.ref, 'refs/tags/')",
+        "if: startsWith(github.ref, 'refs/tags/') && steps.attest_first.outcome == 'failure'",
+        "if: startsWith(github.ref, 'refs/tags/') && steps.attest_first.outcome == 'failure' && steps.attest_second.outcome == 'failure'",
+    )
+    for index, (name, identity, condition) in enumerate(zip(names, ids, conditions)):
+        block = _workflow_step_block(build, name)
+        for token in ("id: " + identity, condition, "timeout-minutes: 2", "uses: actions/attest-build-provenance@v2", "subject-path: dist/${{ matrix.asset }}"):
+            _require(block, token, "bounded exact-subject provenance attempt " + identity, scoped)
+        if index < 2:
+            _require(block, "continue-on-error: true", "bounded provenance retry continuation", scoped)
+        elif "continue-on-error" in block:
+            scoped.append("final provenance attempt must propagate failure")
+        if build.count("id: " + identity + "\n") != 1:
+            scoped.append("provenance attempt identity must occur exactly once")
+    required = _workflow_step_block(build, "Require successful build provenance")
+    for token in ("if: always() && startsWith(github.ref, 'refs/tags/')", "shell: bash", "set -euo pipefail", "success/*/*|*/success/*|*/*/success)", "refusing asset publication.", "exit 1"):
+        _require(required, token, "fail-closed provenance publication gate", scoped)
+    for variable, identity in zip(("ATTEST_FIRST", "ATTEST_SECOND", "ATTEST_THIRD"), ids):
+        _require(required, variable + ": ${{ steps." + identity + ".outcome }}", "actual provenance outcome binding", scoped)
+    if "continue-on-error" in required or "|| true" in required or "exit 0" in required:
+        scoped.append("provenance publication gate must not tolerate failure")
+    upload = _workflow_step_block(build, "Upload workflow artifact")
+    if "continue-on-error" in upload or "|| true" in upload:
+        scoped.append("release workflow artifact upload must propagate failure")
+    order = [build.find("- name: " + name + "\n") for name in ("Stage asset + checksum", *names, "Require successful build provenance", "Upload workflow artifact")]
+    if any(position < 0 for position in order) or order != sorted(order):
+        scoped.append("asset upload must follow staged bytes and required successful provenance")
+    for name, condition, delay in (("Wait before provenance retry 2", conditions[1], "run: sleep 10"), ("Wait before provenance retry 3", conditions[2], "run: sleep 20")):
+        block = _workflow_step_block(build, name)
+        for token in (condition, "shell: bash", delay):
+            _require(block, token, "bounded provenance retry backoff", scoped)
+    if "    continue-on-error: true" in build.replace("        continue-on-error: true", ""):
+        scoped.append("release binary build job must propagate failure")
     return [f"release-binaries.yml/matrix: {failure}" for failure in scoped]
 
 
@@ -7116,7 +7153,7 @@ jobs:
     needs: vendored-ffmpeg
     runs-on: ${{ matrix.os }}
     strategy:
-      fail-fast: true
+      fail-fast: false
       matrix:
         include:
           - os: ubuntu-22.04
@@ -7164,6 +7201,56 @@ jobs:
           cp "target/${MATRIX_TARGET}/dist/udb${MATRIX_EXT}" "dist/${MATRIX_ASSET}"
           sha256sum "${MATRIX_ASSET}" > "${MATRIX_ASSET}.sha256"
           shasum -a 256 "${MATRIX_ASSET}" > "${MATRIX_ASSET}.sha256"
+      - name: Attest build provenance
+        id: attest_first
+        if: startsWith(github.ref, 'refs/tags/')
+        timeout-minutes: 2
+        continue-on-error: true
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: dist/${{ matrix.asset }}
+
+      - name: Wait before provenance retry 2
+        if: startsWith(github.ref, 'refs/tags/') && steps.attest_first.outcome == 'failure'
+        shell: bash
+        run: sleep 10
+
+      - name: Attest build provenance retry 2
+        id: attest_second
+        if: startsWith(github.ref, 'refs/tags/') && steps.attest_first.outcome == 'failure'
+        timeout-minutes: 2
+        continue-on-error: true
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: dist/${{ matrix.asset }}
+
+      - name: Wait before provenance retry 3
+        if: startsWith(github.ref, 'refs/tags/') && steps.attest_first.outcome == 'failure' && steps.attest_second.outcome == 'failure'
+        shell: bash
+        run: sleep 20
+
+      - name: Attest build provenance retry 3
+        id: attest_third
+        if: startsWith(github.ref, 'refs/tags/') && steps.attest_first.outcome == 'failure' && steps.attest_second.outcome == 'failure'
+        timeout-minutes: 2
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: dist/${{ matrix.asset }}
+
+      - name: Require successful build provenance
+        if: always() && startsWith(github.ref, 'refs/tags/')
+        shell: bash
+        env:
+          ATTEST_FIRST: ${{ steps.attest_first.outcome }}
+          ATTEST_SECOND: ${{ steps.attest_second.outcome }}
+          ATTEST_THIRD: ${{ steps.attest_third.outcome }}
+        run: |
+          set -euo pipefail
+          case "${ATTEST_FIRST}/${ATTEST_SECOND}/${ATTEST_THIRD}" in
+            success/*/*|*/success/*|*/*/success) ;;
+            *) echo "::error::No build provenance attempt succeeded; refusing asset publication."; exit 1 ;;
+          esac
+
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
         with:
@@ -10550,6 +10637,20 @@ jobs:
         )
         failures = check_release_binary_matrix_contract(root)
         assert any("release.yml owns tag trigger" in failure for failure in failures), failures
+        (wf / "release-binaries.yml").write_text(release_binaries_good, encoding="utf-8")
+
+        for before, after in (
+            ("      fail-fast: false", "      fail-fast: true"),
+            ("${{ steps.attest_first.outcome }}", "${{ steps.attest_first.conclusion }}"),
+            ("      - name: Require successful build provenance", "      - name: Ignored provenance status"),
+            ("        id: attest_third", "        id: attest_third\n        continue-on-error: true"),
+            ("refusing asset publication.\"; exit 1", "refusing asset publication.\"; exit 0"),
+            ("      - name: Upload workflow artifact", "      - name: Upload workflow artifact\n        continue-on-error: true"),
+        ):
+            assert before in release_binaries_good, before
+            (wf / "release-binaries.yml").write_text(release_binaries_good.replace(before, after), encoding="utf-8")
+            failures = check_release_binary_matrix_contract(root)
+            assert failures, (before, failures)
         (wf / "release-binaries.yml").write_text(release_binaries_good, encoding="utf-8")
 
         (scripts_dir / "gen-release-manifest.mjs").write_text(

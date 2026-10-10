@@ -113,7 +113,7 @@ jobs:
       id-token: write
       attestations: write
     strategy:
-      fail-fast: true
+      fail-fast: false
       matrix:
         include:
           # target_cpu = the per-OS micro-arch floor the shipped binary is tuned for.
@@ -223,10 +223,54 @@ jobs:
           fi
 
       - name: Attest build provenance
+        id: attest_first
         if: startsWith(github.ref, 'refs/tags/')
+        timeout-minutes: 2
+        continue-on-error: true
         uses: actions/attest-build-provenance@v2
         with:
           subject-path: dist/${{ matrix.asset }}
+
+      - name: Wait before provenance retry 2
+        if: startsWith(github.ref, 'refs/tags/') && steps.attest_first.outcome == 'failure'
+        shell: bash
+        run: sleep 10
+
+      - name: Attest build provenance retry 2
+        id: attest_second
+        if: startsWith(github.ref, 'refs/tags/') && steps.attest_first.outcome == 'failure'
+        timeout-minutes: 2
+        continue-on-error: true
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: dist/${{ matrix.asset }}
+
+      - name: Wait before provenance retry 3
+        if: startsWith(github.ref, 'refs/tags/') && steps.attest_first.outcome == 'failure' && steps.attest_second.outcome == 'failure'
+        shell: bash
+        run: sleep 20
+
+      - name: Attest build provenance retry 3
+        id: attest_third
+        if: startsWith(github.ref, 'refs/tags/') && steps.attest_first.outcome == 'failure' && steps.attest_second.outcome == 'failure'
+        timeout-minutes: 2
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: dist/${{ matrix.asset }}
+
+      - name: Require successful build provenance
+        if: always() && startsWith(github.ref, 'refs/tags/')
+        shell: bash
+        env:
+          ATTEST_FIRST: ${{ steps.attest_first.outcome }}
+          ATTEST_SECOND: ${{ steps.attest_second.outcome }}
+          ATTEST_THIRD: ${{ steps.attest_third.outcome }}
+        run: |
+          set -euo pipefail
+          case "${ATTEST_FIRST}/${ATTEST_SECOND}/${ATTEST_THIRD}" in
+            success/*/*|*/success/*|*/*/success) ;;
+            *) echo "::error::No build provenance attempt succeeded; refusing asset publication."; exit 1 ;;
+          esac
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
