@@ -602,9 +602,14 @@ const COMMANDS: &[CmdHelp] = &[
     CmdHelp {
         name: "dev up",
         group: "Scaffold",
-        summary: "Start/stop/test the local multi-backend sandbox (from a repo checkout).",
-        usage: "udb dev <up|down|smoke> [<service>] [--yes]",
-        details: "",
+        summary: "Start/stop/test the local sandbox: Docker compose, or --embedded with no Docker.",
+        usage: "udb dev <up|down|smoke> [<service>] [--yes] | udb dev <up|down> --embedded [--pg-version <v>] [--pg-port <p>]",
+        details: "  --embedded downloads a PostgreSQL build for this platform once (sha256-checked,
+  cached in ~/.udb/postgresql; UDB_POSTGRES_BINARIES_URL for a mirror), runs a
+  private cluster under .udb/dev/, starts `udb serve` against it and, on first
+  start, bootstraps tenant `dev` with user `admin` (credentials printed once and
+  saved in .udb/dev/bootstrap.json). Without UDB_KAFKA_BROKERS, CDC uses the
+  durable PostgreSQL journal and authenticated subscriber streams.",
     },
     CmdHelp {
         name: "admin force-sync",

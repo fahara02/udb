@@ -116,6 +116,8 @@ pub(crate) enum Command {
         action: DevAction,
         service: Option<String>,
         confirmed: bool,
+        /// `--embedded`: no Docker; a downloaded PostgreSQL + `udb serve`.
+        embedded: bool,
     },
     /// Explain the generated DDL, DSN, and policies for a single message type.
     Explain,
@@ -1454,6 +1456,7 @@ pub(crate) fn parse_args(args: &[String]) -> (Command, String, String, String) {
                         .filter(|value| !value.starts_with("--"))
                         .cloned(),
                     confirmed: has_flag("--yes"),
+                    embedded: has_flag("--embedded"),
                 },
                 Err(message) => invalid_usage(message),
             }

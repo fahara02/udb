@@ -26,6 +26,7 @@ mod args;
 mod auth;
 mod authz_cli;
 mod catalog_transition;
+mod dev_embedded;
 mod doctor;
 mod env_setup;
 mod env_template;
@@ -564,7 +565,19 @@ pub fn run() {
             action,
             service,
             confirmed,
+            embedded,
         } => {
+            if embedded {
+                let options = dev_embedded::EmbeddedOptions::from_args(&args);
+                process::exit(match action {
+                    DevAction::Up => dev_embedded::dev_up_embedded(&options),
+                    DevAction::Down => dev_embedded::dev_down_embedded(&options),
+                    _ => {
+                        eprintln!("dev --embedded supports `up` and `down`");
+                        2
+                    }
+                });
+            }
             process::exit(run_dev_sandbox(action, service.as_deref(), confirmed));
         }
         Command::CatalogTransition(command) => {

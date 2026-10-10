@@ -1,6 +1,24 @@
 use super::*;
 
 #[test]
+fn parse_args_recognizes_dev_embedded() {
+    let args = vec![
+        "dev".to_string(),
+        "up".to_string(),
+        "--embedded".to_string(),
+    ];
+    let (command, _, _, _) = parse_args(&args);
+    assert!(matches!(
+        command,
+        Command::Dev {
+            action: DevAction::Up,
+            embedded: true,
+            ..
+        }
+    ));
+}
+
+#[test]
 fn reviewed_catalog_cli_requires_exact_native_base_and_explicit_review_workflow() {
     let args = [
         "catalog",
@@ -362,6 +380,7 @@ fn parse_args_recognizes_dev_defaults() {
             action: DevAction::Up,
             service: None,
             confirmed: false,
+            embedded: false,
         }
     ));
 }

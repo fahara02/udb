@@ -556,6 +556,58 @@ jobs:
           if-no-files-found: warn
           retention-days: 7
 
+      - name: Build portable embedded dev broker
+        # Match the unsuffixed release assets: this proof must also work when
+        # Kafka and its native client are absent from the binary.
+        shell: bash
+        run: cargo build --locked --no-default-features --features "$RELEASE_BINARY_FEATURES" --bin udb
+      - name: Upload portable embedded dev broker
+        uses: actions/upload-artifact@v4
+        with:
+          name: udb-embedded-dev-${{ runner.os }}
+          path: |
+            target/debug/udb
+            target/debug/udb.exe
+          if-no-files-found: error
+          retention-days: 7
+
+  embedded-dev:
+    name: Embedded dev + shared Go contract (${{ matrix.os }})
+    needs: [quick-gate, rust]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: ./.github/actions/setup-sdk-toolchains
+        with:
+          go: "true"
+      - uses: actions/download-artifact@v4
+        with:
+          name: udb-embedded-dev-${{ runner.os }}
+          path: target/debug
+      - name: Mark broker executable
+        if: runner.os == 'Linux'
+        run: chmod +x target/debug/udb
+      - name: Refuse missing, skipped, foreign or duplicated Go proof
+        run: python scripts/check-embedded-dev.py --selftest
+      - name: Prove first start, authenticated stores, restart and shutdown
+        run: python scripts/check-embedded-dev.py target/debug/udb${{ runner.os == 'Windows' && '.exe' || '' }}
+      - name: Preserve required embedded lifecycle receipt
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: embedded-dev-log-${{ runner.os }}
+          path: ${{ runner.temp }}/udb-embedded-dev.log
+          if-no-files-found: error
+          retention-days: 7
+
   # ── Build the broker ONCE, share via same-run artifact ────────────
   # Builds the live feature tier consumed by smoke.
   # The smoke job runs the postgres-only reflection/load probes, which the
