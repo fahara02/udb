@@ -29,6 +29,9 @@ use uuid::Uuid;
 
 use crate::generation::{CatalogManifest, ManifestStoreOption};
 use crate::metrics::MetricsRecorder;
+use crate::runtime::canonical_store::system_store::{
+    ProjectionFailure, ProjectionPermanentPayloadReason,
+};
 use crate::runtime::catalog::CatalogManager;
 use crate::runtime::system::SystemCatalogConfig;
 
@@ -960,7 +963,8 @@ fn projection_task_insert_sql(rel: &str) -> String {
                      updated_at = CASE WHEN existing.status = 'IN_PROGRESS'
                                        THEN existing.updated_at ELSE NOW() END,
                      created_at = clock_timestamp()
-                 WHERE EXISTS (
+                 WHERE existing.last_error NOT LIKE '{permanent_payload_prefix}%'
+                   AND EXISTS (
                        SELECT 1 FROM {rel} AS newer
                        WHERE {same_row}
                          AND newer.row_revision > existing.row_revision)
@@ -970,6 +974,7 @@ fn projection_task_insert_sql(rel: &str) -> String {
          UNION ALL
          SELECT task_id::TEXT FROM {rel} WHERE idempotency_key = $1
          LIMIT 1",
+        permanent_payload_prefix = crate::runtime::canonical_store::system_store::PROJECTION_PERMANENT_PAYLOAD_NAMESPACE_PREFIX,
         same_row =
             crate::runtime::canonical_store::postgres_projection::projection_task_same_row_sql(
                 "newer", "existing"
@@ -1238,12 +1243,18 @@ impl ProjectionWorker {
             ) {
                 // D9: a ledger that cannot order one row's tasks must not drive
                 // a keyed target — refuse instead of applying out of order.
-                Ok(()) if !ordering_enforced
-                    && projection_task_is_ordering_dependent(&target_backend, &target_options) =>
+                Ok(())
+                    if !ordering_enforced
+                        && projection_task_is_ordering_dependent(
+                            &target_backend,
+                            &target_options,
+                        ) =>
                 {
-                    Err(projection_ordering_refusal(ProjectionTaskStore::backend_label(
-                        self.store.as_ref(),
-                    )))
+                    Err(ProjectionFailure::OrderingAuthority(
+                        projection_ordering_refusal(ProjectionTaskStore::backend_label(
+                            self.store.as_ref(),
+                        )),
+                    ))
                 }
                 Ok(()) => {
                     self.execute_task(
@@ -1259,10 +1270,7 @@ impl ProjectionWorker {
                     )
                     .await
                 }
-                Err(error) => Err(format!(
-                    "{} {error}",
-                    crate::runtime::canonical_store::system_store::PROJECTION_AUTHORITY_FAILURE_PREFIX
-                )),
+                Err(error) => Err(ProjectionFailure::CatalogAuthority(error)),
             };
 
             match result {
@@ -1308,17 +1316,17 @@ impl ProjectionWorker {
                 }
                 Err(err) => {
                     let new_retry = retry_count + 1;
-                    // An ordering refusal is permanent for this ledger:
-                    // dead-letter it now rather than burn the retry budget.
-                    let new_status = if new_retry >= self.settings.max_retries
-                        || err.starts_with(PROJECTION_ORDERING_REFUSAL)
-                    {
-                        ProjectionTaskStatus::DeadLetter
-                    } else {
-                        ProjectionTaskStatus::Failed
-                    };
-                    if let Err(mark_err) =
-                        self.mark_failed(task_id, new_retry, new_status, &err).await
+                    // Typed ordering/permanent-payload refusals park once;
+                    // backend error text cannot forge a terminal disposition.
+                    let new_status =
+                        if new_retry >= self.settings.max_retries || err.immediate_dead_letter() {
+                            ProjectionTaskStatus::DeadLetter
+                        } else {
+                            ProjectionTaskStatus::Failed
+                        };
+                    if let Err(mark_err) = self
+                        .mark_failed(task_id, new_retry, new_status, &err.durable_message())
+                        .await
                     {
                         tracing::error!(
                             task_id = %task_id,
@@ -1394,7 +1402,7 @@ impl ProjectionWorker {
         source_row_key: &serde_json::Value,
         target_options: &serde_json::Value,
         source_payload: &serde_json::Value,
-    ) -> Result<(), String> {
+    ) -> Result<(), ProjectionFailure> {
         let normalized_backend = normalize_backend(backend);
         // Every target is scoped — resolve the scope BEFORE dispatching, so no
         // backend can be reached with a record whose tenant is unknown. A
@@ -1417,7 +1425,8 @@ impl ProjectionWorker {
                     source_payload,
                     &scope,
                 )
-                .await;
+                .await
+                .map_err(ProjectionFailure::from);
         }
         if normalized_backend == "s3"
             || normalized_backend == "minio"
@@ -1435,7 +1444,8 @@ impl ProjectionWorker {
                     source_payload,
                     &scope,
                 )
-                .await;
+                .await
+                .map_err(ProjectionFailure::from);
         }
 
         // E8: an edge projection's endpoint labels come from the manifest
@@ -1458,6 +1468,12 @@ impl ProjectionWorker {
         } else {
             target_options.clone()
         };
+        validate_projection_payload(
+            &normalized_backend,
+            operation,
+            &target_options,
+            source_payload,
+        )?;
         let request = render_projection_mutation(
             &normalized_backend,
             projection_kind,
@@ -1482,7 +1498,7 @@ impl ProjectionWorker {
             )
             .await
             .map(|_| ())
-            .map_err(|s| s.message().to_string())
+            .map_err(|s| ProjectionFailure::from(s.message().to_string()))
     }
 
     async fn execute_redis_projection(
@@ -1924,6 +1940,35 @@ fn render_mongodb_projection(
     }))
 }
 
+fn validate_projection_payload(
+    backend: &str,
+    operation: &str,
+    target_options: &serde_json::Value,
+    source_payload: &serde_json::Value,
+) -> Result<(), ProjectionFailure> {
+    if backend == "qdrant"
+        && !operation.eq_ignore_ascii_case("delete")
+        && qdrant_projection_vector(target_options, source_payload).is_none()
+    {
+        return Err(ProjectionFailure::PermanentPayload(
+            ProjectionPermanentPayloadReason::MissingVectorPayload,
+        ));
+    }
+    Ok(())
+}
+
+fn qdrant_projection_vector(
+    target_options: &serde_json::Value,
+    source_payload: &serde_json::Value,
+) -> Option<serde_json::Value> {
+    option_value(target_options, "vector_field")
+        .or_else(|| option_value(target_options, "embedding_field"))
+        .and_then(|field| source_payload.get(&field).cloned())
+        .or_else(|| source_payload.get("vector").cloned())
+        .or_else(|| source_payload.get("embedding").cloned())
+        .or_else(|| source_payload.get("embeddings").cloned())
+}
+
 fn render_qdrant_projection(
     collection: &str,
     operation: &str,
@@ -1944,16 +1989,10 @@ fn render_qdrant_projection(
             "point_ids": [id],
         }));
     }
-    let vector = option_value(target_options, "vector_field")
-        .or_else(|| option_value(target_options, "embedding_field"))
-        .and_then(|field| source_payload.get(&field).cloned())
-        .or_else(|| source_payload.get("vector").cloned())
-        .or_else(|| source_payload.get("embedding").cloned())
-        .or_else(|| source_payload.get("embeddings").cloned())
-        .ok_or_else(|| {
-            "vector projection requires a vector_field/embedding_field option or vector payload field"
-                .to_string()
-        })?;
+    let vector = qdrant_projection_vector(target_options, source_payload).ok_or_else(|| {
+        "vector projection requires a vector_field/embedding_field option or vector payload field"
+            .to_string()
+    })?;
     Ok(serde_json::json!({
         "operation": "upsert",
         "collection": collection,
@@ -2727,6 +2766,46 @@ mod tests {
             key: key.to_string(),
             value: value.to_string(),
         }
+    }
+
+    #[test]
+    fn only_the_renderer_proven_missing_vector_has_permanent_payload_disposition() {
+        use crate::runtime::canonical_store::system_store::{
+            ProjectionFailureDisposition, projection_failure_disposition,
+        };
+        let absent = json!({"id":"own-row","tenant_id":"own-tenant"});
+        let error = validate_projection_payload("qdrant", "upsert", &json!([]), &absent)
+            .expect_err("missing vector must be refused before backend dispatch");
+        assert!(error.immediate_dead_letter());
+        assert_eq!(
+            projection_failure_disposition(&error.durable_message()),
+            ProjectionFailureDisposition::PermanentPayload(
+                ProjectionPermanentPayloadReason::MissingVectorPayload,
+            ),
+        );
+        assert!(validate_projection_payload("qdrant", "delete", &json!([]), &absent).is_ok());
+        assert!(validate_projection_payload("mongodb", "upsert", &json!([]), &absent).is_ok());
+        for field in ["vector", "embedding", "embeddings"] {
+            let mut payload = absent.clone();
+            payload[field] = json!([0.1, 0.2, 0.3]);
+            assert!(validate_projection_payload("qdrant", "upsert", &json!([]), &payload).is_ok());
+        }
+        let options = json!([{"key":"vector_field","value":"owned_values"}]);
+        assert!(
+            validate_projection_payload(
+                "qdrant",
+                "upsert",
+                &options,
+                &json!({"id":"own-row","tenant_id":"own-tenant","owned_values":[0.1,0.2,0.3]}),
+            )
+            .is_ok()
+        );
+        // Presence is the existing renderer contract. Invalid dimensions/null
+        // are not newly guessed into a permanent class in this narrow patch.
+        assert!(
+            validate_projection_payload("qdrant", "upsert", &json!([]), &json!({"vector":null}))
+                .is_ok()
+        );
     }
 
     #[tokio::test]

@@ -480,6 +480,8 @@ impl ProjectionTaskStore for SqliteCanonicalStore {
         Ok(out)
     }
 
+    // The durable refusal namespace includes typed permanent payload failures;
+    // retain this predicate for legacy and current reconciliation alike.
     async fn dead_letter_groups(&self, limit: i64) -> SystemStoreResult<Vec<DeadLetterGroup>> {
         // NOTE: the schema has `source_table` as a column (TEXT).
         let sql = format!(

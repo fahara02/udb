@@ -754,8 +754,10 @@ impl ProjectionTaskStore for ClickHouseCanonicalStore {
         let mut groups: HashMap<(String, String, String, String), i64> = HashMap::new();
         for row in &rows {
             if ch_str(row, "status") != ProjectionTaskStatus::DeadLetter.as_str()
-                || ch_str(row, "last_error")
-                    .starts_with(super::system_store::PROJECTION_AUTHORITY_FAILURE_PREFIX)
+                || !super::system_store::projection_failure_is_automatically_repairable(&ch_str(
+                    row,
+                    "last_error",
+                ))
             {
                 continue;
             }
@@ -813,9 +815,9 @@ impl ProjectionTaskStore for ClickHouseCanonicalStore {
             for row in &rows {
                 let mut task = row_to_projection_task(row)?;
                 if task.status != ProjectionTaskStatus::DeadLetter
-                    || task
-                        .last_error
-                        .starts_with(super::system_store::PROJECTION_AUTHORITY_FAILURE_PREFIX)
+                    || !super::system_store::projection_failure_is_automatically_repairable(
+                        &task.last_error,
+                    )
                 {
                     continue;
                 }

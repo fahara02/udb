@@ -1238,9 +1238,9 @@ impl VectorSystemCanonicalStore {
         let mut count = 0_i64;
         for row in rows {
             if row.status != ProjectionTaskStatus::DeadLetter
-                || row
-                    .last_error
-                    .starts_with(super::system_store::PROJECTION_AUTHORITY_FAILURE_PREFIX)
+                || !super::system_store::projection_failure_is_automatically_repairable(
+                    &row.last_error,
+                )
                 || row.project_id != project_id
                 || row.resource_name != source_table
                 || row.target_backend != target_backend
@@ -1254,8 +1254,8 @@ impl VectorSystemCanonicalStore {
                     "projection source requeue",
                     |current| {
                         if current.status != ProjectionTaskStatus::DeadLetter
-                            || current.last_error.starts_with(
-                                super::system_store::PROJECTION_AUTHORITY_FAILURE_PREFIX,
+                            || !super::system_store::projection_failure_is_automatically_repairable(
+                                &current.last_error,
                             )
                             || current.project_id != project_id
                             || current.resource_name != source_table

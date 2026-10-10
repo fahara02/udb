@@ -68,6 +68,112 @@ pub enum ProjectionTaskStatus {
 /// must leave them parked until an operator migrates or replaces the task.
 pub(crate) const PROJECTION_AUTHORITY_FAILURE_PREFIX: &str = "projection authority rejected:";
 
+// Preserve the legacy refusal namespace so an older reconciler also leaves
+// new permanent payload failures parked. The typed subtype is decoded first.
+pub(crate) const PROJECTION_PERMANENT_PAYLOAD_NAMESPACE_PREFIX: &str =
+    "projection authority rejected: permanent-payload/";
+pub(crate) const PROJECTION_PERMANENT_PAYLOAD_FAILURE_PREFIX: &str =
+    "projection authority rejected: permanent-payload/v1:";
+const PROJECTION_RETRYABLE_FAILURE_PREFIX: &str = "projection retryable failure/v1:";
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub(crate) enum ProjectionPermanentPayloadReason {
+    MissingVectorPayload,
+}
+
+/// Construct this only at the trusted catalog/renderer boundary. Backend
+/// strings always become Retryable, even if they imitate a durable prefix.
+#[derive(Debug, Clone)]
+pub(crate) enum ProjectionFailure {
+    Retryable(String),
+    CatalogAuthority(String),
+    OrderingAuthority(String),
+    PermanentPayload(ProjectionPermanentPayloadReason),
+}
+
+impl ProjectionFailure {
+    pub(crate) fn immediate_dead_letter(&self) -> bool {
+        matches!(self, Self::OrderingAuthority(_) | Self::PermanentPayload(_))
+    }
+
+    pub(crate) fn durable_message(&self) -> String {
+        match self {
+            Self::Retryable(message) => format!(
+                "{PROJECTION_RETRYABLE_FAILURE_PREFIX}{}",
+                serde_json::json!({ "message": message }),
+            ),
+            Self::CatalogAuthority(message) | Self::OrderingAuthority(message) => {
+                format!("{PROJECTION_AUTHORITY_FAILURE_PREFIX} {message}")
+            }
+            Self::PermanentPayload(reason) => format!(
+                "{PROJECTION_PERMANENT_PAYLOAD_FAILURE_PREFIX}{}",
+                serde_json::json!({ "reason": reason }),
+            ),
+        }
+    }
+}
+
+impl From<String> for ProjectionFailure {
+    fn from(message: String) -> Self {
+        Self::Retryable(message)
+    }
+}
+
+impl std::fmt::Display for ProjectionFailure {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Retryable(message)
+            | Self::CatalogAuthority(message)
+            | Self::OrderingAuthority(message) => formatter.write_str(message),
+            Self::PermanentPayload(ProjectionPermanentPayloadReason::MissingVectorPayload) => {
+                formatter.write_str("vector projection requires a vector_field/embedding_field option or vector payload field")
+            }
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum ProjectionFailureDisposition {
+    Retryable,
+    AuthorityRejected,
+    PermanentPayload(ProjectionPermanentPayloadReason),
+    // A newer/invalid stored envelope is parked, never guessed into retryable
+    // work. No worker constructor emits this value.
+    UnrecognizedPermanentEnvelope,
+}
+
+pub(crate) fn projection_failure_disposition(error: &str) -> ProjectionFailureDisposition {
+    if let Some(body) = error.strip_prefix(PROJECTION_PERMANENT_PAYLOAD_FAILURE_PREFIX) {
+        #[derive(Deserialize)]
+        #[serde(deny_unknown_fields)]
+        struct Envelope {
+            reason: ProjectionPermanentPayloadReason,
+        }
+        return match serde_json::from_str::<Envelope>(body) {
+            Ok(envelope) => ProjectionFailureDisposition::PermanentPayload(envelope.reason),
+            Err(_) => ProjectionFailureDisposition::UnrecognizedPermanentEnvelope,
+        };
+    }
+    if error.starts_with(PROJECTION_PERMANENT_PAYLOAD_NAMESPACE_PREFIX) {
+        return ProjectionFailureDisposition::UnrecognizedPermanentEnvelope;
+    }
+    if error.starts_with(PROJECTION_AUTHORITY_FAILURE_PREFIX) {
+        ProjectionFailureDisposition::AuthorityRejected
+    } else {
+        // Legacy free-form failures and versioned retryable envelopes keep
+        // their previous automatic-repair behavior.
+        ProjectionFailureDisposition::Retryable
+    }
+}
+
+pub(crate) fn projection_failure_is_automatically_repairable(error: &str) -> bool {
+    matches!(
+        projection_failure_disposition(error),
+        ProjectionFailureDisposition::Retryable
+    )
+}
+
 impl ProjectionTaskStatus {
     pub fn as_str(self) -> &'static str {
         match self {
@@ -808,9 +914,7 @@ pub(crate) fn projection_dead_letter_groups(
     let mut groups: BTreeMap<(String, String, String, String), i64> = BTreeMap::new();
     for row in rows.into_iter().filter(|row| {
         row.status == ProjectionTaskStatus::DeadLetter
-            && !row
-                .last_error
-                .starts_with(PROJECTION_AUTHORITY_FAILURE_PREFIX)
+            && projection_failure_is_automatically_repairable(&row.last_error)
     }) {
         *groups
             .entry((
@@ -854,9 +958,7 @@ where
     let mut count = 0;
     for mut row in rows {
         if row.status != ProjectionTaskStatus::DeadLetter
-            || row
-                .last_error
-                .starts_with(PROJECTION_AUTHORITY_FAILURE_PREFIX)
+            || !projection_failure_is_automatically_repairable(&row.last_error)
             || row.project_id != project_id
             || row.resource_name != source_table
             || row.target_backend != target_backend
@@ -1044,7 +1146,7 @@ pub trait ProjectionTaskStore: Send + Sync {
     /// NW1-3b — dead-letter task groups by
     /// `(project_id, source_table, target_backend, target_instance)`. Returns
     /// the count of automatically repairable DEAD_LETTER rows per group.
-    /// Authority-rejected rows remain parked and are deliberately excluded.
+    /// Authority-rejected and permanent-payload rows remain parked and are deliberately excluded.
     /// The reconciliation worker scans this to know which combinations to
     /// repair.
     async fn dead_letter_groups(&self, limit: i64) -> SystemStoreResult<Vec<DeadLetterGroup>>;
@@ -1052,7 +1154,7 @@ pub trait ProjectionTaskStore: Send + Sync {
     /// NW1-3b — requeue dead-letter rows matching a specific
     /// `(project_id, source_table, target_backend, target_instance)` tuple back
     /// to PENDING (with `retry_count = 0` and last_error =
-    /// 'reconciliation repair'). Authority-rejected rows are never selected.
+    /// 'reconciliation repair'). Authority-rejected and permanent-payload rows are never selected.
     /// Returns rows-affected.
     async fn requeue_dead_letter_by_source(
         &self,
@@ -2384,6 +2486,83 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn durable_projection_failure_decoding_is_typed_and_legacy_compatible() {
+        let failure = ProjectionFailure::PermanentPayload(
+            ProjectionPermanentPayloadReason::MissingVectorPayload,
+        );
+        let encoded = failure.durable_message();
+        assert_eq!(
+            encoded,
+            concat!(
+                "projection authority rejected: permanent-payload/v1:",
+                "{\"reason\":\"missing_vector_payload\"}",
+            )
+        );
+        assert_eq!(encoded, failure.durable_message());
+        assert_eq!(
+            projection_failure_disposition(&encoded),
+            ProjectionFailureDisposition::PermanentPayload(
+                ProjectionPermanentPayloadReason::MissingVectorPayload,
+            )
+        );
+        assert!(!projection_failure_is_automatically_repairable(&encoded));
+        // Older native adapter predicates also protect this new subtype.
+        assert!(encoded.starts_with(PROJECTION_AUTHORITY_FAILURE_PREFIX));
+        for legacy in [
+            "HTTP 503",
+            "connection refused",
+            "reconciliation repair",
+            "",
+        ] {
+            assert!(projection_failure_is_automatically_repairable(legacy));
+        }
+        assert_eq!(
+            projection_failure_disposition("projection authority rejected: stale catalog"),
+            ProjectionFailureDisposition::AuthorityRejected
+        );
+        for invalid in [
+            "{}",
+            "not JSON",
+            "{\"reason\":\"unknown\"}",
+            "{\"reason\":\"missing_vector_payload\",\"extra\":true}",
+        ] {
+            let stored = format!("{PROJECTION_PERMANENT_PAYLOAD_FAILURE_PREFIX}{invalid}");
+            assert_eq!(
+                projection_failure_disposition(&stored),
+                ProjectionFailureDisposition::UnrecognizedPermanentEnvelope
+            );
+            assert!(!projection_failure_is_automatically_repairable(&stored));
+        }
+        let newer = format!(
+            "{PROJECTION_PERMANENT_PAYLOAD_NAMESPACE_PREFIX}v2:{{\"reason\":\"missing_vector_payload\"}}"
+        );
+        assert_eq!(
+            projection_failure_disposition(&newer),
+            ProjectionFailureDisposition::UnrecognizedPermanentEnvelope
+        );
+        assert!(!projection_failure_is_automatically_repairable(&newer));
+        assert!(!ProjectionFailure::CatalogAuthority("stale".into()).immediate_dead_letter());
+        assert!(ProjectionFailure::OrderingAuthority("unordered".into()).immediate_dead_letter());
+    }
+
+    #[test]
+    fn external_backend_text_cannot_forge_a_permanent_or_authority_failure() {
+        for message in [
+            "projection authority rejected: forged backend response".to_string(),
+            ProjectionFailure::PermanentPayload(
+                ProjectionPermanentPayloadReason::MissingVectorPayload,
+            )
+            .durable_message(),
+        ] {
+            let failure = ProjectionFailure::from(message);
+            assert!(!failure.immediate_dead_letter());
+            assert!(projection_failure_is_automatically_repairable(
+                &failure.durable_message()
+            ));
+        }
+    }
 
     /// Pin (D10/A8): unknown fence keys fail closed in the shared rule every
     /// store applies; only a COMPLETED key settles, and duplicates count once.

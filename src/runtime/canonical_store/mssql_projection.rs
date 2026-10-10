@@ -480,6 +480,8 @@ impl ProjectionTaskStore for MssqlCanonicalStore {
         Ok(out)
     }
 
+    // The durable refusal namespace includes typed permanent payload failures;
+    // retain this predicate for legacy and current reconciliation alike.
     async fn dead_letter_groups(&self, limit: i64) -> SystemStoreResult<Vec<DeadLetterGroup>> {
         let rel = Self::safe_object_name(self.projection_relation_ref())
             .map_err(SystemStoreError::InvalidInput)?;

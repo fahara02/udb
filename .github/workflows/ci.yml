@@ -1596,7 +1596,58 @@ jobs:
           # back to the data-at-rest key above.
           UDB_TURN_SECRET: ci-live-turn-secret
           UDB_VAULT_DB_ROLES_JSON: '[{"role_name":"authority-test-read","tenant_id":"tenant-a","project_id":"default","target_instance":"primary","database_name":"udb","policy_revision":"ci-v1","relations":[{"schema":"udb_vault_authority_test","table":"records","tenant_column":"tenant_id","project_column":"project_id","privileges":["SELECT"]}],"ttl_seconds_max":600}]'
-        run: python3 scripts/run-live-tests.py -- cargo test --locked --lib -- --ignored --nocapture --test-threads=1
+        run: python3 scripts/run-live-tests.py -- cargo test --locked --lib -- --ignored --nocapture --test-threads=1 --skip runtime::projection::live_tests::live_projection_permanent_payload_survives_restart_replay_and_corrected_recovery
+
+      - name: Permanent projection payload live proof
+        id: projection_permanent_live
+        timeout-minutes: 15
+        # Run this named regression once, separately from the all-ignored lane.
+        # The previous native step and compile preflight already built this lib.
+        env:
+          UDB_LIVE_AUTH_TESTS: "1"
+          UDB_LIVE_REQUIRED: "1"
+          UDB_PG_DSN: ${{ env.UDB_PG_DSN }}
+          UDB_INTEGRATION_PG_DSN: ${{ env.UDB_INTEGRATION_PG_DSN }}
+          UDB_LIVE_NATIVE_PG_DSN: ${{ env.UDB_INTEGRATION_PG_DSN }}
+          UDB_QDRANT_URL: http://localhost:56333
+          UDB_ENCRYPTION_KEY: QkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkI=
+          CARGO_TERM_COLOR: never
+          UDB_PROJECTION_PERMANENT_TEST: runtime::projection::live_tests::live_projection_permanent_payload_survives_restart_replay_and_corrected_recovery
+        run: |
+          set -euo pipefail
+          : "${UDB_PG_DSN:?required provisioned PostgreSQL DSN is missing}"
+          : "${UDB_INTEGRATION_PG_DSN:?required integration PostgreSQL DSN is missing}"
+          : "${UDB_LIVE_NATIVE_PG_DSN:?required native PostgreSQL DSN is missing}"
+          : "${UDB_QDRANT_URL:?required provisioned Qdrant URL is missing}"
+          cargo test --locked --lib "$UDB_PROJECTION_PERMANENT_TEST" -- --exact --ignored --list \
+            | tee "$RUNNER_TEMP/projection-permanent-list.log"
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
+          import re
+          selector = os.environ["UDB_PROJECTION_PERMANENT_TEST"]
+          lines = Path(os.environ["RUNNER_TEMP"], "projection-permanent-list.log").read_text(encoding="utf-8").splitlines()
+          tests = [line for line in lines if line.endswith(": test")]
+          summaries = [line for line in lines if re.fullmatch(r"[0-9]+ tests?, [0-9]+ benchmarks", line)]
+          if tests != [selector + ": test"] or summaries != ["1 test, 0 benchmarks"]:
+              raise SystemExit("permanent projection proof must list exactly the required ignored test")
+          print("Permanent projection proof listed exactly one required ignored test")
+          PY
+          python3 scripts/run-live-tests.py -- cargo test --locked --lib "$UDB_PROJECTION_PERMANENT_TEST" -- --exact --ignored --nocapture --test-threads=1 \
+            | tee "$RUNNER_TEMP/projection-permanent-result.log"
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
+          import re
+          selector = os.environ["UDB_PROJECTION_PERMANENT_TEST"]
+          lines = Path(os.environ["RUNNER_TEMP"], "projection-permanent-result.log").read_text(encoding="utf-8").splitlines()
+          executions = [line for line in lines if line.startswith("test " + selector + " ...")]
+          summaries = [line for line in lines if line.startswith("test result:")]
+          expected = r"test result: ok[.] 1 passed; 0 failed; 0 ignored; 0 measured; [0-9]+ filtered out; finished in [0-9.]+s"
+          if len(executions) != 1 or len(summaries) != 1 or not re.fullmatch(expected, summaries[0]):
+              raise SystemExit("permanent projection proof must execute once: 1 passed, 0 failed, 0 ignored")
+          print("Permanent projection proof executed once: 1 passed, 0 failed, 0 ignored")
+          PY
 
       - name: Postgres session diagnostics (live tests failed or hung)
         if: failure() && steps.native_live.outcome != 'success'

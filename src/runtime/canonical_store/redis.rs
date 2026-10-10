@@ -706,9 +706,9 @@ impl ProjectionTaskStore for RedisCanonicalStore {
         let mut groups: BTreeMap<(String, String, String, String), i64> = BTreeMap::new();
         for row in rows.into_iter().filter(|row| {
             row.status == ProjectionTaskStatus::DeadLetter
-                && !row
-                    .last_error
-                    .starts_with(super::system_store::PROJECTION_AUTHORITY_FAILURE_PREFIX)
+                && super::system_store::projection_failure_is_automatically_repairable(
+                    &row.last_error,
+                )
         }) {
             *groups
                 .entry((
@@ -747,9 +747,9 @@ impl ProjectionTaskStore for RedisCanonicalStore {
         let mut count = 0;
         for mut row in rows {
             if row.status != ProjectionTaskStatus::DeadLetter
-                || row
-                    .last_error
-                    .starts_with(super::system_store::PROJECTION_AUTHORITY_FAILURE_PREFIX)
+                || !super::system_store::projection_failure_is_automatically_repairable(
+                    &row.last_error,
+                )
                 || row.project_id != project_id
                 || row.resource_name != source_table
                 || row.target_backend != target_backend

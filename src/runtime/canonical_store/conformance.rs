@@ -490,8 +490,140 @@ pub async fn run_projection_task_contract(store: Arc<dyn ProjectionTaskStore>) {
         .await
         .expect("authority failure requeue is safely ignored");
     assert_eq!(authority_requeued, 0);
+    // The permanent payload and transient backend text share one repair group.
+    // Native SQL/document predicates must repair only the transient member.
+    let mut permanent_task = task.clone();
+    permanent_task.idempotency_key = format!("conformance-permanent-{}", Uuid::new_v4());
+    permanent_task.project_id = "conformance-permanent-project".to_string();
+    permanent_task.source_row_key = serde_json::json!({"id":"permanent-owned-row"});
+    let permanent_id = store
+        .enqueue_projection_task(&permanent_task)
+        .await
+        .unwrap();
+    let claimed = store
+        .claim_projection_tasks(&ProjectionClaimFilter {
+            project_id: Some(permanent_task.project_id.clone()),
+            ..ProjectionClaimFilter::default()
+        })
+        .await
+        .unwrap();
+    assert_eq!(claimed.len(), 1);
+    assert_eq!(claimed[0].task_id, permanent_id);
+    let permanent_error = super::system_store::ProjectionFailure::PermanentPayload(
+        super::system_store::ProjectionPermanentPayloadReason::MissingVectorPayload,
+    )
+    .durable_message();
+    store
+        .mark_projection_task_failed(
+            permanent_id,
+            1,
+            ProjectionTaskStatus::DeadLetter,
+            &permanent_error,
+        )
+        .await
+        .unwrap();
+    assert_eq!(
+        store
+            .enqueue_projection_task(&permanent_task)
+            .await
+            .unwrap(),
+        permanent_id,
+        "immutable poisoned key stays deduplicated"
+    );
+
+    let mut transient_task = permanent_task.clone();
+    transient_task.idempotency_key = format!("conformance-transient-{}", Uuid::new_v4());
+    transient_task.source_row_key = serde_json::json!({"id":"transient-owned-row"});
+    let transient_id = store
+        .enqueue_projection_task(&transient_task)
+        .await
+        .unwrap();
+    let claimed = store
+        .claim_projection_tasks(&ProjectionClaimFilter {
+            project_id: Some(transient_task.project_id.clone()),
+            ..ProjectionClaimFilter::default()
+        })
+        .await
+        .unwrap();
+    assert_eq!(claimed.len(), 1);
+    assert_eq!(claimed[0].task_id, transient_id);
+    let external_text =
+        super::system_store::ProjectionFailure::from(permanent_error.clone()).durable_message();
+    store
+        .mark_projection_task_failed(
+            transient_id,
+            5,
+            ProjectionTaskStatus::DeadLetter,
+            &external_text,
+        )
+        .await
+        .unwrap();
+    let groups = store.dead_letter_groups(30).await.unwrap();
+    let mixed = groups
+        .iter()
+        .find(|group| group.project_id == permanent_task.project_id)
+        .expect("only transient failure is repairable in the mixed group");
+    assert_eq!(mixed.dead_count, 1);
+    assert_eq!(
+        store
+            .requeue_dead_letter_by_source(
+                &mixed.project_id,
+                &mixed.source_table,
+                &mixed.target_backend,
+                &mixed.target_instance
+            )
+            .await
+            .unwrap(),
+        1
+    );
+    let repaired = store
+        .claim_projection_tasks(&ProjectionClaimFilter {
+            project_id: Some(permanent_task.project_id.clone()),
+            ..ProjectionClaimFilter::default()
+        })
+        .await
+        .unwrap();
+    assert_eq!(repaired.len(), 1);
+    assert_eq!(repaired[0].task_id, transient_id);
+    store
+        .mark_projection_task_completed(transient_id)
+        .await
+        .unwrap();
+    assert_eq!(
+        store
+            .pending_projection_task_count(&[permanent_task.idempotency_key.clone()])
+            .await
+            .unwrap(),
+        1,
+        "permanent failure never silently clears its receipt fence"
+    );
+    assert_eq!(
+        store
+            .requeue_dead_letter_by_source(
+                &permanent_task.project_id,
+                &mixed.source_table,
+                &mixed.target_backend,
+                &mixed.target_instance
+            )
+            .await
+            .unwrap(),
+        0
+    );
+
     let final_summary = store.projection_task_summary().await.unwrap();
-    assert_eq!(final_summary.dead_letter, 2);
+    assert_eq!(final_summary.dead_letter, 3);
+    // Explicit operator repair retains its old authority; reconciliation never
+    // calls this API and cannot use it to revive poisoned immutable tasks.
+    assert_eq!(store.requeue_dead_letter_tasks(None).await.unwrap(), 3);
+    let operator_claimed = store
+        .claim_projection_tasks(&ProjectionClaimFilter {
+            project_id: Some(permanent_task.project_id.clone()),
+            ..ProjectionClaimFilter::default()
+        })
+        .await
+        .unwrap();
+    assert_eq!(operator_claimed.len(), 1);
+    assert_eq!(operator_claimed[0].task_id, permanent_id);
 }
 
 /// NW1-1b — Saga contract every `SagaStore` impl must satisfy.

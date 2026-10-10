@@ -680,8 +680,9 @@ impl ProjectionTaskStore for CassandraCanonicalStore {
         let mut groups: HashMap<(String, String, String, String), i64> = HashMap::new();
         for row in &rows {
             if get_text(row, 4) != ProjectionTaskStatus::DeadLetter.as_str()
-                || get_text(row, 5)
-                    .starts_with(super::system_store::PROJECTION_AUTHORITY_FAILURE_PREFIX)
+                || !super::system_store::projection_failure_is_automatically_repairable(&get_text(
+                    row, 5,
+                ))
             {
                 continue;
             }
@@ -737,8 +738,9 @@ impl ProjectionTaskStore for CassandraCanonicalStore {
         for row in &rows {
             let status = get_text(row, 5);
             if status != ProjectionTaskStatus::DeadLetter.as_str()
-                || get_text(row, 6)
-                    .starts_with(super::system_store::PROJECTION_AUTHORITY_FAILURE_PREFIX)
+                || !super::system_store::projection_failure_is_automatically_repairable(&get_text(
+                    row, 6,
+                ))
             {
                 continue;
             }

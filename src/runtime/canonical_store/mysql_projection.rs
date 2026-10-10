@@ -496,6 +496,8 @@ impl ProjectionTaskStore for MysqlCanonicalStore {
         Ok(out)
     }
 
+    // The durable refusal namespace includes typed permanent payload failures;
+    // retain this predicate for legacy and current reconciliation alike.
     async fn dead_letter_groups(&self, limit: i64) -> SystemStoreResult<Vec<DeadLetterGroup>> {
         let sql = format!(
             "SELECT project_id, source_table, target_backend, target_instance,

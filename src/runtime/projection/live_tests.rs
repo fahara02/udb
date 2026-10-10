@@ -1635,3 +1635,244 @@ async fn live_clickhouse_append_only_projection_inserts_and_skips_deletes() {
     clickhouse(format!("DROP TABLE IF EXISTS `{database}`.`{table}`")).await;
     delete_tasks_for_resource(&pool, &table).await;
 }
+
+/// A permanently invalid immutable task stays parked across worker/reconciler
+/// reconstruction and real source replay. Corrected source/catalog content
+/// produces a new authorized key; real backend unavailability still repairs.
+#[tokio::test]
+#[ignore = "requires live Postgres+Qdrant; runs in the CI --ignored live lane"]
+async fn live_projection_permanent_payload_survives_restart_replay_and_corrected_recovery() {
+    use crate::runtime::canonical_store::system_store::{
+        ProjectionFailureDisposition, projection_failure_disposition,
+        projection_failure_is_automatically_repairable,
+    };
+    use crate::runtime::consistency::{ReadFence, StaleReadWarning, WriteReceipt};
+    use crate::runtime::consistency_fence::{FenceOutcome, wait_for_fence};
+    use futures::FutureExt;
+
+    let _guard = crate::runtime::service::live_tests::support::live_native_service_db_lock()
+        .lock()
+        .await;
+    let Some(_) = require_backend_dsn(&["UDB_LIVE_NATIVE_PG_DSN", "UDB_INTEGRATION_PG_DSN"]) else {
+        return;
+    };
+    let qdrant = qdrant_url();
+    let pool = ledger_pool().await;
+    let schema = format!("udb_projection_permanent_{}", Uuid::new_v4().simple());
+    let collection = format!("udb_projection_permanent_{}", Uuid::new_v4().simple());
+    const MSG: &str = "acme.proj.v1.PermanentVector";
+    create_source_table(
+        &pool,
+        &schema,
+        "owned_vectors",
+        ", values_json JSONB, label TEXT",
+    )
+    .await;
+    // Do not create the collection yet. Missing payload is rejected before a
+    // backend request; later valid content observes a real missing collection.
+    let mut values = text_col("values_json", false);
+    values.sql_type = "JSONB".to_string();
+    values.is_jsonb = true;
+    let mut manifest = served_manifest(
+        &schema,
+        "owned_vectors",
+        "PermanentVector",
+        vec![values, text_col("label", false)],
+        vec![projection(
+            "PermanentVector",
+            "vector",
+            "qdrant",
+            &collection,
+            vec![opt("vector_field", "absent_vector")],
+        )],
+        vec![ManifestStore {
+            store_kind: "vector".to_string(),
+            backend: "qdrant".to_string(),
+            resource_name: collection.clone(),
+            options: vec![opt("dimension", "4")],
+            ..ManifestStore::default()
+        }],
+    );
+    manifest.checksum_sha256 = format!("permanent-source-{}", Uuid::new_v4().simple());
+    let svc = served_service(manifest.clone()).await;
+    let tenant = Uuid::new_v4().to_string();
+    let outcome = std::panic::AssertUnwindSafe(async {
+        let payload = |label: &str| {
+            json!({
+                "id":"owned-row", "tenant_id":tenant,
+                "values_json":[0.1,0.2,0.3,0.4], "label":label,
+            })
+        };
+        async fn write_receipt(
+            svc: &DataBrokerService,
+            tenant: &str,
+            record: serde_json::Value,
+        ) -> WriteReceipt {
+            let response = svc
+                .upsert(with_ctx(
+                    crate::proto::UpsertRequest {
+                        message_type: MSG.to_string(),
+                        record_json: serde_json::to_vec(&record).unwrap(),
+                        ..crate::proto::UpsertRequest::default()
+                    },
+                    tenant,
+                ))
+                .await
+                .expect("actual served source write")
+                .into_inner();
+            serde_json::from_str(&response.write_receipt_json).expect("actual producer receipt")
+        }
+        let first = write_receipt(&svc, &tenant, payload("poison-v1")).await;
+        assert_eq!(first.projection_task_ids.len(), 1);
+        let first_key = &first.projection_task_ids[0];
+        let initial_worker = worker(
+            ledger_store(&pool).await,
+            svc.runtime_snapshot(),
+            svc.catalog.clone(),
+        );
+        assert_eq!(initial_worker.run_once().await, (0, 1));
+        drop(initial_worker);
+        assert_eq!(
+            task_statuses(&pool, &first.projection_task_ids).await,
+            ["DEAD_LETTER"]
+        );
+        assert_eq!(task_field(&pool, first_key, "retry_count").await, "1");
+        let stored_error = task_field(&pool, first_key, "last_error").await;
+        assert_eq!(
+            projection_failure_disposition(&stored_error),
+            ProjectionFailureDisposition::PermanentPayload(
+                ProjectionPermanentPayloadReason::MissingVectorPayload
+            )
+        );
+        let first_revision = task_field(&pool, first_key, "row_revision").await;
+        // Create a genuinely different source-content key, then return to the
+        // exact earlier poison. Replay must not rearm that immutable key even
+        // though a newer row revision exists (valid ABA behavior stays intact).
+        let second = write_receipt(&svc, &tenant, payload("poison-v2")).await;
+        assert_ne!(second.projection_task_ids, first.projection_task_ids);
+        let restarted = worker(
+            ledger_store(&pool).await,
+            svc.runtime_snapshot(),
+            svc.catalog.clone(),
+        );
+        assert_eq!(restarted.run_once().await, (0, 1));
+        let returned = write_receipt(&svc, &tenant, payload("poison-v1")).await;
+        assert_eq!(returned.projection_task_ids, first.projection_task_ids);
+        let reconciler = ReconciliationWorker {
+            pool: pool.clone(),
+            store: Arc::new(ledger_store(&pool).await),
+            config: SystemCatalogConfig::current(),
+            settings: ReconciliationSettings {
+                enabled: true,
+                max_source_scan_rows: 10,
+                ..ReconciliationSettings::default()
+            },
+            metrics: Arc::new(crate::metrics::NoopMetrics),
+            catalog: svc.catalog.clone(),
+            runtime: svc.runtime_snapshot(),
+        };
+        for _ in 0..3 {
+            let reports = reconciler.run_once().await;
+            assert!(
+                reports
+                    .iter()
+                    .all(|report| report.repair_tasks_enqueued == 0)
+            );
+            assert_eq!(restarted.run_once().await, (0, 0));
+            assert_eq!(task_field(&pool, first_key, "retry_count").await, "1");
+            assert_eq!(
+                task_field(&pool, first_key, "row_revision").await,
+                first_revision
+            );
+            assert_eq!(
+                task_field(&pool, first_key, "last_error").await,
+                stored_error
+            );
+        }
+        let store = ledger_store(&pool).await;
+        let old_fence = ReadFence {
+            min_outbox_lsn: String::new(),
+            projection_task_ids: first.projection_task_ids.clone(),
+            max_wait_ms: 100,
+        };
+        assert!(matches!(
+            wait_for_fence(&store, &old_fence, "qdrant", &collection).await,
+            FenceOutcome::Stale(StaleReadWarning::ProjectionMissing { .. })
+        ));
+
+        // Real catalog correction maps the existing JSONB vector source.
+        // Both manifest and source content change, not merely ledger revision.
+        let mut corrected = manifest.clone();
+        corrected.checksum_sha256 = format!("corrected-source-{}", Uuid::new_v4().simple());
+        corrected.projections[0].options = vec![opt("vector_field", "values_json")];
+        svc.catalog
+            .stage_catalog(
+                corrected,
+                PROJECT.to_string(),
+                "2.0.0".to_string(),
+                "any".to_string(),
+            )
+            .await
+            .expect("stage corrected test catalog");
+        svc.catalog
+            .activate_catalog_for(PROJECT, "2.0.0")
+            .await
+            .expect("activate corrected test catalog");
+        let fresh = write_receipt(&svc, &tenant, payload("corrected-v3")).await;
+        assert_ne!(fresh.projection_task_ids, first.projection_task_ids);
+        assert_ne!(fresh.manifest_checksum, first.manifest_checksum);
+        let mut recovering = worker(
+            ledger_store(&pool).await,
+            svc.runtime_snapshot(),
+            svc.catalog.clone(),
+        );
+        recovering.settings.max_retries = 1;
+        // Valid vector, missing real collection: retryable backend failure.
+        assert_eq!(recovering.run_once().await, (0, 1));
+        assert_eq!(
+            task_statuses(&pool, &fresh.projection_task_ids).await,
+            ["DEAD_LETTER"]
+        );
+        assert!(projection_failure_is_automatically_repairable(
+            &task_field(&pool, &fresh.projection_task_ids[0], "last_error").await
+        ));
+        create_qdrant_collection(&qdrant, &collection).await;
+        let repaired = reconciler.run_once().await;
+        assert_eq!(
+            repaired
+                .iter()
+                .map(|report| report.repair_tasks_enqueued)
+                .sum::<i64>(),
+            1
+        );
+        assert_eq!(recovering.run_once().await, (1, 0));
+        let points = served_vector_payloads(&svc, &tenant, &collection).await;
+        assert_eq!(points.len(), 1);
+        assert_eq!(points[0]["label"], "corrected-v3");
+        assert_eq!(
+            task_statuses(&pool, &first.projection_task_ids).await,
+            ["DEAD_LETTER"]
+        );
+        assert!(matches!(
+            wait_for_fence(&store, &old_fence, "qdrant", &collection).await,
+            FenceOutcome::Stale(StaleReadWarning::ProjectionMissing { .. })
+        ));
+        let fresh_fence = ReadFence {
+            min_outbox_lsn: String::new(),
+            projection_task_ids: fresh.projection_task_ids.clone(),
+            max_wait_ms: 100,
+        };
+        assert_eq!(
+            wait_for_fence(&store, &fresh_fence, "qdrant", &collection).await,
+            FenceOutcome::Cleared
+        );
+    })
+    .catch_unwind()
+    .await;
+    delete_tasks_for_resource(&pool, &collection).await;
+    drop_qdrant_collection(&qdrant, &collection).await;
+    drop_schema(&pool, &schema).await;
+    if let Err(panic) = outcome {
+        std::panic::resume_unwind(panic);
+    }
+}
