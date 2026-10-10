@@ -4022,7 +4022,9 @@ function verifiedNativeFixtureActor(
   tenantId: string,
   projectId: string,
 ): string {
-  assert.ok(principal?.subject?.trim(), "native fixture requires the AuthenticateBearer subject");
+  if (!principal || typeof principal.subject !== "string" || !principal.subject.trim()) {
+    throw new Error("native fixture requires the AuthenticateBearer subject");
+  }
   assert.ok(principal?.user_id?.trim(), "native fixture requires the persisted authenticated user");
   assert.equal(principal.tenant_id, tenantId, "native fixture refuses a foreign authenticated tenant");
   assert.equal(principal.project_id, projectId, "native fixture refuses a foreign authenticated project");
