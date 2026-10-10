@@ -1703,6 +1703,103 @@ async fn live_projection_permanent_payload_survives_restart_replay_and_corrected
                 "values_json":[0.1,0.2,0.3,0.4], "label":label,
             })
         };
+        // PROJECTION_PERMANENT_REPLAY_DIAGNOSTIC_HELPER_BEGIN
+        async fn owned_replay_diagnostic(
+            pool: &PgPool,
+            schema: &str,
+            resource: &str,
+            tenant: &str,
+            original_payload: &serde_json::Value,
+            original_key: &str,
+            phase: &str,
+        ) {
+            use sqlx::Row;
+            assert!(schema.starts_with("udb_projection_permanent_"));
+            assert!(resource.starts_with("udb_projection_permanent_"));
+            let rel = SystemCatalogConfig::current().projection_tasks_relation();
+            let rows = sqlx::query(&format!(
+                "SELECT idempotency_key, source_checksum, manifest_checksum, target_backend, \
+                 target_instance, status, retry_count, row_revision::TEXT AS row_revision, \
+                 last_error, source_payload, source_payload = $5::JSONB AS matches_original \
+                 FROM {rel} WHERE resource_name = $1 AND source_schema = $2 \
+                 AND source_table = 'owned_vectors' AND project_id = $4 \
+                 AND source_row_key ->> 'id' = 'owned-row' \
+                 AND source_row_key ->> 'tenant_id' = $3 \
+                 AND source_payload ->> 'tenant_id' = $3 \
+                 ORDER BY row_revision LIMIT 4"
+            ))
+            .bind(resource)
+            .bind(schema)
+            .bind(tenant)
+            .bind(PROJECT)
+            .bind(original_payload.to_string())
+            .fetch_all(pool)
+            .await
+            .expect("read only the bounded owned synthetic projection tasks");
+            assert!(
+                (2..=3).contains(&rows.len()),
+                "owned diagnostic must contain the two original tasks and at most one replay task"
+            );
+            let source_rows = sqlx::query_scalar::<_, serde_json::Value>(&format!(
+                "SELECT to_jsonb(t) FROM {}.{} AS t \
+                 WHERE id = $1 AND tenant_id = $2 LIMIT 2",
+                qi(schema),
+                qi("owned_vectors")
+            ))
+            .bind("owned-row")
+            .bind(tenant)
+            .fetch_all(pool)
+            .await
+            .expect("read only the owned synthetic canonical source row");
+            assert_eq!(source_rows.len(), 1, "one owned source row is required");
+            let source_payload = &source_rows[0];
+            let key_order = |value: &serde_json::Value| {
+                value
+                    .as_object()
+                    .expect("synthetic source is an object")
+                    .keys()
+                    .cloned()
+                    .collect::<Vec<_>>()
+            };
+            let tasks = rows
+                .into_iter()
+                .map(|row| {
+                    let payload: serde_json::Value = row.try_get("source_payload").unwrap();
+                    let error: String = row.try_get("last_error").unwrap();
+                    json!({
+                        "natural_key": row.try_get::<String, _>("idempotency_key").unwrap(),
+                        "source_checksum": row.try_get::<String, _>("source_checksum").unwrap(),
+                        "manifest_checksum": row.try_get::<String, _>("manifest_checksum").unwrap(),
+                        "target_backend": row.try_get::<String, _>("target_backend").unwrap(),
+                        "target_instance": row.try_get::<String, _>("target_instance").unwrap(),
+                        "status": row.try_get::<String, _>("status").unwrap(),
+                        "retry_count": row.try_get::<i32, _>("retry_count").unwrap(),
+                        "row_revision": row.try_get::<String, _>("row_revision").unwrap(),
+                        "failure_disposition": format!("{:?}", projection_failure_disposition(&error)),
+                        "semantic_payload_matches_original": row.try_get::<bool, _>("matches_original").unwrap(),
+                        "semantic_payload_matches_sql_row": payload == *source_payload,
+                        "stored_json_key_order": key_order(&payload),
+                        "recomputed_stored_payload_checksum": ProjectionEngine::source_checksum(&payload),
+                    })
+                })
+                .collect::<Vec<_>>();
+            println!(
+                "PROJECTION_PERMANENT_REPLAY_DIAGNOSTIC {}",
+                json!({
+                    "phase": phase,
+                    "scope": "owned synthetic resource, source row and tenant only",
+                    "task_count": tasks.len(),
+                    "original_key": original_key,
+                    "original_request_key_order": key_order(original_payload),
+                    "original_request_source_checksum": ProjectionEngine::source_checksum(original_payload),
+                    "sql_replay_key_order": key_order(source_payload),
+                    "sql_replay_source_checksum": ProjectionEngine::source_checksum(source_payload),
+                    "semantic_sql_payload_matches_original": source_payload == original_payload,
+                    "tasks": tasks,
+                })
+            );
+        }
+        // PROJECTION_PERMANENT_REPLAY_DIAGNOSTIC_HELPER_END
         async fn write_receipt(
             svc: &DataBrokerService,
             tenant: &str,
@@ -1771,14 +1868,64 @@ async fn live_projection_permanent_payload_survives_restart_replay_and_corrected
             catalog: svc.catalog.clone(),
             runtime: svc.runtime_snapshot(),
         };
-        for _ in 0..3 {
+        // PROJECTION_PERMANENT_REPLAY_DIAGNOSTIC_BEFORE_BEGIN
+        let diagnostic_payload = payload("poison-v1");
+        owned_replay_diagnostic(
+            &pool,
+            &schema,
+            &collection,
+            &tenant,
+            &diagnostic_payload,
+            first_key,
+            "before_first_reconciler",
+        )
+        .await;
+        // PROJECTION_PERMANENT_REPLAY_DIAGNOSTIC_BEFORE_END
+        for pass in 0..3 {
             let reports = reconciler.run_once().await;
+            // PROJECTION_PERMANENT_REPLAY_DIAGNOSTIC_RECONCILER_BEGIN
+            if pass == 0 {
+                owned_replay_diagnostic(
+                    &pool,
+                    &schema,
+                    &collection,
+                    &tenant,
+                    &diagnostic_payload,
+                    first_key,
+                    "after_first_reconciler_before_claim",
+                )
+                .await;
+            }
+            // PROJECTION_PERMANENT_REPLAY_DIAGNOSTIC_RECONCILER_END
             assert!(
                 reports
                     .iter()
                     .all(|report| report.repair_tasks_enqueued == 0)
             );
-            assert_eq!(restarted.run_once().await, (0, 0));
+            // PROJECTION_PERMANENT_REPLAY_DIAGNOSTIC_CLAIM_BEGIN
+            let worker_outcome = restarted.run_once().await;
+            if pass == 0 {
+                println!(
+                    "PROJECTION_PERMANENT_REPLAY_DIAGNOSTIC {}",
+                    json!({
+                        "phase": "first_global_worker_outcome",
+                        "worker_outcome": worker_outcome,
+                        "scope": "outcome only; owned snapshots determine owned-key changes",
+                    })
+                );
+                owned_replay_diagnostic(
+                    &pool,
+                    &schema,
+                    &collection,
+                    &tenant,
+                    &diagnostic_payload,
+                    first_key,
+                    "after_first_worker_claim",
+                )
+                .await;
+            }
+            // PROJECTION_PERMANENT_REPLAY_DIAGNOSTIC_CLAIM_END
+            assert_eq!(worker_outcome, (0, 0));
             assert_eq!(task_field(&pool, first_key, "retry_count").await, "1");
             assert_eq!(
                 task_field(&pool, first_key, "row_revision").await,

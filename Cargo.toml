@@ -66,7 +66,7 @@ default = ["postgres", "mysql", "sqlite", "qdrant", "s3", "mongodb-native", "neo
 # can measure them without widening the public API. NOT a stable API; off by
 # default, enabled only for `cargo bench --features bench-internals`.
 bench-internals = []
-postgres = ["dep:postgresql_embedded"]
+postgres = []
 # MySQL and SQLite are optional SQL backends. Each pulls its sqlx driver and is
 # enabled by `default`; slim postgres-only builds skip both.
 mysql = ["sqlx/mysql"]
@@ -232,7 +232,6 @@ sha2 = "0.10"
 sha1 = "0.10"
 # Argon2id password KDF for native password storage (replaces keyed-HMAC).
 argon2 = "0.5"
-postgresql_embedded = { version = "=0.19.0", default-features = false, features = ["tokio", "rustls", "theseus"], optional = true }
 sqlx = { version = "0.8", default-features = false, features = ["runtime-tokio-rustls", "postgres", "json", "uuid", "chrono"] }
 # rustls 0.23 needs a process-level CryptoProvider installed before the first
 # TLS config is built. The dep graph links BOTH aws-lc-rs and ring transitively

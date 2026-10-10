@@ -771,15 +771,35 @@ async fn unpack_postgres_cache(
 }
 
 /// The PostgreSQL install directory (holding `bin/`), downloading it if needed.
-async fn ensure_postgres(version: &str, allow_download: bool) -> Result<PathBuf, String> {
-    if version.is_empty()
-        || version.contains("..")
-        || !version
-            .bytes()
-            .all(|c| c.is_ascii_alphanumeric() || c == b'.' || c == b'-')
-    {
-        return Err("invalid PostgreSQL version".into());
+// The archive/cache identity is an exact numeric release, never a range. Validate
+// it before filesystem or download work and reuse the same major at cluster boot.
+fn postgres_release_major(version: &str) -> Result<u64, String> {
+    let mut components = version.split('.');
+    let mut parse = || {
+        let value = components.next()?;
+        if value.is_empty()
+            || !value.bytes().all(|byte| byte.is_ascii_digit())
+            || (value.len() > 1 && value.starts_with('0'))
+        {
+            return None;
+        }
+        value.parse::<u64>().ok()
+    };
+    let release = (parse(), parse(), parse());
+    let (Some(major), Some(_), Some(_)) = release else {
+        return Err("embedded PostgreSQL requires one pinned release version".into());
+    };
+    if components.next().is_some() {
+        return Err("embedded PostgreSQL requires one pinned release version".into());
     }
+    if major < 10 {
+        return Err("embedded PostgreSQL requires major version 10 or later".into());
+    }
+    Ok(major)
+}
+
+async fn ensure_postgres(version: &str, allow_download: bool) -> Result<PathBuf, String> {
+    postgres_release_major(version)?;
     let target = pg_target()?;
     let root = udb_home().join("postgresql").join(version).join(target);
     if let Some((installation, _)) = cached_postgres(&root, version, target)? {
@@ -984,42 +1004,47 @@ async fn embedded_command_status(
         .await
 }
 
+// Settings contain only inputs used by our existing checksum-verified cache and
+// bounded process owner. No second downloader or upstream blocking Drop is used.
+#[cfg(feature = "postgres")]
+struct EmbeddedClusterSettings {
+    version: String,
+    installation_dir: PathBuf,
+    password_file: PathBuf,
+    data_dir: PathBuf,
+    port: u16,
+    password: String,
+}
+
+#[cfg(feature = "postgres")]
+impl EmbeddedClusterSettings {
+    fn binary_dir(&self) -> PathBuf {
+        self.installation_dir.join("bin")
+    }
+
+    fn url(&self, database: &str) -> String {
+        format!(
+            "postgresql://postgres:{}@127.0.0.1:{}/{}",
+            urlencoding::encode(&self.password),
+            self.port,
+            urlencoding::encode(database),
+        )
+    }
+}
+
 /// The cluster owns a foreground postmaster handle; pg_ctl is used only for a
-/// verified graceful stop. We never instantiate upstream PostgreSQL's blocking
-/// Drop owner, and never signal an arbitrary process from an untrusted PID.
+/// verified graceful stop. We never signal an arbitrary process from a PID file.
 #[cfg(feature = "postgres")]
 struct EmbeddedCluster {
-    settings: postgresql_embedded::Settings,
+    settings: EmbeddedClusterSettings,
     requested_major: u64,
     postmaster: Option<EmbeddedChild>,
 }
 
 #[cfg(feature = "postgres")]
 impl EmbeddedCluster {
-    fn new(settings: postgresql_embedded::Settings) -> Result<Self, String> {
-        // The caller pins Settings.version with =<requested release>. Modern
-        // PostgreSQL writes only its major number to PG_VERSION; pre-10
-        // releases use a different layout and are outside this embedded seam.
-        let [requested] = settings.version.comparators.as_slice() else {
-            return Err("embedded PostgreSQL requires one pinned release version".into());
-        };
-        // VersionReq is the embedded crate's existing public parser; use its
-        // exact comparator rather than requiring another direct dependency.
-        let exact = postgresql_embedded::VersionReq::parse("=10.0.0")
-            .map_err(|err| format!("parse pinned PostgreSQL comparator: {err}"))?;
-        if requested.minor.is_none()
-            || requested.patch.is_none()
-            || !exact
-                .comparators
-                .first()
-                .is_some_and(|exact| requested.op == exact.op)
-        {
-            return Err("embedded PostgreSQL requires one pinned release version".into());
-        }
-        if requested.major < 10 {
-            return Err("embedded PostgreSQL requires major version 10 or later".into());
-        }
-        let requested_major = requested.major;
+    fn new(settings: EmbeddedClusterSettings) -> Result<Self, String> {
+        let requested_major = postgres_release_major(&settings.version)?;
         Ok(Self {
             settings,
             requested_major,
@@ -1319,7 +1344,6 @@ async fn dev_up_embedded_inner(
     options: &EmbeddedOptions,
     interrupt: &DevInterrupt,
 ) -> Result<i32, String> {
-    use postgresql_embedded::{Settings, VersionReq};
     let install = tokio::select! {
         result = ensure_postgres(&options.pg_version, true) => result?,
         _ = interrupt.wait() => return Ok(0),
@@ -1338,8 +1362,7 @@ async fn dev_up_embedded_inner(
     let (private_key, public_key) = signing_keys(&dev_dir())?;
     let pg_password =
         persistent_secret(&directory, "postgres-password", "UDB_EMBEDDED_PG_PASSWORD")?;
-    // Settings::url interpolates the password: refuse delimiters instead of
-    // silently constructing a DSN for a different endpoint or credential.
+    // Keep the persisted development password contract; the DSN also escapes it.
     if !pg_password
         .bytes()
         .all(|byte| byte.is_ascii_alphanumeric() || b"_-".contains(&byte))
@@ -1360,26 +1383,14 @@ async fn dev_up_embedded_inner(
     } else {
         private_write(&password_file, pg_password.as_bytes())?;
     }
-    let settings = Settings {
-        releases_url: DEFAULT_PG_BINARIES_URL.to_string(),
-        version: VersionReq::parse(&format!("={}", options.pg_version))
-            .map_err(|err| format!("PostgreSQL version: {err}"))?,
+    let settings = EmbeddedClusterSettings {
+        version: options.pg_version.clone(),
         installation_dir: fs::canonicalize(&install)
             .map_err(|err| format!("PostgreSQL cache: {err}"))?,
         password_file,
         data_dir: data.clone(),
-        host: "127.0.0.1".into(),
         port: options.pg_port,
-        username: "postgres".into(),
         password: pg_password,
-        temporary: false,
-        timeout: Some(PG_COMMAND_TIMEOUT),
-        configuration: std::collections::HashMap::from([(
-            "listen_addresses".into(),
-            "127.0.0.1".into(),
-        )]),
-        // ensure_postgres already verified the online/offline archive checksum.
-        trust_installation_dir: true,
     };
     let mut postgres = EmbeddedCluster::new(settings)?;
     let mut child: Option<EmbeddedChild> = None;
@@ -1651,21 +1662,14 @@ mod dev_embedded_tests {
     }
 
     #[cfg(feature = "postgres")]
-    fn cluster_settings(root: &Path, version: &str) -> postgresql_embedded::Settings {
-        postgresql_embedded::Settings {
-            releases_url: DEFAULT_PG_BINARIES_URL.into(),
-            version: postgresql_embedded::VersionReq::parse(&format!("={version}")).unwrap(),
+    fn cluster_settings(root: &Path, version: &str) -> EmbeddedClusterSettings {
+        EmbeddedClusterSettings {
+            version: version.into(),
             installation_dir: root.join("missing-installation"),
             password_file: root.join("password"),
             data_dir: root.join("data"),
-            host: "127.0.0.1".into(),
             port: DEFAULT_PG_PORT,
-            username: "postgres".into(),
             password: "filesystem-preflight-only".into(),
-            temporary: false,
-            timeout: Some(PG_COMMAND_TIMEOUT),
-            configuration: std::collections::HashMap::new(),
-            trust_installation_dir: true,
         }
     }
 
@@ -1692,15 +1696,40 @@ mod dev_embedded_tests {
             "^16.4.0",
             ">=16.4.0",
             ">=16.4.0,<17.0.0",
+            "16.4",
+            "16.4.0.1",
+            "016.4.0",
+            "16.04.0",
+            "16.4.00",
+            "16.4.0-beta",
+            "16.4.0/other",
+            "16.4.0\n",
+            "18446744073709551616.4.0",
         ] {
             let mut settings = cluster_settings(&parent.path, "16.4.0");
-            settings.version = postgresql_embedded::VersionReq::parse(requirement).unwrap();
+            settings.version = requirement.into();
             let refusal = match EmbeddedCluster::new(settings) {
                 Err(refusal) => refusal,
                 Ok(_) => panic!("{requirement} does not identify one pinned release"),
             };
             assert!(refusal.contains("one pinned release version"), "{refusal}");
         }
+    }
+
+    #[cfg(feature = "postgres")]
+    #[test]
+    fn owned_cluster_connection_preserves_escaped_credentials_and_database() {
+        let parent = cache_parent();
+        let mut settings = cluster_settings(&parent.path, "16.4.0");
+        settings.password = "synthetic:@/?#% credential".into();
+        let connection = settings
+            .url("synthetic/database")
+            .parse::<sqlx::postgres::PgConnectOptions>()
+            .unwrap();
+        assert_eq!(connection.get_host(), "127.0.0.1");
+        assert_eq!(connection.get_port(), DEFAULT_PG_PORT);
+        assert_eq!(connection.get_username(), "postgres");
+        assert_eq!(connection.get_database(), Some("synthetic/database"));
     }
 
     #[cfg(feature = "postgres")]
