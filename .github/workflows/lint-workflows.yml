@@ -28,6 +28,7 @@ on:
       - "docs/api-rules.md"
       - "docs/api-sdk-beta-migration.md"
       - "scripts/check-workflow-posture.py"
+      - "scripts/capabilities_history_aba.py"
       - "scripts/ci-inventory.mjs"
       - "scripts/check-branch-protection-lockstep.mjs"
       - "scripts/check-ci-runner-evidence.mjs"
@@ -134,6 +135,7 @@ on:
       - "docs/api-rules.md"
       - "docs/api-sdk-beta-migration.md"
       - "scripts/check-workflow-posture.py"
+      - "scripts/capabilities_history_aba.py"
       - "scripts/ci-inventory.mjs"
       - "scripts/check-branch-protection-lockstep.mjs"
       - "scripts/check-ci-runner-evidence.mjs"
@@ -267,5 +269,6 @@ jobs:
           python3 scripts/retry_safe_served_smoke.py --selftest
           python3 scripts/native_load_gate.py --selftest
           python3 scripts/install-ci-native-deps.py --selftest
+          python3 scripts/capabilities_history_aba.py selftest
           python3 scripts/check-workflow-posture.py --selftest
           python3 scripts/check-workflow-posture.py

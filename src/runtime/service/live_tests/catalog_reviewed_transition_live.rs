@@ -1887,3 +1887,1195 @@ async fn run_reviewed_catalog_fixture(single_connection: bool, primary_as_target
     assert!(closed.is_ok(), "owned routed project pool failed to close");
     removed.expect("remove only the owned routed database");
 }
+
+// BEGIN CAPABILITIES_HISTORY_CI_PROFILE
+// Uses only production APIs available at 6983dce4. CI overlays these same bytes
+// on A/B/A, restores the same named DB from its prepared template, and compares
+// exact row receipts; physical database OIDs are recorded after every restore.
+// This separate test name is outside the reviewed-transition capacity filters.
+fn capabilities_profile_project(namespace: Uuid, histories: u8) -> String {
+    let mut bytes = *namespace.as_bytes();
+    bytes[15] ^= histories;
+    Uuid::from_bytes(bytes).to_string()
+}
+
+fn capabilities_profile_source(tables: usize) -> String {
+    assert!(
+        (2..=512).contains(&tables),
+        "profile table count must be 2..512"
+    );
+    let mut proto = source("udb_capabilities_history");
+    for table in 2..tables {
+        proto.push_str(&format!(r#"
+message HistoryTable{table} {{
+  option (udb.core.common.v1.pg_table) = {{
+    table_name: "history_{table}" schema_name: "udb_capabilities_history" is_table: true
+    audit_fields: false enable_rls: true force_rls: true
+  }};
+  option (udb.core.common.v1.db_table_security) = {{
+    tenant_isolation_mode: "row" tenant_column: "tenant_id"
+    project_isolation_mode: "column" project_column: "project_id"
+    soft_delete_mode: "none" audit_mode: AUDIT_MODE_NONE
+    encryption_profile: "none" pii_profile: "none" export_eligible: false
+  }};
+  string record_id = 1 [(udb.core.common.v1.pg_column) = {{sql_type:"VARCHAR(80)" primary_key:true not_null:true}}];
+  string tenant_id = 2 [(udb.core.common.v1.pg_column) = {{sql_type:"VARCHAR(80)" tenant_column:true not_null:true}}];
+  string project_id = 3 [(udb.core.common.v1.pg_column) = {{sql_type:"VARCHAR(80)" project_column:true not_null:true}}];
+}}
+"#));
+    }
+    proto
+}
+
+fn capabilities_profile_security() -> SecurityConfig {
+    SecurityConfig {
+        tls_required: false,
+        mtls_required: false,
+        service_identity_required: false,
+        allow_header_scopes: false,
+        jwt_private_key: Some(include_str!("../../testdata/jwt_rs256_private.pem").into()),
+        jwt_public_key: Some(include_str!("../../testdata/jwt_rs256_public.pem").into()),
+        ..SecurityConfig::default()
+    }
+}
+
+fn capabilities_profile_config(dsn: &str, security: &SecurityConfig) -> UdbConfig {
+    let mut config = UdbConfig::from_env();
+    config.primary.direct_dsn = dsn.into();
+    config.primary.max_open_conns = 4;
+    config.primary.min_connections = 1;
+    config.primary.acquire_timeout_secs = 5;
+    config.project_routing_mode = "permissive".into();
+    config.security = security.clone();
+    config.service.catalog_compatibility_level = "backward".into();
+    config.service.abac_default_allow = false;
+    config.backend_instances = BackendInstanceConfig { instances: vec![] };
+    config
+}
+
+fn capabilities_profile_authn(
+    serving_pool: &sqlx::PgPool,
+    service: &DataBrokerService,
+    security: &SecurityConfig,
+    namespace: Uuid,
+) -> (AuthnServiceImpl, AuthnConfig) {
+    let authn_config = AuthnConfig {
+        session_hash_secret: format!("owned-capabilities-profile-{namespace}"),
+        ..AuthnConfig::from_env()
+    };
+    let authn = AuthnServiceImpl::with_stores(
+        authn_config.clone(),
+        security.clone(),
+        Arc::new(PostgresSessionStore::new(serving_pool.clone(), "")),
+        Arc::new(PostgresApiKeyStore::new(serving_pool.clone(), "")),
+        Arc::new(PostgresUserStore::new(serving_pool.clone(), "")),
+    )
+    .with_runtime(Some(service.runtime_snapshot()))
+    .with_authz_snapshot(Some(service.authz_snapshot()));
+    (authn, authn_config)
+}
+
+async fn capabilities_profile_serve(
+    service: DataBrokerService,
+    authn: AuthnServiceImpl,
+    message_limit: usize,
+) -> (
+    Serving,
+    authn::authn_service_client::AuthnServiceClient<tonic::transport::Channel>,
+) {
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let address = listener.local_addr().unwrap();
+    let incoming = futures::stream::unfold(listener, |listener| async move {
+        Some((listener.accept().await.map(|(stream, _)| stream), listener))
+    });
+    let (shutdown, shutdown_rx) = tokio::sync::oneshot::channel();
+    let broker = service.clone();
+    let native = crate::runtime::service::method_security::MethodSecurityLayer::new()
+        .wrap(authn::authn_service_server::AuthnServiceServer::new(authn));
+    let task = tokio::spawn(async move {
+        tonic::transport::Server::builder()
+            .layer(CredentialResolveLayer::new())
+            .add_service(
+                DataBrokerServer::new(broker)
+                    .max_decoding_message_size(message_limit)
+                    .max_encoding_message_size(message_limit),
+            )
+            .add_service(native)
+            .serve_with_incoming_shutdown(incoming, async move {
+                let _ = shutdown_rx.await;
+            })
+            .await
+            .expect("serve actual matched broker and native Authn routes");
+    });
+    let channel = tonic::transport::Endpoint::from_shared(format!("http://{address}"))
+        .unwrap()
+        .connect()
+        .await
+        .unwrap();
+    let login = authn::authn_service_client::AuthnServiceClient::new(channel.clone())
+        .max_decoding_message_size(message_limit)
+        .max_encoding_message_size(message_limit);
+    (
+        Serving {
+            client: DataBrokerClient::new(channel)
+                .max_decoding_message_size(message_limit)
+                .max_encoding_message_size(message_limit),
+            service,
+            shutdown: Some(shutdown),
+            task: Some(task),
+        },
+        login,
+    )
+}
+
+async fn capabilities_profile_username(
+    control: &sqlx::PgPool,
+    namespace: Uuid,
+    project: &str,
+    actor: &str,
+) -> String {
+    let users = native_catalog::native_model(
+        "udb.core.authn.entity.v1.User",
+        &[
+            "user_id",
+            "username",
+            "created_by",
+            "project_id",
+            "tenant_id",
+            "status",
+        ],
+    );
+    sqlx::query_scalar(&format!(
+        "SELECT {} FROM {} WHERE {}=$1::UUID AND {}=$2 AND {}=$3 AND {} IS NOT NULL AND {}='ACTIVE'",
+        users.q("username"), users.relation, users.q("user_id"), users.q("tenant_id"),
+        users.q("project_id"), users.q("created_by"), users.q("status"),
+    )).bind(actor).bind(namespace.to_string()).bind(project).fetch_one(control)
+        .await.expect("read username of the exact prepared ACTIVE native PERSON")
+}
+
+// In-flight intervals cover actual client RPC await, including serving admission
+// and SQL/KDF queueing. They do not establish that CPU work runs throughout.
+struct CapabilitiesProfileTraffic {
+    origin: std::time::Instant,
+    active: std::sync::atomic::AtomicUsize,
+    peak: std::sync::atomic::AtomicUsize,
+    login_active: std::sync::atomic::AtomicUsize,
+    login_peak: std::sync::atomic::AtomicUsize,
+}
+// A failed workload must not detach its pool monitor. Aborting on unwind is
+// scoped to this fixture's owned task; normal completion still joins it.
+struct CapabilitiesProfileAbortOnDrop(tokio::task::AbortHandle);
+impl Drop for CapabilitiesProfileAbortOnDrop {
+    fn drop(&mut self) {
+        self.0.abort();
+    }
+}
+impl CapabilitiesProfileTraffic {
+    fn new() -> Arc<Self> {
+        Arc::new(Self {
+            origin: std::time::Instant::now(),
+            active: 0.into(),
+            peak: 0.into(),
+            login_active: 0.into(),
+            login_peak: 0.into(),
+        })
+    }
+    fn begin(
+        self: &Arc<Self>,
+        rpc: &'static str,
+        worker: usize,
+        attempt: usize,
+    ) -> CapabilitiesProfileFlight {
+        use std::sync::atomic::Ordering;
+        let active = self.active.fetch_add(1, Ordering::SeqCst) + 1;
+        self.peak.fetch_max(active, Ordering::SeqCst);
+        assert!(
+            active <= 4,
+            "matched workload must cap actual total client in-flight calls at four"
+        );
+        if rpc == "Login" {
+            let active = self.login_active.fetch_add(1, Ordering::SeqCst) + 1;
+            self.login_peak.fetch_max(active, Ordering::SeqCst);
+            assert!(
+                active <= 2,
+                "matched workload must cap actual Login in-flight calls at two"
+            );
+        }
+        CapabilitiesProfileFlight {
+            traffic: self.clone(),
+            rpc,
+            worker,
+            attempt,
+            start_us: u64::try_from(self.origin.elapsed().as_micros()).unwrap(),
+            login_at_start: self.login_active.load(Ordering::SeqCst),
+        }
+    }
+}
+struct CapabilitiesProfileFlight {
+    traffic: Arc<CapabilitiesProfileTraffic>,
+    rpc: &'static str,
+    worker: usize,
+    attempt: usize,
+    start_us: u64,
+    login_at_start: usize,
+}
+impl CapabilitiesProfileFlight {
+    fn finish(self, code: Option<Code>) -> serde_json::Value {
+        use std::sync::atomic::Ordering;
+        let end_us = u64::try_from(self.traffic.origin.elapsed().as_micros()).unwrap();
+        serde_json::json!({
+            "rpc":self.rpc,"worker":self.worker,"attempt":self.attempt,
+            "start_us":self.start_us,"end_us":end_us,"latency_us":end_us-self.start_us,
+            "ok":code.is_none(),"code":code.map(|code|format!("{code:?}")),
+            "login_inflight_at_start":self.login_at_start,
+            "login_inflight_at_end":self.traffic.login_active.load(Ordering::SeqCst),
+        })
+    }
+}
+impl Drop for CapabilitiesProfileFlight {
+    fn drop(&mut self) {
+        use std::sync::atomic::Ordering;
+        if self.rpc == "Login" {
+            self.traffic.login_active.fetch_sub(1, Ordering::SeqCst);
+        }
+        self.traffic.active.fetch_sub(1, Ordering::SeqCst);
+    }
+}
+
+fn capabilities_profile_emit(value: serde_json::Value) {
+    use sha2::Digest;
+    let encoded = serde_json::to_vec(&value).unwrap();
+    if let Ok(directory) = std::env::var("UDB_CAPABILITIES_PROFILE_RECEIPTS_DIR") {
+        std::fs::create_dir_all(&directory).unwrap();
+        let file = format!("history-{}.json", value["history_count"].as_u64().unwrap());
+        std::fs::write(std::path::Path::new(&directory).join(&file), &encoded).unwrap();
+        println!(
+            "CAPABILITIES_HISTORY_PROFILE {}",
+            serde_json::json!({
+                "history_count":value["history_count"],"receipt_file":file,
+                "receipt_sha256":format!("{:x}",sha2::Sha256::digest(&encoded)),
+            })
+        );
+    } else {
+        println!("CAPABILITIES_HISTORY_PROFILE {value}");
+    }
+}
+
+async fn capabilities_profile_actor(
+    control: &sqlx::PgPool,
+    namespace: Uuid,
+    project: &str,
+) -> String {
+    let users = native_catalog::native_model(
+        "udb.core.authn.entity.v1.User",
+        &["user_id", "created_by", "project_id", "tenant_id", "status"],
+    );
+    let actors: Vec<Uuid> = sqlx::query_scalar(&format!(
+        "SELECT {} FROM {} WHERE {}=$1 AND {}=$2 AND {} IS NOT NULL AND {}='ACTIVE'",
+        users.q("user_id"),
+        users.relation,
+        users.q("project_id"),
+        users.q("tenant_id"),
+        users.q("created_by"),
+        users.q("status"),
+    ))
+    .bind(project)
+    .bind(namespace.to_string())
+    .fetch_all(control)
+    .await
+    .expect("read exact durable active profile operator");
+    assert_eq!(
+        actors.len(),
+        1,
+        "profile must use the one prepared PERSON operator"
+    );
+    actors[0].to_string()
+}
+
+fn capabilities_profile_bearer(
+    security: &SecurityConfig,
+    namespace: Uuid,
+    project: &str,
+    actor: &str,
+    scopes: &[&str],
+) -> String {
+    let scopes = scopes
+        .iter()
+        .map(|scope| scope.to_string())
+        .collect::<Vec<_>>();
+    sign_access_token(
+        security,
+        actor,
+        &namespace.to_string(),
+        project,
+        &scopes,
+        &[],
+        "",
+        &format!("capabilities-history-{}", Uuid::new_v4()),
+        "password",
+        authn_entity::AccountKind::Person as i32,
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_secs(),
+    )
+    .expect("sign the prepared native PERSON profile operator")
+    .expect("profile signing key is configured")
+    .0
+}
+
+async fn capabilities_profile_history_receipt(
+    control: &sqlx::PgPool,
+    namespace: Uuid,
+    project: &str,
+    histories: usize,
+) -> serde_json::Value {
+    use sha2::Digest;
+    let relation = SystemCatalogConfig::default().catalog_versions_relation();
+    let rows: Vec<(
+        String,
+        String,
+        String,
+        String,
+        i64,
+        i64,
+        i64,
+        i64,
+        String,
+        String,
+    )> = sqlx::query_as(&format!(
+        "SELECT catalog_id::TEXT, version, status, manifest_integrity_sha256,
+                octet_length(manifest_json::TEXT)::BIGINT,
+                jsonb_array_length(manifest_json->'tables')::BIGINT,
+                jsonb_array_length(manifest_json->'stores')::BIGINT,
+                COALESCE((SELECT SUM(jsonb_array_length(t->'columns'))
+                  FROM jsonb_array_elements(manifest_json->'tables') AS t),0)::BIGINT,
+                encode(sha256(convert_to(manifest_json::TEXT,'UTF8')),'hex'), created_at::TEXT
+           FROM {relation} WHERE project_id=$1 ORDER BY created_at DESC"
+    ))
+    .bind(project)
+    .fetch_all(control)
+    .await
+    .expect("read actual profile history rows and payload bytes");
+    assert_eq!(
+        rows.len(),
+        histories,
+        "profile history count must match the prepared dataset"
+    );
+    assert_eq!(rows.iter().filter(|row| row.2 == "ACTIVE").count(), 1);
+    assert!(rows.iter().all(|row| row.3.len() == 64 && row.4 > 0));
+    let labels = rows
+        .iter()
+        .map(|row| format!("project:{project}:catalog:{}", row.1))
+        .collect::<Vec<_>>();
+    serde_json::json!({
+        "fixture_tenant_id": namespace.to_string(),
+        "project_id":project,"row_count": rows.len(), "manifest_json_text_bytes": rows.iter().map(|row| row.4).sum::<i64>(),
+        "version_text_bytes":rows.iter().map(|row|row.1.len()).sum::<usize>(),
+        "retained_table_definitions": rows.iter().map(|row| row.5).sum::<i64>(),
+        "retained_store_definitions": rows.iter().map(|row| row.6).sum::<i64>(),
+        "retained_column_definitions": rows.iter().map(|row| row.7).sum::<i64>(),
+        "rows_sha256": format!("{:x}", sha2::Sha256::digest(serde_json::to_vec(&rows).unwrap())),
+        "ordered_labels": labels,
+    })
+}
+
+async fn capabilities_profile_read(
+    client: &mut DataBrokerClient<tonic::transport::Channel>,
+    service: &DataBrokerService,
+    bearer: &str,
+    project: &str,
+    receipt: &serde_json::Value,
+    rpc: &'static str,
+    traffic: &Arc<CapabilitiesProfileTraffic>,
+    attempt: usize,
+) -> serde_json::Value {
+    let flight = traffic.begin(rpc, usize::from(rpc == "Select"), attempt);
+    if rpc == "GetCapabilities" {
+        let result = client
+            .get_capabilities(request(
+                crate::proto::CapabilitiesRequest {
+                    project_id: project.into(),
+                    ..Default::default()
+                },
+                bearer,
+            ))
+            .await;
+        let mut sample = flight.finish(result.as_ref().err().map(Status::code));
+        if let Ok(response) = result {
+            let response = response.into_inner();
+            sample["response_protobuf_bytes"] =
+                serde_json::json!(prost::Message::encoded_len(&response));
+            let expected = receipt["ordered_labels"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .map(|label| label.as_str().unwrap().to_string())
+                .collect::<Vec<_>>();
+            let actual = response
+                .system_catalog_relations
+                .iter()
+                .filter(|label| label.starts_with("project:"))
+                .cloned()
+                .collect::<Vec<_>>();
+            assert_eq!(
+                actual, expected,
+                "capabilities preserves exact-project history labels and order"
+            );
+            let active = service
+                .catalog
+                .active_exact_for(project)
+                .expect("fresh exact ACTIVE profile catalog");
+            assert_eq!(response.schema_checksum, active.manifest.checksum_sha256);
+            assert!(service.catalog.authority_is_fresh());
+            let expected = service
+                .runtime_snapshot()
+                .backend_instances_for_project(project)
+                .into_iter()
+                .map(super::super::backend_instance_status)
+                .collect::<Vec<_>>();
+            assert_eq!(
+                response.backend_instances, expected,
+                "capabilities must retain current project-routed backend state"
+            );
+        }
+        sample
+    } else {
+        assert_eq!(rpc, "Select");
+        let result = client
+            .select(request(
+                crate::proto::SelectRequest {
+                    message_type: "reviewed.catalog.live.v1.Receipt".into(),
+                    fields: vec!["record_id".into(), "tenant_id".into(), "project_id".into()],
+                    limit: 1,
+                    cache: Some(crate::proto::CacheOptions {
+                        bypass_read: true,
+                        bypass_write: true,
+                        ..Default::default()
+                    }),
+                    ..Default::default()
+                },
+                bearer,
+            ))
+            .await;
+        let mut sample = flight.finish(result.as_ref().err().map(Status::code));
+        if let Ok(response) = result {
+            let response = response.into_inner();
+            sample["response_protobuf_bytes"] =
+                serde_json::json!(prost::Message::encoded_len(&response));
+            assert_eq!(
+                response.records_json.len(),
+                1,
+                "matched Select must read its real scoped fixture row"
+            );
+            let row: serde_json::Value = serde_json::from_slice(&response.records_json[0]).unwrap();
+            assert_eq!(
+                row["tenant_id"].as_str(),
+                Some(receipt["fixture_tenant_id"].as_str().unwrap())
+            );
+            assert_eq!(
+                row["project_id"].as_str(),
+                Some(project),
+                "matched Select retains exact project scope"
+            );
+        }
+        sample
+    }
+}
+
+async fn capabilities_profile_login(
+    client: &mut authn::authn_service_client::AuthnServiceClient<tonic::transport::Channel>,
+    security: &SecurityConfig,
+    namespace: Uuid,
+    actor: &str,
+    username: &str,
+    project: &str,
+    traffic: &Arc<CapabilitiesProfileTraffic>,
+    worker: usize,
+    attempt: usize,
+    ready: Option<&tokio::sync::watch::Sender<usize>>,
+) -> serde_json::Value {
+    let flight = traffic.begin("Login", worker, attempt);
+    if let Some(ready) = ready {
+        ready.send_modify(|count| *count += 1);
+    }
+    let mut request = Request::new(authn::LoginRequest {
+        username: username.into(),
+        password: "FixturePassword1!".into(),
+        ..Default::default()
+    });
+    request.set_timeout(Duration::from_secs(30));
+    let result = client.login(request).await;
+    let sample = flight.finish(result.as_ref().err().map(Status::code));
+    if let Ok(response) = result {
+        let response = response.into_inner();
+        assert_eq!(
+            response.user_id, actor,
+            "real Login must authenticate the exact prepared PERSON"
+        );
+        assert!(!response.session_id.is_empty());
+        let claims =
+            crate::runtime::security::validate_bearer_token(security, &response.access_token)
+                .expect("actual native Login access token verifies");
+        assert_eq!(claims.sub.as_deref(), Some(actor));
+        assert_eq!(
+            claims.tenant_id.as_deref(),
+            Some(namespace.to_string().as_str())
+        );
+        assert_eq!(claims.project_id.as_deref(), Some(project));
+        assert_eq!(
+            claims.account_kind,
+            Some(authn_entity::AccountKind::Person as i32)
+        );
+    }
+    sample
+}
+
+async fn capabilities_profile_pair(
+    served: &mut Serving,
+    bearer: &str,
+    project: &str,
+    receipt: &serde_json::Value,
+    first: bool,
+    traffic: &Arc<CapabilitiesProfileTraffic>,
+    attempt: usize,
+) -> Vec<serde_json::Value> {
+    let order = if first {
+        ["GetCapabilities", "Select"]
+    } else {
+        ["Select", "GetCapabilities"]
+    };
+    let mut rows = Vec::with_capacity(2);
+    for rpc in order {
+        rows.push(
+            capabilities_profile_read(
+                &mut served.client,
+                &served.service,
+                bearer,
+                project,
+                receipt,
+                rpc,
+                traffic,
+                attempt,
+            )
+            .await,
+        );
+    }
+    rows
+}
+
+async fn capabilities_profile_burst(
+    served: &Serving,
+    login: &authn::authn_service_client::AuthnServiceClient<tonic::transport::Channel>,
+    security: &SecurityConfig,
+    namespace: Uuid,
+    actor: &str,
+    username: &str,
+    project: &str,
+    receipt: &serde_json::Value,
+    attempts: usize,
+    login_attempts: usize,
+) -> serde_json::Value {
+    use std::sync::atomic::Ordering;
+    let traffic = CapabilitiesProfileTraffic::new();
+    let barrier = Arc::new(tokio::sync::Barrier::new(5));
+    let (ready_tx, ready_rx) = tokio::sync::watch::channel(0usize);
+    let mut tasks = tokio::task::JoinSet::new();
+    for worker in 0..2 {
+        let mut client = login.clone();
+        let traffic = traffic.clone();
+        let barrier = barrier.clone();
+        let security = security.clone();
+        let actor = actor.to_string();
+        let username = username.to_string();
+        let project = project.to_string();
+        let ready = ready_tx.clone();
+        tasks.spawn(async move {
+            barrier.wait().await;
+            let mut rows = Vec::with_capacity(login_attempts);
+            for attempt in 0..login_attempts {
+                rows.push(
+                    capabilities_profile_login(
+                        &mut client,
+                        &security,
+                        namespace,
+                        &actor,
+                        &username,
+                        &project,
+                        &traffic,
+                        worker,
+                        attempt,
+                        if attempt == 0 { Some(&ready) } else { None },
+                    )
+                    .await,
+                );
+            }
+            rows
+        });
+    }
+    for rpc in ["GetCapabilities", "Select"] {
+        let mut client = served.client.clone();
+        let service = served.service.clone();
+        let barrier = barrier.clone();
+        let traffic = traffic.clone();
+        let bearer = capabilities_profile_bearer(
+            security,
+            namespace,
+            project,
+            actor,
+            &["udb:admin", "udb:read"],
+        );
+        let project = project.to_string();
+        let receipt = receipt.clone();
+        let mut ready = ready_rx.clone();
+        tasks.spawn(async move {
+            barrier.wait().await;
+            while *ready.borrow() < 2 {
+                ready
+                    .changed()
+                    .await
+                    .expect("both real Login workers must begin");
+            }
+            let mut rows = Vec::with_capacity(attempts);
+            for attempt in 0..attempts {
+                rows.push(
+                    capabilities_profile_read(
+                        &mut client,
+                        &service,
+                        &bearer,
+                        &project,
+                        &receipt,
+                        rpc,
+                        &traffic,
+                        attempt,
+                    )
+                    .await,
+                );
+            }
+            rows
+        });
+    }
+    let serving_pool = served.service.runtime_snapshot().pg_pool_clone().unwrap();
+    let stop = Arc::new(std::sync::atomic::AtomicBool::new(false));
+    let done = stop.clone();
+    let observed_traffic = traffic.clone();
+    let monitor = tokio::spawn(async move {
+        let mut snapshots = Vec::new();
+        while !done.load(Ordering::Acquire) {
+            snapshots.push(
+                serde_json::json!({"at_us":u64::try_from(observed_traffic.origin.elapsed().as_micros()).unwrap(),
+                    "size":serving_pool.size(),"idle":serving_pool.num_idle()}),
+            );
+            tokio::time::sleep(Duration::from_millis(100)).await;
+        }
+        snapshots
+    });
+    let _monitor_guard = CapabilitiesProfileAbortOnDrop(monitor.abort_handle());
+    barrier.wait().await;
+    let process_before = capabilities_profile_process_receipt();
+    let work = async {
+        let mut rows = Vec::with_capacity(2 * attempts + 2 * login_attempts);
+        while let Some(result) = tasks.join_next().await {
+            rows.extend(result.expect("real capped workload worker"));
+        }
+        rows
+    };
+    let samples = tokio::time::timeout(Duration::from_secs(600), work).await;
+    stop.store(true, Ordering::Release);
+    let snapshots = monitor.await.unwrap();
+    let samples =
+        samples.expect("fixed four-worker workload must finish within its explicit bound");
+    assert_eq!(traffic.active.load(Ordering::SeqCst), 0);
+    assert_eq!(traffic.login_active.load(Ordering::SeqCst), 0);
+    let overlap = |rpc| {
+        samples
+            .iter()
+            .filter(|row| {
+                if row["rpc"] != rpc || row["ok"] != true {
+                    return false;
+                }
+                let start = row["start_us"].as_u64().unwrap();
+                let end = row["end_us"].as_u64().unwrap();
+                let contains = |point, end_point| {
+                    samples.iter().any(|login| {
+                        if login["rpc"] != "Login" {
+                            return false;
+                        }
+                        let first = login["start_us"].as_u64().unwrap();
+                        let last = login["end_us"].as_u64().unwrap();
+                        if end_point {
+                            first < point && point <= last
+                        } else {
+                            first <= point && point < last
+                        }
+                    })
+                };
+                contains(start, false) && contains(end, true)
+            })
+            .count()
+    };
+    serde_json::json!({
+        "samples":samples,"read_attempts_per_rpc":attempts,"login_workers":2,
+        "login_attempts_per_worker":login_attempts,"closed_loop_workers":4,
+        "maximum_client_inflight":traffic.peak.load(Ordering::SeqCst),
+        "maximum_login_inflight":traffic.login_peak.load(Ordering::SeqCst),
+        "overlapping_capabilities_successes":overlap("GetCapabilities"),
+        "overlapping_select_successes":overlap("Select"),"pool_snapshots":snapshots,
+        "process_before":process_before,"process_after":capabilities_profile_process_receipt(),
+    })
+}
+
+fn capabilities_profile_process_receipt() -> serde_json::Value {
+    let status = std::fs::read_to_string("/proc/self/status").unwrap_or_default();
+    let stat = std::fs::read_to_string("/proc/self/stat").unwrap_or_default();
+    let fields = stat
+        .rsplit_once(')')
+        .map(|(_, rest)| rest.split_whitespace().collect::<Vec<_>>())
+        .unwrap_or_default();
+    let value = |index| {
+        fields
+            .get(index)
+            .and_then(|value: &&str| value.parse::<u64>().ok())
+    };
+    serde_json::json!({
+        "pid": std::process::id(), "available_parallelism": std::thread::available_parallelism().map(|count| count.get()).ok(),
+        "user_cpu_ticks": value(11), "system_cpu_ticks": value(12), "process_start_ticks": value(19),
+        "threads": status.lines().find_map(|line| line.strip_prefix("Threads:")).map(str::trim),
+        "rss": status.lines().find_map(|line| line.strip_prefix("VmRSS:")).map(str::trim),
+    })
+}
+
+// A/B/A compiles once per source variant. prepare retains one immutable dataset;
+// the CI runner snapshots/restores its owned DB before each saved binary runs.
+// The separate sample artifacts never enter canonical SDK benchmark accounting.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+#[ignore = "requires actual Postgres/CREATE DATABASE; matched history proof is CI only"]
+async fn live_capabilities_catalog_history_profile() {
+    let dsn = require_live_dsn_any(&[
+        "UDB_LIVE_NATIVE_PG_DSN",
+        "UDB_LIVE_AUTH_PG_DSN",
+        "UDB_INTEGRATION_PG_DSN",
+        "UDB_PG_DSN",
+    ])
+    .expect("CAPABILITIES_HISTORY_PROFILE requires an actual PostgreSQL fixture");
+    let mode =
+        std::env::var("UDB_CAPABILITIES_PROFILE_MODE").unwrap_or_else(|_| "correctness".into());
+    assert!(matches!(
+        mode.as_str(),
+        "full" | "prepare" | "sample" | "cleanup" | "correctness"
+    ));
+    let namespace = match std::env::var("UDB_CAPABILITIES_PROFILE_NAMESPACE") {
+        Ok(value) => Uuid::parse_str(&value).expect("profile namespace must be a UUID"),
+        Err(_) if mode == "full" || mode == "correctness" => Uuid::new_v4(),
+        Err(_) => panic!("A/B/A requires the same explicit owned profile namespace"),
+    };
+    let table_count = std::env::var("UDB_CAPABILITIES_PROFILE_TABLES")
+        .map(|value| value.parse::<usize>().unwrap())
+        .unwrap_or(2);
+    let attempts = std::env::var("UDB_CAPABILITIES_PROFILE_ATTEMPTS")
+        .map(|value| value.parse::<usize>().unwrap())
+        .unwrap_or(50);
+    let login_attempts = std::env::var("UDB_CAPABILITIES_PROFILE_LOGIN_ATTEMPTS")
+        .map(|value| value.parse::<usize>().unwrap())
+        .unwrap_or(64);
+    assert!((50..=1000).contains(&attempts));
+    assert!((64..=2048).contains(&login_attempts));
+    let _lock = live_native_service_db_lock().lock().await;
+    let _restore = SecurityRestore(SecurityConfig::current());
+    let administration = pool(&dsn).await;
+    let database = format!("udb_cap_hist_{}", namespace.simple());
+    if mode == "cleanup" {
+        sqlx::query(&format!("DROP DATABASE \"{database}\" WITH (FORCE)"))
+            .execute(&administration)
+            .await
+            .expect("remove only the owned profile DB");
+        administration.close().await;
+        return;
+    }
+    let prepare = matches!(mode.as_str(), "full" | "prepare" | "correctness");
+    if prepare {
+        sqlx::query(&format!("CREATE DATABASE \"{database}\""))
+            .execute(&administration)
+            .await
+            .expect("create the owned immutable profile DB");
+    }
+    let owned_dsn = project_dsn(&dsn, &database);
+    let control = pool(&owned_dsn).await;
+    let result=std::panic::AssertUnwindSafe(async {
+        let (manifest,schemas)=parsed(&capabilities_profile_source(table_count));
+        if prepare {
+            super::support::migrate_native_service_db(&control).await;
+            for ddl in generate_bootstrap_sql(&schemas,&SqlGenerationConfig::default()).unwrap() {
+                if ddl.schema=="udb_capabilities_history" {
+                    sqlx::raw_sql(&ddl.content).execute(&control).await.expect("apply real profile producer DDL");
+                }
+            }
+        }
+        let security=capabilities_profile_security();
+        let config=capabilities_profile_config(&owned_dsn,&security);
+        let message_limit=config.service.grpc_max_message_bytes;
+        let budgets=serde_json::json!({
+            "pg_pool_max":config.primary.max_open_conns,"pg_pool_min":config.primary.min_connections,
+            "pg_acquire_timeout_secs":config.primary.acquire_timeout_secs,"tokio_worker_threads":2,
+            "channels":config.channels,"grpc_timeout_secs":config.service.grpc_timeout_secs,
+            "grpc_max_concurrent":config.service.grpc_max_concurrent,"grpc_max_message_bytes":message_limit,
+            "rate_limit_enabled":config.service.rate_limit_enabled,
+            "rate_limit_window_secs":config.service.rate_limit_window_secs,
+            "rate_limit_max_per_window":config.service.rate_limit_max_per_window,
+            "login_rate_limit_per_minute":std::env::var("UDB_RATE_LIMIT_POLICY_AUTHN_LOGIN_PUBLIC").ok(),
+            "login_abuse_limit_per_minute":std::env::var("UDB_ABUSE_POLICY_AUTHN_LOGIN_ABUSE").ok(),
+            "password_kdf_operator_cap":std::env::var("UDB_PASSWORD_KDF_MAX_CONCURRENCY").ok(),
+        });
+        let service=build_service(config).await;
+        let runtime=service.runtime_snapshot();
+        let serving_pool=runtime.pg_pool_clone().unwrap();
+        assert_eq!(serving_pool.options().get_max_connections(),4,
+            "all native authn and DataBroker requests share the actual four-connection pool");
+        let (authn,authn_config)=capabilities_profile_authn(&serving_pool,&service,&security,namespace);
+        if prepare {
+            for histories in [1u8,8,32] {
+                let project=capabilities_profile_project(namespace,histories);
+                let bearer=fixture_bearer(&control,&authn,&security,&namespace.to_string(),&project,
+                    &["udb:admin","udb:read"]).await;
+                let actor=crate::runtime::security::validate_bearer_token(&security,&bearer).unwrap().sub.unwrap();
+                super::authz_deny_path_live::insert_allow_rule(&control,&namespace.to_string(),&project,
+                    &actor,"reviewed.catalog.live.v1.Receipt","Select").await;
+                sqlx::query("INSERT INTO udb_capabilities_history.records \
+                    (record_id,tenant_id,project_id,lookup_key,round_item_id) VALUES($1,$2,$3,'owned','owned')")
+                    .bind(format!("profile-{histories}")).bind(namespace.to_string()).bind(&project)
+                    .execute(&control).await.expect("seed scoped matched Select row");
+            }
+        }
+        crate::runtime::service::auth_service::install_data_plane_credential_resolvers(
+            serving_pool.clone(),&authn_config,
+            Arc::new(authn.clone().with_runtime(None).with_authz_snapshot(None)),
+        );
+        let (_,authz,_)=service.build_auth_services();authz.warm_shared_snapshot().await;
+        let (mut served,mut login)=capabilities_profile_serve(service,authn,message_limit).await;
+        if prepare {
+            for histories in [1u8,8,32] {
+                let project=capabilities_profile_project(namespace,histories);
+                let actor=capabilities_profile_actor(&control,namespace,&project).await;
+                let bearer=capabilities_profile_bearer(&security,namespace,&project,&actor,&["udb:admin","udb:read"]);
+                for history in 0..histories {
+                    let mut value=serde_json::to_value(&manifest).unwrap();
+                    value["version"]=serde_json::json!(format!("1.0.{history}"));
+                    let staged=stage(&mut served.client,&bearer,&project,&serde_json::to_vec(&value).unwrap(),"",
+                        &format!("profile-stage-{history}")).await.expect("prepare real served catalog history");
+                    if history==0 { activate(&mut served.client,&bearer,&staged,"","profile-base-activate")
+                        .await.expect("prepare real served exact ACTIVE profile catalog"); }
+                }
+                let dataset=capabilities_profile_history_receipt(&control,namespace,&project,histories as usize).await;
+                capabilities_profile_emit(serde_json::json!({"mode":"prepare","history_count":histories,
+                    "customer_table_count":table_count,"dataset":dataset,"pool_max":4,"budgets":budgets}));
+            }
+        }
+        if mode=="sample" || mode=="full" {
+            for histories in [1usize,8,32] {
+                let project=capabilities_profile_project(namespace,histories as u8);
+                let actor=capabilities_profile_actor(&control,namespace,&project).await;
+                let username=capabilities_profile_username(&control,namespace,&project,&actor).await;
+                let bearer=capabilities_profile_bearer(&security,namespace,&project,&actor,&["udb:admin","udb:read"]);
+                let before=capabilities_profile_history_receipt(&control,namespace,&project,histories).await;
+                let warm=CapabilitiesProfileTraffic::new();
+                for attempt in 0..5 {
+                    let rows=capabilities_profile_pair(&mut served,&bearer,&project,&before,attempt%2==0,&warm,attempt).await;
+                    assert!(rows.iter().all(|row|row["ok"]==true),"warm both real read routes");
+                }
+                for attempt in 0..2 {
+                    let row=capabilities_profile_login(&mut login,&security,namespace,&actor,&username,&project,
+                        &warm,0,attempt,None).await;
+                    assert_eq!(row["ok"],true,"warm real Argon2 Login before timing");
+                }
+                let idle=CapabilitiesProfileTraffic::new();
+                let process_before=capabilities_profile_process_receipt();
+                let mut idle_samples=Vec::with_capacity(attempts*2);
+                for attempt in 0..attempts {
+                    idle_samples.extend(capabilities_profile_pair(&mut served,&bearer,&project,&before,
+                        attempt%2==0,&idle,attempt).await);
+                }
+                let idle_process_after=capabilities_profile_process_receipt();
+                let burst=capabilities_profile_burst(&served,&login,&security,namespace,&actor,&username,
+                    &project,&before,attempts,login_attempts).await;
+                let after=capabilities_profile_history_receipt(&control,namespace,&project,histories).await;
+                assert_eq!(before,after,"measured history rows and bytes must remain identical");
+                let value=serde_json::json!({"mode":"sample","history_count":histories,
+                    "customer_table_count":table_count,"attempts_per_rpc":attempts,"dataset":before,
+                    "actor_id":actor,"budgets":budgets,"idle":{"samples":idle_samples,"process_before":process_before,
+                        "process_after":idle_process_after},"burst":burst,
+                    "pool_max":serving_pool.options().get_max_connections(),"pool_size":serving_pool.size(),
+                    "pool_idle":serving_pool.num_idle()});
+                capabilities_profile_emit(value.clone());
+                assert!(idle_samples.iter().all(|row|row["ok"]==true),"all fixed idle RPC attempts must succeed");
+                let burst_samples=value["burst"]["samples"].as_array().unwrap();
+                assert_eq!(burst_samples.len(),2*attempts+2*login_attempts);
+                assert!(burst_samples.iter().all(|row|row["ok"]==true),"all fixed burst RPC attempts must succeed");
+                assert_eq!(value["burst"]["overlapping_capabilities_successes"],serde_json::json!(attempts),
+                    "all measured GetCapabilities calls must begin and finish while real Login RPCs are in flight");
+                assert_eq!(value["burst"]["overlapping_select_successes"],serde_json::json!(attempts),
+                    "all measured Select calls must begin and finish while real Login RPCs are in flight");
+            }
+        }
+        if mode=="full" || mode=="correctness" {
+            capabilities_history_correctness(&mut served,&control,namespace,&security,&manifest).await;
+        }
+        drop(login);served.stop().await;
+        tokio::time::timeout(Duration::from_secs(10),serving_pool.close()).await.expect("close actual serving pool");
+    }).catch_unwind().await;
+    control.close().await;
+    if mode == "full" || mode == "correctness" || result.is_err() {
+        let removed = sqlx::query(&format!("DROP DATABASE \"{database}\" WITH (FORCE)"))
+            .execute(&administration)
+            .await;
+        if result.is_ok() {
+            removed.expect("remove only the completed owned profile DB");
+        }
+    }
+    administration.close().await;
+    if let Err(payload) = result {
+        std::panic::resume_unwind(payload);
+    }
+}
+
+async fn capabilities_history_correctness(
+    served: &mut Serving,
+    control: &sqlx::PgPool,
+    namespace: Uuid,
+    security: &SecurityConfig,
+    manifest: &CatalogManifest,
+) {
+    let project = capabilities_profile_project(namespace, 1);
+    let actor = capabilities_profile_actor(control, namespace, &project).await;
+    let owner = capabilities_profile_bearer(
+        security,
+        namespace,
+        &project,
+        &actor,
+        &["udb:admin", "udb:read"],
+    );
+    let reader = capabilities_profile_bearer(security, namespace, &project, &actor, &["udb:read"]);
+    assert_eq!(
+        served
+            .client
+            .get_capabilities(request(
+                crate::proto::CapabilitiesRequest {
+                    project_id: project.clone(),
+                    ..Default::default()
+                },
+                &reader
+            ))
+            .await
+            .unwrap_err()
+            .code(),
+        Code::PermissionDenied,
+        "capabilities must perform its admin authorization on each call"
+    );
+    assert_eq!(
+        served
+            .client
+            .get_capabilities(request(
+                crate::proto::CapabilitiesRequest {
+                    project_id: capabilities_profile_project(namespace, 8),
+                    ..Default::default()
+                },
+                &owner
+            ))
+            .await
+            .unwrap_err()
+            .code(),
+        Code::PermissionDenied,
+        "history cannot widen project authority"
+    );
+    let active_version = served
+        .service
+        .catalog
+        .active_exact_for(&project)
+        .unwrap()
+        .metadata
+        .version
+        .clone();
+    let mut bytes = serde_json::to_value(manifest).unwrap();
+    bytes["version"] = serde_json::json!("1.0.99");
+    let staged = stage(
+        &mut served.client,
+        &owner,
+        &project,
+        &serde_json::to_vec(&bytes).unwrap(),
+        "",
+        "fresh-history",
+    )
+    .await
+    .expect("new history becomes visible without changing ACTIVE");
+    assert_eq!(
+        served
+            .service
+            .catalog
+            .active_exact_for(&project)
+            .unwrap()
+            .metadata
+            .version,
+        active_version
+    );
+    let expected = capabilities_profile_history_receipt(control, namespace, &project, 2).await;
+    let checked = capabilities_profile_pair(
+        served,
+        &owner,
+        &project,
+        &expected,
+        true,
+        &CapabilitiesProfileTraffic::new(),
+        0,
+    )
+    .await;
+    assert!(checked.iter().all(|row| row["ok"] == true));
+    served.service.catalog.set_authority_fresh(false);
+    let stale = served
+        .client
+        .get_capabilities(request(
+            crate::proto::CapabilitiesRequest {
+                project_id: project.clone(),
+                ..Default::default()
+            },
+            &owner,
+        ))
+        .await;
+    served.service.catalog.set_authority_fresh(true);
+    assert_eq!(
+        stale.unwrap_err().code(),
+        Code::Unavailable,
+        "diagnostic labels never bypass fresh ACTIVE authority"
+    );
+    let relation = SystemCatalogConfig::default().catalog_versions_relation();
+    let original: serde_json::Value = sqlx::query_scalar(&format!(
+        "SELECT manifest_json FROM {relation} WHERE catalog_id=$1::UUID"
+    ))
+    .bind(&staged.catalog_id)
+    .fetch_one(control)
+    .await
+    .unwrap();
+    sqlx::query(&format!("UPDATE {relation} SET manifest_json=jsonb_set(manifest_json,'{{tables}}','[]'::JSONB) WHERE catalog_id=$1::UUID"))
+        .bind(&staged.catalog_id).execute(control).await.unwrap();
+    let public = served
+        .client
+        .get_catalog_versions(request(CatalogManifestRequest::default(), &owner))
+        .await;
+    assert_eq!(
+        public.unwrap_err().code(),
+        Code::FailedPrecondition,
+        "public history retains full provenance validation"
+    );
+    let diagnostic = served
+        .client
+        .get_capabilities(request(
+            crate::proto::CapabilitiesRequest {
+                project_id: project.clone(),
+                ..Default::default()
+            },
+            &owner,
+        ))
+        .await
+        .expect("corrupt historical metadata remains diagnostic only")
+        .into_inner();
+    assert_eq!(
+        diagnostic
+            .system_catalog_relations
+            .iter()
+            .filter(|label| label.starts_with("project:"))
+            .count(),
+        2,
+        "opaque corrupted-history labels must not be confused with verified catalog authority"
+    );
+    sqlx::query(&format!(
+        "UPDATE {relation} SET status='REJECTED' WHERE catalog_id=$1::UUID"
+    ))
+    .bind(&staged.catalog_id)
+    .execute(control)
+    .await
+    .unwrap();
+    let rejected = served
+        .client
+        .get_catalog_versions(request(CatalogManifestRequest::default(), &owner))
+        .await
+        .expect("rejected corrupt history stays a diagnostic public entry")
+        .into_inner();
+    assert!(
+        rejected
+            .versions
+            .iter()
+            .any(|row| row.catalog_id == staged.catalog_id
+                && row.manifest_integrity_sha256.is_empty())
+    );
+    sqlx::query(&format!(
+        "UPDATE {relation} SET manifest_json=$2,status='STAGED' WHERE catalog_id=$1::UUID"
+    ))
+    .bind(&staged.catalog_id)
+    .bind(original)
+    .execute(control)
+    .await
+    .unwrap();
+    let config = SystemCatalogConfig::default();
+    sqlx::query(&format!(
+        "ALTER TABLE {relation} RENAME TO udb_capabilities_hidden_versions"
+    ))
+    .execute(control)
+    .await
+    .unwrap();
+    let omitted = served
+        .client
+        .get_capabilities(request(
+            crate::proto::CapabilitiesRequest {
+                project_id: project.clone(),
+                ..Default::default()
+            },
+            &owner,
+        ))
+        .await;
+    let hidden = native_catalog::relation(
+        &config.cdc.system_schema,
+        "udb_capabilities_hidden_versions",
+    );
+    sqlx::query(&format!(
+        "ALTER TABLE {hidden} RENAME TO \"{}\"",
+        config.catalog_versions_table.replace('"', "\"\"")
+    ))
+    .execute(control)
+    .await
+    .expect("restore owned catalog relation after actual query-error control");
+    assert!(
+        !omitted
+            .expect("history query failure keeps the existing capabilities omission behavior")
+            .into_inner()
+            .system_catalog_relations
+            .iter()
+            .any(|label| label.starts_with("project:"))
+    );
+    let users =
+        native_catalog::native_model("udb.core.authn.entity.v1.User", &["user_id", "status"]);
+    sqlx::query(&format!(
+        "UPDATE {} SET {}='SUSPENDED' WHERE {}=$1::UUID",
+        users.relation,
+        users.q("status"),
+        users.q("user_id")
+    ))
+    .bind(&actor)
+    .execute(control)
+    .await
+    .unwrap();
+    assert_eq!(
+        served
+            .client
+            .get_capabilities(request(
+                crate::proto::CapabilitiesRequest {
+                    project_id: project.clone(),
+                    ..Default::default()
+                },
+                &owner
+            ))
+            .await
+            .unwrap_err()
+            .code(),
+        Code::Unauthenticated,
+        "history optimization must not cache credential authority"
+    );
+}
+// END CAPABILITIES_HISTORY_CI_PROFILE

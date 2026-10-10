@@ -3220,6 +3220,35 @@ impl DataBrokerRuntime {
         })
     }
 
+    /// Read opaque history labels for `GetCapabilities`, without loading manifests.
+    /// These labels are deployment diagnostics, never verified catalog authority.
+    /// Public catalog reads and mutations continue to validate full provenance.
+    pub(crate) async fn catalog_version_labels_for_capabilities(
+        &self,
+        project_id: &str,
+    ) -> Result<Vec<String>, tonic::Status> {
+        use crate::runtime::system::SystemCatalogConfig;
+        let project_id = canonical_catalog_project_id(project_id)?;
+        let pool = self.pg_pool()?;
+        let cat_rel = SystemCatalogConfig::default().catalog_versions_relation();
+        let rows = sqlx::query(&format!(
+            "SELECT version FROM {cat_rel} WHERE project_id = $1 ORDER BY created_at DESC"
+        ))
+        .bind(&project_id)
+        .fetch_all(pool)
+        .await
+        .map_err(|err| {
+            catalog_admin_internal_status(
+                "catalog_version_labels_for_capabilities",
+                format!("catalog version label query failed: {err}"),
+            )
+        })?;
+        Ok(rows
+            .into_iter()
+            .map(|row| row.try_get::<String, _>("version").unwrap_or_default())
+            .collect())
+    }
+
     /// Return all catalog versions for a project.
     pub async fn get_catalog_versions(
         &self,

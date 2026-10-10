@@ -1,0 +1,90 @@
+name: GetCapabilities matched catalog history comparison
+
+on:
+  workflow_dispatch:
+    inputs:
+      baseline_commit:
+        description: "Exact audited immutable serving baseline; other sources refused"
+        required: true
+        default: 678fec4160236f7f392f47b89d03f87012591d77
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: capabilities-history-aba-${{ github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  matched-history:
+    name: Actual optimized same-host A1-B-A2 serving comparison
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    services:
+      postgres:
+        image: public.ecr.aws/docker/library/postgres:16-alpine@sha256:721873c34ceb9f8d8fc265984940dc982404c105f19ad51be9fdc5970a6080ea
+        env:
+          POSTGRES_DB: udb
+          POSTGRES_USER: udb
+          POSTGRES_PASSWORD: udb
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U udb -d udb"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      UDB_LIVE_AUTH_TESTS: "1"
+      UDB_LIVE_REQUIRED: "1"
+      UDB_LIVE_NATIVE_PG_DSN: postgres://udb:udb@127.0.0.1:5432/udb
+      UDB_LIVE_AUTH_PG_DSN: postgres://udb:udb@127.0.0.1:5432/udb
+      UDB_INTEGRATION_PG_DSN: postgres://udb:udb@127.0.0.1:5432/udb
+      # Existing operator controls for this isolated load fixture only.
+      # Method checks and finite policy enforcement remain enabled in all phases.
+      UDB_RATE_LIMIT_POLICY_AUTHN_LOGIN_PUBLIC: "20000"
+      UDB_ABUSE_POLICY_AUTHN_LOGIN_ABUSE: "20000"
+      UDB_GRPC_MAX_RECV_BYTES: "33554432"
+      RUSTFLAGS: "-C target-cpu=x86-64-v2"
+      CARGO_TERM_COLOR: never
+      CARGO_TARGET_DIR: ${{ github.workspace }}/target/capabilities-history-aba
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/setup-rust
+        with:
+          cache-key: rust-capabilities-history-aba-dist
+      - name: Install actual PostgreSQL evidence client
+        timeout-minutes: 5
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+      - name: Validate source-only receipt admission
+        timeout-minutes: 2
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/capabilities_history_aba.py selftest
+      - name: Compile pinned sources and measure identical actual serving fixture
+        timeout-minutes: 165
+        env:
+          BASELINE_COMMIT: ${{ inputs.baseline_commit }}
+          PG_SERVICE_CONTAINER_ID: ${{ job.services.postgres.id }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/capabilities-history-aba"
+          cp scripts/capabilities_history_aba.py "$RUNNER_TEMP/capabilities-history-aba-runner.py"
+          python3 "$RUNNER_TEMP/capabilities-history-aba-runner.py" run
+      - name: Preserve complete source, binary and matched runtime evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: capabilities-history-aba
+          path: ${{ runner.temp }}/capabilities-history-aba/
+          if-no-files-found: error
+          retention-days: 14

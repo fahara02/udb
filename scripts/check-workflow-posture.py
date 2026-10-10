@@ -21,6 +21,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 
 PROOF_WORKFLOWS = (
+    "capabilities-history-aba.yml",
     "branch-protection-audit.yml",
     "cdc-source-proof.yml",
     "sdk-producer-preview.yml",
@@ -50,6 +51,7 @@ DOCKER_PROOF_WORKFLOWS = {
 }
 
 ARTIFACT_PROOF_WORKFLOWS = DOCKER_PROOF_WORKFLOWS | {
+    "capabilities-history-aba.yml",
     "cdc-source-proof.yml",
     "sdk-producer-preview.yml",
     "ffmpeg-transcode-smoke.yml",
@@ -247,6 +249,20 @@ INTEGRATION_COMPOSE_PROFILE_REQUIREMENTS = (
 )
 
 TARGETED_PROOF_WORKFLOW_REQUIREMENTS = {
+    "capabilities-history-aba.yml": (
+        ("baseline_commit:", "immutable source input"),
+        ("default: 678fec4160236f7f392f47b89d03f87012591d77", "audited baseline"),
+        ("cancel-in-progress: false", "preserved matched evidence"),
+        ("services:", "real PostgreSQL service"),
+        ("postgres:16-alpine@sha256:", "pinned PostgreSQL16 image"),
+        ("RUSTFLAGS: \"-C target-cpu=x86-64-v2\"", "optimized hardware tier"),
+        ("python3 scripts/capabilities_history_aba.py selftest", "receipt refusal controls"),
+        ("BASELINE_COMMIT: ${{ inputs.baseline_commit }}", "exact requested baseline"),
+        ("PG_SERVICE_CONTAINER_ID: ${{ job.services.postgres.id }}", "actual PG resource identity"),
+        ('python3 "$RUNNER_TEMP/capabilities-history-aba-runner.py" run', "actual matched serving comparison"),
+        ("name: capabilities-history-aba", "complete source/binary/runtime artifact"),
+        ("if-no-files-found: error", "missing evidence refusal"),
+    ),
     "branch-protection-audit.yml": (
         ("branch-protection-lockstep:", "branch-protection audit job"),
         ("branch:", "protected branch workflow input"),
@@ -4303,6 +4319,7 @@ RETRY_SAFE_SERVED_SMOKE_REQUIREMENTS = (
 )
 
 LINT_WORKFLOW_TRIGGER_PATHS = (
+    ("scripts/capabilities_history_aba.py", "matched capabilities history runner"),
     ("scripts/extract-changelog-section.mjs", "release-notes extractor"),
     (".github/workflows/**", "workflow files"),
     (".github/actions/**", "composite action files"),
@@ -9910,6 +9927,18 @@ jobs:
 """
         for name in PROOF_WORKFLOWS:
             (wf / name).write_text(good, encoding="utf-8")
+        capabilities_good = good + "\n".join(
+            needle for needle, _label in TARGETED_PROOF_WORKFLOW_REQUIREMENTS["capabilities-history-aba.yml"]
+        ) + "\n"
+        capabilities_path = wf / "capabilities-history-aba.yml"
+        capabilities_path.write_text(capabilities_good, encoding="utf-8")
+        assert not check_proof_workflows(root), "good capabilities workflow posture failed"
+        for needle, label in TARGETED_PROOF_WORKFLOW_REQUIREMENTS["capabilities-history-aba.yml"]:
+            capabilities_path.write_text(capabilities_good.replace(needle, ""), encoding="utf-8")
+            assert any(label in failure for failure in check_targeted_proof_workflows(root)), label
+        capabilities_path.write_text(capabilities_good.replace("if: always()", "if: failure()"), encoding="utf-8")
+        assert any("always-run" in failure for failure in check_proof_workflows(root))
+        capabilities_path.write_text(capabilities_good, encoding="utf-8")
         (wf / "branch-protection-audit.yml").write_text(branch_protection_workflow_good, encoding="utf-8")
         (wf / "error-detail-served-smoke.yml").write_text(error_detail_served_workflow_good, encoding="utf-8")
         (wf / "ha-smokes.yml").write_text(ha_good, encoding="utf-8")

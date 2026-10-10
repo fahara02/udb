@@ -144,15 +144,16 @@ impl DataBrokerService {
             qrel(sys_schema, &sys_cfg.saga_table),
             qrel(&sys_cfg.abac_schema, &sys_cfg.abac_table),
         ];
-        // When a project_id is provided, include project-specific catalog information.
+        // Historical version labels are diagnostics only. Exact ACTIVE authority
+        // was resolved above; public catalog APIs separately verify provenance.
+        // Keep this fresh metadata query and omit the labels on query failure.
         if let Ok(versions) = self
             .runtime_snapshot()
-            .get_catalog_versions(&project_scope)
+            .catalog_version_labels_for_capabilities(&project_scope)
             .await
         {
-            for v in &versions {
-                let ver = v["version"].as_str().unwrap_or("unknown");
-                system_catalog_relations.push(format!("project:{project_scope}:catalog:{ver}"));
+            for version in versions {
+                system_catalog_relations.push(format!("project:{project_scope}:catalog:{version}"));
             }
         }
         let supported_rpcs: Vec<String> = SUPPORTED_RPC_NAMES
