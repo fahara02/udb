@@ -659,24 +659,23 @@ RELEASE_ORCHESTRATOR_REQUIREMENTS = (
 CLEANUP_PACKAGES_REQUIREMENTS = (
     ('workflows: ["Release"]', "top-level release completion trigger"),
     ("types: [completed]", "release-completed event filter"),
-    ("schedule:", "weekly cleanup schedule"),
-    ('cron: "0 2 * * 0"', "weekly Sunday cleanup cron"),
-    ("workflow_dispatch:", "manual cleanup trigger"),
-    ("keep_sha_tags:", "manual sha-retention input"),
-    ("dry_run:", "manual dry-run input"),
-    ("packages: write", "package delete permission"),
-    ("cleanup-docker:", "GHCR cleanup job"),
+    ("schedule:", "weekly inventory schedule"),
+    ('cron: "0 2 * * 0"', "weekly Sunday inventory cron"),
+    ("workflow_dispatch:", "manual inventory trigger"),
+    ("keep_sha_tags:", "compatibility retention hint input"),
+    ("dry_run:", "compatibility dry-run input"),
+    ("default: true", "default read-only input"),
+    ("packages: read", "read-only package permission"),
+    ("cleanup-docker:", "single GHCR inventory job"),
+    ("timeout-minutes: 5", "bounded inventory job"),
     ("github.event.workflow_run.conclusion == 'success'", "successful-release cleanup gate"),
-    ("actions/delete-package-versions@v5", "GitHub package deletion action"),
-    ("package-name: udb", "UDB package target"),
-    ("package-type: container", "container package target"),
-    ("min-versions-to-keep: 0", "untagged cleanup keeps no stale untagged versions"),
-    ("delete-only-untagged-versions: 'true'", "untagged-only cleanup pass"),
-    ("github.event.inputs.keep_sha_tags || '5'", "sha tag retention default"),
-    ("ignore-versions:", "semver/latest protection regex"),
-    ("latest|\\d+\\.\\d+|\\d+", "major/minor/latest protection"),
-    ("Dry run", "dry-run package listing step"),
-    ("/users/fahara02/packages/container/udb/versions?per_page=100", "GHCR package listing endpoint"),
+    ("Read-only bounded GHCR inventory", "read-only inventory step"),
+    ("No package versions are deleted by this workflow.", "honest no-deletion contract"),
+    ("pruning requires retained-root reachability", "live OCI child protection"),
+    ("Retention hint (inventory only)", "non-operative compatibility hint"),
+    ("first 100 versions; it is not a deletion plan", "honest partial inventory bound"),
+    ("timeout 60s gh api --method GET", "bounded read-only GitHub request"),
+    ("/users/fahara02/packages/container/udb/versions?per_page=100&page=1", "bounded GHCR listing endpoint"),
 )
 
 PUBLISH_SKILL_REQUIREMENTS = (
@@ -5051,20 +5050,23 @@ def check_cleanup_packages_ownership(root: Path = ROOT) -> list[str]:
     workflow_dir = root / ".github" / "workflows"
     cleanup_path = workflow_dir / "cleanup-packages.yml"
     if not cleanup_path.is_file():
-        return ["cleanup-packages.yml: cleanup workflow file is missing"]
-
-    cleanup_text = _read(cleanup_path)
+        return ["cleanup-packages.yml: inventory workflow file is missing"]
+    cleanup_text = _non_comment_text(_read(cleanup_path))
     scoped: list[str] = []
     for needle, label in CLEANUP_PACKAGES_REQUIREMENTS:
         _require(cleanup_text, needle, label, scoped)
+    for needle in ("packages: write", "actions/delete-package-versions", "delete-only-untagged-versions", "min-versions-to-keep", "ignore-versions:", "--paginate"):
+        if needle in cleanup_text:
+            scoped.append("read-only package inventory forbids " + needle)
+    if re.search(r"(?:--method|-X)(?:=|\s+)(?!GET(?:\s|$))[A-Z]+", cleanup_text):
+        scoped.append("read-only package inventory forbids mutating HTTP methods")
     failures.extend(f"cleanup-packages.yml: {failure}" for failure in scoped)
-
     for path in workflow_dir.glob("*.yml"):
         if path.name == "cleanup-packages.yml":
             continue
-        text = _read(path)
+        text = _non_comment_text(_read(path))
         if "actions/delete-package-versions" in text:
-            failures.append(f"{path.name}: package deletion must stay owned by cleanup-packages.yml")
+            failures.append(f"{path.name}: package deletion is prohibited")
         if "/packages/container/udb/versions" in text:
             failures.append(f"{path.name}: GHCR package listing must stay owned by cleanup-packages.yml")
     return failures
@@ -7610,47 +7612,7 @@ jobs:
           exit 0
           curl -X POST "https://packagist.org/api/update-package"
 """
-        cleanup_packages_good = """name: Cleanup · Stale packages
-on:
-  workflow_run:
-    workflows: ["Release"]
-    types: [completed]
-  schedule:
-    - cron: "0 2 * * 0"
-  workflow_dispatch:
-    inputs:
-      keep_sha_tags:
-        default: "5"
-      dry_run:
-        type: boolean
-        default: false
-permissions:
-  packages: write
-jobs:
-  cleanup-docker:
-    runs-on: ubuntu-latest
-    if: >
-      github.event_name == 'workflow_dispatch' ||
-      github.event_name == 'schedule'         ||
-      github.event.workflow_run.conclusion == 'success'
-    steps:
-      - name: Delete untagged GHCR versions (udb)
-        uses: actions/delete-package-versions@v5
-        with:
-          package-name: udb
-          package-type: container
-          min-versions-to-keep: 0
-          delete-only-untagged-versions: 'true'
-      - name: Prune old sha-* tags (udb) -- keep newest ${{ github.event.inputs.keep_sha_tags || '5' }}
-        uses: actions/delete-package-versions@v5
-        with:
-          package-name: udb
-          package-type: container
-          min-versions-to-keep: ${{ github.event.inputs.keep_sha_tags || '5' }}
-          ignore-versions: '^(v?\\d+\\.\\d+(\\.\\d+)?(-[a-zA-Z0-9._]+)?|latest|\\d+\\.\\d+|\\d+)$'
-      - name: Dry run -- list package versions (no deletion)
-        run: gh api "/users/fahara02/packages/container/udb/versions?per_page=100"
-"""
+        cleanup_packages_good = 'name: Cleanup · Stale packages\n\n# Inventory only. Untagged versions can be live OCI child or attestation manifests.\n# Safe pruning requires OCI reachability from every retained tagged root; tags\n# alone and digest-name retention regexes do not establish that a version is stale.\non:\n  workflow_run:\n    workflows: ["Release"]\n    types: [completed]\n  schedule:\n    - cron: "0 2 * * 0"\n  workflow_dispatch:\n    inputs:\n      keep_sha_tags:\n        description: "Compatibility hint reported only; no package versions are deleted"\n        required: false\n        default: "5"\n      dry_run:\n        description: "Compatibility input; inventory is always read-only, even when false"\n        required: false\n        type: boolean\n        default: true\n\npermissions:\n  packages: read\n\njobs:\n  cleanup-docker:\n    name: GHCR inventory · ghcr.io/fahara02/udb\n    runs-on: ubuntu-latest\n    timeout-minutes: 5\n    if: >\n      github.event_name == \'workflow_dispatch\' ||\n      github.event_name == \'schedule\'         ||\n      github.event.workflow_run.conclusion == \'success\'\n    steps:\n      - name: Read-only bounded GHCR inventory\n        env:\n          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}\n          RETENTION_HINT: ${{ github.event.inputs.keep_sha_tags || \'5\' }}\n          REQUESTED_DRY_RUN: ${{ github.event.inputs.dry_run }}\n        shell: bash\n        run: |\n          set -euo pipefail\n          printf \'%s\\n\' \'No package versions are deleted by this workflow.\'\n          printf \'%s\\n\' \'Untagged versions may be live OCI children; pruning requires retained-root reachability.\'\n          printf \'%s\\n\' "Retention hint (inventory only): $RETENTION_HINT"\n          printf \'%s\\n\' "Requested dry_run (inventory remains read-only): $REQUESTED_DRY_RUN"\n          printf \'%s\\n\' \'Inventory is limited to the first 100 versions; it is not a deletion plan.\'\n          timeout 60s gh api --method GET \\\n            -H "Accept: application/vnd.github+json" \\\n            "/users/fahara02/packages/container/udb/versions?per_page=100&page=1" \\\n            --jq \'.[] | {id, name, created_at, tags: .metadata.container.tags}\'\n'
         release_dockerfile_good = """FROM debian:bookworm-slim AS runtime
 RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl
 ARG GRPC_HEALTH_PROBE_VERSION=v0.4.37
@@ -11904,12 +11866,28 @@ jobs:
         assert any("successful-release cleanup gate" in failure for failure in failures), failures
         (wf / "cleanup-packages.yml").write_text(cleanup_packages_good, encoding="utf-8")
 
+        cleanup_readonly_controls = (
+            (cleanup_packages_good + "\n      - uses: actions/delete-package-versions@v5\n", "actions/delete-package-versions"),
+            (cleanup_packages_good.replace("packages: read", "packages: write"), "packages: write"),
+            (cleanup_packages_good.replace("--method GET", "--method DELETE"), "mutating HTTP methods"),
+            (cleanup_packages_good.replace("--method GET", "--method POST"), "mutating HTTP methods"),
+            (cleanup_packages_good.replace("timeout 60s gh api", "gh api"), "bounded read-only GitHub request"),
+            (cleanup_packages_good.replace("per_page=100&page=1", "per_page=1000&page=1"), "bounded GHCR listing endpoint"),
+            (cleanup_packages_good.replace("default: true", "default: false"), "default read-only input"),
+            (cleanup_packages_good + "\n          gh api --paginate /users/fahara02/packages/container/udb/versions\n", "--paginate"),
+        )
+        for mutation, expected in cleanup_readonly_controls:
+            (wf / "cleanup-packages.yml").write_text(mutation, encoding="utf-8")
+            failures = check_cleanup_packages_ownership(root)
+            assert any(expected in failure for failure in failures), failures
+        (wf / "cleanup-packages.yml").write_text(cleanup_packages_good, encoding="utf-8")
+
         (wf / "release-docker.yml").write_text(
             release_docker_good + "\n      - uses: actions/delete-package-versions@v5\n",
             encoding="utf-8",
         )
         failures = check_cleanup_packages_ownership(root)
-        assert any("package deletion must stay owned by cleanup-packages.yml" in failure for failure in failures), failures
+        assert any("package deletion is prohibited" in failure for failure in failures), failures
         (wf / "release-docker.yml").write_text(release_docker_good, encoding="utf-8")
 
         (wf / "publish-skill.yml").write_text(

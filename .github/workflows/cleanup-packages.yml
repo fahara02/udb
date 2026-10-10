@@ -1,100 +1,53 @@
 name: Cleanup · Stale packages
 
-# Removes stale/broken package versions across all UDB registries.
-#
-# Runs automatically after every successful top-level release, on a weekly schedule
-# (Sunday 02:00 UTC), and can be triggered manually at any time.
-#
-# What is cleaned:
-#   GHCR (ghcr.io/fahara02/udb)
-#     • Untagged versions  — build-cache ghosts and failed-push fragments.
-#     • Old sha-<sha> tags — accumulate on every release; newest 5 are kept.
-#       Semver tags (v0.x.x, 0.x, 0, latest) are never deleted.
-#
-# What is NOT cleaned here (no deletion API available):
-#   crates.io — immutable; use `cargo yank` manually if needed.
-#   PyPI      — immutable; no public delete API.
-#   npm       — deprecation only, no deletion.
-#   Packagist — mirrors a satellite repo; manage tags there directly.
-#   NuGet     — no public delete API; use nuget.org UI / API key.
-#   Maven     — immutable once released to Maven Central.
-#
-# Permissions: only needs packages:write — no repo or environment access.
-
+# Inventory only. Untagged versions can be live OCI child or attestation manifests.
+# Safe pruning requires OCI reachability from every retained tagged root; tags
+# alone and digest-name retention regexes do not establish that a version is stale.
 on:
   workflow_run:
     workflows: ["Release"]
     types: [completed]
   schedule:
-    - cron: "0 2 * * 0"   # every Sunday 02:00 UTC
+    - cron: "0 2 * * 0"
   workflow_dispatch:
     inputs:
       keep_sha_tags:
-        description: "Number of recent sha-* tags to keep (default: 5)"
+        description: "Compatibility hint reported only; no package versions are deleted"
         required: false
         default: "5"
       dry_run:
-        description: "Dry run — log what would be deleted without deleting"
+        description: "Compatibility input; inventory is always read-only, even when false"
         required: false
         type: boolean
-        default: false
+        default: true
 
 permissions:
-  packages: write
+  packages: read
 
 jobs:
-  # ── GHCR: ghcr.io/fahara02/udb ─────────────────────────────────────────────
   cleanup-docker:
-    name: GHCR · ghcr.io/fahara02/udb
+    name: GHCR inventory · ghcr.io/fahara02/udb
     runs-on: ubuntu-latest
-    timeout-minutes: 15
-    # Only run when triggered manually, on schedule, or when the top-level release
-    # workflow succeeded (skip when it fails — nothing new was pushed).
+    timeout-minutes: 5
     if: >
       github.event_name == 'workflow_dispatch' ||
       github.event_name == 'schedule'         ||
       github.event.workflow_run.conclusion == 'success'
-
     steps:
-      # ── Pass 1: untagged versions ─────────────────────────────────────────
-      # These are build-cache index blobs, multi-arch fragments that lost their
-      # manifest, or artifact leftovers from interrupted pushes.
-      - name: Delete untagged GHCR versions (udb)
-        uses: actions/delete-package-versions@v5
-        if: ${{ github.event.inputs.dry_run != 'true' }}
-        with:
-          package-name: udb
-          package-type: container
-          min-versions-to-keep: 0
-          delete-only-untagged-versions: 'true'
-        continue-on-error: true
-
-      # ── Pass 2: old sha-* digest tags ─────────────────────────────────────
-      # Every release push creates a sha-<short-sha> tag. Keep the newest N;
-      # delete the rest. Semver/latest are protected by ignore-versions.
-      - name: Prune old sha-* tags (udb) — keep newest ${{ github.event.inputs.keep_sha_tags || '5' }}
-        uses: actions/delete-package-versions@v5
-        if: ${{ github.event.inputs.dry_run != 'true' }}
-        with:
-          package-name: udb
-          package-type: container
-          min-versions-to-keep: ${{ github.event.inputs.keep_sha_tags || '5' }}
-          # Protect semver tags, major.minor, major-only, and "latest".
-          # Anything that does NOT match this regex (i.e. sha-* tags) is
-          # eligible for deletion once min-versions-to-keep is satisfied.
-          ignore-versions: '^(v?\d+\.\d+(\.\d+)?(-[a-zA-Z0-9._]+)?|latest|\d+\.\d+|\d+)$'
-        continue-on-error: true
-
-      # ── Dry-run summary ───────────────────────────────────────────────────
-      - name: Dry run — list package versions (no deletion)
-        if: ${{ github.event.inputs.dry_run == 'true' }}
+      - name: Read-only bounded GHCR inventory
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RETENTION_HINT: ${{ github.event.inputs.keep_sha_tags || '5' }}
+          REQUESTED_DRY_RUN: ${{ github.event.inputs.dry_run }}
         shell: bash
         run: |
-          echo "=== Dry run: GHCR package versions for ghcr.io/fahara02/udb ==="
-          gh api \
+          set -euo pipefail
+          printf '%s\n' 'No package versions are deleted by this workflow.'
+          printf '%s\n' 'Untagged versions may be live OCI children; pruning requires retained-root reachability.'
+          printf '%s\n' "Retention hint (inventory only): $RETENTION_HINT"
+          printf '%s\n' "Requested dry_run (inventory remains read-only): $REQUESTED_DRY_RUN"
+          printf '%s\n' 'Inventory is limited to the first 100 versions; it is not a deletion plan.'
+          timeout 60s gh api --method GET \
             -H "Accept: application/vnd.github+json" \
-            "/users/fahara02/packages/container/udb/versions?per_page=100" \
-            --jq '.[] | {id, created_at, tags: .metadata.container.tags}' \
-          || echo "(gh api unavailable or no versions found)"
+            "/users/fahara02/packages/container/udb/versions?per_page=100&page=1" \
+            --jq '.[] | {id, name, created_at, tags: .metadata.container.tags}'

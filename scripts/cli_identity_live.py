@@ -25,6 +25,21 @@ def sha(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
 
+def failure_frames(error: BaseException) -> list[dict[str, object]]:
+    """Bounded source locations only; never expose messages, locals or source."""
+    frames: list[dict[str, object]] = []
+    current = error.__traceback__
+    while current is not None:
+        frames.append({
+            "file": Path(current.tb_frame.f_code.co_filename).name[:128],
+            "line": current.tb_lineno,
+            "function": current.tb_frame.f_code.co_name[:128],
+        })
+        frames = frames[-8:]
+        current = current.tb_next
+    return frames
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--bin", required=True)
@@ -351,7 +366,7 @@ def main() -> int:
         receipt["success"] = True
     except (AssertionError, KeyError, ValueError, subprocess.TimeoutExpired, OSError, grpc.RpcError, psycopg.Error) as error:
         # Never serialize exception text: raw RPC/CLI messages may carry secrets.
-        receipt["failure"] = {"type": type(error).__name__, "completed_cases": len(receipt["cases"])}
+        receipt["failure"] = {"type": type(error).__name__, "completed_cases": len(receipt["cases"]), "frames": failure_frames(error)}
         if isinstance(error, grpc.RpcError):
             receipt["failure"]["grpc_code"] = error.code().name
     finally:

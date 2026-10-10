@@ -382,9 +382,23 @@ function checkRepo(repo = ROOT) {
   if (deployOwners.length !== 1 || deployOwners[0] !== "pages.yml") {
     errors.push(`Pages deploy must be single-owned by pages.yml; found ${deployOwners.join(", ") || "none"}`);
   }
-  const cleanupOwners = occurrenceFiles(repo, "actions/delete-package-versions@");
-  if (cleanupOwners.some((name) => name !== "cleanup-packages.yml") || cleanupOwners.length === 0) {
-    errors.push(`GHCR cleanup must be single-owned by cleanup-packages.yml; found ${cleanupOwners.join(", ") || "none"}`);
+  const deletionOwners = occurrenceFiles(repo, "actions/delete-package-versions@");
+  if (deletionOwners.length) {
+    errors.push(`GHCR package deletion is prohibited; found ${deletionOwners.join(", ")}`);
+  }
+  const cleanupOwners = occurrenceFiles(repo, "/packages/container/udb/versions");
+  if (cleanupOwners.length !== 1 || cleanupOwners[0] !== "cleanup-packages.yml") {
+    errors.push(`GHCR inventory must be single-owned by cleanup-packages.yml; found ${cleanupOwners.join(", ") || "none"}`);
+  }
+  const cleanupText = exists(repo, ".github/workflows/cleanup-packages.yml") ? read(repo, ".github/workflows/cleanup-packages.yml") : "";
+  for (const needle of ["packages: read", "timeout-minutes: 5", "timeout 60s gh api --method GET", "per_page=100&page=1", "No package versions are deleted by this workflow.", "pruning requires retained-root reachability"]) {
+    if (!cleanupText.includes(needle)) errors.push(`GHCR read-only inventory is missing ${needle}`);
+  }
+  for (const needle of ["packages: write", "delete-only-untagged-versions", "min-versions-to-keep", "ignore-versions:", "--paginate"]) {
+    if (cleanupText.includes(needle)) errors.push(`GHCR read-only inventory forbids ${needle}`);
+  }
+  if (/(?:--method|-X)(?:=|\s+)(?!GET(?:\s|$))[A-Z]+/.test(cleanupText)) {
+    errors.push("GHCR read-only inventory forbids mutating HTTP methods");
   }
 
   const benchmarkText = exists(repo, ".github/workflows/benchmark-sdks.yml") ? read(repo, ".github/workflows/benchmark-sdks.yml") : "";
@@ -593,7 +607,8 @@ Runner wall-clock evidence is still required before marking 15.A.5 done.
     workflow("_shadow-live-sdk.yml", "on:\n  workflow_dispatch:\njobs:\n  shadow:\n    uses: ./.github/workflows/_live-sdk-suite.yml\n");
     workflow("benchmark-candidate.yml", "on:\n  push:\n    branches: [main]\njobs:\n  benchmark:\n    if: contains(github.event.head_commit.message, '(benchmark)')\n    uses: ./.github/workflows/_live-sdk-suite.yml\n    with:\n      candidate-build: true\n      checkout-ref: ${{ github.sha }}\n");
     workflow("pages.yml", 'on:\n  workflow_run:\n    workflows: ["Benchmark · SDKs"]\npermissions:\n  pages: write\nconcurrency:\n  group: pages\n  cancel-in-progress: false\njobs:\n  deploy:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/deploy-pages@v4\n');
-    workflow("cleanup-packages.yml", "on:\n  workflow_run:\n    workflows: [Release]\njobs:\n  cleanup:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/delete-package-versions@v5\n");
+    const cleanupGood = "name: Cleanup · Stale packages\n\n# Inventory only. Untagged versions can be live OCI child or attestation manifests.\n# Safe pruning requires OCI reachability from every retained tagged root; tags\n# alone and digest-name retention regexes do not establish that a version is stale.\non:\n  workflow_run:\n    workflows: [\"Release\"]\n    types: [completed]\n  schedule:\n    - cron: \"0 2 * * 0\"\n  workflow_dispatch:\n    inputs:\n      keep_sha_tags:\n        description: \"Compatibility hint reported only; no package versions are deleted\"\n        required: false\n        default: \"5\"\n      dry_run:\n        description: \"Compatibility input; inventory is always read-only, even when false\"\n        required: false\n        type: boolean\n        default: true\n\npermissions:\n  packages: read\n\njobs:\n  cleanup-docker:\n    name: GHCR inventory · ghcr.io/fahara02/udb\n    runs-on: ubuntu-latest\n    timeout-minutes: 5\n    if: >\n      github.event_name == 'workflow_dispatch' ||\n      github.event_name == 'schedule'         ||\n      github.event.workflow_run.conclusion == 'success'\n    steps:\n      - name: Read-only bounded GHCR inventory\n        env:\n          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}\n          RETENTION_HINT: ${{ github.event.inputs.keep_sha_tags || '5' }}\n          REQUESTED_DRY_RUN: ${{ github.event.inputs.dry_run }}\n        shell: bash\n        run: |\n          set -euo pipefail\n          printf '%s\\n' 'No package versions are deleted by this workflow.'\n          printf '%s\\n' 'Untagged versions may be live OCI children; pruning requires retained-root reachability.'\n          printf '%s\\n' \"Retention hint (inventory only): $RETENTION_HINT\"\n          printf '%s\\n' \"Requested dry_run (inventory remains read-only): $REQUESTED_DRY_RUN\"\n          printf '%s\\n' 'Inventory is limited to the first 100 versions; it is not a deletion plan.'\n          timeout 60s gh api --method GET \\\n            -H \"Accept: application/vnd.github+json\" \\\n            \"/users/fahara02/packages/container/udb/versions?per_page=100&page=1\" \\\n            --jq '.[] | {id, name, created_at, tags: .metadata.container.tags}'\n";
+    workflow("cleanup-packages.yml", cleanupGood);
     workflow("_live-sdk-suite.yml", "on:\n  workflow_call:\njobs:\n  live:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: ./.github/actions/start-backends\n      - uses: ./.github/actions/broker-env\n      - uses: ./.github/actions/setup-sdk-toolchains\n");
     workflow("_selftest.yml", "on:\n  workflow_dispatch:\njobs:\n  selftest:\n    runs-on: ubuntu-latest\n");
     workflow("publish-skill.yml", "on:\n  workflow_dispatch:\njobs:\n  validate:\n    runs-on: ubuntu-latest\n");
@@ -601,6 +616,21 @@ Runner wall-clock evidence is still required before marking 15.A.5 done.
 
     const good = checkRepo(root);
     if (good.errors.length) throw new Error(`good inventory fixture failed: ${good.errors.join("; ")}`);
+
+    for (const [mutation, expected] of [
+      [cleanupGood + "\n      - uses: actions/delete-package-versions@v5\n", "package deletion is prohibited"],
+      [cleanupGood.replace("packages: read", "packages: write"), "packages: write"],
+      [cleanupGood.replace("--method GET", "--method DELETE"), "mutating HTTP methods"],
+      [cleanupGood.replace("--method GET", "--method POST"), "mutating HTTP methods"],
+      [cleanupGood.replace("timeout 60s gh api", "gh api"), "timeout 60s"],
+      [cleanupGood.replace("per_page=100&page=1", "per_page=1000&page=1"), "per_page=100&page=1"],
+      [cleanupGood + "\n          gh api --paginate /users/fahara02/packages/container/udb/versions\n", "--paginate"],
+    ]) {
+      workflow("cleanup-packages.yml", mutation);
+      const invalid = checkRepo(root);
+      if (!invalid.errors.some((error) => error.includes(expected))) throw new Error(`read-only inventory regression not caught: ${expected}`);
+    }
+    workflow("cleanup-packages.yml", cleanupGood);
 
     workflow("ci.yml", ciGood.replace("  smoke:\n    name: smoke\n    needs: build-broker\n", "  smoke:\n    name: smoke\n"));
     const missingBudgetEdge = checkRepo(root);
