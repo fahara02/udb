@@ -1755,7 +1755,6 @@ fn system_catalog_statements(config: &SystemCatalogConfig) -> Vec<String> {
                 project_id TEXT NOT NULL DEFAULT '',
                 consumer_name TEXT NOT NULL,
                 topic_pattern TEXT NOT NULL,
-                owner_identity TEXT NOT NULL DEFAULT '',
                 last_event_id UUID NOT NULL,
                 owner_identity TEXT NOT NULL DEFAULT '',
                 last_published_at TIMESTAMPTZ NOT NULL DEFAULT 'epoch',
