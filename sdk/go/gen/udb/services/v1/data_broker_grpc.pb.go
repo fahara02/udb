@@ -471,8 +471,8 @@ type DataBrokerClient interface {
 	// Scopes: listener and resource policy defaults (no explicit endpoint scopes).
 	// Credential types: listener credential policy defaults (no explicit allowlist).
 	// Operation kind: mutation.
-	// Idempotency: automatic transient retry requires the declared request key; reuse it only for unchanged request semantics and the same tenant/project.
-	// Idempotency fields: request key=event_id; server-generated key=false; duplicate response=none; replay-safe=true.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
 	// End UDB contract.
 	NackCdcEvents(ctx context.Context, in *v1.NackCdcEventsRequest, opts ...grpc.CallOption) (*v1.AckCdcEventsResponse, error)
 	// UDB contract: /udb.services.v1.DataBroker/CreateMaterializedView

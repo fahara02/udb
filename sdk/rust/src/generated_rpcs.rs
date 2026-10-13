@@ -5114,7 +5114,7 @@ pub static RPCS: &[RpcSpec] = &[
         alias: "nack_cdc_events",
         operation_kind: "mutation",
         read_only: false,
-        replay_safe: true,
+        replay_safe: false,
         client_streaming: false,
         server_streaming: false,
         http_method: "",

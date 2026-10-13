@@ -1,6 +1,6 @@
 {
   "schema_version": "1",
-  "descriptor_sha256": "6552084ec65a60428247d13d243906b137aa3ed602bd33bd15bcee4522690077",
+  "descriptor_sha256": "f811b857506fc8958e7b71c3e31884347e34d9d8394214f4fe0a25fc9beab694",
   "contract_version": "7.2.0",
   "udb_version": "0.5.33",
   "protocol_version": "1.0.0",
@@ -32215,12 +32215,7 @@
           "precondition_contract": null,
           "readback_contract": null,
           "lifecycle_contract": null,
-          "idempotency_contract": {
-            "request_key_field": "event_id",
-            "server_generated_key": false,
-            "duplicate_response_field": "",
-            "replay_safe": true
-          },
+          "idempotency_contract": null,
           "error_contract": null,
           "http": null
         },

@@ -2752,7 +2752,7 @@ RPC_REPLAY_SAFE: dict[str, str] = {
     "/udb.services.v1.DataBroker/ListSagas": "false",
     "/udb.services.v1.DataBroker/LookupMessageSchema": "false",
     "/udb.services.v1.DataBroker/MarkSagaReviewed": "false",
-    "/udb.services.v1.DataBroker/NackCdcEvents": "true",
+    "/udb.services.v1.DataBroker/NackCdcEvents": "false",
     "/udb.services.v1.DataBroker/PauseCdc": "false",
     "/udb.services.v1.DataBroker/PlanMigration": "false",
     "/udb.services.v1.DataBroker/PreviewCdcRedaction": "false",

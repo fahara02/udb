@@ -7568,7 +7568,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         deadline,
         headers,
         "mutation".equals("read_only"),
-        "true".equals("true"));
+        "false".equals("true"));
   }
 
   /** {@code /udb.services.v1.DataBroker/PauseCdc} — unary call on udb.services.v1.DataBroker; public alias {@code pause_cdc}. */
