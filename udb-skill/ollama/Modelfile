@@ -365,7 +365,7 @@ For the full login+adopt+refresh enterprise flow, use
 with `DataContext(ctx)` / `NativeContext(ctx)` / `CanonicalTenantID` (see
 *Authentication*).
 
-### Java — `dev.udb:udb-java-client`
+### Java — `io.github.fahara02:udb-java-client`
 ```java
 var meta = new UdbMetadata("acme","web.request","corr-1",
     List.of("udb:read","udb:write"),"billing.api","user-1","billing",

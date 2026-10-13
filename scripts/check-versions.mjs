@@ -288,7 +288,7 @@ processTriple("readme install php", "README.md", C["sdk-php"].version,
 processTriple("readme install csharp", "README.md", C["sdk-csharp"].version,
   /(dotnet add package Udb\.Client --version )(\d+\.\d+\.\d+)(` \|)/);
 processTriple("readme install java", "README.md", C["sdk-java"].version,
-  /(`dev\.udb:udb-java-client` \(`)(\d+\.\d+\.\d+)(` target)/);
+  /(`io\.github\.fahara02:udb-java-client` \(`)(\d+\.\d+\.\d+)(` target)/);
 
 // ── sdk/README.md install table + PHP consumer block ─────────────────────────
 processTriple("sdk-readme install go", "sdk/README.md", C["sdk-go"].version,

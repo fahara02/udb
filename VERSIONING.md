@@ -128,7 +128,7 @@ Each artifact publishes to its language's usual home:
 | Python SDK | PyPI package `udb-client` |
 | TypeScript SDK | npm package `@udb_plus/sdk` |
 | C# SDK | NuGet package `Udb.Client` |
-| Java SDK | Maven coordinates `dev.udb:udb-java-client` |
+| Java SDK | Maven coordinates `io.github.fahara02:udb-java-client` |
 | PHP/Laravel SDK | Packagist package `fahara02/udb-laravel` |
 | Go SDK | Go module proxy |
 

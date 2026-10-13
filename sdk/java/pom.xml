@@ -3,7 +3,7 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
-  <groupId>dev.udb</groupId>
+  <groupId>io.github.fahara02</groupId>
   <artifactId>udb-java-client</artifactId>
   <version>0.5.33-SNAPSHOT</version>
   <packaging>jar</packaging>

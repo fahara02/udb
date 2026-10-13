@@ -250,7 +250,7 @@ var resp = await client.GetHealthReportAsync(new HealthReportRequest {
 Console.WriteLine(resp);
 "#;
     let java_client = r#"// examples/java/Client.java — minimal UDB gRPC client (Java)
-// mvn dependency: dev.udb:udb-java-client
+// mvn dependency: io.github.fahara02:udb-java-client
 import com.udb.entity.v1.HealthReportRequest;
 import com.udb.entity.v1.RequestContext;
 import com.udb.services.v1.DataBrokerGrpc;

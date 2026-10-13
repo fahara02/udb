@@ -31,12 +31,12 @@ docker compose -f docker-compose.integration.yml --profile broker up -d --wait u
 
 ## 2. Build the SDK, then run the example
 
-The example depends on the local SDK artifact `dev.udb:udb-java-client`, which
+The example depends on the local SDK artifact `io.github.fahara02:udb-java-client`, which
 add-sources the generated stubs under `sdk/java/gen`. Install it once:
 
 ```bash
 cd ../../../sdk/java
-mvn install -DskipTests            # publishes dev.udb:udb-java-client to ~/.m2
+mvn install -DskipTests            # publishes io.github.fahara02:udb-java-client to ~/.m2
 ```
 
 Then run the example (Maven 3.9+, JDK 17):

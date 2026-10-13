@@ -337,7 +337,7 @@ read fences, consistency modes) and idempotency `was_duplicate` replay:
 | TypeScript / Node | `npm i @udb_plus/sdk@0.5.33` |
 | PHP / Laravel | `composer require fahara02/udb-laravel:^0.5.33` |
 | C# | `dotnet add package Udb.Client --version 0.5.33` |
-| Java | `dev.udb:udb-java-client` (`0.5.33` target; build from checkout until publishing lands) |
+| Java | `io.github.fahara02:udb-java-client` (`0.5.33` target; build from checkout until publishing lands) |
 
 Start here: [sdk/README.md](sdk/README.md).
 

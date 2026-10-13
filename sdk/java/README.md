@@ -11,7 +11,7 @@
 </p>
 <!-- UDB_BRAND_HEADER_END -->
 
-`dev.udb:udb-java-client` is the Java client for UDB. It wraps the DataBroker
+`io.github.fahara02:udb-java-client` is the Java client for UDB. It wraps the DataBroker
 gRPC client, attaches UDB metadata, and includes generated request/response
 types for the broker and native control-plane services.
 

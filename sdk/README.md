@@ -67,7 +67,7 @@ track the current generated surface instead of a hand-maintained count.
 | PHP / Laravel | `fahara02/udb-laravel` | `composer require fahara02/udb-laravel:^0.5.33` |
 | C# | `Udb.Client` | `dotnet add package Udb.Client --version 0.5.33` |
 | Rust | `udb-client` | `cargo add udb-client@0.5.21` |
-| Java | `dev.udb:udb-java-client` | build from checkout until Maven Central publishing lands |
+| Java | `io.github.fahara02:udb-java-client` | build from checkout until Maven Central publishing lands |
 
 ## What Every SDK Provides
 

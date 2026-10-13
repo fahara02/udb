@@ -23,7 +23,7 @@
       "manifest": "sdk/java/pom.xml",
       "tag": "v{version}",
       "publishes": [
-        "Maven Central (dev.udb:udb-java-client)"
+        "Maven Central (io.github.fahara02:udb-java-client)"
       ]
     },
     "sdk-php": {

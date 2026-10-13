@@ -19,9 +19,9 @@
     <!-- The hand-written UDB Java SDK (facade + auth ergonomics + AuthzCache).
          Build/install it first:  cd ../../../sdk/java && mvn install -DskipTests
          That add-sources the generated stubs under sdk/java/gen and publishes
-         dev.udb:udb-java-client to your local ~/.m2 so this example resolves it. -->
+         io.github.fahara02:udb-java-client to your local ~/.m2 so this example resolves it. -->
     <dependency>
-      <groupId>dev.udb</groupId>
+      <groupId>io.github.fahara02</groupId>
       <artifactId>udb-java-client</artifactId>
       <version>0.5.33-SNAPSHOT</version>
     </dependency>

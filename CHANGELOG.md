@@ -50,6 +50,12 @@ ungranted store calls, and TypeScript store parity.
   and TypeScript SDKs against their fakes and the live broker, plus Go
   conformance suites for constraints, query predicates and revisions.
 
+### Changed
+
+- **Java SDK Maven coordinates are `io.github.fahara02:udb-java-client`.** The
+  SDK has not been published under the old `dev.udb` group, so nothing resolves
+  it yet; the Java package names are unchanged.
+
 ### Breaking for callers
 
 - None. Go `Consume` used to return an error on a poison event; it now
