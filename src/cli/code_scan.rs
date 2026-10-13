@@ -67,7 +67,10 @@ fn analyzer_source() -> Result<PathBuf, String> {
             ));
         }
     }
-    std::fs::canonicalize(path).map_err(|err| format!("resolve Go analyzer cache: {err}"))
+    // Absolute, not canonical: on Windows canonicalize yields the `\\?\` form,
+    // which `go run` reads as an import path, and resolving through a file that
+    // a concurrent installer just replaced lands in the volume's deleted area.
+    std::path::absolute(&path).map_err(|err| format!("resolve Go analyzer cache: {err}"))
 }
 
 fn analyze(request: serde_json::Value) -> Result<Vec<CallSite>, String> {
@@ -137,7 +140,8 @@ pub(crate) fn scan_go_tree(root: &Path) -> Result<Vec<CallSite>, String> {
     } else {
         root
     };
-    let root = std::fs::canonicalize(root)
+    // Absolute, not canonical: the Go analyzer cannot walk Windows' `\\?\` form.
+    let root = std::path::absolute(root)
         .map_err(|err| format!("resolve code directory {}: {err}", root.display()))?;
     if !root.is_dir() {
         return Err(format!("{} is not a code directory", root.display()));
