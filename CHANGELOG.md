@@ -5,6 +5,32 @@ the package version in `Cargo.toml`; historical v0.3.2 audit material is folded
 into the v0.3.x entries because the codebase advanced to v0.3.7 before that
 release line was tagged.
 
+## [0.5.32] - 2026-10-13
+
+### Fixed
+
+- **Service accounts can run MFA for users of their own tenant.** `EnrollMFA`,
+  `ConfirmMFAEnrollment`, `GenerateRecoveryCodes`, `IssueMfaChallenge`,
+  `VerifyMfaChallenge`, `ListMfaFactors`, `DisableMfaFactor`,
+  `RevokeRecoveryCodes` and `AdminResetMfa` refused a service-account bearer
+  with `PermissionDenied` ("service account credential is not allowed for this
+  method"), so a backend identity service could not read or enroll a staff
+  user's second factor. They now admit it. The method's scope is still
+  required, and the target user must belong to the caller's tenant. Service-account
+  grants, certificate bindings, session revocation and MFA policy stay closed to
+  service accounts.
+
+### Documented
+
+- `ValidateTokenResponse.session_id` is empty for a token refreshed from a
+  refresh-token family, because the broker keeps only a hash of the session.
+  `session_public_id` identifies the session and is the same for the login token
+  and every token refreshed from it.
+
+### Breaking for callers
+
+- None.
+
 ## [0.5.31] - 2026-10-10
 
 ### Fixed

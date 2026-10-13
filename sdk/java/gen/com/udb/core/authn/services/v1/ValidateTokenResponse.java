@@ -124,6 +124,13 @@ private static final long serialVersionUID = 0L;
   @SuppressWarnings("serial")
   private volatile java.lang.Object sessionId_ = "";
   /**
+   * <pre>
+   * The raw session handle, only for a token minted directly by a login. A
+   * token refreshed from a refresh-token family returns it empty: the broker
+   * keeps only a hash of the session. Use session_public_id to identify the
+   * session across refreshes.
+   * </pre>
+   *
    * <code>string session_id = 3 [json_name = "sessionId"];</code>
    * @return The sessionId.
    */
@@ -141,6 +148,13 @@ private static final long serialVersionUID = 0L;
     }
   }
   /**
+   * <pre>
+   * The raw session handle, only for a token minted directly by a login. A
+   * token refreshed from a refresh-token family returns it empty: the broker
+   * keeps only a hash of the session. Use session_public_id to identify the
+   * session across refreshes.
+   * </pre>
+   *
    * <code>string session_id = 3 [json_name = "sessionId"];</code>
    * @return The bytes for sessionId.
    */
@@ -1538,6 +1552,13 @@ java.lang.String defaultValue) {
 
     private java.lang.Object sessionId_ = "";
     /**
+     * <pre>
+     * The raw session handle, only for a token minted directly by a login. A
+     * token refreshed from a refresh-token family returns it empty: the broker
+     * keeps only a hash of the session. Use session_public_id to identify the
+     * session across refreshes.
+     * </pre>
+     *
      * <code>string session_id = 3 [json_name = "sessionId"];</code>
      * @return The sessionId.
      */
@@ -1554,6 +1575,13 @@ java.lang.String defaultValue) {
       }
     }
     /**
+     * <pre>
+     * The raw session handle, only for a token minted directly by a login. A
+     * token refreshed from a refresh-token family returns it empty: the broker
+     * keeps only a hash of the session. Use session_public_id to identify the
+     * session across refreshes.
+     * </pre>
+     *
      * <code>string session_id = 3 [json_name = "sessionId"];</code>
      * @return The bytes for sessionId.
      */
@@ -1571,6 +1599,13 @@ java.lang.String defaultValue) {
       }
     }
     /**
+     * <pre>
+     * The raw session handle, only for a token minted directly by a login. A
+     * token refreshed from a refresh-token family returns it empty: the broker
+     * keeps only a hash of the session. Use session_public_id to identify the
+     * session across refreshes.
+     * </pre>
+     *
      * <code>string session_id = 3 [json_name = "sessionId"];</code>
      * @param value The sessionId to set.
      * @return This builder for chaining.
@@ -1584,6 +1619,13 @@ java.lang.String defaultValue) {
       return this;
     }
     /**
+     * <pre>
+     * The raw session handle, only for a token minted directly by a login. A
+     * token refreshed from a refresh-token family returns it empty: the broker
+     * keeps only a hash of the session. Use session_public_id to identify the
+     * session across refreshes.
+     * </pre>
+     *
      * <code>string session_id = 3 [json_name = "sessionId"];</code>
      * @return This builder for chaining.
      */
@@ -1594,6 +1636,13 @@ java.lang.String defaultValue) {
       return this;
     }
     /**
+     * <pre>
+     * The raw session handle, only for a token minted directly by a login. A
+     * token refreshed from a refresh-token family returns it empty: the broker
+     * keeps only a hash of the session. Use session_public_id to identify the
+     * session across refreshes.
+     * </pre>
+     *
      * <code>string session_id = 3 [json_name = "sessionId"];</code>
      * @param value The bytes for sessionId to set.
      * @return This builder for chaining.

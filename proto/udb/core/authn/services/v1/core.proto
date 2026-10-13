@@ -593,6 +593,10 @@ message ValidateTokenResponse {
   };
   bool valid = 1;
   string user_id = 2;
+  // The raw session handle, only for a token minted directly by a login. A
+  // token refreshed from a refresh-token family returns it empty: the broker
+  // keeps only a hash of the session. Use session_public_id to identify the
+  // session across refreshes.
   string session_id = 3;
   udb.core.authn.entity.v1.AccountKind account_kind = 4;
   string tenant_id = 5;

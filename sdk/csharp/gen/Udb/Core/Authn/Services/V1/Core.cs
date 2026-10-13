@@ -10956,6 +10956,12 @@ namespace Udb.Core.Authn.Services.V1 {
     /// <summary>Field number for the "session_id" field.</summary>
     public const int SessionIdFieldNumber = 3;
     private string sessionId_ = "";
+    /// <summary>
+    /// The raw session handle, only for a token minted directly by a login. A
+    /// token refreshed from a refresh-token family returns it empty: the broker
+    /// keeps only a hash of the session. Use session_public_id to identify the
+    /// session across refreshes.
+    /// </summary>
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public string SessionId {

@@ -23,6 +23,11 @@ class ValidateTokenResponse extends \Google\Protobuf\Internal\Message
      */
     protected $user_id = '';
     /**
+     * The raw session handle, only for a token minted directly by a login. A
+     * token refreshed from a refresh-token family returns it empty: the broker
+     * keeps only a hash of the session. Use session_public_id to identify the
+     * session across refreshes.
+     *
      * Generated from protobuf field <code>string session_id = 3 [json_name = "sessionId"];</code>
      */
     protected $session_id = '';
@@ -99,6 +104,10 @@ class ValidateTokenResponse extends \Google\Protobuf\Internal\Message
      *     @type bool $valid
      *     @type string $user_id
      *     @type string $session_id
+     *           The raw session handle, only for a token minted directly by a login. A
+     *           token refreshed from a refresh-token family returns it empty: the broker
+     *           keeps only a hash of the session. Use session_public_id to identify the
+     *           session across refreshes.
      *     @type int $account_kind
      *     @type string $tenant_id
      *     @type string[] $roles
@@ -171,6 +180,11 @@ class ValidateTokenResponse extends \Google\Protobuf\Internal\Message
     }
 
     /**
+     * The raw session handle, only for a token minted directly by a login. A
+     * token refreshed from a refresh-token family returns it empty: the broker
+     * keeps only a hash of the session. Use session_public_id to identify the
+     * session across refreshes.
+     *
      * Generated from protobuf field <code>string session_id = 3 [json_name = "sessionId"];</code>
      * @return string
      */
@@ -180,6 +194,11 @@ class ValidateTokenResponse extends \Google\Protobuf\Internal\Message
     }
 
     /**
+     * The raw session handle, only for a token minted directly by a login. A
+     * token refreshed from a refresh-token family returns it empty: the broker
+     * keeps only a hash of the session. Use session_public_id to identify the
+     * session across refreshes.
+     *
      * Generated from protobuf field <code>string session_id = 3 [json_name = "sessionId"];</code>
      * @param string $var
      * @return $this

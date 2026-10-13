@@ -1208,6 +1208,11 @@ export type ValidateTokenResponse = Message<"udb.core.authn.services.v1.Validate
   userId: string;
 
   /**
+   * The raw session handle, only for a token minted directly by a login. A
+   * token refreshed from a refresh-token family returns it empty: the broker
+   * keeps only a hash of the session. Use session_public_id to identify the
+   * session across refreshes.
+   *
    * @generated from field: string session_id = 3;
    */
   sessionId: string;

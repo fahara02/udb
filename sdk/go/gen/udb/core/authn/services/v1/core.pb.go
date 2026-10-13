@@ -2280,12 +2280,16 @@ func (x *ValidateTokenRequest) GetTokenType() v11.TokenType {
 }
 
 type ValidateTokenResponse struct {
-	state       protoimpl.MessageState `protogen:"open.v1"`
-	Valid       bool                   `protobuf:"varint,1,opt,name=valid,proto3" json:"valid,omitempty"`
-	UserId      string                 `protobuf:"bytes,2,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
-	SessionId   string                 `protobuf:"bytes,3,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
-	AccountKind v11.AccountKind        `protobuf:"varint,4,opt,name=account_kind,json=accountKind,proto3,enum=udb.core.authn.entity.v1.AccountKind" json:"account_kind,omitempty"`
-	TenantId    string                 `protobuf:"bytes,5,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	state  protoimpl.MessageState `protogen:"open.v1"`
+	Valid  bool                   `protobuf:"varint,1,opt,name=valid,proto3" json:"valid,omitempty"`
+	UserId string                 `protobuf:"bytes,2,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	// The raw session handle, only for a token minted directly by a login. A
+	// token refreshed from a refresh-token family returns it empty: the broker
+	// keeps only a hash of the session. Use session_public_id to identify the
+	// session across refreshes.
+	SessionId   string          `protobuf:"bytes,3,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
+	AccountKind v11.AccountKind `protobuf:"varint,4,opt,name=account_kind,json=accountKind,proto3,enum=udb.core.authn.entity.v1.AccountKind" json:"account_kind,omitempty"`
+	TenantId    string          `protobuf:"bytes,5,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
 	// Resolved roles (from authz domain)
 	Roles         []string               `protobuf:"bytes,6,rep,name=roles,proto3" json:"roles,omitempty"`
 	ExpiresAt     *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=expires_at,json=expiresAt,proto3" json:"expires_at,omitempty"`

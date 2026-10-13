@@ -2,7 +2,7 @@
   "swagger": "2.0",
   "info": {
     "title": "UDB Control-Plane API",
-    "version": "0.5.31",
+    "version": "0.5.32",
     "description": "HTTP/JSON (gRPC-gateway) surface for UDB control-plane services. The core DataBroker data-plane RPCs are gRPC-native and are not represented here."
   },
   "tags": [
@@ -60178,7 +60178,8 @@
           "type": "string"
         },
         "sessionId": {
-          "type": "string"
+          "type": "string",
+          "description": "The raw session handle, only for a token minted directly by a login. A\ntoken refreshed from a refresh-token family returns it empty: the broker\nkeeps only a hash of the session. Use session_public_id to identify the\nsession across refreshes."
         },
         "accountKind": {
           "$ref": "#/definitions/v1AccountKind"

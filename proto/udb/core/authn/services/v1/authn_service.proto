@@ -1293,6 +1293,7 @@ service AuthnService {
       scopes: "udb:authn:enroll-mfa"
       allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
       allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
       decision_resource: "authn.EnrollMFA"
       request_context_required: true
       tenant_required: true
@@ -1351,6 +1352,7 @@ service AuthnService {
       scopes: "udb:authn:confirm-mfa-enrollment"
       allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
       allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
       decision_resource: "authn.ConfirmMFAEnrollment"
       request_context_required: true
       tenant_required: true
@@ -1411,6 +1413,7 @@ service AuthnService {
       scopes: "udb:authn:generate-recovery-codes"
       allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
       allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
       decision_resource: "authn.GenerateRecoveryCodes"
       request_context_required: true
       tenant_required: true
@@ -2182,6 +2185,7 @@ service AuthnService {
       scopes: "udb:authn:issue-mfa-challenge"
       allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
       allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
       decision_resource: "authn.IssueMfaChallenge"
       request_context_required: true
       tenant_required: true
@@ -2197,6 +2201,7 @@ service AuthnService {
       scopes: "udb:authn:verify-mfa-challenge"
       allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
       allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
       decision_resource: "authn.VerifyMfaChallenge"
       request_context_required: true
       tenant_required: true
@@ -2212,6 +2217,7 @@ service AuthnService {
       scopes: "udb:authn:list-mfa-factors"
       allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
       allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
       decision_resource: "authn.ListMfaFactors"
       request_context_required: true
       tenant_required: true
@@ -2227,6 +2233,7 @@ service AuthnService {
       scopes: "udb:authn:disable-mfa-factor"
       allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
       allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
       decision_resource: "authn.DisableMfaFactor"
       request_context_required: true
       tenant_required: true
@@ -2258,6 +2265,7 @@ service AuthnService {
       scopes: "udb:authn:revoke-recovery-codes"
       allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
       allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
       decision_resource: "authn.RevokeRecoveryCodes"
       request_context_required: true
       tenant_required: true
@@ -2274,6 +2282,7 @@ service AuthnService {
       scopes: "udb:authn:admin-reset-mfa"
       allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
       allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
       decision_resource: "authn.AdminResetMfa"
       request_context_required: true
       tenant_required: true
