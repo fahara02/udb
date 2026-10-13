@@ -50,6 +50,14 @@ ungranted store calls, and TypeScript store parity.
   and TypeScript SDKs against their fakes and the live broker, plus Go
   conformance suites for constraints, query predicates and revisions.
 
+### Fixed
+
+- **`udb dev up --embedded` no longer leaves a stale PostgreSQL pidfile** when
+  interrupted while PostgreSQL is still starting, which made the next start
+  believe a cluster was already running.
+- **`udbtest.StartPair` creates its peer tenant with the dev cluster's
+  secrets**, so the Go embedded helper works offline.
+
 ### Changed
 
 - **Java SDK Maven coordinates are `io.github.fahara02:udb-java-client`.** The
