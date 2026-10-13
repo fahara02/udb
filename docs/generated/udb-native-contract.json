@@ -1,6 +1,6 @@
 {
   "schema_version": "1",
-  "descriptor_sha256": "e704062824bb461d0124d78c3ea2a112a577f0e9720d54ed232f807cb51fef9e",
+  "descriptor_sha256": "039cb013ee53c2548574ae065252ed8a761614f277c4429c82698411d75912da",
   "contract_version": "7.2.0",
   "udb_version": "0.5.32",
   "protocol_version": "1.0.0",
@@ -2720,7 +2720,8 @@
             "required_assurance_level": 0,
             "allowed_credential_types": [
               1,
-              2
+              2,
+              4
             ],
             "rate_limit_policy_ref": "",
             "abuse_policy_ref": "",
@@ -3423,7 +3424,8 @@
             "required_assurance_level": 0,
             "allowed_credential_types": [
               1,
-              2
+              2,
+              4
             ],
             "rate_limit_policy_ref": "",
             "abuse_policy_ref": "",
@@ -3986,7 +3988,8 @@
             "required_assurance_level": 0,
             "allowed_credential_types": [
               1,
-              2
+              2,
+              4
             ],
             "rate_limit_policy_ref": "",
             "abuse_policy_ref": "",
@@ -4148,7 +4151,8 @@
             "required_assurance_level": 0,
             "allowed_credential_types": [
               1,
-              2
+              2,
+              4
             ],
             "rate_limit_policy_ref": "",
             "abuse_policy_ref": "",
@@ -4518,7 +4522,8 @@
             "required_assurance_level": 0,
             "allowed_credential_types": [
               1,
-              2
+              2,
+              4
             ],
             "rate_limit_policy_ref": "",
             "abuse_policy_ref": "",
@@ -5179,7 +5184,8 @@
             "required_assurance_level": 0,
             "allowed_credential_types": [
               1,
-              2
+              2,
+              4
             ],
             "rate_limit_policy_ref": "",
             "abuse_policy_ref": "",
@@ -5416,7 +5422,8 @@
             "required_assurance_level": 0,
             "allowed_credential_types": [
               1,
-              2
+              2,
+              4
             ],
             "rate_limit_policy_ref": "",
             "abuse_policy_ref": "",
@@ -6847,7 +6854,8 @@
             "required_assurance_level": 0,
             "allowed_credential_types": [
               1,
-              2
+              2,
+              4
             ],
             "rate_limit_policy_ref": "",
             "abuse_policy_ref": "",
@@ -7983,7 +7991,8 @@
             "required_assurance_level": 0,
             "allowed_credential_types": [
               1,
-              2
+              2,
+              4
             ],
             "rate_limit_policy_ref": "",
             "abuse_policy_ref": "",
