@@ -247,13 +247,20 @@ def main(proof):
                 elif contents != first_marker:
                     raise RuntimeError("restart replaced the persisted admin credentials")
                 credentials = json.loads(contents)
+                # A second user is created offline against the dev cluster, so it
+                # needs the secrets the dev broker hashes and encrypts with.
+                dev_dir = project / ".udb" / "dev"
+                dev_secrets = {
+                    "UDB_SESSION_HASH_SECRET": (dev_dir / "session-secret").read_text().strip(),
+                    "UDB_ENCRYPTION_KEY": (dev_dir / "encryption-key").read_text().strip(),
+                }
                 peer_username = "udbtest-embedded-peer"
                 peer_password = "UdbTestPeer#2026Pass"
                 phase(f"peer-bootstrap-{iteration + 1}")
                 subprocess.run([str(binary), "auth", "bootstrap", "user", "--username", peer_username,
                                 "--email", peer_username + "@udbtest.invalid", "--password", peer_password,
                                 "--tenant", peer_tenant, "--project", "default"],
-                               cwd=project, env=environment | {"UDB_PG_DSN": credentials["dsn"]},
+                               cwd=project, env=environment | dev_secrets | {"UDB_PG_DSN": credentials["dsn"]},
                                stdout=log, stderr=log, check=True, timeout=60)
                 test_env = environment | {
                     "UDB_LIVE_SDK_TESTS": "1",
