@@ -284,7 +284,10 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest]
-    timeout-minutes: 45
+    # Windows compiles from cold whenever the previous run failed (the cache is
+    # only saved on success), and then the release-binary build overran 45
+    # minutes after every test had already passed.
+    timeout-minutes: ${{ matrix.os == 'windows-latest' && 75 || 45 }}
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup-rust
