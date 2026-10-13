@@ -800,687 +800,203 @@ async fn live_cdc_named_delivery_orders_cross_replica_journal_before_local_broad
     f.close().await;
 }
 
-// Retain future NACK/operator coverage as executable tests. Its legacy header
-// fixtures still owe migration to canonical signed credentials; authority is
-// not broadened to make those preservation tests pass.
-mod preserved_future {
-    //! Served durable-consumer ownership, scope, monotonic acknowledgment and
-    //! replay after journal retention. No Kafka process is needed in journal mode.
-    use super::super::data_plane_live::{dp_live_pg_dsn, dp_pool, dp_service, with_ctx};
-    use crate::generation::CatalogManifest;
-    use crate::proto::data_broker_server::DataBroker;
-    use crate::proto::{AckCdcEventsRequest, CdcSubscriptionRequest, NackCdcEventsRequest};
-    use crate::runtime::cdc::{CdcConfig, CdcEngine};
-    use crate::runtime::system::{SystemCatalogConfig, ensure_system_catalog};
-    use futures::StreamExt;
-    use std::sync::Arc;
-    use std::time::Duration;
-    use tonic::{Code, Request};
-    use uuid::Uuid;
-
-    fn principal<T>(message: T, tenant: &str, user: &str) -> Request<T> {
-        let mut request = with_ctx(message, tenant);
-        request.metadata_mut().insert(
-            "x-scopes",
-            "udb:admin,udb:read,udb:write,udb:cdc:read,udb:cdc:subscribe"
-                .parse()
-                .unwrap(),
-        );
-        request
-            .metadata_mut()
-            .insert("x-user-id", user.parse().unwrap());
-        request
-            .metadata_mut()
-            .insert("x-udb-project-id", "default".parse().unwrap());
-        request
+fn dead_letter(name: &str, topic: &str, event: Uuid) -> crate::proto::NackCdcEventsRequest {
+    crate::proto::NackCdcEventsRequest {
+        consumer_name: name.into(),
+        topic_pattern: topic.into(),
+        event_id: event.to_string(),
+        attempts: 3,
+        failure_reason: "handler rejected fixture".into(),
+        ..Default::default()
     }
+}
 
-    async fn seed(
-        pool: &sqlx::PgPool,
-        topic: &str,
-        tenant: &str,
-        project: &str,
-        seconds: i32,
-    ) -> Uuid {
-        let id = Uuid::new_v4();
-        let payload = serde_json::json!({
-            "event_id": id, "event_type": topic, "tenant_id": tenant,
-            "project_id": project, "payload": {"value": seconds},
-        });
-        let journal = SystemCatalogConfig::current().cdc_journal_relation();
-        sqlx::query(&format!(
-        "INSERT INTO {journal} (event_id, topic, payload, published_at) \
-         VALUES ($1, $2, $3, '2026-01-01'::timestamptz + make_interval(secs => $4::double precision))"
-    ))
-    .bind(id).bind(topic).bind(payload).bind(f64::from(seconds))
-    .execute(pool).await.expect("seed durable journal event");
-        id
-    }
-
-    fn acknowledgment(name: &str, topic: &str, event: Uuid) -> AckCdcEventsRequest {
-        AckCdcEventsRequest {
-            consumer_name: name.into(),
-            topic_pattern: topic.into(),
-            event_id: event.to_string(),
-            ..Default::default()
-        }
-    }
-
-    fn subscription(name: &str, topic: &str) -> CdcSubscriptionRequest {
-        CdcSubscriptionRequest {
-            consumer_name: name.into(),
-            topic_pattern: topic.into(),
-            ..Default::default()
-        }
-    }
-
-    async fn service_with_topic(
-        dsn: &str,
-        pool: &sqlx::PgPool,
-        topic: &str,
-    ) -> crate::runtime::service::DataBrokerService {
-        let metrics: Arc<dyn crate::metrics::MetricsRecorder> =
-            Arc::new(crate::metrics::NoopMetrics);
-        let config = CdcConfig {
-            journal_only: true,
-            ..CdcConfig::default()
-        };
-        #[cfg(feature = "redis")]
-        let engine = CdcEngine::new(pool.clone(), None, "", dsn.to_string(), metrics, config);
-        #[cfg(not(feature = "redis"))]
-        let engine = CdcEngine::new(pool.clone(), "", dsn.to_string(), metrics, config);
-        let engine = Arc::new(engine.expect("journal-only engine"));
-        let policy_relation = SystemCatalogConfig::current().topic_policy_relation();
-        sqlx::query(&format!(
-        "INSERT INTO {policy_relation} (topic, owning_project, owning_service, schema_uri, enabled) \
-         VALUES ($1, 'default', 'consumer-live', '', TRUE)"
-    )).bind(topic).execute(pool).await.expect("topic policy");
-        engine
-            .load_topic_policies()
-            .await
-            .expect("load topic policies");
-        let mut service = dp_service(dsn, CatalogManifest::default()).await;
-        service.cdc_engine = Some(engine);
-        service
-    }
-
-    #[tokio::test]
-    #[ignore = "requires live Postgres; CI runs every ignored lib test"]
-    async fn named_consumer_enforces_owner_scope_and_resumes_after_retention() {
-        let _guard = super::super::support::live_native_service_db_lock()
-            .lock()
-            .await;
-        let Some(dsn) = dp_live_pg_dsn() else { return };
-        let pool = dp_pool(&dsn).await;
-        ensure_system_catalog(&pool).await.expect("system catalog");
-        let tenant = Uuid::new_v4().to_string();
-        let topic = format!("udb.cdc.consumer.{}.v1", Uuid::new_v4().simple());
-        let first = seed(&pool, &topic, &tenant, "default", 1).await;
-        let second = seed(&pool, &topic, &tenant, "default", 2).await;
-        let third = seed(&pool, &topic, &tenant, "default", 3).await;
-        let foreign = seed(&pool, &topic, "other-tenant", "default", 4).await;
-        let wrong_project = seed(&pool, &topic, &tenant, "other-project", 5).await;
-        let wrong_topic = seed(&pool, "udb.cdc.other.v1", &tenant, "default", 6).await;
-        let policy_relation = SystemCatalogConfig::current().topic_policy_relation();
-        let service = service_with_topic(&dsn, &pool, &topic).await;
-        let mut stream = service
-            .publish_cdc(principal(subscription("reader", &topic), &tenant, "alice"))
-            .await
-            .expect("new named consumer opens retained backlog")
-            .into_inner();
-        let event = tokio::time::timeout(Duration::from_secs(5), stream.next())
-            .await
-            .expect("backlog arrives")
-            .expect("open stream")
-            .expect("served event");
-        assert_eq!(event.event_id, first.to_string());
-        drop(stream);
-        // The name is owned at subscribe time, before its first acknowledgment.
-        let result = service
-            .publish_cdc(principal(subscription("reader", &topic), &tenant, "bob"))
-            .await;
-        assert_eq!(
-            result
-                .err()
-                .expect("other principal cannot subscribe")
-                .code(),
-            Code::PermissionDenied
-        );
-        for event in [foreign, wrong_project, wrong_topic] {
-            let result = service
-                .ack_cdc_events(principal(
-                    acknowledgment("reader", &topic, event),
-                    &tenant,
-                    "alice",
-                ))
-                .await;
-            assert_eq!(result.unwrap_err().code(), Code::PermissionDenied);
-        }
-        assert_eq!(
-            service
-                .ack_cdc_events(principal(
-                    acknowledgment("reader", &topic, Uuid::new_v4()),
-                    &tenant,
-                    "alice"
-                ))
-                .await
-                .unwrap_err()
-                .code(),
-            Code::NotFound
-        );
-        for event in [second, first] {
-            service
-                .ack_cdc_events(principal(
-                    acknowledgment("reader", &topic, event),
-                    &tenant,
-                    "alice",
-                ))
-                .await
-                .expect("owner acknowledgment");
-        }
-        assert_eq!(
-            service
-                .ack_cdc_events(principal(
-                    acknowledgment("reader", &topic, third),
-                    &tenant,
-                    "bob"
-                ))
-                .await
-                .unwrap_err()
-                .code(),
-            Code::PermissionDenied
-        );
-        let cursors = SystemCatalogConfig::current().cdc_consumer_cursors_relation();
-        let position: Uuid = sqlx::query_scalar(&format!(
-            "SELECT last_event_id FROM {cursors} WHERE tenant_id=$1 AND consumer_name='reader'"
-        ))
-        .bind(&tenant)
-        .fetch_one(&pool)
-        .await
-        .expect("cursor position");
-        assert_eq!(
-            position, second,
-            "a late acknowledgment must not rewind the cursor"
-        );
-        let journal = SystemCatalogConfig::current().cdc_journal_relation();
-        sqlx::query(&format!("DELETE FROM {journal} WHERE event_id=$1"))
-            .bind(second)
-            .execute(&pool)
-            .await
-            .expect("simulate journal retention");
-        let health = service
-            .runtime_snapshot()
-            .delivery_health(crate::runtime::core::delivery_health::DeliveryThresholds {
-                consumer_max_lag_secs: 0,
-                ..Default::default()
-            })
-            .await
-            .expect("delivery health after retention");
-        let health = health
-            .iter()
-            .find(|check| check.check.contains("consumer reader ("))
-            .expect("named consumer health");
-        assert!(
-            !health.passed && health.detail.starts_with("1s behind"),
-            "lag must survive retention and ignore other scopes: {}",
-            health.detail
-        );
-        let slot = format!("consumer-status-{}", Uuid::new_v4().simple());
-        let control = crate::proto::CdcControlRequest {
-            slot_name: slot.clone(),
-            ..Default::default()
-        };
-        service
-            .pause_cdc(principal(control.clone(), &tenant, "alice"))
-            .await
-            .expect("create an owned control slot");
-        let status = service
-            .get_cdc_status(principal(control.clone(), &tenant, "alice"))
-            .await
-            .expect("served consumer lag after retention")
-            .into_inner();
-        let cursor = status
-            .consumers
-            .iter()
-            .find(|consumer| consumer.consumer_name == "reader")
-            .expect("named cursor appears in CDC status");
-        assert_eq!(cursor.last_event_id, second.to_string());
-        assert_eq!(
-            cursor.lag_seconds, 1.0,
-            "lag ignores foreign tenants/projects/topics"
-        );
-        assert_eq!(cursor.owner_identity, "user:alice");
-        assert!(!cursor.owner_migration_required);
-        assert!(
-            status
-                .consumers
-                .iter()
-                .all(|consumer| consumer.tenant_id == tenant && consumer.project_id == "default")
-        );
-        let mut resumed = service
-            .publish_cdc(principal(subscription("reader", &topic), &tenant, "alice"))
-            .await
-            .expect("resume survives cursor row retention")
-            .into_inner();
-        let event = tokio::time::timeout(Duration::from_secs(5), resumed.next())
-            .await
-            .expect("next retained event arrives")
-            .expect("open stream")
-            .expect("served event");
-        assert_eq!(
-            event.event_id,
-            third.to_string(),
-            "resume must not replay the older event"
-        );
-        drop(resumed);
-        // Pre-upgrade rows carry no verified owner and cannot be claimed silently.
-        sqlx::query(&format!(
-            "UPDATE {cursors} SET owner_identity='' WHERE tenant_id=$1"
-        ))
-        .bind(&tenant)
-        .execute(&pool)
-        .await
-        .expect("legacy cursor");
-        let status = service
-            .get_cdc_status(principal(control, &tenant, "alice"))
-            .await
-            .expect("legacy ownership is visible to the operator")
-            .into_inner();
-        assert!(
-            status
-                .consumers
-                .iter()
-                .find(|consumer| consumer.consumer_name == "reader")
-                .expect("legacy named cursor")
-                .owner_migration_required
-        );
-        let result = service
-            .publish_cdc(principal(subscription("reader", &topic), &tenant, "alice"))
-            .await;
-        assert_eq!(
-            result
-                .err()
-                .expect("legacy ownership needs migration")
-                .code(),
-            Code::PermissionDenied
-        );
-        sqlx::query(&format!("DELETE FROM {cursors} WHERE tenant_id=$1"))
-            .bind(&tenant)
-            .execute(&pool)
-            .await
-            .unwrap();
-        sqlx::query(&format!(
-            "DELETE FROM {} WHERE slot_name=$1",
-            SystemCatalogConfig::current().cdc_control_relation()
-        ))
-        .bind(slot)
-        .execute(&pool)
-        .await
-        .unwrap();
-        sqlx::query(&format!("DELETE FROM {journal} WHERE event_id = ANY($1)"))
-            .bind(vec![
-                first,
-                second,
-                third,
-                foreign,
-                wrong_project,
-                wrong_topic,
-            ])
-            .execute(&pool)
-            .await
-            .unwrap();
-        sqlx::query(&format!("DELETE FROM {policy_relation} WHERE topic=$1"))
-            .bind(&topic)
-            .execute(&pool)
-            .await
-            .unwrap();
-    }
-
-    fn dead_letter(name: &str, topic: &str, event: Uuid) -> NackCdcEventsRequest {
-        NackCdcEventsRequest {
-            consumer_name: name.into(),
-            topic_pattern: topic.into(),
-            event_id: event.to_string(),
-            attempts: 3,
-            failure_reason: "handler rejected fixture".into(),
-            ..Default::default()
-        }
-    }
-
-    async fn cursor(pool: &sqlx::PgPool, tenant: &str, consumer: &str) -> Uuid {
-        sqlx::query_scalar(&format!(
-            "SELECT last_event_id FROM {} WHERE tenant_id=$1 AND consumer_name=$2",
-            SystemCatalogConfig::current().cdc_consumer_cursors_relation(),
-        ))
-        .bind(tenant)
-        .bind(consumer)
-        .fetch_one(pool)
-        .await
-        .expect("stored consumer cursor")
-    }
-
-    #[tokio::test]
-    #[ignore = "requires live Postgres; CI runs every ignored lib test"]
-    async fn consumer_dead_letter_is_atomic_scoped_idempotent_and_replayable() {
-        let _guard = super::super::support::live_native_service_db_lock()
-            .lock()
-            .await;
-        let Some(dsn) = dp_live_pg_dsn() else { return };
-        let pool = dp_pool(&dsn).await;
-        ensure_system_catalog(&pool).await.expect("system catalog");
-        let tenant = Uuid::new_v4().to_string();
-        let topic = format!("udb.cdc.consumer.{}.v1", Uuid::new_v4().simple());
-        let first = seed(&pool, &topic, &tenant, "default", 1).await;
-        let poison = seed(&pool, &topic, &tenant, "default", 2).await;
-        let next = seed(&pool, &topic, &tenant, "default", 3).await;
-        let foreign = seed(&pool, &topic, "other-tenant", "default", 4).await;
-        let wrong_project = seed(&pool, &topic, &tenant, "other-project", 5).await;
-        let wrong_topic = seed(&pool, "udb.cdc.other.v1", &tenant, "default", 6).await;
-        let service = service_with_topic(&dsn, &pool, &topic).await;
-        let config = SystemCatalogConfig::current();
-        let journal = config.cdc_journal_relation();
-        let dlq = config.dlq_relation();
-        let original: (String, serde_json::Value) = sqlx::query_as(&format!(
-            "SELECT delivery_state, payload FROM {journal} WHERE event_id=$1"
-        ))
-        .bind(poison)
-        .fetch_one(&pool)
-        .await
-        .unwrap();
-        service
-            .ack_cdc_events(principal(
-                acknowledgment("reader", &topic, first),
-                &tenant,
-                "alice",
-            ))
-            .await
-            .expect("owner's initial cursor");
-        for (event, user) in [
-            (poison, "bob"),
-            (foreign, "alice"),
-            (wrong_project, "alice"),
-            (wrong_topic, "alice"),
-        ] {
-            assert_eq!(
-                service
-                    .nack_cdc_events(principal(
-                        dead_letter("reader", &topic, event),
-                        &tenant,
-                        user
-                    ))
-                    .await
-                    .unwrap_err()
-                    .code(),
-                Code::PermissionDenied
-            );
-        }
-        let mut zero_attempts = dead_letter("reader", &topic, poison);
-        zero_attempts.attempts = 0;
-        let mut many_attempts = dead_letter("reader", &topic, poison);
-        many_attempts.attempts = 1001;
-        let mut long_reason = dead_letter("reader", &topic, poison);
-        long_reason.failure_reason = "x".repeat(2049);
-        for request in [zero_attempts, many_attempts, long_reason] {
-            assert_eq!(
-                service
-                    .nack_cdc_events(principal(request, &tenant, "alice"))
-                    .await
-                    .unwrap_err()
-                    .code(),
-                Code::InvalidArgument
-            );
-        }
-        let count: i64 =
-            sqlx::query_scalar(&format!("SELECT count(*) FROM {dlq} WHERE event_id=$1"))
-                .bind(poison)
-                .fetch_one(&pool)
-                .await
-                .unwrap();
-        assert_eq!(
-            count, 0,
-            "refused settlements must not dead-letter an event"
-        );
-        assert_eq!(cursor(&pool, &tenant, "reader").await, first);
-
-        // A real database refusal AFTER the cursor write must roll that write back.
-        let constraint = format!("consumer_dlq_refusal_{}", Uuid::new_v4().simple());
-        sqlx::query(&format!("ALTER TABLE {dlq} ADD CONSTRAINT {constraint} CHECK (event_id <> '{poison}'::uuid) NOT VALID"))
-        .execute(&pool).await.expect("inject one event's DLQ write refusal");
-        let refused = service
-            .nack_cdc_events(principal(
-                dead_letter("reader", &topic, poison),
-                &tenant,
-                "alice",
-            ))
-            .await;
-        sqlx::query(&format!("ALTER TABLE {dlq} DROP CONSTRAINT {constraint}"))
-            .execute(&pool)
-            .await
-            .expect("remove injected refusal");
-        assert!(
-            refused.is_err(),
-            "database DLQ refusal must fail settlement"
-        );
-        assert_eq!(
-            cursor(&pool, &tenant, "reader").await,
-            first,
-            "DLQ failure must roll back cursor advancement"
-        );
-
-        service
-            .nack_cdc_events(principal(
-                dead_letter("reader", &topic, poison),
-                &tenant,
-                "alice",
-            ))
-            .await
-            .expect("atomic poison settlement");
-        assert_eq!(cursor(&pool, &tenant, "reader").await, poison);
-        let listed = service
-            .list_dlq_events(principal(
-                crate::proto::DlqListRequest {
-                    topic: topic.clone(),
-                    status_filter: "QUARANTINED".into(),
-                    limit: 10,
-                    ..Default::default()
-                },
-                &tenant,
-                "alice",
-            ))
-            .await
-            .expect("ordinary DLQ list sees consumer poison")
-            .into_inner();
-        assert_eq!(listed.total_count, 1);
-        let record = listed.events.first().expect("durable poison record");
-        assert_eq!(record.event_id, poison.to_string());
-        assert_eq!(record.error_type, "CONSUMER_HANDLER_FAILED");
-        let dlq_id = record.dlq_id.clone();
-        let get = service
-            .get_dlq_event(principal(
-                crate::proto::DlqEventRequest {
-                    dlq_id: dlq_id.clone(),
-                    ..Default::default()
-                },
-                &tenant,
-                "alice",
-            ))
-            .await
-            .expect("ordinary DLQ get")
-            .into_inner()
-            .event
-            .unwrap();
-        let stored: serde_json::Value = serde_json::from_slice(&get.payload_json).unwrap();
-        assert_eq!(
-            stored["failed_event"], original.1,
-            "broker retains canonical payload"
-        );
-        assert_eq!(stored["consumer_failures"].as_object().unwrap().len(), 1);
-        let failure = stored["consumer_failures"]
-            .as_object()
-            .unwrap()
-            .values()
-            .next()
-            .unwrap();
-        assert_eq!(failure["owner_identity"], "user:alice");
-        assert_eq!(failure["attempts"], 3);
-
-        // Lost responses do not overwrite diagnostics, duplicate the DLQ row or
-        // rewind the cursor. Independent consumers keep independent failure data.
-        let mut repeated = dead_letter("reader", &topic, poison);
-        repeated.failure_reason = "changed retry text".into();
-        repeated.attempts = 99;
-        service
-            .nack_cdc_events(principal(repeated, &tenant, "alice"))
-            .await
-            .expect("idempotent settlement retry");
-        service
-            .nack_cdc_events(principal(
-                dead_letter("reader-two", &topic, poison),
-                &tenant,
-                "bob",
-            ))
-            .await
-            .expect("another consumer's independent failure");
-        let merged = service
-            .get_dlq_event(principal(
-                crate::proto::DlqEventRequest {
-                    dlq_id: dlq_id.clone(),
-                    ..Default::default()
-                },
-                &tenant,
-                "alice",
-            ))
-            .await
-            .unwrap()
-            .into_inner()
-            .event
-            .unwrap();
-        let merged: serde_json::Value = serde_json::from_slice(&merged.payload_json).unwrap();
-        let failures = merged["consumer_failures"].as_object().unwrap();
-        assert_eq!(failures.len(), 2);
-        assert!(
-            failures
-                .values()
-                .any(|value| value["consumer_name"] == "reader"
-                    && value["attempts"] == 3
-                    && value["failure_reason"] == "handler rejected fixture")
-        );
-        assert!(
-            failures
-                .values()
-                .any(|value| value["consumer_name"] == "reader-two"
-                    && value["owner_identity"] == "user:bob")
-        );
-        let untouched: (String, serde_json::Value) = sqlx::query_as(&format!(
-            "SELECT delivery_state, payload FROM {journal} WHERE event_id=$1"
-        ))
-        .bind(poison)
-        .fetch_one(&pool)
-        .await
-        .unwrap();
-        assert_eq!(
-            untouched, original,
-            "one consumer cannot change delivery for every other consumer"
-        );
-        let mut stream = service
-            .publish_cdc(principal(subscription("reader", &topic), &tenant, "alice"))
-            .await
-            .expect("consumer continues after its poison")
-            .into_inner();
-        let delivered = tokio::time::timeout(Duration::from_secs(5), stream.next())
-            .await
-            .unwrap()
-            .unwrap()
-            .unwrap();
-        assert_eq!(delivered.event_id, next.to_string());
-        drop(stream);
-
-        let replayed = service
-            .replay_dlq_event(principal(
-                crate::proto::DlqActionRequest {
-                    dlq_id: dlq_id.clone(),
-                    ..Default::default()
-                },
-                &tenant,
-                "alice",
-            ))
-            .await
-            .expect("ordinary operator replay works")
-            .into_inner();
-        let replay_id = Uuid::parse_str(&replayed.mutation_id).unwrap();
-        assert_ne!(replay_id, poison);
-        let outbox = config.cdc.outbox_relation();
-        let replay_payload: serde_json::Value =
-            sqlx::query_scalar(&format!("SELECT payload FROM {outbox} WHERE event_id=$1"))
-                .bind(replay_id)
-                .fetch_one(&pool)
-                .await
-                .expect("replay entered canonical outbox");
-        assert_eq!(replay_payload, original.1);
-        service
-            .nack_cdc_events(principal(
-                dead_letter("reader", &topic, poison),
-                &tenant,
-                "alice",
-            ))
-            .await
-            .expect("late settlement retry after operator replay");
-        let replay_status: String =
-            sqlx::query_scalar(&format!("SELECT status FROM {dlq} WHERE event_id=$1"))
-                .bind(poison)
-                .fetch_one(&pool)
-                .await
-                .unwrap();
-        assert_eq!(
-            replay_status, "REPLAYED",
-            "late response retries must not undo operator replay"
-        );
-        let count: i64 =
-            sqlx::query_scalar(&format!("SELECT count(*) FROM {dlq} WHERE event_id=$1"))
-                .bind(poison)
-                .fetch_one(&pool)
-                .await
-                .unwrap();
-        assert_eq!(count, 1);
-        sqlx::query(&format!("DELETE FROM {outbox} WHERE event_id=$1"))
-            .bind(replay_id)
-            .execute(&pool)
-            .await
-            .unwrap();
-        sqlx::query(&format!("DELETE FROM {dlq} WHERE event_id=$1"))
+/// NackCdcEvents settles a poison event for one verified named consumer: the
+/// DLQ record and the cursor advance commit together, a database refusal rolls
+/// both back, a retried settlement changes nothing, and the consumer then
+/// continues with the next event. Refusals cover other owners, foreign tenant,
+/// project and topic, and out-of-bounds diagnostics.
+#[tokio::test]
+#[ignore = "requires live Postgres; CI runs every ignored lib test"]
+async fn live_cdc_nack_dead_letters_atomically_for_the_verified_owner() {
+    let _guard = super::support::live_native_service_db_lock().lock().await;
+    let f = fixture().await;
+    let config = SystemCatalogConfig::current();
+    let journal = config.cdc_journal_relation();
+    let dlq = config.dlq_relation();
+    let first = seed(&f, &f.topic, &f.tenant, "default", 1).await;
+    let poison = seed(&f, &f.topic, &f.tenant, "default", 2).await;
+    let next_event = seed(&f, &f.topic, &f.tenant, "default", 3).await;
+    let foreign = seed(&f, &f.topic, "foreign-tenant", "default", 4).await;
+    let wrong_project = seed(&f, &f.topic, &f.tenant, "foreign-project", 5).await;
+    let wrong_topic = seed(&f, "udb.cdc.foreign.v1", &f.tenant, "default", 6).await;
+    let original: serde_json::Value =
+        sqlx::query_scalar(&format!("SELECT payload FROM {journal} WHERE event_id=$1"))
             .bind(poison)
-            .execute(&pool)
+            .fetch_one(&f.pool)
             .await
-            .unwrap();
-        sqlx::query(&format!(
-            "DELETE FROM {} WHERE tenant_id=$1",
-            config.cdc_consumer_cursors_relation()
+            .expect("poison payload");
+    let mut client = f.client.clone();
+    client
+        .ack_cdc_events(request(
+            acknowledgment("reader", &f.topic, first),
+            &f.tokens[0],
         ))
-        .bind(&tenant)
-        .execute(&pool)
         .await
-        .unwrap();
-        sqlx::query(&format!("DELETE FROM {journal} WHERE event_id = ANY($1)"))
-            .bind(vec![
-                first,
-                poison,
-                next,
-                foreign,
-                wrong_project,
-                wrong_topic,
-            ])
-            .execute(&pool)
+        .expect("owner claims the consumer");
+    let (_, owner) = cursor(&f, "reader").await;
+
+    // Another verified user cannot settle the owner's consumer.
+    assert_eq!(
+        client
+            .nack_cdc_events(request(
+                dead_letter("reader", &f.topic, poison),
+                &f.tokens[1]
+            ))
             .await
-            .unwrap();
-        sqlx::query(&format!(
-            "DELETE FROM {} WHERE topic=$1",
-            config.topic_policy_relation()
-        ))
-        .bind(&topic)
-        .execute(&pool)
-        .await
-        .unwrap();
+            .unwrap_err()
+            .code(),
+        Code::PermissionDenied
+    );
+    for event in [foreign, wrong_project, wrong_topic] {
+        assert_eq!(
+            client
+                .nack_cdc_events(request(
+                    dead_letter("reader", &f.topic, event),
+                    &f.tokens[0]
+                ))
+                .await
+                .unwrap_err()
+                .code(),
+            Code::PermissionDenied
+        );
     }
+    let mut zero_attempts = dead_letter("reader", &f.topic, poison);
+    zero_attempts.attempts = 0;
+    let mut many_attempts = dead_letter("reader", &f.topic, poison);
+    many_attempts.attempts = 1001;
+    let mut long_reason = dead_letter("reader", &f.topic, poison);
+    long_reason.failure_reason = "x".repeat(2049);
+    for invalid in [zero_attempts, many_attempts, long_reason] {
+        assert_eq!(
+            client
+                .nack_cdc_events(request(invalid, &f.tokens[0]))
+                .await
+                .unwrap_err()
+                .code(),
+            Code::InvalidArgument
+        );
+    }
+    let dlq_rows = |pool: sqlx::PgPool| {
+        let dlq = dlq.clone();
+        async move {
+            sqlx::query_scalar::<_, i64>(&format!("SELECT count(*) FROM {dlq} WHERE event_id=$1"))
+                .bind(poison)
+                .fetch_one(&pool)
+                .await
+                .expect("count DLQ rows")
+        }
+    };
+    assert_eq!(
+        dlq_rows(f.pool.clone()).await,
+        0,
+        "refusals dead-letter nothing"
+    );
+    assert_eq!(cursor(&f, "reader").await.0, first);
+
+    // A database refusal after the cursor write rolls the cursor back too.
+    let constraint = format!("consumer_dlq_refusal_{}", Uuid::new_v4().simple());
+    sqlx::query(&format!(
+        "ALTER TABLE {dlq} ADD CONSTRAINT {constraint} CHECK (event_id <> '{poison}'::uuid) NOT VALID"
+    ))
+    .execute(&f.pool)
+    .await
+    .expect("inject one DLQ write refusal");
+    let refused = client
+        .nack_cdc_events(request(
+            dead_letter("reader", &f.topic, poison),
+            &f.tokens[0],
+        ))
+        .await;
+    sqlx::query(&format!("ALTER TABLE {dlq} DROP CONSTRAINT {constraint}"))
+        .execute(&f.pool)
+        .await
+        .expect("remove injected refusal");
+    assert!(refused.is_err(), "a DLQ refusal fails the settlement");
+    assert_eq!(
+        cursor(&f, "reader").await.0,
+        first,
+        "and rolls the cursor back"
+    );
+
+    client
+        .nack_cdc_events(request(
+            dead_letter("reader", &f.topic, poison),
+            &f.tokens[0],
+        ))
+        .await
+        .expect("atomic poison settlement");
+    assert_eq!(cursor(&f, "reader").await.0, poison);
+    let (error_type, stored): (String, serde_json::Value) = sqlx::query_as(&format!(
+        "SELECT error_type, payload FROM {dlq} WHERE event_id=$1"
+    ))
+    .bind(poison)
+    .fetch_one(&f.pool)
+    .await
+    .expect("durable poison record");
+    assert_eq!(error_type, "CONSUMER_HANDLER_FAILED");
+    assert_eq!(
+        stored["failed_event"], original,
+        "the broker keeps the canonical payload"
+    );
+    let failures = stored["consumer_failures"].as_object().expect("failures");
+    assert_eq!(failures.len(), 1);
+    let failure = failures.values().next().unwrap();
+    assert_eq!(
+        failure["owner_identity"],
+        serde_json::Value::String(owner.clone())
+    );
+    assert_eq!(failure["attempts"], 3);
+
+    // A retried settlement (lost response) changes nothing.
+    let mut repeated = dead_letter("reader", &f.topic, poison);
+    repeated.failure_reason = "changed retry text".into();
+    repeated.attempts = 99;
+    client
+        .nack_cdc_events(request(repeated, &f.tokens[0]))
+        .await
+        .expect("idempotent settlement retry");
+    assert_eq!(dlq_rows(f.pool.clone()).await, 1);
+    let after: serde_json::Value =
+        sqlx::query_scalar(&format!("SELECT payload FROM {dlq} WHERE event_id=$1"))
+            .bind(poison)
+            .fetch_one(&f.pool)
+            .await
+            .unwrap();
+    let kept = after["consumer_failures"].as_object().unwrap();
+    assert_eq!(kept.len(), 1);
+    assert_eq!(kept.values().next().unwrap()["attempts"], 3);
+    assert_eq!(
+        cursor(&f, "reader").await.0,
+        poison,
+        "the cursor never rewinds"
+    );
+
+    // The consumer continues with the event after its poison.
+    let mut stream = client
+        .publish_cdc(request(subscription("reader", &f.topic), &f.tokens[0]))
+        .await
+        .expect("consumer continues after its poison")
+        .into_inner();
+    assert_eq!(next(&mut stream).await, next_event.to_string());
+    drop(stream);
+
+    sqlx::query(&format!("DELETE FROM {dlq} WHERE event_id=$1"))
+        .bind(poison)
+        .execute(&f.pool)
+        .await
+        .expect("clean DLQ fixture");
+    f.close().await;
 }
 
 #[tokio::test]

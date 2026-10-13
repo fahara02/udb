@@ -238,7 +238,8 @@ CHECKS: tuple[SourceCheck, ...] = (
             "if !claim.fresh",
             "return mutation_response_from_idempotency_json_for_claim(",
             "&context.tenant_id,\n                        &context.project_id,\n                        &request.message_type,",
-            "operation: \"upsert\"",
+            # The replay receipt persists under the operation it was claimed as.
+            "message_type: request.message_type.clone(),\n                    operation,\n",
             "returned_record_json_or_status(&record_set.records_json)?",
             "let write_receipt_json = write_receipt_json_or_status(&receipt)?;",
             "mutation_response_resource_uri_or_fallback(",

@@ -52,6 +52,15 @@ ungranted store calls, and TypeScript store parity.
 
 ### Fixed
 
+- **A keyed `Insert` failed internally** (`idempotency response persist affected
+  0 rows`): its replay receipt was claimed as an insert and persisted as an
+  upsert. Both now use the same operation.
+- **A unique violation inside `BeginTx` is reported as `ALREADY_EXISTS` with
+  `UDB_UNIQUE_VIOLATION` and its constraint**, as the unary verbs report it,
+  instead of `INTERNAL` with the database text.
+- **`udb dev up --embedded` starts on Windows when PostgreSQL is cached**: the
+  install path is no longer passed in Windows' extended-length form, which
+  `initdb` could not resolve.
 - **`udb dev up --embedded` no longer leaves a stale PostgreSQL pidfile** when
   interrupted while PostgreSQL is still starting, which made the next start
   believe a cluster was already running.

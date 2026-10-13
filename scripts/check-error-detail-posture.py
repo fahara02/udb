@@ -5090,7 +5090,7 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
             "fn postgres_internal_status(",
             'crate::runtime::executor_utils::internal_status("postgres", operation, message)',
             '"execute_tx_plan"',
-            '"transaction mutation failed: {err}"',
+            'sqlx_error_to_status("transaction mutation failed", &err)',
             "postgres_internal_status_carries_typed_detail",
             "fn assert_internal_detail(",
             "ErrorKind::Internal",

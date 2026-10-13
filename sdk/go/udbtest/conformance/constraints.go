@@ -189,7 +189,10 @@ func runConstraints(t *testing.T, connect Connect, tenant func() string) {
 	})
 	t.Run("unsupported transaction idempotency key refuses the entire batch", func(t *testing.T) {
 		u := connect(t, tenant())
-		for _, operation := range []string{"upsert", "enqueue_outbox_event"} {
+		// Relational upsert/update/delete keys are honoured inside a
+		// transaction (durable replay receipts); insert and outbox enqueue
+		// have no receipt, so a key on them refuses the whole batch.
+		for _, operation := range []string{"insert", "enqueue_outbox_event"} {
 			t.Run(operation, func(t *testing.T) {
 				ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 				defer cancel()

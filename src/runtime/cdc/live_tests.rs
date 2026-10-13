@@ -221,6 +221,9 @@ async fn live_embedded_outbox_waits_for_durable_journal_before_delivery() {
     };
     let config = CdcConfig {
         journal_only: true,
+        // Retention is measured from published_at, which the journal keeps
+        // immutable; a 1s TTL lets the acked row age for real.
+        idempotency_ttl_secs: 1,
         poll_interval_ms: 25,
         ..CdcConfig::default()
     };
@@ -345,14 +348,8 @@ async fn live_embedded_outbox_waits_for_durable_journal_before_delivery() {
     .await
     .expect("read terminal journal state");
     assert_eq!(state, "acked", "journal-only rows participate in retention");
-    sqlx::query(&format!(
-        "UPDATE {journal} SET published_at = NOW() - INTERVAL '30 days', \
-         acked_at = NOW() - INTERVAL '30 days' WHERE event_id = $1"
-    ))
-    .bind(event_id)
-    .execute(&pool)
-    .await
-    .expect("age acknowledged journal row");
+    // published_at is immutable (journal trigger), so wait past the TTL.
+    tokio::time::sleep(Duration::from_millis(1500)).await;
     engine.run_journal_retention_sweep().await;
     let retained: bool = sqlx::query_scalar(&format!(
         "SELECT EXISTS(SELECT 1 FROM {journal} WHERE event_id = $1)"

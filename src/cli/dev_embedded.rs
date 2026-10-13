@@ -10,6 +10,24 @@ use super::*;
 use std::io::Read;
 use std::path::{Path, PathBuf};
 
+/// `fs::canonicalize` returns an extended-length path on Windows (`\\?\C:\...`).
+/// PostgreSQL's tools locate their siblings (`postgres`, `share/`) from their own
+/// path and cannot resolve that form, so initdb exits at once; use the plain
+/// form. Other platforms are unchanged.
+fn plain_path(path: PathBuf) -> PathBuf {
+    #[cfg(windows)]
+    {
+        let text = path.to_string_lossy();
+        if let Some(rest) = text.strip_prefix(r"\\?\UNC\") {
+            return PathBuf::from(format!(r"\\{rest}"));
+        }
+        if let Some(rest) = text.strip_prefix(r"\\?\") {
+            return PathBuf::from(rest);
+        }
+    }
+    path
+}
+
 fn private_write(path: &Path, contents: &[u8]) -> Result<(), String> {
     use std::io::Write;
     let mut options = fs::OpenOptions::new();
@@ -1410,8 +1428,9 @@ async fn dev_up_embedded_inner(
     }
     let settings = EmbeddedClusterSettings {
         version: options.pg_version.clone(),
-        installation_dir: fs::canonicalize(&install)
-            .map_err(|err| format!("PostgreSQL cache: {err}"))?,
+        installation_dir: plain_path(
+            fs::canonicalize(&install).map_err(|err| format!("PostgreSQL cache: {err}"))?,
+        ),
         password_file,
         data_dir: data.clone(),
         port: options.pg_port,

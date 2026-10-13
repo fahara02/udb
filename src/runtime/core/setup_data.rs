@@ -1620,7 +1620,7 @@ impl DataBrokerRuntime {
                     tenant_id: context.tenant_id.clone(),
                     project_id: context.project_id.clone(),
                     message_type: request.message_type.clone(),
-                    operation: "upsert",
+                    operation,
                 })
             } else {
                 None

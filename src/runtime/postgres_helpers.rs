@@ -165,11 +165,10 @@ pub(crate) async fn execute_tx_plan(
         )
     })?;
     let query = bind_values(sqlx::query(sql), table, columns, values)?;
+    // Classify the database error (a unique violation stays ALREADY_EXISTS with
+    // UDB_UNIQUE_VIOLATION and its constraint), as the unary verbs do.
     let result = query.execute(&mut **tx).await.map_err(|err| {
-        postgres_internal_status(
-            "execute_tx_plan",
-            format!("transaction mutation failed: {err}"),
-        )
+        crate::runtime::executor_utils::sqlx_error_to_status("transaction mutation failed", &err)
     })?;
     Ok(result.rows_affected())
 }

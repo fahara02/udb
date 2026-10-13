@@ -12,6 +12,12 @@ use uuid::Uuid;
 #[tokio::test]
 #[ignore = "requires live Postgres; CI runs every ignored lib test"]
 async fn pipeline_retries_survive_replica_changes_and_keep_project_scope() {
+    // Surface the pipeline's own retry/dead-letter warnings in the test output.
+    #[cfg(feature = "runtime-logging")]
+    let _ = tracing_subscriber::fmt()
+        .with_test_writer()
+        .with_env_filter("udb=warn")
+        .try_init();
     let Some(dsn) = dp_live_pg_dsn() else { return };
     let pool = dp_pool(&dsn).await;
     ensure_system_catalog(&pool).await.expect("system catalog");
