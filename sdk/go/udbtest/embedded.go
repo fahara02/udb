@@ -186,7 +186,22 @@ func start(t testing.TB, protoRoot, policyFile string, withPeer bool) (*udbclien
 		peerTenant = conformance.NewID()
 		ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 		bootstrap := exec.CommandContext(ctx, binary, "auth", "bootstrap", "user", "--username", peerUsername, "--email", peerUsername+"@udbtest.invalid", "--password", peerPassword, "--tenant", peerTenant, "--project", "default")
-		bootstrap.Dir, bootstrap.Env = project, append(append([]string{}, environment...), "UDB_PG_DSN="+credentials.DSN)
+		// The peer is created offline against the dev cluster, so it needs the
+		// secrets the dev broker hashes passwords and encrypts with.
+		devSecrets := make([]string, 0, 2)
+		for name, file := range map[string]string{
+			"UDB_SESSION_HASH_SECRET": "session-secret",
+			"UDB_ENCRYPTION_KEY":      "encryption-key",
+		} {
+			value, readErr := os.ReadFile(filepath.Join(project, ".udb", "dev", file))
+			if readErr != nil {
+				cancel()
+				t.Fatalf("udbtest.StartPair: read dev %s: %v", file, readErr)
+			}
+			devSecrets = append(devSecrets, name+"="+strings.TrimSpace(string(value)))
+		}
+		bootstrap.Dir = project
+		bootstrap.Env = append(append(append([]string{}, environment...), devSecrets...), "UDB_PG_DSN="+credentials.DSN)
 		bootstrap.Stdout, bootstrap.Stderr = log, log
 		err := bootstrap.Run()
 		cancel()

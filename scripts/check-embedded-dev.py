@@ -209,9 +209,10 @@ def main(proof):
         project = Path(temp)
         environment = os.environ.copy()
         environment["UDB_HOME"] = str(project / "cache")
-        proto = project / "proto"
-        proto.mkdir()
-        environment["UDB_PROTO_ROOT"] = str(proto)
+        # The shared Go contracts use the storage File entity as their table, so
+        # the dev broker serves the repository protos, as the live CI broker does.
+        # An empty project catalog would serve no entities at all.
+        environment["UDB_PROTO_ROOT"] = str(repo / "proto")
         for key in ("UDB_PG_DSN", "DATABASE_URL", "UDB_SESSION_HASH_SECRET", "UDB_JWT_PRIVATE_KEY", "UDB_JWT_PUBLIC_KEY", "UDB_ENCRYPTION_KEY", "UDB_EMBEDDED_PG_PASSWORD", "UDB_DEV_ADMIN_SECRET", "UDB_EMBEDDED_PG_ARCHIVE"):
             environment.pop(key, None)
         marker = project / ".udb" / "dev" / "bootstrap.json"
@@ -329,7 +330,12 @@ if __name__ == "__main__":
         returncode = getattr(error, "returncode", None)
         if isinstance(returncode, int):
             receipt["exit_code"] = returncode
-        print(f"embedded dev failed during {receipt['current_phase']}: {receipt['error_type']}")
+        # RuntimeError messages are this script's own fixed text (no argv, no
+        # broker output), so they are safe to publish and name the failed check.
+        if type(error) is RuntimeError:
+            receipt["error"] = str(error)
+        print(f"embedded dev failed during {receipt['current_phase']}: {receipt['error_type']}"
+              + (f": {receipt['error']}" if "error" in receipt else ""))
     finally:
         public_log = Path(os.environ["RUNNER_TEMP"]) / "udb-embedded-dev.log"
         public_log.write_text(json.dumps(receipt, indent=2) + "\n", encoding="utf-8")

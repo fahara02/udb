@@ -1283,7 +1283,24 @@ impl EmbeddedCluster {
         // Only call pg_ctl for the PID bound to this foreground child. If
         // startup never published our pidfile, kill our child handle directly.
         if !self.owns_postmaster_pid() {
-            return self.postmaster.as_mut().unwrap().terminate().await;
+            let pid = self.postmaster.as_ref().and_then(|p| p.child.id());
+            self.postmaster.as_mut().unwrap().terminate().await?;
+            // A kill that lands while PostgreSQL is still writing its pidfile
+            // leaves the file behind, and the next start would see a cluster
+            // that is not running. Our child is reaped, so remove a pidfile that
+            // is empty, unreadable, or names it; never one naming another PID.
+            let pidfile = self.settings.data_dir.join("postmaster.pid");
+            if let Ok(contents) = fs::read_to_string(&pidfile) {
+                let named = contents
+                    .lines()
+                    .next()
+                    .and_then(|line| line.trim().parse::<u32>().ok());
+                if named.is_none() || named == pid {
+                    fs::remove_file(&pidfile)
+                        .map_err(|err| format!("remove stale PostgreSQL pidfile: {err}"))?;
+                }
+            }
+            return Ok(());
         }
         let mut command = self.command("pg_ctl");
         command
