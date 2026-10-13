@@ -448,7 +448,13 @@ impl ProjectionEngine {
         hasher.update(b"|");
         hasher.update(source_table.as_bytes());
         hasher.update(b"|");
-        hasher.update(source_row_key.to_string().as_bytes());
+        // Key order is not part of a row's identity: the request and a JSONB
+        // read of the same row list their keys in different orders.
+        hasher.update(
+            crate::runtime::core::pagination::canonicalize(source_row_key)
+                .to_string()
+                .as_bytes(),
+        );
         hasher.update(b"|");
         hasher.update(operation.as_bytes());
         hasher.update(b"|");
@@ -472,7 +478,14 @@ impl ProjectionEngine {
 
     pub fn source_checksum(source_payload: &serde_json::Value) -> String {
         let mut hasher = Sha256::new();
-        hasher.update(strip_nul_json(source_payload).to_string().as_bytes());
+        // Hash the payload with its object keys sorted. A write's request JSON
+        // and the reconciler's JSONB read of the same row list keys in
+        // different orders; an order-sensitive checksum made the reconciler
+        // treat an unchanged row as changed and re-enqueue a payload that was
+        // already parked as permanently unprojectable.
+        let canonical =
+            crate::runtime::core::pagination::canonicalize(&strip_nul_json(source_payload));
+        hasher.update(canonical.to_string().as_bytes());
         format!("{:x}", hasher.finalize())
     }
 
@@ -3876,6 +3889,23 @@ mod tests {
         .unwrap();
         assert_eq!(neo4j["operation"], "delete_node");
         assert_eq!(neo4j["label"], "Patient");
+    }
+
+    #[test]
+    fn source_checksum_ignores_object_key_order() {
+        // A request body and a JSONB read of the same row order keys differently.
+        let request = json!({"id": "r1", "tenant_id": "t", "values": [0.1, 0.2], "label": "a"});
+        let stored = json!({"id": "r1", "label": "a", "tenant_id": "t", "values": [0.1, 0.2]});
+        assert_eq!(
+            ProjectionEngine::source_checksum(&request),
+            ProjectionEngine::source_checksum(&stored)
+        );
+        // Array order stays significant.
+        let reordered = json!({"id": "r1", "label": "a", "tenant_id": "t", "values": [0.2, 0.1]});
+        assert_ne!(
+            ProjectionEngine::source_checksum(&request),
+            ProjectionEngine::source_checksum(&reordered)
+        );
     }
 
     #[test]

@@ -20,6 +20,14 @@ release line was tagged.
   grants, certificate bindings, session revocation and MFA policy stay closed to
   service accounts.
 
+- **A projection payload parked as permanently invalid stays parked.** The
+  projection source checksum depended on JSON key order, so the reconciler's
+  read of an unchanged row (JSONB orders keys differently from the request)
+  looked like a change and re-enqueued a payload already dead-lettered as
+  unprojectable. The checksum and the row key in the task's idempotency key now
+  ignore object key order. After upgrade, the reconciler may re-enqueue each
+  drifted row once, under its new checksum.
+
 ### Documented
 
 - `ValidateTokenResponse.session_id` is empty for a token refreshed from a

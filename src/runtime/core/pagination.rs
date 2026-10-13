@@ -65,7 +65,7 @@ pub(crate) fn query_digest(
 /// Recursively rebuild a JSON value with object keys sorted, so two structurally
 /// equal values serialize identically regardless of key insertion order. Array
 /// order is PRESERVED — element order is semantic.
-fn canonicalize(value: &JsonValue) -> JsonValue {
+pub(crate) fn canonicalize(value: &JsonValue) -> JsonValue {
     match value {
         JsonValue::Object(map) => {
             let mut entries: Vec<(&String, &JsonValue)> = map.iter().collect();
