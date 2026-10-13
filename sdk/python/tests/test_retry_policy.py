@@ -45,6 +45,7 @@ def test_replay_safe_map_matches_proto_contract() -> None:
     # method_idempotency_contract declares replay_safe=true.
     truthy = {path for path, val in RPC_REPLAY_SAFE.items() if val == "true"}
     assert truthy == {
+        "/udb.services.v1.DataBroker/Insert",
         "/udb.services.v1.DataBroker/Upsert",
         "/udb.services.v1.DataBroker/Delete",
         "/udb.services.v1.DataBroker/Update",
