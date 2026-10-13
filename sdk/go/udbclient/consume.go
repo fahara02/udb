@@ -132,6 +132,12 @@ func consumeOnce[T proto.Message](ctx context.Context, u *Udb, name, topicPatter
 		if err != nil {
 			return consumeAttemptError(fmt.Errorf("udb: consumer %s: %w", name, err))
 		}
+		// A cancelled consumer never starts another handler, even for an event
+		// the stream had already buffered: it stays unacknowledged and is
+		// redelivered to the next run.
+		if err := ctx.Err(); err != nil {
+			return err
+		}
 		id := envelope.GetEventId()
 		if !seen.has(id) {
 			event, err := decodeConsumedEvent[T](id, envelope.GetTopic(), envelope.GetPartitionKey(), envelope.GetPayloadJson())
@@ -152,13 +158,16 @@ func consumeOnce[T proto.Message](ctx context.Context, u *Udb, name, topicPatter
 				// and advances this consumer in one transaction, so later events
 				// keep flowing. A broker that cannot (Unimplemented) stops the
 				// consumer instead of discarding the event.
-				if _, nackErr := u.Data.Broker.NackCdcEvents(attemptCtx, &entityv1.NackCdcEventsRequest{
+				settleCtx, settled := settlementContext(attemptCtx)
+				_, nackErr := u.Data.Broker.NackCdcEvents(settleCtx, &entityv1.NackCdcEventsRequest{
 					ConsumerName:  name,
 					TopicPattern:  topicPattern,
 					EventId:       id,
 					Attempts:      uint32(o.MaxAttempts),
 					FailureReason: consumerFailureReason(err),
-				}); nackErr != nil {
+				})
+				settled()
+				if nackErr != nil {
 					return consumeAttemptError(fmt.Errorf("udb: consumer %s dead-letter %s: %w", name, id, nackErr))
 				}
 				seen.add(id)
@@ -168,14 +177,27 @@ func consumeOnce[T proto.Message](ctx context.Context, u *Udb, name, topicPatter
 			// Remember its work so redelivery retries only the acknowledgement.
 			seen.add(id)
 		}
-		if _, err := u.Data.Broker.AckCdcEvents(attemptCtx, &entityv1.AckCdcEventsRequest{
+		settleCtx, settled := settlementContext(attemptCtx)
+		_, ackErr := u.Data.Broker.AckCdcEvents(settleCtx, &entityv1.AckCdcEventsRequest{
 			ConsumerName: name,
 			TopicPattern: topicPattern,
 			EventId:      id,
-		}); err != nil {
-			return consumeAttemptError(fmt.Errorf("udb: consumer %s ack %s: %w", name, id, err))
+		})
+		settled()
+		if ackErr != nil {
+			return consumeAttemptError(fmt.Errorf("udb: consumer %s ack %s: %w", name, id, ackErr))
 		}
 	}
+}
+
+// settlementTimeout bounds one acknowledgement or dead-letter call.
+const settlementTimeout = 5 * time.Second
+
+// settlementContext outlives a cancelled consumer for one bounded call: a
+// handler that completed before shutdown is still acknowledged, so a restart
+// does not hand it the same event again.
+func settlementContext(ctx context.Context) (context.Context, context.CancelFunc) {
+	return context.WithTimeout(context.WithoutCancel(ctx), settlementTimeout)
 }
 
 // maxConsumerFailureReasonBytes bounds the diagnostic sent with a dead-letter.

@@ -894,7 +894,7 @@ mod preserved_future {
         sqlx::query(&format!(
         "INSERT INTO {policy_relation} (topic, owning_project, owning_service, schema_uri, enabled) \
          VALUES ($1, 'default', 'consumer-live', '', TRUE)"
-    )).bind(topic).execute(&pool).await.expect("topic policy");
+    )).bind(topic).execute(pool).await.expect("topic policy");
         engine
             .load_topic_policies()
             .await

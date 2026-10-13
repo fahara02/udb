@@ -176,7 +176,7 @@ async fn served_insert_refuses_primary_and_secondary_unique_collisions_live() {
         .await
         .unwrap();
     assert_eq!(count, 1, "failed inserts must not create or replace rows");
-    teardown(&pool, &schema).await;
+    teardown(&pool, &schema, &tenant).await;
 }
 
 async fn ids_matching(

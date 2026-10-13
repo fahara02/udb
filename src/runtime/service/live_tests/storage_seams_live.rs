@@ -88,7 +88,7 @@ async fn legacy_storage_migration_preserves_bytes_and_never_overwrites_a_copy() 
     );
     for object in [&key, &target] {
         runtime
-            .delete_object_backend_target("minio", None, &request("delete", object))
+            .delete_object_backend_target("minio", None, "default", &request("delete", object))
             .await
             .expect("clean up migrated objects");
     }

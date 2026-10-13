@@ -4051,6 +4051,9 @@ async fn start_cdc_engine(
             // Capture enrollment must complete before native ACK can delete
             // original outbox rows. A configured but unready source refuses the
             // CDC engine rather than advertising an incomplete source guarantee.
+            // Source capture (and its destination binding) feeds Kafka; a
+            // journal-only build has neither.
+            #[cfg(feature = "kafka")]
             let postgres_source = match std::env::var("UDB_CDC_POSTGRES_SOURCE_DSN") {
                 Ok(dsn) if !dsn.trim().is_empty() => {
                     let factory = crate::runtime::cdc::source::PostgresCdcSource {
@@ -4072,6 +4075,7 @@ async fn start_cdc_engine(
                 }
                 _ => None,
             };
+            #[cfg(feature = "kafka")]
             if let Some(source) = postgres_source.as_ref() {
                 if let Err(err) = engine.bind_source_destination(source.as_ref()).await {
                     tracing::error!(

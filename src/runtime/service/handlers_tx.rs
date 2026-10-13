@@ -42,45 +42,6 @@ fn tx_status_response_stream(statuses: Vec<Result<TxStatus, Status>>) -> Respons
     })
 }
 
-fn tx_refusal_frame(status: &Status) -> TxStatus {
-    use prost::Message as _;
-    let error_detail = status
-        .metadata()
-        .get_bin(crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY)
-        .and_then(|raw| raw.to_bytes().ok())
-        .and_then(|bytes| crate::proto::ErrorDetail::decode(bytes).ok());
-    TxStatus {
-        state: crate::proto::tx_status::State::TxStateError as i32,
-        message: status.message().to_string(),
-        code: status.code() as i32,
-        error_detail,
-        ..Default::default()
-    }
-}
-
-fn tx_status_response_stream(statuses: Vec<Result<TxStatus, Status>>) -> ResponseStream<TxStatus> {
-    Box::pin(async_stream::stream! {
-        let mut tx_id = String::new();
-        for item in statuses {
-            match item {
-                Ok(status) => {
-                    tx_id.clone_from(&status.tx_id);
-                    yield Ok(status);
-                }
-                Err(status) => {
-                    let mut frame = tx_refusal_frame(&status);
-                    frame.tx_id = tx_id;
-                    yield Ok(frame);
-                    // Let tonic flush the error frame before the terminal
-                    // refusal, which retains its original code and metadata.
-                    tokio::task::yield_now().await;
-                    yield Err(status);
-                    break;
-                }
-            }
-        }
-    })
-}
 type CdcEngineResponseStream = Pin<
     Box<
         dyn tokio_stream::Stream<Item = Result<crate::runtime::cdc::CdcEnvelope, Status>>
@@ -793,7 +754,7 @@ impl DataBrokerService {
                         hasher.update((part.len() as u64).to_be_bytes());
                         hasher.update(part.as_bytes());
                     }
-                    let failure_key = hex::encode(hasher.finalize());
+                    let failure_key = format!("{:x}", hasher.finalize());
                     let now = chrono::Utc::now();
                     let mut dlq_payload = serde_json::json!({
                         "failed_event": payload,

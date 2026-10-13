@@ -18,7 +18,6 @@ use tokio::sync::broadcast;
 
 use crate::runtime::executor_utils::{env_identifier, qi_runtime as qi};
 use tokio::time::interval;
-#[cfg(feature = "kafka")]
 use tracing::error;
 use tracing::{info, warn};
 use uuid::Uuid;
@@ -849,7 +848,6 @@ impl CdcConfig {
         self.shard_count <= 1 || self.partition_owner(partition_key) == self.shard_id
     }
 
-    #[cfg(feature = "kafka")]
     fn schema_uri_for(&self, event_type: &str) -> Option<String> {
         // Native event types are `udb.<domain>.<entity>.<verb>.vN`; the
         // meaningful domain is the segment AFTER the `udb` namespace prefix

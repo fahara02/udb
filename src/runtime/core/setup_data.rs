@@ -6841,23 +6841,6 @@ fn idempotency_request_hash_guarded(
     idempotency_request_hash(operation, &authoritative)
 }
 
-/// Optional concurrency guards are authoritative inputs, not transport fields.
-/// Keep the historical unguarded hash shape so those receipts remain replayable.
-fn idempotency_request_hash_guarded(
-    operation: &str,
-    mut authoritative: JsonValue,
-    guards: &MutationGuards,
-) -> String {
-    if !guards.expected_revision.trim().is_empty() {
-        authoritative["expected_revision"] =
-            JsonValue::String(guards.expected_revision.trim().to_string());
-    }
-    if guards.require_affected != 0 {
-        authoritative["require_affected"] = JsonValue::from(guards.require_affected);
-    }
-    idempotency_request_hash(operation, &authoritative)
-}
-
 /// Authoritative-input hash for a keyed `Delete`: the normalized filter (which
 /// rows) and any CAS precondition.
 fn idempotency_request_hash_delete(

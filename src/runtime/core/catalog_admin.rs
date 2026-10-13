@@ -2457,19 +2457,6 @@ impl DataBrokerRuntime {
         catalog_id: Uuid,
         connection: &mut sqlx::PgConnection,
     ) -> Result<ProjectCatalogRecord, tonic::Status> {
-        let mut connection = self.pg_pool()?.acquire().await.map_err(|err| {
-            catalog_admin_internal_status("load_catalog_record_for_project", err.to_string())
-        })?;
-        self.load_catalog_record_for_project_on_connection(project_id, catalog_id, &mut connection)
-            .await
-    }
-
-    pub(super) async fn load_catalog_record_for_project_on_connection(
-        &self,
-        project_id: &str,
-        catalog_id: Uuid,
-        connection: &mut sqlx::PgConnection,
-    ) -> Result<ProjectCatalogRecord, tonic::Status> {
         use crate::runtime::system::SystemCatalogConfig;
         let project_id = canonical_catalog_project_id(project_id)?;
         let config = SystemCatalogConfig::default();
