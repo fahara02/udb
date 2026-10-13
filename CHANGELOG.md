@@ -35,6 +35,8 @@ ungranted store calls, and TypeScript store parity.
   (`pipelines:` in a YAML/JSON file named by `UDB_PIPELINES_FILE`) that the broker
   runs itself: in journal order, one replica at a time, upserting through the
   data plane, retrying failures and dead-lettering events that cannot be applied.
+  A unit writes with the `udb:write` scope; a target table that declares its own
+  `required_scope` refuses it.
 - **`udb check --code <dir> --role <role>`** scans Go sources for generated-store
   calls and reports each operation that no ALLOW policy grants to the role.
 - **`udb.yaml` declares embedding models and sources** (`embedding:`), which

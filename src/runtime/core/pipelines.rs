@@ -213,6 +213,11 @@ impl DataBrokerRuntime {
                         project_id: spec.project.clone(),
                         purpose: format!("pipeline:{}", spec.name),
                         service_identity: format!("udb.pipeline:{}", spec.name),
+                        // An operator-declared unit run by the broker itself
+                        // writes through the data plane, whose planner requires
+                        // the write scope. Tables that demand a further
+                        // required_scope still refuse it.
+                        scopes: vec!["udb:write".to_string()],
                         ..crate::RequestContext::default()
                     };
                     self.upsert(manifest, request, context)
