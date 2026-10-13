@@ -12,7 +12,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file udb/entity/v1/cdc.proto.
  */
 export const file_udb_entity_v1_cdc: GenFile = /*@__PURE__*/
-  fileDesc("Chd1ZGIvZW50aXR5L3YxL2NkYy5wcm90bxINdWRiLmVudGl0eS52MSKOAQoWQ0RDU3Vic2NyaXB0aW9uUmVxdWVzdBIuCgdjb250ZXh0GAEgASgLMh0udWRiLmVudGl0eS52MS5SZXF1ZXN0Q29udGV4dBIVCg10b3BpY19wYXR0ZXJuGAIgASgJEhYKDnNpbmNlX2V2ZW50X2lkGAMgASgJEhUKDWNvbnN1bWVyX25hbWUYBCABKAkihQEKE0Fja0NkY0V2ZW50c1JlcXVlc3QSLgoHY29udGV4dBgBIAEoCzIdLnVkYi5lbnRpdHkudjEuUmVxdWVzdENvbnRleHQSFQoNY29uc3VtZXJfbmFtZRgCIAEoCRIVCg10b3BpY19wYXR0ZXJuGAMgASgJEhAKCGV2ZW50X2lkGAQgASgJIm0KFEFja0NkY0V2ZW50c1Jlc3BvbnNlEhUKDWNvbnN1bWVyX25hbWUYASABKAkSFQoNdG9waWNfcGF0dGVybhgCIAEoCRIQCghldmVudF9pZBgDIAEoCRIVCg1hY2tlZF9hdF91bml4GAQgASgDImYKEUNkY0NvbnRyb2xSZXF1ZXN0Ei4KB2NvbnRleHQYASABKAsyHS51ZGIuZW50aXR5LnYxLlJlcXVlc3RDb250ZXh0EhEKCXNsb3RfbmFtZRgCIAEoCRIOCgZyZWFzb24YAyABKAkiugEKEUNkY1N0YXR1c1Jlc3BvbnNlEhEKCXNsb3RfbmFtZRgBIAEoCRIRCglpc19sZWFkZXIYAiABKAgSDgoGcGF1c2VkGAMgASgIEhQKDHBhdXNlX3JlYXNvbhgEIAEoCRIVCg1sYXN0X2V2ZW50X2lkGAUgASgJEhMKC2xhZ19zZWNvbmRzGAYgASgBEhQKDG91dGJveF9kZXB0aBgHIAEoAxIXCg91cGRhdGVkX2F0X3VuaXgYCCABKANCrgEKEWNvbS51ZGIuZW50aXR5LnYxQghDZGNQcm90b1ABWjlnaXRodWIuY29tL2ZhaGFyYTAyL3VkYi9zZGsvZ28vZ2VuL3VkYi9lbnRpdHkvdjE7ZW50aXR5djGiAgNVRViqAg1VZGIuRW50aXR5LlYxygINVWRiXEVudGl0eVxWMeICGVVkYlxHUEJNZXRhZGF0YVxFbnRpdHlcVjHqAg9VZGI6OkVudGl0eTo6VjFiBnByb3RvMw", [file_udb_entity_v1_context]);
+  fileDesc("Chd1ZGIvZW50aXR5L3YxL2NkYy5wcm90bxINdWRiLmVudGl0eS52MSKOAQoWQ0RDU3Vic2NyaXB0aW9uUmVxdWVzdBIuCgdjb250ZXh0GAEgASgLMh0udWRiLmVudGl0eS52MS5SZXF1ZXN0Q29udGV4dBIVCg10b3BpY19wYXR0ZXJuGAIgASgJEhYKDnNpbmNlX2V2ZW50X2lkGAMgASgJEhUKDWNvbnN1bWVyX25hbWUYBCABKAkihQEKE0Fja0NkY0V2ZW50c1JlcXVlc3QSLgoHY29udGV4dBgBIAEoCzIdLnVkYi5lbnRpdHkudjEuUmVxdWVzdENvbnRleHQSFQoNY29uc3VtZXJfbmFtZRgCIAEoCRIVCg10b3BpY19wYXR0ZXJuGAMgASgJEhAKCGV2ZW50X2lkGAQgASgJIm0KFEFja0NkY0V2ZW50c1Jlc3BvbnNlEhUKDWNvbnN1bWVyX25hbWUYASABKAkSFQoNdG9waWNfcGF0dGVybhgCIAEoCRIQCghldmVudF9pZBgDIAEoCRIVCg1hY2tlZF9hdF91bml4GAQgASgDIrABChROYWNrQ2RjRXZlbnRzUmVxdWVzdBIuCgdjb250ZXh0GAEgASgLMh0udWRiLmVudGl0eS52MS5SZXF1ZXN0Q29udGV4dBIVCg1jb25zdW1lcl9uYW1lGAIgASgJEhUKDXRvcGljX3BhdHRlcm4YAyABKAkSEAoIZXZlbnRfaWQYBCABKAkSEAoIYXR0ZW1wdHMYBSABKA0SFgoOZmFpbHVyZV9yZWFzb24YBiABKAkiZgoRQ2RjQ29udHJvbFJlcXVlc3QSLgoHY29udGV4dBgBIAEoCzIdLnVkYi5lbnRpdHkudjEuUmVxdWVzdENvbnRleHQSEQoJc2xvdF9uYW1lGAIgASgJEg4KBnJlYXNvbhgDIAEoCSLvAQoRQ2RjU3RhdHVzUmVzcG9uc2USEQoJc2xvdF9uYW1lGAEgASgJEhEKCWlzX2xlYWRlchgCIAEoCBIOCgZwYXVzZWQYAyABKAgSFAoMcGF1c2VfcmVhc29uGAQgASgJEhUKDWxhc3RfZXZlbnRfaWQYBSABKAkSEwoLbGFnX3NlY29uZHMYBiABKAESFAoMb3V0Ym94X2RlcHRoGAcgASgDEhcKD3VwZGF0ZWRfYXRfdW5peBgIIAEoAxIzCgljb25zdW1lcnMYCSADKAsyIC51ZGIuZW50aXR5LnYxLkNkY0NvbnN1bWVyU3RhdHVzIoUCChFDZGNDb25zdW1lclN0YXR1cxIVCg1jb25zdW1lcl9uYW1lGAEgASgJEhUKDXRvcGljX3BhdHRlcm4YAiABKAkSFQoNbGFzdF9ldmVudF9pZBgDIAEoCRITCgtsYWdfc2Vjb25kcxgEIAEoARIVCg1hY2tlZF9hdF91bml4GAUgASgDEh4KFmxhc3RfcHVibGlzaGVkX2F0X3VuaXgYBiABKAMSEQoJdGVuYW50X2lkGAcgASgJEhIKCnByb2plY3RfaWQYCCABKAkSFgoOb3duZXJfaWRlbnRpdHkYCSABKAkSIAoYb3duZXJfbWlncmF0aW9uX3JlcXVpcmVkGAogASgIQq4BChFjb20udWRiLmVudGl0eS52MUIIQ2RjUHJvdG9QAVo5Z2l0aHViLmNvbS9mYWhhcmEwMi91ZGIvc2RrL2dvL2dlbi91ZGIvZW50aXR5L3YxO2VudGl0eXYxogIDVUVYqgINVWRiLkVudGl0eS5WMcoCDVVkYlxFbnRpdHlcVjHiAhlVZGJcR1BCTWV0YWRhdGFcRW50aXR5XFYx6gIPVWRiOjpFbnRpdHk6OlYxYgZwcm90bzM", [file_udb_entity_v1_context]);
 
 /**
  * @generated from message udb.entity.v1.CDCSubscriptionRequest
@@ -37,8 +37,10 @@ export type CDCSubscriptionRequest = Message<"udb.entity.v1.CDCSubscriptionReque
    * A durable consumer's name (1-120 chars of [A-Za-z0-9_.:-]). When set and
    * since_event_id is empty, the stream resumes after the last event this
    * consumer acknowledged with AckCdcEvents for this topic_pattern, so a
-   * restarted (or reconnected) consumer neither skips nor re-reads its place.
-   * Cursors are scoped to the caller's verified tenant and project.
+   * restarted (or reconnected) consumer resumes its acknowledged position.
+   * A new name reads the retained backlog. Positions survive journal retention.
+   * Names are owned by the verified principal within its tenant and project;
+   * another principal cannot subscribe or acknowledge under the same name.
    *
    * @generated from field: string consumer_name = 4;
    */
@@ -79,7 +81,9 @@ export type AckCdcEventsRequest = Message<"udb.entity.v1.AckCdcEventsRequest"> &
 
   /**
    * The last event the consumer has fully handled. The next subscription
-   * under this consumer name resumes after it.
+   * under this consumer name resumes after it. The event must be retained and
+   * match the caller's tenant/project and topic pattern. An older acknowledgment
+   * succeeds without moving the stored cursor backward.
    *
    * @generated from field: string event_id = 4;
    */
@@ -126,6 +130,57 @@ export const AckCdcEventsResponseSchema: GenMessage<AckCdcEventsResponse> = /*@_
   messageDesc(file_udb_entity_v1_cdc, 2);
 
 /**
+ * Atomically retain a failed consumer event in the ordinary DLQ and advance
+ * this consumer's cursor. Other consumers and the journal event are unchanged.
+ * Repeating the same consumer/topic/event settlement is safe. The broker reads
+ * the canonical retained event; callers cannot supply or replace its payload.
+ *
+ * @generated from message udb.entity.v1.NackCdcEventsRequest
+ */
+export type NackCdcEventsRequest = Message<"udb.entity.v1.NackCdcEventsRequest"> & {
+  /**
+   * @generated from field: udb.entity.v1.RequestContext context = 1;
+   */
+  context?: RequestContext | undefined;
+
+  /**
+   * @generated from field: string consumer_name = 2;
+   */
+  consumerName: string;
+
+  /**
+   * @generated from field: string topic_pattern = 3;
+   */
+  topicPattern: string;
+
+  /**
+   * @generated from field: string event_id = 4;
+   */
+  eventId: string;
+
+  /**
+   * Completed handler attempts, from 1 through 1000.
+   *
+   * @generated from field: uint32 attempts = 5;
+   */
+  attempts: number;
+
+  /**
+   * Operator diagnostic, at most 2048 UTF-8 bytes. Do not include credentials.
+   *
+   * @generated from field: string failure_reason = 6;
+   */
+  failureReason: string;
+};
+
+/**
+ * Describes the message udb.entity.v1.NackCdcEventsRequest.
+ * Use `create(NackCdcEventsRequestSchema)` to create a new message.
+ */
+export const NackCdcEventsRequestSchema: GenMessage<NackCdcEventsRequest> = /*@__PURE__*/
+  messageDesc(file_udb_entity_v1_cdc, 3);
+
+/**
  * @generated from message udb.entity.v1.CdcControlRequest
  */
 export type CdcControlRequest = Message<"udb.entity.v1.CdcControlRequest"> & {
@@ -150,7 +205,7 @@ export type CdcControlRequest = Message<"udb.entity.v1.CdcControlRequest"> & {
  * Use `create(CdcControlRequestSchema)` to create a new message.
  */
 export const CdcControlRequestSchema: GenMessage<CdcControlRequest> = /*@__PURE__*/
-  messageDesc(file_udb_entity_v1_cdc, 3);
+  messageDesc(file_udb_entity_v1_cdc, 4);
 
 /**
  * @generated from message udb.entity.v1.CdcStatusResponse
@@ -195,6 +250,14 @@ export type CdcStatusResponse = Message<"udb.entity.v1.CdcStatusResponse"> & {
    * @generated from field: int64 updated_at_unix = 8;
    */
   updatedAtUnix: bigint;
+
+  /**
+   * Durable consumers in the caller's tenant/project. Lag compares each stored
+   * watermark with its own topic head and remains valid after journal pruning.
+   *
+   * @generated from field: repeated udb.entity.v1.CdcConsumerStatus consumers = 9;
+   */
+  consumers: CdcConsumerStatus[];
 };
 
 /**
@@ -202,4 +265,68 @@ export type CdcStatusResponse = Message<"udb.entity.v1.CdcStatusResponse"> & {
  * Use `create(CdcStatusResponseSchema)` to create a new message.
  */
 export const CdcStatusResponseSchema: GenMessage<CdcStatusResponse> = /*@__PURE__*/
-  messageDesc(file_udb_entity_v1_cdc, 4);
+  messageDesc(file_udb_entity_v1_cdc, 5);
+
+/**
+ * @generated from message udb.entity.v1.CdcConsumerStatus
+ */
+export type CdcConsumerStatus = Message<"udb.entity.v1.CdcConsumerStatus"> & {
+  /**
+   * @generated from field: string consumer_name = 1;
+   */
+  consumerName: string;
+
+  /**
+   * @generated from field: string topic_pattern = 2;
+   */
+  topicPattern: string;
+
+  /**
+   * @generated from field: string last_event_id = 3;
+   */
+  lastEventId: string;
+
+  /**
+   * @generated from field: double lag_seconds = 4;
+   */
+  lagSeconds: number;
+
+  /**
+   * @generated from field: int64 acked_at_unix = 5;
+   */
+  ackedAtUnix: bigint;
+
+  /**
+   * @generated from field: int64 last_published_at_unix = 6;
+   */
+  lastPublishedAtUnix: bigint;
+
+  /**
+   * @generated from field: string tenant_id = 7;
+   */
+  tenantId: string;
+
+  /**
+   * @generated from field: string project_id = 8;
+   */
+  projectId: string;
+
+  /**
+   * @generated from field: string owner_identity = 9;
+   */
+  ownerIdentity: string;
+
+  /**
+   * A legacy cursor has no verified owner; migrate it before resuming delivery.
+   *
+   * @generated from field: bool owner_migration_required = 10;
+   */
+  ownerMigrationRequired: boolean;
+};
+
+/**
+ * Describes the message udb.entity.v1.CdcConsumerStatus.
+ * Use `create(CdcConsumerStatusSchema)` to create a new message.
+ */
+export const CdcConsumerStatusSchema: GenMessage<CdcConsumerStatus> = /*@__PURE__*/
+  messageDesc(file_udb_entity_v1_cdc, 6);

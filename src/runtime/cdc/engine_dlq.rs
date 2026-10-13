@@ -45,7 +45,6 @@ mod tests {
 }
 
 impl CdcEngine {
-    #[cfg(feature = "kafka")]
     pub(crate) async fn ack_event(&self, event_id: Uuid, lsn: i64) -> bool {
         let mut tx = match self.pool.begin().await {
             Ok(tx) => tx,
@@ -95,7 +94,9 @@ impl CdcEngine {
             return false;
         }
 
-        if self.config.exactly_once_mode != CdcExactlyOnceMode::AtLeastOnce {
+        if self.config.journal_only
+            || self.config.exactly_once_mode != CdcExactlyOnceMode::AtLeastOnce
+        {
             use crate::runtime::system::SystemCatalogConfig;
             let sys = SystemCatalogConfig::current();
             let journal_sql = format!(
@@ -129,7 +130,6 @@ impl CdcEngine {
         true
     }
 
-    #[cfg(feature = "kafka")]
     pub(crate) async fn route_to_dlq(
         &self,
         event_id: Uuid,
@@ -197,23 +197,26 @@ impl CdcEngine {
             }
         }
 
-        let event_key = event_id.to_string();
-        let record = FutureRecord::to(&self.config.dlq_topic)
-            .key(&event_key)
-            .payload(&payload_string);
-
-        if let Err((e, _)) = self
-            .kafka_producer
-            .send(
-                record,
-                crate::runtime::singleton::WORKER_SINGLETON_LEASE_TTL,
-            )
-            .await
+        #[cfg(feature = "kafka")]
         {
-            error!("[cdc] critical: failed to route to DLQ: {:?}", e);
-            self.mark_cdc_delivery_state(event_id, "pending", None, None, Some(error_message))
-                .await;
-            return false;
+            let event_key = event_id.to_string();
+            let record = FutureRecord::to(&self.config.dlq_topic)
+                .key(&event_key)
+                .payload(&payload_string);
+
+            if let Some(producer) = self.kafka_producer.as_ref()
+                && let Err((e, _)) = producer
+                    .send(
+                        record,
+                        crate::runtime::singleton::WORKER_SINGLETON_LEASE_TTL,
+                    )
+                    .await
+            {
+                error!("[cdc] critical: failed to route to DLQ: {:?}", e);
+                self.mark_cdc_delivery_state(event_id, "pending", None, None, Some(error_message))
+                    .await;
+                return false;
+            }
         }
 
         self.mark_cdc_delivery_state(event_id, "dlq", None, None, Some(error_message))
@@ -345,7 +348,6 @@ impl CdcEngine {
     /// Returns `Ok(())` if the registry is not configured or the check passes.
     /// Returns `Err(reason)` when the schema is rejected, or when the registry
     /// is unavailable and `schema_registry_mode=fail_closed`.
-    #[cfg(feature = "kafka")]
     pub(crate) async fn validate_event_schema(&self, schema_uri: &str) -> Result<(), String> {
         let registry_url = self.config.schema_registry_url.trim();
         if self.config.schema_registry_mode == SchemaRegistryMode::Off
@@ -355,39 +357,44 @@ impl CdcEngine {
             return Ok(());
         }
 
-        let lookup_url = format!(
-            "{}/subjects/{}/versions/latest",
-            registry_url.trim_end_matches('/'),
-            urlencoding::encode(schema_uri)
-        );
+        #[cfg(not(feature = "http-client"))]
+        return Err("schema registry validation requires the http-client feature".into());
+        #[cfg(feature = "http-client")]
+        {
+            let lookup_url = format!(
+                "{}/subjects/{}/versions/latest",
+                registry_url.trim_end_matches('/'),
+                urlencoding::encode(schema_uri)
+            );
 
-        let mut request = reqwest::Client::new().get(&lookup_url);
-        if !self.config.schema_registry_auth.is_empty() {
-            request = request.header("Authorization", &self.config.schema_registry_auth);
-        }
-
-        match request.send().await {
-            Ok(resp) if resp.status().is_success() => Ok(()),
-            Ok(resp) if resp.status().as_u16() == 404 => {
-                Err(format!("schema_uri '{}' not found in registry", schema_uri))
+            let mut request = reqwest::Client::new().get(&lookup_url);
+            if !self.config.schema_registry_auth.is_empty() {
+                request = request.header("Authorization", &self.config.schema_registry_auth);
             }
-            Ok(resp) => {
-                let status = resp.status();
-                let message = format!("schema registry returned {status} for '{schema_uri}'");
-                if self.config.schema_registry_mode.fail_closed() {
-                    Err(message)
-                } else {
-                    warn!("[cdc] {}; allowing event", message);
-                    Ok(())
+
+            match request.send().await {
+                Ok(resp) if resp.status().is_success() => Ok(()),
+                Ok(resp) if resp.status().as_u16() == 404 => {
+                    Err(format!("schema_uri '{}' not found in registry", schema_uri))
                 }
-            }
-            Err(e) => {
-                let message = format!("schema registry unreachable ({e})");
-                if self.config.schema_registry_mode.fail_closed() {
-                    Err(message)
-                } else {
-                    warn!("[cdc] {}; allowing event without validation", message);
-                    Ok(())
+                Ok(resp) => {
+                    let status = resp.status();
+                    let message = format!("schema registry returned {status} for '{schema_uri}'");
+                    if self.config.schema_registry_mode.fail_closed() {
+                        Err(message)
+                    } else {
+                        warn!("[cdc] {}; allowing event", message);
+                        Ok(())
+                    }
+                }
+                Err(e) => {
+                    let message = format!("schema registry unreachable ({e})");
+                    if self.config.schema_registry_mode.fail_closed() {
+                        Err(message)
+                    } else {
+                        warn!("[cdc] {}; allowing event without validation", message);
+                        Ok(())
+                    }
                 }
             }
         }
@@ -461,7 +468,6 @@ impl CdcEngine {
     }
 
     /// Phase 7: Replay a single DLQ event
-    #[cfg(feature = "kafka")]
     pub async fn replay_dlq_event(&self, dlq_id: Uuid) -> Result<String, String> {
         use crate::runtime::system::SystemCatalogConfig;
         let sys = SystemCatalogConfig::current();
@@ -480,6 +486,9 @@ impl CdcEngine {
         let event_id: Uuid = row.try_get("event_id").map_err(|e| e.to_string())?;
         let topic: String = row.try_get("topic").map_err(|e| e.to_string())?;
         let payload: serde_json::Value = row.try_get("payload").map_err(|e| e.to_string())?;
+        // route_to_dlq persists a diagnostic wrapper; replay the original event,
+        // preserving compatibility with older rows that stored it directly.
+        let payload = payload.get("failed_event").cloned().unwrap_or(payload);
         let retry_count: i32 = match row.try_get("retry_count") {
             Ok(value) => value,
             Err(err) => {
@@ -515,17 +524,27 @@ impl CdcEngine {
         // Re-publish to Kafka
         let payload_string = payload.to_string();
         let event_key = event_id.to_string();
-        let record = FutureRecord::to(&topic)
-            .key(&event_key)
-            .payload(&payload_string);
-
-        self.kafka_producer
-            .send(
-                record,
-                crate::runtime::singleton::WORKER_SINGLETON_LEASE_TTL,
-            )
-            .await
-            .map_err(|(e, _)| format!("failed to republish event: {:?}", e))?;
+        let partition_key = payload
+            .get("document_id")
+            .and_then(|v| v.as_str())
+            .unwrap_or(&event_key);
+        #[cfg(feature = "kafka")]
+        if let Some(producer) = self.kafka_producer.as_ref() {
+            let record = FutureRecord::to(&topic)
+                .key(partition_key)
+                .payload(&payload_string);
+            producer
+                .send(
+                    record,
+                    crate::runtime::singleton::WORKER_SINGLETON_LEASE_TTL,
+                )
+                .await
+                .map_err(|(e, _)| format!("failed to republish event: {:?}", e))?;
+        }
+        if self.config.journal_only {
+            self.publish_to_journal(event_id, &topic, partition_key, &payload_string, None, None)
+                .await?;
+        }
 
         // Update DLQ status
         sqlx::query(&format!(
@@ -543,7 +562,6 @@ impl CdcEngine {
     }
 
     /// Phase 7: Replay DLQ events by topic and date range
-    #[cfg(feature = "kafka")]
     pub async fn replay_dlq_by_topic(
         &self,
         topic: String,

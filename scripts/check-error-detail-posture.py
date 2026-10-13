@@ -8045,7 +8045,7 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
             '"cdc"',
             '"PublishCDC"',
             '"cdc_tailer"',
-            "CDC tailer is not configured; set UDB_KAFKA_BROKERS to enable PublishCDC",
+            "CDC tailer is not configured; set UDB_KAFKA_BROKERS or use udb dev up --embedded to enable PublishCDC",
         ),
     ),
     TokenCheck(

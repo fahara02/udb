@@ -42,6 +42,11 @@ public final class CdcProto {
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_udb_entity_v1_AckCdcEventsResponse_fieldAccessorTable;
   static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_udb_entity_v1_NackCdcEventsRequest_descriptor;
+  static final
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_udb_entity_v1_NackCdcEventsRequest_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
     internal_static_udb_entity_v1_CdcControlRequest_descriptor;
   static final
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
@@ -51,6 +56,11 @@ public final class CdcProto {
   static final
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_udb_entity_v1_CdcStatusResponse_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_udb_entity_v1_CdcConsumerStatus_descriptor;
+  static final
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_udb_entity_v1_CdcConsumerStatus_fieldAccessorTable;
 
   public static com.google.protobuf.Descriptors.FileDescriptor
       getDescriptor() {
@@ -75,22 +85,40 @@ public final class CdcProto {
       "umer_name\030\001 \001(\tR\014consumerName\022#\n\rtopic_p" +
       "attern\030\002 \001(\tR\014topicPattern\022\031\n\010event_id\030\003" +
       " \001(\tR\007eventId\022\"\n\racked_at_unix\030\004 \001(\003R\013ac" +
-      "kedAtUnix\"\201\001\n\021CdcControlRequest\0227\n\007conte" +
-      "xt\030\001 \001(\0132\035.udb.entity.v1.RequestContextR" +
-      "\007context\022\033\n\tslot_name\030\002 \001(\tR\010slotName\022\026\n" +
-      "\006reason\030\003 \001(\tR\006reason\"\230\002\n\021CdcStatusRespo" +
-      "nse\022\033\n\tslot_name\030\001 \001(\tR\010slotName\022\033\n\tis_l" +
-      "eader\030\002 \001(\010R\010isLeader\022\026\n\006paused\030\003 \001(\010R\006p" +
-      "aused\022!\n\014pause_reason\030\004 \001(\tR\013pauseReason" +
-      "\022\"\n\rlast_event_id\030\005 \001(\tR\013lastEventId\022\037\n\013" +
-      "lag_seconds\030\006 \001(\001R\nlagSeconds\022!\n\014outbox_" +
-      "depth\030\007 \001(\003R\013outboxDepth\022&\n\017updated_at_u" +
-      "nix\030\010 \001(\003R\rupdatedAtUnixB\256\001\n\021com.udb.ent" +
-      "ity.v1B\010CdcProtoP\001Z9github.com/fahara02/" +
-      "udb/sdk/go/gen/udb/entity/v1;entityv1\242\002\003" +
-      "UEX\252\002\rUdb.Entity.V1\312\002\rUdb\\Entity\\V1\342\002\031Ud" +
-      "b\\GPBMetadata\\Entity\\V1\352\002\017Udb::Entity::V" +
-      "1b\006proto3"
+      "kedAtUnix\"\367\001\n\024NackCdcEventsRequest\0227\n\007co" +
+      "ntext\030\001 \001(\0132\035.udb.entity.v1.RequestConte" +
+      "xtR\007context\022#\n\rconsumer_name\030\002 \001(\tR\014cons" +
+      "umerName\022#\n\rtopic_pattern\030\003 \001(\tR\014topicPa" +
+      "ttern\022\031\n\010event_id\030\004 \001(\tR\007eventId\022\032\n\010atte" +
+      "mpts\030\005 \001(\rR\010attempts\022%\n\016failure_reason\030\006" +
+      " \001(\tR\rfailureReason\"\201\001\n\021CdcControlReques" +
+      "t\0227\n\007context\030\001 \001(\0132\035.udb.entity.v1.Reque" +
+      "stContextR\007context\022\033\n\tslot_name\030\002 \001(\tR\010s" +
+      "lotName\022\026\n\006reason\030\003 \001(\tR\006reason\"\330\002\n\021CdcS" +
+      "tatusResponse\022\033\n\tslot_name\030\001 \001(\tR\010slotNa" +
+      "me\022\033\n\tis_leader\030\002 \001(\010R\010isLeader\022\026\n\006pause" +
+      "d\030\003 \001(\010R\006paused\022!\n\014pause_reason\030\004 \001(\tR\013p" +
+      "auseReason\022\"\n\rlast_event_id\030\005 \001(\tR\013lastE" +
+      "ventId\022\037\n\013lag_seconds\030\006 \001(\001R\nlagSeconds\022" +
+      "!\n\014outbox_depth\030\007 \001(\003R\013outboxDepth\022&\n\017up" +
+      "dated_at_unix\030\010 \001(\003R\rupdatedAtUnix\022>\n\tco" +
+      "nsumers\030\t \003(\0132 .udb.entity.v1.CdcConsume" +
+      "rStatusR\tconsumers\"\230\003\n\021CdcConsumerStatus" +
+      "\022#\n\rconsumer_name\030\001 \001(\tR\014consumerName\022#\n" +
+      "\rtopic_pattern\030\002 \001(\tR\014topicPattern\022\"\n\rla" +
+      "st_event_id\030\003 \001(\tR\013lastEventId\022\037\n\013lag_se" +
+      "conds\030\004 \001(\001R\nlagSeconds\022\"\n\racked_at_unix" +
+      "\030\005 \001(\003R\013ackedAtUnix\0223\n\026last_published_at" +
+      "_unix\030\006 \001(\003R\023lastPublishedAtUnix\022\033\n\ttena" +
+      "nt_id\030\007 \001(\tR\010tenantId\022\035\n\nproject_id\030\010 \001(" +
+      "\tR\tprojectId\022%\n\016owner_identity\030\t \001(\tR\row" +
+      "nerIdentity\0228\n\030owner_migration_required\030" +
+      "\n \001(\010R\026ownerMigrationRequiredB\256\001\n\021com.ud" +
+      "b.entity.v1B\010CdcProtoP\001Z9github.com/faha" +
+      "ra02/udb/sdk/go/gen/udb/entity/v1;entity" +
+      "v1\242\002\003UEX\252\002\rUdb.Entity.V1\312\002\rUdb\\Entity\\V1" +
+      "\342\002\031Udb\\GPBMetadata\\Entity\\V1\352\002\017Udb::Enti" +
+      "ty::V1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -115,18 +143,30 @@ public final class CdcProto {
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_AckCdcEventsResponse_descriptor,
         new java.lang.String[] { "ConsumerName", "TopicPattern", "EventId", "AckedAtUnix", });
-    internal_static_udb_entity_v1_CdcControlRequest_descriptor =
+    internal_static_udb_entity_v1_NackCdcEventsRequest_descriptor =
       getDescriptor().getMessageTypes().get(3);
+    internal_static_udb_entity_v1_NackCdcEventsRequest_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_udb_entity_v1_NackCdcEventsRequest_descriptor,
+        new java.lang.String[] { "Context", "ConsumerName", "TopicPattern", "EventId", "Attempts", "FailureReason", });
+    internal_static_udb_entity_v1_CdcControlRequest_descriptor =
+      getDescriptor().getMessageTypes().get(4);
     internal_static_udb_entity_v1_CdcControlRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_CdcControlRequest_descriptor,
         new java.lang.String[] { "Context", "SlotName", "Reason", });
     internal_static_udb_entity_v1_CdcStatusResponse_descriptor =
-      getDescriptor().getMessageTypes().get(4);
+      getDescriptor().getMessageTypes().get(5);
     internal_static_udb_entity_v1_CdcStatusResponse_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_CdcStatusResponse_descriptor,
-        new java.lang.String[] { "SlotName", "IsLeader", "Paused", "PauseReason", "LastEventId", "LagSeconds", "OutboxDepth", "UpdatedAtUnix", });
+        new java.lang.String[] { "SlotName", "IsLeader", "Paused", "PauseReason", "LastEventId", "LagSeconds", "OutboxDepth", "UpdatedAtUnix", "Consumers", });
+    internal_static_udb_entity_v1_CdcConsumerStatus_descriptor =
+      getDescriptor().getMessageTypes().get(6);
+    internal_static_udb_entity_v1_CdcConsumerStatus_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_udb_entity_v1_CdcConsumerStatus_descriptor,
+        new java.lang.String[] { "ConsumerName", "TopicPattern", "LastEventId", "LagSeconds", "AckedAtUnix", "LastPublishedAtUnix", "TenantId", "ProjectId", "OwnerIdentity", "OwnerMigrationRequired", });
     descriptor.resolveAllFeaturesImmutable();
     com.udb.entity.v1.ContextProto.getDescriptor();
   }

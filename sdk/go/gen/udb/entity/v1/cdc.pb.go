@@ -29,8 +29,10 @@ type CDCSubscriptionRequest struct {
 	// A durable consumer's name (1-120 chars of [A-Za-z0-9_.:-]). When set and
 	// since_event_id is empty, the stream resumes after the last event this
 	// consumer acknowledged with AckCdcEvents for this topic_pattern, so a
-	// restarted (or reconnected) consumer neither skips nor re-reads its place.
-	// Cursors are scoped to the caller's verified tenant and project.
+	// restarted (or reconnected) consumer resumes its acknowledged position.
+	// A new name reads the retained backlog. Positions survive journal retention.
+	// Names are owned by the verified principal within its tenant and project;
+	// another principal cannot subscribe or acknowledge under the same name.
 	ConsumerName  string `protobuf:"bytes,4,opt,name=consumer_name,json=consumerName,proto3" json:"consumer_name,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -103,7 +105,9 @@ type AckCdcEventsRequest struct {
 	// The topic_pattern the consumer subscribed with.
 	TopicPattern string `protobuf:"bytes,3,opt,name=topic_pattern,json=topicPattern,proto3" json:"topic_pattern,omitempty"`
 	// The last event the consumer has fully handled. The next subscription
-	// under this consumer name resumes after it.
+	// under this consumer name resumes after it. The event must be retained and
+	// match the caller's tenant/project and topic pattern. An older acknowledgment
+	// succeeds without moving the stored cursor backward.
 	EventId       string `protobuf:"bytes,4,opt,name=event_id,json=eventId,proto3" json:"event_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -235,6 +239,96 @@ func (x *AckCdcEventsResponse) GetAckedAtUnix() int64 {
 	return 0
 }
 
+// Atomically retain a failed consumer event in the ordinary DLQ and advance
+// this consumer's cursor. Other consumers and the journal event are unchanged.
+// Repeating the same consumer/topic/event settlement is safe. The broker reads
+// the canonical retained event; callers cannot supply or replace its payload.
+type NackCdcEventsRequest struct {
+	state        protoimpl.MessageState `protogen:"open.v1"`
+	Context      *RequestContext        `protobuf:"bytes,1,opt,name=context,proto3" json:"context,omitempty"`
+	ConsumerName string                 `protobuf:"bytes,2,opt,name=consumer_name,json=consumerName,proto3" json:"consumer_name,omitempty"`
+	TopicPattern string                 `protobuf:"bytes,3,opt,name=topic_pattern,json=topicPattern,proto3" json:"topic_pattern,omitempty"`
+	EventId      string                 `protobuf:"bytes,4,opt,name=event_id,json=eventId,proto3" json:"event_id,omitempty"`
+	// Completed handler attempts, from 1 through 1000.
+	Attempts uint32 `protobuf:"varint,5,opt,name=attempts,proto3" json:"attempts,omitempty"`
+	// Operator diagnostic, at most 2048 UTF-8 bytes. Do not include credentials.
+	FailureReason string `protobuf:"bytes,6,opt,name=failure_reason,json=failureReason,proto3" json:"failure_reason,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *NackCdcEventsRequest) Reset() {
+	*x = NackCdcEventsRequest{}
+	mi := &file_udb_entity_v1_cdc_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *NackCdcEventsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*NackCdcEventsRequest) ProtoMessage() {}
+
+func (x *NackCdcEventsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_entity_v1_cdc_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use NackCdcEventsRequest.ProtoReflect.Descriptor instead.
+func (*NackCdcEventsRequest) Descriptor() ([]byte, []int) {
+	return file_udb_entity_v1_cdc_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *NackCdcEventsRequest) GetContext() *RequestContext {
+	if x != nil {
+		return x.Context
+	}
+	return nil
+}
+
+func (x *NackCdcEventsRequest) GetConsumerName() string {
+	if x != nil {
+		return x.ConsumerName
+	}
+	return ""
+}
+
+func (x *NackCdcEventsRequest) GetTopicPattern() string {
+	if x != nil {
+		return x.TopicPattern
+	}
+	return ""
+}
+
+func (x *NackCdcEventsRequest) GetEventId() string {
+	if x != nil {
+		return x.EventId
+	}
+	return ""
+}
+
+func (x *NackCdcEventsRequest) GetAttempts() uint32 {
+	if x != nil {
+		return x.Attempts
+	}
+	return 0
+}
+
+func (x *NackCdcEventsRequest) GetFailureReason() string {
+	if x != nil {
+		return x.FailureReason
+	}
+	return ""
+}
+
 type CdcControlRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Context       *RequestContext        `protobuf:"bytes,1,opt,name=context,proto3" json:"context,omitempty"`
@@ -246,7 +340,7 @@ type CdcControlRequest struct {
 
 func (x *CdcControlRequest) Reset() {
 	*x = CdcControlRequest{}
-	mi := &file_udb_entity_v1_cdc_proto_msgTypes[3]
+	mi := &file_udb_entity_v1_cdc_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -258,7 +352,7 @@ func (x *CdcControlRequest) String() string {
 func (*CdcControlRequest) ProtoMessage() {}
 
 func (x *CdcControlRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_entity_v1_cdc_proto_msgTypes[3]
+	mi := &file_udb_entity_v1_cdc_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -271,7 +365,7 @@ func (x *CdcControlRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CdcControlRequest.ProtoReflect.Descriptor instead.
 func (*CdcControlRequest) Descriptor() ([]byte, []int) {
-	return file_udb_entity_v1_cdc_proto_rawDescGZIP(), []int{3}
+	return file_udb_entity_v1_cdc_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *CdcControlRequest) GetContext() *RequestContext {
@@ -305,13 +399,16 @@ type CdcStatusResponse struct {
 	LagSeconds    float64                `protobuf:"fixed64,6,opt,name=lag_seconds,json=lagSeconds,proto3" json:"lag_seconds,omitempty"`
 	OutboxDepth   int64                  `protobuf:"varint,7,opt,name=outbox_depth,json=outboxDepth,proto3" json:"outbox_depth,omitempty"`
 	UpdatedAtUnix int64                  `protobuf:"varint,8,opt,name=updated_at_unix,json=updatedAtUnix,proto3" json:"updated_at_unix,omitempty"`
+	// Durable consumers in the caller's tenant/project. Lag compares each stored
+	// watermark with its own topic head and remains valid after journal pruning.
+	Consumers     []*CdcConsumerStatus `protobuf:"bytes,9,rep,name=consumers,proto3" json:"consumers,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *CdcStatusResponse) Reset() {
 	*x = CdcStatusResponse{}
-	mi := &file_udb_entity_v1_cdc_proto_msgTypes[4]
+	mi := &file_udb_entity_v1_cdc_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -323,7 +420,7 @@ func (x *CdcStatusResponse) String() string {
 func (*CdcStatusResponse) ProtoMessage() {}
 
 func (x *CdcStatusResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_entity_v1_cdc_proto_msgTypes[4]
+	mi := &file_udb_entity_v1_cdc_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -336,7 +433,7 @@ func (x *CdcStatusResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CdcStatusResponse.ProtoReflect.Descriptor instead.
 func (*CdcStatusResponse) Descriptor() ([]byte, []int) {
-	return file_udb_entity_v1_cdc_proto_rawDescGZIP(), []int{4}
+	return file_udb_entity_v1_cdc_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *CdcStatusResponse) GetSlotName() string {
@@ -395,6 +492,130 @@ func (x *CdcStatusResponse) GetUpdatedAtUnix() int64 {
 	return 0
 }
 
+func (x *CdcStatusResponse) GetConsumers() []*CdcConsumerStatus {
+	if x != nil {
+		return x.Consumers
+	}
+	return nil
+}
+
+type CdcConsumerStatus struct {
+	state               protoimpl.MessageState `protogen:"open.v1"`
+	ConsumerName        string                 `protobuf:"bytes,1,opt,name=consumer_name,json=consumerName,proto3" json:"consumer_name,omitempty"`
+	TopicPattern        string                 `protobuf:"bytes,2,opt,name=topic_pattern,json=topicPattern,proto3" json:"topic_pattern,omitempty"`
+	LastEventId         string                 `protobuf:"bytes,3,opt,name=last_event_id,json=lastEventId,proto3" json:"last_event_id,omitempty"`
+	LagSeconds          float64                `protobuf:"fixed64,4,opt,name=lag_seconds,json=lagSeconds,proto3" json:"lag_seconds,omitempty"`
+	AckedAtUnix         int64                  `protobuf:"varint,5,opt,name=acked_at_unix,json=ackedAtUnix,proto3" json:"acked_at_unix,omitempty"`
+	LastPublishedAtUnix int64                  `protobuf:"varint,6,opt,name=last_published_at_unix,json=lastPublishedAtUnix,proto3" json:"last_published_at_unix,omitempty"`
+	TenantId            string                 `protobuf:"bytes,7,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	ProjectId           string                 `protobuf:"bytes,8,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
+	OwnerIdentity       string                 `protobuf:"bytes,9,opt,name=owner_identity,json=ownerIdentity,proto3" json:"owner_identity,omitempty"`
+	// A legacy cursor has no verified owner; migrate it before resuming delivery.
+	OwnerMigrationRequired bool `protobuf:"varint,10,opt,name=owner_migration_required,json=ownerMigrationRequired,proto3" json:"owner_migration_required,omitempty"`
+	unknownFields          protoimpl.UnknownFields
+	sizeCache              protoimpl.SizeCache
+}
+
+func (x *CdcConsumerStatus) Reset() {
+	*x = CdcConsumerStatus{}
+	mi := &file_udb_entity_v1_cdc_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CdcConsumerStatus) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CdcConsumerStatus) ProtoMessage() {}
+
+func (x *CdcConsumerStatus) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_entity_v1_cdc_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CdcConsumerStatus.ProtoReflect.Descriptor instead.
+func (*CdcConsumerStatus) Descriptor() ([]byte, []int) {
+	return file_udb_entity_v1_cdc_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *CdcConsumerStatus) GetConsumerName() string {
+	if x != nil {
+		return x.ConsumerName
+	}
+	return ""
+}
+
+func (x *CdcConsumerStatus) GetTopicPattern() string {
+	if x != nil {
+		return x.TopicPattern
+	}
+	return ""
+}
+
+func (x *CdcConsumerStatus) GetLastEventId() string {
+	if x != nil {
+		return x.LastEventId
+	}
+	return ""
+}
+
+func (x *CdcConsumerStatus) GetLagSeconds() float64 {
+	if x != nil {
+		return x.LagSeconds
+	}
+	return 0
+}
+
+func (x *CdcConsumerStatus) GetAckedAtUnix() int64 {
+	if x != nil {
+		return x.AckedAtUnix
+	}
+	return 0
+}
+
+func (x *CdcConsumerStatus) GetLastPublishedAtUnix() int64 {
+	if x != nil {
+		return x.LastPublishedAtUnix
+	}
+	return 0
+}
+
+func (x *CdcConsumerStatus) GetTenantId() string {
+	if x != nil {
+		return x.TenantId
+	}
+	return ""
+}
+
+func (x *CdcConsumerStatus) GetProjectId() string {
+	if x != nil {
+		return x.ProjectId
+	}
+	return ""
+}
+
+func (x *CdcConsumerStatus) GetOwnerIdentity() string {
+	if x != nil {
+		return x.OwnerIdentity
+	}
+	return ""
+}
+
+func (x *CdcConsumerStatus) GetOwnerMigrationRequired() bool {
+	if x != nil {
+		return x.OwnerMigrationRequired
+	}
+	return false
+}
+
 var File_udb_entity_v1_cdc_proto protoreflect.FileDescriptor
 
 const file_udb_entity_v1_cdc_proto_rawDesc = "" +
@@ -414,11 +635,18 @@ const file_udb_entity_v1_cdc_proto_rawDesc = "" +
 	"\rconsumer_name\x18\x01 \x01(\tR\fconsumerName\x12#\n" +
 	"\rtopic_pattern\x18\x02 \x01(\tR\ftopicPattern\x12\x19\n" +
 	"\bevent_id\x18\x03 \x01(\tR\aeventId\x12\"\n" +
-	"\racked_at_unix\x18\x04 \x01(\x03R\vackedAtUnix\"\x81\x01\n" +
+	"\racked_at_unix\x18\x04 \x01(\x03R\vackedAtUnix\"\xf7\x01\n" +
+	"\x14NackCdcEventsRequest\x127\n" +
+	"\acontext\x18\x01 \x01(\v2\x1d.udb.entity.v1.RequestContextR\acontext\x12#\n" +
+	"\rconsumer_name\x18\x02 \x01(\tR\fconsumerName\x12#\n" +
+	"\rtopic_pattern\x18\x03 \x01(\tR\ftopicPattern\x12\x19\n" +
+	"\bevent_id\x18\x04 \x01(\tR\aeventId\x12\x1a\n" +
+	"\battempts\x18\x05 \x01(\rR\battempts\x12%\n" +
+	"\x0efailure_reason\x18\x06 \x01(\tR\rfailureReason\"\x81\x01\n" +
 	"\x11CdcControlRequest\x127\n" +
 	"\acontext\x18\x01 \x01(\v2\x1d.udb.entity.v1.RequestContextR\acontext\x12\x1b\n" +
 	"\tslot_name\x18\x02 \x01(\tR\bslotName\x12\x16\n" +
-	"\x06reason\x18\x03 \x01(\tR\x06reason\"\x98\x02\n" +
+	"\x06reason\x18\x03 \x01(\tR\x06reason\"\xd8\x02\n" +
 	"\x11CdcStatusResponse\x12\x1b\n" +
 	"\tslot_name\x18\x01 \x01(\tR\bslotName\x12\x1b\n" +
 	"\tis_leader\x18\x02 \x01(\bR\bisLeader\x12\x16\n" +
@@ -428,7 +656,22 @@ const file_udb_entity_v1_cdc_proto_rawDesc = "" +
 	"\vlag_seconds\x18\x06 \x01(\x01R\n" +
 	"lagSeconds\x12!\n" +
 	"\foutbox_depth\x18\a \x01(\x03R\voutboxDepth\x12&\n" +
-	"\x0fupdated_at_unix\x18\b \x01(\x03R\rupdatedAtUnixB\xae\x01\n" +
+	"\x0fupdated_at_unix\x18\b \x01(\x03R\rupdatedAtUnix\x12>\n" +
+	"\tconsumers\x18\t \x03(\v2 .udb.entity.v1.CdcConsumerStatusR\tconsumers\"\x98\x03\n" +
+	"\x11CdcConsumerStatus\x12#\n" +
+	"\rconsumer_name\x18\x01 \x01(\tR\fconsumerName\x12#\n" +
+	"\rtopic_pattern\x18\x02 \x01(\tR\ftopicPattern\x12\"\n" +
+	"\rlast_event_id\x18\x03 \x01(\tR\vlastEventId\x12\x1f\n" +
+	"\vlag_seconds\x18\x04 \x01(\x01R\n" +
+	"lagSeconds\x12\"\n" +
+	"\racked_at_unix\x18\x05 \x01(\x03R\vackedAtUnix\x123\n" +
+	"\x16last_published_at_unix\x18\x06 \x01(\x03R\x13lastPublishedAtUnix\x12\x1b\n" +
+	"\ttenant_id\x18\a \x01(\tR\btenantId\x12\x1d\n" +
+	"\n" +
+	"project_id\x18\b \x01(\tR\tprojectId\x12%\n" +
+	"\x0eowner_identity\x18\t \x01(\tR\rownerIdentity\x128\n" +
+	"\x18owner_migration_required\x18\n" +
+	" \x01(\bR\x16ownerMigrationRequiredB\xae\x01\n" +
 	"\x11com.udb.entity.v1B\bCdcProtoP\x01Z9github.com/fahara02/udb/sdk/go/gen/udb/entity/v1;entityv1\xa2\x02\x03UEX\xaa\x02\rUdb.Entity.V1\xca\x02\rUdb\\Entity\\V1\xe2\x02\x19Udb\\GPBMetadata\\Entity\\V1\xea\x02\x0fUdb::Entity::V1b\x06proto3"
 
 var (
@@ -443,24 +686,28 @@ func file_udb_entity_v1_cdc_proto_rawDescGZIP() []byte {
 	return file_udb_entity_v1_cdc_proto_rawDescData
 }
 
-var file_udb_entity_v1_cdc_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
+var file_udb_entity_v1_cdc_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
 var file_udb_entity_v1_cdc_proto_goTypes = []any{
 	(*CDCSubscriptionRequest)(nil), // 0: udb.entity.v1.CDCSubscriptionRequest
 	(*AckCdcEventsRequest)(nil),    // 1: udb.entity.v1.AckCdcEventsRequest
 	(*AckCdcEventsResponse)(nil),   // 2: udb.entity.v1.AckCdcEventsResponse
-	(*CdcControlRequest)(nil),      // 3: udb.entity.v1.CdcControlRequest
-	(*CdcStatusResponse)(nil),      // 4: udb.entity.v1.CdcStatusResponse
-	(*RequestContext)(nil),         // 5: udb.entity.v1.RequestContext
+	(*NackCdcEventsRequest)(nil),   // 3: udb.entity.v1.NackCdcEventsRequest
+	(*CdcControlRequest)(nil),      // 4: udb.entity.v1.CdcControlRequest
+	(*CdcStatusResponse)(nil),      // 5: udb.entity.v1.CdcStatusResponse
+	(*CdcConsumerStatus)(nil),      // 6: udb.entity.v1.CdcConsumerStatus
+	(*RequestContext)(nil),         // 7: udb.entity.v1.RequestContext
 }
 var file_udb_entity_v1_cdc_proto_depIdxs = []int32{
-	5, // 0: udb.entity.v1.CDCSubscriptionRequest.context:type_name -> udb.entity.v1.RequestContext
-	5, // 1: udb.entity.v1.AckCdcEventsRequest.context:type_name -> udb.entity.v1.RequestContext
-	5, // 2: udb.entity.v1.CdcControlRequest.context:type_name -> udb.entity.v1.RequestContext
-	3, // [3:3] is the sub-list for method output_type
-	3, // [3:3] is the sub-list for method input_type
-	3, // [3:3] is the sub-list for extension type_name
-	3, // [3:3] is the sub-list for extension extendee
-	0, // [0:3] is the sub-list for field type_name
+	7, // 0: udb.entity.v1.CDCSubscriptionRequest.context:type_name -> udb.entity.v1.RequestContext
+	7, // 1: udb.entity.v1.AckCdcEventsRequest.context:type_name -> udb.entity.v1.RequestContext
+	7, // 2: udb.entity.v1.NackCdcEventsRequest.context:type_name -> udb.entity.v1.RequestContext
+	7, // 3: udb.entity.v1.CdcControlRequest.context:type_name -> udb.entity.v1.RequestContext
+	6, // 4: udb.entity.v1.CdcStatusResponse.consumers:type_name -> udb.entity.v1.CdcConsumerStatus
+	5, // [5:5] is the sub-list for method output_type
+	5, // [5:5] is the sub-list for method input_type
+	5, // [5:5] is the sub-list for extension type_name
+	5, // [5:5] is the sub-list for extension extendee
+	0, // [0:5] is the sub-list for field type_name
 }
 
 func init() { file_udb_entity_v1_cdc_proto_init() }
@@ -475,7 +722,7 @@ func file_udb_entity_v1_cdc_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_udb_entity_v1_cdc_proto_rawDesc), len(file_udb_entity_v1_cdc_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   5,
+			NumMessages:   7,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

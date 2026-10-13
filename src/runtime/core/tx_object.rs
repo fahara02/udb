@@ -81,7 +81,7 @@ fn autofill_tx_mutation_scope(
             continue;
         };
         match operation.as_str() {
-            "upsert" => {
+            "upsert" | "insert" => {
                 let Ok(mut record) = mutation_record_json(mutation) else {
                     continue;
                 };
@@ -548,8 +548,10 @@ impl DataBrokerRuntime {
             // every unary write does. Each mutation re-installs its own context,
             // so a later mutation never runs under an earlier one's scope, and a
             // non-owner/FORCE-RLS deployment's row policies see the right tenant.
-            let relational_target = if matches!(operation.as_str(), "upsert" | "update" | "delete")
-            {
+            let relational_target = if matches!(
+                operation.as_str(),
+                "upsert" | "insert" | "update" | "delete"
+            ) {
                 super::setup_data::typed_relational_backend_guard(
                     &context,
                     &self.backend_instances,
@@ -595,7 +597,7 @@ impl DataBrokerRuntime {
             } = &idempotency
             {
                 Ok(*affected_rows)
-            } else if operation == "upsert" {
+            } else if matches!(operation.as_str(), "upsert" | "insert") {
                 let record = mutation_record_json(mutation);
                 match record {
                     Ok(record) => {
@@ -626,6 +628,7 @@ impl DataBrokerRuntime {
                                         context: context.clone(),
                                         message_type: mutation.message_type.clone(),
                                         record: record.clone(),
+                                        insert_only: operation == "insert",
                                         conflict_fields: mutation.conflict_fields.clone(),
                                         ..UpsertPlanRequest::default()
                                     },
@@ -1443,7 +1446,10 @@ impl DataBrokerRuntime {
             // record-level URI like the unary path's is not meaningful here).
             for (mutation_index, mutation) in tx_mutations.iter().enumerate() {
                 let operation = mutation.operation.to_ascii_lowercase();
-                if !matches!(operation.as_str(), "upsert" | "update" | "delete") {
+                if !matches!(
+                    operation.as_str(),
+                    "upsert" | "insert" | "update" | "delete"
+                ) {
                     continue;
                 }
                 let audit_context =
@@ -3344,7 +3350,7 @@ mod relational_tx_idempotency_key_tests {
 
     #[test]
     fn unsupported_mutations_with_a_key_are_refused() {
-        for operation in ["put_object", "enqueue_outbox_event"] {
+        for operation in ["insert", "put_object", "enqueue_outbox_event"] {
             let status = validate_tx_mutation_guards(&[
                 mutation("upsert", ""),
                 mutation(operation, "retry-1"),
@@ -3365,6 +3371,7 @@ mod relational_tx_idempotency_key_tests {
                 mutation("delete", "delete-1"),
                 mutation("vector_upsert", "vec-1"),
                 mutation("enqueue_outbox_event", ""),
+                mutation("put_object", ""),
             ])
             .is_ok()
         );

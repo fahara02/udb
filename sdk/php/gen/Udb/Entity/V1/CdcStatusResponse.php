@@ -46,6 +46,13 @@ class CdcStatusResponse extends \Google\Protobuf\Internal\Message
      * Generated from protobuf field <code>int64 updated_at_unix = 8 [json_name = "updatedAtUnix"];</code>
      */
     protected $updated_at_unix = 0;
+    /**
+     * Durable consumers in the caller's tenant/project. Lag compares each stored
+     * watermark with its own topic head and remains valid after journal pruning.
+     *
+     * Generated from protobuf field <code>repeated .udb.entity.v1.CdcConsumerStatus consumers = 9 [json_name = "consumers"];</code>
+     */
+    private $consumers;
 
     /**
      * Constructor.
@@ -61,6 +68,9 @@ class CdcStatusResponse extends \Google\Protobuf\Internal\Message
      *     @type float $lag_seconds
      *     @type int|string $outbox_depth
      *     @type int|string $updated_at_unix
+     *     @type \Udb\Entity\V1\CdcConsumerStatus[] $consumers
+     *           Durable consumers in the caller's tenant/project. Lag compares each stored
+     *           watermark with its own topic head and remains valid after journal pruning.
      * }
      */
     public function __construct($data = NULL) {
@@ -240,6 +250,34 @@ class CdcStatusResponse extends \Google\Protobuf\Internal\Message
     {
         GPBUtil::checkInt64($var);
         $this->updated_at_unix = $var;
+
+        return $this;
+    }
+
+    /**
+     * Durable consumers in the caller's tenant/project. Lag compares each stored
+     * watermark with its own topic head and remains valid after journal pruning.
+     *
+     * Generated from protobuf field <code>repeated .udb.entity.v1.CdcConsumerStatus consumers = 9 [json_name = "consumers"];</code>
+     * @return RepeatedField<\Udb\Entity\V1\CdcConsumerStatus>
+     */
+    public function getConsumers()
+    {
+        return $this->consumers;
+    }
+
+    /**
+     * Durable consumers in the caller's tenant/project. Lag compares each stored
+     * watermark with its own topic head and remains valid after journal pruning.
+     *
+     * Generated from protobuf field <code>repeated .udb.entity.v1.CdcConsumerStatus consumers = 9 [json_name = "consumers"];</code>
+     * @param \Udb\Entity\V1\CdcConsumerStatus[] $var
+     * @return $this
+     */
+    public function setConsumers($var)
+    {
+        $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::MESSAGE, \Udb\Entity\V1\CdcConsumerStatus::class);
+        $this->consumers = $arr;
 
         return $this;
     }

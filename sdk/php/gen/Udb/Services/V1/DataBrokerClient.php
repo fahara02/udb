@@ -62,6 +62,25 @@ class DataBrokerClient extends \Grpc\BaseStub {
     }
 
     /**
+     * Insert one complete row atomically. Any primary/unique-key collision is
+     * ALREADY_EXISTS (UDB_UNIQUE_VIOLATION); existing rows are never changed.
+     * Uses the same verified scope, write fencing, CDC, audit and durable keyed
+     * replay contract as Upsert. conflict_fields and expected are not accepted.
+     * Older brokers return UNIMPLEMENTED, so Insert can never degrade to Upsert.
+     * @param \Udb\Entity\V1\UpsertRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall<\Udb\Entity\V1\MutationResponse>
+     */
+    public function Insert(\Udb\Entity\V1\UpsertRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/udb.services.v1.DataBroker/Insert',
+        $argument,
+        ['\Udb\Entity\V1\MutationResponse', 'decode'],
+        $metadata, $options);
+    }
+
+    /**
      * @param \Udb\Entity\V1\UpsertRequest $argument input argument
      * @param array $metadata metadata
      * @param array $options call options
@@ -505,6 +524,24 @@ class DataBrokerClient extends \Grpc\BaseStub {
     }
 
     /**
+     * Retain a poison event in the existing DLQ and advance only its named
+     * consumer. DLQ storage and cursor settlement commit in one transaction.
+     * An older broker refuses UNIMPLEMENTED; the SDK never acknowledges and
+     * discards the failed event as a fallback.
+     * @param \Udb\Entity\V1\NackCdcEventsRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall<\Udb\Entity\V1\AckCdcEventsResponse>
+     */
+    public function NackCdcEvents(\Udb\Entity\V1\NackCdcEventsRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/udb.services.v1.DataBroker/NackCdcEvents',
+        $argument,
+        ['\Udb\Entity\V1\AckCdcEventsResponse', 'decode'],
+        $metadata, $options);
+    }
+
+    /**
      * @param \Udb\Entity\V1\ViewDefinition $argument input argument
      * @param array $metadata metadata
      * @param array $options call options
@@ -938,6 +975,25 @@ class DataBrokerClient extends \Grpc\BaseStub {
         return $this->_simpleRequest('/udb.services.v1.DataBroker/ScanProjectionDrift',
         $argument,
         ['\Udb\Entity\V1\ProjectionDriftScanResponse', 'decode'],
+        $metadata, $options);
+    }
+
+    /**
+     * Erase one data subject inside the caller's tenant: every row whose
+     * owner_field column names the subject, in every table of the active catalog,
+     * through the normal delete path (projections, caches and events follow),
+     * then the soft-delete tombstones. Returns a receipt signed with the broker's
+     * active signing key (`udb compliance verify-receipt`). Admin scope required.
+     * @param \Udb\Entity\V1\PurgeSubjectRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall<\Udb\Entity\V1\PurgeSubjectResponse>
+     */
+    public function PurgeSubject(\Udb\Entity\V1\PurgeSubjectRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/udb.services.v1.DataBroker/PurgeSubject',
+        $argument,
+        ['\Udb\Entity\V1\PurgeSubjectResponse', 'decode'],
         $metadata, $options);
     }
 

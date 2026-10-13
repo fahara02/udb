@@ -6,7 +6,9 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"strings"
 	"time"
+	"unicode/utf8"
 
 	entityv1 "github.com/fahara02/udb/sdk/go/gen/udb/entity/v1"
 	"google.golang.org/grpc/codes"
@@ -140,7 +142,27 @@ func consumeOnce[T proto.Message](ctx context.Context, u *Udb, name, topicPatter
 				event.PublishedAt = ts.AsTime()
 			}
 			if err := handleWithRetry(attemptCtx, event, handle, o); err != nil {
-				return &consumeFatal{err: fmt.Errorf("udb: consumer %s gave up on event %s: %w", name, id, err)}
+				if ctx.Err() != nil {
+					return ctx.Err()
+				}
+				if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+					return &consumeFatal{err: fmt.Errorf("udb: consumer %s gave up on event %s: %w", name, id, err)}
+				}
+				// A poison event is dead-lettered: the broker stores it in its DLQ
+				// and advances this consumer in one transaction, so later events
+				// keep flowing. A broker that cannot (Unimplemented) stops the
+				// consumer instead of discarding the event.
+				if _, nackErr := u.Data.Broker.NackCdcEvents(attemptCtx, &entityv1.NackCdcEventsRequest{
+					ConsumerName:  name,
+					TopicPattern:  topicPattern,
+					EventId:       id,
+					Attempts:      uint32(o.MaxAttempts),
+					FailureReason: consumerFailureReason(err),
+				}); nackErr != nil {
+					return consumeAttemptError(fmt.Errorf("udb: consumer %s dead-letter %s: %w", name, id, nackErr))
+				}
+				seen.add(id)
+				continue
 			}
 			// The handler completed even if the ACK response is subsequently lost.
 			// Remember its work so redelivery retries only the acknowledgement.
@@ -154,6 +176,22 @@ func consumeOnce[T proto.Message](ctx context.Context, u *Udb, name, topicPatter
 			return consumeAttemptError(fmt.Errorf("udb: consumer %s ack %s: %w", name, id, err))
 		}
 	}
+}
+
+// maxConsumerFailureReasonBytes bounds the diagnostic sent with a dead-letter.
+const maxConsumerFailureReasonBytes = 2048
+
+// consumerFailureReason is the handler error as valid UTF-8, cut to the bound
+// on a rune boundary.
+func consumerFailureReason(err error) string {
+	reason := strings.ToValidUTF8(err.Error(), "?")
+	if len(reason) > maxConsumerFailureReasonBytes {
+		reason = reason[:maxConsumerFailureReasonBytes]
+		for !utf8.ValidString(reason) {
+			reason = reason[:len(reason)-1]
+		}
+	}
+	return reason
 }
 
 func handleWithRetry[T proto.Message](ctx context.Context, event ConsumedEvent[T], handle func(context.Context, ConsumedEvent[T]) error, o ConsumeOptions) error {

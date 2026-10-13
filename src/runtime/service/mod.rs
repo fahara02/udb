@@ -161,6 +161,9 @@ pub(crate) mod native_entity_store;
 #[cfg(test)]
 mod native_entity_store_tests;
 mod native_helpers;
+// Storage-layout startup check (core::storage_layout) resolves the same
+// default bucket the storage service uses.
+pub(crate) use native_helpers::storage_object_defaults as storage_object_defaults_pub;
 
 /// The native StorageService object-store contract as the broker will resolve
 /// it at startup: `(backend, bucket)` from `UDB_STORAGE_OBJECT_BACKEND` /
@@ -412,6 +415,7 @@ pub(crate) const SUPPORTED_RPC_NAMES: &[&str] = &[
     "Select",
     "BatchSelect",
     "SelectV2",
+    "Insert",
     "Upsert",
     "BatchUpsert",
     "Delete",
@@ -430,6 +434,8 @@ pub(crate) const SUPPORTED_RPC_NAMES: &[&str] = &[
     "BeginTx",
     "PublishCDC",
     "AckCdcEvents",
+    "NackCdcEvents",
+    "PurgeSubject",
     "EnqueueOutboxEvent",
     "StageCatalog",
     "ActivateCatalog",
@@ -1999,6 +2005,16 @@ pub async fn serve(
     })?;
     let runtime_config = runtime.config().clone();
     native_registry::install_native_service_runtime_config(&runtime_config);
+    // Storage layout (C5): objects written before tenant-namespaced keys are
+    // invisible to the object RPCs. Warn by default; UDB_STORAGE_LAYOUT_STRICT
+    // refuses to start until `udb migrate storage` has copied them.
+    #[cfg(feature = "s3")]
+    runtime
+        .check_storage_layout_at_startup()
+        .await
+        .map_err(|err| {
+            std::io::Error::other(format!("storage layout startup gate failed: {err}"))
+        })?;
     // UDB_FRICTION §2: evaluate ALL enterprise prerequisites once, up front, and
     // emit a single consolidated report — instead of the operator discovering
     // them one-restart-at-a-time. Advisory only here (the per-capability guards
@@ -2480,7 +2496,6 @@ pub async fn serve(
                 "scheduled materialized view auto-refresh tasks"
             );
         }
-        #[cfg(feature = "kafka")]
         {
             let runtime = service.runtime_snapshot();
             service.cdc_engine = start_cdc_engine(runtime.as_ref(), metrics.clone()).await;
@@ -2636,6 +2651,58 @@ pub async fn serve(
                 }
             });
             tracing::info!("projection materialization worker started");
+        }
+        // P6: declared pipeline units (UDB_PIPELINES_FILE). Each tick is
+        // serialized across replicas by a per-unit advisory lock.
+        if let Ok(path) = std::env::var("UDB_PIPELINES_FILE")
+            && !path.trim().is_empty()
+        {
+            match std::fs::read_to_string(path.trim())
+                .map_err(|err| format!("read {path}: {err}"))
+                .and_then(|text| crate::runtime::core::pipelines::parse_pipeline_specs(&text))
+            {
+                Ok(specs) => {
+                    for spec in specs {
+                        let runtime = service.runtime_snapshot().clone();
+                        let catalog = service.catalog.clone();
+                        tracing::info!(pipeline = %spec.name, topic = %spec.source_topic, target = %spec.target_message_type, "pipeline unit started");
+                        tokio::spawn(async move {
+                            let mut waiting_for_catalog = false;
+                            loop {
+                                let Some(active) = catalog.active_exact_for(&spec.project) else {
+                                    if !waiting_for_catalog {
+                                        tracing::warn!(pipeline = %spec.name, project = %spec.project, "pipeline is waiting for its active project catalog");
+                                        waiting_for_catalog = true;
+                                    }
+                                    tokio::time::sleep(std::time::Duration::from_secs(2)).await;
+                                    continue;
+                                };
+                                waiting_for_catalog = false;
+                                let manifest = active.manifest.clone();
+                                let consumed = match runtime
+                                    .run_pipeline_tick(&spec, &manifest, 100)
+                                    .await
+                                {
+                                    Ok(consumed) => consumed,
+                                    Err(err) => {
+                                        tracing::warn!(pipeline = %spec.name, error = %err, "pipeline tick failed");
+                                        0
+                                    }
+                                };
+                                if consumed == 0 {
+                                    tokio::time::sleep(std::time::Duration::from_secs(2)).await;
+                                }
+                            }
+                        });
+                    }
+                }
+                Err(err) => {
+                    return Err(std::io::Error::other(format!(
+                        "UDB_PIPELINES_FILE is invalid: {err}"
+                    ))
+                    .into());
+                }
+            }
         }
         if ReconciliationWorker::is_enabled() {
             let metrics: Arc<dyn MetricsRecorder> = service.metrics.clone();
@@ -3921,7 +3988,6 @@ fn listener_finished(
     }
 }
 
-#[cfg(feature = "kafka")]
 async fn start_cdc_engine(
     runtime: &DataBrokerRuntime,
     metrics: Arc<dyn MetricsRecorder>,
@@ -3932,7 +3998,12 @@ async fn start_cdc_engine(
         tracing::info!("CDC tailer disabled: UDB_CDC_ENABLED=false");
         return None;
     }
-    let Some(kafka_brokers) = runtime.config().kafka_brokers.clone() else {
+    let kafka_brokers = runtime
+        .config()
+        .kafka_brokers
+        .clone()
+        .or_else(|| runtime.config().cdc.journal_only.then(String::new));
+    let Some(kafka_brokers) = kafka_brokers else {
         tracing::info!("CDC tailer disabled: kafka_brokers is not configured");
         return None;
     };
@@ -4030,6 +4101,7 @@ async fn start_cdc_engine(
             // Item 6: wire the generic `CdcSource` path for configured native
             // source adapters. Each source persists offsets through the same
             // `tail_source` loop; operators opt in per backend with env config.
+            #[cfg(feature = "kafka")]
             if let Some(source) = postgres_source {
                 let engine = engine.clone();
                 let singleton_pool = singleton_pool.clone();
@@ -4070,7 +4142,7 @@ async fn start_cdc_engine(
                 });
                 tracing::info!("CDC Postgres captured table source tailer started");
             }
-            #[cfg(feature = "mysql")]
+            #[cfg(all(feature = "kafka", feature = "mysql"))]
             if let Ok(dsn) = std::env::var("UDB_CDC_MYSQL_SOURCE_DSN") {
                 if !dsn.trim().is_empty() {
                     let server_id = std::env::var("UDB_CDC_MYSQL_SOURCE_SERVER_ID")
@@ -4120,7 +4192,7 @@ async fn start_cdc_engine(
                     tracing::info!("CDC MySQL table source tailer started");
                 }
             }
-            #[cfg(feature = "mongodb-native")]
+            #[cfg(all(feature = "kafka", feature = "mongodb-native"))]
             if let Ok(uri) = std::env::var("UDB_CDC_MONGO_SOURCE_URI") {
                 let database = std::env::var("UDB_CDC_MONGO_SOURCE_DB").unwrap_or_default();
                 if !uri.trim().is_empty() && !database.trim().is_empty() {
@@ -4510,6 +4582,7 @@ pub(crate) mod handlers_data;
 mod handlers_meta;
 mod handlers_object;
 mod handlers_policy;
+mod handlers_purge;
 mod handlers_resource;
 mod handlers_stores;
 mod handlers_tx;
@@ -4542,6 +4615,13 @@ impl DataBroker for DataBrokerService {
         request: Request<tonic::Streaming<SelectRequest>>,
     ) -> Result<Response<Self::BatchSelectStream>, Status> {
         self.batch_select_inner(request).await
+    }
+
+    async fn insert(
+        &self,
+        request: Request<UpsertRequest>,
+    ) -> Result<Response<MutationResponse>, Status> {
+        self.insert_inner(request).await
     }
 
     async fn upsert(
@@ -4661,6 +4741,13 @@ impl DataBroker for DataBrokerService {
         request: Request<crate::proto::AckCdcEventsRequest>,
     ) -> Result<Response<crate::proto::AckCdcEventsResponse>, Status> {
         self.ack_cdc_events_inner(request).await
+    }
+
+    async fn nack_cdc_events(
+        &self,
+        request: Request<crate::proto::NackCdcEventsRequest>,
+    ) -> Result<Response<crate::proto::AckCdcEventsResponse>, Status> {
+        self.nack_cdc_events_inner(request).await
     }
 
     async fn get_capabilities(
@@ -4899,6 +4986,13 @@ impl DataBroker for DataBrokerService {
         request: Request<ProjectionDriftScanRequest>,
     ) -> Result<Response<ProjectionDriftScanResponse>, Status> {
         self.scan_projection_drift_inner(request).await
+    }
+
+    async fn purge_subject(
+        &self,
+        request: Request<crate::proto::PurgeSubjectRequest>,
+    ) -> Result<Response<crate::proto::PurgeSubjectResponse>, Status> {
+        self.purge_subject_inner(request).await
     }
 
     async fn list_sagas(

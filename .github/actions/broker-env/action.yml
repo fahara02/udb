@@ -53,6 +53,9 @@ inputs:
   cdc_enabled:
     description: "Enable the CDC tailer (UDB_CDC_ENABLED)."
     default: "true"
+  cdc_journal_only:
+    description: "Deliver outbox events through the durable PostgreSQL journal without Kafka."
+    default: "false"
   startup_dry_run:
     description: "Run startup DDL sync as a dry run (UDB_STARTUP_DRY_RUN)."
     default: "false"
@@ -99,6 +102,7 @@ runs:
         LIVE_REQUIRED_BACKENDS: ${{ inputs.live_required_backends }}
         LIVE_S3_BUCKET: ${{ inputs.live_s3_bucket }}
         CDC_ENABLED: ${{ inputs.cdc_enabled }}
+        CDC_JOURNAL_ONLY: ${{ inputs.cdc_journal_only }}
         STARTUP_DRY_RUN: ${{ inputs.startup_dry_run }}
         OBJECT_BACKEND: ${{ inputs.object_backend }}
         OBJECT_BUCKET: ${{ inputs.object_bucket }}
@@ -131,6 +135,7 @@ runs:
         echo "UDB_LIVE_S3_BUCKET=${LIVE_S3_BUCKET}" >> "$env_file"
         # CDC / startup / object plane
         echo "UDB_CDC_ENABLED=${CDC_ENABLED}" >> "$env_file"
+        echo "UDB_CDC_JOURNAL_ONLY=${CDC_JOURNAL_ONLY}" >> "$env_file"
         echo "UDB_STARTUP_DRY_RUN=${STARTUP_DRY_RUN}" >> "$env_file"
         echo "UDB_OBJECT_BACKEND=${OBJECT_BACKEND}" >> "$env_file"
         echo "UDB_OBJECT_BUCKET=${OBJECT_BUCKET}" >> "$env_file"

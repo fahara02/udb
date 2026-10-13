@@ -37,28 +37,46 @@ namespace Udb.Entity.V1 {
             "ChRBY2tDZGNFdmVudHNSZXNwb25zZRIjCg1jb25zdW1lcl9uYW1lGAEgASgJ",
             "Ugxjb25zdW1lck5hbWUSIwoNdG9waWNfcGF0dGVybhgCIAEoCVIMdG9waWNQ",
             "YXR0ZXJuEhkKCGV2ZW50X2lkGAMgASgJUgdldmVudElkEiIKDWFja2VkX2F0",
-            "X3VuaXgYBCABKANSC2Fja2VkQXRVbml4IoEBChFDZGNDb250cm9sUmVxdWVz",
-            "dBI3Cgdjb250ZXh0GAEgASgLMh0udWRiLmVudGl0eS52MS5SZXF1ZXN0Q29u",
-            "dGV4dFIHY29udGV4dBIbCglzbG90X25hbWUYAiABKAlSCHNsb3ROYW1lEhYK",
-            "BnJlYXNvbhgDIAEoCVIGcmVhc29uIpgCChFDZGNTdGF0dXNSZXNwb25zZRIb",
-            "CglzbG90X25hbWUYASABKAlSCHNsb3ROYW1lEhsKCWlzX2xlYWRlchgCIAEo",
-            "CFIIaXNMZWFkZXISFgoGcGF1c2VkGAMgASgIUgZwYXVzZWQSIQoMcGF1c2Vf",
-            "cmVhc29uGAQgASgJUgtwYXVzZVJlYXNvbhIiCg1sYXN0X2V2ZW50X2lkGAUg",
-            "ASgJUgtsYXN0RXZlbnRJZBIfCgtsYWdfc2Vjb25kcxgGIAEoAVIKbGFnU2Vj",
-            "b25kcxIhCgxvdXRib3hfZGVwdGgYByABKANSC291dGJveERlcHRoEiYKD3Vw",
-            "ZGF0ZWRfYXRfdW5peBgIIAEoA1INdXBkYXRlZEF0VW5peEKuAQoRY29tLnVk",
-            "Yi5lbnRpdHkudjFCCENkY1Byb3RvUAFaOWdpdGh1Yi5jb20vZmFoYXJhMDIv",
-            "dWRiL3Nkay9nby9nZW4vdWRiL2VudGl0eS92MTtlbnRpdHl2MaICA1VFWKoC",
-            "DVVkYi5FbnRpdHkuVjHKAg1VZGJcRW50aXR5XFYx4gIZVWRiXEdQQk1ldGFk",
-            "YXRhXEVudGl0eVxWMeoCD1VkYjo6RW50aXR5OjpWMWIGcHJvdG8z"));
+            "X3VuaXgYBCABKANSC2Fja2VkQXRVbml4IvcBChROYWNrQ2RjRXZlbnRzUmVx",
+            "dWVzdBI3Cgdjb250ZXh0GAEgASgLMh0udWRiLmVudGl0eS52MS5SZXF1ZXN0",
+            "Q29udGV4dFIHY29udGV4dBIjCg1jb25zdW1lcl9uYW1lGAIgASgJUgxjb25z",
+            "dW1lck5hbWUSIwoNdG9waWNfcGF0dGVybhgDIAEoCVIMdG9waWNQYXR0ZXJu",
+            "EhkKCGV2ZW50X2lkGAQgASgJUgdldmVudElkEhoKCGF0dGVtcHRzGAUgASgN",
+            "UghhdHRlbXB0cxIlCg5mYWlsdXJlX3JlYXNvbhgGIAEoCVINZmFpbHVyZVJl",
+            "YXNvbiKBAQoRQ2RjQ29udHJvbFJlcXVlc3QSNwoHY29udGV4dBgBIAEoCzId",
+            "LnVkYi5lbnRpdHkudjEuUmVxdWVzdENvbnRleHRSB2NvbnRleHQSGwoJc2xv",
+            "dF9uYW1lGAIgASgJUghzbG90TmFtZRIWCgZyZWFzb24YAyABKAlSBnJlYXNv",
+            "biLYAgoRQ2RjU3RhdHVzUmVzcG9uc2USGwoJc2xvdF9uYW1lGAEgASgJUghz",
+            "bG90TmFtZRIbCglpc19sZWFkZXIYAiABKAhSCGlzTGVhZGVyEhYKBnBhdXNl",
+            "ZBgDIAEoCFIGcGF1c2VkEiEKDHBhdXNlX3JlYXNvbhgEIAEoCVILcGF1c2VS",
+            "ZWFzb24SIgoNbGFzdF9ldmVudF9pZBgFIAEoCVILbGFzdEV2ZW50SWQSHwoL",
+            "bGFnX3NlY29uZHMYBiABKAFSCmxhZ1NlY29uZHMSIQoMb3V0Ym94X2RlcHRo",
+            "GAcgASgDUgtvdXRib3hEZXB0aBImCg91cGRhdGVkX2F0X3VuaXgYCCABKANS",
+            "DXVwZGF0ZWRBdFVuaXgSPgoJY29uc3VtZXJzGAkgAygLMiAudWRiLmVudGl0",
+            "eS52MS5DZGNDb25zdW1lclN0YXR1c1IJY29uc3VtZXJzIpgDChFDZGNDb25z",
+            "dW1lclN0YXR1cxIjCg1jb25zdW1lcl9uYW1lGAEgASgJUgxjb25zdW1lck5h",
+            "bWUSIwoNdG9waWNfcGF0dGVybhgCIAEoCVIMdG9waWNQYXR0ZXJuEiIKDWxh",
+            "c3RfZXZlbnRfaWQYAyABKAlSC2xhc3RFdmVudElkEh8KC2xhZ19zZWNvbmRz",
+            "GAQgASgBUgpsYWdTZWNvbmRzEiIKDWFja2VkX2F0X3VuaXgYBSABKANSC2Fj",
+            "a2VkQXRVbml4EjMKFmxhc3RfcHVibGlzaGVkX2F0X3VuaXgYBiABKANSE2xh",
+            "c3RQdWJsaXNoZWRBdFVuaXgSGwoJdGVuYW50X2lkGAcgASgJUgh0ZW5hbnRJ",
+            "ZBIdCgpwcm9qZWN0X2lkGAggASgJUglwcm9qZWN0SWQSJQoOb3duZXJfaWRl",
+            "bnRpdHkYCSABKAlSDW93bmVySWRlbnRpdHkSOAoYb3duZXJfbWlncmF0aW9u",
+            "X3JlcXVpcmVkGAogASgIUhZvd25lck1pZ3JhdGlvblJlcXVpcmVkQq4BChFj",
+            "b20udWRiLmVudGl0eS52MUIIQ2RjUHJvdG9QAVo5Z2l0aHViLmNvbS9mYWhh",
+            "cmEwMi91ZGIvc2RrL2dvL2dlbi91ZGIvZW50aXR5L3YxO2VudGl0eXYxogID",
+            "VUVYqgINVWRiLkVudGl0eS5WMcoCDVVkYlxFbnRpdHlcVjHiAhlVZGJcR1BC",
+            "TWV0YWRhdGFcRW50aXR5XFYx6gIPVWRiOjpFbnRpdHk6OlYxYgZwcm90bzM="));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { global::Udb.Entity.V1.ContextReflection.Descriptor, },
           new pbr::GeneratedClrTypeInfo(null, null, new pbr::GeneratedClrTypeInfo[] {
             new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Entity.V1.CDCSubscriptionRequest), global::Udb.Entity.V1.CDCSubscriptionRequest.Parser, new[]{ "Context", "TopicPattern", "SinceEventId", "ConsumerName" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Entity.V1.AckCdcEventsRequest), global::Udb.Entity.V1.AckCdcEventsRequest.Parser, new[]{ "Context", "ConsumerName", "TopicPattern", "EventId" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Entity.V1.AckCdcEventsResponse), global::Udb.Entity.V1.AckCdcEventsResponse.Parser, new[]{ "ConsumerName", "TopicPattern", "EventId", "AckedAtUnix" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Entity.V1.NackCdcEventsRequest), global::Udb.Entity.V1.NackCdcEventsRequest.Parser, new[]{ "Context", "ConsumerName", "TopicPattern", "EventId", "Attempts", "FailureReason" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Entity.V1.CdcControlRequest), global::Udb.Entity.V1.CdcControlRequest.Parser, new[]{ "Context", "SlotName", "Reason" }, null, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Entity.V1.CdcStatusResponse), global::Udb.Entity.V1.CdcStatusResponse.Parser, new[]{ "SlotName", "IsLeader", "Paused", "PauseReason", "LastEventId", "LagSeconds", "OutboxDepth", "UpdatedAtUnix" }, null, null, null, null)
+            new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Entity.V1.CdcStatusResponse), global::Udb.Entity.V1.CdcStatusResponse.Parser, new[]{ "SlotName", "IsLeader", "Paused", "PauseReason", "LastEventId", "LagSeconds", "OutboxDepth", "UpdatedAtUnix", "Consumers" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Entity.V1.CdcConsumerStatus), global::Udb.Entity.V1.CdcConsumerStatus.Parser, new[]{ "ConsumerName", "TopicPattern", "LastEventId", "LagSeconds", "AckedAtUnix", "LastPublishedAtUnix", "TenantId", "ProjectId", "OwnerIdentity", "OwnerMigrationRequired" }, null, null, null, null)
           }));
     }
     #endregion
@@ -156,8 +174,10 @@ namespace Udb.Entity.V1 {
     /// A durable consumer's name (1-120 chars of [A-Za-z0-9_.:-]). When set and
     /// since_event_id is empty, the stream resumes after the last event this
     /// consumer acknowledged with AckCdcEvents for this topic_pattern, so a
-    /// restarted (or reconnected) consumer neither skips nor re-reads its place.
-    /// Cursors are scoped to the caller's verified tenant and project.
+    /// restarted (or reconnected) consumer resumes its acknowledged position.
+    /// A new name reads the retained backlog. Positions survive journal retention.
+    /// Names are owned by the verified principal within its tenant and project;
+    /// another principal cannot subscribe or acknowledge under the same name.
     /// </summary>
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
@@ -488,7 +508,9 @@ namespace Udb.Entity.V1 {
     private string eventId_ = "";
     /// <summary>
     /// The last event the consumer has fully handled. The next subscription
-    /// under this consumer name resumes after it.
+    /// under this consumer name resumes after it. The event must be retained and
+    /// match the caller's tenant/project and topic pattern. An older acknowledgment
+    /// succeeds without moving the stored cursor backward.
     /// </summary>
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
@@ -1030,6 +1052,410 @@ namespace Udb.Entity.V1 {
 
   }
 
+  /// <summary>
+  /// Atomically retain a failed consumer event in the ordinary DLQ and advance
+  /// this consumer's cursor. Other consumers and the journal event are unchanged.
+  /// Repeating the same consumer/topic/event settlement is safe. The broker reads
+  /// the canonical retained event; callers cannot supply or replace its payload.
+  /// </summary>
+  [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
+  public sealed partial class NackCdcEventsRequest : pb::IMessage<NackCdcEventsRequest>
+  #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      , pb::IBufferMessage
+  #endif
+  {
+    private static readonly pb::MessageParser<NackCdcEventsRequest> _parser = new pb::MessageParser<NackCdcEventsRequest>(() => new NackCdcEventsRequest());
+    private pb::UnknownFieldSet _unknownFields;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pb::MessageParser<NackCdcEventsRequest> Parser { get { return _parser; } }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pbr::MessageDescriptor Descriptor {
+      get { return global::Udb.Entity.V1.CdcReflection.Descriptor.MessageTypes[3]; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    pbr::MessageDescriptor pb::IMessage.Descriptor {
+      get { return Descriptor; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public NackCdcEventsRequest() {
+      OnConstruction();
+    }
+
+    partial void OnConstruction();
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public NackCdcEventsRequest(NackCdcEventsRequest other) : this() {
+      context_ = other.context_ != null ? other.context_.Clone() : null;
+      consumerName_ = other.consumerName_;
+      topicPattern_ = other.topicPattern_;
+      eventId_ = other.eventId_;
+      attempts_ = other.attempts_;
+      failureReason_ = other.failureReason_;
+      _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public NackCdcEventsRequest Clone() {
+      return new NackCdcEventsRequest(this);
+    }
+
+    /// <summary>Field number for the "context" field.</summary>
+    public const int ContextFieldNumber = 1;
+    private global::Udb.Entity.V1.RequestContext context_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public global::Udb.Entity.V1.RequestContext Context {
+      get { return context_; }
+      set {
+        context_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "consumer_name" field.</summary>
+    public const int ConsumerNameFieldNumber = 2;
+    private string consumerName_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string ConsumerName {
+      get { return consumerName_; }
+      set {
+        consumerName_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "topic_pattern" field.</summary>
+    public const int TopicPatternFieldNumber = 3;
+    private string topicPattern_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string TopicPattern {
+      get { return topicPattern_; }
+      set {
+        topicPattern_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "event_id" field.</summary>
+    public const int EventIdFieldNumber = 4;
+    private string eventId_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string EventId {
+      get { return eventId_; }
+      set {
+        eventId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "attempts" field.</summary>
+    public const int AttemptsFieldNumber = 5;
+    private uint attempts_;
+    /// <summary>
+    /// Completed handler attempts, from 1 through 1000.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public uint Attempts {
+      get { return attempts_; }
+      set {
+        attempts_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "failure_reason" field.</summary>
+    public const int FailureReasonFieldNumber = 6;
+    private string failureReason_ = "";
+    /// <summary>
+    /// Operator diagnostic, at most 2048 UTF-8 bytes. Do not include credentials.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string FailureReason {
+      get { return failureReason_; }
+      set {
+        failureReason_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override bool Equals(object other) {
+      return Equals(other as NackCdcEventsRequest);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool Equals(NackCdcEventsRequest other) {
+      if (ReferenceEquals(other, null)) {
+        return false;
+      }
+      if (ReferenceEquals(other, this)) {
+        return true;
+      }
+      if (!object.Equals(Context, other.Context)) return false;
+      if (ConsumerName != other.ConsumerName) return false;
+      if (TopicPattern != other.TopicPattern) return false;
+      if (EventId != other.EventId) return false;
+      if (Attempts != other.Attempts) return false;
+      if (FailureReason != other.FailureReason) return false;
+      return Equals(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override int GetHashCode() {
+      int hash = 1;
+      if (context_ != null) hash ^= Context.GetHashCode();
+      if (ConsumerName.Length != 0) hash ^= ConsumerName.GetHashCode();
+      if (TopicPattern.Length != 0) hash ^= TopicPattern.GetHashCode();
+      if (EventId.Length != 0) hash ^= EventId.GetHashCode();
+      if (Attempts != 0) hash ^= Attempts.GetHashCode();
+      if (FailureReason.Length != 0) hash ^= FailureReason.GetHashCode();
+      if (_unknownFields != null) {
+        hash ^= _unknownFields.GetHashCode();
+      }
+      return hash;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override string ToString() {
+      return pb::JsonFormatter.ToDiagnosticString(this);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void WriteTo(pb::CodedOutputStream output) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      output.WriteRawMessage(this);
+    #else
+      if (context_ != null) {
+        output.WriteRawTag(10);
+        output.WriteMessage(Context);
+      }
+      if (ConsumerName.Length != 0) {
+        output.WriteRawTag(18);
+        output.WriteString(ConsumerName);
+      }
+      if (TopicPattern.Length != 0) {
+        output.WriteRawTag(26);
+        output.WriteString(TopicPattern);
+      }
+      if (EventId.Length != 0) {
+        output.WriteRawTag(34);
+        output.WriteString(EventId);
+      }
+      if (Attempts != 0) {
+        output.WriteRawTag(40);
+        output.WriteUInt32(Attempts);
+      }
+      if (FailureReason.Length != 0) {
+        output.WriteRawTag(50);
+        output.WriteString(FailureReason);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(output);
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
+      if (context_ != null) {
+        output.WriteRawTag(10);
+        output.WriteMessage(Context);
+      }
+      if (ConsumerName.Length != 0) {
+        output.WriteRawTag(18);
+        output.WriteString(ConsumerName);
+      }
+      if (TopicPattern.Length != 0) {
+        output.WriteRawTag(26);
+        output.WriteString(TopicPattern);
+      }
+      if (EventId.Length != 0) {
+        output.WriteRawTag(34);
+        output.WriteString(EventId);
+      }
+      if (Attempts != 0) {
+        output.WriteRawTag(40);
+        output.WriteUInt32(Attempts);
+      }
+      if (FailureReason.Length != 0) {
+        output.WriteRawTag(50);
+        output.WriteString(FailureReason);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(ref output);
+      }
+    }
+    #endif
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public int CalculateSize() {
+      int size = 0;
+      if (context_ != null) {
+        size += 1 + pb::CodedOutputStream.ComputeMessageSize(Context);
+      }
+      if (ConsumerName.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(ConsumerName);
+      }
+      if (TopicPattern.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(TopicPattern);
+      }
+      if (EventId.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(EventId);
+      }
+      if (Attempts != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeUInt32Size(Attempts);
+      }
+      if (FailureReason.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(FailureReason);
+      }
+      if (_unknownFields != null) {
+        size += _unknownFields.CalculateSize();
+      }
+      return size;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(NackCdcEventsRequest other) {
+      if (other == null) {
+        return;
+      }
+      if (other.context_ != null) {
+        if (context_ == null) {
+          Context = new global::Udb.Entity.V1.RequestContext();
+        }
+        Context.MergeFrom(other.Context);
+      }
+      if (other.ConsumerName.Length != 0) {
+        ConsumerName = other.ConsumerName;
+      }
+      if (other.TopicPattern.Length != 0) {
+        TopicPattern = other.TopicPattern;
+      }
+      if (other.EventId.Length != 0) {
+        EventId = other.EventId;
+      }
+      if (other.Attempts != 0) {
+        Attempts = other.Attempts;
+      }
+      if (other.FailureReason.Length != 0) {
+        FailureReason = other.FailureReason;
+      }
+      _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(pb::CodedInputStream input) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      input.ReadRawMessage(this);
+    #else
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
+            break;
+          case 10: {
+            if (context_ == null) {
+              Context = new global::Udb.Entity.V1.RequestContext();
+            }
+            input.ReadMessage(Context);
+            break;
+          }
+          case 18: {
+            ConsumerName = input.ReadString();
+            break;
+          }
+          case 26: {
+            TopicPattern = input.ReadString();
+            break;
+          }
+          case 34: {
+            EventId = input.ReadString();
+            break;
+          }
+          case 40: {
+            Attempts = input.ReadUInt32();
+            break;
+          }
+          case 50: {
+            FailureReason = input.ReadString();
+            break;
+          }
+        }
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
+            break;
+          case 10: {
+            if (context_ == null) {
+              Context = new global::Udb.Entity.V1.RequestContext();
+            }
+            input.ReadMessage(Context);
+            break;
+          }
+          case 18: {
+            ConsumerName = input.ReadString();
+            break;
+          }
+          case 26: {
+            TopicPattern = input.ReadString();
+            break;
+          }
+          case 34: {
+            EventId = input.ReadString();
+            break;
+          }
+          case 40: {
+            Attempts = input.ReadUInt32();
+            break;
+          }
+          case 50: {
+            FailureReason = input.ReadString();
+            break;
+          }
+        }
+      }
+    }
+    #endif
+
+  }
+
   [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
   public sealed partial class CdcControlRequest : pb::IMessage<CdcControlRequest>
   #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
@@ -1045,7 +1471,7 @@ namespace Udb.Entity.V1 {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Udb.Entity.V1.CdcReflection.Descriptor.MessageTypes[3]; }
+      get { return global::Udb.Entity.V1.CdcReflection.Descriptor.MessageTypes[4]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -1326,7 +1752,7 @@ namespace Udb.Entity.V1 {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Udb.Entity.V1.CdcReflection.Descriptor.MessageTypes[4]; }
+      get { return global::Udb.Entity.V1.CdcReflection.Descriptor.MessageTypes[5]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -1354,6 +1780,7 @@ namespace Udb.Entity.V1 {
       lagSeconds_ = other.lagSeconds_;
       outboxDepth_ = other.outboxDepth_;
       updatedAtUnix_ = other.updatedAtUnix_;
+      consumers_ = other.consumers_.Clone();
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
     }
 
@@ -1459,6 +1886,21 @@ namespace Udb.Entity.V1 {
       }
     }
 
+    /// <summary>Field number for the "consumers" field.</summary>
+    public const int ConsumersFieldNumber = 9;
+    private static readonly pb::FieldCodec<global::Udb.Entity.V1.CdcConsumerStatus> _repeated_consumers_codec
+        = pb::FieldCodec.ForMessage(74, global::Udb.Entity.V1.CdcConsumerStatus.Parser);
+    private readonly pbc::RepeatedField<global::Udb.Entity.V1.CdcConsumerStatus> consumers_ = new pbc::RepeatedField<global::Udb.Entity.V1.CdcConsumerStatus>();
+    /// <summary>
+    /// Durable consumers in the caller's tenant/project. Lag compares each stored
+    /// watermark with its own topic head and remains valid after journal pruning.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public pbc::RepeatedField<global::Udb.Entity.V1.CdcConsumerStatus> Consumers {
+      get { return consumers_; }
+    }
+
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public override bool Equals(object other) {
@@ -1482,6 +1924,7 @@ namespace Udb.Entity.V1 {
       if (!pbc::ProtobufEqualityComparers.BitwiseDoubleEqualityComparer.Equals(LagSeconds, other.LagSeconds)) return false;
       if (OutboxDepth != other.OutboxDepth) return false;
       if (UpdatedAtUnix != other.UpdatedAtUnix) return false;
+      if(!consumers_.Equals(other.consumers_)) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
 
@@ -1497,6 +1940,7 @@ namespace Udb.Entity.V1 {
       if (LagSeconds != 0D) hash ^= pbc::ProtobufEqualityComparers.BitwiseDoubleEqualityComparer.GetHashCode(LagSeconds);
       if (OutboxDepth != 0L) hash ^= OutboxDepth.GetHashCode();
       if (UpdatedAtUnix != 0L) hash ^= UpdatedAtUnix.GetHashCode();
+      hash ^= consumers_.GetHashCode();
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
       }
@@ -1547,6 +1991,7 @@ namespace Udb.Entity.V1 {
         output.WriteRawTag(64);
         output.WriteInt64(UpdatedAtUnix);
       }
+      consumers_.WriteTo(output, _repeated_consumers_codec);
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
       }
@@ -1589,6 +2034,7 @@ namespace Udb.Entity.V1 {
         output.WriteRawTag(64);
         output.WriteInt64(UpdatedAtUnix);
       }
+      consumers_.WriteTo(ref output, _repeated_consumers_codec);
       if (_unknownFields != null) {
         _unknownFields.WriteTo(ref output);
       }
@@ -1623,6 +2069,7 @@ namespace Udb.Entity.V1 {
       if (UpdatedAtUnix != 0L) {
         size += 1 + pb::CodedOutputStream.ComputeInt64Size(UpdatedAtUnix);
       }
+      size += consumers_.CalculateSize(_repeated_consumers_codec);
       if (_unknownFields != null) {
         size += _unknownFields.CalculateSize();
       }
@@ -1659,6 +2106,7 @@ namespace Udb.Entity.V1 {
       if (other.UpdatedAtUnix != 0L) {
         UpdatedAtUnix = other.UpdatedAtUnix;
       }
+      consumers_.Add(other.consumers_);
       _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
     }
 
@@ -1710,6 +2158,10 @@ namespace Udb.Entity.V1 {
             UpdatedAtUnix = input.ReadInt64();
             break;
           }
+          case 74: {
+            consumers_.AddEntriesFrom(input, _repeated_consumers_codec);
+            break;
+          }
         }
       }
     #endif
@@ -1759,6 +2211,544 @@ namespace Udb.Entity.V1 {
           }
           case 64: {
             UpdatedAtUnix = input.ReadInt64();
+            break;
+          }
+          case 74: {
+            consumers_.AddEntriesFrom(ref input, _repeated_consumers_codec);
+            break;
+          }
+        }
+      }
+    }
+    #endif
+
+  }
+
+  [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
+  public sealed partial class CdcConsumerStatus : pb::IMessage<CdcConsumerStatus>
+  #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      , pb::IBufferMessage
+  #endif
+  {
+    private static readonly pb::MessageParser<CdcConsumerStatus> _parser = new pb::MessageParser<CdcConsumerStatus>(() => new CdcConsumerStatus());
+    private pb::UnknownFieldSet _unknownFields;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pb::MessageParser<CdcConsumerStatus> Parser { get { return _parser; } }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pbr::MessageDescriptor Descriptor {
+      get { return global::Udb.Entity.V1.CdcReflection.Descriptor.MessageTypes[6]; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    pbr::MessageDescriptor pb::IMessage.Descriptor {
+      get { return Descriptor; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public CdcConsumerStatus() {
+      OnConstruction();
+    }
+
+    partial void OnConstruction();
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public CdcConsumerStatus(CdcConsumerStatus other) : this() {
+      consumerName_ = other.consumerName_;
+      topicPattern_ = other.topicPattern_;
+      lastEventId_ = other.lastEventId_;
+      lagSeconds_ = other.lagSeconds_;
+      ackedAtUnix_ = other.ackedAtUnix_;
+      lastPublishedAtUnix_ = other.lastPublishedAtUnix_;
+      tenantId_ = other.tenantId_;
+      projectId_ = other.projectId_;
+      ownerIdentity_ = other.ownerIdentity_;
+      ownerMigrationRequired_ = other.ownerMigrationRequired_;
+      _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public CdcConsumerStatus Clone() {
+      return new CdcConsumerStatus(this);
+    }
+
+    /// <summary>Field number for the "consumer_name" field.</summary>
+    public const int ConsumerNameFieldNumber = 1;
+    private string consumerName_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string ConsumerName {
+      get { return consumerName_; }
+      set {
+        consumerName_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "topic_pattern" field.</summary>
+    public const int TopicPatternFieldNumber = 2;
+    private string topicPattern_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string TopicPattern {
+      get { return topicPattern_; }
+      set {
+        topicPattern_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "last_event_id" field.</summary>
+    public const int LastEventIdFieldNumber = 3;
+    private string lastEventId_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string LastEventId {
+      get { return lastEventId_; }
+      set {
+        lastEventId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "lag_seconds" field.</summary>
+    public const int LagSecondsFieldNumber = 4;
+    private double lagSeconds_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public double LagSeconds {
+      get { return lagSeconds_; }
+      set {
+        lagSeconds_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "acked_at_unix" field.</summary>
+    public const int AckedAtUnixFieldNumber = 5;
+    private long ackedAtUnix_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public long AckedAtUnix {
+      get { return ackedAtUnix_; }
+      set {
+        ackedAtUnix_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "last_published_at_unix" field.</summary>
+    public const int LastPublishedAtUnixFieldNumber = 6;
+    private long lastPublishedAtUnix_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public long LastPublishedAtUnix {
+      get { return lastPublishedAtUnix_; }
+      set {
+        lastPublishedAtUnix_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "tenant_id" field.</summary>
+    public const int TenantIdFieldNumber = 7;
+    private string tenantId_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string TenantId {
+      get { return tenantId_; }
+      set {
+        tenantId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "project_id" field.</summary>
+    public const int ProjectIdFieldNumber = 8;
+    private string projectId_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string ProjectId {
+      get { return projectId_; }
+      set {
+        projectId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "owner_identity" field.</summary>
+    public const int OwnerIdentityFieldNumber = 9;
+    private string ownerIdentity_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string OwnerIdentity {
+      get { return ownerIdentity_; }
+      set {
+        ownerIdentity_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "owner_migration_required" field.</summary>
+    public const int OwnerMigrationRequiredFieldNumber = 10;
+    private bool ownerMigrationRequired_;
+    /// <summary>
+    /// A legacy cursor has no verified owner; migrate it before resuming delivery.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool OwnerMigrationRequired {
+      get { return ownerMigrationRequired_; }
+      set {
+        ownerMigrationRequired_ = value;
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override bool Equals(object other) {
+      return Equals(other as CdcConsumerStatus);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool Equals(CdcConsumerStatus other) {
+      if (ReferenceEquals(other, null)) {
+        return false;
+      }
+      if (ReferenceEquals(other, this)) {
+        return true;
+      }
+      if (ConsumerName != other.ConsumerName) return false;
+      if (TopicPattern != other.TopicPattern) return false;
+      if (LastEventId != other.LastEventId) return false;
+      if (!pbc::ProtobufEqualityComparers.BitwiseDoubleEqualityComparer.Equals(LagSeconds, other.LagSeconds)) return false;
+      if (AckedAtUnix != other.AckedAtUnix) return false;
+      if (LastPublishedAtUnix != other.LastPublishedAtUnix) return false;
+      if (TenantId != other.TenantId) return false;
+      if (ProjectId != other.ProjectId) return false;
+      if (OwnerIdentity != other.OwnerIdentity) return false;
+      if (OwnerMigrationRequired != other.OwnerMigrationRequired) return false;
+      return Equals(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override int GetHashCode() {
+      int hash = 1;
+      if (ConsumerName.Length != 0) hash ^= ConsumerName.GetHashCode();
+      if (TopicPattern.Length != 0) hash ^= TopicPattern.GetHashCode();
+      if (LastEventId.Length != 0) hash ^= LastEventId.GetHashCode();
+      if (LagSeconds != 0D) hash ^= pbc::ProtobufEqualityComparers.BitwiseDoubleEqualityComparer.GetHashCode(LagSeconds);
+      if (AckedAtUnix != 0L) hash ^= AckedAtUnix.GetHashCode();
+      if (LastPublishedAtUnix != 0L) hash ^= LastPublishedAtUnix.GetHashCode();
+      if (TenantId.Length != 0) hash ^= TenantId.GetHashCode();
+      if (ProjectId.Length != 0) hash ^= ProjectId.GetHashCode();
+      if (OwnerIdentity.Length != 0) hash ^= OwnerIdentity.GetHashCode();
+      if (OwnerMigrationRequired != false) hash ^= OwnerMigrationRequired.GetHashCode();
+      if (_unknownFields != null) {
+        hash ^= _unknownFields.GetHashCode();
+      }
+      return hash;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override string ToString() {
+      return pb::JsonFormatter.ToDiagnosticString(this);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void WriteTo(pb::CodedOutputStream output) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      output.WriteRawMessage(this);
+    #else
+      if (ConsumerName.Length != 0) {
+        output.WriteRawTag(10);
+        output.WriteString(ConsumerName);
+      }
+      if (TopicPattern.Length != 0) {
+        output.WriteRawTag(18);
+        output.WriteString(TopicPattern);
+      }
+      if (LastEventId.Length != 0) {
+        output.WriteRawTag(26);
+        output.WriteString(LastEventId);
+      }
+      if (LagSeconds != 0D) {
+        output.WriteRawTag(33);
+        output.WriteDouble(LagSeconds);
+      }
+      if (AckedAtUnix != 0L) {
+        output.WriteRawTag(40);
+        output.WriteInt64(AckedAtUnix);
+      }
+      if (LastPublishedAtUnix != 0L) {
+        output.WriteRawTag(48);
+        output.WriteInt64(LastPublishedAtUnix);
+      }
+      if (TenantId.Length != 0) {
+        output.WriteRawTag(58);
+        output.WriteString(TenantId);
+      }
+      if (ProjectId.Length != 0) {
+        output.WriteRawTag(66);
+        output.WriteString(ProjectId);
+      }
+      if (OwnerIdentity.Length != 0) {
+        output.WriteRawTag(74);
+        output.WriteString(OwnerIdentity);
+      }
+      if (OwnerMigrationRequired != false) {
+        output.WriteRawTag(80);
+        output.WriteBool(OwnerMigrationRequired);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(output);
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
+      if (ConsumerName.Length != 0) {
+        output.WriteRawTag(10);
+        output.WriteString(ConsumerName);
+      }
+      if (TopicPattern.Length != 0) {
+        output.WriteRawTag(18);
+        output.WriteString(TopicPattern);
+      }
+      if (LastEventId.Length != 0) {
+        output.WriteRawTag(26);
+        output.WriteString(LastEventId);
+      }
+      if (LagSeconds != 0D) {
+        output.WriteRawTag(33);
+        output.WriteDouble(LagSeconds);
+      }
+      if (AckedAtUnix != 0L) {
+        output.WriteRawTag(40);
+        output.WriteInt64(AckedAtUnix);
+      }
+      if (LastPublishedAtUnix != 0L) {
+        output.WriteRawTag(48);
+        output.WriteInt64(LastPublishedAtUnix);
+      }
+      if (TenantId.Length != 0) {
+        output.WriteRawTag(58);
+        output.WriteString(TenantId);
+      }
+      if (ProjectId.Length != 0) {
+        output.WriteRawTag(66);
+        output.WriteString(ProjectId);
+      }
+      if (OwnerIdentity.Length != 0) {
+        output.WriteRawTag(74);
+        output.WriteString(OwnerIdentity);
+      }
+      if (OwnerMigrationRequired != false) {
+        output.WriteRawTag(80);
+        output.WriteBool(OwnerMigrationRequired);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(ref output);
+      }
+    }
+    #endif
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public int CalculateSize() {
+      int size = 0;
+      if (ConsumerName.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(ConsumerName);
+      }
+      if (TopicPattern.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(TopicPattern);
+      }
+      if (LastEventId.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(LastEventId);
+      }
+      if (LagSeconds != 0D) {
+        size += 1 + 8;
+      }
+      if (AckedAtUnix != 0L) {
+        size += 1 + pb::CodedOutputStream.ComputeInt64Size(AckedAtUnix);
+      }
+      if (LastPublishedAtUnix != 0L) {
+        size += 1 + pb::CodedOutputStream.ComputeInt64Size(LastPublishedAtUnix);
+      }
+      if (TenantId.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(TenantId);
+      }
+      if (ProjectId.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(ProjectId);
+      }
+      if (OwnerIdentity.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(OwnerIdentity);
+      }
+      if (OwnerMigrationRequired != false) {
+        size += 1 + 1;
+      }
+      if (_unknownFields != null) {
+        size += _unknownFields.CalculateSize();
+      }
+      return size;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(CdcConsumerStatus other) {
+      if (other == null) {
+        return;
+      }
+      if (other.ConsumerName.Length != 0) {
+        ConsumerName = other.ConsumerName;
+      }
+      if (other.TopicPattern.Length != 0) {
+        TopicPattern = other.TopicPattern;
+      }
+      if (other.LastEventId.Length != 0) {
+        LastEventId = other.LastEventId;
+      }
+      if (other.LagSeconds != 0D) {
+        LagSeconds = other.LagSeconds;
+      }
+      if (other.AckedAtUnix != 0L) {
+        AckedAtUnix = other.AckedAtUnix;
+      }
+      if (other.LastPublishedAtUnix != 0L) {
+        LastPublishedAtUnix = other.LastPublishedAtUnix;
+      }
+      if (other.TenantId.Length != 0) {
+        TenantId = other.TenantId;
+      }
+      if (other.ProjectId.Length != 0) {
+        ProjectId = other.ProjectId;
+      }
+      if (other.OwnerIdentity.Length != 0) {
+        OwnerIdentity = other.OwnerIdentity;
+      }
+      if (other.OwnerMigrationRequired != false) {
+        OwnerMigrationRequired = other.OwnerMigrationRequired;
+      }
+      _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(pb::CodedInputStream input) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      input.ReadRawMessage(this);
+    #else
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
+            break;
+          case 10: {
+            ConsumerName = input.ReadString();
+            break;
+          }
+          case 18: {
+            TopicPattern = input.ReadString();
+            break;
+          }
+          case 26: {
+            LastEventId = input.ReadString();
+            break;
+          }
+          case 33: {
+            LagSeconds = input.ReadDouble();
+            break;
+          }
+          case 40: {
+            AckedAtUnix = input.ReadInt64();
+            break;
+          }
+          case 48: {
+            LastPublishedAtUnix = input.ReadInt64();
+            break;
+          }
+          case 58: {
+            TenantId = input.ReadString();
+            break;
+          }
+          case 66: {
+            ProjectId = input.ReadString();
+            break;
+          }
+          case 74: {
+            OwnerIdentity = input.ReadString();
+            break;
+          }
+          case 80: {
+            OwnerMigrationRequired = input.ReadBool();
+            break;
+          }
+        }
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
+            break;
+          case 10: {
+            ConsumerName = input.ReadString();
+            break;
+          }
+          case 18: {
+            TopicPattern = input.ReadString();
+            break;
+          }
+          case 26: {
+            LastEventId = input.ReadString();
+            break;
+          }
+          case 33: {
+            LagSeconds = input.ReadDouble();
+            break;
+          }
+          case 40: {
+            AckedAtUnix = input.ReadInt64();
+            break;
+          }
+          case 48: {
+            LastPublishedAtUnix = input.ReadInt64();
+            break;
+          }
+          case 58: {
+            TenantId = input.ReadString();
+            break;
+          }
+          case 66: {
+            ProjectId = input.ReadString();
+            break;
+          }
+          case 74: {
+            OwnerIdentity = input.ReadString();
+            break;
+          }
+          case 80: {
+            OwnerMigrationRequired = input.ReadBool();
             break;
           }
         }

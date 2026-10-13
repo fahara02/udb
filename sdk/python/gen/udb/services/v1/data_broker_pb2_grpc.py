@@ -42,6 +42,11 @@ class DataBrokerStub(object):
                 request_serializer=udb_dot_entity_dot_v1_dot_relational__pb2.SelectRequest.SerializeToString,
                 response_deserializer=udb_dot_entity_dot_v1_dot_record__batch__pb2.RecordBatchV2.FromString,
                 _registered_method=True)
+        self.Insert = channel.unary_unary(
+                '/udb.services.v1.DataBroker/Insert',
+                request_serializer=udb_dot_entity_dot_v1_dot_relational__pb2.UpsertRequest.SerializeToString,
+                response_deserializer=udb_dot_entity_dot_v1_dot_mutation__pb2.MutationResponse.FromString,
+                _registered_method=True)
         self.Upsert = channel.unary_unary(
                 '/udb.services.v1.DataBroker/Upsert',
                 request_serializer=udb_dot_entity_dot_v1_dot_relational__pb2.UpsertRequest.SerializeToString,
@@ -197,6 +202,11 @@ class DataBrokerStub(object):
                 request_serializer=udb_dot_entity_dot_v1_dot_cdc__pb2.AckCdcEventsRequest.SerializeToString,
                 response_deserializer=udb_dot_entity_dot_v1_dot_cdc__pb2.AckCdcEventsResponse.FromString,
                 _registered_method=True)
+        self.NackCdcEvents = channel.unary_unary(
+                '/udb.services.v1.DataBroker/NackCdcEvents',
+                request_serializer=udb_dot_entity_dot_v1_dot_cdc__pb2.NackCdcEventsRequest.SerializeToString,
+                response_deserializer=udb_dot_entity_dot_v1_dot_cdc__pb2.AckCdcEventsResponse.FromString,
+                _registered_method=True)
         self.CreateMaterializedView = channel.unary_unary(
                 '/udb.services.v1.DataBroker/CreateMaterializedView',
                 request_serializer=udb_dot_entity_dot_v1_dot_relational__pb2.ViewDefinition.SerializeToString,
@@ -337,6 +347,11 @@ class DataBrokerStub(object):
                 request_serializer=udb_dot_entity_dot_v1_dot_admin__pb2.ProjectionDriftScanRequest.SerializeToString,
                 response_deserializer=udb_dot_entity_dot_v1_dot_admin__pb2.ProjectionDriftScanResponse.FromString,
                 _registered_method=True)
+        self.PurgeSubject = channel.unary_unary(
+                '/udb.services.v1.DataBroker/PurgeSubject',
+                request_serializer=udb_dot_entity_dot_v1_dot_admin__pb2.PurgeSubjectRequest.SerializeToString,
+                response_deserializer=udb_dot_entity_dot_v1_dot_admin__pb2.PurgeSubjectResponse.FromString,
+                _registered_method=True)
         self.ListSagas = channel.unary_unary(
                 '/udb.services.v1.DataBroker/ListSagas',
                 request_serializer=udb_dot_entity_dot_v1_dot_admin__pb2.SagaListRequest.SerializeToString,
@@ -461,6 +476,17 @@ class DataBrokerServicer(object):
         """Additive typed columnar read. Reuses SelectRequest; streams RecordBatchV2.
         Clients use this only when ProtocolSupport.encodings advertises
         "record_batch_v2" and otherwise fall back to Select/RecordSet.
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def Insert(self, request, context):
+        """Insert one complete row atomically. Any primary/unique-key collision is
+        ALREADY_EXISTS (UDB_UNIQUE_VIOLATION); existing rows are never changed.
+        Uses the same verified scope, write fencing, CDC, audit and durable keyed
+        replay contract as Upsert. conflict_fields and expected are not accepted.
+        Older brokers return UNIMPLEMENTED, so Insert can never degrade to Upsert.
         """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -668,6 +694,16 @@ class DataBrokerServicer(object):
 
     def AckCdcEvents(self, request, context):
         """Record a durable consumer's position (see CDCSubscriptionRequest.consumer_name).
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def NackCdcEvents(self, request, context):
+        """Retain a poison event in the existing DLQ and advance only its named
+        consumer. DLQ storage and cursor settlement commit in one transaction.
+        An older broker refuses UNIMPLEMENTED; the SDK never acknowledges and
+        discards the failed event as a fallback.
         """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -886,6 +922,17 @@ class DataBrokerServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def PurgeSubject(self, request, context):
+        """Erase one data subject inside the caller's tenant: every row whose
+        owner_field column names the subject, in every table of the active catalog,
+        through the normal delete path (projections, caches and events follow),
+        then the soft-delete tombstones. Returns a receipt signed with the broker's
+        active signing key (`udb compliance verify-receipt`). Admin scope required.
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
     def ListSagas(self, request, context):
         """Saga administration.
         """
@@ -1047,6 +1094,11 @@ def add_DataBrokerServicer_to_server(servicer, server):
                     request_deserializer=udb_dot_entity_dot_v1_dot_relational__pb2.SelectRequest.FromString,
                     response_serializer=udb_dot_entity_dot_v1_dot_record__batch__pb2.RecordBatchV2.SerializeToString,
             ),
+            'Insert': grpc.unary_unary_rpc_method_handler(
+                    servicer.Insert,
+                    request_deserializer=udb_dot_entity_dot_v1_dot_relational__pb2.UpsertRequest.FromString,
+                    response_serializer=udb_dot_entity_dot_v1_dot_mutation__pb2.MutationResponse.SerializeToString,
+            ),
             'Upsert': grpc.unary_unary_rpc_method_handler(
                     servicer.Upsert,
                     request_deserializer=udb_dot_entity_dot_v1_dot_relational__pb2.UpsertRequest.FromString,
@@ -1202,6 +1254,11 @@ def add_DataBrokerServicer_to_server(servicer, server):
                     request_deserializer=udb_dot_entity_dot_v1_dot_cdc__pb2.AckCdcEventsRequest.FromString,
                     response_serializer=udb_dot_entity_dot_v1_dot_cdc__pb2.AckCdcEventsResponse.SerializeToString,
             ),
+            'NackCdcEvents': grpc.unary_unary_rpc_method_handler(
+                    servicer.NackCdcEvents,
+                    request_deserializer=udb_dot_entity_dot_v1_dot_cdc__pb2.NackCdcEventsRequest.FromString,
+                    response_serializer=udb_dot_entity_dot_v1_dot_cdc__pb2.AckCdcEventsResponse.SerializeToString,
+            ),
             'CreateMaterializedView': grpc.unary_unary_rpc_method_handler(
                     servicer.CreateMaterializedView,
                     request_deserializer=udb_dot_entity_dot_v1_dot_relational__pb2.ViewDefinition.FromString,
@@ -1341,6 +1398,11 @@ def add_DataBrokerServicer_to_server(servicer, server):
                     servicer.ScanProjectionDrift,
                     request_deserializer=udb_dot_entity_dot_v1_dot_admin__pb2.ProjectionDriftScanRequest.FromString,
                     response_serializer=udb_dot_entity_dot_v1_dot_admin__pb2.ProjectionDriftScanResponse.SerializeToString,
+            ),
+            'PurgeSubject': grpc.unary_unary_rpc_method_handler(
+                    servicer.PurgeSubject,
+                    request_deserializer=udb_dot_entity_dot_v1_dot_admin__pb2.PurgeSubjectRequest.FromString,
+                    response_serializer=udb_dot_entity_dot_v1_dot_admin__pb2.PurgeSubjectResponse.SerializeToString,
             ),
             'ListSagas': grpc.unary_unary_rpc_method_handler(
                     servicer.ListSagas,
@@ -1526,6 +1588,33 @@ class DataBroker(object):
             '/udb.services.v1.DataBroker/SelectV2',
             udb_dot_entity_dot_v1_dot_relational__pb2.SelectRequest.SerializeToString,
             udb_dot_entity_dot_v1_dot_record__batch__pb2.RecordBatchV2.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def Insert(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/udb.services.v1.DataBroker/Insert',
+            udb_dot_entity_dot_v1_dot_relational__pb2.UpsertRequest.SerializeToString,
+            udb_dot_entity_dot_v1_dot_mutation__pb2.MutationResponse.FromString,
             options,
             channel_credentials,
             insecure,
@@ -2374,6 +2463,33 @@ class DataBroker(object):
             _registered_method=True)
 
     @staticmethod
+    def NackCdcEvents(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/udb.services.v1.DataBroker/NackCdcEvents',
+            udb_dot_entity_dot_v1_dot_cdc__pb2.NackCdcEventsRequest.SerializeToString,
+            udb_dot_entity_dot_v1_dot_cdc__pb2.AckCdcEventsResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
     def CreateMaterializedView(request,
             target,
             options=(),
@@ -3119,6 +3235,33 @@ class DataBroker(object):
             '/udb.services.v1.DataBroker/ScanProjectionDrift',
             udb_dot_entity_dot_v1_dot_admin__pb2.ProjectionDriftScanRequest.SerializeToString,
             udb_dot_entity_dot_v1_dot_admin__pb2.ProjectionDriftScanResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def PurgeSubject(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/udb.services.v1.DataBroker/PurgeSubject',
+            udb_dot_entity_dot_v1_dot_admin__pb2.PurgeSubjectRequest.SerializeToString,
+            udb_dot_entity_dot_v1_dot_admin__pb2.PurgeSubjectResponse.FromString,
             options,
             channel_credentials,
             insecure,

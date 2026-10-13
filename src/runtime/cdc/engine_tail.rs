@@ -334,7 +334,6 @@ fn outbox_delivery_decision(delivery_result: Result<(i32, i64), String>) -> Outb
 /// the outbox tail on a DB/poll error with bounded exponential backoff. A clean
 /// tail exit resets the backoff. This keeps a transient store outage from
 /// becoming either a silent permanent stop or a hot retry loop.
-#[cfg(feature = "kafka")]
 #[derive(Debug, PartialEq, Eq)]
 enum TailerSupervisorStep {
     Restart {
@@ -346,7 +345,6 @@ enum TailerSupervisorStep {
     },
 }
 
-#[cfg(feature = "kafka")]
 fn tailer_supervisor_decision(
     tail_failed: bool,
     current_backoff_secs: u64,
@@ -1026,7 +1024,6 @@ mod tests {
 }
 
 /// Data carried from `prepare_outbox_event` to the produce step (#81).
-#[cfg(feature = "kafka")]
 struct PreparedOutbox {
     event_id: Uuid,
     topic: String,
@@ -1046,10 +1043,9 @@ struct PendingDelivery {
 }
 
 impl CdcEngine {
-    // The CDC tailer publishes to Kafka, so construction requires the `kafka`
-    // feature. Rust can't `cfg` a single parameter, so the `redis` idempotency
-    // client is taken only when the `redis` feature is on (two variants).
-    #[cfg(all(feature = "kafka", feature = "redis"))]
+    // Journal delivery is available in portable builds. Redis and Kafka remain
+    // optional transport dependencies rather than prerequisites for the relay.
+    #[cfg(feature = "redis")]
     pub fn new(
         pool: PgPool,
         redis: Option<redis::Client>,
@@ -1058,14 +1054,18 @@ impl CdcEngine {
         metrics: std::sync::Arc<dyn MetricsRecorder>,
         config: CdcConfig,
     ) -> Result<Self, String> {
+        Self::validate_delivery_config(&config)?;
+        #[cfg(feature = "kafka")]
         let kafka_producer = Self::build_kafka_producer(kafka_brokers, &config)?;
+        #[cfg(not(feature = "kafka"))]
+        let _ = kafka_brokers;
         let (broadcast_tx, _) = broadcast::channel(config.broadcast_capacity);
         Ok(Self {
             pool,
             redis,
+            #[cfg(feature = "kafka")]
             kafka_producer,
             broadcast_tx,
-            #[cfg(feature = "kafka")]
             dsn,
             metrics,
             config,
@@ -1075,7 +1075,7 @@ impl CdcEngine {
         })
     }
 
-    #[cfg(all(feature = "kafka", not(feature = "redis")))]
+    #[cfg(not(feature = "redis"))]
     pub fn new(
         pool: PgPool,
         kafka_brokers: &str,
@@ -1083,13 +1083,17 @@ impl CdcEngine {
         metrics: std::sync::Arc<dyn MetricsRecorder>,
         config: CdcConfig,
     ) -> Result<Self, String> {
+        Self::validate_delivery_config(&config)?;
+        #[cfg(feature = "kafka")]
         let kafka_producer = Self::build_kafka_producer(kafka_brokers, &config)?;
+        #[cfg(not(feature = "kafka"))]
+        let _ = kafka_brokers;
         let (broadcast_tx, _) = broadcast::channel(config.broadcast_capacity);
         Ok(Self {
             pool,
+            #[cfg(feature = "kafka")]
             kafka_producer,
             broadcast_tx,
-            #[cfg(feature = "kafka")]
             dsn,
             metrics,
             config,
@@ -1099,11 +1103,26 @@ impl CdcEngine {
         })
     }
 
+    fn validate_delivery_config(config: &CdcConfig) -> Result<(), String> {
+        if config.journal_only && config.exactly_once_mode == CdcExactlyOnceMode::KafkaTransactional
+        {
+            return Err("journal-only CDC cannot use Kafka transactional delivery".into());
+        }
+        #[cfg(not(feature = "kafka"))]
+        if !config.journal_only {
+            return Err("this build requires UDB_CDC_JOURNAL_ONLY=true for CDC delivery".into());
+        }
+        Ok(())
+    }
+
     #[cfg(feature = "kafka")]
     fn build_kafka_producer(
         kafka_brokers: &str,
         config: &CdcConfig,
-    ) -> Result<FutureProducer, String> {
+    ) -> Result<Option<FutureProducer>, String> {
+        if config.journal_only {
+            return Ok(None);
+        }
         // U21: KafkaTransactional mode is no longer fail-closed. The
         // `kafka_tx` module builds the producer with `transactional.id`
         // set and calls `init_transactions` so the broker can fence the
@@ -1112,7 +1131,7 @@ impl CdcEngine {
         // send in begin/commit_transaction (see kafka_tx::run_in_transaction).
         if config.exactly_once_mode == CdcExactlyOnceMode::KafkaTransactional {
             let tx_cfg = super::kafka_tx::KafkaTxConfig::from_cdc_config(kafka_brokers, config);
-            return super::kafka_tx::build_transactional_producer(&tx_cfg);
+            return super::kafka_tx::build_transactional_producer(&tx_cfg).map(Some);
         }
         ClientConfig::new()
             .set("bootstrap.servers", kafka_brokers)
@@ -1128,6 +1147,7 @@ impl CdcEngine {
                 config.producer_batch_messages.to_string(),
             )
             .create()
+            .map(Some)
             .map_err(|e| e.to_string())
     }
 
@@ -1443,7 +1463,7 @@ impl CdcEngine {
     /// `run_tailer`'s maintenance tick, so a stranded row recovers within
     /// one sweep interval without a process restart.
     pub(crate) async fn run_indoubt_sweep(&self) -> Result<u64, String> {
-        if !indoubt_sweep_applies(self.config.exactly_once_mode) {
+        if !self.config.journal_only && !indoubt_sweep_applies(self.config.exactly_once_mode) {
             return Ok(0);
         }
         let outbox_relation = self.config.outbox_relation();
@@ -1486,9 +1506,8 @@ impl CdcEngine {
     /// returns to `pending` for the next poll. Scoped to rows still in
     /// `publishing` for THIS producer epoch. Best-effort: on a DB error the
     /// periodic in-doubt sweep remains the backstop.
-    #[cfg(feature = "kafka")]
     async fn reset_timed_out_publishing_row(&self, event_id: Uuid) {
-        if !indoubt_sweep_applies(self.config.exactly_once_mode) {
+        if !self.config.journal_only && !indoubt_sweep_applies(self.config.exactly_once_mode) {
             // AtLeastOnce rows never leave 'pending'; nothing to reset.
             return;
         }
@@ -1521,7 +1540,6 @@ impl CdcEngine {
     /// so journal retention and the redis dedup-claim TTL age out together.
     /// Unacked rows are kept as durable replay/operator evidence. Best-effort:
     /// failures are logged and retried on the next maintenance tick.
-    #[cfg(feature = "kafka")]
     pub(crate) async fn run_journal_retention_sweep(&self) {
         let journal_relation = SystemCatalogConfig::current().cdc_journal_relation();
         let sweep_sql = journal_retention_sweep_sql(&journal_relation);
@@ -1549,7 +1567,6 @@ impl CdcEngine {
     /// tailer's maintenance tick (single cluster-wide sweeper, no coordination
     /// needed) at the same TTL as the dedup window. Best-effort: a failure is
     /// logged and retried on the next tick.
-    #[cfg(feature = "kafka")]
     pub(crate) async fn run_idempotency_retention_sweep(&self) {
         let relation = SystemCatalogConfig::current().idempotency_keys_relation();
         let sweep_sql = idempotency_retention_sweep_sql(&relation);
@@ -1742,8 +1759,8 @@ impl CdcEngine {
         // unknown, pruned, or temporarily unreadable cursor must fail this RPC;
         // none of those states may silently become a full-history epoch replay.
         let initial_cursor = match watermark {
-            Some(cursor) => cursor,
-            None => {
+            Some(cursor) if since_event_id.is_none() => cursor,
+            _ => {
                 resolve_cdc_stream_cursor(&pool, &journal_relation, since_event_id.as_deref())
                     .await?
             }
@@ -1892,7 +1909,6 @@ impl CdcEngine {
     /// The upsert returns 1 affected row only when the lock was acquired (either
     /// freshly inserted or stolen from a stale holder); 0 rows means the lock is
     /// held by a live peer.
-    #[cfg(feature = "kafka")]
     pub async fn run_advisory_lock_loop(&self) {
         let mut check_interval =
             crate::runtime::singleton::periodic_worker_interval(Duration::from_secs(30));
@@ -1943,9 +1959,11 @@ impl CdcEngine {
         }
     }
 
-    #[cfg(feature = "kafka")]
     pub(crate) async fn run_tailer(&self, mut lock_conn: PgConnection) {
-        info!("[cdc] logical replication tailer started");
+        info!(
+            journal_only = self.config.journal_only,
+            "[cdc] outbox relay started"
+        );
 
         let mut heartbeat =
             crate::runtime::singleton::periodic_worker_interval(Duration::from_secs(10));
@@ -2165,8 +2183,98 @@ impl CdcEngine {
     /// (at-least-once). Runs under the advisory leader lock (single poller), so a
     /// plain `ORDER BY event_seq` scan is safe. Returns `Err` only on a DB error,
     /// which the supervising `run_tailer` loop restarts with backoff.
-    #[cfg(feature = "kafka")]
     pub(crate) async fn tail_outbox(&self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        if self.config.journal_only {
+            return self.tail_outbox_journal().await;
+        }
+        #[cfg(feature = "kafka")]
+        return self.tail_outbox_kafka().await;
+        #[cfg(not(feature = "kafka"))]
+        Err("Kafka delivery is unavailable in this build".into())
+    }
+
+    async fn tail_outbox_journal(&self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        let outbox = self.config.outbox_relation();
+        let select_sql = format!(
+            "SELECT event_id, topic, partition_key, payload, created_at, event_seq \
+             FROM {outbox} WHERE delivery_state IN ('pending', 'published', 'acked') \
+             ORDER BY event_seq ASC LIMIT {}",
+            self.config.poll_batch
+        );
+        let mut tick = interval(Duration::from_millis(self.config.poll_interval_ms));
+        let timeout = Duration::from_secs(self.config.kafka_tx_timeout_secs.max(30));
+        loop {
+            tick.tick().await;
+            let rows: Vec<(Uuid, String, String, serde_json::Value, DateTime<Utc>, i64)> =
+                tokio::time::timeout(timeout, sqlx::query_as(&select_sql).fetch_all(&self.pool))
+                    .await??;
+            for (event_id, topic, partition_key, payload, created_at, event_seq) in rows {
+                if !self.config.owns_partition(&partition_key) {
+                    continue;
+                }
+                if tokio::time::timeout(
+                    timeout,
+                    self.process_journal_outbox_event(
+                        event_id,
+                        topic,
+                        partition_key,
+                        payload,
+                        created_at,
+                        event_seq,
+                    ),
+                )
+                .await
+                .is_err()
+                {
+                    self.metrics.inc_cdc_errors_total("transient");
+                    self.reset_timed_out_publishing_row(event_id).await;
+                }
+            }
+        }
+    }
+
+    /// Portable relay entry point, shared with the live durability proof.
+    pub(crate) async fn process_journal_outbox_event(
+        &self,
+        event_id: Uuid,
+        topic: String,
+        partition_key: String,
+        payload: serde_json::Value,
+        created_at: DateTime<Utc>,
+        event_seq: i64,
+    ) {
+        if self.was_durably_published(event_id).await {
+            self.metrics.inc_cdc_duplicate_skipped_total();
+            self.ack_event(event_id, event_seq).await;
+            return;
+        }
+        if let Some(prepared) = self
+            .prepare_outbox_event(
+                event_id,
+                topic,
+                partition_key,
+                payload,
+                created_at,
+                event_seq,
+            )
+            .await
+        {
+            self.finish_published_event(
+                prepared.event_id,
+                &prepared.topic,
+                &prepared.partition_key,
+                &prepared.payload_string,
+                prepared.created_at,
+                prepared.lsn,
+                -1,
+                -1,
+            )
+            .await;
+        }
+    }
+
+    #[cfg(feature = "kafka")]
+    async fn tail_outbox_kafka(&self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let outbox = self.config.outbox_relation();
         let poll_batch = self.config.poll_batch;
         // Only pick up rows that have not yet been published. Without this
@@ -2255,7 +2363,7 @@ impl CdcEngine {
                 }
                 if let Some(prepared) = match tokio::time::timeout(
                     poll_timeout,
-                    self.prepare_outbox_event(
+                    self.prepare_kafka_outbox_event(
                         event_id,
                         topic,
                         partition_key,
@@ -2278,7 +2386,9 @@ impl CdcEngine {
                         None
                     }
                 } {
-                    if self.config.exactly_once_mode == CdcExactlyOnceMode::KafkaTransactional {
+                    if self.config.journal_only
+                        || self.config.exactly_once_mode == CdcExactlyOnceMode::KafkaTransactional
+                    {
                         if tokio::time::timeout(
                             poll_timeout,
                             self.produce_and_ack(prepared, redis_conn.as_mut()),
@@ -2332,7 +2442,6 @@ impl CdcEngine {
         }
     }
 
-    #[cfg(feature = "kafka")]
     pub(crate) async fn mark_cdc_delivery_state(
         &self,
         event_id: Uuid,
@@ -2366,7 +2475,9 @@ impl CdcEngine {
         kafka_offset: Option<i64>,
         error_message: Option<&str>,
     ) -> Result<(), sqlx::Error> {
-        if self.config.exactly_once_mode == CdcExactlyOnceMode::AtLeastOnce {
+        if !self.config.journal_only
+            && self.config.exactly_once_mode == CdcExactlyOnceMode::AtLeastOnce
+        {
             return Ok(());
         }
         let state_column = match state {
@@ -2445,7 +2556,7 @@ impl CdcEngine {
         mut redis_conn: Option<&mut redis::aio::MultiplexedConnection>,
     ) {
         if let Some(prepared) = self
-            .prepare_outbox_event(
+            .prepare_kafka_outbox_event(
                 event_id,
                 topic,
                 partition_key,
@@ -2466,7 +2577,7 @@ impl CdcEngine {
     /// handled here). Pulled out so `tail_outbox` can run this in `event_seq`
     /// order and then pipeline the produces (#81).
     #[cfg(feature = "kafka")]
-    async fn prepare_outbox_event<C>(
+    async fn prepare_kafka_outbox_event<C>(
         &self,
         event_id: Uuid,
         topic: String,
@@ -2546,6 +2657,47 @@ impl CdcEngine {
             }
         }
 
+        let prepared = self
+            .prepare_outbox_event(
+                event_id,
+                topic,
+                partition_key,
+                payload_json,
+                created_at,
+                lsn,
+            )
+            .await;
+        if prepared.is_none() && !self.was_durably_published(event_id).await {
+            if let Some(conn) = redis_conn.as_deref_mut() {
+                let _: () = conn.del(&idempotency_key).await.unwrap_or_default();
+            }
+        }
+        prepared
+    }
+
+    async fn prepare_outbox_event(
+        &self,
+        event_id: Uuid,
+        topic: String,
+        partition_key: String,
+        payload_json: serde_json::Value,
+        created_at: DateTime<Utc>,
+        lsn: i64,
+    ) -> Option<PreparedOutbox> {
+        let topic_policy_snapshot = self.topic_policies.load_full();
+        if !topic_policy_snapshot.available {
+            warn!(
+                event_id = %event_id,
+                generation = topic_policy_snapshot.generation,
+                "[cdc] topic policy snapshot unavailable; retaining outbox row for retry"
+            );
+            self.metrics
+                .inc_cdc_errors_total("topic_policy_unavailable");
+            return None;
+        }
+
+        let idempotency_key = format!("{}:{}", self.config.idempotency_key_prefix, event_id);
+
         // 2. Validate Event
         let envelope: Result<EventEnvelope, _> = serde_json::from_value(payload_json.clone());
         match envelope {
@@ -2571,8 +2723,6 @@ impl CdcEngine {
                         .await
                     {
                         self.ack_event(event_id, lsn).await;
-                    } else if let Some(conn) = redis_conn.as_deref_mut() {
-                        let _: () = conn.del(&idempotency_key).await.unwrap_or_default();
                     }
                     return None;
                 }
@@ -2593,8 +2743,6 @@ impl CdcEngine {
                         .await
                     {
                         self.ack_event(event_id, lsn).await;
-                    } else if let Some(conn) = redis_conn.as_deref_mut() {
-                        let _: () = conn.del(&idempotency_key).await.unwrap_or_default();
                     }
                     return None;
                 }
@@ -2633,8 +2781,6 @@ impl CdcEngine {
                                 .await
                             {
                                 self.ack_event(event_id, lsn).await;
-                            } else if let Some(conn) = redis_conn.as_deref_mut() {
-                                let _: () = conn.del(&idempotency_key).await.unwrap_or_default();
                             }
                             return None;
                         }
@@ -2666,8 +2812,6 @@ impl CdcEngine {
                         .await
                     {
                         self.ack_event(event_id, lsn).await;
-                    } else if let Some(conn) = redis_conn.as_deref_mut() {
-                        let _: () = conn.del(&idempotency_key).await.unwrap_or_default();
                     }
                     return None;
                 }
@@ -2703,8 +2847,6 @@ impl CdcEngine {
                     .await
                 {
                     self.ack_event(event_id, lsn).await;
-                } else if let Some(conn) = redis_conn.as_deref_mut() {
-                    let _: () = conn.del(&idempotency_key).await.unwrap_or_default();
                 }
                 None
             }
@@ -2720,10 +2862,24 @@ impl CdcEngine {
     where
         C: redis::aio::ConnectionLike + Send,
     {
+        let Some(producer) = self.kafka_producer.as_ref() else {
+            self.finish_published_event(
+                prepared.event_id,
+                &prepared.topic,
+                &prepared.partition_key,
+                &prepared.payload_string,
+                prepared.created_at,
+                prepared.lsn,
+                -1,
+                -1,
+            )
+            .await;
+            return;
+        };
         if self.config.exactly_once_mode == CdcExactlyOnceMode::KafkaTransactional {
             let timeout = Duration::from_secs(self.config.kafka_tx_timeout_secs.max(1));
             match super::kafka_tx::run_in_transaction(
-                &self.kafka_producer,
+                producer,
                 timeout,
                 &prepared.topic,
                 &prepared.partition_key,
@@ -2801,6 +2957,12 @@ impl CdcEngine {
         &self,
         prepared: PreparedOutbox,
     ) -> Result<PendingDelivery, (PreparedOutbox, String)> {
+        let Some(producer) = self.kafka_producer.as_ref() else {
+            return Err((
+                prepared,
+                "journal-only CDC does not enqueue Kafka deliveries".into(),
+            ));
+        };
         // Phase 10: continue the distributed trace by attaching the current
         // `traceparent` as a Kafka header. Additive — absent any active trace the
         // header is omitted and the record is byte-for-byte as before.
@@ -2822,7 +2984,7 @@ impl CdcEngine {
                 },
             ));
         }
-        match self.kafka_producer.send_result(record) {
+        match producer.send_result(record) {
             Ok(future) => Ok(PendingDelivery { prepared, future }),
             Err((e, _)) => Err((prepared, e.to_string())),
         }
@@ -2912,7 +3074,6 @@ impl CdcEngine {
     /// acknowledged the produce, so a `published`/`acked` journal state is proof
     /// the event left the outbox. On any query error this returns `false`
     /// (fail-safe: prefer re-publishing over silently dropping the event).
-    #[cfg(feature = "kafka")]
     async fn was_durably_published(&self, event_id: Uuid) -> bool {
         use crate::runtime::system::SystemCatalogConfig;
         let journal = SystemCatalogConfig::current().cdc_journal_relation();
@@ -2925,7 +3086,6 @@ impl CdcEngine {
         matches!(state, Ok(Some((s,))) if s == "published" || s == "acked")
     }
 
-    #[cfg(feature = "kafka")]
     async fn finish_published_event(
         &self,
         event_id: Uuid,
@@ -2942,50 +3102,39 @@ impl CdcEngine {
             event_id, partition, offset
         );
 
-        // Kafka has acknowledged already. Only database work runs while the
-        // journal head lock is owned; fan-out follows the committed insert.
-        let config = SystemCatalogConfig::current();
-        let retained = async {
-            let mut tx = self.pool.begin().await?;
-            let entry = super::journal::insert(
-                &mut tx,
-                &config,
+        // F-6: write the JOURNAL (the only replay source) BEFORE broadcasting to
+        // live subscribers. The journal insert is durable; the broadcast is
+        // best-effort. If we broadcast first and the journal insert then fails, a
+        // reconnecting subscriber that anchors on the journal never sees the
+        // event, while live subscribers already did — a silent per-subscriber
+        // loss. Ordering journal→broadcast means a journal failure returns before
+        // anyone is told the event happened. (F-9: resolve the system-catalog
+        // config the same way the writer does — `current()`, not `default()` —
+        // so a schema override does not point writer and tailer at different
+        // relations.)
+        let partition = (!self.config.journal_only).then_some(partition);
+        let offset = (!self.config.journal_only).then_some(offset);
+        if let Err(err) = self
+            .publish_to_journal(
                 event_id,
                 topic,
                 partition_key,
                 payload_string,
-                Some(partition),
-                Some(offset),
-                self.config.fenced_producer_epoch(),
-                &self.config.transactional_id(),
+                partition,
+                offset,
             )
-            .await?;
-            tx.commit().await?;
-            Ok::<_, sqlx::Error>(entry)
-        }
-        .await;
-        let entry = match retained {
-            Ok(entry) => entry,
-            Err(err) => {
-                self.metrics.inc_cdc_journal_failures_total();
-                error!(
-                    "[cdc] journal insert failed for event {}: {}",
-                    event_id, err
-                );
-                return;
-            }
-        };
-
-        // Live-subscription fan-out is best-effort, but a send error means zero
-        // receivers / full buffer — surface it (the subscriber logs Lagged; the
-        // publisher was silent). Durability is unaffected (Kafka + journal already
-        // have it).
-        if self.broadcast_tx.send(entry.envelope).is_err() {
-            tracing::debug!(
-                event_id = %event_id,
-                topic = %topic,
-                "[cdc] live broadcast dropped (no active subscribers / buffer full)"
+            .await
+        {
+            self.metrics.inc_cdc_journal_failures_total();
+            error!(
+                "[cdc] journal insert failed for event {}: {}",
+                event_id, err
             );
+            if self.config.journal_only {
+                self.mark_cdc_delivery_state(event_id, "pending", None, None, Some(&err))
+                    .await;
+            }
+            return;
         }
 
         let publish_duration = (Utc::now() - created_at).num_milliseconds() as f64 / 1000.0;
@@ -2994,27 +3143,68 @@ impl CdcEngine {
         self.metrics.inc_cdc_events_published_total(topic);
 
         if let Err(err) = self
-            .try_mark_cdc_delivery_state(event_id, "published", Some(partition), Some(offset), None)
+            .try_mark_cdc_delivery_state(event_id, "published", partition, offset, None)
             .await
         {
             error!(
-                "[cdc] publish state update failed for event {} after broker ack: {}",
+                "[cdc] publish state update failed for event {} after durable delivery: {}",
                 event_id, err
             );
             return;
         }
 
         if let Err(err) = self
-            .try_mark_cdc_delivery_state(event_id, "acked", Some(partition), Some(offset), None)
+            .try_mark_cdc_delivery_state(event_id, "acked", partition, offset, None)
             .await
         {
             error!(
-                "[cdc] ack state update failed for event {} after broker ack: {}",
+                "[cdc] ack state update failed for event {} after durable delivery: {}",
                 event_id, err
             );
             return;
         }
         self.ack_event(event_id, lsn).await;
+    }
+
+    /// Persist the replay source before fan-out, shared by delivery and DLQ replay.
+    pub(crate) async fn publish_to_journal(
+        &self,
+        event_id: Uuid,
+        topic: &str,
+        partition_key: &str,
+        payload_string: &str,
+        partition: Option<i32>,
+        offset: Option<i64>,
+    ) -> Result<(), String> {
+        let config = SystemCatalogConfig::current();
+        let mut tx = self
+            .pool
+            .begin()
+            .await
+            .map_err(|err| format!("CDC journal transaction failed: {err}"))?;
+        let entry = super::journal::insert(
+            &mut tx,
+            &config,
+            event_id,
+            topic,
+            partition_key,
+            payload_string,
+            partition,
+            offset,
+            self.config.fenced_producer_epoch(),
+            &self.config.transactional_id(),
+        )
+        .await
+        .map_err(|err| format!("CDC journal insert failed: {err}"))?;
+        tx.commit()
+            .await
+            .map_err(|err| format!("CDC journal commit failed: {err}"))?;
+        if self.broadcast_tx.send(entry.envelope).is_err() {
+            tracing::debug!(event_id = %event_id, topic = %topic,
+                "[cdc] live broadcast dropped (no active subscribers / buffer full)");
+        }
+
+        Ok(())
     }
 
     // ── D (2026-05-30): generic CdcSource tail ────────────────────────────
@@ -3105,6 +3295,10 @@ impl CdcEngine {
         fence: Option<&crate::runtime::singleton::LeaseFence>,
     ) -> Result<(), String> {
         use futures::StreamExt;
+        let producer = self.kafka_producer.as_ref().ok_or_else(|| {
+            "external CDC sources require the Kafka transport; embedded CDC tails the outbox"
+                .to_string()
+        })?;
 
         if let Some(fence) = fence {
             fence
@@ -3264,7 +3458,7 @@ impl CdcEngine {
             {
                 let timeout = Duration::from_secs(self.config.kafka_tx_timeout_secs.max(1));
                 match super::kafka_tx::run_in_transaction(
-                    &self.kafka_producer,
+                    producer,
                     timeout,
                     &topic,
                     &partition_key,
@@ -3294,7 +3488,7 @@ impl CdcEngine {
                         },
                     ));
                 }
-                self.kafka_producer
+                producer
                     .send(record, Duration::from_secs(30))
                     .await
                     .map_err(|(err, _)| format!("{err:?}"))

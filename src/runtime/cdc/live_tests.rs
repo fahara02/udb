@@ -193,7 +193,6 @@ async fn live_indoubt_reset_returns_publishing_row_to_pending() {
 /// Build a CdcEngine for live tests. The broker address is unroutable on
 /// purpose: rdkafka connects lazily and the paths under test fail (or
 /// finish) before any Kafka I/O is needed.
-#[cfg(feature = "kafka")]
 fn live_engine(pool: PgPool, dsn: String, config: CdcConfig) -> CdcEngine {
     let metrics: std::sync::Arc<dyn MetricsRecorder> =
         std::sync::Arc::new(crate::metrics::NoopMetrics);
@@ -206,6 +205,176 @@ fn live_engine(pool: PgPool, dsn: String, config: CdcConfig) -> CdcEngine {
     {
         CdcEngine::new(pool, "127.0.0.1:1", dsn, metrics, config).expect("build live CDC engine")
     }
+}
+
+/// Embedded delivery uses the real relay and durable replay journal without a
+/// Kafka producer. A journal failure cannot broadcast or discard the outbox row.
+#[tokio::test]
+#[ignore = "requires live Postgres; CI runs every ignored lib test"]
+async fn live_embedded_outbox_waits_for_durable_journal_before_delivery() {
+    let _guard = live_cdc_db_lock().lock().await;
+    let Some(pool) = live_cdc_pool().await else {
+        if crate::runtime::service::live_tests::support::live_lane_active() {
+            panic!("embedded CDC proof requires the CI Postgres DSN");
+        }
+        return;
+    };
+    let config = CdcConfig {
+        journal_only: true,
+        poll_interval_ms: 25,
+        ..CdcConfig::default()
+    };
+    let topic = format!("udb.cdc.live.embedded.{}.v1", Uuid::new_v4().simple());
+    let policy = crate::runtime::system::SystemCatalogConfig::current().topic_policy_relation();
+    sqlx::query(&format!(
+        "INSERT INTO {policy} (topic, owning_project, owning_service, schema_uri, enabled) \
+         VALUES ($1, 'default', 'embedded-cdc-live', '', TRUE)"
+    ))
+    .bind(&topic)
+    .execute(&pool)
+    .await
+    .expect("allow embedded topic");
+    let engine = Arc::new(live_engine(
+        pool.clone(),
+        live_pg_dsn().unwrap(),
+        config.clone(),
+    ));
+    #[cfg(feature = "kafka")]
+    assert!(
+        engine.kafka_producer.is_none(),
+        "embedded delivery constructs no Kafka producer"
+    );
+    engine.load_topic_policies().await.expect("load policies");
+    let mut subscriber = engine.subscribe();
+    let event_id = Uuid::new_v4();
+    let payload = serde_json::json!({
+        "event_id": event_id.to_string(), "event_type": topic,
+        "correlation_id": event_id.to_string(), "document_id": "row-1",
+        "tenant_id": "tenant-a", "project_id": "default",
+        "timestamp": Utc::now().to_rfc3339(), "envelope_version": EVENT_ENVELOPE_VERSION,
+        "payload": {"id": "row-1", "tenant_id": "tenant-a"}
+    });
+    let outbox = config.outbox_relation();
+    let seq: i64 = sqlx::query_scalar(&format!(
+        "INSERT INTO {outbox} (event_id, topic, partition_key, payload) \
+         VALUES ($1, $2, 'row-1', $3) RETURNING event_seq"
+    ))
+    .bind(event_id)
+    .bind(&topic)
+    .bind(&payload)
+    .fetch_one(&pool)
+    .await
+    .expect("enqueue outbox");
+    let journal = crate::runtime::system::SystemCatalogConfig::current().cdc_journal_relation();
+    let constraint = format!("embedded_journal_{}", event_id.simple());
+    sqlx::query(&format!(
+        "ALTER TABLE {journal} ADD CONSTRAINT {constraint} CHECK (event_id <> '{event_id}'::UUID)"
+    ))
+    .execute(&pool)
+    .await
+    .expect("force journal refusal");
+    engine
+        .process_journal_outbox_event(
+            event_id,
+            topic.clone(),
+            "row-1".into(),
+            payload,
+            Utc::now(),
+            seq,
+        )
+        .await;
+    assert_eq!(outbox_delivery_state(&pool, event_id).await, "pending");
+    assert!(matches!(
+        subscriber.try_recv(),
+        Err(broadcast::error::TryRecvError::Empty)
+    ));
+    sqlx::query(&format!(
+        "ALTER TABLE {journal} DROP CONSTRAINT {constraint}"
+    ))
+    .execute(&pool)
+    .await
+    .expect("restore journal");
+
+    let tailer = {
+        let engine = engine.clone();
+        tokio::spawn(async move { engine.tail_outbox().await })
+    };
+    let delivery = tokio::time::timeout(Duration::from_secs(10), subscriber.recv())
+        .await
+        .expect("embedded relay delivered within budget")
+        .expect("event delivered");
+    assert_eq!(delivery.event_id, event_id.to_string());
+    let (stored, partition, offset): (serde_json::Value, Option<i32>, Option<i64>) =
+        sqlx::query_as(&format!(
+            "SELECT payload, kafka_partition, kafka_offset FROM {journal} WHERE event_id = $1"
+        ))
+        .bind(event_id)
+        .fetch_one(&pool)
+        .await
+        .expect("delivery is already durably replayable");
+    assert_eq!(stored["payload"]["id"], "row-1");
+    assert_eq!(
+        (partition, offset),
+        (None, None),
+        "journal delivery claims no Kafka ack"
+    );
+    tokio::time::timeout(Duration::from_secs(10), async {
+        loop {
+            let remaining: bool = sqlx::query_scalar(&format!(
+                "SELECT EXISTS(SELECT 1 FROM {outbox} WHERE event_id = $1)"
+            ))
+            .bind(event_id)
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+            if !remaining {
+                break;
+            }
+            tokio::time::sleep(Duration::from_millis(25)).await;
+        }
+    })
+    .await
+    .expect("outbox ack after durable delivery");
+    tailer.abort();
+    let _ = tailer.await;
+    let state: String = sqlx::query_scalar(&format!(
+        "SELECT delivery_state FROM {journal} WHERE event_id = $1"
+    ))
+    .bind(event_id)
+    .fetch_one(&pool)
+    .await
+    .expect("read terminal journal state");
+    assert_eq!(state, "acked", "journal-only rows participate in retention");
+    sqlx::query(&format!(
+        "UPDATE {journal} SET published_at = NOW() - INTERVAL '30 days', \
+         acked_at = NOW() - INTERVAL '30 days' WHERE event_id = $1"
+    ))
+    .bind(event_id)
+    .execute(&pool)
+    .await
+    .expect("age acknowledged journal row");
+    engine.run_journal_retention_sweep().await;
+    let retained: bool = sqlx::query_scalar(&format!(
+        "SELECT EXISTS(SELECT 1 FROM {journal} WHERE event_id = $1)"
+    ))
+    .bind(event_id)
+    .fetch_one(&pool)
+    .await
+    .expect("check journal retention");
+    assert!(
+        !retained,
+        "acknowledged journal-only delivery can be pruned"
+    );
+    sqlx::query(&format!("DELETE FROM {journal} WHERE event_id = $1"))
+        .bind(event_id)
+        .execute(&pool)
+        .await
+        .expect("clean journal");
+    sqlx::query(&format!("DELETE FROM {policy} WHERE topic = $1"))
+        .bind(topic)
+        .execute(&pool)
+        .await
+        .expect("clean topic policy");
 }
 
 /// Item 25: `route_to_dlq`'s failure path. When the durable Postgres DLQ

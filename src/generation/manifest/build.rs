@@ -875,6 +875,7 @@ pub(crate) fn column_from_proto(column: &ProtoColumn) -> ManifestColumn {
             data_class: column.security.data_class.clone(),
             consent_required: column.security.consent_required,
             retention_days: column.security.retention_days,
+            owner_field: column.security.owner_field,
         },
         field_number: column.field_number,
         oneof_group: column.oneof_group.clone(),

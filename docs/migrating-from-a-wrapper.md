@@ -71,6 +71,44 @@ err := u.Tx(ctx, func(tx *udbclient.TxScope) error {
 })
 ```
 
+## Consumer cursor upgrade
+
+From 0.5.30, a named consumer is bound to a verified principal within its tenant
+and project. Service credentials use `service:<service_identity>`; user credentials
+use `user:<user_id>`. Subscription claims a new name before delivering events.
+Another principal cannot subscribe or acknowledge under that name and topic pattern.
+A new name reads the retained backlog. Handlers must remain idempotent: interruption
+before acknowledgment redelivers the event, and an uncertain acknowledgment can
+also cause redelivery.
+
+Old cursor rows contain no verified owner. The broker refuses them until an
+operator migrates them. Stop the consumer and back up its cursor row. Obtain the
+principal from AuthenticateBearer, then update **only that consumer's** row and
+preserve its position using the still-retained journal event:
+
+```sql
+BEGIN;
+UPDATE udb_system.udb_cdc_consumer_cursors AS c
+SET owner_identity = 'service:<verified-service-identity>',
+    last_published_at = j.published_at
+FROM udb_system.udb_cdc_event_journal AS j
+WHERE c.tenant_id = '<canonical-tenant-id>'
+  AND c.project_id = '<verified-project-id>'
+  AND c.consumer_name = '<consumer-name>'
+  AND c.topic_pattern = '<topic-pattern>'
+  AND c.owner_identity = ''
+  AND j.event_id = c.last_event_id
+RETURNING c.consumer_name, c.last_event_id, c.last_published_at;
+COMMIT;
+```
+
+Use `user:<verified-user-id>` for a user principal. Expect exactly one returned
+row. If the journal event has expired, restore the timestamp from durable evidence
+or use a fresh consumer name to replay retained history. Do not invent a timestamp:
+it can skip work. Preserve the old row as migration evidence until the replacement
+consumer is caught up. Cursors migrated with their original timestamp can resume
+after later journal retention; older acknowledgments cannot move them backward.
+
 ## Errors
 
 Replace every `strings.Contains(err.Error(), ...)` with the closed error code:

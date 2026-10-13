@@ -625,6 +625,8 @@ mod catalog_transition;
 pub use catalog_transition::ReviewedCatalogPlanRequest;
 pub mod delivery_health;
 pub(crate) mod native_store;
+pub mod pipelines;
+pub mod storage_layout;
 pub use catalog_sql::ManifestDrift;
 mod probe_dispatch;
 mod reload;
@@ -799,7 +801,7 @@ fn validate_tx_strategy(strategy: TxStrategy, mutations: &[Mutation]) -> Result<
                 .iter()
                 .filter(|mutation| !mutation.commit && !mutation.rollback)
                 .map(|mutation| mutation.operation.to_ascii_lowercase())
-                .find(|operation| !matches!(operation.as_str(), "upsert" | "delete"));
+                .find(|operation| !matches!(operation.as_str(), "upsert" | "insert" | "delete"));
             if let Some(operation) = unsupported {
                 return Err(two_phase_unsupported_operation_status(&operation));
             }

@@ -4,6 +4,7 @@ export * from "./auth";
 export * from "./negotiation";
 export * from "./generatedClient";
 export * from "./project";
+export * from "./stores";
 export * from "./adapters";
 export { defaultProtoRoot } from "./protoRoot";
 // Importing wkt registers the google.protobuf.Struct serializer (plain JS object

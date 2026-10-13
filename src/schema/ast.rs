@@ -470,6 +470,10 @@ pub struct ProtoColumnSecurity {
     pub data_class: String,
     pub consent_required: bool,
     pub retention_days: i32,
+    /// `db_column_security.owner_field`: the column names the data subject that
+    /// owns the row (PurgeSubject erases by it).
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub owner_field: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]

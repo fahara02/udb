@@ -18,6 +18,8 @@ import "udb/entity/v1/error.proto";
 message Mutation {
   RequestContext context = 1;
   string tx_id = 2;
+  // `insert` creates one complete relational row and refuses any key collision.
+  // It shares Upsert's scope, CDC, projections and audit; it never replaces a row.
   string operation = 3;
   string message_type = 4;
   // The record to write, in EITHER of two forms. Set exactly one.

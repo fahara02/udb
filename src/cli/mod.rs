@@ -26,6 +26,7 @@ mod args;
 mod auth;
 mod authz_cli;
 mod catalog_transition;
+mod code_scan;
 mod dev_embedded;
 mod doctor;
 mod env_setup;
@@ -1300,9 +1301,18 @@ pub fn run() {
             }
             process::exit(exit_code);
         }
-        Command::Check { policies } => {
+        Command::Check {
+            policies,
+            code,
+            identities,
+            identity,
+            purpose,
+            role,
+            subject,
+        } => {
             let manifest = CatalogManifest::from_schemas(&schemas)
                 .unwrap_or_else(|err| fatal_json("failed to build catalog manifest", err));
+            let (manifest, _) = udb::runtime::native_catalog::merge_native(&manifest, &schemas);
             let catalog = lint_catalog(&manifest);
             // Policies: --policies <json|yaml>, else UDB_ABAC_POLICY_FILE when set;
             // without either the policy sections are skipped, not failed.
@@ -1319,6 +1329,82 @@ pub fn run() {
             let mut passed = catalog.passed;
             let mut policy_section = serde_json::Value::Null;
             let mut coverage_section = serde_json::Value::Null;
+            let loaded_policies: Option<Vec<AuthzPolicy>> = loaded
+                .as_ref()
+                .and_then(|result| result.as_ref().ok().cloned());
+            // C2: every Go call is checked against the declared grant and its
+            // effective request purpose, using the runtime's policy predicates.
+            let mut code_section = serde_json::Value::Null;
+            if !code.trim().is_empty() {
+                let principal =
+                    ops_cli::code_scan_principal(&identities, &identity, &role, &subject)
+                        .unwrap_or_else(|err| {
+                            eprintln!("check --code: {err}");
+                            std::process::exit(1);
+                        });
+                let sites = code_scan::scan_go_tree(std::path::Path::new(code.trim()))
+                    .unwrap_or_else(|err| {
+                        eprintln!("check --code: {err}");
+                        std::process::exit(1);
+                    });
+                let mut ungranted = Vec::new();
+                for site in &sites {
+                    let candidates: Vec<_> = manifest
+                        .tables
+                        .iter()
+                        .filter(|table| table.message_name == site.entity)
+                        .collect();
+                    let table = (candidates.len() == 1).then(|| candidates[0]);
+                    let message_type = table
+                        .map(|table| table.message_fqn())
+                        .unwrap_or_else(|| site.entity.clone());
+                    let effective_purpose = site
+                        .purpose
+                        .as_deref()
+                        .or_else(|| (!purpose.trim().is_empty()).then_some(purpose.trim()));
+                    let allowed = table.is_some()
+                        && !site.purpose_dynamic
+                        && loaded_policies.as_ref().is_some_and(|policies| {
+                            udb::runtime::authz::policies_allow_statically(
+                                policies,
+                                &principal,
+                                &udb::runtime::authz::ResourceRef::message(&message_type),
+                                &site.action,
+                                effective_purpose,
+                            )
+                        });
+                    if !allowed {
+                        ungranted.push(serde_json::json!({
+                            "file": site.file,
+                            "line": site.line,
+                            "method": site.method,
+                            "action": site.action,
+                            "message_type": message_type,
+                            "identity": principal.service_identity,
+                            "purpose": effective_purpose,
+                            "reason": if table.is_none() { "entity_not_resolved_uniquely" } else if site.purpose_dynamic { "dynamic_request_purpose" } else { "no_static_grant" },
+                        }));
+                    }
+                }
+                if loaded_policies.is_none() {
+                    eprintln!(
+                        "check --code: no policies loaded (--policies or UDB_ABAC_POLICY_FILE); every call site is reported"
+                    );
+                }
+                passed &= ungranted.is_empty();
+                code_section = serde_json::json!({
+                    "role": role,
+                    "subject": subject,
+                    "identity": principal.service_identity,
+                    "account": principal.principal_id,
+                    "tenant": principal.tenant_id,
+                    "project": principal.project_id,
+                    "scopes": principal.scopes,
+                    "purpose": purpose,
+                    "call_sites": sites.len(),
+                    "ungranted": ungranted,
+                });
+            }
             if let Some(loaded) = loaded {
                 let coverage = loaded.as_ref().ok().map(|policies| {
                     let entities: Vec<(String, String)> = manifest
@@ -1358,6 +1444,7 @@ pub fn run() {
                     "catalog": catalog,
                     "policy": policy_section,
                     "coverage": coverage_section,
+                    "code": code_section,
                 }),
                 "check report",
             );

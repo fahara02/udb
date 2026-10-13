@@ -317,6 +317,32 @@ pub(crate) fn run_compliance_command(command: ComplianceCommand) -> i32 {
 
 async fn run_compliance_command_async(command: ComplianceCommand) -> Result<Value, String> {
     match command {
+        ComplianceCommand::VerifyReceipt { file, public_key } => {
+            if file.trim().is_empty() {
+                return Err("pass -f <receipt.jws> (or - for stdin)".to_string());
+            }
+            let jws = if file.trim() == "-" {
+                let mut buffer = String::new();
+                std::io::Read::read_to_string(&mut std::io::stdin(), &mut buffer)
+                    .map_err(|err| format!("read stdin failed: {err}"))?;
+                buffer
+            } else {
+                std::fs::read_to_string(file.trim())
+                    .map_err(|err| format!("read {file} failed: {err}"))?
+            };
+            let source = if public_key.trim().is_empty() {
+                std::env::var("UDB_JWT_PUBLIC_KEY").map_err(|_| {
+                    "pass --public-key <pem file> or set UDB_JWT_PUBLIC_KEY to the broker's signing public key"
+                        .to_string()
+                })?
+            } else {
+                public_key.trim().to_string()
+            };
+            let pem = udb::runtime::security::SecurityConfig::resolve_pem(&source)?
+                .ok_or_else(|| "the public key source is empty".to_string())?;
+            let claims = udb::runtime::security::verify_erasure_receipt(&jws, &pem)?;
+            Ok(serde_json::json!({ "verified": true, "receipt": claims }))
+        }
         ComplianceCommand::Evidence {
             since,
             until,

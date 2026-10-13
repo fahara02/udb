@@ -766,6 +766,46 @@ class ProjectionDriftTargetReport(_message.Message):
     warnings: _containers.RepeatedScalarFieldContainer[str]
     def __init__(self, target_backend: _Optional[str] = ..., target_instance: _Optional[str] = ..., target_resource: _Optional[str] = ..., source_rows_scanned: _Optional[int] = ..., divergent_rows: _Optional[_Iterable[_Union[ProjectionDriftDivergentRow, _Mapping]]] = ..., rows_to_repair: _Optional[int] = ..., estimated_cost_units: _Optional[float] = ..., repair_tasks_enqueued: _Optional[int] = ..., warnings: _Optional[_Iterable[str]] = ...) -> None: ...
 
+class PurgeSubjectRequest(_message.Message):
+    __slots__ = ("context", "subject_id", "reason", "dry_run", "confirm_subject_id")
+    CONTEXT_FIELD_NUMBER: _ClassVar[int]
+    SUBJECT_ID_FIELD_NUMBER: _ClassVar[int]
+    REASON_FIELD_NUMBER: _ClassVar[int]
+    DRY_RUN_FIELD_NUMBER: _ClassVar[int]
+    CONFIRM_SUBJECT_ID_FIELD_NUMBER: _ClassVar[int]
+    context: _context_pb2.RequestContext
+    subject_id: str
+    reason: str
+    dry_run: bool
+    confirm_subject_id: str
+    def __init__(self, context: _Optional[_Union[_context_pb2.RequestContext, _Mapping]] = ..., subject_id: _Optional[str] = ..., reason: _Optional[str] = ..., dry_run: bool = ..., confirm_subject_id: _Optional[str] = ...) -> None: ...
+
+class PurgedSubjectTable(_message.Message):
+    __slots__ = ("message_type", "column", "deleted")
+    MESSAGE_TYPE_FIELD_NUMBER: _ClassVar[int]
+    COLUMN_FIELD_NUMBER: _ClassVar[int]
+    DELETED_FIELD_NUMBER: _ClassVar[int]
+    message_type: str
+    column: str
+    deleted: int
+    def __init__(self, message_type: _Optional[str] = ..., column: _Optional[str] = ..., deleted: _Optional[int] = ...) -> None: ...
+
+class PurgeSubjectResponse(_message.Message):
+    __slots__ = ("tables", "not_covered", "total_deleted", "dry_run", "receipt_jws", "receipt_json")
+    TABLES_FIELD_NUMBER: _ClassVar[int]
+    NOT_COVERED_FIELD_NUMBER: _ClassVar[int]
+    TOTAL_DELETED_FIELD_NUMBER: _ClassVar[int]
+    DRY_RUN_FIELD_NUMBER: _ClassVar[int]
+    RECEIPT_JWS_FIELD_NUMBER: _ClassVar[int]
+    RECEIPT_JSON_FIELD_NUMBER: _ClassVar[int]
+    tables: _containers.RepeatedCompositeFieldContainer[PurgedSubjectTable]
+    not_covered: _containers.RepeatedScalarFieldContainer[str]
+    total_deleted: int
+    dry_run: bool
+    receipt_jws: str
+    receipt_json: str
+    def __init__(self, tables: _Optional[_Iterable[_Union[PurgedSubjectTable, _Mapping]]] = ..., not_covered: _Optional[_Iterable[str]] = ..., total_deleted: _Optional[int] = ..., dry_run: bool = ..., receipt_jws: _Optional[str] = ..., receipt_json: _Optional[str] = ...) -> None: ...
+
 class ProjectionDriftScanResponse(_message.Message):
     __slots__ = ("project_id", "message_type", "scan_mode", "source_rows_loaded", "reports", "summary_json", "warnings")
     PROJECT_ID_FIELD_NUMBER: _ClassVar[int]

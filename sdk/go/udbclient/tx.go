@@ -117,6 +117,16 @@ func (tx *TxScope) fail(err error) error {
 
 // Upsert writes the whole row m in the transaction.
 func (tx *TxScope) Upsert(m proto.Message) error {
+	return tx.write(m, "upsert")
+}
+
+// Insert creates m when its primary and unique keys are new. A duplicate
+// returns CodeUnique and rolls back every write and event in the transaction.
+func (tx *TxScope) Insert(m proto.Message) error {
+	return tx.write(m, "insert")
+}
+
+func (tx *TxScope) write(m proto.Message, operation string) error {
 	rec, err := EncodeRecord(m, WriteInsert)
 	if err != nil {
 		return tx.fail(err)
@@ -125,7 +135,7 @@ func (tx *TxScope) Upsert(m proto.Message) error {
 	if err != nil {
 		return tx.fail(err)
 	}
-	tx.add(&entityv1.Mutation{Operation: "upsert", MessageType: MessageType(m), RecordJson: raw})
+	tx.add(&entityv1.Mutation{Operation: operation, MessageType: MessageType(m), RecordJson: raw})
 	return nil
 }
 

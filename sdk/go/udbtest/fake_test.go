@@ -19,6 +19,14 @@ func TestFakeMeetsTheTableContract(t *testing.T) {
 	})
 }
 
+// The fake passes the cross-SDK cases the TypeScript runner shares.
+func TestFakeMeetsTheSharedTableCases(t *testing.T) {
+	fake := udbtest.New(t, &storagev1.File{})
+	conformance.RunTableCases(t, func(t testing.TB, tenant string) *udbclient.Udb {
+		return fake.Client(t, tenant)
+	}, "../../conformance/table-cases.json")
+}
+
 // Emit builds the envelope from the event's own contract and commits it with
 // the transaction's writes.
 func TestEmitCommitsTheEventWithTheTransaction(t *testing.T) {

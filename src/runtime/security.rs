@@ -1195,6 +1195,68 @@ fn registry_public_pem_for_kid(kid: &str) -> Option<String> {
         .and_then(|g| g.public_by_kid.get(kid).cloned())
 }
 
+/// JWS `typ` of an erasure receipt. A receipt carries no `exp` and its own
+/// `typ`, so it can never pass bearer-token validation.
+pub const ERASURE_RECEIPT_TYP: &str = "udb-erasure-receipt+jwt";
+
+/// Holds the validated signing key for an erasure. Resolve it before deleting
+/// any rows, and keep the same key even if the registry rotates during the purge.
+pub struct ErasureReceiptSigner {
+    key: jsonwebtoken::EncodingKey,
+    header: jsonwebtoken::Header,
+}
+
+impl ErasureReceiptSigner {
+    pub fn configured() -> Result<Self, String> {
+        let (kid, private_pem) = match active_signing_key() {
+            Some(active) => active,
+            None => {
+                let config = SecurityConfig::current();
+                let pem = config
+                    .jwt_private_key
+                    .as_deref()
+                    .map(SecurityConfig::resolve_pem)
+                    .transpose()?
+                    .flatten()
+                    .ok_or("configure an active signing key or UDB_JWT_PRIVATE_KEY before erasing a subject")?;
+                (UDB_RS256_KID.to_string(), pem)
+            }
+        };
+        let key = jsonwebtoken::EncodingKey::from_rsa_pem(private_pem.as_bytes())
+            .map_err(|e| format!("invalid signing key: {e}"))?;
+        let mut header = jsonwebtoken::Header::new(jsonwebtoken::Algorithm::RS256);
+        header.kid = Some(kid);
+        header.typ = Some(ERASURE_RECEIPT_TYP.to_string());
+        Ok(Self { key, header })
+    }
+
+    pub fn sign(&self, claims: &serde_json::Value) -> Result<String, String> {
+        jsonwebtoken::encode(&self.header, claims, &self.key)
+            .map_err(|e| format!("sign erasure receipt failed: {e}"))
+    }
+}
+
+/// Verify an erasure receipt against `public_pem` and return its claims.
+pub fn verify_erasure_receipt(jws: &str, public_pem: &str) -> Result<serde_json::Value, String> {
+    use jsonwebtoken::{Algorithm, DecodingKey, Validation, decode, decode_header};
+    let header = decode_header(jws.trim()).map_err(|e| format!("not a JWS: {e}"))?;
+    if header.typ.as_deref() != Some(ERASURE_RECEIPT_TYP) {
+        return Err(format!(
+            "not an erasure receipt (typ {:?}, expected {ERASURE_RECEIPT_TYP})",
+            header.typ
+        ));
+    }
+    let key = DecodingKey::from_rsa_pem(public_pem.as_bytes())
+        .map_err(|e| format!("invalid public key: {e}"))?;
+    let mut validation = Validation::new(Algorithm::RS256);
+    validation.required_spec_claims.clear();
+    validation.validate_exp = false;
+    validation.validate_aud = false;
+    decode::<serde_json::Value>(jws.trim(), &key, &validation)
+        .map(|data| data.claims)
+        .map_err(|e| format!("signature does not verify: {e}"))
+}
+
 /// Sign a UDB-issued access token (RS256) from the configured env private key
 /// (`UDB_JWT_PRIVATE_KEY`, inline PEM or path), stamping [`UDB_RS256_KID`]. This
 /// is the single-key fallback used when the signing-key registry has no ACTIVE
@@ -3983,6 +4045,25 @@ mod tests {
     }
 
     /// Sign `claims` into an RS256 JWT using the test private key.
+    /// D4: an erasure receipt verifies with the signing public key, and a
+    /// JWS without the receipt `typ` (an access token) is refused.
+    #[test]
+    fn erasure_receipt_verifies_and_rejects_other_tokens() {
+        use jsonwebtoken::{Algorithm, EncodingKey, Header, encode};
+        let key = EncodingKey::from_rsa_pem(TEST_JWT_PRIVATE_PEM.as_bytes()).expect("test key");
+        let claims = serde_json::json!({"typ": "udb.erasure-receipt.v1", "total_deleted": 3});
+        let mut header = Header::new(Algorithm::RS256);
+        header.typ = Some(ERASURE_RECEIPT_TYP.to_string());
+        let receipt = encode(&header, &claims, &key).expect("sign");
+        let verified = verify_erasure_receipt(&receipt, TEST_JWT_PUBLIC_PEM).expect("verifies");
+        assert_eq!(verified["total_deleted"], 3);
+        let token = sign_rs256(&serde_json::json!({"sub": "u", "exp": 9_999_999_999i64}));
+        assert!(verify_erasure_receipt(&token, TEST_JWT_PUBLIC_PEM).is_err());
+        let mut tampered = receipt.clone();
+        tampered.push('x');
+        assert!(verify_erasure_receipt(&tampered, TEST_JWT_PUBLIC_PEM).is_err());
+    }
+
     fn sign_rs256(claims: &serde_json::Value) -> String {
         use jsonwebtoken::{Algorithm, EncodingKey, Header, encode};
         let key = EncodingKey::from_rsa_pem(TEST_JWT_PRIVATE_PEM.as_bytes())

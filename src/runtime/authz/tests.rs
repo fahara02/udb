@@ -378,6 +378,10 @@ async fn denial_diagnostics_honor_matched_relationships_and_name_only_failed_con
         denied.deny_reason.contains("Diagnosis:"),
         "an unrelated applicable rule cannot hide the closest miss"
     );
+    assert!(
+        denied.deny_reason.contains("Diagnosis:"),
+        "an unrelated applicable rule cannot hide the closest miss"
+    );
     let attributes = BTreeMap::from([("department".into(), "billing".into())]);
     let allowed = snap
         .casbin_authorize(&query(&caller, &resource, "Select", "billing", &attributes))
@@ -476,4 +480,107 @@ fn authz_catalog_ddl_covers_v2_tables_and_is_idempotent() {
         joined.contains("UDB:proto_manifest_checksum"),
         "native authz DDL must carry proto manifest metadata"
     );
+}
+
+#[test]
+fn static_code_coverage_requires_the_declared_domain_purpose_and_scopes() {
+    let mut caller = principal("account", "tenant-a", &["udb:data:read"], &[]);
+    caller.service_identity = "billing".into();
+    caller.project_id = "project-a".into();
+    let resource = ResourceRef::message("billing.Invoice");
+    let policy = AuthzPolicy {
+        subject: "billing".into(),
+        tenant: "tenant-a".into(),
+        project: "project-a".into(),
+        action: "Select".into(),
+        resource: "billing.Invoice".into(),
+        purpose: "billing".into(),
+        required_scopes: vec!["udb:data:read".into()],
+        ..Default::default()
+    };
+    let policies = [policy];
+    assert!(policies_allow_statically(
+        &policies,
+        &caller,
+        &resource,
+        "Select",
+        Some("billing")
+    ));
+    assert!(!policies_allow_statically(
+        &policies,
+        &caller,
+        &resource,
+        "Select",
+        Some("support")
+    ));
+    assert!(!policies_allow_statically(
+        &policies, &caller, &resource, "Select", None
+    ));
+    caller.tenant_id = "tenant-b".into();
+    assert!(!policies_allow_statically(
+        &policies,
+        &caller,
+        &resource,
+        "Select",
+        Some("billing")
+    ));
+    caller.tenant_id = "tenant-a".into();
+    caller.project_id = "project-b".into();
+    assert!(!policies_allow_statically(
+        &policies,
+        &caller,
+        &resource,
+        "Select",
+        Some("billing")
+    ));
+    caller.project_id = "project-a".into();
+    caller.scopes.clear();
+    assert!(!policies_allow_statically(
+        &policies,
+        &caller,
+        &resource,
+        "Select",
+        Some("billing")
+    ));
+}
+
+#[test]
+fn static_code_coverage_cannot_prove_attribute_or_relationship_permissions() {
+    let caller = principal("account", "tenant-a", &[], &[]);
+    let resource = ResourceRef::message("billing.Invoice");
+    let allow = AuthzPolicy {
+        action: "Select".into(),
+        resource: "billing.Invoice".into(),
+        ..Default::default()
+    };
+    let mut conditional = allow.clone();
+    conditional
+        .conditions
+        .insert("owner".into(), "account".into());
+    assert!(!policies_allow_statically(
+        &[conditional.clone()],
+        &caller,
+        &resource,
+        "Select",
+        Some("billing")
+    ));
+    conditional.effect = Effect::Deny;
+    assert!(!policies_allow_statically(
+        &[allow.clone(), conditional],
+        &caller,
+        &resource,
+        "Select",
+        Some("billing")
+    ));
+    let related = AuthzPolicy {
+        relationship: "owner".into(),
+        ..allow
+    };
+    assert!(!policies_allow_statically(
+        &[related],
+        &caller,
+        &resource,
+        "Select",
+        Some("billing")
+    ));
 }

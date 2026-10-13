@@ -127,6 +127,11 @@ private static final long serialVersionUID = 0L;
   @SuppressWarnings("serial")
   private volatile java.lang.Object operation_ = "";
   /**
+   * <pre>
+   * `insert` creates one complete relational row and refuses any key collision.
+   * It shares Upsert's scope, CDC, projections and audit; it never replaces a row.
+   * </pre>
+   *
    * <code>string operation = 3 [json_name = "operation"];</code>
    * @return The operation.
    */
@@ -144,6 +149,11 @@ private static final long serialVersionUID = 0L;
     }
   }
   /**
+   * <pre>
+   * `insert` creates one complete relational row and refuses any key collision.
+   * It shares Upsert's scope, CDC, projections and audit; it never replaces a row.
+   * </pre>
+   *
    * <code>string operation = 3 [json_name = "operation"];</code>
    * @return The bytes for operation.
    */
@@ -1991,6 +2001,11 @@ private static final long serialVersionUID = 0L;
 
     private java.lang.Object operation_ = "";
     /**
+     * <pre>
+     * `insert` creates one complete relational row and refuses any key collision.
+     * It shares Upsert's scope, CDC, projections and audit; it never replaces a row.
+     * </pre>
+     *
      * <code>string operation = 3 [json_name = "operation"];</code>
      * @return The operation.
      */
@@ -2007,6 +2022,11 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
+     * <pre>
+     * `insert` creates one complete relational row and refuses any key collision.
+     * It shares Upsert's scope, CDC, projections and audit; it never replaces a row.
+     * </pre>
+     *
      * <code>string operation = 3 [json_name = "operation"];</code>
      * @return The bytes for operation.
      */
@@ -2024,6 +2044,11 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
+     * <pre>
+     * `insert` creates one complete relational row and refuses any key collision.
+     * It shares Upsert's scope, CDC, projections and audit; it never replaces a row.
+     * </pre>
+     *
      * <code>string operation = 3 [json_name = "operation"];</code>
      * @param value The operation to set.
      * @return This builder for chaining.
@@ -2037,6 +2062,11 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
+     * <pre>
+     * `insert` creates one complete relational row and refuses any key collision.
+     * It shares Upsert's scope, CDC, projections and audit; it never replaces a row.
+     * </pre>
+     *
      * <code>string operation = 3 [json_name = "operation"];</code>
      * @return This builder for chaining.
      */
@@ -2047,6 +2077,11 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
+     * <pre>
+     * `insert` creates one complete relational row and refuses any key collision.
+     * It shares Upsert's scope, CDC, projections and audit; it never replaces a row.
+     * </pre>
+     *
      * <code>string operation = 3 [json_name = "operation"];</code>
      * @param value The bytes for operation to set.
      * @return This builder for chaining.

@@ -374,6 +374,9 @@ pub struct ManifestColumnSecurity {
     pub data_class: String,
     pub consent_required: bool,
     pub retention_days: i32,
+    /// The column names the row's data subject (PurgeSubject erases by it).
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub owner_field: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]

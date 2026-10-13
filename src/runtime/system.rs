@@ -303,6 +303,10 @@ impl SystemCatalogConfig {
     pub(crate) fn cdc_consumer_cursors_relation(&self) -> String {
         relation(&self.cdc.system_schema, CDC_CONSUMER_CURSORS_TABLE)
     }
+
+    pub(crate) fn pipeline_cursors_relation(&self) -> String {
+        relation(&self.cdc.system_schema, "udb_pipeline_cursors")
+    }
 }
 
 /// C3: the system table holding the serving route of every vector collection
@@ -1751,6 +1755,7 @@ fn system_catalog_statements(config: &SystemCatalogConfig) -> Vec<String> {
                 project_id TEXT NOT NULL DEFAULT '',
                 consumer_name TEXT NOT NULL,
                 topic_pattern TEXT NOT NULL,
+                owner_identity TEXT NOT NULL DEFAULT '',
                 last_event_id UUID NOT NULL,
                 owner_identity TEXT NOT NULL DEFAULT '',
                 last_published_at TIMESTAMPTZ NOT NULL DEFAULT 'epoch',
@@ -1764,6 +1769,23 @@ fn system_catalog_statements(config: &SystemCatalogConfig) -> Vec<String> {
             "ALTER TABLE {} ADD COLUMN IF NOT EXISTS owner_identity TEXT NOT NULL DEFAULT '', \
              ADD COLUMN IF NOT EXISTS last_published_at TIMESTAMPTZ NOT NULL DEFAULT 'epoch'",
             config.cdc_consumer_cursors_relation()
+        ),
+        // Pipeline progress includes the journal watermark and the pending
+        // event's retry budget, so journal expiry and replica changes cannot
+        // reset a unit's position or indefinitely restart its retries.
+        format!(
+            "CREATE TABLE IF NOT EXISTS {} (
+                project_id TEXT NOT NULL,
+                pipeline_name TEXT NOT NULL,
+                source_topic TEXT NOT NULL,
+                last_published_at TIMESTAMPTZ NOT NULL DEFAULT 'epoch',
+                last_event_id UUID NOT NULL DEFAULT '00000000-0000-0000-0000-000000000000',
+                pending_event_id UUID,
+                retry_count INTEGER NOT NULL DEFAULT 0,
+                updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                PRIMARY KEY (project_id, pipeline_name, source_topic)
+            )",
+            config.pipeline_cursors_relation()
         ),
         // ── Phase 7 — Topic policy ────────────────────────────────────────────
         format!(

@@ -7,18 +7,17 @@ use rdkafka::producer::{FutureProducer, FutureRecord};
 #[cfg(feature = "redis")]
 use redis::AsyncCommands;
 use serde::{Deserialize, Serialize};
-#[cfg(feature = "kafka")]
 use sqlx::{Connection, PgConnection};
 use sqlx::{PgPool, Row};
 use std::collections::HashMap;
 use std::fmt;
 use std::pin::Pin;
 use std::sync::{Arc, Mutex, OnceLock};
-#[cfg(feature = "kafka")]
 use std::time::Duration;
 use tokio::sync::broadcast;
 
 use crate::runtime::executor_utils::{env_identifier, qi_runtime as qi};
+use tokio::time::interval;
 #[cfg(feature = "kafka")]
 use tracing::error;
 use tracing::{info, warn};
@@ -223,6 +222,9 @@ pub struct CdcConfig {
     pub replication_tls_required: bool,
     pub max_wal_lag_bytes: i64,
     pub exactly_once_mode: CdcExactlyOnceMode,
+    /// Explicit embedded transport: durable PG journal and local stream fan-out.
+    /// Never used as a fallback for failed Kafka delivery.
+    pub journal_only: bool,
     pub transactional_id_prefix: String,
     pub producer_epoch: i64,
     /// CDC scale-out (master-plan 6.5): number of tailer shards configured for
@@ -374,6 +376,7 @@ impl Default for CdcConfig {
             replication_tls_required: true,
             max_wal_lag_bytes: 1_073_741_824,
             exactly_once_mode: CdcExactlyOnceMode::default(),
+            journal_only: false,
             transactional_id_prefix: "udb-cdc".to_string(),
             producer_epoch: 0,
             shard_count: 1,
@@ -472,6 +475,9 @@ impl CdcConfig {
             exactly_once_mode: std::env::var("UDB_CDC_EXACTLY_ONCE_MODE")
                 .map(|value| CdcExactlyOnceMode::from_env_value(&value))
                 .unwrap_or(defaults.exactly_once_mode),
+            journal_only: std::env::var("UDB_CDC_JOURNAL_ONLY")
+                .map(|value| matches!(value.trim(), "1" | "true" | "yes"))
+                .unwrap_or(defaults.journal_only),
             transactional_id_prefix: std::env::var("UDB_CDC_TRANSACTIONAL_ID_PREFIX")
                 .unwrap_or(defaults.transactional_id_prefix),
             producer_epoch: std::env::var("UDB_CDC_PRODUCER_EPOCH")
@@ -1498,9 +1504,8 @@ pub struct CdcEngine {
     #[cfg(feature = "redis")]
     redis: Option<redis::Client>,
     #[cfg(feature = "kafka")]
-    kafka_producer: FutureProducer,
+    kafka_producer: Option<FutureProducer>,
     broadcast_tx: broadcast::Sender<CdcEnvelope>,
-    #[cfg(feature = "kafka")]
     dsn: String,
     metrics: std::sync::Arc<dyn MetricsRecorder>,
     config: CdcConfig,

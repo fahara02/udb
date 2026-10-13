@@ -97,6 +97,19 @@ async fn run_ops_command_async(command: OpsCommand) -> Result<serde_json::Value,
             max,
         } => events_tail_command(&topic_pattern, &since, decode, max).await,
         OpsCommand::ResourcesList { backend } => resources_list_command(&backend).await,
+        OpsCommand::SubjectPurge {
+            subject,
+            reason,
+            dry_run,
+            receipt_out,
+        } => subject_purge_command(&subject, &reason, dry_run, &receipt_out).await,
+        OpsCommand::MigrateStorage {
+            bucket,
+            tenant,
+            prefix,
+            limit,
+            dry_run,
+        } => migrate_storage_command(&bucket, &tenant, &prefix, limit, dry_run).await,
         OpsCommand::Up {
             file,
             dry_run,
@@ -356,6 +369,50 @@ struct ProjectFile {
     policy_overlays: Vec<String>,
     seed: Option<serde_json::Value>,
     seed_file: String,
+    embedding: Option<EmbeddingSection>,
+    /// Pipeline units run by the broker: point UDB_PIPELINES_FILE at this
+    /// file. `udb up` only validates them.
+    pipelines: Vec<serde_yaml::Value>,
+}
+
+/// Declared embedding models and sources (P5). Models and sources are per
+/// tenant in udb, and a source must name its model's versioned collection, so
+/// they are declared here and registered by `udb up` rather than inferred.
+#[derive(Debug, Clone, Default, serde::Deserialize)]
+#[serde(default, deny_unknown_fields)]
+struct EmbeddingSection {
+    models: Vec<DeclaredModel>,
+    sources: Vec<DeclaredSource>,
+}
+
+#[derive(Debug, Clone, Default, serde::Deserialize, serde::Serialize)]
+#[serde(default, deny_unknown_fields)]
+struct DeclaredModel {
+    model_id: String,
+    provider: String,
+    model_name: String,
+    version: String,
+    dimensions: i32,
+    distance_metric: String,
+    normalize: bool,
+    task_type: String,
+    provider_endpoint_ref: String,
+    vector_backend: String,
+    active_collection: String,
+    collection_alias: String,
+}
+
+#[derive(Debug, Clone, Default, serde::Deserialize, serde::Serialize)]
+#[serde(default, deny_unknown_fields)]
+struct DeclaredSource {
+    source_name: String,
+    source_message_type: String,
+    text_fields: Vec<String>,
+    model_id: String,
+    /// Defaults to the model's active_collection.
+    target_collection: String,
+    /// Backfill existing rows when the source is first registered.
+    backfill: bool,
 }
 
 /// Paths in udb.yaml are relative to the file itself.
@@ -418,8 +475,8 @@ async fn up_command(
     );
     report.insert("dry_run".into(), serde_json::Value::Bool(dry_run));
 
-    // Policies first: identities created next must not run before their grants
-    // have rules to match.
+    // Order: policies (identities need rules to match), identities, embedding
+    // models and sources (so seeded rows are embedded), then seed data.
     let mut policies = project.policies.clone();
     if !project.policies_file.trim().is_empty() {
         policies.extend(load_policy_file(&relative_to(
@@ -466,6 +523,24 @@ async fn up_command(
         report.insert("identities".into(), result?);
     }
 
+    if !project.pipelines.is_empty() {
+        let text = fs::read_to_string(file).map_err(|err| format!("read {file}: {err}"))?;
+        let specs = udb::runtime::core::pipelines::parse_pipeline_specs(&text)?;
+        report.insert(
+            "pipelines".into(),
+            serde_json::json!({
+                "declared": specs.iter().map(|spec| spec.name.clone()).collect::<Vec<_>>(),
+                "run_by": "the broker, with UDB_PIPELINES_FILE pointing at this file",
+            }),
+        );
+    }
+    if let Some(embedding) = &project.embedding {
+        report.insert(
+            "embedding".into(),
+            embedding_up(&tenant, embedding, dry_run).await?,
+        );
+    }
+
     let seed = match (&project.seed, project.seed_file.trim()) {
         (Some(inline), _) => Some(inline.clone()),
         (None, "") => None,
@@ -488,6 +563,279 @@ async fn up_command(
         report.insert("seed".into(), result?);
     }
     Ok(serde_json::Value::Object(report))
+}
+
+// ── udb up: embedding models and sources ──────────────────────────────────
+
+/// Register declared models and sources that the tenant does not have yet.
+/// A model's vector identity (name, dimensions, collection) is immutable: a
+/// declared model whose stored registration differs is reported, never
+/// changed — declare a new model_id instead.
+async fn embedding_up(
+    tenant: &str,
+    section: &EmbeddingSection,
+    dry_run: bool,
+) -> Result<serde_json::Value, String> {
+    use udb::proto::udb::core::embedding::services::v1 as embedding_pb;
+    use udb::proto::udb::core::embedding::services::v1::embedding_service_client::EmbeddingServiceClient;
+
+    let mut client = EmbeddingServiceClient::connect(super::authz_cli::auth_target())
+        .await
+        .map_err(|err| format!("failed to connect to the embedding service: {err}"))?;
+
+    let mut existing_models = Vec::new();
+    let mut token = String::new();
+    loop {
+        let page = client
+            .list_models(super::authz_cli::with_metadata(
+                embedding_pb::ListModelsRequest {
+                    tenant_id: tenant.to_string(),
+                    page_size: 200,
+                    page_token: token.clone(),
+                    ..Default::default()
+                },
+            ))
+            .await
+            .map_err(|err| format!("list embedding models failed: {err}"))?
+            .into_inner();
+        existing_models.extend(page.models);
+        if page.next_page_token.is_empty() {
+            break;
+        }
+        token = page.next_page_token;
+    }
+    let mut existing_sources = Vec::new();
+    let mut token = String::new();
+    loop {
+        let page = client
+            .list_sources(super::authz_cli::with_metadata(
+                embedding_pb::ListSourcesRequest {
+                    tenant_id: tenant.to_string(),
+                    page_size: 200,
+                    page_token: token.clone(),
+                },
+            ))
+            .await
+            .map_err(|err| format!("list embedding sources failed: {err}"))?
+            .into_inner();
+        existing_sources.extend(page.sources);
+        if page.next_page_token.is_empty() {
+            break;
+        }
+        token = page.next_page_token;
+    }
+
+    let mut models_report = Vec::new();
+    for model in &section.models {
+        if model.model_id.trim().is_empty() || model.active_collection.trim().is_empty() {
+            return Err("every embedding model needs model_id and active_collection".to_string());
+        }
+        let action = match existing_models
+            .iter()
+            .find(|m| m.model_id == model.model_id)
+        {
+            Some(stored)
+                if stored.model_name == model.model_name
+                    && stored.dimensions == model.dimensions
+                    && stored.active_collection == model.active_collection =>
+            {
+                "unchanged".to_string()
+            }
+            Some(stored) => format!(
+                "differs (stored {} / {} dims / {}); a model's vector identity cannot change, declare a new model_id",
+                stored.model_name, stored.dimensions, stored.active_collection
+            ),
+            None if dry_run => "would register".to_string(),
+            None => {
+                client
+                    .register_model(super::authz_cli::with_metadata(
+                        embedding_pb::RegisterModelRequest {
+                            tenant_id: tenant.to_string(),
+                            model_id: model.model_id.clone(),
+                            provider: model.provider.clone(),
+                            model_name: model.model_name.clone(),
+                            version: model.version.clone(),
+                            dimensions: model.dimensions,
+                            distance_metric: model.distance_metric.clone(),
+                            normalize: model.normalize,
+                            task_type: model.task_type.clone(),
+                            provider_endpoint_ref: model.provider_endpoint_ref.clone(),
+                            vector_backend: model.vector_backend.clone(),
+                            active_collection: model.active_collection.clone(),
+                            collection_alias: model.collection_alias.clone(),
+                            ..Default::default()
+                        },
+                    ))
+                    .await
+                    .map_err(|err| format!("register model {} failed: {err}", model.model_id))?;
+                "registered".to_string()
+            }
+        };
+        models_report.push(serde_json::json!({ "model_id": model.model_id, "action": action }));
+    }
+
+    let mut sources_report = Vec::new();
+    for source in &section.sources {
+        let target_collection = if source.target_collection.trim().is_empty() {
+            section
+                .models
+                .iter()
+                .find(|m| m.model_id == source.model_id)
+                .map(|m| m.active_collection.clone())
+                .or_else(|| {
+                    existing_models
+                        .iter()
+                        .find(|m| m.model_id == source.model_id)
+                        .map(|m| m.active_collection.clone())
+                })
+                .ok_or_else(|| {
+                    format!(
+                        "source {}: model {} is neither declared nor registered",
+                        source.source_name, source.model_id
+                    )
+                })?
+        } else {
+            source.target_collection.clone()
+        };
+        let stored = existing_sources
+            .iter()
+            .find(|s| s.source_name == source.source_name);
+        let unchanged = stored.is_some_and(|s| {
+            s.source_message_type == source.source_message_type
+                && s.model_id == source.model_id
+                && s.target_collection == target_collection
+        });
+        let action = if unchanged {
+            "unchanged".to_string()
+        } else if dry_run {
+            if stored.is_some() {
+                "would update"
+            } else {
+                "would register"
+            }
+            .to_string()
+        } else {
+            client
+                .register_source(super::authz_cli::with_metadata(
+                    embedding_pb::RegisterSourceRequest {
+                        tenant_id: tenant.to_string(),
+                        source_name: source.source_name.clone(),
+                        source_message_type: source.source_message_type.clone(),
+                        text_fields: source.text_fields.clone(),
+                        target_collection: target_collection.clone(),
+                        model_id: source.model_id.clone(),
+                        ..Default::default()
+                    },
+                ))
+                .await
+                .map_err(|err| format!("register source {} failed: {err}", source.source_name))?;
+            if stored.is_none() && source.backfill {
+                client
+                    .backfill(super::authz_cli::with_metadata(
+                        embedding_pb::BackfillRequest {
+                            tenant_id: tenant.to_string(),
+                            source_name: source.source_name.clone(),
+                            mode: String::new(),
+                        },
+                    ))
+                    .await
+                    .map_err(|err| format!("backfill {} failed: {err}", source.source_name))?;
+                "registered and backfill queued".to_string()
+            } else if stored.is_some() {
+                "updated".to_string()
+            } else {
+                "registered".to_string()
+            }
+        };
+        sources_report.push(serde_json::json!({
+            "source_name": source.source_name,
+            "target_collection": target_collection,
+            "action": action,
+        }));
+    }
+    Ok(serde_json::json!({ "models": models_report, "sources": sources_report }))
+}
+
+// ── udb subject purge ───────────────────────────────────────────────────────
+
+/// Erase a data subject in the caller's tenant (PurgeSubject, admin bearer)
+/// and keep the signed receipt.
+async fn subject_purge_command(
+    subject: &str,
+    reason: &str,
+    dry_run: bool,
+    receipt_out: &str,
+) -> Result<serde_json::Value, String> {
+    use udb::proto::data_broker_client::DataBrokerClient;
+    use udb::proto::udb::entity::v1 as entity_pb;
+
+    if subject.trim().is_empty() {
+        return Err("name the subject: udb subject purge <subject id>".to_string());
+    }
+    let mut client = DataBrokerClient::connect(data_target())
+        .await
+        .map_err(|err| format!("failed to connect to the broker: {err}"))?;
+    let response = client
+        .purge_subject(super::authz_cli::with_metadata(
+            entity_pb::PurgeSubjectRequest {
+                subject_id: subject.trim().to_string(),
+                confirm_subject_id: subject.trim().to_string(),
+                reason: reason.to_string(),
+                dry_run,
+                ..Default::default()
+            },
+        ))
+        .await
+        .map_err(|err| format!("purge failed: {err}"))?
+        .into_inner();
+    if !receipt_out.trim().is_empty() && !response.receipt_jws.is_empty() {
+        fs::write(receipt_out.trim(), &response.receipt_jws)
+            .map_err(|err| format!("write receipt to {receipt_out} failed: {err}"))?;
+    }
+    Ok(serde_json::json!({
+        "dry_run": response.dry_run,
+        "total_deleted": response.total_deleted,
+        "tables": response.tables.iter().map(|t| serde_json::json!({
+            "message_type": t.message_type, "column": t.column, "deleted": t.deleted
+        })).collect::<Vec<_>>(),
+        "not_covered": response.not_covered,
+        "receipt_signed": !response.receipt_jws.is_empty(),
+        "receipt": serde_json::from_str::<serde_json::Value>(&response.receipt_json).unwrap_or_default(),
+    }))
+}
+
+// ── udb migrate storage ─────────────────────────────────────────────────────
+
+/// Copy objects written before tenant-namespaced keys under the named tenant
+/// (sources are kept). Uses the broker's own S3/MinIO configuration from the
+/// environment.
+async fn migrate_storage_command(
+    bucket: &str,
+    tenant: &str,
+    prefix: &str,
+    limit: usize,
+    dry_run: bool,
+) -> Result<serde_json::Value, String> {
+    #[cfg(feature = "s3")]
+    {
+        let bucket = if bucket.trim().is_empty() {
+            env::var("UDB_STORAGE_BUCKET")
+                .map_err(|_| "pass --bucket <name> (or set UDB_STORAGE_BUCKET)".to_string())?
+        } else {
+            bucket.trim().to_string()
+        };
+        let runtime = udb::runtime::DataBrokerRuntime::from_env().await;
+        let report = runtime
+            .migrate_legacy_object_keys(&bucket, tenant, prefix, limit, dry_run)
+            .await
+            .map_err(|err| format!("storage migration failed: {err}"))?;
+        serde_json::to_value(&report).map_err(|err| format!("render report failed: {err}"))
+    }
+    #[cfg(not(feature = "s3"))]
+    {
+        let _ = (bucket, tenant, prefix, limit, dry_run);
+        Err("this udb build has no S3/MinIO support (feature `s3`)".to_string())
+    }
 }
 
 // ── udb events tail / udb resources list ──────────────────────────────────
@@ -602,5 +950,100 @@ fn read_structured<T: serde::de::DeserializeOwned>(path: &str) -> Result<T, Stri
         serde_json::from_str(&raw).map_err(|err| format!("parse {path} failed: {err}"))
     } else {
         serde_yaml::from_str(&raw).map_err(|err| format!("parse {path} failed: {err}"))
+    }
+}
+
+/// Read the same identity declaration used by `identity diff|apply`; the code
+/// checker never invents grant scopes or replaces the declared account/tenant.
+pub(super) fn code_scan_principal(
+    file: &str,
+    identity: &str,
+    role: &str,
+    subject: &str,
+) -> Result<udb::runtime::authz::Principal, String> {
+    if file.trim().is_empty() || identity.trim().is_empty() {
+        return Err("--code requires --identities <identities.yaml> and --identity <service identity or account>".into());
+    }
+    let declared: IdentityFile = read_structured(file)?;
+    uuid::Uuid::parse_str(declared.tenant.trim())
+        .map_err(|_| "identities file must declare its canonical tenant UUID".to_string())?;
+    let matches: Vec<_> = declared
+        .service_accounts
+        .iter()
+        .filter(|account| {
+            account.identity.trim() == identity.trim() || account.account.trim() == identity.trim()
+        })
+        .collect();
+    if matches.len() != 1 {
+        return Err(format!(
+            "identity '{identity}' must resolve to exactly one declared account, found {}",
+            matches.len()
+        ));
+    }
+    let account = matches[0];
+    uuid::Uuid::parse_str(account.account.trim())
+        .map_err(|_| format!("identity '{identity}' has an invalid account UUID"))?;
+    if account.identity.trim().is_empty() {
+        return Err(format!(
+            "account '{}' has no declared service identity",
+            account.account
+        ));
+    }
+    if !subject.trim().is_empty()
+        && subject.trim() != account.account.trim()
+        && subject.trim() != account.identity.trim()
+    {
+        return Err(
+            "--subject must match the selected declared account or service identity".into(),
+        );
+    }
+    Ok(udb::runtime::authz::Principal {
+        principal_id: account.account.trim().into(),
+        subject: account.account.trim().into(),
+        service_identity: account.identity.trim().into(),
+        tenant_id: declared.tenant.trim().into(),
+        project_id: account.project.trim().into(),
+        scopes: sorted_scopes(&account.scopes),
+        roles: if role.trim().is_empty() {
+            vec![]
+        } else {
+            vec![role.trim().into()]
+        },
+        ..Default::default()
+    })
+}
+
+fn sorted_scopes(scopes: &[String]) -> Vec<String> {
+    let mut out: Vec<String> = scopes
+        .iter()
+        .map(|scope| scope.trim().to_string())
+        .filter(|scope| !scope.is_empty())
+        .collect();
+    out.sort();
+    out.dedup();
+    out
+}
+
+#[cfg(test)]
+mod code_scan_tests {
+    #[test]
+    fn code_scan_uses_declared_grant_facts_and_refuses_identity_substitution() {
+        let path =
+            std::env::temp_dir().join(format!("udb-code-identity-{}.json", uuid::Uuid::new_v4()));
+        let account = "00000000-0000-4000-8000-000000000001";
+        std::fs::write(&path, serde_json::json!({
+            "tenant": "00000000-0000-4000-8000-000000000002",
+            "service_accounts": [{"account": account, "identity": "billing", "project": "app", "scopes": ["udb:data:read"]}]
+        }).to_string()).unwrap();
+        let file = path.to_str().unwrap();
+        let caller = super::code_scan_principal(file, "billing", "reader", "").unwrap();
+        assert_eq!(caller.subject, account);
+        assert_eq!(caller.service_identity, "billing");
+        assert_eq!(caller.project_id, "app");
+        assert_eq!(caller.scopes, vec!["udb:data:read"]);
+        assert!(super::code_scan_principal(file, "billing", "", "other-account").is_err());
+        assert!(super::code_scan_principal(file, "unknown", "", "").is_err());
+        assert!(super::code_scan_principal("", "billing", "", "").is_err());
+        std::fs::remove_file(path).unwrap();
     }
 }

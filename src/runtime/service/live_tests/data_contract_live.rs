@@ -16,7 +16,9 @@ use super::data_plane_live::{
 };
 use crate::generation::{CatalogManifest, ManifestTable, ManifestTableSecurity};
 use crate::proto::data_broker_server::DataBroker;
-use crate::proto::{DeleteRequest, PolicyRecord, PutPolicyRequest, SelectRequest, UpdateRequest};
+use crate::proto::{
+    DeleteRequest, PolicyRecord, PutPolicyRequest, SelectRequest, UpdateRequest, UpsertRequest,
+};
 use crate::runtime::error_reasons::reason_of;
 use crate::runtime::executor_utils::json_to_struct;
 use crate::runtime::service::DataBrokerService;
@@ -109,6 +111,72 @@ async fn task_service(dsn: &str, pool: &sqlx::PgPool, schema: &str) -> DataBroke
         },
     )
     .await
+}
+
+#[tokio::test]
+#[ignore = "requires live Postgres (UDB_INTEGRATION_PG_DSN); runs in the CI --ignored live step"]
+async fn served_insert_refuses_primary_and_secondary_unique_collisions_live() {
+    let Some(dsn) = dp_live_pg_dsn() else {
+        return;
+    };
+    let _guard = super::support::live_native_service_db_lock().lock().await;
+    install_dp_security();
+    let pool = dp_pool(&dsn).await;
+    ensure_system_catalog(&pool).await.expect("system catalog");
+    let schema = format!("insert_{}", Uuid::new_v4().simple());
+    let svc = task_service(&dsn, &pool, &schema).await;
+    sqlx::query(&format!(
+        "CREATE UNIQUE INDEX tasks_tenant_status_unique ON \"{schema}\".tasks (tenant_id, status)"
+    ))
+    .execute(&pool)
+    .await
+    .expect("secondary unique index");
+    let tenant = Uuid::new_v4().to_string();
+    let request = |id: &str, status: &str| UpsertRequest {
+        message_type: MSG.into(),
+        record_json: serde_json::to_vec(&json!({"id": id, "status": status, "rank": 1})).unwrap(),
+        return_record: true,
+        ..Default::default()
+    };
+    let first = svc
+        .insert(with_ctx(request("only", "ORIGINAL"), &tenant))
+        .await
+        .expect("first insert")
+        .into_inner();
+    assert_eq!(first.affected_rows, 1);
+    let returned: serde_json::Value = serde_json::from_slice(&first.record_json).unwrap();
+    assert_eq!(returned["tenant_id"], tenant);
+    for (id, status) in [("only", "REPLACEMENT"), ("other", "ORIGINAL")] {
+        let err = svc
+            .insert(with_ctx(request(id, status), &tenant))
+            .await
+            .expect_err("duplicate must refuse");
+        assert_eq!(err.code(), Code::AlreadyExists, "{err:?}");
+        assert_eq!(reason_of(&err).as_deref(), Some("UDB_UNIQUE_VIOLATION"));
+    }
+    assert_eq!(
+        ids_matching(&svc, &tenant, json!({"status": "ORIGINAL"})).await,
+        vec!["only"]
+    );
+    assert!(
+        ids_matching(&svc, &tenant, json!({"status": "REPLACEMENT"}))
+            .await
+            .is_empty()
+    );
+    let foreign = svc
+        .insert(with_ctx(
+            request("only", "FOREIGN"),
+            &Uuid::new_v4().to_string(),
+        ))
+        .await
+        .expect_err("foreign key collision must refuse");
+    assert_eq!(foreign.code(), Code::AlreadyExists);
+    let count: i64 = sqlx::query_scalar(&format!("SELECT COUNT(*) FROM \"{schema}\".tasks"))
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+    assert_eq!(count, 1, "failed inserts must not create or replace rows");
+    teardown(&pool, &schema).await;
 }
 
 async fn ids_matching(

@@ -1,5 +1,5 @@
 // Package conformance is the behaviour contract a typed store must meet,
-// written once and run against both the in-memory fake (udbtest) and a live
+// written once and run against the in-memory fake, embedded and live
 // broker. A fake that drifts from the broker fails the same test the broker
 // passes, so a service's unit tests stay honest.
 package conformance
@@ -72,6 +72,8 @@ func RunTable(t *testing.T, connect Connect, opts ...Option) {
 		}
 		return NewID()
 	}
+	runConstraints(t, connect, newTenant)
+	runQueries(t, connect, newTenant)
 	t.Run("get missing is ErrNotFound", func(t *testing.T) {
 		u := connect(t, newTenant())
 		files := udbclient.TableOf[*storagev1.File](u)
@@ -99,6 +101,96 @@ func RunTable(t *testing.T, connect Connect, opts ...Option) {
 		}
 	})
 
+	t.Run("insert refuses a duplicate without changing the stored row", func(t *testing.T) {
+		tenant := newTenant()
+		files := udbclient.TableOf[*storagev1.File](connect(t, tenant))
+		id := NewID()
+		if err := files.Insert(context.Background(), file(tenant, id, "original.pdf")); err != nil {
+			t.Fatalf("insert: %v", err)
+		}
+		if err := files.Insert(context.Background(), file(tenant, id, "replacement.pdf")); !udbclient.IsUnique(err) {
+			t.Fatalf("duplicate insert = %v, want Unique", err)
+		}
+		got, err := files.Get(context.Background(), udbclient.RowKey{"file_id": id})
+		if err != nil || got.GetFilename() != "original.pdf" {
+			t.Fatalf("duplicate changed the stored row: %v, %v", got, err)
+		}
+	})
+
+	t.Run("two concurrent inserts have exactly one winner", func(t *testing.T) {
+		tenant := newTenant()
+		files := udbclient.TableOf[*storagev1.File](connect(t, tenant))
+		id := NewID()
+		type result struct {
+			name string
+			err  error
+		}
+		results := make(chan result, 2)
+		start := make(chan struct{})
+		for _, name := range []string{"a.pdf", "b.pdf"} {
+			go func(name string) {
+				<-start
+				results <- result{name, files.Insert(context.Background(), file(tenant, id, name))}
+			}(name)
+		}
+		close(start)
+		winner := ""
+		duplicates := 0
+		for range 2 {
+			result := <-results
+			if result.err == nil {
+				if winner != "" {
+					t.Fatal("both inserts succeeded")
+				}
+				winner = result.name
+			} else if udbclient.IsUnique(result.err) {
+				duplicates++
+			} else {
+				t.Fatalf("insert failed without Unique: %v", result.err)
+			}
+		}
+		if winner == "" || duplicates != 1 {
+			t.Fatalf("winner=%q, duplicates=%d", winner, duplicates)
+		}
+		got, err := files.Get(context.Background(), udbclient.RowKey{"file_id": id})
+		if err != nil || got.GetFilename() != winner {
+			t.Fatalf("winner was overwritten: %v, %v", got, err)
+		}
+	})
+
+	t.Run("transaction insert duplicate rolls back every earlier write", func(t *testing.T) {
+		tenant := newTenant()
+		u := connect(t, tenant)
+		files := udbclient.TableOf[*storagev1.File](u)
+		existing, fresh := NewID(), NewID()
+		if err := files.Insert(context.Background(), file(tenant, existing, "original.pdf")); err != nil {
+			t.Fatal(err)
+		}
+		err := u.Tx(context.Background(), func(tx *udbclient.TxScope) error {
+			if err := tx.Insert(file(tenant, fresh, "new.pdf")); err != nil {
+				return err
+			}
+			return tx.Insert(file(tenant, existing, "replacement.pdf"))
+		})
+		if !udbclient.IsUnique(err) {
+			t.Fatalf("transaction duplicate = %v, want Unique", err)
+		}
+		if _, err := files.Get(context.Background(), udbclient.RowKey{"file_id": fresh}); !errors.Is(err, udbclient.ErrNotFound) {
+			t.Fatalf("transaction left an earlier insert behind: %v", err)
+		}
+		got, err := files.Get(context.Background(), udbclient.RowKey{"file_id": existing})
+		if err != nil || got.GetFilename() != "original.pdf" {
+			t.Fatalf("transaction replaced duplicate row: %v, %v", got, err)
+		}
+		if err := u.Tx(context.Background(), func(tx *udbclient.TxScope) error { return tx.Insert(file(tenant, fresh, "committed.pdf")) }); err != nil {
+			t.Fatal(err)
+		}
+		got, err = files.Get(context.Background(), udbclient.RowKey{"file_id": fresh})
+		if err != nil || got.GetFilename() != "committed.pdf" {
+			t.Fatalf("transaction insert did not commit: %v, %v", got, err)
+		}
+	})
+
 	t.Run("tenants never see each other's rows", func(t *testing.T) {
 		a, b := newTenant(), newTenant()
 		if o.tenants[1] != "" {
@@ -116,6 +208,14 @@ func RunTable(t *testing.T, connect Connect, opts ...Option) {
 		_, err = udbclient.TableOf[*storagev1.File](ub).Select(context.Background(), udbclient.Filter{"tenant_id": a}, udbclient.SelectOptions{})
 		if err == nil {
 			t.Fatal("naming another tenant in a filter must be refused")
+		}
+		foreign := file(b, id, "must-not-overwrite.pdf")
+		if err := udbclient.TableOf[*storagev1.File](ub).Upsert(context.Background(), foreign); err == nil {
+			t.Fatal("another tenant upserted a stored global primary key")
+		}
+		got, err := udbclient.TableOf[*storagev1.File](ua).Get(context.Background(), udbclient.RowKey{"file_id": id})
+		if err != nil || got.GetFilename() != "secret.pdf" {
+			t.Fatalf("foreign write changed original: %v, %v", got, err)
 		}
 	})
 

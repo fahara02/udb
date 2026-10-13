@@ -2457,6 +2457,19 @@ impl DataBrokerRuntime {
         catalog_id: Uuid,
         connection: &mut sqlx::PgConnection,
     ) -> Result<ProjectCatalogRecord, tonic::Status> {
+        let mut connection = self.pg_pool()?.acquire().await.map_err(|err| {
+            catalog_admin_internal_status("load_catalog_record_for_project", err.to_string())
+        })?;
+        self.load_catalog_record_for_project_on_connection(project_id, catalog_id, &mut connection)
+            .await
+    }
+
+    pub(super) async fn load_catalog_record_for_project_on_connection(
+        &self,
+        project_id: &str,
+        catalog_id: Uuid,
+        connection: &mut sqlx::PgConnection,
+    ) -> Result<ProjectCatalogRecord, tonic::Status> {
         use crate::runtime::system::SystemCatalogConfig;
         let project_id = canonical_catalog_project_id(project_id)?;
         let config = SystemCatalogConfig::default();
@@ -4226,7 +4239,7 @@ impl DataBrokerRuntime {
         use sqlx::QueryBuilder;
         let status_filter = parse_dlq_status_filter(status_filter)?;
         let pool = self.pg_pool()?;
-        let config = SystemCatalogConfig::default();
+        let config = SystemCatalogConfig::current();
         let dlq_rel = config.dlq_relation();
 
         let offset: i64 = page_token.parse().unwrap_or(0);
@@ -4303,7 +4316,7 @@ impl DataBrokerRuntime {
         use crate::runtime::system::SystemCatalogConfig;
         let id: Uuid = parse_dlq_id(dlq_id)?;
         let pool = self.pg_pool()?;
-        let config = SystemCatalogConfig::default();
+        let config = SystemCatalogConfig::current();
         let dlq_rel = config.dlq_relation();
         let row = sqlx::query(&format!(
             "SELECT dlq_id, event_id, topic, tenant_id, project_id, payload, error_type, error_message,
@@ -4354,7 +4367,7 @@ impl DataBrokerRuntime {
         use crate::runtime::system::SystemCatalogConfig;
         let id: Uuid = parse_dlq_id(dlq_id)?;
         let pool = self.pg_pool()?;
-        let config = SystemCatalogConfig::default();
+        let config = SystemCatalogConfig::current();
         let dlq_rel = config.dlq_relation();
         let outbox_rel = config.cdc.outbox_relation();
         let row = sqlx::query(&format!(
@@ -4481,7 +4494,7 @@ impl DataBrokerRuntime {
         use crate::runtime::system::SystemCatalogConfig;
         let id: Uuid = parse_dlq_id(dlq_id)?;
         let pool = self.pg_pool()?;
-        let config = SystemCatalogConfig::default();
+        let config = SystemCatalogConfig::current();
         let dlq_rel = config.dlq_relation();
         let rows = sqlx::query(&format!(
             "UPDATE {dlq_rel} SET status = $1, updated_at = NOW() WHERE dlq_id = $2 AND tenant_id = $3 AND project_id = $4"
@@ -4518,7 +4531,7 @@ impl DataBrokerRuntime {
     ) -> Result<serde_json::Value, tonic::Status> {
         use crate::runtime::system::SystemCatalogConfig;
         let pool = self.pg_pool()?;
-        let config = SystemCatalogConfig::default();
+        let config = SystemCatalogConfig::current();
         let ctrl_rel = config.cdc_control_relation();
         let out_rel = config.cdc.outbox_relation();
         let row = sqlx::query(&format!(
@@ -4541,16 +4554,20 @@ impl DataBrokerRuntime {
             catalog_admin_internal_status("get_cdc_status", format!("get_cdc_status failed: {err}"))
         })?;
         match row {
-            Some(r) => Ok(serde_json::json!({
-                "slot_name": r.try_get::<String,_>("slot_name").unwrap_or_default(),
-                "paused": r.try_get::<bool,_>("paused").unwrap_or(false),
-                "pause_reason": r.try_get::<String,_>("pause_reason").unwrap_or_default(),
-                // Broker-global: the outbox carries no tenant/project ownership, so
-                // this is the whole broker's backlog, not the caller's. Reported as
-                // such because GetCdcStatus is an admin-scoped operational surface.
-                "outbox_depth": r.try_get::<i64,_>("outbox_depth").unwrap_or(0),
-                "updated_at_unix": r.try_get::<i64,_>("updated_at_unix").unwrap_or(0),
-            })),
+            Some(r) => {
+                let consumers = self.cdc_consumer_lag(tenant_id, project_id).await?;
+                Ok(serde_json::json!({
+                    "slot_name": r.try_get::<String,_>("slot_name").unwrap_or_default(),
+                    "paused": r.try_get::<bool,_>("paused").unwrap_or(false),
+                    "pause_reason": r.try_get::<String,_>("pause_reason").unwrap_or_default(),
+                    // Broker-global: the outbox carries no tenant/project ownership, so
+                    // this is the whole broker's backlog, not the caller's. Reported as
+                    // such because GetCdcStatus is an admin-scoped operational surface.
+                    "outbox_depth": r.try_get::<i64,_>("outbox_depth").unwrap_or(0),
+                    "updated_at_unix": r.try_get::<i64,_>("updated_at_unix").unwrap_or(0),
+                    "consumers": consumers,
+                }))
+            }
             None => {
                 // Previously returned paused=false / depth=0, i.e. a healthy empty
                 // pipeline. An unregistered slot — or one owned by another

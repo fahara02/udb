@@ -146,6 +146,8 @@ namespace Udb.Services.V1 {
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     static readonly grpc::Marshaller<global::Udb.Entity.V1.AckCdcEventsResponse> __Marshaller_udb_entity_v1_AckCdcEventsResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Entity.V1.AckCdcEventsResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::Udb.Entity.V1.NackCdcEventsRequest> __Marshaller_udb_entity_v1_NackCdcEventsRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Entity.V1.NackCdcEventsRequest.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     static readonly grpc::Marshaller<global::Udb.Entity.V1.ViewDefinition> __Marshaller_udb_entity_v1_ViewDefinition = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Entity.V1.ViewDefinition.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     static readonly grpc::Marshaller<global::Udb.Entity.V1.EnqueueOutboxEventRequest> __Marshaller_udb_entity_v1_EnqueueOutboxEventRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Entity.V1.EnqueueOutboxEventRequest.Parser));
@@ -207,6 +209,10 @@ namespace Udb.Services.V1 {
     static readonly grpc::Marshaller<global::Udb.Entity.V1.ProjectionDriftScanRequest> __Marshaller_udb_entity_v1_ProjectionDriftScanRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Entity.V1.ProjectionDriftScanRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     static readonly grpc::Marshaller<global::Udb.Entity.V1.ProjectionDriftScanResponse> __Marshaller_udb_entity_v1_ProjectionDriftScanResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Entity.V1.ProjectionDriftScanResponse.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::Udb.Entity.V1.PurgeSubjectRequest> __Marshaller_udb_entity_v1_PurgeSubjectRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Entity.V1.PurgeSubjectRequest.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::Udb.Entity.V1.PurgeSubjectResponse> __Marshaller_udb_entity_v1_PurgeSubjectResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Entity.V1.PurgeSubjectResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     static readonly grpc::Marshaller<global::Udb.Entity.V1.SagaListRequest> __Marshaller_udb_entity_v1_SagaListRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Entity.V1.SagaListRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
@@ -289,6 +295,14 @@ namespace Udb.Services.V1 {
         "SelectV2",
         __Marshaller_udb_entity_v1_SelectRequest,
         __Marshaller_udb_entity_v1_RecordBatchV2);
+
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Method<global::Udb.Entity.V1.UpsertRequest, global::Udb.Entity.V1.MutationResponse> __Method_Insert = new grpc::Method<global::Udb.Entity.V1.UpsertRequest, global::Udb.Entity.V1.MutationResponse>(
+        grpc::MethodType.Unary,
+        __ServiceName,
+        "Insert",
+        __Marshaller_udb_entity_v1_UpsertRequest,
+        __Marshaller_udb_entity_v1_MutationResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     static readonly grpc::Method<global::Udb.Entity.V1.UpsertRequest, global::Udb.Entity.V1.MutationResponse> __Method_Upsert = new grpc::Method<global::Udb.Entity.V1.UpsertRequest, global::Udb.Entity.V1.MutationResponse>(
@@ -539,6 +553,14 @@ namespace Udb.Services.V1 {
         __Marshaller_udb_entity_v1_AckCdcEventsResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Method<global::Udb.Entity.V1.NackCdcEventsRequest, global::Udb.Entity.V1.AckCdcEventsResponse> __Method_NackCdcEvents = new grpc::Method<global::Udb.Entity.V1.NackCdcEventsRequest, global::Udb.Entity.V1.AckCdcEventsResponse>(
+        grpc::MethodType.Unary,
+        __ServiceName,
+        "NackCdcEvents",
+        __Marshaller_udb_entity_v1_NackCdcEventsRequest,
+        __Marshaller_udb_entity_v1_AckCdcEventsResponse);
+
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     static readonly grpc::Method<global::Udb.Entity.V1.ViewDefinition, global::Udb.Entity.V1.MutationResponse> __Method_CreateMaterializedView = new grpc::Method<global::Udb.Entity.V1.ViewDefinition, global::Udb.Entity.V1.MutationResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
@@ -763,6 +785,14 @@ namespace Udb.Services.V1 {
         __Marshaller_udb_entity_v1_ProjectionDriftScanResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Method<global::Udb.Entity.V1.PurgeSubjectRequest, global::Udb.Entity.V1.PurgeSubjectResponse> __Method_PurgeSubject = new grpc::Method<global::Udb.Entity.V1.PurgeSubjectRequest, global::Udb.Entity.V1.PurgeSubjectResponse>(
+        grpc::MethodType.Unary,
+        __ServiceName,
+        "PurgeSubject",
+        __Marshaller_udb_entity_v1_PurgeSubjectRequest,
+        __Marshaller_udb_entity_v1_PurgeSubjectResponse);
+
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     static readonly grpc::Method<global::Udb.Entity.V1.SagaListRequest, global::Udb.Entity.V1.SagaListResponse> __Method_ListSagas = new grpc::Method<global::Udb.Entity.V1.SagaListRequest, global::Udb.Entity.V1.SagaListResponse>(
         grpc::MethodType.Unary,
         __ServiceName,
@@ -961,6 +991,22 @@ namespace Udb.Services.V1 {
       /// <returns>A task indicating completion of the handler.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
       public virtual global::System.Threading.Tasks.Task SelectV2(global::Udb.Entity.V1.SelectRequest request, grpc::IServerStreamWriter<global::Udb.Entity.V1.RecordBatchV2> responseStream, grpc::ServerCallContext context)
+      {
+        throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
+      }
+
+      /// <summary>
+      /// Insert one complete row atomically. Any primary/unique-key collision is
+      /// ALREADY_EXISTS (UDB_UNIQUE_VIOLATION); existing rows are never changed.
+      /// Uses the same verified scope, write fencing, CDC, audit and durable keyed
+      /// replay contract as Upsert. conflict_fields and expected are not accepted.
+      /// Older brokers return UNIMPLEMENTED, so Insert can never degrade to Upsert.
+      /// </summary>
+      /// <param name="request">The request received from the client.</param>
+      /// <param name="context">The context of the server-side call handler being invoked.</param>
+      /// <returns>The response to send back to the client (wrapped by a task).</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Entity.V1.MutationResponse> Insert(global::Udb.Entity.V1.UpsertRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -1214,6 +1260,21 @@ namespace Udb.Services.V1 {
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
       public virtual global::System.Threading.Tasks.Task<global::Udb.Entity.V1.AckCdcEventsResponse> AckCdcEvents(global::Udb.Entity.V1.AckCdcEventsRequest request, grpc::ServerCallContext context)
+      {
+        throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
+      }
+
+      /// <summary>
+      /// Retain a poison event in the existing DLQ and advance only its named
+      /// consumer. DLQ storage and cursor settlement commit in one transaction.
+      /// An older broker refuses UNIMPLEMENTED; the SDK never acknowledges and
+      /// discards the failed event as a fallback.
+      /// </summary>
+      /// <param name="request">The request received from the client.</param>
+      /// <param name="context">The context of the server-side call handler being invoked.</param>
+      /// <returns>The response to send back to the client (wrapped by a task).</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Entity.V1.AckCdcEventsResponse> NackCdcEvents(global::Udb.Entity.V1.NackCdcEventsRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -1517,6 +1578,22 @@ namespace Udb.Services.V1 {
 
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
       public virtual global::System.Threading.Tasks.Task<global::Udb.Entity.V1.ProjectionDriftScanResponse> ScanProjectionDrift(global::Udb.Entity.V1.ProjectionDriftScanRequest request, grpc::ServerCallContext context)
+      {
+        throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
+      }
+
+      /// <summary>
+      /// Erase one data subject inside the caller's tenant: every row whose
+      /// owner_field column names the subject, in every table of the active catalog,
+      /// through the normal delete path (projections, caches and events follow),
+      /// then the soft-delete tombstones. Returns a receipt signed with the broker's
+      /// active signing key (`udb compliance verify-receipt`). Admin scope required.
+      /// </summary>
+      /// <param name="request">The request received from the client.</param>
+      /// <param name="context">The context of the server-side call handler being invoked.</param>
+      /// <returns>The response to send back to the client (wrapped by a task).</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Entity.V1.PurgeSubjectResponse> PurgeSubject(global::Udb.Entity.V1.PurgeSubjectRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -1834,6 +1911,70 @@ namespace Udb.Services.V1 {
       public virtual grpc::AsyncServerStreamingCall<global::Udb.Entity.V1.RecordBatchV2> SelectV2(global::Udb.Entity.V1.SelectRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncServerStreamingCall(__Method_SelectV2, null, options, request);
+      }
+      /// <summary>
+      /// Insert one complete row atomically. Any primary/unique-key collision is
+      /// ALREADY_EXISTS (UDB_UNIQUE_VIOLATION); existing rows are never changed.
+      /// Uses the same verified scope, write fencing, CDC, audit and durable keyed
+      /// replay contract as Upsert. conflict_fields and expected are not accepted.
+      /// Older brokers return UNIMPLEMENTED, so Insert can never degrade to Upsert.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
+      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
+      /// <param name="cancellationToken">An optional token for canceling the call.</param>
+      /// <returns>The response received from the server.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::Udb.Entity.V1.MutationResponse Insert(global::Udb.Entity.V1.UpsertRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return Insert(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      /// <summary>
+      /// Insert one complete row atomically. Any primary/unique-key collision is
+      /// ALREADY_EXISTS (UDB_UNIQUE_VIOLATION); existing rows are never changed.
+      /// Uses the same verified scope, write fencing, CDC, audit and durable keyed
+      /// replay contract as Upsert. conflict_fields and expected are not accepted.
+      /// Older brokers return UNIMPLEMENTED, so Insert can never degrade to Upsert.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="options">The options for the call.</param>
+      /// <returns>The response received from the server.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::Udb.Entity.V1.MutationResponse Insert(global::Udb.Entity.V1.UpsertRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.BlockingUnaryCall(__Method_Insert, null, options, request);
+      }
+      /// <summary>
+      /// Insert one complete row atomically. Any primary/unique-key collision is
+      /// ALREADY_EXISTS (UDB_UNIQUE_VIOLATION); existing rows are never changed.
+      /// Uses the same verified scope, write fencing, CDC, audit and durable keyed
+      /// replay contract as Upsert. conflict_fields and expected are not accepted.
+      /// Older brokers return UNIMPLEMENTED, so Insert can never degrade to Upsert.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
+      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
+      /// <param name="cancellationToken">An optional token for canceling the call.</param>
+      /// <returns>The call object.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::Udb.Entity.V1.MutationResponse> InsertAsync(global::Udb.Entity.V1.UpsertRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return InsertAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      /// <summary>
+      /// Insert one complete row atomically. Any primary/unique-key collision is
+      /// ALREADY_EXISTS (UDB_UNIQUE_VIOLATION); existing rows are never changed.
+      /// Uses the same verified scope, write fencing, CDC, audit and durable keyed
+      /// replay contract as Upsert. conflict_fields and expected are not accepted.
+      /// Older brokers return UNIMPLEMENTED, so Insert can never degrade to Upsert.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="options">The options for the call.</param>
+      /// <returns>The call object.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::Udb.Entity.V1.MutationResponse> InsertAsync(global::Udb.Entity.V1.UpsertRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.AsyncUnaryCall(__Method_Insert, null, options, request);
       }
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
       public virtual global::Udb.Entity.V1.MutationResponse Upsert(global::Udb.Entity.V1.UpsertRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
@@ -2662,6 +2803,66 @@ namespace Udb.Services.V1 {
       public virtual grpc::AsyncUnaryCall<global::Udb.Entity.V1.AckCdcEventsResponse> AckCdcEventsAsync(global::Udb.Entity.V1.AckCdcEventsRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_AckCdcEvents, null, options, request);
+      }
+      /// <summary>
+      /// Retain a poison event in the existing DLQ and advance only its named
+      /// consumer. DLQ storage and cursor settlement commit in one transaction.
+      /// An older broker refuses UNIMPLEMENTED; the SDK never acknowledges and
+      /// discards the failed event as a fallback.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
+      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
+      /// <param name="cancellationToken">An optional token for canceling the call.</param>
+      /// <returns>The response received from the server.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::Udb.Entity.V1.AckCdcEventsResponse NackCdcEvents(global::Udb.Entity.V1.NackCdcEventsRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return NackCdcEvents(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      /// <summary>
+      /// Retain a poison event in the existing DLQ and advance only its named
+      /// consumer. DLQ storage and cursor settlement commit in one transaction.
+      /// An older broker refuses UNIMPLEMENTED; the SDK never acknowledges and
+      /// discards the failed event as a fallback.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="options">The options for the call.</param>
+      /// <returns>The response received from the server.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::Udb.Entity.V1.AckCdcEventsResponse NackCdcEvents(global::Udb.Entity.V1.NackCdcEventsRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.BlockingUnaryCall(__Method_NackCdcEvents, null, options, request);
+      }
+      /// <summary>
+      /// Retain a poison event in the existing DLQ and advance only its named
+      /// consumer. DLQ storage and cursor settlement commit in one transaction.
+      /// An older broker refuses UNIMPLEMENTED; the SDK never acknowledges and
+      /// discards the failed event as a fallback.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
+      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
+      /// <param name="cancellationToken">An optional token for canceling the call.</param>
+      /// <returns>The call object.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::Udb.Entity.V1.AckCdcEventsResponse> NackCdcEventsAsync(global::Udb.Entity.V1.NackCdcEventsRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return NackCdcEventsAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      /// <summary>
+      /// Retain a poison event in the existing DLQ and advance only its named
+      /// consumer. DLQ storage and cursor settlement commit in one transaction.
+      /// An older broker refuses UNIMPLEMENTED; the SDK never acknowledges and
+      /// discards the failed event as a fallback.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="options">The options for the call.</param>
+      /// <returns>The call object.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::Udb.Entity.V1.AckCdcEventsResponse> NackCdcEventsAsync(global::Udb.Entity.V1.NackCdcEventsRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.AsyncUnaryCall(__Method_NackCdcEvents, null, options, request);
       }
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
       public virtual global::Udb.Entity.V1.MutationResponse CreateMaterializedView(global::Udb.Entity.V1.ViewDefinition request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
@@ -3836,6 +4037,70 @@ namespace Udb.Services.V1 {
         return CallInvoker.AsyncUnaryCall(__Method_ScanProjectionDrift, null, options, request);
       }
       /// <summary>
+      /// Erase one data subject inside the caller's tenant: every row whose
+      /// owner_field column names the subject, in every table of the active catalog,
+      /// through the normal delete path (projections, caches and events follow),
+      /// then the soft-delete tombstones. Returns a receipt signed with the broker's
+      /// active signing key (`udb compliance verify-receipt`). Admin scope required.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
+      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
+      /// <param name="cancellationToken">An optional token for canceling the call.</param>
+      /// <returns>The response received from the server.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::Udb.Entity.V1.PurgeSubjectResponse PurgeSubject(global::Udb.Entity.V1.PurgeSubjectRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return PurgeSubject(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      /// <summary>
+      /// Erase one data subject inside the caller's tenant: every row whose
+      /// owner_field column names the subject, in every table of the active catalog,
+      /// through the normal delete path (projections, caches and events follow),
+      /// then the soft-delete tombstones. Returns a receipt signed with the broker's
+      /// active signing key (`udb compliance verify-receipt`). Admin scope required.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="options">The options for the call.</param>
+      /// <returns>The response received from the server.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::Udb.Entity.V1.PurgeSubjectResponse PurgeSubject(global::Udb.Entity.V1.PurgeSubjectRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.BlockingUnaryCall(__Method_PurgeSubject, null, options, request);
+      }
+      /// <summary>
+      /// Erase one data subject inside the caller's tenant: every row whose
+      /// owner_field column names the subject, in every table of the active catalog,
+      /// through the normal delete path (projections, caches and events follow),
+      /// then the soft-delete tombstones. Returns a receipt signed with the broker's
+      /// active signing key (`udb compliance verify-receipt`). Admin scope required.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
+      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
+      /// <param name="cancellationToken">An optional token for canceling the call.</param>
+      /// <returns>The call object.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::Udb.Entity.V1.PurgeSubjectResponse> PurgeSubjectAsync(global::Udb.Entity.V1.PurgeSubjectRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return PurgeSubjectAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      /// <summary>
+      /// Erase one data subject inside the caller's tenant: every row whose
+      /// owner_field column names the subject, in every table of the active catalog,
+      /// through the normal delete path (projections, caches and events follow),
+      /// then the soft-delete tombstones. Returns a receipt signed with the broker's
+      /// active signing key (`udb compliance verify-receipt`). Admin scope required.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="options">The options for the call.</param>
+      /// <returns>The call object.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::Udb.Entity.V1.PurgeSubjectResponse> PurgeSubjectAsync(global::Udb.Entity.V1.PurgeSubjectRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.AsyncUnaryCall(__Method_PurgeSubject, null, options, request);
+      }
+      /// <summary>
       /// Saga administration.
       /// </summary>
       /// <param name="request">The request to send to the server.</param>
@@ -4612,6 +4877,7 @@ namespace Udb.Services.V1 {
           .AddMethod(__Method_Select, serviceImpl.Select)
           .AddMethod(__Method_BatchSelect, serviceImpl.BatchSelect)
           .AddMethod(__Method_SelectV2, serviceImpl.SelectV2)
+          .AddMethod(__Method_Insert, serviceImpl.Insert)
           .AddMethod(__Method_Upsert, serviceImpl.Upsert)
           .AddMethod(__Method_BatchUpsert, serviceImpl.BatchUpsert)
           .AddMethod(__Method_Delete, serviceImpl.Delete)
@@ -4643,6 +4909,7 @@ namespace Udb.Services.V1 {
           .AddMethod(__Method_BeginTx, serviceImpl.BeginTx)
           .AddMethod(__Method_PublishCDC, serviceImpl.PublishCDC)
           .AddMethod(__Method_AckCdcEvents, serviceImpl.AckCdcEvents)
+          .AddMethod(__Method_NackCdcEvents, serviceImpl.NackCdcEvents)
           .AddMethod(__Method_CreateMaterializedView, serviceImpl.CreateMaterializedView)
           .AddMethod(__Method_EnqueueOutboxEvent, serviceImpl.EnqueueOutboxEvent)
           .AddMethod(__Method_GenericDispatch, serviceImpl.GenericDispatch)
@@ -4671,6 +4938,7 @@ namespace Udb.Services.V1 {
           .AddMethod(__Method_StepDownCdcLeader, serviceImpl.StepDownCdcLeader)
           .AddMethod(__Method_PreviewCdcRedaction, serviceImpl.PreviewCdcRedaction)
           .AddMethod(__Method_ScanProjectionDrift, serviceImpl.ScanProjectionDrift)
+          .AddMethod(__Method_PurgeSubject, serviceImpl.PurgeSubject)
           .AddMethod(__Method_ListSagas, serviceImpl.ListSagas)
           .AddMethod(__Method_GetSaga, serviceImpl.GetSaga)
           .AddMethod(__Method_RetrySagaCompensation, serviceImpl.RetrySagaCompensation)
@@ -4703,6 +4971,7 @@ namespace Udb.Services.V1 {
       serviceBinder.AddMethod(__Method_Select, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Entity.V1.SelectRequest, global::Udb.Entity.V1.RecordSet>(serviceImpl.Select));
       serviceBinder.AddMethod(__Method_BatchSelect, serviceImpl == null ? null : new grpc::DuplexStreamingServerMethod<global::Udb.Entity.V1.SelectRequest, global::Udb.Entity.V1.RecordSet>(serviceImpl.BatchSelect));
       serviceBinder.AddMethod(__Method_SelectV2, serviceImpl == null ? null : new grpc::ServerStreamingServerMethod<global::Udb.Entity.V1.SelectRequest, global::Udb.Entity.V1.RecordBatchV2>(serviceImpl.SelectV2));
+      serviceBinder.AddMethod(__Method_Insert, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Entity.V1.UpsertRequest, global::Udb.Entity.V1.MutationResponse>(serviceImpl.Insert));
       serviceBinder.AddMethod(__Method_Upsert, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Entity.V1.UpsertRequest, global::Udb.Entity.V1.MutationResponse>(serviceImpl.Upsert));
       serviceBinder.AddMethod(__Method_BatchUpsert, serviceImpl == null ? null : new grpc::DuplexStreamingServerMethod<global::Udb.Entity.V1.UpsertRequest, global::Udb.Entity.V1.MutationResponse>(serviceImpl.BatchUpsert));
       serviceBinder.AddMethod(__Method_Delete, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Entity.V1.DeleteRequest, global::Udb.Entity.V1.MutationResponse>(serviceImpl.Delete));
@@ -4734,6 +5003,7 @@ namespace Udb.Services.V1 {
       serviceBinder.AddMethod(__Method_BeginTx, serviceImpl == null ? null : new grpc::DuplexStreamingServerMethod<global::Udb.Entity.V1.Mutation, global::Udb.Entity.V1.TxStatus>(serviceImpl.BeginTx));
       serviceBinder.AddMethod(__Method_PublishCDC, serviceImpl == null ? null : new grpc::ServerStreamingServerMethod<global::Udb.Entity.V1.CDCSubscriptionRequest, global::Udb.Events.V1.CDCEnvelope>(serviceImpl.PublishCDC));
       serviceBinder.AddMethod(__Method_AckCdcEvents, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Entity.V1.AckCdcEventsRequest, global::Udb.Entity.V1.AckCdcEventsResponse>(serviceImpl.AckCdcEvents));
+      serviceBinder.AddMethod(__Method_NackCdcEvents, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Entity.V1.NackCdcEventsRequest, global::Udb.Entity.V1.AckCdcEventsResponse>(serviceImpl.NackCdcEvents));
       serviceBinder.AddMethod(__Method_CreateMaterializedView, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Entity.V1.ViewDefinition, global::Udb.Entity.V1.MutationResponse>(serviceImpl.CreateMaterializedView));
       serviceBinder.AddMethod(__Method_EnqueueOutboxEvent, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Entity.V1.EnqueueOutboxEventRequest, global::Udb.Entity.V1.EnqueueOutboxEventResponse>(serviceImpl.EnqueueOutboxEvent));
       serviceBinder.AddMethod(__Method_GenericDispatch, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Entity.V1.GenericDispatchRequest, global::Udb.Entity.V1.GenericDispatchResponse>(serviceImpl.GenericDispatch));
@@ -4762,6 +5032,7 @@ namespace Udb.Services.V1 {
       serviceBinder.AddMethod(__Method_StepDownCdcLeader, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Entity.V1.CdcControlRequest, global::Udb.Entity.V1.CdcStatusResponse>(serviceImpl.StepDownCdcLeader));
       serviceBinder.AddMethod(__Method_PreviewCdcRedaction, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Entity.V1.CdcRedactionPreviewRequest, global::Udb.Entity.V1.CdcRedactionPreviewResponse>(serviceImpl.PreviewCdcRedaction));
       serviceBinder.AddMethod(__Method_ScanProjectionDrift, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Entity.V1.ProjectionDriftScanRequest, global::Udb.Entity.V1.ProjectionDriftScanResponse>(serviceImpl.ScanProjectionDrift));
+      serviceBinder.AddMethod(__Method_PurgeSubject, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Entity.V1.PurgeSubjectRequest, global::Udb.Entity.V1.PurgeSubjectResponse>(serviceImpl.PurgeSubject));
       serviceBinder.AddMethod(__Method_ListSagas, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Entity.V1.SagaListRequest, global::Udb.Entity.V1.SagaListResponse>(serviceImpl.ListSagas));
       serviceBinder.AddMethod(__Method_GetSaga, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Entity.V1.SagaRequest, global::Udb.Entity.V1.SagaResponse>(serviceImpl.GetSaga));
       serviceBinder.AddMethod(__Method_RetrySagaCompensation, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Entity.V1.SagaRequest, global::Udb.Entity.V1.SagaResponse>(serviceImpl.RetrySagaCompensation));

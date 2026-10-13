@@ -205,7 +205,20 @@ func (t *Table[T]) Count(ctx context.Context, where Filter) (int64, error) {
 
 // Upsert writes the whole row m: inserted when its key is new, replaced when it
 // exists. To change some columns of an existing row use Patch or UpdateIf.
+// ErrNotFound means the conflict target was outside the verified scope and
+// the broker left it untouched.
 func (t *Table[T]) Upsert(ctx context.Context, m T) error {
+	return t.write(ctx, m, false)
+}
+
+// Insert creates the complete row m in one broker call. A primary or unique-key
+// collision returns CodeUnique and never replaces the existing row. The broker
+// supplies the verified tenant. Older brokers return Unimplemented.
+func (t *Table[T]) Insert(ctx context.Context, m T) error {
+	return t.write(ctx, m, true)
+}
+
+func (t *Table[T]) write(ctx context.Context, m T, insertOnly bool) error {
 	rec, err := EncodeRecord(m, WriteInsert)
 	if err != nil {
 		return err
@@ -214,9 +227,18 @@ func (t *Table[T]) Upsert(ctx context.Context, m T) error {
 	if err != nil {
 		return fmt.Errorf("udb: encode %s: %w", t.messageType, err)
 	}
-	res, err := t.u.Data.Broker.Upsert(ctx, &entityv1.UpsertRequest{MessageType: t.messageType, RecordJson: raw})
+	request := &entityv1.UpsertRequest{MessageType: t.messageType, RecordJson: raw}
+	var res *entityv1.MutationResponse
+	if insertOnly {
+		res, err = t.u.Data.Broker.Insert(ctx, request)
+	} else {
+		res, err = t.u.Data.Broker.Upsert(ctx, request)
+	}
 	if err != nil {
 		return classify(err)
+	}
+	if res.GetAffectedRows() == 0 {
+		return ErrNotFound
 	}
 	t.u.rememberWrite(res)
 	return nil

@@ -75,4 +75,53 @@ public interface CdcStatusResponseOrBuilder extends
    * @return The updatedAtUnix.
    */
   long getUpdatedAtUnix();
+
+  /**
+   * <pre>
+   * Durable consumers in the caller's tenant/project. Lag compares each stored
+   * watermark with its own topic head and remains valid after journal pruning.
+   * </pre>
+   *
+   * <code>repeated .udb.entity.v1.CdcConsumerStatus consumers = 9 [json_name = "consumers"];</code>
+   */
+  java.util.List<com.udb.entity.v1.CdcConsumerStatus>
+      getConsumersList();
+  /**
+   * <pre>
+   * Durable consumers in the caller's tenant/project. Lag compares each stored
+   * watermark with its own topic head and remains valid after journal pruning.
+   * </pre>
+   *
+   * <code>repeated .udb.entity.v1.CdcConsumerStatus consumers = 9 [json_name = "consumers"];</code>
+   */
+  com.udb.entity.v1.CdcConsumerStatus getConsumers(int index);
+  /**
+   * <pre>
+   * Durable consumers in the caller's tenant/project. Lag compares each stored
+   * watermark with its own topic head and remains valid after journal pruning.
+   * </pre>
+   *
+   * <code>repeated .udb.entity.v1.CdcConsumerStatus consumers = 9 [json_name = "consumers"];</code>
+   */
+  int getConsumersCount();
+  /**
+   * <pre>
+   * Durable consumers in the caller's tenant/project. Lag compares each stored
+   * watermark with its own topic head and remains valid after journal pruning.
+   * </pre>
+   *
+   * <code>repeated .udb.entity.v1.CdcConsumerStatus consumers = 9 [json_name = "consumers"];</code>
+   */
+  java.util.List<? extends com.udb.entity.v1.CdcConsumerStatusOrBuilder>
+      getConsumersOrBuilderList();
+  /**
+   * <pre>
+   * Durable consumers in the caller's tenant/project. Lag compares each stored
+   * watermark with its own topic head and remains valid after journal pruning.
+   * </pre>
+   *
+   * <code>repeated .udb.entity.v1.CdcConsumerStatus consumers = 9 [json_name = "consumers"];</code>
+   */
+  com.udb.entity.v1.CdcConsumerStatusOrBuilder getConsumersOrBuilder(
+      int index);
 }

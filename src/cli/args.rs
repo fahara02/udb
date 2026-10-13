@@ -14,6 +14,14 @@ pub(crate) enum Command {
     /// catalog lint, the policy lint and entity/policy coverage.
     Check {
         policies: String,
+        /// `--code <dir>`: scan Go call sites for ungranted operations.
+        code: String,
+        identities: String,
+        identity: String,
+        purpose: String,
+        /// `--role` / `--subject`: whose grants the code scan checks against.
+        role: String,
+        subject: String,
     },
     Drift,
     /// Check runtime environment and backend readiness.
@@ -657,6 +665,14 @@ pub(crate) enum OpsCommand {
         decode: bool,
         max: u64,
     },
+    /// `udb migrate storage --bucket <b> --tenant <uuid> [--prefix p] [--limit n] [--dry-run]`
+    MigrateStorage {
+        bucket: String,
+        tenant: String,
+        prefix: String,
+        limit: usize,
+        dry_run: bool,
+    },
     /// `udb resources list --backend <qdrant|neo4j|…>`
     ResourcesList { backend: String },
     /// `udb up [-f udb.yaml] [--dry-run] [--allow-transfer] [--dsn <dsn>]` —
@@ -666,6 +682,13 @@ pub(crate) enum OpsCommand {
         dry_run: bool,
         allow_transfer: bool,
         dsn: String,
+    },
+    /// `udb subject purge <subject id> [--reason <r>] [--dry-run] [--receipt-out <file>]`
+    SubjectPurge {
+        subject: String,
+        reason: String,
+        dry_run: bool,
+        receipt_out: String,
     },
     /// `udb data seed -f <seed.(yaml|json)> [--tenant <uuid>] [--project <id>]
     ///   [--dry-run]`
@@ -699,6 +722,8 @@ pub(crate) enum ComplianceCommand {
         out: String,
         dry_run: bool,
     },
+    /// `udb compliance verify-receipt -f <receipt.jws|-> [--public-key <pem>]`
+    VerifyReceipt { file: String, public_key: String },
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -1055,6 +1080,12 @@ fn parse_compliance_subcommand(args: &[String]) -> Option<(ComplianceCommand, us
         args.windows(2).find(|w| w[0] == flag).map(|w| w[1].clone())
     };
     let command = match args.get(1).map(|value| value.as_str()) {
+        Some("verify-receipt") => ComplianceCommand::VerifyReceipt {
+            file: flag_value("-f")
+                .or_else(|| flag_value("--receipt"))
+                .unwrap_or_default(),
+            public_key: flag_value("--public-key").unwrap_or_default(),
+        },
         Some("evidence") | Some("export") => ComplianceCommand::Evidence {
             since: flag_value("--since").unwrap_or_default(),
             until: flag_value("--until").unwrap_or_default(),
@@ -1145,6 +1176,25 @@ fn parse_ops_subcommand(args: &[String]) -> Option<(OpsCommand, usize)> {
             allow_transfer: has_flag("--allow-transfer"),
             dsn: flag_value("--dsn").unwrap_or_default(),
         },
+        (Some("subject"), Some("purge")) => OpsCommand::SubjectPurge {
+            subject: args
+                .get(2)
+                .filter(|value| !value.starts_with("--"))
+                .cloned()
+                .unwrap_or_default(),
+            reason: flag_value("--reason").unwrap_or_default(),
+            dry_run: has_flag("--dry-run"),
+            receipt_out: flag_value("--receipt-out").unwrap_or_default(),
+        },
+        (Some("migrate"), Some("storage")) => OpsCommand::MigrateStorage {
+            bucket: flag_value("--bucket").unwrap_or_default(),
+            tenant: flag_value("--tenant").unwrap_or_default(),
+            prefix: flag_value("--prefix").unwrap_or_default(),
+            limit: flag_value("--limit")
+                .and_then(|value| value.trim().parse::<usize>().ok())
+                .unwrap_or(10_000),
+            dry_run: has_flag("--dry-run"),
+        },
         (Some("resources"), Some("list")) => OpsCommand::ResourcesList {
             backend: flag_value("--backend").unwrap_or_default(),
         },
@@ -1231,6 +1281,13 @@ const VALUE_FLAGS: &[&str] = &[
     "--tier",
     "--manifest",
     "--policies",
+    "--code",
+    "--identities",
+    "--identity",
+    "--purpose",
+    "--public-key",
+    "--receipt",
+    "--receipt-out",
     "--repo",
     "--max",
     "--version",
@@ -1352,12 +1409,20 @@ pub(crate) fn parse_args(args: &[String]) -> (Command, String, String, String) {
         }
         Some("check") => {
             offset = 1;
-            Command::Check {
-                policies: args
-                    .windows(2)
-                    .find(|w| w[0] == "--policies")
+            let flag_value = |flag: &str| -> String {
+                args.windows(2)
+                    .find(|w| w[0] == flag)
                     .map(|w| w[1].clone())
-                    .unwrap_or_default(),
+                    .unwrap_or_default()
+            };
+            Command::Check {
+                policies: flag_value("--policies"),
+                code: flag_value("--code"),
+                identities: flag_value("--identities"),
+                identity: flag_value("--identity"),
+                purpose: flag_value("--purpose"),
+                role: flag_value("--role"),
+                subject: flag_value("--subject"),
             }
         }
         Some("drift") => {
@@ -1575,7 +1640,7 @@ pub(crate) fn parse_args(args: &[String]) -> (Command, String, String, String) {
             }
         }
         Some("policy") | Some("identity") | Some("data") | Some("projection") | Some("events")
-        | Some("resources") | Some("up")
+        | Some("resources") | Some("up") | Some("migrate") | Some("subject")
             if parse_ops_subcommand(args).is_some() =>
         {
             let (ops_command, consumed) =

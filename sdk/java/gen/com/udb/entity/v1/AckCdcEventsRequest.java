@@ -177,7 +177,9 @@ private static final long serialVersionUID = 0L;
   /**
    * <pre>
    * The last event the consumer has fully handled. The next subscription
-   * under this consumer name resumes after it.
+   * under this consumer name resumes after it. The event must be retained and
+   * match the caller's tenant/project and topic pattern. An older acknowledgment
+   * succeeds without moving the stored cursor backward.
    * </pre>
    *
    * <code>string event_id = 4 [json_name = "eventId"];</code>
@@ -199,7 +201,9 @@ private static final long serialVersionUID = 0L;
   /**
    * <pre>
    * The last event the consumer has fully handled. The next subscription
-   * under this consumer name resumes after it.
+   * under this consumer name resumes after it. The event must be retained and
+   * match the caller's tenant/project and topic pattern. An older acknowledgment
+   * succeeds without moving the stored cursor backward.
    * </pre>
    *
    * <code>string event_id = 4 [json_name = "eventId"];</code>
@@ -920,7 +924,9 @@ private static final long serialVersionUID = 0L;
     /**
      * <pre>
      * The last event the consumer has fully handled. The next subscription
-     * under this consumer name resumes after it.
+     * under this consumer name resumes after it. The event must be retained and
+     * match the caller's tenant/project and topic pattern. An older acknowledgment
+     * succeeds without moving the stored cursor backward.
      * </pre>
      *
      * <code>string event_id = 4 [json_name = "eventId"];</code>
@@ -941,7 +947,9 @@ private static final long serialVersionUID = 0L;
     /**
      * <pre>
      * The last event the consumer has fully handled. The next subscription
-     * under this consumer name resumes after it.
+     * under this consumer name resumes after it. The event must be retained and
+     * match the caller's tenant/project and topic pattern. An older acknowledgment
+     * succeeds without moving the stored cursor backward.
      * </pre>
      *
      * <code>string event_id = 4 [json_name = "eventId"];</code>
@@ -963,7 +971,9 @@ private static final long serialVersionUID = 0L;
     /**
      * <pre>
      * The last event the consumer has fully handled. The next subscription
-     * under this consumer name resumes after it.
+     * under this consumer name resumes after it. The event must be retained and
+     * match the caller's tenant/project and topic pattern. An older acknowledgment
+     * succeeds without moving the stored cursor backward.
      * </pre>
      *
      * <code>string event_id = 4 [json_name = "eventId"];</code>
@@ -981,7 +991,9 @@ private static final long serialVersionUID = 0L;
     /**
      * <pre>
      * The last event the consumer has fully handled. The next subscription
-     * under this consumer name resumes after it.
+     * under this consumer name resumes after it. The event must be retained and
+     * match the caller's tenant/project and topic pattern. An older acknowledgment
+     * succeeds without moving the stored cursor backward.
      * </pre>
      *
      * <code>string event_id = 4 [json_name = "eventId"];</code>
@@ -996,7 +1008,9 @@ private static final long serialVersionUID = 0L;
     /**
      * <pre>
      * The last event the consumer has fully handled. The next subscription
-     * under this consumer name resumes after it.
+     * under this consumer name resumes after it. The event must be retained and
+     * match the caller's tenant/project and topic pattern. An older acknowledgment
+     * succeeds without moving the stored cursor backward.
      * </pre>
      *
      * <code>string event_id = 4 [json_name = "eventId"];</code>

@@ -167,6 +167,10 @@ namespace Udb.Entity.V1 {
     /// <summary>Field number for the "operation" field.</summary>
     public const int OperationFieldNumber = 3;
     private string operation_ = "";
+    /// <summary>
+    /// `insert` creates one complete relational row and refuses any key collision.
+    /// It shares Upsert's scope, CDC, projections and audit; it never replaces a row.
+    /// </summary>
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public string Operation {

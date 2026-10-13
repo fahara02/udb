@@ -104,6 +104,10 @@ pub struct UpsertPlanRequest {
     pub message_type: String,
     pub record: Value,
     pub conflict_fields: Vec<String>,
+    /// True for the Insert RPC / BeginTx insert operation: ordinary INSERT,
+    /// with database uniqueness enforcement and no conflict replacement.
+    #[serde(default)]
+    pub insert_only: bool,
     pub return_record: bool,
     pub bypass_cache_write: bool,
 }
@@ -860,7 +864,7 @@ pub fn build_upsert_plan(
             .map(|field| resolve_column(&resolver, field))
             .collect::<Vec<_>>()
     };
-    if conflict_columns.is_empty() {
+    if !request.insert_only && conflict_columns.is_empty() {
         errors.push("upsert requires conflict_fields or a manifest primary key".to_string());
     }
     for column in &conflict_columns {
@@ -868,7 +872,10 @@ pub fn build_upsert_plan(
             errors.push(format!("unknown conflict field {}", column));
         }
     }
-    if !conflict_columns.is_empty() && !conflict_target_is_unique(table, &conflict_columns) {
+    if !request.insert_only
+        && !conflict_columns.is_empty()
+        && !conflict_target_is_unique(table, &conflict_columns)
+    {
         errors.push(format!(
             "conflict_fields ({}) must match the primary key or a declared unique index \
              (upsert ON CONFLICT needs a unique constraint on exactly those columns); \
@@ -877,10 +884,12 @@ pub fn build_upsert_plan(
             describe_valid_conflict_targets(table),
         ));
     }
-    errors.extend(unmatchable_partitioned_conflict_target_error(
-        table,
-        &conflict_columns,
-    ));
+    if !request.insert_only {
+        errors.extend(unmatchable_partitioned_conflict_target_error(
+            table,
+            &conflict_columns,
+        ));
+    }
 
     // Cross-tenant takeover guard. The conflict arbiter is usually the primary
     // key, which is unique across ALL tenants, so without a guard an upsert
@@ -976,16 +985,21 @@ pub fn build_upsert_plan(
     } else {
         ""
     };
-    let sql = format!(
-        "INSERT INTO {}.{} ({}) VALUES ({}) ON CONFLICT ({}) {}{}",
+    let mut sql = format!(
+        "INSERT INTO {}.{} ({}) VALUES ({})",
         qi(&table.schema),
         qi(&table.table),
         quote_list(&parameter_columns),
         values,
-        quote_list(&conflict_columns),
-        on_conflict,
-        returning
     );
+    if !request.insert_only {
+        sql.push_str(&format!(
+            " ON CONFLICT ({}) {}",
+            quote_list(&conflict_columns),
+            on_conflict,
+        ));
+    }
+    sql.push_str(returning);
 
     SqlOperationPlan {
         operation: "upsert".to_string(),
@@ -1021,7 +1035,7 @@ pub(crate) fn build_upsert_logical_write(
     // tombstoned key (see `build_upsert_plan`); neutral IR has no assignment for
     // a column the record does not carry, so decline and let the planner SQL
     // (which the served path falls back to) emit the revive.
-    if table.soft_delete {
+    if table.soft_delete && !request.insert_only {
         return Err(vec![format!(
             "soft-delete table {}.{} does not lower to a neutral upsert; \
              the planner upsert revives a tombstoned row instead",
@@ -1091,7 +1105,7 @@ pub(crate) fn build_upsert_logical_write(
             .map(|field| resolve_column(&resolver, field))
             .collect::<Vec<_>>()
     };
-    if conflict_columns.is_empty() {
+    if !request.insert_only && conflict_columns.is_empty() {
         errors.push("upsert requires conflict_fields or a manifest primary key".to_string());
     }
     for column in &conflict_columns {
@@ -1099,7 +1113,10 @@ pub(crate) fn build_upsert_logical_write(
             errors.push(format!("unknown conflict field {}", column));
         }
     }
-    if !conflict_columns.is_empty() && !conflict_target_is_unique(table, &conflict_columns) {
+    if !request.insert_only
+        && !conflict_columns.is_empty()
+        && !conflict_target_is_unique(table, &conflict_columns)
+    {
         errors.push(format!(
             "conflict_fields ({}) must match the primary key or a declared unique index \
              (upsert ON CONFLICT needs a unique constraint on exactly those columns); \
@@ -1108,10 +1125,12 @@ pub(crate) fn build_upsert_logical_write(
             describe_valid_conflict_targets(table),
         ));
     }
-    errors.extend(unmatchable_partitioned_conflict_target_error(
-        table,
-        &conflict_columns,
-    ));
+    if !request.insert_only {
+        errors.extend(unmatchable_partitioned_conflict_target_error(
+            table,
+            &conflict_columns,
+        ));
+    }
 
     let update_columns = record_columns
         .iter()
@@ -1122,7 +1141,9 @@ pub(crate) fn build_upsert_logical_write(
         .collect::<Vec<_>>();
     let uses_primary_conflict =
         request.conflict_fields.is_empty() || conflict_columns == table.primary_key;
-    let conflict = if update_columns.is_empty() {
+    let conflict = if request.insert_only {
+        ConflictStrategy::Error
+    } else if update_columns.is_empty() {
         if !uses_primary_conflict {
             errors.push(
                 "neutral IR cannot represent alternate-unique ON CONFLICT DO NOTHING yet"
@@ -1656,12 +1677,13 @@ pub fn build_transaction_plan(
     let mut mutation_plans = Vec::new();
     for mutation in &request.mutations {
         match mutation.operation.as_str() {
-            "upsert" => mutation_plans.push(build_upsert_plan(
+            "upsert" | "insert" => mutation_plans.push(build_upsert_plan(
                 manifest,
                 &UpsertPlanRequest {
                     context: request.context.clone(),
                     message_type: mutation.message_type.clone(),
                     record: mutation.record.clone(),
+                    insert_only: mutation.operation == "insert",
                     ..UpsertPlanRequest::default()
                 },
             )),
@@ -4764,6 +4786,41 @@ mod tests {
             )),
             "{errors:?}"
         );
+    }
+
+    #[test]
+    fn insert_planner_and_bridge_preserve_create_only_semantics() {
+        let mut manifest = soft_delete_test_manifest();
+        manifest.tables[0].primary_key = vec!["id".into()];
+        let context = write_context();
+        let request = UpsertPlanRequest {
+            context: context.clone(),
+            message_type: "acme.test.v1.Widget".into(),
+            record: json!({"id": "w1", "tenant_id": "tenant-a", "status": "open"}),
+            insert_only: true,
+            return_record: true,
+            ..Default::default()
+        };
+        let plan = build_upsert_plan(&manifest, &request);
+        assert!(plan.errors.is_empty(), "{:?}", plan.errors);
+        assert!(!plan.sql.contains("ON CONFLICT"), "{}", plan.sql);
+        assert!(plan.sql.ends_with(" RETURNING *"));
+        let write = build_upsert_logical_write(&manifest, &request)
+            .expect("soft-delete Insert must retain an ordinary INSERT");
+        assert!(matches!(write.conflict, ConflictStrategy::Error));
+        let (compiled_sql, _) =
+            compile_pg_sql(&manifest, &context, CompileOperation::Write(&write));
+        assert!(!compiled_sql.contains("ON CONFLICT"), "{compiled_sql}");
+        // Default Upsert remains the explicit revive/replacement path.
+        let upsert = build_upsert_plan(
+            &manifest,
+            &UpsertPlanRequest {
+                insert_only: false,
+                ..request
+            },
+        );
+        assert!(upsert.sql.contains("ON CONFLICT"));
+        assert!(upsert.sql.contains("\"deleted_at\" = NULL"));
     }
 
     #[test]

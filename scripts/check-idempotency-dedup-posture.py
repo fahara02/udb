@@ -225,13 +225,16 @@ CHECKS: tuple[SourceCheck, ...] = (
         ),
     ),
     SourceCheck(
-        "upsert keyed replay path",
+        "insert and upsert keyed replay path",
         "src/runtime/core/setup_data.rs",
         (
             "pub async fn upsert(",
+            "pub async fn insert(",
+            'let operation = if insert_only { "insert" } else { "upsert" };',
             "let key = idempotency_key_for_dedup(&request.idempotency_key)?;",
             "if let Some(key) = key",
-            "&request.message_type,\n                    \"upsert\",\n                    key,",
+            "&request.message_type,\n                    operation,\n                    key,",
+            "idempotency_request_hash_relational_write(operation, &request, &record)",
             "if !claim.fresh",
             "return mutation_response_from_idempotency_json_for_claim(",
             "&context.tenant_id,\n                        &context.project_id,\n                        &request.message_type,",

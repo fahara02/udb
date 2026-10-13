@@ -5,6 +5,57 @@ the package version in `Cargo.toml`; historical v0.3.2 audit material is folded
 into the v0.3.x entries because the codebase advanced to v0.3.7 before that
 release line was tagged.
 
+## [0.5.33] - 2026-10-13
+
+The rest of the no-wrapper plan: subject erasure with a signed receipt, poison
+events that no longer stop a consumer, `Insert`, pipeline units, a scanner for
+ungranted store calls, and TypeScript store parity.
+
+### Added
+
+- **`PurgeSubject` erases one data subject and returns a signed receipt.** Every
+  row whose `owner_field` column names the subject, in every table of the active
+  catalog, goes through the normal delete path, so vector points, graph nodes,
+  search documents, caches and events follow; soft-delete tombstones are then
+  removed. The receipt is a JWS signed with the broker's active key (it can never
+  pass as a bearer token), lists what was erased and identifies the subject only
+  by a SHA-256 digest. `udb subject purge <id>` calls it and
+  `udb compliance verify-receipt` checks a receipt.
+- **`NackCdcEvents` dead-letters a poison event for one consumer.** The broker
+  stores the event in its DLQ and advances only that named consumer, in one
+  transaction. The Go `Consume` now calls it after `MaxAttempts` handler failures
+  and continues with the next event, instead of stopping the consumer; a broker
+  without the RPC still stops it rather than discarding the event.
+- **`Insert`** writes a row only when its key is new and refuses a duplicate
+  (`UDB_UNIQUE_VIOLATION`) without changing the stored row; Go `Table.Insert`.
+- **CDC without Kafka.** `UDB_CDC_JOURNAL_ONLY=true` delivers outbox events
+  through the durable PostgreSQL journal alone. A subscription that names
+  `since_event_id` now starts there even when its consumer has a stored cursor.
+- **Pipeline units.** A declared `topic → field mapping → entity` step
+  (`pipelines:` in a YAML/JSON file named by `UDB_PIPELINES_FILE`) that the broker
+  runs itself: in journal order, one replica at a time, upserting through the
+  data plane, retrying failures and dead-lettering events that cannot be applied.
+- **`udb check --code <dir> --role <role>`** scans Go sources for generated-store
+  calls and reports each operation that no ALLOW policy grants to the role.
+- **`udb.yaml` declares embedding models and sources** (`embedding:`), which
+  `udb up` registers per tenant.
+- **`udb migrate storage --bucket <b> --tenant <uuid>`** copies objects written
+  before tenant-namespaced keys (pre-0.5.0) under their tenant's namespace. The
+  broker warns at startup while such objects remain;
+  `UDB_STORAGE_LAYOUT_STRICT=true` makes it refuse to start instead.
+- **TypeScript:** `Table`, `tx` (with `emit`), `consume`, `ErrorCode`/`inspect`
+  and an `InMemoryDataPlane` for tests; error details decode `reason`,
+  `constraint`, `column`, `fix_hint` and `missing`.
+- **Shared conformance cases** (`sdk/conformance/table-cases.json`) run by the Go
+  and TypeScript SDKs against their fakes and the live broker, plus Go
+  conformance suites for constraints, query predicates and revisions.
+
+### Breaking for callers
+
+- None. Go `Consume` used to return an error on a poison event; it now
+  dead-letters the event and continues. Callers that relied on the stop can set
+  `MaxAttempts` high and handle the error in their handler.
+
 ## [0.5.32] - 2026-10-13
 
 ### Fixed

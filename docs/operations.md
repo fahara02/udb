@@ -13,7 +13,7 @@
 │    UNIVERSAL DATA BROKER                                                   │
 │    gRPC data plane | native control plane | tenant/project scope guard     │
 │                                                                            │
-│    crate v0.5.32 | protocol v1.0.0                                          │
+│    crate v0.5.33 | protocol v1.0.0                                          │
 └────────────────────────────────────────────────────────────────────────────┘
 ```
 This is the guide for running UDB in production. If you operate a UDB
@@ -21,6 +21,33 @@ deployment — day to day, or on call when something breaks — this page is for
 you. It covers how to run the broker, what to check before going live, the
 service objectives (SLOs) to hold yourself to, the runbooks to reach for when
 things go wrong, and how to validate that a release is ready.
+
+## Check code coverage
+
+Before deployment, check a service's generated table calls against the same
+identity and policy declarations used to provision it:
+
+```bash
+udb check app-proto --code ./... --identities identities.yaml \
+  --identity billing --purpose invoicing --policies policies.yaml
+```
+
+The identities file must name the canonical tenant UUID and the selected
+service account's UUID, service identity, project and grant scopes. The checker
+reads that grant rather than assuming wildcard scopes. Add `--role` when the
+service has a known role binding; confirm those bindings with live authorization
+checks after deployment.
+
+The embedded analyzer requires Go on PATH and uses `go/parser` and `go/ast`.
+It compiles only its own standard-library program, then parses application
+source as data. Module, toolchain and dependency downloads are disabled. It
+resolves generated table constructors, variable aliases, typed parameters and
+receiver fields, including sibling-file declarations. Syntax/read failures and
+symlinked source directories fail the scan instead of producing an empty pass.
+A literal `WithMetadata(..., Metadata{Purpose: "..."})` overrides the deployment
+purpose. A dynamic purpose, an ambiguous entity or a permission depending on
+runtime attributes/relationships produces a finding. This checks the resolved
+table call sites; it does not establish the deployment's live policy state.
 
 ## Runtime Shape
 
@@ -30,6 +57,13 @@ from committed resource writes. It checks for missed changes every 30 seconds
 skips full config re-sourcing; `udb_control_resync_total` counts completed resyncs,
 including the startup baseline. Listener reconnects check the durable world to
 recover changes from a connection gap.
+
+All gRPC listeners send HTTP/2 keepalive pings every 30 seconds and close a
+connection if its peer does not acknowledge within 20 seconds. This applies to
+the public, native control-plane, WebRTC peer and optional Unix socket listeners.
+LiveQuery additionally sends an explicit `Heartbeat` payload while idle, at the
+`UDB_LIVEQUERY_KEEPALIVE_SECS` cadence (default 30 seconds; zero disables it).
+Heartbeats contain no data or resume cursor and should be ignored by row handlers.
 
 LiveQuery subscriptions share one 500 ms journal poll per tenant, project and
 topic. Each stream applies its own IN/OR predicates to snapshots and deltas.
@@ -473,7 +507,7 @@ paths:
 python data/gen_bench_data.py --target-mb 512
 cargo bench --features bench-internals --bench hotpath_bench
 UDB_BENCH_LIVE=1 cargo bench --features bench-internals --bench live_backends_bench
-python scripts/bench_snapshot.py --label "release-0.5.32"
+python scripts/bench_snapshot.py --label "release-0.5.33"
 ```
 
 Once you record a snapshot, its history is kept under `bench-history/`, and the

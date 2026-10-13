@@ -24,4 +24,5 @@ func TestEmbeddedBrokerMeetsTheTableContract(t *testing.T) {
 		return u
 	}
 	conformance.RunTable(t, connect, conformance.Tenants(u.Meta.TenantID, peer.Meta.TenantID))
+	conformance.RunTableCases(t, func(testing.TB, string) *udbclient.Udb { return u }, "../../conformance/table-cases.json")
 }

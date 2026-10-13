@@ -72,4 +72,6 @@ func TestLiveBrokerMeetsTheTableContract(t *testing.T) {
 		return sess.Udb
 	}
 	conformance.RunTable(t, connect, conformance.Tenants(sess.CanonicalTenantID, peer.CanonicalTenantID))
+	// The cross-SDK cases (shared with the TypeScript runner) on the real broker.
+	conformance.RunTableCases(t, func(testing.TB, string) *udbclient.Udb { return sess.Udb }, "../../conformance/table-cases.json")
 }

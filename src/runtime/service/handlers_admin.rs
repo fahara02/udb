@@ -325,6 +325,39 @@ impl DataBrokerService {
                     pause_reason: v["pause_reason"].as_str().unwrap_or_default().into(),
                     outbox_depth: v["outbox_depth"].as_i64().unwrap_or(0),
                     updated_at_unix: v["updated_at_unix"].as_i64().unwrap_or(0),
+                    consumers: v["consumers"]
+                        .as_array()
+                        .into_iter()
+                        .flatten()
+                        .map(|consumer| crate::proto::CdcConsumerStatus {
+                            consumer_name: consumer["consumer_name"]
+                                .as_str()
+                                .unwrap_or_default()
+                                .into(),
+                            topic_pattern: consumer["topic_pattern"]
+                                .as_str()
+                                .unwrap_or_default()
+                                .into(),
+                            last_event_id: consumer["last_event_id"]
+                                .as_str()
+                                .unwrap_or_default()
+                                .into(),
+                            lag_seconds: consumer["lag_seconds"].as_f64().unwrap_or(0.0),
+                            acked_at_unix: consumer["acked_at_unix"].as_i64().unwrap_or(0),
+                            last_published_at_unix: consumer["last_published_at_unix"]
+                                .as_i64()
+                                .unwrap_or(0),
+                            tenant_id: consumer["tenant_id"].as_str().unwrap_or_default().into(),
+                            project_id: consumer["project_id"].as_str().unwrap_or_default().into(),
+                            owner_identity: consumer["owner_identity"]
+                                .as_str()
+                                .unwrap_or_default()
+                                .into(),
+                            owner_migration_required: consumer["owner_migration_required"]
+                                .as_bool()
+                                .unwrap_or(true),
+                        })
+                        .collect(),
                     // is_leader / last_event_id / lag_seconds have no source on this
                     // path and stay at their defaults; they are NOT observations.
                     ..Default::default()

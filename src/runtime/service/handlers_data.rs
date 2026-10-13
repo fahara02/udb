@@ -322,10 +322,26 @@ impl DataBrokerService {
         &self,
         request: Request<UpsertRequest>,
     ) -> Result<Response<MutationResponse>, Status> {
+        self.upsert_inner_impl(request, false).await
+    }
+
+    pub(crate) async fn insert_inner(
+        &self,
+        request: Request<UpsertRequest>,
+    ) -> Result<Response<MutationResponse>, Status> {
+        self.upsert_inner_impl(request, true).await
+    }
+
+    async fn upsert_inner_impl(
+        &self,
+        request: Request<UpsertRequest>,
+        insert_only: bool,
+    ) -> Result<Response<MutationResponse>, Status> {
+        let method = if insert_only { "Insert" } else { "Upsert" };
         let started = Instant::now();
         let security = match security_from_request(&request) {
             Ok(s) => s,
-            Err(e) => return self.record_grpc("Upsert", started, Err(e)),
+            Err(e) => return self.record_grpc(method, started, Err(e)),
         };
         let request = request.into_inner();
         let decision_id = match self
@@ -333,7 +349,7 @@ impl DataBrokerService {
             .await
         {
             Ok(id) => id,
-            Err(err) => return self.record_grpc("Upsert", started, Err(err)),
+            Err(err) => return self.record_grpc(method, started, Err(err)),
         };
         let manifest = &self.catalog.active_for(&security.project_id).manifest;
         let runtime = self.runtime_snapshot();
@@ -346,19 +362,25 @@ impl DataBrokerService {
                 crate::runtime::channels::OperationChannel::Write,
                 Some(&metadata_context),
                 Some("postgres"),
-                || async move { runtime.upsert(manifest, request, exec_context).await },
+                || async move {
+                    if insert_only {
+                        runtime.insert(manifest, request, exec_context).await
+                    } else {
+                        runtime.upsert(manifest, request, exec_context).await
+                    }
+                },
             )
             .await;
 
         match result {
             Ok(res) => self.record_grpc(
-                "Upsert",
+                method,
                 started,
                 Ok(self
                     .with_mutation_response_headers(res, &metadata_context)
                     .await),
             ),
-            Err(err) => self.record_grpc("Upsert", started, Err(err)),
+            Err(err) => self.record_grpc(method, started, Err(err)),
         }
     }
 

@@ -24,6 +24,7 @@ const (
 	DataBroker_Select_FullMethodName                  = "/udb.services.v1.DataBroker/Select"
 	DataBroker_BatchSelect_FullMethodName             = "/udb.services.v1.DataBroker/BatchSelect"
 	DataBroker_SelectV2_FullMethodName                = "/udb.services.v1.DataBroker/SelectV2"
+	DataBroker_Insert_FullMethodName                  = "/udb.services.v1.DataBroker/Insert"
 	DataBroker_Upsert_FullMethodName                  = "/udb.services.v1.DataBroker/Upsert"
 	DataBroker_BatchUpsert_FullMethodName             = "/udb.services.v1.DataBroker/BatchUpsert"
 	DataBroker_Delete_FullMethodName                  = "/udb.services.v1.DataBroker/Delete"
@@ -55,6 +56,7 @@ const (
 	DataBroker_BeginTx_FullMethodName                 = "/udb.services.v1.DataBroker/BeginTx"
 	DataBroker_PublishCDC_FullMethodName              = "/udb.services.v1.DataBroker/PublishCDC"
 	DataBroker_AckCdcEvents_FullMethodName            = "/udb.services.v1.DataBroker/AckCdcEvents"
+	DataBroker_NackCdcEvents_FullMethodName           = "/udb.services.v1.DataBroker/NackCdcEvents"
 	DataBroker_CreateMaterializedView_FullMethodName  = "/udb.services.v1.DataBroker/CreateMaterializedView"
 	DataBroker_EnqueueOutboxEvent_FullMethodName      = "/udb.services.v1.DataBroker/EnqueueOutboxEvent"
 	DataBroker_GenericDispatch_FullMethodName         = "/udb.services.v1.DataBroker/GenericDispatch"
@@ -83,6 +85,7 @@ const (
 	DataBroker_StepDownCdcLeader_FullMethodName       = "/udb.services.v1.DataBroker/StepDownCdcLeader"
 	DataBroker_PreviewCdcRedaction_FullMethodName     = "/udb.services.v1.DataBroker/PreviewCdcRedaction"
 	DataBroker_ScanProjectionDrift_FullMethodName     = "/udb.services.v1.DataBroker/ScanProjectionDrift"
+	DataBroker_PurgeSubject_FullMethodName            = "/udb.services.v1.DataBroker/PurgeSubject"
 	DataBroker_ListSagas_FullMethodName               = "/udb.services.v1.DataBroker/ListSagas"
 	DataBroker_GetSaga_FullMethodName                 = "/udb.services.v1.DataBroker/GetSaga"
 	DataBroker_RetrySagaCompensation_FullMethodName   = "/udb.services.v1.DataBroker/RetrySagaCompensation"
@@ -143,6 +146,20 @@ type DataBrokerClient interface {
 	// Idempotency fields: no declared method replay contract.
 	// End UDB contract.
 	SelectV2(ctx context.Context, in *v1.SelectRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[v1.RecordBatchV2], error)
+	// Insert one complete row atomically. Any primary/unique-key collision is
+	// ALREADY_EXISTS (UDB_UNIQUE_VIOLATION); existing rows are never changed.
+	// Uses the same verified scope, write fencing, CDC, audit and durable keyed
+	// replay contract as Upsert. conflict_fields and expected are not accepted.
+	// Older brokers return UNIMPLEMENTED, so Insert can never degrade to Upsert.
+	// UDB contract: /udb.services.v1.DataBroker/Insert
+	// Listener: data plane.
+	// Scopes: listener and resource policy defaults (no explicit endpoint scopes).
+	// Credential types: listener credential policy defaults (no explicit allowlist).
+	// Operation kind: mutation.
+	// Idempotency: automatic transient retry requires the declared request key; reuse it only for unchanged request semantics and the same tenant/project.
+	// Idempotency fields: request key=idempotency_key; server-generated key=false; duplicate response=was_duplicate; replay-safe=true.
+	// End UDB contract.
+	Insert(ctx context.Context, in *v1.UpsertRequest, opts ...grpc.CallOption) (*v1.MutationResponse, error)
 	// UDB contract: /udb.services.v1.DataBroker/Upsert
 	// Listener: data plane.
 	// Scopes: listener and resource policy defaults (no explicit endpoint scopes).
@@ -445,6 +462,19 @@ type DataBrokerClient interface {
 	// Idempotency fields: no declared method replay contract.
 	// End UDB contract.
 	AckCdcEvents(ctx context.Context, in *v1.AckCdcEventsRequest, opts ...grpc.CallOption) (*v1.AckCdcEventsResponse, error)
+	// Retain a poison event in the existing DLQ and advance only its named
+	// consumer. DLQ storage and cursor settlement commit in one transaction.
+	// An older broker refuses UNIMPLEMENTED; the SDK never acknowledges and
+	// discards the failed event as a fallback.
+	// UDB contract: /udb.services.v1.DataBroker/NackCdcEvents
+	// Listener: data plane.
+	// Scopes: listener and resource policy defaults (no explicit endpoint scopes).
+	// Credential types: listener credential policy defaults (no explicit allowlist).
+	// Operation kind: mutation.
+	// Idempotency: automatic transient retry requires the declared request key; reuse it only for unchanged request semantics and the same tenant/project.
+	// Idempotency fields: request key=event_id; server-generated key=false; duplicate response=none; replay-safe=true.
+	// End UDB contract.
+	NackCdcEvents(ctx context.Context, in *v1.NackCdcEventsRequest, opts ...grpc.CallOption) (*v1.AckCdcEventsResponse, error)
 	// UDB contract: /udb.services.v1.DataBroker/CreateMaterializedView
 	// Listener: data plane.
 	// Scopes: listener and resource policy defaults (no explicit endpoint scopes).
@@ -742,6 +772,20 @@ type DataBrokerClient interface {
 	// Idempotency fields: no declared method replay contract.
 	// End UDB contract.
 	ScanProjectionDrift(ctx context.Context, in *v1.ProjectionDriftScanRequest, opts ...grpc.CallOption) (*v1.ProjectionDriftScanResponse, error)
+	// Erase one data subject inside the caller's tenant: every row whose
+	// owner_field column names the subject, in every table of the active catalog,
+	// through the normal delete path (projections, caches and events follow),
+	// then the soft-delete tombstones. Returns a receipt signed with the broker's
+	// active signing key (`udb compliance verify-receipt`). Admin scope required.
+	// UDB contract: /udb.services.v1.DataBroker/PurgeSubject
+	// Listener: data plane.
+	// Scopes: listener and resource policy defaults (no explicit endpoint scopes).
+	// Credential types: listener credential policy defaults (no explicit allowlist).
+	// Operation kind: destructive.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
+	PurgeSubject(ctx context.Context, in *v1.PurgeSubjectRequest, opts ...grpc.CallOption) (*v1.PurgeSubjectResponse, error)
 	// Saga administration.
 	// UDB contract: /udb.services.v1.DataBroker/ListSagas
 	// Listener: data plane.
@@ -997,6 +1041,16 @@ func (c *dataBrokerClient) SelectV2(ctx context.Context, in *v1.SelectRequest, o
 
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
 type DataBroker_SelectV2Client = grpc.ServerStreamingClient[v1.RecordBatchV2]
+
+func (c *dataBrokerClient) Insert(ctx context.Context, in *v1.UpsertRequest, opts ...grpc.CallOption) (*v1.MutationResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(v1.MutationResponse)
+	err := c.cc.Invoke(ctx, DataBroker_Insert_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
 
 func (c *dataBrokerClient) Upsert(ctx context.Context, in *v1.UpsertRequest, opts ...grpc.CallOption) (*v1.MutationResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
@@ -1338,6 +1392,16 @@ func (c *dataBrokerClient) AckCdcEvents(ctx context.Context, in *v1.AckCdcEvents
 	return out, nil
 }
 
+func (c *dataBrokerClient) NackCdcEvents(ctx context.Context, in *v1.NackCdcEventsRequest, opts ...grpc.CallOption) (*v1.AckCdcEventsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(v1.AckCdcEventsResponse)
+	err := c.cc.Invoke(ctx, DataBroker_NackCdcEvents_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *dataBrokerClient) CreateMaterializedView(ctx context.Context, in *v1.ViewDefinition, opts ...grpc.CallOption) (*v1.MutationResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(v1.MutationResponse)
@@ -1618,6 +1682,16 @@ func (c *dataBrokerClient) ScanProjectionDrift(ctx context.Context, in *v1.Proje
 	return out, nil
 }
 
+func (c *dataBrokerClient) PurgeSubject(ctx context.Context, in *v1.PurgeSubjectRequest, opts ...grpc.CallOption) (*v1.PurgeSubjectResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(v1.PurgeSubjectResponse)
+	err := c.cc.Invoke(ctx, DataBroker_PurgeSubject_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *dataBrokerClient) ListSagas(ctx context.Context, in *v1.SagaListRequest, opts ...grpc.CallOption) (*v1.SagaListResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(v1.SagaListResponse)
@@ -1833,6 +1907,12 @@ type DataBrokerServer interface {
 	// Clients use this only when ProtocolSupport.encodings advertises
 	// "record_batch_v2" and otherwise fall back to Select/RecordSet.
 	SelectV2(*v1.SelectRequest, grpc.ServerStreamingServer[v1.RecordBatchV2]) error
+	// Insert one complete row atomically. Any primary/unique-key collision is
+	// ALREADY_EXISTS (UDB_UNIQUE_VIOLATION); existing rows are never changed.
+	// Uses the same verified scope, write fencing, CDC, audit and durable keyed
+	// replay contract as Upsert. conflict_fields and expected are not accepted.
+	// Older brokers return UNIMPLEMENTED, so Insert can never degrade to Upsert.
+	Insert(context.Context, *v1.UpsertRequest) (*v1.MutationResponse, error)
 	Upsert(context.Context, *v1.UpsertRequest) (*v1.MutationResponse, error)
 	BatchUpsert(grpc.BidiStreamingServer[v1.UpsertRequest, v1.MutationResponse]) error
 	// Delete rows without raw SQL.
@@ -1885,6 +1965,11 @@ type DataBrokerServer interface {
 	PublishCDC(*v1.CDCSubscriptionRequest, grpc.ServerStreamingServer[v11.CDCEnvelope]) error
 	// Record a durable consumer's position (see CDCSubscriptionRequest.consumer_name).
 	AckCdcEvents(context.Context, *v1.AckCdcEventsRequest) (*v1.AckCdcEventsResponse, error)
+	// Retain a poison event in the existing DLQ and advance only its named
+	// consumer. DLQ storage and cursor settlement commit in one transaction.
+	// An older broker refuses UNIMPLEMENTED; the SDK never acknowledges and
+	// discards the failed event as a fallback.
+	NackCdcEvents(context.Context, *v1.NackCdcEventsRequest) (*v1.AckCdcEventsResponse, error)
 	CreateMaterializedView(context.Context, *v1.ViewDefinition) (*v1.MutationResponse, error)
 	// ── First-Class Event API ─────────────────────────────────────────────────
 	EnqueueOutboxEvent(context.Context, *v1.EnqueueOutboxEventRequest) (*v1.EnqueueOutboxEventResponse, error)
@@ -1958,6 +2043,12 @@ type DataBrokerServer interface {
 	StepDownCdcLeader(context.Context, *v1.CdcControlRequest) (*v1.CdcStatusResponse, error)
 	PreviewCdcRedaction(context.Context, *v1.CdcRedactionPreviewRequest) (*v1.CdcRedactionPreviewResponse, error)
 	ScanProjectionDrift(context.Context, *v1.ProjectionDriftScanRequest) (*v1.ProjectionDriftScanResponse, error)
+	// Erase one data subject inside the caller's tenant: every row whose
+	// owner_field column names the subject, in every table of the active catalog,
+	// through the normal delete path (projections, caches and events follow),
+	// then the soft-delete tombstones. Returns a receipt signed with the broker's
+	// active signing key (`udb compliance verify-receipt`). Admin scope required.
+	PurgeSubject(context.Context, *v1.PurgeSubjectRequest) (*v1.PurgeSubjectResponse, error)
 	// Saga administration.
 	ListSagas(context.Context, *v1.SagaListRequest) (*v1.SagaListResponse, error)
 	GetSaga(context.Context, *v1.SagaRequest) (*v1.SagaResponse, error)
@@ -2019,6 +2110,9 @@ func (UnimplementedDataBrokerServer) BatchSelect(grpc.BidiStreamingServer[v1.Sel
 }
 func (UnimplementedDataBrokerServer) SelectV2(*v1.SelectRequest, grpc.ServerStreamingServer[v1.RecordBatchV2]) error {
 	return status.Error(codes.Unimplemented, "method SelectV2 not implemented")
+}
+func (UnimplementedDataBrokerServer) Insert(context.Context, *v1.UpsertRequest) (*v1.MutationResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method Insert not implemented")
 }
 func (UnimplementedDataBrokerServer) Upsert(context.Context, *v1.UpsertRequest) (*v1.MutationResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method Upsert not implemented")
@@ -2113,6 +2207,9 @@ func (UnimplementedDataBrokerServer) PublishCDC(*v1.CDCSubscriptionRequest, grpc
 func (UnimplementedDataBrokerServer) AckCdcEvents(context.Context, *v1.AckCdcEventsRequest) (*v1.AckCdcEventsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method AckCdcEvents not implemented")
 }
+func (UnimplementedDataBrokerServer) NackCdcEvents(context.Context, *v1.NackCdcEventsRequest) (*v1.AckCdcEventsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method NackCdcEvents not implemented")
+}
 func (UnimplementedDataBrokerServer) CreateMaterializedView(context.Context, *v1.ViewDefinition) (*v1.MutationResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method CreateMaterializedView not implemented")
 }
@@ -2196,6 +2293,9 @@ func (UnimplementedDataBrokerServer) PreviewCdcRedaction(context.Context, *v1.Cd
 }
 func (UnimplementedDataBrokerServer) ScanProjectionDrift(context.Context, *v1.ProjectionDriftScanRequest) (*v1.ProjectionDriftScanResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ScanProjectionDrift not implemented")
+}
+func (UnimplementedDataBrokerServer) PurgeSubject(context.Context, *v1.PurgeSubjectRequest) (*v1.PurgeSubjectResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method PurgeSubject not implemented")
 }
 func (UnimplementedDataBrokerServer) ListSagas(context.Context, *v1.SagaListRequest) (*v1.SagaListResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListSagas not implemented")
@@ -2312,6 +2412,24 @@ func _DataBroker_SelectV2_Handler(srv interface{}, stream grpc.ServerStream) err
 
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
 type DataBroker_SelectV2Server = grpc.ServerStreamingServer[v1.RecordBatchV2]
+
+func _DataBroker_Insert_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(v1.UpsertRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DataBrokerServer).Insert(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DataBroker_Insert_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DataBrokerServer).Insert(ctx, req.(*v1.UpsertRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
 
 func _DataBroker_Upsert_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(v1.UpsertRequest)
@@ -2809,6 +2927,24 @@ func _DataBroker_AckCdcEvents_Handler(srv interface{}, ctx context.Context, dec 
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(DataBrokerServer).AckCdcEvents(ctx, req.(*v1.AckCdcEventsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DataBroker_NackCdcEvents_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(v1.NackCdcEventsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DataBrokerServer).NackCdcEvents(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DataBroker_NackCdcEvents_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DataBrokerServer).NackCdcEvents(ctx, req.(*v1.NackCdcEventsRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -3317,6 +3453,24 @@ func _DataBroker_ScanProjectionDrift_Handler(srv interface{}, ctx context.Contex
 	return interceptor(ctx, in, info, handler)
 }
 
+func _DataBroker_PurgeSubject_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(v1.PurgeSubjectRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DataBrokerServer).PurgeSubject(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DataBroker_PurgeSubject_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DataBrokerServer).PurgeSubject(ctx, req.(*v1.PurgeSubjectRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _DataBroker_ListSagas_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(v1.SagaListRequest)
 	if err := dec(in); err != nil {
@@ -3689,6 +3843,10 @@ var DataBroker_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _DataBroker_Select_Handler,
 		},
 		{
+			MethodName: "Insert",
+			Handler:    _DataBroker_Insert_Handler,
+		},
+		{
 			MethodName: "Upsert",
 			Handler:    _DataBroker_Upsert_Handler,
 		},
@@ -3787,6 +3945,10 @@ var DataBroker_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "AckCdcEvents",
 			Handler:    _DataBroker_AckCdcEvents_Handler,
+		},
+		{
+			MethodName: "NackCdcEvents",
+			Handler:    _DataBroker_NackCdcEvents_Handler,
 		},
 		{
 			MethodName: "CreateMaterializedView",
@@ -3899,6 +4061,10 @@ var DataBroker_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ScanProjectionDrift",
 			Handler:    _DataBroker_ScanProjectionDrift_Handler,
+		},
+		{
+			MethodName: "PurgeSubject",
+			Handler:    _DataBroker_PurgeSubject_Handler,
 		},
 		{
 			MethodName: "ListSagas",

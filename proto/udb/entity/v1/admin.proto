@@ -560,6 +560,35 @@ message ProjectionDriftTargetReport {
   repeated string warnings = 9;
 }
 
+message PurgeSubjectRequest {
+  RequestContext context = 1;
+  // The data subject: the value its rows carry in their owner_field columns.
+  string subject_id = 2;
+  // Why (recorded in the receipt and the audit trail), e.g. a ticket id.
+  string reason = 3;
+  // List what would be erased without deleting anything.
+  bool dry_run = 4;
+  // Must repeat subject_id exactly (an erasure cannot be undone).
+  string confirm_subject_id = 5;
+}
+
+message PurgedSubjectTable {
+  string message_type = 1;
+  string column = 2;
+  int64 deleted = 3;
+}
+
+message PurgeSubjectResponse {
+  repeated PurgedSubjectTable tables = 1;
+  // Stores the purge does not reach, with the way to erase the subject there.
+  repeated string not_covered = 2;
+  int64 total_deleted = 3;
+  bool dry_run = 4;
+  // The signed receipt (compact JWS, RS256) and its decoded claims as JSON.
+  string receipt_jws = 5;
+  string receipt_json = 6;
+}
+
 message ProjectionDriftScanResponse {
   string project_id = 1;
   string message_type = 2;

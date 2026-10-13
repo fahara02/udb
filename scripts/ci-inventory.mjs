@@ -225,6 +225,9 @@ function extractJobs(text) {
 }
 
 function workflowJobBlock(text, job) {
+  // Windows checkouts retain CRLF; the workflow graph is independent of its
+  // physical line endings. Normalize before matching YAML job boundaries.
+  text = text.replace(/\r\n/g, "\n");
   const match = text.match(new RegExp(`^  ${job}:\\n([\\s\\S]*?)(?=^  [A-Za-z0-9_-]+:\\n|(?![\\s\\S]))`, "m"));
   return match ? match[1] : "";
 }

@@ -273,6 +273,7 @@ const DB_COLUMN_SECURITY_KEYS: &[&str] = &[
     "hashing_algorithm",
     "encryption_key_class",
     "searchable_encrypted",
+    "owner_field",
 ];
 const FIELD_SECURITY_SCALAR_KEYS: &[&str] = &["<scalar value>"];
 const GENERIC_STORE_KEYS: &[&str] = &[
@@ -1245,6 +1246,7 @@ pub(super) fn apply_db_column_security_values(
             security.is_encrypted |= enabled;
             security.is_blind_index |= enabled;
         },
+        "owner_field" => security.owner_field = parse_bool(&value),
     });
 }
 

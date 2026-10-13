@@ -31,6 +31,7 @@ private static final long serialVersionUID = 0L;
     slotName_ = "";
     pauseReason_ = "";
     lastEventId_ = "";
+    consumers_ = java.util.Collections.emptyList();
   }
 
   public static final com.google.protobuf.Descriptors.Descriptor
@@ -218,6 +219,72 @@ private static final long serialVersionUID = 0L;
     return updatedAtUnix_;
   }
 
+  public static final int CONSUMERS_FIELD_NUMBER = 9;
+  @SuppressWarnings("serial")
+  private java.util.List<com.udb.entity.v1.CdcConsumerStatus> consumers_;
+  /**
+   * <pre>
+   * Durable consumers in the caller's tenant/project. Lag compares each stored
+   * watermark with its own topic head and remains valid after journal pruning.
+   * </pre>
+   *
+   * <code>repeated .udb.entity.v1.CdcConsumerStatus consumers = 9 [json_name = "consumers"];</code>
+   */
+  @java.lang.Override
+  public java.util.List<com.udb.entity.v1.CdcConsumerStatus> getConsumersList() {
+    return consumers_;
+  }
+  /**
+   * <pre>
+   * Durable consumers in the caller's tenant/project. Lag compares each stored
+   * watermark with its own topic head and remains valid after journal pruning.
+   * </pre>
+   *
+   * <code>repeated .udb.entity.v1.CdcConsumerStatus consumers = 9 [json_name = "consumers"];</code>
+   */
+  @java.lang.Override
+  public java.util.List<? extends com.udb.entity.v1.CdcConsumerStatusOrBuilder>
+      getConsumersOrBuilderList() {
+    return consumers_;
+  }
+  /**
+   * <pre>
+   * Durable consumers in the caller's tenant/project. Lag compares each stored
+   * watermark with its own topic head and remains valid after journal pruning.
+   * </pre>
+   *
+   * <code>repeated .udb.entity.v1.CdcConsumerStatus consumers = 9 [json_name = "consumers"];</code>
+   */
+  @java.lang.Override
+  public int getConsumersCount() {
+    return consumers_.size();
+  }
+  /**
+   * <pre>
+   * Durable consumers in the caller's tenant/project. Lag compares each stored
+   * watermark with its own topic head and remains valid after journal pruning.
+   * </pre>
+   *
+   * <code>repeated .udb.entity.v1.CdcConsumerStatus consumers = 9 [json_name = "consumers"];</code>
+   */
+  @java.lang.Override
+  public com.udb.entity.v1.CdcConsumerStatus getConsumers(int index) {
+    return consumers_.get(index);
+  }
+  /**
+   * <pre>
+   * Durable consumers in the caller's tenant/project. Lag compares each stored
+   * watermark with its own topic head and remains valid after journal pruning.
+   * </pre>
+   *
+   * <code>repeated .udb.entity.v1.CdcConsumerStatus consumers = 9 [json_name = "consumers"];</code>
+   */
+  @java.lang.Override
+  public com.udb.entity.v1.CdcConsumerStatusOrBuilder getConsumersOrBuilder(
+      int index) {
+    return consumers_.get(index);
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -255,6 +322,9 @@ private static final long serialVersionUID = 0L;
     }
     if (updatedAtUnix_ != 0L) {
       output.writeInt64(8, updatedAtUnix_);
+    }
+    for (int i = 0; i < consumers_.size(); i++) {
+      output.writeMessage(9, consumers_.get(i));
     }
     getUnknownFields().writeTo(output);
   }
@@ -294,6 +364,10 @@ private static final long serialVersionUID = 0L;
       size += com.google.protobuf.CodedOutputStream
         .computeInt64Size(8, updatedAtUnix_);
     }
+    for (int i = 0; i < consumers_.size(); i++) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeMessageSize(9, consumers_.get(i));
+    }
     size += getUnknownFields().getSerializedSize();
     memoizedSize = size;
     return size;
@@ -326,6 +400,8 @@ private static final long serialVersionUID = 0L;
         != other.getOutboxDepth()) return false;
     if (getUpdatedAtUnix()
         != other.getUpdatedAtUnix()) return false;
+    if (!getConsumersList()
+        .equals(other.getConsumersList())) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -358,6 +434,10 @@ private static final long serialVersionUID = 0L;
     hash = (37 * hash) + UPDATED_AT_UNIX_FIELD_NUMBER;
     hash = (53 * hash) + com.google.protobuf.Internal.hashLong(
         getUpdatedAtUnix());
+    if (getConsumersCount() > 0) {
+      hash = (37 * hash) + CONSUMERS_FIELD_NUMBER;
+      hash = (53 * hash) + getConsumersList().hashCode();
+    }
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -497,6 +577,13 @@ private static final long serialVersionUID = 0L;
       lagSeconds_ = 0D;
       outboxDepth_ = 0L;
       updatedAtUnix_ = 0L;
+      if (consumersBuilder_ == null) {
+        consumers_ = java.util.Collections.emptyList();
+      } else {
+        consumers_ = null;
+        consumersBuilder_.clear();
+      }
+      bitField0_ = (bitField0_ & ~0x00000100);
       return this;
     }
 
@@ -523,9 +610,22 @@ private static final long serialVersionUID = 0L;
     @java.lang.Override
     public com.udb.entity.v1.CdcStatusResponse buildPartial() {
       com.udb.entity.v1.CdcStatusResponse result = new com.udb.entity.v1.CdcStatusResponse(this);
+      buildPartialRepeatedFields(result);
       if (bitField0_ != 0) { buildPartial0(result); }
       onBuilt();
       return result;
+    }
+
+    private void buildPartialRepeatedFields(com.udb.entity.v1.CdcStatusResponse result) {
+      if (consumersBuilder_ == null) {
+        if (((bitField0_ & 0x00000100) != 0)) {
+          consumers_ = java.util.Collections.unmodifiableList(consumers_);
+          bitField0_ = (bitField0_ & ~0x00000100);
+        }
+        result.consumers_ = consumers_;
+      } else {
+        result.consumers_ = consumersBuilder_.build();
+      }
     }
 
     private void buildPartial0(com.udb.entity.v1.CdcStatusResponse result) {
@@ -598,6 +698,32 @@ private static final long serialVersionUID = 0L;
       if (other.getUpdatedAtUnix() != 0L) {
         setUpdatedAtUnix(other.getUpdatedAtUnix());
       }
+      if (consumersBuilder_ == null) {
+        if (!other.consumers_.isEmpty()) {
+          if (consumers_.isEmpty()) {
+            consumers_ = other.consumers_;
+            bitField0_ = (bitField0_ & ~0x00000100);
+          } else {
+            ensureConsumersIsMutable();
+            consumers_.addAll(other.consumers_);
+          }
+          onChanged();
+        }
+      } else {
+        if (!other.consumers_.isEmpty()) {
+          if (consumersBuilder_.isEmpty()) {
+            consumersBuilder_.dispose();
+            consumersBuilder_ = null;
+            consumers_ = other.consumers_;
+            bitField0_ = (bitField0_ & ~0x00000100);
+            consumersBuilder_ =
+              com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
+                 internalGetConsumersFieldBuilder() : null;
+          } else {
+            consumersBuilder_.addAllMessages(other.consumers_);
+          }
+        }
+      }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
       return this;
@@ -664,6 +790,19 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00000080;
               break;
             } // case 64
+            case 74: {
+              com.udb.entity.v1.CdcConsumerStatus m =
+                  input.readMessage(
+                      com.udb.entity.v1.CdcConsumerStatus.parser(),
+                      extensionRegistry);
+              if (consumersBuilder_ == null) {
+                ensureConsumersIsMutable();
+                consumers_.add(m);
+              } else {
+                consumersBuilder_.addMessage(m);
+              }
+              break;
+            } // case 74
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -1055,6 +1194,336 @@ private static final long serialVersionUID = 0L;
       updatedAtUnix_ = 0L;
       onChanged();
       return this;
+    }
+
+    private java.util.List<com.udb.entity.v1.CdcConsumerStatus> consumers_ =
+      java.util.Collections.emptyList();
+    private void ensureConsumersIsMutable() {
+      if (!((bitField0_ & 0x00000100) != 0)) {
+        consumers_ = new java.util.ArrayList<com.udb.entity.v1.CdcConsumerStatus>(consumers_);
+        bitField0_ |= 0x00000100;
+       }
+    }
+
+    private com.google.protobuf.RepeatedFieldBuilder<
+        com.udb.entity.v1.CdcConsumerStatus, com.udb.entity.v1.CdcConsumerStatus.Builder, com.udb.entity.v1.CdcConsumerStatusOrBuilder> consumersBuilder_;
+
+    /**
+     * <pre>
+     * Durable consumers in the caller's tenant/project. Lag compares each stored
+     * watermark with its own topic head and remains valid after journal pruning.
+     * </pre>
+     *
+     * <code>repeated .udb.entity.v1.CdcConsumerStatus consumers = 9 [json_name = "consumers"];</code>
+     */
+    public java.util.List<com.udb.entity.v1.CdcConsumerStatus> getConsumersList() {
+      if (consumersBuilder_ == null) {
+        return java.util.Collections.unmodifiableList(consumers_);
+      } else {
+        return consumersBuilder_.getMessageList();
+      }
+    }
+    /**
+     * <pre>
+     * Durable consumers in the caller's tenant/project. Lag compares each stored
+     * watermark with its own topic head and remains valid after journal pruning.
+     * </pre>
+     *
+     * <code>repeated .udb.entity.v1.CdcConsumerStatus consumers = 9 [json_name = "consumers"];</code>
+     */
+    public int getConsumersCount() {
+      if (consumersBuilder_ == null) {
+        return consumers_.size();
+      } else {
+        return consumersBuilder_.getCount();
+      }
+    }
+    /**
+     * <pre>
+     * Durable consumers in the caller's tenant/project. Lag compares each stored
+     * watermark with its own topic head and remains valid after journal pruning.
+     * </pre>
+     *
+     * <code>repeated .udb.entity.v1.CdcConsumerStatus consumers = 9 [json_name = "consumers"];</code>
+     */
+    public com.udb.entity.v1.CdcConsumerStatus getConsumers(int index) {
+      if (consumersBuilder_ == null) {
+        return consumers_.get(index);
+      } else {
+        return consumersBuilder_.getMessage(index);
+      }
+    }
+    /**
+     * <pre>
+     * Durable consumers in the caller's tenant/project. Lag compares each stored
+     * watermark with its own topic head and remains valid after journal pruning.
+     * </pre>
+     *
+     * <code>repeated .udb.entity.v1.CdcConsumerStatus consumers = 9 [json_name = "consumers"];</code>
+     */
+    public Builder setConsumers(
+        int index, com.udb.entity.v1.CdcConsumerStatus value) {
+      if (consumersBuilder_ == null) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        ensureConsumersIsMutable();
+        consumers_.set(index, value);
+        onChanged();
+      } else {
+        consumersBuilder_.setMessage(index, value);
+      }
+      return this;
+    }
+    /**
+     * <pre>
+     * Durable consumers in the caller's tenant/project. Lag compares each stored
+     * watermark with its own topic head and remains valid after journal pruning.
+     * </pre>
+     *
+     * <code>repeated .udb.entity.v1.CdcConsumerStatus consumers = 9 [json_name = "consumers"];</code>
+     */
+    public Builder setConsumers(
+        int index, com.udb.entity.v1.CdcConsumerStatus.Builder builderForValue) {
+      if (consumersBuilder_ == null) {
+        ensureConsumersIsMutable();
+        consumers_.set(index, builderForValue.build());
+        onChanged();
+      } else {
+        consumersBuilder_.setMessage(index, builderForValue.build());
+      }
+      return this;
+    }
+    /**
+     * <pre>
+     * Durable consumers in the caller's tenant/project. Lag compares each stored
+     * watermark with its own topic head and remains valid after journal pruning.
+     * </pre>
+     *
+     * <code>repeated .udb.entity.v1.CdcConsumerStatus consumers = 9 [json_name = "consumers"];</code>
+     */
+    public Builder addConsumers(com.udb.entity.v1.CdcConsumerStatus value) {
+      if (consumersBuilder_ == null) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        ensureConsumersIsMutable();
+        consumers_.add(value);
+        onChanged();
+      } else {
+        consumersBuilder_.addMessage(value);
+      }
+      return this;
+    }
+    /**
+     * <pre>
+     * Durable consumers in the caller's tenant/project. Lag compares each stored
+     * watermark with its own topic head and remains valid after journal pruning.
+     * </pre>
+     *
+     * <code>repeated .udb.entity.v1.CdcConsumerStatus consumers = 9 [json_name = "consumers"];</code>
+     */
+    public Builder addConsumers(
+        int index, com.udb.entity.v1.CdcConsumerStatus value) {
+      if (consumersBuilder_ == null) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        ensureConsumersIsMutable();
+        consumers_.add(index, value);
+        onChanged();
+      } else {
+        consumersBuilder_.addMessage(index, value);
+      }
+      return this;
+    }
+    /**
+     * <pre>
+     * Durable consumers in the caller's tenant/project. Lag compares each stored
+     * watermark with its own topic head and remains valid after journal pruning.
+     * </pre>
+     *
+     * <code>repeated .udb.entity.v1.CdcConsumerStatus consumers = 9 [json_name = "consumers"];</code>
+     */
+    public Builder addConsumers(
+        com.udb.entity.v1.CdcConsumerStatus.Builder builderForValue) {
+      if (consumersBuilder_ == null) {
+        ensureConsumersIsMutable();
+        consumers_.add(builderForValue.build());
+        onChanged();
+      } else {
+        consumersBuilder_.addMessage(builderForValue.build());
+      }
+      return this;
+    }
+    /**
+     * <pre>
+     * Durable consumers in the caller's tenant/project. Lag compares each stored
+     * watermark with its own topic head and remains valid after journal pruning.
+     * </pre>
+     *
+     * <code>repeated .udb.entity.v1.CdcConsumerStatus consumers = 9 [json_name = "consumers"];</code>
+     */
+    public Builder addConsumers(
+        int index, com.udb.entity.v1.CdcConsumerStatus.Builder builderForValue) {
+      if (consumersBuilder_ == null) {
+        ensureConsumersIsMutable();
+        consumers_.add(index, builderForValue.build());
+        onChanged();
+      } else {
+        consumersBuilder_.addMessage(index, builderForValue.build());
+      }
+      return this;
+    }
+    /**
+     * <pre>
+     * Durable consumers in the caller's tenant/project. Lag compares each stored
+     * watermark with its own topic head and remains valid after journal pruning.
+     * </pre>
+     *
+     * <code>repeated .udb.entity.v1.CdcConsumerStatus consumers = 9 [json_name = "consumers"];</code>
+     */
+    public Builder addAllConsumers(
+        java.lang.Iterable<? extends com.udb.entity.v1.CdcConsumerStatus> values) {
+      if (consumersBuilder_ == null) {
+        ensureConsumersIsMutable();
+        com.google.protobuf.AbstractMessageLite.Builder.addAll(
+            values, consumers_);
+        onChanged();
+      } else {
+        consumersBuilder_.addAllMessages(values);
+      }
+      return this;
+    }
+    /**
+     * <pre>
+     * Durable consumers in the caller's tenant/project. Lag compares each stored
+     * watermark with its own topic head and remains valid after journal pruning.
+     * </pre>
+     *
+     * <code>repeated .udb.entity.v1.CdcConsumerStatus consumers = 9 [json_name = "consumers"];</code>
+     */
+    public Builder clearConsumers() {
+      if (consumersBuilder_ == null) {
+        consumers_ = java.util.Collections.emptyList();
+        bitField0_ = (bitField0_ & ~0x00000100);
+        onChanged();
+      } else {
+        consumersBuilder_.clear();
+      }
+      return this;
+    }
+    /**
+     * <pre>
+     * Durable consumers in the caller's tenant/project. Lag compares each stored
+     * watermark with its own topic head and remains valid after journal pruning.
+     * </pre>
+     *
+     * <code>repeated .udb.entity.v1.CdcConsumerStatus consumers = 9 [json_name = "consumers"];</code>
+     */
+    public Builder removeConsumers(int index) {
+      if (consumersBuilder_ == null) {
+        ensureConsumersIsMutable();
+        consumers_.remove(index);
+        onChanged();
+      } else {
+        consumersBuilder_.remove(index);
+      }
+      return this;
+    }
+    /**
+     * <pre>
+     * Durable consumers in the caller's tenant/project. Lag compares each stored
+     * watermark with its own topic head and remains valid after journal pruning.
+     * </pre>
+     *
+     * <code>repeated .udb.entity.v1.CdcConsumerStatus consumers = 9 [json_name = "consumers"];</code>
+     */
+    public com.udb.entity.v1.CdcConsumerStatus.Builder getConsumersBuilder(
+        int index) {
+      return internalGetConsumersFieldBuilder().getBuilder(index);
+    }
+    /**
+     * <pre>
+     * Durable consumers in the caller's tenant/project. Lag compares each stored
+     * watermark with its own topic head and remains valid after journal pruning.
+     * </pre>
+     *
+     * <code>repeated .udb.entity.v1.CdcConsumerStatus consumers = 9 [json_name = "consumers"];</code>
+     */
+    public com.udb.entity.v1.CdcConsumerStatusOrBuilder getConsumersOrBuilder(
+        int index) {
+      if (consumersBuilder_ == null) {
+        return consumers_.get(index);  } else {
+        return consumersBuilder_.getMessageOrBuilder(index);
+      }
+    }
+    /**
+     * <pre>
+     * Durable consumers in the caller's tenant/project. Lag compares each stored
+     * watermark with its own topic head and remains valid after journal pruning.
+     * </pre>
+     *
+     * <code>repeated .udb.entity.v1.CdcConsumerStatus consumers = 9 [json_name = "consumers"];</code>
+     */
+    public java.util.List<? extends com.udb.entity.v1.CdcConsumerStatusOrBuilder>
+         getConsumersOrBuilderList() {
+      if (consumersBuilder_ != null) {
+        return consumersBuilder_.getMessageOrBuilderList();
+      } else {
+        return java.util.Collections.unmodifiableList(consumers_);
+      }
+    }
+    /**
+     * <pre>
+     * Durable consumers in the caller's tenant/project. Lag compares each stored
+     * watermark with its own topic head and remains valid after journal pruning.
+     * </pre>
+     *
+     * <code>repeated .udb.entity.v1.CdcConsumerStatus consumers = 9 [json_name = "consumers"];</code>
+     */
+    public com.udb.entity.v1.CdcConsumerStatus.Builder addConsumersBuilder() {
+      return internalGetConsumersFieldBuilder().addBuilder(
+          com.udb.entity.v1.CdcConsumerStatus.getDefaultInstance());
+    }
+    /**
+     * <pre>
+     * Durable consumers in the caller's tenant/project. Lag compares each stored
+     * watermark with its own topic head and remains valid after journal pruning.
+     * </pre>
+     *
+     * <code>repeated .udb.entity.v1.CdcConsumerStatus consumers = 9 [json_name = "consumers"];</code>
+     */
+    public com.udb.entity.v1.CdcConsumerStatus.Builder addConsumersBuilder(
+        int index) {
+      return internalGetConsumersFieldBuilder().addBuilder(
+          index, com.udb.entity.v1.CdcConsumerStatus.getDefaultInstance());
+    }
+    /**
+     * <pre>
+     * Durable consumers in the caller's tenant/project. Lag compares each stored
+     * watermark with its own topic head and remains valid after journal pruning.
+     * </pre>
+     *
+     * <code>repeated .udb.entity.v1.CdcConsumerStatus consumers = 9 [json_name = "consumers"];</code>
+     */
+    public java.util.List<com.udb.entity.v1.CdcConsumerStatus.Builder>
+         getConsumersBuilderList() {
+      return internalGetConsumersFieldBuilder().getBuilderList();
+    }
+    private com.google.protobuf.RepeatedFieldBuilder<
+        com.udb.entity.v1.CdcConsumerStatus, com.udb.entity.v1.CdcConsumerStatus.Builder, com.udb.entity.v1.CdcConsumerStatusOrBuilder>
+        internalGetConsumersFieldBuilder() {
+      if (consumersBuilder_ == null) {
+        consumersBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
+            com.udb.entity.v1.CdcConsumerStatus, com.udb.entity.v1.CdcConsumerStatus.Builder, com.udb.entity.v1.CdcConsumerStatusOrBuilder>(
+                consumers_,
+                ((bitField0_ & 0x00000100) != 0),
+                getParentForChildren(),
+                isClean());
+        consumers_ = null;
+      }
+      return consumersBuilder_;
     }
 
     // @@protoc_insertion_point(builder_scope:udb.entity.v1.CdcStatusResponse)

@@ -487,7 +487,52 @@ impl AuthzSnapshot {
 
 // ── Matching helpers ───────────────────────────────────────────────────────
 
-/// Empty / `*` / exact match.
+/// Conservative offline coverage for a declared identity and call site.
+/// Uses the runtime's subject, role, domain, resource and scope predicates.
+/// An ALLOW requiring runtime attributes or relationships is not proof. A
+/// potentially matching conditional DENY prevents a static grant. A missing
+/// purpose cannot pass because the data plane requires it on every request.
+pub fn policies_allow_statically(
+    policies: &[AuthzPolicy],
+    principal: &Principal,
+    resource: &ResourceRef,
+    action: &str,
+    purpose: Option<&str>,
+) -> bool {
+    let Some(purpose) = purpose.filter(|purpose| !purpose.trim().is_empty()) else {
+        return false;
+    };
+    let snapshot = AuthzSnapshot::default();
+    let attributes = BTreeMap::new();
+    let request = AuthzQuery {
+        principal,
+        resource,
+        action,
+        purpose,
+        attributes: &attributes,
+    };
+    let denied = policies.iter().any(|policy| {
+        if !policy.enabled || policy.effect != Effect::Deny {
+            return false;
+        }
+        let mut potential = policy.clone();
+        potential.conditions.clear();
+        potential.relationship.clear();
+        if principal.project_id.is_empty() {
+            potential.project.clear();
+        }
+        snapshot.policy_matches(&potential, &principal.roles, &request)
+    });
+    !denied
+        && policies.iter().any(|policy| {
+            policy.enabled
+                && policy.effect == Effect::Allow
+                && policy.conditions.is_empty()
+                && policy.relationship.is_empty()
+                && snapshot.policy_matches(policy, &principal.roles, &request)
+        })
+}
+
 fn wildcard(pattern: &str, value: &str) -> bool {
     let pattern = pattern.trim();
     pattern.is_empty() || pattern == "*" || pattern == value

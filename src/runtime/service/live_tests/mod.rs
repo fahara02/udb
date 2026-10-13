@@ -30,6 +30,7 @@ mod native_worker_seams_live;
 #[cfg(feature = "http-client")]
 pub(super) mod notification_http_live;
 pub(super) mod ops_seams_live;
+mod pipeline_live;
 mod projection_drift_live;
 #[cfg(feature = "redis")]
 mod rate_limit_live;
@@ -45,6 +46,7 @@ mod storage_object_tenant_iso_live;
 #[cfg(feature = "http-client")]
 mod storage_seams_live;
 mod store_rpc_live;
+mod subject_purge_live;
 pub(crate) mod support;
 // C1/C5/C6/C7: Elasticsearch / Weaviate / Pinecone-stub vector isolation.
 #[cfg(all(

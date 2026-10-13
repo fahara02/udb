@@ -159,8 +159,10 @@ private static final long serialVersionUID = 0L;
    * A durable consumer's name (1-120 chars of [A-Za-z0-9_.:-]). When set and
    * since_event_id is empty, the stream resumes after the last event this
    * consumer acknowledged with AckCdcEvents for this topic_pattern, so a
-   * restarted (or reconnected) consumer neither skips nor re-reads its place.
-   * Cursors are scoped to the caller's verified tenant and project.
+   * restarted (or reconnected) consumer resumes its acknowledged position.
+   * A new name reads the retained backlog. Positions survive journal retention.
+   * Names are owned by the verified principal within its tenant and project;
+   * another principal cannot subscribe or acknowledge under the same name.
    * </pre>
    *
    * <code>string consumer_name = 4 [json_name = "consumerName"];</code>
@@ -184,8 +186,10 @@ private static final long serialVersionUID = 0L;
    * A durable consumer's name (1-120 chars of [A-Za-z0-9_.:-]). When set and
    * since_event_id is empty, the stream resumes after the last event this
    * consumer acknowledged with AckCdcEvents for this topic_pattern, so a
-   * restarted (or reconnected) consumer neither skips nor re-reads its place.
-   * Cursors are scoped to the caller's verified tenant and project.
+   * restarted (or reconnected) consumer resumes its acknowledged position.
+   * A new name reads the retained backlog. Positions survive journal retention.
+   * Names are owned by the verified principal within its tenant and project;
+   * another principal cannot subscribe or acknowledge under the same name.
    * </pre>
    *
    * <code>string consumer_name = 4 [json_name = "consumerName"];</code>
@@ -864,8 +868,10 @@ private static final long serialVersionUID = 0L;
      * A durable consumer's name (1-120 chars of [A-Za-z0-9_.:-]). When set and
      * since_event_id is empty, the stream resumes after the last event this
      * consumer acknowledged with AckCdcEvents for this topic_pattern, so a
-     * restarted (or reconnected) consumer neither skips nor re-reads its place.
-     * Cursors are scoped to the caller's verified tenant and project.
+     * restarted (or reconnected) consumer resumes its acknowledged position.
+     * A new name reads the retained backlog. Positions survive journal retention.
+     * Names are owned by the verified principal within its tenant and project;
+     * another principal cannot subscribe or acknowledge under the same name.
      * </pre>
      *
      * <code>string consumer_name = 4 [json_name = "consumerName"];</code>
@@ -888,8 +894,10 @@ private static final long serialVersionUID = 0L;
      * A durable consumer's name (1-120 chars of [A-Za-z0-9_.:-]). When set and
      * since_event_id is empty, the stream resumes after the last event this
      * consumer acknowledged with AckCdcEvents for this topic_pattern, so a
-     * restarted (or reconnected) consumer neither skips nor re-reads its place.
-     * Cursors are scoped to the caller's verified tenant and project.
+     * restarted (or reconnected) consumer resumes its acknowledged position.
+     * A new name reads the retained backlog. Positions survive journal retention.
+     * Names are owned by the verified principal within its tenant and project;
+     * another principal cannot subscribe or acknowledge under the same name.
      * </pre>
      *
      * <code>string consumer_name = 4 [json_name = "consumerName"];</code>
@@ -913,8 +921,10 @@ private static final long serialVersionUID = 0L;
      * A durable consumer's name (1-120 chars of [A-Za-z0-9_.:-]). When set and
      * since_event_id is empty, the stream resumes after the last event this
      * consumer acknowledged with AckCdcEvents for this topic_pattern, so a
-     * restarted (or reconnected) consumer neither skips nor re-reads its place.
-     * Cursors are scoped to the caller's verified tenant and project.
+     * restarted (or reconnected) consumer resumes its acknowledged position.
+     * A new name reads the retained backlog. Positions survive journal retention.
+     * Names are owned by the verified principal within its tenant and project;
+     * another principal cannot subscribe or acknowledge under the same name.
      * </pre>
      *
      * <code>string consumer_name = 4 [json_name = "consumerName"];</code>
@@ -934,8 +944,10 @@ private static final long serialVersionUID = 0L;
      * A durable consumer's name (1-120 chars of [A-Za-z0-9_.:-]). When set and
      * since_event_id is empty, the stream resumes after the last event this
      * consumer acknowledged with AckCdcEvents for this topic_pattern, so a
-     * restarted (or reconnected) consumer neither skips nor re-reads its place.
-     * Cursors are scoped to the caller's verified tenant and project.
+     * restarted (or reconnected) consumer resumes its acknowledged position.
+     * A new name reads the retained backlog. Positions survive journal retention.
+     * Names are owned by the verified principal within its tenant and project;
+     * another principal cannot subscribe or acknowledge under the same name.
      * </pre>
      *
      * <code>string consumer_name = 4 [json_name = "consumerName"];</code>
@@ -952,8 +964,10 @@ private static final long serialVersionUID = 0L;
      * A durable consumer's name (1-120 chars of [A-Za-z0-9_.:-]). When set and
      * since_event_id is empty, the stream resumes after the last event this
      * consumer acknowledged with AckCdcEvents for this topic_pattern, so a
-     * restarted (or reconnected) consumer neither skips nor re-reads its place.
-     * Cursors are scoped to the caller's verified tenant and project.
+     * restarted (or reconnected) consumer resumes its acknowledged position.
+     * A new name reads the retained backlog. Positions survive journal retention.
+     * Names are owned by the verified principal within its tenant and project;
+     * another principal cannot subscribe or acknowledge under the same name.
      * </pre>
      *
      * <code>string consumer_name = 4 [json_name = "consumerName"];</code>

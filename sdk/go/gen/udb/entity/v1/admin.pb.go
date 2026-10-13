@@ -4061,6 +4061,232 @@ func (x *ProjectionDriftTargetReport) GetWarnings() []string {
 	return nil
 }
 
+type PurgeSubjectRequest struct {
+	state   protoimpl.MessageState `protogen:"open.v1"`
+	Context *RequestContext        `protobuf:"bytes,1,opt,name=context,proto3" json:"context,omitempty"`
+	// The data subject: the value its rows carry in their owner_field columns.
+	SubjectId string `protobuf:"bytes,2,opt,name=subject_id,json=subjectId,proto3" json:"subject_id,omitempty"`
+	// Why (recorded in the receipt and the audit trail), e.g. a ticket id.
+	Reason string `protobuf:"bytes,3,opt,name=reason,proto3" json:"reason,omitempty"`
+	// List what would be erased without deleting anything.
+	DryRun bool `protobuf:"varint,4,opt,name=dry_run,json=dryRun,proto3" json:"dry_run,omitempty"`
+	// Must repeat subject_id exactly (an erasure cannot be undone).
+	ConfirmSubjectId string `protobuf:"bytes,5,opt,name=confirm_subject_id,json=confirmSubjectId,proto3" json:"confirm_subject_id,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
+}
+
+func (x *PurgeSubjectRequest) Reset() {
+	*x = PurgeSubjectRequest{}
+	mi := &file_udb_entity_v1_admin_proto_msgTypes[46]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PurgeSubjectRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PurgeSubjectRequest) ProtoMessage() {}
+
+func (x *PurgeSubjectRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_entity_v1_admin_proto_msgTypes[46]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PurgeSubjectRequest.ProtoReflect.Descriptor instead.
+func (*PurgeSubjectRequest) Descriptor() ([]byte, []int) {
+	return file_udb_entity_v1_admin_proto_rawDescGZIP(), []int{46}
+}
+
+func (x *PurgeSubjectRequest) GetContext() *RequestContext {
+	if x != nil {
+		return x.Context
+	}
+	return nil
+}
+
+func (x *PurgeSubjectRequest) GetSubjectId() string {
+	if x != nil {
+		return x.SubjectId
+	}
+	return ""
+}
+
+func (x *PurgeSubjectRequest) GetReason() string {
+	if x != nil {
+		return x.Reason
+	}
+	return ""
+}
+
+func (x *PurgeSubjectRequest) GetDryRun() bool {
+	if x != nil {
+		return x.DryRun
+	}
+	return false
+}
+
+func (x *PurgeSubjectRequest) GetConfirmSubjectId() string {
+	if x != nil {
+		return x.ConfirmSubjectId
+	}
+	return ""
+}
+
+type PurgedSubjectTable struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	MessageType   string                 `protobuf:"bytes,1,opt,name=message_type,json=messageType,proto3" json:"message_type,omitempty"`
+	Column        string                 `protobuf:"bytes,2,opt,name=column,proto3" json:"column,omitempty"`
+	Deleted       int64                  `protobuf:"varint,3,opt,name=deleted,proto3" json:"deleted,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PurgedSubjectTable) Reset() {
+	*x = PurgedSubjectTable{}
+	mi := &file_udb_entity_v1_admin_proto_msgTypes[47]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PurgedSubjectTable) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PurgedSubjectTable) ProtoMessage() {}
+
+func (x *PurgedSubjectTable) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_entity_v1_admin_proto_msgTypes[47]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PurgedSubjectTable.ProtoReflect.Descriptor instead.
+func (*PurgedSubjectTable) Descriptor() ([]byte, []int) {
+	return file_udb_entity_v1_admin_proto_rawDescGZIP(), []int{47}
+}
+
+func (x *PurgedSubjectTable) GetMessageType() string {
+	if x != nil {
+		return x.MessageType
+	}
+	return ""
+}
+
+func (x *PurgedSubjectTable) GetColumn() string {
+	if x != nil {
+		return x.Column
+	}
+	return ""
+}
+
+func (x *PurgedSubjectTable) GetDeleted() int64 {
+	if x != nil {
+		return x.Deleted
+	}
+	return 0
+}
+
+type PurgeSubjectResponse struct {
+	state  protoimpl.MessageState `protogen:"open.v1"`
+	Tables []*PurgedSubjectTable  `protobuf:"bytes,1,rep,name=tables,proto3" json:"tables,omitempty"`
+	// Stores the purge does not reach, with the way to erase the subject there.
+	NotCovered   []string `protobuf:"bytes,2,rep,name=not_covered,json=notCovered,proto3" json:"not_covered,omitempty"`
+	TotalDeleted int64    `protobuf:"varint,3,opt,name=total_deleted,json=totalDeleted,proto3" json:"total_deleted,omitempty"`
+	DryRun       bool     `protobuf:"varint,4,opt,name=dry_run,json=dryRun,proto3" json:"dry_run,omitempty"`
+	// The signed receipt (compact JWS, RS256) and its decoded claims as JSON.
+	ReceiptJws    string `protobuf:"bytes,5,opt,name=receipt_jws,json=receiptJws,proto3" json:"receipt_jws,omitempty"`
+	ReceiptJson   string `protobuf:"bytes,6,opt,name=receipt_json,json=receiptJson,proto3" json:"receipt_json,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PurgeSubjectResponse) Reset() {
+	*x = PurgeSubjectResponse{}
+	mi := &file_udb_entity_v1_admin_proto_msgTypes[48]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PurgeSubjectResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PurgeSubjectResponse) ProtoMessage() {}
+
+func (x *PurgeSubjectResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_entity_v1_admin_proto_msgTypes[48]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PurgeSubjectResponse.ProtoReflect.Descriptor instead.
+func (*PurgeSubjectResponse) Descriptor() ([]byte, []int) {
+	return file_udb_entity_v1_admin_proto_rawDescGZIP(), []int{48}
+}
+
+func (x *PurgeSubjectResponse) GetTables() []*PurgedSubjectTable {
+	if x != nil {
+		return x.Tables
+	}
+	return nil
+}
+
+func (x *PurgeSubjectResponse) GetNotCovered() []string {
+	if x != nil {
+		return x.NotCovered
+	}
+	return nil
+}
+
+func (x *PurgeSubjectResponse) GetTotalDeleted() int64 {
+	if x != nil {
+		return x.TotalDeleted
+	}
+	return 0
+}
+
+func (x *PurgeSubjectResponse) GetDryRun() bool {
+	if x != nil {
+		return x.DryRun
+	}
+	return false
+}
+
+func (x *PurgeSubjectResponse) GetReceiptJws() string {
+	if x != nil {
+		return x.ReceiptJws
+	}
+	return ""
+}
+
+func (x *PurgeSubjectResponse) GetReceiptJson() string {
+	if x != nil {
+		return x.ReceiptJson
+	}
+	return ""
+}
+
 type ProjectionDriftScanResponse struct {
 	state            protoimpl.MessageState         `protogen:"open.v1"`
 	ProjectId        string                         `protobuf:"bytes,1,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
@@ -4076,7 +4302,7 @@ type ProjectionDriftScanResponse struct {
 
 func (x *ProjectionDriftScanResponse) Reset() {
 	*x = ProjectionDriftScanResponse{}
-	mi := &file_udb_entity_v1_admin_proto_msgTypes[46]
+	mi := &file_udb_entity_v1_admin_proto_msgTypes[49]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4088,7 +4314,7 @@ func (x *ProjectionDriftScanResponse) String() string {
 func (*ProjectionDriftScanResponse) ProtoMessage() {}
 
 func (x *ProjectionDriftScanResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_entity_v1_admin_proto_msgTypes[46]
+	mi := &file_udb_entity_v1_admin_proto_msgTypes[49]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4101,7 +4327,7 @@ func (x *ProjectionDriftScanResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ProjectionDriftScanResponse.ProtoReflect.Descriptor instead.
 func (*ProjectionDriftScanResponse) Descriptor() ([]byte, []int) {
-	return file_udb_entity_v1_admin_proto_rawDescGZIP(), []int{46}
+	return file_udb_entity_v1_admin_proto_rawDescGZIP(), []int{49}
 }
 
 func (x *ProjectionDriftScanResponse) GetProjectId() string {
@@ -4169,7 +4395,7 @@ type SagaListRequest struct {
 
 func (x *SagaListRequest) Reset() {
 	*x = SagaListRequest{}
-	mi := &file_udb_entity_v1_admin_proto_msgTypes[47]
+	mi := &file_udb_entity_v1_admin_proto_msgTypes[50]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4181,7 +4407,7 @@ func (x *SagaListRequest) String() string {
 func (*SagaListRequest) ProtoMessage() {}
 
 func (x *SagaListRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_entity_v1_admin_proto_msgTypes[47]
+	mi := &file_udb_entity_v1_admin_proto_msgTypes[50]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4194,7 +4420,7 @@ func (x *SagaListRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SagaListRequest.ProtoReflect.Descriptor instead.
 func (*SagaListRequest) Descriptor() ([]byte, []int) {
-	return file_udb_entity_v1_admin_proto_rawDescGZIP(), []int{47}
+	return file_udb_entity_v1_admin_proto_rawDescGZIP(), []int{50}
 }
 
 func (x *SagaListRequest) GetContext() *RequestContext {
@@ -4265,7 +4491,7 @@ type SagaRecord struct {
 
 func (x *SagaRecord) Reset() {
 	*x = SagaRecord{}
-	mi := &file_udb_entity_v1_admin_proto_msgTypes[48]
+	mi := &file_udb_entity_v1_admin_proto_msgTypes[51]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4277,7 +4503,7 @@ func (x *SagaRecord) String() string {
 func (*SagaRecord) ProtoMessage() {}
 
 func (x *SagaRecord) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_entity_v1_admin_proto_msgTypes[48]
+	mi := &file_udb_entity_v1_admin_proto_msgTypes[51]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4290,7 +4516,7 @@ func (x *SagaRecord) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SagaRecord.ProtoReflect.Descriptor instead.
 func (*SagaRecord) Descriptor() ([]byte, []int) {
-	return file_udb_entity_v1_admin_proto_rawDescGZIP(), []int{48}
+	return file_udb_entity_v1_admin_proto_rawDescGZIP(), []int{51}
 }
 
 func (x *SagaRecord) GetSagaId() string {
@@ -4381,7 +4607,7 @@ type SagaListResponse struct {
 
 func (x *SagaListResponse) Reset() {
 	*x = SagaListResponse{}
-	mi := &file_udb_entity_v1_admin_proto_msgTypes[49]
+	mi := &file_udb_entity_v1_admin_proto_msgTypes[52]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4393,7 +4619,7 @@ func (x *SagaListResponse) String() string {
 func (*SagaListResponse) ProtoMessage() {}
 
 func (x *SagaListResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_entity_v1_admin_proto_msgTypes[49]
+	mi := &file_udb_entity_v1_admin_proto_msgTypes[52]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4406,7 +4632,7 @@ func (x *SagaListResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SagaListResponse.ProtoReflect.Descriptor instead.
 func (*SagaListResponse) Descriptor() ([]byte, []int) {
-	return file_udb_entity_v1_admin_proto_rawDescGZIP(), []int{49}
+	return file_udb_entity_v1_admin_proto_rawDescGZIP(), []int{52}
 }
 
 func (x *SagaListResponse) GetSagas() []*SagaRecord {
@@ -4442,7 +4668,7 @@ type SagaRequest struct {
 
 func (x *SagaRequest) Reset() {
 	*x = SagaRequest{}
-	mi := &file_udb_entity_v1_admin_proto_msgTypes[50]
+	mi := &file_udb_entity_v1_admin_proto_msgTypes[53]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4454,7 +4680,7 @@ func (x *SagaRequest) String() string {
 func (*SagaRequest) ProtoMessage() {}
 
 func (x *SagaRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_entity_v1_admin_proto_msgTypes[50]
+	mi := &file_udb_entity_v1_admin_proto_msgTypes[53]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4467,7 +4693,7 @@ func (x *SagaRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SagaRequest.ProtoReflect.Descriptor instead.
 func (*SagaRequest) Descriptor() ([]byte, []int) {
-	return file_udb_entity_v1_admin_proto_rawDescGZIP(), []int{50}
+	return file_udb_entity_v1_admin_proto_rawDescGZIP(), []int{53}
 }
 
 func (x *SagaRequest) GetContext() *RequestContext {
@@ -4508,7 +4734,7 @@ type SagaResponse struct {
 
 func (x *SagaResponse) Reset() {
 	*x = SagaResponse{}
-	mi := &file_udb_entity_v1_admin_proto_msgTypes[51]
+	mi := &file_udb_entity_v1_admin_proto_msgTypes[54]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4520,7 +4746,7 @@ func (x *SagaResponse) String() string {
 func (*SagaResponse) ProtoMessage() {}
 
 func (x *SagaResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_entity_v1_admin_proto_msgTypes[51]
+	mi := &file_udb_entity_v1_admin_proto_msgTypes[54]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4533,7 +4759,7 @@ func (x *SagaResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SagaResponse.ProtoReflect.Descriptor instead.
 func (*SagaResponse) Descriptor() ([]byte, []int) {
-	return file_udb_entity_v1_admin_proto_rawDescGZIP(), []int{51}
+	return file_udb_entity_v1_admin_proto_rawDescGZIP(), []int{54}
 }
 
 func (x *SagaResponse) GetSaga() *SagaRecord {
@@ -4568,7 +4794,7 @@ type PolicyRecord struct {
 
 func (x *PolicyRecord) Reset() {
 	*x = PolicyRecord{}
-	mi := &file_udb_entity_v1_admin_proto_msgTypes[52]
+	mi := &file_udb_entity_v1_admin_proto_msgTypes[55]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4580,7 +4806,7 @@ func (x *PolicyRecord) String() string {
 func (*PolicyRecord) ProtoMessage() {}
 
 func (x *PolicyRecord) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_entity_v1_admin_proto_msgTypes[52]
+	mi := &file_udb_entity_v1_admin_proto_msgTypes[55]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4593,7 +4819,7 @@ func (x *PolicyRecord) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PolicyRecord.ProtoReflect.Descriptor instead.
 func (*PolicyRecord) Descriptor() ([]byte, []int) {
-	return file_udb_entity_v1_admin_proto_rawDescGZIP(), []int{52}
+	return file_udb_entity_v1_admin_proto_rawDescGZIP(), []int{55}
 }
 
 func (x *PolicyRecord) GetPolicyId() int64 {
@@ -4678,7 +4904,7 @@ type PolicyListRequest struct {
 
 func (x *PolicyListRequest) Reset() {
 	*x = PolicyListRequest{}
-	mi := &file_udb_entity_v1_admin_proto_msgTypes[53]
+	mi := &file_udb_entity_v1_admin_proto_msgTypes[56]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4690,7 +4916,7 @@ func (x *PolicyListRequest) String() string {
 func (*PolicyListRequest) ProtoMessage() {}
 
 func (x *PolicyListRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_entity_v1_admin_proto_msgTypes[53]
+	mi := &file_udb_entity_v1_admin_proto_msgTypes[56]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4703,7 +4929,7 @@ func (x *PolicyListRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PolicyListRequest.ProtoReflect.Descriptor instead.
 func (*PolicyListRequest) Descriptor() ([]byte, []int) {
-	return file_udb_entity_v1_admin_proto_rawDescGZIP(), []int{53}
+	return file_udb_entity_v1_admin_proto_rawDescGZIP(), []int{56}
 }
 
 func (x *PolicyListRequest) GetContext() *RequestContext {
@@ -4745,7 +4971,7 @@ type PolicyListResponse struct {
 
 func (x *PolicyListResponse) Reset() {
 	*x = PolicyListResponse{}
-	mi := &file_udb_entity_v1_admin_proto_msgTypes[54]
+	mi := &file_udb_entity_v1_admin_proto_msgTypes[57]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4757,7 +4983,7 @@ func (x *PolicyListResponse) String() string {
 func (*PolicyListResponse) ProtoMessage() {}
 
 func (x *PolicyListResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_entity_v1_admin_proto_msgTypes[54]
+	mi := &file_udb_entity_v1_admin_proto_msgTypes[57]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4770,7 +4996,7 @@ func (x *PolicyListResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PolicyListResponse.ProtoReflect.Descriptor instead.
 func (*PolicyListResponse) Descriptor() ([]byte, []int) {
-	return file_udb_entity_v1_admin_proto_rawDescGZIP(), []int{54}
+	return file_udb_entity_v1_admin_proto_rawDescGZIP(), []int{57}
 }
 
 func (x *PolicyListResponse) GetPolicies() []*PolicyRecord {
@@ -4804,7 +5030,7 @@ type PutPolicyRequest struct {
 
 func (x *PutPolicyRequest) Reset() {
 	*x = PutPolicyRequest{}
-	mi := &file_udb_entity_v1_admin_proto_msgTypes[55]
+	mi := &file_udb_entity_v1_admin_proto_msgTypes[58]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4816,7 +5042,7 @@ func (x *PutPolicyRequest) String() string {
 func (*PutPolicyRequest) ProtoMessage() {}
 
 func (x *PutPolicyRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_entity_v1_admin_proto_msgTypes[55]
+	mi := &file_udb_entity_v1_admin_proto_msgTypes[58]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4829,7 +5055,7 @@ func (x *PutPolicyRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PutPolicyRequest.ProtoReflect.Descriptor instead.
 func (*PutPolicyRequest) Descriptor() ([]byte, []int) {
-	return file_udb_entity_v1_admin_proto_rawDescGZIP(), []int{55}
+	return file_udb_entity_v1_admin_proto_rawDescGZIP(), []int{58}
 }
 
 func (x *PutPolicyRequest) GetContext() *RequestContext {
@@ -4856,7 +5082,7 @@ type PolicyRequest struct {
 
 func (x *PolicyRequest) Reset() {
 	*x = PolicyRequest{}
-	mi := &file_udb_entity_v1_admin_proto_msgTypes[56]
+	mi := &file_udb_entity_v1_admin_proto_msgTypes[59]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4868,7 +5094,7 @@ func (x *PolicyRequest) String() string {
 func (*PolicyRequest) ProtoMessage() {}
 
 func (x *PolicyRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_entity_v1_admin_proto_msgTypes[56]
+	mi := &file_udb_entity_v1_admin_proto_msgTypes[59]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4881,7 +5107,7 @@ func (x *PolicyRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PolicyRequest.ProtoReflect.Descriptor instead.
 func (*PolicyRequest) Descriptor() ([]byte, []int) {
-	return file_udb_entity_v1_admin_proto_rawDescGZIP(), []int{56}
+	return file_udb_entity_v1_admin_proto_rawDescGZIP(), []int{59}
 }
 
 func (x *PolicyRequest) GetContext() *RequestContext {
@@ -4908,7 +5134,7 @@ type PolicyLintResponse struct {
 
 func (x *PolicyLintResponse) Reset() {
 	*x = PolicyLintResponse{}
-	mi := &file_udb_entity_v1_admin_proto_msgTypes[57]
+	mi := &file_udb_entity_v1_admin_proto_msgTypes[60]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4920,7 +5146,7 @@ func (x *PolicyLintResponse) String() string {
 func (*PolicyLintResponse) ProtoMessage() {}
 
 func (x *PolicyLintResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_entity_v1_admin_proto_msgTypes[57]
+	mi := &file_udb_entity_v1_admin_proto_msgTypes[60]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4933,7 +5159,7 @@ func (x *PolicyLintResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PolicyLintResponse.ProtoReflect.Descriptor instead.
 func (*PolicyLintResponse) Descriptor() ([]byte, []int) {
-	return file_udb_entity_v1_admin_proto_rawDescGZIP(), []int{57}
+	return file_udb_entity_v1_admin_proto_rawDescGZIP(), []int{60}
 }
 
 func (x *PolicyLintResponse) GetPassed() bool {
@@ -4965,7 +5191,7 @@ type EnsureProjectRequest struct {
 
 func (x *EnsureProjectRequest) Reset() {
 	*x = EnsureProjectRequest{}
-	mi := &file_udb_entity_v1_admin_proto_msgTypes[58]
+	mi := &file_udb_entity_v1_admin_proto_msgTypes[61]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4977,7 +5203,7 @@ func (x *EnsureProjectRequest) String() string {
 func (*EnsureProjectRequest) ProtoMessage() {}
 
 func (x *EnsureProjectRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_entity_v1_admin_proto_msgTypes[58]
+	mi := &file_udb_entity_v1_admin_proto_msgTypes[61]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4990,7 +5216,7 @@ func (x *EnsureProjectRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EnsureProjectRequest.ProtoReflect.Descriptor instead.
 func (*EnsureProjectRequest) Descriptor() ([]byte, []int) {
-	return file_udb_entity_v1_admin_proto_rawDescGZIP(), []int{58}
+	return file_udb_entity_v1_admin_proto_rawDescGZIP(), []int{61}
 }
 
 func (x *EnsureProjectRequest) GetContext() *RequestContext {
@@ -5034,7 +5260,7 @@ type ProjectRecord struct {
 
 func (x *ProjectRecord) Reset() {
 	*x = ProjectRecord{}
-	mi := &file_udb_entity_v1_admin_proto_msgTypes[59]
+	mi := &file_udb_entity_v1_admin_proto_msgTypes[62]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5046,7 +5272,7 @@ func (x *ProjectRecord) String() string {
 func (*ProjectRecord) ProtoMessage() {}
 
 func (x *ProjectRecord) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_entity_v1_admin_proto_msgTypes[59]
+	mi := &file_udb_entity_v1_admin_proto_msgTypes[62]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5059,7 +5285,7 @@ func (x *ProjectRecord) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ProjectRecord.ProtoReflect.Descriptor instead.
 func (*ProjectRecord) Descriptor() ([]byte, []int) {
-	return file_udb_entity_v1_admin_proto_rawDescGZIP(), []int{59}
+	return file_udb_entity_v1_admin_proto_rawDescGZIP(), []int{62}
 }
 
 func (x *ProjectRecord) GetProjectId() string {
@@ -5108,7 +5334,7 @@ type ProjectListRequest struct {
 
 func (x *ProjectListRequest) Reset() {
 	*x = ProjectListRequest{}
-	mi := &file_udb_entity_v1_admin_proto_msgTypes[60]
+	mi := &file_udb_entity_v1_admin_proto_msgTypes[63]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5120,7 +5346,7 @@ func (x *ProjectListRequest) String() string {
 func (*ProjectListRequest) ProtoMessage() {}
 
 func (x *ProjectListRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_entity_v1_admin_proto_msgTypes[60]
+	mi := &file_udb_entity_v1_admin_proto_msgTypes[63]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5133,7 +5359,7 @@ func (x *ProjectListRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ProjectListRequest.ProtoReflect.Descriptor instead.
 func (*ProjectListRequest) Descriptor() ([]byte, []int) {
-	return file_udb_entity_v1_admin_proto_rawDescGZIP(), []int{60}
+	return file_udb_entity_v1_admin_proto_rawDescGZIP(), []int{63}
 }
 
 func (x *ProjectListRequest) GetContext() *RequestContext {
@@ -5168,7 +5394,7 @@ type ProjectListResponse struct {
 
 func (x *ProjectListResponse) Reset() {
 	*x = ProjectListResponse{}
-	mi := &file_udb_entity_v1_admin_proto_msgTypes[61]
+	mi := &file_udb_entity_v1_admin_proto_msgTypes[64]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5180,7 +5406,7 @@ func (x *ProjectListResponse) String() string {
 func (*ProjectListResponse) ProtoMessage() {}
 
 func (x *ProjectListResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_entity_v1_admin_proto_msgTypes[61]
+	mi := &file_udb_entity_v1_admin_proto_msgTypes[64]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5193,7 +5419,7 @@ func (x *ProjectListResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ProjectListResponse.ProtoReflect.Descriptor instead.
 func (*ProjectListResponse) Descriptor() ([]byte, []int) {
-	return file_udb_entity_v1_admin_proto_rawDescGZIP(), []int{61}
+	return file_udb_entity_v1_admin_proto_rawDescGZIP(), []int{64}
 }
 
 func (x *ProjectListResponse) GetProjects() []*ProjectRecord {
@@ -5232,7 +5458,7 @@ type AdminSummaryRequest struct {
 
 func (x *AdminSummaryRequest) Reset() {
 	*x = AdminSummaryRequest{}
-	mi := &file_udb_entity_v1_admin_proto_msgTypes[62]
+	mi := &file_udb_entity_v1_admin_proto_msgTypes[65]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5244,7 +5470,7 @@ func (x *AdminSummaryRequest) String() string {
 func (*AdminSummaryRequest) ProtoMessage() {}
 
 func (x *AdminSummaryRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_entity_v1_admin_proto_msgTypes[62]
+	mi := &file_udb_entity_v1_admin_proto_msgTypes[65]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5257,7 +5483,7 @@ func (x *AdminSummaryRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AdminSummaryRequest.ProtoReflect.Descriptor instead.
 func (*AdminSummaryRequest) Descriptor() ([]byte, []int) {
-	return file_udb_entity_v1_admin_proto_rawDescGZIP(), []int{62}
+	return file_udb_entity_v1_admin_proto_rawDescGZIP(), []int{65}
 }
 
 func (x *AdminSummaryRequest) GetContext() *RequestContext {
@@ -5304,7 +5530,7 @@ type AdminAuditLogRequest struct {
 
 func (x *AdminAuditLogRequest) Reset() {
 	*x = AdminAuditLogRequest{}
-	mi := &file_udb_entity_v1_admin_proto_msgTypes[63]
+	mi := &file_udb_entity_v1_admin_proto_msgTypes[66]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5316,7 +5542,7 @@ func (x *AdminAuditLogRequest) String() string {
 func (*AdminAuditLogRequest) ProtoMessage() {}
 
 func (x *AdminAuditLogRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_entity_v1_admin_proto_msgTypes[63]
+	mi := &file_udb_entity_v1_admin_proto_msgTypes[66]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5329,7 +5555,7 @@ func (x *AdminAuditLogRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AdminAuditLogRequest.ProtoReflect.Descriptor instead.
 func (*AdminAuditLogRequest) Descriptor() ([]byte, []int) {
-	return file_udb_entity_v1_admin_proto_rawDescGZIP(), []int{63}
+	return file_udb_entity_v1_admin_proto_rawDescGZIP(), []int{66}
 }
 
 func (x *AdminAuditLogRequest) GetContext() *RequestContext {
@@ -5410,7 +5636,7 @@ type AdminAuditLogRecord struct {
 
 func (x *AdminAuditLogRecord) Reset() {
 	*x = AdminAuditLogRecord{}
-	mi := &file_udb_entity_v1_admin_proto_msgTypes[64]
+	mi := &file_udb_entity_v1_admin_proto_msgTypes[67]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5422,7 +5648,7 @@ func (x *AdminAuditLogRecord) String() string {
 func (*AdminAuditLogRecord) ProtoMessage() {}
 
 func (x *AdminAuditLogRecord) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_entity_v1_admin_proto_msgTypes[64]
+	mi := &file_udb_entity_v1_admin_proto_msgTypes[67]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5435,7 +5661,7 @@ func (x *AdminAuditLogRecord) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AdminAuditLogRecord.ProtoReflect.Descriptor instead.
 func (*AdminAuditLogRecord) Descriptor() ([]byte, []int) {
-	return file_udb_entity_v1_admin_proto_rawDescGZIP(), []int{64}
+	return file_udb_entity_v1_admin_proto_rawDescGZIP(), []int{67}
 }
 
 func (x *AdminAuditLogRecord) GetAuditId() string {
@@ -5547,7 +5773,7 @@ type AdminAuditLogResponse struct {
 
 func (x *AdminAuditLogResponse) Reset() {
 	*x = AdminAuditLogResponse{}
-	mi := &file_udb_entity_v1_admin_proto_msgTypes[65]
+	mi := &file_udb_entity_v1_admin_proto_msgTypes[68]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5559,7 +5785,7 @@ func (x *AdminAuditLogResponse) String() string {
 func (*AdminAuditLogResponse) ProtoMessage() {}
 
 func (x *AdminAuditLogResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_entity_v1_admin_proto_msgTypes[65]
+	mi := &file_udb_entity_v1_admin_proto_msgTypes[68]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5572,7 +5798,7 @@ func (x *AdminAuditLogResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AdminAuditLogResponse.ProtoReflect.Descriptor instead.
 func (*AdminAuditLogResponse) Descriptor() ([]byte, []int) {
-	return file_udb_entity_v1_admin_proto_rawDescGZIP(), []int{65}
+	return file_udb_entity_v1_admin_proto_rawDescGZIP(), []int{68}
 }
 
 func (x *AdminAuditLogResponse) GetLogs() []*AdminAuditLogRecord {
@@ -5607,7 +5833,7 @@ type AdminAuditVerifyRequest struct {
 
 func (x *AdminAuditVerifyRequest) Reset() {
 	*x = AdminAuditVerifyRequest{}
-	mi := &file_udb_entity_v1_admin_proto_msgTypes[66]
+	mi := &file_udb_entity_v1_admin_proto_msgTypes[69]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5619,7 +5845,7 @@ func (x *AdminAuditVerifyRequest) String() string {
 func (*AdminAuditVerifyRequest) ProtoMessage() {}
 
 func (x *AdminAuditVerifyRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_entity_v1_admin_proto_msgTypes[66]
+	mi := &file_udb_entity_v1_admin_proto_msgTypes[69]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5632,7 +5858,7 @@ func (x *AdminAuditVerifyRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AdminAuditVerifyRequest.ProtoReflect.Descriptor instead.
 func (*AdminAuditVerifyRequest) Descriptor() ([]byte, []int) {
-	return file_udb_entity_v1_admin_proto_rawDescGZIP(), []int{66}
+	return file_udb_entity_v1_admin_proto_rawDescGZIP(), []int{69}
 }
 
 func (x *AdminAuditVerifyRequest) GetContext() *RequestContext {
@@ -5666,7 +5892,7 @@ type AdminAuditVerifyResponse struct {
 
 func (x *AdminAuditVerifyResponse) Reset() {
 	*x = AdminAuditVerifyResponse{}
-	mi := &file_udb_entity_v1_admin_proto_msgTypes[67]
+	mi := &file_udb_entity_v1_admin_proto_msgTypes[70]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5678,7 +5904,7 @@ func (x *AdminAuditVerifyResponse) String() string {
 func (*AdminAuditVerifyResponse) ProtoMessage() {}
 
 func (x *AdminAuditVerifyResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_entity_v1_admin_proto_msgTypes[67]
+	mi := &file_udb_entity_v1_admin_proto_msgTypes[70]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5691,7 +5917,7 @@ func (x *AdminAuditVerifyResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AdminAuditVerifyResponse.ProtoReflect.Descriptor instead.
 func (*AdminAuditVerifyResponse) Descriptor() ([]byte, []int) {
-	return file_udb_entity_v1_admin_proto_rawDescGZIP(), []int{67}
+	return file_udb_entity_v1_admin_proto_rawDescGZIP(), []int{70}
 }
 
 func (x *AdminAuditVerifyResponse) GetPassed() bool {
@@ -5781,7 +6007,7 @@ type AdminBackendSummary struct {
 
 func (x *AdminBackendSummary) Reset() {
 	*x = AdminBackendSummary{}
-	mi := &file_udb_entity_v1_admin_proto_msgTypes[68]
+	mi := &file_udb_entity_v1_admin_proto_msgTypes[71]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5793,7 +6019,7 @@ func (x *AdminBackendSummary) String() string {
 func (*AdminBackendSummary) ProtoMessage() {}
 
 func (x *AdminBackendSummary) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_entity_v1_admin_proto_msgTypes[68]
+	mi := &file_udb_entity_v1_admin_proto_msgTypes[71]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5806,7 +6032,7 @@ func (x *AdminBackendSummary) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AdminBackendSummary.ProtoReflect.Descriptor instead.
 func (*AdminBackendSummary) Descriptor() ([]byte, []int) {
-	return file_udb_entity_v1_admin_proto_rawDescGZIP(), []int{68}
+	return file_udb_entity_v1_admin_proto_rawDescGZIP(), []int{71}
 }
 
 func (x *AdminBackendSummary) GetBackend() string {
@@ -5929,7 +6155,7 @@ type AdminCdcSummary struct {
 
 func (x *AdminCdcSummary) Reset() {
 	*x = AdminCdcSummary{}
-	mi := &file_udb_entity_v1_admin_proto_msgTypes[69]
+	mi := &file_udb_entity_v1_admin_proto_msgTypes[72]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5941,7 +6167,7 @@ func (x *AdminCdcSummary) String() string {
 func (*AdminCdcSummary) ProtoMessage() {}
 
 func (x *AdminCdcSummary) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_entity_v1_admin_proto_msgTypes[69]
+	mi := &file_udb_entity_v1_admin_proto_msgTypes[72]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5954,7 +6180,7 @@ func (x *AdminCdcSummary) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AdminCdcSummary.ProtoReflect.Descriptor instead.
 func (*AdminCdcSummary) Descriptor() ([]byte, []int) {
-	return file_udb_entity_v1_admin_proto_rawDescGZIP(), []int{69}
+	return file_udb_entity_v1_admin_proto_rawDescGZIP(), []int{72}
 }
 
 func (x *AdminCdcSummary) GetIsLeader() bool {
@@ -6019,7 +6245,7 @@ type AdminSagaSummary struct {
 
 func (x *AdminSagaSummary) Reset() {
 	*x = AdminSagaSummary{}
-	mi := &file_udb_entity_v1_admin_proto_msgTypes[70]
+	mi := &file_udb_entity_v1_admin_proto_msgTypes[73]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6031,7 +6257,7 @@ func (x *AdminSagaSummary) String() string {
 func (*AdminSagaSummary) ProtoMessage() {}
 
 func (x *AdminSagaSummary) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_entity_v1_admin_proto_msgTypes[70]
+	mi := &file_udb_entity_v1_admin_proto_msgTypes[73]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6044,7 +6270,7 @@ func (x *AdminSagaSummary) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AdminSagaSummary.ProtoReflect.Descriptor instead.
 func (*AdminSagaSummary) Descriptor() ([]byte, []int) {
-	return file_udb_entity_v1_admin_proto_rawDescGZIP(), []int{70}
+	return file_udb_entity_v1_admin_proto_rawDescGZIP(), []int{73}
 }
 
 func (x *AdminSagaSummary) GetActive() int64 {
@@ -6097,7 +6323,7 @@ type AdminCatalogSummary struct {
 
 func (x *AdminCatalogSummary) Reset() {
 	*x = AdminCatalogSummary{}
-	mi := &file_udb_entity_v1_admin_proto_msgTypes[71]
+	mi := &file_udb_entity_v1_admin_proto_msgTypes[74]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6109,7 +6335,7 @@ func (x *AdminCatalogSummary) String() string {
 func (*AdminCatalogSummary) ProtoMessage() {}
 
 func (x *AdminCatalogSummary) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_entity_v1_admin_proto_msgTypes[71]
+	mi := &file_udb_entity_v1_admin_proto_msgTypes[74]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6122,7 +6348,7 @@ func (x *AdminCatalogSummary) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AdminCatalogSummary.ProtoReflect.Descriptor instead.
 func (*AdminCatalogSummary) Descriptor() ([]byte, []int) {
-	return file_udb_entity_v1_admin_proto_rawDescGZIP(), []int{71}
+	return file_udb_entity_v1_admin_proto_rawDescGZIP(), []int{74}
 }
 
 func (x *AdminCatalogSummary) GetProjectId() string {
@@ -6195,7 +6421,7 @@ type AdminSummaryResponse struct {
 
 func (x *AdminSummaryResponse) Reset() {
 	*x = AdminSummaryResponse{}
-	mi := &file_udb_entity_v1_admin_proto_msgTypes[72]
+	mi := &file_udb_entity_v1_admin_proto_msgTypes[75]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6207,7 +6433,7 @@ func (x *AdminSummaryResponse) String() string {
 func (*AdminSummaryResponse) ProtoMessage() {}
 
 func (x *AdminSummaryResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_entity_v1_admin_proto_msgTypes[72]
+	mi := &file_udb_entity_v1_admin_proto_msgTypes[75]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6220,7 +6446,7 @@ func (x *AdminSummaryResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AdminSummaryResponse.ProtoReflect.Descriptor instead.
 func (*AdminSummaryResponse) Descriptor() ([]byte, []int) {
-	return file_udb_entity_v1_admin_proto_rawDescGZIP(), []int{72}
+	return file_udb_entity_v1_admin_proto_rawDescGZIP(), []int{75}
 }
 
 func (x *AdminSummaryResponse) GetCatalog() []*AdminCatalogSummary {
@@ -6667,7 +6893,27 @@ const file_udb_entity_v1_admin_proto_rawDesc = "" +
 	"\x0erows_to_repair\x18\x06 \x01(\x05R\frowsToRepair\x120\n" +
 	"\x14estimated_cost_units\x18\a \x01(\x01R\x12estimatedCostUnits\x122\n" +
 	"\x15repair_tasks_enqueued\x18\b \x01(\x03R\x13repairTasksEnqueued\x12\x1a\n" +
-	"\bwarnings\x18\t \x03(\tR\bwarnings\"\xaf\x02\n" +
+	"\bwarnings\x18\t \x03(\tR\bwarnings\"\xcc\x01\n" +
+	"\x13PurgeSubjectRequest\x127\n" +
+	"\acontext\x18\x01 \x01(\v2\x1d.udb.entity.v1.RequestContextR\acontext\x12\x1d\n" +
+	"\n" +
+	"subject_id\x18\x02 \x01(\tR\tsubjectId\x12\x16\n" +
+	"\x06reason\x18\x03 \x01(\tR\x06reason\x12\x17\n" +
+	"\adry_run\x18\x04 \x01(\bR\x06dryRun\x12,\n" +
+	"\x12confirm_subject_id\x18\x05 \x01(\tR\x10confirmSubjectId\"i\n" +
+	"\x12PurgedSubjectTable\x12!\n" +
+	"\fmessage_type\x18\x01 \x01(\tR\vmessageType\x12\x16\n" +
+	"\x06column\x18\x02 \x01(\tR\x06column\x12\x18\n" +
+	"\adeleted\x18\x03 \x01(\x03R\adeleted\"\xf4\x01\n" +
+	"\x14PurgeSubjectResponse\x129\n" +
+	"\x06tables\x18\x01 \x03(\v2!.udb.entity.v1.PurgedSubjectTableR\x06tables\x12\x1f\n" +
+	"\vnot_covered\x18\x02 \x03(\tR\n" +
+	"notCovered\x12#\n" +
+	"\rtotal_deleted\x18\x03 \x01(\x03R\ftotalDeleted\x12\x17\n" +
+	"\adry_run\x18\x04 \x01(\bR\x06dryRun\x12\x1f\n" +
+	"\vreceipt_jws\x18\x05 \x01(\tR\n" +
+	"receiptJws\x12!\n" +
+	"\freceipt_json\x18\x06 \x01(\tR\vreceiptJson\"\xaf\x02\n" +
 	"\x1bProjectionDriftScanResponse\x12\x1d\n" +
 	"\n" +
 	"project_id\x18\x01 \x01(\tR\tprojectId\x12!\n" +
@@ -6892,7 +7138,7 @@ func file_udb_entity_v1_admin_proto_rawDescGZIP() []byte {
 	return file_udb_entity_v1_admin_proto_rawDescData
 }
 
-var file_udb_entity_v1_admin_proto_msgTypes = make([]protoimpl.MessageInfo, 75)
+var file_udb_entity_v1_admin_proto_msgTypes = make([]protoimpl.MessageInfo, 78)
 var file_udb_entity_v1_admin_proto_goTypes = []any{
 	(*CapabilitiesRequest)(nil),               // 0: udb.entity.v1.CapabilitiesRequest
 	(*CapabilitiesResponse)(nil),              // 1: udb.entity.v1.CapabilitiesResponse
@@ -6940,101 +7186,106 @@ var file_udb_entity_v1_admin_proto_goTypes = []any{
 	(*ProjectionDriftScanRequest)(nil),        // 43: udb.entity.v1.ProjectionDriftScanRequest
 	(*ProjectionDriftDivergentRow)(nil),       // 44: udb.entity.v1.ProjectionDriftDivergentRow
 	(*ProjectionDriftTargetReport)(nil),       // 45: udb.entity.v1.ProjectionDriftTargetReport
-	(*ProjectionDriftScanResponse)(nil),       // 46: udb.entity.v1.ProjectionDriftScanResponse
-	(*SagaListRequest)(nil),                   // 47: udb.entity.v1.SagaListRequest
-	(*SagaRecord)(nil),                        // 48: udb.entity.v1.SagaRecord
-	(*SagaListResponse)(nil),                  // 49: udb.entity.v1.SagaListResponse
-	(*SagaRequest)(nil),                       // 50: udb.entity.v1.SagaRequest
-	(*SagaResponse)(nil),                      // 51: udb.entity.v1.SagaResponse
-	(*PolicyRecord)(nil),                      // 52: udb.entity.v1.PolicyRecord
-	(*PolicyListRequest)(nil),                 // 53: udb.entity.v1.PolicyListRequest
-	(*PolicyListResponse)(nil),                // 54: udb.entity.v1.PolicyListResponse
-	(*PutPolicyRequest)(nil),                  // 55: udb.entity.v1.PutPolicyRequest
-	(*PolicyRequest)(nil),                     // 56: udb.entity.v1.PolicyRequest
-	(*PolicyLintResponse)(nil),                // 57: udb.entity.v1.PolicyLintResponse
-	(*EnsureProjectRequest)(nil),              // 58: udb.entity.v1.EnsureProjectRequest
-	(*ProjectRecord)(nil),                     // 59: udb.entity.v1.ProjectRecord
-	(*ProjectListRequest)(nil),                // 60: udb.entity.v1.ProjectListRequest
-	(*ProjectListResponse)(nil),               // 61: udb.entity.v1.ProjectListResponse
-	(*AdminSummaryRequest)(nil),               // 62: udb.entity.v1.AdminSummaryRequest
-	(*AdminAuditLogRequest)(nil),              // 63: udb.entity.v1.AdminAuditLogRequest
-	(*AdminAuditLogRecord)(nil),               // 64: udb.entity.v1.AdminAuditLogRecord
-	(*AdminAuditLogResponse)(nil),             // 65: udb.entity.v1.AdminAuditLogResponse
-	(*AdminAuditVerifyRequest)(nil),           // 66: udb.entity.v1.AdminAuditVerifyRequest
-	(*AdminAuditVerifyResponse)(nil),          // 67: udb.entity.v1.AdminAuditVerifyResponse
-	(*AdminBackendSummary)(nil),               // 68: udb.entity.v1.AdminBackendSummary
-	(*AdminCdcSummary)(nil),                   // 69: udb.entity.v1.AdminCdcSummary
-	(*AdminSagaSummary)(nil),                  // 70: udb.entity.v1.AdminSagaSummary
-	(*AdminCatalogSummary)(nil),               // 71: udb.entity.v1.AdminCatalogSummary
-	(*AdminSummaryResponse)(nil),              // 72: udb.entity.v1.AdminSummaryResponse
-	nil,                                       // 73: udb.entity.v1.BackendInstanceStatus.LabelsEntry
-	nil,                                       // 74: udb.entity.v1.AdminBackendSummary.LabelsEntry
-	(*RequestContext)(nil),                    // 75: udb.entity.v1.RequestContext
+	(*PurgeSubjectRequest)(nil),               // 46: udb.entity.v1.PurgeSubjectRequest
+	(*PurgedSubjectTable)(nil),                // 47: udb.entity.v1.PurgedSubjectTable
+	(*PurgeSubjectResponse)(nil),              // 48: udb.entity.v1.PurgeSubjectResponse
+	(*ProjectionDriftScanResponse)(nil),       // 49: udb.entity.v1.ProjectionDriftScanResponse
+	(*SagaListRequest)(nil),                   // 50: udb.entity.v1.SagaListRequest
+	(*SagaRecord)(nil),                        // 51: udb.entity.v1.SagaRecord
+	(*SagaListResponse)(nil),                  // 52: udb.entity.v1.SagaListResponse
+	(*SagaRequest)(nil),                       // 53: udb.entity.v1.SagaRequest
+	(*SagaResponse)(nil),                      // 54: udb.entity.v1.SagaResponse
+	(*PolicyRecord)(nil),                      // 55: udb.entity.v1.PolicyRecord
+	(*PolicyListRequest)(nil),                 // 56: udb.entity.v1.PolicyListRequest
+	(*PolicyListResponse)(nil),                // 57: udb.entity.v1.PolicyListResponse
+	(*PutPolicyRequest)(nil),                  // 58: udb.entity.v1.PutPolicyRequest
+	(*PolicyRequest)(nil),                     // 59: udb.entity.v1.PolicyRequest
+	(*PolicyLintResponse)(nil),                // 60: udb.entity.v1.PolicyLintResponse
+	(*EnsureProjectRequest)(nil),              // 61: udb.entity.v1.EnsureProjectRequest
+	(*ProjectRecord)(nil),                     // 62: udb.entity.v1.ProjectRecord
+	(*ProjectListRequest)(nil),                // 63: udb.entity.v1.ProjectListRequest
+	(*ProjectListResponse)(nil),               // 64: udb.entity.v1.ProjectListResponse
+	(*AdminSummaryRequest)(nil),               // 65: udb.entity.v1.AdminSummaryRequest
+	(*AdminAuditLogRequest)(nil),              // 66: udb.entity.v1.AdminAuditLogRequest
+	(*AdminAuditLogRecord)(nil),               // 67: udb.entity.v1.AdminAuditLogRecord
+	(*AdminAuditLogResponse)(nil),             // 68: udb.entity.v1.AdminAuditLogResponse
+	(*AdminAuditVerifyRequest)(nil),           // 69: udb.entity.v1.AdminAuditVerifyRequest
+	(*AdminAuditVerifyResponse)(nil),          // 70: udb.entity.v1.AdminAuditVerifyResponse
+	(*AdminBackendSummary)(nil),               // 71: udb.entity.v1.AdminBackendSummary
+	(*AdminCdcSummary)(nil),                   // 72: udb.entity.v1.AdminCdcSummary
+	(*AdminSagaSummary)(nil),                  // 73: udb.entity.v1.AdminSagaSummary
+	(*AdminCatalogSummary)(nil),               // 74: udb.entity.v1.AdminCatalogSummary
+	(*AdminSummaryResponse)(nil),              // 75: udb.entity.v1.AdminSummaryResponse
+	nil,                                       // 76: udb.entity.v1.BackendInstanceStatus.LabelsEntry
+	nil,                                       // 77: udb.entity.v1.AdminBackendSummary.LabelsEntry
+	(*RequestContext)(nil),                    // 78: udb.entity.v1.RequestContext
 }
 var file_udb_entity_v1_admin_proto_depIdxs = []int32{
-	75, // 0: udb.entity.v1.CapabilitiesRequest.context:type_name -> udb.entity.v1.RequestContext
+	78, // 0: udb.entity.v1.CapabilitiesRequest.context:type_name -> udb.entity.v1.RequestContext
 	5,  // 1: udb.entity.v1.CapabilitiesResponse.backend_instances:type_name -> udb.entity.v1.BackendInstanceStatus
 	4,  // 2: udb.entity.v1.CapabilitiesResponse.backend_capabilities:type_name -> udb.entity.v1.BackendCapabilityDescriptor
 	2,  // 3: udb.entity.v1.CapabilitiesResponse.protocol_support:type_name -> udb.entity.v1.ProtocolSupport
 	3,  // 4: udb.entity.v1.CapabilitiesResponse.backend_protocol_support:type_name -> udb.entity.v1.BackendProtocolSupport
 	6,  // 5: udb.entity.v1.CapabilitiesResponse.native_services:type_name -> udb.entity.v1.NativeServiceStatus
-	73, // 6: udb.entity.v1.BackendInstanceStatus.labels:type_name -> udb.entity.v1.BackendInstanceStatus.LabelsEntry
-	75, // 7: udb.entity.v1.CatalogManifestRequest.context:type_name -> udb.entity.v1.RequestContext
-	75, // 8: udb.entity.v1.MessageSchemaLookupRequest.context:type_name -> udb.entity.v1.RequestContext
+	76, // 6: udb.entity.v1.BackendInstanceStatus.labels:type_name -> udb.entity.v1.BackendInstanceStatus.LabelsEntry
+	78, // 7: udb.entity.v1.CatalogManifestRequest.context:type_name -> udb.entity.v1.RequestContext
+	78, // 8: udb.entity.v1.MessageSchemaLookupRequest.context:type_name -> udb.entity.v1.RequestContext
 	10, // 9: udb.entity.v1.MessageSchemaDescriptor.fields:type_name -> udb.entity.v1.MessageFieldDescriptor
 	11, // 10: udb.entity.v1.MessageSchemaLookupResponse.schema:type_name -> udb.entity.v1.MessageSchemaDescriptor
-	75, // 11: udb.entity.v1.MessageSchemaListRequest.context:type_name -> udb.entity.v1.RequestContext
-	75, // 12: udb.entity.v1.HealthReportRequest.context:type_name -> udb.entity.v1.RequestContext
+	78, // 11: udb.entity.v1.MessageSchemaListRequest.context:type_name -> udb.entity.v1.RequestContext
+	78, // 12: udb.entity.v1.HealthReportRequest.context:type_name -> udb.entity.v1.RequestContext
 	5,  // 13: udb.entity.v1.HealthReportResponse.backend_instances:type_name -> udb.entity.v1.BackendInstanceStatus
 	6,  // 14: udb.entity.v1.HealthReportResponse.native_services:type_name -> udb.entity.v1.NativeServiceStatus
-	75, // 15: udb.entity.v1.GenericDispatchRequest.context:type_name -> udb.entity.v1.RequestContext
-	75, // 16: udb.entity.v1.ResourceAdminRequest.context:type_name -> udb.entity.v1.RequestContext
-	75, // 17: udb.entity.v1.StageCatalogRequest.context:type_name -> udb.entity.v1.RequestContext
-	75, // 18: udb.entity.v1.CatalogVersionRequest.context:type_name -> udb.entity.v1.RequestContext
+	78, // 15: udb.entity.v1.GenericDispatchRequest.context:type_name -> udb.entity.v1.RequestContext
+	78, // 16: udb.entity.v1.ResourceAdminRequest.context:type_name -> udb.entity.v1.RequestContext
+	78, // 17: udb.entity.v1.StageCatalogRequest.context:type_name -> udb.entity.v1.RequestContext
+	78, // 18: udb.entity.v1.CatalogVersionRequest.context:type_name -> udb.entity.v1.RequestContext
 	23, // 19: udb.entity.v1.CatalogVersionListResponse.versions:type_name -> udb.entity.v1.CatalogVersionResponse
-	75, // 20: udb.entity.v1.MigrationPlanRequest.context:type_name -> udb.entity.v1.RequestContext
+	78, // 20: udb.entity.v1.MigrationPlanRequest.context:type_name -> udb.entity.v1.RequestContext
 	27, // 21: udb.entity.v1.MigrationPlanResponse.reviewed_catalog_transition:type_name -> udb.entity.v1.ReviewedCatalogTransitionEvidence
-	75, // 22: udb.entity.v1.MigrationApplyRequest.context:type_name -> udb.entity.v1.RequestContext
-	75, // 23: udb.entity.v1.MigrationRunRequest.context:type_name -> udb.entity.v1.RequestContext
-	75, // 24: udb.entity.v1.MigrationRunListRequest.context:type_name -> udb.entity.v1.RequestContext
+	78, // 22: udb.entity.v1.MigrationApplyRequest.context:type_name -> udb.entity.v1.RequestContext
+	78, // 23: udb.entity.v1.MigrationRunRequest.context:type_name -> udb.entity.v1.RequestContext
+	78, // 24: udb.entity.v1.MigrationRunListRequest.context:type_name -> udb.entity.v1.RequestContext
 	33, // 25: udb.entity.v1.MigrationRunListResponse.runs:type_name -> udb.entity.v1.MigrationStatusResponse
 	34, // 26: udb.entity.v1.MigrationStatusResponse.operations:type_name -> udb.entity.v1.MigrationOperationStatus
 	27, // 27: udb.entity.v1.MigrationStatusResponse.reviewed_catalog_transition:type_name -> udb.entity.v1.ReviewedCatalogTransitionEvidence
-	75, // 28: udb.entity.v1.DlqListRequest.context:type_name -> udb.entity.v1.RequestContext
+	78, // 28: udb.entity.v1.DlqListRequest.context:type_name -> udb.entity.v1.RequestContext
 	36, // 29: udb.entity.v1.DlqListResponse.events:type_name -> udb.entity.v1.DlqEventRecord
-	75, // 30: udb.entity.v1.DlqEventRequest.context:type_name -> udb.entity.v1.RequestContext
+	78, // 30: udb.entity.v1.DlqEventRequest.context:type_name -> udb.entity.v1.RequestContext
 	36, // 31: udb.entity.v1.DlqEventResponse.event:type_name -> udb.entity.v1.DlqEventRecord
-	75, // 32: udb.entity.v1.DlqActionRequest.context:type_name -> udb.entity.v1.RequestContext
-	75, // 33: udb.entity.v1.CdcRedactionPreviewRequest.context:type_name -> udb.entity.v1.RequestContext
-	75, // 34: udb.entity.v1.ProjectionDriftScanRequest.context:type_name -> udb.entity.v1.RequestContext
+	78, // 32: udb.entity.v1.DlqActionRequest.context:type_name -> udb.entity.v1.RequestContext
+	78, // 33: udb.entity.v1.CdcRedactionPreviewRequest.context:type_name -> udb.entity.v1.RequestContext
+	78, // 34: udb.entity.v1.ProjectionDriftScanRequest.context:type_name -> udb.entity.v1.RequestContext
 	44, // 35: udb.entity.v1.ProjectionDriftTargetReport.divergent_rows:type_name -> udb.entity.v1.ProjectionDriftDivergentRow
-	45, // 36: udb.entity.v1.ProjectionDriftScanResponse.reports:type_name -> udb.entity.v1.ProjectionDriftTargetReport
-	75, // 37: udb.entity.v1.SagaListRequest.context:type_name -> udb.entity.v1.RequestContext
-	48, // 38: udb.entity.v1.SagaListResponse.sagas:type_name -> udb.entity.v1.SagaRecord
-	75, // 39: udb.entity.v1.SagaRequest.context:type_name -> udb.entity.v1.RequestContext
-	48, // 40: udb.entity.v1.SagaResponse.saga:type_name -> udb.entity.v1.SagaRecord
-	75, // 41: udb.entity.v1.PolicyListRequest.context:type_name -> udb.entity.v1.RequestContext
-	52, // 42: udb.entity.v1.PolicyListResponse.policies:type_name -> udb.entity.v1.PolicyRecord
-	75, // 43: udb.entity.v1.PutPolicyRequest.context:type_name -> udb.entity.v1.RequestContext
-	52, // 44: udb.entity.v1.PutPolicyRequest.policy:type_name -> udb.entity.v1.PolicyRecord
-	75, // 45: udb.entity.v1.PolicyRequest.context:type_name -> udb.entity.v1.RequestContext
-	75, // 46: udb.entity.v1.EnsureProjectRequest.context:type_name -> udb.entity.v1.RequestContext
-	75, // 47: udb.entity.v1.ProjectListRequest.context:type_name -> udb.entity.v1.RequestContext
-	59, // 48: udb.entity.v1.ProjectListResponse.projects:type_name -> udb.entity.v1.ProjectRecord
-	75, // 49: udb.entity.v1.AdminSummaryRequest.context:type_name -> udb.entity.v1.RequestContext
-	75, // 50: udb.entity.v1.AdminAuditLogRequest.context:type_name -> udb.entity.v1.RequestContext
-	64, // 51: udb.entity.v1.AdminAuditLogResponse.logs:type_name -> udb.entity.v1.AdminAuditLogRecord
-	75, // 52: udb.entity.v1.AdminAuditVerifyRequest.context:type_name -> udb.entity.v1.RequestContext
-	74, // 53: udb.entity.v1.AdminBackendSummary.labels:type_name -> udb.entity.v1.AdminBackendSummary.LabelsEntry
-	71, // 54: udb.entity.v1.AdminSummaryResponse.catalog:type_name -> udb.entity.v1.AdminCatalogSummary
-	69, // 55: udb.entity.v1.AdminSummaryResponse.cdc:type_name -> udb.entity.v1.AdminCdcSummary
-	70, // 56: udb.entity.v1.AdminSummaryResponse.sagas:type_name -> udb.entity.v1.AdminSagaSummary
-	68, // 57: udb.entity.v1.AdminSummaryResponse.backends:type_name -> udb.entity.v1.AdminBackendSummary
-	58, // [58:58] is the sub-list for method output_type
-	58, // [58:58] is the sub-list for method input_type
-	58, // [58:58] is the sub-list for extension type_name
-	58, // [58:58] is the sub-list for extension extendee
-	0,  // [0:58] is the sub-list for field type_name
+	78, // 36: udb.entity.v1.PurgeSubjectRequest.context:type_name -> udb.entity.v1.RequestContext
+	47, // 37: udb.entity.v1.PurgeSubjectResponse.tables:type_name -> udb.entity.v1.PurgedSubjectTable
+	45, // 38: udb.entity.v1.ProjectionDriftScanResponse.reports:type_name -> udb.entity.v1.ProjectionDriftTargetReport
+	78, // 39: udb.entity.v1.SagaListRequest.context:type_name -> udb.entity.v1.RequestContext
+	51, // 40: udb.entity.v1.SagaListResponse.sagas:type_name -> udb.entity.v1.SagaRecord
+	78, // 41: udb.entity.v1.SagaRequest.context:type_name -> udb.entity.v1.RequestContext
+	51, // 42: udb.entity.v1.SagaResponse.saga:type_name -> udb.entity.v1.SagaRecord
+	78, // 43: udb.entity.v1.PolicyListRequest.context:type_name -> udb.entity.v1.RequestContext
+	55, // 44: udb.entity.v1.PolicyListResponse.policies:type_name -> udb.entity.v1.PolicyRecord
+	78, // 45: udb.entity.v1.PutPolicyRequest.context:type_name -> udb.entity.v1.RequestContext
+	55, // 46: udb.entity.v1.PutPolicyRequest.policy:type_name -> udb.entity.v1.PolicyRecord
+	78, // 47: udb.entity.v1.PolicyRequest.context:type_name -> udb.entity.v1.RequestContext
+	78, // 48: udb.entity.v1.EnsureProjectRequest.context:type_name -> udb.entity.v1.RequestContext
+	78, // 49: udb.entity.v1.ProjectListRequest.context:type_name -> udb.entity.v1.RequestContext
+	62, // 50: udb.entity.v1.ProjectListResponse.projects:type_name -> udb.entity.v1.ProjectRecord
+	78, // 51: udb.entity.v1.AdminSummaryRequest.context:type_name -> udb.entity.v1.RequestContext
+	78, // 52: udb.entity.v1.AdminAuditLogRequest.context:type_name -> udb.entity.v1.RequestContext
+	67, // 53: udb.entity.v1.AdminAuditLogResponse.logs:type_name -> udb.entity.v1.AdminAuditLogRecord
+	78, // 54: udb.entity.v1.AdminAuditVerifyRequest.context:type_name -> udb.entity.v1.RequestContext
+	77, // 55: udb.entity.v1.AdminBackendSummary.labels:type_name -> udb.entity.v1.AdminBackendSummary.LabelsEntry
+	74, // 56: udb.entity.v1.AdminSummaryResponse.catalog:type_name -> udb.entity.v1.AdminCatalogSummary
+	72, // 57: udb.entity.v1.AdminSummaryResponse.cdc:type_name -> udb.entity.v1.AdminCdcSummary
+	73, // 58: udb.entity.v1.AdminSummaryResponse.sagas:type_name -> udb.entity.v1.AdminSagaSummary
+	71, // 59: udb.entity.v1.AdminSummaryResponse.backends:type_name -> udb.entity.v1.AdminBackendSummary
+	60, // [60:60] is the sub-list for method output_type
+	60, // [60:60] is the sub-list for method input_type
+	60, // [60:60] is the sub-list for extension type_name
+	60, // [60:60] is the sub-list for extension extendee
+	0,  // [0:60] is the sub-list for field type_name
 }
 
 func init() { file_udb_entity_v1_admin_proto_init() }
@@ -7050,7 +7301,7 @@ func file_udb_entity_v1_admin_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_udb_entity_v1_admin_proto_rawDesc), len(file_udb_entity_v1_admin_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   75,
+			NumMessages:   78,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

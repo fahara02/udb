@@ -6,7 +6,7 @@
 
 <p align="center">
   <strong>UDB :: Universal Data Broker</strong><br>
-  <sub>gRPC data plane | native control plane | tenant/project scope guard<br>crate v0.5.32 | protocol v1.0.0</sub>
+  <sub>gRPC data plane | native control plane | tenant/project scope guard<br>crate v0.5.33 | protocol v1.0.0</sub>
 </p>
 
 <p align="center">
@@ -58,7 +58,7 @@ staleness test fails if it drifts.
 <!-- BEGIN GENERATED:services -->
 | Area | Surface |
 |---|---|
-| Data plane | 82 `DataBroker` RPCs |
+| Data plane | 85 `DataBroker` RPCs |
 | Native control plane | 27 services, 304 RPCs |
 
 Per-service RPC counts (native control plane):
@@ -99,7 +99,7 @@ Per-service RPC counts (native control plane):
 | Contract manifest | 733 messages, 49 table-backed models, 192 event contracts |
 | Backends | 18 backend kinds across SQL, cache, vector, object, document, graph, and column stores |
 | SDKs | Go, Python, TypeScript/Node, Java, C#, PHP/Laravel |
-| Release | crate/SDK version `0.5.32`, wire protocol `1.0.0` |
+| Release | crate/SDK version `0.5.33`, wire protocol `1.0.0` |
 
 ## Why UDB
 
@@ -332,12 +332,12 @@ read fences, consistency modes) and idempotency `was_duplicate` replay:
 
 | Language | Install |
 |---|---|
-| Go | `go get github.com/fahara02/udb/sdk/go@v0.5.32` |
-| Python | `pip install udb-client==0.5.32` |
-| TypeScript / Node | `npm i @udb_plus/sdk@0.5.32` |
-| PHP / Laravel | `composer require fahara02/udb-laravel:^0.5.32` |
-| C# | `dotnet add package Udb.Client --version 0.5.32` |
-| Java | `dev.udb:udb-java-client` (`0.5.32` target; build from checkout until publishing lands) |
+| Go | `go get github.com/fahara02/udb/sdk/go@v0.5.33` |
+| Python | `pip install udb-client==0.5.33` |
+| TypeScript / Node | `npm i @udb_plus/sdk@0.5.33` |
+| PHP / Laravel | `composer require fahara02/udb-laravel:^0.5.33` |
+| C# | `dotnet add package Udb.Client --version 0.5.33` |
+| Java | `dev.udb:udb-java-client` (`0.5.33` target; build from checkout until publishing lands) |
 
 Start here: [sdk/README.md](sdk/README.md).
 

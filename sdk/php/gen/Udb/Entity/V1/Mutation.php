@@ -23,6 +23,9 @@ class Mutation extends \Google\Protobuf\Internal\Message
      */
     protected $tx_id = '';
     /**
+     * `insert` creates one complete relational row and refuses any key collision.
+     * It shares Upsert's scope, CDC, projections and audit; it never replaces a row.
+     *
      * Generated from protobuf field <code>string operation = 3 [json_name = "operation"];</code>
      */
     protected $operation = '';
@@ -160,6 +163,8 @@ class Mutation extends \Google\Protobuf\Internal\Message
      *     @type \Udb\Entity\V1\RequestContext $context
      *     @type string $tx_id
      *     @type string $operation
+     *           `insert` creates one complete relational row and refuses any key collision.
+     *           It shares Upsert's scope, CDC, projections and audit; it never replaces a row.
      *     @type string $message_type
      *     @type string $record_json
      *           The record to write, in EITHER of two forms. Set exactly one.
@@ -282,6 +287,9 @@ class Mutation extends \Google\Protobuf\Internal\Message
     }
 
     /**
+     * `insert` creates one complete relational row and refuses any key collision.
+     * It shares Upsert's scope, CDC, projections and audit; it never replaces a row.
+     *
      * Generated from protobuf field <code>string operation = 3 [json_name = "operation"];</code>
      * @return string
      */
@@ -291,6 +299,9 @@ class Mutation extends \Google\Protobuf\Internal\Message
     }
 
     /**
+     * `insert` creates one complete relational row and refuses any key collision.
+     * It shares Upsert's scope, CDC, projections and audit; it never replaces a row.
+     *
      * Generated from protobuf field <code>string operation = 3 [json_name = "operation"];</code>
      * @param string $var
      * @return $this

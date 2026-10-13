@@ -16,6 +16,91 @@ use crate::runtime::service::storage_service::StorageServiceImpl;
 use tonic::{Code, Request};
 use uuid::Uuid;
 
+#[cfg(feature = "s3")]
+#[tokio::test]
+#[ignore = "requires live MinIO and Postgres; CI runs every ignored lib test"]
+async fn legacy_storage_migration_preserves_bytes_and_never_overwrites_a_copy() {
+    let _guard = live_native_service_db_lock().lock().await;
+    require_live_dsn_any(&[
+        "UDB_LIVE_NATIVE_PG_DSN",
+        "UDB_INTEGRATION_PG_DSN",
+        "UDB_PG_DSN",
+    ]);
+    configure_minio_env();
+    let runtime = live_runtime().await;
+    let bucket = std::env::var("UDB_STORAGE_BUCKET").unwrap_or_else(|_| "udb-storage".into());
+    let tenant = Uuid::new_v4().to_string();
+    let prefix = format!("legacy-layout-{}/", Uuid::new_v4().simple());
+    let key = format!("{prefix}a b-ü.txt");
+    let target = crate::runtime::core::storage_layout::namespaced_object_key(&tenant, &key);
+    let request = |operation: &str, key: &str| {
+        crate::runtime::core::setup_data::object_request_json(operation, &bucket, key, "text/plain")
+    };
+    runtime
+        .put_object_backend_target("minio", None, &request("put", &key), b"original".to_vec())
+        .await
+        .expect("seed bare key");
+    let dry = runtime
+        .migrate_legacy_object_keys(&bucket, &tenant, &prefix, 10, true)
+        .await
+        .expect("dry migration");
+    assert_eq!(dry.legacy_keys, [key.clone()]);
+    assert_eq!(dry.copied, 0);
+    assert!(
+        runtime
+            .get_object_backend_target("minio", None, &request("get", &target))
+            .await
+            .is_err()
+    );
+    let migrated = runtime
+        .migrate_legacy_object_keys(&bucket, &tenant, &prefix, 10, false)
+        .await
+        .expect("migrate bare key");
+    assert_eq!(migrated.copied, 1);
+    assert_eq!(
+        runtime
+            .get_object_backend_target("minio", None, &request("get", &target))
+            .await
+            .expect("read migrated bytes"),
+        b"original"
+    );
+    runtime
+        .put_object_backend_target(
+            "minio",
+            None,
+            &request("put", &key),
+            b"changed source".to_vec(),
+        )
+        .await
+        .expect("change source");
+    let repeated = runtime
+        .migrate_legacy_object_keys(&bucket, &tenant, &prefix, 10, false)
+        .await
+        .expect("repeat migration");
+    assert_eq!(repeated.already_present, 1);
+    assert_eq!(repeated.copied, 0);
+    assert_eq!(
+        runtime
+            .get_object_backend_target("minio", None, &request("get", &target))
+            .await
+            .expect("copy stays intact"),
+        b"original"
+    );
+    for object in [&key, &target] {
+        runtime
+            .delete_object_backend_target("minio", None, &request("delete", object))
+            .await
+            .expect("clean up migrated objects");
+    }
+    let _strict = EnvOverride::set("UDB_STORAGE_LAYOUT_STRICT", "true");
+    let missing_bucket = format!("udb-layout-missing-{}", Uuid::new_v4().simple());
+    let _bucket = EnvOverride::set("UDB_STORAGE_BUCKET", &missing_bucket);
+    assert!(
+        runtime.check_storage_layout_at_startup().await.is_err(),
+        "strict mode cannot skip an unreadable bucket"
+    );
+}
+
 /// Point the runtime's MinIO instance at the live integration store (the CI
 /// live-lane defaults when the env is not already set). Mirrors the other
 /// object live tests.

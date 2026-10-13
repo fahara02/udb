@@ -79,8 +79,10 @@ from udb.entity.v1.tx_pb2 import TxStatus as TxStatus
 from udb.entity.v1.cdc_pb2 import CDCSubscriptionRequest as CDCSubscriptionRequest
 from udb.entity.v1.cdc_pb2 import AckCdcEventsRequest as AckCdcEventsRequest
 from udb.entity.v1.cdc_pb2 import AckCdcEventsResponse as AckCdcEventsResponse
+from udb.entity.v1.cdc_pb2 import NackCdcEventsRequest as NackCdcEventsRequest
 from udb.entity.v1.cdc_pb2 import CdcControlRequest as CdcControlRequest
 from udb.entity.v1.cdc_pb2 import CdcStatusResponse as CdcStatusResponse
+from udb.entity.v1.cdc_pb2 import CdcConsumerStatus as CdcConsumerStatus
 from udb.entity.v1.outbox_pb2 import EnqueueOutboxEventRequest as EnqueueOutboxEventRequest
 from udb.entity.v1.outbox_pb2 import EnqueueOutboxEventResponse as EnqueueOutboxEventResponse
 from udb.entity.v1.admin_pb2 import CapabilitiesRequest as CapabilitiesRequest
@@ -129,6 +131,9 @@ from udb.entity.v1.admin_pb2 import CdcRedactionPreviewResponse as CdcRedactionP
 from udb.entity.v1.admin_pb2 import ProjectionDriftScanRequest as ProjectionDriftScanRequest
 from udb.entity.v1.admin_pb2 import ProjectionDriftDivergentRow as ProjectionDriftDivergentRow
 from udb.entity.v1.admin_pb2 import ProjectionDriftTargetReport as ProjectionDriftTargetReport
+from udb.entity.v1.admin_pb2 import PurgeSubjectRequest as PurgeSubjectRequest
+from udb.entity.v1.admin_pb2 import PurgedSubjectTable as PurgedSubjectTable
+from udb.entity.v1.admin_pb2 import PurgeSubjectResponse as PurgeSubjectResponse
 from udb.entity.v1.admin_pb2 import ProjectionDriftScanResponse as ProjectionDriftScanResponse
 from udb.entity.v1.admin_pb2 import SagaListRequest as SagaListRequest
 from udb.entity.v1.admin_pb2 import SagaRecord as SagaRecord

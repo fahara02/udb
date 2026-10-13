@@ -376,12 +376,21 @@ const COMMANDS: &[CmdHelp] = &[
         name: "check",
         group: "Schema & SQL",
         summary: "One verdict over catalog lint, policy lint and entity/policy coverage.",
-        usage: "udb check [--policies <policies.yaml|json>]",
+        usage: "udb check [--policies <policies.yaml|json>] [--code <go dir> --identities <identities.yaml> --identity <service> [--purpose <p>] [--role <role>]]",
         details: "  Runs the catalog lint (including projection options: unknown keys, and
   payload_fields / fts_columns naming missing, encrypted or PII columns), the
   policy lint and the entity coverage check, prints one JSON report and exits 1
   when any part has an error. Policies come from --policies, else
-  UDB_ABAC_POLICY_FILE; without either the policy checks are skipped.",
+  UDB_ABAC_POLICY_FILE; without either the policy checks are skipped.
+  --code uses the Go AST to resolve generated-store calls, aliases, typed
+  parameters and receiver fields, including declarations in sibling files.
+  Requires Go on PATH; only the embedded standard-library analyzer is compiled.
+  --identities and --identity select the declared account, tenant, project and
+  grant scopes. --purpose declares the deployment purpose; a literal
+  WithMetadata request override takes precedence. Missing/dynamic purposes,
+  ambiguous entities and unproven conditional grants are reported as findings.
+  --role supplies a known role; --subject must match the declared account or
+  service identity. This is a coverage check; verify live role bindings too.",
     },
     CmdHelp {
         name: "gen edge",
@@ -499,10 +508,43 @@ const COMMANDS: &[CmdHelp] = &[
         summary: "Reconcile a project's udb.yaml: policies, service accounts, seed data.",
         usage: "udb up [-f udb.yaml] [--dry-run] [--allow-transfer] [--dsn <dsn>]",
         details: "  udb.yaml: {tenant, project, policies | policies_file, policy_overlays,
-  service_accounts | service_accounts_file, seed | seed_file}. Runs the same
-  reconcilers as `udb policy apply`, `udb identity apply` and `udb data seed`, in
+  service_accounts | service_accounts_file, embedding {models, sources},
+  seed | seed_file}. Runs the same reconcilers as `udb policy apply`,
+  `udb identity apply`, EmbeddingService RegisterModel/RegisterSource (plus a
+  first backfill when a source sets `backfill: true`) and `udb data seed`, in
   that order; --dry-run prints the differences only. Paths are relative to the
   file. Applying the same file twice changes nothing.",
+    },
+    CmdHelp {
+        name: "migrate storage",
+        group: "Admin",
+        summary: "Copy objects written before tenant-namespaced keys under their tenant.",
+        usage: "udb migrate storage --bucket <name> --tenant <uuid> [--prefix <p>] [--limit <n>] [--dry-run]",
+        details: "  Since 0.5.0 object keys are stored as __udb_t/<tenant>/<key>; objects from
+  earlier versions sit at their bare key and the object RPCs no longer find them.
+  This copies each bare key under the named tenant (the owner of a pre-0.5.0,
+  single-tenant deployment) and never deletes the source. The broker warns at
+  startup while bare keys remain; UDB_STORAGE_LAYOUT_STRICT=true makes it refuse
+  to start instead.",
+    },
+    CmdHelp {
+        name: "subject purge",
+        group: "Admin",
+        summary: "Erase one data subject in your tenant and keep a signed receipt.",
+        usage: "udb subject purge <subject id> [--reason <r>] [--dry-run] [--receipt-out <file.jws>]",
+        details: "  Calls PurgeSubject (UDB_GRPC_TARGET, admin bearer in UDB_AUTH_TOKEN): every
+  row whose owner_field column names the subject, in every catalog table, goes
+  through the normal delete path (vectors, graph, search, caches and events
+  follow), then soft-delete tombstones are removed. The receipt is signed with
+  the broker's active key; check it with `udb compliance verify-receipt`.
+  Accounts and files have their own erasure RPCs; the reply lists them.",
+    },
+    CmdHelp {
+        name: "compliance verify-receipt",
+        group: "Admin",
+        summary: "Verify a PurgeSubject erasure receipt's signature and print its claims.",
+        usage: "udb compliance verify-receipt -f <receipt.jws|-> [--public-key <pem file>]",
+        details: "  The public key defaults to UDB_JWT_PUBLIC_KEY (inline PEM or path).",
     },
     CmdHelp {
         name: "data seed",

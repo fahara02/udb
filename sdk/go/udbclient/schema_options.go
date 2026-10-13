@@ -8,6 +8,7 @@ import (
 	"unicode"
 
 	udbcommonv1 "github.com/fahara02/udb/sdk/go/gen/udb/core/common/v1"
+	"github.com/fahara02/udb/sdk/go/internal/protoschema"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
@@ -46,32 +47,16 @@ func PartitionKeyField(m proto.Message) string { return eventContract(m).GetPart
 // `column` option, else the Postgres `pg_column` one (udb's own entities use
 // pg_column).
 func columnOptions(fd protoreflect.FieldDescriptor) *udbcommonv1.ColumnOptions {
-	if proto.HasExtension(fd.Options(), udbcommonv1.E_Column) {
-		c, _ := proto.GetExtension(fd.Options(), udbcommonv1.E_Column).(*udbcommonv1.ColumnOptions)
-		return c
-	}
-	c, _ := proto.GetExtension(fd.Options(), udbcommonv1.E_PgColumn).(*udbcommonv1.ColumnOptions)
-	return c
+	return protoschema.Column(fd)
 }
-
 func columnSecurityOptions(fd protoreflect.FieldDescriptor) *udbcommonv1.DbColumnSecurityOptions {
-	s, _ := proto.GetExtension(fd.Options(), udbcommonv1.E_DbColumnSecurity).(*udbcommonv1.DbColumnSecurityOptions)
-	return s
+	return protoschema.ColumnSecurity(fd)
 }
-
 func tableSecurityOptions(m proto.Message) *udbcommonv1.DbTableSecurityOptions {
-	s, _ := proto.GetExtension(m.ProtoReflect().Descriptor().Options(), udbcommonv1.E_DbTableSecurity).(*udbcommonv1.DbTableSecurityOptions)
-	return s
+	return protoschema.TableSecurity(m.ProtoReflect().Descriptor())
 }
-
 func tableOptions(m proto.Message) *udbcommonv1.TableOptions {
-	opts := m.ProtoReflect().Descriptor().Options()
-	if proto.HasExtension(opts, udbcommonv1.E_Table) {
-		t, _ := proto.GetExtension(opts, udbcommonv1.E_Table).(*udbcommonv1.TableOptions)
-		return t
-	}
-	t, _ := proto.GetExtension(opts, udbcommonv1.E_PgTable).(*udbcommonv1.TableOptions)
-	return t
+	return protoschema.Table(m.ProtoReflect().Descriptor())
 }
 
 // fieldsWhere lists, in field order, the names of m's fields that keep holds for.

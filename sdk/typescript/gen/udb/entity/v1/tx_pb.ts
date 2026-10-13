@@ -38,6 +38,9 @@ export type Mutation = Message<"udb.entity.v1.Mutation"> & {
   txId: string;
 
   /**
+   * `insert` creates one complete relational row and refuses any key collision.
+   * It shares Upsert's scope, CDC, projections and audit; it never replaces a row.
+   *
    * @generated from field: string operation = 3;
    */
   operation: string;

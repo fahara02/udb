@@ -78,11 +78,13 @@ func (TxStatus_State) EnumDescriptor() ([]byte, []int) {
 }
 
 type Mutation struct {
-	state       protoimpl.MessageState `protogen:"open.v1"`
-	Context     *RequestContext        `protobuf:"bytes,1,opt,name=context,proto3" json:"context,omitempty"`
-	TxId        string                 `protobuf:"bytes,2,opt,name=tx_id,json=txId,proto3" json:"tx_id,omitempty"`
-	Operation   string                 `protobuf:"bytes,3,opt,name=operation,proto3" json:"operation,omitempty"`
-	MessageType string                 `protobuf:"bytes,4,opt,name=message_type,json=messageType,proto3" json:"message_type,omitempty"`
+	state   protoimpl.MessageState `protogen:"open.v1"`
+	Context *RequestContext        `protobuf:"bytes,1,opt,name=context,proto3" json:"context,omitempty"`
+	TxId    string                 `protobuf:"bytes,2,opt,name=tx_id,json=txId,proto3" json:"tx_id,omitempty"`
+	// `insert` creates one complete relational row and refuses any key collision.
+	// It shares Upsert's scope, CDC, projections and audit; it never replaces a row.
+	Operation   string `protobuf:"bytes,3,opt,name=operation,proto3" json:"operation,omitempty"`
+	MessageType string `protobuf:"bytes,4,opt,name=message_type,json=messageType,proto3" json:"message_type,omitempty"`
 	// The record to write, in EITHER of two forms. Set exactly one.
 	//
 	// PRECEDENCE: when both are set, `payload` WINS and `record_json` is ignored,

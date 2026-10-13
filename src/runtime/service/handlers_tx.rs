@@ -42,6 +42,45 @@ fn tx_status_response_stream(statuses: Vec<Result<TxStatus, Status>>) -> Respons
     })
 }
 
+fn tx_refusal_frame(status: &Status) -> TxStatus {
+    use prost::Message as _;
+    let error_detail = status
+        .metadata()
+        .get_bin(crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY)
+        .and_then(|raw| raw.to_bytes().ok())
+        .and_then(|bytes| crate::proto::ErrorDetail::decode(bytes).ok());
+    TxStatus {
+        state: crate::proto::tx_status::State::TxStateError as i32,
+        message: status.message().to_string(),
+        code: status.code() as i32,
+        error_detail,
+        ..Default::default()
+    }
+}
+
+fn tx_status_response_stream(statuses: Vec<Result<TxStatus, Status>>) -> ResponseStream<TxStatus> {
+    Box::pin(async_stream::stream! {
+        let mut tx_id = String::new();
+        for item in statuses {
+            match item {
+                Ok(status) => {
+                    tx_id.clone_from(&status.tx_id);
+                    yield Ok(status);
+                }
+                Err(status) => {
+                    let mut frame = tx_refusal_frame(&status);
+                    frame.tx_id = tx_id;
+                    yield Ok(frame);
+                    // Let tonic flush the error frame before the terminal
+                    // refusal, which retains its original code and metadata.
+                    tokio::task::yield_now().await;
+                    yield Err(status);
+                    break;
+                }
+            }
+        }
+    })
+}
 type CdcEngineResponseStream = Pin<
     Box<
         dyn tokio_stream::Stream<Item = Result<crate::runtime::cdc::CdcEnvelope, Status>>
@@ -49,6 +88,32 @@ type CdcEngineResponseStream = Pin<
             + 'static,
     >,
 >;
+
+const CDC_MAX_HANDLER_ATTEMPTS: u32 = 1000;
+const CDC_FAILURE_REASON_MAX_BYTES: usize = 2048;
+
+struct CdcConsumerFailure {
+    attempts: u32,
+    reason: String,
+}
+
+impl CdcConsumerFailure {
+    fn validate(&self) -> Result<(), Status> {
+        if !(1..=CDC_MAX_HANDLER_ATTEMPTS).contains(&self.attempts) {
+            return Err(crate::runtime::executor_utils::invalid_argument_fields(
+                "attempts must be between 1 and 1000",
+                [("attempts", "out of range")],
+            ));
+        }
+        if self.reason.len() > CDC_FAILURE_REASON_MAX_BYTES {
+            return Err(crate::runtime::executor_utils::invalid_argument_fields(
+                "failure_reason exceeds 2048 UTF-8 bytes",
+                [("failure_reason", "too long")],
+            ));
+        }
+        Ok(())
+    }
+}
 
 /// Maximum interval during which an already-open CDC stream may continue using
 /// a credential/policy decision before the canonical authorities are consulted
@@ -272,7 +337,7 @@ fn validate_cdc_consumer_name(name: &str) -> Result<(), Status> {
 fn tx_mutation_authz_target(mutation: &Mutation) -> Result<(&str, &'static str), Status> {
     let operation = mutation.operation.to_ascii_lowercase();
     let target = match operation.as_str() {
-        "upsert" => (mutation.message_type.as_str(), "Upsert"),
+        "upsert" | "insert" => (mutation.message_type.as_str(), "Upsert"),
         "update" => (mutation.message_type.as_str(), "Update"),
         "delete" => (mutation.message_type.as_str(), "Delete"),
         "vector_upsert" => (mutation.collection.as_str(), "VectorUpsert"),
@@ -437,7 +502,7 @@ impl DataBrokerService {
                     "cdc",
                     "PublishCDC",
                     "cdc_tailer",
-                    "CDC tailer is not configured; set UDB_KAFKA_BROKERS to enable PublishCDC",
+                    "CDC tailer is not configured; set UDB_KAFKA_BROKERS or use udb dev up --embedded to enable PublishCDC",
                 )),
             );
         };
@@ -606,13 +671,57 @@ impl DataBrokerService {
         &self,
         request: Request<crate::proto::AckCdcEventsRequest>,
     ) -> Result<Response<crate::proto::AckCdcEventsResponse>, Status> {
+        self.settle_cdc_event_inner(request, None).await
+    }
+
+    pub(crate) async fn nack_cdc_events_inner(
+        &self,
+        request: Request<crate::proto::NackCdcEventsRequest>,
+    ) -> Result<Response<crate::proto::AckCdcEventsResponse>, Status> {
+        let (metadata, extensions, request) = request.into_parts();
+        let failure = CdcConsumerFailure {
+            attempts: request.attempts,
+            reason: request.failure_reason,
+        };
+        self.settle_cdc_event_inner(
+            Request::from_parts(
+                metadata,
+                extensions,
+                crate::proto::AckCdcEventsRequest {
+                    context: request.context,
+                    consumer_name: request.consumer_name,
+                    topic_pattern: request.topic_pattern,
+                    event_id: request.event_id,
+                },
+            ),
+            Some(failure),
+        )
+        .await
+    }
+
+    /// Ordinary acknowledgments and poison settlement share identity, topic,
+    /// journal and monotonic cursor enforcement. A poison settlement adds a
+    /// durable DLQ record in the SAME transaction, before returning success.
+    async fn settle_cdc_event_inner(
+        &self,
+        request: Request<crate::proto::AckCdcEventsRequest>,
+        failure: Option<CdcConsumerFailure>,
+    ) -> Result<Response<crate::proto::AckCdcEventsResponse>, Status> {
         let started = Instant::now();
+        let method = if failure.is_some() {
+            "NackCdcEvents"
+        } else {
+            "AckCdcEvents"
+        };
         let result = async {
             let (security, principal) = crate::runtime::security::security_and_verified_principal_from_request(&request)?;
             super::tenant_service::tenant_status_gate(&security.tenant_id)?;
             let owner = cdc_consumer_owner(principal.as_ref())?;
             let request = request.into_inner();
             validate_cdc_consumer_name(&request.consumer_name)?;
+            if let Some(failure) = &failure {
+                failure.validate()?;
+            }
             let topic_pattern = match request.topic_pattern.trim() {
                 "" => "*".to_string(),
                 value => value.to_string(),
@@ -620,7 +729,7 @@ impl DataBrokerService {
             self.authorize_pattern(&security, &topic_pattern, "PublishCDC").await?;
             let engine = self.cdc_engine.as_ref().ok_or_else(|| {
                 crate::runtime::executor_utils::capability_status(
-                    "cdc", "AckCdcEvents", "cdc_tailer",
+                    "cdc", method, "cdc_tailer",
                     "CDC tailer is not configured for consumer event authorization",
                 )
             })?;
@@ -633,6 +742,8 @@ impl DataBrokerService {
                     [("event_id", "must be a UUID")],
                 )
             })?;
+            let ctx = security.request_context();
+            let consumer = request.consumer_name.trim().to_string();
             let runtime = self.runtime_snapshot();
             let pool = runtime.pg_pool()?.clone();
             let config = crate::runtime::system::SystemCatalogConfig::current();
@@ -644,14 +755,13 @@ impl DataBrokerService {
             })?;
             let Some((topic, payload, published_at, journal_position)) = event else {
                 return Err(crate::runtime::executor_utils::schema_status(
-                    Code::NotFound, "cdc", "AckCdcEvents", "cdc_ack_event_not_found",
+                    Code::NotFound, "cdc", method, "cdc_ack_event_not_found",
                     "acknowledged CDC event is unknown or no longer retained",
                 ));
             };
             engine.validate_consumer_event(
                 &security.scopes, &topic_pattern, &topic, &payload, &security.tenant_id, &security.project_id,
             )?;
-            let consumer = request.consumer_name.trim().to_string();
             let relation = config.cdc_consumer_cursors_relation();
             let sql = format!(
                 "INSERT INTO {relation} AS current_cursor (tenant_id, project_id, consumer_name, topic_pattern, last_event_id, owner_identity, last_published_at, last_journal_position, acked_at) \
@@ -663,18 +773,90 @@ impl DataBrokerService {
                  WHERE current_cursor.owner_identity = EXCLUDED.owner_identity \
                  RETURNING EXTRACT(EPOCH FROM acked_at)::BIGINT"
             );
-            let acked_at: Option<i64> = sqlx::query_scalar(&sql)
-                .bind(&security.tenant_id).bind(&security.project_id).bind(&consumer)
-                .bind(&topic_pattern).bind(event_id).bind(&owner).bind(published_at).bind(journal_position)
-                .fetch_optional(&pool).await.map_err(|err| {
-                    crate::runtime::executor_utils::sqlx_error_to_status("CDC consumer cursor write failed", &err)
-                })?;
-            let acked_at_unix = acked_at.ok_or_else(cdc_consumer_owner_refusal)?;
+            let mut tx = pool.begin().await.map_err(|err| {
+                crate::runtime::executor_utils::sqlx_error_to_status("CDC settlement transaction failed", &err)
+            })?;
+            let settled = async {
+                let acked_at: Option<i64> = sqlx::query_scalar(&sql)
+                    .bind(&ctx.tenant_id).bind(&ctx.project_id).bind(&consumer)
+                    .bind(&topic_pattern).bind(event_id).bind(&owner).bind(published_at).bind(journal_position)
+                    .fetch_optional(&mut *tx).await
+                    .map_err(|err| crate::runtime::executor_utils::sqlx_error_to_status("CDC consumer cursor write failed", &err))?;
+                let Some(acked_at_unix) = acked_at else { return Err(cdc_consumer_owner_refusal()); };
+                if let Some(failure) = &failure {
+                    use sha2::{Digest, Sha256};
+                    // An event can fail for several independent named consumers.
+                    // The existing DLQ's unique(event_id) is kept; record each
+                    // failure under an unambiguous, bounded identity key.
+                    let mut hasher = Sha256::new();
+                    for part in [&owner, &consumer, &topic_pattern] {
+                        hasher.update((part.len() as u64).to_be_bytes());
+                        hasher.update(part.as_bytes());
+                    }
+                    let failure_key = hex::encode(hasher.finalize());
+                    let now = chrono::Utc::now();
+                    let mut dlq_payload = serde_json::json!({
+                        "failed_event": payload,
+                        "failure_metadata": {
+                            "service": "udb-cdc-consumer", "error_type": "CONSUMER_HANDLER_FAILED",
+                            "error_message": failure.reason, "failed_at": now, "retry_count": 0,
+                        },
+                        "consumer_failures": {},
+                    });
+                    dlq_payload["consumer_failures"][&failure_key] = serde_json::json!({
+                        "owner_identity": owner, "consumer_name": consumer,
+                        "topic_pattern": topic_pattern, "attempts": failure.attempts,
+                        "failure_reason": failure.reason, "failed_at": now,
+                    });
+                    let dlq = config.dlq_relation();
+                    let dlq_id: Option<uuid::Uuid> = sqlx::query_scalar(&format!(
+                        "INSERT INTO {dlq} AS current_dlq (event_id, topic, tenant_id, project_id, payload, error_type, error_message, status, next_retry_at) \
+                         VALUES ($1, $2, $3, $4, $5, 'CONSUMER_HANDLER_FAILED', $6, 'QUARANTINED', NULL) \
+                         ON CONFLICT (event_id) DO UPDATE SET \
+                           payload = CASE WHEN COALESCE(current_dlq.payload->'consumer_failures', '{{}}'::jsonb) ? $7 THEN current_dlq.payload ELSE (CASE WHEN current_dlq.payload ? 'failed_event' THEN current_dlq.payload ELSE jsonb_build_object('failed_event', current_dlq.payload, 'failure_metadata', EXCLUDED.payload->'failure_metadata') END) || jsonb_build_object('consumer_failures', COALESCE(current_dlq.payload->'consumer_failures', '{{}}'::jsonb) || (EXCLUDED.payload->'consumer_failures')) END, \
+                           status = CASE WHEN COALESCE(current_dlq.payload->'consumer_failures', '{{}}'::jsonb) ? $7 THEN current_dlq.status ELSE 'QUARANTINED' END, \
+                           next_retry_at = CASE WHEN COALESCE(current_dlq.payload->'consumer_failures', '{{}}'::jsonb) ? $7 THEN current_dlq.next_retry_at ELSE NULL END, \
+                           updated_at = CASE WHEN COALESCE(current_dlq.payload->'consumer_failures', '{{}}'::jsonb) ? $7 THEN current_dlq.updated_at ELSE NOW() END \
+                         WHERE current_dlq.tenant_id = EXCLUDED.tenant_id AND current_dlq.project_id = EXCLUDED.project_id AND current_dlq.topic = EXCLUDED.topic \
+                         RETURNING dlq_id"
+                    ))
+                    .bind(event_id).bind(&topic).bind(&ctx.tenant_id).bind(&ctx.project_id)
+                    .bind(dlq_payload).bind(&failure.reason).bind(&failure_key)
+                    .fetch_optional(&mut *tx).await
+                    .map_err(|err| crate::runtime::executor_utils::sqlx_error_to_status("CDC consumer dead-letter write failed", &err))?;
+                    if dlq_id.is_none() {
+                        return Err(crate::runtime::executor_utils::policy_status_with_code(
+                            Code::PermissionDenied, method, "cdc_ack_event_scope_mismatch",
+                            "existing dead-letter event belongs to another scope",
+                        ));
+                    }
+                }
+                Ok(acked_at_unix)
+            }.await;
+            let acked_at_unix = match settled {
+                Ok(acked) => {
+                    tx.commit().await.map_err(|err| crate::runtime::executor_utils::sqlx_error_to_status("CDC settlement commit failed", &err))?;
+                    acked
+                }
+                Err(err) => {
+                    let _ = tx.rollback().await;
+                    return Err(err);
+                }
+            };
+            if let Some(failure) = &failure {
+                if let Err(err) = runtime.write_audit_log(
+                    &security.service_identity, method, &event_id.to_string(),
+                    &serde_json::json!({"consumer_name": consumer, "topic_pattern": topic_pattern, "owner_identity": owner, "event_id": event_id, "attempts": failure.attempts}),
+                    "ok", &security.tenant_id, "", &security.correlation_id,
+                ).await {
+                    tracing::warn!(error = %err, operation = method, "consumer settlement audit log write failed");
+                }
+            }
             Ok(Response::new(crate::proto::AckCdcEventsResponse {
                 consumer_name: consumer, topic_pattern, event_id: event_id.to_string(), acked_at_unix,
             }))
         }.await;
-        self.record_grpc("AckCdcEvents", started, result)
+        self.record_grpc(method, started, result)
     }
 
     /// Claim a name once and retain its ordered watermark independently of
@@ -848,6 +1030,60 @@ mod tests {
     use super::*;
 
     #[test]
+    fn consumer_failure_rejects_unbounded_attempts_and_diagnostics() {
+        for attempts in [0, CDC_MAX_HANDLER_ATTEMPTS + 1] {
+            assert_eq!(
+                CdcConsumerFailure {
+                    attempts,
+                    reason: String::new()
+                }
+                .validate()
+                .unwrap_err()
+                .code(),
+                Code::InvalidArgument,
+            );
+        }
+        assert!(
+            CdcConsumerFailure {
+                attempts: CDC_MAX_HANDLER_ATTEMPTS,
+                reason: "ক".repeat(682)
+            }
+            .validate()
+            .is_ok()
+        );
+        assert_eq!(
+            CdcConsumerFailure {
+                attempts: 1,
+                reason: "ক".repeat(683)
+            }
+            .validate()
+            .unwrap_err()
+            .code(),
+            Code::InvalidArgument
+        );
+    }
+
+    #[test]
+    fn transaction_error_frame_keeps_the_original_code_and_reason() {
+        use prost::Message as _;
+        let detail = crate::proto::ErrorDetail {
+            reason: "UDB_CAS_CONFLICT".into(),
+            ..Default::default()
+        };
+        let mut status = crate::runtime::executor_utils::failed_precondition_fields(
+            "opaque operator text",
+            [("version", "mismatch")],
+        );
+        status.metadata_mut().insert_bin(
+            "udb-error-detail-bin",
+            tonic::metadata::MetadataValue::from_bytes(&detail.encode_to_vec()),
+        );
+        let frame = tx_refusal_frame(&status);
+        assert_eq!(frame.code, tonic::Code::FailedPrecondition as i32);
+        assert_eq!(frame.error_detail.unwrap().reason, "UDB_CAS_CONFLICT");
+    }
+
+    #[test]
     fn cdc_stream_budget_clamps_to_verified_credential_expiry() {
         let (budget, reason) =
             cdc_stream_budget(30, 1_010, 1_000).expect("live credential has a stream budget");
@@ -900,6 +1136,10 @@ mod tests {
     #[test]
     fn tx_mutation_authz_target_uses_unary_action_tokens() {
         let m = mutation("UPSERT", "acme.billing.v1.Invoice");
+        assert_eq!(
+            tx_mutation_authz_target(&mutation("INSERT", "acme.billing.v1.Invoice")).unwrap(),
+            ("acme.billing.v1.Invoice", "Upsert")
+        );
         assert_eq!(
             tx_mutation_authz_target(&m).unwrap(),
             ("acme.billing.v1.Invoice", "Upsert")

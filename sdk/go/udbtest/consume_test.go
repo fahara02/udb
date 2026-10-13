@@ -2,6 +2,7 @@ package udbtest_test
 
 import (
 	"context"
+	"errors"
 	"sync"
 	"testing"
 	"time"
@@ -28,25 +29,28 @@ func TestConsumeResumesAfterTheLastAcknowledgedEvent(t *testing.T) {
 	run := func(stopAfter int) {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
-		_ = udbclient.Consume(ctx, u, "billing-projector", topic,
+		err := udbclient.Consume(ctx, u, "billing-projector", topic,
 			func(_ context.Context, e udbclient.ConsumedEvent[*apikeyeventsv1.ApiKeyCreatedEvent]) error {
 				mu.Lock()
 				handled = append(handled, e.Payload.GetKeyId())
 				n := len(handled)
 				mu.Unlock()
 				if n == stopAfter {
-					// Let the ack land, then stop the consumer as a crash would.
-					go func() { time.Sleep(100 * time.Millisecond); cancel() }()
+					// Completed handlers must flush before the cancelled Consume returns.
+					cancel()
 				}
 				return nil
 			})
+		if !errors.Is(err, context.Canceled) {
+			t.Fatalf("consumer shutdown: %v", err)
+		}
 	}
 
 	run(2)
 	mu.Lock()
 	first := append([]string(nil), handled...)
 	mu.Unlock()
-	if len(first) < 2 || first[0] != "k1" || first[1] != "k2" {
+	if len(first) != 2 || first[0] != "k1" || first[1] != "k2" {
 		t.Fatalf("first run handled %v, want k1 k2 first", first)
 	}
 
@@ -54,7 +58,7 @@ func TestConsumeResumesAfterTheLastAcknowledgedEvent(t *testing.T) {
 	handled = nil
 	mu.Unlock()
 	fake.Emit(tenant, topic, tenant, map[string]any{"key_id": "k4", "tenant_id": tenant})
-	run(len(first) - 2 + 2)
+	run(2)
 	mu.Lock()
 	second := append([]string(nil), handled...)
 	mu.Unlock()

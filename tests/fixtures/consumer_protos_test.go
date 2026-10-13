@@ -148,8 +148,13 @@ func TestGeneratedConsumerShapesRoundTrip(t *testing.T) {
 }
 
 func TestGeneratedConsumerOneofRejectsMultipleValues(t *testing.T) {
-	if _, err := ShapeFromUDBRow(map[string]any{"choice_text": "", "choice_number": 0}); err == nil || !strings.Contains(err.Error(), "oneof choice") {
-		t.Fatalf("two present zero-valued alternatives must be refused with oneof context: %v", err)
+	for _, row := range []map[string]any{
+		{"choice_text": "selected", "choice_number": 7},
+		{"choice_text": "", "choice_number": 0},
+	} {
+		if _, err := ShapeFromUDBRow(row); err == nil || !strings.Contains(err.Error(), "oneof choice") {
+			t.Fatalf("two present alternatives must be refused with oneof context: %v", err)
+		}
 	}
 }
 

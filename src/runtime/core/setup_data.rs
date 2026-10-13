@@ -1473,8 +1473,50 @@ impl DataBrokerRuntime {
         request: UpsertRequest,
         metadata_context: RequestContext,
     ) -> Result<MutationResponse, tonic::Status> {
+        self.upsert_impl(manifest, request, metadata_context, false)
+            .await
+    }
+
+    pub async fn insert(
+        &self,
+        manifest: &CatalogManifest,
+        request: UpsertRequest,
+        metadata_context: RequestContext,
+    ) -> Result<MutationResponse, tonic::Status> {
+        self.upsert_impl(manifest, request, metadata_context, true)
+            .await
+    }
+
+    async fn upsert_impl(
+        &self,
+        manifest: &CatalogManifest,
+        request: UpsertRequest,
+        metadata_context: RequestContext,
+        insert_only: bool,
+    ) -> Result<MutationResponse, tonic::Status> {
+        if insert_only {
+            if !request.conflict_fields.is_empty() {
+                return Err(setup_data_invalid_field(
+                    "conflict_fields",
+                    "must be empty for Insert",
+                    "Insert refuses conflict replacement",
+                ));
+            }
+            if request
+                .expected
+                .as_ref()
+                .is_some_and(|expected| !expected.fields.is_empty())
+            {
+                return Err(setup_data_invalid_field(
+                    "expected",
+                    "must be empty for Insert",
+                    "Insert creates a new row and does not compare an existing row",
+                ));
+            }
+        }
         let context = merge_context(request.context.as_ref(), metadata_context);
-        typed_relational_backend_guard(&context, &self.backend_instances, "upsert")?;
+        let operation = if insert_only { "insert" } else { "upsert" };
+        typed_relational_backend_guard(&context, &self.backend_instances, operation)?;
         let mut record = upsert_record_json(&request)?;
         if let Ok(scope_table) = resolve_table_for_message(manifest, &request.message_type) {
             crate::runtime::core::scope_autofill::autofill_record(
@@ -1488,6 +1530,7 @@ impl DataBrokerRuntime {
             message_type: request.message_type.clone(),
             record: record.clone(),
             conflict_fields: request.conflict_fields.clone(),
+            insert_only,
             return_record: request.return_record,
             bypass_cache_write: request
                 .cache
@@ -1529,13 +1572,17 @@ impl DataBrokerRuntime {
                     &context.tenant_id,
                     &context.project_id,
                     &request.message_type,
-                    "upsert",
+                    operation,
                     key,
                 );
                 // #6: bind the claim to the authoritative inputs (record + conflict
                 // target + expected precondition) so a key reused with different
                 // inputs is a conflict, not a bogus replay.
-                let request_hash = idempotency_request_hash_upsert(&request, &record);
+                let request_hash = if insert_only {
+                    idempotency_request_hash_relational_write(operation, &request, &record)
+                } else {
+                    idempotency_request_hash_upsert(&request, &record)
+                };
                 let claim = claim_idempotency_key_in_tx(
                     &mut tx,
                     &config,
@@ -1543,7 +1590,7 @@ impl DataBrokerRuntime {
                     &context.tenant_id,
                     &context.project_id,
                     &request.message_type,
-                    "upsert",
+                    operation,
                     &request_hash,
                 )
                 .await?;
@@ -6761,12 +6808,37 @@ fn idempotency_expected_json(expected: Option<&prost_types::Struct>) -> JsonValu
 /// conflict target, and any CAS precondition. `return_record`/cache are
 /// transport-only and excluded.
 fn idempotency_request_hash_upsert(request: &UpsertRequest, record: &JsonValue) -> String {
+    idempotency_request_hash_relational_write("upsert", request, record)
+}
+
+fn idempotency_request_hash_relational_write(
+    operation: &str,
+    request: &UpsertRequest,
+    record: &JsonValue,
+) -> String {
     let authoritative = serde_json::json!({
         "record": record,
         "conflict_fields": request.conflict_fields,
         "expected": idempotency_expected_json(request.expected.as_ref()),
     });
-    idempotency_request_hash("upsert", &authoritative)
+    idempotency_request_hash(operation, &authoritative)
+}
+
+/// Optional concurrency guards are authoritative inputs, not transport fields.
+/// Keep the historical unguarded hash shape so those receipts remain replayable.
+fn idempotency_request_hash_guarded(
+    operation: &str,
+    mut authoritative: JsonValue,
+    guards: &MutationGuards,
+) -> String {
+    if !guards.expected_revision.trim().is_empty() {
+        authoritative["expected_revision"] =
+            JsonValue::String(guards.expected_revision.trim().to_string());
+    }
+    if guards.require_affected != 0 {
+        authoritative["require_affected"] = JsonValue::from(guards.require_affected);
+    }
+    idempotency_request_hash(operation, &authoritative)
 }
 
 /// Optional concurrency guards are authoritative inputs, not transport fields.
@@ -9896,6 +9968,10 @@ mod setup_data_consistency_tests {
             ..Default::default()
         };
         let base = idempotency_request_hash_upsert(&request, &record);
+        assert_ne!(
+            base,
+            super::idempotency_request_hash_relational_write("insert", &request, &record)
+        );
         // Key order does not matter (canonicalized).
         assert_eq!(
             base,

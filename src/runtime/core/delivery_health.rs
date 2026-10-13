@@ -36,7 +36,43 @@ pub struct DeliveryCheck {
     pub detail: String,
 }
 
+/// A durable consumer's scoped position, shared by status and verification.
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct CdcConsumerLag {
+    pub consumer_name: String,
+    pub topic_pattern: String,
+    pub last_event_id: String,
+    pub lag_seconds: f64,
+    pub acked_at_unix: i64,
+    pub last_published_at_unix: i64,
+    pub tenant_id: String,
+    pub project_id: String,
+    pub owner_identity: String,
+    pub owner_migration_required: bool,
+}
+
 impl DataBrokerRuntime {
+    /// Read cursor lag only within the supplied tenant and project.
+    pub(crate) async fn cdc_consumer_lag(
+        &self,
+        tenant: &str,
+        project: &str,
+    ) -> Result<Vec<CdcConsumerLag>, tonic::Status> {
+        consumer_lags(
+            self.pg_pool()?,
+            &SystemCatalogConfig::current(),
+            Some(tenant),
+            Some(project),
+        )
+        .await
+        .map_err(|err| {
+            crate::runtime::executor_utils::sqlx_error_to_status(
+                "CDC consumer lag read failed",
+                &err,
+            )
+        })
+    }
+
     /// Read-only delivery health over the system tables. A table that does
     /// not exist yet (a broker that never started) is reported, not failed.
     pub async fn delivery_health(
@@ -71,23 +107,9 @@ impl DataBrokerRuntime {
             Err(err) => unreadable("outbox", err),
         });
 
-        // Each durable consumer's last ack against the newest journal row on
-        // the topics it reads. Patterns are matched like PublishCDC does for
-        // the common forms: exact topic or a trailing `*`.
-        let consumers = sqlx::query_as::<_, (String, String, String, Option<i64>)>(&format!(
-            "SELECT c.tenant_id, c.consumer_name, c.topic_pattern, \
-                    EXTRACT(EPOCH FROM ( \
-                        SELECT MAX(j.published_at) FROM {journal} j \
-                        WHERE j.topic = c.topic_pattern \
-                           OR (RIGHT(c.topic_pattern, 1) = '*' AND j.topic LIKE RTRIM(c.topic_pattern, '*') || '%') \
-                    ) - acked.published_at)::BIGINT \
-             FROM {cursors} c \
-             LEFT JOIN LATERAL (SELECT published_at FROM {journal} WHERE event_id = c.last_event_id) acked ON TRUE",
-            journal = config.cdc_journal_relation(),
-            cursors = config.cdc_consumer_cursors_relation(),
-        ))
-        .fetch_all(pool)
-        .await;
+        // Stored watermarks survive retention. Compare with this consumer's
+        // scoped head; another tenant/project must not create false lag.
+        let consumers = consumer_lags(pool, &config, None, None).await;
         match consumers {
             Ok(rows) if rows.is_empty() => checks.push(DeliveryCheck {
                 check: "consumers".to_string(),
@@ -95,11 +117,23 @@ impl DataBrokerRuntime {
                 detail: "no durable consumers registered".to_string(),
             }),
             Ok(rows) => {
-                for (tenant, name, pattern, lag) in rows {
-                    let lag = lag.unwrap_or(0).max(0);
+                for consumer in rows {
+                    let check = format!(
+                        "consumer {} ({}, tenant {})",
+                        consumer.consumer_name, consumer.topic_pattern, consumer.tenant_id
+                    );
+                    if consumer.owner_migration_required {
+                        checks.push(DeliveryCheck {
+                            check,
+                            passed: false,
+                            detail: "legacy cursor requires a verified owner migration".into(),
+                        });
+                        continue;
+                    }
+                    let lag = consumer.lag_seconds;
                     checks.push(DeliveryCheck {
-                        check: format!("consumer {name} ({pattern}, tenant {tenant})"),
-                        passed: lag <= thresholds.consumer_max_lag_secs,
+                        check,
+                        passed: lag <= thresholds.consumer_max_lag_secs as f64,
                         detail: format!(
                             "{lag}s behind the journal head (limit {}s)",
                             thresholds.consumer_max_lag_secs
@@ -135,6 +169,84 @@ impl DataBrokerRuntime {
         });
         Ok(checks)
     }
+}
+
+async fn consumer_lags(
+    pool: &sqlx::PgPool,
+    config: &SystemCatalogConfig,
+    tenant: Option<&str>,
+    project: Option<&str>,
+) -> Result<Vec<CdcConsumerLag>, sqlx::Error> {
+    let rows = sqlx::query_as::<_, (String, String, String, String, uuid::Uuid, chrono::DateTime<chrono::Utc>, String, chrono::DateTime<chrono::Utc>)>(&format!(
+        "SELECT tenant_id, project_id, consumer_name, topic_pattern, last_event_id, last_published_at, owner_identity, acked_at \
+         FROM {} WHERE ($1::TEXT IS NULL OR tenant_id=$1) AND ($2::TEXT IS NULL OR project_id=$2) \
+         ORDER BY tenant_id, project_id, consumer_name, topic_pattern",
+        config.cdc_consumer_cursors_relation(),
+    ))
+    .bind(tenant)
+    .bind(project)
+    .fetch_all(pool)
+    .await?;
+    let mut consumers = Vec::with_capacity(rows.len());
+    for (
+        tenant_id,
+        project_id,
+        consumer_name,
+        topic_pattern,
+        last_event_id,
+        watermark,
+        owner_identity,
+        acked_at,
+    ) in rows
+    {
+        let head: Option<chrono::DateTime<chrono::Utc>> = sqlx::query_scalar(&format!(
+            "SELECT MAX(published_at) FROM {} WHERE topic ~ $3 \
+             AND payload->>'tenant_id'=$1 AND ($2='' OR payload->>'project_id'=$2) \
+             AND delivery_state IN ('published','acked')",
+            config.cdc_journal_relation(),
+        ))
+        .bind(&tenant_id)
+        .bind(&project_id)
+        .bind(topic_pattern_regex(&topic_pattern))
+        .fetch_one(pool)
+        .await?;
+        consumers.push(CdcConsumerLag {
+            consumer_name,
+            topic_pattern,
+            last_event_id: last_event_id.to_string(),
+            lag_seconds: head
+                .map_or(0.0, |head| {
+                    (head - watermark).num_milliseconds() as f64 / 1000.0
+                })
+                .max(0.0),
+            acked_at_unix: acked_at.timestamp(),
+            last_published_at_unix: watermark.timestamp(),
+            tenant_id,
+            project_id,
+            owner_migration_required: owner_identity.is_empty(),
+            owner_identity,
+        });
+    }
+    Ok(consumers)
+}
+
+// WildMatch's two metacharacters, converted to an anchored PostgreSQL regex.
+// Quote all regex syntax so literal topic punctuation cannot broaden a check.
+fn topic_pattern_regex(pattern: &str) -> String {
+    let mut regex = String::from("^");
+    for ch in pattern.chars() {
+        match ch {
+            '*' => regex.push_str(".*"),
+            '?' => regex.push('.'),
+            '.' | '^' | '$' | '(' | ')' | '[' | ']' | '{' | '}' | '+' | '|' | '\\' => {
+                regex.push('\\');
+                regex.push(ch);
+            }
+            _ => regex.push(ch),
+        }
+    }
+    regex.push('$');
+    regex
 }
 
 /// A missing table means the broker has not created it yet: report it as a

@@ -1,0 +1,48 @@
+{
+  "description": "Typed-store (Table) contract shared by every SDK's conformance runner. Entity: udb.core.storage.entity.v1.File keyed by file_id. \"$id\" is replaced with a fresh UUID per case; errors use the SDKs' closed ErrorCode names.",
+  "message_type": "udb.core.storage.entity.v1.File",
+  "key": ["file_id"],
+  "cases": [
+    {
+      "name": "get of a missing row is not_found",
+      "steps": [{ "op": "get", "key": { "file_id": "$id" }, "expect": { "error": "not_found" } }]
+    },
+    {
+      "name": "upsert then get returns the row",
+      "steps": [
+        { "op": "upsert", "row": { "file_id": "$id", "filename": "a.pdf", "object_key": "conformance/$id", "status": "PENDING" } },
+        { "op": "get", "key": { "file_id": "$id" }, "expect": { "row": { "filename": "a.pdf" } } }
+      ]
+    },
+    {
+      "name": "patch changes only the given columns",
+      "steps": [
+        { "op": "upsert", "row": { "file_id": "$id", "filename": "a.pdf", "object_key": "conformance/$id", "status": "PENDING" } },
+        { "op": "patch", "key": { "file_id": "$id" }, "changes": { "filename": "b.pdf" } },
+        { "op": "get", "key": { "file_id": "$id" }, "expect": { "row": { "filename": "b.pdf", "object_key": "conformance/$id" } } }
+      ]
+    },
+    {
+      "name": "patch of a missing row is not_found",
+      "steps": [{ "op": "patch", "key": { "file_id": "$id" }, "changes": { "filename": "b.pdf" }, "expect": { "error": "not_found" } }]
+    },
+    {
+      "name": "conditional update detects a changed row",
+      "steps": [
+        { "op": "upsert", "row": { "file_id": "$id", "filename": "a.pdf", "object_key": "conformance/$id", "status": "PENDING" } },
+        { "op": "update_if", "key": { "file_id": "$id" }, "expected": { "filename": "other.pdf" }, "changes": { "filename": "c.pdf" }, "expect": { "error": "conflict" } },
+        { "op": "update_if", "key": { "file_id": "$id" }, "expected": { "filename": "a.pdf" }, "changes": { "filename": "c.pdf" } },
+        { "op": "get", "key": { "file_id": "$id" }, "expect": { "row": { "filename": "c.pdf" } } }
+      ]
+    },
+    {
+      "name": "delete needs the row",
+      "steps": [
+        { "op": "upsert", "row": { "file_id": "$id", "filename": "a.pdf", "object_key": "conformance/$id", "status": "PENDING" } },
+        { "op": "delete", "key": { "file_id": "$id" } },
+        { "op": "delete", "key": { "file_id": "$id" }, "expect": { "error": "not_found" } },
+        { "op": "get", "key": { "file_id": "$id" }, "expect": { "error": "not_found" } }
+      ]
+    }
+  ]
+}

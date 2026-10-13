@@ -1862,6 +1862,11 @@ func (e *UnitOfWorkTxError) Error() string {
 	return e.Status.Message
 }
 
+func (e *UnitOfWorkTxError) Unwrap() error {
+	if e == nil || e.Status == nil { return nil }
+	return txStatusError(e.Status)
+}
+
 type UnitOfWorkConflictError struct {
 	UnitOfWorkTxError
 }
@@ -1976,7 +1981,7 @@ func (u *UnitOfWork) ValidateTxStatuses(statuses []*entityv1.TxStatus) error {
 		if status == nil || status.GetState() != entityv1.TxStatus_TX_STATE_ERROR {
 			continue
 		}
-		if isTxConflictMessage(status.GetMessage()) {
+		if IsCASConflict(txStatusError(status)) || (status.GetErrorDetail() == nil && isTxConflictMessage(status.GetMessage())) {
 			return &UnitOfWorkConflictError{UnitOfWorkTxError{Status: status}}
 		}
 		return &UnitOfWorkTxError{Status: status}
@@ -2005,6 +2010,7 @@ func (u *UnitOfWork) Flush(ctx context.Context, client *GeneratedClient, backend
 		return nil, mapError(beginTxFullMethod, err, nil)
 	}
 	statuses := []*entityv1.TxStatus{}
+	committed := false
 	for {
 		status := &entityv1.TxStatus{}
 		err := stream.RecvMsg(status)
@@ -2012,13 +2018,15 @@ func (u *UnitOfWork) Flush(ctx context.Context, client *GeneratedClient, backend
 			break
 		}
 		if err != nil {
-			return statuses, mapError(beginTxFullMethod, err, nil)
+			return statuses, mapError(beginTxFullMethod, err, stream.Trailer())
 		}
 		statuses = append(statuses, status)
+		if status.GetState() == entityv1.TxStatus_TX_STATE_COMMITTED { committed = true }
 	}
 	if err := u.ValidateTxStatuses(statuses); err != nil {
 		return statuses, err
 	}
+	if !committed { return statuses, errors.New("udb: UnitOfWork transaction ended without a COMMITTED status") }
 	if err := u.MarkClean(); err != nil {
 		return statuses, err
 	}
