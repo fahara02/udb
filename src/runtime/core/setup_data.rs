@@ -139,6 +139,16 @@ fn typed_values_match(have: &JsonValue, want: &JsonValue, sql_type: Option<&str>
                 return a == b;
             }
         }
+        // Integers compare by value: SDKs send 64-bit integers as exact strings
+        // ("0") while the read path may hold a JSON number (0).
+        "SMALLINT" | "INTEGER" | "INT" | "INT2" | "INT4" | "INT8" | "BIGINT" | "SERIAL"
+        | "BIGSERIAL" | "SMALLSERIAL" => {
+            if let (Some(a), Some(b)) = (as_text(have), as_text(want))
+                && let (Ok(a), Ok(b)) = (a.trim().parse::<i128>(), b.trim().parse::<i128>())
+            {
+                return a == b;
+            }
+        }
         "DATE" => {
             let parse = |text: &str| {
                 let text = text.trim();
@@ -8459,6 +8469,16 @@ mod setup_data_validation_tests {
         let numeric = Some("NUMERIC(12,2)");
         assert!(typed_values_match(&json!("12.50"), &json!(12.5), numeric));
         assert!(typed_values_match(&json!("12.50"), &json!("12.5"), numeric));
+        // Integers: an SDK's exact string form equals the read path's number.
+        let bigint = Some("BIGINT");
+        assert!(typed_values_match(&json!(0), &json!("0"), bigint));
+        assert!(typed_values_match(
+            &json!("9007199254740993"),
+            &json!("9007199254740993"),
+            bigint
+        ));
+        assert!(!typed_values_match(&json!(7), &json!("0"), bigint));
+        assert!(typed_values_match(&json!(5), &json!(" 5"), Some("INTEGER")));
         assert!(!typed_values_match(
             &json!("12.50"),
             &json!("12.51"),

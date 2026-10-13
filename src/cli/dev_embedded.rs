@@ -28,6 +28,29 @@ fn plain_path(path: PathBuf) -> PathBuf {
     path
 }
 
+/// Why the embedded server stopped before it was ready: its exit status, the
+/// last lines it logged, and the remedy for the one refusal a developer can fix
+/// themselves (PostgreSQL will not run with Windows administrative rights).
+fn postgres_startup_failure(status: std::process::ExitStatus, log_path: &Path) -> String {
+    let tail = fs::read_to_string(log_path)
+        .map(|log| {
+            let lines: Vec<&str> = log.lines().filter(|line| !line.trim().is_empty()).collect();
+            lines[lines.len().saturating_sub(4)..].join(" | ")
+        })
+        .unwrap_or_default();
+    let mut message = format!("PostgreSQL exited during startup ({status})");
+    if !tail.is_empty() {
+        message.push_str(&format!(": {tail}"));
+    }
+    if tail.contains("administrative permissions") {
+        message.push_str(
+            "; run `udb dev up --embedded` from a terminal that is not elevated (\"Run as administrator\")",
+        );
+    }
+    message.push_str(&format!(" (log: {})", log_path.display()));
+    message
+}
+
 fn private_write(path: &Path, contents: &[u8]) -> Result<(), String> {
     use std::io::Write;
     let mut options = fs::OpenOptions::new();
@@ -1192,7 +1215,17 @@ impl EmbeddedCluster {
         if status.code() != Some(3) {
             return Err(format!("check PostgreSQL exited with {status}"));
         }
-        let command = self.postmaster_command();
+        let mut command = self.postmaster_command();
+        // Keep the server's own startup diagnostics: a server that exits before
+        // it is ready otherwise leaves nothing to explain why.
+        let log_path = self.settings.data_dir.with_file_name("postgres.log");
+        if let Ok(log) = fs::OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(&log_path)
+        {
+            command.stderr(std::process::Stdio::from(log));
+        }
         self.postmaster = Some(EmbeddedChild::spawn(command, "embedded PostgreSQL")?);
         let deadline = std::time::Instant::now() + PG_COMMAND_TIMEOUT;
         loop {
@@ -1205,7 +1238,7 @@ impl EmbeddedCluster {
                 .try_wait()
                 .map_err(|err| format!("PostgreSQL startup status: {err}"))?
             {
-                return Err(format!("PostgreSQL exited during startup ({status})"));
+                return Err(postgres_startup_failure(status, &log_path));
             }
             if self.owns_postmaster_pid() {
                 let dsn = self.settings.url("postgres");

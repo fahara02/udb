@@ -54,6 +54,14 @@ ungranted store calls, and TypeScript store parity.
 
 ### Fixed
 
+- **A compare-and-swap precondition on an integer column matches by value.** An
+  SDK sends a 64-bit integer as an exact string (`"0"`) and the stored value
+  was compared as a JSON number, so a keyed conditional Update on a BIGINT
+  failed with `FAILED_PRECONDITION` although the value matched.
+- **`udb dev up --embedded` explains a PostgreSQL that stops while starting**:
+  the server's own log lines are kept in `.udb/dev/postgres.log` and quoted in
+  the error. PostgreSQL refuses to run with Windows administrative rights; the
+  error says to start from a terminal that is not elevated.
 - **A keyed `Insert` failed internally** (`idempotency response persist affected
   0 rows`): its replay receipt was claimed as an insert and persisted as an
   upsert. Both now use the same operation.
