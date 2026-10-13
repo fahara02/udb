@@ -21,7 +21,7 @@ use Grpc\ChannelCredentials;
  *   UDB version ...... 0.5.33
  *   Protocol version . 1.0.0
  *   Services ......... 28
- *   RPCs ............. 386
+ *   RPCs ............. 389
  *
  * This class COMPOSES WITH the hand-written layer; it does not replace it:
  *   - it reuses {@see UdbMetadata} for the eight broker headers,
@@ -412,6 +412,7 @@ final class GeneratedClient
         "GraphMutate" => "mutation",
         "GraphQuery" => "read_only",
         "InitiateMultipartUpload" => "mutation",
+        "Insert" => "mutation",
         "LintPolicies" => "read_only",
         "ListAdminAuditLogs" => "read_only",
         "ListDlqEvents" => "read_only",
@@ -423,10 +424,12 @@ final class GeneratedClient
         "ListSagas" => "read_only",
         "LookupMessageSchema" => "read_only",
         "MarkSagaReviewed" => "mutation",
+        "NackCdcEvents" => "mutation",
         "PauseCdc" => "mutation",
         "PlanMigration" => "mutation",
         "PreviewCdcRedaction" => "read_only",
         "PublishCDC" => "mutation",
+        "PurgeSubject" => "destructive",
         "PutObject" => "mutation",
         "PutPolicy" => "destructive",
         "QuarantineDlqEvent" => "mutation",
@@ -807,6 +810,7 @@ final class GeneratedClient
         "DataBroker/GraphMutate" => "mutation",
         "DataBroker/GraphQuery" => "read_only",
         "DataBroker/InitiateMultipartUpload" => "mutation",
+        "DataBroker/Insert" => "mutation",
         "DataBroker/LintPolicies" => "read_only",
         "DataBroker/ListAdminAuditLogs" => "read_only",
         "DataBroker/ListDlqEvents" => "read_only",
@@ -818,10 +822,12 @@ final class GeneratedClient
         "DataBroker/ListSagas" => "read_only",
         "DataBroker/LookupMessageSchema" => "read_only",
         "DataBroker/MarkSagaReviewed" => "mutation",
+        "DataBroker/NackCdcEvents" => "mutation",
         "DataBroker/PauseCdc" => "mutation",
         "DataBroker/PlanMigration" => "mutation",
         "DataBroker/PreviewCdcRedaction" => "read_only",
         "DataBroker/PublishCDC" => "mutation",
+        "DataBroker/PurgeSubject" => "destructive",
         "DataBroker/PutObject" => "mutation",
         "DataBroker/PutPolicy" => "destructive",
         "DataBroker/QuarantineDlqEvent" => "mutation",
@@ -1202,6 +1208,7 @@ final class GeneratedClient
         "DataBroker/GraphMutate" => "graph_mutate",
         "DataBroker/GraphQuery" => "graph_query",
         "DataBroker/InitiateMultipartUpload" => "initiate_multipart_upload",
+        "DataBroker/Insert" => "insert",
         "DataBroker/LintPolicies" => "lint_policies",
         "DataBroker/ListAdminAuditLogs" => "list_admin_audit_logs",
         "DataBroker/ListDlqEvents" => "list_dlq_events",
@@ -1213,10 +1220,12 @@ final class GeneratedClient
         "DataBroker/ListSagas" => "list_sagas",
         "DataBroker/LookupMessageSchema" => "lookup_message_schema",
         "DataBroker/MarkSagaReviewed" => "mark_saga_reviewed",
+        "DataBroker/NackCdcEvents" => "nack_cdc_events",
         "DataBroker/PauseCdc" => "pause_cdc",
         "DataBroker/PlanMigration" => "plan_migration",
         "DataBroker/PreviewCdcRedaction" => "preview_cdc_redaction",
         "DataBroker/PublishCDC" => "publish_cdc",
+        "DataBroker/PurgeSubject" => "purge_subject",
         "DataBroker/PutObject" => "put_object",
         "DataBroker/PutPolicy" => "put_policy",
         "DataBroker/QuarantineDlqEvent" => "quarantine_dlq_event",
@@ -1596,6 +1605,7 @@ final class GeneratedClient
         "DataBroker/GraphMutate" => "graphMutate",
         "DataBroker/GraphQuery" => "graphQuery",
         "DataBroker/InitiateMultipartUpload" => "initiateMultipartUpload",
+        "DataBroker/Insert" => "insert",
         "DataBroker/LintPolicies" => "lintPolicies",
         "DataBroker/ListAdminAuditLogs" => "listAdminAuditLogs",
         "DataBroker/ListDlqEvents" => "listDlqEvents",
@@ -1607,10 +1617,12 @@ final class GeneratedClient
         "DataBroker/ListSagas" => "listSagas",
         "DataBroker/LookupMessageSchema" => "lookupMessageSchema",
         "DataBroker/MarkSagaReviewed" => "markSagaReviewed",
+        "DataBroker/NackCdcEvents" => "nackCdcEvents",
         "DataBroker/PauseCdc" => "pauseCdc",
         "DataBroker/PlanMigration" => "planMigration",
         "DataBroker/PreviewCdcRedaction" => "previewCdcRedaction",
         "DataBroker/PublishCDC" => "publishCdc",
+        "DataBroker/PurgeSubject" => "purgeSubject",
         "DataBroker/PutObject" => "putObject",
         "DataBroker/PutPolicy" => "putPolicy",
         "DataBroker/QuarantineDlqEvent" => "quarantineDlqEvent",
@@ -1990,6 +2002,7 @@ final class GeneratedClient
         "DataBroker/GraphMutate" => "",
         "DataBroker/GraphQuery" => "",
         "DataBroker/InitiateMultipartUpload" => "",
+        "DataBroker/Insert" => "",
         "DataBroker/LintPolicies" => "",
         "DataBroker/ListAdminAuditLogs" => "",
         "DataBroker/ListDlqEvents" => "",
@@ -2001,10 +2014,12 @@ final class GeneratedClient
         "DataBroker/ListSagas" => "",
         "DataBroker/LookupMessageSchema" => "",
         "DataBroker/MarkSagaReviewed" => "",
+        "DataBroker/NackCdcEvents" => "",
         "DataBroker/PauseCdc" => "",
         "DataBroker/PlanMigration" => "",
         "DataBroker/PreviewCdcRedaction" => "",
         "DataBroker/PublishCDC" => "",
+        "DataBroker/PurgeSubject" => "",
         "DataBroker/PutObject" => "",
         "DataBroker/PutPolicy" => "",
         "DataBroker/QuarantineDlqEvent" => "",
@@ -2384,6 +2399,7 @@ final class GeneratedClient
         "DataBroker/GraphMutate" => "",
         "DataBroker/GraphQuery" => "",
         "DataBroker/InitiateMultipartUpload" => "",
+        "DataBroker/Insert" => "",
         "DataBroker/LintPolicies" => "",
         "DataBroker/ListAdminAuditLogs" => "",
         "DataBroker/ListDlqEvents" => "",
@@ -2395,10 +2411,12 @@ final class GeneratedClient
         "DataBroker/ListSagas" => "",
         "DataBroker/LookupMessageSchema" => "",
         "DataBroker/MarkSagaReviewed" => "",
+        "DataBroker/NackCdcEvents" => "",
         "DataBroker/PauseCdc" => "",
         "DataBroker/PlanMigration" => "",
         "DataBroker/PreviewCdcRedaction" => "",
         "DataBroker/PublishCDC" => "",
+        "DataBroker/PurgeSubject" => "",
         "DataBroker/PutObject" => "",
         "DataBroker/PutPolicy" => "",
         "DataBroker/QuarantineDlqEvent" => "",
@@ -2882,6 +2900,7 @@ final class GeneratedClient
         "graph_mutate" => "graphMutate",
         "graph_query" => "graphQuery",
         "initiate_multipart_upload" => "initiateMultipartUpload",
+        "insert" => "insert",
         "lint_policies" => "lintPolicies",
         "list_admin_audit_logs" => "listAdminAuditLogs",
         "list_dlq_events" => "listDlqEvents",
@@ -2893,11 +2912,13 @@ final class GeneratedClient
         "list_sagas" => "listSagas",
         "lookup_message_schema" => "lookupMessageSchema",
         "mark_saga_reviewed" => "markSagaReviewed",
+        "nack_cdc_events" => "nackCdcEvents",
         "pause_cdc" => "pauseCdc",
         "plan_migration" => "planMigration",
         "preview_cdc_redaction" => "previewCdcRedaction",
         "publish_cdc" => "publishCdc",
         "publish_c_d_c" => "publishCdc",
+        "purge_subject" => "purgeSubject",
         "put_object" => "putObject",
         "put_policy" => "putPolicy",
         "quarantine_dlq_event" => "quarantineDlqEvent",
@@ -10124,6 +10145,27 @@ final class GeneratedClient
         );
     }
     /**
+     * udb.services.v1.DataBroker / Insert (unary), public alias insert.
+     *
+     * Forwards to {@see stubFor()}->Insert(); retries transient codes.
+     * Path: /udb.services.v1.DataBroker/Insert
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded MutationResponse
+     */
+    public function insert($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'Insert',
+            'DataBroker',
+            'udb.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->Insert($request, $md, $opts),
+            $metadata,
+            'mutation' === 'read_only',
+            $request,
+        );
+    }
+    /**
      * udb.services.v1.DataBroker / LintPolicies (unary), public alias lint_policies.
      *
      * Forwards to {@see stubFor()}->LintPolicies(); retries transient codes.
@@ -10355,6 +10397,27 @@ final class GeneratedClient
         );
     }
     /**
+     * udb.services.v1.DataBroker / NackCdcEvents (unary), public alias nack_cdc_events.
+     *
+     * Forwards to {@see stubFor()}->NackCdcEvents(); retries transient codes.
+     * Path: /udb.services.v1.DataBroker/NackCdcEvents
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded AckCdcEventsResponse
+     */
+    public function nackCdcEvents($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'NackCdcEvents',
+            'DataBroker',
+            'udb.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->NackCdcEvents($request, $md, $opts),
+            $metadata,
+            'mutation' === 'read_only',
+            $request,
+        );
+    }
+    /**
      * udb.services.v1.DataBroker / PauseCdc (unary), public alias pause_cdc.
      *
      * Forwards to {@see stubFor()}->PauseCdc(); retries transient codes.
@@ -10414,6 +10477,27 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->PreviewCdcRedaction($request, $md, $opts),
             $metadata,
             'read_only' === 'read_only',
+            $request,
+        );
+    }
+    /**
+     * udb.services.v1.DataBroker / PurgeSubject (unary), public alias purge_subject.
+     *
+     * Forwards to {@see stubFor()}->PurgeSubject(); retries transient codes.
+     * Path: /udb.services.v1.DataBroker/PurgeSubject
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded PurgeSubjectResponse
+     */
+    public function purgeSubject($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'PurgeSubject',
+            'DataBroker',
+            'udb.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->PurgeSubject($request, $md, $opts),
+            $metadata,
+            'destructive' === 'read_only',
             $request,
         );
     }
@@ -11328,7 +11412,7 @@ final class GeneratedClient
         return $this->stubFor('WorkflowService', 'udb.core.workflow.services.v1');
     }
     /**
-     * Underlying buf-generated stub for udb.services.v1.DataBroker (82 RPC(s)).
+     * Underlying buf-generated stub for udb.services.v1.DataBroker (85 RPC(s)).
      * Channel is shared with every other service stub on this client.
      *
      * @return BaseStub  a DataBrokerClient

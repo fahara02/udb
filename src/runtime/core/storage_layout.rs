@@ -50,6 +50,16 @@ pub struct StorageLayoutReport {
     pub truncated: bool,
 }
 
+/// Storage-layout startup settings, resolved by the caller from
+/// `UDB_STORAGE_LAYOUT_STRICT`, `UDB_STORAGE_OBJECT_BACKEND` and
+/// `UDB_STORAGE_BUCKET`.
+#[derive(Debug, Clone, Default)]
+pub struct StorageLayoutSettings {
+    pub strict: bool,
+    pub object_backend: Option<String>,
+    pub bucket: Option<String>,
+}
+
 impl DataBrokerRuntime {
     /// List up to `limit` legacy keys in `bucket` under `prefix`.
     #[cfg(feature = "s3")]
@@ -167,18 +177,15 @@ impl DataBrokerRuntime {
         Ok(report)
     }
 
-    /// Startup check: warn (or, with `UDB_STORAGE_LAYOUT_STRICT=true`, refuse)
-    /// when the default storage bucket still holds legacy keys.
+    /// Startup check: warn (or, when `layout.strict`, refuse) when the default
+    /// storage bucket still holds legacy keys. The caller resolves the settings
+    /// at startup, so this module reads no environment.
     #[cfg(feature = "s3")]
-    pub async fn check_storage_layout_at_startup(&self) -> Result<(), String> {
-        let strict = std::env::var("UDB_STORAGE_LAYOUT_STRICT")
-            .map(|value| {
-                matches!(
-                    value.trim().to_ascii_lowercase().as_str(),
-                    "1" | "true" | "yes" | "on"
-                )
-            })
-            .unwrap_or(false);
+    pub async fn check_storage_layout_at_startup(
+        &self,
+        layout: &StorageLayoutSettings,
+    ) -> Result<(), String> {
+        let strict = layout.strict;
         if let Err(err) = self.s3_for_instance_for_project(None, "") {
             return if strict {
                 Err(format!("cannot verify storage layout: {err}"))
@@ -187,8 +194,8 @@ impl DataBrokerRuntime {
             };
         }
         let (_, bucket) = crate::runtime::service::storage_object_defaults_pub(
-            std::env::var("UDB_STORAGE_OBJECT_BACKEND").ok(),
-            std::env::var("UDB_STORAGE_BUCKET").ok(),
+            layout.object_backend.clone(),
+            layout.bucket.clone(),
         );
         let report = match self.scan_legacy_object_keys(&bucket, "", 5).await {
             Ok(report) => report,

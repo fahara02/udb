@@ -2341,6 +2341,18 @@
   },
   {
     "file": "data_broker.md",
+    "rpc": "Insert",
+    "service": "DataBroker",
+    "wire_rpc": "DataBroker/Insert",
+    "api_alias": "insert",
+    "operation_id": "insert",
+    "op_kind": "MUTATION",
+    "request_msg": "UpsertRequest",
+    "body": "`{ \"context\": { \"tenant_id\": \"<seed:tenant_id>\", \"project_id\": \"<seed:project>\", \"purpose\": \"sdk.live.perf\" }, \"message_type\": \"<seed:message_type>\", \"payload\": { \"record_id\": \"insert-<seed:tenant_id>\", \"tenant_id\": \"<seed:tenant_id>\", \"project_id\": \"<seed:project>\", \"lookup_key\": \"manifest-insert-lk\", \"payload\": \"perf\" }, \"return_record\": true }`",
+    "notes": "inserts one new row keyed per run (the harness purges the tenant at the end of each run); a duplicate key would refuse with UDB_UNIQUE_VIOLATION."
+  },
+  {
+    "file": "data_broker.md",
     "rpc": "LintPolicies",
     "service": "DataBroker",
     "wire_rpc": "DataBroker/LintPolicies",
@@ -2473,6 +2485,18 @@
   },
   {
     "file": "data_broker.md",
+    "rpc": "NackCdcEvents",
+    "service": "DataBroker",
+    "wire_rpc": "DataBroker/NackCdcEvents",
+    "api_alias": "nack_cdc_events",
+    "operation_id": "nackCdcEvents",
+    "op_kind": "MUTATION",
+    "request_msg": "NackCdcEventsRequest",
+    "body": "`{ \"context\": { \"tenant_id\": \"<seed:tenant_id>\", \"project_id\": \"<seed:project>\", \"purpose\": \"sdk.live.perf\" }, \"consumer_name\": \"sdk-perf-nack-consumer\", \"topic_pattern\": \"<seed:cdc_ack_topic>\", \"event_id\": \"<seed:cdc_ack_event_id>\", \"attempts\": 3, \"failure_reason\": \"sdk perf dead-letter\" }`",
+    "notes": "dead-letters the prepared retained event for its own consumer name, separate from the AckCdcEvents cursor."
+  },
+  {
+    "file": "data_broker.md",
     "rpc": "PauseCdc",
     "service": "DataBroker",
     "wire_rpc": "DataBroker/PauseCdc",
@@ -2518,6 +2542,18 @@
     "request_msg": "CDCSubscriptionRequest",
     "body": "`{ \"context\": { \"tenant_id\": \"<seed:tenant_id>\", \"project_id\": \"<seed:project>\", \"purpose\": \"sdk.live.perf\" }, \"topic_pattern\": \"*\" }`",
     "notes": "`since_event_id` optional (resume). server-streams CDCEnvelope."
+  },
+  {
+    "file": "data_broker.md",
+    "rpc": "PurgeSubject",
+    "service": "DataBroker",
+    "wire_rpc": "DataBroker/PurgeSubject",
+    "api_alias": "purge_subject",
+    "operation_id": "purgeSubject",
+    "op_kind": "DESTRUCTIVE",
+    "request_msg": "PurgeSubjectRequest",
+    "body": "`{ \"context\": { \"tenant_id\": \"<seed:tenant_id>\", \"project_id\": \"<seed:project>\", \"purpose\": \"sdk.live.perf\" }, \"subject_id\": \"<seed:user_id>\", \"reason\": \"sdk perf dry run\", \"dry_run\": true, \"confirm_subject_id\": \"<seed:user_id>\" }`",
+    "notes": "dry run: reports the rows that owner_field columns tie to the seeded user without deleting them."
   },
   {
     "file": "data_broker.md",

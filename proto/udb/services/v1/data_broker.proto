@@ -49,6 +49,9 @@ service DataBroker {
   rpc Insert(udb.entity.v1.UpsertRequest) returns (udb.entity.v1.MutationResponse) {
     option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
     option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "insert" rest_operation_id: "insert" };
+    // Replay-safe like Upsert: a retried keyed Insert is deduped by
+    // idempotency_key inside the write tx, scoped to the verified tenant and
+    // project, and returns was_duplicate=true with the original body.
     option (udb.core.common.v1.method_idempotency_contract) = {
       request_key_field: "idempotency_key"
       duplicate_response_field: "was_duplicate"
@@ -237,11 +240,9 @@ service DataBroker {
   rpc NackCdcEvents(udb.entity.v1.NackCdcEventsRequest) returns (udb.entity.v1.AckCdcEventsResponse) {
     option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
     option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "nack_cdc_events" rest_operation_id: "nackCdcEvents" };
-    // Retry the same event, consumer, topic pattern and verified owner.
-    option (udb.core.common.v1.method_idempotency_contract) = {
-      request_key_field: "event_id"
-      replay_safe: true
-    };
+    // Settling the same event again is harmless (the cursor only moves forward
+    // and the DLQ record is keyed per consumer), but the reply cannot report a
+    // duplicate, so it is not declared replay-safe: the consumer retries it.
   }
   rpc CreateMaterializedView(udb.entity.v1.ViewDefinition) returns (udb.entity.v1.MutationResponse) {
     option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;

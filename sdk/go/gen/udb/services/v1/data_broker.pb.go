@@ -142,7 +142,7 @@ const file_udb_services_v1_data_broker_proto_rawDesc = "" +
 	"\x16EnsureBaselineResponse\x12\x19\n" +
 	"\bsaga_ids\x18\x01 \x03(\tR\asagaIds\x12\x17\n" +
 	"\adlq_ids\x18\x02 \x03(\tR\x06dlqIds\x12\x1b\n" +
-	"\tdevice_id\x18\x03 \x01(\tR\bdeviceId2\xbd[\n" +
+	"\tdevice_id\x18\x03 \x01(\tR\bdeviceId2\xad[\n" +
 	"\n" +
 	"DataBroker\x12\\\n" +
 	"\x06Select\x12\x1c.udb.entity.v1.SelectRequest\x1a\x18.udb.entity.v1.RecordSet\"\x1a\xda\xf3\x18\x12\b\x01\x12\x06selectZ\x06select\xf8\xf3\x18\x01\x12p\n" +
@@ -190,9 +190,8 @@ const file_udb_services_v1_data_broker_proto_rawDesc = "" +
 	"\n" +
 	"PublishCDC\x12%.udb.entity.v1.CDCSubscriptionRequest\x1a\x1a.udb.events.v1.CDCEnvelope\"#\xda\xf3\x18\x1b\b\x01\x12\vpublish_cdcZ\n" +
 	"publishCdc\xf8\xf3\x18\x020\x01\x12\x81\x01\n" +
-	"\fAckCdcEvents\x12\".udb.entity.v1.AckCdcEventsRequest\x1a#.udb.entity.v1.AckCdcEventsResponse\"(\xda\xf3\x18 \b\x01\x12\x0eack_cdc_eventsZ\fackCdcEvents\xf8\xf3\x18\x02\x12\x95\x01\n" +
-	"\rNackCdcEvents\x12#.udb.entity.v1.NackCdcEventsRequest\x1a#.udb.entity.v1.AckCdcEventsResponse\":\xda\xf3\x18\"\b\x01\x12\x0fnack_cdc_eventsZ\rnackCdcEvents\xf8\xf3\x18\x02\x9a\xf4\x18\f\n" +
-	"\bevent_id \x01\x12\x96\x01\n" +
+	"\fAckCdcEvents\x12\".udb.entity.v1.AckCdcEventsRequest\x1a#.udb.entity.v1.AckCdcEventsResponse\"(\xda\xf3\x18 \b\x01\x12\x0eack_cdc_eventsZ\fackCdcEvents\xf8\xf3\x18\x02\x12\x85\x01\n" +
+	"\rNackCdcEvents\x12#.udb.entity.v1.NackCdcEventsRequest\x1a#.udb.entity.v1.AckCdcEventsResponse\"*\xda\xf3\x18\"\b\x01\x12\x0fnack_cdc_eventsZ\rnackCdcEvents\xf8\xf3\x18\x02\x12\x96\x01\n" +
 	"\x16CreateMaterializedView\x12\x1d.udb.entity.v1.ViewDefinition\x1a\x1f.udb.entity.v1.MutationResponse\"<\xda\xf3\x184\b\x01\x12\x18create_materialized_viewZ\x16createMaterializedView\xf8\xf3\x18\x02\x12\x9f\x01\n" +
 	"\x12EnqueueOutboxEvent\x12(.udb.entity.v1.EnqueueOutboxEventRequest\x1a).udb.entity.v1.EnqueueOutboxEventResponse\"4\xda\xf3\x18,\b\x01\x12\x14enqueue_outbox_eventZ\x12enqueueOutboxEvent\xf8\xf3\x18\x02\x12\x8f\x01\n" +
 	"\x0fGenericDispatch\x12%.udb.entity.v1.GenericDispatchRequest\x1a&.udb.entity.v1.GenericDispatchResponse\"-\xda\xf3\x18%\b\x01\x12\x10generic_dispatchZ\x0fgenericDispatch\xf8\xf3\x18\x02\x12\x83\x01\n" +

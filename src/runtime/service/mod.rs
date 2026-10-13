@@ -2010,7 +2010,18 @@ pub async fn serve(
     // refuses to start until `udb migrate storage` has copied them.
     #[cfg(feature = "s3")]
     runtime
-        .check_storage_layout_at_startup()
+        .check_storage_layout_at_startup(
+            &crate::runtime::core::storage_layout::StorageLayoutSettings {
+                strict: std::env::var("UDB_STORAGE_LAYOUT_STRICT").is_ok_and(|value| {
+                    matches!(
+                        value.trim().to_ascii_lowercase().as_str(),
+                        "1" | "true" | "yes" | "on"
+                    )
+                }),
+                object_backend: std::env::var("UDB_STORAGE_OBJECT_BACKEND").ok(),
+                bucket: std::env::var("UDB_STORAGE_BUCKET").ok(),
+            },
+        )
         .await
         .map_err(|err| {
             std::io::Error::other(format!("storage layout startup gate failed: {err}"))

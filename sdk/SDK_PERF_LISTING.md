@@ -6,7 +6,7 @@ Inputs:
 - `docs/generated/bench-bodies.json`
 - `docs/site/bench-results.json`
 
-Current generated RPC surface: 386 RPCs across 28 services.
+Current generated RPC surface: 389 RPCs across 28 services.
 
 Published benchmark artifact: present.
 Release tag: v0.4.28.
@@ -57,7 +57,7 @@ Generated at: 2026-07-26T17:46:09+00:00.
 | CacheService | 7 | 3 | 3 | 1 | 0 |
 | ConfigService | 5 | 3 | 1 | 1 | 0 |
 | ControlPlaneService | 6 | 2 | 4 | 0 | 0 |
-| DataBroker | 82 | 35 | 40 | 7 | 0 |
+| DataBroker | 85 | 35 | 42 | 8 | 0 |
 | EmbeddingService | 19 | 5 | 12 | 2 | 0 |
 | IdentityProviderService | 27 | 6 | 21 | 0 | 0 |
 | LiveQueryService | 1 | 1 | 0 | 0 | 0 |
@@ -280,6 +280,7 @@ identity surface available to benchmark reports.
 | `DataBroker/GraphMutate` | `graph_mutate` | `graphMutate` | MUTATION |
 | `DataBroker/GraphQuery` | `graph_query` | `graphQuery` | READ_ONLY |
 | `DataBroker/InitiateMultipartUpload` | `initiate_multipart_upload` | `initiateMultipartUpload` | MUTATION |
+| `DataBroker/Insert` | `insert` | `insert` | MUTATION |
 | `DataBroker/LintPolicies` | `lint_policies` | `lintPolicies` | READ_ONLY |
 | `DataBroker/ListAdminAuditLogs` | `list_admin_audit_logs` | `listAdminAuditLogs` | READ_ONLY |
 | `DataBroker/ListDlqEvents` | `list_dlq_events` | `listDlqEvents` | READ_ONLY |
@@ -291,10 +292,12 @@ identity surface available to benchmark reports.
 | `DataBroker/ListSagas` | `list_sagas` | `listSagas` | READ_ONLY |
 | `DataBroker/LookupMessageSchema` | `lookup_message_schema` | `lookupMessageSchema` | READ_ONLY |
 | `DataBroker/MarkSagaReviewed` | `mark_saga_reviewed` | `markSagaReviewed` | MUTATION |
+| `DataBroker/NackCdcEvents` | `nack_cdc_events` | `nackCdcEvents` | MUTATION |
 | `DataBroker/PauseCdc` | `pause_cdc` | `pauseCdc` | MUTATION |
 | `DataBroker/PlanMigration` | `plan_migration` | `planMigration` | MUTATION |
 | `DataBroker/PreviewCdcRedaction` | `preview_cdc_redaction` | `previewCdcRedaction` | READ_ONLY |
 | `DataBroker/PublishCDC` | `publish_cdc` | `publishCdc` | MUTATION |
+| `DataBroker/PurgeSubject` | `purge_subject` | `purgeSubject` | DESTRUCTIVE |
 | `DataBroker/PutObject` | `put_object` | `putObject` | MUTATION |
 | `DataBroker/PutPolicy` | `put_policy` | `putPolicy` | DESTRUCTIVE |
 | `DataBroker/QuarantineDlqEvent` | `quarantine_dlq_event` | `quarantineDlqEvent` | MUTATION |

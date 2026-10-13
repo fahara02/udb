@@ -6,7 +6,7 @@
 //   UDB version:      0.5.33
 //   Protocol version: 1.0.0
 //   Services:         28
-//   RPCs:             386
+//   RPCs:             389
 //
 // This file is RENDERED by `udb sdk generate` from
 //   sdk-templates/csharp/Udb.Client/GeneratedClient.cs.tmpl
@@ -411,6 +411,7 @@ public static class GeneratedRpcIdentities
         map["/udb.services.v1.DataBroker/GraphMutate"] = new RpcIdentity("/udb.services.v1.DataBroker/GraphMutate", "DataBroker", "GraphMutate", "graph_mutate", "graphMutate", "mutation", "", "");
         map["/udb.services.v1.DataBroker/GraphQuery"] = new RpcIdentity("/udb.services.v1.DataBroker/GraphQuery", "DataBroker", "GraphQuery", "graph_query", "graphQuery", "read_only", "", "");
         map["/udb.services.v1.DataBroker/InitiateMultipartUpload"] = new RpcIdentity("/udb.services.v1.DataBroker/InitiateMultipartUpload", "DataBroker", "InitiateMultipartUpload", "initiate_multipart_upload", "initiateMultipartUpload", "mutation", "", "");
+        map["/udb.services.v1.DataBroker/Insert"] = new RpcIdentity("/udb.services.v1.DataBroker/Insert", "DataBroker", "Insert", "insert", "insert", "mutation", "", "");
         map["/udb.services.v1.DataBroker/LintPolicies"] = new RpcIdentity("/udb.services.v1.DataBroker/LintPolicies", "DataBroker", "LintPolicies", "lint_policies", "lintPolicies", "read_only", "", "");
         map["/udb.services.v1.DataBroker/ListAdminAuditLogs"] = new RpcIdentity("/udb.services.v1.DataBroker/ListAdminAuditLogs", "DataBroker", "ListAdminAuditLogs", "list_admin_audit_logs", "listAdminAuditLogs", "read_only", "", "");
         map["/udb.services.v1.DataBroker/ListDlqEvents"] = new RpcIdentity("/udb.services.v1.DataBroker/ListDlqEvents", "DataBroker", "ListDlqEvents", "list_dlq_events", "listDlqEvents", "read_only", "", "");
@@ -422,10 +423,12 @@ public static class GeneratedRpcIdentities
         map["/udb.services.v1.DataBroker/ListSagas"] = new RpcIdentity("/udb.services.v1.DataBroker/ListSagas", "DataBroker", "ListSagas", "list_sagas", "listSagas", "read_only", "", "");
         map["/udb.services.v1.DataBroker/LookupMessageSchema"] = new RpcIdentity("/udb.services.v1.DataBroker/LookupMessageSchema", "DataBroker", "LookupMessageSchema", "lookup_message_schema", "lookupMessageSchema", "read_only", "", "");
         map["/udb.services.v1.DataBroker/MarkSagaReviewed"] = new RpcIdentity("/udb.services.v1.DataBroker/MarkSagaReviewed", "DataBroker", "MarkSagaReviewed", "mark_saga_reviewed", "markSagaReviewed", "mutation", "", "");
+        map["/udb.services.v1.DataBroker/NackCdcEvents"] = new RpcIdentity("/udb.services.v1.DataBroker/NackCdcEvents", "DataBroker", "NackCdcEvents", "nack_cdc_events", "nackCdcEvents", "mutation", "", "");
         map["/udb.services.v1.DataBroker/PauseCdc"] = new RpcIdentity("/udb.services.v1.DataBroker/PauseCdc", "DataBroker", "PauseCdc", "pause_cdc", "pauseCdc", "mutation", "", "");
         map["/udb.services.v1.DataBroker/PlanMigration"] = new RpcIdentity("/udb.services.v1.DataBroker/PlanMigration", "DataBroker", "PlanMigration", "plan_migration", "planMigration", "mutation", "", "");
         map["/udb.services.v1.DataBroker/PreviewCdcRedaction"] = new RpcIdentity("/udb.services.v1.DataBroker/PreviewCdcRedaction", "DataBroker", "PreviewCdcRedaction", "preview_cdc_redaction", "previewCdcRedaction", "read_only", "", "");
         map["/udb.services.v1.DataBroker/PublishCDC"] = new RpcIdentity("/udb.services.v1.DataBroker/PublishCDC", "DataBroker", "PublishCDC", "publish_cdc", "publishCdc", "mutation", "", "");
+        map["/udb.services.v1.DataBroker/PurgeSubject"] = new RpcIdentity("/udb.services.v1.DataBroker/PurgeSubject", "DataBroker", "PurgeSubject", "purge_subject", "purgeSubject", "destructive", "", "");
         map["/udb.services.v1.DataBroker/PutObject"] = new RpcIdentity("/udb.services.v1.DataBroker/PutObject", "DataBroker", "PutObject", "put_object", "putObject", "mutation", "", "");
         map["/udb.services.v1.DataBroker/PutPolicy"] = new RpcIdentity("/udb.services.v1.DataBroker/PutPolicy", "DataBroker", "PutPolicy", "put_policy", "putPolicy", "destructive", "", "");
         map["/udb.services.v1.DataBroker/QuarantineDlqEvent"] = new RpcIdentity("/udb.services.v1.DataBroker/QuarantineDlqEvent", "DataBroker", "QuarantineDlqEvent", "quarantine_dlq_event", "quarantineDlqEvent", "mutation", "", "");
@@ -1190,7 +1193,7 @@ public sealed partial class GeneratedWorkflowServiceClient : GeneratedServiceBas
 }
 /// <summary>
 /// Robustness wrapper for the <c>udb.services.v1.DataBroker</c> service
-/// (82 RPCs). Forwards to the buf-generated
+/// (85 RPCs). Forwards to the buf-generated
 /// <c>DataBrokerClient</c> stub.
 /// </summary>
 public sealed partial class GeneratedDataBrokerClient : GeneratedServiceBase
@@ -9017,6 +9020,29 @@ public sealed partial class GeneratedDataBrokerClient
 public sealed partial class GeneratedDataBrokerClient
 {
     /// <summary>
+    /// <c>insert</c> (unary) — forwards to <c>DataBrokerClient.InsertAsync</c>.
+    /// gRPC path: <c>/udb.services.v1.DataBroker/Insert</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
+    /// </summary>
+    public Task<dynamic> InsertAsync(
+        dynamic request,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        // _stub.InsertAsync returns a concrete AsyncUnaryCall<TResp>; box it
+        // as object so no dynamic-to-closed-generic cast is ever attempted.
+        return InvokeUnaryAsync(
+            "/udb.services.v1.DataBroker/Insert",
+            co => (object)_stub.InsertAsync(request, co),
+            deadline,
+            cancellationToken,
+            "mutation" == "read_only",
+            "true" == "true",
+            (object)request);
+    }
+}
+public sealed partial class GeneratedDataBrokerClient
+{
+    /// <summary>
     /// <c>lint_policies</c> (unary) — forwards to <c>DataBrokerClient.LintPoliciesAsync</c>.
     /// gRPC path: <c>/udb.services.v1.DataBroker/LintPolicies</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
@@ -9270,6 +9296,29 @@ public sealed partial class GeneratedDataBrokerClient
 public sealed partial class GeneratedDataBrokerClient
 {
     /// <summary>
+    /// <c>nack_cdc_events</c> (unary) — forwards to <c>DataBrokerClient.NackCdcEventsAsync</c>.
+    /// gRPC path: <c>/udb.services.v1.DataBroker/NackCdcEvents</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
+    /// </summary>
+    public Task<dynamic> NackCdcEventsAsync(
+        dynamic request,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        // _stub.NackCdcEventsAsync returns a concrete AsyncUnaryCall<TResp>; box it
+        // as object so no dynamic-to-closed-generic cast is ever attempted.
+        return InvokeUnaryAsync(
+            "/udb.services.v1.DataBroker/NackCdcEvents",
+            co => (object)_stub.NackCdcEventsAsync(request, co),
+            deadline,
+            cancellationToken,
+            "mutation" == "read_only",
+            "true" == "true",
+            (object)request);
+    }
+}
+public sealed partial class GeneratedDataBrokerClient
+{
+    /// <summary>
     /// <c>pause_cdc</c> (unary) — forwards to <c>DataBrokerClient.PauseCdcAsync</c>.
     /// gRPC path: <c>/udb.services.v1.DataBroker/PauseCdc</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
@@ -9332,6 +9381,29 @@ public sealed partial class GeneratedDataBrokerClient
             deadline,
             cancellationToken,
             "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
+    }
+}
+public sealed partial class GeneratedDataBrokerClient
+{
+    /// <summary>
+    /// <c>purge_subject</c> (unary) — forwards to <c>DataBrokerClient.PurgeSubjectAsync</c>.
+    /// gRPC path: <c>/udb.services.v1.DataBroker/PurgeSubject</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
+    /// </summary>
+    public Task<dynamic> PurgeSubjectAsync(
+        dynamic request,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        // _stub.PurgeSubjectAsync returns a concrete AsyncUnaryCall<TResp>; box it
+        // as object so no dynamic-to-closed-generic cast is ever attempted.
+        return InvokeUnaryAsync(
+            "/udb.services.v1.DataBroker/PurgeSubject",
+            co => (object)_stub.PurgeSubjectAsync(request, co),
+            deadline,
+            cancellationToken,
+            "destructive" == "read_only",
             "false" == "true",
             (object)request);
     }

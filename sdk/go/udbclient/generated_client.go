@@ -25,7 +25,7 @@ package udbclient
 // connection (interceptors) those wrappers run on, plus low-level escape
 // hatches for RPCs that don't yet have a typed helper.
 //
-// Covers 386 RPCs across 28 services
+// Covers 389 RPCs across 28 services
 // (UDB v0.5.33, wire protocol 1.0.0).
 
 import (
@@ -1315,6 +1315,7 @@ var AllRPCs = []RPCInfo{
 	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/GraphMutate", Name: "GraphMutate", APIAlias: "graph_mutate", OperationID: "graphMutate", HTTPMethod: "", HTTPPath: "", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false, Listener: "data plane (UDB_GRPC_TARGET, default :50051)", AuthMode: "", Scopes: []string{}, CredentialTypes: []string{}},
 	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/GraphQuery", Name: "GraphQuery", APIAlias: "graph_query", OperationID: "graphQuery", HTTPMethod: "", HTTPPath: "", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false, Listener: "data plane (UDB_GRPC_TARGET, default :50051)", AuthMode: "", Scopes: []string{}, CredentialTypes: []string{}},
 	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/InitiateMultipartUpload", Name: "InitiateMultipartUpload", APIAlias: "initiate_multipart_upload", OperationID: "initiateMultipartUpload", HTTPMethod: "", HTTPPath: "", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false, Listener: "data plane (UDB_GRPC_TARGET, default :50051)", AuthMode: "", Scopes: []string{}, CredentialTypes: []string{}},
+	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/Insert", Name: "Insert", APIAlias: "insert", OperationID: "insert", HTTPMethod: "", HTTPPath: "", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: true, Listener: "data plane (UDB_GRPC_TARGET, default :50051)", AuthMode: "", Scopes: []string{}, CredentialTypes: []string{}},
 	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/LintPolicies", Name: "LintPolicies", APIAlias: "lint_policies", OperationID: "lintPolicies", HTTPMethod: "", HTTPPath: "", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false, Listener: "data plane (UDB_GRPC_TARGET, default :50051)", AuthMode: "", Scopes: []string{}, CredentialTypes: []string{}},
 	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/ListAdminAuditLogs", Name: "ListAdminAuditLogs", APIAlias: "list_admin_audit_logs", OperationID: "listAdminAuditLogs", HTTPMethod: "", HTTPPath: "", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false, Listener: "data plane (UDB_GRPC_TARGET, default :50051)", AuthMode: "", Scopes: []string{}, CredentialTypes: []string{}},
 	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/ListDlqEvents", Name: "ListDlqEvents", APIAlias: "list_dlq_events", OperationID: "listDlqEvents", HTTPMethod: "", HTTPPath: "", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false, Listener: "data plane (UDB_GRPC_TARGET, default :50051)", AuthMode: "", Scopes: []string{}, CredentialTypes: []string{}},
@@ -1326,10 +1327,12 @@ var AllRPCs = []RPCInfo{
 	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/ListSagas", Name: "ListSagas", APIAlias: "list_sagas", OperationID: "listSagas", HTTPMethod: "", HTTPPath: "", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false, Listener: "data plane (UDB_GRPC_TARGET, default :50051)", AuthMode: "", Scopes: []string{}, CredentialTypes: []string{}},
 	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/LookupMessageSchema", Name: "LookupMessageSchema", APIAlias: "lookup_message_schema", OperationID: "lookupMessageSchema", HTTPMethod: "", HTTPPath: "", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false, Listener: "data plane (UDB_GRPC_TARGET, default :50051)", AuthMode: "", Scopes: []string{}, CredentialTypes: []string{}},
 	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/MarkSagaReviewed", Name: "MarkSagaReviewed", APIAlias: "mark_saga_reviewed", OperationID: "markSagaReviewed", HTTPMethod: "", HTTPPath: "", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false, Listener: "data plane (UDB_GRPC_TARGET, default :50051)", AuthMode: "", Scopes: []string{}, CredentialTypes: []string{}},
+	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/NackCdcEvents", Name: "NackCdcEvents", APIAlias: "nack_cdc_events", OperationID: "nackCdcEvents", HTTPMethod: "", HTTPPath: "", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: true, Listener: "data plane (UDB_GRPC_TARGET, default :50051)", AuthMode: "", Scopes: []string{}, CredentialTypes: []string{}},
 	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/PauseCdc", Name: "PauseCdc", APIAlias: "pause_cdc", OperationID: "pauseCdc", HTTPMethod: "", HTTPPath: "", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false, Listener: "data plane (UDB_GRPC_TARGET, default :50051)", AuthMode: "", Scopes: []string{}, CredentialTypes: []string{}},
 	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/PlanMigration", Name: "PlanMigration", APIAlias: "plan_migration", OperationID: "planMigration", HTTPMethod: "", HTTPPath: "", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false, Listener: "data plane (UDB_GRPC_TARGET, default :50051)", AuthMode: "", Scopes: []string{}, CredentialTypes: []string{}},
 	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/PreviewCdcRedaction", Name: "PreviewCdcRedaction", APIAlias: "preview_cdc_redaction", OperationID: "previewCdcRedaction", HTTPMethod: "", HTTPPath: "", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false, Listener: "data plane (UDB_GRPC_TARGET, default :50051)", AuthMode: "", Scopes: []string{}, CredentialTypes: []string{}},
 	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/PublishCDC", Name: "PublishCDC", APIAlias: "publish_cdc", OperationID: "publishCdc", HTTPMethod: "", HTTPPath: "", Kind: RPCKind("server_streaming"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false, Listener: "data plane (UDB_GRPC_TARGET, default :50051)", AuthMode: "", Scopes: []string{}, CredentialTypes: []string{}},
+	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/PurgeSubject", Name: "PurgeSubject", APIAlias: "purge_subject", OperationID: "purgeSubject", HTTPMethod: "", HTTPPath: "", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "destructive", ReplaySafe: false, Listener: "data plane (UDB_GRPC_TARGET, default :50051)", AuthMode: "", Scopes: []string{}, CredentialTypes: []string{}},
 	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/PutObject", Name: "PutObject", APIAlias: "put_object", OperationID: "putObject", HTTPMethod: "", HTTPPath: "", Kind: RPCKind("client_streaming"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false, Listener: "data plane (UDB_GRPC_TARGET, default :50051)", AuthMode: "", Scopes: []string{}, CredentialTypes: []string{}},
 	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/PutPolicy", Name: "PutPolicy", APIAlias: "put_policy", OperationID: "putPolicy", HTTPMethod: "", HTTPPath: "", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "destructive", ReplaySafe: false, Listener: "data plane (UDB_GRPC_TARGET, default :50051)", AuthMode: "", Scopes: []string{}, CredentialTypes: []string{}},
 	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/QuarantineDlqEvent", Name: "QuarantineDlqEvent", APIAlias: "quarantine_dlq_event", OperationID: "quarantineDlqEvent", HTTPMethod: "", HTTPPath: "", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false, Listener: "data plane (UDB_GRPC_TARGET, default :50051)", AuthMode: "", Scopes: []string{}, CredentialTypes: []string{}},
@@ -1384,7 +1387,7 @@ var ServiceRPCCounts = map[string]int{
 	"udb.core.webrtc.services.v1.TrackService": 4,
 	"udb.core.webrtc.services.v1.TurnService": 1,
 	"udb.core.workflow.services.v1.WorkflowService": 6,
-	"udb.services.v1.DataBroker": 82,
+	"udb.services.v1.DataBroker": 85,
 }
 
 // Entities is the catalog-derived entity registry, generated from the annotated
@@ -2621,6 +2624,11 @@ func (e *UnitOfWorkTxError) Error() string {
 	return e.Status.Message
 }
 
+func (e *UnitOfWorkTxError) Unwrap() error {
+	if e == nil || e.Status == nil { return nil }
+	return txStatusError(e.Status)
+}
+
 type UnitOfWorkConflictError struct {
 	UnitOfWorkTxError
 }
@@ -2735,7 +2743,7 @@ func (u *UnitOfWork) ValidateTxStatuses(statuses []*entityv1.TxStatus) error {
 		if status == nil || status.GetState() != entityv1.TxStatus_TX_STATE_ERROR {
 			continue
 		}
-		if isTxConflictMessage(status.GetMessage()) {
+		if IsCASConflict(txStatusError(status)) || (status.GetErrorDetail() == nil && isTxConflictMessage(status.GetMessage())) {
 			return &UnitOfWorkConflictError{UnitOfWorkTxError{Status: status}}
 		}
 		return &UnitOfWorkTxError{Status: status}
@@ -2764,6 +2772,7 @@ func (u *UnitOfWork) Flush(ctx context.Context, client *GeneratedClient, backend
 		return nil, mapError(beginTxFullMethod, err, nil)
 	}
 	statuses := []*entityv1.TxStatus{}
+	committed := false
 	for {
 		status := &entityv1.TxStatus{}
 		err := stream.RecvMsg(status)
@@ -2771,13 +2780,15 @@ func (u *UnitOfWork) Flush(ctx context.Context, client *GeneratedClient, backend
 			break
 		}
 		if err != nil {
-			return statuses, mapError(beginTxFullMethod, err, nil)
+			return statuses, mapError(beginTxFullMethod, err, stream.Trailer())
 		}
 		statuses = append(statuses, status)
+		if status.GetState() == entityv1.TxStatus_TX_STATE_COMMITTED { committed = true }
 	}
 	if err := u.ValidateTxStatuses(statuses); err != nil {
 		return statuses, err
 	}
+	if !committed { return statuses, errors.New("udb: UnitOfWork transaction ended without a COMMITTED status") }
 	if err := u.MarkClean(); err != nil {
 		return statuses, err
 	}

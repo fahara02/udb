@@ -92,11 +92,17 @@ async fn legacy_storage_migration_preserves_bytes_and_never_overwrites_a_copy() 
             .await
             .expect("clean up migrated objects");
     }
-    let _strict = EnvOverride::set("UDB_STORAGE_LAYOUT_STRICT", "true");
     let missing_bucket = format!("udb-layout-missing-{}", Uuid::new_v4().simple());
-    let _bucket = EnvOverride::set("UDB_STORAGE_BUCKET", &missing_bucket);
+    let strict = crate::runtime::core::storage_layout::StorageLayoutSettings {
+        strict: true,
+        object_backend: None,
+        bucket: Some(missing_bucket),
+    };
     assert!(
-        runtime.check_storage_layout_at_startup().await.is_err(),
+        runtime
+            .check_storage_layout_at_startup(&strict)
+            .await
+            .is_err(),
         "strict mode cannot skip an unreadable bucket"
     );
 }
