@@ -378,13 +378,21 @@ fn init_otel_subscriber(
 
     if log_json_enabled() {
         subscriber
-            .with(tracing_subscriber::fmt::layer().json())
+            .with(
+                tracing_subscriber::fmt::layer()
+                    .with_writer(crate::runtime::observability::log_writer())
+                    .json(),
+            )
             .try_init()
     } else {
         subscriber
-            .with(tracing_subscriber::fmt::layer().event_format(PrettyLog {
-                colors: log_colors_enabled(),
-            }))
+            .with(
+                tracing_subscriber::fmt::layer()
+                    .with_writer(crate::runtime::observability::log_writer())
+                    .event_format(PrettyLog {
+                        colors: log_colors_enabled(),
+                    }),
+            )
             .try_init()
     }
 }

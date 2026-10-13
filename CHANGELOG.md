@@ -28,6 +28,14 @@ release line was tagged.
   ignore object key order. After upgrade, the reconciler may re-enqueue each
   drifted row once, under its new checksum.
 
+- **`udb dev up --embedded` starts again.** Every CLI command except `serve`
+  wrote its log lines to stdout ahead of its JSON result, so the dev command
+  could not parse the first-start admin bootstrap and exited. Logs from
+  one-shot commands now go to stderr; `udb serve` still logs to stdout. Anything
+  piping a command's JSON output (`udb ... | jq`) is fixed by the same change.
+- **`udb auth` no longer prints the database password** when it cannot reach
+  PostgreSQL: the DSN in that error is redacted.
+
 ### Documented
 
 - `ValidateTokenResponse.session_id` is empty for a token refreshed from a

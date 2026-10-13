@@ -384,7 +384,12 @@ pub async fn bootstrap_admin_user(
         .acquire_timeout(std::time::Duration::from_secs(10))
         .connect(dsn)
         .await
-        .map_err(|err| format!("connect postgres '{dsn}': {err}"))?;
+        .map_err(|err| {
+            format!(
+                "connect postgres '{}': {err}",
+                crate::generation::dsn::redact_dsn(&dsn)
+            )
+        })?;
 
     // Best-effort: ensure the native auth schema exists (idempotent
     // `CREATE … IF NOT EXISTS`) so a fresh database can be bootstrapped in one shot.
@@ -548,7 +553,12 @@ pub async fn bootstrap_platform_admin_user(
         .acquire_timeout(std::time::Duration::from_secs(10))
         .connect(dsn)
         .await
-        .map_err(|err| format!("connect postgres '{dsn}': {err}"))?;
+        .map_err(|err| {
+            format!(
+                "connect postgres '{}': {err}",
+                crate::generation::dsn::redact_dsn(&dsn)
+            )
+        })?;
     let role = crate::runtime::native_catalog::native_model(
         "udb.core.authz.entity.v1.Role",
         &[
@@ -716,7 +726,12 @@ pub async fn served_bootstrap_admin(
         .acquire_timeout(std::time::Duration::from_secs(10))
         .connect(dsn)
         .await
-        .map_err(|err| format!("connect postgres '{dsn}': {err}"))?;
+        .map_err(|err| {
+            format!(
+                "connect postgres '{}': {err}",
+                crate::generation::dsn::redact_dsn(&dsn)
+            )
+        })?;
 
     sqlx::raw_sql("CREATE SCHEMA IF NOT EXISTS udb_system")
         .execute(&pool)

@@ -315,6 +315,9 @@ pub fn run() {
     ensure_cli_correlation_id();
     // Phase 10: install the OTLP trace exporter (feature- and env-gated) BEFORE
     // the fmt subscriber so spans export when `otel` is compiled + enabled.
+    // stdout carries a command's result (often JSON another program parses);
+    // only the long-running `serve` writes its logs there.
+    udb::runtime::observability::log_to_stderr(args.first().map(String::as_str) != Some("serve"));
     udb::runtime::otel::init_otel();
     init_observability();
     // Install the rustls CryptoProvider before ANY TLS config is built (serve

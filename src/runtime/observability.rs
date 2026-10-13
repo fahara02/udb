@@ -13,6 +13,27 @@ pub struct TraceContext {
     pub correlation_id: String,
 }
 
+/// Where log lines go. `udb serve` logs to stdout as a long-running service;
+/// every other command keeps stdout for its machine-readable result (JSON a
+/// caller parses), so its logs go to stderr. Set before the subscriber is
+/// installed.
+static LOG_TO_STDERR: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
+/// Send logs to stderr instead of stdout. Call before [`init_observability`].
+pub fn log_to_stderr(enabled: bool) {
+    LOG_TO_STDERR.store(enabled, std::sync::atomic::Ordering::Relaxed);
+}
+
+/// The writer every fmt layer uses, honouring [`log_to_stderr`].
+#[cfg(feature = "runtime-logging")]
+pub(crate) fn log_writer() -> tracing_subscriber::fmt::writer::BoxMakeWriter {
+    if LOG_TO_STDERR.load(std::sync::atomic::Ordering::Relaxed) {
+        tracing_subscriber::fmt::writer::BoxMakeWriter::new(std::io::stderr)
+    } else {
+        tracing_subscriber::fmt::writer::BoxMakeWriter::new(std::io::stdout)
+    }
+}
+
 #[cfg(feature = "runtime-logging")]
 pub fn init_observability() {
     let filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
@@ -35,6 +56,7 @@ pub fn init_observability() {
     if json {
         let _ = tracing_subscriber::fmt()
             .with_env_filter(filter)
+            .with_writer(log_writer())
             .json()
             .try_init();
     } else {
@@ -53,6 +75,7 @@ pub fn init_observability() {
                 .unwrap_or(true);
         let _ = tracing_subscriber::fmt()
             .with_env_filter(filter)
+            .with_writer(log_writer())
             .event_format(PrettyLog { colors })
             .try_init();
     }
