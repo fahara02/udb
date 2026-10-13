@@ -33,6 +33,9 @@ release line was tagged.
   could not parse the first-start admin bootstrap and exited. Logs from
   one-shot commands now go to stderr; `udb serve` still logs to stdout. Anything
   piping a command's JSON output (`udb ... | jq`) is fixed by the same change.
+- **`udb dev up --embedded` works on Windows.** The Windows PostgreSQL build's
+  `.sha256` file is CertUtil output, whose first word is `SHA256`, so the
+  checksum always mismatched. The digest is now read as the first 64-hex token.
 - **`udb auth` no longer prints the database password** when it cannot reach
   PostgreSQL: the DSN in that error is redacted.
 

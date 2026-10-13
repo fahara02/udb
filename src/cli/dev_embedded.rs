@@ -798,6 +798,18 @@ fn postgres_release_major(version: &str) -> Result<u64, String> {
     Ok(major)
 }
 
+/// The SHA-256 digest a `.sha256` sidecar publishes: the first token that is 64
+/// hex digits. The Linux and macOS sidecars are `<digest>  <file>`; the Windows
+/// one is CertUtil output (a `SHA256 hash of ...:` header line, the digest, then
+/// a status line), so the first token alone is not the digest.
+fn published_sha256(sidecar: &[u8]) -> String {
+    String::from_utf8_lossy(sidecar)
+        .split_whitespace()
+        .find(|token| token.len() == 64 && token.bytes().all(|byte| byte.is_ascii_hexdigit()))
+        .unwrap_or_default()
+        .to_ascii_lowercase()
+}
+
 async fn ensure_postgres(version: &str, allow_download: bool) -> Result<PathBuf, String> {
     postgres_release_major(version)?;
     let target = pg_target()?;
@@ -853,11 +865,7 @@ async fn ensure_postgres(version: &str, allow_download: bool) -> Result<PathBuf,
             return Err("this build cannot download PostgreSQL; set UDB_EMBEDDED_PG_ARCHIVE and its .sha256 sidecar".into());
         }
     };
-    let expected = String::from_utf8_lossy(&archive.1)
-        .split_whitespace()
-        .next()
-        .unwrap_or_default()
-        .to_ascii_lowercase();
+    let expected = published_sha256(&archive.1);
     let actual = {
         use sha2::{Digest, Sha256};
         format!("{:x}", Sha256::digest(&archive.0))
@@ -1605,6 +1613,25 @@ fn client_target_addr_for_dev(addr: &str) -> String {
 
 #[cfg(test)]
 mod dev_embedded_tests {
+    #[test]
+    fn published_sha256_reads_plain_and_certutil_sidecars() {
+        let digest = "e01be1f09d72f989f998845765786c779f78128eae0edb99380285838d34c447";
+        let plain = format!(
+            "{digest}  postgresql-16.4.0-x86_64-unknown-linux-gnu.tar.gz
+"
+        );
+        assert_eq!(published_sha256(plain.as_bytes()), digest);
+        let certutil = format!(
+            "SHA256 hash of postgresql-16.4.0-x86_64-pc-windows-msvc.tar.gz:
+{}
+CertUtil: -hashfile command completed successfully.
+",
+            digest.to_ascii_uppercase()
+        );
+        assert_eq!(published_sha256(certutil.as_bytes()), digest);
+        assert_eq!(published_sha256(b"SHA256 not-a-digest"), "");
+    }
+
     use super::*;
 
     fn header(name: &str, size: usize, kind: u8) -> [u8; 512] {
