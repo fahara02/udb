@@ -297,7 +297,7 @@ type AuthnServiceClient interface {
 	// UDB contract: /udb.core.authn.services.v1.AuthnService/EnrollMFA
 	// Listener: control plane.
 	// Scopes: udb:authn:enroll-mfa.
-	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
 	// Operation kind: mutation.
 	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
 	// Idempotency fields: no declared method replay contract.
@@ -307,7 +307,7 @@ type AuthnServiceClient interface {
 	// UDB contract: /udb.core.authn.services.v1.AuthnService/ConfirmMFAEnrollment
 	// Listener: control plane.
 	// Scopes: udb:authn:confirm-mfa-enrollment.
-	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
 	// Operation kind: mutation.
 	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
 	// Idempotency fields: no declared method replay contract.
@@ -318,7 +318,7 @@ type AuthnServiceClient interface {
 	// UDB contract: /udb.core.authn.services.v1.AuthnService/GenerateRecoveryCodes
 	// Listener: control plane.
 	// Scopes: udb:authn:generate-recovery-codes.
-	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
 	// Operation kind: mutation.
 	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
 	// Idempotency fields: no declared method replay contract.
@@ -493,7 +493,7 @@ type AuthnServiceClient interface {
 	// UDB contract: /udb.core.authn.services.v1.AuthnService/IssueMfaChallenge
 	// Listener: control plane.
 	// Scopes: udb:authn:issue-mfa-challenge.
-	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
 	// Operation kind: mutation.
 	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
 	// Idempotency fields: no declared method replay contract.
@@ -502,7 +502,7 @@ type AuthnServiceClient interface {
 	// UDB contract: /udb.core.authn.services.v1.AuthnService/VerifyMfaChallenge
 	// Listener: control plane.
 	// Scopes: udb:authn:verify-mfa-challenge.
-	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
 	// Operation kind: mutation.
 	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
 	// Idempotency fields: no declared method replay contract.
@@ -511,7 +511,7 @@ type AuthnServiceClient interface {
 	// UDB contract: /udb.core.authn.services.v1.AuthnService/ListMfaFactors
 	// Listener: control plane.
 	// Scopes: udb:authn:list-mfa-factors.
-	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
 	// Operation kind: read_only.
 	// Idempotency: read-only unary calls may retry transient failures.
 	// Idempotency fields: no declared method replay contract.
@@ -520,7 +520,7 @@ type AuthnServiceClient interface {
 	// UDB contract: /udb.core.authn.services.v1.AuthnService/DisableMfaFactor
 	// Listener: control plane.
 	// Scopes: udb:authn:disable-mfa-factor.
-	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
 	// Operation kind: mutation.
 	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
 	// Idempotency fields: no declared method replay contract.
@@ -538,7 +538,7 @@ type AuthnServiceClient interface {
 	// UDB contract: /udb.core.authn.services.v1.AuthnService/RevokeRecoveryCodes
 	// Listener: control plane.
 	// Scopes: udb:authn:revoke-recovery-codes.
-	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
 	// Operation kind: mutation.
 	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
 	// Idempotency fields: no declared method replay contract.
@@ -547,7 +547,7 @@ type AuthnServiceClient interface {
 	// UDB contract: /udb.core.authn.services.v1.AuthnService/AdminResetMfa
 	// Listener: control plane.
 	// Scopes: udb:authn:admin-reset-mfa.
-	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
 	// Operation kind: destructive.
 	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
 	// Idempotency fields: no declared method replay contract.
