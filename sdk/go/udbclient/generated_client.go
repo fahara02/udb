@@ -2729,7 +2729,7 @@ func (u *UnitOfWork) ValidateTxStatuses(statuses []*entityv1.TxStatus) error {
 		if status == nil || status.GetState() != entityv1.TxStatus_TX_STATE_ERROR {
 			continue
 		}
-		if IsCASConflict(txStatusError(status)) || (status.GetErrorDetail() == nil && isTxConflictMessage(status.GetMessage())) {
+		if IsCASConflict(txStatusError(status)) {
 			return &UnitOfWorkConflictError{UnitOfWorkTxError{Status: status}}
 		}
 		return &UnitOfWorkTxError{Status: status}
@@ -2854,11 +2854,6 @@ func mustStringMap(raw string) map[string]string {
 		panic(fmt.Sprintf("udb: invalid generated backend role map: %v", err))
 	}
 	return out
-}
-
-func isTxConflictMessage(message string) bool {
-	lower := strings.ToLower(message)
-	return strings.Contains(lower, "aborted") || strings.Contains(lower, "version") || strings.Contains(lower, "conflict")
 }
 
 // RawDispatchRequest is the ESCAPE HATCH: build a raw GenericDispatchRequest with

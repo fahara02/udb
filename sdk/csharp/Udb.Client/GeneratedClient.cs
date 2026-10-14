@@ -10837,7 +10837,7 @@ public sealed class UnitOfWork
                 continue;
             }
             var message = string.IsNullOrEmpty(status.Message) ? "udb: unit-of-work transaction failed" : status.Message;
-            if (IsTxConflictMessage(message))
+            if (IsTxConflictStatus(status))
             {
                 throw new UnitOfWorkConflictException(message, status);
             }
@@ -10929,10 +10929,10 @@ public sealed class UnitOfWork
         return JsonSerializer.Serialize(sorted);
     }
 
-    private static bool IsTxConflictMessage(string message)
+    /// <summary>A tx status is a conflict only by its typed reason, never by message text.</summary>
+    private static bool IsTxConflictStatus(Udb.Entity.V1.TxStatus status)
     {
-        var lower = message.ToLowerInvariant();
-        return lower.Contains("aborted") || lower.Contains("version") || lower.Contains("conflict");
+        return status.ErrorDetail?.Reason is "UDB_CAS_CONFLICT" or "UDB_CAS_ROW_MISSING" or "UDB_REVISION_CONFLICT";
     }
 }
 

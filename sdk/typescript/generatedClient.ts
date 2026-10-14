@@ -11996,7 +11996,7 @@ export class UnitOfWork {
       const state = String(status?.state ?? "");
       const message = String(status?.message ?? "");
       if (state === "4" || state.includes("ERROR")) {
-        if (isTxConflictMessage(message)) {
+        if (isTxConflictStatus(status)) {
           throw new UnitOfWorkConflictError(message || "udb: unit-of-work transaction conflict", status);
         }
         throw new UnitOfWorkTxError(message || "udb: unit-of-work transaction failed", status);
@@ -12050,10 +12050,13 @@ function resolveBeginTx(target: UnitOfWorkFlushLike): UnitOfWorkFlushTarget {
   throw new Error("udb: UnitOfWork flush target must expose DataBroker.begin_tx");
 }
 
-function isTxConflictMessage(message: string): boolean {
-  const lower = message.toLowerCase();
-  return lower.includes("aborted") || lower.includes("version") || lower.includes("conflict");
+/** A tx status is a conflict only by its typed reason, never by message text. */
+function isTxConflictStatus(status: any): boolean {
+  const reason = String(status?.error_detail?.reason ?? status?.errorDetail?.reason ?? "");
+  return TX_CONFLICT_REASONS.has(reason);
 }
+
+const TX_CONFLICT_REASONS = new Set(["UDB_CAS_CONFLICT", "UDB_CAS_ROW_MISSING", "UDB_REVISION_CONFLICT"]);
 
 export function executorPerformanceSummaryRepository(): Repository<Record<string, unknown>> {
   return repository<Record<string, unknown>>("udb.core.analytics.entity.v1.ExecutorPerformanceSummary");

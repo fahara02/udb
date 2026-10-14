@@ -12826,7 +12826,7 @@ final class UnitOfWork
                 continue;
             }
             $message = $message !== '' ? $message : 'udb: unit-of-work transaction failed';
-            if (self::isTxConflictMessage($message)) {
+            if (self::isTxConflictStatus($status)) {
                 throw new UnitOfWorkConflictException($message, $status);
             }
             throw new UnitOfWorkTxException($message, $status);
@@ -12913,9 +12913,11 @@ final class UnitOfWork
         return $fqn;
     }
 
-    private static function isTxConflictMessage(string $message): bool
+    /** A tx status is a conflict only by its typed reason, never by message text. */
+    private static function isTxConflictStatus(object $status): bool
     {
-        $lower = strtolower($message);
-        return str_contains($lower, 'aborted') || str_contains($lower, 'version') || str_contains($lower, 'conflict');
+        $detail = method_exists($status, 'getErrorDetail') ? $status->getErrorDetail() : null;
+        $reason = $detail !== null && method_exists($detail, 'getReason') ? (string) $detail->getReason() : '';
+        return in_array($reason, ['UDB_CAS_CONFLICT', 'UDB_CAS_ROW_MISSING', 'UDB_REVISION_CONFLICT'], true);
     }
 }

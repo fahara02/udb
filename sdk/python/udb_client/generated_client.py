@@ -14627,7 +14627,7 @@ class UnitOfWork:
             state = str(getattr(status, "state", ""))
             message = str(getattr(status, "message", ""))
             if state == "4" or "ERROR" in state:
-                if _is_tx_conflict_message(message):
+                if _is_tx_conflict_status(status):
                     raise UnitOfWorkConflictError(message or "udb: unit-of-work transaction conflict", status)
                 raise UnitOfWorkTxError(message or "udb: unit-of-work transaction failed", status)
 
@@ -14679,9 +14679,13 @@ def _resolve_begin_tx(target: Any) -> Any:
     )
 
 
-def _is_tx_conflict_message(message: str) -> bool:
-    lower = message.lower()
-    return "aborted" in lower or "version" in lower or "conflict" in lower
+_TX_CONFLICT_REASONS = frozenset({"UDB_CAS_CONFLICT", "UDB_CAS_ROW_MISSING", "UDB_REVISION_CONFLICT"})
+
+
+def _is_tx_conflict_status(status: Any) -> bool:
+    """A tx status is a conflict only by its typed reason, never by message text."""
+    detail = getattr(status, "error_detail", None)
+    return str(getattr(detail, "reason", "") or "") in _TX_CONFLICT_REASONS
 
 
 def executor_performance_summary_repository() -> Repository:

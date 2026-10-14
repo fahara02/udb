@@ -10614,7 +10614,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
         String message = status.getMessage().isBlank()
             ? "udb: unit-of-work transaction failed"
             : status.getMessage();
-        if (isTxConflictMessage(message)) {
+        if (isTxConflictStatus(status)) {
           throw new UnitOfWorkConflictException(message, status);
         }
         throw new UnitOfWorkTxException(message, status);
@@ -10729,9 +10729,15 @@ public final class GeneratedUdbClient implements AutoCloseable {
       return sb.toString();
     }
 
-    private static boolean isTxConflictMessage(String message) {
-      String lower = message.toLowerCase(java.util.Locale.ROOT);
-      return lower.contains("aborted") || lower.contains("version") || lower.contains("conflict");
+    /** A tx status is a conflict only by its typed reason, never by message text. */
+    private static boolean isTxConflictStatus(com.udb.entity.v1.TxStatus status) {
+      if (!status.hasErrorDetail()) {
+        return false;
+      }
+      String reason = status.getErrorDetail().getReason();
+      return "UDB_CAS_CONFLICT".equals(reason)
+          || "UDB_CAS_ROW_MISSING".equals(reason)
+          || "UDB_REVISION_CONFLICT".equals(reason);
     }
   }
 }

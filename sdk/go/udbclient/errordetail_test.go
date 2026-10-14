@@ -173,18 +173,31 @@ func TestErrorRetryAfterAndReason(t *testing.T) {
 	}
 }
 
-// IsCASConflict must recognise a FAILED_PRECONDITION (the broker's CAS-mismatch
-// signal) and reject anything else, so a WithExpected retry loop is precise.
+// IsCASConflict must recognise the broker's typed CAS reasons on a
+// FAILED_PRECONDITION and reject anything else — including the old message
+// text with no typed reason — so a WithExpected retry loop is precise.
 func TestIsCASConflict(t *testing.T) {
-	cas := &Error{Code: codes.FailedPrecondition, Message: "compare-and-swap precondition failed"}
-	if !IsCASConflict(cas) {
-		t.Error("IsCASConflict(FailedPrecondition) = false, want true")
+	withReason := func(reason, message string) *Error {
+		detail, err := proto.Marshal(&entityv1.ErrorDetail{Reason: reason})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return &Error{Code: codes.FailedPrecondition, Message: message, DetailBin: detail}
+	}
+	if !IsCASConflict(withReason("UDB_CAS_CONFLICT", "compare-and-swap precondition failed")) {
+		t.Error("IsCASConflict(UDB_CAS_CONFLICT) = false, want true")
 	}
 	if IsCASConflict(&Error{Code: codes.Unavailable}) {
 		t.Error("IsCASConflict(Unavailable) = true, want false")
 	}
-	if !IsCASConflict(&Error{Code: codes.FailedPrecondition, Message: "revision precondition failed: the row's current revision differs"}) {
+	if !IsCASConflict(withReason("UDB_REVISION_CONFLICT", "revision precondition failed: the row's current revision differs")) {
 		t.Error("a revision mismatch is a conflict")
+	}
+	// The message alone no longer classifies: only the typed reason does.
+	for _, message := range []string{"compare-and-swap precondition failed", "revision precondition failed"} {
+		if IsCASConflict(&Error{Code: codes.FailedPrecondition, Message: message}) {
+			t.Errorf("IsCASConflict(message %q without a typed reason) = true, want false", message)
+		}
 	}
 	// A usage refusal shares FAILED_PRECONDITION but is not retryable.
 	usage := &Error{Code: codes.FailedPrecondition, Message: "conditional mutation requires an equality filter on every primary-key column"}
