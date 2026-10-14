@@ -935,7 +935,7 @@ const OWNED_REAP_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(5
 /// panic fallback; normal and cancellation paths explicitly await termination.
 #[cfg(feature = "postgres")]
 struct EmbeddedChild {
-    child: tokio::process::Child,
+    child: ChildProcess,
     phase: &'static str,
     /// Recorded at spawn: tokio stops reporting the id once the process is
     /// reaped, and pidfile cleanup still needs it then.
@@ -950,7 +950,33 @@ impl EmbeddedChild {
         command.creation_flags(0x08000000); // CREATE_NO_WINDOW for background helpers.
         let child = command.spawn().map_err(|err| format!("{phase}: {err}"))?;
         let pid = child.id();
-        Ok(Self { child, phase, pid })
+        Ok(Self {
+            child: ChildProcess::Tokio(child),
+            phase,
+            pid,
+        })
+    }
+
+    /// PostgreSQL refuses to run with Windows administrative rights, and an
+    /// elevated terminal (or an elevated CI runner) would otherwise hand it
+    /// those. Launch it the way `pg_ctl` does: under a restricted copy of this
+    /// process's token with the Administrators and Power Users groups disabled.
+    /// The postmaster stays this process's own child, so pid ownership,
+    /// readiness and shutdown are unchanged.
+    #[cfg(windows)]
+    fn spawn_restricted(
+        command: &tokio::process::Command,
+        stderr: Option<std::fs::File>,
+        phase: &'static str,
+    ) -> Result<Self, String> {
+        let child = restricted::RestrictedChild::spawn(command.as_std(), stderr)
+            .map_err(|err| format!("{phase}: {err}"))?;
+        let pid = Some(child.id());
+        Ok(Self {
+            child: ChildProcess::Restricted(child),
+            phase,
+            pid,
+        })
     }
 
     async fn terminate(&mut self) -> Result<(), String> {
@@ -1008,8 +1034,7 @@ impl EmbeddedChild {
         const LIMIT: u64 = 1024 * 1024;
         let stdout = self
             .child
-            .stdout
-            .take()
+            .take_stdout()
             .ok_or_else(|| format!("{} has no owned stdout", self.phase))?;
         let mut readers = tokio::task::JoinSet::new();
         readers.spawn(async move {
@@ -1042,6 +1067,512 @@ impl EmbeddedChild {
             ));
         }
         Ok((status, bytes))
+    }
+}
+
+/// The process an [`EmbeddedChild`] owns: a tokio child, or on Windows the
+/// postmaster launched under a restricted token (which tokio cannot spawn).
+#[cfg(feature = "postgres")]
+enum ChildProcess {
+    Tokio(tokio::process::Child),
+    #[cfg(windows)]
+    Restricted(restricted::RestrictedChild),
+}
+
+#[cfg(feature = "postgres")]
+impl ChildProcess {
+    fn id(&self) -> Option<u32> {
+        match self {
+            Self::Tokio(child) => child.id(),
+            #[cfg(windows)]
+            Self::Restricted(child) => child.running().then_some(child.id()),
+        }
+    }
+
+    fn try_wait(&mut self) -> std::io::Result<Option<std::process::ExitStatus>> {
+        match self {
+            Self::Tokio(child) => child.try_wait(),
+            #[cfg(windows)]
+            Self::Restricted(child) => child.try_wait(),
+        }
+    }
+
+    fn start_kill(&mut self) -> std::io::Result<()> {
+        match self {
+            Self::Tokio(child) => child.start_kill(),
+            #[cfg(windows)]
+            Self::Restricted(child) => child.kill(),
+        }
+    }
+
+    /// Cancel-safe: dropping the future leaves the child running and owned.
+    async fn wait(&mut self) -> std::io::Result<std::process::ExitStatus> {
+        match self {
+            Self::Tokio(child) => child.wait().await,
+            #[cfg(windows)]
+            Self::Restricted(child) => loop {
+                if let Some(status) = child.try_wait()? {
+                    return Ok(status);
+                }
+                tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+            },
+        }
+    }
+
+    fn take_stdout(&mut self) -> Option<tokio::process::ChildStdout> {
+        match self {
+            Self::Tokio(child) => child.stdout.take(),
+            #[cfg(windows)]
+            Self::Restricted(_) => None,
+        }
+    }
+}
+
+/// `CreateRestrictedToken` + `CreateProcessAsUserW`, as PostgreSQL's own
+/// `pg_ctl` and `initdb` launch the server on Windows. Declared directly: the
+/// two system libraries are already linked by the standard library.
+#[cfg(all(windows, feature = "postgres"))]
+#[allow(non_snake_case, non_camel_case_types, clippy::upper_case_acronyms)]
+mod restricted {
+    use std::ffi::{OsStr, c_void};
+    use std::os::windows::ffi::OsStrExt;
+    use std::os::windows::io::AsRawHandle;
+    use std::os::windows::process::ExitStatusExt;
+
+    type HANDLE = *mut c_void;
+    type BOOL = i32;
+    type PSID = *mut c_void;
+
+    #[repr(C)]
+    struct SidIdentifierAuthority {
+        value: [u8; 6],
+    }
+
+    #[repr(C)]
+    struct SidAndAttributes {
+        sid: PSID,
+        attributes: u32,
+    }
+
+    #[repr(C)]
+    struct StartupInfoW {
+        cb: u32,
+        reserved: *mut u16,
+        desktop: *mut u16,
+        title: *mut u16,
+        x: u32,
+        y: u32,
+        x_size: u32,
+        y_size: u32,
+        x_count_chars: u32,
+        y_count_chars: u32,
+        fill_attribute: u32,
+        flags: u32,
+        show_window: u16,
+        reserved2_size: u16,
+        reserved2: *mut u8,
+        std_input: HANDLE,
+        std_output: HANDLE,
+        std_error: HANDLE,
+    }
+
+    #[repr(C)]
+    struct ProcessInformation {
+        process: HANDLE,
+        thread: HANDLE,
+        process_id: u32,
+        thread_id: u32,
+    }
+
+    #[link(name = "advapi32")]
+    unsafe extern "system" {
+        fn OpenProcessToken(process: HANDLE, access: u32, token: *mut HANDLE) -> BOOL;
+        fn AllocateAndInitializeSid(
+            authority: *const SidIdentifierAuthority,
+            count: u8,
+            sub0: u32,
+            sub1: u32,
+            sub2: u32,
+            sub3: u32,
+            sub4: u32,
+            sub5: u32,
+            sub6: u32,
+            sub7: u32,
+            sid: *mut PSID,
+        ) -> BOOL;
+        fn FreeSid(sid: PSID) -> *mut c_void;
+        fn CreateRestrictedToken(
+            existing: HANDLE,
+            flags: u32,
+            disable_count: u32,
+            disable: *const SidAndAttributes,
+            delete_privilege_count: u32,
+            delete_privileges: *const c_void,
+            restrict_count: u32,
+            restrict: *const SidAndAttributes,
+            new_token: *mut HANDLE,
+        ) -> BOOL;
+        fn CreateProcessAsUserW(
+            token: HANDLE,
+            application: *const u16,
+            command_line: *mut u16,
+            process_attributes: *const c_void,
+            thread_attributes: *const c_void,
+            inherit_handles: BOOL,
+            creation_flags: u32,
+            environment: *const c_void,
+            current_directory: *const u16,
+            startup_info: *const StartupInfoW,
+            process_information: *mut ProcessInformation,
+        ) -> BOOL;
+    }
+
+    #[link(name = "kernel32")]
+    unsafe extern "system" {
+        fn GetCurrentProcess() -> HANDLE;
+        fn CloseHandle(handle: HANDLE) -> BOOL;
+        fn SetHandleInformation(handle: HANDLE, mask: u32, flags: u32) -> BOOL;
+        fn GetExitCodeProcess(process: HANDLE, code: *mut u32) -> BOOL;
+        fn TerminateProcess(process: HANDLE, code: u32) -> BOOL;
+    }
+
+    const TOKEN_ALL_ACCESS: u32 = 0x000F_01FF;
+    const DISABLE_MAX_PRIVILEGE: u32 = 0x1;
+    const SECURITY_NT_AUTHORITY: [u8; 6] = [0, 0, 0, 0, 0, 5];
+    const SECURITY_BUILTIN_DOMAIN_RID: u32 = 0x20;
+    const DOMAIN_ALIAS_RID_ADMINS: u32 = 0x220;
+    const DOMAIN_ALIAS_RID_POWER_USERS: u32 = 0x223;
+    const HANDLE_FLAG_INHERIT: u32 = 0x1;
+    const STARTF_USESTDHANDLES: u32 = 0x100;
+    const CREATE_UNICODE_ENVIRONMENT: u32 = 0x400;
+    const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+    const STILL_ACTIVE: u32 = 259;
+
+    /// Closes a handle (or frees a SID) when dropped, on every return path.
+    struct Owned(HANDLE);
+    impl Drop for Owned {
+        fn drop(&mut self) {
+            if !self.0.is_null() {
+                // SAFETY: the handle was returned open by the OS and is closed once.
+                unsafe { CloseHandle(self.0) };
+            }
+        }
+    }
+    struct OwnedSid(PSID);
+    impl Drop for OwnedSid {
+        fn drop(&mut self) {
+            if !self.0.is_null() {
+                // SAFETY: allocated by AllocateAndInitializeSid and freed once.
+                unsafe { FreeSid(self.0) };
+            }
+        }
+    }
+
+    fn check(result: BOOL) -> std::io::Result<()> {
+        if result == 0 {
+            Err(std::io::Error::last_os_error())
+        } else {
+            Ok(())
+        }
+    }
+
+    fn wide(text: &OsStr) -> Vec<u16> {
+        text.encode_wide().chain(std::iter::once(0)).collect()
+    }
+
+    /// One argument quoted the way the Microsoft C runtime splits a command line.
+    fn push_quoted(line: &mut Vec<u16>, arg: &OsStr) {
+        let units: Vec<u16> = arg.encode_wide().collect();
+        let plain = !units.is_empty()
+            && !units.iter().any(|&unit| {
+                unit == u16::from(b' ') || unit == u16::from(b'\t') || unit == u16::from(b'"')
+            });
+        if !line.is_empty() {
+            line.push(u16::from(b' '));
+        }
+        if plain {
+            line.extend_from_slice(&units);
+            return;
+        }
+        line.push(u16::from(b'"'));
+        let mut backslashes = 0usize;
+        for &unit in &units {
+            if unit == u16::from(b'\\') {
+                backslashes += 1;
+                continue;
+            }
+            let repeat = if unit == u16::from(b'"') {
+                backslashes * 2 + 1
+            } else {
+                backslashes
+            };
+            line.extend(std::iter::repeat_n(u16::from(b'\\'), repeat));
+            backslashes = 0;
+            line.push(unit);
+        }
+        line.extend(std::iter::repeat_n(u16::from(b'\\'), backslashes * 2));
+        line.push(u16::from(b'"'));
+    }
+
+    /// The parent's environment with the command's overrides applied, as a
+    /// sorted `KEY=value\0...\0\0` block.
+    fn environment_block(command: &std::process::Command) -> Vec<u16> {
+        let mut variables: std::collections::BTreeMap<
+            String,
+            (std::ffi::OsString, std::ffi::OsString),
+        > = std::env::vars_os()
+            .map(|(key, value)| (key.to_string_lossy().to_uppercase(), (key, value)))
+            .collect();
+        for (key, value) in command.get_envs() {
+            let folded = key.to_string_lossy().to_uppercase();
+            match value {
+                Some(value) => {
+                    variables.insert(folded, (key.to_os_string(), value.to_os_string()));
+                }
+                None => {
+                    variables.remove(&folded);
+                }
+            }
+        }
+        let mut block = Vec::new();
+        for (key, value) in variables.values() {
+            block.extend(key.encode_wide());
+            block.push(u16::from(b'='));
+            block.extend(value.encode_wide());
+            block.push(0);
+        }
+        block.push(0);
+        block
+    }
+
+    /// A child launched with a restricted token. Terminated if still running
+    /// when dropped, like tokio's kill-on-drop.
+    pub(super) struct RestrictedChild {
+        process: Owned,
+        id: u32,
+        exited: Option<std::process::ExitStatus>,
+    }
+
+    // SAFETY: a process handle may be used from any thread.
+    unsafe impl Send for RestrictedChild {}
+
+    impl RestrictedChild {
+        pub(super) fn spawn(
+            command: &std::process::Command,
+            stderr: Option<std::fs::File>,
+        ) -> std::io::Result<Self> {
+            let mut token: HANDLE = std::ptr::null_mut();
+            // SAFETY: valid out-pointer; the pseudo handle needs no closing.
+            check(unsafe { OpenProcessToken(GetCurrentProcess(), TOKEN_ALL_ACCESS, &mut token) })?;
+            let token = Owned(token);
+            let authority = SidIdentifierAuthority {
+                value: SECURITY_NT_AUTHORITY,
+            };
+            let mut admins: PSID = std::ptr::null_mut();
+            let mut power_users: PSID = std::ptr::null_mut();
+            // SAFETY: valid authority and out-pointers; each SID is freed by OwnedSid.
+            check(unsafe {
+                AllocateAndInitializeSid(
+                    &authority,
+                    2,
+                    SECURITY_BUILTIN_DOMAIN_RID,
+                    DOMAIN_ALIAS_RID_ADMINS,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    &mut admins,
+                )
+            })?;
+            let admins = OwnedSid(admins);
+            check(unsafe {
+                AllocateAndInitializeSid(
+                    &authority,
+                    2,
+                    SECURITY_BUILTIN_DOMAIN_RID,
+                    DOMAIN_ALIAS_RID_POWER_USERS,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    &mut power_users,
+                )
+            })?;
+            let power_users = OwnedSid(power_users);
+            let disable = [
+                SidAndAttributes {
+                    sid: admins.0,
+                    attributes: 0,
+                },
+                SidAndAttributes {
+                    sid: power_users.0,
+                    attributes: 0,
+                },
+            ];
+            let mut restricted: HANDLE = std::ptr::null_mut();
+            // SAFETY: the token and SIDs are open/allocated for this call.
+            check(unsafe {
+                CreateRestrictedToken(
+                    token.0,
+                    DISABLE_MAX_PRIVILEGE,
+                    disable.len() as u32,
+                    disable.as_ptr(),
+                    0,
+                    std::ptr::null(),
+                    0,
+                    std::ptr::null(),
+                    &mut restricted,
+                )
+            })?;
+            let restricted = Owned(restricted);
+
+            // The child's standard handles: no input, no console output,
+            // stderr to the server log when one was opened.
+            let input = std::fs::File::open("NUL")?;
+            let output = std::fs::OpenOptions::new().write(true).open("NUL")?;
+            let error = match stderr {
+                Some(file) => file,
+                None => std::fs::OpenOptions::new().write(true).open("NUL")?,
+            };
+            for file in [&input, &output, &error] {
+                // SAFETY: the handle is open for the lifetime of `file`.
+                check(unsafe {
+                    SetHandleInformation(
+                        file.as_raw_handle(),
+                        HANDLE_FLAG_INHERIT,
+                        HANDLE_FLAG_INHERIT,
+                    )
+                })?;
+            }
+            let startup = StartupInfoW {
+                cb: std::mem::size_of::<StartupInfoW>() as u32,
+                reserved: std::ptr::null_mut(),
+                desktop: std::ptr::null_mut(),
+                title: std::ptr::null_mut(),
+                x: 0,
+                y: 0,
+                x_size: 0,
+                y_size: 0,
+                x_count_chars: 0,
+                y_count_chars: 0,
+                fill_attribute: 0,
+                flags: STARTF_USESTDHANDLES,
+                show_window: 0,
+                reserved2_size: 0,
+                reserved2: std::ptr::null_mut(),
+                std_input: input.as_raw_handle(),
+                std_output: output.as_raw_handle(),
+                std_error: error.as_raw_handle(),
+            };
+
+            let program = command.get_program();
+            let application = wide(program);
+            let mut line = Vec::new();
+            push_quoted(&mut line, program);
+            for arg in command.get_args() {
+                push_quoted(&mut line, arg);
+            }
+            line.push(0);
+            let environment = environment_block(command);
+            let directory = command.get_current_dir().map(|dir| wide(dir.as_os_str()));
+            let mut information = ProcessInformation {
+                process: std::ptr::null_mut(),
+                thread: std::ptr::null_mut(),
+                process_id: 0,
+                thread_id: 0,
+            };
+            // SAFETY: every pointer refers to a live, NUL-terminated buffer or
+            // struct owned by this frame for the duration of the call.
+            check(unsafe {
+                CreateProcessAsUserW(
+                    restricted.0,
+                    application.as_ptr(),
+                    line.as_mut_ptr(),
+                    std::ptr::null(),
+                    std::ptr::null(),
+                    1,
+                    CREATE_UNICODE_ENVIRONMENT | CREATE_NO_WINDOW,
+                    environment.as_ptr().cast(),
+                    directory
+                        .as_ref()
+                        .map_or(std::ptr::null(), |dir| dir.as_ptr()),
+                    &startup,
+                    &mut information,
+                )
+            })?;
+            drop(Owned(information.thread));
+            Ok(Self {
+                process: Owned(information.process),
+                id: information.process_id,
+                exited: None,
+            })
+        }
+
+        pub(super) fn id(&self) -> u32 {
+            self.id
+        }
+
+        pub(super) fn running(&self) -> bool {
+            self.exited.is_none()
+        }
+
+        pub(super) fn try_wait(&mut self) -> std::io::Result<Option<std::process::ExitStatus>> {
+            if let Some(status) = self.exited {
+                return Ok(Some(status));
+            }
+            let mut code = 0u32;
+            // SAFETY: the process handle stays open while `self` lives.
+            check(unsafe { GetExitCodeProcess(self.process.0, &mut code) })?;
+            if code == STILL_ACTIVE {
+                return Ok(None);
+            }
+            let status = std::process::ExitStatus::from_raw(code);
+            self.exited = Some(status);
+            Ok(Some(status))
+        }
+
+        pub(super) fn kill(&mut self) -> std::io::Result<()> {
+            if self.try_wait()?.is_some() {
+                return Ok(());
+            }
+            // SAFETY: the process handle stays open while `self` lives.
+            check(unsafe { TerminateProcess(self.process.0, 1) })
+        }
+    }
+
+    impl Drop for RestrictedChild {
+        fn drop(&mut self) {
+            let _ = self.kill();
+        }
+    }
+
+    #[cfg(test)]
+    mod tests {
+        use super::push_quoted;
+        use std::ffi::OsStr;
+
+        fn quoted(args: &[&str]) -> String {
+            let mut line = Vec::new();
+            for arg in args {
+                push_quoted(&mut line, OsStr::new(arg));
+            }
+            String::from_utf16(&line).unwrap()
+        }
+
+        #[test]
+        fn arguments_are_quoted_for_the_c_runtime() {
+            assert_eq!(
+                quoted(&["postgres", "-D", r"C:\a b\data"]),
+                r#"postgres -D "C:\a b\data""#
+            );
+            assert_eq!(quoted(&["", r#"say "hi""#]), r#""" "say \"hi\"""#);
+            assert_eq!(quoted(&[r"C:\dir with space\"]), r#""C:\dir with space\\""#);
+            assert_eq!(quoted(&[r"C:\plain\path"]), r"C:\plain\path");
+        }
     }
 }
 
@@ -1220,18 +1751,26 @@ impl EmbeddedCluster {
         if status.code() != Some(3) {
             return Err(format!("check PostgreSQL exited with {status}"));
         }
+        #[cfg_attr(windows, allow(unused_mut))]
         let mut command = self.postmaster_command();
         // Keep the server's own startup diagnostics: a server that exits before
         // it is ready otherwise leaves nothing to explain why.
         let log_path = self.settings.data_dir.with_file_name("postgres.log");
-        if let Ok(log) = fs::OpenOptions::new()
+        let log = fs::OpenOptions::new()
             .create(true)
             .append(true)
             .open(&log_path)
-        {
-            command.stderr(std::process::Stdio::from(log));
-        }
-        self.postmaster = Some(EmbeddedChild::spawn(command, "embedded PostgreSQL")?);
+            .ok();
+        #[cfg(windows)]
+        let postmaster = EmbeddedChild::spawn_restricted(&command, log, "embedded PostgreSQL")?;
+        #[cfg(not(windows))]
+        let postmaster = {
+            if let Some(log) = log {
+                command.stderr(std::process::Stdio::from(log));
+            }
+            EmbeddedChild::spawn(command, "embedded PostgreSQL")?
+        };
+        self.postmaster = Some(postmaster);
         let deadline = std::time::Instant::now() + PG_COMMAND_TIMEOUT;
         loop {
             interrupt.check()?;

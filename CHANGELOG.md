@@ -5,6 +5,21 @@ the package version in `Cargo.toml`; historical v0.3.2 audit material is folded
 into the v0.3.x entries because the codebase advanced to v0.3.7 before that
 release line was tagged.
 
+## [0.5.34] - Unreleased
+
+### Fixed
+
+- **`udb dev up --embedded` starts on an elevated Windows terminal.** PostgreSQL
+  refuses to run with administrative rights, so an elevated terminal (and every
+  GitHub Windows runner) could not start the embedded server. The postmaster is
+  now launched the way `pg_ctl` launches it: under a restricted copy of the
+  caller's token with the Administrators and Power Users groups disabled. It is
+  still the dev command's own child, so readiness, pid ownership and shutdown
+  are unchanged. The Windows embedded-dev CI leg is blocking again.
+- **`udbtest.Start`/`StartPair` wait for the broker to load offline-written
+  roles and policies** before the first login (the broker reads them from an
+  authz snapshot that reloads every 5 seconds).
+
 ## [0.5.33] - 2026-10-13
 
 The rest of the no-wrapper plan: subject erasure with a signed receipt, poison

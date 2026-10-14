@@ -586,10 +586,8 @@ jobs:
     needs: [quick-gate, rust]
     runs-on: ${{ matrix.os }}
     timeout-minutes: 35
-    # Windows leg advisory until 0.5.34: GitHub's Windows runners are elevated
-    # and PostgreSQL refuses administrative rights. 0.5.34 launches the embedded
-    # server under a restricted token; the Linux leg stays blocking.
-    continue-on-error: ${{ matrix.os == 'windows-latest' }}
+    # GitHub's Windows runners are elevated; this leg proves the embedded server
+    # starts there under its restricted token.
     strategy:
       fail-fast: false
       matrix:
