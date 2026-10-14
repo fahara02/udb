@@ -1,0 +1,67 @@
+name: Probe · Windows embedded PostgreSQL
+
+# Manual diagnostic for `udb dev up --embedded` on Windows runners: runs the
+# exact PostgreSQL archive the dev command downloads, without building UDB, so
+# a loader or permission failure (e.g. STATUS_DLL_NOT_FOUND from initdb) can be
+# narrowed down in minutes instead of a full CI round.
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "PostgreSQL binaries release"
+        default: "16.4.0"
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    name: Probe embedded PostgreSQL archive
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - name: Download and extract the archive
+        shell: pwsh
+        env:
+          PG_VERSION: ${{ github.event.inputs.version }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $name = "postgresql-$env:PG_VERSION-x86_64-pc-windows-msvc"
+          $root = Join-Path $env:RUNNER_TEMP 'pgprobe'
+          New-Item -ItemType Directory -Force $root | Out-Null
+          Invoke-WebRequest "https://github.com/theseus-rs/postgresql-binaries/releases/download/$env:PG_VERSION/$name.tar.gz" -OutFile "$root\pg.tar.gz"
+          tar -xzf "$root\pg.tar.gz" -C $root
+          "PGBIN=$root\$name\bin" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+
+      - name: Runtime DLLs the archive does not ship
+        shell: pwsh
+        run: |
+          foreach ($dll in 'vcruntime140.dll', 'vcruntime140_1.dll', 'msvcp140.dll', 'ucrtbase.dll') {
+            "{0,-20} System32: {1}  in bin: {2}" -f $dll, (Test-Path "$env:WINDIR\System32\$dll"), (Test-Path "$env:PGBIN\$dll")
+          }
+          whoami /groups | Select-String 'Administrators|Mandatory Label'
+
+      - name: Load test (elevated, as CI runs it)
+        shell: pwsh
+        run: |
+          & "$env:PGBIN\initdb.exe" --version; "initdb --version exit: $LASTEXITCODE"
+          & "$env:PGBIN\postgres.exe" --version; "postgres --version exit: $LASTEXITCODE"
+          & "$env:PGBIN\pg_ctl.exe" --version; "pg_ctl --version exit: $LASTEXITCODE"
+
+      - name: initdb as the dev command runs it
+        shell: pwsh
+        run: |
+          $data = Join-Path $env:RUNNER_TEMP 'pgprobe-data'
+          Set-Content -Path "$env:RUNNER_TEMP\pgpass" -Value 'probe'
+          & "$env:PGBIN\initdb.exe" --pgdata $data --username postgres --auth scram-sha-256 --pwfile "$env:RUNNER_TEMP\pgpass" --encoding UTF8
+          "initdb exit: $LASTEXITCODE (0x{0:x})" -f $LASTEXITCODE
+          if (Test-Path $data) { Get-ChildItem $data | Select-Object -First 5 Name }
+
+      - name: Permissions of the extracted binaries
+        if: always()
+        shell: pwsh
+        run: |
+          icacls "$env:PGBIN\initdb.exe"
+          icacls "$env:PGBIN\icuuc67.dll"
+          icacls $env:PGBIN
