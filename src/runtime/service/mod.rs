@@ -2042,6 +2042,9 @@ pub async fn serve(
         &runtime_config,
         addr,
     ));
+    // Size password-KDF admission now so a memory-limited container's warning
+    // (naming UDB_PASSWORD_KDF_MAX_CONCURRENCY) is in the boot log.
+    crate::runtime::authn::password_cpu::init_admission();
     // Secure-transport gate (always fatal when the operator has explicitly
     // enabled UDB_REQUIRE_SECURE_TRANSPORT / UDB_MTLS_REQUIRED but left certs
     // unconfigured).

@@ -19,6 +19,79 @@ fn concurrency_budget(available: usize, configured: Option<&str>) -> Result<usiz
     Ok(detected.min(cap))
 }
 
+/// Memory one Argon2id hash or verify holds (`m=19456` KiB).
+const ARGON2_MEMORY_BYTES: u64 = 19_456 * 1024;
+/// Share of the process memory limit password work may use by default.
+const KDF_MEMORY_SHARE_DIVISOR: u64 = 4;
+/// Below this limit a startup warning names the knob even without a cut.
+const SMALL_MEMORY_LIMIT_BYTES: u64 = 512 * 1024 * 1024;
+
+/// The cgroup memory limit of this process (v2 `memory.max`, else v1
+/// `memory.limit_in_bytes`); `None` when unlimited or not in a cgroup.
+fn cgroup_memory_limit() -> Option<u64> {
+    let read = |path: &str| std::fs::read_to_string(path).ok();
+    let parse = |raw: String| {
+        raw.trim()
+            .parse::<u64>()
+            .ok()
+            // cgroup v1 reports "unlimited" as a page-rounded i64::MAX.
+            .filter(|bytes| *bytes > 0 && *bytes < (1 << 60))
+    };
+    read("/sys/fs/cgroup/memory.max")
+        .and_then(parse)
+        .or_else(|| read("/sys/fs/cgroup/memory/memory.limit_in_bytes").and_then(parse))
+}
+
+/// The KDF admission budget and, when the memory limit shaped it (or is small),
+/// the startup warning that names the knob. Without an operator cap the
+/// CPU-derived budget is lowered so concurrent hashes fit in a quarter of the
+/// memory limit; an explicit `UDB_PASSWORD_KDF_MAX_CONCURRENCY` is honored and
+/// only warned about when it exceeds that share.
+fn budget_with_memory(
+    available: usize,
+    configured: Option<&str>,
+    memory_limit: Option<u64>,
+) -> Result<(usize, Option<String>), String> {
+    let cpu_budget = concurrency_budget(available, configured)?;
+    let Some(limit) = memory_limit else {
+        return Ok((cpu_budget, None));
+    };
+    let memory_budget =
+        usize::try_from((limit / KDF_MEMORY_SHARE_DIVISOR / ARGON2_MEMORY_BYTES).max(1))
+            .unwrap_or(usize::MAX);
+    let limit_mib = limit / (1024 * 1024);
+    let per_hash_mib = ARGON2_MEMORY_BYTES / (1024 * 1024);
+    if configured.is_some() {
+        let warning = (cpu_budget > memory_budget).then(|| {
+            format!(
+                "UDB_PASSWORD_KDF_MAX_CONCURRENCY allows {cpu_budget} concurrent password hashes \
+                 (~{per_hash_mib} MiB each) but the memory limit is {limit_mib} MiB; logins under \
+                 load can exhaust memory. Lower it to {memory_budget} or raise the container \
+                 memory limit"
+            )
+        });
+        return Ok((cpu_budget, warning));
+    }
+    let budget = cpu_budget.min(memory_budget);
+    let warning = if budget < cpu_budget {
+        Some(format!(
+            "password KDF concurrency set to {budget} (not {cpu_budget} from the CPU count) \
+             because the memory limit is {limit_mib} MiB and each Argon2id hash holds \
+             ~{per_hash_mib} MiB; set UDB_PASSWORD_KDF_MAX_CONCURRENCY to choose it, or raise \
+             the container memory limit"
+        ))
+    } else if limit < SMALL_MEMORY_LIMIT_BYTES {
+        Some(format!(
+            "memory limit is {limit_mib} MiB; password KDF concurrency is {budget} \
+             (~{per_hash_mib} MiB per hash). Set UDB_PASSWORD_KDF_MAX_CONCURRENCY lower if \
+             logins run out of memory"
+        ))
+    } else {
+        None
+    };
+    Ok((budget, warning))
+}
+
 fn admission() -> Result<Arc<Semaphore>, String> {
     static ADMISSION: OnceLock<Result<Arc<Semaphore>, String>> = OnceLock::new();
     ADMISSION
@@ -27,10 +100,24 @@ fn admission() -> Result<Arc<Semaphore>, String> {
                 .map(|count| count.get())
                 .unwrap_or(1);
             let configured = std::env::var("UDB_PASSWORD_KDF_MAX_CONCURRENCY").ok();
-            concurrency_budget(available, configured.as_deref())
-                .map(|permits| Arc::new(Semaphore::new(permits)))
+            budget_with_memory(available, configured.as_deref(), cgroup_memory_limit()).map(
+                |(permits, warning)| {
+                    if let Some(warning) = warning {
+                        tracing::warn!(permits, "{warning}");
+                    }
+                    Arc::new(Semaphore::new(permits))
+                },
+            )
         })
         .clone()
+}
+
+/// Size the password admission at startup so its memory warning appears in
+/// the boot log rather than on the first login.
+pub(crate) fn init_admission() {
+    if let Err(err) = admission() {
+        tracing::warn!(error = %err, "password KDF admission is not configured correctly");
+    }
 }
 
 async fn run_on<R, F>(admission: Arc<Semaphore>, work: F) -> Result<R, String>
@@ -79,6 +166,31 @@ pub(crate) async fn verify(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn kdf_budget_fits_the_memory_limit_and_names_the_knob() {
+        const MIB: u64 = 1024 * 1024;
+        // No limit: CPU-derived, no warning.
+        assert_eq!(budget_with_memory(16, None, None), Ok((15, None)));
+        // 256 MiB limit: a quarter (64 MiB) fits 3 hashes of ~19 MiB.
+        let (permits, warning) = budget_with_memory(16, None, Some(256 * MIB)).unwrap();
+        assert_eq!(permits, 3);
+        let warning = warning.expect("a memory-shaped budget is announced");
+        assert!(
+            warning.contains("UDB_PASSWORD_KDF_MAX_CONCURRENCY"),
+            "{warning}"
+        );
+        assert!(warning.contains("256 MiB"), "{warning}");
+        // Tiny limit still admits one hash.
+        assert_eq!(budget_with_memory(16, None, Some(32 * MIB)).unwrap().0, 1);
+        // Plenty of memory: no cut, no warning.
+        assert_eq!(budget_with_memory(4, None, Some(8192 * MIB)), Ok((3, None)));
+        // An operator cap is honored, with a warning when it exceeds the share.
+        let (permits, warning) = budget_with_memory(16, Some("8"), Some(256 * MIB)).unwrap();
+        assert_eq!(permits, 8);
+        assert!(warning.unwrap().contains("Lower it to 3"));
+        assert!(budget_with_memory(16, Some("0"), Some(256 * MIB)).is_err());
+    }
 
     #[test]
     fn password_budget_reserves_cpu_and_only_accepts_positive_lower_caps() {

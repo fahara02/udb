@@ -523,6 +523,13 @@ minus one, with a minimum of one. Detection happens once. Set
 values above the detected budget do not increase it. Invalid values refuse
 password operations with a typed internal error.
 
+Each Argon2id hash holds about 19 MiB. When the process runs under a cgroup
+memory limit (`memory.max`, or v1 `memory.limit_in_bytes`) and no cap is set,
+the default is also lowered so concurrent hashes fit in a quarter of that limit
+(at least one), and the broker logs a startup warning naming
+`UDB_PASSWORD_KDF_MAX_CONCURRENCY`. It also warns when the limit is under
+512 MiB, and when an explicit cap exceeds the quarter-of-memory budget.
+
 Available parallelism estimates affinity and container CPU limits where the host
 exposes them. It does not measure VM steal or changing host contention. On a
 throttled host, lower the operator cap and compare concurrent login/read latency
