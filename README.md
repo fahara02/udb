@@ -59,7 +59,7 @@ staleness test fails if it drifts.
 | Area | Surface |
 |---|---|
 | Data plane | 85 `DataBroker` RPCs |
-| Native control plane | 28 services, 316 RPCs |
+| Native control plane | 28 services, 319 RPCs |
 
 Per-service RPC counts (native control plane):
 
@@ -78,7 +78,7 @@ Per-service RPC counts (native control plane):
 | `idp` | 27 |
 | `livequery` | 1 |
 | `lock` | 5 |
-| `messaging` | 12 |
+| `messaging` | 15 |
 | `metering` | 6 |
 | `notification` | 12 |
 | `scheduler` | 6 |

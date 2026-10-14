@@ -31,6 +31,40 @@ release line was tagged.
   - CI: `messaging-live` runs the Rust SDK's served three-device suite and a
     Rust<->TypeScript group chat against the CI broker; `udb-mls` is
     published to crates.io ahead of `udb-client`.
+- **Opt-in encrypted message-history backup.** History stays device-only
+  unless the user opts in. The device seals its MLS state and the
+  application's history under a key derived from a user recovery secret
+  (Argon2id, then HKDF-SHA256, then XChaCha20-Poly1305; fresh salt and nonce
+  per backup, the whole header authenticated) and the broker stores only the
+  envelope.
+  - MessagingService: `PutMessagingBackup` (with an optional
+    `expected_version` compare-and-swap; a lost race is `FAILED_PRECONDITION`
+    with `missing.current_version`), `GetMessagingBackup`,
+    `DeleteMessagingBackup` (idempotent). Backups live in the tenant-RLS table
+    `udb_messaging.backups`, one per principal and backup id, up to 3 MiB; an
+    end user reaches only its own; a body that is not a udb-mls envelope is
+    refused.
+  - `udb-mls`: `MlsClient::export_backup` / `restore_backup`, `seal_backup` /
+    `open_backup`. A restored device is the backed-up device and reads on from
+    the backup's inbox cursor. A wrong secret and a modified envelope both
+    fail to open; crafted Argon2id costs are refused before any work.
+  - Rust SDK `MessagingClient::backup`, `delete_backup` and
+    `MessagingClient::restore`; TypeScript `MessagingClient.backup`,
+    `deleteBackup` and `MessagingClient.restore` (the WebAssembly module adds
+    `exportBackup` and `openBackup`). The interop test restores a Rust
+    device's backup in TypeScript and a TypeScript device's backup in Rust.
+- **`PurgeSubject` covers messaging.** The subject's messaging devices,
+  KeyPackages, inbox rows, group memberships and backups are erased in one
+  tenant transaction, every remaining member of the subject's groups gets a
+  removal hint, and the signed receipt lists the five messaging tables. Until
+  a member commits the removal, a group's public ratchet tree still holds the
+  erased devices' leaves; the receipt says so under `not_covered`.
+
+### Fixed
+
+- **The Python live harness covers MessagingService.** Its service list
+  lacked the messaging client, so the descriptor-count check at import failed
+  and the shared benchmark seed could not run.
 
 ## [0.5.34] - Unreleased
 
