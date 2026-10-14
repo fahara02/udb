@@ -199,6 +199,42 @@ def receipt_selftest():
 
 
 
+SECRET_TOKEN = re.compile(r"[A-Za-z0-9+/=_-]{24,}")
+DSN_CREDENTIALS = re.compile(r"://[^@\s/]*@")
+
+
+def sanitized_tail(text, limit=15):
+    """Last diagnostic lines that are safe to publish: lines naming a password
+    are dropped, DSN credentials and long token-like strings are masked."""
+    kept = []
+    for line in text.splitlines():
+        line = line.strip()
+        if not line or "password" in line.lower() or "secret" in line.lower():
+            continue
+        line = DSN_CREDENTIALS.sub("://***@", line)
+        line = SECRET_TOKEN.sub("***", line)
+        kept.append(line[:300])
+    return kept[-limit:]
+
+
+def startup_failure(code, log, project):
+    """A publishable explanation of a dev process that exited during startup."""
+    log.flush()
+    parts = [f"embedded dev exited during startup: {code}"]
+    try:
+        dev_lines = sanitized_tail(Path(log.name).read_text(encoding="utf-8", errors="replace"))
+    except OSError:
+        dev_lines = []
+    if dev_lines:
+        parts.append("dev output: " + " | ".join(dev_lines))
+    postgres_log = project / ".udb" / "dev" / "postgres.log"
+    if postgres_log.is_file():
+        pg_lines = sanitized_tail(postgres_log.read_text(encoding="utf-8", errors="replace"), 8)
+        if pg_lines:
+            parts.append("postgres.log: " + " | ".join(pg_lines))
+    return RuntimeError("; ".join(parts))
+
+
 def main(proof):
     def phase(name):
         if proof["current_phase"] != "prepare":
@@ -237,7 +273,7 @@ def main(proof):
                 deadline = time.monotonic() + 600
                 while True:
                     if process.poll() is not None:
-                        raise RuntimeError(f"embedded dev exited during startup: {process.returncode}; see {log_path}")
+                        raise startup_failure(process.returncode, log, project)
                     ready = marker.exists()
                     if ready:
                         try:
