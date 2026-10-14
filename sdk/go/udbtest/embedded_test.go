@@ -15,7 +15,10 @@ func TestEmbeddedBrokerMeetsTheTableContract(t *testing.T) {
 	if os.Getenv("UDB_EMBEDDED_SDK_TESTS") != "1" {
 		t.Skip("requires an embedded broker (UDB_EMBEDDED_SDK_TESTS=1)")
 	}
-	u, peer := udbtest.StartPair(t, "", "")
+	// The shared contract uses the storage File entity as its table, so the
+	// embedded broker serves the repository protos (an empty project serves
+	// no entities).
+	u, peer := udbtest.StartPair(t, "../../../proto", "")
 	connect := func(t testing.TB, tenant string) *udbclient.Udb {
 		t.Helper()
 		if tenant == peer.Meta.TenantID {
