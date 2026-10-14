@@ -845,3 +845,22 @@ fn removal_hints_and_unknown_kinds_are_surfaced() {
     ));
     assert_eq!(bob.inbox_cursor(), 2);
 }
+
+#[test]
+fn key_packages_name_their_device() {
+    let mut bob = device("bob", "bob-phone");
+    let registration = bob.registration().unwrap();
+    let one_time = crate::inspect_key_package(&bob.key_packages(1).unwrap()[0]).unwrap();
+    assert_eq!(
+        one_time.identity,
+        DeviceIdentity::new(TENANT, "bob", "bob-phone").unwrap()
+    );
+    assert_eq!(
+        one_time.signature_public_key,
+        registration.signature_public_key
+    );
+    assert!(!one_time.last_resort);
+    let last_resort = crate::inspect_key_package(&bob.last_resort_key_package().unwrap()).unwrap();
+    assert!(last_resort.last_resort);
+    assert!(crate::inspect_key_package(b"junk").is_err());
+}

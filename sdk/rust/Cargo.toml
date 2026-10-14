@@ -65,6 +65,16 @@ tokio = { version = "1", features = ["sync", "time"] }
 serde_json = "1"
 # BYTEA columns cross the wire base64-encoded.
 base64 = "0.22"
+# End-to-end encrypted messaging (feature `mls`): the client-side MLS crate the
+# `messaging` module drives. Optional so the default client stays free of the
+# OpenMLS dependency tree.
+udb-mls = { path = "../../crates/udb-mls", version = "0.1.0", optional = true }
+
+[features]
+default = []
+# `udb_client::messaging::MessagingClient`: device keys, KeyPackages, group
+# commits, and message encryption over the MessagingService.
+mls = ["dep:udb-mls"]
 
 [build-dependencies]
 # tonic 0.14 split codegen out of `tonic-build` into `tonic-prost-build`.
@@ -80,3 +90,9 @@ tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 prost-reflect = { version = "0.16", features = ["serde"] }
 serde = { version = "1", features = ["derive"] }
 tokio-stream = "0.1"
+
+# Served end-to-end encrypted messaging; needs the `mls` feature (and a live
+# broker when UDB_LIVE_SDK_TESTS=1).
+[[test]]
+name = "live_messaging"
+required-features = ["mls"]

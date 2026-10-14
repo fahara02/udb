@@ -176,6 +176,44 @@ fn rejected<E: std::fmt::Display>(context: &str) -> impl FnOnce(E) -> MlsError +
     move |err| MlsError::Rejected(format!("{context}: {err}"))
 }
 
+/// What a verified KeyPackage says about its device.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct KeyPackageInfo {
+    pub identity: DeviceIdentity,
+    pub signature_public_key: Vec<u8>,
+    pub last_resort: bool,
+}
+
+fn parse_key_package(bytes: &[u8]) -> Result<(KeyPackage, KeyPackageInfo), MlsError> {
+    let provider = OpenMlsRustCrypto::default();
+    let package = KeyPackageIn::tls_deserialize_exact(bytes)
+        .map_err(rejected("not an MLS KeyPackage"))?
+        .validate(provider.crypto(), ProtocolVersion::Mls10)
+        .map_err(rejected("KeyPackage did not verify"))?;
+    if package.ciphersuite() != CIPHERSUITE {
+        return Err(MlsError::Rejected(
+            "KeyPackage uses a ciphersuite other than the service's".into(),
+        ));
+    }
+    let leaf = package.leaf_node();
+    let (tenant, subject, device) = credential_identity(leaf.credential()).ok_or_else(|| {
+        MlsError::Rejected("KeyPackage credential is not a UDB device identity".into())
+    })?;
+    let info = KeyPackageInfo {
+        identity: DeviceIdentity::new(tenant, subject, device)?,
+        signature_public_key: leaf.signature_key().as_slice().to_vec(),
+        last_resort: package.last_resort(),
+    };
+    Ok((package, info))
+}
+
+/// Verify a TLS-serialized KeyPackage (signature, lifetime, ciphersuite) and
+/// return the device it names, so a caller can check that a package claimed
+/// for a device really is that device's before adding it.
+pub fn inspect_key_package(bytes: &[u8]) -> Result<KeyPackageInfo, MlsError> {
+    parse_key_package(bytes).map(|(_, info)| info)
+}
+
 fn credential_identity(credential: &Credential) -> Option<(String, String, String)> {
     BasicCredential::try_from(credential.clone())
         .ok()
@@ -517,22 +555,9 @@ impl<S: StateStore> MlsClient<S> {
                 let mut kept = Vec::new();
                 let mut added: Vec<String> = Vec::new();
                 for bytes in key_packages {
-                    let package = KeyPackageIn::tls_deserialize_exact(bytes.as_slice())
-                        .map_err(rejected("not an MLS KeyPackage"))?
-                        .validate(self.provider.crypto(), ProtocolVersion::Mls10)
-                        .map_err(rejected("KeyPackage did not verify"))?;
-                    if package.ciphersuite() != CIPHERSUITE {
-                        return Err(MlsError::Rejected(
-                            "KeyPackage uses a ciphersuite other than the service's".into(),
-                        ));
-                    }
-                    let (tenant, _subject, device) =
-                        credential_identity(package.leaf_node().credential()).ok_or_else(|| {
-                            MlsError::Rejected(
-                                "KeyPackage credential is not a UDB device identity".into(),
-                            )
-                        })?;
-                    if tenant != self.meta.identity.tenant_id {
+                    let (package, info) = parse_key_package(&bytes)?;
+                    let device = info.identity.device_id;
+                    if info.identity.tenant_id != self.meta.identity.tenant_id {
                         return Err(MlsError::Rejected(format!(
                             "KeyPackage for device `{device}` belongs to another tenant"
                         )));

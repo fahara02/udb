@@ -55,8 +55,8 @@ mod inbox;
 mod store;
 
 pub use client::{
-    CommitIntent, CommitSummary, DeviceRegistration, GroupCreation, GroupMember, MlsClient,
-    OutgoingMessage, PendingCommit,
+    inspect_key_package, CommitIntent, CommitSummary, DeviceRegistration, GroupCreation,
+    GroupMember, KeyPackageInfo, MlsClient, OutgoingMessage, PendingCommit,
 };
 pub use error::MlsError;
 pub use identity::{device_identity, key_fingerprint, split_identity, DeviceIdentity, CIPHERSUITE};
