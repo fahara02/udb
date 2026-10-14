@@ -124,6 +124,11 @@ mod livequery_service;
 // can reuse the LockService's entity name + pure fencing-token freshness check
 // (re-exported from `lock_service`) without duplicating any lock logic.
 pub(crate) mod lock_service;
+// 0.6.0: native MessagingService - the MLS delivery service and key directory for
+// end-to-end encrypted messaging. Mounted with every native service through
+// `NativeControlPlaneServices`; its inbox retention worker is spawned in `serve()`
+// under leader election, like the lock expiry reaper.
+pub(crate) mod messaging_service;
 // W16 (Phase 9.9): native MeteringService — usage metering and quotas. Usage is a
 // durable, append-only `UsageEvent` stream fed by `metering_service::record_usage`
 // (a cheap single-INSERT seam the leader calls from `native_helpers::admit_on`,
@@ -1886,6 +1891,7 @@ struct NativeControlPlaneServices {
     control_plane: auth_service::ControlPlaneServiceImpl,
     tenant: tenant_service::TenantServiceImpl,
     lock: lock_service::LockServiceImpl,
+    messaging: messaging_service::MessagingServiceImpl,
     scheduler: scheduler_service::SchedulerServiceImpl,
     vault: vault_service::VaultServiceImpl,
     cache: cache_service::CacheServiceImpl,
@@ -1918,6 +1924,7 @@ impl NativeControlPlaneServices {
             control_plane: service.build_control_plane_service(),
             tenant: service.build_tenant_service(),
             lock: service.build_lock_service(),
+            messaging: service.build_messaging_service(),
             scheduler: service.build_scheduler_service(),
             vault: service.build_vault_service(),
             cache: service.build_cache_service(),
@@ -1957,6 +1964,9 @@ impl NativeControlPlaneServices {
         )))
         .add_service(msec.wrap(tenant_service::TenantServiceServer::new(self.tenant)))
         .add_service(msec.wrap(lock_service::LockServiceServer::new(self.lock)))
+        .add_service(msec.wrap(messaging_service::MessagingServiceServer::new(
+            self.messaging,
+        )))
         .add_service(msec.wrap(scheduler_service::SchedulerServiceServer::new(
             self.scheduler,
         )))
@@ -3029,6 +3039,8 @@ pub async fn serve(
     let analytics_service = service.build_analytics_service();
     // W12 (Phase 9): native LockService (9.2) + SchedulerService (9.3).
     let lock_service = service.build_lock_service();
+    // 0.6.0: MessagingService (E2EE delivery service + key directory).
+    let messaging_service = service.build_messaging_service();
     let scheduler_service = service.build_scheduler_service();
     // W13 (Phase 9): flagship VaultService (9.1) + CacheService (9.6).
     let vault_service = service.build_vault_service();
@@ -3396,6 +3408,38 @@ pub async fn serve(
                             catalog.active_project_ids(),
                             Some(&outbox),
                             crate::runtime::service::lock_service::LOCK_EXPIRY_SWEEP_BATCH,
+                        )
+                        .await
+                    }
+                },
+            );
+        }
+    }
+    // 0.6.0: leader-elected messaging inbox retention - deletes inbox rows their
+    // device acknowledged or that outlived UDB_MESSAGING_INBOX_TTL (and spent
+    // KeyPackages), over the messaging store of every active project.
+    {
+        let messaging_runtime = service.runtime.load_full();
+        if let Ok(messaging_pool) =
+            messaging_runtime.native_store_pool_for_service("messaging", true, "")
+        {
+            let singleton_relation = messaging_runtime.config().cdc.lock_log_relation();
+            let messaging_catalog = service.catalog.clone();
+            crate::runtime::service::native_runtime::NativeWorkerHost::spawn_while_leader(
+                crate::runtime::singleton::WORKER_MESSAGING_INBOX_RETENTION,
+                "messaging inbox retention collected rows",
+                messaging_pool,
+                singleton_relation,
+                crate::runtime::service::messaging_service::inbox_retention_interval(),
+                move || {
+                    let runtime = messaging_runtime.clone();
+                    let catalog = messaging_catalog.clone();
+                    async move {
+                        crate::runtime::service::messaging_service::run_inbox_retention_all_projects(
+                            runtime.as_ref(),
+                            catalog.active_project_ids(),
+                            crate::runtime::service::messaging_service::inbox_ttl(),
+                            crate::runtime::service::messaging_service::INBOX_RETENTION_BATCH,
                         )
                         .await
                     }
@@ -3818,6 +3862,7 @@ pub async fn serve(
         control_plane: control_plane_service,
         tenant: tenant_service,
         lock: lock_service,
+        messaging: messaging_service,
         scheduler: scheduler_service,
         vault: vault_service,
         cache: cache_service,

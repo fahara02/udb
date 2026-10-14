@@ -342,6 +342,12 @@ pub(super) async fn lock_service(
     native_broker_service().await.build_lock_service()
 }
 
+/// Build the native `MessagingService` on the live PG, the way `serve()` does.
+pub(crate) async fn messaging_service()
+-> crate::runtime::service::messaging_service::MessagingServiceImpl {
+    native_broker_service().await.build_messaging_service()
+}
+
 pub(super) async fn put_storage_object(object_key: &str, content_type: &str, bytes: &[u8]) {
     let runtime = DataBrokerRuntime::from_config(live_native_config()).await;
     let request = object_request_json("put", DEFAULT_OBJECT_BUCKET, object_key, content_type);

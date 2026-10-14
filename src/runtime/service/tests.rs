@@ -923,6 +923,23 @@ fn full_service_descriptor_surface_snapshot() {
             ],
         ),
         (
+            "udb.core.messaging.services.v1.MessagingService",
+            &[
+                "AckInbox",
+                "ClaimKeyPackages",
+                "CreateGroup",
+                "GetGroupInfo",
+                "GetKeyPackageStock",
+                "ListDevices",
+                "PublishKeyPackages",
+                "RegisterDevice",
+                "RevokeDevice",
+                "SendMessage",
+                "StreamInbox",
+                "SubmitCommit",
+            ],
+        ),
+        (
             "udb.core.metering.services.v1.MeteringService",
             &[
                 "CheckQuota",
