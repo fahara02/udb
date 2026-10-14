@@ -1171,13 +1171,14 @@ impl EmbeddedCluster {
             ])
             .arg("--pwfile")
             .arg(&self.settings.password_file);
-        let status = embedded_command_status(
-            command,
-            "initialize PostgreSQL",
-            PG_COMMAND_TIMEOUT,
-            Some(interrupt),
-        )
-        .await?;
+        // Let initdb finish before honouring an interrupt. Killing it leaves its
+        // own `postgres` bootstrap child (which holds postmaster.pid) running
+        // briefly and a half-initialized data directory that the next start
+        // must refuse; initdb takes a few seconds.
+        let status =
+            embedded_command_status(command, "initialize PostgreSQL", PG_COMMAND_TIMEOUT, None)
+                .await?;
+        interrupt.check()?;
         if !status.success() {
             return Err(format!(
                 "initialize PostgreSQL exited with {status}; the data directory was preserved"

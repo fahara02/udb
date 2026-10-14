@@ -74,7 +74,9 @@ ungranted store calls, and TypeScript store parity.
 - **`udb dev up --embedded` no longer leaves a stale PostgreSQL pidfile** when
   interrupted while PostgreSQL is still starting, whether the server was killed,
   failed its graceful stop or exited on its own, which made the next start
-  believe a cluster was already running.
+  believe a cluster was already running. An interrupt during first-time
+  initialization now lets `initdb` finish rather than leaving a half-built data
+  directory the next start would refuse.
 - **`udbtest.StartPair` creates its peer tenant with the dev cluster's
   secrets**, so the Go embedded helper works offline.
 
