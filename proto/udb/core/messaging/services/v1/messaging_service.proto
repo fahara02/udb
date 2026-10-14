@@ -621,6 +621,126 @@ service MessagingService {
       body: "*"
     };
   }
+
+  // Store (or replace) the calling principal's opt-in, client-encrypted history
+  // backup. The client seals the export with a key derived from a recovery secret
+  // the broker never sees; the broker keeps only the opaque envelope and refuses
+  // a body that is not one. With expected_version > 0 the write is a
+  // compare-and-swap against the stored version.
+  rpc PutMessagingBackup(PutMessagingBackupRequest) returns (PutMessagingBackupResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:messaging:put-messaging-backup"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
+      decision_resource: "messaging.PutMessagingBackup"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "put_messaging_backup" rest_operation_id: "messagingPutMessagingBackup"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "messaging"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "messaging"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {
+      put: "/v1/messaging/backups/{backup_id}"
+      body: "*"
+    };
+  }
+
+  // Return a principal's stored backup envelope for restore on a new device. Only
+  // the principal itself (or a service account acting for it) can read it.
+  rpc GetMessagingBackup(GetMessagingBackupRequest) returns (GetMessagingBackupResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:messaging:get-messaging-backup"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
+      decision_resource: "messaging.GetMessagingBackup"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "get_messaging_backup" rest_operation_id: "messagingGetMessagingBackup"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "messaging"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "messaging"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {get: "/v1/messaging/backups/{backup_id}"};
+  }
+
+  // Erase a principal's stored backup. Deleting a backup that does not exist
+  // succeeds with deleted=false.
+  rpc DeleteMessagingBackup(DeleteMessagingBackupRequest) returns (DeleteMessagingBackupResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_DESTRUCTIVE;
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:messaging:delete-messaging-backup"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
+      decision_resource: "messaging.DeleteMessagingBackup"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "delete_messaging_backup" rest_operation_id: "messagingDeleteMessagingBackup"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "messaging"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "messaging"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {delete: "/v1/messaging/backups/{backup_id}"};
+  }
 }
 
 // A device in the key directory. `key_fingerprint` is the lowercase hex SHA-256
@@ -1145,4 +1265,140 @@ message AckInboxResponse {
   string message = 3;
   // Error information if operation failed
   udb.core.common.v1.ApiError error = 4;
+}
+
+// A stored backup's metadata. The envelope itself travels only in
+// GetMessagingBackupResponse.ciphertext.
+message MessagingBackupInfo {
+  option (udb.core.common.v1.message_sdk_surface) = {
+      include_in_facade: true
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "messaging"
+      generate_minimal_example: true
+  };
+  string tenant_id = 1;
+  string subject_id = 2;
+  string backup_id = 3;
+  int64 size_bytes = 4;
+  // Lowercase hex SHA-256 of the envelope.
+  string ciphertext_sha256 = 5;
+  // 1 on the first write, +1 on every overwrite.
+  int64 version = 6;
+  int64 created_at_unix = 7;
+  int64 updated_at_unix = 8;
+}
+
+message PutMessagingBackupRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+      include_in_facade: true
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "messaging"
+      generate_minimal_example: true
+  };
+  string tenant_id = 1;
+  // The owning principal; empty means "the caller". An end user may store only
+  // its own backup.
+  string subject_id = 2;
+  // 1-128 characters from [A-Za-z0-9._-]; empty means "default".
+  string backup_id = 3;
+  // The sealed backup envelope produced by the client (udb-mls `seal_backup`).
+  // Its plaintext and its key never reach the broker.
+  bytes ciphertext = 4;
+  // 0 writes unconditionally. A positive value makes the write a compare-and-swap:
+  // it succeeds only while a backup with exactly this version is stored, else
+  // FAILED_PRECONDITION with `missing.current_version` (0 = none stored).
+  int64 expected_version = 5;
+}
+
+message PutMessagingBackupResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+      include_in_facade: true
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "messaging"
+      generate_minimal_example: true
+  };
+  MessagingBackupInfo backup = 1;
+  // True when this call created the backup, false when it replaced one.
+  bool created = 2;
+  string message = 3;
+  // Error information if operation failed
+  udb.core.common.v1.ApiError error = 4;
+}
+
+message GetMessagingBackupRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+      include_in_facade: true
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "messaging"
+      generate_minimal_example: true
+  };
+  string tenant_id = 1;
+  // The owning principal; empty means "the caller".
+  string subject_id = 2;
+  // Empty means "default".
+  string backup_id = 3;
+}
+
+message GetMessagingBackupResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+      include_in_facade: true
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "messaging"
+      generate_minimal_example: true
+  };
+  MessagingBackupInfo backup = 1;
+  // The sealed envelope, exactly as stored.
+  bytes ciphertext = 2;
+  string message = 3;
+  // Error information if operation failed
+  udb.core.common.v1.ApiError error = 4;
+}
+
+message DeleteMessagingBackupRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+      include_in_facade: true
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "messaging"
+      generate_minimal_example: true
+  };
+  string tenant_id = 1;
+  // The owning principal; empty means "the caller".
+  string subject_id = 2;
+  // Empty means "default".
+  string backup_id = 3;
+}
+
+message DeleteMessagingBackupResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+      include_in_facade: true
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "messaging"
+      generate_minimal_example: true
+  };
+  // False when there was no backup to delete.
+  bool deleted = 1;
+  string message = 2;
+  // Error information if operation failed
+  udb.core.common.v1.ApiError error = 3;
 }
