@@ -21,7 +21,7 @@ use Grpc\ChannelCredentials;
  *   UDB version ...... 0.5.33
  *   Protocol version . 1.0.0
  *   Services ......... 29
- *   RPCs ............. 401
+ *   RPCs ............. 404
  *
  * This class COMPOSES WITH the hand-written layer; it does not replace it:
  *   - it reuses {@see UdbMetadata} for the eight broker headers,
@@ -270,10 +270,13 @@ final class GeneratedClient
         "AckInbox" => "mutation",
         "ClaimKeyPackages" => "mutation",
         "CreateGroup" => "mutation",
+        "DeleteMessagingBackup" => "destructive",
         "GetGroupInfo" => "read_only",
         "GetKeyPackageStock" => "read_only",
+        "GetMessagingBackup" => "read_only",
         "ListMessagingDevices" => "read_only",
         "PublishKeyPackages" => "mutation",
+        "PutMessagingBackup" => "mutation",
         "RegisterMessagingDevice" => "mutation",
         "RevokeMessagingDevice" => "destructive",
         "SendMessage" => "mutation",
@@ -680,10 +683,13 @@ final class GeneratedClient
         "MessagingService/AckInbox" => "mutation",
         "MessagingService/ClaimKeyPackages" => "mutation",
         "MessagingService/CreateGroup" => "mutation",
+        "MessagingService/DeleteMessagingBackup" => "destructive",
         "MessagingService/GetGroupInfo" => "read_only",
         "MessagingService/GetKeyPackageStock" => "read_only",
+        "MessagingService/GetMessagingBackup" => "read_only",
         "MessagingService/ListMessagingDevices" => "read_only",
         "MessagingService/PublishKeyPackages" => "mutation",
+        "MessagingService/PutMessagingBackup" => "mutation",
         "MessagingService/RegisterMessagingDevice" => "mutation",
         "MessagingService/RevokeMessagingDevice" => "destructive",
         "MessagingService/SendMessage" => "mutation",
@@ -1090,10 +1096,13 @@ final class GeneratedClient
         "MessagingService/AckInbox" => "ack_inbox",
         "MessagingService/ClaimKeyPackages" => "claim_key_packages",
         "MessagingService/CreateGroup" => "create_group",
+        "MessagingService/DeleteMessagingBackup" => "delete_messaging_backup",
         "MessagingService/GetGroupInfo" => "get_group_info",
         "MessagingService/GetKeyPackageStock" => "get_key_package_stock",
+        "MessagingService/GetMessagingBackup" => "get_messaging_backup",
         "MessagingService/ListMessagingDevices" => "list_messaging_devices",
         "MessagingService/PublishKeyPackages" => "publish_key_packages",
+        "MessagingService/PutMessagingBackup" => "put_messaging_backup",
         "MessagingService/RegisterMessagingDevice" => "register_messaging_device",
         "MessagingService/RevokeMessagingDevice" => "revoke_messaging_device",
         "MessagingService/SendMessage" => "send_message",
@@ -1499,10 +1508,13 @@ final class GeneratedClient
         "MessagingService/AckInbox" => "messagingAckInbox",
         "MessagingService/ClaimKeyPackages" => "messagingClaimKeyPackages",
         "MessagingService/CreateGroup" => "messagingCreateGroup",
+        "MessagingService/DeleteMessagingBackup" => "messagingDeleteMessagingBackup",
         "MessagingService/GetGroupInfo" => "messagingGetGroupInfo",
         "MessagingService/GetKeyPackageStock" => "messagingGetKeyPackageStock",
+        "MessagingService/GetMessagingBackup" => "messagingGetMessagingBackup",
         "MessagingService/ListMessagingDevices" => "messagingListMessagingDevices",
         "MessagingService/PublishKeyPackages" => "messagingPublishKeyPackages",
+        "MessagingService/PutMessagingBackup" => "messagingPutMessagingBackup",
         "MessagingService/RegisterMessagingDevice" => "messagingRegisterMessagingDevice",
         "MessagingService/RevokeMessagingDevice" => "messagingRevokeMessagingDevice",
         "MessagingService/SendMessage" => "messagingSendMessage",
@@ -1908,10 +1920,13 @@ final class GeneratedClient
         "MessagingService/AckInbox" => "post",
         "MessagingService/ClaimKeyPackages" => "post",
         "MessagingService/CreateGroup" => "post",
+        "MessagingService/DeleteMessagingBackup" => "delete",
         "MessagingService/GetGroupInfo" => "get",
         "MessagingService/GetKeyPackageStock" => "get",
+        "MessagingService/GetMessagingBackup" => "get",
         "MessagingService/ListMessagingDevices" => "get",
         "MessagingService/PublishKeyPackages" => "post",
+        "MessagingService/PutMessagingBackup" => "put",
         "MessagingService/RegisterMessagingDevice" => "post",
         "MessagingService/RevokeMessagingDevice" => "post",
         "MessagingService/SendMessage" => "post",
@@ -2317,10 +2332,13 @@ final class GeneratedClient
         "MessagingService/AckInbox" => "/v1/messaging/inbox:ack",
         "MessagingService/ClaimKeyPackages" => "/v1/messaging/key-packages:claim",
         "MessagingService/CreateGroup" => "/v1/messaging/groups",
+        "MessagingService/DeleteMessagingBackup" => "/v1/messaging/backups/{backup_id}",
         "MessagingService/GetGroupInfo" => "/v1/messaging/groups/{group_id}/info",
         "MessagingService/GetKeyPackageStock" => "/v1/messaging/devices/{device_id}/key-package-stock",
+        "MessagingService/GetMessagingBackup" => "/v1/messaging/backups/{backup_id}",
         "MessagingService/ListMessagingDevices" => "/v1/messaging/devices",
         "MessagingService/PublishKeyPackages" => "/v1/messaging/devices/{device_id}/key-packages",
+        "MessagingService/PutMessagingBackup" => "/v1/messaging/backups/{backup_id}",
         "MessagingService/RegisterMessagingDevice" => "/v1/messaging/devices",
         "MessagingService/RevokeMessagingDevice" => "/v1/messaging/devices/{device_id}:revoke",
         "MessagingService/SendMessage" => "/v1/messaging/groups/{group_id}/messages",
@@ -2582,6 +2600,7 @@ final class GeneratedClient
         "udb.core.idp.entity.v1.SamlReplayEntry" => ['table' => "saml_replay_entries", 'primary_keys' => ["saml_replay_entry_id"], 'fields' => ["saml_replay_entry_id", "tenant_id", "provider_id", "assertion_id", "not_on_or_after", "consumed_at"], 'relations_json' => "[]", 'version_field' => "", 'tenant_field' => "tenant_id", 'project_field' => "", 'php_type' => "Udb\Core\Idp\Entity\V1\SamlReplayEntry"],
         "udb.core.idp.entity.v1.ScimDirectoryState" => ['table' => "scim_directory_state", 'primary_keys' => ["scim_directory_state_id"], 'fields' => ["scim_directory_state_id", "tenant_id", "provider_id", "cursor", "last_sync_at", "failure_count", "last_error", "deprovision_policy", "created_at", "updated_at", "created_by"], 'relations_json' => "[{\"name\":\"provider\",\"kind\":\"belongs_to\",\"local_fields\":[\"provider_id\"],\"target_message_type\":\"udb.core.idp.entity.v1.IdentityProvider\",\"target_table\":\"udb_idp.identity_providers\",\"target_fields\":[\"provider_id\"],\"on_delete\":\"CASCADE\",\"on_update\":\"NO ACTION\"}]", 'version_field' => "", 'tenant_field' => "tenant_id", 'project_field' => "", 'php_type' => "Udb\Core\Idp\Entity\V1\ScimDirectoryState"],
         "udb.core.lock.entity.v1.Lock" => ['table' => "locks", 'primary_keys' => ["lock_id"], 'fields' => ["lock_id", "tenant_id", "lock_name", "owner_id", "fencing_token", "lease_ttl_seconds", "status", "acquired_at", "expires_at", "metadata_json", "created_at", "updated_at", "created_by"], 'relations_json' => "[]", 'version_field' => "", 'tenant_field' => "tenant_id", 'project_field' => "", 'php_type' => "Udb\Core\Lock\Entity\V1\Lock"],
+        "udb.core.messaging.entity.v1.MessagingBackup" => ['table' => "backups", 'primary_keys' => ["id"], 'fields' => ["id", "tenant_id", "subject_id", "backup_id", "ciphertext", "size_bytes", "ciphertext_sha256", "version", "created_at", "updated_at", "created_by"], 'relations_json' => "[]", 'version_field' => "version", 'tenant_field' => "tenant_id", 'project_field' => "", 'php_type' => "Udb\Core\Messaging\Entity\V1\MessagingBackup"],
         "udb.core.messaging.entity.v1.MessagingDevice" => ['table' => "devices", 'primary_keys' => ["id"], 'fields' => ["id", "tenant_id", "subject_id", "device_id", "signature_public_key", "credential", "key_fingerprint", "status", "inbox_head_seq", "acked_seq", "registered_at", "revoked_at", "created_at", "updated_at", "created_by"], 'relations_json' => "[]", 'version_field' => "", 'tenant_field' => "tenant_id", 'project_field' => "", 'php_type' => "Udb\Core\Messaging\Entity\V1\MessagingDevice"],
         "udb.core.messaging.entity.v1.MessagingGroup" => ['table' => "mls_groups", 'primary_keys' => ["id"], 'fields' => ["id", "tenant_id", "group_id", "epoch", "public_group_state", "group_info", "group_info_epoch", "created_by_device_id", "created_at", "updated_at", "created_by"], 'relations_json' => "[]", 'version_field' => "", 'tenant_field' => "tenant_id", 'project_field' => "", 'php_type' => "Udb\Core\Messaging\Entity\V1\MessagingGroup"],
         "udb.core.messaging.entity.v1.MessagingGroupMember" => ['table' => "group_members", 'primary_keys' => ["id"], 'fields' => ["id", "tenant_id", "group_id", "device_id", "subject_id", "leaf_index", "joined_epoch", "created_at", "updated_at", "created_by"], 'relations_json' => "[]", 'version_field' => "", 'tenant_field' => "tenant_id", 'project_field' => "", 'php_type' => "Udb\Core\Messaging\Entity\V1\MessagingGroupMember"],
@@ -2835,10 +2854,13 @@ final class GeneratedClient
         "ack_inbox" => "ackInbox",
         "claim_key_packages" => "claimKeyPackages",
         "create_group" => "createGroup",
+        "delete_messaging_backup" => "deleteMessagingBackup",
         "get_group_info" => "getGroupInfo",
         "get_key_package_stock" => "getKeyPackageStock",
+        "get_messaging_backup" => "getMessagingBackup",
         "list_messaging_devices" => "listMessagingDevices",
         "publish_key_packages" => "publishKeyPackages",
+        "put_messaging_backup" => "putMessagingBackup",
         "register_messaging_device" => "registerMessagingDevice",
         "revoke_messaging_device" => "revokeMessagingDevice",
         "send_message" => "sendMessage",
@@ -7378,6 +7400,27 @@ final class GeneratedClient
         );
     }
     /**
+     * udb.core.messaging.services.v1.MessagingService / DeleteMessagingBackup (unary), public alias delete_messaging_backup.
+     *
+     * Forwards to {@see stubFor()}->DeleteMessagingBackup(); retries transient codes.
+     * Path: /udb.core.messaging.services.v1.MessagingService/DeleteMessagingBackup
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded DeleteMessagingBackupResponse
+     */
+    public function deleteMessagingBackup($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'DeleteMessagingBackup',
+            'MessagingService',
+            'udb.core.messaging.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->DeleteMessagingBackup($request, $md, $opts),
+            $metadata,
+            'destructive' === 'read_only',
+            $request,
+        );
+    }
+    /**
      * udb.core.messaging.services.v1.MessagingService / GetGroupInfo (unary), public alias get_group_info.
      *
      * Forwards to {@see stubFor()}->GetGroupInfo(); retries transient codes.
@@ -7420,6 +7463,27 @@ final class GeneratedClient
         );
     }
     /**
+     * udb.core.messaging.services.v1.MessagingService / GetMessagingBackup (unary), public alias get_messaging_backup.
+     *
+     * Forwards to {@see stubFor()}->GetMessagingBackup(); retries transient codes.
+     * Path: /udb.core.messaging.services.v1.MessagingService/GetMessagingBackup
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded GetMessagingBackupResponse
+     */
+    public function getMessagingBackup($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'GetMessagingBackup',
+            'MessagingService',
+            'udb.core.messaging.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->GetMessagingBackup($request, $md, $opts),
+            $metadata,
+            'read_only' === 'read_only',
+            $request,
+        );
+    }
+    /**
      * udb.core.messaging.services.v1.MessagingService / ListMessagingDevices (unary), public alias list_messaging_devices.
      *
      * Forwards to {@see stubFor()}->ListMessagingDevices(); retries transient codes.
@@ -7456,6 +7520,27 @@ final class GeneratedClient
             'MessagingService',
             'udb.core.messaging.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->PublishKeyPackages($request, $md, $opts),
+            $metadata,
+            'mutation' === 'read_only',
+            $request,
+        );
+    }
+    /**
+     * udb.core.messaging.services.v1.MessagingService / PutMessagingBackup (unary), public alias put_messaging_backup.
+     *
+     * Forwards to {@see stubFor()}->PutMessagingBackup(); retries transient codes.
+     * Path: /udb.core.messaging.services.v1.MessagingService/PutMessagingBackup
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded PutMessagingBackupResponse
+     */
+    public function putMessagingBackup($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'PutMessagingBackup',
+            'MessagingService',
+            'udb.core.messaging.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->PutMessagingBackup($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
             $request,
@@ -11609,7 +11694,7 @@ final class GeneratedClient
         return $this->stubFor('LockService', 'udb.core.lock.services.v1');
     }
     /**
-     * Underlying buf-generated stub for udb.core.messaging.services.v1.MessagingService (12 RPC(s)).
+     * Underlying buf-generated stub for udb.core.messaging.services.v1.MessagingService (15 RPC(s)).
      * Channel is shared with every other service stub on this client.
      *
      * @return BaseStub  a MessagingServiceClient
@@ -12244,6 +12329,10 @@ final class GeneratedClient
     public static function lockRepository(): EntityRepository
     {
         return self::repository("udb.core.lock.entity.v1.Lock");
+    }
+    public static function messagingBackupRepository(): EntityRepository
+    {
+        return self::repository("udb.core.messaging.entity.v1.MessagingBackup");
     }
     public static function messagingDeviceRepository(): EntityRepository
     {

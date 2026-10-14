@@ -228,4 +228,55 @@ class MessagingServiceClient extends \Grpc\BaseStub {
         $metadata, $options);
     }
 
+    /**
+     * Store (or replace) the calling principal's opt-in, client-encrypted history
+     * backup. The client seals the export with a key derived from a recovery secret
+     * the broker never sees; the broker keeps only the opaque envelope and refuses
+     * a body that is not one. With expected_version > 0 the write is a
+     * compare-and-swap against the stored version.
+     * @param \Udb\Core\Messaging\Services\V1\PutMessagingBackupRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall<\Udb\Core\Messaging\Services\V1\PutMessagingBackupResponse>
+     */
+    public function PutMessagingBackup(\Udb\Core\Messaging\Services\V1\PutMessagingBackupRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/udb.core.messaging.services.v1.MessagingService/PutMessagingBackup',
+        $argument,
+        ['\Udb\Core\Messaging\Services\V1\PutMessagingBackupResponse', 'decode'],
+        $metadata, $options);
+    }
+
+    /**
+     * Return a principal's stored backup envelope for restore on a new device. Only
+     * the principal itself (or a service account acting for it) can read it.
+     * @param \Udb\Core\Messaging\Services\V1\GetMessagingBackupRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall<\Udb\Core\Messaging\Services\V1\GetMessagingBackupResponse>
+     */
+    public function GetMessagingBackup(\Udb\Core\Messaging\Services\V1\GetMessagingBackupRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/udb.core.messaging.services.v1.MessagingService/GetMessagingBackup',
+        $argument,
+        ['\Udb\Core\Messaging\Services\V1\GetMessagingBackupResponse', 'decode'],
+        $metadata, $options);
+    }
+
+    /**
+     * Erase a principal's stored backup. Deleting a backup that does not exist
+     * succeeds with deleted=false.
+     * @param \Udb\Core\Messaging\Services\V1\DeleteMessagingBackupRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall<\Udb\Core\Messaging\Services\V1\DeleteMessagingBackupResponse>
+     */
+    public function DeleteMessagingBackup(\Udb\Core\Messaging\Services\V1\DeleteMessagingBackupRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/udb.core.messaging.services.v1.MessagingService/DeleteMessagingBackup',
+        $argument,
+        ['\Udb\Core\Messaging\Services\V1\DeleteMessagingBackupResponse', 'decode'],
+        $metadata, $options);
+    }
+
 }

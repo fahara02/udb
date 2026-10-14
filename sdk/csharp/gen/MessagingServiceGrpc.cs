@@ -103,6 +103,18 @@ namespace Udb.Core.Messaging.Services.V1 {
     static readonly grpc::Marshaller<global::Udb.Core.Messaging.Services.V1.AckInboxRequest> __Marshaller_udb_core_messaging_services_v1_AckInboxRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Messaging.Services.V1.AckInboxRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     static readonly grpc::Marshaller<global::Udb.Core.Messaging.Services.V1.AckInboxResponse> __Marshaller_udb_core_messaging_services_v1_AckInboxResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Messaging.Services.V1.AckInboxResponse.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::Udb.Core.Messaging.Services.V1.PutMessagingBackupRequest> __Marshaller_udb_core_messaging_services_v1_PutMessagingBackupRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Messaging.Services.V1.PutMessagingBackupRequest.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::Udb.Core.Messaging.Services.V1.PutMessagingBackupResponse> __Marshaller_udb_core_messaging_services_v1_PutMessagingBackupResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Messaging.Services.V1.PutMessagingBackupResponse.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::Udb.Core.Messaging.Services.V1.GetMessagingBackupRequest> __Marshaller_udb_core_messaging_services_v1_GetMessagingBackupRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Messaging.Services.V1.GetMessagingBackupRequest.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::Udb.Core.Messaging.Services.V1.GetMessagingBackupResponse> __Marshaller_udb_core_messaging_services_v1_GetMessagingBackupResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Messaging.Services.V1.GetMessagingBackupResponse.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::Udb.Core.Messaging.Services.V1.DeleteMessagingBackupRequest> __Marshaller_udb_core_messaging_services_v1_DeleteMessagingBackupRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Messaging.Services.V1.DeleteMessagingBackupRequest.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::Udb.Core.Messaging.Services.V1.DeleteMessagingBackupResponse> __Marshaller_udb_core_messaging_services_v1_DeleteMessagingBackupResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Messaging.Services.V1.DeleteMessagingBackupResponse.Parser));
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     static readonly grpc::Method<global::Udb.Core.Messaging.Services.V1.RegisterMessagingDeviceRequest, global::Udb.Core.Messaging.Services.V1.RegisterMessagingDeviceResponse> __Method_RegisterMessagingDevice = new grpc::Method<global::Udb.Core.Messaging.Services.V1.RegisterMessagingDeviceRequest, global::Udb.Core.Messaging.Services.V1.RegisterMessagingDeviceResponse>(
@@ -199,6 +211,30 @@ namespace Udb.Core.Messaging.Services.V1 {
         "AckInbox",
         __Marshaller_udb_core_messaging_services_v1_AckInboxRequest,
         __Marshaller_udb_core_messaging_services_v1_AckInboxResponse);
+
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Method<global::Udb.Core.Messaging.Services.V1.PutMessagingBackupRequest, global::Udb.Core.Messaging.Services.V1.PutMessagingBackupResponse> __Method_PutMessagingBackup = new grpc::Method<global::Udb.Core.Messaging.Services.V1.PutMessagingBackupRequest, global::Udb.Core.Messaging.Services.V1.PutMessagingBackupResponse>(
+        grpc::MethodType.Unary,
+        __ServiceName,
+        "PutMessagingBackup",
+        __Marshaller_udb_core_messaging_services_v1_PutMessagingBackupRequest,
+        __Marshaller_udb_core_messaging_services_v1_PutMessagingBackupResponse);
+
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Method<global::Udb.Core.Messaging.Services.V1.GetMessagingBackupRequest, global::Udb.Core.Messaging.Services.V1.GetMessagingBackupResponse> __Method_GetMessagingBackup = new grpc::Method<global::Udb.Core.Messaging.Services.V1.GetMessagingBackupRequest, global::Udb.Core.Messaging.Services.V1.GetMessagingBackupResponse>(
+        grpc::MethodType.Unary,
+        __ServiceName,
+        "GetMessagingBackup",
+        __Marshaller_udb_core_messaging_services_v1_GetMessagingBackupRequest,
+        __Marshaller_udb_core_messaging_services_v1_GetMessagingBackupResponse);
+
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Method<global::Udb.Core.Messaging.Services.V1.DeleteMessagingBackupRequest, global::Udb.Core.Messaging.Services.V1.DeleteMessagingBackupResponse> __Method_DeleteMessagingBackup = new grpc::Method<global::Udb.Core.Messaging.Services.V1.DeleteMessagingBackupRequest, global::Udb.Core.Messaging.Services.V1.DeleteMessagingBackupResponse>(
+        grpc::MethodType.Unary,
+        __ServiceName,
+        "DeleteMessagingBackup",
+        __Marshaller_udb_core_messaging_services_v1_DeleteMessagingBackupRequest,
+        __Marshaller_udb_core_messaging_services_v1_DeleteMessagingBackupResponse);
 
     /// <summary>Service descriptor</summary>
     public static global::Google.Protobuf.Reflection.ServiceDescriptor Descriptor
@@ -375,6 +411,48 @@ namespace Udb.Core.Messaging.Services.V1 {
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
       public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Messaging.Services.V1.AckInboxResponse> AckInbox(global::Udb.Core.Messaging.Services.V1.AckInboxRequest request, grpc::ServerCallContext context)
+      {
+        throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
+      }
+
+      /// <summary>
+      /// Store (or replace) the calling principal's opt-in, client-encrypted history
+      /// backup. The client seals the export with a key derived from a recovery secret
+      /// the broker never sees; the broker keeps only the opaque envelope and refuses
+      /// a body that is not one. With expected_version > 0 the write is a
+      /// compare-and-swap against the stored version.
+      /// </summary>
+      /// <param name="request">The request received from the client.</param>
+      /// <param name="context">The context of the server-side call handler being invoked.</param>
+      /// <returns>The response to send back to the client (wrapped by a task).</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Messaging.Services.V1.PutMessagingBackupResponse> PutMessagingBackup(global::Udb.Core.Messaging.Services.V1.PutMessagingBackupRequest request, grpc::ServerCallContext context)
+      {
+        throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
+      }
+
+      /// <summary>
+      /// Return a principal's stored backup envelope for restore on a new device. Only
+      /// the principal itself (or a service account acting for it) can read it.
+      /// </summary>
+      /// <param name="request">The request received from the client.</param>
+      /// <param name="context">The context of the server-side call handler being invoked.</param>
+      /// <returns>The response to send back to the client (wrapped by a task).</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Messaging.Services.V1.GetMessagingBackupResponse> GetMessagingBackup(global::Udb.Core.Messaging.Services.V1.GetMessagingBackupRequest request, grpc::ServerCallContext context)
+      {
+        throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
+      }
+
+      /// <summary>
+      /// Erase a principal's stored backup. Deleting a backup that does not exist
+      /// succeeds with deleted=false.
+      /// </summary>
+      /// <param name="request">The request received from the client.</param>
+      /// <param name="context">The context of the server-side call handler being invoked.</param>
+      /// <returns>The response to send back to the client (wrapped by a task).</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Messaging.Services.V1.DeleteMessagingBackupResponse> DeleteMessagingBackup(global::Udb.Core.Messaging.Services.V1.DeleteMessagingBackupRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -1052,6 +1130,174 @@ namespace Udb.Core.Messaging.Services.V1 {
       {
         return CallInvoker.AsyncUnaryCall(__Method_AckInbox, null, options, request);
       }
+      /// <summary>
+      /// Store (or replace) the calling principal's opt-in, client-encrypted history
+      /// backup. The client seals the export with a key derived from a recovery secret
+      /// the broker never sees; the broker keeps only the opaque envelope and refuses
+      /// a body that is not one. With expected_version > 0 the write is a
+      /// compare-and-swap against the stored version.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
+      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
+      /// <param name="cancellationToken">An optional token for canceling the call.</param>
+      /// <returns>The response received from the server.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::Udb.Core.Messaging.Services.V1.PutMessagingBackupResponse PutMessagingBackup(global::Udb.Core.Messaging.Services.V1.PutMessagingBackupRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return PutMessagingBackup(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      /// <summary>
+      /// Store (or replace) the calling principal's opt-in, client-encrypted history
+      /// backup. The client seals the export with a key derived from a recovery secret
+      /// the broker never sees; the broker keeps only the opaque envelope and refuses
+      /// a body that is not one. With expected_version > 0 the write is a
+      /// compare-and-swap against the stored version.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="options">The options for the call.</param>
+      /// <returns>The response received from the server.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::Udb.Core.Messaging.Services.V1.PutMessagingBackupResponse PutMessagingBackup(global::Udb.Core.Messaging.Services.V1.PutMessagingBackupRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.BlockingUnaryCall(__Method_PutMessagingBackup, null, options, request);
+      }
+      /// <summary>
+      /// Store (or replace) the calling principal's opt-in, client-encrypted history
+      /// backup. The client seals the export with a key derived from a recovery secret
+      /// the broker never sees; the broker keeps only the opaque envelope and refuses
+      /// a body that is not one. With expected_version > 0 the write is a
+      /// compare-and-swap against the stored version.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
+      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
+      /// <param name="cancellationToken">An optional token for canceling the call.</param>
+      /// <returns>The call object.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Messaging.Services.V1.PutMessagingBackupResponse> PutMessagingBackupAsync(global::Udb.Core.Messaging.Services.V1.PutMessagingBackupRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return PutMessagingBackupAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      /// <summary>
+      /// Store (or replace) the calling principal's opt-in, client-encrypted history
+      /// backup. The client seals the export with a key derived from a recovery secret
+      /// the broker never sees; the broker keeps only the opaque envelope and refuses
+      /// a body that is not one. With expected_version > 0 the write is a
+      /// compare-and-swap against the stored version.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="options">The options for the call.</param>
+      /// <returns>The call object.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Messaging.Services.V1.PutMessagingBackupResponse> PutMessagingBackupAsync(global::Udb.Core.Messaging.Services.V1.PutMessagingBackupRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.AsyncUnaryCall(__Method_PutMessagingBackup, null, options, request);
+      }
+      /// <summary>
+      /// Return a principal's stored backup envelope for restore on a new device. Only
+      /// the principal itself (or a service account acting for it) can read it.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
+      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
+      /// <param name="cancellationToken">An optional token for canceling the call.</param>
+      /// <returns>The response received from the server.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::Udb.Core.Messaging.Services.V1.GetMessagingBackupResponse GetMessagingBackup(global::Udb.Core.Messaging.Services.V1.GetMessagingBackupRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return GetMessagingBackup(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      /// <summary>
+      /// Return a principal's stored backup envelope for restore on a new device. Only
+      /// the principal itself (or a service account acting for it) can read it.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="options">The options for the call.</param>
+      /// <returns>The response received from the server.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::Udb.Core.Messaging.Services.V1.GetMessagingBackupResponse GetMessagingBackup(global::Udb.Core.Messaging.Services.V1.GetMessagingBackupRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.BlockingUnaryCall(__Method_GetMessagingBackup, null, options, request);
+      }
+      /// <summary>
+      /// Return a principal's stored backup envelope for restore on a new device. Only
+      /// the principal itself (or a service account acting for it) can read it.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
+      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
+      /// <param name="cancellationToken">An optional token for canceling the call.</param>
+      /// <returns>The call object.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Messaging.Services.V1.GetMessagingBackupResponse> GetMessagingBackupAsync(global::Udb.Core.Messaging.Services.V1.GetMessagingBackupRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return GetMessagingBackupAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      /// <summary>
+      /// Return a principal's stored backup envelope for restore on a new device. Only
+      /// the principal itself (or a service account acting for it) can read it.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="options">The options for the call.</param>
+      /// <returns>The call object.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Messaging.Services.V1.GetMessagingBackupResponse> GetMessagingBackupAsync(global::Udb.Core.Messaging.Services.V1.GetMessagingBackupRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.AsyncUnaryCall(__Method_GetMessagingBackup, null, options, request);
+      }
+      /// <summary>
+      /// Erase a principal's stored backup. Deleting a backup that does not exist
+      /// succeeds with deleted=false.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
+      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
+      /// <param name="cancellationToken">An optional token for canceling the call.</param>
+      /// <returns>The response received from the server.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::Udb.Core.Messaging.Services.V1.DeleteMessagingBackupResponse DeleteMessagingBackup(global::Udb.Core.Messaging.Services.V1.DeleteMessagingBackupRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return DeleteMessagingBackup(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      /// <summary>
+      /// Erase a principal's stored backup. Deleting a backup that does not exist
+      /// succeeds with deleted=false.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="options">The options for the call.</param>
+      /// <returns>The response received from the server.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::Udb.Core.Messaging.Services.V1.DeleteMessagingBackupResponse DeleteMessagingBackup(global::Udb.Core.Messaging.Services.V1.DeleteMessagingBackupRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.BlockingUnaryCall(__Method_DeleteMessagingBackup, null, options, request);
+      }
+      /// <summary>
+      /// Erase a principal's stored backup. Deleting a backup that does not exist
+      /// succeeds with deleted=false.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
+      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
+      /// <param name="cancellationToken">An optional token for canceling the call.</param>
+      /// <returns>The call object.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Messaging.Services.V1.DeleteMessagingBackupResponse> DeleteMessagingBackupAsync(global::Udb.Core.Messaging.Services.V1.DeleteMessagingBackupRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return DeleteMessagingBackupAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      /// <summary>
+      /// Erase a principal's stored backup. Deleting a backup that does not exist
+      /// succeeds with deleted=false.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="options">The options for the call.</param>
+      /// <returns>The call object.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Messaging.Services.V1.DeleteMessagingBackupResponse> DeleteMessagingBackupAsync(global::Udb.Core.Messaging.Services.V1.DeleteMessagingBackupRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.AsyncUnaryCall(__Method_DeleteMessagingBackup, null, options, request);
+      }
       /// <summary>Creates a new instance of client from given <c>ClientBaseConfiguration</c>.</summary>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
       protected override MessagingServiceClient NewInstance(ClientBaseConfiguration configuration)
@@ -1077,7 +1323,10 @@ namespace Udb.Core.Messaging.Services.V1 {
           .AddMethod(__Method_GetGroupInfo, serviceImpl.GetGroupInfo)
           .AddMethod(__Method_SendMessage, serviceImpl.SendMessage)
           .AddMethod(__Method_StreamInbox, serviceImpl.StreamInbox)
-          .AddMethod(__Method_AckInbox, serviceImpl.AckInbox).Build();
+          .AddMethod(__Method_AckInbox, serviceImpl.AckInbox)
+          .AddMethod(__Method_PutMessagingBackup, serviceImpl.PutMessagingBackup)
+          .AddMethod(__Method_GetMessagingBackup, serviceImpl.GetMessagingBackup)
+          .AddMethod(__Method_DeleteMessagingBackup, serviceImpl.DeleteMessagingBackup).Build();
     }
 
     /// <summary>Register service method with a service binder with or without implementation. Useful when customizing the service binding logic.
@@ -1099,6 +1348,9 @@ namespace Udb.Core.Messaging.Services.V1 {
       serviceBinder.AddMethod(__Method_SendMessage, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Messaging.Services.V1.SendMessageRequest, global::Udb.Core.Messaging.Services.V1.SendMessageResponse>(serviceImpl.SendMessage));
       serviceBinder.AddMethod(__Method_StreamInbox, serviceImpl == null ? null : new grpc::ServerStreamingServerMethod<global::Udb.Core.Messaging.Services.V1.StreamInboxRequest, global::Udb.Core.Messaging.Services.V1.StreamInboxResponse>(serviceImpl.StreamInbox));
       serviceBinder.AddMethod(__Method_AckInbox, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Messaging.Services.V1.AckInboxRequest, global::Udb.Core.Messaging.Services.V1.AckInboxResponse>(serviceImpl.AckInbox));
+      serviceBinder.AddMethod(__Method_PutMessagingBackup, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Messaging.Services.V1.PutMessagingBackupRequest, global::Udb.Core.Messaging.Services.V1.PutMessagingBackupResponse>(serviceImpl.PutMessagingBackup));
+      serviceBinder.AddMethod(__Method_GetMessagingBackup, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Messaging.Services.V1.GetMessagingBackupRequest, global::Udb.Core.Messaging.Services.V1.GetMessagingBackupResponse>(serviceImpl.GetMessagingBackup));
+      serviceBinder.AddMethod(__Method_DeleteMessagingBackup, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Messaging.Services.V1.DeleteMessagingBackupRequest, global::Udb.Core.Messaging.Services.V1.DeleteMessagingBackupResponse>(serviceImpl.DeleteMessagingBackup));
     }
 
   }

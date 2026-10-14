@@ -370,3 +370,91 @@ class AckInboxResponse(_message.Message):
     message: str
     error: _dto_pb2.ApiError
     def __init__(self, acked_seq: _Optional[int] = ..., acknowledged: _Optional[int] = ..., message: _Optional[str] = ..., error: _Optional[_Union[_dto_pb2.ApiError, _Mapping]] = ...) -> None: ...
+
+class MessagingBackupInfo(_message.Message):
+    __slots__ = ("tenant_id", "subject_id", "backup_id", "size_bytes", "ciphertext_sha256", "version", "created_at_unix", "updated_at_unix")
+    TENANT_ID_FIELD_NUMBER: _ClassVar[int]
+    SUBJECT_ID_FIELD_NUMBER: _ClassVar[int]
+    BACKUP_ID_FIELD_NUMBER: _ClassVar[int]
+    SIZE_BYTES_FIELD_NUMBER: _ClassVar[int]
+    CIPHERTEXT_SHA256_FIELD_NUMBER: _ClassVar[int]
+    VERSION_FIELD_NUMBER: _ClassVar[int]
+    CREATED_AT_UNIX_FIELD_NUMBER: _ClassVar[int]
+    UPDATED_AT_UNIX_FIELD_NUMBER: _ClassVar[int]
+    tenant_id: str
+    subject_id: str
+    backup_id: str
+    size_bytes: int
+    ciphertext_sha256: str
+    version: int
+    created_at_unix: int
+    updated_at_unix: int
+    def __init__(self, tenant_id: _Optional[str] = ..., subject_id: _Optional[str] = ..., backup_id: _Optional[str] = ..., size_bytes: _Optional[int] = ..., ciphertext_sha256: _Optional[str] = ..., version: _Optional[int] = ..., created_at_unix: _Optional[int] = ..., updated_at_unix: _Optional[int] = ...) -> None: ...
+
+class PutMessagingBackupRequest(_message.Message):
+    __slots__ = ("tenant_id", "subject_id", "backup_id", "ciphertext", "expected_version")
+    TENANT_ID_FIELD_NUMBER: _ClassVar[int]
+    SUBJECT_ID_FIELD_NUMBER: _ClassVar[int]
+    BACKUP_ID_FIELD_NUMBER: _ClassVar[int]
+    CIPHERTEXT_FIELD_NUMBER: _ClassVar[int]
+    EXPECTED_VERSION_FIELD_NUMBER: _ClassVar[int]
+    tenant_id: str
+    subject_id: str
+    backup_id: str
+    ciphertext: bytes
+    expected_version: int
+    def __init__(self, tenant_id: _Optional[str] = ..., subject_id: _Optional[str] = ..., backup_id: _Optional[str] = ..., ciphertext: _Optional[bytes] = ..., expected_version: _Optional[int] = ...) -> None: ...
+
+class PutMessagingBackupResponse(_message.Message):
+    __slots__ = ("backup", "created", "message", "error")
+    BACKUP_FIELD_NUMBER: _ClassVar[int]
+    CREATED_FIELD_NUMBER: _ClassVar[int]
+    MESSAGE_FIELD_NUMBER: _ClassVar[int]
+    ERROR_FIELD_NUMBER: _ClassVar[int]
+    backup: MessagingBackupInfo
+    created: bool
+    message: str
+    error: _dto_pb2.ApiError
+    def __init__(self, backup: _Optional[_Union[MessagingBackupInfo, _Mapping]] = ..., created: bool = ..., message: _Optional[str] = ..., error: _Optional[_Union[_dto_pb2.ApiError, _Mapping]] = ...) -> None: ...
+
+class GetMessagingBackupRequest(_message.Message):
+    __slots__ = ("tenant_id", "subject_id", "backup_id")
+    TENANT_ID_FIELD_NUMBER: _ClassVar[int]
+    SUBJECT_ID_FIELD_NUMBER: _ClassVar[int]
+    BACKUP_ID_FIELD_NUMBER: _ClassVar[int]
+    tenant_id: str
+    subject_id: str
+    backup_id: str
+    def __init__(self, tenant_id: _Optional[str] = ..., subject_id: _Optional[str] = ..., backup_id: _Optional[str] = ...) -> None: ...
+
+class GetMessagingBackupResponse(_message.Message):
+    __slots__ = ("backup", "ciphertext", "message", "error")
+    BACKUP_FIELD_NUMBER: _ClassVar[int]
+    CIPHERTEXT_FIELD_NUMBER: _ClassVar[int]
+    MESSAGE_FIELD_NUMBER: _ClassVar[int]
+    ERROR_FIELD_NUMBER: _ClassVar[int]
+    backup: MessagingBackupInfo
+    ciphertext: bytes
+    message: str
+    error: _dto_pb2.ApiError
+    def __init__(self, backup: _Optional[_Union[MessagingBackupInfo, _Mapping]] = ..., ciphertext: _Optional[bytes] = ..., message: _Optional[str] = ..., error: _Optional[_Union[_dto_pb2.ApiError, _Mapping]] = ...) -> None: ...
+
+class DeleteMessagingBackupRequest(_message.Message):
+    __slots__ = ("tenant_id", "subject_id", "backup_id")
+    TENANT_ID_FIELD_NUMBER: _ClassVar[int]
+    SUBJECT_ID_FIELD_NUMBER: _ClassVar[int]
+    BACKUP_ID_FIELD_NUMBER: _ClassVar[int]
+    tenant_id: str
+    subject_id: str
+    backup_id: str
+    def __init__(self, tenant_id: _Optional[str] = ..., subject_id: _Optional[str] = ..., backup_id: _Optional[str] = ...) -> None: ...
+
+class DeleteMessagingBackupResponse(_message.Message):
+    __slots__ = ("deleted", "message", "error")
+    DELETED_FIELD_NUMBER: _ClassVar[int]
+    MESSAGE_FIELD_NUMBER: _ClassVar[int]
+    ERROR_FIELD_NUMBER: _ClassVar[int]
+    deleted: bool
+    message: str
+    error: _dto_pb2.ApiError
+    def __init__(self, deleted: bool = ..., message: _Optional[str] = ..., error: _Optional[_Union[_dto_pb2.ApiError, _Mapping]] = ...) -> None: ...

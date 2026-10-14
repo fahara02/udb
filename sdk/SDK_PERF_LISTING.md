@@ -6,7 +6,7 @@ Inputs:
 - `docs/generated/bench-bodies.json`
 - `docs/site/bench-results.json`
 
-Current generated RPC surface: 401 RPCs across 29 services.
+Current generated RPC surface: 404 RPCs across 29 services.
 
 Published benchmark artifact: present.
 Release tag: v0.4.28.
@@ -63,7 +63,7 @@ Generated at: 2026-07-26T17:46:09+00:00.
 | IdentityProviderService | 27 | 6 | 21 | 0 | 0 |
 | LiveQueryService | 1 | 1 | 0 | 0 | 0 |
 | LockService | 5 | 2 | 3 | 0 | 0 |
-| MessagingService | 12 | 4 | 7 | 1 | 0 |
+| MessagingService | 15 | 5 | 8 | 2 | 0 |
 | MeteringService | 6 | 4 | 2 | 0 | 0 |
 | NotificationService | 12 | 7 | 5 | 0 | 0 |
 | PeerService | 5 | 2 | 3 | 0 | 0 |
@@ -378,10 +378,13 @@ identity surface available to benchmark reports.
 | `MessagingService/AckInbox` | `ack_inbox` | `messagingAckInbox` | MUTATION |
 | `MessagingService/ClaimKeyPackages` | `claim_key_packages` | `messagingClaimKeyPackages` | MUTATION |
 | `MessagingService/CreateGroup` | `create_group` | `messagingCreateGroup` | MUTATION |
+| `MessagingService/DeleteMessagingBackup` | `delete_messaging_backup` | `messagingDeleteMessagingBackup` | DESTRUCTIVE |
 | `MessagingService/GetGroupInfo` | `get_group_info` | `messagingGetGroupInfo` | READ_ONLY |
 | `MessagingService/GetKeyPackageStock` | `get_key_package_stock` | `messagingGetKeyPackageStock` | READ_ONLY |
+| `MessagingService/GetMessagingBackup` | `get_messaging_backup` | `messagingGetMessagingBackup` | READ_ONLY |
 | `MessagingService/ListMessagingDevices` | `list_messaging_devices` | `messagingListMessagingDevices` | READ_ONLY |
 | `MessagingService/PublishKeyPackages` | `publish_key_packages` | `messagingPublishKeyPackages` | MUTATION |
+| `MessagingService/PutMessagingBackup` | `put_messaging_backup` | `messagingPutMessagingBackup` | MUTATION |
 | `MessagingService/RegisterMessagingDevice` | `register_messaging_device` | `messagingRegisterMessagingDevice` | MUTATION |
 | `MessagingService/RevokeMessagingDevice` | `revoke_messaging_device` | `messagingRevokeMessagingDevice` | DESTRUCTIVE |
 | `MessagingService/SendMessage` | `send_message` | `messagingSendMessage` | MUTATION |

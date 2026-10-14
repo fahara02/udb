@@ -3493,6 +3493,18 @@
   },
   {
     "file": "messaging.md",
+    "rpc": "DeleteMessagingBackup",
+    "service": "MessagingService",
+    "wire_rpc": "MessagingService/DeleteMessagingBackup",
+    "api_alias": "delete_messaging_backup",
+    "operation_id": "messagingDeleteMessagingBackup",
+    "op_kind": "DESTRUCTIVE",
+    "request_msg": "DeleteMessagingBackupRequest",
+    "body": "`{ \"tenant_id\": \"<seed:tenant_id>\", \"subject_id\": \"\", \"backup_id\": \"sdk-perf-backup-delete\" }`",
+    "notes": "erases the caller's backup `sdk-perf-backup-delete`; idempotent (a missing backup answers `deleted=false`), so every iteration succeeds."
+  },
+  {
+    "file": "messaging.md",
     "rpc": "GetGroupInfo",
     "service": "MessagingService",
     "wire_rpc": "MessagingService/GetGroupInfo",
@@ -3517,6 +3529,18 @@
   },
   {
     "file": "messaging.md",
+    "rpc": "GetMessagingBackup",
+    "service": "MessagingService",
+    "wire_rpc": "MessagingService/GetMessagingBackup",
+    "api_alias": "get_messaging_backup",
+    "operation_id": "messagingGetMessagingBackup",
+    "op_kind": "READ_ONLY",
+    "request_msg": "GetMessagingBackupRequest",
+    "body": "`{ \"tenant_id\": \"<seed:tenant_id>\", \"subject_id\": \"\", \"backup_id\": \"sdk-perf-backup\" }`",
+    "notes": "returns the caller's opaque backup envelope; `sdk-perf-backup` is stored by the shared seed. Empty `subject_id` means the caller."
+  },
+  {
+    "file": "messaging.md",
     "rpc": "ListMessagingDevices",
     "service": "MessagingService",
     "wire_rpc": "MessagingService/ListMessagingDevices",
@@ -3538,6 +3562,18 @@
     "request_msg": "PublishKeyPackagesRequest",
     "body": "`{ \"tenant_id\": \"<seed:tenant_id>\", \"device_id\": \"sdk-perf-device\", \"key_packages\": [\"AA==\"] }`",
     "notes": "each KeyPackage must be MLS-signed by the device's registered key."
+  },
+  {
+    "file": "messaging.md",
+    "rpc": "PutMessagingBackup",
+    "service": "MessagingService",
+    "wire_rpc": "MessagingService/PutMessagingBackup",
+    "api_alias": "put_messaging_backup",
+    "operation_id": "messagingPutMessagingBackup",
+    "op_kind": "MUTATION",
+    "request_msg": "PutMessagingBackupRequest",
+    "body": "`{ \"tenant_id\": \"<seed:tenant_id>\", \"subject_id\": \"\", \"backup_id\": \"sdk-perf-backup-put\", \"ciphertext\": \"VURCTUxTQjEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==\", \"expected_version\": 0 }`",
+    "notes": "stores (then replaces) the caller's backup; the body is a minimal udb-mls envelope (magic + 68 bytes), the only framing the broker checks."
   },
   {
     "file": "messaging.md",

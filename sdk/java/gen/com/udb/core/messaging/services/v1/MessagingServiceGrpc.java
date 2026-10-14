@@ -394,6 +394,99 @@ public final class MessagingServiceGrpc {
     return getAckInboxMethod;
   }
 
+  private static volatile io.grpc.MethodDescriptor<com.udb.core.messaging.services.v1.PutMessagingBackupRequest,
+      com.udb.core.messaging.services.v1.PutMessagingBackupResponse> getPutMessagingBackupMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "PutMessagingBackup",
+      requestType = com.udb.core.messaging.services.v1.PutMessagingBackupRequest.class,
+      responseType = com.udb.core.messaging.services.v1.PutMessagingBackupResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.udb.core.messaging.services.v1.PutMessagingBackupRequest,
+      com.udb.core.messaging.services.v1.PutMessagingBackupResponse> getPutMessagingBackupMethod() {
+    io.grpc.MethodDescriptor<com.udb.core.messaging.services.v1.PutMessagingBackupRequest, com.udb.core.messaging.services.v1.PutMessagingBackupResponse> getPutMessagingBackupMethod;
+    if ((getPutMessagingBackupMethod = MessagingServiceGrpc.getPutMessagingBackupMethod) == null) {
+      synchronized (MessagingServiceGrpc.class) {
+        if ((getPutMessagingBackupMethod = MessagingServiceGrpc.getPutMessagingBackupMethod) == null) {
+          MessagingServiceGrpc.getPutMessagingBackupMethod = getPutMessagingBackupMethod =
+              io.grpc.MethodDescriptor.<com.udb.core.messaging.services.v1.PutMessagingBackupRequest, com.udb.core.messaging.services.v1.PutMessagingBackupResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "PutMessagingBackup"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.messaging.services.v1.PutMessagingBackupRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.messaging.services.v1.PutMessagingBackupResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new MessagingServiceMethodDescriptorSupplier("PutMessagingBackup"))
+              .build();
+        }
+      }
+    }
+    return getPutMessagingBackupMethod;
+  }
+
+  private static volatile io.grpc.MethodDescriptor<com.udb.core.messaging.services.v1.GetMessagingBackupRequest,
+      com.udb.core.messaging.services.v1.GetMessagingBackupResponse> getGetMessagingBackupMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "GetMessagingBackup",
+      requestType = com.udb.core.messaging.services.v1.GetMessagingBackupRequest.class,
+      responseType = com.udb.core.messaging.services.v1.GetMessagingBackupResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.udb.core.messaging.services.v1.GetMessagingBackupRequest,
+      com.udb.core.messaging.services.v1.GetMessagingBackupResponse> getGetMessagingBackupMethod() {
+    io.grpc.MethodDescriptor<com.udb.core.messaging.services.v1.GetMessagingBackupRequest, com.udb.core.messaging.services.v1.GetMessagingBackupResponse> getGetMessagingBackupMethod;
+    if ((getGetMessagingBackupMethod = MessagingServiceGrpc.getGetMessagingBackupMethod) == null) {
+      synchronized (MessagingServiceGrpc.class) {
+        if ((getGetMessagingBackupMethod = MessagingServiceGrpc.getGetMessagingBackupMethod) == null) {
+          MessagingServiceGrpc.getGetMessagingBackupMethod = getGetMessagingBackupMethod =
+              io.grpc.MethodDescriptor.<com.udb.core.messaging.services.v1.GetMessagingBackupRequest, com.udb.core.messaging.services.v1.GetMessagingBackupResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "GetMessagingBackup"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.messaging.services.v1.GetMessagingBackupRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.messaging.services.v1.GetMessagingBackupResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new MessagingServiceMethodDescriptorSupplier("GetMessagingBackup"))
+              .build();
+        }
+      }
+    }
+    return getGetMessagingBackupMethod;
+  }
+
+  private static volatile io.grpc.MethodDescriptor<com.udb.core.messaging.services.v1.DeleteMessagingBackupRequest,
+      com.udb.core.messaging.services.v1.DeleteMessagingBackupResponse> getDeleteMessagingBackupMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "DeleteMessagingBackup",
+      requestType = com.udb.core.messaging.services.v1.DeleteMessagingBackupRequest.class,
+      responseType = com.udb.core.messaging.services.v1.DeleteMessagingBackupResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.udb.core.messaging.services.v1.DeleteMessagingBackupRequest,
+      com.udb.core.messaging.services.v1.DeleteMessagingBackupResponse> getDeleteMessagingBackupMethod() {
+    io.grpc.MethodDescriptor<com.udb.core.messaging.services.v1.DeleteMessagingBackupRequest, com.udb.core.messaging.services.v1.DeleteMessagingBackupResponse> getDeleteMessagingBackupMethod;
+    if ((getDeleteMessagingBackupMethod = MessagingServiceGrpc.getDeleteMessagingBackupMethod) == null) {
+      synchronized (MessagingServiceGrpc.class) {
+        if ((getDeleteMessagingBackupMethod = MessagingServiceGrpc.getDeleteMessagingBackupMethod) == null) {
+          MessagingServiceGrpc.getDeleteMessagingBackupMethod = getDeleteMessagingBackupMethod =
+              io.grpc.MethodDescriptor.<com.udb.core.messaging.services.v1.DeleteMessagingBackupRequest, com.udb.core.messaging.services.v1.DeleteMessagingBackupResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "DeleteMessagingBackup"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.messaging.services.v1.DeleteMessagingBackupRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.messaging.services.v1.DeleteMessagingBackupResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new MessagingServiceMethodDescriptorSupplier("DeleteMessagingBackup"))
+              .build();
+        }
+      }
+    }
+    return getDeleteMessagingBackupMethod;
+  }
+
   /**
    * Creates a new async stub that supports all call types for the service
    */
@@ -610,6 +703,42 @@ public final class MessagingServiceGrpc {
         io.grpc.stub.StreamObserver<com.udb.core.messaging.services.v1.AckInboxResponse> responseObserver) {
       io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getAckInboxMethod(), responseObserver);
     }
+
+    /**
+     * <pre>
+     * Store (or replace) the calling principal's opt-in, client-encrypted history
+     * backup. The client seals the export with a key derived from a recovery secret
+     * the broker never sees; the broker keeps only the opaque envelope and refuses
+     * a body that is not one. With expected_version &gt; 0 the write is a
+     * compare-and-swap against the stored version.
+     * </pre>
+     */
+    default void putMessagingBackup(com.udb.core.messaging.services.v1.PutMessagingBackupRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.messaging.services.v1.PutMessagingBackupResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getPutMessagingBackupMethod(), responseObserver);
+    }
+
+    /**
+     * <pre>
+     * Return a principal's stored backup envelope for restore on a new device. Only
+     * the principal itself (or a service account acting for it) can read it.
+     * </pre>
+     */
+    default void getMessagingBackup(com.udb.core.messaging.services.v1.GetMessagingBackupRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.messaging.services.v1.GetMessagingBackupResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getGetMessagingBackupMethod(), responseObserver);
+    }
+
+    /**
+     * <pre>
+     * Erase a principal's stored backup. Deleting a backup that does not exist
+     * succeeds with deleted=false.
+     * </pre>
+     */
+    default void deleteMessagingBackup(com.udb.core.messaging.services.v1.DeleteMessagingBackupRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.messaging.services.v1.DeleteMessagingBackupResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getDeleteMessagingBackupMethod(), responseObserver);
+    }
   }
 
   /**
@@ -814,6 +943,45 @@ public final class MessagingServiceGrpc {
       io.grpc.stub.ClientCalls.asyncUnaryCall(
           getChannel().newCall(getAckInboxMethod(), getCallOptions()), request, responseObserver);
     }
+
+    /**
+     * <pre>
+     * Store (or replace) the calling principal's opt-in, client-encrypted history
+     * backup. The client seals the export with a key derived from a recovery secret
+     * the broker never sees; the broker keeps only the opaque envelope and refuses
+     * a body that is not one. With expected_version &gt; 0 the write is a
+     * compare-and-swap against the stored version.
+     * </pre>
+     */
+    public void putMessagingBackup(com.udb.core.messaging.services.v1.PutMessagingBackupRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.messaging.services.v1.PutMessagingBackupResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getPutMessagingBackupMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     * <pre>
+     * Return a principal's stored backup envelope for restore on a new device. Only
+     * the principal itself (or a service account acting for it) can read it.
+     * </pre>
+     */
+    public void getMessagingBackup(com.udb.core.messaging.services.v1.GetMessagingBackupRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.messaging.services.v1.GetMessagingBackupResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getGetMessagingBackupMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     * <pre>
+     * Erase a principal's stored backup. Deleting a backup that does not exist
+     * succeeds with deleted=false.
+     * </pre>
+     */
+    public void deleteMessagingBackup(com.udb.core.messaging.services.v1.DeleteMessagingBackupRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.messaging.services.v1.DeleteMessagingBackupResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getDeleteMessagingBackupMethod(), getCallOptions()), request, responseObserver);
+    }
   }
 
   /**
@@ -987,6 +1155,42 @@ public final class MessagingServiceGrpc {
       return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
           getChannel(), getAckInboxMethod(), getCallOptions(), request);
     }
+
+    /**
+     * <pre>
+     * Store (or replace) the calling principal's opt-in, client-encrypted history
+     * backup. The client seals the export with a key derived from a recovery secret
+     * the broker never sees; the broker keeps only the opaque envelope and refuses
+     * a body that is not one. With expected_version &gt; 0 the write is a
+     * compare-and-swap against the stored version.
+     * </pre>
+     */
+    public com.udb.core.messaging.services.v1.PutMessagingBackupResponse putMessagingBackup(com.udb.core.messaging.services.v1.PutMessagingBackupRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getPutMessagingBackupMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * Return a principal's stored backup envelope for restore on a new device. Only
+     * the principal itself (or a service account acting for it) can read it.
+     * </pre>
+     */
+    public com.udb.core.messaging.services.v1.GetMessagingBackupResponse getMessagingBackup(com.udb.core.messaging.services.v1.GetMessagingBackupRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getGetMessagingBackupMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * Erase a principal's stored backup. Deleting a backup that does not exist
+     * succeeds with deleted=false.
+     * </pre>
+     */
+    public com.udb.core.messaging.services.v1.DeleteMessagingBackupResponse deleteMessagingBackup(com.udb.core.messaging.services.v1.DeleteMessagingBackupRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getDeleteMessagingBackupMethod(), getCallOptions(), request);
+    }
   }
 
   /**
@@ -1159,6 +1363,42 @@ public final class MessagingServiceGrpc {
       return io.grpc.stub.ClientCalls.blockingUnaryCall(
           getChannel(), getAckInboxMethod(), getCallOptions(), request);
     }
+
+    /**
+     * <pre>
+     * Store (or replace) the calling principal's opt-in, client-encrypted history
+     * backup. The client seals the export with a key derived from a recovery secret
+     * the broker never sees; the broker keeps only the opaque envelope and refuses
+     * a body that is not one. With expected_version &gt; 0 the write is a
+     * compare-and-swap against the stored version.
+     * </pre>
+     */
+    public com.udb.core.messaging.services.v1.PutMessagingBackupResponse putMessagingBackup(com.udb.core.messaging.services.v1.PutMessagingBackupRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getPutMessagingBackupMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * Return a principal's stored backup envelope for restore on a new device. Only
+     * the principal itself (or a service account acting for it) can read it.
+     * </pre>
+     */
+    public com.udb.core.messaging.services.v1.GetMessagingBackupResponse getMessagingBackup(com.udb.core.messaging.services.v1.GetMessagingBackupRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getGetMessagingBackupMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * Erase a principal's stored backup. Deleting a backup that does not exist
+     * succeeds with deleted=false.
+     * </pre>
+     */
+    public com.udb.core.messaging.services.v1.DeleteMessagingBackupResponse deleteMessagingBackup(com.udb.core.messaging.services.v1.DeleteMessagingBackupRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getDeleteMessagingBackupMethod(), getCallOptions(), request);
+    }
   }
 
   /**
@@ -1329,6 +1569,45 @@ public final class MessagingServiceGrpc {
       return io.grpc.stub.ClientCalls.futureUnaryCall(
           getChannel().newCall(getAckInboxMethod(), getCallOptions()), request);
     }
+
+    /**
+     * <pre>
+     * Store (or replace) the calling principal's opt-in, client-encrypted history
+     * backup. The client seals the export with a key derived from a recovery secret
+     * the broker never sees; the broker keeps only the opaque envelope and refuses
+     * a body that is not one. With expected_version &gt; 0 the write is a
+     * compare-and-swap against the stored version.
+     * </pre>
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.udb.core.messaging.services.v1.PutMessagingBackupResponse> putMessagingBackup(
+        com.udb.core.messaging.services.v1.PutMessagingBackupRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getPutMessagingBackupMethod(), getCallOptions()), request);
+    }
+
+    /**
+     * <pre>
+     * Return a principal's stored backup envelope for restore on a new device. Only
+     * the principal itself (or a service account acting for it) can read it.
+     * </pre>
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.udb.core.messaging.services.v1.GetMessagingBackupResponse> getMessagingBackup(
+        com.udb.core.messaging.services.v1.GetMessagingBackupRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getGetMessagingBackupMethod(), getCallOptions()), request);
+    }
+
+    /**
+     * <pre>
+     * Erase a principal's stored backup. Deleting a backup that does not exist
+     * succeeds with deleted=false.
+     * </pre>
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.udb.core.messaging.services.v1.DeleteMessagingBackupResponse> deleteMessagingBackup(
+        com.udb.core.messaging.services.v1.DeleteMessagingBackupRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getDeleteMessagingBackupMethod(), getCallOptions()), request);
+    }
   }
 
   private static final int METHODID_REGISTER_MESSAGING_DEVICE = 0;
@@ -1343,6 +1622,9 @@ public final class MessagingServiceGrpc {
   private static final int METHODID_SEND_MESSAGE = 9;
   private static final int METHODID_STREAM_INBOX = 10;
   private static final int METHODID_ACK_INBOX = 11;
+  private static final int METHODID_PUT_MESSAGING_BACKUP = 12;
+  private static final int METHODID_GET_MESSAGING_BACKUP = 13;
+  private static final int METHODID_DELETE_MESSAGING_BACKUP = 14;
 
   private static final class MethodHandlers<Req, Resp> implements
       io.grpc.stub.ServerCalls.UnaryMethod<Req, Resp>,
@@ -1408,6 +1690,18 @@ public final class MessagingServiceGrpc {
         case METHODID_ACK_INBOX:
           serviceImpl.ackInbox((com.udb.core.messaging.services.v1.AckInboxRequest) request,
               (io.grpc.stub.StreamObserver<com.udb.core.messaging.services.v1.AckInboxResponse>) responseObserver);
+          break;
+        case METHODID_PUT_MESSAGING_BACKUP:
+          serviceImpl.putMessagingBackup((com.udb.core.messaging.services.v1.PutMessagingBackupRequest) request,
+              (io.grpc.stub.StreamObserver<com.udb.core.messaging.services.v1.PutMessagingBackupResponse>) responseObserver);
+          break;
+        case METHODID_GET_MESSAGING_BACKUP:
+          serviceImpl.getMessagingBackup((com.udb.core.messaging.services.v1.GetMessagingBackupRequest) request,
+              (io.grpc.stub.StreamObserver<com.udb.core.messaging.services.v1.GetMessagingBackupResponse>) responseObserver);
+          break;
+        case METHODID_DELETE_MESSAGING_BACKUP:
+          serviceImpl.deleteMessagingBackup((com.udb.core.messaging.services.v1.DeleteMessagingBackupRequest) request,
+              (io.grpc.stub.StreamObserver<com.udb.core.messaging.services.v1.DeleteMessagingBackupResponse>) responseObserver);
           break;
         default:
           throw new AssertionError();
@@ -1511,6 +1805,27 @@ public final class MessagingServiceGrpc {
               com.udb.core.messaging.services.v1.AckInboxRequest,
               com.udb.core.messaging.services.v1.AckInboxResponse>(
                 service, METHODID_ACK_INBOX)))
+        .<com.udb.core.messaging.services.v1.PutMessagingBackupRequest, com.udb.core.messaging.services.v1.PutMessagingBackupResponse>addMethod(
+          getPutMessagingBackupMethod(),
+          io.grpc.stub.ServerCalls.<com.udb.core.messaging.services.v1.PutMessagingBackupRequest, com.udb.core.messaging.services.v1.PutMessagingBackupResponse>asyncUnaryCall(
+            new MethodHandlers<
+              com.udb.core.messaging.services.v1.PutMessagingBackupRequest,
+              com.udb.core.messaging.services.v1.PutMessagingBackupResponse>(
+                service, METHODID_PUT_MESSAGING_BACKUP)))
+        .<com.udb.core.messaging.services.v1.GetMessagingBackupRequest, com.udb.core.messaging.services.v1.GetMessagingBackupResponse>addMethod(
+          getGetMessagingBackupMethod(),
+          io.grpc.stub.ServerCalls.<com.udb.core.messaging.services.v1.GetMessagingBackupRequest, com.udb.core.messaging.services.v1.GetMessagingBackupResponse>asyncUnaryCall(
+            new MethodHandlers<
+              com.udb.core.messaging.services.v1.GetMessagingBackupRequest,
+              com.udb.core.messaging.services.v1.GetMessagingBackupResponse>(
+                service, METHODID_GET_MESSAGING_BACKUP)))
+        .<com.udb.core.messaging.services.v1.DeleteMessagingBackupRequest, com.udb.core.messaging.services.v1.DeleteMessagingBackupResponse>addMethod(
+          getDeleteMessagingBackupMethod(),
+          io.grpc.stub.ServerCalls.<com.udb.core.messaging.services.v1.DeleteMessagingBackupRequest, com.udb.core.messaging.services.v1.DeleteMessagingBackupResponse>asyncUnaryCall(
+            new MethodHandlers<
+              com.udb.core.messaging.services.v1.DeleteMessagingBackupRequest,
+              com.udb.core.messaging.services.v1.DeleteMessagingBackupResponse>(
+                service, METHODID_DELETE_MESSAGING_BACKUP)))
         .build();
   }
 
@@ -1571,6 +1886,9 @@ public final class MessagingServiceGrpc {
               .addMethod(getSendMessageMethod())
               .addMethod(getStreamInboxMethod())
               .addMethod(getAckInboxMethod())
+              .addMethod(getPutMessagingBackupMethod())
+              .addMethod(getGetMessagingBackupMethod())
+              .addMethod(getDeleteMessagingBackupMethod())
               .build();
         }
       }

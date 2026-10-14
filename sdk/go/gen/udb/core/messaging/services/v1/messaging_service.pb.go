@@ -2084,6 +2084,520 @@ func (x *AckInboxResponse) GetError() *v1.ApiError {
 	return nil
 }
 
+// A stored backup's metadata. The envelope itself travels only in
+// GetMessagingBackupResponse.ciphertext.
+type MessagingBackupInfo struct {
+	state     protoimpl.MessageState `protogen:"open.v1"`
+	TenantId  string                 `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	SubjectId string                 `protobuf:"bytes,2,opt,name=subject_id,json=subjectId,proto3" json:"subject_id,omitempty"`
+	BackupId  string                 `protobuf:"bytes,3,opt,name=backup_id,json=backupId,proto3" json:"backup_id,omitempty"`
+	SizeBytes int64                  `protobuf:"varint,4,opt,name=size_bytes,json=sizeBytes,proto3" json:"size_bytes,omitempty"`
+	// Lowercase hex SHA-256 of the envelope.
+	CiphertextSha256 string `protobuf:"bytes,5,opt,name=ciphertext_sha256,json=ciphertextSha256,proto3" json:"ciphertext_sha256,omitempty"`
+	// 1 on the first write, +1 on every overwrite.
+	Version       int64 `protobuf:"varint,6,opt,name=version,proto3" json:"version,omitempty"`
+	CreatedAtUnix int64 `protobuf:"varint,7,opt,name=created_at_unix,json=createdAtUnix,proto3" json:"created_at_unix,omitempty"`
+	UpdatedAtUnix int64 `protobuf:"varint,8,opt,name=updated_at_unix,json=updatedAtUnix,proto3" json:"updated_at_unix,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *MessagingBackupInfo) Reset() {
+	*x = MessagingBackupInfo{}
+	mi := &file_udb_core_messaging_services_v1_messaging_service_proto_msgTypes[27]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *MessagingBackupInfo) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MessagingBackupInfo) ProtoMessage() {}
+
+func (x *MessagingBackupInfo) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_messaging_services_v1_messaging_service_proto_msgTypes[27]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MessagingBackupInfo.ProtoReflect.Descriptor instead.
+func (*MessagingBackupInfo) Descriptor() ([]byte, []int) {
+	return file_udb_core_messaging_services_v1_messaging_service_proto_rawDescGZIP(), []int{27}
+}
+
+func (x *MessagingBackupInfo) GetTenantId() string {
+	if x != nil {
+		return x.TenantId
+	}
+	return ""
+}
+
+func (x *MessagingBackupInfo) GetSubjectId() string {
+	if x != nil {
+		return x.SubjectId
+	}
+	return ""
+}
+
+func (x *MessagingBackupInfo) GetBackupId() string {
+	if x != nil {
+		return x.BackupId
+	}
+	return ""
+}
+
+func (x *MessagingBackupInfo) GetSizeBytes() int64 {
+	if x != nil {
+		return x.SizeBytes
+	}
+	return 0
+}
+
+func (x *MessagingBackupInfo) GetCiphertextSha256() string {
+	if x != nil {
+		return x.CiphertextSha256
+	}
+	return ""
+}
+
+func (x *MessagingBackupInfo) GetVersion() int64 {
+	if x != nil {
+		return x.Version
+	}
+	return 0
+}
+
+func (x *MessagingBackupInfo) GetCreatedAtUnix() int64 {
+	if x != nil {
+		return x.CreatedAtUnix
+	}
+	return 0
+}
+
+func (x *MessagingBackupInfo) GetUpdatedAtUnix() int64 {
+	if x != nil {
+		return x.UpdatedAtUnix
+	}
+	return 0
+}
+
+type PutMessagingBackupRequest struct {
+	state    protoimpl.MessageState `protogen:"open.v1"`
+	TenantId string                 `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	// The owning principal; empty means "the caller". An end user may store only
+	// its own backup.
+	SubjectId string `protobuf:"bytes,2,opt,name=subject_id,json=subjectId,proto3" json:"subject_id,omitempty"`
+	// 1-128 characters from [A-Za-z0-9._-]; empty means "default".
+	BackupId string `protobuf:"bytes,3,opt,name=backup_id,json=backupId,proto3" json:"backup_id,omitempty"`
+	// The sealed backup envelope produced by the client (udb-mls `seal_backup`).
+	// Its plaintext and its key never reach the broker.
+	Ciphertext []byte `protobuf:"bytes,4,opt,name=ciphertext,proto3" json:"ciphertext,omitempty"`
+	// 0 writes unconditionally. A positive value makes the write a compare-and-swap:
+	// it succeeds only while a backup with exactly this version is stored, else
+	// FAILED_PRECONDITION with `missing.current_version` (0 = none stored).
+	ExpectedVersion int64 `protobuf:"varint,5,opt,name=expected_version,json=expectedVersion,proto3" json:"expected_version,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *PutMessagingBackupRequest) Reset() {
+	*x = PutMessagingBackupRequest{}
+	mi := &file_udb_core_messaging_services_v1_messaging_service_proto_msgTypes[28]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PutMessagingBackupRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PutMessagingBackupRequest) ProtoMessage() {}
+
+func (x *PutMessagingBackupRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_messaging_services_v1_messaging_service_proto_msgTypes[28]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PutMessagingBackupRequest.ProtoReflect.Descriptor instead.
+func (*PutMessagingBackupRequest) Descriptor() ([]byte, []int) {
+	return file_udb_core_messaging_services_v1_messaging_service_proto_rawDescGZIP(), []int{28}
+}
+
+func (x *PutMessagingBackupRequest) GetTenantId() string {
+	if x != nil {
+		return x.TenantId
+	}
+	return ""
+}
+
+func (x *PutMessagingBackupRequest) GetSubjectId() string {
+	if x != nil {
+		return x.SubjectId
+	}
+	return ""
+}
+
+func (x *PutMessagingBackupRequest) GetBackupId() string {
+	if x != nil {
+		return x.BackupId
+	}
+	return ""
+}
+
+func (x *PutMessagingBackupRequest) GetCiphertext() []byte {
+	if x != nil {
+		return x.Ciphertext
+	}
+	return nil
+}
+
+func (x *PutMessagingBackupRequest) GetExpectedVersion() int64 {
+	if x != nil {
+		return x.ExpectedVersion
+	}
+	return 0
+}
+
+type PutMessagingBackupResponse struct {
+	state  protoimpl.MessageState `protogen:"open.v1"`
+	Backup *MessagingBackupInfo   `protobuf:"bytes,1,opt,name=backup,proto3" json:"backup,omitempty"`
+	// True when this call created the backup, false when it replaced one.
+	Created bool   `protobuf:"varint,2,opt,name=created,proto3" json:"created,omitempty"`
+	Message string `protobuf:"bytes,3,opt,name=message,proto3" json:"message,omitempty"`
+	// Error information if operation failed
+	Error         *v1.ApiError `protobuf:"bytes,4,opt,name=error,proto3" json:"error,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PutMessagingBackupResponse) Reset() {
+	*x = PutMessagingBackupResponse{}
+	mi := &file_udb_core_messaging_services_v1_messaging_service_proto_msgTypes[29]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PutMessagingBackupResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PutMessagingBackupResponse) ProtoMessage() {}
+
+func (x *PutMessagingBackupResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_messaging_services_v1_messaging_service_proto_msgTypes[29]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PutMessagingBackupResponse.ProtoReflect.Descriptor instead.
+func (*PutMessagingBackupResponse) Descriptor() ([]byte, []int) {
+	return file_udb_core_messaging_services_v1_messaging_service_proto_rawDescGZIP(), []int{29}
+}
+
+func (x *PutMessagingBackupResponse) GetBackup() *MessagingBackupInfo {
+	if x != nil {
+		return x.Backup
+	}
+	return nil
+}
+
+func (x *PutMessagingBackupResponse) GetCreated() bool {
+	if x != nil {
+		return x.Created
+	}
+	return false
+}
+
+func (x *PutMessagingBackupResponse) GetMessage() string {
+	if x != nil {
+		return x.Message
+	}
+	return ""
+}
+
+func (x *PutMessagingBackupResponse) GetError() *v1.ApiError {
+	if x != nil {
+		return x.Error
+	}
+	return nil
+}
+
+type GetMessagingBackupRequest struct {
+	state    protoimpl.MessageState `protogen:"open.v1"`
+	TenantId string                 `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	// The owning principal; empty means "the caller".
+	SubjectId string `protobuf:"bytes,2,opt,name=subject_id,json=subjectId,proto3" json:"subject_id,omitempty"`
+	// Empty means "default".
+	BackupId      string `protobuf:"bytes,3,opt,name=backup_id,json=backupId,proto3" json:"backup_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetMessagingBackupRequest) Reset() {
+	*x = GetMessagingBackupRequest{}
+	mi := &file_udb_core_messaging_services_v1_messaging_service_proto_msgTypes[30]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetMessagingBackupRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetMessagingBackupRequest) ProtoMessage() {}
+
+func (x *GetMessagingBackupRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_messaging_services_v1_messaging_service_proto_msgTypes[30]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetMessagingBackupRequest.ProtoReflect.Descriptor instead.
+func (*GetMessagingBackupRequest) Descriptor() ([]byte, []int) {
+	return file_udb_core_messaging_services_v1_messaging_service_proto_rawDescGZIP(), []int{30}
+}
+
+func (x *GetMessagingBackupRequest) GetTenantId() string {
+	if x != nil {
+		return x.TenantId
+	}
+	return ""
+}
+
+func (x *GetMessagingBackupRequest) GetSubjectId() string {
+	if x != nil {
+		return x.SubjectId
+	}
+	return ""
+}
+
+func (x *GetMessagingBackupRequest) GetBackupId() string {
+	if x != nil {
+		return x.BackupId
+	}
+	return ""
+}
+
+type GetMessagingBackupResponse struct {
+	state  protoimpl.MessageState `protogen:"open.v1"`
+	Backup *MessagingBackupInfo   `protobuf:"bytes,1,opt,name=backup,proto3" json:"backup,omitempty"`
+	// The sealed envelope, exactly as stored.
+	Ciphertext []byte `protobuf:"bytes,2,opt,name=ciphertext,proto3" json:"ciphertext,omitempty"`
+	Message    string `protobuf:"bytes,3,opt,name=message,proto3" json:"message,omitempty"`
+	// Error information if operation failed
+	Error         *v1.ApiError `protobuf:"bytes,4,opt,name=error,proto3" json:"error,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetMessagingBackupResponse) Reset() {
+	*x = GetMessagingBackupResponse{}
+	mi := &file_udb_core_messaging_services_v1_messaging_service_proto_msgTypes[31]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetMessagingBackupResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetMessagingBackupResponse) ProtoMessage() {}
+
+func (x *GetMessagingBackupResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_messaging_services_v1_messaging_service_proto_msgTypes[31]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetMessagingBackupResponse.ProtoReflect.Descriptor instead.
+func (*GetMessagingBackupResponse) Descriptor() ([]byte, []int) {
+	return file_udb_core_messaging_services_v1_messaging_service_proto_rawDescGZIP(), []int{31}
+}
+
+func (x *GetMessagingBackupResponse) GetBackup() *MessagingBackupInfo {
+	if x != nil {
+		return x.Backup
+	}
+	return nil
+}
+
+func (x *GetMessagingBackupResponse) GetCiphertext() []byte {
+	if x != nil {
+		return x.Ciphertext
+	}
+	return nil
+}
+
+func (x *GetMessagingBackupResponse) GetMessage() string {
+	if x != nil {
+		return x.Message
+	}
+	return ""
+}
+
+func (x *GetMessagingBackupResponse) GetError() *v1.ApiError {
+	if x != nil {
+		return x.Error
+	}
+	return nil
+}
+
+type DeleteMessagingBackupRequest struct {
+	state    protoimpl.MessageState `protogen:"open.v1"`
+	TenantId string                 `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	// The owning principal; empty means "the caller".
+	SubjectId string `protobuf:"bytes,2,opt,name=subject_id,json=subjectId,proto3" json:"subject_id,omitempty"`
+	// Empty means "default".
+	BackupId      string `protobuf:"bytes,3,opt,name=backup_id,json=backupId,proto3" json:"backup_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeleteMessagingBackupRequest) Reset() {
+	*x = DeleteMessagingBackupRequest{}
+	mi := &file_udb_core_messaging_services_v1_messaging_service_proto_msgTypes[32]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteMessagingBackupRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteMessagingBackupRequest) ProtoMessage() {}
+
+func (x *DeleteMessagingBackupRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_messaging_services_v1_messaging_service_proto_msgTypes[32]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteMessagingBackupRequest.ProtoReflect.Descriptor instead.
+func (*DeleteMessagingBackupRequest) Descriptor() ([]byte, []int) {
+	return file_udb_core_messaging_services_v1_messaging_service_proto_rawDescGZIP(), []int{32}
+}
+
+func (x *DeleteMessagingBackupRequest) GetTenantId() string {
+	if x != nil {
+		return x.TenantId
+	}
+	return ""
+}
+
+func (x *DeleteMessagingBackupRequest) GetSubjectId() string {
+	if x != nil {
+		return x.SubjectId
+	}
+	return ""
+}
+
+func (x *DeleteMessagingBackupRequest) GetBackupId() string {
+	if x != nil {
+		return x.BackupId
+	}
+	return ""
+}
+
+type DeleteMessagingBackupResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// False when there was no backup to delete.
+	Deleted bool   `protobuf:"varint,1,opt,name=deleted,proto3" json:"deleted,omitempty"`
+	Message string `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`
+	// Error information if operation failed
+	Error         *v1.ApiError `protobuf:"bytes,3,opt,name=error,proto3" json:"error,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeleteMessagingBackupResponse) Reset() {
+	*x = DeleteMessagingBackupResponse{}
+	mi := &file_udb_core_messaging_services_v1_messaging_service_proto_msgTypes[33]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteMessagingBackupResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteMessagingBackupResponse) ProtoMessage() {}
+
+func (x *DeleteMessagingBackupResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_messaging_services_v1_messaging_service_proto_msgTypes[33]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteMessagingBackupResponse.ProtoReflect.Descriptor instead.
+func (*DeleteMessagingBackupResponse) Descriptor() ([]byte, []int) {
+	return file_udb_core_messaging_services_v1_messaging_service_proto_rawDescGZIP(), []int{33}
+}
+
+func (x *DeleteMessagingBackupResponse) GetDeleted() bool {
+	if x != nil {
+		return x.Deleted
+	}
+	return false
+}
+
+func (x *DeleteMessagingBackupResponse) GetMessage() string {
+	if x != nil {
+		return x.Message
+	}
+	return ""
+}
+
+func (x *DeleteMessagingBackupResponse) GetError() *v1.ApiError {
+	if x != nil {
+		return x.Error
+	}
+	return nil
+}
+
 var File_udb_core_messaging_services_v1_messaging_service_proto protoreflect.FileDescriptor
 
 const file_udb_core_messaging_services_v1_messaging_service_proto_rawDesc = "" +
@@ -2259,7 +2773,53 @@ const file_udb_core_messaging_services_v1_messaging_service_proto_rawDesc = "" +
 	"\tacked_seq\x18\x01 \x01(\x03R\backedSeq\x12\"\n" +
 	"\facknowledged\x18\x02 \x01(\x03R\facknowledged\x12\x18\n" +
 	"\amessage\x18\x03 \x01(\tR\amessage\x122\n" +
-	"\x05error\x18\x04 \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error: \x9a\xb2\x19\x1c\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\tmessagingP\x012\xb1-\n" +
+	"\x05error\x18\x04 \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error: \x9a\xb2\x19\x1c\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\tmessagingP\x01\"\xc6\x02\n" +
+	"\x13MessagingBackupInfo\x12\x1b\n" +
+	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x12\x1d\n" +
+	"\n" +
+	"subject_id\x18\x02 \x01(\tR\tsubjectId\x12\x1b\n" +
+	"\tbackup_id\x18\x03 \x01(\tR\bbackupId\x12\x1d\n" +
+	"\n" +
+	"size_bytes\x18\x04 \x01(\x03R\tsizeBytes\x12+\n" +
+	"\x11ciphertext_sha256\x18\x05 \x01(\tR\x10ciphertextSha256\x12\x18\n" +
+	"\aversion\x18\x06 \x01(\x03R\aversion\x12&\n" +
+	"\x0fcreated_at_unix\x18\a \x01(\x03R\rcreatedAtUnix\x12&\n" +
+	"\x0fupdated_at_unix\x18\b \x01(\x03R\rupdatedAtUnix: \x9a\xb2\x19\x1c\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\tmessagingP\x01\"\xe1\x01\n" +
+	"\x19PutMessagingBackupRequest\x12\x1b\n" +
+	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x12\x1d\n" +
+	"\n" +
+	"subject_id\x18\x02 \x01(\tR\tsubjectId\x12\x1b\n" +
+	"\tbackup_id\x18\x03 \x01(\tR\bbackupId\x12\x1e\n" +
+	"\n" +
+	"ciphertext\x18\x04 \x01(\fR\n" +
+	"ciphertext\x12)\n" +
+	"\x10expected_version\x18\x05 \x01(\x03R\x0fexpectedVersion: \x9a\xb2\x19\x1c\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\tmessagingP\x01\"\xf3\x01\n" +
+	"\x1aPutMessagingBackupResponse\x12K\n" +
+	"\x06backup\x18\x01 \x01(\v23.udb.core.messaging.services.v1.MessagingBackupInfoR\x06backup\x12\x18\n" +
+	"\acreated\x18\x02 \x01(\bR\acreated\x12\x18\n" +
+	"\amessage\x18\x03 \x01(\tR\amessage\x122\n" +
+	"\x05error\x18\x04 \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error: \x9a\xb2\x19\x1c\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\tmessagingP\x01\"\x96\x01\n" +
+	"\x19GetMessagingBackupRequest\x12\x1b\n" +
+	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x12\x1d\n" +
+	"\n" +
+	"subject_id\x18\x02 \x01(\tR\tsubjectId\x12\x1b\n" +
+	"\tbackup_id\x18\x03 \x01(\tR\bbackupId: \x9a\xb2\x19\x1c\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\tmessagingP\x01\"\xf9\x01\n" +
+	"\x1aGetMessagingBackupResponse\x12K\n" +
+	"\x06backup\x18\x01 \x01(\v23.udb.core.messaging.services.v1.MessagingBackupInfoR\x06backup\x12\x1e\n" +
+	"\n" +
+	"ciphertext\x18\x02 \x01(\fR\n" +
+	"ciphertext\x12\x18\n" +
+	"\amessage\x18\x03 \x01(\tR\amessage\x122\n" +
+	"\x05error\x18\x04 \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error: \x9a\xb2\x19\x1c\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\tmessagingP\x01\"\x99\x01\n" +
+	"\x1cDeleteMessagingBackupRequest\x12\x1b\n" +
+	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x12\x1d\n" +
+	"\n" +
+	"subject_id\x18\x02 \x01(\tR\tsubjectId\x12\x1b\n" +
+	"\tbackup_id\x18\x03 \x01(\tR\bbackupId: \x9a\xb2\x19\x1c\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\tmessagingP\x01\"\xa9\x01\n" +
+	"\x1dDeleteMessagingBackupResponse\x12\x18\n" +
+	"\adeleted\x18\x01 \x01(\bR\adeleted\x12\x18\n" +
+	"\amessage\x18\x02 \x01(\tR\amessage\x122\n" +
+	"\x05error\x18\x03 \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error: \x9a\xb2\x19\x1c\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\tmessagingP\x012\xe57\n" +
 	"\x10MessagingService\x12\xdc\x03\n" +
 	"\x17RegisterMessagingDevice\x12>.udb.core.messaging.services.v1.RegisterMessagingDeviceRequest\x1a?.udb.core.messaging.services.v1.RegisterMessagingDeviceResponse\"\xbf\x02\xca\xf3\x18X\b\x02\x1a'udb:messaging:register-messaging-device \x01J\x03\x01\x02\x04j!messaging.RegisterMessagingDevice\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18Y\b\x01\x12\x19register_messaging_device\x1a\x03udb(\xb0\xea\x010\x03@\x01J\tmessagingP\x01Z messagingRegisterMessagingDevice\xf2\xf3\x18C\n" +
 	"\tmessaging\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x02\x9a\xf4\x18\r\n" +
@@ -2291,7 +2851,13 @@ const file_udb_core_messaging_services_v1_messaging_service_proto_rawDesc = "" +
 	"\vStreamInbox\x122.udb.core.messaging.services.v1.StreamInboxRequest\x1a3.udb.core.messaging.services.v1.StreamInboxResponse\"\x81\x02\xca\xf3\x18?\b\x02\x1a\x1audb:messaging:stream-inbox \x01J\x03\x01\x02\x04j\x15messaging.StreamInbox\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18@\b\x01\x12\fstream_inbox\x1a\x03udb(\xb0\xea\x010\x03@\x01J\tmessagingP\x01Z\x14messagingStreamInbox\xf2\xf3\x18C\n" +
 	"\tmessaging\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x01\x82\xd3\xe4\x93\x02\x1f:\x01*\"\x1a/v1/messaging/inbox:stream0\x01\x12\xe2\x02\n" +
 	"\bAckInbox\x12/.udb.core.messaging.services.v1.AckInboxRequest\x1a0.udb.core.messaging.services.v1.AckInboxResponse\"\xf2\x01\xca\xf3\x189\b\x02\x1a\x17udb:messaging:ack-inbox \x01J\x03\x01\x02\x04j\x12messaging.AckInbox\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18:\b\x01\x12\tack_inbox\x1a\x03udb(\xb0\xea\x010\x03@\x01J\tmessagingP\x01Z\x11messagingAckInbox\xf2\xf3\x18C\n" +
-	"\tmessaging\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x02\x82\xd3\xe4\x93\x02\x1c:\x01*\"\x17/v1/messaging/inbox:ack\x1a\xf8\x02\xca\xf0\x19s\n" +
+	"\tmessaging\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x02\x82\xd3\xe4\x93\x02\x1c:\x01*\"\x17/v1/messaging/inbox:ack\x12\xb4\x03\n" +
+	"\x12PutMessagingBackup\x129.udb.core.messaging.services.v1.PutMessagingBackupRequest\x1a:.udb.core.messaging.services.v1.PutMessagingBackupResponse\"\xa6\x02\xca\xf3\x18N\b\x02\x1a\"udb:messaging:put-messaging-backup \x01J\x03\x01\x02\x04j\x1cmessaging.PutMessagingBackup\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18O\b\x01\x12\x14put_messaging_backup\x1a\x03udb(\xb0\xea\x010\x03@\x01J\tmessagingP\x01Z\x1bmessagingPutMessagingBackup\xf2\xf3\x18C\n" +
+	"\tmessaging\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x02\x82\xd3\xe4\x93\x02&:\x01*\x1a!/v1/messaging/backups/{backup_id}\x12\xb1\x03\n" +
+	"\x12GetMessagingBackup\x129.udb.core.messaging.services.v1.GetMessagingBackupRequest\x1a:.udb.core.messaging.services.v1.GetMessagingBackupResponse\"\xa3\x02\xca\xf3\x18N\b\x02\x1a\"udb:messaging:get-messaging-backup \x01J\x03\x01\x02\x04j\x1cmessaging.GetMessagingBackup\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18O\b\x01\x12\x14get_messaging_backup\x1a\x03udb(\xb0\xea\x010\x03@\x01J\tmessagingP\x01Z\x1bmessagingGetMessagingBackup\xf2\xf3\x18C\n" +
+	"\tmessaging\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x01\x82\xd3\xe4\x93\x02#\x12!/v1/messaging/backups/{backup_id}\x12\xc6\x03\n" +
+	"\x15DeleteMessagingBackup\x12<.udb.core.messaging.services.v1.DeleteMessagingBackupRequest\x1a=.udb.core.messaging.services.v1.DeleteMessagingBackupResponse\"\xaf\x02\xca\xf3\x18T\b\x02\x1a%udb:messaging:delete-messaging-backup \x01J\x03\x01\x02\x04j\x1fmessaging.DeleteMessagingBackup\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18U\b\x01\x12\x17delete_messaging_backup\x1a\x03udb(\xb0\xea\x010\x03@\x01J\tmessagingP\x01Z\x1emessagingDeleteMessagingBackup\xf2\xf3\x18C\n" +
+	"\tmessaging\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x03\x82\xd3\xe4\x93\x02#*!/v1/messaging/backups/{backup_id}\x1a\xf8\x02\xca\xf0\x19s\n" +
 	"\tmessaging\x12\tmessaging\x1a\tmessaging\"\tMessaging*\tmessaging0\x018\x01h\x01z\tmessaging\x82\x01\tmessaging\x8a\x01\tmessaging\x92\x01\x10native.messaging\xd2\xf0\x19\x1c\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\tmessagingP\x01\xda\xf0\x19\x95\x01\n" +
 	"\tmessaging\x12\x14udb/native/messaging\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\"\x1budb.native.messaging.config:\tmessagingJ\vUDB_API_KEYZ\x0fudb native lint\xe2\xf0\x19C\n" +
 	"\tmessaging\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGETB\xa6\x02\n" +
@@ -2309,7 +2875,7 @@ func file_udb_core_messaging_services_v1_messaging_service_proto_rawDescGZIP() [
 	return file_udb_core_messaging_services_v1_messaging_service_proto_rawDescData
 }
 
-var file_udb_core_messaging_services_v1_messaging_service_proto_msgTypes = make([]protoimpl.MessageInfo, 27)
+var file_udb_core_messaging_services_v1_messaging_service_proto_msgTypes = make([]protoimpl.MessageInfo, 34)
 var file_udb_core_messaging_services_v1_messaging_service_proto_goTypes = []any{
 	(*DirectoryDevice)(nil),                 // 0: udb.core.messaging.services.v1.DirectoryDevice
 	(*RegisterMessagingDeviceRequest)(nil),  // 1: udb.core.messaging.services.v1.RegisterMessagingDeviceRequest
@@ -2338,54 +2904,72 @@ var file_udb_core_messaging_services_v1_messaging_service_proto_goTypes = []any{
 	(*StreamInboxResponse)(nil),             // 24: udb.core.messaging.services.v1.StreamInboxResponse
 	(*AckInboxRequest)(nil),                 // 25: udb.core.messaging.services.v1.AckInboxRequest
 	(*AckInboxResponse)(nil),                // 26: udb.core.messaging.services.v1.AckInboxResponse
-	(*v1.ApiError)(nil),                     // 27: udb.core.common.v1.ApiError
+	(*MessagingBackupInfo)(nil),             // 27: udb.core.messaging.services.v1.MessagingBackupInfo
+	(*PutMessagingBackupRequest)(nil),       // 28: udb.core.messaging.services.v1.PutMessagingBackupRequest
+	(*PutMessagingBackupResponse)(nil),      // 29: udb.core.messaging.services.v1.PutMessagingBackupResponse
+	(*GetMessagingBackupRequest)(nil),       // 30: udb.core.messaging.services.v1.GetMessagingBackupRequest
+	(*GetMessagingBackupResponse)(nil),      // 31: udb.core.messaging.services.v1.GetMessagingBackupResponse
+	(*DeleteMessagingBackupRequest)(nil),    // 32: udb.core.messaging.services.v1.DeleteMessagingBackupRequest
+	(*DeleteMessagingBackupResponse)(nil),   // 33: udb.core.messaging.services.v1.DeleteMessagingBackupResponse
+	(*v1.ApiError)(nil),                     // 34: udb.core.common.v1.ApiError
 }
 var file_udb_core_messaging_services_v1_messaging_service_proto_depIdxs = []int32{
 	0,  // 0: udb.core.messaging.services.v1.RegisterMessagingDeviceResponse.device:type_name -> udb.core.messaging.services.v1.DirectoryDevice
-	27, // 1: udb.core.messaging.services.v1.RegisterMessagingDeviceResponse.error:type_name -> udb.core.common.v1.ApiError
+	34, // 1: udb.core.messaging.services.v1.RegisterMessagingDeviceResponse.error:type_name -> udb.core.common.v1.ApiError
 	0,  // 2: udb.core.messaging.services.v1.ListMessagingDevicesResponse.devices:type_name -> udb.core.messaging.services.v1.DirectoryDevice
-	27, // 3: udb.core.messaging.services.v1.ListMessagingDevicesResponse.error:type_name -> udb.core.common.v1.ApiError
-	27, // 4: udb.core.messaging.services.v1.RevokeMessagingDeviceResponse.error:type_name -> udb.core.common.v1.ApiError
-	27, // 5: udb.core.messaging.services.v1.PublishKeyPackagesResponse.error:type_name -> udb.core.common.v1.ApiError
+	34, // 3: udb.core.messaging.services.v1.ListMessagingDevicesResponse.error:type_name -> udb.core.common.v1.ApiError
+	34, // 4: udb.core.messaging.services.v1.RevokeMessagingDeviceResponse.error:type_name -> udb.core.common.v1.ApiError
+	34, // 5: udb.core.messaging.services.v1.PublishKeyPackagesResponse.error:type_name -> udb.core.common.v1.ApiError
 	10, // 6: udb.core.messaging.services.v1.ClaimKeyPackagesResponse.key_packages:type_name -> udb.core.messaging.services.v1.ClaimedKeyPackage
-	27, // 7: udb.core.messaging.services.v1.ClaimKeyPackagesResponse.error:type_name -> udb.core.common.v1.ApiError
-	27, // 8: udb.core.messaging.services.v1.GetKeyPackageStockResponse.error:type_name -> udb.core.common.v1.ApiError
-	27, // 9: udb.core.messaging.services.v1.CreateGroupResponse.error:type_name -> udb.core.common.v1.ApiError
-	27, // 10: udb.core.messaging.services.v1.SubmitCommitResponse.error:type_name -> udb.core.common.v1.ApiError
-	27, // 11: udb.core.messaging.services.v1.GetGroupInfoResponse.error:type_name -> udb.core.common.v1.ApiError
-	27, // 12: udb.core.messaging.services.v1.SendMessageResponse.error:type_name -> udb.core.common.v1.ApiError
+	34, // 7: udb.core.messaging.services.v1.ClaimKeyPackagesResponse.error:type_name -> udb.core.common.v1.ApiError
+	34, // 8: udb.core.messaging.services.v1.GetKeyPackageStockResponse.error:type_name -> udb.core.common.v1.ApiError
+	34, // 9: udb.core.messaging.services.v1.CreateGroupResponse.error:type_name -> udb.core.common.v1.ApiError
+	34, // 10: udb.core.messaging.services.v1.SubmitCommitResponse.error:type_name -> udb.core.common.v1.ApiError
+	34, // 11: udb.core.messaging.services.v1.GetGroupInfoResponse.error:type_name -> udb.core.common.v1.ApiError
+	34, // 12: udb.core.messaging.services.v1.SendMessageResponse.error:type_name -> udb.core.common.v1.ApiError
 	22, // 13: udb.core.messaging.services.v1.StreamInboxResponse.entry:type_name -> udb.core.messaging.services.v1.InboxEntry
-	27, // 14: udb.core.messaging.services.v1.StreamInboxResponse.error:type_name -> udb.core.common.v1.ApiError
-	27, // 15: udb.core.messaging.services.v1.AckInboxResponse.error:type_name -> udb.core.common.v1.ApiError
-	1,  // 16: udb.core.messaging.services.v1.MessagingService.RegisterMessagingDevice:input_type -> udb.core.messaging.services.v1.RegisterMessagingDeviceRequest
-	3,  // 17: udb.core.messaging.services.v1.MessagingService.ListMessagingDevices:input_type -> udb.core.messaging.services.v1.ListMessagingDevicesRequest
-	5,  // 18: udb.core.messaging.services.v1.MessagingService.RevokeMessagingDevice:input_type -> udb.core.messaging.services.v1.RevokeMessagingDeviceRequest
-	7,  // 19: udb.core.messaging.services.v1.MessagingService.PublishKeyPackages:input_type -> udb.core.messaging.services.v1.PublishKeyPackagesRequest
-	9,  // 20: udb.core.messaging.services.v1.MessagingService.ClaimKeyPackages:input_type -> udb.core.messaging.services.v1.ClaimKeyPackagesRequest
-	12, // 21: udb.core.messaging.services.v1.MessagingService.GetKeyPackageStock:input_type -> udb.core.messaging.services.v1.GetKeyPackageStockRequest
-	14, // 22: udb.core.messaging.services.v1.MessagingService.CreateGroup:input_type -> udb.core.messaging.services.v1.CreateGroupRequest
-	16, // 23: udb.core.messaging.services.v1.MessagingService.SubmitCommit:input_type -> udb.core.messaging.services.v1.SubmitCommitRequest
-	18, // 24: udb.core.messaging.services.v1.MessagingService.GetGroupInfo:input_type -> udb.core.messaging.services.v1.GetGroupInfoRequest
-	20, // 25: udb.core.messaging.services.v1.MessagingService.SendMessage:input_type -> udb.core.messaging.services.v1.SendMessageRequest
-	23, // 26: udb.core.messaging.services.v1.MessagingService.StreamInbox:input_type -> udb.core.messaging.services.v1.StreamInboxRequest
-	25, // 27: udb.core.messaging.services.v1.MessagingService.AckInbox:input_type -> udb.core.messaging.services.v1.AckInboxRequest
-	2,  // 28: udb.core.messaging.services.v1.MessagingService.RegisterMessagingDevice:output_type -> udb.core.messaging.services.v1.RegisterMessagingDeviceResponse
-	4,  // 29: udb.core.messaging.services.v1.MessagingService.ListMessagingDevices:output_type -> udb.core.messaging.services.v1.ListMessagingDevicesResponse
-	6,  // 30: udb.core.messaging.services.v1.MessagingService.RevokeMessagingDevice:output_type -> udb.core.messaging.services.v1.RevokeMessagingDeviceResponse
-	8,  // 31: udb.core.messaging.services.v1.MessagingService.PublishKeyPackages:output_type -> udb.core.messaging.services.v1.PublishKeyPackagesResponse
-	11, // 32: udb.core.messaging.services.v1.MessagingService.ClaimKeyPackages:output_type -> udb.core.messaging.services.v1.ClaimKeyPackagesResponse
-	13, // 33: udb.core.messaging.services.v1.MessagingService.GetKeyPackageStock:output_type -> udb.core.messaging.services.v1.GetKeyPackageStockResponse
-	15, // 34: udb.core.messaging.services.v1.MessagingService.CreateGroup:output_type -> udb.core.messaging.services.v1.CreateGroupResponse
-	17, // 35: udb.core.messaging.services.v1.MessagingService.SubmitCommit:output_type -> udb.core.messaging.services.v1.SubmitCommitResponse
-	19, // 36: udb.core.messaging.services.v1.MessagingService.GetGroupInfo:output_type -> udb.core.messaging.services.v1.GetGroupInfoResponse
-	21, // 37: udb.core.messaging.services.v1.MessagingService.SendMessage:output_type -> udb.core.messaging.services.v1.SendMessageResponse
-	24, // 38: udb.core.messaging.services.v1.MessagingService.StreamInbox:output_type -> udb.core.messaging.services.v1.StreamInboxResponse
-	26, // 39: udb.core.messaging.services.v1.MessagingService.AckInbox:output_type -> udb.core.messaging.services.v1.AckInboxResponse
-	28, // [28:40] is the sub-list for method output_type
-	16, // [16:28] is the sub-list for method input_type
-	16, // [16:16] is the sub-list for extension type_name
-	16, // [16:16] is the sub-list for extension extendee
-	0,  // [0:16] is the sub-list for field type_name
+	34, // 14: udb.core.messaging.services.v1.StreamInboxResponse.error:type_name -> udb.core.common.v1.ApiError
+	34, // 15: udb.core.messaging.services.v1.AckInboxResponse.error:type_name -> udb.core.common.v1.ApiError
+	27, // 16: udb.core.messaging.services.v1.PutMessagingBackupResponse.backup:type_name -> udb.core.messaging.services.v1.MessagingBackupInfo
+	34, // 17: udb.core.messaging.services.v1.PutMessagingBackupResponse.error:type_name -> udb.core.common.v1.ApiError
+	27, // 18: udb.core.messaging.services.v1.GetMessagingBackupResponse.backup:type_name -> udb.core.messaging.services.v1.MessagingBackupInfo
+	34, // 19: udb.core.messaging.services.v1.GetMessagingBackupResponse.error:type_name -> udb.core.common.v1.ApiError
+	34, // 20: udb.core.messaging.services.v1.DeleteMessagingBackupResponse.error:type_name -> udb.core.common.v1.ApiError
+	1,  // 21: udb.core.messaging.services.v1.MessagingService.RegisterMessagingDevice:input_type -> udb.core.messaging.services.v1.RegisterMessagingDeviceRequest
+	3,  // 22: udb.core.messaging.services.v1.MessagingService.ListMessagingDevices:input_type -> udb.core.messaging.services.v1.ListMessagingDevicesRequest
+	5,  // 23: udb.core.messaging.services.v1.MessagingService.RevokeMessagingDevice:input_type -> udb.core.messaging.services.v1.RevokeMessagingDeviceRequest
+	7,  // 24: udb.core.messaging.services.v1.MessagingService.PublishKeyPackages:input_type -> udb.core.messaging.services.v1.PublishKeyPackagesRequest
+	9,  // 25: udb.core.messaging.services.v1.MessagingService.ClaimKeyPackages:input_type -> udb.core.messaging.services.v1.ClaimKeyPackagesRequest
+	12, // 26: udb.core.messaging.services.v1.MessagingService.GetKeyPackageStock:input_type -> udb.core.messaging.services.v1.GetKeyPackageStockRequest
+	14, // 27: udb.core.messaging.services.v1.MessagingService.CreateGroup:input_type -> udb.core.messaging.services.v1.CreateGroupRequest
+	16, // 28: udb.core.messaging.services.v1.MessagingService.SubmitCommit:input_type -> udb.core.messaging.services.v1.SubmitCommitRequest
+	18, // 29: udb.core.messaging.services.v1.MessagingService.GetGroupInfo:input_type -> udb.core.messaging.services.v1.GetGroupInfoRequest
+	20, // 30: udb.core.messaging.services.v1.MessagingService.SendMessage:input_type -> udb.core.messaging.services.v1.SendMessageRequest
+	23, // 31: udb.core.messaging.services.v1.MessagingService.StreamInbox:input_type -> udb.core.messaging.services.v1.StreamInboxRequest
+	25, // 32: udb.core.messaging.services.v1.MessagingService.AckInbox:input_type -> udb.core.messaging.services.v1.AckInboxRequest
+	28, // 33: udb.core.messaging.services.v1.MessagingService.PutMessagingBackup:input_type -> udb.core.messaging.services.v1.PutMessagingBackupRequest
+	30, // 34: udb.core.messaging.services.v1.MessagingService.GetMessagingBackup:input_type -> udb.core.messaging.services.v1.GetMessagingBackupRequest
+	32, // 35: udb.core.messaging.services.v1.MessagingService.DeleteMessagingBackup:input_type -> udb.core.messaging.services.v1.DeleteMessagingBackupRequest
+	2,  // 36: udb.core.messaging.services.v1.MessagingService.RegisterMessagingDevice:output_type -> udb.core.messaging.services.v1.RegisterMessagingDeviceResponse
+	4,  // 37: udb.core.messaging.services.v1.MessagingService.ListMessagingDevices:output_type -> udb.core.messaging.services.v1.ListMessagingDevicesResponse
+	6,  // 38: udb.core.messaging.services.v1.MessagingService.RevokeMessagingDevice:output_type -> udb.core.messaging.services.v1.RevokeMessagingDeviceResponse
+	8,  // 39: udb.core.messaging.services.v1.MessagingService.PublishKeyPackages:output_type -> udb.core.messaging.services.v1.PublishKeyPackagesResponse
+	11, // 40: udb.core.messaging.services.v1.MessagingService.ClaimKeyPackages:output_type -> udb.core.messaging.services.v1.ClaimKeyPackagesResponse
+	13, // 41: udb.core.messaging.services.v1.MessagingService.GetKeyPackageStock:output_type -> udb.core.messaging.services.v1.GetKeyPackageStockResponse
+	15, // 42: udb.core.messaging.services.v1.MessagingService.CreateGroup:output_type -> udb.core.messaging.services.v1.CreateGroupResponse
+	17, // 43: udb.core.messaging.services.v1.MessagingService.SubmitCommit:output_type -> udb.core.messaging.services.v1.SubmitCommitResponse
+	19, // 44: udb.core.messaging.services.v1.MessagingService.GetGroupInfo:output_type -> udb.core.messaging.services.v1.GetGroupInfoResponse
+	21, // 45: udb.core.messaging.services.v1.MessagingService.SendMessage:output_type -> udb.core.messaging.services.v1.SendMessageResponse
+	24, // 46: udb.core.messaging.services.v1.MessagingService.StreamInbox:output_type -> udb.core.messaging.services.v1.StreamInboxResponse
+	26, // 47: udb.core.messaging.services.v1.MessagingService.AckInbox:output_type -> udb.core.messaging.services.v1.AckInboxResponse
+	29, // 48: udb.core.messaging.services.v1.MessagingService.PutMessagingBackup:output_type -> udb.core.messaging.services.v1.PutMessagingBackupResponse
+	31, // 49: udb.core.messaging.services.v1.MessagingService.GetMessagingBackup:output_type -> udb.core.messaging.services.v1.GetMessagingBackupResponse
+	33, // 50: udb.core.messaging.services.v1.MessagingService.DeleteMessagingBackup:output_type -> udb.core.messaging.services.v1.DeleteMessagingBackupResponse
+	36, // [36:51] is the sub-list for method output_type
+	21, // [21:36] is the sub-list for method input_type
+	21, // [21:21] is the sub-list for extension type_name
+	21, // [21:21] is the sub-list for extension extendee
+	0,  // [0:21] is the sub-list for field type_name
 }
 
 func init() { file_udb_core_messaging_services_v1_messaging_service_proto_init() }
@@ -2399,7 +2983,7 @@ func file_udb_core_messaging_services_v1_messaging_service_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_udb_core_messaging_services_v1_messaging_service_proto_rawDesc), len(file_udb_core_messaging_services_v1_messaging_service_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   27,
+			NumMessages:   34,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

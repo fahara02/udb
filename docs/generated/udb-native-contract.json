@@ -1,6 +1,6 @@
 {
   "schema_version": "1",
-  "descriptor_sha256": "3ed970b837c8db7b5bd21717395cf78d6933d853ba07f3da305c4ac9ed635b0b",
+  "descriptor_sha256": "d3ceaed6dcd8d8463f6d202d84ac2e0ad0b38f5a461122c5e0ae128e45bbd395",
   "contract_version": "7.2.0",
   "udb_version": "0.5.33",
   "protocol_version": "1.0.0",
@@ -18882,7 +18882,7 @@
         ],
         "degraded_when_missing": []
       },
-      "rpc_count": 12,
+      "rpc_count": 15,
       "rpcs": [
         {
           "method": "AckInbox",
@@ -19160,6 +19160,96 @@
           }
         },
         {
+          "method": "DeleteMessagingBackup",
+          "method_alias": "delete_messaging_backup",
+          "rest_operation_id": "messagingDeleteMessagingBackup",
+          "path": "/udb.core.messaging.services.v1.MessagingService/DeleteMessagingBackup",
+          "kind": "unary",
+          "operation_kind": "destructive",
+          "read_only": false,
+          "input": ".udb.core.messaging.services.v1.DeleteMessagingBackupRequest",
+          "output": ".udb.core.messaging.services.v1.DeleteMessagingBackupResponse",
+          "auth_mode": "bearer",
+          "scopes": [
+            "udb:messaging:delete-messaging-backup"
+          ],
+          "roles": [],
+          "policy_ref": "",
+          "tenant_required": true,
+          "tenant_field": "",
+          "project_field": "",
+          "endpoint_security": {
+            "auth_mode": "bearer",
+            "roles": [],
+            "scopes": [
+              "udb:messaging:delete-messaging-backup"
+            ],
+            "policy_ref": "",
+            "tenant_required": true,
+            "csrf_required": false,
+            "internal_grpc_only": false,
+            "required_assurance_level": 0,
+            "allowed_credential_types": [
+              1,
+              2,
+              4
+            ],
+            "rate_limit_policy_ref": "",
+            "abuse_policy_ref": "",
+            "audit_event_type": "",
+            "decision_resource": "messaging.DeleteMessagingBackup",
+            "owner_field": "",
+            "tenant_field": "",
+            "project_field": "",
+            "idempotency_required": false,
+            "request_context_required": true
+          },
+          "event_contract": null,
+          "emits": [],
+          "sdk_surface": {
+            "include_in_facade": true,
+            "method_alias": "delete_messaging_backup",
+            "rest_operation_id": "messagingDeleteMessagingBackup",
+            "required_credential_provider": "udb",
+            "streaming_helper_type": "",
+            "default_deadline_ms": 30000,
+            "default_max_attempts": 3,
+            "browser_safe": false,
+            "server_only": true,
+            "boilerplate_recipe_tags": [
+              "messaging"
+            ],
+            "generate_minimal_example": true
+          },
+          "dependency_contract": {
+            "required_native_services": [
+              "messaging"
+            ],
+            "optional_native_services": [],
+            "required_backends": [
+              "postgres"
+            ],
+            "optional_backends": [],
+            "required_features": [],
+            "required_env": [
+              "UDB_NATIVE_SERVICES_ENABLED",
+              "UDB_GRPC_TARGET"
+            ],
+            "degraded_when_missing": []
+          },
+          "precondition_contract": null,
+          "readback_contract": null,
+          "lifecycle_contract": null,
+          "idempotency_contract": null,
+          "error_contract": null,
+          "http": {
+            "verb": "delete",
+            "path": "/v1/messaging/backups/{backup_id}",
+            "body": "",
+            "response_body": ""
+          }
+        },
+        {
           "method": "GetGroupInfo",
           "method_alias": "get_group_info",
           "rest_operation_id": "messagingGetGroupInfo",
@@ -19340,6 +19430,96 @@
           }
         },
         {
+          "method": "GetMessagingBackup",
+          "method_alias": "get_messaging_backup",
+          "rest_operation_id": "messagingGetMessagingBackup",
+          "path": "/udb.core.messaging.services.v1.MessagingService/GetMessagingBackup",
+          "kind": "unary",
+          "operation_kind": "read_only",
+          "read_only": true,
+          "input": ".udb.core.messaging.services.v1.GetMessagingBackupRequest",
+          "output": ".udb.core.messaging.services.v1.GetMessagingBackupResponse",
+          "auth_mode": "bearer",
+          "scopes": [
+            "udb:messaging:get-messaging-backup"
+          ],
+          "roles": [],
+          "policy_ref": "",
+          "tenant_required": true,
+          "tenant_field": "",
+          "project_field": "",
+          "endpoint_security": {
+            "auth_mode": "bearer",
+            "roles": [],
+            "scopes": [
+              "udb:messaging:get-messaging-backup"
+            ],
+            "policy_ref": "",
+            "tenant_required": true,
+            "csrf_required": false,
+            "internal_grpc_only": false,
+            "required_assurance_level": 0,
+            "allowed_credential_types": [
+              1,
+              2,
+              4
+            ],
+            "rate_limit_policy_ref": "",
+            "abuse_policy_ref": "",
+            "audit_event_type": "",
+            "decision_resource": "messaging.GetMessagingBackup",
+            "owner_field": "",
+            "tenant_field": "",
+            "project_field": "",
+            "idempotency_required": false,
+            "request_context_required": true
+          },
+          "event_contract": null,
+          "emits": [],
+          "sdk_surface": {
+            "include_in_facade": true,
+            "method_alias": "get_messaging_backup",
+            "rest_operation_id": "messagingGetMessagingBackup",
+            "required_credential_provider": "udb",
+            "streaming_helper_type": "",
+            "default_deadline_ms": 30000,
+            "default_max_attempts": 3,
+            "browser_safe": false,
+            "server_only": true,
+            "boilerplate_recipe_tags": [
+              "messaging"
+            ],
+            "generate_minimal_example": true
+          },
+          "dependency_contract": {
+            "required_native_services": [
+              "messaging"
+            ],
+            "optional_native_services": [],
+            "required_backends": [
+              "postgres"
+            ],
+            "optional_backends": [],
+            "required_features": [],
+            "required_env": [
+              "UDB_NATIVE_SERVICES_ENABLED",
+              "UDB_GRPC_TARGET"
+            ],
+            "degraded_when_missing": []
+          },
+          "precondition_contract": null,
+          "readback_contract": null,
+          "lifecycle_contract": null,
+          "idempotency_contract": null,
+          "error_contract": null,
+          "http": {
+            "verb": "get",
+            "path": "/v1/messaging/backups/{backup_id}",
+            "body": "",
+            "response_body": ""
+          }
+        },
+        {
           "method": "ListMessagingDevices",
           "method_alias": "list_messaging_devices",
           "rest_operation_id": "messagingListMessagingDevices",
@@ -19515,6 +19695,96 @@
           "http": {
             "verb": "post",
             "path": "/v1/messaging/devices/{device_id}/key-packages",
+            "body": "*",
+            "response_body": ""
+          }
+        },
+        {
+          "method": "PutMessagingBackup",
+          "method_alias": "put_messaging_backup",
+          "rest_operation_id": "messagingPutMessagingBackup",
+          "path": "/udb.core.messaging.services.v1.MessagingService/PutMessagingBackup",
+          "kind": "unary",
+          "operation_kind": "mutation",
+          "read_only": false,
+          "input": ".udb.core.messaging.services.v1.PutMessagingBackupRequest",
+          "output": ".udb.core.messaging.services.v1.PutMessagingBackupResponse",
+          "auth_mode": "bearer",
+          "scopes": [
+            "udb:messaging:put-messaging-backup"
+          ],
+          "roles": [],
+          "policy_ref": "",
+          "tenant_required": true,
+          "tenant_field": "",
+          "project_field": "",
+          "endpoint_security": {
+            "auth_mode": "bearer",
+            "roles": [],
+            "scopes": [
+              "udb:messaging:put-messaging-backup"
+            ],
+            "policy_ref": "",
+            "tenant_required": true,
+            "csrf_required": false,
+            "internal_grpc_only": false,
+            "required_assurance_level": 0,
+            "allowed_credential_types": [
+              1,
+              2,
+              4
+            ],
+            "rate_limit_policy_ref": "",
+            "abuse_policy_ref": "",
+            "audit_event_type": "",
+            "decision_resource": "messaging.PutMessagingBackup",
+            "owner_field": "",
+            "tenant_field": "",
+            "project_field": "",
+            "idempotency_required": false,
+            "request_context_required": true
+          },
+          "event_contract": null,
+          "emits": [],
+          "sdk_surface": {
+            "include_in_facade": true,
+            "method_alias": "put_messaging_backup",
+            "rest_operation_id": "messagingPutMessagingBackup",
+            "required_credential_provider": "udb",
+            "streaming_helper_type": "",
+            "default_deadline_ms": 30000,
+            "default_max_attempts": 3,
+            "browser_safe": false,
+            "server_only": true,
+            "boilerplate_recipe_tags": [
+              "messaging"
+            ],
+            "generate_minimal_example": true
+          },
+          "dependency_contract": {
+            "required_native_services": [
+              "messaging"
+            ],
+            "optional_native_services": [],
+            "required_backends": [
+              "postgres"
+            ],
+            "optional_backends": [],
+            "required_features": [],
+            "required_env": [
+              "UDB_NATIVE_SERVICES_ENABLED",
+              "UDB_GRPC_TARGET"
+            ],
+            "degraded_when_missing": []
+          },
+          "precondition_contract": null,
+          "readback_contract": null,
+          "lifecycle_contract": null,
+          "idempotency_contract": null,
+          "error_contract": null,
+          "http": {
+            "verb": "put",
+            "path": "/v1/messaging/backups/{backup_id}",
             "body": "*",
             "response_body": ""
           }
@@ -34589,7 +34859,7 @@
       ]
     }
   ],
-  "message_count": 1096,
+  "message_count": 1104,
   "messages": [
     {
       "message": "udb.core.analytics.entity.v1.ExecutorPerformanceSummary",
@@ -113468,6 +113738,222 @@
       ]
     },
     {
+      "message": "udb.core.messaging.entity.v1.MessagingBackup",
+      "file": "udb/core/messaging/entity/v1/messaging_backup.proto",
+      "sdk_surface": null,
+      "event_contract": null,
+      "dependency_contract": null,
+      "table_security": {
+        "tenant_isolation_mode": "tenant",
+        "project_isolation_mode": "",
+        "tenant_column": "tenant_id",
+        "project_column": "",
+        "rls_policy_template": "tenant_id = current_setting('app.current_tenant_id')",
+        "soft_delete_mode": "none",
+        "retention_class": "messaging.backup",
+        "retention_days": 3650,
+        "audit_mode": 2,
+        "encryption_profile": "tenant",
+        "pii_profile": "restricted",
+        "break_glass_visible": false,
+        "export_eligible": false,
+        "data_residency_policy_ref": "tenant.data_residency"
+      },
+      "field_count": 10,
+      "fields": [
+        {
+          "name": "id",
+          "number": 1,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "tenant_id",
+          "number": 2,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "subject_id",
+          "number": 3,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "backup_id",
+          "number": 4,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "ciphertext",
+          "number": 5,
+          "type": "12",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "size_bytes",
+          "number": 6,
+          "type": "3",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "ciphertext_sha256",
+          "number": 7,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "version",
+          "number": 8,
+          "type": "3",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "created_at",
+          "number": 9,
+          "type": ".google.protobuf.Timestamp",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "updated_at",
+          "number": 10,
+          "type": ".google.protobuf.Timestamp",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        }
+      ]
+    },
+    {
       "message": "udb.core.messaging.entity.v1.MessagingDevice",
       "file": "udb/core/messaging/entity/v1/messaging_device.proto",
       "sdk_surface": null,
@@ -115293,6 +115779,170 @@
       ]
     },
     {
+      "message": "udb.core.messaging.services.v1.DeleteMessagingBackupRequest",
+      "file": "udb/core/messaging/services/v1/messaging_service.proto",
+      "sdk_surface": {
+        "include_in_facade": true,
+        "method_alias": "",
+        "rest_operation_id": "",
+        "required_credential_provider": "udb",
+        "streaming_helper_type": "",
+        "default_deadline_ms": 30000,
+        "default_max_attempts": 3,
+        "browser_safe": false,
+        "server_only": true,
+        "boilerplate_recipe_tags": [
+          "messaging"
+        ],
+        "generate_minimal_example": true
+      },
+      "event_contract": null,
+      "dependency_contract": null,
+      "table_security": null,
+      "field_count": 3,
+      "fields": [
+        {
+          "name": "tenant_id",
+          "number": 1,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "subject_id",
+          "number": 2,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "backup_id",
+          "number": 3,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        }
+      ]
+    },
+    {
+      "message": "udb.core.messaging.services.v1.DeleteMessagingBackupResponse",
+      "file": "udb/core/messaging/services/v1/messaging_service.proto",
+      "sdk_surface": {
+        "include_in_facade": true,
+        "method_alias": "",
+        "rest_operation_id": "",
+        "required_credential_provider": "udb",
+        "streaming_helper_type": "",
+        "default_deadline_ms": 30000,
+        "default_max_attempts": 3,
+        "browser_safe": false,
+        "server_only": true,
+        "boilerplate_recipe_tags": [
+          "messaging"
+        ],
+        "generate_minimal_example": true
+      },
+      "event_contract": null,
+      "dependency_contract": null,
+      "table_security": null,
+      "field_count": 3,
+      "fields": [
+        {
+          "name": "deleted",
+          "number": 1,
+          "type": "8",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "message",
+          "number": 2,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "error",
+          "number": 3,
+          "type": ".udb.core.common.v1.ApiError",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        }
+      ]
+    },
+    {
       "message": "udb.core.messaging.services.v1.DirectoryDevice",
       "file": "udb/core/messaging/services/v1/messaging_service.proto",
       "sdk_surface": {
@@ -115893,6 +116543,189 @@
       ]
     },
     {
+      "message": "udb.core.messaging.services.v1.GetMessagingBackupRequest",
+      "file": "udb/core/messaging/services/v1/messaging_service.proto",
+      "sdk_surface": {
+        "include_in_facade": true,
+        "method_alias": "",
+        "rest_operation_id": "",
+        "required_credential_provider": "udb",
+        "streaming_helper_type": "",
+        "default_deadline_ms": 30000,
+        "default_max_attempts": 3,
+        "browser_safe": false,
+        "server_only": true,
+        "boilerplate_recipe_tags": [
+          "messaging"
+        ],
+        "generate_minimal_example": true
+      },
+      "event_contract": null,
+      "dependency_contract": null,
+      "table_security": null,
+      "field_count": 3,
+      "fields": [
+        {
+          "name": "tenant_id",
+          "number": 1,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "subject_id",
+          "number": 2,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "backup_id",
+          "number": 3,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        }
+      ]
+    },
+    {
+      "message": "udb.core.messaging.services.v1.GetMessagingBackupResponse",
+      "file": "udb/core/messaging/services/v1/messaging_service.proto",
+      "sdk_surface": {
+        "include_in_facade": true,
+        "method_alias": "",
+        "rest_operation_id": "",
+        "required_credential_provider": "udb",
+        "streaming_helper_type": "",
+        "default_deadline_ms": 30000,
+        "default_max_attempts": 3,
+        "browser_safe": false,
+        "server_only": true,
+        "boilerplate_recipe_tags": [
+          "messaging"
+        ],
+        "generate_minimal_example": true
+      },
+      "event_contract": null,
+      "dependency_contract": null,
+      "table_security": null,
+      "field_count": 4,
+      "fields": [
+        {
+          "name": "backup",
+          "number": 1,
+          "type": ".udb.core.messaging.services.v1.MessagingBackupInfo",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "ciphertext",
+          "number": 2,
+          "type": "12",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "message",
+          "number": 3,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "error",
+          "number": 4,
+          "type": ".udb.core.common.v1.ApiError",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        }
+      ]
+    },
+    {
       "message": "udb.core.messaging.services.v1.InboxEntry",
       "file": "udb/core/messaging/services/v1/messaging_service.proto",
       "sdk_surface": {
@@ -116253,6 +117086,183 @@
       ]
     },
     {
+      "message": "udb.core.messaging.services.v1.MessagingBackupInfo",
+      "file": "udb/core/messaging/services/v1/messaging_service.proto",
+      "sdk_surface": {
+        "include_in_facade": true,
+        "method_alias": "",
+        "rest_operation_id": "",
+        "required_credential_provider": "udb",
+        "streaming_helper_type": "",
+        "default_deadline_ms": 30000,
+        "default_max_attempts": 3,
+        "browser_safe": false,
+        "server_only": true,
+        "boilerplate_recipe_tags": [
+          "messaging"
+        ],
+        "generate_minimal_example": true
+      },
+      "event_contract": null,
+      "dependency_contract": null,
+      "table_security": null,
+      "field_count": 8,
+      "fields": [
+        {
+          "name": "tenant_id",
+          "number": 1,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "subject_id",
+          "number": 2,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "backup_id",
+          "number": 3,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "size_bytes",
+          "number": 4,
+          "type": "3",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "ciphertext_sha256",
+          "number": 5,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "version",
+          "number": 6,
+          "type": "3",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "created_at_unix",
+          "number": 7,
+          "type": "3",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "updated_at_unix",
+          "number": 8,
+          "type": "3",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        }
+      ]
+    },
+    {
       "message": "udb.core.messaging.services.v1.PublishKeyPackagesRequest",
       "file": "udb/core/messaging/services/v1/messaging_service.proto",
       "sdk_surface": {
@@ -116455,6 +117465,227 @@
         {
           "name": "error",
           "number": 5,
+          "type": ".udb.core.common.v1.ApiError",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        }
+      ]
+    },
+    {
+      "message": "udb.core.messaging.services.v1.PutMessagingBackupRequest",
+      "file": "udb/core/messaging/services/v1/messaging_service.proto",
+      "sdk_surface": {
+        "include_in_facade": true,
+        "method_alias": "",
+        "rest_operation_id": "",
+        "required_credential_provider": "udb",
+        "streaming_helper_type": "",
+        "default_deadline_ms": 30000,
+        "default_max_attempts": 3,
+        "browser_safe": false,
+        "server_only": true,
+        "boilerplate_recipe_tags": [
+          "messaging"
+        ],
+        "generate_minimal_example": true
+      },
+      "event_contract": null,
+      "dependency_contract": null,
+      "table_security": null,
+      "field_count": 5,
+      "fields": [
+        {
+          "name": "tenant_id",
+          "number": 1,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "subject_id",
+          "number": 2,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "backup_id",
+          "number": 3,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "ciphertext",
+          "number": 4,
+          "type": "12",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "expected_version",
+          "number": 5,
+          "type": "3",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        }
+      ]
+    },
+    {
+      "message": "udb.core.messaging.services.v1.PutMessagingBackupResponse",
+      "file": "udb/core/messaging/services/v1/messaging_service.proto",
+      "sdk_surface": {
+        "include_in_facade": true,
+        "method_alias": "",
+        "rest_operation_id": "",
+        "required_credential_provider": "udb",
+        "streaming_helper_type": "",
+        "default_deadline_ms": 30000,
+        "default_max_attempts": 3,
+        "browser_safe": false,
+        "server_only": true,
+        "boilerplate_recipe_tags": [
+          "messaging"
+        ],
+        "generate_minimal_example": true
+      },
+      "event_contract": null,
+      "dependency_contract": null,
+      "table_security": null,
+      "field_count": 4,
+      "fields": [
+        {
+          "name": "backup",
+          "number": 1,
+          "type": ".udb.core.messaging.services.v1.MessagingBackupInfo",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "created",
+          "number": 2,
+          "type": "8",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "message",
+          "number": 3,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "error",
+          "number": 4,
           "type": ".udb.core.common.v1.ApiError",
           "column_security": null,
           "scalar_security": {
@@ -168431,7 +169662,7 @@
       ]
     }
   ],
-  "table_count": 78,
+  "table_count": 79,
   "tables": [
     {
       "message": "udb.core.analytics.entity.v1.ExecutorPerformanceSummary",
@@ -183390,6 +184621,219 @@
           "name": "metadata_json",
           "number": 10,
           "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        }
+      ]
+    },
+    {
+      "message": "udb.core.messaging.entity.v1.MessagingBackup",
+      "file": "udb/core/messaging/entity/v1/messaging_backup.proto",
+      "table_security": {
+        "tenant_isolation_mode": "tenant",
+        "project_isolation_mode": "",
+        "tenant_column": "tenant_id",
+        "project_column": "",
+        "rls_policy_template": "tenant_id = current_setting('app.current_tenant_id')",
+        "soft_delete_mode": "none",
+        "retention_class": "messaging.backup",
+        "retention_days": 3650,
+        "audit_mode": 2,
+        "encryption_profile": "tenant",
+        "pii_profile": "restricted",
+        "break_glass_visible": false,
+        "export_eligible": false,
+        "data_residency_policy_ref": "tenant.data_residency"
+      },
+      "field_count": 10,
+      "fields": [
+        {
+          "name": "id",
+          "number": 1,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "tenant_id",
+          "number": 2,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "subject_id",
+          "number": 3,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "backup_id",
+          "number": 4,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "ciphertext",
+          "number": 5,
+          "type": "12",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "size_bytes",
+          "number": 6,
+          "type": "3",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "ciphertext_sha256",
+          "number": 7,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "version",
+          "number": 8,
+          "type": "3",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "created_at",
+          "number": 9,
+          "type": ".google.protobuf.Timestamp",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "updated_at",
+          "number": 10,
+          "type": ".google.protobuf.Timestamp",
           "column_security": null,
           "scalar_security": {
             "pii": false,

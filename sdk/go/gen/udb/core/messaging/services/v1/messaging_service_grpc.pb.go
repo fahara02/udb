@@ -31,6 +31,9 @@ const (
 	MessagingService_SendMessage_FullMethodName             = "/udb.core.messaging.services.v1.MessagingService/SendMessage"
 	MessagingService_StreamInbox_FullMethodName             = "/udb.core.messaging.services.v1.MessagingService/StreamInbox"
 	MessagingService_AckInbox_FullMethodName                = "/udb.core.messaging.services.v1.MessagingService/AckInbox"
+	MessagingService_PutMessagingBackup_FullMethodName      = "/udb.core.messaging.services.v1.MessagingService/PutMessagingBackup"
+	MessagingService_GetMessagingBackup_FullMethodName      = "/udb.core.messaging.services.v1.MessagingService/GetMessagingBackup"
+	MessagingService_DeleteMessagingBackup_FullMethodName   = "/udb.core.messaging.services.v1.MessagingService/DeleteMessagingBackup"
 )
 
 // MessagingServiceClient is the client API for MessagingService service.
@@ -190,6 +193,42 @@ type MessagingServiceClient interface {
 	// Idempotency fields: no declared method replay contract.
 	// End UDB contract.
 	AckInbox(ctx context.Context, in *AckInboxRequest, opts ...grpc.CallOption) (*AckInboxResponse, error)
+	// Store (or replace) the calling principal's opt-in, client-encrypted history
+	// backup. The client seals the export with a key derived from a recovery secret
+	// the broker never sees; the broker keeps only the opaque envelope and refuses
+	// a body that is not one. With expected_version > 0 the write is a
+	// compare-and-swap against the stored version.
+	// UDB contract: /udb.core.messaging.services.v1.MessagingService/PutMessagingBackup
+	// Listener: control plane.
+	// Scopes: udb:messaging:put-messaging-backup.
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
+	PutMessagingBackup(ctx context.Context, in *PutMessagingBackupRequest, opts ...grpc.CallOption) (*PutMessagingBackupResponse, error)
+	// Return a principal's stored backup envelope for restore on a new device. Only
+	// the principal itself (or a service account acting for it) can read it.
+	// UDB contract: /udb.core.messaging.services.v1.MessagingService/GetMessagingBackup
+	// Listener: control plane.
+	// Scopes: udb:messaging:get-messaging-backup.
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
+	GetMessagingBackup(ctx context.Context, in *GetMessagingBackupRequest, opts ...grpc.CallOption) (*GetMessagingBackupResponse, error)
+	// Erase a principal's stored backup. Deleting a backup that does not exist
+	// succeeds with deleted=false.
+	// UDB contract: /udb.core.messaging.services.v1.MessagingService/DeleteMessagingBackup
+	// Listener: control plane.
+	// Scopes: udb:messaging:delete-messaging-backup.
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
+	// Operation kind: destructive.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
+	DeleteMessagingBackup(ctx context.Context, in *DeleteMessagingBackupRequest, opts ...grpc.CallOption) (*DeleteMessagingBackupResponse, error)
 }
 
 type messagingServiceClient struct {
@@ -329,6 +368,36 @@ func (c *messagingServiceClient) AckInbox(ctx context.Context, in *AckInboxReque
 	return out, nil
 }
 
+func (c *messagingServiceClient) PutMessagingBackup(ctx context.Context, in *PutMessagingBackupRequest, opts ...grpc.CallOption) (*PutMessagingBackupResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(PutMessagingBackupResponse)
+	err := c.cc.Invoke(ctx, MessagingService_PutMessagingBackup_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *messagingServiceClient) GetMessagingBackup(ctx context.Context, in *GetMessagingBackupRequest, opts ...grpc.CallOption) (*GetMessagingBackupResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetMessagingBackupResponse)
+	err := c.cc.Invoke(ctx, MessagingService_GetMessagingBackup_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *messagingServiceClient) DeleteMessagingBackup(ctx context.Context, in *DeleteMessagingBackupRequest, opts ...grpc.CallOption) (*DeleteMessagingBackupResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DeleteMessagingBackupResponse)
+	err := c.cc.Invoke(ctx, MessagingService_DeleteMessagingBackup_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // MessagingServiceServer is the server API for MessagingService service.
 // All implementations should embed UnimplementedMessagingServiceServer
 // for forward compatibility.
@@ -390,6 +459,18 @@ type MessagingServiceServer interface {
 	// Advance a device's inbox cursor. Acknowledged entries become collectable by
 	// the retention worker.
 	AckInbox(context.Context, *AckInboxRequest) (*AckInboxResponse, error)
+	// Store (or replace) the calling principal's opt-in, client-encrypted history
+	// backup. The client seals the export with a key derived from a recovery secret
+	// the broker never sees; the broker keeps only the opaque envelope and refuses
+	// a body that is not one. With expected_version > 0 the write is a
+	// compare-and-swap against the stored version.
+	PutMessagingBackup(context.Context, *PutMessagingBackupRequest) (*PutMessagingBackupResponse, error)
+	// Return a principal's stored backup envelope for restore on a new device. Only
+	// the principal itself (or a service account acting for it) can read it.
+	GetMessagingBackup(context.Context, *GetMessagingBackupRequest) (*GetMessagingBackupResponse, error)
+	// Erase a principal's stored backup. Deleting a backup that does not exist
+	// succeeds with deleted=false.
+	DeleteMessagingBackup(context.Context, *DeleteMessagingBackupRequest) (*DeleteMessagingBackupResponse, error)
 }
 
 // UnimplementedMessagingServiceServer should be embedded to have
@@ -434,6 +515,15 @@ func (UnimplementedMessagingServiceServer) StreamInbox(*StreamInboxRequest, grpc
 }
 func (UnimplementedMessagingServiceServer) AckInbox(context.Context, *AckInboxRequest) (*AckInboxResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method AckInbox not implemented")
+}
+func (UnimplementedMessagingServiceServer) PutMessagingBackup(context.Context, *PutMessagingBackupRequest) (*PutMessagingBackupResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method PutMessagingBackup not implemented")
+}
+func (UnimplementedMessagingServiceServer) GetMessagingBackup(context.Context, *GetMessagingBackupRequest) (*GetMessagingBackupResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetMessagingBackup not implemented")
+}
+func (UnimplementedMessagingServiceServer) DeleteMessagingBackup(context.Context, *DeleteMessagingBackupRequest) (*DeleteMessagingBackupResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method DeleteMessagingBackup not implemented")
 }
 func (UnimplementedMessagingServiceServer) testEmbeddedByValue() {}
 
@@ -664,6 +754,60 @@ func _MessagingService_AckInbox_Handler(srv interface{}, ctx context.Context, de
 	return interceptor(ctx, in, info, handler)
 }
 
+func _MessagingService_PutMessagingBackup_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PutMessagingBackupRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MessagingServiceServer).PutMessagingBackup(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: MessagingService_PutMessagingBackup_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MessagingServiceServer).PutMessagingBackup(ctx, req.(*PutMessagingBackupRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _MessagingService_GetMessagingBackup_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetMessagingBackupRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MessagingServiceServer).GetMessagingBackup(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: MessagingService_GetMessagingBackup_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MessagingServiceServer).GetMessagingBackup(ctx, req.(*GetMessagingBackupRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _MessagingService_DeleteMessagingBackup_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteMessagingBackupRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MessagingServiceServer).DeleteMessagingBackup(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: MessagingService_DeleteMessagingBackup_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MessagingServiceServer).DeleteMessagingBackup(ctx, req.(*DeleteMessagingBackupRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // MessagingService_ServiceDesc is the grpc.ServiceDesc for MessagingService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -714,6 +858,18 @@ var MessagingService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "AckInbox",
 			Handler:    _MessagingService_AckInbox_Handler,
+		},
+		{
+			MethodName: "PutMessagingBackup",
+			Handler:    _MessagingService_PutMessagingBackup_Handler,
+		},
+		{
+			MethodName: "GetMessagingBackup",
+			Handler:    _MessagingService_GetMessagingBackup_Handler,
+		},
+		{
+			MethodName: "DeleteMessagingBackup",
+			Handler:    _MessagingService_DeleteMessagingBackup_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{

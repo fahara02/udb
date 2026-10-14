@@ -7,7 +7,7 @@ Inputs:
 - `sdk/go/udbclient/generated_client.go`
 - `docs/site/bench-results.json`
 
-Current generated RPC surface: 401 RPCs across 29 services.
+Current generated RPC surface: 404 RPCs across 29 services.
 
 The benchmark body manifest is checked against generated SDK metadata before this
 file is written. A missing row, extra row, alias drift, operationId drift, or
@@ -48,7 +48,7 @@ stack, with request bodies taken from the plan the shared Python seed exports.
 | IdentityProviderService | 27 | 6 | 21 | 0 | 0 |
 | LiveQueryService | 1 | 1 | 0 | 0 | 0 |
 | LockService | 5 | 2 | 3 | 0 | 0 |
-| MessagingService | 12 | 4 | 7 | 1 | 0 |
+| MessagingService | 15 | 5 | 8 | 2 | 0 |
 | MeteringService | 6 | 4 | 2 | 0 | 0 |
 | NotificationService | 12 | 7 | 5 | 0 | 0 |
 | PeerService | 5 | 2 | 3 | 0 | 0 |
@@ -362,10 +362,13 @@ benchmark harnesses.
 | MessagingService | `MessagingService/AckInbox` | `ack_inbox` | `messagingAckInbox` | MUTATION | messaging.md |
 | MessagingService | `MessagingService/ClaimKeyPackages` | `claim_key_packages` | `messagingClaimKeyPackages` | MUTATION | messaging.md |
 | MessagingService | `MessagingService/CreateGroup` | `create_group` | `messagingCreateGroup` | MUTATION | messaging.md |
+| MessagingService | `MessagingService/DeleteMessagingBackup` | `delete_messaging_backup` | `messagingDeleteMessagingBackup` | DESTRUCTIVE | messaging.md |
 | MessagingService | `MessagingService/GetGroupInfo` | `get_group_info` | `messagingGetGroupInfo` | READ_ONLY | messaging.md |
 | MessagingService | `MessagingService/GetKeyPackageStock` | `get_key_package_stock` | `messagingGetKeyPackageStock` | READ_ONLY | messaging.md |
+| MessagingService | `MessagingService/GetMessagingBackup` | `get_messaging_backup` | `messagingGetMessagingBackup` | READ_ONLY | messaging.md |
 | MessagingService | `MessagingService/ListMessagingDevices` | `list_messaging_devices` | `messagingListMessagingDevices` | READ_ONLY | messaging.md |
 | MessagingService | `MessagingService/PublishKeyPackages` | `publish_key_packages` | `messagingPublishKeyPackages` | MUTATION | messaging.md |
+| MessagingService | `MessagingService/PutMessagingBackup` | `put_messaging_backup` | `messagingPutMessagingBackup` | MUTATION | messaging.md |
 | MessagingService | `MessagingService/RegisterMessagingDevice` | `register_messaging_device` | `messagingRegisterMessagingDevice` | MUTATION | messaging.md |
 | MessagingService | `MessagingService/RevokeMessagingDevice` | `revoke_messaging_device` | `messagingRevokeMessagingDevice` | DESTRUCTIVE | messaging.md |
 | MessagingService | `MessagingService/SendMessage` | `send_message` | `messagingSendMessage` | MUTATION | messaging.md |

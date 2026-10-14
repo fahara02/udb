@@ -31806,6 +31806,462 @@
         "x-udb-operation-kind": "mutation"
       }
     },
+    "/v1/messaging/backups/{backupId}": {
+      "get": {
+        "summary": "Return a principal's stored backup envelope for restore on a new device. Only\nthe principal itself (or a service account acting for it) can read it.",
+        "operationId": "messagingGetMessagingBackup",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetMessagingBackupResponse"
+            }
+          },
+          "400": {
+            "description": "gRPC INVALID_ARGUMENT/FAILED_PRECONDITION mapped to HTTP 400. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "INVALID_ARGUMENT",
+              "FAILED_PRECONDITION"
+            ]
+          },
+          "401": {
+            "description": "gRPC UNAUTHENTICATED mapped to HTTP 401. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "UNAUTHENTICATED"
+            ]
+          },
+          "403": {
+            "description": "gRPC PERMISSION_DENIED mapped to HTTP 403. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "PERMISSION_DENIED"
+            ]
+          },
+          "404": {
+            "description": "gRPC NOT_FOUND mapped to HTTP 404. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "NOT_FOUND"
+            ]
+          },
+          "409": {
+            "description": "gRPC ALREADY_EXISTS/ABORTED mapped to HTTP 409. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "ALREADY_EXISTS",
+              "ABORTED"
+            ]
+          },
+          "429": {
+            "description": "gRPC RESOURCE_EXHAUSTED mapped to HTTP 429. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "RESOURCE_EXHAUSTED"
+            ]
+          },
+          "500": {
+            "description": "gRPC UNKNOWN/INTERNAL/DATA_LOSS mapped to HTTP 500. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "UNKNOWN",
+              "INTERNAL",
+              "DATA_LOSS"
+            ]
+          },
+          "501": {
+            "description": "gRPC UNIMPLEMENTED mapped to HTTP 501. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "UNIMPLEMENTED"
+            ]
+          },
+          "503": {
+            "description": "gRPC UNAVAILABLE mapped to HTTP 503. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "UNAVAILABLE"
+            ]
+          },
+          "504": {
+            "description": "gRPC DEADLINE_EXCEEDED mapped to HTTP 504. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "DEADLINE_EXCEEDED"
+            ]
+          },
+          "default": {
+            "description": "Unexpected gRPC error response. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "UNKNOWN"
+            ]
+          }
+        },
+        "parameters": [
+          {
+            "name": "backupId",
+            "description": "Empty means \"default\".",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "subjectId",
+            "description": "The owning principal; empty means \"the caller\".",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "MessagingService"
+        ],
+        "x-udb-sdk-alias": "get_messaging_backup",
+        "x-udb-scope": [
+          "udb:messaging:get-messaging-backup"
+        ],
+        "x-udb-retry-safe": true,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "messaging",
+        "x-udb-operation-kind": "read_only"
+      },
+      "delete": {
+        "summary": "Erase a principal's stored backup. Deleting a backup that does not exist\nsucceeds with deleted=false.",
+        "operationId": "messagingDeleteMessagingBackup",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DeleteMessagingBackupResponse"
+            }
+          },
+          "400": {
+            "description": "gRPC INVALID_ARGUMENT/FAILED_PRECONDITION mapped to HTTP 400. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "INVALID_ARGUMENT",
+              "FAILED_PRECONDITION"
+            ]
+          },
+          "401": {
+            "description": "gRPC UNAUTHENTICATED mapped to HTTP 401. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "UNAUTHENTICATED"
+            ]
+          },
+          "403": {
+            "description": "gRPC PERMISSION_DENIED mapped to HTTP 403. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "PERMISSION_DENIED"
+            ]
+          },
+          "404": {
+            "description": "gRPC NOT_FOUND mapped to HTTP 404. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "NOT_FOUND"
+            ]
+          },
+          "409": {
+            "description": "gRPC ALREADY_EXISTS/ABORTED mapped to HTTP 409. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "ALREADY_EXISTS",
+              "ABORTED"
+            ]
+          },
+          "429": {
+            "description": "gRPC RESOURCE_EXHAUSTED mapped to HTTP 429. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "RESOURCE_EXHAUSTED"
+            ]
+          },
+          "500": {
+            "description": "gRPC UNKNOWN/INTERNAL/DATA_LOSS mapped to HTTP 500. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "UNKNOWN",
+              "INTERNAL",
+              "DATA_LOSS"
+            ]
+          },
+          "501": {
+            "description": "gRPC UNIMPLEMENTED mapped to HTTP 501. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "UNIMPLEMENTED"
+            ]
+          },
+          "503": {
+            "description": "gRPC UNAVAILABLE mapped to HTTP 503. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "UNAVAILABLE"
+            ]
+          },
+          "504": {
+            "description": "gRPC DEADLINE_EXCEEDED mapped to HTTP 504. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "DEADLINE_EXCEEDED"
+            ]
+          },
+          "default": {
+            "description": "Unexpected gRPC error response. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "UNKNOWN"
+            ]
+          }
+        },
+        "parameters": [
+          {
+            "name": "backupId",
+            "description": "Empty means \"default\".",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "subjectId",
+            "description": "The owning principal; empty means \"the caller\".",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "MessagingService"
+        ],
+        "x-udb-sdk-alias": "delete_messaging_backup",
+        "x-udb-scope": [
+          "udb:messaging:delete-messaging-backup"
+        ],
+        "x-udb-retry-safe": false,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "messaging",
+        "x-udb-operation-kind": "destructive"
+      },
+      "put": {
+        "summary": "Store (or replace) the calling principal's opt-in, client-encrypted history\nbackup. The client seals the export with a key derived from a recovery secret\nthe broker never sees; the broker keeps only the opaque envelope and refuses\na body that is not one. With expected_version > 0 the write is a\ncompare-and-swap against the stored version.",
+        "operationId": "messagingPutMessagingBackup",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1PutMessagingBackupResponse"
+            }
+          },
+          "400": {
+            "description": "gRPC INVALID_ARGUMENT/FAILED_PRECONDITION mapped to HTTP 400. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "INVALID_ARGUMENT",
+              "FAILED_PRECONDITION"
+            ]
+          },
+          "401": {
+            "description": "gRPC UNAUTHENTICATED mapped to HTTP 401. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "UNAUTHENTICATED"
+            ]
+          },
+          "403": {
+            "description": "gRPC PERMISSION_DENIED mapped to HTTP 403. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "PERMISSION_DENIED"
+            ]
+          },
+          "404": {
+            "description": "gRPC NOT_FOUND mapped to HTTP 404. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "NOT_FOUND"
+            ]
+          },
+          "409": {
+            "description": "gRPC ALREADY_EXISTS/ABORTED mapped to HTTP 409. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "ALREADY_EXISTS",
+              "ABORTED"
+            ]
+          },
+          "429": {
+            "description": "gRPC RESOURCE_EXHAUSTED mapped to HTTP 429. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "RESOURCE_EXHAUSTED"
+            ]
+          },
+          "500": {
+            "description": "gRPC UNKNOWN/INTERNAL/DATA_LOSS mapped to HTTP 500. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "UNKNOWN",
+              "INTERNAL",
+              "DATA_LOSS"
+            ]
+          },
+          "501": {
+            "description": "gRPC UNIMPLEMENTED mapped to HTTP 501. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "UNIMPLEMENTED"
+            ]
+          },
+          "503": {
+            "description": "gRPC UNAVAILABLE mapped to HTTP 503. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "UNAVAILABLE"
+            ]
+          },
+          "504": {
+            "description": "gRPC DEADLINE_EXCEEDED mapped to HTTP 504. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "DEADLINE_EXCEEDED"
+            ]
+          },
+          "default": {
+            "description": "Unexpected gRPC error response. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "UNKNOWN"
+            ]
+          }
+        },
+        "parameters": [
+          {
+            "name": "backupId",
+            "description": "1-128 characters from [A-Za-z0-9._-]; empty means \"default\".",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/MessagingServicePutMessagingBackupBody"
+            }
+          }
+        ],
+        "tags": [
+          "MessagingService"
+        ],
+        "x-udb-sdk-alias": "put_messaging_backup",
+        "x-udb-scope": [
+          "udb:messaging:put-messaging-backup"
+        ],
+        "x-udb-retry-safe": false,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "messaging",
+        "x-udb-operation-kind": "mutation"
+      }
+    },
     "/v1/messaging/devices": {
       "get": {
         "summary": "List a principal's devices with their key fingerprints, so a peer can verify\nkeys out of band (safety numbers). Revoked devices are included only when\nasked for.",
@@ -49435,6 +49891,28 @@
         }
       }
     },
+    "MessagingServicePutMessagingBackupBody": {
+      "type": "object",
+      "properties": {
+        "tenantId": {
+          "type": "string"
+        },
+        "subjectId": {
+          "type": "string",
+          "description": "The owning principal; empty means \"the caller\". An end user may store only\nits own backup."
+        },
+        "ciphertext": {
+          "type": "string",
+          "format": "byte",
+          "description": "The sealed backup envelope produced by the client (udb-mls `seal_backup`).\nIts plaintext and its key never reach the broker."
+        },
+        "expectedVersion": {
+          "type": "string",
+          "format": "int64",
+          "description": "0 writes unconditionally. A positive value makes the write a compare-and-swap:\nit succeeds only while a backup with exactly this version is stored, else\nFAILED_PRECONDITION with `missing.current_version` (0 = none stored)."
+        }
+      }
+    },
     "MessagingServiceRevokeMessagingDeviceBody": {
       "type": "object",
       "properties": {
@@ -53012,6 +53490,22 @@
         }
       }
     },
+    "v1DeleteMessagingBackupResponse": {
+      "type": "object",
+      "properties": {
+        "deleted": {
+          "type": "boolean",
+          "description": "False when there was no backup to delete."
+        },
+        "message": {
+          "type": "string"
+        },
+        "error": {
+          "$ref": "#/definitions/v1ApiError",
+          "title": "Error information if operation failed"
+        }
+      }
+    },
     "v1DeleteMode": {
       "type": "string",
       "enum": [
@@ -54758,6 +55252,26 @@
         },
         "found": {
           "type": "boolean"
+        },
+        "message": {
+          "type": "string"
+        },
+        "error": {
+          "$ref": "#/definitions/v1ApiError",
+          "title": "Error information if operation failed"
+        }
+      }
+    },
+    "v1GetMessagingBackupResponse": {
+      "type": "object",
+      "properties": {
+        "backup": {
+          "$ref": "#/definitions/v1MessagingBackupInfo"
+        },
+        "ciphertext": {
+          "type": "string",
+          "format": "byte",
+          "description": "The sealed envelope, exactly as stored."
         },
         "message": {
           "type": "string"
@@ -56825,6 +57339,42 @@
         }
       }
     },
+    "v1MessagingBackupInfo": {
+      "type": "object",
+      "properties": {
+        "tenantId": {
+          "type": "string"
+        },
+        "subjectId": {
+          "type": "string"
+        },
+        "backupId": {
+          "type": "string"
+        },
+        "sizeBytes": {
+          "type": "string",
+          "format": "int64"
+        },
+        "ciphertextSha256": {
+          "type": "string",
+          "description": "Lowercase hex SHA-256 of the envelope."
+        },
+        "version": {
+          "type": "string",
+          "format": "int64",
+          "description": "1 on the first write, +1 on every overwrite."
+        },
+        "createdAtUnix": {
+          "type": "string",
+          "format": "int64"
+        },
+        "updatedAtUnix": {
+          "type": "string",
+          "format": "int64"
+        }
+      },
+      "description": "A stored backup's metadata. The envelope itself travels only in\nGetMessagingBackupResponse.ciphertext."
+    },
     "v1MfaChallengePurpose": {
       "type": "string",
       "enum": [
@@ -58469,6 +59019,25 @@
         },
         "error": {
           "$ref": "#/definitions/v1ApiError"
+        }
+      }
+    },
+    "v1PutMessagingBackupResponse": {
+      "type": "object",
+      "properties": {
+        "backup": {
+          "$ref": "#/definitions/v1MessagingBackupInfo"
+        },
+        "created": {
+          "type": "boolean",
+          "description": "True when this call created the backup, false when it replaced one."
+        },
+        "message": {
+          "type": "string"
+        },
+        "error": {
+          "$ref": "#/definitions/v1ApiError",
+          "title": "Error information if operation failed"
         }
       }
     },

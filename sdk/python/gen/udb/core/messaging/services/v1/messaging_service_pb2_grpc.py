@@ -82,6 +82,21 @@ class MessagingServiceStub(object):
                 request_serializer=udb_dot_core_dot_messaging_dot_services_dot_v1_dot_messaging__service__pb2.AckInboxRequest.SerializeToString,
                 response_deserializer=udb_dot_core_dot_messaging_dot_services_dot_v1_dot_messaging__service__pb2.AckInboxResponse.FromString,
                 _registered_method=True)
+        self.PutMessagingBackup = channel.unary_unary(
+                '/udb.core.messaging.services.v1.MessagingService/PutMessagingBackup',
+                request_serializer=udb_dot_core_dot_messaging_dot_services_dot_v1_dot_messaging__service__pb2.PutMessagingBackupRequest.SerializeToString,
+                response_deserializer=udb_dot_core_dot_messaging_dot_services_dot_v1_dot_messaging__service__pb2.PutMessagingBackupResponse.FromString,
+                _registered_method=True)
+        self.GetMessagingBackup = channel.unary_unary(
+                '/udb.core.messaging.services.v1.MessagingService/GetMessagingBackup',
+                request_serializer=udb_dot_core_dot_messaging_dot_services_dot_v1_dot_messaging__service__pb2.GetMessagingBackupRequest.SerializeToString,
+                response_deserializer=udb_dot_core_dot_messaging_dot_services_dot_v1_dot_messaging__service__pb2.GetMessagingBackupResponse.FromString,
+                _registered_method=True)
+        self.DeleteMessagingBackup = channel.unary_unary(
+                '/udb.core.messaging.services.v1.MessagingService/DeleteMessagingBackup',
+                request_serializer=udb_dot_core_dot_messaging_dot_services_dot_v1_dot_messaging__service__pb2.DeleteMessagingBackupRequest.SerializeToString,
+                response_deserializer=udb_dot_core_dot_messaging_dot_services_dot_v1_dot_messaging__service__pb2.DeleteMessagingBackupResponse.FromString,
+                _registered_method=True)
 
 
 class MessagingServiceServicer(object):
@@ -203,6 +218,33 @@ class MessagingServiceServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def PutMessagingBackup(self, request, context):
+        """Store (or replace) the calling principal's opt-in, client-encrypted history
+        backup. The client seals the export with a key derived from a recovery secret
+        the broker never sees; the broker keeps only the opaque envelope and refuses
+        a body that is not one. With expected_version > 0 the write is a
+        compare-and-swap against the stored version.
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def GetMessagingBackup(self, request, context):
+        """Return a principal's stored backup envelope for restore on a new device. Only
+        the principal itself (or a service account acting for it) can read it.
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def DeleteMessagingBackup(self, request, context):
+        """Erase a principal's stored backup. Deleting a backup that does not exist
+        succeeds with deleted=false.
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_MessagingServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
@@ -265,6 +307,21 @@ def add_MessagingServiceServicer_to_server(servicer, server):
                     servicer.AckInbox,
                     request_deserializer=udb_dot_core_dot_messaging_dot_services_dot_v1_dot_messaging__service__pb2.AckInboxRequest.FromString,
                     response_serializer=udb_dot_core_dot_messaging_dot_services_dot_v1_dot_messaging__service__pb2.AckInboxResponse.SerializeToString,
+            ),
+            'PutMessagingBackup': grpc.unary_unary_rpc_method_handler(
+                    servicer.PutMessagingBackup,
+                    request_deserializer=udb_dot_core_dot_messaging_dot_services_dot_v1_dot_messaging__service__pb2.PutMessagingBackupRequest.FromString,
+                    response_serializer=udb_dot_core_dot_messaging_dot_services_dot_v1_dot_messaging__service__pb2.PutMessagingBackupResponse.SerializeToString,
+            ),
+            'GetMessagingBackup': grpc.unary_unary_rpc_method_handler(
+                    servicer.GetMessagingBackup,
+                    request_deserializer=udb_dot_core_dot_messaging_dot_services_dot_v1_dot_messaging__service__pb2.GetMessagingBackupRequest.FromString,
+                    response_serializer=udb_dot_core_dot_messaging_dot_services_dot_v1_dot_messaging__service__pb2.GetMessagingBackupResponse.SerializeToString,
+            ),
+            'DeleteMessagingBackup': grpc.unary_unary_rpc_method_handler(
+                    servicer.DeleteMessagingBackup,
+                    request_deserializer=udb_dot_core_dot_messaging_dot_services_dot_v1_dot_messaging__service__pb2.DeleteMessagingBackupRequest.FromString,
+                    response_serializer=udb_dot_core_dot_messaging_dot_services_dot_v1_dot_messaging__service__pb2.DeleteMessagingBackupResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -599,6 +656,87 @@ class MessagingService(object):
             '/udb.core.messaging.services.v1.MessagingService/AckInbox',
             udb_dot_core_dot_messaging_dot_services_dot_v1_dot_messaging__service__pb2.AckInboxRequest.SerializeToString,
             udb_dot_core_dot_messaging_dot_services_dot_v1_dot_messaging__service__pb2.AckInboxResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def PutMessagingBackup(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/udb.core.messaging.services.v1.MessagingService/PutMessagingBackup',
+            udb_dot_core_dot_messaging_dot_services_dot_v1_dot_messaging__service__pb2.PutMessagingBackupRequest.SerializeToString,
+            udb_dot_core_dot_messaging_dot_services_dot_v1_dot_messaging__service__pb2.PutMessagingBackupResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def GetMessagingBackup(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/udb.core.messaging.services.v1.MessagingService/GetMessagingBackup',
+            udb_dot_core_dot_messaging_dot_services_dot_v1_dot_messaging__service__pb2.GetMessagingBackupRequest.SerializeToString,
+            udb_dot_core_dot_messaging_dot_services_dot_v1_dot_messaging__service__pb2.GetMessagingBackupResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def DeleteMessagingBackup(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/udb.core.messaging.services.v1.MessagingService/DeleteMessagingBackup',
+            udb_dot_core_dot_messaging_dot_services_dot_v1_dot_messaging__service__pb2.DeleteMessagingBackupRequest.SerializeToString,
+            udb_dot_core_dot_messaging_dot_services_dot_v1_dot_messaging__service__pb2.DeleteMessagingBackupResponse.FromString,
             options,
             channel_credentials,
             insecure,
