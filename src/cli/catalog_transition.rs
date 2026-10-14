@@ -800,9 +800,9 @@ mod tests {
     fn rpc_errors_carry_the_brokers_refusal_message() {
         let message = rpc_error(
             "stage",
-            tonic::Status::failed_precondition("candidate catalog version 2.0.0 is not compatible"),
+            tonic::Status::unknown("candidate catalog version 2.0.0 is not compatible"),
         );
-        assert!(message.contains("FailedPrecondition"), "{message}");
+        assert!(message.contains("Unknown"), "{message}");
         assert!(message.contains("is not compatible"), "{message}");
     }
 
