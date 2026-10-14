@@ -8,8 +8,10 @@
 //! [`native_service_registry`]. There is no hand-maintained service list to
 //! drift from the wire contract.
 //!
-//! State lives in a `.udb/native-services.json` manifest under the target dir.
-//! `add`/`remove` edit it idempotently; `generate` reads it back and emits
+//! State lives in the `native_services:` section of `udb.yaml` under the target
+//! dir (the same file `udb up` reads). `add`/`remove` edit that section
+//! idempotently and leave every other section of the file as written;
+//! `generate` reads it back and emits
 //! `udb.config.json`, `.env.example`, and a per-language client-factory snippet
 //! that wires the `UdbProject` facade (`createUdb` / `Udb.project`). `doctor`
 //! validates the manifest against the current descriptor version; `smoke`
@@ -28,8 +30,9 @@ use udb::runtime::service::native_registry::native_service_registry;
 
 use super::native_dependency_tokens;
 
-/// On-disk schema for `.udb/native-services.json`.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+/// The `native_services:` section of `udb.yaml`.
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(default, deny_unknown_fields)]
 pub(crate) struct NativeServicesManifest {
     /// Descriptor/protocol version the selection was made against.
     pub descriptor_version: String,
@@ -38,19 +41,33 @@ pub(crate) struct NativeServicesManifest {
     /// Canonical, sorted, de-duplicated selected service IDs.
     pub services: Vec<String>,
     /// Target SDK language recorded for `generate`.
-    #[serde(default)]
     pub lang: String,
     /// Target framework hint recorded for `generate`.
-    #[serde(default)]
     pub framework: String,
     /// A reproducible command that recreates this selection.
     pub regenerate_command: String,
 }
 
-const MANIFEST_REL: &str = ".udb/native-services.json";
+/// The project file that holds the selection, relative to the target dir.
+const PROJECT_FILE_REL: &str = "udb.yaml";
+/// The top-level `udb.yaml` key the selection lives under.
+pub(crate) const NATIVE_SERVICES_SECTION: &str = "native_services";
+/// The pre-0.6.0 JSON manifest. Only detected, to refuse it with directions.
+pub(crate) const REMOVED_JSON_MANIFEST_REL: &str = ".udb/native-services.json";
 
 fn manifest_path(out_dir: &str) -> PathBuf {
-    Path::new(out_dir).join(MANIFEST_REL)
+    Path::new(out_dir).join(PROJECT_FILE_REL)
+}
+
+/// The refusal for a project that still carries the removed JSON manifest.
+pub(crate) fn removed_json_manifest_message(json_path: &Path, yaml_path: &Path) -> String {
+    format!(
+        "{json} is no longer read (removed in 0.6.0). Move its fields (services, lang, framework, \
+         descriptor_version, generator_version, regenerate_command) under a top-level \
+         `{NATIVE_SERVICES_SECTION}:` section in {yaml}, then delete {json}",
+        json = json_path.display(),
+        yaml = yaml_path.display(),
+    )
 }
 
 fn descriptor_version() -> String {
@@ -239,25 +256,123 @@ pub(crate) fn run_list(manifest: &DescriptorContractManifest, json: bool) -> i32
 
 // ── `native add` / `native remove` ───────────────────────────────────────────
 
+/// Refuse a target dir that still has the removed JSON manifest, so the old
+/// selection is never silently ignored or shadowed by a new `udb.yaml` section.
+fn refuse_removed_json_manifest(out_dir: &str) -> Result<(), String> {
+    let json_path = Path::new(out_dir).join(REMOVED_JSON_MANIFEST_REL);
+    if json_path.exists() {
+        return Err(removed_json_manifest_message(
+            &json_path,
+            &manifest_path(out_dir),
+        ));
+    }
+    Ok(())
+}
+
 fn load_manifest(out_dir: &str) -> Result<Option<NativeServicesManifest>, String> {
+    refuse_removed_json_manifest(out_dir)?;
     let path = manifest_path(out_dir);
     if !path.exists() {
         return Ok(None);
     }
-    let bytes = std::fs::read(&path).map_err(|e| format!("read {}: {e}", path.display()))?;
-    let parsed: NativeServicesManifest =
-        serde_json::from_slice(&bytes).map_err(|e| format!("parse {}: {e}", path.display()))?;
+    let raw =
+        std::fs::read_to_string(&path).map_err(|e| format!("read {}: {e}", path.display()))?;
+    let document: serde_yaml::Value =
+        serde_yaml::from_str(&raw).map_err(|e| format!("parse {}: {e}", path.display()))?;
+    let Some(section) = document.get(NATIVE_SERVICES_SECTION) else {
+        return Ok(None);
+    };
+    if section.is_null() {
+        return Ok(None);
+    }
+    let parsed: NativeServicesManifest = serde_yaml::from_value(section.clone()).map_err(|e| {
+        format!(
+            "parse `{NATIVE_SERVICES_SECTION}:` in {}: {e}",
+            path.display()
+        )
+    })?;
     Ok(Some(parsed))
 }
 
+/// Replace (or append) the top-level `native_services:` block of a YAML
+/// document, leaving every other line, comment included, exactly as written.
+fn splice_native_services_section(existing: &str, section: &str) -> String {
+    let lines: Vec<&str> = existing.lines().collect();
+    let is_top_level_key = |line: &str| {
+        !line.is_empty()
+            && !line.starts_with(char::is_whitespace)
+            && !line.starts_with('#')
+            && !line.starts_with('-')
+    };
+    let header = format!("{NATIVE_SERVICES_SECTION}:");
+    let start = lines.iter().position(|line| {
+        line.strip_prefix(&header)
+            .is_some_and(|rest| rest.trim().is_empty() || rest.trim_start().starts_with('#'))
+    });
+    let section = section.trim_end_matches('\n');
+    let Some(start) = start else {
+        let mut out = existing.trim_end_matches('\n').to_string();
+        if !out.is_empty() {
+            out.push_str("\n\n");
+        }
+        out.push_str(section);
+        out.push('\n');
+        return out;
+    };
+    let mut end = lines[start + 1..]
+        .iter()
+        .position(|line| is_top_level_key(line))
+        .map_or(lines.len(), |offset| start + 1 + offset);
+    // Blank and comment lines just before the next key belong to that key.
+    while end > start + 1 {
+        let previous = lines[end - 1].trim_start();
+        if previous.is_empty() || (previous.starts_with('#') && !lines[end - 1].starts_with(' ')) {
+            end -= 1;
+        } else {
+            break;
+        }
+    }
+    let mut out = lines[..start].join("\n");
+    if !out.is_empty() {
+        out.push('\n');
+    }
+    out.push_str(section);
+    if end < lines.len() {
+        out.push('\n');
+        out.push_str(&lines[end..].join("\n"));
+    }
+    out.push('\n');
+    out
+}
+
 fn write_manifest(out_dir: &str, manifest: &NativeServicesManifest) -> Result<(), String> {
+    refuse_removed_json_manifest(out_dir)?;
     let path = manifest_path(out_dir);
     if let Some(parent) = path.parent() {
         std::fs::create_dir_all(parent).map_err(|e| format!("mkdir {}: {e}", parent.display()))?;
     }
-    let body = serde_json::to_string_pretty(manifest)
-        .map_err(|e| format!("serialize native-services.json: {e}"))?;
-    std::fs::write(&path, format!("{body}\n")).map_err(|e| format!("write {}: {e}", path.display()))
+    let mut wrapper = serde_yaml::Mapping::new();
+    wrapper.insert(
+        serde_yaml::Value::String(NATIVE_SERVICES_SECTION.to_string()),
+        serde_yaml::to_value(manifest)
+            .map_err(|e| format!("serialize `{NATIVE_SERVICES_SECTION}:`: {e}"))?,
+    );
+    let section = serde_yaml::to_string(&wrapper)
+        .map_err(|e| format!("serialize `{NATIVE_SERVICES_SECTION}:`: {e}"))?;
+    let existing = match std::fs::read_to_string(&path) {
+        Ok(raw) => raw,
+        Err(err) if err.kind() == std::io::ErrorKind::NotFound => String::new(),
+        Err(err) => return Err(format!("read {}: {err}", path.display())),
+    };
+    let body = splice_native_services_section(&existing, &section);
+    // Never leave a udb.yaml the next read cannot parse.
+    serde_yaml::from_str::<serde_yaml::Value>(&body).map_err(|e| {
+        format!(
+            "updating `{NATIVE_SERVICES_SECTION}:` in {} would produce invalid YAML: {e}",
+            path.display()
+        )
+    })?;
+    std::fs::write(&path, body).map_err(|e| format!("write {}: {e}", path.display()))
 }
 
 fn regenerate_command(services: &[String]) -> String {
@@ -340,7 +455,7 @@ pub(crate) fn run_remove(services: &[String], out_dir: &str) -> i32 {
         Ok(Some(value)) => value,
         Ok(None) => {
             eprintln!(
-                "native remove: no {} — nothing to remove",
+                "native remove: no `{NATIVE_SERVICES_SECTION}:` section in {} — nothing to remove",
                 manifest_path(out_dir).display()
             );
             return 1;
@@ -669,7 +784,7 @@ pub(crate) fn run_generate(out_dir: &str, lang: Option<&str>, framework: &str) -
         Ok(Some(value)) => value,
         Ok(None) => {
             eprintln!(
-                "native generate: no {} — run `udb native add <services...>` first",
+                "native generate: no `{NATIVE_SERVICES_SECTION}:` section in {} — run `udb native add <services...>` first",
                 manifest_path(out_dir).display()
             );
             return 1;
@@ -759,7 +874,7 @@ pub(crate) fn run_doctor(out_dir: &str) -> i32 {
         Ok(Some(value)) => value,
         Ok(None) => {
             println!(
-                "  FAIL  {} not found — run `udb native add <services...>`",
+                "  FAIL  no `{NATIVE_SERVICES_SECTION}:` section in {} — run `udb native add <services...>`",
                 manifest_path(out_dir).display()
             );
             return 1;
@@ -770,7 +885,7 @@ pub(crate) fn run_doctor(out_dir: &str) -> i32 {
         }
     };
     println!(
-        "  PASS  manifest present ({} service(s))",
+        "  PASS  `native_services:` present ({} service(s))",
         existing.services.len()
     );
 
@@ -924,7 +1039,7 @@ pub(crate) fn run_smoke(out_dir: &str) -> i32 {
         Ok(Some(value)) => value,
         Ok(None) => {
             eprintln!(
-                "native smoke: not configured — run `udb native generate` first ({} missing)",
+                "native smoke: not configured — run `udb native generate` first (no `{NATIVE_SERVICES_SECTION}:` section in {})",
                 manifest_path(out_dir).display()
             );
             return 1;
@@ -1023,7 +1138,7 @@ pub(crate) fn run_app_init(args: AppInitArgs) -> i32 {
         return 1;
     }
 
-    // 1. Write the .udb/native-services.json manifest.
+    // 1. Record the selection in the `native_services:` section of udb.yaml.
     let manifest_record = NativeServicesManifest {
         descriptor_version: descriptor_version(),
         generator_version: generator_version(),
@@ -1037,7 +1152,7 @@ pub(crate) fn run_app_init(args: AppInitArgs) -> i32 {
         return 1;
     }
     println!(
-        "app init: wrote {} ({} service(s))",
+        "app init: wrote `native_services:` to {} ({} service(s))",
         manifest_path(&args.out_dir).display(),
         expanded.len()
     );
@@ -1125,8 +1240,18 @@ mod tests {
         assert_eq!(bad, vec!["nope".to_string()]);
     }
 
+    fn temp_out_dir(tag: &str) -> PathBuf {
+        let root = std::env::temp_dir().join(format!("udb-native-{tag}-{}", uuid::Uuid::new_v4()));
+        std::fs::create_dir_all(&root).expect("create temp native app dir");
+        root
+    }
+
     #[test]
-    fn manifest_round_trips_through_json() {
+    fn manifest_round_trips_through_udb_yaml_and_keeps_other_sections() {
+        let root = temp_out_dir("yaml");
+        let out_dir = root.to_string_lossy().to_string();
+        let original = "# project file\ntenant: 00000000-0000-0000-0000-000000000001\n\n# policies come next\npolicies_file: policies.yaml\n";
+        std::fs::write(root.join("udb.yaml"), original).expect("write udb.yaml");
         let m = NativeServicesManifest {
             descriptor_version: "9.9".to_string(),
             generator_version: "1.2.3".to_string(),
@@ -1135,9 +1260,55 @@ mod tests {
             framework: "next".to_string(),
             regenerate_command: "udb native add authn authz && udb native generate".to_string(),
         };
-        let json = serde_json::to_string(&m).expect("serialize");
-        let back: NativeServicesManifest = serde_json::from_str(&json).expect("deserialize");
-        assert_eq!(m, back);
+        write_manifest(&out_dir, &m).expect("write section");
+        assert_eq!(load_manifest(&out_dir).expect("load"), Some(m.clone()));
+        let mut updated = m.clone();
+        updated.services.push("storage".to_string());
+        write_manifest(&out_dir, &updated).expect("rewrite section");
+        assert_eq!(load_manifest(&out_dir).expect("reload"), Some(updated));
+        let raw = std::fs::read_to_string(root.join("udb.yaml")).expect("read udb.yaml");
+        assert!(
+            raw.starts_with(original.trim_end()),
+            "other sections and comments are kept:\n{raw}"
+        );
+        assert_eq!(raw.matches("native_services:").count(), 1, "{raw}");
+        let _ = std::fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn section_splice_replaces_only_its_own_block() {
+        let existing =
+            "tenant: t\nnative_services:\n  services:\n  - authn\n\n# next\nproject: p\n";
+        let spliced = splice_native_services_section(
+            existing,
+            "native_services:\n  services:\n  - storage\n",
+        );
+        assert_eq!(
+            spliced,
+            "tenant: t\nnative_services:\n  services:\n  - storage\n\n# next\nproject: p\n"
+        );
+    }
+
+    #[test]
+    fn removed_json_manifest_is_refused_with_the_udb_yaml_section() {
+        let root = temp_out_dir("legacy");
+        let out_dir = root.to_string_lossy().to_string();
+        std::fs::create_dir_all(root.join(".udb")).expect("mkdir .udb");
+        std::fs::write(
+            root.join(REMOVED_JSON_MANIFEST_REL),
+            "{\"services\":[\"authn\"]}",
+        )
+        .expect("write legacy manifest");
+        let err = load_manifest(&out_dir).expect_err("legacy manifest must be refused");
+        assert!(err.contains("native-services.json"), "{err}");
+        assert!(err.contains("`native_services:`"), "{err}");
+        assert!(err.contains("udb.yaml"), "{err}");
+        assert!(
+            write_manifest(&out_dir, &NativeServicesManifest::default()).is_err(),
+            "a write must not shadow the legacy selection"
+        );
+        assert_eq!(run_add(&["authn".to_string()], &out_dir), 1);
+        let _ = std::fs::remove_dir_all(root);
     }
 
     #[test]

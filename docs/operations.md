@@ -366,7 +366,10 @@ udb app init --lang typescript --framework express --services auth,storage
 ```
 
 Each service is descriptor-driven, so you can enable exactly the ones a given
-deployment needs.
+deployment needs. The selection lives in the `native_services:` section of the
+target directory's `udb.yaml` (`udb native add|remove` edit only that section).
+Since 0.6.0 a leftover `.udb/native-services.json` is refused with directions to
+move it there; `udb upgrade --check` flags it as well.
 
 ## SLO Lanes
 

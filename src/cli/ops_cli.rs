@@ -373,6 +373,12 @@ struct ProjectFile {
     /// Pipeline units run by the broker: point UDB_PIPELINES_FILE at this
     /// file. `udb up` only validates them.
     pipelines: Vec<serde_yaml::Value>,
+    /// The native-service selection `udb native add|remove|generate` and
+    /// `udb app init` maintain (it replaced `.udb/native-services.json` in
+    /// 0.6.0). `udb up` does not reconcile it; it is parsed here so a
+    /// malformed section fails `udb up` instead of being skipped.
+    #[allow(dead_code)]
+    native_services: Option<super::native_app::NativeServicesManifest>,
 }
 
 /// Declared embedding models and sources (P5). Models and sources are per
