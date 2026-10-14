@@ -404,6 +404,7 @@ fn credential_type_for_bearer_claims(claims: &SecurityClaims) -> CredentialType 
 }
 
 fn enforce_direct_credential_type(
+    rpc: &str,
     declared: Option<&MethodSecurity>,
     credential: CredentialType,
 ) -> Result<(), (Status, &'static str)> {
@@ -411,26 +412,25 @@ fn enforce_direct_credential_type(
         && !declared_allows_credential(security, credential)
     {
         return Err((
-            method_security_policy_denied(
-                deny_reason::CREDENTIAL_TYPE,
-                format!(
-                    "{} credential is not allowed for this method",
-                    credential.label()
-                ),
-            ),
+            credential_type_not_admitted(rpc, security, credential),
             deny_reason::CREDENTIAL_TYPE,
         ));
     }
     Err((
         Status::unauthenticated(format!(
-            "{} credential must be exchanged for a validated bearer JWT before native control-plane RPCs",
-            credential.label()
+            "a raw {} credential ({}) cannot call {rpc}: native control-plane RPCs take a validated \
+             bearer JWT. Exchange it first (Authenticate with the {} on the auth listener) and send \
+             `authorization: Bearer <token>`",
+            credential.label(),
+            credential.proto_name(),
+            credential.label(),
         )),
         deny_reason::CREDENTIAL_TYPE,
     ))
 }
 
 fn enforce_bearer_credential_type(
+    rpc: &str,
     declared: Option<&MethodSecurity>,
     claims: &SecurityClaims,
 ) -> Result<(), (Status, &'static str)> {
@@ -445,15 +445,72 @@ fn enforce_bearer_credential_type(
         return Ok(());
     }
     Err((
-        method_security_policy_denied(
-            deny_reason::CREDENTIAL_TYPE,
-            format!(
-                "{} credential is not allowed for this method",
-                credential.label()
-            ),
-        ),
+        credential_type_not_admitted(rpc, security, credential),
         deny_reason::CREDENTIAL_TYPE,
     ))
+}
+
+/// The refusal for a credential type the RPC's descriptor does not admit
+/// (`endpoint_security.allowed_credential_types`). The message names the
+/// caller's credential type, the RPC, what it admits, and how to get an
+/// admitted credential, so the cause is never mistaken for a missing policy.
+/// The admitted set is this broker's compiled descriptor; the broker version is
+/// in the message because admissions are added in releases (a newer client's
+/// proto can admit a type an older broker still refuses).
+fn credential_type_not_admitted(
+    rpc: &str,
+    security: &MethodSecurity,
+    credential: CredentialType,
+) -> Status {
+    let allowed: Vec<CredentialType> = security
+        .allowed_credential_types
+        .iter()
+        .filter_map(|code| CredentialType::from_code(*code))
+        .collect();
+    let allowed_names: Vec<&str> = allowed.iter().map(|kind| kind.proto_name()).collect();
+    let allowed_list = allowed_names.join(", ");
+    let human = allowed
+        .iter()
+        .any(|kind| matches!(kind, CredentialType::BearerJwt | CredentialType::Session));
+    let workload = allowed
+        .iter()
+        .any(|kind| matches!(kind, CredentialType::ServiceAccount | CredentialType::ApiKey));
+    let fix = if human
+        && matches!(
+            credential,
+            CredentialType::ServiceAccount | CredentialType::ApiKey | CredentialType::Mtls
+        ) {
+        "call it as a staff user: sign in a human account (Login/Authenticate with its password or OIDC) and send that user's bearer, not a service-account token"
+    } else if workload {
+        "call it as a workload: exchange the service API key with Authenticate{api_key} and send the returned service bearer"
+    } else if allowed.contains(&CredentialType::Mtls) {
+        "present a client certificate registered to a service account (mTLS)"
+    } else {
+        "send one of the admitted credential types"
+    };
+    let status = method_security_policy_denied(
+        deny_reason::CREDENTIAL_TYPE,
+        format!(
+            "credential type {} ({}) is not admitted for {rpc}: this broker (udb {}) admits only {allowed_list} \
+             (endpoint_security.allowed_credential_types); {fix}. This is not a missing policy grant, so \
+             `udb policy apply` will not help; if your proto admits {} here, upgrade the broker",
+            credential.proto_name(),
+            credential.label(),
+            env!("CARGO_PKG_VERSION"),
+            credential.proto_name(),
+        ),
+    );
+    crate::runtime::error_reasons::annotate_with(
+        status,
+        crate::runtime::error_reasons::CREDENTIAL_TYPE_NOT_ADMITTED,
+        None,
+        None,
+        &[
+            ("credential_type", credential.proto_name()),
+            ("allowed_credential_types", allowed_list.as_str()),
+            ("rpc", rpc),
+        ],
+    )
 }
 
 /// Reason labels for `udb_method_security_denials_total{reason}` (Phase 10).
@@ -1430,7 +1487,7 @@ fn enforce(
             && method_allows_api_key
             && api_key_principal.is_some();
         if !api_key_accepted {
-            enforce_direct_credential_type(declared, credential)?;
+            enforce_direct_credential_type(path, declared, credential)?;
         }
     }
     // fix_plan §1.4/§3: a REGISTERED mTLS principal — resolved by the async
@@ -1527,7 +1584,7 @@ fn enforce(
                 (claims, principal)
             }
         };
-        enforce_bearer_credential_type(declared, &claims)?;
+        enforce_bearer_credential_type(path, declared, &claims)?;
         (claims, principal)
     };
     // A verified client certificate remains transport identity when a bearer
@@ -1771,6 +1828,30 @@ enum CredentialType {
 }
 
 impl CredentialType {
+    fn from_code(code: i32) -> Option<Self> {
+        [
+            CredentialType::BearerJwt,
+            CredentialType::Session,
+            CredentialType::ApiKey,
+            CredentialType::ServiceAccount,
+            CredentialType::Mtls,
+        ]
+        .into_iter()
+        .find(|kind| *kind as i32 == code)
+    }
+
+    /// The `udb.core.common.v1.CredentialType` value name without its prefix,
+    /// as written in `endpoint_security.allowed_credential_types`.
+    fn proto_name(self) -> &'static str {
+        match self {
+            CredentialType::BearerJwt => "BEARER_JWT",
+            CredentialType::Session => "SESSION",
+            CredentialType::ApiKey => "API_KEY",
+            CredentialType::ServiceAccount => "SERVICE_ACCOUNT",
+            CredentialType::Mtls => "MTLS",
+        }
+    }
+
     fn label(self) -> &'static str {
         match self {
             CredentialType::BearerJwt => "bearer JWT",
@@ -2618,7 +2699,7 @@ mod tests {
         // SERVICE_ACCOUNT. Either declaration admits both forms of the key.
         let key_only =
             synthetic_method_security(&[CredentialType::BearerJwt, CredentialType::ApiKey]);
-        enforce_bearer_credential_type(Some(&key_only), &claims_with("api_key", "svc:scanner"))
+        enforce_bearer_credential_type(TEST_RPC, Some(&key_only), &claims_with("api_key", "svc:scanner"))
             .expect("an exchanged service bearer must reach an API_KEY method");
         let service_only =
             synthetic_method_security(&[CredentialType::BearerJwt, CredentialType::ServiceAccount]);
@@ -2642,7 +2723,7 @@ mod tests {
     #[test]
     fn session_origin_jwt_satisfies_session_only_descriptor() {
         let security = synthetic_method_security(&[CredentialType::Session]);
-        enforce_bearer_credential_type(Some(&security), &claims_with("session", ""))
+        enforce_bearer_credential_type(TEST_RPC, Some(&security), &claims_with("session", ""))
             .expect("session-origin JWT should satisfy a session credential contract");
     }
 
@@ -2651,7 +2732,7 @@ mod tests {
         let security =
             synthetic_method_security(&[CredentialType::BearerJwt, CredentialType::Session]);
         let (err, reason) =
-            enforce_bearer_credential_type(Some(&security), &claims_with("api_key", ""))
+            enforce_bearer_credential_type(TEST_RPC, Some(&security), &claims_with("api_key", ""))
                 .expect_err("API-key-origin JWT must not satisfy bearer/session-only contract");
         assert_eq!(err.code(), tonic::Code::PermissionDenied);
         assert_eq!(reason, deny_reason::CREDENTIAL_TYPE);
@@ -2661,6 +2742,7 @@ mod tests {
     fn service_account_jwt_requires_service_account_descriptor() {
         let user_bearer_only = synthetic_method_security(&[CredentialType::BearerJwt]);
         let (err, reason) = enforce_bearer_credential_type(
+            TEST_RPC,
             Some(&user_bearer_only),
             &claims_with("service_account", "svc:control-plane"),
         )
@@ -2670,10 +2752,75 @@ mod tests {
 
         let service_account = synthetic_method_security(&[CredentialType::ServiceAccount]);
         enforce_bearer_credential_type(
+            TEST_RPC,
             Some(&service_account),
             &claims_with("service_account", "svc:control-plane"),
         )
         .expect("service-account JWT should satisfy a service-account credential contract");
+    }
+
+    const TEST_RPC: &str = "/udb.core.config.services.v1.ConfigService/PutFlag";
+
+    #[test]
+    fn credential_type_refusal_names_the_type_the_rpc_and_the_fix() {
+        let staff_only =
+            synthetic_method_security(&[CredentialType::BearerJwt, CredentialType::Session]);
+        let (err, _) = enforce_bearer_credential_type(
+            TEST_RPC,
+            Some(&staff_only),
+            &claims_with("service_account", "svc:control-plane"),
+        )
+        .expect_err("a service account must not reach a staff-only RPC");
+        let message = err.message();
+        assert!(
+            message.contains("credential type SERVICE_ACCOUNT"),
+            "{message}"
+        );
+        assert!(message.contains(TEST_RPC), "{message}");
+        assert!(message.contains("admits only BEARER_JWT, SESSION"), "{message}");
+        assert!(message.contains("staff user"), "{message}");
+        assert!(message.contains(env!("CARGO_PKG_VERSION")), "{message}");
+        assert!(
+            !message.contains("candidate polic"),
+            "a credential-type refusal must not read as a policy miss: {message}"
+        );
+        let detail = decode_detail(&err);
+        assert_eq!(detail.reason, "UDB_CREDENTIAL_TYPE_NOT_ADMITTED");
+        assert_eq!(
+            detail.missing.get("credential_type").map(String::as_str),
+            Some("SERVICE_ACCOUNT")
+        );
+        assert_eq!(
+            detail.missing.get("allowed_credential_types").map(String::as_str),
+            Some("BEARER_JWT, SESSION")
+        );
+        assert_eq!(
+            detail.missing.get("rpc").map(String::as_str),
+            Some(TEST_RPC)
+        );
+
+        // A staff bearer on a workload-only RPC is told to use a service bearer.
+        let workload_only = synthetic_method_security(&[CredentialType::ServiceAccount]);
+        let (err, _) =
+            enforce_bearer_credential_type(TEST_RPC, Some(&workload_only), &claims_with("jwt", ""))
+                .expect_err("a staff bearer must not reach a workload-only RPC");
+        assert!(err.message().contains("credential type BEARER_JWT"));
+        assert!(err.message().contains("Authenticate{api_key}"));
+    }
+
+    #[test]
+    fn raw_credential_refusal_names_the_exchange_step() {
+        let (err, reason) = enforce_direct_credential_type(TEST_RPC, None, CredentialType::Session)
+            .expect_err("a raw session must be exchanged first");
+        assert_eq!(err.code(), tonic::Code::Unauthenticated);
+        assert_eq!(reason, deny_reason::CREDENTIAL_TYPE);
+        assert!(err.message().contains("SESSION"), "{}", err.message());
+        assert!(err.message().contains(TEST_RPC), "{}", err.message());
+        assert!(
+            err.message().contains("authorization: Bearer <token>"),
+            "{}",
+            err.message()
+        );
     }
 
     fn mtls_credentials(

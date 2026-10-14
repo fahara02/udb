@@ -92,6 +92,9 @@ reasons! {
     POLICY_DENIED = "UDB_POLICY_DENIED", Permission, PermissionDenied,
         "No policy rule allows this action for the caller; ErrorDetail.missing names the rule that would.",
         "Add the rule (`udb authz explain` shows the closest candidate and the attribute that failed).";
+    CREDENTIAL_TYPE_NOT_ADMITTED = "UDB_CREDENTIAL_TYPE_NOT_ADMITTED", Permission, PermissionDenied,
+        "The RPC's endpoint_security.allowed_credential_types does not admit the caller's credential type; missing names credential_type, allowed_credential_types and rpc.",
+        "Call the RPC with an admitted credential type (a staff user's bearer for staff-only RPCs, a service bearer from Authenticate{api_key} for workload RPCs); a policy grant does not change admission.";
     REDACTED_VALUE_WRITE = "UDB_REDACTED_VALUE_WRITE", Redacted, InvalidArgument,
         "A write tried to store the redaction placeholder in a protected column, which would erase the real value.",
         "Read the row with the PII read scope before writing it back, or leave the column out of the write.";
