@@ -91,12 +91,6 @@ prost-reflect = { version = "0.16", features = ["serde"] }
 serde = { version = "1", features = ["derive"] }
 tokio-stream = "0.1"
 
-# Served end-to-end encrypted messaging; needs the `mls` feature (and a live
-# broker when UDB_LIVE_SDK_TESTS=1).
-[[test]]
-name = "live_messaging"
-required-features = ["mls"]
-
 # A scripted messaging device the TypeScript SDK's Rust<->TypeScript interop
 # test drives.
 [[example]]

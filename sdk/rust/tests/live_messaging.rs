@@ -13,6 +13,9 @@
 //!
 //! Run: `cargo test --features mls --test live_messaging -- --nocapture`
 
+// Compiled only with the `mls` feature (an empty test crate otherwise).
+#![cfg(feature = "mls")]
+
 use std::time::Duration;
 
 use tonic::transport::{Channel, Endpoint};
