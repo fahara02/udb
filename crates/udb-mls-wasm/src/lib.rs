@@ -278,6 +278,25 @@ pub fn inspect_key_package(bytes: &[u8]) -> Result<KeyPackageInfo, JsError> {
     })
 }
 
+/// An opened encrypted backup: the device snapshot (SECRET; `MlsDevice.restore`
+/// takes it) and the application history it carried.
+#[wasm_bindgen(getter_with_clone)]
+pub struct OpenedBackup {
+    pub snapshot: Vec<u8>,
+    pub history: Vec<u8>,
+}
+
+/// Open a backup envelope (as `GetMessagingBackup` returns it) with the user's
+/// recovery secret. A wrong secret and a modified envelope both fail.
+#[wasm_bindgen(js_name = openBackup)]
+pub fn open_backup(recovery_secret: &[u8], envelope: &[u8]) -> Result<OpenedBackup, JsError> {
+    let mut contents = udb_mls::open_backup(recovery_secret, envelope).map_err(js_err)?;
+    Ok(OpenedBackup {
+        snapshot: std::mem::take(&mut contents.snapshot),
+        history: std::mem::take(&mut contents.history),
+    })
+}
+
 /// Lowercase hex SHA-256 of a signature public key (the directory fingerprint).
 #[wasm_bindgen(js_name = keyFingerprint)]
 pub fn key_fingerprint(signature_public_key: &[u8]) -> String {
@@ -317,6 +336,43 @@ impl MlsDevice {
     /// changes state; it is what `restore` takes.
     pub fn snapshot(&self) -> Vec<u8> {
         self.store.snapshot().unwrap_or_default()
+    }
+
+    /// Seal this device's state and the application's `history` under a key
+    /// derived from `recoverySecret` (Argon2id with the recommended costs, then
+    /// HKDF-SHA256, then XChaCha20-Poly1305), for `PutMessagingBackup`.
+    #[wasm_bindgen(js_name = exportBackup)]
+    pub fn export_backup(
+        &self,
+        recovery_secret: &[u8],
+        history: &[u8],
+    ) -> Result<Vec<u8>, JsError> {
+        self.client
+            .export_backup(recovery_secret, history)
+            .map_err(js_err)
+    }
+
+    /// `exportBackup` with explicit Argon2id costs (memory in KiB).
+    #[wasm_bindgen(js_name = exportBackupWith)]
+    pub fn export_backup_with(
+        &self,
+        recovery_secret: &[u8],
+        history: &[u8],
+        memory_kib: u32,
+        iterations: u32,
+        parallelism: u32,
+    ) -> Result<Vec<u8>, JsError> {
+        self.client
+            .export_backup_with(
+                recovery_secret,
+                history,
+                udb_mls::BackupParams {
+                    memory_kib,
+                    iterations,
+                    parallelism,
+                },
+            )
+            .map_err(js_err)
     }
 
     #[wasm_bindgen(getter, js_name = tenantId)]

@@ -12,7 +12,10 @@
 //! - Welcome processing for groups this device was added to,
 //! - `PrivateMessage` encryption and decryption of application messages,
 //! - in-order processing of the device inbox (commits, welcomes, messages) with
-//!   epoch tracking, and the re-base path when a concurrent commit won.
+//!   epoch tracking, and the re-base path when a concurrent commit won,
+//! - an opt-in encrypted backup of the device state and the application's
+//!   history, sealed under a key derived from a user recovery secret
+//!   ([`MlsClient::export_backup`], [`MlsClient::restore_backup`]).
 //!
 //! The crate is sans-IO. [`MlsClient`] returns the bytes each RPC carries and
 //! consumes the entries `StreamInbox` delivers; the SDKs drive the network. All
@@ -48,12 +51,17 @@
 #![forbid(unsafe_code)]
 #![warn(missing_debug_implementations)]
 
+mod backup;
 mod client;
 mod error;
 mod identity;
 mod inbox;
 mod store;
 
+pub use backup::{
+    open_backup, seal_backup, BackupContents, BackupParams, BACKUP_MAGIC, MIN_BACKUP_LEN,
+    MIN_RECOVERY_SECRET_LEN,
+};
 pub use client::{
     inspect_key_package, CommitIntent, CommitSummary, DeviceRegistration, GroupCreation,
     GroupMember, KeyPackageInfo, MlsClient, OutgoingMessage, PendingCommit,

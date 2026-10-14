@@ -41,6 +41,10 @@ pub enum MlsError {
     /// verify, a member that is not in the group, a foreign tenant's device).
     #[error("rejected: {0}")]
     Rejected(String),
+    /// An encrypted backup could not be sealed or opened (a recovery secret
+    /// that is too short, a wrong secret, a modified or foreign envelope).
+    #[error("backup: {0}")]
+    Backup(String),
     /// OpenMLS refused an operation.
     #[error("MLS operation failed: {0}")]
     Mls(String),

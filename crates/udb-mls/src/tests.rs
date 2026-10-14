@@ -864,3 +864,180 @@ fn key_packages_name_their_device() {
     assert!(last_resort.last_resort);
     assert!(crate::inspect_key_package(b"junk").is_err());
 }
+
+// ── encrypted backup ───────────────────────────────────────────────────────
+
+const SECRET: &[u8] = b"correct horse battery staple";
+
+/// Cheap Argon2id costs so the debug-build tests stay fast; the recommended
+/// costs are exercised once below.
+const FAST: crate::BackupParams = crate::BackupParams {
+    memory_kib: 256,
+    iterations: 1,
+    parallelism: 1,
+};
+
+fn contents(snapshot: &[u8], history: &[u8]) -> crate::BackupContents {
+    crate::BackupContents {
+        snapshot: snapshot.to_vec(),
+        history: history.to_vec(),
+    }
+}
+
+#[test]
+fn a_restored_device_decrypts_what_was_sent_after_the_backup_and_new_messages() {
+    let mut hub = Hub::default();
+    let (mut alice, mut bob, mut carol) = three_member_group(&mut hub, "room");
+    send(&mut hub, &mut alice, "room", "before the backup");
+    assert_eq!(
+        texts(&hub.deliver(&mut bob)),
+        [("alice-phone".to_string(), "before the backup".to_string())]
+    );
+    let cursor = bob.inbox_cursor();
+    let envelope = bob
+        .export_backup_with(SECRET, b"bob's chat history", FAST)
+        .expect("seal backup");
+    // Bob's phone is lost; the group moves on without him noticing.
+    drop(bob);
+    send(&mut hub, &mut alice, "room", "while bob was away");
+
+    let (mut restored, history) =
+        MlsClient::restore_backup(SECRET, &envelope, MemoryStore::new()).expect("restore");
+    assert_eq!(history, b"bob's chat history");
+    assert_eq!(
+        restored.identity(),
+        &DeviceIdentity::new(TENANT, "bob", "bob-phone").unwrap()
+    );
+    assert_eq!(restored.inbox_cursor(), cursor);
+    assert_eq!(restored.epoch("room").unwrap(), 1);
+    assert_eq!(
+        texts(&hub.deliver(&mut restored)),
+        [("alice-phone".to_string(), "while bob was away".to_string())]
+    );
+
+    // The restored device follows a key rotation and decrypts new traffic.
+    commit_ok(&mut hub, &mut carol, "room", CommitIntent::Update);
+    hub.deliver(&mut alice);
+    hub.deliver(&mut carol);
+    hub.deliver(&mut restored);
+    assert_eq!(restored.epoch("room").unwrap(), 2);
+    send(&mut hub, &mut alice, "room", "after the rotation");
+    assert_eq!(
+        texts(&hub.deliver(&mut restored)),
+        [("alice-phone".to_string(), "after the rotation".to_string())]
+    );
+    // And it can still speak: carol decrypts what the restored device sends.
+    hub.deliver(&mut carol);
+    send(&mut hub, &mut restored, "room", "bob is back");
+    assert_eq!(
+        texts(&hub.deliver(&mut carol)),
+        [("bob-phone".to_string(), "bob is back".to_string())]
+    );
+}
+
+#[test]
+fn the_recommended_costs_round_trip() {
+    let bob = device("bob", "bob-phone");
+    let envelope = bob.export_backup(SECRET, b"").expect("seal");
+    let opened = crate::open_backup(SECRET, &envelope).expect("open");
+    assert_eq!(opened.snapshot, bob.snapshot().unwrap());
+    assert!(opened.history.is_empty());
+    assert_eq!(
+        &envelope[8..20],
+        [
+            &(19u32 * 1024).to_be_bytes()[..],
+            &2u32.to_be_bytes()[..],
+            &1u32.to_be_bytes()[..]
+        ]
+        .concat()
+        .as_slice()
+    );
+}
+
+#[test]
+fn a_wrong_secret_or_any_modified_byte_does_not_open() {
+    let envelope = crate::seal_backup(SECRET, &contents(b"state", b"history"), FAST).unwrap();
+    assert!(crate::open_backup(SECRET, &envelope).is_ok());
+    assert!(matches!(
+        crate::open_backup(b"correct horse battery stapler", &envelope),
+        Err(MlsError::Backup(_))
+    ));
+    // Every region: magic, Argon2id costs, salt, nonce, ciphertext, tag.
+    for index in [0, 9, 13, 17, 25, 45, 61, envelope.len() - 1] {
+        let mut modified = envelope.clone();
+        modified[index] ^= 0x01;
+        assert!(
+            matches!(
+                crate::open_backup(SECRET, &modified),
+                Err(MlsError::Backup(_))
+            ),
+            "a flip at byte {index} must not open"
+        );
+    }
+    assert!(crate::open_backup(SECRET, &envelope[..envelope.len() - 1]).is_err());
+    assert!(crate::open_backup(SECRET, &envelope[..crate::MIN_BACKUP_LEN - 1]).is_err());
+    assert!(matches!(
+        crate::seal_backup(b"short", &contents(b"s", b"h"), FAST),
+        Err(MlsError::Backup(_))
+    ));
+}
+
+#[test]
+fn crafted_argon2_costs_are_refused_before_any_work() {
+    let mut envelope = crate::seal_backup(SECRET, &contents(b"s", b"h"), FAST).unwrap();
+    envelope[8..12].copy_from_slice(&u32::MAX.to_be_bytes());
+    let err = crate::open_backup(SECRET, &envelope).unwrap_err();
+    assert!(
+        matches!(&err, MlsError::Backup(message) if message.contains("exceeds")),
+        "{err:?}"
+    );
+}
+
+#[test]
+fn the_envelope_carries_no_plaintext_and_never_repeats() {
+    let bob = device("bob", "bob-phone");
+    let snapshot = bob.snapshot().unwrap();
+    let history = b"meet at the north gate at nine".to_vec();
+    let first = bob.export_backup_with(SECRET, &history, FAST).unwrap();
+    let second = bob.export_backup_with(SECRET, &history, FAST).unwrap();
+    assert!(first.starts_with(crate::BACKUP_MAGIC));
+    assert_ne!(first, second, "a fresh salt and nonce per backup");
+    let identity = b"tenant-mls/bob/bob-phone";
+    let signature_key = bob.registration().unwrap().signature_public_key;
+    for envelope in [&first, &second] {
+        for needle in [
+            &history[..],
+            &identity[..],
+            &signature_key[..],
+            &snapshot[..32],
+            SECRET,
+        ] {
+            assert!(
+                !envelope.windows(needle.len()).any(|w| w == needle),
+                "the envelope must not contain plaintext"
+            );
+        }
+    }
+    assert!(
+        snapshot.windows(identity.len()).any(|w| w == identity),
+        "the needle is real: the snapshot names the device"
+    );
+}
+
+#[test]
+fn a_restore_never_replaces_a_device_in_the_store() {
+    let bob = device("bob", "bob-phone");
+    let envelope = bob.export_backup_with(SECRET, b"", FAST).unwrap();
+    let occupied = MemoryStore::new();
+    let carol = MlsClient::create(
+        DeviceIdentity::new(TENANT, "carol", "carol-laptop").unwrap(),
+        occupied,
+    )
+    .unwrap();
+    let before = carol.snapshot().unwrap();
+    let occupied = MemoryStore::from_snapshot(before.clone());
+    let err = MlsClient::restore_backup(SECRET, &envelope, occupied).unwrap_err();
+    assert!(matches!(err, MlsError::AlreadyInitialized(_)), "{err:?}");
+    let wrong = MlsClient::restore_backup(b"not the secret", &envelope, MemoryStore::new());
+    assert!(matches!(wrong, Err(MlsError::Backup(_))));
+}

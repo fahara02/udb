@@ -13,13 +13,14 @@ use openmls_basic_credential::SignatureKeyPair;
 use openmls_rust_crypto::OpenMlsRustCrypto;
 use serde::{Deserialize, Serialize};
 
+use crate::backup::{open_backup, seal_backup, BackupContents, BackupParams};
 use crate::error::{mls, MlsError};
 use crate::identity::{
     key_fingerprint, split_identity, validate_device_id, validate_group_id, DeviceIdentity,
     CIPHERSUITE,
 };
 use crate::inbox::{InboxEvent, InboxItem, InboxKind};
-use crate::store::{decode_snapshot, encode_snapshot, StateStore};
+use crate::store::{decode_snapshot, encode_snapshot, MemoryStore, StateStore};
 
 /// Past epochs whose message secrets a member keeps, so an application message
 /// sealed just before a commit still decrypts after the commit was applied.
@@ -353,6 +354,56 @@ impl<S: StateStore> MlsClient<S> {
     /// device's private keys).
     pub fn snapshot(&self) -> Result<Vec<u8>, MlsError> {
         self.store.load()?.ok_or(MlsError::NotInitialized)
+    }
+
+    /// Seal this device's saved state, plus the application's `history`, as a
+    /// backup envelope for `PutMessagingBackup`, under a key derived from
+    /// `recovery_secret` with the recommended Argon2id costs. The broker can
+    /// store it but never open it.
+    pub fn export_backup(
+        &self,
+        recovery_secret: &[u8],
+        history: &[u8],
+    ) -> Result<Vec<u8>, MlsError> {
+        self.export_backup_with(recovery_secret, history, BackupParams::default())
+    }
+
+    /// [`Self::export_backup`] with explicit Argon2id costs.
+    pub fn export_backup_with(
+        &self,
+        recovery_secret: &[u8],
+        history: &[u8],
+        params: BackupParams,
+    ) -> Result<Vec<u8>, MlsError> {
+        let contents = BackupContents {
+            snapshot: self.snapshot()?,
+            history: history.to_vec(),
+        };
+        seal_backup(recovery_secret, &contents, params)
+    }
+
+    /// Restore a device from a backup envelope (as `GetMessagingBackup` returns
+    /// it) into an EMPTY `store`, on a new device. Returns the device, which is
+    /// the backed-up device with its identity, keys, groups and inbox cursor,
+    /// and the history the backup carried. A store that already holds a device
+    /// is never overwritten.
+    pub fn restore_backup(
+        recovery_secret: &[u8],
+        envelope: &[u8],
+        store: S,
+    ) -> Result<(Self, Vec<u8>), MlsError> {
+        if store.load()?.is_some() {
+            let existing = Self::open(store)?;
+            return Err(MlsError::AlreadyInitialized(
+                existing.meta.identity.credential_identity(),
+            ));
+        }
+        let mut contents = open_backup(recovery_secret, envelope)?;
+        // Prove the snapshot opens before it replaces anything.
+        MlsClient::<MemoryStore>::open(MemoryStore::from_snapshot(contents.snapshot.clone()))?;
+        store.save(&contents.snapshot)?;
+        let client = Self::open(store)?;
+        Ok((client, std::mem::take(&mut contents.history)))
     }
 
     /// The underlying store.
