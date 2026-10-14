@@ -107,7 +107,7 @@ EOF
       git bundle create "$bundle" HEAD --quiet
     fi
     remote "cat > '$root/sync.bundle'" < "$bundle"
-    remote "cd '$root/repo' && git fetch -q '$root/sync.bundle' HEAD && git checkout -q --detach '$head' && git clean -qfdx -e target && rm -f '$root/sync.bundle' && git log --oneline -1"
+    remote "cd '$root/repo' && git fetch -q '$root/sync.bundle' HEAD && git checkout -q -f --detach '$head' && git clean -qfdx -e target && rm -f '$root/sync.bundle' && git log --oneline -1"
     ;;
   run)
     shift 2
