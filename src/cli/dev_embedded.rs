@@ -31,7 +31,34 @@ fn plain_path(path: PathBuf) -> PathBuf {
 /// Why the embedded server stopped before it was ready: its exit status, the
 /// last lines it logged, and the remedy for the one refusal a developer can fix
 /// themselves (PostgreSQL will not run with Windows administrative rights).
-fn postgres_startup_failure(status: std::process::ExitStatus, log_path: &Path) -> String {
+/// Windows loader failures of a restricted PostgreSQL process, explained.
+///
+/// PostgreSQL (and `initdb`, which re-launches itself) runs under a token with
+/// the Administrators group disabled. If a directory it needs — its own
+/// binaries, the data directory — grants access only to Administrators (as a
+/// directory owned by an elevated process with an owner-only ACL does), the
+/// process cannot load its DLLs and exits with STATUS_DLL_NOT_FOUND
+/// (0xc0000135) or STATUS_DLL_INIT_FAILED (0xc0000142) before printing
+/// anything. Name that cause and the fix instead of a bare exit code.
+fn windows_restricted_access_hint(status: std::process::ExitStatus, dir: &Path) -> Option<String> {
+    let code = status.code()? as u32;
+    if code != 0xC000_0135 && code != 0xC000_0142 {
+        return None;
+    }
+    Some(format!(
+        "; PostgreSQL runs with administrator rights removed and could not load its own files \
+         (Windows status 0x{code:08x}): {} likely grants access only to Administrators. \
+         Grant your user access and retry: icacls \"{}\" /grant \"%USERNAME%\":(OI)(CI)F /T",
+        dir.display(),
+        dir.display()
+    ))
+}
+
+fn postgres_startup_failure(
+    status: std::process::ExitStatus,
+    log_path: &Path,
+    installation_dir: &Path,
+) -> String {
     let tail = fs::read_to_string(log_path)
         .map(|log| {
             let lines: Vec<&str> = log.lines().filter(|line| !line.trim().is_empty()).collect();
@@ -46,6 +73,9 @@ fn postgres_startup_failure(status: std::process::ExitStatus, log_path: &Path) -
         message.push_str(
             "; run `udb dev up --embedded` from a terminal that is not elevated (\"Run as administrator\")",
         );
+    }
+    if let Some(hint) = windows_restricted_access_hint(status, installation_dir) {
+        message.push_str(&hint);
     }
     message.push_str(&format!(" (log: {})", log_path.display()));
     message
@@ -1855,8 +1885,10 @@ impl EmbeddedCluster {
                 .await?;
         interrupt.check()?;
         if !status.success() {
+            let hint = windows_restricted_access_hint(status, &self.settings.installation_dir)
+                .unwrap_or_default();
             return Err(format!(
-                "initialize PostgreSQL exited with {status}; the data directory was preserved"
+                "initialize PostgreSQL exited with {status}; the data directory was preserved{hint}"
             ));
         }
         if !self.initialized_cluster()? {
@@ -1926,7 +1958,11 @@ impl EmbeddedCluster {
                 .try_wait()
                 .map_err(|err| format!("PostgreSQL startup status: {err}"))?
             {
-                return Err(postgres_startup_failure(status, &log_path));
+                return Err(postgres_startup_failure(
+                    status,
+                    &log_path,
+                    &self.settings.installation_dir,
+                ));
             }
             if self.owns_postmaster_pid() {
                 let dsn = self.settings.url("postgres");
@@ -2629,6 +2665,23 @@ CertUtil: -hashfile command completed successfully.
             Ok(_) => panic!("pre-10 cluster versions require a separate supported layout"),
         };
         assert!(refusal.contains("major version 10 or later"));
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn a_windows_loader_failure_names_the_directory_and_the_fix() {
+        use std::os::windows::process::ExitStatusExt;
+        let dir = Path::new(r"C:\udb\cache\pg\bin");
+        let hint =
+            windows_restricted_access_hint(std::process::ExitStatus::from_raw(0xC000_0135), dir)
+                .expect("STATUS_DLL_NOT_FOUND is explained");
+        assert!(
+            hint.contains("icacls") && hint.contains(r"C:\udb\cache\pg\bin"),
+            "{hint}"
+        );
+        assert!(
+            windows_restricted_access_hint(std::process::ExitStatus::from_raw(1), dir).is_none()
+        );
     }
 
     #[cfg(feature = "postgres")]

@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 """CI proof for embedded startup, shared Go conformance and persisted restart."""
+import contextlib
 import hashlib
 import json
 import re
 import os
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+import shutil
 import signal
 import socket
 import subprocess
@@ -17,6 +19,24 @@ import uuid
 
 
 PORTS = (54329, 50051, 50061)
+
+
+@contextlib.contextmanager
+def project_directory(prefix):
+    """A scratch project directory with ordinary inherited permissions.
+
+    `tempfile.TemporaryDirectory` on Windows (Python 3.12+) creates an owner-only
+    ACL. On an elevated runner the owner is the Administrators group, and
+    PostgreSQL re-launches itself under a token where that group is deny-only,
+    so it could not read its own binaries or files there (initdb then fails
+    with STATUS_DLL_NOT_FOUND). A user's real project directory inherits normal
+    permissions; so does this one."""
+    path = Path(tempfile.gettempdir()) / f"{prefix}{uuid.uuid4().hex[:12]}"
+    path.mkdir()
+    try:
+        yield str(path)
+    finally:
+        shutil.rmtree(path, ignore_errors=True)
 
 
 def start(command, project, environment, log):
@@ -60,7 +80,7 @@ def interrupted_download(command, environment, log):
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
     try:
-        with tempfile.TemporaryDirectory(prefix="udb-download-interrupt-") as temp:
+        with project_directory("udb-download-interrupt-") as temp:
             project = Path(temp)
             test_env = environment | {
                 "UDB_HOME": str(project / "cache"),
@@ -86,7 +106,7 @@ def interrupted_download(command, environment, log):
 
 
 def interrupted_startup(command, environment, log):
-    with tempfile.TemporaryDirectory(prefix="udb-startup-interrupt-") as temp:
+    with project_directory("udb-startup-interrupt-") as temp:
         project = Path(temp)
         proto = project / "proto"
         proto.mkdir()
@@ -249,7 +269,7 @@ def main(proof):
     with binary.open("rb") as source:
         proof["binary_sha256"] = hashlib.file_digest(source, "sha256").hexdigest()
     proof["source_commit"] = os.environ.get("GITHUB_SHA", "")
-    with tempfile.TemporaryDirectory(prefix="udb-embedded-") as temp, log_path.open("w") as log:
+    with project_directory("udb-embedded-") as temp, log_path.open("w") as log:
         project = Path(temp)
         environment = os.environ.copy()
         environment["UDB_HOME"] = str(project / "cache")
