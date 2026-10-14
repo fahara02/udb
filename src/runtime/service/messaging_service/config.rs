@@ -7,6 +7,7 @@ pub(crate) const KEY_PACKAGE_MSG: &str = "udb.core.messaging.entity.v1.Messaging
 pub(crate) const GROUP_MSG: &str = "udb.core.messaging.entity.v1.MessagingGroup";
 pub(crate) const GROUP_MEMBER_MSG: &str = "udb.core.messaging.entity.v1.MessagingGroupMember";
 pub(crate) const INBOX_MSG: &str = "udb.core.messaging.entity.v1.MessagingInboxEntry";
+pub(crate) const BACKUP_MSG: &str = "udb.core.messaging.entity.v1.MessagingBackup";
 
 /// Emitted once per appended inbox row, in the same transaction as the row. The
 /// payload names only `{tenant_id, device_id, seq}`: subscribers wake and pull
@@ -39,6 +40,22 @@ pub(crate) const MAX_CLAIM_TARGETS: usize = 256;
 pub(crate) const MAX_MLS_MESSAGE_BYTES: usize = 1024 * 1024;
 /// Members one group may hold; bounds the per-commit fan-out transaction.
 pub(crate) const MAX_GROUP_MEMBERS: usize = 1000;
+
+/// The backup a request names when it names none.
+pub(crate) const DEFAULT_BACKUP_ID: &str = "default";
+/// Longest accepted backup id.
+pub(crate) const MAX_BACKUP_ID_LEN: usize = 128;
+/// Every sealed backup envelope (udb-mls `seal_backup`) starts with this tag.
+/// The broker cannot check the encryption, but it refuses a body that is not
+/// an envelope at all, so a client bug cannot store a plaintext export.
+pub(crate) const BACKUP_ENVELOPE_MAGIC: &[u8; 8] = b"UDBMLSB1";
+/// Smallest possible envelope: magic, Argon2id parameters (3 x u32), 16-byte
+/// salt, 24-byte nonce, and the 16-byte Poly1305 tag of an empty payload.
+pub(crate) const MIN_BACKUP_BYTES: usize = 8 + 12 + 16 + 24 + 16;
+/// Largest accepted envelope. It stays under the 4 MiB default gRPC message
+/// limit of the native listener and of the SDK clients, so a backup always
+/// round-trips without per-client limit changes.
+pub(crate) const MAX_BACKUP_BYTES: usize = 3 * 1024 * 1024;
 
 /// Inbox rows one `StreamInbox` page reads.
 pub(crate) const INBOX_PAGE: i64 = 100;

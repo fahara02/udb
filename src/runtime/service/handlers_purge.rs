@@ -5,8 +5,11 @@
 //! so vector points, graph nodes, search documents, caches and CDC consumers
 //! follow exactly as they do for any delete; soft-delete tables then lose their
 //! tombstones too, since an erased subject must not survive as a "deleted" row.
-//! Tables are found by their `owner_field` columns. udb's own entities (users,
-//! files) have dedicated erasure RPCs and are listed in `not_covered`.
+//! Tables are found by their `owner_field` columns. The native messaging
+//! service's rows (devices, KeyPackages, inbox, group memberships, backups) are
+//! erased through the messaging store, and the groups the subject was in get a
+//! removal hint. udb's other own entities (users, files) have dedicated erasure
+//! RPCs and are listed in `not_covered`.
 
 use super::*;
 use crate::proto::{PurgeSubjectRequest, PurgeSubjectResponse, PurgedSubjectTable};
@@ -124,6 +127,37 @@ impl DataBrokerService {
                     deleted,
                 });
             }
+        }
+
+        // Native messaging (E2EE): the subject's devices, KeyPackages, inbox
+        // rows, group memberships and backups, plus a removal hint to every
+        // group the subject was in.
+        let messaging = self.build_messaging_service();
+        match messaging
+            .erase_subject(&context, &subject, req.dry_run)
+            .await?
+        {
+            messaging_service::MessagingErasure::Covered {
+                tables: erased,
+                hinted_groups,
+            } => {
+                for table in erased {
+                    total += table.deleted;
+                    tables.push(PurgedSubjectTable {
+                        message_type: table.message_type.to_string(),
+                        column: table.column.to_string(),
+                        deleted: table.deleted,
+                    });
+                }
+                if hinted_groups > 0 {
+                    not_covered.push(format!(
+                        "messaging group state: {hinted_groups} group(s) keep the erased devices' leaves \
+                         (their credentials name the subject) in the public ratchet tree until a \
+                         remaining member commits the removal the hint asked for"
+                    ));
+                }
+            }
+            messaging_service::MessagingErasure::NotCovered(reason) => not_covered.push(reason),
         }
 
         let receipt = serde_json::json!({

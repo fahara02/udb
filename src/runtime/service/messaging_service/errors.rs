@@ -151,3 +151,35 @@ pub(crate) fn device_owner_mismatch_status(operation: &'static str) -> Status {
         "the device belongs to a different principal",
     )
 }
+
+pub(crate) fn backup_not_found_status(operation: &'static str, backup_id: &str) -> Status {
+    messaging_not_found_status(
+        operation,
+        "messaging_backup_not_found",
+        format!("no messaging backup '{backup_id}' is stored for this principal"),
+    )
+}
+
+/// A compare-and-swap backup write lost: another device replaced the backup
+/// first. `FailedPrecondition` with `missing.current_version` (0 = none stored),
+/// so the SDK can re-read and decide without parsing text.
+pub(crate) fn backup_version_conflict_status(
+    operation: &'static str,
+    expected: i64,
+    current: i64,
+) -> Status {
+    let mut missing = std::collections::HashMap::new();
+    missing.insert("current_version".to_string(), current.to_string());
+    let detail = crate::proto::ErrorDetail {
+        backend: "messaging".to_string(),
+        operation: operation.to_string(),
+        kind: crate::proto::ErrorKind::Conflict as i32,
+        missing,
+        ..Default::default()
+    };
+    crate::runtime::executor_utils::status_with_typed_detail(
+        tonic::Code::FailedPrecondition,
+        format!("backup version {expected} is stale; the stored version is {current}"),
+        detail,
+    )
+}

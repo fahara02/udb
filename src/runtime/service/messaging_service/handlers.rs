@@ -1,5 +1,6 @@
-//! The twelve `MessagingService` RPC handlers, as free functions taking `svc`;
-//! `mod.rs` delegates one line to each.
+//! The device, KeyPackage, group and inbox `MessagingService` RPC handlers, as
+//! free functions taking `svc`; `mod.rs` delegates one line to each. The backup
+//! RPCs live in `backup.rs`.
 //!
 //! Every handler: binds the body tenant to the verified claim first, validates
 //! the request, admits on the tenant's fair-share channel, resolves the
@@ -42,7 +43,7 @@ fn mls_status(reject: mls::MlsReject) -> Status {
 }
 
 /// Common prologue: tenant binding + admission.
-async fn admit(
+pub(super) async fn admit(
     svc: &MessagingServiceImpl,
     metadata: &MetadataMap,
     tenant_id: &str,
@@ -83,7 +84,7 @@ async fn require_own_active_device(
 /// Append the given entries (any order) and their events. Entries are sorted by
 /// device id and every target row is locked first, in that order, so concurrent
 /// fan-outs cannot deadlock. Returns the number of rows appended.
-async fn fan_out(
+pub(super) async fn fan_out(
     svc: &MessagingServiceImpl,
     conn: &mut sqlx::PgConnection,
     tenant_id: &str,

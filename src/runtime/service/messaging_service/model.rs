@@ -7,11 +7,12 @@ use tonic::Status;
 use crate::proto::udb::core::messaging::services::v1 as msg_pb;
 
 use super::config::{
+    BACKUP_ENVELOPE_MAGIC, DEFAULT_BACKUP_ID, MAX_BACKUP_BYTES, MAX_BACKUP_ID_LEN,
     MAX_CLIENT_MESSAGE_ID_LEN, MAX_DEVICE_ID_LEN, MAX_GROUP_ID_LEN, MAX_MLS_MESSAGE_BYTES,
-    MAX_SUBJECT_ID_LEN,
+    MAX_SUBJECT_ID_LEN, MIN_BACKUP_BYTES,
 };
 use super::errors::{device_owner_mismatch_status, invalid_field};
-use super::store::{DeviceRow, InboxRow};
+use super::store::{BackupRow, DeviceRow, InboxRow};
 
 fn token_char(c: char, extra: &[char]) -> bool {
     c.is_ascii_alphanumeric() || matches!(c, '.' | '_' | '-') || extra.contains(&c)
@@ -59,6 +60,32 @@ pub(crate) fn validate_client_message_id(value: &str) -> Result<String, Status> 
         MAX_CLIENT_MESSAGE_ID_LEN,
         &[':'],
     )
+}
+
+/// A backup id: 1-128 of `[A-Za-z0-9._-]`; empty means [`DEFAULT_BACKUP_ID`].
+pub(crate) fn validate_backup_id(value: &str) -> Result<String, Status> {
+    if value.trim().is_empty() {
+        return Ok(DEFAULT_BACKUP_ID.to_string());
+    }
+    token("backup_id", value, MAX_BACKUP_ID_LEN, &[])
+}
+
+/// A sealed backup envelope: tagged with the udb-mls envelope magic and within
+/// the size bounds. The broker cannot verify the encryption itself.
+pub(crate) fn require_backup_envelope(bytes: &[u8]) -> Result<(), Status> {
+    if bytes.len() < MIN_BACKUP_BYTES || !bytes.starts_with(BACKUP_ENVELOPE_MAGIC) {
+        return Err(invalid_field(
+            "ciphertext",
+            "must be a sealed backup envelope (udb-mls seal_backup); the broker stores only encrypted backups",
+        ));
+    }
+    if bytes.len() > MAX_BACKUP_BYTES {
+        return Err(invalid_field(
+            "ciphertext",
+            format!("is larger than {MAX_BACKUP_BYTES} bytes"),
+        ));
+    }
+    Ok(())
 }
 
 /// A subject id: non-empty, at most 255 characters, no control characters.
@@ -193,4 +220,22 @@ pub(crate) fn removal_hint_payload(
     })
     .to_string()
     .into_bytes()
+}
+
+pub(crate) fn backup_dto(tenant_id: &str, row: &BackupRow) -> msg_pb::MessagingBackupInfo {
+    msg_pb::MessagingBackupInfo {
+        tenant_id: tenant_id.to_string(),
+        subject_id: row.subject_id.clone(),
+        backup_id: row.backup_id.clone(),
+        size_bytes: row.size_bytes,
+        ciphertext_sha256: row.ciphertext_sha256.clone(),
+        version: row.version,
+        created_at_unix: row.created_at_unix,
+        updated_at_unix: row.updated_at_unix,
+    }
+}
+
+/// Lowercase hex SHA-256 of a backup envelope.
+pub(crate) fn envelope_digest(bytes: &[u8]) -> String {
+    format!("{:x}", sha2::Sha256::digest(bytes))
 }

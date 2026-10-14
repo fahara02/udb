@@ -13,12 +13,13 @@ use crate::proto::{ErrorDetail, ErrorKind};
 use crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY;
 
 use super::MessagingServiceImpl;
-use super::config::parse_ttl_secs;
-use super::errors::stale_epoch_status;
+use super::config::{BACKUP_ENVELOPE_MAGIC, MAX_BACKUP_BYTES, MIN_BACKUP_BYTES, parse_ttl_secs};
+use super::errors::{backup_version_conflict_status, stale_epoch_status};
 use super::events::inbox_appended_payload;
 use super::mls;
 use super::model::{
-    resolve_subject, validate_client_message_id, validate_device_id, validate_group_id,
+    require_backup_envelope, resolve_subject, validate_backup_id, validate_client_message_id,
+    validate_device_id, validate_group_id,
 };
 use super::store::{claim_one_time_sql, inbox_retention_sql, models};
 
@@ -549,4 +550,74 @@ async fn register_device_requires_the_credential_to_name_the_device() {
     assert_eq!(err.code(), tonic::Code::InvalidArgument);
 }
 
+/// A body shaped like a udb-mls sealed backup envelope (the broker checks the
+/// framing and bounds only; it cannot check the encryption).
+pub(super) fn envelope(len: usize) -> Vec<u8> {
+    let mut bytes = BACKUP_ENVELOPE_MAGIC.to_vec();
+    bytes.resize(len.max(BACKUP_ENVELOPE_MAGIC.len()), 0xA5);
+    bytes
+}
+
+#[test]
+fn backup_ids_default_and_reject_separators() {
+    assert_eq!(validate_backup_id("").unwrap(), "default");
+    assert_eq!(validate_backup_id(" phone.v2 ").unwrap(), "phone.v2");
+    assert!(validate_backup_id("a/b").is_err());
+    assert!(validate_backup_id(&"x".repeat(129)).is_err());
+}
+
+#[test]
+fn only_sealed_envelopes_within_bounds_are_stored() {
+    assert!(require_backup_envelope(&envelope(MIN_BACKUP_BYTES)).is_ok());
+    assert!(require_backup_envelope(&envelope(MAX_BACKUP_BYTES)).is_ok());
+    for refused in [
+        envelope(MIN_BACKUP_BYTES - 1),
+        envelope(MAX_BACKUP_BYTES + 1),
+        b"{\"history\":\"plaintext export\"}".repeat(4),
+        Vec::new(),
+    ] {
+        let err = require_backup_envelope(&refused).expect_err("refused");
+        assert_eq!(err.code(), tonic::Code::InvalidArgument);
+    }
+}
+
+#[test]
+fn backup_version_conflict_carries_the_current_version() {
+    let status = backup_version_conflict_status("put_messaging_backup", 2, 5);
+    assert_eq!(status.code(), tonic::Code::FailedPrecondition);
+    let detail = decode_detail(&status);
+    assert_eq!(detail.kind, ErrorKind::Conflict as i32);
+    assert_eq!(
+        detail.missing.get("current_version").map(String::as_str),
+        Some("5")
+    );
+}
+
+#[tokio::test]
+async fn an_end_user_cannot_read_another_principals_backup() {
+    use crate::runtime::service::method_security::{
+        VerifiedClaimContext, scope_claim_context_for_test,
+    };
+    let svc = MessagingServiceImpl::new();
+    let mut request = Request::new(msg_pb::GetMessagingBackupRequest {
+        tenant_id: TENANT.to_string(),
+        subject_id: "bob".to_string(),
+        backup_id: String::new(),
+    });
+    request
+        .metadata_mut()
+        .insert("x-tenant-id", MetadataValue::from_static(TENANT));
+    let claim = VerifiedClaimContext {
+        authenticated: true,
+        subject: "alice".to_string(),
+        tenant_id: TENANT.to_string(),
+        ..Default::default()
+    };
+    let err = scope_claim_context_for_test(claim, svc.get_messaging_backup(request))
+        .await
+        .expect_err("alice may not read bob's backup");
+    assert_eq!(err.code(), tonic::Code::PermissionDenied);
+}
+
 mod live;
+mod live_backup;

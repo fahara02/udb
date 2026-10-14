@@ -22,7 +22,7 @@ use tonic::Status;
 use crate::runtime::native_catalog::{NativeModel, native_model};
 
 use super::config::{
-    DEVICE_ACTIVE, DEVICE_MSG, DEVICE_REVOKED, GROUP_MEMBER_MSG, GROUP_MSG, INBOX_MSG,
+    BACKUP_MSG, DEVICE_ACTIVE, DEVICE_MSG, DEVICE_REVOKED, GROUP_MEMBER_MSG, GROUP_MSG, INBOX_MSG,
     KEY_PACKAGE_MSG,
 };
 use super::errors::{messaging_internal_status, messaging_store_status};
@@ -33,6 +33,7 @@ pub(crate) struct Models {
     pub(crate) group: NativeModel,
     pub(crate) member: NativeModel,
     pub(crate) inbox: NativeModel,
+    pub(crate) backup: NativeModel,
 }
 
 pub(crate) fn models() -> &'static Models {
@@ -111,6 +112,21 @@ pub(crate) fn models() -> &'static Models {
                 "client_message_id",
                 "created_at",
                 "acked_at",
+            ],
+        ),
+        backup: native_model(
+            BACKUP_MSG,
+            &[
+                "id",
+                "tenant_id",
+                "subject_id",
+                "backup_id",
+                "ciphertext",
+                "size_bytes",
+                "ciphertext_sha256",
+                "version",
+                "created_at",
+                "updated_at",
             ],
         ),
     })
@@ -1121,4 +1137,305 @@ pub(crate) fn spent_key_package_retention_sql(m: &NativeModel) -> String {
         id = m.q("id"),
         claimed = m.q("claimed_at"),
     )
+}
+
+// ── backups ────────────────────────────────────────────────────────────────
+
+#[derive(Debug, Clone)]
+pub(crate) struct BackupRow {
+    pub(crate) subject_id: String,
+    pub(crate) backup_id: String,
+    pub(crate) size_bytes: i64,
+    pub(crate) ciphertext_sha256: String,
+    pub(crate) version: i64,
+    pub(crate) created_at_unix: i64,
+    pub(crate) updated_at_unix: i64,
+}
+
+fn backup_columns(m: &NativeModel) -> String {
+    format!(
+        "{subject} AS subject_id, {backup} AS backup_id, {size} AS size_bytes, \
+         {digest} AS ciphertext_sha256, {version} AS version, {created}, {updated}",
+        subject = m.q("subject_id"),
+        backup = m.q("backup_id"),
+        size = m.q("size_bytes"),
+        digest = m.q("ciphertext_sha256"),
+        version = m.q("version"),
+        created = unix(&m.q("created_at"), "created_at_unix"),
+        updated = unix(&m.q("updated_at"), "updated_at_unix"),
+    )
+}
+
+fn backup_from_row(row: &sqlx::postgres::PgRow) -> Result<BackupRow, Status> {
+    Ok(BackupRow {
+        subject_id: decode(row, "subject_id")?,
+        backup_id: decode(row, "backup_id")?,
+        size_bytes: decode(row, "size_bytes")?,
+        ciphertext_sha256: decode(row, "ciphertext_sha256")?,
+        version: decode(row, "version")?,
+        created_at_unix: decode(row, "created_at_unix")?,
+        updated_at_unix: decode(row, "updated_at_unix")?,
+    })
+}
+
+/// The stored backup and its envelope.
+pub(crate) async fn load_backup(
+    conn: &mut PgConnection,
+    tenant_id: &str,
+    subject_id: &str,
+    backup_id: &str,
+) -> Result<Option<(BackupRow, Vec<u8>)>, Status> {
+    let m = &models().backup;
+    let sql = format!(
+        "SELECT {cols}, {ciphertext} AS ciphertext FROM {rel} \
+         WHERE {tenant} = $1 AND {subject} = $2 AND {backup} = $3",
+        cols = backup_columns(m),
+        ciphertext = m.q("ciphertext"),
+        rel = m.relation,
+        tenant = m.q("tenant_id"),
+        subject = m.q("subject_id"),
+        backup = m.q("backup_id"),
+    );
+    let row = sqlx::query(&sql)
+        .bind(tenant_id)
+        .bind(subject_id)
+        .bind(backup_id)
+        .fetch_optional(&mut *conn)
+        .await
+        .map_err(|err| messaging_store_status("load_backup", &err))?;
+    row.map(|row| Ok((backup_from_row(&row)?, decode(&row, "ciphertext")?)))
+        .transpose()
+}
+
+/// The stored backup's version, 0 when none is stored.
+pub(crate) async fn backup_version(
+    conn: &mut PgConnection,
+    tenant_id: &str,
+    subject_id: &str,
+    backup_id: &str,
+) -> Result<i64, Status> {
+    let m = &models().backup;
+    let sql = format!(
+        "SELECT {version} AS version FROM {rel} \
+         WHERE {tenant} = $1 AND {subject} = $2 AND {backup} = $3",
+        version = m.q("version"),
+        rel = m.relation,
+        tenant = m.q("tenant_id"),
+        subject = m.q("subject_id"),
+        backup = m.q("backup_id"),
+    );
+    let row = sqlx::query(&sql)
+        .bind(tenant_id)
+        .bind(subject_id)
+        .bind(backup_id)
+        .fetch_optional(&mut *conn)
+        .await
+        .map_err(|err| messaging_store_status("backup_version", &err))?;
+    row.map(|row| decode(&row, "version"))
+        .transpose()
+        .map(Option::unwrap_or_default)
+}
+
+/// One backup write: the envelope, its size and digest.
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct BackupWrite<'a> {
+    pub(crate) tenant_id: &'a str,
+    pub(crate) subject_id: &'a str,
+    pub(crate) backup_id: &'a str,
+    pub(crate) ciphertext: &'a [u8],
+    pub(crate) ciphertext_sha256: &'a str,
+}
+
+/// Store or replace a backup unconditionally: `(row, created)`. One statement,
+/// so two concurrent first writes cannot both insert.
+pub(crate) async fn upsert_backup(
+    conn: &mut PgConnection,
+    write: BackupWrite<'_>,
+) -> Result<(BackupRow, bool), Status> {
+    let m = &models().backup;
+    let sql = format!(
+        "INSERT INTO {rel} AS b ({tenant}, {subject}, {backup}, {ciphertext}, {size}, {digest}) \
+         VALUES ($1, $2, $3, $4, $5, $6) \
+         ON CONFLICT ({tenant}, {subject}, {backup}) DO UPDATE SET \
+            {ciphertext} = EXCLUDED.{ciphertext}, {size} = EXCLUDED.{size}, \
+            {digest} = EXCLUDED.{digest}, {version} = b.{version} + 1, {updated} = NOW() \
+         RETURNING {cols}, (xmax = 0) AS created",
+        rel = m.relation,
+        tenant = m.q("tenant_id"),
+        subject = m.q("subject_id"),
+        backup = m.q("backup_id"),
+        ciphertext = m.q("ciphertext"),
+        size = m.q("size_bytes"),
+        digest = m.q("ciphertext_sha256"),
+        version = m.q("version"),
+        updated = m.q("updated_at"),
+        cols = backup_columns(m),
+    );
+    let row = sqlx::query(&sql)
+        .bind(write.tenant_id)
+        .bind(write.subject_id)
+        .bind(write.backup_id)
+        .bind(write.ciphertext)
+        .bind(write.ciphertext.len() as i64)
+        .bind(write.ciphertext_sha256)
+        .fetch_one(&mut *conn)
+        .await
+        .map_err(|err| messaging_store_status("upsert_backup", &err))?;
+    Ok((backup_from_row(&row)?, decode(&row, "created")?))
+}
+
+/// Replace a backup only while it is at `expected_version`; `None` when it is
+/// not (or no backup is stored).
+pub(crate) async fn replace_backup_at_version(
+    conn: &mut PgConnection,
+    write: BackupWrite<'_>,
+    expected_version: i64,
+) -> Result<Option<BackupRow>, Status> {
+    let m = &models().backup;
+    let sql = format!(
+        "UPDATE {rel} SET {ciphertext} = $4, {size} = $5, {digest} = $6, \
+            {version} = {version} + 1, {updated} = NOW() \
+         WHERE {tenant} = $1 AND {subject} = $2 AND {backup} = $3 AND {version} = $7 \
+         RETURNING {cols}",
+        rel = m.relation,
+        tenant = m.q("tenant_id"),
+        subject = m.q("subject_id"),
+        backup = m.q("backup_id"),
+        ciphertext = m.q("ciphertext"),
+        size = m.q("size_bytes"),
+        digest = m.q("ciphertext_sha256"),
+        version = m.q("version"),
+        updated = m.q("updated_at"),
+        cols = backup_columns(m),
+    );
+    let row = sqlx::query(&sql)
+        .bind(write.tenant_id)
+        .bind(write.subject_id)
+        .bind(write.backup_id)
+        .bind(write.ciphertext)
+        .bind(write.ciphertext.len() as i64)
+        .bind(write.ciphertext_sha256)
+        .bind(expected_version)
+        .fetch_optional(&mut *conn)
+        .await
+        .map_err(|err| messaging_store_status("replace_backup_at_version", &err))?;
+    row.as_ref().map(backup_from_row).transpose()
+}
+
+/// Delete a backup; `false` when none was stored.
+pub(crate) async fn delete_backup(
+    conn: &mut PgConnection,
+    tenant_id: &str,
+    subject_id: &str,
+    backup_id: &str,
+) -> Result<bool, Status> {
+    let m = &models().backup;
+    let sql = format!(
+        "DELETE FROM {rel} WHERE {tenant} = $1 AND {subject} = $2 AND {backup} = $3",
+        rel = m.relation,
+        tenant = m.q("tenant_id"),
+        subject = m.q("subject_id"),
+        backup = m.q("backup_id"),
+    );
+    let done = sqlx::query(&sql)
+        .bind(tenant_id)
+        .bind(subject_id)
+        .bind(backup_id)
+        .execute(&mut *conn)
+        .await
+        .map_err(|err| messaging_store_status("delete_backup", &err))?;
+    Ok(done.rows_affected() == 1)
+}
+
+// ── subject erasure ────────────────────────────────────────────────────────
+
+/// Whether the service's tables exist in this store (a store the messaging
+/// migrations never ran on has none).
+pub(crate) async fn messaging_tables_exist(conn: &mut PgConnection) -> Result<bool, Status> {
+    let mut relations: Vec<String> = Vec::new();
+    let all = models();
+    for m in [
+        &all.device,
+        &all.key_package,
+        &all.group,
+        &all.member,
+        &all.inbox,
+        &all.backup,
+    ] {
+        relations.push(m.relation.clone());
+    }
+    let present: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*) FROM UNNEST($1::TEXT[]) AS r(name) WHERE to_regclass(r.name) IS NOT NULL",
+    )
+    .bind(&relations)
+    .fetch_one(&mut *conn)
+    .await
+    .map_err(|err| messaging_store_status("messaging_tables_exist", &err))?;
+    Ok(present == relations.len() as i64)
+}
+
+/// Every device of a subject, any status.
+pub(crate) async fn subject_device_ids(
+    conn: &mut PgConnection,
+    tenant_id: &str,
+    subject_id: &str,
+) -> Result<Vec<String>, Status> {
+    let m = &models().device;
+    let sql = format!(
+        "SELECT {device} AS device_id FROM {rel} WHERE {tenant} = $1 AND {subject} = $2 \
+         ORDER BY {device}",
+        rel = m.relation,
+        tenant = m.q("tenant_id"),
+        subject = m.q("subject_id"),
+        device = m.q("device_id"),
+    );
+    let rows = sqlx::query(&sql)
+        .bind(tenant_id)
+        .bind(subject_id)
+        .fetch_all(&mut *conn)
+        .await
+        .map_err(|err| messaging_store_status("subject_device_ids", &err))?;
+    rows.iter().map(|row| decode(row, "device_id")).collect()
+}
+
+/// Erase (or, with `delete = false`, count) the tenant's rows of `m` whose
+/// `column` is one of `values`. Returns the row count.
+pub(crate) async fn erase_rows(
+    conn: &mut PgConnection,
+    m: &NativeModel,
+    column: &str,
+    tenant_id: &str,
+    values: &[String],
+    delete: bool,
+) -> Result<i64, Status> {
+    if values.is_empty() {
+        return Ok(0);
+    }
+    let predicate = format!(
+        "{tenant} = $1 AND {column} = ANY($2)",
+        tenant = m.q("tenant_id"),
+        column = m.q(column),
+    );
+    if delete {
+        let sql = format!("DELETE FROM {rel} WHERE {predicate}", rel = m.relation);
+        let done = sqlx::query(&sql)
+            .bind(tenant_id)
+            .bind(values)
+            .execute(&mut *conn)
+            .await
+            .map_err(|err| messaging_store_status("erase_rows", &err))?;
+        Ok(done.rows_affected() as i64)
+    } else {
+        let sql = format!(
+            "SELECT COUNT(*) AS rows FROM {rel} WHERE {predicate}",
+            rel = m.relation
+        );
+        let row = sqlx::query(&sql)
+            .bind(tenant_id)
+            .bind(values)
+            .fetch_one(&mut *conn)
+            .await
+            .map_err(|err| messaging_store_status("count_rows", &err))?;
+        decode(&row, "rows")
+    }
 }

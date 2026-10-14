@@ -17,9 +17,10 @@
 //! Module layout: [`config`] constants and knobs, [`errors`] typed statuses,
 //! [`mls`] the OpenMLS delivery-service validation (pure), [`model`] request
 //! validation and DTO mapping, [`store`] the manifest-derived SQL, [`events`] the
-//! outbox event, [`handlers`] the twelve RPCs, [`workers`] the leader-elected
-//! inbox retention worker. `mod.rs` keeps the struct, builders and one-line trait
-//! delegators.
+//! outbox event, [`handlers`] the device, KeyPackage, group and inbox RPCs,
+//! [`backup`] the opt-in encrypted history backup RPCs, [`purge`] the
+//! `PurgeSubject` coverage, [`workers`] the leader-elected inbox retention
+//! worker. `mod.rs` keeps the struct, builders and one-line trait delegators.
 
 use std::sync::Arc;
 
@@ -38,12 +39,14 @@ pub use crate::proto::udb::core::messaging::services::v1::messaging_service_serv
 use super::DataBrokerService;
 use super::native_helpers::project_scoped_native_service_context;
 
+mod backup;
 mod config;
 mod errors;
 mod events;
 mod handlers;
 mod mls;
 mod model;
+mod purge;
 mod store;
 #[cfg(test)]
 mod tests;
@@ -53,6 +56,8 @@ mod workers;
 // election.
 pub(crate) use config::{INBOX_RETENTION_BATCH, inbox_retention_interval, inbox_ttl};
 pub(crate) use workers::run_inbox_retention_all_projects;
+// Used by the data-plane `PurgeSubject`.
+pub(crate) use purge::MessagingErasure;
 
 /// The `StreamInbox` response stream.
 pub(crate) type InboxStream = std::pin::Pin<
@@ -114,6 +119,19 @@ impl MessagingServiceImpl {
         tenant_id: &str,
         write: bool,
     ) -> Result<(crate::RequestContext, PgPool), Status> {
+        self.store_for_context(
+            project_scoped_native_service_context(metadata, tenant_id),
+            write,
+        )
+    }
+
+    /// [`Self::store`] for an already-built request context (the data-plane
+    /// `PurgeSubject` resolves the store from its verified security context).
+    pub(crate) fn store_for_context(
+        &self,
+        mut context: crate::RequestContext,
+        write: bool,
+    ) -> Result<(crate::RequestContext, PgPool), Status> {
         let runtime = self.runtime.as_deref().ok_or_else(|| {
             errors::messaging_capability_status(
                 "native_store",
@@ -121,7 +139,6 @@ impl MessagingServiceImpl {
                 "messaging service requires a runtime with a Postgres native store (no runtime configured)",
             )
         })?;
-        let mut context = project_scoped_native_service_context(metadata, tenant_id);
         let (pool, instance) =
             runtime.native_store_postgres_binding_for_service("messaging", write, &context)?;
         context.target_backend = "postgres".to_string();
@@ -222,6 +239,27 @@ impl MessagingService for MessagingServiceImpl {
         request: Request<msg_pb::AckInboxRequest>,
     ) -> Result<Response<msg_pb::AckInboxResponse>, Status> {
         handlers::ack_inbox(self, request).await
+    }
+
+    async fn put_messaging_backup(
+        &self,
+        request: Request<msg_pb::PutMessagingBackupRequest>,
+    ) -> Result<Response<msg_pb::PutMessagingBackupResponse>, Status> {
+        backup::put_backup(self, request).await
+    }
+
+    async fn get_messaging_backup(
+        &self,
+        request: Request<msg_pb::GetMessagingBackupRequest>,
+    ) -> Result<Response<msg_pb::GetMessagingBackupResponse>, Status> {
+        backup::get_backup(self, request).await
+    }
+
+    async fn delete_messaging_backup(
+        &self,
+        request: Request<msg_pb::DeleteMessagingBackupRequest>,
+    ) -> Result<Response<msg_pb::DeleteMessagingBackupResponse>, Status> {
+        backup::delete_backup(self, request).await
     }
 }
 

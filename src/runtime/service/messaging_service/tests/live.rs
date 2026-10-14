@@ -24,9 +24,9 @@ use super::super::workers::run_inbox_retention_once;
 use super::client::Device;
 use super::decode_detail;
 
-type Client = MessagingServiceClient<Channel>;
+pub(super) type Client = MessagingServiceClient<Channel>;
 
-async fn serve() -> (Client, tokio::sync::oneshot::Sender<()>) {
+pub(super) async fn serve() -> (Client, tokio::sync::oneshot::Sender<()>) {
     let svc = messaging_service().await;
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
         .await
@@ -52,7 +52,7 @@ async fn serve() -> (Client, tokio::sync::oneshot::Sender<()>) {
     (client, shutdown_tx)
 }
 
-fn req<T>(tenant: &str, message: T) -> Request<T> {
+pub(super) fn req<T>(tenant: &str, message: T) -> Request<T> {
     let mut request = Request::new(message);
     request
         .metadata_mut()
@@ -60,7 +60,7 @@ fn req<T>(tenant: &str, message: T) -> Request<T> {
     request
 }
 
-async fn register(client: &mut Client, tenant: &str, subject: &str, device: &Device) {
+pub(super) async fn register(client: &mut Client, tenant: &str, subject: &str, device: &Device) {
     let response = client
         .register_messaging_device(req(
             tenant,
@@ -78,7 +78,7 @@ async fn register(client: &mut Client, tenant: &str, subject: &str, device: &Dev
     assert!(response.created, "{} registers fresh", device.device_id);
 }
 
-async fn publish(
+pub(super) async fn publish(
     client: &mut Client,
     tenant: &str,
     device: &Device,
@@ -105,7 +105,7 @@ async fn publish(
     assert_eq!(response.accepted as usize, count);
 }
 
-async fn claim(
+pub(super) async fn claim(
     client: &mut Client,
     tenant: &str,
     requester: &str,
@@ -138,7 +138,7 @@ async fn claim(
     response.key_packages.remove(0)
 }
 
-async fn drain(
+pub(super) async fn drain(
     client: &mut Client,
     tenant: &str,
     device_id: &str,
@@ -166,7 +166,7 @@ async fn drain(
 }
 
 #[allow(clippy::too_many_arguments)]
-async fn submit(
+pub(super) async fn submit(
     client: &mut Client,
     tenant: &str,
     group_id: &str,
@@ -194,7 +194,7 @@ async fn submit(
         .map(tonic::Response::into_inner)
 }
 
-async fn send(
+pub(super) async fn send(
     client: &mut Client,
     tenant: &str,
     group_id: &str,
