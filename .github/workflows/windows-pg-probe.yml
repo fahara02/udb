@@ -106,63 +106,36 @@ jobs:
         with:
           go: "true"
 
-      - name: udb dev up from Python under different PATHs
+      - name: Record the PowerShell environment
+        if: github.event.inputs.udb_run_id != ''
+        shell: pwsh
+        run: |
+          Get-ChildItem env: | ForEach-Object { "$($_.Name)=$($_.Value)" } | Set-Content -Encoding utf8 "$env:RUNNER_TEMP\pwsh-env.txt"
+
+      - name: initdb from Python, by wrapper and environment
         if: github.event.inputs.udb_run_id != ''
         shell: python
         run: |
-          import glob, os, re, subprocess, tempfile, time, pathlib
-          udb = os.path.join(os.environ["GITHUB_WORKSPACE"], "udbbin", "udb.exe")
-          full = os.environ["PATH"]
-          windir = os.environ.get("WINDIR", r"C:\Windows")
-          variants = {
-              "full-path": full,
-              "system32-only": windir + r"\System32;" + windir,
-              "no-toolcache": ";".join(p for p in full.split(";") if "hostedtoolcache" not in p.lower()),
-          }
-          bin_dir = None
-          for label, path in variants.items():
-              project = pathlib.Path(tempfile.mkdtemp(prefix="udb-pyprobe-"))
-              (project / "proto").mkdir()
-              env = os.environ.copy()
-              env["PATH"] = path
-              env["UDB_HOME"] = str(project / "cache")
-              env["UDB_PROTO_ROOT"] = str(project / "proto")
-              log = open(project / "dev.log", "w")
-              proc = subprocess.Popen([udb, "dev", "up", "--embedded"], cwd=project, env=env,
-                                      stdout=log, stderr=log, creationflags=subprocess.CREATE_NEW_PROCESS_GROUP)
-              deadline = time.time() + 180
-              while time.time() < deadline and proc.poll() is None:
-                  if (project / ".udb" / "dev" / "bootstrap.json").exists():
-                      break
-                  time.sleep(2)
-              ok = (project / ".udb" / "dev" / "bootstrap.json").exists()
-              log.close()
-              lines = [l for l in (project / "dev.log").read_text(errors="replace").splitlines()
-                       if l.strip() and not re.search("(?i)password|secret", l)]
-              print("=== %s (%d PATH entries): bootstrap=%s" % (label, len(path.split(";")), ok))
-              for line in lines[-2:]:
-                  print("   " + line)
-              found = glob.glob(str(project / "cache" / "**" / "initdb.exe"), recursive=True)
-              bin_dir = bin_dir or (os.path.dirname(found[0]) if found else None)
-              if proc.poll() is None:
-                  subprocess.run([udb, "dev", "down", "--embedded"], cwd=project, env=env, timeout=60)
-                  proc.kill()
-          if bin_dir:
-              hits = []
-              for entry in full.split(";"):
-                  for dll in glob.glob(os.path.join(entry, "*.dll")):
-                      if os.path.exists(os.path.join(bin_dir, os.path.basename(dll))):
-                          hits.append(dll)
-              print("=== PATH DLLs shadowing names in the PostgreSQL bin dir:")
-              for hit in hits[:30]:
-                  print("   " + hit)
-              for label, path in (("direct-full-path", full), ("direct-system32", windir + r"\System32;" + windir)):
-                  data = tempfile.mkdtemp(prefix="pgdirect-")
-                  pw = os.path.join(data, "pw")
-                  open(pw, "w").write("probe")
-                  env = os.environ.copy()
-                  env["PATH"] = path
-                  rc = subprocess.run([os.path.join(bin_dir, "initdb.exe"), "--pgdata", os.path.join(data, "d"),
-                                       "--username", "postgres", "--auth", "password", "--pwfile", pw,
-                                       "--encoding", "UTF8"], env=env, capture_output=True).returncode
-                  print("=== initdb %s: exit 0x%x" % (label, rc & 0xFFFFFFFF))
+          import os, subprocess, tempfile
+          pg_bin = os.environ["PGBIN"]
+          initdb = os.path.join(pg_bin, "initdb.exe")
+          pw_env = {}
+          for line in open(os.path.join(os.environ["RUNNER_TEMP"], "pwsh-env.txt"), encoding="utf-8-sig"):
+              key, _, value = line.rstrip("\n").partition("=")
+              pw_env[key] = value
+          py_keys = {k.upper() for k in os.environ}
+          pw_keys = {k.upper() for k in pw_env}
+          print("=== only in Python env:", sorted(py_keys - pw_keys))
+          print("=== only in PowerShell env:", sorted(pw_keys - py_keys))
+          def run(label, argv, env):
+              data = tempfile.mkdtemp(prefix="pgv5-")
+              pw = os.path.join(data, "pw")
+              open(pw, "w").write("probe")
+              args = ["--pgdata", os.path.join(data, "d"), "--username", "postgres", "--auth", "password", "--pwfile", pw, "--encoding", "UTF8"]
+              rc = subprocess.run(argv + args, env=env, capture_output=True, text=True)
+              print("=== %s: exit 0x%x %s" % (label, rc.returncode & 0xFFFFFFFF, (rc.stderr or "").strip().splitlines()[-1:] ))
+          run("python-direct", [initdb], os.environ.copy())
+          run("python-pwsh-env", [initdb], pw_env)
+          minimal = {k: os.environ[k] for k in ("SYSTEMROOT", "WINDIR", "TEMP", "TMP", "USERPROFILE", "PATH", "COMSPEC", "SYSTEMDRIVE") if k in os.environ}
+          run("python-minimal-env", [initdb], minimal)
+          run("python-via-cmd", ["cmd", "/c", initdb], os.environ.copy())
