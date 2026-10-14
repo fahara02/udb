@@ -52,6 +52,13 @@ pub(crate) fn generated_encryption_key() -> String {
 pub(crate) fn ensure_rs256_keypair(dir: &Path) -> Result<(PathBuf, PathBuf), String> {
     use rsa::pkcs8::{DecodePrivateKey, EncodePrivateKey, EncodePublicKey, LineEnding};
     fs::create_dir_all(dir).map_err(|err| format!("create {}: {err}", dir.display()))?;
+    #[cfg(unix)]
+    {
+        // The directory holds the signing key: owner-only, like the key files.
+        use std::os::unix::fs::PermissionsExt;
+        fs::set_permissions(dir, fs::Permissions::from_mode(0o700))
+            .map_err(|err| format!("restrict {}: {err}", dir.display()))?;
+    }
     let private_path = dir.join("jwt-private.pem");
     let public_path = dir.join("jwt-public.pem");
     let key = if private_path.exists() {
@@ -113,6 +120,12 @@ mod tests {
             "an existing key is kept"
         );
         assert!(fs::read_to_string(&public).unwrap().contains("PUBLIC KEY"));
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let mode = fs::metadata(&dir).unwrap().permissions().mode() & 0o777;
+            assert_eq!(mode, 0o700, "the key directory is owner-only");
+        }
         let _ = fs::remove_dir_all(&dir);
     }
 }
