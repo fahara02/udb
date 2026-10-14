@@ -25,6 +25,8 @@ jobs:
     runs-on: windows-latest
     timeout-minutes: 20
     steps:
+      - uses: actions/checkout@v4
+
       - name: Download and extract the archive
         shell: pwsh
         env:
