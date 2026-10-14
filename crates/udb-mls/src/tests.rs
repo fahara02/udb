@@ -110,7 +110,7 @@ impl Hub {
     }
 
     /// Deliver a device's pending inbox entries in order.
-    fn deliver(&mut self, client: &mut Client) -> Vec<InboxEvent> {
+    fn deliver<S: StateStore>(&mut self, client: &mut MlsClient<S>) -> Vec<InboxEvent> {
         let device = client.identity().device_id.clone();
         self.take(&device)
             .iter()
