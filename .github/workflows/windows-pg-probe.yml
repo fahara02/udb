@@ -1,9 +1,9 @@
 name: Probe · Windows embedded PostgreSQL
 
 # Manual diagnostic for `udb dev up --embedded` on Windows runners: runs the
-# exact PostgreSQL archive the dev command downloads, without building UDB, so
-# a loader or permission failure (e.g. STATUS_DLL_NOT_FOUND from initdb) can be
-# narrowed down in minutes instead of a full CI round.
+# exact PostgreSQL archive the dev command downloads, and optionally a
+# CI-built udb.exe, so a loader or permission failure (e.g. STATUS_DLL_NOT_FOUND
+# from initdb) can be narrowed down in minutes instead of a full CI round.
 
 on:
   workflow_dispatch:
@@ -11,15 +11,19 @@ on:
       version:
         description: "PostgreSQL binaries release"
         default: "16.4.0"
+      udb_run_id:
+        description: "CI run id whose udb-embedded-dev-Windows artifact to exercise (optional)"
+        default: ""
 
 permissions:
   contents: read
+  actions: read
 
 jobs:
   probe:
     name: Probe embedded PostgreSQL archive
     runs-on: windows-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - name: Download and extract the archive
         shell: pwsh
@@ -40,28 +44,50 @@ jobs:
           foreach ($dll in 'vcruntime140.dll', 'vcruntime140_1.dll', 'msvcp140.dll', 'ucrtbase.dll') {
             "{0,-20} System32: {1}  in bin: {2}" -f $dll, (Test-Path "$env:WINDIR\System32\$dll"), (Test-Path "$env:PGBIN\$dll")
           }
-          whoami /groups | Select-String 'Administrators|Mandatory Label'
 
-      - name: Load test (elevated, as CI runs it)
-        shell: pwsh
-        run: |
-          & "$env:PGBIN\initdb.exe" --version; "initdb --version exit: $LASTEXITCODE"
-          & "$env:PGBIN\postgres.exe" --version; "postgres --version exit: $LASTEXITCODE"
-          & "$env:PGBIN\pg_ctl.exe" --version; "pg_ctl --version exit: $LASTEXITCODE"
-
-      - name: initdb as the dev command runs it
+      - name: initdb from the archive, elevated
         shell: pwsh
         run: |
           $data = Join-Path $env:RUNNER_TEMP 'pgprobe-data'
           Set-Content -Path "$env:RUNNER_TEMP\pgpass" -Value 'probe'
-          & "$env:PGBIN\initdb.exe" --pgdata $data --username postgres --auth scram-sha-256 --pwfile "$env:RUNNER_TEMP\pgpass" --encoding UTF8
+          & "$env:PGBIN\initdb.exe" --pgdata $data --username postgres --auth password --pwfile "$env:RUNNER_TEMP\pgpass" --encoding UTF8 | Select-Object -Last 3
           "initdb exit: $LASTEXITCODE (0x{0:x})" -f $LASTEXITCODE
-          if (Test-Path $data) { Get-ChildItem $data | Select-Object -First 5 Name }
 
-      - name: Permissions of the extracted binaries
-        if: always()
+      - name: Download the CI-built udb.exe
+        if: github.event.inputs.udb_run_id != ''
+        uses: actions/download-artifact@v4
+        with:
+          name: udb-embedded-dev-Windows
+          path: udbbin
+          run-id: ${{ github.event.inputs.udb_run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: udb dev up --embedded, as the CI checker runs it
+        if: github.event.inputs.udb_run_id != ''
         shell: pwsh
         run: |
-          icacls "$env:PGBIN\initdb.exe"
-          icacls "$env:PGBIN\icuuc67.dll"
-          icacls $env:PGBIN
+          $project = Join-Path $env:TEMP ('udb-probe-' + [guid]::NewGuid().ToString('N'))
+          New-Item -ItemType Directory -Force "$project\proto" | Out-Null
+          $env:UDB_HOME = "$project\cache"
+          $env:UDB_PROTO_ROOT = "$project\proto"
+          Set-Location $project
+          $udb = Resolve-Path "$env:GITHUB_WORKSPACE\udbbin\udb.exe"
+          $job = Start-Process -FilePath $udb -ArgumentList 'dev','up','--embedded' -PassThru -NoNewWindow -RedirectStandardError "$project\dev.err" -RedirectStandardOutput "$project\dev.out"
+          if (-not $job.WaitForExit(240000)) { Stop-Process -Id $job.Id -Force; "dev did not exit in 240s" }
+          "dev exit: $($job.ExitCode)"
+          Get-Content "$project\dev.err", "$project\dev.out" -ErrorAction SilentlyContinue |
+            Where-Object { $_ -notmatch '(?i)password|secret' } | Select-Object -Last 25
+          $bin = Get-ChildItem -Path "$project\cache" -Recurse -Filter initdb.exe -ErrorAction SilentlyContinue | Select-Object -First 1
+          if ($bin) {
+            "--- initdb from udb's own cache: $($bin.DirectoryName)"
+            & $bin.FullName --version; "cached initdb --version exit: $LASTEXITCODE (0x{0:x})" -f $LASTEXITCODE
+            Set-Content -Path "$project\pgpass2" -Value 'probe'
+            & $bin.FullName --pgdata "$project\direct-data" --username postgres --auth password --pwfile "$project\pgpass2" --encoding UTF8 | Select-Object -Last 3
+            "cached initdb exit: $LASTEXITCODE (0x{0:x})" -f $LASTEXITCODE
+            "--- dll count in cached bin: $((Get-ChildItem $bin.DirectoryName -Filter *.dll).Count)"
+            icacls $bin.FullName
+            icacls $bin.DirectoryName
+          } else {
+            "no initdb.exe under $project\cache"
+          }
+          Get-Content "$project\.udb\dev\postgres.log" -ErrorAction SilentlyContinue | Select-Object -Last 10
