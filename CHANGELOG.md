@@ -72,7 +72,8 @@ ungranted store calls, and TypeScript store parity.
   install path is no longer passed in Windows' extended-length form, which
   `initdb` could not resolve.
 - **`udb dev up --embedded` no longer leaves a stale PostgreSQL pidfile** when
-  interrupted while PostgreSQL is still starting, which made the next start
+  interrupted while PostgreSQL is still starting, whether the server was killed,
+  failed its graceful stop or exited on its own, which made the next start
   believe a cluster was already running.
 - **`udbtest.StartPair` creates its peer tenant with the dev cluster's
   secrets**, so the Go embedded helper works offline.

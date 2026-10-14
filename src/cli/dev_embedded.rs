@@ -937,6 +937,9 @@ const OWNED_REAP_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(5
 struct EmbeddedChild {
     child: tokio::process::Child,
     phase: &'static str,
+    /// Recorded at spawn: tokio stops reporting the id once the process is
+    /// reaped, and pidfile cleanup still needs it then.
+    pid: Option<u32>,
 }
 
 #[cfg(feature = "postgres")]
@@ -946,7 +949,8 @@ impl EmbeddedChild {
         #[cfg(windows)]
         command.creation_flags(0x08000000); // CREATE_NO_WINDOW for background helpers.
         let child = command.spawn().map_err(|err| format!("{phase}: {err}"))?;
-        Ok(Self { child, phase })
+        let pid = child.id();
+        Ok(Self { child, phase, pid })
     }
 
     async fn terminate(&mut self) -> Result<(), String> {
@@ -1319,6 +1323,25 @@ impl EmbeddedCluster {
         result
     }
 
+    /// A kill leaves `postmaster.pid` behind (PostgreSQL removes it only on a
+    /// clean shutdown), and the next start would see a cluster that is not
+    /// running. Our killed child is reaped, so remove a pidfile that is empty,
+    /// unreadable, or names it; never one naming another PID.
+    fn remove_stale_pidfile(&self, pid: Option<u32>) -> Result<(), String> {
+        let pidfile = self.settings.data_dir.join("postmaster.pid");
+        if let Ok(contents) = fs::read_to_string(&pidfile) {
+            let named = contents
+                .lines()
+                .next()
+                .and_then(|line| line.trim().parse::<u32>().ok());
+            if named.is_none() || named == pid {
+                fs::remove_file(&pidfile)
+                    .map_err(|err| format!("remove stale PostgreSQL pidfile: {err}"))?;
+            }
+        }
+        Ok(())
+    }
+
     async fn stop(&mut self) -> Result<(), String> {
         let Some(process) = self.postmaster.as_mut() else {
             return Ok(());
@@ -1329,29 +1352,16 @@ impl EmbeddedCluster {
             .map_err(|err| format!("PostgreSQL stop status: {err}"))?
             .is_some()
         {
-            return Ok(());
+            // It exited on its own (or was killed) without a clean shutdown.
+            let pid = process.pid;
+            return self.remove_stale_pidfile(pid);
         }
         // Only call pg_ctl for the PID bound to this foreground child. If
         // startup never published our pidfile, kill our child handle directly.
         if !self.owns_postmaster_pid() {
-            let pid = self.postmaster.as_ref().and_then(|p| p.child.id());
+            let pid = self.postmaster.as_ref().and_then(|p| p.pid);
             self.postmaster.as_mut().unwrap().terminate().await?;
-            // A kill that lands while PostgreSQL is still writing its pidfile
-            // leaves the file behind, and the next start would see a cluster
-            // that is not running. Our child is reaped, so remove a pidfile that
-            // is empty, unreadable, or names it; never one naming another PID.
-            let pidfile = self.settings.data_dir.join("postmaster.pid");
-            if let Ok(contents) = fs::read_to_string(&pidfile) {
-                let named = contents
-                    .lines()
-                    .next()
-                    .and_then(|line| line.trim().parse::<u32>().ok());
-                if named.is_none() || named == pid {
-                    fs::remove_file(&pidfile)
-                        .map_err(|err| format!("remove stale PostgreSQL pidfile: {err}"))?;
-                }
-            }
-            return Ok(());
+            return self.remove_stale_pidfile(pid);
         }
         let mut command = self.command("pg_ctl");
         command
@@ -1370,7 +1380,9 @@ impl EmbeddedCluster {
                 Ok(())
             }
             _ => {
+                let pid = self.postmaster.as_ref().and_then(|p| p.pid);
                 self.postmaster.as_mut().unwrap().terminate().await?;
+                self.remove_stale_pidfile(pid)?;
                 // The parent handle exited, but a failed graceful stop is not
                 // proof that every Windows backend descendant was reaped.
                 Err("PostgreSQL graceful shutdown failed; owned parent was terminated, descendant cleanup is unverified".into())
