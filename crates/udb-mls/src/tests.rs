@@ -1002,7 +1002,8 @@ fn the_envelope_carries_no_plaintext_and_never_repeats() {
     let second = bob.export_backup_with(SECRET, &history, FAST).unwrap();
     assert!(first.starts_with(crate::BACKUP_MAGIC));
     assert_ne!(first, second, "a fresh salt and nonce per backup");
-    let identity = b"tenant-mls/bob/bob-phone";
+    // The metadata names the device; the snapshot is otherwise binary.
+    let identity = b"\"device_id\":\"bob-phone\"";
     let signature_key = bob.registration().unwrap().signature_public_key;
     for envelope in [&first, &second] {
         for needle in [
