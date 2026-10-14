@@ -212,9 +212,6 @@ type RecordSet struct {
 	// deprecated for reads.
 	Rows          []*Row `protobuf:"bytes,2,rep,name=rows,proto3" json:"rows,omitempty"`
 	NextPageToken string `protobuf:"bytes,3,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
-	// The number of records in THIS page (the length of `records_json`), not the
-	// number of matching rows. Use `exact_total` for that.
-	TotalCount int32 `protobuf:"varint,4,opt,name=total_count,json=totalCount,proto3" json:"total_count,omitempty"`
 	// #5 (opaque row revision / ETag): when the caller asked for revisions
 	// (`SelectRequest.include_revision`), this carries the broker-maintained
 	// opaque revision token for each returned record, index-aligned with
@@ -292,13 +289,6 @@ func (x *RecordSet) GetNextPageToken() string {
 		return x.NextPageToken
 	}
 	return ""
-}
-
-func (x *RecordSet) GetTotalCount() int32 {
-	if x != nil {
-		return x.TotalCount
-	}
-	return 0
 }
 
 func (x *RecordSet) GetRecordRevisions() []string {
@@ -1373,18 +1363,16 @@ const file_udb_entity_v1_relational_proto_rawDesc = "" +
 	"\x06fields\x18\x01 \x03(\v2\x1e.udb.entity.v1.Row.FieldsEntryR\x06fields\x1aQ\n" +
 	"\vFieldsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12,\n" +
-	"\x05value\x18\x02 \x01(\v2\x16.google.protobuf.ValueR\x05value:\x028\x01\"\xaf\x02\n" +
+	"\x05value\x18\x02 \x01(\v2\x16.google.protobuf.ValueR\x05value:\x028\x01\"\xa1\x02\n" +
 	"\tRecordSet\x12!\n" +
 	"\frecords_json\x18\x01 \x03(\fR\vrecordsJson\x12&\n" +
 	"\x04rows\x18\x02 \x03(\v2\x12.udb.entity.v1.RowR\x04rows\x12&\n" +
-	"\x0fnext_page_token\x18\x03 \x01(\tR\rnextPageToken\x12\x1f\n" +
-	"\vtotal_count\x18\x04 \x01(\x05R\n" +
-	"totalCount\x12)\n" +
+	"\x0fnext_page_token\x18\x03 \x01(\tR\rnextPageToken\x12)\n" +
 	"\x10record_revisions\x18\x05 \x03(\tR\x0frecordRevisions\x12\x19\n" +
 	"\bhas_more\x18\x06 \x01(\bR\ahasMore\x12\x1f\n" +
 	"\vexact_total\x18\a \x01(\x03R\n" +
 	"exactTotal\x12'\n" +
-	"\x0fredacted_fields\x18\b \x03(\tR\x0eredactedFields\"\x95\x03\n" +
+	"\x0fredacted_fields\x18\b \x03(\tR\x0eredactedFieldsJ\x04\b\x04\x10\x05R\vtotal_count\"\x95\x03\n" +
 	"\rSelectRequest\x127\n" +
 	"\acontext\x18\x01 \x01(\v2\x1d.udb.entity.v1.RequestContextR\acontext\x12!\n" +
 	"\fmessage_type\x18\x02 \x01(\tR\vmessageType\x12/\n" +

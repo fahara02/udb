@@ -6,8 +6,8 @@ package udbclient
 // call into THIS package; if the SDK DTOs drift incompatibly, the generated
 // consumer code stops compiling — but that only surfaced downstream, in the
 // consumer's build, never here. V23-1: the emitter declared an int64 List count
-// return while udbclient.Page.TotalCount is int32, so every generated repo
-// failed `go build` at the consumer.
+// return while the page count was int32, so every generated repo failed
+// `go build` at the consumer. 0.6.0 replaced that count with Page.HasMore.
 //
 // This test (plus the never-called shape function below) mirrors the generated
 // repo's expressions line-for-line so the same mismatch fails to COMPILE inside
@@ -27,22 +27,22 @@ import (
 )
 
 func TestEntityRepoGeneratedContract(t *testing.T) {
-	// ── List() count widening ─────────────────────────────────────────────
-	// The generated List declares an int64 count and returns
-	// `int64(page.TotalCount)`. That widening must stay legal whatever concrete
-	// integer type Page.TotalCount has — this is the line that broke.
+	// ── List() return shape ───────────────────────────────────────────────
+	// The generated List returns `page.HasMore` as its bool third value.
 	var page Page
 	var _ []map[string]any = page.Rows // FromUDBRow consumes each row
 	var _ string = page.NextPageToken
-	var totalCount int64 = int64(page.TotalCount)
-	_ = totalCount
+	var hasMore bool = page.HasMore
+	_ = hasMore
+	var _ int64 = page.ExactTotal
 
 	// ── PageOptions the caller of a generated List constructs ──────────────
 	_ = PageOptions{
-		Fields:    nil,
-		Sort:      []SortKey{{Field: "id", Descending: true}},
-		Limit:     0,
-		PageToken: "",
+		Fields:       nil,
+		Sort:         []SortKey{{Field: "id", Descending: true}},
+		Limit:        0,
+		PageToken:    "",
+		IncludeTotal: false,
 	}
 
 	// Keep the call-shape contract compiled/type-checked without invoking it.
@@ -58,9 +58,9 @@ func entityRepoGeneratedCallShapes(c *Client, ctx context.Context) {
 	e := c.Entity("acme.v1.Thing", Key("id")) // New<Entity>Repo binding
 	repo := struct{ E *Entity }{E: e}         // <Entity>Repo{ E *udbclient.Entity }
 	where := map[string]any{"id": "x"}
-	// List: SelectPage → rows → (out, token, int64 count, err)
+	// List: SelectPage → rows → (out, token, hasMore, err)
 	p, _ := repo.E.SelectPage(ctx, where, PageOptions{})
-	_ = int64(p.TotalCount)
+	_ = p.HasMore
 	// Get: Select → first row
 	_, _ = repo.E.Select(ctx, where)
 	// UpdateGuarded / DeleteGuarded: CAS options pass-through

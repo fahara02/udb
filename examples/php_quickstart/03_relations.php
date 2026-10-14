@@ -92,9 +92,11 @@ $top = $client->select(new SelectRequest([
     'limit'        => 3,
 ]), $md);
 
-printf("top %d orders for customer (amount desc):\n", $top->getTotalCount());
-foreach ($top->getRows() as $row) {
-    $f = $row->getFields();
+// The page length is the number of records_json entries (the compatibility
+// `rows` carry no field data). `has_more` says whether more rows match.
+printf("top %d orders for customer (amount desc):\n", count($top->getRecordsJson()));
+foreach ($top->getRecordsJson() as $record) {
+    $f = json_decode((string) $record, true, 512, JSON_THROW_ON_ERROR | JSON_BIGINT_AS_STRING);
     printf("  order=…%s  amount_cents=%s  status=%s\n",
         substr(scalar($f['order_id'] ?? null), -4),
         scalar($f['amount_cents'] ?? null),
@@ -114,22 +116,13 @@ function filterBy(array $kv): Struct
     return $filter;
 }
 
-/** Read a scalar out of a row's protobuf Value field. */
-function scalar(?\Google\Protobuf\Value $v): string
+/** Render one decoded JSON record value as text. */
+function scalar(mixed $v): string
 {
-    if ($v === null) {
-        return '';
-    }
-    return match ($v->getKind()) {
-        'string_value' => $v->getStringValue(),
-        'number_value' => formatNumber($v->getNumberValue()),
-        'bool_value'   => $v->getBoolValue() ? 'true' : 'false',
-        default        => $v->serializeToJsonString(),
+    return match (true) {
+        $v === null    => '',
+        is_bool($v)    => $v ? 'true' : 'false',
+        is_scalar($v)  => (string) $v,
+        default        => json_encode($v, JSON_THROW_ON_ERROR),
     };
-}
-
-/** Whole numbers print without a decimal point; fractions print as-is. */
-function formatNumber(float $n): string
-{
-    return $n == floor($n) && is_finite($n) ? sprintf('%.0f', $n) : (string) $n;
 }

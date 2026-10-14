@@ -244,7 +244,8 @@ impl Record {
 #[derive(Debug, Clone, PartialEq)]
 pub struct Records {
     records: Vec<Record>,
-    total_count: i32,
+    has_more: bool,
+    exact_total: i64,
     next_page_token: String,
 }
 
@@ -318,12 +319,11 @@ impl Records {
 
         Ok(Self {
             records,
-            // Reported, not enforced. On the relational and cache paths this is
-            // the page's own row count, but it is a plain `int32` on a message
-            // several code paths build, and failing a correct read over a
-            // metadata disagreement would be a worse bug than the one this
-            // decoder fixes. `records.len()` is authoritative for iteration.
-            total_count: set.total_count,
+            // Reported, not enforced: `records.len()` is authoritative for what
+            // is in hand. `has_more` says whether to keep paging; `exact_total`
+            // is the match count, set only when the read asked for it.
+            has_more: set.has_more,
+            exact_total: set.exact_total,
             next_page_token: set.next_page_token.clone(),
         })
     }
@@ -345,10 +345,17 @@ impl Records {
         self.records.get(index)
     }
 
-    /// The broker's reported total. See the note in [`Records::decode`]: prefer
-    /// [`Records::len`] for how many records are actually in hand.
-    pub fn total_count(&self) -> i32 {
-        self.total_count
+    /// True when the page is full and more rows may match: keep paging with
+    /// [`Records::next_page_token`].
+    pub fn has_more(&self) -> bool {
+        self.has_more
+    }
+
+    /// Every row the filter matches, ignoring the limit and page position. Set
+    /// only when the read asked for it (`SelectRequest.include_total`); 0
+    /// otherwise. Use [`Records::len`] for how many records are in this page.
+    pub fn exact_total(&self) -> i64 {
+        self.exact_total
     }
 
     /// Token for the next page, empty when this is the last one.
@@ -575,7 +582,6 @@ mod tests {
             // Exactly what the broker sends on the relational path: one EMPTY
             // compatibility row per record.
             rows: bodies.iter().map(|_| Row::default()).collect(),
-            total_count: bodies.len() as i32,
             ..RecordSet::default()
         }
     }
@@ -596,7 +602,6 @@ mod tests {
         let broken = RecordSet {
             records_json: Vec::new(),
             rows: vec![Row::default(), Row::default()],
-            total_count: 2,
             ..RecordSet::default()
         };
         assert_eq!(
@@ -768,11 +773,13 @@ mod tests {
     fn page_metadata_is_carried_through() {
         let mut page = set(&[r#"{"id":"a"}"#]);
         page.next_page_token = "next".into();
-        page.total_count = 97;
+        page.has_more = true;
+        page.exact_total = 97;
         let decoded = Records::decode(&page).unwrap();
         assert_eq!(decoded.next_page_token(), "next");
         // Reported as sent; `len` stays authoritative for what is in hand.
-        assert_eq!(decoded.total_count(), 97);
+        assert!(decoded.has_more());
+        assert_eq!(decoded.exact_total(), 97);
         assert_eq!(decoded.len(), 1);
     }
 

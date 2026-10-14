@@ -67,7 +67,6 @@ fn read_path() {
         ],
         // What the broker actually sends: present, aligned, and EMPTY.
         rows: vec![Row::default()],
-        total_count: 1,
         ..RecordSet::default()
     };
 
@@ -95,7 +94,6 @@ fn read_path() {
     // And the defect's own signature stays an error rather than an empty page.
     let compat_only = RecordSet {
         rows: vec![Row::default()],
-        total_count: 1,
         ..RecordSet::default()
     };
     assert!(

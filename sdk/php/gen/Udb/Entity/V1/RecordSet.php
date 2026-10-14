@@ -51,13 +51,6 @@ class RecordSet extends \Google\Protobuf\Internal\Message
      */
     protected $next_page_token = '';
     /**
-     * The number of records in THIS page (the length of `records_json`), not the
-     * number of matching rows. Use `exact_total` for that.
-     *
-     * Generated from protobuf field <code>int32 total_count = 4 [json_name = "totalCount"];</code>
-     */
-    protected $total_count = 0;
-    /**
      * #5 (opaque row revision / ETag): when the caller asked for revisions
      * (`SelectRequest.include_revision`), this carries the broker-maintained
      * opaque revision token for each returned record, index-aligned with
@@ -125,9 +118,6 @@ class RecordSet extends \Google\Protobuf\Internal\Message
      *           released contract breaks decoders that still reference it. Treat it as
      *           deprecated for reads.
      *     @type string $next_page_token
-     *     @type int $total_count
-     *           The number of records in THIS page (the length of `records_json`), not the
-     *           number of matching rows. Use `exact_total` for that.
      *     @type string[] $record_revisions
      *           #5 (opaque row revision / ETag): when the caller asked for revisions
      *           (`SelectRequest.include_revision`), this carries the broker-maintained
@@ -261,34 +251,6 @@ class RecordSet extends \Google\Protobuf\Internal\Message
     {
         GPBUtil::checkString($var, True);
         $this->next_page_token = $var;
-
-        return $this;
-    }
-
-    /**
-     * The number of records in THIS page (the length of `records_json`), not the
-     * number of matching rows. Use `exact_total` for that.
-     *
-     * Generated from protobuf field <code>int32 total_count = 4 [json_name = "totalCount"];</code>
-     * @return int
-     */
-    public function getTotalCount()
-    {
-        return $this->total_count;
-    }
-
-    /**
-     * The number of records in THIS page (the length of `records_json`), not the
-     * number of matching rows. Use `exact_total` for that.
-     *
-     * Generated from protobuf field <code>int32 total_count = 4 [json_name = "totalCount"];</code>
-     * @param int $var
-     * @return $this
-     */
-    public function setTotalCount($var)
-    {
-        GPBUtil::checkInt32($var);
-        $this->total_count = $var;
 
         return $this;
     }

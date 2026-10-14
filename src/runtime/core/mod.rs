@@ -3069,7 +3069,6 @@ fn rows_to_record_set(
         proto_rows.push(ProtoRow::default());
     }
     Ok(RecordSet {
-        total_count: proto_rows.len() as i32,
         rows: proto_rows,
         records_json,
         redacted_fields: redacted_fields.into_iter().collect(),

@@ -1561,16 +1561,18 @@ func New{name}Repo(c *udbclient.Client) {name}Repo {{\n\
 \treturn {name}Repo{{E: c.Entity({fqn:?}, udbclient.Key({keys}))}}\n\
 }}\n\n\
 // List pages through rows matching where, decoded to typed messages. A row that\n\
-// fails to decode fails the whole page (no partially-zeroed results).\n\
-func (r {name}Repo) List(ctx context.Context, where map[string]any, opts udbclient.PageOptions) ([]*{qualified}, string, int64, error) {{\n\
+// fails to decode fails the whole page (no partially-zeroed results). hasMore\n\
+// reports a full page: keep paging with the returned token. For the number of\n\
+// matching rows use SelectPage with PageOptions.IncludeTotal.\n\
+func (r {name}Repo) List(ctx context.Context, where map[string]any, opts udbclient.PageOptions) ([]*{qualified}, string, bool, error) {{\n\
 \tpage, err := r.E.SelectPage(ctx, where, opts)\n\
-\tif err != nil {{\n\t\treturn nil, \"\", 0, err\n\t}}\n\
+\tif err != nil {{\n\t\treturn nil, \"\", false, err\n\t}}\n\
 \tout := make([]*{qualified}, 0, len(page.Rows))\n\
 \tfor _, row := range page.Rows {{\n\
 \t\titem, err := {name}FromUDBRow(row)\n\
-\t\tif err != nil {{\n\t\t\treturn nil, \"\", 0, err\n\t\t}}\n\
+\t\tif err != nil {{\n\t\t\treturn nil, \"\", false, err\n\t\t}}\n\
 \t\tout = append(out, item)\n\t}}\n\
-\treturn out, page.NextPageToken, int64(page.TotalCount), nil\n\
+\treturn out, page.NextPageToken, page.HasMore, nil\n\
 }}\n\n\
 // Get returns the single row identified by its FULL primary key. where must pin\n\
 // every primary-key column by equality; a partial key is rejected before the RPC\n\
@@ -4182,12 +4184,11 @@ message Stored {
         assert_ne!(go_pascal("proj4text"), "Proj4text");
     }
 
-    // V23-1: the typed repository `List` declares an `int64` count return but the
-    // SDK's `udbclient.Page.TotalCount` is `int32` — the raw return did not
-    // compile (`cannot use page.TotalCount (int32) as int64`). The emitter must
-    // widen explicitly, and the digit-field accessors must use the correct names.
+    // V23-1 → 0.6.0: the typed repository `List` returned a page-length count
+    // that callers misread as the match count. It now returns `page.HasMore`
+    // (bool), and the digit-field accessors must use the correct names.
     #[test]
-    fn typed_list_widens_total_count_and_names_digit_fields() {
+    fn typed_list_returns_has_more_and_names_digit_fields() {
         let mut language_classes = std::collections::BTreeMap::new();
         language_classes.insert(
             "go".to_string(),
@@ -4214,18 +4215,18 @@ message Stored {
         }];
         let out = render_go_entities_file(&entities, "spatialgen").expect("render");
 
-        // Count type: the return must widen to match the int64 signature.
+        // Page continuation: List returns HasMore, never a page-length count.
         assert!(
-            out.contains("[]*spatialv1.SpatialRefSys, string, int64, error)"),
-            "List must declare the int64 count return, got:\n{out}"
+            out.contains("[]*spatialv1.SpatialRefSys, string, bool, error)"),
+            "List must declare the bool hasMore return, got:\n{out}"
         );
         assert!(
-            out.contains("return out, page.NextPageToken, int64(page.TotalCount), nil"),
-            "List must widen page.TotalCount to int64, got:\n{out}"
+            out.contains("return out, page.NextPageToken, page.HasMore, nil"),
+            "List must return page.HasMore, got:\n{out}"
         );
         assert!(
-            !out.contains("page.NextPageToken, page.TotalCount, nil"),
-            "the un-widened int32 return must not survive, got:\n{out}"
+            !out.contains("TotalCount"),
+            "the removed page-length count must not survive, got:\n{out}"
         );
 
         // Field naming: the digit-boundary accessors must match protoc-gen-go.
@@ -4298,7 +4299,7 @@ message Stored {
         assert!(out.contains("\treturn m, nil\n"), "got:\n{out}");
         assert!(
             out.contains("item, err := WidgetFromUDBRow(row)")
-                && out.contains("return nil, \"\", 0, err"),
+                && out.contains("return nil, \"\", false, err"),
             "List must propagate a per-row decode error, got:\n{out}"
         );
     }

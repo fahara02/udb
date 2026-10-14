@@ -1207,8 +1207,8 @@ def _assert_no_rows(label: str, response: RecordSet) -> None:
         raise AssertionError(f"{label}: expected no records_json rows, got {len(response.records_json)}")
     if response.rows:
         raise AssertionError(f"{label}: expected no structured rows, got {len(response.rows)}")
-    if response.total_count:
-        raise AssertionError(f"{label}: expected total_count=0, got {response.total_count}")
+    if response.exact_total:
+        raise AssertionError(f"{label}: expected exact_total=0, got {response.exact_total}")
 
 
 def check_fail_closed(

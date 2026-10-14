@@ -320,7 +320,6 @@ func (f *Fake) Select(ctx context.Context, req *entityv1.SelectRequest) (*entity
 		out.RedactedFields = append(out.RedactedFields, name)
 	}
 	sort.Strings(out.RedactedFields)
-	out.TotalCount = int32(len(out.RecordsJson))
 	out.HasMore = len(out.RecordsJson) >= limit
 	if out.HasMore && end < len(matched) {
 		out.NextPageToken = base64.RawURLEncoding.EncodeToString([]byte(strconv.Itoa(end)))

@@ -1547,7 +1547,6 @@ pub(crate) fn cached_record_set(
     }
     let rows = vec![ProtoRow::default(); records_json.len()];
     RecordSet {
-        total_count: records_json.len() as i32,
         rows,
         records_json,
         redacted_fields: redacted_fields.into_iter().collect(),
@@ -1727,7 +1726,7 @@ pub(crate) fn record_batch_v2_from_json_rows(
 ///
 /// Fails rather than skipping a record it cannot parse. This used to
 /// `filter_map(...ok())`, which silently dropped an unparseable blob: the batch
-/// came back SHORT while `total_count` still reported the full number, so a
+/// came back SHORT while the batch's count still reported the full number, so a
 /// caller saw fewer records than the query matched with nothing anywhere saying
 /// so. Same failure mode as reading the empty compatibility rows — a wrong
 /// answer that looks like a right one.
@@ -1752,11 +1751,14 @@ pub(crate) fn record_batch_v2_from_record_set(
     } else {
         set.rows.iter().map(proto_row_to_json).collect()
     };
+    // The batch's page length is the number of records it carries; RecordSet
+    // no longer has a count field to copy it from.
+    let page_len = rows.len() as i32;
     Ok(record_batch_v2_from_json_rows(
         &rows,
         schema_version,
         set.next_page_token.clone(),
-        set.total_count,
+        page_len,
     ))
 }
 
@@ -4200,13 +4202,15 @@ mod record_batch_tests {
         let blob = serde_json::to_vec(&json!({"a": 1})).unwrap();
         let set = RecordSet {
             records_json: vec![blob],
-            total_count: 1,
             next_page_token: "n".into(),
             ..RecordSet::default()
         };
         let batch = record_batch_v2_from_record_set(&set, "v1").expect("valid record set");
         assert_eq!(batch.row_count, 1);
-        assert_eq!(batch.total_count, 1);
+        assert_eq!(
+            batch.total_count, 1,
+            "the batch's page length is the record count"
+        );
         assert_eq!(batch.next_page_token, "n");
         assert_eq!(col(&batch, "a").int64_values, vec![1]);
     }
@@ -4232,7 +4236,6 @@ mod record_batch_tests {
         let blob = serde_json::to_vec(&json!({"id": 1, "email": "a@b.com"})).unwrap();
         let set = RecordSet {
             records_json: vec![blob],
-            total_count: 1,
             ..RecordSet::default()
         };
         let batch = record_batch_v2_from_record_set(&set, "v9").expect("valid record set");
@@ -4250,7 +4253,7 @@ mod record_batch_tests {
     }
 
     /// A record the columnar encoder cannot parse must fail the call, not shrink
-    /// the batch. Dropping it produced a SHORT batch beside a full `total_count`,
+    /// the batch. Dropping it produced a SHORT batch beside a full count,
     /// which reads to a caller as a complete answer.
     #[test]
     fn v2_batch_fails_closed_on_an_unparseable_record() {
@@ -4259,7 +4262,6 @@ mod record_batch_tests {
                 serde_json::to_vec(&json!({"id": 1})).unwrap(),
                 b"{not json".to_vec(),
             ],
-            total_count: 2,
             ..RecordSet::default()
         };
         let err = record_batch_v2_from_record_set(&set, "v1")
@@ -4302,7 +4304,6 @@ mod cached_record_set_shape_tests {
             set.records_json, blobs,
             "the canonical records pass through"
         );
-        assert_eq!(set.total_count, 2);
         // One EMPTY compatibility row per record — exactly what
         // `rows_to_record_set` emits.
         assert_eq!(set.rows.len(), blobs.len());
