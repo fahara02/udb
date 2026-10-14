@@ -77,7 +77,12 @@ jobs:
             echo "udb-mls ${mls_version} already exists on crates.io"
             exit 0
           fi
-          cargo publish --locked -p udb-mls
+          # The broker crate's release publishes the same crate concurrently.
+          if cargo publish --locked -p udb-mls; then
+            exit 0
+          fi
+          sleep 30
+          curl -fsS "https://crates.io/api/v1/crates/udb-mls/${mls_version}" >/dev/null
 
       # `cargo publish` packages ONLY the crate directory, so the build script's
       # repo-relative `../../proto` is unreachable from the published crate. The

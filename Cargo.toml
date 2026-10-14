@@ -232,6 +232,10 @@ sha2 = "0.10"
 # 0.8 is the newest line whose MSRV fits `rust-version` above (0.9 needs 1.91).
 openmls = "0.8.1"
 openmls_rust_crypto = "0.5.1"
+# The MLS client crate, for `udb messaging bench-fixture`: the benchmark's MLS
+# objects are minted by the same code the SDKs run. Published before `udb`
+# (release-crates.yml), so the packaged crate resolves it from crates.io.
+udb-mls = { path = "crates/udb-mls", version = "0.1.0" }
 # SHA-1 is required only for RFC 6238 TOTP (the de-facto authenticator-app HMAC)
 # and legacy SAML RSA-SHA1 signature verification. (No `oid` feature needed: the
 # SAML verify path prepends the DigestInfo prefix itself — see idp/saml.rs.)

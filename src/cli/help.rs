@@ -236,6 +236,17 @@ const COMMANDS: &[CmdHelp] = &[
         details: "",
     },
     CmdHelp {
+        name: "messaging bench-fixture",
+        group: "Diagnostics",
+        summary: "Mint the MLS objects the MessagingService benchmark rows need (offline JSON).",
+        usage: "udb messaging bench-fixture --tenant <tenant-id> --subject <subject-id> [--prefix <p>] [--out <path>]",
+        details: "  Builds, with the udb-mls client crate, the devices, KeyPackages, groups,
+  commit, Welcome and message ciphertext for one tenant and subject. Talks to no
+  broker: `setup` lists the requests a benchmark seed sends first, `fixtures`
+  the <seed:KEY> values the bench bodies consume. Use the canonical tenant id
+  and the subject the benchmark token resolves to.",
+    },
+    CmdHelp {
         name: "manifest-export",
         group: "Schema & SQL",
         summary: "Export the current CatalogManifest to JSON (for CI plan-approval).",
