@@ -28,6 +28,11 @@ release line was tagged.
 
 ### Fixed
 
+- **`udb env` wrote an encryption key the broker refuses.** `UDB_ENCRYPTION_KEY`
+  must decode to exactly 32 bytes; the generated value was 48 alphanumeric
+  characters (base64 → 36 bytes), so a broker started from a generated file failed
+  on the key. It is now 32 random bytes, base64-encoded, and a test checks it with
+  the broker's own decoder (`udb::runtime::validate_encryption_key`).
 - **`udb dev up --embedded` starts on an elevated Windows terminal.** PostgreSQL
   refuses to run with administrative rights, so an elevated terminal (and every
   GitHub Windows runner) could not start the embedded server. The postmaster is

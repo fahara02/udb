@@ -53,6 +53,16 @@ fn generated_secret() -> String {
         .collect()
 }
 
+/// A `UDB_ENCRYPTION_KEY`: 32 random bytes, base64-encoded. The broker accepts
+/// a key only if it decodes to exactly 32 bytes, so this cannot reuse
+/// [`generated_secret`] (48 characters decode to 36 bytes and are refused).
+fn generated_encryption_key() -> String {
+    use base64::Engine as _;
+    let mut raw = [0u8; 32];
+    getrandom::getrandom(&mut raw).expect("OS CSPRNG unavailable");
+    base64::engine::general_purpose::STANDARD.encode(raw)
+}
+
 fn section(out: &mut String, title: &str, why: &str) {
     let _ = write!(
         out,
@@ -155,7 +165,7 @@ pub(crate) fn render(profile: EnvProfile, dsn: &str) -> String {
     var(
         &mut out,
         "UDB_ENCRYPTION_KEY",
-        &generated_secret(),
+        &generated_encryption_key(),
         "At-rest encryption for secret columns and vault material. Losing it loses the data.",
     );
     var(
@@ -300,6 +310,25 @@ mod tests {
             Some(EnvProfile::Enterprise)
         );
         assert_eq!(EnvProfile::parse("nonsense"), None);
+    }
+
+    #[test]
+    fn the_generated_encryption_key_is_one_the_broker_accepts() {
+        let key = generated_encryption_key();
+        udb::runtime::validate_encryption_key(&key)
+            .unwrap_or_else(|err| panic!("generated key {key} refused: {err}"));
+        assert_ne!(
+            key,
+            generated_encryption_key(),
+            "each file gets its own key"
+        );
+        let rendered = render(EnvProfile::Dev, "postgres://x");
+        let line = rendered
+            .lines()
+            .find(|line| line.starts_with("UDB_ENCRYPTION_KEY="))
+            .expect("the file sets UDB_ENCRYPTION_KEY");
+        udb::runtime::validate_encryption_key(&line["UDB_ENCRYPTION_KEY=".len()..])
+            .expect("the rendered file carries a valid key");
     }
 
     #[test]

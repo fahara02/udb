@@ -269,6 +269,13 @@ fn key_label(version: u8) -> String {
     }
 }
 
+/// Whether `value` is a usable `UDB_ENCRYPTION_KEY`: exactly 32 bytes after
+/// base64, hex or raw decoding — the same rule the broker applies at startup,
+/// for tooling that writes or checks keys before a broker ever reads them.
+pub fn validate_encryption_key(value: &str) -> Result<(), String> {
+    decode_encryption_key(value).map(|_| ())
+}
+
 fn decode_encryption_key(value: &str) -> Result<[u8; 32], String> {
     let trimmed = value.trim();
     let base64_len = BASE64_STANDARD.decode(trimmed).ok().map(|bytes| {
