@@ -944,14 +944,6 @@ class PolicyListResponse(_message.Message):
     total_count: int
     def __init__(self, policies: _Optional[_Iterable[_Union[PolicyRecord, _Mapping]]] = ..., next_page_token: _Optional[str] = ..., total_count: _Optional[int] = ...) -> None: ...
 
-class PutPolicyRequest(_message.Message):
-    __slots__ = ("context", "policy")
-    CONTEXT_FIELD_NUMBER: _ClassVar[int]
-    POLICY_FIELD_NUMBER: _ClassVar[int]
-    context: _context_pb2.RequestContext
-    policy: PolicyRecord
-    def __init__(self, context: _Optional[_Union[_context_pb2.RequestContext, _Mapping]] = ..., policy: _Optional[_Union[PolicyRecord, _Mapping]] = ...) -> None: ...
-
 class PolicyRequest(_message.Message):
     __slots__ = ("context", "policy_id")
     CONTEXT_FIELD_NUMBER: _ClassVar[int]

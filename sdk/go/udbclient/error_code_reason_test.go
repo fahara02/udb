@@ -10,7 +10,7 @@ import (
 )
 
 func TestTypedReasonsControlCASRetryDespiteMessage(t *testing.T) {
-	for _, reason := range []string{"UDB_IDEMPOTENCY_REUSE", "UDB_POLICY_WRONG_SURFACE"} {
+	for _, reason := range []string{"UDB_IDEMPOTENCY_REUSE", "UDB_ENVELOPE_VERSION_UNSUPPORTED"} {
 		detail, err := proto.Marshal(&entityv1.ErrorDetail{Reason: reason, Kind: entityv1.ErrorKind_ERROR_KIND_CONFLICT})
 		if err != nil {
 			t.Fatal(err)

@@ -41,11 +41,10 @@ use crate::proto::{
     MutationResponse, PolicyLintResponse, PolicyListRequest, PolicyListResponse, PolicyRecord,
     PolicyRequest, ProjectListRequest, ProjectListResponse, ProjectRecord,
     ProjectionDriftDivergentRow, ProjectionDriftScanRequest, ProjectionDriftScanResponse,
-    ProjectionDriftTargetReport, PutPolicyRequest, RecordSet, ResourceAdminRequest,
-    ResourceListResponse, SagaListRequest, SagaListResponse, SagaRecord, SagaRequest, SagaResponse,
-    SelectRequest, StageCatalogRequest, TxStatus, UpdateRequest, UpsertRequest, UrlRequest,
-    UrlResponse, VectorHybridSearchRequest, VectorSearchRequest, VectorSet, VectorUpsertRequest,
-    ViewDefinition,
+    ProjectionDriftTargetReport, RecordSet, ResourceAdminRequest, ResourceListResponse,
+    SagaListRequest, SagaListResponse, SagaRecord, SagaRequest, SagaResponse, SelectRequest,
+    StageCatalogRequest, TxStatus, UpdateRequest, UpsertRequest, UrlRequest, UrlResponse,
+    VectorHybridSearchRequest, VectorSearchRequest, VectorSet, VectorUpsertRequest, ViewDefinition,
 };
 use crate::runtime::DataBrokerRuntime;
 use crate::runtime::authz::{AuthzQuery, AuthzSnapshot, Principal, ResourceRef};
@@ -464,7 +463,6 @@ pub(crate) const SUPPORTED_RPC_NAMES: &[&str] = &[
     "RetrySagaCompensation",
     "MarkSagaReviewed",
     "ListPolicies",
-    "PutPolicy",
     "DeletePolicy",
     "ReloadPolicies",
     "LintPolicies",
@@ -5050,13 +5048,6 @@ impl DataBroker for DataBrokerService {
         request: Request<PolicyListRequest>,
     ) -> Result<Response<PolicyListResponse>, Status> {
         self.list_policies_inner(request).await
-    }
-
-    async fn put_policy(
-        &self,
-        request: Request<PutPolicyRequest>,
-    ) -> Result<Response<MutationResponse>, Status> {
-        self.put_policy_inner(request).await
     }
 
     async fn delete_policy(

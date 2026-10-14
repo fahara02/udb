@@ -1072,7 +1072,6 @@ test("manifest JSON body hydrates all remaining DataBroker rows", () => {
   const begin = manifestJSONBody("DataBroker", "begin_tx", fixtures);
   const enqueue = manifestJSONBody("DataBroker", "enqueue_outbox_event", fixtures);
   const putObject = manifestJSONBody("DataBroker", "put_object", fixtures);
-  const putPolicy = manifestJSONBody("DataBroker", "put_policy", fixtures);
   const rollback = manifestJSONBody("DataBroker", "rollback_catalog", fixtures);
   const stage = manifestJSONBody("DataBroker", "stage_catalog", fixtures);
   const timeSeries = manifestJSONBody("DataBroker", "time_series_write", fixtures);
@@ -1084,8 +1083,6 @@ test("manifest JSON body hydrates all remaining DataBroker rows", () => {
   assert.equal(enqueue?.payload?.event_type, "invoice.updated");
   assert.equal(putObject?.data, "cGVyZg==");
   assert.equal(putObject?.final_chunk, true);
-  assert.equal(putPolicy?.policy?.effect, "allow");
-  assert.equal(putPolicy?.policy?.enabled, true);
   assert.equal(rollback?.project_id, "project-1");
   assert.equal(stage?.manifest_json, "e30=");
   assert.equal(stage?.reason, "stage");
@@ -2805,9 +2802,9 @@ async function seedPerfFixtures(
       if (hdrs.tok) fix.set("approval_token", hdrs.tok);
     }
   });
-  // ds_policy_id: a real broker policy (allow-all, harmless) for the measured DeletePolicy.
-  await tryRun("PutPolicy", async () => {
-    await data.put_policy({ context: { ...ctx, scopes: ["udb:admin"] }, policy: { effect: "allow", tenant_id: tenantId, priority: 1, enabled: true } }, opts);
+  // ds_policy_id: an existing legacy broker policy row, when there is one, for the
+  // measured DeletePolicy (DataBroker.PutPolicy was removed in 0.6.0).
+  await tryRun("ListPolicies", async () => {
     const pl = await data.list_policies({ context: { ...ctx, scopes: ["udb:admin"] }, include_disabled: true, limit: 50 }, opts);
     const first = (pl.policies ?? [])[0];
     if (first?.policy_id != null) fix.set("ds_policy_id", String(first.policy_id));

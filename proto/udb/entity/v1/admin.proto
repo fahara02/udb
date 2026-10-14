@@ -672,11 +672,6 @@ message PolicyListResponse {
   int32 total_count = 3;
 }
 
-message PutPolicyRequest {
-  RequestContext context = 1;
-  PolicyRecord policy = 2;
-}
-
 message PolicyRequest {
   RequestContext context = 1;
   int64 policy_id = 2;

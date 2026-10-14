@@ -120,10 +120,9 @@ Casbin policy rows do nothing for native RPCs, and token scopes do not authorize
 data CRUD — do not confuse them. (A legacy ABAC table, `udb_abac_policies`, still
 exists but is no longer consulted for decisions; seed `policy_rules`, not it.)
 
-`DataBroker.PutPolicy` refuses with `UDB_POLICY_WRONG_SURFACE`. Use
-`AuthzService.PutAuthzPolicy` or `udb policy apply` to change the live policy
-source. The temporary `UDB_ALLOW_LEGACY_PUT_POLICY=true` migration override only
-permits writes to the obsolete table; those rows still cannot grant access.
+`DataBroker.PutPolicy` (and the `UDB_ALLOW_LEGACY_PUT_POLICY` override) was removed
+in 0.6.0. Use `AuthzService.PutAuthzPolicy` or `udb policy apply` to change the live
+policy source.
 
 ### Seeding data-plane authorization (the standard path)
 

@@ -63,7 +63,6 @@ const REASON_CODES: Record<string, ErrorCode> = {
   UDB_DECODE_FAILED: ErrorCode.Internal,
   UDB_UNKNOWN_MESSAGE_TYPE: ErrorCode.Invalid,
   UDB_ENVELOPE_VERSION_UNSUPPORTED: ErrorCode.Precondition,
-  UDB_POLICY_WRONG_SURFACE: ErrorCode.Precondition,
 };
 
 /** Wire values of `udb.entity.v1.ErrorKind` (proto/udb/entity/v1/error.proto). */

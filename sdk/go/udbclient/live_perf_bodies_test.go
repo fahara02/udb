@@ -2968,17 +2968,6 @@ func TestBuildManifestJSONBodyUsesSharedManifest(t *testing.T) {
 	if got := string(putObjectMsg.Get(putObjectFields.ByName("data")).Bytes()); got != "perf" {
 		t.Fatalf("databroker put object data = %q, want perf", got)
 	}
-	putPolicyIn, _, ok := buildManifestJSONBody("/udb.services.v1.DataBroker/PutPolicy", fix)
-	if !ok {
-		t.Fatalf("DataBroker PutPolicy manifest JSON body was not hydrated")
-	}
-	putPolicyMsg := putPolicyIn.ProtoReflect()
-	putPolicyFields := putPolicyMsg.Descriptor().Fields()
-	policyMsg := putPolicyMsg.Get(putPolicyFields.ByName("policy")).Message()
-	policyFields := policyMsg.Descriptor().Fields()
-	if got := policyMsg.Get(policyFields.ByName("effect")).String(); got != "allow" {
-		t.Fatalf("databroker put policy effect = %q, want allow", got)
-	}
 	rollbackIn, _, ok := buildManifestJSONBody("/udb.services.v1.DataBroker/RollbackCatalog", fix)
 	if !ok {
 		t.Fatalf("DataBroker RollbackCatalog manifest JSON body was not hydrated")

@@ -1361,7 +1361,7 @@ func runLiveControlPlaneE2E(t *testing.T, broker servicesv1.DataBrokerClient, ca
 		t.Fatalf("ListProjects did not include created project %s", projID)
 	}
 
-	// Policy READS only. NOTE: PutPolicy is deliberately NOT exercised here —
+	// Policy READS only. NOTE: no policy write is exercised here —
 	// inserting any row into udb_system.udb_abac_policies flips the data-plane
 	// method-security gate from coarse-bearer-scope fallback to policy-match-or-
 	// default-deny, which would break every subsequent request (GetCapabilities

@@ -273,7 +273,7 @@ function run_live_backend_e2e(GeneratedClient $data, UdbMetadata $meta, Generate
     expect($deleted->getAffectedRows())->toBe(1);
 
     // Control-plane data ops: project create+list, policy reads, catalog/schema/
-    // health. PutPolicy is intentionally NOT called — an abac policy insert flips
+    // health. Policy writes are intentionally NOT made — an abac policy insert flips
     // the data plane to default-deny.
     $projId = "sdklive_proj_php_$suffix";
     expect($platformMeta->tenantId)->toBe($tenant);
@@ -718,7 +718,7 @@ function phpStableAttributionId(string $subject): string
 // Whether to field-populate an RPC's probe request: every RPC except those
 // classified DESTRUCTIVE by the proto-derived GeneratedClient::OPERATION_KIND map
 // (keyed by Service/Method) — never a hardcoded name list. A populated
-// destructive RPC (PutPolicy, RollbackCatalog, the revoke-all/emergency/reset
+// destructive RPC (DeletePolicy, RollbackCatalog, the revoke-all/emergency/reset
 // family, DropResource, ...) could corrupt shared/global broker state.
 function shouldPopulatePhp(string $name, string $service = ''): bool
 {
@@ -2437,7 +2437,6 @@ it('manifest JSON body hydrates every remaining DataBroker request', function ()
     $begin = phpManifestJsonBody('begin_tx', $fix, 'tenant-php', 'project-php', 'DataBroker');
     $enqueue = phpManifestJsonBody('enqueue_outbox_event', $fix, 'tenant-php', 'project-php', 'DataBroker');
     $putObject = phpManifestJsonBody('put_object', $fix, 'tenant-php', 'project-php', 'DataBroker');
-    $putPolicy = phpManifestJsonBody('put_policy', $fix, 'tenant-php', 'project-php', 'DataBroker');
     $rollback = phpManifestJsonBody('rollback_catalog', $fix, 'tenant-php', 'project-php', 'DataBroker');
     $stage = phpManifestJsonBody('stage_catalog', $fix, 'tenant-php', 'project-php', 'DataBroker');
     $timeSeries = phpManifestJsonBody('time_series_write', $fix, 'tenant-php', 'project-php', 'DataBroker');
@@ -2451,9 +2450,6 @@ it('manifest JSON body hydrates every remaining DataBroker request', function ()
         ->and($putObject)->toBeInstanceOf(\Udb\Entity\V1\Chunk::class)
         ->and($putObject->getData())->toBe('perf')
         ->and($putObject->getFinalChunk())->toBeTrue()
-        ->and($putPolicy)->toBeInstanceOf(\Udb\Entity\V1\PutPolicyRequest::class)
-        ->and($putPolicy->getPolicy()->getEffect())->toBe('allow')
-        ->and($putPolicy->getPolicy()->getEnabled())->toBeTrue()
         ->and($rollback)->toBeInstanceOf(\Udb\Entity\V1\CatalogVersionRequest::class)
         ->and($rollback->getProjectId())->toBe('project-php')
         ->and($stage)->toBeInstanceOf(\Udb\Entity\V1\StageCatalogRequest::class)
@@ -4604,8 +4600,8 @@ function perfSeedPhp(array $s): array
             return $tok;
         });
     }
-    // ds_policy_id: a real broker policy (allow-all, harmless) for the measured DeletePolicy.
-    $try('PutPolicy', fn () => $data->put_policy((new \Udb\Entity\V1\PutPolicyRequest())->setContext($rcSeed)->setPolicy((new \Udb\Entity\V1\PolicyRecord())->setEffect('allow')->setTenantId($tenant)->setPriority(1)->setEnabled(true)), $meta));
+    // ds_policy_id: an existing legacy policy row, when there is one, for the measured
+    // DeletePolicy (DataBroker.PutPolicy was removed in 0.6.0).
     $pl = $try('ListPolicies', fn () => $data->list_policies((new \Udb\Entity\V1\PolicyListRequest())->setContext($rcSeed)->setIncludeDisabled(true)->setLimit(50), $meta));
     if ($pl && count($pl->getPolicies()) > 0) {
         $fix->set('ds_policy_id', (string) $pl->getPolicies()[0]->getPolicyId());

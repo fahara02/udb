@@ -2217,37 +2217,6 @@ public final class DataBrokerGrpc {
     return getListPoliciesMethod;
   }
 
-  private static volatile io.grpc.MethodDescriptor<com.udb.entity.v1.PutPolicyRequest,
-      com.udb.entity.v1.MutationResponse> getPutPolicyMethod;
-
-  @io.grpc.stub.annotations.RpcMethod(
-      fullMethodName = SERVICE_NAME + '/' + "PutPolicy",
-      requestType = com.udb.entity.v1.PutPolicyRequest.class,
-      responseType = com.udb.entity.v1.MutationResponse.class,
-      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
-  public static io.grpc.MethodDescriptor<com.udb.entity.v1.PutPolicyRequest,
-      com.udb.entity.v1.MutationResponse> getPutPolicyMethod() {
-    io.grpc.MethodDescriptor<com.udb.entity.v1.PutPolicyRequest, com.udb.entity.v1.MutationResponse> getPutPolicyMethod;
-    if ((getPutPolicyMethod = DataBrokerGrpc.getPutPolicyMethod) == null) {
-      synchronized (DataBrokerGrpc.class) {
-        if ((getPutPolicyMethod = DataBrokerGrpc.getPutPolicyMethod) == null) {
-          DataBrokerGrpc.getPutPolicyMethod = getPutPolicyMethod =
-              io.grpc.MethodDescriptor.<com.udb.entity.v1.PutPolicyRequest, com.udb.entity.v1.MutationResponse>newBuilder()
-              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
-              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "PutPolicy"))
-              .setSampledToLocalTracing(true)
-              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
-                  com.udb.entity.v1.PutPolicyRequest.getDefaultInstance()))
-              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
-                  com.udb.entity.v1.MutationResponse.getDefaultInstance()))
-              .setSchemaDescriptor(new DataBrokerMethodDescriptorSupplier("PutPolicy"))
-              .build();
-        }
-      }
-    }
-    return getPutPolicyMethod;
-  }
-
   private static volatile io.grpc.MethodDescriptor<com.udb.entity.v1.PolicyRequest,
       com.udb.entity.v1.MutationResponse> getDeletePolicyMethod;
 
@@ -3376,19 +3345,10 @@ public final class DataBrokerGrpc {
 
     /**
      * <pre>
-     * DEPRECATED: writes the legacy ABAC table, which does NOT authorize
-     * requests. Authorization comes from the Casbin governance table: use
-     * AuthzService.PutAuthzPolicy (or `udb authz seed` / `udb policy apply`).
-     * Every response carries an `x-udb-deprecated` header; removed in 0.6.0.
+     * PutPolicy was removed in 0.6.0: it wrote the legacy ABAC table, which never
+     * authorized requests. Write policy with AuthzService.PutAuthzPolicy or
+     * `udb policy apply`.
      * </pre>
-     */
-    @java.lang.Deprecated
-    default void putPolicy(com.udb.entity.v1.PutPolicyRequest request,
-        io.grpc.stub.StreamObserver<com.udb.entity.v1.MutationResponse> responseObserver) {
-      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getPutPolicyMethod(), responseObserver);
-    }
-
-    /**
      */
     default void deletePolicy(com.udb.entity.v1.PolicyRequest request,
         io.grpc.stub.StreamObserver<com.udb.entity.v1.MutationResponse> responseObserver) {
@@ -4272,20 +4232,10 @@ public final class DataBrokerGrpc {
 
     /**
      * <pre>
-     * DEPRECATED: writes the legacy ABAC table, which does NOT authorize
-     * requests. Authorization comes from the Casbin governance table: use
-     * AuthzService.PutAuthzPolicy (or `udb authz seed` / `udb policy apply`).
-     * Every response carries an `x-udb-deprecated` header; removed in 0.6.0.
+     * PutPolicy was removed in 0.6.0: it wrote the legacy ABAC table, which never
+     * authorized requests. Write policy with AuthzService.PutAuthzPolicy or
+     * `udb policy apply`.
      * </pre>
-     */
-    @java.lang.Deprecated
-    public void putPolicy(com.udb.entity.v1.PutPolicyRequest request,
-        io.grpc.stub.StreamObserver<com.udb.entity.v1.MutationResponse> responseObserver) {
-      io.grpc.stub.ClientCalls.asyncUnaryCall(
-          getChannel().newCall(getPutPolicyMethod(), getCallOptions()), request, responseObserver);
-    }
-
-    /**
      */
     public void deletePolicy(com.udb.entity.v1.PolicyRequest request,
         io.grpc.stub.StreamObserver<com.udb.entity.v1.MutationResponse> responseObserver) {
@@ -5112,19 +5062,10 @@ public final class DataBrokerGrpc {
 
     /**
      * <pre>
-     * DEPRECATED: writes the legacy ABAC table, which does NOT authorize
-     * requests. Authorization comes from the Casbin governance table: use
-     * AuthzService.PutAuthzPolicy (or `udb authz seed` / `udb policy apply`).
-     * Every response carries an `x-udb-deprecated` header; removed in 0.6.0.
+     * PutPolicy was removed in 0.6.0: it wrote the legacy ABAC table, which never
+     * authorized requests. Write policy with AuthzService.PutAuthzPolicy or
+     * `udb policy apply`.
      * </pre>
-     */
-    @java.lang.Deprecated
-    public com.udb.entity.v1.MutationResponse putPolicy(com.udb.entity.v1.PutPolicyRequest request) throws io.grpc.StatusException {
-      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
-          getChannel(), getPutPolicyMethod(), getCallOptions(), request);
-    }
-
-    /**
      */
     public com.udb.entity.v1.MutationResponse deletePolicy(com.udb.entity.v1.PolicyRequest request) throws io.grpc.StatusException {
       return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
@@ -5884,19 +5825,10 @@ public final class DataBrokerGrpc {
 
     /**
      * <pre>
-     * DEPRECATED: writes the legacy ABAC table, which does NOT authorize
-     * requests. Authorization comes from the Casbin governance table: use
-     * AuthzService.PutAuthzPolicy (or `udb authz seed` / `udb policy apply`).
-     * Every response carries an `x-udb-deprecated` header; removed in 0.6.0.
+     * PutPolicy was removed in 0.6.0: it wrote the legacy ABAC table, which never
+     * authorized requests. Write policy with AuthzService.PutAuthzPolicy or
+     * `udb policy apply`.
      * </pre>
-     */
-    @java.lang.Deprecated
-    public com.udb.entity.v1.MutationResponse putPolicy(com.udb.entity.v1.PutPolicyRequest request) {
-      return io.grpc.stub.ClientCalls.blockingUnaryCall(
-          getChannel(), getPutPolicyMethod(), getCallOptions(), request);
-    }
-
-    /**
      */
     public com.udb.entity.v1.MutationResponse deletePolicy(com.udb.entity.v1.PolicyRequest request) {
       return io.grpc.stub.ClientCalls.blockingUnaryCall(
@@ -6690,20 +6622,10 @@ public final class DataBrokerGrpc {
 
     /**
      * <pre>
-     * DEPRECATED: writes the legacy ABAC table, which does NOT authorize
-     * requests. Authorization comes from the Casbin governance table: use
-     * AuthzService.PutAuthzPolicy (or `udb authz seed` / `udb policy apply`).
-     * Every response carries an `x-udb-deprecated` header; removed in 0.6.0.
+     * PutPolicy was removed in 0.6.0: it wrote the legacy ABAC table, which never
+     * authorized requests. Write policy with AuthzService.PutAuthzPolicy or
+     * `udb policy apply`.
      * </pre>
-     */
-    @java.lang.Deprecated
-    public com.google.common.util.concurrent.ListenableFuture<com.udb.entity.v1.MutationResponse> putPolicy(
-        com.udb.entity.v1.PutPolicyRequest request) {
-      return io.grpc.stub.ClientCalls.futureUnaryCall(
-          getChannel().newCall(getPutPolicyMethod(), getCallOptions()), request);
-    }
-
-    /**
      */
     public com.google.common.util.concurrent.ListenableFuture<com.udb.entity.v1.MutationResponse> deletePolicy(
         com.udb.entity.v1.PolicyRequest request) {
@@ -6902,25 +6824,24 @@ public final class DataBrokerGrpc {
   private static final int METHODID_MARK_SAGA_REVIEWED = 63;
   private static final int METHODID_ENSURE_BASELINE = 64;
   private static final int METHODID_LIST_POLICIES = 65;
-  private static final int METHODID_PUT_POLICY = 66;
-  private static final int METHODID_DELETE_POLICY = 67;
-  private static final int METHODID_RELOAD_POLICIES = 68;
-  private static final int METHODID_LINT_POLICIES = 69;
-  private static final int METHODID_GET_CAPABILITIES = 70;
-  private static final int METHODID_GET_CATALOG_MANIFEST = 71;
-  private static final int METHODID_LOOKUP_MESSAGE_SCHEMA = 72;
-  private static final int METHODID_LIST_MESSAGE_SCHEMAS = 73;
-  private static final int METHODID_GET_HEALTH_REPORT = 74;
-  private static final int METHODID_ENSURE_PROJECT = 75;
-  private static final int METHODID_LIST_PROJECTS = 76;
-  private static final int METHODID_GET_ADMIN_SUMMARY = 77;
-  private static final int METHODID_LIST_ADMIN_AUDIT_LOGS = 78;
-  private static final int METHODID_VERIFY_ADMIN_AUDIT_LOG = 79;
-  private static final int METHODID_BATCH_SELECT = 80;
-  private static final int METHODID_BATCH_UPSERT = 81;
-  private static final int METHODID_VECTOR_BATCH_UPSERT = 82;
-  private static final int METHODID_PUT_OBJECT = 83;
-  private static final int METHODID_BEGIN_TX = 84;
+  private static final int METHODID_DELETE_POLICY = 66;
+  private static final int METHODID_RELOAD_POLICIES = 67;
+  private static final int METHODID_LINT_POLICIES = 68;
+  private static final int METHODID_GET_CAPABILITIES = 69;
+  private static final int METHODID_GET_CATALOG_MANIFEST = 70;
+  private static final int METHODID_LOOKUP_MESSAGE_SCHEMA = 71;
+  private static final int METHODID_LIST_MESSAGE_SCHEMAS = 72;
+  private static final int METHODID_GET_HEALTH_REPORT = 73;
+  private static final int METHODID_ENSURE_PROJECT = 74;
+  private static final int METHODID_LIST_PROJECTS = 75;
+  private static final int METHODID_GET_ADMIN_SUMMARY = 76;
+  private static final int METHODID_LIST_ADMIN_AUDIT_LOGS = 77;
+  private static final int METHODID_VERIFY_ADMIN_AUDIT_LOG = 78;
+  private static final int METHODID_BATCH_SELECT = 79;
+  private static final int METHODID_BATCH_UPSERT = 80;
+  private static final int METHODID_VECTOR_BATCH_UPSERT = 81;
+  private static final int METHODID_PUT_OBJECT = 82;
+  private static final int METHODID_BEGIN_TX = 83;
 
   private static final class MethodHandlers<Req, Resp> implements
       io.grpc.stub.ServerCalls.UnaryMethod<Req, Resp>,
@@ -7202,10 +7123,6 @@ public final class DataBrokerGrpc {
         case METHODID_LIST_POLICIES:
           serviceImpl.listPolicies((com.udb.entity.v1.PolicyListRequest) request,
               (io.grpc.stub.StreamObserver<com.udb.entity.v1.PolicyListResponse>) responseObserver);
-          break;
-        case METHODID_PUT_POLICY:
-          serviceImpl.putPolicy((com.udb.entity.v1.PutPolicyRequest) request,
-              (io.grpc.stub.StreamObserver<com.udb.entity.v1.MutationResponse>) responseObserver);
           break;
         case METHODID_DELETE_POLICY:
           serviceImpl.deletePolicy((com.udb.entity.v1.PolicyRequest) request,
@@ -7789,13 +7706,6 @@ public final class DataBrokerGrpc {
               com.udb.entity.v1.PolicyListRequest,
               com.udb.entity.v1.PolicyListResponse>(
                 service, METHODID_LIST_POLICIES)))
-        .<com.udb.entity.v1.PutPolicyRequest, com.udb.entity.v1.MutationResponse>addMethod(
-          getPutPolicyMethod(),
-          io.grpc.stub.ServerCalls.<com.udb.entity.v1.PutPolicyRequest, com.udb.entity.v1.MutationResponse>asyncUnaryCall(
-            new MethodHandlers<
-              com.udb.entity.v1.PutPolicyRequest,
-              com.udb.entity.v1.MutationResponse>(
-                service, METHODID_PUT_POLICY)))
         .<com.udb.entity.v1.PolicyRequest, com.udb.entity.v1.MutationResponse>addMethod(
           getDeletePolicyMethod(),
           io.grpc.stub.ServerCalls.<com.udb.entity.v1.PolicyRequest, com.udb.entity.v1.MutationResponse>asyncUnaryCall(
@@ -8006,7 +7916,6 @@ public final class DataBrokerGrpc {
               .addMethod(getMarkSagaReviewedMethod())
               .addMethod(getEnsureBaselineMethod())
               .addMethod(getListPoliciesMethod())
-              .addMethod(getPutPolicyMethod())
               .addMethod(getDeletePolicyMethod())
               .addMethod(getReloadPoliciesMethod())
               .addMethod(getLintPoliciesMethod())

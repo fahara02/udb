@@ -94,7 +94,6 @@ var reasonCodes = map[string]ErrorCode{
 	"UDB_RATE_LIMITED":                 CodeRateLimited,
 	"UDB_UNKNOWN_MESSAGE_TYPE":         CodeInvalid,
 	"UDB_ENVELOPE_VERSION_UNSUPPORTED": CodePrecondition,
-	"UDB_POLICY_WRONG_SURFACE":         CodePrecondition,
 }
 
 var kindCodes = map[entityv1.ErrorKind]ErrorCode{

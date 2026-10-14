@@ -5010,8 +5010,6 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
             '"stepdown_cdc_leader"',
             '"list_policies"',
             '"list_policies_page"',
-            '"put_policy_update"',
-            '"put_policy_insert"',
             '"delete_policy"',
             '"write_audit_log"',
             '"ensure_project"',

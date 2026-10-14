@@ -350,10 +350,8 @@ clients ignore it without advancing their resume cursor. The Go helper also
 accepts the empty Change heartbeat from older brokers.
 
 Use `AuthzService.PutAuthzPolicy` or `udb policy apply` to manage authorization.
-`DataBroker.PutPolicy` returns `UDB_POLICY_WRONG_SURFACE` because its legacy ABAC
-table does not grant access. `UDB_ALLOW_LEGACY_PUT_POLICY=true` temporarily enables
-that table's migration writes. The performance harness measures this explicit
-migration mode; native correctness CI verifies the default refusal and no write.
+`DataBroker.PutPolicy` and its `UDB_ALLOW_LEGACY_PUT_POLICY` override were removed
+in 0.6.0: the legacy ABAC table it wrote never granted access.
 
 The native services are the control-plane building blocks (auth, storage, WebRTC,
 and more). List what's running, check the health of specific ones, or scaffold a

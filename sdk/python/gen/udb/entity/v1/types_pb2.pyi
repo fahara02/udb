@@ -143,7 +143,6 @@ from udb.entity.v1.admin_pb2 import SagaResponse as SagaResponse
 from udb.entity.v1.admin_pb2 import PolicyRecord as PolicyRecord
 from udb.entity.v1.admin_pb2 import PolicyListRequest as PolicyListRequest
 from udb.entity.v1.admin_pb2 import PolicyListResponse as PolicyListResponse
-from udb.entity.v1.admin_pb2 import PutPolicyRequest as PutPolicyRequest
 from udb.entity.v1.admin_pb2 import PolicyRequest as PolicyRequest
 from udb.entity.v1.admin_pb2 import PolicyLintResponse as PolicyLintResponse
 from udb.entity.v1.admin_pb2 import EnsureProjectRequest as EnsureProjectRequest

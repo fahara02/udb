@@ -6,7 +6,7 @@
 //   UDB version:      0.5.33
 //   Protocol version: 1.0.0
 //   Services:         28
-//   RPCs:             389
+//   RPCs:             388
 //
 // This file is RENDERED by `udb sdk generate` from
 //   sdk-templates/csharp/Udb.Client/GeneratedClient.cs.tmpl
@@ -430,7 +430,6 @@ public static class GeneratedRpcIdentities
         map["/udb.services.v1.DataBroker/PublishCDC"] = new RpcIdentity("/udb.services.v1.DataBroker/PublishCDC", "DataBroker", "PublishCDC", "publish_cdc", "publishCdc", "mutation", "", "");
         map["/udb.services.v1.DataBroker/PurgeSubject"] = new RpcIdentity("/udb.services.v1.DataBroker/PurgeSubject", "DataBroker", "PurgeSubject", "purge_subject", "purgeSubject", "destructive", "", "");
         map["/udb.services.v1.DataBroker/PutObject"] = new RpcIdentity("/udb.services.v1.DataBroker/PutObject", "DataBroker", "PutObject", "put_object", "putObject", "mutation", "", "");
-        map["/udb.services.v1.DataBroker/PutPolicy"] = new RpcIdentity("/udb.services.v1.DataBroker/PutPolicy", "DataBroker", "PutPolicy", "put_policy", "putPolicy", "destructive", "", "");
         map["/udb.services.v1.DataBroker/QuarantineDlqEvent"] = new RpcIdentity("/udb.services.v1.DataBroker/QuarantineDlqEvent", "DataBroker", "QuarantineDlqEvent", "quarantine_dlq_event", "quarantineDlqEvent", "mutation", "", "");
         map["/udb.services.v1.DataBroker/ReloadPolicies"] = new RpcIdentity("/udb.services.v1.DataBroker/ReloadPolicies", "DataBroker", "ReloadPolicies", "reload_policies", "reloadPolicies", "destructive", "", "");
         map["/udb.services.v1.DataBroker/ReplayDlqEvent"] = new RpcIdentity("/udb.services.v1.DataBroker/ReplayDlqEvent", "DataBroker", "ReplayDlqEvent", "replay_dlq_event", "replayDlqEvent", "mutation", "", "");
@@ -1193,7 +1192,7 @@ public sealed partial class GeneratedWorkflowServiceClient : GeneratedServiceBas
 }
 /// <summary>
 /// Robustness wrapper for the <c>udb.services.v1.DataBroker</c> service
-/// (85 RPCs). Forwards to the buf-generated
+/// (84 RPCs). Forwards to the buf-generated
 /// <c>DataBrokerClient</c> stub.
 /// </summary>
 public sealed partial class GeneratedDataBrokerClient : GeneratedServiceBase
@@ -9401,29 +9400,6 @@ public sealed partial class GeneratedDataBrokerClient
         return InvokeUnaryAsync(
             "/udb.services.v1.DataBroker/PurgeSubject",
             co => (object)_stub.PurgeSubjectAsync(request, co),
-            deadline,
-            cancellationToken,
-            "destructive" == "read_only",
-            "false" == "true",
-            (object)request);
-    }
-}
-public sealed partial class GeneratedDataBrokerClient
-{
-    /// <summary>
-    /// <c>put_policy</c> (unary) — forwards to <c>DataBrokerClient.PutPolicyAsync</c>.
-    /// gRPC path: <c>/udb.services.v1.DataBroker/PutPolicy</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
-    /// </summary>
-    public Task<dynamic> PutPolicyAsync(
-        dynamic request,
-        TimeSpan? deadline = null,
-        CancellationToken cancellationToken = default)
-    {
-        // _stub.PutPolicyAsync returns a concrete AsyncUnaryCall<TResp>; box it
-        // as object so no dynamic-to-closed-generic cast is ever attempted.
-        return InvokeUnaryAsync(
-            "/udb.services.v1.DataBroker/PutPolicy",
-            co => (object)_stub.PutPolicyAsync(request, co),
             deadline,
             cancellationToken,
             "destructive" == "read_only",

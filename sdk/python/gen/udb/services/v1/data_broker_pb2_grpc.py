@@ -382,11 +382,6 @@ class DataBrokerStub(object):
                 request_serializer=udb_dot_entity_dot_v1_dot_admin__pb2.PolicyListRequest.SerializeToString,
                 response_deserializer=udb_dot_entity_dot_v1_dot_admin__pb2.PolicyListResponse.FromString,
                 _registered_method=True)
-        self.PutPolicy = channel.unary_unary(
-                '/udb.services.v1.DataBroker/PutPolicy',
-                request_serializer=udb_dot_entity_dot_v1_dot_admin__pb2.PutPolicyRequest.SerializeToString,
-                response_deserializer=udb_dot_entity_dot_v1_dot_mutation__pb2.MutationResponse.FromString,
-                _registered_method=True)
         self.DeletePolicy = channel.unary_unary(
                 '/udb.services.v1.DataBroker/DeletePolicy',
                 request_serializer=udb_dot_entity_dot_v1_dot_admin__pb2.PolicyRequest.SerializeToString,
@@ -974,18 +969,11 @@ class DataBrokerServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
-    def PutPolicy(self, request, context):
-        """DEPRECATED: writes the legacy ABAC table, which does NOT authorize
-        requests. Authorization comes from the Casbin governance table: use
-        AuthzService.PutAuthzPolicy (or `udb authz seed` / `udb policy apply`).
-        Every response carries an `x-udb-deprecated` header; removed in 0.6.0.
-        """
-        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-        context.set_details('Method not implemented!')
-        raise NotImplementedError('Method not implemented!')
-
     def DeletePolicy(self, request, context):
-        """Missing associated documentation comment in .proto file."""
+        """PutPolicy was removed in 0.6.0: it wrote the legacy ABAC table, which never
+        authorized requests. Write policy with AuthzService.PutAuthzPolicy or
+        `udb policy apply`.
+        """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
@@ -1433,11 +1421,6 @@ def add_DataBrokerServicer_to_server(servicer, server):
                     servicer.ListPolicies,
                     request_deserializer=udb_dot_entity_dot_v1_dot_admin__pb2.PolicyListRequest.FromString,
                     response_serializer=udb_dot_entity_dot_v1_dot_admin__pb2.PolicyListResponse.SerializeToString,
-            ),
-            'PutPolicy': grpc.unary_unary_rpc_method_handler(
-                    servicer.PutPolicy,
-                    request_deserializer=udb_dot_entity_dot_v1_dot_admin__pb2.PutPolicyRequest.FromString,
-                    response_serializer=udb_dot_entity_dot_v1_dot_mutation__pb2.MutationResponse.SerializeToString,
             ),
             'DeletePolicy': grpc.unary_unary_rpc_method_handler(
                     servicer.DeletePolicy,
@@ -3424,33 +3407,6 @@ class DataBroker(object):
             '/udb.services.v1.DataBroker/ListPolicies',
             udb_dot_entity_dot_v1_dot_admin__pb2.PolicyListRequest.SerializeToString,
             udb_dot_entity_dot_v1_dot_admin__pb2.PolicyListResponse.FromString,
-            options,
-            channel_credentials,
-            insecure,
-            call_credentials,
-            compression,
-            wait_for_ready,
-            timeout,
-            metadata,
-            _registered_method=True)
-
-    @staticmethod
-    def PutPolicy(request,
-            target,
-            options=(),
-            channel_credentials=None,
-            call_credentials=None,
-            insecure=False,
-            compression=None,
-            wait_for_ready=None,
-            timeout=None,
-            metadata=None):
-        return grpc.experimental.unary_unary(
-            request,
-            target,
-            '/udb.services.v1.DataBroker/PutPolicy',
-            udb_dot_entity_dot_v1_dot_admin__pb2.PutPolicyRequest.SerializeToString,
-            udb_dot_entity_dot_v1_dot_mutation__pb2.MutationResponse.FromString,
             options,
             channel_credentials,
             insecure,

@@ -142,9 +142,9 @@ which one you tripped is 90% of the fix.
 Every `DataBroker` data RPC (`Select`, `SelectV2`, `Upsert`, `Delete`, `Update`,
 `BulkCas`, and the batch streams) is authorized by **one Casbin engine**,
 default-DENY. The old ABAC coarse gate (`data.select` vocab, the
-`udb_abac_policies` table, `DataBroker.PutPolicy`) is **removed** — those still
-exist as a vestigial write surface but **the data plane no longer reads them.
-Seeding `udb_abac_policies` will NOT fix your CRUD deny.**
+`udb_abac_policies` table, and the `DataBroker.PutPolicy` RPC that wrote it — the
+RPC was deleted in 0.6.0) is **removed**. **The data plane does not read that
+table; seeding it will NOT fix your CRUD deny.**
 
 The decision path: handler `authorize(security, message_type, "Select")` →
 `AuthzSnapshot::casbin_authorize`. The engine is fed from `udb_authz.policy_rules`
@@ -270,8 +270,8 @@ grant doesn't hold.
 
 ### Surface 3 — the legacy ABAC table (dead for decisions)
 
-`udb_abac_policies` (written by `DataBroker.PutPolicy`, `udb`'s old
-`policy-seed`-to-that-table paths) is **no longer consulted** by any live
+`udb_abac_policies` (written by the removed `DataBroker.PutPolicy` RPC and
+`udb`'s old seeding paths) is **no longer consulted** by any live
 decision. If you inherited code or docs that seed it, that's why "the policy is
 there but I'm still denied." Migrate those to `policy_rules` (Surface 1).
 
@@ -1735,8 +1735,8 @@ authz, and events apply **uniformly** across all backends.
 - **Two authz surfaces, two cures:** data deny → a Casbin **policy row**; native
   deny → a token **scope**. Never seed a policy to fix a native scope problem, or
   vice-versa.
-- **Seeding the wrong table:** `udb_abac_policies` (`DataBroker.PutPolicy`) is
-  DEAD for decisions; seed `udb_authz.policy_rules` (`udb authz seed`/
+- **Seeding the wrong table:** `udb_abac_policies` (the removed
+  `DataBroker.PutPolicy`) is DEAD for decisions; seed `udb_authz.policy_rules` (`udb authz seed`/
   `PutAuthzPolicy`/`CreatePolicyRule`/`policy-seed`).
 - **A service account needs a `ServiceAccountGrant`** or it cannot authenticate.
   "Works as a user, fails as a service" = missing/inactive grant.

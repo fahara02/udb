@@ -474,15 +474,9 @@ service DataBroker {
     option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
     option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "list_policies" rest_operation_id: "listPolicies" };
   }
-  // DEPRECATED: writes the legacy ABAC table, which does NOT authorize
-  // requests. Authorization comes from the Casbin governance table: use
-  // AuthzService.PutAuthzPolicy (or `udb authz seed` / `udb policy apply`).
-  // Every response carries an `x-udb-deprecated` header; removed in 0.6.0.
-  rpc PutPolicy(udb.entity.v1.PutPolicyRequest) returns (udb.entity.v1.MutationResponse) {
-    option deprecated = true;
-    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_DESTRUCTIVE;
-    option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "put_policy" rest_operation_id: "putPolicy" };
-  }
+  // PutPolicy was removed in 0.6.0: it wrote the legacy ABAC table, which never
+  // authorized requests. Write policy with AuthzService.PutAuthzPolicy or
+  // `udb policy apply`.
   rpc DeletePolicy(udb.entity.v1.PolicyRequest) returns (udb.entity.v1.MutationResponse) {
     option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
     option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "delete_policy" rest_operation_id: "deletePolicy" };

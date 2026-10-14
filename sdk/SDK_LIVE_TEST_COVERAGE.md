@@ -7,7 +7,7 @@ Inputs:
 - `sdk/go/udbclient/generated_client.go`
 - `docs/site/bench-results.json`
 
-Current generated RPC surface: 389 RPCs across 28 services.
+Current generated RPC surface: 388 RPCs across 28 services.
 
 The benchmark body manifest is checked against generated SDK metadata before this
 file is written. A missing row, extra row, alias drift, operationId drift, or
@@ -43,7 +43,7 @@ stack, with request bodies taken from the plan the shared Python seed exports.
 | CacheService | 7 | 3 | 3 | 1 | 0 |
 | ConfigService | 5 | 3 | 1 | 1 | 0 |
 | ControlPlaneService | 6 | 2 | 4 | 0 | 0 |
-| DataBroker | 85 | 35 | 42 | 8 | 0 |
+| DataBroker | 84 | 35 | 42 | 7 | 0 |
 | EmbeddingService | 19 | 5 | 12 | 2 | 0 |
 | IdentityProviderService | 27 | 6 | 21 | 0 | 0 |
 | LiveQueryService | 1 | 1 | 0 | 0 | 0 |
@@ -284,7 +284,6 @@ benchmark harnesses.
 | DataBroker | `DataBroker/PublishCDC` | `publish_cdc` | `publishCdc` | MUTATION | data_broker.md |
 | DataBroker | `DataBroker/PurgeSubject` | `purge_subject` | `purgeSubject` | DESTRUCTIVE | data_broker.md |
 | DataBroker | `DataBroker/PutObject` | `put_object` | `putObject` | MUTATION | data_broker.md |
-| DataBroker | `DataBroker/PutPolicy` | `put_policy` | `putPolicy` | DESTRUCTIVE | data_broker.md |
 | DataBroker | `DataBroker/QuarantineDlqEvent` | `quarantine_dlq_event` | `quarantineDlqEvent` | MUTATION | data_broker.md |
 | DataBroker | `DataBroker/ReloadPolicies` | `reload_policies` | `reloadPolicies` | DESTRUCTIVE | data_broker.md |
 | DataBroker | `DataBroker/ReplayDlqEvent` | `replay_dlq_event` | `replayDlqEvent` | MUTATION | data_broker.md |

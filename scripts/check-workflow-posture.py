@@ -6495,8 +6495,8 @@ def check_benchmark_workflow_gate(root: Path = ROOT) -> list[str]:
         ):
             if fixture not in correctness:
                 scoped.append(f"candidate Go live correctness missing required fixture {fixture}")
-        if re.search(r"continue-on-error:\s*true|\|\|\s*true|\bexit\s+0\b|set\s+\+e|UDB_ALLOW_LEGACY_PUT_POLICY", correctness):
-            scoped.append("candidate Go live correctness must propagate failures and preserve production policy gates")
+        if re.search(r"continue-on-error:\s*true|\|\|\s*true|\bexit\s+0\b|set\s+\+e", correctness):
+            scoped.append("candidate Go live correctness must propagate failures")
         correctness_at = text.find("Run every Go live correctness test")
         php_at = text.find("Benchmark PHP SDK")
         if not (0 <= php_at < correctness_at < collect_at):

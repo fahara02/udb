@@ -7,7 +7,7 @@ package udbclient
 // real request decode + tenant-scope/validation + handler-entry logic across the
 // whole surface, not just an empty mount ping. Mutations keep a default-valued
 // request so the probe never triggers a destructive side effect (a populated
-// PutPolicy/DropResource/RollbackCatalog could corrupt broker state).
+// DeletePolicy/DropResource/RollbackCatalog could corrupt broker state).
 
 import (
 	"strings"
@@ -46,7 +46,7 @@ func resolveMethodDesc(fullMethod string) protoreflect.MethodDescriptor {
 // probeRPCDestructive reports whether an RPC is classified DESTRUCTIVE by the
 // proto-derived operation_kind on the generated client (RPCInfo.OperationKind) —
 // the SINGLE authoritative source, never a hardcoded name list. A destructive RPC
-// (abac PutPolicy flips the data plane to default-deny; catalog/policy-version
+// (policy deletes change authorization; catalog/policy-version
 // mutations rewrite the active config; the revoke-all/emergency/reset family can
 // lock out the admin) would corrupt shared state if field-populated, so it is
 // sent a typed-empty request: the handler still decodes + validates, but the
