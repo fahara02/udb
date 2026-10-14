@@ -7,11 +7,15 @@
 //! - **Upsert no longer fills missing columns.** …
 //!   - detect: code: .Upsert(
 //!   - detect: sql: SELECT COUNT(*) FROM app.orders WHERE status IS NULL
+//!   - detect: file: .udb/native-services.json
+//!   - detect: env: UDB_SOME_SETTING
 //!   - fix: send whole rows to Upsert, or use Update for partial changes.
 //! ```
 //!
 //! `code` is a literal substring searched in the repo's source files; `sql` is a
-//! read-only probe whose first column counts affected rows.
+//! read-only probe whose first column counts affected rows; `file` is a relative
+//! path found anywhere under the repo; `env` is a variable set in this process's
+//! environment or assigned in a `.env*` file under the repo.
 
 use super::*;
 
@@ -32,13 +36,15 @@ const SKIP_DIRS: &[&str] = &[
 /// Source file extensions searched for code detectors.
 const SOURCE_EXTENSIONS: &[&str] = &[
     "go", "rs", "ts", "tsx", "js", "mjs", "py", "php", "java", "cs", "kt", "proto", "sql", "yaml",
-    "yml", "json", "toml",
+    "yml", "json", "toml", "sh", "bash", "ps1", "cmd", "bat",
 ];
 
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize)]
 pub(crate) enum Detector {
     Code(String),
     Sql(String),
+    File(String),
+    Env(String),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize)]
@@ -116,6 +122,10 @@ pub(crate) fn parse_breaking_entries(changelog: &str) -> Vec<BreakingEntry> {
                 entry.detectors.push(Detector::Code(strip_ticks(pattern)));
             } else if let Some(query) = rest.strip_prefix("sql:") {
                 entry.detectors.push(Detector::Sql(strip_ticks(query)));
+            } else if let Some(path) = rest.strip_prefix("file:") {
+                entry.detectors.push(Detector::File(strip_ticks(path)));
+            } else if let Some(name) = rest.strip_prefix("env:") {
+                entry.detectors.push(Detector::Env(strip_ticks(name)));
             }
         } else if let Some(fix) = trimmed.strip_prefix("- fix:") {
             entry.fix = fix.trim().to_string();
@@ -186,6 +196,87 @@ fn search_code(root: &std::path::Path, needle: &str, hits: &mut Vec<String>, lim
             }
         }
     }
+}
+
+/// Every file under `root` whose path ends with the relative path `suffix`
+/// (so `.udb/native-services.json` is found in nested app directories too).
+fn search_files(root: &std::path::Path, suffix: &str, hits: &mut Vec<String>, limit: usize) {
+    let Ok(read) = fs::read_dir(root) else {
+        return;
+    };
+    let suffix: Vec<&str> = suffix
+        .split(['/', '\\'])
+        .filter(|part| !part.is_empty())
+        .collect();
+    for item in read.flatten() {
+        if hits.len() >= limit {
+            return;
+        }
+        let path = item.path();
+        let name = item.file_name().to_string_lossy().to_string();
+        if path.is_dir() {
+            if !SKIP_DIRS.contains(&name.as_str()) {
+                search_files(&path, &suffix.join("/"), hits, limit);
+            }
+            continue;
+        }
+        let parts: Vec<String> = path
+            .components()
+            .map(|part| part.as_os_str().to_string_lossy().to_string())
+            .collect();
+        if !suffix.is_empty()
+            && parts.len() >= suffix.len()
+            && parts[parts.len() - suffix.len()..]
+                .iter()
+                .zip(&suffix)
+                .all(|(have, want)| have == want)
+        {
+            hits.push(path.display().to_string());
+        }
+    }
+}
+
+/// Where `name` is set: this process's environment, or an assignment in a
+/// `.env*` file under `root` (`NAME=…` or `export NAME=…`).
+fn search_env(root: &std::path::Path, name: &str, hits: &mut Vec<String>, limit: usize) {
+    fn walk(dir: &std::path::Path, name: &str, hits: &mut Vec<String>, limit: usize) {
+        let Ok(read) = fs::read_dir(dir) else {
+            return;
+        };
+        for item in read.flatten() {
+            if hits.len() >= limit {
+                return;
+            }
+            let path = item.path();
+            let file = item.file_name().to_string_lossy().to_string();
+            if path.is_dir() {
+                if !SKIP_DIRS.contains(&file.as_str()) {
+                    walk(&path, name, hits, limit);
+                }
+                continue;
+            }
+            if !file.starts_with(".env") {
+                continue;
+            }
+            let Ok(text) = fs::read_to_string(&path) else {
+                continue;
+            };
+            for (number, line) in text.lines().enumerate() {
+                let line = line.trim_start();
+                let line = line.strip_prefix("export ").unwrap_or(line).trim_start();
+                if line
+                    .strip_prefix(name)
+                    .is_some_and(|rest| rest.trim_start().starts_with('='))
+                {
+                    hits.push(format!("{}:{}", path.display(), number + 1));
+                }
+            }
+        }
+    }
+    if env::var(name).is_ok_and(|value| !value.trim().is_empty()) {
+        hits.push(format!("set in this process's environment ({name})"));
+    }
+    walk(root, name, hits, limit);
 }
 
 pub(crate) fn run_upgrade_command(
@@ -264,6 +355,19 @@ pub(crate) fn run_upgrade_command(
                             .map(|hit| format!("code `{needle}` at {hit}")),
                     );
                 }
+                Detector::File(suffix) => {
+                    let mut hits = Vec::new();
+                    search_files(std::path::Path::new(&repo), suffix, &mut hits, 50);
+                    findings.extend(
+                        hits.into_iter()
+                            .map(|hit| format!("file `{suffix}` at {hit}")),
+                    );
+                }
+                Detector::Env(name) => {
+                    let mut hits = Vec::new();
+                    search_env(std::path::Path::new(&repo), name, &mut hits, 50);
+                    findings.extend(hits.into_iter().map(|hit| format!("env `{name}` {hit}")));
+                }
                 Detector::Sql(query) => match pool.as_ref() {
                     None => unchecked.push(format!("sql probe needs --dsn: {query}")),
                     Some(pool) => {
@@ -323,7 +427,9 @@ pub(crate) fn run_upgrade_command(
 
 #[cfg(test)]
 mod upgrade_cli_tests {
-    use super::{Detector, entries_between, parse_breaking_entries};
+    use super::{
+        CHANGELOG, Detector, entries_between, parse_breaking_entries, search_env, search_files,
+    };
 
     const SAMPLE: &str = "# Changelog\n\n## [0.5.30] - 2026-10-09\n\n### Breaking for callers\n\n- None.\n\n## [0.5.29] - 2026-10-08\n\n### Added\n\n- something\n\n### Breaking for callers\n\n- **Upsert no longer fills missing columns.**\n  Partial rows fail.\n  - detect: code: `.Upsert(`\n  - detect: sql: SELECT 0\n  - fix: send whole rows, or use Update.\n\n## [0.5.28] - 2026-10-07\n\n### Breaking for callers\n\n- **old change**\n  - fix: nothing\n";
 
@@ -356,5 +462,65 @@ mod upgrade_cli_tests {
                 .is_empty()
         );
         assert!(entries_between(&entries, "x", "0.5.30").is_err());
+    }
+
+    #[test]
+    fn parses_file_and_env_detectors() {
+        let sample = "## [0.6.0] - Unreleased\n\n### Breaking for callers\n\n- **moved**\n  - detect: file: `.udb/native-services.json`\n  - detect: env: `UDB_X`\n  - fix: move it.\n";
+        let entries = parse_breaking_entries(sample);
+        assert_eq!(
+            entries[0].detectors,
+            vec![
+                Detector::File(".udb/native-services.json".into()),
+                Detector::Env("UDB_X".into())
+            ]
+        );
+    }
+
+    #[test]
+    fn file_and_env_detectors_find_nested_hits() {
+        let root = std::env::temp_dir().join(format!("udb-upgrade-{}", uuid::Uuid::new_v4()));
+        std::fs::create_dir_all(root.join("apps/web/.udb")).expect("mkdir");
+        std::fs::write(root.join("apps/web/.udb/native-services.json"), "{}").expect("write");
+        std::fs::write(
+            root.join("apps/web/.env.production"),
+            "A=1\nexport UDB_UPGRADE_TEST_FLAG=true\n",
+        )
+        .expect("write env");
+        let mut files = Vec::new();
+        search_files(&root, ".udb/native-services.json", &mut files, 10);
+        assert_eq!(files.len(), 1, "{files:?}");
+        let mut envs = Vec::new();
+        search_env(&root, "UDB_UPGRADE_TEST_FLAG", &mut envs, 10);
+        assert_eq!(envs.len(), 1, "{envs:?}");
+        assert!(envs[0].ends_with(":2"), "{envs:?}");
+        let mut none = Vec::new();
+        search_env(&root, "UDB_UPGRADE_TEST", &mut none, 10);
+        assert!(
+            none.is_empty(),
+            "a prefix of another name is not a hit: {none:?}"
+        );
+        let _ = std::fs::remove_dir_all(root);
+    }
+
+    /// Every 0.6.0 removal ships a breaking entry with a fix; the detectable
+    /// ones carry a detector.
+    #[test]
+    fn the_0_6_0_removals_carry_fixes_and_detectors() {
+        let entries = entries_between(&parse_breaking_entries(CHANGELOG), "0.5.99", "0.6.0")
+            .expect("version window");
+        assert!(entries.len() >= 9, "{}", entries.len());
+        assert!(entries.iter().all(|entry| !entry.fix.is_empty()));
+        let detectors: Vec<&Detector> = entries.iter().flat_map(|e| &e.detectors).collect();
+        for expected in [
+            Detector::Code("RawAPIKey".into()),
+            Detector::File(".udb/native-services.json".into()),
+            Detector::Env("UDB_ALLOW_LEGACY_PUT_POLICY".into()),
+            Detector::Code("authz seed".into()),
+            Detector::Code("policy-seed".into()),
+            Detector::Code("\"from_label\"".into()),
+        ] {
+            assert!(detectors.contains(&&expected), "missing {expected:?}");
+        }
     }
 }
