@@ -5875,6 +5875,8 @@ mod catalog_incompatibility_message_tests {
         CatalogManifest {
             checksum_sha256: indexes.join(","),
             tables: vec![ManifestTable {
+                // The diff skips a table whose checksum is unchanged.
+                checksum_sha256: format!("lessons:{}", indexes.join(",")),
                 schema: "edu".to_string(),
                 table: "lessons".to_string(),
                 columns: vec![ManifestColumn {
