@@ -2,6 +2,7 @@
 """CI proof for embedded startup, shared Go conformance and persisted restart."""
 import hashlib
 import json
+import re
 import os
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -137,7 +138,14 @@ def go_contract_receipt(stdout, stderr, returncode, selector, phase):
     refused = [event for event in events if event.get("Action") in {"skip", "fail"}]
     package_pass = [i for i, event in enumerate(events) if event.get("Action") == "pass" and not event.get("Test")]
     if returncode or len(starts) != 1 or len(passes) != 1 or refused or len(package_pass) != 1:
-        raise RuntimeError("missing, skipped, failed or duplicated actual Go contract")
+        # Name what failed: the failing tests and their file:line messages. Go
+        # test output carries assertion text, never the bootstrap argv.
+        failed = sorted({event["Test"] for event in refused if event.get("Test")})
+        lines = [event.get("Output", "").strip() for event in events
+                 if event.get("Action") == "output" and re.search(r"\.go:\d+:", event.get("Output", ""))]
+        detail = "; ".join(failed + lines)[:1500]
+        raise RuntimeError("missing, skipped, failed or duplicated actual Go contract"
+                           + (f": {detail}" if detail else ""))
     if events[package_pass[0]].get("Package") != package or not starts[0] < passes[0] < package_pass[0]:
         raise RuntimeError("Go contract completion order or package is invalid")
     return {
