@@ -149,8 +149,8 @@ pub(crate) fn ensure_device_owner(
     }
 }
 
-pub(crate) fn device_dto(tenant_id: &str, row: &DeviceRow) -> msg_pb::Device {
-    msg_pb::Device {
+pub(crate) fn device_dto(tenant_id: &str, row: &DeviceRow) -> msg_pb::DirectoryDevice {
+    msg_pb::DirectoryDevice {
         tenant_id: tenant_id.to_string(),
         subject_id: row.subject_id.clone(),
         device_id: row.device_id.clone(),

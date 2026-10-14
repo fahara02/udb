@@ -603,7 +603,7 @@ service MessagingService {
 
 // A device in the key directory. `key_fingerprint` is the lowercase hex SHA-256
 // of the Ed25519 signature public key; peers compare it out of band.
-message Device {
+message DirectoryDevice {
   option (udb.core.common.v1.message_sdk_surface) = {
       include_in_facade: true
       required_credential_provider: "udb"
@@ -662,7 +662,7 @@ message RegisterMessagingDeviceResponse {
       boilerplate_recipe_tags: "messaging"
       generate_minimal_example: true
   };
-  Device device = 1;
+  DirectoryDevice device = 1;
   // False when the identical device was already registered (idempotent replay).
   bool created = 2;
   string message = 3;
@@ -696,7 +696,7 @@ message ListMessagingDevicesResponse {
       boilerplate_recipe_tags: "messaging"
       generate_minimal_example: true
   };
-  repeated Device devices = 1;
+  repeated DirectoryDevice devices = 1;
   string message = 2;
   // Error information if operation failed
   udb.core.common.v1.ApiError error = 3;
