@@ -43,6 +43,7 @@ from udb.core.webrtc.services.v1 import webrtc_service_pb2 as webrtc_pb, webrtc_
 # manifest bodies need (mirrors the Go perf seed).
 from udb.core.vault.services.v1 import vault_service_pb2 as vault_pb
 from udb.core.lock.services.v1 import lock_service_pb2 as lock_pb
+from udb.core.messaging.services.v1 import messaging_service_pb2 as messaging_pb
 from udb.core.workflow.services.v1 import workflow_service_pb2 as workflow_pb
 from udb.core.scheduler.services.v1 import scheduler_service_pb2 as scheduler_pb
 from udb.core.webhook.services.v1 import webhook_service_pb2 as webhook_pb
@@ -73,6 +74,7 @@ from udb_client.generated_client import (
     IdentityProviderServiceClient,
     LiveQueryServiceClient,
     LockServiceClient,
+    MessagingServiceClient,
     MeteringServiceClient,
     NotificationServiceClient,
     PeerServiceClient,
@@ -112,6 +114,7 @@ SERVICE_CLIENTS = [
     IdentityProviderServiceClient,
     LiveQueryServiceClient,
     LockServiceClient,
+    MessagingServiceClient,
     MeteringServiceClient,
     NotificationServiceClient,
     SchedulerServiceClient,
@@ -1516,6 +1519,7 @@ DOC_BY_CLIENT = {
     "IdentityProviderServiceClient": "idp.md",
     "LiveQueryServiceClient": "livequery.md",
     "LockServiceClient": "lock.md",
+    "MessagingServiceClient": "messaging.md",
     "MeteringServiceClient": "metering.md",
     "NotificationServiceClient": "notification.md",
     "SchedulerServiceClient": "scheduler.md",
@@ -3879,6 +3883,24 @@ def perf_seed(
                 fix.set(_lock_ref, str(acquired.fencing_token))
         except grpc.RpcError:
             pass
+
+    # MessagingService: an opt-in backup the GetMessagingBackup row reads. The
+    # broker cannot check the encryption, only the udb-mls envelope framing
+    # (magic + minimum length), so an opaque framed blob is a valid backup.
+    try:
+        clients[MessagingServiceClient].stub.PutMessagingBackup(
+            messaging_pb.PutMessagingBackupRequest(
+                tenant_id=tenant,
+                subject_id="",
+                backup_id="sdk-perf-backup",
+                ciphertext=b"UDBMLSB1" + bytes(68),
+                expected_version=0,
+            ),
+            metadata=md,
+            timeout=8.0,
+        )
+    except grpc.RpcError as exc:
+        print(f"perf seed: PutMessagingBackup failed: {exc}", flush=True)
 
     # WorkflowService: primary + disposable workflow → workflow_id/cancel_workflow_id.
     workflow = clients[WorkflowServiceClient].stub

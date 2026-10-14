@@ -1,17 +1,30 @@
 ## MessagingService
 _proto: core/messaging/services/v1/messaging_service.proto_
 
-Bytes fields are base64 in these JSON bodies. Every MLS object (credential, KeyPackage, GroupInfo, ratchet tree, commit, Welcome, ciphertext) must be built by an MLS client for the call to succeed; until the benchmark gains an MLS client fixture, the MLS-carrying rows below measure the broker's validation-refusal path (`INVALID_ARGUMENT`) and the directory reads measure the empty-directory path.
+Bytes fields are base64 in these JSON bodies.
+
+Success path: `ListMessagingDevices` (the subject's directory, empty for a subject with no devices) and the three backup rows. A backup envelope is opaque to the broker, which checks only its udb-mls framing (the `UDBMLSB1` magic and the minimum length), so a framed placeholder is a valid backup: `PutMessagingBackup` and `DeleteMessagingBackup` (idempotent: deleting a missing backup is `deleted=false`) succeed on every iteration, and `GetMessagingBackup` reads `sdk-perf-backup`, which the shared Python seed stores before the measurement (reads run before mutations).
+
+Refusal path (documented, not yet a success path): every other row carries an MLS object (credential, KeyPackage, GroupInfo, ratchet tree, commit, Welcome, ciphertext) that only an MLS client can build for the run's tenant and subject, and the shared seed has no MLS client yet (the Python SDK gains MLS bindings in 0.6.x). Until it does, these rows measure the broker's refusal before any write:
+
+- `RegisterMessagingDevice`, `CreateGroup`, `SubmitCommit`, `SendMessage`: `INVALID_ARGUMENT` from MLS validation of the placeholder bytes (checked before the store is touched).
+- `PublishKeyPackages`, `ClaimKeyPackages`, `GetKeyPackageStock`, `StreamInbox`, `AckInbox`, `RevokeMessagingDevice`: `NOT_FOUND`, because `sdk-perf-device` (and `sdk-perf-revoked-device`) could not be registered with a placeholder credential.
+- `GetGroupInfo`: `NOT_FOUND`, because `sdk-perf-group` could not be created.
+
+The full-surface benchmark gate counts these refusals as failed RPCs against a broker that serves MessagingService (0.6.0 and later). Making them success-path rows needs a seed-time MLS fixture: a device registration, KeyPackages, a group and a commit/ciphertext built by `udb-mls` for the seeded tenant and subject.
 
 | done | RPC | op_kind | request msg | valid body | seed refs / notes |
 | --- | --- | --- | --- | --- | --- |
 | [ ] | AckInbox | MUTATION | AckInboxRequest | `{ "tenant_id": "<seed:tenant_id>", "device_id": "sdk-perf-device", "up_to_seq": 0 }` | advances the device cursor; NOT_FOUND until the device is registered. |
 | [ ] | ClaimKeyPackages | MUTATION | ClaimKeyPackagesRequest | `{ "tenant_id": "<seed:tenant_id>", "requester_device_id": "sdk-perf-device", "target_subject_ids": ["<seed:user_id>"] }` | claims one KeyPackage per active device of the target subject; the requester device must be registered and owned by the caller. |
 | [ ] | CreateGroup | MUTATION | CreateGroupRequest | `{ "tenant_id": "<seed:tenant_id>", "group_id": "sdk-perf-group", "creator_device_id": "sdk-perf-device", "group_info": "AA==", "ratchet_tree": "AA==" }` | needs the creator's signed MLS GroupInfo and ratchet tree; placeholder bytes exercise the MLS validation refusal. |
+| [ ] | DeleteMessagingBackup | DESTRUCTIVE | DeleteMessagingBackupRequest | `{ "tenant_id": "<seed:tenant_id>", "subject_id": "", "backup_id": "sdk-perf-backup-delete" }` | erases the caller's backup `sdk-perf-backup-delete`; idempotent (a missing backup answers `deleted=false`), so every iteration succeeds. |
 | [ ] | GetGroupInfo | READ_ONLY | GetGroupInfoRequest | `{ "tenant_id": "<seed:tenant_id>", "group_id": "sdk-perf-group" }` | public ratchet tree + latest GroupInfo for an external join; NOT_FOUND until the group exists. |
 | [ ] | GetKeyPackageStock | READ_ONLY | GetKeyPackageStockRequest | `{ "tenant_id": "<seed:tenant_id>", "device_id": "sdk-perf-device" }` | unclaimed one-time KeyPackages left for the device. |
+| [ ] | GetMessagingBackup | READ_ONLY | GetMessagingBackupRequest | `{ "tenant_id": "<seed:tenant_id>", "subject_id": "", "backup_id": "sdk-perf-backup" }` | returns the caller's opaque backup envelope; `sdk-perf-backup` is stored by the shared seed. Empty `subject_id` means the caller. |
 | [ ] | ListMessagingDevices | READ_ONLY | ListMessagingDevicesRequest | `{ "tenant_id": "<seed:tenant_id>", "subject_id": "<seed:user_id>", "include_revoked": false }` | the subject's devices with key fingerprints (empty for a subject with no devices). |
 | [ ] | PublishKeyPackages | MUTATION | PublishKeyPackagesRequest | `{ "tenant_id": "<seed:tenant_id>", "device_id": "sdk-perf-device", "key_packages": ["AA=="] }` | each KeyPackage must be MLS-signed by the device's registered key. |
+| [ ] | PutMessagingBackup | MUTATION | PutMessagingBackupRequest | `{ "tenant_id": "<seed:tenant_id>", "subject_id": "", "backup_id": "sdk-perf-backup-put", "ciphertext": "VURCTUxTQjEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==", "expected_version": 0 }` | stores (then replaces) the caller's backup; the body is a minimal udb-mls envelope (magic + 68 bytes), the only framing the broker checks. |
 | [ ] | RegisterMessagingDevice | MUTATION | RegisterMessagingDeviceRequest | `{ "tenant_id": "<seed:tenant_id>", "subject_id": "<seed:user_id>", "device_id": "sdk-perf-device", "signature_public_key": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=", "credential": "AA==" }` | the credential must be an MLS BasicCredential naming `<tenant>/<subject>/<device>`; placeholder bytes exercise the validation refusal. |
 | [ ] | RevokeMessagingDevice | DESTRUCTIVE | RevokeMessagingDeviceRequest | `{ "tenant_id": "<seed:tenant_id>", "device_id": "sdk-perf-revoked-device", "reason": "sdk perf" }` | revokes a disposable device and sends removal hints to its groups; NOT_FOUND until registered. |
 | [ ] | SendMessage | MUTATION | SendMessageRequest | `{ "tenant_id": "<seed:tenant_id>", "group_id": "sdk-perf-group", "sender_device_id": "sdk-perf-device", "ciphertext": "AA==", "client_message_id": "sdk-perf-message" }` | the ciphertext must be an MLS PrivateMessage for the group's current epoch. |
