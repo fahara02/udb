@@ -180,17 +180,6 @@ public interface RecordSetOrBuilder extends
 
   /**
    * <pre>
-   * The number of records in THIS page (the length of `records_json`), not the
-   * number of matching rows. Use `exact_total` for that.
-   * </pre>
-   *
-   * <code>int32 total_count = 4 [json_name = "totalCount"];</code>
-   * @return The totalCount.
-   */
-  int getTotalCount();
-
-  /**
-   * <pre>
    * #5 (opaque row revision / ETag): when the caller asked for revisions
    * (`SelectRequest.include_revision`), this carries the broker-maintained
    * opaque revision token for each returned record, index-aligned with

@@ -1087,25 +1087,9 @@ class DataBrokerClient extends \Grpc\BaseStub {
     }
 
     /**
-     * @deprecated
-     * DEPRECATED: writes the legacy ABAC table, which does NOT authorize
-     * requests. Authorization comes from the Casbin governance table: use
-     * AuthzService.PutAuthzPolicy (or `udb authz seed` / `udb policy apply`).
-     * Every response carries an `x-udb-deprecated` header; removed in 0.6.0.
-     * @param \Udb\Entity\V1\PutPolicyRequest $argument input argument
-     * @param array $metadata metadata
-     * @param array $options call options
-     * @return \Grpc\UnaryCall<\Udb\Entity\V1\MutationResponse>
-     */
-    public function PutPolicy(\Udb\Entity\V1\PutPolicyRequest $argument,
-      $metadata = [], $options = []) {
-        return $this->_simpleRequest('/udb.services.v1.DataBroker/PutPolicy',
-        $argument,
-        ['\Udb\Entity\V1\MutationResponse', 'decode'],
-        $metadata, $options);
-    }
-
-    /**
+     * PutPolicy was removed in 0.6.0: it wrote the legacy ABAC table, which never
+     * authorized requests. Write policy with AuthzService.PutAuthzPolicy or
+     * `udb policy apply`.
      * @param \Udb\Entity\V1\PolicyRequest $argument input argument
      * @param array $metadata metadata
      * @param array $options call options

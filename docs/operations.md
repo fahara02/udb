@@ -350,10 +350,8 @@ clients ignore it without advancing their resume cursor. The Go helper also
 accepts the empty Change heartbeat from older brokers.
 
 Use `AuthzService.PutAuthzPolicy` or `udb policy apply` to manage authorization.
-`DataBroker.PutPolicy` returns `UDB_POLICY_WRONG_SURFACE` because its legacy ABAC
-table does not grant access. `UDB_ALLOW_LEGACY_PUT_POLICY=true` temporarily enables
-that table's migration writes. The performance harness measures this explicit
-migration mode; native correctness CI verifies the default refusal and no write.
+`DataBroker.PutPolicy` and its `UDB_ALLOW_LEGACY_PUT_POLICY` override were removed
+in 0.6.0: the legacy ABAC table it wrote never granted access.
 
 The native services are the control-plane building blocks (auth, storage, WebRTC,
 and more). List what's running, check the health of specific ones, or scaffold a
@@ -366,7 +364,10 @@ udb app init --lang typescript --framework express --services auth,storage
 ```
 
 Each service is descriptor-driven, so you can enable exactly the ones a given
-deployment needs.
+deployment needs. The selection lives in the `native_services:` section of the
+target directory's `udb.yaml` (`udb native add|remove` edit only that section).
+Since 0.6.0 a leftover `.udb/native-services.json` is refused with directions to
+move it there; `udb upgrade --check` flags it as well.
 
 ## SLO Lanes
 
@@ -521,6 +522,13 @@ minus one, with a minimum of one. Detection happens once. Set
 `UDB_PASSWORD_KDF_MAX_CONCURRENCY` to a positive integer to lower that budget;
 values above the detected budget do not increase it. Invalid values refuse
 password operations with a typed internal error.
+
+Each Argon2id hash holds about 19 MiB. When the process runs under a cgroup
+memory limit (`memory.max`, or v1 `memory.limit_in_bytes`) and no cap is set,
+the default is also lowered so concurrent hashes fit in a quarter of that limit
+(at least one), and the broker logs a startup warning naming
+`UDB_PASSWORD_KDF_MAX_CONCURRENCY`. It also warns when the limit is under
+512 MiB, and when an explicit cap exceeds the quarter-of-memory budget.
 
 Available parallelism estimates affinity and container CPU limits where the host
 exposes them. It does not measure VM steal or changing host contention. On a

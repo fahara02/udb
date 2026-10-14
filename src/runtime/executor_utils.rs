@@ -820,6 +820,18 @@ pub(crate) fn sqlx_error_to_status(context: &str, err: &sqlx::Error) -> tonic::S
                         None,
                     );
                 }
+                "42703" | "42P01" => {
+                    // undefined_column / undefined_table: the SQL the broker built
+                    // from the ACTIVE catalog names a column or table the live
+                    // database does not have. That is a catalog/schema mismatch
+                    // the caller can fix, not a broker fault.
+                    return catalog_schema_mismatch_status(
+                        code.as_ref(),
+                        context,
+                        db.message(),
+                        db.table(),
+                    );
+                }
                 "23503" => {
                     let column = database_error_column(db);
                     return crate::runtime::error_reasons::annotate(
@@ -1165,6 +1177,85 @@ fn not_null_column(message: &str) -> Option<String> {
     } else {
         Some(name.to_string())
     }
+}
+
+/// The first double-quoted identifier after `prefix` in a driver message.
+fn quoted_after(message: &str, prefix: &str) -> Option<String> {
+    let after = message.split(prefix).nth(1)?;
+    let name = after.strip_prefix('"')?.split('"').next()?;
+    (!name.is_empty()).then(|| name.to_string())
+}
+
+/// A statement built from the ACTIVE catalog named a column (`42703`) or table
+/// (`42P01`) the live database does not have. The message names the object and
+/// the commands that line the catalog and the database up; the driver text is
+/// not echoed (only identifiers are parsed out of it).
+pub(crate) fn catalog_schema_mismatch_status(
+    sqlstate: &str,
+    context: &str,
+    db_message: &str,
+    db_table: Option<&str>,
+) -> tonic::Status {
+    let relation = db_table
+        .filter(|table| !table.is_empty())
+        .map(str::to_string)
+        .or_else(|| quoted_after(db_message, "relation "));
+    let fix = "the active catalog and the live database schema are out of step. Run \
+               `udb catalog status --project <id>` to see the ACTIVE catalog, then either apply \
+               its migration (`udb catalog transition status --project <id>` prints the next step; \
+               `udb plan` prints the DDL) or activate a catalog that matches the live schema";
+    let (missing_key, object, message) = if sqlstate == "42703" {
+        let column = quoted_after(db_message, "column ").or_else(|| {
+            // `column t.x does not exist`
+            db_message
+                .strip_prefix("column ")
+                .and_then(|rest| rest.split_whitespace().next())
+                .map(|name| name.rsplit('.').next().unwrap_or(name).to_string())
+        });
+        let column_text = column.clone().unwrap_or_else(|| "<unknown>".to_string());
+        let table_text = relation
+            .as_deref()
+            .map(|table| format!(" of table '{table}'"))
+            .unwrap_or_default();
+        (
+            "column",
+            column,
+            format!(
+                "{context}: column '{column_text}'{table_text} is in the active catalog but not in \
+                 the live database: {fix}"
+            ),
+        )
+    } else {
+        let table_text = relation.clone().unwrap_or_else(|| "<unknown>".to_string());
+        (
+            "table",
+            relation.clone(),
+            format!(
+                "{context}: table '{table_text}' is in the active catalog but not in the live \
+                 database: {fix}"
+            ),
+        )
+    };
+    let column = if missing_key == "column" {
+        object.clone()
+    } else {
+        None
+    };
+    let object = object.unwrap_or_default();
+    let table = relation.unwrap_or_default();
+    crate::runtime::error_reasons::annotate_with(
+        schema_status(
+            tonic::Code::FailedPrecondition,
+            "database",
+            context,
+            "catalog_schema_mismatch",
+            message,
+        ),
+        crate::runtime::error_reasons::CATALOG_SCHEMA_MISMATCH,
+        column.as_deref(),
+        None,
+        &[(missing_key, object.as_str()), ("table", table.as_str())],
+    )
 }
 
 /// Schema/catalog compatibility refusal. The caller selects the public gRPC code
@@ -1547,7 +1638,6 @@ pub(crate) fn cached_record_set(
     }
     let rows = vec![ProtoRow::default(); records_json.len()];
     RecordSet {
-        total_count: records_json.len() as i32,
         rows,
         records_json,
         redacted_fields: redacted_fields.into_iter().collect(),
@@ -1727,7 +1817,7 @@ pub(crate) fn record_batch_v2_from_json_rows(
 ///
 /// Fails rather than skipping a record it cannot parse. This used to
 /// `filter_map(...ok())`, which silently dropped an unparseable blob: the batch
-/// came back SHORT while `total_count` still reported the full number, so a
+/// came back SHORT while the batch's count still reported the full number, so a
 /// caller saw fewer records than the query matched with nothing anywhere saying
 /// so. Same failure mode as reading the empty compatibility rows — a wrong
 /// answer that looks like a right one.
@@ -1752,11 +1842,14 @@ pub(crate) fn record_batch_v2_from_record_set(
     } else {
         set.rows.iter().map(proto_row_to_json).collect()
     };
+    // The batch's page length is the number of records it carries; RecordSet
+    // no longer has a count field to copy it from.
+    let page_len = rows.len() as i32;
     Ok(record_batch_v2_from_json_rows(
         &rows,
         schema_version,
         set.next_page_token.clone(),
-        set.total_count,
+        page_len,
     ))
 }
 
@@ -2664,6 +2757,64 @@ mod error_detail_tests {
             .to_bytes()
             .expect("trailer decodes to bytes");
         crate::runtime::executor_utils::decode_error_detail_from_raw(&raw)
+    }
+
+    #[test]
+    fn undefined_column_is_a_catalog_schema_mismatch_naming_the_column_and_the_fix() {
+        let status = super::catalog_schema_mismatch_status(
+            "42703",
+            "transaction mutation failed",
+            "column \"grade_band\" of relation \"lessons\" does not exist",
+            None,
+        );
+        assert_eq!(status.code(), tonic::Code::FailedPrecondition);
+        let message = status.message();
+        assert!(
+            message.contains("column 'grade_band' of table 'lessons'"),
+            "{message}"
+        );
+        assert!(
+            message.contains("udb catalog status --project"),
+            "{message}"
+        );
+        assert!(
+            message.contains("udb catalog transition status"),
+            "{message}"
+        );
+        assert!(message.contains("udb plan"), "{message}");
+        let detail = decode_detail(&status);
+        assert_eq!(detail.reason, "UDB_CATALOG_SCHEMA_MISMATCH");
+        assert_eq!(detail.kind, ErrorKind::Schema as i32);
+        assert_eq!(detail.column, "grade_band");
+        assert_eq!(
+            detail.missing.get("column").map(String::as_str),
+            Some("grade_band")
+        );
+        assert_eq!(
+            detail.missing.get("table").map(String::as_str),
+            Some("lessons")
+        );
+
+        // `column t.x does not exist` (qualified reference) and a missing table.
+        let qualified = super::catalog_schema_mismatch_status(
+            "42703",
+            "select",
+            "column l.grade_band does not exist",
+            Some("lessons"),
+        );
+        assert!(qualified.message().contains("column 'grade_band'"));
+        let table = super::catalog_schema_mismatch_status(
+            "42P01",
+            "select",
+            "relation \"edu.lessons\" does not exist",
+            None,
+        );
+        assert_eq!(table.code(), tonic::Code::FailedPrecondition);
+        assert!(
+            table.message().contains("table 'edu.lessons'"),
+            "{}",
+            table.message()
+        );
     }
 
     #[test]
@@ -4200,13 +4351,15 @@ mod record_batch_tests {
         let blob = serde_json::to_vec(&json!({"a": 1})).unwrap();
         let set = RecordSet {
             records_json: vec![blob],
-            total_count: 1,
             next_page_token: "n".into(),
             ..RecordSet::default()
         };
         let batch = record_batch_v2_from_record_set(&set, "v1").expect("valid record set");
         assert_eq!(batch.row_count, 1);
-        assert_eq!(batch.total_count, 1);
+        assert_eq!(
+            batch.total_count, 1,
+            "the batch's page length is the record count"
+        );
         assert_eq!(batch.next_page_token, "n");
         assert_eq!(col(&batch, "a").int64_values, vec![1]);
     }
@@ -4232,7 +4385,6 @@ mod record_batch_tests {
         let blob = serde_json::to_vec(&json!({"id": 1, "email": "a@b.com"})).unwrap();
         let set = RecordSet {
             records_json: vec![blob],
-            total_count: 1,
             ..RecordSet::default()
         };
         let batch = record_batch_v2_from_record_set(&set, "v9").expect("valid record set");
@@ -4250,7 +4402,7 @@ mod record_batch_tests {
     }
 
     /// A record the columnar encoder cannot parse must fail the call, not shrink
-    /// the batch. Dropping it produced a SHORT batch beside a full `total_count`,
+    /// the batch. Dropping it produced a SHORT batch beside a full count,
     /// which reads to a caller as a complete answer.
     #[test]
     fn v2_batch_fails_closed_on_an_unparseable_record() {
@@ -4259,7 +4411,6 @@ mod record_batch_tests {
                 serde_json::to_vec(&json!({"id": 1})).unwrap(),
                 b"{not json".to_vec(),
             ],
-            total_count: 2,
             ..RecordSet::default()
         };
         let err = record_batch_v2_from_record_set(&set, "v1")
@@ -4302,7 +4453,6 @@ mod cached_record_set_shape_tests {
             set.records_json, blobs,
             "the canonical records pass through"
         );
-        assert_eq!(set.total_count, 2);
         // One EMPTY compatibility row per record — exactly what
         // `rows_to_record_set` emits.
         assert_eq!(set.rows.len(), blobs.len());

@@ -1151,11 +1151,6 @@ export class UdbProject {
 
   private readonly tokenStore: TokenStore;
   private refreshInFlight: Promise<StoredToken | null> | null = null;
-  /** True while calls authenticate with the raw `x-api-key` header instead of an
-   *  exchanged bearer (broker minted no token, or re-exchange kept failing near
-   *  expiry). The refresher keeps trying to re-exchange and swaps back on success. */
-  private apiKeyRawMode = false;
-  private rawModeWarned = false;
   /** Consecutive background-refresh failures (drives exponential backoff). */
   private refreshFailures = 0;
   /** Background bearer-refresher state (parity with the Go enterprise session): a
@@ -1398,9 +1393,10 @@ export class UdbProject {
    * Exchange a native API key (AuthnService.Authenticate) for a short-lived
    * bearer, adopt the verified principal, and keep the bearer alive: the key is
    * retained privately (never logged) and the background refresher re-exchanges
-   * it at ~80% of the bearer lifetime. If the broker mints no access token (no JWT
-   * signing key configured) or re-exchange keeps failing near expiry, calls fall
-   * back to the raw `x-api-key` header, which the broker accepts for service keys.
+   * it at ~80% of the bearer lifetime. The key is never sent as a header: if the
+   * broker mints no access token (no JWT signing key configured) the exchange
+   * fails, and if re-exchange keeps failing past bearer expiry calls fail closed
+   * until a re-exchange succeeds.
    */
   async authenticateApiKeyAndAdopt(apiKey = this.config.credentials?.apiKey ?? ""): Promise<any> {
     if (!apiKey) throw new Error("udb: api key is required");
@@ -1412,9 +1408,8 @@ export class UdbProject {
     return verified;
   }
 
-  /** One API-key → bearer exchange: adopt principal, persist + install the bearer
-   *  (or switch to raw `x-api-key` mode when no token is minted). Shared by the
-   *  initial connect and the background re-exchange. */
+  /** One API-key → bearer exchange: adopt principal, persist + install the bearer.
+   *  Shared by the initial connect and the background re-exchange. */
   private async exchangeApiKey(apiKey: string): Promise<{ verified: any; token: StoredToken | null }> {
     const verified: any = await this.auth.authenticateApiKey(apiKey);
     RETAINED_API_KEYS.set(this, apiKey);
@@ -1430,11 +1425,13 @@ export class UdbProject {
     if (serviceIdentity) this.sharedMeta.serviceIdentity = serviceIdentity;
     if (Array.isArray(principal?.scopes)) this.sharedMeta.scopes = [...principal.scopes];
     if (!token) {
-      // No JWT signing key on the broker: nothing to refresh; authenticate every
-      // call with the raw service key instead of failing the connect.
+      // No JWT signing key on the broker. An API key is only ever exchanged for a
+      // bearer; it is never sent as a raw header, so there is nothing to fall back to.
       await this.tokenStore.clear();
-      this.enterApiKeyRawMode(apiKey, "the broker returned no access token for the API key");
-      return { verified, token: null };
+      this.clearBearerCredentials();
+      throw new Error(
+        "udb: the broker returned no access token for the API key; configure a JWT signing key on the broker (API keys are exchanged for a bearer, never sent raw)",
+      );
     }
     const now = Date.now();
     const expiresAtUnix = Number(verified?.expires_at_unix ?? 0);
@@ -1446,25 +1443,6 @@ export class UdbProject {
     await this.tokenStore.save(next);
     this.applyCredentials(token);
     return { verified, token: next };
-  }
-
-  /** Authenticate every outbound channel with the raw `x-api-key` header (no
-   *  bearer). Warns once; the key itself is never logged. */
-  private enterApiKeyRawMode(apiKey: string, reason: string): void {
-    this.apiKeyRawMode = true;
-    this.poisoned = false;
-    if (this.sharedMeta) {
-      this.sharedMeta.bearerToken = undefined;
-      this.sharedMeta.apiKey = apiKey;
-    }
-    this.core.setCredentials({ bearerToken: undefined, apiKey });
-    this.authGenerated?.core.setCredentials({ bearerToken: undefined, apiKey });
-    this.auth.setCredentials({ bearerToken: undefined, apiKey });
-    this.webrtcGenerated?.core.setCredentials({ bearerToken: undefined, apiKey });
-    if (!this.rawModeWarned) {
-      this.rawModeWarned = true;
-      console.warn(`udb: ${reason}; falling back to the raw x-api-key header`);
-    }
   }
 
   /**
@@ -1501,7 +1479,6 @@ export class UdbProject {
 
   /** Push a refreshed bearer into every outbound channel, clearing raw API-key metadata. */
   private applyCredentials(bearerToken: string): void {
-    this.apiKeyRawMode = false;
     if (this.sharedMeta) {
       this.sharedMeta.bearerToken = bearerToken;
       this.sharedMeta.apiKey = undefined;
@@ -1514,7 +1491,6 @@ export class UdbProject {
 
   /** Remove the active bearer and raw API-key metadata from every outbound channel. */
   private clearBearerCredentials(): void {
-    this.apiKeyRawMode = false;
     if (this.sharedMeta) {
       this.sharedMeta.bearerToken = undefined;
       this.sharedMeta.apiKey = undefined;
@@ -1654,19 +1630,8 @@ export class UdbProject {
       this.lastRefreshError = err instanceof Error ? err : new Error(String(err));
       this.refreshFailures = (this.refreshFailures ?? 0) + 1;
       const tok = await Promise.resolve(this.tokenStore.load()).catch(() => null);
-      const retainedKey = RETAINED_API_KEYS.get(this);
-      const apiKeyBearer = !!retainedKey && (!tok || (!tok.refreshToken && !tok.sessionId));
-      if (apiKeyBearer) {
-        // API-key bearer whose re-exchange keeps failing: once it is within the
-        // final skew window (or expired), fall back to the raw service key rather
-        // than failing closed. The refresher keeps retrying the exchange.
-        const nearExpiry =
-          !tok || (tok.expiresAt > 0 && Date.now() + BG_REFRESH_SKEW_MS >= tok.expiresAt);
-        if (nearExpiry && !this.apiKeyRawMode) {
-          this.enterApiKeyRawMode(retainedKey!, "API key re-exchange is failing near bearer expiry");
-        }
-        return;
-      }
+      // An API-key bearer whose re-exchange keeps failing is treated like any
+      // other bearer: it fails closed at expiry and the refresher keeps retrying.
       const expired = !tok || (tok.expiresAt > 0 && Date.now() >= tok.expiresAt);
       if (expired) {
         // Fail closed: drop the dead bearer so no call goes out with a stale

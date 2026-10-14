@@ -227,6 +227,9 @@ type PageOptions struct {
 	Limit int32
 	// PageToken continues a walk; empty requests the first page.
 	PageToken string
+	// IncludeTotal also counts every matching row into Page.ExactTotal (one
+	// extra COUNT on the broker; the read cache is skipped).
+	IncludeTotal bool
 }
 
 // Page is one page of a keyset-paginated read.
@@ -235,8 +238,12 @@ type Page struct {
 	// NextPageToken is the cursor for the following page — empty on the last
 	// page. Feed it back verbatim as PageOptions.PageToken; it is opaque.
 	NextPageToken string
-	// TotalCount is the number of rows in THIS page (see decodeRecordSet).
-	TotalCount int32
+	// HasMore reports a full page: more rows may match, so keep paging with
+	// NextPageToken. The page length is len(Rows).
+	HasMore bool
+	// ExactTotal is every row the filter matches, ignoring the limit and page
+	// position. Set only when PageOptions.IncludeTotal asked for it; 0 otherwise.
+	ExactTotal int64
 }
 
 // SelectPage issues a single keyset-paginated Select for the bound FQN. Pass an
@@ -253,13 +260,14 @@ func (e *Entity) SelectPage(ctx context.Context, where map[string]any, opts Page
 		sort = append(sort, &entityv1.Sort{Field: s.Field, Descending: s.Descending})
 	}
 	rs, err := e.client.Select(ctx, &entityv1.SelectRequest{
-		Context:     e.requestContext(),
-		MessageType: e.fqn,
-		Filter:      filter,
-		Fields:      opts.Fields,
-		Limit:       opts.Limit,
-		PageToken:   opts.PageToken,
-		Sort:        sort,
+		Context:      e.requestContext(),
+		MessageType:  e.fqn,
+		Filter:       filter,
+		Fields:       opts.Fields,
+		Limit:        opts.Limit,
+		PageToken:    opts.PageToken,
+		Sort:         sort,
+		IncludeTotal: opts.IncludeTotal,
 	})
 	if err != nil {
 		return nil, err
@@ -271,7 +279,8 @@ func (e *Entity) SelectPage(ctx context.Context, where map[string]any, opts Page
 	return &Page{
 		Rows:          rows,
 		NextPageToken: rs.GetNextPageToken(),
-		TotalCount:    rs.GetTotalCount(),
+		HasMore:       rs.GetHasMore(),
+		ExactTotal:    rs.GetExactTotal(),
 	}, nil
 }
 
@@ -501,7 +510,7 @@ func decodeRecordSet(rs *entityv1.RecordSet) ([]map[string]any, error) {
 	out := make([]map[string]any, 0, len(rows))
 	for i, raw := range rows {
 		// Fail rather than skip: a skipped record leaves the page SHORT while
-		// TotalCount still reports the full number.
+		// HasMore and ExactTotal still describe the full result.
 		if len(raw) == 0 {
 			return nil, fmt.Errorf("udb: decode record row %d: empty body", i)
 		}

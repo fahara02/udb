@@ -29,6 +29,7 @@ mod catalog_transition;
 mod code_scan;
 mod dev_embedded;
 mod doctor;
+mod env_fill;
 mod env_setup;
 mod env_template;
 mod evidence;
@@ -37,6 +38,7 @@ mod help;
 mod identity_ops;
 mod init;
 mod init_prompt;
+mod keygen;
 mod native_app;
 pub(crate) mod native_lint;
 mod ops_cli;
@@ -434,6 +436,44 @@ pub fn run() {
                 dsn.as_str(),
             ));
         }
+        Command::EnvFill {
+            ref file,
+            ref keys_dir,
+            ref profile,
+            ref dsn,
+            yes,
+            check,
+            dry_run,
+        } => {
+            // Like `udb env`, dispatched before proto parsing: filling a .env is
+            // part of bringing a deployment up, before any project parses.
+            let profile = match profile.as_deref() {
+                None => None,
+                Some(raw) => match env_template::EnvProfile::parse(raw) {
+                    Some(parsed) => Some(parsed),
+                    None => {
+                        eprintln!(
+                            "udb env fill: unknown profile {raw:?} — expected `dev` or `enterprise`"
+                        );
+                        process::exit(2);
+                    }
+                },
+            };
+            let mode = if check {
+                env_fill::FillMode::Check
+            } else if dry_run {
+                env_fill::FillMode::DryRun
+            } else {
+                env_fill::FillMode::Apply { yes }
+            };
+            process::exit(env_fill::run(&env_fill::FillOptions {
+                file: PathBuf::from(file),
+                keys_dir: PathBuf::from(keys_dir),
+                profile,
+                dsn: dsn.clone(),
+                mode,
+            }));
+        }
         Command::HealthCheck => {
             // Lightweight Docker HEALTHCHECK: connect to PG and verify system catalog.
             let runtime = tokio::runtime::Runtime::new().unwrap_or_else(|err| {
@@ -823,62 +863,6 @@ pub fn run() {
             output_json(&result, "policy lint result");
             process::exit(exit_code);
         }
-        Command::PolicySeed => {
-            let policies = match load_authz_policies_for_lint() {
-                Ok(policies) => policies,
-                Err(err) => {
-                    eprintln!("{err}");
-                    process::exit(1);
-                }
-            };
-            if policies.is_empty() {
-                eprintln!(
-                    "No policies loaded. Set UDB_ABAC_POLICY_FILE to a JSON array of AuthzPolicy (Casbin) objects."
-                );
-                process::exit(1);
-            }
-            // The Casbin governance table the runtime data plane enforces from.
-            let table = pg_relation("udb_authz", "policy_rules");
-            let source = env::var("UDB_ABAC_POLICY_FILE").unwrap_or_default();
-            println!("-- UDB authorization (Casbin) policy seed SQL for the governance table");
-            println!("-- Source: {source}");
-            println!("-- Table : {table}");
-            println!("-- Generated: {} policies", policies.len());
-            println!();
-            println!("BEGIN;");
-            println!("DELETE FROM {table}; -- clear existing policies before re-seeding");
-            println!();
-            for (i, p) in policies.iter().enumerate() {
-                // Non-column AuthzPolicy fields (priority/role/purpose/relationship/
-                // required_scopes) live in attributes_json, exactly as the runtime
-                // policy loader reads them back.
-                let attributes = serde_json::json!({
-                    "priority": p.priority.to_string(),
-                    "role": p.role,
-                    "purpose": p.purpose,
-                    "relationship": p.relationship,
-                    "required_scopes": p.required_scopes.join(","),
-                })
-                .to_string();
-                println!(
-                    "INSERT INTO {table} \
-                     (subject, domain, object, action, effect, is_active, tenant_id, project_id, attributes_json) VALUES \
-                     ({sub}, {dom}, {obj}, {act}, {eff}, {active}, {ten}, {proj}, {attrs}::jsonb); -- #{i}",
-                    sub = sql_literal(&p.subject),
-                    dom = sql_literal(&p.tenant),
-                    obj = sql_literal(&p.resource),
-                    act = sql_literal(&p.action),
-                    eff = sql_literal(&p.effect.as_str().to_uppercase()),
-                    active = p.enabled,
-                    ten = sql_literal(&p.tenant),
-                    proj = sql_literal(&p.project),
-                    attrs = sql_literal(&attributes),
-                );
-            }
-            println!();
-            println!("COMMIT;");
-            process::exit(0);
-        }
         Command::FieldMaskPreview => {
             // FieldMaskPreview needs proto parsing — defer to below.
         }
@@ -1212,6 +1196,8 @@ pub fn run() {
                 &MigrationPlanConfig::default(),
             )
             .unwrap_or_else(|err| fatal_json("failed to build migration plan", err));
+
+            warn_new_entities_without_role_grants(&args, &plan);
 
             // `--emit-approval-plan <path>`: write the EXACT `ExportedPlan` that
             // `serve`'s approval gate consumes — built with `build_exported_plan`
@@ -1868,7 +1854,6 @@ pub fn run() {
         | Command::AdminVerifyAudit { .. }
         | Command::AdminResetDb { .. }
         | Command::PolicyLint
-        | Command::PolicySeed
         | Command::ProtoExport { .. }
         | Command::ProtoFmt { .. }
         | Command::Sdk { .. }
@@ -1876,7 +1861,8 @@ pub fn run() {
         | Command::Native { .. }
         | Command::AppInit { .. }
         | Command::CompatMatrix
-        | Command::Env { .. } => {
+        | Command::Env { .. }
+        | Command::EnvFill { .. } => {
             // Already handled before proto parsing above; unreachable.
         }
         Command::Explain => {

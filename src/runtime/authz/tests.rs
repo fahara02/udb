@@ -584,3 +584,137 @@ fn static_code_coverage_cannot_prove_attribute_or_relationship_permissions() {
         Some("billing")
     ));
 }
+
+#[tokio::test]
+async fn default_deny_names_the_tuple_and_ends_with_the_grant_command() {
+    let snap = AuthzSnapshot {
+        version: "v1".into(),
+        policies: (0..40)
+            .map(|index| AuthzPolicy {
+                id: format!("p{index}"),
+                tenant: "acme".into(),
+                role: "billing".into(),
+                action: "Select".into(),
+                resource: format!("acme.Other{index}"),
+                ..Default::default()
+            })
+            .collect(),
+        ..Default::default()
+    };
+    let res = ResourceRef::message("acme.Lesson");
+    let attrs = no_attrs();
+    let caller = principal("svc:lessons", "acme", &[], &["teacher"]);
+    let denied = snap
+        .casbin_authorize(&query(&caller, &res, "Upsert", "ops", &attrs))
+        .await;
+    assert!(!denied.allowed);
+    let message = &denied.deny_reason;
+    assert!(
+        !message.contains("candidate polic") && !message.contains("40"),
+        "the evaluated-policy count must not be in the message: {message}"
+    );
+    assert!(message.contains("action 'Upsert'"), "{message}");
+    assert!(message.contains("acme.Lesson"), "{message}");
+    assert!(
+        message.contains(
+            "{role: \"teacher\", action: \"Upsert\", resource: \"acme.Lesson\", effect: allow}"
+        ),
+        "{message}"
+    );
+    assert!(
+        message.contains("udb policy apply -f <policies.yaml> --tenant acme"),
+        "{message}"
+    );
+    assert!(message.contains("keep the existing entries"), "{message}");
+    assert_eq!(denied.matched_policy_ids.len(), 40, "audit keeps the count");
+
+    // No role: the grant names the caller's identity instead.
+    let bare = principal("svc:lessons", "acme", &[], &[]);
+    let denied = snap
+        .casbin_authorize(&query(&bare, &res, "Upsert", "ops", &attrs))
+        .await;
+    assert!(
+        denied
+            .deny_reason
+            .contains("{subject: \"svc:lessons\", action: \"Upsert\""),
+        "{}",
+        denied.deny_reason
+    );
+}
+
+#[test]
+fn grant_policy_entry_parses_as_a_policy_file_entry() {
+    let entry = grant_policy_entry(Grantee::Role("teacher"), "Upsert", "acme.v1.Lesson");
+    let yaml = format!("policies:\n- {entry}\n");
+    #[derive(serde::Deserialize)]
+    struct File {
+        policies: Vec<AuthzPolicy>,
+    }
+    let parsed: File = serde_yaml::from_str(&yaml).expect("the hint is valid policies YAML");
+    assert_eq!(parsed.policies.len(), 1);
+    assert_eq!(parsed.policies[0].role, "teacher");
+    assert_eq!(parsed.policies[0].action, "Upsert");
+    assert_eq!(parsed.policies[0].resource, "acme.v1.Lesson");
+    assert_eq!(parsed.policies[0].effect, Effect::Allow);
+    assert!(parsed.policies[0].enabled);
+}
+
+#[test]
+fn a_deny_on_a_snapshot_behind_the_durable_revision_says_so_with_a_retry_time() {
+    // Same revision, or nothing known: no note (a real missing grant).
+    assert_eq!(stale_snapshot_message(Some("r1"), Some("r1"), 5, 1), None);
+    assert_eq!(stale_snapshot_message(None, Some("r2"), 5, 1), None);
+    assert_eq!(stale_snapshot_message(Some("r1"), None, 5, 1), None);
+    // Durable revision moved on after the load: name the cause and the wait.
+    let note = stale_snapshot_message(Some("r1"), Some("r2"), 5, 2).expect("behind");
+    assert!(
+        note.contains("predates the latest durable policy/role revision"),
+        "{note}"
+    );
+    assert!(note.contains("udb policy apply"), "{note}");
+    assert!(note.contains("UDB_AUTHZ_SNAPSHOT_TTL_SECS"), "{note}");
+    assert!(note.contains("Retry after 3s"), "{note}");
+    // A reload that is overdue still asks for at least a second.
+    let overdue = stale_snapshot_message(Some("r1"), Some("r2"), 5, 60).expect("behind");
+    assert!(overdue.contains("Retry after 1s"), "{overdue}");
+}
+
+#[test]
+fn a_role_without_a_grant_on_a_new_entity_is_named_with_its_grant() {
+    let rule = |role: &str, action: &str, resource: &str| AuthzPolicy {
+        role: role.into(),
+        action: action.into(),
+        resource: resource.into(),
+        ..Default::default()
+    };
+    let policies = vec![
+        rule("svc_lessons", "Select", "acme.v1.Course"),
+        rule("svc_lessons", "Upsert", "acme.v1.Course"),
+        rule("svc_billing", "Select", "acme.v1.*"),
+    ];
+    let new_entities = vec![("acme.v1.Lesson".to_string(), "edu.lessons".to_string())];
+    let missing = missing_role_grants_for_new_entities(&policies, &new_entities);
+    assert_eq!(missing.len(), 1, "{missing:?}");
+    assert_eq!(missing[0].role, "svc_lessons");
+    assert_eq!(missing[0].actions, vec!["Select", "Upsert"]);
+    let message = missing[0].message("policies.yaml", "t-1");
+    assert!(
+        message.starts_with("role svc_lessons has no grant on new entity acme.v1.Lesson"),
+        "{message}"
+    );
+    assert!(message.contains("will be denied"), "{message}");
+    assert!(
+        message
+            .contains("{role: \"svc_lessons\", action: \"Upsert\", resource: \"acme.v1.Lesson\""),
+        "{message}"
+    );
+    assert!(
+        message.contains("udb policy apply -f policies.yaml --tenant t-1"),
+        "{message}"
+    );
+
+    // A rule with no role and no subject covers every caller.
+    let mut open = policies.clone();
+    open.push(rule("", "Select", "acme.v1.Lesson"));
+    assert!(missing_role_grants_for_new_entities(&open, &new_entities).is_empty());
+}

@@ -211,16 +211,16 @@ native `PERMISSION_DENIED` is a missing token scope, not a missing policy row.
   canonical tenant UUID). Every request must also carry a non-empty **purpose**.
   With no matching rule the decision falls back to `UDB_ABAC_DEFAULT_ALLOW`
   (default `false` = deny-all) and the denied client sees a `7 PERMISSION_DENIED`
-  whose message names the seeding command and the token traps.
-- **Seed policy** — the straightforward path is **`udb authz seed --tenant <uuid>
-  --role app_rw`**: it writes role-gated ALLOW rows into `udb_authz.policy_rules`
-  with the correct tokens, **idempotently and atomically** (all rows in one tx, so
-  an open `UDB_ABAC_DEFAULT_ALLOW` window never half-closes). Then bind principals
-  to the role: `udb auth role bind --principal <id> --role app_rw --tenant <uuid>`
-  (works for users AND service accounts). Equivalents: `AuthzService.CreatePolicyRule`/
-  `PutAuthzPolicy` at runtime (effective immediately), or `udb policy-seed` for an
-  offline SQL bundle (`--emit <path>` on `udb authz seed` writes the same
-  version-controllable JSON).
+  whose message names the policy command and the token traps.
+- **Apply policy** — declare role-gated ALLOW rules in a policy file and run
+  **`udb policy apply -f <policies.yaml> --tenant <uuid>`**: it reconciles the
+  tenant's rows in `udb_authz.policy_rules` **idempotently and atomically** (one
+  transaction, so an open `UDB_ABAC_DEFAULT_ALLOW` window never half-closes;
+  `udb policy diff` previews it). Then bind principals to the role:
+  `udb auth role bind --principal <id> --role app_rw --tenant <uuid>` (works for
+  users AND service accounts). Equivalent at runtime: `AuthzService.CreatePolicyRule`/
+  `PutAuthzPolicy` (effective immediately). `udb authz seed` and `udb policy-seed`
+  were removed in 0.6.0.
 
 For dev/bootstrap: `UDB_ABAC_DEFAULT_ALLOW=true` (only while `policy_rules` is
 empty). For production: seed real least-privilege `policy_rules` and leave

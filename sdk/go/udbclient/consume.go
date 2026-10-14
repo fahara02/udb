@@ -255,8 +255,14 @@ func decodeConsumedEvent[T proto.Message](id, topic, partition, payloadJSON stri
 			}
 		}
 	}
-	if version, ok := envelope["envelope_version"].(float64); ok && int(version) > EventEnvelopeVersion {
+	version, ok := envelope["envelope_version"].(float64)
+	switch {
+	case !ok:
+		return zero, fmt.Errorf("envelope has no envelope_version; unversioned envelopes are not supported (this SDK reads version %d)", EventEnvelopeVersion)
+	case int(version) > EventEnvelopeVersion:
 		return zero, fmt.Errorf("envelope_version %d is newer than this SDK understands (%d); upgrade the SDK", int(version), EventEnvelopeVersion)
+	case int(version) != EventEnvelopeVersion:
+		return zero, fmt.Errorf("envelope_version %d is not supported; this SDK reads version %d", int(version), EventEnvelopeVersion)
 	}
 	var newT T
 	payload := newT.ProtoReflect().Type().New().Interface().(T)

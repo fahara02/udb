@@ -25,8 +25,8 @@ package udbclient
 // connection (interceptors) those wrappers run on, plus low-level escape
 // hatches for RPCs that don't yet have a typed helper.
 //
-// Covers 389 RPCs across 28 services
-// (UDB v0.5.34, wire protocol 1.0.0).
+// Covers 388 RPCs across 28 services
+// (UDB v0.5.33, wire protocol 1.0.0).
 
 import (
 	"bytes"
@@ -66,7 +66,7 @@ const (
 // SDKVersion is the UDB release this generated layer was rendered from. It is
 // baked at generation time and is the version the bundled `udb` CLI launcher
 // (cmd/udb) will resolve.
-const SDKVersion = "0.5.34"
+const SDKVersion = "0.5.33"
 
 // VersionMismatchError reports an absent, malformed, or incompatible broker
 // release header. Compatibility requires the same major and minor release;
@@ -289,8 +289,6 @@ type Options struct {
 	// Authorization, when non-empty, is sent as the `authorization` header
 	// (e.g. "Bearer <jwt>").
 	Authorization string
-	// APIKey, when non-empty, is sent as the `x-api-key` header.
-	APIKey string
 	// RequestID, when non-empty, is sent as the `x-request-id` header. When
 	// empty a per-call id is derived from Meta.CorrelationID if set.
 	RequestID string
@@ -451,14 +449,6 @@ func (g *GeneratedClient) SetAuthorization(authorization string) {
 	g.opt.Store(&o)
 }
 
-// SetAPIKey atomically swaps the `x-api-key` credential. Passing an empty string
-// clears API-key metadata after it has been exchanged for a bearer.
-func (g *GeneratedClient) SetAPIKey(apiKey string) {
-	o := g.options()
-	o.APIKey = apiKey
-	g.opt.Store(&o)
-}
-
 // Conn exposes the underlying connection so the hand-written typed wrappers can
 // be built on the same channel: udbclient.New(gc.Conn(), gc.Meta()).
 func (g *GeneratedClient) Conn() grpc.ClientConnInterface { return g.conn }
@@ -475,7 +465,7 @@ func (g *GeneratedClient) rebindConn(conn grpc.ClientConnInterface) { g.conn = c
 // Meta returns the configured caller Metadata.
 func (g *GeneratedClient) Meta() Metadata { return g.options().Meta }
 
-// outgoingContext attaches the 8 UDB headers plus optional auth / api-key /
+// outgoingContext attaches the 8 UDB headers plus optional auth /
 // request-id, reusing joinScopes and MergeRequestScopedAudit from the
 // hand-written client.go.
 //
@@ -486,7 +476,7 @@ func (g *GeneratedClient) Meta() Metadata { return g.options().Meta }
 // correlation id from native calls, leaving them to be rejected for a missing
 // request context or audited against a stale connection-level id.
 func (g *GeneratedClient) outgoingContext(ctx context.Context) context.Context {
-	// Single atomic snapshot so meta + auth + api-key are read all-or-nothing.
+	// Single atomic snapshot so meta + auth are read all-or-nothing.
 	o := g.options()
 	m := MergeRequestScopedAudit(ctx, o.Meta)
 	// V23-2: this interceptor runs on connections that ALSO carry the typed
@@ -527,9 +517,6 @@ func (g *GeneratedClient) outgoingContext(ctx context.Context) context.Context {
 	}
 	if o.Authorization != "" {
 		add("authorization", o.Authorization)
-	}
-	if o.APIKey != "" {
-		add("x-api-key", o.APIKey)
 	}
 	hasNonempty := func(key string) bool {
 		for _, value := range existing.Get(key) {
@@ -1334,7 +1321,6 @@ var AllRPCs = []RPCInfo{
 	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/PublishCDC", Name: "PublishCDC", APIAlias: "publish_cdc", OperationID: "publishCdc", HTTPMethod: "", HTTPPath: "", Kind: RPCKind("server_streaming"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false, Listener: "data plane (UDB_GRPC_TARGET, default :50051)", AuthMode: "", Scopes: []string{}, CredentialTypes: []string{}},
 	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/PurgeSubject", Name: "PurgeSubject", APIAlias: "purge_subject", OperationID: "purgeSubject", HTTPMethod: "", HTTPPath: "", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "destructive", ReplaySafe: false, Listener: "data plane (UDB_GRPC_TARGET, default :50051)", AuthMode: "", Scopes: []string{}, CredentialTypes: []string{}},
 	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/PutObject", Name: "PutObject", APIAlias: "put_object", OperationID: "putObject", HTTPMethod: "", HTTPPath: "", Kind: RPCKind("client_streaming"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false, Listener: "data plane (UDB_GRPC_TARGET, default :50051)", AuthMode: "", Scopes: []string{}, CredentialTypes: []string{}},
-	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/PutPolicy", Name: "PutPolicy", APIAlias: "put_policy", OperationID: "putPolicy", HTTPMethod: "", HTTPPath: "", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "destructive", ReplaySafe: false, Listener: "data plane (UDB_GRPC_TARGET, default :50051)", AuthMode: "", Scopes: []string{}, CredentialTypes: []string{}},
 	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/QuarantineDlqEvent", Name: "QuarantineDlqEvent", APIAlias: "quarantine_dlq_event", OperationID: "quarantineDlqEvent", HTTPMethod: "", HTTPPath: "", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false, Listener: "data plane (UDB_GRPC_TARGET, default :50051)", AuthMode: "", Scopes: []string{}, CredentialTypes: []string{}},
 	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/ReloadPolicies", Name: "ReloadPolicies", APIAlias: "reload_policies", OperationID: "reloadPolicies", HTTPMethod: "", HTTPPath: "", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "destructive", ReplaySafe: false, Listener: "data plane (UDB_GRPC_TARGET, default :50051)", AuthMode: "", Scopes: []string{}, CredentialTypes: []string{}},
 	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/ReplayDlqEvent", Name: "ReplayDlqEvent", APIAlias: "replay_dlq_event", OperationID: "replayDlqEvent", HTTPMethod: "", HTTPPath: "", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false, Listener: "data plane (UDB_GRPC_TARGET, default :50051)", AuthMode: "", Scopes: []string{}, CredentialTypes: []string{}},
@@ -1387,7 +1373,7 @@ var ServiceRPCCounts = map[string]int{
 	"udb.core.webrtc.services.v1.TrackService": 4,
 	"udb.core.webrtc.services.v1.TurnService": 1,
 	"udb.core.workflow.services.v1.WorkflowService": 6,
-	"udb.services.v1.DataBroker": 85,
+	"udb.services.v1.DataBroker": 84,
 }
 
 // Entities is the catalog-derived entity registry, generated from the annotated
@@ -2743,7 +2729,7 @@ func (u *UnitOfWork) ValidateTxStatuses(statuses []*entityv1.TxStatus) error {
 		if status == nil || status.GetState() != entityv1.TxStatus_TX_STATE_ERROR {
 			continue
 		}
-		if IsCASConflict(txStatusError(status)) || (status.GetErrorDetail() == nil && isTxConflictMessage(status.GetMessage())) {
+		if IsCASConflict(txStatusError(status)) {
 			return &UnitOfWorkConflictError{UnitOfWorkTxError{Status: status}}
 		}
 		return &UnitOfWorkTxError{Status: status}
@@ -2868,11 +2854,6 @@ func mustStringMap(raw string) map[string]string {
 		panic(fmt.Sprintf("udb: invalid generated backend role map: %v", err))
 	}
 	return out
-}
-
-func isTxConflictMessage(message string) bool {
-	lower := strings.ToLower(message)
-	return strings.Contains(lower, "aborted") || strings.Contains(lower, "version") || strings.Contains(lower, "conflict")
 }
 
 // RawDispatchRequest is the ESCAPE HATCH: build a raw GenericDispatchRequest with

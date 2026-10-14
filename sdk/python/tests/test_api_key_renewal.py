@@ -2,8 +2,8 @@
 
 An API key is exchanged via ``Authn.Authenticate`` for a short-lived bearer that
 carries NO refresh token. The project must retain the key, re-exchange it before
-expiry, fall back to the raw ``x-api-key`` header when no bearer can be
-obtained, and stop renewing on ``close()``.
+expiry, never send the key as a raw ``x-api-key`` header (no bearer means calls
+fail closed), and stop renewing on ``close()``.
 """
 
 from __future__ import annotations
@@ -14,6 +14,7 @@ import time
 import pytest
 
 from udb_client import UdbConfig, UdbProject
+from udb_client.exceptions import UdbConfigurationError
 
 _authn = pytest.importorskip("udb.core.authn.services.v1.core_pb2")
 
@@ -85,26 +86,24 @@ def test_not_due_tick_is_a_noop(project) -> None:
     assert len(fake.requests) == 1
 
 
-def test_empty_access_token_falls_back_to_raw_key(project, caplog) -> None:
+def test_empty_access_token_is_refused_without_a_raw_key(project) -> None:
     def empty(request):
         resp = _authn.AuthnResponse(access_token="")
         resp.principal.tenant_id = "tenant-uuid"
         return resp
 
     project.auth.authn.Authenticate = _FakeAuthenticate(empty)
-    with caplog.at_level(logging.WARNING, logger="udb_client"):
+    with pytest.raises(UdbConfigurationError, match="no access token") as excinfo:
         project.authenticate_api_key_and_adopt("svc-key")
 
+    assert "svc-key" not in str(excinfo.value), "error must not leak the key"
     headers = _headers(project)
-    assert headers["x-api-key"] == "svc-key"
+    assert "x-api-key" not in headers
     assert "authorization" not in headers
-    assert project.metadata.tenant_id == "tenant-uuid"
     assert project._api_key_thread is None, "nothing to renew"
-    assert len(caplog.records) == 1
-    assert "svc-key" not in caplog.text, "warning must not leak the key"
 
 
-def test_failing_reexchange_near_expiry_falls_back_then_recovers(project) -> None:
+def test_failing_reexchange_fails_closed_at_expiry_then_recovers(project, caplog) -> None:
     state = {"fail": True}
 
     def flaky(request):
@@ -124,8 +123,16 @@ def test_failing_reexchange_near_expiry_falls_back_then_recovers(project) -> Non
     assert project.api_key_renewal_error() is not None
     assert project._api_key_next_delay() >= 1.0, "backoff, no hot loop"
     headers = _headers(project)
-    assert headers["x-api-key"] == "svc-key"
-    assert "authorization" not in headers
+    assert headers["authorization"] == "Bearer bearer-1", "a live bearer is kept"
+    assert "x-api-key" not in headers
+
+    project._api_key_expires_at = time.time() - 1
+    with caplog.at_level(logging.WARNING, logger="udb_client"):
+        project._api_key_renewal_tick()
+    headers = _headers(project)
+    assert "authorization" not in headers, "an expired bearer is dropped"
+    assert "x-api-key" not in headers, "the raw key is never sent"
+    assert "svc-key" not in caplog.text, "warning must not leak the key"
 
     state["fail"] = False
     project._api_key_renewal_tick()

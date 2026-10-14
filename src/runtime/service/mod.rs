@@ -41,11 +41,10 @@ use crate::proto::{
     MutationResponse, PolicyLintResponse, PolicyListRequest, PolicyListResponse, PolicyRecord,
     PolicyRequest, ProjectListRequest, ProjectListResponse, ProjectRecord,
     ProjectionDriftDivergentRow, ProjectionDriftScanRequest, ProjectionDriftScanResponse,
-    ProjectionDriftTargetReport, PutPolicyRequest, RecordSet, ResourceAdminRequest,
-    ResourceListResponse, SagaListRequest, SagaListResponse, SagaRecord, SagaRequest, SagaResponse,
-    SelectRequest, StageCatalogRequest, TxStatus, UpdateRequest, UpsertRequest, UrlRequest,
-    UrlResponse, VectorHybridSearchRequest, VectorSearchRequest, VectorSet, VectorUpsertRequest,
-    ViewDefinition,
+    ProjectionDriftTargetReport, RecordSet, ResourceAdminRequest, ResourceListResponse,
+    SagaListRequest, SagaListResponse, SagaRecord, SagaRequest, SagaResponse, SelectRequest,
+    StageCatalogRequest, TxStatus, UpdateRequest, UpsertRequest, UrlRequest, UrlResponse,
+    VectorHybridSearchRequest, VectorSearchRequest, VectorSet, VectorUpsertRequest, ViewDefinition,
 };
 use crate::runtime::DataBrokerRuntime;
 use crate::runtime::authz::{AuthzQuery, AuthzSnapshot, Principal, ResourceRef};
@@ -92,9 +91,8 @@ pub use auth_service::auth_readiness_triples;
 /// `service` module, so this `pub(crate)` re-export is the reachable handle.)
 pub(crate) use auth_service::events::topics::AUTH_TOPIC_PATTERNS;
 pub use auth_service::{
-    BootstrapAdmin, DATA_PLANE_ACTION_TOKENS, bootstrap_admin_user, bootstrap_platform_admin_user,
-    cli_api_key_list, cli_api_key_revoke, migrate_service_account_grants, seed_authz_policy_id,
-    seed_project_authz_policies_offline, served_bootstrap_admin,
+    BootstrapAdmin, bootstrap_admin_user, bootstrap_platform_admin_user, cli_api_key_list,
+    cli_api_key_revoke, migrate_service_account_grants, served_bootstrap_admin,
 };
 pub use auth_service::{
     PolicyReconcileReport, normalize_declared_policies, reconcile_authz_policies_offline,
@@ -150,6 +148,8 @@ mod metering_service;
 // that joins active sources to the durable CDC journal.
 mod embedding_service;
 pub(crate) mod method_security;
+/// Credential-type admission per native RPC, for `udb authz explain`.
+pub use method_security::{RpcAdmission, describe_rpc_admission};
 // These crate-path re-exports exist solely for the feature-gated
 // `bench_internals` shims (lib.rs D.2); in-tree callers use the module path
 // directly. Gate them the same way so the default build carries no dead use.
@@ -464,7 +464,6 @@ pub(crate) const SUPPORTED_RPC_NAMES: &[&str] = &[
     "RetrySagaCompensation",
     "MarkSagaReviewed",
     "ListPolicies",
-    "PutPolicy",
     "DeletePolicy",
     "ReloadPolicies",
     "LintPolicies",
@@ -910,11 +909,13 @@ impl DataBrokerService {
         if decision.allowed {
             Ok(decision.decision_id)
         } else {
+            let stale_snapshot = crate::runtime::authz::stale_snapshot_hint().await;
             Err(data_plane_denial(
                 "data_plane_authorize",
                 decision,
                 operation,
                 &resource,
+                stale_snapshot.as_deref(),
             ))
         }
     }
@@ -959,11 +960,13 @@ impl DataBrokerService {
         if decision.allowed {
             Ok(decision.decision_id)
         } else {
+            let stale_snapshot = crate::runtime::authz::stale_snapshot_hint().await;
             Err(data_plane_denial(
                 "data_plane_authorize_item",
                 decision,
                 operation,
                 &resource,
+                stale_snapshot.as_deref(),
             ))
         }
     }
@@ -1495,8 +1498,13 @@ fn data_plane_denial(
     decision: crate::runtime::authz::Decision,
     action: &str,
     resource: &crate::runtime::authz::ResourceRef,
+    stale_snapshot: Option<&str>,
 ) -> Status {
     let rule = format!("{action} {}", resource.resource_name);
+    let message = match stale_snapshot {
+        Some(note) => format!("{}. {note}", decision.deny_reason),
+        None => decision.deny_reason,
+    };
     let mut missing = decision.missing;
     missing.insert("rule".to_string(), rule);
     let fields: Vec<(&str, &str)> = missing
@@ -1504,7 +1512,7 @@ fn data_plane_denial(
         .map(|(key, value)| (key.as_str(), value.as_str()))
         .collect();
     crate::runtime::error_reasons::annotate_with(
-        service_policy_denied(operation, decision.decision_id, decision.deny_reason),
+        service_policy_denied(operation, decision.decision_id, message),
         crate::runtime::error_reasons::POLICY_DENIED,
         None,
         None,
@@ -2034,6 +2042,9 @@ pub async fn serve(
         &runtime_config,
         addr,
     ));
+    // Size password-KDF admission now so a memory-limited container's warning
+    // (naming UDB_PASSWORD_KDF_MAX_CONCURRENCY) is in the boot log.
+    crate::runtime::authn::password_cpu::init_admission();
     // Secure-transport gate (always fatal when the operator has explicitly
     // enabled UDB_REQUIRE_SECURE_TRANSPORT / UDB_MTLS_REQUIRED but left certs
     // unconfigured).
@@ -5050,13 +5061,6 @@ impl DataBroker for DataBrokerService {
         request: Request<PolicyListRequest>,
     ) -> Result<Response<PolicyListResponse>, Status> {
         self.list_policies_inner(request).await
-    }
-
-    async fn put_policy(
-        &self,
-        request: Request<PutPolicyRequest>,
-    ) -> Result<Response<MutationResponse>, Status> {
-        self.put_policy_inner(request).await
     }
 
     async fn delete_policy(

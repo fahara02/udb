@@ -62,6 +62,17 @@ pub(crate) enum Command {
         force: bool,
         dsn: String,
     },
+    /// `udb env fill`: complete an existing `.env` — generate what can be
+    /// generated, ask for the rest, write only after approval.
+    EnvFill {
+        file: String,
+        keys_dir: String,
+        profile: Option<String>,
+        dsn: Option<String>,
+        yes: bool,
+        check: bool,
+        dry_run: bool,
+    },
     /// Stage + activate a catalog for a project that has none, so an upgraded
     /// deployment can serve without writing a gRPC client.
     CatalogBootstrap {
@@ -133,8 +144,6 @@ pub(crate) enum Command {
     ManifestExport,
     /// Lint a set of ABAC policies loaded from UDB_ABAC_POLICY_FILE (JSON array).
     PolicyLint,
-    /// Generate INSERT SQL to seed ABAC policies into the configured UDB ABAC table.
-    PolicySeed,
     /// Preview field masking for a given message type and scope set.
     FieldMaskPreview,
     /// Print the compatibility matrix of supported proto option shapes as JSON.
@@ -513,7 +522,7 @@ pub(crate) enum AuthCommand {
     },
     /// `role bind --principal <id> --role <role-code> --tenant <uuid>`: the
     /// PutRoleBinding grouping tuple the data-plane enforcer reads — the binding
-    /// `authz seed` policies are matched against. Works for users and service
+    /// role-gated policies (`udb policy apply`) are matched against. Works for users and service
     /// accounts alike; the role is the bare code (`app_rw`, `svc_billing`).
     RoleBindingPut {
         principal: String,
@@ -583,16 +592,6 @@ pub(crate) enum AuthzCommand {
         persist: bool,
         policy_version_id: String,
     },
-    /// `udb authz seed --tenant <uuid> [--role <code>] [--project <id>]
-    ///   [--entity <fqn> …] [--action <Select|Upsert|…> …] [--dsn <dsn>]
-    ///   [--emit <path>]`
-    ///
-    /// Offline (Postgres-direct) seed of the STANDARD data-plane authorization
-    /// for a new project: one role-gated `ALLOW` policy per (entity, action) into
-    /// `udb_authz.policy_rules`, using the real Casbin action tokens the broker
-    /// submits (`Select`/`Upsert`/… — never a `data.*` alias) and the caller's
-    /// canonical tenant UUID. Idempotent + atomic. Bind users AND service accounts
-    /// to `--role` (`udb auth role bind`) and one policy set authorizes both.
     /// `udb authz check --user <id> --object <message type> --action <Rpc>
     ///   [--tenant <uuid>] [--purpose <p>]`
     ///
@@ -606,15 +605,12 @@ pub(crate) enum AuthzCommand {
         action: String,
         tenant: String,
         purpose: String,
-    },
-    Seed {
-        tenant: String,
+        /// `--credential <SERVICE_ACCOUNT|BEARER_JWT|SESSION|API_KEY|MTLS>`:
+        /// the caller's credential type, checked against the RPC's
+        /// `endpoint_security.allowed_credential_types`.
+        credential: String,
+        /// `--role <code>`: name this role (not the subject) in the grant hint.
         role: String,
-        project: String,
-        entities: Vec<String>,
-        actions: Vec<String>,
-        dsn: String,
-        emit: String,
     },
 }
 
@@ -963,7 +959,7 @@ fn parse_auth_subcommand(args: &[String]) -> Option<(AuthCommand, usize)> {
             platform_admin: has_flag("--platform-admin"),
         },
         // `--user` selects the legacy AssignRole form (role UUID); everything
-        // else is the binding form `authz seed` tells operators to run.
+        // else is the binding form role-gated policies are matched against.
         (Some("role"), Some("bind")) if has_flag("--user") && !has_flag("--principal") => {
             AuthCommand::RoleBind {
                 user_id: flag_value("--user").unwrap_or_default(),
@@ -1033,13 +1029,6 @@ fn parse_authz_subcommand(args: &[String]) -> Option<(AuthzCommand, usize)> {
     let flag_value = |flag: &str| -> Option<String> {
         args.windows(2).find(|w| w[0] == flag).map(|w| w[1].clone())
     };
-    // Collect EVERY value for a repeated flag (e.g. multiple `--entity`/`--action`).
-    let flag_values = |flag: &str| -> Vec<String> {
-        args.windows(2)
-            .filter(|w| w[0] == flag)
-            .map(|w| w[1].clone())
-            .collect()
-    };
     let command = match args.get(1).map(|value| value.as_str()) {
         Some("simulate") | Some("sim") => AuthzCommand::Simulate {
             bundle: flag_value("--bundle").unwrap_or_default(),
@@ -1049,22 +1038,30 @@ fn parse_authz_subcommand(args: &[String]) -> Option<(AuthzCommand, usize)> {
             persist: has_flag("--persist"),
             policy_version_id: flag_value("--policy-version").unwrap_or_default(),
         },
-        Some("check") | Some("explain") => AuthzCommand::Check {
-            user: flag_value("--user").unwrap_or_default(),
-            object: flag_value("--object").unwrap_or_default(),
-            action: flag_value("--action").unwrap_or_default(),
-            tenant: flag_value("--tenant").unwrap_or_default(),
-            purpose: flag_value("--purpose").unwrap_or_default(),
-        },
-        Some("seed") => AuthzCommand::Seed {
-            tenant: flag_value("--tenant").unwrap_or_default(),
-            role: flag_value("--role").unwrap_or_default(),
-            project: flag_value("--project").unwrap_or_default(),
-            entities: flag_values("--entity"),
-            actions: flag_values("--action"),
-            dsn: flag_value("--dsn").unwrap_or_default(),
-            emit: flag_value("--emit").unwrap_or_default(),
-        },
+        Some("check") | Some("explain") => {
+            // `udb authz explain <subject> <action> <resource>`: positionals
+            // fill whatever the flags leave empty.
+            let positional: Vec<String> = args
+                .iter()
+                .skip(2)
+                .take_while(|arg| !arg.starts_with("--"))
+                .cloned()
+                .collect();
+            let pick = |flag: &str, index: usize| {
+                flag_value(flag)
+                    .or_else(|| positional.get(index).cloned())
+                    .unwrap_or_default()
+            };
+            AuthzCommand::Check {
+                user: pick("--user", 0),
+                action: pick("--action", 1),
+                object: pick("--object", 2),
+                tenant: flag_value("--tenant").unwrap_or_default(),
+                purpose: flag_value("--purpose").unwrap_or_default(),
+                credential: flag_value("--credential").unwrap_or_default(),
+                role: flag_value("--role").unwrap_or_default(),
+            }
+        }
         _ => return None,
     };
     Some((command, 2))
@@ -1300,6 +1297,7 @@ const VALUE_FLAGS: &[&str] = &[
     "--idempotency-key",
     "--target",
     "--timeout-secs",
+    "--credential",
 ];
 
 /// Collect positional (non-flag) tokens after `start`, skipping any token that
@@ -1460,6 +1458,18 @@ pub(crate) fn parse_args(args: &[String]) -> (Command, String, String, String) {
                 json: has_flag("--json"),
             }
         }
+        Some("env") if args.get(1).map(String::as_str) == Some("fill") => {
+            offset = 2;
+            Command::EnvFill {
+                file: flag_value("--file").unwrap_or_else(|| ".env".to_string()),
+                keys_dir: flag_value("--keys-dir").unwrap_or_else(|| ".udb/keys".to_string()),
+                profile: flag_value("--profile"),
+                dsn: flag_value("--dsn"),
+                yes: has_flag("--yes"),
+                check: has_flag("--check"),
+                dry_run: has_flag("--dry-run"),
+            }
+        }
         Some("env") => {
             offset = 1;
             Command::Env {
@@ -1537,10 +1547,6 @@ pub(crate) fn parse_args(args: &[String]) -> (Command, String, String, String) {
         Some("policy-lint") => {
             offset = 1;
             Command::PolicyLint
-        }
-        Some("policy-seed") => {
-            offset = 1;
-            Command::PolicySeed
         }
         Some("field-mask-preview") => {
             offset = 1;

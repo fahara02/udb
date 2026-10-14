@@ -30,7 +30,8 @@ type EnqueueOutboxEventRequest struct {
 	// The partition key for the event (must equal document_id for pipeline events).
 	PartitionKey string `protobuf:"bytes,3,opt,name=partition_key,json=partitionKey,proto3" json:"partition_key,omitempty"`
 	// Full EventEnvelope payload as a Struct. Required fields: event_id, event_type,
-	// correlation_id, document_id.
+	// correlation_id, document_id, and envelope_version (2); an unversioned
+	// envelope is refused with UDB_ENVELOPE_VERSION_UNSUPPORTED since 0.6.0.
 	Payload *structpb.Struct `protobuf:"bytes,4,opt,name=payload,proto3" json:"payload,omitempty"`
 	// Optional schema_uri injected into the envelope if absent.
 	SchemaUri string `protobuf:"bytes,5,opt,name=schema_uri,json=schemaUri,proto3" json:"schema_uri,omitempty"`

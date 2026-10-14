@@ -1446,7 +1446,6 @@ class UdbProject:
         # logged, scrubbed from ``config``) so the short-lived bearer minted by
         # Authn.Authenticate can be re-exchanged before it expires.
         self._api_key_secret = ""
-        self._api_key_raw_mode = False
         self._api_key_warned = False
         self._api_key_issued_at = 0.0
         self._api_key_expires_at = 0.0
@@ -1573,7 +1572,6 @@ class UdbProject:
         dropped so the renewal thread cannot overwrite them.
         """
         self._api_key_secret = ""
-        self._api_key_raw_mode = False
         self.config.bearer_token = bearer_token
         self.config.api_key = api_key
         self.bind_metadata(
@@ -1594,11 +1592,12 @@ class UdbProject:
         privately and a background daemon thread re-exchanges it at ~80% of the
         bearer lifetime (single-flight, hot-swapped like a normal refresh).
 
-        Raw ``x-api-key`` fallback: if the broker returns no access token (no JWT
-        signing key configured), or re-exchange keeps failing near expiry, calls
-        authenticate with the raw service key instead (warned once; the key is
-        never logged). Renewal keeps retrying with backoff and swaps the bearer
-        back in on success. :meth:`close` stops the renewal thread.
+        The key is never sent as a raw ``x-api-key`` header. If the broker
+        returns no access token (no JWT signing key configured) the exchange
+        raises :class:`UdbConfigurationError`. If re-exchange keeps failing, the
+        bearer is kept until it expires and then dropped, so calls fail closed
+        (UNAUTHENTICATED); renewal keeps retrying with backoff and installs the
+        new bearer on success. :meth:`close` stops the renewal thread.
         """
         key = api_key or self.config.api_key or self._api_key_secret
         if not key:
@@ -1629,32 +1628,35 @@ class UdbProject:
             scopes=tuple(principal.scopes or ()),
         )
         if not token:
-            # Nothing to renew: authenticate every call with the raw key.
+            # An API key is only ever exchanged for a bearer; there is no raw-key
+            # fallback, so a broker that mints no token cannot serve this key.
+            self._api_key_secret = ""
             self._api_key_issued_at = 0.0
             self._api_key_expires_at = 0.0
-            self._enter_api_key_raw_mode(
-                "the broker returned no access token for the API key", adopted
+            raise UdbConfigurationError(
+                "the broker returned no access token for the API key; configure a "
+                "JWT signing key on the broker (API keys are exchanged for a bearer, "
+                "never sent raw)"
             )
-            return authn
         now = time.time()
         expires_at = float(getattr(authn, "expires_at_unix", 0) or 0)
         self._api_key_issued_at = now
         self._api_key_expires_at = expires_at if expires_at > 0 else 0.0
-        self._api_key_raw_mode = False
+        self._api_key_warned = False
         self.config.bearer_token = token
         self.bind_metadata(replace(adopted, bearer_token=token, api_key=""))
         return authn
 
-    def _enter_api_key_raw_mode(self, reason: str, base: Metadata | None = None) -> None:
-        """Send the raw ``x-api-key`` header (no bearer) on every call."""
-        self._api_key_raw_mode = True
+    def _drop_expired_api_key_bearer(self) -> None:
+        """Fail closed: remove an expired API-key bearer from every future call."""
         self.config.bearer_token = ""
-        self.bind_metadata(
-            replace(base or self._metadata, bearer_token="", api_key=self._api_key_secret)
-        )
+        self.bind_metadata(replace(self._metadata, bearer_token="", api_key=""))
         if not self._api_key_warned:
             self._api_key_warned = True
-            _LOG.warning("udb: %s; falling back to the raw x-api-key header", reason)
+            _LOG.warning(
+                "udb: API key re-exchange is failing past bearer expiry; calls fail "
+                "closed until a re-exchange succeeds"
+            )
 
     def _api_key_skew(self) -> float:
         lifetime = self._api_key_expires_at - self._api_key_issued_at
@@ -1683,9 +1685,9 @@ class UdbProject:
     def _api_key_renewal_tick(self) -> None:
         """Re-exchange the retained key if the bearer is due for renewal.
 
-        Single-flight under ``_api_key_lock``. On failure the error is recorded
-        and, once the bearer is within the final skew window (or expired), calls
-        fall back to the raw key instead of failing UNAUTHENTICATED.
+        Single-flight under ``_api_key_lock``. On failure the error is recorded;
+        the bearer stays installed until it expires and is then dropped so calls
+        fail closed (UNAUTHENTICATED) rather than send a dead credential.
         """
         with self._api_key_lock:
             key = self._api_key_secret
@@ -1696,11 +1698,8 @@ class UdbProject:
             except Exception as exc:  # noqa: BLE001 - renewal must never crash
                 self._api_key_failures += 1
                 self._api_key_last_error = exc
-                near_expiry = time.time() + _API_KEY_REFRESH_SKEW_S >= self._api_key_expires_at
-                if near_expiry and not self._api_key_raw_mode:
-                    self._enter_api_key_raw_mode(
-                        "API key re-exchange is failing near bearer expiry"
-                    )
+                if time.time() >= self._api_key_expires_at:
+                    self._drop_expired_api_key_bearer()
                 return
             self._api_key_failures = 0
             self._api_key_last_error = None
@@ -1765,7 +1764,6 @@ class UdbProject:
         )
         # A password session supersedes any API-key identity: stop renewing it.
         self._api_key_secret = ""
-        self._api_key_raw_mode = False
         self.config.bearer_token = token
         self.config.api_key = ""
         self.config.tenant_id = adopted.tenant_id
@@ -1821,16 +1819,11 @@ class UdbProject:
 
     def _with_config_credentials(self, metadata: Metadata) -> Metadata:
         bearer_token = metadata.bearer_token or self.config.bearer_token
-        # Raw ``x-api-key`` is only ever sent in the explicit API-key fallback
-        # mode (no bearer obtainable); otherwise it is always stripped.
-        api_key = (
-            self._api_key_secret
-            if not bearer_token and getattr(self, "_api_key_raw_mode", False)
-            else ""
-        )
-        if bearer_token == metadata.bearer_token and api_key == metadata.api_key:
+        # An API key is exchanged for a bearer; a raw ``x-api-key`` header is
+        # never sent, so it is always stripped here.
+        if bearer_token == metadata.bearer_token and not metadata.api_key:
             return metadata
-        return replace(metadata, bearer_token=bearer_token, api_key=api_key)
+        return replace(metadata, bearer_token=bearer_token, api_key="")
 
     def _invoke(
         self,

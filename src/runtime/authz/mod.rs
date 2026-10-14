@@ -59,6 +59,131 @@ pub(crate) fn record_snapshot_reload_success() {
     LAST_GOOD_SNAPSHOT_UNIX.store(unix_now_secs(), std::sync::atomic::Ordering::Relaxed);
 }
 
+// ── Snapshot-behind-revision hint ──────────────────────────────────────────
+//
+// A deny that lands between a durable policy/role change (for example an
+// offline `udb policy apply`, which appends an authz revision) and the next
+// timed snapshot reload looks exactly like a missing grant. On a deny the
+// broker compares the revision fingerprint the snapshot was loaded at with the
+// durable one and, when the durable one is newer, says so with a retry time.
+// The durable probe runs at most once per `REVISION_PROBE_MIN_INTERVAL` and is
+// bounded by `REVISION_PROBE_TIMEOUT`, so a deny storm cannot turn into a
+// query storm and a slow store cannot slow a refusal.
+
+type RevisionProbeFuture =
+    std::pin::Pin<Box<dyn std::future::Future<Output = Option<String>> + Send>>;
+
+/// Reads the durable authz revision fingerprint (`None` when unreadable).
+pub(crate) type RevisionProbe = std::sync::Arc<dyn Fn() -> RevisionProbeFuture + Send + Sync>;
+
+struct RevisionState {
+    /// Fingerprint of the durable revisions the shared snapshot was loaded at.
+    loaded: Option<String>,
+    /// Snapshot reload cadence, for the retry hint.
+    reload_every_secs: u64,
+    probe: Option<RevisionProbe>,
+    /// Last probe time and the durable fingerprint it read.
+    last_probe: Option<(std::time::Instant, Option<String>)>,
+}
+
+const REVISION_PROBE_MIN_INTERVAL: std::time::Duration = std::time::Duration::from_secs(1);
+const REVISION_PROBE_TIMEOUT: std::time::Duration = std::time::Duration::from_millis(500);
+
+fn revision_state() -> &'static std::sync::Mutex<RevisionState> {
+    static STATE: std::sync::OnceLock<std::sync::Mutex<RevisionState>> = std::sync::OnceLock::new();
+    STATE.get_or_init(|| {
+        std::sync::Mutex::new(RevisionState {
+            loaded: None,
+            reload_every_secs: 5,
+            probe: None,
+            last_probe: None,
+        })
+    })
+}
+
+/// Register how to read the durable revision fingerprint and the snapshot
+/// reload cadence (called once the authz service has its durable store).
+pub(crate) fn register_revision_probe(probe: RevisionProbe, reload_every_secs: u64) {
+    if let Ok(mut state) = revision_state().lock() {
+        state.probe = Some(probe);
+        state.reload_every_secs = reload_every_secs.max(1);
+        state.last_probe = None;
+    }
+}
+
+/// Record the durable revision fingerprint a successful snapshot load saw.
+pub(crate) fn record_loaded_revision(fingerprint: &str) {
+    if let Ok(mut state) = revision_state().lock() {
+        state.loaded = Some(fingerprint.to_string());
+    }
+}
+
+/// The message suffix for a deny decided on a snapshot older than the durable
+/// revision. Pure for testing: `None` unless both fingerprints are known and
+/// differ.
+pub(crate) fn stale_snapshot_message(
+    loaded: Option<&str>,
+    durable: Option<&str>,
+    reload_every_secs: u64,
+    loaded_age_secs: u64,
+) -> Option<String> {
+    let (loaded, durable) = (loaded?, durable?);
+    if loaded.is_empty() || durable.is_empty() || loaded == durable {
+        return None;
+    }
+    let retry_after = reload_every_secs
+        .saturating_sub(loaded_age_secs)
+        .clamp(1, reload_every_secs.max(1));
+    Some(format!(
+        "Note: this broker decided with an authz snapshot that predates the latest durable \
+         policy/role revision (a change such as `udb policy apply` or a role binding landed after \
+         the last reload; snapshots reload every {reload_every_secs}s, UDB_AUTHZ_SNAPSHOT_TTL_SECS). \
+         Retry after {retry_after}s before changing policy"
+    ))
+}
+
+/// Probe the durable revision (rate-limited, time-bounded) and return the
+/// stale-snapshot note when the loaded snapshot is behind it.
+pub(crate) async fn stale_snapshot_hint() -> Option<String> {
+    let (probe, loaded, reload_every_secs, cached) = {
+        let state = revision_state().lock().ok()?;
+        let cached = state
+            .last_probe
+            .as_ref()
+            .filter(|(at, _)| at.elapsed() < REVISION_PROBE_MIN_INTERVAL)
+            .map(|(_, durable)| durable.clone());
+        (
+            state.probe.clone(),
+            state.loaded.clone(),
+            state.reload_every_secs,
+            cached,
+        )
+    };
+    loaded.as_ref()?;
+    let durable = match cached {
+        Some(durable) => durable,
+        None => {
+            let probe = probe?;
+            let durable = tokio::time::timeout(REVISION_PROBE_TIMEOUT, probe())
+                .await
+                .ok()
+                .flatten();
+            if let Ok(mut state) = revision_state().lock() {
+                state.last_probe = Some((std::time::Instant::now(), durable.clone()));
+            }
+            durable
+        }
+    };
+    let last_good = LAST_GOOD_SNAPSHOT_UNIX.load(std::sync::atomic::Ordering::Relaxed);
+    let age = u64::try_from(unix_now_secs().saturating_sub(last_good)).unwrap_or(0);
+    stale_snapshot_message(
+        loaded.as_deref(),
+        durable.as_deref(),
+        reload_every_secs,
+        age,
+    )
+}
+
 /// Parse `UDB_AUTHZ_SNAPSHOT_MAX_STALENESS_SECS` (`0` disables the bound).
 fn resolve_snapshot_max_staleness_secs(raw: Option<&str>) -> u64 {
     raw.and_then(|v| v.trim().parse::<u64>().ok())
@@ -483,6 +608,189 @@ impl AuthzSnapshot {
         let id: String = format!("{digest:x}").chars().take(16).collect();
         format!("authz_{id}")
     }
+}
+
+// ── Grant hints ────────────────────────────────────────────────────────────
+
+/// Who a suggested grant names: a role the caller holds, or the caller itself.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Grantee<'a> {
+    Role(&'a str),
+    Subject(&'a str),
+}
+
+impl<'a> Grantee<'a> {
+    /// The caller's first effective role, else its most readable identity
+    /// (service identity, then subject, then principal id).
+    pub fn for_principal(principal: &'a Principal, roles: &'a [String]) -> Self {
+        if let Some(role) = roles
+            .iter()
+            .map(|role| role.trim())
+            .find(|role| !role.is_empty())
+        {
+            return Grantee::Role(role);
+        }
+        let subject = [
+            principal.service_identity.as_str(),
+            principal.subject.as_str(),
+            principal.user_id.as_str(),
+            principal.principal_id.as_str(),
+        ]
+        .into_iter()
+        .map(str::trim)
+        .find(|id| !id.is_empty())
+        .unwrap_or("<subject>");
+        Grantee::Subject(subject)
+    }
+}
+
+fn yaml_scalar(value: &str) -> String {
+    serde_json::to_string(value).unwrap_or_else(|_| format!("\"{value}\""))
+}
+
+/// One policies-file entry, YAML flow style, that allows `action` on
+/// `resource` for `grantee`. Values are JSON-quoted, which YAML accepts.
+pub fn grant_policy_entry(grantee: Grantee<'_>, action: &str, resource: &str) -> String {
+    let (key, who) = match grantee {
+        Grantee::Role(role) => ("role", role),
+        Grantee::Subject(subject) => ("subject", subject),
+    };
+    format!(
+        "{{{key}: {}, action: {}, resource: {}, effect: allow}}",
+        yaml_scalar(who),
+        yaml_scalar(action),
+        yaml_scalar(resource)
+    )
+}
+
+/// The exact `udb policy apply` step that would grant `action` on `resource`.
+/// `udb policy apply` reconciles the tenant to the WHOLE file (rules it does
+/// not declare are soft-deleted), so the hint says to add the entry to the
+/// existing file rather than apply a file holding only this entry.
+pub fn grant_command_hint(
+    tenant: &str,
+    grantee: Grantee<'_>,
+    action: &str,
+    resource: &str,
+) -> String {
+    let tenant = if tenant.trim().is_empty() {
+        "<tenant-uuid>"
+    } else {
+        tenant.trim()
+    };
+    format!(
+        "To grant it, add `- {}` under `policies:` in the tenant's policies file and run \
+         `udb policy apply -f <policies.yaml> --tenant {tenant}` (apply reconciles the whole \
+         file, so keep the existing entries in it)",
+        grant_policy_entry(grantee, action, resource)
+    )
+}
+
+/// One role that has rules for existing entities but none for a new one.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct MissingRoleGrant {
+    pub role: String,
+    /// The new entity's fully-qualified message type.
+    pub entity: String,
+    pub schema_table: String,
+    /// The actions the role is granted elsewhere (one suggested entry each).
+    pub actions: Vec<String>,
+}
+
+impl MissingRoleGrant {
+    /// "role X has no grant on new entity Y; it will be denied" plus the
+    /// policies-file entries and the apply command.
+    pub fn message(&self, policies_file: &str, tenant: &str) -> String {
+        let entries: Vec<String> = self
+            .actions
+            .iter()
+            .map(|action| {
+                format!(
+                    "- {}",
+                    grant_policy_entry(Grantee::Role(&self.role), action, &self.entity)
+                )
+            })
+            .collect();
+        let tenant = if tenant.trim().is_empty() {
+            "<tenant-uuid>"
+        } else {
+            tenant.trim()
+        };
+        format!(
+            "role {} has no grant on new entity {} ({}); its calls to it will be denied. Add {} \
+             under `policies:` in {policies_file} and run `udb policy apply -f {policies_file} \
+             --tenant {tenant}`",
+            self.role,
+            self.entity,
+            self.schema_table,
+            entries.join(" and ")
+        )
+    }
+}
+
+/// For each new entity `(message type, schema.table)`, the roles that hold
+/// ALLOW rules on other resources but none covering the entity. A rule with no
+/// role and no subject covers every caller, so it covers every role. Actions
+/// are the role's existing actions (at most four), so the suggested grant
+/// mirrors what the role already does elsewhere.
+pub fn missing_role_grants_for_new_entities(
+    policies: &[AuthzPolicy],
+    new_entities: &[(String, String)],
+) -> Vec<MissingRoleGrant> {
+    let allows: Vec<&AuthzPolicy> = policies
+        .iter()
+        .filter(|policy| policy.enabled && policy.effect == Effect::Allow)
+        .collect();
+    let mut roles: Vec<&str> = allows
+        .iter()
+        .map(|policy| policy.role.trim())
+        .filter(|role| !role.is_empty() && *role != "*")
+        .collect();
+    roles.sort_unstable();
+    roles.dedup();
+    let mut out = Vec::new();
+    for (entity, schema_table) in new_entities {
+        let short = entity.rsplit('.').next().unwrap_or(entity);
+        let table = schema_table.rsplit('.').next().unwrap_or(schema_table);
+        let selectors = [entity.as_str(), short, schema_table.as_str(), table];
+        let covers = |policy: &&AuthzPolicy| resource_match(&policy.resource, &selectors);
+        if allows.iter().any(|policy| {
+            policy.role.trim().is_empty() && policy.subject.trim().is_empty() && covers(policy)
+        }) {
+            continue;
+        }
+        for role in &roles {
+            let role_rules: Vec<&&AuthzPolicy> = allows
+                .iter()
+                .filter(|policy| {
+                    let held = policy.role.trim();
+                    held == *role || held == "*"
+                })
+                .collect();
+            if role_rules.iter().any(|policy| covers(policy)) {
+                continue;
+            }
+            let mut actions: Vec<String> = role_rules
+                .iter()
+                .filter(|policy| policy.role.trim() == *role)
+                .map(|policy| policy.action.trim().to_string())
+                .filter(|action| !action.is_empty())
+                .collect();
+            actions.sort();
+            actions.dedup();
+            actions.truncate(4);
+            if actions.is_empty() {
+                actions.push("Select".to_string());
+            }
+            out.push(MissingRoleGrant {
+                role: (*role).to_string(),
+                entity: entity.clone(),
+                schema_table: schema_table.clone(),
+                actions,
+            });
+        }
+    }
+    out
 }
 
 // ── Matching helpers ───────────────────────────────────────────────────────

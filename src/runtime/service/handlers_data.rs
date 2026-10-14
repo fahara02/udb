@@ -199,7 +199,7 @@ impl DataBrokerService {
             // handler, so discard it here (hard-fail modes already errored).
             Ok((record_set, _stale_warning)) => {
                 // A record the columnar encoder cannot parse is an error, not a
-                // row to leave out: a short batch beside a full `total_count`
+                // row to leave out: a short batch beside a full count
                 // reads as a complete answer.
                 let batch = match crate::runtime::executor_utils::record_batch_v2_from_record_set(
                     &record_set,

@@ -237,18 +237,17 @@ func TestEntityUnconditionalDeleteUnaffected(t *testing.T) {
 // Rows without the canonical RecordsJson, or an empty record body, is an error,
 // not zero rows or a short page.
 func TestDecodeRecordSetFailsClosed(t *testing.T) {
-	compatOnly := &entityv1.RecordSet{Rows: []*entityv1.Row{{}, {}}, TotalCount: 2}
+	compatOnly := &entityv1.RecordSet{Rows: []*entityv1.Row{{}, {}}}
 	if _, err := decodeRecordSet(compatOnly); err == nil {
 		t.Fatal("Rows without RecordsJson must be an error, not an empty page")
 	}
-	emptyBody := &entityv1.RecordSet{RecordsJson: [][]byte{[]byte(`{"id":"a"}`), {}}, TotalCount: 2}
+	emptyBody := &entityv1.RecordSet{RecordsJson: [][]byte{[]byte(`{"id":"a"}`), {}}}
 	if _, err := decodeRecordSet(emptyBody); err == nil || !strings.Contains(err.Error(), "row 1") {
 		t.Fatalf("an empty record body must fail and name its index, got %v", err)
 	}
 	served := &entityv1.RecordSet{
 		RecordsJson: [][]byte{[]byte(`{"id":"a"}`)},
 		Rows:        []*entityv1.Row{{}},
-		TotalCount:  1,
 	}
 	rows, err := decodeRecordSet(served)
 	if err != nil || len(rows) != 1 || rows[0]["id"] != "a" {

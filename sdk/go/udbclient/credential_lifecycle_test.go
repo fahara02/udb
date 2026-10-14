@@ -426,8 +426,8 @@ func TestCredentialLifecycleAPIKeyDemandAndBackgroundShareActualExchange(t *test
 	}
 }
 
-func TestCredentialLifecycleRejectsRawAndMultipleCredentialConfigurations(t *testing.T) {
-	for _, credentials := range []Credentials{{APIKey: "key", RawAPIKey: true}, {APIKey: "key", Bearer: "bearer"}} {
+func TestCredentialLifecycleRejectsMultipleCredentialConfigurations(t *testing.T) {
+	for _, credentials := range []Credentials{{APIKey: "key", Bearer: "bearer"}} {
 		u, err := Connect(context.Background(), Config{Target: "127.0.0.1:1", Credentials: credentials})
 		if err == nil || u != nil {
 			if u != nil {

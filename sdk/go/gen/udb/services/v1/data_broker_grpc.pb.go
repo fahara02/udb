@@ -92,7 +92,6 @@ const (
 	DataBroker_MarkSagaReviewed_FullMethodName        = "/udb.services.v1.DataBroker/MarkSagaReviewed"
 	DataBroker_EnsureBaseline_FullMethodName          = "/udb.services.v1.DataBroker/EnsureBaseline"
 	DataBroker_ListPolicies_FullMethodName            = "/udb.services.v1.DataBroker/ListPolicies"
-	DataBroker_PutPolicy_FullMethodName               = "/udb.services.v1.DataBroker/PutPolicy"
 	DataBroker_DeletePolicy_FullMethodName            = "/udb.services.v1.DataBroker/DeletePolicy"
 	DataBroker_ReloadPolicies_FullMethodName          = "/udb.services.v1.DataBroker/ReloadPolicies"
 	DataBroker_LintPolicies_FullMethodName            = "/udb.services.v1.DataBroker/LintPolicies"
@@ -845,20 +844,9 @@ type DataBrokerClient interface {
 	// Idempotency fields: no declared method replay contract.
 	// End UDB contract.
 	ListPolicies(ctx context.Context, in *v1.PolicyListRequest, opts ...grpc.CallOption) (*v1.PolicyListResponse, error)
-	// Deprecated: Do not use.
-	// DEPRECATED: writes the legacy ABAC table, which does NOT authorize
-	// requests. Authorization comes from the Casbin governance table: use
-	// AuthzService.PutAuthzPolicy (or `udb authz seed` / `udb policy apply`).
-	// Every response carries an `x-udb-deprecated` header; removed in 0.6.0.
-	// UDB contract: /udb.services.v1.DataBroker/PutPolicy
-	// Listener: data plane.
-	// Scopes: listener and resource policy defaults (no explicit endpoint scopes).
-	// Credential types: listener credential policy defaults (no explicit allowlist).
-	// Operation kind: destructive.
-	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
-	// Idempotency fields: no declared method replay contract.
-	// End UDB contract.
-	PutPolicy(ctx context.Context, in *v1.PutPolicyRequest, opts ...grpc.CallOption) (*v1.MutationResponse, error)
+	// PutPolicy was removed in 0.6.0: it wrote the legacy ABAC table, which never
+	// authorized requests. Write policy with AuthzService.PutAuthzPolicy or
+	// `udb policy apply`.
 	// UDB contract: /udb.services.v1.DataBroker/DeletePolicy
 	// Listener: data plane.
 	// Scopes: listener and resource policy defaults (no explicit endpoint scopes).
@@ -1752,17 +1740,6 @@ func (c *dataBrokerClient) ListPolicies(ctx context.Context, in *v1.PolicyListRe
 	return out, nil
 }
 
-// Deprecated: Do not use.
-func (c *dataBrokerClient) PutPolicy(ctx context.Context, in *v1.PutPolicyRequest, opts ...grpc.CallOption) (*v1.MutationResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(v1.MutationResponse)
-	err := c.cc.Invoke(ctx, DataBroker_PutPolicy_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 func (c *dataBrokerClient) DeletePolicy(ctx context.Context, in *v1.PolicyRequest, opts ...grpc.CallOption) (*v1.MutationResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(v1.MutationResponse)
@@ -2060,12 +2037,9 @@ type DataBrokerServer interface {
 	EnsureBaseline(context.Context, *EnsureBaselineRequest) (*EnsureBaselineResponse, error)
 	// Policy administration.
 	ListPolicies(context.Context, *v1.PolicyListRequest) (*v1.PolicyListResponse, error)
-	// Deprecated: Do not use.
-	// DEPRECATED: writes the legacy ABAC table, which does NOT authorize
-	// requests. Authorization comes from the Casbin governance table: use
-	// AuthzService.PutAuthzPolicy (or `udb authz seed` / `udb policy apply`).
-	// Every response carries an `x-udb-deprecated` header; removed in 0.6.0.
-	PutPolicy(context.Context, *v1.PutPolicyRequest) (*v1.MutationResponse, error)
+	// PutPolicy was removed in 0.6.0: it wrote the legacy ABAC table, which never
+	// authorized requests. Write policy with AuthzService.PutAuthzPolicy or
+	// `udb policy apply`.
 	DeletePolicy(context.Context, *v1.PolicyRequest) (*v1.MutationResponse, error)
 	ReloadPolicies(context.Context, *v1.CapabilitiesRequest) (*v1.MutationResponse, error)
 	LintPolicies(context.Context, *v1.CapabilitiesRequest) (*v1.PolicyLintResponse, error)
@@ -2314,9 +2288,6 @@ func (UnimplementedDataBrokerServer) EnsureBaseline(context.Context, *EnsureBase
 }
 func (UnimplementedDataBrokerServer) ListPolicies(context.Context, *v1.PolicyListRequest) (*v1.PolicyListResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListPolicies not implemented")
-}
-func (UnimplementedDataBrokerServer) PutPolicy(context.Context, *v1.PutPolicyRequest) (*v1.MutationResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method PutPolicy not implemented")
 }
 func (UnimplementedDataBrokerServer) DeletePolicy(context.Context, *v1.PolicyRequest) (*v1.MutationResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method DeletePolicy not implemented")
@@ -3579,24 +3550,6 @@ func _DataBroker_ListPolicies_Handler(srv interface{}, ctx context.Context, dec 
 	return interceptor(ctx, in, info, handler)
 }
 
-func _DataBroker_PutPolicy_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(v1.PutPolicyRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(DataBrokerServer).PutPolicy(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: DataBroker_PutPolicy_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(DataBrokerServer).PutPolicy(ctx, req.(*v1.PutPolicyRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 func _DataBroker_DeletePolicy_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(v1.PolicyRequest)
 	if err := dec(in); err != nil {
@@ -4089,10 +4042,6 @@ var DataBroker_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ListPolicies",
 			Handler:    _DataBroker_ListPolicies_Handler,
-		},
-		{
-			MethodName: "PutPolicy",
-			Handler:    _DataBroker_PutPolicy_Handler,
 		},
 		{
 			MethodName: "DeletePolicy",

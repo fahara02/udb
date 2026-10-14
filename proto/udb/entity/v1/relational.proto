@@ -59,9 +59,12 @@ message RecordSet {
   // deprecated for reads.
   repeated Row rows = 2;
   string next_page_token = 3;
-  // The number of records in THIS page (the length of `records_json`), not the
-  // number of matching rows. Use `exact_total` for that.
-  int32 total_count = 4;
+  // Field 4 was `total_count`: the length of THIS page, which callers misread as
+  // the number of matching rows. Removed in 0.6.0 — use `has_more` to decide
+  // whether to page on and `exact_total` (with `SelectRequest.include_total`)
+  // for the match count; the page length is `records_json`'s length.
+  reserved 4;
+  reserved "total_count";
   // #5 (opaque row revision / ETag): when the caller asked for revisions
   // (`SelectRequest.include_revision`), this carries the broker-maintained
   // opaque revision token for each returned record, index-aligned with

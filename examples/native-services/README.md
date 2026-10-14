@@ -139,7 +139,7 @@ does not affect these calls.
 - **Two authorization surfaces.** A `PERMISSION_DENIED` on a native RPC means your
   token is missing the scope `udb:<service>:<method>` — a different fix than a
   data-CRUD deny (which needs a `udb_authz.policy_rules` row; see
-  `docs/security.md` and `udb authz seed`).
+  `docs/security.md` and `udb policy apply`).
 - **A service account needs a grant.** To use a `SERVICE_ACCOUNT` identity you
   must `CreateServiceAccountGrant` for it (approved scopes) *before* it can
   authenticate or mint an API key — without an active grant it fails closed. Then

@@ -281,22 +281,6 @@ private static final long serialVersionUID = 0L;
     }
   }
 
-  public static final int TOTAL_COUNT_FIELD_NUMBER = 4;
-  private int totalCount_ = 0;
-  /**
-   * <pre>
-   * The number of records in THIS page (the length of `records_json`), not the
-   * number of matching rows. Use `exact_total` for that.
-   * </pre>
-   *
-   * <code>int32 total_count = 4 [json_name = "totalCount"];</code>
-   * @return The totalCount.
-   */
-  @java.lang.Override
-  public int getTotalCount() {
-    return totalCount_;
-  }
-
   public static final int RECORD_REVISIONS_FIELD_NUMBER = 5;
   @SuppressWarnings("serial")
   private com.google.protobuf.LazyStringArrayList recordRevisions_ =
@@ -505,9 +489,6 @@ private static final long serialVersionUID = 0L;
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(nextPageToken_)) {
       com.google.protobuf.GeneratedMessage.writeString(output, 3, nextPageToken_);
     }
-    if (totalCount_ != 0) {
-      output.writeInt32(4, totalCount_);
-    }
     for (int i = 0; i < recordRevisions_.size(); i++) {
       com.google.protobuf.GeneratedMessage.writeString(output, 5, recordRevisions_.getRaw(i));
     }
@@ -544,10 +525,6 @@ private static final long serialVersionUID = 0L;
     }
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(nextPageToken_)) {
       size += com.google.protobuf.GeneratedMessage.computeStringSize(3, nextPageToken_);
-    }
-    if (totalCount_ != 0) {
-      size += com.google.protobuf.CodedOutputStream
-        .computeInt32Size(4, totalCount_);
     }
     {
       int dataSize = 0;
@@ -594,8 +571,6 @@ private static final long serialVersionUID = 0L;
         .equals(other.getRowsList())) return false;
     if (!getNextPageToken()
         .equals(other.getNextPageToken())) return false;
-    if (getTotalCount()
-        != other.getTotalCount()) return false;
     if (!getRecordRevisionsList()
         .equals(other.getRecordRevisionsList())) return false;
     if (getHasMore()
@@ -625,8 +600,6 @@ private static final long serialVersionUID = 0L;
     }
     hash = (37 * hash) + NEXT_PAGE_TOKEN_FIELD_NUMBER;
     hash = (53 * hash) + getNextPageToken().hashCode();
-    hash = (37 * hash) + TOTAL_COUNT_FIELD_NUMBER;
-    hash = (53 * hash) + getTotalCount();
     if (getRecordRevisionsCount() > 0) {
       hash = (37 * hash) + RECORD_REVISIONS_FIELD_NUMBER;
       hash = (53 * hash) + getRecordRevisionsList().hashCode();
@@ -788,7 +761,6 @@ private static final long serialVersionUID = 0L;
       }
       bitField0_ = (bitField0_ & ~0x00000002);
       nextPageToken_ = "";
-      totalCount_ = 0;
       recordRevisions_ =
           com.google.protobuf.LazyStringArrayList.emptyList();
       hasMore_ = false;
@@ -849,19 +821,16 @@ private static final long serialVersionUID = 0L;
         result.nextPageToken_ = nextPageToken_;
       }
       if (((from_bitField0_ & 0x00000008) != 0)) {
-        result.totalCount_ = totalCount_;
-      }
-      if (((from_bitField0_ & 0x00000010) != 0)) {
         recordRevisions_.makeImmutable();
         result.recordRevisions_ = recordRevisions_;
       }
-      if (((from_bitField0_ & 0x00000020) != 0)) {
+      if (((from_bitField0_ & 0x00000010) != 0)) {
         result.hasMore_ = hasMore_;
       }
-      if (((from_bitField0_ & 0x00000040) != 0)) {
+      if (((from_bitField0_ & 0x00000020) != 0)) {
         result.exactTotal_ = exactTotal_;
       }
-      if (((from_bitField0_ & 0x00000080) != 0)) {
+      if (((from_bitField0_ & 0x00000040) != 0)) {
         redactedFields_.makeImmutable();
         result.redactedFields_ = redactedFields_;
       }
@@ -921,13 +890,10 @@ private static final long serialVersionUID = 0L;
         bitField0_ |= 0x00000004;
         onChanged();
       }
-      if (other.getTotalCount() != 0) {
-        setTotalCount(other.getTotalCount());
-      }
       if (!other.recordRevisions_.isEmpty()) {
         if (recordRevisions_.isEmpty()) {
           recordRevisions_ = other.recordRevisions_;
-          bitField0_ |= 0x00000010;
+          bitField0_ |= 0x00000008;
         } else {
           ensureRecordRevisionsIsMutable();
           recordRevisions_.addAll(other.recordRevisions_);
@@ -943,7 +909,7 @@ private static final long serialVersionUID = 0L;
       if (!other.redactedFields_.isEmpty()) {
         if (redactedFields_.isEmpty()) {
           redactedFields_ = other.redactedFields_;
-          bitField0_ |= 0x00000080;
+          bitField0_ |= 0x00000040;
         } else {
           ensureRedactedFieldsIsMutable();
           redactedFields_.addAll(other.redactedFields_);
@@ -1000,11 +966,6 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00000004;
               break;
             } // case 26
-            case 32: {
-              totalCount_ = input.readInt32();
-              bitField0_ |= 0x00000008;
-              break;
-            } // case 32
             case 42: {
               java.lang.String s = input.readStringRequireUtf8();
               ensureRecordRevisionsIsMutable();
@@ -1013,12 +974,12 @@ private static final long serialVersionUID = 0L;
             } // case 42
             case 48: {
               hasMore_ = input.readBool();
-              bitField0_ |= 0x00000020;
+              bitField0_ |= 0x00000010;
               break;
             } // case 48
             case 56: {
               exactTotal_ = input.readInt64();
-              bitField0_ |= 0x00000040;
+              bitField0_ |= 0x00000020;
               break;
             } // case 56
             case 66: {
@@ -1816,60 +1777,13 @@ private static final long serialVersionUID = 0L;
       return this;
     }
 
-    private int totalCount_ ;
-    /**
-     * <pre>
-     * The number of records in THIS page (the length of `records_json`), not the
-     * number of matching rows. Use `exact_total` for that.
-     * </pre>
-     *
-     * <code>int32 total_count = 4 [json_name = "totalCount"];</code>
-     * @return The totalCount.
-     */
-    @java.lang.Override
-    public int getTotalCount() {
-      return totalCount_;
-    }
-    /**
-     * <pre>
-     * The number of records in THIS page (the length of `records_json`), not the
-     * number of matching rows. Use `exact_total` for that.
-     * </pre>
-     *
-     * <code>int32 total_count = 4 [json_name = "totalCount"];</code>
-     * @param value The totalCount to set.
-     * @return This builder for chaining.
-     */
-    public Builder setTotalCount(int value) {
-
-      totalCount_ = value;
-      bitField0_ |= 0x00000008;
-      onChanged();
-      return this;
-    }
-    /**
-     * <pre>
-     * The number of records in THIS page (the length of `records_json`), not the
-     * number of matching rows. Use `exact_total` for that.
-     * </pre>
-     *
-     * <code>int32 total_count = 4 [json_name = "totalCount"];</code>
-     * @return This builder for chaining.
-     */
-    public Builder clearTotalCount() {
-      bitField0_ = (bitField0_ & ~0x00000008);
-      totalCount_ = 0;
-      onChanged();
-      return this;
-    }
-
     private com.google.protobuf.LazyStringArrayList recordRevisions_ =
         com.google.protobuf.LazyStringArrayList.emptyList();
     private void ensureRecordRevisionsIsMutable() {
       if (!recordRevisions_.isModifiable()) {
         recordRevisions_ = new com.google.protobuf.LazyStringArrayList(recordRevisions_);
       }
-      bitField0_ |= 0x00000010;
+      bitField0_ |= 0x00000008;
     }
     /**
      * <pre>
@@ -1975,7 +1889,7 @@ private static final long serialVersionUID = 0L;
       if (value == null) { throw new NullPointerException(); }
       ensureRecordRevisionsIsMutable();
       recordRevisions_.set(index, value);
-      bitField0_ |= 0x00000010;
+      bitField0_ |= 0x00000008;
       onChanged();
       return this;
     }
@@ -2001,7 +1915,7 @@ private static final long serialVersionUID = 0L;
       if (value == null) { throw new NullPointerException(); }
       ensureRecordRevisionsIsMutable();
       recordRevisions_.add(value);
-      bitField0_ |= 0x00000010;
+      bitField0_ |= 0x00000008;
       onChanged();
       return this;
     }
@@ -2027,7 +1941,7 @@ private static final long serialVersionUID = 0L;
       ensureRecordRevisionsIsMutable();
       com.google.protobuf.AbstractMessageLite.Builder.addAll(
           values, recordRevisions_);
-      bitField0_ |= 0x00000010;
+      bitField0_ |= 0x00000008;
       onChanged();
       return this;
     }
@@ -2050,7 +1964,7 @@ private static final long serialVersionUID = 0L;
     public Builder clearRecordRevisions() {
       recordRevisions_ =
         com.google.protobuf.LazyStringArrayList.emptyList();
-      bitField0_ = (bitField0_ & ~0x00000010);;
+      bitField0_ = (bitField0_ & ~0x00000008);;
       onChanged();
       return this;
     }
@@ -2077,7 +1991,7 @@ private static final long serialVersionUID = 0L;
       checkByteStringIsUtf8(value);
       ensureRecordRevisionsIsMutable();
       recordRevisions_.add(value);
-      bitField0_ |= 0x00000010;
+      bitField0_ |= 0x00000008;
       onChanged();
       return this;
     }
@@ -2113,7 +2027,7 @@ private static final long serialVersionUID = 0L;
     public Builder setHasMore(boolean value) {
 
       hasMore_ = value;
-      bitField0_ |= 0x00000020;
+      bitField0_ |= 0x00000010;
       onChanged();
       return this;
     }
@@ -2129,7 +2043,7 @@ private static final long serialVersionUID = 0L;
      * @return This builder for chaining.
      */
     public Builder clearHasMore() {
-      bitField0_ = (bitField0_ & ~0x00000020);
+      bitField0_ = (bitField0_ & ~0x00000010);
       hasMore_ = false;
       onChanged();
       return this;
@@ -2164,7 +2078,7 @@ private static final long serialVersionUID = 0L;
     public Builder setExactTotal(long value) {
 
       exactTotal_ = value;
-      bitField0_ |= 0x00000040;
+      bitField0_ |= 0x00000020;
       onChanged();
       return this;
     }
@@ -2179,7 +2093,7 @@ private static final long serialVersionUID = 0L;
      * @return This builder for chaining.
      */
     public Builder clearExactTotal() {
-      bitField0_ = (bitField0_ & ~0x00000040);
+      bitField0_ = (bitField0_ & ~0x00000020);
       exactTotal_ = 0L;
       onChanged();
       return this;
@@ -2191,7 +2105,7 @@ private static final long serialVersionUID = 0L;
       if (!redactedFields_.isModifiable()) {
         redactedFields_ = new com.google.protobuf.LazyStringArrayList(redactedFields_);
       }
-      bitField0_ |= 0x00000080;
+      bitField0_ |= 0x00000040;
     }
     /**
      * <pre>
@@ -2272,7 +2186,7 @@ private static final long serialVersionUID = 0L;
       if (value == null) { throw new NullPointerException(); }
       ensureRedactedFieldsIsMutable();
       redactedFields_.set(index, value);
-      bitField0_ |= 0x00000080;
+      bitField0_ |= 0x00000040;
       onChanged();
       return this;
     }
@@ -2293,7 +2207,7 @@ private static final long serialVersionUID = 0L;
       if (value == null) { throw new NullPointerException(); }
       ensureRedactedFieldsIsMutable();
       redactedFields_.add(value);
-      bitField0_ |= 0x00000080;
+      bitField0_ |= 0x00000040;
       onChanged();
       return this;
     }
@@ -2314,7 +2228,7 @@ private static final long serialVersionUID = 0L;
       ensureRedactedFieldsIsMutable();
       com.google.protobuf.AbstractMessageLite.Builder.addAll(
           values, redactedFields_);
-      bitField0_ |= 0x00000080;
+      bitField0_ |= 0x00000040;
       onChanged();
       return this;
     }
@@ -2332,7 +2246,7 @@ private static final long serialVersionUID = 0L;
     public Builder clearRedactedFields() {
       redactedFields_ =
         com.google.protobuf.LazyStringArrayList.emptyList();
-      bitField0_ = (bitField0_ & ~0x00000080);;
+      bitField0_ = (bitField0_ & ~0x00000040);;
       onChanged();
       return this;
     }
@@ -2354,7 +2268,7 @@ private static final long serialVersionUID = 0L;
       checkByteStringIsUtf8(value);
       ensureRedactedFieldsIsMutable();
       redactedFields_.add(value);
-      bitField0_ |= 0x00000080;
+      bitField0_ |= 0x00000040;
       onChanged();
       return this;
     }

@@ -198,7 +198,7 @@ fn detect_file_signals(root: &Path, scan: &mut WorkspaceScan) {
     }
     for file in [
         "udb.config.json",
-        ".udb/native-services.json",
+        "udb.yaml",
         "configs/database.yaml",
         "configs/backends.yaml",
         "configs/services.yaml",

@@ -115,10 +115,10 @@ canonical UUID, so human project codes like `private` are safe. `is_public` is
    `setTenant(principal.tenant_id)` (or `loginAndAdoptTenant()`).
 3. **SEED authz or every data RPC is `PERMISSION_DENIED`** — the org-owner role +
    `udb:*` scopes are NOT enough; the data plane enforces from `policy_rules`.
-   Straightforward: `udb authz seed --tenant <T-UUID> --role app_rw` (offline,
-   Postgres-direct, validated action tokens, idempotent + atomic; `--emit <path>`
-   for a version-controlled JSON) — or runtime `AuthzService.CreatePolicyRule`,
-   or offline `udb policy-seed`. Real actions only (`Select`/`Upsert`/`Delete`/
+   Straightforward: `udb policy apply -f <policies.yaml> --tenant <T-UUID>`
+   (offline, Postgres-direct, one transaction, idempotent; the file is your
+   version-controlled policy) — or runtime `AuthzService.CreatePolicyRule`.
+   Real actions only (`Select`/`Upsert`/`Delete`/
    `Update`/`BulkCas` — never `data.*`), then bind principals to the role
    (`udb auth role bind`). Dev shortcut: `UDB_ABAC_DEFAULT_ALLOW=true`.
 4. The broker needs JWT keys (`UDB_JWT_PRIVATE_KEY`/`_PUBLIC_KEY`, RS256), sessions
@@ -133,8 +133,8 @@ canonical UUID, so human project codes like `private` are safe. `is_public` is
 `udb sdk generate --lang <l>` · `udb sdk manifest` · `udb requirements` (backend
 contract; run BEFORE first start) · `udb doctor --enterprise` (manifest-aware
 preflight — lists every unmet prereq + missing required backend at once) ·
-`udb authz seed --tenant <UUID> --role app_rw` (offline data-plane policy
-seeding) · `udb native list/docs` · `udb compat-matrix` (authoritative
+`udb policy apply -f <policies.yaml> --tenant <UUID>` (offline data-plane
+policy) · `udb native list/docs` · `udb compat-matrix` (authoritative
 annotations). Since 0.3.7, `udb --help`, `udb help <cmd>`, command `--help`,
 `udb --version`, and near-miss "did you mean" suggestions are supported.
 
@@ -143,8 +143,8 @@ annotations). Since 0.3.7, `udb --help`, `udb help <cmd>`, command `--help`,
 `FAILED_PRECONDITION`→native service disabled (backend missing: Vault unseal /
 Redis / Kafka / object store / ledger), wrong lifecycle, or missing config ·
 `RESOURCE_EXHAUSTED`→rate limit/quota (read `retry_after_ms`, back off) ·
-`UNAUTHENTICATED`→missing bearer, or empty tenant; on the data plane exchange an
-API key for a JWT if `x-api-key` isn't accepted · `INVALID_ARGUMENT`→unknown
+`UNAUTHENTICATED`→missing bearer, or empty tenant; an API key is exchanged for a
+JWT (the SDKs do it; a raw `x-api-key` is never sent) · `INVALID_ARGUMENT`→unknown
 message_type (`udb sdk manifest`), or "tenant isolation requires filter on
 tenant_id" (put the tenant UUID in the filter), or non-UUID `project_id` on
 storage · `ABORTED`→CAS/revision conflict (re-read, retry) · `NOT_FOUND`→may be
@@ -153,8 +153,8 @@ storage · `ABORTED`→CAS/revision conflict (re-read, retry) · `NOT_FOUND`→m
 **`PERMISSION_DENIED` decision tree:** (1) "purpose is required" → send
 `x-purpose`. (2) NATIVE call → token missing scope `udb:<service>:<method>` (for
 a service, add it to its grant first). (3) DATA call → Casbin: "no authz policy"
-= zero rows → `udb authz seed --tenant <T-UUID> --role app_rw` then bind the
-principal; "no applicable allow policy" = one of the three token traps —
+= zero rows → `udb policy apply -f <policies.yaml> --tenant <T-UUID>` then bind
+the principal; "no applicable allow policy" = one of the three token traps —
 `action` must be `Select`/`Upsert`/… (not `data.select`), `tenant_id`=caller
 UUID, `object`=message_type, subject matches. (4) "tenant mismatch" → use the
 credential's UUID.

@@ -230,8 +230,6 @@ namespace Udb.Services.V1 {
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     static readonly grpc::Marshaller<global::Udb.Entity.V1.PolicyListResponse> __Marshaller_udb_entity_v1_PolicyListResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Entity.V1.PolicyListResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Marshaller<global::Udb.Entity.V1.PutPolicyRequest> __Marshaller_udb_entity_v1_PutPolicyRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Entity.V1.PutPolicyRequest.Parser));
-    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     static readonly grpc::Marshaller<global::Udb.Entity.V1.PolicyRequest> __Marshaller_udb_entity_v1_PolicyRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Entity.V1.PolicyRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     static readonly grpc::Marshaller<global::Udb.Entity.V1.CapabilitiesRequest> __Marshaller_udb_entity_v1_CapabilitiesRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Entity.V1.CapabilitiesRequest.Parser));
@@ -839,14 +837,6 @@ namespace Udb.Services.V1 {
         "ListPolicies",
         __Marshaller_udb_entity_v1_PolicyListRequest,
         __Marshaller_udb_entity_v1_PolicyListResponse);
-
-    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-    static readonly grpc::Method<global::Udb.Entity.V1.PutPolicyRequest, global::Udb.Entity.V1.MutationResponse> __Method_PutPolicy = new grpc::Method<global::Udb.Entity.V1.PutPolicyRequest, global::Udb.Entity.V1.MutationResponse>(
-        grpc::MethodType.Unary,
-        __ServiceName,
-        "PutPolicy",
-        __Marshaller_udb_entity_v1_PutPolicyRequest,
-        __Marshaller_udb_entity_v1_MutationResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     static readonly grpc::Method<global::Udb.Entity.V1.PolicyRequest, global::Udb.Entity.V1.MutationResponse> __Method_DeletePolicy = new grpc::Method<global::Udb.Entity.V1.PolicyRequest, global::Udb.Entity.V1.MutationResponse>(
@@ -1655,21 +1645,13 @@ namespace Udb.Services.V1 {
       }
 
       /// <summary>
-      /// DEPRECATED: writes the legacy ABAC table, which does NOT authorize
-      /// requests. Authorization comes from the Casbin governance table: use
-      /// AuthzService.PutAuthzPolicy (or `udb authz seed` / `udb policy apply`).
-      /// Every response carries an `x-udb-deprecated` header; removed in 0.6.0.
+      /// PutPolicy was removed in 0.6.0: it wrote the legacy ABAC table, which never
+      /// authorized requests. Write policy with AuthzService.PutAuthzPolicy or
+      /// `udb policy apply`.
       /// </summary>
       /// <param name="request">The request received from the client.</param>
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
-      [global::System.ObsoleteAttribute]
-      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::System.Threading.Tasks.Task<global::Udb.Entity.V1.MutationResponse> PutPolicy(global::Udb.Entity.V1.PutPolicyRequest request, grpc::ServerCallContext context)
-      {
-        throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
-      }
-
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
       public virtual global::System.Threading.Tasks.Task<global::Udb.Entity.V1.MutationResponse> DeletePolicy(global::Udb.Entity.V1.PolicyRequest request, grpc::ServerCallContext context)
       {
@@ -4313,84 +4295,56 @@ namespace Udb.Services.V1 {
         return CallInvoker.AsyncUnaryCall(__Method_ListPolicies, null, options, request);
       }
       /// <summary>
-      /// DEPRECATED: writes the legacy ABAC table, which does NOT authorize
-      /// requests. Authorization comes from the Casbin governance table: use
-      /// AuthzService.PutAuthzPolicy (or `udb authz seed` / `udb policy apply`).
-      /// Every response carries an `x-udb-deprecated` header; removed in 0.6.0.
+      /// PutPolicy was removed in 0.6.0: it wrote the legacy ABAC table, which never
+      /// authorized requests. Write policy with AuthzService.PutAuthzPolicy or
+      /// `udb policy apply`.
       /// </summary>
       /// <param name="request">The request to send to the server.</param>
       /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
       /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
-      [global::System.ObsoleteAttribute]
-      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::Udb.Entity.V1.MutationResponse PutPolicy(global::Udb.Entity.V1.PutPolicyRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
-      {
-        return PutPolicy(request, new grpc::CallOptions(headers, deadline, cancellationToken));
-      }
-      /// <summary>
-      /// DEPRECATED: writes the legacy ABAC table, which does NOT authorize
-      /// requests. Authorization comes from the Casbin governance table: use
-      /// AuthzService.PutAuthzPolicy (or `udb authz seed` / `udb policy apply`).
-      /// Every response carries an `x-udb-deprecated` header; removed in 0.6.0.
-      /// </summary>
-      /// <param name="request">The request to send to the server.</param>
-      /// <param name="options">The options for the call.</param>
-      /// <returns>The response received from the server.</returns>
-      [global::System.ObsoleteAttribute]
-      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual global::Udb.Entity.V1.MutationResponse PutPolicy(global::Udb.Entity.V1.PutPolicyRequest request, grpc::CallOptions options)
-      {
-        return CallInvoker.BlockingUnaryCall(__Method_PutPolicy, null, options, request);
-      }
-      /// <summary>
-      /// DEPRECATED: writes the legacy ABAC table, which does NOT authorize
-      /// requests. Authorization comes from the Casbin governance table: use
-      /// AuthzService.PutAuthzPolicy (or `udb authz seed` / `udb policy apply`).
-      /// Every response carries an `x-udb-deprecated` header; removed in 0.6.0.
-      /// </summary>
-      /// <param name="request">The request to send to the server.</param>
-      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
-      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
-      /// <param name="cancellationToken">An optional token for canceling the call.</param>
-      /// <returns>The call object.</returns>
-      [global::System.ObsoleteAttribute]
-      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::Udb.Entity.V1.MutationResponse> PutPolicyAsync(global::Udb.Entity.V1.PutPolicyRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
-      {
-        return PutPolicyAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
-      }
-      /// <summary>
-      /// DEPRECATED: writes the legacy ABAC table, which does NOT authorize
-      /// requests. Authorization comes from the Casbin governance table: use
-      /// AuthzService.PutAuthzPolicy (or `udb authz seed` / `udb policy apply`).
-      /// Every response carries an `x-udb-deprecated` header; removed in 0.6.0.
-      /// </summary>
-      /// <param name="request">The request to send to the server.</param>
-      /// <param name="options">The options for the call.</param>
-      /// <returns>The call object.</returns>
-      [global::System.ObsoleteAttribute]
-      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
-      public virtual grpc::AsyncUnaryCall<global::Udb.Entity.V1.MutationResponse> PutPolicyAsync(global::Udb.Entity.V1.PutPolicyRequest request, grpc::CallOptions options)
-      {
-        return CallInvoker.AsyncUnaryCall(__Method_PutPolicy, null, options, request);
-      }
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
       public virtual global::Udb.Entity.V1.MutationResponse DeletePolicy(global::Udb.Entity.V1.PolicyRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return DeletePolicy(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
+      /// <summary>
+      /// PutPolicy was removed in 0.6.0: it wrote the legacy ABAC table, which never
+      /// authorized requests. Write policy with AuthzService.PutAuthzPolicy or
+      /// `udb policy apply`.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="options">The options for the call.</param>
+      /// <returns>The response received from the server.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
       public virtual global::Udb.Entity.V1.MutationResponse DeletePolicy(global::Udb.Entity.V1.PolicyRequest request, grpc::CallOptions options)
       {
         return CallInvoker.BlockingUnaryCall(__Method_DeletePolicy, null, options, request);
       }
+      /// <summary>
+      /// PutPolicy was removed in 0.6.0: it wrote the legacy ABAC table, which never
+      /// authorized requests. Write policy with AuthzService.PutAuthzPolicy or
+      /// `udb policy apply`.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
+      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
+      /// <param name="cancellationToken">An optional token for canceling the call.</param>
+      /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
       public virtual grpc::AsyncUnaryCall<global::Udb.Entity.V1.MutationResponse> DeletePolicyAsync(global::Udb.Entity.V1.PolicyRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
       {
         return DeletePolicyAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
+      /// <summary>
+      /// PutPolicy was removed in 0.6.0: it wrote the legacy ABAC table, which never
+      /// authorized requests. Write policy with AuthzService.PutAuthzPolicy or
+      /// `udb policy apply`.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="options">The options for the call.</param>
+      /// <returns>The call object.</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
       public virtual grpc::AsyncUnaryCall<global::Udb.Entity.V1.MutationResponse> DeletePolicyAsync(global::Udb.Entity.V1.PolicyRequest request, grpc::CallOptions options)
       {
@@ -4945,7 +4899,6 @@ namespace Udb.Services.V1 {
           .AddMethod(__Method_MarkSagaReviewed, serviceImpl.MarkSagaReviewed)
           .AddMethod(__Method_EnsureBaseline, serviceImpl.EnsureBaseline)
           .AddMethod(__Method_ListPolicies, serviceImpl.ListPolicies)
-          .AddMethod(__Method_PutPolicy, serviceImpl.PutPolicy)
           .AddMethod(__Method_DeletePolicy, serviceImpl.DeletePolicy)
           .AddMethod(__Method_ReloadPolicies, serviceImpl.ReloadPolicies)
           .AddMethod(__Method_LintPolicies, serviceImpl.LintPolicies)
@@ -5039,7 +4992,6 @@ namespace Udb.Services.V1 {
       serviceBinder.AddMethod(__Method_MarkSagaReviewed, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Entity.V1.SagaRequest, global::Udb.Entity.V1.SagaResponse>(serviceImpl.MarkSagaReviewed));
       serviceBinder.AddMethod(__Method_EnsureBaseline, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Services.V1.EnsureBaselineRequest, global::Udb.Services.V1.EnsureBaselineResponse>(serviceImpl.EnsureBaseline));
       serviceBinder.AddMethod(__Method_ListPolicies, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Entity.V1.PolicyListRequest, global::Udb.Entity.V1.PolicyListResponse>(serviceImpl.ListPolicies));
-      serviceBinder.AddMethod(__Method_PutPolicy, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Entity.V1.PutPolicyRequest, global::Udb.Entity.V1.MutationResponse>(serviceImpl.PutPolicy));
       serviceBinder.AddMethod(__Method_DeletePolicy, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Entity.V1.PolicyRequest, global::Udb.Entity.V1.MutationResponse>(serviceImpl.DeletePolicy));
       serviceBinder.AddMethod(__Method_ReloadPolicies, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Entity.V1.CapabilitiesRequest, global::Udb.Entity.V1.MutationResponse>(serviceImpl.ReloadPolicies));
       serviceBinder.AddMethod(__Method_LintPolicies, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Entity.V1.CapabilitiesRequest, global::Udb.Entity.V1.PolicyLintResponse>(serviceImpl.LintPolicies));

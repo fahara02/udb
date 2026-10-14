@@ -163,7 +163,7 @@ func (o *credentialOwner) prepare(ctx context.Context, method string) (context.C
 	if capability, ok := ctx.Value(credentialRecoveryKey{}).(credentialRecovery); ok && capability.owner == o && capability.method == method &&
 		(method == credentialAuthenticate || method == credentialLogin || method == credentialRefresh) {
 		// These operations carry their credential in the typed request. Suppress
-		// the expired owned bearer and raw-key defaults during recovery.
+		// the expired owned bearer and any inherited raw key during recovery.
 		md.Set("authorization", "")
 		md.Delete("x-api-key")
 		md.Delete("x-udb-api-key")
@@ -183,7 +183,7 @@ func (o *credentialOwner) prepare(ctx context.Context, method string) (context.C
 		if len(values) != 1 || !strings.HasPrefix(values[0], "Bearer ") || strings.TrimSpace(strings.TrimPrefix(values[0], "Bearer ")) == "" {
 			return nil, status.Error(codes.Unauthenticated, "udb: delegated bearer is required")
 		}
-		md.Set("x-api-key", "")
+		md.Delete("x-api-key")
 		md.Delete("x-udb-api-key")
 		return metadata.NewOutgoingContext(ctx, md), nil
 	}

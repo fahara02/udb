@@ -78,7 +78,7 @@ func (s *consumeAckBroker) PublishCDC(req *entityv1.CDCSubscriptionRequest, stre
 	for _, id := range ids {
 		if err := stream.Send(&eventsv1.CDCEnvelope{
 			EventId: id, Topic: "fixture.events",
-			PayloadJson: `{"envelope_version":1,"event_type":"fixture.event","payload":{"value":"` + id + `"}}`,
+			PayloadJson: `{"envelope_version":2,"event_type":"fixture.event","payload":{"value":"` + id + `"}}`,
 		}); err != nil {
 			return err
 		}

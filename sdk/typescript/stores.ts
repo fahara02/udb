@@ -63,7 +63,6 @@ const REASON_CODES: Record<string, ErrorCode> = {
   UDB_DECODE_FAILED: ErrorCode.Internal,
   UDB_UNKNOWN_MESSAGE_TYPE: ErrorCode.Invalid,
   UDB_ENVELOPE_VERSION_UNSUPPORTED: ErrorCode.Precondition,
-  UDB_POLICY_WRONG_SURFACE: ErrorCode.Precondition,
 };
 
 /** Wire values of `udb.entity.v1.ErrorKind` (proto/udb/entity/v1/error.proto). */
@@ -406,9 +405,15 @@ export function decodeEnvelope(payloadJson: string): Record<string, unknown> {
   let envelope = JSON.parse(payloadJson || "{}");
   const inner = envelope?.payload;
   if (inner && typeof inner === "object" && "event_type" in inner && "payload" in inner) envelope = inner;
-  const version = Number(envelope?.envelope_version ?? 0);
+  if (envelope?.envelope_version === undefined || envelope?.envelope_version === null) {
+    throw new EnvelopeVersionError(`udb: envelope has no envelope_version; unversioned envelopes are not supported (this SDK reads version ${EVENT_ENVELOPE_VERSION})`);
+  }
+  const version = Number(envelope.envelope_version);
   if (version > EVENT_ENVELOPE_VERSION) {
     throw new EnvelopeVersionError(`udb: envelope_version ${version} is newer than this SDK understands (${EVENT_ENVELOPE_VERSION}); upgrade the SDK`);
+  }
+  if (version !== EVENT_ENVELOPE_VERSION) {
+    throw new EnvelopeVersionError(`udb: envelope_version ${version} is not supported; this SDK reads version ${EVENT_ENVELOPE_VERSION}`);
   }
   return envelope;
 }

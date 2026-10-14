@@ -317,7 +317,6 @@ pub const KNOWN_PROJECTION_OPTION_KEYS: &[&str] = &[
     "eviction_policy",
     "experiment_name",
     "field_name",
-    "from_label",
     "fts_columns",
     "fts_config",
     "hnsw_m",
@@ -346,7 +345,6 @@ pub const KNOWN_PROJECTION_OPTION_KEYS: &[&str] = &[
     "tag_fields",
     "tenant_field",
     "time_field",
-    "to_label",
     "ttl_seconds",
     "validator",
     "value_fields",
@@ -387,12 +385,17 @@ fn lint_projection_options(table: &ManifestTable, items: &mut Vec<LintItem>) {
                 _ => None,
             } {
                 items.push(finding(
-                    LintSeverity::Warning,
-                    "projection_option_deprecated_alias",
+                    LintSeverity::Error,
+                    "projection_option_removed_alias",
                     "",
-                    format!("{target} sets '{key}', a deprecated alias of '{canonical}'"),
-                    "Use the typed data_store field (edge_source_label / edge_target_label); the alias is removed in 0.6.",
+                    format!(
+                        "{target} sets '{key}', an option alias removed in 0.6.0; the runtime no longer reads it"
+                    ),
+                    &format!(
+                        "Set the typed data_store field `{canonical}` instead (option key '{canonical}')."
+                    ),
                 ));
+                continue;
             }
             if !KNOWN_PROJECTION_OPTION_KEYS.contains(&key) {
                 items.push(finding(
@@ -1374,6 +1377,38 @@ mod tests {
         assert!(has_kind(&report, "projection_option_column_missing"));
         assert!(has_kind(&report, "projection_option_column_sensitive"));
         assert!(has_kind(&report, "projection_option_column_encrypted"));
+        assert!(!report.passed);
+    }
+
+    /// 0.6.0: the `from_label` / `to_label` option aliases are errors that name
+    /// the typed replacement, not warnings the runtime still honours.
+    #[test]
+    fn removed_edge_label_aliases_are_errors_naming_the_typed_field() {
+        let option = |key: &str, value: &str| crate::generation::manifest::ManifestStoreOption {
+            key: key.to_string(),
+            value: value.to_string(),
+        };
+        let mut projection = base_projection(false);
+        projection.backend = "neo4j".to_string();
+        projection.options = vec![
+            option("from_label", "Doctor"),
+            option("to_label", "Patient"),
+        ];
+        let report = lint_catalog(&base_manifest(vec![projection]));
+        let removed: Vec<&LintItem> = report
+            .items
+            .iter()
+            .filter(|item| item.kind == "projection_option_removed_alias")
+            .collect();
+        assert_eq!(removed.len(), 2, "{:?}", report.items);
+        assert!(
+            removed
+                .iter()
+                .all(|item| item.severity == LintSeverity::Error)
+        );
+        assert!(removed[0].suggestion.contains("edge_source_label"));
+        assert!(removed[1].suggestion.contains("edge_target_label"));
+        assert!(!has_kind(&report, "projection_option_unknown"));
         assert!(!report.passed);
     }
 

@@ -2108,8 +2108,8 @@
     "operation_id": "enqueueOutboxEvent",
     "op_kind": "MUTATION",
     "request_msg": "EnqueueOutboxEventRequest",
-    "body": "`{ \"context\": { \"tenant_id\": \"<seed:tenant_id>\", \"project_id\": \"<seed:project>\", \"purpose\": \"sdk.live.perf\" }, \"topic\": \"<seed:event_type>\", \"partition_key\": \"<seed:document_id>\", \"payload\": { \"event_id\": \"00000000-0000-4000-8000-000000000001\", \"event_type\": \"<seed:event_type>\", \"correlation_id\": \"00000000-0000-4000-8000-000000000002\", \"document_id\": \"<seed:document_id>\" } }`",
-    "notes": "payload Struct MUST contain event_id/event_type/correlation_id/document_id (per proto comment). `schema_uri`,`idempotency_key` optional."
+    "body": "`{ \"context\": { \"tenant_id\": \"<seed:tenant_id>\", \"project_id\": \"<seed:project>\", \"purpose\": \"sdk.live.perf\" }, \"topic\": \"<seed:event_type>\", \"partition_key\": \"<seed:document_id>\", \"payload\": { \"event_id\": \"00000000-0000-4000-8000-000000000001\", \"event_type\": \"<seed:event_type>\", \"correlation_id\": \"00000000-0000-4000-8000-000000000002\", \"document_id\": \"<seed:document_id>\", \"envelope_version\": 2 } }`",
+    "notes": "payload Struct MUST contain event_id/event_type/correlation_id/document_id and envelope_version 2 (per proto comment; an unversioned envelope is refused since 0.6.0). `schema_uri`,`idempotency_key` optional."
   },
   {
     "file": "data_broker.md",
@@ -2566,18 +2566,6 @@
     "request_msg": "stream Chunk",
     "body": "`{ \"context\": { \"tenant_id\": \"<seed:tenant_id>\", \"project_id\": \"<seed:project>\", \"purpose\": \"sdk.live.perf\" }, \"bucket\": \"<seed:bucket>\", \"object_key\": \"<seed:object_key>\", \"data\": \"cGVyZg==\", \"content_type\": \"application/octet-stream\", \"final_chunk\": true }`",
     "notes": "client-streaming; set `final_chunk:true` on terminal chunk. `idempotency_key` optional. bucket must exist."
-  },
-  {
-    "file": "data_broker.md",
-    "rpc": "PutPolicy",
-    "service": "DataBroker",
-    "wire_rpc": "DataBroker/PutPolicy",
-    "api_alias": "put_policy",
-    "operation_id": "putPolicy",
-    "op_kind": "DESTRUCTIVE",
-    "request_msg": "PutPolicyRequest",
-    "body": "`{ \"context\": { \"tenant_id\": \"<seed:tenant_id>\", \"project_id\": \"<seed:project>\", \"purpose\": \"sdk.live.perf\" }, \"policy\": { \"effect\": \"allow\", \"service_identity\": \"\", \"tenant_id\": \"<seed:tenant_id>\", \"message_type\": \"\", \"operation\": \"\", \"required_scope\": \"\", \"priority\": 1, \"enabled\": true } }`",
-    "notes": "PolicyRecord.policy_id omit/0 for create; set `<seed:policy_id>` to update. effect=allow/deny. Measured only with `UDB_ALLOW_LEGACY_PUT_POLICY=true`; normal calls refuse with `UDB_POLICY_WRONG_SURFACE` and use AuthzService.PutAuthzPolicy instead."
   },
   {
     "file": "data_broker.md",

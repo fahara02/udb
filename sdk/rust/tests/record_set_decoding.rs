@@ -14,7 +14,7 @@ use udb_client::proto::udb::entity::v1::{RecordSet, Row};
 use udb_client::{DecodeError, Records};
 
 /// Byte-for-byte what `rows_to_record_set` puts on the wire: the records in
-/// `records_json`, one EMPTY `Row` each, `total_count` equal to the record count.
+/// `records_json`, one EMPTY `Row` each.
 fn served_page() -> RecordSet {
     RecordSet {
         records_json: vec![
@@ -23,7 +23,6 @@ fn served_page() -> RecordSet {
                 .to_vec(),
         ],
         rows: vec![Row::default(), Row::default()],
-        total_count: 2,
         ..RecordSet::default()
     }
 }
@@ -72,7 +71,6 @@ fn rows_without_records_json_is_rejected_not_reported_as_empty() {
     let compat_only = RecordSet {
         records_json: Vec::new(),
         rows: vec![Row::default(), Row::default(), Row::default()],
-        total_count: 3,
         ..RecordSet::default()
     };
     match Records::decode(&compat_only) {
@@ -128,7 +126,6 @@ fn cached_and_uncached_shapes_decode_identically() {
     let cached = RecordSet {
         records_json: uncached.records_json.clone(),
         rows: vec![Row::default(); uncached.records_json.len()],
-        total_count: uncached.records_json.len() as i32,
         ..RecordSet::default()
     };
     assert_eq!(

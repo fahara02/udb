@@ -258,6 +258,64 @@ pub(crate) fn fatal_json<T>(label: &str, err: serde_json::Error) -> T {
 /// while the JSON said 100 changes, so a pipeline reading the exit code or the
 /// report never saw it. The most common cause is passing the output of
 /// `udb catalog` (a ProtoCatalog) where a CatalogManifest is required.
+/// `udb plan`: warn (stderr) for every role that has grants on existing
+/// entities but none on an entity this plan creates, with the exact entry to
+/// add. Policies come from `--policies <file>`, else `UDB_ABAC_POLICY_FILE`;
+/// without either nothing is checked. Never fails the plan.
+pub(crate) fn warn_new_entities_without_role_grants(
+    args: &[String],
+    plan: &udb::migration::plan::MigrationPlan,
+) {
+    let flag = |name: &str| {
+        args.windows(2)
+            .find(|w| w[0] == name)
+            .map(|w| w[1].trim().to_string())
+            .filter(|value| !value.is_empty())
+    };
+    let Some(file) = flag("--policies").or_else(|| {
+        env::var("UDB_ABAC_POLICY_FILE")
+            .ok()
+            .map(|value| value.trim().to_string())
+            .filter(|value| !value.is_empty())
+    }) else {
+        return;
+    };
+    let policies = match super::ops_cli::load_policy_file(&file) {
+        Ok(policies) => policies,
+        Err(err) => {
+            eprintln!("warning[policy_grant] could not read {file} to check new entities: {err}");
+            return;
+        }
+    };
+    let new_entities: Vec<(String, String)> = plan
+        .changes
+        .iter()
+        .filter(|change| change.kind == udb::migration::diff::ChangeKind::CreateTable)
+        .filter_map(|change| {
+            plan.manifest
+                .tables
+                .iter()
+                .find(|table| table.schema == change.schema && table.table == change.table)
+                .map(|table| {
+                    (
+                        table.message_fqn(),
+                        format!("{}.{}", table.schema, table.table),
+                    )
+                })
+        })
+        // The broker's own `udb_*` tables are governed by native-RPC policy.
+        .filter(|(_, schema_table)| !schema_table.starts_with("udb_"))
+        .collect();
+    let tenant = flag("--tenant")
+        .or_else(|| env::var("UDB_TENANT_ID").ok())
+        .unwrap_or_default();
+    for missing in
+        udb::runtime::authz::missing_role_grants_for_new_entities(&policies, &new_entities)
+    {
+        eprintln!("warning[policy_grant] {}", missing.message(&file, &tenant));
+    }
+}
+
 pub(crate) fn load_prior_manifest_from_args(args: &[String]) -> Option<CatalogManifest> {
     let path = args
         .windows(2)
@@ -327,14 +385,6 @@ pub(crate) fn load_authz_policies_from_file(path: &str) -> Result<Vec<AuthzPolic
 /// Escape and quote a string as a PostgreSQL string literal (single-quoted, escaping `'`).
 pub(crate) fn sql_literal(value: &str) -> String {
     format!("'{}'", value.replace('\'', "''"))
-}
-
-pub(crate) fn pg_identifier(value: &str) -> String {
-    format!("\"{}\"", value.replace('"', "\"\""))
-}
-
-pub(crate) fn pg_relation(schema: &str, table: &str) -> String {
-    format!("{}.{}", pg_identifier(schema), pg_identifier(table))
 }
 
 // ── Compatibility matrix ──────────────────────────────────────────────────────

@@ -1101,6 +1101,16 @@ impl AuthzServiceImpl {
         // the real snapshot from PG.
         if has_pool {
             self.invalidate_snapshot_cache();
+            // A deny decided on a snapshot older than the durable revision says
+            // so (see `runtime::authz::stale_snapshot_hint`).
+            let probe_service = self.clone();
+            crate::runtime::authz::register_revision_probe(
+                std::sync::Arc::new(move || {
+                    let service = probe_service.clone();
+                    Box::pin(async move { service.authz_revision_fingerprint().await.ok() })
+                }),
+                self.snapshot_ttl.as_secs(),
+            );
         }
         self
     }
@@ -2032,6 +2042,7 @@ impl AuthzServiceImpl {
                 // Staleness bound: the data plane fails closed once the last good
                 // durable load is older than UDB_AUTHZ_SNAPSHOT_MAX_STALENESS_SECS.
                 crate::runtime::authz::record_snapshot_reload_success();
+                crate::runtime::authz::record_loaded_revision(&revision_after);
                 return Ok(self.snapshot.load_full());
             }
             self.require_snapshot_fallback()?;

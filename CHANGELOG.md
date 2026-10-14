@@ -5,6 +5,152 @@ the package version in `Cargo.toml`; historical v0.3.2 audit material is folded
 into the v0.3.x entries because the codebase advanced to v0.3.7 before that
 release line was tagged.
 
+## [0.6.0] - Unreleased
+
+0.6.0 removes the compatibility paths 0.5.x deprecated. Run
+`udb upgrade --check --from <your version> --to 0.6.0` in your project: it lists
+each change below, points at the files, settings and outbox rows it affects, and
+prints the fix.
+
+### Breaking for callers
+
+- **SDKs never send an API key as a raw `x-api-key` header.** The Go
+  `Credentials.RawAPIKey` field and the generated client's `Options.APIKey` /
+  `SetAPIKey` are gone, and the TypeScript and Python raw-key fallback is
+  removed. An API key is always exchanged for a bearer (`Credentials{APIKey}`,
+  `authenticateApiKeyAndAdopt`, `authenticate_api_key_and_adopt`): a broker that
+  mints no bearer now fails the exchange with a named error, and a re-exchange
+  that keeps failing past the bearer's expiry fails calls closed until it
+  recovers. The broker itself still accepts a scoped `x-api-key` from a
+  hand-written client.
+  - detect: code: `RawAPIKey`
+  - detect: code: `SetAPIKey(`
+  - fix: pass the key as `Credentials{APIKey: …}` (TS/Python: the API-key exchange helpers) and configure `UDB_JWT_PRIVATE_KEY` on the broker so the exchange mints a bearer.
+- **`RecordSet.total_count` is removed** (proto field 4 is reserved). It was the
+  length of the page, not the number of matching rows. Go `Page.TotalCount` is
+  replaced by `Page.HasMore` and `Page.ExactTotal` (request it with
+  `PageOptions.IncludeTotal`); the generated typed repository `List` returns
+  `hasMore bool` instead of an `int64` count; the Rust SDK `Records` exposes
+  `has_more()` and `exact_total()` instead of `total_count()`.
+  `RecordBatchV2.total_count` stays and still reports the batch's row count.
+  - detect: code: `.TotalCount`
+  - detect: code: `.total_count()`
+  - fix: page with `has_more` + `next_page_token`; for the number of matching rows set `include_total` on the Select and read `exact_total`; for the page length use the length of `records_json`. Hits on other messages' `total_count` (List* responses) are unaffected.
+- **The `from_label` / `to_label` projection option aliases are removed.** Edge
+  endpoint labels are read only from `edge_source_label` / `edge_target_label`;
+  `udb check` reports the old aliases as an error
+  (`projection_option_removed_alias`). The executor's edge-op wire keys keep
+  their names.
+  - detect: code: `"from_label"`
+  - detect: code: `"to_label"`
+  - fix: rename the data_store option key `from_label` to `edge_source_label` and `to_label` to `edge_target_label`.
+- **`.udb/native-services.json` is no longer read.** `udb native add|remove|
+  generate|doctor|smoke` and `udb app init` keep the native-service selection in
+  the `native_services:` section of the target directory's `udb.yaml` (they edit
+  only that section). A leftover JSON manifest is refused with directions.
+  - detect: file: `.udb/native-services.json`
+  - fix: move the JSON object's fields (services, lang, framework, descriptor_version, generator_version, regenerate_command) under a top-level `native_services:` key in `udb.yaml` next to it, then delete `.udb/native-services.json`.
+- **`DataBroker.PutPolicy`, `PutPolicyRequest` and `UDB_ALLOW_LEGACY_PUT_POLICY`
+  are removed**, with the `UDB_POLICY_WRONG_SURFACE` reason that only they used.
+  The RPC wrote the legacy ABAC table, which never authorized requests. The
+  native contract version moves to 8.0.0.
+  - detect: env: `UDB_ALLOW_LEGACY_PUT_POLICY`
+  - detect: code: `UDB_ALLOW_LEGACY_PUT_POLICY`
+  - detect: code: `PutPolicyRequest`
+  - detect: code: `.PutPolicy(`
+  - detect: code: `put_policy(`
+  - detect: code: `putPolicy(`
+  - fix: write policy with `AuthzService.PutAuthzPolicy` or `udb policy apply -f <policies.yaml> --tenant <uuid>`, and drop the env variable.
+- **Outbox envelopes must state `envelope_version: 2`.** `EnqueueOutboxEvent`
+  and transactional outbox ops refuse an envelope that omits it, or states 1,
+  with `UDB_ENVELOPE_VERSION_UNSUPPORTED` instead of stamping the current version.
+  The CDC tail routes an unversioned outbox row to the DLQ
+  (`EnvelopeVersionUnsupported`); replaying it from the DLQ stamps the version.
+  The Go and TypeScript consumers refuse an envelope without the version. The Go
+  and TypeScript transaction helpers already stamp it; the Python, PHP, Java, C#
+  and Rust SDKs pass your envelope through, so you stamp it.
+  - detect: code: `EnqueueOutboxEvent`
+  - detect: code: `enqueue_outbox_event(`
+  - detect: code: `enqueueOutboxEvent`
+  - detect: sql: `SELECT COUNT(*) FROM udb_system.outbox_events WHERE published_at IS NULL AND NOT (payload ? 'envelope_version')`
+  - fix: add `"envelope_version": 2` to every envelope you build; drain the outbox before upgrading, or replay the rows the DLQ receives.
+- **CAS conflicts are classified only by the typed reason.** Go `IsCASConflict`
+  no longer falls back to matching `compare-and-swap precondition failed` /
+  `revision precondition failed`, and the generated unit of work in every SDK
+  treats a failed transaction as a conflict only when its `error_detail.reason`
+  is `UDB_CAS_CONFLICT`, `UDB_CAS_ROW_MISSING` or `UDB_REVISION_CONFLICT`, never
+  because the message contains `aborted`, `version` or `conflict`.
+  - detect: code: `compare-and-swap precondition failed`
+  - detect: code: `revision precondition failed`
+  - fix: branch on the error's reason (`Reason()` / `reason`, `IsCASConflict`, `codeOf(...) === Conflict`) instead of its message text.
+- **`udb authz seed` and `udb policy-seed` are removed**, with the broker
+  helpers only they used. Every deny, preflight and readiness message now names
+  `udb policy apply`. `udb policy-lint` and `udb auth bootstrap user` stay.
+  - detect: code: `authz seed`
+  - detect: code: `policy-seed`
+  - fix: declare the tenant's policies in a version-controlled file and run `udb policy apply -f <policies.yaml> --tenant <uuid>` (`udb policy diff` previews it); the file is the same `AuthzPolicy` list `udb policy-seed` read.
+- **Typed Go generation fails on an entity without a Go language class.**
+  `udb sdk generate --project-proto --lang go` used to drop such an entity from
+  the generated file with no error; it now stops and names the entity.
+  - fix: set `option go_package = "<import path>;<package>";` in the entity's proto file.
+
+### Clearer refusals
+
+Every refusal below now says, in the gRPC status message itself, why it
+happened and the exact command or field that fixes it; the typed
+`ErrorDetail` (reason, `missing`, fix hint) carries the same facts. Branch on
+the reason, not the text.
+
+- **Credential type not admitted** (native RPCs): names the caller's type, the
+  RPC, the types it admits, this broker's version and how to get an admitted
+  credential, and says a policy grant will not help. New reason
+  `UDB_CREDENTIAL_TYPE_NOT_ADMITTED` with `missing.credential_type`,
+  `allowed_credential_types` and `rpc`. A raw session or API key names the
+  exchange step.
+- **Policy denials** no longer lead with "N candidate policies evaluated" (the
+  count stays in `matched_policy_ids`). Every default deny ends with the grant:
+  the `- {role: …, action: …, resource: …, effect: allow}` entry to add and the
+  `udb policy apply -f <policies.yaml> --tenant <uuid>` command (keep the file's
+  other entries: apply reconciles the whole file).
+- **Deny right after a policy change**: when the durable authz revision is newer
+  than the snapshot the broker decided with, the denial says so and gives a
+  retry time (snapshots reload every `UDB_AUTHZ_SNAPSHOT_TTL_SECS`, 5 s).
+- **Undefined column or table** from a statement built from the active catalog
+  is `FailedPrecondition` with new reason `UDB_CATALOG_SCHEMA_MISMATCH`, naming
+  the column and table and the `udb catalog status` / `udb catalog transition
+  status` / `udb plan` steps, instead of `Internal: transaction mutation failed`.
+- **Incompatible StageCatalog** names the ACTIVE catalog, lists the
+  review-required or blocked ops, and separates ops the live database already
+  has (the ACTIVE catalog is behind it) from the candidate's own changes.
+- **Held index / foreign-key drops** name the option to set:
+  `option (udb.core.common.v1.table).allow_drop = true;` on the message (and
+  its proto file) or `[(udb.core.common.v1.column).allow_drop = true]` on an
+  indexed column, or the reviewed-plan alternative.
+- **Reviewed catalog transitions** name the refused change and table; a
+  table-security change other than `retention_class` lists each changed field
+  with old and new values and the path that applies it.
+- **Channel overload** (`cdc channel overloaded` and the other channels) names
+  slots in use, the limit, `UDB_<OP>_MAX_CONCURRENT` (or the scoped
+  `UDB_CHANNEL_<SCOPE>_…_LIMIT`) and `UDB_<OP>_QUEUE_TIMEOUT_MS`. The base
+  semaphores are now sized from the configured limit, including the
+  `UDB_CHANNEL_<OP>_LIMIT` alias the limit already reported.
+- **`udb catalog transition`** prints the broker's refusal message (it printed
+  only the gRPC code), and `status` prints `next_command`: the exact `plan`
+  invocation with the ACTIVE catalog id, manifest integrity and a fresh
+  idempotency key, or the next approve/apply/stage/activate step for a run.
+- **`udb authz explain <subject> <action> <resource>`** (positional) reports
+  the RPC's credential-type rule offline (`--credential` checks one type), and
+  `next_step` names the credential rule, the grant, or (with `--role`) the role
+  binding.
+- **`udb plan --policies <file>`** (or `UDB_ABAC_POLICY_FILE`) warns when a role
+  with grants elsewhere has none on an entity the plan creates, with the entry
+  to add.
+- **`udb env fill`** ends with a table of where each value lives (file or keys
+  directory) and which process reads it.
+- **Password KDF concurrency** defaults to what fits a quarter of the cgroup
+  memory limit (~19 MiB per Argon2id hash), and the broker logs a startup
+  warning naming `UDB_PASSWORD_KDF_MAX_CONCURRENCY` when the limit shaped it.
+
 ## [0.5.34] - 2026-10-15
 
 ### Breaking for callers

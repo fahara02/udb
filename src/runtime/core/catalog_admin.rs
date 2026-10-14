@@ -290,6 +290,173 @@ pub(super) fn catalog_transition_is_compatible(level: &str, from: &str, to: &str
     }
 }
 
+/// Inputs for explaining why a candidate catalog is not compatible with the
+/// project's ACTIVE catalog.
+pub(super) struct CatalogIncompatibility<'a> {
+    pub(super) level: &'a str,
+    /// Empty when the caller does not know it; the hint then shows `<project>`.
+    pub(super) project_id: &'a str,
+    pub(super) from_version: &'a str,
+    pub(super) from_integrity: &'a str,
+    pub(super) from_manifest: Option<&'a CatalogManifest>,
+    pub(super) to_version: &'a str,
+    pub(super) to_manifest: &'a CatalogManifest,
+    /// The manifest last applied to the live database (the migration ledger),
+    /// when known. With it the refusal separates drift that is already in the
+    /// live schema (the ACTIVE catalog is stale) from the candidate's own changes.
+    pub(super) live_manifest: Option<&'a CatalogManifest>,
+}
+
+/// The ops of `from → to` that keep a transition from being backward
+/// compatible: review-required or blocked, hint warnings excluded (the same
+/// set the drift report counts).
+fn non_auto_changes(
+    from: &CatalogManifest,
+    to: &CatalogManifest,
+) -> Vec<crate::migration::diff::ChangeOperation> {
+    use crate::migration::diff::{ChangeKind, ChangeSafety};
+    crate::migration::diff::diff_manifests(Some(from), to)
+        .into_iter()
+        .filter(|change| {
+            change.kind != ChangeKind::HintWarning
+                && matches!(
+                    change.safety,
+                    ChangeSafety::RequiresReview | ChangeSafety::Blocked
+                )
+        })
+        .collect()
+}
+
+fn change_identity(change: &crate::migration::diff::ChangeOperation) -> String {
+    format!(
+        "{:?} {}.{}{}{}",
+        change.kind,
+        change.schema,
+        change.table,
+        if change.column.is_empty() {
+            String::new()
+        } else {
+            format!(".{}", change.column)
+        },
+        if change.object_name.is_empty() {
+            String::new()
+        } else {
+            format!(" ({})", change.object_name)
+        },
+    )
+}
+
+fn change_list(changes: &[&crate::migration::diff::ChangeOperation]) -> String {
+    const SHOWN: usize = 8;
+    let mut out = changes
+        .iter()
+        .take(SHOWN)
+        .map(|change| {
+            let mut line = change_identity(change);
+            if !change.blocked_reason.is_empty() {
+                line.push_str(&format!(" [{}]", change.blocked_reason));
+            }
+            line
+        })
+        .collect::<Vec<_>>()
+        .join("; ");
+    if changes.len() > SHOWN {
+        out.push_str(&format!("; and {} more", changes.len() - SHOWN));
+    }
+    out
+}
+
+/// The refusal for a catalog that is not `level`-compatible with the ACTIVE
+/// one. It names the ACTIVE catalog, lists the ops that need review, and —
+/// when the live schema is known — says which of them the live database
+/// already has (the ACTIVE catalog is behind it) versus which the candidate
+/// adds, with the command for each.
+pub(super) fn catalog_incompatible_status(
+    operation: &'static str,
+    input: &CatalogIncompatibility<'_>,
+) -> tonic::Status {
+    let project = if input.project_id.trim().is_empty() {
+        "<project>"
+    } else {
+        input.project_id.trim()
+    };
+    let integrity: String = input.from_integrity.chars().take(16).collect();
+    let active = format!(
+        "the ACTIVE catalog (version {}, integrity {integrity}…)",
+        input.from_version
+    );
+    let status_hint = format!(
+        "`udb catalog transition status --project {project}` prints the ACTIVE catalog id, its \
+         manifest integrity and the next command"
+    );
+    let mut message = format!(
+        "candidate catalog version {} is not {}-compatible with {active}",
+        input.to_version, input.level
+    );
+    if input.level == "backward"
+        && !catalog_transition_is_compatible(input.level, input.from_version, input.to_version)
+    {
+        message.push_str(&format!(
+            ": a backward-compatible version must keep the major version and not go below {}",
+            input.from_version
+        ));
+    }
+    if let Some(from) = input.from_manifest {
+        let changes = non_auto_changes(from, input.to_manifest);
+        if !changes.is_empty() {
+            let behind: Vec<&crate::migration::diff::ChangeOperation> = match input.live_manifest {
+                Some(live) => {
+                    let in_live: std::collections::BTreeSet<String> = non_auto_changes(from, live)
+                        .iter()
+                        .map(change_identity)
+                        .collect();
+                    changes
+                        .iter()
+                        .filter(|change| in_live.contains(&change_identity(change)))
+                        .collect()
+                }
+                None => Vec::new(),
+            };
+            let own: Vec<&crate::migration::diff::ChangeOperation> = changes
+                .iter()
+                .filter(|change| !behind.iter().any(|b| std::ptr::eq(*b, *change)))
+                .collect();
+            if !behind.is_empty() {
+                message.push_str(&format!(
+                    ". {active} is behind the live database schema by {} op(s) the database \
+                     already has: {}. Advance the ACTIVE catalog first (reviewed transition: \
+                     plan, approve, apply, stage, activate); {status_hint}",
+                    behind.len(),
+                    change_list(&behind)
+                ));
+            }
+            if !own.is_empty() {
+                message.push_str(&format!(
+                    ". {} {} op(s) need review or are blocked: {}. Approve them through \
+                     `udb catalog transition plan --project {project} ...` then `approve`; \
+                     {status_hint}",
+                    if behind.is_empty() && input.live_manifest.is_some() {
+                        "The candidate's own changes:"
+                    } else if input.live_manifest.is_some() {
+                        "Separately, the candidate's own changes:"
+                    } else {
+                        "Changes from the ACTIVE catalog:"
+                    },
+                    own.len(),
+                    change_list(&own)
+                ));
+                if input.live_manifest.is_none() {
+                    message.push_str(
+                        ". If you did not make these changes, the ACTIVE catalog is stale \
+                         relative to the live schema: advance it before staging your change",
+                    );
+                }
+            }
+        }
+    }
+    catalog_admin_schema_status(operation, "catalog_transition_incompatible", message)
+}
+
 pub(super) fn catalog_compatibility_evidence(
     operation: &'static str,
     level: &str,
@@ -318,10 +485,18 @@ pub(super) fn catalog_compatibility_evidence(
         }
     };
     if !allowed {
-        return Err(catalog_admin_schema_status(
+        return Err(catalog_incompatible_status(
             operation,
-            "catalog_transition_incompatible",
-            format!("catalog content is not {level}-compatible with the exact ACTIVE catalog"),
+            &CatalogIncompatibility {
+                level,
+                project_id: "",
+                from_version,
+                from_integrity,
+                from_manifest,
+                to_version,
+                to_manifest,
+                live_manifest: None,
+            },
         ));
     }
     Ok(catalog_request_fingerprint(&[
@@ -1557,22 +1732,51 @@ impl DataBrokerRuntime {
                 )
                 .await?
             }
-            None => catalog_compatibility_evidence(
-                "stage_catalog",
-                compatibility_level,
-                validated_against
+            None => {
+                let from_version = validated_against
                     .as_ref()
                     .map(|row| row.1.as_str())
-                    .unwrap_or_default(),
-                validated_against
+                    .unwrap_or_default();
+                let from_integrity = validated_against
                     .as_ref()
                     .map(|row| row.4.as_str())
-                    .unwrap_or_default(),
-                validated_against_manifest.as_ref(),
-                version,
-                &manifest_integrity_sha256,
-                &manifest,
-            )?,
+                    .unwrap_or_default();
+                match catalog_compatibility_evidence(
+                    "stage_catalog",
+                    compatibility_level,
+                    from_version,
+                    from_integrity,
+                    validated_against_manifest.as_ref(),
+                    version,
+                    &manifest_integrity_sha256,
+                    &manifest,
+                ) {
+                    Ok(evidence) => evidence,
+                    Err(status) => {
+                        // Refused: re-explain it against the live schema (the
+                        // migration ledger) so drift the database already has
+                        // is told apart from the candidate's own changes. A
+                        // ledger read failure keeps the plain refusal.
+                        let Some(active) = validated_against_manifest.as_ref() else {
+                            return Err(status);
+                        };
+                        let live = self.load_last_manifest().await.ok().flatten();
+                        return Err(catalog_incompatible_status(
+                            "stage_catalog",
+                            &CatalogIncompatibility {
+                                level: compatibility_level,
+                                project_id: &project_id,
+                                from_version,
+                                from_integrity,
+                                from_manifest: Some(active),
+                                to_version: version,
+                                to_manifest: &manifest,
+                                live_manifest: live.as_ref(),
+                            },
+                        ));
+                    }
+                }
+            }
         };
         let validated_against_id = validated_against.as_ref().map(|row| row.0);
         let validated_against_checksum = validated_against
@@ -4835,78 +5039,6 @@ impl DataBrokerRuntime {
         })).collect(), total))
     }
 
-    /// Upsert a policy.  Returns the new/updated policy_id.
-    #[allow(clippy::too_many_arguments)]
-    pub async fn put_policy(
-        &self,
-        effect: &str,
-        service_identity: &str,
-        tenant_id: &str,
-        purpose: &str,
-        message_type: &str,
-        operation: &str,
-        required_scope: &str,
-        priority: i32,
-        enabled: bool,
-        policy_id: Option<i64>,
-    ) -> Result<i64, tonic::Status> {
-        let pool = self.pg_pool()?;
-        let abac_table = self.abac_policy_relation();
-        let new_id: i64 = if let Some(id) = policy_id {
-            sqlx::query_scalar(&format!(
-                "UPDATE {abac_table}
-                 SET effect=$1, service_identity=$2, tenant_id=$3, purpose=$4,
-                     message_type=$5, operation=$6, required_scope=$7, priority=$8, enabled=$9
-                 WHERE policy_id=$10
-                 RETURNING policy_id"
-            ))
-            .bind(effect)
-            .bind(service_identity)
-            .bind(tenant_id)
-            .bind(purpose)
-            .bind(message_type)
-            .bind(operation)
-            .bind(required_scope)
-            .bind(priority)
-            .bind(enabled)
-            .bind(id)
-            .fetch_one(pool)
-            .await
-            .map_err(|err| {
-                catalog_admin_internal_status(
-                    "put_policy_update",
-                    format!("put_policy update failed: {err}"),
-                )
-            })?
-        } else {
-            sqlx::query_scalar(&format!(
-                "INSERT INTO {abac_table}
-                     (effect, service_identity, tenant_id, purpose, message_type,
-                      operation, required_scope, priority, enabled)
-                 VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
-                 RETURNING policy_id"
-            ))
-            .bind(effect)
-            .bind(service_identity)
-            .bind(tenant_id)
-            .bind(purpose)
-            .bind(message_type)
-            .bind(operation)
-            .bind(required_scope)
-            .bind(priority)
-            .bind(enabled)
-            .fetch_one(pool)
-            .await
-            .map_err(|err| {
-                catalog_admin_internal_status(
-                    "put_policy_insert",
-                    format!("put_policy insert failed: {err}"),
-                )
-            })?
-        };
-        Ok(new_id)
-    }
-
     /// Delete a policy by ID.
     pub async fn delete_policy(&self, policy_id: i64) -> Result<(), tonic::Status> {
         let pool = self.pg_pool()?;
@@ -5731,5 +5863,102 @@ mod migration_approval_tests {
         assert!(content.contains("CREATE TABLE IF NOT EXISTS"));
         assert!(content.contains("\"public\".\"widgets\""));
         assert!(content.contains("PRIMARY KEY"));
+    }
+}
+
+#[cfg(test)]
+mod catalog_incompatibility_message_tests {
+    use super::*;
+    use crate::generation::manifest::{ManifestColumn, ManifestIndex, ManifestTable};
+
+    fn manifest(indexes: &[&str]) -> CatalogManifest {
+        CatalogManifest {
+            checksum_sha256: indexes.join(","),
+            tables: vec![ManifestTable {
+                // The diff skips a table whose checksum is unchanged.
+                checksum_sha256: format!("lessons:{}", indexes.join(",")),
+                schema: "edu".to_string(),
+                table: "lessons".to_string(),
+                columns: vec![ManifestColumn {
+                    column_name: "title".to_string(),
+                    field_name: "title".to_string(),
+                    sql_type: "TEXT".to_string(),
+                    ..ManifestColumn::default()
+                }],
+                indexes: indexes
+                    .iter()
+                    .map(|name| ManifestIndex {
+                        name: (*name).to_string(),
+                        columns: vec!["title".to_string()],
+                        where_clause: format!("title <> '{name}'"),
+                        ..ManifestIndex::default()
+                    })
+                    .collect(),
+                ..ManifestTable::default()
+            }],
+            ..CatalogManifest::default()
+        }
+    }
+
+    #[test]
+    fn a_stale_active_catalog_is_told_apart_from_the_candidates_own_changes() {
+        // ACTIVE has idx_a and idx_b. The live database already dropped idx_a
+        // (the ACTIVE catalog is behind it); the candidate also drops idx_b.
+        let active = manifest(&["idx_a", "idx_b"]);
+        let live = manifest(&["idx_b"]);
+        let candidate = manifest(&[]);
+        let status = catalog_incompatible_status(
+            "stage_catalog",
+            &CatalogIncompatibility {
+                level: "backward",
+                project_id: "virtued",
+                from_version: "1.2.0",
+                from_integrity: "0123456789abcdef0123",
+                from_manifest: Some(&active),
+                to_version: "1.3.0",
+                to_manifest: &candidate,
+                live_manifest: Some(&live),
+            },
+        );
+        assert_eq!(status.code(), tonic::Code::FailedPrecondition);
+        let message = status.message();
+        assert!(
+            message.contains("is behind the live database schema by 1 op(s)"),
+            "{message}"
+        );
+        assert!(message.contains("idx_a"), "{message}");
+        assert!(
+            message.contains("the candidate's own changes: 1 op(s)"),
+            "{message}"
+        );
+        assert!(message.contains("idx_b"), "{message}");
+        assert!(
+            message.contains("udb catalog transition status --project virtued"),
+            "{message}"
+        );
+        assert!(message.contains("version 1.2.0"), "{message}");
+
+        // Without the live schema the refusal still lists the ops and says what
+        // a stale ACTIVE catalog would look like.
+        let status = catalog_incompatible_status(
+            "stage_catalog",
+            &CatalogIncompatibility {
+                level: "backward",
+                project_id: "",
+                from_version: "1.2.0",
+                from_integrity: "0123",
+                from_manifest: Some(&active),
+                to_version: "1.3.0",
+                to_manifest: &candidate,
+                live_manifest: None,
+            },
+        );
+        let message = status.message();
+        assert!(
+            message.contains("Changes from the ACTIVE catalog: 2 op(s)"),
+            "{message}"
+        );
+        assert!(message.contains("ACTIVE catalog is stale"), "{message}");
+        assert!(message.contains("--project <project>"), "{message}");
     }
 }

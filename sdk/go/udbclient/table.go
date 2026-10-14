@@ -392,7 +392,7 @@ func classify(err error) error {
 		reason = e.Reason()
 	}
 	switch {
-	case reason == "UDB_CAS_CONFLICT" || reason == "UDB_REVISION_CONFLICT" || reason == "UDB_CAS_ROW_MISSING" || IsCASConflict(err):
+	case reason == "UDB_CAS_CONFLICT" || reason == "UDB_REVISION_CONFLICT" || reason == "UDB_CAS_ROW_MISSING":
 		return fmt.Errorf("%w: %w", ErrConflict, err)
 	case reason == "UDB_NO_ROWS_AFFECTED" || code == codes.NotFound:
 		return fmt.Errorf("%w: %w", ErrNotFound, err)

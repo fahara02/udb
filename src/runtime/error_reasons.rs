@@ -92,6 +92,9 @@ reasons! {
     POLICY_DENIED = "UDB_POLICY_DENIED", Permission, PermissionDenied,
         "No policy rule allows this action for the caller; ErrorDetail.missing names the rule that would.",
         "Add the rule (`udb authz explain` shows the closest candidate and the attribute that failed).";
+    CREDENTIAL_TYPE_NOT_ADMITTED = "UDB_CREDENTIAL_TYPE_NOT_ADMITTED", Permission, PermissionDenied,
+        "The RPC's endpoint_security.allowed_credential_types does not admit the caller's credential type; missing names credential_type, allowed_credential_types and rpc.",
+        "Call the RPC with an admitted credential type (a staff user's bearer for staff-only RPCs, a service bearer from Authenticate{api_key} for workload RPCs); a policy grant does not change admission.";
     REDACTED_VALUE_WRITE = "UDB_REDACTED_VALUE_WRITE", Redacted, InvalidArgument,
         "A write tried to store the redaction placeholder in a protected column, which would erase the real value.",
         "Read the row with the PII read scope before writing it back, or leave the column out of the write.";
@@ -101,18 +104,18 @@ reasons! {
     UNKNOWN_MESSAGE_TYPE = "UDB_UNKNOWN_MESSAGE_TYPE", Schema, InvalidArgument,
         "The message type is not in the project's active catalog.",
         "Stage and activate a catalog that contains the entity (`udb catalog stage` / `udb catalog activate`).";
+    CATALOG_SCHEMA_MISMATCH = "UDB_CATALOG_SCHEMA_MISMATCH", Schema, FailedPrecondition,
+        "A statement built from the active catalog named a column or table the live database does not have; column and missing.table name it.",
+        "Line the catalog and the database up: `udb catalog status --project <id>` shows the ACTIVE catalog; apply its migration (`udb catalog transition status`, `udb plan`) or activate a catalog that matches the live schema.";
     GRANT_OWNED_BY_OTHER = "UDB_GRANT_OWNED_BY_OTHER", Conflict, FailedPrecondition,
         "The service identity is already granted to another service account; a grant is never moved implicitly.",
         "Use a distinct service identity, or move the grant on purpose with `udb auth grant transfer` (or `udb identity apply --allow-transfer`).";
     ENVELOPE_VERSION_UNSUPPORTED = "UDB_ENVELOPE_VERSION_UNSUPPORTED", Schema, FailedPrecondition,
-        "An event's envelope_version is newer than the consumer understands.",
-        "Upgrade the consumer's SDK to the broker's version.";
+        "An event's envelope_version is missing (refused since 0.6.0), older than the current shape, or newer than the reader understands.",
+        "Stamp \"envelope_version\": 2 on every envelope you build, and keep the SDK on the broker's release.";
     PASSWORD_SETUP_REQUIRED = "UDB_PASSWORD_SETUP_REQUIRED", Validation, FailedPrecondition,
         "The invited account has no user-selected password yet and cannot start a login session.",
         "Complete ResetPassword using the invitation code delivered to the account email, then log in.";
-    POLICY_WRONG_SURFACE = "UDB_POLICY_WRONG_SURFACE", Validation, FailedPrecondition,
-        "DataBroker.PutPolicy writes the legacy ABAC table, which does not authorize requests.",
-        "Use AuthzService.PutAuthzPolicy or udb policy apply; UDB_ALLOW_LEGACY_PUT_POLICY=true is a temporary migration override.";
     CAPABILITY_UNSUPPORTED = "UDB_CAPABILITY_UNSUPPORTED", Capability, FailedPrecondition,
         "The backend or service cannot perform the requested capability; capability_required names it.",
         "Use a backend or enabled service that supports the named capability.";

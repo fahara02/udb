@@ -185,6 +185,50 @@ fn foreign_key_action(action: &str) -> Result<&'static str, tonic::Status> {
     }
 }
 
+/// Why a reviewed transition refuses a table-security change: it names every
+/// changed security field with its old and new value, and the path that does
+/// apply it. Only `retention_class` (catalog compliance metadata, no DDL) is
+/// recorded by a reviewed transition; the other fields (isolation, encryption,
+/// audit, PII, residency) have no native applied proof, so recording them here
+/// would claim enforcement that never ran.
+fn security_change_refusal(
+    schema: &str,
+    table: &str,
+    old: &crate::generation::manifest::ManifestTableSecurity,
+    new: &crate::generation::manifest::ManifestTableSecurity,
+) -> String {
+    let to_map =
+        |security: &crate::generation::manifest::ManifestTableSecurity| match serde_json::to_value(
+            security,
+        ) {
+            Ok(serde_json::Value::Object(map)) => map,
+            _ => serde_json::Map::new(),
+        };
+    let (old, new) = (to_map(old), to_map(new));
+    let mut changed: Vec<String> = new
+        .iter()
+        .filter(|(key, value)| old.get(*key) != Some(*value))
+        .map(|(key, value)| {
+            format!(
+                "{key} {} -> {value}",
+                old.get(key).cloned().unwrap_or(serde_json::Value::Null)
+            )
+        })
+        .collect();
+    changed.extend(
+        old.iter()
+            .filter(|(key, _)| !new.contains_key(*key))
+            .map(|(key, value)| format!("{key} {value} -> (unset)")),
+    );
+    format!(
+        "only retention_class changes are applied in a reviewed catalog transition; table \
+         {schema}.{table} also changes {}. Those need the startup migration path (deploy the \
+         protos with an approved plan from `udb plan --emit-approval-plan <path>`), or revert \
+         them in the candidate and transition the retention_class change alone",
+        changed.join(", ")
+    )
+}
+
 fn allowed_changes(
     base: &CatalogManifest,
     target: &CatalogManifest,
@@ -194,7 +238,27 @@ fn allowed_changes(
         if change.safety == ChangeSafety::Blocked || change.data_destructive {
             return Err(refusal(
                 "reviewed_transition_blocked",
-                "blocked or data-destructive changes cannot use reviewed catalog activation",
+                format!(
+                    "{:?} on {}.{}{} is {} and cannot use reviewed catalog activation{}",
+                    change.kind,
+                    change.schema,
+                    change.table,
+                    if change.column.is_empty() {
+                        String::new()
+                    } else {
+                        format!(".{}", change.column)
+                    },
+                    if change.data_destructive {
+                        "data-destructive"
+                    } else {
+                        "blocked"
+                    },
+                    if change.blocked_reason.is_empty() {
+                        String::new()
+                    } else {
+                        format!(": {}", change.blocked_reason)
+                    },
+                ),
             ));
         }
         // These operations have native transactional SQL and observable target
@@ -214,7 +278,12 @@ fn allowed_changes(
         ) {
             return Err(refusal(
                 "reviewed_operation_unsupported",
-                format!("native reviewed proof is unavailable for {:?}", change.kind),
+                format!(
+                    "native reviewed proof is unavailable for {:?} on {}.{}; reviewed transitions \
+                     apply only AddSchema, CreateTable, AddColumn, DropNotNull, AddForeignKey, \
+                     CreateIndex, DropIndex and retention_class changes",
+                    change.kind, change.schema, change.table
+                ),
             ));
         }
         if change.kind == ChangeKind::AlterTableSecurity {
@@ -240,7 +309,12 @@ fn allowed_changes(
             if old_security != new_security {
                 return Err(refusal(
                     "reviewed_security_application_unsupported",
-                    "only exact reviewed retention-class metadata changes have native catalog proof",
+                    security_change_refusal(
+                        &change.schema,
+                        &change.table,
+                        &old_security,
+                        &new_security,
+                    ),
                 ));
             }
         }
@@ -2079,5 +2153,45 @@ impl DataBrokerRuntime {
             "reviewed_operation_fingerprints":plan.reviewed_operation_fingerprints,"approved_by":row.0,"approved_at_unix":row.1,
             "application_state":row.2,"applied_operations_hash":row.3,"application_evidence_sha256":row.4,"applied_at_unix":row.5}),
         ))
+    }
+}
+
+#[cfg(test)]
+mod refusal_message_tests {
+    use super::*;
+    use crate::generation::manifest::ManifestTableSecurity;
+
+    #[test]
+    fn a_non_retention_security_change_names_the_field_values_and_the_path() {
+        let old = ManifestTableSecurity {
+            retention_class: "evidence".to_string(),
+            encryption_profile: String::new(),
+            ..ManifestTableSecurity::default()
+        };
+        let new = ManifestTableSecurity {
+            retention_class: String::new(),
+            encryption_profile: "field_aead".to_string(),
+            ..ManifestTableSecurity::default()
+        };
+        let mut old_cleared = old.clone();
+        let mut new_cleared = new.clone();
+        old_cleared.retention_class.clear();
+        new_cleared.retention_class.clear();
+        let message =
+            security_change_refusal("udb_evidence", "receipts", &old_cleared, &new_cleared);
+        assert!(
+            message.starts_with("only retention_class changes are applied"),
+            "{message}"
+        );
+        assert!(message.contains("udb_evidence.receipts"), "{message}");
+        assert!(
+            message.contains("encryption_profile \"\" -> \"field_aead\""),
+            "{message}"
+        );
+        assert!(!message.contains("retention_class \""), "{message}");
+        assert!(
+            message.contains("udb plan --emit-approval-plan"),
+            "{message}"
+        );
     }
 }

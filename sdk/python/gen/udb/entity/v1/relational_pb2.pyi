@@ -40,11 +40,10 @@ class Row(_message.Message):
     def __init__(self, fields: _Optional[_Mapping[str, _struct_pb2.Value]] = ...) -> None: ...
 
 class RecordSet(_message.Message):
-    __slots__ = ("records_json", "rows", "next_page_token", "total_count", "record_revisions", "has_more", "exact_total", "redacted_fields")
+    __slots__ = ("records_json", "rows", "next_page_token", "record_revisions", "has_more", "exact_total", "redacted_fields")
     RECORDS_JSON_FIELD_NUMBER: _ClassVar[int]
     ROWS_FIELD_NUMBER: _ClassVar[int]
     NEXT_PAGE_TOKEN_FIELD_NUMBER: _ClassVar[int]
-    TOTAL_COUNT_FIELD_NUMBER: _ClassVar[int]
     RECORD_REVISIONS_FIELD_NUMBER: _ClassVar[int]
     HAS_MORE_FIELD_NUMBER: _ClassVar[int]
     EXACT_TOTAL_FIELD_NUMBER: _ClassVar[int]
@@ -52,12 +51,11 @@ class RecordSet(_message.Message):
     records_json: _containers.RepeatedScalarFieldContainer[bytes]
     rows: _containers.RepeatedCompositeFieldContainer[Row]
     next_page_token: str
-    total_count: int
     record_revisions: _containers.RepeatedScalarFieldContainer[str]
     has_more: bool
     exact_total: int
     redacted_fields: _containers.RepeatedScalarFieldContainer[str]
-    def __init__(self, records_json: _Optional[_Iterable[bytes]] = ..., rows: _Optional[_Iterable[_Union[Row, _Mapping]]] = ..., next_page_token: _Optional[str] = ..., total_count: _Optional[int] = ..., record_revisions: _Optional[_Iterable[str]] = ..., has_more: bool = ..., exact_total: _Optional[int] = ..., redacted_fields: _Optional[_Iterable[str]] = ...) -> None: ...
+    def __init__(self, records_json: _Optional[_Iterable[bytes]] = ..., rows: _Optional[_Iterable[_Union[Row, _Mapping]]] = ..., next_page_token: _Optional[str] = ..., record_revisions: _Optional[_Iterable[str]] = ..., has_more: bool = ..., exact_total: _Optional[int] = ..., redacted_fields: _Optional[_Iterable[str]] = ...) -> None: ...
 
 class SelectRequest(_message.Message):
     __slots__ = ("context", "message_type", "filter", "fields", "limit", "page_token", "sort", "cache", "include_revision", "include_total")

@@ -126,9 +126,9 @@ which one you tripped is 90% of the fix.
 Every `DataBroker` data RPC (`Select`, `SelectV2`, `Upsert`, `Delete`, `Update`,
 `BulkCas`, and the batch streams) is authorized by **one Casbin engine**,
 default-DENY. The old ABAC coarse gate (`data.select` vocab, the
-`udb_abac_policies` table, `DataBroker.PutPolicy`) is **removed** — those still
-exist as a vestigial write surface but **the data plane no longer reads them.
-Seeding `udb_abac_policies` will NOT fix your CRUD deny.**
+`udb_abac_policies` table, and the `DataBroker.PutPolicy` RPC that wrote it — the
+RPC was deleted in 0.6.0) is **removed**. **The data plane does not read that
+table; seeding it will NOT fix your CRUD deny.**
 
 The decision path: handler `authorize(security, message_type, "Select")` →
 `AuthzSnapshot::casbin_authorize`. The engine is fed from `udb_authz.policy_rules`
@@ -164,39 +164,52 @@ Plus the request itself must carry a **non-empty `purpose`** (else
   change.
 
 The deny messages you will see (verbatim, so you can grep):
-- Zero policies: ``no authz policy (default deny); seed the standard data-plane
-  policy for this tenant with `udb authz seed --tenant <tenant-uuid> --role
-  app_rw` (or AuthzService CreatePolicyRule/PutAuthzPolicy), then bind
+- Zero policies: ``no authz policy (default deny); declare a role-gated ALLOW
+  policy for this tenant and apply it with `udb policy apply -f <policies.yaml>
+  --tenant <tenant-uuid>` (or AuthzService PutAuthzPolicy), then bind
   principals to the role — or set UDB_ABAC_DEFAULT_ALLOW=true for local
   bootstrap (works only while zero policy rows exist)``
-- Policies exist, none match: ``denied by Casbin PERM model: no applicable
-  allow policy for action '<act>' on '<selectors>' (tenant '<t>'). Check the
-  three token traps: the action must be the RPC method name (Select/Upsert/
-  Delete/Update/BulkCas — NOT a data.* alias), the policy's tenant_id must be
-  this tenant UUID, and its object must match the message type. Seed it with
-  `udb authz seed --tenant <t> --role app_rw` (+ bind this principal to the
-  role)``
+- No rule names this action: ``denied by Casbin PERM model: no policy allows
+  action '<act>' on '<selectors>' for this caller in tenant '<t>'. A rule
+  matches only when its action is exactly '<act>' (the RPC method name, or the
+  typed store RPC's dotted token, never a data.* alias), its tenant is this
+  tenant UUID and its resource matches. To grant it, add `- {role: "<role>",
+  action: "<act>", resource: "<type>", effect: allow}` under `policies:` in the
+  tenant's policies file and run `udb policy apply -f <policies.yaml> --tenant
+  <t>` (apply reconciles the whole file, so keep the existing entries in it)``
+- Rules exist but none grants it: ``denied by Casbin PERM model: no allow rule
+  grants action '<act>' on '<selectors>' to this caller's identities or roles
+  in tenant '<t>'. Diagnosis: the closest rule in this tenant (<id>) fails on:
+  <what>. To grant it, ...`` (same grant step). The grant names the caller's
+  role when it holds one, else its identity (`subject:`).
+- Snapshot not reloaded yet: a deny right after `udb policy apply` or a role
+  binding ends with ``Note: this broker decided with an authz snapshot that
+  predates the latest durable policy/role revision ... Retry after <n>s before
+  changing policy``. Wait and retry; do not edit policy.
+- Credential type not admitted (native RPCs): ``credential type
+  SERVICE_ACCOUNT (service account) is not admitted for /<pkg>.<Svc>/<Rpc>:
+  this broker (udb <ver>) admits only BEARER_JWT, SESSION
+  (endpoint_security.allowed_credential_types); call it as a staff user ...``
+  (reason `UDB_CREDENTIAL_TYPE_NOT_ADMITTED`). No policy fixes this; use an
+  admitted credential.
 
-**The straightforward seeder + the two policy shapes:**
-- The **standard offline seeder**: `udb authz seed --tenant <canonical-UUID>
-  [--role app_rw] [--entity <fqn>…] [--action <A>…] [--emit <path>]` — writes
-  role-gated Allow rows DIRECTLY into `udb_authz.policy_rules` (Postgres-direct
-  via `UDB_PG_DSN`; no running broker needed): idempotent, atomic, and every
-  `--action` is validated against the real RPC method names (a `data.*` alias
-  is rejected up front, so the classic silent-deny trap is impossible here).
-  `--emit <path>` additionally writes the version-controllable offline JSON
-  below so the seed is reproducible.
+**Policy as code + the two policy shapes:**
+- The **standard offline path**: `udb policy apply -f <policies.yaml>
+  --tenant <canonical-UUID>` — reconciles that tenant's rows in
+  `udb_authz.policy_rules` to the declared file (Postgres-direct via
+  `UDB_PG_DSN`; no running broker needed): one transaction, idempotent, and
+  `udb policy diff` previews it. (`udb authz seed` and `udb policy-seed` were
+  removed in 0.6.0.)
 - The **runtime** shape (`AuthzService.CreatePolicyRule` / `PutAuthzPolicy`,
   `udb auth policy put`): fields `{subject, domain, object, action, effect:
   "POLICY_EFFECT_ALLOW", tenant_id, project_id, ...}`. Effective immediately;
   this is what you call from app code or the CLI. **This is the one that
   actually feeds the enforced engine.**
-- The **offline JSON** shape (`UDB_ABAC_POLICY_FILE` + `udb policy-seed`, and the
-  `AuthzPolicy` lint format): `{effect, subject, tenant, resource, action,
-  required_scopes}`. `udb policy-seed` prints the `INSERT` SQL for
-  `udb_authz.policy_rules` to stdout; pipe it to `psql`. Convenient for
-  version-controlled seeds, but remember it's writing the *same* `policy_rules`
-  table.
+- The **offline file** shape (`udb policy apply|diff -f`, `udb policy-lint` via
+  `UDB_ABAC_POLICY_FILE`, the `AuthzPolicy` format): a list (or
+  `{tenant, policies}`) of `{effect, subject, role, tenant, resource, action,
+  required_scopes}`. Version-control it; `udb policy apply` writes the *same*
+  `policy_rules` table.
 
 **Governed mode:** if `governed_mode_enabled()` is on, direct `PutAuthzPolicy`/
 `CreatePolicyRule` are disabled and you must use the draft → approve → activate
@@ -254,8 +267,8 @@ grant doesn't hold.
 
 ### Surface 3 — the legacy ABAC table (dead for decisions)
 
-`udb_abac_policies` (written by `DataBroker.PutPolicy`, `udb`'s old
-`policy-seed`-to-that-table paths) is **no longer consulted** by any live
+`udb_abac_policies` (written by the removed `DataBroker.PutPolicy` RPC and
+`udb`'s old seeding paths) is **no longer consulted** by any live
 decision. If you inherited code or docs that seed it, that's why "the policy is
 there but I'm still denied." Migrate those to `policy_rules` (Surface 1).
 
@@ -400,7 +413,7 @@ $records = $client->select($req, $meta);
 | `x-service-identity` | calling service name |
 | `x-udb-client-catalog-version` | client's catalog/protocol version |
 | `authorization: Bearer <jwt>` | bearer credential |
-| `x-api-key: <key>` | API-key credential (native plane + data plane) |
+| `x-api-key: <key>` | raw API-key header the broker accepts; **SDKs never send it** — from 0.6.0 every SDK exchanges the key for a bearer |
 
 SDKs build these from a `Metadata`/`UdbMetadata` object — set tenant, project,
 scopes, purpose and a credential; never hand-craft headers. **A body-carried
@@ -454,12 +467,13 @@ grant** — do not look for `client_id`/`client_secret`):
 - **API key (recommended for machines):** `CreateApiKey{ owner_id: <service
   user_id>, owner_type: SERVICE_ACCOUNT, scopes ⊆ grant }` → returns a one-time
   `plain_key` shaped `udbk_<12hex>.<uuid>`. Save it; it is never shown again.
-  Use it two ways:
-  - **Directly** as `x-api-key` on native AND data-plane calls (validated against
-    the durable store + live grant on every request).
+  The SDKs use it one way only (0.6.0 removed every raw-key fallback):
   - **Exchanged for a JWT** via `Authenticate{api_key}` → a short access token
     with `account_kind=SERVICE_ACCOUNT`, `auth_method="api_key"`, scopes
-    re-attenuated to the *current* grant.
+    re-attenuated to the *current* grant. The SDK re-exchanges it before expiry.
+  - A hand-written client *can* still send it as a raw `x-api-key` header (the
+    broker validates it against the durable store + live grant), but no SDK
+    does, and a broker that mints no JWT cannot serve an SDK API key.
   Requires `UDB_API_KEY_HASH_SECRET` (falls back to `UDB_SESSION_HASH_SECRET`)
   on the broker. Keep it **stable**: changing it — or generating it per start —
   invalidates every API key.
@@ -496,17 +510,21 @@ in the token but is **dropped before the data-plane authz Principal**, so you
 gate on subject id, `service_identity`, role, or scope instead.
 
 **SDK wiring for a service (Go, representative):**
-- **Static credential (the honest machine path):** `udbclient.NewUdb(ctx,
-  Config{ Target, AuthTarget, Credentials: { APIKey: "udbk_…" } })` — or
-  `BearerToken`. The SDK attaches `x-api-key` / `authorization` on every call.
-  **No auto-refresh** — you own token lifetime; on expiry, re-exchange the API
-  key and `SetAPIKey`/`SetAuthorization` (hot-swap).
+- **API key (the machine path):** `udbclient.NewUdb(ctx,
+  Config{ Target, AuthTarget, Credentials: { APIKey: "udbk_…" } })`. The SDK
+  exchanges the key for a bearer at connect, sends only `authorization`, and
+  re-exchanges in the background before expiry. The raw key is never a header
+  (`Credentials.RawAPIKey` was removed in 0.6.0).
+- **Static bearer:** `Credentials: { Bearer: "…" }` — no auto-refresh; you own
+  its lifetime and hot-swap with `SetAuthorization`.
 - **Enterprise session (login+refresh):** `ConnectEnterprise` hard-requires
   username/password and runs a background bearer refresher — but since service
   accounts have no refresh token, a service using it will still hit expiry. It's
   the better fit for *human*-backed sessions.
-- TS/Python/PHP/Java/C# mirror the `x-api-key` / `authorization` model via their
-  generated clients + `set_credentials()`.
+- TS/Python mirror the exchange (`authenticateApiKeyAndAdopt` /
+  `authenticate_api_key_and_adopt`): no bearer minted → the call fails with a
+  named error; a re-exchange failing past expiry → calls fail closed until it
+  recovers. There is no raw `x-api-key` fallback.
 
 **Transport/config a service needs on the broker:** reach `UDB_AUTH_GRPC_ADDR`
 (`:50061`, open it beyond loopback for remote services); `UDB_JWT_PRIVATE_KEY`
@@ -528,9 +546,8 @@ gate on subject id, `service_identity`, role, or scope instead.
   (sessions-only); missing hash secret ⇒ preflight failure / API-key create error.
 
 ### API keys vs bearers, quick rules
-- **Data plane** accepts a JWT bearer, mTLS, OR an `x-api-key` (the API-key
-  data-plane principal path). If you present only an API key and get
-  `Unauthenticated`, the deployment likely requires JWT — exchange the key via
+- **Data plane** accepts a JWT bearer, mTLS, OR a scoped raw `x-api-key` from a
+  hand-written client. The SDKs always exchange the key via
   `Authenticate{api_key}` and send the bearer.
 - **Native plane** accepts a bearer (and API key / mTLS where the RPC opts in).
 - Per-key rate limits are enforced from real usage; see *rate limiting*.
@@ -555,8 +572,8 @@ gate on subject id, `service_identity`, role, or scope instead.
 - **Phone/email verification:** `SendPhoneVerification`/OTP → `VerifyOtp` marks
   verified.
 - **API-key rotation:** `RotateApiKey` issues a new secret; both may be valid for
-  an overlap window — swap the client credential (`SetAPIKey`) then revoke the
-  old.
+  an overlap window — reconnect the client with the new key (the SDK exchanges
+  it for a bearer) then revoke the old.
 - **Token introspection / JWKS:** `IntrospectToken` (is this token valid + its
   claims), `GetJwks` (public — verify tokens offline with the broker's public
   keys / `UDB_JWT_JWKS_URL`).
@@ -570,8 +587,8 @@ gate on subject id, `service_identity`, role, or scope instead.
 
 This is the section people come for. To make CRUD work for a principal on an
 entity, insert `policy_rules` rows with the exact tokens from *Surface 1*.
-The straightforward path is **`udb authz seed`** (Option D below): offline,
-validated action tokens, idempotent + atomic.
+The straightforward path is **`udb policy apply`** (Option C below): offline,
+version-controlled, idempotent + atomic.
 
 ### Option A — from app code, effective immediately
 
@@ -596,37 +613,26 @@ udb auth policy put --subject role:app_rw --action '*' \
 udb auth role bind --principal <user_id> --role app_rw --tenant <T-UUID>
 ```
 
-### Option C — offline, version-controlled seed → psql
+### Option C — `udb policy apply`: offline, version-controlled, idempotent (the straightforward path)
 
-Author a JSON array (the `AuthzPolicy` offline shape) and apply it:
-```json
-[{"effect":"allow","subject":"role:app_rw","tenant":"<T-UUID>","resource":"shop.v1.Customer","action":"Select"},
- {"effect":"allow","subject":"role:app_rw","tenant":"<T-UUID>","resource":"shop.v1.Customer","action":"Upsert"},
- {"effect":"allow","subject":"role:app_rw","tenant":"<T-UUID>","resource":"shop.v1.Customer","action":"Delete"},
- {"effect":"allow","subject":"role:app_rw","tenant":"<T-UUID>","resource":"shop.v1.Customer","action":"Update"}]
+Author the tenant's policy file (the `AuthzPolicy` offline shape) and reconcile:
+```yaml
+tenant: "<T-UUID>"
+policies:
+  - {effect: allow, role: app_rw, tenant: "<T-UUID>", resource: shop.v1.Customer, action: Select}
+  - {effect: allow, role: app_rw, tenant: "<T-UUID>", resource: shop.v1.Customer, action: Upsert}
+  - {effect: allow, role: app_rw, tenant: "<T-UUID>", resource: shop.v1.Customer, action: Delete}
+  - {effect: allow, role: app_rw, tenant: "<T-UUID>", resource: shop.v1.Customer, action: Update}
 ```
 ```bash
-UDB_ABAC_POLICY_FILE=authz-policies.json udb policy-seed | psql "$UDB_PG_DSN"
+UDB_PG_DSN="$DSN" udb policy diff  -f policies.yaml --tenant <T-UUID>   # preview
+UDB_PG_DSN="$DSN" udb policy apply -f policies.yaml --tenant <T-UUID>   # one transaction
+udb auth role bind --principal <user_id> --role app_rw --tenant <T-UUID>
 ```
-`udb policy-seed` prints a `BEGIN; DELETE …; INSERT …; COMMIT;` transaction for
-`udb_authz.policy_rules` — atomic by construction (which matters: recall the
-default-allow flip). Commit this file to your repo as the project's policy
-scaffold.
-
-### Option D — `udb authz seed`: offline, validated, idempotent (the straightforward path)
-
-```bash
-UDB_PG_DSN="$DSN" udb authz seed --tenant <T-UUID> --role app_rw
-# → Allow rows for Select/Upsert/Delete/Update/BulkCas on `*`, role app_rw
-UDB_PG_DSN="$DSN" udb authz seed --tenant <T-UUID> --role app_rw \
-    --entity shop.v1.Customer --emit authz-policies.json
-# → narrowed to one entity; --emit keeps a version-controlled copy
-```
-Postgres-direct (no running broker), idempotent + atomic, and `--action` is
-validated against the real RPC method names — a `data.*` alias is rejected up
-front. Repeat `--entity` to narrow the wildcard; then bind principals exactly
-as in the other options (`udb auth role bind --principal <id> --role app_rw
---tenant <T-UUID>`).
+Postgres-direct (no running broker), touches only that tenant, and re-applying
+the same file changes nothing — atomic by construction (which matters: recall
+the default-allow flip). Commit the file to your repo as the project's policy
+scaffold. (`udb authz seed` and `udb policy-seed` were removed in 0.6.0.)
 
 ### Checklist that prevents 90% of denies
 - `action` ∈ `{Select, Upsert, Delete, Update, BulkCas, BatchSelect,
@@ -1189,9 +1195,9 @@ generated native clients on the auth channel; `MutationOutcome` exposes
 services via the generated clients pointed at the auth endpoint; `wasReplay($r)`
 for idempotent-replay detection.
 
-**Credential hot-swap (all SDKs):** `set_credentials()` / `SetAuthorization` /
-`SetAPIKey` swaps the token without rebuilding the channel — use it on rotation
-and on API-key→bearer re-exchange.
+**Credential hot-swap (all SDKs):** `set_credentials()` / `SetAuthorization`
+swaps the bearer without rebuilding the channel. API-key→bearer re-exchange is
+automatic; the raw key is never a header.
 
 ---
 
@@ -1240,9 +1246,9 @@ acked deliveries). Use it for projections, cache invalidation, and integrations.
 1. **Kafka** configured on the broker (`UDB_KAFKA_BROKERS`) — otherwise it fails
    with "CDC tailer is not configured".
 2. The **`udb:cdc:read`** scope on the caller.
-3. A Casbin **`PublishCDC` allow rule per topic** (object = the topic). Seed it
-   offline with `udb authz seed --action PublishCDC --entity <topic> ...`, or
-   online with `AuthzService.CreatePolicyRule{object: <topic>, action: PublishCDC}`.
+3. A Casbin **`PublishCDC` allow rule per topic** (object = the topic). Declare
+   it in the tenant's policy file (`resource: <topic>, action: PublishCDC`) and
+   `udb policy apply`, or add it online with `AuthzService.CreatePolicyRule{object: <topic>, action: PublishCDC}`.
 
 Go SDK: from 0.5.25 server streams (PublishCDC, LiveQuery) no longer inherit
 `Options.CallTimeout`/`UDB_DEADLINE`; give the stream context its own deadline
@@ -1300,12 +1306,11 @@ a "did you mean …?" suggestion.
 | `udb auth bootstrap user --username … --tenant acme …` | First offline admin. Prints the canonical tenant UUID — **capture it**. Seeds only the org-owner wildcard policy; you still seed per-entity rows. |
 | `udb auth api-key-create …` | Mint an API key (owner must be an active service account + grant). |
 | `udb auth policy put --subject role:R --action '*' --resource <fqn> --effect allow --tenant <UUID>` | Write a `policy_rules` Allow via `PutAuthzPolicy` (needs a running broker). |
+| `udb policy apply -f <policies.yaml> --tenant <UUID>` (`udb policy diff` to preview) | THE offline policy path: reconcile one tenant's `udb_authz.policy_rules` rows to a version-controlled file in one transaction (Postgres-direct, idempotent). Replaces `udb authz seed` / `udb policy-seed` (removed in 0.6.0). |
 | `udb auth role bind --principal <id> --role R --tenant <UUID>` | Bind a principal to a role. |
 | `udb auth role unbind --principal <id> --role R --tenant <UUID>` / `role create --code R` / `role list` / `role assignments --user <id>` | Revoke a binding (re-put expired), create/list roles, list AssignRole assignments. `R` is the bare role code, never `role:R`. |
 | `udb auth relation put …` | Write a ReBAC tuple. |
 | `udb auth grant …` | Service-account grant lifecycle. |
-| `udb authz seed --tenant <UUID> [--role R] [--entity <fqn>…] [--emit <file>]` | THE straightforward offline seeder: role-gated Allow rows (`Select`/`Upsert`/`Delete`/`Update`/`BulkCas` — validated tokens) directly into `udb_authz.policy_rules` (Postgres-direct, idempotent + atomic). Then bind principals with `udb auth role bind`. |
-| `udb policy-seed` (with `UDB_ABAC_POLICY_FILE`) | Print the atomic `policy_rules` INSERT SQL to stdout → pipe to `psql`. Offline. |
 | `udb policy-lint` | Lint an offline policy file (CI-safe, non-zero on breakage). |
 | `udb authz simulate` | "What would change if this policy bundle shipped" (read-only). |
 
@@ -1374,7 +1379,7 @@ strings. General map:
 | gRPC status | Most likely cause |
 |---|---|
 | `UNIMPLEMENTED` | Native-service call sent to the **data target** — dial `authTarget`/`:50061`. |
-| `UNAUTHENTICATED` | Missing/invalid bearer, or empty tenant. On the data plane an `x-api-key` may be accepted; if not, exchange it for a JWT (`Authenticate{api_key}`) and send `authorization: Bearer <jwt>`. |
+| `UNAUTHENTICATED` | Missing/invalid bearer, or empty tenant. An API key is exchanged for a JWT (`Authenticate{api_key}`, which the SDKs do for you) and sent as `authorization: Bearer <jwt>`. |
 | `PERMISSION_DENIED` | See the decision tree below. |
 | `INVALID_ARGUMENT "tenant isolation requires filter on tenant_id"` | A tenant-scoped read/delete MUST include `tenant_id` (the UUID) in the filter. |
 | `FAILED_PRECONDITION` | Native service disabled/not mounted (backend missing — Vault sealed, no Redis/Kafka/ledger), wrong lifecycle (apply before approve), governed-mode direct policy write, feature needs config (TURN secret). |
@@ -1391,9 +1396,9 @@ strings. General map:
    scope to its **grant** first, then re-mint. Check
    `docs/generated/authn-authz-rpc-inventory.md`.
 3. **On a DATA call (`:50051`)?** → it's Casbin (Surface 1):
-   - Message "no authz policy (default deny)" → **zero policy rows**. Seed them
-     — straightforward: `udb authz seed --tenant <T-UUID> --role app_rw`
-     (Option D; or A/B/C), then `udb auth role bind`; or
+   - Message "no authz policy (default deny)" → **zero policy rows**. Add them
+     — straightforward: `udb policy apply -f policies.yaml --tenant <T-UUID>`
+     (Option C; or A/B), then `udb auth role bind`; or
      `UDB_ABAC_DEFAULT_ALLOW=true` for dev.
    - Message "no applicable allow policy for action '…'" → a row exists but a
      token is wrong. Check, in order: **`action`** is the method name
@@ -1460,24 +1465,18 @@ udb auth bootstrap user --username admin --email admin@x.com \
 
 **3. SEED authorization, or every data RPC is `PERMISSION_DENIED`** (default-deny;
 the org-owner wildcard covers the admin only). Straightforward path — offline,
-validated action tokens, idempotent + atomic:
+version-controlled, idempotent + atomic: author the policy file using the
+**real action tokens** and the **tenant UUID**, then apply it:
+```json
+[{"effect":"allow","role":"app_rw","tenant":"<TENANT_UUID>","resource":"*","action":"Select"},
+ {"effect":"allow","role":"app_rw","tenant":"<TENANT_UUID>","resource":"*","action":"Upsert"},
+ {"effect":"allow","role":"app_rw","tenant":"<TENANT_UUID>","resource":"*","action":"Delete"},
+ {"effect":"allow","role":"app_rw","tenant":"<TENANT_UUID>","resource":"*","action":"Update"}]
+```
 ```bash
-UDB_PG_DSN="$DSN" udb authz seed --tenant <TENANT_UUID> --role app_rw
-# → Allow Select/Upsert/Delete/Update/BulkCas on * for role app_rw
+UDB_PG_DSN="$DSN" udb policy apply -f authz-policies.json --tenant <TENANT_UUID>
 # then bind principals to the role (runtime): udb auth role bind --principal <id> --role app_rw --tenant <UUID>
 ```
-Version-controlled alternative (same `policy_rules` table): author the offline
-JSON using the **real action tokens** and the **tenant UUID**, seed atomically:
-```json
-[{"effect":"allow","subject":"role:app_rw","tenant":"<TENANT_UUID>","resource":"*","action":"Select"},
- {"effect":"allow","subject":"role:app_rw","tenant":"<TENANT_UUID>","resource":"*","action":"Upsert"},
- {"effect":"allow","subject":"role:app_rw","tenant":"<TENANT_UUID>","resource":"*","action":"Delete"},
- {"effect":"allow","subject":"role:app_rw","tenant":"<TENANT_UUID>","resource":"*","action":"Update"}]
-```
-```bash
-UDB_ABAC_POLICY_FILE=authz-policies.json udb policy-seed | psql "$UDB_PG_DSN"
-```
-(`udb authz seed --emit authz-policies.json` produces exactly this file.)
 Or from app code: `AuthzService.PutAuthzPolicy` + `AssignRole`. Dev shortcut:
 `UDB_ABAC_DEFAULT_ALLOW=true` (only until row #1 exists).
 
@@ -1550,10 +1549,9 @@ udb auth bootstrap user --username admin --email admin@x.com \
     --password "$ADMIN_PW" --tenant acme --project default
 # → tenant_id = 00000000-0000-0000-0000-0000000d0001   (call it $T)
 
-# 3) seed authorization — straightforward: `udb authz seed` (offline, validated
-#    action tokens, idempotent + atomic); --emit keeps a version-controlled copy
-udb authz seed --tenant "$T" --role app_rw --emit authz.json
-# (version-controlled alternative: UDB_ABAC_POLICY_FILE=authz.json udb policy-seed | psql "$UDB_PG_DSN")
+# 3) apply authorization — straightforward: `udb policy apply` (offline,
+#    version-controlled, idempotent + atomic) over a committed policy file
+udb policy apply -f authz.json --tenant "$T"
 
 # 4) bring up serve env, then serve (wait for the ready line)
 export UDB_JWT_PRIVATE_KEY=... UDB_JWT_PUBLIC_KEY=... \
@@ -1588,12 +1586,13 @@ binding (data) — run the decision tree.
   `conflict_fields` for merge). A replay returns `was_duplicate=true`.
 - **…grant a new entity to an existing app?** Add one `policy_rules` row per
   action (or `action:*`) for your role + object=FQN, tenant=UUID. `udb auth
-  policy put …` / `PutAuthzPolicy` — or `udb authz seed --entity <fqn>` to
-  narrow an existing seeded role.
+  policy put …` / `PutAuthzPolicy` — or add the rows to the tenant's policy
+  file and `udb policy apply`.
 - **…grant a service access?** Add the scope to its `ServiceAccountGrant`
   (native) AND bind it to your data role (`AssignRole`).
 - **…rotate a token/key without downtime?** `set_credentials()` /
-  `SetAuthorization` / `SetAPIKey` — hot-swap, no channel rebuild.
+  `SetAuthorization` — hot-swap the bearer, no channel rebuild; for a rotated
+  API key, connect with the new key (it is exchanged) before revoking the old.
 - **…read my own write immediately?** Attach the write receipt as a fence:
   `select(..., metadata.afterWrite(resp.write_receipt))`.
 - **…add a column?** Add a nullable/`default_value` field with the next free
@@ -1714,9 +1713,9 @@ authz, and events apply **uniformly** across all backends.
 - **Two authz surfaces, two cures:** data deny → a Casbin **policy row**; native
   deny → a token **scope**. Never seed a policy to fix a native scope problem, or
   vice-versa.
-- **Seeding the wrong table:** `udb_abac_policies` (`DataBroker.PutPolicy`) is
-  DEAD for decisions; seed `udb_authz.policy_rules` (`udb authz seed`/
-  `PutAuthzPolicy`/`CreatePolicyRule`/`policy-seed`).
+- **Seeding the wrong table:** `udb_abac_policies` (the removed
+  `DataBroker.PutPolicy`) is DEAD for decisions; seed `udb_authz.policy_rules` (`udb policy apply`/
+  `PutAuthzPolicy`/`CreatePolicyRule`).
 - **A service account needs a `ServiceAccountGrant`** or it cannot authenticate.
   "Works as a user, fails as a service" = missing/inactive grant.
 - **No client-credentials grant.** Machines use API keys or password login. No

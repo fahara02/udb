@@ -687,7 +687,7 @@ unless noted. Entry points are real `pub` names you can grep.
   over `udb_authz.policy_rules`; RBAC+ABAC+ReBAC+explicit-deny+required-scopes.
   Deny decided in Rust before Casbin (Rust effector can't deny-override
   reliably). `required_scopes` refine an Allow ONLY. Empty-policy message names
-  `udb_authz.policy_rules` and points at `udb authz seed`.
+  `udb_authz.policy_rules` and points at `udb policy apply`.
 - **Policy engine seam** (`runtime/authz/policy_engine.rs`): pluggable
   `decide/explain/lint/bundle` so a future Cedar/OPA can slot in.
 - **Signed bundles** (`runtime/authz/bundle.rs`): HMAC-SHA256-signed snapshot for
@@ -806,7 +806,7 @@ Each is a proto-driven gRPC service, no in-memory store. Read the per-service
 - **`data.*` vs real action tokens** — the data plane matches RPC method names
   (`Select`/`Upsert`/`Delete`/`Update`/`BulkCas`), never `data.select`.
 - **Two authz surfaces, two cures** — a data deny needs a policy row
-  (`udb authz seed`); a native deny needs a scope on the grant.
+  (`udb policy apply`); a native deny needs a scope on the grant.
 
 ---
 

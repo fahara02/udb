@@ -1063,7 +1063,6 @@ fn full_service_descriptor_surface_snapshot() {
                 "PreviewCdcRedaction",
                 "PublishCDC",
                 "PutObject",
-                "PutPolicy",
                 "QuarantineDlqEvent",
                 "ReloadPolicies",
                 "ReplayDlqEvent",
@@ -1492,7 +1491,6 @@ async fn get_capabilities_includes_policy_rpcs() {
     let rpcs = &resp.get_ref().supported_rpcs;
     for name in [
         "ListPolicies",
-        "PutPolicy",
         "DeletePolicy",
         "ReloadPolicies",
         "LintPolicies",
@@ -1844,7 +1842,7 @@ fn webrtc_peer_policy_denials_carry_policy_detail() {
 // These drive `DataBrokerService::authorize()` through the Casbin decision
 // engine (the ONLY broker authz path), so the broker-level allow/deny is
 // exercised deterministically — no live Postgres, no gRPC server. The broker
-// passes the raw RPC name (`Select`/`Upsert`/`PutPolicy`) as the operation, so
+// passes the raw RPC name (`Select`/`Upsert`/`DeletePolicy`) as the operation, so
 // a matching policy carries the same operation string.
 
 fn test_authz_snapshot(
@@ -1939,8 +1937,8 @@ async fn broker_v2_select_denied_without_policy() {
         err.message()
     );
     assert!(
-        err.message().contains("udb authz seed"),
-        "deny message must point at the standard seeding command: {}",
+        err.message().contains("udb policy apply"),
+        "deny message must point at the policy apply command: {}",
         err.message()
     );
 }
@@ -1959,11 +1957,11 @@ async fn broker_v2_upsert_allowed_with_matching_policy() {
 #[tokio::test]
 async fn broker_v2_admin_rpc_denied_without_grant() {
     // 127: a read grant does not authorize an admin mutation under v2 — the
-    // operation selector must match, so PutPolicy is denied.
+    // operation selector must match, so DeletePolicy is denied.
     let svc = v2_service(vec![allow_policy("Select", "udb:read")]);
     let ctx = billing_ctx(&["udb:read", "udb:admin"]);
     let err = svc
-        .authorize(&ctx, "Policy", "PutPolicy")
+        .authorize(&ctx, "Policy", "DeletePolicy")
         .await
         .unwrap_err();
     assert_eq!(err.code(), tonic::Code::PermissionDenied);
@@ -1972,7 +1970,7 @@ async fn broker_v2_admin_rpc_denied_without_grant() {
     assert_eq!(detail.reason, "UDB_POLICY_DENIED");
     assert_eq!(
         detail.missing.get("rule").map(String::as_str),
-        Some("PutPolicy Policy")
+        Some("DeletePolicy Policy")
     );
     assert_eq!(detail.operation, "data_plane_authorize");
     assert!(detail.policy_decision_id.starts_with("authz_"));
@@ -2002,8 +2000,8 @@ async fn broker_v2_batch_item_denial_carries_policy_detail() {
         err.message()
     );
     assert!(
-        err.message().contains("udb authz seed"),
-        "deny message must point at the standard seeding command: {}",
+        err.message().contains("udb policy apply"),
+        "deny message must point at the policy apply command: {}",
         err.message()
     );
 }
@@ -2015,8 +2013,8 @@ async fn broker_v2_control_rpc_not_locked_out_by_nonmatching_policy() {
     // with the WILDCARD message_type ("*", from `authorized_call!`) and are governed
     // by their own coarse `require_admin_scope` gate — NEVER by the data-plane policy
     // set. Without the carve-out (the internal `authorize_control` entry point
-    // `authorized_call!` uses), the FIRST non-matching `PutPolicy` would deny
-    // `GetCapabilities`, `PutPolicy`, `DeletePolicy` and every control RPC, making
+    // `authorized_call!` uses), the FIRST non-matching policy would deny
+    // `GetCapabilities`, `ReloadPolicies`, `DeletePolicy` and every control RPC, making
     // the cluster unrecoverable without a broker restart. This test pins that the
     // carve-out holds while data ops stay deny-by-default.
     let svc = v2_service(vec![allow_policy("Select", "udb:read")]); // matches data Select only
@@ -2026,8 +2024,8 @@ async fn broker_v2_control_rpc_not_locked_out_by_nonmatching_policy() {
         "control RPC must survive a non-matching policy set"
     );
     assert!(
-        svc.authorize_control(&ctx, "PutPolicy").await.is_ok(),
-        "PutPolicy must stay reachable so a bad policy is removable WITHOUT a restart"
+        svc.authorize_control(&ctx, "ReloadPolicies").await.is_ok(),
+        "ReloadPolicies must stay reachable so a fixed policy set loads WITHOUT a restart"
     );
     assert!(
         svc.authorize_control(&ctx, "DeletePolicy").await.is_ok(),

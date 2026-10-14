@@ -1070,6 +1070,7 @@ async fn live_postgres_ha_cdc_idempotent_double_process() {
     let payload = serde_json::json!({
         "event_id": event_id.to_string(),
         "event_type": topic,
+        "envelope_version": 2,
         "correlation_id": format!("cdc-idem:{event_id}"),
         "document_id": partition_key,
         "tenant_id": "acme",

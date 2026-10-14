@@ -148,7 +148,8 @@ namespace Udb.Entity.V1 {
     private global::Google.Protobuf.WellKnownTypes.Struct payload_;
     /// <summary>
     /// Full EventEnvelope payload as a Struct. Required fields: event_id, event_type,
-    /// correlation_id, document_id.
+    /// correlation_id, document_id, and envelope_version (2); an unversioned
+    /// envelope is refused with UDB_ENVELOPE_VERSION_UNSUPPORTED since 0.6.0.
     /// </summary>
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]

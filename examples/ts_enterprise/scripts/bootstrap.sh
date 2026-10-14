@@ -64,7 +64,7 @@ TENANT_ID="$(printf '%s' "$BOOT_OUT" | grep -oE '"tenant_id"[[:space:]]*:[[:spac
 if [[ -z "$TENANT_ID" ]]; then echo "FAILED: could not parse canonical tenant_id from bootstrap output" >&2; exit 1; fi
 echo "canonical tenant UUID: $TENANT_ID"
 
-# Real authorization policy, seeded OFFLINE into the Casbin governance table
+# Real authorization policy, applied OFFLINE to the Casbin governance table
 # (udb_authz.policy_rules) — the SAME table the data plane enforces from, and the
 # one an operator/consumer manages at runtime via AuthzService.CreatePolicyRule.
 # The action vocabulary is the REAL operation the broker submits (Select / Upsert /
@@ -75,15 +75,9 @@ AUTHZ_JSON='[{"effect":"allow","subject":"*","tenant":"'"$TENANT_ID"'","resource
 POLICY_FILE="$SECRETS/authz-policies.json"
 printf '%s' "$AUTHZ_JSON" > "$POLICY_FILE"
 
-echo "seeding tenant authorization policies into udb_authz.policy_rules..."
-SEED_SQL="$SECRETS/policy_seed.sql"
-UDB_ABAC_POLICY_FILE="$POLICY_FILE" "$CLI" policy-seed > "$SEED_SQL"
-if command -v psql >/dev/null 2>&1; then
-  psql "$PG_DSN" -f "$SEED_SQL" >/dev/null
-  echo "seeded 3 allow policies (Select/Upsert/Delete) for tenant $TENANT_ID"
-else
-  echo "WARN: no psql found — apply $SEED_SQL to Postgres ($PG_DSN) manually before serving" >&2
-fi
+echo "applying tenant authorization policies to udb_authz.policy_rules..."
+"$CLI" policy apply -f "$POLICY_FILE" --tenant "$TENANT_ID" --dsn "$PG_DSN" >/dev/null
+echo "applied 3 allow policies (Select/Upsert/Delete) for tenant $TENANT_ID"
 
 # Emit the env file serve.sh + the client read. There is no ABAC env override any
 # more: authorization lives entirely in the policy_rules governance table (Casbin).

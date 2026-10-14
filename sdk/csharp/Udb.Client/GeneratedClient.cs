@@ -6,7 +6,7 @@
 //   UDB version:      0.5.34
 //   Protocol version: 1.0.0
 //   Services:         28
-//   RPCs:             389
+//   RPCs:             388
 //
 // This file is RENDERED by `udb sdk generate` from
 //   sdk-templates/csharp/Udb.Client/GeneratedClient.cs.tmpl
@@ -430,7 +430,6 @@ public static class GeneratedRpcIdentities
         map["/udb.services.v1.DataBroker/PublishCDC"] = new RpcIdentity("/udb.services.v1.DataBroker/PublishCDC", "DataBroker", "PublishCDC", "publish_cdc", "publishCdc", "mutation", "", "");
         map["/udb.services.v1.DataBroker/PurgeSubject"] = new RpcIdentity("/udb.services.v1.DataBroker/PurgeSubject", "DataBroker", "PurgeSubject", "purge_subject", "purgeSubject", "destructive", "", "");
         map["/udb.services.v1.DataBroker/PutObject"] = new RpcIdentity("/udb.services.v1.DataBroker/PutObject", "DataBroker", "PutObject", "put_object", "putObject", "mutation", "", "");
-        map["/udb.services.v1.DataBroker/PutPolicy"] = new RpcIdentity("/udb.services.v1.DataBroker/PutPolicy", "DataBroker", "PutPolicy", "put_policy", "putPolicy", "destructive", "", "");
         map["/udb.services.v1.DataBroker/QuarantineDlqEvent"] = new RpcIdentity("/udb.services.v1.DataBroker/QuarantineDlqEvent", "DataBroker", "QuarantineDlqEvent", "quarantine_dlq_event", "quarantineDlqEvent", "mutation", "", "");
         map["/udb.services.v1.DataBroker/ReloadPolicies"] = new RpcIdentity("/udb.services.v1.DataBroker/ReloadPolicies", "DataBroker", "ReloadPolicies", "reload_policies", "reloadPolicies", "destructive", "", "");
         map["/udb.services.v1.DataBroker/ReplayDlqEvent"] = new RpcIdentity("/udb.services.v1.DataBroker/ReplayDlqEvent", "DataBroker", "ReplayDlqEvent", "replay_dlq_event", "replayDlqEvent", "mutation", "", "");
@@ -1193,7 +1192,7 @@ public sealed partial class GeneratedWorkflowServiceClient : GeneratedServiceBas
 }
 /// <summary>
 /// Robustness wrapper for the <c>udb.services.v1.DataBroker</c> service
-/// (85 RPCs). Forwards to the buf-generated
+/// (84 RPCs). Forwards to the buf-generated
 /// <c>DataBrokerClient</c> stub.
 /// </summary>
 public sealed partial class GeneratedDataBrokerClient : GeneratedServiceBase
@@ -9411,29 +9410,6 @@ public sealed partial class GeneratedDataBrokerClient
 public sealed partial class GeneratedDataBrokerClient
 {
     /// <summary>
-    /// <c>put_policy</c> (unary) — forwards to <c>DataBrokerClient.PutPolicyAsync</c>.
-    /// gRPC path: <c>/udb.services.v1.DataBroker/PutPolicy</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
-    /// </summary>
-    public Task<dynamic> PutPolicyAsync(
-        dynamic request,
-        TimeSpan? deadline = null,
-        CancellationToken cancellationToken = default)
-    {
-        // _stub.PutPolicyAsync returns a concrete AsyncUnaryCall<TResp>; box it
-        // as object so no dynamic-to-closed-generic cast is ever attempted.
-        return InvokeUnaryAsync(
-            "/udb.services.v1.DataBroker/PutPolicy",
-            co => (object)_stub.PutPolicyAsync(request, co),
-            deadline,
-            cancellationToken,
-            "destructive" == "read_only",
-            "false" == "true",
-            (object)request);
-    }
-}
-public sealed partial class GeneratedDataBrokerClient
-{
-    /// <summary>
     /// <c>quarantine_dlq_event</c> (unary) — forwards to <c>DataBrokerClient.QuarantineDlqEventAsync</c>.
     /// gRPC path: <c>/udb.services.v1.DataBroker/QuarantineDlqEvent</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
@@ -10861,7 +10837,7 @@ public sealed class UnitOfWork
                 continue;
             }
             var message = string.IsNullOrEmpty(status.Message) ? "udb: unit-of-work transaction failed" : status.Message;
-            if (IsTxConflictMessage(message))
+            if (IsTxConflictStatus(status))
             {
                 throw new UnitOfWorkConflictException(message, status);
             }
@@ -10953,10 +10929,10 @@ public sealed class UnitOfWork
         return JsonSerializer.Serialize(sorted);
     }
 
-    private static bool IsTxConflictMessage(string message)
+    /// <summary>A tx status is a conflict only by its typed reason, never by message text.</summary>
+    private static bool IsTxConflictStatus(Udb.Entity.V1.TxStatus status)
     {
-        var lower = message.ToLowerInvariant();
-        return lower.Contains("aborted") || lower.Contains("version") || lower.Contains("conflict");
+        return status.ErrorDetail?.Reason is "UDB_CAS_CONFLICT" or "UDB_CAS_ROW_MISSING" or "UDB_REVISION_CONFLICT";
     }
 }
 

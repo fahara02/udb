@@ -1422,10 +1422,8 @@ func perfSeed(t *testing.T, ctx context.Context, broker servicesv1.DataBrokerCli
 		fix.set("catalog_manifest_b64", base64.StdEncoding.EncodeToString(cm.GetManifestJson()))
 	}
 
-	// ── DataBroker method-security policy → policy_id (int64) for the destructive DeletePolicy.
-	_, _ = broker.PutPolicy(brokerCtx, &entityv1.PutPolicyRequest{Context: rc, Policy: &entityv1.PolicyRecord{
-		Effect: "allow", TenantId: tenant, Priority: 1, Enabled: true,
-	}})
+	// ── An existing legacy policy row, when there is one → policy_id (int64) for the
+	// destructive DeletePolicy (DataBroker.PutPolicy was removed in 0.6.0).
 	if pl, err := broker.ListPolicies(brokerCtx, &entityv1.PolicyListRequest{Context: rc, IncludeDisabled: true, Limit: 50}); err == nil && len(pl.GetPolicies()) > 0 {
 		fix.set("ds_policy_id", strconv.FormatInt(pl.GetPolicies()[0].GetPolicyId(), 10))
 	}

@@ -337,11 +337,11 @@ impl AuthzSnapshot {
                     // governance table, so configure authorization through the
                     // AuthzService (CreatePolicyRule / PutAuthzPolicy) — or flip the
                     // dev escape hatch for local bootstrap.
-                    "no authz policy (default deny); seed the standard data-plane policy for \
-                     this tenant with `udb authz seed --tenant <tenant-uuid> --role app_rw` \
-                     (or AuthzService CreatePolicyRule/PutAuthzPolicy), then bind principals to \
-                     the role — or set UDB_ABAC_DEFAULT_ALLOW=true for local bootstrap (works \
-                     only while zero policy rows exist)"
+                    "no authz policy (default deny); declare a role-gated ALLOW policy for \
+                     this tenant and apply it with `udb policy apply -f <policies.yaml> \
+                     --tenant <tenant-uuid>` (or AuthzService PutAuthzPolicy), then bind \
+                     principals to the role — or set UDB_ABAC_DEFAULT_ALLOW=true for local \
+                     bootstrap (works only while zero policy rows exist)"
                         .to_string()
                 },
                 policy_version: self.version.clone(),
@@ -560,31 +560,47 @@ impl AuthzSnapshot {
                 // Anti-enumeration-safe: echoes only the caller's own request
                 // (their action/resource/tenant) plus counts — never another
                 // principal's policies.
+                //
+                // The number of candidate policies evaluated is NOT in the
+                // message: it read as the cause ("1016 candidate policies")
+                // when the cause was elsewhere. It stays in
+                // `matched_policy_ids` for audit.
                 {
+                    let target = selectors.join("|");
                     let base = if applicable.is_empty() {
                         format!(
-                            "denied by Casbin PERM model: no applicable allow policy for action '{}' on '{}' (tenant '{}'). Check the three token traps: the policy action must be exactly '{}' (the RPC method name, or the typed store RPC's dotted token — NOT a data.* alias), the policy's tenant_id must be this tenant UUID, and its object must match the resource. Seed it with `udb authz seed --tenant {} --role app_rw --action {}` (+ bind this principal to the role)",
-                            req.action,
-                            selectors.join("|"),
-                            principal.tenant_id,
-                            req.action,
-                            principal.tenant_id,
-                            req.action,
+                            "denied by Casbin PERM model: no policy allows action '{action}' on '{target}' \
+                             for this caller in tenant '{tenant}'. A rule matches only when its action is \
+                             exactly '{action}' (the RPC method name, or the typed store RPC's dotted token, \
+                             never a data.* alias), its tenant is this tenant UUID and its resource matches",
+                            action = req.action,
+                            tenant = principal.tenant_id,
                         )
                     } else {
                         format!(
-                            "denied by Casbin PERM model: {} candidate polic{} evaluated, none granted action '{}' on '{}' (tenant '{}') for the caller's identities/roles",
-                            applicable.len(),
-                            if applicable.len() == 1 { "y" } else { "ies" },
-                            req.action,
-                            selectors.join("|"),
-                            principal.tenant_id,
+                            "denied by Casbin PERM model: no allow rule grants action '{}' on '{}' to this \
+                             caller's identities or roles in tenant '{}'",
+                            req.action, target, principal.tenant_id,
                         )
                     };
-                    match &closest {
+                    let base = match &closest {
                         Some((miss, _)) => format!("{base}. Diagnosis: {miss}"),
                         None => base,
-                    }
+                    };
+                    let resource = if req.resource.resource_name.trim().is_empty() {
+                        selectors.first().cloned().unwrap_or_default()
+                    } else {
+                        req.resource.resource_name.clone()
+                    };
+                    format!(
+                        "{base}. {}",
+                        super::grant_command_hint(
+                            &principal.tenant_id,
+                            super::Grantee::for_principal(principal, roles),
+                            req.action,
+                            &resource,
+                        )
+                    )
                 }
             },
             missing,
@@ -805,7 +821,8 @@ mod tests {
         };
         assert!(explicit.is_explicit_deny());
         let default_deny = Decision {
-            deny_reason: "denied by Casbin PERM model: 3 candidate policies evaluated".to_string(),
+            deny_reason: "denied by Casbin PERM model: no allow rule grants action 'Select'"
+                .to_string(),
             matched_policy_ids: vec!["a".into(), "b".into(), "c".into()],
             ..Decision::default()
         };

@@ -2,7 +2,6 @@ package udbclient
 
 import (
 	"errors"
-	"strings"
 	"time"
 
 	entityv1 "github.com/fahara02/udb/sdk/go/gen/udb/entity/v1"
@@ -143,8 +142,9 @@ func stringValue(msg protoreflect.Message, fd protoreflect.FieldDescriptor) stri
 // IsCASConflict reports whether err is a compare-and-swap precondition failure —
 // the target row was absent or a field no longer matched the expected value.
 // Check it after Upsert(WithExpected) or Delete(WithDeleteExpected) to decide
-// whether to re-read and retry the optimistic operation. Detected by the
-// stable typed reason, with message fallback for older brokers. Other
+// whether to re-read and retry the optimistic operation. Detected only by the
+// stable typed reason (UDB_CAS_CONFLICT, UDB_CAS_ROW_MISSING,
+// UDB_REVISION_CONFLICT); the message text is never matched. Other
 // FAILED_PRECONDITION refusals —
 // e.g. a conditional mutation whose filter does not pin the primary key — are
 // usage errors that a retry can never fix, and are NOT conflicts.
@@ -153,14 +153,10 @@ func IsCASConflict(err error) bool {
 	if !errors.As(err, &e) || e.Code != codes.FailedPrecondition {
 		return false
 	}
-	if detail, ok := e.Detail(); ok && detail.GetReason() != "" {
-		switch detail.GetReason() {
-		case "UDB_CAS_CONFLICT", "UDB_CAS_ROW_MISSING", "UDB_REVISION_CONFLICT":
-			return true
-		default:
-			return false
-		}
+	switch e.Reason() {
+	case "UDB_CAS_CONFLICT", "UDB_CAS_ROW_MISSING", "UDB_REVISION_CONFLICT":
+		return true
+	default:
+		return false
 	}
-	return strings.HasPrefix(e.Message, "compare-and-swap precondition failed") ||
-		strings.HasPrefix(e.Message, "revision precondition failed")
 }

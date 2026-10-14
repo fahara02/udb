@@ -250,7 +250,7 @@ pub fn evaluate(config: &UdbConfig, public_addr: SocketAddr) -> Vec<PreflightFin
 
 /// Pure authz default-posture finding. The live Casbin engine reads the
 /// PG-warmed `udb_authz.policy_rules` table (written by the AuthzService and
-/// `udb authz seed`).
+/// `udb policy apply`).
 fn authz_default_posture_finding(
     default_allow: bool,
     production: bool,
@@ -263,7 +263,7 @@ fn authz_default_posture_finding(
                      policy rules are seeded in udb_authz.policy_rules (the table the live \
                      Casbin engine reads) and principals are bound to roles"
                 .to_string(),
-            fix: "seed policy with `udb authz seed --tenant <tenant-uuid> --role app_rw` (or AuthzService CreatePolicyRule/PutAuthzPolicy) and bind principals; UDB_ABAC_DEFAULT_ALLOW=true is a dev-only bootstrap hatch",
+            fix: "apply policy with `udb policy apply -f <policies.yaml> --tenant <tenant-uuid>` (or AuthzService PutAuthzPolicy) and bind principals; UDB_ABAC_DEFAULT_ALLOW=true is a dev-only bootstrap hatch",
         }),
         (true, true) => Some(PreflightFinding {
             name: "authz-default-allow-production",
@@ -271,7 +271,7 @@ fn authz_default_posture_finding(
             detail: "UDB_ABAC_DEFAULT_ALLOW is set in production: every request would be allowed \
                      while zero policy rows exist; production startup refuses this"
                 .to_string(),
-            fix: "unset UDB_ABAC_DEFAULT_ALLOW and seed policy with `udb authz seed --tenant <tenant-uuid> --role app_rw`",
+            fix: "unset UDB_ABAC_DEFAULT_ALLOW and apply policy with `udb policy apply -f <policies.yaml> --tenant <tenant-uuid>`",
         }),
         (true, false) => None,
     }

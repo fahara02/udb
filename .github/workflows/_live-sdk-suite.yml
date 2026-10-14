@@ -493,9 +493,6 @@ jobs:
       - name: Benchmark Go SDK
         if: always()
         shell: bash
-        env:
-          # Measure the retained migration surface; native CI proves default refusal.
-          UDB_ALLOW_LEGACY_PUT_POLICY: "true"
         run: |
           set +e
           mkdir -p bench-output/logs
@@ -604,8 +601,6 @@ jobs:
       - name: Benchmark Python SDK
         if: always()
         shell: bash
-        env:
-          UDB_ALLOW_LEGACY_PUT_POLICY: "true"
         run: |
           set +e
           mkdir -p bench-output/logs
@@ -680,8 +675,6 @@ jobs:
       - name: Benchmark TypeScript SDK
         if: always()
         shell: bash
-        env:
-          UDB_ALLOW_LEGACY_PUT_POLICY: "true"
         run: |
           set +e
           mkdir -p bench-output/logs
@@ -756,8 +749,6 @@ jobs:
       - name: Benchmark PHP SDK
         if: always()
         shell: bash
-        env:
-          UDB_ALLOW_LEGACY_PUT_POLICY: "true"
         run: |
           set +e
           mkdir -p bench-output/logs
@@ -854,8 +845,6 @@ jobs:
       - name: Benchmark Rust SDK
         if: always()
         shell: bash
-        env:
-          UDB_ALLOW_LEGACY_PUT_POLICY: "true"
         run: >-
           bash scripts/run-plan-benchmark.sh rust Rust sdk/rust/perf_report_rust.md
           "cd sdk/rust && cargo test --release --test live_perf --no-run"
@@ -864,8 +853,6 @@ jobs:
       - name: Benchmark Java SDK
         if: always()
         shell: bash
-        env:
-          UDB_ALLOW_LEGACY_PUT_POLICY: "true"
         run: >-
           bash scripts/run-plan-benchmark.sh java Java sdk/java/perf_report_java.md
           "cd sdk/java && mvn -B -ntp -q test-compile"
@@ -874,8 +861,6 @@ jobs:
       - name: Benchmark C# SDK
         if: always()
         shell: bash
-        env:
-          UDB_ALLOW_LEGACY_PUT_POLICY: "true"
         run: >-
           bash scripts/run-plan-benchmark.sh csharp C# sdk/csharp/perf_report_csharp.md
           "dotnet build sdk/csharp/Udb.Client.Tests/Udb.Client.Tests.csproj -c Release"

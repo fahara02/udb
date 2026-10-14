@@ -60,7 +60,7 @@ public final class DataBrokerProto {
       "ntity.v1.RequestContextR\007context\"i\n\026Ensu" +
       "reBaselineResponse\022\031\n\010saga_ids\030\001 \003(\tR\007sa" +
       "gaIds\022\027\n\007dlq_ids\030\002 \003(\tR\006dlqIds\022\033\n\tdevice" +
-      "_id\030\003 \001(\tR\010deviceId2\255[\n\nDataBroker\022\\\n\006Se" +
+      "_id\030\003 \001(\tR\010deviceId2\270Z\n\nDataBroker\022\\\n\006Se" +
       "lect\022\034.udb.entity.v1.SelectRequest\032\030.udb" +
       ".entity.v1.RecordSet\"\032\332\363\030\022\010\001\022\006selectZ\006se" +
       "lect\370\363\030\001\022p\n\013BatchSelect\022\034.udb.entity.v1." +
@@ -303,62 +303,59 @@ public final class DataBrokerProto {
       "Baseline\370\363\030\002\022|\n\014ListPolicies\022 .udb.entit" +
       "y.v1.PolicyListRequest\032!.udb.entity.v1.P" +
       "olicyListResponse\"\'\332\363\030\037\010\001\022\rlist_policies" +
-      "Z\014listPolicies\370\363\030\001\022s\n\tPutPolicy\022\037.udb.en" +
-      "tity.v1.PutPolicyRequest\032\037.udb.entity.v1" +
-      ".MutationResponse\"$\210\002\001\332\363\030\031\010\001\022\nput_policy" +
-      "Z\tputPolicy\370\363\030\003\022v\n\014DeletePolicy\022\034.udb.en" +
-      "tity.v1.PolicyRequest\032\037.udb.entity.v1.Mu" +
-      "tationResponse\"\'\332\363\030\037\010\001\022\rdelete_policyZ\014d" +
-      "eletePolicy\370\363\030\002\022\202\001\n\016ReloadPolicies\022\".udb" +
-      ".entity.v1.CapabilitiesRequest\032\037.udb.ent" +
-      "ity.v1.MutationResponse\"+\332\363\030#\010\001\022\017reload_" +
-      "policiesZ\016reloadPolicies\370\363\030\003\022~\n\014LintPoli" +
-      "cies\022\".udb.entity.v1.CapabilitiesRequest" +
-      "\032!.udb.entity.v1.PolicyLintResponse\"\'\332\363\030" +
-      "\037\010\001\022\rlint_policiesZ\014lintPolicies\370\363\030\001\022\211\001\n" +
-      "\017GetCapabilities\022\".udb.entity.v1.Capabil" +
-      "itiesRequest\032#.udb.entity.v1.Capabilitie" +
-      "sResponse\"-\332\363\030%\010\001\022\020get_capabilitiesZ\017get" +
-      "Capabilities\370\363\030\001\022\231\001\n\022GetCatalogManifest\022" +
-      "%.udb.entity.v1.CatalogManifestRequest\032&" +
-      ".udb.entity.v1.CatalogManifestResponse\"4" +
-      "\332\363\030,\010\001\022\024get_catalog_manifestZ\022getCatalog" +
-      "Manifest\370\363\030\001\022\244\001\n\023LookupMessageSchema\022).u" +
-      "db.entity.v1.MessageSchemaLookupRequest\032" +
-      "*.udb.entity.v1.MessageSchemaLookupRespo" +
-      "nse\"6\332\363\030.\010\001\022\025lookup_message_schemaZ\023look" +
-      "upMessageSchema\370\363\030\001\022\235\001\n\022ListMessageSchem" +
-      "as\022\'.udb.entity.v1.MessageSchemaListRequ" +
-      "est\032(.udb.entity.v1.MessageSchemaListRes" +
-      "ponse\"4\332\363\030,\010\001\022\024list_message_schemasZ\022lis" +
-      "tMessageSchemas\370\363\030\001\022\212\001\n\017GetHealthReport\022" +
-      "\".udb.entity.v1.HealthReportRequest\032#.ud" +
-      "b.entity.v1.HealthReportResponse\".\332\363\030&\010\001" +
-      "\022\021get_health_reportZ\017getHealthReport\370\363\030\001" +
-      "\022\200\001\n\rEnsureProject\022#.udb.entity.v1.Ensur" +
-      "eProjectRequest\032\037.udb.entity.v1.Mutation" +
-      "Response\")\332\363\030!\010\001\022\016ensure_projectZ\rensure" +
-      "Project\370\363\030\002\022~\n\014ListProjects\022!.udb.entity" +
-      ".v1.ProjectListRequest\032\".udb.entity.v1.P" +
-      "rojectListResponse\"\'\332\363\030\037\010\001\022\rlist_project" +
-      "sZ\014listProjects\370\363\030\001\022\212\001\n\017GetAdminSummary\022" +
-      "\".udb.entity.v1.AdminSummaryRequest\032#.ud" +
-      "b.entity.v1.AdminSummaryResponse\".\332\363\030&\010\001" +
-      "\022\021get_admin_summaryZ\017getAdminSummary\370\363\030\001" +
-      "\022\226\001\n\022ListAdminAuditLogs\022#.udb.entity.v1." +
-      "AdminAuditLogRequest\032$.udb.entity.v1.Adm" +
-      "inAuditLogResponse\"5\332\363\030-\010\001\022\025list_admin_a" +
-      "udit_logsZ\022listAdminAuditLogs\370\363\030\001\022\237\001\n\023Ve" +
-      "rifyAdminAuditLog\022&.udb.entity.v1.AdminA" +
-      "uditVerifyRequest\032\'.udb.entity.v1.AdminA" +
-      "uditVerifyResponse\"7\332\363\030/\010\001\022\026verify_admin" +
-      "_audit_logZ\023verifyAdminAuditLog\370\363\030\001B\303\001\n\023" +
-      "com.udb.services.v1B\017DataBrokerProtoP\001Z=" +
-      "github.com/fahara02/udb/sdk/go/gen/udb/s" +
-      "ervices/v1;servicesv1\242\002\003USX\252\002\017Udb.Servic" +
-      "es.V1\312\002\017Udb\\Services\\V1\342\002\033Udb\\GPBMetadat" +
-      "a\\Services\\V1\352\002\021Udb::Services::V1b\006proto" +
-      "3"
+      "Z\014listPolicies\370\363\030\001\022v\n\014DeletePolicy\022\034.udb" +
+      ".entity.v1.PolicyRequest\032\037.udb.entity.v1" +
+      ".MutationResponse\"\'\332\363\030\037\010\001\022\rdelete_policy" +
+      "Z\014deletePolicy\370\363\030\002\022\202\001\n\016ReloadPolicies\022\"." +
+      "udb.entity.v1.CapabilitiesRequest\032\037.udb." +
+      "entity.v1.MutationResponse\"+\332\363\030#\010\001\022\017relo" +
+      "ad_policiesZ\016reloadPolicies\370\363\030\003\022~\n\014LintP" +
+      "olicies\022\".udb.entity.v1.CapabilitiesRequ" +
+      "est\032!.udb.entity.v1.PolicyLintResponse\"\'" +
+      "\332\363\030\037\010\001\022\rlint_policiesZ\014lintPolicies\370\363\030\001\022" +
+      "\211\001\n\017GetCapabilities\022\".udb.entity.v1.Capa" +
+      "bilitiesRequest\032#.udb.entity.v1.Capabili" +
+      "tiesResponse\"-\332\363\030%\010\001\022\020get_capabilitiesZ\017" +
+      "getCapabilities\370\363\030\001\022\231\001\n\022GetCatalogManife" +
+      "st\022%.udb.entity.v1.CatalogManifestReques" +
+      "t\032&.udb.entity.v1.CatalogManifestRespons" +
+      "e\"4\332\363\030,\010\001\022\024get_catalog_manifestZ\022getCata" +
+      "logManifest\370\363\030\001\022\244\001\n\023LookupMessageSchema\022" +
+      ").udb.entity.v1.MessageSchemaLookupReque" +
+      "st\032*.udb.entity.v1.MessageSchemaLookupRe" +
+      "sponse\"6\332\363\030.\010\001\022\025lookup_message_schemaZ\023l" +
+      "ookupMessageSchema\370\363\030\001\022\235\001\n\022ListMessageSc" +
+      "hemas\022\'.udb.entity.v1.MessageSchemaListR" +
+      "equest\032(.udb.entity.v1.MessageSchemaList" +
+      "Response\"4\332\363\030,\010\001\022\024list_message_schemasZ\022" +
+      "listMessageSchemas\370\363\030\001\022\212\001\n\017GetHealthRepo" +
+      "rt\022\".udb.entity.v1.HealthReportRequest\032#" +
+      ".udb.entity.v1.HealthReportResponse\".\332\363\030" +
+      "&\010\001\022\021get_health_reportZ\017getHealthReport\370" +
+      "\363\030\001\022\200\001\n\rEnsureProject\022#.udb.entity.v1.En" +
+      "sureProjectRequest\032\037.udb.entity.v1.Mutat" +
+      "ionResponse\")\332\363\030!\010\001\022\016ensure_projectZ\rens" +
+      "ureProject\370\363\030\002\022~\n\014ListProjects\022!.udb.ent" +
+      "ity.v1.ProjectListRequest\032\".udb.entity.v" +
+      "1.ProjectListResponse\"\'\332\363\030\037\010\001\022\rlist_proj" +
+      "ectsZ\014listProjects\370\363\030\001\022\212\001\n\017GetAdminSumma" +
+      "ry\022\".udb.entity.v1.AdminSummaryRequest\032#" +
+      ".udb.entity.v1.AdminSummaryResponse\".\332\363\030" +
+      "&\010\001\022\021get_admin_summaryZ\017getAdminSummary\370" +
+      "\363\030\001\022\226\001\n\022ListAdminAuditLogs\022#.udb.entity." +
+      "v1.AdminAuditLogRequest\032$.udb.entity.v1." +
+      "AdminAuditLogResponse\"5\332\363\030-\010\001\022\025list_admi" +
+      "n_audit_logsZ\022listAdminAuditLogs\370\363\030\001\022\237\001\n" +
+      "\023VerifyAdminAuditLog\022&.udb.entity.v1.Adm" +
+      "inAuditVerifyRequest\032\'.udb.entity.v1.Adm" +
+      "inAuditVerifyResponse\"7\332\363\030/\010\001\022\026verify_ad" +
+      "min_audit_logZ\023verifyAdminAuditLog\370\363\030\001B\303" +
+      "\001\n\023com.udb.services.v1B\017DataBrokerProtoP" +
+      "\001Z=github.com/fahara02/udb/sdk/go/gen/ud" +
+      "b/services/v1;servicesv1\242\002\003USX\252\002\017Udb.Ser" +
+      "vices.V1\312\002\017Udb\\Services\\V1\342\002\033Udb\\GPBMeta" +
+      "data\\Services\\V1\352\002\021Udb::Services::V1b\006pr" +
+      "oto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
