@@ -694,11 +694,11 @@ async fn run_async(command: TransitionCommand) -> Result<Value, String> {
                 }
                 return Ok(value);
             }
-            let run = command.run_id.unwrap();
+            let run = command.run_id.clone().unwrap();
             let response = client
                 .get_migration_status(caller.request(MigrationRunRequest {
                     context: Some(caller.context()),
-                    project_id: command.project,
+                    project_id: command.project.clone(),
                     run_id: run.clone(),
                     ..Default::default()
                 })?)
@@ -713,7 +713,7 @@ async fn run_async(command: TransitionCommand) -> Result<Value, String> {
                 &run,
                 &response.state,
             ));
-            if let Some(out) = command.out {
+            if let Some(out) = command.out.clone() {
                 write_new_json(&out, &value)?;
             }
             Ok(value)
