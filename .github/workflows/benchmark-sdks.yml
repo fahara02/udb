@@ -105,7 +105,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p "$RUNNER_TEMP/bench-status"
-          for sdk in go python typescript php rust; do
+          for sdk in go python typescript php rust csharp java; do
             printf '{"exit_code":0}\n' > "$RUNNER_TEMP/bench-status/${sdk}.json"
           done
           python scripts/collect_sdk_bench_results.py \

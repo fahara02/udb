@@ -4391,6 +4391,7 @@ LINT_WORKFLOW_TRIGGER_PATHS = (
     ("scripts/locate_benchmark_report.py", "canonical benchmark artifact locator"),
     ("scripts/bootstrap_benchmark_project_catalog.py", "benchmark catalog bootstrap"),
     ("scripts/prepare-benchmark-fixtures.py", "served benchmark fixture preparation"),
+    ("scripts/run-plan-benchmark.sh", "plan-driven SDK benchmark runner"),
     ("scripts/fixtures/benchmark-analytics.sql", "stored analytics benchmark fixtures"),
     ("scripts/check-openapi-api-rules.mjs", "OpenAPI API-rule guard"),
     ("scripts/check-http-api-style.mjs", "HTTP API route-style guard"),

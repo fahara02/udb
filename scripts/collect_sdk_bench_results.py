@@ -24,6 +24,8 @@ SDK_REPORTS = {
     "typescript": ROOT / "sdk/typescript/perf_report_ts.md",
     "php": ROOT / "sdk/php/perf_report_php.md",
     "rust": ROOT / "sdk/rust/perf_report_rust.md",
+    "csharp": ROOT / "sdk/csharp/perf_report_csharp.md",
+    "java": ROOT / "sdk/java/perf_report_java.md",
 }
 
 SDK_NAMES = {
@@ -36,10 +38,7 @@ SDK_NAMES = {
     "java": "Java",
 }
 
-MISSING_HARNESS = {
-    "csharp": "No live per-RPC benchmark harness exists yet; SDK build/unit conformance still runs in CI.",
-    "java": "No live per-RPC benchmark harness exists yet; SDK compile/unit conformance still runs in CI.",
-}
+MISSING_HARNESS: dict[str, str] = {}
 
 CANONICAL_RPC_MANIFEST = ROOT / "docs/generated/bench-bodies.json"
 CANONICAL_RPC_MANIFEST_LABEL = "docs/generated/bench-bodies.json"
@@ -1357,11 +1356,16 @@ RPCs measured: 2
         failures = _benchmark_gate_failures(illegal_measured_skip, contract, canonical_rpcs)
         assert any("measured SDK go must have status=ok" in failure for failure in failures), failures
 
-        illegal_static_measurement = cloned_payload()
-        java = next(sdk for sdk in illegal_static_measurement["sdks"] if sdk["id"] == "java")
-        java["status"] = "ok"
-        failures = _benchmark_gate_failures(illegal_static_measurement, contract, canonical_rpcs)
-        assert any("non-measured SDK java must remain an explicit skip" in failure for failure in failures), failures
+        # Every SDK now owns a harness; this case guards whichever SDK is ever
+        # listed as skipped again.
+        for skipped_id in SKIPPED_SDK_IDS[:1]:
+            illegal_static_measurement = cloned_payload()
+            skipped = next(sdk for sdk in illegal_static_measurement["sdks"] if sdk["id"] == skipped_id)
+            skipped["status"] = "ok"
+            failures = _benchmark_gate_failures(illegal_static_measurement, contract, canonical_rpcs)
+            assert any(
+                f"non-measured SDK {skipped_id} must remain an explicit skip" in failure for failure in failures
+            ), failures
 
         contract_tamper = cloned_payload()
         contract_tamper["benchmark_contract"]["canonical_rpc_count"] = 1

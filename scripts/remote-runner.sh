@@ -46,7 +46,9 @@ env_script() {
   cat <<EOF
 export RUSTUP_HOME=$root/.rustup CARGO_HOME=$root/.cargo GOROOT=$root/go GOPATH=$root/gopath
 export GOCACHE=$root/cache/go-build GOMODCACHE=$root/gopath/pkg/mod PIP_CACHE_DIR=$root/cache/pip
-export PATH=$root/.cargo/bin:$root/go/bin:$root/venv/bin:\$PATH
+export JAVA_HOME=$root/jdk DOTNET_ROOT=$root/dotnet DOTNET_CLI_HOME=$root/cache/dotnet NUGET_PACKAGES=$root/cache/nuget
+export MAVEN_OPTS=-Dmaven.repo.local=$root/cache/m2 DOTNET_CLI_TELEMETRY_OPTOUT=1
+export PATH=$root/.cargo/bin:$root/go/bin:$root/jdk/bin:$root/maven/bin:$root/dotnet:$root/venv/bin:\$PATH
 export CARGO_BUILD_JOBS=$jobs CARGO_TARGET_DIR=$root/target CARGO_INCREMENTAL=0
 EOF
 }
@@ -67,9 +69,20 @@ fi
 if [ ! -x '$root/go/bin/go' ]; then
   curl -fsSL "https://go.dev/dl/go${go_version}.linux-amd64.tar.gz" | tar -C '$root' -xz
 fi
+if [ ! -x '$root/jdk/bin/java' ]; then
+  mkdir -p '$root/jdk'
+  curl -fsSL 'https://api.adoptium.net/v3/binary/latest/17/ga/linux/x64/jdk/hotspot/normal/eclipse' | tar -C '$root/jdk' -xz --strip-components=1
+fi
+if [ ! -x '$root/maven/bin/mvn' ]; then
+  mkdir -p '$root/maven'
+  curl -fsSL 'https://archive.apache.org/dist/maven/maven-3/3.9.9/binaries/apache-maven-3.9.9-bin.tar.gz' | tar -C '$root/maven' -xz --strip-components=1
+fi
+if [ ! -x '$root/dotnet/dotnet' ]; then
+  curl -fsSL https://dot.net/v1/dotnet-install.sh | bash -s -- --channel 8.0 --install-dir '$root/dotnet' >'$root/dotnet-install.log' 2>&1
+fi
 [ -x '$root/venv/bin/python' ] || python3 -m venv '$root/venv'
 [ -d '$root/repo/.git' ] || git clone -q '$repo_url' '$root/repo'
-echo "provisioned: \$(rustc --version); \$(go version); \$(python --version)"
+echo "provisioned: \$(rustc --version); \$(go version); \$(python --version); java \$(java -version 2>&1 | head -1); \$(mvn -v | head -1); dotnet \$(dotnet --version)"
 EOF
     ;;
   sync)

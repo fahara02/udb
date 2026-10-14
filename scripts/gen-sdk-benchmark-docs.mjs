@@ -22,8 +22,8 @@ const LIVE_HARNESSES = new Map([
   ["python", "live full-surface + scenario benchmark harness"],
   ["php", "live full-surface + scenario benchmark harness"],
   ["rust", "live full-surface benchmark harness (requests from the shared seed plan)"],
-  ["java", "static SDK conformance only; no live per-RPC benchmark harness yet"],
-  ["csharp", "static SDK conformance only; no live per-RPC benchmark harness yet"],
+  ["java", "live full-surface benchmark harness (requests from the shared seed plan)"],
+  ["csharp", "live full-surface benchmark harness (requests from the shared seed plan)"],
 ]);
 
 function readJson(path) {
@@ -167,11 +167,10 @@ operation-kind drift fails generation.
 
 ## SDK Coverage Split
 
-UDB ships six generated SDKs and a Rust client. Go, TypeScript, Python, PHP, and
-Rust own live broker benchmark harnesses; Rust sends and times every request
-itself, with request bodies taken from the plan the shared Python seed exports.
-Java and C# are still covered by static SDK conformance, but do not yet publish
-per-RPC live benchmark results.
+UDB ships six generated SDKs and a Rust client, and every one of them owns a live
+broker benchmark harness. Go, TypeScript, Python, and PHP seed their own
+fixtures; Rust, Java, and C# send and time every request through their own gRPC
+stack, with request bodies taken from the plan the shared Python seed exports.
 
 | SDK | Coverage owner |
 |---|---|
