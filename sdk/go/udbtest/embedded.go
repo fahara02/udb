@@ -210,14 +210,22 @@ func start(t testing.TB, protoRoot, policyFile string, withPeer bool) (*udbclien
 		}
 	}
 	if policyFile != "" {
-		ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
-		apply := exec.CommandContext(ctx, binary, "policy", "apply", "-f", policyFile, "--tenant", credentials.TenantID)
-		apply.Dir, apply.Env = project, append(append([]string{}, environment...), "UDB_PG_DSN="+credentials.DSN)
-		apply.Stdout, apply.Stderr = log, log
-		err := apply.Run()
-		cancel()
-		if err != nil {
-			t.Fatalf("udbtest.Start: apply policy file: %v (private log: %s)", err, logPath)
+		// Every provisioned tenant gets the same policy: the shared contract
+		// writes as both tenants.
+		tenants := []string{credentials.TenantID}
+		if withPeer {
+			tenants = append(tenants, peerTenant)
+		}
+		for _, tenant := range tenants {
+			ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+			apply := exec.CommandContext(ctx, binary, "policy", "apply", "-f", policyFile, "--tenant", tenant)
+			apply.Dir, apply.Env = project, append(append([]string{}, environment...), "UDB_PG_DSN="+credentials.DSN)
+			apply.Stdout, apply.Stderr = log, log
+			err := apply.Run()
+			cancel()
+			if err != nil {
+				t.Fatalf("udbtest.Start: apply policy file for tenant %s: %v (private log: %s)", tenant, err, logPath)
+			}
 		}
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
