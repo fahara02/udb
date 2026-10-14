@@ -86,6 +86,20 @@
       <scope>provided</scope>
       <optional>true</optional>
     </dependency>
+    <!-- Live benchmark (LivePerfTest): proto3 JSON request bodies and the
+         shared benchmark plan. Test scope only. -->
+    <dependency>
+      <groupId>com.google.protobuf</groupId>
+      <artifactId>protobuf-java-util</artifactId>
+      <version>${protobuf.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.google.code.gson</groupId>
+      <artifactId>gson</artifactId>
+      <version>2.13.1</version>
+      <scope>test</scope>
+    </dependency>
     <dependency>
       <groupId>org.junit.jupiter</groupId>
       <artifactId>junit-jupiter-api</artifactId>

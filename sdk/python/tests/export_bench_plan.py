@@ -19,6 +19,7 @@ Usage (same environment as `UDB_LIVE_PERF=1 pytest`):
 
 from __future__ import annotations
 
+import base64
 import json
 import sys
 from dataclasses import replace
@@ -26,6 +27,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
+from google.protobuf import descriptor_pb2  # noqa: E402
 from google.protobuf.json_format import MessageToDict  # noqa: E402
 
 import test_live_conformance as live  # noqa: E402
@@ -42,6 +44,25 @@ SENTINELS = {
 
 def as_json(message) -> dict:
     return MessageToDict(message, preserving_proto_field_name=True)
+
+
+def descriptor_set_b64() -> str:
+    """Every service file and its transitive imports, dependencies first."""
+    ordered, seen = [], set()
+
+    def visit(file) -> None:
+        if file.name in seen:
+            return
+        seen.add(file.name)
+        for dependency in file.dependencies:
+            visit(dependency)
+        proto = descriptor_pb2.FileDescriptorProto()
+        file.CopyToProto(proto)
+        ordered.append(proto)
+
+    for _client_cls, method in live.ALL_RPCS:
+        visit(method.containing_service.file)
+    return base64.b64encode(descriptor_pb2.FileDescriptorSet(file=ordered).SerializeToString()).decode()
 
 
 def main(argv: list[str]) -> int:
@@ -146,6 +167,9 @@ def main(argv: list[str]) -> int:
             "context": as_json(authed_meta.with_purpose("rust.live.perf.cdc").to_request_context()),
         },
         "rpcs": rpcs,
+        # For SDKs that build requests reflectively without their own copy of
+        # the contract (Java's DynamicMessage).
+        "descriptor_set_b64": descriptor_set_b64(),
     }
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(json.dumps(plan, indent=1) + "\n", encoding="utf-8")
