@@ -820,6 +820,18 @@ pub(crate) fn sqlx_error_to_status(context: &str, err: &sqlx::Error) -> tonic::S
                         None,
                     );
                 }
+                "42703" | "42P01" => {
+                    // undefined_column / undefined_table: the SQL the broker built
+                    // from the ACTIVE catalog names a column or table the live
+                    // database does not have. That is a catalog/schema mismatch
+                    // the caller can fix, not a broker fault.
+                    return catalog_schema_mismatch_status(
+                        code.as_ref(),
+                        context,
+                        db.message(),
+                        db.table(),
+                    );
+                }
                 "23503" => {
                     let column = database_error_column(db);
                     return crate::runtime::error_reasons::annotate(
@@ -1165,6 +1177,85 @@ fn not_null_column(message: &str) -> Option<String> {
     } else {
         Some(name.to_string())
     }
+}
+
+/// The first double-quoted identifier after `prefix` in a driver message.
+fn quoted_after(message: &str, prefix: &str) -> Option<String> {
+    let after = message.split(prefix).nth(1)?;
+    let name = after.strip_prefix('"')?.split('"').next()?;
+    (!name.is_empty()).then(|| name.to_string())
+}
+
+/// A statement built from the ACTIVE catalog named a column (`42703`) or table
+/// (`42P01`) the live database does not have. The message names the object and
+/// the commands that line the catalog and the database up; the driver text is
+/// not echoed (only identifiers are parsed out of it).
+pub(crate) fn catalog_schema_mismatch_status(
+    sqlstate: &str,
+    context: &str,
+    db_message: &str,
+    db_table: Option<&str>,
+) -> tonic::Status {
+    let relation = db_table
+        .filter(|table| !table.is_empty())
+        .map(str::to_string)
+        .or_else(|| quoted_after(db_message, "relation "));
+    let fix = "the active catalog and the live database schema are out of step. Run \
+               `udb catalog status --project <id>` to see the ACTIVE catalog, then either apply \
+               its migration (`udb catalog transition status --project <id>` prints the next step; \
+               `udb plan` prints the DDL) or activate a catalog that matches the live schema";
+    let (missing_key, object, message) = if sqlstate == "42703" {
+        let column = quoted_after(db_message, "column ").or_else(|| {
+            // `column t.x does not exist`
+            db_message
+                .strip_prefix("column ")
+                .and_then(|rest| rest.split_whitespace().next())
+                .map(|name| name.rsplit('.').next().unwrap_or(name).to_string())
+        });
+        let column_text = column.clone().unwrap_or_else(|| "<unknown>".to_string());
+        let table_text = relation
+            .as_deref()
+            .map(|table| format!(" of table '{table}'"))
+            .unwrap_or_default();
+        (
+            "column",
+            column,
+            format!(
+                "{context}: column '{column_text}'{table_text} is in the active catalog but not in \
+                 the live database: {fix}"
+            ),
+        )
+    } else {
+        let table_text = relation.clone().unwrap_or_else(|| "<unknown>".to_string());
+        (
+            "table",
+            relation.clone(),
+            format!(
+                "{context}: table '{table_text}' is in the active catalog but not in the live \
+                 database: {fix}"
+            ),
+        )
+    };
+    let column = if missing_key == "column" {
+        object.clone()
+    } else {
+        None
+    };
+    let object = object.unwrap_or_default();
+    let table = relation.unwrap_or_default();
+    crate::runtime::error_reasons::annotate_with(
+        schema_status(
+            tonic::Code::FailedPrecondition,
+            "database",
+            context,
+            "catalog_schema_mismatch",
+            message,
+        ),
+        crate::runtime::error_reasons::CATALOG_SCHEMA_MISMATCH,
+        column.as_deref(),
+        None,
+        &[(missing_key, object.as_str()), ("table", table.as_str())],
+    )
 }
 
 /// Schema/catalog compatibility refusal. The caller selects the public gRPC code
@@ -2666,6 +2757,51 @@ mod error_detail_tests {
             .to_bytes()
             .expect("trailer decodes to bytes");
         crate::runtime::executor_utils::decode_error_detail_from_raw(&raw)
+    }
+
+    #[test]
+    fn undefined_column_is_a_catalog_schema_mismatch_naming_the_column_and_the_fix() {
+        let status = super::catalog_schema_mismatch_status(
+            "42703",
+            "transaction mutation failed",
+            "column \"grade_band\" of relation \"lessons\" does not exist",
+            None,
+        );
+        assert_eq!(status.code(), tonic::Code::FailedPrecondition);
+        let message = status.message();
+        assert!(message.contains("column 'grade_band' of table 'lessons'"), "{message}");
+        assert!(message.contains("udb catalog status --project"), "{message}");
+        assert!(message.contains("udb catalog transition status"), "{message}");
+        assert!(message.contains("udb plan"), "{message}");
+        let detail = decode_detail(&status);
+        assert_eq!(detail.reason, "UDB_CATALOG_SCHEMA_MISMATCH");
+        assert_eq!(detail.kind, ErrorKind::Schema as i32);
+        assert_eq!(detail.column, "grade_band");
+        assert_eq!(
+            detail.missing.get("column").map(String::as_str),
+            Some("grade_band")
+        );
+        assert_eq!(
+            detail.missing.get("table").map(String::as_str),
+            Some("lessons")
+        );
+
+        // `column t.x does not exist` (qualified reference) and a missing table.
+        let qualified = super::catalog_schema_mismatch_status(
+            "42703",
+            "select",
+            "column l.grade_band does not exist",
+            Some("lessons"),
+        );
+        assert!(qualified.message().contains("column 'grade_band'"));
+        let table = super::catalog_schema_mismatch_status(
+            "42P01",
+            "select",
+            "relation \"edu.lessons\" does not exist",
+            None,
+        );
+        assert_eq!(table.code(), tonic::Code::FailedPrecondition);
+        assert!(table.message().contains("table 'edu.lessons'"), "{}", table.message());
     }
 
     #[test]

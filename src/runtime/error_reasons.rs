@@ -104,6 +104,9 @@ reasons! {
     UNKNOWN_MESSAGE_TYPE = "UDB_UNKNOWN_MESSAGE_TYPE", Schema, InvalidArgument,
         "The message type is not in the project's active catalog.",
         "Stage and activate a catalog that contains the entity (`udb catalog stage` / `udb catalog activate`).";
+    CATALOG_SCHEMA_MISMATCH = "UDB_CATALOG_SCHEMA_MISMATCH", Schema, FailedPrecondition,
+        "A statement built from the active catalog named a column or table the live database does not have; column and missing.table name it.",
+        "Line the catalog and the database up: `udb catalog status --project <id>` shows the ACTIVE catalog; apply its migration (`udb catalog transition status`, `udb plan`) or activate a catalog that matches the live schema.";
     GRANT_OWNED_BY_OTHER = "UDB_GRANT_OWNED_BY_OTHER", Conflict, FailedPrecondition,
         "The service identity is already granted to another service account; a grant is never moved implicitly.",
         "Use a distinct service identity, or move the grant on purpose with `udb auth grant transfer` (or `udb identity apply --allow-transfer`).";
