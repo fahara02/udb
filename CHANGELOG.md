@@ -18,6 +18,13 @@ release line was tagged.
   beside the Go, Python, TypeScript and PHP results. Request bodies come from a
   plan the shared Python seed exports (`sdk/python/tests/export_bench_plan.py`);
   the plan carries no credentials. See the Rust SDK README, "Benchmark".
+- **Java SDK release to Maven Central** (`io.github.fahara02:udb-java-client`):
+  `release.yml` gains `publish-java` (`release-java-sdk.yml`), and the pom carries
+  the Central metadata and a `release` profile (sources, javadoc, GPG signing,
+  Central Portal publishing). It publishes once the repository has the
+  `MAVEN_CENTRAL_USERNAME`/`MAVEN_CENTRAL_TOKEN` and
+  `MAVEN_GPG_PRIVATE_KEY`/`MAVEN_GPG_PASSPHRASE` secrets; until then the job warns
+  and publishes nothing.
 
 ### Fixed
 

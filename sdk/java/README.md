@@ -21,8 +21,18 @@ Release target: `0.5.33`
 
 Runtime: Java 17+
 
-Maven Central publishing is still release-pipeline work. Until the public
-artifact is available, build from this checkout:
+Releases publish to Maven Central through `.github/workflows/release-java-sdk.yml`
+once the repository's Central credentials and signing key are configured:
+
+```xml
+<dependency>
+  <groupId>io.github.fahara02</groupId>
+  <artifactId>udb-java-client</artifactId>
+  <version>0.5.34</version>
+</dependency>
+```
+
+Until a version appears on Central, build from this checkout:
 
 ```bash
 mvn -f sdk/java/pom.xml test

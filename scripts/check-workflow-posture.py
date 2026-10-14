@@ -5005,6 +5005,7 @@ def check_release_topology(root: Path = ROOT) -> list[str]:
         "publish-ts",
         "publish-py",
         "publish-csharp",
+        "publish-java",
         "publish-go",
         "publish-packagist",
     ):

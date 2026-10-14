@@ -8,6 +8,35 @@
   <version>0.5.33-SNAPSHOT</version>
   <packaging>jar</packaging>
 
+  <name>UDB Java client</name>
+  <description>Java client for UDB, a proto-driven gRPC broker over multiple databases: generated gRPC stubs for every service plus the tenant/project metadata the broker expects.</description>
+  <url>https://github.com/fahara02/udb</url>
+
+  <licenses>
+    <license>
+      <name>MIT License</name>
+      <url>https://opensource.org/licenses/MIT</url>
+    </license>
+    <license>
+      <name>Apache License, Version 2.0</name>
+      <url>https://www.apache.org/licenses/LICENSE-2.0</url>
+    </license>
+  </licenses>
+
+  <developers>
+    <developer>
+      <id>fahara02</id>
+      <name>fahara02</name>
+      <url>https://github.com/fahara02</url>
+    </developer>
+  </developers>
+
+  <scm>
+    <connection>scm:git:https://github.com/fahara02/udb.git</connection>
+    <developerConnection>scm:git:ssh://git@github.com/fahara02/udb.git</developerConnection>
+    <url>https://github.com/fahara02/udb</url>
+  </scm>
+
   <properties>
     <maven.compiler.release>17</maven.compiler.release>
     <grpc.version>1.81.0</grpc.version>
@@ -158,4 +187,79 @@
       </plugin>
     </plugins>
   </build>
+
+  <!-- Maven Central publishing (`mvn -P release deploy`, run by
+       .github/workflows/release-java-sdk.yml). Central requires sources and
+       javadoc jars and a GPG signature on every artifact. -->
+  <profiles>
+    <profile>
+      <id>release</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-source-plugin</artifactId>
+            <version>3.3.1</version>
+            <executions>
+              <execution>
+                <id>attach-sources</id>
+                <goals>
+                  <goal>jar-no-fork</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-javadoc-plugin</artifactId>
+            <version>3.11.2</version>
+            <configuration>
+              <!-- The generated stubs carry proto comments, not javadoc. -->
+              <doclint>none</doclint>
+              <quiet>true</quiet>
+            </configuration>
+            <executions>
+              <execution>
+                <id>attach-javadocs</id>
+                <goals>
+                  <goal>jar</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-gpg-plugin</artifactId>
+            <version>3.2.7</version>
+            <configuration>
+              <gpgArguments>
+                <arg>--pinentry-mode</arg>
+                <arg>loopback</arg>
+              </gpgArguments>
+            </configuration>
+            <executions>
+              <execution>
+                <id>sign-artifacts</id>
+                <phase>verify</phase>
+                <goals>
+                  <goal>sign</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <groupId>org.sonatype.central</groupId>
+            <artifactId>central-publishing-maven-plugin</artifactId>
+            <version>0.8.0</version>
+            <extensions>true</extensions>
+            <configuration>
+              <publishingServerId>central</publishingServerId>
+              <autoPublish>true</autoPublish>
+              <waitUntil>published</waitUntil>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
 </project>
