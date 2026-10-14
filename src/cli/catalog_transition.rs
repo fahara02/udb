@@ -394,11 +394,80 @@ fn active_catalog_json(
 }
 
 fn rpc_error(action: &str, error: tonic::Status) -> String {
-    // Avoid printing response bodies, credentials or approval tokens.
+    // The broker's refusal message names the cause and the next step (it never
+    // carries credentials or approval tokens); response bodies are not printed.
+    let message: String = error.message().chars().take(4000).collect();
+    if message.trim().is_empty() {
+        format!(
+            "catalog transition {action} refused: code={:?}",
+            error.code()
+        )
+    } else {
+        format!(
+            "catalog transition {action} refused: code={:?}: {message}",
+            error.code()
+        )
+    }
+}
+
+/// The flags that address the same broker and tenant as this invocation.
+fn connection_flags(command: &TransitionCommand, tenant: &str) -> String {
+    let mut flags = format!("--project {}", command.project);
+    if !tenant.is_empty() {
+        flags.push_str(&format!(" --tenant {tenant}"));
+    }
+    if let Some(target) = command.target.as_deref() {
+        flags.push_str(&format!(" --target {target}"));
+    }
+    flags
+}
+
+/// The exact `plan` command for advancing the ACTIVE catalog `active`
+/// (a `catalog_json` value), with the expected id and outer manifest integrity
+/// filled in and a fresh idempotency key.
+fn next_plan_command(command: &TransitionCommand, tenant: &str, active: &Value) -> String {
+    let id = active["catalog_id"].as_str().unwrap_or_default();
+    let integrity = active["manifest_integrity_sha256"]
+        .as_str()
+        .unwrap_or_default();
+    let short: String = id.chars().take(8).collect();
     format!(
-        "catalog transition {action} refused: code={:?}",
-        error.code()
+        "udb manifest-export && udb catalog transition plan {} --manifest udb_catalog_manifest.json \
+         --expected-active-catalog-id {id} --expected-active-manifest-integrity-sha256 {integrity} \
+         --out plan-{short}.json --idempotency-key plan-{}",
+        connection_flags(command, tenant),
+        uuid::Uuid::new_v4()
     )
+}
+
+/// The next command for a reviewed run in `state` (from `status --run-id`).
+fn next_run_command(command: &TransitionCommand, tenant: &str, run: &str, state: &str) -> String {
+    let flags = connection_flags(command, tenant);
+    let key = uuid::Uuid::new_v4();
+    let short: String = run.chars().take(8).collect();
+    match state {
+        "PREFLIGHT" => format!(
+            "review the plan file's operations, then: udb catalog transition approve {flags} \
+             --plan plan-<id>.json --out approval-{short}.json --idempotency-key approve-{key}"
+        ),
+        "APPROVED" | "APPLYING" | "VERIFYING" => format!(
+            "udb catalog transition apply {flags} --approval approval-{short}.json \
+             --idempotency-key apply-{key}"
+        ),
+        "COMPLETED" => format!(
+            "udb catalog transition stage {flags} --manifest udb_catalog_manifest.json \
+             --run-id {run} --idempotency-key stage-{key}; then activate the staged catalog id it \
+             prints: udb catalog transition activate {flags} --catalog-id <staged-id> --run-id {run} \
+             --idempotency-key activate-{key}"
+        ),
+        "ERROR" => format!(
+            "read the run's error, fix the cause, and plan again (`udb catalog transition status \
+             {flags}` prints the plan command)"
+        ),
+        other => format!(
+            "run state {other}: rerun `udb catalog transition status {flags} --run-id {run}`"
+        ),
+    }
 }
 
 pub(crate) fn run(command: TransitionCommand) -> i32 {
@@ -613,7 +682,13 @@ async fn run_async(command: TransitionCommand) -> Result<Value, String> {
                 if response.project_id != command.project {
                     return Err("broker catalog discovery returned a different project".into());
                 }
-                let value = active_catalog_json(&command.project, &response.versions)?;
+                let mut value = active_catalog_json(&command.project, &response.versions)?;
+                value["next_command"] =
+                    Value::String(next_plan_command(&command, &caller.tenant, &value));
+                value["next_command_needs"] = Value::String(
+                    "UDB_AUTH_TOKEN (or UDB_BEARER_TOKEN) set to an authorized operator bearer"
+                        .to_string(),
+                );
                 if let Some(out) = command.out {
                     write_new_json(&out, &value)?;
                 }
@@ -631,7 +706,13 @@ async fn run_async(command: TransitionCommand) -> Result<Value, String> {
                 .map_err(|error| rpc_error("status", error))?
                 .into_inner();
             validate_status_binding(&response, &caller, &run)?;
-            let value = status_json(&response);
+            let mut value = status_json(&response);
+            value["next_command"] = Value::String(next_run_command(
+                &command,
+                &caller.tenant,
+                &run,
+                &response.state,
+            ));
             if let Some(out) = command.out {
                 write_new_json(&out, &value)?;
             }
@@ -660,6 +741,69 @@ mod tests {
         assert_eq!(discovered["manifest_integrity_sha256"], "a".repeat(64));
         assert!(active_catalog_json("other", &[catalog.clone()]).is_err());
         assert!(active_catalog_json("owned", &[catalog.clone(), catalog]).is_err());
+    }
+
+    fn status_command() -> TransitionCommand {
+        parse(
+            &["catalog", "transition", "status", "--project", "virtued"]
+                .iter()
+                .map(|s| s.to_string())
+                .collect::<Vec<_>>(),
+        )
+        .expect("status parses")
+    }
+
+    #[test]
+    fn status_prints_the_exact_next_plan_command_with_the_active_identity() {
+        let command = status_command();
+        let active = json!({
+            "catalog_id": "3f1c0d2e-0000-4000-8000-000000000001",
+            "manifest_integrity_sha256": "a".repeat(64),
+        });
+        let next = next_plan_command(&command, "t-1", &active);
+        assert!(
+            next.contains("udb catalog transition plan --project virtued --tenant t-1"),
+            "{next}"
+        );
+        assert!(
+            next.contains("--expected-active-catalog-id 3f1c0d2e-0000-4000-8000-000000000001"),
+            "{next}"
+        );
+        assert!(
+            next.contains(&format!(
+                "--expected-active-manifest-integrity-sha256 {}",
+                "a".repeat(64)
+            )),
+            "{next}"
+        );
+        assert!(next.contains("--idempotency-key plan-"), "{next}");
+        assert!(next.contains("udb manifest-export"), "{next}");
+        // The command it prints parses as a complete plan invocation.
+        let plan_part = next.split("&& ").nth(1).expect("plan part");
+        let argv: Vec<String> = plan_part
+            .split_whitespace()
+            .skip(1)
+            .map(str::to_string)
+            .collect();
+        let parsed = parse(&argv).expect("the printed plan command is complete");
+        assert_eq!(parsed.action, TransitionAction::Plan);
+
+        let after_apply = next_run_command(&command, "t-1", "run-123", "COMPLETED");
+        assert!(
+            after_apply.contains("transition stage --project virtued"),
+            "{after_apply}"
+        );
+        assert!(after_apply.contains("--run-id run-123"), "{after_apply}");
+    }
+
+    #[test]
+    fn rpc_errors_carry_the_brokers_refusal_message() {
+        let message = rpc_error(
+            "stage",
+            tonic::Status::failed_precondition("candidate catalog version 2.0.0 is not compatible"),
+        );
+        assert!(message.contains("FailedPrecondition"), "{message}");
+        assert!(message.contains("is not compatible"), "{message}");
     }
 
     #[test]
