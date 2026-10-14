@@ -68,6 +68,11 @@ service MessagingService {
   // change is a new device).
   rpc RegisterMessagingDevice(RegisterMessagingDeviceRequest) returns (RegisterMessagingDeviceResponse) {
     option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    // Verified: GENUINE keyed dedup. device_id is unique per tenant
+    // (unique-index on (tenant_id, device_id) in the project's messaging
+    // store); the insert is ON CONFLICT DO NOTHING inside one transaction, and
+    // a replay of the identical request returns the existing row with
+    // created=false, while a conflicting one is ALREADY_EXISTS.
     option (udb.core.common.v1.method_idempotency_contract) = {
       request_key_field: "device_id"
       server_generated_key: false
@@ -326,6 +331,11 @@ service MessagingService {
   // secrets.
   rpc CreateGroup(CreateGroupRequest) returns (CreateGroupResponse) {
     option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    // Verified: GENUINE keyed dedup. group_id is unique per tenant
+    // (unique-index on (tenant_id, group_id) in the project's messaging
+    // store); the insert is ON CONFLICT DO NOTHING inside one transaction, and
+    // a replay of the identical request returns the existing row with
+    // created=false, while a conflicting one is ALREADY_EXISTS.
     option (udb.core.common.v1.method_idempotency_contract) = {
       request_key_field: "group_id"
       server_generated_key: false
@@ -374,6 +384,12 @@ service MessagingService {
   // receives FAILED_PRECONDITION carrying the current epoch so it can re-base.
   rpc SubmitCommit(SubmitCommitRequest) returns (SubmitCommitResponse) {
     option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    // Verified: GENUINE keyed dedup. A non-empty client_message_id is scoped to
+    // (tenant, group) in the project's messaging store; the handler takes a
+    // transaction-scoped advisory lock on that key and returns the original
+    // result if an inbox row with the key exists, inside the same transaction
+    // that would append the fan-out, so a retry is never delivered twice. An
+    // empty key disables dedup, so server_generated_key=false.
     option (udb.core.common.v1.method_idempotency_contract) = {
       request_key_field: "client_message_id"
       server_generated_key: false
@@ -467,6 +483,12 @@ service MessagingService {
   // them.
   rpc SendMessage(SendMessageRequest) returns (SendMessageResponse) {
     option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    // Verified: GENUINE keyed dedup. A non-empty client_message_id is scoped to
+    // (tenant, group) in the project's messaging store; the handler takes a
+    // transaction-scoped advisory lock on that key and returns the original
+    // result if an inbox row with the key exists, inside the same transaction
+    // that would append the fan-out, so a retry is never delivered twice. An
+    // empty key disables dedup, so server_generated_key=false.
     option (udb.core.common.v1.method_idempotency_contract) = {
       request_key_field: "client_message_id"
       server_generated_key: false
