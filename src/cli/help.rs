@@ -188,7 +188,11 @@ const COMMANDS: &[CmdHelp] = &[
   --yes      approve up front (automation); uses safe defaults, never invents
              answers that have none
   --check    exit 1 listing what is missing; write nothing (CI, doctor)
-  --dry-run  print the plan; write nothing",
+  --dry-run  print the plan; write nothing
+
+  Apply and --dry-run end with a \"where each value lives\" table: each value, the file
+  or keys directory that holds it, and the process that reads it (broker or
+  udb CLI), plus the per-operator values that belong in a shell instead.",
     },
     CmdHelp {
         name: "requirements",

@@ -335,6 +335,72 @@ fn render_plan(file: &Path, profile: EnvProfile, plan: &Plan) -> String {
     out
 }
 
+/// Which process reads a value, by key.
+fn read_by(key: &str) -> &'static str {
+    match key {
+        "UDB_PG_DSN" => "broker (udb serve) and udb CLI (policy apply/diff, catalog, plan)",
+        "UDB_JWT_PRIVATE_KEY" => "broker: signs bearer tokens",
+        "UDB_JWT_PUBLIC_KEY" => "broker: verifies bearer tokens",
+        "UDB_MTLS_CLIENT_CA_PATH" | "UDB_TLS_CERT_PATH" | "UDB_TLS_KEY_PATH" => {
+            "broker: gRPC listeners"
+        }
+        _ => "broker (udb serve)",
+    }
+}
+
+/// The closing "where each value lives" table: every value the profile needs,
+/// the file (or keys directory) holding it and the process that reads it, plus
+/// the per-operator values that belong in a shell, never in this file.
+fn render_where_values_live(file: &Path, keys_dir: &Path, profile: EnvProfile) -> String {
+    let file = file.display().to_string();
+    let keys = keys_dir.display().to_string();
+    let mut rows: Vec<(String, String, String)> = needs(profile)
+        .into_iter()
+        .map(|need| {
+            let lives = match need.make {
+                Make::JwtPrivate => format!("{keys}/jwt-private.pem (path in {file})"),
+                Make::JwtPublic => format!("{keys}/jwt-public.pem (path in {file})"),
+                Make::Ask { .. } if need.key.ends_with("_PATH") => {
+                    format!("the file you named (path in {file})")
+                }
+                _ => file.clone(),
+            };
+            (need.key.to_string(), lives, read_by(need.key).to_string())
+        })
+        .collect();
+    for (key, lives, reader) in [
+        (
+            "UDB_AUTH_TOKEN",
+            "your shell, per operator (a bearer from Login/Authenticate)",
+            "udb CLI: auth, authz, catalog transition, identity apply",
+        ),
+        (
+            "UDB_GRPC_TARGET / UDB_AUTH_TARGET",
+            "your shell, per operator",
+            "udb CLI: which broker to call",
+        ),
+        (
+            "UDB_TENANT_ID",
+            "your shell, per operator",
+            "udb CLI: default --tenant",
+        ),
+    ] {
+        rows.push((key.to_string(), lives.to_string(), reader.to_string()));
+    }
+    let key_width = rows.iter().map(|row| row.0.len()).max().unwrap_or(0);
+    let lives_width = rows.iter().map(|row| row.1.len()).max().unwrap_or(0);
+    let mut out = format!(
+        "Where each value lives:\n  {:key_width$}  {:lives_width$}  read by\n",
+        "value", "lives in"
+    );
+    for (key, lives, reader) in rows {
+        out.push_str(&format!(
+            "  {key:key_width$}  {lives:lives_width$}  {reader}\n"
+        ));
+    }
+    out
+}
+
 fn profile_label(profile: EnvProfile) -> &'static str {
     match profile {
         EnvProfile::Dev => "dev",
@@ -486,10 +552,18 @@ pub(crate) fn run(options: &FillOptions) -> i32 {
     eprint!("{}", render_plan(&options.file, profile, &plan));
     if plan.add.is_empty() && plan.unanswered.is_empty() {
         eprintln!("Nothing to add.");
+        eprint!(
+            "{}",
+            render_where_values_live(&options.file, &options.keys_dir, profile)
+        );
         return 0;
     }
     if options.mode == FillMode::DryRun {
         eprintln!("Dry run: nothing written.");
+        eprint!(
+            "{}",
+            render_where_values_live(&options.file, &options.keys_dir, profile)
+        );
         return 0;
     }
     if !plan.unanswered.is_empty() {
@@ -531,6 +605,10 @@ pub(crate) fn run(options: &FillOptions) -> i32 {
                 backup
                     .map(|path| format!(" (previous version: {})", path.display()))
                     .unwrap_or_default()
+            );
+            eprint!(
+                "{}",
+                render_where_values_live(&options.file, &options.keys_dir, profile)
             );
             0
         }
@@ -707,6 +785,26 @@ mod tests {
         };
         assert_eq!(run(&check), 0, "a filled file passes --check");
         let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn the_closing_table_says_where_each_value_lives_and_who_reads_it() {
+        let table = render_where_values_live(
+            Path::new(".env"),
+            Path::new(".udb/keys"),
+            EnvProfile::Enterprise,
+        );
+        assert!(table.starts_with("Where each value lives:"), "{table}");
+        for key in needs(EnvProfile::Enterprise).iter().map(|need| need.key) {
+            assert!(table.contains(key), "{key} missing from: {table}");
+        }
+        assert!(
+            table.contains(".udb/keys/jwt-private.pem (path in .env)"),
+            "{table}"
+        );
+        assert!(table.contains("udb CLI (policy apply/diff"), "{table}");
+        assert!(table.contains("UDB_AUTH_TOKEN"), "{table}");
+        assert!(table.contains("your shell, per operator"), "{table}");
     }
 
     #[test]
