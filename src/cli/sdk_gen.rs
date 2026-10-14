@@ -1232,7 +1232,9 @@ fn generate(
 ///
 /// Returns `Err` (FAILS CLOSED) when an entity has a field with no column
 /// round-trip — a message stored in a non-JSON column — rather than silently
-/// omitting it. Every other shape is emitted inline or through the reflective
+/// omitting it, and when an entity has no (or an unparseable) Go
+/// `language_classes` entry, which used to drop the entity from the file with
+/// no error. Every other shape is emitted inline or through the reflective
 /// field codec; nothing is skipped.
 fn render_go_entities_file(entities: &[EntityDescriptor], package: &str) -> Result<String, String> {
     // First pass: which entities are renderable + what imports/helpers are needed.
@@ -1243,11 +1245,24 @@ fn render_go_entities_file(entities: &[EntityDescriptor], package: &str) -> Resu
     let mut needs_json_message = false;
     let mut renderable: Vec<(&EntityDescriptor, String, String)> = Vec::new();
     for entity in entities {
-        let Some(go_type) = entity.language_classes.get("go") else {
-            continue;
+        let Some(go_type) = entity
+            .language_classes
+            .get("go")
+            .filter(|value| !value.trim().is_empty())
+        else {
+            return Err(format!(
+                "entity {} has no Go language class, so no typed Go code can be generated for it; \
+                 set `option go_package = \"<import path>;<package>\"` in its proto file (the \
+                 manifest records it as language_classes[\"go\"] = \"<import path>;<package>.{}\")",
+                entity.message_type, entity.short_name
+            ));
         };
         let Some((path, alias, type_name)) = parse_go_type(go_type) else {
-            continue;
+            return Err(format!(
+                "entity {} has an unparseable Go language class {go_type:?}; expected \
+                 \"<import path>;<package>.<Type>\" (from the proto file's go_package option)",
+                entity.message_type
+            ));
         };
         proto_imports.insert(path, alias.clone());
         for column in &entity.columns {
@@ -3104,7 +3119,7 @@ fn substitute_rpc(body: &str, rpc: &RpcDescriptor, manifest: &[RpcDescriptor]) -
     } else {
         rpc.rest_operation_id.clone()
     };
-    let pairs: [(&str, String); 40] = [
+    let pairs: [(&str, String); 34] = [
         ("{{RPC_NAME}}", rpc.method.clone()),
         ("{{RPC_WIRE_NAME}}", rpc.method.clone()),
         ("{{RPC_SNAKE}}", rpc.method_snake.clone()),
@@ -3114,13 +3129,6 @@ fn substitute_rpc(body: &str, rpc: &RpcDescriptor, manifest: &[RpcDescriptor]) -
         ("{{REST_OPERATION_ID}}", rest_operation_id.clone()),
         ("{{RPC_HTTP_METHOD}}", rpc.http_verb.clone()),
         ("{{RPC_HTTP_PATH}}", rpc.http_path.clone()),
-        // Compatibility placeholders used by older templates during migration.
-        ("{{RPC_WIRE_PATH}}", rpc.grpc_path()),
-        ("{{RPC_API_ALIAS}}", alias_snake.clone()),
-        ("{{RPC_OPERATION_ID}}", rest_operation_id),
-        ("{{RPC_METHOD_ALIAS_SNAKE}}", alias_snake),
-        ("{{RPC_METHOD_ALIAS_CAMEL}}", alias_camel),
-        ("{{RPC_METHOD_ALIAS_PASCAL}}", alias_pascal),
         ("{{PHP_RPC_METHOD_CAMEL}}", php_method_camel),
         ("{{RPC_INPUT}}", rpc.input_short.clone()),
         ("{{RPC_INPUT_PKG}}", rpc.input_pkg.clone()),
@@ -4097,6 +4105,45 @@ message Stored {
         assert!(
             read.contains("orderv1.OrderStatus_value[\"ORDER_STATUS_\"+s]"),
             "enum read must rebuild the full name, got: {read}"
+        );
+    }
+
+    // 0.6.0: an entity with no usable Go language class is a generation error
+    // naming the entity, not an entity silently missing from the file.
+    #[test]
+    fn entity_without_a_go_language_class_fails_generation() {
+        let entity = |classes: &[(&str, &str)]| EntityDescriptor {
+            message_type: "acme.v1.Profile".to_string(),
+            short_name: "Profile".to_string(),
+            table: "profiles".to_string(),
+            primary_keys: vec!["id".to_string()],
+            unique_keys: Vec::new(),
+            unique_key_errors: Vec::new(),
+            tenant_field: String::new(),
+            project_field: String::new(),
+            soft_delete_field: String::new(),
+            version_field: String::new(),
+            proto_package: "acme.v1".to_string(),
+            language_classes: classes
+                .iter()
+                .map(|(lang, class)| (lang.to_string(), class.to_string()))
+                .collect(),
+            json_field_names: vec!["id".to_string()],
+            relations: Vec::new(),
+            columns: vec![column("id", "string")],
+        };
+        let missing = render_go_entities_file(&[entity(&[("ts", "Profile")])], "acmegen")
+            .expect_err("a missing Go class must fail generation");
+        assert!(
+            missing.contains("acme.v1.Profile") && missing.contains("go_package"),
+            "{missing}"
+        );
+        let unparseable =
+            render_go_entities_file(&[entity(&[("go", "acmev1.Profile")])], "acmegen")
+                .expect_err("an unparseable Go class must fail generation");
+        assert!(
+            unparseable.contains("acme.v1.Profile") && unparseable.contains("unparseable"),
+            "{unparseable}"
         );
     }
 
