@@ -1349,9 +1349,9 @@ fn diff_indexes(old: &ManifestTable, new: &ManifestTable, ops: &mut Vec<ChangeOp
                 ChangeSafety::RequiresReview
             };
             let blocked = if safety == ChangeSafety::RequiresReview {
-                "drop_index requires allow_drop on table or one indexed column"
+                allow_drop_needed_reason("drop_index", &index_name(old, index), new, &index.columns)
             } else {
-                ""
+                String::new()
             };
             ops.push(op(
                 ChangeKind::DropIndex,
@@ -1361,7 +1361,7 @@ fn diff_indexes(old: &ManifestTable, new: &ManifestTable, ops: &mut Vec<ChangeOp
                 "",
                 &index_name(old, index),
                 "index no longer exists in desired proto AST",
-                blocked,
+                &blocked,
             ));
         }
     }
@@ -1392,9 +1392,9 @@ fn diff_foreign_keys(old: &ManifestTable, new: &ManifestTable, ops: &mut Vec<Cha
                 ChangeSafety::RequiresReview
             };
             let blocked = if safety == ChangeSafety::RequiresReview {
-                "drop_foreign_key requires allow_drop on table or one FK column"
+                allow_drop_needed_reason("drop_foreign_key", &fk_name(old, fk), new, &fk.columns)
             } else {
-                ""
+                String::new()
             };
             ops.push(op(
                 ChangeKind::DropForeignKey,
@@ -1404,7 +1404,7 @@ fn diff_foreign_keys(old: &ManifestTable, new: &ManifestTable, ops: &mut Vec<Cha
                 "",
                 &fk_name(old, fk),
                 "foreign key no longer exists in desired proto AST",
-                blocked,
+                &blocked,
             ));
         }
     }
@@ -1647,6 +1647,34 @@ fn add_column_safety<'a>(
     } else {
         (ChangeSafety::SafeAuto, "")
     }
+}
+
+/// Why dropping an index / foreign key waits for review, naming the exact proto
+/// option that would allow it (on which message and file, or on which column)
+/// and the reviewed-plan alternative.
+fn allow_drop_needed_reason(
+    verb: &str,
+    object: &str,
+    table: &ManifestTable,
+    columns: &[String],
+) -> String {
+    let message = table.message_fqn();
+    let file = if table.source_file.trim().is_empty() {
+        String::new()
+    } else {
+        format!(" in {}", table.source_file.trim())
+    };
+    format!(
+        "{verb} {object} on {schema}.{table_name} needs allow_drop: add \
+         `option (udb.core.common.v1.table).allow_drop = true;` to message {message}{file}, or \
+         `[(udb.core.common.v1.column).allow_drop = true]` to one of its columns ({columns}), and \
+         remove it once the drop is applied; or approve the drop in a reviewed plan \
+         (`udb plan --emit-approval-plan <path>` for a startup migration, \
+         `udb catalog transition plan` then `approve` for a served catalog)",
+        schema = table.schema,
+        table_name = table.table,
+        columns = columns.join(", "),
+    )
 }
 
 fn column_allows_drop(table: &ManifestTable, columns: &[String]) -> bool {
@@ -2247,6 +2275,39 @@ mod tests {
         ] {
             assert!(!is_data_destructive(&kind), "{kind:?} only adds");
         }
+    }
+
+    #[test]
+    fn a_held_index_drop_names_the_proto_option_message_file_and_approval_path() {
+        let mut old_table = table(vec![column("name", "TEXT")]);
+        old_table.proto_package = "acme.clinic.v1".to_string();
+        old_table.message_name = "Patient".to_string();
+        old_table.source_file = "proto/acme/clinic/v1/patient.proto".to_string();
+        old_table.indexes = vec![ManifestIndex {
+            name: "idx_patients_name".to_string(),
+            columns: vec!["name".to_string()],
+            ..ManifestIndex::default()
+        }];
+        let mut new_table = old_table.clone();
+        new_table.indexes.clear();
+        let old = manifest(old_table, "old", "old-table");
+        let desired = manifest(new_table, "new", "new-table");
+        let changes = diff_manifests(Some(&old), &desired);
+        let drop = changes
+            .iter()
+            .find(|change| change.kind == ChangeKind::DropIndex)
+            .expect("the removed index is planned");
+        assert_eq!(drop.safety, ChangeSafety::RequiresReview);
+        let reason = &drop.blocked_reason;
+        assert!(
+            reason.contains("(udb.core.common.v1.table).allow_drop = true"),
+            "{reason}"
+        );
+        assert!(reason.contains("(udb.core.common.v1.column).allow_drop"), "{reason}");
+        assert!(reason.contains("acme.clinic.v1.Patient"), "{reason}");
+        assert!(reason.contains("proto/acme/clinic/v1/patient.proto"), "{reason}");
+        assert!(reason.contains("(name)"), "{reason}");
+        assert!(reason.contains("udb catalog transition plan"), "{reason}");
     }
 
     /// The flag must be populated on every finalized operation, not left default.
