@@ -185,13 +185,29 @@ The deny messages you will see (verbatim, so you can grep):
   --tenant <tenant-uuid>` (or AuthzService PutAuthzPolicy), then bind
   principals to the role — or set UDB_ABAC_DEFAULT_ALLOW=true for local
   bootstrap (works only while zero policy rows exist)``
-- Policies exist, none match: ``denied by Casbin PERM model: no applicable
-  allow policy for action '<act>' on '<selectors>' (tenant '<t>'). Check the
-  three token traps: the action must be the RPC method name (Select/Upsert/
-  Delete/Update/BulkCas — NOT a data.* alias), the policy's tenant_id must be
-  this tenant UUID, and its object must match the message type. Apply it with
-  `udb policy apply -f <policies.yaml> --tenant <t>` declaring an ALLOW rule
-  for action '<act>' (+ bind this principal to the role)``
+- No rule names this action: ``denied by Casbin PERM model: no policy allows
+  action '<act>' on '<selectors>' for this caller in tenant '<t>'. A rule
+  matches only when its action is exactly '<act>' (the RPC method name, or the
+  typed store RPC's dotted token, never a data.* alias), its tenant is this
+  tenant UUID and its resource matches. To grant it, add `- {role: "<role>",
+  action: "<act>", resource: "<type>", effect: allow}` under `policies:` in the
+  tenant's policies file and run `udb policy apply -f <policies.yaml> --tenant
+  <t>` (apply reconciles the whole file, so keep the existing entries in it)``
+- Rules exist but none grants it: ``denied by Casbin PERM model: no allow rule
+  grants action '<act>' on '<selectors>' to this caller's identities or roles
+  in tenant '<t>'. Diagnosis: the closest rule in this tenant (<id>) fails on:
+  <what>. To grant it, ...`` (same grant step). The grant names the caller's
+  role when it holds one, else its identity (`subject:`).
+- Snapshot not reloaded yet: a deny right after `udb policy apply` or a role
+  binding ends with ``Note: this broker decided with an authz snapshot that
+  predates the latest durable policy/role revision ... Retry after <n>s before
+  changing policy``. Wait and retry; do not edit policy.
+- Credential type not admitted (native RPCs): ``credential type
+  SERVICE_ACCOUNT (service account) is not admitted for /<pkg>.<Svc>/<Rpc>:
+  this broker (udb <ver>) admits only BEARER_JWT, SESSION
+  (endpoint_security.allowed_credential_types); call it as a staff user ...``
+  (reason `UDB_CREDENTIAL_TYPE_NOT_ADMITTED`). No policy fixes this; use an
+  admitted credential.
 
 **Policy as code + the two policy shapes:**
 - The **standard offline path**: `udb policy apply -f <policies.yaml>

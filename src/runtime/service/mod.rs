@@ -907,11 +907,13 @@ impl DataBrokerService {
         if decision.allowed {
             Ok(decision.decision_id)
         } else {
+            let stale_snapshot = crate::runtime::authz::stale_snapshot_hint().await;
             Err(data_plane_denial(
                 "data_plane_authorize",
                 decision,
                 operation,
                 &resource,
+                stale_snapshot.as_deref(),
             ))
         }
     }
@@ -956,11 +958,13 @@ impl DataBrokerService {
         if decision.allowed {
             Ok(decision.decision_id)
         } else {
+            let stale_snapshot = crate::runtime::authz::stale_snapshot_hint().await;
             Err(data_plane_denial(
                 "data_plane_authorize_item",
                 decision,
                 operation,
                 &resource,
+                stale_snapshot.as_deref(),
             ))
         }
     }
@@ -1492,8 +1496,13 @@ fn data_plane_denial(
     decision: crate::runtime::authz::Decision,
     action: &str,
     resource: &crate::runtime::authz::ResourceRef,
+    stale_snapshot: Option<&str>,
 ) -> Status {
     let rule = format!("{action} {}", resource.resource_name);
+    let message = match stale_snapshot {
+        Some(note) => format!("{}. {note}", decision.deny_reason),
+        None => decision.deny_reason,
+    };
     let mut missing = decision.missing;
     missing.insert("rule".to_string(), rule);
     let fields: Vec<(&str, &str)> = missing
@@ -1501,7 +1510,7 @@ fn data_plane_denial(
         .map(|(key, value)| (key.as_str(), value.as_str()))
         .collect();
     crate::runtime::error_reasons::annotate_with(
-        service_policy_denied(operation, decision.decision_id, decision.deny_reason),
+        service_policy_denied(operation, decision.decision_id, message),
         crate::runtime::error_reasons::POLICY_DENIED,
         None,
         None,
