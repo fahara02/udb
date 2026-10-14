@@ -60,6 +60,25 @@ jobs:
             echo "exists=false" >> "$GITHUB_OUTPUT"
           fi
 
+      # udb-client's optional `mls` feature depends on crates/udb-mls by path AND
+      # version; packaging udb-client resolves it from crates.io, so it must be
+      # published first. Its version is its own (crates/udb-mls/Cargo.toml) and
+      # an already-published version is skipped.
+      - name: Publish udb-mls (the optional messaging dependency)
+        if: steps.crate_version.outputs.exists != 'true'
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mls_version="$(sed -n 's/^version = "\(.*\)"$/\1/p' crates/udb-mls/Cargo.toml | head -n 1)"
+          test -n "$mls_version" || { echo "::error::no version in crates/udb-mls/Cargo.toml"; exit 1; }
+          if curl -fsS "https://crates.io/api/v1/crates/udb-mls/${mls_version}" >/dev/null; then
+            echo "udb-mls ${mls_version} already exists on crates.io"
+            exit 0
+          fi
+          cargo publish --locked -p udb-mls
+
       # `cargo publish` packages ONLY the crate directory, so the build script's
       # repo-relative `../../proto` is unreachable from the published crate. The
       # crate's build.rs falls back to a vendored `./proto`, which is what this

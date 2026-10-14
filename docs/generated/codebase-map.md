@@ -178,6 +178,19 @@ graph LR
 - **src/control/sync_config.rs** — types: `SyncConfig`, `SyncResult`, `SyncStatus` · fns: `effective_batch_size`, `has_explicit_tables`, `tenant_scoped`, `validate_tenant_scope`, `is_clean`, `elapsed_ms`, `summary`
 - **src/control/tracker.rs** — fns: `all_tracker_ddl_sql`, `all_tracker_ddl_sql_for_schema` · consts: `DEFAULT_LEDGER_SCHEMA`, `DDL_SCHEMA_MIGRATIONS`, `DDL_PROTO_SCHEMA_VERSIONS`, `DDL_MIGRATION_ERROR_LOG`, `DDL_MIGRATION_RUNTIME_STATE`, `ALL_TRACKER_DDL`
 
+### crates/udb-mls  (6 files)
+
+- **crates/udb-mls/src/client.rs** — [`MlsClient`]: one device's MLS state and every operation on it. · types: `CommitIntent`, `DeviceRegistration`, `GroupCreation`, `PendingCommit`, `CommitSummary`, `OutgoingMessage`, `GroupMember`, `MlsClient`, `KeyPackageInfo` · fns: `inspect_key_package`, `create`, `open`, `open_or_create`, `snapshot`, `store`, `identity`, `inbox_cursor`, `registration`, `key_packages`, `last_resort_key_package`, `create_group`, `forget_group`, `group_ids`, `epoch`, `members`, `has_pending_commit`, `commit`, `confirm_commit`, `discard_commit`, `encrypt`, `process`
+- **crates/udb-mls/src/error.rs** — The crate's error type. Only failures the CALLER must handle are errors: a broken store, an unknown group, a misuse of the commit lifecycle, input that is not a valid MLS object. A single inbox entry that cannot be pr… · types: `MlsError` · fns: `mls`
+- **crates/udb-mls/src/identity.rs** — Device identity: the ciphersuite, the credential naming scheme the broker enforces, and the key fingerprint peers compare out of band. · types: `DeviceIdentity` · fns: `device_identity`, `split_identity`, `key_fingerprint`, `new`, `credential_identity`, `validate_device_id`, `validate_group_id` · consts: `CIPHERSUITE`
+- **crates/udb-mls/src/inbox.rs** — Inbox entries as the broker delivers them, and what processing one yields. · types: `InboxKind`, `InboxItem`, `InboxEvent` · fns: `parse`, `as_str`, `commit`, `welcome`, `message`, `seq`
+- **crates/udb-mls/src/lib.rs** — Client-side MLS for UDB's end-to-end encrypted messaging service. The broker's `MessagingService` is the MLS Delivery Service and key directory: it validates handshake commits against the PUBLIC group state and fans c…
+- **crates/udb-mls/src/store.rs** — Pluggable persistence for client state. The client keeps its OpenMLS key/value storage in memory and writes one self-contained snapshot through a [`StateStore`] after every mutation: the device identity and inbox curs… · traits: `StateStore` · types: `MemoryStore`, `FileStore`, `DecodedSnapshot` · fns: `new`, `from_snapshot`, `snapshot`, `new`, `path`, `encode_snapshot`, `decode_snapshot`
+
+### crates/udb-mls-wasm  (1 files)
+
+- **crates/udb-mls-wasm/src/lib.rs** — JavaScript bindings for `udb-mls` (wasm-bindgen). The TypeScript SDK's `MessagingClient` drives the network; this module holds one device's MLS state and does every cryptographic operation, exactly as the Rust SDK doe… · types: `MlsDevice`, `DeviceRegistration`, `GroupCreation`, `Commit`, `Sealed`, `KeyPackageInfo`, `Event` · fns: `inspect_key_package`, `key_fingerprint`, `create`, `restore`, `snapshot`, `tenant_id`, `subject_id`, `device_id`, `inbox_cursor`, `registration`, `key_packages`, `last_resort_key_package`, `create_group`, `forget_group`, `group_ids`, `epoch`, `members`, `has_pending_commit`, `commit_add`, `commit_remove`, `commit_update`, `confirm_commit`, `discard_commit`, `recommit`, `encrypt`, `process`
+
 ### crates/udb-portable  (2 files)
 
 - **crates/udb-portable/src/lib.rs** — `udb-portable` — the WASM/edge-safe subset of the UDB stack (U28). ## What's in here - [`ast`] — `ProtoSchema`, `ProtoColumn`, and every other AST type that the catalog manifest is built from. Pure serde structs, no I… · fns: `embedded_file_descriptor_set`, `parse_proto_source`, `parse_proto_schemas`, `parse_ast_source`, `dedupe_schemas`
