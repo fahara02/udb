@@ -1,0 +1,40 @@
+# udb-mls-wasm — a thin wasm-bindgen cdylib exposing `udb-mls` (the client
+# side of UDB's end-to-end encrypted messaging) to JavaScript. It adds no
+# cryptography and no protocol logic: every operation is the same Rust code the
+# Rust SDK runs. The TypeScript SDK's `MessagingClient` loads it.
+#
+# Build (the TypeScript SDK's `npm run build:mls-wasm` runs exactly this):
+#   RUSTFLAGS='--cfg getrandom_backend="wasm_js"' \
+#     cargo build --locked -p udb-mls-wasm --release --target wasm32-unknown-unknown
+#   wasm-bindgen --target nodejs --out-dir sdk/typescript/mls-wasm \
+#     target/wasm32-unknown-unknown/release/udb_mls_wasm.wasm
+# The wasm-bindgen CLI version must equal the `wasm-bindgen` crate version in
+# Cargo.lock. The `getrandom_backend` cfg selects the JS randomness source for
+# getrandom 0.3 (OpenMLS's `js` feature); getrandom 0.2 (rand 0.8) takes it from
+# its `js` feature below.
+[package]
+name = "udb-mls-wasm"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.88"
+description = "WebAssembly (wasm-bindgen) bridge exposing udb-mls to the TypeScript SDK"
+license = "MIT OR Apache-2.0"
+publish = false
+
+[lib]
+name = "udb_mls_wasm"
+crate-type = ["cdylib", "rlib"]
+path = "src/lib.rs"
+
+[dependencies]
+wasm-bindgen = "0.2.122"
+js-sys = "0.3.99"
+
+# OpenMLS's `js` feature (clock and randomness from the JS host) only on wasm32,
+# so a native workspace build never unifies it into the broker's OpenMLS.
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+udb-mls = { path = "../udb-mls", features = ["js"] }
+getrandom_02 = { package = "getrandom", version = "0.2", features = ["js"] }
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+udb-mls = { path = "../udb-mls" }

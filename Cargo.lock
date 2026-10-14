@@ -8575,6 +8575,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "udb-mls-wasm"
+version = "0.1.0"
+dependencies = [
+ "getrandom 0.2.17",
+ "js-sys",
+ "udb-mls",
+ "wasm-bindgen",
+]
+
+[[package]]
 name = "udb-portable"
 version = "0.1.0"
 dependencies = [
