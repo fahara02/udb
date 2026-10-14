@@ -488,7 +488,7 @@ fn retention_sql_deletes_acked_or_expired_rows_in_bounded_batches() {
 #[tokio::test]
 async fn register_device_rejects_cross_tenant_body() {
     let svc = MessagingServiceImpl::new();
-    let mut request = Request::new(msg_pb::RegisterDeviceRequest {
+    let mut request = Request::new(msg_pb::RegisterMessagingDeviceRequest {
         tenant_id: "tenant-b".to_string(),
         subject_id: "alice".to_string(),
         device_id: "d1".to_string(),
@@ -498,7 +498,7 @@ async fn register_device_rejects_cross_tenant_body() {
         .metadata_mut()
         .insert("x-tenant-id", MetadataValue::from_static("tenant-a"));
     let err = svc
-        .register_device(request)
+        .register_messaging_device(request)
         .await
         .expect_err("cross-tenant body must be rejected");
     assert_eq!(err.code(), tonic::Code::PermissionDenied);
@@ -508,7 +508,7 @@ async fn register_device_rejects_cross_tenant_body() {
 async fn missing_store_is_a_typed_capability_refusal() {
     let svc = MessagingServiceImpl::new();
     let alice = Device::new(TENANT, "alice", "alice-phone");
-    let mut request = Request::new(msg_pb::RegisterDeviceRequest {
+    let mut request = Request::new(msg_pb::RegisterMessagingDeviceRequest {
         tenant_id: TENANT.to_string(),
         subject_id: "alice".to_string(),
         device_id: "alice-phone".to_string(),
@@ -518,7 +518,10 @@ async fn missing_store_is_a_typed_capability_refusal() {
     request
         .metadata_mut()
         .insert("x-tenant-id", MetadataValue::from_static(TENANT));
-    let err = svc.register_device(request).await.expect_err("no runtime");
+    let err = svc
+        .register_messaging_device(request)
+        .await
+        .expect_err("no runtime");
     assert_eq!(err.code(), tonic::Code::FailedPrecondition);
     let detail = decode_detail(&err);
     assert_eq!(detail.kind, ErrorKind::Capability as i32);
@@ -529,7 +532,7 @@ async fn missing_store_is_a_typed_capability_refusal() {
 async fn register_device_requires_the_credential_to_name_the_device() {
     let svc = MessagingServiceImpl::new();
     let wrong = Device::with_identity("alice-phone", "other-tenant/alice/alice-phone");
-    let mut request = Request::new(msg_pb::RegisterDeviceRequest {
+    let mut request = Request::new(msg_pb::RegisterMessagingDeviceRequest {
         tenant_id: TENANT.to_string(),
         subject_id: "alice".to_string(),
         device_id: "alice-phone".to_string(),
@@ -539,7 +542,10 @@ async fn register_device_requires_the_credential_to_name_the_device() {
     request
         .metadata_mut()
         .insert("x-tenant-id", MetadataValue::from_static(TENANT));
-    let err = svc.register_device(request).await.expect_err("mismatch");
+    let err = svc
+        .register_messaging_device(request)
+        .await
+        .expect_err("mismatch");
     assert_eq!(err.code(), tonic::Code::InvalidArgument);
 }
 

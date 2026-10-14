@@ -140,24 +140,24 @@ impl Default for MessagingServiceImpl {
 impl MessagingService for MessagingServiceImpl {
     type StreamInboxStream = InboxStream;
 
-    async fn register_device(
+    async fn register_messaging_device(
         &self,
-        request: Request<msg_pb::RegisterDeviceRequest>,
-    ) -> Result<Response<msg_pb::RegisterDeviceResponse>, Status> {
+        request: Request<msg_pb::RegisterMessagingDeviceRequest>,
+    ) -> Result<Response<msg_pb::RegisterMessagingDeviceResponse>, Status> {
         handlers::register_device(self, request).await
     }
 
-    async fn list_devices(
+    async fn list_messaging_devices(
         &self,
-        request: Request<msg_pb::ListDevicesRequest>,
-    ) -> Result<Response<msg_pb::ListDevicesResponse>, Status> {
+        request: Request<msg_pb::ListMessagingDevicesRequest>,
+    ) -> Result<Response<msg_pb::ListMessagingDevicesResponse>, Status> {
         handlers::list_devices(self, request).await
     }
 
-    async fn revoke_device(
+    async fn revoke_messaging_device(
         &self,
-        request: Request<msg_pb::RevokeDeviceRequest>,
-    ) -> Result<Response<msg_pb::RevokeDeviceResponse>, Status> {
+        request: Request<msg_pb::RevokeMessagingDeviceRequest>,
+    ) -> Result<Response<msg_pb::RevokeMessagingDeviceResponse>, Status> {
         handlers::revoke_device(self, request).await
     }
 

@@ -66,7 +66,7 @@ service MessagingService {
   // `<tenant>/<subject>/<device_id>`. Re-registering the same device with the same
   // key is idempotent; a different key for an existing device id is refused (a key
   // change is a new device).
-  rpc RegisterDevice(RegisterDeviceRequest) returns (RegisterDeviceResponse) {
+  rpc RegisterMessagingDevice(RegisterMessagingDeviceRequest) returns (RegisterMessagingDeviceResponse) {
     option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
     option (udb.core.common.v1.method_idempotency_contract) = {
       request_key_field: "device_id"
@@ -75,17 +75,17 @@ service MessagingService {
     };
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
-      scopes: "udb:messaging:register-device"
+      scopes: "udb:messaging:register-messaging-device"
       allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
       allowed_credential_types: CREDENTIAL_TYPE_SESSION
       allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
-      decision_resource: "messaging.RegisterDevice"
+      decision_resource: "messaging.RegisterMessagingDevice"
       request_context_required: true
       tenant_required: true
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "register_device" rest_operation_id: "messagingRegisterDevice"
+      method_alias: "register_messaging_device" rest_operation_id: "messagingRegisterMessagingDevice"
       required_credential_provider: "udb"
       default_deadline_ms: 30000
       default_max_attempts: 3
@@ -113,21 +113,21 @@ service MessagingService {
   // List a principal's devices with their key fingerprints, so a peer can verify
   // keys out of band (safety numbers). Revoked devices are included only when
   // asked for.
-  rpc ListDevices(ListDevicesRequest) returns (ListDevicesResponse) {
+  rpc ListMessagingDevices(ListMessagingDevicesRequest) returns (ListMessagingDevicesResponse) {
     option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
-      scopes: "udb:messaging:list-devices"
+      scopes: "udb:messaging:list-messaging-devices"
       allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
       allowed_credential_types: CREDENTIAL_TYPE_SESSION
       allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
-      decision_resource: "messaging.ListDevices"
+      decision_resource: "messaging.ListMessagingDevices"
       request_context_required: true
       tenant_required: true
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "list_devices" rest_operation_id: "messagingListDevices"
+      method_alias: "list_messaging_devices" rest_operation_id: "messagingListMessagingDevices"
       required_credential_provider: "udb"
       default_deadline_ms: 30000
       default_max_attempts: 3
@@ -152,21 +152,21 @@ service MessagingService {
   // Revoke one device: it stops receiving fan-out, its unclaimed KeyPackages are
   // deleted, and every group it belongs to gets a removal hint in the other member
   // devices' inboxes so a member commits the removal.
-  rpc RevokeDevice(RevokeDeviceRequest) returns (RevokeDeviceResponse) {
+  rpc RevokeMessagingDevice(RevokeMessagingDeviceRequest) returns (RevokeMessagingDeviceResponse) {
     option (udb.core.common.v1.operation_kind) = OPERATION_KIND_DESTRUCTIVE;
     option (udb.core.common.v1.endpoint_security) = {
       mode: AUTH_MODE_BEARER
-      scopes: "udb:messaging:revoke-device"
+      scopes: "udb:messaging:revoke-messaging-device"
       allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
       allowed_credential_types: CREDENTIAL_TYPE_SESSION
       allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
-      decision_resource: "messaging.RevokeDevice"
+      decision_resource: "messaging.RevokeMessagingDevice"
       request_context_required: true
       tenant_required: true
     };
     option (udb.core.common.v1.sdk_surface) = {
       include_in_facade: true
-      method_alias: "revoke_device" rest_operation_id: "messagingRevokeDevice"
+      method_alias: "revoke_messaging_device" rest_operation_id: "messagingRevokeMessagingDevice"
       required_credential_provider: "udb"
       default_deadline_ms: 30000
       default_max_attempts: 3
@@ -181,7 +181,7 @@ service MessagingService {
       required_env: "UDB_GRPC_TARGET"
     };
     option (udb.core.common.v1.method_event_contract) = {
-      event_type: "messaging.RevokeDevice"
+      event_type: "messaging.RevokeMessagingDevice"
       outbox_topic: "udb.messaging.inbox.appended.v1"
       partition_key_field: "tenant_id"
       payload_redaction_profile: "standard"
@@ -627,7 +627,7 @@ message Device {
   int64 revoked_at_unix = 9;
 }
 
-message RegisterDeviceRequest {
+message RegisterMessagingDeviceRequest {
   option (udb.core.common.v1.message_sdk_surface) = {
       include_in_facade: true
       required_credential_provider: "udb"
@@ -652,7 +652,7 @@ message RegisterDeviceRequest {
   bytes credential = 5;
 }
 
-message RegisterDeviceResponse {
+message RegisterMessagingDeviceResponse {
   option (udb.core.common.v1.message_sdk_surface) = {
       include_in_facade: true
       required_credential_provider: "udb"
@@ -670,7 +670,7 @@ message RegisterDeviceResponse {
   udb.core.common.v1.ApiError error = 4;
 }
 
-message ListDevicesRequest {
+message ListMessagingDevicesRequest {
   option (udb.core.common.v1.message_sdk_surface) = {
       include_in_facade: true
       required_credential_provider: "udb"
@@ -686,7 +686,7 @@ message ListDevicesRequest {
   bool include_revoked = 3;
 }
 
-message ListDevicesResponse {
+message ListMessagingDevicesResponse {
   option (udb.core.common.v1.message_sdk_surface) = {
       include_in_facade: true
       required_credential_provider: "udb"
@@ -702,7 +702,7 @@ message ListDevicesResponse {
   udb.core.common.v1.ApiError error = 3;
 }
 
-message RevokeDeviceRequest {
+message RevokeMessagingDeviceRequest {
   option (udb.core.common.v1.message_sdk_surface) = {
       include_in_facade: true
       required_credential_provider: "udb"
@@ -718,7 +718,7 @@ message RevokeDeviceRequest {
   string reason = 3;
 }
 
-message RevokeDeviceResponse {
+message RevokeMessagingDeviceResponse {
   option (udb.core.common.v1.message_sdk_surface) = {
       include_in_facade: true
       required_credential_provider: "udb"

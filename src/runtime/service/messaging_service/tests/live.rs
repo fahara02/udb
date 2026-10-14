@@ -62,9 +62,9 @@ fn req<T>(tenant: &str, message: T) -> Request<T> {
 
 async fn register(client: &mut Client, tenant: &str, subject: &str, device: &Device) {
     let response = client
-        .register_device(req(
+        .register_messaging_device(req(
             tenant,
-            msg_pb::RegisterDeviceRequest {
+            msg_pb::RegisterMessagingDeviceRequest {
                 tenant_id: tenant.to_string(),
                 subject_id: subject.to_string(),
                 device_id: device.device_id.clone(),
@@ -257,9 +257,9 @@ async fn live_messaging_key_packages_are_claimed_once_and_tenants_are_isolated()
     register(&mut c, &tenant_a, "bob", &bob).await;
     // Re-registering the identical device is an idempotent replay.
     let replay = c
-        .register_device(req(
+        .register_messaging_device(req(
             &tenant_a,
-            msg_pb::RegisterDeviceRequest {
+            msg_pb::RegisterMessagingDeviceRequest {
                 tenant_id: tenant_a.clone(),
                 subject_id: "bob".to_string(),
                 device_id: "bob-phone".to_string(),
@@ -274,9 +274,9 @@ async fn live_messaging_key_packages_are_claimed_once_and_tenants_are_isolated()
     // A different key for the same device id is refused.
     let impostor = Device::new(&tenant_a, "bob", "bob-phone");
     let err = c
-        .register_device(req(
+        .register_messaging_device(req(
             &tenant_a,
-            msg_pb::RegisterDeviceRequest {
+            msg_pb::RegisterMessagingDeviceRequest {
                 tenant_id: tenant_a.clone(),
                 subject_id: "bob".to_string(),
                 device_id: "bob-phone".to_string(),
@@ -373,9 +373,9 @@ async fn live_messaging_key_packages_are_claimed_once_and_tenants_are_isolated()
     let carol = Device::new(&tenant_b, "carol", "carol-phone");
     register(&mut c, &tenant_b, "carol", &carol).await;
     let listed = c
-        .list_devices(req(
+        .list_messaging_devices(req(
             &tenant_b,
-            msg_pb::ListDevicesRequest {
+            msg_pb::ListMessagingDevicesRequest {
                 tenant_id: tenant_b.clone(),
                 subject_id: "bob".to_string(),
                 include_revoked: true,
@@ -404,9 +404,9 @@ async fn live_messaging_key_packages_are_claimed_once_and_tenants_are_isolated()
     assert!(cross.key_packages.is_empty());
     assert_eq!(cross.missing_device_ids, ["bob-phone"]);
     let err = c
-        .list_devices(req(
+        .list_messaging_devices(req(
             &tenant_b,
-            msg_pb::ListDevicesRequest {
+            msg_pb::ListMessagingDevicesRequest {
                 tenant_id: tenant_a.clone(),
                 subject_id: "bob".to_string(),
                 include_revoked: true,
@@ -416,9 +416,9 @@ async fn live_messaging_key_packages_are_claimed_once_and_tenants_are_isolated()
         .expect_err("a body tenant different from the header tenant is refused");
     assert_eq!(err.code(), Code::PermissionDenied);
     let listed = c
-        .list_devices(req(
+        .list_messaging_devices(req(
             &tenant_a,
-            msg_pb::ListDevicesRequest {
+            msg_pb::ListMessagingDevicesRequest {
                 tenant_id: tenant_a.clone(),
                 subject_id: "bob".to_string(),
                 include_revoked: false,
@@ -875,9 +875,9 @@ async fn live_messaging_group_commits_linearize_and_messages_fan_out() {
 
     // Revoking carol: alice and bob get a removal hint; carol stops receiving.
     let revoked = c
-        .revoke_device(req(
+        .revoke_messaging_device(req(
             &tenant,
-            msg_pb::RevokeDeviceRequest {
+            msg_pb::RevokeMessagingDeviceRequest {
                 tenant_id: tenant.clone(),
                 device_id: "carol-laptop".to_string(),
                 reason: "lost".to_string(),

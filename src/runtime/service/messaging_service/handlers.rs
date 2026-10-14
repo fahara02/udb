@@ -119,9 +119,9 @@ async fn fan_out(
 
 pub(crate) async fn register_device(
     svc: &MessagingServiceImpl,
-    request: Request<msg_pb::RegisterDeviceRequest>,
-) -> Result<Response<msg_pb::RegisterDeviceResponse>, Status> {
-    const OP: &str = "register_device";
+    request: Request<msg_pb::RegisterMessagingDeviceRequest>,
+) -> Result<Response<msg_pb::RegisterMessagingDeviceResponse>, Status> {
+    const OP: &str = "register_messaging_device";
     let metadata = request.metadata().clone();
     let req = request.into_inner();
     let (tenant_id, _permit) =
@@ -184,7 +184,7 @@ pub(crate) async fn register_device(
         }
     };
     commit(tx).await?;
-    Ok(Response::new(msg_pb::RegisterDeviceResponse {
+    Ok(Response::new(msg_pb::RegisterMessagingDeviceResponse {
         device: Some(device_dto(&tenant_id, &device)),
         created,
         message: if created {
@@ -198,8 +198,8 @@ pub(crate) async fn register_device(
 
 pub(crate) async fn list_devices(
     svc: &MessagingServiceImpl,
-    request: Request<msg_pb::ListDevicesRequest>,
-) -> Result<Response<msg_pb::ListDevicesResponse>, Status> {
+    request: Request<msg_pb::ListMessagingDevicesRequest>,
+) -> Result<Response<msg_pb::ListMessagingDevicesResponse>, Status> {
     let metadata = request.metadata().clone();
     let req = request.into_inner();
     let (tenant_id, _permit) =
@@ -215,7 +215,7 @@ pub(crate) async fn list_devices(
     let devices =
         store::list_devices(&mut tx, &tenant_id, &subject_id, req.include_revoked).await?;
     commit(tx).await?;
-    Ok(Response::new(msg_pb::ListDevicesResponse {
+    Ok(Response::new(msg_pb::ListMessagingDevicesResponse {
         devices: devices
             .iter()
             .map(|device| device_dto(&tenant_id, device))
@@ -227,9 +227,9 @@ pub(crate) async fn list_devices(
 
 pub(crate) async fn revoke_device(
     svc: &MessagingServiceImpl,
-    request: Request<msg_pb::RevokeDeviceRequest>,
-) -> Result<Response<msg_pb::RevokeDeviceResponse>, Status> {
-    const OP: &str = "revoke_device";
+    request: Request<msg_pb::RevokeMessagingDeviceRequest>,
+) -> Result<Response<msg_pb::RevokeMessagingDeviceResponse>, Status> {
+    const OP: &str = "revoke_messaging_device";
     let metadata = request.metadata().clone();
     let req = request.into_inner();
     let (tenant_id, _permit) =
@@ -245,7 +245,7 @@ pub(crate) async fn revoke_device(
     ensure_device_owner(caller.as_deref(), &device, OP)?;
     if !device.is_active() {
         commit(tx).await?;
-        return Ok(Response::new(msg_pb::RevokeDeviceResponse {
+        return Ok(Response::new(msg_pb::RevokeMessagingDeviceResponse {
             revoked: true,
             group_ids: Vec::new(),
             message: "device already revoked".to_string(),
@@ -288,7 +288,7 @@ pub(crate) async fn revoke_device(
     if appended > 0 {
         svc.inbox_wake.notify_waiters();
     }
-    Ok(Response::new(msg_pb::RevokeDeviceResponse {
+    Ok(Response::new(msg_pb::RevokeMessagingDeviceResponse {
         revoked: true,
         group_ids: groups.into_iter().map(|(group_id, _)| group_id).collect(),
         message: "device revoked".to_string(),
