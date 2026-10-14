@@ -571,15 +571,15 @@ impl ChannelManager {
             settings.generic_max_concurrent,
         );
         Self {
-            read_sem: Arc::new(Semaphore::new(settings.read_max_concurrent)),
-            write_sem: Arc::new(Semaphore::new(settings.write_max_concurrent)),
-            tx_sem: Arc::new(Semaphore::new(settings.tx_max_concurrent)),
-            migration_sem: Arc::new(Semaphore::new(settings.migration_max_concurrent)),
-            cdc_sem: Arc::new(Semaphore::new(settings.cdc_max_concurrent)),
-            admin_sem: Arc::new(Semaphore::new(settings.admin_max_concurrent)),
-            vector_sem: Arc::new(Semaphore::new(settings.vector_max_concurrent)),
-            object_sem: Arc::new(Semaphore::new(settings.object_max_concurrent)),
-            generic_sem: Arc::new(Semaphore::new(settings.generic_max_concurrent)),
+            read_sem: Arc::new(Semaphore::new(read_limit)),
+            write_sem: Arc::new(Semaphore::new(write_limit)),
+            tx_sem: Arc::new(Semaphore::new(tx_limit)),
+            migration_sem: Arc::new(Semaphore::new(migration_limit)),
+            cdc_sem: Arc::new(Semaphore::new(cdc_limit)),
+            admin_sem: Arc::new(Semaphore::new(admin_limit)),
+            vector_sem: Arc::new(Semaphore::new(vector_limit)),
+            object_sem: Arc::new(Semaphore::new(object_limit)),
+            generic_sem: Arc::new(Semaphore::new(generic_limit)),
             tenant_sems: Arc::new(Mutex::new(HashMap::new())),
             project_sems: Arc::new(Mutex::new(HashMap::new())),
             instance_sems: Arc::new(Mutex::new(HashMap::new())),
@@ -632,7 +632,8 @@ impl ChannelManager {
                 _backend_instance: None,
             })
             .map_err(|_| {
-                let message = format!("{} channel overloaded", op.as_str());
+                let message =
+                    self.overload_message(op, "channel", &sem, &self.base_admission(op), None);
                 crate::runtime::executor_utils::quota_status(
                     "channel",
                     format!("{} immediate admission", op.as_str()),
@@ -682,28 +683,47 @@ impl ChannelManager {
         self.acquire_budget(op, tenant_id, project_id, backend, instance_name, cost)?;
         let timeout = self.queue_timeout_ms(op);
         let base = self
-            .acquire_one(op, self.base_sem(op), timeout, "channel")
+            .acquire_one(
+                op,
+                self.base_sem(op),
+                timeout,
+                "channel",
+                self.base_admission(op),
+            )
             .await?;
         let tenant = match scoped_value(tenant_id) {
             Some(tenant) => {
-                let sem = self.scoped_sem(
-                    &self.tenant_sems,
-                    scope_key1(op, tenant),
-                    self.tenant_limit(op, tenant),
-                );
-                Some(self.acquire_one(op, sem, timeout, "tenant channel").await?)
+                let admission = ScopedAdmission {
+                    limit: self.tenant_limit(op, tenant),
+                    knob: format!(
+                        "UDB_CHANNEL_TENANT_{}_{}_LIMIT",
+                        env_part(tenant),
+                        op.env_suffix()
+                    ),
+                };
+                let sem =
+                    self.scoped_sem(&self.tenant_sems, scope_key1(op, tenant), admission.limit);
+                Some(
+                    self.acquire_one(op, sem, timeout, "tenant channel", admission)
+                        .await?,
+                )
             }
             None => None,
         };
         let project = match scoped_value(project_id) {
             Some(project) => {
-                let sem = self.scoped_sem(
-                    &self.project_sems,
-                    scope_key1(op, project),
-                    self.project_limit(op, project),
-                );
+                let admission = ScopedAdmission {
+                    limit: self.project_limit(op, project),
+                    knob: format!(
+                        "UDB_CHANNEL_PROJECT_{}_{}_LIMIT",
+                        env_part(project),
+                        op.env_suffix()
+                    ),
+                };
+                let sem =
+                    self.scoped_sem(&self.project_sems, scope_key1(op, project), admission.limit);
                 Some(
-                    self.acquire_one(op, sem, timeout, "project channel")
+                    self.acquire_one(op, sem, timeout, "project channel", admission)
                         .await?,
                 )
             }
@@ -711,13 +731,21 @@ impl ChannelManager {
         };
         let instance = match scoped_value(instance_name) {
             Some(instance) => {
+                let admission = ScopedAdmission {
+                    limit: self.instance_limit(op, instance),
+                    knob: format!(
+                        "UDB_CHANNEL_INSTANCE_{}_{}_LIMIT",
+                        env_part(instance),
+                        op.env_suffix()
+                    ),
+                };
                 let sem = self.scoped_sem(
                     &self.instance_sems,
                     scope_key1(op, instance),
-                    self.instance_limit(op, instance),
+                    admission.limit,
                 );
                 Some(
-                    self.acquire_one(op, sem, timeout, "instance channel")
+                    self.acquire_one(op, sem, timeout, "instance channel", admission)
                         .await?,
                 )
             }
@@ -725,13 +753,22 @@ impl ChannelManager {
         };
         let backend_instance = match (scoped_value(backend), scoped_value(instance_name)) {
             (Some(backend), Some(instance)) => {
+                let admission = ScopedAdmission {
+                    limit: self.backend_instance_limit(op, backend, instance),
+                    knob: format!(
+                        "UDB_CHANNEL_BACKEND_INSTANCE_{}_{}_{}_LIMIT",
+                        env_part(backend),
+                        env_part(instance),
+                        op.env_suffix()
+                    ),
+                };
                 let sem = self.scoped_sem(
                     &self.backend_instance_sems,
                     scope_key2(op, backend, instance),
-                    self.backend_instance_limit(op, backend, instance),
+                    admission.limit,
                 );
                 Some(
-                    self.acquire_one(op, sem, timeout, "backend instance channel")
+                    self.acquire_one(op, sem, timeout, "backend instance channel", admission)
                         .await?,
                 )
             }
@@ -744,6 +781,34 @@ impl ChannelManager {
             _instance: instance,
             _backend_instance: backend_instance,
         })
+    }
+
+    fn base_admission(&self, op: OperationChannel) -> ScopedAdmission {
+        ScopedAdmission {
+            limit: self.base_limit(op),
+            knob: format!("UDB_{}_MAX_CONCURRENT", op.env_suffix()),
+        }
+    }
+
+    /// An admission refusal that names the limit, how many slots are in use,
+    /// the knob that sizes it and the queue-wait knob, so an operator can tell
+    /// a too-small limit from a real overload.
+    fn overload_message(
+        &self,
+        op: OperationChannel,
+        label: &str,
+        sem: &Semaphore,
+        admission: &ScopedAdmission,
+        waited_ms: Option<u64>,
+    ) -> String {
+        overload_message_text(
+            op,
+            label,
+            admission.limit.saturating_sub(sem.available_permits()),
+            admission,
+            waited_ms,
+            self.queue_timeout_ms(op),
+        )
     }
 
     fn base_sem(&self, op: OperationChannel) -> Arc<Semaphore> {
@@ -767,10 +832,11 @@ impl ChannelManager {
         sem: Arc<Semaphore>,
         queue_timeout_ms: u64,
         label: &str,
+        admission: ScopedAdmission,
     ) -> Result<OwnedSemaphorePermit, Status> {
         if queue_timeout_ms == 0 {
             return sem.clone().try_acquire_owned().map_err(|_| {
-                let message = format!("{} {label} overloaded", op.as_str());
+                let message = self.overload_message(op, label, &sem, &admission, None);
                 crate::runtime::executor_utils::quota_status(
                     "channel",
                     format!("{} {label} admission", op.as_str()),
@@ -779,8 +845,11 @@ impl ChannelManager {
                 )
             });
         }
-        match tokio::time::timeout(Duration::from_millis(queue_timeout_ms), sem.acquire_owned())
-            .await
+        match tokio::time::timeout(
+            Duration::from_millis(queue_timeout_ms),
+            sem.clone().acquire_owned(),
+        )
+        .await
         {
             Ok(Ok(permit)) => Ok(permit),
             Ok(Err(_)) => {
@@ -793,11 +862,8 @@ impl ChannelManager {
                 ))
             }
             Err(_) => {
-                let message = format!(
-                    "{} {label} overloaded after waiting {}ms",
-                    op.as_str(),
-                    queue_timeout_ms
-                );
+                let message =
+                    self.overload_message(op, label, &sem, &admission, Some(queue_timeout_ms));
                 Err(crate::runtime::executor_utils::quota_status(
                     "channel",
                     format!("{} {label} admission", op.as_str()),
@@ -1190,6 +1256,33 @@ pub(crate) fn env_part(value: &str) -> String {
         .collect()
 }
 
+/// The limit one admission semaphore enforces and the env knob that sets it.
+struct ScopedAdmission {
+    limit: usize,
+    knob: String,
+}
+
+fn overload_message_text(
+    op: OperationChannel,
+    label: &str,
+    in_use: usize,
+    admission: &ScopedAdmission,
+    waited_ms: Option<u64>,
+    queue_timeout_ms: u64,
+) -> String {
+    let waited = waited_ms
+        .map(|ms| format!(" after waiting {ms}ms for a slot"))
+        .unwrap_or_default();
+    format!(
+        "{} {label} overloaded: {in_use} of {} slots in use{waited}. Raise {} (now {}) or UDB_{}_QUEUE_TIMEOUT_MS (now {queue_timeout_ms}ms) if this load is expected; otherwise retry with backoff",
+        op.as_str(),
+        admission.limit,
+        admission.knob,
+        admission.limit,
+        op.env_suffix(),
+    )
+}
+
 fn configured_base_limit(
     env_config: &ChannelEnvConfig,
     op: OperationChannel,
@@ -1283,6 +1376,13 @@ mod tests {
         let err = manager.acquire(OperationChannel::Read).unwrap_err();
         assert_eq!(err.code(), Code::ResourceExhausted);
         assert!(err.message().contains("read channel overloaded"));
+        assert!(
+            err.message().contains("1 of 1 slots in use"),
+            "{}",
+            err.message()
+        );
+        assert!(err.message().contains("UDB_READ_MAX_CONCURRENT (now 1)"));
+        assert!(err.message().contains("UDB_READ_QUEUE_TIMEOUT_MS"));
         let detail = decode_detail(&err);
         assert_eq!(detail.kind, ErrorKind::Quota as i32);
         assert!(detail.retryable);
