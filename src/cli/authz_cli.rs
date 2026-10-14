@@ -131,14 +131,22 @@ async fn run_authz_command_async(command: AuthzCommand) -> Result<serde_json::Va
             action,
             tenant,
             purpose,
+            credential,
+            role,
         } => {
             if user.trim().is_empty() || object.trim().is_empty() || action.trim().is_empty() {
                 return Err(
-                    "provide --user <id>, --object <message type> and --action <RPC name, e.g. Select>"
+                    "provide <subject> <action> <resource> (or --user <id> --action <RPC name, \
+                     e.g. Select> --object <message type or native RPC>)"
                         .to_string(),
                 );
             }
             let tenant = first_non_empty(&tenant, "UDB_TENANT_ID");
+            // Credential-type admission is decided before any policy, from the
+            // RPC's descriptor; report it offline so a credential-type refusal
+            // is never chased as a missing grant.
+            let credential_rules =
+                explain_credential_rules(object.trim(), action.trim(), &credential);
             let request = authz_pb::CheckAccessRequest {
                 user_id: user.trim().to_string(),
                 domain: tenant.clone(),
@@ -148,13 +156,28 @@ async fn run_authz_command_async(command: AuthzCommand) -> Result<serde_json::Va
                 tenant_id: tenant.clone(),
                 ..Default::default()
             };
-            let mut client = authz_client().await?;
+            let mut client = authz_client()
+                .await
+                .map_err(|err| explain_offline_error(&err, &credential_rules))?;
             let response = client
                 .check_access(with_metadata(request))
                 .await
-                .map_err(|err| format!("authz check failed: {err}"))?
+                .map_err(|err| {
+                    explain_offline_error(&format!("authz check failed: {err}"), &credential_rules)
+                })?
                 .into_inner();
             let decision = response.decision.unwrap_or_default();
+            let next_step = explain_next_step(
+                response.allowed,
+                &credential_rules,
+                ExplainTarget {
+                    user: user.trim(),
+                    role: role.trim(),
+                    tenant: &tenant,
+                    action: action.trim(),
+                    object: object.trim(),
+                },
+            );
             Ok(serde_json::json!({
                 "allowed": response.allowed,
                 "user": user.trim(),
@@ -166,9 +189,100 @@ async fn run_authz_command_async(command: AuthzCommand) -> Result<serde_json::Va
                 "deny_reason": decision.deny_reason,
                 "matched_policy_ids": decision.matched_policy_ids,
                 "required_scopes": decision.required_scopes,
+                "credential_rules": credential_rules,
+                "next_step": next_step,
             }))
         }
     }
+}
+
+/// The native RPC(s) the explained resource (or action) names, with their
+/// credential-type admission. A data-plane message type matches nothing.
+fn explain_credential_rules(
+    object: &str,
+    action: &str,
+    credential: &str,
+) -> Vec<udb::runtime::service::RpcAdmission> {
+    let object = object.trim_start_matches("native.rpc:");
+    let by_object = udb::runtime::service::describe_rpc_admission(object, credential);
+    if !by_object.is_empty() {
+        return by_object;
+    }
+    // A bare action such as `Select` would match unrelated native methods;
+    // only an explicit `Service/Method` action is looked up.
+    if action.contains('/') {
+        return udb::runtime::service::describe_rpc_admission(action, credential);
+    }
+    Vec::new()
+}
+
+/// When the broker cannot be asked, still print the offline credential rule.
+fn explain_offline_error(
+    err: &str,
+    credential_rules: &[udb::runtime::service::RpcAdmission],
+) -> String {
+    let rules: Vec<&str> = credential_rules
+        .iter()
+        .map(|rule| rule.explanation.as_str())
+        .collect();
+    if rules.is_empty() {
+        err.to_string()
+    } else {
+        format!("{err}. Credential rule (offline): {}", rules.join(" | "))
+    }
+}
+
+struct ExplainTarget<'a> {
+    user: &'a str,
+    role: &'a str,
+    tenant: &'a str,
+    action: &'a str,
+    object: &'a str,
+}
+
+/// The single next step for an explained decision: the credential rule when
+/// it refuses the caller's credential type, else the grant (and the binding
+/// when the grant names a role).
+fn explain_next_step(
+    allowed: bool,
+    credential_rules: &[udb::runtime::service::RpcAdmission],
+    target: ExplainTarget<'_>,
+) -> String {
+    if let Some(refused) = credential_rules
+        .iter()
+        .find(|rule| rule.credential_admitted == Some(false))
+    {
+        return refused.explanation.clone();
+    }
+    if allowed {
+        return "allowed: nothing to do".to_string();
+    }
+    let object = target.object.trim_start_matches("native.rpc:");
+    let (grantee, binding) = if target.role.is_empty() {
+        (
+            udb::runtime::authz::Grantee::Subject(target.user),
+            String::new(),
+        )
+    } else {
+        (
+            udb::runtime::authz::Grantee::Role(target.role),
+            format!(
+                "; then bind the subject to the role: `udb auth role bind --principal {} --role {} \
+                 --tenant {}`",
+                target.user,
+                target.role,
+                if target.tenant.is_empty() {
+                    "<tenant-uuid>"
+                } else {
+                    target.tenant
+                }
+            ),
+        )
+    };
+    format!(
+        "{}{binding}",
+        udb::runtime::authz::grant_command_hint(target.tenant, grantee, target.action, object)
+    )
 }
 
 /// Render a [`SimulatePolicyResponse`] into the CLI diff view: a per-case
@@ -600,6 +714,87 @@ fn default_true() -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn explain_takes_subject_action_resource_positionally() {
+        let args: Vec<String> = [
+            "authz",
+            "explain",
+            "svc:lessons",
+            "PutFlag",
+            "ConfigService/PutFlag",
+            "--credential",
+            "SERVICE_ACCOUNT",
+        ]
+        .iter()
+        .map(|s| s.to_string())
+        .collect();
+        let (command, _, _, _) = parse_args(&args);
+        match command {
+            Command::Authz(AuthzCommand::Check {
+                user,
+                action,
+                object,
+                credential,
+                ..
+            }) => {
+                assert_eq!(user, "svc:lessons");
+                assert_eq!(action, "PutFlag");
+                assert_eq!(object, "ConfigService/PutFlag");
+                assert_eq!(credential, "SERVICE_ACCOUNT");
+            }
+            _ => panic!("explain parses as Check"),
+        }
+    }
+
+    #[test]
+    fn explain_names_the_credential_rule_before_any_grant() {
+        let rules = explain_credential_rules(
+            "native.rpc:AuthzService/CreatePolicyRule",
+            "CreatePolicyRule",
+            "SERVICE_ACCOUNT",
+        );
+        assert_eq!(rules.len(), 1, "{rules:?}");
+        let step = explain_next_step(
+            false,
+            &rules,
+            ExplainTarget {
+                user: "svc:ops",
+                role: "",
+                tenant: "t-1",
+                action: "CreatePolicyRule",
+                object: "AuthzService/CreatePolicyRule",
+            },
+        );
+        assert!(step.contains("SERVICE_ACCOUNT is NOT admitted"), "{step}");
+
+        // A data-plane miss names the grant and, with --role, the binding.
+        let step = explain_next_step(
+            false,
+            &[],
+            ExplainTarget {
+                user: "svc:lessons",
+                role: "teacher",
+                tenant: "t-1",
+                action: "Upsert",
+                object: "acme.v1.Lesson",
+            },
+        );
+        assert!(
+            step.contains("{role: \"teacher\", action: \"Upsert\", resource: \"acme.v1.Lesson\""),
+            "{step}"
+        );
+        assert!(
+            step.contains("udb policy apply -f <policies.yaml> --tenant t-1"),
+            "{step}"
+        );
+        assert!(
+            step.contains("udb auth role bind --principal svc:lessons --role teacher --tenant t-1"),
+            "{step}"
+        );
+        // Message types never match native RPC descriptors.
+        assert!(explain_credential_rules("acme.v1.Lesson", "Upsert", "").is_empty());
+    }
 
     #[test]
     fn parse_bundle_maps_candidate_and_cases() {

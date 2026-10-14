@@ -605,6 +605,12 @@ pub(crate) enum AuthzCommand {
         action: String,
         tenant: String,
         purpose: String,
+        /// `--credential <SERVICE_ACCOUNT|BEARER_JWT|SESSION|API_KEY|MTLS>`:
+        /// the caller's credential type, checked against the RPC's
+        /// `endpoint_security.allowed_credential_types`.
+        credential: String,
+        /// `--role <code>`: name this role (not the subject) in the grant hint.
+        role: String,
     },
 }
 
@@ -1032,13 +1038,30 @@ fn parse_authz_subcommand(args: &[String]) -> Option<(AuthzCommand, usize)> {
             persist: has_flag("--persist"),
             policy_version_id: flag_value("--policy-version").unwrap_or_default(),
         },
-        Some("check") | Some("explain") => AuthzCommand::Check {
-            user: flag_value("--user").unwrap_or_default(),
-            object: flag_value("--object").unwrap_or_default(),
-            action: flag_value("--action").unwrap_or_default(),
-            tenant: flag_value("--tenant").unwrap_or_default(),
-            purpose: flag_value("--purpose").unwrap_or_default(),
-        },
+        Some("check") | Some("explain") => {
+            // `udb authz explain <subject> <action> <resource>`: positionals
+            // fill whatever the flags leave empty.
+            let positional: Vec<String> = args
+                .iter()
+                .skip(2)
+                .take_while(|arg| !arg.starts_with("--"))
+                .cloned()
+                .collect();
+            let pick = |flag: &str, index: usize| {
+                flag_value(flag)
+                    .or_else(|| positional.get(index).cloned())
+                    .unwrap_or_default()
+            };
+            AuthzCommand::Check {
+                user: pick("--user", 0),
+                action: pick("--action", 1),
+                object: pick("--object", 2),
+                tenant: flag_value("--tenant").unwrap_or_default(),
+                purpose: flag_value("--purpose").unwrap_or_default(),
+                credential: flag_value("--credential").unwrap_or_default(),
+                role: flag_value("--role").unwrap_or_default(),
+            }
+        }
         _ => return None,
     };
     Some((command, 2))
@@ -1274,6 +1297,7 @@ const VALUE_FLAGS: &[&str] = &[
     "--idempotency-key",
     "--target",
     "--timeout-secs",
+    "--credential",
 ];
 
 /// Collect positional (non-flag) tokens after `start`, skipping any token that

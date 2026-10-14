@@ -574,12 +574,20 @@ const COMMANDS: &[CmdHelp] = &[
         name: "authz check",
         group: "Auth & policy",
         summary: "Ask the live policy engine whether a principal may do an action, and why not.",
-        usage: "udb authz check --user <id> --object <message type> --action <Select|Upsert|…> [--tenant <uuid>] [--purpose <p>]",
+        usage: "udb authz explain <subject> <action> <resource> [--credential <SERVICE_ACCOUNT|BEARER_JWT|SESSION|API_KEY|MTLS>] [--role <code>] [--tenant <uuid>] [--purpose <p>]",
         details: "  Calls AuthzService.CheckAccess against the running broker (UDB_AUTH_TARGET,
   with the bearer in UDB_AUTH_TOKEN) and prints the decision as JSON. A denial
   includes the broker's diagnosis: the closest rule for that action and object
   in the tenant and the attribute it fails on (purpose, project, scopes,
-  subject/role, conditions). `udb authz explain` is the same command.",
+  subject/role, conditions). `udb authz check --user <id> --action <a> --object <r>`
+  is the same command with flags.
+  When <resource> names a native RPC (`ConfigService/PutFlag`, a full
+  `/pkg.Service/Method` path or `native.rpc:Service/Method`), the output also
+  lists its credential-type rule (endpoint_security.allowed_credential_types,
+  read offline from this binary); with --credential it says whether that type
+  is admitted. `next_step` is the one thing to do: the credential rule when it
+  refuses the type, else the `udb policy apply` grant (plus the
+  `udb auth role bind` step when --role names the role to grant).",
     },
     CmdHelp {
         name: "proto export",

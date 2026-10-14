@@ -206,6 +206,101 @@ pub fn method_security(path: &str) -> Option<&'static MethodSecurity> {
     method_security_registry().get(path)
 }
 
+/// The credential-type admission one native RPC declares, as `udb authz
+/// explain` reports it (this binary's compiled descriptors, the same ones a
+/// broker of the same version enforces).
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize)]
+pub struct RpcAdmission {
+    /// `/<package>.<Service>/<Method>`.
+    pub rpc: String,
+    /// `endpoint_security.allowed_credential_types` value names; empty means
+    /// every credential type is admitted.
+    pub allowed_credential_types: Vec<&'static str>,
+    /// Scopes the RPC declares (any one suffices besides the admin scopes).
+    pub scopes: Vec<String>,
+    /// Present when `credential` was asked about: whether it is admitted.
+    pub credential_admitted: Option<bool>,
+    /// One sentence a person or agent can act on.
+    pub explanation: String,
+}
+
+/// Find the native RPCs `name` designates — a full path
+/// (`/udb.core.config.services.v1.ConfigService/PutFlag`), `Service/Method`
+/// (`ConfigService/PutFlag`) or a bare method name (`PutFlag`) — and describe
+/// their credential-type admission. `credential` is an optional
+/// `CredentialType` value name (`SERVICE_ACCOUNT`, `BEARER_JWT`, `SESSION`,
+/// `API_KEY`, `MTLS`, with or without the `CREDENTIAL_TYPE_` prefix).
+pub fn describe_rpc_admission(name: &str, credential: &str) -> Vec<RpcAdmission> {
+    let name = name.trim().trim_start_matches('/');
+    if name.is_empty() {
+        return Vec::new();
+    }
+    let wanted = credential
+        .trim()
+        .to_ascii_uppercase()
+        .trim_start_matches("CREDENTIAL_TYPE_")
+        .to_string();
+    let credential = [
+        CredentialType::BearerJwt,
+        CredentialType::Session,
+        CredentialType::ApiKey,
+        CredentialType::ServiceAccount,
+        CredentialType::Mtls,
+    ]
+    .into_iter()
+    .find(|kind| kind.proto_name() == wanted);
+    let mut out: Vec<RpcAdmission> = method_security_registry()
+        .iter()
+        .filter(|(path, _)| {
+            let path = path.trim_start_matches('/');
+            path == name
+                || path.ends_with(&format!("/{name}"))
+                || path.ends_with(&format!(".{name}"))
+        })
+        .map(|(path, security)| {
+            let allowed: Vec<CredentialType> = security
+                .allowed_credential_types
+                .iter()
+                .filter_map(|code| CredentialType::from_code(*code))
+                .collect();
+            let allowed_names: Vec<&'static str> =
+                allowed.iter().map(|kind| kind.proto_name()).collect();
+            let admitted = credential.map(|kind| declared_allows_credential(security, kind));
+            let explanation = match (credential, admitted) {
+                (Some(kind), Some(false)) => format!(
+                    "credential type {} is NOT admitted for {path}: it admits only {}. The call is \
+                     refused before any policy is evaluated, so no `udb policy apply` grant fixes \
+                     it; use an admitted credential",
+                    kind.proto_name(),
+                    allowed_names.join(", ")
+                ),
+                (Some(kind), _) => format!(
+                    "credential type {} is admitted for {path}; a refusal there is a scope or \
+                     policy decision",
+                    kind.proto_name()
+                ),
+                (None, _) if allowed_names.is_empty() => {
+                    format!("{path} admits every credential type")
+                }
+                (None, _) => format!(
+                    "{path} admits only {} (endpoint_security.allowed_credential_types); any other \
+                     credential type is refused before policy",
+                    allowed_names.join(", ")
+                ),
+            };
+            RpcAdmission {
+                rpc: path.clone(),
+                allowed_credential_types: allowed_names,
+                scopes: security.scopes.clone(),
+                credential_admitted: admitted,
+                explanation,
+            }
+        })
+        .collect();
+    out.sort_by(|a, b| a.rpc.cmp(&b.rpc));
+    out
+}
+
 /// Control-plane scopes that authorize any non-public native RPC.
 const ADMIN_SCOPES: [&str; 4] = ["*", "udb:*", "udb:admin", "udb:auth:admin"];
 
@@ -2819,6 +2914,42 @@ mod tests {
                 .expect_err("a staff bearer must not reach a workload-only RPC");
         assert!(err.message().contains("credential type BEARER_JWT"));
         assert!(err.message().contains("Authenticate{api_key}"));
+    }
+
+    #[test]
+    fn explain_admission_names_the_credential_rule_of_a_native_rpc() {
+        let staff_only = describe_rpc_admission("AuthzService/CreatePolicyRule", "SERVICE_ACCOUNT");
+        assert_eq!(staff_only.len(), 1, "{staff_only:?}");
+        let admission = &staff_only[0];
+        assert!(admission.rpc.ends_with("AuthzService/CreatePolicyRule"));
+        assert_eq!(admission.credential_admitted, Some(false));
+        assert!(
+            admission
+                .allowed_credential_types
+                .iter()
+                .all(|kind| *kind != "SERVICE_ACCOUNT" && *kind != "API_KEY"),
+            "{admission:?}"
+        );
+        assert!(
+            admission
+                .explanation
+                .contains("SERVICE_ACCOUNT is NOT admitted"),
+            "{}",
+            admission.explanation
+        );
+        assert!(
+            admission
+                .explanation
+                .contains("no `udb policy apply` grant fixes it")
+        );
+
+        let put_flag = describe_rpc_admission(
+            "/udb.core.config.services.v1.ConfigService/PutFlag",
+            "CREDENTIAL_TYPE_SERVICE_ACCOUNT",
+        );
+        assert_eq!(put_flag.len(), 1, "{put_flag:?}");
+        assert_eq!(put_flag[0].credential_admitted, Some(true));
+        assert!(describe_rpc_admission("NoSuchRpcAnywhere", "").is_empty());
     }
 
     #[test]

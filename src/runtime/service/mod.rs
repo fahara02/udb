@@ -148,6 +148,8 @@ mod metering_service;
 // that joins active sources to the durable CDC journal.
 mod embedding_service;
 pub(crate) mod method_security;
+/// Credential-type admission per native RPC, for `udb authz explain`.
+pub use method_security::{RpcAdmission, describe_rpc_admission};
 // These crate-path re-exports exist solely for the feature-gated
 // `bench_internals` shims (lib.rs D.2); in-tree callers use the module path
 // directly. Gate them the same way so the default build carries no dead use.
