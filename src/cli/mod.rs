@@ -1916,7 +1916,8 @@ pub fn run() {
         | Command::Native { .. }
         | Command::AppInit { .. }
         | Command::CompatMatrix
-        | Command::Env { .. } => {
+        | Command::Env { .. }
+        | Command::EnvFill { .. } => {
             // Already handled before proto parsing above; unreachable.
         }
         Command::Explain => {
