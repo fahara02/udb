@@ -75,3 +75,8 @@ protoc-bin-vendored = "3"
 
 [dev-dependencies]
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
+# The live benchmark (tests/live_perf.rs) calls every RPC in the descriptor set
+# without a stub per service: requests are built and decoded reflectively.
+prost-reflect = { version = "0.16", features = ["serde"] }
+serde = { version = "1", features = ["derive"] }
+tokio-stream = "0.1"

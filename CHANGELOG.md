@@ -7,6 +7,18 @@ release line was tagged.
 
 ## [0.5.34] - Unreleased
 
+### Added
+
+- **The Rust SDK has a typed client for every service.** `build.rs` now compiles
+  every `*/services/v1/*.proto` (it compiled three), so the native services sit
+  beside `DataBrokerClient` under `udb_client::proto`, and the whole contract is
+  exposed as `udb_client::FILE_DESCRIPTOR_SET` for reflective callers.
+- **Rust SDK live benchmark.** `sdk/rust/tests/live_perf.rs` measures every RPC
+  in the contract through tonic and writes `perf_report_rust.md`, published
+  beside the Go, Python, TypeScript and PHP results. Request bodies come from a
+  plan the shared Python seed exports (`sdk/python/tests/export_bench_plan.py`);
+  the plan carries no credentials. See the Rust SDK README, "Benchmark".
+
 ### Fixed
 
 - **`udb dev up --embedded` starts on an elevated Windows terminal.** PostgreSQL

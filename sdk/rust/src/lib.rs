@@ -71,6 +71,14 @@ pub mod proto {
     include!(concat!(env!("OUT_DIR"), "/udb_modules.rs"));
 }
 
+/// The whole UDB contract as an encoded `google.protobuf.FileDescriptorSet`:
+/// every service, request and response type the typed clients under [`proto`]
+/// were generated from. For callers that build requests at runtime (a
+/// reflection-driven tool, a benchmark over every RPC) with a descriptor
+/// library such as `prost-reflect`.
+pub const FILE_DESCRIPTOR_SET: &[u8] =
+    include_bytes!(concat!(env!("OUT_DIR"), "/udb_descriptor.bin"));
+
 pub use auth::{Token, TokenManager};
 pub use client::{SelectError, UdbClient};
 pub use error::{CallPolicy, UdbError};

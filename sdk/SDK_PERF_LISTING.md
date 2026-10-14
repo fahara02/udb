@@ -41,6 +41,7 @@ Generated at: 2026-07-26T17:46:09+00:00.
 | typescript | live full-surface + scenario benchmark harness |
 | python | live full-surface + scenario benchmark harness |
 | php | live full-surface + scenario benchmark harness |
+| rust | live full-surface benchmark harness (requests from the shared seed plan) |
 | java | static SDK conformance only; no live per-RPC benchmark harness yet |
 | csharp | static SDK conformance only; no live per-RPC benchmark harness yet |
 

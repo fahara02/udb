@@ -27,20 +27,25 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let (proto_root, googleapis) = resolve_roots()?;
 
-    let protos = [
-        // Data plane: Select / Upsert / Update / Delete / BulkCas / streaming.
-        "udb/services/v1/data_broker.proto",
-        // Native auth plane: login, refresh, and the authz decision surface.
-        "udb/core/authn/services/v1/authn_service.proto",
-        "udb/core/authz/services/v1/authz_service.proto",
-        // The typed error payload the broker attaches to the
-        // `udb-error-detail-bin` trailer. Listed EXPLICITLY because no service
-        // proto imports it — it travels as trailer bytes, not as a field — so it
-        // is absent from the transitive closure and would not otherwise be
-        // generated.
-        "udb/entity/v1/error.proto",
-    ];
-    let proto_paths: Vec<PathBuf> = protos.iter().map(|p| proto_root.join(p)).collect();
+    // Every native service and the data plane: each `*/services/v1/*.proto`
+    // under `udb/`. Discovered rather than listed, so a service added to the
+    // contract is a typed client here without editing this file.
+    let mut protos = Vec::new();
+    collect_service_protos(&proto_root.join("udb"), &mut protos)?;
+    protos.sort();
+    if protos.is_empty() {
+        return Err(format!(
+            "no service protos under {}",
+            proto_root.join("udb").display()
+        )
+        .into());
+    }
+    // The typed error payload the broker attaches to the `udb-error-detail-bin`
+    // trailer. Listed EXPLICITLY because no service proto imports it — it
+    // travels as trailer bytes, not as a field — so it is absent from the
+    // transitive closure and would not otherwise be generated.
+    protos.push(proto_root.join("udb/entity/v1/error.proto"));
+    let proto_paths = protos;
 
     for p in &proto_paths {
         if !p.exists() {
@@ -66,15 +71,38 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         // `cargo test` tries to compile Google's prose and fails on it. Dropping
         // comments for that package only leaves UDB's own docs intact.
         .disable_comments(["google.api"])
+        // The whole contract as a descriptor set, for callers that build
+        // requests dynamically (see `udb_client::FILE_DESCRIPTOR_SET`).
+        .file_descriptor_set_path(out_dir.join("udb_descriptor.bin"))
         .compile_protos(&proto_paths, &[proto_root.clone(), googleapis])?;
 
     // Emit the module tree from what was ACTUALLY generated, rather than a
     // hand-written list of `include_proto!` calls. The transitive closure of
-    // these three services spans dozens of proto packages; a hand-maintained list
+    // every service spans dozens of proto packages; a hand-maintained list
     // would rot the first time the contract adds one, and the failure would read
     // as "cannot find module" rather than "the SDK is out of date".
     write_module_tree(&out_dir)?;
 
+    Ok(())
+}
+
+/// Every `.proto` file in a `services/v1` directory below `dir`.
+fn collect_service_protos(
+    dir: &Path,
+    out: &mut Vec<PathBuf>,
+) -> Result<(), Box<dyn std::error::Error>> {
+    for entry in std::fs::read_dir(dir)? {
+        let path = entry?.path();
+        if path.is_dir() {
+            collect_service_protos(&path, out)?;
+        } else if path.extension().is_some_and(|ext| ext == "proto")
+            && path
+                .parent()
+                .is_some_and(|parent| parent.ends_with(Path::new("services").join("v1")))
+        {
+            out.push(path);
+        }
+    }
     Ok(())
 }
 

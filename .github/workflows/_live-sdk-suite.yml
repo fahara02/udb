@@ -122,7 +122,8 @@ jobs:
             sdk/go/udbclient/perf_report_go.md \
             sdk/python/perf_report_python.md \
             sdk/typescript/perf_report_ts.md \
-            sdk/php/perf_report_php.md
+            sdk/php/perf_report_php.md \
+            sdk/rust/perf_report_rust.md
 
       # ── SDK toolchains ────────────────────────────────────────────────
       # Perf needs Go/Python/TS/PHP SDK toolchains (PHP 8.3 mirrors the
@@ -829,6 +830,72 @@ jobs:
           ( cd sdk/php && timeout --signal=TERM --kill-after=30s 10m vendor/bin/pest tests/Live/GeneratedRpcSurfaceTest.php --filter 'covers the live generated RPC surface' --log-junit "${GITHUB_WORKSPACE}/bench-output/deep/php-junit.xml" ) 2>&1 | tee bench-output/logs/php-deep.log
           python bench-output/deep/verify-executed.py executed php
 
+      - name: Set up Rust SDK toolchain
+        if: always()
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust SDK build
+        if: always()
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: sdk/rust
+
+      # The Rust harness sends and times every request itself; the request
+      # bodies come from the plan the shared Python seed exports after this
+      # SDK's own fresh-database reset. It compiles before the reset so build
+      # time never ages the seeded fixtures or the plan's sessions.
+      - name: Benchmark Rust SDK
+        if: always()
+        shell: bash
+        env:
+          UDB_ALLOW_LEGACY_PUT_POLICY: "true"
+        run: |
+          set +e
+          mkdir -p bench-output/logs
+          plan="${GITHUB_WORKSPACE}/bench-output/rust-plan.json"
+          rust_report() {
+            {
+              echo "# UDB SDK Live Perf — Rust"
+              echo
+              echo "RPCs measured: 0"
+              echo
+              echo "## Harness error"
+              echo
+              echo "$1"
+              echo
+              echo '```text'
+              tail -200 "$2"
+              echo '```'
+            } > sdk/rust/perf_report_rust.md
+          }
+          ( cd sdk/rust && cargo test --release --test live_perf --no-run ) 2>&1 | tee bench-output/logs/rust-build.log
+          code=${PIPESTATUS[0]}
+          reset_code=0
+          if [ "$code" -ne 0 ]; then
+            rust_report "The Rust benchmark failed to build (code ${code})." bench-output/logs/rust-build.log
+          else
+            bash bench-output/reset.sh 2>&1 | tee bench-output/logs/rust-reset.log
+            reset_code=${PIPESTATUS[0]}
+            if [ "$reset_code" -ne 0 ]; then
+              code=$reset_code
+              rust_report "Reset failed with code ${reset_code} before running the Rust benchmark." bench-output/logs/rust-reset.log
+            else
+              python sdk/python/tests/export_bench_plan.py "$plan" 2>&1 | tee bench-output/logs/rust-plan.log
+              code=${PIPESTATUS[0]}
+              if [ "$code" -ne 0 ]; then
+                rust_report "The shared seed could not export the benchmark plan (code ${code})." bench-output/logs/rust-plan.log
+              else
+                ( cd sdk/rust && UDB_BENCH_PLAN="$plan" cargo test --release --test live_perf -- --nocapture ) 2>&1 | tee bench-output/logs/rust.log
+                code=${PIPESTATUS[0]}
+              fi
+            fi
+          fi
+          if [ ! -f sdk/rust/perf_report_rust.md ]; then
+            rust_report "Benchmark command exited with code ${code} before writing perf_report_rust.md." bench-output/logs/rust.log
+          fi
+          printf '{"exit_code":%d,"note":"%s"}\n' "$code" "$([ "${reset_code:-0}" -ne 0 ] && echo "reset failed before Rust benchmark" || echo "")" > bench-output/status/rust.json
+          exit 0
+
       # Run correctness after all measured SDKs so its state and output cannot
       # change canonical per-RPC measurements. Released tag harnesses remain exact.
       - name: Run every Go live correctness test
@@ -1142,6 +1209,8 @@ jobs:
             sdk/python/perf_report_python.md
             sdk/typescript/perf_report_ts.md
             sdk/php/perf_report_php.md
+            sdk/rust/perf_report_rust.md
+            bench-output/rust-plan.json
             bench-output/logs/**
             bench-output/status/**
             bench-output/deep/**

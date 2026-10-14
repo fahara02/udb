@@ -23,6 +23,7 @@ SDK_REPORTS = {
     "python": ROOT / "sdk/python/perf_report_python.md",
     "typescript": ROOT / "sdk/typescript/perf_report_ts.md",
     "php": ROOT / "sdk/php/perf_report_php.md",
+    "rust": ROOT / "sdk/rust/perf_report_rust.md",
 }
 
 SDK_NAMES = {
@@ -30,6 +31,7 @@ SDK_NAMES = {
     "python": "Python",
     "typescript": "TypeScript",
     "php": "PHP",
+    "rust": "Rust",
     "csharp": "C#",
     "java": "Java",
 }

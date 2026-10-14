@@ -234,8 +234,44 @@ proto package — `udb.entity.v1` is `udb_client::proto::udb::entity::v1`. The
 module tree is emitted by `build.rs` from the packages tonic actually produced,
 so a new service in the contract needs no hand-edited list here.
 
+Every service in the contract has a typed client: `build.rs` compiles each
+`*/services/v1/*.proto` (the data plane and every native service, including
+auth, storage, workflow and WebRTC), so `AuthnServiceClient`, `StorageServiceClient`
+and the rest sit beside `DataBrokerClient` under `udb_client::proto`.
+
+The whole contract is also available as an encoded descriptor set,
+`udb_client::FILE_DESCRIPTOR_SET`, for tools that build requests at runtime
+(with `prost-reflect`, for example) instead of through a stub.
+
 `build.rs` resolves the protos from `../../proto` in a repo checkout, falling
 back to a vendored `./proto`.
+
+## Benchmark
+
+`tests/live_perf.rs` measures every RPC in the contract against a live broker
+and writes `perf_report_rust.md`, the same report the Go, Python, TypeScript
+and PHP harnesses produce. It sends and times every request through tonic
+itself; the request bodies come from a plan the shared Python seed writes, so
+each RPC runs down its success path against real disposable entities. The seed
+leaves those entities in place, so run it against a broker you can reset (CI
+recreates the database before each SDK).
+
+```sh
+export UDB_LIVE_SDK_TESTS=1 UDB_LIVE_PERF=1
+export UDB_GRPC_TARGET=127.0.0.1:50051 UDB_AUTH_GRPC_TARGET=127.0.0.1:50061
+export UDB_LIVE_TENANT=<tenant> UDB_LIVE_PROJECT=<project>
+export UDB_LIVE_USERNAME=<admin> UDB_LIVE_PASSWORD=<password>
+# a second user in the same tenant holding the platform_admin role:
+export UDB_LIVE_PLATFORM_USERNAME=<platform admin> UDB_LIVE_PLATFORM_PASSWORD=<password>
+pip install -e "sdk/python[dev]"
+python sdk/python/tests/export_bench_plan.py /tmp/udb-bench-plan.json
+cd sdk/rust && UDB_BENCH_PLAN=/tmp/udb-bench-plan.json cargo test --release --test live_perf -- --nocapture
+```
+
+The plan holds no credentials: the harness logs in with the variables above and
+substitutes its own session material where a request carries one. Without
+`UDB_LIVE_SDK_TESTS=1` and `UDB_LIVE_PERF=1` the test does nothing, so a plain
+`cargo test` stays offline.
 
 ## Publishing
 
