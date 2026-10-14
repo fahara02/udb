@@ -210,6 +210,7 @@ async fn live_cdc_topic_policy_rejection_routes_to_dlq_and_acks() {
         serde_json::json!({
             "event_id": event_id.to_string(),
             "event_type": rejected_topic,
+            "envelope_version": 2,
             "correlation_id": format!("cdc-policy:{event_id}"),
             "document_id": user_id,
             "tenant_id": "acme",
@@ -240,6 +241,7 @@ async fn live_cdc_topic_policy_rejection_routes_to_dlq_and_acks() {
             serde_json::json!({
                 "event_id": event_id.to_string(),
                 "event_type": rejected_topic,
+                "envelope_version": 2,
                 "correlation_id": format!("cdc-policy:{event_id}"),
                 "tenant_id": "acme",
                 "timestamp": chrono::Utc::now().to_rfc3339(),
@@ -288,6 +290,7 @@ async fn live_cdc_mismatched_envelope_event_id_routes_to_dlq() {
     let payload = serde_json::json!({
         "event_id": payload_event_id.to_string(),
         "event_type": topic,
+        "envelope_version": 2,
         "correlation_id": format!("cdc-mismatch:{event_id}"),
         "timestamp": chrono::Utc::now().to_rfc3339(),
         "payload": {"user_id": Uuid::new_v4().to_string()}
@@ -411,6 +414,7 @@ async fn live_cdc_stream_replay_filters_by_scope_topic_and_anchor() {
         serde_json::json!({
             "event_id": anchor_id.to_string(),
             "event_type": "udb.authn.anchor.v1",
+            "envelope_version": 2,
             "tenant_id": "tenant-a",
             "correlation_id": "cdc-replay-anchor",
             "timestamp": chrono::Utc::now().to_rfc3339(),
@@ -427,6 +431,7 @@ async fn live_cdc_stream_replay_filters_by_scope_topic_and_anchor() {
         serde_json::json!({
             "event_id": skipped_id.to_string(),
             "event_type": "udb.notification.sent.v1",
+            "envelope_version": 2,
             "tenant_id": "tenant-b",
             "correlation_id": "cdc-replay-skip",
             "timestamp": chrono::Utc::now().to_rfc3339(),
@@ -442,6 +447,7 @@ async fn live_cdc_stream_replay_filters_by_scope_topic_and_anchor() {
         serde_json::json!({
             "event_id": replay_id.to_string(),
             "event_type": "udb.authn.user.registered.v1",
+            "envelope_version": 2,
             "tenant_id": "tenant-a",
             "correlation_id": "cdc-replay-hit",
             "timestamp": chrono::Utc::now().to_rfc3339(),

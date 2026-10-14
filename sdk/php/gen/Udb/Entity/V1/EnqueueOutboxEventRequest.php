@@ -32,7 +32,8 @@ class EnqueueOutboxEventRequest extends \Google\Protobuf\Internal\Message
     protected $partition_key = '';
     /**
      * Full EventEnvelope payload as a Struct. Required fields: event_id, event_type,
-     * correlation_id, document_id.
+     * correlation_id, document_id, and envelope_version (2); an unversioned
+     * envelope is refused with UDB_ENVELOPE_VERSION_UNSUPPORTED since 0.6.0.
      *
      * Generated from protobuf field <code>.google.protobuf.Struct payload = 4 [json_name = "payload"];</code>
      */
@@ -66,7 +67,8 @@ class EnqueueOutboxEventRequest extends \Google\Protobuf\Internal\Message
      *           The partition key for the event (must equal document_id for pipeline events).
      *     @type \Google\Protobuf\Struct $payload
      *           Full EventEnvelope payload as a Struct. Required fields: event_id, event_type,
-     *           correlation_id, document_id.
+     *           correlation_id, document_id, and envelope_version (2); an unversioned
+     *           envelope is refused with UDB_ENVELOPE_VERSION_UNSUPPORTED since 0.6.0.
      *     @type string $schema_uri
      *           Optional schema_uri injected into the envelope if absent.
      *     @type string $idempotency_key
@@ -167,7 +169,8 @@ class EnqueueOutboxEventRequest extends \Google\Protobuf\Internal\Message
 
     /**
      * Full EventEnvelope payload as a Struct. Required fields: event_id, event_type,
-     * correlation_id, document_id.
+     * correlation_id, document_id, and envelope_version (2); an unversioned
+     * envelope is refused with UDB_ENVELOPE_VERSION_UNSUPPORTED since 0.6.0.
      *
      * Generated from protobuf field <code>.google.protobuf.Struct payload = 4 [json_name = "payload"];</code>
      * @return \Google\Protobuf\Struct|null
@@ -189,7 +192,8 @@ class EnqueueOutboxEventRequest extends \Google\Protobuf\Internal\Message
 
     /**
      * Full EventEnvelope payload as a Struct. Required fields: event_id, event_type,
-     * correlation_id, document_id.
+     * correlation_id, document_id, and envelope_version (2); an unversioned
+     * envelope is refused with UDB_ENVELOPE_VERSION_UNSUPPORTED since 0.6.0.
      *
      * Generated from protobuf field <code>.google.protobuf.Struct payload = 4 [json_name = "payload"];</code>
      * @param \Google\Protobuf\Struct $var

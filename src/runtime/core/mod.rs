@@ -934,30 +934,34 @@ fn prepare_outbox_envelope(
         ));
     }
 
-    // An envelope newer than this broker's would be stored and delivered under
-    // rules the broker does not know; a malformed version is refused too.
+    // The producer states the envelope shape it wrote. An unversioned envelope
+    // (or version 1, the pre-0.5.26 flat shape) is refused since 0.6.0 rather
+    // than stamped with the current version, and a newer one would be stored and
+    // delivered under rules this broker does not know.
     let current_version = crate::runtime::cdc::EVENT_ENVELOPE_VERSION;
-    if let Some(version) = obj.get("envelope_version") {
-        let accepted = version
-            .as_u64()
-            .is_some_and(|version| version >= 1 && version <= u64::from(current_version));
-        if !accepted {
-            return Err(crate::runtime::error_reasons::Refusal::new(
-                crate::runtime::error_reasons::ENVELOPE_VERSION_UNSUPPORTED,
-                format!(
-                    "event envelope_version {version} is not supported; this broker writes version {current_version}"
-                ),
-            )
-            .field("payload.envelope_version", "must be an integer between 1 and the broker's version")
-            .into_status());
-        }
+    let stated = obj.get("envelope_version");
+    if stated.and_then(serde_json::Value::as_u64) != Some(u64::from(current_version)) {
+        let message = match stated {
+            None => format!(
+                "event envelope_version is required; set \"envelope_version\": {current_version} (unversioned envelopes are refused since 0.6.0)"
+            ),
+            Some(version) => format!(
+                "event envelope_version {version} is not supported; this broker accepts version {current_version}"
+            ),
+        };
+        return Err(crate::runtime::error_reasons::Refusal::new(
+            crate::runtime::error_reasons::ENVELOPE_VERSION_UNSUPPORTED,
+            message,
+        )
+        .field(
+            "payload.envelope_version",
+            format!("must equal the broker's envelope version ({current_version})"),
+        )
+        .into_status());
     }
 
     let event_id = event_id_uuid.to_string();
     let mut enriched_obj = obj.clone();
-    enriched_obj
-        .entry("envelope_version".to_string())
-        .or_insert_with(|| serde_json::Value::Number(serde_json::Number::from(current_version)));
     enriched_obj.insert(
         "event_id".to_string(),
         serde_json::Value::String(event_id.clone()),
@@ -1873,7 +1877,8 @@ mod outbox_envelope_tests {
                 "event_id": "11111111-1111-4111-8111-111111111111",
                 "event_type": "document.uploaded.v1",
                 "correlation_id": "corr-1",
-                "document_id": "doc-1"
+                "document_id": "doc-1",
+                "envelope_version": crate::runtime::cdc::EVENT_ENVELOPE_VERSION
             }),
             Some("buf.build/example/document.uploaded.v1"),
         )
@@ -1916,6 +1921,33 @@ mod outbox_envelope_tests {
             crate::runtime::error_reasons::reason_of(&newer).as_deref(),
             Some("UDB_ENVELOPE_VERSION_UNSUPPORTED")
         );
+
+        // An unversioned envelope, or the pre-0.5.26 version 1, is refused by
+        // the same reason instead of being stamped with the current version.
+        for stated in [None, Some(json!(1))] {
+            let mut envelope = json!({
+                "event_id": "11111111-1111-4111-8111-111111111111",
+                "event_type": "document.uploaded.v1",
+                "correlation_id": "corr-1",
+                "document_id": "doc-1"
+            });
+            if let Some(version) = stated.clone() {
+                envelope["envelope_version"] = version;
+            }
+            let refused = prepare_outbox_envelope("document.uploaded.v1", "doc-1", envelope, None)
+                .expect_err("an unversioned or v1 envelope must be refused");
+            assert_eq!(refused.code(), tonic::Code::FailedPrecondition);
+            assert_eq!(
+                crate::runtime::error_reasons::reason_of(&refused).as_deref(),
+                Some("UDB_ENVELOPE_VERSION_UNSUPPORTED"),
+                "{stated:?}"
+            );
+            assert!(
+                refused.message().contains("envelope_version"),
+                "{}",
+                refused.message()
+            );
+        }
     }
 
     #[test]
@@ -1949,6 +1981,7 @@ mod outbox_envelope_tests {
                 "event_type": "notes.note_job.queued.v1",
                 "correlation_id": "corr-1",
                 "document_id": "doc-1",
+                "envelope_version": crate::runtime::cdc::EVENT_ENVELOPE_VERSION,
                 "payload": {"job_id": "job-7"}
             }),
             None,

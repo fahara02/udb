@@ -105,8 +105,8 @@ reasons! {
         "The service identity is already granted to another service account; a grant is never moved implicitly.",
         "Use a distinct service identity, or move the grant on purpose with `udb auth grant transfer` (or `udb identity apply --allow-transfer`).";
     ENVELOPE_VERSION_UNSUPPORTED = "UDB_ENVELOPE_VERSION_UNSUPPORTED", Schema, FailedPrecondition,
-        "An event's envelope_version is newer than the consumer understands.",
-        "Upgrade the consumer's SDK to the broker's version.";
+        "An event's envelope_version is missing (refused since 0.6.0), older than the current shape, or newer than the reader understands.",
+        "Stamp \"envelope_version\": 2 on every envelope you build, and keep the SDK on the broker's release.";
     PASSWORD_SETUP_REQUIRED = "UDB_PASSWORD_SETUP_REQUIRED", Validation, FailedPrecondition,
         "The invited account has no user-selected password yet and cannot start a login session.",
         "Complete ResetPassword using the invitation code delivered to the account email, then log in.";

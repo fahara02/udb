@@ -77,10 +77,12 @@ test("tx scope emits a versioned envelope with the writes", () => {
   assert.equal(event.payload.correlation_id, "corr-1");
 });
 
-test("decodeEnvelope unwraps a nested journal envelope and refuses newer versions", () => {
+test("decodeEnvelope unwraps a nested journal envelope and refuses unversioned, old and newer versions", () => {
   const nested = JSON.stringify({ payload: { event_type: "x", payload: { a: 1 }, envelope_version: 2 } });
   assert.deepEqual(decodeEnvelope(nested).payload, { a: 1 });
-  assert.throws(() => decodeEnvelope(JSON.stringify({ event_type: "x", payload: {}, envelope_version: 3 })));
+  assert.throws(() => decodeEnvelope(JSON.stringify({ event_type: "x", payload: {}, envelope_version: 3 })), /upgrade the SDK/);
+  assert.throws(() => decodeEnvelope(JSON.stringify({ event_type: "x", payload: {} })), /no envelope_version/);
+  assert.throws(() => decodeEnvelope(JSON.stringify({ event_type: "x", payload: {}, envelope_version: 1 })), /not supported/);
 });
 
 test("tx requires a commit acknowledgement and preserves the typed failure trailer", async () => {

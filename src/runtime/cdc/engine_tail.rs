@@ -2816,6 +2816,36 @@ impl CdcEngine {
                     return None;
                 }
 
+                // 2c. The envelope must state the shape it was written in. Every
+                // broker writer stamps it; an unversioned or unknown-version row
+                // is refused rather than read as the current shape.
+                if env.envelope_version != crate::runtime::cdc::EVENT_ENVELOPE_VERSION {
+                    let error_message = format!(
+                        "envelope_version {} is not supported; this broker reads version {}",
+                        env.envelope_version,
+                        crate::runtime::cdc::EVENT_ENVELOPE_VERSION
+                    );
+                    error!(
+                        "[cdc] envelope version rejected event {}: {}",
+                        event_id, error_message
+                    );
+                    self.metrics
+                        .inc_cdc_errors_total("envelope_version_unsupported");
+                    self.metrics.inc_cdc_errors_total("dlq_routed");
+                    if self
+                        .route_to_dlq(
+                            event_id,
+                            payload_json,
+                            "EnvelopeVersionUnsupported",
+                            &error_message,
+                        )
+                        .await
+                    {
+                        self.ack_event(event_id, lsn).await;
+                    }
+                    return None;
+                }
+
                 // 3. Prepared — hand the data back so the caller publishes it
                 // (synchronously via `produce_and_ack`, or pipelined by
                 // `tail_outbox`). (#81)

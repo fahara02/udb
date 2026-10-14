@@ -68,7 +68,8 @@ public interface EnqueueOutboxEventRequestOrBuilder extends
   /**
    * <pre>
    * Full EventEnvelope payload as a Struct. Required fields: event_id, event_type,
-   * correlation_id, document_id.
+   * correlation_id, document_id, and envelope_version (2); an unversioned
+   * envelope is refused with UDB_ENVELOPE_VERSION_UNSUPPORTED since 0.6.0.
    * </pre>
    *
    * <code>.google.protobuf.Struct payload = 4 [json_name = "payload"];</code>
@@ -78,7 +79,8 @@ public interface EnqueueOutboxEventRequestOrBuilder extends
   /**
    * <pre>
    * Full EventEnvelope payload as a Struct. Required fields: event_id, event_type,
-   * correlation_id, document_id.
+   * correlation_id, document_id, and envelope_version (2); an unversioned
+   * envelope is refused with UDB_ENVELOPE_VERSION_UNSUPPORTED since 0.6.0.
    * </pre>
    *
    * <code>.google.protobuf.Struct payload = 4 [json_name = "payload"];</code>
@@ -88,7 +90,8 @@ public interface EnqueueOutboxEventRequestOrBuilder extends
   /**
    * <pre>
    * Full EventEnvelope payload as a Struct. Required fields: event_id, event_type,
-   * correlation_id, document_id.
+   * correlation_id, document_id, and envelope_version (2); an unversioned
+   * envelope is refused with UDB_ENVELOPE_VERSION_UNSUPPORTED since 0.6.0.
    * </pre>
    *
    * <code>.google.protobuf.Struct payload = 4 [json_name = "payload"];</code>

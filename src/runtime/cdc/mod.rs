@@ -50,7 +50,8 @@ where
 {
     let topic = strip_nul_text(topic);
     let partition_key = strip_nul_text(partition_key);
-    let envelope = strip_nul_json(envelope);
+    let mut envelope = strip_nul_json(envelope);
+    stamp_envelope_version(&mut envelope);
     let sql = format!(
         "INSERT INTO {relation} (event_id, topic, partition_key, payload, created_at) \
          VALUES ($1::UUID, $2, $3, $4::JSONB, NOW())"
@@ -918,8 +919,15 @@ pub(crate) const EVENT_ENVELOPE_FIELDS: &[&str] = &[
 /// refuse a newer major than they understand instead of reading empty fields.
 pub(crate) const EVENT_ENVELOPE_VERSION: u32 = 2;
 
-fn current_envelope_version() -> u32 {
-    EVENT_ENVELOPE_VERSION
+/// Stamp the current envelope version on a broker-built envelope that does not
+/// state one. Every outbox writer goes through [`insert_outbox_row`], so the
+/// broker's own events (native, auth, data-plane CDC) and DLQ replays always
+/// carry it; client envelopes are refused at ingress when they omit it.
+fn stamp_envelope_version(envelope: &mut serde_json::Value) {
+    if let Some(obj) = envelope.as_object_mut() {
+        obj.entry("envelope_version".to_string())
+            .or_insert_with(|| serde_json::Value::from(EVENT_ENVELOPE_VERSION));
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -975,9 +983,11 @@ pub struct EventEnvelope {
     pub span_id: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub target_resource: String,
-    /// See [`EVENT_ENVELOPE_VERSION`]. An event written before versioning reads
-    /// as the current version (its shape is the current one).
-    #[serde(default = "current_envelope_version")]
+    /// See [`EVENT_ENVELOPE_VERSION`]. 0 means the row stated no version. Since
+    /// 0.6.0 such an envelope is no longer read as the current version: the CDC
+    /// tail routes it to the DLQ (`EnvelopeVersionUnsupported`), where a replay
+    /// re-inserts it through [`insert_outbox_row`], which stamps the version.
+    #[serde(default)]
     pub envelope_version: u32,
 }
 

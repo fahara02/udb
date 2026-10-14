@@ -1927,6 +1927,7 @@ def postprocess_perf_body(client_cls, method, request, meta: Metadata, fix: "Per
                 "event_type": _fixture(fix, "event_type", "python.live.perf"),
                 "correlation_id": str(uuid.uuid4()),
                 "document_id": _fixture(fix, "document_id", "python-live-document"),
+                "envelope_version": 2,
             })
         elif method.name == "GenericDispatch":
             request.spec_json = "{}"

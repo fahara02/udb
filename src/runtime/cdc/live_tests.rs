@@ -708,6 +708,7 @@ async fn live_tail_outbox_publishes_journals_and_acks_a_pending_row() {
     let payload = serde_json::json!({
         "event_id": event_id.to_string(),
         "event_type": topic,
+        "envelope_version": 2,
         "correlation_id": format!("cdc-tail:{event_id}"),
         "document_id": "row-1",
         "tenant_id": "tenant-a",

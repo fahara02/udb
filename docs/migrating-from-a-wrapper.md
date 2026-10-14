@@ -59,7 +59,7 @@ _, err = notes.UpdateWithRetry(ctx, udbclient.RowKey{"note_id": id}, 5, func(n *
 | Wrapper code | Replacement |
 |---|---|
 | Collect mutations, drive `BeginTx`, check for `COMMITTED`, guess conflicts from the message | `u.Tx(ctx, func(tx *udbclient.TxScope) error { ... })`; a lost CAS is `ErrConflict` |
-| Build the outbox envelope (`event_id`, `event_type`, `document_id`, `correlation_id`, `payload`) | `tx.Emit(event)` builds it from the event message's `message_event_contract` |
+| Build the outbox envelope (`event_id`, `event_type`, `document_id`, `correlation_id`, `envelope_version`, `payload`) | `tx.Emit(event)` builds it from the event message's `message_event_contract` |
 | A consumer loop: load cursor, subscribe, handle, CAS-commit the cursor, reconnect, refresh credentials | `udbclient.Consume[*eventsv1.NoteCreated]` with a consumer name such as `"search-indexer"`, the topic and your handler; the broker stores the cursor |
 
 ```go
