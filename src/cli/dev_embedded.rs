@@ -1360,6 +1360,27 @@ impl EmbeddedCluster {
         // startup never published our pidfile, kill our child handle directly.
         if !self.owns_postmaster_pid() {
             let pid = self.postmaster.as_ref().and_then(|p| p.pid);
+            // PostgreSQL handles SIGINT (fast shutdown) at any point of its
+            // startup and stops its backends with it; a SIGKILL leaves those
+            // backends writing into the data directory for a moment. Ask
+            // first, then kill only what did not stop.
+            #[cfg(unix)]
+            if let Some(pid) = pid {
+                let asked = std::process::Command::new("kill")
+                    .args(["-INT", &pid.to_string()])
+                    .stdout(std::process::Stdio::null())
+                    .stderr(std::process::Stdio::null())
+                    .status()
+                    .is_ok_and(|status| status.success());
+                if asked {
+                    let _ = self
+                        .postmaster
+                        .as_mut()
+                        .unwrap()
+                        .wait(std::time::Duration::from_secs(10), None)
+                        .await;
+                }
+            }
             self.postmaster.as_mut().unwrap().terminate().await?;
             return self.remove_stale_pidfile(pid);
         }
