@@ -41,6 +41,10 @@ func StartPair(t testing.TB, protoRoot, policyFile string) (*udbclient.Udb, *udb
 	return start(t, protoRoot, policyFile, true)
 }
 
+// authzReloadInterval is the broker's shortest shared authz snapshot reload
+// period (UDB_AUTHZ_SNAPSHOT_TTL_SECS, floored at 5 seconds for the warmer).
+const authzReloadInterval = 5 * time.Second
+
 func start(t testing.TB, protoRoot, policyFile string, withPeer bool) (*udbclient.Udb, *udbclient.Udb) {
 	t.Helper()
 	binary := os.Getenv("UDB_TEST_BINARY")
@@ -228,6 +232,13 @@ func start(t testing.TB, protoRoot, policyFile string, withPeer bool) (*udbclien
 			}
 		}
 	}
+	// The admin (by `udb dev up`), the peer and the policies are all written
+	// offline, straight to PostgreSQL. The broker sees role bindings and policies
+	// only through its shared authz snapshot, which reloads on a timer (at least
+	// every authzReloadInterval). A login before the next reload gets a token
+	// with no roles or scopes, and requests are judged without the new
+	// policies, so wait for two reloads before the first login.
+	time.Sleep(2*authzReloadInterval + time.Second)
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()
 	session, err := udbclient.ConnectEnterprise(ctx, udbclient.EnterpriseConfig{
