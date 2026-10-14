@@ -1,0 +1,87 @@
+syntax = "proto3";
+
+package udb.core.messaging.entity.v1;
+
+import "google/protobuf/timestamp.proto";
+import "udb/core/common/v1/db.proto";
+import "udb/core/common/v1/security.proto";
+
+option csharp_namespace = "Udb.Core.Messaging.Entity.V1";
+option go_package = "github.com/udb-project/udb/gen/go/udb/core/messaging/entity/v1;messagingv1";
+option java_package = "com.udb.core.messaging.entity.v1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Messaging\\Entity\\V1";
+option php_namespace = "Udb\\Core\\Messaging\\Entity\\V1";
+
+// MessagingKeyPackage: one published MLS KeyPackage. A one-time package
+// (`last_resort` false) is consumed exactly once: ClaimKeyPackages stamps `claimed_at`
+// inside a FOR UPDATE SKIP LOCKED claim, so concurrent claimers never receive the same
+// package. A last-resort package is handed out only when no one-time package remains
+// and is never consumed.
+message MessagingKeyPackage {
+  option (udb.core.common.v1.pg_table) = {
+    table_name: "key_packages"
+    schema_name: "udb_messaging"
+    migration_order: 2
+    is_table: true
+    comment: "E2EE messaging MLS KeyPackages; one-time packages are claimed exactly once"
+    soft_delete: false
+    audit_fields: true
+    enable_rls: true
+    force_rls: true
+    rls_policies: {
+      policy_name: "tenant_isolation"
+      using: "(tenant_id::text = current_setting('app.current_tenant_id', true) OR current_setting('app.platform_admin', true) = 'true')"
+      permissive: true
+    }
+    indexes: {
+      index_name: "idx_messaging_key_packages_tenant_ref_unique"
+      index_type: "BTREE"
+      unique: true
+      columns: "tenant_id"
+      columns: "key_package_ref"
+    }
+    indexes: {
+      index_name: "idx_messaging_key_packages_tenant_device"
+      index_type: "BTREE"
+      columns: "tenant_id"
+      columns: "device_id"
+      columns: "last_resort"
+      columns: "claimed_at"
+    }
+    cdc_topic: "udb.messaging.key_packages.cdc"
+    required_scope: "messaging:read"
+  };
+  option (udb.core.common.v1.db_table_security) = {
+    tenant_isolation_mode: "tenant"
+    tenant_column: "tenant_id"
+    rls_policy_template: "tenant_id = current_setting('app.current_tenant_id')"
+    soft_delete_mode: "none"
+    retention_class: "messaging.directory"
+    retention_days: 365
+    audit_mode: AUDIT_MODE_MUTATION
+    encryption_profile: "tenant"
+    pii_profile: "standard"
+    export_eligible: false
+    data_residency_policy_ref: "tenant.data_residency"
+  };
+
+  string id = 1 [(udb.core.common.v1.pg_column) = { column_name: "id" sql_type: "UUID" primary_key: true not_null: true default_value: "gen_random_uuid()" }];
+
+  string tenant_id = 2 [(udb.core.common.v1.pg_column) = { column_name: "tenant_id" sql_type: "VARCHAR(64)" tenant_column: true not_null: true }];
+
+  string device_id = 3 [(udb.core.common.v1.pg_column) = { column_name: "device_id" sql_type: "VARCHAR(128)" not_null: true }];
+
+  // TLS-serialized MLS KeyPackage.
+  bytes key_package = 4 [(udb.core.common.v1.pg_column) = { column_name: "key_package" sql_type: "BYTEA" not_null: true }];
+
+  // Lowercase hex MLS KeyPackageRef.
+  string key_package_ref = 5 [(udb.core.common.v1.pg_column) = { column_name: "key_package_ref" sql_type: "VARCHAR(128)" not_null: true }];
+
+  bool last_resort = 6 [(udb.core.common.v1.pg_column) = { column_name: "last_resort" sql_type: "BOOLEAN" not_null: true default_value: "FALSE" }];
+
+  google.protobuf.Timestamp published_at = 7 [(udb.core.common.v1.pg_column) = { column_name: "published_at" sql_type: "TIMESTAMPTZ" not_null: true default_value: "NOW()" }];
+
+  google.protobuf.Timestamp claimed_at = 8 [(udb.core.common.v1.pg_column) = { column_name: "claimed_at" sql_type: "TIMESTAMPTZ" comment: "When a one-time package was claimed; null while available" }];
+
+  string claimed_by_device_id = 9 [(udb.core.common.v1.pg_column) = { column_name: "claimed_by_device_id" sql_type: "VARCHAR(128)" }];
+}

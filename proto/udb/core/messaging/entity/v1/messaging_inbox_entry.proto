@@ -1,0 +1,97 @@
+syntax = "proto3";
+
+package udb.core.messaging.entity.v1;
+
+import "google/protobuf/timestamp.proto";
+import "udb/core/common/v1/db.proto";
+import "udb/core/common/v1/security.proto";
+
+option csharp_namespace = "Udb.Core.Messaging.Entity.V1";
+option go_package = "github.com/udb-project/udb/gen/go/udb/core/messaging/entity/v1;messagingv1";
+option java_package = "com.udb.core.messaging.entity.v1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Messaging\\Entity\\V1";
+option php_namespace = "Udb\\Core\\Messaging\\Entity\\V1";
+
+// MessagingInboxEntry: one delivery to one device. `payload` is opaque: the
+// MLS message (PrivateMessage ciphertext, PublicMessage commit, or Welcome) or a small
+// JSON removal hint. `seq` is strictly increasing per device. Rows are collected by the
+// retention worker once acknowledged or after the inbox TTL.
+message MessagingInboxEntry {
+  option (udb.core.common.v1.pg_table) = {
+    table_name: "inbox"
+    schema_name: "udb_messaging"
+    migration_order: 5
+    is_table: true
+    comment: "E2EE messaging per-device inbox of opaque MLS messages"
+    soft_delete: false
+    audit_fields: true
+    enable_rls: true
+    force_rls: true
+    rls_policies: {
+      policy_name: "tenant_isolation"
+      using: "(tenant_id::text = current_setting('app.current_tenant_id', true) OR current_setting('app.platform_admin', true) = 'true')"
+      permissive: true
+    }
+    indexes: {
+      index_name: "idx_messaging_inbox_device_seq_unique"
+      index_type: "BTREE"
+      unique: true
+      columns: "tenant_id"
+      columns: "device_id"
+      columns: "seq"
+    }
+    indexes: {
+      index_name: "idx_messaging_inbox_group_client_message"
+      index_type: "BTREE"
+      columns: "tenant_id"
+      columns: "group_id"
+      columns: "client_message_id"
+    }
+    indexes: {
+      index_name: "idx_messaging_inbox_retention"
+      index_type: "BTREE"
+      columns: "acked_at"
+      columns: "created_at"
+    }
+    cdc_topic: "udb.messaging.inbox.cdc"
+    required_scope: "messaging:read"
+  };
+  option (udb.core.common.v1.db_table_security) = {
+    tenant_isolation_mode: "tenant"
+    tenant_column: "tenant_id"
+    rls_policy_template: "tenant_id = current_setting('app.current_tenant_id')"
+    soft_delete_mode: "none"
+    retention_class: "messaging.inbox"
+    retention_days: 30
+    audit_mode: AUDIT_MODE_MUTATION
+    encryption_profile: "tenant"
+    pii_profile: "restricted"
+    export_eligible: false
+    data_residency_policy_ref: "tenant.data_residency"
+  };
+
+  string id = 1 [(udb.core.common.v1.pg_column) = { column_name: "id" sql_type: "UUID" primary_key: true not_null: true default_value: "gen_random_uuid()" }];
+
+  string tenant_id = 2 [(udb.core.common.v1.pg_column) = { column_name: "tenant_id" sql_type: "VARCHAR(64)" tenant_column: true not_null: true }];
+
+  string device_id = 3 [(udb.core.common.v1.pg_column) = { column_name: "device_id" sql_type: "VARCHAR(128)" not_null: true }];
+
+  int64 seq = 4 [(udb.core.common.v1.pg_column) = { column_name: "seq" sql_type: "BIGINT" not_null: true }];
+
+  // COMMIT | WELCOME | MESSAGE | REMOVAL_HINT
+  string kind = 5 [(udb.core.common.v1.pg_column) = { column_name: "kind" sql_type: "VARCHAR(16)" not_null: true }];
+
+  string group_id = 6 [(udb.core.common.v1.pg_column) = { column_name: "group_id" sql_type: "VARCHAR(255)" not_null: true }];
+
+  int64 epoch = 7 [(udb.core.common.v1.pg_column) = { column_name: "epoch" sql_type: "BIGINT" not_null: true default_value: "0" }];
+
+  bytes payload = 8 [(udb.core.common.v1.pg_column) = { column_name: "payload" sql_type: "BYTEA" not_null: true }];
+
+  string sender_device_id = 9 [(udb.core.common.v1.pg_column) = { column_name: "sender_device_id" sql_type: "VARCHAR(128)" not_null: true default_value: "''" }];
+
+  string client_message_id = 10 [(udb.core.common.v1.pg_column) = { column_name: "client_message_id" sql_type: "VARCHAR(128)" not_null: true default_value: "''" }];
+
+  google.protobuf.Timestamp created_at = 11 [(udb.core.common.v1.pg_column) = { column_name: "created_at" sql_type: "TIMESTAMPTZ" not_null: true default_value: "NOW()" }];
+
+  google.protobuf.Timestamp acked_at = 12 [(udb.core.common.v1.pg_column) = { column_name: "acked_at" sql_type: "TIMESTAMPTZ" comment: "When the target device acknowledged the entry" }];
+}
