@@ -237,10 +237,13 @@ const COMMANDS: &[CmdHelp] = &[
         name: "plan",
         group: "Schema & SQL",
         summary: "Build a migration plan (optionally vs a prior manifest) as JSON.",
-        usage: "udb plan [--prior <manifest.json>] [--emit-approval-plan <path>]",
+        usage: "udb plan [--prior <manifest.json>] [--emit-approval-plan <path>] [--policies <policies.yaml>] [--tenant <uuid>]",
         details: "--emit-approval-plan writes the exact approval-plan file serve accepts \
                   (same canonical change set + operations_hash), so migration.require_approval_plan \
-                  can point at it directly — no failed startup needed to discover the hash.",
+                  can point at it directly — no failed startup needed to discover the hash. \
+                  With --policies (or UDB_ABAC_POLICY_FILE) it warns on stderr for every role \
+                  that has grants elsewhere but none on an entity the plan creates, with the \
+                  policies-file entry and the `udb policy apply` command that grants it.",
     },
     CmdHelp {
         name: "catalog",

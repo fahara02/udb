@@ -686,6 +686,113 @@ pub fn grant_command_hint(
     )
 }
 
+/// One role that has rules for existing entities but none for a new one.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct MissingRoleGrant {
+    pub role: String,
+    /// The new entity's fully-qualified message type.
+    pub entity: String,
+    pub schema_table: String,
+    /// The actions the role is granted elsewhere (one suggested entry each).
+    pub actions: Vec<String>,
+}
+
+impl MissingRoleGrant {
+    /// "role X has no grant on new entity Y; it will be denied" plus the
+    /// policies-file entries and the apply command.
+    pub fn message(&self, policies_file: &str, tenant: &str) -> String {
+        let entries: Vec<String> = self
+            .actions
+            .iter()
+            .map(|action| {
+                format!(
+                    "- {}",
+                    grant_policy_entry(Grantee::Role(&self.role), action, &self.entity)
+                )
+            })
+            .collect();
+        let tenant = if tenant.trim().is_empty() {
+            "<tenant-uuid>"
+        } else {
+            tenant.trim()
+        };
+        format!(
+            "role {} has no grant on new entity {} ({}); its calls to it will be denied. Add {} \
+             under `policies:` in {policies_file} and run `udb policy apply -f {policies_file} \
+             --tenant {tenant}`",
+            self.role,
+            self.entity,
+            self.schema_table,
+            entries.join(" and ")
+        )
+    }
+}
+
+/// For each new entity `(message type, schema.table)`, the roles that hold
+/// ALLOW rules on other resources but none covering the entity. A rule with no
+/// role and no subject covers every caller, so it covers every role. Actions
+/// are the role's existing actions (at most four), so the suggested grant
+/// mirrors what the role already does elsewhere.
+pub fn missing_role_grants_for_new_entities(
+    policies: &[AuthzPolicy],
+    new_entities: &[(String, String)],
+) -> Vec<MissingRoleGrant> {
+    let allows: Vec<&AuthzPolicy> = policies
+        .iter()
+        .filter(|policy| policy.enabled && policy.effect == Effect::Allow)
+        .collect();
+    let mut roles: Vec<&str> = allows
+        .iter()
+        .map(|policy| policy.role.trim())
+        .filter(|role| !role.is_empty() && *role != "*")
+        .collect();
+    roles.sort_unstable();
+    roles.dedup();
+    let mut out = Vec::new();
+    for (entity, schema_table) in new_entities {
+        let short = entity.rsplit('.').next().unwrap_or(entity);
+        let table = schema_table.rsplit('.').next().unwrap_or(schema_table);
+        let selectors = [entity.as_str(), short, schema_table.as_str(), table];
+        let covers = |policy: &&AuthzPolicy| resource_match(&policy.resource, &selectors);
+        if allows.iter().any(|policy| {
+            policy.role.trim().is_empty() && policy.subject.trim().is_empty() && covers(policy)
+        }) {
+            continue;
+        }
+        for role in &roles {
+            let role_rules: Vec<&&AuthzPolicy> = allows
+                .iter()
+                .filter(|policy| {
+                    let held = policy.role.trim();
+                    held == *role || held == "*"
+                })
+                .collect();
+            if role_rules.iter().any(|policy| covers(policy)) {
+                continue;
+            }
+            let mut actions: Vec<String> = role_rules
+                .iter()
+                .filter(|policy| policy.role.trim() == *role)
+                .map(|policy| policy.action.trim().to_string())
+                .filter(|action| !action.is_empty())
+                .collect();
+            actions.sort();
+            actions.dedup();
+            actions.truncate(4);
+            if actions.is_empty() {
+                actions.push("Select".to_string());
+            }
+            out.push(MissingRoleGrant {
+                role: (*role).to_string(),
+                entity: entity.clone(),
+                schema_table: schema_table.clone(),
+                actions,
+            });
+        }
+    }
+    out
+}
+
 // ── Matching helpers ───────────────────────────────────────────────────────
 
 /// Conservative offline coverage for a declared identity and call site.

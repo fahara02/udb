@@ -678,3 +678,43 @@ fn a_deny_on_a_snapshot_behind_the_durable_revision_says_so_with_a_retry_time() 
     let overdue = stale_snapshot_message(Some("r1"), Some("r2"), 5, 60).expect("behind");
     assert!(overdue.contains("Retry after 1s"), "{overdue}");
 }
+
+#[test]
+fn a_role_without_a_grant_on_a_new_entity_is_named_with_its_grant() {
+    let rule = |role: &str, action: &str, resource: &str| AuthzPolicy {
+        role: role.into(),
+        action: action.into(),
+        resource: resource.into(),
+        ..Default::default()
+    };
+    let policies = vec![
+        rule("svc_lessons", "Select", "acme.v1.Course"),
+        rule("svc_lessons", "Upsert", "acme.v1.Course"),
+        rule("svc_billing", "Select", "acme.v1.*"),
+    ];
+    let new_entities = vec![("acme.v1.Lesson".to_string(), "edu.lessons".to_string())];
+    let missing = missing_role_grants_for_new_entities(&policies, &new_entities);
+    assert_eq!(missing.len(), 1, "{missing:?}");
+    assert_eq!(missing[0].role, "svc_lessons");
+    assert_eq!(missing[0].actions, vec!["Select", "Upsert"]);
+    let message = missing[0].message("policies.yaml", "t-1");
+    assert!(
+        message.starts_with("role svc_lessons has no grant on new entity acme.v1.Lesson"),
+        "{message}"
+    );
+    assert!(message.contains("will be denied"), "{message}");
+    assert!(
+        message
+            .contains("{role: \"svc_lessons\", action: \"Upsert\", resource: \"acme.v1.Lesson\""),
+        "{message}"
+    );
+    assert!(
+        message.contains("udb policy apply -f policies.yaml --tenant t-1"),
+        "{message}"
+    );
+
+    // A rule with no role and no subject covers every caller.
+    let mut open = policies.clone();
+    open.push(rule("", "Select", "acme.v1.Lesson"));
+    assert!(missing_role_grants_for_new_entities(&open, &new_entities).is_empty());
+}

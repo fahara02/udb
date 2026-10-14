@@ -1197,6 +1197,8 @@ pub fn run() {
             )
             .unwrap_or_else(|err| fatal_json("failed to build migration plan", err));
 
+            warn_new_entities_without_role_grants(&args, &plan);
+
             // `--emit-approval-plan <path>`: write the EXACT `ExportedPlan` that
             // `serve`'s approval gate consumes — built with `build_exported_plan`
             // over the SAME canonical change set, so it carries serve's
