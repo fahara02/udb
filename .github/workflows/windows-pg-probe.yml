@@ -91,3 +91,48 @@ jobs:
             "no initdb.exe under $project\cache"
           }
           Get-Content "$project\.udb\dev\postgres.log" -ErrorAction SilentlyContinue | Select-Object -Last 10
+
+      - name: Set up Python like the CI checker
+        if: github.event.inputs.udb_run_id != ''
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Set up Go like the CI checker
+        if: github.event.inputs.udb_run_id != ''
+        uses: ./.github/actions/setup-sdk-toolchains
+        with:
+          go: "true"
+
+      - name: udb dev up from Python, with and without a new process group
+        if: github.event.inputs.udb_run_id != ''
+        shell: python
+        run: |
+          import os, re, subprocess, tempfile, time, pathlib
+          udb = os.path.join(os.environ["GITHUB_WORKSPACE"], "udbbin", "udb.exe")
+          for label, flags in (("new-process-group", subprocess.CREATE_NEW_PROCESS_GROUP), ("no-flags", 0)):
+              project = pathlib.Path(tempfile.mkdtemp(prefix="udb-pyprobe-"))
+              (project / "proto").mkdir()
+              env = os.environ.copy()
+              env["UDB_HOME"] = str(project / "cache")
+              env["UDB_PROTO_ROOT"] = str(project / "proto")
+              log = open(project / "dev.log", "w")
+              proc = subprocess.Popen([udb, "dev", "up", "--embedded"], cwd=project, env=env,
+                                      stdout=log, stderr=log, creationflags=flags)
+              deadline = time.time() + 180
+              while time.time() < deadline and proc.poll() is None:
+                  if (project / ".udb" / "dev" / "bootstrap.json").exists():
+                      break
+                  time.sleep(2)
+              state = "exited %s" % proc.returncode if proc.poll() is not None else "running"
+              log.close()
+              text = (project / "dev.log").read_text(errors="replace")
+              lines = [l for l in text.splitlines() if l.strip() and not re.search("(?i)password|secret", l)]
+              print("=== %s: %s, bootstrap=%s" % (label, state, (project / ".udb" / "dev" / "bootstrap.json").exists()))
+              for line in lines[-6:]:
+                  print(line)
+              print("PATH entries: %d, env bytes: %d" % (len(env["PATH"].split(";")), sum(len(k) + len(v) + 2 for k, v in env.items())))
+              if proc.poll() is None:
+                  subprocess.run([udb, "dev", "down", "--embedded"], cwd=project, env=env, timeout=60)
+                  proc.kill()
+
