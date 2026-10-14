@@ -6,7 +6,7 @@ Inputs:
 - `docs/generated/bench-bodies.json`
 - `docs/site/bench-results.json`
 
-Current generated RPC surface: 389 RPCs across 28 services.
+Current generated RPC surface: 401 RPCs across 29 services.
 
 Published benchmark artifact: present.
 Release tag: v0.4.28.
@@ -63,6 +63,7 @@ Generated at: 2026-07-26T17:46:09+00:00.
 | IdentityProviderService | 27 | 6 | 21 | 0 | 0 |
 | LiveQueryService | 1 | 1 | 0 | 0 | 0 |
 | LockService | 5 | 2 | 3 | 0 | 0 |
+| MessagingService | 12 | 4 | 7 | 1 | 0 |
 | MeteringService | 6 | 4 | 2 | 0 | 0 |
 | NotificationService | 12 | 7 | 5 | 0 | 0 |
 | PeerService | 5 | 2 | 3 | 0 | 0 |
@@ -374,6 +375,18 @@ identity surface available to benchmark reports.
 | `LockService/ListLocks` | `list_locks` | `listLocks` | READ_ONLY |
 | `LockService/ReleaseLock` | `release_lock` | `releaseLock` | MUTATION |
 | `LockService/RenewLock` | `renew_lock` | `renewLock` | MUTATION |
+| `MessagingService/AckInbox` | `ack_inbox` | `messagingAckInbox` | MUTATION |
+| `MessagingService/ClaimKeyPackages` | `claim_key_packages` | `messagingClaimKeyPackages` | MUTATION |
+| `MessagingService/CreateGroup` | `create_group` | `messagingCreateGroup` | MUTATION |
+| `MessagingService/GetGroupInfo` | `get_group_info` | `messagingGetGroupInfo` | READ_ONLY |
+| `MessagingService/GetKeyPackageStock` | `get_key_package_stock` | `messagingGetKeyPackageStock` | READ_ONLY |
+| `MessagingService/ListMessagingDevices` | `list_messaging_devices` | `messagingListMessagingDevices` | READ_ONLY |
+| `MessagingService/PublishKeyPackages` | `publish_key_packages` | `messagingPublishKeyPackages` | MUTATION |
+| `MessagingService/RegisterMessagingDevice` | `register_messaging_device` | `messagingRegisterMessagingDevice` | MUTATION |
+| `MessagingService/RevokeMessagingDevice` | `revoke_messaging_device` | `messagingRevokeMessagingDevice` | DESTRUCTIVE |
+| `MessagingService/SendMessage` | `send_message` | `messagingSendMessage` | MUTATION |
+| `MessagingService/StreamInbox` | `stream_inbox` | `messagingStreamInbox` | READ_ONLY |
+| `MessagingService/SubmitCommit` | `submit_commit` | `messagingSubmitCommit` | MUTATION |
 | `MeteringService/CheckQuota` | `check_quota` | `checkQuota` | READ_ONLY |
 | `MeteringService/GetQuota` | `get_quota` | `getQuota` | READ_ONLY |
 | `MeteringService/ListQuotas` | `list_quotas` | `listQuotas` | READ_ONLY |

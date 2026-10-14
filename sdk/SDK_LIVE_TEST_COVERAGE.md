@@ -7,7 +7,7 @@ Inputs:
 - `sdk/go/udbclient/generated_client.go`
 - `docs/site/bench-results.json`
 
-Current generated RPC surface: 389 RPCs across 28 services.
+Current generated RPC surface: 401 RPCs across 29 services.
 
 The benchmark body manifest is checked against generated SDK metadata before this
 file is written. A missing row, extra row, alias drift, operationId drift, or
@@ -48,6 +48,7 @@ stack, with request bodies taken from the plan the shared Python seed exports.
 | IdentityProviderService | 27 | 6 | 21 | 0 | 0 |
 | LiveQueryService | 1 | 1 | 0 | 0 | 0 |
 | LockService | 5 | 2 | 3 | 0 | 0 |
+| MessagingService | 12 | 4 | 7 | 1 | 0 |
 | MeteringService | 6 | 4 | 2 | 0 | 0 |
 | NotificationService | 12 | 7 | 5 | 0 | 0 |
 | PeerService | 5 | 2 | 3 | 0 | 0 |
@@ -358,6 +359,18 @@ benchmark harnesses.
 | LockService | `LockService/ListLocks` | `list_locks` | `listLocks` | READ_ONLY | lock.md |
 | LockService | `LockService/ReleaseLock` | `release_lock` | `releaseLock` | MUTATION | lock.md |
 | LockService | `LockService/RenewLock` | `renew_lock` | `renewLock` | MUTATION | lock.md |
+| MessagingService | `MessagingService/AckInbox` | `ack_inbox` | `messagingAckInbox` | MUTATION | messaging.md |
+| MessagingService | `MessagingService/ClaimKeyPackages` | `claim_key_packages` | `messagingClaimKeyPackages` | MUTATION | messaging.md |
+| MessagingService | `MessagingService/CreateGroup` | `create_group` | `messagingCreateGroup` | MUTATION | messaging.md |
+| MessagingService | `MessagingService/GetGroupInfo` | `get_group_info` | `messagingGetGroupInfo` | READ_ONLY | messaging.md |
+| MessagingService | `MessagingService/GetKeyPackageStock` | `get_key_package_stock` | `messagingGetKeyPackageStock` | READ_ONLY | messaging.md |
+| MessagingService | `MessagingService/ListMessagingDevices` | `list_messaging_devices` | `messagingListMessagingDevices` | READ_ONLY | messaging.md |
+| MessagingService | `MessagingService/PublishKeyPackages` | `publish_key_packages` | `messagingPublishKeyPackages` | MUTATION | messaging.md |
+| MessagingService | `MessagingService/RegisterMessagingDevice` | `register_messaging_device` | `messagingRegisterMessagingDevice` | MUTATION | messaging.md |
+| MessagingService | `MessagingService/RevokeMessagingDevice` | `revoke_messaging_device` | `messagingRevokeMessagingDevice` | DESTRUCTIVE | messaging.md |
+| MessagingService | `MessagingService/SendMessage` | `send_message` | `messagingSendMessage` | MUTATION | messaging.md |
+| MessagingService | `MessagingService/StreamInbox` | `stream_inbox` | `messagingStreamInbox` | READ_ONLY | messaging.md |
+| MessagingService | `MessagingService/SubmitCommit` | `submit_commit` | `messagingSubmitCommit` | MUTATION | messaging.md |
 | MeteringService | `MeteringService/CheckQuota` | `check_quota` | `checkQuota` | READ_ONLY | metering.md |
 | MeteringService | `MeteringService/GetQuota` | `get_quota` | `getQuota` | READ_ONLY | metering.md |
 | MeteringService | `MeteringService/ListQuotas` | `list_quotas` | `listQuotas` | READ_ONLY | metering.md |

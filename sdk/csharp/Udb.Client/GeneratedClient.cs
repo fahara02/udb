@@ -5,8 +5,8 @@
 //   Language:         csharp
 //   UDB version:      0.5.33
 //   Protocol version: 1.0.0
-//   Services:         28
-//   RPCs:             389
+//   Services:         29
+//   RPCs:             401
 //
 // This file is RENDERED by `udb sdk generate` from
 //   sdk-templates/csharp/Udb.Client/GeneratedClient.cs.tmpl
@@ -266,6 +266,18 @@ public static class GeneratedRpcIdentities
         map["/udb.core.lock.services.v1.LockService/ListLocks"] = new RpcIdentity("/udb.core.lock.services.v1.LockService/ListLocks", "LockService", "ListLocks", "list_locks", "listLocks", "read_only", "get", "/v1/locks");
         map["/udb.core.lock.services.v1.LockService/ReleaseLock"] = new RpcIdentity("/udb.core.lock.services.v1.LockService/ReleaseLock", "LockService", "ReleaseLock", "release_lock", "releaseLock", "mutation", "post", "/v1/locks:release");
         map["/udb.core.lock.services.v1.LockService/RenewLock"] = new RpcIdentity("/udb.core.lock.services.v1.LockService/RenewLock", "LockService", "RenewLock", "renew_lock", "renewLock", "mutation", "post", "/v1/locks:renew");
+        map["/udb.core.messaging.services.v1.MessagingService/AckInbox"] = new RpcIdentity("/udb.core.messaging.services.v1.MessagingService/AckInbox", "MessagingService", "AckInbox", "ack_inbox", "messagingAckInbox", "mutation", "post", "/v1/messaging/inbox:ack");
+        map["/udb.core.messaging.services.v1.MessagingService/ClaimKeyPackages"] = new RpcIdentity("/udb.core.messaging.services.v1.MessagingService/ClaimKeyPackages", "MessagingService", "ClaimKeyPackages", "claim_key_packages", "messagingClaimKeyPackages", "mutation", "post", "/v1/messaging/key-packages:claim");
+        map["/udb.core.messaging.services.v1.MessagingService/CreateGroup"] = new RpcIdentity("/udb.core.messaging.services.v1.MessagingService/CreateGroup", "MessagingService", "CreateGroup", "create_group", "messagingCreateGroup", "mutation", "post", "/v1/messaging/groups");
+        map["/udb.core.messaging.services.v1.MessagingService/GetGroupInfo"] = new RpcIdentity("/udb.core.messaging.services.v1.MessagingService/GetGroupInfo", "MessagingService", "GetGroupInfo", "get_group_info", "messagingGetGroupInfo", "read_only", "get", "/v1/messaging/groups/{group_id}/info");
+        map["/udb.core.messaging.services.v1.MessagingService/GetKeyPackageStock"] = new RpcIdentity("/udb.core.messaging.services.v1.MessagingService/GetKeyPackageStock", "MessagingService", "GetKeyPackageStock", "get_key_package_stock", "messagingGetKeyPackageStock", "read_only", "get", "/v1/messaging/devices/{device_id}/key-package-stock");
+        map["/udb.core.messaging.services.v1.MessagingService/ListMessagingDevices"] = new RpcIdentity("/udb.core.messaging.services.v1.MessagingService/ListMessagingDevices", "MessagingService", "ListMessagingDevices", "list_messaging_devices", "messagingListMessagingDevices", "read_only", "get", "/v1/messaging/devices");
+        map["/udb.core.messaging.services.v1.MessagingService/PublishKeyPackages"] = new RpcIdentity("/udb.core.messaging.services.v1.MessagingService/PublishKeyPackages", "MessagingService", "PublishKeyPackages", "publish_key_packages", "messagingPublishKeyPackages", "mutation", "post", "/v1/messaging/devices/{device_id}/key-packages");
+        map["/udb.core.messaging.services.v1.MessagingService/RegisterMessagingDevice"] = new RpcIdentity("/udb.core.messaging.services.v1.MessagingService/RegisterMessagingDevice", "MessagingService", "RegisterMessagingDevice", "register_messaging_device", "messagingRegisterMessagingDevice", "mutation", "post", "/v1/messaging/devices");
+        map["/udb.core.messaging.services.v1.MessagingService/RevokeMessagingDevice"] = new RpcIdentity("/udb.core.messaging.services.v1.MessagingService/RevokeMessagingDevice", "MessagingService", "RevokeMessagingDevice", "revoke_messaging_device", "messagingRevokeMessagingDevice", "destructive", "post", "/v1/messaging/devices/{device_id}:revoke");
+        map["/udb.core.messaging.services.v1.MessagingService/SendMessage"] = new RpcIdentity("/udb.core.messaging.services.v1.MessagingService/SendMessage", "MessagingService", "SendMessage", "send_message", "messagingSendMessage", "mutation", "post", "/v1/messaging/groups/{group_id}/messages");
+        map["/udb.core.messaging.services.v1.MessagingService/StreamInbox"] = new RpcIdentity("/udb.core.messaging.services.v1.MessagingService/StreamInbox", "MessagingService", "StreamInbox", "stream_inbox", "messagingStreamInbox", "read_only", "post", "/v1/messaging/inbox:stream");
+        map["/udb.core.messaging.services.v1.MessagingService/SubmitCommit"] = new RpcIdentity("/udb.core.messaging.services.v1.MessagingService/SubmitCommit", "MessagingService", "SubmitCommit", "submit_commit", "messagingSubmitCommit", "mutation", "post", "/v1/messaging/groups/{group_id}:commit");
         map["/udb.core.metering.services.v1.MeteringService/CheckQuota"] = new RpcIdentity("/udb.core.metering.services.v1.MeteringService/CheckQuota", "MeteringService", "CheckQuota", "check_quota", "checkQuota", "read_only", "post", "/v1/metering/quotas:check");
         map["/udb.core.metering.services.v1.MeteringService/GetQuota"] = new RpcIdentity("/udb.core.metering.services.v1.MeteringService/GetQuota", "MeteringService", "GetQuota", "get_quota", "getQuota", "read_only", "get", "/v1/metering/quotas/{metric}");
         map["/udb.core.metering.services.v1.MeteringService/ListQuotas"] = new RpcIdentity("/udb.core.metering.services.v1.MeteringService/ListQuotas", "MeteringService", "ListQuotas", "list_quotas", "listQuotas", "read_only", "get", "/v1/metering/quotas");
@@ -812,6 +824,33 @@ public sealed partial class GeneratedLockServiceClient : GeneratedServiceBase
 
     /// <summary>The fully-qualified service name (<c>udb.core.lock.services.v1.LockService</c>).</summary>
     public const string ServiceFullName = "udb.core.lock.services.v1.LockService";
+}
+/// <summary>
+/// Robustness wrapper for the <c>udb.core.messaging.services.v1.MessagingService</c> service
+/// (12 RPCs). Forwards to the buf-generated
+/// <c>MessagingServiceClient</c> stub.
+/// </summary>
+public sealed partial class GeneratedMessagingServiceClient : GeneratedServiceBase
+{
+    private readonly dynamic _stub;
+
+    /// <summary>
+    /// Wrap an already-constructed buf stub (e.g.
+    /// <c>new MessagingServiceClient(channel)</c>) with the shared robustness
+    /// layer. <paramref name="headers"/> supplies per-call metadata (reuse
+    /// <c>UdbClient.Headers()</c> / <c>UdbMetadata</c>).
+    /// </summary>
+    public GeneratedMessagingServiceClient(object stub, Func<Metadata> headers, UdbCallOptions? options = null)
+        : base(headers, options)
+    {
+        _stub = stub ?? throw new ArgumentNullException(nameof(stub));
+    }
+
+    /// <summary>The proto package this service lives in (<c>udb.core.messaging.services.v1</c>).</summary>
+    public const string ServicePackage = "udb.core.messaging.services.v1";
+
+    /// <summary>The fully-qualified service name (<c>udb.core.messaging.services.v1.MessagingService</c>).</summary>
+    public const string ServiceFullName = "udb.core.messaging.services.v1.MessagingService";
 }
 /// <summary>
 /// Robustness wrapper for the <c>udb.core.metering.services.v1.MeteringService</c> service
@@ -5820,6 +5859,259 @@ public sealed partial class GeneratedLockServiceClient
             (object)request);
     }
 }
+public sealed partial class GeneratedMessagingServiceClient
+{
+    /// <summary>
+    /// <c>ack_inbox</c> (unary) — forwards to <c>MessagingServiceClient.AckInboxAsync</c>.
+    /// gRPC path: <c>/udb.core.messaging.services.v1.MessagingService/AckInbox</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
+    /// </summary>
+    public Task<dynamic> AckInboxAsync(
+        dynamic request,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        // _stub.AckInboxAsync returns a concrete AsyncUnaryCall<TResp>; box it
+        // as object so no dynamic-to-closed-generic cast is ever attempted.
+        return InvokeUnaryAsync(
+            "/udb.core.messaging.services.v1.MessagingService/AckInbox",
+            co => (object)_stub.AckInboxAsync(request, co),
+            deadline,
+            cancellationToken,
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
+    }
+}
+public sealed partial class GeneratedMessagingServiceClient
+{
+    /// <summary>
+    /// <c>claim_key_packages</c> (unary) — forwards to <c>MessagingServiceClient.ClaimKeyPackagesAsync</c>.
+    /// gRPC path: <c>/udb.core.messaging.services.v1.MessagingService/ClaimKeyPackages</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
+    /// </summary>
+    public Task<dynamic> ClaimKeyPackagesAsync(
+        dynamic request,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        // _stub.ClaimKeyPackagesAsync returns a concrete AsyncUnaryCall<TResp>; box it
+        // as object so no dynamic-to-closed-generic cast is ever attempted.
+        return InvokeUnaryAsync(
+            "/udb.core.messaging.services.v1.MessagingService/ClaimKeyPackages",
+            co => (object)_stub.ClaimKeyPackagesAsync(request, co),
+            deadline,
+            cancellationToken,
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
+    }
+}
+public sealed partial class GeneratedMessagingServiceClient
+{
+    /// <summary>
+    /// <c>create_group</c> (unary) — forwards to <c>MessagingServiceClient.CreateGroupAsync</c>.
+    /// gRPC path: <c>/udb.core.messaging.services.v1.MessagingService/CreateGroup</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
+    /// </summary>
+    public Task<dynamic> CreateGroupAsync(
+        dynamic request,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        // _stub.CreateGroupAsync returns a concrete AsyncUnaryCall<TResp>; box it
+        // as object so no dynamic-to-closed-generic cast is ever attempted.
+        return InvokeUnaryAsync(
+            "/udb.core.messaging.services.v1.MessagingService/CreateGroup",
+            co => (object)_stub.CreateGroupAsync(request, co),
+            deadline,
+            cancellationToken,
+            "mutation" == "read_only",
+            "true" == "true",
+            (object)request);
+    }
+}
+public sealed partial class GeneratedMessagingServiceClient
+{
+    /// <summary>
+    /// <c>get_group_info</c> (unary) — forwards to <c>MessagingServiceClient.GetGroupInfoAsync</c>.
+    /// gRPC path: <c>/udb.core.messaging.services.v1.MessagingService/GetGroupInfo</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
+    /// </summary>
+    public Task<dynamic> GetGroupInfoAsync(
+        dynamic request,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        // _stub.GetGroupInfoAsync returns a concrete AsyncUnaryCall<TResp>; box it
+        // as object so no dynamic-to-closed-generic cast is ever attempted.
+        return InvokeUnaryAsync(
+            "/udb.core.messaging.services.v1.MessagingService/GetGroupInfo",
+            co => (object)_stub.GetGroupInfoAsync(request, co),
+            deadline,
+            cancellationToken,
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
+    }
+}
+public sealed partial class GeneratedMessagingServiceClient
+{
+    /// <summary>
+    /// <c>get_key_package_stock</c> (unary) — forwards to <c>MessagingServiceClient.GetKeyPackageStockAsync</c>.
+    /// gRPC path: <c>/udb.core.messaging.services.v1.MessagingService/GetKeyPackageStock</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
+    /// </summary>
+    public Task<dynamic> GetKeyPackageStockAsync(
+        dynamic request,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        // _stub.GetKeyPackageStockAsync returns a concrete AsyncUnaryCall<TResp>; box it
+        // as object so no dynamic-to-closed-generic cast is ever attempted.
+        return InvokeUnaryAsync(
+            "/udb.core.messaging.services.v1.MessagingService/GetKeyPackageStock",
+            co => (object)_stub.GetKeyPackageStockAsync(request, co),
+            deadline,
+            cancellationToken,
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
+    }
+}
+public sealed partial class GeneratedMessagingServiceClient
+{
+    /// <summary>
+    /// <c>list_messaging_devices</c> (unary) — forwards to <c>MessagingServiceClient.ListMessagingDevicesAsync</c>.
+    /// gRPC path: <c>/udb.core.messaging.services.v1.MessagingService/ListMessagingDevices</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
+    /// </summary>
+    public Task<dynamic> ListMessagingDevicesAsync(
+        dynamic request,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        // _stub.ListMessagingDevicesAsync returns a concrete AsyncUnaryCall<TResp>; box it
+        // as object so no dynamic-to-closed-generic cast is ever attempted.
+        return InvokeUnaryAsync(
+            "/udb.core.messaging.services.v1.MessagingService/ListMessagingDevices",
+            co => (object)_stub.ListMessagingDevicesAsync(request, co),
+            deadline,
+            cancellationToken,
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
+    }
+}
+public sealed partial class GeneratedMessagingServiceClient
+{
+    /// <summary>
+    /// <c>publish_key_packages</c> (unary) — forwards to <c>MessagingServiceClient.PublishKeyPackagesAsync</c>.
+    /// gRPC path: <c>/udb.core.messaging.services.v1.MessagingService/PublishKeyPackages</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
+    /// </summary>
+    public Task<dynamic> PublishKeyPackagesAsync(
+        dynamic request,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        // _stub.PublishKeyPackagesAsync returns a concrete AsyncUnaryCall<TResp>; box it
+        // as object so no dynamic-to-closed-generic cast is ever attempted.
+        return InvokeUnaryAsync(
+            "/udb.core.messaging.services.v1.MessagingService/PublishKeyPackages",
+            co => (object)_stub.PublishKeyPackagesAsync(request, co),
+            deadline,
+            cancellationToken,
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
+    }
+}
+public sealed partial class GeneratedMessagingServiceClient
+{
+    /// <summary>
+    /// <c>register_messaging_device</c> (unary) — forwards to <c>MessagingServiceClient.RegisterMessagingDeviceAsync</c>.
+    /// gRPC path: <c>/udb.core.messaging.services.v1.MessagingService/RegisterMessagingDevice</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
+    /// </summary>
+    public Task<dynamic> RegisterMessagingDeviceAsync(
+        dynamic request,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        // _stub.RegisterMessagingDeviceAsync returns a concrete AsyncUnaryCall<TResp>; box it
+        // as object so no dynamic-to-closed-generic cast is ever attempted.
+        return InvokeUnaryAsync(
+            "/udb.core.messaging.services.v1.MessagingService/RegisterMessagingDevice",
+            co => (object)_stub.RegisterMessagingDeviceAsync(request, co),
+            deadline,
+            cancellationToken,
+            "mutation" == "read_only",
+            "true" == "true",
+            (object)request);
+    }
+}
+public sealed partial class GeneratedMessagingServiceClient
+{
+    /// <summary>
+    /// <c>revoke_messaging_device</c> (unary) — forwards to <c>MessagingServiceClient.RevokeMessagingDeviceAsync</c>.
+    /// gRPC path: <c>/udb.core.messaging.services.v1.MessagingService/RevokeMessagingDevice</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
+    /// </summary>
+    public Task<dynamic> RevokeMessagingDeviceAsync(
+        dynamic request,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        // _stub.RevokeMessagingDeviceAsync returns a concrete AsyncUnaryCall<TResp>; box it
+        // as object so no dynamic-to-closed-generic cast is ever attempted.
+        return InvokeUnaryAsync(
+            "/udb.core.messaging.services.v1.MessagingService/RevokeMessagingDevice",
+            co => (object)_stub.RevokeMessagingDeviceAsync(request, co),
+            deadline,
+            cancellationToken,
+            "destructive" == "read_only",
+            "false" == "true",
+            (object)request);
+    }
+}
+public sealed partial class GeneratedMessagingServiceClient
+{
+    /// <summary>
+    /// <c>send_message</c> (unary) — forwards to <c>MessagingServiceClient.SendMessageAsync</c>.
+    /// gRPC path: <c>/udb.core.messaging.services.v1.MessagingService/SendMessage</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
+    /// </summary>
+    public Task<dynamic> SendMessageAsync(
+        dynamic request,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        // _stub.SendMessageAsync returns a concrete AsyncUnaryCall<TResp>; box it
+        // as object so no dynamic-to-closed-generic cast is ever attempted.
+        return InvokeUnaryAsync(
+            "/udb.core.messaging.services.v1.MessagingService/SendMessage",
+            co => (object)_stub.SendMessageAsync(request, co),
+            deadline,
+            cancellationToken,
+            "mutation" == "read_only",
+            "true" == "true",
+            (object)request);
+    }
+}
+public sealed partial class GeneratedMessagingServiceClient
+{
+    /// <summary>
+    /// <c>submit_commit</c> (unary) — forwards to <c>MessagingServiceClient.SubmitCommitAsync</c>.
+    /// gRPC path: <c>/udb.core.messaging.services.v1.MessagingService/SubmitCommit</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
+    /// </summary>
+    public Task<dynamic> SubmitCommitAsync(
+        dynamic request,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        // _stub.SubmitCommitAsync returns a concrete AsyncUnaryCall<TResp>; box it
+        // as object so no dynamic-to-closed-generic cast is ever attempted.
+        return InvokeUnaryAsync(
+            "/udb.core.messaging.services.v1.MessagingService/SubmitCommit",
+            co => (object)_stub.SubmitCommitAsync(request, co),
+            deadline,
+            cancellationToken,
+            "mutation" == "read_only",
+            "true" == "true",
+            (object)request);
+    }
+}
 public sealed partial class GeneratedMeteringServiceClient
 {
     /// <summary>
@@ -10406,6 +10698,56 @@ public static class UdbIr
             "tenant_id",
             "",
             "Udb.Core.Lock.Entity.V1.Lock");
+        entities["udb.core.messaging.entity.v1.MessagingDevice"] = new EntityBinding(
+            "udb.core.messaging.entity.v1.MessagingDevice",
+            "devices",
+            new List<string> { "id" },
+            new List<string> { "id", "tenant_id", "subject_id", "device_id", "signature_public_key", "credential", "key_fingerprint", "status", "inbox_head_seq", "acked_seq", "registered_at", "revoked_at", "created_at", "updated_at", "created_by" },
+            "[]",
+            "",
+            "tenant_id",
+            "",
+            "Udb.Core.Messaging.Entity.V1.MessagingDevice");
+        entities["udb.core.messaging.entity.v1.MessagingGroup"] = new EntityBinding(
+            "udb.core.messaging.entity.v1.MessagingGroup",
+            "mls_groups",
+            new List<string> { "id" },
+            new List<string> { "id", "tenant_id", "group_id", "epoch", "public_group_state", "group_info", "group_info_epoch", "created_by_device_id", "created_at", "updated_at", "created_by" },
+            "[]",
+            "",
+            "tenant_id",
+            "",
+            "Udb.Core.Messaging.Entity.V1.MessagingGroup");
+        entities["udb.core.messaging.entity.v1.MessagingGroupMember"] = new EntityBinding(
+            "udb.core.messaging.entity.v1.MessagingGroupMember",
+            "group_members",
+            new List<string> { "id" },
+            new List<string> { "id", "tenant_id", "group_id", "device_id", "subject_id", "leaf_index", "joined_epoch", "created_at", "updated_at", "created_by" },
+            "[]",
+            "",
+            "tenant_id",
+            "",
+            "Udb.Core.Messaging.Entity.V1.MessagingGroupMember");
+        entities["udb.core.messaging.entity.v1.MessagingInboxEntry"] = new EntityBinding(
+            "udb.core.messaging.entity.v1.MessagingInboxEntry",
+            "inbox",
+            new List<string> { "id" },
+            new List<string> { "id", "tenant_id", "device_id", "seq", "kind", "group_id", "epoch", "payload", "sender_device_id", "client_message_id", "created_at", "acked_at", "updated_at", "created_by" },
+            "[]",
+            "",
+            "tenant_id",
+            "",
+            "Udb.Core.Messaging.Entity.V1.MessagingInboxEntry");
+        entities["udb.core.messaging.entity.v1.MessagingKeyPackage"] = new EntityBinding(
+            "udb.core.messaging.entity.v1.MessagingKeyPackage",
+            "key_packages",
+            new List<string> { "id" },
+            new List<string> { "id", "tenant_id", "device_id", "key_package", "key_package_ref", "last_resort", "published_at", "claimed_at", "claimed_by_device_id", "created_at", "updated_at", "created_by" },
+            "[]",
+            "",
+            "tenant_id",
+            "",
+            "Udb.Core.Messaging.Entity.V1.MessagingKeyPackage");
         entities["udb.core.metering.entity.v1.QuotaRule"] = new EntityBinding(
             "udb.core.metering.entity.v1.QuotaRule",
             "quota_rules",
@@ -10679,6 +11021,11 @@ public static class UdbIr
     public static EntityRepository SamlReplayEntryRepository() => Repository("udb.core.idp.entity.v1.SamlReplayEntry");
     public static EntityRepository ScimDirectoryStateRepository() => Repository("udb.core.idp.entity.v1.ScimDirectoryState");
     public static EntityRepository LockRepository() => Repository("udb.core.lock.entity.v1.Lock");
+    public static EntityRepository MessagingDeviceRepository() => Repository("udb.core.messaging.entity.v1.MessagingDevice");
+    public static EntityRepository MessagingGroupRepository() => Repository("udb.core.messaging.entity.v1.MessagingGroup");
+    public static EntityRepository MessagingGroupMemberRepository() => Repository("udb.core.messaging.entity.v1.MessagingGroupMember");
+    public static EntityRepository MessagingInboxEntryRepository() => Repository("udb.core.messaging.entity.v1.MessagingInboxEntry");
+    public static EntityRepository MessagingKeyPackageRepository() => Repository("udb.core.messaging.entity.v1.MessagingKeyPackage");
     public static EntityRepository QuotaRuleRepository() => Repository("udb.core.metering.entity.v1.QuotaRule");
     public static EntityRepository UsageEventRepository() => Repository("udb.core.metering.entity.v1.UsageEvent");
     public static EntityRepository NotificationRepository() => Repository("udb.core.notification.entity.v1.Notification");
@@ -11621,6 +11968,27 @@ public sealed partial class GeneratedLiveQueryServiceClient
         return InvokeLongLivedStreaming(
             "/udb.core.livequery.services.v1.LiveQueryService/Subscribe",
             co => (object)_stub.Subscribe(request, co),
+            deadline,
+            cancellationToken);
+    }
+}
+public sealed partial class GeneratedMessagingServiceClient
+{
+    /// <summary>
+    /// <c>stream_inbox</c> (server-streaming) — forwards to
+    /// <c>MessagingServiceClient.StreamInbox</c>. gRPC path: <c>/udb.core.messaging.services.v1.MessagingService/StreamInbox</c>.
+    /// Not retried mid-stream; drain the returned stream and map errors with
+    /// <see cref="GeneratedServiceBase.MapStreamError"/>.
+    /// </summary>
+    public dynamic StreamInbox(
+        dynamic request,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        // Returns the concrete AsyncServerStreamingCall<TResp> as dynamic.
+        return InvokeLongLivedStreaming(
+            "/udb.core.messaging.services.v1.MessagingService/StreamInbox",
+            co => (object)_stub.StreamInbox(request, co),
             deadline,
             cancellationToken);
     }
