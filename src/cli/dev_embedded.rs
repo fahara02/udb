@@ -1343,6 +1343,25 @@ impl EmbeddedCluster {
     }
 
     async fn stop(&mut self) -> Result<(), String> {
+        let pid = self.postmaster.as_ref().and_then(|p| p.pid);
+        let stopped = self.stop_postmaster().await;
+        // PostgreSQL may unlink postmaster.pid a moment after its parent handle
+        // reports the exit. Do not return (and let the dev command exit) while
+        // the file is still there: wait briefly, then clear one that only
+        // names our own stopped child.
+        let pidfile = self.settings.data_dir.join("postmaster.pid");
+        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(5);
+        let owned = self.postmaster.is_some();
+        while owned && pidfile.exists() && std::time::Instant::now() < deadline {
+            tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+        }
+        if owned && pidfile.exists() {
+            self.remove_stale_pidfile(pid)?;
+        }
+        stopped
+    }
+
+    async fn stop_postmaster(&mut self) -> Result<(), String> {
         let Some(process) = self.postmaster.as_mut() else {
             return Ok(());
         };
