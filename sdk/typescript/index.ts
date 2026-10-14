@@ -18,3 +18,6 @@ export * from "./consistency";
 export * from "./stream";
 // Bound entity / table helper over the DataBroker Upsert/Select/Delete RPCs.
 export * from "./entity";
+// End-to-end encrypted messaging (MLS) over the MessagingService; the WebAssembly
+// core is loaded lazily, so importing the SDK never requires it.
+export * from "./messaging";

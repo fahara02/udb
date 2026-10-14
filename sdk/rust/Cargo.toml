@@ -96,3 +96,9 @@ tokio-stream = "0.1"
 [[test]]
 name = "live_messaging"
 required-features = ["mls"]
+
+# A scripted messaging device the TypeScript SDK's Rust<->TypeScript interop
+# test drives.
+[[example]]
+name = "messaging_peer"
+required-features = ["mls"]
