@@ -91,9 +91,6 @@ type Credentials struct {
 	// a service bearer at connect and keeps that bearer fresh in the background;
 	// the raw key is never sent on a call.
 	APIKey string
-	// RawAPIKey is retained for source compatibility but Connect refuses it:
-	// service API keys must be exchanged and cannot be sent as request headers.
-	RawAPIKey bool
 }
 
 func (c Config) metadata() Metadata {
@@ -175,9 +172,6 @@ func Connect(ctx context.Context, cfg Config) (*Udb, error) {
 // NewUdb dials the broker (and the auth endpoint, if different), builds the
 // generated robustness layer, and wires every available per-domain client.
 func NewUdb(ctx context.Context, cfg Config) (*Udb, error) {
-	if cfg.Credentials.RawAPIKey {
-		return nil, fmt.Errorf("udb: Credentials.RawAPIKey is unsupported; APIKey must be exchanged")
-	}
 	if cfg.Credentials.APIKey != "" && cfg.Credentials.Bearer != "" {
 		return nil, fmt.Errorf("udb: Credentials.APIKey and Credentials.Bearer are mutually exclusive")
 	}

@@ -258,8 +258,8 @@ test("background refresh recovers: a successful refresh clears poison", async ()
 // ── API-key bearer lifecycle ────────────────────────────────────────────────
 // An API key is exchanged (AuthnService.Authenticate) for a short-lived bearer
 // that carries NO refresh token. The SDK must retain the key and re-exchange it
-// before expiry, fall back to the raw x-api-key header when no bearer can be
-// obtained, and stop the refresher on close().
+// before expiry, never send the key as a raw x-api-key header (no bearer means
+// the call fails closed), and stop the refresher on close().
 
 function apiKeyAuth(responses: Array<() => any>) {
   const keys: string[] = [];
@@ -318,26 +318,21 @@ test("API-key bearer is re-exchanged with the retained key at ~80% of its lifeti
   assert.equal(last.apiKey, undefined, "raw key not sent while a bearer is held");
 });
 
-test("empty access token falls back to raw x-api-key instead of throwing", async () => {
+test("empty access token is refused: the API key is never sent raw", async () => {
   const auth = apiKeyAuth([() => ({ access_token: "", principal: { tenant_id: "tenant-uuid" } })]);
   const core = credSpy();
   const { project } = apiKeyProject(auth, core);
-  const warn = console.warn;
-  const warnings: string[] = [];
-  console.warn = (m: string) => void warnings.push(m);
-  try {
-    await project.authenticateApiKeyAndAdopt("svc-key");
-  } finally {
-    console.warn = warn;
-  }
-  const last = core.calls.at(-1)!;
-  assert.equal(last.apiKey, "svc-key", "raw key installed");
-  assert.equal(last.bearerToken, undefined);
-  assert.equal(warnings.length, 1, "warned once");
-  assert.ok(!warnings[0].includes("svc-key"), "warning must not leak the key");
+  await assert.rejects(
+    project.authenticateApiKeyAndAdopt("svc-key"),
+    (err: Error) => /no access token/.test(err.message) && !err.message.includes("svc-key"),
+  );
+  assert.ok(
+    core.calls.every((call: any) => call.apiKey === undefined),
+    "the raw key must never be installed as a header",
+  );
 });
 
-test("failing re-exchange near expiry falls back to raw key, then recovers to a bearer", async () => {
+test("failing re-exchange keeps the bearer until expiry, then fails closed, then recovers", async () => {
   let fail = true;
   const auth = apiKeyAuth([
     minted("bearer-1", 900),
@@ -352,23 +347,26 @@ test("failing re-exchange near expiry falls back to raw key, then recovers to a 
 
   store.current()!.issuedAt = Date.now() - 890_000;
   store.current()!.expiresAt = Date.now() + 10_000; // inside the final skew window
-  const warn = console.warn;
-  console.warn = () => {};
-  try {
-    await project.backgroundRefreshTick();
-  } finally {
-    console.warn = warn;
-  }
+  await project.backgroundRefreshTick();
   assert.equal(project.refreshFailures, 1, "failure counted for backoff");
-  assert.equal(project.poisoned, false, "API-key session must not fail closed");
-  assert.equal(core.calls.at(-1)?.apiKey, "svc-key", "raw key fallback installed");
-  assert.equal(core.calls.at(-1)?.bearerToken, undefined);
+  assert.equal(project.poisoned, false, "a still-live bearer is kept");
+  assert.equal(core.calls.at(-1)?.bearerToken, "bearer-1");
+
+  store.current()!.expiresAt = Date.now() - 1_000; // now expired
+  await project.backgroundRefreshTick();
+  assert.equal(project.refreshFailures, 2);
+  assert.equal(project.poisoned, true, "an expired API-key bearer fails closed");
+  assert.equal(core.calls.at(-1)?.bearerToken, undefined, "dead bearer dropped");
+  assert.ok(
+    core.calls.every((call: any) => call.apiKey === undefined),
+    "the raw key must never be installed as a header",
+  );
 
   fail = false;
   await project.backgroundRefreshTick();
   assert.equal(project.refreshFailures, 0);
+  assert.equal(project.poisoned, false);
   assert.equal(core.calls.at(-1)?.bearerToken, "bearer-2", "bearer swapped back in");
-  assert.equal(core.calls.at(-1)?.apiKey, undefined, "raw key dropped again");
 });
 
 test("a re-exchange blip while the bearer is still well within life keeps the bearer", async () => {

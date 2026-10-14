@@ -142,9 +142,9 @@ func (u *Udb) AsUser(ctx context.Context, bearer string) context.Context {
 		md.Delete(key)
 	}
 	md.Set("authorization", "Bearer "+bearer)
-	// An explicit empty value prevents a generated interceptor from restoring
-	// a legacy raw-key default. It is not a second authentication credential.
-	md.Set("x-api-key", "")
+	// A raw key inherited from the caller's context must not ride along with
+	// the delegated bearer: the call carries exactly one credential.
+	md.Delete("x-api-key")
 	md.Delete("x-udb-api-key")
 	ctx = context.WithValue(ctx, asUserContextKey{}, asUserContext{inheritedAudit: audit})
 	return metadata.NewOutgoingContext(ctx, md)

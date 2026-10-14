@@ -180,32 +180,6 @@ func TestConnectFailsWhenTheKeyCannotBeExchanged(t *testing.T) {
 	}
 }
 
-// Unsupported raw keys must fail before either auth or business transport.
-func TestRawAPIKeyModeRefusesBeforeTransport(t *testing.T) {
-	authn := &keyAuthn{ttl: time.Minute}
-	broker := &mdBroker{}
-	target := serveKeyFakes(t, authn, broker)
-	u, err := Connect(context.Background(), Config{
-		Target:      target,
-		Credentials: Credentials{APIKey: "svc-key", RawAPIKey: true},
-	})
-	if u != nil {
-		defer u.Close()
-		t.Fatal("unsupported raw API-key mode returned a client")
-	}
-	if err == nil || !strings.Contains(err.Error(), "Credentials.RawAPIKey is unsupported") {
-		t.Fatal("raw API-key mode must return its named refusal")
-	}
-	if n, raw := authn.snapshot(); n != 0 || raw {
-		t.Fatal("unsupported raw API-key mode reached authentication transport")
-	}
-	broker.mu.Lock()
-	defer broker.mu.Unlock()
-	if len(broker.md) != 0 {
-		t.Fatal("unsupported raw API-key mode reached business transport")
-	}
-}
-
 // Every missing variable is reported in one error.
 func TestConfigFromEnvReportsEveryProblemAtOnce(t *testing.T) {
 	for _, name := range []string{"TARGET", "TENANT_ID", "PURPOSE", "API_KEY", "BEARER", "DEADLINE"} {

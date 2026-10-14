@@ -201,12 +201,12 @@ func TestCanonicalMetadataHeaders(t *testing.T) {
 	}
 }
 
-// TestGeneratedClientAPIKeyHeader covers the x-api-key / x-request-id headers,
-// which ride on the GeneratedClient robustness layer rather than AuthClient.
-func TestGeneratedClientAPIKeyHeader(t *testing.T) {
+// TestGeneratedClientAuthHeaders covers the authorization / x-request-id
+// headers, which ride on the GeneratedClient robustness layer rather than
+// AuthClient. An API key is never a header: it is exchanged for a bearer.
+func TestGeneratedClientAuthHeaders(t *testing.T) {
 	g := NewGenerated(nil, Options{
 		Meta:          testMeta(),
-		APIKey:        "key-abc",
 		Authorization: "Bearer jwt-xyz",
 	})
 	ctx := g.outgoingContext(context.Background())
@@ -214,8 +214,10 @@ func TestGeneratedClientAPIKeyHeader(t *testing.T) {
 	if !ok {
 		t.Fatal("expected outgoing metadata")
 	}
+	if got := md.Get("x-api-key"); len(got) != 0 {
+		t.Errorf("generated client sent a raw x-api-key header: %v", got)
+	}
 	for k, v := range map[string]string{
-		"x-api-key":        "key-abc",
 		"authorization":    "Bearer jwt-xyz",
 		"x-request-id":     "corr-123", // falls back to correlation id
 		"x-correlation-id": "corr-123",

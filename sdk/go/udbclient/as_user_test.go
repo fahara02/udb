@@ -262,29 +262,6 @@ func TestAsUserUsesOneBearerWithoutServiceHintsOnOwnedConnections(t *testing.T) 
 			t.Errorf("concurrent service/delegated call failed: code=%s", status.Code(err))
 		}
 	}
-	// Legacy raw-key mode has a nonempty interceptor default even after AsUser
-	// removes an inherited header. It must not restore that service credential.
-	legacy, err := Connect(ctx, Config{
-		Target: listener.Addr().String(), TenantID: asUserFixtureTenant, ProjectID: asUserFixtureProject,
-		UserID: asUserFixtureService, ServiceIdentity: "spiffe://fixture/service", Scopes: []string{"data:read"},
-		Credentials: Credentials{APIKey: "fixture-legacy-key", RawAPIKey: true},
-		Purpose:     "service-purpose", Retry: RetryConfig{MaxAttempts: 1}, Deadline: 3 * time.Second,
-	})
-	if err == nil || legacy != nil {
-		if legacy != nil {
-			_ = legacy.Close()
-		}
-		t.Fatal("Connect must refuse legacy raw API-key mode")
-	}
-	// The low-level explicit static option remains caller-owned. Delegation
-	// must suppress it without changing the default or adding another credential.
-	legacyGenerated := NewGenerated(u.brokerConn, Options{APIKey: "fixture-legacy-key", Meta: u.Meta, Retry: RetryConfig{MaxAttempts: 1}})
-	if err := legacyGenerated.InvokeUnary(u.AsUser(WithMetadata(ctx, delegatedAudit), "fixture-user-bearer"), "/udb.services.v1.DataBroker/GetCapabilities", &entityv1.CapabilitiesRequest{}, &entityv1.CapabilitiesResponse{}); err != nil {
-		t.Fatalf("legacy raw-key default overrode delegation: code=%s", status.Code(err))
-	}
-	if legacyGenerated.options().APIKey != "fixture-legacy-key" {
-		t.Fatal("request delegation changed the ordinary legacy credential default")
-	}
 	for _, invalid := range []string{"", "not-a-token"} {
 		_, err := u.Data.Broker.GetCapabilities(u.AsUser(ctx, invalid), &entityv1.CapabilitiesRequest{})
 		if status.Code(err) != codes.Unauthenticated {
@@ -296,7 +273,7 @@ func TestAsUserUsesOneBearerWithoutServiceHintsOnOwnedConnections(t *testing.T) 
 	}
 	fixture.mu.Lock()
 	defer fixture.mu.Unlock()
-	if fixture.service != 8 || fixture.user != 18 {
+	if fixture.service != 8 || fixture.user != 17 {
 		t.Fatalf("served wire coverage incomplete: service=%d delegated=%d", fixture.service, fixture.user)
 	}
 }

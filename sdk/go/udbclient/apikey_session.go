@@ -54,13 +54,12 @@ const (
 )
 
 // startAPIKeyExchange swaps cfg's API key for a service bearer and keeps it
-// fresh. The key is cleared from the outgoing headers first, so no call (the
-// exchange included) ever carries the raw key.
+// fresh. The key travels only inside the typed exchange request; no call ever
+// carries it as a header.
 func (u *Udb) startAPIKeyExchange(ctx context.Context, key string, retry time.Duration) error {
 	if retry <= 0 {
 		retry = apiKeyRetryDefault
 	}
-	u.Generated.SetAPIKey("")
 	s := &apiKeySession{key: key, retry: retry, stop: make(chan struct{})}
 	u.apiKey = s
 	exp, err := u.exchangeAPIKey(ctx, s)

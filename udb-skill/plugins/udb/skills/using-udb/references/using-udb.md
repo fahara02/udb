@@ -400,7 +400,7 @@ $records = $client->select($req, $meta);
 | `x-service-identity` | calling service name |
 | `x-udb-client-catalog-version` | client's catalog/protocol version |
 | `authorization: Bearer <jwt>` | bearer credential |
-| `x-api-key: <key>` | API-key credential (native plane + data plane) |
+| `x-api-key: <key>` | raw API-key header the broker accepts; **SDKs never send it** — from 0.6.0 every SDK exchanges the key for a bearer |
 
 SDKs build these from a `Metadata`/`UdbMetadata` object — set tenant, project,
 scopes, purpose and a credential; never hand-craft headers. **A body-carried
@@ -454,12 +454,13 @@ grant** — do not look for `client_id`/`client_secret`):
 - **API key (recommended for machines):** `CreateApiKey{ owner_id: <service
   user_id>, owner_type: SERVICE_ACCOUNT, scopes ⊆ grant }` → returns a one-time
   `plain_key` shaped `udbk_<12hex>.<uuid>`. Save it; it is never shown again.
-  Use it two ways:
-  - **Directly** as `x-api-key` on native AND data-plane calls (validated against
-    the durable store + live grant on every request).
+  The SDKs use it one way only (0.6.0 removed every raw-key fallback):
   - **Exchanged for a JWT** via `Authenticate{api_key}` → a short access token
     with `account_kind=SERVICE_ACCOUNT`, `auth_method="api_key"`, scopes
-    re-attenuated to the *current* grant.
+    re-attenuated to the *current* grant. The SDK re-exchanges it before expiry.
+  - A hand-written client *can* still send it as a raw `x-api-key` header (the
+    broker validates it against the durable store + live grant), but no SDK
+    does, and a broker that mints no JWT cannot serve an SDK API key.
   Requires `UDB_API_KEY_HASH_SECRET` (falls back to `UDB_SESSION_HASH_SECRET`)
   on the broker. Keep it **stable**: changing it — or generating it per start —
   invalidates every API key.
@@ -496,17 +497,21 @@ in the token but is **dropped before the data-plane authz Principal**, so you
 gate on subject id, `service_identity`, role, or scope instead.
 
 **SDK wiring for a service (Go, representative):**
-- **Static credential (the honest machine path):** `udbclient.NewUdb(ctx,
-  Config{ Target, AuthTarget, Credentials: { APIKey: "udbk_…" } })` — or
-  `BearerToken`. The SDK attaches `x-api-key` / `authorization` on every call.
-  **No auto-refresh** — you own token lifetime; on expiry, re-exchange the API
-  key and `SetAPIKey`/`SetAuthorization` (hot-swap).
+- **API key (the machine path):** `udbclient.NewUdb(ctx,
+  Config{ Target, AuthTarget, Credentials: { APIKey: "udbk_…" } })`. The SDK
+  exchanges the key for a bearer at connect, sends only `authorization`, and
+  re-exchanges in the background before expiry. The raw key is never a header
+  (`Credentials.RawAPIKey` was removed in 0.6.0).
+- **Static bearer:** `Credentials: { Bearer: "…" }` — no auto-refresh; you own
+  its lifetime and hot-swap with `SetAuthorization`.
 - **Enterprise session (login+refresh):** `ConnectEnterprise` hard-requires
   username/password and runs a background bearer refresher — but since service
   accounts have no refresh token, a service using it will still hit expiry. It's
   the better fit for *human*-backed sessions.
-- TS/Python/PHP/Java/C# mirror the `x-api-key` / `authorization` model via their
-  generated clients + `set_credentials()`.
+- TS/Python mirror the exchange (`authenticateApiKeyAndAdopt` /
+  `authenticate_api_key_and_adopt`): no bearer minted → the call fails with a
+  named error; a re-exchange failing past expiry → calls fail closed until it
+  recovers. There is no raw `x-api-key` fallback.
 
 **Transport/config a service needs on the broker:** reach `UDB_AUTH_GRPC_ADDR`
 (`:50061`, open it beyond loopback for remote services); `UDB_JWT_PRIVATE_KEY`
@@ -528,9 +533,8 @@ gate on subject id, `service_identity`, role, or scope instead.
   (sessions-only); missing hash secret ⇒ preflight failure / API-key create error.
 
 ### API keys vs bearers, quick rules
-- **Data plane** accepts a JWT bearer, mTLS, OR an `x-api-key` (the API-key
-  data-plane principal path). If you present only an API key and get
-  `Unauthenticated`, the deployment likely requires JWT — exchange the key via
+- **Data plane** accepts a JWT bearer, mTLS, OR a scoped raw `x-api-key` from a
+  hand-written client. The SDKs always exchange the key via
   `Authenticate{api_key}` and send the bearer.
 - **Native plane** accepts a bearer (and API key / mTLS where the RPC opts in).
 - Per-key rate limits are enforced from real usage; see *rate limiting*.
@@ -555,8 +559,8 @@ gate on subject id, `service_identity`, role, or scope instead.
 - **Phone/email verification:** `SendPhoneVerification`/OTP → `VerifyOtp` marks
   verified.
 - **API-key rotation:** `RotateApiKey` issues a new secret; both may be valid for
-  an overlap window — swap the client credential (`SetAPIKey`) then revoke the
-  old.
+  an overlap window — reconnect the client with the new key (the SDK exchanges
+  it for a bearer) then revoke the old.
 - **Token introspection / JWKS:** `IntrospectToken` (is this token valid + its
   claims), `GetJwks` (public — verify tokens offline with the broker's public
   keys / `UDB_JWT_JWKS_URL`).
@@ -1189,9 +1193,9 @@ generated native clients on the auth channel; `MutationOutcome` exposes
 services via the generated clients pointed at the auth endpoint; `wasReplay($r)`
 for idempotent-replay detection.
 
-**Credential hot-swap (all SDKs):** `set_credentials()` / `SetAuthorization` /
-`SetAPIKey` swaps the token without rebuilding the channel — use it on rotation
-and on API-key→bearer re-exchange.
+**Credential hot-swap (all SDKs):** `set_credentials()` / `SetAuthorization`
+swaps the bearer without rebuilding the channel. API-key→bearer re-exchange is
+automatic; the raw key is never a header.
 
 ---
 
@@ -1374,7 +1378,7 @@ strings. General map:
 | gRPC status | Most likely cause |
 |---|---|
 | `UNIMPLEMENTED` | Native-service call sent to the **data target** — dial `authTarget`/`:50061`. |
-| `UNAUTHENTICATED` | Missing/invalid bearer, or empty tenant. On the data plane an `x-api-key` may be accepted; if not, exchange it for a JWT (`Authenticate{api_key}`) and send `authorization: Bearer <jwt>`. |
+| `UNAUTHENTICATED` | Missing/invalid bearer, or empty tenant. An API key is exchanged for a JWT (`Authenticate{api_key}`, which the SDKs do for you) and sent as `authorization: Bearer <jwt>`. |
 | `PERMISSION_DENIED` | See the decision tree below. |
 | `INVALID_ARGUMENT "tenant isolation requires filter on tenant_id"` | A tenant-scoped read/delete MUST include `tenant_id` (the UUID) in the filter. |
 | `FAILED_PRECONDITION` | Native service disabled/not mounted (backend missing — Vault sealed, no Redis/Kafka/ledger), wrong lifecycle (apply before approve), governed-mode direct policy write, feature needs config (TURN secret). |
@@ -1593,7 +1597,8 @@ binding (data) — run the decision tree.
 - **…grant a service access?** Add the scope to its `ServiceAccountGrant`
   (native) AND bind it to your data role (`AssignRole`).
 - **…rotate a token/key without downtime?** `set_credentials()` /
-  `SetAuthorization` / `SetAPIKey` — hot-swap, no channel rebuild.
+  `SetAuthorization` — hot-swap the bearer, no channel rebuild; for a rotated
+  API key, connect with the new key (it is exchanged) before revoking the old.
 - **…read my own write immediately?** Attach the write receipt as a fence:
   `select(..., metadata.afterWrite(resp.write_receipt))`.
 - **…add a column?** Add a nullable/`default_value` field with the next free
