@@ -246,6 +246,69 @@ The whole contract is also available as an encoded descriptor set,
 `build.rs` resolves the protos from `../../proto` in a repo checkout, falling
 back to a vendored `./proto`.
 
+## End-to-end encrypted messaging (feature `mls`)
+
+The `mls` feature adds `udb_client::messaging::MessagingClient`, a client for
+the `MessagingService` built on [`udb-mls`](../../crates/udb-mls) (OpenMLS,
+RFC 9420). The broker is the delivery service and key directory; every key and
+every plaintext stays on the device. The feature is off by default so the plain
+client carries no OpenMLS dependencies.
+
+```toml
+udb-client = { version = "0.6", features = ["mls"] }
+```
+
+```rust,no_run
+use udb_client::messaging::{mls, MessagingClient};
+use udb_client::Metadata;
+
+# async fn example(meta: Metadata) -> Result<(), Box<dyn std::error::Error>> {
+// The device's keys and group state live in this file (owner-only, replaced
+// atomically). Implement `mls::StateStore` to keep them somewhere else.
+let device = mls::MlsClient::open_or_create(
+    mls::DeviceIdentity::new(&meta.tenant_id, "alice", "alice-phone")?,
+    mls::FileStore::new("alice-phone.mls"),
+)?;
+// MessagingService is a native service: connect to the native listener.
+let mut chat = MessagingClient::connect("http://127.0.0.1:50061", meta, device).await?;
+chat.register_device().await?;      // signature key + credential into the directory
+chat.ensure_key_packages().await?;  // top up one-time KeyPackages (+ a last-resort one)
+
+chat.create_group("room-1").await?;
+chat.add_members("room-1", &["bob"], &[]).await?; // every active device of bob
+chat.send("room-1", b"hello bob").await?;
+
+for event in chat.sync().await? {   // or `next_event()` on a follow stream
+    if let mls::InboxEvent::Message { sender_device_id, plaintext, .. } = event {
+        println!("{sender_device_id}: {}", String::from_utf8_lossy(&plaintext));
+    }
+}
+chat.update_keys("room-1").await?;  // rotate this device's keys (post-compromise security)
+# Ok(())
+# }
+```
+
+- The device credential names `<tenant>/<subject>/<device_id>`; the tenant must
+  be the canonical tenant id the token resolves to. Compare
+  `DirectoryDevice.key_fingerprint` (from `list_devices`) out of band to verify a
+  peer's device.
+- Commits are `PublicMessage`s the broker validates; if another member's commit
+  wins the epoch, the client processes the inbox up to the winning epoch,
+  rebuilds the same change and resubmits it (`CommitOutcome::rebases`).
+- Inbox entries are processed and the state saved **before** they are
+  acknowledged, so a crash replays at most entries the client then skips.
+- `InboxEvent::RemovalHint` reports a revoked member device; commit its removal
+  with `remove_devices`.
+
+`tests/live_messaging.rs` drives three devices through a real broker (gated on
+`UDB_LIVE_SDK_TESTS=1` plus `UDB_AUTH_GRPC_TARGET` and the `UDB_LIVE_*` login
+variables); `examples/messaging_peer.rs` is a scripted device the TypeScript
+SDK's Rust<->TypeScript test drives.
+
+```sh
+cargo test --features mls --test live_messaging -- --nocapture
+```
+
 ## Benchmark
 
 `tests/live_perf.rs` measures every RPC in the contract against a live broker
@@ -301,6 +364,8 @@ cd sdk/rust
 cargo test                 # unit tests
 cargo build --examples     # compile-checks the documented usage
 cargo clippy --all-targets -- -D warnings
+cargo test --features mls  # plus the messaging client (crates/udb-mls)
+cargo clippy --all-targets --features mls -- -D warnings
 ```
 
 Lib doctests are off: google/api's proto comments embed indented HTTP and proto

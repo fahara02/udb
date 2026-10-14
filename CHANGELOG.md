@@ -5,6 +5,33 @@ the package version in `Cargo.toml`; historical v0.3.2 audit material is folded
 into the v0.3.x entries because the codebase advanced to v0.3.7 before that
 release line was tagged.
 
+## [0.6.0] - Unreleased
+
+### Added
+
+- **End-to-end encrypted messaging clients (MLS, RFC 9420).** The client side
+  of the new MessagingService: all cryptography runs on the device, the broker
+  only validates handshakes and routes ciphertext.
+  - `crates/udb-mls`: device identity and Ed25519 keys, one-time and
+    last-resort KeyPackages, group create/add/remove/key-rotation as
+    `PublicMessage` commits, Welcome processing, `PrivateMessage`
+    encryption, in-order inbox processing with epoch tracking, and the
+    re-base path when a concurrent commit wins
+    (`FAILED_PRECONDITION` with `missing.current_epoch`). Client state is
+    saved through a pluggable `StateStore` (`MemoryStore`, atomic owner-only
+    `FileStore`) before an entry is acknowledged or a ciphertext leaves.
+  - Rust SDK: `udb_client::messaging::MessagingClient` behind the new `mls`
+    feature (off by default): register devices, keep the KeyPackage stock
+    topped up, create groups, add (verifying each claimed package names the
+    claimed device) and remove members, rotate keys, send, sync or follow the
+    inbox, acknowledge.
+  - TypeScript SDK: `MessagingClient` over `crates/udb-mls-wasm`, the same
+    crate compiled to WebAssembly (`npm run build:mls-wasm`; the module ships
+    in the package under `mls-wasm/`).
+  - CI: `messaging-live` runs the Rust SDK's served three-device suite and a
+    Rust<->TypeScript group chat against the CI broker; `udb-mls` is
+    published to crates.io ahead of `udb-client`.
+
 ## [0.5.34] - Unreleased
 
 ### Added

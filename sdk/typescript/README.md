@@ -182,6 +182,61 @@ Each service exposes both snake_case and camelCase method aliases; the per-RPC
 retry class and idempotency contract are in
 [docs/generated/udb-native-contract.json](../../docs/generated/udb-native-contract.json).
 
+## End-to-End Encrypted Messaging
+
+`MessagingClient` speaks to the `MessagingService` (MLS, RFC 9420). The broker
+is the delivery service and key directory; every key and every plaintext stays
+in this process. The cryptography is the Rust `udb-mls` crate compiled to
+WebAssembly — the same code the Rust SDK runs — and is loaded only when you call
+`loadMlsWasm()`, so importing the SDK never requires it.
+
+```ts
+import * as fs from "node:fs";
+import { loadMlsWasm, MessagingClient, UdbGeneratedClient } from "@udb_plus/sdk";
+
+const mls = loadMlsWasm();
+// A new device, or one restored from its saved state.
+const device = fs.existsSync("alice-laptop.mls")
+  ? mls.MlsDevice.restore(fs.readFileSync("alice-laptop.mls"))
+  : mls.MlsDevice.create(tenantId, subjectId, "alice-laptop");
+// MessagingService is a native service: use the native listener's target.
+const generated = new UdbGeneratedClient({ target: authTarget, meta, bearerToken });
+const chat = new MessagingClient({
+  api: generated.MessagingService,
+  device,
+  wasm: mls,
+  // Called before an entry is acknowledged or a ciphertext leaves. It holds
+  // private keys: keep it with the device's other secrets.
+  persist: (snapshot) => fs.writeFileSync("alice-laptop.mls", snapshot, { mode: 0o600 }),
+});
+
+await chat.registerDevice();
+await chat.ensureKeyPackages();
+await chat.createGroup("room-1");
+await chat.addMembers("room-1", ["bob"]);        // every active device of bob
+await chat.send("room-1", "hello bob");
+for (const event of await chat.sync()) {          // or chat.nextEvent(timeoutMs)
+  if (event.kind === "message") console.log(event.deviceId, new TextDecoder().decode(event.plaintext));
+}
+await chat.updateKeys("room-1");                  // post-compromise key rotation
+```
+
+`tenantId` must be the canonical tenant id the token resolves to (the device
+credential names `<tenant>/<subject>/<device>`). A commit refused because another
+member's commit won the epoch is re-based automatically (`CommitOutcome.rebases`).
+
+The WebAssembly module ships in the published package (`mls-wasm/`). In a repo
+checkout, build it first — it needs the `wasm32-unknown-unknown` Rust target and
+the `wasm-bindgen` CLI at the version pinned in `Cargo.lock`:
+
+```sh
+npm run build:mls-wasm
+UDB_REQUIRE_MLS_WASM=1 npm run test:mls   # in-process suite; the Rust<->TypeScript
+                                          # live test also needs UDB_LIVE_SDK_TESTS=1,
+                                          # UDB_AUTH_GRPC_TARGET, UDB_LIVE_* and
+                                          # UDB_RUST_MESSAGING_PEER
+```
+
 ## Performance
 
 The SDK uses a **single long-lived gRPC channel** — the generated client caches one
