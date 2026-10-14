@@ -94,6 +94,63 @@ prints the fix.
   the generated file with no error; it now stops and names the entity.
   - fix: set `option go_package = "<import path>;<package>";` in the entity's proto file.
 
+### Clearer refusals
+
+Every refusal below now says, in the gRPC status message itself, why it
+happened and the exact command or field that fixes it; the typed
+`ErrorDetail` (reason, `missing`, fix hint) carries the same facts. Branch on
+the reason, not the text.
+
+- **Credential type not admitted** (native RPCs): names the caller's type, the
+  RPC, the types it admits, this broker's version and how to get an admitted
+  credential, and says a policy grant will not help. New reason
+  `UDB_CREDENTIAL_TYPE_NOT_ADMITTED` with `missing.credential_type`,
+  `allowed_credential_types` and `rpc`. A raw session or API key names the
+  exchange step.
+- **Policy denials** no longer lead with "N candidate policies evaluated" (the
+  count stays in `matched_policy_ids`). Every default deny ends with the grant:
+  the `- {role: …, action: …, resource: …, effect: allow}` entry to add and the
+  `udb policy apply -f <policies.yaml> --tenant <uuid>` command (keep the file's
+  other entries: apply reconciles the whole file).
+- **Deny right after a policy change**: when the durable authz revision is newer
+  than the snapshot the broker decided with, the denial says so and gives a
+  retry time (snapshots reload every `UDB_AUTHZ_SNAPSHOT_TTL_SECS`, 5 s).
+- **Undefined column or table** from a statement built from the active catalog
+  is `FailedPrecondition` with new reason `UDB_CATALOG_SCHEMA_MISMATCH`, naming
+  the column and table and the `udb catalog status` / `udb catalog transition
+  status` / `udb plan` steps, instead of `Internal: transaction mutation failed`.
+- **Incompatible StageCatalog** names the ACTIVE catalog, lists the
+  review-required or blocked ops, and separates ops the live database already
+  has (the ACTIVE catalog is behind it) from the candidate's own changes.
+- **Held index / foreign-key drops** name the option to set:
+  `option (udb.core.common.v1.table).allow_drop = true;` on the message (and
+  its proto file) or `[(udb.core.common.v1.column).allow_drop = true]` on an
+  indexed column, or the reviewed-plan alternative.
+- **Reviewed catalog transitions** name the refused change and table; a
+  table-security change other than `retention_class` lists each changed field
+  with old and new values and the path that applies it.
+- **Channel overload** (`cdc channel overloaded` and the other channels) names
+  slots in use, the limit, `UDB_<OP>_MAX_CONCURRENT` (or the scoped
+  `UDB_CHANNEL_<SCOPE>_…_LIMIT`) and `UDB_<OP>_QUEUE_TIMEOUT_MS`. The base
+  semaphores are now sized from the configured limit, including the
+  `UDB_CHANNEL_<OP>_LIMIT` alias the limit already reported.
+- **`udb catalog transition`** prints the broker's refusal message (it printed
+  only the gRPC code), and `status` prints `next_command`: the exact `plan`
+  invocation with the ACTIVE catalog id, manifest integrity and a fresh
+  idempotency key, or the next approve/apply/stage/activate step for a run.
+- **`udb authz explain <subject> <action> <resource>`** (positional) reports
+  the RPC's credential-type rule offline (`--credential` checks one type), and
+  `next_step` names the credential rule, the grant, or (with `--role`) the role
+  binding.
+- **`udb plan --policies <file>`** (or `UDB_ABAC_POLICY_FILE`) warns when a role
+  with grants elsewhere has none on an entity the plan creates, with the entry
+  to add.
+- **`udb env fill`** ends with a table of where each value lives (file or keys
+  directory) and which process reads it.
+- **Password KDF concurrency** defaults to what fits a quarter of the cgroup
+  memory limit (~19 MiB per Argon2id hash), and the broker logs a startup
+  warning naming `UDB_PASSWORD_KDF_MAX_CONCURRENCY` when the limit shaped it.
+
 ## [0.5.34] - Unreleased
 
 ### Added
