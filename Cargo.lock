@@ -8565,6 +8565,9 @@ dependencies = [
 name = "udb-mls"
 version = "0.1.0"
 dependencies = [
+ "argon2",
+ "chacha20poly1305",
+ "hkdf",
  "openmls",
  "openmls_basic_credential",
  "openmls_rust_crypto",
@@ -8572,6 +8575,7 @@ dependencies = [
  "serde_json",
  "sha2 0.10.9",
  "thiserror 2.0.18",
+ "zeroize",
 ]
 
 [[package]]
