@@ -68,10 +68,10 @@ table.
 - **Credential** — bearer/API key in hand, or bootstrap needed?
 
 ## Quick reference
-**Current baseline:** UDB `0.5.33`, wire protocol `1.0.0`. Pin SDKs to the same
-product version: TS `@udb_plus/sdk@0.5.33` · Python `udb-client==0.5.33` · Go
-`github.com/fahara02/udb/sdk/go@v0.5.33` · Java `io.github.fahara02:udb-java-client`
-`0.5.33` · C# `Udb.Client` `0.5.33` · PHP `fahara02/udb-laravel:^0.5.33`.
+**Current baseline:** UDB `0.5.34`, wire protocol `1.0.0`. Pin SDKs to the same
+product version: TS `@udb_plus/sdk@0.5.34` · Python `udb-client==0.5.34` · Go
+`github.com/fahara02/udb/sdk/go@v0.5.34` · Java `io.github.fahara02:udb-java-client`
+`0.5.34` · C# `Udb.Client` `0.5.34` · PHP `fahara02/udb-laravel:^0.5.34`.
 
 **Enterprise session (human):** Go `udbclient.ConnectEnterprise(ctx,
 EnterpriseConfig{Target, AuthTarget, Username, Password, TenantCode})` → an
