@@ -667,7 +667,10 @@ fn a_deny_on_a_snapshot_behind_the_durable_revision_says_so_with_a_retry_time() 
     assert_eq!(stale_snapshot_message(Some("r1"), None, 5, 1), None);
     // Durable revision moved on after the load: name the cause and the wait.
     let note = stale_snapshot_message(Some("r1"), Some("r2"), 5, 2).expect("behind");
-    assert!(note.contains("predates the latest durable policy/role revision"), "{note}");
+    assert!(
+        note.contains("predates the latest durable policy/role revision"),
+        "{note}"
+    );
     assert!(note.contains("udb policy apply"), "{note}");
     assert!(note.contains("UDB_AUTHZ_SNAPSHOT_TTL_SECS"), "{note}");
     assert!(note.contains("Retry after 3s"), "{note}");

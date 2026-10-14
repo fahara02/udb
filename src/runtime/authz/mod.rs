@@ -70,7 +70,8 @@ pub(crate) fn record_snapshot_reload_success() {
 // bounded by `REVISION_PROBE_TIMEOUT`, so a deny storm cannot turn into a
 // query storm and a slow store cannot slow a refusal.
 
-type RevisionProbeFuture = std::pin::Pin<Box<dyn std::future::Future<Output = Option<String>> + Send>>;
+type RevisionProbeFuture =
+    std::pin::Pin<Box<dyn std::future::Future<Output = Option<String>> + Send>>;
 
 /// Reads the durable authz revision fingerprint (`None` when unreadable).
 pub(crate) type RevisionProbe = std::sync::Arc<dyn Fn() -> RevisionProbeFuture + Send + Sync>;
@@ -89,8 +90,7 @@ const REVISION_PROBE_MIN_INTERVAL: std::time::Duration = std::time::Duration::fr
 const REVISION_PROBE_TIMEOUT: std::time::Duration = std::time::Duration::from_millis(500);
 
 fn revision_state() -> &'static std::sync::Mutex<RevisionState> {
-    static STATE: std::sync::OnceLock<std::sync::Mutex<RevisionState>> =
-        std::sync::OnceLock::new();
+    static STATE: std::sync::OnceLock<std::sync::Mutex<RevisionState>> = std::sync::OnceLock::new();
     STATE.get_or_init(|| {
         std::sync::Mutex::new(RevisionState {
             loaded: None,
@@ -623,7 +623,11 @@ impl<'a> Grantee<'a> {
     /// The caller's first effective role, else its most readable identity
     /// (service identity, then subject, then principal id).
     pub fn for_principal(principal: &'a Principal, roles: &'a [String]) -> Self {
-        if let Some(role) = roles.iter().map(|role| role.trim()).find(|role| !role.is_empty()) {
+        if let Some(role) = roles
+            .iter()
+            .map(|role| role.trim())
+            .find(|role| !role.is_empty())
+        {
             return Grantee::Role(role);
         }
         let subject = [

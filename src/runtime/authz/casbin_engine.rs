@@ -821,7 +821,8 @@ mod tests {
         };
         assert!(explicit.is_explicit_deny());
         let default_deny = Decision {
-            deny_reason: "denied by Casbin PERM model: no allow rule grants action 'Select'".to_string(),
+            deny_reason: "denied by Casbin PERM model: no allow rule grants action 'Select'"
+                .to_string(),
             matched_policy_ids: vec!["a".into(), "b".into(), "c".into()],
             ..Decision::default()
         };

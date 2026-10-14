@@ -197,12 +197,13 @@ fn security_change_refusal(
     old: &crate::generation::manifest::ManifestTableSecurity,
     new: &crate::generation::manifest::ManifestTableSecurity,
 ) -> String {
-    let to_map = |security: &crate::generation::manifest::ManifestTableSecurity| {
-        match serde_json::to_value(security) {
+    let to_map =
+        |security: &crate::generation::manifest::ManifestTableSecurity| match serde_json::to_value(
+            security,
+        ) {
             Ok(serde_json::Value::Object(map)) => map,
             _ => serde_json::Map::new(),
-        }
-    };
+        };
     let (old, new) = (to_map(old), to_map(new));
     let mut changed: Vec<String> = new
         .iter()
@@ -2176,7 +2177,8 @@ mod refusal_message_tests {
         let mut new_cleared = new.clone();
         old_cleared.retention_class.clear();
         new_cleared.retention_class.clear();
-        let message = security_change_refusal("udb_evidence", "receipts", &old_cleared, &new_cleared);
+        let message =
+            security_change_refusal("udb_evidence", "receipts", &old_cleared, &new_cleared);
         assert!(
             message.starts_with("only retention_class changes are applied"),
             "{message}"
@@ -2187,6 +2189,9 @@ mod refusal_message_tests {
             "{message}"
         );
         assert!(!message.contains("retention_class \""), "{message}");
-        assert!(message.contains("udb plan --emit-approval-plan"), "{message}");
+        assert!(
+            message.contains("udb plan --emit-approval-plan"),
+            "{message}"
+        );
     }
 }

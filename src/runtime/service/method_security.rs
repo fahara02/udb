@@ -472,9 +472,12 @@ fn credential_type_not_admitted(
     let human = allowed
         .iter()
         .any(|kind| matches!(kind, CredentialType::BearerJwt | CredentialType::Session));
-    let workload = allowed
-        .iter()
-        .any(|kind| matches!(kind, CredentialType::ServiceAccount | CredentialType::ApiKey));
+    let workload = allowed.iter().any(|kind| {
+        matches!(
+            kind,
+            CredentialType::ServiceAccount | CredentialType::ApiKey
+        )
+    });
     let fix = if human
         && matches!(
             credential,
@@ -2699,8 +2702,12 @@ mod tests {
         // SERVICE_ACCOUNT. Either declaration admits both forms of the key.
         let key_only =
             synthetic_method_security(&[CredentialType::BearerJwt, CredentialType::ApiKey]);
-        enforce_bearer_credential_type(TEST_RPC, Some(&key_only), &claims_with("api_key", "svc:scanner"))
-            .expect("an exchanged service bearer must reach an API_KEY method");
+        enforce_bearer_credential_type(
+            TEST_RPC,
+            Some(&key_only),
+            &claims_with("api_key", "svc:scanner"),
+        )
+        .expect("an exchanged service bearer must reach an API_KEY method");
         let service_only =
             synthetic_method_security(&[CredentialType::BearerJwt, CredentialType::ServiceAccount]);
         assert!(declared_allows_credential(
@@ -2777,7 +2784,10 @@ mod tests {
             "{message}"
         );
         assert!(message.contains(TEST_RPC), "{message}");
-        assert!(message.contains("admits only BEARER_JWT, SESSION"), "{message}");
+        assert!(
+            message.contains("admits only BEARER_JWT, SESSION"),
+            "{message}"
+        );
         assert!(message.contains("staff user"), "{message}");
         assert!(message.contains(env!("CARGO_PKG_VERSION")), "{message}");
         assert!(
@@ -2791,7 +2801,10 @@ mod tests {
             Some("SERVICE_ACCOUNT")
         );
         assert_eq!(
-            detail.missing.get("allowed_credential_types").map(String::as_str),
+            detail
+                .missing
+                .get("allowed_credential_types")
+                .map(String::as_str),
             Some("BEARER_JWT, SESSION")
         );
         assert_eq!(

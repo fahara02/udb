@@ -5925,7 +5925,10 @@ mod catalog_incompatibility_message_tests {
             "{message}"
         );
         assert!(message.contains("idx_a"), "{message}");
-        assert!(message.contains("the candidate's own changes: 1 op(s)"), "{message}");
+        assert!(
+            message.contains("the candidate's own changes: 1 op(s)"),
+            "{message}"
+        );
         assert!(message.contains("idx_b"), "{message}");
         assert!(
             message.contains("udb catalog transition status --project virtued"),
@@ -5949,7 +5952,10 @@ mod catalog_incompatibility_message_tests {
             },
         );
         let message = status.message();
-        assert!(message.contains("Changes from the ACTIVE catalog: 2 op(s)"), "{message}");
+        assert!(
+            message.contains("Changes from the ACTIVE catalog: 2 op(s)"),
+            "{message}"
+        );
         assert!(message.contains("ACTIVE catalog is stale"), "{message}");
         assert!(message.contains("--project <project>"), "{message}");
     }

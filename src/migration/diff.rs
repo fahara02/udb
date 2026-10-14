@@ -2303,9 +2303,15 @@ mod tests {
             reason.contains("(udb.core.common.v1.table).allow_drop = true"),
             "{reason}"
         );
-        assert!(reason.contains("(udb.core.common.v1.column).allow_drop"), "{reason}");
+        assert!(
+            reason.contains("(udb.core.common.v1.column).allow_drop"),
+            "{reason}"
+        );
         assert!(reason.contains("acme.clinic.v1.Patient"), "{reason}");
-        assert!(reason.contains("proto/acme/clinic/v1/patient.proto"), "{reason}");
+        assert!(
+            reason.contains("proto/acme/clinic/v1/patient.proto"),
+            "{reason}"
+        );
         assert!(reason.contains("(name)"), "{reason}");
         assert!(reason.contains("udb catalog transition plan"), "{reason}");
     }

@@ -2769,9 +2769,18 @@ mod error_detail_tests {
         );
         assert_eq!(status.code(), tonic::Code::FailedPrecondition);
         let message = status.message();
-        assert!(message.contains("column 'grade_band' of table 'lessons'"), "{message}");
-        assert!(message.contains("udb catalog status --project"), "{message}");
-        assert!(message.contains("udb catalog transition status"), "{message}");
+        assert!(
+            message.contains("column 'grade_band' of table 'lessons'"),
+            "{message}"
+        );
+        assert!(
+            message.contains("udb catalog status --project"),
+            "{message}"
+        );
+        assert!(
+            message.contains("udb catalog transition status"),
+            "{message}"
+        );
         assert!(message.contains("udb plan"), "{message}");
         let detail = decode_detail(&status);
         assert_eq!(detail.reason, "UDB_CATALOG_SCHEMA_MISMATCH");
@@ -2801,7 +2810,11 @@ mod error_detail_tests {
             None,
         );
         assert_eq!(table.code(), tonic::Code::FailedPrecondition);
-        assert!(table.message().contains("table 'edu.lessons'"), "{}", table.message());
+        assert!(
+            table.message().contains("table 'edu.lessons'"),
+            "{}",
+            table.message()
+        );
     }
 
     #[test]
