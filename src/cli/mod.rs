@@ -29,6 +29,7 @@ mod catalog_transition;
 mod code_scan;
 mod dev_embedded;
 mod doctor;
+mod env_fill;
 mod env_setup;
 mod env_template;
 mod evidence;
@@ -37,6 +38,7 @@ mod help;
 mod identity_ops;
 mod init;
 mod init_prompt;
+mod keygen;
 mod native_app;
 pub(crate) mod native_lint;
 mod ops_cli;
@@ -433,6 +435,44 @@ pub fn run() {
                 force,
                 dsn.as_str(),
             ));
+        }
+        Command::EnvFill {
+            ref file,
+            ref keys_dir,
+            ref profile,
+            ref dsn,
+            yes,
+            check,
+            dry_run,
+        } => {
+            // Like `udb env`, dispatched before proto parsing: filling a .env is
+            // part of bringing a deployment up, before any project parses.
+            let profile = match profile.as_deref() {
+                None => None,
+                Some(raw) => match env_template::EnvProfile::parse(raw) {
+                    Some(parsed) => Some(parsed),
+                    None => {
+                        eprintln!(
+                            "udb env fill: unknown profile {raw:?} — expected `dev` or `enterprise`"
+                        );
+                        process::exit(2);
+                    }
+                },
+            };
+            let mode = if check {
+                env_fill::FillMode::Check
+            } else if dry_run {
+                env_fill::FillMode::DryRun
+            } else {
+                env_fill::FillMode::Apply { yes }
+            };
+            process::exit(env_fill::run(&env_fill::FillOptions {
+                file: PathBuf::from(file),
+                keys_dir: PathBuf::from(keys_dir),
+                profile,
+                dsn: dsn.clone(),
+                mode,
+            }));
         }
         Command::HealthCheck => {
             // Lightweight Docker HEALTHCHECK: connect to PG and verify system catalog.

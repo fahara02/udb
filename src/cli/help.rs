@@ -170,6 +170,27 @@ const COMMANDS: &[CmdHelp] = &[
   Then: udb requirements (backends this manifest needs) and udb doctor.",
     },
     CmdHelp {
+        name: "env fill",
+        group: "Core",
+        summary: "Complete an existing .env: generate what can be generated, ask for the rest, write after approval.",
+        usage: "udb env fill [--file .env] [--profile dev|enterprise] [--dsn <dsn>] [--keys-dir .udb/keys] [--yes | --check | --dry-run]",
+        details: "  Reads the file and adds only what the profile still needs to boot a broker and
+  log anyone in: the encryption key, session / API-key / approval secrets, an
+  RS256 keypair for the broker's own bearer tokens (written owner-only to
+  --keys-dir), and the posture defaults. Values only you know (the database,
+  TLS material for enterprise) are asked for; nothing is invented for them.
+
+  Shows the plan with secrets masked and writes nothing until you approve.
+  Never changes a value that is already set, keeps a timestamped backup of the
+  file, and leaves it readable by its owner only. The profile defaults to the
+  file's UDB_ENV (production → enterprise, otherwise dev).
+
+  --yes      approve up front (automation); uses safe defaults, never invents
+             answers that have none
+  --check    exit 1 listing what is missing; write nothing (CI, doctor)
+  --dry-run  print the plan; write nothing",
+    },
+    CmdHelp {
         name: "requirements",
         group: "Core",
         summary: "Print the backend contract this project's manifest declares (run before first start).",

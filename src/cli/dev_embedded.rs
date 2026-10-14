@@ -6,6 +6,7 @@
 //! once. The same SQL as production; without Kafka, CDC delivers through the
 //! durable PostgreSQL journal and the same authenticated subscriber streams.
 
+use super::keygen::private_write;
 use super::*;
 use std::io::Read;
 use std::path::{Path, PathBuf};
@@ -51,22 +52,6 @@ fn postgres_startup_failure(status: std::process::ExitStatus, log_path: &Path) -
     message
 }
 
-fn private_write(path: &Path, contents: &[u8]) -> Result<(), String> {
-    use std::io::Write;
-    let mut options = fs::OpenOptions::new();
-    options.write(true).create_new(true);
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::OpenOptionsExt;
-        options.mode(0o600);
-    }
-    let mut file = options
-        .open(path)
-        .map_err(|err| format!("create {}: {err}", path.display()))?;
-    file.write_all(contents)
-        .map_err(|err| format!("write {}: {err}", path.display()))
-}
-
 fn persistent_secret(dir: &Path, name: &str, environment_key: &str) -> Result<String, String> {
     if let Ok(secret) = env::var(environment_key)
         && !secret.trim().is_empty()
@@ -92,41 +77,12 @@ fn persistent_secret(dir: &Path, name: &str, environment_key: &str) -> Result<St
 }
 
 fn signing_keys(dir: &Path) -> Result<(String, String), String> {
-    use rsa::pkcs8::{DecodePrivateKey, EncodePrivateKey, EncodePublicKey, LineEnding};
     match (env::var("UDB_JWT_PRIVATE_KEY"), env::var("UDB_JWT_PUBLIC_KEY")) {
         (Ok(private), Ok(public)) if !private.trim().is_empty() && !public.trim().is_empty() => return Ok((private, public)),
         (Ok(_), _) | (_, Ok(_)) => return Err("set both UDB_JWT_PRIVATE_KEY and UDB_JWT_PUBLIC_KEY, or neither for generated dev keys".into()),
         _ => {}
     }
-    let private_path = dir.join("jwt-private.pem");
-    let public_path = dir.join("jwt-public.pem");
-    let key = if private_path.exists() {
-        let pem = fs::read_to_string(&private_path)
-            .map_err(|err| format!("read dev signing key: {err}"))?;
-        rsa::RsaPrivateKey::from_pkcs8_pem(&pem)
-            .map_err(|err| format!("decode dev signing key: {err}"))?
-    } else {
-        let key = rsa::RsaPrivateKey::new(&mut rsa::rand_core::OsRng, 2048)
-            .map_err(|err| format!("generate dev signing key: {err}"))?;
-        let pem = key
-            .to_pkcs8_pem(LineEnding::LF)
-            .map_err(|err| format!("encode dev signing key: {err}"))?;
-        private_write(&private_path, pem.as_bytes())?;
-        key
-    };
-    let public = rsa::RsaPublicKey::from(&key)
-        .to_public_key_pem(LineEnding::LF)
-        .map_err(|err| format!("encode dev verification key: {err}"))?;
-    if public_path.exists() {
-        if fs::read_to_string(&public_path)
-            .map_err(|err| format!("read dev verification key: {err}"))?
-            != public
-        {
-            return Err("dev JWT public key does not match the persisted private key".into());
-        }
-    } else {
-        private_write(&public_path, public.as_bytes())?;
-    }
+    let (private_path, public_path) = super::keygen::ensure_rs256_keypair(dir)?;
     Ok((
         private_path.display().to_string(),
         public_path.display().to_string(),

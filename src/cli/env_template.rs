@@ -41,27 +41,7 @@ impl EnvProfile {
     }
 }
 
-/// A 32-byte URL-safe secret. Uses the OS CSPRNG — a generated file must never
-/// ship a shared literal, because a placeholder that boots is a placeholder that
-/// reaches production.
-fn generated_secret() -> String {
-    const ALPHABET: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-    let mut raw = [0u8; 48];
-    getrandom::getrandom(&mut raw).expect("OS CSPRNG unavailable");
-    raw.iter()
-        .map(|byte| ALPHABET[*byte as usize % ALPHABET.len()] as char)
-        .collect()
-}
-
-/// A `UDB_ENCRYPTION_KEY`: 32 random bytes, base64-encoded. The broker accepts
-/// a key only if it decodes to exactly 32 bytes, so this cannot reuse
-/// [`generated_secret`] (48 characters decode to 36 bytes and are refused).
-fn generated_encryption_key() -> String {
-    use base64::Engine as _;
-    let mut raw = [0u8; 32];
-    getrandom::getrandom(&mut raw).expect("OS CSPRNG unavailable");
-    base64::engine::general_purpose::STANDARD.encode(raw)
-}
+use super::keygen::{generated_encryption_key, generated_secret};
 
 fn section(out: &mut String, title: &str, why: &str) {
     let _ = write!(

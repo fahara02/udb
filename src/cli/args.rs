@@ -62,6 +62,17 @@ pub(crate) enum Command {
         force: bool,
         dsn: String,
     },
+    /// `udb env fill`: complete an existing `.env` — generate what can be
+    /// generated, ask for the rest, write only after approval.
+    EnvFill {
+        file: String,
+        keys_dir: String,
+        profile: Option<String>,
+        dsn: Option<String>,
+        yes: bool,
+        check: bool,
+        dry_run: bool,
+    },
     /// Stage + activate a catalog for a project that has none, so an upgraded
     /// deployment can serve without writing a gRPC client.
     CatalogBootstrap {
@@ -1458,6 +1469,18 @@ pub(crate) fn parse_args(args: &[String]) -> (Command, String, String, String) {
                 live: has_flag("--live"),
                 dsn: flag_value("--dsn"),
                 json: has_flag("--json"),
+            }
+        }
+        Some("env") if args.get(1).map(String::as_str) == Some("fill") => {
+            offset = 2;
+            Command::EnvFill {
+                file: flag_value("--file").unwrap_or_else(|| ".env".to_string()),
+                keys_dir: flag_value("--keys-dir").unwrap_or_else(|| ".udb/keys".to_string()),
+                profile: flag_value("--profile"),
+                dsn: flag_value("--dsn"),
+                yes: has_flag("--yes"),
+                check: has_flag("--check"),
+                dry_run: has_flag("--dry-run"),
             }
         }
         Some("env") => {
