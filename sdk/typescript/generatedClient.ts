@@ -234,7 +234,13 @@ export class UdbError extends Error {
   readonly cause?: grpc.ServiceError;
 
   constructor(rpc: string, cause: grpc.ServiceError, detail?: UdbErrorDetail) {
-    const base = detail?.reason || cause.details || cause.message || "udb rpc failed";
+    // Lead with the stable reason code and keep the broker's own explanation:
+    // the reason alone ("UDB_CAPABILITY_UNSUPPORTED") does not say what to do.
+    const reason = detail?.reason ?? "";
+    const server = cause.details || cause.message || "";
+    const base = reason && server && !server.includes(reason)
+      ? `${reason}: ${server}`
+      : server || reason || "udb rpc failed";
     super(`udb ${rpc}: ${base} (code=${grpc.status[cause.code] ?? cause.code})`);
     this.name = "UdbError";
     this.rpc = rpc;

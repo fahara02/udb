@@ -47,8 +47,8 @@ env_script() {
 export RUSTUP_HOME=$root/.rustup CARGO_HOME=$root/.cargo GOROOT=$root/go GOPATH=$root/gopath
 export GOCACHE=$root/cache/go-build GOMODCACHE=$root/gopath/pkg/mod PIP_CACHE_DIR=$root/cache/pip
 export JAVA_HOME=$root/jdk DOTNET_ROOT=$root/dotnet DOTNET_CLI_HOME=$root/cache/dotnet NUGET_PACKAGES=$root/cache/nuget
-export MAVEN_OPTS=-Dmaven.repo.local=$root/cache/m2 DOTNET_CLI_TELEMETRY_OPTOUT=1
-export PATH=$root/.cargo/bin:$root/go/bin:$root/jdk/bin:$root/maven/bin:$root/dotnet:$root/venv/bin:\$PATH
+export MAVEN_OPTS=-Dmaven.repo.local=$root/cache/m2 DOTNET_CLI_TELEMETRY_OPTOUT=1 npm_config_cache=$root/cache/npm
+export PATH=$root/.cargo/bin:$root/go/bin:$root/jdk/bin:$root/maven/bin:$root/dotnet:$root/node/bin:$root/venv/bin:\$PATH
 export CARGO_BUILD_JOBS=$jobs CARGO_TARGET_DIR=$root/target CARGO_INCREMENTAL=0
 EOF
 }
@@ -79,6 +79,10 @@ if [ ! -x '$root/maven/bin/mvn' ]; then
 fi
 if [ ! -x '$root/dotnet/dotnet' ]; then
   curl -fsSL https://dot.net/v1/dotnet-install.sh | bash -s -- --channel 8.0 --install-dir '$root/dotnet' >'$root/dotnet-install.log' 2>&1
+fi
+if [ ! -x '$root/node/bin/node' ]; then
+  mkdir -p '$root/node'
+  curl -fsSL 'https://nodejs.org/dist/v20.18.1/node-v20.18.1-linux-x64.tar.xz' | tar -C '$root/node' -xJ --strip-components=1
 fi
 [ -x '$root/venv/bin/python' ] || python3 -m venv '$root/venv'
 [ -d '$root/repo/.git' ] || git clone -q '$repo_url' '$root/repo'

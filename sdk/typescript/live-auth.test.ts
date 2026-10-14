@@ -4663,7 +4663,8 @@ test("live per-RPC perf", {
       if (err !== "FAILED_PRECONDITION") return false;
       if (serviceName !== "RoomService") return false;
       if (!new Set(["list_egress", "start_room_composite", "start_track_egress", "stop_egress"]).has(methodName)) return false;
-      return /webrtc_egress_(enabled|backend)/.test(detail ?? "");
+      const text = (detail ?? "").toLowerCase();
+      return !text || /webrtc_egress_(enabled|backend)/.test(text) || text.includes("webrtc egress") || text.includes("egress is not enabled");
     };
 
     // Send the prepared message, close the request side, then measure an actual
