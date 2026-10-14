@@ -48,6 +48,8 @@ class FakeBroker {
   readonly claimed = new Map<string, Set<string>>();
   readonly acked = new Map<string, number>();
   readonly seen = new Set<string>();
+  /** Backup envelopes by `<subject>/<backup id>`, with their versions. */
+  readonly backups = new Map<string, { envelope: Buffer; version: number }>();
   private nextSeq = new Map<string, number>();
 
   constructor(private readonly wasm: MlsWasmModule) {}
@@ -72,8 +74,39 @@ class FakeBroker {
     return new UdbError(rpc, cause, { missing: { current_epoch: String(current) } } as any);
   }
 
+  private notFound(rpc: string): UdbError {
+    const cause = {
+      code: grpc.status.NOT_FOUND,
+      details: "no messaging backup is stored",
+      message: "not found",
+      metadata: new grpc.Metadata(),
+    } as grpc.ServiceError;
+    return new UdbError(rpc, cause, {} as any);
+  }
+
   api(): any {
     return {
+      put_messaging_backup: async (req: any) => {
+        const envelope = Buffer.from(req.ciphertext);
+        // The broker refuses anything but a sealed envelope.
+        if (envelope.subarray(0, 8).toString("latin1") !== "UDBMLSB1") throw new Error("not an envelope");
+        const key = `${req.subject_id}/${req.backup_id || "default"}`;
+        const prior = this.backups.get(key);
+        const version = (prior?.version ?? 0) + 1;
+        this.backups.set(key, { envelope, version });
+        return {
+          backup: { backup_id: req.backup_id || "default", version: String(version), size_bytes: String(envelope.length) },
+          created: !prior,
+        };
+      },
+      get_messaging_backup: async (req: any) => {
+        const stored = this.backups.get(`${req.subject_id}/${req.backup_id || "default"}`);
+        if (!stored) throw this.notFound("GetMessagingBackup");
+        return { backup: { version: String(stored.version) }, ciphertext: stored.envelope };
+      },
+      delete_messaging_backup: async (req: any) => ({
+        deleted: this.backups.delete(`${req.subject_id}/${req.backup_id || "default"}`),
+      }),
       register_messaging_device: async (req: any) => {
         const device = {
           tenant_id: req.tenant_id,
@@ -271,4 +304,81 @@ test("TypeScript MessagingClient runs a group over the WebAssembly MLS core", as
   );
   assert.equal(staleEpoch(err), 7);
   assert.equal(staleEpoch(new Error("FAILED_PRECONDITION current_epoch 7")), undefined);
+});
+
+test("an encrypted backup restores a device on a new machine", async (t) => {
+  const wasm = wasmOrSkip();
+  if (!wasm) {
+    t.skip("the MLS WebAssembly module is not built (npm run build:mls-wasm)");
+    return;
+  }
+  const broker = new FakeBroker(wasm);
+  // Cheap Argon2id costs keep the test fast; the defaults are the recommended ones.
+  const backupParams = { memoryKib: 256, iterations: 1, parallelism: 1 };
+  const make = (subject: string, deviceId: string) =>
+    new MessagingClient({
+      api: broker.api(),
+      device: wasm.MlsDevice.create(TENANT, subject, deviceId),
+      wasm,
+      keyPackageTarget: 2,
+      keyPackageThreshold: 2,
+      backupParams,
+    });
+  const a = make("alice", "a-1");
+  const b = make("bob", "b-1");
+  for (const device of [a, b]) {
+    await device.registerDevice();
+    await device.ensureKeyPackages();
+  }
+  await a.createGroup("room");
+  await a.addMembers("room", [], ["b-1"]);
+  await b.sync();
+  await a.send("room", "before the backup");
+  assert.deepEqual(texts(await b.sync()), [["a-1", "before the backup"]]);
+
+  const passphrase = "bob's recovery passphrase";
+  const stored = await b.backup(passphrase, "bob's chat history");
+  assert.deepEqual([stored.backup_id, stored.version], ["default", "1"]);
+  const held = broker.backups.get("bob/default")!.envelope;
+  assert.equal(held.subarray(0, 8).toString("latin1"), "UDBMLSB1");
+  for (const needle of ["bob's chat history", passphrase, `${TENANT}/bob/b-1`]) {
+    assert.equal(held.includes(Buffer.from(needle)), false, `the broker copy must not contain ${needle}`);
+  }
+
+  // Bob's machine is lost; alice keeps talking.
+  b.close();
+  await a.send("room", "while bob was away");
+  await assert.rejects(
+    MessagingClient.restore({ api: broker.api(), wasm, tenantId: TENANT, subjectId: "bob", recoverySecret: "not the passphrase" }),
+    /does not open/,
+  );
+  let persisted: Uint8Array | undefined;
+  const { client: restored, history } = await MessagingClient.restore({
+    api: broker.api(),
+    wasm,
+    tenantId: TENANT,
+    subjectId: "bob",
+    recoverySecret: passphrase,
+    persist: (snapshot) => {
+      persisted = snapshot;
+    },
+  });
+  assert.equal(new TextDecoder().decode(history), "bob's chat history");
+  assert.ok(persisted && persisted.length > 0, "the restored state is persisted before use");
+  assert.equal(restored.device.deviceId, "b-1");
+  assert.deepEqual(texts(await restored.sync()), [["a-1", "while bob was away"]]);
+
+  // The restored device follows a rotation and keeps decrypting, both ways.
+  await a.updateKeys("room");
+  await a.send("room", "after the restore");
+  assert.deepEqual(texts(await restored.sync()), [["a-1", "after the restore"]]);
+  await restored.send("room", "bob is back");
+  assert.deepEqual(texts(await a.sync()), [["b-1", "bob is back"]]);
+
+  assert.equal(await restored.deleteBackup(), true);
+  assert.equal(await restored.deleteBackup(), false);
+  await assert.rejects(
+    MessagingClient.restore({ api: broker.api(), wasm, tenantId: TENANT, subjectId: "bob", recoverySecret: passphrase }),
+    (err: unknown) => err instanceof UdbError && err.code === grpc.status.NOT_FOUND,
+  );
 });

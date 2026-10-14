@@ -296,3 +296,124 @@ async fn live_e2ee_group_chat_through_the_rust_sdk() {
         }
     }
 }
+
+/// Opt-in encrypted backup: a device backs its state up under a recovery
+/// secret, is lost, and is restored on a new machine from the broker-held
+/// envelope; the restored device reads what arrived while it was gone and
+/// keeps decrypting new messages. A wrong secret does not open the backup and
+/// a deleted backup is gone.
+#[tokio::test(flavor = "multi_thread")]
+async fn live_backup_restores_a_device_on_a_new_machine() {
+    if std::env::var("UDB_LIVE_SDK_TESTS").as_deref() != Ok("1") {
+        eprintln!("skipped: the live messaging test needs UDB_LIVE_SDK_TESTS=1");
+        return;
+    }
+    let channel = Endpoint::from_shared(endpoint(&required("UDB_AUTH_GRPC_TARGET")))
+        .expect("endpoint")
+        .connect()
+        .await
+        .expect("connect the native listener");
+    let (meta, subject) = login(channel.clone()).await;
+    let run = format!(
+        "{:x}",
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_millis()
+    );
+    let (a_id, b_id) = (format!("rs-bk-a-{run}"), format!("rs-bk-b-{run}"));
+    let group = format!("rs-backup-room-{run}");
+    let backup_id = format!("rs-backup-{run}");
+    let secret = b"a long recovery passphrase only the user knows";
+    let mut a = device(&channel, &meta, &subject, &a_id).await;
+    let mut b = device(&channel, &meta, &subject, &b_id).await;
+
+    a.create_group(&group).await.expect("create group");
+    a.add_members(&group, &[], &[b_id.as_str()])
+        .await
+        .expect("add b");
+    b.sync().await.expect("b joins");
+    a.send(&group, b"before the backup").await.expect("send");
+    assert_eq!(
+        messages(&b.sync().await.unwrap()),
+        [(a_id.clone(), "before the backup".to_string())]
+    );
+    let stored = b
+        .backup(secret, b"b's chat history", &backup_id)
+        .await
+        .expect("back up b");
+    assert_eq!(
+        (stored.backup_id.as_str(), stored.version),
+        (backup_id.as_str(), 1)
+    );
+
+    // b's machine is lost; a keeps talking.
+    drop(b);
+    a.send(&group, b"while b was away").await.expect("send");
+
+    let wrong = MessagingClient::restore(
+        channel.clone(),
+        meta.clone(),
+        "",
+        &backup_id,
+        b"not the recovery passphrase",
+        MemoryStore::new(),
+    )
+    .await;
+    assert!(
+        matches!(wrong, Err(MessagingError::Mls(_))),
+        "a wrong secret does not open the backup: {wrong:?}"
+    );
+    let (mut restored, history) = MessagingClient::restore(
+        channel.clone(),
+        meta.clone(),
+        "",
+        &backup_id,
+        secret,
+        MemoryStore::new(),
+    )
+    .await
+    .expect("restore b on a new machine");
+    assert_eq!(history, b"b's chat history");
+    assert_eq!(restored.mls().identity().device_id, b_id);
+    assert_eq!(
+        messages(&restored.sync().await.unwrap()),
+        [(a_id.clone(), "while b was away".to_string())]
+    );
+    // The restored device follows a key rotation and keeps decrypting, both ways.
+    a.update_keys(&group).await.expect("a rotates keys");
+    a.send(&group, b"after the restore").await.expect("send");
+    assert_eq!(
+        messages(&restored.sync().await.unwrap()),
+        [(a_id.clone(), "after the restore".to_string())]
+    );
+    restored
+        .send(&group, b"b is back")
+        .await
+        .expect("restored device sends");
+    assert_eq!(
+        messages(&a.sync().await.unwrap()),
+        [(b_id.clone(), "b is back".to_string())]
+    );
+
+    assert!(restored.delete_backup(&backup_id).await.expect("delete"));
+    let gone = MessagingClient::restore(
+        channel.clone(),
+        meta.clone(),
+        "",
+        &backup_id,
+        secret,
+        MemoryStore::new(),
+    )
+    .await;
+    assert!(
+        matches!(&gone, Err(MessagingError::Rpc(err)) if err.code() == tonic::Code::NotFound),
+        "{gone:?}"
+    );
+    for (client, id) in [(&mut a, &a_id), (&mut restored, &b_id)] {
+        client
+            .revoke_device(id, "live test cleanup")
+            .await
+            .expect("revoke");
+    }
+}

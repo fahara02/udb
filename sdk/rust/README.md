@@ -300,6 +300,35 @@ chat.update_keys("room-1").await?;  // rotate this device's keys (post-compromis
 - `InboxEvent::RemovalHint` reports a revoked member device; commit its removal
   with `remove_devices`.
 
+**Encrypted backup (opt-in).** History is device-only unless the user opts in.
+`backup` seals this device's state and the history you pass under a key derived
+from the user's recovery secret (Argon2id, HKDF-SHA256, XChaCha20-Poly1305) and
+stores only that envelope on the broker; `restore` brings the device back on a
+new machine:
+
+```rust,no_run
+# use udb_client::messaging::{mls, MessagingClient};
+# async fn example(
+#     mut chat: MessagingClient<mls::FileStore>,
+#     channel: tonic::transport::Channel,
+#     meta: udb_client::Metadata,
+# ) -> Result<(), Box<dyn std::error::Error>> {
+let secret = b"the user's recovery passphrase";
+chat.backup(secret, b"my app's chat history", "").await?; // "" = backup "default"
+// ... later, on a new machine (an empty store):
+let (mut chat, history) = MessagingClient::restore(
+    channel, meta, "", "", secret, mls::FileStore::new("alice-phone.mls"),
+)
+.await?;
+chat.sync().await?; // reads on from the backup's inbox cursor
+# Ok(())
+# }
+```
+
+The restored device is the backed-up device. Back up after processing the
+inbox: entries acknowledged after the backup was taken are collected by the
+broker, and a group whose commits the device missed must re-add it.
+
 `tests/live_messaging.rs` drives three devices through a real broker (gated on
 `UDB_LIVE_SDK_TESTS=1` plus `UDB_AUTH_GRPC_TARGET` and the `UDB_LIVE_*` login
 variables); `examples/messaging_peer.rs` is a scripted device the TypeScript

@@ -225,6 +225,25 @@ await chat.updateKeys("room-1");                  // post-compromise key rotatio
 credential names `<tenant>/<subject>/<device>`). A commit refused because another
 member's commit won the epoch is re-based automatically (`CommitOutcome.rebases`).
 
+Encrypted backup is opt-in: `chat.backup(recoverySecret, history)` seals the
+device state and your history under a key derived from the user's recovery
+secret (Argon2id, HKDF-SHA256, XChaCha20-Poly1305) and stores only the envelope
+on the broker. On a new machine:
+
+```ts
+const { client, history } = await MessagingClient.restore({
+  api: generated.MessagingService,
+  wasm: mls,
+  tenantId,
+  recoverySecret: "the user's recovery passphrase",
+  persist: (snapshot) => fs.writeFileSync("alice-laptop.mls", snapshot, { mode: 0o600 }),
+});
+await client.sync(); // reads on from the backup's inbox cursor
+```
+
+Back up after processing the inbox: entries acknowledged after the backup are
+collected by the broker.
+
 The WebAssembly module ships in the published package (`mls-wasm/`). In a repo
 checkout, build it first — it needs the `wasm32-unknown-unknown` Rust target and
 the `wasm-bindgen` CLI at the version pinned in `Cargo.lock`:

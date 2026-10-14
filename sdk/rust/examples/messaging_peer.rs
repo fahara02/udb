@@ -9,6 +9,8 @@
 //! messaging_peer <state-file> send <group> <text>  encrypt and send
 //! messaging_peer <state-file> update <group>       rotate this device's keys in the group
 //! messaging_peer <state-file> revoke               revoke this device
+//! messaging_peer <state-file> backup <id> <secret> seal this device into the encrypted backup <id>
+//! messaging_peer <state-file> restore <id> <secret> restore backup <id> into a NEW state file
 //! ```
 //!
 //! Connection and login come from `UDB_AUTH_GRPC_TARGET`, `UDB_LIVE_USERNAME`,
@@ -145,11 +147,10 @@ async fn main() -> Result<(), Failure> {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let (state, command) = match args.as_slice() {
         [state, command, ..] => (state.clone(), command.as_str()),
-        _ => {
-            return Err(
-                "usage: messaging_peer <state-file> <init|sync|send|update|revoke> ...".into(),
-            )
-        }
+        _ => return Err(
+            "usage: messaging_peer <state-file> <init|sync|send|update|revoke|backup|restore> ..."
+                .into(),
+        ),
     };
     let target = env("UDB_AUTH_GRPC_TARGET")?;
     let target = if target.contains("://") {
@@ -159,6 +160,24 @@ async fn main() -> Result<(), Failure> {
     };
     let channel = Endpoint::from_shared(target)?.connect().await?;
     let (meta, subject) = login(channel.clone()).await?;
+    if let ("restore", [_, backup_id, secret]) = (command, &args[1..]) {
+        let (mut client, history) = MessagingClient::restore(
+            channel,
+            meta,
+            "",
+            backup_id,
+            secret.as_bytes(),
+            FileStore::new(&state),
+        )
+        .await?;
+        let device_id = client.mls().identity().device_id.clone();
+        let events: Vec<_> = client.sync().await?.iter().map(event_json).collect();
+        println!(
+            "{}",
+            json!({"device_id": device_id, "history": String::from_utf8_lossy(&history), "events": events})
+        );
+        return Ok(());
+    }
     let mls = if command == "init" {
         let device_id = args.get(2).ok_or("init needs a device id")?;
         MlsClient::create(
@@ -195,6 +214,15 @@ async fn main() -> Result<(), Failure> {
             println!(
                 "{}",
                 json!({"epoch": outcome.epoch, "rebases": outcome.rebases})
+            );
+        }
+        ("backup", [backup_id, secret]) => {
+            let stored = client
+                .backup(secret.as_bytes(), b"rust peer history", backup_id)
+                .await?;
+            println!(
+                "{}",
+                json!({"backup_id": stored.backup_id, "version": stored.version, "size_bytes": stored.size_bytes})
             );
         }
         ("revoke", _) => {

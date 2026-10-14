@@ -78,6 +78,17 @@ export interface MlsDevice {
   readonly inboxCursor: number;
   /** The complete device state (SECRET: private keys). */
   snapshot(): Uint8Array;
+  /** Seal the state and `history` as an encrypted backup envelope under a key
+   *  derived from `recoverySecret` (Argon2id, HKDF-SHA256, XChaCha20-Poly1305). */
+  exportBackup(recoverySecret: Uint8Array, history: Uint8Array): Uint8Array;
+  /** `exportBackup` with explicit Argon2id costs (memory in KiB). */
+  exportBackupWith(
+    recoverySecret: Uint8Array,
+    history: Uint8Array,
+    memoryKib: number,
+    iterations: number,
+    parallelism: number,
+  ): Uint8Array;
   registration(): {
     tenantId: string;
     subjectId: string;
@@ -125,6 +136,8 @@ export interface MlsWasmModule {
     lastResort: boolean;
   };
   keyFingerprint(signaturePublicKey: Uint8Array): string;
+  /** Open a backup envelope; a wrong secret or a modified envelope throws. */
+  openBackup(recoverySecret: Uint8Array, envelope: Uint8Array): { snapshot: Uint8Array; history: Uint8Array };
 }
 
 const WASM_ENTRY = "udb_mls_wasm.js";
@@ -208,6 +221,25 @@ export interface KeyPackageStock {
   published: number;
 }
 
+/** Argon2id costs of the backup key (memory in KiB). */
+export interface BackupParams {
+  memoryKib: number;
+  iterations: number;
+  parallelism: number;
+}
+
+/** What `MessagingClient.restore` needs: the client options minus the device,
+ *  plus where the backup is and the secret that opens it. */
+export interface RestoreOptions extends Omit<MessagingClientOptions, "device"> {
+  /** The tenant the restored device must belong to. */
+  tenantId: string;
+  recoverySecret: Uint8Array | string;
+  /** The backup's owner ("" = the caller). */
+  subjectId?: string;
+  /** "" = "default". */
+  backupId?: string;
+}
+
 export interface MessagingClientOptions {
   /** The generated MessagingService API (on the native listener's client). */
   api: MessagingServiceApi;
@@ -224,9 +256,15 @@ export interface MessagingClientOptions {
   keyPackageThreshold?: number;
   /** Per-call options forwarded to every RPC. */
   call?: CallOptions;
+  /** Argon2id costs for `backup` (default: the recommended 19 MiB / 2 / 1). */
+  backupParams?: BackupParams;
 }
 
 const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+
+function utf8(value: Uint8Array | string): Uint8Array {
+  return typeof value === "string" ? new TextEncoder().encode(value) : value;
+}
 
 function bytes(value: Uint8Array | Buffer | undefined | null): Buffer {
   if (!value) return Buffer.alloc(0);
@@ -247,6 +285,7 @@ export class MessagingClient {
   private readonly target: number;
   private readonly threshold: number;
   private readonly call?: CallOptions;
+  private readonly backupParams?: BackupParams;
   private backlog: MlsEvent[] = [];
   private acked = 0;
   private ids = 0;
@@ -264,6 +303,7 @@ export class MessagingClient {
     this.target = Math.max(1, options.keyPackageTarget ?? 20);
     this.threshold = Math.min(options.keyPackageThreshold ?? 5, this.target);
     this.call = options.call;
+    this.backupParams = options.backupParams;
   }
 
   private get tenantId(): string {
@@ -368,6 +408,68 @@ export class MessagingClient {
       hasLastResort: Boolean(published.has_last_resort),
       published: Number(published.accepted ?? 0),
     };
+  }
+
+  // ── encrypted backup ─────────────────────────────────────────────────────
+
+  /** Seal this device's state and the application's `history` under a key
+   *  derived from `recoverySecret` and store the envelope as the principal's
+   *  backup `backupId` ("" = "default"), replacing an earlier one. The broker
+   *  stores only the envelope. Back up after processing the inbox: a restore
+   *  resumes from the cursor saved here. */
+  async backup(recoverySecret: Uint8Array | string, history: Uint8Array | string = "", backupId = ""): Promise<any> {
+    const secret = utf8(recoverySecret);
+    const plain = utf8(history);
+    const envelope = this.backupParams
+      ? this.device.exportBackupWith(
+          secret,
+          plain,
+          this.backupParams.memoryKib,
+          this.backupParams.iterations,
+          this.backupParams.parallelism,
+        )
+      : this.device.exportBackup(secret, plain);
+    const response: any = await this.api.put_messaging_backup(
+      {
+        tenant_id: this.tenantId,
+        subject_id: this.device.subjectId,
+        backup_id: backupId,
+        ciphertext: bytes(envelope),
+        expected_version: 0,
+      },
+      this.call,
+    );
+    if (!response.backup) throw new MessagingError("the backup write returned no backup");
+    return response.backup;
+  }
+
+  /** Erase the principal's backup `backupId` ("" = "default"); false when none was stored. */
+  async deleteBackup(backupId = ""): Promise<boolean> {
+    const response: any = await this.api.delete_messaging_backup(
+      { tenant_id: this.tenantId, subject_id: this.device.subjectId, backup_id: backupId },
+      this.call,
+    );
+    return Boolean(response.deleted);
+  }
+
+  /** Restore a device on a new machine: fetch the backup, open it with the
+   *  recovery secret, and load the backed-up device (its identity, keys,
+   *  groups and inbox cursor). The snapshot is handed to `persist` before this
+   *  returns. Also returns the history the backup carried. */
+  static async restore(options: RestoreOptions): Promise<{ client: MessagingClient; history: Uint8Array }> {
+    const stored: any = await options.api.get_messaging_backup(
+      { tenant_id: options.tenantId, subject_id: options.subjectId ?? "", backup_id: options.backupId ?? "" },
+      options.call,
+    );
+    const wasm = options.wasm ?? loadMlsWasm();
+    const opened = wasm.openBackup(utf8(options.recoverySecret), new Uint8Array(stored.ciphertext ?? []));
+    const device = wasm.MlsDevice.restore(opened.snapshot);
+    if (device.tenantId !== options.tenantId) {
+      throw new MessagingError(`the backup is of tenant ${device.tenantId}, not ${options.tenantId}`);
+    }
+    const client = new MessagingClient({ ...options, device, wasm });
+    await client.persist();
+    return { client, history: opened.history };
   }
 
   // ── groups ───────────────────────────────────────────────────────────────

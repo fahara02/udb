@@ -172,6 +172,7 @@ pub struct MessagingClient<S: StateStore> {
     acked: i64,
     key_package_target: usize,
     key_package_threshold: usize,
+    backup_params: mls::BackupParams,
     ids: u64,
 }
 
@@ -207,6 +208,7 @@ impl<S: StateStore> MessagingClient<S> {
             acked: 0,
             key_package_target: 20,
             key_package_threshold: 5,
+            backup_params: mls::BackupParams::default(),
             ids: 0,
         }
     }
@@ -216,6 +218,13 @@ impl<S: StateStore> MessagingClient<S> {
     pub fn with_key_package_stock(mut self, target: usize, threshold: usize) -> Self {
         self.key_package_target = target.max(1);
         self.key_package_threshold = threshold.min(self.key_package_target);
+        self
+    }
+
+    /// The Argon2id costs [`Self::backup`] derives the backup key with (default
+    /// [`mls::BackupParams::RECOMMENDED`]).
+    pub fn with_backup_params(mut self, params: mls::BackupParams) -> Self {
+        self.backup_params = params;
         self
     }
 
@@ -588,6 +597,89 @@ impl<S: StateStore> MessagingClient<S> {
             self.mls.discard_commit(group_id)?;
         }
         Ok(())
+    }
+
+    // ── encrypted backup ───────────────────────────────────────────────────
+
+    /// Seal this device's state and the application's `history` under a key
+    /// derived from `recovery_secret` and store the envelope as the principal's
+    /// backup `backup_id` (empty: `"default"`), replacing any earlier one. The
+    /// broker stores only the envelope; the secret never leaves this process.
+    /// Back up after processing the inbox: a restore resumes from the cursor
+    /// saved here.
+    pub async fn backup(
+        &mut self,
+        recovery_secret: &[u8],
+        history: &[u8],
+        backup_id: &str,
+    ) -> Result<pb::MessagingBackupInfo, MessagingError> {
+        let envelope = self
+            .mls
+            .export_backup_with(recovery_secret, history, self.backup_params)?;
+        let request = self.request(pb::PutMessagingBackupRequest {
+            tenant_id: self.tenant(),
+            subject_id: self.mls.identity().subject_id.clone(),
+            backup_id: backup_id.to_string(),
+            ciphertext: envelope,
+            expected_version: 0,
+        })?;
+        self.rpc
+            .put_messaging_backup(request)
+            .await?
+            .into_inner()
+            .backup
+            .ok_or_else(|| MessagingError::Protocol("the backup write returned no backup".into()))
+    }
+
+    /// Erase the principal's backup `backup_id` (empty: `"default"`). `false`
+    /// when none was stored.
+    pub async fn delete_backup(&mut self, backup_id: &str) -> Result<bool, MessagingError> {
+        let request = self.request(pb::DeleteMessagingBackupRequest {
+            tenant_id: self.tenant(),
+            subject_id: self.mls.identity().subject_id.clone(),
+            backup_id: backup_id.to_string(),
+        })?;
+        Ok(self
+            .rpc
+            .delete_messaging_backup(request)
+            .await?
+            .into_inner()
+            .deleted)
+    }
+
+    /// Restore a device on a new machine: fetch `subject_id`'s backup
+    /// `backup_id` (empty: the caller, `"default"`), open it with
+    /// `recovery_secret`, and load the device into the EMPTY `store`. Returns the
+    /// client (the backed-up device, ready to [`Self::sync`] from the backup's
+    /// cursor) and the history the backup carried.
+    pub async fn restore(
+        channel: Channel,
+        meta: Metadata,
+        subject_id: &str,
+        backup_id: &str,
+        recovery_secret: &[u8],
+        store: S,
+    ) -> Result<(Self, Vec<u8>), MessagingError> {
+        let mut rpc = MessagingServiceClient::new(channel.clone());
+        let mut request = Request::new(pb::GetMessagingBackupRequest {
+            tenant_id: meta.tenant_id.clone(),
+            subject_id: subject_id.to_string(),
+            backup_id: backup_id.to_string(),
+        });
+        meta.apply(&mut request)?;
+        if let Ok(value) = "messaging-restore".parse() {
+            request.metadata_mut().insert("x-request-id", value);
+        }
+        let stored = rpc.get_messaging_backup(request).await?.into_inner();
+        let (mls, history) = MlsClient::restore_backup(recovery_secret, &stored.ciphertext, store)?;
+        if mls.identity().tenant_id != meta.tenant_id {
+            return Err(MessagingError::Protocol(format!(
+                "the backup is of tenant {}, not {}",
+                mls.identity().tenant_id,
+                meta.tenant_id
+            )));
+        }
+        Ok((Self::with_channel(channel, meta, mls), history))
     }
 
     // ── messages ───────────────────────────────────────────────────────────

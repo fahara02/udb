@@ -5,7 +5,8 @@
 // state in a file) share one MLS group: the TypeScript device creates it and
 // adds the Rust device by a claimed KeyPackage, the Rust device joins from the
 // Welcome, both directions decrypt, and each side's key rotation is applied by
-// the other.
+// the other. Each side then restores the other's encrypted backup on a new
+// machine and reads on.
 //
 // Gated on UDB_LIVE_SDK_TESTS=1. Needs UDB_AUTH_GRPC_TARGET, UDB_LIVE_USERNAME,
 // UDB_LIVE_PASSWORD, UDB_LIVE_TENANT, UDB_RUST_MESSAGING_PEER (the built
@@ -140,6 +141,44 @@ test("Rust and TypeScript devices share an end-to-end encrypted group", async (t
     for (let i = 0; live && live.kind !== "message" && i < 5; i += 1) live = await chat.nextEvent(15_000);
     assert.ok(live, "a live event arrived");
     assert.deepEqual(texts([live]), [[rustDeviceId, "live from rust"]]);
+
+    // Encrypted backup across the two implementations. The Rust device seals
+    // its state; a fresh TypeScript (WebAssembly) client restores it on a "new
+    // machine" and reads what arrived while the Rust device was away.
+    chat.close();
+    peer(rustPeer, state, "sync");
+    const rustBackupId = `interop-rs-${run}`;
+    const rustSecret = "interop rust recovery passphrase";
+    const [sealed] = peer(rustPeer, state, "backup", rustBackupId, rustSecret);
+    assert.equal(sealed.version, 1);
+    await chat.send(group, "while rust was away");
+    const { client: rustOnTs, history } = await MessagingClient.restore({
+      api: generated.MessagingService,
+      wasm,
+      tenantId,
+      backupId: rustBackupId,
+      recoverySecret: rustSecret,
+    });
+    assert.equal(new TextDecoder().decode(history), "rust peer history");
+    assert.equal(rustOnTs.device.deviceId, rustDeviceId);
+    assert.deepEqual(texts(await rustOnTs.sync()), [[tsDeviceId, "while rust was away"]]);
+
+    // The other way: TypeScript seals; the Rust peer restores it into a new
+    // state file and decrypts what the restored Rust device sent meanwhile.
+    await chat.sync();
+    const tsBackupId = `interop-ts-${run}`;
+    const tsSecret = "interop typescript recovery passphrase";
+    await chat.backup(tsSecret, "typescript history", tsBackupId);
+    await rustOnTs.send(group, "from the restored rust device");
+    const [tsOnRust] = peer(rustPeer, path.join(dir, "ts-restored.mls"), "restore", tsBackupId, tsSecret);
+    assert.equal(tsOnRust.device_id, tsDeviceId);
+    assert.equal(tsOnRust.history, "typescript history");
+    assert.deepEqual(
+      tsOnRust.events.filter((e: any) => e.kind === "message").map((e: any) => [e.device_id, e.text]),
+      [[rustDeviceId, "from the restored rust device"]],
+    );
+    assert.equal(await rustOnTs.deleteBackup(rustBackupId), true);
+    assert.equal(await chat.deleteBackup(tsBackupId), true);
   } finally {
     chat.close();
     try {
