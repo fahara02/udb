@@ -2,7 +2,7 @@
 //! authorization policies in `udb_authz.policy_rules` against a declared file.
 //!
 //! Policies used to be kept in hand-synced JSON files pushed with `udb
-//! policy-seed`, which deletes EVERY tenant's rows before re-inserting; one
+//! policy-seed` (removed in 0.6.0), which deleted EVERY tenant's rows before re-inserting; one
 //! diff script compared rows without their purpose and skipped 17 of them, and a
 //! development file once loaded 302 rows into production. This reconcile:
 //!

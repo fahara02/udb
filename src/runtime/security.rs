@@ -737,8 +737,8 @@ pub fn abac_default_allow_requested() -> bool {
 pub(crate) fn default_allow_production_violation(default_allow: bool) -> Option<String> {
     default_allow.then(|| {
         "UDB_ABAC_DEFAULT_ALLOW must not be set in production: it allows EVERY request while \
-         zero policy rows exist. Unset it and seed policy (`udb authz seed --tenant <uuid> \
-         --role app_rw`)."
+         zero policy rows exist. Unset it and apply policy (`udb policy apply -f \
+         <policies.yaml> --tenant <uuid>`)."
             .to_string()
     })
 }

@@ -182,39 +182,36 @@ Plus the request itself must carry a **non-empty `purpose`** (else
   change.
 
 The deny messages you will see (verbatim, so you can grep):
-- Zero policies: ``no authz policy (default deny); seed the standard data-plane
-  policy for this tenant with `udb authz seed --tenant <tenant-uuid> --role
-  app_rw` (or AuthzService CreatePolicyRule/PutAuthzPolicy), then bind
+- Zero policies: ``no authz policy (default deny); declare a role-gated ALLOW
+  policy for this tenant and apply it with `udb policy apply -f <policies.yaml>
+  --tenant <tenant-uuid>` (or AuthzService PutAuthzPolicy), then bind
   principals to the role — or set UDB_ABAC_DEFAULT_ALLOW=true for local
   bootstrap (works only while zero policy rows exist)``
 - Policies exist, none match: ``denied by Casbin PERM model: no applicable
   allow policy for action '<act>' on '<selectors>' (tenant '<t>'). Check the
   three token traps: the action must be the RPC method name (Select/Upsert/
   Delete/Update/BulkCas — NOT a data.* alias), the policy's tenant_id must be
-  this tenant UUID, and its object must match the message type. Seed it with
-  `udb authz seed --tenant <t> --role app_rw` (+ bind this principal to the
-  role)``
+  this tenant UUID, and its object must match the message type. Apply it with
+  `udb policy apply -f <policies.yaml> --tenant <t>` declaring an ALLOW rule
+  for action '<act>' (+ bind this principal to the role)``
 
-**The straightforward seeder + the two policy shapes:**
-- The **standard offline seeder**: `udb authz seed --tenant <canonical-UUID>
-  [--role app_rw] [--entity <fqn>…] [--action <A>…] [--emit <path>]` — writes
-  role-gated Allow rows DIRECTLY into `udb_authz.policy_rules` (Postgres-direct
-  via `UDB_PG_DSN`; no running broker needed): idempotent, atomic, and every
-  `--action` is validated against the real RPC method names (a `data.*` alias
-  is rejected up front, so the classic silent-deny trap is impossible here).
-  `--emit <path>` additionally writes the version-controllable offline JSON
-  below so the seed is reproducible.
+**Policy as code + the two policy shapes:**
+- The **standard offline path**: `udb policy apply -f <policies.yaml>
+  --tenant <canonical-UUID>` — reconciles that tenant's rows in
+  `udb_authz.policy_rules` to the declared file (Postgres-direct via
+  `UDB_PG_DSN`; no running broker needed): one transaction, idempotent, and
+  `udb policy diff` previews it. (`udb authz seed` and `udb policy-seed` were
+  removed in 0.6.0.)
 - The **runtime** shape (`AuthzService.CreatePolicyRule` / `PutAuthzPolicy`,
   `udb auth policy put`): fields `{subject, domain, object, action, effect:
   "POLICY_EFFECT_ALLOW", tenant_id, project_id, ...}`. Effective immediately;
   this is what you call from app code or the CLI. **This is the one that
   actually feeds the enforced engine.**
-- The **offline JSON** shape (`UDB_ABAC_POLICY_FILE` + `udb policy-seed`, and the
-  `AuthzPolicy` lint format): `{effect, subject, tenant, resource, action,
-  required_scopes}`. `udb policy-seed` prints the `INSERT` SQL for
-  `udb_authz.policy_rules` to stdout; pipe it to `psql`. Convenient for
-  version-controlled seeds, but remember it's writing the *same* `policy_rules`
-  table.
+- The **offline file** shape (`udb policy apply|diff -f`, `udb policy-lint` via
+  `UDB_ABAC_POLICY_FILE`, the `AuthzPolicy` format): a list (or
+  `{tenant, policies}`) of `{effect, subject, role, tenant, resource, action,
+  required_scopes}`. Version-control it; `udb policy apply` writes the *same*
+  `policy_rules` table.
 
 **Governed mode:** if `governed_mode_enabled()` is on, direct `PutAuthzPolicy`/
 `CreatePolicyRule` are disabled and you must use the draft → approve → activate
@@ -592,8 +589,8 @@ gate on subject id, `service_identity`, role, or scope instead.
 
 This is the section people come for. To make CRUD work for a principal on an
 entity, insert `policy_rules` rows with the exact tokens from *Surface 1*.
-The straightforward path is **`udb authz seed`** (Option D below): offline,
-validated action tokens, idempotent + atomic.
+The straightforward path is **`udb policy apply`** (Option C below): offline,
+version-controlled, idempotent + atomic.
 
 ### Option A — from app code, effective immediately
 
@@ -618,37 +615,26 @@ udb auth policy put --subject role:app_rw --action '*' \
 udb auth role bind --principal <user_id> --role app_rw --tenant <T-UUID>
 ```
 
-### Option C — offline, version-controlled seed → psql
+### Option C — `udb policy apply`: offline, version-controlled, idempotent (the straightforward path)
 
-Author a JSON array (the `AuthzPolicy` offline shape) and apply it:
-```json
-[{"effect":"allow","subject":"role:app_rw","tenant":"<T-UUID>","resource":"shop.v1.Customer","action":"Select"},
- {"effect":"allow","subject":"role:app_rw","tenant":"<T-UUID>","resource":"shop.v1.Customer","action":"Upsert"},
- {"effect":"allow","subject":"role:app_rw","tenant":"<T-UUID>","resource":"shop.v1.Customer","action":"Delete"},
- {"effect":"allow","subject":"role:app_rw","tenant":"<T-UUID>","resource":"shop.v1.Customer","action":"Update"}]
+Author the tenant's policy file (the `AuthzPolicy` offline shape) and reconcile:
+```yaml
+tenant: "<T-UUID>"
+policies:
+  - {effect: allow, role: app_rw, tenant: "<T-UUID>", resource: shop.v1.Customer, action: Select}
+  - {effect: allow, role: app_rw, tenant: "<T-UUID>", resource: shop.v1.Customer, action: Upsert}
+  - {effect: allow, role: app_rw, tenant: "<T-UUID>", resource: shop.v1.Customer, action: Delete}
+  - {effect: allow, role: app_rw, tenant: "<T-UUID>", resource: shop.v1.Customer, action: Update}
 ```
 ```bash
-UDB_ABAC_POLICY_FILE=authz-policies.json udb policy-seed | psql "$UDB_PG_DSN"
+UDB_PG_DSN="$DSN" udb policy diff  -f policies.yaml --tenant <T-UUID>   # preview
+UDB_PG_DSN="$DSN" udb policy apply -f policies.yaml --tenant <T-UUID>   # one transaction
+udb auth role bind --principal <user_id> --role app_rw --tenant <T-UUID>
 ```
-`udb policy-seed` prints a `BEGIN; DELETE …; INSERT …; COMMIT;` transaction for
-`udb_authz.policy_rules` — atomic by construction (which matters: recall the
-default-allow flip). Commit this file to your repo as the project's policy
-scaffold.
-
-### Option D — `udb authz seed`: offline, validated, idempotent (the straightforward path)
-
-```bash
-UDB_PG_DSN="$DSN" udb authz seed --tenant <T-UUID> --role app_rw
-# → Allow rows for Select/Upsert/Delete/Update/BulkCas on `*`, role app_rw
-UDB_PG_DSN="$DSN" udb authz seed --tenant <T-UUID> --role app_rw \
-    --entity shop.v1.Customer --emit authz-policies.json
-# → narrowed to one entity; --emit keeps a version-controlled copy
-```
-Postgres-direct (no running broker), idempotent + atomic, and `--action` is
-validated against the real RPC method names — a `data.*` alias is rejected up
-front. Repeat `--entity` to narrow the wildcard; then bind principals exactly
-as in the other options (`udb auth role bind --principal <id> --role app_rw
---tenant <T-UUID>`).
+Postgres-direct (no running broker), touches only that tenant, and re-applying
+the same file changes nothing — atomic by construction (which matters: recall
+the default-allow flip). Commit the file to your repo as the project's policy
+scaffold. (`udb authz seed` and `udb policy-seed` were removed in 0.6.0.)
 
 ### Checklist that prevents 90% of denies
 - `action` ∈ `{Select, Upsert, Delete, Update, BulkCas, BatchSelect,
@@ -1262,9 +1248,9 @@ acked deliveries). Use it for projections, cache invalidation, and integrations.
 1. **Kafka** configured on the broker (`UDB_KAFKA_BROKERS`) — otherwise it fails
    with "CDC tailer is not configured".
 2. The **`udb:cdc:read`** scope on the caller.
-3. A Casbin **`PublishCDC` allow rule per topic** (object = the topic). Seed it
-   offline with `udb authz seed --action PublishCDC --entity <topic> ...`, or
-   online with `AuthzService.CreatePolicyRule{object: <topic>, action: PublishCDC}`.
+3. A Casbin **`PublishCDC` allow rule per topic** (object = the topic). Declare
+   it in the tenant's policy file (`resource: <topic>, action: PublishCDC`) and
+   `udb policy apply`, or add it online with `AuthzService.CreatePolicyRule{object: <topic>, action: PublishCDC}`.
 
 Go SDK: from 0.5.25 server streams (PublishCDC, LiveQuery) no longer inherit
 `Options.CallTimeout`/`UDB_DEADLINE`; give the stream context its own deadline
@@ -1322,12 +1308,11 @@ a "did you mean …?" suggestion.
 | `udb auth bootstrap user --username … --tenant acme …` | First offline admin. Prints the canonical tenant UUID — **capture it**. Seeds only the org-owner wildcard policy; you still seed per-entity rows. |
 | `udb auth api-key-create …` | Mint an API key (owner must be an active service account + grant). |
 | `udb auth policy put --subject role:R --action '*' --resource <fqn> --effect allow --tenant <UUID>` | Write a `policy_rules` Allow via `PutAuthzPolicy` (needs a running broker). |
+| `udb policy apply -f <policies.yaml> --tenant <UUID>` (`udb policy diff` to preview) | THE offline policy path: reconcile one tenant's `udb_authz.policy_rules` rows to a version-controlled file in one transaction (Postgres-direct, idempotent). Replaces `udb authz seed` / `udb policy-seed` (removed in 0.6.0). |
 | `udb auth role bind --principal <id> --role R --tenant <UUID>` | Bind a principal to a role. |
 | `udb auth role unbind --principal <id> --role R --tenant <UUID>` / `role create --code R` / `role list` / `role assignments --user <id>` | Revoke a binding (re-put expired), create/list roles, list AssignRole assignments. `R` is the bare role code, never `role:R`. |
 | `udb auth relation put …` | Write a ReBAC tuple. |
 | `udb auth grant …` | Service-account grant lifecycle. |
-| `udb authz seed --tenant <UUID> [--role R] [--entity <fqn>…] [--emit <file>]` | THE straightforward offline seeder: role-gated Allow rows (`Select`/`Upsert`/`Delete`/`Update`/`BulkCas` — validated tokens) directly into `udb_authz.policy_rules` (Postgres-direct, idempotent + atomic). Then bind principals with `udb auth role bind`. |
-| `udb policy-seed` (with `UDB_ABAC_POLICY_FILE`) | Print the atomic `policy_rules` INSERT SQL to stdout → pipe to `psql`. Offline. |
 | `udb policy-lint` | Lint an offline policy file (CI-safe, non-zero on breakage). |
 | `udb authz simulate` | "What would change if this policy bundle shipped" (read-only). |
 
@@ -1413,9 +1398,9 @@ strings. General map:
    scope to its **grant** first, then re-mint. Check
    `docs/generated/authn-authz-rpc-inventory.md`.
 3. **On a DATA call (`:50051`)?** → it's Casbin (Surface 1):
-   - Message "no authz policy (default deny)" → **zero policy rows**. Seed them
-     — straightforward: `udb authz seed --tenant <T-UUID> --role app_rw`
-     (Option D; or A/B/C), then `udb auth role bind`; or
+   - Message "no authz policy (default deny)" → **zero policy rows**. Add them
+     — straightforward: `udb policy apply -f policies.yaml --tenant <T-UUID>`
+     (Option C; or A/B), then `udb auth role bind`; or
      `UDB_ABAC_DEFAULT_ALLOW=true` for dev.
    - Message "no applicable allow policy for action '…'" → a row exists but a
      token is wrong. Check, in order: **`action`** is the method name
@@ -1482,24 +1467,18 @@ udb auth bootstrap user --username admin --email admin@x.com \
 
 **3. SEED authorization, or every data RPC is `PERMISSION_DENIED`** (default-deny;
 the org-owner wildcard covers the admin only). Straightforward path — offline,
-validated action tokens, idempotent + atomic:
+version-controlled, idempotent + atomic: author the policy file using the
+**real action tokens** and the **tenant UUID**, then apply it:
+```json
+[{"effect":"allow","role":"app_rw","tenant":"<TENANT_UUID>","resource":"*","action":"Select"},
+ {"effect":"allow","role":"app_rw","tenant":"<TENANT_UUID>","resource":"*","action":"Upsert"},
+ {"effect":"allow","role":"app_rw","tenant":"<TENANT_UUID>","resource":"*","action":"Delete"},
+ {"effect":"allow","role":"app_rw","tenant":"<TENANT_UUID>","resource":"*","action":"Update"}]
+```
 ```bash
-UDB_PG_DSN="$DSN" udb authz seed --tenant <TENANT_UUID> --role app_rw
-# → Allow Select/Upsert/Delete/Update/BulkCas on * for role app_rw
+UDB_PG_DSN="$DSN" udb policy apply -f authz-policies.json --tenant <TENANT_UUID>
 # then bind principals to the role (runtime): udb auth role bind --principal <id> --role app_rw --tenant <UUID>
 ```
-Version-controlled alternative (same `policy_rules` table): author the offline
-JSON using the **real action tokens** and the **tenant UUID**, seed atomically:
-```json
-[{"effect":"allow","subject":"role:app_rw","tenant":"<TENANT_UUID>","resource":"*","action":"Select"},
- {"effect":"allow","subject":"role:app_rw","tenant":"<TENANT_UUID>","resource":"*","action":"Upsert"},
- {"effect":"allow","subject":"role:app_rw","tenant":"<TENANT_UUID>","resource":"*","action":"Delete"},
- {"effect":"allow","subject":"role:app_rw","tenant":"<TENANT_UUID>","resource":"*","action":"Update"}]
-```
-```bash
-UDB_ABAC_POLICY_FILE=authz-policies.json udb policy-seed | psql "$UDB_PG_DSN"
-```
-(`udb authz seed --emit authz-policies.json` produces exactly this file.)
 Or from app code: `AuthzService.PutAuthzPolicy` + `AssignRole`. Dev shortcut:
 `UDB_ABAC_DEFAULT_ALLOW=true` (only until row #1 exists).
 
@@ -1572,10 +1551,9 @@ udb auth bootstrap user --username admin --email admin@x.com \
     --password "$ADMIN_PW" --tenant acme --project default
 # → tenant_id = 00000000-0000-0000-0000-0000000d0001   (call it $T)
 
-# 3) seed authorization — straightforward: `udb authz seed` (offline, validated
-#    action tokens, idempotent + atomic); --emit keeps a version-controlled copy
-udb authz seed --tenant "$T" --role app_rw --emit authz.json
-# (version-controlled alternative: UDB_ABAC_POLICY_FILE=authz.json udb policy-seed | psql "$UDB_PG_DSN")
+# 3) apply authorization — straightforward: `udb policy apply` (offline,
+#    version-controlled, idempotent + atomic) over a committed policy file
+udb policy apply -f authz.json --tenant "$T"
 
 # 4) bring up serve env, then serve (wait for the ready line)
 export UDB_JWT_PRIVATE_KEY=... UDB_JWT_PUBLIC_KEY=... \
@@ -1610,8 +1588,8 @@ binding (data) — run the decision tree.
   `conflict_fields` for merge). A replay returns `was_duplicate=true`.
 - **…grant a new entity to an existing app?** Add one `policy_rules` row per
   action (or `action:*`) for your role + object=FQN, tenant=UUID. `udb auth
-  policy put …` / `PutAuthzPolicy` — or `udb authz seed --entity <fqn>` to
-  narrow an existing seeded role.
+  policy put …` / `PutAuthzPolicy` — or add the rows to the tenant's policy
+  file and `udb policy apply`.
 - **…grant a service access?** Add the scope to its `ServiceAccountGrant`
   (native) AND bind it to your data role (`AssignRole`).
 - **…rotate a token/key without downtime?** `set_credentials()` /
@@ -1738,8 +1716,8 @@ authz, and events apply **uniformly** across all backends.
   deny → a token **scope**. Never seed a policy to fix a native scope problem, or
   vice-versa.
 - **Seeding the wrong table:** `udb_abac_policies` (the removed
-  `DataBroker.PutPolicy`) is DEAD for decisions; seed `udb_authz.policy_rules` (`udb authz seed`/
-  `PutAuthzPolicy`/`CreatePolicyRule`/`policy-seed`).
+  `DataBroker.PutPolicy`) is DEAD for decisions; seed `udb_authz.policy_rules` (`udb policy apply`/
+  `PutAuthzPolicy`/`CreatePolicyRule`).
 - **A service account needs a `ServiceAccountGrant`** or it cannot authenticate.
   "Works as a user, fails as a service" = missing/inactive grant.
 - **No client-credentials grant.** Machines use API keys or password login. No

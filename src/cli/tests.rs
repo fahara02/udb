@@ -794,8 +794,8 @@ fn argv(line: &str) -> Vec<String> {
     line.split_whitespace().map(ToString::to_string).collect()
 }
 
-/// `udb authz seed` prints exactly this command as its next step; it used to
-/// name flags no parser accepted.
+/// The role-binding command operators run after applying role-gated policy; it
+/// used to name flags no parser accepted.
 #[test]
 fn parse_args_role_bind_with_principal_is_a_role_binding() {
     let (command, _, _, _) = parse_args(&argv(

@@ -329,14 +329,6 @@ pub(crate) fn sql_literal(value: &str) -> String {
     format!("'{}'", value.replace('\'', "''"))
 }
 
-pub(crate) fn pg_identifier(value: &str) -> String {
-    format!("\"{}\"", value.replace('"', "\"\""))
-}
-
-pub(crate) fn pg_relation(schema: &str, table: &str) -> String {
-    format!("{}.{}", pg_identifier(schema), pg_identifier(table))
-}
-
 // ── Compatibility matrix ──────────────────────────────────────────────────────
 
 #[cfg(test)]

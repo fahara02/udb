@@ -337,11 +337,11 @@ impl AuthzSnapshot {
                     // governance table, so configure authorization through the
                     // AuthzService (CreatePolicyRule / PutAuthzPolicy) — or flip the
                     // dev escape hatch for local bootstrap.
-                    "no authz policy (default deny); seed the standard data-plane policy for \
-                     this tenant with `udb authz seed --tenant <tenant-uuid> --role app_rw` \
-                     (or AuthzService CreatePolicyRule/PutAuthzPolicy), then bind principals to \
-                     the role — or set UDB_ABAC_DEFAULT_ALLOW=true for local bootstrap (works \
-                     only while zero policy rows exist)"
+                    "no authz policy (default deny); declare a role-gated ALLOW policy for \
+                     this tenant and apply it with `udb policy apply -f <policies.yaml> \
+                     --tenant <tenant-uuid>` (or AuthzService PutAuthzPolicy), then bind \
+                     principals to the role — or set UDB_ABAC_DEFAULT_ALLOW=true for local \
+                     bootstrap (works only while zero policy rows exist)"
                         .to_string()
                 },
                 policy_version: self.version.clone(),
@@ -563,7 +563,7 @@ impl AuthzSnapshot {
                 {
                     let base = if applicable.is_empty() {
                         format!(
-                            "denied by Casbin PERM model: no applicable allow policy for action '{}' on '{}' (tenant '{}'). Check the three token traps: the policy action must be exactly '{}' (the RPC method name, or the typed store RPC's dotted token — NOT a data.* alias), the policy's tenant_id must be this tenant UUID, and its object must match the resource. Seed it with `udb authz seed --tenant {} --role app_rw --action {}` (+ bind this principal to the role)",
+                            "denied by Casbin PERM model: no applicable allow policy for action '{}' on '{}' (tenant '{}'). Check the three token traps: the policy action must be exactly '{}' (the RPC method name, or the typed store RPC's dotted token — NOT a data.* alias), the policy's tenant_id must be this tenant UUID, and its object must match the resource. Apply it with `udb policy apply -f <policies.yaml> --tenant {}` declaring an ALLOW rule for action '{}' (+ bind this principal to the role)",
                             req.action,
                             selectors.join("|"),
                             principal.tenant_id,

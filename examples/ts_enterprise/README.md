@@ -161,8 +161,8 @@ of the env file is for the broker. Everything except `UDB_PASS` has a default:
 - **Expecting the org-owner role to be enough.** Authorization is default-deny:
   the data plane evaluates a Casbin policy from the `udb_authz.policy_rules`
   governance table on *every* CRUD call, and without a matching rule even
-  `udb:*` gets `PERMISSION_DENIED`. `bootstrap.sh` seeds a rule into
-  `policy_rules` (via `udb policy-seed`) so `Select`/`Upsert`/`Delete` are
+  `udb:*` gets `PERMISSION_DENIED`. `bootstrap.sh` applies rules to
+  `policy_rules` (via `udb policy apply`) so `Select`/`Upsert`/`Delete` are
   allowed for this tenant.
 - **Hand-writing the row shape.** The `Invoice` type is generated from
   `invoice.proto` with `buf generate`, using **snake_case** field names
@@ -186,8 +186,9 @@ that answers the SDK's `udb.authz.can` / `udb.authz.require` queries. It is
   matching rule, even `udb:*` gets `PERMISSION_DENIED`.
 - You configure policy per-tenant at runtime via `AuthzService.CreatePolicyRule`
   (effective immediately — the snapshot cache invalidates on mutation and a
-  warmer reloads), or offline via **`udb policy-seed`** (emits INSERTs into
-  `udb_authz.policy_rules`, piped to psql). `bootstrap.sh` uses the offline path.
+  warmer reloads), or offline via **`udb policy apply -f <file> --tenant <uuid>`**
+  (reconciles the tenant's rows in `udb_authz.policy_rules` in one transaction).
+  `bootstrap.sh` uses the offline path.
 
 Because it is one engine over one table, seeding a rule that allows
 `Select`/`Upsert`/`Delete` for this tenant is all this example needs — there is

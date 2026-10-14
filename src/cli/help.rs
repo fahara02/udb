@@ -353,8 +353,8 @@ const COMMANDS: &[CmdHelp] = &[
         usage: "udb auth role <bind|unbind|create|list|assignments> [flags]",
         details: "\
   udb auth role bind --principal <id> --role <code> --tenant <uuid> [--project <p>] [--expires-at-unix <n>]
-    PutRoleBinding — the binding the data-plane enforcer matches `udb authz seed`
-    policies against. <id> is the bare user_id (for a service account, its
+    PutRoleBinding — the binding the data-plane enforcer matches role-gated
+    policies (`udb policy apply`) against. <id> is the bare user_id (for a service account, its
     user_id / API-key owner; its service identity also matches). <code> is the
     bare role code (`app_rw`, `svc_billing`), NOT `role:…`. <uuid> is the
     canonical tenant UUID; omit --project to bind across all projects. Takes
@@ -384,13 +384,6 @@ const COMMANDS: &[CmdHelp] = &[
         group: "Auth & policy",
         summary: "Lint ABAC policy files from UDB_ABAC_POLICY_FILE (nonzero on broken files).",
         usage: "udb policy-lint",
-        details: "",
-    },
-    CmdHelp {
-        name: "policy-seed",
-        group: "Auth & policy",
-        summary: "Generate INSERT SQL to seed ABAC policies into the UDB ABAC table.",
-        usage: "udb policy-seed",
         details: "",
     },
     CmdHelp {
@@ -587,31 +580,6 @@ const COMMANDS: &[CmdHelp] = &[
   includes the broker's diagnosis: the closest rule for that action and object
   in the tenant and the attribute it fails on (purpose, project, scopes,
   subject/role, conditions). `udb authz explain` is the same command.",
-    },
-    CmdHelp {
-        name: "authz seed",
-        group: "Auth & policy",
-        summary: "Seed the STANDARD data-plane authorization for a project (idempotent, offline).",
-        usage: "udb authz seed --tenant <uuid> [--role app_rw] [--entity <fqn> …] [--action <verb> …] [--project <id>] [--dsn <dsn>] [--emit <path>]",
-        details: "\
-  The straightforward way to stop fighting `PERMISSION_DENIED` on CRUD. Writes one
-  role-gated ALLOW policy per (entity, action) into `udb_authz.policy_rules` — the
-  table the data plane actually enforces — using the REAL action tokens the broker
-  submits (`Select`/`Upsert`/`Delete`/`Update`/`BulkCas`, NOT a `data.*` alias) and
-  the canonical tenant UUID. Postgres-direct (needs UDB_PG_DSN/DATABASE_URL or
-  --dsn); run it right after `udb auth bootstrap user`. Idempotent (safe to re-run)
-  and atomic (all rows in one tx, so an open `UDB_ABAC_DEFAULT_ALLOW` window never
-  half-closes).\n\
-  Defaults: `--role app_rw`, the CRUD verbs (Select/Upsert/Delete/Update/BulkCas),
-  object `*` (the whole catalog). `--entity <fqn>` (repeatable) narrows to specific
-  message types (or a topic / bucket / collection for PublishCDC, object and
-  vector verbs); `--action <verb>` (repeatable) picks other verbs, e.g. PublishCDC,
-  VectorSearch, GetObject or a typed store token (cache.get, document.find, ...);
-  `--emit <path>` also writes the equivalent offline policy JSON for version
-  control (written before seeding; `--emit -` returns it in the output).\n\
-  Then bind principals (users AND service accounts) to the role so the policy
-  applies: `udb auth role bind --principal <id> --role <role> --tenant <uuid>`.\n\
-  Example: udb authz seed --tenant 00000000-0000-0000-0000-0000000d0001 --role app_rw",
     },
     CmdHelp {
         name: "proto export",

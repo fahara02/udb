@@ -863,62 +863,6 @@ pub fn run() {
             output_json(&result, "policy lint result");
             process::exit(exit_code);
         }
-        Command::PolicySeed => {
-            let policies = match load_authz_policies_for_lint() {
-                Ok(policies) => policies,
-                Err(err) => {
-                    eprintln!("{err}");
-                    process::exit(1);
-                }
-            };
-            if policies.is_empty() {
-                eprintln!(
-                    "No policies loaded. Set UDB_ABAC_POLICY_FILE to a JSON array of AuthzPolicy (Casbin) objects."
-                );
-                process::exit(1);
-            }
-            // The Casbin governance table the runtime data plane enforces from.
-            let table = pg_relation("udb_authz", "policy_rules");
-            let source = env::var("UDB_ABAC_POLICY_FILE").unwrap_or_default();
-            println!("-- UDB authorization (Casbin) policy seed SQL for the governance table");
-            println!("-- Source: {source}");
-            println!("-- Table : {table}");
-            println!("-- Generated: {} policies", policies.len());
-            println!();
-            println!("BEGIN;");
-            println!("DELETE FROM {table}; -- clear existing policies before re-seeding");
-            println!();
-            for (i, p) in policies.iter().enumerate() {
-                // Non-column AuthzPolicy fields (priority/role/purpose/relationship/
-                // required_scopes) live in attributes_json, exactly as the runtime
-                // policy loader reads them back.
-                let attributes = serde_json::json!({
-                    "priority": p.priority.to_string(),
-                    "role": p.role,
-                    "purpose": p.purpose,
-                    "relationship": p.relationship,
-                    "required_scopes": p.required_scopes.join(","),
-                })
-                .to_string();
-                println!(
-                    "INSERT INTO {table} \
-                     (subject, domain, object, action, effect, is_active, tenant_id, project_id, attributes_json) VALUES \
-                     ({sub}, {dom}, {obj}, {act}, {eff}, {active}, {ten}, {proj}, {attrs}::jsonb); -- #{i}",
-                    sub = sql_literal(&p.subject),
-                    dom = sql_literal(&p.tenant),
-                    obj = sql_literal(&p.resource),
-                    act = sql_literal(&p.action),
-                    eff = sql_literal(&p.effect.as_str().to_uppercase()),
-                    active = p.enabled,
-                    ten = sql_literal(&p.tenant),
-                    proj = sql_literal(&p.project),
-                    attrs = sql_literal(&attributes),
-                );
-            }
-            println!();
-            println!("COMMIT;");
-            process::exit(0);
-        }
         Command::FieldMaskPreview => {
             // FieldMaskPreview needs proto parsing — defer to below.
         }
@@ -1908,7 +1852,6 @@ pub fn run() {
         | Command::AdminVerifyAudit { .. }
         | Command::AdminResetDb { .. }
         | Command::PolicyLint
-        | Command::PolicySeed
         | Command::ProtoExport { .. }
         | Command::ProtoFmt { .. }
         | Command::Sdk { .. }

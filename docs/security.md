@@ -135,22 +135,33 @@ Three tokens must be exact or a policy silently never matches:
 2. `object` is the `message_type` (proto FQN), or a package glob (`shop.v1.*` = `shop.v1` and `shop.v1.<anything>`; dots are literal), or `*`. A path-style object containing `/` uses `keyMatch2`.
 3. `tenant_id` is the caller's canonical **tenant UUID** (not the human code).
 
-Seed the standard set for a project in one idempotent, atomic command:
+Declare the standard set for a project in a version-controlled policy file and
+reconcile the tenant to it in one transaction:
+
+```yaml
+# policies.yaml — after `udb auth bootstrap user …` printed the tenant UUID $T
+tenant: "<T>"
+policies:
+  - {effect: allow, tenant: "<T>", role: app_rw, resource: "*", action: Select}
+  - {effect: allow, tenant: "<T>", role: app_rw, resource: "*", action: Upsert}
+  - {effect: allow, tenant: "<T>", role: app_rw, resource: "*", action: Delete}
+  - {effect: allow, tenant: "<T>", role: app_rw, resource: "*", action: Update}
+  - {effect: allow, tenant: "<T>", role: app_rw, resource: "*", action: BulkCas}
+```
 
 ```bash
-# after `udb auth bootstrap user …` printed the tenant UUID $T
-udb authz seed --tenant $T --role app_rw          # ALLOW Select/Upsert/Delete/Update/BulkCas on * for role app_rw
+udb policy apply -f policies.yaml --tenant $T     # idempotent; `udb policy diff` previews it
 udb auth role bind --principal <user-or-service-id> --role app_rw --tenant $T
 ```
 
-`udb authz seed` writes role-gated rows with the correct tokens; bind both human
-users and service accounts to the role and one policy set authorizes both.
-`--entity <fqn>` (repeatable) narrows to specific message types; `--action`
-(repeatable) narrows the verbs; `--emit <path>` also writes a version-controllable
-policy JSON. Equivalents: `AuthzService.PutAuthzPolicy`/`CreatePolicyRule` at
-runtime, or `udb policy-seed` for an offline SQL bundle. Dev bypass:
+Role-gated rows authorize every principal bound to the role, human users and
+service accounts alike. Narrow `resource` to a message type (or a package glob) and
+`action` to specific verbs as needed. Equivalent at runtime:
+`AuthzService.PutAuthzPolicy`/`CreatePolicyRule`. (`udb authz seed` and
+`udb policy-seed` were removed in 0.6.0.) Dev bypass:
 `UDB_ABAC_DEFAULT_ALLOW=true` — but only while `policy_rules` is empty (the first
-row flips the gate back to deny-by-default, so seed all rows atomically).
+row flips the gate back to deny-by-default, so apply all rows in one transaction,
+as `udb policy apply` does).
 
 Every tenant-scoped data request must also carry a non-empty `purpose` (else it is
 denied before authorization runs) and the tenant UUID.

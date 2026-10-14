@@ -1937,8 +1937,8 @@ async fn broker_v2_select_denied_without_policy() {
         err.message()
     );
     assert!(
-        err.message().contains("udb authz seed"),
-        "deny message must point at the standard seeding command: {}",
+        err.message().contains("udb policy apply"),
+        "deny message must point at the policy apply command: {}",
         err.message()
     );
 }
@@ -2000,8 +2000,8 @@ async fn broker_v2_batch_item_denial_carries_policy_detail() {
         err.message()
     );
     assert!(
-        err.message().contains("udb authz seed"),
-        "deny message must point at the standard seeding command: {}",
+        err.message().contains("udb policy apply"),
+        "deny message must point at the policy apply command: {}",
         err.message()
     );
 }

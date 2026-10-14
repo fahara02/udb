@@ -942,8 +942,8 @@ fn require_role_binding(principal: &str, role: &str, tenant: &str) -> Result<(),
     require("principal", principal)?;
     require("role", role)?;
     require("tenant", tenant)?;
-    // The enforcer matches the bare code: `authz seed --role app_rw` writes
-    // policies for `app_rw`, and a `role:app_rw` binding would never match.
+    // The enforcer matches the bare code: a role-gated policy for `app_rw`
+    // never matches a `role:app_rw` binding.
     if role.trim().starts_with("role:") {
         return Err(format!(
             "--role takes the bare role code (`{}`), not `{role}`",

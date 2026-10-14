@@ -144,8 +144,6 @@ pub(crate) enum Command {
     ManifestExport,
     /// Lint a set of ABAC policies loaded from UDB_ABAC_POLICY_FILE (JSON array).
     PolicyLint,
-    /// Generate INSERT SQL to seed ABAC policies into the configured UDB ABAC table.
-    PolicySeed,
     /// Preview field masking for a given message type and scope set.
     FieldMaskPreview,
     /// Print the compatibility matrix of supported proto option shapes as JSON.
@@ -524,7 +522,7 @@ pub(crate) enum AuthCommand {
     },
     /// `role bind --principal <id> --role <role-code> --tenant <uuid>`: the
     /// PutRoleBinding grouping tuple the data-plane enforcer reads — the binding
-    /// `authz seed` policies are matched against. Works for users and service
+    /// role-gated policies (`udb policy apply`) are matched against. Works for users and service
     /// accounts alike; the role is the bare code (`app_rw`, `svc_billing`).
     RoleBindingPut {
         principal: String,
@@ -594,16 +592,6 @@ pub(crate) enum AuthzCommand {
         persist: bool,
         policy_version_id: String,
     },
-    /// `udb authz seed --tenant <uuid> [--role <code>] [--project <id>]
-    ///   [--entity <fqn> …] [--action <Select|Upsert|…> …] [--dsn <dsn>]
-    ///   [--emit <path>]`
-    ///
-    /// Offline (Postgres-direct) seed of the STANDARD data-plane authorization
-    /// for a new project: one role-gated `ALLOW` policy per (entity, action) into
-    /// `udb_authz.policy_rules`, using the real Casbin action tokens the broker
-    /// submits (`Select`/`Upsert`/… — never a `data.*` alias) and the caller's
-    /// canonical tenant UUID. Idempotent + atomic. Bind users AND service accounts
-    /// to `--role` (`udb auth role bind`) and one policy set authorizes both.
     /// `udb authz check --user <id> --object <message type> --action <Rpc>
     ///   [--tenant <uuid>] [--purpose <p>]`
     ///
@@ -617,15 +605,6 @@ pub(crate) enum AuthzCommand {
         action: String,
         tenant: String,
         purpose: String,
-    },
-    Seed {
-        tenant: String,
-        role: String,
-        project: String,
-        entities: Vec<String>,
-        actions: Vec<String>,
-        dsn: String,
-        emit: String,
     },
 }
 
@@ -974,7 +953,7 @@ fn parse_auth_subcommand(args: &[String]) -> Option<(AuthCommand, usize)> {
             platform_admin: has_flag("--platform-admin"),
         },
         // `--user` selects the legacy AssignRole form (role UUID); everything
-        // else is the binding form `authz seed` tells operators to run.
+        // else is the binding form role-gated policies are matched against.
         (Some("role"), Some("bind")) if has_flag("--user") && !has_flag("--principal") => {
             AuthCommand::RoleBind {
                 user_id: flag_value("--user").unwrap_or_default(),
@@ -1044,13 +1023,6 @@ fn parse_authz_subcommand(args: &[String]) -> Option<(AuthzCommand, usize)> {
     let flag_value = |flag: &str| -> Option<String> {
         args.windows(2).find(|w| w[0] == flag).map(|w| w[1].clone())
     };
-    // Collect EVERY value for a repeated flag (e.g. multiple `--entity`/`--action`).
-    let flag_values = |flag: &str| -> Vec<String> {
-        args.windows(2)
-            .filter(|w| w[0] == flag)
-            .map(|w| w[1].clone())
-            .collect()
-    };
     let command = match args.get(1).map(|value| value.as_str()) {
         Some("simulate") | Some("sim") => AuthzCommand::Simulate {
             bundle: flag_value("--bundle").unwrap_or_default(),
@@ -1066,15 +1038,6 @@ fn parse_authz_subcommand(args: &[String]) -> Option<(AuthzCommand, usize)> {
             action: flag_value("--action").unwrap_or_default(),
             tenant: flag_value("--tenant").unwrap_or_default(),
             purpose: flag_value("--purpose").unwrap_or_default(),
-        },
-        Some("seed") => AuthzCommand::Seed {
-            tenant: flag_value("--tenant").unwrap_or_default(),
-            role: flag_value("--role").unwrap_or_default(),
-            project: flag_value("--project").unwrap_or_default(),
-            entities: flag_values("--entity"),
-            actions: flag_values("--action"),
-            dsn: flag_value("--dsn").unwrap_or_default(),
-            emit: flag_value("--emit").unwrap_or_default(),
         },
         _ => return None,
     };
@@ -1560,10 +1523,6 @@ pub(crate) fn parse_args(args: &[String]) -> (Command, String, String, String) {
         Some("policy-lint") => {
             offset = 1;
             Command::PolicyLint
-        }
-        Some("policy-seed") => {
-            offset = 1;
-            Command::PolicySeed
         }
         Some("field-mask-preview") => {
             offset = 1;

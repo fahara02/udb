@@ -88,7 +88,7 @@ async function main(): Promise<void> {
     // enough; the data plane reads a PG-warmed snapshot of policy_rules).
     // (One engine: the SDK's udb.authz.can/require and this data-plane gate
     // both decide from the SAME policy_rules table, so a rule seeded here — via
-    // udb policy-seed or AuthzService.CreatePolicyRule — governs both.)
+    // udb policy apply or AuthzService.CreatePolicyRule — governs both.)
     console.log("authz: data-plane ABAC gates every CRUD op below (default-deny without the seeded policy)");
 
     // ── 3. CRUD the tenant-scoped billing table with the verified bearer ─────

@@ -400,8 +400,8 @@ fn policy_snapshot_posture(default_allow: bool, hardened: bool) -> AuthReadiness
         (true, true) => AuthReadinessCheck::fail(
             "policy_snapshot",
             "UDB_ABAC_DEFAULT_ALLOW is set in a production/fail-closed posture: the snapshot \
-             would ALLOW every request while zero policy rows exist. Unset it and seed policy \
-             (`udb authz seed`).",
+             would ALLOW every request while zero policy rows exist. Unset it and apply policy \
+             (`udb policy apply`).",
         ),
         (true, false) => AuthReadinessCheck::pass(
             "policy_snapshot",
