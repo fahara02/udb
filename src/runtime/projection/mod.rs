@@ -2185,12 +2185,11 @@ fn with_manifest_payload_fields(
     serde_json::Value::Array(options)
 }
 
-/// Option keys an edge projection declares its endpoint labels under (first
-/// wins), in `[source, target]` order. Shared with [`render_neo4j_projection`].
-const EDGE_ENDPOINT_LABEL_KEYS: [[&str; 2]; 2] = [
-    ["edge_source_label", "from_label"],
-    ["edge_target_label", "to_label"],
-];
+/// Option keys an edge projection declares its endpoint labels under, in
+/// `[source, target]` order. Shared with [`render_neo4j_projection`]. The
+/// `from_label` / `to_label` option aliases were removed in 0.6.0 (`udb check`
+/// rejects them); those names survive only as the executor's edge-op wire keys.
+const EDGE_ENDPOINT_LABEL_KEYS: [&str; 2] = ["edge_source_label", "edge_target_label"];
 
 /// `target_options` plus the endpoint labels the manifest implies for an edge
 /// projection that does not declare them. The edge's source table is the table
@@ -2261,11 +2260,11 @@ fn with_manifest_edge_labels(
         serde_json::Value::Array(entries) => entries.clone(),
         _ => Vec::new(),
     };
-    for (keys, field) in EDGE_ENDPOINT_LABEL_KEYS
-        .iter()
+    for (key, field) in EDGE_ENDPOINT_LABEL_KEYS
+        .into_iter()
         .zip([source_field.trim(), target_field.trim()])
     {
-        if keys.iter().any(|&key| declared(key).is_some()) {
+        if declared(key).is_some() {
             continue;
         }
         let Some(referenced) = source_table
@@ -2276,7 +2275,7 @@ fn with_manifest_edge_labels(
         else {
             continue;
         };
-        options.push(serde_json::json!({ "key": keys[0], "value": node_label(referenced) }));
+        options.push(serde_json::json!({ "key": key, "value": node_label(referenced) }));
     }
     serde_json::Value::Array(options)
 }
@@ -2355,13 +2354,11 @@ fn render_neo4j_projection(
             });
             // Endpoint labels, when declared, let the executor's edge MATCH
             // use the label index instead of scanning every node.
-            for (option_keys, field) in EDGE_ENDPOINT_LABEL_KEYS
+            for (option_key, field) in EDGE_ENDPOINT_LABEL_KEYS
                 .into_iter()
                 .zip(["from_label", "to_label"])
             {
-                if let Some(endpoint_label) = option_keys
-                    .iter()
-                    .find_map(|key| option_value(target_options, key))
+                if let Some(endpoint_label) = option_value(target_options, option_key)
                     .filter(|value| !value.trim().is_empty())
                 {
                     edge[field] = serde_json::Value::String(
@@ -3642,14 +3639,44 @@ mod tests {
         let declared = json!([
             {"key":"edge_source_field","value":"doctor_id"},
             {"key":"edge_target_field","value":"patient_id"},
-            {"key":"from_label","value":"Physician"}
+            {"key":"edge_source_label","value":"Physician"}
         ]);
         let kept = with_manifest_edge_labels(&manifest, "treatments", &declared);
+        let source_labels = kept
+            .as_array()
+            .unwrap()
+            .iter()
+            .filter(|o| o["key"] == "edge_source_label")
+            .map(|o| o["value"].as_str().unwrap())
+            .collect::<Vec<_>>();
+        assert_eq!(source_labels, vec!["Physician"]);
+        // The removed `from_label` option alias is not read: the manifest label
+        // is derived exactly as if it were absent.
+        let alias = json!([
+            {"key":"edge_source_field","value":"doctor_id"},
+            {"key":"edge_target_field","value":"patient_id"},
+            {"key":"from_label","value":"Physician"}
+        ]);
+        let derived_past_alias = with_manifest_edge_labels(&manifest, "treatments", &alias);
         assert_eq!(
-            option_value(&kept, "from_label").as_deref(),
-            Some("Physician")
+            option_value(&derived_past_alias, "edge_source_label").as_deref(),
+            Some("Doctor")
         );
-        assert!(option_value(&kept, "edge_source_label").is_none());
+        let edge = render_projection_mutation(
+            "neo4j",
+            "graph",
+            "treatments",
+            "upsert",
+            &json!({"id":"e1"}),
+            &alias,
+            &payload,
+            &ProjectionScope::default(),
+        )
+        .unwrap();
+        assert!(
+            edge.get("from_label").is_none(),
+            "the removed option alias must not set the edge's source label: {edge}"
+        );
         // Node projections (no edge fields) are untouched.
         let node = json!([{"key":"node_label","value":"Doctor"}]);
         assert_eq!(with_manifest_edge_labels(&manifest, "doctors", &node), node);
