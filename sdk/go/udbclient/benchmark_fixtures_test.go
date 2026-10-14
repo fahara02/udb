@@ -38,4 +38,33 @@ func loadPreparedBenchmarkFixtures(t testing.TB, fix *perfFixtures, tenant, proj
 		}
 		fix.set(key, value)
 	}
+	// MessagingService MLS objects minted by `udb messaging bench-fixture`;
+	// absent when the benchmark broker predates the messaging service.
+	for _, key := range messagingFixtureKeys {
+		if value := prepared.Fixtures[key]; value != "" {
+			fix.set(key, value)
+		}
+	}
+}
+
+// messagingFixtureKeys are the `mls_*` bench-body fixtures
+// scripts/prepare-benchmark-fixtures.py copies from `udb messaging
+// bench-fixture` (the same list in every harness).
+var messagingFixtureKeys = []string{
+	"mls_subject_id",
+	"mls_device_id",
+	"mls_peer_device_id",
+	"mls_revoke_device_id",
+	"mls_register_device_id",
+	"mls_register_signature_key",
+	"mls_register_credential",
+	"mls_key_package",
+	"mls_group_id",
+	"mls_message_ciphertext",
+	"mls_commit_group_id",
+	"mls_commit",
+	"mls_welcome",
+	"mls_new_group_id",
+	"mls_new_group_info",
+	"mls_new_ratchet_tree",
 }

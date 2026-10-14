@@ -698,6 +698,8 @@ function fullSurfaceManifestFixtures(): PerfFixtures {
     multipart_bucket: "bucket-1", multipart_object_key: "multipart-1", multipart_upload_id: "upload-1",
     multipart_etag: "etag-1", ack_workflow_id: "workflow-ack-1",
     cdc_ack_event_id: "00000000-0000-4000-8000-000000000003", cdc_ack_topic: "udb.sdk.benchmark.ack",
+    // MessagingService MLS objects (live: `udb messaging bench-fixture`).
+    mls_subject_id: "mls-subject-id-1", mls_device_id: "mls-device-id-1", mls_peer_device_id: "mls-peer-device-id-1", mls_revoke_device_id: "mls-revoke-device-id-1", mls_register_device_id: "mls-register-device-id-1", mls_register_signature_key: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=", mls_register_credential: "AA==", mls_key_package: "AA==", mls_group_id: "mls-group-id-1", mls_message_ciphertext: "AA==", mls_commit_group_id: "mls-commit-group-id-1", mls_commit: "AA==", mls_welcome: "AA==", mls_new_group_id: "mls-new-group-id-1", mls_new_group_info: "AA==", mls_new_ratchet_tree: "AA==",
     document_id: "document-1", mongo_collection: "collection_1", node_id: "node-1",
     user_id: "user-1", subject: "user:user-1", session_id: "session-1", token: "token-1",
     grant_binding_id: "grant-binding-1", grant_create_user_id: "grant-create-user-1",
@@ -2129,6 +2131,27 @@ interface SeedResult {
 // client (native services), `data` the DataBroker data plane. uuidTenant is the
 // canonical tenant UUID the UUID-strict services (storage/asset/webrtc) require —
 // the bootstrap admin's tenant claim IS that UUID, so one client serves all.
+/** The `mls_*` bench-body fixtures scripts/prepare-benchmark-fixtures.py copies from
+ *  `udb messaging bench-fixture` (the same list in every harness). */
+const MESSAGING_FIXTURE_KEYS = [
+  "mls_subject_id",
+  "mls_device_id",
+  "mls_peer_device_id",
+  "mls_revoke_device_id",
+  "mls_register_device_id",
+  "mls_register_signature_key",
+  "mls_register_credential",
+  "mls_key_package",
+  "mls_group_id",
+  "mls_message_ciphertext",
+  "mls_commit_group_id",
+  "mls_commit",
+  "mls_welcome",
+  "mls_new_group_id",
+  "mls_new_group_info",
+  "mls_new_ratchet_tree",
+];
+
 async function seedPerfFixtures(
   gen: any,
   platformGen: any,
@@ -2141,6 +2164,7 @@ async function seedPerfFixtures(
 ): Promise<SeedResult> {
   const fix = fullSurfaceManifestFixtures();
   for (const key of ["multipart_bucket", "multipart_object_key", "multipart_upload_id", "multipart_etag", "ack_workflow_id", "cdc_ack_event_id", "cdc_ack_topic"]) fix.clear(key);
+  for (const key of MESSAGING_FIXTURE_KEYS) fix.clear(key);
   if (process.env.UDB_BENCH_FIXTURES) {
     const prepared = JSON.parse(readFileSync(process.env.UDB_BENCH_FIXTURES, "utf8"));
     if (prepared.schema_version !== 1 || prepared.tenant_id !== tenantId || prepared.project_id !== projectId) {
@@ -2150,6 +2174,12 @@ async function seedPerfFixtures(
       const value = prepared.fixtures?.[key];
       if (typeof value !== "string" || !value) throw new Error(`prepared benchmark fixtures missing ${key}`);
       fix.set(key, value);
+    }
+    // MessagingService MLS objects minted by `udb messaging bench-fixture`;
+    // absent when the benchmark broker predates the messaging service.
+    for (const key of MESSAGING_FIXTURE_KEYS) {
+      const value = prepared.fixtures?.[key];
+      if (typeof value === "string" && value) fix.set(key, value);
     }
   }
   // The manifest-only unit fixture uses typed placeholder IDs to prove every body

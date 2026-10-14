@@ -3979,6 +3979,13 @@ function perfSeedPhp(array $s): array
             if (!is_string($value) || $value === '') throw new RuntimeException("prepared benchmark fixtures missing {$key}");
             $fix->set($key, $value);
         }
+        // MessagingService MLS objects minted by `udb messaging bench-fixture`
+        // (scripts/prepare-benchmark-fixtures.py); absent when the benchmark
+        // broker predates the messaging service. Same list in every harness.
+        foreach (['mls_subject_id', 'mls_device_id', 'mls_peer_device_id', 'mls_revoke_device_id', 'mls_register_device_id', 'mls_register_signature_key', 'mls_register_credential', 'mls_key_package', 'mls_group_id', 'mls_message_ciphertext', 'mls_commit_group_id', 'mls_commit', 'mls_welcome', 'mls_new_group_id', 'mls_new_group_info', 'mls_new_ratchet_tree'] as $key) {
+            $value = $prepared['fixtures'][$key] ?? null;
+            if (is_string($value) && $value !== '') $fix->set($key, $value);
+        }
     }
     $cleanups = [];
 

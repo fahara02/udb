@@ -2538,6 +2538,28 @@ class PerfFixtures:
                 return v
         return None
 
+#: The `mls_*` bench-body fixtures `scripts/prepare-benchmark-fixtures.py`
+#: copies from `udb messaging bench-fixture` (same list in every harness).
+MESSAGING_FIXTURE_KEYS = (
+    "mls_subject_id",
+    "mls_device_id",
+    "mls_peer_device_id",
+    "mls_revoke_device_id",
+    "mls_register_device_id",
+    "mls_register_signature_key",
+    "mls_register_credential",
+    "mls_key_package",
+    "mls_group_id",
+    "mls_message_ciphertext",
+    "mls_commit_group_id",
+    "mls_commit",
+    "mls_welcome",
+    "mls_new_group_id",
+    "mls_new_group_info",
+    "mls_new_ratchet_tree",
+)
+
+
 def perf_seed(
     clients: dict,
     platform_clients: dict,
@@ -2568,6 +2590,12 @@ def perf_seed(
             if not isinstance(value, str) or not value:
                 raise ValueError(f"prepared benchmark fixtures missing {key}")
             fix.set(key, value)
+        # MessagingService MLS objects minted by `udb messaging bench-fixture`;
+        # absent when the benchmark broker predates the messaging service.
+        for key in MESSAGING_FIXTURE_KEYS:
+            value = prepared.get("fixtures", {}).get(key)
+            if isinstance(value, str) and value:
+                fix.set(key, value)
     md = meta.to_grpc_metadata()
     platform_md = platform_meta.to_grpc_metadata()
     cleanups: list = []
@@ -3883,24 +3911,6 @@ def perf_seed(
                 fix.set(_lock_ref, str(acquired.fencing_token))
         except grpc.RpcError:
             pass
-
-    # MessagingService: an opt-in backup the GetMessagingBackup row reads. The
-    # broker cannot check the encryption, only the udb-mls envelope framing
-    # (magic + minimum length), so an opaque framed blob is a valid backup.
-    try:
-        clients[MessagingServiceClient].stub.PutMessagingBackup(
-            messaging_pb.PutMessagingBackupRequest(
-                tenant_id=tenant,
-                subject_id="",
-                backup_id="sdk-perf-backup",
-                ciphertext=b"UDBMLSB1" + bytes(68),
-                expected_version=0,
-            ),
-            metadata=md,
-            timeout=8.0,
-        )
-    except grpc.RpcError as exc:
-        print(f"perf seed: PutMessagingBackup failed: {exc}", flush=True)
 
     # WorkflowService: primary + disposable workflow → workflow_id/cancel_workflow_id.
     workflow = clients[WorkflowServiceClient].stub

@@ -3464,8 +3464,8 @@
     "operation_id": "messagingAckInbox",
     "op_kind": "MUTATION",
     "request_msg": "AckInboxRequest",
-    "body": "`{ \"tenant_id\": \"<seed:tenant_id>\", \"device_id\": \"sdk-perf-device\", \"up_to_seq\": 0 }`",
-    "notes": "advances the device cursor; NOT_FOUND until the device is registered."
+    "body": "`{ \"tenant_id\": \"<seed:tenant_id>\", \"device_id\": \"<seed:mls_device_id>\", \"up_to_seq\": 1 }`",
+    "notes": "acknowledges the measured device's inbox through the setup commit."
   },
   {
     "file": "messaging.md",
@@ -3476,8 +3476,8 @@
     "operation_id": "messagingClaimKeyPackages",
     "op_kind": "MUTATION",
     "request_msg": "ClaimKeyPackagesRequest",
-    "body": "`{ \"tenant_id\": \"<seed:tenant_id>\", \"requester_device_id\": \"sdk-perf-device\", \"target_subject_ids\": [\"<seed:user_id>\"] }`",
-    "notes": "claims one KeyPackage per active device of the target subject; the requester device must be registered and owned by the caller."
+    "body": "`{ \"tenant_id\": \"<seed:tenant_id>\", \"requester_device_id\": \"<seed:mls_device_id>\", \"target_device_ids\": [\"<seed:mls_peer_device_id>\"] }`",
+    "notes": "claims one of the peer device's published one-time KeyPackages."
   },
   {
     "file": "messaging.md",
@@ -3488,8 +3488,8 @@
     "operation_id": "messagingCreateGroup",
     "op_kind": "MUTATION",
     "request_msg": "CreateGroupRequest",
-    "body": "`{ \"tenant_id\": \"<seed:tenant_id>\", \"group_id\": \"sdk-perf-group\", \"creator_device_id\": \"sdk-perf-device\", \"group_info\": \"AA==\", \"ratchet_tree\": \"AA==\" }`",
-    "notes": "needs the creator's signed MLS GroupInfo and ratchet tree; placeholder bytes exercise the MLS validation refusal."
+    "body": "`{ \"tenant_id\": \"<seed:tenant_id>\", \"group_id\": \"<seed:mls_new_group_id>\", \"creator_device_id\": \"<seed:mls_device_id>\", \"group_info\": \"<seed:mls_new_group_info>\", \"ratchet_tree\": \"<seed:mls_new_ratchet_tree>\" }`",
+    "notes": "registers a group the fixture minted and nobody created; the broker validates the signed GroupInfo against the tree."
   },
   {
     "file": "messaging.md",
@@ -3501,7 +3501,7 @@
     "op_kind": "DESTRUCTIVE",
     "request_msg": "DeleteMessagingBackupRequest",
     "body": "`{ \"tenant_id\": \"<seed:tenant_id>\", \"subject_id\": \"\", \"backup_id\": \"sdk-perf-backup-delete\" }`",
-    "notes": "erases the caller's backup `sdk-perf-backup-delete`; idempotent (a missing backup answers `deleted=false`), so every iteration succeeds."
+    "notes": "erases the caller's backup `sdk-perf-backup-delete`; idempotent (a missing backup answers `deleted=false`)."
   },
   {
     "file": "messaging.md",
@@ -3512,8 +3512,8 @@
     "operation_id": "messagingGetGroupInfo",
     "op_kind": "READ_ONLY",
     "request_msg": "GetGroupInfoRequest",
-    "body": "`{ \"tenant_id\": \"<seed:tenant_id>\", \"group_id\": \"sdk-perf-group\" }`",
-    "notes": "public ratchet tree + latest GroupInfo for an external join; NOT_FOUND until the group exists."
+    "body": "`{ \"tenant_id\": \"<seed:tenant_id>\", \"group_id\": \"<seed:mls_group_id>\" }`",
+    "notes": "the message group's public ratchet tree and GroupInfo (epoch 1 after the setup commit)."
   },
   {
     "file": "messaging.md",
@@ -3524,8 +3524,8 @@
     "operation_id": "messagingGetKeyPackageStock",
     "op_kind": "READ_ONLY",
     "request_msg": "GetKeyPackageStockRequest",
-    "body": "`{ \"tenant_id\": \"<seed:tenant_id>\", \"device_id\": \"sdk-perf-device\" }`",
-    "notes": "unclaimed one-time KeyPackages left for the device."
+    "body": "`{ \"tenant_id\": \"<seed:tenant_id>\", \"device_id\": \"<seed:mls_device_id>\" }`",
+    "notes": "unclaimed one-time KeyPackages left for the measured device."
   },
   {
     "file": "messaging.md",
@@ -3537,7 +3537,7 @@
     "op_kind": "READ_ONLY",
     "request_msg": "GetMessagingBackupRequest",
     "body": "`{ \"tenant_id\": \"<seed:tenant_id>\", \"subject_id\": \"\", \"backup_id\": \"sdk-perf-backup\" }`",
-    "notes": "returns the caller's opaque backup envelope; `sdk-perf-backup` is stored by the shared seed. Empty `subject_id` means the caller."
+    "notes": "returns the caller's opaque backup envelope `sdk-perf-backup`, stored by the seed. Empty `subject_id` means the caller."
   },
   {
     "file": "messaging.md",
@@ -3548,8 +3548,8 @@
     "operation_id": "messagingListMessagingDevices",
     "op_kind": "READ_ONLY",
     "request_msg": "ListMessagingDevicesRequest",
-    "body": "`{ \"tenant_id\": \"<seed:tenant_id>\", \"subject_id\": \"<seed:user_id>\", \"include_revoked\": false }`",
-    "notes": "the subject's devices with key fingerprints (empty for a subject with no devices)."
+    "body": "`{ \"tenant_id\": \"<seed:tenant_id>\", \"subject_id\": \"<seed:mls_subject_id>\", \"include_revoked\": false }`",
+    "notes": "the benchmark subject's devices with key fingerprints."
   },
   {
     "file": "messaging.md",
@@ -3560,8 +3560,8 @@
     "operation_id": "messagingPublishKeyPackages",
     "op_kind": "MUTATION",
     "request_msg": "PublishKeyPackagesRequest",
-    "body": "`{ \"tenant_id\": \"<seed:tenant_id>\", \"device_id\": \"sdk-perf-device\", \"key_packages\": [\"AA==\"] }`",
-    "notes": "each KeyPackage must be MLS-signed by the device's registered key."
+    "body": "`{ \"tenant_id\": \"<seed:tenant_id>\", \"device_id\": \"<seed:mls_device_id>\", \"key_packages\": [\"<seed:mls_key_package>\"] }`",
+    "notes": "publishes a fresh one-time KeyPackage signed by the measured device's registered key."
   },
   {
     "file": "messaging.md",
@@ -3573,7 +3573,7 @@
     "op_kind": "MUTATION",
     "request_msg": "PutMessagingBackupRequest",
     "body": "`{ \"tenant_id\": \"<seed:tenant_id>\", \"subject_id\": \"\", \"backup_id\": \"sdk-perf-backup-put\", \"ciphertext\": \"VURCTUxTQjEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==\", \"expected_version\": 0 }`",
-    "notes": "stores (then replaces) the caller's backup; the body is a minimal udb-mls envelope (magic + 68 bytes), the only framing the broker checks."
+    "notes": "stores the caller's backup; the body is a minimal udb-mls envelope (magic + 68 bytes), the only framing the broker checks."
   },
   {
     "file": "messaging.md",
@@ -3584,8 +3584,8 @@
     "operation_id": "messagingRegisterMessagingDevice",
     "op_kind": "MUTATION",
     "request_msg": "RegisterMessagingDeviceRequest",
-    "body": "`{ \"tenant_id\": \"<seed:tenant_id>\", \"subject_id\": \"<seed:user_id>\", \"device_id\": \"sdk-perf-device\", \"signature_public_key\": \"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=\", \"credential\": \"AA==\" }`",
-    "notes": "the credential must be an MLS BasicCredential naming `<tenant>/<subject>/<device>`; placeholder bytes exercise the validation refusal."
+    "body": "`{ \"tenant_id\": \"<seed:tenant_id>\", \"subject_id\": \"<seed:mls_subject_id>\", \"device_id\": \"<seed:mls_register_device_id>\", \"signature_public_key\": \"<seed:mls_register_signature_key>\", \"credential\": \"<seed:mls_register_credential>\" }`",
+    "notes": "registers a device the fixture minted; its BasicCredential names `<tenant>/<subject>/<device>`."
   },
   {
     "file": "messaging.md",
@@ -3596,8 +3596,8 @@
     "operation_id": "messagingRevokeMessagingDevice",
     "op_kind": "DESTRUCTIVE",
     "request_msg": "RevokeMessagingDeviceRequest",
-    "body": "`{ \"tenant_id\": \"<seed:tenant_id>\", \"device_id\": \"sdk-perf-revoked-device\", \"reason\": \"sdk perf\" }`",
-    "notes": "revokes a disposable device and sends removal hints to its groups; NOT_FOUND until registered."
+    "body": "`{ \"tenant_id\": \"<seed:tenant_id>\", \"device_id\": \"<seed:mls_revoke_device_id>\", \"reason\": \"sdk perf\" }`",
+    "notes": "revokes a disposable registered device that is in no group."
   },
   {
     "file": "messaging.md",
@@ -3608,8 +3608,8 @@
     "operation_id": "messagingSendMessage",
     "op_kind": "MUTATION",
     "request_msg": "SendMessageRequest",
-    "body": "`{ \"tenant_id\": \"<seed:tenant_id>\", \"group_id\": \"sdk-perf-group\", \"sender_device_id\": \"sdk-perf-device\", \"ciphertext\": \"AA==\", \"client_message_id\": \"sdk-perf-message\" }`",
-    "notes": "the ciphertext must be an MLS PrivateMessage for the group's current epoch."
+    "body": "`{ \"tenant_id\": \"<seed:tenant_id>\", \"group_id\": \"<seed:mls_group_id>\", \"sender_device_id\": \"<seed:mls_device_id>\", \"ciphertext\": \"<seed:mls_message_ciphertext>\", \"client_message_id\": \"sdk-perf-message\" }`",
+    "notes": "a PrivateMessage sealed for the message group's epoch 1, fanned out to the peer."
   },
   {
     "file": "messaging.md",
@@ -3620,8 +3620,8 @@
     "operation_id": "messagingStreamInbox",
     "op_kind": "READ_ONLY",
     "request_msg": "StreamInboxRequest",
-    "body": "`{ \"tenant_id\": \"<seed:tenant_id>\", \"device_id\": \"sdk-perf-device\", \"after_seq\": 0, \"follow\": false, \"max_entries\": 10 }`",
-    "notes": "server-streaming; with follow=false the stream ends once caught up."
+    "body": "`{ \"tenant_id\": \"<seed:tenant_id>\", \"device_id\": \"<seed:mls_device_id>\", \"after_seq\": 0, \"follow\": false, \"max_entries\": 10 }`",
+    "notes": "server-streaming; delivers the setup commit and ends once caught up (follow=false)."
   },
   {
     "file": "messaging.md",
@@ -3632,8 +3632,8 @@
     "operation_id": "messagingSubmitCommit",
     "op_kind": "MUTATION",
     "request_msg": "SubmitCommitRequest",
-    "body": "`{ \"tenant_id\": \"<seed:tenant_id>\", \"group_id\": \"sdk-perf-group\", \"sender_device_id\": \"sdk-perf-device\", \"epoch\": 0, \"commit\": \"AA==\", \"client_message_id\": \"sdk-perf-commit\" }`",
-    "notes": "the commit must be an MLS PublicMessage for the group's current epoch; a stale epoch is FAILED_PRECONDITION with `missing.current_epoch`."
+    "body": "`{ \"tenant_id\": \"<seed:tenant_id>\", \"group_id\": \"<seed:mls_commit_group_id>\", \"sender_device_id\": \"<seed:mls_device_id>\", \"epoch\": 0, \"commit\": \"<seed:mls_commit>\", \"welcome\": \"<seed:mls_welcome>\", \"client_message_id\": \"sdk-perf-commit\" }`",
+    "notes": "a PublicMessage commit adding the peer to the commit group at epoch 0, validated against the group's public state; the Welcome goes to the peer."
   },
   {
     "file": "metering.md",

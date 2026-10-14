@@ -66,6 +66,8 @@ func TestLivePerfExplicitBodyCoverage(t *testing.T) {
 		"multipart_bucket": "bucket-1", "multipart_object_key": "multipart-1", "multipart_upload_id": "upload-1",
 		"multipart_etag": "etag-1", "ack_workflow_id": "workflow-ack-1",
 		"cdc_ack_event_id": "00000000-0000-4000-8000-000000000003", "cdc_ack_topic": "udb.sdk.benchmark.ack",
+		// MessagingService MLS objects (live: `udb messaging bench-fixture`).
+		"mls_subject_id": "mls-subject-id-1", "mls_device_id": "mls-device-id-1", "mls_peer_device_id": "mls-peer-device-id-1", "mls_revoke_device_id": "mls-revoke-device-id-1", "mls_register_device_id": "mls-register-device-id-1", "mls_register_signature_key": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=", "mls_register_credential": "AA==", "mls_key_package": "AA==", "mls_group_id": "mls-group-id-1", "mls_message_ciphertext": "AA==", "mls_commit_group_id": "mls-commit-group-id-1", "mls_commit": "AA==", "mls_welcome": "AA==", "mls_new_group_id": "mls-new-group-id-1", "mls_new_group_info": "AA==", "mls_new_ratchet_tree": "AA==",
 		"document_id": "document-1", "mongo_collection": "collection_1", "node_id": "node-1",
 		"user_id": "user-1", "subject": "user:user-1", "session_id": "session-1", "token": "token-1",
 		"refresh_token": "refresh-1", "csrf_token": "csrf-1", "code": "123456", "role_id": "role-1",
