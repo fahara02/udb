@@ -439,7 +439,7 @@ func jsonSafeValue(v any) any {
 		}
 		return out
 	case time.Time:
-		return x.UTC().Format(time.RFC3339Nano)
+		return FormatTimestamp(x)
 	}
 	return v
 }

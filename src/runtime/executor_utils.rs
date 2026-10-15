@@ -2382,7 +2382,7 @@ where
             v.map(|dt| JsonValue::String(dt.format("%Y-%m-%dT%H:%M:%S%.6f").to_string()))
                 .unwrap_or(JsonValue::Null)
         } else if let Ok(v) = row.try_get::<Option<chrono::DateTime<chrono::Utc>>, _>(i) {
-            v.map(|dt| JsonValue::String(dt.to_rfc3339()))
+            v.map(|dt| JsonValue::String(crate::runtime::core::canonical_timestamp_text(&dt)))
                 .unwrap_or(JsonValue::Null)
         } else if let Ok(v) = row.try_get::<Option<chrono::NaiveDate>, _>(i) {
             v.map(|d| JsonValue::String(d.format("%Y-%m-%d").to_string()))

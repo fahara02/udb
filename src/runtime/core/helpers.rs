@@ -1722,12 +1722,9 @@ pub(crate) fn logical_value_to_json(value: &crate::ir::value::LogicalValue) -> s
             use base64::{Engine as _, engine::general_purpose::STANDARD as B64};
             serde_json::Value::String(format!("base64:{}", B64.encode(value)))
         }
-        LogicalValue::Timestamp(value) => serde_json::Value::String(
-            // Canonical wire form: `Z` suffix, not `+00:00` — chrono's plain
-            // `to_rfc3339()` renders the offset form, which every SDK decoder
-            // has to special-case. AutoSi keeps the stored sub-second precision.
-            value.to_rfc3339_opts(chrono::SecondsFormat::AutoSi, true),
-        ),
+        LogicalValue::Timestamp(value) => {
+            serde_json::Value::String(canonical_timestamp_text(value))
+        }
         LogicalValue::Json(value) => value.clone(),
         LogicalValue::Array(values) => {
             serde_json::Value::Array(values.iter().map(logical_value_to_json).collect())
@@ -1979,4 +1976,45 @@ pub(crate) fn bridged_pg_delete_statement(
         &request.context,
         crate::ir::compile::CompileOperation::Delete(&delete),
     )
+}
+
+/// The one text form of a TIMESTAMPTZ value on the wire: RFC 3339 in UTC with
+/// exactly six fractional digits and a `Z` suffix (`2026-10-15T08:30:00.800000Z`).
+///
+/// Fixed width on purpose. PostgreSQL stores microseconds, and a variable form
+/// (chrono's `AutoSi` gives `.800` for `.800000` and no fraction for a whole
+/// second; Go's RFC3339Nano trims trailing zeros) makes the same instant render
+/// differently, so a client comparing a write's echo with a re-read byte for
+/// byte sees a conflict that is not there. The SDKs format with the same layout
+/// (`udbclient.FormatTimestamp` in Go).
+pub(crate) fn canonical_timestamp_text(value: &chrono::DateTime<chrono::Utc>) -> String {
+    value.to_rfc3339_opts(chrono::SecondsFormat::Micros, true)
+}
+
+#[cfg(test)]
+mod canonical_timestamp_tests {
+    use super::canonical_timestamp_text;
+    use chrono::{TimeZone, Utc};
+
+    #[test]
+    fn every_instant_renders_with_six_fractional_digits_and_z() {
+        let at = |nanos| Utc.timestamp_opt(1_792_052_400, nanos).unwrap();
+        assert_eq!(
+            canonical_timestamp_text(&at(0)),
+            "2026-10-15T08:20:00.000000Z"
+        );
+        assert_eq!(
+            canonical_timestamp_text(&at(800_000_000)),
+            "2026-10-15T08:20:00.800000Z"
+        );
+        assert_eq!(
+            canonical_timestamp_text(&at(807_240_000)),
+            "2026-10-15T08:20:00.807240Z"
+        );
+        // Sub-microsecond digits are not part of a PostgreSQL value.
+        assert_eq!(
+            canonical_timestamp_text(&at(807_240_999)),
+            "2026-10-15T08:20:00.807240Z"
+        );
+    }
 }

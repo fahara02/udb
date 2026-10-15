@@ -94,6 +94,16 @@ prints the fix.
   the generated file with no error; it now stops and names the entity.
   - fix: set `option go_package = "<import path>;<package>";` in the entity's proto file.
 
+- **TIMESTAMPTZ values have one canonical text form**: RFC 3339 in UTC with
+  exactly six fractional digits and `Z` (`2026-10-15T08:20:00.800000Z`). Record
+  values used chrono's `AutoSi` (`.800` for `.800000`, no fraction for a whole
+  second) and one decode path rendered `+00:00`, so the same instant could come
+  back in different text and a byte-for-byte compare saw a conflict that was not
+  there. The Go SDK adds `udbclient.FormatTimestamp` / `TimestampLayout` with the
+  same layout and uses it for the timestamps it writes.
+  - detect: code: `time.RFC3339Nano`
+  - fix: compare parsed times, or format the value you wrote with `udbclient.FormatTimestamp` (layout `2006-01-02T15:04:05.000000Z07:00`) before comparing it as text with what udb returns.
+
 ### Clearer refusals
 
 Every refusal below now says, in the gRPC status message itself, why it

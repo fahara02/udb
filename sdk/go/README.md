@@ -107,6 +107,18 @@ if err != nil {
 }
 ```
 
+## Timestamps: One Text Form
+
+udb returns every TIMESTAMPTZ value in one text form: RFC 3339 in UTC with
+exactly six fractional digits and a `Z` (`2026-10-15T08:20:00.800000Z`).
+PostgreSQL stores microseconds, so six digits are exact, and a fixed width means
+one instant always renders the same way.
+
+Format with `udbclient.FormatTimestamp(t)` (layout `udbclient.TimestampLayout`)
+whenever you compare a timestamp you wrote with the broker's echo or a re-read
+as text. `time.RFC3339Nano` trims trailing zeros (`.8Z`, `.80724Z`) and will not
+match. Comparing parsed `time.Time` values (`Equal`) is always safe.
+
 ## Storage (Upload And Download Files)
 
 The `Udb` facade (`udbclient.NewUdb`) exposes a `Storage` client. `UploadFile`

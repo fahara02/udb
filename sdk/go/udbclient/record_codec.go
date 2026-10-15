@@ -527,6 +527,18 @@ func EncodeEvent(event proto.Message) (Record, error) {
 	return payload, nil
 }
 
+// TimestampLayout is the one text form udb uses for a TIMESTAMPTZ value: RFC 3339 in UTC with
+// exactly six fractional digits and a Z suffix, e.g. 2026-10-15T08:20:00.800000Z. PostgreSQL stores
+// microseconds, so six digits are exact, and a fixed width means one instant always renders the
+// same way: compare a value you wrote with the broker's echo or a re-read as text only after
+// formatting it with FormatTimestamp (time.RFC3339Nano trims trailing zeros and will not match).
+const TimestampLayout = "2006-01-02T15:04:05.000000Z07:00"
+
+// FormatTimestamp renders t exactly as udb returns a TIMESTAMPTZ value (see TimestampLayout).
+func FormatTimestamp(t time.Time) string {
+	return t.UTC().Format(TimestampLayout)
+}
+
 // ParseTimestamp parses a TIMESTAMPTZ column as DecodeRecord leaves it in a string field (RFC 3339);
 // "" (NULL) is the zero time.
 func ParseTimestamp(s string) (time.Time, error) {

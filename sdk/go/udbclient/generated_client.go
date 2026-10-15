@@ -1636,7 +1636,7 @@ func ToLogicalValue(value any) any {
 		}
 		return map[string]any{"Bytes": nums}
 	case time.Time:
-		return map[string]any{"Timestamp": v.UTC().Format(time.RFC3339Nano)}
+		return map[string]any{"Timestamp": FormatTimestamp(v)}
 	}
 	rv := reflect.ValueOf(value)
 	switch rv.Kind() {

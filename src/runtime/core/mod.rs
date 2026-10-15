@@ -974,10 +974,8 @@ fn prepare_outbox_envelope(
     enriched_obj
         .entry("timestamp".to_string())
         .or_insert_with(|| {
-            // Canonical `Z` wire form (see logical_value_to_json).
-            serde_json::Value::String(
-                Utc::now().to_rfc3339_opts(chrono::SecondsFormat::AutoSi, true),
-            )
+            // Canonical wire form (see canonical_timestamp_text).
+            serde_json::Value::String(helpers::canonical_timestamp_text(&Utc::now()))
         });
     enriched_obj
         .entry("payload".to_string())
@@ -3451,9 +3449,7 @@ fn row_value_to_json(row: &PgRow, idx: usize, type_name: &str) -> Result<JsonVal
             "TIMESTAMPTZ" | "TIMESTAMP WITH TIME ZONE" => row
                 .try_get::<Option<Vec<Option<DateTime<Utc>>>>, _>(idx)
                 .map(|items| {
-                    wrap_rendered(items, |value| {
-                        value.to_rfc3339_opts(chrono::SecondsFormat::AutoSi, true)
-                    })
+                    wrap_rendered(items, |value| helpers::canonical_timestamp_text(&value))
                 }),
             "TIMESTAMP" | "TIMESTAMP WITHOUT TIME ZONE" => row
                 .try_get::<Option<Vec<Option<NaiveDateTime>>>, _>(idx)
@@ -3583,9 +3579,7 @@ fn row_value_to_json(row: &PgRow, idx: usize, type_name: &str) -> Result<JsonVal
                     // Canonical `Z` wire form, not `+00:00` (Z-3): consumers
                     // parse the broker's timestamp rendering across six SDKs;
                     // one canonical shape beats per-SDK layout ladders.
-                    .map(|dt| {
-                        JsonValue::String(dt.to_rfc3339_opts(chrono::SecondsFormat::AutoSi, true))
-                    })
+                    .map(|dt| JsonValue::String(helpers::canonical_timestamp_text(&dt)))
                     .unwrap_or(JsonValue::Null)
             })
             .map_err(|err| column_decode_failed(row, idx, &type_name, err));
