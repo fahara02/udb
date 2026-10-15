@@ -79,6 +79,14 @@ processTriple(
   C["sdk-rust"].version,
   /(\[package\][\s\S]*?\nversion = ")([^"]*)(")/,
 );
+// The end-to-end messaging client crates follow the release version, like the
+// broker crate: `udb` and the Rust SDK depend on `udb-mls` by version.
+processTriple("udb-mls (crate)", "crates/udb-mls/Cargo.toml", C.udb.version, /(\[package\][\s\S]*?\nversion = ")([^"]*)(")/);
+processTriple("udb-mls-wasm (crate)", "crates/udb-mls-wasm/Cargo.toml", C.udb.version, /(\[package\][\s\S]*?\nversion = ")([^"]*)(")/);
+processTriple("udb -> udb-mls dependency", "Cargo.toml", C.udb.version, /(udb-mls = \{ path = "crates\/udb-mls", version = ")([^"]*)(")/);
+processTriple("sdk-rust -> udb-mls dependency", "sdk/rust/Cargo.toml", C.udb.version, /(udb-mls = \{ path = "\.\.\/\.\.\/crates\/udb-mls", version = ")([^"]*)(")/);
+processTriple("udb-mls lock", "Cargo.lock", C.udb.version, /(\[\[package\]\]\s*\nname = "udb-mls"\s*\nversion = ")([^"]*)(")/);
+processTriple("udb-mls-wasm lock", "Cargo.lock", C.udb.version, /(\[\[package\]\]\s*\nname = "udb-mls-wasm"\s*\nversion = ")([^"]*)(")/);
 processTriple("sdk-csharp", "sdk/csharp/Udb.Client/Udb.Client.csproj", C["sdk-csharp"].version, /(<Version>)([^<]*)(<\/Version>)/);
 processTriple("sdk-java", "sdk/java/pom.xml", C["sdk-java"].version, /(<version>)([^<]*)(<\/version>)/, { snapshotOk: true });
 processTriple(
