@@ -136,7 +136,7 @@ graph LR
 - **src/backend/plugins/sqlite.rs** — NW3-2 — SQLite plugin. Same shape as the MySQL plugin. The runtime register function detects `sqlite::memory:` / `:memory:` in the DSN and clamps to `max_connections = 1` so the in-memory schema and data survive acros… · types: `SqlitePlugin` · consts: `PLUGIN`
 - **src/backend/plugins/weaviate.rs** — C9 — Weaviate backend plugin. REST + GraphQL via reqwest. Same shape as the Qdrant plugin. · types: `WeaviatePlugin` · consts: `PLUGIN`
 
-### cli  (26 files)
+### cli  (27 files)
 
 - **src/cli/args.rs** — main.rs split — args (Phase H). · types: `Command`, `InitArgs`, `SdkSelector`, `SdkAction`, `OrmAction`, `NativeAction`, `AuthCommand`, `AuthzCommand`, `SelfCommand`, `OpsCommand`, `ComplianceCommand`, `DevAction` · fns: `parse`, `split_csv`, `parse_args`
 - **src/cli/auth.rs** — Native auth CLI commands. These commands call the generated UDB authn/authz/apikey clients. The CLI is a control-plane convenience layer only; CRUD still flows through the native service protos and their server implem… · fns: `run_auth_command`
@@ -153,6 +153,7 @@ graph LR
 - **src/cli/identity_ops.rs** — Declarative identity reconciliation through the canonical native services. Account/grant/key responses remain authoritative. Local output receipts only prevent repeating a one-time secret operation; a pending outcome … · types: `SecretRef`, `ProvisionAccount`, `DeclaredKey`, `DeclaredAccount`, `IdentityFile` · fns: `resolve_file_references`, `identity_command`
 - **src/cli/init.rs** — `udb init` command runner. · types: `InitRunError` · fns: `run`
 - **src/cli/init_prompt.rs** — Line-mode prompt fallback for `udb init`. This module is deliberately narrow: it collects choices and returns them to the init core. Planning, validation, and disk writes stay outside prompts. · types: `InitPromptResult`, `InitPromptError`, `InitPromptCatalog`, `InitPromptSelection` · fns: `run_init_prompts`, `run_init_prompts`
+- **src/cli/messaging_fixture.rs** — `udb messaging bench-fixture`: mint, with the real client crate (`udb-mls`), every MLS object the MessagingService benchmark rows need for one tenant and subject, so each measured RPC runs its success path. The comman… · fns: `build`, `run`
 - **src/cli/mod.rs** — CLI entry point internals (Phase H split of main.rs).
 - **src/cli/native_app.rs** — Native-service app lifecycle (`udb native add|remove|generate|doctor|smoke`) and `udb app init`. Everything here is **descriptor-driven**: the set of selectable services, the surface grouping, dependency tokens, facad… · types: `NativeServicesManifest`, `AppInitArgs` · fns: `run_list`, `run_add`, `run_remove`, `run_generate`, `run_doctor`, `run_smoke`, `run_app_init`
 - **src/cli/native_lint.rs** — Phase 0A (Section F5/F13) descriptor lints. These lints complement `native_contract_findings` in [`super`] (which already emits native-control-plane `endpoint_security_missing`, `non_public_rpc_without_policy`, and `d… · fns: `descriptor_lint_findings`
