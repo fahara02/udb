@@ -32,9 +32,10 @@ from udb_client.auth import UdbAuthClient
 from udb_client.metadata import Metadata
 
 
-#: The backup the GetMessagingBackup row reads. The broker checks only the
-#: udb-mls envelope framing (magic + minimum length) of an opaque backup.
-MESSAGING_BACKUP_ID = "sdk-perf-backup"
+#: The backups the GetMessagingBackup row reads and the DeleteMessagingBackup
+#: row erases. The broker checks only the udb-mls envelope framing (magic +
+#: minimum length) of an opaque backup.
+MESSAGING_BACKUP_IDS = ("sdk-perf-backup", "sdk-perf-backup-delete")
 MESSAGING_BACKUP_ENVELOPE = b"UDBMLSB1" + bytes(68)
 
 
@@ -66,9 +67,10 @@ def seed_messaging(channel, headers, tenant_id: str, subject: str) -> dict[str, 
     reads. Returns the `mls_*` bench-body fixtures."""
     messaging = messaging_grpc.MessagingServiceStub(channel)
     try:
-        messaging.PutMessagingBackup(messaging_pb.PutMessagingBackupRequest(
-            tenant_id=tenant_id, subject_id=subject, backup_id=MESSAGING_BACKUP_ID,
-            ciphertext=MESSAGING_BACKUP_ENVELOPE), metadata=headers, timeout=20.0)
+        for backup_id in MESSAGING_BACKUP_IDS:
+            messaging.PutMessagingBackup(messaging_pb.PutMessagingBackupRequest(
+                tenant_id=tenant_id, subject_id=subject, backup_id=backup_id,
+                ciphertext=MESSAGING_BACKUP_ENVELOPE), metadata=headers, timeout=20.0)
     except grpc.RpcError as exc:
         # A broker older than 0.6.0 serves no MessagingService at all.
         if exc.code() != grpc.StatusCode.UNIMPLEMENTED:

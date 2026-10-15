@@ -3501,7 +3501,7 @@
     "op_kind": "DESTRUCTIVE",
     "request_msg": "DeleteMessagingBackupRequest",
     "body": "`{ \"tenant_id\": \"<seed:tenant_id>\", \"subject_id\": \"\", \"backup_id\": \"sdk-perf-backup-delete\" }`",
-    "notes": "erases the caller's backup `sdk-perf-backup-delete`; idempotent (a missing backup answers `deleted=false`)."
+    "notes": "erases the caller's backup `sdk-perf-backup-delete`, stored by the seed (a missing backup would answer `deleted=false`)."
   },
   {
     "file": "messaging.md",
