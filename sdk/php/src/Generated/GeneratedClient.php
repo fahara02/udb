@@ -21,7 +21,7 @@ use Grpc\ChannelCredentials;
  *   UDB version ...... 0.5.34
  *   Protocol version . 1.0.0
  *   Services ......... 29
- *   RPCs ............. 404
+ *   RPCs ............. 403
  *
  * This class COMPOSES WITH the hand-written layer; it does not replace it:
  *   - it reuses {@see UdbMetadata} for the eight broker headers,
@@ -446,7 +446,6 @@ final class GeneratedClient
         "PublishCDC" => "mutation",
         "PurgeSubject" => "destructive",
         "PutObject" => "mutation",
-        "PutPolicy" => "destructive",
         "QuarantineDlqEvent" => "mutation",
         "ReloadPolicies" => "destructive",
         "ReplayDlqEvent" => "mutation",
@@ -859,7 +858,6 @@ final class GeneratedClient
         "DataBroker/PublishCDC" => "mutation",
         "DataBroker/PurgeSubject" => "destructive",
         "DataBroker/PutObject" => "mutation",
-        "DataBroker/PutPolicy" => "destructive",
         "DataBroker/QuarantineDlqEvent" => "mutation",
         "DataBroker/ReloadPolicies" => "destructive",
         "DataBroker/ReplayDlqEvent" => "mutation",
@@ -1272,7 +1270,6 @@ final class GeneratedClient
         "DataBroker/PublishCDC" => "publish_cdc",
         "DataBroker/PurgeSubject" => "purge_subject",
         "DataBroker/PutObject" => "put_object",
-        "DataBroker/PutPolicy" => "put_policy",
         "DataBroker/QuarantineDlqEvent" => "quarantine_dlq_event",
         "DataBroker/ReloadPolicies" => "reload_policies",
         "DataBroker/ReplayDlqEvent" => "replay_dlq_event",
@@ -1684,7 +1681,6 @@ final class GeneratedClient
         "DataBroker/PublishCDC" => "publishCdc",
         "DataBroker/PurgeSubject" => "purgeSubject",
         "DataBroker/PutObject" => "putObject",
-        "DataBroker/PutPolicy" => "putPolicy",
         "DataBroker/QuarantineDlqEvent" => "quarantineDlqEvent",
         "DataBroker/ReloadPolicies" => "reloadPolicies",
         "DataBroker/ReplayDlqEvent" => "replayDlqEvent",
@@ -2096,7 +2092,6 @@ final class GeneratedClient
         "DataBroker/PublishCDC" => "",
         "DataBroker/PurgeSubject" => "",
         "DataBroker/PutObject" => "",
-        "DataBroker/PutPolicy" => "",
         "DataBroker/QuarantineDlqEvent" => "",
         "DataBroker/ReloadPolicies" => "",
         "DataBroker/ReplayDlqEvent" => "",
@@ -2508,7 +2503,6 @@ final class GeneratedClient
         "DataBroker/PublishCDC" => "",
         "DataBroker/PurgeSubject" => "",
         "DataBroker/PutObject" => "",
-        "DataBroker/PutPolicy" => "",
         "DataBroker/QuarantineDlqEvent" => "",
         "DataBroker/ReloadPolicies" => "",
         "DataBroker/ReplayDlqEvent" => "",
@@ -3031,7 +3025,6 @@ final class GeneratedClient
         "publish_c_d_c" => "publishCdc",
         "purge_subject" => "purgeSubject",
         "put_object" => "putObject",
-        "put_policy" => "putPolicy",
         "quarantine_dlq_event" => "quarantineDlqEvent",
         "reload_policies" => "reloadPolicies",
         "replay_dlq_event" => "replayDlqEvent",
@@ -10907,27 +10900,6 @@ final class GeneratedClient
         );
     }
     /**
-     * udb.services.v1.DataBroker / PutPolicy (unary), public alias put_policy.
-     *
-     * Forwards to {@see stubFor()}->PutPolicy(); retries transient codes.
-     * Path: /udb.services.v1.DataBroker/PutPolicy
-     *
-     * @param  \Google\Protobuf\Internal\Message  $request
-     * @return \Google\Protobuf\Internal\Message  the decoded MutationResponse
-     */
-    public function putPolicy($request, ?UdbMetadata $metadata = null)
-    {
-        return $this->invokeUnary(
-            'PutPolicy',
-            'DataBroker',
-            'udb.services.v1',
-            fn (BaseStub $stub, array $md, array $opts) => $stub->PutPolicy($request, $md, $opts),
-            $metadata,
-            'destructive' === 'read_only',
-            $request,
-        );
-    }
-    /**
      * udb.services.v1.DataBroker / QuarantineDlqEvent (unary), public alias quarantine_dlq_event.
      *
      * Forwards to {@see stubFor()}->QuarantineDlqEvent(); retries transient codes.
@@ -11844,7 +11816,7 @@ final class GeneratedClient
         return $this->stubFor('WorkflowService', 'udb.core.workflow.services.v1');
     }
     /**
-     * Underlying buf-generated stub for udb.services.v1.DataBroker (85 RPC(s)).
+     * Underlying buf-generated stub for udb.services.v1.DataBroker (84 RPC(s)).
      * Channel is shared with every other service stub on this client.
      *
      * @return BaseStub  a DataBrokerClient
@@ -13310,7 +13282,7 @@ final class UnitOfWork
                 continue;
             }
             $message = $message !== '' ? $message : 'udb: unit-of-work transaction failed';
-            if (self::isTxConflictMessage($message)) {
+            if (self::isTxConflictStatus($status)) {
                 throw new UnitOfWorkConflictException($message, $status);
             }
             throw new UnitOfWorkTxException($message, $status);
@@ -13397,9 +13369,11 @@ final class UnitOfWork
         return $fqn;
     }
 
-    private static function isTxConflictMessage(string $message): bool
+    /** A tx status is a conflict only by its typed reason, never by message text. */
+    private static function isTxConflictStatus(object $status): bool
     {
-        $lower = strtolower($message);
-        return str_contains($lower, 'aborted') || str_contains($lower, 'version') || str_contains($lower, 'conflict');
+        $detail = method_exists($status, 'getErrorDetail') ? $status->getErrorDetail() : null;
+        $reason = $detail !== null && method_exists($detail, 'getReason') ? (string) $detail->getReason() : '';
+        return in_array($reason, ['UDB_CAS_CONFLICT', 'UDB_CAS_ROW_MISSING', 'UDB_REVISION_CONFLICT'], true);
     }
 }

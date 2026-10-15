@@ -1,7 +1,7 @@
 {
   "schema_version": "1",
-  "descriptor_sha256": "d3ceaed6dcd8d8463f6d202d84ac2e0ad0b38f5a461122c5e0ae128e45bbd395",
-  "contract_version": "7.2.0",
+  "descriptor_sha256": "02e22aeabb1dd9c0d06beb81f11bab7aee0e63d24561c5c443df022e36b107a7",
+  "contract_version": "8.0.0",
   "udb_version": "0.5.34",
   "protocol_version": "1.0.0",
   "service_count": 29,
@@ -31310,7 +31310,7 @@
       "sdk_surface": null,
       "cli_scaffold": null,
       "dependency_contract": null,
-      "rpc_count": 85,
+      "rpc_count": 84,
       "rpcs": [
         {
           "method": "AbortMultipartUpload",
@@ -33945,47 +33945,6 @@
           "http": null
         },
         {
-          "method": "PutPolicy",
-          "method_alias": "put_policy",
-          "rest_operation_id": "putPolicy",
-          "path": "/udb.services.v1.DataBroker/PutPolicy",
-          "kind": "unary",
-          "operation_kind": "destructive",
-          "read_only": false,
-          "input": ".udb.entity.v1.PutPolicyRequest",
-          "output": ".udb.entity.v1.MutationResponse",
-          "auth_mode": "unspecified",
-          "scopes": [],
-          "roles": [],
-          "policy_ref": "",
-          "tenant_required": false,
-          "tenant_field": "",
-          "project_field": "",
-          "endpoint_security": null,
-          "event_contract": null,
-          "emits": [],
-          "sdk_surface": {
-            "include_in_facade": true,
-            "method_alias": "put_policy",
-            "rest_operation_id": "putPolicy",
-            "required_credential_provider": "",
-            "streaming_helper_type": "",
-            "default_deadline_ms": 0,
-            "default_max_attempts": 0,
-            "browser_safe": false,
-            "server_only": false,
-            "boilerplate_recipe_tags": [],
-            "generate_minimal_example": false
-          },
-          "dependency_contract": null,
-          "precondition_contract": null,
-          "readback_contract": null,
-          "lifecycle_contract": null,
-          "idempotency_contract": null,
-          "error_contract": null,
-          "http": null
-        },
-        {
           "method": "QuarantineDlqEvent",
           "method_alias": "quarantine_dlq_event",
           "rest_operation_id": "quarantineDlqEvent",
@@ -34859,7 +34818,7 @@
       ]
     }
   ],
-  "message_count": 1104,
+  "message_count": 1103,
   "messages": [
     {
       "message": "udb.core.analytics.entity.v1.ExecutorPerformanceSummary",
@@ -163941,55 +163900,6 @@
       ]
     },
     {
-      "message": "udb.entity.v1.PutPolicyRequest",
-      "file": "udb/entity/v1/admin.proto",
-      "sdk_surface": null,
-      "event_contract": null,
-      "dependency_contract": null,
-      "table_security": null,
-      "field_count": 2,
-      "fields": [
-        {
-          "name": "context",
-          "number": 1,
-          "type": ".udb.entity.v1.RequestContext",
-          "column_security": null,
-          "scalar_security": {
-            "pii": false,
-            "encrypted_security": false,
-            "log_masked": false,
-            "log_redacted": false,
-            "sensitive": false,
-            "requires_consent": false,
-            "data_purpose": "",
-            "retention_days": 0,
-            "tokenized": false,
-            "security_classification": 0,
-            "data_category": 0
-          }
-        },
-        {
-          "name": "policy",
-          "number": 2,
-          "type": ".udb.entity.v1.PolicyRecord",
-          "column_security": null,
-          "scalar_security": {
-            "pii": false,
-            "encrypted_security": false,
-            "log_masked": false,
-            "log_redacted": false,
-            "sensitive": false,
-            "requires_consent": false,
-            "data_purpose": "",
-            "retention_days": 0,
-            "tokenized": false,
-            "security_classification": 0,
-            "data_category": 0
-          }
-        }
-      ]
-    },
-    {
       "message": "udb.entity.v1.ReadFence",
       "file": "udb/entity/v1/consistency.proto",
       "sdk_surface": null,
@@ -164189,7 +164099,7 @@
       "event_contract": null,
       "dependency_contract": null,
       "table_security": null,
-      "field_count": 8,
+      "field_count": 7,
       "fields": [
         {
           "name": "records_json",
@@ -164233,25 +164143,6 @@
           "name": "next_page_token",
           "number": 3,
           "type": "9",
-          "column_security": null,
-          "scalar_security": {
-            "pii": false,
-            "encrypted_security": false,
-            "log_masked": false,
-            "log_redacted": false,
-            "sensitive": false,
-            "requires_consent": false,
-            "data_purpose": "",
-            "retention_days": 0,
-            "tokenized": false,
-            "security_classification": 0,
-            "data_category": 0
-          }
-        },
-        {
-          "name": "total_count",
-          "number": 4,
-          "type": "5",
           "column_security": null,
           "scalar_security": {
             "pii": false,

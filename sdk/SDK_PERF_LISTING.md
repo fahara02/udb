@@ -6,7 +6,7 @@ Inputs:
 - `docs/generated/bench-bodies.json`
 - `docs/site/bench-results.json`
 
-Current generated RPC surface: 404 RPCs across 29 services.
+Current generated RPC surface: 403 RPCs across 29 services.
 
 Published benchmark artifact: present.
 Release tag: v0.4.28.
@@ -58,7 +58,7 @@ Generated at: 2026-07-26T17:46:09+00:00.
 | CacheService | 7 | 3 | 3 | 1 | 0 |
 | ConfigService | 5 | 3 | 1 | 1 | 0 |
 | ControlPlaneService | 6 | 2 | 4 | 0 | 0 |
-| DataBroker | 85 | 35 | 42 | 8 | 0 |
+| DataBroker | 84 | 35 | 42 | 7 | 0 |
 | EmbeddingService | 19 | 5 | 12 | 2 | 0 |
 | IdentityProviderService | 27 | 6 | 21 | 0 | 0 |
 | LiveQueryService | 1 | 1 | 0 | 0 | 0 |
@@ -301,7 +301,6 @@ identity surface available to benchmark reports.
 | `DataBroker/PublishCDC` | `publish_cdc` | `publishCdc` | MUTATION |
 | `DataBroker/PurgeSubject` | `purge_subject` | `purgeSubject` | DESTRUCTIVE |
 | `DataBroker/PutObject` | `put_object` | `putObject` | MUTATION |
-| `DataBroker/PutPolicy` | `put_policy` | `putPolicy` | DESTRUCTIVE |
 | `DataBroker/QuarantineDlqEvent` | `quarantine_dlq_event` | `quarantineDlqEvent` | MUTATION |
 | `DataBroker/ReloadPolicies` | `reload_policies` | `reloadPolicies` | DESTRUCTIVE |
 | `DataBroker/ReplayDlqEvent` | `replay_dlq_event` | `replayDlqEvent` | MUTATION |
