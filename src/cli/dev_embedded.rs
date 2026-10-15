@@ -31,7 +31,34 @@ fn plain_path(path: PathBuf) -> PathBuf {
 /// Why the embedded server stopped before it was ready: its exit status, the
 /// last lines it logged, and the remedy for the one refusal a developer can fix
 /// themselves (PostgreSQL will not run with Windows administrative rights).
-fn postgres_startup_failure(status: std::process::ExitStatus, log_path: &Path) -> String {
+/// Windows loader failures of a restricted PostgreSQL process, explained.
+///
+/// PostgreSQL (and `initdb`, which re-launches itself) runs under a token with
+/// the Administrators group disabled. If a directory it needs — its own
+/// binaries, the data directory — grants access only to Administrators (as a
+/// directory owned by an elevated process with an owner-only ACL does), the
+/// process cannot load its DLLs and exits with STATUS_DLL_NOT_FOUND
+/// (0xc0000135) or STATUS_DLL_INIT_FAILED (0xc0000142) before printing
+/// anything. Name that cause and the fix instead of a bare exit code.
+fn windows_restricted_access_hint(status: std::process::ExitStatus, dir: &Path) -> Option<String> {
+    let code = status.code()? as u32;
+    if code != 0xC000_0135 && code != 0xC000_0142 {
+        return None;
+    }
+    Some(format!(
+        "; PostgreSQL runs with administrator rights removed and could not load its own files \
+         (Windows status 0x{code:08x}): {} likely grants access only to Administrators. \
+         Grant your user access and retry: icacls \"{}\" /grant \"%USERNAME%\":(OI)(CI)F /T",
+        dir.display(),
+        dir.display()
+    ))
+}
+
+fn postgres_startup_failure(
+    status: std::process::ExitStatus,
+    log_path: &Path,
+    installation_dir: &Path,
+) -> String {
     let tail = fs::read_to_string(log_path)
         .map(|log| {
             let lines: Vec<&str> = log.lines().filter(|line| !line.trim().is_empty()).collect();
@@ -46,6 +73,9 @@ fn postgres_startup_failure(status: std::process::ExitStatus, log_path: &Path) -
         message.push_str(
             "; run `udb dev up --embedded` from a terminal that is not elevated (\"Run as administrator\")",
         );
+    }
+    if let Some(hint) = windows_restricted_access_hint(status, installation_dir) {
+        message.push_str(&hint);
     }
     message.push_str(&format!(" (log: {})", log_path.display()));
     message
@@ -1225,6 +1255,42 @@ mod restricted {
             startup_info: *const StartupInfoW,
             process_information: *mut ProcessInformation,
         ) -> BOOL;
+        fn GetTokenInformation(
+            token: HANDLE,
+            class: u32,
+            information: *mut c_void,
+            length: u32,
+            returned: *mut u32,
+        ) -> BOOL;
+        fn SetTokenInformation(
+            token: HANDLE,
+            class: u32,
+            information: *const c_void,
+            length: u32,
+        ) -> BOOL;
+        fn GetAclInformation(
+            acl: *const c_void,
+            information: *mut c_void,
+            length: u32,
+            class: u32,
+        ) -> BOOL;
+        fn InitializeAcl(acl: *mut c_void, length: u32, revision: u32) -> BOOL;
+        fn GetAce(acl: *const c_void, index: u32, ace: *mut *mut c_void) -> BOOL;
+        fn AddAce(
+            acl: *mut c_void,
+            revision: u32,
+            start_index: u32,
+            ace_list: *const c_void,
+            length: u32,
+        ) -> BOOL;
+        fn AddAccessAllowedAceEx(
+            acl: *mut c_void,
+            revision: u32,
+            flags: u32,
+            mask: u32,
+            sid: PSID,
+        ) -> BOOL;
+        fn GetLengthSid(sid: PSID) -> u32;
     }
 
     #[link(name = "kernel32")]
@@ -1247,6 +1313,113 @@ mod restricted {
     const CREATE_UNICODE_ENVIRONMENT: u32 = 0x400;
     const CREATE_NO_WINDOW: u32 = 0x0800_0000;
     const STILL_ACTIVE: u32 = 259;
+    const TOKEN_USER_CLASS: u32 = 1;
+    const TOKEN_DEFAULT_DACL_CLASS: u32 = 6;
+    const ACL_SIZE_INFORMATION_CLASS: u32 = 2;
+    const ACL_REVISION: u32 = 2;
+    const OBJECT_INHERIT_ACE: u32 = 0x1;
+    const GENERIC_ALL: u32 = 0x1000_0000;
+    const MAXDWORD: u32 = u32::MAX;
+    /// `sizeof(ACCESS_ALLOWED_ACE) - sizeof(DWORD)`: the ACE header and mask,
+    /// before the SID that replaces its `SidStart` placeholder.
+    const ACCESS_ALLOWED_ACE_FIXED: u32 = 8;
+
+    #[repr(C)]
+    #[allow(dead_code)] // layout mirrors the Win32 struct; not every field is read
+    struct AclSizeInformation {
+        ace_count: u32,
+        bytes_in_use: u32,
+        bytes_free: u32,
+    }
+
+    #[repr(C)]
+    #[allow(dead_code)] // layout mirrors the Win32 struct; not every field is read
+    struct AceHeader {
+        ace_type: u8,
+        ace_flags: u8,
+        ace_size: u16,
+    }
+
+    /// A token information class read into an 8-byte aligned buffer.
+    fn token_information(token: HANDLE, class: u32) -> std::io::Result<Vec<u64>> {
+        let mut needed = 0u32;
+        // SAFETY: a size query with a null buffer; only `needed` is written.
+        unsafe { GetTokenInformation(token, class, std::ptr::null_mut(), 0, &mut needed) };
+        if needed == 0 {
+            return Err(std::io::Error::last_os_error());
+        }
+        let mut buffer = vec![0u64; (needed as usize).div_ceil(8)];
+        // SAFETY: the buffer holds at least `needed` bytes.
+        check(unsafe {
+            GetTokenInformation(
+                token,
+                class,
+                buffer.as_mut_ptr().cast(),
+                needed,
+                &mut needed,
+            )
+        })?;
+        Ok(buffer)
+    }
+
+    /// Grant the token's own user full access in its default DACL, as
+    /// PostgreSQL's `pg_ctl` does after restricting a token. When elevated, the
+    /// default DACL names only Administrators and SYSTEM; with Administrators
+    /// now deny-only, the postmaster could not open the shared memory and events
+    /// it creates itself.
+    fn add_user_to_default_dacl(token: HANDLE) -> std::io::Result<()> {
+        let user = token_information(token, TOKEN_USER_CLASS)?;
+        // TOKEN_USER starts with SID_AND_ATTRIBUTES, whose first field is the SID.
+        let user_sid = unsafe { *(user.as_ptr() as *const PSID) };
+        let default = token_information(token, TOKEN_DEFAULT_DACL_CLASS)?;
+        // TOKEN_DEFAULT_DACL is a single pointer to the ACL.
+        let old_acl = unsafe { *(default.as_ptr() as *const *mut c_void) };
+        let mut sizes = AclSizeInformation {
+            ace_count: 0,
+            bytes_in_use: 0,
+            bytes_free: 0,
+        };
+        if !old_acl.is_null() {
+            // SAFETY: `old_acl` points into `default`, alive for this call.
+            check(unsafe {
+                GetAclInformation(
+                    old_acl,
+                    (&mut sizes as *mut AclSizeInformation).cast(),
+                    std::mem::size_of::<AclSizeInformation>() as u32,
+                    ACL_SIZE_INFORMATION_CLASS,
+                )
+            })?;
+        }
+        // SAFETY: `user_sid` points into `user`, alive for this function.
+        let sid_length = unsafe { GetLengthSid(user_sid) };
+        let acl_size = sizes.bytes_in_use.max(8) + ACCESS_ALLOWED_ACE_FIXED + sid_length;
+        let mut new_acl = vec![0u64; (acl_size as usize).div_ceil(8)];
+        let acl = new_acl.as_mut_ptr().cast::<c_void>();
+        // SAFETY: `acl` has room for `acl_size` bytes.
+        check(unsafe { InitializeAcl(acl, acl_size, ACL_REVISION) })?;
+        for index in 0..sizes.ace_count {
+            let mut ace: *mut c_void = std::ptr::null_mut();
+            // SAFETY: `index` is below the ACE count of `old_acl`.
+            check(unsafe { GetAce(old_acl, index, &mut ace) })?;
+            let size = unsafe { (*(ace as *const AceHeader)).ace_size };
+            // SAFETY: copies one existing ACE of `size` bytes into `acl`.
+            check(unsafe { AddAce(acl, ACL_REVISION, MAXDWORD, ace, u32::from(size)) })?;
+        }
+        // SAFETY: `acl` was sized for one more ACE carrying `user_sid`.
+        check(unsafe {
+            AddAccessAllowedAceEx(acl, ACL_REVISION, OBJECT_INHERIT_ACE, GENERIC_ALL, user_sid)
+        })?;
+        let replacement: *mut c_void = acl;
+        // SAFETY: TOKEN_DEFAULT_DACL is one pointer; `acl` outlives the call.
+        check(unsafe {
+            SetTokenInformation(
+                token,
+                TOKEN_DEFAULT_DACL_CLASS,
+                (&replacement as *const *mut c_void).cast(),
+                std::mem::size_of::<*mut c_void>() as u32,
+            )
+        })
+    }
 
     /// Closes a handle (or frees a SID) when dropped, on every return path.
     struct Owned(HANDLE);
@@ -1429,6 +1602,7 @@ mod restricted {
                 )
             })?;
             let restricted = Owned(restricted);
+            add_user_to_default_dacl(restricted.0)?;
 
             // The child's standard handles: no input, no console output,
             // stderr to the server log when one was opened.
@@ -1711,8 +1885,10 @@ impl EmbeddedCluster {
                 .await?;
         interrupt.check()?;
         if !status.success() {
+            let hint = windows_restricted_access_hint(status, &self.settings.installation_dir)
+                .unwrap_or_default();
             return Err(format!(
-                "initialize PostgreSQL exited with {status}; the data directory was preserved"
+                "initialize PostgreSQL exited with {status}; the data directory was preserved{hint}"
             ));
         }
         if !self.initialized_cluster()? {
@@ -1782,7 +1958,11 @@ impl EmbeddedCluster {
                 .try_wait()
                 .map_err(|err| format!("PostgreSQL startup status: {err}"))?
             {
-                return Err(postgres_startup_failure(status, &log_path));
+                return Err(postgres_startup_failure(
+                    status,
+                    &log_path,
+                    &self.settings.installation_dir,
+                ));
             }
             if self.owns_postmaster_pid() {
                 let dsn = self.settings.url("postgres");
@@ -2485,6 +2665,23 @@ CertUtil: -hashfile command completed successfully.
             Ok(_) => panic!("pre-10 cluster versions require a separate supported layout"),
         };
         assert!(refusal.contains("major version 10 or later"));
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn a_windows_loader_failure_names_the_directory_and_the_fix() {
+        use std::os::windows::process::ExitStatusExt;
+        let dir = Path::new(r"C:\udb\cache\pg\bin");
+        let hint =
+            windows_restricted_access_hint(std::process::ExitStatus::from_raw(0xC000_0135), dir)
+                .expect("STATUS_DLL_NOT_FOUND is explained");
+        assert!(
+            hint.contains("icacls") && hint.contains(r"C:\udb\cache\pg\bin"),
+            "{hint}"
+        );
+        assert!(
+            windows_restricted_access_hint(std::process::ExitStatus::from_raw(1), dir).is_none()
+        );
     }
 
     #[cfg(feature = "postgres")]

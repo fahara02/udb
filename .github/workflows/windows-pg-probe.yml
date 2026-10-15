@@ -1,0 +1,141 @@
+name: Probe · Windows embedded PostgreSQL
+
+# Manual diagnostic for `udb dev up --embedded` on Windows runners: runs the
+# exact PostgreSQL archive the dev command downloads, and optionally a
+# CI-built udb.exe, so a loader or permission failure (e.g. STATUS_DLL_NOT_FOUND
+# from initdb) can be narrowed down in minutes instead of a full CI round.
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "PostgreSQL binaries release"
+        default: "16.4.0"
+      udb_run_id:
+        description: "CI run id whose udb-embedded-dev-Windows artifact to exercise (optional)"
+        default: ""
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  probe:
+    name: Probe embedded PostgreSQL archive
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download and extract the archive
+        shell: pwsh
+        env:
+          PG_VERSION: ${{ github.event.inputs.version }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $name = "postgresql-$env:PG_VERSION-x86_64-pc-windows-msvc"
+          $root = Join-Path $env:RUNNER_TEMP 'pgprobe'
+          New-Item -ItemType Directory -Force $root | Out-Null
+          Invoke-WebRequest "https://github.com/theseus-rs/postgresql-binaries/releases/download/$env:PG_VERSION/$name.tar.gz" -OutFile "$root\pg.tar.gz"
+          tar -xzf "$root\pg.tar.gz" -C $root
+          "PGBIN=$root\$name\bin" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+
+      - name: Runtime DLLs the archive does not ship
+        shell: pwsh
+        run: |
+          foreach ($dll in 'vcruntime140.dll', 'vcruntime140_1.dll', 'msvcp140.dll', 'ucrtbase.dll') {
+            "{0,-20} System32: {1}  in bin: {2}" -f $dll, (Test-Path "$env:WINDIR\System32\$dll"), (Test-Path "$env:PGBIN\$dll")
+          }
+
+      - name: initdb from the archive, elevated
+        shell: pwsh
+        run: |
+          $data = Join-Path $env:RUNNER_TEMP 'pgprobe-data'
+          Set-Content -Path "$env:RUNNER_TEMP\pgpass" -Value 'probe'
+          & "$env:PGBIN\initdb.exe" --pgdata $data --username postgres --auth password --pwfile "$env:RUNNER_TEMP\pgpass" --encoding UTF8 | Select-Object -Last 3
+          "initdb exit: $LASTEXITCODE (0x{0:x})" -f $LASTEXITCODE
+
+      - name: Download the CI-built udb.exe
+        if: github.event.inputs.udb_run_id != ''
+        uses: actions/download-artifact@v4
+        with:
+          name: udb-embedded-dev-Windows
+          path: udbbin
+          run-id: ${{ github.event.inputs.udb_run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: udb dev up --embedded, as the CI checker runs it
+        if: github.event.inputs.udb_run_id != ''
+        shell: pwsh
+        run: |
+          $project = Join-Path $env:TEMP ('udb-probe-' + [guid]::NewGuid().ToString('N'))
+          New-Item -ItemType Directory -Force "$project\proto" | Out-Null
+          $env:UDB_HOME = "$project\cache"
+          $env:UDB_PROTO_ROOT = "$project\proto"
+          Set-Location $project
+          $udb = Resolve-Path "$env:GITHUB_WORKSPACE\udbbin\udb.exe"
+          $job = Start-Process -FilePath $udb -ArgumentList 'dev','up','--embedded' -PassThru -NoNewWindow -RedirectStandardError "$project\dev.err" -RedirectStandardOutput "$project\dev.out"
+          if (-not $job.WaitForExit(240000)) { Stop-Process -Id $job.Id -Force; "dev did not exit in 240s" }
+          "dev exit: $($job.ExitCode)"
+          Get-Content "$project\dev.err", "$project\dev.out" -ErrorAction SilentlyContinue |
+            Where-Object { $_ -notmatch '(?i)password|secret' } | Select-Object -Last 25
+          $bin = Get-ChildItem -Path "$project\cache" -Recurse -Filter initdb.exe -ErrorAction SilentlyContinue | Select-Object -First 1
+          if ($bin) {
+            "--- initdb from udb's own cache: $($bin.DirectoryName)"
+            & $bin.FullName --version; "cached initdb --version exit: $LASTEXITCODE (0x{0:x})" -f $LASTEXITCODE
+            Set-Content -Path "$project\pgpass2" -Value 'probe'
+            & $bin.FullName --pgdata "$project\direct-data" --username postgres --auth password --pwfile "$project\pgpass2" --encoding UTF8 | Select-Object -Last 3
+            "cached initdb exit: $LASTEXITCODE (0x{0:x})" -f $LASTEXITCODE
+            "--- dll count in cached bin: $((Get-ChildItem $bin.DirectoryName -Filter *.dll).Count)"
+            icacls $bin.FullName
+            icacls $bin.DirectoryName
+          } else {
+            "no initdb.exe under $project\cache"
+          }
+          Get-Content "$project\.udb\dev\postgres.log" -ErrorAction SilentlyContinue | Select-Object -Last 10
+
+      - name: Set up Python like the CI checker
+        if: github.event.inputs.udb_run_id != ''
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Set up Go like the CI checker
+        if: github.event.inputs.udb_run_id != ''
+        uses: ./.github/actions/setup-sdk-toolchains
+        with:
+          go: "true"
+
+      - name: Record the PowerShell environment
+        if: github.event.inputs.udb_run_id != ''
+        shell: pwsh
+        run: |
+          Get-ChildItem env: | ForEach-Object { "$($_.Name)=$($_.Value)" } | Set-Content -Encoding utf8 "$env:RUNNER_TEMP\pwsh-env.txt"
+
+      - name: initdb from Python, by wrapper and environment
+        if: github.event.inputs.udb_run_id != ''
+        shell: python
+        run: |
+          import os, subprocess, tempfile
+          pg_bin = os.environ["PGBIN"]
+          initdb = os.path.join(pg_bin, "initdb.exe")
+          pw_env = {}
+          for line in open(os.path.join(os.environ["RUNNER_TEMP"], "pwsh-env.txt"), encoding="utf-8-sig"):
+              key, _, value = line.rstrip("\n").partition("=")
+              pw_env[key] = value
+          py_keys = {k.upper() for k in os.environ}
+          pw_keys = {k.upper() for k in pw_env}
+          print("=== only in Python env:", sorted(py_keys - pw_keys))
+          print("=== only in PowerShell env:", sorted(pw_keys - py_keys))
+          def run(label, argv, env):
+              data = tempfile.mkdtemp(prefix="pgv5-")
+              pw = os.path.join(data, "pw")
+              open(pw, "w").write("probe")
+              args = ["--pgdata", os.path.join(data, "d"), "--username", "postgres", "--auth", "password", "--pwfile", pw, "--encoding", "UTF8"]
+              rc = subprocess.run(argv + args, env=env, capture_output=True, text=True)
+              print("=== %s: exit 0x%x %s" % (label, rc.returncode & 0xFFFFFFFF, (rc.stderr or "").strip().splitlines()[-1:] ))
+          run("python-direct", [initdb], os.environ.copy())
+          run("python-pwsh-env", [initdb], pw_env)
+          minimal = {k: os.environ[k] for k in ("SYSTEMROOT", "WINDIR", "TEMP", "TMP", "USERPROFILE", "PATH", "COMSPEC", "SYSTEMDRIVE") if k in os.environ}
+          run("python-minimal-env", [initdb], minimal)
+          run("python-via-cmd", ["cmd", "/c", initdb], os.environ.copy())

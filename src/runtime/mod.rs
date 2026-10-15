@@ -9,6 +9,7 @@ pub mod core;
 pub mod descriptor_diff; // F6: native-service contract version + descriptor-diff classifier
 pub mod descriptor_manifest;
 mod encryption;
+pub use encryption::validate_encryption_key;
 pub(crate) mod error_reasons;
 pub mod evidence_export; // 4.4: leader-elected compliance-evidence export worker (chain-hashed JSONL → object store)
 pub(crate) mod executor_utils;
