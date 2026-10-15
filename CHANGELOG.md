@@ -60,6 +60,15 @@ release line was tagged.
   a member commits the removal, a group's public ratchet tree still holds the
   erased devices' leaves; the receipt says so under `not_covered`.
 
+- **`udb messaging bench-fixture`.** An offline command that mints, with the
+  `udb-mls` client crate, the MLS objects the MessagingService benchmark rows
+  need for one tenant and subject (devices, KeyPackages, groups, a commit with
+  its Welcome, a PrivateMessage), plus the setup requests a seed sends first.
+  `scripts/prepare-benchmark-fixtures.py` runs it after every SDK's database
+  reset, so all fifteen messaging rows run their success path in every SDK
+  harness. `udb` now depends on `udb-mls`; the crates release publishes
+  `udb-mls` first.
+
 ### Fixed
 
 - **The Python live harness covers MessagingService.** Its service list

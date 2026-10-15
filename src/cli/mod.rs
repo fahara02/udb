@@ -1890,6 +1890,7 @@ pub fn run() {
         | Command::Native { .. }
         | Command::AppInit { .. }
         | Command::CompatMatrix
+        | Command::MessagingBenchFixture { .. }
         | Command::Env { .. } => {
             // Already handled before proto parsing above; unreachable.
         }
