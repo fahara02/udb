@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 """CI proof for embedded startup, shared Go conformance and persisted restart."""
+import contextlib
 import hashlib
 import json
 import re
 import os
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+import shutil
 import signal
 import socket
 import subprocess
@@ -17,6 +19,24 @@ import uuid
 
 
 PORTS = (54329, 50051, 50061)
+
+
+@contextlib.contextmanager
+def project_directory(prefix):
+    """A scratch project directory with ordinary inherited permissions.
+
+    `tempfile.TemporaryDirectory` on Windows (Python 3.12+) creates an owner-only
+    ACL. On an elevated runner the owner is the Administrators group, and
+    PostgreSQL re-launches itself under a token where that group is deny-only,
+    so it could not read its own binaries or files there (initdb then fails
+    with STATUS_DLL_NOT_FOUND). A user's real project directory inherits normal
+    permissions; so does this one."""
+    path = Path(tempfile.gettempdir()) / f"{prefix}{uuid.uuid4().hex[:12]}"
+    path.mkdir()
+    try:
+        yield str(path)
+    finally:
+        shutil.rmtree(path, ignore_errors=True)
 
 
 def start(command, project, environment, log):
@@ -60,7 +80,7 @@ def interrupted_download(command, environment, log):
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
     try:
-        with tempfile.TemporaryDirectory(prefix="udb-download-interrupt-") as temp:
+        with project_directory("udb-download-interrupt-") as temp:
             project = Path(temp)
             test_env = environment | {
                 "UDB_HOME": str(project / "cache"),
@@ -86,7 +106,7 @@ def interrupted_download(command, environment, log):
 
 
 def interrupted_startup(command, environment, log):
-    with tempfile.TemporaryDirectory(prefix="udb-startup-interrupt-") as temp:
+    with project_directory("udb-startup-interrupt-") as temp:
         project = Path(temp)
         proto = project / "proto"
         proto.mkdir()
@@ -199,6 +219,42 @@ def receipt_selftest():
 
 
 
+SECRET_TOKEN = re.compile(r"[A-Za-z0-9+/=_-]{24,}")
+DSN_CREDENTIALS = re.compile(r"://[^@\s/]*@")
+
+
+def sanitized_tail(text, limit=15):
+    """Last diagnostic lines that are safe to publish: lines naming a password
+    are dropped, DSN credentials and long token-like strings are masked."""
+    kept = []
+    for line in text.splitlines():
+        line = line.strip()
+        if not line or "password" in line.lower() or "secret" in line.lower():
+            continue
+        line = DSN_CREDENTIALS.sub("://***@", line)
+        line = SECRET_TOKEN.sub("***", line)
+        kept.append(line[:300])
+    return kept[-limit:]
+
+
+def startup_failure(code, log, project):
+    """A publishable explanation of a dev process that exited during startup."""
+    log.flush()
+    parts = [f"embedded dev exited during startup: {code}"]
+    try:
+        dev_lines = sanitized_tail(Path(log.name).read_text(encoding="utf-8", errors="replace"))
+    except OSError:
+        dev_lines = []
+    if dev_lines:
+        parts.append("dev output: " + " | ".join(dev_lines))
+    postgres_log = project / ".udb" / "dev" / "postgres.log"
+    if postgres_log.is_file():
+        pg_lines = sanitized_tail(postgres_log.read_text(encoding="utf-8", errors="replace"), 8)
+        if pg_lines:
+            parts.append("postgres.log: " + " | ".join(pg_lines))
+    return RuntimeError("; ".join(parts))
+
+
 def main(proof):
     def phase(name):
         if proof["current_phase"] != "prepare":
@@ -213,7 +269,7 @@ def main(proof):
     with binary.open("rb") as source:
         proof["binary_sha256"] = hashlib.file_digest(source, "sha256").hexdigest()
     proof["source_commit"] = os.environ.get("GITHUB_SHA", "")
-    with tempfile.TemporaryDirectory(prefix="udb-embedded-") as temp, log_path.open("w") as log:
+    with project_directory("udb-embedded-") as temp, log_path.open("w") as log:
         project = Path(temp)
         environment = os.environ.copy()
         environment["UDB_HOME"] = str(project / "cache")
@@ -237,7 +293,7 @@ def main(proof):
                 deadline = time.monotonic() + 600
                 while True:
                     if process.poll() is not None:
-                        raise RuntimeError(f"embedded dev exited during startup: {process.returncode}; see {log_path}")
+                        raise startup_failure(process.returncode, log, project)
                     ready = marker.exists()
                     if ready:
                         try:

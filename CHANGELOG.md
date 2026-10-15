@@ -151,7 +151,18 @@ the reason, not the text.
   memory limit (~19 MiB per Argon2id hash), and the broker logs a startup
   warning naming `UDB_PASSWORD_KDF_MAX_CONCURRENCY` when the limit shaped it.
 
-## [0.5.34] - Unreleased
+# Changelog
+
+All notable user-facing and release-gating changes are tracked here. UDB follows
+the package version in `Cargo.toml`; historical v0.3.2 audit material is folded
+into the v0.3.x entries because the codebase advanced to v0.3.7 before that
+release line was tagged.
+
+## [0.5.34] - 2026-10-15
+
+### Breaking for callers
+
+- None.
 
 ### Added
 
