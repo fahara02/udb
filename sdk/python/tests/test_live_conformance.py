@@ -43,6 +43,7 @@ from udb.core.webrtc.services.v1 import webrtc_service_pb2 as webrtc_pb, webrtc_
 # manifest bodies need (mirrors the Go perf seed).
 from udb.core.vault.services.v1 import vault_service_pb2 as vault_pb
 from udb.core.lock.services.v1 import lock_service_pb2 as lock_pb
+from udb.core.messaging.services.v1 import messaging_service_pb2 as messaging_pb
 from udb.core.workflow.services.v1 import workflow_service_pb2 as workflow_pb
 from udb.core.scheduler.services.v1 import scheduler_service_pb2 as scheduler_pb
 from udb.core.webhook.services.v1 import webhook_service_pb2 as webhook_pb
@@ -73,6 +74,7 @@ from udb_client.generated_client import (
     IdentityProviderServiceClient,
     LiveQueryServiceClient,
     LockServiceClient,
+    MessagingServiceClient,
     MeteringServiceClient,
     NotificationServiceClient,
     PeerServiceClient,
@@ -112,6 +114,7 @@ SERVICE_CLIENTS = [
     IdentityProviderServiceClient,
     LiveQueryServiceClient,
     LockServiceClient,
+    MessagingServiceClient,
     MeteringServiceClient,
     NotificationServiceClient,
     SchedulerServiceClient,
@@ -1516,6 +1519,7 @@ DOC_BY_CLIENT = {
     "IdentityProviderServiceClient": "idp.md",
     "LiveQueryServiceClient": "livequery.md",
     "LockServiceClient": "lock.md",
+    "MessagingServiceClient": "messaging.md",
     "MeteringServiceClient": "metering.md",
     "NotificationServiceClient": "notification.md",
     "SchedulerServiceClient": "scheduler.md",
@@ -2535,6 +2539,28 @@ class PerfFixtures:
                 return v
         return None
 
+#: The `mls_*` bench-body fixtures `scripts/prepare-benchmark-fixtures.py`
+#: copies from `udb messaging bench-fixture` (same list in every harness).
+MESSAGING_FIXTURE_KEYS = (
+    "mls_subject_id",
+    "mls_device_id",
+    "mls_peer_device_id",
+    "mls_revoke_device_id",
+    "mls_register_device_id",
+    "mls_register_signature_key",
+    "mls_register_credential",
+    "mls_key_package",
+    "mls_group_id",
+    "mls_message_ciphertext",
+    "mls_commit_group_id",
+    "mls_commit",
+    "mls_welcome",
+    "mls_new_group_id",
+    "mls_new_group_info",
+    "mls_new_ratchet_tree",
+)
+
+
 def perf_seed(
     clients: dict,
     platform_clients: dict,
@@ -2565,6 +2591,12 @@ def perf_seed(
             if not isinstance(value, str) or not value:
                 raise ValueError(f"prepared benchmark fixtures missing {key}")
             fix.set(key, value)
+        # MessagingService MLS objects minted by `udb messaging bench-fixture`;
+        # absent when the benchmark broker predates the messaging service.
+        for key in MESSAGING_FIXTURE_KEYS:
+            value = prepared.get("fixtures", {}).get(key)
+            if isinstance(value, str) and value:
+                fix.set(key, value)
     md = meta.to_grpc_metadata()
     platform_md = platform_meta.to_grpc_metadata()
     cleanups: list = []

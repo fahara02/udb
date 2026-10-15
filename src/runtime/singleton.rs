@@ -112,6 +112,11 @@ pub const WORKER_SEARCH_REINDEX: &str = "udb:search:reindex";
 /// stop counting against tenant quotas without double-expiring across replicas.
 /// The pass body is `service::lock_service::run_lock_expiry_once`.
 pub const WORKER_LOCK_EXPIRY_REAPER: &str = "udb:lock:expiry-reaper";
+/// Leader-elected messaging inbox retention (0.6.0). Only the lease holder
+/// deletes inbox rows that were acknowledged or outlived `UDB_MESSAGING_INBOX_TTL`
+/// (plus spent KeyPackages), so retention runs once cluster-wide. The pass body
+/// is `service::messaging_service::run_inbox_retention_all_projects`.
+pub const WORKER_MESSAGING_INBOX_RETENTION: &str = "udb:messaging:inbox-retention";
 /// Leader-elected backup maintenance: enforces each enabled `BackupPolicy`'s
 /// retention (prunes old runs + their objects) and fires due scheduled backups.
 pub const WORKER_BACKUP_RETENTION: &str = "udb:backup:retention";

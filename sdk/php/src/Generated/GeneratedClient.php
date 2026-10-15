@@ -18,10 +18,10 @@ use Grpc\ChannelCredentials;
  * the embedded proto descriptor set by `udb sdk generate`, so its surface can
  * never drift from the wire contract.
  *
- *   UDB version ...... 0.5.34
+ *   UDB version ...... 0.5.33
  *   Protocol version . 1.0.0
- *   Services ......... 28
- *   RPCs ............. 388
+ *   Services ......... 29
+ *   RPCs ............. 404
  *
  * This class COMPOSES WITH the hand-written layer; it does not replace it:
  *   - it reuses {@see UdbMetadata} for the eight broker headers,
@@ -267,6 +267,21 @@ final class GeneratedClient
         "ListLocks" => "read_only",
         "ReleaseLock" => "mutation",
         "RenewLock" => "mutation",
+        "AckInbox" => "mutation",
+        "ClaimKeyPackages" => "mutation",
+        "CreateGroup" => "mutation",
+        "DeleteMessagingBackup" => "destructive",
+        "GetGroupInfo" => "read_only",
+        "GetKeyPackageStock" => "read_only",
+        "GetMessagingBackup" => "read_only",
+        "ListMessagingDevices" => "read_only",
+        "PublishKeyPackages" => "mutation",
+        "PutMessagingBackup" => "mutation",
+        "RegisterMessagingDevice" => "mutation",
+        "RevokeMessagingDevice" => "destructive",
+        "SendMessage" => "mutation",
+        "StreamInbox" => "read_only",
+        "SubmitCommit" => "mutation",
         "CheckQuota" => "read_only",
         "GetQuota" => "read_only",
         "ListQuotas" => "read_only",
@@ -431,6 +446,7 @@ final class GeneratedClient
         "PublishCDC" => "mutation",
         "PurgeSubject" => "destructive",
         "PutObject" => "mutation",
+        "PutPolicy" => "destructive",
         "QuarantineDlqEvent" => "mutation",
         "ReloadPolicies" => "destructive",
         "ReplayDlqEvent" => "mutation",
@@ -664,6 +680,21 @@ final class GeneratedClient
         "LockService/ListLocks" => "read_only",
         "LockService/ReleaseLock" => "mutation",
         "LockService/RenewLock" => "mutation",
+        "MessagingService/AckInbox" => "mutation",
+        "MessagingService/ClaimKeyPackages" => "mutation",
+        "MessagingService/CreateGroup" => "mutation",
+        "MessagingService/DeleteMessagingBackup" => "destructive",
+        "MessagingService/GetGroupInfo" => "read_only",
+        "MessagingService/GetKeyPackageStock" => "read_only",
+        "MessagingService/GetMessagingBackup" => "read_only",
+        "MessagingService/ListMessagingDevices" => "read_only",
+        "MessagingService/PublishKeyPackages" => "mutation",
+        "MessagingService/PutMessagingBackup" => "mutation",
+        "MessagingService/RegisterMessagingDevice" => "mutation",
+        "MessagingService/RevokeMessagingDevice" => "destructive",
+        "MessagingService/SendMessage" => "mutation",
+        "MessagingService/StreamInbox" => "read_only",
+        "MessagingService/SubmitCommit" => "mutation",
         "MeteringService/CheckQuota" => "read_only",
         "MeteringService/GetQuota" => "read_only",
         "MeteringService/ListQuotas" => "read_only",
@@ -828,6 +859,7 @@ final class GeneratedClient
         "DataBroker/PublishCDC" => "mutation",
         "DataBroker/PurgeSubject" => "destructive",
         "DataBroker/PutObject" => "mutation",
+        "DataBroker/PutPolicy" => "destructive",
         "DataBroker/QuarantineDlqEvent" => "mutation",
         "DataBroker/ReloadPolicies" => "destructive",
         "DataBroker/ReplayDlqEvent" => "mutation",
@@ -1061,6 +1093,21 @@ final class GeneratedClient
         "LockService/ListLocks" => "list_locks",
         "LockService/ReleaseLock" => "release_lock",
         "LockService/RenewLock" => "renew_lock",
+        "MessagingService/AckInbox" => "ack_inbox",
+        "MessagingService/ClaimKeyPackages" => "claim_key_packages",
+        "MessagingService/CreateGroup" => "create_group",
+        "MessagingService/DeleteMessagingBackup" => "delete_messaging_backup",
+        "MessagingService/GetGroupInfo" => "get_group_info",
+        "MessagingService/GetKeyPackageStock" => "get_key_package_stock",
+        "MessagingService/GetMessagingBackup" => "get_messaging_backup",
+        "MessagingService/ListMessagingDevices" => "list_messaging_devices",
+        "MessagingService/PublishKeyPackages" => "publish_key_packages",
+        "MessagingService/PutMessagingBackup" => "put_messaging_backup",
+        "MessagingService/RegisterMessagingDevice" => "register_messaging_device",
+        "MessagingService/RevokeMessagingDevice" => "revoke_messaging_device",
+        "MessagingService/SendMessage" => "send_message",
+        "MessagingService/StreamInbox" => "stream_inbox",
+        "MessagingService/SubmitCommit" => "submit_commit",
         "MeteringService/CheckQuota" => "check_quota",
         "MeteringService/GetQuota" => "get_quota",
         "MeteringService/ListQuotas" => "list_quotas",
@@ -1225,6 +1272,7 @@ final class GeneratedClient
         "DataBroker/PublishCDC" => "publish_cdc",
         "DataBroker/PurgeSubject" => "purge_subject",
         "DataBroker/PutObject" => "put_object",
+        "DataBroker/PutPolicy" => "put_policy",
         "DataBroker/QuarantineDlqEvent" => "quarantine_dlq_event",
         "DataBroker/ReloadPolicies" => "reload_policies",
         "DataBroker/ReplayDlqEvent" => "replay_dlq_event",
@@ -1457,6 +1505,21 @@ final class GeneratedClient
         "LockService/ListLocks" => "listLocks",
         "LockService/ReleaseLock" => "releaseLock",
         "LockService/RenewLock" => "renewLock",
+        "MessagingService/AckInbox" => "messagingAckInbox",
+        "MessagingService/ClaimKeyPackages" => "messagingClaimKeyPackages",
+        "MessagingService/CreateGroup" => "messagingCreateGroup",
+        "MessagingService/DeleteMessagingBackup" => "messagingDeleteMessagingBackup",
+        "MessagingService/GetGroupInfo" => "messagingGetGroupInfo",
+        "MessagingService/GetKeyPackageStock" => "messagingGetKeyPackageStock",
+        "MessagingService/GetMessagingBackup" => "messagingGetMessagingBackup",
+        "MessagingService/ListMessagingDevices" => "messagingListMessagingDevices",
+        "MessagingService/PublishKeyPackages" => "messagingPublishKeyPackages",
+        "MessagingService/PutMessagingBackup" => "messagingPutMessagingBackup",
+        "MessagingService/RegisterMessagingDevice" => "messagingRegisterMessagingDevice",
+        "MessagingService/RevokeMessagingDevice" => "messagingRevokeMessagingDevice",
+        "MessagingService/SendMessage" => "messagingSendMessage",
+        "MessagingService/StreamInbox" => "messagingStreamInbox",
+        "MessagingService/SubmitCommit" => "messagingSubmitCommit",
         "MeteringService/CheckQuota" => "checkQuota",
         "MeteringService/GetQuota" => "getQuota",
         "MeteringService/ListQuotas" => "listQuotas",
@@ -1621,6 +1684,7 @@ final class GeneratedClient
         "DataBroker/PublishCDC" => "publishCdc",
         "DataBroker/PurgeSubject" => "purgeSubject",
         "DataBroker/PutObject" => "putObject",
+        "DataBroker/PutPolicy" => "putPolicy",
         "DataBroker/QuarantineDlqEvent" => "quarantineDlqEvent",
         "DataBroker/ReloadPolicies" => "reloadPolicies",
         "DataBroker/ReplayDlqEvent" => "replayDlqEvent",
@@ -1853,6 +1917,21 @@ final class GeneratedClient
         "LockService/ListLocks" => "get",
         "LockService/ReleaseLock" => "post",
         "LockService/RenewLock" => "post",
+        "MessagingService/AckInbox" => "post",
+        "MessagingService/ClaimKeyPackages" => "post",
+        "MessagingService/CreateGroup" => "post",
+        "MessagingService/DeleteMessagingBackup" => "delete",
+        "MessagingService/GetGroupInfo" => "get",
+        "MessagingService/GetKeyPackageStock" => "get",
+        "MessagingService/GetMessagingBackup" => "get",
+        "MessagingService/ListMessagingDevices" => "get",
+        "MessagingService/PublishKeyPackages" => "post",
+        "MessagingService/PutMessagingBackup" => "put",
+        "MessagingService/RegisterMessagingDevice" => "post",
+        "MessagingService/RevokeMessagingDevice" => "post",
+        "MessagingService/SendMessage" => "post",
+        "MessagingService/StreamInbox" => "post",
+        "MessagingService/SubmitCommit" => "post",
         "MeteringService/CheckQuota" => "post",
         "MeteringService/GetQuota" => "get",
         "MeteringService/ListQuotas" => "get",
@@ -2017,6 +2096,7 @@ final class GeneratedClient
         "DataBroker/PublishCDC" => "",
         "DataBroker/PurgeSubject" => "",
         "DataBroker/PutObject" => "",
+        "DataBroker/PutPolicy" => "",
         "DataBroker/QuarantineDlqEvent" => "",
         "DataBroker/ReloadPolicies" => "",
         "DataBroker/ReplayDlqEvent" => "",
@@ -2249,6 +2329,21 @@ final class GeneratedClient
         "LockService/ListLocks" => "/v1/locks",
         "LockService/ReleaseLock" => "/v1/locks:release",
         "LockService/RenewLock" => "/v1/locks:renew",
+        "MessagingService/AckInbox" => "/v1/messaging/inbox:ack",
+        "MessagingService/ClaimKeyPackages" => "/v1/messaging/key-packages:claim",
+        "MessagingService/CreateGroup" => "/v1/messaging/groups",
+        "MessagingService/DeleteMessagingBackup" => "/v1/messaging/backups/{backup_id}",
+        "MessagingService/GetGroupInfo" => "/v1/messaging/groups/{group_id}/info",
+        "MessagingService/GetKeyPackageStock" => "/v1/messaging/devices/{device_id}/key-package-stock",
+        "MessagingService/GetMessagingBackup" => "/v1/messaging/backups/{backup_id}",
+        "MessagingService/ListMessagingDevices" => "/v1/messaging/devices",
+        "MessagingService/PublishKeyPackages" => "/v1/messaging/devices/{device_id}/key-packages",
+        "MessagingService/PutMessagingBackup" => "/v1/messaging/backups/{backup_id}",
+        "MessagingService/RegisterMessagingDevice" => "/v1/messaging/devices",
+        "MessagingService/RevokeMessagingDevice" => "/v1/messaging/devices/{device_id}:revoke",
+        "MessagingService/SendMessage" => "/v1/messaging/groups/{group_id}/messages",
+        "MessagingService/StreamInbox" => "/v1/messaging/inbox:stream",
+        "MessagingService/SubmitCommit" => "/v1/messaging/groups/{group_id}:commit",
         "MeteringService/CheckQuota" => "/v1/metering/quotas:check",
         "MeteringService/GetQuota" => "/v1/metering/quotas/{metric}",
         "MeteringService/ListQuotas" => "/v1/metering/quotas",
@@ -2413,6 +2508,7 @@ final class GeneratedClient
         "DataBroker/PublishCDC" => "",
         "DataBroker/PurgeSubject" => "",
         "DataBroker/PutObject" => "",
+        "DataBroker/PutPolicy" => "",
         "DataBroker/QuarantineDlqEvent" => "",
         "DataBroker/ReloadPolicies" => "",
         "DataBroker/ReplayDlqEvent" => "",
@@ -2504,6 +2600,12 @@ final class GeneratedClient
         "udb.core.idp.entity.v1.SamlReplayEntry" => ['table' => "saml_replay_entries", 'primary_keys' => ["saml_replay_entry_id"], 'fields' => ["saml_replay_entry_id", "tenant_id", "provider_id", "assertion_id", "not_on_or_after", "consumed_at"], 'relations_json' => "[]", 'version_field' => "", 'tenant_field' => "tenant_id", 'project_field' => "", 'php_type' => "Udb\Core\Idp\Entity\V1\SamlReplayEntry"],
         "udb.core.idp.entity.v1.ScimDirectoryState" => ['table' => "scim_directory_state", 'primary_keys' => ["scim_directory_state_id"], 'fields' => ["scim_directory_state_id", "tenant_id", "provider_id", "cursor", "last_sync_at", "failure_count", "last_error", "deprovision_policy", "created_at", "updated_at", "created_by"], 'relations_json' => "[{\"name\":\"provider\",\"kind\":\"belongs_to\",\"local_fields\":[\"provider_id\"],\"target_message_type\":\"udb.core.idp.entity.v1.IdentityProvider\",\"target_table\":\"udb_idp.identity_providers\",\"target_fields\":[\"provider_id\"],\"on_delete\":\"CASCADE\",\"on_update\":\"NO ACTION\"}]", 'version_field' => "", 'tenant_field' => "tenant_id", 'project_field' => "", 'php_type' => "Udb\Core\Idp\Entity\V1\ScimDirectoryState"],
         "udb.core.lock.entity.v1.Lock" => ['table' => "locks", 'primary_keys' => ["lock_id"], 'fields' => ["lock_id", "tenant_id", "lock_name", "owner_id", "fencing_token", "lease_ttl_seconds", "status", "acquired_at", "expires_at", "metadata_json", "created_at", "updated_at", "created_by"], 'relations_json' => "[]", 'version_field' => "", 'tenant_field' => "tenant_id", 'project_field' => "", 'php_type' => "Udb\Core\Lock\Entity\V1\Lock"],
+        "udb.core.messaging.entity.v1.MessagingBackup" => ['table' => "backups", 'primary_keys' => ["id"], 'fields' => ["id", "tenant_id", "subject_id", "backup_id", "ciphertext", "size_bytes", "ciphertext_sha256", "version", "created_at", "updated_at", "created_by"], 'relations_json' => "[]", 'version_field' => "version", 'tenant_field' => "tenant_id", 'project_field' => "", 'php_type' => "Udb\Core\Messaging\Entity\V1\MessagingBackup"],
+        "udb.core.messaging.entity.v1.MessagingDevice" => ['table' => "devices", 'primary_keys' => ["id"], 'fields' => ["id", "tenant_id", "subject_id", "device_id", "signature_public_key", "credential", "key_fingerprint", "status", "inbox_head_seq", "acked_seq", "registered_at", "revoked_at", "created_at", "updated_at", "created_by"], 'relations_json' => "[]", 'version_field' => "", 'tenant_field' => "tenant_id", 'project_field' => "", 'php_type' => "Udb\Core\Messaging\Entity\V1\MessagingDevice"],
+        "udb.core.messaging.entity.v1.MessagingGroup" => ['table' => "mls_groups", 'primary_keys' => ["id"], 'fields' => ["id", "tenant_id", "group_id", "epoch", "public_group_state", "group_info", "group_info_epoch", "created_by_device_id", "created_at", "updated_at", "created_by"], 'relations_json' => "[]", 'version_field' => "", 'tenant_field' => "tenant_id", 'project_field' => "", 'php_type' => "Udb\Core\Messaging\Entity\V1\MessagingGroup"],
+        "udb.core.messaging.entity.v1.MessagingGroupMember" => ['table' => "group_members", 'primary_keys' => ["id"], 'fields' => ["id", "tenant_id", "group_id", "device_id", "subject_id", "leaf_index", "joined_epoch", "created_at", "updated_at", "created_by"], 'relations_json' => "[]", 'version_field' => "", 'tenant_field' => "tenant_id", 'project_field' => "", 'php_type' => "Udb\Core\Messaging\Entity\V1\MessagingGroupMember"],
+        "udb.core.messaging.entity.v1.MessagingInboxEntry" => ['table' => "inbox", 'primary_keys' => ["id"], 'fields' => ["id", "tenant_id", "device_id", "seq", "kind", "group_id", "epoch", "payload", "sender_device_id", "client_message_id", "created_at", "acked_at", "updated_at", "created_by"], 'relations_json' => "[]", 'version_field' => "", 'tenant_field' => "tenant_id", 'project_field' => "", 'php_type' => "Udb\Core\Messaging\Entity\V1\MessagingInboxEntry"],
+        "udb.core.messaging.entity.v1.MessagingKeyPackage" => ['table' => "key_packages", 'primary_keys' => ["id"], 'fields' => ["id", "tenant_id", "device_id", "key_package", "key_package_ref", "last_resort", "published_at", "claimed_at", "claimed_by_device_id", "created_at", "updated_at", "created_by"], 'relations_json' => "[]", 'version_field' => "", 'tenant_field' => "tenant_id", 'project_field' => "", 'php_type' => "Udb\Core\Messaging\Entity\V1\MessagingKeyPackage"],
         "udb.core.metering.entity.v1.QuotaRule" => ['table' => "quota_rules", 'primary_keys' => ["quota_id"], 'fields' => ["quota_id", "tenant_id", "project_id", "metric", "limit_value", "window_seconds", "enabled", "revision", "metadata_json", "created_at", "updated_at", "created_by"], 'relations_json' => "[]", 'version_field' => "revision", 'tenant_field' => "tenant_id", 'project_field' => "project_id", 'php_type' => "Udb\Core\Metering\Entity\V1\QuotaRule"],
         "udb.core.metering.entity.v1.UsageEvent" => ['table' => "usage_events", 'primary_keys' => ["usage_id"], 'fields' => ["usage_id", "tenant_id", "principal_id", "method", "unit", "quantity", "occurred_at", "occurred_at_unix", "metadata_json", "created_at", "updated_at", "created_by"], 'relations_json' => "[]", 'version_field' => "", 'tenant_field' => "tenant_id", 'project_field' => "", 'php_type' => "Udb\Core\Metering\Entity\V1\UsageEvent"],
         "udb.core.notification.entity.v1.Notification" => ['table' => "notifications", 'primary_keys' => ["notification_id"], 'fields' => ["notification_id", "recipient_id", "type", "channel", "subject", "message", "template_data", "priority", "status", "scheduled_at", "sent_at", "delivered_at", "read_at", "created_at", "retry_count", "error_message", "tenant_id", "deleted_at", "deleted_by", "updated_at", "created_by"], 'relations_json' => "[]", 'version_field' => "", 'tenant_field' => "tenant_id", 'project_field' => "", 'php_type' => "Udb\Core\Notification\Entity\V1\Notification"],
@@ -2749,6 +2851,21 @@ final class GeneratedClient
         "list_locks" => "listLocks",
         "release_lock" => "releaseLock",
         "renew_lock" => "renewLock",
+        "ack_inbox" => "ackInbox",
+        "claim_key_packages" => "claimKeyPackages",
+        "create_group" => "createGroup",
+        "delete_messaging_backup" => "deleteMessagingBackup",
+        "get_group_info" => "getGroupInfo",
+        "get_key_package_stock" => "getKeyPackageStock",
+        "get_messaging_backup" => "getMessagingBackup",
+        "list_messaging_devices" => "listMessagingDevices",
+        "publish_key_packages" => "publishKeyPackages",
+        "put_messaging_backup" => "putMessagingBackup",
+        "register_messaging_device" => "registerMessagingDevice",
+        "revoke_messaging_device" => "revokeMessagingDevice",
+        "send_message" => "sendMessage",
+        "stream_inbox" => "streamInbox",
+        "submit_commit" => "submitCommit",
         "check_quota" => "checkQuota",
         "get_quota" => "getQuota",
         "list_quotas" => "listQuotas",
@@ -2914,6 +3031,7 @@ final class GeneratedClient
         "publish_c_d_c" => "publishCdc",
         "purge_subject" => "purgeSubject",
         "put_object" => "putObject",
+        "put_policy" => "putPolicy",
         "quarantine_dlq_event" => "quarantineDlqEvent",
         "reload_policies" => "reloadPolicies",
         "replay_dlq_event" => "replayDlqEvent",
@@ -7219,6 +7337,300 @@ final class GeneratedClient
         );
     }
     /**
+     * udb.core.messaging.services.v1.MessagingService / AckInbox (unary), public alias ack_inbox.
+     *
+     * Forwards to {@see stubFor()}->AckInbox(); retries transient codes.
+     * Path: /udb.core.messaging.services.v1.MessagingService/AckInbox
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded AckInboxResponse
+     */
+    public function ackInbox($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'AckInbox',
+            'MessagingService',
+            'udb.core.messaging.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->AckInbox($request, $md, $opts),
+            $metadata,
+            'mutation' === 'read_only',
+            $request,
+        );
+    }
+    /**
+     * udb.core.messaging.services.v1.MessagingService / ClaimKeyPackages (unary), public alias claim_key_packages.
+     *
+     * Forwards to {@see stubFor()}->ClaimKeyPackages(); retries transient codes.
+     * Path: /udb.core.messaging.services.v1.MessagingService/ClaimKeyPackages
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded ClaimKeyPackagesResponse
+     */
+    public function claimKeyPackages($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'ClaimKeyPackages',
+            'MessagingService',
+            'udb.core.messaging.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->ClaimKeyPackages($request, $md, $opts),
+            $metadata,
+            'mutation' === 'read_only',
+            $request,
+        );
+    }
+    /**
+     * udb.core.messaging.services.v1.MessagingService / CreateGroup (unary), public alias create_group.
+     *
+     * Forwards to {@see stubFor()}->CreateGroup(); retries transient codes.
+     * Path: /udb.core.messaging.services.v1.MessagingService/CreateGroup
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded CreateGroupResponse
+     */
+    public function createGroup($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'CreateGroup',
+            'MessagingService',
+            'udb.core.messaging.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->CreateGroup($request, $md, $opts),
+            $metadata,
+            'mutation' === 'read_only',
+            $request,
+        );
+    }
+    /**
+     * udb.core.messaging.services.v1.MessagingService / DeleteMessagingBackup (unary), public alias delete_messaging_backup.
+     *
+     * Forwards to {@see stubFor()}->DeleteMessagingBackup(); retries transient codes.
+     * Path: /udb.core.messaging.services.v1.MessagingService/DeleteMessagingBackup
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded DeleteMessagingBackupResponse
+     */
+    public function deleteMessagingBackup($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'DeleteMessagingBackup',
+            'MessagingService',
+            'udb.core.messaging.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->DeleteMessagingBackup($request, $md, $opts),
+            $metadata,
+            'destructive' === 'read_only',
+            $request,
+        );
+    }
+    /**
+     * udb.core.messaging.services.v1.MessagingService / GetGroupInfo (unary), public alias get_group_info.
+     *
+     * Forwards to {@see stubFor()}->GetGroupInfo(); retries transient codes.
+     * Path: /udb.core.messaging.services.v1.MessagingService/GetGroupInfo
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded GetGroupInfoResponse
+     */
+    public function getGroupInfo($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'GetGroupInfo',
+            'MessagingService',
+            'udb.core.messaging.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->GetGroupInfo($request, $md, $opts),
+            $metadata,
+            'read_only' === 'read_only',
+            $request,
+        );
+    }
+    /**
+     * udb.core.messaging.services.v1.MessagingService / GetKeyPackageStock (unary), public alias get_key_package_stock.
+     *
+     * Forwards to {@see stubFor()}->GetKeyPackageStock(); retries transient codes.
+     * Path: /udb.core.messaging.services.v1.MessagingService/GetKeyPackageStock
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded GetKeyPackageStockResponse
+     */
+    public function getKeyPackageStock($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'GetKeyPackageStock',
+            'MessagingService',
+            'udb.core.messaging.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->GetKeyPackageStock($request, $md, $opts),
+            $metadata,
+            'read_only' === 'read_only',
+            $request,
+        );
+    }
+    /**
+     * udb.core.messaging.services.v1.MessagingService / GetMessagingBackup (unary), public alias get_messaging_backup.
+     *
+     * Forwards to {@see stubFor()}->GetMessagingBackup(); retries transient codes.
+     * Path: /udb.core.messaging.services.v1.MessagingService/GetMessagingBackup
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded GetMessagingBackupResponse
+     */
+    public function getMessagingBackup($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'GetMessagingBackup',
+            'MessagingService',
+            'udb.core.messaging.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->GetMessagingBackup($request, $md, $opts),
+            $metadata,
+            'read_only' === 'read_only',
+            $request,
+        );
+    }
+    /**
+     * udb.core.messaging.services.v1.MessagingService / ListMessagingDevices (unary), public alias list_messaging_devices.
+     *
+     * Forwards to {@see stubFor()}->ListMessagingDevices(); retries transient codes.
+     * Path: /udb.core.messaging.services.v1.MessagingService/ListMessagingDevices
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded ListMessagingDevicesResponse
+     */
+    public function listMessagingDevices($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'ListMessagingDevices',
+            'MessagingService',
+            'udb.core.messaging.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->ListMessagingDevices($request, $md, $opts),
+            $metadata,
+            'read_only' === 'read_only',
+            $request,
+        );
+    }
+    /**
+     * udb.core.messaging.services.v1.MessagingService / PublishKeyPackages (unary), public alias publish_key_packages.
+     *
+     * Forwards to {@see stubFor()}->PublishKeyPackages(); retries transient codes.
+     * Path: /udb.core.messaging.services.v1.MessagingService/PublishKeyPackages
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded PublishKeyPackagesResponse
+     */
+    public function publishKeyPackages($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'PublishKeyPackages',
+            'MessagingService',
+            'udb.core.messaging.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->PublishKeyPackages($request, $md, $opts),
+            $metadata,
+            'mutation' === 'read_only',
+            $request,
+        );
+    }
+    /**
+     * udb.core.messaging.services.v1.MessagingService / PutMessagingBackup (unary), public alias put_messaging_backup.
+     *
+     * Forwards to {@see stubFor()}->PutMessagingBackup(); retries transient codes.
+     * Path: /udb.core.messaging.services.v1.MessagingService/PutMessagingBackup
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded PutMessagingBackupResponse
+     */
+    public function putMessagingBackup($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'PutMessagingBackup',
+            'MessagingService',
+            'udb.core.messaging.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->PutMessagingBackup($request, $md, $opts),
+            $metadata,
+            'mutation' === 'read_only',
+            $request,
+        );
+    }
+    /**
+     * udb.core.messaging.services.v1.MessagingService / RegisterMessagingDevice (unary), public alias register_messaging_device.
+     *
+     * Forwards to {@see stubFor()}->RegisterMessagingDevice(); retries transient codes.
+     * Path: /udb.core.messaging.services.v1.MessagingService/RegisterMessagingDevice
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded RegisterMessagingDeviceResponse
+     */
+    public function registerMessagingDevice($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'RegisterMessagingDevice',
+            'MessagingService',
+            'udb.core.messaging.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->RegisterMessagingDevice($request, $md, $opts),
+            $metadata,
+            'mutation' === 'read_only',
+            $request,
+        );
+    }
+    /**
+     * udb.core.messaging.services.v1.MessagingService / RevokeMessagingDevice (unary), public alias revoke_messaging_device.
+     *
+     * Forwards to {@see stubFor()}->RevokeMessagingDevice(); retries transient codes.
+     * Path: /udb.core.messaging.services.v1.MessagingService/RevokeMessagingDevice
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded RevokeMessagingDeviceResponse
+     */
+    public function revokeMessagingDevice($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'RevokeMessagingDevice',
+            'MessagingService',
+            'udb.core.messaging.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->RevokeMessagingDevice($request, $md, $opts),
+            $metadata,
+            'destructive' === 'read_only',
+            $request,
+        );
+    }
+    /**
+     * udb.core.messaging.services.v1.MessagingService / SendMessage (unary), public alias send_message.
+     *
+     * Forwards to {@see stubFor()}->SendMessage(); retries transient codes.
+     * Path: /udb.core.messaging.services.v1.MessagingService/SendMessage
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded SendMessageResponse
+     */
+    public function sendMessage($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'SendMessage',
+            'MessagingService',
+            'udb.core.messaging.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->SendMessage($request, $md, $opts),
+            $metadata,
+            'mutation' === 'read_only',
+            $request,
+        );
+    }
+    /**
+     * udb.core.messaging.services.v1.MessagingService / SubmitCommit (unary), public alias submit_commit.
+     *
+     * Forwards to {@see stubFor()}->SubmitCommit(); retries transient codes.
+     * Path: /udb.core.messaging.services.v1.MessagingService/SubmitCommit
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded SubmitCommitResponse
+     */
+    public function submitCommit($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'SubmitCommit',
+            'MessagingService',
+            'udb.core.messaging.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->SubmitCommit($request, $md, $opts),
+            $metadata,
+            'mutation' === 'read_only',
+            $request,
+        );
+    }
+    /**
      * udb.core.metering.services.v1.MeteringService / CheckQuota (unary), public alias check_quota.
      *
      * Forwards to {@see stubFor()}->CheckQuota(); retries transient codes.
@@ -10495,6 +10907,27 @@ final class GeneratedClient
         );
     }
     /**
+     * udb.services.v1.DataBroker / PutPolicy (unary), public alias put_policy.
+     *
+     * Forwards to {@see stubFor()}->PutPolicy(); retries transient codes.
+     * Path: /udb.services.v1.DataBroker/PutPolicy
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded MutationResponse
+     */
+    public function putPolicy($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'PutPolicy',
+            'DataBroker',
+            'udb.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->PutPolicy($request, $md, $opts),
+            $metadata,
+            'destructive' === 'read_only',
+            $request,
+        );
+    }
+    /**
      * udb.services.v1.DataBroker / QuarantineDlqEvent (unary), public alias quarantine_dlq_event.
      *
      * Forwards to {@see stubFor()}->QuarantineDlqEvent(); retries transient codes.
@@ -10912,6 +11345,23 @@ final class GeneratedClient
         return $stub->Subscribe($request, $this->headers($metadata), $this->streamCallOptions($deadlineMs));
     }
     /**
+     * udb.core.messaging.services.v1.MessagingService / StreamInbox (server_streaming), public alias stream_inbox.
+     *
+     * Returns the live {@see \Grpc\ServerStreamingCall}; iterate
+     * `->responses()` then check `->getStatus()`. Path: /udb.core.messaging.services.v1.MessagingService/StreamInbox
+     *
+     * No implicit deadline: this stream is long-lived, so the configured
+     * `deadline_ms` does not apply; pass `$deadlineMs` to bound this call.
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Grpc\ServerStreamingCall
+     */
+    public function streamInbox($request, ?UdbMetadata $metadata = null, ?int $deadlineMs = null)
+    {
+        $stub = $this->stubFor('MessagingService', 'udb.core.messaging.services.v1');
+        return $stub->StreamInbox($request, $this->headers($metadata), $this->streamCallOptions($deadlineMs));
+    }
+    /**
      * udb.core.storage.services.v1.StorageService / DownloadFile (server_streaming), public alias download_file.
      *
      * Returns the live {@see \Grpc\ServerStreamingCall}; iterate
@@ -11244,6 +11694,16 @@ final class GeneratedClient
         return $this->stubFor('LockService', 'udb.core.lock.services.v1');
     }
     /**
+     * Underlying buf-generated stub for udb.core.messaging.services.v1.MessagingService (15 RPC(s)).
+     * Channel is shared with every other service stub on this client.
+     *
+     * @return BaseStub  a MessagingServiceClient
+     */
+    public function MessagingServiceStub(): BaseStub
+    {
+        return $this->stubFor('MessagingService', 'udb.core.messaging.services.v1');
+    }
+    /**
      * Underlying buf-generated stub for udb.core.metering.services.v1.MeteringService (6 RPC(s)).
      * Channel is shared with every other service stub on this client.
      *
@@ -11384,7 +11844,7 @@ final class GeneratedClient
         return $this->stubFor('WorkflowService', 'udb.core.workflow.services.v1');
     }
     /**
-     * Underlying buf-generated stub for udb.services.v1.DataBroker (84 RPC(s)).
+     * Underlying buf-generated stub for udb.services.v1.DataBroker (85 RPC(s)).
      * Channel is shared with every other service stub on this client.
      *
      * @return BaseStub  a DataBrokerClient
@@ -11869,6 +12329,30 @@ final class GeneratedClient
     public static function lockRepository(): EntityRepository
     {
         return self::repository("udb.core.lock.entity.v1.Lock");
+    }
+    public static function messagingBackupRepository(): EntityRepository
+    {
+        return self::repository("udb.core.messaging.entity.v1.MessagingBackup");
+    }
+    public static function messagingDeviceRepository(): EntityRepository
+    {
+        return self::repository("udb.core.messaging.entity.v1.MessagingDevice");
+    }
+    public static function messagingGroupRepository(): EntityRepository
+    {
+        return self::repository("udb.core.messaging.entity.v1.MessagingGroup");
+    }
+    public static function messagingGroupMemberRepository(): EntityRepository
+    {
+        return self::repository("udb.core.messaging.entity.v1.MessagingGroupMember");
+    }
+    public static function messagingInboxEntryRepository(): EntityRepository
+    {
+        return self::repository("udb.core.messaging.entity.v1.MessagingInboxEntry");
+    }
+    public static function messagingKeyPackageRepository(): EntityRepository
+    {
+        return self::repository("udb.core.messaging.entity.v1.MessagingKeyPackage");
     }
     public static function quotaRuleRepository(): EntityRepository
     {
@@ -12826,7 +13310,7 @@ final class UnitOfWork
                 continue;
             }
             $message = $message !== '' ? $message : 'udb: unit-of-work transaction failed';
-            if (self::isTxConflictStatus($status)) {
+            if (self::isTxConflictMessage($message)) {
                 throw new UnitOfWorkConflictException($message, $status);
             }
             throw new UnitOfWorkTxException($message, $status);
@@ -12913,11 +13397,9 @@ final class UnitOfWork
         return $fqn;
     }
 
-    /** A tx status is a conflict only by its typed reason, never by message text. */
-    private static function isTxConflictStatus(object $status): bool
+    private static function isTxConflictMessage(string $message): bool
     {
-        $detail = method_exists($status, 'getErrorDetail') ? $status->getErrorDetail() : null;
-        $reason = $detail !== null && method_exists($detail, 'getReason') ? (string) $detail->getReason() : '';
-        return in_array($reason, ['UDB_CAS_CONFLICT', 'UDB_CAS_ROW_MISSING', 'UDB_REVISION_CONFLICT'], true);
+        $lower = strtolower($message);
+        return str_contains($lower, 'aborted') || str_contains($lower, 'version') || str_contains($lower, 'conflict');
     }
 }

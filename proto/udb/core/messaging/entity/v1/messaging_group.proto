@@ -1,0 +1,81 @@
+syntax = "proto3";
+
+package udb.core.messaging.entity.v1;
+
+import "google/protobuf/timestamp.proto";
+import "udb/core/common/v1/db.proto";
+import "udb/core/common/v1/security.proto";
+
+option csharp_namespace = "Udb.Core.Messaging.Entity.V1";
+option go_package = "github.com/udb-project/udb/gen/go/udb/core/messaging/entity/v1;messagingv1";
+option java_package = "com.udb.core.messaging.entity.v1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Messaging\\Entity\\V1";
+option php_namespace = "Udb\\Core\\Messaging\\Entity\\V1";
+
+// MessagingGroup: one MLS group the broker delivers for. `public_group_state`
+// is the serialized OpenMLS PublicGroup (ratchet tree, group context, transcript hash,
+// confirmation tag) - public values only, never a group secret. `epoch` advances by
+// exactly one per accepted commit; SubmitCommit locks this row FOR UPDATE, so
+// concurrent commits at the same epoch linearize.
+message MessagingGroup {
+  option (udb.core.common.v1.pg_table) = {
+    table_name: "mls_groups"
+    schema_name: "udb_messaging"
+    migration_order: 3
+    is_table: true
+    comment: "E2EE messaging MLS groups: public group state and the current epoch"
+    soft_delete: false
+    audit_fields: true
+    enable_rls: true
+    force_rls: true
+    rls_policies: {
+      policy_name: "tenant_isolation"
+      using: "(tenant_id::text = current_setting('app.current_tenant_id', true) OR current_setting('app.platform_admin', true) = 'true')"
+      permissive: true
+    }
+    indexes: {
+      index_name: "idx_messaging_groups_tenant_group_unique"
+      index_type: "BTREE"
+      unique: true
+      columns: "tenant_id"
+      columns: "group_id"
+    }
+    cdc_topic: "udb.messaging.mls_groups.cdc"
+    required_scope: "messaging:read"
+  };
+  option (udb.core.common.v1.db_table_security) = {
+    tenant_isolation_mode: "tenant"
+    tenant_column: "tenant_id"
+    rls_policy_template: "tenant_id = current_setting('app.current_tenant_id')"
+    soft_delete_mode: "none"
+    retention_class: "messaging.group"
+    retention_days: 3650
+    audit_mode: AUDIT_MODE_MUTATION
+    encryption_profile: "tenant"
+    pii_profile: "standard"
+    export_eligible: false
+    data_residency_policy_ref: "tenant.data_residency"
+  };
+
+  string id = 1 [(udb.core.common.v1.pg_column) = { column_name: "id" sql_type: "UUID" primary_key: true not_null: true default_value: "gen_random_uuid()" }];
+
+  string tenant_id = 2 [(udb.core.common.v1.pg_column) = { column_name: "tenant_id" sql_type: "VARCHAR(64)" tenant_column: true not_null: true }];
+
+  // MLS group id as UTF-8 text.
+  string group_id = 3 [(udb.core.common.v1.pg_column) = { column_name: "group_id" sql_type: "VARCHAR(255)" not_null: true }];
+
+  int64 epoch = 4 [(udb.core.common.v1.pg_column) = { column_name: "epoch" sql_type: "BIGINT" not_null: true default_value: "0" }];
+
+  bytes public_group_state = 5 [(udb.core.common.v1.pg_column) = { column_name: "public_group_state" sql_type: "BYTEA" not_null: true }];
+
+  // Latest signed GroupInfo a member uploaded (for external joins).
+  bytes group_info = 6 [(udb.core.common.v1.pg_column) = { column_name: "group_info" sql_type: "BYTEA" }];
+
+  int64 group_info_epoch = 7 [(udb.core.common.v1.pg_column) = { column_name: "group_info_epoch" sql_type: "BIGINT" not_null: true default_value: "0" }];
+
+  string created_by_device_id = 8 [(udb.core.common.v1.pg_column) = { column_name: "created_by_device_id" sql_type: "VARCHAR(128)" not_null: true }];
+
+  google.protobuf.Timestamp created_at = 9 [(udb.core.common.v1.pg_column) = { column_name: "created_at" sql_type: "TIMESTAMPTZ" not_null: true default_value: "NOW()" }];
+
+  google.protobuf.Timestamp updated_at = 10 [(udb.core.common.v1.pg_column) = { column_name: "updated_at" sql_type: "TIMESTAMPTZ" not_null: true default_value: "NOW()" }];
+}

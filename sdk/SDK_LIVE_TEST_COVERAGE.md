@@ -7,7 +7,7 @@ Inputs:
 - `sdk/go/udbclient/generated_client.go`
 - `docs/site/bench-results.json`
 
-Current generated RPC surface: 388 RPCs across 28 services.
+Current generated RPC surface: 404 RPCs across 29 services.
 
 The benchmark body manifest is checked against generated SDK metadata before this
 file is written. A missing row, extra row, alias drift, operationId drift, or
@@ -43,11 +43,12 @@ stack, with request bodies taken from the plan the shared Python seed exports.
 | CacheService | 7 | 3 | 3 | 1 | 0 |
 | ConfigService | 5 | 3 | 1 | 1 | 0 |
 | ControlPlaneService | 6 | 2 | 4 | 0 | 0 |
-| DataBroker | 84 | 35 | 42 | 7 | 0 |
+| DataBroker | 85 | 35 | 42 | 8 | 0 |
 | EmbeddingService | 19 | 5 | 12 | 2 | 0 |
 | IdentityProviderService | 27 | 6 | 21 | 0 | 0 |
 | LiveQueryService | 1 | 1 | 0 | 0 | 0 |
 | LockService | 5 | 2 | 3 | 0 | 0 |
+| MessagingService | 15 | 5 | 8 | 2 | 0 |
 | MeteringService | 6 | 4 | 2 | 0 | 0 |
 | NotificationService | 12 | 7 | 5 | 0 | 0 |
 | PeerService | 5 | 2 | 3 | 0 | 0 |
@@ -284,6 +285,7 @@ benchmark harnesses.
 | DataBroker | `DataBroker/PublishCDC` | `publish_cdc` | `publishCdc` | MUTATION | data_broker.md |
 | DataBroker | `DataBroker/PurgeSubject` | `purge_subject` | `purgeSubject` | DESTRUCTIVE | data_broker.md |
 | DataBroker | `DataBroker/PutObject` | `put_object` | `putObject` | MUTATION | data_broker.md |
+| DataBroker | `DataBroker/PutPolicy` | `put_policy` | `putPolicy` | DESTRUCTIVE | data_broker.md |
 | DataBroker | `DataBroker/QuarantineDlqEvent` | `quarantine_dlq_event` | `quarantineDlqEvent` | MUTATION | data_broker.md |
 | DataBroker | `DataBroker/ReloadPolicies` | `reload_policies` | `reloadPolicies` | DESTRUCTIVE | data_broker.md |
 | DataBroker | `DataBroker/ReplayDlqEvent` | `replay_dlq_event` | `replayDlqEvent` | MUTATION | data_broker.md |
@@ -357,6 +359,21 @@ benchmark harnesses.
 | LockService | `LockService/ListLocks` | `list_locks` | `listLocks` | READ_ONLY | lock.md |
 | LockService | `LockService/ReleaseLock` | `release_lock` | `releaseLock` | MUTATION | lock.md |
 | LockService | `LockService/RenewLock` | `renew_lock` | `renewLock` | MUTATION | lock.md |
+| MessagingService | `MessagingService/AckInbox` | `ack_inbox` | `messagingAckInbox` | MUTATION | messaging.md |
+| MessagingService | `MessagingService/ClaimKeyPackages` | `claim_key_packages` | `messagingClaimKeyPackages` | MUTATION | messaging.md |
+| MessagingService | `MessagingService/CreateGroup` | `create_group` | `messagingCreateGroup` | MUTATION | messaging.md |
+| MessagingService | `MessagingService/DeleteMessagingBackup` | `delete_messaging_backup` | `messagingDeleteMessagingBackup` | DESTRUCTIVE | messaging.md |
+| MessagingService | `MessagingService/GetGroupInfo` | `get_group_info` | `messagingGetGroupInfo` | READ_ONLY | messaging.md |
+| MessagingService | `MessagingService/GetKeyPackageStock` | `get_key_package_stock` | `messagingGetKeyPackageStock` | READ_ONLY | messaging.md |
+| MessagingService | `MessagingService/GetMessagingBackup` | `get_messaging_backup` | `messagingGetMessagingBackup` | READ_ONLY | messaging.md |
+| MessagingService | `MessagingService/ListMessagingDevices` | `list_messaging_devices` | `messagingListMessagingDevices` | READ_ONLY | messaging.md |
+| MessagingService | `MessagingService/PublishKeyPackages` | `publish_key_packages` | `messagingPublishKeyPackages` | MUTATION | messaging.md |
+| MessagingService | `MessagingService/PutMessagingBackup` | `put_messaging_backup` | `messagingPutMessagingBackup` | MUTATION | messaging.md |
+| MessagingService | `MessagingService/RegisterMessagingDevice` | `register_messaging_device` | `messagingRegisterMessagingDevice` | MUTATION | messaging.md |
+| MessagingService | `MessagingService/RevokeMessagingDevice` | `revoke_messaging_device` | `messagingRevokeMessagingDevice` | DESTRUCTIVE | messaging.md |
+| MessagingService | `MessagingService/SendMessage` | `send_message` | `messagingSendMessage` | MUTATION | messaging.md |
+| MessagingService | `MessagingService/StreamInbox` | `stream_inbox` | `messagingStreamInbox` | READ_ONLY | messaging.md |
+| MessagingService | `MessagingService/SubmitCommit` | `submit_commit` | `messagingSubmitCommit` | MUTATION | messaging.md |
 | MeteringService | `MeteringService/CheckQuota` | `check_quota` | `checkQuota` | READ_ONLY | metering.md |
 | MeteringService | `MeteringService/GetQuota` | `get_quota` | `getQuota` | READ_ONLY | metering.md |
 | MeteringService | `MeteringService/ListQuotas` | `list_quotas` | `listQuotas` | READ_ONLY | metering.md |

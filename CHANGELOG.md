@@ -151,6 +151,74 @@ the reason, not the text.
   memory limit (~19 MiB per Argon2id hash), and the broker logs a startup
   warning naming `UDB_PASSWORD_KDF_MAX_CONCURRENCY` when the limit shaped it.
 
+### Added
+
+- **End-to-end encrypted messaging clients (MLS, RFC 9420).** The client side
+  of the new MessagingService: all cryptography runs on the device, the broker
+  only validates handshakes and routes ciphertext.
+  - `crates/udb-mls`: device identity and Ed25519 keys, one-time and
+    last-resort KeyPackages, group create/add/remove/key-rotation as
+    `PublicMessage` commits, Welcome processing, `PrivateMessage`
+    encryption, in-order inbox processing with epoch tracking, and the
+    re-base path when a concurrent commit wins
+    (`FAILED_PRECONDITION` with `missing.current_epoch`). Client state is
+    saved through a pluggable `StateStore` (`MemoryStore`, atomic owner-only
+    `FileStore`) before an entry is acknowledged or a ciphertext leaves.
+  - Rust SDK: `udb_client::messaging::MessagingClient` behind the new `mls`
+    feature (off by default): register devices, keep the KeyPackage stock
+    topped up, create groups, add (verifying each claimed package names the
+    claimed device) and remove members, rotate keys, send, sync or follow the
+    inbox, acknowledge.
+  - TypeScript SDK: `MessagingClient` over `crates/udb-mls-wasm`, the same
+    crate compiled to WebAssembly (`npm run build:mls-wasm`; the module ships
+    in the package under `mls-wasm/`).
+  - CI: `messaging-live` runs the Rust SDK's served three-device suite and a
+    Rust<->TypeScript group chat against the CI broker; `udb-mls` is
+    published to crates.io ahead of `udb-client`.
+- **Opt-in encrypted message-history backup.** History stays device-only
+  unless the user opts in. The device seals its MLS state and the
+  application's history under a key derived from a user recovery secret
+  (Argon2id, then HKDF-SHA256, then XChaCha20-Poly1305; fresh salt and nonce
+  per backup, the whole header authenticated) and the broker stores only the
+  envelope.
+  - MessagingService: `PutMessagingBackup` (with an optional
+    `expected_version` compare-and-swap; a lost race is `FAILED_PRECONDITION`
+    with `missing.current_version`), `GetMessagingBackup`,
+    `DeleteMessagingBackup` (idempotent). Backups live in the tenant-RLS table
+    `udb_messaging.backups`, one per principal and backup id, up to 3 MiB; an
+    end user reaches only its own; a body that is not a udb-mls envelope is
+    refused.
+  - `udb-mls`: `MlsClient::export_backup` / `restore_backup`, `seal_backup` /
+    `open_backup`. A restored device is the backed-up device and reads on from
+    the backup's inbox cursor. A wrong secret and a modified envelope both
+    fail to open; crafted Argon2id costs are refused before any work.
+  - Rust SDK `MessagingClient::backup`, `delete_backup` and
+    `MessagingClient::restore`; TypeScript `MessagingClient.backup`,
+    `deleteBackup` and `MessagingClient.restore` (the WebAssembly module adds
+    `exportBackup` and `openBackup`). The interop test restores a Rust
+    device's backup in TypeScript and a TypeScript device's backup in Rust.
+- **`PurgeSubject` covers messaging.** The subject's messaging devices,
+  KeyPackages, inbox rows, group memberships and backups are erased in one
+  tenant transaction, every remaining member of the subject's groups gets a
+  removal hint, and the signed receipt lists the five messaging tables. Until
+  a member commits the removal, a group's public ratchet tree still holds the
+  erased devices' leaves; the receipt says so under `not_covered`.
+
+- **`udb messaging bench-fixture`.** An offline command that mints, with the
+  `udb-mls` client crate, the MLS objects the MessagingService benchmark rows
+  need for one tenant and subject (devices, KeyPackages, groups, a commit with
+  its Welcome, a PrivateMessage), plus the setup requests a seed sends first.
+  `scripts/prepare-benchmark-fixtures.py` runs it after every SDK's database
+  reset, so all fifteen messaging rows run their success path in every SDK
+  harness. `udb` now depends on `udb-mls`; the crates release publishes
+  `udb-mls` first.
+
+### Fixed
+
+- **The Python live harness covers MessagingService.** Its service list
+  lacked the messaging client, so the descriptor-count check at import failed
+  and the shared benchmark seed could not run.
+
 ## [0.5.34] - 2026-10-15
 
 ### Breaking for callers

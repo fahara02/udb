@@ -1,0 +1,77 @@
+syntax = "proto3";
+
+package udb.core.messaging.entity.v1;
+
+import "udb/core/common/v1/db.proto";
+import "udb/core/common/v1/security.proto";
+
+option csharp_namespace = "Udb.Core.Messaging.Entity.V1";
+option go_package = "github.com/udb-project/udb/gen/go/udb/core/messaging/entity/v1;messagingv1";
+option java_package = "com.udb.core.messaging.entity.v1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Messaging\\Entity\\V1";
+option php_namespace = "Udb\\Core\\Messaging\\Entity\\V1";
+
+// MessagingGroupMember: one device's membership in a group. Rows are derived
+// from the validated ratchet tree after every accepted commit, never asserted by a
+// client, and drive inbox fan-out.
+message MessagingGroupMember {
+  option (udb.core.common.v1.pg_table) = {
+    table_name: "group_members"
+    schema_name: "udb_messaging"
+    migration_order: 4
+    is_table: true
+    comment: "E2EE messaging group roster derived from the validated ratchet tree"
+    soft_delete: false
+    audit_fields: true
+    enable_rls: true
+    force_rls: true
+    rls_policies: {
+      policy_name: "tenant_isolation"
+      using: "(tenant_id::text = current_setting('app.current_tenant_id', true) OR current_setting('app.platform_admin', true) = 'true')"
+      permissive: true
+    }
+    indexes: {
+      index_name: "idx_messaging_group_members_unique"
+      index_type: "BTREE"
+      unique: true
+      columns: "tenant_id"
+      columns: "group_id"
+      columns: "device_id"
+    }
+    indexes: {
+      index_name: "idx_messaging_group_members_device"
+      index_type: "BTREE"
+      columns: "tenant_id"
+      columns: "device_id"
+    }
+    cdc_topic: "udb.messaging.group_members.cdc"
+    required_scope: "messaging:read"
+  };
+  option (udb.core.common.v1.db_table_security) = {
+    tenant_isolation_mode: "tenant"
+    tenant_column: "tenant_id"
+    rls_policy_template: "tenant_id = current_setting('app.current_tenant_id')"
+    soft_delete_mode: "none"
+    retention_class: "messaging.group"
+    retention_days: 3650
+    audit_mode: AUDIT_MODE_MUTATION
+    encryption_profile: "tenant"
+    pii_profile: "standard"
+    export_eligible: false
+    data_residency_policy_ref: "tenant.data_residency"
+  };
+
+  string id = 1 [(udb.core.common.v1.pg_column) = { column_name: "id" sql_type: "UUID" primary_key: true not_null: true default_value: "gen_random_uuid()" }];
+
+  string tenant_id = 2 [(udb.core.common.v1.pg_column) = { column_name: "tenant_id" sql_type: "VARCHAR(64)" tenant_column: true not_null: true }];
+
+  string group_id = 3 [(udb.core.common.v1.pg_column) = { column_name: "group_id" sql_type: "VARCHAR(255)" not_null: true }];
+
+  string device_id = 4 [(udb.core.common.v1.pg_column) = { column_name: "device_id" sql_type: "VARCHAR(128)" not_null: true }];
+
+  string subject_id = 5 [(udb.core.common.v1.pg_column) = { column_name: "subject_id" sql_type: "VARCHAR(255)" not_null: true }];
+
+  int32 leaf_index = 6 [(udb.core.common.v1.pg_column) = { column_name: "leaf_index" sql_type: "INTEGER" not_null: true }];
+
+  int64 joined_epoch = 7 [(udb.core.common.v1.pg_column) = { column_name: "joined_epoch" sql_type: "BIGINT" not_null: true default_value: "0" }];
+}

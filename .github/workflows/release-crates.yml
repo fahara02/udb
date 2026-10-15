@@ -63,6 +63,34 @@ jobs:
             echo "exists=false" >> "$GITHUB_OUTPUT"
           fi
 
+      # `udb` depends on crates/udb-mls by path AND version (the
+      # `udb messaging bench-fixture` command mints MLS objects with it), so
+      # packaging `udb` resolves it from crates.io: publish it first. The
+      # Rust SDK release publishes the same crate concurrently; whichever job
+      # loses the race finds the version on crates.io and carries on.
+      - name: Publish udb-mls (a dependency of udb)
+        if: steps.crate_version.outputs.exists != 'true'
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        shell: bash
+        run: |
+          set -uo pipefail
+          mls_version="$(sed -n 's/^version = "\(.*\)"$/\1/p' crates/udb-mls/Cargo.toml | head -n 1)"
+          test -n "$mls_version" || { echo "::error::no version in crates/udb-mls/Cargo.toml"; exit 1; }
+          if curl -fsS "https://crates.io/api/v1/crates/udb-mls/${mls_version}" >/dev/null; then
+            echo "udb-mls ${mls_version} already exists on crates.io"
+            exit 0
+          fi
+          if cargo publish --locked -p udb-mls; then
+            exit 0
+          fi
+          sleep 30
+          if curl -fsS "https://crates.io/api/v1/crates/udb-mls/${mls_version}" >/dev/null; then
+            echo "udb-mls ${mls_version} was published by the concurrent Rust SDK release"
+            exit 0
+          fi
+          exit 1
+
       - name: cargo publish --dry-run
         if: steps.crate_version.outputs.exists != 'true'
         run: cargo publish --dry-run

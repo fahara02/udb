@@ -25,8 +25,8 @@ package udbclient
 // connection (interceptors) those wrappers run on, plus low-level escape
 // hatches for RPCs that don't yet have a typed helper.
 //
-// Covers 388 RPCs across 28 services
-// (UDB v0.5.34, wire protocol 1.0.0).
+// Covers 404 RPCs across 29 services
+// (UDB v0.5.33, wire protocol 1.0.0).
 
 import (
 	"bytes"
@@ -66,7 +66,7 @@ const (
 // SDKVersion is the UDB release this generated layer was rendered from. It is
 // baked at generation time and is the version the bundled `udb` CLI launcher
 // (cmd/udb) will resolve.
-const SDKVersion = "0.5.34"
+const SDKVersion = "0.5.33"
 
 // VersionMismatchError reports an absent, malformed, or incompatible broker
 // release header. Compatibility requires the same major and minor release;
@@ -289,6 +289,8 @@ type Options struct {
 	// Authorization, when non-empty, is sent as the `authorization` header
 	// (e.g. "Bearer <jwt>").
 	Authorization string
+	// APIKey, when non-empty, is sent as the `x-api-key` header.
+	APIKey string
 	// RequestID, when non-empty, is sent as the `x-request-id` header. When
 	// empty a per-call id is derived from Meta.CorrelationID if set.
 	RequestID string
@@ -449,6 +451,14 @@ func (g *GeneratedClient) SetAuthorization(authorization string) {
 	g.opt.Store(&o)
 }
 
+// SetAPIKey atomically swaps the `x-api-key` credential. Passing an empty string
+// clears API-key metadata after it has been exchanged for a bearer.
+func (g *GeneratedClient) SetAPIKey(apiKey string) {
+	o := g.options()
+	o.APIKey = apiKey
+	g.opt.Store(&o)
+}
+
 // Conn exposes the underlying connection so the hand-written typed wrappers can
 // be built on the same channel: udbclient.New(gc.Conn(), gc.Meta()).
 func (g *GeneratedClient) Conn() grpc.ClientConnInterface { return g.conn }
@@ -465,7 +475,7 @@ func (g *GeneratedClient) rebindConn(conn grpc.ClientConnInterface) { g.conn = c
 // Meta returns the configured caller Metadata.
 func (g *GeneratedClient) Meta() Metadata { return g.options().Meta }
 
-// outgoingContext attaches the 8 UDB headers plus optional auth /
+// outgoingContext attaches the 8 UDB headers plus optional auth / api-key /
 // request-id, reusing joinScopes and MergeRequestScopedAudit from the
 // hand-written client.go.
 //
@@ -476,7 +486,7 @@ func (g *GeneratedClient) Meta() Metadata { return g.options().Meta }
 // correlation id from native calls, leaving them to be rejected for a missing
 // request context or audited against a stale connection-level id.
 func (g *GeneratedClient) outgoingContext(ctx context.Context) context.Context {
-	// Single atomic snapshot so meta + auth are read all-or-nothing.
+	// Single atomic snapshot so meta + auth + api-key are read all-or-nothing.
 	o := g.options()
 	m := MergeRequestScopedAudit(ctx, o.Meta)
 	// V23-2: this interceptor runs on connections that ALSO carry the typed
@@ -517,6 +527,9 @@ func (g *GeneratedClient) outgoingContext(ctx context.Context) context.Context {
 	}
 	if o.Authorization != "" {
 		add("authorization", o.Authorization)
+	}
+	if o.APIKey != "" {
+		add("x-api-key", o.APIKey)
 	}
 	hasNonempty := func(key string) bool {
 		for _, value := range existing.Get(key) {
@@ -1157,6 +1170,21 @@ var AllRPCs = []RPCInfo{
 	{Service: "LockService", ServicePkg: "udb.core.lock.services.v1", FullMethod: "/udb.core.lock.services.v1.LockService/ListLocks", Name: "ListLocks", APIAlias: "list_locks", OperationID: "listLocks", HTTPMethod: "get", HTTPPath: "/v1/locks", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false, Listener: "native control plane (UDB_AUTH_TARGET, default :50061)", AuthMode: "bearer", Scopes: []string{"udb:lock:list-locks"}, CredentialTypes: []string{"bearer_jwt", "session", "service_account"}},
 	{Service: "LockService", ServicePkg: "udb.core.lock.services.v1", FullMethod: "/udb.core.lock.services.v1.LockService/ReleaseLock", Name: "ReleaseLock", APIAlias: "release_lock", OperationID: "releaseLock", HTTPMethod: "post", HTTPPath: "/v1/locks:release", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false, Listener: "native control plane (UDB_AUTH_TARGET, default :50061)", AuthMode: "bearer", Scopes: []string{"udb:lock:release-lock"}, CredentialTypes: []string{"bearer_jwt", "session", "service_account"}},
 	{Service: "LockService", ServicePkg: "udb.core.lock.services.v1", FullMethod: "/udb.core.lock.services.v1.LockService/RenewLock", Name: "RenewLock", APIAlias: "renew_lock", OperationID: "renewLock", HTTPMethod: "post", HTTPPath: "/v1/locks:renew", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false, Listener: "native control plane (UDB_AUTH_TARGET, default :50061)", AuthMode: "bearer", Scopes: []string{"udb:lock:renew-lock"}, CredentialTypes: []string{"bearer_jwt", "session", "service_account"}},
+	{Service: "MessagingService", ServicePkg: "udb.core.messaging.services.v1", FullMethod: "/udb.core.messaging.services.v1.MessagingService/AckInbox", Name: "AckInbox", APIAlias: "ack_inbox", OperationID: "messagingAckInbox", HTTPMethod: "post", HTTPPath: "/v1/messaging/inbox:ack", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false, Listener: "native control plane (UDB_AUTH_TARGET, default :50061)", AuthMode: "bearer", Scopes: []string{"udb:messaging:ack-inbox"}, CredentialTypes: []string{"bearer_jwt", "session", "service_account"}},
+	{Service: "MessagingService", ServicePkg: "udb.core.messaging.services.v1", FullMethod: "/udb.core.messaging.services.v1.MessagingService/ClaimKeyPackages", Name: "ClaimKeyPackages", APIAlias: "claim_key_packages", OperationID: "messagingClaimKeyPackages", HTTPMethod: "post", HTTPPath: "/v1/messaging/key-packages:claim", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false, Listener: "native control plane (UDB_AUTH_TARGET, default :50061)", AuthMode: "bearer", Scopes: []string{"udb:messaging:claim-key-packages"}, CredentialTypes: []string{"bearer_jwt", "session", "service_account"}},
+	{Service: "MessagingService", ServicePkg: "udb.core.messaging.services.v1", FullMethod: "/udb.core.messaging.services.v1.MessagingService/CreateGroup", Name: "CreateGroup", APIAlias: "create_group", OperationID: "messagingCreateGroup", HTTPMethod: "post", HTTPPath: "/v1/messaging/groups", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: true, Listener: "native control plane (UDB_AUTH_TARGET, default :50061)", AuthMode: "bearer", Scopes: []string{"udb:messaging:create-group"}, CredentialTypes: []string{"bearer_jwt", "session", "service_account"}},
+	{Service: "MessagingService", ServicePkg: "udb.core.messaging.services.v1", FullMethod: "/udb.core.messaging.services.v1.MessagingService/DeleteMessagingBackup", Name: "DeleteMessagingBackup", APIAlias: "delete_messaging_backup", OperationID: "messagingDeleteMessagingBackup", HTTPMethod: "delete", HTTPPath: "/v1/messaging/backups/{backup_id}", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "destructive", ReplaySafe: false, Listener: "native control plane (UDB_AUTH_TARGET, default :50061)", AuthMode: "bearer", Scopes: []string{"udb:messaging:delete-messaging-backup"}, CredentialTypes: []string{"bearer_jwt", "session", "service_account"}},
+	{Service: "MessagingService", ServicePkg: "udb.core.messaging.services.v1", FullMethod: "/udb.core.messaging.services.v1.MessagingService/GetGroupInfo", Name: "GetGroupInfo", APIAlias: "get_group_info", OperationID: "messagingGetGroupInfo", HTTPMethod: "get", HTTPPath: "/v1/messaging/groups/{group_id}/info", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false, Listener: "native control plane (UDB_AUTH_TARGET, default :50061)", AuthMode: "bearer", Scopes: []string{"udb:messaging:get-group-info"}, CredentialTypes: []string{"bearer_jwt", "session", "service_account"}},
+	{Service: "MessagingService", ServicePkg: "udb.core.messaging.services.v1", FullMethod: "/udb.core.messaging.services.v1.MessagingService/GetKeyPackageStock", Name: "GetKeyPackageStock", APIAlias: "get_key_package_stock", OperationID: "messagingGetKeyPackageStock", HTTPMethod: "get", HTTPPath: "/v1/messaging/devices/{device_id}/key-package-stock", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false, Listener: "native control plane (UDB_AUTH_TARGET, default :50061)", AuthMode: "bearer", Scopes: []string{"udb:messaging:get-key-package-stock"}, CredentialTypes: []string{"bearer_jwt", "session", "service_account"}},
+	{Service: "MessagingService", ServicePkg: "udb.core.messaging.services.v1", FullMethod: "/udb.core.messaging.services.v1.MessagingService/GetMessagingBackup", Name: "GetMessagingBackup", APIAlias: "get_messaging_backup", OperationID: "messagingGetMessagingBackup", HTTPMethod: "get", HTTPPath: "/v1/messaging/backups/{backup_id}", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false, Listener: "native control plane (UDB_AUTH_TARGET, default :50061)", AuthMode: "bearer", Scopes: []string{"udb:messaging:get-messaging-backup"}, CredentialTypes: []string{"bearer_jwt", "session", "service_account"}},
+	{Service: "MessagingService", ServicePkg: "udb.core.messaging.services.v1", FullMethod: "/udb.core.messaging.services.v1.MessagingService/ListMessagingDevices", Name: "ListMessagingDevices", APIAlias: "list_messaging_devices", OperationID: "messagingListMessagingDevices", HTTPMethod: "get", HTTPPath: "/v1/messaging/devices", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false, Listener: "native control plane (UDB_AUTH_TARGET, default :50061)", AuthMode: "bearer", Scopes: []string{"udb:messaging:list-messaging-devices"}, CredentialTypes: []string{"bearer_jwt", "session", "service_account"}},
+	{Service: "MessagingService", ServicePkg: "udb.core.messaging.services.v1", FullMethod: "/udb.core.messaging.services.v1.MessagingService/PublishKeyPackages", Name: "PublishKeyPackages", APIAlias: "publish_key_packages", OperationID: "messagingPublishKeyPackages", HTTPMethod: "post", HTTPPath: "/v1/messaging/devices/{device_id}/key-packages", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false, Listener: "native control plane (UDB_AUTH_TARGET, default :50061)", AuthMode: "bearer", Scopes: []string{"udb:messaging:publish-key-packages"}, CredentialTypes: []string{"bearer_jwt", "session", "service_account"}},
+	{Service: "MessagingService", ServicePkg: "udb.core.messaging.services.v1", FullMethod: "/udb.core.messaging.services.v1.MessagingService/PutMessagingBackup", Name: "PutMessagingBackup", APIAlias: "put_messaging_backup", OperationID: "messagingPutMessagingBackup", HTTPMethod: "put", HTTPPath: "/v1/messaging/backups/{backup_id}", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false, Listener: "native control plane (UDB_AUTH_TARGET, default :50061)", AuthMode: "bearer", Scopes: []string{"udb:messaging:put-messaging-backup"}, CredentialTypes: []string{"bearer_jwt", "session", "service_account"}},
+	{Service: "MessagingService", ServicePkg: "udb.core.messaging.services.v1", FullMethod: "/udb.core.messaging.services.v1.MessagingService/RegisterMessagingDevice", Name: "RegisterMessagingDevice", APIAlias: "register_messaging_device", OperationID: "messagingRegisterMessagingDevice", HTTPMethod: "post", HTTPPath: "/v1/messaging/devices", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: true, Listener: "native control plane (UDB_AUTH_TARGET, default :50061)", AuthMode: "bearer", Scopes: []string{"udb:messaging:register-messaging-device"}, CredentialTypes: []string{"bearer_jwt", "session", "service_account"}},
+	{Service: "MessagingService", ServicePkg: "udb.core.messaging.services.v1", FullMethod: "/udb.core.messaging.services.v1.MessagingService/RevokeMessagingDevice", Name: "RevokeMessagingDevice", APIAlias: "revoke_messaging_device", OperationID: "messagingRevokeMessagingDevice", HTTPMethod: "post", HTTPPath: "/v1/messaging/devices/{device_id}:revoke", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "destructive", ReplaySafe: false, Listener: "native control plane (UDB_AUTH_TARGET, default :50061)", AuthMode: "bearer", Scopes: []string{"udb:messaging:revoke-messaging-device"}, CredentialTypes: []string{"bearer_jwt", "session", "service_account"}},
+	{Service: "MessagingService", ServicePkg: "udb.core.messaging.services.v1", FullMethod: "/udb.core.messaging.services.v1.MessagingService/SendMessage", Name: "SendMessage", APIAlias: "send_message", OperationID: "messagingSendMessage", HTTPMethod: "post", HTTPPath: "/v1/messaging/groups/{group_id}/messages", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: true, Listener: "native control plane (UDB_AUTH_TARGET, default :50061)", AuthMode: "bearer", Scopes: []string{"udb:messaging:send-message"}, CredentialTypes: []string{"bearer_jwt", "session", "service_account"}},
+	{Service: "MessagingService", ServicePkg: "udb.core.messaging.services.v1", FullMethod: "/udb.core.messaging.services.v1.MessagingService/StreamInbox", Name: "StreamInbox", APIAlias: "stream_inbox", OperationID: "messagingStreamInbox", HTTPMethod: "post", HTTPPath: "/v1/messaging/inbox:stream", Kind: RPCKind("server_streaming"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false, Listener: "native control plane (UDB_AUTH_TARGET, default :50061)", AuthMode: "bearer", Scopes: []string{"udb:messaging:stream-inbox"}, CredentialTypes: []string{"bearer_jwt", "session", "service_account"}},
+	{Service: "MessagingService", ServicePkg: "udb.core.messaging.services.v1", FullMethod: "/udb.core.messaging.services.v1.MessagingService/SubmitCommit", Name: "SubmitCommit", APIAlias: "submit_commit", OperationID: "messagingSubmitCommit", HTTPMethod: "post", HTTPPath: "/v1/messaging/groups/{group_id}:commit", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: true, Listener: "native control plane (UDB_AUTH_TARGET, default :50061)", AuthMode: "bearer", Scopes: []string{"udb:messaging:submit-commit"}, CredentialTypes: []string{"bearer_jwt", "session", "service_account"}},
 	{Service: "MeteringService", ServicePkg: "udb.core.metering.services.v1", FullMethod: "/udb.core.metering.services.v1.MeteringService/CheckQuota", Name: "CheckQuota", APIAlias: "check_quota", OperationID: "checkQuota", HTTPMethod: "post", HTTPPath: "/v1/metering/quotas:check", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false, Listener: "native control plane (UDB_AUTH_TARGET, default :50061)", AuthMode: "bearer", Scopes: []string{"udb:metering:check-quota"}, CredentialTypes: []string{"bearer_jwt", "session", "service_account"}},
 	{Service: "MeteringService", ServicePkg: "udb.core.metering.services.v1", FullMethod: "/udb.core.metering.services.v1.MeteringService/GetQuota", Name: "GetQuota", APIAlias: "get_quota", OperationID: "getQuota", HTTPMethod: "get", HTTPPath: "/v1/metering/quotas/{metric}", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false, Listener: "native control plane (UDB_AUTH_TARGET, default :50061)", AuthMode: "bearer", Scopes: []string{"udb:metering:get-quota"}, CredentialTypes: []string{"bearer_jwt", "session", "service_account"}},
 	{Service: "MeteringService", ServicePkg: "udb.core.metering.services.v1", FullMethod: "/udb.core.metering.services.v1.MeteringService/ListQuotas", Name: "ListQuotas", APIAlias: "list_quotas", OperationID: "listQuotas", HTTPMethod: "get", HTTPPath: "/v1/metering/quotas", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false, Listener: "native control plane (UDB_AUTH_TARGET, default :50061)", AuthMode: "bearer", Scopes: []string{"udb:metering:list-quotas"}, CredentialTypes: []string{"bearer_jwt", "session", "service_account"}},
@@ -1321,6 +1349,7 @@ var AllRPCs = []RPCInfo{
 	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/PublishCDC", Name: "PublishCDC", APIAlias: "publish_cdc", OperationID: "publishCdc", HTTPMethod: "", HTTPPath: "", Kind: RPCKind("server_streaming"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false, Listener: "data plane (UDB_GRPC_TARGET, default :50051)", AuthMode: "", Scopes: []string{}, CredentialTypes: []string{}},
 	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/PurgeSubject", Name: "PurgeSubject", APIAlias: "purge_subject", OperationID: "purgeSubject", HTTPMethod: "", HTTPPath: "", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "destructive", ReplaySafe: false, Listener: "data plane (UDB_GRPC_TARGET, default :50051)", AuthMode: "", Scopes: []string{}, CredentialTypes: []string{}},
 	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/PutObject", Name: "PutObject", APIAlias: "put_object", OperationID: "putObject", HTTPMethod: "", HTTPPath: "", Kind: RPCKind("client_streaming"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false, Listener: "data plane (UDB_GRPC_TARGET, default :50051)", AuthMode: "", Scopes: []string{}, CredentialTypes: []string{}},
+	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/PutPolicy", Name: "PutPolicy", APIAlias: "put_policy", OperationID: "putPolicy", HTTPMethod: "", HTTPPath: "", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "destructive", ReplaySafe: false, Listener: "data plane (UDB_GRPC_TARGET, default :50051)", AuthMode: "", Scopes: []string{}, CredentialTypes: []string{}},
 	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/QuarantineDlqEvent", Name: "QuarantineDlqEvent", APIAlias: "quarantine_dlq_event", OperationID: "quarantineDlqEvent", HTTPMethod: "", HTTPPath: "", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false, Listener: "data plane (UDB_GRPC_TARGET, default :50051)", AuthMode: "", Scopes: []string{}, CredentialTypes: []string{}},
 	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/ReloadPolicies", Name: "ReloadPolicies", APIAlias: "reload_policies", OperationID: "reloadPolicies", HTTPMethod: "", HTTPPath: "", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "destructive", ReplaySafe: false, Listener: "data plane (UDB_GRPC_TARGET, default :50051)", AuthMode: "", Scopes: []string{}, CredentialTypes: []string{}},
 	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/ReplayDlqEvent", Name: "ReplayDlqEvent", APIAlias: "replay_dlq_event", OperationID: "replayDlqEvent", HTTPMethod: "", HTTPPath: "", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false, Listener: "data plane (UDB_GRPC_TARGET, default :50051)", AuthMode: "", Scopes: []string{}, CredentialTypes: []string{}},
@@ -1359,6 +1388,7 @@ var ServiceRPCCounts = map[string]int{
 	"udb.core.idp.services.v1.IdentityProviderService": 27,
 	"udb.core.livequery.services.v1.LiveQueryService": 1,
 	"udb.core.lock.services.v1.LockService": 5,
+	"udb.core.messaging.services.v1.MessagingService": 15,
 	"udb.core.metering.services.v1.MeteringService": 6,
 	"udb.core.notification.services.v1.NotificationService": 12,
 	"udb.core.scheduler.services.v1.SchedulerService": 6,
@@ -1373,7 +1403,7 @@ var ServiceRPCCounts = map[string]int{
 	"udb.core.webrtc.services.v1.TrackService": 4,
 	"udb.core.webrtc.services.v1.TurnService": 1,
 	"udb.core.workflow.services.v1.WorkflowService": 6,
-	"udb.services.v1.DataBroker": 84,
+	"udb.services.v1.DataBroker": 85,
 }
 
 // Entities is the catalog-derived entity registry, generated from the annotated
@@ -1434,6 +1464,12 @@ var Entities = map[string]EntityDescriptor{
 	"udb.core.idp.entity.v1.SamlReplayEntry": {Table: "saml_replay_entries", PrimaryKeys: []string{"saml_replay_entry_id"}, UniqueKeys: [][]string{{"tenant_id", "provider_id", "assertion_id"}}, Fields: []string{"saml_replay_entry_id", "tenant_id", "provider_id", "assertion_id", "not_on_or_after", "consumed_at"}, Relations: mustEntityRelations(`[]`), VersionField: "", TenantField: "tenant_id", ProjectField: "", GoType: "github.com/udb-project/udb/gen/go/udb/core/idp/entity/v1;idpv1.SamlReplayEntry"},
 	"udb.core.idp.entity.v1.ScimDirectoryState": {Table: "scim_directory_state", PrimaryKeys: []string{"scim_directory_state_id"}, UniqueKeys: [][]string{{"tenant_id", "provider_id"}}, Fields: []string{"scim_directory_state_id", "tenant_id", "provider_id", "cursor", "last_sync_at", "failure_count", "last_error", "deprovision_policy", "created_at", "updated_at", "created_by"}, Relations: mustEntityRelations(`[{"name":"provider","kind":"belongs_to","local_fields":["provider_id"],"target_message_type":"udb.core.idp.entity.v1.IdentityProvider","target_table":"udb_idp.identity_providers","target_fields":["provider_id"],"on_delete":"CASCADE","on_update":"NO ACTION"}]`), VersionField: "", TenantField: "tenant_id", ProjectField: "", GoType: "github.com/udb-project/udb/gen/go/udb/core/idp/entity/v1;idpv1.ScimDirectoryState"},
 	"udb.core.lock.entity.v1.Lock": {Table: "locks", PrimaryKeys: []string{"lock_id"}, UniqueKeys: [][]string{{"tenant_id", "lock_name"}}, Fields: []string{"lock_id", "tenant_id", "lock_name", "owner_id", "fencing_token", "lease_ttl_seconds", "status", "acquired_at", "expires_at", "metadata_json", "created_at", "updated_at", "created_by"}, Relations: mustEntityRelations(`[]`), VersionField: "", TenantField: "tenant_id", ProjectField: "", GoType: "github.com/udb-project/udb/gen/go/udb/core/lock/entity/v1;lockv1.Lock"},
+	"udb.core.messaging.entity.v1.MessagingBackup": {Table: "backups", PrimaryKeys: []string{"id"}, UniqueKeys: [][]string{{"tenant_id", "subject_id", "backup_id"}}, Fields: []string{"id", "tenant_id", "subject_id", "backup_id", "ciphertext", "size_bytes", "ciphertext_sha256", "version", "created_at", "updated_at", "created_by"}, Relations: mustEntityRelations(`[]`), VersionField: "version", TenantField: "tenant_id", ProjectField: "", GoType: "github.com/udb-project/udb/gen/go/udb/core/messaging/entity/v1;messagingv1.MessagingBackup"},
+	"udb.core.messaging.entity.v1.MessagingDevice": {Table: "devices", PrimaryKeys: []string{"id"}, UniqueKeys: [][]string{{"tenant_id", "device_id"}}, Fields: []string{"id", "tenant_id", "subject_id", "device_id", "signature_public_key", "credential", "key_fingerprint", "status", "inbox_head_seq", "acked_seq", "registered_at", "revoked_at", "created_at", "updated_at", "created_by"}, Relations: mustEntityRelations(`[]`), VersionField: "", TenantField: "tenant_id", ProjectField: "", GoType: "github.com/udb-project/udb/gen/go/udb/core/messaging/entity/v1;messagingv1.MessagingDevice"},
+	"udb.core.messaging.entity.v1.MessagingGroup": {Table: "mls_groups", PrimaryKeys: []string{"id"}, UniqueKeys: [][]string{{"tenant_id", "group_id"}}, Fields: []string{"id", "tenant_id", "group_id", "epoch", "public_group_state", "group_info", "group_info_epoch", "created_by_device_id", "created_at", "updated_at", "created_by"}, Relations: mustEntityRelations(`[]`), VersionField: "", TenantField: "tenant_id", ProjectField: "", GoType: "github.com/udb-project/udb/gen/go/udb/core/messaging/entity/v1;messagingv1.MessagingGroup"},
+	"udb.core.messaging.entity.v1.MessagingGroupMember": {Table: "group_members", PrimaryKeys: []string{"id"}, UniqueKeys: [][]string{{"tenant_id", "group_id", "device_id"}}, Fields: []string{"id", "tenant_id", "group_id", "device_id", "subject_id", "leaf_index", "joined_epoch", "created_at", "updated_at", "created_by"}, Relations: mustEntityRelations(`[]`), VersionField: "", TenantField: "tenant_id", ProjectField: "", GoType: "github.com/udb-project/udb/gen/go/udb/core/messaging/entity/v1;messagingv1.MessagingGroupMember"},
+	"udb.core.messaging.entity.v1.MessagingInboxEntry": {Table: "inbox", PrimaryKeys: []string{"id"}, UniqueKeys: [][]string{{"tenant_id", "device_id", "seq"}}, Fields: []string{"id", "tenant_id", "device_id", "seq", "kind", "group_id", "epoch", "payload", "sender_device_id", "client_message_id", "created_at", "acked_at", "updated_at", "created_by"}, Relations: mustEntityRelations(`[]`), VersionField: "", TenantField: "tenant_id", ProjectField: "", GoType: "github.com/udb-project/udb/gen/go/udb/core/messaging/entity/v1;messagingv1.MessagingInboxEntry"},
+	"udb.core.messaging.entity.v1.MessagingKeyPackage": {Table: "key_packages", PrimaryKeys: []string{"id"}, UniqueKeys: [][]string{{"tenant_id", "key_package_ref"}}, Fields: []string{"id", "tenant_id", "device_id", "key_package", "key_package_ref", "last_resort", "published_at", "claimed_at", "claimed_by_device_id", "created_at", "updated_at", "created_by"}, Relations: mustEntityRelations(`[]`), VersionField: "", TenantField: "tenant_id", ProjectField: "", GoType: "github.com/udb-project/udb/gen/go/udb/core/messaging/entity/v1;messagingv1.MessagingKeyPackage"},
 	"udb.core.metering.entity.v1.QuotaRule": {Table: "quota_rules", PrimaryKeys: []string{"quota_id"}, UniqueKeys: [][]string{{"tenant_id", "project_id", "metric"}}, Fields: []string{"quota_id", "tenant_id", "project_id", "metric", "limit_value", "window_seconds", "enabled", "revision", "metadata_json", "created_at", "updated_at", "created_by"}, Relations: mustEntityRelations(`[]`), VersionField: "revision", TenantField: "tenant_id", ProjectField: "project_id", GoType: "github.com/udb-project/udb/gen/go/udb/core/metering/entity/v1;meteringv1.QuotaRule"},
 	"udb.core.metering.entity.v1.UsageEvent": {Table: "usage_events", PrimaryKeys: []string{"usage_id"}, UniqueKeys: [][]string{}, Fields: []string{"usage_id", "tenant_id", "principal_id", "method", "unit", "quantity", "occurred_at", "occurred_at_unix", "metadata_json", "created_at", "updated_at", "created_by"}, Relations: mustEntityRelations(`[]`), VersionField: "", TenantField: "tenant_id", ProjectField: "", GoType: "github.com/udb-project/udb/gen/go/udb/core/metering/entity/v1;meteringv1.UsageEvent"},
 	"udb.core.notification.entity.v1.Notification": {Table: "notifications", PrimaryKeys: []string{"notification_id"}, UniqueKeys: [][]string{}, Fields: []string{"notification_id", "recipient_id", "type", "channel", "subject", "message", "template_data", "priority", "status", "scheduled_at", "sent_at", "delivered_at", "read_at", "created_at", "retry_count", "error_message", "tenant_id", "deleted_at", "deleted_by", "updated_at", "created_by"}, Relations: mustEntityRelations(`[]`), VersionField: "", TenantField: "tenant_id", ProjectField: "", GoType: "github.com/udb-project/udb/gen/go/udb/core/notification/entity/v1;notificationv1.Notification"},
@@ -2508,6 +2544,30 @@ func LockRepository() (*Repository, error) {
 	return RepositoryFor("udb.core.lock.entity.v1.Lock")
 }
 
+func MessagingBackupRepository() (*Repository, error) {
+	return RepositoryFor("udb.core.messaging.entity.v1.MessagingBackup")
+}
+
+func MessagingDeviceRepository() (*Repository, error) {
+	return RepositoryFor("udb.core.messaging.entity.v1.MessagingDevice")
+}
+
+func MessagingGroupRepository() (*Repository, error) {
+	return RepositoryFor("udb.core.messaging.entity.v1.MessagingGroup")
+}
+
+func MessagingGroupMemberRepository() (*Repository, error) {
+	return RepositoryFor("udb.core.messaging.entity.v1.MessagingGroupMember")
+}
+
+func MessagingInboxEntryRepository() (*Repository, error) {
+	return RepositoryFor("udb.core.messaging.entity.v1.MessagingInboxEntry")
+}
+
+func MessagingKeyPackageRepository() (*Repository, error) {
+	return RepositoryFor("udb.core.messaging.entity.v1.MessagingKeyPackage")
+}
+
 func QuotaRuleRepository() (*Repository, error) {
 	return RepositoryFor("udb.core.metering.entity.v1.QuotaRule")
 }
@@ -2729,7 +2789,7 @@ func (u *UnitOfWork) ValidateTxStatuses(statuses []*entityv1.TxStatus) error {
 		if status == nil || status.GetState() != entityv1.TxStatus_TX_STATE_ERROR {
 			continue
 		}
-		if IsCASConflict(txStatusError(status)) {
+		if IsCASConflict(txStatusError(status)) || (status.GetErrorDetail() == nil && isTxConflictMessage(status.GetMessage())) {
 			return &UnitOfWorkConflictError{UnitOfWorkTxError{Status: status}}
 		}
 		return &UnitOfWorkTxError{Status: status}
@@ -2854,6 +2914,11 @@ func mustStringMap(raw string) map[string]string {
 		panic(fmt.Sprintf("udb: invalid generated backend role map: %v", err))
 	}
 	return out
+}
+
+func isTxConflictMessage(message string) bool {
+	lower := strings.ToLower(message)
+	return strings.Contains(lower, "aborted") || strings.Contains(lower, "version") || strings.Contains(lower, "conflict")
 }
 
 // RawDispatchRequest is the ESCAPE HATCH: build a raw GenericDispatchRequest with

@@ -1656,6 +1656,9 @@ mod tests {
             "src/runtime/service/scheduler_service/",
             "src/runtime/service/search_service/",
             "src/runtime/service/lock_service/",
+            // MessagingService resolves its inbox TTL + retention cadence once
+            // via OnceLock at worker spawn.
+            "src/runtime/service/messaging_service/",
             "src/runtime/service/workflow_service/",
             // `#[cfg(test)]` live seam test: reads its backend DSNs from env.
             "src/runtime/service/tenant_service/vector_purge_live.rs",

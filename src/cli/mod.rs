@@ -39,6 +39,7 @@ mod identity_ops;
 mod init;
 mod init_prompt;
 mod keygen;
+mod messaging_fixture;
 mod native_app;
 pub(crate) mod native_lint;
 mod ops_cli;
@@ -875,6 +876,19 @@ pub fn run() {
         Command::CompatMatrix => {
             output_json(&build_compat_matrix(), "compatibility matrix");
             process::exit(0);
+        }
+        Command::MessagingBenchFixture {
+            ref tenant,
+            ref subject,
+            ref prefix,
+            ref out,
+        } => {
+            process::exit(messaging_fixture::run(
+                tenant,
+                subject,
+                prefix,
+                out.as_deref(),
+            ));
         }
         _ => {}
     }
@@ -1861,6 +1875,7 @@ pub fn run() {
         | Command::Native { .. }
         | Command::AppInit { .. }
         | Command::CompatMatrix
+        | Command::MessagingBenchFixture { .. }
         | Command::Env { .. }
         | Command::EnvFill { .. } => {
             // Already handled before proto parsing above; unreachable.

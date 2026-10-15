@@ -1,0 +1,1404 @@
+syntax = "proto3";
+
+package udb.core.messaging.services.v1;
+
+import "google/api/annotations.proto";
+import "udb/core/common/v1/dto.proto";
+import "udb/core/common/v1/security.proto";
+
+option csharp_namespace = "Udb.Core.Messaging.Services.V1";
+option go_package = "github.com/udb-project/udb/gen/go/udb/core/messaging/services/v1;messagingservicev1";
+option java_package = "com.udb.core.messaging.services.v1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Messaging\\Services\\V1";
+option php_namespace = "Udb\\Core\\Messaging\\Services\\V1";
+
+// MessagingService: the delivery service and key directory for end-to-end
+// encrypted user-to-user messaging over MLS (RFC 9420, ciphersuite
+// MLS_128_DHKEMX25519_AES128GCM_SHA256_Ed25519). Clients do all cryptography. The
+// broker stores opaque ciphertext plus the PUBLIC group state, validates every
+// handshake commit against that public state (linear epochs, an authoritative
+// roster), and fans messages out to per-device inboxes. It never holds a group
+// secret and never sees plaintext. Handshake metadata (who joined or left, group
+// sizes, timing) is visible to the broker by design.
+service MessagingService {
+  option (udb.core.common.v1.native_service) = {
+    service_id: "messaging"
+    logical_service_id: "messaging"
+    proto_service_id: "messaging"
+    display_name: "Messaging"
+    category: "messaging"
+    default_enabled: true
+    requires_postgres: true
+    control_plane_listener_allowed: true
+    sdk_facade_name: "messaging"
+    cli_scaffold_group: "messaging"
+    health_check_ref: "messaging"
+    capability_ref: "native.messaging"
+  };
+  option (udb.core.common.v1.service_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "messaging"
+    generate_minimal_example: true
+  };
+  option (udb.core.common.v1.service_cli_scaffold) = {
+    scaffold_package: "messaging"
+    import_path: "udb/native/messaging"
+    required_env: "UDB_NATIVE_SERVICES_ENABLED"
+    required_env: "UDB_GRPC_TARGET"
+    generated_files: "udb.native.messaging.config"
+    required_native_services: "messaging"
+    secret_placeholders: "UDB_API_KEY"
+    smoke_test_command: "udb native lint"
+  };
+  option (udb.core.common.v1.service_dependency_contract) = {
+    required_native_services: "messaging"
+    required_backends: "postgres"
+    required_env: "UDB_NATIVE_SERVICES_ENABLED"
+    required_env: "UDB_GRPC_TARGET"
+  };
+
+  // Register one device of the calling principal: its device id, its Ed25519
+  // signature public key, and its MLS BasicCredential naming
+  // `<tenant>/<subject>/<device_id>`. Re-registering the same device with the same
+  // key is idempotent; a different key for an existing device id is refused (a key
+  // change is a new device).
+  rpc RegisterMessagingDevice(RegisterMessagingDeviceRequest) returns (RegisterMessagingDeviceResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    // Verified: GENUINE keyed dedup. device_id is unique per tenant
+    // (unique-index on (tenant_id, device_id) in the project's messaging
+    // store); the insert is ON CONFLICT DO NOTHING inside one transaction, and
+    // a replay of the identical request returns the existing row with
+    // created=false, while a conflicting one is ALREADY_EXISTS.
+    option (udb.core.common.v1.method_idempotency_contract) = {
+      request_key_field: "device_id"
+      server_generated_key: false
+      replay_safe: true
+    };
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:messaging:register-messaging-device"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
+      decision_resource: "messaging.RegisterMessagingDevice"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "register_messaging_device" rest_operation_id: "messagingRegisterMessagingDevice"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "messaging"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "messaging"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {
+      post: "/v1/messaging/devices"
+      body: "*"
+    };
+  }
+
+  // List a principal's devices with their key fingerprints, so a peer can verify
+  // keys out of band (safety numbers). Revoked devices are included only when
+  // asked for.
+  rpc ListMessagingDevices(ListMessagingDevicesRequest) returns (ListMessagingDevicesResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:messaging:list-messaging-devices"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
+      decision_resource: "messaging.ListMessagingDevices"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "list_messaging_devices" rest_operation_id: "messagingListMessagingDevices"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "messaging"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "messaging"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {get: "/v1/messaging/devices"};
+  }
+
+  // Revoke one device: it stops receiving fan-out, its unclaimed KeyPackages are
+  // deleted, and every group it belongs to gets a removal hint in the other member
+  // devices' inboxes so a member commits the removal.
+  rpc RevokeMessagingDevice(RevokeMessagingDeviceRequest) returns (RevokeMessagingDeviceResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_DESTRUCTIVE;
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:messaging:revoke-messaging-device"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
+      decision_resource: "messaging.RevokeMessagingDevice"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "revoke_messaging_device" rest_operation_id: "messagingRevokeMessagingDevice"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "messaging"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "messaging"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "messaging.RevokeMessagingDevice"
+      outbox_topic: "udb.messaging.inbox.appended.v1"
+      partition_key_field: "tenant_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {
+      post: "/v1/messaging/devices/{device_id}:revoke"
+      body: "*"
+    };
+  }
+
+  // Upload one-time MLS KeyPackages (and optionally one last-resort package) for a
+  // device. Every package is validated: its credential must name the device and
+  // its signature key must be the device's registered key.
+  rpc PublishKeyPackages(PublishKeyPackagesRequest) returns (PublishKeyPackagesResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:messaging:publish-key-packages"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
+      decision_resource: "messaging.PublishKeyPackages"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "publish_key_packages" rest_operation_id: "messagingPublishKeyPackages"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "messaging"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "messaging"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {
+      post: "/v1/messaging/devices/{device_id}/key-packages"
+      body: "*"
+    };
+  }
+
+  // Atomically claim one KeyPackage per target device. A one-time package is
+  // consumed exactly once, even under concurrent claims; when a device has none
+  // left its last-resort package is returned without being consumed.
+  rpc ClaimKeyPackages(ClaimKeyPackagesRequest) returns (ClaimKeyPackagesResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:messaging:claim-key-packages"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
+      decision_resource: "messaging.ClaimKeyPackages"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "claim_key_packages" rest_operation_id: "messagingClaimKeyPackages"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "messaging"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "messaging"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {
+      post: "/v1/messaging/key-packages:claim"
+      body: "*"
+    };
+  }
+
+  // How many unclaimed one-time KeyPackages a device has left, so the client can
+  // top up below a threshold.
+  rpc GetKeyPackageStock(GetKeyPackageStockRequest) returns (GetKeyPackageStockResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:messaging:get-key-package-stock"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
+      decision_resource: "messaging.GetKeyPackageStock"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "get_key_package_stock" rest_operation_id: "messagingGetKeyPackageStock"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "messaging"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "messaging"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {get: "/v1/messaging/devices/{device_id}/key-package-stock"};
+  }
+
+  // Register a new MLS group from the creator's signed public GroupInfo and
+  // ratchet tree. The broker keeps only public group state and never holds group
+  // secrets.
+  rpc CreateGroup(CreateGroupRequest) returns (CreateGroupResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    // Verified: GENUINE keyed dedup. group_id is unique per tenant
+    // (unique-index on (tenant_id, group_id) in the project's messaging
+    // store); the insert is ON CONFLICT DO NOTHING inside one transaction, and
+    // a replay of the identical request returns the existing row with
+    // created=false, while a conflicting one is ALREADY_EXISTS.
+    option (udb.core.common.v1.method_idempotency_contract) = {
+      request_key_field: "group_id"
+      server_generated_key: false
+      replay_safe: true
+    };
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:messaging:create-group"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
+      decision_resource: "messaging.CreateGroup"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "create_group" rest_operation_id: "messagingCreateGroup"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "messaging"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "messaging"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {
+      post: "/v1/messaging/groups"
+      body: "*"
+    };
+  }
+
+  // Submit an MLS PublicMessage commit (plus the Welcome for any added devices).
+  // Accepted only when its epoch is the group's current epoch and it validates
+  // against the public group state; concurrent commits linearize and the loser
+  // receives FAILED_PRECONDITION carrying the current epoch so it can re-base.
+  rpc SubmitCommit(SubmitCommitRequest) returns (SubmitCommitResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    // Verified: GENUINE keyed dedup. A non-empty client_message_id is scoped to
+    // (tenant, group) in the project's messaging store; the handler takes a
+    // transaction-scoped advisory lock on that key and returns the original
+    // result if an inbox row with the key exists, inside the same transaction
+    // that would append the fan-out, so a retry is never delivered twice. An
+    // empty key disables dedup, so server_generated_key=false.
+    option (udb.core.common.v1.method_idempotency_contract) = {
+      request_key_field: "client_message_id"
+      server_generated_key: false
+      replay_safe: true
+    };
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:messaging:submit-commit"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
+      decision_resource: "messaging.SubmitCommit"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "submit_commit" rest_operation_id: "messagingSubmitCommit"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "messaging"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "messaging"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "messaging.SubmitCommit"
+      outbox_topic: "udb.messaging.inbox.appended.v1"
+      partition_key_field: "tenant_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {
+      post: "/v1/messaging/groups/{group_id}:commit"
+      body: "*"
+    };
+  }
+
+  // Return the group's current epoch, its exported public ratchet tree, and the
+  // latest signed GroupInfo a member uploaded, for an external join.
+  rpc GetGroupInfo(GetGroupInfoRequest) returns (GetGroupInfoResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:messaging:get-group-info"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
+      decision_resource: "messaging.GetGroupInfo"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "get_group_info" rest_operation_id: "messagingGetGroupInfo"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "messaging"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "messaging"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {get: "/v1/messaging/groups/{group_id}/info"};
+  }
+
+  // Fan an MLS PrivateMessage ciphertext for the group's current epoch out to every
+  // member device's inbox. The broker stores the opaque bytes and never decrypts
+  // them.
+  rpc SendMessage(SendMessageRequest) returns (SendMessageResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    // Verified: GENUINE keyed dedup. A non-empty client_message_id is scoped to
+    // (tenant, group) in the project's messaging store; the handler takes a
+    // transaction-scoped advisory lock on that key and returns the original
+    // result if an inbox row with the key exists, inside the same transaction
+    // that would append the fan-out, so a retry is never delivered twice. An
+    // empty key disables dedup, so server_generated_key=false.
+    option (udb.core.common.v1.method_idempotency_contract) = {
+      request_key_field: "client_message_id"
+      server_generated_key: false
+      replay_safe: true
+    };
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:messaging:send-message"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
+      decision_resource: "messaging.SendMessage"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "send_message" rest_operation_id: "messagingSendMessage"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "messaging"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "messaging"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "messaging.SendMessage"
+      outbox_topic: "udb.messaging.inbox.appended.v1"
+      partition_key_field: "tenant_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {
+      post: "/v1/messaging/groups/{group_id}/messages"
+      body: "*"
+    };
+  }
+
+  // Stream a device's ordered inbox (commits, welcomes, messages, removal hints)
+  // from a cursor. With follow=true the stream stays open and delivers new entries
+  // as they are appended.
+  rpc StreamInbox(StreamInboxRequest) returns (stream StreamInboxResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:messaging:stream-inbox"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
+      decision_resource: "messaging.StreamInbox"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "stream_inbox" rest_operation_id: "messagingStreamInbox"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "messaging"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "messaging"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {
+      post: "/v1/messaging/inbox:stream"
+      body: "*"
+    };
+  }
+
+  // Advance a device's inbox cursor. Acknowledged entries become collectable by
+  // the retention worker.
+  rpc AckInbox(AckInboxRequest) returns (AckInboxResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:messaging:ack-inbox"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
+      decision_resource: "messaging.AckInbox"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "ack_inbox" rest_operation_id: "messagingAckInbox"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "messaging"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "messaging"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {
+      post: "/v1/messaging/inbox:ack"
+      body: "*"
+    };
+  }
+
+  // Store (or replace) the calling principal's opt-in, client-encrypted history
+  // backup. The client seals the export with a key derived from a recovery secret
+  // the broker never sees; the broker keeps only the opaque envelope and refuses
+  // a body that is not one. With expected_version > 0 the write is a
+  // compare-and-swap against the stored version.
+  rpc PutMessagingBackup(PutMessagingBackupRequest) returns (PutMessagingBackupResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:messaging:put-messaging-backup"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
+      decision_resource: "messaging.PutMessagingBackup"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "put_messaging_backup" rest_operation_id: "messagingPutMessagingBackup"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "messaging"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "messaging"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {
+      put: "/v1/messaging/backups/{backup_id}"
+      body: "*"
+    };
+  }
+
+  // Return a principal's stored backup envelope for restore on a new device. Only
+  // the principal itself (or a service account acting for it) can read it.
+  rpc GetMessagingBackup(GetMessagingBackupRequest) returns (GetMessagingBackupResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:messaging:get-messaging-backup"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
+      decision_resource: "messaging.GetMessagingBackup"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "get_messaging_backup" rest_operation_id: "messagingGetMessagingBackup"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "messaging"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "messaging"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {get: "/v1/messaging/backups/{backup_id}"};
+  }
+
+  // Erase a principal's stored backup. Deleting a backup that does not exist
+  // succeeds with deleted=false.
+  rpc DeleteMessagingBackup(DeleteMessagingBackupRequest) returns (DeleteMessagingBackupResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_DESTRUCTIVE;
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:messaging:delete-messaging-backup"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
+      decision_resource: "messaging.DeleteMessagingBackup"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "delete_messaging_backup" rest_operation_id: "messagingDeleteMessagingBackup"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "messaging"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "messaging"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {delete: "/v1/messaging/backups/{backup_id}"};
+  }
+}
+
+// A device in the key directory. `key_fingerprint` is the lowercase hex SHA-256
+// of the Ed25519 signature public key; peers compare it out of band.
+message DirectoryDevice {
+  option (udb.core.common.v1.message_sdk_surface) = {
+      include_in_facade: true
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "messaging"
+      generate_minimal_example: true
+  };
+  string tenant_id = 1;
+  string subject_id = 2;
+  string device_id = 3;
+  bytes signature_public_key = 4;
+  // TLS-serialized MLS Credential (a BasicCredential naming
+  // `<tenant>/<subject>/<device_id>`).
+  bytes credential = 5;
+  string key_fingerprint = 6;
+  // ACTIVE | REVOKED
+  string status = 7;
+  int64 registered_at_unix = 8;
+  int64 revoked_at_unix = 9;
+}
+
+message RegisterMessagingDeviceRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+      include_in_facade: true
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "messaging"
+      generate_minimal_example: true
+  };
+  // Verified against the bearer/claim tenant; cross-tenant values are rejected.
+  string tenant_id = 1;
+  // The owning principal. When the caller is an end user this must be the
+  // caller's own subject; empty means "the caller".
+  string subject_id = 2;
+  // Client-chosen device id, unique within the tenant. 1-128 characters from
+  // [A-Za-z0-9._-].
+  string device_id = 3;
+  // Raw Ed25519 signature public key (32 bytes).
+  bytes signature_public_key = 4;
+  // TLS-serialized MLS Credential; must be a BasicCredential whose identity is
+  // `<tenant>/<subject>/<device_id>`.
+  bytes credential = 5;
+}
+
+message RegisterMessagingDeviceResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+      include_in_facade: true
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "messaging"
+      generate_minimal_example: true
+  };
+  DirectoryDevice device = 1;
+  // False when the identical device was already registered (idempotent replay).
+  bool created = 2;
+  string message = 3;
+  // Error information if operation failed
+  udb.core.common.v1.ApiError error = 4;
+}
+
+message ListMessagingDevicesRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+      include_in_facade: true
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "messaging"
+      generate_minimal_example: true
+  };
+  string tenant_id = 1;
+  // The principal whose devices to list; empty means "the caller".
+  string subject_id = 2;
+  bool include_revoked = 3;
+}
+
+message ListMessagingDevicesResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+      include_in_facade: true
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "messaging"
+      generate_minimal_example: true
+  };
+  repeated DirectoryDevice devices = 1;
+  string message = 2;
+  // Error information if operation failed
+  udb.core.common.v1.ApiError error = 3;
+}
+
+message RevokeMessagingDeviceRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+      include_in_facade: true
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "messaging"
+      generate_minimal_example: true
+  };
+  string tenant_id = 1;
+  string device_id = 2;
+  // Free-text reason recorded in the removal hint.
+  string reason = 3;
+}
+
+message RevokeMessagingDeviceResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+      include_in_facade: true
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "messaging"
+      generate_minimal_example: true
+  };
+  bool revoked = 1;
+  // Groups whose other members received a removal hint.
+  repeated string group_ids = 2;
+  string message = 3;
+  // Error information if operation failed
+  udb.core.common.v1.ApiError error = 4;
+}
+
+message PublishKeyPackagesRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+      include_in_facade: true
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "messaging"
+      generate_minimal_example: true
+  };
+  string tenant_id = 1;
+  string device_id = 2;
+  // TLS-serialized MLS KeyPackages, each consumed at most once.
+  repeated bytes key_packages = 3;
+  // Optional TLS-serialized last-resort KeyPackage; replaces the device's
+  // previous one. It is handed out only when no one-time package is left.
+  bytes last_resort_key_package = 4;
+}
+
+message PublishKeyPackagesResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+      include_in_facade: true
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "messaging"
+      generate_minimal_example: true
+  };
+  // Newly stored one-time packages (a package already published is skipped).
+  int32 accepted = 1;
+  // Unclaimed one-time packages after this publish.
+  int64 one_time_remaining = 2;
+  bool has_last_resort = 3;
+  string message = 4;
+  // Error information if operation failed
+  udb.core.common.v1.ApiError error = 5;
+}
+
+message ClaimKeyPackagesRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+      include_in_facade: true
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "messaging"
+      generate_minimal_example: true
+  };
+  string tenant_id = 1;
+  // The caller's own device, recorded as the claimer.
+  string requester_device_id = 2;
+  // Devices to claim one package for.
+  repeated string target_device_ids = 3;
+  // Principals whose every ACTIVE device gets one package claimed.
+  repeated string target_subject_ids = 4;
+}
+
+message ClaimedKeyPackage {
+  option (udb.core.common.v1.message_sdk_surface) = {
+      include_in_facade: true
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "messaging"
+      generate_minimal_example: true
+  };
+  string subject_id = 1;
+  string device_id = 2;
+  bytes key_package = 3;
+  // Lowercase hex MLS KeyPackageRef.
+  string key_package_ref = 4;
+  bool last_resort = 5;
+}
+
+message ClaimKeyPackagesResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+      include_in_facade: true
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "messaging"
+      generate_minimal_example: true
+  };
+  repeated ClaimedKeyPackage key_packages = 1;
+  // Target devices that had no package available (or are not active).
+  repeated string missing_device_ids = 2;
+  string message = 3;
+  // Error information if operation failed
+  udb.core.common.v1.ApiError error = 4;
+}
+
+message GetKeyPackageStockRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+      include_in_facade: true
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "messaging"
+      generate_minimal_example: true
+  };
+  string tenant_id = 1;
+  string device_id = 2;
+}
+
+message GetKeyPackageStockResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+      include_in_facade: true
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "messaging"
+      generate_minimal_example: true
+  };
+  int64 one_time_remaining = 1;
+  bool has_last_resort = 2;
+  string message = 3;
+  // Error information if operation failed
+  udb.core.common.v1.ApiError error = 4;
+}
+
+message CreateGroupRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+      include_in_facade: true
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "messaging"
+      generate_minimal_example: true
+  };
+  string tenant_id = 1;
+  // The MLS group id as UTF-8 text; must equal the GroupInfo's group id.
+  string group_id = 2;
+  // The creator's device; must be the group's only member.
+  string creator_device_id = 3;
+  // TLS-serialized MlsMessage carrying the creator's signed GroupInfo.
+  bytes group_info = 4;
+  // TLS-serialized ratchet tree exported by the creator.
+  bytes ratchet_tree = 5;
+}
+
+message CreateGroupResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+      include_in_facade: true
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "messaging"
+      generate_minimal_example: true
+  };
+  string group_id = 1;
+  int64 epoch = 2;
+  bool created = 3;
+  string message = 4;
+  // Error information if operation failed
+  udb.core.common.v1.ApiError error = 5;
+}
+
+message SubmitCommitRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+      include_in_facade: true
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "messaging"
+      generate_minimal_example: true
+  };
+  string tenant_id = 1;
+  string group_id = 2;
+  // The committing member's device.
+  string sender_device_id = 3;
+  // The epoch the commit was built on; must be the group's current epoch.
+  int64 epoch = 4;
+  // TLS-serialized MlsMessage carrying the PublicMessage commit.
+  bytes commit = 5;
+  // TLS-serialized MlsMessage carrying the Welcome for added devices; required
+  // when the commit adds members.
+  bytes welcome = 6;
+  // Optional TLS-serialized MlsMessage carrying the signed GroupInfo of the new
+  // epoch, served by GetGroupInfo for external joins.
+  bytes group_info = 7;
+  // Client idempotency key. A retried commit with the same key returns the
+  // original result instead of being re-applied.
+  string client_message_id = 8;
+}
+
+message SubmitCommitResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+      include_in_facade: true
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "messaging"
+      generate_minimal_example: true
+  };
+  // The group's epoch after the commit.
+  int64 epoch = 1;
+  // Devices that are members after the commit.
+  repeated string member_device_ids = 2;
+  // Devices added by this commit (they received the Welcome).
+  repeated string added_device_ids = 3;
+  // Devices removed by this commit.
+  repeated string removed_device_ids = 4;
+  bool duplicate = 5;
+  string message = 6;
+  // Error information if operation failed
+  udb.core.common.v1.ApiError error = 7;
+}
+
+message GetGroupInfoRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+      include_in_facade: true
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "messaging"
+      generate_minimal_example: true
+  };
+  string tenant_id = 1;
+  string group_id = 2;
+}
+
+message GetGroupInfoResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+      include_in_facade: true
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "messaging"
+      generate_minimal_example: true
+  };
+  string group_id = 1;
+  int64 epoch = 2;
+  // TLS-serialized public ratchet tree of the current epoch.
+  bytes ratchet_tree = 3;
+  // Latest signed GroupInfo a member uploaded; may lag the epoch when the last
+  // committer did not upload one.
+  bytes group_info = 4;
+  int64 group_info_epoch = 5;
+  repeated string member_device_ids = 6;
+  string message = 7;
+  // Error information if operation failed
+  udb.core.common.v1.ApiError error = 8;
+}
+
+message SendMessageRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+      include_in_facade: true
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "messaging"
+      generate_minimal_example: true
+  };
+  string tenant_id = 1;
+  string group_id = 2;
+  string sender_device_id = 3;
+  // TLS-serialized MlsMessage carrying a PrivateMessage for the current epoch.
+  bytes ciphertext = 4;
+  // Client idempotency key. A retried send with the same key is not fanned out
+  // twice.
+  string client_message_id = 5;
+}
+
+message SendMessageResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+      include_in_facade: true
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "messaging"
+      generate_minimal_example: true
+  };
+  int64 epoch = 1;
+  // Number of inbox entries appended (one per member device but the sender's).
+  int32 fanout = 2;
+  bool duplicate = 3;
+  string message = 4;
+  // Error information if operation failed
+  udb.core.common.v1.ApiError error = 5;
+}
+
+message InboxEntry {
+  option (udb.core.common.v1.message_sdk_surface) = {
+      include_in_facade: true
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "messaging"
+      generate_minimal_example: true
+  };
+  string device_id = 1;
+  int64 seq = 2;
+  // COMMIT | WELCOME | MESSAGE | REMOVAL_HINT
+  string kind = 3;
+  string group_id = 4;
+  int64 epoch = 5;
+  // Opaque bytes: the MlsMessage for COMMIT/WELCOME/MESSAGE, a small JSON hint
+  // for REMOVAL_HINT.
+  bytes payload = 6;
+  string sender_device_id = 7;
+  string client_message_id = 8;
+  int64 created_at_unix = 9;
+}
+
+message StreamInboxRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+      include_in_facade: true
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "messaging"
+      generate_minimal_example: true
+  };
+  string tenant_id = 1;
+  string device_id = 2;
+  // Deliver entries with seq greater than this. 0 means "from the device's
+  // acknowledged cursor".
+  int64 after_seq = 3;
+  // Keep the stream open and deliver new entries as they arrive.
+  bool follow = 4;
+  // Stop after this many entries; 0 = unbounded (bounded by follow).
+  int32 max_entries = 5;
+}
+
+message StreamInboxResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+      include_in_facade: true
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "messaging"
+      generate_minimal_example: true
+  };
+  InboxEntry entry = 1;
+  // Error information if operation failed
+  udb.core.common.v1.ApiError error = 2;
+}
+
+message AckInboxRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+      include_in_facade: true
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "messaging"
+      generate_minimal_example: true
+  };
+  string tenant_id = 1;
+  string device_id = 2;
+  // Acknowledge every entry with seq up to and including this value.
+  int64 up_to_seq = 3;
+}
+
+message AckInboxResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+      include_in_facade: true
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "messaging"
+      generate_minimal_example: true
+  };
+  // The device's acknowledged cursor after this call (never moves backwards).
+  int64 acked_seq = 1;
+  // Entries newly marked acknowledged by this call.
+  int64 acknowledged = 2;
+  string message = 3;
+  // Error information if operation failed
+  udb.core.common.v1.ApiError error = 4;
+}
+
+// A stored backup's metadata. The envelope itself travels only in
+// GetMessagingBackupResponse.ciphertext.
+message MessagingBackupInfo {
+  option (udb.core.common.v1.message_sdk_surface) = {
+      include_in_facade: true
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "messaging"
+      generate_minimal_example: true
+  };
+  string tenant_id = 1;
+  string subject_id = 2;
+  string backup_id = 3;
+  int64 size_bytes = 4;
+  // Lowercase hex SHA-256 of the envelope.
+  string ciphertext_sha256 = 5;
+  // 1 on the first write, +1 on every overwrite.
+  int64 version = 6;
+  int64 created_at_unix = 7;
+  int64 updated_at_unix = 8;
+}
+
+message PutMessagingBackupRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+      include_in_facade: true
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "messaging"
+      generate_minimal_example: true
+  };
+  string tenant_id = 1;
+  // The owning principal; empty means "the caller". An end user may store only
+  // its own backup.
+  string subject_id = 2;
+  // 1-128 characters from [A-Za-z0-9._-]; empty means "default".
+  string backup_id = 3;
+  // The sealed backup envelope produced by the client (udb-mls `seal_backup`).
+  // Its plaintext and its key never reach the broker.
+  bytes ciphertext = 4;
+  // 0 writes unconditionally. A positive value makes the write a compare-and-swap:
+  // it succeeds only while a backup with exactly this version is stored, else
+  // FAILED_PRECONDITION with `missing.current_version` (0 = none stored).
+  int64 expected_version = 5;
+}
+
+message PutMessagingBackupResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+      include_in_facade: true
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "messaging"
+      generate_minimal_example: true
+  };
+  MessagingBackupInfo backup = 1;
+  // True when this call created the backup, false when it replaced one.
+  bool created = 2;
+  string message = 3;
+  // Error information if operation failed
+  udb.core.common.v1.ApiError error = 4;
+}
+
+message GetMessagingBackupRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+      include_in_facade: true
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "messaging"
+      generate_minimal_example: true
+  };
+  string tenant_id = 1;
+  // The owning principal; empty means "the caller".
+  string subject_id = 2;
+  // Empty means "default".
+  string backup_id = 3;
+}
+
+message GetMessagingBackupResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+      include_in_facade: true
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "messaging"
+      generate_minimal_example: true
+  };
+  MessagingBackupInfo backup = 1;
+  // The sealed envelope, exactly as stored.
+  bytes ciphertext = 2;
+  string message = 3;
+  // Error information if operation failed
+  udb.core.common.v1.ApiError error = 4;
+}
+
+message DeleteMessagingBackupRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+      include_in_facade: true
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "messaging"
+      generate_minimal_example: true
+  };
+  string tenant_id = 1;
+  // The owning principal; empty means "the caller".
+  string subject_id = 2;
+  // Empty means "default".
+  string backup_id = 3;
+}
+
+message DeleteMessagingBackupResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+      include_in_facade: true
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "messaging"
+      generate_minimal_example: true
+  };
+  // False when there was no backup to delete.
+  bool deleted = 1;
+  string message = 2;
+  // Error information if operation failed
+  udb.core.common.v1.ApiError error = 3;
+}

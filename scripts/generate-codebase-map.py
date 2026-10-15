@@ -30,6 +30,8 @@ SCAN_ROOTS = [
     ("src", REPO / "src"),
     ("crates/udb-portable/src", REPO / "crates" / "udb-portable" / "src"),
     ("crates/udb-wasm/src", REPO / "crates" / "udb-wasm" / "src"),
+    ("crates/udb-mls/src", REPO / "crates" / "udb-mls" / "src"),
+    ("crates/udb-mls-wasm/src", REPO / "crates" / "udb-mls-wasm" / "src"),
 ]
 
 PUB_RE = re.compile(

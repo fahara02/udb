@@ -56,6 +56,9 @@ pub mod error;
 /// Regenerate with `udb sdk generate --lang rust --out sdk`; CI fails if the
 /// committed copy differs from what the descriptor produces.
 pub mod generated_rpcs;
+/// End-to-end encrypted messaging over the `MessagingService` (feature `mls`).
+#[cfg(feature = "mls")]
+pub mod messaging;
 pub mod metadata;
 pub mod record;
 

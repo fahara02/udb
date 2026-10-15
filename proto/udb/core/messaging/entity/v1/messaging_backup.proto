@@ -1,0 +1,85 @@
+syntax = "proto3";
+
+package udb.core.messaging.entity.v1;
+
+import "google/protobuf/timestamp.proto";
+import "udb/core/common/v1/db.proto";
+import "udb/core/common/v1/security.proto";
+
+option csharp_namespace = "Udb.Core.Messaging.Entity.V1";
+option go_package = "github.com/udb-project/udb/gen/go/udb/core/messaging/entity/v1;messagingv1";
+option java_package = "com.udb.core.messaging.entity.v1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Messaging\\Entity\\V1";
+option php_namespace = "Udb\\Core\\Messaging\\Entity\\V1";
+
+// MessagingBackup: one opt-in, client-encrypted history backup of a principal.
+// `ciphertext` is sealed on the device with a key derived from the user's recovery
+// secret (Argon2id, then HKDF-SHA256, then XChaCha20-Poly1305); the broker never sees
+// the secret, the key, or the plaintext. `version` grows by one on every overwrite so
+// two devices of the same principal can compare-and-swap.
+message MessagingBackup {
+  option (udb.core.common.v1.pg_table) = {
+    table_name: "backups"
+    schema_name: "udb_messaging"
+    migration_order: 6
+    is_table: true
+    comment: "E2EE messaging opt-in client-encrypted history backups"
+    soft_delete: false
+    audit_fields: true
+    enable_rls: true
+    force_rls: true
+    rls_policies: {
+      policy_name: "tenant_isolation"
+      using: "(tenant_id::text = current_setting('app.current_tenant_id', true) OR current_setting('app.platform_admin', true) = 'true')"
+      permissive: true
+    }
+    indexes: {
+      index_name: "idx_messaging_backups_tenant_subject_backup_unique"
+      index_type: "BTREE"
+      unique: true
+      columns: "tenant_id"
+      columns: "subject_id"
+      columns: "backup_id"
+    }
+    cdc_topic: "udb.messaging.backups.cdc"
+    required_scope: "messaging:read"
+  };
+  option (udb.core.common.v1.db_table_security) = {
+    tenant_isolation_mode: "tenant"
+    tenant_column: "tenant_id"
+    rls_policy_template: "tenant_id = current_setting('app.current_tenant_id')"
+    soft_delete_mode: "none"
+    retention_class: "messaging.backup"
+    retention_days: 3650
+    audit_mode: AUDIT_MODE_MUTATION
+    encryption_profile: "tenant"
+    pii_profile: "restricted"
+    export_eligible: false
+    data_residency_policy_ref: "tenant.data_residency"
+  };
+
+  string id = 1 [(udb.core.common.v1.pg_column) = { column_name: "id" sql_type: "UUID" primary_key: true not_null: true default_value: "gen_random_uuid()" }];
+
+  string tenant_id = 2 [(udb.core.common.v1.pg_column) = { column_name: "tenant_id" sql_type: "VARCHAR(64)" tenant_column: true not_null: true }];
+
+  // Owning principal (the UDB subject).
+  string subject_id = 3 [(udb.core.common.v1.pg_column) = { column_name: "subject_id" sql_type: "VARCHAR(255)" not_null: true }];
+
+  // Client-chosen backup name, unique per principal ("default" unless the client names one).
+  string backup_id = 4 [(udb.core.common.v1.pg_column) = { column_name: "backup_id" sql_type: "VARCHAR(128)" not_null: true }];
+
+  // The sealed backup envelope; opaque to the broker.
+  bytes ciphertext = 5 [(udb.core.common.v1.pg_column) = { column_name: "ciphertext" sql_type: "BYTEA" not_null: true }];
+
+  int64 size_bytes = 6 [(udb.core.common.v1.pg_column) = { column_name: "size_bytes" sql_type: "BIGINT" not_null: true }];
+
+  // Lowercase hex SHA-256 of ciphertext, for integrity checks after download.
+  string ciphertext_sha256 = 7 [(udb.core.common.v1.pg_column) = { column_name: "ciphertext_sha256" sql_type: "VARCHAR(64)" not_null: true }];
+
+  // 1 on the first write, +1 on every overwrite.
+  int64 version = 8 [(udb.core.common.v1.pg_column) = { column_name: "version" sql_type: "BIGINT" not_null: true default_value: "1" }];
+
+  google.protobuf.Timestamp created_at = 9 [(udb.core.common.v1.pg_column) = { column_name: "created_at" sql_type: "TIMESTAMPTZ" not_null: true default_value: "NOW()" }];
+
+  google.protobuf.Timestamp updated_at = 10 [(udb.core.common.v1.pg_column) = { column_name: "updated_at" sql_type: "TIMESTAMPTZ" not_null: true default_value: "NOW()" }];
+}

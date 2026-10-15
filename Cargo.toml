@@ -3,7 +3,7 @@
 # source of truth for the AST, lexer, checksum, and source-based parser.
 # See crates/udb-portable/Cargo.toml.
 [workspace]
-members = ["crates/udb-portable", "crates/udb-wasm"]
+members = ["crates/udb-portable", "crates/udb-wasm", "crates/udb-mls", "crates/udb-mls-wasm"]
 # The Rust SDK is a CONSUMER of the wire contract, not part of the broker.
 # Excluding it keeps `cargo build` at the root from compiling the client and
 # stops the two from sharing a lockfile or feature unification.
@@ -226,6 +226,16 @@ ratatui = { version = "0.30", optional = true, default-features = false, feature
 crossterm = { version = "0.29", optional = true }
 inquire = { version = "0.9", optional = true, default-features = false, features = ["crossterm"] }
 sha2 = "0.10"
+# MLS (RFC 9420) delivery-service validation for the native MessagingService:
+# the broker tracks each group's PUBLIC state with an OpenMLS `PublicGroup` and
+# validates handshake commits against it; it never holds group secrets.
+# 0.8 is the newest line whose MSRV fits `rust-version` above (0.9 needs 1.91).
+openmls = "0.8.1"
+openmls_rust_crypto = "0.5.1"
+# The MLS client crate, for `udb messaging bench-fixture`: the benchmark's MLS
+# objects are minted by the same code the SDKs run. Published before `udb`
+# (release-crates.yml), so the packaged crate resolves it from crates.io.
+udb-mls = { path = "crates/udb-mls", version = "0.1.0" }
 # SHA-1 is required only for RFC 6238 TOTP (the de-facto authenticator-app HMAC)
 # and legacy SAML RSA-SHA1 signature verification. (No `oid` feature needed: the
 # SAML verify path prepends the DigestInfo prefix itself — see idp/saml.rs.)
@@ -324,6 +334,8 @@ heck = "0.5"
 criterion = { version = "0.5", features = ["html_reports"] }
 # D.2 heap-allocation profiling for the hot paths (run the dhat_hotpath example).
 dhat = "0.3"
+# MLS clients that stand in for real devices in the MessagingService tests.
+openmls_basic_credential = "0.5"
 redis = { version = "0.27", features = ["tokio-comp", "connection-manager"] }
 rdkafka = { version = "0.36", default-features = false, features = ["cmake-build", "tokio", "curl-static"] }
 aws-config = "1"

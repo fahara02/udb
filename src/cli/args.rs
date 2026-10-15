@@ -142,6 +142,14 @@ pub(crate) enum Command {
     Explain,
     /// Export the current CatalogManifest to a JSON file (for CI plan approval workflows).
     ManifestExport,
+    /// `udb messaging bench-fixture`: mint the MLS objects the MessagingService
+    /// benchmark rows need for one tenant and subject (offline; JSON out).
+    MessagingBenchFixture {
+        tenant: String,
+        subject: String,
+        prefix: String,
+        out: Option<String>,
+    },
     /// Lint a set of ABAC policies loaded from UDB_ABAC_POLICY_FILE (JSON array).
     PolicyLint,
     /// Preview field masking for a given message type and scope set.
@@ -1702,6 +1710,23 @@ pub(crate) fn parse_args(args: &[String]) -> (Command, String, String, String) {
                     .and_then(|value| value.parse::<i64>().ok())
                     .unwrap_or(5000)
                     .max(1),
+            }
+        }
+        Some("messaging") => {
+            offset = args.len();
+            match args.get(1).map(String::as_str) {
+                Some("bench-fixture") => Command::MessagingBenchFixture {
+                    tenant: flag_value("--tenant").unwrap_or_default(),
+                    subject: flag_value("--subject").unwrap_or_default(),
+                    prefix: flag_value("--prefix").unwrap_or_else(|| "sdk-perf-mls".to_string()),
+                    out: flag_value("--out"),
+                },
+                other => Command::InvalidUsage {
+                    message: format!(
+                        "udb messaging: unknown action {:?}; usage: udb messaging bench-fixture --tenant <id> --subject <id> [--prefix <p>] [--out <path>]",
+                        other.unwrap_or("")
+                    ),
+                },
             }
         }
         Some("sdk") => {

@@ -1,0 +1,54 @@
+# udb-mls — the client side of UDB's end-to-end encrypted messaging (MLS,
+# RFC 9420, via OpenMLS). A device's identity and keys, KeyPackages, group
+# create/add/remove/update commits, Welcome processing, application message
+# encryption, and in-order inbox processing with epoch tracking.
+#
+# Sans-IO: it never talks to the broker. It produces the exact bytes the
+# MessagingService accepts (PublicMessage commits, Welcomes, PrivateMessage
+# ciphertext, KeyPackages) and consumes the inbox entries it delivers. The Rust
+# SDK (`udb-client`, feature `mls`) and the TypeScript SDK (through
+# `crates/udb-mls-wasm`) drive the RPCs.
+#
+# No plaintext and no secret leaves this crate except to its caller: client
+# state (signature key, KeyPackage private keys, group secrets) is persisted
+# through the caller's `StateStore`.
+[package]
+name = "udb-mls"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.88"
+description = "Client-side MLS (RFC 9420) for UDB's end-to-end encrypted messaging service: device keys, KeyPackages, group commits, Welcome processing and message encryption over OpenMLS."
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/fahara02/udb"
+homepage = "https://github.com/fahara02/udb"
+documentation = "https://docs.rs/udb-mls"
+keywords = ["udb", "mls", "e2ee", "messaging", "openmls"]
+categories = ["cryptography", "network-programming"]
+
+[lib]
+name = "udb_mls"
+path = "src/lib.rs"
+
+[features]
+default = []
+# wasm32-unknown-unknown in a JS host: OpenMLS's clock and randomness come from
+# the JS environment (`crates/udb-mls-wasm` enables this).
+js = ["openmls/js"]
+
+[dependencies]
+# Same versions as the broker's delivery-service validation, so client and
+# broker agree byte for byte on the wire objects.
+openmls = "0.8.1"
+openmls_rust_crypto = "0.5.1"
+openmls_basic_credential = "0.5"
+# Encrypted backup (Argon2id -> HKDF-SHA256 -> XChaCha20-Poly1305). Pure Rust,
+# no default features: randomness comes from the OpenMLS provider, so the same
+# code builds for wasm32 without another getrandom backend.
+argon2 = { version = "0.5", default-features = false, features = ["alloc"] }
+chacha20poly1305 = { version = "0.10", default-features = false, features = ["alloc"] }
+hkdf = "0.12"
+zeroize = "1"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+sha2 = "0.10"
+thiserror = "2"

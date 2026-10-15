@@ -64,6 +64,39 @@ jobs:
             echo "exists=false" >> "${GITHUB_OUTPUT}"
           fi
 
+      # The messaging client's MLS core (crates/udb-mls-wasm) ships in the
+      # package under mls-wasm/: build it with the wasm-bindgen CLI pinned to the
+      # Cargo.lock version (the build script refuses a mismatch).
+      - uses: ./.github/actions/setup-rust
+        with:
+          target: wasm32-unknown-unknown
+          install-build-deps: "false"
+          cache-key: release-typescript-mls-wasm
+
+      - name: Install pinned wasm-bindgen CLI
+        shell: bash
+        run: |
+          set -euo pipefail
+          archive="${RUNNER_TEMP}/wasm-bindgen-0.2.122-x86_64-unknown-linux-musl.tar.gz"
+          curl --fail --location --retry 3 --retry-all-errors \
+            https://github.com/wasm-bindgen/wasm-bindgen/releases/download/0.2.122/wasm-bindgen-0.2.122-x86_64-unknown-linux-musl.tar.gz \
+            --output "$archive"
+          printf '%s  %s\n' '122a3fe2ea9c6e3e89b50e42dd1a346e499f3f65a54aae0b4eaeb658139d1e0e' "$archive" | sha256sum --check --strict
+          install_dir="${RUNNER_TEMP}/udb-wasm-bindgen"
+          mkdir -p "$install_dir"
+          tar --extract --gzip --file "$archive" --directory "$install_dir" --strip-components=1
+          "$install_dir/wasm-bindgen" --version | grep -Fx 'wasm-bindgen 0.2.122'
+          printf '%s\n' "$install_dir" >> "$GITHUB_PATH"
+
+      - name: Build the MLS WebAssembly module
+        working-directory: sdk/typescript
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm run build:mls-wasm
+          test -f mls-wasm/udb_mls_wasm.js
+          test -f mls-wasm/udb_mls_wasm_bg.wasm
+
       # `build` bundles the runtime proto assets into the package (bundle-proto)
       # and emits dist/*.js + *.d.ts. The committed `gen/` tree is hard-verified
       # against `buf generate --include-imports` by the CI `buf` job, so no

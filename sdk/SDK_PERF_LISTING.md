@@ -6,7 +6,7 @@ Inputs:
 - `docs/generated/bench-bodies.json`
 - `docs/site/bench-results.json`
 
-Current generated RPC surface: 388 RPCs across 28 services.
+Current generated RPC surface: 404 RPCs across 29 services.
 
 Published benchmark artifact: present.
 Release tag: v0.4.28.
@@ -58,11 +58,12 @@ Generated at: 2026-07-26T17:46:09+00:00.
 | CacheService | 7 | 3 | 3 | 1 | 0 |
 | ConfigService | 5 | 3 | 1 | 1 | 0 |
 | ControlPlaneService | 6 | 2 | 4 | 0 | 0 |
-| DataBroker | 84 | 35 | 42 | 7 | 0 |
+| DataBroker | 85 | 35 | 42 | 8 | 0 |
 | EmbeddingService | 19 | 5 | 12 | 2 | 0 |
 | IdentityProviderService | 27 | 6 | 21 | 0 | 0 |
 | LiveQueryService | 1 | 1 | 0 | 0 | 0 |
 | LockService | 5 | 2 | 3 | 0 | 0 |
+| MessagingService | 15 | 5 | 8 | 2 | 0 |
 | MeteringService | 6 | 4 | 2 | 0 | 0 |
 | NotificationService | 12 | 7 | 5 | 0 | 0 |
 | PeerService | 5 | 2 | 3 | 0 | 0 |
@@ -300,6 +301,7 @@ identity surface available to benchmark reports.
 | `DataBroker/PublishCDC` | `publish_cdc` | `publishCdc` | MUTATION |
 | `DataBroker/PurgeSubject` | `purge_subject` | `purgeSubject` | DESTRUCTIVE |
 | `DataBroker/PutObject` | `put_object` | `putObject` | MUTATION |
+| `DataBroker/PutPolicy` | `put_policy` | `putPolicy` | DESTRUCTIVE |
 | `DataBroker/QuarantineDlqEvent` | `quarantine_dlq_event` | `quarantineDlqEvent` | MUTATION |
 | `DataBroker/ReloadPolicies` | `reload_policies` | `reloadPolicies` | DESTRUCTIVE |
 | `DataBroker/ReplayDlqEvent` | `replay_dlq_event` | `replayDlqEvent` | MUTATION |
@@ -373,6 +375,21 @@ identity surface available to benchmark reports.
 | `LockService/ListLocks` | `list_locks` | `listLocks` | READ_ONLY |
 | `LockService/ReleaseLock` | `release_lock` | `releaseLock` | MUTATION |
 | `LockService/RenewLock` | `renew_lock` | `renewLock` | MUTATION |
+| `MessagingService/AckInbox` | `ack_inbox` | `messagingAckInbox` | MUTATION |
+| `MessagingService/ClaimKeyPackages` | `claim_key_packages` | `messagingClaimKeyPackages` | MUTATION |
+| `MessagingService/CreateGroup` | `create_group` | `messagingCreateGroup` | MUTATION |
+| `MessagingService/DeleteMessagingBackup` | `delete_messaging_backup` | `messagingDeleteMessagingBackup` | DESTRUCTIVE |
+| `MessagingService/GetGroupInfo` | `get_group_info` | `messagingGetGroupInfo` | READ_ONLY |
+| `MessagingService/GetKeyPackageStock` | `get_key_package_stock` | `messagingGetKeyPackageStock` | READ_ONLY |
+| `MessagingService/GetMessagingBackup` | `get_messaging_backup` | `messagingGetMessagingBackup` | READ_ONLY |
+| `MessagingService/ListMessagingDevices` | `list_messaging_devices` | `messagingListMessagingDevices` | READ_ONLY |
+| `MessagingService/PublishKeyPackages` | `publish_key_packages` | `messagingPublishKeyPackages` | MUTATION |
+| `MessagingService/PutMessagingBackup` | `put_messaging_backup` | `messagingPutMessagingBackup` | MUTATION |
+| `MessagingService/RegisterMessagingDevice` | `register_messaging_device` | `messagingRegisterMessagingDevice` | MUTATION |
+| `MessagingService/RevokeMessagingDevice` | `revoke_messaging_device` | `messagingRevokeMessagingDevice` | DESTRUCTIVE |
+| `MessagingService/SendMessage` | `send_message` | `messagingSendMessage` | MUTATION |
+| `MessagingService/StreamInbox` | `stream_inbox` | `messagingStreamInbox` | READ_ONLY |
+| `MessagingService/SubmitCommit` | `submit_commit` | `messagingSubmitCommit` | MUTATION |
 | `MeteringService/CheckQuota` | `check_quota` | `checkQuota` | READ_ONLY |
 | `MeteringService/GetQuota` | `get_quota` | `getQuota` | READ_ONLY |
 | `MeteringService/ListQuotas` | `list_quotas` | `listQuotas` | READ_ONLY |

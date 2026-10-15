@@ -1,0 +1,96 @@
+syntax = "proto3";
+
+package udb.core.messaging.entity.v1;
+
+import "google/protobuf/timestamp.proto";
+import "udb/core/common/v1/db.proto";
+import "udb/core/common/v1/security.proto";
+
+option csharp_namespace = "Udb.Core.Messaging.Entity.V1";
+option go_package = "github.com/udb-project/udb/gen/go/udb/core/messaging/entity/v1;messagingv1";
+option java_package = "com.udb.core.messaging.entity.v1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Messaging\\Entity\\V1";
+option php_namespace = "Udb\\Core\\Messaging\\Entity\\V1";
+
+// MessagingDevice: one registered device in the messaging key directory. The
+// broker vouches that `signature_public_key` belongs to `subject_id`'s device; clients
+// pin it and compare `key_fingerprint` out of band. `inbox_head_seq` is the device's
+// inbox sequence allocator and `acked_seq` its acknowledged cursor; both only grow.
+message MessagingDevice {
+  option (udb.core.common.v1.pg_table) = {
+    table_name: "devices"
+    schema_name: "udb_messaging"
+    migration_order: 1
+    is_table: true
+    comment: "E2EE messaging key directory: one row per registered device"
+    soft_delete: false
+    audit_fields: true
+    enable_rls: true
+    force_rls: true
+    rls_policies: {
+      policy_name: "tenant_isolation"
+      using: "(tenant_id::text = current_setting('app.current_tenant_id', true) OR current_setting('app.platform_admin', true) = 'true')"
+      permissive: true
+    }
+    indexes: {
+      index_name: "idx_messaging_devices_tenant_device_unique"
+      index_type: "BTREE"
+      unique: true
+      columns: "tenant_id"
+      columns: "device_id"
+    }
+    indexes: {
+      index_name: "idx_messaging_devices_tenant_subject"
+      index_type: "BTREE"
+      columns: "tenant_id"
+      columns: "subject_id"
+    }
+    cdc_topic: "udb.messaging.devices.cdc"
+    required_scope: "messaging:read"
+  };
+  option (udb.core.common.v1.db_table_security) = {
+    tenant_isolation_mode: "tenant"
+    tenant_column: "tenant_id"
+    rls_policy_template: "tenant_id = current_setting('app.current_tenant_id')"
+    soft_delete_mode: "none"
+    retention_class: "messaging.directory"
+    retention_days: 3650
+    audit_mode: AUDIT_MODE_MUTATION
+    encryption_profile: "tenant"
+    pii_profile: "standard"
+    export_eligible: false
+    data_residency_policy_ref: "tenant.data_residency"
+  };
+
+  string id = 1 [(udb.core.common.v1.pg_column) = { column_name: "id" sql_type: "UUID" primary_key: true not_null: true default_value: "gen_random_uuid()" }];
+
+  string tenant_id = 2 [(udb.core.common.v1.pg_column) = { column_name: "tenant_id" sql_type: "VARCHAR(64)" tenant_column: true not_null: true }];
+
+  // Owning principal (the UDB subject).
+  string subject_id = 3 [(udb.core.common.v1.pg_column) = { column_name: "subject_id" sql_type: "VARCHAR(255)" not_null: true }];
+
+  // Client-chosen device id, unique within the tenant.
+  string device_id = 4 [(udb.core.common.v1.pg_column) = { column_name: "device_id" sql_type: "VARCHAR(128)" not_null: true }];
+
+  // Raw Ed25519 signature public key.
+  bytes signature_public_key = 5 [(udb.core.common.v1.pg_column) = { column_name: "signature_public_key" sql_type: "BYTEA" not_null: true }];
+
+  // TLS-serialized MLS BasicCredential naming <tenant>/<subject>/<device_id>.
+  bytes credential = 6 [(udb.core.common.v1.pg_column) = { column_name: "credential" sql_type: "BYTEA" not_null: true }];
+
+  // Lowercase hex SHA-256 of signature_public_key.
+  string key_fingerprint = 7 [(udb.core.common.v1.pg_column) = { column_name: "key_fingerprint" sql_type: "VARCHAR(64)" not_null: true }];
+
+  // ACTIVE | REVOKED
+  string status = 8 [(udb.core.common.v1.pg_column) = { column_name: "status" sql_type: "VARCHAR(20)" not_null: true default_value: "'ACTIVE'" }];
+
+  // Highest inbox seq allocated to this device.
+  int64 inbox_head_seq = 9 [(udb.core.common.v1.pg_column) = { column_name: "inbox_head_seq" sql_type: "BIGINT" not_null: true default_value: "0" }];
+
+  // Highest inbox seq the device acknowledged.
+  int64 acked_seq = 10 [(udb.core.common.v1.pg_column) = { column_name: "acked_seq" sql_type: "BIGINT" not_null: true default_value: "0" }];
+
+  google.protobuf.Timestamp registered_at = 11 [(udb.core.common.v1.pg_column) = { column_name: "registered_at" sql_type: "TIMESTAMPTZ" not_null: true default_value: "NOW()" }];
+
+  google.protobuf.Timestamp revoked_at = 12 [(udb.core.common.v1.pg_column) = { column_name: "revoked_at" sql_type: "TIMESTAMPTZ" comment: "When the device was revoked; null while active" }];
+}
