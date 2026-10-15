@@ -28,6 +28,7 @@ import (
 	_ "github.com/fahara02/udb/sdk/go/gen/udb/core/embedding/services/v1"
 	_ "github.com/fahara02/udb/sdk/go/gen/udb/core/livequery/services/v1"
 	_ "github.com/fahara02/udb/sdk/go/gen/udb/core/lock/services/v1"
+	_ "github.com/fahara02/udb/sdk/go/gen/udb/core/messaging/services/v1"
 	_ "github.com/fahara02/udb/sdk/go/gen/udb/core/metering/services/v1"
 	_ "github.com/fahara02/udb/sdk/go/gen/udb/core/scheduler/services/v1"
 	_ "github.com/fahara02/udb/sdk/go/gen/udb/core/search/services/v1"
