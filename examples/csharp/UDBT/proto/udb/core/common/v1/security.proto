@@ -1,0 +1,362 @@
+syntax = "proto3";
+
+package udb.core.common.v1;
+
+import "google/protobuf/descriptor.proto";
+
+option csharp_namespace = "Udb.Core.Common.V1";
+option go_package = "github.com/udb-project/udb/gen/go/udb/core/common/v1;commonv1";
+option java_package = "com.udb.core.common.v1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Common\\V1";
+option php_namespace = "Udb\\Core\\Common\\V1";
+
+// ── UDB custom-option extension-number registry (F9.1) ──────────────────────
+// Non-overlapping ranges are RESERVED per extended descriptor option so future
+// additive options never collide. protoc/`buf build` already rejects duplicate
+// extension numbers within an extended message, so a collision fails CI by
+// construction; this registry documents the allocation and upper bounds:
+//   FieldOptions   : 50002..50199  (50002/50006/50021/50032 db.proto-owned;
+//                                    50010..50020 scalar, 50033 structured)
+//   MethodOptions  : 51001..51199  (51001..51012 used)
+//   MessageOptions : 50001..52199  (50001..50013/50031 db.proto-owned;
+//                                    52001..52004 security.proto-owned)
+//   ServiceOptions : 53001..53199  (53001..53004 used; rest reserved)
+//   FileOptions    : 54001..54199  (reserved; no file-level options yet)
+// Do NOT reuse a retired number; bump into the reserved tail instead.
+extend google.protobuf.FieldOptions {
+  bool pii = 50010;
+  bool encrypted_security = 50011;
+  bool log_masked = 50012;
+  bool log_redacted = 50013;
+  bool sensitive = 50014;
+  bool requires_consent = 50015;
+  string data_purpose = 50016;
+  int32 retention_days = 50017;
+  bool tokenized = 50018;
+  SecurityClassification security_classification = 50019;
+  DataCategory data_category = 50020;
+  // Enterprise contract v1 additive field option. This does not replace the
+  // scalar options above; generators normalize both shapes into one manifest.
+  DbColumnSecurityOptions db_column_security = 50033;
+}
+
+extend google.protobuf.MethodOptions {
+  EndpointSecurity endpoint_security = 51001;
+  RestContract rest_contract = 51002;
+  SdkSurfaceOptions sdk_surface = 51003;
+  CliScaffoldOptions method_cli_scaffold = 51004;
+  EventContractOptions method_event_contract = 51005;
+  DependencyContractOptions method_dependency_contract = 51006;
+  // Authoritative state-change classification — see the OperationKind enum.
+  // Standalone (not in endpoint_security) so it is decoupled from auth and every
+  // RPC can carry it, including the DataBroker data-plane RPCs.
+  OperationKind operation_kind = 51007;
+  MethodPreconditionContract method_precondition_contract = 51008;
+  ReadAfterWriteContract method_readback_contract = 51009;
+  LifecycleContract method_lifecycle_contract = 51010;
+  IdempotencyContract method_idempotency_contract = 51011;
+  ErrorContract method_error_contract = 51012;
+}
+
+extend google.protobuf.MessageOptions {
+  DbTableSecurityOptions db_table_security = 52001;
+  EventContractOptions message_event_contract = 52002;
+  SdkSurfaceOptions message_sdk_surface = 52003;
+  DependencyContractOptions message_dependency_contract = 52004;
+}
+
+extend google.protobuf.ServiceOptions {
+  NativeServiceOptions native_service = 53001;
+  SdkSurfaceOptions service_sdk_surface = 53002;
+  CliScaffoldOptions service_cli_scaffold = 53003;
+  DependencyContractOptions service_dependency_contract = 53004;
+}
+
+message EndpointSecurity {
+  AuthMode mode = 1;
+  repeated string roles = 2;
+  repeated string scopes = 3;
+  bool tenant_required = 4;
+  bool csrf_required = 5;
+  string policy_ref = 6;
+  bool internal_grpc_only = 7;
+  int32 required_assurance_level = 8;
+  repeated CredentialType allowed_credential_types = 9;
+  string rate_limit_policy_ref = 10;
+  string abuse_policy_ref = 11;
+  string audit_event_type = 12;
+  string decision_resource = 13;
+  string owner_field = 14;
+  string tenant_field = 15;
+  string project_field = 16;
+  bool idempotency_required = 17;
+  bool request_context_required = 18;
+}
+
+// State-change semantics of an RPC, set via the standalone `operation_kind`
+// method option (NOT nested in endpoint_security, so it never affects the
+// auth/method-security path — it is pure metadata). SINGLE source of truth for
+// (a) client retry safety — only READ_ONLY is safe to auto-retry on a transient
+// failure (retrying a MUTATION risks duplicate side effects), and (b) SDK
+// conformance probing — READ_ONLY/MUTATION requests may be field-populated,
+// DESTRUCTIVE requests must not be (populating them could corrupt shared/global
+// state). Every facade RPC MUST set it; the generation lint rejects UNSPECIFIED,
+// so new RPCs are classified explicitly, never guessed from the method name.
+enum OperationKind {
+  OPERATION_KIND_UNSPECIFIED = 0; // not set — rejected by the generation lint
+  OPERATION_KIND_READ_ONLY = 1;   // no state change; retry-safe
+  OPERATION_KIND_MUTATION = 2;    // tenant/resource-scoped state change; not retry-safe
+  OPERATION_KIND_DESTRUCTIVE = 3; // irreversible or cluster-global blast radius
+}
+
+message MethodPreconditionContract {
+  repeated string required_resources = 1;
+  repeated string required_prior_result_fields = 2;
+  repeated string required_source_states = 3;
+  string missing_code = 4;
+  string wrong_state_code = 5;
+}
+
+message ReadAfterWriteContract {
+  string returned_id_field = 1;
+  string readback_rpc = 2;
+  string readback_request_field = 3;
+  bool requires_read_fence = 4;
+  bool requires_primary_read = 5;
+  string no_readback_reason = 6;
+}
+
+message LifecycleContract {
+  string entity = 1;
+  repeated string legal_source_states = 2;
+  string target_state = 3;
+  repeated string terminal_states = 4;
+  bool input_consumed = 5;
+  bool destructive = 6;
+}
+
+message IdempotencyContract {
+  string request_key_field = 1;
+  bool server_generated_key = 2;
+  string duplicate_response_field = 3;
+  bool replay_safe = 4;
+}
+
+message ErrorContract {
+  repeated ErrorCase cases = 1;
+
+  message ErrorCase {
+    string canonical_code = 1;
+    string grpc_status = 2;
+    bool retryable = 3;
+    string details_type = 4;
+  }
+}
+
+message RestContract {
+  bool response_envelope = 1;
+  bool api_error = 2;
+  bool pagination_meta = 3;
+  bool explicit_nulls = 4;
+}
+
+message NativeServiceOptions {
+  string service_id = 1;
+  string logical_service_id = 2;
+  string proto_service_id = 3;
+  string display_name = 4;
+  string category = 5;
+  bool default_enabled = 6;
+  bool requires_postgres = 7;
+  bool requires_redis = 8;
+  bool requires_object_store = 9;
+  bool requires_kafka = 10;
+  string requires_feature = 11;
+  bool public_listener_allowed = 12;
+  bool control_plane_listener_allowed = 13;
+  bool peer_listener_allowed = 14;
+  string sdk_facade_name = 15;
+  string cli_scaffold_group = 16;
+  string health_check_ref = 17;
+  string capability_ref = 18;
+  // Whether this service owns background workers (e.g. storage orphan-reaper,
+  // webrtc TURN/SFU maintenance loops) that run beyond request handling. Makes
+  // worker ownership an explicit part of the contract instead of implicit runtime
+  // behavior; the native registry surfaces it on the capability report.
+  bool owns_background_workers = 19;
+}
+
+message DbTableSecurityOptions {
+  string tenant_isolation_mode = 1;
+  string project_isolation_mode = 2;
+  string tenant_column = 3;
+  string project_column = 4;
+  string rls_policy_template = 5;
+  string soft_delete_mode = 6;
+  string retention_class = 7;
+  int32 retention_days = 8;
+  AuditMode audit_mode = 9;
+  string encryption_profile = 10;
+  string pii_profile = 11;
+  bool break_glass_visible = 12;
+  bool export_eligible = 13;
+  string data_residency_policy_ref = 14;
+}
+
+message DbColumnSecurityOptions {
+  SecretClassification secret_classification = 1;
+  OutputView output_view = 2;
+  RedactionStrategy redaction_strategy = 3;
+  string tokenization_strategy = 4;
+  string hashing_strategy = 5;
+  string hashing_algorithm = 6;
+  string encryption_key_class = 7;
+  bool searchable_encrypted = 8;
+  string uniqueness_scope = 9;
+  bool owner_field = 10;
+  bool tenant_field = 11;
+  bool project_field = 12;
+}
+
+message SdkSurfaceOptions {
+  bool include_in_facade = 1;
+  string method_alias = 2;
+  string required_credential_provider = 3;
+  string streaming_helper_type = 4;
+  int32 default_deadline_ms = 5;
+  int32 default_max_attempts = 6;
+  bool browser_safe = 7;
+  bool server_only = 8;
+  repeated string boilerplate_recipe_tags = 9;
+  bool generate_minimal_example = 10;
+  string rest_operation_id = 11;
+}
+
+message CliScaffoldOptions {
+  string scaffold_package = 1;
+  string import_path = 2;
+  repeated string required_env = 3;
+  repeated string generated_files = 4;
+  string route_name = 5;
+  string middleware_name = 6;
+  repeated string required_native_services = 7;
+  repeated string optional_native_services = 8;
+  repeated string secret_placeholders = 9;
+  repeated string post_generation_commands = 10;
+  string smoke_test_command = 11;
+}
+
+message EventContractOptions {
+  string event_type = 1;
+  string outbox_topic = 2;
+  string partition_key_field = 3;
+  string payload_redaction_profile = 4;
+  string delivery_guarantee = 5;
+  string replay_compatibility = 6;
+  // The full set of versioned domain events an RPC may emit. Fields 1-6 above are
+  // a single coarse per-RPC contract kept for back-compat; `emits` is canonical —
+  // one RPC may emit 0..N versioned per-event topics (e.g. CloseRoom emits
+  // peer.left + track.ended + room.closed). See docs/event-contract-model.md.
+  repeated EmittedEvent emits = 7;
+
+  // One versioned domain event an RPC publishes to the outbox→CDC→Kafka relay.
+  message EmittedEvent {
+    string topic = 1;                     // versioned: udb.<domain>.<entity>.<action>.v1
+    string partition_key_field = 2;       // request/aggregate field used as the Kafka partition key
+    string delivery_guarantee = 3;        // e.g. at_least_once
+    string payload_redaction_profile = 4; // e.g. standard
+    bool conditional = 5;                 // not every call emits it (e.g. per-peer/per-track or no-op)
+  }
+}
+
+message DependencyContractOptions {
+  repeated string required_native_services = 1;
+  repeated string optional_native_services = 2;
+  repeated string required_backends = 3;
+  repeated string optional_backends = 4;
+  repeated string required_features = 5;
+  repeated string required_env = 6;
+  repeated string degraded_when_missing = 7;
+}
+
+enum AuthMode {
+  AUTH_MODE_UNSPECIFIED = 0;
+  AUTH_MODE_PUBLIC = 1;
+  AUTH_MODE_BEARER = 2;
+  AUTH_MODE_API_KEY = 3;
+  AUTH_MODE_SERVICE_ACCOUNT = 4;
+}
+
+enum CredentialType {
+  CREDENTIAL_TYPE_UNSPECIFIED = 0;
+  CREDENTIAL_TYPE_BEARER_JWT = 1;
+  CREDENTIAL_TYPE_SESSION = 2;
+  CREDENTIAL_TYPE_API_KEY = 3;
+  CREDENTIAL_TYPE_SERVICE_ACCOUNT = 4;
+  CREDENTIAL_TYPE_MTLS = 5;
+  CREDENTIAL_TYPE_OIDC = 6;
+  CREDENTIAL_TYPE_SAML = 7;
+  CREDENTIAL_TYPE_WEBAUTHN = 8;
+  CREDENTIAL_TYPE_EXTERNAL_JWT = 9;
+}
+
+enum AuditMode {
+  AUDIT_MODE_UNSPECIFIED = 0;
+  AUDIT_MODE_NONE = 1;
+  AUDIT_MODE_MUTATION = 2;
+  AUDIT_MODE_DECISION = 3;
+  AUDIT_MODE_FULL = 4;
+}
+
+enum SecretClassification {
+  SECRET_CLASSIFICATION_UNSPECIFIED = 0;
+  SECRET_CLASSIFICATION_PUBLIC = 1;
+  SECRET_CLASSIFICATION_INTERNAL = 2;
+  SECRET_CLASSIFICATION_CREDENTIAL = 3;
+  SECRET_CLASSIFICATION_TOKEN = 4;
+  SECRET_CLASSIFICATION_KEY = 5;
+  SECRET_CLASSIFICATION_BIOMETRIC = 6;
+  SECRET_CLASSIFICATION_IDENTITY = 7;
+  SECRET_CLASSIFICATION_PII = 8;
+  SECRET_CLASSIFICATION_OPERATIONAL = 9;
+  // Asymmetric private key material (e.g. SAML SP signing key). Referenced by the
+  // idp proto's db_column_security; added here to keep the contract compiling.
+  SECRET_CLASSIFICATION_PRIVATE_KEY = 10;
+}
+
+enum OutputView {
+  OUTPUT_VIEW_UNSPECIFIED = 0;
+  OUTPUT_VIEW_STORAGE_ONLY = 1;
+  OUTPUT_VIEW_PUBLIC = 2;
+  OUTPUT_VIEW_SELF = 3;
+  OUTPUT_VIEW_ADMIN = 4;
+  OUTPUT_VIEW_AUDIT = 5;
+  OUTPUT_VIEW_NEVER = 6;
+}
+
+enum RedactionStrategy {
+  REDACTION_STRATEGY_UNSPECIFIED = 0;
+  REDACTION_STRATEGY_NONE = 1;
+  REDACTION_STRATEGY_MASK = 2;
+  REDACTION_STRATEGY_REDACT = 3;
+  REDACTION_STRATEGY_HASH_ONLY = 4;
+  REDACTION_STRATEGY_LAST4 = 5;
+}
+
+enum SecurityClassification {
+  SECURITY_CLASSIFICATION_UNSPECIFIED = 0;
+  SECURITY_CLASSIFICATION_PUBLIC = 1;
+  SECURITY_CLASSIFICATION_INTERNAL = 2;
+  SECURITY_CLASSIFICATION_CONFIDENTIAL = 3;
+  SECURITY_CLASSIFICATION_RESTRICTED = 4;
+}
+
+enum DataCategory {
+  DATA_CATEGORY_UNSPECIFIED = 0;
+  DATA_CATEGORY_PERSONAL = 1;
+  DATA_CATEGORY_FINANCIAL = 2;
+  DATA_CATEGORY_BIOMETRIC = 3;
+  DATA_CATEGORY_IDENTITY = 4;
+  DATA_CATEGORY_OPERATIONAL = 5;
+  DATA_CATEGORY_SYSTEM = 6;
+}

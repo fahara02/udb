@@ -1,0 +1,382 @@
+syntax = "proto3";
+
+package udb.core.authn.events.v1;
+
+import "google/protobuf/timestamp.proto";
+import "udb/core/authn/entity/v1/enums.proto";
+import "udb/core/common/v1/security.proto";
+
+option csharp_namespace = "Udb.Core.Authn.Events.V1";
+option go_package = "github.com/udb-project/udb/gen/go/udb/core/authn/events/v1;authneventsv1";
+option java_package = "com.udb.core.authn.events.v1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Authn\\Events\\V1";
+option php_namespace = "Udb\\Core\\Authn\\Events\\V1";
+
+// Kafka topic: udb.authn.user.registered.v1
+message UserRegisteredEvent {
+  option (udb.core.common.v1.message_event_contract) = {
+    event_type: "udb.core.authn.events.v1.UserRegisteredEvent"
+    outbox_topic: "udb.authn.user.registered.v1"
+    partition_key_field: "tenant_id"
+    payload_redaction_profile: "standard"
+    delivery_guarantee: "at_least_once"
+    replay_compatibility: "stable"
+  };
+  string event_id = 1;
+  string user_id = 2;
+  string username = 3;
+  string email = 4; // masked in logs
+  string tenant_id = 5;
+  string created_by = 6;
+  string correlation_id = 7;
+  google.protobuf.Timestamp occurred_at = 8;
+  string access_surface = 9;
+  string project_id = 10;
+  udb.core.authn.entity.v1.AccountKind account_kind = 11;
+  string contact_address = 12; // Masked email, phone, handle, or provider subject.
+  string provider_id = 13;
+}
+
+// Kafka topic: udb.authn.user.login.v1
+message UserLoggedInEvent {
+  option (udb.core.common.v1.message_event_contract) = {
+    event_type: "udb.core.authn.events.v1.UserLoggedInEvent"
+    outbox_topic: "udb.authn.user.login.v1"
+    partition_key_field: "tenant_id"
+    payload_redaction_profile: "standard"
+    delivery_guarantee: "at_least_once"
+    replay_compatibility: "stable"
+  };
+  string event_id = 1;
+  string user_id = 2;
+  string session_id = 3;
+  udb.core.authn.entity.v1.SessionType session_type = 4;
+  udb.core.authn.entity.v1.DeviceType device_type = 5;
+  string ip_address = 6; // masked in logs
+  string tenant_id = 7;
+  string correlation_id = 8;
+  google.protobuf.Timestamp occurred_at = 9;
+  string project_id = 10;
+  string principal_id = 11;
+  string access_surface = 12;
+}
+
+// Kafka topic: udb.authn.session.revoked.v1
+message SessionRevokedEvent {
+  option (udb.core.common.v1.message_event_contract) = {
+    event_type: "udb.core.authn.events.v1.SessionRevokedEvent"
+    outbox_topic: "udb.authn.session.revoked.v1"
+    partition_key_field: "tenant_id"
+    payload_redaction_profile: "standard"
+    delivery_guarantee: "at_least_once"
+    replay_compatibility: "stable"
+  };
+  string event_id = 1;
+  string session_id = 2;
+  string user_id = 3;
+  string revoked_by = 4; // user_id of revoker (same user = self-logout)
+  string revoke_reason = 5; // logout | admin_revoke | password_change | security_event
+  string correlation_id = 6;
+  google.protobuf.Timestamp occurred_at = 7;
+  string tenant_id = 8;
+}
+
+// Kafka topic: udb.authn.user.locked.v1
+message UserLockedEvent {
+  option (udb.core.common.v1.message_event_contract) = {
+    event_type: "udb.core.authn.events.v1.UserLockedEvent"
+    outbox_topic: "udb.authn.user.locked.v1"
+    partition_key_field: "tenant_id"
+    payload_redaction_profile: "standard"
+    delivery_guarantee: "at_least_once"
+    replay_compatibility: "stable"
+  };
+  string event_id = 1;
+  string user_id = 2;
+  int32 attempt_count = 3;
+  string ip_address = 4; // masked in logs
+  google.protobuf.Timestamp locked_until = 5;
+  string correlation_id = 6;
+  google.protobuf.Timestamp occurred_at = 7;
+  string tenant_id = 8;
+}
+
+// Kafka topic: udb.authn.user.password.changed.v1
+message PasswordChangedEvent {
+  option (udb.core.common.v1.message_event_contract) = {
+    event_type: "udb.core.authn.events.v1.PasswordChangedEvent"
+    outbox_topic: "udb.authn.user.password.changed.v1"
+    partition_key_field: "tenant_id"
+    payload_redaction_profile: "standard"
+    delivery_guarantee: "at_least_once"
+    replay_compatibility: "stable"
+  };
+  string event_id = 1;
+  string user_id = 2;
+  bool is_reset = 3; // true = admin reset; false = user-initiated change
+  string changed_by = 4;
+  string correlation_id = 5;
+  google.protobuf.Timestamp occurred_at = 6;
+  string tenant_id = 7;
+  string ip_address = 8; // masked in logs
+}
+
+// Kafka topic: udb.authn.otp.sent.v1
+message OTPSentEvent {
+  option (udb.core.common.v1.message_event_contract) = {
+    event_type: "udb.core.authn.events.v1.OTPSentEvent"
+    outbox_topic: "udb.authn.otp.sent.v1"
+    partition_key_field: "tenant_id"
+    payload_redaction_profile: "standard"
+    delivery_guarantee: "at_least_once"
+    replay_compatibility: "stable"
+  };
+  string event_id = 1;
+  string otp_id = 2;
+  string user_id = 3;
+  udb.core.authn.entity.v1.OTPType otp_type = 4;
+  string delivery_channel = 5;
+  int32 expires_in_seconds = 6;
+  string correlation_id = 7;
+  google.protobuf.Timestamp occurred_at = 8;
+  string tenant_id = 9;
+}
+
+// Kafka topic: udb.authn.user.status.changed.v1
+message UserStatusChangedEvent {
+  option (udb.core.common.v1.message_event_contract) = {
+    event_type: "udb.core.authn.events.v1.UserStatusChangedEvent"
+    outbox_topic: "udb.authn.user.status.changed.v1"
+    partition_key_field: "tenant_id"
+    payload_redaction_profile: "standard"
+    delivery_guarantee: "at_least_once"
+    replay_compatibility: "stable"
+  };
+  string event_id = 1;
+  string user_id = 2;
+  udb.core.authn.entity.v1.UserStatus old_status = 3;
+  udb.core.authn.entity.v1.UserStatus new_status = 4;
+  string changed_by = 5;
+  string reason = 6;
+  string correlation_id = 7;
+  google.protobuf.Timestamp occurred_at = 8;
+  string tenant_id = 9;
+}
+
+// Kafka topic: udb.authn.user.email.verified.v1
+message EmailVerifiedEvent {
+  option (udb.core.common.v1.message_event_contract) = {
+    event_type: "udb.core.authn.events.v1.EmailVerifiedEvent"
+    outbox_topic: "udb.authn.user.email.verified.v1"
+    partition_key_field: "tenant_id"
+    payload_redaction_profile: "standard"
+    delivery_guarantee: "at_least_once"
+    replay_compatibility: "stable"
+  };
+  string event_id = 1;
+  string user_id = 2;
+  string email = 3;
+  string correlation_id = 4;
+  string tenant_id = 5;
+  google.protobuf.Timestamp occurred_at = 6;
+}
+
+// Kafka topic: udb.authn.user.password.reset.requested.v1
+message PasswordResetRequestedEvent {
+  option (udb.core.common.v1.message_event_contract) = {
+    event_type: "udb.core.authn.events.v1.PasswordResetRequestedEvent"
+    outbox_topic: "udb.authn.user.password.reset.requested.v1"
+    partition_key_field: "tenant_id"
+    payload_redaction_profile: "standard"
+    delivery_guarantee: "at_least_once"
+    replay_compatibility: "stable"
+  };
+  string event_id = 1;
+  string user_id = 2;
+  string contact_address = 3; // Masked email, phone, handle, or provider subject.
+  string ip_address = 4; // masked in logs
+  udb.core.authn.entity.v1.DeviceType device_type = 5;
+  string otp_id = 6;
+  string correlation_id = 7;
+  google.protobuf.Timestamp occurred_at = 8;
+  string tenant_id = 9;
+  string project_id = 10;
+}
+
+// Kafka topic: udb.authn.user.email.password.reset.requested.v1
+message PasswordResetByEmailRequestedEvent {
+  option (udb.core.common.v1.message_event_contract) = {
+    event_type: "udb.core.authn.events.v1.PasswordResetByEmailRequestedEvent"
+    outbox_topic: "udb.authn.user.email.password.reset.requested.v1"
+    partition_key_field: "tenant_id"
+    payload_redaction_profile: "standard"
+    delivery_guarantee: "at_least_once"
+    replay_compatibility: "stable"
+  };
+  string event_id = 1;
+  string user_id = 2;
+  string email_masked = 3;
+  string otp_id = 4;
+  string ip_address = 5; // masked in logs
+  string correlation_id = 6;
+  google.protobuf.Timestamp occurred_at = 7;
+  string tenant_id = 8;
+}
+
+// ===========================================================================
+// Phase L (Compliance Audit) — required security-sensitive authn events.
+// Each carries the compliance-relevant fields (actor, outcome, reason,
+// correlation/trace ids); credential material is never present.
+// ===========================================================================
+
+// Kafka topic: udb.authn.user.login.failed.v1
+message LoginFailedEvent {
+  option (udb.core.common.v1.message_event_contract) = {
+    event_type: "udb.core.authn.events.v1.LoginFailedEvent"
+    outbox_topic: "udb.authn.user.login.failed.v1"
+    partition_key_field: "tenant_id"
+    payload_redaction_profile: "standard"
+    delivery_guarantee: "at_least_once"
+    replay_compatibility: "stable"
+  };
+  string event_id = 1;
+  string user_id = 2;
+  string contact_address = 3; // masked identifier
+  string tenant_id = 4;
+  string project_id = 5;
+  string reason_code = 6; // e.g. bad_password, unknown_user, mfa_required
+  string auth_method = 7;
+  string ip_address = 8; // masked
+  string correlation_id = 9;
+  google.protobuf.Timestamp occurred_at = 10;
+}
+
+// Kafka topic: udb.authn.mfa.enrolled.v1
+message MfaEnrolledEvent {
+  option (udb.core.common.v1.message_event_contract) = {
+    event_type: "udb.core.authn.events.v1.MfaEnrolledEvent"
+    outbox_topic: "udb.authn.mfa.enrolled.v1"
+    partition_key_field: "tenant_id"
+    payload_redaction_profile: "standard"
+    delivery_guarantee: "at_least_once"
+    replay_compatibility: "stable"
+  };
+  string event_id = 1;
+  string user_id = 2;
+  string tenant_id = 3;
+  string project_id = 4;
+  string factor_type = 5; // totp, webauthn, recovery_code
+  string correlation_id = 6;
+  google.protobuf.Timestamp occurred_at = 7;
+}
+
+// Kafka topic: udb.authn.mfa.changed.v1
+message MfaChangedEvent {
+  option (udb.core.common.v1.message_event_contract) = {
+    event_type: "udb.core.authn.events.v1.MfaChangedEvent"
+    outbox_topic: "udb.authn.mfa.changed.v1"
+    partition_key_field: "tenant_id"
+    payload_redaction_profile: "standard"
+    delivery_guarantee: "at_least_once"
+    replay_compatibility: "stable"
+  };
+  string event_id = 1;
+  string user_id = 2;
+  string tenant_id = 3;
+  string project_id = 4;
+  string factor_type = 5;
+  string change = 6; // added, removed, reset
+  string correlation_id = 7;
+  google.protobuf.Timestamp occurred_at = 8;
+}
+
+// Kafka topic: udb.authn.recovery.codes.generated.v1
+message RecoveryCodesGeneratedEvent {
+  option (udb.core.common.v1.message_event_contract) = {
+    event_type: "udb.core.authn.events.v1.RecoveryCodesGeneratedEvent"
+    outbox_topic: "udb.authn.recovery.codes.generated.v1"
+    partition_key_field: "tenant_id"
+    payload_redaction_profile: "standard"
+    delivery_guarantee: "at_least_once"
+    replay_compatibility: "stable"
+  };
+  string event_id = 1;
+  string user_id = 2;
+  string tenant_id = 3;
+  int32 code_count = 4; // count only — never the codes themselves
+  string correlation_id = 5;
+  google.protobuf.Timestamp occurred_at = 6;
+}
+
+// Kafka topic: udb.authn.recovery.code.used.v1
+message RecoveryCodeUsedEvent {
+  option (udb.core.common.v1.message_event_contract) = {
+    event_type: "udb.core.authn.events.v1.RecoveryCodeUsedEvent"
+    outbox_topic: "udb.authn.recovery.code.used.v1"
+    partition_key_field: "tenant_id"
+    payload_redaction_profile: "standard"
+    delivery_guarantee: "at_least_once"
+    replay_compatibility: "stable"
+  };
+  string event_id = 1;
+  string user_id = 2;
+  string tenant_id = 3;
+  int32 remaining_codes = 4;
+  string correlation_id = 5;
+  google.protobuf.Timestamp occurred_at = 6;
+}
+
+// Kafka topic: udb.authn.session.refreshed.v1
+message SessionRefreshedEvent {
+  option (udb.core.common.v1.message_event_contract) = {
+    event_type: "udb.core.authn.events.v1.SessionRefreshedEvent"
+    outbox_topic: "udb.authn.session.refreshed.v1"
+    partition_key_field: "tenant_id"
+    payload_redaction_profile: "standard"
+    delivery_guarantee: "at_least_once"
+    replay_compatibility: "stable"
+  };
+  string event_id = 1;
+  string user_id = 2;
+  string session_public_id = 3; // public id, never the raw token
+  string tenant_id = 4;
+  string project_id = 5;
+  string correlation_id = 6;
+  google.protobuf.Timestamp occurred_at = 7;
+}
+
+// Kafka topic: udb.authn.user.phone.verified.v1
+message PhoneVerifiedEvent {
+  option (udb.core.common.v1.message_event_contract) = {
+    event_type: "udb.core.authn.events.v1.PhoneVerifiedEvent"
+    outbox_topic: "udb.authn.user.phone.verified.v1"
+    partition_key_field: "tenant_id"
+    payload_redaction_profile: "standard"
+    delivery_guarantee: "at_least_once"
+    replay_compatibility: "stable"
+  };
+  string event_id = 1;
+  string user_id = 2;
+  string phone_masked = 3;
+  string tenant_id = 4;
+  string correlation_id = 5;
+  google.protobuf.Timestamp occurred_at = 6;
+}
+
+// Kafka topic: udb.authn.webauthn.registered.v1
+message WebauthnRegisteredEvent {
+  option (udb.core.common.v1.message_event_contract) = {
+    event_type: "udb.core.authn.events.v1.WebauthnRegisteredEvent"
+    outbox_topic: "udb.authn.webauthn.registered.v1"
+    partition_key_field: "tenant_id"
+    payload_redaction_profile: "standard"
+    delivery_guarantee: "at_least_once"
+    replay_compatibility: "stable"
+  };
+  string event_id = 1;
+  string user_id = 2;
+  string credential_id = 3; // public credential id, not the key
+  string tenant_id = 4;
+  string correlation_id = 5;
+  google.protobuf.Timestamp occurred_at = 6;
+}

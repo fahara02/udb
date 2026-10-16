@@ -1,0 +1,131 @@
+syntax = "proto3";
+
+package udb.core.notification.entity.v1;
+
+import "google/protobuf/timestamp.proto";
+import "udb/core/common/v1/db.proto";
+import "udb/core/common/v1/security.proto";
+import "udb/core/notification/entity/v1/enums.proto";
+
+option csharp_namespace = "Udb.Core.Notification.Entity.V1";
+option go_package = "github.com/udb-project/udb/gen/go/udb/core/notification/entity/v1;notificationv1";
+option java_package = "com.udb.core.notification.entity.v1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Notification\\Entity\\V1";
+option php_namespace = "Udb\\Core\\Notification\\Entity\\V1";
+
+// ---------------------------------------------------------------------------
+// NotificationTemplate — Message template with variable substitution.
+//
+// F4.3 decision (hybrid tenant model inside an exact project): NULL tenant_id =
+// project-global default template; non-null tenant_id = per-tenant override.
+// Resolution prefers the per-tenant row over the project-global default for the
+// same (event_type, channel). Project ownership is always first-class.
+// ---------------------------------------------------------------------------
+
+message NotificationTemplate {
+  option (udb.core.common.v1.pg_table) = {
+    table_name: "notification_templates"
+    schema_name: "udb_notification"
+    migration_order: 1
+    is_table: true
+    comment: "Message templates for each notification type and channel"
+    soft_delete: true
+    audit_fields: true
+    enable_rls: true
+    force_rls: true
+    rls_policies: {
+      policy_name: "tenant_project_isolation"
+      command: "ALL"
+      using: "((tenant_id IS NULL OR tenant_id::text = current_setting('app.current_tenant_id', true)::text) AND project_id::text = current_setting('app.current_project_id', true)::text)"
+      permissive: true
+    }
+    indexes: {
+      index_name: "idx_notif_templates_project_global_event_channel"
+      index_type: "BTREE"
+      unique: true
+      columns: "project_id"
+      columns: "event_type"
+      columns: "channel"
+      where_clause: "tenant_id IS NULL AND deleted_at IS NULL"
+    }
+    indexes: {
+      index_name: "idx_notif_templates_tenant_project_event_channel"
+      index_type: "BTREE"
+      unique: true
+      columns: "tenant_id"
+      columns: "project_id"
+      columns: "event_type"
+      columns: "channel"
+      where_clause: "tenant_id IS NOT NULL AND deleted_at IS NULL"
+    }
+    sql_artifacts: {
+      name: "touch_updated_at_function"
+      backend: "postgres"
+      phase: "before_triggers"
+      sql:
+        "CREATE OR REPLACE FUNCTION udb_notification.touch_updated_at()\n"
+        "RETURNS trigger\n"
+        "LANGUAGE plpgsql\n"
+        "AS $$\n"
+        "BEGIN\n"
+        "  NEW.updated_at = CURRENT_TIMESTAMP;\n"
+        "  RETURN NEW;\n"
+        "END;\n"
+        "$$;"
+    }
+    triggers: {
+      trigger_name: "trg_notification_templates_touch_updated_at"
+      timing: "BEFORE"
+      event: "UPDATE"
+      function_name: "udb_notification.touch_updated_at()"
+      for_each: "ROW"
+    }
+    required_scope: "notification:admin"
+  };
+  option (udb.core.common.v1.db_table_security) = {
+    tenant_isolation_mode: "tenant"
+    project_isolation_mode: "project"
+    tenant_column: "tenant_id"
+    project_column: "project_id"
+    rls_policy_template: "(tenant_id IS NULL OR tenant_id = current_setting('app.current_tenant_id')) AND project_id = current_setting('app.current_project_id')"
+    soft_delete_mode: "soft_delete"
+    retention_class: "notification.operational"
+    retention_days: 2555
+    audit_mode: AUDIT_MODE_MUTATION
+    encryption_profile: "tenant"
+    pii_profile: "standard"
+    export_eligible: false
+    data_residency_policy_ref: "tenant.data_residency"
+  };
+
+  string template_id = 1 [(udb.core.common.v1.pg_column) = { column_name: "template_id" sql_type: "UUID" primary_key: true not_null: true default_value: "gen_random_uuid()" }];
+
+  // Machine code such as RESOURCE_CREATED, SLA_BREACH_WARNING, REVIEW_ASSIGNED.
+  // Partial unique indexes above permit one project-global default and one
+  // per-tenant override for the same event/channel in each exact project.
+  string event_type = 2 [(udb.core.common.v1.pg_column) = { column_name: "event_type" sql_type: "VARCHAR(80)" not_null: true }];
+
+  NotificationChannel channel = 3 [(udb.core.common.v1.pg_column) = { column_name: "channel" sql_type: "VARCHAR(20)" not_null: true }];
+
+  string subject_template = 4 [(udb.core.common.v1.pg_column) = { column_name: "subject_template" sql_type: "VARCHAR(500)" is_tsvector: true tsvector_language: "english" tsvector_source_columns: "subject_template" tsvector_source_columns: "body_template" comment: "Handlebars/Go template such as '{{.ResourceName}} requires review'" }];
+
+  string body_template = 5 [(udb.core.common.v1.pg_column) = { column_name: "body_template" sql_type: "TEXT" not_null: true comment: "Full message body template with variable placeholders" }];
+
+  string locale = 6 [(udb.core.common.v1.pg_column) = { column_name: "locale" sql_type: "VARCHAR(10)" not_null: true default_value: "'en'" comment: "en | bn" }];
+
+  bool is_active = 7 [(udb.core.common.v1.pg_column) = { column_name: "is_active" sql_type: "BOOLEAN" not_null: true default_value: "TRUE" }];
+
+  google.protobuf.Timestamp created_at = 8 [(udb.core.common.v1.pg_column) = { column_name: "created_at" sql_type: "TIMESTAMPTZ" not_null: true default_value: "CURRENT_TIMESTAMP" exclude_from_insert: true exclude_from_update: true }];
+  google.protobuf.Timestamp updated_at = 9 [(udb.core.common.v1.pg_column) = { column_name: "updated_at" sql_type: "TIMESTAMPTZ" not_null: true default_value: "CURRENT_TIMESTAMP" exclude_from_insert: true }];
+  google.protobuf.Timestamp deleted_at = 10 [(udb.core.common.v1.pg_column) = { column_name: "deleted_at" sql_type: "TIMESTAMPTZ" index: { index_name: "idx_notif_templates_active" index_type: "BTREE" where_clause: "deleted_at IS NULL" } }];
+
+  string created_by = 11 [(udb.core.common.v1.pg_column) = { column_name: "created_by" sql_type: "VARCHAR(120)" comment: "Identity that created this record." }];
+  string deleted_by = 12 [(udb.core.common.v1.pg_column) = { column_name: "deleted_by" sql_type: "UUID" comment: "Soft delete actor" }];
+
+  // NULLABLE: NULL = project-global default template; non-null = per-tenant override.
+  string tenant_id = 13 [(udb.core.common.v1.pg_column) = { column_name: "tenant_id" tenant_column: true sql_type: "VARCHAR(120)" comment: "Owning tenant for per-tenant overrides; NULL = project-global default template" index: { index_name: "idx_notif_templates_tenant_id" index_type: "BTREE" } }];
+
+  // First-class project owner. Blank is reserved for quarantined legacy rows;
+  // serving paths persist only an explicitly active resolved project.
+  string project_id = 14 [(udb.core.common.v1.pg_column) = { column_name: "project_id" project_column: true sql_type: "VARCHAR(120)" not_null: true default_value: "''" index: { index_name: "idx_notif_templates_project_id" index_type: "BTREE" } }];
+}

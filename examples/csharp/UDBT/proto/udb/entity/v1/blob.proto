@@ -1,0 +1,57 @@
+syntax = "proto3";
+
+package udb.entity.v1;
+
+option go_package = "github.com/udb-project/udb/gen/go/udb/entity/v1;entityv1";
+option java_package      = "com.udb.entity.v1";
+option csharp_namespace = "Udb.Entity.V1";
+option php_namespace = "Udb\\Entity\\V1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Entity\\V1";
+
+import "udb/entity/v1/context.proto";
+
+message Chunk {
+  RequestContext context = 1;
+  string bucket = 2;
+  string object_key = 3;
+  bytes data = 4;
+  bool final_chunk = 5;
+  string content_type = 6;
+  string idempotency_key = 7;
+}
+
+message ObjectRequest {
+  RequestContext context = 1;
+  string bucket = 2;
+  string object_key = 3;
+}
+
+message UrlRequest {
+  RequestContext context = 1;
+  string bucket = 2;
+  string object_key = 3;
+  string method = 4;
+  int32 ttl_seconds = 5;
+  string content_type = 6;
+}
+
+message UrlResponse {
+  string url = 1;
+  int64 expires_at_unix = 2;
+}
+
+message MultipartUploadRequest {
+  RequestContext context = 1;
+  string bucket = 2;
+  string object_key = 3;
+  string content_type = 4;
+  int32 part_count = 5;
+  int32 ttl_seconds = 6;
+  string idempotency_key = 7;
+}
+
+message MultipartUploadResponse {
+  string upload_id = 1;
+  repeated string part_urls = 2;
+  int64 expires_at_unix = 3;
+}
