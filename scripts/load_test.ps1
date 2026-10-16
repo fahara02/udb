@@ -62,7 +62,7 @@ switch ($Profile) {
     }
     "write-heavy" {
         Invoke-UdbLoadCase "Upsert" "Upsert" '{"messageType":"ProcessingQueue","payload":{"fields":{"id":{"stringValue":"load-{{.RequestNumber}}"},"status":{"stringValue":"pending"}}},"idempotencyKey":"load-{{.RequestNumber}}"}' "udb:write"
-        Invoke-UdbLoadCase "EnqueueOutboxEvent" "EnqueueOutboxEvent" '{"topic":"document.uploaded.v1","partitionKey":"doc-{{.RequestNumber}}","payload":{"fields":{"event_id":{"stringValue":"11111111-1111-4111-8111-111111111111"},"event_type":{"stringValue":"document.uploaded.v1"},"correlation_id":{"stringValue":"load"},"document_id":{"stringValue":"doc-{{.RequestNumber}}"}}},"idempotencyKey":"outbox-{{.RequestNumber}}"}' "udb:write"
+        Invoke-UdbLoadCase "EnqueueOutboxEvent" "EnqueueOutboxEvent" '{"topic":"document.uploaded.v1","partitionKey":"doc-{{.RequestNumber}}","payload":{"fields":{"event_id":{"stringValue":"11111111-1111-4111-8111-111111111111"},"event_type":{"stringValue":"document.uploaded.v1"},"correlation_id":{"stringValue":"load"},"document_id":{"stringValue":"doc-{{.RequestNumber}}"},"envelope_version":{"numberValue":2}}},"idempotencyKey":"outbox-{{.RequestNumber}}"}' "udb:write"
     }
     "mixed-projection" {
         Invoke-UdbLoadCase "Upsert plus projection fanout" "Upsert" '{"messageType":"ProcessingQueue","payload":{"fields":{"id":{"stringValue":"projection-{{.RequestNumber}}"},"status":{"stringValue":"project"},"tenant_id":{"stringValue":"test-tenant"}}},"idempotencyKey":"projection-{{.RequestNumber}}"}' "udb:write"

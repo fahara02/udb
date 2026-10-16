@@ -126,7 +126,7 @@ function Test-Event {
     Write-Host ""
     Write-Host "── Outbox Event Enqueue ─────────────────────────────────────────────" -ForegroundColor Cyan
 
-    $payload = '{"topic":"document.uploaded.v1","partition_key":"smoke-doc-001","payload":{"fields":{"document_id":{"string_value":"smoke-doc-001"},"event_id":{"string_value":"00000000-0000-0000-0000-000000000001"},"event_type":{"string_value":"document.uploaded.v1"},"correlation_id":{"string_value":"smoke-corr-001"},"source_agent":{"string_value":"smoke-test"}}},"idempotency_key":"smoke-idem-001"}'
+    $payload = '{"topic":"document.uploaded.v1","partition_key":"smoke-doc-001","payload":{"fields":{"document_id":{"string_value":"smoke-doc-001"},"event_id":{"string_value":"00000000-0000-0000-0000-000000000001"},"event_type":{"string_value":"document.uploaded.v1"},"correlation_id":{"string_value":"smoke-corr-001"},"source_agent":{"string_value":"smoke-test"},"envelope_version":{"number_value":2}}},"idempotency_key":"smoke-idem-001"}'
 
     Run-Check "EnqueueOutboxEvent returns event_id" {
         $out = Invoke-Grpc "EnqueueOutboxEvent" $payload

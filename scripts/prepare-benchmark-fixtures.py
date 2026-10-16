@@ -149,6 +149,7 @@ def main() -> int:
                     "event_id": str(uuid.uuid4()), "event_type": ack_topic,
                     "correlation_id": str(uuid.uuid4()), "document_id": ack_document,
                     "tenant_id": principal.tenant_id, "project_id": principal.project_id,
+                    "envelope_version": 2,
                 }), metadata=headers, timeout=15.0)
             if not event.enqueued or not event.event_id:
                 raise RuntimeError("CDC acknowledgement fixture was not enqueued")

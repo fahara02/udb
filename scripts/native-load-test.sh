@@ -160,7 +160,7 @@ run_case "cdc stream admission" \
 run_case "cdc dlq throughput (rejected events)" \
   udb.services.v1.DataBroker.EnqueueOutboxEvent \
   --proto proto/udb/services/v1/data_broker.proto \
-  -d "{\"topic\":\"udb.load.rejected.unrouted.v1\",\"partition_key\":\"{{.RequestNumber}}\",\"payload\":{\"event_id\":\"{{newUUID}}\",\"event_type\":\"udb.load.rejected.unrouted.v1\",\"correlation_id\":\"load-dlq-{{.RequestNumber}}\",\"document_id\":\"{{.RequestNumber}}\"}}"
+  -d "{\"topic\":\"udb.load.rejected.unrouted.v1\",\"partition_key\":\"{{.RequestNumber}}\",\"payload\":{\"event_id\":\"{{newUUID}}\",\"event_type\":\"udb.load.rejected.unrouted.v1\",\"correlation_id\":\"load-dlq-{{.RequestNumber}}\",\"document_id\":\"{{.RequestNumber}}\",\"envelope_version\":2}}"
 
 # ── policy distribution ────────────────────────────────────────────────────────
 run_case "policy revision read" \

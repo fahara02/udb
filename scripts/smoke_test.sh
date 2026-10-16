@@ -137,7 +137,8 @@ smoke_event() {
       "event_id":       {"string_value": "00000000-0000-0000-0000-000000000001"},
       "event_type":     {"string_value": "document.uploaded.v1"},
       "correlation_id": {"string_value": "smoke-corr-001"},
-      "source_agent":   {"string_value": "smoke-test"}
+      "source_agent":   {"string_value": "smoke-test"},
+      "envelope_version": {"number_value": 2}
     }
   },
   "idempotency_key": "smoke-idem-001"
