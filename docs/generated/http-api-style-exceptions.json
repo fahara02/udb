@@ -1,12 +1,12 @@
 {
   "generated_by": "node scripts/check-http-api-style.mjs --write-report",
   "counts": {
-    "native_contract_http_operations": 295,
-    "proto_http_annotations": 295,
+    "native_contract_http_operations": 310,
+    "proto_http_annotations": 310,
     "generated_route_style_exceptions": 0,
     "source_route_style_exceptions": 0,
-    "resource_identity_contract_exceptions": 0,
-    "pagination_contract_exceptions": 0,
+    "resource_identity_contract_exceptions": 3,
+    "pagination_contract_exceptions": 2,
     "query_update_contract_exceptions": 0,
     "operation_id_collisions": 0,
     "allowlist_entries": 5
@@ -41,8 +41,76 @@
   },
   "route_style_exceptions_by_rule": {},
   "source_route_style_exceptions_by_rule": {},
-  "resource_identity_contract_exceptions_by_rule": {},
-  "pagination_contract_exceptions_by_rule": {},
+  "resource_identity_contract_exceptions_by_rule": {
+    "user_chosen_id_format_undocumented": [
+      {
+        "rule": "user_chosen_id_format_undocumented",
+        "category": "resource_identity_contract",
+        "message": "caller-supplied identity field \"creator_device_id\" must document allowed format or server-assigned semantics",
+        "service": "udb.core.messaging.services.v1.MessagingService",
+        "rpc": "CreateGroup",
+        "method": "POST",
+        "path": "/v1/messaging/groups",
+        "source": "proto/udb/core/messaging/services/v1/messaging_service.proto",
+        "requestType": "CreateGroupRequest",
+        "field": "creator_device_id"
+      },
+      {
+        "rule": "user_chosen_id_format_undocumented",
+        "category": "resource_identity_contract",
+        "message": "caller-supplied identity field \"group_id\" must document allowed format or server-assigned semantics",
+        "service": "udb.core.messaging.services.v1.MessagingService",
+        "rpc": "CreateGroup",
+        "method": "POST",
+        "path": "/v1/messaging/groups",
+        "source": "proto/udb/core/messaging/services/v1/messaging_service.proto",
+        "requestType": "CreateGroupRequest",
+        "field": "group_id"
+      },
+      {
+        "rule": "user_chosen_id_format_undocumented",
+        "category": "resource_identity_contract",
+        "message": "caller-supplied identity field \"device_id\" must document allowed format or server-assigned semantics",
+        "service": "udb.core.messaging.services.v1.MessagingService",
+        "rpc": "RegisterMessagingDevice",
+        "method": "POST",
+        "path": "/v1/messaging/devices",
+        "source": "proto/udb/core/messaging/services/v1/messaging_service.proto",
+        "requestType": "RegisterMessagingDeviceRequest",
+        "field": "device_id"
+      }
+    ]
+  },
+  "pagination_contract_exceptions_by_rule": {
+    "missing_request_pagination": [
+      {
+        "rule": "missing_request_pagination",
+        "category": "pagination_contract",
+        "message": "list/search request must expose page_size plus page_token or shared PageRequest",
+        "service": "udb.core.messaging.services.v1.MessagingService",
+        "rpc": "ListMessagingDevices",
+        "method": "GET",
+        "path": "/v1/messaging/devices",
+        "source": "proto/udb/core/messaging/services/v1/messaging_service.proto",
+        "requestType": "ListMessagingDevicesRequest",
+        "responseType": "ListMessagingDevicesResponse"
+      }
+    ],
+    "missing_response_pagination": [
+      {
+        "rule": "missing_response_pagination",
+        "category": "pagination_contract",
+        "message": "list/search response must expose next_page_token or shared PageResponse",
+        "service": "udb.core.messaging.services.v1.MessagingService",
+        "rpc": "ListMessagingDevices",
+        "method": "GET",
+        "path": "/v1/messaging/devices",
+        "source": "proto/udb/core/messaging/services/v1/messaging_service.proto",
+        "requestType": "ListMessagingDevicesRequest",
+        "responseType": "ListMessagingDevicesResponse"
+      }
+    ]
+  },
   "query_update_contract_exceptions_by_rule": {},
   "operation_id_collisions": [],
   "not_yet_reported_by_this_guard": [

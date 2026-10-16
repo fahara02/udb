@@ -59,6 +59,8 @@ pub(crate) const MAX_BACKUP_BYTES: usize = 3 * 1024 * 1024;
 
 /// Inbox rows one `StreamInbox` page reads.
 pub(crate) const INBOX_PAGE: i64 = 100;
+/// Devices per ListMessagingDevices page when the caller sends no page_size.
+pub(crate) const DEVICE_PAGE: i64 = 100;
 /// How long a following `StreamInbox` waits for an in-process wake before it
 /// polls the store again (covers appends made by another broker replica).
 pub(crate) const INBOX_POLL_INTERVAL: std::time::Duration = std::time::Duration::from_secs(2);

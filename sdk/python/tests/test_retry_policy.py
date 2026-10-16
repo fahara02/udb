@@ -52,6 +52,10 @@ def test_replay_safe_map_matches_proto_contract() -> None:
         "/udb.core.asset.services.v1.AssetService/StartPipeline",
         "/udb.core.vault.services.v1.VaultService/GenerateDatabaseCredentials",
         "/udb.core.vault.services.v1.VaultService/RevokeDatabaseCredentials",
+        "/udb.core.messaging.services.v1.MessagingService/CreateGroup",
+        "/udb.core.messaging.services.v1.MessagingService/RegisterMessagingDevice",
+        "/udb.core.messaging.services.v1.MessagingService/SendMessage",
+        "/udb.core.messaging.services.v1.MessagingService/SubmitCommit",
     }
     assert _is_replay_safe("/udb.services.v1.DataBroker/Upsert") is True
     assert _is_replay_safe("/udb.services.v1.DataBroker/Delete") is True

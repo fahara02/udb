@@ -379,6 +379,7 @@ async fn live_messaging_key_packages_are_claimed_once_and_tenants_are_isolated()
                 tenant_id: tenant_b.clone(),
                 subject_id: "bob".to_string(),
                 include_revoked: true,
+                ..Default::default()
             },
         ))
         .await
@@ -410,6 +411,7 @@ async fn live_messaging_key_packages_are_claimed_once_and_tenants_are_isolated()
                 tenant_id: tenant_a.clone(),
                 subject_id: "bob".to_string(),
                 include_revoked: true,
+                ..Default::default()
             },
         ))
         .await
@@ -422,6 +424,7 @@ async fn live_messaging_key_packages_are_claimed_once_and_tenants_are_isolated()
                 tenant_id: tenant_a.clone(),
                 subject_id: "bob".to_string(),
                 include_revoked: false,
+                ..Default::default()
             },
         ))
         .await

@@ -319,17 +319,24 @@ impl<S: StateStore> MessagingClient<S> {
         subject_id: &str,
         include_revoked: bool,
     ) -> Result<Vec<pb::DirectoryDevice>, MessagingError> {
-        let request = self.request(pb::ListMessagingDevicesRequest {
-            tenant_id: self.tenant(),
-            subject_id: subject_id.to_string(),
-            include_revoked,
-        })?;
-        Ok(self
-            .rpc
-            .list_messaging_devices(request)
-            .await?
-            .into_inner()
-            .devices)
+        // Follow the broker's pages so the caller always gets every device.
+        let mut devices = Vec::new();
+        let mut page_token = String::new();
+        loop {
+            let request = self.request(pb::ListMessagingDevicesRequest {
+                tenant_id: self.tenant(),
+                subject_id: subject_id.to_string(),
+                include_revoked,
+                page_token,
+                ..Default::default()
+            })?;
+            let page = self.rpc.list_messaging_devices(request).await?.into_inner();
+            devices.extend(page.devices);
+            if page.next_page_token.is_empty() {
+                return Ok(devices);
+            }
+            page_token = page.next_page_token;
+        }
     }
 
     /// Revoke one of the principal's devices. Its groups' other members get a

@@ -283,16 +283,20 @@ pub(crate) async fn insert_device(
     row.as_ref().map(device_from_row).transpose()
 }
 
+/// One page of a subject's devices in `device_id` order, starting after the
+/// `after` device id (empty = from the first). Returns at most `limit` rows.
 pub(crate) async fn list_devices(
     conn: &mut PgConnection,
     tenant_id: &str,
     subject_id: &str,
     include_revoked: bool,
+    after: &str,
+    limit: i64,
 ) -> Result<Vec<DeviceRow>, Status> {
     let m = &models().device;
     let sql = format!(
         "SELECT {cols} FROM {rel} WHERE {tenant} = $1 AND {subject} = $2 \
-         AND ($3 OR {status} = $4) ORDER BY {device}",
+         AND ($3 OR {status} = $4) AND {device} > $5 ORDER BY {device} LIMIT $6",
         cols = device_columns(m),
         rel = m.relation,
         tenant = m.q("tenant_id"),
@@ -305,6 +309,8 @@ pub(crate) async fn list_devices(
         .bind(subject_id)
         .bind(include_revoked)
         .bind(DEVICE_ACTIVE)
+        .bind(after)
+        .bind(limit)
         .fetch_all(&mut *conn)
         .await
         .map_err(|err| messaging_store_status("list_devices", &err))?;

@@ -17,11 +17,13 @@ use tonic::{Request, Response, Status};
 use crate::proto::udb::core::messaging::services::v1 as msg_pb;
 use crate::runtime::channels::OperationChannel;
 
-use super::super::native_helpers::{admit_on as native_admit_on, validate_request_tenant};
+use super::super::native_helpers::{
+    MAX_LIST_ROWS, admit_on as native_admit_on, validate_request_tenant,
+};
 use super::MessagingServiceImpl;
 use super::config::{
-    DEVICE_ACTIVE, INBOX_PAGE, INBOX_POLL_INTERVAL, KIND_COMMIT, KIND_MESSAGE, KIND_REMOVAL_HINT,
-    KIND_WELCOME, MAX_CLAIM_TARGETS, MAX_GROUP_MEMBERS, MAX_KEY_PACKAGE_STOCK,
+    DEVICE_ACTIVE, DEVICE_PAGE, INBOX_PAGE, INBOX_POLL_INTERVAL, KIND_COMMIT, KIND_MESSAGE,
+    KIND_REMOVAL_HINT, KIND_WELCOME, MAX_CLAIM_TARGETS, MAX_GROUP_MEMBERS, MAX_KEY_PACKAGE_STOCK,
     MAX_KEY_PACKAGES_PER_PUBLISH,
 };
 use super::errors::{
@@ -211,11 +213,40 @@ pub(crate) async fn list_devices(
         Some(caller) if req.subject_id.trim().is_empty() => caller,
         _ => super::model::validate_subject_id("subject_id", &req.subject_id)?,
     };
+    let limit = if req.page_size > 0 {
+        i64::from(req.page_size).min(MAX_LIST_ROWS)
+    } else {
+        DEVICE_PAGE
+    };
+    // The cursor is the last device id of the previous page, so it must be a
+    // well-formed device id itself.
+    let after = if req.page_token.trim().is_empty() {
+        String::new()
+    } else {
+        validate_device_id("page_token", &req.page_token)?
+    };
     let (_context, pool) = svc.store(&metadata, &tenant_id, false)?;
     let mut tx = begin_tenant_tx(&pool, &tenant_id).await?;
-    let devices =
-        store::list_devices(&mut tx, &tenant_id, &subject_id, req.include_revoked).await?;
+    // One extra row tells whether another page follows.
+    let mut devices = store::list_devices(
+        &mut tx,
+        &tenant_id,
+        &subject_id,
+        req.include_revoked,
+        &after,
+        limit + 1,
+    )
+    .await?;
     commit(tx).await?;
+    let next_page_token = if devices.len() as i64 > limit {
+        devices.truncate(limit as usize);
+        devices
+            .last()
+            .map(|device| device.device_id.clone())
+            .unwrap_or_default()
+    } else {
+        String::new()
+    };
     Ok(Response::new(msg_pb::ListMessagingDevicesResponse {
         devices: devices
             .iter()
@@ -223,6 +254,7 @@ pub(crate) async fn list_devices(
             .collect(),
         message: String::new(),
         error: None,
+        next_page_token,
     }))
 }
 
