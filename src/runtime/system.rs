@@ -2243,6 +2243,7 @@ mod tests {
                 || relation.display_relation.starts_with("udb_metering.")
                 || relation.display_relation.starts_with("udb_workflow.")
                 || relation.display_relation.starts_with("udb_embedding.")
+                || relation.display_relation.starts_with("udb_messaging.")
         }));
     }
 
