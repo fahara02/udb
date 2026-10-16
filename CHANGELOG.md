@@ -5,7 +5,7 @@ the package version in `Cargo.toml`; historical v0.3.2 audit material is folded
 into the v0.3.x entries because the codebase advanced to v0.3.7 before that
 release line was tagged.
 
-## [0.6.0] - Unreleased
+## [0.6.0] - 2026-10-16
 
 0.6.0 removes the compatibility paths 0.5.x deprecated. Run
 `udb upgrade --check --from <your version> --to 0.6.0` in your project: it lists
