@@ -576,7 +576,8 @@ async fn ensure_system_catalog_unlocked(
         let Some((relation, columns)) = declared_table_columns(statement) else {
             continue;
         };
-        let refs: Vec<&str> = columns.iter().map(String::as_str).collect();
+        let mut refs: Vec<&str> = columns.iter().map(String::as_str).collect();
+        refs.extend(trigger_assigned_columns(&config, &relation));
         if let Err(err) =
             crate::runtime::core::audit::verify_table_columns(pool, &relation, &refs).await
         {
@@ -594,6 +595,17 @@ async fn ensure_system_catalog_unlocked(
         schema: config.cdc.system_schema,
         statements_applied: statements.len(),
     })
+}
+
+/// Columns of `relation` that a UDB-owned insert trigger fills. They are NOT
+/// NULL without a default and absent from the CREATE TABLE (a later migration
+/// adds them), so the shape check would otherwise report them as unwritable.
+fn trigger_assigned_columns(config: &SystemCatalogConfig, relation: &str) -> Vec<&'static str> {
+    if relation == config.cdc_journal_relation() {
+        vec![crate::runtime::cdc::journal::POSITION_COLUMN]
+    } else {
+        Vec::new()
+    }
 }
 
 /// Extract `(relation, column_names)` from a `CREATE TABLE IF NOT EXISTS` DDL
@@ -2251,6 +2263,26 @@ mod tests {
     /// against healthy deployments on every boot. Run the parser over every real
     /// bootstrap statement and assert it either declines cleanly or returns
     /// plausible identifiers - never an invented column name.
+    /// The CDC journal's trigger-assigned position column must reach the shape
+    /// check: the journal's CREATE TABLE must parse to exactly the configured
+    /// relation, or every boot logs a false "every write fails" error for it.
+    #[test]
+    fn journal_position_counts_as_written_by_the_bootstrap_shape_check() {
+        let config = SystemCatalogConfig::default();
+        let journal = config.cdc_journal_relation();
+        let parsed = system_catalog_statements(&config)
+            .iter()
+            .filter_map(|stmt| declared_table_columns(stmt))
+            .find(|(relation, _)| *relation == journal);
+        let (relation, columns) = parsed.expect("the journal CREATE TABLE parses to its relation");
+        assert!(!columns.iter().any(|c| c == "journal_position"));
+        assert_eq!(
+            trigger_assigned_columns(&config, &relation),
+            ["journal_position"]
+        );
+        assert!(trigger_assigned_columns(&config, &config.saga_relation()).is_empty());
+    }
+
     #[test]
     fn declared_table_columns_parses_every_real_bootstrap_statement() {
         let statements = system_catalog_statements(&SystemCatalogConfig::default());

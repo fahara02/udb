@@ -315,7 +315,7 @@ async fn served_select_returns_one_json_shape_per_sql_type_live() {
     assert_eq!(row["ref"], json!("0192f0c4-0000-7000-8000-000000000001"));
     assert_eq!(row["doc"], json!({"a": [1, "x"]}));
     assert_eq!(row["blob"], json!("3q2+7w=="));
-    assert_eq!(row["at"], json!("2026-10-07T09:30:00.123Z"));
+    assert_eq!(row["at"], json!("2026-10-07T09:30:00.123000Z"));
     assert_eq!(row["day"], json!("2026-10-07"));
     assert_eq!(row["code"], json!("AB"));
     assert_eq!(row["mood"], json!("very sad"));

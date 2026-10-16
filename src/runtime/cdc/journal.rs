@@ -10,6 +10,9 @@ use crate::runtime::executor_utils::qi_runtime as qi;
 use crate::runtime::system::SystemCatalogConfig;
 
 pub(crate) type JournalPosition = i64;
+/// The journal column the insert trigger assigns. It is NOT NULL with no
+/// default, so shape checks must count it as written by UDB.
+pub(crate) const POSITION_COLUMN: &str = "journal_position";
 const HEAD_TABLE: &str = "udb_cdc_journal_heads";
 const ALLOCATOR: &str = "udb_cdc_assign_journal_position";
 const IMMUTABLE: &str = "udb_cdc_keep_journal_position";

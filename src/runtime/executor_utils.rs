@@ -820,11 +820,13 @@ pub(crate) fn sqlx_error_to_status(context: &str, err: &sqlx::Error) -> tonic::S
                         None,
                     );
                 }
-                "42703" | "42P01" => {
+                "42703" | "42P01" if !names_udb_owned_relation(db.message(), db.table()) => {
                     // undefined_column / undefined_table: the SQL the broker built
                     // from the ACTIVE catalog names a column or table the live
                     // database does not have. That is a catalog/schema mismatch
-                    // the caller can fix, not a broker fault.
+                    // the caller can fix, not a broker fault. A missing table in a
+                    // UDB-owned `udb_*` schema is the broker's own store failing,
+                    // which no catalog change fixes, so it stays a server error.
                     return catalog_schema_mismatch_status(
                         code.as_ref(),
                         context,
@@ -1177,6 +1179,21 @@ fn not_null_column(message: &str) -> Option<String> {
     } else {
         Some(name.to_string())
     }
+}
+
+/// True when an undefined-object error names a relation in a UDB-owned schema
+/// (`udb_system`, `udb_authn`, ...): PostgreSQL reports a schema-qualified
+/// statement's relation as `relation "schema.table" does not exist`.
+fn names_udb_owned_relation(db_message: &str, db_table: Option<&str>) -> bool {
+    db_table
+        .filter(|table| !table.is_empty())
+        .map(str::to_string)
+        .or_else(|| quoted_after(db_message, "relation "))
+        .is_some_and(|relation| {
+            relation
+                .split_once('.')
+                .is_some_and(|(schema, _)| schema.trim_matches('"').starts_with("udb_"))
+        })
 }
 
 /// The first double-quoted identifier after `prefix` in a driver message.
@@ -2757,6 +2774,31 @@ mod error_detail_tests {
             .to_bytes()
             .expect("trailer decodes to bytes");
         crate::runtime::executor_utils::decode_error_detail_from_raw(&raw)
+    }
+
+    #[test]
+    fn missing_udb_owned_table_is_not_a_catalog_schema_mismatch() {
+        assert!(super::names_udb_owned_relation(
+            r#"relation "udb_authn.otps" does not exist"#,
+            None
+        ));
+        assert!(super::names_udb_owned_relation(
+            r#"relation "udb_system.missing_notification_outbox" does not exist"#,
+            None
+        ));
+        // Application tables, qualified or not, stay catalog mismatches.
+        assert!(!super::names_udb_owned_relation(
+            r#"relation "public.orders" does not exist"#,
+            None
+        ));
+        assert!(!super::names_udb_owned_relation(
+            r#"relation "orders" does not exist"#,
+            None
+        ));
+        assert!(!super::names_udb_owned_relation(
+            r#"column "total" of relation "orders" does not exist"#,
+            Some("orders")
+        ));
     }
 
     #[test]
