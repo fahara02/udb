@@ -18,6 +18,13 @@ on:
       CARGO_REGISTRY_TOKEN:
         description: crates.io API token used by `cargo publish`.
         required: false
+  # Re-publish an already tagged release whose crates.io job failed: checks out
+  # the `v<version>` tag, so it publishes exactly the released source.
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Released UDB version to publish, for example 0.6.0"
+        required: true
 
 env:
   CARGO_TERM_COLOR: always
@@ -37,6 +44,8 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.version && format('v{0}', github.event.inputs.version) || '' }}
 
       # Rust toolchain + cache + native build deps (single-source composite).
       - uses: ./.github/actions/setup-rust
@@ -49,14 +58,17 @@ jobs:
       - uses: ./.github/actions/version-guard
         with:
           component: udb
+          dispatch-version: ${{ github.event.inputs.version }}
 
       - name: Check crates.io version availability
         id: crate_version
         shell: bash
+        env:
+          DISPATCH_VERSION: ${{ github.event.inputs.version }}
         run: |
           set -euo pipefail
-          version="${GITHUB_REF#refs/tags/v}"
-          if curl -fsS "https://crates.io/api/v1/crates/udb/${version}" >/dev/null; then
+          version="${DISPATCH_VERSION:-${GITHUB_REF#refs/tags/v}}"
+          if curl -fsS -A "udb-release (https://github.com/fahara02/udb)" "https://crates.io/api/v1/crates/udb/${version}" >/dev/null; then
             echo "exists=true" >> "$GITHUB_OUTPUT"
             echo "udb ${version} already exists on crates.io; publish steps will be skipped."
           else
@@ -77,7 +89,7 @@ jobs:
           set -uo pipefail
           mls_version="$(sed -n 's/^version = "\(.*\)"$/\1/p' crates/udb-mls/Cargo.toml | head -n 1)"
           test -n "$mls_version" || { echo "::error::no version in crates/udb-mls/Cargo.toml"; exit 1; }
-          if curl -fsS "https://crates.io/api/v1/crates/udb-mls/${mls_version}" >/dev/null; then
+          if curl -fsS -A "udb-release (https://github.com/fahara02/udb)" "https://crates.io/api/v1/crates/udb-mls/${mls_version}" >/dev/null; then
             echo "udb-mls ${mls_version} already exists on crates.io"
             exit 0
           fi
@@ -85,7 +97,7 @@ jobs:
             exit 0
           fi
           sleep 30
-          if curl -fsS "https://crates.io/api/v1/crates/udb-mls/${mls_version}" >/dev/null; then
+          if curl -fsS -A "udb-release (https://github.com/fahara02/udb)" "https://crates.io/api/v1/crates/udb-mls/${mls_version}" >/dev/null; then
             echo "udb-mls ${mls_version} was published by the concurrent Rust SDK release"
             exit 0
           fi

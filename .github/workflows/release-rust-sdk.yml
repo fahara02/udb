@@ -53,7 +53,7 @@ jobs:
         run: |
           set -euo pipefail
           version="${GITHUB_REF#refs/tags/v}"
-          if curl -fsS "https://crates.io/api/v1/crates/udb-client/${version}" >/dev/null; then
+          if curl -fsS -A "udb-release (https://github.com/fahara02/udb)" "https://crates.io/api/v1/crates/udb-client/${version}" >/dev/null; then
             echo "exists=true" >> "$GITHUB_OUTPUT"
             echo "udb-client ${version} already exists on crates.io; publish steps will be skipped."
           else
@@ -73,7 +73,7 @@ jobs:
           set -euo pipefail
           mls_version="$(sed -n 's/^version = "\(.*\)"$/\1/p' crates/udb-mls/Cargo.toml | head -n 1)"
           test -n "$mls_version" || { echo "::error::no version in crates/udb-mls/Cargo.toml"; exit 1; }
-          if curl -fsS "https://crates.io/api/v1/crates/udb-mls/${mls_version}" >/dev/null; then
+          if curl -fsS -A "udb-release (https://github.com/fahara02/udb)" "https://crates.io/api/v1/crates/udb-mls/${mls_version}" >/dev/null; then
             echo "udb-mls ${mls_version} already exists on crates.io"
             exit 0
           fi
@@ -82,7 +82,7 @@ jobs:
             exit 0
           fi
           sleep 30
-          curl -fsS "https://crates.io/api/v1/crates/udb-mls/${mls_version}" >/dev/null
+          curl -fsS -A "udb-release (https://github.com/fahara02/udb)" "https://crates.io/api/v1/crates/udb-mls/${mls_version}" >/dev/null
 
       # `cargo publish` packages ONLY the crate directory, so the build script's
       # repo-relative `../../proto` is unreachable from the published crate. The
