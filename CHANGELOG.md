@@ -103,6 +103,13 @@ prints the fix.
   same layout and uses it for the timestamps it writes.
   - detect: code: `time.RFC3339Nano`
   - fix: compare parsed times, or format the value you wrote with `udbclient.FormatTimestamp` (layout `2006-01-02T15:04:05.000000Z07:00`) before comparing it as text with what udb returns.
+- **`DataBroker.ListPolicies` honors `include_disabled`.** The flag was
+  inverted since 0.2.0: by default the list returned disabled legacy policy
+  rows too, and `include_disabled: true` returned only the enabled ones. The
+  default now lists enabled rows only.
+  - detect: code: `include_disabled`
+  - detect: code: `IncludeDisabled`
+  - fix: set `include_disabled: true` where you need disabled rows listed, and drop any client-side filtering written around the inverted behavior.
 
 ### Clearer refusals
 

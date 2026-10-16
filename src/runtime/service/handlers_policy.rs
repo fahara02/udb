@@ -45,7 +45,7 @@ impl DataBrokerService {
         let offset = page_offset(&req.page_token);
         let result = self
             .runtime_snapshot()
-            .list_policies_page(!req.include_disabled, limit as i64, offset as i64)
+            .list_policies_page(req.include_disabled, limit as i64, offset as i64)
             .await;
         match result {
             Ok((entries, total_count)) => {
