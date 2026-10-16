@@ -28,6 +28,19 @@ class ListMessagingDevicesRequest extends \Google\Protobuf\Internal\Message
      * Generated from protobuf field <code>bool include_revoked = 3 [json_name = "includeRevoked"];</code>
      */
     protected $include_revoked = false;
+    /**
+     * Maximum devices per page; 0 means 100. Capped at the broker's list limit.
+     *
+     * Generated from protobuf field <code>int32 page_size = 4 [json_name = "pageSize"];</code>
+     */
+    protected $page_size = 0;
+    /**
+     * Opaque cursor from a previous response's next_page_token; empty starts at
+     * the first device (devices are ordered by device_id).
+     *
+     * Generated from protobuf field <code>string page_token = 5 [json_name = "pageToken"];</code>
+     */
+    protected $page_token = '';
 
     /**
      * Constructor.
@@ -39,6 +52,11 @@ class ListMessagingDevicesRequest extends \Google\Protobuf\Internal\Message
      *     @type string $subject_id
      *           The principal whose devices to list; empty means "the caller".
      *     @type bool $include_revoked
+     *     @type int $page_size
+     *           Maximum devices per page; 0 means 100. Capped at the broker's list limit.
+     *     @type string $page_token
+     *           Opaque cursor from a previous response's next_page_token; empty starts at
+     *           the first device (devices are ordered by device_id).
      * }
      */
     public function __construct($data = NULL) {
@@ -112,6 +130,60 @@ class ListMessagingDevicesRequest extends \Google\Protobuf\Internal\Message
     {
         GPBUtil::checkBool($var);
         $this->include_revoked = $var;
+
+        return $this;
+    }
+
+    /**
+     * Maximum devices per page; 0 means 100. Capped at the broker's list limit.
+     *
+     * Generated from protobuf field <code>int32 page_size = 4 [json_name = "pageSize"];</code>
+     * @return int
+     */
+    public function getPageSize()
+    {
+        return $this->page_size;
+    }
+
+    /**
+     * Maximum devices per page; 0 means 100. Capped at the broker's list limit.
+     *
+     * Generated from protobuf field <code>int32 page_size = 4 [json_name = "pageSize"];</code>
+     * @param int $var
+     * @return $this
+     */
+    public function setPageSize($var)
+    {
+        GPBUtil::checkInt32($var);
+        $this->page_size = $var;
+
+        return $this;
+    }
+
+    /**
+     * Opaque cursor from a previous response's next_page_token; empty starts at
+     * the first device (devices are ordered by device_id).
+     *
+     * Generated from protobuf field <code>string page_token = 5 [json_name = "pageToken"];</code>
+     * @return string
+     */
+    public function getPageToken()
+    {
+        return $this->page_token;
+    }
+
+    /**
+     * Opaque cursor from a previous response's next_page_token; empty starts at
+     * the first device (devices are ordered by device_id).
+     *
+     * Generated from protobuf field <code>string page_token = 5 [json_name = "pageToken"];</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setPageToken($var)
+    {
+        GPBUtil::checkString($var, True);
+        $this->page_token = $var;
 
         return $this;
     }

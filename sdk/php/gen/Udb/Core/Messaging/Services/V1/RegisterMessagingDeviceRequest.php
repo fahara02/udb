@@ -28,8 +28,8 @@ class RegisterMessagingDeviceRequest extends \Google\Protobuf\Internal\Message
      */
     protected $subject_id = '';
     /**
-     * Client-chosen device id, unique within the tenant. 1-128 characters from
-     * [A-Za-z0-9._-].
+     * Caller-chosen device id, unique within the tenant. Format: 1-128
+     * characters from [A-Za-z0-9._-]; stable for the life of the device.
      *
      * Generated from protobuf field <code>string device_id = 3 [json_name = "deviceId"];</code>
      */
@@ -60,8 +60,8 @@ class RegisterMessagingDeviceRequest extends \Google\Protobuf\Internal\Message
      *           The owning principal. When the caller is an end user this must be the
      *           caller's own subject; empty means "the caller".
      *     @type string $device_id
-     *           Client-chosen device id, unique within the tenant. 1-128 characters from
-     *           [A-Za-z0-9._-].
+     *           Caller-chosen device id, unique within the tenant. Format: 1-128
+     *           characters from [A-Za-z0-9._-]; stable for the life of the device.
      *     @type string $signature_public_key
      *           Raw Ed25519 signature public key (32 bytes).
      *     @type string $credential
@@ -129,8 +129,8 @@ class RegisterMessagingDeviceRequest extends \Google\Protobuf\Internal\Message
     }
 
     /**
-     * Client-chosen device id, unique within the tenant. 1-128 characters from
-     * [A-Za-z0-9._-].
+     * Caller-chosen device id, unique within the tenant. Format: 1-128
+     * characters from [A-Za-z0-9._-]; stable for the life of the device.
      *
      * Generated from protobuf field <code>string device_id = 3 [json_name = "deviceId"];</code>
      * @return string
@@ -141,8 +141,8 @@ class RegisterMessagingDeviceRequest extends \Google\Protobuf\Internal\Message
     }
 
     /**
-     * Client-chosen device id, unique within the tenant. 1-128 characters from
-     * [A-Za-z0-9._-].
+     * Caller-chosen device id, unique within the tenant. Format: 1-128
+     * characters from [A-Za-z0-9._-]; stable for the life of the device.
      *
      * Generated from protobuf field <code>string device_id = 3 [json_name = "deviceId"];</code>
      * @param string $var

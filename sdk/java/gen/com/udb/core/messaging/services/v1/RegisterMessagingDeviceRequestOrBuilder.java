@@ -54,8 +54,8 @@ public interface RegisterMessagingDeviceRequestOrBuilder extends
 
   /**
    * <pre>
-   * Client-chosen device id, unique within the tenant. 1-128 characters from
-   * [A-Za-z0-9._-].
+   * Caller-chosen device id, unique within the tenant. Format: 1-128
+   * characters from [A-Za-z0-9._-]; stable for the life of the device.
    * </pre>
    *
    * <code>string device_id = 3 [json_name = "deviceId"];</code>
@@ -64,8 +64,8 @@ public interface RegisterMessagingDeviceRequestOrBuilder extends
   java.lang.String getDeviceId();
   /**
    * <pre>
-   * Client-chosen device id, unique within the tenant. 1-128 characters from
-   * [A-Za-z0-9._-].
+   * Caller-chosen device id, unique within the tenant. Format: 1-128
+   * characters from [A-Za-z0-9._-]; stable for the life of the device.
    * </pre>
    *
    * <code>string device_id = 3 [json_name = "deviceId"];</code>

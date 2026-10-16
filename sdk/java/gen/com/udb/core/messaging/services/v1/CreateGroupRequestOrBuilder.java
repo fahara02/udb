@@ -24,7 +24,8 @@ public interface CreateGroupRequestOrBuilder extends
 
   /**
    * <pre>
-   * The MLS group id as UTF-8 text; must equal the GroupInfo's group id.
+   * Caller-chosen MLS group id as UTF-8 text; must equal the GroupInfo's group
+   * id. Format: 1-255 characters from [A-Za-z0-9._:-].
    * </pre>
    *
    * <code>string group_id = 2 [json_name = "groupId"];</code>
@@ -33,7 +34,8 @@ public interface CreateGroupRequestOrBuilder extends
   java.lang.String getGroupId();
   /**
    * <pre>
-   * The MLS group id as UTF-8 text; must equal the GroupInfo's group id.
+   * Caller-chosen MLS group id as UTF-8 text; must equal the GroupInfo's group
+   * id. Format: 1-255 characters from [A-Za-z0-9._:-].
    * </pre>
    *
    * <code>string group_id = 2 [json_name = "groupId"];</code>
@@ -44,7 +46,8 @@ public interface CreateGroupRequestOrBuilder extends
 
   /**
    * <pre>
-   * The creator's device; must be the group's only member.
+   * The creator's device: a caller-chosen device id (same format as
+   * RegisterMessagingDeviceRequest.device_id); must be the group's only member.
    * </pre>
    *
    * <code>string creator_device_id = 3 [json_name = "creatorDeviceId"];</code>
@@ -53,7 +56,8 @@ public interface CreateGroupRequestOrBuilder extends
   java.lang.String getCreatorDeviceId();
   /**
    * <pre>
-   * The creator's device; must be the group's only member.
+   * The creator's device: a caller-chosen device id (same format as
+   * RegisterMessagingDeviceRequest.device_id); must be the group's only member.
    * </pre>
    *
    * <code>string creator_device_id = 3 [json_name = "creatorDeviceId"];</code>

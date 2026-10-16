@@ -58,24 +58,30 @@ class RegisterMessagingDeviceResponse(_message.Message):
     def __init__(self, device: _Optional[_Union[DirectoryDevice, _Mapping]] = ..., created: bool = ..., message: _Optional[str] = ..., error: _Optional[_Union[_dto_pb2.ApiError, _Mapping]] = ...) -> None: ...
 
 class ListMessagingDevicesRequest(_message.Message):
-    __slots__ = ("tenant_id", "subject_id", "include_revoked")
+    __slots__ = ("tenant_id", "subject_id", "include_revoked", "page_size", "page_token")
     TENANT_ID_FIELD_NUMBER: _ClassVar[int]
     SUBJECT_ID_FIELD_NUMBER: _ClassVar[int]
     INCLUDE_REVOKED_FIELD_NUMBER: _ClassVar[int]
+    PAGE_SIZE_FIELD_NUMBER: _ClassVar[int]
+    PAGE_TOKEN_FIELD_NUMBER: _ClassVar[int]
     tenant_id: str
     subject_id: str
     include_revoked: bool
-    def __init__(self, tenant_id: _Optional[str] = ..., subject_id: _Optional[str] = ..., include_revoked: bool = ...) -> None: ...
+    page_size: int
+    page_token: str
+    def __init__(self, tenant_id: _Optional[str] = ..., subject_id: _Optional[str] = ..., include_revoked: bool = ..., page_size: _Optional[int] = ..., page_token: _Optional[str] = ...) -> None: ...
 
 class ListMessagingDevicesResponse(_message.Message):
-    __slots__ = ("devices", "message", "error")
+    __slots__ = ("devices", "message", "error", "next_page_token")
     DEVICES_FIELD_NUMBER: _ClassVar[int]
     MESSAGE_FIELD_NUMBER: _ClassVar[int]
     ERROR_FIELD_NUMBER: _ClassVar[int]
+    NEXT_PAGE_TOKEN_FIELD_NUMBER: _ClassVar[int]
     devices: _containers.RepeatedCompositeFieldContainer[DirectoryDevice]
     message: str
     error: _dto_pb2.ApiError
-    def __init__(self, devices: _Optional[_Iterable[_Union[DirectoryDevice, _Mapping]]] = ..., message: _Optional[str] = ..., error: _Optional[_Union[_dto_pb2.ApiError, _Mapping]] = ...) -> None: ...
+    next_page_token: str
+    def __init__(self, devices: _Optional[_Iterable[_Union[DirectoryDevice, _Mapping]]] = ..., message: _Optional[str] = ..., error: _Optional[_Union[_dto_pb2.ApiError, _Mapping]] = ..., next_page_token: _Optional[str] = ...) -> None: ...
 
 class RevokeMessagingDeviceRequest(_message.Message):
     __slots__ = ("tenant_id", "device_id", "reason")

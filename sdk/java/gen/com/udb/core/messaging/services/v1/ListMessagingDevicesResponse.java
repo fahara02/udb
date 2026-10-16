@@ -30,6 +30,7 @@ private static final long serialVersionUID = 0L;
   private ListMessagingDevicesResponse() {
     devices_ = java.util.Collections.emptyList();
     message_ = "";
+    nextPageToken_ = "";
   }
 
   public static final com.google.protobuf.Descriptors.Descriptor
@@ -164,6 +165,53 @@ private static final long serialVersionUID = 0L;
     return error_ == null ? com.udb.core.common.v1.ApiError.getDefaultInstance() : error_;
   }
 
+  public static final int NEXT_PAGE_TOKEN_FIELD_NUMBER = 4;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object nextPageToken_ = "";
+  /**
+   * <pre>
+   * Cursor for the next page; empty when this page is the last.
+   * </pre>
+   *
+   * <code>string next_page_token = 4 [json_name = "nextPageToken"];</code>
+   * @return The nextPageToken.
+   */
+  @java.lang.Override
+  public java.lang.String getNextPageToken() {
+    java.lang.Object ref = nextPageToken_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs =
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      nextPageToken_ = s;
+      return s;
+    }
+  }
+  /**
+   * <pre>
+   * Cursor for the next page; empty when this page is the last.
+   * </pre>
+   *
+   * <code>string next_page_token = 4 [json_name = "nextPageToken"];</code>
+   * @return The bytes for nextPageToken.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getNextPageTokenBytes() {
+    java.lang.Object ref = nextPageToken_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b =
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      nextPageToken_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -187,6 +235,9 @@ private static final long serialVersionUID = 0L;
     if (((bitField0_ & 0x00000001) != 0)) {
       output.writeMessage(3, getError());
     }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(nextPageToken_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 4, nextPageToken_);
+    }
     getUnknownFields().writeTo(output);
   }
 
@@ -206,6 +257,9 @@ private static final long serialVersionUID = 0L;
     if (((bitField0_ & 0x00000001) != 0)) {
       size += com.google.protobuf.CodedOutputStream
         .computeMessageSize(3, getError());
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(nextPageToken_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(4, nextPageToken_);
     }
     size += getUnknownFields().getSerializedSize();
     memoizedSize = size;
@@ -231,6 +285,8 @@ private static final long serialVersionUID = 0L;
       if (!getError()
           .equals(other.getError())) return false;
     }
+    if (!getNextPageToken()
+        .equals(other.getNextPageToken())) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -252,6 +308,8 @@ private static final long serialVersionUID = 0L;
       hash = (37 * hash) + ERROR_FIELD_NUMBER;
       hash = (53 * hash) + getError().hashCode();
     }
+    hash = (37 * hash) + NEXT_PAGE_TOKEN_FIELD_NUMBER;
+    hash = (53 * hash) + getNextPageToken().hashCode();
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -403,6 +461,7 @@ private static final long serialVersionUID = 0L;
         errorBuilder_.dispose();
         errorBuilder_ = null;
       }
+      nextPageToken_ = "";
       return this;
     }
 
@@ -459,6 +518,9 @@ private static final long serialVersionUID = 0L;
             : errorBuilder_.build();
         to_bitField0_ |= 0x00000001;
       }
+      if (((from_bitField0_ & 0x00000008) != 0)) {
+        result.nextPageToken_ = nextPageToken_;
+      }
       result.bitField0_ |= to_bitField0_;
     }
 
@@ -507,6 +569,11 @@ private static final long serialVersionUID = 0L;
       }
       if (other.hasError()) {
         mergeError(other.getError());
+      }
+      if (!other.getNextPageToken().isEmpty()) {
+        nextPageToken_ = other.nextPageToken_;
+        bitField0_ |= 0x00000008;
+        onChanged();
       }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
@@ -559,6 +626,11 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00000004;
               break;
             } // case 26
+            case 34: {
+              nextPageToken_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00000008;
+              break;
+            } // case 34
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -1043,6 +1115,98 @@ private static final long serialVersionUID = 0L;
         error_ = null;
       }
       return errorBuilder_;
+    }
+
+    private java.lang.Object nextPageToken_ = "";
+    /**
+     * <pre>
+     * Cursor for the next page; empty when this page is the last.
+     * </pre>
+     *
+     * <code>string next_page_token = 4 [json_name = "nextPageToken"];</code>
+     * @return The nextPageToken.
+     */
+    public java.lang.String getNextPageToken() {
+      java.lang.Object ref = nextPageToken_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        nextPageToken_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <pre>
+     * Cursor for the next page; empty when this page is the last.
+     * </pre>
+     *
+     * <code>string next_page_token = 4 [json_name = "nextPageToken"];</code>
+     * @return The bytes for nextPageToken.
+     */
+    public com.google.protobuf.ByteString
+        getNextPageTokenBytes() {
+      java.lang.Object ref = nextPageToken_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b =
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        nextPageToken_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <pre>
+     * Cursor for the next page; empty when this page is the last.
+     * </pre>
+     *
+     * <code>string next_page_token = 4 [json_name = "nextPageToken"];</code>
+     * @param value The nextPageToken to set.
+     * @return This builder for chaining.
+     */
+    public Builder setNextPageToken(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      nextPageToken_ = value;
+      bitField0_ |= 0x00000008;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Cursor for the next page; empty when this page is the last.
+     * </pre>
+     *
+     * <code>string next_page_token = 4 [json_name = "nextPageToken"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearNextPageToken() {
+      nextPageToken_ = getDefaultInstance().getNextPageToken();
+      bitField0_ = (bitField0_ & ~0x00000008);
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Cursor for the next page; empty when this page is the last.
+     * </pre>
+     *
+     * <code>string next_page_token = 4 [json_name = "nextPageToken"];</code>
+     * @param value The bytes for nextPageToken to set.
+     * @return This builder for chaining.
+     */
+    public Builder setNextPageTokenBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      nextPageToken_ = value;
+      bitField0_ |= 0x00000008;
+      onChanged();
+      return this;
     }
 
     // @@protoc_insertion_point(builder_scope:udb.core.messaging.services.v1.ListMessagingDevicesResponse)

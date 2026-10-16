@@ -143,8 +143,8 @@ type RegisterMessagingDeviceRequest struct {
 	// The owning principal. When the caller is an end user this must be the
 	// caller's own subject; empty means "the caller".
 	SubjectId string `protobuf:"bytes,2,opt,name=subject_id,json=subjectId,proto3" json:"subject_id,omitempty"`
-	// Client-chosen device id, unique within the tenant. 1-128 characters from
-	// [A-Za-z0-9._-].
+	// Caller-chosen device id, unique within the tenant. Format: 1-128
+	// characters from [A-Za-z0-9._-]; stable for the life of the device.
 	DeviceId string `protobuf:"bytes,3,opt,name=device_id,json=deviceId,proto3" json:"device_id,omitempty"`
 	// Raw Ed25519 signature public key (32 bytes).
 	SignaturePublicKey []byte `protobuf:"bytes,4,opt,name=signature_public_key,json=signaturePublicKey,proto3" json:"signature_public_key,omitempty"`
@@ -296,8 +296,13 @@ type ListMessagingDevicesRequest struct {
 	// The principal whose devices to list; empty means "the caller".
 	SubjectId      string `protobuf:"bytes,2,opt,name=subject_id,json=subjectId,proto3" json:"subject_id,omitempty"`
 	IncludeRevoked bool   `protobuf:"varint,3,opt,name=include_revoked,json=includeRevoked,proto3" json:"include_revoked,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	// Maximum devices per page; 0 means 100. Capped at the broker's list limit.
+	PageSize int32 `protobuf:"varint,4,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
+	// Opaque cursor from a previous response's next_page_token; empty starts at
+	// the first device (devices are ordered by device_id).
+	PageToken     string `protobuf:"bytes,5,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *ListMessagingDevicesRequest) Reset() {
@@ -351,12 +356,28 @@ func (x *ListMessagingDevicesRequest) GetIncludeRevoked() bool {
 	return false
 }
 
+func (x *ListMessagingDevicesRequest) GetPageSize() int32 {
+	if x != nil {
+		return x.PageSize
+	}
+	return 0
+}
+
+func (x *ListMessagingDevicesRequest) GetPageToken() string {
+	if x != nil {
+		return x.PageToken
+	}
+	return ""
+}
+
 type ListMessagingDevicesResponse struct {
 	state   protoimpl.MessageState `protogen:"open.v1"`
 	Devices []*DirectoryDevice     `protobuf:"bytes,1,rep,name=devices,proto3" json:"devices,omitempty"`
 	Message string                 `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`
 	// Error information if operation failed
-	Error         *v1.ApiError `protobuf:"bytes,3,opt,name=error,proto3" json:"error,omitempty"`
+	Error *v1.ApiError `protobuf:"bytes,3,opt,name=error,proto3" json:"error,omitempty"`
+	// Cursor for the next page; empty when this page is the last.
+	NextPageToken string `protobuf:"bytes,4,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -410,6 +431,13 @@ func (x *ListMessagingDevicesResponse) GetError() *v1.ApiError {
 		return x.Error
 	}
 	return nil
+}
+
+func (x *ListMessagingDevicesResponse) GetNextPageToken() string {
+	if x != nil {
+		return x.NextPageToken
+	}
+	return ""
 }
 
 type RevokeMessagingDeviceRequest struct {
@@ -1035,9 +1063,11 @@ func (x *GetKeyPackageStockResponse) GetError() *v1.ApiError {
 type CreateGroupRequest struct {
 	state    protoimpl.MessageState `protogen:"open.v1"`
 	TenantId string                 `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
-	// The MLS group id as UTF-8 text; must equal the GroupInfo's group id.
+	// Caller-chosen MLS group id as UTF-8 text; must equal the GroupInfo's group
+	// id. Format: 1-255 characters from [A-Za-z0-9._:-].
 	GroupId string `protobuf:"bytes,2,opt,name=group_id,json=groupId,proto3" json:"group_id,omitempty"`
-	// The creator's device; must be the group's only member.
+	// The creator's device: a caller-chosen device id (same format as
+	// RegisterMessagingDeviceRequest.device_id); must be the group's only member.
 	CreatorDeviceId string `protobuf:"bytes,3,opt,name=creator_device_id,json=creatorDeviceId,proto3" json:"creator_device_id,omitempty"`
 	// TLS-serialized MlsMessage carrying the creator's signed GroupInfo.
 	GroupInfo []byte `protobuf:"bytes,4,opt,name=group_info,json=groupInfo,proto3" json:"group_info,omitempty"`
@@ -2629,16 +2659,20 @@ const file_udb_core_messaging_services_v1_messaging_service_proto_rawDesc = "" +
 	"\x06device\x18\x01 \x01(\v2/.udb.core.messaging.services.v1.DirectoryDeviceR\x06device\x12\x18\n" +
 	"\acreated\x18\x02 \x01(\bR\acreated\x12\x18\n" +
 	"\amessage\x18\x03 \x01(\tR\amessage\x122\n" +
-	"\x05error\x18\x04 \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error: \x9a\xb2\x19\x1c\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\tmessagingP\x01\"\xa4\x01\n" +
+	"\x05error\x18\x04 \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error: \x9a\xb2\x19\x1c\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\tmessagingP\x01\"\xe0\x01\n" +
 	"\x1bListMessagingDevicesRequest\x12\x1b\n" +
 	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x12\x1d\n" +
 	"\n" +
 	"subject_id\x18\x02 \x01(\tR\tsubjectId\x12'\n" +
-	"\x0finclude_revoked\x18\x03 \x01(\bR\x0eincludeRevoked: \x9a\xb2\x19\x1c\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\tmessagingP\x01\"\xd9\x01\n" +
+	"\x0finclude_revoked\x18\x03 \x01(\bR\x0eincludeRevoked\x12\x1b\n" +
+	"\tpage_size\x18\x04 \x01(\x05R\bpageSize\x12\x1d\n" +
+	"\n" +
+	"page_token\x18\x05 \x01(\tR\tpageToken: \x9a\xb2\x19\x1c\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\tmessagingP\x01\"\x81\x02\n" +
 	"\x1cListMessagingDevicesResponse\x12I\n" +
 	"\adevices\x18\x01 \x03(\v2/.udb.core.messaging.services.v1.DirectoryDeviceR\adevices\x12\x18\n" +
 	"\amessage\x18\x02 \x01(\tR\amessage\x122\n" +
-	"\x05error\x18\x03 \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error: \x9a\xb2\x19\x1c\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\tmessagingP\x01\"\x92\x01\n" +
+	"\x05error\x18\x03 \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error\x12&\n" +
+	"\x0fnext_page_token\x18\x04 \x01(\tR\rnextPageToken: \x9a\xb2\x19\x1c\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\tmessagingP\x01\"\x92\x01\n" +
 	"\x1cRevokeMessagingDeviceRequest\x12\x1b\n" +
 	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x12\x1b\n" +
 	"\tdevice_id\x18\x02 \x01(\tR\bdeviceId\x12\x16\n" +

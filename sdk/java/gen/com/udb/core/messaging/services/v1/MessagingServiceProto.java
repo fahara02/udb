@@ -231,363 +231,365 @@ public final class MessagingServiceProto {
       "\002 \001(\010R\007created\022\030\n\007message\030\003 \001(\tR\007message" +
       "\0222\n\005error\030\004 \001(\0132\034.udb.core.common.v1.Api" +
       "ErrorR\005error: \232\262\031\034\010\001\032\003udb(\260\352\0010\003@\001J\tmessa" +
-      "gingP\001\"\244\001\n\033ListMessagingDevicesRequest\022\033" +
+      "gingP\001\"\340\001\n\033ListMessagingDevicesRequest\022\033" +
       "\n\ttenant_id\030\001 \001(\tR\010tenantId\022\035\n\nsubject_i" +
       "d\030\002 \001(\tR\tsubjectId\022\'\n\017include_revoked\030\003 " +
-      "\001(\010R\016includeRevoked: \232\262\031\034\010\001\032\003udb(\260\352\0010\003@\001" +
-      "J\tmessagingP\001\"\331\001\n\034ListMessagingDevicesRe" +
-      "sponse\022I\n\007devices\030\001 \003(\0132/.udb.core.messa" +
-      "ging.services.v1.DirectoryDeviceR\007device" +
-      "s\022\030\n\007message\030\002 \001(\tR\007message\0222\n\005error\030\003 \001" +
-      "(\0132\034.udb.core.common.v1.ApiErrorR\005error:" +
-      " \232\262\031\034\010\001\032\003udb(\260\352\0010\003@\001J\tmessagingP\001\"\222\001\n\034Re" +
-      "vokeMessagingDeviceRequest\022\033\n\ttenant_id\030" +
-      "\001 \001(\tR\010tenantId\022\033\n\tdevice_id\030\002 \001(\tR\010devi" +
-      "ceId\022\026\n\006reason\030\003 \001(\tR\006reason: \232\262\031\034\010\001\032\003ud" +
-      "b(\260\352\0010\003@\001J\tmessagingP\001\"\306\001\n\035RevokeMessagi" +
-      "ngDeviceResponse\022\030\n\007revoked\030\001 \001(\010R\007revok" +
-      "ed\022\033\n\tgroup_ids\030\002 \003(\tR\010groupIds\022\030\n\007messa" +
-      "ge\030\003 \001(\tR\007message\0222\n\005error\030\004 \001(\0132\034.udb.c" +
-      "ore.common.v1.ApiErrorR\005error: \232\262\031\034\010\001\032\003u" +
-      "db(\260\352\0010\003@\001J\tmessagingP\001\"\321\001\n\031PublishKeyPa" +
-      "ckagesRequest\022\033\n\ttenant_id\030\001 \001(\tR\010tenant" +
-      "Id\022\033\n\tdevice_id\030\002 \001(\tR\010deviceId\022!\n\014key_p" +
-      "ackages\030\003 \003(\014R\013keyPackages\0225\n\027last_resor" +
-      "t_key_package\030\004 \001(\014R\024lastResortKeyPackag" +
-      "e: \232\262\031\034\010\001\032\003udb(\260\352\0010\003@\001J\tmessagingP\001\"\376\001\n\032" +
-      "PublishKeyPackagesResponse\022\032\n\010accepted\030\001" +
-      " \001(\005R\010accepted\022,\n\022one_time_remaining\030\002 \001" +
-      "(\003R\020oneTimeRemaining\022&\n\017has_last_resort\030" +
-      "\003 \001(\010R\rhasLastResort\022\030\n\007message\030\004 \001(\tR\007m" +
-      "essage\0222\n\005error\030\005 \001(\0132\034.udb.core.common." +
-      "v1.ApiErrorR\005error: \232\262\031\034\010\001\032\003udb(\260\352\0010\003@\001J" +
-      "\tmessagingP\001\"\342\001\n\027ClaimKeyPackagesRequest" +
-      "\022\033\n\ttenant_id\030\001 \001(\tR\010tenantId\022.\n\023request" +
-      "er_device_id\030\002 \001(\tR\021requesterDeviceId\022*\n" +
-      "\021target_device_ids\030\003 \003(\tR\017targetDeviceId" +
-      "s\022,\n\022target_subject_ids\030\004 \003(\tR\020targetSub" +
-      "jectIds: \232\262\031\034\010\001\032\003udb(\260\352\0010\003@\001J\tmessagingP" +
-      "\001\"\333\001\n\021ClaimedKeyPackage\022\035\n\nsubject_id\030\001 " +
-      "\001(\tR\tsubjectId\022\033\n\tdevice_id\030\002 \001(\tR\010devic" +
-      "eId\022\037\n\013key_package\030\003 \001(\014R\nkeyPackage\022&\n\017" +
-      "key_package_ref\030\004 \001(\tR\rkeyPackageRef\022\037\n\013" +
-      "last_resort\030\005 \001(\010R\nlastResort: \232\262\031\034\010\001\032\003u" +
-      "db(\260\352\0010\003@\001J\tmessagingP\001\"\216\002\n\030ClaimKeyPack" +
-      "agesResponse\022T\n\014key_packages\030\001 \003(\01321.udb" +
-      ".core.messaging.services.v1.ClaimedKeyPa" +
-      "ckageR\013keyPackages\022,\n\022missing_device_ids" +
-      "\030\002 \003(\tR\020missingDeviceIds\022\030\n\007message\030\003 \001(" +
-      "\tR\007message\0222\n\005error\030\004 \001(\0132\034.udb.core.com" +
-      "mon.v1.ApiErrorR\005error: \232\262\031\034\010\001\032\003udb(\260\352\0010" +
-      "\003@\001J\tmessagingP\001\"w\n\031GetKeyPackageStockRe" +
-      "quest\022\033\n\ttenant_id\030\001 \001(\tR\010tenantId\022\033\n\tde" +
-      "vice_id\030\002 \001(\tR\010deviceId: \232\262\031\034\010\001\032\003udb(\260\352\001" +
-      "0\003@\001J\tmessagingP\001\"\342\001\n\032GetKeyPackageStock" +
-      "Response\022,\n\022one_time_remaining\030\001 \001(\003R\020on" +
-      "eTimeRemaining\022&\n\017has_last_resort\030\002 \001(\010R" +
-      "\rhasLastResort\022\030\n\007message\030\003 \001(\tR\007message" +
-      "\0222\n\005error\030\004 \001(\0132\034.udb.core.common.v1.Api" +
-      "ErrorR\005error: \232\262\031\034\010\001\032\003udb(\260\352\0010\003@\001J\tmessa" +
-      "gingP\001\"\334\001\n\022CreateGroupRequest\022\033\n\ttenant_" +
-      "id\030\001 \001(\tR\010tenantId\022\031\n\010group_id\030\002 \001(\tR\007gr" +
-      "oupId\022*\n\021creator_device_id\030\003 \001(\tR\017creato" +
-      "rDeviceId\022\035\n\ngroup_info\030\004 \001(\014R\tgroupInfo" +
-      "\022!\n\014ratchet_tree\030\005 \001(\014R\013ratchetTree: \232\262\031" +
-      "\034\010\001\032\003udb(\260\352\0010\003@\001J\tmessagingP\001\"\320\001\n\023Create" +
-      "GroupResponse\022\031\n\010group_id\030\001 \001(\tR\007groupId" +
-      "\022\024\n\005epoch\030\002 \001(\003R\005epoch\022\030\n\007created\030\003 \001(\010R" +
-      "\007created\022\030\n\007message\030\004 \001(\tR\007message\0222\n\005er" +
-      "ror\030\005 \001(\0132\034.udb.core.common.v1.ApiErrorR" +
-      "\005error: \232\262\031\034\010\001\032\003udb(\260\352\0010\003@\001J\tmessagingP\001" +
-      "\"\254\002\n\023SubmitCommitRequest\022\033\n\ttenant_id\030\001 " +
-      "\001(\tR\010tenantId\022\031\n\010group_id\030\002 \001(\tR\007groupId" +
-      "\022(\n\020sender_device_id\030\003 \001(\tR\016senderDevice" +
-      "Id\022\024\n\005epoch\030\004 \001(\003R\005epoch\022\026\n\006commit\030\005 \001(\014" +
-      "R\006commit\022\030\n\007welcome\030\006 \001(\014R\007welcome\022\035\n\ngr" +
-      "oup_info\030\007 \001(\014R\tgroupInfo\022*\n\021client_mess" +
-      "age_id\030\010 \001(\tR\017clientMessageId: \232\262\031\034\010\001\032\003u" +
-      "db(\260\352\0010\003@\001J\tmessagingP\001\"\276\002\n\024SubmitCommit" +
-      "Response\022\024\n\005epoch\030\001 \001(\003R\005epoch\022*\n\021member" +
-      "_device_ids\030\002 \003(\tR\017memberDeviceIds\022(\n\020ad" +
-      "ded_device_ids\030\003 \003(\tR\016addedDeviceIds\022,\n\022" +
-      "removed_device_ids\030\004 \003(\tR\020removedDeviceI" +
-      "ds\022\034\n\tduplicate\030\005 \001(\010R\tduplicate\022\030\n\007mess" +
-      "age\030\006 \001(\tR\007message\0222\n\005error\030\007 \001(\0132\034.udb." +
-      "core.common.v1.ApiErrorR\005error: \232\262\031\034\010\001\032\003" +
-      "udb(\260\352\0010\003@\001J\tmessagingP\001\"o\n\023GetGroupInfo" +
-      "Request\022\033\n\ttenant_id\030\001 \001(\tR\010tenantId\022\031\n\010" +
-      "group_id\030\002 \001(\tR\007groupId: \232\262\031\034\010\001\032\003udb(\260\352\001" +
-      "0\003@\001J\tmessagingP\001\"\317\002\n\024GetGroupInfoRespon" +
-      "se\022\031\n\010group_id\030\001 \001(\tR\007groupId\022\024\n\005epoch\030\002" +
-      " \001(\003R\005epoch\022!\n\014ratchet_tree\030\003 \001(\014R\013ratch" +
-      "etTree\022\035\n\ngroup_info\030\004 \001(\014R\tgroupInfo\022(\n" +
-      "\020group_info_epoch\030\005 \001(\003R\016groupInfoEpoch\022" +
-      "*\n\021member_device_ids\030\006 \003(\tR\017memberDevice" +
-      "Ids\022\030\n\007message\030\007 \001(\tR\007message\0222\n\005error\030\010" +
-      " \001(\0132\034.udb.core.common.v1.ApiErrorR\005erro" +
-      "r: \232\262\031\034\010\001\032\003udb(\260\352\0010\003@\001J\tmessagingP\001\"\344\001\n\022" +
-      "SendMessageRequest\022\033\n\ttenant_id\030\001 \001(\tR\010t" +
-      "enantId\022\031\n\010group_id\030\002 \001(\tR\007groupId\022(\n\020se" +
-      "nder_device_id\030\003 \001(\tR\016senderDeviceId\022\036\n\n" +
-      "ciphertext\030\004 \001(\014R\nciphertext\022*\n\021client_m" +
-      "essage_id\030\005 \001(\tR\017clientMessageId: \232\262\031\034\010\001" +
-      "\032\003udb(\260\352\0010\003@\001J\tmessagingP\001\"\321\001\n\023SendMessa" +
-      "geResponse\022\024\n\005epoch\030\001 \001(\003R\005epoch\022\026\n\006fano" +
-      "ut\030\002 \001(\005R\006fanout\022\034\n\tduplicate\030\003 \001(\010R\tdup" +
-      "licate\022\030\n\007message\030\004 \001(\tR\007message\0222\n\005erro" +
-      "r\030\005 \001(\0132\034.udb.core.common.v1.ApiErrorR\005e" +
-      "rror: \232\262\031\034\010\001\032\003udb(\260\352\0010\003@\001J\tmessagingP\001\"\272" +
-      "\002\n\nInboxEntry\022\033\n\tdevice_id\030\001 \001(\tR\010device" +
-      "Id\022\020\n\003seq\030\002 \001(\003R\003seq\022\022\n\004kind\030\003 \001(\tR\004kind" +
-      "\022\031\n\010group_id\030\004 \001(\tR\007groupId\022\024\n\005epoch\030\005 \001" +
-      "(\003R\005epoch\022\030\n\007payload\030\006 \001(\014R\007payload\022(\n\020s" +
-      "ender_device_id\030\007 \001(\tR\016senderDeviceId\022*\n" +
-      "\021client_message_id\030\010 \001(\tR\017clientMessageI" +
-      "d\022&\n\017created_at_unix\030\t \001(\003R\rcreatedAtUni" +
-      "x: \232\262\031\034\010\001\032\003udb(\260\352\0010\003@\001J\tmessagingP\001\"\306\001\n\022" +
-      "StreamInboxRequest\022\033\n\ttenant_id\030\001 \001(\tR\010t" +
-      "enantId\022\033\n\tdevice_id\030\002 \001(\tR\010deviceId\022\033\n\t" +
-      "after_seq\030\003 \001(\003R\010afterSeq\022\026\n\006follow\030\004 \001(" +
-      "\010R\006follow\022\037\n\013max_entries\030\005 \001(\005R\nmaxEntri" +
-      "es: \232\262\031\034\010\001\032\003udb(\260\352\0010\003@\001J\tmessagingP\001\"\255\001\n" +
-      "\023StreamInboxResponse\022@\n\005entry\030\001 \001(\0132*.ud" +
-      "b.core.messaging.services.v1.InboxEntryR" +
-      "\005entry\0222\n\005error\030\002 \001(\0132\034.udb.core.common." +
-      "v1.ApiErrorR\005error: \232\262\031\034\010\001\032\003udb(\260\352\0010\003@\001J" +
-      "\tmessagingP\001\"\211\001\n\017AckInboxRequest\022\033\n\ttena" +
-      "nt_id\030\001 \001(\tR\010tenantId\022\033\n\tdevice_id\030\002 \001(\t" +
-      "R\010deviceId\022\032\n\tup_to_seq\030\003 \001(\003R\007upToSeq: " +
-      "\232\262\031\034\010\001\032\003udb(\260\352\0010\003@\001J\tmessagingP\001\"\303\001\n\020Ack" +
-      "InboxResponse\022\033\n\tacked_seq\030\001 \001(\003R\010ackedS" +
-      "eq\022\"\n\014acknowledged\030\002 \001(\003R\014acknowledged\022\030" +
-      "\n\007message\030\003 \001(\tR\007message\0222\n\005error\030\004 \001(\0132" +
-      "\034.udb.core.common.v1.ApiErrorR\005error: \232\262" +
-      "\031\034\010\001\032\003udb(\260\352\0010\003@\001J\tmessagingP\001\"\306\002\n\023Messa" +
-      "gingBackupInfo\022\033\n\ttenant_id\030\001 \001(\tR\010tenan" +
-      "tId\022\035\n\nsubject_id\030\002 \001(\tR\tsubjectId\022\033\n\tba" +
-      "ckup_id\030\003 \001(\tR\010backupId\022\035\n\nsize_bytes\030\004 " +
-      "\001(\003R\tsizeBytes\022+\n\021ciphertext_sha256\030\005 \001(" +
-      "\tR\020ciphertextSha256\022\030\n\007version\030\006 \001(\003R\007ve" +
-      "rsion\022&\n\017created_at_unix\030\007 \001(\003R\rcreatedA" +
-      "tUnix\022&\n\017updated_at_unix\030\010 \001(\003R\rupdatedA" +
-      "tUnix: \232\262\031\034\010\001\032\003udb(\260\352\0010\003@\001J\tmessagingP\001\"" +
-      "\341\001\n\031PutMessagingBackupRequest\022\033\n\ttenant_" +
-      "id\030\001 \001(\tR\010tenantId\022\035\n\nsubject_id\030\002 \001(\tR\t" +
-      "subjectId\022\033\n\tbackup_id\030\003 \001(\tR\010backupId\022\036" +
-      "\n\nciphertext\030\004 \001(\014R\nciphertext\022)\n\020expect" +
-      "ed_version\030\005 \001(\003R\017expectedVersion: \232\262\031\034\010" +
-      "\001\032\003udb(\260\352\0010\003@\001J\tmessagingP\001\"\363\001\n\032PutMessa" +
-      "gingBackupResponse\022K\n\006backup\030\001 \001(\01323.udb" +
-      ".core.messaging.services.v1.MessagingBac" +
-      "kupInfoR\006backup\022\030\n\007created\030\002 \001(\010R\007create" +
-      "d\022\030\n\007message\030\003 \001(\tR\007message\0222\n\005error\030\004 \001" +
-      "(\0132\034.udb.core.common.v1.ApiErrorR\005error:" +
-      " \232\262\031\034\010\001\032\003udb(\260\352\0010\003@\001J\tmessagingP\001\"\226\001\n\031Ge" +
-      "tMessagingBackupRequest\022\033\n\ttenant_id\030\001 \001" +
-      "(\tR\010tenantId\022\035\n\nsubject_id\030\002 \001(\tR\tsubjec" +
-      "tId\022\033\n\tbackup_id\030\003 \001(\tR\010backupId: \232\262\031\034\010\001" +
-      "\032\003udb(\260\352\0010\003@\001J\tmessagingP\001\"\371\001\n\032GetMessag" +
-      "ingBackupResponse\022K\n\006backup\030\001 \001(\01323.udb." +
-      "core.messaging.services.v1.MessagingBack" +
-      "upInfoR\006backup\022\036\n\nciphertext\030\002 \001(\014R\nciph" +
-      "ertext\022\030\n\007message\030\003 \001(\tR\007message\0222\n\005erro" +
-      "r\030\004 \001(\0132\034.udb.core.common.v1.ApiErrorR\005e" +
-      "rror: \232\262\031\034\010\001\032\003udb(\260\352\0010\003@\001J\tmessagingP\001\"\231" +
-      "\001\n\034DeleteMessagingBackupRequest\022\033\n\ttenan" +
-      "t_id\030\001 \001(\tR\010tenantId\022\035\n\nsubject_id\030\002 \001(\t" +
-      "R\tsubjectId\022\033\n\tbackup_id\030\003 \001(\tR\010backupId" +
-      ": \232\262\031\034\010\001\032\003udb(\260\352\0010\003@\001J\tmessagingP\001\"\251\001\n\035D" +
-      "eleteMessagingBackupResponse\022\030\n\007deleted\030" +
-      "\001 \001(\010R\007deleted\022\030\n\007message\030\002 \001(\tR\007message" +
-      "\0222\n\005error\030\003 \001(\0132\034.udb.core.common.v1.Api" +
-      "ErrorR\005error: \232\262\031\034\010\001\032\003udb(\260\352\0010\003@\001J\tmessa" +
-      "gingP\0012\3457\n\020MessagingService\022\334\003\n\027Register" +
-      "MessagingDevice\022>.udb.core.messaging.ser" +
-      "vices.v1.RegisterMessagingDeviceRequest\032" +
-      "?.udb.core.messaging.services.v1.Registe" +
-      "rMessagingDeviceResponse\"\277\002\312\363\030X\010\002\032\'udb:m" +
-      "essaging:register-messaging-device \001J\003\001\002" +
-      "\004j!messaging.RegisterMessagingDevice\220\001\001\322" +
-      "\363\030\006\010\001\020\001 \001\332\363\030Y\010\001\022\031register_messaging_devi" +
-      "ce\032\003udb(\260\352\0010\003@\001J\tmessagingP\001Z messagingR" +
-      "egisterMessagingDevice\362\363\030C\n\tmessaging\032\010p" +
-      "ostgres2\033UDB_NATIVE_SERVICES_ENABLED2\017UD" +
-      "B_GRPC_TARGET\370\363\030\002\232\364\030\r\n\tdevice_id \001\202\323\344\223\002\032" +
-      "\"\025/v1/messaging/devices:\001*\022\263\003\n\024ListMessa" +
-      "gingDevices\022;.udb.core.messaging.service" +
-      "s.v1.ListMessagingDevicesRequest\032<.udb.c" +
-      "ore.messaging.services.v1.ListMessagingD" +
-      "evicesResponse\"\237\002\312\363\030R\010\002\032$udb:messaging:l" +
-      "ist-messaging-devices \001J\003\001\002\004j\036messaging." +
-      "ListMessagingDevices\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030S\010\001\022" +
-      "\026list_messaging_devices\032\003udb(\260\352\0010\003@\001J\tme" +
-      "ssagingP\001Z\035messagingListMessagingDevices" +
-      "\362\363\030C\n\tmessaging\032\010postgres2\033UDB_NATIVE_SE" +
-      "RVICES_ENABLED2\017UDB_GRPC_TARGET\370\363\030\001\202\323\344\223\002" +
-      "\027\022\025/v1/messaging/devices\022\302\004\n\025RevokeMessa" +
-      "gingDevice\022<.udb.core.messaging.services" +
-      ".v1.RevokeMessagingDeviceRequest\032=.udb.c" +
-      "ore.messaging.services.v1.RevokeMessagin" +
-      "gDeviceResponse\"\253\003\312\363\030T\010\002\032%udb:messaging:" +
-      "revoke-messaging-device \001J\003\001\002\004j\037messagin" +
-      "g.RevokeMessagingDevice\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030U" +
-      "\010\001\022\027revoke_messaging_device\032\003udb(\260\352\0010\003@\001" +
-      "J\tmessagingP\001Z\036messagingRevokeMessagingD" +
-      "evice\352\363\030n\n\037messaging.RevokeMessagingDevi" +
-      "ce\022\037udb.messaging.inbox.appended.v1\032\tten" +
-      "ant_id\"\010standard*\rat_least_once2\006stable\362" +
-      "\363\030C\n\tmessaging\032\010postgres2\033UDB_NATIVE_SER" +
-      "VICES_ENABLED2\017UDB_GRPC_TARGET\370\363\030\003\202\323\344\223\002-" +
-      "\"(/v1/messaging/devices/{device_id}:revo" +
-      "ke:\001*\022\301\003\n\022PublishKeyPackages\0229.udb.core." +
-      "messaging.services.v1.PublishKeyPackages" +
-      "Request\032:.udb.core.messaging.services.v1" +
-      ".PublishKeyPackagesResponse\"\263\002\312\363\030N\010\002\032\"ud" +
-      "b:messaging:publish-key-packages \001J\003\001\002\004j" +
-      "\034messaging.PublishKeyPackages\220\001\001\322\363\030\006\010\001\020\001" +
-      " \001\332\363\030O\010\001\022\024publish_key_packages\032\003udb(\260\352\0010" +
-      "\003@\001J\tmessagingP\001Z\033messagingPublishKeyPac" +
-      "kages\362\363\030C\n\tmessaging\032\010postgres2\033UDB_NATI" +
-      "VE_SERVICES_ENABLED2\017UDB_GRPC_TARGET\370\363\030\002" +
-      "\202\323\344\223\0023\"./v1/messaging/devices/{device_id" +
-      "}/key-packages:\001*\022\245\003\n\020ClaimKeyPackages\0227" +
-      ".udb.core.messaging.services.v1.ClaimKey" +
-      "PackagesRequest\0328.udb.core.messaging.ser" +
-      "vices.v1.ClaimKeyPackagesResponse\"\235\002\312\363\030J" +
-      "\010\002\032 udb:messaging:claim-key-packages \001J\003" +
-      "\001\002\004j\032messaging.ClaimKeyPackages\220\001\001\322\363\030\006\010\001" +
-      "\020\001 \001\332\363\030K\010\001\022\022claim_key_packages\032\003udb(\260\352\0010" +
-      "\003@\001J\tmessagingP\001Z\031messagingClaimKeyPacka" +
-      "ges\362\363\030C\n\tmessaging\032\010postgres2\033UDB_NATIVE" +
-      "_SERVICES_ENABLED2\017UDB_GRPC_TARGET\370\363\030\002\202\323" +
-      "\344\223\002%\" /v1/messaging/key-packages:claim:\001" +
-      "*\022\305\003\n\022GetKeyPackageStock\0229.udb.core.mess" +
-      "aging.services.v1.GetKeyPackageStockRequ" +
-      "est\032:.udb.core.messaging.services.v1.Get" +
-      "KeyPackageStockResponse\"\267\002\312\363\030O\010\002\032#udb:me" +
-      "ssaging:get-key-package-stock \001J\003\001\002\004j\034me" +
-      "ssaging.GetKeyPackageStock\220\001\001\322\363\030\006\010\001\020\001 \001\332" +
-      "\363\030P\010\001\022\025get_key_package_stock\032\003udb(\260\352\0010\003@" +
-      "\001J\tmessagingP\001Z\033messagingGetKeyPackageSt" +
-      "ock\362\363\030C\n\tmessaging\032\010postgres2\033UDB_NATIVE" +
-      "_SERVICES_ENABLED2\017UDB_GRPC_TARGET\370\363\030\001\202\323" +
-      "\344\223\0025\0223/v1/messaging/devices/{device_id}/" +
-      "key-package-stock\022\204\003\n\013CreateGroup\0222.udb." +
-      "core.messaging.services.v1.CreateGroupRe" +
-      "quest\0323.udb.core.messaging.services.v1.C" +
-      "reateGroupResponse\"\213\002\312\363\030?\010\002\032\032udb:messagi" +
-      "ng:create-group \001J\003\001\002\004j\025messaging.Create" +
-      "Group\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030@\010\001\022\014create_group\032\003" +
-      "udb(\260\352\0010\003@\001J\tmessagingP\001Z\024messagingCreat" +
-      "eGroup\362\363\030C\n\tmessaging\032\010postgres2\033UDB_NAT" +
-      "IVE_SERVICES_ENABLED2\017UDB_GRPC_TARGET\370\363\030" +
-      "\002\232\364\030\014\n\010group_id \001\202\323\344\223\002\031\"\024/v1/messaging/g" +
-      "roups:\001*\022\217\004\n\014SubmitCommit\0223.udb.core.mes" +
-      "saging.services.v1.SubmitCommitRequest\0324" +
-      ".udb.core.messaging.services.v1.SubmitCo" +
-      "mmitResponse\"\223\003\312\363\030A\010\002\032\033udb:messaging:sub" +
-      "mit-commit \001J\003\001\002\004j\026messaging.SubmitCommi" +
-      "t\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030B\010\001\022\rsubmit_commit\032\003udb" +
-      "(\260\352\0010\003@\001J\tmessagingP\001Z\025messagingSubmitCo" +
-      "mmit\352\363\030e\n\026messaging.SubmitCommit\022\037udb.me" +
-      "ssaging.inbox.appended.v1\032\ttenant_id\"\010st" +
-      "andard*\rat_least_once2\006stable\362\363\030C\n\tmessa" +
-      "ging\032\010postgres2\033UDB_NATIVE_SERVICES_ENAB" +
-      "LED2\017UDB_GRPC_TARGET\370\363\030\002\232\364\030\025\n\021client_mes" +
-      "sage_id \001\202\323\344\223\002+\"&/v1/messaging/groups/{g" +
-      "roup_id}:commit:\001*\022\212\003\n\014GetGroupInfo\0223.ud" +
-      "b.core.messaging.services.v1.GetGroupInf" +
-      "oRequest\0324.udb.core.messaging.services.v" +
-      "1.GetGroupInfoResponse\"\216\002\312\363\030B\010\002\032\034udb:mes" +
-      "saging:get-group-info \001J\003\001\002\004j\026messaging." +
-      "GetGroupInfo\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030C\010\001\022\016get_gro" +
-      "up_info\032\003udb(\260\352\0010\003@\001J\tmessagingP\001Z\025messa" +
-      "gingGetGroupInfo\362\363\030C\n\tmessaging\032\010postgre" +
-      "s2\033UDB_NATIVE_SERVICES_ENABLED2\017UDB_GRPC" +
-      "_TARGET\370\363\030\001\202\323\344\223\002&\022$/v1/messaging/groups/" +
-      "{group_id}/info\022\211\004\n\013SendMessage\0222.udb.co" +
-      "re.messaging.services.v1.SendMessageRequ" +
-      "est\0323.udb.core.messaging.services.v1.Sen" +
-      "dMessageResponse\"\220\003\312\363\030?\010\002\032\032udb:messaging" +
-      ":send-message \001J\003\001\002\004j\025messaging.SendMess" +
-      "age\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030@\010\001\022\014send_message\032\003ud" +
-      "b(\260\352\0010\003@\001J\tmessagingP\001Z\024messagingSendMes" +
-      "sage\352\363\030d\n\025messaging.SendMessage\022\037udb.mes" +
-      "saging.inbox.appended.v1\032\ttenant_id\"\010sta" +
-      "ndard*\rat_least_once2\006stable\362\363\030C\n\tmessag" +
-      "ing\032\010postgres2\033UDB_NATIVE_SERVICES_ENABL" +
-      "ED2\017UDB_GRPC_TARGET\370\363\030\002\232\364\030\025\n\021client_mess" +
-      "age_id \001\202\323\344\223\002-\"(/v1/messaging/groups/{gr" +
-      "oup_id}/messages:\001*\022\374\002\n\013StreamInbox\0222.ud" +
-      "b.core.messaging.services.v1.StreamInbox" +
-      "Request\0323.udb.core.messaging.services.v1" +
-      ".StreamInboxResponse\"\201\002\312\363\030?\010\002\032\032udb:messa" +
-      "ging:stream-inbox \001J\003\001\002\004j\025messaging.Stre" +
-      "amInbox\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030@\010\001\022\014stream_inbox" +
-      "\032\003udb(\260\352\0010\003@\001J\tmessagingP\001Z\024messagingStr" +
-      "eamInbox\362\363\030C\n\tmessaging\032\010postgres2\033UDB_N" +
+      "\001(\010R\016includeRevoked\022\033\n\tpage_size\030\004 \001(\005R\010" +
+      "pageSize\022\035\n\npage_token\030\005 \001(\tR\tpageToken:" +
+      " \232\262\031\034\010\001\032\003udb(\260\352\0010\003@\001J\tmessagingP\001\"\201\002\n\034Li" +
+      "stMessagingDevicesResponse\022I\n\007devices\030\001 " +
+      "\003(\0132/.udb.core.messaging.services.v1.Dir" +
+      "ectoryDeviceR\007devices\022\030\n\007message\030\002 \001(\tR\007" +
+      "message\0222\n\005error\030\003 \001(\0132\034.udb.core.common" +
+      ".v1.ApiErrorR\005error\022&\n\017next_page_token\030\004" +
+      " \001(\tR\rnextPageToken: \232\262\031\034\010\001\032\003udb(\260\352\0010\003@\001" +
+      "J\tmessagingP\001\"\222\001\n\034RevokeMessagingDeviceR" +
+      "equest\022\033\n\ttenant_id\030\001 \001(\tR\010tenantId\022\033\n\td" +
+      "evice_id\030\002 \001(\tR\010deviceId\022\026\n\006reason\030\003 \001(\t" +
+      "R\006reason: \232\262\031\034\010\001\032\003udb(\260\352\0010\003@\001J\tmessaging" +
+      "P\001\"\306\001\n\035RevokeMessagingDeviceResponse\022\030\n\007" +
+      "revoked\030\001 \001(\010R\007revoked\022\033\n\tgroup_ids\030\002 \003(" +
+      "\tR\010groupIds\022\030\n\007message\030\003 \001(\tR\007message\0222\n" +
+      "\005error\030\004 \001(\0132\034.udb.core.common.v1.ApiErr" +
+      "orR\005error: \232\262\031\034\010\001\032\003udb(\260\352\0010\003@\001J\tmessagin" +
+      "gP\001\"\321\001\n\031PublishKeyPackagesRequest\022\033\n\tten" +
+      "ant_id\030\001 \001(\tR\010tenantId\022\033\n\tdevice_id\030\002 \001(" +
+      "\tR\010deviceId\022!\n\014key_packages\030\003 \003(\014R\013keyPa" +
+      "ckages\0225\n\027last_resort_key_package\030\004 \001(\014R" +
+      "\024lastResortKeyPackage: \232\262\031\034\010\001\032\003udb(\260\352\0010\003" +
+      "@\001J\tmessagingP\001\"\376\001\n\032PublishKeyPackagesRe" +
+      "sponse\022\032\n\010accepted\030\001 \001(\005R\010accepted\022,\n\022on" +
+      "e_time_remaining\030\002 \001(\003R\020oneTimeRemaining" +
+      "\022&\n\017has_last_resort\030\003 \001(\010R\rhasLastResort" +
+      "\022\030\n\007message\030\004 \001(\tR\007message\0222\n\005error\030\005 \001(" +
+      "\0132\034.udb.core.common.v1.ApiErrorR\005error: " +
+      "\232\262\031\034\010\001\032\003udb(\260\352\0010\003@\001J\tmessagingP\001\"\342\001\n\027Cla" +
+      "imKeyPackagesRequest\022\033\n\ttenant_id\030\001 \001(\tR" +
+      "\010tenantId\022.\n\023requester_device_id\030\002 \001(\tR\021" +
+      "requesterDeviceId\022*\n\021target_device_ids\030\003" +
+      " \003(\tR\017targetDeviceIds\022,\n\022target_subject_" +
+      "ids\030\004 \003(\tR\020targetSubjectIds: \232\262\031\034\010\001\032\003udb" +
+      "(\260\352\0010\003@\001J\tmessagingP\001\"\333\001\n\021ClaimedKeyPack" +
+      "age\022\035\n\nsubject_id\030\001 \001(\tR\tsubjectId\022\033\n\tde" +
+      "vice_id\030\002 \001(\tR\010deviceId\022\037\n\013key_package\030\003" +
+      " \001(\014R\nkeyPackage\022&\n\017key_package_ref\030\004 \001(" +
+      "\tR\rkeyPackageRef\022\037\n\013last_resort\030\005 \001(\010R\nl" +
+      "astResort: \232\262\031\034\010\001\032\003udb(\260\352\0010\003@\001J\tmessagin" +
+      "gP\001\"\216\002\n\030ClaimKeyPackagesResponse\022T\n\014key_" +
+      "packages\030\001 \003(\01321.udb.core.messaging.serv" +
+      "ices.v1.ClaimedKeyPackageR\013keyPackages\022," +
+      "\n\022missing_device_ids\030\002 \003(\tR\020missingDevic" +
+      "eIds\022\030\n\007message\030\003 \001(\tR\007message\0222\n\005error\030" +
+      "\004 \001(\0132\034.udb.core.common.v1.ApiErrorR\005err" +
+      "or: \232\262\031\034\010\001\032\003udb(\260\352\0010\003@\001J\tmessagingP\001\"w\n\031" +
+      "GetKeyPackageStockRequest\022\033\n\ttenant_id\030\001" +
+      " \001(\tR\010tenantId\022\033\n\tdevice_id\030\002 \001(\tR\010devic" +
+      "eId: \232\262\031\034\010\001\032\003udb(\260\352\0010\003@\001J\tmessagingP\001\"\342\001" +
+      "\n\032GetKeyPackageStockResponse\022,\n\022one_time" +
+      "_remaining\030\001 \001(\003R\020oneTimeRemaining\022&\n\017ha" +
+      "s_last_resort\030\002 \001(\010R\rhasLastResort\022\030\n\007me" +
+      "ssage\030\003 \001(\tR\007message\0222\n\005error\030\004 \001(\0132\034.ud" +
+      "b.core.common.v1.ApiErrorR\005error: \232\262\031\034\010\001" +
+      "\032\003udb(\260\352\0010\003@\001J\tmessagingP\001\"\334\001\n\022CreateGro" +
+      "upRequest\022\033\n\ttenant_id\030\001 \001(\tR\010tenantId\022\031" +
+      "\n\010group_id\030\002 \001(\tR\007groupId\022*\n\021creator_dev" +
+      "ice_id\030\003 \001(\tR\017creatorDeviceId\022\035\n\ngroup_i" +
+      "nfo\030\004 \001(\014R\tgroupInfo\022!\n\014ratchet_tree\030\005 \001" +
+      "(\014R\013ratchetTree: \232\262\031\034\010\001\032\003udb(\260\352\0010\003@\001J\tme" +
+      "ssagingP\001\"\320\001\n\023CreateGroupResponse\022\031\n\010gro" +
+      "up_id\030\001 \001(\tR\007groupId\022\024\n\005epoch\030\002 \001(\003R\005epo" +
+      "ch\022\030\n\007created\030\003 \001(\010R\007created\022\030\n\007message\030" +
+      "\004 \001(\tR\007message\0222\n\005error\030\005 \001(\0132\034.udb.core" +
+      ".common.v1.ApiErrorR\005error: \232\262\031\034\010\001\032\003udb(" +
+      "\260\352\0010\003@\001J\tmessagingP\001\"\254\002\n\023SubmitCommitReq" +
+      "uest\022\033\n\ttenant_id\030\001 \001(\tR\010tenantId\022\031\n\010gro" +
+      "up_id\030\002 \001(\tR\007groupId\022(\n\020sender_device_id" +
+      "\030\003 \001(\tR\016senderDeviceId\022\024\n\005epoch\030\004 \001(\003R\005e" +
+      "poch\022\026\n\006commit\030\005 \001(\014R\006commit\022\030\n\007welcome\030" +
+      "\006 \001(\014R\007welcome\022\035\n\ngroup_info\030\007 \001(\014R\tgrou" +
+      "pInfo\022*\n\021client_message_id\030\010 \001(\tR\017client" +
+      "MessageId: \232\262\031\034\010\001\032\003udb(\260\352\0010\003@\001J\tmessagin" +
+      "gP\001\"\276\002\n\024SubmitCommitResponse\022\024\n\005epoch\030\001 " +
+      "\001(\003R\005epoch\022*\n\021member_device_ids\030\002 \003(\tR\017m" +
+      "emberDeviceIds\022(\n\020added_device_ids\030\003 \003(\t" +
+      "R\016addedDeviceIds\022,\n\022removed_device_ids\030\004" +
+      " \003(\tR\020removedDeviceIds\022\034\n\tduplicate\030\005 \001(" +
+      "\010R\tduplicate\022\030\n\007message\030\006 \001(\tR\007message\0222" +
+      "\n\005error\030\007 \001(\0132\034.udb.core.common.v1.ApiEr" +
+      "rorR\005error: \232\262\031\034\010\001\032\003udb(\260\352\0010\003@\001J\tmessagi" +
+      "ngP\001\"o\n\023GetGroupInfoRequest\022\033\n\ttenant_id" +
+      "\030\001 \001(\tR\010tenantId\022\031\n\010group_id\030\002 \001(\tR\007grou" +
+      "pId: \232\262\031\034\010\001\032\003udb(\260\352\0010\003@\001J\tmessagingP\001\"\317\002" +
+      "\n\024GetGroupInfoResponse\022\031\n\010group_id\030\001 \001(\t" +
+      "R\007groupId\022\024\n\005epoch\030\002 \001(\003R\005epoch\022!\n\014ratch" +
+      "et_tree\030\003 \001(\014R\013ratchetTree\022\035\n\ngroup_info" +
+      "\030\004 \001(\014R\tgroupInfo\022(\n\020group_info_epoch\030\005 " +
+      "\001(\003R\016groupInfoEpoch\022*\n\021member_device_ids" +
+      "\030\006 \003(\tR\017memberDeviceIds\022\030\n\007message\030\007 \001(\t" +
+      "R\007message\0222\n\005error\030\010 \001(\0132\034.udb.core.comm" +
+      "on.v1.ApiErrorR\005error: \232\262\031\034\010\001\032\003udb(\260\352\0010\003" +
+      "@\001J\tmessagingP\001\"\344\001\n\022SendMessageRequest\022\033" +
+      "\n\ttenant_id\030\001 \001(\tR\010tenantId\022\031\n\010group_id\030" +
+      "\002 \001(\tR\007groupId\022(\n\020sender_device_id\030\003 \001(\t" +
+      "R\016senderDeviceId\022\036\n\nciphertext\030\004 \001(\014R\nci" +
+      "phertext\022*\n\021client_message_id\030\005 \001(\tR\017cli" +
+      "entMessageId: \232\262\031\034\010\001\032\003udb(\260\352\0010\003@\001J\tmessa" +
+      "gingP\001\"\321\001\n\023SendMessageResponse\022\024\n\005epoch\030" +
+      "\001 \001(\003R\005epoch\022\026\n\006fanout\030\002 \001(\005R\006fanout\022\034\n\t" +
+      "duplicate\030\003 \001(\010R\tduplicate\022\030\n\007message\030\004 " +
+      "\001(\tR\007message\0222\n\005error\030\005 \001(\0132\034.udb.core.c" +
+      "ommon.v1.ApiErrorR\005error: \232\262\031\034\010\001\032\003udb(\260\352" +
+      "\0010\003@\001J\tmessagingP\001\"\272\002\n\nInboxEntry\022\033\n\tdev" +
+      "ice_id\030\001 \001(\tR\010deviceId\022\020\n\003seq\030\002 \001(\003R\003seq" +
+      "\022\022\n\004kind\030\003 \001(\tR\004kind\022\031\n\010group_id\030\004 \001(\tR\007" +
+      "groupId\022\024\n\005epoch\030\005 \001(\003R\005epoch\022\030\n\007payload" +
+      "\030\006 \001(\014R\007payload\022(\n\020sender_device_id\030\007 \001(" +
+      "\tR\016senderDeviceId\022*\n\021client_message_id\030\010" +
+      " \001(\tR\017clientMessageId\022&\n\017created_at_unix" +
+      "\030\t \001(\003R\rcreatedAtUnix: \232\262\031\034\010\001\032\003udb(\260\352\0010\003" +
+      "@\001J\tmessagingP\001\"\306\001\n\022StreamInboxRequest\022\033" +
+      "\n\ttenant_id\030\001 \001(\tR\010tenantId\022\033\n\tdevice_id" +
+      "\030\002 \001(\tR\010deviceId\022\033\n\tafter_seq\030\003 \001(\003R\010aft" +
+      "erSeq\022\026\n\006follow\030\004 \001(\010R\006follow\022\037\n\013max_ent" +
+      "ries\030\005 \001(\005R\nmaxEntries: \232\262\031\034\010\001\032\003udb(\260\352\0010" +
+      "\003@\001J\tmessagingP\001\"\255\001\n\023StreamInboxResponse" +
+      "\022@\n\005entry\030\001 \001(\0132*.udb.core.messaging.ser" +
+      "vices.v1.InboxEntryR\005entry\0222\n\005error\030\002 \001(" +
+      "\0132\034.udb.core.common.v1.ApiErrorR\005error: " +
+      "\232\262\031\034\010\001\032\003udb(\260\352\0010\003@\001J\tmessagingP\001\"\211\001\n\017Ack" +
+      "InboxRequest\022\033\n\ttenant_id\030\001 \001(\tR\010tenantI" +
+      "d\022\033\n\tdevice_id\030\002 \001(\tR\010deviceId\022\032\n\tup_to_" +
+      "seq\030\003 \001(\003R\007upToSeq: \232\262\031\034\010\001\032\003udb(\260\352\0010\003@\001J" +
+      "\tmessagingP\001\"\303\001\n\020AckInboxResponse\022\033\n\tack" +
+      "ed_seq\030\001 \001(\003R\010ackedSeq\022\"\n\014acknowledged\030\002" +
+      " \001(\003R\014acknowledged\022\030\n\007message\030\003 \001(\tR\007mes" +
+      "sage\0222\n\005error\030\004 \001(\0132\034.udb.core.common.v1" +
+      ".ApiErrorR\005error: \232\262\031\034\010\001\032\003udb(\260\352\0010\003@\001J\tm" +
+      "essagingP\001\"\306\002\n\023MessagingBackupInfo\022\033\n\tte" +
+      "nant_id\030\001 \001(\tR\010tenantId\022\035\n\nsubject_id\030\002 " +
+      "\001(\tR\tsubjectId\022\033\n\tbackup_id\030\003 \001(\tR\010backu" +
+      "pId\022\035\n\nsize_bytes\030\004 \001(\003R\tsizeBytes\022+\n\021ci" +
+      "phertext_sha256\030\005 \001(\tR\020ciphertextSha256\022" +
+      "\030\n\007version\030\006 \001(\003R\007version\022&\n\017created_at_" +
+      "unix\030\007 \001(\003R\rcreatedAtUnix\022&\n\017updated_at_" +
+      "unix\030\010 \001(\003R\rupdatedAtUnix: \232\262\031\034\010\001\032\003udb(\260" +
+      "\352\0010\003@\001J\tmessagingP\001\"\341\001\n\031PutMessagingBack" +
+      "upRequest\022\033\n\ttenant_id\030\001 \001(\tR\010tenantId\022\035" +
+      "\n\nsubject_id\030\002 \001(\tR\tsubjectId\022\033\n\tbackup_" +
+      "id\030\003 \001(\tR\010backupId\022\036\n\nciphertext\030\004 \001(\014R\n" +
+      "ciphertext\022)\n\020expected_version\030\005 \001(\003R\017ex" +
+      "pectedVersion: \232\262\031\034\010\001\032\003udb(\260\352\0010\003@\001J\tmess" +
+      "agingP\001\"\363\001\n\032PutMessagingBackupResponse\022K" +
+      "\n\006backup\030\001 \001(\01323.udb.core.messaging.serv" +
+      "ices.v1.MessagingBackupInfoR\006backup\022\030\n\007c" +
+      "reated\030\002 \001(\010R\007created\022\030\n\007message\030\003 \001(\tR\007" +
+      "message\0222\n\005error\030\004 \001(\0132\034.udb.core.common" +
+      ".v1.ApiErrorR\005error: \232\262\031\034\010\001\032\003udb(\260\352\0010\003@\001" +
+      "J\tmessagingP\001\"\226\001\n\031GetMessagingBackupRequ" +
+      "est\022\033\n\ttenant_id\030\001 \001(\tR\010tenantId\022\035\n\nsubj" +
+      "ect_id\030\002 \001(\tR\tsubjectId\022\033\n\tbackup_id\030\003 \001" +
+      "(\tR\010backupId: \232\262\031\034\010\001\032\003udb(\260\352\0010\003@\001J\tmessa" +
+      "gingP\001\"\371\001\n\032GetMessagingBackupResponse\022K\n" +
+      "\006backup\030\001 \001(\01323.udb.core.messaging.servi" +
+      "ces.v1.MessagingBackupInfoR\006backup\022\036\n\nci" +
+      "phertext\030\002 \001(\014R\nciphertext\022\030\n\007message\030\003 " +
+      "\001(\tR\007message\0222\n\005error\030\004 \001(\0132\034.udb.core.c" +
+      "ommon.v1.ApiErrorR\005error: \232\262\031\034\010\001\032\003udb(\260\352" +
+      "\0010\003@\001J\tmessagingP\001\"\231\001\n\034DeleteMessagingBa" +
+      "ckupRequest\022\033\n\ttenant_id\030\001 \001(\tR\010tenantId" +
+      "\022\035\n\nsubject_id\030\002 \001(\tR\tsubjectId\022\033\n\tbacku" +
+      "p_id\030\003 \001(\tR\010backupId: \232\262\031\034\010\001\032\003udb(\260\352\0010\003@" +
+      "\001J\tmessagingP\001\"\251\001\n\035DeleteMessagingBackup" +
+      "Response\022\030\n\007deleted\030\001 \001(\010R\007deleted\022\030\n\007me" +
+      "ssage\030\002 \001(\tR\007message\0222\n\005error\030\003 \001(\0132\034.ud" +
+      "b.core.common.v1.ApiErrorR\005error: \232\262\031\034\010\001" +
+      "\032\003udb(\260\352\0010\003@\001J\tmessagingP\0012\3457\n\020Messaging" +
+      "Service\022\334\003\n\027RegisterMessagingDevice\022>.ud" +
+      "b.core.messaging.services.v1.RegisterMes" +
+      "sagingDeviceRequest\032?.udb.core.messaging" +
+      ".services.v1.RegisterMessagingDeviceResp" +
+      "onse\"\277\002\312\363\030X\010\002\032\'udb:messaging:register-me" +
+      "ssaging-device \001J\003\001\002\004j!messaging.Registe" +
+      "rMessagingDevice\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030Y\010\001\022\031reg" +
+      "ister_messaging_device\032\003udb(\260\352\0010\003@\001J\tmes" +
+      "sagingP\001Z messagingRegisterMessagingDevi" +
+      "ce\362\363\030C\n\tmessaging\032\010postgres2\033UDB_NATIVE_" +
+      "SERVICES_ENABLED2\017UDB_GRPC_TARGET\370\363\030\002\232\364\030" +
+      "\r\n\tdevice_id \001\202\323\344\223\002\032\"\025/v1/messaging/devi" +
+      "ces:\001*\022\263\003\n\024ListMessagingDevices\022;.udb.co" +
+      "re.messaging.services.v1.ListMessagingDe" +
+      "vicesRequest\032<.udb.core.messaging.servic" +
+      "es.v1.ListMessagingDevicesResponse\"\237\002\312\363\030" +
+      "R\010\002\032$udb:messaging:list-messaging-device" +
+      "s \001J\003\001\002\004j\036messaging.ListMessagingDevices" +
+      "\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030S\010\001\022\026list_messaging_devi" +
+      "ces\032\003udb(\260\352\0010\003@\001J\tmessagingP\001Z\035messaging" +
+      "ListMessagingDevices\362\363\030C\n\tmessaging\032\010pos" +
+      "tgres2\033UDB_NATIVE_SERVICES_ENABLED2\017UDB_" +
+      "GRPC_TARGET\370\363\030\001\202\323\344\223\002\027\022\025/v1/messaging/dev" +
+      "ices\022\302\004\n\025RevokeMessagingDevice\022<.udb.cor" +
+      "e.messaging.services.v1.RevokeMessagingD" +
+      "eviceRequest\032=.udb.core.messaging.servic" +
+      "es.v1.RevokeMessagingDeviceResponse\"\253\003\312\363" +
+      "\030T\010\002\032%udb:messaging:revoke-messaging-dev" +
+      "ice \001J\003\001\002\004j\037messaging.RevokeMessagingDev" +
+      "ice\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030U\010\001\022\027revoke_messaging" +
+      "_device\032\003udb(\260\352\0010\003@\001J\tmessagingP\001Z\036messa" +
+      "gingRevokeMessagingDevice\352\363\030n\n\037messaging" +
+      ".RevokeMessagingDevice\022\037udb.messaging.in" +
+      "box.appended.v1\032\ttenant_id\"\010standard*\rat" +
+      "_least_once2\006stable\362\363\030C\n\tmessaging\032\010post" +
+      "gres2\033UDB_NATIVE_SERVICES_ENABLED2\017UDB_G" +
+      "RPC_TARGET\370\363\030\003\202\323\344\223\002-\"(/v1/messaging/devi" +
+      "ces/{device_id}:revoke:\001*\022\301\003\n\022PublishKey" +
+      "Packages\0229.udb.core.messaging.services.v" +
+      "1.PublishKeyPackagesRequest\032:.udb.core.m" +
+      "essaging.services.v1.PublishKeyPackagesR" +
+      "esponse\"\263\002\312\363\030N\010\002\032\"udb:messaging:publish-" +
+      "key-packages \001J\003\001\002\004j\034messaging.PublishKe" +
+      "yPackages\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030O\010\001\022\024publish_ke" +
+      "y_packages\032\003udb(\260\352\0010\003@\001J\tmessagingP\001Z\033me" +
+      "ssagingPublishKeyPackages\362\363\030C\n\tmessaging" +
+      "\032\010postgres2\033UDB_NATIVE_SERVICES_ENABLED2" +
+      "\017UDB_GRPC_TARGET\370\363\030\002\202\323\344\223\0023\"./v1/messagin" +
+      "g/devices/{device_id}/key-packages:\001*\022\245\003" +
+      "\n\020ClaimKeyPackages\0227.udb.core.messaging." +
+      "services.v1.ClaimKeyPackagesRequest\0328.ud" +
+      "b.core.messaging.services.v1.ClaimKeyPac" +
+      "kagesResponse\"\235\002\312\363\030J\010\002\032 udb:messaging:cl" +
+      "aim-key-packages \001J\003\001\002\004j\032messaging.Claim" +
+      "KeyPackages\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030K\010\001\022\022claim_ke" +
+      "y_packages\032\003udb(\260\352\0010\003@\001J\tmessagingP\001Z\031me" +
+      "ssagingClaimKeyPackages\362\363\030C\n\tmessaging\032\010" +
+      "postgres2\033UDB_NATIVE_SERVICES_ENABLED2\017U" +
+      "DB_GRPC_TARGET\370\363\030\002\202\323\344\223\002%\" /v1/messaging/" +
+      "key-packages:claim:\001*\022\305\003\n\022GetKeyPackageS" +
+      "tock\0229.udb.core.messaging.services.v1.Ge" +
+      "tKeyPackageStockRequest\032:.udb.core.messa" +
+      "ging.services.v1.GetKeyPackageStockRespo" +
+      "nse\"\267\002\312\363\030O\010\002\032#udb:messaging:get-key-pack" +
+      "age-stock \001J\003\001\002\004j\034messaging.GetKeyPackag" +
+      "eStock\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030P\010\001\022\025get_key_packa" +
+      "ge_stock\032\003udb(\260\352\0010\003@\001J\tmessagingP\001Z\033mess" +
+      "agingGetKeyPackageStock\362\363\030C\n\tmessaging\032\010" +
+      "postgres2\033UDB_NATIVE_SERVICES_ENABLED2\017U" +
+      "DB_GRPC_TARGET\370\363\030\001\202\323\344\223\0025\0223/v1/messaging/" +
+      "devices/{device_id}/key-package-stock\022\204\003" +
+      "\n\013CreateGroup\0222.udb.core.messaging.servi" +
+      "ces.v1.CreateGroupRequest\0323.udb.core.mes" +
+      "saging.services.v1.CreateGroupResponse\"\213" +
+      "\002\312\363\030?\010\002\032\032udb:messaging:create-group \001J\003\001" +
+      "\002\004j\025messaging.CreateGroup\220\001\001\322\363\030\006\010\001\020\001 \001\332\363" +
+      "\030@\010\001\022\014create_group\032\003udb(\260\352\0010\003@\001J\tmessagi" +
+      "ngP\001Z\024messagingCreateGroup\362\363\030C\n\tmessagin" +
+      "g\032\010postgres2\033UDB_NATIVE_SERVICES_ENABLED" +
+      "2\017UDB_GRPC_TARGET\370\363\030\002\232\364\030\014\n\010group_id \001\202\323\344" +
+      "\223\002\031\"\024/v1/messaging/groups:\001*\022\217\004\n\014SubmitC" +
+      "ommit\0223.udb.core.messaging.services.v1.S" +
+      "ubmitCommitRequest\0324.udb.core.messaging." +
+      "services.v1.SubmitCommitResponse\"\223\003\312\363\030A\010" +
+      "\002\032\033udb:messaging:submit-commit \001J\003\001\002\004j\026m" +
+      "essaging.SubmitCommit\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030B\010\001" +
+      "\022\rsubmit_commit\032\003udb(\260\352\0010\003@\001J\tmessagingP" +
+      "\001Z\025messagingSubmitCommit\352\363\030e\n\026messaging." +
+      "SubmitCommit\022\037udb.messaging.inbox.append" +
+      "ed.v1\032\ttenant_id\"\010standard*\rat_least_onc" +
+      "e2\006stable\362\363\030C\n\tmessaging\032\010postgres2\033UDB_" +
+      "NATIVE_SERVICES_ENABLED2\017UDB_GRPC_TARGET" +
+      "\370\363\030\002\232\364\030\025\n\021client_message_id \001\202\323\344\223\002+\"&/v1" +
+      "/messaging/groups/{group_id}:commit:\001*\022\212" +
+      "\003\n\014GetGroupInfo\0223.udb.core.messaging.ser" +
+      "vices.v1.GetGroupInfoRequest\0324.udb.core." +
+      "messaging.services.v1.GetGroupInfoRespon" +
+      "se\"\216\002\312\363\030B\010\002\032\034udb:messaging:get-group-inf" +
+      "o \001J\003\001\002\004j\026messaging.GetGroupInfo\220\001\001\322\363\030\006\010" +
+      "\001\020\001 \001\332\363\030C\010\001\022\016get_group_info\032\003udb(\260\352\0010\003@\001" +
+      "J\tmessagingP\001Z\025messagingGetGroupInfo\362\363\030C" +
+      "\n\tmessaging\032\010postgres2\033UDB_NATIVE_SERVIC" +
+      "ES_ENABLED2\017UDB_GRPC_TARGET\370\363\030\001\202\323\344\223\002&\022$/" +
+      "v1/messaging/groups/{group_id}/info\022\211\004\n\013" +
+      "SendMessage\0222.udb.core.messaging.service" +
+      "s.v1.SendMessageRequest\0323.udb.core.messa" +
+      "ging.services.v1.SendMessageResponse\"\220\003\312" +
+      "\363\030?\010\002\032\032udb:messaging:send-message \001J\003\001\002\004" +
+      "j\025messaging.SendMessage\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030@" +
+      "\010\001\022\014send_message\032\003udb(\260\352\0010\003@\001J\tmessaging" +
+      "P\001Z\024messagingSendMessage\352\363\030d\n\025messaging." +
+      "SendMessage\022\037udb.messaging.inbox.appende" +
+      "d.v1\032\ttenant_id\"\010standard*\rat_least_once" +
+      "2\006stable\362\363\030C\n\tmessaging\032\010postgres2\033UDB_N" +
       "ATIVE_SERVICES_ENABLED2\017UDB_GRPC_TARGET\370" +
-      "\363\030\001\202\323\344\223\002\037\"\032/v1/messaging/inbox:stream:\001*" +
-      "0\001\022\342\002\n\010AckInbox\022/.udb.core.messaging.ser" +
-      "vices.v1.AckInboxRequest\0320.udb.core.mess" +
-      "aging.services.v1.AckInboxResponse\"\362\001\312\363\030" +
-      "9\010\002\032\027udb:messaging:ack-inbox \001J\003\001\002\004j\022mes" +
-      "saging.AckInbox\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030:\010\001\022\tack_" +
-      "inbox\032\003udb(\260\352\0010\003@\001J\tmessagingP\001Z\021messagi" +
-      "ngAckInbox\362\363\030C\n\tmessaging\032\010postgres2\033UDB" +
-      "_NATIVE_SERVICES_ENABLED2\017UDB_GRPC_TARGE" +
-      "T\370\363\030\002\202\323\344\223\002\034\"\027/v1/messaging/inbox:ack:\001*\022" +
-      "\264\003\n\022PutMessagingBackup\0229.udb.core.messag" +
-      "ing.services.v1.PutMessagingBackupReques" +
-      "t\032:.udb.core.messaging.services.v1.PutMe" +
-      "ssagingBackupResponse\"\246\002\312\363\030N\010\002\032\"udb:mess" +
-      "aging:put-messaging-backup \001J\003\001\002\004j\034messa" +
-      "ging.PutMessagingBackup\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030O" +
-      "\010\001\022\024put_messaging_backup\032\003udb(\260\352\0010\003@\001J\tm" +
-      "essagingP\001Z\033messagingPutMessagingBackup\362" +
-      "\363\030C\n\tmessaging\032\010postgres2\033UDB_NATIVE_SER" +
-      "VICES_ENABLED2\017UDB_GRPC_TARGET\370\363\030\002\202\323\344\223\002&" +
-      "\032!/v1/messaging/backups/{backup_id}:\001*\022\261" +
-      "\003\n\022GetMessagingBackup\0229.udb.core.messagi" +
-      "ng.services.v1.GetMessagingBackupRequest" +
-      "\032:.udb.core.messaging.services.v1.GetMes" +
-      "sagingBackupResponse\"\243\002\312\363\030N\010\002\032\"udb:messa" +
-      "ging:get-messaging-backup \001J\003\001\002\004j\034messag" +
-      "ing.GetMessagingBackup\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030O\010" +
-      "\001\022\024get_messaging_backup\032\003udb(\260\352\0010\003@\001J\tme" +
-      "ssagingP\001Z\033messagingGetMessagingBackup\362\363" +
-      "\030C\n\tmessaging\032\010postgres2\033UDB_NATIVE_SERV" +
-      "ICES_ENABLED2\017UDB_GRPC_TARGET\370\363\030\001\202\323\344\223\002#\022" +
-      "!/v1/messaging/backups/{backup_id}\022\306\003\n\025D" +
-      "eleteMessagingBackup\022<.udb.core.messagin" +
-      "g.services.v1.DeleteMessagingBackupReque" +
-      "st\032=.udb.core.messaging.services.v1.Dele" +
-      "teMessagingBackupResponse\"\257\002\312\363\030T\010\002\032%udb:" +
-      "messaging:delete-messaging-backup \001J\003\001\002\004" +
-      "j\037messaging.DeleteMessagingBackup\220\001\001\322\363\030\006" +
-      "\010\001\020\001 \001\332\363\030U\010\001\022\027delete_messaging_backup\032\003u" +
-      "db(\260\352\0010\003@\001J\tmessagingP\001Z\036messagingDelete" +
-      "MessagingBackup\362\363\030C\n\tmessaging\032\010postgres" +
-      "2\033UDB_NATIVE_SERVICES_ENABLED2\017UDB_GRPC_" +
-      "TARGET\370\363\030\003\202\323\344\223\002#*!/v1/messaging/backups/" +
-      "{backup_id}\032\370\002\312\360\031s\n\tmessaging\022\tmessaging" +
-      "\032\tmessaging\"\tMessaging*\tmessaging0\0018\001h\001z" +
-      "\tmessaging\202\001\tmessaging\212\001\tmessaging\222\001\020nat" +
-      "ive.messaging\322\360\031\034\010\001\032\003udb(\260\352\0010\003@\001J\tmessag" +
-      "ingP\001\332\360\031\225\001\n\tmessaging\022\024udb/native/messag" +
-      "ing\032\033UDB_NATIVE_SERVICES_ENABLED\032\017UDB_GR" +
-      "PC_TARGET\"\033udb.native.messaging.config:\t" +
-      "messagingJ\013UDB_API_KEYZ\017udb native lint\342" +
-      "\360\031C\n\tmessaging\032\010postgres2\033UDB_NATIVE_SER" +
-      "VICES_ENABLED2\017UDB_GRPC_TARGETB\246\002\n\"com.u" +
-      "db.core.messaging.services.v1B\025Messaging" +
-      "ServiceProtoP\001ZLgithub.com/fahara02/udb/" +
-      "sdk/go/gen/udb/core/messaging/services/v" +
-      "1;servicesv1\242\002\004UCMS\252\002\036Udb.Core.Messaging" +
-      ".Services.V1\312\002\036Udb\\Core\\Messaging\\Servic" +
-      "es\\V1\342\002*Udb\\GPBMetadata\\Core\\Messaging\\S" +
-      "ervices\\V1\352\002\"Udb::Core::Messaging::Servi" +
-      "ces::V1b\006proto3"
+      "\363\030\002\232\364\030\025\n\021client_message_id \001\202\323\344\223\002-\"(/v1/" +
+      "messaging/groups/{group_id}/messages:\001*\022" +
+      "\374\002\n\013StreamInbox\0222.udb.core.messaging.ser" +
+      "vices.v1.StreamInboxRequest\0323.udb.core.m" +
+      "essaging.services.v1.StreamInboxResponse" +
+      "\"\201\002\312\363\030?\010\002\032\032udb:messaging:stream-inbox \001J" +
+      "\003\001\002\004j\025messaging.StreamInbox\220\001\001\322\363\030\006\010\001\020\001 \001" +
+      "\332\363\030@\010\001\022\014stream_inbox\032\003udb(\260\352\0010\003@\001J\tmessa" +
+      "gingP\001Z\024messagingStreamInbox\362\363\030C\n\tmessag" +
+      "ing\032\010postgres2\033UDB_NATIVE_SERVICES_ENABL" +
+      "ED2\017UDB_GRPC_TARGET\370\363\030\001\202\323\344\223\002\037\"\032/v1/messa" +
+      "ging/inbox:stream:\001*0\001\022\342\002\n\010AckInbox\022/.ud" +
+      "b.core.messaging.services.v1.AckInboxReq" +
+      "uest\0320.udb.core.messaging.services.v1.Ac" +
+      "kInboxResponse\"\362\001\312\363\0309\010\002\032\027udb:messaging:a" +
+      "ck-inbox \001J\003\001\002\004j\022messaging.AckInbox\220\001\001\322\363" +
+      "\030\006\010\001\020\001 \001\332\363\030:\010\001\022\tack_inbox\032\003udb(\260\352\0010\003@\001J\t" +
+      "messagingP\001Z\021messagingAckInbox\362\363\030C\n\tmess" +
+      "aging\032\010postgres2\033UDB_NATIVE_SERVICES_ENA" +
+      "BLED2\017UDB_GRPC_TARGET\370\363\030\002\202\323\344\223\002\034\"\027/v1/mes" +
+      "saging/inbox:ack:\001*\022\264\003\n\022PutMessagingBack" +
+      "up\0229.udb.core.messaging.services.v1.PutM" +
+      "essagingBackupRequest\032:.udb.core.messagi" +
+      "ng.services.v1.PutMessagingBackupRespons" +
+      "e\"\246\002\312\363\030N\010\002\032\"udb:messaging:put-messaging-" +
+      "backup \001J\003\001\002\004j\034messaging.PutMessagingBac" +
+      "kup\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030O\010\001\022\024put_messaging_ba" +
+      "ckup\032\003udb(\260\352\0010\003@\001J\tmessagingP\001Z\033messagin" +
+      "gPutMessagingBackup\362\363\030C\n\tmessaging\032\010post" +
+      "gres2\033UDB_NATIVE_SERVICES_ENABLED2\017UDB_G" +
+      "RPC_TARGET\370\363\030\002\202\323\344\223\002&\032!/v1/messaging/back" +
+      "ups/{backup_id}:\001*\022\261\003\n\022GetMessagingBacku" +
+      "p\0229.udb.core.messaging.services.v1.GetMe" +
+      "ssagingBackupRequest\032:.udb.core.messagin" +
+      "g.services.v1.GetMessagingBackupResponse" +
+      "\"\243\002\312\363\030N\010\002\032\"udb:messaging:get-messaging-b" +
+      "ackup \001J\003\001\002\004j\034messaging.GetMessagingBack" +
+      "up\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030O\010\001\022\024get_messaging_bac" +
+      "kup\032\003udb(\260\352\0010\003@\001J\tmessagingP\001Z\033messaging" +
+      "GetMessagingBackup\362\363\030C\n\tmessaging\032\010postg" +
+      "res2\033UDB_NATIVE_SERVICES_ENABLED2\017UDB_GR" +
+      "PC_TARGET\370\363\030\001\202\323\344\223\002#\022!/v1/messaging/backu" +
+      "ps/{backup_id}\022\306\003\n\025DeleteMessagingBackup" +
+      "\022<.udb.core.messaging.services.v1.Delete" +
+      "MessagingBackupRequest\032=.udb.core.messag" +
+      "ing.services.v1.DeleteMessagingBackupRes" +
+      "ponse\"\257\002\312\363\030T\010\002\032%udb:messaging:delete-mes" +
+      "saging-backup \001J\003\001\002\004j\037messaging.DeleteMe" +
+      "ssagingBackup\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030U\010\001\022\027delete" +
+      "_messaging_backup\032\003udb(\260\352\0010\003@\001J\tmessagin" +
+      "gP\001Z\036messagingDeleteMessagingBackup\362\363\030C\n" +
+      "\tmessaging\032\010postgres2\033UDB_NATIVE_SERVICE" +
+      "S_ENABLED2\017UDB_GRPC_TARGET\370\363\030\003\202\323\344\223\002#*!/v" +
+      "1/messaging/backups/{backup_id}\032\370\002\312\360\031s\n\t" +
+      "messaging\022\tmessaging\032\tmessaging\"\tMessagi" +
+      "ng*\tmessaging0\0018\001h\001z\tmessaging\202\001\tmessagi" +
+      "ng\212\001\tmessaging\222\001\020native.messaging\322\360\031\034\010\001\032" +
+      "\003udb(\260\352\0010\003@\001J\tmessagingP\001\332\360\031\225\001\n\tmessagin" +
+      "g\022\024udb/native/messaging\032\033UDB_NATIVE_SERV" +
+      "ICES_ENABLED\032\017UDB_GRPC_TARGET\"\033udb.nativ" +
+      "e.messaging.config:\tmessagingJ\013UDB_API_K" +
+      "EYZ\017udb native lint\342\360\031C\n\tmessaging\032\010post" +
+      "gres2\033UDB_NATIVE_SERVICES_ENABLED2\017UDB_G" +
+      "RPC_TARGETB\246\002\n\"com.udb.core.messaging.se" +
+      "rvices.v1B\025MessagingServiceProtoP\001ZLgith" +
+      "ub.com/fahara02/udb/sdk/go/gen/udb/core/" +
+      "messaging/services/v1;servicesv1\242\002\004UCMS\252" +
+      "\002\036Udb.Core.Messaging.Services.V1\312\002\036Udb\\C" +
+      "ore\\Messaging\\Services\\V1\342\002*Udb\\GPBMetad" +
+      "ata\\Core\\Messaging\\Services\\V1\352\002\"Udb::Co" +
+      "re::Messaging::Services::V1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -619,13 +621,13 @@ public final class MessagingServiceProto {
     internal_static_udb_core_messaging_services_v1_ListMessagingDevicesRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_core_messaging_services_v1_ListMessagingDevicesRequest_descriptor,
-        new java.lang.String[] { "TenantId", "SubjectId", "IncludeRevoked", });
+        new java.lang.String[] { "TenantId", "SubjectId", "IncludeRevoked", "PageSize", "PageToken", });
     internal_static_udb_core_messaging_services_v1_ListMessagingDevicesResponse_descriptor =
       getDescriptor().getMessageTypes().get(4);
     internal_static_udb_core_messaging_services_v1_ListMessagingDevicesResponse_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_core_messaging_services_v1_ListMessagingDevicesResponse_descriptor,
-        new java.lang.String[] { "Devices", "Message", "Error", });
+        new java.lang.String[] { "Devices", "Message", "Error", "NextPageToken", });
     internal_static_udb_core_messaging_services_v1_RevokeMessagingDeviceRequest_descriptor =
       getDescriptor().getMessageTypes().get(5);
     internal_static_udb_core_messaging_services_v1_RevokeMessagingDeviceRequest_fieldAccessorTable = new

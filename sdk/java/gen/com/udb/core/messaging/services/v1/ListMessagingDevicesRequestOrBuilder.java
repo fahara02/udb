@@ -47,4 +47,36 @@ public interface ListMessagingDevicesRequestOrBuilder extends
    * @return The includeRevoked.
    */
   boolean getIncludeRevoked();
+
+  /**
+   * <pre>
+   * Maximum devices per page; 0 means 100. Capped at the broker's list limit.
+   * </pre>
+   *
+   * <code>int32 page_size = 4 [json_name = "pageSize"];</code>
+   * @return The pageSize.
+   */
+  int getPageSize();
+
+  /**
+   * <pre>
+   * Opaque cursor from a previous response's next_page_token; empty starts at
+   * the first device (devices are ordered by device_id).
+   * </pre>
+   *
+   * <code>string page_token = 5 [json_name = "pageToken"];</code>
+   * @return The pageToken.
+   */
+  java.lang.String getPageToken();
+  /**
+   * <pre>
+   * Opaque cursor from a previous response's next_page_token; empty starts at
+   * the first device (devices are ordered by device_id).
+   * </pre>
+   *
+   * <code>string page_token = 5 [json_name = "pageToken"];</code>
+   * @return The bytes for pageToken.
+   */
+  com.google.protobuf.ByteString
+      getPageTokenBytes();
 }

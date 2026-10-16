@@ -1,6 +1,6 @@
 {
   "schema_version": "1",
-  "descriptor_sha256": "02e22aeabb1dd9c0d06beb81f11bab7aee0e63d24561c5c443df022e36b107a7",
+  "descriptor_sha256": "48e58ae6ec7ecfdaaeada4ac5694a58c3cec649951d23ab9ec22a23b7e87b7fa",
   "contract_version": "8.0.0",
   "udb_version": "0.6.0",
   "protocol_version": "1.0.0",
@@ -116901,7 +116901,7 @@
       "event_contract": null,
       "dependency_contract": null,
       "table_security": null,
-      "field_count": 3,
+      "field_count": 5,
       "fields": [
         {
           "name": "tenant_id",
@@ -116959,6 +116959,44 @@
             "security_classification": 0,
             "data_category": 0
           }
+        },
+        {
+          "name": "page_size",
+          "number": 4,
+          "type": "5",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "page_token",
+          "number": 5,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
         }
       ]
     },
@@ -116983,7 +117021,7 @@
       "event_contract": null,
       "dependency_contract": null,
       "table_security": null,
-      "field_count": 3,
+      "field_count": 4,
       "fields": [
         {
           "name": "devices",
@@ -117027,6 +117065,25 @@
           "name": "error",
           "number": 3,
           "type": ".udb.core.common.v1.ApiError",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "next_page_token",
+          "number": 4,
+          "type": "9",
           "column_security": null,
           "scalar_security": {
             "pii": false,

@@ -179,6 +179,9 @@ the reason, not the text.
     topped up, create groups, add (verifying each claimed package names the
     claimed device) and remove members, rotate keys, send, sync or follow the
     inbox, acknowledge.
+  - `ListMessagingDevices` is paged by device id (`page_size`, default 100;
+    `page_token` / `next_page_token`); the Rust SDK's `list_devices` follows
+    the pages and still returns every device.
   - TypeScript SDK: `MessagingClient` over `crates/udb-mls-wasm`, the same
     crate compiled to WebAssembly (`npm run build:mls-wasm`; the module ships
     in the package under `mls-wasm/`).

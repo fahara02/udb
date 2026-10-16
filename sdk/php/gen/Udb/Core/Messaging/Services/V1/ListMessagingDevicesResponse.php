@@ -28,6 +28,12 @@ class ListMessagingDevicesResponse extends \Google\Protobuf\Internal\Message
      * Generated from protobuf field <code>.udb.core.common.v1.ApiError error = 3 [json_name = "error"];</code>
      */
     protected $error = null;
+    /**
+     * Cursor for the next page; empty when this page is the last.
+     *
+     * Generated from protobuf field <code>string next_page_token = 4 [json_name = "nextPageToken"];</code>
+     */
+    protected $next_page_token = '';
 
     /**
      * Constructor.
@@ -39,6 +45,8 @@ class ListMessagingDevicesResponse extends \Google\Protobuf\Internal\Message
      *     @type string $message
      *     @type \Udb\Core\Common\V1\ApiError $error
      *           Error information if operation failed
+     *     @type string $next_page_token
+     *           Cursor for the next page; empty when this page is the last.
      * }
      */
     public function __construct($data = NULL) {
@@ -122,6 +130,32 @@ class ListMessagingDevicesResponse extends \Google\Protobuf\Internal\Message
     {
         GPBUtil::checkMessage($var, \Udb\Core\Common\V1\ApiError::class);
         $this->error = $var;
+
+        return $this;
+    }
+
+    /**
+     * Cursor for the next page; empty when this page is the last.
+     *
+     * Generated from protobuf field <code>string next_page_token = 4 [json_name = "nextPageToken"];</code>
+     * @return string
+     */
+    public function getNextPageToken()
+    {
+        return $this->next_page_token;
+    }
+
+    /**
+     * Cursor for the next page; empty when this page is the last.
+     *
+     * Generated from protobuf field <code>string next_page_token = 4 [json_name = "nextPageToken"];</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setNextPageToken($var)
+    {
+        GPBUtil::checkString($var, True);
+        $this->next_page_token = $var;
 
         return $this;
     }
