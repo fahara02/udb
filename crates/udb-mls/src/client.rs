@@ -956,9 +956,9 @@ impl<S: StateStore> MlsClient<S> {
             .propose_adds(adds)
             .propose_removals(removals)
             .force_self_update(self_update)
-            .create_group_info(true)
             .load_psks(self.provider.storage())
             .map_err(mls("load the commit's PSKs"))?
+            .create_group_info(true)
             .build(
                 self.provider.rand(),
                 self.provider.crypto(),
