@@ -520,7 +520,7 @@ async fn live_external_join_adds_a_device_of_the_same_user() {
     let joined = c.join_external(&group).await.expect("external join");
     assert!(joined.committed);
     assert_eq!(joined.epoch, 2);
-    assert_eq!(joined.added_device_ids, [c_id.clone()]);
+    assert_eq!(joined.added_device_ids, std::slice::from_ref(&c_id));
     assert_eq!(c.mls().epoch(&group).unwrap(), 2);
     assert!(!c.mls().has_pending_commit(&group));
     // Joining again is a no-op; the echo is its own commit.
