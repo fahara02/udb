@@ -13,6 +13,11 @@ pub(crate) fn run_ops_command(command: OpsCommand) -> i32 {
             return 1;
         }
     };
+    // `udb up` reports per step and has its own exit codes (3: stopped at a
+    // step that needs a person).
+    if let OpsCommand::Up(options) = command {
+        return runtime.block_on(super::up::run(options));
+    }
     match runtime.block_on(run_ops_command_async(command)) {
         Ok(value) => {
             output_json(&value, "command result");
@@ -110,12 +115,7 @@ async fn run_ops_command_async(command: OpsCommand) -> Result<serde_json::Value,
             limit,
             dry_run,
         } => migrate_storage_command(&bucket, &tenant, &prefix, limit, dry_run).await,
-        OpsCommand::Up {
-            file,
-            dry_run,
-            allow_transfer,
-            dsn,
-        } => up_command(&file, dry_run, allow_transfer, &dsn).await,
+        OpsCommand::Up(_) => unreachable!("udb up is dispatched by run_ops_command"),
     }
 }
 
@@ -180,6 +180,16 @@ fn data_target() -> String {
     }
 }
 
+/// A setting's value: the flag, else the declaration file, else `env_name`.
+pub(super) fn pick(flag: &str, from_file: &str, env_name: &str) -> String {
+    [flag, from_file]
+        .into_iter()
+        .map(str::trim)
+        .find(|value| !value.is_empty())
+        .map(str::to_string)
+        .unwrap_or_else(|| env::var(env_name).unwrap_or_default().trim().to_string())
+}
+
 async fn data_seed_command(
     file: &str,
     tenant: &str,
@@ -193,14 +203,6 @@ async fn data_seed_command(
         return Err("provide -f <seed.yaml>".to_string());
     }
     let parsed: SeedFile = read_structured(file)?;
-    let pick = |flag: &str, from_file: &str, env_name: &str| -> String {
-        [flag, from_file]
-            .into_iter()
-            .map(str::trim)
-            .find(|value| !value.is_empty())
-            .map(str::to_string)
-            .unwrap_or_else(|| env::var(env_name).unwrap_or_default())
-    };
     let tenant = pick(tenant, &parsed.tenant, "UDB_TENANT_ID");
     let project = pick(project, &parsed.project, "UDB_PROJECT_ID");
     let total: usize = parsed.entities.iter().map(|e| e.records.len()).sum();
@@ -359,9 +361,15 @@ async fn projection_command(
 /// point at a separate file instead of inlining it.
 #[derive(Debug, Clone, Default, serde::Deserialize)]
 #[serde(default, deny_unknown_fields)]
-struct ProjectFile {
-    tenant: String,
-    project: String,
+pub(super) struct ProjectFile {
+    pub(super) tenant: String,
+    pub(super) project: String,
+    /// The proto directory and package filter `udb up` builds the catalog
+    /// from (else UDB_PROTO_ROOT / UDB_PROTO_NAMESPACE, else `proto`).
+    pub(super) proto_root: String,
+    pub(super) proto_namespace: String,
+    /// The serving broker, for the reviewed catalog transition.
+    pub(super) catalog: CatalogSection,
     service_accounts: Vec<DeclaredAccount>,
     service_accounts_file: String,
     policies: Vec<udb::runtime::authz::AuthzPolicy>,
@@ -369,7 +377,7 @@ struct ProjectFile {
     policy_overlays: Vec<String>,
     seed: Option<serde_json::Value>,
     seed_file: String,
-    embedding: Option<EmbeddingSection>,
+    pub(super) embedding: Option<EmbeddingSection>,
     /// Pipeline units run by the broker: point UDB_PIPELINES_FILE at this
     /// file. `udb up` only validates them.
     pipelines: Vec<serde_yaml::Value>,
@@ -381,12 +389,20 @@ struct ProjectFile {
     native_services: Option<super::native_app::NativeServicesManifest>,
 }
 
+/// `catalog:` in udb.yaml.
+#[derive(Debug, Clone, Default, serde::Deserialize)]
+#[serde(default, deny_unknown_fields)]
+pub(super) struct CatalogSection {
+    /// The broker's gRPC address (else UDB_GRPC_TARGET).
+    pub(super) target: String,
+}
+
 /// Declared embedding models and sources (P5). Models and sources are per
 /// tenant in udb, and a source must name its model's versioned collection, so
 /// they are declared here and registered by `udb up` rather than inferred.
 #[derive(Debug, Clone, Default, serde::Deserialize)]
 #[serde(default, deny_unknown_fields)]
-struct EmbeddingSection {
+pub(super) struct EmbeddingSection {
     models: Vec<DeclaredModel>,
     sources: Vec<DeclaredSource>,
 }
@@ -422,7 +438,7 @@ struct DeclaredSource {
 }
 
 /// Paths in udb.yaml are relative to the file itself.
-fn relative_to(base: &str, path: &str) -> String {
+pub(super) fn relative_to(base: &str, path: &str) -> String {
     let candidate = std::path::Path::new(path);
     if candidate.is_absolute() {
         return path.to_string();
@@ -433,142 +449,137 @@ fn relative_to(base: &str, path: &str) -> String {
         .unwrap_or_else(|| path.to_string())
 }
 
-/// `udb up`: policies, then identities, then seed data; `--dry-run` shows the
-/// differences only. Stops at the first section that fails, reporting what was
-/// already applied.
-async fn up_command(
-    file: &str,
-    dry_run: bool,
-    allow_transfer: bool,
-    dsn: &str,
-) -> Result<serde_json::Value, String> {
-    let project: ProjectFile = read_structured(file)?;
-    if project.tenant.trim().is_empty() {
-        return Err(format!("{file}: set `tenant:` (the canonical tenant UUID)"));
-    }
-    let tenant = project.tenant.trim().to_string();
-    // Resolve references before serializing the combined declarations. Inline
-    // declarations belong to udb.yaml; external declarations belong to their
-    // own source file, even when the bridge writes a temporary JSON document.
-    let source_base = |path: &str| {
-        fs::canonicalize(
-            std::path::Path::new(path)
-                .parent()
-                .filter(|parent| !parent.as_os_str().is_empty())
-                .unwrap_or(std::path::Path::new(".")),
-        )
-        .map_err(|_| "identity declaration directory is unavailable".to_string())
-    };
-    let mut accounts = project.service_accounts.clone();
-    for account in &mut accounts {
-        account.resolve_file_references(&source_base(file)?)?;
-    }
-    if !project.service_accounts_file.trim().is_empty() {
-        let nested_path = relative_to(file, project.service_accounts_file.trim());
-        let mut nested: IdentityFile = read_structured(&nested_path)?;
-        if !nested.tenant.is_empty() && nested.tenant != tenant {
-            return Err("external identity declaration tenant differs from udb.yaml".into());
+/// Read udb.yaml for `udb up`. An empty `file` means `udb.yaml` when it exists
+/// and an empty declaration when it does not (a project can be brought up from
+/// flags alone); a named file must exist. Returns the path the file's relative
+/// references resolve against.
+pub(super) fn load_project_file(file: &str) -> Result<(String, ProjectFile), String> {
+    if file.trim().is_empty() {
+        let default = "udb.yaml";
+        if !std::path::Path::new(default).exists() {
+            return Ok((default.to_string(), ProjectFile::default()));
         }
-        for account in &mut nested.service_accounts {
-            account.resolve_file_references(&source_base(&nested_path)?)?;
-        }
-        accounts.extend(nested.service_accounts);
+        return Ok((default.to_string(), read_structured(default)?));
     }
-    let mut report = serde_json::Map::new();
-    report.insert(
-        "tenant_id".into(),
-        serde_json::Value::String(tenant.clone()),
-    );
-    report.insert("dry_run".into(), serde_json::Value::Bool(dry_run));
+    Ok((file.to_string(), read_structured(file)?))
+}
 
-    // Order: policies (identities need rules to match), identities, embedding
-    // models and sources (so seeded rows are embedded), then seed data.
-    let mut policies = project.policies.clone();
-    if !project.policies_file.trim().is_empty() {
-        policies.extend(load_policy_file(&relative_to(
-            file,
-            project.policies_file.trim(),
-        ))?);
+impl ProjectFile {
+    /// Every declared policy: inline, then `policies_file`, then the overlays.
+    pub(super) fn declared_policies(
+        &self,
+        file: &str,
+    ) -> Result<Vec<udb::runtime::authz::AuthzPolicy>, String> {
+        let mut policies = self.policies.clone();
+        if !self.policies_file.trim().is_empty() {
+            policies.extend(load_policy_file(&relative_to(
+                file,
+                self.policies_file.trim(),
+            ))?);
+        }
+        for overlay in &self.policy_overlays {
+            policies.extend(load_policy_file(&relative_to(file, overlay))?);
+        }
+        Ok(policies)
     }
-    for overlay in &project.policy_overlays {
-        policies.extend(load_policy_file(&relative_to(file, overlay))?);
+
+    /// The file `udb check --policies` reads, when the policies live in one.
+    pub(super) fn policies_path(&self, file: &str) -> Option<String> {
+        (!self.policies_file.trim().is_empty())
+            .then(|| relative_to(file, self.policies_file.trim()))
     }
-    if !policies.is_empty() {
-        let declared = udb::runtime::service::normalize_declared_policies(&tenant, policies)?;
-        let dsn = if dsn.trim().is_empty() {
-            env::var("UDB_PG_DSN")
-                .or_else(|_| env::var("DATABASE_URL"))
-                .map_err(|_| "policies need UDB_PG_DSN (or DATABASE_URL) or --dsn".to_string())?
-        } else {
-            dsn.trim().to_string()
+
+    /// Every declared service account, inline and from `service_accounts_file`,
+    /// with file references resolved.
+    pub(super) fn declared_accounts(
+        &self,
+        file: &str,
+        tenant: &str,
+    ) -> Result<Vec<DeclaredAccount>, String> {
+        // Resolve references before serializing the combined declarations.
+        // Inline declarations belong to udb.yaml; external declarations belong
+        // to their own source file, even when the bridge writes a temporary JSON
+        // document.
+        let source_base = |path: &str| {
+            fs::canonicalize(
+                std::path::Path::new(path)
+                    .parent()
+                    .filter(|parent| !parent.as_os_str().is_empty())
+                    .unwrap_or(std::path::Path::new(".")),
+            )
+            .map_err(|_| "identity declaration directory is unavailable".to_string())
         };
-        let policy_report = udb::runtime::service::reconcile_authz_policies_offline(
-            &dsn, &tenant, declared, !dry_run, "udb-up",
-        )
-        .await?;
-        report.insert(
-            "policies".into(),
-            serde_json::to_value(&policy_report).unwrap_or_default(),
-        );
+        let mut accounts = self.service_accounts.clone();
+        for account in &mut accounts {
+            account.resolve_file_references(&source_base(file)?)?;
+        }
+        if !self.service_accounts_file.trim().is_empty() {
+            let nested_path = relative_to(file, self.service_accounts_file.trim());
+            let mut nested: IdentityFile = read_structured(&nested_path)?;
+            if !nested.tenant.is_empty() && nested.tenant != tenant {
+                return Err("external identity declaration tenant differs from udb.yaml".into());
+            }
+            for account in &mut nested.service_accounts {
+                account.resolve_file_references(&source_base(&nested_path)?)?;
+            }
+            accounts.extend(nested.service_accounts);
+        }
+        Ok(accounts)
     }
 
-    if !accounts.is_empty() {
-        let staged =
-            std::env::temp_dir().join(format!("udb-up-identities-{}.json", uuid::Uuid::new_v4()));
-        let body = serde_json::json!({ "tenant": tenant, "service_accounts": accounts });
-        fs::write(&staged, body.to_string())
-            .map_err(|err| format!("stage identities failed: {err}"))?;
-        let result = identity_command(
-            !dry_run,
-            &staged.display().to_string(),
-            &tenant,
-            allow_transfer,
-        )
-        .await;
-        let _ = fs::remove_file(&staged);
-        report.insert("identities".into(), result?);
+    /// The declared seed document, inline or from `seed_file`.
+    pub(super) fn declared_seed(&self, file: &str) -> Result<Option<serde_json::Value>, String> {
+        Ok(match (&self.seed, self.seed_file.trim()) {
+            (Some(inline), _) => Some(inline.clone()),
+            (None, "") => None,
+            (None, path) => Some(read_structured::<serde_json::Value>(&relative_to(
+                file, path,
+            ))?),
+        })
     }
 
-    if !project.pipelines.is_empty() {
+    /// The names of the declared pipeline units. The broker runs them (with
+    /// UDB_PIPELINES_FILE pointing at this file); `udb up` only validates them.
+    pub(super) fn declared_pipelines(&self, file: &str) -> Result<Vec<String>, String> {
+        if self.pipelines.is_empty() {
+            return Ok(Vec::new());
+        }
         let text = fs::read_to_string(file).map_err(|err| format!("read {file}: {err}"))?;
         let specs = udb::runtime::core::pipelines::parse_pipeline_specs(&text)?;
-        report.insert(
-            "pipelines".into(),
-            serde_json::json!({
-                "declared": specs.iter().map(|spec| spec.name.clone()).collect::<Vec<_>>(),
-                "run_by": "the broker, with UDB_PIPELINES_FILE pointing at this file",
-            }),
-        );
+        Ok(specs.iter().map(|spec| spec.name.clone()).collect())
     }
-    if let Some(embedding) = &project.embedding {
-        report.insert(
-            "embedding".into(),
-            embedding_up(&tenant, embedding, dry_run).await?,
-        );
-    }
+}
 
-    let seed = match (&project.seed, project.seed_file.trim()) {
-        (Some(inline), _) => Some(inline.clone()),
-        (None, "") => None,
-        (None, path) => Some(read_structured::<serde_json::Value>(&relative_to(
-            file, path,
-        ))?),
-    };
-    if let Some(seed) = seed {
-        let staged =
-            std::env::temp_dir().join(format!("udb-up-seed-{}.json", uuid::Uuid::new_v4()));
-        fs::write(&staged, seed.to_string()).map_err(|err| format!("stage seed failed: {err}"))?;
-        let result = data_seed_command(
-            &staged.display().to_string(),
-            &tenant,
-            project.project.trim(),
-            dry_run,
-        )
-        .await;
-        let _ = fs::remove_file(&staged);
-        report.insert("seed".into(), result?);
-    }
-    Ok(serde_json::Value::Object(report))
+/// Reconcile declared service accounts with the `udb identity apply|diff` code.
+pub(super) async fn reconcile_identities(
+    accounts: &[DeclaredAccount],
+    tenant: &str,
+    apply: bool,
+    allow_transfer: bool,
+) -> Result<serde_json::Value, String> {
+    let staged =
+        std::env::temp_dir().join(format!("udb-up-identities-{}.json", uuid::Uuid::new_v4()));
+    let body = serde_json::json!({ "tenant": tenant, "service_accounts": accounts });
+    fs::write(&staged, body.to_string())
+        .map_err(|err| format!("stage identities failed: {err}"))?;
+    let result =
+        identity_command(apply, &staged.display().to_string(), tenant, allow_transfer).await;
+    let _ = fs::remove_file(&staged);
+    result
+}
+
+/// Write a seed document with the `udb data seed` code.
+pub(super) async fn seed_records(
+    seed: &serde_json::Value,
+    tenant: &str,
+    project: &str,
+    dry_run: bool,
+) -> Result<serde_json::Value, String> {
+    let staged = std::env::temp_dir().join(format!("udb-up-seed-{}.json", uuid::Uuid::new_v4()));
+    fs::write(&staged, seed.to_string()).map_err(|err| format!("stage seed failed: {err}"))?;
+    let result = data_seed_command(&staged.display().to_string(), tenant, project, dry_run).await;
+    let _ = fs::remove_file(&staged);
+    result
 }
 
 // ── udb up: embedding models and sources ──────────────────────────────────
@@ -577,7 +588,7 @@ async fn up_command(
 /// A model's vector identity (name, dimensions, collection) is immutable: a
 /// declared model whose stored registration differs is reported, never
 /// changed — declare a new model_id instead.
-async fn embedding_up(
+pub(super) async fn embedding_up(
     tenant: &str,
     section: &EmbeddingSection,
     dry_run: bool,

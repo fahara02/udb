@@ -50,6 +50,39 @@ pub(crate) struct TransitionCommand {
     pub timeout_seconds: u64,
 }
 
+const DEFAULT_REASON: &str = "reviewed catalog transition";
+const DEFAULT_TIMEOUT_SECONDS: u64 = 300;
+
+impl TransitionCommand {
+    /// The command `parse` builds for `action` with only the connection flags
+    /// set, for callers that drive a transition programmatically (`udb up`).
+    /// The caller fills the action's own fields before `run_async`.
+    pub(crate) fn new(
+        action: TransitionAction,
+        project: &str,
+        tenant: Option<String>,
+        target: Option<String>,
+    ) -> Self {
+        Self {
+            action,
+            project: project.to_string(),
+            tenant,
+            target,
+            manifest: None,
+            plan: None,
+            approval: None,
+            out: None,
+            run_id: None,
+            catalog_id: None,
+            expected_active_catalog_id: None,
+            expected_active_manifest_integrity_sha256: None,
+            idempotency_key: None,
+            reason: DEFAULT_REASON.to_string(),
+            timeout_seconds: DEFAULT_TIMEOUT_SECONDS,
+        }
+    }
+}
+
 pub(crate) fn parse(args: &[String]) -> Result<TransitionCommand, String> {
     let action = match args.get(2).map(String::as_str) {
         Some("plan") => TransitionAction::Plan,
@@ -120,10 +153,13 @@ pub(crate) fn parse(args: &[String]) -> Result<TransitionCommand, String> {
             return Err(format!("{name} is required for catalog transition"));
         }
     }
-    let timeout_seconds = values.get("--timeout-secs").map_or(Ok(300), |raw| {
-        raw.parse::<u64>()
-            .map_err(|_| "--timeout-secs must be an integer".to_string())
-    })?;
+    let timeout_seconds =
+        values
+            .get("--timeout-secs")
+            .map_or(Ok(DEFAULT_TIMEOUT_SECONDS), |raw| {
+                raw.parse::<u64>()
+                    .map_err(|_| "--timeout-secs must be an integer".to_string())
+            })?;
     if !(1..=3600).contains(&timeout_seconds) {
         return Err("--timeout-secs must be between 1 and 3600".into());
     }
@@ -144,7 +180,7 @@ pub(crate) fn parse(args: &[String]) -> Result<TransitionCommand, String> {
             "--expected-active-manifest-integrity-sha256",
         ),
         idempotency_key: get("--idempotency-key"),
-        reason: get("--reason").unwrap_or_else(|| "reviewed catalog transition".into()),
+        reason: get("--reason").unwrap_or_else(|| DEFAULT_REASON.into()),
         timeout_seconds,
     })
 }
@@ -270,7 +306,7 @@ fn read_bounded(path: &str) -> Result<Vec<u8>, String> {
     Ok(bytes)
 }
 
-fn read_json(path: &str) -> Result<Value, String> {
+pub(crate) fn read_json(path: &str) -> Result<Value, String> {
     serde_json::from_slice(&read_bounded(path)?)
         .map_err(|_| "transition input is not valid JSON".into())
 }
@@ -294,7 +330,7 @@ fn file_binding(value: &Value, project: &str) -> Result<String, String> {
     text(value, "run_id")
 }
 
-fn write_new_json(path: &str, value: &Value) -> Result<(), String> {
+pub(crate) fn write_new_json(path: &str, value: &Value) -> Result<(), String> {
     let bytes =
         serde_json::to_vec_pretty(value).map_err(|_| "could not encode transition response")?;
     let mut options = OpenOptions::new();
@@ -411,7 +447,7 @@ fn rpc_error(action: &str, error: tonic::Status) -> String {
 }
 
 /// The flags that address the same broker and tenant as this invocation.
-fn connection_flags(command: &TransitionCommand, tenant: &str) -> String {
+pub(crate) fn connection_flags(command: &TransitionCommand, tenant: &str) -> String {
     let mut flags = format!("--project {}", command.project);
     if !tenant.is_empty() {
         flags.push_str(&format!(" --tenant {tenant}"));
@@ -441,7 +477,12 @@ fn next_plan_command(command: &TransitionCommand, tenant: &str, active: &Value) 
 }
 
 /// The next command for a reviewed run in `state` (from `status --run-id`).
-fn next_run_command(command: &TransitionCommand, tenant: &str, run: &str, state: &str) -> String {
+pub(crate) fn next_run_command(
+    command: &TransitionCommand,
+    tenant: &str,
+    run: &str,
+    state: &str,
+) -> String {
     let flags = connection_flags(command, tenant);
     let key = uuid::Uuid::new_v4();
     let short: String = run.chars().take(8).collect();
@@ -490,7 +531,7 @@ pub(crate) fn run(command: TransitionCommand) -> i32 {
     }
 }
 
-async fn run_async(command: TransitionCommand) -> Result<Value, String> {
+pub(crate) async fn run_async(command: TransitionCommand) -> Result<Value, String> {
     let caller = Caller::from_env(&command)?;
     // Validate response files before network mutation. The server independently
     // validates their echoes against the durable native run under its lock.

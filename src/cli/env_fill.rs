@@ -461,6 +461,47 @@ fn apply(
     Ok(Some(backup))
 }
 
+/// The profile a file is filled for: the one asked for, else the file's own
+/// `UDB_ENV` (production → enterprise).
+fn infer_profile(explicit: Option<EnvProfile>, existing: &BTreeMap<String, String>) -> EnvProfile {
+    explicit.unwrap_or_else(|| {
+        match existing
+            .get("UDB_ENV")
+            .map(|value| value.to_ascii_lowercase())
+        {
+            Some(value) if value == "production" || value == "prod" => EnvProfile::Enterprise,
+            _ => EnvProfile::Dev,
+        }
+    })
+}
+
+/// The keys a plan would still add or ask for: what `--check` reports.
+fn missing_keys(plan: &Plan) -> Vec<&'static str> {
+    let mut missing: Vec<&'static str> = plan.add.iter().map(|planned| planned.key).collect();
+    missing.extend(plan.unanswered.iter().copied());
+    missing
+}
+
+/// `--check` without the printing, for `udb up`'s runtime-flags step: the
+/// profile `file` is checked against and the keys it lacks. Generates and
+/// writes nothing; `Ok(None)` when the file does not exist.
+pub(crate) fn check_missing(
+    file: &Path,
+    keys_dir: &Path,
+) -> Result<Option<(&'static str, Vec<&'static str>)>, String> {
+    let text = match fs::read_to_string(file) {
+        Ok(text) => text,
+        Err(err) if err.kind() == std::io::ErrorKind::NotFound => return Ok(None),
+        Err(err) => return Err(format!("cannot read {}: {err}", file.display())),
+    };
+    let existing = parse_env(&text);
+    let profile = infer_profile(None, &existing);
+    let mut unanswered =
+        |_: &'static str, _: &'static str, _: Option<&'static str>| -> Option<String> { None };
+    let plan = plan(profile, &existing, keys_dir, None, &mut unanswered)?;
+    Ok(Some((profile_label(profile), missing_keys(&plan))))
+}
+
 /// `udb env fill`. Exit codes: 0 done (or nothing to do), 1 incomplete or
 /// declined, 2 invalid input.
 pub(crate) fn run(options: &FillOptions) -> i32 {
@@ -476,15 +517,7 @@ pub(crate) fn run(options: &FillOptions) -> i32 {
         }
     };
     let existing = parse_env(&text);
-    let profile = options.profile.unwrap_or_else(|| {
-        match existing
-            .get("UDB_ENV")
-            .map(|value| value.to_ascii_lowercase())
-        {
-            Some(value) if value == "production" || value == "prod" => EnvProfile::Enterprise,
-            _ => EnvProfile::Dev,
-        }
-    });
+    let profile = infer_profile(options.profile, &existing);
     let interactive =
         matches!(options.mode, FillMode::Apply { yes: false }) && std::io::stdin().is_terminal();
     let stdin = std::io::stdin();
@@ -527,8 +560,7 @@ pub(crate) fn run(options: &FillOptions) -> i32 {
     };
 
     if options.mode == FillMode::Check {
-        let mut missing: Vec<&str> = plan.add.iter().map(|planned| planned.key).collect();
-        missing.extend(plan.unanswered.iter().copied());
+        let missing = missing_keys(&plan);
         if missing.is_empty() {
             println!(
                 "udb env fill: {} is complete for the {} profile",

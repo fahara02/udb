@@ -379,6 +379,14 @@ jobs:
             echo "::error::catalog bootstrap ran without --project"; exit 1
           fi
 
+          echo "--- udb up without a tenant names the missing key"
+          if UDB_TENANT_ID="" "$udb" up --project ci-up > /tmp/up-no-tenant.json 2> /tmp/up-no-tenant.err; then
+            echo "::error::udb up ran without a tenant"; exit 1
+          fi
+          cat /tmp/up-no-tenant.err
+          grep -q '^\[failed\] inputs .*tenant' /tmp/up-no-tenant.err
+          grep -q 'UDB_TENANT_ID' /tmp/up-no-tenant.err
+
           echo "--- verify --live without a DSN fails cleanly"
           if "$udb" verify proto --live --dsn "" > /tmp/verify.out 2>&1; then
             echo "::error::verify --live succeeded with no database"; exit 1
@@ -750,6 +758,37 @@ jobs:
           name: native-load-smoke
           path: /tmp/native-load.txt
           if-no-files-found: ignore
+      - name: udb up takes a fresh project to a served catalog, then changes nothing
+        shell: bash
+        env:
+          UDB_STARTUP_DRY_RUN: "false"
+          CI_UP_TENANT: 7d0f5bb4-0000-4000-8000-0000000000c1
+        run: |
+          set -euo pipefail
+          udb=target/debug/udb
+          # The smoke broker starts in dry-run mode; give the database the schema
+          # the protos declare first, as a migrating broker would.
+          "$udb" admin force-sync proto
+          status=0
+          "$udb" up --project ci-up --tenant "$CI_UP_TENANT" --proto proto \
+            > /tmp/up-first.json 2> /tmp/up-first.err || status=$?
+          cat /tmp/up-first.err
+          if [ "$status" -ne 0 ]; then
+            echo "::error::the first udb up exited ${status}"; exit 1
+          fi
+          grep -q '^\[done\] catalog' /tmp/up-first.err
+          status=0
+          "$udb" up --project ci-up --tenant "$CI_UP_TENANT" --proto proto \
+            > /tmp/up-second.json 2> /tmp/up-second.err || status=$?
+          cat /tmp/up-second.err
+          if [ "$status" -ne 0 ]; then
+            echo "::error::the second udb up exited ${status}"; exit 1
+          fi
+          if grep -q '^\[done\]' /tmp/up-second.err; then
+            echo "::error::a second udb up changed something"; exit 1
+          fi
+          grep -q '^\[skipped\] catalog' /tmp/up-second.err
+          "$udb" catalog status --project ci-up
       - name: Stop broker
         if: always()
         shell: bash

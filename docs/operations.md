@@ -566,6 +566,16 @@ immutable candidate **before staging**. Ordinary `catalog stage` and `activate`
 retain their compatibility checks. Blocked or data-destructive changes cannot use
 this workflow.
 
+`udb up --project PROJECT --tenant TENANT` drives this whole sequence. When the
+ACTIVE catalog differs from the protos it runs `status` and `plan` (with an
+idempotency key derived from the ACTIVE catalog and the target, so re-running
+replays the same broker run), prints the operations and the review command, and
+stops with exit code 3 and `Next: udb up … --approve RUN_ID`. Rerun with that
+flag after reviewing to approve, apply, stage and activate; at a terminal you
+can confirm instead. `--yes` never approves a reviewed plan. The response files
+are kept under `.udb/transitions/`, and an existing file means its step is done.
+The manual steps below are what it runs.
+
 Set `UDB_AUTH_TOKEN` (or `UDB_BEARER_TOKEN`) to an authorized operator bearer,
 `UDB_TENANT_ID` to its tenant and `UDB_GRPC_TARGET` to its project broker. For an
 HTTPS endpoint, set `UDB_TLS_CA_FILE` to the trusted CA file. The broker verifies

@@ -146,6 +146,56 @@ fn reviewed_catalog_cli_refuses_unchecked_receipts_and_ambiguous_arguments() {
 }
 
 #[test]
+fn parse_args_reads_every_udb_up_flag() {
+    let args: Vec<String> = [
+        "up",
+        "-f",
+        "deploy/udb.yaml",
+        "--project",
+        "notes",
+        "--tenant",
+        "7d0f5bb4-0000-4000-8000-000000000001",
+        "--dsn",
+        "postgres://localhost/udb",
+        "--proto",
+        "app-proto",
+        "--approve",
+        "run-1",
+        "--dry-run",
+        "--yes",
+        "--allow-transfer",
+        "--json",
+    ]
+    .into_iter()
+    .map(String::from)
+    .collect();
+    let Command::Ops(OpsCommand::Up(options)) = parse_args(&args).0 else {
+        panic!("expected udb up")
+    };
+    assert_eq!(
+        options,
+        up::UpOptions {
+            file: "deploy/udb.yaml".into(),
+            project: "notes".into(),
+            tenant: "7d0f5bb4-0000-4000-8000-000000000001".into(),
+            dsn: "postgres://localhost/udb".into(),
+            proto: "app-proto".into(),
+            approve: "run-1".into(),
+            dry_run: true,
+            yes: true,
+            allow_transfer: true,
+            json: true,
+        }
+    );
+
+    // Bare `udb up`: nothing given, udb.yaml is used when it exists.
+    let Command::Ops(OpsCommand::Up(options)) = parse_args(&["up".to_string()]).0 else {
+        panic!("expected udb up")
+    };
+    assert_eq!(options, up::UpOptions::default());
+}
+
+#[test]
 fn parse_args_keeps_code_check_identity_values_out_of_the_proto_root() {
     let args: Vec<String> = [
         "check",

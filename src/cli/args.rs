@@ -679,14 +679,12 @@ pub(crate) enum OpsCommand {
     },
     /// `udb resources list --backend <qdrant|neo4j|…>`
     ResourcesList { backend: String },
-    /// `udb up [-f udb.yaml] [--dry-run] [--allow-transfer] [--dsn <dsn>]` —
-    /// reconcile a project's declared identities, policies and seed data.
-    Up {
-        file: String,
-        dry_run: bool,
-        allow_transfer: bool,
-        dsn: String,
-    },
+    /// `udb up [-f udb.yaml] [--project <id>] [--tenant <uuid>] [--dsn <dsn>]
+    ///   [--proto <dir>] [--dry-run] [--yes] [--approve <run-id>]
+    ///   [--allow-transfer] [--json]` — take a project from its protos to a
+    /// served catalog, then reconcile its declared policies, identities,
+    /// embedding sources and seed data.
+    Up(super::up::UpOptions),
     /// `udb subject purge <subject id> [--reason <r>] [--dry-run] [--receipt-out <file>]`
     SubjectPurge {
         subject: String,
@@ -1168,19 +1166,19 @@ fn parse_ops_subcommand(args: &[String]) -> Option<(OpsCommand, usize)> {
                 .and_then(|value| value.trim().parse::<u64>().ok())
                 .unwrap_or(0),
         },
-        (Some("up"), _) => OpsCommand::Up {
-            file: {
-                let file = file();
-                if file.is_empty() {
-                    "udb.yaml".to_string()
-                } else {
-                    file
-                }
-            },
-            dry_run: has_flag("--dry-run"),
-            allow_transfer: has_flag("--allow-transfer"),
+        (Some("up"), _) => OpsCommand::Up(super::up::UpOptions {
+            // Empty: `udb.yaml` when it exists. A named file must exist.
+            file: file(),
+            project: flag_value("--project").unwrap_or_default(),
+            tenant: flag_value("--tenant").unwrap_or_default(),
             dsn: flag_value("--dsn").unwrap_or_default(),
-        },
+            proto: flag_value("--proto").unwrap_or_default(),
+            approve: flag_value("--approve").unwrap_or_default(),
+            dry_run: has_flag("--dry-run"),
+            yes: has_flag("--yes"),
+            allow_transfer: has_flag("--allow-transfer"),
+            json: has_flag("--json"),
+        }),
         (Some("subject"), Some("purge")) => OpsCommand::SubjectPurge {
             subject: args
                 .get(2)
@@ -1306,6 +1304,8 @@ const VALUE_FLAGS: &[&str] = &[
     "--target",
     "--timeout-secs",
     "--credential",
+    "--proto",
+    "--approve",
 ];
 
 /// Collect positional (non-flag) tokens after `start`, skipping any token that

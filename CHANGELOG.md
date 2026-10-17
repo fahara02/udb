@@ -5,6 +5,44 @@ the package version in `Cargo.toml`; historical v0.3.2 audit material is folded
 into the v0.3.x entries because the codebase advanced to v0.3.7 before that
 release line was tagged.
 
+## [0.6.1] - Unreleased
+
+### Added
+
+- **`udb up` takes a project from its protos to a served catalog.** It builds
+  the effective manifest, checks the database schema against it, bootstraps
+  the project's catalog when it has none, skips it when the ACTIVE catalog
+  matches the protos, and drives the reviewed catalog transition through the
+  broker when it does not (stopping at the plan until
+  `--approve <run-id>` names that run, or a person confirms at the terminal).
+  It then applies the declared policies, service accounts, embedding sources
+  and seed data as before, and reports the project check and the `.env`
+  posture. Each step prints one `[ok]/[done]/[skipped]/[next]/[failed]` line;
+  `[next]` names the exact command and what it needs. New flags: `--project`,
+  `--tenant`, `--proto`, `--yes`, `--approve`, `--json`; new `udb.yaml` keys:
+  `proto_root`, `proto_namespace`, `catalog.target`. Exit codes: 0 done or
+  skipped, 3 stopped at a step that needs a person, 1 failed, 2 inputs
+  missing. Under `UDB_ENV=production` every change needs `--yes`, nothing is
+  migrated automatically and nothing prompts; `--yes` never approves a
+  reviewed transition. The JSON report gains `steps`.
+
+### Fixed
+
+- **`udb catalog bootstrap` no longer reports success when the project's ACTIVE
+  catalog differs from the protos.** It returned the existing catalog and
+  printed "now has an ACTIVE catalog … Safe to re-run" even after the protos
+  changed. It now prints "unchanged" when the ACTIVE catalog matches, and exits
+  3 naming `udb catalog transition status` (or `udb up`) when it does not.
+
+### Breaking for callers
+
+- **`udb catalog bootstrap` exits 3 when the project already has an ACTIVE
+  catalog built from other protos** (it used to exit 0 and change nothing).
+  `udb up` no longer requires `tenant:` in `udb.yaml` (`--tenant` or
+  `UDB_TENANT_ID` also work) but now requires a project and a PostgreSQL DSN.
+  - detect: code: `udb catalog bootstrap`
+  - fix: treat exit 3 as "the catalog needs the reviewed transition": run `udb catalog transition status --project <id>` (or `udb up --project <id> --tenant <uuid>`), or keep exit 0 only for an unchanged or new catalog.
+
 ## [0.6.0] - 2026-10-16
 
 0.6.0 removes the compatibility paths 0.5.x deprecated. Run

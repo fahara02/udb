@@ -49,6 +49,7 @@ mod proto_fmt;
 mod scaffold;
 mod sdk_gen;
 mod self_cli;
+mod up;
 mod upgrade_cli;
 pub(crate) use args::*;
 pub(crate) use auth::*;
@@ -265,6 +266,81 @@ fn scan_dense_aggregate_annotations(dir: &std::path::Path, out: &mut Vec<String>
             }
         }
     }
+}
+
+/// Parse the project's protos the way every proto-reading command does,
+/// printing the parser diagnostics and the manifest-input line to stderr.
+/// Returns the custom schemas and their checksum.
+pub(super) fn parse_project_schemas(
+    proto_root: &std::path::Path,
+    namespace: &str,
+) -> Result<(Vec<udb::ProtoSchema>, String), String> {
+    let config = ParserConfig::new(namespace);
+    let parse_report =
+        parse_directory_report(proto_root, &config).map_err(|err| err.to_string())?;
+    for diagnostic in &parse_report.diagnostics {
+        eprintln!("diagnostic: {diagnostic}");
+    }
+    let schemas = parse_report.schemas;
+    let checksum = schema_checksum(&schemas)
+        .map_err(|err| format!("failed to serialize schema checksum input: {err}"))?;
+
+    // Echo the manifest input decision in a high-signal line so a
+    // wrong invocation (e.g. an over-eager UDB_PROTO_NAMESPACE that filters out
+    // every project proto) is obvious instead of silently producing a UDB-only
+    // broker. The native schemas are merged later, at serve startup.
+    eprintln!(
+        "manifest input: proto root {} | namespace filter: {} | custom schemas discovered: {}",
+        proto_root.display(),
+        if namespace.trim().is_empty() {
+            "none".to_string()
+        } else {
+            namespace.to_string()
+        },
+        schemas.len(),
+    );
+    if !namespace.trim().is_empty() && schemas.is_empty() {
+        eprintln!(
+            "WARNING: namespace filter '{namespace}' produced 0 non-UDB schemas; \
+             remove UDB_PROTO_NAMESPACE or check that your proto packages match it"
+        );
+    }
+    Ok((schemas, checksum))
+}
+
+/// The manifest `serve` stores in the ledger for these schemas: the app
+/// schemas plus the embedded native `udb_*` schemas. Every command that stages,
+/// exports or compares a catalog uses this one; an app-only manifest omits the
+/// `udb_*` tables and disagrees with the running broker.
+pub(super) fn effective_manifest(
+    schemas: &[udb::ProtoSchema],
+) -> Result<CatalogManifest, serde_json::Error> {
+    let manifest = CatalogManifest::from_schemas(schemas)?;
+    Ok(udb::runtime::native_catalog::merge_native(&manifest, schemas).0)
+}
+
+/// Parse the protos under `proto_root` and build the effective manifest
+/// (`effective_manifest`), for commands that run before the shared parse.
+pub(super) fn build_effective_manifest(
+    proto_root: &std::path::Path,
+    namespace: &str,
+) -> Result<CatalogManifest, String> {
+    let (schemas, _) = parse_project_schemas(proto_root, namespace)?;
+    effective_manifest(&schemas).map_err(|err| format!("failed to build catalog manifest: {err}"))
+}
+
+/// The `(entity, schema.table)` pairs policy/entity coverage is checked over.
+pub(super) fn manifest_entities(manifest: &CatalogManifest) -> Vec<(String, String)> {
+    manifest
+        .tables
+        .iter()
+        .map(|table| {
+            (
+                table.message_name.clone(),
+                format!("{}.{}", table.schema, table.table),
+            )
+        })
+        .collect()
 }
 
 /// Runs `body` against a runtime connected to the catalog store (`--dsn`, or
@@ -707,7 +783,7 @@ pub fn run() {
                             );
                             eprintln!(
                                 "catalog status: project '{project}' has no ACTIVE catalog, so services in it are refused. \
-                             Run `udb catalog bootstrap --project {project}` (or stage + activate)."
+                             Run `udb up --project {project}` (or `udb catalog bootstrap --project {project}`)."
                             );
                             3
                         }
@@ -893,46 +969,13 @@ pub fn run() {
         _ => {}
     }
 
-    let config = ParserConfig::new(namespace.as_str());
-    let parse_report = match parse_directory_report(&proto_root, &config) {
-        Ok(report) => report,
+    let (schemas, checksum) = match parse_project_schemas(&proto_root, &namespace) {
+        Ok(parsed) => parsed,
         Err(err) => {
             eprintln!("{err}");
             process::exit(1);
         }
     };
-    for diagnostic in &parse_report.diagnostics {
-        eprintln!("diagnostic: {diagnostic}");
-    }
-    let schemas = parse_report.schemas;
-    let checksum = match schema_checksum(&schemas) {
-        Ok(checksum) => checksum,
-        Err(err) => {
-            eprintln!("failed to serialize schema checksum input: {err}");
-            process::exit(1);
-        }
-    };
-
-    // Echo the manifest input decision in a high-signal line so a
-    // wrong invocation (e.g. an over-eager UDB_PROTO_NAMESPACE that filters out
-    // every project proto) is obvious instead of silently producing a UDB-only
-    // broker. The native schemas are merged later, at serve startup.
-    eprintln!(
-        "manifest input: proto root {} | namespace filter: {} | custom schemas discovered: {}",
-        proto_root.display(),
-        if namespace.trim().is_empty() {
-            "none".to_string()
-        } else {
-            namespace.clone()
-        },
-        schemas.len(),
-    );
-    if !namespace.trim().is_empty() && schemas.is_empty() {
-        eprintln!(
-            "WARNING: namespace filter '{namespace}' produced 0 non-UDB schemas; \
-             remove UDB_PROTO_NAMESPACE or check that your proto packages match it"
-        );
-    }
     eprintln!("schemas: {}", schemas.len());
     eprintln!("checksum_sha256: {checksum}");
 
@@ -942,54 +985,73 @@ pub fn run() {
                 eprintln!("catalog bootstrap: --project <id> is required");
                 process::exit(2);
             }
-            let manifest = CatalogManifest::from_schemas(&schemas)
-                .unwrap_or_else(|err| fatal_json("failed to build catalog manifest", err));
             // Same merge `serve` performs, so the bootstrapped catalog describes
             // the `udb_*` native tables too — a catalog missing them would be
             // activated and then disagree with the running broker.
-            let (manifest, _) = udb::runtime::native_catalog::merge_native(&manifest, &schemas);
+            let manifest = effective_manifest(&schemas)
+                .unwrap_or_else(|err| fatal_json("failed to build catalog manifest", err));
             let manifest_json = serde_json::to_vec(&manifest)
                 .unwrap_or_else(|err| fatal_json("failed to serialize catalog manifest", err));
-            if let Some(dsn) = dsn.as_deref().filter(|value| !value.trim().is_empty()) {
-                #[allow(unused_unsafe)]
-                unsafe {
-                    env::set_var("UDB_PG_DSN", dsn);
-                }
-            }
-            let runtime = tokio::runtime::Runtime::new().unwrap_or_else(|err| {
-                eprintln!("failed to create tokio runtime: {err}");
-                process::exit(1);
-            });
-            let exit_code = runtime.block_on(async {
-                let rt = DataBrokerRuntime::from_env().await;
-                if rt.pg_pool_clone().is_none() {
-                    eprintln!(
-                        "catalog bootstrap: PostgreSQL is not configured. Pass --dsn <dsn> or set UDB_PG_DSN."
-                    );
-                    return 1i32;
-                }
-                match rt
-                    .bootstrap_project_catalog(
-                        &project,
-                        &manifest_json,
-                        "bootstrap catalog for an upgraded deployment",
-                        "udb-cli",
-                    )
-                    .await
-                {
-                    Ok(catalog_id) => {
-                        eprintln!(
-                            "catalog bootstrap: project '{project}' now has an ACTIVE catalog ({catalog_id}). \
-                             Services authenticating under this project can serve. Safe to re-run."
-                        );
-                        0
+            let exit_code = with_catalog_runtime(
+                "catalog bootstrap",
+                dsn.as_deref(),
+                |rt| async move {
+                    // An existing ACTIVE catalog is never replaced here: when it
+                    // was built from other protos, the change goes through the
+                    // reviewed transition, and saying "done" would hide that.
+                    match rt.active_project_catalog_schema_checksum(&project).await {
+                        Ok(Some((catalog_id, active_checksum)))
+                            if active_checksum == manifest.checksum_sha256 =>
+                        {
+                            eprintln!(
+                                "catalog bootstrap: project '{project}' unchanged; its ACTIVE catalog \
+                                 ({catalog_id}) matches your protos."
+                            );
+                            return 0;
+                        }
+                        Ok(Some((catalog_id, _))) => {
+                            let tenant = env::var("UDB_TENANT_ID")
+                                .ok()
+                                .filter(|value| !value.trim().is_empty())
+                                .unwrap_or_else(|| "<tenant-uuid>".to_string());
+                            eprintln!(
+                                "catalog bootstrap: project '{project}' already has an ACTIVE catalog \
+                                 ({catalog_id}), but it differs from your protos; bootstrap never replaces \
+                                 it. Next: udb catalog transition status --project {project} --tenant {tenant} \
+                                 (or `udb up --project {project} --tenant {tenant}`, which drives the \
+                                 reviewed transition). Needs: UDB_AUTH_TOKEN and UDB_GRPC_TARGET."
+                            );
+                            return 3;
+                        }
+                        Ok(None) => {}
+                        Err(err) => {
+                            eprintln!("catalog bootstrap: {err}");
+                            return 1;
+                        }
                     }
-                    Err(err) => {
-                        eprintln!("catalog bootstrap: {err}");
-                        1
+                    match rt
+                        .bootstrap_project_catalog(
+                            &project,
+                            &manifest_json,
+                            "bootstrap catalog for an upgraded deployment",
+                            "udb-cli",
+                        )
+                        .await
+                    {
+                        Ok(catalog_id) => {
+                            eprintln!(
+                                "catalog bootstrap: project '{project}' now has an ACTIVE catalog ({catalog_id}). \
+                                 Services authenticating under this project can serve. Safe to re-run."
+                            );
+                            0
+                        }
+                        Err(err) => {
+                            eprintln!("catalog bootstrap: {err}");
+                            1
+                        }
                     }
-                }
-            });
+                },
+            );
             process::exit(exit_code);
         }
         Command::CatalogStage { project, dsn } => {
@@ -997,9 +1059,8 @@ pub fn run() {
                 eprintln!("catalog stage: --project <id> is required");
                 process::exit(2);
             }
-            let manifest = CatalogManifest::from_schemas(&schemas)
+            let manifest = effective_manifest(&schemas)
                 .unwrap_or_else(|err| fatal_json("failed to build catalog manifest", err));
-            let (manifest, _) = udb::runtime::native_catalog::merge_native(&manifest, &schemas);
             let manifest_json = serde_json::to_vec(&manifest)
                 .unwrap_or_else(|err| fatal_json("failed to serialize catalog manifest", err));
             let exit_code = with_catalog_runtime(
@@ -1260,16 +1321,7 @@ pub fn run() {
             // halves are known here. Only runs when a policy file is configured;
             // `udb policy lint` remains the policy-only entry point.
             if let Ok(policies) = load_authz_policies_for_lint() {
-                let entities: Vec<(String, String)> = manifest
-                    .tables
-                    .iter()
-                    .map(|table| {
-                        (
-                            table.message_name.clone(),
-                            format!("{}.{}", table.schema, table.table),
-                        )
-                    })
-                    .collect();
+                let entities = manifest_entities(&manifest);
                 for finding in udb::lint_policy_entity_coverage(&policies, &entities) {
                     eprintln!("lint[{}] {}", finding.category, finding.message);
                 }
@@ -1310,9 +1362,8 @@ pub fn run() {
             role,
             subject,
         } => {
-            let manifest = CatalogManifest::from_schemas(&schemas)
+            let manifest = effective_manifest(&schemas)
                 .unwrap_or_else(|err| fatal_json("failed to build catalog manifest", err));
-            let (manifest, _) = udb::runtime::native_catalog::merge_native(&manifest, &schemas);
             let catalog = lint_catalog(&manifest);
             // Policies: --policies <json|yaml>, else UDB_ABAC_POLICY_FILE when set;
             // without either the policy sections are skipped, not failed.
@@ -1407,17 +1458,7 @@ pub fn run() {
             }
             if let Some(loaded) = loaded {
                 let coverage = loaded.as_ref().ok().map(|policies| {
-                    let entities: Vec<(String, String)> = manifest
-                        .tables
-                        .iter()
-                        .map(|table| {
-                            (
-                                table.message_name.clone(),
-                                format!("{}.{}", table.schema, table.table),
-                            )
-                        })
-                        .collect();
-                    udb::lint_policy_entity_coverage(policies, &entities)
+                    udb::lint_policy_entity_coverage(policies, &manifest_entities(&manifest))
                 });
                 let (result, _) = build_policy_lint_cli_result(loaded);
                 passed &= result.passed;
@@ -1458,12 +1499,11 @@ pub fn run() {
                 );
                 process::exit(2);
             }
-            let manifest = CatalogManifest::from_schemas(&schemas)
-                .unwrap_or_else(|err| fatal_json("failed to build catalog manifest", err));
             // Same merge `serve` and `drift` do: without the embedded native
             // schemas the CLI manifest omits the `udb_*` tables and would report
             // them all as missing.
-            let (manifest, _) = udb::runtime::native_catalog::merge_native(&manifest, &schemas);
+            let manifest = effective_manifest(&schemas)
+                .unwrap_or_else(|err| fatal_json("failed to build catalog manifest", err));
             if let Some(dsn) = dsn.as_deref().filter(|value| !value.trim().is_empty()) {
                 #[allow(unused_unsafe)]
                 unsafe {
@@ -1573,12 +1613,11 @@ pub fn run() {
             process::exit(exit_code);
         }
         Command::Drift => {
-            let manifest = CatalogManifest::from_schemas(&schemas)
-                .unwrap_or_else(|err| fatal_json("failed to build catalog manifest", err));
             // Merge embedded native schemas so the drift diff matches serve's
             // (same reason as `plan`): the CLI's own manifest must include the
             // `udb_*` tables the ledger manifest carries.
-            let (manifest, _) = udb::runtime::native_catalog::merge_native(&manifest, &schemas);
+            let manifest = effective_manifest(&schemas)
+                .unwrap_or_else(|err| fatal_json("failed to build catalog manifest", err));
             // Load prior manifest from --prior <path> or UDB_PRIOR_MANIFEST_PATH.
             let prior = load_prior_manifest_from_args(&args);
             let report = build_drift_report(prior.as_ref(), &manifest);
@@ -1919,13 +1958,12 @@ pub fn run() {
             output_json(&report, "explain report");
         }
         Command::ManifestExport => {
-            let manifest = CatalogManifest::from_schemas(&schemas)
-                .unwrap_or_else(|err| fatal_json("failed to build catalog manifest", err));
             // Export the SAME effective manifest serve stores in the ledger
             // (app schemas + embedded native `udb_*` schemas). A ledger-shaped
             // export is what feeds `udb plan --prior` and the approval workflow;
             // an app-only export diverges and produces phantom DropTable ops.
-            let (manifest, _) = udb::runtime::native_catalog::merge_native(&manifest, &schemas);
+            let manifest = effective_manifest(&schemas)
+                .unwrap_or_else(|err| fatal_json("failed to build catalog manifest", err));
             let path = env::var("UDB_MANIFEST_EXPORT_PATH")
                 .unwrap_or_else(|_| "udb_catalog_manifest.json".to_string());
             let json = serde_json::to_string_pretty(&manifest)
