@@ -120,6 +120,56 @@ pub(crate) fn require_mls_bytes(field: &str, bytes: &[u8]) -> Result<(), Status>
     Ok(())
 }
 
+/// Who may join a group by an external commit, as the group row stores it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum JoinPolicy {
+    None,
+    SamePrincipal,
+    Tenant,
+}
+
+impl JoinPolicy {
+    /// The request enum; UNSPECIFIED is NONE, an unknown value is refused.
+    pub(crate) fn from_proto(value: i32) -> Result<Self, Status> {
+        use msg_pb::ExternalJoinPolicy as P;
+        match P::try_from(value) {
+            Ok(P::Unspecified | P::None) => Ok(Self::None),
+            Ok(P::SamePrincipal) => Ok(Self::SamePrincipal),
+            Ok(P::Tenant) => Ok(Self::Tenant),
+            Err(_) => Err(invalid_field(
+                "external_join_policy",
+                "is not a known ExternalJoinPolicy",
+            )),
+        }
+    }
+
+    pub(crate) fn to_proto(self) -> msg_pb::ExternalJoinPolicy {
+        match self {
+            Self::None => msg_pb::ExternalJoinPolicy::None,
+            Self::SamePrincipal => msg_pb::ExternalJoinPolicy::SamePrincipal,
+            Self::Tenant => msg_pb::ExternalJoinPolicy::Tenant,
+        }
+    }
+
+    /// The `external_join_policy` column value.
+    pub(crate) fn as_text(self) -> &'static str {
+        match self {
+            Self::None => "NONE",
+            Self::SamePrincipal => "SAME_PRINCIPAL",
+            Self::Tenant => "TENANT",
+        }
+    }
+
+    /// The column value; anything unrecognised reads as NONE (fail closed).
+    pub(crate) fn from_text(value: &str) -> Self {
+        match value.trim() {
+            "SAME_PRINCIPAL" => Self::SamePrincipal,
+            "TENANT" => Self::Tenant,
+            _ => Self::None,
+        }
+    }
+}
+
 /// Lowercase hex SHA-256 of a signature public key: the safety-number input
 /// peers compare out of band.
 pub(crate) fn key_fingerprint(signature_public_key: &[u8]) -> String {

@@ -37,6 +37,9 @@ export interface MlsCommit {
   readonly commit: Uint8Array;
   /** Empty when the commit adds nobody. */
   readonly welcome: Uint8Array;
+  /** The signed GroupInfo of the epoch the commit creates (groups that allow
+   *  external joins require it on every commit). */
+  readonly groupInfo: Uint8Array;
   readonly addedDeviceIds: string[];
   readonly removedDeviceIds: string[];
 }
@@ -68,6 +71,43 @@ export interface MlsEvent {
   readonly removed: string[];
   readonly merged: boolean;
   readonly reason: string;
+}
+
+/** Where a device key was observed. */
+export type MlsKeySource = "directory" | "key_package" | "welcome" | "commit" | "group_info";
+
+/** A device key to check against the pins (a `ListMessagingDevices` row). */
+export interface MlsObservedKey {
+  subjectId: string;
+  deviceId: string;
+  signaturePublicKey: Uint8Array;
+}
+
+/** A key event: a new device of a known subject (or of this device's own
+ *  subject), or a changed key seen in a Welcome or another member's commit (the
+ *  group already accepted it). For a new device `observedFingerprint` is its key
+ *  and `pinnedFingerprint` is empty; `groupId` is empty and `seq` 0 when the key
+ *  was not seen in an inbox entry. */
+export interface MlsKeyEvent {
+  readonly kind: "new_device" | "key_changed";
+  readonly subjectId: string;
+  readonly deviceId: string;
+  readonly pinnedFingerprint: string;
+  readonly observedFingerprint: string;
+  readonly source: MlsKeySource;
+  readonly groupId: string;
+  readonly seq: number;
+}
+
+/** A pinned device key. `pendingFingerprint` is an observed, not yet accepted key. */
+export interface MlsPinnedDevice {
+  readonly subjectId: string;
+  readonly deviceId: string;
+  readonly signaturePublicKey: Uint8Array;
+  readonly keyFingerprint: string;
+  readonly firstSeenUnix: number;
+  readonly verified: boolean;
+  readonly pendingFingerprint: string;
 }
 
 /** One device's MLS state inside the WebAssembly module. */
@@ -121,6 +161,16 @@ export interface MlsDevice {
     senderDeviceId: string,
     clientMessageId: string,
   ): MlsEvent;
+  /** Check device keys against the pins (first sight pins; a different key
+   *  throws `key_changed:{json}`, which the client turns into `KeyChangedError`). */
+  observeDeviceKeys(keys: MlsObservedKey[], source?: MlsKeySource): void;
+  takeKeyEvents(): MlsKeyEvent[];
+  /** 12 groups of 5 digits from both subjects' pinned keys. */
+  safetyNumber(peerSubjectId: string): string;
+  verifyDevice(subjectId: string, deviceId: string, fingerprint: string): void;
+  acceptKeyChange(subjectId: string, deviceId: string, fingerprint: string): void;
+  pinnedDevices(subjectId: string): MlsPinnedDevice[];
+  forgetDevice(subjectId: string, deviceId: string): boolean;
 }
 
 /** The `udb-mls-wasm` module (wasm-bindgen, Node target). */
@@ -134,6 +184,8 @@ export interface MlsWasmModule {
     subjectId: string;
     deviceId: string;
     lastResort: boolean;
+    signaturePublicKey: Uint8Array;
+    keyFingerprint: string;
   };
   keyFingerprint(signaturePublicKey: Uint8Array): string;
   /** Open a backup envelope; a wrong secret or a modified envelope throws. */
@@ -199,6 +251,43 @@ export class MessagingError extends Error {
   constructor(message: string) {
     super(`udb messaging: ${message}`);
     this.name = "MessagingError";
+  }
+}
+
+/** A pinned device presented a different signature key (from the directory or
+ *  a claimed KeyPackage). The pin is unchanged; compare `observedFingerprint`
+ *  with the device's owner out of band, then `acceptKeyChange` it or stop. */
+export class KeyChangedError extends MessagingError {
+  constructor(
+    readonly subjectId: string,
+    readonly deviceId: string,
+    readonly pinnedFingerprint: string,
+    readonly observedFingerprint: string,
+  ) {
+    super(
+      `the key of device '${deviceId}' of '${subjectId}' changed: pinned ${pinnedFingerprint}, observed ${observedFingerprint}`,
+    );
+    this.name = "KeyChangedError";
+  }
+}
+
+const KEY_CHANGED_PREFIX = "key_changed:";
+
+/** The WebAssembly module reports a changed key as `key_changed:{json}`; turn
+ *  that into a `KeyChangedError`, anything else is returned unchanged. */
+function keyChangedOr(err: unknown): unknown {
+  const message = (err as { message?: unknown })?.message;
+  if (typeof message !== "string" || !message.startsWith(KEY_CHANGED_PREFIX)) return err;
+  try {
+    const detail = JSON.parse(message.slice(KEY_CHANGED_PREFIX.length));
+    return new KeyChangedError(
+      String(detail.subjectId ?? ""),
+      String(detail.deviceId ?? ""),
+      String(detail.pinnedFingerprint ?? ""),
+      String(detail.observedFingerprint ?? ""),
+    );
+  } catch {
+    return err;
   }
 }
 
@@ -361,13 +450,85 @@ export class MessagingClient {
     return device;
   }
 
-  /** A principal's devices with key fingerprints ("" = this device's principal). */
+  /** A principal's devices with key fingerprints ("" = this device's
+   *  principal). Every key is checked against this device's pins: the first key
+   *  seen for a device is pinned, an unseen device of a known subject (or of
+   *  this device's own) is queued as a `new_device` key event (`takeKeyEvents`),
+   *  and a key that differs from its pin throws `KeyChangedError`. */
   async listDevices(subjectId = "", includeRevoked = false): Promise<any[]> {
-    const response: any = await this.api.list_messaging_devices(
-      { tenant_id: this.tenantId, subject_id: subjectId, include_revoked: includeRevoked },
-      this.call,
-    );
-    return response.devices ?? [];
+    const devices: any[] = [];
+    let pageToken = "";
+    do {
+      const response: any = await this.api.list_messaging_devices(
+        { tenant_id: this.tenantId, subject_id: subjectId, include_revoked: includeRevoked, page_token: pageToken },
+        this.call,
+      );
+      devices.push(...(response.devices ?? []));
+      pageToken = String(response.next_page_token ?? "");
+    } while (pageToken);
+    try {
+      this.device.observeDeviceKeys(
+        devices.map((device) => ({
+          subjectId: String(device.subject_id ?? ""),
+          deviceId: String(device.device_id ?? ""),
+          signaturePublicKey: new Uint8Array(device.signature_public_key ?? []),
+        })),
+        "directory",
+      );
+    } catch (err) {
+      // Every key was recorded (a changed one as pending) before the throw.
+      await this.persist();
+      throw keyChangedOr(err);
+    }
+    await this.persist();
+    return devices;
+  }
+
+  // ── key pinning ──────────────────────────────────────────────────────────
+
+  /** Key events (new devices; changed keys seen in a Welcome or another
+   *  member's commit, which the group already accepted) since the last call. */
+  async takeKeyEvents(): Promise<MlsKeyEvent[]> {
+    const events = this.device.takeKeyEvents();
+    if (events.length) await this.persist();
+    return events;
+  }
+
+  /** The safety number to compare with `peerSubjectId` out of band, after
+   *  refreshing both subjects' devices (a changed pinned key throws
+   *  `KeyChangedError`). */
+  async safetyNumber(peerSubjectId: string): Promise<string> {
+    const own = this.device.subjectId;
+    await this.listDevices(own, false);
+    if (peerSubjectId !== own) await this.listDevices(peerSubjectId, false);
+    try {
+      return this.device.safetyNumber(peerSubjectId);
+    } catch (err) {
+      throw keyChangedOr(err);
+    }
+  }
+
+  /** Mark a pinned device verified after its owner read `fingerprint` out of
+   *  band; a different fingerprint throws `KeyChangedError`. */
+  async verifyDevice(subjectId: string, deviceId: string, fingerprint: string): Promise<void> {
+    try {
+      this.device.verifyDevice(subjectId, deviceId, fingerprint);
+    } catch (err) {
+      throw keyChangedOr(err);
+    }
+    await this.persist();
+  }
+
+  /** Re-pin a device to the key a `KeyChangedError` reported, after comparing
+   *  its `observedFingerprint` with the device's owner. Only that key is accepted. */
+  async acceptKeyChange(subjectId: string, deviceId: string, fingerprint: string): Promise<void> {
+    this.device.acceptKeyChange(subjectId, deviceId, fingerprint);
+    await this.persist();
+  }
+
+  /** A subject's pinned devices, sorted by device id. */
+  pinnedDevices(subjectId: string): MlsPinnedDevice[] {
+    return this.device.pinnedDevices(subjectId);
   }
 
   async revokeDevice(deviceId: string, reason = ""): Promise<any> {
@@ -575,7 +736,16 @@ export class MessagingClient {
     let rebases = 0;
     let next: () => MlsCommit | undefined = build;
     for (;;) {
-      const pending = next();
+      let built: MlsCommit | undefined;
+      try {
+        built = next();
+      } catch (err) {
+        // A claimed KeyPackage with a changed key: nothing was built, the
+        // observed key is pending.
+        await this.persist();
+        throw keyChangedOr(err);
+      }
+      const pending = built;
       if (!pending) {
         await this.persist();
         return this.noop(groupId, rebases);
@@ -592,7 +762,7 @@ export class MessagingClient {
               epoch: String(pending.epoch),
               commit: bytes(pending.commit),
               welcome: bytes(pending.welcome),
-              group_info: Buffer.alloc(0),
+              group_info: bytes(pending.groupInfo),
               client_message_id: clientMessageId,
             },
             { ...(this.call ?? {}), noRetry: true },

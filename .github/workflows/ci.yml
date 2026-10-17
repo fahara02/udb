@@ -1360,7 +1360,11 @@ jobs:
           node: "true"
       - name: Rust SDK served messaging suite
         working-directory: sdk/rust
-        run: cargo test --features mls --test live_messaging -- --nocapture
+        # One test at a time: every test registers devices of the same live
+        # user, and the pinning test compares safety numbers over that user's
+        # device list. The pinning test plays a compromised directory with the
+        # runner's `psql` against UDB_PG_DSN.
+        run: cargo test --features mls --test live_messaging -- --nocapture --test-threads=1
       - name: Build the Rust messaging peer
         working-directory: sdk/rust
         run: cargo build --features mls --example messaging_peer

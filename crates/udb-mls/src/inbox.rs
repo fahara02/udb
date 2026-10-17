@@ -109,7 +109,8 @@ pub enum InboxEvent {
         removed: Vec<String>,
     },
     /// This device's own commit came back through the inbox. If it was still
-    /// pending (the SubmitCommit response was lost) it has now been merged.
+    /// pending (the SubmitCommit response was lost) it has now been merged; for
+    /// an external join, the echo confirms the join the same way.
     OwnCommit {
         seq: i64,
         group_id: String,

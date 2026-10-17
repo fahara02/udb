@@ -25,6 +25,41 @@ release line was tagged.
   missing. Under `UDB_ENV=production` every change needs `--yes`, nothing is
   migrated automatically and nothing prompts; `--yes` never approves a
   reviewed transition. The JSON report gains `steps`.
+- **Key pinning for end-to-end encrypted messaging.** `udb-mls` pins the first
+  signature key it sees for every device (from the directory, a claimed
+  KeyPackage, a Welcome, or another member's commit) in the client snapshot, so
+  pins survive restarts and travel in the encrypted backup. A different key
+  later never replaces the pin: listing devices and adding members fail closed
+  with `MlsError::KeyChanged`, and a changed key inside a group the device
+  already belongs to is queued as a `KeyEvent::KeyChanged`; a new device of a
+  known user, or any new device of the user's own account, is queued as a
+  `KeyEvent::NewDevice`. New API: `MlsClient::{observe_device_keys,
+  take_key_events, key_events, pinned_key, pinned_devices, verify_device,
+  accept_key_change, forget_device, with_clock}` and the `KeyEvent`,
+  `KeySource`, `PinnedKey` and `Observation` types; the Rust SDK's
+  `MessagingClient::{take_key_events, safety_number, verify_device,
+  accept_key_change, pinned_devices}` and `MessagingError::key_change()`; the
+  TypeScript SDK's `KeyChangedError` and `MessagingClient.{takeKeyEvents,
+  safetyNumber, verifyDevice, acceptKeyChange, pinnedDevices}`.
+- **Safety numbers.** `MlsClient::safety_number(peer)` derives 12 groups of 5
+  digits from both users' pinned device keys; it is the same on both sides and
+  independent of who computes it, so two users can compare it out of band.
+  `inspectKeyPackage` (WebAssembly) now also returns the signature key and its
+  fingerprint.
+- **External joins.** A device can join a group without a Welcome by an MLS
+  external commit built from the GroupInfo `GetGroupInfo` serves. A group's
+  `CreateGroupRequest.external_join_policy` (`NONE`, the default;
+  `SAME_PRINCIPAL`: a device of a principal that already has a member device;
+  `TENANT`: any active device of the tenant) decides whether `SubmitCommit`
+  accepts it; `GetGroupInfoResponse.external_join_policy` reports it, and the
+  `mls_groups.external_join_policy` column stores it (existing groups read as
+  `NONE`). Groups that admit external joins require the new epoch's GroupInfo on
+  every commit, so the GroupInfo they serve is always current. The joiner gets
+  its commit back as a COMMIT inbox entry; the members see a commit that adds
+  it. New API: `MlsClient::join_external` and `ExternalJoin`,
+  `PendingCommit::group_info` (sent by the Rust and TypeScript SDKs on every
+  commit), and the Rust SDK's `MessagingClient::{join_external,
+  create_group_with_policy}`.
 
 ### Fixed
 
@@ -33,6 +68,12 @@ release line was tagged.
   printed "now has an ACTIVE catalog … Safe to re-run" even after the protos
   changed. It now prints "unchanged" when the ACTIVE catalog matches, and exits
   3 naming `udb catalog transition status` (or `udb up`) when it does not.
+- **`GetGroupInfo` no longer shows any group to any tenant user (security).**
+  It returned the GroupInfo, ratchet tree and member device list of every group
+  in the tenant to any authenticated caller. An end user now sees only groups
+  one of its devices is a member of, or groups open to the whole tenant
+  (`EXTERNAL_JOIN_POLICY_TENANT`); any other group answers `NOT_FOUND`, exactly
+  like a missing one. Service accounts and in-process callers keep full access.
 
 ### Breaking for callers
 
@@ -42,6 +83,18 @@ release line was tagged.
   `UDB_TENANT_ID` also work) but now requires a project and a PostgreSQL DSN.
   - detect: code: `udb catalog bootstrap`
   - fix: treat exit 3 as "the catalog needs the reviewed transition": run `udb catalog transition status --project <id>` (or `udb up --project <id> --tenant <uuid>`), or keep exit 0 only for an unchanged or new catalog.
+- **`MlsError` has a new `KeyChanged` variant.** An exhaustive `match` on
+  `udb_mls::MlsError` no longer compiles.
+  - detect: code: `MlsError::`
+  - fix: add a `MlsError::KeyChanged { .. }` arm (a pinned device presented a different key: show it to the user, compare `observed_fingerprint` out of band, then `accept_key_change` or stop).
+- **`udb_mls::PendingCommit` has a new public field, `group_info`.** Code that
+  builds a `PendingCommit` with a struct literal no longer compiles.
+  - detect: code: `PendingCommit {`
+  - fix: add `group_info: None` (or the commit's GroupInfo), or end the literal with `..` from an existing value; when submitting, send `pending.group_info` as `SubmitCommitRequest.group_info`.
+
+Downgrading a client to 0.6.0 keeps its groups but drops its pins and queued key
+events (0.6.0 ignores the new snapshot fields); 0.6.1 opens a 0.6.0 snapshot and
+pins peers again on next sight.
 
 ## [0.6.0] - 2026-10-16
 

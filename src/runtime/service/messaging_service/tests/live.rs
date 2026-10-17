@@ -551,6 +551,7 @@ async fn live_messaging_group_commits_linearize_and_messages_fan_out() {
                     creator_device_id: "alice-phone".to_string(),
                     group_info: info.clone(),
                     ratchet_tree: tree.clone(),
+                    ..Default::default()
                 },
             ))
             .await
@@ -949,4 +950,348 @@ async fn live_messaging_group_commits_linearize_and_messages_fan_out() {
         inbox_rows(&pool, &tenant).await > 0,
         "unacknowledged fresh rows survive"
     );
+}
+
+#[allow(clippy::too_many_arguments)]
+async fn submit_with_info(
+    client: &mut Client,
+    tenant: &str,
+    group_id: &str,
+    sender: &str,
+    epoch: i64,
+    commit: Vec<u8>,
+    welcome: Vec<u8>,
+    group_info: Vec<u8>,
+) -> Result<msg_pb::SubmitCommitResponse, Status> {
+    client
+        .submit_commit(req(
+            tenant,
+            msg_pb::SubmitCommitRequest {
+                tenant_id: tenant.to_string(),
+                group_id: group_id.to_string(),
+                sender_device_id: sender.to_string(),
+                epoch,
+                commit,
+                welcome,
+                group_info,
+                client_message_id: String::new(),
+            },
+        ))
+        .await
+        .map(tonic::Response::into_inner)
+}
+
+async fn create_with_policy(
+    client: &mut Client,
+    tenant: &str,
+    group_id: &str,
+    creator: &str,
+    info: Vec<u8>,
+    tree: Vec<u8>,
+    policy: msg_pb::ExternalJoinPolicy,
+) -> Result<msg_pb::CreateGroupResponse, Status> {
+    client
+        .create_group(req(
+            tenant,
+            msg_pb::CreateGroupRequest {
+                tenant_id: tenant.to_string(),
+                group_id: group_id.to_string(),
+                creator_device_id: creator.to_string(),
+                group_info: info,
+                ratchet_tree: tree,
+                external_join_policy: policy as i32,
+            },
+        ))
+        .await
+        .map(tonic::Response::into_inner)
+}
+
+async fn group_info(
+    client: &mut Client,
+    tenant: &str,
+    group_id: &str,
+) -> msg_pb::GetGroupInfoResponse {
+    client
+        .get_group_info(req(
+            tenant,
+            msg_pb::GetGroupInfoRequest {
+                tenant_id: tenant.to_string(),
+                group_id: group_id.to_string(),
+            },
+        ))
+        .await
+        .expect("group info")
+        .into_inner()
+}
+
+/// GetGroupInfo as the end user `subject` calls it (the verified claim scopes
+/// the handler), straight on the service.
+async fn group_info_as(
+    tenant: &str,
+    subject: &str,
+    group_id: &str,
+) -> Result<msg_pb::GetGroupInfoResponse, Status> {
+    use crate::proto::udb::core::messaging::services::v1::messaging_service_server::MessagingService as _;
+    use crate::runtime::service::method_security::{
+        VerifiedClaimContext, scope_claim_context_for_test,
+    };
+    let svc = messaging_service().await;
+    let request = req(
+        tenant,
+        msg_pb::GetGroupInfoRequest {
+            tenant_id: tenant.to_string(),
+            group_id: group_id.to_string(),
+        },
+    );
+    let claim = VerifiedClaimContext {
+        authenticated: true,
+        subject: subject.to_string(),
+        tenant_id: tenant.to_string(),
+        ..Default::default()
+    };
+    scope_claim_context_for_test(claim, svc.get_group_info(request))
+        .await
+        .map(tonic::Response::into_inner)
+}
+
+/// External joins: a SAME_PRINCIPAL group admits another device of a member's
+/// principal (it gets the COMMIT echo, not a Welcome, and everyone reads its
+/// messages) and refuses a stranger; a GroupInfo from a past epoch is stale; a
+/// NONE group refuses every external join; a group open to joins requires the
+/// GroupInfo on every commit; and an end user cannot read the GroupInfo of a
+/// group it is not in.
+#[tokio::test]
+#[ignore = "requires live Postgres; run with cargo test --lib messaging_service::tests::live -- --ignored --test-threads=1"]
+async fn live_messaging_external_join_follows_the_group_policy() {
+    let _guard = live_native_service_db_lock().lock().await;
+    let pool = live_pg_pool().await;
+    migrate_native_service_db(&pool).await;
+    let (client, _shutdown) = serve().await;
+    let mut c = client.clone();
+    let tenant = uuid::Uuid::new_v4().to_string();
+    let group_id = "family-room";
+
+    let phone = Device::new(&tenant, "alice", "alice-phone");
+    let laptop = Device::new(&tenant, "alice", "alice-laptop");
+    let tablet = Device::new(&tenant, "alice", "alice-tablet");
+    let bob = Device::new(&tenant, "bob", "bob-phone");
+    let mallory = Device::new(&tenant, "mallory", "mallory-phone");
+    for (subject, device) in [
+        ("alice", &phone),
+        ("alice", &laptop),
+        ("alice", &tablet),
+        ("bob", &bob),
+        ("mallory", &mallory),
+    ] {
+        register(&mut c, &tenant, subject, device).await;
+    }
+    publish(&mut c, &tenant, &bob, 1, false).await;
+
+    let (mut phone_group, info, tree) = phone.create_group(group_id);
+    let created = create_with_policy(
+        &mut c,
+        &tenant,
+        group_id,
+        "alice-phone",
+        info,
+        tree,
+        msg_pb::ExternalJoinPolicy::SamePrincipal,
+    )
+    .await
+    .expect("create a SAME_PRINCIPAL group");
+    assert_eq!(created.epoch, 0);
+
+    // (e) A group open to external joins needs the GroupInfo on every commit.
+    let bob_kp = claim(&mut c, &tenant, "alice-phone", "bob-phone").await;
+    let (commit, welcome) = phone.add(&mut phone_group, &[bob_kp.key_package]);
+    let missing = submit(
+        &mut c,
+        &tenant,
+        group_id,
+        "alice-phone",
+        0,
+        commit.clone(),
+        welcome.clone(),
+        "",
+    )
+    .await
+    .expect_err("a commit without the GroupInfo is refused");
+    assert_eq!(missing.code(), Code::InvalidArgument);
+    phone.merge(&mut phone_group);
+    let added = submit_with_info(
+        &mut c,
+        &tenant,
+        group_id,
+        "alice-phone",
+        0,
+        commit,
+        welcome,
+        phone.group_info(&phone_group),
+    )
+    .await
+    .expect("add bob with the GroupInfo");
+    assert_eq!(added.epoch, 1);
+    let bob_inbox = drain(&mut c, &tenant, "bob-phone", 0).await;
+    let mut bob_group = bob.join(&bob_inbox[0].payload);
+    let phone_seq = drain(&mut c, &tenant, "alice-phone", 0)
+        .await
+        .last()
+        .map_or(0, |entry| entry.seq);
+
+    let served = group_info(&mut c, &tenant, group_id).await;
+    assert_eq!((served.epoch, served.group_info_epoch), (1, 1));
+    assert_eq!(
+        served.external_join_policy,
+        msg_pb::ExternalJoinPolicy::SamePrincipal as i32
+    );
+
+    // (b) A device of a principal with no member device is refused.
+    let (_mallory_group, mallory_commit, mallory_info) =
+        mallory.external_join(&served.group_info, &served.ratchet_tree);
+    let refused = submit_with_info(
+        &mut c,
+        &tenant,
+        group_id,
+        "mallory-phone",
+        1,
+        mallory_commit,
+        Vec::new(),
+        mallory_info,
+    )
+    .await
+    .expect_err("a stranger cannot join externally");
+    assert_eq!(refused.code(), Code::PermissionDenied);
+    assert_eq!(
+        decode_detail(&refused).policy_decision_id,
+        "messaging_external_join_not_permitted"
+    );
+
+    // (a) The laptop of alice joins: it gets the COMMIT echo, the members
+    // apply it.
+    let (mut laptop_group, laptop_commit, laptop_info) =
+        laptop.external_join(&served.group_info, &served.ratchet_tree);
+    let joined = submit_with_info(
+        &mut c,
+        &tenant,
+        group_id,
+        "alice-laptop",
+        1,
+        laptop_commit,
+        Vec::new(),
+        laptop_info,
+    )
+    .await
+    .expect("the laptop joins externally");
+    assert_eq!(joined.epoch, 2);
+    assert_eq!(joined.added_device_ids, ["alice-laptop"]);
+    assert_eq!(
+        joined.member_device_ids,
+        ["alice-laptop", "alice-phone", "bob-phone"]
+    );
+    let laptop_inbox = drain(&mut c, &tenant, "alice-laptop", 0).await;
+    assert_eq!(laptop_inbox.len(), 1);
+    assert_eq!(laptop_inbox[0].kind, "COMMIT", "a joiner gets no Welcome");
+    assert_eq!(laptop_inbox[0].sender_device_id, "alice-laptop");
+    let phone_entries = drain(&mut c, &tenant, "alice-phone", phone_seq).await;
+    let phone_seq = phone_entries.last().expect("commit").seq;
+    phone.apply_commit(
+        &mut phone_group,
+        &phone_entries.last().expect("commit").payload,
+    );
+    let bob_entries = drain(&mut c, &tenant, "bob-phone", bob_inbox[0].seq).await;
+    let bob_seq = bob_entries.last().expect("commit").seq;
+    bob.apply_commit(&mut bob_group, &bob_entries.last().expect("commit").payload);
+    let refreshed = group_info(&mut c, &tenant, group_id).await;
+    assert_eq!((refreshed.epoch, refreshed.group_info_epoch), (2, 2));
+
+    let ciphertext = laptop.encrypt(&mut laptop_group, b"hello from the laptop");
+    let sent = send(
+        &mut c,
+        &tenant,
+        group_id,
+        "alice-laptop",
+        ciphertext,
+        "laptop-1",
+    )
+    .await
+    .expect("the joined device sends");
+    assert_eq!(sent.fanout, 3);
+    for (device, group, after) in [
+        (&phone, &mut phone_group, phone_seq),
+        (&bob, &mut bob_group, bob_seq),
+    ] {
+        let entries = drain(&mut c, &tenant, &device.device_id, after).await;
+        let message = entries.last().expect("message");
+        assert_eq!(message.kind, "MESSAGE");
+        assert_eq!(
+            device.decrypt(group, &message.payload),
+            b"hello from the laptop"
+        );
+    }
+
+    // (c) The epoch-1 GroupInfo is stale now.
+    let (_tablet_group, stale_commit, stale_info) =
+        tablet.external_join(&served.group_info, &served.ratchet_tree);
+    let stale = submit_with_info(
+        &mut c,
+        &tenant,
+        group_id,
+        "alice-tablet",
+        1,
+        stale_commit,
+        Vec::new(),
+        stale_info,
+    )
+    .await
+    .expect_err("a join from a past GroupInfo is stale");
+    assert_eq!(stale.code(), Code::FailedPrecondition);
+
+    // (d) A group created without a policy refuses every external join.
+    let closed = "closed-room";
+    let (_closed_group, closed_info, closed_tree) = phone.create_group(closed);
+    create_with_policy(
+        &mut c,
+        &tenant,
+        closed,
+        "alice-phone",
+        closed_info,
+        closed_tree,
+        msg_pb::ExternalJoinPolicy::Unspecified,
+    )
+    .await
+    .expect("create a closed group");
+    let closed_served = group_info(&mut c, &tenant, closed).await;
+    assert_eq!(
+        closed_served.external_join_policy,
+        msg_pb::ExternalJoinPolicy::None as i32
+    );
+    let (_closed_join, closed_commit, closed_join_info) =
+        tablet.external_join(&closed_served.group_info, &closed_served.ratchet_tree);
+    let disabled = submit_with_info(
+        &mut c,
+        &tenant,
+        closed,
+        "alice-tablet",
+        0,
+        closed_commit,
+        Vec::new(),
+        closed_join_info,
+    )
+    .await
+    .expect_err("a closed group refuses external joins");
+    assert_eq!(disabled.code(), Code::PermissionDenied);
+    assert_eq!(
+        decode_detail(&disabled).policy_decision_id,
+        "messaging_external_join_disabled"
+    );
+
+    // (f) An end user reads only the GroupInfo of a group it is in.
+    let hidden = group_info_as(&tenant, "mallory", group_id)
+        .await
+        .expect_err("a non-member end user sees no GroupInfo");
+    assert_eq!(hidden.code(), Code::NotFound);
+    let visible = group_info_as(&tenant, "bob", group_id)
+        .await
+        .expect("a member end user reads the GroupInfo");
+    assert_eq!(visible.epoch, 2);
 }

@@ -222,6 +222,32 @@ GUCs therefore cannot widen visibility. Callers must provide an idempotency key;
 use the single-lease or emergency project revoke RPCs to terminate sessions and
 remove the generated role, grants, and policies.
 
+## End-To-End Encrypted Messaging
+
+`MessagingService` is the MLS delivery service and key directory. It never holds
+a group secret or sees plaintext, but it does vouch for which signature key
+belongs to which device. An honest broker refuses a key change for a registered
+device id and checks published KeyPackages and commit leaves against the
+directory key, so a swapped key can only come from a compromised directory or
+broker. The SDK clients defend against that by pinning keys:
+
+- **Caught:** a different key for a device the client has already seen, whether
+  it comes from the directory, a claimed KeyPackage, a Welcome or another
+  member's commit. Listing devices and adding members fail closed
+  (`KeyChanged`); a changed key inside a group the device already belongs to is
+  reported as a key event. The pin never changes until the user compares the
+  new fingerprint out of band and accepts it.
+- **Reported:** a new device of a user the client already knows, and any new
+  device of the user's own account (a broker adding a device to your account).
+- **Not caught by pinning alone:** a key that was already swapped the first time
+  the client saw that device (trust on first use), or a forged new device of a
+  user nobody compares. Users close that gap by comparing safety numbers (12
+  groups of 5 digits computed from both users' pinned keys) in person or over a
+  call, and by acting on new-device events.
+
+Pins live in the client's device state, so they survive restarts and travel in
+an encrypted backup. Downgrading a client to 0.6.0 drops them.
+
 ## Audit And Events
 
 Every auth, policy, native-service, and CDC (change-data-capture) event carries

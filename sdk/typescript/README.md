@@ -225,6 +225,18 @@ await chat.updateKeys("room-1");                  // post-compromise key rotatio
 credential names `<tenant>/<subject>/<device>`). A commit refused because another
 member's commit won the epoch is re-based automatically (`CommitOutcome.rebases`).
 
+The client pins the first signature key it sees for every device (from
+`listDevices`, a claimed KeyPackage, a Welcome or a commit) in the device
+snapshot. A different key later is never trusted silently: `listDevices` and
+`addMembers` throw `KeyChangedError` (`deviceId`, `pinnedFingerprint`,
+`observedFingerprint`), and a changed key inside a group the device already
+belongs to, or a new device of a known user (or of your own), is queued for
+`takeKeyEvents()`. Users compare `await chat.safetyNumber(peerSubjectId)` (12
+groups of 5 digits, the same on both sides) in person or over a call;
+`verifyDevice(subject, device, fingerprint)` marks a device verified, and after
+comparing a changed key's `observedFingerprint` with its owner,
+`acceptKeyChange(subject, device, fingerprint)` re-pins exactly that key.
+
 Encrypted backup is opt-in: `chat.backup(recoverySecret, history)` seals the
 device state and your history under a key derived from the user's recovery
 secret (Argon2id, HKDF-SHA256, XChaCha20-Poly1305) and stores only the envelope

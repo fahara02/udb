@@ -307,6 +307,7 @@ async fn live_purge_subject_erases_messaging_rows_and_lists_the_tables_in_the_re
             creator_device_id: "alice-phone".to_string(),
             group_info: info,
             ratchet_tree: tree,
+            ..Default::default()
         },
     ))
     .await

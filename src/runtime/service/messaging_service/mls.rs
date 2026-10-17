@@ -310,6 +310,9 @@ pub(crate) fn create_public_group(
 pub(crate) struct AcceptedCommit {
     pub(crate) committed_epoch: u64,
     pub(crate) sender_identity: Vec<u8>,
+    /// An external commit (RFC 9420 `new_member_commit`): the signer joined the
+    /// group with it instead of being a member already.
+    pub(crate) external: bool,
     pub(crate) after: GroupState,
 }
 
@@ -365,6 +368,7 @@ pub(crate) fn apply_commit(
             "commit sender must be a member or an external joiner",
         ));
     }
+    let external = matches!(processed.sender(), Sender::NewMemberCommit);
     let staged = match processed.into_content() {
         ProcessedMessageContent::StagedCommitMessage(staged) => staged,
         _ => return Err(MlsReject::new("commit", "message is not a commit")),
@@ -377,6 +381,7 @@ pub(crate) fn apply_commit(
     Ok(AcceptedCommit {
         committed_epoch,
         sender_identity,
+        external,
         after: GroupState {
             epoch,
             state: dump_state(&provider),
