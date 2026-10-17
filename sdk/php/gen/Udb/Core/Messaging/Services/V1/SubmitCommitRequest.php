@@ -42,14 +42,16 @@ class SubmitCommitRequest extends \Google\Protobuf\Internal\Message
     protected $commit = '';
     /**
      * TLS-serialized MlsMessage carrying the Welcome for added devices; required
-     * when the commit adds members.
+     * when a member's commit adds members, empty for an external commit.
      *
      * Generated from protobuf field <code>bytes welcome = 6 [json_name = "welcome"];</code>
      */
     protected $welcome = '';
     /**
-     * Optional TLS-serialized MlsMessage carrying the signed GroupInfo of the new
-     * epoch, served by GetGroupInfo for external joins.
+     * TLS-serialized MlsMessage carrying the signed GroupInfo of the new epoch,
+     * served by GetGroupInfo for external joins. Required on every commit to a
+     * group whose external_join_policy is not NONE (optional otherwise); it must
+     * verify against the post-commit tree.
      *
      * Generated from protobuf field <code>bytes group_info = 7 [json_name = "groupInfo"];</code>
      */
@@ -78,10 +80,12 @@ class SubmitCommitRequest extends \Google\Protobuf\Internal\Message
      *           TLS-serialized MlsMessage carrying the PublicMessage commit.
      *     @type string $welcome
      *           TLS-serialized MlsMessage carrying the Welcome for added devices; required
-     *           when the commit adds members.
+     *           when a member's commit adds members, empty for an external commit.
      *     @type string $group_info
-     *           Optional TLS-serialized MlsMessage carrying the signed GroupInfo of the new
-     *           epoch, served by GetGroupInfo for external joins.
+     *           TLS-serialized MlsMessage carrying the signed GroupInfo of the new epoch,
+     *           served by GetGroupInfo for external joins. Required on every commit to a
+     *           group whose external_join_policy is not NONE (optional otherwise); it must
+     *           verify against the post-commit tree.
      *     @type string $client_message_id
      *           Client idempotency key. A retried commit with the same key returns the
      *           original result instead of being re-applied.
@@ -216,7 +220,7 @@ class SubmitCommitRequest extends \Google\Protobuf\Internal\Message
 
     /**
      * TLS-serialized MlsMessage carrying the Welcome for added devices; required
-     * when the commit adds members.
+     * when a member's commit adds members, empty for an external commit.
      *
      * Generated from protobuf field <code>bytes welcome = 6 [json_name = "welcome"];</code>
      * @return string
@@ -228,7 +232,7 @@ class SubmitCommitRequest extends \Google\Protobuf\Internal\Message
 
     /**
      * TLS-serialized MlsMessage carrying the Welcome for added devices; required
-     * when the commit adds members.
+     * when a member's commit adds members, empty for an external commit.
      *
      * Generated from protobuf field <code>bytes welcome = 6 [json_name = "welcome"];</code>
      * @param string $var
@@ -243,8 +247,10 @@ class SubmitCommitRequest extends \Google\Protobuf\Internal\Message
     }
 
     /**
-     * Optional TLS-serialized MlsMessage carrying the signed GroupInfo of the new
-     * epoch, served by GetGroupInfo for external joins.
+     * TLS-serialized MlsMessage carrying the signed GroupInfo of the new epoch,
+     * served by GetGroupInfo for external joins. Required on every commit to a
+     * group whose external_join_policy is not NONE (optional otherwise); it must
+     * verify against the post-commit tree.
      *
      * Generated from protobuf field <code>bytes group_info = 7 [json_name = "groupInfo"];</code>
      * @return string
@@ -255,8 +261,10 @@ class SubmitCommitRequest extends \Google\Protobuf\Internal\Message
     }
 
     /**
-     * Optional TLS-serialized MlsMessage carrying the signed GroupInfo of the new
-     * epoch, served by GetGroupInfo for external joins.
+     * TLS-serialized MlsMessage carrying the signed GroupInfo of the new epoch,
+     * served by GetGroupInfo for external joins. Required on every commit to a
+     * group whose external_join_policy is not NONE (optional otherwise); it must
+     * verify against the post-commit tree.
      *
      * Generated from protobuf field <code>bytes group_info = 7 [json_name = "groupInfo"];</code>
      * @param string $var

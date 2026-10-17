@@ -3564,7 +3564,7 @@ export const ENTITY_REGISTRY: Record<string, EntityBinding> = {
     table: "mls_groups",
     primaryKeys: ["id"],
     key: ["id"],
-    fields: ["id", "tenant_id", "group_id", "epoch", "public_group_state", "group_info", "group_info_epoch", "created_by_device_id", "created_at", "updated_at", "created_by"],
+    fields: ["id", "tenant_id", "group_id", "epoch", "public_group_state", "group_info", "group_info_epoch", "created_by_device_id", "created_at", "updated_at", "external_join_policy", "created_by"],
     relations: [],
     versionField: "",
     tsType: "Record<string, unknown>",

@@ -23,6 +23,64 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+// Who may join a group by an external commit (RFC 9420 §12.4.3.2) built from
+// the GroupInfo GetGroupInfo serves.
+type ExternalJoinPolicy int32
+
+const (
+	// Treated as NONE.
+	ExternalJoinPolicy_EXTERNAL_JOIN_POLICY_UNSPECIFIED ExternalJoinPolicy = 0
+	// No external joins: devices join only from a member's Welcome.
+	ExternalJoinPolicy_EXTERNAL_JOIN_POLICY_NONE ExternalJoinPolicy = 1
+	// A device whose principal already has a member device in the group.
+	ExternalJoinPolicy_EXTERNAL_JOIN_POLICY_SAME_PRINCIPAL ExternalJoinPolicy = 2
+	// Any active device of the tenant.
+	ExternalJoinPolicy_EXTERNAL_JOIN_POLICY_TENANT ExternalJoinPolicy = 3
+)
+
+// Enum value maps for ExternalJoinPolicy.
+var (
+	ExternalJoinPolicy_name = map[int32]string{
+		0: "EXTERNAL_JOIN_POLICY_UNSPECIFIED",
+		1: "EXTERNAL_JOIN_POLICY_NONE",
+		2: "EXTERNAL_JOIN_POLICY_SAME_PRINCIPAL",
+		3: "EXTERNAL_JOIN_POLICY_TENANT",
+	}
+	ExternalJoinPolicy_value = map[string]int32{
+		"EXTERNAL_JOIN_POLICY_UNSPECIFIED":    0,
+		"EXTERNAL_JOIN_POLICY_NONE":           1,
+		"EXTERNAL_JOIN_POLICY_SAME_PRINCIPAL": 2,
+		"EXTERNAL_JOIN_POLICY_TENANT":         3,
+	}
+)
+
+func (x ExternalJoinPolicy) Enum() *ExternalJoinPolicy {
+	p := new(ExternalJoinPolicy)
+	*p = x
+	return p
+}
+
+func (x ExternalJoinPolicy) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (ExternalJoinPolicy) Descriptor() protoreflect.EnumDescriptor {
+	return file_udb_core_messaging_services_v1_messaging_service_proto_enumTypes[0].Descriptor()
+}
+
+func (ExternalJoinPolicy) Type() protoreflect.EnumType {
+	return &file_udb_core_messaging_services_v1_messaging_service_proto_enumTypes[0]
+}
+
+func (x ExternalJoinPolicy) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use ExternalJoinPolicy.Descriptor instead.
+func (ExternalJoinPolicy) EnumDescriptor() ([]byte, []int) {
+	return file_udb_core_messaging_services_v1_messaging_service_proto_rawDescGZIP(), []int{0}
+}
+
 // A device in the key directory. `key_fingerprint` is the lowercase hex SHA-256
 // of the Ed25519 signature public key; peers compare it out of band.
 type DirectoryDevice struct {
@@ -1072,9 +1130,12 @@ type CreateGroupRequest struct {
 	// TLS-serialized MlsMessage carrying the creator's signed GroupInfo.
 	GroupInfo []byte `protobuf:"bytes,4,opt,name=group_info,json=groupInfo,proto3" json:"group_info,omitempty"`
 	// TLS-serialized ratchet tree exported by the creator.
-	RatchetTree   []byte `protobuf:"bytes,5,opt,name=ratchet_tree,json=ratchetTree,proto3" json:"ratchet_tree,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	RatchetTree []byte `protobuf:"bytes,5,opt,name=ratchet_tree,json=ratchetTree,proto3" json:"ratchet_tree,omitempty"`
+	// Who may join by an external commit. Unless NONE, every commit to the group
+	// must upload the new epoch's GroupInfo. A replayed create must repeat it.
+	ExternalJoinPolicy ExternalJoinPolicy `protobuf:"varint,6,opt,name=external_join_policy,json=externalJoinPolicy,proto3,enum=udb.core.messaging.services.v1.ExternalJoinPolicy" json:"external_join_policy,omitempty"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
 }
 
 func (x *CreateGroupRequest) Reset() {
@@ -1140,6 +1201,13 @@ func (x *CreateGroupRequest) GetRatchetTree() []byte {
 		return x.RatchetTree
 	}
 	return nil
+}
+
+func (x *CreateGroupRequest) GetExternalJoinPolicy() ExternalJoinPolicy {
+	if x != nil {
+		return x.ExternalJoinPolicy
+	}
+	return ExternalJoinPolicy_EXTERNAL_JOIN_POLICY_UNSPECIFIED
 }
 
 type CreateGroupResponse struct {
@@ -1230,10 +1298,12 @@ type SubmitCommitRequest struct {
 	// TLS-serialized MlsMessage carrying the PublicMessage commit.
 	Commit []byte `protobuf:"bytes,5,opt,name=commit,proto3" json:"commit,omitempty"`
 	// TLS-serialized MlsMessage carrying the Welcome for added devices; required
-	// when the commit adds members.
+	// when a member's commit adds members, empty for an external commit.
 	Welcome []byte `protobuf:"bytes,6,opt,name=welcome,proto3" json:"welcome,omitempty"`
-	// Optional TLS-serialized MlsMessage carrying the signed GroupInfo of the new
-	// epoch, served by GetGroupInfo for external joins.
+	// TLS-serialized MlsMessage carrying the signed GroupInfo of the new epoch,
+	// served by GetGroupInfo for external joins. Required on every commit to a
+	// group whose external_join_policy is not NONE (optional otherwise); it must
+	// verify against the post-commit tree.
 	GroupInfo []byte `protobuf:"bytes,7,opt,name=group_info,json=groupInfo,proto3" json:"group_info,omitempty"`
 	// Client idempotency key. A retried commit with the same key returns the
 	// original result instead of being re-applied.
@@ -1490,9 +1560,11 @@ type GetGroupInfoResponse struct {
 	MemberDeviceIds []string `protobuf:"bytes,6,rep,name=member_device_ids,json=memberDeviceIds,proto3" json:"member_device_ids,omitempty"`
 	Message         string   `protobuf:"bytes,7,opt,name=message,proto3" json:"message,omitempty"`
 	// Error information if operation failed
-	Error         *v1.ApiError `protobuf:"bytes,8,opt,name=error,proto3" json:"error,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	Error *v1.ApiError `protobuf:"bytes,8,opt,name=error,proto3" json:"error,omitempty"`
+	// Who may join by an external commit.
+	ExternalJoinPolicy ExternalJoinPolicy `protobuf:"varint,9,opt,name=external_join_policy,json=externalJoinPolicy,proto3,enum=udb.core.messaging.services.v1.ExternalJoinPolicy" json:"external_join_policy,omitempty"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
 }
 
 func (x *GetGroupInfoResponse) Reset() {
@@ -1579,6 +1651,13 @@ func (x *GetGroupInfoResponse) GetError() *v1.ApiError {
 		return x.Error
 	}
 	return nil
+}
+
+func (x *GetGroupInfoResponse) GetExternalJoinPolicy() ExternalJoinPolicy {
+	if x != nil {
+		return x.ExternalJoinPolicy
+	}
+	return ExternalJoinPolicy_EXTERNAL_JOIN_POLICY_UNSPECIFIED
 }
 
 type SendMessageRequest struct {
@@ -2719,14 +2798,15 @@ const file_udb_core_messaging_services_v1_messaging_service_proto_rawDesc = "" +
 	"\x12one_time_remaining\x18\x01 \x01(\x03R\x10oneTimeRemaining\x12&\n" +
 	"\x0fhas_last_resort\x18\x02 \x01(\bR\rhasLastResort\x12\x18\n" +
 	"\amessage\x18\x03 \x01(\tR\amessage\x122\n" +
-	"\x05error\x18\x04 \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error: \x9a\xb2\x19\x1c\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\tmessagingP\x01\"\xdc\x01\n" +
+	"\x05error\x18\x04 \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error: \x9a\xb2\x19\x1c\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\tmessagingP\x01\"\xc2\x02\n" +
 	"\x12CreateGroupRequest\x12\x1b\n" +
 	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x12\x19\n" +
 	"\bgroup_id\x18\x02 \x01(\tR\agroupId\x12*\n" +
 	"\x11creator_device_id\x18\x03 \x01(\tR\x0fcreatorDeviceId\x12\x1d\n" +
 	"\n" +
 	"group_info\x18\x04 \x01(\fR\tgroupInfo\x12!\n" +
-	"\fratchet_tree\x18\x05 \x01(\fR\vratchetTree: \x9a\xb2\x19\x1c\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\tmessagingP\x01\"\xd0\x01\n" +
+	"\fratchet_tree\x18\x05 \x01(\fR\vratchetTree\x12d\n" +
+	"\x14external_join_policy\x18\x06 \x01(\x0e22.udb.core.messaging.services.v1.ExternalJoinPolicyR\x12externalJoinPolicy: \x9a\xb2\x19\x1c\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\tmessagingP\x01\"\xd0\x01\n" +
 	"\x13CreateGroupResponse\x12\x19\n" +
 	"\bgroup_id\x18\x01 \x01(\tR\agroupId\x12\x14\n" +
 	"\x05epoch\x18\x02 \x01(\x03R\x05epoch\x12\x18\n" +
@@ -2753,7 +2833,7 @@ const file_udb_core_messaging_services_v1_messaging_service_proto_rawDesc = "" +
 	"\x05error\x18\a \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error: \x9a\xb2\x19\x1c\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\tmessagingP\x01\"o\n" +
 	"\x13GetGroupInfoRequest\x12\x1b\n" +
 	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x12\x19\n" +
-	"\bgroup_id\x18\x02 \x01(\tR\agroupId: \x9a\xb2\x19\x1c\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\tmessagingP\x01\"\xcf\x02\n" +
+	"\bgroup_id\x18\x02 \x01(\tR\agroupId: \x9a\xb2\x19\x1c\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\tmessagingP\x01\"\xb5\x03\n" +
 	"\x14GetGroupInfoResponse\x12\x19\n" +
 	"\bgroup_id\x18\x01 \x01(\tR\agroupId\x12\x14\n" +
 	"\x05epoch\x18\x02 \x01(\x03R\x05epoch\x12!\n" +
@@ -2763,7 +2843,8 @@ const file_udb_core_messaging_services_v1_messaging_service_proto_rawDesc = "" +
 	"\x10group_info_epoch\x18\x05 \x01(\x03R\x0egroupInfoEpoch\x12*\n" +
 	"\x11member_device_ids\x18\x06 \x03(\tR\x0fmemberDeviceIds\x12\x18\n" +
 	"\amessage\x18\a \x01(\tR\amessage\x122\n" +
-	"\x05error\x18\b \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error: \x9a\xb2\x19\x1c\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\tmessagingP\x01\"\xe4\x01\n" +
+	"\x05error\x18\b \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error\x12d\n" +
+	"\x14external_join_policy\x18\t \x01(\x0e22.udb.core.messaging.services.v1.ExternalJoinPolicyR\x12externalJoinPolicy: \x9a\xb2\x19\x1c\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\tmessagingP\x01\"\xe4\x01\n" +
 	"\x12SendMessageRequest\x12\x1b\n" +
 	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x12\x19\n" +
 	"\bgroup_id\x18\x02 \x01(\tR\agroupId\x12(\n" +
@@ -2853,7 +2934,12 @@ const file_udb_core_messaging_services_v1_messaging_service_proto_rawDesc = "" +
 	"\x1dDeleteMessagingBackupResponse\x12\x18\n" +
 	"\adeleted\x18\x01 \x01(\bR\adeleted\x12\x18\n" +
 	"\amessage\x18\x02 \x01(\tR\amessage\x122\n" +
-	"\x05error\x18\x03 \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error: \x9a\xb2\x19\x1c\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\tmessagingP\x012\xe57\n" +
+	"\x05error\x18\x03 \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error: \x9a\xb2\x19\x1c\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\tmessagingP\x01*\xa3\x01\n" +
+	"\x12ExternalJoinPolicy\x12$\n" +
+	" EXTERNAL_JOIN_POLICY_UNSPECIFIED\x10\x00\x12\x1d\n" +
+	"\x19EXTERNAL_JOIN_POLICY_NONE\x10\x01\x12'\n" +
+	"#EXTERNAL_JOIN_POLICY_SAME_PRINCIPAL\x10\x02\x12\x1f\n" +
+	"\x1bEXTERNAL_JOIN_POLICY_TENANT\x10\x032\xe57\n" +
 	"\x10MessagingService\x12\xdc\x03\n" +
 	"\x17RegisterMessagingDevice\x12>.udb.core.messaging.services.v1.RegisterMessagingDeviceRequest\x1a?.udb.core.messaging.services.v1.RegisterMessagingDeviceResponse\"\xbf\x02\xca\xf3\x18X\b\x02\x1a'udb:messaging:register-messaging-device \x01J\x03\x01\x02\x04j!messaging.RegisterMessagingDevice\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18Y\b\x01\x12\x19register_messaging_device\x1a\x03udb(\xb0\xea\x010\x03@\x01J\tmessagingP\x01Z messagingRegisterMessagingDevice\xf2\xf3\x18C\n" +
 	"\tmessaging\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x02\x9a\xf4\x18\r\n" +
@@ -2909,101 +2995,105 @@ func file_udb_core_messaging_services_v1_messaging_service_proto_rawDescGZIP() [
 	return file_udb_core_messaging_services_v1_messaging_service_proto_rawDescData
 }
 
+var file_udb_core_messaging_services_v1_messaging_service_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
 var file_udb_core_messaging_services_v1_messaging_service_proto_msgTypes = make([]protoimpl.MessageInfo, 34)
 var file_udb_core_messaging_services_v1_messaging_service_proto_goTypes = []any{
-	(*DirectoryDevice)(nil),                 // 0: udb.core.messaging.services.v1.DirectoryDevice
-	(*RegisterMessagingDeviceRequest)(nil),  // 1: udb.core.messaging.services.v1.RegisterMessagingDeviceRequest
-	(*RegisterMessagingDeviceResponse)(nil), // 2: udb.core.messaging.services.v1.RegisterMessagingDeviceResponse
-	(*ListMessagingDevicesRequest)(nil),     // 3: udb.core.messaging.services.v1.ListMessagingDevicesRequest
-	(*ListMessagingDevicesResponse)(nil),    // 4: udb.core.messaging.services.v1.ListMessagingDevicesResponse
-	(*RevokeMessagingDeviceRequest)(nil),    // 5: udb.core.messaging.services.v1.RevokeMessagingDeviceRequest
-	(*RevokeMessagingDeviceResponse)(nil),   // 6: udb.core.messaging.services.v1.RevokeMessagingDeviceResponse
-	(*PublishKeyPackagesRequest)(nil),       // 7: udb.core.messaging.services.v1.PublishKeyPackagesRequest
-	(*PublishKeyPackagesResponse)(nil),      // 8: udb.core.messaging.services.v1.PublishKeyPackagesResponse
-	(*ClaimKeyPackagesRequest)(nil),         // 9: udb.core.messaging.services.v1.ClaimKeyPackagesRequest
-	(*ClaimedKeyPackage)(nil),               // 10: udb.core.messaging.services.v1.ClaimedKeyPackage
-	(*ClaimKeyPackagesResponse)(nil),        // 11: udb.core.messaging.services.v1.ClaimKeyPackagesResponse
-	(*GetKeyPackageStockRequest)(nil),       // 12: udb.core.messaging.services.v1.GetKeyPackageStockRequest
-	(*GetKeyPackageStockResponse)(nil),      // 13: udb.core.messaging.services.v1.GetKeyPackageStockResponse
-	(*CreateGroupRequest)(nil),              // 14: udb.core.messaging.services.v1.CreateGroupRequest
-	(*CreateGroupResponse)(nil),             // 15: udb.core.messaging.services.v1.CreateGroupResponse
-	(*SubmitCommitRequest)(nil),             // 16: udb.core.messaging.services.v1.SubmitCommitRequest
-	(*SubmitCommitResponse)(nil),            // 17: udb.core.messaging.services.v1.SubmitCommitResponse
-	(*GetGroupInfoRequest)(nil),             // 18: udb.core.messaging.services.v1.GetGroupInfoRequest
-	(*GetGroupInfoResponse)(nil),            // 19: udb.core.messaging.services.v1.GetGroupInfoResponse
-	(*SendMessageRequest)(nil),              // 20: udb.core.messaging.services.v1.SendMessageRequest
-	(*SendMessageResponse)(nil),             // 21: udb.core.messaging.services.v1.SendMessageResponse
-	(*InboxEntry)(nil),                      // 22: udb.core.messaging.services.v1.InboxEntry
-	(*StreamInboxRequest)(nil),              // 23: udb.core.messaging.services.v1.StreamInboxRequest
-	(*StreamInboxResponse)(nil),             // 24: udb.core.messaging.services.v1.StreamInboxResponse
-	(*AckInboxRequest)(nil),                 // 25: udb.core.messaging.services.v1.AckInboxRequest
-	(*AckInboxResponse)(nil),                // 26: udb.core.messaging.services.v1.AckInboxResponse
-	(*MessagingBackupInfo)(nil),             // 27: udb.core.messaging.services.v1.MessagingBackupInfo
-	(*PutMessagingBackupRequest)(nil),       // 28: udb.core.messaging.services.v1.PutMessagingBackupRequest
-	(*PutMessagingBackupResponse)(nil),      // 29: udb.core.messaging.services.v1.PutMessagingBackupResponse
-	(*GetMessagingBackupRequest)(nil),       // 30: udb.core.messaging.services.v1.GetMessagingBackupRequest
-	(*GetMessagingBackupResponse)(nil),      // 31: udb.core.messaging.services.v1.GetMessagingBackupResponse
-	(*DeleteMessagingBackupRequest)(nil),    // 32: udb.core.messaging.services.v1.DeleteMessagingBackupRequest
-	(*DeleteMessagingBackupResponse)(nil),   // 33: udb.core.messaging.services.v1.DeleteMessagingBackupResponse
-	(*v1.ApiError)(nil),                     // 34: udb.core.common.v1.ApiError
+	(ExternalJoinPolicy)(0),                 // 0: udb.core.messaging.services.v1.ExternalJoinPolicy
+	(*DirectoryDevice)(nil),                 // 1: udb.core.messaging.services.v1.DirectoryDevice
+	(*RegisterMessagingDeviceRequest)(nil),  // 2: udb.core.messaging.services.v1.RegisterMessagingDeviceRequest
+	(*RegisterMessagingDeviceResponse)(nil), // 3: udb.core.messaging.services.v1.RegisterMessagingDeviceResponse
+	(*ListMessagingDevicesRequest)(nil),     // 4: udb.core.messaging.services.v1.ListMessagingDevicesRequest
+	(*ListMessagingDevicesResponse)(nil),    // 5: udb.core.messaging.services.v1.ListMessagingDevicesResponse
+	(*RevokeMessagingDeviceRequest)(nil),    // 6: udb.core.messaging.services.v1.RevokeMessagingDeviceRequest
+	(*RevokeMessagingDeviceResponse)(nil),   // 7: udb.core.messaging.services.v1.RevokeMessagingDeviceResponse
+	(*PublishKeyPackagesRequest)(nil),       // 8: udb.core.messaging.services.v1.PublishKeyPackagesRequest
+	(*PublishKeyPackagesResponse)(nil),      // 9: udb.core.messaging.services.v1.PublishKeyPackagesResponse
+	(*ClaimKeyPackagesRequest)(nil),         // 10: udb.core.messaging.services.v1.ClaimKeyPackagesRequest
+	(*ClaimedKeyPackage)(nil),               // 11: udb.core.messaging.services.v1.ClaimedKeyPackage
+	(*ClaimKeyPackagesResponse)(nil),        // 12: udb.core.messaging.services.v1.ClaimKeyPackagesResponse
+	(*GetKeyPackageStockRequest)(nil),       // 13: udb.core.messaging.services.v1.GetKeyPackageStockRequest
+	(*GetKeyPackageStockResponse)(nil),      // 14: udb.core.messaging.services.v1.GetKeyPackageStockResponse
+	(*CreateGroupRequest)(nil),              // 15: udb.core.messaging.services.v1.CreateGroupRequest
+	(*CreateGroupResponse)(nil),             // 16: udb.core.messaging.services.v1.CreateGroupResponse
+	(*SubmitCommitRequest)(nil),             // 17: udb.core.messaging.services.v1.SubmitCommitRequest
+	(*SubmitCommitResponse)(nil),            // 18: udb.core.messaging.services.v1.SubmitCommitResponse
+	(*GetGroupInfoRequest)(nil),             // 19: udb.core.messaging.services.v1.GetGroupInfoRequest
+	(*GetGroupInfoResponse)(nil),            // 20: udb.core.messaging.services.v1.GetGroupInfoResponse
+	(*SendMessageRequest)(nil),              // 21: udb.core.messaging.services.v1.SendMessageRequest
+	(*SendMessageResponse)(nil),             // 22: udb.core.messaging.services.v1.SendMessageResponse
+	(*InboxEntry)(nil),                      // 23: udb.core.messaging.services.v1.InboxEntry
+	(*StreamInboxRequest)(nil),              // 24: udb.core.messaging.services.v1.StreamInboxRequest
+	(*StreamInboxResponse)(nil),             // 25: udb.core.messaging.services.v1.StreamInboxResponse
+	(*AckInboxRequest)(nil),                 // 26: udb.core.messaging.services.v1.AckInboxRequest
+	(*AckInboxResponse)(nil),                // 27: udb.core.messaging.services.v1.AckInboxResponse
+	(*MessagingBackupInfo)(nil),             // 28: udb.core.messaging.services.v1.MessagingBackupInfo
+	(*PutMessagingBackupRequest)(nil),       // 29: udb.core.messaging.services.v1.PutMessagingBackupRequest
+	(*PutMessagingBackupResponse)(nil),      // 30: udb.core.messaging.services.v1.PutMessagingBackupResponse
+	(*GetMessagingBackupRequest)(nil),       // 31: udb.core.messaging.services.v1.GetMessagingBackupRequest
+	(*GetMessagingBackupResponse)(nil),      // 32: udb.core.messaging.services.v1.GetMessagingBackupResponse
+	(*DeleteMessagingBackupRequest)(nil),    // 33: udb.core.messaging.services.v1.DeleteMessagingBackupRequest
+	(*DeleteMessagingBackupResponse)(nil),   // 34: udb.core.messaging.services.v1.DeleteMessagingBackupResponse
+	(*v1.ApiError)(nil),                     // 35: udb.core.common.v1.ApiError
 }
 var file_udb_core_messaging_services_v1_messaging_service_proto_depIdxs = []int32{
-	0,  // 0: udb.core.messaging.services.v1.RegisterMessagingDeviceResponse.device:type_name -> udb.core.messaging.services.v1.DirectoryDevice
-	34, // 1: udb.core.messaging.services.v1.RegisterMessagingDeviceResponse.error:type_name -> udb.core.common.v1.ApiError
-	0,  // 2: udb.core.messaging.services.v1.ListMessagingDevicesResponse.devices:type_name -> udb.core.messaging.services.v1.DirectoryDevice
-	34, // 3: udb.core.messaging.services.v1.ListMessagingDevicesResponse.error:type_name -> udb.core.common.v1.ApiError
-	34, // 4: udb.core.messaging.services.v1.RevokeMessagingDeviceResponse.error:type_name -> udb.core.common.v1.ApiError
-	34, // 5: udb.core.messaging.services.v1.PublishKeyPackagesResponse.error:type_name -> udb.core.common.v1.ApiError
-	10, // 6: udb.core.messaging.services.v1.ClaimKeyPackagesResponse.key_packages:type_name -> udb.core.messaging.services.v1.ClaimedKeyPackage
-	34, // 7: udb.core.messaging.services.v1.ClaimKeyPackagesResponse.error:type_name -> udb.core.common.v1.ApiError
-	34, // 8: udb.core.messaging.services.v1.GetKeyPackageStockResponse.error:type_name -> udb.core.common.v1.ApiError
-	34, // 9: udb.core.messaging.services.v1.CreateGroupResponse.error:type_name -> udb.core.common.v1.ApiError
-	34, // 10: udb.core.messaging.services.v1.SubmitCommitResponse.error:type_name -> udb.core.common.v1.ApiError
-	34, // 11: udb.core.messaging.services.v1.GetGroupInfoResponse.error:type_name -> udb.core.common.v1.ApiError
-	34, // 12: udb.core.messaging.services.v1.SendMessageResponse.error:type_name -> udb.core.common.v1.ApiError
-	22, // 13: udb.core.messaging.services.v1.StreamInboxResponse.entry:type_name -> udb.core.messaging.services.v1.InboxEntry
-	34, // 14: udb.core.messaging.services.v1.StreamInboxResponse.error:type_name -> udb.core.common.v1.ApiError
-	34, // 15: udb.core.messaging.services.v1.AckInboxResponse.error:type_name -> udb.core.common.v1.ApiError
-	27, // 16: udb.core.messaging.services.v1.PutMessagingBackupResponse.backup:type_name -> udb.core.messaging.services.v1.MessagingBackupInfo
-	34, // 17: udb.core.messaging.services.v1.PutMessagingBackupResponse.error:type_name -> udb.core.common.v1.ApiError
-	27, // 18: udb.core.messaging.services.v1.GetMessagingBackupResponse.backup:type_name -> udb.core.messaging.services.v1.MessagingBackupInfo
-	34, // 19: udb.core.messaging.services.v1.GetMessagingBackupResponse.error:type_name -> udb.core.common.v1.ApiError
-	34, // 20: udb.core.messaging.services.v1.DeleteMessagingBackupResponse.error:type_name -> udb.core.common.v1.ApiError
-	1,  // 21: udb.core.messaging.services.v1.MessagingService.RegisterMessagingDevice:input_type -> udb.core.messaging.services.v1.RegisterMessagingDeviceRequest
-	3,  // 22: udb.core.messaging.services.v1.MessagingService.ListMessagingDevices:input_type -> udb.core.messaging.services.v1.ListMessagingDevicesRequest
-	5,  // 23: udb.core.messaging.services.v1.MessagingService.RevokeMessagingDevice:input_type -> udb.core.messaging.services.v1.RevokeMessagingDeviceRequest
-	7,  // 24: udb.core.messaging.services.v1.MessagingService.PublishKeyPackages:input_type -> udb.core.messaging.services.v1.PublishKeyPackagesRequest
-	9,  // 25: udb.core.messaging.services.v1.MessagingService.ClaimKeyPackages:input_type -> udb.core.messaging.services.v1.ClaimKeyPackagesRequest
-	12, // 26: udb.core.messaging.services.v1.MessagingService.GetKeyPackageStock:input_type -> udb.core.messaging.services.v1.GetKeyPackageStockRequest
-	14, // 27: udb.core.messaging.services.v1.MessagingService.CreateGroup:input_type -> udb.core.messaging.services.v1.CreateGroupRequest
-	16, // 28: udb.core.messaging.services.v1.MessagingService.SubmitCommit:input_type -> udb.core.messaging.services.v1.SubmitCommitRequest
-	18, // 29: udb.core.messaging.services.v1.MessagingService.GetGroupInfo:input_type -> udb.core.messaging.services.v1.GetGroupInfoRequest
-	20, // 30: udb.core.messaging.services.v1.MessagingService.SendMessage:input_type -> udb.core.messaging.services.v1.SendMessageRequest
-	23, // 31: udb.core.messaging.services.v1.MessagingService.StreamInbox:input_type -> udb.core.messaging.services.v1.StreamInboxRequest
-	25, // 32: udb.core.messaging.services.v1.MessagingService.AckInbox:input_type -> udb.core.messaging.services.v1.AckInboxRequest
-	28, // 33: udb.core.messaging.services.v1.MessagingService.PutMessagingBackup:input_type -> udb.core.messaging.services.v1.PutMessagingBackupRequest
-	30, // 34: udb.core.messaging.services.v1.MessagingService.GetMessagingBackup:input_type -> udb.core.messaging.services.v1.GetMessagingBackupRequest
-	32, // 35: udb.core.messaging.services.v1.MessagingService.DeleteMessagingBackup:input_type -> udb.core.messaging.services.v1.DeleteMessagingBackupRequest
-	2,  // 36: udb.core.messaging.services.v1.MessagingService.RegisterMessagingDevice:output_type -> udb.core.messaging.services.v1.RegisterMessagingDeviceResponse
-	4,  // 37: udb.core.messaging.services.v1.MessagingService.ListMessagingDevices:output_type -> udb.core.messaging.services.v1.ListMessagingDevicesResponse
-	6,  // 38: udb.core.messaging.services.v1.MessagingService.RevokeMessagingDevice:output_type -> udb.core.messaging.services.v1.RevokeMessagingDeviceResponse
-	8,  // 39: udb.core.messaging.services.v1.MessagingService.PublishKeyPackages:output_type -> udb.core.messaging.services.v1.PublishKeyPackagesResponse
-	11, // 40: udb.core.messaging.services.v1.MessagingService.ClaimKeyPackages:output_type -> udb.core.messaging.services.v1.ClaimKeyPackagesResponse
-	13, // 41: udb.core.messaging.services.v1.MessagingService.GetKeyPackageStock:output_type -> udb.core.messaging.services.v1.GetKeyPackageStockResponse
-	15, // 42: udb.core.messaging.services.v1.MessagingService.CreateGroup:output_type -> udb.core.messaging.services.v1.CreateGroupResponse
-	17, // 43: udb.core.messaging.services.v1.MessagingService.SubmitCommit:output_type -> udb.core.messaging.services.v1.SubmitCommitResponse
-	19, // 44: udb.core.messaging.services.v1.MessagingService.GetGroupInfo:output_type -> udb.core.messaging.services.v1.GetGroupInfoResponse
-	21, // 45: udb.core.messaging.services.v1.MessagingService.SendMessage:output_type -> udb.core.messaging.services.v1.SendMessageResponse
-	24, // 46: udb.core.messaging.services.v1.MessagingService.StreamInbox:output_type -> udb.core.messaging.services.v1.StreamInboxResponse
-	26, // 47: udb.core.messaging.services.v1.MessagingService.AckInbox:output_type -> udb.core.messaging.services.v1.AckInboxResponse
-	29, // 48: udb.core.messaging.services.v1.MessagingService.PutMessagingBackup:output_type -> udb.core.messaging.services.v1.PutMessagingBackupResponse
-	31, // 49: udb.core.messaging.services.v1.MessagingService.GetMessagingBackup:output_type -> udb.core.messaging.services.v1.GetMessagingBackupResponse
-	33, // 50: udb.core.messaging.services.v1.MessagingService.DeleteMessagingBackup:output_type -> udb.core.messaging.services.v1.DeleteMessagingBackupResponse
-	36, // [36:51] is the sub-list for method output_type
-	21, // [21:36] is the sub-list for method input_type
-	21, // [21:21] is the sub-list for extension type_name
-	21, // [21:21] is the sub-list for extension extendee
-	0,  // [0:21] is the sub-list for field type_name
+	1,  // 0: udb.core.messaging.services.v1.RegisterMessagingDeviceResponse.device:type_name -> udb.core.messaging.services.v1.DirectoryDevice
+	35, // 1: udb.core.messaging.services.v1.RegisterMessagingDeviceResponse.error:type_name -> udb.core.common.v1.ApiError
+	1,  // 2: udb.core.messaging.services.v1.ListMessagingDevicesResponse.devices:type_name -> udb.core.messaging.services.v1.DirectoryDevice
+	35, // 3: udb.core.messaging.services.v1.ListMessagingDevicesResponse.error:type_name -> udb.core.common.v1.ApiError
+	35, // 4: udb.core.messaging.services.v1.RevokeMessagingDeviceResponse.error:type_name -> udb.core.common.v1.ApiError
+	35, // 5: udb.core.messaging.services.v1.PublishKeyPackagesResponse.error:type_name -> udb.core.common.v1.ApiError
+	11, // 6: udb.core.messaging.services.v1.ClaimKeyPackagesResponse.key_packages:type_name -> udb.core.messaging.services.v1.ClaimedKeyPackage
+	35, // 7: udb.core.messaging.services.v1.ClaimKeyPackagesResponse.error:type_name -> udb.core.common.v1.ApiError
+	35, // 8: udb.core.messaging.services.v1.GetKeyPackageStockResponse.error:type_name -> udb.core.common.v1.ApiError
+	0,  // 9: udb.core.messaging.services.v1.CreateGroupRequest.external_join_policy:type_name -> udb.core.messaging.services.v1.ExternalJoinPolicy
+	35, // 10: udb.core.messaging.services.v1.CreateGroupResponse.error:type_name -> udb.core.common.v1.ApiError
+	35, // 11: udb.core.messaging.services.v1.SubmitCommitResponse.error:type_name -> udb.core.common.v1.ApiError
+	35, // 12: udb.core.messaging.services.v1.GetGroupInfoResponse.error:type_name -> udb.core.common.v1.ApiError
+	0,  // 13: udb.core.messaging.services.v1.GetGroupInfoResponse.external_join_policy:type_name -> udb.core.messaging.services.v1.ExternalJoinPolicy
+	35, // 14: udb.core.messaging.services.v1.SendMessageResponse.error:type_name -> udb.core.common.v1.ApiError
+	23, // 15: udb.core.messaging.services.v1.StreamInboxResponse.entry:type_name -> udb.core.messaging.services.v1.InboxEntry
+	35, // 16: udb.core.messaging.services.v1.StreamInboxResponse.error:type_name -> udb.core.common.v1.ApiError
+	35, // 17: udb.core.messaging.services.v1.AckInboxResponse.error:type_name -> udb.core.common.v1.ApiError
+	28, // 18: udb.core.messaging.services.v1.PutMessagingBackupResponse.backup:type_name -> udb.core.messaging.services.v1.MessagingBackupInfo
+	35, // 19: udb.core.messaging.services.v1.PutMessagingBackupResponse.error:type_name -> udb.core.common.v1.ApiError
+	28, // 20: udb.core.messaging.services.v1.GetMessagingBackupResponse.backup:type_name -> udb.core.messaging.services.v1.MessagingBackupInfo
+	35, // 21: udb.core.messaging.services.v1.GetMessagingBackupResponse.error:type_name -> udb.core.common.v1.ApiError
+	35, // 22: udb.core.messaging.services.v1.DeleteMessagingBackupResponse.error:type_name -> udb.core.common.v1.ApiError
+	2,  // 23: udb.core.messaging.services.v1.MessagingService.RegisterMessagingDevice:input_type -> udb.core.messaging.services.v1.RegisterMessagingDeviceRequest
+	4,  // 24: udb.core.messaging.services.v1.MessagingService.ListMessagingDevices:input_type -> udb.core.messaging.services.v1.ListMessagingDevicesRequest
+	6,  // 25: udb.core.messaging.services.v1.MessagingService.RevokeMessagingDevice:input_type -> udb.core.messaging.services.v1.RevokeMessagingDeviceRequest
+	8,  // 26: udb.core.messaging.services.v1.MessagingService.PublishKeyPackages:input_type -> udb.core.messaging.services.v1.PublishKeyPackagesRequest
+	10, // 27: udb.core.messaging.services.v1.MessagingService.ClaimKeyPackages:input_type -> udb.core.messaging.services.v1.ClaimKeyPackagesRequest
+	13, // 28: udb.core.messaging.services.v1.MessagingService.GetKeyPackageStock:input_type -> udb.core.messaging.services.v1.GetKeyPackageStockRequest
+	15, // 29: udb.core.messaging.services.v1.MessagingService.CreateGroup:input_type -> udb.core.messaging.services.v1.CreateGroupRequest
+	17, // 30: udb.core.messaging.services.v1.MessagingService.SubmitCommit:input_type -> udb.core.messaging.services.v1.SubmitCommitRequest
+	19, // 31: udb.core.messaging.services.v1.MessagingService.GetGroupInfo:input_type -> udb.core.messaging.services.v1.GetGroupInfoRequest
+	21, // 32: udb.core.messaging.services.v1.MessagingService.SendMessage:input_type -> udb.core.messaging.services.v1.SendMessageRequest
+	24, // 33: udb.core.messaging.services.v1.MessagingService.StreamInbox:input_type -> udb.core.messaging.services.v1.StreamInboxRequest
+	26, // 34: udb.core.messaging.services.v1.MessagingService.AckInbox:input_type -> udb.core.messaging.services.v1.AckInboxRequest
+	29, // 35: udb.core.messaging.services.v1.MessagingService.PutMessagingBackup:input_type -> udb.core.messaging.services.v1.PutMessagingBackupRequest
+	31, // 36: udb.core.messaging.services.v1.MessagingService.GetMessagingBackup:input_type -> udb.core.messaging.services.v1.GetMessagingBackupRequest
+	33, // 37: udb.core.messaging.services.v1.MessagingService.DeleteMessagingBackup:input_type -> udb.core.messaging.services.v1.DeleteMessagingBackupRequest
+	3,  // 38: udb.core.messaging.services.v1.MessagingService.RegisterMessagingDevice:output_type -> udb.core.messaging.services.v1.RegisterMessagingDeviceResponse
+	5,  // 39: udb.core.messaging.services.v1.MessagingService.ListMessagingDevices:output_type -> udb.core.messaging.services.v1.ListMessagingDevicesResponse
+	7,  // 40: udb.core.messaging.services.v1.MessagingService.RevokeMessagingDevice:output_type -> udb.core.messaging.services.v1.RevokeMessagingDeviceResponse
+	9,  // 41: udb.core.messaging.services.v1.MessagingService.PublishKeyPackages:output_type -> udb.core.messaging.services.v1.PublishKeyPackagesResponse
+	12, // 42: udb.core.messaging.services.v1.MessagingService.ClaimKeyPackages:output_type -> udb.core.messaging.services.v1.ClaimKeyPackagesResponse
+	14, // 43: udb.core.messaging.services.v1.MessagingService.GetKeyPackageStock:output_type -> udb.core.messaging.services.v1.GetKeyPackageStockResponse
+	16, // 44: udb.core.messaging.services.v1.MessagingService.CreateGroup:output_type -> udb.core.messaging.services.v1.CreateGroupResponse
+	18, // 45: udb.core.messaging.services.v1.MessagingService.SubmitCommit:output_type -> udb.core.messaging.services.v1.SubmitCommitResponse
+	20, // 46: udb.core.messaging.services.v1.MessagingService.GetGroupInfo:output_type -> udb.core.messaging.services.v1.GetGroupInfoResponse
+	22, // 47: udb.core.messaging.services.v1.MessagingService.SendMessage:output_type -> udb.core.messaging.services.v1.SendMessageResponse
+	25, // 48: udb.core.messaging.services.v1.MessagingService.StreamInbox:output_type -> udb.core.messaging.services.v1.StreamInboxResponse
+	27, // 49: udb.core.messaging.services.v1.MessagingService.AckInbox:output_type -> udb.core.messaging.services.v1.AckInboxResponse
+	30, // 50: udb.core.messaging.services.v1.MessagingService.PutMessagingBackup:output_type -> udb.core.messaging.services.v1.PutMessagingBackupResponse
+	32, // 51: udb.core.messaging.services.v1.MessagingService.GetMessagingBackup:output_type -> udb.core.messaging.services.v1.GetMessagingBackupResponse
+	34, // 52: udb.core.messaging.services.v1.MessagingService.DeleteMessagingBackup:output_type -> udb.core.messaging.services.v1.DeleteMessagingBackupResponse
+	38, // [38:53] is the sub-list for method output_type
+	23, // [23:38] is the sub-list for method input_type
+	23, // [23:23] is the sub-list for extension type_name
+	23, // [23:23] is the sub-list for extension extendee
+	0,  // [0:23] is the sub-list for field type_name
 }
 
 func init() { file_udb_core_messaging_services_v1_messaging_service_proto_init() }
@@ -3016,13 +3106,14 @@ func file_udb_core_messaging_services_v1_messaging_service_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_udb_core_messaging_services_v1_messaging_service_proto_rawDesc), len(file_udb_core_messaging_services_v1_messaging_service_proto_rawDesc)),
-			NumEnums:      0,
+			NumEnums:      1,
 			NumMessages:   34,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
 		GoTypes:           file_udb_core_messaging_services_v1_messaging_service_proto_goTypes,
 		DependencyIndexes: file_udb_core_messaging_services_v1_messaging_service_proto_depIdxs,
+		EnumInfos:         file_udb_core_messaging_services_v1_messaging_service_proto_enumTypes,
 		MessageInfos:      file_udb_core_messaging_services_v1_messaging_service_proto_msgTypes,
 	}.Build()
 	File_udb_core_messaging_services_v1_messaging_service_proto = out.File

@@ -651,6 +651,10 @@ public final class MessagingServiceGrpc {
      * Accepted only when its epoch is the group's current epoch and it validates
      * against the public group state; concurrent commits linearize and the loser
      * receives FAILED_PRECONDITION carrying the current epoch so it can re-base.
+     * An external commit (a new device joining from GetGroupInfo's GroupInfo, no
+     * Welcome) is accepted only as the group's external_join_policy allows; the
+     * joiner receives the COMMIT echo, not a Welcome. Groups whose policy is not
+     * NONE require the new epoch's GroupInfo on every commit.
      * </pre>
      */
     default void submitCommit(com.udb.core.messaging.services.v1.SubmitCommitRequest request,
@@ -661,7 +665,9 @@ public final class MessagingServiceGrpc {
     /**
      * <pre>
      * Return the group's current epoch, its exported public ratchet tree, and the
-     * latest signed GroupInfo a member uploaded, for an external join.
+     * latest signed GroupInfo a member uploaded, for an external join. An end
+     * user sees only groups one of its devices is a member of, or groups open to
+     * the tenant (EXTERNAL_JOIN_POLICY_TENANT); others are NOT_FOUND.
      * </pre>
      */
     default void getGroupInfo(com.udb.core.messaging.services.v1.GetGroupInfoRequest request,
@@ -886,6 +892,10 @@ public final class MessagingServiceGrpc {
      * Accepted only when its epoch is the group's current epoch and it validates
      * against the public group state; concurrent commits linearize and the loser
      * receives FAILED_PRECONDITION carrying the current epoch so it can re-base.
+     * An external commit (a new device joining from GetGroupInfo's GroupInfo, no
+     * Welcome) is accepted only as the group's external_join_policy allows; the
+     * joiner receives the COMMIT echo, not a Welcome. Groups whose policy is not
+     * NONE require the new epoch's GroupInfo on every commit.
      * </pre>
      */
     public void submitCommit(com.udb.core.messaging.services.v1.SubmitCommitRequest request,
@@ -897,7 +907,9 @@ public final class MessagingServiceGrpc {
     /**
      * <pre>
      * Return the group's current epoch, its exported public ratchet tree, and the
-     * latest signed GroupInfo a member uploaded, for an external join.
+     * latest signed GroupInfo a member uploaded, for an external join. An end
+     * user sees only groups one of its devices is a member of, or groups open to
+     * the tenant (EXTERNAL_JOIN_POLICY_TENANT); others are NOT_FOUND.
      * </pre>
      */
     public void getGroupInfo(com.udb.core.messaging.services.v1.GetGroupInfoRequest request,
@@ -1101,6 +1113,10 @@ public final class MessagingServiceGrpc {
      * Accepted only when its epoch is the group's current epoch and it validates
      * against the public group state; concurrent commits linearize and the loser
      * receives FAILED_PRECONDITION carrying the current epoch so it can re-base.
+     * An external commit (a new device joining from GetGroupInfo's GroupInfo, no
+     * Welcome) is accepted only as the group's external_join_policy allows; the
+     * joiner receives the COMMIT echo, not a Welcome. Groups whose policy is not
+     * NONE require the new epoch's GroupInfo on every commit.
      * </pre>
      */
     public com.udb.core.messaging.services.v1.SubmitCommitResponse submitCommit(com.udb.core.messaging.services.v1.SubmitCommitRequest request) throws io.grpc.StatusException {
@@ -1111,7 +1127,9 @@ public final class MessagingServiceGrpc {
     /**
      * <pre>
      * Return the group's current epoch, its exported public ratchet tree, and the
-     * latest signed GroupInfo a member uploaded, for an external join.
+     * latest signed GroupInfo a member uploaded, for an external join. An end
+     * user sees only groups one of its devices is a member of, or groups open to
+     * the tenant (EXTERNAL_JOIN_POLICY_TENANT); others are NOT_FOUND.
      * </pre>
      */
     public com.udb.core.messaging.services.v1.GetGroupInfoResponse getGroupInfo(com.udb.core.messaging.services.v1.GetGroupInfoRequest request) throws io.grpc.StatusException {
@@ -1310,6 +1328,10 @@ public final class MessagingServiceGrpc {
      * Accepted only when its epoch is the group's current epoch and it validates
      * against the public group state; concurrent commits linearize and the loser
      * receives FAILED_PRECONDITION carrying the current epoch so it can re-base.
+     * An external commit (a new device joining from GetGroupInfo's GroupInfo, no
+     * Welcome) is accepted only as the group's external_join_policy allows; the
+     * joiner receives the COMMIT echo, not a Welcome. Groups whose policy is not
+     * NONE require the new epoch's GroupInfo on every commit.
      * </pre>
      */
     public com.udb.core.messaging.services.v1.SubmitCommitResponse submitCommit(com.udb.core.messaging.services.v1.SubmitCommitRequest request) {
@@ -1320,7 +1342,9 @@ public final class MessagingServiceGrpc {
     /**
      * <pre>
      * Return the group's current epoch, its exported public ratchet tree, and the
-     * latest signed GroupInfo a member uploaded, for an external join.
+     * latest signed GroupInfo a member uploaded, for an external join. An end
+     * user sees only groups one of its devices is a member of, or groups open to
+     * the tenant (EXTERNAL_JOIN_POLICY_TENANT); others are NOT_FOUND.
      * </pre>
      */
     public com.udb.core.messaging.services.v1.GetGroupInfoResponse getGroupInfo(com.udb.core.messaging.services.v1.GetGroupInfoRequest request) {
@@ -1525,6 +1549,10 @@ public final class MessagingServiceGrpc {
      * Accepted only when its epoch is the group's current epoch and it validates
      * against the public group state; concurrent commits linearize and the loser
      * receives FAILED_PRECONDITION carrying the current epoch so it can re-base.
+     * An external commit (a new device joining from GetGroupInfo's GroupInfo, no
+     * Welcome) is accepted only as the group's external_join_policy allows; the
+     * joiner receives the COMMIT echo, not a Welcome. Groups whose policy is not
+     * NONE require the new epoch's GroupInfo on every commit.
      * </pre>
      */
     public com.google.common.util.concurrent.ListenableFuture<com.udb.core.messaging.services.v1.SubmitCommitResponse> submitCommit(
@@ -1536,7 +1564,9 @@ public final class MessagingServiceGrpc {
     /**
      * <pre>
      * Return the group's current epoch, its exported public ratchet tree, and the
-     * latest signed GroupInfo a member uploaded, for an external join.
+     * latest signed GroupInfo a member uploaded, for an external join. An end
+     * user sees only groups one of its devices is a member of, or groups open to
+     * the tenant (EXTERNAL_JOIN_POLICY_TENANT); others are NOT_FOUND.
      * </pre>
      */
     public com.google.common.util.concurrent.ListenableFuture<com.udb.core.messaging.services.v1.GetGroupInfoResponse> getGroupInfo(

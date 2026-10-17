@@ -85,4 +85,25 @@ public interface CreateGroupRequestOrBuilder extends
    * @return The ratchetTree.
    */
   com.google.protobuf.ByteString getRatchetTree();
+
+  /**
+   * <pre>
+   * Who may join by an external commit. Unless NONE, every commit to the group
+   * must upload the new epoch's GroupInfo. A replayed create must repeat it.
+   * </pre>
+   *
+   * <code>.udb.core.messaging.services.v1.ExternalJoinPolicy external_join_policy = 6 [json_name = "externalJoinPolicy"];</code>
+   * @return The enum numeric value on the wire for externalJoinPolicy.
+   */
+  int getExternalJoinPolicyValue();
+  /**
+   * <pre>
+   * Who may join by an external commit. Unless NONE, every commit to the group
+   * must upload the new epoch's GroupInfo. A replayed create must repeat it.
+   * </pre>
+   *
+   * <code>.udb.core.messaging.services.v1.ExternalJoinPolicy external_join_policy = 6 [json_name = "externalJoinPolicy"];</code>
+   * @return The externalJoinPolicy.
+   */
+  com.udb.core.messaging.services.v1.ExternalJoinPolicy getExternalJoinPolicy();
 }

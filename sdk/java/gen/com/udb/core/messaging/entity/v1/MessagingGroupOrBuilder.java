@@ -123,4 +123,24 @@ public interface MessagingGroupOrBuilder extends
    * <code>.google.protobuf.Timestamp updated_at = 10 [json_name = "updatedAt", (.udb.core.common.v1.pg_column) = { ... }</code>
    */
   com.google.protobuf.TimestampOrBuilder getUpdatedAtOrBuilder();
+
+  /**
+   * <pre>
+   * Who may join by an external commit: NONE | SAME_PRINCIPAL | TENANT.
+   * </pre>
+   *
+   * <code>string external_join_policy = 11 [json_name = "externalJoinPolicy", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The externalJoinPolicy.
+   */
+  java.lang.String getExternalJoinPolicy();
+  /**
+   * <pre>
+   * Who may join by an external commit: NONE | SAME_PRINCIPAL | TENANT.
+   * </pre>
+   *
+   * <code>string external_join_policy = 11 [json_name = "externalJoinPolicy", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The bytes for externalJoinPolicy.
+   */
+  com.google.protobuf.ByteString
+      getExternalJoinPolicyBytes();
 }

@@ -33,6 +33,7 @@ private static final long serialVersionUID = 0L;
     creatorDeviceId_ = "";
     groupInfo_ = com.google.protobuf.ByteString.EMPTY;
     ratchetTree_ = com.google.protobuf.ByteString.EMPTY;
+    externalJoinPolicy_ = 0;
   }
 
   public static final com.google.protobuf.Descriptors.Descriptor
@@ -215,6 +216,34 @@ private static final long serialVersionUID = 0L;
     return ratchetTree_;
   }
 
+  public static final int EXTERNAL_JOIN_POLICY_FIELD_NUMBER = 6;
+  private int externalJoinPolicy_ = 0;
+  /**
+   * <pre>
+   * Who may join by an external commit. Unless NONE, every commit to the group
+   * must upload the new epoch's GroupInfo. A replayed create must repeat it.
+   * </pre>
+   *
+   * <code>.udb.core.messaging.services.v1.ExternalJoinPolicy external_join_policy = 6 [json_name = "externalJoinPolicy"];</code>
+   * @return The enum numeric value on the wire for externalJoinPolicy.
+   */
+  @java.lang.Override public int getExternalJoinPolicyValue() {
+    return externalJoinPolicy_;
+  }
+  /**
+   * <pre>
+   * Who may join by an external commit. Unless NONE, every commit to the group
+   * must upload the new epoch's GroupInfo. A replayed create must repeat it.
+   * </pre>
+   *
+   * <code>.udb.core.messaging.services.v1.ExternalJoinPolicy external_join_policy = 6 [json_name = "externalJoinPolicy"];</code>
+   * @return The externalJoinPolicy.
+   */
+  @java.lang.Override public com.udb.core.messaging.services.v1.ExternalJoinPolicy getExternalJoinPolicy() {
+    com.udb.core.messaging.services.v1.ExternalJoinPolicy result = com.udb.core.messaging.services.v1.ExternalJoinPolicy.forNumber(externalJoinPolicy_);
+    return result == null ? com.udb.core.messaging.services.v1.ExternalJoinPolicy.UNRECOGNIZED : result;
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -244,6 +273,9 @@ private static final long serialVersionUID = 0L;
     if (!ratchetTree_.isEmpty()) {
       output.writeBytes(5, ratchetTree_);
     }
+    if (externalJoinPolicy_ != com.udb.core.messaging.services.v1.ExternalJoinPolicy.EXTERNAL_JOIN_POLICY_UNSPECIFIED.getNumber()) {
+      output.writeEnum(6, externalJoinPolicy_);
+    }
     getUnknownFields().writeTo(output);
   }
 
@@ -270,6 +302,10 @@ private static final long serialVersionUID = 0L;
       size += com.google.protobuf.CodedOutputStream
         .computeBytesSize(5, ratchetTree_);
     }
+    if (externalJoinPolicy_ != com.udb.core.messaging.services.v1.ExternalJoinPolicy.EXTERNAL_JOIN_POLICY_UNSPECIFIED.getNumber()) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeEnumSize(6, externalJoinPolicy_);
+    }
     size += getUnknownFields().getSerializedSize();
     memoizedSize = size;
     return size;
@@ -295,6 +331,7 @@ private static final long serialVersionUID = 0L;
         .equals(other.getGroupInfo())) return false;
     if (!getRatchetTree()
         .equals(other.getRatchetTree())) return false;
+    if (externalJoinPolicy_ != other.externalJoinPolicy_) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -316,6 +353,8 @@ private static final long serialVersionUID = 0L;
     hash = (53 * hash) + getGroupInfo().hashCode();
     hash = (37 * hash) + RATCHET_TREE_FIELD_NUMBER;
     hash = (53 * hash) + getRatchetTree().hashCode();
+    hash = (37 * hash) + EXTERNAL_JOIN_POLICY_FIELD_NUMBER;
+    hash = (53 * hash) + externalJoinPolicy_;
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -452,6 +491,7 @@ private static final long serialVersionUID = 0L;
       creatorDeviceId_ = "";
       groupInfo_ = com.google.protobuf.ByteString.EMPTY;
       ratchetTree_ = com.google.protobuf.ByteString.EMPTY;
+      externalJoinPolicy_ = 0;
       return this;
     }
 
@@ -500,6 +540,9 @@ private static final long serialVersionUID = 0L;
       if (((from_bitField0_ & 0x00000010) != 0)) {
         result.ratchetTree_ = ratchetTree_;
       }
+      if (((from_bitField0_ & 0x00000020) != 0)) {
+        result.externalJoinPolicy_ = externalJoinPolicy_;
+      }
     }
 
     @java.lang.Override
@@ -534,6 +577,9 @@ private static final long serialVersionUID = 0L;
       }
       if (!other.getRatchetTree().isEmpty()) {
         setRatchetTree(other.getRatchetTree());
+      }
+      if (other.externalJoinPolicy_ != 0) {
+        setExternalJoinPolicyValue(other.getExternalJoinPolicyValue());
       }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
@@ -586,6 +632,11 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00000010;
               break;
             } // case 42
+            case 48: {
+              externalJoinPolicy_ = input.readEnum();
+              bitField0_ |= 0x00000020;
+              break;
+            } // case 48
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -953,6 +1004,82 @@ private static final long serialVersionUID = 0L;
     public Builder clearRatchetTree() {
       bitField0_ = (bitField0_ & ~0x00000010);
       ratchetTree_ = getDefaultInstance().getRatchetTree();
+      onChanged();
+      return this;
+    }
+
+    private int externalJoinPolicy_ = 0;
+    /**
+     * <pre>
+     * Who may join by an external commit. Unless NONE, every commit to the group
+     * must upload the new epoch's GroupInfo. A replayed create must repeat it.
+     * </pre>
+     *
+     * <code>.udb.core.messaging.services.v1.ExternalJoinPolicy external_join_policy = 6 [json_name = "externalJoinPolicy"];</code>
+     * @return The enum numeric value on the wire for externalJoinPolicy.
+     */
+    @java.lang.Override public int getExternalJoinPolicyValue() {
+      return externalJoinPolicy_;
+    }
+    /**
+     * <pre>
+     * Who may join by an external commit. Unless NONE, every commit to the group
+     * must upload the new epoch's GroupInfo. A replayed create must repeat it.
+     * </pre>
+     *
+     * <code>.udb.core.messaging.services.v1.ExternalJoinPolicy external_join_policy = 6 [json_name = "externalJoinPolicy"];</code>
+     * @param value The enum numeric value on the wire for externalJoinPolicy to set.
+     * @return This builder for chaining.
+     */
+    public Builder setExternalJoinPolicyValue(int value) {
+      externalJoinPolicy_ = value;
+      bitField0_ |= 0x00000020;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Who may join by an external commit. Unless NONE, every commit to the group
+     * must upload the new epoch's GroupInfo. A replayed create must repeat it.
+     * </pre>
+     *
+     * <code>.udb.core.messaging.services.v1.ExternalJoinPolicy external_join_policy = 6 [json_name = "externalJoinPolicy"];</code>
+     * @return The externalJoinPolicy.
+     */
+    @java.lang.Override
+    public com.udb.core.messaging.services.v1.ExternalJoinPolicy getExternalJoinPolicy() {
+      com.udb.core.messaging.services.v1.ExternalJoinPolicy result = com.udb.core.messaging.services.v1.ExternalJoinPolicy.forNumber(externalJoinPolicy_);
+      return result == null ? com.udb.core.messaging.services.v1.ExternalJoinPolicy.UNRECOGNIZED : result;
+    }
+    /**
+     * <pre>
+     * Who may join by an external commit. Unless NONE, every commit to the group
+     * must upload the new epoch's GroupInfo. A replayed create must repeat it.
+     * </pre>
+     *
+     * <code>.udb.core.messaging.services.v1.ExternalJoinPolicy external_join_policy = 6 [json_name = "externalJoinPolicy"];</code>
+     * @param value The externalJoinPolicy to set.
+     * @return This builder for chaining.
+     */
+    public Builder setExternalJoinPolicy(com.udb.core.messaging.services.v1.ExternalJoinPolicy value) {
+      if (value == null) { throw new NullPointerException(); }
+      bitField0_ |= 0x00000020;
+      externalJoinPolicy_ = value.getNumber();
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Who may join by an external commit. Unless NONE, every commit to the group
+     * must upload the new epoch's GroupInfo. A replayed create must repeat it.
+     * </pre>
+     *
+     * <code>.udb.core.messaging.services.v1.ExternalJoinPolicy external_join_policy = 6 [json_name = "externalJoinPolicy"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearExternalJoinPolicy() {
+      bitField0_ = (bitField0_ & ~0x00000020);
+      externalJoinPolicy_ = 0;
       onChanged();
       return this;
     }

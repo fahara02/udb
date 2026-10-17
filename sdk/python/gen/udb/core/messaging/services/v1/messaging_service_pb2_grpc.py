@@ -179,6 +179,10 @@ class MessagingServiceServicer(object):
         Accepted only when its epoch is the group's current epoch and it validates
         against the public group state; concurrent commits linearize and the loser
         receives FAILED_PRECONDITION carrying the current epoch so it can re-base.
+        An external commit (a new device joining from GetGroupInfo's GroupInfo, no
+        Welcome) is accepted only as the group's external_join_policy allows; the
+        joiner receives the COMMIT echo, not a Welcome. Groups whose policy is not
+        NONE require the new epoch's GroupInfo on every commit.
         """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -186,7 +190,9 @@ class MessagingServiceServicer(object):
 
     def GetGroupInfo(self, request, context):
         """Return the group's current epoch, its exported public ratchet tree, and the
-        latest signed GroupInfo a member uploaded, for an external join.
+        latest signed GroupInfo a member uploaded, for an external join. An end
+        user sees only groups one of its devices is a member of, or groups open to
+        the tenant (EXTERNAL_JOIN_POLICY_TENANT); others are NOT_FOUND.
         """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')

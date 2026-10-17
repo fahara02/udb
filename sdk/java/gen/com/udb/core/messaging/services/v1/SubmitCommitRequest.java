@@ -210,7 +210,7 @@ private static final long serialVersionUID = 0L;
   /**
    * <pre>
    * TLS-serialized MlsMessage carrying the Welcome for added devices; required
-   * when the commit adds members.
+   * when a member's commit adds members, empty for an external commit.
    * </pre>
    *
    * <code>bytes welcome = 6 [json_name = "welcome"];</code>
@@ -225,8 +225,10 @@ private static final long serialVersionUID = 0L;
   private com.google.protobuf.ByteString groupInfo_ = com.google.protobuf.ByteString.EMPTY;
   /**
    * <pre>
-   * Optional TLS-serialized MlsMessage carrying the signed GroupInfo of the new
-   * epoch, served by GetGroupInfo for external joins.
+   * TLS-serialized MlsMessage carrying the signed GroupInfo of the new epoch,
+   * served by GetGroupInfo for external joins. Required on every commit to a
+   * group whose external_join_policy is not NONE (optional otherwise); it must
+   * verify against the post-commit tree.
    * </pre>
    *
    * <code>bytes group_info = 7 [json_name = "groupInfo"];</code>
@@ -1073,7 +1075,7 @@ private static final long serialVersionUID = 0L;
     /**
      * <pre>
      * TLS-serialized MlsMessage carrying the Welcome for added devices; required
-     * when the commit adds members.
+     * when a member's commit adds members, empty for an external commit.
      * </pre>
      *
      * <code>bytes welcome = 6 [json_name = "welcome"];</code>
@@ -1086,7 +1088,7 @@ private static final long serialVersionUID = 0L;
     /**
      * <pre>
      * TLS-serialized MlsMessage carrying the Welcome for added devices; required
-     * when the commit adds members.
+     * when a member's commit adds members, empty for an external commit.
      * </pre>
      *
      * <code>bytes welcome = 6 [json_name = "welcome"];</code>
@@ -1103,7 +1105,7 @@ private static final long serialVersionUID = 0L;
     /**
      * <pre>
      * TLS-serialized MlsMessage carrying the Welcome for added devices; required
-     * when the commit adds members.
+     * when a member's commit adds members, empty for an external commit.
      * </pre>
      *
      * <code>bytes welcome = 6 [json_name = "welcome"];</code>
@@ -1119,8 +1121,10 @@ private static final long serialVersionUID = 0L;
     private com.google.protobuf.ByteString groupInfo_ = com.google.protobuf.ByteString.EMPTY;
     /**
      * <pre>
-     * Optional TLS-serialized MlsMessage carrying the signed GroupInfo of the new
-     * epoch, served by GetGroupInfo for external joins.
+     * TLS-serialized MlsMessage carrying the signed GroupInfo of the new epoch,
+     * served by GetGroupInfo for external joins. Required on every commit to a
+     * group whose external_join_policy is not NONE (optional otherwise); it must
+     * verify against the post-commit tree.
      * </pre>
      *
      * <code>bytes group_info = 7 [json_name = "groupInfo"];</code>
@@ -1132,8 +1136,10 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * Optional TLS-serialized MlsMessage carrying the signed GroupInfo of the new
-     * epoch, served by GetGroupInfo for external joins.
+     * TLS-serialized MlsMessage carrying the signed GroupInfo of the new epoch,
+     * served by GetGroupInfo for external joins. Required on every commit to a
+     * group whose external_join_policy is not NONE (optional otherwise); it must
+     * verify against the post-commit tree.
      * </pre>
      *
      * <code>bytes group_info = 7 [json_name = "groupInfo"];</code>
@@ -1149,8 +1155,10 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * Optional TLS-serialized MlsMessage carrying the signed GroupInfo of the new
-     * epoch, served by GetGroupInfo for external joins.
+     * TLS-serialized MlsMessage carrying the signed GroupInfo of the new epoch,
+     * served by GetGroupInfo for external joins. Required on every commit to a
+     * group whose external_join_policy is not NONE (optional otherwise); it must
+     * verify against the post-commit tree.
      * </pre>
      *
      * <code>bytes group_info = 7 [json_name = "groupInfo"];</code>

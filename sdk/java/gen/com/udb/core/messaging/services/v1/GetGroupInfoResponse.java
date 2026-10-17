@@ -34,6 +34,7 @@ private static final long serialVersionUID = 0L;
     memberDeviceIds_ =
         com.google.protobuf.LazyStringArrayList.emptyList();
     message_ = "";
+    externalJoinPolicy_ = 0;
   }
 
   public static final com.google.protobuf.Descriptors.Descriptor
@@ -256,6 +257,32 @@ private static final long serialVersionUID = 0L;
     return error_ == null ? com.udb.core.common.v1.ApiError.getDefaultInstance() : error_;
   }
 
+  public static final int EXTERNAL_JOIN_POLICY_FIELD_NUMBER = 9;
+  private int externalJoinPolicy_ = 0;
+  /**
+   * <pre>
+   * Who may join by an external commit.
+   * </pre>
+   *
+   * <code>.udb.core.messaging.services.v1.ExternalJoinPolicy external_join_policy = 9 [json_name = "externalJoinPolicy"];</code>
+   * @return The enum numeric value on the wire for externalJoinPolicy.
+   */
+  @java.lang.Override public int getExternalJoinPolicyValue() {
+    return externalJoinPolicy_;
+  }
+  /**
+   * <pre>
+   * Who may join by an external commit.
+   * </pre>
+   *
+   * <code>.udb.core.messaging.services.v1.ExternalJoinPolicy external_join_policy = 9 [json_name = "externalJoinPolicy"];</code>
+   * @return The externalJoinPolicy.
+   */
+  @java.lang.Override public com.udb.core.messaging.services.v1.ExternalJoinPolicy getExternalJoinPolicy() {
+    com.udb.core.messaging.services.v1.ExternalJoinPolicy result = com.udb.core.messaging.services.v1.ExternalJoinPolicy.forNumber(externalJoinPolicy_);
+    return result == null ? com.udb.core.messaging.services.v1.ExternalJoinPolicy.UNRECOGNIZED : result;
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -293,6 +320,9 @@ private static final long serialVersionUID = 0L;
     }
     if (((bitField0_ & 0x00000001) != 0)) {
       output.writeMessage(8, getError());
+    }
+    if (externalJoinPolicy_ != com.udb.core.messaging.services.v1.ExternalJoinPolicy.EXTERNAL_JOIN_POLICY_UNSPECIFIED.getNumber()) {
+      output.writeEnum(9, externalJoinPolicy_);
     }
     getUnknownFields().writeTo(output);
   }
@@ -337,6 +367,10 @@ private static final long serialVersionUID = 0L;
       size += com.google.protobuf.CodedOutputStream
         .computeMessageSize(8, getError());
     }
+    if (externalJoinPolicy_ != com.udb.core.messaging.services.v1.ExternalJoinPolicy.EXTERNAL_JOIN_POLICY_UNSPECIFIED.getNumber()) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeEnumSize(9, externalJoinPolicy_);
+    }
     size += getUnknownFields().getSerializedSize();
     memoizedSize = size;
     return size;
@@ -371,6 +405,7 @@ private static final long serialVersionUID = 0L;
       if (!getError()
           .equals(other.getError())) return false;
     }
+    if (externalJoinPolicy_ != other.externalJoinPolicy_) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -404,6 +439,8 @@ private static final long serialVersionUID = 0L;
       hash = (37 * hash) + ERROR_FIELD_NUMBER;
       hash = (53 * hash) + getError().hashCode();
     }
+    hash = (37 * hash) + EXTERNAL_JOIN_POLICY_FIELD_NUMBER;
+    hash = (53 * hash) + externalJoinPolicy_;
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -554,6 +591,7 @@ private static final long serialVersionUID = 0L;
         errorBuilder_.dispose();
         errorBuilder_ = null;
       }
+      externalJoinPolicy_ = 0;
       return this;
     }
 
@@ -616,6 +654,9 @@ private static final long serialVersionUID = 0L;
             : errorBuilder_.build();
         to_bitField0_ |= 0x00000001;
       }
+      if (((from_bitField0_ & 0x00000100) != 0)) {
+        result.externalJoinPolicy_ = externalJoinPolicy_;
+      }
       result.bitField0_ |= to_bitField0_;
     }
 
@@ -665,6 +706,9 @@ private static final long serialVersionUID = 0L;
       }
       if (other.hasError()) {
         mergeError(other.getError());
+      }
+      if (other.externalJoinPolicy_ != 0) {
+        setExternalJoinPolicyValue(other.getExternalJoinPolicyValue());
       }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
@@ -735,6 +779,11 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00000080;
               break;
             } // case 66
+            case 72: {
+              externalJoinPolicy_ = input.readEnum();
+              bitField0_ |= 0x00000100;
+              break;
+            } // case 72
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -1317,6 +1366,77 @@ private static final long serialVersionUID = 0L;
         error_ = null;
       }
       return errorBuilder_;
+    }
+
+    private int externalJoinPolicy_ = 0;
+    /**
+     * <pre>
+     * Who may join by an external commit.
+     * </pre>
+     *
+     * <code>.udb.core.messaging.services.v1.ExternalJoinPolicy external_join_policy = 9 [json_name = "externalJoinPolicy"];</code>
+     * @return The enum numeric value on the wire for externalJoinPolicy.
+     */
+    @java.lang.Override public int getExternalJoinPolicyValue() {
+      return externalJoinPolicy_;
+    }
+    /**
+     * <pre>
+     * Who may join by an external commit.
+     * </pre>
+     *
+     * <code>.udb.core.messaging.services.v1.ExternalJoinPolicy external_join_policy = 9 [json_name = "externalJoinPolicy"];</code>
+     * @param value The enum numeric value on the wire for externalJoinPolicy to set.
+     * @return This builder for chaining.
+     */
+    public Builder setExternalJoinPolicyValue(int value) {
+      externalJoinPolicy_ = value;
+      bitField0_ |= 0x00000100;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Who may join by an external commit.
+     * </pre>
+     *
+     * <code>.udb.core.messaging.services.v1.ExternalJoinPolicy external_join_policy = 9 [json_name = "externalJoinPolicy"];</code>
+     * @return The externalJoinPolicy.
+     */
+    @java.lang.Override
+    public com.udb.core.messaging.services.v1.ExternalJoinPolicy getExternalJoinPolicy() {
+      com.udb.core.messaging.services.v1.ExternalJoinPolicy result = com.udb.core.messaging.services.v1.ExternalJoinPolicy.forNumber(externalJoinPolicy_);
+      return result == null ? com.udb.core.messaging.services.v1.ExternalJoinPolicy.UNRECOGNIZED : result;
+    }
+    /**
+     * <pre>
+     * Who may join by an external commit.
+     * </pre>
+     *
+     * <code>.udb.core.messaging.services.v1.ExternalJoinPolicy external_join_policy = 9 [json_name = "externalJoinPolicy"];</code>
+     * @param value The externalJoinPolicy to set.
+     * @return This builder for chaining.
+     */
+    public Builder setExternalJoinPolicy(com.udb.core.messaging.services.v1.ExternalJoinPolicy value) {
+      if (value == null) { throw new NullPointerException(); }
+      bitField0_ |= 0x00000100;
+      externalJoinPolicy_ = value.getNumber();
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Who may join by an external commit.
+     * </pre>
+     *
+     * <code>.udb.core.messaging.services.v1.ExternalJoinPolicy external_join_policy = 9 [json_name = "externalJoinPolicy"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearExternalJoinPolicy() {
+      bitField0_ = (bitField0_ & ~0x00000100);
+      externalJoinPolicy_ = 0;
+      onChanged();
+      return this;
     }
 
     // @@protoc_insertion_point(builder_scope:udb.core.messaging.services.v1.GetGroupInfoResponse)

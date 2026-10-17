@@ -118,4 +118,23 @@ public interface GetGroupInfoResponseOrBuilder extends
    * <code>.udb.core.common.v1.ApiError error = 8 [json_name = "error"];</code>
    */
   com.udb.core.common.v1.ApiErrorOrBuilder getErrorOrBuilder();
+
+  /**
+   * <pre>
+   * Who may join by an external commit.
+   * </pre>
+   *
+   * <code>.udb.core.messaging.services.v1.ExternalJoinPolicy external_join_policy = 9 [json_name = "externalJoinPolicy"];</code>
+   * @return The enum numeric value on the wire for externalJoinPolicy.
+   */
+  int getExternalJoinPolicyValue();
+  /**
+   * <pre>
+   * Who may join by an external commit.
+   * </pre>
+   *
+   * <code>.udb.core.messaging.services.v1.ExternalJoinPolicy external_join_policy = 9 [json_name = "externalJoinPolicy"];</code>
+   * @return The externalJoinPolicy.
+   */
+  com.udb.core.messaging.services.v1.ExternalJoinPolicy getExternalJoinPolicy();
 }

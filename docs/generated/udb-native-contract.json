@@ -1,6 +1,6 @@
 {
   "schema_version": "1",
-  "descriptor_sha256": "48e58ae6ec7ecfdaaeada4ac5694a58c3cec649951d23ab9ec22a23b7e87b7fa",
+  "descriptor_sha256": "dbd83d38e7053a9b975c645711f18ffc8cdf1480b07ee148d6d441c4646828ba",
   "contract_version": "8.0.0",
   "udb_version": "0.6.0",
   "protocol_version": "1.0.0",
@@ -114188,7 +114188,7 @@
         "export_eligible": false,
         "data_residency_policy_ref": "tenant.data_residency"
       },
-      "field_count": 10,
+      "field_count": 11,
       "fields": [
         {
           "name": "id",
@@ -114365,6 +114365,25 @@
           "name": "updated_at",
           "number": 10,
           "type": ".google.protobuf.Timestamp",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "external_join_policy",
+          "number": 11,
+          "type": "9",
           "column_security": null,
           "scalar_security": {
             "pii": false,
@@ -115518,7 +115537,7 @@
       "event_contract": null,
       "dependency_contract": null,
       "table_security": null,
-      "field_count": 5,
+      "field_count": 6,
       "fields": [
         {
           "name": "tenant_id",
@@ -115600,6 +115619,25 @@
           "name": "ratchet_tree",
           "number": 5,
           "type": "12",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "external_join_policy",
+          "number": 6,
+          "type": ".udb.core.messaging.services.v1.ExternalJoinPolicy",
           "column_security": null,
           "scalar_security": {
             "pii": false,
@@ -116181,7 +116219,7 @@
       "event_contract": null,
       "dependency_contract": null,
       "table_security": null,
-      "field_count": 8,
+      "field_count": 9,
       "fields": [
         {
           "name": "group_id",
@@ -116320,6 +116358,25 @@
           "name": "error",
           "number": 8,
           "type": ".udb.core.common.v1.ApiError",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "external_join_policy",
+          "number": 9,
+          "type": ".udb.core.messaging.services.v1.ExternalJoinPolicy",
           "column_security": null,
           "scalar_security": {
             "pii": false,
@@ -185069,7 +185126,7 @@
         "export_eligible": false,
         "data_residency_policy_ref": "tenant.data_residency"
       },
-      "field_count": 10,
+      "field_count": 11,
       "fields": [
         {
           "name": "id",
@@ -185246,6 +185303,25 @@
           "name": "updated_at",
           "number": 10,
           "type": ".google.protobuf.Timestamp",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "external_join_policy",
+          "number": 11,
+          "type": "9",
           "column_security": null,
           "scalar_security": {
             "pii": false,

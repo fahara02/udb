@@ -42,6 +42,7 @@ private static final long serialVersionUID = 0L;
     publicGroupState_ = com.google.protobuf.ByteString.EMPTY;
     groupInfo_ = com.google.protobuf.ByteString.EMPTY;
     createdByDeviceId_ = "";
+    externalJoinPolicy_ = "";
   }
 
   public static final com.google.protobuf.Descriptors.Descriptor
@@ -322,6 +323,53 @@ private static final long serialVersionUID = 0L;
     return updatedAt_ == null ? com.google.protobuf.Timestamp.getDefaultInstance() : updatedAt_;
   }
 
+  public static final int EXTERNAL_JOIN_POLICY_FIELD_NUMBER = 11;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object externalJoinPolicy_ = "";
+  /**
+   * <pre>
+   * Who may join by an external commit: NONE | SAME_PRINCIPAL | TENANT.
+   * </pre>
+   *
+   * <code>string external_join_policy = 11 [json_name = "externalJoinPolicy", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The externalJoinPolicy.
+   */
+  @java.lang.Override
+  public java.lang.String getExternalJoinPolicy() {
+    java.lang.Object ref = externalJoinPolicy_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs =
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      externalJoinPolicy_ = s;
+      return s;
+    }
+  }
+  /**
+   * <pre>
+   * Who may join by an external commit: NONE | SAME_PRINCIPAL | TENANT.
+   * </pre>
+   *
+   * <code>string external_join_policy = 11 [json_name = "externalJoinPolicy", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The bytes for externalJoinPolicy.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getExternalJoinPolicyBytes() {
+    java.lang.Object ref = externalJoinPolicy_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b =
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      externalJoinPolicy_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -365,6 +413,9 @@ private static final long serialVersionUID = 0L;
     }
     if (((bitField0_ & 0x00000002) != 0)) {
       output.writeMessage(10, getUpdatedAt());
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(externalJoinPolicy_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 11, externalJoinPolicy_);
     }
     getUnknownFields().writeTo(output);
   }
@@ -411,6 +462,9 @@ private static final long serialVersionUID = 0L;
       size += com.google.protobuf.CodedOutputStream
         .computeMessageSize(10, getUpdatedAt());
     }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(externalJoinPolicy_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(11, externalJoinPolicy_);
+    }
     size += getUnknownFields().getSerializedSize();
     memoizedSize = size;
     return size;
@@ -452,6 +506,8 @@ private static final long serialVersionUID = 0L;
       if (!getUpdatedAt()
           .equals(other.getUpdatedAt())) return false;
     }
+    if (!getExternalJoinPolicy()
+        .equals(other.getExternalJoinPolicy())) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -489,6 +545,8 @@ private static final long serialVersionUID = 0L;
       hash = (37 * hash) + UPDATED_AT_FIELD_NUMBER;
       hash = (53 * hash) + getUpdatedAt().hashCode();
     }
+    hash = (37 * hash) + EXTERNAL_JOIN_POLICY_FIELD_NUMBER;
+    hash = (53 * hash) + getExternalJoinPolicy().hashCode();
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -653,6 +711,7 @@ private static final long serialVersionUID = 0L;
         updatedAtBuilder_.dispose();
         updatedAtBuilder_ = null;
       }
+      externalJoinPolicy_ = "";
       return this;
     }
 
@@ -723,6 +782,9 @@ private static final long serialVersionUID = 0L;
             : updatedAtBuilder_.build();
         to_bitField0_ |= 0x00000002;
       }
+      if (((from_bitField0_ & 0x00000400) != 0)) {
+        result.externalJoinPolicy_ = externalJoinPolicy_;
+      }
       result.bitField0_ |= to_bitField0_;
     }
 
@@ -775,6 +837,11 @@ private static final long serialVersionUID = 0L;
       }
       if (other.hasUpdatedAt()) {
         mergeUpdatedAt(other.getUpdatedAt());
+      }
+      if (!other.getExternalJoinPolicy().isEmpty()) {
+        externalJoinPolicy_ = other.externalJoinPolicy_;
+        bitField0_ |= 0x00000400;
+        onChanged();
       }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
@@ -856,6 +923,11 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00000200;
               break;
             } // case 82
+            case 90: {
+              externalJoinPolicy_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00000400;
+              break;
+            } // case 90
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -1561,6 +1633,98 @@ private static final long serialVersionUID = 0L;
         updatedAt_ = null;
       }
       return updatedAtBuilder_;
+    }
+
+    private java.lang.Object externalJoinPolicy_ = "";
+    /**
+     * <pre>
+     * Who may join by an external commit: NONE | SAME_PRINCIPAL | TENANT.
+     * </pre>
+     *
+     * <code>string external_join_policy = 11 [json_name = "externalJoinPolicy", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @return The externalJoinPolicy.
+     */
+    public java.lang.String getExternalJoinPolicy() {
+      java.lang.Object ref = externalJoinPolicy_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        externalJoinPolicy_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <pre>
+     * Who may join by an external commit: NONE | SAME_PRINCIPAL | TENANT.
+     * </pre>
+     *
+     * <code>string external_join_policy = 11 [json_name = "externalJoinPolicy", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @return The bytes for externalJoinPolicy.
+     */
+    public com.google.protobuf.ByteString
+        getExternalJoinPolicyBytes() {
+      java.lang.Object ref = externalJoinPolicy_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b =
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        externalJoinPolicy_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <pre>
+     * Who may join by an external commit: NONE | SAME_PRINCIPAL | TENANT.
+     * </pre>
+     *
+     * <code>string external_join_policy = 11 [json_name = "externalJoinPolicy", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @param value The externalJoinPolicy to set.
+     * @return This builder for chaining.
+     */
+    public Builder setExternalJoinPolicy(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      externalJoinPolicy_ = value;
+      bitField0_ |= 0x00000400;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Who may join by an external commit: NONE | SAME_PRINCIPAL | TENANT.
+     * </pre>
+     *
+     * <code>string external_join_policy = 11 [json_name = "externalJoinPolicy", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearExternalJoinPolicy() {
+      externalJoinPolicy_ = getDefaultInstance().getExternalJoinPolicy();
+      bitField0_ = (bitField0_ & ~0x00000400);
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Who may join by an external commit: NONE | SAME_PRINCIPAL | TENANT.
+     * </pre>
+     *
+     * <code>string external_join_policy = 11 [json_name = "externalJoinPolicy", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @param value The bytes for externalJoinPolicy to set.
+     * @return This builder for chaining.
+     */
+    public Builder setExternalJoinPolicyBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      externalJoinPolicy_ = value;
+      bitField0_ |= 0x00000400;
+      onChanged();
+      return this;
     }
 
     // @@protoc_insertion_point(builder_scope:udb.core.messaging.entity.v1.MessagingGroup)

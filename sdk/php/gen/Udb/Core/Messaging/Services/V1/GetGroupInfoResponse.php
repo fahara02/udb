@@ -53,6 +53,12 @@ class GetGroupInfoResponse extends \Google\Protobuf\Internal\Message
      * Generated from protobuf field <code>.udb.core.common.v1.ApiError error = 8 [json_name = "error"];</code>
      */
     protected $error = null;
+    /**
+     * Who may join by an external commit.
+     *
+     * Generated from protobuf field <code>.udb.core.messaging.services.v1.ExternalJoinPolicy external_join_policy = 9 [json_name = "externalJoinPolicy"];</code>
+     */
+    protected $external_join_policy = 0;
 
     /**
      * Constructor.
@@ -72,6 +78,8 @@ class GetGroupInfoResponse extends \Google\Protobuf\Internal\Message
      *     @type string $message
      *     @type \Udb\Core\Common\V1\ApiError $error
      *           Error information if operation failed
+     *     @type int $external_join_policy
+     *           Who may join by an external commit.
      * }
      */
     public function __construct($data = NULL) {
@@ -275,6 +283,32 @@ class GetGroupInfoResponse extends \Google\Protobuf\Internal\Message
     {
         GPBUtil::checkMessage($var, \Udb\Core\Common\V1\ApiError::class);
         $this->error = $var;
+
+        return $this;
+    }
+
+    /**
+     * Who may join by an external commit.
+     *
+     * Generated from protobuf field <code>.udb.core.messaging.services.v1.ExternalJoinPolicy external_join_policy = 9 [json_name = "externalJoinPolicy"];</code>
+     * @return int
+     */
+    public function getExternalJoinPolicy()
+    {
+        return $this->external_join_policy;
+    }
+
+    /**
+     * Who may join by an external commit.
+     *
+     * Generated from protobuf field <code>.udb.core.messaging.services.v1.ExternalJoinPolicy external_join_policy = 9 [json_name = "externalJoinPolicy"];</code>
+     * @param int $var
+     * @return $this
+     */
+    public function setExternalJoinPolicy($var)
+    {
+        GPBUtil::checkEnum($var, \Udb\Core\Messaging\Services\V1\ExternalJoinPolicy::class);
+        $this->external_join_policy = $var;
 
         return $this;
     }

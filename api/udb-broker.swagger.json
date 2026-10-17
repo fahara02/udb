@@ -33162,7 +33162,7 @@
     },
     "/v1/messaging/groups/{groupId}/info": {
       "get": {
-        "summary": "Return the group's current epoch, its exported public ratchet tree, and the\nlatest signed GroupInfo a member uploaded, for an external join.",
+        "summary": "Return the group's current epoch, its exported public ratchet tree, and the\nlatest signed GroupInfo a member uploaded, for an external join. An end\nuser sees only groups one of its devices is a member of, or groups open to\nthe tenant (EXTERNAL_JOIN_POLICY_TENANT); others are NOT_FOUND.",
         "operationId": "messagingGetGroupInfo",
         "responses": {
           "200": {
@@ -33458,7 +33458,7 @@
     },
     "/v1/messaging/groups/{groupId}:commit": {
       "post": {
-        "summary": "Submit an MLS PublicMessage commit (plus the Welcome for any added devices).\nAccepted only when its epoch is the group's current epoch and it validates\nagainst the public group state; concurrent commits linearize and the loser\nreceives FAILED_PRECONDITION carrying the current epoch so it can re-base.",
+        "summary": "Submit an MLS PublicMessage commit (plus the Welcome for any added devices).\nAccepted only when its epoch is the group's current epoch and it validates\nagainst the public group state; concurrent commits linearize and the loser\nreceives FAILED_PRECONDITION carrying the current epoch so it can re-base.\nAn external commit (a new device joining from GetGroupInfo's GroupInfo, no\nWelcome) is accepted only as the group's external_join_policy allows; the\njoiner receives the COMMIT echo, not a Welcome. Groups whose policy is not\nNONE require the new epoch's GroupInfo on every commit.",
         "operationId": "messagingSubmitCommit",
         "responses": {
           "200": {
@@ -49983,12 +49983,12 @@
         "welcome": {
           "type": "string",
           "format": "byte",
-          "description": "TLS-serialized MlsMessage carrying the Welcome for added devices; required\nwhen the commit adds members."
+          "description": "TLS-serialized MlsMessage carrying the Welcome for added devices; required\nwhen a member's commit adds members, empty for an external commit."
         },
         "groupInfo": {
           "type": "string",
           "format": "byte",
-          "description": "Optional TLS-serialized MlsMessage carrying the signed GroupInfo of the new\nepoch, served by GetGroupInfo for external joins."
+          "description": "TLS-serialized MlsMessage carrying the signed GroupInfo of the new epoch,\nserved by GetGroupInfo for external joins. Required on every commit to a\ngroup whose external_join_policy is not NONE (optional otherwise); it must\nverify against the post-commit tree."
         },
         "clientMessageId": {
           "type": "string",
@@ -52628,6 +52628,10 @@
           "type": "string",
           "format": "byte",
           "description": "TLS-serialized ratchet tree exported by the creator."
+        },
+        "externalJoinPolicy": {
+          "$ref": "#/definitions/v1ExternalJoinPolicy",
+          "description": "Who may join by an external commit. Unless NONE, every commit to the group\nmust upload the new epoch's GroupInfo. A replayed create must repeat it."
         }
       }
     },
@@ -54513,6 +54517,17 @@
       },
       "description": "---------------------------------------------------------------------------\nExternalIdentity — Mapping from an IdP subject to a UDB user/principal.\n\nOne row per (tenant, provider, subject). Established at first login (JIT) or\nvia an explicit account-linking flow. RLS scopes rows to the current tenant.\n\nMigration order 11 — after identity_providers + authn users.\n---------------------------------------------------------------------------"
     },
+    "v1ExternalJoinPolicy": {
+      "type": "string",
+      "enum": [
+        "EXTERNAL_JOIN_POLICY_UNSPECIFIED",
+        "EXTERNAL_JOIN_POLICY_NONE",
+        "EXTERNAL_JOIN_POLICY_SAME_PRINCIPAL",
+        "EXTERNAL_JOIN_POLICY_TENANT"
+      ],
+      "default": "EXTERNAL_JOIN_POLICY_UNSPECIFIED",
+      "description": "Who may join a group by an external commit (RFC 9420 §12.4.3.2) built from\nthe GroupInfo GetGroupInfo serves.\n\n - EXTERNAL_JOIN_POLICY_UNSPECIFIED: Treated as NONE.\n - EXTERNAL_JOIN_POLICY_NONE: No external joins: devices join only from a member's Welcome.\n - EXTERNAL_JOIN_POLICY_SAME_PRINCIPAL: A device whose principal already has a member device in the group.\n - EXTERNAL_JOIN_POLICY_TENANT: Any active device of the tenant."
+    },
     "v1FieldViolation": {
       "type": "object",
       "properties": {
@@ -55216,6 +55231,10 @@
         "error": {
           "$ref": "#/definitions/v1ApiError",
           "title": "Error information if operation failed"
+        },
+        "externalJoinPolicy": {
+          "$ref": "#/definitions/v1ExternalJoinPolicy",
+          "description": "Who may join by an external commit."
         }
       }
     },

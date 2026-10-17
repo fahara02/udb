@@ -2,12 +2,24 @@ from google.api import annotations_pb2 as _annotations_pb2
 from udb.core.common.v1 import dto_pb2 as _dto_pb2
 from udb.core.common.v1 import security_pb2 as _security_pb2
 from google.protobuf.internal import containers as _containers
+from google.protobuf.internal import enum_type_wrapper as _enum_type_wrapper
 from google.protobuf import descriptor as _descriptor
 from google.protobuf import message as _message
 from collections.abc import Iterable as _Iterable, Mapping as _Mapping
 from typing import ClassVar as _ClassVar, Optional as _Optional, Union as _Union
 
 DESCRIPTOR: _descriptor.FileDescriptor
+
+class ExternalJoinPolicy(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
+    __slots__ = ()
+    EXTERNAL_JOIN_POLICY_UNSPECIFIED: _ClassVar[ExternalJoinPolicy]
+    EXTERNAL_JOIN_POLICY_NONE: _ClassVar[ExternalJoinPolicy]
+    EXTERNAL_JOIN_POLICY_SAME_PRINCIPAL: _ClassVar[ExternalJoinPolicy]
+    EXTERNAL_JOIN_POLICY_TENANT: _ClassVar[ExternalJoinPolicy]
+EXTERNAL_JOIN_POLICY_UNSPECIFIED: ExternalJoinPolicy
+EXTERNAL_JOIN_POLICY_NONE: ExternalJoinPolicy
+EXTERNAL_JOIN_POLICY_SAME_PRINCIPAL: ExternalJoinPolicy
+EXTERNAL_JOIN_POLICY_TENANT: ExternalJoinPolicy
 
 class DirectoryDevice(_message.Message):
     __slots__ = ("tenant_id", "subject_id", "device_id", "signature_public_key", "credential", "key_fingerprint", "status", "registered_at_unix", "revoked_at_unix")
@@ -190,18 +202,20 @@ class GetKeyPackageStockResponse(_message.Message):
     def __init__(self, one_time_remaining: _Optional[int] = ..., has_last_resort: bool = ..., message: _Optional[str] = ..., error: _Optional[_Union[_dto_pb2.ApiError, _Mapping]] = ...) -> None: ...
 
 class CreateGroupRequest(_message.Message):
-    __slots__ = ("tenant_id", "group_id", "creator_device_id", "group_info", "ratchet_tree")
+    __slots__ = ("tenant_id", "group_id", "creator_device_id", "group_info", "ratchet_tree", "external_join_policy")
     TENANT_ID_FIELD_NUMBER: _ClassVar[int]
     GROUP_ID_FIELD_NUMBER: _ClassVar[int]
     CREATOR_DEVICE_ID_FIELD_NUMBER: _ClassVar[int]
     GROUP_INFO_FIELD_NUMBER: _ClassVar[int]
     RATCHET_TREE_FIELD_NUMBER: _ClassVar[int]
+    EXTERNAL_JOIN_POLICY_FIELD_NUMBER: _ClassVar[int]
     tenant_id: str
     group_id: str
     creator_device_id: str
     group_info: bytes
     ratchet_tree: bytes
-    def __init__(self, tenant_id: _Optional[str] = ..., group_id: _Optional[str] = ..., creator_device_id: _Optional[str] = ..., group_info: _Optional[bytes] = ..., ratchet_tree: _Optional[bytes] = ...) -> None: ...
+    external_join_policy: ExternalJoinPolicy
+    def __init__(self, tenant_id: _Optional[str] = ..., group_id: _Optional[str] = ..., creator_device_id: _Optional[str] = ..., group_info: _Optional[bytes] = ..., ratchet_tree: _Optional[bytes] = ..., external_join_policy: _Optional[_Union[ExternalJoinPolicy, str]] = ...) -> None: ...
 
 class CreateGroupResponse(_message.Message):
     __slots__ = ("group_id", "epoch", "created", "message", "error")
@@ -264,7 +278,7 @@ class GetGroupInfoRequest(_message.Message):
     def __init__(self, tenant_id: _Optional[str] = ..., group_id: _Optional[str] = ...) -> None: ...
 
 class GetGroupInfoResponse(_message.Message):
-    __slots__ = ("group_id", "epoch", "ratchet_tree", "group_info", "group_info_epoch", "member_device_ids", "message", "error")
+    __slots__ = ("group_id", "epoch", "ratchet_tree", "group_info", "group_info_epoch", "member_device_ids", "message", "error", "external_join_policy")
     GROUP_ID_FIELD_NUMBER: _ClassVar[int]
     EPOCH_FIELD_NUMBER: _ClassVar[int]
     RATCHET_TREE_FIELD_NUMBER: _ClassVar[int]
@@ -273,6 +287,7 @@ class GetGroupInfoResponse(_message.Message):
     MEMBER_DEVICE_IDS_FIELD_NUMBER: _ClassVar[int]
     MESSAGE_FIELD_NUMBER: _ClassVar[int]
     ERROR_FIELD_NUMBER: _ClassVar[int]
+    EXTERNAL_JOIN_POLICY_FIELD_NUMBER: _ClassVar[int]
     group_id: str
     epoch: int
     ratchet_tree: bytes
@@ -281,7 +296,8 @@ class GetGroupInfoResponse(_message.Message):
     member_device_ids: _containers.RepeatedScalarFieldContainer[str]
     message: str
     error: _dto_pb2.ApiError
-    def __init__(self, group_id: _Optional[str] = ..., epoch: _Optional[int] = ..., ratchet_tree: _Optional[bytes] = ..., group_info: _Optional[bytes] = ..., group_info_epoch: _Optional[int] = ..., member_device_ids: _Optional[_Iterable[str]] = ..., message: _Optional[str] = ..., error: _Optional[_Union[_dto_pb2.ApiError, _Mapping]] = ...) -> None: ...
+    external_join_policy: ExternalJoinPolicy
+    def __init__(self, group_id: _Optional[str] = ..., epoch: _Optional[int] = ..., ratchet_tree: _Optional[bytes] = ..., group_info: _Optional[bytes] = ..., group_info_epoch: _Optional[int] = ..., member_device_ids: _Optional[_Iterable[str]] = ..., message: _Optional[str] = ..., error: _Optional[_Union[_dto_pb2.ApiError, _Mapping]] = ..., external_join_policy: _Optional[_Union[ExternalJoinPolicy, str]] = ...) -> None: ...
 
 class SendMessageRequest(_message.Message):
     __slots__ = ("tenant_id", "group_id", "sender_device_id", "ciphertext", "client_message_id")

@@ -10770,7 +10770,7 @@ public static class UdbIr
             "udb.core.messaging.entity.v1.MessagingGroup",
             "mls_groups",
             new List<string> { "id" },
-            new List<string> { "id", "tenant_id", "group_id", "epoch", "public_group_state", "group_info", "group_info_epoch", "created_by_device_id", "created_at", "updated_at", "created_by" },
+            new List<string> { "id", "tenant_id", "group_id", "epoch", "public_group_state", "group_info", "group_info_epoch", "created_by_device_id", "created_at", "updated_at", "external_join_policy", "created_by" },
             "[]",
             "",
             "tenant_id",

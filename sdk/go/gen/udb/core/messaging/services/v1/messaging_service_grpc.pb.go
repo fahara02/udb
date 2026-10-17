@@ -138,6 +138,10 @@ type MessagingServiceClient interface {
 	// Accepted only when its epoch is the group's current epoch and it validates
 	// against the public group state; concurrent commits linearize and the loser
 	// receives FAILED_PRECONDITION carrying the current epoch so it can re-base.
+	// An external commit (a new device joining from GetGroupInfo's GroupInfo, no
+	// Welcome) is accepted only as the group's external_join_policy allows; the
+	// joiner receives the COMMIT echo, not a Welcome. Groups whose policy is not
+	// NONE require the new epoch's GroupInfo on every commit.
 	// UDB contract: /udb.core.messaging.services.v1.MessagingService/SubmitCommit
 	// Listener: control plane.
 	// Scopes: udb:messaging:submit-commit.
@@ -148,7 +152,9 @@ type MessagingServiceClient interface {
 	// End UDB contract.
 	SubmitCommit(ctx context.Context, in *SubmitCommitRequest, opts ...grpc.CallOption) (*SubmitCommitResponse, error)
 	// Return the group's current epoch, its exported public ratchet tree, and the
-	// latest signed GroupInfo a member uploaded, for an external join.
+	// latest signed GroupInfo a member uploaded, for an external join. An end
+	// user sees only groups one of its devices is a member of, or groups open to
+	// the tenant (EXTERNAL_JOIN_POLICY_TENANT); others are NOT_FOUND.
 	// UDB contract: /udb.core.messaging.services.v1.MessagingService/GetGroupInfo
 	// Listener: control plane.
 	// Scopes: udb:messaging:get-group-info.
@@ -444,9 +450,15 @@ type MessagingServiceServer interface {
 	// Accepted only when its epoch is the group's current epoch and it validates
 	// against the public group state; concurrent commits linearize and the loser
 	// receives FAILED_PRECONDITION carrying the current epoch so it can re-base.
+	// An external commit (a new device joining from GetGroupInfo's GroupInfo, no
+	// Welcome) is accepted only as the group's external_join_policy allows; the
+	// joiner receives the COMMIT echo, not a Welcome. Groups whose policy is not
+	// NONE require the new epoch's GroupInfo on every commit.
 	SubmitCommit(context.Context, *SubmitCommitRequest) (*SubmitCommitResponse, error)
 	// Return the group's current epoch, its exported public ratchet tree, and the
-	// latest signed GroupInfo a member uploaded, for an external join.
+	// latest signed GroupInfo a member uploaded, for an external join. An end
+	// user sees only groups one of its devices is a member of, or groups open to
+	// the tenant (EXTERNAL_JOIN_POLICY_TENANT); others are NOT_FOUND.
 	GetGroupInfo(context.Context, *GetGroupInfoRequest) (*GetGroupInfoResponse, error)
 	// Fan an MLS PrivateMessage ciphertext for the group's current epoch out to every
 	// member device's inbox. The broker stores the opaque bytes and never decrypts

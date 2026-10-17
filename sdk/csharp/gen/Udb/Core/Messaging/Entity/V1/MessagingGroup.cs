@@ -28,7 +28,7 @@ namespace Udb.Core.Messaging.Entity.V1 {
             "cC5wcm90bxIcdWRiLmNvcmUubWVzc2FnaW5nLmVudGl0eS52MRofZ29vZ2xl",
             "L3Byb3RvYnVmL3RpbWVzdGFtcC5wcm90bxobdWRiL2NvcmUvY29tbW9uL3Yx",
             "L2RiLnByb3RvGiF1ZGIvY29yZS9jb21tb24vdjEvc2VjdXJpdHkucHJvdG8i",
-            "gAoKDk1lc3NhZ2luZ0dyb3VwEjUKAmlkGAEgASgJQiWCtxghCgJpZBIEVVVJ",
+            "5QoKDk1lc3NhZ2luZ0dyb3VwEjUKAmlkGAEgASgJQiWCtxghCgJpZBIEVVVJ",
             "RBgBKAE6EWdlbl9yYW5kb21fdXVpZCgpUgJpZBI+Cgl0ZW5hbnRfaWQYAiAB",
             "KAlCIYK3GB0KCXRlbmFudF9pZBILVkFSQ0hBUig2NCkYAZgCAVIIdGVuYW50",
             "SWQSOQoIZ3JvdXBfaWQYAyABKAlCHoK3GBoKCGdyb3VwX2lkEgxWQVJDSEFS",
@@ -44,29 +44,32 @@ namespace Udb.Core.Messaging.Entity.V1 {
             "b3RvYnVmLlRpbWVzdGFtcEImgrcYIgoKY3JlYXRlZF9hdBILVElNRVNUQU1Q",
             "VFoYAToFTk9XKClSCWNyZWF0ZWRBdBJhCgp1cGRhdGVkX2F0GAogASgLMhou",
             "Z29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcEImgrcYIgoKdXBkYXRlZF9hdBIL",
-            "VElNRVNUQU1QVFoYAToFTk9XKClSCXVwZGF0ZWRBdDqQBPq2GPgCCgptbHNf",
-            "Z3JvdXBzEg11ZGJfbWVzc2FnaW5nGAMgASpDRTJFRSBtZXNzYWdpbmcgTUxT",
-            "IGdyb3VwczogcHVibGljIGdyb3VwIHN0YXRlIGFuZCB0aGUgY3VycmVudCBl",
-            "cG9jaDgBQAFikAEKEHRlbmFudF9pc29sYXRpb24aeih0ZW5hbnRfaWQ6OnRl",
-            "eHQgPSBjdXJyZW50X3NldHRpbmcoJ2FwcC5jdXJyZW50X3RlbmFudF9pZCcs",
-            "IHRydWUpIE9SIGN1cnJlbnRfc2V0dGluZygnYXBwLnBsYXRmb3JtX2FkbWlu",
-            "JywgdHJ1ZSkgPSAndHJ1ZScpKAFoAYoBSAooaWR4X21lc3NhZ2luZ19ncm91",
-            "cHNfdGVuYW50X2dyb3VwX3VuaXF1ZRIFQlRSRUUYAVoJdGVuYW50X2lkWghn",
-            "cm91cF9pZPIBHHVkYi5tZXNzYWdpbmcubWxzX2dyb3Vwcy5jZGP6AQ5tZXNz",
-            "YWdpbmc6cmVhZIqyGY4BCgZ0ZW5hbnQaCXRlbmFudF9pZCo0dGVuYW50X2lk",
-            "ID0gY3VycmVudF9zZXR0aW5nKCdhcHAuY3VycmVudF90ZW5hbnRfaWQnKTIE",
-            "bm9uZToPbWVzc2FnaW5nLmdyb3VwQMIcSAJSBnRlbmFudFoIc3RhbmRhcmRy",
-            "FXRlbmFudC5kYXRhX3Jlc2lkZW5jeUKWAgogY29tLnVkYi5jb3JlLm1lc3Nh",
-            "Z2luZy5lbnRpdHkudjFCE01lc3NhZ2luZ0dyb3VwUHJvdG9QAVpIZ2l0aHVi",
-            "LmNvbS9mYWhhcmEwMi91ZGIvc2RrL2dvL2dlbi91ZGIvY29yZS9tZXNzYWdp",
-            "bmcvZW50aXR5L3YxO2VudGl0eXYxogIEVUNNRaoCHFVkYi5Db3JlLk1lc3Nh",
-            "Z2luZy5FbnRpdHkuVjHKAhxVZGJcQ29yZVxNZXNzYWdpbmdcRW50aXR5XFYx",
-            "4gIoVWRiXEdQQk1ldGFkYXRhXENvcmVcTWVzc2FnaW5nXEVudGl0eVxWMeoC",
-            "IFVkYjo6Q29yZTo6TWVzc2FnaW5nOjpFbnRpdHk6OlYxYgZwcm90bzM="));
+            "VElNRVNUQU1QVFoYAToFTk9XKClSCXVwZGF0ZWRBdBJjChRleHRlcm5hbF9q",
+            "b2luX3BvbGljeRgLIAEoCUIxgrcYLQoUZXh0ZXJuYWxfam9pbl9wb2xpY3kS",
+            "C1ZBUkNIQVIoMjApGAE6BidOT05FJ1ISZXh0ZXJuYWxKb2luUG9saWN5OpAE",
+            "+rYY+AIKCm1sc19ncm91cHMSDXVkYl9tZXNzYWdpbmcYAyABKkNFMkVFIG1l",
+            "c3NhZ2luZyBNTFMgZ3JvdXBzOiBwdWJsaWMgZ3JvdXAgc3RhdGUgYW5kIHRo",
+            "ZSBjdXJyZW50IGVwb2NoOAFAAWKQAQoQdGVuYW50X2lzb2xhdGlvbhp6KHRl",
+            "bmFudF9pZDo6dGV4dCA9IGN1cnJlbnRfc2V0dGluZygnYXBwLmN1cnJlbnRf",
+            "dGVuYW50X2lkJywgdHJ1ZSkgT1IgY3VycmVudF9zZXR0aW5nKCdhcHAucGxh",
+            "dGZvcm1fYWRtaW4nLCB0cnVlKSA9ICd0cnVlJykoAWgBigFICihpZHhfbWVz",
+            "c2FnaW5nX2dyb3Vwc190ZW5hbnRfZ3JvdXBfdW5pcXVlEgVCVFJFRRgBWgl0",
+            "ZW5hbnRfaWRaCGdyb3VwX2lk8gEcdWRiLm1lc3NhZ2luZy5tbHNfZ3JvdXBz",
+            "LmNkY/oBDm1lc3NhZ2luZzpyZWFkirIZjgEKBnRlbmFudBoJdGVuYW50X2lk",
+            "KjR0ZW5hbnRfaWQgPSBjdXJyZW50X3NldHRpbmcoJ2FwcC5jdXJyZW50X3Rl",
+            "bmFudF9pZCcpMgRub25lOg9tZXNzYWdpbmcuZ3JvdXBAwhxIAlIGdGVuYW50",
+            "WghzdGFuZGFyZHIVdGVuYW50LmRhdGFfcmVzaWRlbmN5QpYCCiBjb20udWRi",
+            "LmNvcmUubWVzc2FnaW5nLmVudGl0eS52MUITTWVzc2FnaW5nR3JvdXBQcm90",
+            "b1ABWkhnaXRodWIuY29tL2ZhaGFyYTAyL3VkYi9zZGsvZ28vZ2VuL3VkYi9j",
+            "b3JlL21lc3NhZ2luZy9lbnRpdHkvdjE7ZW50aXR5djGiAgRVQ01FqgIcVWRi",
+            "LkNvcmUuTWVzc2FnaW5nLkVudGl0eS5WMcoCHFVkYlxDb3JlXE1lc3NhZ2lu",
+            "Z1xFbnRpdHlcVjHiAihVZGJcR1BCTWV0YWRhdGFcQ29yZVxNZXNzYWdpbmdc",
+            "RW50aXR5XFYx6gIgVWRiOjpDb3JlOjpNZXNzYWdpbmc6OkVudGl0eTo6VjFi",
+            "BnByb3RvMw=="));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { global::Google.Protobuf.WellKnownTypes.TimestampReflection.Descriptor, global::Udb.Core.Common.V1.DbReflection.Descriptor, global::Udb.Core.Common.V1.SecurityReflection.Descriptor, },
           new pbr::GeneratedClrTypeInfo(null, null, new pbr::GeneratedClrTypeInfo[] {
-            new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Core.Messaging.Entity.V1.MessagingGroup), global::Udb.Core.Messaging.Entity.V1.MessagingGroup.Parser, new[]{ "Id", "TenantId", "GroupId", "Epoch", "PublicGroupState", "GroupInfo", "GroupInfoEpoch", "CreatedByDeviceId", "CreatedAt", "UpdatedAt" }, null, null, null, null)
+            new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Core.Messaging.Entity.V1.MessagingGroup), global::Udb.Core.Messaging.Entity.V1.MessagingGroup.Parser, new[]{ "Id", "TenantId", "GroupId", "Epoch", "PublicGroupState", "GroupInfo", "GroupInfoEpoch", "CreatedByDeviceId", "CreatedAt", "UpdatedAt", "ExternalJoinPolicy" }, null, null, null, null)
           }));
     }
     #endregion
@@ -125,6 +128,7 @@ namespace Udb.Core.Messaging.Entity.V1 {
       createdByDeviceId_ = other.createdByDeviceId_;
       createdAt_ = other.createdAt_ != null ? other.createdAt_.Clone() : null;
       updatedAt_ = other.updatedAt_ != null ? other.updatedAt_.Clone() : null;
+      externalJoinPolicy_ = other.externalJoinPolicy_;
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
     }
 
@@ -260,6 +264,21 @@ namespace Udb.Core.Messaging.Entity.V1 {
       }
     }
 
+    /// <summary>Field number for the "external_join_policy" field.</summary>
+    public const int ExternalJoinPolicyFieldNumber = 11;
+    private string externalJoinPolicy_ = "";
+    /// <summary>
+    /// Who may join by an external commit: NONE | SAME_PRINCIPAL | TENANT.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string ExternalJoinPolicy {
+      get { return externalJoinPolicy_; }
+      set {
+        externalJoinPolicy_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public override bool Equals(object other) {
@@ -285,6 +304,7 @@ namespace Udb.Core.Messaging.Entity.V1 {
       if (CreatedByDeviceId != other.CreatedByDeviceId) return false;
       if (!object.Equals(CreatedAt, other.CreatedAt)) return false;
       if (!object.Equals(UpdatedAt, other.UpdatedAt)) return false;
+      if (ExternalJoinPolicy != other.ExternalJoinPolicy) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
 
@@ -302,6 +322,7 @@ namespace Udb.Core.Messaging.Entity.V1 {
       if (CreatedByDeviceId.Length != 0) hash ^= CreatedByDeviceId.GetHashCode();
       if (createdAt_ != null) hash ^= CreatedAt.GetHashCode();
       if (updatedAt_ != null) hash ^= UpdatedAt.GetHashCode();
+      if (ExternalJoinPolicy.Length != 0) hash ^= ExternalJoinPolicy.GetHashCode();
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
       }
@@ -360,6 +381,10 @@ namespace Udb.Core.Messaging.Entity.V1 {
         output.WriteRawTag(82);
         output.WriteMessage(UpdatedAt);
       }
+      if (ExternalJoinPolicy.Length != 0) {
+        output.WriteRawTag(90);
+        output.WriteString(ExternalJoinPolicy);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
       }
@@ -410,6 +435,10 @@ namespace Udb.Core.Messaging.Entity.V1 {
         output.WriteRawTag(82);
         output.WriteMessage(UpdatedAt);
       }
+      if (ExternalJoinPolicy.Length != 0) {
+        output.WriteRawTag(90);
+        output.WriteString(ExternalJoinPolicy);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(ref output);
       }
@@ -449,6 +478,9 @@ namespace Udb.Core.Messaging.Entity.V1 {
       }
       if (updatedAt_ != null) {
         size += 1 + pb::CodedOutputStream.ComputeMessageSize(UpdatedAt);
+      }
+      if (ExternalJoinPolicy.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(ExternalJoinPolicy);
       }
       if (_unknownFields != null) {
         size += _unknownFields.CalculateSize();
@@ -497,6 +529,9 @@ namespace Udb.Core.Messaging.Entity.V1 {
           UpdatedAt = new global::Google.Protobuf.WellKnownTypes.Timestamp();
         }
         UpdatedAt.MergeFrom(other.UpdatedAt);
+      }
+      if (other.ExternalJoinPolicy.Length != 0) {
+        ExternalJoinPolicy = other.ExternalJoinPolicy;
       }
       _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
     }
@@ -563,6 +598,10 @@ namespace Udb.Core.Messaging.Entity.V1 {
             input.ReadMessage(UpdatedAt);
             break;
           }
+          case 90: {
+            ExternalJoinPolicy = input.ReadString();
+            break;
+          }
         }
       }
     #endif
@@ -626,6 +665,10 @@ namespace Udb.Core.Messaging.Entity.V1 {
               UpdatedAt = new global::Google.Protobuf.WellKnownTypes.Timestamp();
             }
             input.ReadMessage(UpdatedAt);
+            break;
+          }
+          case 90: {
+            ExternalJoinPolicy = input.ReadString();
             break;
           }
         }

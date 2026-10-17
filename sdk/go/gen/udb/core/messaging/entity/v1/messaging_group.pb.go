@@ -42,8 +42,10 @@ type MessagingGroup struct {
 	CreatedByDeviceId string                 `protobuf:"bytes,8,opt,name=created_by_device_id,json=createdByDeviceId,proto3" json:"created_by_device_id,omitempty"`
 	CreatedAt         *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	UpdatedAt         *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
-	unknownFields     protoimpl.UnknownFields
-	sizeCache         protoimpl.SizeCache
+	// Who may join by an external commit: NONE | SAME_PRINCIPAL | TENANT.
+	ExternalJoinPolicy string `protobuf:"bytes,11,opt,name=external_join_policy,json=externalJoinPolicy,proto3" json:"external_join_policy,omitempty"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
 }
 
 func (x *MessagingGroup) Reset() {
@@ -146,11 +148,18 @@ func (x *MessagingGroup) GetUpdatedAt() *timestamppb.Timestamp {
 	return nil
 }
 
+func (x *MessagingGroup) GetExternalJoinPolicy() string {
+	if x != nil {
+		return x.ExternalJoinPolicy
+	}
+	return ""
+}
+
 var File_udb_core_messaging_entity_v1_messaging_group_proto protoreflect.FileDescriptor
 
 const file_udb_core_messaging_entity_v1_messaging_group_proto_rawDesc = "" +
 	"\n" +
-	"2udb/core/messaging/entity/v1/messaging_group.proto\x12\x1cudb.core.messaging.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\"\x80\n" +
+	"2udb/core/messaging/entity/v1/messaging_group.proto\x12\x1cudb.core.messaging.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\"\xe5\n" +
 	"\n" +
 	"\x0eMessagingGroup\x125\n" +
 	"\x02id\x18\x01 \x01(\tB%\x82\xb7\x18!\n" +
@@ -179,7 +188,9 @@ const file_udb_core_messaging_entity_v1_messaging_group_proto_rawDesc = "" +
 	"updated_at\x18\n" +
 	" \x01(\v2\x1a.google.protobuf.TimestampB&\x82\xb7\x18\"\n" +
 	"\n" +
-	"updated_at\x12\vTIMESTAMPTZ\x18\x01:\x05NOW()R\tupdatedAt:\x90\x04\xfa\xb6\x18\xf8\x02\n" +
+	"updated_at\x12\vTIMESTAMPTZ\x18\x01:\x05NOW()R\tupdatedAt\x12c\n" +
+	"\x14external_join_policy\x18\v \x01(\tB1\x82\xb7\x18-\n" +
+	"\x14external_join_policy\x12\vVARCHAR(20)\x18\x01:\x06'NONE'R\x12externalJoinPolicy:\x90\x04\xfa\xb6\x18\xf8\x02\n" +
 	"\n" +
 	"mls_groups\x12\rudb_messaging\x18\x03 \x01*CE2EE messaging MLS groups: public group state and the current epoch8\x01@\x01b\x90\x01\n" +
 	"\x10tenant_isolation\x1az(tenant_id::text = current_setting('app.current_tenant_id', true) OR current_setting('app.platform_admin', true) = 'true')(\x01h\x01\x8a\x01H\n" +

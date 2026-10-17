@@ -9292,7 +9292,7 @@ public final class GeneratedUdbClient implements AutoCloseable {
             "udb.core.messaging.entity.v1.MessagingGroup",
             "mls_groups",
             List.of("id"),
-            List.of("id", "tenant_id", "group_id", "epoch", "public_group_state", "group_info", "group_info_epoch", "created_by_device_id", "created_at", "updated_at", "created_by"),
+            List.of("id", "tenant_id", "group_id", "epoch", "public_group_state", "group_info", "group_info_epoch", "created_by_device_id", "created_at", "updated_at", "external_join_policy", "created_by"),
             List.of(),
             "[]",
             "",

@@ -44,7 +44,7 @@ public final class MessagingGroupProto {
       "_group.proto\022\034udb.core.messaging.entity." +
       "v1\032\037google/protobuf/timestamp.proto\032\033udb" +
       "/core/common/v1/db.proto\032!udb/core/commo" +
-      "n/v1/security.proto\"\200\n\n\016MessagingGroup\0225" +
+      "n/v1/security.proto\"\345\n\n\016MessagingGroup\0225" +
       "\n\002id\030\001 \001(\tB%\202\267\030!\n\002id\022\004UUID\030\001(\001:\021gen_rand" +
       "om_uuid()R\002id\022>\n\ttenant_id\030\002 \001(\tB!\202\267\030\035\n\t" +
       "tenant_id\022\013VARCHAR(64)\030\001\230\002\001R\010tenantId\0229\n" +
@@ -63,27 +63,30 @@ public final class MessagingGroupProto {
       "\013TIMESTAMPTZ\030\001:\005NOW()R\tcreatedAt\022a\n\nupda" +
       "ted_at\030\n \001(\0132\032.google.protobuf.Timestamp" +
       "B&\202\267\030\"\n\nupdated_at\022\013TIMESTAMPTZ\030\001:\005NOW()" +
-      "R\tupdatedAt:\220\004\372\266\030\370\002\n\nmls_groups\022\rudb_mes" +
-      "saging\030\003 \001*CE2EE messaging MLS groups: p" +
-      "ublic group state and the current epoch8" +
-      "\001@\001b\220\001\n\020tenant_isolation\032z(tenant_id::te" +
-      "xt = current_setting(\'app.current_tenant" +
-      "_id\', true) OR current_setting(\'app.plat" +
-      "form_admin\', true) = \'true\')(\001h\001\212\001H\n(idx" +
-      "_messaging_groups_tenant_group_unique\022\005B" +
-      "TREE\030\001Z\ttenant_idZ\010group_id\362\001\034udb.messag" +
-      "ing.mls_groups.cdc\372\001\016messaging:read\212\262\031\216\001" +
-      "\n\006tenant\032\ttenant_id*4tenant_id = current" +
-      "_setting(\'app.current_tenant_id\')2\004none:" +
-      "\017messaging.group@\302\034H\002R\006tenantZ\010standardr" +
-      "\025tenant.data_residencyB\226\002\n com.udb.core." +
-      "messaging.entity.v1B\023MessagingGroupProto" +
-      "P\001ZHgithub.com/fahara02/udb/sdk/go/gen/u" +
-      "db/core/messaging/entity/v1;entityv1\242\002\004U" +
-      "CME\252\002\034Udb.Core.Messaging.Entity.V1\312\002\034Udb" +
-      "\\Core\\Messaging\\Entity\\V1\342\002(Udb\\GPBMetad" +
-      "ata\\Core\\Messaging\\Entity\\V1\352\002 Udb::Core" +
-      "::Messaging::Entity::V1b\006proto3"
+      "R\tupdatedAt\022c\n\024external_join_policy\030\013 \001(" +
+      "\tB1\202\267\030-\n\024external_join_policy\022\013VARCHAR(2" +
+      "0)\030\001:\006\'NONE\'R\022externalJoinPolicy:\220\004\372\266\030\370\002" +
+      "\n\nmls_groups\022\rudb_messaging\030\003 \001*CE2EE me" +
+      "ssaging MLS groups: public group state a" +
+      "nd the current epoch8\001@\001b\220\001\n\020tenant_isol" +
+      "ation\032z(tenant_id::text = current_settin" +
+      "g(\'app.current_tenant_id\', true) OR curr" +
+      "ent_setting(\'app.platform_admin\', true) " +
+      "= \'true\')(\001h\001\212\001H\n(idx_messaging_groups_t" +
+      "enant_group_unique\022\005BTREE\030\001Z\ttenant_idZ\010" +
+      "group_id\362\001\034udb.messaging.mls_groups.cdc\372" +
+      "\001\016messaging:read\212\262\031\216\001\n\006tenant\032\ttenant_id" +
+      "*4tenant_id = current_setting(\'app.curre" +
+      "nt_tenant_id\')2\004none:\017messaging.group@\302\034" +
+      "H\002R\006tenantZ\010standardr\025tenant.data_reside" +
+      "ncyB\226\002\n com.udb.core.messaging.entity.v1" +
+      "B\023MessagingGroupProtoP\001ZHgithub.com/faha" +
+      "ra02/udb/sdk/go/gen/udb/core/messaging/e" +
+      "ntity/v1;entityv1\242\002\004UCME\252\002\034Udb.Core.Mess" +
+      "aging.Entity.V1\312\002\034Udb\\Core\\Messaging\\Ent" +
+      "ity\\V1\342\002(Udb\\GPBMetadata\\Core\\Messaging\\" +
+      "Entity\\V1\352\002 Udb::Core::Messaging::Entity" +
+      "::V1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -97,7 +100,7 @@ public final class MessagingGroupProto {
     internal_static_udb_core_messaging_entity_v1_MessagingGroup_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_core_messaging_entity_v1_MessagingGroup_descriptor,
-        new java.lang.String[] { "Id", "TenantId", "GroupId", "Epoch", "PublicGroupState", "GroupInfo", "GroupInfoEpoch", "CreatedByDeviceId", "CreatedAt", "UpdatedAt", });
+        new java.lang.String[] { "Id", "TenantId", "GroupId", "Epoch", "PublicGroupState", "GroupInfo", "GroupInfoEpoch", "CreatedByDeviceId", "CreatedAt", "UpdatedAt", "ExternalJoinPolicy", });
     descriptor.resolveAllFeaturesImmutable();
     com.google.protobuf.TimestampProto.getDescriptor();
     com.udb.core.common.v1.DbProto.getDescriptor();

@@ -64,6 +64,12 @@ class MessagingGroup extends \Google\Protobuf\Internal\Message
      * Generated from protobuf field <code>.google.protobuf.Timestamp updated_at = 10 [json_name = "updatedAt", (.udb.core.common.v1.pg_column) = {</code>
      */
     protected $updated_at = null;
+    /**
+     * Who may join by an external commit: NONE | SAME_PRINCIPAL | TENANT.
+     *
+     * Generated from protobuf field <code>string external_join_policy = 11 [json_name = "externalJoinPolicy", (.udb.core.common.v1.pg_column) = {</code>
+     */
+    protected $external_join_policy = '';
 
     /**
      * Constructor.
@@ -83,6 +89,8 @@ class MessagingGroup extends \Google\Protobuf\Internal\Message
      *     @type string $created_by_device_id
      *     @type \Google\Protobuf\Timestamp $created_at
      *     @type \Google\Protobuf\Timestamp $updated_at
+     *     @type string $external_join_policy
+     *           Who may join by an external commit: NONE | SAME_PRINCIPAL | TENANT.
      * }
      */
     public function __construct($data = NULL) {
@@ -334,6 +342,32 @@ class MessagingGroup extends \Google\Protobuf\Internal\Message
     {
         GPBUtil::checkMessage($var, \Google\Protobuf\Timestamp::class);
         $this->updated_at = $var;
+
+        return $this;
+    }
+
+    /**
+     * Who may join by an external commit: NONE | SAME_PRINCIPAL | TENANT.
+     *
+     * Generated from protobuf field <code>string external_join_policy = 11 [json_name = "externalJoinPolicy", (.udb.core.common.v1.pg_column) = {</code>
+     * @return string
+     */
+    public function getExternalJoinPolicy()
+    {
+        return $this->external_join_policy;
+    }
+
+    /**
+     * Who may join by an external commit: NONE | SAME_PRINCIPAL | TENANT.
+     *
+     * Generated from protobuf field <code>string external_join_policy = 11 [json_name = "externalJoinPolicy", (.udb.core.common.v1.pg_column) = {</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setExternalJoinPolicy($var)
+    {
+        GPBUtil::checkString($var, True);
+        $this->external_join_policy = $var;
 
         return $this;
     }

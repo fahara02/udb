@@ -44,6 +44,13 @@ class CreateGroupRequest extends \Google\Protobuf\Internal\Message
      * Generated from protobuf field <code>bytes ratchet_tree = 5 [json_name = "ratchetTree"];</code>
      */
     protected $ratchet_tree = '';
+    /**
+     * Who may join by an external commit. Unless NONE, every commit to the group
+     * must upload the new epoch's GroupInfo. A replayed create must repeat it.
+     *
+     * Generated from protobuf field <code>.udb.core.messaging.services.v1.ExternalJoinPolicy external_join_policy = 6 [json_name = "externalJoinPolicy"];</code>
+     */
+    protected $external_join_policy = 0;
 
     /**
      * Constructor.
@@ -62,6 +69,9 @@ class CreateGroupRequest extends \Google\Protobuf\Internal\Message
      *           TLS-serialized MlsMessage carrying the creator's signed GroupInfo.
      *     @type string $ratchet_tree
      *           TLS-serialized ratchet tree exported by the creator.
+     *     @type int $external_join_policy
+     *           Who may join by an external commit. Unless NONE, every commit to the group
+     *           must upload the new epoch's GroupInfo. A replayed create must repeat it.
      * }
      */
     public function __construct($data = NULL) {
@@ -195,6 +205,34 @@ class CreateGroupRequest extends \Google\Protobuf\Internal\Message
     {
         GPBUtil::checkString($var, False);
         $this->ratchet_tree = $var;
+
+        return $this;
+    }
+
+    /**
+     * Who may join by an external commit. Unless NONE, every commit to the group
+     * must upload the new epoch's GroupInfo. A replayed create must repeat it.
+     *
+     * Generated from protobuf field <code>.udb.core.messaging.services.v1.ExternalJoinPolicy external_join_policy = 6 [json_name = "externalJoinPolicy"];</code>
+     * @return int
+     */
+    public function getExternalJoinPolicy()
+    {
+        return $this->external_join_policy;
+    }
+
+    /**
+     * Who may join by an external commit. Unless NONE, every commit to the group
+     * must upload the new epoch's GroupInfo. A replayed create must repeat it.
+     *
+     * Generated from protobuf field <code>.udb.core.messaging.services.v1.ExternalJoinPolicy external_join_policy = 6 [json_name = "externalJoinPolicy"];</code>
+     * @param int $var
+     * @return $this
+     */
+    public function setExternalJoinPolicy($var)
+    {
+        GPBUtil::checkEnum($var, \Udb\Core\Messaging\Services\V1\ExternalJoinPolicy::class);
+        $this->external_join_policy = $var;
 
         return $this;
     }
