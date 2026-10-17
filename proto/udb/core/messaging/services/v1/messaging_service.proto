@@ -382,6 +382,10 @@ service MessagingService {
   // Accepted only when its epoch is the group's current epoch and it validates
   // against the public group state; concurrent commits linearize and the loser
   // receives FAILED_PRECONDITION carrying the current epoch so it can re-base.
+  // An external commit (a new device joining from GetGroupInfo's GroupInfo, no
+  // Welcome) is accepted only as the group's external_join_policy allows; the
+  // joiner receives the COMMIT echo, not a Welcome. Groups whose policy is not
+  // NONE require the new epoch's GroupInfo on every commit.
   rpc SubmitCommit(SubmitCommitRequest) returns (SubmitCommitResponse) {
     option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
     // Verified: GENUINE keyed dedup. A non-empty client_message_id is scoped to
@@ -441,7 +445,9 @@ service MessagingService {
   }
 
   // Return the group's current epoch, its exported public ratchet tree, and the
-  // latest signed GroupInfo a member uploaded, for an external join.
+  // latest signed GroupInfo a member uploaded, for an external join. An end
+  // user sees only groups one of its devices is a member of, or groups open to
+  // the tenant (EXTERNAL_JOIN_POLICY_TENANT); others are NOT_FOUND.
   rpc GetGroupInfo(GetGroupInfoRequest) returns (GetGroupInfoResponse) {
     option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
     option (udb.core.common.v1.endpoint_security) = {
@@ -1010,6 +1016,19 @@ message GetKeyPackageStockResponse {
   udb.core.common.v1.ApiError error = 4;
 }
 
+// Who may join a group by an external commit (RFC 9420 §12.4.3.2) built from
+// the GroupInfo GetGroupInfo serves.
+enum ExternalJoinPolicy {
+  // Treated as NONE.
+  EXTERNAL_JOIN_POLICY_UNSPECIFIED = 0;
+  // No external joins: devices join only from a member's Welcome.
+  EXTERNAL_JOIN_POLICY_NONE = 1;
+  // A device whose principal already has a member device in the group.
+  EXTERNAL_JOIN_POLICY_SAME_PRINCIPAL = 2;
+  // Any active device of the tenant.
+  EXTERNAL_JOIN_POLICY_TENANT = 3;
+}
+
 message CreateGroupRequest {
   option (udb.core.common.v1.message_sdk_surface) = {
       include_in_facade: true
@@ -1031,6 +1050,9 @@ message CreateGroupRequest {
   bytes group_info = 4;
   // TLS-serialized ratchet tree exported by the creator.
   bytes ratchet_tree = 5;
+  // Who may join by an external commit. Unless NONE, every commit to the group
+  // must upload the new epoch's GroupInfo. A replayed create must repeat it.
+  ExternalJoinPolicy external_join_policy = 6;
 }
 
 message CreateGroupResponse {
@@ -1070,10 +1092,12 @@ message SubmitCommitRequest {
   // TLS-serialized MlsMessage carrying the PublicMessage commit.
   bytes commit = 5;
   // TLS-serialized MlsMessage carrying the Welcome for added devices; required
-  // when the commit adds members.
+  // when a member's commit adds members, empty for an external commit.
   bytes welcome = 6;
-  // Optional TLS-serialized MlsMessage carrying the signed GroupInfo of the new
-  // epoch, served by GetGroupInfo for external joins.
+  // TLS-serialized MlsMessage carrying the signed GroupInfo of the new epoch,
+  // served by GetGroupInfo for external joins. Required on every commit to a
+  // group whose external_join_policy is not NONE (optional otherwise); it must
+  // verify against the post-commit tree.
   bytes group_info = 7;
   // Client idempotency key. A retried commit with the same key returns the
   // original result instead of being re-applied.
@@ -1140,6 +1164,8 @@ message GetGroupInfoResponse {
   string message = 7;
   // Error information if operation failed
   udb.core.common.v1.ApiError error = 8;
+  // Who may join by an external commit.
+  ExternalJoinPolicy external_join_policy = 9;
 }
 
 message SendMessageRequest {

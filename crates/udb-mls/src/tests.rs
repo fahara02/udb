@@ -87,6 +87,24 @@ impl Hub {
         Ok(epoch + 1)
     }
 
+    /// An external commit: the joiner becomes a member and, like every member,
+    /// receives the COMMIT (its echo); nobody gets a Welcome.
+    fn submit_external(&mut self, sender: &str, join: &crate::ExternalJoin) -> Result<u64, u64> {
+        let (epoch, members) = self.groups[&join.group_id].clone();
+        if join.epoch != epoch {
+            return Err(epoch);
+        }
+        let mut after = members;
+        after.insert(sender.to_string());
+        for device in &after {
+            let item = InboxItem::commit(0, &join.group_id, epoch, sender, join.commit.clone());
+            self.append(device, item);
+        }
+        self.groups
+            .insert(join.group_id.clone(), (epoch + 1, after));
+        Ok(epoch + 1)
+    }
+
     fn send(&mut self, sender: &str, message: &OutgoingMessage) {
         let (epoch, members) = self.groups[&message.group_id].clone();
         assert_eq!(
@@ -1555,5 +1573,158 @@ fn a_0_6_0_snapshot_opens_with_no_pins() {
     assert_eq!(
         stamped.pinned_key("bob-phone").unwrap().first_seen_unix,
         seen
+    );
+}
+
+// ── external joins ─────────────────────────────────────────────────────────
+
+#[test]
+fn a_device_joins_by_external_commit_from_the_group_info() {
+    let mut hub = Hub::default();
+    let (mut alice, mut bob, mut carol) = three_member_group(&mut hub, "g-ext");
+    // Every commit carries the GroupInfo of the epoch it creates.
+    let update = alice
+        .commit("g-ext", CommitIntent::Update)
+        .unwrap()
+        .unwrap();
+    let info = update
+        .group_info
+        .clone()
+        .expect("a commit carries the new epoch's GroupInfo");
+    assert_eq!(hub.submit("alice-phone", &update), Ok(2));
+    alice.confirm_commit("g-ext").unwrap();
+    for client in [&mut alice, &mut bob, &mut carol] {
+        hub.deliver(client);
+    }
+
+    // A pinned key that differs from a member's leaf refuses the join.
+    let mut wary = device("dave", "dave-1");
+    let impostor = signature_key(&device("bob", "bob-phone"));
+    wary.observe_device_keys(
+        &[("bob", "bob-phone", impostor.as_slice())],
+        crate::KeySource::Directory,
+    )
+    .unwrap();
+    assert!(matches!(
+        wary.join_external("g-ext", &info, &[]),
+        Err(MlsError::KeyChanged { .. })
+    ));
+    assert!(wary.group_ids().is_empty());
+
+    // Alice's second device joins from the GroupInfo (it carries the tree).
+    let mut laptop = device("alice", "alice-laptop");
+    let join = laptop.join_external("g-ext", &info, &[]).unwrap();
+    assert_eq!(join.epoch, 2, "built on the GroupInfo's epoch");
+    assert!(join.group_info.is_some());
+    assert!(laptop.has_pending_commit("g-ext"));
+    assert!(matches!(
+        laptop.encrypt("g-ext", b"too early"),
+        Err(MlsError::PendingCommit(_))
+    ));
+    assert!(matches!(
+        laptop.join_external("g-ext", &info, &[]),
+        Err(MlsError::GroupExists(_))
+    ));
+    assert_eq!(hub.submit_external("alice-laptop", &join), Ok(3));
+    let summary = laptop.confirm_commit("g-ext").unwrap();
+    assert_eq!(summary.epoch, 3);
+    assert_eq!(
+        summary.members,
+        ["alice-laptop", "alice-phone", "bob-phone", "carol-laptop"]
+    );
+    assert!(!laptop.has_pending_commit("g-ext"));
+
+    // The members apply the external commit as an add by the joiner.
+    for client in [&mut bob, &mut carol] {
+        let events = hub.deliver(client);
+        assert!(
+            matches!(&events[..], [InboxEvent::Commit { epoch: 3, added, sender_device_id, .. }]
+                if added == &["alice-laptop".to_string()] && sender_device_id == "alice-laptop"),
+            "{events:?}"
+        );
+    }
+    hub.deliver(&mut alice);
+    // A new device of alice's own account is worth a look.
+    assert!(alice
+        .take_key_events()
+        .unwrap()
+        .iter()
+        .any(|event| matches!(
+            event,
+            crate::KeyEvent::NewDevice { device_id, source: crate::KeySource::Commit, .. }
+                if device_id == "alice-laptop"
+        )));
+    // The joiner gets its own commit back, already applied.
+    assert!(matches!(
+        &hub.deliver(&mut laptop)[..],
+        [InboxEvent::OwnCommit {
+            merged: false,
+            epoch: 3,
+            ..
+        }]
+    ));
+    send(&mut hub, &mut laptop, "g-ext", "joined from the laptop");
+    for client in [&mut alice, &mut bob, &mut carol] {
+        assert_eq!(
+            texts(&hub.deliver(client)),
+            [(
+                "alice-laptop".to_string(),
+                "joined from the laptop".to_string()
+            )]
+        );
+    }
+}
+
+#[test]
+fn an_external_join_is_dropped_on_refusal_and_confirmed_by_its_echo() {
+    let mut hub = Hub::default();
+    let (mut alice, mut bob, _carol) = three_member_group(&mut hub, "g-ext-2");
+    let first = alice
+        .commit("g-ext-2", CommitIntent::Update)
+        .unwrap()
+        .unwrap();
+    let stale_info = first.group_info.clone().unwrap();
+    hub.submit("alice-phone", &first).unwrap();
+    alice.confirm_commit("g-ext-2").unwrap();
+    hub.deliver(&mut alice);
+    hub.deliver(&mut bob);
+
+    // Another commit moves the group on: a join from the older GroupInfo is
+    // refused stale, and discarding it deletes the joined group.
+    let second = bob
+        .commit("g-ext-2", CommitIntent::Update)
+        .unwrap()
+        .unwrap();
+    let info = second.group_info.clone().unwrap();
+    hub.submit("bob-phone", &second).unwrap();
+    bob.confirm_commit("g-ext-2").unwrap();
+    let mut tablet = device("bob", "bob-tablet");
+    let stale = tablet.join_external("g-ext-2", &stale_info, &[]).unwrap();
+    assert_eq!(hub.submit_external("bob-tablet", &stale), Err(3));
+    assert_eq!(tablet.discard_commit("g-ext-2").unwrap(), None);
+    assert!(tablet.group_ids().is_empty());
+    assert!(!tablet.has_pending_commit("g-ext-2"));
+
+    // Rejoin from the current GroupInfo; the SubmitCommit response is lost,
+    // and the inbox echo confirms the join after a restart.
+    let join = tablet.join_external("g-ext-2", &info, &[]).unwrap();
+    assert_eq!(hub.submit_external("bob-tablet", &join), Ok(4));
+    let mut restarted =
+        MlsClient::open(MemoryStore::from_snapshot(tablet.snapshot().unwrap())).unwrap();
+    assert!(restarted.has_pending_commit("g-ext-2"));
+    assert!(matches!(
+        &hub.deliver(&mut restarted)[..],
+        [InboxEvent::OwnCommit {
+            merged: true,
+            epoch: 4,
+            ..
+        }]
+    ));
+    assert!(!restarted.has_pending_commit("g-ext-2"));
+    hub.deliver(&mut bob);
+    send(&mut hub, &mut restarted, "g-ext-2", "tablet is in");
+    assert_eq!(
+        texts(&hub.deliver(&mut bob)),
+        [("bob-tablet".to_string(), "tablet is in".to_string())]
     );
 }

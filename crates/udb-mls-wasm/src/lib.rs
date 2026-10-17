@@ -152,6 +152,10 @@ pub struct Commit {
     pub commit: Vec<u8>,
     /// Empty when the commit adds nobody.
     pub welcome: Vec<u8>,
+    /// The signed GroupInfo of the epoch the commit creates
+    /// (`SubmitCommitRequest.group_info`); empty when none was produced.
+    #[wasm_bindgen(js_name = groupInfo)]
+    pub group_info: Vec<u8>,
     #[wasm_bindgen(js_name = addedDeviceIds)]
     pub added_device_ids: Vec<String>,
     #[wasm_bindgen(js_name = removedDeviceIds)]
@@ -165,6 +169,7 @@ impl From<PendingCommit> for Commit {
             epoch: pending.epoch as f64,
             commit: pending.commit,
             welcome: pending.welcome.unwrap_or_default(),
+            group_info: pending.group_info.unwrap_or_default(),
             added_device_ids: pending.added_device_ids,
             removed_device_ids: pending.removed_device_ids,
         }
@@ -196,8 +201,8 @@ pub struct KeyPackageInfo {
 }
 
 /// A key event (`MlsDevice.takeKeyEvents`). `kind` is `new_device` or
-/// `key_changed`; `source` is `directory`, `key_package`, `welcome` or
-/// `commit`. For a new device `observedFingerprint` is its key and
+/// `key_changed`; `source` is `directory`, `key_package`, `welcome`, `commit` or
+/// `group_info`. For a new device `observedFingerprint` is its key and
 /// `pinnedFingerprint` is empty; `groupId` is empty and `seq` 0 when the key was
 /// not seen in an inbox entry.
 #[wasm_bindgen(getter_with_clone)]

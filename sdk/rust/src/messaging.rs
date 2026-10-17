@@ -505,7 +505,20 @@ impl<S: StateStore> MessagingClient<S> {
     // ── groups ─────────────────────────────────────────────────────────────
 
     /// Create a group with this device as its only member. Returns its epoch.
+    /// The group admits no external joins; see [`Self::create_group_with_policy`].
     pub async fn create_group(&mut self, group_id: &str) -> Result<u64, MessagingError> {
+        self.create_group_with_policy(group_id, pb::ExternalJoinPolicy::None)
+            .await
+    }
+
+    /// Create a group whose `policy` decides who may join it by an external
+    /// commit ([`Self::join_external`]). Unless `NONE`, every commit to the
+    /// group uploads the new epoch's GroupInfo (this client always does).
+    pub async fn create_group_with_policy(
+        &mut self,
+        group_id: &str,
+        policy: pb::ExternalJoinPolicy,
+    ) -> Result<u64, MessagingError> {
         let creation = self.mls.create_group(group_id)?;
         let request = self.request(pb::CreateGroupRequest {
             tenant_id: self.tenant(),
@@ -513,6 +526,7 @@ impl<S: StateStore> MessagingClient<S> {
             creator_device_id: self.device(),
             group_info: creation.group_info,
             ratchet_tree: creation.ratchet_tree,
+            external_join_policy: policy as i32,
         })?;
         match self.rpc.create_group(request).await {
             Ok(response) => Ok(u64::try_from(response.into_inner().epoch).unwrap_or_default()),
@@ -624,34 +638,18 @@ impl<S: StateStore> MessagingClient<S> {
                 });
             };
             let client_message_id = self.fresh_id("commit");
-            let mut transport_retries = 0;
-            let result = loop {
-                let request = self.request(pb::SubmitCommitRequest {
+            let result = self
+                .send_commit(pb::SubmitCommitRequest {
                     tenant_id: self.tenant(),
                     group_id: group_id.to_string(),
                     sender_device_id: self.device(),
                     epoch: pending.epoch as i64,
                     commit: pending.commit.clone(),
                     welcome: pending.welcome.clone().unwrap_or_default(),
-                    group_info: Vec::new(),
-                    client_message_id: client_message_id.clone(),
-                })?;
-                match self.rpc.submit_commit(request).await {
-                    Ok(response) => break Ok(response.into_inner()),
-                    Err(status) => {
-                        let err = UdbError::from_status(status);
-                        if transient(&err) && transport_retries < MAX_TRANSPORT_RETRIES {
-                            transport_retries += 1;
-                            tokio::time::sleep(Duration::from_millis(
-                                100 * u64::from(transport_retries),
-                            ))
-                            .await;
-                            continue;
-                        }
-                        break Err(err);
-                    }
-                }
-            };
+                    group_info: pending.group_info.clone().unwrap_or_default(),
+                    client_message_id,
+                })
+                .await?;
             match result {
                 Ok(_response) => {
                     // A `duplicate` response means an earlier attempt landed; its
@@ -690,6 +688,121 @@ impl<S: StateStore> MessagingClient<S> {
                     // A transport failure that outlived the retries leaves the
                     // commit pending: its inbox echo merges it if it landed;
                     // otherwise `discard_pending_commit` drops it.
+                    return Err(err.into());
+                }
+            }
+        }
+    }
+
+    /// Send a `SubmitCommit`, re-sending it with the SAME idempotency key after
+    /// a transport failure. The outer `Err` is a local failure building the
+    /// request; the inner one is the broker's (or the transport's) answer.
+    async fn send_commit(
+        &mut self,
+        commit: pb::SubmitCommitRequest,
+    ) -> Result<Result<pb::SubmitCommitResponse, UdbError>, MessagingError> {
+        let mut transport_retries = 0;
+        loop {
+            let request = self.request(commit.clone())?;
+            match self.rpc.submit_commit(request).await {
+                Ok(response) => return Ok(Ok(response.into_inner())),
+                Err(status) => {
+                    let err = UdbError::from_status(status);
+                    if transient(&err) && transport_retries < MAX_TRANSPORT_RETRIES {
+                        transport_retries += 1;
+                        tokio::time::sleep(Duration::from_millis(
+                            100 * u64::from(transport_retries),
+                        ))
+                        .await;
+                        continue;
+                    }
+                    return Ok(Err(err));
+                }
+            }
+        }
+    }
+
+    /// Join `group_id` without a Welcome: fetch the group's current GroupInfo
+    /// (`GetGroupInfo`), build an external commit from it and submit it. The
+    /// group's `external_join_policy` decides whether the broker accepts it
+    /// (`SAME_PRINCIPAL`: another device of this device's principal is a
+    /// member; `TENANT`: any device of the tenant). The current members see an
+    /// [`InboxEvent::Commit`] that adds this device. A lost epoch race fetches
+    /// the GroupInfo again; a join left unresolved by a crash is settled
+    /// through the inbox first.
+    pub async fn join_external(&mut self, group_id: &str) -> Result<CommitOutcome, MessagingError> {
+        if self.mls.has_pending_commit(group_id) {
+            // An earlier join (or commit) never got its answer: the inbox echo
+            // confirms it if it landed, otherwise it is dropped.
+            self.discard_pending_commit(group_id).await?;
+        }
+        if self.mls.group_ids().iter().any(|id| id == group_id) {
+            return Ok(CommitOutcome {
+                epoch: self.mls.epoch(group_id)?,
+                ..CommitOutcome::default()
+            });
+        }
+        let mut rebases = 0;
+        loop {
+            let request = self.request(pb::GetGroupInfoRequest {
+                tenant_id: self.tenant(),
+                group_id: group_id.to_string(),
+            })?;
+            let info = self.rpc.get_group_info(request).await?.into_inner();
+            if info.group_info.is_empty() || info.group_info_epoch != info.epoch {
+                return Err(MessagingError::Protocol(format!(
+                    "group `{group_id}` has no current GroupInfo (epoch {}, GroupInfo epoch {}); a member must commit first",
+                    info.epoch, info.group_info_epoch
+                )));
+            }
+            let join = self
+                .mls
+                .join_external(group_id, &info.group_info, &info.ratchet_tree)?;
+            let client_message_id = self.fresh_id("join");
+            let result = self
+                .send_commit(pb::SubmitCommitRequest {
+                    tenant_id: self.tenant(),
+                    group_id: group_id.to_string(),
+                    sender_device_id: self.device(),
+                    epoch: join.epoch as i64,
+                    commit: join.commit.clone(),
+                    welcome: Vec::new(),
+                    group_info: join.group_info.clone().unwrap_or_default(),
+                    client_message_id,
+                })
+                .await?;
+            match result {
+                Ok(response) => {
+                    // A `duplicate` response means an earlier attempt landed; its
+                    // inbox echo may already have confirmed the join.
+                    let epoch = if self.mls.has_pending_commit(group_id) {
+                        self.mls.confirm_commit(group_id)?.epoch
+                    } else {
+                        self.mls.epoch(group_id)?
+                    };
+                    return Ok(CommitOutcome {
+                        epoch,
+                        added_device_ids: response.added_device_ids,
+                        removed_device_ids: Vec::new(),
+                        missing_device_ids: Vec::new(),
+                        rebases,
+                        committed: true,
+                    });
+                }
+                Err(err) => {
+                    if stale_epoch(&err).is_some() && rebases < MAX_REBASES {
+                        // Another commit won the epoch: drop the joined group and
+                        // build again from the new GroupInfo.
+                        rebases += 1;
+                        self.mls.discard_commit(group_id)?;
+                        continue;
+                    }
+                    if !transient(&err) {
+                        self.mls.discard_commit(group_id)?;
+                    }
+                    // A transport failure that outlived the retries leaves the
+                    // join pending; `discard_pending_commit` (or calling this
+                    // again) settles it through the inbox.
                     return Err(err.into());
                 }
             }

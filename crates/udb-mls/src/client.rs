@@ -6,8 +6,9 @@ use openmls::prelude::tls_codec::{Deserialize as _, Serialize as _};
 use openmls::prelude::{
     BasicCredential, Capabilities, Credential, CredentialWithKey, ExtensionType, GroupId,
     KeyPackage, KeyPackageIn, LeafNodeIndex, LeafNodeParameters, MlsGroup, MlsGroupCreateConfig,
-    MlsMessageBodyIn, MlsMessageIn, OpenMlsProvider as _, ProcessedMessageContent, ProtocolMessage,
-    ProtocolVersion, StagedWelcome, MIXED_PLAINTEXT_WIRE_FORMAT_POLICY,
+    MlsMessageBodyIn, MlsMessageIn, MlsMessageOut, OpenMlsProvider as _, ProcessedMessageContent,
+    ProtocolMessage, ProtocolVersion, RatchetTreeIn, StagedWelcome,
+    MIXED_PLAINTEXT_WIRE_FORMAT_POLICY,
 };
 use openmls_basic_credential::SignatureKeyPair;
 use openmls_rust_crypto::OpenMlsRustCrypto;
@@ -26,6 +27,10 @@ use crate::store::{decode_snapshot, encode_snapshot, MemoryStore, StateStore};
 /// Past epochs whose message secrets a member keeps, so an application message
 /// sealed just before a commit still decrypts after the commit was applied.
 const MAX_PAST_EPOCHS: usize = 8;
+
+/// A built commit's messages: the commit, the Welcome (adds only), and the
+/// GroupInfo of the epoch it creates.
+type CommitMessages = (MlsMessageOut, Option<MlsMessageOut>, Option<MlsMessageOut>);
 
 /// Snapshot metadata format version.
 const META_VERSION: u32 = 1;
@@ -93,9 +98,31 @@ pub struct PendingCommit {
     pub commit: Vec<u8>,
     /// TLS-serialized Welcome for the added devices (adds only).
     pub welcome: Option<Vec<u8>>,
+    /// TLS-serialized `MlsMessage` carrying the signed GroupInfo of the epoch
+    /// this commit creates (`SubmitCommitRequest.group_info`; groups that allow
+    /// external joins require it).
+    pub group_info: Option<Vec<u8>>,
     pub added_device_ids: Vec<String>,
     pub removed_device_ids: Vec<String>,
     pub intent: CommitIntent,
+}
+
+/// An external commit that joins a group from its GroupInfo (RFC 9420
+/// §12.4.3.2), built by [`MlsClient::join_external`]. Submit `commit` (no
+/// Welcome) with `SubmitCommit` at `epoch`, then [`MlsClient::confirm_commit`]
+/// on success or [`MlsClient::discard_commit`] on a definite rejection; until
+/// then the group is held but refuses to send.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ExternalJoin {
+    pub group_id: String,
+    /// The epoch the commit was built on: the GroupInfo's epoch
+    /// (`SubmitCommitRequest.epoch`).
+    pub epoch: u64,
+    /// TLS-serialized `MlsMessage` carrying the `PublicMessage` external commit.
+    pub commit: Vec<u8>,
+    /// TLS-serialized `MlsMessage` carrying the signed GroupInfo of the epoch
+    /// the join creates.
+    pub group_info: Option<Vec<u8>>,
 }
 
 /// The group after a confirmed commit.
@@ -140,6 +167,12 @@ struct GroupMeta {
     /// epoch arrived first); [`MlsClient::discard_commit`] hands it back so it
     /// can be rebuilt.
     lost: Option<CommitIntent>,
+    /// This device joined by an external commit the broker has not accepted
+    /// yet. The group is already at the new epoch (an external commit needs no
+    /// merge); it is kept on acceptance (or when the inbox echoes the commit)
+    /// and deleted on refusal.
+    #[serde(default)]
+    awaiting_external_ack: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -544,9 +577,17 @@ impl<S: StateStore> MlsClient<S> {
         )
     }
 
-    /// Check every leaf of a group this device already holds against the pins.
-    /// Changed keys become [`KeyEvent`]s (saved with the inbox cursor).
-    fn observe_members(&mut self, group: &MlsGroup, source: KeySource, group_id: &str, seq: i64) {
+    /// Check every leaf of a group against the pins. Changed keys from a source
+    /// that does not fail closed become [`KeyEvent`]s (saved with the inbox
+    /// cursor); the first changed key is returned as [`MlsError::KeyChanged`]
+    /// for the caller that does fail closed.
+    fn observe_members(
+        &mut self,
+        group: &MlsGroup,
+        source: KeySource,
+        group_id: &str,
+        seq: Option<i64>,
+    ) -> Option<MlsError> {
         let tenant = self.meta.identity.tenant_id.clone();
         let members: Vec<(String, String, Vec<u8>)> = group
             .members()
@@ -556,17 +597,15 @@ impl<S: StateStore> MlsClient<S> {
             })
             .collect();
         let known = pins::known_subjects(&self.meta.pins);
+        let mut changed = None;
         for (subject, device, key) in members {
-            self.observe_key(
-                &subject,
-                &device,
-                &key,
-                &known,
-                source,
-                Some(group_id),
-                Some(seq),
-            );
+            let observed =
+                self.observe_key(&subject, &device, &key, &known, source, Some(group_id), seq);
+            if observed == Observation::Changed && changed.is_none() {
+                changed = Some(pins::key_changed(&self.meta.pins, &subject, &device, &key));
+            }
         }
+        changed
     }
 
     /// Record device keys learned outside MLS (the directory's
@@ -884,12 +923,149 @@ impl<S: StateStore> MlsClient<S> {
             .collect())
     }
 
-    /// Whether a commit this device built awaits confirmation.
+    /// Whether a commit this device built (or an external join) awaits
+    /// confirmation.
     pub fn has_pending_commit(&self, group_id: &str) -> bool {
         self.meta
             .groups
             .get(group_id)
-            .is_some_and(|meta| meta.pending.is_some())
+            .is_some_and(|meta| meta.pending.is_some() || meta.awaiting_external_ack)
+    }
+
+    fn awaiting_external_ack(&self, group_id: &str) -> bool {
+        self.meta
+            .groups
+            .get(group_id)
+            .is_some_and(|meta| meta.awaiting_external_ack)
+    }
+
+    /// Build the commit through the commit builder, asking for the new epoch's
+    /// GroupInfo explicitly; used when the convenience API returned none.
+    fn commit_with_group_info(
+        &self,
+        group: &mut MlsGroup,
+        adds: Vec<KeyPackage>,
+        removals: Vec<LeafNodeIndex>,
+        self_update: bool,
+    ) -> Result<CommitMessages, MlsError> {
+        group
+            .clear_pending_commit(self.provider.storage())
+            .map_err(mls("clear the commit to rebuild it"))?;
+        let bundle = group
+            .commit_builder()
+            .propose_adds(adds)
+            .propose_removals(removals)
+            .force_self_update(self_update)
+            .create_group_info(true)
+            .load_psks(self.provider.storage())
+            .map_err(mls("load the commit's PSKs"))?
+            .build(
+                self.provider.rand(),
+                self.provider.crypto(),
+                &self.signer,
+                |_| true,
+            )
+            .map_err(mls("build the commit"))?
+            .stage_commit(&self.provider)
+            .map_err(mls("stage the commit"))?;
+        let (commit, welcome, group_info) = bundle.into_messages();
+        Ok((commit, welcome, group_info.map(MlsMessageOut::from)))
+    }
+
+    /// Build an external commit that joins `group_id` from its signed
+    /// `group_info` (TLS-serialized `MlsMessage`, as `GetGroupInfo` serves it)
+    /// and its public `ratchet_tree` (may be empty when the GroupInfo carries
+    /// the tree). Every member's key is checked against the pins first: a
+    /// changed key refuses the join ([`MlsError::KeyChanged`]). The group is
+    /// held at the new epoch until [`Self::confirm_commit`] (the broker accepted
+    /// the commit) or [`Self::discard_commit`] (it refused; the group is
+    /// deleted). Not a [`CommitIntent`]: a lost race is retried by fetching the
+    /// GroupInfo again.
+    pub fn join_external(
+        &mut self,
+        group_id: &str,
+        group_info: &[u8],
+        ratchet_tree: &[u8],
+    ) -> Result<ExternalJoin, MlsError> {
+        validate_group_id(group_id)?;
+        if self.meta.groups.contains_key(group_id) || self.find_group(group_id)?.is_some() {
+            return Err(MlsError::GroupExists(group_id.to_string()));
+        }
+        let verifiable = match MlsMessageIn::tls_deserialize_exact(group_info)
+            .map_err(rejected("group_info is not an MLS message"))?
+            .extract()
+        {
+            MlsMessageBodyIn::GroupInfo(info) => info,
+            _ => {
+                return Err(MlsError::Rejected(
+                    "group_info is not an MLS GroupInfo".into(),
+                ))
+            }
+        };
+        let mut builder =
+            MlsGroup::external_commit_builder().with_config(group_config().join_config().clone());
+        if !ratchet_tree.is_empty() {
+            let tree = RatchetTreeIn::tls_deserialize_exact(ratchet_tree)
+                .map_err(rejected("ratchet_tree is not an MLS ratchet tree"))?;
+            builder = builder.with_ratchet_tree(tree);
+        }
+        // `finalize` returns the group already at the new epoch: an external
+        // commit has nothing left to merge.
+        let (mut group, bundle) = builder
+            .build_group(&self.provider, verifiable, self.credential.clone())
+            .map_err(mls("start the external commit"))?
+            .load_psks(self.provider.storage())
+            .map_err(mls("load the external commit's PSKs"))?
+            .build(
+                self.provider.rand(),
+                self.provider.crypto(),
+                &self.signer,
+                |_| true,
+            )
+            .map_err(mls("build the external commit"))?
+            .finalize(&self.provider)
+            .map_err(mls("finalize the external commit"))?;
+        if group.group_id().as_slice() != group_id.as_bytes() {
+            group
+                .delete(self.provider.storage())
+                .map_err(mls("delete a mismatched group"))?;
+            return Err(MlsError::Rejected(
+                "the GroupInfo is for a different group".into(),
+            ));
+        }
+        if let Some(changed) = self.observe_members(&group, KeySource::GroupInfo, group_id, None) {
+            group
+                .delete(self.provider.storage())
+                .map_err(mls("delete the refused group"))?;
+            self.persist()?;
+            return Err(changed);
+        }
+        let (commit, _welcome, _info) = bundle.into_messages();
+        let commit = commit
+            .tls_serialize_detached()
+            .map_err(mls("serialize the external commit"))?;
+        // The joined group is already at the new epoch: its own GroupInfo (with
+        // the ratchet tree) is the one the broker serves next.
+        let new_group_info = group
+            .export_group_info(self.provider.crypto(), &self.signer, true)
+            .map_err(mls("export the GroupInfo"))?
+            .tls_serialize_detached()
+            .map_err(mls("serialize the GroupInfo"))?;
+        let epoch = group.epoch().as_u64().saturating_sub(1);
+        self.meta.groups.insert(
+            group_id.to_string(),
+            GroupMeta {
+                awaiting_external_ack: true,
+                ..GroupMeta::default()
+            },
+        );
+        self.persist()?;
+        Ok(ExternalJoin {
+            group_id: group_id.to_string(),
+            epoch,
+            commit,
+            group_info: Some(new_group_info),
+        })
     }
 
     /// Build a `PublicMessage` commit for `intent` on the group's current epoch.
@@ -907,7 +1083,7 @@ impl<S: StateStore> MlsClient<S> {
         }
         let epoch = group.epoch().as_u64();
         let members = member_devices(&group);
-        let (commit, welcome, added, removed, intent) = match intent {
+        let built: (CommitMessages, Vec<String>, Vec<String>, CommitIntent) = match intent {
             CommitIntent::Add { key_packages } => {
                 let known = pins::known_subjects(&self.meta.pins);
                 let mut packages = Vec::new();
@@ -949,12 +1125,16 @@ impl<S: StateStore> MlsClient<S> {
                     self.persist()?;
                     return Ok(None);
                 }
-                let (commit, welcome, _info) = group
+                let (commit, welcome, info) = group
                     .add_members(&self.provider, &self.signer, &packages)
                     .map_err(mls("add members"))?;
+                let mut messages = (commit, Some(welcome), info.map(MlsMessageOut::from));
+                if messages.2.is_none() {
+                    messages =
+                        self.commit_with_group_info(&mut group, packages, Vec::new(), false)?;
+                }
                 (
-                    commit,
-                    Some(welcome),
+                    messages,
                     added,
                     Vec::new(),
                     CommitIntent::Add { key_packages: kept },
@@ -981,12 +1161,16 @@ impl<S: StateStore> MlsClient<S> {
                 }
                 // A removal adds nobody, so there is no Welcome to route (the
                 // broker refuses one on a commit that adds no members).
-                let (commit, _welcome, _info) = group
+                let (commit, _welcome, info) = group
                     .remove_members(&self.provider, &self.signer, &leaves)
                     .map_err(mls("remove members"))?;
+                let mut messages = (commit, None, info.map(MlsMessageOut::from));
+                if messages.2.is_none() {
+                    messages =
+                        self.commit_with_group_info(&mut group, Vec::new(), leaves, false)?;
+                }
                 (
-                    commit,
-                    None,
+                    messages,
                     Vec::new(),
                     removed.clone(),
                     CommitIntent::Remove {
@@ -998,10 +1182,16 @@ impl<S: StateStore> MlsClient<S> {
                 let bundle = group
                     .self_update(&self.provider, &self.signer, LeafNodeParameters::default())
                     .map_err(mls("rotate the leaf keys"))?;
-                let (commit, _welcome, _info) = bundle.into_messages();
-                (commit, None, Vec::new(), Vec::new(), CommitIntent::Update)
+                let (commit, _welcome, info) = bundle.into_messages();
+                let mut messages = (commit, None, info.map(MlsMessageOut::from));
+                if messages.2.is_none() {
+                    messages =
+                        self.commit_with_group_info(&mut group, Vec::new(), Vec::new(), true)?;
+                }
+                (messages, Vec::new(), Vec::new(), CommitIntent::Update)
             }
         };
+        let ((commit, welcome, group_info), added, removed, intent) = built;
         let commit = commit
             .tls_serialize_detached()
             .map_err(mls("serialize the commit"))?;
@@ -1009,6 +1199,10 @@ impl<S: StateStore> MlsClient<S> {
             .map(|welcome| welcome.tls_serialize_detached())
             .transpose()
             .map_err(mls("serialize the Welcome"))?;
+        let group_info = group_info
+            .map(|info| info.tls_serialize_detached())
+            .transpose()
+            .map_err(mls("serialize the GroupInfo"))?;
         let meta = self.meta.groups.entry(group_id.to_string()).or_default();
         meta.pending = Some(PendingMeta {
             epoch,
@@ -1021,6 +1215,7 @@ impl<S: StateStore> MlsClient<S> {
             epoch,
             commit,
             welcome,
+            group_info,
             added_device_ids: added,
             removed_device_ids: removed,
             intent,
@@ -1028,8 +1223,21 @@ impl<S: StateStore> MlsClient<S> {
     }
 
     /// The broker accepted the pending commit: merge it and enter the new epoch.
+    /// For an external join ([`Self::join_external`]) the group is already at
+    /// the new epoch and is simply kept.
     pub fn confirm_commit(&mut self, group_id: &str) -> Result<CommitSummary, MlsError> {
         let mut group = self.load_group(group_id)?;
+        if self.awaiting_external_ack(group_id) {
+            if let Some(meta) = self.meta.groups.get_mut(group_id) {
+                meta.awaiting_external_ack = false;
+            }
+            self.persist()?;
+            return Ok(CommitSummary {
+                group_id: group_id.to_string(),
+                epoch: group.epoch().as_u64(),
+                members: member_devices(&group).into_keys().collect(),
+            });
+        }
         if group.pending_commit().is_none() {
             return Err(MlsError::NoPendingCommit(group_id.to_string()));
         }
@@ -1050,8 +1258,14 @@ impl<S: StateStore> MlsClient<S> {
     /// The broker definitively refused the pending commit (a stale epoch, a
     /// validation failure): drop it. Returns its intent — or the intent of a
     /// commit that already lost a race while the inbox was processed — so the
-    /// caller can rebuild it on the current epoch with [`Self::commit`].
+    /// caller can rebuild it on the current epoch with [`Self::commit`]. A
+    /// refused external join deletes the group (`None`): join again from a
+    /// fresh GroupInfo.
     pub fn discard_commit(&mut self, group_id: &str) -> Result<Option<CommitIntent>, MlsError> {
+        if self.awaiting_external_ack(group_id) {
+            self.forget_group(group_id)?;
+            return Ok(None);
+        }
         let mut group = self.load_group(group_id)?;
         group
             .clear_pending_commit(self.provider.storage())
@@ -1069,14 +1283,15 @@ impl<S: StateStore> MlsClient<S> {
     // ── application messages ───────────────────────────────────────────────
 
     /// Seal `plaintext` as a `PrivateMessage` for the group's current epoch.
-    /// Not allowed while a commit is pending (its epoch is about to end).
+    /// Not allowed while a commit is pending (its epoch is about to end), nor
+    /// while an external join awaits the broker (the epoch may never exist).
     pub fn encrypt(
         &mut self,
         group_id: &str,
         plaintext: &[u8],
     ) -> Result<OutgoingMessage, MlsError> {
         let mut group = self.load_group(group_id)?;
-        if group.pending_commit().is_some() {
+        if group.pending_commit().is_some() || self.awaiting_external_ack(group_id) {
             return Err(MlsError::PendingCommit(group_id.to_string()));
         }
         let ciphertext = group
@@ -1166,7 +1381,7 @@ impl<S: StateStore> MlsClient<S> {
             ));
         }
         // The group is joined either way; a changed key is reported as an event.
-        self.observe_members(&group, KeySource::Welcome, &item.group_id, item.seq);
+        let _ = self.observe_members(&group, KeySource::Welcome, &item.group_id, Some(item.seq));
         self.meta
             .groups
             .insert(item.group_id.clone(), GroupMeta::default());
@@ -1197,8 +1412,16 @@ impl<S: StateStore> MlsClient<S> {
             // Our own commit, echoed. Normally it was confirmed already; if the
             // SubmitCommit response was lost it is still pending — the broker
             // accepted it, so merge it now.
-            let merged = group.pending_commit().is_some() && current == item.epoch;
-            if merged {
+            // An external join's echo (built on the epoch before the one the
+            // joined group is at) confirms it the same way.
+            let joined = self.awaiting_external_ack(&item.group_id)
+                && item.epoch.checked_add(1) == Some(current);
+            let merged = joined || (group.pending_commit().is_some() && current == item.epoch);
+            if joined {
+                if let Some(meta) = self.meta.groups.get_mut(&item.group_id) {
+                    meta.awaiting_external_ack = false;
+                }
+            } else if merged {
                 group
                     .merge_pending_commit(&self.provider)
                     .map_err(mls("merge the pending commit"))?;
@@ -1274,7 +1497,7 @@ impl<S: StateStore> MlsClient<S> {
         }
         // Every leaf, not only the added device ids: a removal and re-add, or an
         // update path, can change a leaf's key under the same device id.
-        self.observe_members(&group, KeySource::Commit, &item.group_id, item.seq);
+        let _ = self.observe_members(&group, KeySource::Commit, &item.group_id, Some(item.seq));
         let after = member_devices(&group);
         let before: BTreeSet<&String> = before.keys().collect();
         let after_ids: BTreeSet<&String> = after.keys().collect();

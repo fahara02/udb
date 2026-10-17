@@ -73,6 +73,9 @@ pub enum KeySource {
     Welcome,
     /// The ratchet tree after another member's commit.
     Commit,
+    /// The ratchet tree of a group this device is joining by an external
+    /// commit (from the GroupInfo the broker serves).
+    GroupInfo,
 }
 
 impl KeySource {
@@ -82,6 +85,7 @@ impl KeySource {
             Self::KeyPackage => "key_package",
             Self::Welcome => "welcome",
             Self::Commit => "commit",
+            Self::GroupInfo => "group_info",
         }
     }
 
@@ -92,16 +96,18 @@ impl KeySource {
             "key_package" => Some(Self::KeyPackage),
             "welcome" => Some(Self::Welcome),
             "commit" => Some(Self::Commit),
+            "group_info" => Some(Self::GroupInfo),
             _ => None,
         }
     }
 
-    /// Sources the client acts on (listing devices, adding a member) refuse a
-    /// changed key with [`MlsError::KeyChanged`]. A Welcome or another member's
+    /// Sources the client acts on (listing devices, adding a member, joining
+    /// from a GroupInfo) refuse a changed key with [`MlsError::KeyChanged`]. A
+    /// Welcome or another member's
     /// commit was already accepted by the group, so a changed key there is
     /// recorded as a [`KeyEvent`] instead.
     pub(crate) fn fails_closed(self) -> bool {
-        matches!(self, Self::Directory | Self::KeyPackage)
+        matches!(self, Self::Directory | Self::KeyPackage | Self::GroupInfo)
     }
 }
 

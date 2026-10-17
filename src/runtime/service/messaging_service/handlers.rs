@@ -34,7 +34,7 @@ use super::errors::{
 use super::events::emit_inbox_appended;
 use super::mls;
 use super::model::{
-    caller_user_subject, device_dto, ensure_device_owner, inbox_dto, key_fingerprint,
+    JoinPolicy, caller_user_subject, device_dto, ensure_device_owner, inbox_dto, key_fingerprint,
     removal_hint_payload, require_mls_bytes, resolve_subject, validate_client_message_id,
     validate_device_id, validate_group_id,
 };
@@ -626,6 +626,7 @@ pub(crate) async fn create_group(
         admit(svc, &metadata, &req.tenant_id, OperationChannel::Admin).await?;
     let group_id = validate_group_id(&req.group_id)?;
     let creator = validate_device_id("creator_device_id", &req.creator_device_id)?;
+    let policy = JoinPolicy::from_proto(req.external_join_policy)?;
     require_mls_bytes("group_info", &req.group_info)?;
     require_mls_bytes("ratchet_tree", &req.ratchet_tree)?;
     let state = mls::create_public_group(&group_id, &req.group_info, &req.ratchet_tree)
@@ -665,6 +666,7 @@ pub(crate) async fn create_group(
         &state.state,
         &req.group_info,
         &creator,
+        policy.as_text(),
     )
     .await?;
     if created {
@@ -675,10 +677,12 @@ pub(crate) async fn create_group(
             .ok_or_else(|| {
                 messaging_internal_status(OP, "group conflicted but could not be read")
             })?;
-        // Idempotent replay: the same creator registering the same untouched group.
+        // Idempotent replay: the same creator registering the same untouched
+        // group with the same external-join policy.
         if existing.created_by_device_id != creator
             || existing.epoch != epoch
             || existing.public_group_state != state.state
+            || JoinPolicy::from_text(&existing.external_join_policy) != policy
         {
             return Err(messaging_already_exists_status(
                 OP,
@@ -772,6 +776,15 @@ pub(crate) async fn submit_commit(
     if req.epoch != group.epoch {
         return Err(stale_epoch_status(OP, req.epoch, group.epoch));
     }
+    // A group open to external joins must always serve the current GroupInfo,
+    // so every commit uploads the one for the epoch it creates.
+    let policy = JoinPolicy::from_text(&group.external_join_policy);
+    if policy != JoinPolicy::None && req.group_info.is_empty() {
+        return Err(invalid_field(
+            "group_info",
+            "the group allows external joins; every commit must carry the new epoch's GroupInfo",
+        ));
+    }
     let sender_device =
         require_own_active_device(&mut tx, &tenant_id, &sender, caller.as_deref(), OP).await?;
     let before = store::list_members(&mut tx, &tenant_id, &group_id).await?;
@@ -803,13 +816,29 @@ pub(crate) async fn submit_commit(
     }
     let added: BTreeSet<String> = after_ids.difference(&before_ids).cloned().collect();
     let removed: Vec<String> = before_ids.difference(&after_ids).cloned().collect();
-    if !added.is_empty() && req.welcome.is_empty() {
+    if accepted.external
+        && (added.iter().any(|device| device != &sender)
+            || !removed.is_empty()
+            || !req.welcome.is_empty())
+    {
+        return Err(invalid_field(
+            "commit",
+            "an external commit may only add its own sender; it removes nobody and carries no Welcome",
+        ));
+    }
+    // An external joiner learns of its commit from the COMMIT echo, not a Welcome.
+    let welcomed: BTreeSet<String> = if accepted.external {
+        BTreeSet::new()
+    } else {
+        added.clone()
+    };
+    if !welcomed.is_empty() && req.welcome.is_empty() {
         return Err(invalid_field(
             "welcome",
             "the commit adds members; their Welcome is required",
         ));
     }
-    if added.is_empty() && !req.welcome.is_empty() {
+    if welcomed.is_empty() && !req.welcome.is_empty() {
         return Err(invalid_field(
             "welcome",
             "the commit adds no members; omit the Welcome",
@@ -817,6 +846,39 @@ pub(crate) async fn submit_commit(
     }
     let lookup: Vec<String> = after_ids.union(&before_ids).cloned().collect();
     let directory = store::devices_by_id(&mut tx, &tenant_id, &lookup).await?;
+    // A device re-joining under its own member id (an external resync) is
+    // allowed under every policy; a new device only as the policy says.
+    if accepted.external && !before_ids.contains(&sender) {
+        match policy {
+            JoinPolicy::None => {
+                return Err(messaging_policy_status(
+                    tonic::Code::PermissionDenied,
+                    OP,
+                    "messaging_external_join_disabled",
+                    format!("group '{group_id}' does not allow external joins"),
+                ));
+            }
+            JoinPolicy::SamePrincipal => {
+                let principal_is_member = before.iter().any(|member| {
+                    member.subject_id == sender_device.subject_id
+                        && directory
+                            .get(&member.device_id)
+                            .is_some_and(DeviceRow::is_active)
+                });
+                if !principal_is_member {
+                    return Err(messaging_policy_status(
+                        tonic::Code::PermissionDenied,
+                        OP,
+                        "messaging_external_join_not_permitted",
+                        format!(
+                            "group '{group_id}' admits external joins only from devices of a principal that is already a member"
+                        ),
+                    ));
+                }
+            }
+            JoinPolicy::Tenant => {}
+        }
+    }
     let joined: BTreeMap<String, i64> = before
         .iter()
         .map(|m| (m.device_id.clone(), m.joined_epoch))
@@ -863,15 +925,16 @@ pub(crate) async fn submit_commit(
     store::replace_members(&mut tx, &tenant_id, &group_id, &roster).await?;
 
     // COMMIT to everyone who was or still is a member (removed devices learn they
-    // were removed), except the added ones, who get the Welcome instead.
-    // Revoked devices receive nothing.
+    // were removed), except the devices a Welcome added, who get the Welcome
+    // instead; an external joiner gets the COMMIT echo. Revoked devices receive
+    // nothing.
     let committed_epoch = accepted.committed_epoch as i64;
     let mut entries = Vec::new();
     for device_id in before_ids.union(&after_ids) {
         if !directory.get(device_id).is_some_and(DeviceRow::is_active) {
             continue;
         }
-        let (kind, epoch, payload) = if added.contains(device_id) {
+        let (kind, epoch, payload) = if welcomed.contains(device_id) {
             (KIND_WELCOME, new_epoch, req.welcome.as_slice())
         } else {
             (KIND_COMMIT, committed_epoch, req.commit.as_slice())
@@ -912,6 +975,7 @@ pub(crate) async fn get_group_info(
     let (tenant_id, _permit) =
         admit(svc, &metadata, &req.tenant_id, OperationChannel::Read).await?;
     let group_id = validate_group_id(&req.group_id)?;
+    let caller = caller_user_subject();
     let (_context, pool) = svc.store(&metadata, &tenant_id, false)?;
     let mut tx = begin_tenant_tx(&pool, &tenant_id).await?;
     let group = store::load_group(&mut tx, &tenant_id, &group_id, RowLock::None)
@@ -919,6 +983,18 @@ pub(crate) async fn get_group_info(
         .ok_or_else(|| group_not_found_status(OP, &group_id))?;
     let members = store::list_members(&mut tx, &tenant_id, &group_id).await?;
     commit(tx).await?;
+    let policy = JoinPolicy::from_text(&group.external_join_policy);
+    // An end user reads only groups one of its devices belongs to, or groups
+    // open to the whole tenant; any other group answers exactly like a missing
+    // one, so its existence and member list do not leak. Service accounts and
+    // in-process callers act for users and keep full access.
+    if let Some(subject) = caller.as_deref() {
+        let visible = policy == JoinPolicy::Tenant
+            || members.iter().any(|member| member.subject_id == subject);
+        if !visible {
+            return Err(group_not_found_status(OP, &group_id));
+        }
+    }
     let ratchet_tree =
         mls::export_ratchet_tree(&group.public_group_state, &group_id).map_err(|reject| {
             messaging_internal_status(OP, format!("stored group state unreadable: {reject}"))
@@ -932,6 +1008,7 @@ pub(crate) async fn get_group_info(
         member_device_ids: members.into_iter().map(|m| m.device_id).collect(),
         message: String::new(),
         error: None,
+        external_join_policy: policy.to_proto() as i32,
     }))
 }
 

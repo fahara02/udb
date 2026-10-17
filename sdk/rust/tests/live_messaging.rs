@@ -27,6 +27,7 @@ use udb_client::messaging::mls::{
 use udb_client::messaging::{MessagingClient, MessagingError};
 use udb_client::proto::udb::core::authn::services::v1 as authn;
 use udb_client::proto::udb::core::authn::services::v1::authn_service_client::AuthnServiceClient;
+use udb_client::proto::udb::core::messaging::services::v1 as pb;
 use udb_client::Metadata;
 
 type Device = MessagingClient<MemoryStore>;
@@ -464,6 +465,100 @@ async fn live_pinning_flags_a_swapped_device_key() {
     assert_ne!(after, with_tablet);
 
     for (client, id) in [(&mut a, &a_id), (&mut tablet, &tablet_id), (&mut b, &b_id)] {
+        client
+            .revoke_device(id, "live test cleanup")
+            .await
+            .expect("revoke");
+    }
+}
+
+/// External join: a group created open to the same principal admits a third
+/// device of the live user without a Welcome. The device fetches the GroupInfo,
+/// commits itself in, and the existing devices see a commit that adds it; its
+/// messages decrypt everywhere.
+#[tokio::test(flavor = "multi_thread")]
+async fn live_external_join_adds_a_device_of_the_same_user() {
+    if std::env::var("UDB_LIVE_SDK_TESTS").as_deref() != Ok("1") {
+        eprintln!("skipped: the live messaging test needs UDB_LIVE_SDK_TESTS=1");
+        return;
+    }
+    let channel = Endpoint::from_shared(endpoint(&required("UDB_AUTH_GRPC_TARGET")))
+        .expect("endpoint")
+        .connect()
+        .await
+        .expect("connect the native listener");
+    let (meta, subject) = login(channel.clone()).await;
+    let run = format!(
+        "{:x}",
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_millis()
+    );
+    let (a_id, b_id, c_id) = (
+        format!("rs-ext-a-{run}"),
+        format!("rs-ext-b-{run}"),
+        format!("rs-ext-c-{run}"),
+    );
+    let group = format!("rs-ext-room-{run}");
+    let mut a = device(&channel, &meta, &subject, &a_id).await;
+    let mut b = device(&channel, &meta, &subject, &b_id).await;
+
+    a.create_group_with_policy(&group, pb::ExternalJoinPolicy::SamePrincipal)
+        .await
+        .expect("create a group open to the same principal");
+    a.add_members(&group, &[], &[b_id.as_str()])
+        .await
+        .expect("add b (the commit carries the GroupInfo)");
+    assert!(matches!(
+        &b.sync().await.unwrap()[..],
+        [InboxEvent::Joined { .. }]
+    ));
+
+    // A third device joins from the GroupInfo, with no Welcome.
+    let mut c = device(&channel, &meta, &subject, &c_id).await;
+    let joined = c.join_external(&group).await.expect("external join");
+    assert!(joined.committed);
+    assert_eq!(joined.epoch, 2);
+    assert_eq!(joined.added_device_ids, [c_id.clone()]);
+    assert_eq!(c.mls().epoch(&group).unwrap(), 2);
+    assert!(!c.mls().has_pending_commit(&group));
+    // Joining again is a no-op; the echo is its own commit.
+    assert!(
+        !c.join_external(&group)
+            .await
+            .expect("already a member")
+            .committed
+    );
+    assert!(c
+        .sync()
+        .await
+        .unwrap()
+        .iter()
+        .any(|event| matches!(event, InboxEvent::OwnCommit { epoch: 2, .. })));
+
+    for (client, id) in [(&mut a, &a_id), (&mut b, &b_id)] {
+        let events = client.sync().await.expect("sync");
+        assert!(
+            events.iter().any(|event| matches!(
+                event,
+                InboxEvent::Commit { epoch: 2, added, sender_device_id, .. }
+                    if added == std::slice::from_ref(&c_id) && sender_device_id == &c_id
+            )),
+            "{id}: {events:?}"
+        );
+    }
+    c.send(&group, b"hello from the joined device")
+        .await
+        .expect("the joined device sends");
+    for client in [&mut a, &mut b] {
+        assert_eq!(
+            messages(&client.sync().await.unwrap()),
+            [(c_id.clone(), "hello from the joined device".to_string())]
+        );
+    }
+
+    for (client, id) in [(&mut a, &a_id), (&mut b, &b_id), (&mut c, &c_id)] {
         client
             .revoke_device(id, "live test cleanup")
             .await

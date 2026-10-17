@@ -9,7 +9,9 @@
 //!   naming `<tenant>/<subject>/<device_id>`),
 //! - KeyPackages (a one-time batch plus a last-resort package),
 //! - group creation and `PublicMessage` commits that add, remove, or rekey,
-//! - Welcome processing for groups this device was added to,
+//! - Welcome processing for groups this device was added to, and external
+//!   joins from the GroupInfo the broker serves ([`MlsClient::join_external`])
+//!   for groups whose policy admits them,
 //! - `PrivateMessage` encryption and decryption of application messages,
 //! - in-order processing of the device inbox (commits, welcomes, messages) with
 //!   epoch tracking, and the re-base path when a concurrent commit won,
@@ -69,8 +71,8 @@ pub use backup::{
     MIN_RECOVERY_SECRET_LEN,
 };
 pub use client::{
-    inspect_key_package, CommitIntent, CommitSummary, DeviceRegistration, GroupCreation,
-    GroupMember, KeyPackageInfo, MlsClient, OutgoingMessage, PendingCommit,
+    inspect_key_package, CommitIntent, CommitSummary, DeviceRegistration, ExternalJoin,
+    GroupCreation, GroupMember, KeyPackageInfo, MlsClient, OutgoingMessage, PendingCommit,
 };
 pub use error::MlsError;
 pub use identity::{device_identity, key_fingerprint, split_identity, DeviceIdentity, CIPHERSUITE};

@@ -83,6 +83,7 @@ pub(crate) fn models() -> &'static Models {
                 "created_by_device_id",
                 "created_at",
                 "updated_at",
+                "external_join_policy",
             ],
         ),
         member: native_model(
@@ -615,6 +616,8 @@ pub(crate) struct GroupRow {
     pub(crate) group_info: Option<Vec<u8>>,
     pub(crate) group_info_epoch: i64,
     pub(crate) created_by_device_id: String,
+    /// `NONE` | `SAME_PRINCIPAL` | `TENANT` ([`super::model::JoinPolicy`]).
+    pub(crate) external_join_policy: String,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -638,7 +641,8 @@ pub(crate) async fn load_group(
     };
     let sql = format!(
         "SELECT {epoch} AS epoch, {state} AS public_group_state, {info} AS group_info, \
-                {info_epoch} AS group_info_epoch, {creator} AS created_by_device_id \
+                {info_epoch} AS group_info_epoch, {creator} AS created_by_device_id, \
+                {policy} AS external_join_policy \
          FROM {rel} WHERE {tenant} = $1 AND {group} = $2{lock_clause}",
         rel = m.relation,
         epoch = m.q("epoch"),
@@ -646,6 +650,7 @@ pub(crate) async fn load_group(
         info = m.q("group_info"),
         info_epoch = m.q("group_info_epoch"),
         creator = m.q("created_by_device_id"),
+        policy = m.q("external_join_policy"),
         tenant = m.q("tenant_id"),
         group = m.q("group_id"),
     );
@@ -662,6 +667,7 @@ pub(crate) async fn load_group(
             group_info: decode(&row, "group_info")?,
             group_info_epoch: decode(&row, "group_info_epoch")?,
             created_by_device_id: decode(&row, "created_by_device_id")?,
+            external_join_policy: decode(&row, "external_join_policy")?,
         })
     })
     .transpose()
@@ -677,11 +683,12 @@ pub(crate) async fn insert_group(
     state: &[u8],
     group_info: &[u8],
     creator_device_id: &str,
+    external_join_policy: &str,
 ) -> Result<bool, Status> {
     let m = &models().group;
     let sql = format!(
-        "INSERT INTO {rel} ({tenant}, {group}, {epoch}, {state}, {info}, {info_epoch}, {creator}) \
-         VALUES ($1, $2, $3, $4, $5, $3, $6) \
+        "INSERT INTO {rel} ({tenant}, {group}, {epoch}, {state}, {info}, {info_epoch}, {creator}, {policy}) \
+         VALUES ($1, $2, $3, $4, $5, $3, $6, $7) \
          ON CONFLICT ({tenant}, {group}) DO NOTHING",
         rel = m.relation,
         tenant = m.q("tenant_id"),
@@ -691,6 +698,7 @@ pub(crate) async fn insert_group(
         info = m.q("group_info"),
         info_epoch = m.q("group_info_epoch"),
         creator = m.q("created_by_device_id"),
+        policy = m.q("external_join_policy"),
     );
     let done = sqlx::query(&sql)
         .bind(tenant_id)
@@ -699,6 +707,7 @@ pub(crate) async fn insert_group(
         .bind(state)
         .bind(group_info)
         .bind(creator_device_id)
+        .bind(external_join_policy)
         .execute(&mut *conn)
         .await
         .map_err(|err| messaging_store_status("insert_group", &err))?;

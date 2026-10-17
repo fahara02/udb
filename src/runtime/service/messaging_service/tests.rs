@@ -197,6 +197,48 @@ pub(super) mod client {
             .expect("join group")
         }
 
+        /// Join by an external commit built from a GroupInfo and the ratchet
+        /// tree; returns `(group at the new epoch, commit, its GroupInfo)`. The
+        /// group needs no merge.
+        pub(crate) fn external_join(
+            &self,
+            group_info: &[u8],
+            tree: &[u8],
+        ) -> (MlsGroup, Vec<u8>, Vec<u8>) {
+            use openmls::prelude::RatchetTreeIn;
+            let verifiable = match MlsMessageIn::tls_deserialize_exact(group_info)
+                .expect("group info decodes")
+                .extract()
+            {
+                MlsMessageBodyIn::GroupInfo(info) => info,
+                _ => panic!("not a GroupInfo"),
+            };
+            let tree = RatchetTreeIn::tls_deserialize_exact(tree).expect("ratchet tree decodes");
+            let (group, bundle) = MlsGroup::external_commit_builder()
+                .with_ratchet_tree(tree)
+                .with_config(create_config().join_config().clone())
+                .build_group(&self.provider, verifiable, self.credential.clone())
+                .expect("start the external commit")
+                .load_psks(self.provider.storage())
+                .expect("load PSKs")
+                .build(
+                    self.provider.rand(),
+                    self.provider.crypto(),
+                    &self.signer,
+                    |_| true,
+                )
+                .expect("build the external commit")
+                .finalize(&self.provider)
+                .expect("finalize the external commit");
+            let (commit, _welcome, _info) = bundle.into_messages();
+            let info = self.group_info(&group);
+            (
+                group,
+                commit.tls_serialize_detached().expect("serialize commit"),
+                info,
+            )
+        }
+
         pub(crate) fn encrypt(&self, group: &mut MlsGroup, plaintext: &[u8]) -> Vec<u8> {
             group
                 .create_message(&self.provider, &self.signer, plaintext)
@@ -347,6 +389,51 @@ fn group_creation_commit_and_message_follow_the_public_state() {
         after.sender_identity,
         mls::device_identity(TENANT, "bob", "bob-phone").as_bytes()
     );
+}
+
+#[test]
+fn an_external_commit_is_recognised_and_its_group_info_verifies() {
+    let alice = Device::new(TENANT, "alice", "alice-phone");
+    let laptop = Device::new(TENANT, "alice", "alice-laptop");
+    let (mut group, info, tree) = alice.create_group("g-external");
+    let created = mls::create_public_group("g-external", &info, &tree).expect("group registers");
+
+    // A member's commit is not external.
+    let update = alice.self_update(&mut group);
+    alice.merge(&mut group);
+    let updated =
+        mls::apply_commit(&created.state, "g-external", &update).expect("update accepted");
+    assert!(!updated.external);
+
+    // A new device joins from the served GroupInfo and ratchet tree.
+    let served_info = alice.group_info(&group);
+    let served_tree = mls::export_ratchet_tree(&updated.after.state, "g-external").expect("tree");
+    let (mut joined, commit, joined_info) = laptop.external_join(&served_info, &served_tree);
+    assert_eq!(
+        mls::commit_epoch(&commit).expect("header").1,
+        1,
+        "built on the GroupInfo's epoch"
+    );
+    let accepted = mls::apply_commit(&updated.after.state, "g-external", &commit)
+        .expect("external commit accepted");
+    assert!(accepted.external);
+    assert_eq!(accepted.committed_epoch, 1);
+    assert_eq!(accepted.after.epoch, 2);
+    assert_eq!(
+        accepted.sender_identity,
+        mls::device_identity(TENANT, "alice", "alice-laptop").as_bytes()
+    );
+    assert_eq!(accepted.after.members.len(), 2);
+    // The joiner's GroupInfo describes the epoch its commit created.
+    assert_eq!(
+        mls::verify_group_info(&accepted.after.state, "g-external", &joined_info)
+            .expect("joiner GroupInfo verifies"),
+        2
+    );
+    // The existing member applies it and both read each other.
+    alice.apply_commit(&mut group, &commit);
+    let ciphertext = laptop.encrypt(&mut joined, b"from the laptop");
+    assert_eq!(alice.decrypt(&mut group, &ciphertext), b"from the laptop");
 }
 
 #[test]

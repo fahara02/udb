@@ -37,6 +37,9 @@ export interface MlsCommit {
   readonly commit: Uint8Array;
   /** Empty when the commit adds nobody. */
   readonly welcome: Uint8Array;
+  /** The signed GroupInfo of the epoch the commit creates (groups that allow
+   *  external joins require it on every commit). */
+  readonly groupInfo: Uint8Array;
   readonly addedDeviceIds: string[];
   readonly removedDeviceIds: string[];
 }
@@ -71,7 +74,7 @@ export interface MlsEvent {
 }
 
 /** Where a device key was observed. */
-export type MlsKeySource = "directory" | "key_package" | "welcome" | "commit";
+export type MlsKeySource = "directory" | "key_package" | "welcome" | "commit" | "group_info";
 
 /** A device key to check against the pins (a `ListMessagingDevices` row). */
 export interface MlsObservedKey {
@@ -759,7 +762,7 @@ export class MessagingClient {
               epoch: String(pending.epoch),
               commit: bytes(pending.commit),
               welcome: bytes(pending.welcome),
-              group_info: Buffer.alloc(0),
+              group_info: bytes(pending.groupInfo),
               client_message_id: clientMessageId,
             },
             { ...(this.call ?? {}), noRetry: true },

@@ -309,6 +309,14 @@ chat.update_keys("room-1").await?;  // rotate this device's keys (post-compromis
   acknowledged, so a crash replays at most entries the client then skips.
 - `InboxEvent::RemovalHint` reports a revoked member device; commit its removal
   with `remove_devices`.
+- **External joins.** `create_group_with_policy(group, ExternalJoinPolicy::SamePrincipal)`
+  (or `Tenant`) lets a device join without a Welcome: `join_external(group)`
+  fetches the GroupInfo, commits the device in, and the members see an
+  `InboxEvent::Commit` that adds it. `SamePrincipal` admits another device of a
+  user who already has one in the group (a new laptop joining the user's
+  rooms); `Tenant` admits any device of the tenant; `create_group` keeps the
+  default, `None`. A device must not send in the group until the join is
+  confirmed; `join_external` resolves that before it returns.
 
 **Encrypted backup (opt-in).** History is device-only unless the user opts in.
 `backup` seals this device's state and the history you pass under a key derived

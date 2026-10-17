@@ -30,6 +30,29 @@ release line was tagged.
   independent of who computes it, so two users can compare it out of band.
   `inspectKeyPackage` (WebAssembly) now also returns the signature key and its
   fingerprint.
+- **External joins.** A device can join a group without a Welcome by an MLS
+  external commit built from the GroupInfo `GetGroupInfo` serves. A group's
+  `CreateGroupRequest.external_join_policy` (`NONE`, the default;
+  `SAME_PRINCIPAL`: a device of a principal that already has a member device;
+  `TENANT`: any active device of the tenant) decides whether `SubmitCommit`
+  accepts it; `GetGroupInfoResponse.external_join_policy` reports it, and the
+  `mls_groups.external_join_policy` column stores it (existing groups read as
+  `NONE`). Groups that admit external joins require the new epoch's GroupInfo on
+  every commit, so the GroupInfo they serve is always current. The joiner gets
+  its commit back as a COMMIT inbox entry; the members see a commit that adds
+  it. New API: `MlsClient::join_external` and `ExternalJoin`,
+  `PendingCommit::group_info` (sent by the Rust and TypeScript SDKs on every
+  commit), and the Rust SDK's `MessagingClient::{join_external,
+  create_group_with_policy}`.
+
+### Fixed
+
+- **`GetGroupInfo` no longer shows any group to any tenant user (security).**
+  It returned the GroupInfo, ratchet tree and member device list of every group
+  in the tenant to any authenticated caller. An end user now sees only groups
+  one of its devices is a member of, or groups open to the whole tenant
+  (`EXTERNAL_JOIN_POLICY_TENANT`); any other group answers `NOT_FOUND`, exactly
+  like a missing one. Service accounts and in-process callers keep full access.
 
 ### Breaking for callers
 
@@ -37,6 +60,10 @@ release line was tagged.
   `udb_mls::MlsError` no longer compiles.
   - detect: code: `MlsError::`
   - fix: add a `MlsError::KeyChanged { .. }` arm (a pinned device presented a different key: show it to the user, compare `observed_fingerprint` out of band, then `accept_key_change` or stop).
+- **`udb_mls::PendingCommit` has a new public field, `group_info`.** Code that
+  builds a `PendingCommit` with a struct literal no longer compiles.
+  - detect: code: `PendingCommit {`
+  - fix: add `group_info: None` (or the commit's GroupInfo), or end the literal with `..` from an existing value; when submitting, send `pending.group_info` as `SubmitCommitRequest.group_info`.
 
 Downgrading a client to 0.6.0 keeps its groups but drops its pins and queued key
 events (0.6.0 ignores the new snapshot fields); 0.6.1 opens a 0.6.0 snapshot and
