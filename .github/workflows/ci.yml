@@ -766,11 +766,15 @@ jobs:
         run: |
           set -euo pipefail
           udb=target/debug/udb
-          # The smoke broker starts in dry-run mode; give the database the schema
-          # the protos declare first, as a migrating broker would.
-          "$udb" admin force-sync proto
+          # A first-time project: one app proto with tables only. The repo's own
+          # proto/ also declares an S3 bucket and a Qdrant collection, which this
+          # job does not run. The smoke broker starts in dry-run mode, so give the
+          # database the schema these protos declare first, as a migrating broker
+          # would.
+          project_proto=examples/go_enterprise/proto
+          "$udb" admin force-sync "$project_proto"
           status=0
-          "$udb" up --project ci-up --tenant "$CI_UP_TENANT" --proto proto \
+          "$udb" up --project ci-up --tenant "$CI_UP_TENANT" --proto "$project_proto" \
             > /tmp/up-first.json 2> /tmp/up-first.err || status=$?
           cat /tmp/up-first.err
           if [ "$status" -ne 0 ]; then
@@ -778,7 +782,7 @@ jobs:
           fi
           grep -q '^\[done\] catalog' /tmp/up-first.err
           status=0
-          "$udb" up --project ci-up --tenant "$CI_UP_TENANT" --proto proto \
+          "$udb" up --project ci-up --tenant "$CI_UP_TENANT" --proto "$project_proto" \
             > /tmp/up-second.json 2> /tmp/up-second.err || status=$?
           cat /tmp/up-second.err
           if [ "$status" -ne 0 ]; then

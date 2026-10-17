@@ -371,7 +371,8 @@ fn init_otel_subscriber(
     use crate::runtime::pretty_log::PrettyLog;
     use tracing_subscriber::{EnvFilter, layer::SubscriberExt as _, util::SubscriberInitExt as _};
 
-    let filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
+    let filter = EnvFilter::try_from_default_env()
+        .unwrap_or_else(|_| EnvFilter::new(crate::runtime::observability::DEFAULT_LOG_FILTER));
     let subscriber = tracing_subscriber::registry()
         .with(filter)
         .with(tracing_opentelemetry::layer().with_tracer(tracer));

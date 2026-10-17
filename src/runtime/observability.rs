@@ -19,6 +19,12 @@ pub struct TraceContext {
 /// installed.
 static LOG_TO_STDERR: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
 
+/// The log filter when `RUST_LOG` is unset. PostgreSQL's NOTICEs come from the
+/// idempotent `CREATE ... IF NOT EXISTS` bootstrap ("already exists, skipping")
+/// and drown out the lines a person reads, so they show only as warnings.
+#[cfg(feature = "runtime-logging")]
+pub(crate) const DEFAULT_LOG_FILTER: &str = "info,sqlx::postgres::notice=warn";
+
 /// Send logs to stderr instead of stdout. Call before [`init_observability`].
 pub fn log_to_stderr(enabled: bool) {
     LOG_TO_STDERR.store(enabled, std::sync::atomic::Ordering::Relaxed);
@@ -36,7 +42,8 @@ pub(crate) fn log_writer() -> tracing_subscriber::fmt::writer::BoxMakeWriter {
 
 #[cfg(feature = "runtime-logging")]
 pub fn init_observability() {
-    let filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
+    let filter =
+        EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new(DEFAULT_LOG_FILTER));
 
     // JSON mode: opt-in via UDB_LOG_JSON=1 (e.g. in production / log aggregation).
     // Default: human-readable pretty output.
