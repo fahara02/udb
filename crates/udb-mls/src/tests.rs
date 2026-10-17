@@ -1042,3 +1042,518 @@ fn a_restore_never_replaces_a_device_in_the_store() {
     let wrong = MlsClient::restore_backup(b"not the secret", &envelope, MemoryStore::new());
     assert!(matches!(wrong, Err(MlsError::Backup(_))));
 }
+
+// ── key pinning ────────────────────────────────────────────────────────────
+
+fn signature_key<S: StateStore>(client: &MlsClient<S>) -> Vec<u8> {
+    client.registration().unwrap().signature_public_key
+}
+
+/// Alice creates `group_id` and adds `peer` by one of its KeyPackages.
+fn add_by_key_package(hub: &mut Hub, alice: &mut Client, peer: &mut Client, group_id: &str) {
+    alice.create_group(group_id).unwrap();
+    hub.create(group_id, &id(alice));
+    commit_ok(
+        hub,
+        alice,
+        group_id,
+        CommitIntent::Add {
+            key_packages: peer.key_packages(1).unwrap(),
+        },
+    );
+}
+
+#[test]
+fn pins_on_first_sight_from_a_key_package() {
+    let mut hub = Hub::default();
+    let mut alice = device("alice", "alice-phone");
+    let mut bob = device("bob", "bob-phone");
+    // The own key is pinned (and verified) from creation.
+    let own = alice.pinned_key("alice-phone").expect("own pin");
+    assert_eq!(own.signature_public_key, signature_key(&alice));
+    assert!(own.verified);
+    assert!(alice.pinned_key("bob-phone").is_none());
+
+    add_by_key_package(&mut hub, &mut alice, &mut bob, "g-pin");
+    let pinned = alice.pinned_devices("bob");
+    assert_eq!(pinned.len(), 1);
+    let (device_id, pin) = &pinned[0];
+    assert_eq!(device_id, "bob-phone");
+    assert_eq!(pin.subject_id, "bob");
+    assert_eq!(pin.signature_public_key, signature_key(&bob));
+    assert_eq!(pin.fingerprint(), key_fingerprint(&signature_key(&bob)));
+    assert!(!pin.verified);
+    assert!(pin.pending.is_none());
+    assert!(pin.first_seen_unix > 0);
+    // A first contact with a new subject is silent.
+    assert!(alice.take_key_events().unwrap().is_empty());
+
+    // Bob pinned alice from the Welcome's ratchet tree.
+    hub.deliver(&mut bob);
+    assert_eq!(
+        bob.pinned_key("alice-phone").unwrap().signature_public_key,
+        signature_key(&alice)
+    );
+    assert!(bob.take_key_events().unwrap().is_empty());
+}
+
+#[test]
+fn a_different_key_for_a_pinned_device_is_refused() {
+    let mut hub = Hub::default();
+    let mut alice = device("alice", "alice-phone");
+    let mut bob = device("bob", "bob-phone");
+    add_by_key_package(&mut hub, &mut alice, &mut bob, "g-first");
+
+    // Same identity, different key: an impostor a compromised directory serves.
+    let mut impostor = device("bob", "bob-phone");
+    alice.create_group("g-second").unwrap();
+    let err = alice
+        .commit(
+            "g-second",
+            CommitIntent::Add {
+                key_packages: impostor.key_packages(1).unwrap(),
+            },
+        )
+        .unwrap_err();
+    assert_eq!(
+        err,
+        MlsError::KeyChanged {
+            subject_id: "bob".into(),
+            device_id: "bob-phone".into(),
+            pinned_fingerprint: key_fingerprint(&signature_key(&bob)),
+            observed_fingerprint: key_fingerprint(&signature_key(&impostor)),
+        }
+    );
+    assert!(!alice.has_pending_commit("g-second"));
+    assert_eq!(alice.members("g-second").unwrap().len(), 1);
+    let pin = alice.pinned_key("bob-phone").unwrap();
+    assert_eq!(
+        pin.signature_public_key,
+        signature_key(&bob),
+        "the pin is unchanged"
+    );
+    assert_eq!(
+        pin.pending.as_deref(),
+        Some(signature_key(&impostor).as_slice())
+    );
+    // The refusal was saved: a restart still holds the pending key.
+    let reopened = MlsClient::open(MemoryStore::from_snapshot(alice.snapshot().unwrap())).unwrap();
+    assert!(reopened.pinned_key("bob-phone").unwrap().pending.is_some());
+
+    // The directory path fails closed the same way; the real key still matches.
+    let impostor_key = signature_key(&impostor);
+    assert!(matches!(
+        alice.observe_device_keys(
+            &[("bob", "bob-phone", impostor_key.as_slice())],
+            crate::KeySource::Directory
+        ),
+        Err(MlsError::KeyChanged { .. })
+    ));
+    let bob_key = signature_key(&bob);
+    alice
+        .observe_device_keys(
+            &[("bob", "bob-phone", bob_key.as_slice())],
+            crate::KeySource::Directory,
+        )
+        .unwrap();
+    // A device id showing up under another subject is a key change too.
+    assert!(matches!(
+        alice.observe_device_keys(
+            &[("mallory", "bob-phone", bob_key.as_slice())],
+            crate::KeySource::Directory
+        ),
+        Err(MlsError::KeyChanged { .. })
+    ));
+    // Fail-closed refusals are errors, not queued events.
+    assert!(alice.take_key_events().unwrap().is_empty());
+}
+
+#[test]
+fn accept_key_change_repins_only_the_compared_key() {
+    let mut hub = Hub::default();
+    let mut alice = device("alice", "alice-phone");
+    let mut bob = device("bob", "bob-phone");
+    add_by_key_package(&mut hub, &mut alice, &mut bob, "g-accept");
+    let real = key_fingerprint(&signature_key(&bob));
+
+    // Verifying the pin: the right fingerprint (as a user might type it) marks
+    // it verified, a wrong one is a key change.
+    assert!(matches!(
+        alice.verify_device("bob", "bob-phone", &"0".repeat(64)),
+        Err(MlsError::KeyChanged { .. })
+    ));
+    alice
+        .verify_device("bob", "bob-phone", &real.to_uppercase())
+        .unwrap();
+    assert!(alice.pinned_key("bob-phone").unwrap().verified);
+    assert!(matches!(
+        alice.verify_device("carol", "bob-phone", &real),
+        Err(MlsError::Rejected(_))
+    ));
+
+    let mut impostor = device("bob", "bob-phone");
+    let packages = impostor.key_packages(1).unwrap();
+    alice.create_group("g-new").unwrap();
+    hub.create("g-new", "alice-phone");
+    assert!(matches!(
+        alice.commit(
+            "g-new",
+            CommitIntent::Add {
+                key_packages: packages.clone()
+            }
+        ),
+        Err(MlsError::KeyChanged { .. })
+    ));
+    let observed = key_fingerprint(&signature_key(&impostor));
+    // Only the compared, pending key is accepted.
+    for wrong in [real.as_str(), "deadbeef"] {
+        assert!(matches!(
+            alice.accept_key_change("bob", "bob-phone", wrong),
+            Err(MlsError::Rejected(_))
+        ));
+    }
+    assert!(matches!(
+        alice.accept_key_change("mallory", "bob-phone", &observed),
+        Err(MlsError::Rejected(_))
+    ));
+    assert!(alice.pinned_key("bob-phone").unwrap().pending.is_some());
+    assert!(matches!(
+        alice.accept_key_change("alice", "alice-phone", &observed),
+        Err(MlsError::Rejected(_))
+    ));
+    alice
+        .accept_key_change("bob", "bob-phone", &observed)
+        .unwrap();
+    let pin = alice.pinned_key("bob-phone").unwrap();
+    assert_eq!(pin.signature_public_key, signature_key(&impostor));
+    assert!(!pin.verified, "a re-pinned key starts unverified");
+    assert!(pin.pending.is_none());
+    // Now the accepted key is the pin, and the add goes through.
+    commit_ok(
+        &mut hub,
+        &mut alice,
+        "g-new",
+        CommitIntent::Add {
+            key_packages: packages,
+        },
+    );
+    // The old key is now the stranger.
+    assert!(matches!(
+        alice.commit(
+            "g-accept",
+            CommitIntent::Add {
+                key_packages: bob.key_packages(1).unwrap()
+            }
+        ),
+        Err(MlsError::KeyChanged { .. })
+    ));
+}
+
+#[test]
+fn a_commit_adding_an_impostor_raises_a_key_event() {
+    let mut hub = Hub::default();
+    let (mut alice, _bob, mut carol) = three_member_group(&mut hub, "g-swap");
+    // Carol removes bob, then (never having seen his key) adds an impostor
+    // that carries bob's device id.
+    commit_ok(
+        &mut hub,
+        &mut carol,
+        "g-swap",
+        CommitIntent::Remove {
+            device_ids: vec!["bob-phone".into()],
+        },
+    );
+    assert!(carol.forget_device("bob", "bob-phone").unwrap());
+    let mut impostor = device("bob", "bob-phone");
+    commit_ok(
+        &mut hub,
+        &mut carol,
+        "g-swap",
+        CommitIntent::Add {
+            key_packages: impostor.key_packages(1).unwrap(),
+        },
+    );
+    // The group accepted it: alice applies both commits...
+    let events = hub.deliver(&mut alice);
+    assert!(
+        matches!(
+            &events[..],
+            [InboxEvent::Commit { epoch: 2, .. }, InboxEvent::Commit { epoch: 3, added, .. }]
+                if added == &["bob-phone".to_string()]
+        ),
+        "{events:?}"
+    );
+    // ...and is told the key changed.
+    let key_events = alice.take_key_events().unwrap();
+    assert_eq!(key_events.len(), 1, "{key_events:?}");
+    match &key_events[0] {
+        crate::KeyEvent::KeyChanged {
+            subject_id,
+            device_id,
+            observed_fingerprint,
+            source,
+            group_id,
+            seq,
+            ..
+        } => {
+            assert_eq!(
+                (subject_id.as_str(), device_id.as_str()),
+                ("bob", "bob-phone")
+            );
+            assert_eq!(
+                observed_fingerprint,
+                &key_fingerprint(&signature_key(&impostor))
+            );
+            assert_eq!(*source, crate::KeySource::Commit);
+            assert_eq!(group_id.as_deref(), Some("g-swap"));
+            assert!(seq.is_some());
+        }
+        other => panic!("{other:?}"),
+    }
+    assert!(alice.take_key_events().unwrap().is_empty(), "taken once");
+    // A later commit that keeps the impostor does not repeat the event.
+    commit_ok(&mut hub, &mut carol, "g-swap", CommitIntent::Update);
+    hub.deliver(&mut alice);
+    assert!(alice.key_events().is_empty());
+    // The impostor joined; the pin still holds the real key.
+    // (The shared device id's inbox also holds the removal, which it skips.)
+    assert!(hub
+        .deliver(&mut impostor)
+        .iter()
+        .any(|event| matches!(event, InboxEvent::Joined { .. })));
+    assert!(alice.pinned_key("bob-phone").unwrap().pending.is_some());
+}
+
+#[test]
+fn a_new_device_of_a_known_subject_is_reported() {
+    let mut hub = Hub::default();
+    let mut alice = device("alice", "alice-phone");
+    let mut bob = device("bob", "bob-phone");
+    add_by_key_package(&mut hub, &mut alice, &mut bob, "g-devices");
+    let tablet = device("bob", "bob-tablet");
+    let laptop = device("alice", "alice-laptop");
+    let dave_1 = device("dave", "dave-1");
+    let dave_2 = device("dave", "dave-2");
+    let keys = [
+        signature_key(&bob),
+        signature_key(&tablet),
+        signature_key(&laptop),
+        signature_key(&dave_1),
+        signature_key(&dave_2),
+    ];
+    alice
+        .observe_device_keys(
+            &[
+                ("bob", "bob-phone", keys[0].as_slice()),
+                ("bob", "bob-tablet", keys[1].as_slice()),
+                ("alice", "alice-laptop", keys[2].as_slice()),
+                // Two devices of a subject never seen: one silent first contact.
+                ("dave", "dave-1", keys[3].as_slice()),
+                ("dave", "dave-2", keys[4].as_slice()),
+            ],
+            crate::KeySource::Directory,
+        )
+        .unwrap();
+    let events = alice.take_key_events().unwrap();
+    let new_devices: Vec<(&str, &str)> = events
+        .iter()
+        .map(|event| match event {
+            crate::KeyEvent::NewDevice {
+                subject_id,
+                device_id,
+                fingerprint,
+                source,
+                ..
+            } => {
+                assert_eq!(*source, crate::KeySource::Directory);
+                assert_eq!(fingerprint.len(), 64);
+                (subject_id.as_str(), device_id.as_str())
+            }
+            other => panic!("{other:?}"),
+        })
+        .collect();
+    // A new device of a known subject, and any new device of the own subject
+    // (a device added to this user's account is always worth a look).
+    assert_eq!(
+        new_devices,
+        [("bob", "bob-tablet"), ("alice", "alice-laptop")]
+    );
+    assert_eq!(alice.pinned_devices("dave").len(), 2);
+    // Seen again: nothing new.
+    alice
+        .observe_device_keys(
+            &[("bob", "bob-tablet", keys[1].as_slice())],
+            crate::KeySource::Directory,
+        )
+        .unwrap();
+    assert!(alice.take_key_events().unwrap().is_empty());
+    // Forgetting a pin lets the device be pinned afresh.
+    assert!(alice.forget_device("bob", "bob-tablet").unwrap());
+    assert!(!alice.forget_device("bob", "bob-tablet").unwrap());
+    assert!(alice.forget_device("alice", "alice-phone").is_err());
+}
+
+#[test]
+fn safety_numbers_match_on_both_sides_and_ignore_order() {
+    let mut alice = device("alice", "alice-phone");
+    let mut bob = device("bob", "bob-phone");
+    let tablet = device("bob", "bob-tablet");
+    let (a, b, t) = (
+        signature_key(&alice),
+        signature_key(&bob),
+        signature_key(&tablet),
+    );
+    assert!(matches!(
+        alice.safety_number("bob"),
+        Err(MlsError::Rejected(_))
+    ));
+    alice
+        .observe_device_keys(
+            &[
+                ("bob", "bob-tablet", t.as_slice()),
+                ("bob", "bob-phone", b.as_slice()),
+            ],
+            crate::KeySource::Directory,
+        )
+        .unwrap();
+    bob.observe_device_keys(
+        &[
+            ("alice", "alice-phone", a.as_slice()),
+            ("bob", "bob-tablet", t.as_slice()),
+        ],
+        crate::KeySource::Directory,
+    )
+    .unwrap();
+    let number = alice.safety_number("bob").unwrap();
+    assert_eq!(number, bob.safety_number("alice").unwrap());
+    let groups: Vec<&str> = number.split(' ').collect();
+    assert_eq!(groups.len(), 12, "{number}");
+    assert!(groups
+        .iter()
+        .all(|g| g.len() == 5 && g.bytes().all(|c| c.is_ascii_digit())));
+
+    // A different key for one device gives a different number.
+    let mut swapped =
+        MlsClient::open(MemoryStore::from_snapshot(alice.snapshot().unwrap())).unwrap();
+    assert_eq!(swapped.safety_number("bob").unwrap(), number);
+    let other = signature_key(&device("bob", "bob-tablet"));
+    assert!(matches!(
+        swapped.observe_device_keys(
+            &[("bob", "bob-tablet", other.as_slice())],
+            crate::KeySource::Directory,
+        ),
+        Err(MlsError::KeyChanged { .. })
+    ));
+    assert_eq!(
+        swapped.safety_number("bob").unwrap(),
+        number,
+        "pending keys do not count"
+    );
+    swapped
+        .accept_key_change("bob", "bob-tablet", &key_fingerprint(&other))
+        .unwrap();
+    assert_ne!(swapped.safety_number("bob").unwrap(), number);
+    assert!(matches!(
+        alice.safety_number("nobody"),
+        Err(MlsError::Rejected(_))
+    ));
+}
+
+#[test]
+fn pins_survive_a_file_store_reopen() {
+    let dir = std::env::temp_dir().join(format!(
+        "udb-mls-pins-{}-{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos()
+    ));
+    std::fs::create_dir_all(&dir).unwrap();
+    let path = dir.join("alice.mls");
+    let bob = device("bob", "bob-phone");
+    let tablet = device("bob", "bob-tablet");
+    let (b, t) = (signature_key(&bob), signature_key(&tablet));
+    {
+        let mut alice = MlsClient::create(
+            DeviceIdentity::new(TENANT, "alice", "alice-phone").unwrap(),
+            crate::FileStore::new(&path),
+        )
+        .unwrap();
+        alice
+            .observe_device_keys(
+                &[("bob", "bob-phone", b.as_slice())],
+                crate::KeySource::Directory,
+            )
+            .unwrap();
+        alice
+            .verify_device("bob", "bob-phone", &key_fingerprint(&b))
+            .unwrap();
+        alice
+            .observe_device_keys(
+                &[("bob", "bob-tablet", t.as_slice())],
+                crate::KeySource::Directory,
+            )
+            .unwrap();
+    }
+    let mut alice = MlsClient::open(crate::FileStore::new(&path)).unwrap();
+    let pin = alice.pinned_key("bob-phone").unwrap();
+    assert_eq!(pin.signature_public_key, b);
+    assert!(pin.verified);
+    // The undelivered event survived too.
+    assert!(matches!(
+        &alice.take_key_events().unwrap()[..],
+        [crate::KeyEvent::NewDevice { device_id, .. }] if device_id == "bob-tablet"
+    ));
+    let number = alice.safety_number("bob").unwrap();
+
+    // An encrypted backup carries the pins to a restored device.
+    let envelope = alice.export_backup_with(SECRET, b"", FAST).unwrap();
+    let (restored, _) = MlsClient::restore_backup(SECRET, &envelope, MemoryStore::new()).unwrap();
+    assert_eq!(restored.pinned_devices("bob"), alice.pinned_devices("bob"));
+    assert_eq!(restored.safety_number("bob").unwrap(), number);
+    std::fs::remove_dir_all(&dir).unwrap();
+}
+
+#[test]
+fn a_0_6_0_snapshot_opens_with_no_pins() {
+    let mut hub = Hub::default();
+    let mut alice = device("alice", "alice-phone");
+    let mut bob = device("bob", "bob-phone");
+    add_by_key_package(&mut hub, &mut alice, &mut bob, "g-old");
+    // Rewrite the metadata the way 0.6.0 wrote it: no pins, no key events.
+    let (meta, values) = crate::store::decode_snapshot(&alice.snapshot().unwrap()).unwrap();
+    let mut meta: serde_json::Value = serde_json::from_slice(&meta).unwrap();
+    let object = meta.as_object_mut().unwrap();
+    assert!(object.remove("pins").is_some());
+    assert!(object.remove("key_events").is_some());
+    let old = crate::store::encode_snapshot(&serde_json::to_vec(&meta).unwrap(), &values);
+
+    let mut opened = MlsClient::open(MemoryStore::from_snapshot(old)).unwrap();
+    assert_eq!(opened.group_ids(), ["g-old"]);
+    // The own key is pinned on open; peers are pinned on next sight.
+    let own = opened
+        .pinned_key("alice-phone")
+        .expect("own pin backfilled");
+    assert_eq!(own.signature_public_key, signature_key(&alice));
+    assert!(opened.pinned_key("bob-phone").is_none());
+    let bob_key = signature_key(&bob);
+    opened
+        .observe_device_keys(
+            &[("bob", "bob-phone", bob_key.as_slice())],
+            crate::KeySource::Directory,
+        )
+        .unwrap();
+    assert!(opened.take_key_events().unwrap().is_empty());
+    assert!(opened.safety_number("bob").is_ok());
+    // Installing a host clock stamps only pins recorded without one.
+    let seen = opened.pinned_key("bob-phone").unwrap().first_seen_unix;
+    assert!(seen > 0);
+    let stamped = MlsClient::open(MemoryStore::from_snapshot(opened.snapshot().unwrap()))
+        .unwrap()
+        .with_clock(|| 1_700_000_000);
+    assert_eq!(
+        stamped.pinned_key("bob-phone").unwrap().first_seen_unix,
+        seen
+    );
+}

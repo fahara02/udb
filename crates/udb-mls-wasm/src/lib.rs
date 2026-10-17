@@ -15,15 +15,79 @@
 use std::collections::BTreeMap;
 use std::sync::Arc;
 
-use js_sys::{Array, Uint8Array};
+use js_sys::{Array, Reflect, Uint8Array};
 use udb_mls::{
-    CommitIntent, DeviceIdentity, InboxEvent, InboxItem, InboxKind, MemoryStore, MlsClient,
-    MlsError, PendingCommit,
+    CommitIntent, DeviceIdentity, InboxEvent, InboxItem, InboxKind, KeySource, MemoryStore,
+    MlsClient, MlsError, PendingCommit,
 };
 use wasm_bindgen::prelude::*;
 
+/// A JSON string literal (the identifiers in a key-change error are tenant
+/// subject ids and device ids; escape them anyway).
+fn json_string(value: &str) -> String {
+    use std::fmt::Write as _;
+    let mut out = String::with_capacity(value.len() + 2);
+    out.push('"');
+    for c in value.chars() {
+        match c {
+            '"' => out.push_str("\\\""),
+            '\\' => out.push_str("\\\\"),
+            c if (c as u32) < 0x20 => {
+                let _ = write!(out, "\\u{:04x}", c as u32);
+            }
+            c => out.push(c),
+        }
+    }
+    out.push('"');
+    out
+}
+
+/// A changed key crosses as `key_changed:{json}` so the TypeScript SDK can
+/// raise a typed `KeyChangedError`; every other error as its message.
 fn js_err(err: MlsError) -> JsError {
+    if let MlsError::KeyChanged {
+        subject_id,
+        device_id,
+        pinned_fingerprint,
+        observed_fingerprint,
+    } = &err
+    {
+        return JsError::new(&format!(
+            "key_changed:{{\"subjectId\":{},\"deviceId\":{},\"pinnedFingerprint\":{},\"observedFingerprint\":{}}}",
+            json_string(subject_id),
+            json_string(device_id),
+            json_string(pinned_fingerprint),
+            json_string(observed_fingerprint),
+        ));
+    }
     JsError::new(&err.to_string())
+}
+
+/// Unix seconds from the JS host (`SystemTime` is unavailable on
+/// wasm32-unknown-unknown).
+#[cfg(target_arch = "wasm32")]
+fn js_clock() -> u64 {
+    (js_sys::Date::now() / 1000.0) as u64
+}
+
+/// Install the JS host clock for pin timestamps (wasm32 only; a native build of
+/// this crate keeps the system clock).
+fn with_host_clock<S: udb_mls::StateStore>(client: MlsClient<S>) -> MlsClient<S> {
+    #[cfg(target_arch = "wasm32")]
+    {
+        client.with_clock(js_clock)
+    }
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        client
+    }
+}
+
+fn string_field(value: &JsValue, name: &str) -> Result<String, JsError> {
+    Reflect::get(value, &JsValue::from_str(name))
+        .ok()
+        .and_then(|field| field.as_string())
+        .ok_or_else(|| JsError::new(&format!("expected a string `{name}`")))
 }
 
 fn bytes_list(list: &Array) -> Result<Vec<Vec<u8>>, JsError> {
@@ -125,6 +189,93 @@ pub struct KeyPackageInfo {
     pub device_id: String,
     #[wasm_bindgen(js_name = lastResort)]
     pub last_resort: bool,
+    #[wasm_bindgen(js_name = signaturePublicKey)]
+    pub signature_public_key: Vec<u8>,
+    #[wasm_bindgen(js_name = keyFingerprint)]
+    pub key_fingerprint: String,
+}
+
+/// A key event (`MlsDevice.takeKeyEvents`). `kind` is `new_device` or
+/// `key_changed`; `source` is `directory`, `key_package`, `welcome` or
+/// `commit`. For a new device `observedFingerprint` is its key and
+/// `pinnedFingerprint` is empty; `groupId` is empty and `seq` 0 when the key was
+/// not seen in an inbox entry.
+#[wasm_bindgen(getter_with_clone)]
+pub struct KeyEvent {
+    pub kind: String,
+    #[wasm_bindgen(js_name = subjectId)]
+    pub subject_id: String,
+    #[wasm_bindgen(js_name = deviceId)]
+    pub device_id: String,
+    #[wasm_bindgen(js_name = pinnedFingerprint)]
+    pub pinned_fingerprint: String,
+    #[wasm_bindgen(js_name = observedFingerprint)]
+    pub observed_fingerprint: String,
+    pub source: String,
+    #[wasm_bindgen(js_name = groupId)]
+    pub group_id: String,
+    pub seq: f64,
+}
+
+impl From<udb_mls::KeyEvent> for KeyEvent {
+    fn from(event: udb_mls::KeyEvent) -> Self {
+        match event {
+            udb_mls::KeyEvent::NewDevice {
+                subject_id,
+                device_id,
+                fingerprint,
+                source,
+                group_id,
+                seq,
+            } => Self {
+                kind: "new_device".into(),
+                subject_id,
+                device_id,
+                pinned_fingerprint: String::new(),
+                observed_fingerprint: fingerprint,
+                source: source.as_str().into(),
+                group_id: group_id.unwrap_or_default(),
+                seq: seq.unwrap_or_default() as f64,
+            },
+            udb_mls::KeyEvent::KeyChanged {
+                subject_id,
+                device_id,
+                pinned_fingerprint,
+                observed_fingerprint,
+                source,
+                group_id,
+                seq,
+            } => Self {
+                kind: "key_changed".into(),
+                subject_id,
+                device_id,
+                pinned_fingerprint,
+                observed_fingerprint,
+                source: source.as_str().into(),
+                group_id: group_id.unwrap_or_default(),
+                seq: seq.unwrap_or_default() as f64,
+            },
+        }
+    }
+}
+
+/// A pinned device key (`MlsDevice.pinnedDevices`). `pendingFingerprint` is the
+/// observed, not yet accepted key (empty when none).
+#[wasm_bindgen(getter_with_clone)]
+pub struct PinnedDevice {
+    #[wasm_bindgen(js_name = subjectId)]
+    pub subject_id: String,
+    #[wasm_bindgen(js_name = deviceId)]
+    pub device_id: String,
+    #[wasm_bindgen(js_name = signaturePublicKey)]
+    pub signature_public_key: Vec<u8>,
+    #[wasm_bindgen(js_name = keyFingerprint)]
+    pub key_fingerprint: String,
+    #[wasm_bindgen(js_name = firstSeenUnix)]
+    pub first_seen_unix: f64,
+    pub verified: bool,
+    #[wasm_bindgen(js_name = pendingFingerprint)]
+    pub pending_fingerprint: String,
 }
 
 /// The outcome of processing one inbox entry. `kind` is one of `joined`,
@@ -275,6 +426,8 @@ pub fn inspect_key_package(bytes: &[u8]) -> Result<KeyPackageInfo, JsError> {
         subject_id: info.identity.subject_id,
         device_id: info.identity.device_id,
         last_resort: info.last_resort,
+        key_fingerprint: udb_mls::key_fingerprint(&info.signature_public_key),
+        signature_public_key: info.signature_public_key,
     })
 }
 
@@ -313,7 +466,8 @@ impl MlsDevice {
     ) -> Result<MlsDevice, JsError> {
         let identity = DeviceIdentity::new(tenant_id, subject_id, device_id).map_err(js_err)?;
         let store = Arc::new(MemoryStore::new());
-        let client = MlsClient::create(identity, Arc::clone(&store)).map_err(js_err)?;
+        let client =
+            with_host_clock(MlsClient::create(identity, Arc::clone(&store)).map_err(js_err)?);
         Ok(Self {
             client,
             store,
@@ -324,7 +478,7 @@ impl MlsDevice {
     /// The device saved in `snapshot`.
     pub fn restore(snapshot: &[u8]) -> Result<MlsDevice, JsError> {
         let store = Arc::new(MemoryStore::from_snapshot(snapshot.to_vec()));
-        let client = MlsClient::open(Arc::clone(&store)).map_err(js_err)?;
+        let client = with_host_clock(MlsClient::open(Arc::clone(&store)).map_err(js_err)?);
         Ok(Self {
             client,
             store,
@@ -553,5 +707,117 @@ impl MlsDevice {
             client_message_id: client_message_id.to_string(),
         };
         Ok(Event::from(self.client.process(&item).map_err(js_err)?))
+    }
+
+    // ── key pinning ────────────────────────────────────────────────────────
+
+    /// Record device keys (an array of `{ subjectId, deviceId,
+    /// signaturePublicKey }`, as `ListMessagingDevices` returns them) against
+    /// the pins; `source` is `directory` (default) or `key_package`. Every key
+    /// is recorded; a key that differs from its pin throws `key_changed:{json}`.
+    #[wasm_bindgen(js_name = observeDeviceKeys)]
+    pub fn observe_device_keys(
+        &mut self,
+        keys: &Array,
+        source: Option<String>,
+    ) -> Result<(), JsError> {
+        let source = match source.as_deref() {
+            None | Some("") => KeySource::Directory,
+            Some(name) => KeySource::parse(name)
+                .ok_or_else(|| JsError::new(&format!("unknown key source `{name}`")))?,
+        };
+        let mut owned = Vec::with_capacity(keys.length() as usize);
+        for value in keys.iter() {
+            let key = Reflect::get(&value, &JsValue::from_str("signaturePublicKey"))
+                .ok()
+                .and_then(|field| field.dyn_into::<Uint8Array>().ok())
+                .ok_or_else(|| JsError::new("expected a Uint8Array `signaturePublicKey`"))?
+                .to_vec();
+            owned.push((
+                string_field(&value, "subjectId")?,
+                string_field(&value, "deviceId")?,
+                key,
+            ));
+        }
+        let borrowed: Vec<(&str, &str, &[u8])> = owned
+            .iter()
+            .map(|(subject, device, key)| (subject.as_str(), device.as_str(), key.as_slice()))
+            .collect();
+        self.client
+            .observe_device_keys(&borrowed, source)
+            .map_err(js_err)
+    }
+
+    /// Key events (new devices, changed keys seen in a Welcome or a commit)
+    /// since the last call, oldest first.
+    #[wasm_bindgen(js_name = takeKeyEvents)]
+    pub fn take_key_events(&mut self) -> Result<Vec<KeyEvent>, JsError> {
+        Ok(self
+            .client
+            .take_key_events()
+            .map_err(js_err)?
+            .into_iter()
+            .map(KeyEvent::from)
+            .collect())
+    }
+
+    /// The safety number for this device's subject and `peerSubjectId`: 12
+    /// groups of 5 digits, equal on both sides when both pinned the same keys.
+    #[wasm_bindgen(js_name = safetyNumber)]
+    pub fn safety_number(&self, peer_subject_id: &str) -> Result<String, JsError> {
+        self.client.safety_number(peer_subject_id).map_err(js_err)
+    }
+
+    /// Mark a pinned device verified after comparing its fingerprint out of
+    /// band; a different fingerprint throws `key_changed:{json}`.
+    #[wasm_bindgen(js_name = verifyDevice)]
+    pub fn verify_device(
+        &mut self,
+        subject_id: &str,
+        device_id: &str,
+        fingerprint: &str,
+    ) -> Result<(), JsError> {
+        self.client
+            .verify_device(subject_id, device_id, fingerprint)
+            .map_err(js_err)
+    }
+
+    /// Re-pin a device to its pending key, given that key's compared fingerprint.
+    #[wasm_bindgen(js_name = acceptKeyChange)]
+    pub fn accept_key_change(
+        &mut self,
+        subject_id: &str,
+        device_id: &str,
+        fingerprint: &str,
+    ) -> Result<(), JsError> {
+        self.client
+            .accept_key_change(subject_id, device_id, fingerprint)
+            .map_err(js_err)
+    }
+
+    /// A subject's pinned devices, sorted by device id.
+    #[wasm_bindgen(js_name = pinnedDevices)]
+    pub fn pinned_devices(&self, subject_id: &str) -> Vec<PinnedDevice> {
+        self.client
+            .pinned_devices(subject_id)
+            .into_iter()
+            .map(|(device_id, pin)| PinnedDevice {
+                key_fingerprint: pin.fingerprint(),
+                pending_fingerprint: pin.pending_fingerprint().unwrap_or_default(),
+                subject_id: pin.subject_id,
+                device_id,
+                signature_public_key: pin.signature_public_key,
+                first_seen_unix: pin.first_seen_unix as f64,
+                verified: pin.verified,
+            })
+            .collect()
+    }
+
+    /// Drop a device's pin; false when nothing was pinned for it.
+    #[wasm_bindgen(js_name = forgetDevice)]
+    pub fn forget_device(&mut self, subject_id: &str, device_id: &str) -> Result<bool, JsError> {
+        self.client
+            .forget_device(subject_id, device_id)
+            .map_err(js_err)
     }
 }

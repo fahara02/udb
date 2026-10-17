@@ -5,6 +5,43 @@ the package version in `Cargo.toml`; historical v0.3.2 audit material is folded
 into the v0.3.x entries because the codebase advanced to v0.3.7 before that
 release line was tagged.
 
+## [0.6.1] - Unreleased
+
+### Added
+
+- **Key pinning for end-to-end encrypted messaging.** `udb-mls` pins the first
+  signature key it sees for every device (from the directory, a claimed
+  KeyPackage, a Welcome, or another member's commit) in the client snapshot, so
+  pins survive restarts and travel in the encrypted backup. A different key
+  later never replaces the pin: listing devices and adding members fail closed
+  with `MlsError::KeyChanged`, and a changed key inside a group the device
+  already belongs to is queued as a `KeyEvent::KeyChanged`; a new device of a
+  known user, or any new device of the user's own account, is queued as a
+  `KeyEvent::NewDevice`. New API: `MlsClient::{observe_device_keys,
+  take_key_events, key_events, pinned_key, pinned_devices, verify_device,
+  accept_key_change, forget_device, with_clock}` and the `KeyEvent`,
+  `KeySource`, `PinnedKey` and `Observation` types; the Rust SDK's
+  `MessagingClient::{take_key_events, safety_number, verify_device,
+  accept_key_change, pinned_devices}` and `MessagingError::key_change()`; the
+  TypeScript SDK's `KeyChangedError` and `MessagingClient.{takeKeyEvents,
+  safetyNumber, verifyDevice, acceptKeyChange, pinnedDevices}`.
+- **Safety numbers.** `MlsClient::safety_number(peer)` derives 12 groups of 5
+  digits from both users' pinned device keys; it is the same on both sides and
+  independent of who computes it, so two users can compare it out of band.
+  `inspectKeyPackage` (WebAssembly) now also returns the signature key and its
+  fingerprint.
+
+### Breaking for callers
+
+- **`MlsError` has a new `KeyChanged` variant.** An exhaustive `match` on
+  `udb_mls::MlsError` no longer compiles.
+  - detect: code: `MlsError::`
+  - fix: add a `MlsError::KeyChanged { .. }` arm (a pinned device presented a different key: show it to the user, compare `observed_fingerprint` out of band, then `accept_key_change` or stop).
+
+Downgrading a client to 0.6.0 keeps its groups but drops its pins and queued key
+events (0.6.0 ignores the new snapshot fields); 0.6.1 opens a 0.6.0 snapshot and
+pins peers again on next sight.
+
 ## [0.6.0] - 2026-10-16
 
 0.6.0 removes the compatibility paths 0.5.x deprecated. Run

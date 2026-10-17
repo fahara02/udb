@@ -20,6 +20,7 @@ use crate::identity::{
     CIPHERSUITE,
 };
 use crate::inbox::{InboxEvent, InboxItem, InboxKind};
+use crate::pins::{self, KeyEvent, KeySource, Observation, ObserveContext, PinnedKey};
 use crate::store::{decode_snapshot, encode_snapshot, MemoryStore, StateStore};
 
 /// Past epochs whose message secrets a member keeps, so an application message
@@ -148,6 +149,43 @@ struct Meta {
     signature_public_key: Vec<u8>,
     inbox_cursor: i64,
     groups: BTreeMap<String, GroupMeta>,
+    /// Pinned signature keys by device id (device ids are tenant-unique).
+    /// Absent in a 0.6.0 snapshot; [`MlsClient::open`] pins the own key.
+    #[serde(default)]
+    pins: BTreeMap<String, PinnedKey>,
+    /// Key events not yet taken by the caller.
+    #[serde(default)]
+    key_events: Vec<KeyEvent>,
+}
+
+/// Unix seconds from the system clock. `wasm32-unknown-unknown` has no system
+/// clock (`SystemTime::now` panics there), so it reads 0 until the host
+/// installs one with [`MlsClient::with_clock`].
+fn system_clock() -> u64 {
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|elapsed| elapsed.as_secs())
+            .unwrap_or_default()
+    }
+    #[cfg(target_arch = "wasm32")]
+    {
+        0
+    }
+}
+
+fn own_pin(signature_public_key: &[u8], subject_id: &str, now: u64) -> PinnedKey {
+    PinnedKey {
+        subject_id: subject_id.to_string(),
+        signature_public_key: signature_public_key.to_vec(),
+        first_seen_unix: now,
+        // This device's own key needs no out-of-band comparison.
+        verified: true,
+        pending: None,
+        pending_subject_id: None,
+        pending_seen_unix: None,
+    }
 }
 
 /// One device's MLS client. Every mutation is persisted through the
@@ -160,6 +198,8 @@ pub struct MlsClient<S: StateStore> {
     credential: CredentialWithKey,
     meta: Meta,
     store: S,
+    /// Unix seconds, for pin timestamps.
+    clock: fn() -> u64,
 }
 
 impl<S: StateStore> std::fmt::Debug for MlsClient<S> {
@@ -264,12 +304,19 @@ impl<S: StateStore> MlsClient<S> {
             credential: BasicCredential::new(identity.credential_identity().into_bytes()).into(),
             signature_key: signer.public().into(),
         };
+        let signature_public_key = signer.to_public_vec();
+        let pins = BTreeMap::from([(
+            identity.device_id.clone(),
+            own_pin(&signature_public_key, &identity.subject_id, system_clock()),
+        )]);
         let meta = Meta {
             version: META_VERSION,
             identity,
-            signature_public_key: signer.to_public_vec(),
+            signature_public_key,
             inbox_cursor: 0,
             groups: BTreeMap::new(),
+            pins,
+            key_events: Vec::new(),
         };
         let client = Self {
             provider,
@@ -277,6 +324,7 @@ impl<S: StateStore> MlsClient<S> {
             credential,
             meta,
             store,
+            clock: system_clock,
         };
         client.persist()?;
         Ok(client)
@@ -286,7 +334,7 @@ impl<S: StateStore> MlsClient<S> {
     pub fn open(store: S) -> Result<Self, MlsError> {
         let snapshot = store.load()?.ok_or(MlsError::NotInitialized)?;
         let (meta, values) = decode_snapshot(&snapshot)?;
-        let meta: Meta = serde_json::from_slice(&meta)
+        let mut meta: Meta = serde_json::from_slice(&meta)
             .map_err(|err| MlsError::Corrupt(format!("client metadata: {err}")))?;
         if meta.version != META_VERSION {
             return Err(MlsError::Corrupt(format!(
@@ -311,13 +359,41 @@ impl<S: StateStore> MlsClient<S> {
                 .into(),
             signature_key: signer.public().into(),
         };
+        // A 0.6.0 snapshot has no pins: pin this device's own key (saved with
+        // the next mutation).
+        if !meta.pins.contains_key(&meta.identity.device_id) {
+            let pin = own_pin(
+                &meta.signature_public_key,
+                &meta.identity.subject_id,
+                system_clock(),
+            );
+            meta.pins.insert(meta.identity.device_id.clone(), pin);
+        }
         Ok(Self {
             provider,
             signer,
             credential,
             meta,
             store,
+            clock: system_clock,
         })
+    }
+
+    /// Use `clock` (Unix seconds) for pin timestamps instead of the system
+    /// clock; the WASM binding installs the JS host's clock this way. Pins
+    /// recorded while no clock was available (timestamp 0) take its time.
+    pub fn with_clock(mut self, clock: fn() -> u64) -> Self {
+        self.clock = clock;
+        let now = clock();
+        for pin in self.meta.pins.values_mut() {
+            if pin.first_seen_unix == 0 {
+                pin.first_seen_unix = now;
+            }
+            if pin.pending_seen_unix == Some(0) {
+                pin.pending_seen_unix = Some(now);
+            }
+        }
+        self
     }
 
     /// Open the device in `store`, or create it when the store is empty. A store
@@ -434,6 +510,237 @@ impl<S: StateStore> MlsClient<S> {
                 .map_err(mls("serialize the credential"))?,
             key_fingerprint: key_fingerprint(self.signer.public()),
         })
+    }
+
+    // ── key pinning ────────────────────────────────────────────────────────
+
+    #[allow(clippy::too_many_arguments)]
+    fn observe_key(
+        &mut self,
+        subject: &str,
+        device: &str,
+        key: &[u8],
+        known: &BTreeSet<String>,
+        source: KeySource,
+        group_id: Option<&str>,
+        seq: Option<i64>,
+    ) -> Observation {
+        let own_subject = self.meta.identity.subject_id.clone();
+        let ctx = ObserveContext {
+            known_subjects: known,
+            own_subject: &own_subject,
+            source,
+            group_id,
+            seq,
+            now: (self.clock)(),
+        };
+        pins::observe(
+            &mut self.meta.pins,
+            &mut self.meta.key_events,
+            subject,
+            device,
+            key,
+            &ctx,
+        )
+    }
+
+    /// Check every leaf of a group this device already holds against the pins.
+    /// Changed keys become [`KeyEvent`]s (saved with the inbox cursor).
+    fn observe_members(&mut self, group: &MlsGroup, source: KeySource, group_id: &str, seq: i64) {
+        let tenant = self.meta.identity.tenant_id.clone();
+        let members: Vec<(String, String, Vec<u8>)> = group
+            .members()
+            .filter_map(|member| {
+                let (member_tenant, subject, device) = credential_identity(&member.credential)?;
+                (member_tenant == tenant).then_some((subject, device, member.signature_key))
+            })
+            .collect();
+        let known = pins::known_subjects(&self.meta.pins);
+        for (subject, device, key) in members {
+            self.observe_key(
+                &subject,
+                &device,
+                &key,
+                &known,
+                source,
+                Some(group_id),
+                Some(seq),
+            );
+        }
+    }
+
+    /// Record device keys learned outside MLS (the directory's
+    /// `ListMessagingDevices` rows: subject, device id, signature public key)
+    /// against the pins and save them once. Every key is recorded; the first
+    /// one that differs from its pin is returned as [`MlsError::KeyChanged`]
+    /// (the pin is unchanged and the observed key kept pending).
+    pub fn observe_device_keys(
+        &mut self,
+        keys: &[(&str, &str, &[u8])],
+        source: KeySource,
+    ) -> Result<(), MlsError> {
+        for (subject, device, key) in keys {
+            validate_device_id(device)?;
+            if subject.is_empty() || key.is_empty() {
+                return Err(MlsError::Rejected(format!(
+                    "device `{device}` has no subject or no signature key"
+                )));
+            }
+        }
+        let known = pins::known_subjects(&self.meta.pins);
+        let mut changed = None;
+        for (subject, device, key) in keys {
+            let observed = self.observe_key(subject, device, key, &known, source, None, None);
+            if observed == Observation::Changed && changed.is_none() {
+                changed = Some(pins::key_changed(&self.meta.pins, subject, device, key));
+            }
+        }
+        self.persist()?;
+        match changed {
+            Some(err) if source.fails_closed() => Err(err),
+            _ => Ok(()),
+        }
+    }
+
+    /// Key events (new devices, changed keys seen in a Welcome or a commit)
+    /// recorded since the last call, oldest first. Taking them is saved.
+    pub fn take_key_events(&mut self) -> Result<Vec<KeyEvent>, MlsError> {
+        if self.meta.key_events.is_empty() {
+            return Ok(Vec::new());
+        }
+        let events = std::mem::take(&mut self.meta.key_events);
+        self.persist()?;
+        Ok(events)
+    }
+
+    /// Key events not yet taken.
+    pub fn key_events(&self) -> &[KeyEvent] {
+        &self.meta.key_events
+    }
+
+    /// The pinned key of a device, under whatever subject it was pinned.
+    pub fn pinned_key(&self, device_id: &str) -> Option<&PinnedKey> {
+        self.meta.pins.get(device_id)
+    }
+
+    /// A subject's pinned devices `(device id, pin)`, sorted by device id.
+    pub fn pinned_devices(&self, subject_id: &str) -> Vec<(String, PinnedKey)> {
+        self.meta
+            .pins
+            .iter()
+            .filter(|(_, pin)| pin.subject_id == subject_id)
+            .map(|(device, pin)| (device.clone(), pin.clone()))
+            .collect()
+    }
+
+    /// The safety number for this device's subject and `peer_subject_id`, from
+    /// both subjects' pinned devices: 12 groups of 5 digits, the same on both
+    /// sides when both pinned the same keys. Compare it out of band (in person,
+    /// over a call). `Rejected` while no device of the peer is pinned.
+    pub fn safety_number(&self, peer_subject_id: &str) -> Result<String, MlsError> {
+        pins::safety_number(
+            &self.meta.identity.tenant_id,
+            &self.meta.pins,
+            &self.meta.identity.subject_id,
+            peer_subject_id,
+        )
+    }
+
+    fn pin_of(&self, subject_id: &str, device_id: &str) -> Result<&PinnedKey, MlsError> {
+        self.meta
+            .pins
+            .get(device_id)
+            .filter(|pin| pin.subject_id == subject_id)
+            .ok_or_else(|| {
+                MlsError::Rejected(format!(
+                    "no pinned key for device `{device_id}` of `{subject_id}`"
+                ))
+            })
+    }
+
+    /// Mark a pinned device verified after its owner read `fingerprint` (the
+    /// directory's lowercase hex key fingerprint) out of band.
+    /// [`MlsError::KeyChanged`] when it is not the pinned key's fingerprint.
+    pub fn verify_device(
+        &mut self,
+        subject_id: &str,
+        device_id: &str,
+        fingerprint: &str,
+    ) -> Result<(), MlsError> {
+        let pinned = self.pin_of(subject_id, device_id)?.fingerprint();
+        let given = pins::normalize_fingerprint(fingerprint);
+        if given != pinned {
+            return Err(MlsError::KeyChanged {
+                subject_id: subject_id.to_string(),
+                device_id: device_id.to_string(),
+                pinned_fingerprint: pinned,
+                observed_fingerprint: given,
+            });
+        }
+        if let Some(pin) = self.meta.pins.get_mut(device_id) {
+            pin.verified = true;
+        }
+        self.persist()
+    }
+
+    /// Re-pin a device to the pending key observed for it under `subject_id`,
+    /// after the user compared that key's `fingerprint` with the device's owner.
+    /// Only the compared key is accepted: a fingerprint that is not the pending
+    /// key's is refused. The new pin is unverified.
+    pub fn accept_key_change(
+        &mut self,
+        subject_id: &str,
+        device_id: &str,
+        fingerprint: &str,
+    ) -> Result<(), MlsError> {
+        if device_id == self.meta.identity.device_id {
+            return Err(MlsError::Rejected(
+                "this device's own key is never replaced".into(),
+            ));
+        }
+        let given = pins::normalize_fingerprint(fingerprint);
+        let now = (self.clock)();
+        let pin =
+            self.meta.pins.get_mut(device_id).ok_or_else(|| {
+                MlsError::Rejected(format!("no pinned key for device `{device_id}`"))
+            })?;
+        let matches = pin.pending_subject_id.as_deref() == Some(subject_id)
+            && pin.pending_fingerprint().as_deref() == Some(given.as_str());
+        let pending = match pin.pending.take() {
+            Some(pending) if matches => pending,
+            other => {
+                pin.pending = other;
+                return Err(MlsError::Rejected(format!(
+                    "no pending key with fingerprint {given} for device `{device_id}` of `{subject_id}`"
+                )));
+            }
+        };
+        *pin = PinnedKey {
+            subject_id: subject_id.to_string(),
+            signature_public_key: pending,
+            first_seen_unix: pin.pending_seen_unix.unwrap_or(now),
+            verified: false,
+            pending: None,
+            pending_subject_id: None,
+            pending_seen_unix: None,
+        };
+        self.persist()
+    }
+
+    /// Drop a device's pin (a device that was revoked and will not return), so
+    /// its id can be pinned afresh. `false` when nothing was pinned for it.
+    pub fn forget_device(&mut self, subject_id: &str, device_id: &str) -> Result<bool, MlsError> {
+        if device_id == self.meta.identity.device_id {
+            return Err(MlsError::Rejected(
+                "this device's own pin cannot be forgotten".into(),
+            ));
+        }
+        if self.pin_of(subject_id, device_id).is_err() {
+            return Ok(false);
+        }
+        self.meta.pins.remove(device_id);
+        self.persist()?;
+        Ok(true)
     }
 
     // ── key packages ───────────────────────────────────────────────────────
@@ -602,6 +909,7 @@ impl<S: StateStore> MlsClient<S> {
         let members = member_devices(&group);
         let (commit, welcome, added, removed, intent) = match intent {
             CommitIntent::Add { key_packages } => {
+                let known = pins::known_subjects(&self.meta.pins);
                 let mut packages = Vec::new();
                 let mut kept = Vec::new();
                 let mut added: Vec<String> = Vec::new();
@@ -613,6 +921,22 @@ impl<S: StateStore> MlsClient<S> {
                             "KeyPackage for device `{device}` belongs to another tenant"
                         )));
                     }
+                    let subject = info.identity.subject_id;
+                    let key = info.signature_public_key;
+                    let observed = self.observe_key(
+                        &subject,
+                        &device,
+                        &key,
+                        &known,
+                        KeySource::KeyPackage,
+                        None,
+                        None,
+                    );
+                    if observed == Observation::Changed {
+                        // Keep the pending key; build nothing.
+                        self.persist()?;
+                        return Err(pins::key_changed(&self.meta.pins, &subject, &device, &key));
+                    }
                     if members.contains_key(&device) || added.contains(&device) {
                         continue;
                     }
@@ -621,6 +945,8 @@ impl<S: StateStore> MlsClient<S> {
                     added.push(device);
                 }
                 if packages.is_empty() {
+                    // Keys pinned from the packages are kept.
+                    self.persist()?;
                     return Ok(None);
                 }
                 let (commit, welcome, _info) = group
@@ -839,6 +1165,8 @@ impl<S: StateStore> MlsClient<S> {
                 "the Welcome is for a different group than the entry names".into(),
             ));
         }
+        // The group is joined either way; a changed key is reported as an event.
+        self.observe_members(&group, KeySource::Welcome, &item.group_id, item.seq);
         self.meta
             .groups
             .insert(item.group_id.clone(), GroupMeta::default());
@@ -944,6 +1272,9 @@ impl<S: StateStore> MlsClient<S> {
                 removed_by: sender,
             });
         }
+        // Every leaf, not only the added device ids: a removal and re-add, or an
+        // update path, can change a leaf's key under the same device id.
+        self.observe_members(&group, KeySource::Commit, &item.group_id, item.seq);
         let after = member_devices(&group);
         let before: BTreeSet<&String> = before.keys().collect();
         let after_ids: BTreeSet<&String> = after.keys().collect();

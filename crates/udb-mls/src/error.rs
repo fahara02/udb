@@ -45,6 +45,19 @@ pub enum MlsError {
     /// that is too short, a wrong secret, a modified or foreign envelope).
     #[error("backup: {0}")]
     Backup(String),
+    /// A device presented a different signature key than the one this client
+    /// pinned for it (from the directory or a claimed KeyPackage). The pin is
+    /// unchanged; compare `observed_fingerprint` with the device's owner out of
+    /// band, then [`crate::MlsClient::accept_key_change`] it or stop.
+    #[error(
+        "the key of device `{device_id}` of `{subject_id}` changed: pinned {pinned_fingerprint}, observed {observed_fingerprint}"
+    )]
+    KeyChanged {
+        subject_id: String,
+        device_id: String,
+        pinned_fingerprint: String,
+        observed_fingerprint: String,
+    },
     /// OpenMLS refused an operation.
     #[error("MLS operation failed: {0}")]
     Mls(String),

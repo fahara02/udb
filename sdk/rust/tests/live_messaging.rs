@@ -9,9 +9,10 @@
 //! Gated on `UDB_LIVE_SDK_TESTS=1`; without it the test passes without touching
 //! the network. Needs `UDB_AUTH_GRPC_TARGET` (the native listener that serves
 //! AuthnService and MessagingService), `UDB_LIVE_USERNAME`, `UDB_LIVE_PASSWORD`,
-//! `UDB_LIVE_TENANT`, and optionally `UDB_LIVE_PROJECT`.
+//! `UDB_LIVE_TENANT`, and optionally `UDB_LIVE_PROJECT`. The key-pinning test
+//! also needs `UDB_PG_DSN` and `psql` (it swaps a key in the directory table).
 //!
-//! Run: `cargo test --features mls --test live_messaging -- --nocapture`
+//! Run: `cargo test --features mls --test live_messaging -- --nocapture --test-threads=1`
 
 // Compiled only with the `mls` feature (an empty test crate otherwise).
 #![cfg(feature = "mls")]
@@ -20,7 +21,9 @@ use std::time::Duration;
 
 use tonic::transport::{Channel, Endpoint};
 use tonic::Request;
-use udb_client::messaging::mls::{DeviceIdentity, InboxEvent, MemoryStore, MlsClient};
+use udb_client::messaging::mls::{
+    DeviceIdentity, InboxEvent, KeyEvent, KeySource, MemoryStore, MlsClient,
+};
 use udb_client::messaging::{MessagingClient, MessagingError};
 use udb_client::proto::udb::core::authn::services::v1 as authn;
 use udb_client::proto::udb::core::authn::services::v1::authn_service_client::AuthnServiceClient;
@@ -294,6 +297,177 @@ async fn live_e2ee_group_chat_through_the_rust_sdk() {
             Err(MessagingError::Rpc(err)) => panic!("revoke {id}: {err}"),
             Err(other) => panic!("revoke {id}: {other}"),
         }
+    }
+}
+
+/// Play a compromised directory: overwrite a registered device's signature key
+/// in the broker's database (an honest broker refuses a key change for an
+/// existing device id). Uses `psql` against `UDB_PG_DSN`, so the test needs no
+/// database driver.
+fn swap_directory_key(tenant_id: &str, device_id: &str, key: &[u8], fingerprint: &str) {
+    let quote = |value: &str| value.replace('\'', "''");
+    let hex: String = key.iter().map(|byte| format!("{byte:02x}")).collect();
+    let update = format!(
+        "UPDATE udb_messaging.devices SET signature_public_key = decode('{hex}', 'hex'), \
+         key_fingerprint = '{fingerprint}' WHERE tenant_id = '{tenant}' AND device_id = '{device}' \
+         RETURNING device_id",
+        fingerprint = quote(fingerprint),
+        tenant = quote(tenant_id),
+        device = quote(device_id),
+    );
+    let output = std::process::Command::new("psql")
+        .arg(required("UDB_PG_DSN"))
+        .args(["-X", "-tA", "-v", "ON_ERROR_STOP=1"])
+        // The directory table forces row-level security; the platform-admin
+        // setting is the policy's bypass.
+        .args(["-c", "SET app.platform_admin = 'true'", "-c", &update])
+        .output()
+        .expect("run psql (the live pinning test needs the PostgreSQL client)");
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        output.status.success() && stdout.lines().any(|line| line.trim() == device_id),
+        "swapping the directory key of {device_id} failed: {stdout} {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+}
+
+/// Key pinning against a served broker: the directory listing pins each
+/// device's key, both devices compute the same safety number, a new device of
+/// the user is reported, and a key swapped in the directory (a compromised
+/// broker) fails listing and adding closed until the user accepts the compared
+/// key — after which the safety number differs.
+#[tokio::test(flavor = "multi_thread")]
+async fn live_pinning_flags_a_swapped_device_key() {
+    if std::env::var("UDB_LIVE_SDK_TESTS").as_deref() != Ok("1") {
+        eprintln!("skipped: the live messaging test needs UDB_LIVE_SDK_TESTS=1");
+        return;
+    }
+    let channel = Endpoint::from_shared(endpoint(&required("UDB_AUTH_GRPC_TARGET")))
+        .expect("endpoint")
+        .connect()
+        .await
+        .expect("connect the native listener");
+    let (meta, subject) = login(channel.clone()).await;
+    let run = format!(
+        "{:x}",
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_millis()
+    );
+    let (a_id, b_id, tablet_id) = (
+        format!("rs-pin-a-{run}"),
+        format!("rs-pin-b-{run}"),
+        format!("rs-pin-t-{run}"),
+    );
+    let group = format!("rs-pin-room-{run}");
+    let mut a = device(&channel, &meta, &subject, &a_id).await;
+    let mut b = device(&channel, &meta, &subject, &b_id).await;
+    let b_registration = b.mls().registration().unwrap();
+
+    // First sight pins b's directory key; a device of a's own user is reported.
+    a.list_devices(&subject, false).await.expect("list devices");
+    let pinned = a.pinned_devices(&subject);
+    let b_pin = pinned
+        .iter()
+        .find(|(device, _)| device == &b_id)
+        .map(|(_, pin)| pin.clone())
+        .expect("b is pinned");
+    assert_eq!(
+        b_pin.signature_public_key,
+        b_registration.signature_public_key
+    );
+    assert!(a.take_key_events().unwrap().iter().any(|event| matches!(
+        event,
+        KeyEvent::NewDevice { device_id, source: KeySource::Directory, .. } if device_id == &b_id
+    )));
+
+    a.create_group(&group).await.expect("create group");
+    a.add_members(&group, &[], &[b_id.as_str()])
+        .await
+        .expect("add b");
+    assert!(matches!(
+        &b.sync().await.unwrap()[..],
+        [InboxEvent::Joined { .. }]
+    ));
+    let number = a.safety_number(&subject).await.expect("a's safety number");
+    assert_eq!(
+        b.safety_number(&subject).await.expect("b's safety number"),
+        number,
+        "both devices pinned the same keys"
+    );
+
+    // A new device of the user is an event on the next listing.
+    let mut tablet = device(&channel, &meta, &subject, &tablet_id).await;
+    a.list_devices(&subject, false).await.expect("list devices");
+    assert!(a.take_key_events().unwrap().iter().any(|event| matches!(
+        event,
+        KeyEvent::NewDevice { device_id, .. } if device_id == &tablet_id
+    )));
+    let with_tablet = a.safety_number(&subject).await.expect("safety number");
+    assert_ne!(with_tablet, number);
+
+    // The directory now serves an impostor's key for b, and takes its packages.
+    let impostor = MlsClient::create(
+        DeviceIdentity::new(&meta.tenant_id, &subject, &b_id).expect("identity"),
+        MemoryStore::new(),
+    )
+    .expect("impostor keys");
+    let forged = impostor.registration().unwrap();
+    swap_directory_key(
+        &meta.tenant_id,
+        &b_id,
+        &forged.signature_public_key,
+        &forged.key_fingerprint,
+    );
+    let mut impostor = MessagingClient::with_channel(channel.clone(), meta.clone(), impostor)
+        .with_key_package_stock(3, 3);
+    impostor
+        .ensure_key_packages()
+        .await
+        .expect("the swapped directory accepts the impostor's KeyPackages");
+
+    // Listing fails closed with the key change; so does adding by subject.
+    let err = a
+        .list_devices(&subject, false)
+        .await
+        .expect_err("a swapped key fails the listing");
+    let change = err.key_change().expect("a key change");
+    assert_eq!(change.device_id, b_id);
+    assert_eq!(change.pinned_fingerprint, b_registration.key_fingerprint);
+    assert_eq!(change.observed_fingerprint, forged.key_fingerprint);
+    let second = format!("rs-pin-room-2-{run}");
+    a.create_group(&second).await.expect("create group");
+    let err = a
+        .add_members(&second, &[subject.as_str()], &[])
+        .await
+        .expect_err("adding fails closed");
+    assert!(err.key_change().is_some(), "{err}");
+    assert_eq!(a.mls().members(&second).unwrap().len(), 1);
+    // b itself notices that the directory no longer holds its key.
+    let err = b
+        .list_devices(&subject, false)
+        .await
+        .expect_err("b sees its own key swapped");
+    assert_eq!(
+        err.key_change().map(|change| change.device_id.to_string()),
+        Some(b_id.clone())
+    );
+
+    // Only the compared key is accepted; then the safety number differs.
+    assert!(a
+        .accept_key_change(&subject, &b_id, &b_registration.key_fingerprint)
+        .is_err());
+    a.accept_key_change(&subject, &b_id, &forged.key_fingerprint)
+        .expect("accept the compared key");
+    let after = a.safety_number(&subject).await.expect("safety number");
+    assert_ne!(after, with_tablet);
+
+    for (client, id) in [(&mut a, &a_id), (&mut tablet, &tablet_id), (&mut b, &b_id)] {
+        client
+            .revoke_device(id, "live test cleanup")
+            .await
+            .expect("revoke");
     }
 }
 

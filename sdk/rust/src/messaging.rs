@@ -92,6 +92,38 @@ impl std::error::Error for MessagingError {
     }
 }
 
+/// A pinned device's key changed ([`MessagingError::key_change`]).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct KeyChange<'a> {
+    pub subject_id: &'a str,
+    pub device_id: &'a str,
+    pub pinned_fingerprint: &'a str,
+    /// The fingerprint to compare with the device's owner and, if it matches,
+    /// pass to [`MessagingClient::accept_key_change`].
+    pub observed_fingerprint: &'a str,
+}
+
+impl MessagingError {
+    /// The key change behind this error, when a pinned device presented a
+    /// different key ([`MlsError::KeyChanged`]).
+    pub fn key_change(&self) -> Option<KeyChange<'_>> {
+        match self {
+            Self::Mls(MlsError::KeyChanged {
+                subject_id,
+                device_id,
+                pinned_fingerprint,
+                observed_fingerprint,
+            }) => Some(KeyChange {
+                subject_id,
+                device_id,
+                pinned_fingerprint,
+                observed_fingerprint,
+            }),
+            _ => None,
+        }
+    }
+}
+
 impl From<UdbError> for MessagingError {
     fn from(err: UdbError) -> Self {
         Self::Rpc(err)
@@ -313,7 +345,12 @@ impl<S: StateStore> MessagingClient<S> {
     }
 
     /// A principal's devices with their key fingerprints (empty subject: this
-    /// device's own principal). Compare fingerprints out of band to verify.
+    /// device's own principal). Every key is checked against this device's
+    /// pins: the first key seen for a device is pinned, an unseen device of a
+    /// known subject (or of this device's own) is queued as a
+    /// [`mls::KeyEvent::NewDevice`] ([`Self::take_key_events`]), and a key that
+    /// differs from its pin fails the call with [`MlsError::KeyChanged`]
+    /// ([`MessagingError::key_change`]).
     pub async fn list_devices(
         &mut self,
         subject_id: &str,
@@ -333,10 +370,73 @@ impl<S: StateStore> MessagingClient<S> {
             let page = self.rpc.list_messaging_devices(request).await?.into_inner();
             devices.extend(page.devices);
             if page.next_page_token.is_empty() {
-                return Ok(devices);
+                break;
             }
             page_token = page.next_page_token;
         }
+        let keys: Vec<(&str, &str, &[u8])> = devices
+            .iter()
+            .map(|device| {
+                (
+                    device.subject_id.as_str(),
+                    device.device_id.as_str(),
+                    device.signature_public_key.as_slice(),
+                )
+            })
+            .collect();
+        self.mls
+            .observe_device_keys(&keys, mls::KeySource::Directory)?;
+        Ok(devices)
+    }
+
+    // ── key pinning ────────────────────────────────────────────────────────
+
+    /// Key events (new devices; changed keys seen in a Welcome or another
+    /// member's commit, which the group already accepted) since the last call.
+    pub fn take_key_events(&mut self) -> Result<Vec<mls::KeyEvent>, MessagingError> {
+        Ok(self.mls.take_key_events()?)
+    }
+
+    /// The safety number to compare with `peer_subject_id` out of band, after
+    /// refreshing both subjects' devices from the directory (which fails with
+    /// [`MlsError::KeyChanged`] if a pinned key changed).
+    pub async fn safety_number(&mut self, peer_subject_id: &str) -> Result<String, MessagingError> {
+        let own = self.mls.identity().subject_id.clone();
+        self.list_devices(&own, false).await?;
+        if peer_subject_id != own {
+            self.list_devices(peer_subject_id, false).await?;
+        }
+        Ok(self.mls.safety_number(peer_subject_id)?)
+    }
+
+    /// Mark a pinned device verified after its owner read `fingerprint` out of
+    /// band ([`MlsError::KeyChanged`] when it is not the pinned key's).
+    pub fn verify_device(
+        &mut self,
+        subject_id: &str,
+        device_id: &str,
+        fingerprint: &str,
+    ) -> Result<(), MessagingError> {
+        Ok(self.mls.verify_device(subject_id, device_id, fingerprint)?)
+    }
+
+    /// Re-pin a device to the key a [`MlsError::KeyChanged`] reported, after
+    /// comparing its `fingerprint` (the error's `observed_fingerprint`) with the
+    /// device's owner. Only that key is accepted.
+    pub fn accept_key_change(
+        &mut self,
+        subject_id: &str,
+        device_id: &str,
+        fingerprint: &str,
+    ) -> Result<(), MessagingError> {
+        Ok(self
+            .mls
+            .accept_key_change(subject_id, device_id, fingerprint)?)
+    }
+
+    /// A subject's pinned devices `(device id, pin)`, sorted by device id.
+    pub fn pinned_devices(&self, subject_id: &str) -> Vec<(String, mls::PinnedKey)> {
+        self.mls.pinned_devices(subject_id)
     }
 
     /// Revoke one of the principal's devices. Its groups' other members get a

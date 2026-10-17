@@ -289,9 +289,19 @@ chat.update_keys("room-1").await?;  // rotate this device's keys (post-compromis
 ```
 
 - The device credential names `<tenant>/<subject>/<device_id>`; the tenant must
-  be the canonical tenant id the token resolves to. Compare
-  `DirectoryDevice.key_fingerprint` (from `list_devices`) out of band to verify a
-  peer's device.
+  be the canonical tenant id the token resolves to.
+- **Key pinning.** The client pins the first signature key it sees for every
+  device (from `list_devices`, a claimed KeyPackage, a Welcome or a commit). A
+  different key later is never trusted silently: `list_devices` and
+  `add_members` fail with `MlsError::KeyChanged` (read it with
+  `err.key_change()`), and a changed key inside a group the device already
+  belongs to is queued as `mls::KeyEvent::KeyChanged`. A new device of a known
+  user (or of your own) is queued as `KeyEvent::NewDevice`; drain the queue
+  with `take_key_events()`. Users compare `safety_number(peer)` (12 groups of 5
+  digits, the same on both sides) in person or over a call;
+  `verify_device(subject, device, fingerprint)` marks a device verified, and
+  after comparing a changed key's `observed_fingerprint` with its owner,
+  `accept_key_change(subject, device, fingerprint)` re-pins exactly that key.
 - Commits are `PublicMessage`s the broker validates; if another member's commit
   wins the epoch, the client processes the inbox up to the winning epoch,
   rebuilds the same change and resubmits it (`CommitOutcome::rebases`).

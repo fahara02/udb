@@ -14,7 +14,7 @@ import { PassThrough } from "node:stream";
 import * as grpc from "@grpc/grpc-js";
 
 import { UdbError } from "./generatedClient";
-import { loadMlsWasm, MessagingClient, MlsEvent, MlsWasmModule, staleEpoch } from "./messaging";
+import { KeyChangedError, loadMlsWasm, MessagingClient, MlsEvent, MlsWasmModule, staleEpoch } from "./messaging";
 
 function wasmOrSkip(): MlsWasmModule | undefined {
   try {
@@ -381,4 +381,80 @@ test("an encrypted backup restores a device on a new machine", async (t) => {
     MessagingClient.restore({ api: broker.api(), wasm, tenantId: TENANT, subjectId: "bob", recoverySecret: passphrase }),
     (err: unknown) => err instanceof UdbError && err.code === grpc.status.NOT_FOUND,
   );
+});
+
+test("pinned keys flag a swapped directory key and safety numbers match", async (t) => {
+  const wasm = wasmOrSkip();
+  if (!wasm) {
+    t.skip("the MLS WebAssembly module is not built (npm run build:mls-wasm)");
+    return;
+  }
+  const broker = new FakeBroker(wasm);
+  const make = (subject: string, deviceId: string) =>
+    new MessagingClient({
+      api: broker.api(),
+      device: wasm.MlsDevice.create(TENANT, subject, deviceId),
+      wasm,
+      keyPackageTarget: 2,
+      keyPackageThreshold: 2,
+    });
+  const a = make("alice", "a-1");
+  const b = make("bob", "b-1");
+  for (const device of [a, b]) {
+    await device.registerDevice();
+    await device.ensureKeyPackages();
+  }
+
+  // First sight pins silently; both sides compute the same safety number.
+  await a.listDevices("bob");
+  const pinned = a.pinnedDevices("bob");
+  assert.deepEqual(pinned.map((p) => [p.deviceId, p.keyFingerprint, p.verified]), [
+    ["b-1", b.device.registration().keyFingerprint, false],
+  ]);
+  assert.ok(pinned[0].firstSeenUnix > 0, "the JS host clock stamps pins");
+  assert.deepEqual(await a.takeKeyEvents(), []);
+  await a.createGroup("room");
+  await a.addMembers("room", ["bob"]);
+  await b.sync();
+  const number = await a.safetyNumber("bob");
+  assert.match(number, /^(\d{5} ){11}\d{5}$/);
+  assert.equal(await b.safetyNumber("alice"), number);
+  await a.verifyDevice("bob", "b-1", b.device.registration().keyFingerprint);
+  await assert.rejects(a.verifyDevice("bob", "b-1", "0".repeat(64)), KeyChangedError);
+
+  // A new device of a known subject is an event.
+  const tablet = make("bob", "b-2");
+  await tablet.registerDevice();
+  await a.listDevices("bob");
+  const events = await a.takeKeyEvents();
+  assert.deepEqual(events.map((e) => [e.kind, e.subjectId, e.deviceId, e.source]), [
+    ["new_device", "bob", "b-2", "directory"],
+  ]);
+  const withTablet = await a.safetyNumber("bob");
+  assert.notEqual(withTablet, number);
+
+  // A compromised directory swaps b-1's key: listing and adding fail closed.
+  const impostor = make("bob", "b-1");
+  await impostor.registerDevice();
+  await impostor.ensureKeyPackages();
+  const observed = impostor.device.registration().keyFingerprint;
+  await assert.rejects(a.listDevices("bob"), (err: unknown) => {
+    assert.ok(err instanceof KeyChangedError, String(err));
+    assert.equal(err.deviceId, "b-1");
+    assert.equal(err.pinnedFingerprint, b.device.registration().keyFingerprint);
+    assert.equal(err.observedFingerprint, observed);
+    return true;
+  });
+  await a.createGroup("room-2");
+  await assert.rejects(a.addMembers("room-2", ["bob"]), KeyChangedError);
+  assert.equal(a.device.members("room-2").length, 1);
+  assert.equal(a.pinnedDevices("bob")[0].pendingFingerprint, observed);
+  assert.equal(await a.safetyNumber("bob").catch((err) => err instanceof KeyChangedError), true);
+
+  // Only the compared key is accepted; afterwards the numbers differ.
+  await assert.rejects(a.acceptKeyChange("bob", "b-1", b.device.registration().keyFingerprint));
+  await a.acceptKeyChange("bob", "b-1", observed);
+  const after = await a.safetyNumber("bob");
+  assert.notEqual(after, withTablet);
+  assert.equal(a.pinnedDevices("bob").find((p) => p.deviceId === "b-1")?.verified, false);
 });
