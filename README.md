@@ -276,7 +276,8 @@ All public commands use the short binary name `udb`.
 | `udb catalog`, `udb sql` | Inspect the schema and DDL UDB derives from your protos |
 | `udb drift`, `udb plan` | **Changing a live model:** what a change does, and the approval plan `serve` accepts |
 | `udb verify --live` | Compare protos against a LIVE database, read-only, before applying anything |
-| `udb catalog bootstrap` | Give a project an ACTIVE catalog (needed once per project after upgrading) |
+| `udb up` | Take a project from its protos to a served catalog (bootstrap, or the reviewed transition when the ACTIVE catalog differs), then apply its declared policies, identities and seed data; safe to re-run |
+| `udb catalog bootstrap` | Give a project its first ACTIVE catalog; exits 3 when an ACTIVE catalog already differs from the protos |
 | `udb env` | Generate a working `.env` for dev or enterprise, with real secrets |
 | `udb sdk generate` | Generate descriptor-aware SDK surfaces from templates |
 | `udb native list`, `udb native manifest`, `udb native docs` | Inspect native-service contracts |

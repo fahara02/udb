@@ -71,10 +71,14 @@ const COMMANDS: &[CmdHelp] = &[
   fails its first call. This stages the current manifest for that project and
   activates it in one step.
 
-  Idempotent: if the project already has an ACTIVE catalog it reports that id and
-  changes nothing, so it is safe to re-run and safe on a healthy deployment.
+  Never replaces an ACTIVE catalog. When the project already has one built from
+  the same protos it prints \"unchanged\" and exits 0, so it is safe to re-run.
+  When the ACTIVE catalog differs from the protos it exits 3 and names the
+  reviewed transition (`udb catalog transition status`, or `udb up`, which
+  drives it).
 
-  Run once per project that services authenticate under.",
+  Run once per project that services authenticate under; `udb up` does this
+  for you.",
     },
     CmdHelp {
         name: "catalog stage",
@@ -537,15 +541,34 @@ const COMMANDS: &[CmdHelp] = &[
     CmdHelp {
         name: "up",
         group: "Admin",
-        summary: "Reconcile a project's udb.yaml: policies, service accounts, seed data.",
-        usage: "udb up [-f udb.yaml] [--dry-run] [--allow-transfer] [--dsn <dsn>]",
-        details: "  udb.yaml: {tenant, project, policies | policies_file, policy_overlays,
-  service_accounts | service_accounts_file, embedding {models, sources},
-  seed | seed_file}. Runs the same reconcilers as `udb policy apply`,
-  `udb identity apply`, EmbeddingService RegisterModel/RegisterSource (plus a
-  first backfill when a source sets `backfill: true`) and `udb data seed`, in
-  that order; --dry-run prints the differences only. Paths are relative to the
-  file. Applying the same file twice changes nothing.",
+        summary: "Take a project from its protos to a served catalog, then apply its udb.yaml.",
+        usage: "udb up [-f udb.yaml] [--project <id>] [--tenant <uuid>] [--dsn <dsn>] [--proto <dir>] [--dry-run] [--yes] [--approve <run-id>] [--allow-transfer] [--json]",
+        details: "  Steps, one stderr line each ([ok] [done] [skipped] [next] [failed]):
+    inputs        project, tenant, DSN, protos (flags > udb.yaml > UDB_PROJECT_ID,
+                  UDB_TENANT_ID, UDB_PG_DSN, UDB_PROTO_ROOT)
+    manifest      the effective manifest `serve` stores
+    schema        the database against the protos (`udb verify --live`)
+    catalog       none ACTIVE: bootstrap. Same protos: skipped. Different
+                  protos: the reviewed transition through the broker
+                  (UDB_AUTH_TOKEN, UDB_GRPC_TARGET or catalog.target); it stops
+                  at the plan until --approve <run-id> names that run (or you
+                  confirm at the terminal). Responses: .udb/transitions/
+    policies      `udb policy apply`; soft-deletes rules the file dropped
+    identities    `udb identity apply`
+    embedding     RegisterModel/RegisterSource (+ first backfill)
+    seed          `udb data seed`
+    check         `udb check` (report only)
+    runtime-flags `udb env fill --check` on ./.env (report only)
+  A [next] line prints `Next:` (the exact command) and `Needs:` (what that
+  command needs). Exit codes: 0 done/skipped, 3 stopped at a step that needs a
+  person, 1 a step failed, 2 inputs missing. --dry-run changes nothing and exits
+  0. --yes confirms changes that need no review and is required for every
+  change under UDB_ENV=production (which never prompts or migrates); it never
+  approves a reviewed transition.
+  udb.yaml: {tenant, project, proto_root, proto_namespace, catalog {target},
+  policies | policies_file, policy_overlays, service_accounts |
+  service_accounts_file, embedding {models, sources}, seed | seed_file}. Paths
+  are relative to the file. Running it twice changes nothing.",
     },
     CmdHelp {
         name: "migrate storage",

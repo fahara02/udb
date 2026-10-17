@@ -150,12 +150,22 @@ project 'acme' has no ACTIVE catalog, and falling back to the default project is
 Give each project a catalog once:
 
 ```bash
-udb catalog bootstrap --project acme --dsn "$UDB_PG_DSN"
+udb up --project acme --tenant "$UDB_TENANT_ID" --dsn "$UDB_PG_DSN"
 ```
 
-It stages the current manifest for that project and activates it. Re-running is
-safe — if the project already has an ACTIVE catalog it reports that and changes
-nothing.
+`udb up` builds the manifest from your protos, checks the database against it,
+and bootstraps the project's catalog when it has none. Re-running is safe: when
+the ACTIVE catalog already matches the protos the catalog step prints
+`[skipped]`. When it differs, `udb up` plans the reviewed transition through the
+broker and stops at `[next]` with the exact `udb up … --approve <run-id>`
+command to run after you have reviewed the plan. The same command then applies
+the project's declared policies, service accounts and seed data from
+`udb.yaml`.
+
+`udb catalog bootstrap --project acme` remains for the catalog alone. It never
+replaces an ACTIVE catalog: it prints "unchanged" when the ACTIVE catalog
+matches the protos, and exits 3 naming `udb catalog transition status` when it
+does not. Before 0.6.1 it reported success in that case too.
 
 Run it for every project your services authenticate under, not just the default.
 

@@ -2015,6 +2015,21 @@ impl DataBrokerRuntime {
             }))
     }
 
+    /// The project's ACTIVE catalog as `(catalog_id, schema_checksum_sha256)`,
+    /// if any. The second value is the semantic checksum of the stored
+    /// manifest (not the raw-payload selector `catalog status` prints), so it
+    /// equals `checksum_sha256` of a manifest freshly built from the same
+    /// protos exactly when they have not changed.
+    pub async fn active_project_catalog_schema_checksum(
+        &self,
+        project_id: &str,
+    ) -> Result<Option<(String, String)>, tonic::Status> {
+        Ok(self
+            .load_active_catalog_for_project(project_id)
+            .await?
+            .map(|record| (record.catalog_id, record.manifest.checksum_sha256)))
+    }
+
     /// Activate a catalog version (marks it ACTIVE, records activation log).
     pub(crate) async fn activate_catalog(
         &self,
