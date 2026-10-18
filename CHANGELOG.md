@@ -5,6 +5,30 @@ the package version in `Cargo.toml`; historical v0.3.2 audit material is folded
 into the v0.3.x entries because the codebase advanced to v0.3.7 before that
 release line was tagged.
 
+## [Unreleased]
+
+### Added
+
+- **Go durable consumers can acknowledge in batches.** `udbclient.ConsumeOptions`
+  gains `AckBatchSize`, `AckInterval` and `AckTimeout`, so a high-throughput
+  consumer settles a run of successful events as one watermark instead of one
+  `AckCdcEvents` call per event. `AckInterval` flushes a partial batch on an idle
+  stream and `AckTimeout` bounds each settlement, including a shutdown flush.
+  A redelivery of an event whose handler already completed is acknowledged again
+  without re-running the handler, so a cursor the broker never saw confirmed
+  still advances.
+
+### Breaking for callers
+
+- None. `AckBatchSize` defaults to 1, which keeps the released per-event
+  contract: an event is acknowledged before the next one is read, a failed
+  acknowledgement stops the stream before later events can advance the cursor,
+  and a redelivery is re-acknowledged in place. Raising it is opt-in and trades
+  that guarantee for throughput.
+  - detect: code: `AckBatchSize:`
+  - fix: none needed unless you set it; handlers must be idempotent, which
+    at-least-once delivery already requires.
+
 ## [0.6.1] - 2026-10-17
 
 ### Added

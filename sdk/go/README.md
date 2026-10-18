@@ -201,6 +201,43 @@ when the request carries a caller-supplied idempotency key** — keyless mutatio
 fail closed instead of risking a double apply. Typed error details decode from
 the `udb-error-detail-bin` trailer via `Error.Detail()` in this package.
 
+## Durable Consumers
+
+`udbclient.Consume` owns reconnects, credential refresh and a named,
+principal-owned server cursor: the broker stores how far the consumer got
+(`AckCdcEvents`) and resumes there after a restart, a reconnect or a credential
+refresh. You no longer keep a cursor table, CAS-commit it, reconnect by hand and
+handle expired credentials in the loop — the pattern where one loop that stopped
+retrying left every consumer idle for hours without an error.
+
+```go
+err := udbclient.Consume[*myservice.OrderEvent](ctx, u, "order-worker", "orders.*",
+    func(ctx context.Context, ev udbclient.ConsumedEvent[*myservice.OrderEvent]) error {
+        return applyOrder(ctx, ev.Payload)
+    })
+```
+
+By default (`AckBatchSize` 1) each event is acknowledged before the next one is
+read, so a failed acknowledgement stops the stream before later events can
+advance the cursor and a redelivery is acknowledged again without re-running its
+handler. Raising `AckBatchSize` acknowledges a batch as a single watermark
+(the newest id in it) for throughput; `AckInterval` flushes a partial batch on an
+idle stream and `AckTimeout` bounds each settlement, including a shutdown flush.
+Batching trades the per-event guarantee for throughput: events handled inside an
+unflushed batch are read and handled before that watermark settles, so a refusal
+or crash in between redelivers the whole batch. Delivery is at-least-once either
+way — handlers must use event IDs for idempotency where needed.
+
+Cancellation never settles an interrupted handler (it stays unacknowledged and
+is redelivered), but it flushes handlers that already completed within
+`AckTimeout` and preserves any flush error in the returned error.
+
+After `MaxAttempts` handler failures (default 5) the broker atomically stores the
+event in its ordinary DLQ and advances that consumer, so later events keep
+flowing; a broker without `NackCdcEvents` refuses rather than discarding it.
+Envelopes newer than this SDK understands stop the consumer rather than being
+misread.
+
 ## Platform Services (Vault, Metering, Scheduler, …)
 
 The control plane also ships Vault, Metering, Scheduler, Search, Webhook,
