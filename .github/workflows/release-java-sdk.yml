@@ -82,6 +82,45 @@ jobs:
           gpg-private-key: ${{ secrets.MAVEN_GPG_PRIVATE_KEY }}
           gpg-passphrase: MAVEN_GPG_PASSPHRASE
 
+      # Pin Maven to the 3.9.x line, off the runner-image default. The
+      # central-publishing plugin 0.8.0 stages artifacts with
+      # ArtifactInstaller.install(); under Maven 3.10.0 the resolver writes
+      # bookkeeping (maven-metadata-local.xml at the artifact dir, plus
+      # _remote.repositories and .locks/) into that staging dir, which the
+      # plugin does not strip before zipping, so Central rejects the bundle
+      # with "Bundle has content that does NOT have a .pom file:
+      # io/github/fahara02/udb-java-client". 3.9.9 stages a clean bundle
+      # (reproduced locally: 3.9.9 -> 9 files under 0.6.1/ with the pom;
+      # 3.10.0 -> the same plus the version-less metadata/locks). See
+      # apache/maven#13388 and central-publishing-maven-plugin#78.
+      - name: Install pinned Maven
+        if: steps.credentials.outputs.ready == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "runner default Maven (before pin):"
+          mvn -v 2>&1 | head -1 || echo "  (no mvn on PATH)"
+          version="3.9.9"
+          archive="${RUNNER_TEMP}/apache-maven-${version}-bin.tar.gz"
+          curl --fail --location --retry 3 --retry-all-errors \
+            "https://archive.apache.org/dist/maven/maven-3/${version}/binaries/apache-maven-${version}-bin.tar.gz" \
+            --output "$archive"
+          printf '%s  %s\n' 'a555254d6b53d267965a3404ecb14e53c3827c09c3b94b5678835887ab404556bfaf78dcfe03ba76fa2508649dca8531c74bca4d5846513522404d48e8c4ac8b' "$archive" | sha512sum --check --strict
+          install_dir="${RUNNER_TEMP}/udb-maven"
+          mkdir -p "$install_dir"
+          tar --extract --gzip --file "$archive" --directory "$install_dir" --strip-components=1
+          printf '%s\n' "${install_dir}/bin" >> "$GITHUB_PATH"
+
+      - name: Report Maven version
+        if: steps.credentials.outputs.ready == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          command -v mvn
+          mvn -v | head -1
+          mvn -v | head -1 | grep -Fq 'Apache Maven 3.9.9' \
+            || { echo "::error::pinned Maven 3.9.9 is not first on PATH"; exit 1; }
+
       - name: Check udb-java-client availability on Maven Central
         id: central
         if: steps.credentials.outputs.ready == 'true'
