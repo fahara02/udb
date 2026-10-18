@@ -38,7 +38,7 @@ concurrency:
 
 jobs:
   go-live-contract:
-    name: Go SDK typed-store contract (live)
+    name: Go + TypeScript store contract and admin flows (live)
     if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 25
@@ -46,9 +46,15 @@ jobs:
       RELEASE_TAG: ${{ inputs.release_tag || 'latest' }}
       RELEASE_ASSET: ${{ inputs.release_asset || 'udb-linux-amd64-full' }}
       UDB_LIVE_SDK_TESTS: "1"
+      UDB_LIVE_CDC_TESTS: "1"
+      UDB_LIVE_CDC_EXPIRY_TESTS: "1"
+      UDB_LIVE_CDC_RESTART_TESTS: "1"
       UDB_LIVE_PEER_USERNAME: sdk-live-peer
       UDB_LIVE_PEER_PASSWORD: "SdkLivePeer#2026Pass"
       UDB_LIVE_PEER_TENANT: sdk-live-peer
+      # The stream keeps its original bearer while the SDK refreshes the
+      # connection's next bearer. Prove actual expiry and reauthentication.
+      UDB_JWT_ACCESS_TTL_SECONDS: "20"
     services:
       postgres:
         image: public.ecr.aws/docker/library/postgres:16-alpine@sha256:721873c34ceb9f8d8fc265984940dc982404c105f19ad51be9fdc5970a6080ea
@@ -72,6 +78,7 @@ jobs:
         uses: ./.github/actions/setup-sdk-toolchains
         with:
           go: "true"
+          node: "true"
 
       - name: Resolve served binary
         uses: ./.github/actions/resolve-served-binary
@@ -88,7 +95,8 @@ jobs:
           grpc_target: 127.0.0.1:50051
           auth_grpc_addr: 127.0.0.1:50061
           auth_grpc_target: 127.0.0.1:50061
-          cdc_enabled: "false"
+          cdc_enabled: "true"
+          cdc_journal_only: "true"
           startup_dry_run: "false"
           enable_column_backend: "false"
           enable_graph_backend: "false"
@@ -139,14 +147,24 @@ jobs:
         run: |
           set -euo pipefail
           cd sdk/go
-          go test ./udbtest -run '^TestLiveBrokerMeetsTheTableContract$' -count=1 -v -timeout 10m
+          go test ./udbtest -run '^TestLive' -count=1 -v -timeout 10m
+
+      - name: Run TypeScript shared store cases and admin flows
+        working-directory: sdk/typescript
+        run: |
+          npm ci
+          npm run bundle-proto
+          npx tsc -p tsconfig.test.json
+          node --test dist-test/live-admin.test.js
 
       - name: Upload broker log
         if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: go-sdk-live-broker-log
-          path: /tmp/udb-go-live.log
+          path: |
+            /tmp/udb-go-live.log
+            ${{ runner.temp }}/udb-go-live-restart.log
           if-no-files-found: ignore
           retention-days: 7
 

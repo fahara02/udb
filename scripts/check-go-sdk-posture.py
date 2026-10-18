@@ -287,7 +287,15 @@ CHECKS: tuple[SourceCheck, ...] = (
             '--username "${UDB_LIVE_PEER_USERNAME}"',
             '--password "${UDB_LIVE_PEER_PASSWORD}"',
             '--tenant "${UDB_LIVE_PEER_TENANT}"',
-            "go test ./udbtest -run '^TestLiveBrokerMeetsTheTableContract$' -count=1 -v -timeout 10m",
+            # The lane runs every TestLive* proof, not just the table contract:
+            # the durable-consumer, bearer-expiry and broker-restart cases gate
+            # on UDB_LIVE_CDC_*, which only this workflow sets.
+            "go test ./udbtest -run '^TestLive' -count=1 -v -timeout 10m",
+            'UDB_LIVE_CDC_TESTS: "1"',
+            'UDB_LIVE_CDC_EXPIRY_TESTS: "1"',
+            'UDB_LIVE_CDC_RESTART_TESTS: "1"',
+            'cdc_enabled: "true"',
+            "node --test dist-test/live-admin.test.js",
         ),
         ("--platform-admin",),
     ),
@@ -348,7 +356,7 @@ CHECKS += (
         "go credential and pool race proofs",
         ".github/workflows/ci.yml",
         (
-            "TokenManager|EnterpriseSession|APIKey|ConsumeG6|AsUser|CredentialLifecycle|TenantSessionPool",
+            "TokenManager|EnterpriseSession|APIKey|ConsumeG6|Consumer|AsUser|CredentialLifecycle|TenantSessionPool",
         ),
     ),
 )
