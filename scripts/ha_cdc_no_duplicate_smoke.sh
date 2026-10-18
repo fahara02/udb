@@ -164,6 +164,10 @@ new_event_id() {
 insert_outbox_event() {
   local event_id="$1"
   local label="$2"
+  # 0.6.0 refuses an outbox envelope that does not state envelope_version
+  # (EVENT_ENVELOPE_VERSION=2); an unversioned row is routed to the DLQ instead
+  # of the journal. Broker-built events are stamped by insert_outbox_row, but
+  # this script writes the outbox row directly, so it stamps the version itself.
   psql_exec "
     INSERT INTO udb_system.outbox_events (event_id, topic, partition_key, payload, created_at)
     VALUES (
@@ -177,7 +181,8 @@ insert_outbox_event() {
         'document_id', '${label}',
         'tenant_id', 'ha-cdc-tenant',
         'project_id', 'ha-cdc-project',
-        'payload', jsonb_build_object('label', '${label}', 'source_agent', 'ha_cdc_no_duplicate_smoke')
+        'payload', jsonb_build_object('label', '${label}', 'source_agent', 'ha_cdc_no_duplicate_smoke'),
+        'envelope_version', 2
       ),
       NOW()
     );
