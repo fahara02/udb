@@ -1514,6 +1514,27 @@ def main() -> int:
         else:
             entry["status"] = "failed" if exit_code not in (None, 0) else "missing"
             entry["note"] = "Benchmark command did not produce a Markdown report."
+            # An SDK whose report never landed still has to carry the same shape
+            # as a parsed or skipped one: the workflow's collection check and the
+            # dashboard both assert every entry has a summary, and the aggregate
+            # counts below read summary keys off every entry.
+            entry["summary"] = {
+                "rpc_count": None,
+                "attempted_rpc_count": 0,
+                "measured_rpc_count": 0,
+                "capability_skipped_rpc_count": 0,
+                "service_count": 0,
+                "slowest_count": 0,
+                "failed_rpc_count": 0,
+            }
+            entry["services"] = []
+            entry["slowest"] = []
+            entry["failed_rpcs"] = []
+            entry["full_rpcs"] = []
+            try:
+                entry["report_path"] = str(path.relative_to(ROOT)).replace("\\", "/")
+            except ValueError:
+                entry["report_path"] = str(path)
         if status.get("note"):
             entry["note"] = status["note"]
         sdks.append(entry)
