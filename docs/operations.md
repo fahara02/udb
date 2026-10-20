@@ -473,6 +473,17 @@ The webhook dispatcher and the cache invalidator each keep their position in
 there. With no active webhook endpoint the dispatcher does not read the journal
 at all; it moves its position to the head.
 
+The embedding work emitter (`embedding.work`), the search freshness worker
+(`search.freshness`) and the search reindex worker (`search.reindex`) keep
+their positions in the same table. Each reads 5,000 positions per query and,
+while a window holds nothing to do, moves on to the next one in the same tick,
+up to 20. With no ACTIVE embedding source naming a CDC topic, no ACTIVE search
+index naming one, or no search index that is not deleted, the matching worker
+does not read the journal and moves its position to the head. A failed event
+holds its worker's position just before it until it succeeds. A source or index
+registered later does not receive changes published before its worker's
+position; use `Backfill` or `Reindex`.
+
 ## Common Runbooks
 
 When something breaks, start here. Each row pairs a symptom with the first things
