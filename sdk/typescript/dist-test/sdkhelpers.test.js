@@ -47,9 +47,89 @@ const fs = __importStar(require("node:fs"));
 const path = __importStar(require("node:path"));
 const node_test_1 = require("node:test");
 const grpc = __importStar(require("@grpc/grpc-js"));
+const protoLoader = __importStar(require("@grpc/proto-loader"));
+const protobuf = __importStar(require("protobufjs"));
 const generatedClient_1 = require("./generatedClient");
 const consistency_1 = require("./consistency");
 const stream_1 = require("./stream");
+const protoRoot_1 = require("./protoRoot");
+const wkt_1 = require("./wkt");
+// Exercise the real DataBroker request serializer rather than a capturing stub:
+// nested filters must cross protobufjs's Struct -> Value -> Struct converters.
+function selectWireMethod() {
+    const root = (0, protoRoot_1.defaultProtoRoot)();
+    const definition = protoLoader.loadSync(path.join(root, "udb/services/v1/data_broker.proto"), {
+        keepCase: true,
+        longs: String,
+        enums: String,
+        defaults: true,
+        oneofs: true,
+        includeDirs: [root, path.resolve(root, "../third_party/googleapis")],
+    });
+    const service = definition["udb.services.v1.DataBroker"];
+    node_assert_1.strict.ok(service.Select, "actual canonical Select serializer must exist");
+    return service.Select;
+}
+(0, node_test_1.test)("actual Select serializer preserves nested predicates and literal fields data", () => {
+    const method = selectWireMethod();
+    const filter = {
+        tenant_id: "owned-tenant",
+        record_id: { $in: ["own-row", "peer-row"] },
+        $or: [{ project_id: "own-project" }, { project_id: "peer-project" }],
+        fields: { stringValue: "ordinary user data", nested: { fields: { numberValue: 7 } } },
+        values: [null, false, true, 0, 1.5, "", [], {}, ["nested", { accepted: true }]],
+    };
+    const before = JSON.stringify(filter);
+    for (let attempt = 0; attempt < 2; attempt++) {
+        const bytes = method.requestSerialize({
+            message_type: "udb.sdk.live.v1.SdkLiveRecord", filter, limit: 10,
+        });
+        const decoded = method.requestDeserialize(bytes);
+        node_assert_1.strict.deepEqual((0, wkt_1.structToObject)(decoded.filter), filter);
+    }
+    node_assert_1.strict.equal(JSON.stringify(filter), before, "normalization must not mutate caller predicates");
+});
+(0, node_test_1.test)("actual Struct messages serialize unchanged and wrapper converters preserve depth", () => {
+    const schema = protobuf.common.get("google/protobuf/struct.proto");
+    node_assert_1.strict.ok(schema, "protobufjs's canonical Struct descriptor must exist");
+    const struct = protobuf.Root.fromJSON(schema).lookupType("google.protobuf.Struct");
+    const converter = struct;
+    const input = {
+        fields: { stringValue: "literal" }, predicate: { $in: ["a", "b"] },
+        emptyString: "", zero: 0, falseValue: false, nullValue: null,
+        number: 1.5, trueValue: true,
+        literalKeys: JSON.parse('{"__proto__":{"stringValue":"own data"},"constructor":false,"prototype":0}'),
+        nested: [{ text: "", count: 0, enabled: false, missing: null }, [false, 0, "", null]],
+    };
+    const message = struct.fromObject(input);
+    node_assert_1.strict.equal(struct.fromObject(message), message, "a genuine protobuf message remains the same instance");
+    node_assert_1.strict.deepEqual((0, wkt_1.structToObject)(message), input, "only actual oneof members decode from a genuine message");
+    const literalKeys = (0, wkt_1.structToObject)(message).literalKeys;
+    node_assert_1.strict.equal(Object.getPrototypeOf(literalKeys), Object.prototype);
+    node_assert_1.strict.ok(Object.prototype.hasOwnProperty.call(literalKeys, "__proto__"));
+    node_assert_1.strict.deepEqual(literalKeys["__proto__"], { stringValue: "own data" });
+    const before = JSON.stringify(struct.toObject(message, { oneofs: true }));
+    const method = selectWireMethod();
+    const bytes = method.requestSerialize({ filter: message });
+    node_assert_1.strict.deepEqual(bytes, method.requestSerialize({ filter: input }), "foreign-root and plain JSON Select bytes match");
+    const decoded = method.requestDeserialize(bytes);
+    node_assert_1.strict.deepEqual((0, wkt_1.structToObject)(decoded.filter), input);
+    node_assert_1.strict.equal(JSON.stringify(struct.toObject(message, { oneofs: true })), before, "foreign-root conversion leaves its message untouched");
+    const limit = protobuf.util.recursionLimit;
+    node_assert_1.strict.ok(Number.isInteger(limit) && limit > 0);
+    node_assert_1.strict.throws(() => converter.fromObject({}, limit + 1), /maximum nesting depth exceeded/);
+    node_assert_1.strict.throws(() => converter.toObject(message, {}, limit + 1), /max depth exceeded/);
+    let nested = { leaf: "value" };
+    for (let depth = 0; depth <= limit; depth++)
+        nested = { nested };
+    node_assert_1.strict.throws(() => method.requestSerialize({ filter: nested }), /maximum nesting depth exceeded/);
+    const cycle = {};
+    cycle.self = cycle;
+    node_assert_1.strict.throws(() => method.requestSerialize({ filter: cycle }), /maximum nesting depth exceeded/);
+    const messageCycle = struct.fromObject({ nested: {} });
+    messageCycle.fields.nested.structValue = messageCycle;
+    node_assert_1.strict.throws(() => method.requestSerialize({ filter: messageCycle }), /maximum nesting depth exceeded/);
+});
 // ── 09.1: ErrorDetail decode + UdbError.kind/kindName/retryable accessors ─────
 (0, node_test_1.test)("ERROR_KIND_NAMES maps the ErrorKind enum (0..7)", () => {
     node_assert_1.strict.equal(generatedClient_1.ERROR_KIND_NAMES[3], "QUOTA");

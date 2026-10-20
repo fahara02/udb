@@ -81,8 +81,7 @@ class GenericStoreOptions extends \Google\Protobuf\Internal\Message
     protected $fts_config = '';
     /**
      * Graph edge projections: the source/target fields of the edge row and the
-     * node labels they point at. Same as options["edge_source_field"] etc.; the
-     * older "from_label"/"to_label" keys are deprecated aliases.
+     * node labels they point at. Same as options["edge_source_field"] etc.
      *
      * Generated from protobuf field <code>string edge_source_field = 14 [json_name = "edgeSourceField"];</code>
      */
@@ -130,8 +129,7 @@ class GenericStoreOptions extends \Google\Protobuf\Internal\Message
      *           Text search configuration for fts_columns (default "simple").
      *     @type string $edge_source_field
      *           Graph edge projections: the source/target fields of the edge row and the
-     *           node labels they point at. Same as options["edge_source_field"] etc.; the
-     *           older "from_label"/"to_label" keys are deprecated aliases.
+     *           node labels they point at. Same as options["edge_source_field"] etc.
      *     @type string $edge_target_field
      *     @type string $edge_source_label
      *     @type string $edge_target_label
@@ -456,8 +454,7 @@ class GenericStoreOptions extends \Google\Protobuf\Internal\Message
 
     /**
      * Graph edge projections: the source/target fields of the edge row and the
-     * node labels they point at. Same as options["edge_source_field"] etc.; the
-     * older "from_label"/"to_label" keys are deprecated aliases.
+     * node labels they point at. Same as options["edge_source_field"] etc.
      *
      * Generated from protobuf field <code>string edge_source_field = 14 [json_name = "edgeSourceField"];</code>
      * @return string
@@ -469,8 +466,7 @@ class GenericStoreOptions extends \Google\Protobuf\Internal\Message
 
     /**
      * Graph edge projections: the source/target fields of the edge row and the
-     * node labels they point at. Same as options["edge_source_field"] etc.; the
-     * older "from_label"/"to_label" keys are deprecated aliases.
+     * node labels they point at. Same as options["edge_source_field"] etc.
      *
      * Generated from protobuf field <code>string edge_source_field = 14 [json_name = "edgeSourceField"];</code>
      * @param string $var

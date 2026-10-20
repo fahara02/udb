@@ -40,6 +40,7 @@ var __importStar = (this && this.__importStar) || (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 const node_assert_1 = require("node:assert");
 const node_test_1 = require("node:test");
+const node_crypto_1 = require("node:crypto");
 const node_fs_1 = require("node:fs");
 const path = __importStar(require("node:path"));
 const grpc = __importStar(require("@grpc/grpc-js"));
@@ -123,6 +124,43 @@ const FATAL_CONNECTIVITY_CODES = new Set([
     grpc.status.UNAVAILABLE,
 ]);
 const LIVE_MESSAGE_TYPE = "udb.sdk.live.v1.SdkLiveRecord";
+const PLATFORM_BENCHMARK_RPCS = new Set([
+    "DataBroker/list_projects",
+    "AnalyticsService/get_executor_performance",
+    "AnalyticsService/get_reconciliation_analytics",
+    "BackupService/restore_tenant",
+    "TenantService/admin_purge_tenant",
+    "AuthzService/create_policy_draft",
+    "AuthzService/update_policy_draft",
+    "AuthzService/diff_policy_draft",
+    "AuthzService/submit_policy_draft",
+    "AuthzService/approve_policy_draft",
+    "AuthzService/reject_policy_draft",
+    "AuthzService/activate_policy_version",
+    "AuthzService/rollback_policy_version",
+    "AuthzService/activate_canary",
+    "AuthzService/promote_canary",
+    "AuthzService/get_canary_status",
+    "AuthzService/list_policy_versions",
+    "AuthzService/simulate_policy",
+    "AuthzService/explain_policy",
+    "AuthzService/invalidate_policy_bundles",
+    "AuthzService/seed_builtin_roles",
+    "AuthzService/migrate_legacy_policies",
+]);
+function requiresPlatformBenchmarkIdentity(serviceName, methodName) {
+    return PLATFORM_BENCHMARK_RPCS.has(`${serviceName}/${methodName}`);
+}
+function governanceSeedActor(platformActorUserId, tenantId, projectId, expiresAtUnix) {
+    return {
+        subject: platformActorUserId,
+        tenant_id: tenantId,
+        project_id: projectId,
+        break_glass: true,
+        break_glass_reason: "sdk perf governance seed",
+        break_glass_expires_at_unix: expiresAtUnix,
+    };
+}
 const UNSUPPORTED_OPERATION_CODE = "UDB_UNSUPPORTED_OPERATION";
 // Canonical generic-dispatch op vocabulary the broker gates per backend
 // (src/runtime/service/mod.rs check_generic_dispatch_operation), safe-first.
@@ -299,6 +337,20 @@ function rpcPathOf(serviceFull, methodSnake) {
     }
     return direct;
 }
+function canonicalRpcIdentityOf(serviceFull, methodName) {
+    const path = rpcPathOf(serviceFull, methodName);
+    if (!Object.prototype.hasOwnProperty.call(generatedClient_1.RPC_OPERATION_KIND, path)) {
+        throw new Error(`generated RPC identity missing for ${serviceFull}/${methodName}: resolved ${path}`);
+    }
+    const parts = path.split("/").filter(Boolean);
+    const canonicalServiceFull = parts[0] ?? "";
+    const rpc = parts[1] ?? "";
+    const service = canonicalServiceFull.split(".").pop() ?? "";
+    if (parts.length !== 2 || !service || !rpc) {
+        throw new Error(`generated RPC path is not canonical: ${path}`);
+    }
+    return { path, service, rpc };
+}
 function operationKindOf(serviceFull, methodSnake) {
     return generatedClient_1.RPC_OPERATION_KIND[rpcPathOf(serviceFull, methodSnake)];
 }
@@ -467,6 +519,36 @@ function parseBenchBodyMarkdownRows() {
     const orphan = [...rows.keys()].filter((m) => !surfaceShort.has(m));
     node_assert_1.strict.equal(orphan.length, 0, `bench-body manifest row(s) have no generated RPC (stale contract): ${orphan.join(", ")}`);
 });
+(0, node_test_1.test)("benchmark samples retain canonical wire identities for every generated alias", () => {
+    const emitted = new Set();
+    for (const path of Object.keys(generatedClient_1.RPC_OPERATION_KIND)) {
+        const parts = path.split("/").filter(Boolean);
+        node_assert_1.strict.equal(parts.length, 2, `generated RPC path is malformed: ${path}`);
+        const serviceFull = parts[0];
+        const expectedRpc = parts[1];
+        const alias = generatedClient_1.RPC_API_ALIAS[path] || expectedRpc;
+        const identity = canonicalRpcIdentityOf(serviceFull, alias);
+        node_assert_1.strict.equal(identity.path, path, `alias ${alias} resolved to the wrong generated RPC`);
+        node_assert_1.strict.equal(identity.service, serviceFull.split(".").pop());
+        node_assert_1.strict.equal(identity.rpc, expectedRpc);
+        emitted.add(`${identity.service}/${identity.rpc}`);
+    }
+    node_assert_1.strict.equal(emitted.size, Object.keys(generatedClient_1.RPC_OPERATION_KIND).length, "benchmark wire identities must be bijective");
+    const aliasCases = [
+        ["udb.core.cache.services.v1.CacheService", "cache_delete", "Delete"],
+        ["udb.core.cache.services.v1.CacheService", "create_cache_namespace", "CreateNamespace"],
+        ["udb.core.cache.services.v1.CacheService", "delete_cache_namespace", "DeleteNamespace"],
+        ["udb.core.cache.services.v1.CacheService", "cache_get", "Get"],
+        ["udb.core.cache.services.v1.CacheService", "get_cache_namespace_stats", "GetNamespaceStats"],
+        ["udb.core.cache.services.v1.CacheService", "cache_scan", "Scan"],
+        ["udb.core.cache.services.v1.CacheService", "cache_set", "Set"],
+        ["udb.core.embedding.services.v1.EmbeddingService", "get_job_status", "GetEmbeddingJobStatus"],
+        ["udb.core.embedding.services.v1.EmbeddingService", "list_work_items", "ListEmbeddingWorkItems"],
+    ];
+    for (const [serviceFull, alias, expectedRpc] of aliasCases) {
+        node_assert_1.strict.equal(canonicalRpcIdentityOf(serviceFull, alias).rpc, expectedRpc);
+    }
+});
 function manifestBodyFor(serviceName, methodName) {
     const method = snakeToPascal(methodName);
     // Prefer the generated service+alias metadata before ambiguous bare RPC names.
@@ -508,6 +590,24 @@ function resolveManifestSeeds(body, fixtures) {
         return value;
     });
 }
+function blockedManifestSeed(serviceName, methodName, fixtures) {
+    const cell = manifestBodyFor(serviceName, methodName);
+    if (!cell || !fixtures)
+        return undefined;
+    const jsonCell = strictManifestJSONCell(cell);
+    if (!jsonCell)
+        return undefined;
+    const keys = [...jsonCell.matchAll(/<seed:([^>]+)>/g)]
+        .map((match) => String(match[1]).trim().toLowerCase())
+        .filter((key, index, all) => key.length > 0 && all.indexOf(key) === index)
+        .sort();
+    for (const key of keys) {
+        const failure = fixtures.blockedSeed(key);
+        if (failure)
+            return failure;
+    }
+    return undefined;
+}
 function manifestJSONBody(serviceName, methodName, fixtures) {
     const cell = manifestBodyFor(serviceName, methodName);
     if (!cell)
@@ -518,9 +618,22 @@ function manifestJSONBody(serviceName, methodName, fixtures) {
     const resolved = resolveManifestSeeds(jsonCell, fixtures);
     if (!resolved)
         return undefined;
-    return JSON.parse(resolved);
+    const body = JSON.parse(resolved);
+    // The manifest uses canonical protobuf JSON; proto-loader expects Timestamp
+    // objects on this wire path. Convert the declared, whole-second fixture.
+    if (serviceName === "DataBroker" && methodName === "time_series_write") {
+        for (const point of body.points ?? []) {
+            if (typeof point.timestamp === "string") {
+                const milliseconds = Date.parse(point.timestamp);
+                if (!Number.isFinite(milliseconds))
+                    throw new Error("invalid benchmark Timestamp");
+                point.timestamp = { seconds: Math.floor(milliseconds / 1000), nanos: (milliseconds % 1000) * 1_000_000 };
+            }
+        }
+    }
+    return body;
 }
-function uniquifyPerfBody(serviceName, methodName, body) {
+function uniquifyPerfBody(serviceName, methodName, body, fixtures) {
     if (!body || typeof body !== "object")
         return body;
     const rpc = `${serviceName}.${snakeToPascal(methodName)}`;
@@ -532,14 +645,38 @@ function uniquifyPerfBody(serviceName, methodName, body) {
     else if (rpc === "AssetService.CreatePipelineDefinition") {
         body.name = `thumbnail-pipeline-${suffix}`;
     }
+    const ordinaryActor = fixtures?.lookup("actor_user_id");
+    const platformActor = fixtures?.lookup("platform_actor_user_id");
+    if (serviceName === "AuthzService" && requiresPlatformBenchmarkIdentity(serviceName, methodName)) {
+        if (body.actor && platformActor)
+            body.actor.subject = platformActor;
+        if (Object.prototype.hasOwnProperty.call(body, "reviewer") && platformActor) {
+            body.reviewer = platformActor;
+        }
+    }
+    if (serviceName === "AuthzService" && ordinaryActor) {
+        for (const field of ["created_by", "assigned_by", "updated_by", "deleted_by", "revoked_by"]) {
+            if (Object.prototype.hasOwnProperty.call(body, field))
+                body[field] = ordinaryActor;
+        }
+    }
+    if (serviceName === "TenantService" && methodName === "admin_purge_tenant" && platformActor) {
+        body.delegated_actor = platformActor;
+    }
     return body;
 }
 function fullSurfaceManifestFixtures() {
     const fixtures = new PerfFixtures();
     for (const [key, value] of Object.entries({
         tenant_id: "tenant-1", tenant: "tenant-1", project: "project-1", project_id: "project-1",
+        actor_user_id: "actor-user-1", platform_actor_user_id: "platform-actor-user-1",
         tenant_code: "tenant-code-1", purge_tenant_id: "tenant-1",
         message_type: LIVE_MESSAGE_TYPE, record_id: "record-1", bucket: "bucket-1", object_key: "object-1",
+        multipart_bucket: "bucket-1", multipart_object_key: "multipart-1", multipart_upload_id: "upload-1",
+        multipart_etag: "etag-1", ack_workflow_id: "workflow-ack-1",
+        cdc_ack_event_id: "00000000-0000-4000-8000-000000000003", cdc_ack_topic: "udb.sdk.benchmark.ack",
+        // MessagingService MLS objects (live: `udb messaging bench-fixture`).
+        mls_subject_id: "mls-subject-id-1", mls_device_id: "mls-device-id-1", mls_peer_device_id: "mls-peer-device-id-1", mls_revoke_device_id: "mls-revoke-device-id-1", mls_register_device_id: "mls-register-device-id-1", mls_register_signature_key: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=", mls_register_credential: "AA==", mls_key_package: "AA==", mls_group_id: "mls-group-id-1", mls_message_ciphertext: "AA==", mls_commit_group_id: "mls-commit-group-id-1", mls_commit: "AA==", mls_welcome: "AA==", mls_new_group_id: "mls-new-group-id-1", mls_new_group_info: "AA==", mls_new_ratchet_tree: "AA==",
         document_id: "document-1", mongo_collection: "collection_1", node_id: "node-1",
         user_id: "user-1", subject: "user:user-1", session_id: "session-1", token: "token-1",
         grant_binding_id: "grant-binding-1", grant_create_user_id: "grant-create-user-1",
@@ -576,14 +713,14 @@ function fullSurfaceManifestFixtures() {
         embedding_document_job_id: "11111111-1111-4111-8111-000000000104",
         embedding_delete_model_id: "embedding-delete-model-1",
         join_session_room_id: "join-room-1", leave_peer_id: "leave-peer-1", mark_saga_id: "mark-saga-1",
-        otp_code: "123456", otp_id: "otp-1", owner_id: "owner-1", quarantine_dlq_id: "quarantine-dlq-1",
+        otp_code: "123456", otp_id: "otp-1", recovery_code: "recovery-code-1", owner_id: "owner-1", quarantine_dlq_id: "quarantine-dlq-1",
         refresh_session_id: "refresh-session-1", reg_challenge_id: "reg-challenge-1", replay_dlq_id: "replay-dlq-1",
         reset_otp_code: "654321", reset_otp_id: "reset-otp-1", resource_name: "resource-1",
         restore_tenant_id: "restore-tenant-1", retry_saga_id: "retry-saga-1", revoke_key_id: "revoke-key-1",
         saml_provider_id: "saml-provider-1", scim_group_id: "sdk-perf-group", scim_user_id: "scim-user-1",
         signal_peer_id: "signal-peer-1", step_id: "step-1", topic_pattern: "topic.*", ts_table: "sdk_timeseries",
         unpublish_track_id: "unpublish-track-1", update_key_id: "update-key-1", username: "perf-u",
-        vault_ciphertext: "vault-ciphertext-1", vault_db_role: "readonly", vault_delete_secret_path: "secret/delete",
+        vault_ciphertext: "vault-ciphertext-1", vault_db_role: "readonly", vault_db_idempotency_key: "vault-db-idempotency-1", vault_db_lease_id: "vault-db-lease-1", vault_delete_secret_path: "secret/delete",
         vault_destroy_secret_path: "secret/destroy", vault_key_name: "transit-key", vault_secret_path: "secret/path",
         vault_signature: "vault-signature-1", vault_signing_key_name: "transit-signing-key", vault_hmac_key_name: "transit-hmac-key", reissue_file_id: "reissue-file-1", workflow_id: "workflow-1",
         approve_draft_id: "approve-draft-1", canary_version_id: "canary-version-1",
@@ -592,6 +729,8 @@ function fullSurfaceManifestFixtures() {
         rollback_resource_version: "rollback-resource-version-1",
         update_draft_id: "update-draft-1", release_fencing_token: "1", renew_fencing_token: "1",
         vault_create_key_name: "transit-create-key", vault_put_secret_path: "secret/put",
+        webauthn_delete_user_id: "webauthn-delete-user-1", webauthn_delete_credential_id: "webauthn-delete-credential-1",
+        webauthn_rename_user_id: "webauthn-rename-user-1", webauthn_rename_credential_id: "webauthn-rename-credential-1",
     })) {
         fixtures.set(key, value);
     }
@@ -610,6 +749,35 @@ function fullSurfaceManifestFixtures() {
         }
     }
     node_assert_1.strict.equal(missing.length, 0, `manifest-only perf body gaps: ${missing.join(", ")}`);
+});
+(0, node_test_1.test)("blocked governance seeds retain the original gRPC failure provenance", () => {
+    const fixtures = fullSurfaceManifestFixtures();
+    const denied = Object.assign(new Error("governance scope denied"), {
+        code: grpc.status.PERMISSION_DENIED,
+        details: "verified platform principal requires audited break-glass",
+    });
+    fixtures.blockSeed("policy_draft_id", "AuthzService/CreatePolicyDraft", denied);
+    const blocked = blockedManifestSeed("AuthzService", "diff_policy_draft", fixtures);
+    node_assert_1.strict.deepEqual(blocked, {
+        key: "policy_draft_id",
+        source: "AuthzService/CreatePolicyDraft",
+        grpcCode: grpc.status.PERMISSION_DENIED,
+        grpcStatus: "PERMISSION_DENIED",
+        details: "verified platform principal requires audited break-glass",
+    });
+    node_assert_1.strict.throws(() => manifestJSONBody("AuthzService", "diff_policy_draft", fixtures), /missing bench manifest seed policy_draft_id/);
+    fixtures.set("policy_draft_id", "11111111-1111-4111-8111-111111111111");
+    node_assert_1.strict.equal(blockedManifestSeed("AuthzService", "diff_policy_draft", fixtures), undefined);
+});
+(0, node_test_1.test)("governance seed actor is verified-platform attributed and audited", () => {
+    node_assert_1.strict.deepEqual(governanceSeedActor("74f9dc0f-5344-41b0-9839-7811cc3f94c5", "tenant-1", "project-1", 1_893_456_000), {
+        subject: "74f9dc0f-5344-41b0-9839-7811cc3f94c5",
+        tenant_id: "tenant-1",
+        project_id: "project-1",
+        break_glass: true,
+        break_glass_reason: "sdk perf governance seed",
+        break_glass_expires_at_unix: 1_893_456_000,
+    });
 });
 (0, node_test_1.test)("manifest JSON body hydrates AnalyticsService rows with seed refs", () => {
     const fixtures = new PerfFixtures();
@@ -859,7 +1027,6 @@ function fullSurfaceManifestFixtures() {
     const begin = manifestJSONBody("DataBroker", "begin_tx", fixtures);
     const enqueue = manifestJSONBody("DataBroker", "enqueue_outbox_event", fixtures);
     const putObject = manifestJSONBody("DataBroker", "put_object", fixtures);
-    const putPolicy = manifestJSONBody("DataBroker", "put_policy", fixtures);
     const rollback = manifestJSONBody("DataBroker", "rollback_catalog", fixtures);
     const stage = manifestJSONBody("DataBroker", "stage_catalog", fixtures);
     const timeSeries = manifestJSONBody("DataBroker", "time_series_write", fixtures);
@@ -871,8 +1038,6 @@ function fullSurfaceManifestFixtures() {
     node_assert_1.strict.equal(enqueue?.payload?.event_type, "invoice.updated");
     node_assert_1.strict.equal(putObject?.data, "cGVyZg==");
     node_assert_1.strict.equal(putObject?.final_chunk, true);
-    node_assert_1.strict.equal(putPolicy?.policy?.effect, "allow");
-    node_assert_1.strict.equal(putPolicy?.policy?.enabled, true);
     node_assert_1.strict.equal(rollback?.project_id, "project-1");
     node_assert_1.strict.equal(stage?.manifest_json, "e30=");
     node_assert_1.strict.equal(stage?.reason, "stage");
@@ -938,6 +1103,7 @@ function fullSurfaceManifestFixtures() {
 (0, node_test_1.test)("manifest JSON body hydrates AuthnService read-only rows with seed refs", () => {
     const fixtures = new PerfFixtures();
     fixtures.set("tenant_id", "tenant-1");
+    fixtures.set("project", "project-1");
     fixtures.set("user_id", "user-1");
     fixtures.set("admin_reset_mfa_user_id", "admin-reset-mfa-user-1");
     fixtures.set("admin_reset_password_user_id", "admin-reset-password-user-1");
@@ -952,6 +1118,7 @@ function fullSurfaceManifestFixtures() {
     fixtures.set("otp_id", "otp-1");
     fixtures.set("otp_code", "654321");
     fixtures.set("challenge_id", "challenge-1");
+    fixtures.set("recovery_code", "recovery-code-1");
     const getUser = manifestJSONBody("AuthnService", "get_user", fixtures);
     const listSessions = manifestJSONBody("AuthnService", "list_sessions", fixtures);
     const validate = manifestJSONBody("AuthnService", "validate_token", fixtures);
@@ -971,6 +1138,7 @@ function fullSurfaceManifestFixtures() {
     node_assert_1.strict.equal(otp?.otp_id, "otp-1");
     node_assert_1.strict.equal(otp?.code, "654321");
     node_assert_1.strict.equal(mfa?.challenge_id, "challenge-1");
+    node_assert_1.strict.equal(mfa?.code, "recovery-code-1");
 });
 (0, node_test_1.test)("manifest JSON body hydrates AuthnService session and MFA setup rows", () => {
     const fixtures = new PerfFixtures();
@@ -1022,6 +1190,7 @@ function fullSurfaceManifestFixtures() {
 (0, node_test_1.test)("manifest JSON body hydrates AuthnService terminal and WebAuthn rows", () => {
     const fixtures = new PerfFixtures();
     fixtures.set("tenant_id", "tenant-1");
+    fixtures.set("project", "project-1");
     fixtures.set("user_id", "user-1");
     fixtures.set("admin_reset_mfa_user_id", "admin-reset-mfa-user-1");
     fixtures.set("admin_reset_password_user_id", "admin-reset-password-user-1");
@@ -1036,7 +1205,10 @@ function fullSurfaceManifestFixtures() {
     fixtures.set("reset_otp_id", "reset-otp-1");
     fixtures.set("reset_otp_code", "135790");
     fixtures.set("device_id", "device-1");
-    fixtures.set("record_id", "credential-1");
+    fixtures.set("webauthn_delete_user_id", "webauthn-delete-user-1");
+    fixtures.set("webauthn_delete_credential_id", "webauthn-delete-credential-1");
+    fixtures.set("webauthn_rename_user_id", "webauthn-rename-user-1");
+    fixtures.set("webauthn_rename_credential_id", "webauthn-rename-credential-1");
     fixtures.set("reg_challenge_id", "reg-challenge-1");
     fixtures.set("auth_challenge_id", "auth-challenge-1");
     const logout = manifestJSONBody("AuthnService", "logout", fixtures);
@@ -1077,11 +1249,14 @@ function fullSurfaceManifestFixtures() {
     node_assert_1.strict.equal(disabledMfa?.user_id, "disable-mfa-user-1");
     node_assert_1.strict.equal(disabledMfa?.factor_kind, "AUTH_FACTOR_KIND_TOTP");
     node_assert_1.strict.equal(renamed?.new_label, "perf-key2");
+    node_assert_1.strict.equal(renamed?.user_id, "webauthn-rename-user-1");
+    node_assert_1.strict.equal(renamed?.credential_id, "webauthn-rename-credential-1");
     node_assert_1.strict.equal(revokedRecovery?.user_id, "revoke-recovery-user-1");
     node_assert_1.strict.equal(adminResetMfa?.user_id, "admin-reset-mfa-user-1");
     node_assert_1.strict.equal(adminResetMfa?.reason, "perf");
     node_assert_1.strict.equal(revokedDevice?.device_id, "revoke-device-1");
-    node_assert_1.strict.equal(deletedWebAuthn?.credential_id, "credential-1");
+    node_assert_1.strict.equal(deletedWebAuthn?.user_id, "webauthn-delete-user-1");
+    node_assert_1.strict.equal(deletedWebAuthn?.credential_id, "webauthn-delete-credential-1");
     node_assert_1.strict.equal(startedReg?.label, "perf-key");
     node_assert_1.strict.equal(finishedReg?.challenge_id, "reg-challenge-1");
     node_assert_1.strict.equal(finishedReg?.public_key_credential_json, "__UDB_WEBAUTHN_TEST__");
@@ -1132,7 +1307,7 @@ function fullSurfaceManifestFixtures() {
     node_assert_1.strict.equal(list?.tenant_id, "tenant-1");
     node_assert_1.strict.equal(list?.media_type, "image/png");
     node_assert_1.strict.equal(list?.page_size, 20);
-    node_assert_1.strict.equal(registered?.project_id, "");
+    node_assert_1.strict.equal(registered?.project_id, "project-1");
     node_assert_1.strict.equal(registered?.file_id, "file-1");
     node_assert_1.strict.equal(registered?.metadata, "{\"source\":\"upload\"}");
     node_assert_1.strict.equal(started?.definition_id, "definition-1");
@@ -1363,7 +1538,7 @@ function fullSurfaceManifestFixtures() {
     const paused = manifestJSONBody("SchedulerService", "pause_job", fixtures);
     const resumed = manifestJSONBody("SchedulerService", "resume_job", fixtures);
     const deleted = manifestJSONBody("SchedulerService", "delete_job", fixtures);
-    node_assert_1.strict.equal(created?.project_id, "");
+    node_assert_1.strict.equal(created?.project_id, "project-1");
     node_assert_1.strict.equal(created?.name, "sdk-perf-job");
     node_assert_1.strict.equal(created?.schedule_type, "CRON");
     node_assert_1.strict.equal(created?.cron_expression, "*/5 * * * *");
@@ -1475,7 +1650,7 @@ function fullSurfaceManifestFixtures() {
     const started = manifestJSONBody("WorkflowService", "start_workflow", fixtures);
     const cancelled = manifestJSONBody("WorkflowService", "cancel_workflow", fixtures);
     const signalled = manifestJSONBody("WorkflowService", "signal_workflow", fixtures);
-    node_assert_1.strict.equal(started?.project_id, "");
+    node_assert_1.strict.equal(started?.project_id, "project-1");
     node_assert_1.strict.equal(started?.workflow_type, "sdk.perf.workflow");
     node_assert_1.strict.equal(started?.total_steps, 20);
     node_assert_1.strict.equal(started?.payload, "{}");
@@ -1569,6 +1744,7 @@ function fullSurfaceManifestFixtures() {
 (0, node_test_1.test)("manifest JSON body hydrates VaultService rows with seed refs", () => {
     const fixtures = new PerfFixtures();
     fixtures.set("tenant_id", "tenant-1");
+    fixtures.set("project", "project-1");
     fixtures.set("vault_key_name", "sdk-perf-key");
     fixtures.set("vault_signing_key_name", "sdk-perf-signing-key");
     fixtures.set("vault_hmac_key_name", "sdk-perf-hmac-key");
@@ -1578,6 +1754,8 @@ function fullSurfaceManifestFixtures() {
     fixtures.set("vault_delete_secret_path", "app/delete");
     fixtures.set("vault_destroy_secret_path", "app/destroy");
     fixtures.set("vault_db_role", "sdk-readonly");
+    fixtures.set("vault_db_idempotency_key", "sdk-vault-db-idempotency");
+    fixtures.set("vault_db_lease_id", "sdk-vault-db-lease");
     fixtures.set("vault_create_key_name", "sdk-perf-create-key");
     fixtures.set("vault_put_secret_path", "app/put");
     const created = manifestJSONBody("VaultService", "create_transit_key", fixtures);
@@ -1586,6 +1764,7 @@ function fullSurfaceManifestFixtures() {
     const destroyed = manifestJSONBody("VaultService", "destroy_secret", fixtures);
     const encrypted = manifestJSONBody("VaultService", "encrypt", fixtures);
     const dbCreds = manifestJSONBody("VaultService", "generate_database_credentials", fixtures);
+    const revokedDbCreds = manifestJSONBody("VaultService", "revoke_database_credentials", fixtures);
     const secret = manifestJSONBody("VaultService", "get_secret", fixtures);
     const hmac = manifestJSONBody("VaultService", "hmac", fixtures);
     const secrets = manifestJSONBody("VaultService", "list_secrets", fixtures);
@@ -1602,7 +1781,10 @@ function fullSurfaceManifestFixtures() {
     node_assert_1.strict.equal(destroyed?.confirmation_token, destroyed?.secret_path);
     node_assert_1.strict.equal(encrypted?.plaintext, "perf");
     node_assert_1.strict.equal(dbCreds?.role_name, "sdk-readonly");
+    node_assert_1.strict.equal(dbCreds?.project_id, "project-1");
     node_assert_1.strict.equal(dbCreds?.ttl_seconds, 900);
+    node_assert_1.strict.equal(dbCreds?.idempotency_key, "sdk-vault-db-idempotency");
+    node_assert_1.strict.equal(revokedDbCreds?.lease_id, "sdk-vault-db-lease");
     node_assert_1.strict.equal(secret?.secret_path, "app/config");
     node_assert_1.strict.equal(hmac?.input, "perf");
     node_assert_1.strict.equal(hmac?.key_name, "sdk-perf-hmac-key");
@@ -1706,6 +1888,35 @@ function fullSurfaceManifestFixtures() {
     node_assert_1.strict.equal(draft?.actor?.break_glass, true);
     node_assert_1.strict.deepEqual(draft?.document, {});
 });
+(0, node_test_1.test)("benchmark platform routing is exact and preserves ordinary Authz CRUD", () => {
+    node_assert_1.strict.equal(requiresPlatformBenchmarkIdentity("DataBroker", "list_projects"), true);
+    node_assert_1.strict.equal(requiresPlatformBenchmarkIdentity("AnalyticsService", "get_executor_performance"), true);
+    node_assert_1.strict.equal(requiresPlatformBenchmarkIdentity("BackupService", "restore_tenant"), true);
+    node_assert_1.strict.equal(requiresPlatformBenchmarkIdentity("TenantService", "admin_purge_tenant"), true);
+    node_assert_1.strict.equal(requiresPlatformBenchmarkIdentity("AuthzService", "create_policy_draft"), true);
+    node_assert_1.strict.equal(requiresPlatformBenchmarkIdentity("AuthzService", "create_role"), false);
+    node_assert_1.strict.equal(requiresPlatformBenchmarkIdentity("TenantService", "purge_tenant"), false);
+    node_assert_1.strict.equal(requiresPlatformBenchmarkIdentity("DataBroker", "select"), false);
+    node_assert_1.strict.equal(requiresPlatformBenchmarkIdentity("DataBroker", "ensure_project"), false);
+    const fixtures = fullSurfaceManifestFixtures();
+    const draft = perfRealBody("AuthzService", "create_policy_draft", "tenant-1", "project-1", fixtures);
+    const role = perfRealBody("AuthzService", "create_role", "tenant-1", "project-1", fixtures);
+    node_assert_1.strict.equal(draft?.actor?.subject, "platform-actor-user-1");
+    node_assert_1.strict.equal(role?.created_by, "actor-user-1");
+    const principal = {
+        subject: "c65e8cbd-2f62-4c44-89b7-502b77418d14", user_id: "039c134f-e3ad-4b01-bd0e-aea4849df619",
+        tenant_id: "tenant-1", project_id: "project-1",
+    };
+    const actor = verifiedNativeFixtureActor(principal, "tenant-1", "project-1");
+    node_assert_1.strict.notEqual(actor, principal.user_id);
+    fixtures.set("actor_user_id", actor);
+    fixtures.set("user_id", principal.user_id);
+    const attributedRole = perfRealBody("AuthzService", "create_role", "tenant-1", "project-1", fixtures);
+    node_assert_1.strict.equal(attributedRole.created_by, principal.subject);
+    node_assert_1.strict.equal(fixtures.lookup("user_id"), principal.user_id);
+    node_assert_1.strict.throws(() => verifiedNativeFixtureActor(principal, "foreign-tenant", "project-1"), /foreign authenticated tenant/);
+    node_assert_1.strict.throws(() => verifiedNativeFixtureActor(principal, "tenant-1", "foreign-project"), /foreign authenticated project/);
+});
 // A "kitchen-sink" request: protobufjs (under proto-loader) drops keys that the
 // concrete request type doesn't declare, so every read RPC picks up exactly the
 // fields it has (tenant/project/context/message_type/…). This deepens the probe
@@ -1729,7 +1940,7 @@ function surfaceProbeRequest(tenantId, projectId) {
 // or generic placeholder fallback.
 function perfRealBody(serviceName, methodName, _tenantId, _projectId, fixtures) {
     const body = manifestJSONBody(serviceName, methodName, fixtures);
-    return uniquifyPerfBody(serviceName, methodName, body);
+    return uniquifyPerfBody(serviceName, methodName, body, fixtures);
 }
 // ── Perf SEED phase + fixture map (mirrors the Go harness) ─────────────────────
 //
@@ -1753,10 +1964,35 @@ function perfRealBody(serviceName, methodName, _tenantId, _projectId, fixtures) 
 // deliberately seeded resolve, everything else falls through to the generic scalar.
 class PerfFixtures {
     m = new Map();
+    blocked = new Map();
     recordId = "";
     set(key, val) {
-        if (val)
-            this.m.set(key.toLowerCase(), val);
+        if (val) {
+            const normalized = key.toLowerCase();
+            this.m.set(normalized, val);
+            this.blocked.delete(normalized);
+        }
+    }
+    clear(key) {
+        const normalized = key.trim().toLowerCase();
+        this.m.delete(normalized);
+        this.blocked.delete(normalized);
+    }
+    blockSeed(key, source, err) {
+        const normalized = key.trim().toLowerCase();
+        if (!normalized)
+            throw new Error("blocked TypeScript bench seed key cannot be empty");
+        const code = grpcCode(err) ?? grpc.status.UNKNOWN;
+        const status = grpc.status[code] ?? String(code);
+        const details = errText(err);
+        this.m.delete(normalized);
+        this.blocked.set(normalized, {
+            key: normalized,
+            source,
+            grpcCode: code,
+            grpcStatus: status,
+            details,
+        });
     }
     lookup(field) {
         const f = field.toLowerCase();
@@ -1768,14 +2004,84 @@ class PerfFixtures {
         }
         return undefined;
     }
+    blockedSeed(field) {
+        const normalized = field.toLowerCase();
+        if (this.blocked.has(normalized))
+            return this.blocked.get(normalized);
+        for (const [key, failure] of this.blocked) {
+            if (normalized === key || normalized.endsWith("_" + key))
+                return failure;
+        }
+        return undefined;
+    }
 }
+const GOVERNANCE_SEED_KEYS = [
+    "policy_draft_id",
+    "update_draft_id",
+    "approve_draft_id",
+    "reject_draft_id",
+    "policy_version_id",
+    "canary_version_id",
+    "canary_id",
+    "rollback_policy_set_id",
+    "rollback_target_version_id",
+];
 // seedPerfFixtures creates real, disposable entities across the services the perf
 // run touches and records their identifiers. `gen` is the control-plane generated
 // client (native services), `data` the DataBroker data plane. uuidTenant is the
 // canonical tenant UUID the UUID-strict services (storage/asset/webrtc) require —
 // the bootstrap admin's tenant claim IS that UUID, so one client serves all.
-async function seedPerfFixtures(gen, data, tenantId, projectId, uuidTenant) {
+/** The `mls_*` bench-body fixtures scripts/prepare-benchmark-fixtures.py copies from
+ *  `udb messaging bench-fixture` (the same list in every harness). */
+const MESSAGING_FIXTURE_KEYS = [
+    "mls_subject_id",
+    "mls_device_id",
+    "mls_peer_device_id",
+    "mls_revoke_device_id",
+    "mls_register_device_id",
+    "mls_register_signature_key",
+    "mls_register_credential",
+    "mls_key_package",
+    "mls_group_id",
+    "mls_message_ciphertext",
+    "mls_commit_group_id",
+    "mls_commit",
+    "mls_welcome",
+    "mls_new_group_id",
+    "mls_new_group_info",
+    "mls_new_ratchet_tree",
+];
+async function seedPerfFixtures(gen, platformGen, data, tenantId, projectId, uuidTenant, actorUserId, platformActorUserId) {
     const fix = fullSurfaceManifestFixtures();
+    for (const key of ["multipart_bucket", "multipart_object_key", "multipart_upload_id", "multipart_etag", "ack_workflow_id", "cdc_ack_event_id", "cdc_ack_topic"])
+        fix.clear(key);
+    for (const key of MESSAGING_FIXTURE_KEYS)
+        fix.clear(key);
+    if (process.env.UDB_BENCH_FIXTURES) {
+        const prepared = JSON.parse((0, node_fs_1.readFileSync)(process.env.UDB_BENCH_FIXTURES, "utf8"));
+        if (prepared.schema_version !== 1 || prepared.tenant_id !== tenantId || prepared.project_id !== projectId) {
+            throw new Error("prepared benchmark fixtures do not match the verified tenant/project");
+        }
+        for (const key of ["multipart_bucket", "multipart_object_key", "multipart_upload_id", "multipart_etag", "ack_workflow_id", "cdc_ack_event_id", "cdc_ack_topic"]) {
+            const value = prepared.fixtures?.[key];
+            if (typeof value !== "string" || !value)
+                throw new Error(`prepared benchmark fixtures missing ${key}`);
+            fix.set(key, value);
+        }
+        // MessagingService MLS objects minted by `udb messaging bench-fixture`;
+        // absent when the benchmark broker predates the messaging service.
+        for (const key of MESSAGING_FIXTURE_KEYS) {
+            const value = prepared.fixtures?.[key];
+            if (typeof value === "string" && value)
+                fix.set(key, value);
+        }
+    }
+    // The manifest-only unit fixture uses typed placeholder IDs to prove every body
+    // hydrates. A live run must never let those placeholders become authority: every
+    // governance dependency is either replaced by a served seed or marked with the
+    // original seed failure below.
+    for (const key of GOVERNANCE_SEED_KEYS)
+        fix.clear(key);
     const suffix = `${process.pid}${Date.now()}`;
     const opts = { deadlineMs: 8_000, noRetry: true };
     const ctx = requestContext(tenantId, projectId, "ts.live.perf.seed");
@@ -1783,12 +2089,14 @@ async function seedPerfFixtures(gen, data, tenantId, projectId, uuidTenant) {
     fix.set("egress_id", `eg-${tenantId}-${liveUuid()}`);
     const cleanups = [];
     const addCleanup = (fn) => cleanups.push(fn);
-    const tryRun = async (label, fn) => {
+    const tryRun = async (label, fn, blockedSeeds = []) => {
         try {
             await fn();
         }
         catch (err) {
-            console.log(`perf seed: ${label} failed (dependent RPCs fall back): ${errText(err)}`);
+            for (const key of blockedSeeds)
+                fix.blockSeed(key, label, err);
+            console.log(`perf seed: ${label} failed (dependent RPCs are seed-blocked): ${errText(err)}`);
         }
     };
     // Always-known scalars.
@@ -1797,6 +2105,8 @@ async function seedPerfFixtures(gen, data, tenantId, projectId, uuidTenant) {
     fix.set("project_id", projectId);
     fix.set("project", projectId);
     fix.set("domain", tenantId);
+    fix.set("actor_user_id", actorUserId);
+    fix.set("platform_actor_user_id", platformActorUserId);
     fix.set("message_type", LIVE_MESSAGE_TYPE);
     fix.set("tenant_code", `sdk-perf-tenant-${suffix}`);
     fix.set("purge_tenant_id", tenantId);
@@ -1808,7 +2118,7 @@ async function seedPerfFixtures(gen, data, tenantId, projectId, uuidTenant) {
     // (isolated NotFound, never a cascade) if creation fails.
     fix.set("admin_purge_tenant_id", liveUuid());
     await tryRun("disposable admin-purge tenant", async () => {
-        const dispTenant = await gen.TenantService.create_tenant({ code: `sdkperfadminpurge${suffix}`, name: "SDK Perf Admin-Purge Disposable", type: "organization", config: "{}", branding: "{}" }, opts);
+        const dispTenant = await platformGen.TenantService.create_tenant({ code: `sdkperfadminpurge${suffix}`, name: "SDK Perf Admin-Purge Disposable", type: "organization", config: "{}", branding: "{}" }, opts);
         if (dispTenant.tenant_id)
             fix.set("admin_purge_tenant_id", dispTenant.tenant_id);
     });
@@ -1922,9 +2232,10 @@ async function seedPerfFixtures(gen, data, tenantId, projectId, uuidTenant) {
             if (rso.dev_otp_code)
                 fix.set("reset_otp_code", rso.dev_otp_code);
         });
-        // A real MFA challenge → challenge_id (a valid UUID) for VerifyMfaChallenge.
+        // A real recovery-code MFA challenge → challenge_id plus the matching
+        // single-use recovery code for VerifyMfaChallenge.
         await tryRun("SeedMfaChallenge", async () => {
-            const mc = await gen.AuthnService.issue_mfa_challenge({ user_id: uid, factor_kind: "AUTH_FACTOR_KIND_EMAIL_OTP", purpose: "MFA_CHALLENGE_PURPOSE_LOGIN_STEP_UP" }, opts);
+            const mc = await gen.AuthnService.issue_mfa_challenge({ user_id: uid, factor_kind: "AUTH_FACTOR_KIND_RECOVERY_CODE", purpose: "MFA_CHALLENGE_PURPOSE_LOGIN_STEP_UP" }, opts);
             if (mc.challenge_id)
                 fix.set("challenge_id", mc.challenge_id);
         });
@@ -2001,6 +2312,41 @@ async function seedPerfFixtures(gen, data, tenantId, projectId, uuidTenant) {
             if (sr.challenge_id)
                 await gen.AuthnService.finish_web_authn_registration({ challenge_id: sr.challenge_id, public_key_credential_json: "__UDB_WEBAUTHN_TEST__", label: "perf-passkey" }, opts);
         });
+        const seedDisposablePasskey = async (fixturePrefix, label) => {
+            const username = `sdk-perf-webauthn-${fixturePrefix}-${suffix}`;
+            const created = (await gen.AuthnService.create_user({
+                username,
+                email: `${username}@example.com`,
+                password: pw,
+                tenant_id: tenantId,
+                project_id: projectId,
+                full_name: `SDK Perf WebAuthn ${fixturePrefix} User`,
+            }, opts)).user;
+            const userId = created?.user_id;
+            if (!userId)
+                throw new Error(`WebAuthn ${fixturePrefix} CreateUser did not return user_id`);
+            const started = await gen.AuthnService.start_web_authn_registration({
+                user_id: userId,
+                label,
+                tenant_id: tenantId,
+                project_id: projectId,
+            }, opts);
+            if (!started.challenge_id)
+                throw new Error(`WebAuthn ${fixturePrefix} registration did not return challenge_id`);
+            const finished = await gen.AuthnService.finish_web_authn_registration({
+                challenge_id: started.challenge_id,
+                public_key_credential_json: "__UDB_WEBAUTHN_TEST__",
+                label,
+            }, opts);
+            if (!finished.credential_id)
+                throw new Error(`WebAuthn ${fixturePrefix} registration did not return credential_id`);
+            fix.set(`webauthn_${fixturePrefix}_user_id`, userId);
+            fix.set(`webauthn_${fixturePrefix}_credential_id`, finished.credential_id);
+        };
+        // Keep Delete and Rename independent of benchmark ordering and of the main
+        // passkey used by the authentication rows.
+        await tryRun("SeedWebAuthnDeleteCredential", async () => seedDisposablePasskey("delete", "perf-delete-passkey"));
+        await tryRun("SeedWebAuthnRenameCredential", async () => seedDisposablePasskey("rename", "perf-rename-passkey"));
         let webauthnRegUserId = uid;
         await tryRun("SeedWebAuthnRegistrationUser", async () => {
             const ru = await gen.AuthnService.create_user({
@@ -2042,7 +2388,7 @@ async function seedPerfFixtures(gen, data, tenantId, projectId, uuidTenant) {
     // ── AuthzService: role + assignment + policies + relationship ──────────────────
     const roleCode = `sdk_perf_reader_${suffix}`;
     await tryRun("CreateRole", async () => {
-        const role = (await gen.AuthzService.create_role({ name: `SDK Perf Reader ${suffix}`, description: "perf seed role", created_by: liveUuid(), role_code: roleCode, domain: tenantId, tenant_id: tenantId, project_id: projectId }, opts)).role;
+        const role = (await gen.AuthzService.create_role({ name: `SDK Perf Reader ${suffix}`, description: "perf seed role", created_by: actorUserId, role_code: roleCode, domain: tenantId, tenant_id: tenantId, project_id: projectId }, opts)).role;
         const rid = role.role_id;
         fix.set("role_id", rid);
         fix.set("role", roleCode);
@@ -2050,13 +2396,13 @@ async function seedPerfFixtures(gen, data, tenantId, projectId, uuidTenant) {
         const uid = fix.lookup("user_id");
         if (uid) {
             await tryRun("AssignRole", async () => {
-                const assigned = (await gen.AuthzService.assign_role({ user_id: uid, role_id: rid, domain: tenantId, assigned_by: uid, tenant_id: tenantId, project_id: projectId }, opts)).user_role;
+                const assigned = (await gen.AuthzService.assign_role({ user_id: uid, role_id: rid, domain: tenantId, assigned_by: actorUserId, tenant_id: tenantId, project_id: projectId }, opts)).user_role;
                 fix.set("user_role_id", assigned.user_role_id);
             });
         }
         addCleanup(async () => {
             try {
-                await gen.AuthzService.delete_role({ role_id: rid, deleted_by: fix.lookup("user_id") ?? liveUuid() }, opts);
+                await gen.AuthzService.delete_role({ role_id: rid, deleted_by: actorUserId }, opts);
             }
             catch { /* best-effort */ }
         });
@@ -2064,7 +2410,7 @@ async function seedPerfFixtures(gen, data, tenantId, projectId, uuidTenant) {
     // A SEPARATE disposable role for the destructive DeleteRole → real 200, while the
     // primary role_id survives for GetRole/UpdateRole/ListUserRoles.
     await tryRun("CreateDeleteRole", async () => {
-        const dr = (await gen.AuthzService.create_role({ name: `SDK Perf Del ${suffix}`, description: "disposable", created_by: fix.lookup("user_id") ?? liveUuid(), role_code: `sdk_perf_del_${suffix}`, domain: tenantId, tenant_id: tenantId, project_id: projectId }, opts)).role;
+        const dr = (await gen.AuthzService.create_role({ name: `SDK Perf Del ${suffix}`, description: "disposable", created_by: actorUserId, role_code: `sdk_perf_del_${suffix}`, domain: tenantId, tenant_id: tenantId, project_id: projectId }, opts)).role;
         fix.set("delete_role_id", dr.role_id);
     });
     // ABAC policy + an RBAC policy rule -> policy_id for GetPolicyRule/DeletePolicyRule.
@@ -2073,21 +2419,6 @@ async function seedPerfFixtures(gen, data, tenantId, projectId, uuidTenant) {
     });
     const uidForPolicy = fix.lookup("user_id");
     if (uidForPolicy) {
-        // GetPolicyRule's CreatePolicyRule response id IS Get-queryable, BUT
-        // ActivatePolicyVersion/RollbackPolicyVersion DELETE+regenerate ALL policy_rules for the
-        // tenant/project and sort BEFORE GetPolicyRule — wiping a main-project rule. Seed the target
-        // in an ISOLATED project no version-activation touches (harness_correction.md GetPolicyRule).
-        const getPolProject = `${projectId}-getpolrule`;
-        await tryRun("CreatePolicyRule", async () => {
-            const created = (await gen.AuthzService.create_policy_rule({ subject: roleCode, domain: tenantId, object: "ledger", action: "data.update", effect: 1, description: "perf seed rule (version-isolated)", created_by: uidForPolicy, tenant_id: tenantId, project_id: getPolProject }, opts)).policy;
-            if (created?.policy_id)
-                fix.set("policy_id", created.policy_id);
-        });
-        await tryRun("CreateDeletePolicyRule", async () => {
-            const dr = (await gen.AuthzService.create_policy_rule({ subject: roleCode, domain: tenantId, object: "ledger-disposable", action: "data.delete", effect: 1, description: "disposable", created_by: uidForPolicy, tenant_id: tenantId, project_id: getPolProject }, opts)).policy;
-            if (dr?.policy_id)
-                fix.set("delete_policy_id", dr.policy_id);
-        });
         await tryRun("PutRoleBinding", async () => {
             await gen.AuthzService.put_role_binding({ binding: { subject: `user:${uidForPolicy}`, role: roleCode, tenant: tenantId, project: projectId, source: "sdk-perf" } }, opts);
         });
@@ -2310,80 +2641,80 @@ async function seedPerfFixtures(gen, data, tenantId, projectId, uuidTenant) {
     // approved policy VERSIONS, a canary, and a rollback set — so the draft/version/
     // canary RPCs run their real success path. ──────────────────────────────────────
     {
-        const subject = fix.lookup("subject") ?? `user:${fix.lookup("user_id") ?? liveUuid()}`;
-        // Body actor.scopes are ignored by the live D1/D2 gate (it reads claim scopes,
-        // and no role projects to authz:*), so the seed's own governance writes (incl.
-        // the first CreatePolicyDraft that stores policy_draft_id) must use the
-        // body-authoritative break-glass bypass — otherwise the drafts/versions/canary
-        // are never created and the governance RPCs that read them fail "<id> is
-        // required". break_glass_expires_at_unix is int64-as-number (epoch seconds).
-        const gActor = () => ({ subject, tenant_id: tenantId, project_id: projectId, break_glass: true, break_glass_reason: "sdk perf seed", break_glass_expires_at_unix: Math.floor(Date.now() / 1000) + 900 });
+        // Governance is system-global control authority. The benchmark uses the
+        // separately offline-provisioned, VERIFIED platform principal and the server's
+        // explicit audited break-glass contract. The short expiry/reason are mandatory;
+        // ordinary tenant credentials never receive this actor or metadata.
+        const governanceSeedExpiry = Math.floor(Date.now() / 1000) + 900;
+        const gActor = () => governanceSeedActor(platformActorUserId, tenantId, projectId, governanceSeedExpiry);
         const mkDraft = async (title, setName = "default") => {
-            try {
-                const d = await gen.AuthzService.create_policy_draft({ actor: gActor(), tenant_id: tenantId, project_id: projectId, policy_set_name: setName, title: title + suffix, change_reason: "seed", document: {} }, opts);
-                return d.draft?.draft_id ?? d.draft_id ?? "";
-            }
-            catch {
-                return "";
-            }
+            const d = await platformGen.AuthzService.create_policy_draft({ actor: gActor(), tenant_id: tenantId, project_id: projectId, policy_set_name: setName, title: title + suffix, change_reason: "seed", document: {} }, opts);
+            const draftId = d.draft?.draft_id ?? d.draft_id ?? "";
+            if (!draftId)
+                throw new Error("successful CreatePolicyDraft seed omitted draft_id");
+            return draftId;
         };
         // Drafts: one OPEN (diff/update/submit), two submitted→IN_REVIEW (approve/reject).
-        await tryRun("CreatePolicyDraft", async () => { const id = await mkDraft("sdk-perf-draft-"); if (id)
-            fix.set("policy_draft_id", id); });
-        await tryRun("UpdateDraft", async () => { const id = await mkDraft("sdk-perf-update-"); if (id)
-            fix.set("update_draft_id", id); });
+        await tryRun("AuthzService/CreatePolicyDraft", async () => { fix.set("policy_draft_id", await mkDraft("sdk-perf-draft-")); }, ["policy_draft_id"]);
+        await tryRun("AuthzService/CreatePolicyDraft:update", async () => { fix.set("update_draft_id", await mkDraft("sdk-perf-update-")); }, ["update_draft_id"]);
         await tryRun("ApproveDraft", async () => {
             const id = await mkDraft("sdk-perf-approve-");
-            if (id) {
-                await gen.AuthzService.submit_policy_draft({ actor: gActor(), draft_id: id }, opts);
-                fix.set("approve_draft_id", id);
-            }
-        });
+            await platformGen.AuthzService.submit_policy_draft({ actor: gActor(), draft_id: id }, opts);
+            fix.set("approve_draft_id", id);
+        }, ["approve_draft_id"]);
         await tryRun("RejectDraft", async () => {
             const id = await mkDraft("sdk-perf-reject-");
-            if (id) {
-                await gen.AuthzService.submit_policy_draft({ actor: gActor(), draft_id: id }, opts);
-                fix.set("reject_draft_id", id);
-            }
-        });
+            await platformGen.AuthzService.submit_policy_draft({ actor: gActor(), draft_id: id }, opts);
+            fix.set("reject_draft_id", id);
+        }, ["reject_draft_id"]);
         // Versions: CreateDraft→Submit→Approve promotes a PolicyVersion (APPROVED).
         const mkVersion = async (setName, title) => {
             const did = await mkDraft(title, setName);
-            if (!did)
-                return null;
-            try {
-                await gen.AuthzService.submit_policy_draft({ actor: gActor(), draft_id: did }, opts);
-                const ap = await gen.AuthzService.approve_policy_draft({ actor: gActor(), draft_id: did, reviewer: fix.lookup("user_id") ?? liveUuid(), reason: "seed approve" }, opts);
-                return ap.version ?? null;
-            }
-            catch {
-                return null;
-            }
+            await platformGen.AuthzService.submit_policy_draft({ actor: gActor(), draft_id: did }, opts);
+            const ap = await platformGen.AuthzService.approve_policy_draft({ actor: gActor(), draft_id: did, reviewer: platformActorUserId, reason: "seed approve" }, opts);
+            if (!ap.version?.policy_version_id)
+                throw new Error("successful ApprovePolicyDraft seed omitted policy_version_id");
+            return ap.version;
         };
-        await tryRun("SeedActivateVersion", async () => { const v = await mkVersion(`sdk-perf-activate-set-${suffix}`, "activate-"); if (v?.policy_version_id)
-            fix.set("policy_version_id", v.policy_version_id); });
-        await tryRun("SeedCanary", async () => {
+        await tryRun("SeedActivateVersion", async () => { const v = await mkVersion(`sdk-perf-activate-set-${suffix}`, "activate-"); fix.set("policy_version_id", v.policy_version_id); }, ["policy_version_id"]);
+        await tryRun("SeedCanaryVersion", async () => {
             const v = await mkVersion(`sdk-perf-canary-set-${suffix}`, "canary-");
-            if (v?.policy_version_id) {
-                fix.set("canary_version_id", v.policy_version_id);
+            fix.set("canary_version_id", v.policy_version_id);
+        }, ["canary_version_id", "canary_id"]);
+        const canaryVersionId = fix.lookup("canary_version_id");
+        if (canaryVersionId) {
+            await tryRun("SeedCanary", async () => {
                 // success_window_secs MUST be > 0 (1s): 0 makes the broker substitute a default that
                 // never elapses during the run, so PromoteCanary stays "not promote-eligible".
-                const c = await gen.AuthzService.activate_canary({ actor: gActor(), policy_version_id: v.policy_version_id, scope_kind: "CANARY_SCOPE_KIND_PERCENT", scope_values: ["10"], success_window_secs: 1, metric_threshold: 0.99, min_samples: 0 }, opts);
-                if (c.canary?.canary_id)
-                    fix.set("canary_id", c.canary.canary_id);
-            }
-        });
+                const c = await platformGen.AuthzService.activate_canary({ actor: gActor(), policy_version_id: canaryVersionId, scope_kind: "CANARY_SCOPE_KIND_PERCENT", scope_values: ["10"], success_window_secs: 1, metric_threshold: 0.99, min_samples: 0 }, opts);
+                if (!c.canary?.canary_id)
+                    throw new Error("successful ActivateCanary seed omitted canary_id");
+                fix.set("canary_id", c.canary.canary_id);
+            }, ["canary_id"]);
+        }
         await tryRun("SeedRollbackSet", async () => {
             const v1 = await mkVersion(`sdk-perf-rollback-set-${suffix}`, "rb1-");
-            if (v1?.policy_version_id) {
-                await gen.AuthzService.activate_policy_version({ actor: gActor(), policy_version_id: v1.policy_version_id }, opts);
-                const v2 = await mkVersion(`sdk-perf-rollback-set-${suffix}`, "rb2-");
-                if (v2?.policy_version_id) {
-                    await gen.AuthzService.activate_policy_version({ actor: gActor(), policy_version_id: v2.policy_version_id }, opts);
-                    fix.set("rollback_policy_set_id", v2.policy_set_id);
-                    fix.set("rollback_target_version_id", v1.policy_version_id);
-                }
-            }
+            await platformGen.AuthzService.activate_policy_version({ actor: gActor(), policy_version_id: v1.policy_version_id }, opts);
+            const v2 = await mkVersion(`sdk-perf-rollback-set-${suffix}`, "rb2-");
+            await platformGen.AuthzService.activate_policy_version({ actor: gActor(), policy_version_id: v2.policy_version_id }, opts);
+            if (!v2.policy_set_id)
+                throw new Error("successful rollback seed omitted policy_set_id");
+            fix.set("rollback_policy_set_id", v2.policy_set_id);
+            fix.set("rollback_target_version_id", v1.policy_version_id);
+        }, ["rollback_policy_set_id", "rollback_target_version_id"]);
+    }
+    // Seed policies after governance setup; reads/mutations precede activation.
+    if (uidForPolicy) {
+        const getPolProject = projectId;
+        await tryRun("CreatePolicyRule", async () => {
+            const created = (await gen.AuthzService.create_policy_rule({ subject: roleCode, domain: tenantId, object: "ledger", action: "data.update", effect: 1, description: "perf seed rule", created_by: actorUserId, tenant_id: tenantId, project_id: getPolProject }, opts)).policy;
+            if (created?.policy_id)
+                fix.set("policy_id", created.policy_id);
+        });
+        await tryRun("CreateDeletePolicyRule", async () => {
+            const dr = (await gen.AuthzService.create_policy_rule({ subject: roleCode, domain: tenantId, object: "ledger-disposable", action: "data.delete", effect: 1, description: "disposable", created_by: actorUserId, tenant_id: tenantId, project_id: getPolProject }, opts)).policy;
+            if (dr?.policy_id)
+                fix.set("delete_policy_id", dr.policy_id);
         });
     }
     // ── DataBroker migration: a real plan run → migration_id (run_id) ──────────────
@@ -2418,9 +2749,9 @@ async function seedPerfFixtures(gen, data, tenantId, projectId, uuidTenant) {
                 fix.set("approval_token", hdrs.tok);
         }
     });
-    // ds_policy_id: a real broker policy (allow-all, harmless) for the measured DeletePolicy.
-    await tryRun("PutPolicy", async () => {
-        await data.put_policy({ context: { ...ctx, scopes: ["udb:admin"] }, policy: { effect: "allow", tenant_id: tenantId, priority: 1, enabled: true } }, opts);
+    // ds_policy_id: an existing legacy broker policy row, when there is one, for the
+    // measured DeletePolicy (DataBroker.PutPolicy was removed in 0.6.0).
+    await tryRun("ListPolicies", async () => {
         const pl = await data.list_policies({ context: { ...ctx, scopes: ["udb:admin"] }, include_disabled: true, limit: 50 }, opts);
         const first = (pl.policies ?? [])[0];
         if (first?.policy_id != null)
@@ -2438,9 +2769,9 @@ async function seedPerfFixtures(gen, data, tenantId, projectId, uuidTenant) {
         await data.ensure_resource({ context: { ...ctx, scopes: ["udb:admin"] }, backend: "clickhouse", resource_name: "sdk_perf_ts", spec_json: "{}" }, opts);
         fix.set("ts_table", "sdk_perf_ts");
     });
-    // ── Capture the live catalog manifest (READ-ONLY) so the measured StageCatalog has a
-    // valid CatalogManifest (Go passes StageCatalog with the new binary). activate/rollback/
-    // get_version stay broker-blocked (K2). If staging still poisons, revert this.
+    // ── Reset already activated the release manifest for this exact project. Capture it
+    // so the measured StageCatalog -> ActivateCatalog -> RollbackCatalog lifecycle uses a
+    // real manifest while preserving the active 1.0.0 compatibility contract.
     await tryRun("CaptureCatalogManifest", async () => {
         const cm = await data.get_catalog_manifest({ context: { ...ctx, scopes: ["udb:admin"] }, redact: false }, opts);
         if (cm?.manifest_json) {
@@ -2449,9 +2780,6 @@ async function seedPerfFixtures(gen, data, tenantId, projectId, uuidTenant) {
             fix.set("catalog_manifest_b64", bytes.toString("base64"));
         }
     });
-    // NOTE: NOT staging a catalog here — staging the manifest puts the broker into a
-    // pending-catalog state that fails-precondition EVERY DataBroker data op (76 RPCs).
-    // The 4 catalog RPCs aren't worth that; leave them red until a safe seed path exists.
     // ── AnalyticsService: a recorded metric → a stage_name with data ───────────────
     const stage = `sdk_perf_stage_${suffix}`;
     await tryRun("RecordPipelineMetric", async () => {
@@ -2606,6 +2934,34 @@ async function seedPerfFixtures(gen, data, tenantId, projectId, uuidTenant) {
     });
     await tryRun("SeedVaultDestroySecret", async () => {
         await gen.VaultService.put_secret({ tenant_id: tenantId, secret_path: "secret/destroy", secret_value: "perf-secret-destroy", expected_version: 0, metadata_json: "{}" }, opts);
+    });
+    // Generate uses its own stable retry key. Revoke targets a separately issued
+    // disposable lease so benchmark ordering cannot destroy Generate's replay row.
+    fix.set("vault_db_role", "readonly");
+    fix.set("vault_db_idempotency_key", `sdk-perf-vault-db-generate-${suffix}`);
+    await tryRun("SeedVaultDatabaseCredentialForRevoke", async () => {
+        const issued = await gen.VaultService.generate_database_credentials({
+            tenant_id: tenantId,
+            project_id: projectId,
+            role_name: "readonly",
+            ttl_seconds: 900,
+            idempotency_key: `sdk-perf-vault-db-revoke-${suffix}`,
+        }, opts);
+        if (!issued.lease_id)
+            throw new Error("GenerateDatabaseCredentials(revoke fixture) did not return lease_id");
+        const leaseId = issued.lease_id;
+        fix.set("vault_db_lease_id", leaseId);
+        addCleanup(async () => {
+            try {
+                await gen.VaultService.revoke_database_credentials({
+                    tenant_id: tenantId,
+                    project_id: projectId,
+                    lease_id: leaseId,
+                    reason: "benchmark cleanup",
+                }, opts);
+            }
+            catch { /* best-effort */ }
+        });
     });
     await tryRun("SeedVaultTransit", async () => {
         await gen.VaultService.create_transit_key({ tenant_id: tenantId, key_name: "transit-key", algorithm: "aes256-gcm-siv" }, opts);
@@ -2779,6 +3135,11 @@ async function seedPerfFixtures(gen, data, tenantId, projectId, uuidTenant) {
             const lj = await gen.PeerService.join_room({ tenant_id: uuidTenant, room_id: roomId, display_name: "sdk-perf-leave-peer", metadata: "{}", user_agent: "sdk-perf" }, opts);
             fix.set("leave_peer_id", lj.peer.peer_id);
         });
+        // Closing Signal disconnects its peer; other RPCs retain the active peer.
+        await tryRun("JoinSignalPeer", async () => {
+            const joined = await gen.PeerService.join_room({ tenant_id: uuidTenant, room_id: roomId, display_name: "sdk-perf-signal-peer", metadata: "{}", user_agent: "sdk-perf" }, opts);
+            fix.set("signal_peer_id", joined.peer.peer_id);
+        });
         // A SEPARATE disposable room for the destructive CloseRoom — closing the MAIN room
         // would close its peers and break PublishTrack/MuteTrack/Signal (arbitrary order).
         await tryRun("CreateCloseRoom", async () => {
@@ -2838,6 +3199,9 @@ async function seedPerfFixtures(gen, data, tenantId, projectId, uuidTenant) {
                 fin();
             }
         });
+    });
+    await tryRun("ResumeCdc", async () => {
+        await data.resume_cdc({ context: ctx, slot_name: "udb_cdc" }, opts);
     });
     // ── BackupService: a policy row + a started backup id for read/restore RPCs ──
     fix.set("restore_tenant_id", liveUuid());
@@ -2910,42 +3274,100 @@ async function runLiveBackendClaimCheck(data, ctx, enabled) {
         await expectMounted(`backend-claim.${backend}`, () => data.list_resources({ context: ctx, backend }, { deadlineMs: 5_000, noRetry: true }));
     }
 }
-// runLiveAuthLifecycle: prove Logout invalidates the session — the access token,
-// refresh token and session-refresh must ALL fail afterwards. Throwaway login.
-async function runLiveAuthLifecycle(authn, tenantId, projectId, username, password) {
+// Replay invalidation belongs to an owned person; the operator must remain usable.
+async function runLiveAuthLifecycle(authn, tenantId, projectId, operatorToken) {
     const opts = { deadlineMs: 8_000, noRetry: true };
-    const login = await authn.login({ username, password, tenant_hint: tenantId, project_hint: projectId, device_name: "ts-sdk-lifecycle" }, opts);
-    const token = login.access_token, sid = login.session_id, refresh = login.refresh_token;
-    node_assert_1.strict.ok(token && sid && refresh, "Login must return access_token+session_id+refresh_token");
-    const pre = await authn.validate_token({ token, token_type: 1 }, opts); // 1 = TOKEN_TYPE_JWT_ACCESS
-    node_assert_1.strict.ok(pre.valid, "fresh access token must validate before logout");
-    await authn.get_session({ session_id: sid }, opts);
-    const preIntro = await authn.introspect_token({ token }, opts);
-    node_assert_1.strict.ok(preIntro.active, "fresh access token must introspect active before logout");
-    const out = await authn.logout({ session_id: sid, revoke_reason: "sdk_live_test" }, opts);
-    node_assert_1.strict.ok(Number(out.sessions_revoked) >= 1, "Logout must revoke at least one session");
     const failures = [];
+    const validate = (token) => authn.validate_token({ token, token_type: "TOKEN_TYPE_JWT_ACCESS" }, opts);
+    const operator = await validate(operatorToken);
+    node_assert_1.strict.ok(operator.valid && operator.principal?.user_id);
+    node_assert_1.strict.equal(operator.principal.tenant_id, tenantId);
+    node_assert_1.strict.equal(operator.principal.project_id, projectId);
+    const actorId = operator.principal.user_id;
+    const context = {
+        tenant: { tenant_id: tenantId, project_id: projectId }, user_id: actorId,
+        principal_id: actorId, purpose: "ts.live.auth.lifecycle",
+    };
+    const username = `sdk-lifecycle-ts-${liveUuid()}`;
+    const password = "CorrectHorse1!";
+    const created = (await authn.create_user({
+        username, email: `${username}@example.invalid`, password, tenant_id: tenantId, project_id: projectId,
+        full_name: "SDK owned lifecycle person", account_kind: "ACCOUNT_KIND_PERSON", context,
+    }, opts)).user;
+    node_assert_1.strict.ok(created?.user_id && created.user_id !== actorId);
+    node_assert_1.strict.equal(created.username, username);
+    node_assert_1.strict.equal(created.tenant_id, tenantId);
+    node_assert_1.strict.equal(created.project_id, projectId);
+    const userId = created.user_id;
     try {
-        if ((await authn.validate_token({ token, token_type: 1 }, opts)).valid)
-            failures.push("access token still validates after logout");
+        node_assert_1.strict.equal(created.account_kind, "ACCOUNT_KIND_PERSON");
+        const active = await authn.change_user_status({ user_id: userId, new_status: "USER_STATUS_ACTIVE", reason: "ts live lifecycle activation", context }, opts);
+        node_assert_1.strict.equal(active.user.status, "USER_STATUS_ACTIVE");
+        const loginOwned = async (device_name) => {
+            const login = await authn.login({ username, password, tenant_hint: tenantId, project_hint: projectId, device_name }, opts);
+            node_assert_1.strict.equal(login.user_id, userId);
+            node_assert_1.strict.ok(login.access_token && login.session_id && login.refresh_token);
+            return login;
+        };
+        const login = await loginOwned("ts-sdk-lifecycle");
+        const token = login.access_token, sid = login.session_id, refresh = login.refresh_token;
+        const pre = await validate(token);
+        node_assert_1.strict.ok(pre.valid);
+        node_assert_1.strict.equal(pre.principal.user_id, userId);
+        node_assert_1.strict.equal(pre.principal.tenant_id, tenantId);
+        node_assert_1.strict.equal(pre.principal.project_id, projectId);
+        await authn.get_session({ session_id: sid }, opts);
+        node_assert_1.strict.ok((await authn.introspect_token({ token }, opts)).active);
+        const sibling = await loginOwned("ts-sdk-lifecycle-sibling");
+        node_assert_1.strict.ok((await validate(sibling.access_token)).valid);
+        const out = await authn.logout({ session_id: sid, revoke_reason: "sdk_live_test" }, opts);
+        node_assert_1.strict.ok(Number(out.sessions_revoked) >= 1);
+        const requireInactive = async (label, perform) => {
+            try {
+                if (await perform())
+                    failures.push(`${label} still reports active`);
+            }
+            catch (err) {
+                if (grpcCode(err) !== grpc.status.UNAUTHENTICATED)
+                    failures.push(`${label} returned ${grpcCode(err)}, expected inactive or UNAUTHENTICATED`);
+            }
+        };
+        await requireInactive("post-logout access token", async () => (await validate(token)).valid);
+        await requireInactive("post-logout introspection", async () => (await authn.introspect_token({ token }, opts)).active);
+        node_assert_1.strict.ok((await validate(sibling.access_token)).valid, "single-session logout must preserve the owned sibling before replay");
+        for (const [label, perform] of [
+            ["revoked refresh replay", () => authn.refresh_token({ refresh_token: refresh, session_id: sid }, opts)],
+            ["revoked RefreshSession", () => authn.refresh_session({ session_id: sid }, opts)],
+        ]) {
+            try {
+                await perform();
+                failures.push(`${label} was accepted`);
+            }
+            catch (err) {
+                if (grpcCode(err) !== grpc.status.UNAUTHENTICATED)
+                    failures.push(`${label} returned ${grpcCode(err)}, expected UNAUTHENTICATED`);
+            }
+        }
+        await requireInactive("post-replay owned sibling", async () => (await validate(sibling.access_token)).valid);
+        const operatorAfter = await validate(operatorToken);
+        node_assert_1.strict.ok(operatorAfter.valid, "operator must survive owned refresh replay");
+        node_assert_1.strict.equal(operatorAfter.principal.user_id, actorId);
     }
-    catch { /* denied = correct */ }
-    try {
-        if ((await authn.introspect_token({ token }, opts)).active)
-            failures.push("token still introspects Active after logout");
+    finally {
+        const cleanupOpts = { deadlineMs: 5_000, noRetry: true };
+        for (const [label, perform] of [
+            ["sessions", () => authn.revoke_session({ principal_id: userId, all_for_principal: true, revoke_reason: "ts live lifecycle cleanup", context }, cleanupOpts)],
+            ["identity", () => authn.change_user_status({ user_id: userId, new_status: "USER_STATUS_DEACTIVATED", reason: "ts live lifecycle cleanup", context }, cleanupOpts)],
+        ]) {
+            try {
+                await perform();
+            }
+            catch (err) {
+                failures.push(`owned lifecycle cleanup ${label} returned ${grpcCode(err)}`);
+            }
+        }
     }
-    catch { /* denied = correct */ }
-    try {
-        await authn.refresh_token({ refresh_token: refresh, session_id: sid }, opts);
-        failures.push("refresh token still works after logout — token family not revoked");
-    }
-    catch { /* denied = correct */ }
-    try {
-        await authn.refresh_session({ session_id: sid }, opts);
-        failures.push("RefreshSession still works after logout — session not revoked");
-    }
-    catch { /* denied = correct */ }
-    node_assert_1.strict.equal(failures.length, 0, `SECURITY (logout did not fully invalidate the session): ${failures.join("; ")}`);
+    node_assert_1.strict.equal(failures.length, 0, `owned lifecycle refusals: ${failures.join("; ")}`);
 }
 // runLiveAuthNegative: edge cases the happy-path suite skips — the auth plane must
 // fail CLOSED. A wrong password mints no access token; a garbage/forged bearer never
@@ -2991,7 +3413,102 @@ async function runLiveAuthNegative(authn, tenantId, projectId, username) {
 // sanitise), never leak cross-tenant data, and never surface a server fault
 // (UNKNOWN/INTERNAL/DATA_LOSS = the input crashed the handler). Mirrors the Go suite.
 const EDGE_SERVER_FAULTS = new Set([2, 13, 15]); // UNKNOWN, INTERNAL, DATA_LOSS
-async function runLiveEdgeCases(data, tenantId, projectId) {
+// This proto disables RLS: two served principals and actual rows exercise the
+// verified project predicates in the normal query path.
+async function runLiveProjectIsolationWitness(project, tenantId, projectId) {
+    const otherProjectId = requiredEnv("UDB_LIVE_ISOLATION_PROJECT");
+    node_assert_1.strict.notEqual(otherProjectId, projectId, "isolation witness requires two projects");
+    const target = requiredEnv("UDB_GRPC_TARGET");
+    const peer = new project_1.UdbProject({
+        target, authTarget: process.env.UDB_AUTH_GRPC_TARGET?.trim() || target,
+        tenantId, projectId: otherProjectId, purpose: "ts.edge.isolation",
+        tokenStore: memoryStore(), deadlineMs: 8_000,
+    });
+    const opts = { deadlineMs: 8_000, noRetry: true };
+    const owned = [];
+    let sessionId = "";
+    let peerSubject = "";
+    try {
+        const token = await project.currentToken();
+        node_assert_1.strict.ok(token?.accessToken, "operator isolation witness requires a bearer");
+        const own = (await project.auth.authenticateBearer(token.accessToken))?.principal;
+        node_assert_1.strict.ok(own?.subject);
+        node_assert_1.strict.equal(own.tenant_id, tenantId);
+        node_assert_1.strict.equal(own.project_id, projectId);
+        const login = await peer.login({
+            username: requiredEnv("UDB_LIVE_ISOLATION_USERNAME"), password: requiredEnv("UDB_LIVE_PASSWORD"),
+            tenant_hint: tenantId, project_hint: otherProjectId, device_name: "ts-project-isolation",
+        });
+        sessionId = login.session_id;
+        node_assert_1.strict.ok(login.access_token && sessionId, "peer Login must issue an owned session");
+        const principal = (await peer.auth.authenticateBearer(login.access_token))?.principal;
+        node_assert_1.strict.ok(principal?.subject);
+        peerSubject = principal.subject;
+        node_assert_1.strict.notEqual(principal.subject, own.subject);
+        node_assert_1.strict.equal(principal.tenant_id, tenantId);
+        node_assert_1.strict.equal(principal.project_id, otherProjectId);
+        node_assert_1.strict.ok(own.scopes.includes("udb:admin") && principal.scopes.includes("udb:admin"), "both signed fixture principals need the table's approved scope");
+        const suffix = `${process.pid}-${Date.now()}`;
+        const ownId = `edge-own-${suffix}`, peerId = `edge-peer-${suffix}`;
+        for (const row of [{ data: project.generated.DataBroker, projectId, id: ownId }, { data: peer.generated.DataBroker, projectId: otherProjectId, id: peerId }]) {
+            owned.push(row);
+            await row.data.upsert({
+                context: requestContext(tenantId, row.projectId, "ts.edge.seed"), message_type: LIVE_MESSAGE_TYPE,
+                record_json: jsonBytes({ record_id: row.id, tenant_id: tenantId, project_id: row.projectId, lookup_key: `lookup-${row.id}`, payload: row.id, revision: 1 }),
+                conflict_fields: ["record_id"],
+            }, opts);
+        }
+        const selectRows = (data, selectedProject, filter) => data.select({
+            context: requestContext(tenantId, selectedProject, "ts.edge.isolation"), message_type: LIVE_MESSAGE_TYPE, filter, limit: 10,
+        }, opts);
+        const assertOwned = (rows, id, selectedProject) => {
+            node_assert_1.strict.equal(rows.records_json.length, 1, "project-scoped witness must return exactly its owned row");
+            const row = recordJson(rows);
+            node_assert_1.strict.deepEqual([row.record_id, row.payload, row.tenant_id, row.project_id], [id, id, tenantId, selectedProject], "project-scoped witness returned a different row or scope");
+        };
+        assertOwned(await selectRows(peer.generated.DataBroker, otherProjectId, { tenant_id: tenantId, project_id: otherProjectId, record_id: peerId }), peerId, otherProjectId);
+        const ids = { $in: [ownId, peerId] };
+        assertOwned(await selectRows(project.generated.DataBroker, projectId, { tenant_id: tenantId, record_id: ids }), ownId, projectId);
+        const foreign = await selectRows(project.generated.DataBroker, projectId, { tenant_id: tenantId, project_id: otherProjectId, record_id: ids });
+        node_assert_1.strict.equal(foreign.records_json.length, 0, "explicit foreign project must intersect verified project to zero rows");
+        let orRefused = false;
+        try {
+            await selectRows(project.generated.DataBroker, projectId, { tenant_id: tenantId, $or: [{ record_id: ownId }, { record_id: peerId, project_id: otherProjectId }] });
+        }
+        catch (err) {
+            node_assert_1.strict.equal(grpcCode(err), 3, "project predicate buried in OR must receive the planner's typed InvalidArgument refusal");
+            orRefused = true;
+        }
+        node_assert_1.strict.ok(orRefused, "project predicate buried in OR bypassed the mandatory project guard");
+    }
+    finally {
+        const errors = [];
+        try {
+            for (const row of [...owned].reverse()) {
+                try {
+                    await row.data.delete({ context: requestContext(tenantId, row.projectId, "ts.edge.cleanup"), message_type: LIVE_MESSAGE_TYPE, filter: { tenant_id: tenantId, project_id: row.projectId, record_id: row.id } }, opts);
+                }
+                catch (err) {
+                    errors.push(`row:${grpcCode(err)}`);
+                }
+            }
+            if (sessionId) {
+                try {
+                    await (peer.authGenerated ?? peer.generated).AuthnService.logout({ session_id: sessionId, revoke_reason: "sdk_project_isolation", context: { tenant: { tenant_id: tenantId, project_id: otherProjectId }, user_id: peerSubject, principal_id: peerSubject, purpose: "ts.edge.cleanup" } }, opts);
+                }
+                catch (err) {
+                    errors.push(`session:${grpcCode(err)}`);
+                }
+            }
+        }
+        finally {
+            peer.close();
+        }
+        node_assert_1.strict.equal(errors.length, 0, `owned isolation cleanup failed: ${errors.join(",")}`);
+    }
+}
+async function runLiveEdgeCases(project, tenantId, projectId) {
+    const data = project.generated.DataBroker;
     const ctx = requestContext(tenantId, projectId, "ts.live.edge");
     const opts = { deadlineMs: 8_000, noRetry: true };
     const suffix = `${tenantId}-edge`;
@@ -3001,17 +3518,9 @@ async function runLiveEdgeCases(data, tenantId, projectId) {
             throw new Error(`${label} faulted the server (code ${c}): ${describeGrpcError(err)}`);
         }
     };
-    // 1. missing project_id in the filter -> project isolation must reject.
-    let accepted1 = false;
-    try {
-        await data.select({ context: ctx, message_type: LIVE_MESSAGE_TYPE, filter: { tenant_id: tenantId }, limit: 1 }, opts);
-        accepted1 = true;
-    }
-    catch (err) {
-        notFault("missing project_id", err);
-    }
-    node_assert_1.strict.equal(accepted1, false, "Select without a project_id filter was ACCEPTED — project isolation not enforced");
-    // 2. cross-tenant read -> RLS scopes to the JWT tenant; a foreign filter leaks nothing.
+    // 1. Omitted project is filled from the verified bearer, never broadened.
+    await runLiveProjectIsolationWitness(project, tenantId, projectId);
+    // 2. cross-tenant read -> verified scope forbids a foreign tenant's rows.
     const foreign = "00000000-0000-0000-0000-0000deadbeef";
     try {
         const resp = await data.select({ context: ctx, message_type: LIVE_MESSAGE_TYPE, filter: { tenant_id: foreign, project_id: projectId }, limit: 10 }, opts);
@@ -3344,7 +3853,7 @@ async function graphKind(data, rc, backend, suffix, mountFatal) {
         mountFatal(backend, "query", err);
     }
 }
-async function runLiveBackendE2E(project, tenantId, projectId) {
+async function runLiveBackendE2E(project, platformProject, tenantId, projectId) {
     const data = project.generated.DataBroker;
     const ctx = requestContext(tenantId, projectId, "ts.live.backend.e2e");
     const suffix = `${process.pid}-${Date.now()}`;
@@ -3532,8 +4041,23 @@ async function runLiveBackendE2E(project, tenantId, projectId) {
     // reads, catalog/schema/health. PutPolicy is intentionally NOT called — an abac
     // policy insert flips the data plane to default-deny.
     const projId = `sdklive_proj_ts_${suffix}`;
-    await data.ensure_project({ context: ctx, project_id: projId, name: "SDK Live Project" }, { deadlineMs: 8_000, noRetry: true });
-    const projects = await data.list_projects({ context: ctx }, { deadlineMs: 8_000, noRetry: true });
+    const requireRefusal = async (operation, decision, perform) => {
+        await node_assert_1.strict.rejects(perform, (err) => {
+            node_assert_1.strict.ok(err instanceof generatedClient_1.UdbError, "refusal must retain the actual broker trailer");
+            node_assert_1.strict.equal(err.code, grpc.status.PERMISSION_DENIED);
+            node_assert_1.strict.equal(err.detail?.operation, operation);
+            node_assert_1.strict.equal(err.detail?.policy_decision_id, decision);
+            return true;
+        });
+    };
+    await requireRefusal("EnsureProject", "catalog_project_scope_mismatch", () => data.ensure_project({ context: ctx, project_id: projId, name: "SDK Live Project" }, { deadlineMs: 8_000, noRetry: true }));
+    const scoped = await data.ensure_project({ context: ctx, project_id: projectId, name: "SDK Live Verified Project" }, { deadlineMs: 8_000, noRetry: true });
+    node_assert_1.strict.equal(scoped.mutation_id, projectId);
+    await requireRefusal("ListProjects", "catalog_platform_authority_required", () => data.list_projects({ context: ctx }, { deadlineMs: 8_000, noRetry: true }));
+    const platformData = platformProject.generated.DataBroker;
+    const created = await platformData.ensure_project({ context: ctx, project_id: projId, name: "SDK Live Project" }, { deadlineMs: 8_000, noRetry: true });
+    node_assert_1.strict.equal(created.mutation_id, projId);
+    const projects = await platformData.list_projects({ context: ctx }, { deadlineMs: 8_000, noRetry: true });
     node_assert_1.strict.ok((projects.projects ?? []).some((p) => p.project_id === projId), "ListProjects must include the created project");
     await data.list_policies({ context: ctx }, { deadlineMs: 8_000, noRetry: true });
     await data.lint_policies({ context: ctx }, { deadlineMs: 8_000, noRetry: true });
@@ -3554,8 +4078,25 @@ function liveUuid() {
 // against the bearer claim, so they run through `uuidProject` (a second admin
 // bootstrapped on a UUID tenant). Authz created_by must be a UUID; the
 // notification recipient_id is an FK to a real users row.
-async function runLiveNativeServiceE2E(project, uuidProject, tenantId, projectId, uuidTenant) {
+function verifiedNativeFixtureActor(principal, tenantId, projectId) {
+    if (!principal || typeof principal.subject !== "string" || !principal.subject.trim()) {
+        throw new Error("native fixture requires the AuthenticateBearer subject");
+    }
+    node_assert_1.strict.ok(principal?.user_id?.trim(), "native fixture requires the persisted authenticated user");
+    node_assert_1.strict.equal(principal.tenant_id, tenantId, "native fixture refuses a foreign authenticated tenant");
+    node_assert_1.strict.equal(principal.project_id, projectId, "native fixture refuses a foreign authenticated project");
+    node_assert_1.strict.equal(principal.subject, principal.subject.trim(), "native fixture requires the exact unpadded verified subject");
+    const subject = principal.subject;
+    // Match authz::stable_uuid_from_subject; attribution follows the verified
+    // claim subject even when the response's persisted user_id is different.
+    if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(subject))
+        return subject.toLowerCase();
+    const hex = (0, node_crypto_1.createHash)("sha256").update(subject).digest("hex").slice(0, 32);
+    return [hex.slice(0, 8), hex.slice(8, 12), hex.slice(12, 16), hex.slice(16, 20), hex.slice(20)].join("-");
+}
+async function runLiveNativeServiceE2E(project, uuidProject, tenantId, projectId, uuidTenant, platformProject, actorId) {
     const gen = project.authGenerated ?? project.generated;
+    const platformGen = platformProject.authGenerated ?? platformProject.generated;
     const ugen = uuidProject.authGenerated ?? uuidProject.generated;
     const opts = { deadlineMs: 8_000, noRetry: true };
     const suffix = `${process.pid}${Date.now()}`;
@@ -3566,10 +4107,11 @@ async function runLiveNativeServiceE2E(project, uuidProject, tenantId, projectId
     // AuthzService — role create/get/list.
     const roleCode = `sdk_reader_ts_${suffix}`;
     const createdRole = (await gen.AuthzService.create_role({
-        name: `SDK Reader TS ${suffix}`, description: "Live SDK reader role", created_by: liveUuid(),
+        name: `SDK Reader TS ${suffix}`, description: "Live SDK reader role", created_by: actorId,
         role_code: roleCode, domain: tenantId, tenant_id: tenantId, project_id: projectId,
     }, opts)).role;
     node_assert_1.strict.equal(createdRole.role_code, roleCode);
+    node_assert_1.strict.equal(createdRole.created_by, actorId, "role creator must be the verified caller subject");
     const gotRole = (await gen.AuthzService.get_role({ role_id: createdRole.role_id }, opts)).role;
     node_assert_1.strict.equal(gotRole.role_code, roleCode);
     const roles = await gen.AuthzService.list_roles({ domain: tenantId, active_only: true }, opts);
@@ -3582,44 +4124,107 @@ async function runLiveNativeServiceE2E(project, uuidProject, tenantId, projectId
     }, opts)).user;
     const assignedRole = (await gen.AuthzService.assign_role({
         user_id: subject.user_id, role_id: createdRole.role_id, domain: tenantId,
-        assigned_by: subject.user_id, tenant_id: tenantId, project_id: projectId,
+        assigned_by: actorId, tenant_id: tenantId, project_id: projectId,
     }, opts)).user_role;
+    node_assert_1.strict.equal(assignedRole.assigned_by, actorId);
+    const accessRequest = {
+        user_id: subject.user_id, domain: tenantId, tenant_id: tenantId, project_id: projectId, object: "invoice", action: "data.select",
+    };
+    const beforePolicy = await platformGen.AuthzService.check_access(accessRequest, opts);
+    node_assert_1.strict.equal(beforePolicy.allowed, false, "owned role must deny before its policy exists");
+    const policyId = liveUuid();
     await gen.AuthzService.put_authz_policy({
         policy: {
-            id: liveUuid(), enabled: true, effect: "allow", tenant: tenantId, project: projectId,
+            id: policyId, enabled: true, effect: "allow", tenant: tenantId, project: projectId,
             role: createdRole.role_code, action: "data.select", resource: "invoice",
         },
     }, opts);
-    const allowed = await gen.AuthzService.check_access({
-        user_id: subject.user_id, domain: tenantId, tenant_id: tenantId, project_id: projectId, object: "invoice", action: "data.select",
-    }, opts);
+    const allowed = await platformGen.AuthzService.check_access(accessRequest, opts);
     node_assert_1.strict.ok(allowed.allowed, "CheckAccess must allow the assigned role+policy");
+    node_assert_1.strict.ok((allowed.decision?.matched_policy_ids ?? []).includes(policyId), "PDP must evaluate the exact owned policy");
     const userRoles = await gen.AuthzService.list_user_roles({ user_id: subject.user_id, domain: tenantId, active_only: true }, opts);
     node_assert_1.strict.equal((userRoles.user_roles ?? []).length, 1);
-    await gen.AuthzService.revoke_role({ user_role_id: assignedRole.user_role_id, user_id: subject.user_id, reason: "sdk_live_test", revoked_by: subject.user_id }, opts);
-    const denied = await gen.AuthzService.check_access({
-        user_id: subject.user_id, domain: tenantId, tenant_id: tenantId, project_id: projectId, object: "invoice", action: "data.select",
-    }, opts);
+    await gen.AuthzService.revoke_role({ user_role_id: assignedRole.user_role_id, user_id: subject.user_id, reason: "sdk_live_test", revoked_by: actorId }, opts);
+    const denied = await platformGen.AuthzService.check_access(accessRequest, opts);
     node_assert_1.strict.ok(!denied.allowed, "CheckAccess must deny after the role was revoked");
-    // ApiKeyService — create/validate/list/revoke lifecycle.
-    const principal = `sdk-live-svc-${suffix}`;
-    const keyCtx = { user_id: principal, tenant: { tenant_id: tenantId, project_id: projectId } };
-    const createdKey = await gen.ApiKeyService.create_api_key({ name: `sdk-live-key-${suffix}`, owner_id: principal, scopes: ["data:read"], context: keyCtx }, opts);
-    node_assert_1.strict.ok(String(createdKey.plain_key).startsWith("udbk_"), "plain_key must have udbk_ prefix");
-    const keyId = createdKey.key.key_id;
-    const valid = await gen.ApiKeyService.validate_api_key({ plain_key: createdKey.plain_key, required_scope: "data:read" }, opts);
-    node_assert_1.strict.ok(valid.valid && valid.owner_id === principal, "ValidateApiKey must accept the fresh key");
-    const listedKeys = await gen.ApiKeyService.list_api_keys({ owner_id: principal, status: 1 }, opts); // 1 = ACTIVE
-    node_assert_1.strict.equal((listedKeys.keys ?? []).length, 1);
-    node_assert_1.strict.equal(listedKeys.keys[0].key_id, keyId);
-    const gotKey = await gen.ApiKeyService.get_api_key({ key_id: keyId }, opts);
-    node_assert_1.strict.equal(gotKey.key.owner_id, principal);
-    await gen.ApiKeyService.update_api_key({ key_id: keyId, scopes: ["data:read", "data:write"], context: keyCtx }, opts);
-    const writeOK = await gen.ApiKeyService.validate_api_key({ plain_key: createdKey.plain_key, required_scope: "data:write" }, opts);
-    node_assert_1.strict.ok(writeOK.valid, "ValidateApiKey must honor the updated data:write scope");
-    await gen.ApiKeyService.revoke_api_key({ key_id: keyId, revoke_reason: "sdk_live_test", context: keyCtx }, opts);
-    const afterRevoke = await gen.ApiKeyService.validate_api_key({ plain_key: createdKey.plain_key, required_scope: "data:read" }, opts);
-    node_assert_1.strict.ok(!afterRevoke.valid, "revoked API key must not validate");
+    const revokedRoles = await gen.AuthzService.list_user_roles({ user_id: subject.user_id, domain: tenantId, active_only: true }, opts);
+    node_assert_1.strict.equal((revokedRoles.user_roles ?? []).length, 0);
+    const deletedPolicy = await gen.AuthzService.delete_policy_rule({ policy_id: policyId, deleted_by: actorId }, opts);
+    node_assert_1.strict.equal(deletedPolicy.deleted, true);
+    await gen.AuthzService.delete_role({ role_id: createdRole.role_id, deleted_by: actorId }, opts);
+    // ApiKeyService: a persisted active SERVICE_ACCOUNT with its exact typed
+    // grant owns the key. The request context remains the verified ordinary actor.
+    const serviceName = "sdk-live-svc-" + suffix;
+    const keyCtx = { user_id: actorId, tenant: { tenant_id: tenantId, project_id: projectId } };
+    const service = (await gen.AuthnService.create_user({
+        username: serviceName, email: serviceName + "@example.com", password: "CorrectHorse1!",
+        tenant_id: tenantId, project_id: projectId, full_name: "SDK Live Service Account",
+        account_kind: "ACCOUNT_KIND_SERVICE_ACCOUNT", context: keyCtx,
+    }, opts)).user;
+    const principal = service.user_id;
+    node_assert_1.strict.match(principal, /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
+    node_assert_1.strict.notEqual(principal, actorId);
+    node_assert_1.strict.equal(service.tenant_id, tenantId);
+    node_assert_1.strict.equal(service.project_id, projectId);
+    node_assert_1.strict.equal(service.account_kind, "ACCOUNT_KIND_SERVICE_ACCOUNT");
+    let keyId = "";
+    let keyRevoked = false;
+    let primaryFailure;
+    try {
+        const active = (await gen.AuthnService.change_user_status({
+            user_id: principal, new_status: "USER_STATUS_ACTIVE", reason: "sdk live activate service account", context: keyCtx,
+        }, opts)).user;
+        node_assert_1.strict.equal(active.user_id, principal);
+        node_assert_1.strict.equal(active.status, "USER_STATUS_ACTIVE");
+        await gen.AuthnService.create_service_account_grant({
+            tenant_id: tenantId, project_id: projectId, user_id: principal, service_identity: serviceName,
+            approved_scopes: ["data:read", "data:write"], reason: "sdk live API key fixture",
+        }, opts);
+        const createdKey = await gen.ApiKeyService.create_api_key({ name: `sdk-live-key-${suffix}`, owner_id: principal, scopes: ["data:read"], context: keyCtx }, opts);
+        node_assert_1.strict.ok(String(createdKey.plain_key).startsWith("udbk_"), "plain_key must have udbk_ prefix");
+        keyId = createdKey.key.key_id;
+        const valid = await gen.ApiKeyService.validate_api_key({ plain_key: createdKey.plain_key, required_scope: "data:read" }, opts);
+        node_assert_1.strict.ok(valid.valid && valid.owner_id === principal, "ValidateApiKey must accept the fresh key");
+        const listedKeys = await gen.ApiKeyService.list_api_keys({ owner_id: principal, status: 1 }, opts); // 1 = ACTIVE
+        node_assert_1.strict.equal((listedKeys.keys ?? []).length, 1);
+        node_assert_1.strict.equal(listedKeys.keys[0].key_id, keyId);
+        const gotKey = await gen.ApiKeyService.get_api_key({ key_id: keyId }, opts);
+        node_assert_1.strict.equal(gotKey.key.owner_id, principal);
+        await gen.ApiKeyService.update_api_key({ key_id: keyId, scopes: ["data:read", "data:write"], context: keyCtx }, opts);
+        const writeOK = await gen.ApiKeyService.validate_api_key({ plain_key: createdKey.plain_key, required_scope: "data:write" }, opts);
+        node_assert_1.strict.ok(writeOK.valid, "ValidateApiKey must honor the updated data:write scope");
+        await gen.ApiKeyService.revoke_api_key({ key_id: keyId, revoke_reason: "sdk_live_test", context: keyCtx }, opts);
+        const afterRevoke = await gen.ApiKeyService.validate_api_key({ plain_key: createdKey.plain_key, required_scope: "data:read" }, opts);
+        node_assert_1.strict.ok(!afterRevoke.valid, "revoked API key must not validate");
+        keyRevoked = true;
+    }
+    catch (error) {
+        primaryFailure = error;
+        throw error;
+    }
+    finally {
+        const cleanups = [];
+        if (keyId && !keyRevoked)
+            cleanups.push(["key", () => gen.ApiKeyService.revoke_api_key({
+                    key_id: keyId, revoke_reason: "sdk live fixture cleanup", context: keyCtx,
+                }, opts)]);
+        cleanups.push(["grant", () => gen.AuthnService.revoke_service_account_grant({ tenant_id: tenantId, user_id: principal, reason: "sdk live fixture cleanup" }, opts)], ["service", () => gen.AuthnService.change_user_status({ user_id: principal, new_status: "USER_STATUS_DEACTIVATED", reason: "sdk live fixture cleanup", context: keyCtx }, opts)]);
+        const cleanupErrors = [];
+        for (const [label, cleanup] of cleanups) {
+            try {
+                await cleanup();
+            }
+            catch (error) {
+                cleanupErrors.push(label + ":" + Number(error?.code ?? grpc.status.UNKNOWN));
+            }
+        }
+        if (cleanupErrors.length) {
+            const detail = "owned API key fixture cleanup failed: " + cleanupErrors.join(",");
+            if (primaryFailure === undefined)
+                throw new Error(detail);
+            console.error(detail); // Keep the original failure; emit only labels/codes.
+        }
+    }
     // AnalyticsService — record metrics then roll up.
     const stage = `sdk_live_stage_ts_${suffix}`;
     for (const [latency, ok] of [[100, true], [200, true], [400, false]]) {
@@ -3804,6 +4409,7 @@ async function runLiveNativeServiceE2E(project, uuidProject, tenantId, projectId
         // tenantId is already the canonical UUID (resolved by the pre-login probe above),
         // so the project's x-tenant-id header AND all request bodies match the JWT claim.
         node_assert_1.strict.equal(authn.principal.tenant_id, tenantId, "principal tenant must match the resolved canonical UUID");
+        const actorId = verifiedNativeFixtureActor(authn.principal, tenantId, projectId);
         await store.save({
             accessToken: login.access_token,
             refreshToken: login.refresh_token,
@@ -3824,24 +4430,47 @@ async function runLiveNativeServiceE2E(project, uuidProject, tenantId, projectId
         await runLiveBackendClaimCheck(project.generated.DataBroker, requestContext(tenantId, projectId, "ts.live.backend.claim"), enabledBackends);
         // Challenge every advertised backend KIND's per-operation claims in BOTH directions.
         await runLiveBackendCapabilityChallenge(project.generated.DataBroker, requestContext(tenantId, projectId, "ts.live.backend.capability"), caps);
-        // Full session lifecycle on a throwaway login: prove logout invalidates the
-        // session (access token + refresh token + session-refresh all rejected after).
-        await runLiveAuthLifecycle(project.authGenerated?.AuthnService ?? project.generated.AuthnService, tenantId, projectId, username, password);
+        // Own a separate person for logout/replay checks, preserving the operator
+        // credential used by the rest of this conformance fixture.
+        const lifecycleOperatorToken = store.current()?.accessToken;
+        node_assert_1.strict.ok(lifecycleOperatorToken, "lifecycle operator must retain a bearer");
+        await runLiveAuthLifecycle(project.authGenerated?.AuthnService ?? project.generated.AuthnService, tenantId, projectId, lifecycleOperatorToken);
         // Edge cases: the auth plane must fail CLOSED on bad credentials/forged bearers.
         await runLiveAuthNegative(project.authGenerated?.AuthnService ?? project.generated.AuthnService, tenantId, projectId, username);
-        await runLiveBackendE2E(project, tenantId, projectId);
-        // Per-RPC EDGE cases (malformed/hostile inputs + isolation boundaries): every one
-        // must fail closed with a typed error and never leak cross-tenant data or fault.
-        await runLiveEdgeCases(project.generated.DataBroker, tenantId, projectId);
-        // Breadth: a real category-appropriate round-trip against EVERY advertised backend
-        // kind (relational SQL, object, document, cache, vector, graph) — not just the
-        // canonical postgres/mongodb/minio trio. Adapts to whatever the broker enabled.
-        await runLiveAllBackendKindsMatrix(project.generated.DataBroker, tenantId, projectId, caps);
-        // A SINGLE admin (bound to the canonical tenant UUID) now serves the UUID-strict
-        // services (storage/webrtc/asset) and the free-text ones alike — no second
-        // "uuid tenant" admin needed (auth_fix.md tenant-identity fix). The same project
-        // and canonical tenant id are used for both arguments.
-        await runLiveNativeServiceE2E(project, project, tenantId, projectId, tenantId);
+        const platformProject = new project_1.UdbProject({
+            target, authTarget, tenantId, projectId, purpose: "ts.live.deep.platform",
+            tokenStore: memoryStore(), deadlineMs: 10_000,
+        });
+        try {
+            const platformLogin = await platformProject.login({
+                username: requiredEnv("UDB_LIVE_PLATFORM_USERNAME"), password: requiredEnv("UDB_LIVE_PLATFORM_PASSWORD"),
+                tenant_hint: tenantId, project_hint: projectId, device_name: "ts-sdk-deep-platform",
+            });
+            const platformPrincipal = (await platformProject.auth.authenticateBearer(platformLogin.access_token))?.principal;
+            node_assert_1.strict.ok((platformPrincipal?.roles ?? []).some((role) => role.toLowerCase() === "platform_admin"));
+            node_assert_1.strict.ok(platformPrincipal?.subject && platformPrincipal?.user_id);
+            const platformActor = verifiedNativeFixtureActor(platformPrincipal, tenantId, projectId);
+            node_assert_1.strict.notEqual(platformActor, actorId);
+            node_assert_1.strict.equal(platformPrincipal.tenant_id, tenantId);
+            node_assert_1.strict.equal(platformPrincipal.project_id, projectId);
+            node_assert_1.strict.notEqual(platformPrincipal.user_id, authn.principal.user_id);
+            await runLiveBackendE2E(project, platformProject, tenantId, projectId);
+            // Per-RPC EDGE cases (malformed/hostile inputs + isolation boundaries): every one
+            // must fail closed with a typed error and never leak cross-tenant data or fault.
+            await runLiveEdgeCases(project, tenantId, projectId);
+            // Breadth: a real category-appropriate round-trip against EVERY advertised backend
+            // kind (relational SQL, object, document, cache, vector, graph) — not just the
+            // canonical postgres/mongodb/minio trio. Adapts to whatever the broker enabled.
+            await runLiveAllBackendKindsMatrix(project.generated.DataBroker, tenantId, projectId, caps);
+            // A SINGLE admin (bound to the canonical tenant UUID) now serves the UUID-strict
+            // services (storage/webrtc/asset) and the free-text ones alike — no second
+            // "uuid tenant" admin needed (auth_fix.md tenant-identity fix). The same project
+            // and canonical tenant id are used for both arguments.
+            await runLiveNativeServiceE2E(project, project, tenantId, projectId, tenantId, platformProject, actorId);
+        }
+        finally {
+            platformProject.close();
+        }
         const authGenerated = project.authGenerated ?? project.generated;
         const probeCounters = { populated: 0 };
         const nativeCount = await expectGeneratedUnarySurfaceMounted(t, "authTarget", authGenerated, NATIVE_SERVICE_APIS, tenantId, projectId, probeCounters);
@@ -3901,6 +4530,10 @@ async function runLiveNativeServiceE2E(project, uuidProject, tenantId, projectId
         target, authTarget, tenantId, projectId,
         purpose: "ts.live.perf", tokenStore: memoryStore(), deadlineMs: 20_000,
     });
+    const platformProject = new project_1.UdbProject({
+        target, authTarget, tenantId, projectId,
+        purpose: "ts.live.perf.platform", tokenStore: memoryStore(), deadlineMs: 20_000,
+    });
     try {
         const login = await project.login({ username, password, tenant_hint: tenantId, project_hint: projectId, device_name: "ts-sdk-perf" });
         const who = await project.auth.authenticateBearer(login.access_token);
@@ -3912,16 +4545,49 @@ async function runLiveNativeServiceE2E(project, uuidProject, tenantId, projectId
         project.setTenant(tenantId);
         const authGenerated = project.authGenerated ?? project.generated;
         const data = project.generated.DataBroker;
+        const actorUserId = who?.principal?.user_id || who?.principal?.subject;
+        node_assert_1.strict.ok(actorUserId, "ordinary benchmark bearer must expose an actor user id");
+        const platformUsername = requiredEnv("UDB_LIVE_PLATFORM_USERNAME");
+        const platformPassword = requiredEnv("UDB_LIVE_PLATFORM_PASSWORD");
+        let platformLogin = await platformProject.login({
+            username: platformUsername,
+            password: platformPassword,
+            tenant_hint: tenantId,
+            project_hint: projectId,
+            device_name: "ts-sdk-perf-platform-seed",
+        });
+        let platformWho = await platformProject.auth.authenticateBearer(platformLogin.access_token);
+        const platformPrincipal = platformWho?.principal ?? {};
+        node_assert_1.strict.ok((platformPrincipal.roles ?? []).some((role) => role.toLowerCase() === "platform_admin"), "platform benchmark bearer must carry the trusted platform_admin role");
+        const platformActorUserId = platformPrincipal.user_id;
+        node_assert_1.strict.ok(platformActorUserId, "platform benchmark bearer must expose a verified user_id for governance attribution");
+        platformProject.setTenant(platformPrincipal.tenant_id || tenantId);
+        let platformAuthGenerated = platformProject.authGenerated ?? platformProject.generated;
         // SEED PHASE (before any measurement): create real, disposable entities and
         // capture their identifiers so every RPC can be driven down its SUCCESS path
         // with valid inputs. The bootstrap admin's tenant claim IS the canonical UUID
         // (resolved above), so one client serves the UUID-strict native services too.
-        const seed = await seedPerfFixtures(authGenerated, data, tenantId, projectId, tenantId);
+        const seed = await seedPerfFixtures(authGenerated, platformAuthGenerated, data, tenantId, projectId, tenantId, actorUserId, platformActorUserId);
         const fixtures = seed.fixtures;
+        // Seeding performs a long control-plane lifecycle. Refresh the distinct
+        // platform session before timing so expiry cannot be mistaken for an RPC
+        // contract failure.
+        platformLogin = await platformProject.login({
+            username: platformUsername,
+            password: platformPassword,
+            tenant_hint: tenantId,
+            project_hint: projectId,
+            device_name: "ts-sdk-perf-platform-measure",
+        });
+        platformWho = await platformProject.auth.authenticateBearer(platformLogin.access_token);
+        node_assert_1.strict.ok((platformWho?.principal?.roles ?? []).some((role) => role.toLowerCase() === "platform_admin"), "refreshed platform benchmark bearer must retain platform_admin");
+        node_assert_1.strict.equal(platformWho?.principal?.user_id, platformActorUserId, "refreshed platform benchmark bearer must retain the seeded governance actor user id");
+        platformProject.setTenant(platformWho?.principal?.tenant_id || tenantId);
+        platformAuthGenerated = platformProject.authGenerated ?? platformProject.generated;
         // Iteration budget per operation_kind. Every RPC is now driven down its SUCCESS
         // path with seeded inputs, so even destructive RPCs run for real (against a
         // disposable seeded target) — measured ONCE because the action is not idempotent.
-        const itersFor = (kind) => (kind === "destructive" ? 1 : kind === "mutation" ? 5 : 25);
+        const itersFor = (kind) => (kind === "read_only" ? 25 : 1);
         const samples = [];
         // gRPC status code NAME for an error (e.g. "UNAVAILABLE", "FAILED_PRECONDITION"),
         // reusing the file's grpcCode() extractor; "OK" when there was no error.
@@ -3953,28 +4619,54 @@ async function runLiveNativeServiceE2E(project, uuidProject, tenantId, projectId
                 return false;
             if (!new Set(["list_egress", "start_room_composite", "start_track_egress", "stop_egress"]).has(methodName))
                 return false;
-            return /webrtc_egress_(enabled|backend)/.test(detail ?? "");
+            const text = (detail ?? "").toLowerCase();
+            return !text || /webrtc_egress_(enabled|backend)/.test(text) || text.includes("webrtc egress") || text.includes("egress is not enabled");
         };
-        // Stream-open timer: create the streaming call and tear it down WITHOUT draining
-        // responses. A subscription/upload stream emits a first message only on an event,
-        // so draining it in a passive run would just hit the deadline. This measures the
-        // client-side latency to establish the stream. Used for the client-streaming /
-        // bidi RPCs (put_object, batch_*, begin_tx, vector_batch_upsert, delta/stream
-        // resources, signal) where a single seeded message cannot drive a real response.
-        const timeStreamOpen = (fn, request) => {
+        // Send the prepared message, close the request side, then measure an actual
+        // response or successful empty completion. Opening a channel proves no RPC.
+        const timeSeededWritableStream = async (fn, request) => {
             const start = performance.now();
+            let stream;
             try {
-                const r = fn(request, { deadlineMs: 1_500, noRetry: true });
-                const s = r?.stream ?? r;
-                if (s && typeof s.cancel === "function")
-                    s.cancel();
-                else if (s && typeof s.destroy === "function")
-                    s.destroy();
-                if (r?.response && typeof r.response.catch === "function")
-                    r.response.catch(() => { });
+                const call = fn({ deadlineMs: 15_000, noRetry: true });
+                stream = call?.stream ?? call;
+                if (call?.response) {
+                    // The generated client-streaming API takes options, not a request.
+                    const response = call.response;
+                    stream.write(request);
+                    stream.end();
+                    await response;
+                    return { ms: performance.now() - start, err: "OK" };
+                }
+                return await new Promise((resolve) => {
+                    let settled = false;
+                    const finish = (err) => {
+                        if (settled)
+                            return;
+                        settled = true;
+                        clearTimeout(timer);
+                        resolve({ ms: performance.now() - start, err });
+                    };
+                    const timer = setTimeout(() => finish("DEADLINE_EXCEEDED"), 15_000);
+                    stream.once("data", () => finish("OK"));
+                    stream.once("end", () => finish("OK"));
+                    stream.on("error", (e) => finish(codeNameOf(e)));
+                    try {
+                        stream.write(request);
+                        stream.end();
+                    }
+                    catch (e) {
+                        finish(codeNameOf(e));
+                    }
+                });
             }
-            catch { /* setup latency still counts */ }
-            return performance.now() - start;
+            catch (e) {
+                return { ms: performance.now() - start, err: codeNameOf(e) };
+            }
+            finally {
+                if (typeof stream?.cancel === "function")
+                    stream.cancel();
+            }
         };
         // Server-streaming first-response timer: open the stream with a seeded request
         // and measure up to the FIRST server-delivered message (a real round-trip), not
@@ -4057,8 +4749,8 @@ async function runLiveNativeServiceE2E(project, uuidProject, tenantId, projectId
             topic_pattern: "*",
         });
         // Server-streaming reads that take a request and deliver a real first response.
-        const SERVER_STREAM_FIRST_RESPONSE = new Set(["select_v_2", "get_object", "download_file"]);
-        const seededStreamRequest = (methodName) => {
+        const SERVER_STREAM_FIRST_RESPONSE = new Set(["select_v_2", "get_object", "download_file", "subscribe"]);
+        const seededStreamRequest = (serviceName, methodName) => {
             if (methodName === "select_v_2") {
                 return { context: requestContext(tenantId, projectId, "ts.live.perf"), message_type: LIVE_MESSAGE_TYPE, filter: { tenant_id: tenantId, project_id: projectId }, limit: 1 };
             }
@@ -4070,8 +4762,7 @@ async function runLiveNativeServiceE2E(project, uuidProject, tenantId, projectId
                 // the first DownloadFileChunk carries object metadata + the first bytes.
                 return { tenant_id: tenantId, file_id: fixtures.lookup("file_id") ?? "", chunk_size_bytes: 65536 };
             }
-            // Only select_v_2/get_object/download_file reach here; never a generic body.
-            return perfRealBody("StorageService", methodName, tenantId, projectId, fixtures) ?? {};
+            return perfRealBody(serviceName, methodName, tenantId, projectId, fixtures);
         };
         // ── measureRpc: time ONE RPC (unary or streaming) and push its sample ─────────
         // Extracted from the old single-pass loop so the AUTH-ROUTE 3-phase ordering
@@ -4085,6 +4776,7 @@ async function runLiveNativeServiceE2E(project, uuidProject, tenantId, projectId
             // callable as stream/unary so a helper never trips the strict body coverage gate.
             if (methodName === "entity" || methodName === "table")
                 return;
+            const identity = canonicalRpcIdentityOf(api.serviceFull, methodName);
             if (NON_UNARY_METHODS.has(methodName)) {
                 // CDC subscription: subscribe → fire a real seeded Upsert → first event.
                 if (serviceName === "DataBroker" && methodName === "publish_cdc") {
@@ -4099,12 +4791,12 @@ async function runLiveNativeServiceE2E(project, uuidProject, tenantId, projectId
                     }
                     durs.sort((a, b) => a - b);
                     const pct = (p) => durs[Math.min(durs.length - 1, Math.floor((p * (durs.length - 1)) / 100))];
-                    samples.push({ service: serviceName, rpc: snakeToPascal(methodName), apiAlias: apiAliasOf(api.serviceFull, methodName), operationId: operationIdOf(api.serviceFull, methodName), kind: "stream", err: errCode, p50: pct(50), p99: pct(99), mean: durs.reduce((s, d) => s + d, 0) / durs.length, note: "cdc: time-to-first-event (real seeded Upsert produced)" });
+                    samples.push({ service: identity.service, rpc: identity.rpc, apiAlias: apiAliasOf(api.serviceFull, methodName), operationId: operationIdOf(api.serviceFull, methodName), kind: "stream", err: errCode, p50: pct(50), p99: pct(99), mean: durs.reduce((s, d) => s + d, 0) / durs.length, iters: durs.length, note: "cdc: time-to-first-event (real seeded Upsert produced)" });
                     return;
                 }
                 // Server-streaming reads with a real first response (select_v_2, get_object).
                 if (SERVER_STREAM_FIRST_RESPONSE.has(methodName)) {
-                    const req = seededStreamRequest(methodName);
+                    const req = seededStreamRequest(serviceName, methodName);
                     const durs = [];
                     let errCode = "OK";
                     await timeServerStreamFirstResponse(fn, req); // warm-up
@@ -4116,20 +4808,40 @@ async function runLiveNativeServiceE2E(project, uuidProject, tenantId, projectId
                     }
                     durs.sort((a, b) => a - b);
                     const pct = (p) => durs[Math.min(durs.length - 1, Math.floor((p * (durs.length - 1)) / 100))];
-                    samples.push({ service: serviceName, rpc: snakeToPascal(methodName), apiAlias: apiAliasOf(api.serviceFull, methodName), operationId: operationIdOf(api.serviceFull, methodName), kind: "stream", err: errCode, p50: pct(50), p99: pct(99), mean: durs.reduce((s, d) => s + d, 0) / durs.length, note: "streaming: time-to-first-response (seeded)" });
+                    samples.push({ service: identity.service, rpc: identity.rpc, apiAlias: apiAliasOf(api.serviceFull, methodName), operationId: operationIdOf(api.serviceFull, methodName), kind: "stream", err: errCode, p50: pct(50), p99: pct(99), mean: durs.reduce((s, d) => s + d, 0) / durs.length, iters: durs.length, note: "streaming: time-to-first-response (seeded)" });
                     return;
                 }
-                // Client-streaming / bidi: a single seeded message cannot drive a real
-                // response in a passive run — report stream-open latency. The first message
-                // is the shared manifest body (no generic): perfRealBody must cover it.
+                // Client-streaming / bidi uses a real response to the
+                // shared manifest body (no generic): perfRealBody must cover it.
                 const streamReq = perfRealBody(serviceName, methodName, tenantId, projectId, fixtures);
                 if (!streamReq)
                     throw new Error(`perfRealBody has no doc-grounded body for streaming ${serviceName}/${methodName} — gap/bypass not allowed`);
-                const d = timeStreamOpen(fn, streamReq);
-                samples.push({ service: serviceName, rpc: snakeToPascal(methodName), apiAlias: apiAliasOf(api.serviceFull, methodName), operationId: operationIdOf(api.serviceFull, methodName), kind: "stream_open", err: "OK", p50: d, p99: d, mean: d, note: "streaming: stream-open latency" });
+                const r = await timeSeededWritableStream(fn, streamReq);
+                samples.push({ service: identity.service, rpc: identity.rpc, apiAlias: apiAliasOf(api.serviceFull, methodName), operationId: operationIdOf(api.serviceFull, methodName), kind: "stream_first_recv", err: r.err, p50: r.ms, p99: r.ms, mean: r.ms, iters: 1, note: "streaming: time-to-first-response (seeded)" });
                 return;
             }
             const kind = operationKindOf(api.serviceFull, methodName) || "read_only";
+            const bodyStarted = performance.now();
+            const blockedSeed = blockedManifestSeed(serviceName, methodName, fixtures);
+            if (blockedSeed) {
+                const elapsed = Math.max(performance.now() - bodyStarted, 0.001);
+                const detail = `seed '${blockedSeed.key}' blocked by ${blockedSeed.source}: original gRPC ${blockedSeed.grpcStatus} (${blockedSeed.grpcCode}): ${blockedSeed.details}`;
+                console.error(`FAILDETAIL ${serviceName}/${methodName} [SEED_BLOCKED] ${detail.slice(0, 200)}`);
+                samples.push({
+                    service: identity.service,
+                    rpc: identity.rpc,
+                    apiAlias: apiAliasOf(api.serviceFull, methodName),
+                    operationId: operationIdOf(api.serviceFull, methodName),
+                    kind,
+                    err: "SEED_BLOCKED",
+                    p50: elapsed,
+                    p99: elapsed,
+                    mean: elapsed,
+                    iters: 1,
+                    note: detail,
+                });
+                return;
+            }
             // Every RPC gets its shared manifest body from perfRealBody — NO generic
             // fallback. A missing body is a loud failure (gap/bypass not allowed), never a
             // silently-populated placeholder. Destructive RPCs run for real against the
@@ -4151,7 +4863,14 @@ async function runLiveNativeServiceE2E(project, uuidProject, tenantId, projectId
             let anyOk = false;
             let firstErr = "OK";
             let firstDetail;
-            for (let i = 0; i < itersFor(kind); i++) {
+            // v0.5.7 treats refresh-token replay as credential theft and revokes the
+            // principal's sessions. Measure the single-use rotation once; repeating the
+            // same fixture token would invalidate the bearer used by every later RPC.
+            const iterations = (serviceName === "AuthnService" && methodName === "refresh_token") ||
+                (serviceName === "DataBroker" && ["approve_migration_plan", "complete_multipart_upload"].includes(methodName))
+                ? 1
+                : itersFor(kind);
+            for (let i = 0; i < iterations; i++) {
                 const r = await timeMethod(fn, mkBody());
                 allDurs.push(r.ms);
                 if (r.err === "OK") {
@@ -4163,24 +4882,22 @@ async function runLiveNativeServiceE2E(project, uuidProject, tenantId, projectId
                     firstDetail = r.detail;
                 }
             }
-            // An RPC that succeeds AT LEAST ONCE works: repeated-call failures on a
-            // non-idempotent mutation (consumed token / duplicate / already-deleted) are a
-            // measurement artifact, not an RPC failure (mirrors the Go harness). Only an RPC
-            // that NEVER succeeds is a real failure (its first-attempt status).
+            // Every measured call must succeed; one success cannot hide a refusal.
             const capabilitySkipped = !anyOk && isCapabilitySkip(serviceName, methodName, firstErr, firstDetail);
-            const errCode = anyOk ? "OK" : capabilitySkipped ? "CAPABILITY_SKIPPED" : firstErr;
-            const errDetail = anyOk ? undefined : firstDetail;
-            const durs = (anyOk ? okDurs : allDurs);
+            const errCode = capabilitySkipped ? "CAPABILITY_SKIPPED" : firstErr;
+            const errDetail = firstDetail;
+            const durs = allDurs;
             if (errCode !== "OK" && errCode !== "CAPABILITY_SKIPPED")
                 console.error(`FAILDETAIL ${serviceName}/${methodName} [${errCode}] ${errDetail ?? ""}`);
             durs.sort((a, b) => a - b);
             const pct = (p) => durs[Math.min(durs.length - 1, Math.floor((p * (durs.length - 1)) / 100))];
             samples.push({
-                service: serviceName, rpc: snakeToPascal(methodName),
+                service: identity.service, rpc: identity.rpc,
                 apiAlias: apiAliasOf(api.serviceFull, methodName),
                 operationId: operationIdOf(api.serviceFull, methodName),
                 kind, err: errCode,
                 p50: pct(50), p99: pct(99), mean: durs.reduce((s, d) => s + d, 0) / durs.length,
+                iters: durs.length,
                 note: capabilitySkipped ? `capability skipped: ${errDetail ?? "server reported unavailable capability"}` : kind === "destructive" ? "destructive: 1 real call against a seeded disposable target" : `${kind} (seeded success path)`,
             });
         };
@@ -4226,7 +4943,16 @@ async function runLiveNativeServiceE2E(project, uuidProject, tenantId, projectId
                     // names point to the same RPC function, otherwise the perf count doubles.
                     if (!methodName.includes("_") && Object.entries(api).some(([otherName, otherFn]) => otherName.includes("_") && otherFn === fn))
                         continue;
-                    const unit = { serviceName, api, methodName, fn: fn };
+                    const selectedApi = requiresPlatformBenchmarkIdentity(serviceName, methodName)
+                        ? (serviceName === "DataBroker" ? platformProject.generated : platformAuthGenerated)[serviceName]
+                        : api;
+                    if (!selectedApi)
+                        throw new Error(`platform benchmark surface is missing ${serviceName}`);
+                    const selectedFn = selectedApi[methodName];
+                    if (typeof selectedFn !== "function") {
+                        throw new Error(`platform benchmark surface is missing ${serviceName}/${methodName}`);
+                    }
+                    const unit = { serviceName, api: selectedApi, methodName, fn: selectedFn };
                     const unitKey = `${serviceName}/${methodName}`;
                     if (TERMINAL_DESTRUCTIVE.has(unitKey))
                         terminalDestructive.push(unit);
@@ -4246,7 +4972,15 @@ async function runLiveNativeServiceE2E(project, uuidProject, tenantId, projectId
         // that same entity earlier in the run (Go orderRPCsByAuthPhase). Stable sort.
         const okRank = { read_only: 0, mutation: 1, destructive: 2 };
         const rankOf = (u) => okRank[operationKindOf(u.api.serviceFull, u.methodName) ?? "read_only"] ?? 0;
-        phase2 = phase2.map((u, i) => [u, i]).sort((a, b) => (rankOf(a[0]) - rankOf(b[0])) || (a[1] - b[1])).map(([u]) => u);
+        const catalogLifecycleRank = { stage_catalog: 0, activate_catalog: 1, rollback_catalog: 2 };
+        const catalogRankOf = (u) => u.serviceName === "DataBroker" ? (catalogLifecycleRank[u.methodName] ?? 3) : 3;
+        phase2 = phase2.map((u, i) => [u, i]).sort((a, b) => (rankOf(a[0]) - rankOf(b[0])) ||
+            (catalogRankOf(a[0]) - catalogRankOf(b[0])) ||
+            (a[1] - b[1])).map(([u]) => u);
+        // Tenant-wide revocation intentionally invalidates the benchmark session.
+        // Run it after every disposable-principal teardown, then log in once more
+        // before the final self-PurgeTenant.
+        phase3.sort((a, b) => Number(a.methodName === "admin_revoke_all_tenant_sessions") - Number(b.methodName === "admin_revoke_all_tenant_sessions"));
         // Phase 1: establish/validate the session FIRST (the seed phase already ran above
         // and captured the session/token fixtures these RPCs consume).
         for (const u of phase1)
@@ -4259,11 +4993,17 @@ async function runLiveNativeServiceE2E(project, uuidProject, tenantId, projectId
         // authn state, so no later measurement may depend on that principal.
         for (const u of phase3)
             await measureRpc(u.serviceName, u.api, u.methodName, u.fn);
-        // Terminal destructive RPCs can invalidate broad tenant state. Keep them
-        // after Authn teardown, using the same verified tenant-scoped credential as
-        // the other SDK harnesses instead of performing another login after
-        // tenant-wide session revocation has run.
+        // Terminal destructive RPCs can invalidate broad tenant state. The preceding
+        // tenant-wide session revoke invalidated the old bearer by design, so acquire
+        // a new verified session before measuring the final self-purge.
         if (terminalDestructive.length > 0) {
+            await project.login({
+                username,
+                password,
+                tenant_hint: tenantId,
+                project_hint: projectId,
+                device_name: "ts-sdk-perf-final-purge",
+            });
             tenantId = fixtures.lookup("purge_tenant_id") || tenantId;
             project.setTenant(tenantId);
         }
@@ -4293,8 +5033,8 @@ async function runLiveNativeServiceE2E(project, uuidProject, tenantId, projectId
                 + "validate_token → introspect_token → get_jwks), then the seed phase; Phase 2 measures everything "
                 + "else; Phase 3 LAST runs the session/credential-teardown AuthnService RPCs (logout, revoke_*, "
                 + "change/reset password, admin_reset_mfa, disable_mfa_factor, …) against the seeded DISPOSABLE "
-                + "user/session so the admin's own session is never killed mid-run. The final terminal destructive "
-                + "tenant purge uses the verified tenant-scoped benchmark credential, matching the other SDK harnesses.", "",
+                + "user/session. Tenant-wide revocation runs last in that phase; the harness then logs in again so "
+                + "the final terminal tenant purge measures the handler rather than a stale-bearer rejection.", "",
             "## Seeded fixtures", "",
             `Captured semantic field → seeded value keys used to resolve request fields: ${fkeys.join(", ")}`, "",
             "## Per-service mean latency", "", "| Service | RPCs | mean ms |", "|---|--:|--:|"];
@@ -4326,13 +5066,13 @@ async function runLiveNativeServiceE2E(project, uuidProject, tenantId, projectId
                 lines.push(`| ${s.service}/${s.rpc} | ${s.apiAlias} | ${s.operationId} | ${s.kind} | ${s.note} |`);
             }
         }
-        lines.push("", "## Slowest 20 by p99", "", "| RPC | api_alias | operation_id | kind | err | p50 ms | p99 ms | mean ms | note |", "|---|---|---|---|---|--:|--:|--:|---|");
+        lines.push("", "## Slowest 20 by p99", "", "| RPC | api_alias | operation_id | kind | err | p50 ms | p99 ms | mean ms | iters | note |", "|---|---|---|---|---|--:|--:|--:|--:|---|");
         for (const s of [...samples].sort((a, b) => b.p99 - a.p99).slice(0, 20)) {
-            lines.push(`| ${s.service}/${s.rpc} | ${s.apiAlias} | ${s.operationId} | ${s.kind} | ${s.err} | ${s.p50.toFixed(2)} | ${s.p99.toFixed(2)} | ${s.mean.toFixed(2)} | ${s.note} |`);
+            lines.push(`| ${s.service}/${s.rpc} | ${s.apiAlias} | ${s.operationId} | ${s.kind} | ${s.err} | ${s.p50.toFixed(2)} | ${s.p99.toFixed(2)} | ${s.mean.toFixed(2)} | ${s.iters} | ${s.note} |`);
         }
-        lines.push("", "## Full per-RPC table (sorted by service, then RPC)", "", "| Service | RPC | api_alias | operation_id | kind | err | p50 ms | p99 ms | mean ms | note |", "|---|---|---|---|---|---|--:|--:|--:|---|");
+        lines.push("", "## Full per-RPC table (sorted by service, then RPC)", "", "| Service | RPC | api_alias | operation_id | kind | err | p50 ms | p99 ms | mean ms | iters | note |", "|---|---|---|---|---|---|--:|--:|--:|--:|---|");
         for (const s of [...samples].sort((a, b) => (a.service === b.service ? a.rpc.localeCompare(b.rpc) : a.service.localeCompare(b.service)))) {
-            lines.push(`| ${s.service} | ${s.rpc} | ${s.apiAlias} | ${s.operationId} | ${s.kind} | ${s.err} | ${s.p50.toFixed(2)} | ${s.p99.toFixed(2)} | ${s.mean.toFixed(2)} | ${s.note} |`);
+            lines.push(`| ${s.service} | ${s.rpc} | ${s.apiAlias} | ${s.operationId} | ${s.kind} | ${s.err} | ${s.p50.toFixed(2)} | ${s.p99.toFixed(2)} | ${s.mean.toFixed(2)} | ${s.iters} | ${s.note} |`);
         }
         (0, node_fs_1.writeFileSync)("perf_report_ts.md", lines.join("\n") + "\n");
         const expectedPerfCount = Object.keys(generatedClient_1.RPC_OPERATION_KIND).length;
@@ -4342,6 +5082,7 @@ async function runLiveNativeServiceE2E(project, uuidProject, tenantId, projectId
     }
     finally {
         project.close();
+        platformProject.close();
     }
 });
 // ── Scenario perf (gated on UDB_SCENARIO_PERF=1, SEPARATE from the full sweep) ──

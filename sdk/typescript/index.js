@@ -21,6 +21,7 @@ __exportStar(require("./auth"), exports);
 __exportStar(require("./negotiation"), exports);
 __exportStar(require("./generatedClient"), exports);
 __exportStar(require("./project"), exports);
+__exportStar(require("./stores"), exports);
 __exportStar(require("./adapters"), exports);
 var protoRoot_1 = require("./protoRoot");
 Object.defineProperty(exports, "defaultProtoRoot", { enumerable: true, get: function () { return protoRoot_1.defaultProtoRoot; } });
@@ -28,3 +29,14 @@ Object.defineProperty(exports, "defaultProtoRoot", { enumerable: true, get: func
 // → Struct on send); `structToObject` is the inverse for reading Struct responses.
 var wkt_1 = require("./wkt");
 Object.defineProperty(exports, "structToObject", { enumerable: true, get: function () { return wkt_1.structToObject; } });
+// Typed snake_case request/response interfaces for the common-RPC subset (§8B).
+__exportStar(require("./messages"), exports);
+// Typed WriteReceipt / ReadFence read-after-write consistency helpers.
+__exportStar(require("./consistency"), exports);
+// Stream send-one / await-first helpers for client-streaming and bidi RPCs.
+__exportStar(require("./stream"), exports);
+// Bound entity / table helper over the DataBroker Upsert/Select/Delete RPCs.
+__exportStar(require("./entity"), exports);
+// End-to-end encrypted messaging (MLS) over the MessagingService; the WebAssembly
+// core is loaded lazily, so importing the SDK never requires it.
+__exportStar(require("./messaging"), exports);

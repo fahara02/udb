@@ -51,8 +51,17 @@ exports.structToObject = structToObject;
 // the first `protoLoader.loadSync(...)`; every SDK module that loads protos does
 // so via a top-of-file `import "./wkt"`.
 const protobuf = __importStar(require("protobufjs"));
+// Only wire objects produced here bypass normalization. A user's literal
+// `fields` key is ordinary JSON data, so its shape cannot identify a wire Struct.
+const normalizedStructs = new WeakSet();
+function checkDepth(depth) {
+    const limit = protobuf.util.recursionLimit;
+    if (depth > limit)
+        throw new Error("maximum nesting depth exceeded");
+}
 /** Recursively convert a JS value to a google.protobuf.Value (camelCase oneof). */
-function jsToValue(v) {
+function jsToValue(v, depth) {
+    checkDepth(depth);
     if (v === null || v === undefined)
         return { nullValue: 0 };
     switch (typeof v) {
@@ -63,43 +72,67 @@ function jsToValue(v) {
         case "boolean":
             return { boolValue: v };
     }
-    if (Array.isArray(v))
-        return { listValue: { values: v.map(jsToValue) } };
+    if (Array.isArray(v)) {
+        checkDepth(depth + 1); // ListValue adds one message before each nested Value.
+        return { listValue: { values: v.map((value) => jsToValue(value, depth + 2)) } };
+    }
     if (typeof v === "object")
-        return { structValue: jsToStruct(v) };
+        return { structValue: jsToStruct(v, depth + 1) };
     return { nullValue: 0 };
 }
 /** Convert a plain JS object to the explicit google.protobuf.Struct wire shape. */
-function jsToStruct(o) {
-    const fields = {};
+function jsToStruct(o, depth) {
+    checkDepth(depth);
+    const fields = Object.create(null);
     for (const [k, val] of Object.entries(o ?? {}))
-        fields[k] = jsToValue(val);
-    return { fields };
+        fields[k] = jsToValue(val, depth + 1);
+    const wire = { fields };
+    normalizedStructs.add(wire);
+    return wire;
 }
 const wrappers = protobuf.wrappers;
 // Idempotent: only install once even if several modules import this.
 if (!wrappers[".google.protobuf.Struct"]?.__udb) {
     wrappers[".google.protobuf.Struct"] = {
         __udb: true,
-        // `this.fromObject` is the ORIGINAL (protobufjs binds it), so we normalize a
-        // plain JS object into the explicit {fields:{k:{<value>}}} form and hand it
-        // back to the real decoder — no recursion.
-        fromObject(object) {
-            return this.fromObject(jsToStruct(object));
+        // protobufjs binds the original converter here, but that converter calls
+        // wrapped Type.fromObject again for nested Structs. Preserve our normalized
+        // objects and genuine message instances instead of wrapping `fields` again.
+        fromObject(object, depth = 0) {
+            const structMessage = object instanceof protobuf.Message
+                && object.$type?.fullName === ".google.protobuf.Struct";
+            if (object instanceof this.ctor || normalizedStructs.has(object)) {
+                return this.fromObject(object, depth);
+            }
+            if (structMessage) {
+                // A foreign constructor's Value prototypes expose inactive oneof
+                // defaults. Passing them to this converter would install false/0/""
+                // as real fields. Decode its active members before target conversion.
+                return this.fromObject(jsToStruct(structWireToObject(object, depth), depth), depth);
+            }
+            return this.fromObject(jsToStruct(object, depth), depth);
         },
-        toObject(message, options) {
-            return this.toObject(message, options);
+        toObject(message, options, depth) {
+            return this.toObject(message, options, depth);
         },
     };
 }
 /** Read a google.protobuf.Struct response (explicit wire shape) into plain JS. */
 function structToObject(struct) {
+    return structWireToObject(struct, 0);
+}
+function structWireToObject(struct, depth) {
+    checkDepth(depth);
     const out = {};
-    for (const [k, v] of Object.entries(struct?.fields ?? {}))
-        out[k] = valueToJs(v);
+    for (const [k, v] of Object.entries(struct?.fields ?? {})) {
+        Object.defineProperty(out, k, {
+            value: valueToJs(v, depth + 1), enumerable: true, configurable: true, writable: true,
+        });
+    }
     return out;
 }
-function valueToJs(v) {
+function valueToJs(v, depth) {
+    checkDepth(depth);
     if (v == null)
         return undefined;
     switch (v.kind) {
@@ -112,21 +145,27 @@ function valueToJs(v) {
         case "boolValue":
             return v.boolValue;
         case "structValue":
-            return structToObject(v.structValue);
+            return structWireToObject(v.structValue, depth + 1);
         case "listValue":
-            return (v.listValue?.values ?? []).map(valueToJs);
+            checkDepth(depth + 1);
+            return (v.listValue?.values ?? []).map((value) => valueToJs(value, depth + 2));
     }
-    if (v.stringValue !== undefined)
+    // Plain wire responses need not carry the oneof discriminator. Inherited
+    // protobuf defaults are never evidence that a member is actually present.
+    const owns = (field) => Object.prototype.hasOwnProperty.call(v, field);
+    if (owns("stringValue") && v.stringValue !== undefined)
         return v.stringValue;
-    if (v.numberValue !== undefined)
+    if (owns("numberValue") && v.numberValue !== undefined)
         return v.numberValue;
-    if (v.boolValue !== undefined)
+    if (owns("boolValue") && v.boolValue !== undefined)
         return v.boolValue;
-    if (v.structValue !== undefined)
-        return structToObject(v.structValue);
-    if (v.listValue !== undefined)
-        return (v.listValue.values ?? []).map(valueToJs);
-    if (v.nullValue !== undefined)
+    if (owns("structValue") && v.structValue != null)
+        return structWireToObject(v.structValue, depth + 1);
+    if (owns("listValue") && v.listValue != null) {
+        checkDepth(depth + 1);
+        return (v.listValue.values ?? []).map((value) => valueToJs(value, depth + 2));
+    }
+    if (owns("nullValue") && v.nullValue !== undefined)
         return null;
     return undefined;
 }

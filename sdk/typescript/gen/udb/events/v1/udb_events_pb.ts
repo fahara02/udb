@@ -12,7 +12,7 @@ import type { JsonObject, Message } from "@bufbuild/protobuf";
  * Describes the file udb/events/v1/udb_events.proto.
  */
 export const file_udb_events_v1_udb_events: GenFile = /*@__PURE__*/
-  fileDesc("Ch51ZGIvZXZlbnRzL3YxL3VkYl9ldmVudHMucHJvdG8SDXVkYi5ldmVudHMudjEijQEKC0NEQ0VudmVsb3BlEhAKCGV2ZW50X2lkGAEgASgJEg0KBXRvcGljGAIgASgJEhUKDXBhcnRpdGlvbl9rZXkYAyABKAkSFAoMcGF5bG9hZF9qc29uGAQgASgJEjAKDHB1Ymxpc2hlZF9hdBgFIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXAizwEKDUV2ZW50RW52ZWxvcGUSEAoIZXZlbnRfaWQYASABKAkSEgoKZXZlbnRfdHlwZRgCIAEoCRItCgl0aW1lc3RhbXAYAyABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEhYKDmNvcnJlbGF0aW9uX2lkGAQgASgJEhMKC2RvY3VtZW50X2lkGAUgASgJEhIKCnNjaGVtYV91cmkYBiABKAkSKAoHcGF5bG9hZBgHIAEoCzIXLmdvb2dsZS5wcm90b2J1Zi5TdHJ1Y3QixQEKEkRyaWZ0RGV0ZWN0ZWRFdmVudBIQCghldmVudF9pZBgBIAEoCRIeChZzY2hlbWFfY2hlY2tzdW1fc2hhMjU2GAIgASgJEh8KF2Jsb2NrZWRfb3BlcmF0aW9uX2NvdW50GAMgASgFEhMKC3JlcG9ydF9qc29uGAQgASgJEhYKDmNvcnJlbGF0aW9uX2lkGAUgASgJEi8KC29jY3VycmVkX2F0GAYgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcCK4AQoaUHJvdmlzaW9uaW5nQ29tcGxldGVkRXZlbnQSEAoIZXZlbnRfaWQYASABKAkSHgoWc2NoZW1hX2NoZWNrc3VtX3NoYTI1NhgCIAEoCRIfChdhcHBsaWVkX29wZXJhdGlvbl9jb3VudBgDIAEoBRIWCg5jb3JyZWxhdGlvbl9pZBgEIAEoCRIvCgtvY2N1cnJlZF9hdBgFIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBCtAEKEWNvbS51ZGIuZXZlbnRzLnYxQg5VZGJFdmVudHNQcm90b1ABWjlnaXRodWIuY29tL2ZhaGFyYTAyL3VkYi9zZGsvZ28vZ2VuL3VkYi9ldmVudHMvdjE7ZXZlbnRzdjGiAgNVRViqAg1VZGIuRXZlbnRzLlYxygINVWRiXEV2ZW50c1xWMeICGVVkYlxHUEJNZXRhZGF0YVxFdmVudHNcVjHqAg9VZGI6OkV2ZW50czo6VjFiBnByb3RvMw", [file_google_protobuf_struct, file_google_protobuf_timestamp]);
+  fileDesc("Ch51ZGIvZXZlbnRzL3YxL3VkYl9ldmVudHMucHJvdG8SDXVkYi5ldmVudHMudjEivgEKC0NEQ0VudmVsb3BlEhAKCGV2ZW50X2lkGAEgASgJEg0KBXRvcGljGAIgASgJEhUKDXBhcnRpdGlvbl9rZXkYAyABKAkSFAoMcGF5bG9hZF9qc29uGAQgASgJEjAKDHB1Ymxpc2hlZF9hdBgFIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASFQoNcHJvZ3Jlc3Nfb25seRgGIAEoCBIYChBqb3VybmFsX3Bvc2l0aW9uGAcgASgDIs8BCg1FdmVudEVudmVsb3BlEhAKCGV2ZW50X2lkGAEgASgJEhIKCmV2ZW50X3R5cGUYAiABKAkSLQoJdGltZXN0YW1wGAMgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIWCg5jb3JyZWxhdGlvbl9pZBgEIAEoCRITCgtkb2N1bWVudF9pZBgFIAEoCRISCgpzY2hlbWFfdXJpGAYgASgJEigKB3BheWxvYWQYByABKAsyFy5nb29nbGUucHJvdG9idWYuU3RydWN0IsUBChJEcmlmdERldGVjdGVkRXZlbnQSEAoIZXZlbnRfaWQYASABKAkSHgoWc2NoZW1hX2NoZWNrc3VtX3NoYTI1NhgCIAEoCRIfChdibG9ja2VkX29wZXJhdGlvbl9jb3VudBgDIAEoBRITCgtyZXBvcnRfanNvbhgEIAEoCRIWCg5jb3JyZWxhdGlvbl9pZBgFIAEoCRIvCgtvY2N1cnJlZF9hdBgGIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXAiuAEKGlByb3Zpc2lvbmluZ0NvbXBsZXRlZEV2ZW50EhAKCGV2ZW50X2lkGAEgASgJEh4KFnNjaGVtYV9jaGVja3N1bV9zaGEyNTYYAiABKAkSHwoXYXBwbGllZF9vcGVyYXRpb25fY291bnQYAyABKAUSFgoOY29ycmVsYXRpb25faWQYBCABKAkSLwoLb2NjdXJyZWRfYXQYBSABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wQrQBChFjb20udWRiLmV2ZW50cy52MUIOVWRiRXZlbnRzUHJvdG9QAVo5Z2l0aHViLmNvbS9mYWhhcmEwMi91ZGIvc2RrL2dvL2dlbi91ZGIvZXZlbnRzL3YxO2V2ZW50c3YxogIDVUVYqgINVWRiLkV2ZW50cy5WMcoCDVVkYlxFdmVudHNcVjHiAhlVZGJcR1BCTWV0YWRhdGFcRXZlbnRzXFYx6gIPVWRiOjpFdmVudHM6OlYxYgZwcm90bzM", [file_google_protobuf_struct, file_google_protobuf_timestamp]);
 
 /**
  * Kafka topic: udb.cdc.envelope.v1
@@ -44,6 +44,31 @@ export type CDCEnvelope = Message<"udb.events.v1.CDCEnvelope"> & {
    * @generated from field: google.protobuf.Timestamp published_at = 5;
    */
   publishedAt?: Timestamp | undefined;
+
+  /**
+   * True for a progress marker, which is not an event. Markers are sent only
+   * when CDCSubscriptionRequest.progress_markers is set. A marker says the
+   * stream has read every committed journal row up to journal_position, so a
+   * consumer whose topic is quiet still sees its position advance. Its fields:
+   * event_id is a progress token (a version-8 UUID whose first six bytes are
+   * "udbpro" and whose last eight carry the position); topic is the reserved
+   * "udb.cdc.progress.v1"; partition_key is empty; payload_json is
+   * {"kind":"progress","journal_position":"<position>","caught_up":<bool>}.
+   * Do not pass a marker to event handlers. A durable consumer acknowledges it
+   * with AckCdcEvents (event_id = the token) once every earlier event is
+   * acknowledged; the token is also accepted as since_event_id.
+   *
+   * @generated from field: bool progress_only = 6;
+   */
+  progressOnly: boolean;
+
+  /**
+   * Committed journal position of this event, or for a marker the position
+   * read through. Positions increase in commit order and are never reused.
+   *
+   * @generated from field: int64 journal_position = 7;
+   */
+  journalPosition: bigint;
 };
 
 /**

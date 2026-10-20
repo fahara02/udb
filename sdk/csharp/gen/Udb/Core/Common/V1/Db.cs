@@ -11508,8 +11508,7 @@ namespace Udb.Core.Common.V1 {
     private string edgeSourceField_ = "";
     /// <summary>
     /// Graph edge projections: the source/target fields of the edge row and the
-    /// node labels they point at. Same as options["edge_source_field"] etc.; the
-    /// older "from_label"/"to_label" keys are deprecated aliases.
+    /// node labels they point at. Same as options["edge_source_field"] etc.
     /// </summary>
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]

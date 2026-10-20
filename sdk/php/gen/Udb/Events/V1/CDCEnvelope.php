@@ -36,6 +36,29 @@ class CDCEnvelope extends \Google\Protobuf\Internal\Message
      * Generated from protobuf field <code>.google.protobuf.Timestamp published_at = 5 [json_name = "publishedAt"];</code>
      */
     protected $published_at = null;
+    /**
+     * True for a progress marker, which is not an event. Markers are sent only
+     * when CDCSubscriptionRequest.progress_markers is set. A marker says the
+     * stream has read every committed journal row up to journal_position, so a
+     * consumer whose topic is quiet still sees its position advance. Its fields:
+     * event_id is a progress token (a version-8 UUID whose first six bytes are
+     * "udbpro" and whose last eight carry the position); topic is the reserved
+     * "udb.cdc.progress.v1"; partition_key is empty; payload_json is
+     * {"kind":"progress","journal_position":"<position>","caught_up":<bool>}.
+     * Do not pass a marker to event handlers. A durable consumer acknowledges it
+     * with AckCdcEvents (event_id = the token) once every earlier event is
+     * acknowledged; the token is also accepted as since_event_id.
+     *
+     * Generated from protobuf field <code>bool progress_only = 6 [json_name = "progressOnly"];</code>
+     */
+    protected $progress_only = false;
+    /**
+     * Committed journal position of this event, or for a marker the position
+     * read through. Positions increase in commit order and are never reused.
+     *
+     * Generated from protobuf field <code>int64 journal_position = 7 [json_name = "journalPosition"];</code>
+     */
+    protected $journal_position = 0;
 
     /**
      * Constructor.
@@ -48,6 +71,21 @@ class CDCEnvelope extends \Google\Protobuf\Internal\Message
      *     @type string $partition_key
      *     @type string $payload_json
      *     @type \Google\Protobuf\Timestamp $published_at
+     *     @type bool $progress_only
+     *           True for a progress marker, which is not an event. Markers are sent only
+     *           when CDCSubscriptionRequest.progress_markers is set. A marker says the
+     *           stream has read every committed journal row up to journal_position, so a
+     *           consumer whose topic is quiet still sees its position advance. Its fields:
+     *           event_id is a progress token (a version-8 UUID whose first six bytes are
+     *           "udbpro" and whose last eight carry the position); topic is the reserved
+     *           "udb.cdc.progress.v1"; partition_key is empty; payload_json is
+     *           {"kind":"progress","journal_position":"<position>","caught_up":<bool>}.
+     *           Do not pass a marker to event handlers. A durable consumer acknowledges it
+     *           with AckCdcEvents (event_id = the token) once every earlier event is
+     *           acknowledged; the token is also accepted as since_event_id.
+     *     @type int|string $journal_position
+     *           Committed journal position of this event, or for a marker the position
+     *           read through. Positions increase in commit order and are never reused.
      * }
      */
     public function __construct($data = NULL) {
@@ -171,6 +209,80 @@ class CDCEnvelope extends \Google\Protobuf\Internal\Message
     {
         GPBUtil::checkMessage($var, \Google\Protobuf\Timestamp::class);
         $this->published_at = $var;
+
+        return $this;
+    }
+
+    /**
+     * True for a progress marker, which is not an event. Markers are sent only
+     * when CDCSubscriptionRequest.progress_markers is set. A marker says the
+     * stream has read every committed journal row up to journal_position, so a
+     * consumer whose topic is quiet still sees its position advance. Its fields:
+     * event_id is a progress token (a version-8 UUID whose first six bytes are
+     * "udbpro" and whose last eight carry the position); topic is the reserved
+     * "udb.cdc.progress.v1"; partition_key is empty; payload_json is
+     * {"kind":"progress","journal_position":"<position>","caught_up":<bool>}.
+     * Do not pass a marker to event handlers. A durable consumer acknowledges it
+     * with AckCdcEvents (event_id = the token) once every earlier event is
+     * acknowledged; the token is also accepted as since_event_id.
+     *
+     * Generated from protobuf field <code>bool progress_only = 6 [json_name = "progressOnly"];</code>
+     * @return bool
+     */
+    public function getProgressOnly()
+    {
+        return $this->progress_only;
+    }
+
+    /**
+     * True for a progress marker, which is not an event. Markers are sent only
+     * when CDCSubscriptionRequest.progress_markers is set. A marker says the
+     * stream has read every committed journal row up to journal_position, so a
+     * consumer whose topic is quiet still sees its position advance. Its fields:
+     * event_id is a progress token (a version-8 UUID whose first six bytes are
+     * "udbpro" and whose last eight carry the position); topic is the reserved
+     * "udb.cdc.progress.v1"; partition_key is empty; payload_json is
+     * {"kind":"progress","journal_position":"<position>","caught_up":<bool>}.
+     * Do not pass a marker to event handlers. A durable consumer acknowledges it
+     * with AckCdcEvents (event_id = the token) once every earlier event is
+     * acknowledged; the token is also accepted as since_event_id.
+     *
+     * Generated from protobuf field <code>bool progress_only = 6 [json_name = "progressOnly"];</code>
+     * @param bool $var
+     * @return $this
+     */
+    public function setProgressOnly($var)
+    {
+        GPBUtil::checkBool($var);
+        $this->progress_only = $var;
+
+        return $this;
+    }
+
+    /**
+     * Committed journal position of this event, or for a marker the position
+     * read through. Positions increase in commit order and are never reused.
+     *
+     * Generated from protobuf field <code>int64 journal_position = 7 [json_name = "journalPosition"];</code>
+     * @return int|string
+     */
+    public function getJournalPosition()
+    {
+        return $this->journal_position;
+    }
+
+    /**
+     * Committed journal position of this event, or for a marker the position
+     * read through. Positions increase in commit order and are never reused.
+     *
+     * Generated from protobuf field <code>int64 journal_position = 7 [json_name = "journalPosition"];</code>
+     * @param int|string $var
+     * @return $this
+     */
+    public function setJournalPosition($var)
+    {
+        GPBUtil::checkInt64($var);
+        $this->journal_position = $var;
 
         return $this;
     }

@@ -25,52 +25,57 @@ namespace Udb.Entity.V1 {
       byte[] descriptorData = global::System.Convert.FromBase64String(
           string.Concat(
             "Chd1ZGIvZW50aXR5L3YxL2NkYy5wcm90bxINdWRiLmVudGl0eS52MRobdWRi",
-            "L2VudGl0eS92MS9jb250ZXh0LnByb3RvIsEBChZDRENTdWJzY3JpcHRpb25S",
+            "L2VudGl0eS92MS9jb250ZXh0LnByb3RvIqMCChZDRENTdWJzY3JpcHRpb25S",
             "ZXF1ZXN0EjcKB2NvbnRleHQYASABKAsyHS51ZGIuZW50aXR5LnYxLlJlcXVl",
             "c3RDb250ZXh0Ugdjb250ZXh0EiMKDXRvcGljX3BhdHRlcm4YAiABKAlSDHRv",
             "cGljUGF0dGVybhIkCg5zaW5jZV9ldmVudF9pZBgDIAEoCVIMc2luY2VFdmVu",
-            "dElkEiMKDWNvbnN1bWVyX25hbWUYBCABKAlSDGNvbnN1bWVyTmFtZSKzAQoT",
-            "QWNrQ2RjRXZlbnRzUmVxdWVzdBI3Cgdjb250ZXh0GAEgASgLMh0udWRiLmVu",
-            "dGl0eS52MS5SZXF1ZXN0Q29udGV4dFIHY29udGV4dBIjCg1jb25zdW1lcl9u",
-            "YW1lGAIgASgJUgxjb25zdW1lck5hbWUSIwoNdG9waWNfcGF0dGVybhgDIAEo",
-            "CVIMdG9waWNQYXR0ZXJuEhkKCGV2ZW50X2lkGAQgASgJUgdldmVudElkIp8B",
-            "ChRBY2tDZGNFdmVudHNSZXNwb25zZRIjCg1jb25zdW1lcl9uYW1lGAEgASgJ",
-            "Ugxjb25zdW1lck5hbWUSIwoNdG9waWNfcGF0dGVybhgCIAEoCVIMdG9waWNQ",
-            "YXR0ZXJuEhkKCGV2ZW50X2lkGAMgASgJUgdldmVudElkEiIKDWFja2VkX2F0",
-            "X3VuaXgYBCABKANSC2Fja2VkQXRVbml4IvcBChROYWNrQ2RjRXZlbnRzUmVx",
-            "dWVzdBI3Cgdjb250ZXh0GAEgASgLMh0udWRiLmVudGl0eS52MS5SZXF1ZXN0",
-            "Q29udGV4dFIHY29udGV4dBIjCg1jb25zdW1lcl9uYW1lGAIgASgJUgxjb25z",
-            "dW1lck5hbWUSIwoNdG9waWNfcGF0dGVybhgDIAEoCVIMdG9waWNQYXR0ZXJu",
-            "EhkKCGV2ZW50X2lkGAQgASgJUgdldmVudElkEhoKCGF0dGVtcHRzGAUgASgN",
-            "UghhdHRlbXB0cxIlCg5mYWlsdXJlX3JlYXNvbhgGIAEoCVINZmFpbHVyZVJl",
-            "YXNvbiKBAQoRQ2RjQ29udHJvbFJlcXVlc3QSNwoHY29udGV4dBgBIAEoCzId",
-            "LnVkYi5lbnRpdHkudjEuUmVxdWVzdENvbnRleHRSB2NvbnRleHQSGwoJc2xv",
-            "dF9uYW1lGAIgASgJUghzbG90TmFtZRIWCgZyZWFzb24YAyABKAlSBnJlYXNv",
-            "biLYAgoRQ2RjU3RhdHVzUmVzcG9uc2USGwoJc2xvdF9uYW1lGAEgASgJUghz",
-            "bG90TmFtZRIbCglpc19sZWFkZXIYAiABKAhSCGlzTGVhZGVyEhYKBnBhdXNl",
-            "ZBgDIAEoCFIGcGF1c2VkEiEKDHBhdXNlX3JlYXNvbhgEIAEoCVILcGF1c2VS",
-            "ZWFzb24SIgoNbGFzdF9ldmVudF9pZBgFIAEoCVILbGFzdEV2ZW50SWQSHwoL",
-            "bGFnX3NlY29uZHMYBiABKAFSCmxhZ1NlY29uZHMSIQoMb3V0Ym94X2RlcHRo",
-            "GAcgASgDUgtvdXRib3hEZXB0aBImCg91cGRhdGVkX2F0X3VuaXgYCCABKANS",
-            "DXVwZGF0ZWRBdFVuaXgSPgoJY29uc3VtZXJzGAkgAygLMiAudWRiLmVudGl0",
-            "eS52MS5DZGNDb25zdW1lclN0YXR1c1IJY29uc3VtZXJzIpgDChFDZGNDb25z",
-            "dW1lclN0YXR1cxIjCg1jb25zdW1lcl9uYW1lGAEgASgJUgxjb25zdW1lck5h",
-            "bWUSIwoNdG9waWNfcGF0dGVybhgCIAEoCVIMdG9waWNQYXR0ZXJuEiIKDWxh",
-            "c3RfZXZlbnRfaWQYAyABKAlSC2xhc3RFdmVudElkEh8KC2xhZ19zZWNvbmRz",
-            "GAQgASgBUgpsYWdTZWNvbmRzEiIKDWFja2VkX2F0X3VuaXgYBSABKANSC2Fj",
-            "a2VkQXRVbml4EjMKFmxhc3RfcHVibGlzaGVkX2F0X3VuaXgYBiABKANSE2xh",
-            "c3RQdWJsaXNoZWRBdFVuaXgSGwoJdGVuYW50X2lkGAcgASgJUgh0ZW5hbnRJ",
-            "ZBIdCgpwcm9qZWN0X2lkGAggASgJUglwcm9qZWN0SWQSJQoOb3duZXJfaWRl",
-            "bnRpdHkYCSABKAlSDW93bmVySWRlbnRpdHkSOAoYb3duZXJfbWlncmF0aW9u",
-            "X3JlcXVpcmVkGAogASgIUhZvd25lck1pZ3JhdGlvblJlcXVpcmVkQq4BChFj",
-            "b20udWRiLmVudGl0eS52MUIIQ2RjUHJvdG9QAVo5Z2l0aHViLmNvbS9mYWhh",
-            "cmEwMi91ZGIvc2RrL2dvL2dlbi91ZGIvZW50aXR5L3YxO2VudGl0eXYxogID",
-            "VUVYqgINVWRiLkVudGl0eS5WMcoCDVVkYlxFbnRpdHlcVjHiAhlVZGJcR1BC",
-            "TWV0YWRhdGFcRW50aXR5XFYx6gIPVWRiOjpFbnRpdHk6OlYxYgZwcm90bzM="));
+            "dElkEiMKDWNvbnN1bWVyX25hbWUYBCABKAlSDGNvbnN1bWVyTmFtZRIpChBw",
+            "cm9ncmVzc19tYXJrZXJzGAUgASgIUg9wcm9ncmVzc01hcmtlcnMSNQoFc3Rh",
+            "cnQYBiABKA4yHy51ZGIuZW50aXR5LnYxLkNkY0NvbnN1bWVyU3RhcnRSBXN0",
+            "YXJ0IrMBChNBY2tDZGNFdmVudHNSZXF1ZXN0EjcKB2NvbnRleHQYASABKAsy",
+            "HS51ZGIuZW50aXR5LnYxLlJlcXVlc3RDb250ZXh0Ugdjb250ZXh0EiMKDWNv",
+            "bnN1bWVyX25hbWUYAiABKAlSDGNvbnN1bWVyTmFtZRIjCg10b3BpY19wYXR0",
+            "ZXJuGAMgASgJUgx0b3BpY1BhdHRlcm4SGQoIZXZlbnRfaWQYBCABKAlSB2V2",
+            "ZW50SWQinwEKFEFja0NkY0V2ZW50c1Jlc3BvbnNlEiMKDWNvbnN1bWVyX25h",
+            "bWUYASABKAlSDGNvbnN1bWVyTmFtZRIjCg10b3BpY19wYXR0ZXJuGAIgASgJ",
+            "Ugx0b3BpY1BhdHRlcm4SGQoIZXZlbnRfaWQYAyABKAlSB2V2ZW50SWQSIgoN",
+            "YWNrZWRfYXRfdW5peBgEIAEoA1ILYWNrZWRBdFVuaXgi9wEKFE5hY2tDZGNF",
+            "dmVudHNSZXF1ZXN0EjcKB2NvbnRleHQYASABKAsyHS51ZGIuZW50aXR5LnYx",
+            "LlJlcXVlc3RDb250ZXh0Ugdjb250ZXh0EiMKDWNvbnN1bWVyX25hbWUYAiAB",
+            "KAlSDGNvbnN1bWVyTmFtZRIjCg10b3BpY19wYXR0ZXJuGAMgASgJUgx0b3Bp",
+            "Y1BhdHRlcm4SGQoIZXZlbnRfaWQYBCABKAlSB2V2ZW50SWQSGgoIYXR0ZW1w",
+            "dHMYBSABKA1SCGF0dGVtcHRzEiUKDmZhaWx1cmVfcmVhc29uGAYgASgJUg1m",
+            "YWlsdXJlUmVhc29uIoEBChFDZGNDb250cm9sUmVxdWVzdBI3Cgdjb250ZXh0",
+            "GAEgASgLMh0udWRiLmVudGl0eS52MS5SZXF1ZXN0Q29udGV4dFIHY29udGV4",
+            "dBIbCglzbG90X25hbWUYAiABKAlSCHNsb3ROYW1lEhYKBnJlYXNvbhgDIAEo",
+            "CVIGcmVhc29uItgCChFDZGNTdGF0dXNSZXNwb25zZRIbCglzbG90X25hbWUY",
+            "ASABKAlSCHNsb3ROYW1lEhsKCWlzX2xlYWRlchgCIAEoCFIIaXNMZWFkZXIS",
+            "FgoGcGF1c2VkGAMgASgIUgZwYXVzZWQSIQoMcGF1c2VfcmVhc29uGAQgASgJ",
+            "UgtwYXVzZVJlYXNvbhIiCg1sYXN0X2V2ZW50X2lkGAUgASgJUgtsYXN0RXZl",
+            "bnRJZBIfCgtsYWdfc2Vjb25kcxgGIAEoAVIKbGFnU2Vjb25kcxIhCgxvdXRi",
+            "b3hfZGVwdGgYByABKANSC291dGJveERlcHRoEiYKD3VwZGF0ZWRfYXRfdW5p",
+            "eBgIIAEoA1INdXBkYXRlZEF0VW5peBI+Cgljb25zdW1lcnMYCSADKAsyIC51",
+            "ZGIuZW50aXR5LnYxLkNkY0NvbnN1bWVyU3RhdHVzUgljb25zdW1lcnMimAMK",
+            "EUNkY0NvbnN1bWVyU3RhdHVzEiMKDWNvbnN1bWVyX25hbWUYASABKAlSDGNv",
+            "bnN1bWVyTmFtZRIjCg10b3BpY19wYXR0ZXJuGAIgASgJUgx0b3BpY1BhdHRl",
+            "cm4SIgoNbGFzdF9ldmVudF9pZBgDIAEoCVILbGFzdEV2ZW50SWQSHwoLbGFn",
+            "X3NlY29uZHMYBCABKAFSCmxhZ1NlY29uZHMSIgoNYWNrZWRfYXRfdW5peBgF",
+            "IAEoA1ILYWNrZWRBdFVuaXgSMwoWbGFzdF9wdWJsaXNoZWRfYXRfdW5peBgG",
+            "IAEoA1ITbGFzdFB1Ymxpc2hlZEF0VW5peBIbCgl0ZW5hbnRfaWQYByABKAlS",
+            "CHRlbmFudElkEh0KCnByb2plY3RfaWQYCCABKAlSCXByb2plY3RJZBIlCg5v",
+            "d25lcl9pZGVudGl0eRgJIAEoCVINb3duZXJJZGVudGl0eRI4Chhvd25lcl9t",
+            "aWdyYXRpb25fcmVxdWlyZWQYCiABKAhSFm93bmVyTWlncmF0aW9uUmVxdWly",
+            "ZWQqdgoQQ2RjQ29uc3VtZXJTdGFydBIiCh5DRENfQ09OU1VNRVJfU1RBUlRf",
+            "VU5TUEVDSUZJRUQQABIdChlDRENfQ09OU1VNRVJfU1RBUlRfTEFURVNUEAES",
+            "HwobQ0RDX0NPTlNVTUVSX1NUQVJUX0VBUkxJRVNUEAJCrgEKEWNvbS51ZGIu",
+            "ZW50aXR5LnYxQghDZGNQcm90b1ABWjlnaXRodWIuY29tL2ZhaGFyYTAyL3Vk",
+            "Yi9zZGsvZ28vZ2VuL3VkYi9lbnRpdHkvdjE7ZW50aXR5djGiAgNVRViqAg1V",
+            "ZGIuRW50aXR5LlYxygINVWRiXEVudGl0eVxWMeICGVVkYlxHUEJNZXRhZGF0",
+            "YVxFbnRpdHlcVjHqAg9VZGI6OkVudGl0eTo6VjFiBnByb3RvMw=="));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { global::Udb.Entity.V1.ContextReflection.Descriptor, },
-          new pbr::GeneratedClrTypeInfo(null, null, new pbr::GeneratedClrTypeInfo[] {
-            new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Entity.V1.CDCSubscriptionRequest), global::Udb.Entity.V1.CDCSubscriptionRequest.Parser, new[]{ "Context", "TopicPattern", "SinceEventId", "ConsumerName" }, null, null, null, null),
+          new pbr::GeneratedClrTypeInfo(new[] {typeof(global::Udb.Entity.V1.CdcConsumerStart), }, null, new pbr::GeneratedClrTypeInfo[] {
+            new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Entity.V1.CDCSubscriptionRequest), global::Udb.Entity.V1.CDCSubscriptionRequest.Parser, new[]{ "Context", "TopicPattern", "SinceEventId", "ConsumerName", "ProgressMarkers", "Start" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Entity.V1.AckCdcEventsRequest), global::Udb.Entity.V1.AckCdcEventsRequest.Parser, new[]{ "Context", "ConsumerName", "TopicPattern", "EventId" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Entity.V1.AckCdcEventsResponse), global::Udb.Entity.V1.AckCdcEventsResponse.Parser, new[]{ "ConsumerName", "TopicPattern", "EventId", "AckedAtUnix" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Entity.V1.NackCdcEventsRequest), global::Udb.Entity.V1.NackCdcEventsRequest.Parser, new[]{ "Context", "ConsumerName", "TopicPattern", "EventId", "Attempts", "FailureReason" }, null, null, null, null),
@@ -82,6 +87,28 @@ namespace Udb.Entity.V1 {
     #endregion
 
   }
+  #region Enums
+  /// <summary>
+  /// Where a durable consumer name starts the first time it subscribes.
+  /// </summary>
+  public enum CdcConsumerStart {
+    /// <summary>
+    /// Same as CDC_CONSUMER_START_LATEST.
+    /// </summary>
+    [pbr::OriginalName("CDC_CONSUMER_START_UNSPECIFIED")] Unspecified = 0,
+    /// <summary>
+    /// Start at the journal head: only events committed after the first
+    /// subscription are delivered.
+    /// </summary>
+    [pbr::OriginalName("CDC_CONSUMER_START_LATEST")] Latest = 1,
+    /// <summary>
+    /// Start before the earliest retained event and replay the retained history.
+    /// </summary>
+    [pbr::OriginalName("CDC_CONSUMER_START_EARLIEST")] Earliest = 2,
+  }
+
+  #endregion
+
   #region Messages
   [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
   public sealed partial class CDCSubscriptionRequest : pb::IMessage<CDCSubscriptionRequest>
@@ -122,6 +149,8 @@ namespace Udb.Entity.V1 {
       topicPattern_ = other.topicPattern_;
       sinceEventId_ = other.sinceEventId_;
       consumerName_ = other.consumerName_;
+      progressMarkers_ = other.progressMarkers_;
+      start_ = other.start_;
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
     }
 
@@ -158,6 +187,10 @@ namespace Udb.Entity.V1 {
     /// <summary>Field number for the "since_event_id" field.</summary>
     public const int SinceEventIdFieldNumber = 3;
     private string sinceEventId_ = "";
+    /// <summary>
+    /// Resume after this event: a retained event id, or a progress marker's
+    /// token (see CDCEnvelope.progress_only), which stays valid after retention.
+    /// </summary>
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public string SinceEventId {
@@ -175,7 +208,7 @@ namespace Udb.Entity.V1 {
     /// since_event_id is empty, the stream resumes after the last event this
     /// consumer acknowledged with AckCdcEvents for this topic_pattern, so a
     /// restarted (or reconnected) consumer resumes its acknowledged position.
-    /// A new name reads the retained backlog. Positions survive journal retention.
+    /// A new name starts where `start` says. Positions survive journal retention.
     /// Names are owned by the verified principal within its tenant and project;
     /// another principal cannot subscribe or acknowledge under the same name.
     /// </summary>
@@ -185,6 +218,41 @@ namespace Udb.Entity.V1 {
       get { return consumerName_; }
       set {
         consumerName_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "progress_markers" field.</summary>
+    public const int ProgressMarkersFieldNumber = 5;
+    private bool progressMarkers_;
+    /// <summary>
+    /// Interleave progress markers with events (CDCEnvelope.progress_only). Set
+    /// it only if the client recognizes markers and keeps them away from event
+    /// handlers. One marker follows the end of replay; later ones follow polls
+    /// that read past events this stream did not deliver, at most every few
+    /// seconds or every thousand journal positions.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool ProgressMarkers {
+      get { return progressMarkers_; }
+      set {
+        progressMarkers_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "start" field.</summary>
+    public const int StartFieldNumber = 6;
+    private global::Udb.Entity.V1.CdcConsumerStart start_ = global::Udb.Entity.V1.CdcConsumerStart.Unspecified;
+    /// <summary>
+    /// Where a consumer_name starts on its first subscription. Ignored once the
+    /// name has a stored position, and for anonymous streams.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public global::Udb.Entity.V1.CdcConsumerStart Start {
+      get { return start_; }
+      set {
+        start_ = value;
       }
     }
 
@@ -207,6 +275,8 @@ namespace Udb.Entity.V1 {
       if (TopicPattern != other.TopicPattern) return false;
       if (SinceEventId != other.SinceEventId) return false;
       if (ConsumerName != other.ConsumerName) return false;
+      if (ProgressMarkers != other.ProgressMarkers) return false;
+      if (Start != other.Start) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
 
@@ -218,6 +288,8 @@ namespace Udb.Entity.V1 {
       if (TopicPattern.Length != 0) hash ^= TopicPattern.GetHashCode();
       if (SinceEventId.Length != 0) hash ^= SinceEventId.GetHashCode();
       if (ConsumerName.Length != 0) hash ^= ConsumerName.GetHashCode();
+      if (ProgressMarkers != false) hash ^= ProgressMarkers.GetHashCode();
+      if (Start != global::Udb.Entity.V1.CdcConsumerStart.Unspecified) hash ^= Start.GetHashCode();
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
       }
@@ -252,6 +324,14 @@ namespace Udb.Entity.V1 {
         output.WriteRawTag(34);
         output.WriteString(ConsumerName);
       }
+      if (ProgressMarkers != false) {
+        output.WriteRawTag(40);
+        output.WriteBool(ProgressMarkers);
+      }
+      if (Start != global::Udb.Entity.V1.CdcConsumerStart.Unspecified) {
+        output.WriteRawTag(48);
+        output.WriteEnum((int) Start);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
       }
@@ -278,6 +358,14 @@ namespace Udb.Entity.V1 {
         output.WriteRawTag(34);
         output.WriteString(ConsumerName);
       }
+      if (ProgressMarkers != false) {
+        output.WriteRawTag(40);
+        output.WriteBool(ProgressMarkers);
+      }
+      if (Start != global::Udb.Entity.V1.CdcConsumerStart.Unspecified) {
+        output.WriteRawTag(48);
+        output.WriteEnum((int) Start);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(ref output);
       }
@@ -299,6 +387,12 @@ namespace Udb.Entity.V1 {
       }
       if (ConsumerName.Length != 0) {
         size += 1 + pb::CodedOutputStream.ComputeStringSize(ConsumerName);
+      }
+      if (ProgressMarkers != false) {
+        size += 1 + 1;
+      }
+      if (Start != global::Udb.Entity.V1.CdcConsumerStart.Unspecified) {
+        size += 1 + pb::CodedOutputStream.ComputeEnumSize((int) Start);
       }
       if (_unknownFields != null) {
         size += _unknownFields.CalculateSize();
@@ -326,6 +420,12 @@ namespace Udb.Entity.V1 {
       }
       if (other.ConsumerName.Length != 0) {
         ConsumerName = other.ConsumerName;
+      }
+      if (other.ProgressMarkers != false) {
+        ProgressMarkers = other.ProgressMarkers;
+      }
+      if (other.Start != global::Udb.Entity.V1.CdcConsumerStart.Unspecified) {
+        Start = other.Start;
       }
       _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
     }
@@ -365,6 +465,14 @@ namespace Udb.Entity.V1 {
             ConsumerName = input.ReadString();
             break;
           }
+          case 40: {
+            ProgressMarkers = input.ReadBool();
+            break;
+          }
+          case 48: {
+            Start = (global::Udb.Entity.V1.CdcConsumerStart) input.ReadEnum();
+            break;
+          }
         }
       }
     #endif
@@ -401,6 +509,14 @@ namespace Udb.Entity.V1 {
           }
           case 34: {
             ConsumerName = input.ReadString();
+            break;
+          }
+          case 40: {
+            ProgressMarkers = input.ReadBool();
+            break;
+          }
+          case 48: {
+            Start = (global::Udb.Entity.V1.CdcConsumerStart) input.ReadEnum();
             break;
           }
         }
@@ -510,7 +626,9 @@ namespace Udb.Entity.V1 {
     /// The last event the consumer has fully handled. The next subscription
     /// under this consumer name resumes after it. The event must be retained and
     /// match the caller's tenant/project and topic pattern. An older acknowledgment
-    /// succeeds without moving the stored cursor backward.
+    /// succeeds without moving the stored cursor backward. A progress marker's
+    /// token is also accepted: it moves the cursor to the marker's position.
+    /// NackCdcEvents refuses a token (InvalidArgument).
     /// </summary>
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]

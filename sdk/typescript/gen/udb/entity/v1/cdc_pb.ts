@@ -2,8 +2,8 @@
 // @generated from file udb/entity/v1/cdc.proto (package udb.entity.v1, syntax proto3)
 /* eslint-disable */
 
-import type { GenFile, GenMessage } from "@bufbuild/protobuf/codegenv2";
-import { fileDesc, messageDesc } from "@bufbuild/protobuf/codegenv2";
+import type { GenEnum, GenFile, GenMessage } from "@bufbuild/protobuf/codegenv2";
+import { enumDesc, fileDesc, messageDesc } from "@bufbuild/protobuf/codegenv2";
 import type { RequestContext } from "./context_pb";
 import { file_udb_entity_v1_context } from "./context_pb";
 import type { Message } from "@bufbuild/protobuf";
@@ -12,7 +12,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file udb/entity/v1/cdc.proto.
  */
 export const file_udb_entity_v1_cdc: GenFile = /*@__PURE__*/
-  fileDesc("Chd1ZGIvZW50aXR5L3YxL2NkYy5wcm90bxINdWRiLmVudGl0eS52MSKOAQoWQ0RDU3Vic2NyaXB0aW9uUmVxdWVzdBIuCgdjb250ZXh0GAEgASgLMh0udWRiLmVudGl0eS52MS5SZXF1ZXN0Q29udGV4dBIVCg10b3BpY19wYXR0ZXJuGAIgASgJEhYKDnNpbmNlX2V2ZW50X2lkGAMgASgJEhUKDWNvbnN1bWVyX25hbWUYBCABKAkihQEKE0Fja0NkY0V2ZW50c1JlcXVlc3QSLgoHY29udGV4dBgBIAEoCzIdLnVkYi5lbnRpdHkudjEuUmVxdWVzdENvbnRleHQSFQoNY29uc3VtZXJfbmFtZRgCIAEoCRIVCg10b3BpY19wYXR0ZXJuGAMgASgJEhAKCGV2ZW50X2lkGAQgASgJIm0KFEFja0NkY0V2ZW50c1Jlc3BvbnNlEhUKDWNvbnN1bWVyX25hbWUYASABKAkSFQoNdG9waWNfcGF0dGVybhgCIAEoCRIQCghldmVudF9pZBgDIAEoCRIVCg1hY2tlZF9hdF91bml4GAQgASgDIrABChROYWNrQ2RjRXZlbnRzUmVxdWVzdBIuCgdjb250ZXh0GAEgASgLMh0udWRiLmVudGl0eS52MS5SZXF1ZXN0Q29udGV4dBIVCg1jb25zdW1lcl9uYW1lGAIgASgJEhUKDXRvcGljX3BhdHRlcm4YAyABKAkSEAoIZXZlbnRfaWQYBCABKAkSEAoIYXR0ZW1wdHMYBSABKA0SFgoOZmFpbHVyZV9yZWFzb24YBiABKAkiZgoRQ2RjQ29udHJvbFJlcXVlc3QSLgoHY29udGV4dBgBIAEoCzIdLnVkYi5lbnRpdHkudjEuUmVxdWVzdENvbnRleHQSEQoJc2xvdF9uYW1lGAIgASgJEg4KBnJlYXNvbhgDIAEoCSLvAQoRQ2RjU3RhdHVzUmVzcG9uc2USEQoJc2xvdF9uYW1lGAEgASgJEhEKCWlzX2xlYWRlchgCIAEoCBIOCgZwYXVzZWQYAyABKAgSFAoMcGF1c2VfcmVhc29uGAQgASgJEhUKDWxhc3RfZXZlbnRfaWQYBSABKAkSEwoLbGFnX3NlY29uZHMYBiABKAESFAoMb3V0Ym94X2RlcHRoGAcgASgDEhcKD3VwZGF0ZWRfYXRfdW5peBgIIAEoAxIzCgljb25zdW1lcnMYCSADKAsyIC51ZGIuZW50aXR5LnYxLkNkY0NvbnN1bWVyU3RhdHVzIoUCChFDZGNDb25zdW1lclN0YXR1cxIVCg1jb25zdW1lcl9uYW1lGAEgASgJEhUKDXRvcGljX3BhdHRlcm4YAiABKAkSFQoNbGFzdF9ldmVudF9pZBgDIAEoCRITCgtsYWdfc2Vjb25kcxgEIAEoARIVCg1hY2tlZF9hdF91bml4GAUgASgDEh4KFmxhc3RfcHVibGlzaGVkX2F0X3VuaXgYBiABKAMSEQoJdGVuYW50X2lkGAcgASgJEhIKCnByb2plY3RfaWQYCCABKAkSFgoOb3duZXJfaWRlbnRpdHkYCSABKAkSIAoYb3duZXJfbWlncmF0aW9uX3JlcXVpcmVkGAogASgIQq4BChFjb20udWRiLmVudGl0eS52MUIIQ2RjUHJvdG9QAVo5Z2l0aHViLmNvbS9mYWhhcmEwMi91ZGIvc2RrL2dvL2dlbi91ZGIvZW50aXR5L3YxO2VudGl0eXYxogIDVUVYqgINVWRiLkVudGl0eS5WMcoCDVVkYlxFbnRpdHlcVjHiAhlVZGJcR1BCTWV0YWRhdGFcRW50aXR5XFYx6gIPVWRiOjpFbnRpdHk6OlYxYgZwcm90bzM", [file_udb_entity_v1_context]);
+  fileDesc("Chd1ZGIvZW50aXR5L3YxL2NkYy5wcm90bxINdWRiLmVudGl0eS52MSLYAQoWQ0RDU3Vic2NyaXB0aW9uUmVxdWVzdBIuCgdjb250ZXh0GAEgASgLMh0udWRiLmVudGl0eS52MS5SZXF1ZXN0Q29udGV4dBIVCg10b3BpY19wYXR0ZXJuGAIgASgJEhYKDnNpbmNlX2V2ZW50X2lkGAMgASgJEhUKDWNvbnN1bWVyX25hbWUYBCABKAkSGAoQcHJvZ3Jlc3NfbWFya2VycxgFIAEoCBIuCgVzdGFydBgGIAEoDjIfLnVkYi5lbnRpdHkudjEuQ2RjQ29uc3VtZXJTdGFydCKFAQoTQWNrQ2RjRXZlbnRzUmVxdWVzdBIuCgdjb250ZXh0GAEgASgLMh0udWRiLmVudGl0eS52MS5SZXF1ZXN0Q29udGV4dBIVCg1jb25zdW1lcl9uYW1lGAIgASgJEhUKDXRvcGljX3BhdHRlcm4YAyABKAkSEAoIZXZlbnRfaWQYBCABKAkibQoUQWNrQ2RjRXZlbnRzUmVzcG9uc2USFQoNY29uc3VtZXJfbmFtZRgBIAEoCRIVCg10b3BpY19wYXR0ZXJuGAIgASgJEhAKCGV2ZW50X2lkGAMgASgJEhUKDWFja2VkX2F0X3VuaXgYBCABKAMisAEKFE5hY2tDZGNFdmVudHNSZXF1ZXN0Ei4KB2NvbnRleHQYASABKAsyHS51ZGIuZW50aXR5LnYxLlJlcXVlc3RDb250ZXh0EhUKDWNvbnN1bWVyX25hbWUYAiABKAkSFQoNdG9waWNfcGF0dGVybhgDIAEoCRIQCghldmVudF9pZBgEIAEoCRIQCghhdHRlbXB0cxgFIAEoDRIWCg5mYWlsdXJlX3JlYXNvbhgGIAEoCSJmChFDZGNDb250cm9sUmVxdWVzdBIuCgdjb250ZXh0GAEgASgLMh0udWRiLmVudGl0eS52MS5SZXF1ZXN0Q29udGV4dBIRCglzbG90X25hbWUYAiABKAkSDgoGcmVhc29uGAMgASgJIu8BChFDZGNTdGF0dXNSZXNwb25zZRIRCglzbG90X25hbWUYASABKAkSEQoJaXNfbGVhZGVyGAIgASgIEg4KBnBhdXNlZBgDIAEoCBIUCgxwYXVzZV9yZWFzb24YBCABKAkSFQoNbGFzdF9ldmVudF9pZBgFIAEoCRITCgtsYWdfc2Vjb25kcxgGIAEoARIUCgxvdXRib3hfZGVwdGgYByABKAMSFwoPdXBkYXRlZF9hdF91bml4GAggASgDEjMKCWNvbnN1bWVycxgJIAMoCzIgLnVkYi5lbnRpdHkudjEuQ2RjQ29uc3VtZXJTdGF0dXMihQIKEUNkY0NvbnN1bWVyU3RhdHVzEhUKDWNvbnN1bWVyX25hbWUYASABKAkSFQoNdG9waWNfcGF0dGVybhgCIAEoCRIVCg1sYXN0X2V2ZW50X2lkGAMgASgJEhMKC2xhZ19zZWNvbmRzGAQgASgBEhUKDWFja2VkX2F0X3VuaXgYBSABKAMSHgoWbGFzdF9wdWJsaXNoZWRfYXRfdW5peBgGIAEoAxIRCgl0ZW5hbnRfaWQYByABKAkSEgoKcHJvamVjdF9pZBgIIAEoCRIWCg5vd25lcl9pZGVudGl0eRgJIAEoCRIgChhvd25lcl9taWdyYXRpb25fcmVxdWlyZWQYCiABKAgqdgoQQ2RjQ29uc3VtZXJTdGFydBIiCh5DRENfQ09OU1VNRVJfU1RBUlRfVU5TUEVDSUZJRUQQABIdChlDRENfQ09OU1VNRVJfU1RBUlRfTEFURVNUEAESHwobQ0RDX0NPTlNVTUVSX1NUQVJUX0VBUkxJRVNUEAJCrgEKEWNvbS51ZGIuZW50aXR5LnYxQghDZGNQcm90b1ABWjlnaXRodWIuY29tL2ZhaGFyYTAyL3VkYi9zZGsvZ28vZ2VuL3VkYi9lbnRpdHkvdjE7ZW50aXR5djGiAgNVRViqAg1VZGIuRW50aXR5LlYxygINVWRiXEVudGl0eVxWMeICGVVkYlxHUEJNZXRhZGF0YVxFbnRpdHlcVjHqAg9VZGI6OkVudGl0eTo6VjFiBnByb3RvMw", [file_udb_entity_v1_context]);
 
 /**
  * @generated from message udb.entity.v1.CDCSubscriptionRequest
@@ -29,6 +29,9 @@ export type CDCSubscriptionRequest = Message<"udb.entity.v1.CDCSubscriptionReque
   topicPattern: string;
 
   /**
+   * Resume after this event: a retained event id, or a progress marker's
+   * token (see CDCEnvelope.progress_only), which stays valid after retention.
+   *
    * @generated from field: string since_event_id = 3;
    */
   sinceEventId: string;
@@ -38,13 +41,32 @@ export type CDCSubscriptionRequest = Message<"udb.entity.v1.CDCSubscriptionReque
    * since_event_id is empty, the stream resumes after the last event this
    * consumer acknowledged with AckCdcEvents for this topic_pattern, so a
    * restarted (or reconnected) consumer resumes its acknowledged position.
-   * A new name reads the retained backlog. Positions survive journal retention.
+   * A new name starts where `start` says. Positions survive journal retention.
    * Names are owned by the verified principal within its tenant and project;
    * another principal cannot subscribe or acknowledge under the same name.
    *
    * @generated from field: string consumer_name = 4;
    */
   consumerName: string;
+
+  /**
+   * Interleave progress markers with events (CDCEnvelope.progress_only). Set
+   * it only if the client recognizes markers and keeps them away from event
+   * handlers. One marker follows the end of replay; later ones follow polls
+   * that read past events this stream did not deliver, at most every few
+   * seconds or every thousand journal positions.
+   *
+   * @generated from field: bool progress_markers = 5;
+   */
+  progressMarkers: boolean;
+
+  /**
+   * Where a consumer_name starts on its first subscription. Ignored once the
+   * name has a stored position, and for anonymous streams.
+   *
+   * @generated from field: udb.entity.v1.CdcConsumerStart start = 6;
+   */
+  start: CdcConsumerStart;
 };
 
 /**
@@ -83,7 +105,9 @@ export type AckCdcEventsRequest = Message<"udb.entity.v1.AckCdcEventsRequest"> &
    * The last event the consumer has fully handled. The next subscription
    * under this consumer name resumes after it. The event must be retained and
    * match the caller's tenant/project and topic pattern. An older acknowledgment
-   * succeeds without moving the stored cursor backward.
+   * succeeds without moving the stored cursor backward. A progress marker's
+   * token is also accepted: it moves the cursor to the marker's position.
+   * NackCdcEvents refuses a token (InvalidArgument).
    *
    * @generated from field: string event_id = 4;
    */
@@ -330,3 +354,38 @@ export type CdcConsumerStatus = Message<"udb.entity.v1.CdcConsumerStatus"> & {
  */
 export const CdcConsumerStatusSchema: GenMessage<CdcConsumerStatus> = /*@__PURE__*/
   messageDesc(file_udb_entity_v1_cdc, 6);
+
+/**
+ * Where a durable consumer name starts the first time it subscribes.
+ *
+ * @generated from enum udb.entity.v1.CdcConsumerStart
+ */
+export enum CdcConsumerStart {
+  /**
+   * Same as CDC_CONSUMER_START_LATEST.
+   *
+   * @generated from enum value: CDC_CONSUMER_START_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * Start at the journal head: only events committed after the first
+   * subscription are delivered.
+   *
+   * @generated from enum value: CDC_CONSUMER_START_LATEST = 1;
+   */
+  LATEST = 1,
+
+  /**
+   * Start before the earliest retained event and replay the retained history.
+   *
+   * @generated from enum value: CDC_CONSUMER_START_EARLIEST = 2;
+   */
+  EARLIEST = 2,
+}
+
+/**
+ * Describes the enum udb.entity.v1.CdcConsumerStart.
+ */
+export const CdcConsumerStartSchema: GenEnum<CdcConsumerStart> = /*@__PURE__*/
+  enumDesc(file_udb_entity_v1_cdc, 0);

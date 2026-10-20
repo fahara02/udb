@@ -251,8 +251,7 @@ java.lang.String defaultValue);
   /**
    * <pre>
    * Graph edge projections: the source/target fields of the edge row and the
-   * node labels they point at. Same as options["edge_source_field"] etc.; the
-   * older "from_label"/"to_label" keys are deprecated aliases.
+   * node labels they point at. Same as options["edge_source_field"] etc.
    * </pre>
    *
    * <code>string edge_source_field = 14 [json_name = "edgeSourceField"];</code>
@@ -262,8 +261,7 @@ java.lang.String defaultValue);
   /**
    * <pre>
    * Graph edge projections: the source/target fields of the edge row and the
-   * node labels they point at. Same as options["edge_source_field"] etc.; the
-   * older "from_label"/"to_label" keys are deprecated aliases.
+   * node labels they point at. Same as options["edge_source_field"] etc.
    * </pre>
    *
    * <code>string edge_source_field = 14 [json_name = "edgeSourceField"];</code>

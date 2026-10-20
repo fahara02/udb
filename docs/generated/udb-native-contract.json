@@ -1,6 +1,6 @@
 {
   "schema_version": "1",
-  "descriptor_sha256": "dbd83d38e7053a9b975c645711f18ffc8cdf1480b07ee148d6d441c4646828ba",
+  "descriptor_sha256": "4741860bcf5dac0ce10800f40a1fbc6d94720475d6b3bb3a3a6dfc018644c3e1",
   "contract_version": "8.0.0",
   "udb_version": "0.6.1",
   "protocol_version": "1.0.0",
@@ -152723,7 +152723,7 @@
       "event_contract": null,
       "dependency_contract": null,
       "table_security": null,
-      "field_count": 4,
+      "field_count": 6,
       "fields": [
         {
           "name": "context",
@@ -152786,6 +152786,44 @@
           "name": "consumer_name",
           "number": 4,
           "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "progress_markers",
+          "number": 5,
+          "type": "8",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "start",
+          "number": 6,
+          "type": ".udb.entity.v1.CdcConsumerStart",
           "column_security": null,
           "scalar_security": {
             "pii": false,
@@ -168925,7 +168963,7 @@
       "event_contract": null,
       "dependency_contract": null,
       "table_security": null,
-      "field_count": 5,
+      "field_count": 7,
       "fields": [
         {
           "name": "event_id",
@@ -169007,6 +169045,44 @@
           "name": "published_at",
           "number": 5,
           "type": ".google.protobuf.Timestamp",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "progress_only",
+          "number": 6,
+          "type": "8",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "journal_position",
+          "number": 7,
+          "type": "3",
           "column_security": null,
           "scalar_security": {
             "pii": false,

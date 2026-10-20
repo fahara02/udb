@@ -38,11 +38,21 @@ public interface CDCSubscriptionRequestOrBuilder extends
       getTopicPatternBytes();
 
   /**
+   * <pre>
+   * Resume after this event: a retained event id, or a progress marker's
+   * token (see CDCEnvelope.progress_only), which stays valid after retention.
+   * </pre>
+   *
    * <code>string since_event_id = 3 [json_name = "sinceEventId"];</code>
    * @return The sinceEventId.
    */
   java.lang.String getSinceEventId();
   /**
+   * <pre>
+   * Resume after this event: a retained event id, or a progress marker's
+   * token (see CDCEnvelope.progress_only), which stays valid after retention.
+   * </pre>
+   *
    * <code>string since_event_id = 3 [json_name = "sinceEventId"];</code>
    * @return The bytes for sinceEventId.
    */
@@ -55,7 +65,7 @@ public interface CDCSubscriptionRequestOrBuilder extends
    * since_event_id is empty, the stream resumes after the last event this
    * consumer acknowledged with AckCdcEvents for this topic_pattern, so a
    * restarted (or reconnected) consumer resumes its acknowledged position.
-   * A new name reads the retained backlog. Positions survive journal retention.
+   * A new name starts where `start` says. Positions survive journal retention.
    * Names are owned by the verified principal within its tenant and project;
    * another principal cannot subscribe or acknowledge under the same name.
    * </pre>
@@ -70,7 +80,7 @@ public interface CDCSubscriptionRequestOrBuilder extends
    * since_event_id is empty, the stream resumes after the last event this
    * consumer acknowledged with AckCdcEvents for this topic_pattern, so a
    * restarted (or reconnected) consumer resumes its acknowledged position.
-   * A new name reads the retained backlog. Positions survive journal retention.
+   * A new name starts where `start` says. Positions survive journal retention.
    * Names are owned by the verified principal within its tenant and project;
    * another principal cannot subscribe or acknowledge under the same name.
    * </pre>
@@ -80,4 +90,39 @@ public interface CDCSubscriptionRequestOrBuilder extends
    */
   com.google.protobuf.ByteString
       getConsumerNameBytes();
+
+  /**
+   * <pre>
+   * Interleave progress markers with events (CDCEnvelope.progress_only). Set
+   * it only if the client recognizes markers and keeps them away from event
+   * handlers. One marker follows the end of replay; later ones follow polls
+   * that read past events this stream did not deliver, at most every few
+   * seconds or every thousand journal positions.
+   * </pre>
+   *
+   * <code>bool progress_markers = 5 [json_name = "progressMarkers"];</code>
+   * @return The progressMarkers.
+   */
+  boolean getProgressMarkers();
+
+  /**
+   * <pre>
+   * Where a consumer_name starts on its first subscription. Ignored once the
+   * name has a stored position, and for anonymous streams.
+   * </pre>
+   *
+   * <code>.udb.entity.v1.CdcConsumerStart start = 6 [json_name = "start"];</code>
+   * @return The enum numeric value on the wire for start.
+   */
+  int getStartValue();
+  /**
+   * <pre>
+   * Where a consumer_name starts on its first subscription. Ignored once the
+   * name has a stored position, and for anonymous streams.
+   * </pre>
+   *
+   * <code>.udb.entity.v1.CdcConsumerStart start = 6 [json_name = "start"];</code>
+   * @return The start.
+   */
+  com.udb.entity.v1.CdcConsumerStart getStart();
 }

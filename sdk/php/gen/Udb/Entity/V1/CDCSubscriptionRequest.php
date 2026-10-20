@@ -23,6 +23,9 @@ class CDCSubscriptionRequest extends \Google\Protobuf\Internal\Message
      */
     protected $topic_pattern = '';
     /**
+     * Resume after this event: a retained event id, or a progress marker's
+     * token (see CDCEnvelope.progress_only), which stays valid after retention.
+     *
      * Generated from protobuf field <code>string since_event_id = 3 [json_name = "sinceEventId"];</code>
      */
     protected $since_event_id = '';
@@ -31,13 +34,30 @@ class CDCSubscriptionRequest extends \Google\Protobuf\Internal\Message
      * since_event_id is empty, the stream resumes after the last event this
      * consumer acknowledged with AckCdcEvents for this topic_pattern, so a
      * restarted (or reconnected) consumer resumes its acknowledged position.
-     * A new name reads the retained backlog. Positions survive journal retention.
+     * A new name starts where `start` says. Positions survive journal retention.
      * Names are owned by the verified principal within its tenant and project;
      * another principal cannot subscribe or acknowledge under the same name.
      *
      * Generated from protobuf field <code>string consumer_name = 4 [json_name = "consumerName"];</code>
      */
     protected $consumer_name = '';
+    /**
+     * Interleave progress markers with events (CDCEnvelope.progress_only). Set
+     * it only if the client recognizes markers and keeps them away from event
+     * handlers. One marker follows the end of replay; later ones follow polls
+     * that read past events this stream did not deliver, at most every few
+     * seconds or every thousand journal positions.
+     *
+     * Generated from protobuf field <code>bool progress_markers = 5 [json_name = "progressMarkers"];</code>
+     */
+    protected $progress_markers = false;
+    /**
+     * Where a consumer_name starts on its first subscription. Ignored once the
+     * name has a stored position, and for anonymous streams.
+     *
+     * Generated from protobuf field <code>.udb.entity.v1.CdcConsumerStart start = 6 [json_name = "start"];</code>
+     */
+    protected $start = 0;
 
     /**
      * Constructor.
@@ -48,14 +68,25 @@ class CDCSubscriptionRequest extends \Google\Protobuf\Internal\Message
      *     @type \Udb\Entity\V1\RequestContext $context
      *     @type string $topic_pattern
      *     @type string $since_event_id
+     *           Resume after this event: a retained event id, or a progress marker's
+     *           token (see CDCEnvelope.progress_only), which stays valid after retention.
      *     @type string $consumer_name
      *           A durable consumer's name (1-120 chars of [A-Za-z0-9_.:-]). When set and
      *           since_event_id is empty, the stream resumes after the last event this
      *           consumer acknowledged with AckCdcEvents for this topic_pattern, so a
      *           restarted (or reconnected) consumer resumes its acknowledged position.
-     *           A new name reads the retained backlog. Positions survive journal retention.
+     *           A new name starts where `start` says. Positions survive journal retention.
      *           Names are owned by the verified principal within its tenant and project;
      *           another principal cannot subscribe or acknowledge under the same name.
+     *     @type bool $progress_markers
+     *           Interleave progress markers with events (CDCEnvelope.progress_only). Set
+     *           it only if the client recognizes markers and keeps them away from event
+     *           handlers. One marker follows the end of replay; later ones follow polls
+     *           that read past events this stream did not deliver, at most every few
+     *           seconds or every thousand journal positions.
+     *     @type int $start
+     *           Where a consumer_name starts on its first subscription. Ignored once the
+     *           name has a stored position, and for anonymous streams.
      * }
      */
     public function __construct($data = NULL) {
@@ -118,6 +149,9 @@ class CDCSubscriptionRequest extends \Google\Protobuf\Internal\Message
     }
 
     /**
+     * Resume after this event: a retained event id, or a progress marker's
+     * token (see CDCEnvelope.progress_only), which stays valid after retention.
+     *
      * Generated from protobuf field <code>string since_event_id = 3 [json_name = "sinceEventId"];</code>
      * @return string
      */
@@ -127,6 +161,9 @@ class CDCSubscriptionRequest extends \Google\Protobuf\Internal\Message
     }
 
     /**
+     * Resume after this event: a retained event id, or a progress marker's
+     * token (see CDCEnvelope.progress_only), which stays valid after retention.
+     *
      * Generated from protobuf field <code>string since_event_id = 3 [json_name = "sinceEventId"];</code>
      * @param string $var
      * @return $this
@@ -144,7 +181,7 @@ class CDCSubscriptionRequest extends \Google\Protobuf\Internal\Message
      * since_event_id is empty, the stream resumes after the last event this
      * consumer acknowledged with AckCdcEvents for this topic_pattern, so a
      * restarted (or reconnected) consumer resumes its acknowledged position.
-     * A new name reads the retained backlog. Positions survive journal retention.
+     * A new name starts where `start` says. Positions survive journal retention.
      * Names are owned by the verified principal within its tenant and project;
      * another principal cannot subscribe or acknowledge under the same name.
      *
@@ -161,7 +198,7 @@ class CDCSubscriptionRequest extends \Google\Protobuf\Internal\Message
      * since_event_id is empty, the stream resumes after the last event this
      * consumer acknowledged with AckCdcEvents for this topic_pattern, so a
      * restarted (or reconnected) consumer resumes its acknowledged position.
-     * A new name reads the retained backlog. Positions survive journal retention.
+     * A new name starts where `start` says. Positions survive journal retention.
      * Names are owned by the verified principal within its tenant and project;
      * another principal cannot subscribe or acknowledge under the same name.
      *
@@ -173,6 +210,68 @@ class CDCSubscriptionRequest extends \Google\Protobuf\Internal\Message
     {
         GPBUtil::checkString($var, True);
         $this->consumer_name = $var;
+
+        return $this;
+    }
+
+    /**
+     * Interleave progress markers with events (CDCEnvelope.progress_only). Set
+     * it only if the client recognizes markers and keeps them away from event
+     * handlers. One marker follows the end of replay; later ones follow polls
+     * that read past events this stream did not deliver, at most every few
+     * seconds or every thousand journal positions.
+     *
+     * Generated from protobuf field <code>bool progress_markers = 5 [json_name = "progressMarkers"];</code>
+     * @return bool
+     */
+    public function getProgressMarkers()
+    {
+        return $this->progress_markers;
+    }
+
+    /**
+     * Interleave progress markers with events (CDCEnvelope.progress_only). Set
+     * it only if the client recognizes markers and keeps them away from event
+     * handlers. One marker follows the end of replay; later ones follow polls
+     * that read past events this stream did not deliver, at most every few
+     * seconds or every thousand journal positions.
+     *
+     * Generated from protobuf field <code>bool progress_markers = 5 [json_name = "progressMarkers"];</code>
+     * @param bool $var
+     * @return $this
+     */
+    public function setProgressMarkers($var)
+    {
+        GPBUtil::checkBool($var);
+        $this->progress_markers = $var;
+
+        return $this;
+    }
+
+    /**
+     * Where a consumer_name starts on its first subscription. Ignored once the
+     * name has a stored position, and for anonymous streams.
+     *
+     * Generated from protobuf field <code>.udb.entity.v1.CdcConsumerStart start = 6 [json_name = "start"];</code>
+     * @return int
+     */
+    public function getStart()
+    {
+        return $this->start;
+    }
+
+    /**
+     * Where a consumer_name starts on its first subscription. Ignored once the
+     * name has a stored position, and for anonymous streams.
+     *
+     * Generated from protobuf field <code>.udb.entity.v1.CdcConsumerStart start = 6 [json_name = "start"];</code>
+     * @param int $var
+     * @return $this
+     */
+    public function setStart($var)
+    {
+        GPBUtil::checkEnum($var, \Udb\Entity\V1\CdcConsumerStart::class);
+        $this->start = $var;
 
         return $this;
     }

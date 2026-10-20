@@ -21,6 +21,7 @@ __exportStar(require("./auth"), exports);
 __exportStar(require("./negotiation"), exports);
 __exportStar(require("./generatedClient"), exports);
 __exportStar(require("./project"), exports);
+__exportStar(require("./stores"), exports);
 __exportStar(require("./adapters"), exports);
 var protoRoot_1 = require("./protoRoot");
 Object.defineProperty(exports, "defaultProtoRoot", { enumerable: true, get: function () { return protoRoot_1.defaultProtoRoot; } });
@@ -36,3 +37,6 @@ __exportStar(require("./consistency"), exports);
 __exportStar(require("./stream"), exports);
 // Bound entity / table helper over the DataBroker Upsert/Select/Delete RPCs.
 __exportStar(require("./entity"), exports);
+// End-to-end encrypted messaging (MLS) over the MessagingService; the WebAssembly
+// core is loaded lazily, so importing the SDK never requires it.
+__exportStar(require("./messaging"), exports);

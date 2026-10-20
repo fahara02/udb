@@ -234,6 +234,47 @@ private static final long serialVersionUID = 0L;
     return publishedAt_ == null ? com.google.protobuf.Timestamp.getDefaultInstance() : publishedAt_;
   }
 
+  public static final int PROGRESS_ONLY_FIELD_NUMBER = 6;
+  private boolean progressOnly_ = false;
+  /**
+   * <pre>
+   * True for a progress marker, which is not an event. Markers are sent only
+   * when CDCSubscriptionRequest.progress_markers is set. A marker says the
+   * stream has read every committed journal row up to journal_position, so a
+   * consumer whose topic is quiet still sees its position advance. Its fields:
+   * event_id is a progress token (a version-8 UUID whose first six bytes are
+   * "udbpro" and whose last eight carry the position); topic is the reserved
+   * "udb.cdc.progress.v1"; partition_key is empty; payload_json is
+   * {"kind":"progress","journal_position":"&lt;position&gt;","caught_up":&lt;bool&gt;}.
+   * Do not pass a marker to event handlers. A durable consumer acknowledges it
+   * with AckCdcEvents (event_id = the token) once every earlier event is
+   * acknowledged; the token is also accepted as since_event_id.
+   * </pre>
+   *
+   * <code>bool progress_only = 6 [json_name = "progressOnly"];</code>
+   * @return The progressOnly.
+   */
+  @java.lang.Override
+  public boolean getProgressOnly() {
+    return progressOnly_;
+  }
+
+  public static final int JOURNAL_POSITION_FIELD_NUMBER = 7;
+  private long journalPosition_ = 0L;
+  /**
+   * <pre>
+   * Committed journal position of this event, or for a marker the position
+   * read through. Positions increase in commit order and are never reused.
+   * </pre>
+   *
+   * <code>int64 journal_position = 7 [json_name = "journalPosition"];</code>
+   * @return The journalPosition.
+   */
+  @java.lang.Override
+  public long getJournalPosition() {
+    return journalPosition_;
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -263,6 +304,12 @@ private static final long serialVersionUID = 0L;
     if (((bitField0_ & 0x00000001) != 0)) {
       output.writeMessage(5, getPublishedAt());
     }
+    if (progressOnly_ != false) {
+      output.writeBool(6, progressOnly_);
+    }
+    if (journalPosition_ != 0L) {
+      output.writeInt64(7, journalPosition_);
+    }
     getUnknownFields().writeTo(output);
   }
 
@@ -287,6 +334,14 @@ private static final long serialVersionUID = 0L;
     if (((bitField0_ & 0x00000001) != 0)) {
       size += com.google.protobuf.CodedOutputStream
         .computeMessageSize(5, getPublishedAt());
+    }
+    if (progressOnly_ != false) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeBoolSize(6, progressOnly_);
+    }
+    if (journalPosition_ != 0L) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeInt64Size(7, journalPosition_);
     }
     size += getUnknownFields().getSerializedSize();
     memoizedSize = size;
@@ -316,6 +371,10 @@ private static final long serialVersionUID = 0L;
       if (!getPublishedAt()
           .equals(other.getPublishedAt())) return false;
     }
+    if (getProgressOnly()
+        != other.getProgressOnly()) return false;
+    if (getJournalPosition()
+        != other.getJournalPosition()) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -339,6 +398,12 @@ private static final long serialVersionUID = 0L;
       hash = (37 * hash) + PUBLISHED_AT_FIELD_NUMBER;
       hash = (53 * hash) + getPublishedAt().hashCode();
     }
+    hash = (37 * hash) + PROGRESS_ONLY_FIELD_NUMBER;
+    hash = (53 * hash) + com.google.protobuf.Internal.hashBoolean(
+        getProgressOnly());
+    hash = (37 * hash) + JOURNAL_POSITION_FIELD_NUMBER;
+    hash = (53 * hash) + com.google.protobuf.Internal.hashLong(
+        getJournalPosition());
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -489,6 +554,8 @@ private static final long serialVersionUID = 0L;
         publishedAtBuilder_.dispose();
         publishedAtBuilder_ = null;
       }
+      progressOnly_ = false;
+      journalPosition_ = 0L;
       return this;
     }
 
@@ -541,6 +608,12 @@ private static final long serialVersionUID = 0L;
             : publishedAtBuilder_.build();
         to_bitField0_ |= 0x00000001;
       }
+      if (((from_bitField0_ & 0x00000020) != 0)) {
+        result.progressOnly_ = progressOnly_;
+      }
+      if (((from_bitField0_ & 0x00000040) != 0)) {
+        result.journalPosition_ = journalPosition_;
+      }
       result.bitField0_ |= to_bitField0_;
     }
 
@@ -578,6 +651,12 @@ private static final long serialVersionUID = 0L;
       }
       if (other.hasPublishedAt()) {
         mergePublishedAt(other.getPublishedAt());
+      }
+      if (other.getProgressOnly() != false) {
+        setProgressOnly(other.getProgressOnly());
+      }
+      if (other.getJournalPosition() != 0L) {
+        setJournalPosition(other.getJournalPosition());
       }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
@@ -632,6 +711,16 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00000010;
               break;
             } // case 42
+            case 48: {
+              progressOnly_ = input.readBool();
+              bitField0_ |= 0x00000020;
+              break;
+            } // case 48
+            case 56: {
+              journalPosition_ = input.readInt64();
+              bitField0_ |= 0x00000040;
+              break;
+            } // case 56
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -1056,6 +1145,127 @@ private static final long serialVersionUID = 0L;
         publishedAt_ = null;
       }
       return publishedAtBuilder_;
+    }
+
+    private boolean progressOnly_ ;
+    /**
+     * <pre>
+     * True for a progress marker, which is not an event. Markers are sent only
+     * when CDCSubscriptionRequest.progress_markers is set. A marker says the
+     * stream has read every committed journal row up to journal_position, so a
+     * consumer whose topic is quiet still sees its position advance. Its fields:
+     * event_id is a progress token (a version-8 UUID whose first six bytes are
+     * "udbpro" and whose last eight carry the position); topic is the reserved
+     * "udb.cdc.progress.v1"; partition_key is empty; payload_json is
+     * {"kind":"progress","journal_position":"&lt;position&gt;","caught_up":&lt;bool&gt;}.
+     * Do not pass a marker to event handlers. A durable consumer acknowledges it
+     * with AckCdcEvents (event_id = the token) once every earlier event is
+     * acknowledged; the token is also accepted as since_event_id.
+     * </pre>
+     *
+     * <code>bool progress_only = 6 [json_name = "progressOnly"];</code>
+     * @return The progressOnly.
+     */
+    @java.lang.Override
+    public boolean getProgressOnly() {
+      return progressOnly_;
+    }
+    /**
+     * <pre>
+     * True for a progress marker, which is not an event. Markers are sent only
+     * when CDCSubscriptionRequest.progress_markers is set. A marker says the
+     * stream has read every committed journal row up to journal_position, so a
+     * consumer whose topic is quiet still sees its position advance. Its fields:
+     * event_id is a progress token (a version-8 UUID whose first six bytes are
+     * "udbpro" and whose last eight carry the position); topic is the reserved
+     * "udb.cdc.progress.v1"; partition_key is empty; payload_json is
+     * {"kind":"progress","journal_position":"&lt;position&gt;","caught_up":&lt;bool&gt;}.
+     * Do not pass a marker to event handlers. A durable consumer acknowledges it
+     * with AckCdcEvents (event_id = the token) once every earlier event is
+     * acknowledged; the token is also accepted as since_event_id.
+     * </pre>
+     *
+     * <code>bool progress_only = 6 [json_name = "progressOnly"];</code>
+     * @param value The progressOnly to set.
+     * @return This builder for chaining.
+     */
+    public Builder setProgressOnly(boolean value) {
+
+      progressOnly_ = value;
+      bitField0_ |= 0x00000020;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * True for a progress marker, which is not an event. Markers are sent only
+     * when CDCSubscriptionRequest.progress_markers is set. A marker says the
+     * stream has read every committed journal row up to journal_position, so a
+     * consumer whose topic is quiet still sees its position advance. Its fields:
+     * event_id is a progress token (a version-8 UUID whose first six bytes are
+     * "udbpro" and whose last eight carry the position); topic is the reserved
+     * "udb.cdc.progress.v1"; partition_key is empty; payload_json is
+     * {"kind":"progress","journal_position":"&lt;position&gt;","caught_up":&lt;bool&gt;}.
+     * Do not pass a marker to event handlers. A durable consumer acknowledges it
+     * with AckCdcEvents (event_id = the token) once every earlier event is
+     * acknowledged; the token is also accepted as since_event_id.
+     * </pre>
+     *
+     * <code>bool progress_only = 6 [json_name = "progressOnly"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearProgressOnly() {
+      bitField0_ = (bitField0_ & ~0x00000020);
+      progressOnly_ = false;
+      onChanged();
+      return this;
+    }
+
+    private long journalPosition_ ;
+    /**
+     * <pre>
+     * Committed journal position of this event, or for a marker the position
+     * read through. Positions increase in commit order and are never reused.
+     * </pre>
+     *
+     * <code>int64 journal_position = 7 [json_name = "journalPosition"];</code>
+     * @return The journalPosition.
+     */
+    @java.lang.Override
+    public long getJournalPosition() {
+      return journalPosition_;
+    }
+    /**
+     * <pre>
+     * Committed journal position of this event, or for a marker the position
+     * read through. Positions increase in commit order and are never reused.
+     * </pre>
+     *
+     * <code>int64 journal_position = 7 [json_name = "journalPosition"];</code>
+     * @param value The journalPosition to set.
+     * @return This builder for chaining.
+     */
+    public Builder setJournalPosition(long value) {
+
+      journalPosition_ = value;
+      bitField0_ |= 0x00000040;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Committed journal position of this event, or for a marker the position
+     * read through. Positions increase in commit order and are never reused.
+     * </pre>
+     *
+     * <code>int64 journal_position = 7 [json_name = "journalPosition"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearJournalPosition() {
+      bitField0_ = (bitField0_ & ~0x00000040);
+      journalPosition_ = 0L;
+      onChanged();
+      return this;
     }
 
     // @@protoc_insertion_point(builder_scope:udb.events.v1.CDCEnvelope)

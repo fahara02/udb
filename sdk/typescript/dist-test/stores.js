@@ -92,7 +92,6 @@ const REASON_CODES = {
     UDB_DECODE_FAILED: ErrorCode.Internal,
     UDB_UNKNOWN_MESSAGE_TYPE: ErrorCode.Invalid,
     UDB_ENVELOPE_VERSION_UNSUPPORTED: ErrorCode.Precondition,
-    UDB_POLICY_WRONG_SURFACE: ErrorCode.Precondition,
 };
 /** Wire values of `udb.entity.v1.ErrorKind` (proto/udb/entity/v1/error.proto). */
 exports.ErrorKind = {
@@ -389,16 +388,24 @@ function decodeEnvelope(payloadJson) {
     const inner = envelope?.payload;
     if (inner && typeof inner === "object" && "event_type" in inner && "payload" in inner)
         envelope = inner;
-    const version = Number(envelope?.envelope_version ?? 0);
+    if (envelope?.envelope_version === undefined || envelope?.envelope_version === null) {
+        throw new EnvelopeVersionError(`udb: envelope has no envelope_version; unversioned envelopes are not supported (this SDK reads version ${exports.EVENT_ENVELOPE_VERSION})`);
+    }
+    const version = Number(envelope.envelope_version);
     if (version > exports.EVENT_ENVELOPE_VERSION) {
         throw new EnvelopeVersionError(`udb: envelope_version ${version} is newer than this SDK understands (${exports.EVENT_ENVELOPE_VERSION}); upgrade the SDK`);
+    }
+    if (version !== exports.EVENT_ENVELOPE_VERSION) {
+        throw new EnvelopeVersionError(`udb: envelope_version ${version} is not supported; this SDK reads version ${exports.EVENT_ENVELOPE_VERSION}`);
     }
     return envelope;
 }
 /** Deliver every event on `topicPattern` to `handle` as the durable consumer
  *  `name`: the broker keeps the position (AckCdcEvents), reconnects resume
- *  there, and an event is acked only after `handle` resolves. Returns when
- *  `signal` aborts or a refusal reconnecting cannot fix arrives. */
+ *  there, and an event is acked only after `handle` resolves. A name that has
+ *  never subscribed starts at the journal head unless `fromEarliest` asks for
+ *  the retained history. Returns when `signal` aborts or a refusal
+ *  reconnecting cannot fix arrives. */
 async function consume(plane, name, topicPattern, handle, opts = {}) {
     if (!plane.serverStream)
         throw new Error("udb: this transport does not support streams");
@@ -408,7 +415,14 @@ async function consume(plane, name, topicPattern, handle, opts = {}) {
         if (opts.signal?.aborted)
             return;
         const failure = await new Promise((resolve) => {
-            const stream = plane.serverStream(DATABROKER, "PublishCDC", { topic_pattern: topicPattern, consumer_name: name });
+            // Progress markers let a consumer of a quiet topic move its stored
+            // position past the rest of the journal; they never reach `handle`.
+            const stream = plane.serverStream(DATABROKER, "PublishCDC", {
+                topic_pattern: topicPattern,
+                consumer_name: name,
+                progress_markers: true,
+                start: opts.fromEarliest ? "CDC_CONSUMER_START_EARLIEST" : "CDC_CONSUMER_START_LATEST",
+            });
             let chain = Promise.resolve();
             let closing = false;
             let stopped = false;
@@ -438,6 +452,13 @@ async function consume(plane, name, topicPattern, handle, opts = {}) {
                     const id = String(envelope?.event_id ?? "");
                     if (seen.has(id))
                         return;
+                    if (envelope?.progress_only) {
+                        // Not an event: the stream read the journal up to this position.
+                        // The queue is sequential, so every earlier event is already
+                        // acknowledged when the marker's token is.
+                        await plane.unary(DATABROKER, "AckCdcEvents", { consumer_name: name, topic_pattern: topicPattern, event_id: id });
+                        return;
+                    }
                     const decoded = decodeEnvelope(String(envelope?.payload_json ?? ""));
                     await handle({
                         id,

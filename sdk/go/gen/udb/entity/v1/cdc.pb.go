@@ -21,19 +21,84 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+// Where a durable consumer name starts the first time it subscribes.
+type CdcConsumerStart int32
+
+const (
+	// Same as CDC_CONSUMER_START_LATEST.
+	CdcConsumerStart_CDC_CONSUMER_START_UNSPECIFIED CdcConsumerStart = 0
+	// Start at the journal head: only events committed after the first
+	// subscription are delivered.
+	CdcConsumerStart_CDC_CONSUMER_START_LATEST CdcConsumerStart = 1
+	// Start before the earliest retained event and replay the retained history.
+	CdcConsumerStart_CDC_CONSUMER_START_EARLIEST CdcConsumerStart = 2
+)
+
+// Enum value maps for CdcConsumerStart.
+var (
+	CdcConsumerStart_name = map[int32]string{
+		0: "CDC_CONSUMER_START_UNSPECIFIED",
+		1: "CDC_CONSUMER_START_LATEST",
+		2: "CDC_CONSUMER_START_EARLIEST",
+	}
+	CdcConsumerStart_value = map[string]int32{
+		"CDC_CONSUMER_START_UNSPECIFIED": 0,
+		"CDC_CONSUMER_START_LATEST":      1,
+		"CDC_CONSUMER_START_EARLIEST":    2,
+	}
+)
+
+func (x CdcConsumerStart) Enum() *CdcConsumerStart {
+	p := new(CdcConsumerStart)
+	*p = x
+	return p
+}
+
+func (x CdcConsumerStart) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (CdcConsumerStart) Descriptor() protoreflect.EnumDescriptor {
+	return file_udb_entity_v1_cdc_proto_enumTypes[0].Descriptor()
+}
+
+func (CdcConsumerStart) Type() protoreflect.EnumType {
+	return &file_udb_entity_v1_cdc_proto_enumTypes[0]
+}
+
+func (x CdcConsumerStart) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use CdcConsumerStart.Descriptor instead.
+func (CdcConsumerStart) EnumDescriptor() ([]byte, []int) {
+	return file_udb_entity_v1_cdc_proto_rawDescGZIP(), []int{0}
+}
+
 type CDCSubscriptionRequest struct {
 	state        protoimpl.MessageState `protogen:"open.v1"`
 	Context      *RequestContext        `protobuf:"bytes,1,opt,name=context,proto3" json:"context,omitempty"`
 	TopicPattern string                 `protobuf:"bytes,2,opt,name=topic_pattern,json=topicPattern,proto3" json:"topic_pattern,omitempty"`
-	SinceEventId string                 `protobuf:"bytes,3,opt,name=since_event_id,json=sinceEventId,proto3" json:"since_event_id,omitempty"`
+	// Resume after this event: a retained event id, or a progress marker's
+	// token (see CDCEnvelope.progress_only), which stays valid after retention.
+	SinceEventId string `protobuf:"bytes,3,opt,name=since_event_id,json=sinceEventId,proto3" json:"since_event_id,omitempty"`
 	// A durable consumer's name (1-120 chars of [A-Za-z0-9_.:-]). When set and
 	// since_event_id is empty, the stream resumes after the last event this
 	// consumer acknowledged with AckCdcEvents for this topic_pattern, so a
 	// restarted (or reconnected) consumer resumes its acknowledged position.
-	// A new name reads the retained backlog. Positions survive journal retention.
+	// A new name starts where `start` says. Positions survive journal retention.
 	// Names are owned by the verified principal within its tenant and project;
 	// another principal cannot subscribe or acknowledge under the same name.
-	ConsumerName  string `protobuf:"bytes,4,opt,name=consumer_name,json=consumerName,proto3" json:"consumer_name,omitempty"`
+	ConsumerName string `protobuf:"bytes,4,opt,name=consumer_name,json=consumerName,proto3" json:"consumer_name,omitempty"`
+	// Interleave progress markers with events (CDCEnvelope.progress_only). Set
+	// it only if the client recognizes markers and keeps them away from event
+	// handlers. One marker follows the end of replay; later ones follow polls
+	// that read past events this stream did not deliver, at most every few
+	// seconds or every thousand journal positions.
+	ProgressMarkers bool `protobuf:"varint,5,opt,name=progress_markers,json=progressMarkers,proto3" json:"progress_markers,omitempty"`
+	// Where a consumer_name starts on its first subscription. Ignored once the
+	// name has a stored position, and for anonymous streams.
+	Start         CdcConsumerStart `protobuf:"varint,6,opt,name=start,proto3,enum=udb.entity.v1.CdcConsumerStart" json:"start,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -96,6 +161,20 @@ func (x *CDCSubscriptionRequest) GetConsumerName() string {
 	return ""
 }
 
+func (x *CDCSubscriptionRequest) GetProgressMarkers() bool {
+	if x != nil {
+		return x.ProgressMarkers
+	}
+	return false
+}
+
+func (x *CDCSubscriptionRequest) GetStart() CdcConsumerStart {
+	if x != nil {
+		return x.Start
+	}
+	return CdcConsumerStart_CDC_CONSUMER_START_UNSPECIFIED
+}
+
 // AckCdcEvents records how far a durable consumer has processed a stream.
 type AckCdcEventsRequest struct {
 	state   protoimpl.MessageState `protogen:"open.v1"`
@@ -107,7 +186,9 @@ type AckCdcEventsRequest struct {
 	// The last event the consumer has fully handled. The next subscription
 	// under this consumer name resumes after it. The event must be retained and
 	// match the caller's tenant/project and topic pattern. An older acknowledgment
-	// succeeds without moving the stored cursor backward.
+	// succeeds without moving the stored cursor backward. A progress marker's
+	// token is also accepted: it moves the cursor to the marker's position.
+	// NackCdcEvents refuses a token (InvalidArgument).
 	EventId       string `protobuf:"bytes,4,opt,name=event_id,json=eventId,proto3" json:"event_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -620,12 +701,14 @@ var File_udb_entity_v1_cdc_proto protoreflect.FileDescriptor
 
 const file_udb_entity_v1_cdc_proto_rawDesc = "" +
 	"\n" +
-	"\x17udb/entity/v1/cdc.proto\x12\rudb.entity.v1\x1a\x1budb/entity/v1/context.proto\"\xc1\x01\n" +
+	"\x17udb/entity/v1/cdc.proto\x12\rudb.entity.v1\x1a\x1budb/entity/v1/context.proto\"\xa3\x02\n" +
 	"\x16CDCSubscriptionRequest\x127\n" +
 	"\acontext\x18\x01 \x01(\v2\x1d.udb.entity.v1.RequestContextR\acontext\x12#\n" +
 	"\rtopic_pattern\x18\x02 \x01(\tR\ftopicPattern\x12$\n" +
 	"\x0esince_event_id\x18\x03 \x01(\tR\fsinceEventId\x12#\n" +
-	"\rconsumer_name\x18\x04 \x01(\tR\fconsumerName\"\xb3\x01\n" +
+	"\rconsumer_name\x18\x04 \x01(\tR\fconsumerName\x12)\n" +
+	"\x10progress_markers\x18\x05 \x01(\bR\x0fprogressMarkers\x125\n" +
+	"\x05start\x18\x06 \x01(\x0e2\x1f.udb.entity.v1.CdcConsumerStartR\x05start\"\xb3\x01\n" +
 	"\x13AckCdcEventsRequest\x127\n" +
 	"\acontext\x18\x01 \x01(\v2\x1d.udb.entity.v1.RequestContextR\acontext\x12#\n" +
 	"\rconsumer_name\x18\x02 \x01(\tR\fconsumerName\x12#\n" +
@@ -671,7 +754,11 @@ const file_udb_entity_v1_cdc_proto_rawDesc = "" +
 	"project_id\x18\b \x01(\tR\tprojectId\x12%\n" +
 	"\x0eowner_identity\x18\t \x01(\tR\rownerIdentity\x128\n" +
 	"\x18owner_migration_required\x18\n" +
-	" \x01(\bR\x16ownerMigrationRequiredB\xae\x01\n" +
+	" \x01(\bR\x16ownerMigrationRequired*v\n" +
+	"\x10CdcConsumerStart\x12\"\n" +
+	"\x1eCDC_CONSUMER_START_UNSPECIFIED\x10\x00\x12\x1d\n" +
+	"\x19CDC_CONSUMER_START_LATEST\x10\x01\x12\x1f\n" +
+	"\x1bCDC_CONSUMER_START_EARLIEST\x10\x02B\xae\x01\n" +
 	"\x11com.udb.entity.v1B\bCdcProtoP\x01Z9github.com/fahara02/udb/sdk/go/gen/udb/entity/v1;entityv1\xa2\x02\x03UEX\xaa\x02\rUdb.Entity.V1\xca\x02\rUdb\\Entity\\V1\xe2\x02\x19Udb\\GPBMetadata\\Entity\\V1\xea\x02\x0fUdb::Entity::V1b\x06proto3"
 
 var (
@@ -686,28 +773,31 @@ func file_udb_entity_v1_cdc_proto_rawDescGZIP() []byte {
 	return file_udb_entity_v1_cdc_proto_rawDescData
 }
 
+var file_udb_entity_v1_cdc_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
 var file_udb_entity_v1_cdc_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
 var file_udb_entity_v1_cdc_proto_goTypes = []any{
-	(*CDCSubscriptionRequest)(nil), // 0: udb.entity.v1.CDCSubscriptionRequest
-	(*AckCdcEventsRequest)(nil),    // 1: udb.entity.v1.AckCdcEventsRequest
-	(*AckCdcEventsResponse)(nil),   // 2: udb.entity.v1.AckCdcEventsResponse
-	(*NackCdcEventsRequest)(nil),   // 3: udb.entity.v1.NackCdcEventsRequest
-	(*CdcControlRequest)(nil),      // 4: udb.entity.v1.CdcControlRequest
-	(*CdcStatusResponse)(nil),      // 5: udb.entity.v1.CdcStatusResponse
-	(*CdcConsumerStatus)(nil),      // 6: udb.entity.v1.CdcConsumerStatus
-	(*RequestContext)(nil),         // 7: udb.entity.v1.RequestContext
+	(CdcConsumerStart)(0),          // 0: udb.entity.v1.CdcConsumerStart
+	(*CDCSubscriptionRequest)(nil), // 1: udb.entity.v1.CDCSubscriptionRequest
+	(*AckCdcEventsRequest)(nil),    // 2: udb.entity.v1.AckCdcEventsRequest
+	(*AckCdcEventsResponse)(nil),   // 3: udb.entity.v1.AckCdcEventsResponse
+	(*NackCdcEventsRequest)(nil),   // 4: udb.entity.v1.NackCdcEventsRequest
+	(*CdcControlRequest)(nil),      // 5: udb.entity.v1.CdcControlRequest
+	(*CdcStatusResponse)(nil),      // 6: udb.entity.v1.CdcStatusResponse
+	(*CdcConsumerStatus)(nil),      // 7: udb.entity.v1.CdcConsumerStatus
+	(*RequestContext)(nil),         // 8: udb.entity.v1.RequestContext
 }
 var file_udb_entity_v1_cdc_proto_depIdxs = []int32{
-	7, // 0: udb.entity.v1.CDCSubscriptionRequest.context:type_name -> udb.entity.v1.RequestContext
-	7, // 1: udb.entity.v1.AckCdcEventsRequest.context:type_name -> udb.entity.v1.RequestContext
-	7, // 2: udb.entity.v1.NackCdcEventsRequest.context:type_name -> udb.entity.v1.RequestContext
-	7, // 3: udb.entity.v1.CdcControlRequest.context:type_name -> udb.entity.v1.RequestContext
-	6, // 4: udb.entity.v1.CdcStatusResponse.consumers:type_name -> udb.entity.v1.CdcConsumerStatus
-	5, // [5:5] is the sub-list for method output_type
-	5, // [5:5] is the sub-list for method input_type
-	5, // [5:5] is the sub-list for extension type_name
-	5, // [5:5] is the sub-list for extension extendee
-	0, // [0:5] is the sub-list for field type_name
+	8, // 0: udb.entity.v1.CDCSubscriptionRequest.context:type_name -> udb.entity.v1.RequestContext
+	0, // 1: udb.entity.v1.CDCSubscriptionRequest.start:type_name -> udb.entity.v1.CdcConsumerStart
+	8, // 2: udb.entity.v1.AckCdcEventsRequest.context:type_name -> udb.entity.v1.RequestContext
+	8, // 3: udb.entity.v1.NackCdcEventsRequest.context:type_name -> udb.entity.v1.RequestContext
+	8, // 4: udb.entity.v1.CdcControlRequest.context:type_name -> udb.entity.v1.RequestContext
+	7, // 5: udb.entity.v1.CdcStatusResponse.consumers:type_name -> udb.entity.v1.CdcConsumerStatus
+	6, // [6:6] is the sub-list for method output_type
+	6, // [6:6] is the sub-list for method input_type
+	6, // [6:6] is the sub-list for extension type_name
+	6, // [6:6] is the sub-list for extension extendee
+	0, // [0:6] is the sub-list for field type_name
 }
 
 func init() { file_udb_entity_v1_cdc_proto_init() }
@@ -721,13 +811,14 @@ func file_udb_entity_v1_cdc_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_udb_entity_v1_cdc_proto_rawDesc), len(file_udb_entity_v1_cdc_proto_rawDesc)),
-			NumEnums:      0,
+			NumEnums:      1,
 			NumMessages:   7,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
 		GoTypes:           file_udb_entity_v1_cdc_proto_goTypes,
 		DependencyIndexes: file_udb_entity_v1_cdc_proto_depIdxs,
+		EnumInfos:         file_udb_entity_v1_cdc_proto_enumTypes,
 		MessageInfos:      file_udb_entity_v1_cdc_proto_msgTypes,
 	}.Build()
 	File_udb_entity_v1_cdc_proto = out.File

@@ -1,5 +1,6 @@
 from udb.entity.v1 import context_pb2 as _context_pb2
 from google.protobuf.internal import containers as _containers
+from google.protobuf.internal import enum_type_wrapper as _enum_type_wrapper
 from google.protobuf import descriptor as _descriptor
 from google.protobuf import message as _message
 from collections.abc import Iterable as _Iterable, Mapping as _Mapping
@@ -7,17 +8,30 @@ from typing import ClassVar as _ClassVar, Optional as _Optional, Union as _Union
 
 DESCRIPTOR: _descriptor.FileDescriptor
 
+class CdcConsumerStart(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
+    __slots__ = ()
+    CDC_CONSUMER_START_UNSPECIFIED: _ClassVar[CdcConsumerStart]
+    CDC_CONSUMER_START_LATEST: _ClassVar[CdcConsumerStart]
+    CDC_CONSUMER_START_EARLIEST: _ClassVar[CdcConsumerStart]
+CDC_CONSUMER_START_UNSPECIFIED: CdcConsumerStart
+CDC_CONSUMER_START_LATEST: CdcConsumerStart
+CDC_CONSUMER_START_EARLIEST: CdcConsumerStart
+
 class CDCSubscriptionRequest(_message.Message):
-    __slots__ = ("context", "topic_pattern", "since_event_id", "consumer_name")
+    __slots__ = ("context", "topic_pattern", "since_event_id", "consumer_name", "progress_markers", "start")
     CONTEXT_FIELD_NUMBER: _ClassVar[int]
     TOPIC_PATTERN_FIELD_NUMBER: _ClassVar[int]
     SINCE_EVENT_ID_FIELD_NUMBER: _ClassVar[int]
     CONSUMER_NAME_FIELD_NUMBER: _ClassVar[int]
+    PROGRESS_MARKERS_FIELD_NUMBER: _ClassVar[int]
+    START_FIELD_NUMBER: _ClassVar[int]
     context: _context_pb2.RequestContext
     topic_pattern: str
     since_event_id: str
     consumer_name: str
-    def __init__(self, context: _Optional[_Union[_context_pb2.RequestContext, _Mapping]] = ..., topic_pattern: _Optional[str] = ..., since_event_id: _Optional[str] = ..., consumer_name: _Optional[str] = ...) -> None: ...
+    progress_markers: bool
+    start: CdcConsumerStart
+    def __init__(self, context: _Optional[_Union[_context_pb2.RequestContext, _Mapping]] = ..., topic_pattern: _Optional[str] = ..., since_event_id: _Optional[str] = ..., consumer_name: _Optional[str] = ..., progress_markers: bool = ..., start: _Optional[_Union[CdcConsumerStart, str]] = ...) -> None: ...
 
 class AckCdcEventsRequest(_message.Message):
     __slots__ = ("context", "consumer_name", "topic_pattern", "event_id")

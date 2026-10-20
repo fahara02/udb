@@ -94,10 +94,12 @@ const store_conformance_1 = require("./test-support/store-conformance");
     strict_1.default.equal(event.payload.envelope_version, 2);
     strict_1.default.equal(event.payload.correlation_id, "corr-1");
 });
-(0, node_test_1.test)("decodeEnvelope unwraps a nested journal envelope and refuses newer versions", () => {
+(0, node_test_1.test)("decodeEnvelope unwraps a nested journal envelope and refuses unversioned, old and newer versions", () => {
     const nested = JSON.stringify({ payload: { event_type: "x", payload: { a: 1 }, envelope_version: 2 } });
     strict_1.default.deepEqual((0, stores_1.decodeEnvelope)(nested).payload, { a: 1 });
-    strict_1.default.throws(() => (0, stores_1.decodeEnvelope)(JSON.stringify({ event_type: "x", payload: {}, envelope_version: 3 })));
+    strict_1.default.throws(() => (0, stores_1.decodeEnvelope)(JSON.stringify({ event_type: "x", payload: {}, envelope_version: 3 })), /upgrade the SDK/);
+    strict_1.default.throws(() => (0, stores_1.decodeEnvelope)(JSON.stringify({ event_type: "x", payload: {} })), /no envelope_version/);
+    strict_1.default.throws(() => (0, stores_1.decodeEnvelope)(JSON.stringify({ event_type: "x", payload: {}, envelope_version: 1 })), /not supported/);
 });
 (0, node_test_1.test)("tx requires a commit acknowledgement and preserves the typed failure trailer", async () => {
     const conflict = new generatedClient_1.UdbError("DataBroker/BeginTx", Object.assign(new Error("CAS failed"), { code: 10 }), { reason: "UDB_CAS_CONFLICT" });
@@ -144,6 +146,34 @@ const store_conformance_1 = require("./test-support/store-conformance");
     }, { signal: controller.signal, onError: () => controller.abort() });
     strict_1.default.deepEqual(handled, ["head"]);
     strict_1.default.deepEqual(acked, []);
+});
+(0, node_test_1.test)("consumer acknowledges progress markers in order without handling them", async () => {
+    const controller = new AbortController();
+    const handled = [];
+    const acked = [];
+    let subscribed;
+    const event = (event_id) => ({ event_id, payload_json: JSON.stringify({ envelope_version: 2, payload: {} }) });
+    await (0, stores_1.consume)({
+        unary: async (_service, _method, request) => { acked.push(request.event_id); return {}; },
+        serverStream: (_service, _method, request) => {
+            subscribed = request;
+            const stream = Object.assign(new node_events_1.EventEmitter(), { cancel: () => stream.emit("error", { code: 1 }) });
+            queueMicrotask(() => {
+                stream.emit("data", event("a"));
+                stream.emit("data", { event_id: "marker", topic: "udb.cdc.progress.v1", progress_only: true,
+                    payload_json: JSON.stringify({ kind: "progress", journal_position: "7", caught_up: true }) });
+                stream.emit("data", event("b"));
+                stream.emit("end");
+            });
+            return stream;
+        },
+    }, "consumer", "topic", async (consumed) => {
+        handled.push(consumed.id);
+    }, { signal: controller.signal, onError: () => controller.abort(), fromEarliest: true });
+    strict_1.default.deepEqual(handled, ["a", "b"]);
+    strict_1.default.deepEqual(acked, ["a", "marker", "b"]);
+    strict_1.default.equal(subscribed.progress_markers, true);
+    strict_1.default.equal(subscribed.start, "CDC_CONSUMER_START_EARLIEST");
 });
 (0, node_test_1.test)("consumer stops on an unsupported envelope version without acknowledging it", async () => {
     let acked = false;

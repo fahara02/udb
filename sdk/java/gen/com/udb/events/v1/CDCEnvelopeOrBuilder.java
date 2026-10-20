@@ -72,4 +72,35 @@ public interface CDCEnvelopeOrBuilder extends
    * <code>.google.protobuf.Timestamp published_at = 5 [json_name = "publishedAt"];</code>
    */
   com.google.protobuf.TimestampOrBuilder getPublishedAtOrBuilder();
+
+  /**
+   * <pre>
+   * True for a progress marker, which is not an event. Markers are sent only
+   * when CDCSubscriptionRequest.progress_markers is set. A marker says the
+   * stream has read every committed journal row up to journal_position, so a
+   * consumer whose topic is quiet still sees its position advance. Its fields:
+   * event_id is a progress token (a version-8 UUID whose first six bytes are
+   * "udbpro" and whose last eight carry the position); topic is the reserved
+   * "udb.cdc.progress.v1"; partition_key is empty; payload_json is
+   * {"kind":"progress","journal_position":"&lt;position&gt;","caught_up":&lt;bool&gt;}.
+   * Do not pass a marker to event handlers. A durable consumer acknowledges it
+   * with AckCdcEvents (event_id = the token) once every earlier event is
+   * acknowledged; the token is also accepted as since_event_id.
+   * </pre>
+   *
+   * <code>bool progress_only = 6 [json_name = "progressOnly"];</code>
+   * @return The progressOnly.
+   */
+  boolean getProgressOnly();
+
+  /**
+   * <pre>
+   * Committed journal position of this event, or for a marker the position
+   * read through. Positions increase in commit order and are never reused.
+   * </pre>
+   *
+   * <code>int64 journal_position = 7 [json_name = "journalPosition"];</code>
+   * @return The journalPosition.
+   */
+  long getJournalPosition();
 }

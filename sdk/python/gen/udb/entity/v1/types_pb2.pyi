@@ -83,6 +83,7 @@ from udb.entity.v1.cdc_pb2 import NackCdcEventsRequest as NackCdcEventsRequest
 from udb.entity.v1.cdc_pb2 import CdcControlRequest as CdcControlRequest
 from udb.entity.v1.cdc_pb2 import CdcStatusResponse as CdcStatusResponse
 from udb.entity.v1.cdc_pb2 import CdcConsumerStatus as CdcConsumerStatus
+from udb.entity.v1.cdc_pb2 import CdcConsumerStart as CdcConsumerStart
 from udb.entity.v1.outbox_pb2 import EnqueueOutboxEventRequest as EnqueueOutboxEventRequest
 from udb.entity.v1.outbox_pb2 import EnqueueOutboxEventResponse as EnqueueOutboxEventResponse
 from udb.entity.v1.admin_pb2 import CapabilitiesRequest as CapabilitiesRequest
@@ -170,3 +171,6 @@ GRAPH_TRAVERSAL_DIRECTION_UNSPECIFIED: _stores_pb2.GraphTraversalDirection
 GRAPH_TRAVERSAL_DIRECTION_OUTGOING: _stores_pb2.GraphTraversalDirection
 GRAPH_TRAVERSAL_DIRECTION_INCOMING: _stores_pb2.GraphTraversalDirection
 GRAPH_TRAVERSAL_DIRECTION_BOTH: _stores_pb2.GraphTraversalDirection
+CDC_CONSUMER_START_UNSPECIFIED: _cdc_pb2.CdcConsumerStart
+CDC_CONSUMER_START_LATEST: _cdc_pb2.CdcConsumerStart
+CDC_CONSUMER_START_EARLIEST: _cdc_pb2.CdcConsumerStart

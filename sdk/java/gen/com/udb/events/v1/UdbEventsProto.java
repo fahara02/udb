@@ -57,12 +57,14 @@ public final class UdbEventsProto {
     java.lang.String[] descriptorData = {
       "\n\036udb/events/v1/udb_events.proto\022\rudb.ev" +
       "ents.v1\032\034google/protobuf/struct.proto\032\037g" +
-      "oogle/protobuf/timestamp.proto\"\305\001\n\013CDCEn" +
+      "oogle/protobuf/timestamp.proto\"\225\002\n\013CDCEn" +
       "velope\022\031\n\010event_id\030\001 \001(\tR\007eventId\022\024\n\005top" +
       "ic\030\002 \001(\tR\005topic\022#\n\rpartition_key\030\003 \001(\tR\014" +
       "partitionKey\022!\n\014payload_json\030\004 \001(\tR\013payl" +
       "oadJson\022=\n\014published_at\030\005 \001(\0132\032.google.p" +
-      "rotobuf.TimestampR\013publishedAt\"\235\002\n\rEvent" +
+      "rotobuf.TimestampR\013publishedAt\022#\n\rprogre" +
+      "ss_only\030\006 \001(\010R\014progressOnly\022)\n\020journal_p" +
+      "osition\030\007 \001(\003R\017journalPosition\"\235\002\n\rEvent" +
       "Envelope\022\031\n\010event_id\030\001 \001(\tR\007eventId\022\035\n\ne" +
       "vent_type\030\002 \001(\tR\teventType\0228\n\ttimestamp\030" +
       "\003 \001(\0132\032.google.protobuf.TimestampR\ttimes" +
@@ -101,7 +103,7 @@ public final class UdbEventsProto {
     internal_static_udb_events_v1_CDCEnvelope_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_events_v1_CDCEnvelope_descriptor,
-        new java.lang.String[] { "EventId", "Topic", "PartitionKey", "PayloadJson", "PublishedAt", });
+        new java.lang.String[] { "EventId", "Topic", "PartitionKey", "PayloadJson", "PublishedAt", "ProgressOnly", "JournalPosition", });
     internal_static_udb_events_v1_EventEnvelope_descriptor =
       getDescriptor().getMessageTypes().get(1);
     internal_static_udb_events_v1_EventEnvelope_fieldAccessorTable = new

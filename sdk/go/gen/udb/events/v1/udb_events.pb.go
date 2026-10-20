@@ -25,14 +25,29 @@ const (
 
 // Kafka topic: udb.cdc.envelope.v1
 type CDCEnvelope struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	EventId       string                 `protobuf:"bytes,1,opt,name=event_id,json=eventId,proto3" json:"event_id,omitempty"`
-	Topic         string                 `protobuf:"bytes,2,opt,name=topic,proto3" json:"topic,omitempty"`
-	PartitionKey  string                 `protobuf:"bytes,3,opt,name=partition_key,json=partitionKey,proto3" json:"partition_key,omitempty"`
-	PayloadJson   string                 `protobuf:"bytes,4,opt,name=payload_json,json=payloadJson,proto3" json:"payload_json,omitempty"`
-	PublishedAt   *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=published_at,json=publishedAt,proto3" json:"published_at,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state        protoimpl.MessageState `protogen:"open.v1"`
+	EventId      string                 `protobuf:"bytes,1,opt,name=event_id,json=eventId,proto3" json:"event_id,omitempty"`
+	Topic        string                 `protobuf:"bytes,2,opt,name=topic,proto3" json:"topic,omitempty"`
+	PartitionKey string                 `protobuf:"bytes,3,opt,name=partition_key,json=partitionKey,proto3" json:"partition_key,omitempty"`
+	PayloadJson  string                 `protobuf:"bytes,4,opt,name=payload_json,json=payloadJson,proto3" json:"payload_json,omitempty"`
+	PublishedAt  *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=published_at,json=publishedAt,proto3" json:"published_at,omitempty"`
+	// True for a progress marker, which is not an event. Markers are sent only
+	// when CDCSubscriptionRequest.progress_markers is set. A marker says the
+	// stream has read every committed journal row up to journal_position, so a
+	// consumer whose topic is quiet still sees its position advance. Its fields:
+	// event_id is a progress token (a version-8 UUID whose first six bytes are
+	// "udbpro" and whose last eight carry the position); topic is the reserved
+	// "udb.cdc.progress.v1"; partition_key is empty; payload_json is
+	// {"kind":"progress","journal_position":"<position>","caught_up":<bool>}.
+	// Do not pass a marker to event handlers. A durable consumer acknowledges it
+	// with AckCdcEvents (event_id = the token) once every earlier event is
+	// acknowledged; the token is also accepted as since_event_id.
+	ProgressOnly bool `protobuf:"varint,6,opt,name=progress_only,json=progressOnly,proto3" json:"progress_only,omitempty"`
+	// Committed journal position of this event, or for a marker the position
+	// read through. Positions increase in commit order and are never reused.
+	JournalPosition int64 `protobuf:"varint,7,opt,name=journal_position,json=journalPosition,proto3" json:"journal_position,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *CDCEnvelope) Reset() {
@@ -98,6 +113,20 @@ func (x *CDCEnvelope) GetPublishedAt() *timestamppb.Timestamp {
 		return x.PublishedAt
 	}
 	return nil
+}
+
+func (x *CDCEnvelope) GetProgressOnly() bool {
+	if x != nil {
+		return x.ProgressOnly
+	}
+	return false
+}
+
+func (x *CDCEnvelope) GetJournalPosition() int64 {
+	if x != nil {
+		return x.JournalPosition
+	}
+	return 0
 }
 
 // Canonical inner envelope wrapping every native domain event stored in the
@@ -367,13 +396,15 @@ var File_udb_events_v1_udb_events_proto protoreflect.FileDescriptor
 
 const file_udb_events_v1_udb_events_proto_rawDesc = "" +
 	"\n" +
-	"\x1eudb/events/v1/udb_events.proto\x12\rudb.events.v1\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xc5\x01\n" +
+	"\x1eudb/events/v1/udb_events.proto\x12\rudb.events.v1\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\x95\x02\n" +
 	"\vCDCEnvelope\x12\x19\n" +
 	"\bevent_id\x18\x01 \x01(\tR\aeventId\x12\x14\n" +
 	"\x05topic\x18\x02 \x01(\tR\x05topic\x12#\n" +
 	"\rpartition_key\x18\x03 \x01(\tR\fpartitionKey\x12!\n" +
 	"\fpayload_json\x18\x04 \x01(\tR\vpayloadJson\x12=\n" +
-	"\fpublished_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\vpublishedAt\"\x9d\x02\n" +
+	"\fpublished_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\vpublishedAt\x12#\n" +
+	"\rprogress_only\x18\x06 \x01(\bR\fprogressOnly\x12)\n" +
+	"\x10journal_position\x18\a \x01(\x03R\x0fjournalPosition\"\x9d\x02\n" +
 	"\rEventEnvelope\x12\x19\n" +
 	"\bevent_id\x18\x01 \x01(\tR\aeventId\x12\x1d\n" +
 	"\n" +

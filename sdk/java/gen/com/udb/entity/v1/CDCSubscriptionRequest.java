@@ -31,6 +31,7 @@ private static final long serialVersionUID = 0L;
     topicPattern_ = "";
     sinceEventId_ = "";
     consumerName_ = "";
+    start_ = 0;
   }
 
   public static final com.google.protobuf.Descriptors.Descriptor
@@ -116,6 +117,11 @@ private static final long serialVersionUID = 0L;
   @SuppressWarnings("serial")
   private volatile java.lang.Object sinceEventId_ = "";
   /**
+   * <pre>
+   * Resume after this event: a retained event id, or a progress marker's
+   * token (see CDCEnvelope.progress_only), which stays valid after retention.
+   * </pre>
+   *
    * <code>string since_event_id = 3 [json_name = "sinceEventId"];</code>
    * @return The sinceEventId.
    */
@@ -133,6 +139,11 @@ private static final long serialVersionUID = 0L;
     }
   }
   /**
+   * <pre>
+   * Resume after this event: a retained event id, or a progress marker's
+   * token (see CDCEnvelope.progress_only), which stays valid after retention.
+   * </pre>
+   *
    * <code>string since_event_id = 3 [json_name = "sinceEventId"];</code>
    * @return The bytes for sinceEventId.
    */
@@ -160,7 +171,7 @@ private static final long serialVersionUID = 0L;
    * since_event_id is empty, the stream resumes after the last event this
    * consumer acknowledged with AckCdcEvents for this topic_pattern, so a
    * restarted (or reconnected) consumer resumes its acknowledged position.
-   * A new name reads the retained backlog. Positions survive journal retention.
+   * A new name starts where `start` says. Positions survive journal retention.
    * Names are owned by the verified principal within its tenant and project;
    * another principal cannot subscribe or acknowledge under the same name.
    * </pre>
@@ -187,7 +198,7 @@ private static final long serialVersionUID = 0L;
    * since_event_id is empty, the stream resumes after the last event this
    * consumer acknowledged with AckCdcEvents for this topic_pattern, so a
    * restarted (or reconnected) consumer resumes its acknowledged position.
-   * A new name reads the retained backlog. Positions survive journal retention.
+   * A new name starts where `start` says. Positions survive journal retention.
    * Names are owned by the verified principal within its tenant and project;
    * another principal cannot subscribe or acknowledge under the same name.
    * </pre>
@@ -208,6 +219,53 @@ private static final long serialVersionUID = 0L;
     } else {
       return (com.google.protobuf.ByteString) ref;
     }
+  }
+
+  public static final int PROGRESS_MARKERS_FIELD_NUMBER = 5;
+  private boolean progressMarkers_ = false;
+  /**
+   * <pre>
+   * Interleave progress markers with events (CDCEnvelope.progress_only). Set
+   * it only if the client recognizes markers and keeps them away from event
+   * handlers. One marker follows the end of replay; later ones follow polls
+   * that read past events this stream did not deliver, at most every few
+   * seconds or every thousand journal positions.
+   * </pre>
+   *
+   * <code>bool progress_markers = 5 [json_name = "progressMarkers"];</code>
+   * @return The progressMarkers.
+   */
+  @java.lang.Override
+  public boolean getProgressMarkers() {
+    return progressMarkers_;
+  }
+
+  public static final int START_FIELD_NUMBER = 6;
+  private int start_ = 0;
+  /**
+   * <pre>
+   * Where a consumer_name starts on its first subscription. Ignored once the
+   * name has a stored position, and for anonymous streams.
+   * </pre>
+   *
+   * <code>.udb.entity.v1.CdcConsumerStart start = 6 [json_name = "start"];</code>
+   * @return The enum numeric value on the wire for start.
+   */
+  @java.lang.Override public int getStartValue() {
+    return start_;
+  }
+  /**
+   * <pre>
+   * Where a consumer_name starts on its first subscription. Ignored once the
+   * name has a stored position, and for anonymous streams.
+   * </pre>
+   *
+   * <code>.udb.entity.v1.CdcConsumerStart start = 6 [json_name = "start"];</code>
+   * @return The start.
+   */
+  @java.lang.Override public com.udb.entity.v1.CdcConsumerStart getStart() {
+    com.udb.entity.v1.CdcConsumerStart result = com.udb.entity.v1.CdcConsumerStart.forNumber(start_);
+    return result == null ? com.udb.entity.v1.CdcConsumerStart.UNRECOGNIZED : result;
   }
 
   private byte memoizedIsInitialized = -1;
@@ -236,6 +294,12 @@ private static final long serialVersionUID = 0L;
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(consumerName_)) {
       com.google.protobuf.GeneratedMessage.writeString(output, 4, consumerName_);
     }
+    if (progressMarkers_ != false) {
+      output.writeBool(5, progressMarkers_);
+    }
+    if (start_ != com.udb.entity.v1.CdcConsumerStart.CDC_CONSUMER_START_UNSPECIFIED.getNumber()) {
+      output.writeEnum(6, start_);
+    }
     getUnknownFields().writeTo(output);
   }
 
@@ -257,6 +321,14 @@ private static final long serialVersionUID = 0L;
     }
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(consumerName_)) {
       size += com.google.protobuf.GeneratedMessage.computeStringSize(4, consumerName_);
+    }
+    if (progressMarkers_ != false) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeBoolSize(5, progressMarkers_);
+    }
+    if (start_ != com.udb.entity.v1.CdcConsumerStart.CDC_CONSUMER_START_UNSPECIFIED.getNumber()) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeEnumSize(6, start_);
     }
     size += getUnknownFields().getSerializedSize();
     memoizedSize = size;
@@ -284,6 +356,9 @@ private static final long serialVersionUID = 0L;
         .equals(other.getSinceEventId())) return false;
     if (!getConsumerName()
         .equals(other.getConsumerName())) return false;
+    if (getProgressMarkers()
+        != other.getProgressMarkers()) return false;
+    if (start_ != other.start_) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -305,6 +380,11 @@ private static final long serialVersionUID = 0L;
     hash = (53 * hash) + getSinceEventId().hashCode();
     hash = (37 * hash) + CONSUMER_NAME_FIELD_NUMBER;
     hash = (53 * hash) + getConsumerName().hashCode();
+    hash = (37 * hash) + PROGRESS_MARKERS_FIELD_NUMBER;
+    hash = (53 * hash) + com.google.protobuf.Internal.hashBoolean(
+        getProgressMarkers());
+    hash = (37 * hash) + START_FIELD_NUMBER;
+    hash = (53 * hash) + start_;
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -450,6 +530,8 @@ private static final long serialVersionUID = 0L;
       topicPattern_ = "";
       sinceEventId_ = "";
       consumerName_ = "";
+      progressMarkers_ = false;
+      start_ = 0;
       return this;
     }
 
@@ -499,6 +581,12 @@ private static final long serialVersionUID = 0L;
       if (((from_bitField0_ & 0x00000008) != 0)) {
         result.consumerName_ = consumerName_;
       }
+      if (((from_bitField0_ & 0x00000010) != 0)) {
+        result.progressMarkers_ = progressMarkers_;
+      }
+      if (((from_bitField0_ & 0x00000020) != 0)) {
+        result.start_ = start_;
+      }
       result.bitField0_ |= to_bitField0_;
     }
 
@@ -531,6 +619,12 @@ private static final long serialVersionUID = 0L;
         consumerName_ = other.consumerName_;
         bitField0_ |= 0x00000008;
         onChanged();
+      }
+      if (other.getProgressMarkers() != false) {
+        setProgressMarkers(other.getProgressMarkers());
+      }
+      if (other.start_ != 0) {
+        setStartValue(other.getStartValue());
       }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
@@ -580,6 +674,16 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00000008;
               break;
             } // case 34
+            case 40: {
+              progressMarkers_ = input.readBool();
+              bitField0_ |= 0x00000010;
+              break;
+            } // case 40
+            case 48: {
+              start_ = input.readEnum();
+              bitField0_ |= 0x00000020;
+              break;
+            } // case 48
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -792,6 +896,11 @@ private static final long serialVersionUID = 0L;
 
     private java.lang.Object sinceEventId_ = "";
     /**
+     * <pre>
+     * Resume after this event: a retained event id, or a progress marker's
+     * token (see CDCEnvelope.progress_only), which stays valid after retention.
+     * </pre>
+     *
      * <code>string since_event_id = 3 [json_name = "sinceEventId"];</code>
      * @return The sinceEventId.
      */
@@ -808,6 +917,11 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
+     * <pre>
+     * Resume after this event: a retained event id, or a progress marker's
+     * token (see CDCEnvelope.progress_only), which stays valid after retention.
+     * </pre>
+     *
      * <code>string since_event_id = 3 [json_name = "sinceEventId"];</code>
      * @return The bytes for sinceEventId.
      */
@@ -825,6 +939,11 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
+     * <pre>
+     * Resume after this event: a retained event id, or a progress marker's
+     * token (see CDCEnvelope.progress_only), which stays valid after retention.
+     * </pre>
+     *
      * <code>string since_event_id = 3 [json_name = "sinceEventId"];</code>
      * @param value The sinceEventId to set.
      * @return This builder for chaining.
@@ -838,6 +957,11 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
+     * <pre>
+     * Resume after this event: a retained event id, or a progress marker's
+     * token (see CDCEnvelope.progress_only), which stays valid after retention.
+     * </pre>
+     *
      * <code>string since_event_id = 3 [json_name = "sinceEventId"];</code>
      * @return This builder for chaining.
      */
@@ -848,6 +972,11 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
+     * <pre>
+     * Resume after this event: a retained event id, or a progress marker's
+     * token (see CDCEnvelope.progress_only), which stays valid after retention.
+     * </pre>
+     *
      * <code>string since_event_id = 3 [json_name = "sinceEventId"];</code>
      * @param value The bytes for sinceEventId to set.
      * @return This builder for chaining.
@@ -869,7 +998,7 @@ private static final long serialVersionUID = 0L;
      * since_event_id is empty, the stream resumes after the last event this
      * consumer acknowledged with AckCdcEvents for this topic_pattern, so a
      * restarted (or reconnected) consumer resumes its acknowledged position.
-     * A new name reads the retained backlog. Positions survive journal retention.
+     * A new name starts where `start` says. Positions survive journal retention.
      * Names are owned by the verified principal within its tenant and project;
      * another principal cannot subscribe or acknowledge under the same name.
      * </pre>
@@ -895,7 +1024,7 @@ private static final long serialVersionUID = 0L;
      * since_event_id is empty, the stream resumes after the last event this
      * consumer acknowledged with AckCdcEvents for this topic_pattern, so a
      * restarted (or reconnected) consumer resumes its acknowledged position.
-     * A new name reads the retained backlog. Positions survive journal retention.
+     * A new name starts where `start` says. Positions survive journal retention.
      * Names are owned by the verified principal within its tenant and project;
      * another principal cannot subscribe or acknowledge under the same name.
      * </pre>
@@ -922,7 +1051,7 @@ private static final long serialVersionUID = 0L;
      * since_event_id is empty, the stream resumes after the last event this
      * consumer acknowledged with AckCdcEvents for this topic_pattern, so a
      * restarted (or reconnected) consumer resumes its acknowledged position.
-     * A new name reads the retained backlog. Positions survive journal retention.
+     * A new name starts where `start` says. Positions survive journal retention.
      * Names are owned by the verified principal within its tenant and project;
      * another principal cannot subscribe or acknowledge under the same name.
      * </pre>
@@ -945,7 +1074,7 @@ private static final long serialVersionUID = 0L;
      * since_event_id is empty, the stream resumes after the last event this
      * consumer acknowledged with AckCdcEvents for this topic_pattern, so a
      * restarted (or reconnected) consumer resumes its acknowledged position.
-     * A new name reads the retained backlog. Positions survive journal retention.
+     * A new name starts where `start` says. Positions survive journal retention.
      * Names are owned by the verified principal within its tenant and project;
      * another principal cannot subscribe or acknowledge under the same name.
      * </pre>
@@ -965,7 +1094,7 @@ private static final long serialVersionUID = 0L;
      * since_event_id is empty, the stream resumes after the last event this
      * consumer acknowledged with AckCdcEvents for this topic_pattern, so a
      * restarted (or reconnected) consumer resumes its acknowledged position.
-     * A new name reads the retained backlog. Positions survive journal retention.
+     * A new name starts where `start` says. Positions survive journal retention.
      * Names are owned by the verified principal within its tenant and project;
      * another principal cannot subscribe or acknowledge under the same name.
      * </pre>
@@ -980,6 +1109,138 @@ private static final long serialVersionUID = 0L;
       checkByteStringIsUtf8(value);
       consumerName_ = value;
       bitField0_ |= 0x00000008;
+      onChanged();
+      return this;
+    }
+
+    private boolean progressMarkers_ ;
+    /**
+     * <pre>
+     * Interleave progress markers with events (CDCEnvelope.progress_only). Set
+     * it only if the client recognizes markers and keeps them away from event
+     * handlers. One marker follows the end of replay; later ones follow polls
+     * that read past events this stream did not deliver, at most every few
+     * seconds or every thousand journal positions.
+     * </pre>
+     *
+     * <code>bool progress_markers = 5 [json_name = "progressMarkers"];</code>
+     * @return The progressMarkers.
+     */
+    @java.lang.Override
+    public boolean getProgressMarkers() {
+      return progressMarkers_;
+    }
+    /**
+     * <pre>
+     * Interleave progress markers with events (CDCEnvelope.progress_only). Set
+     * it only if the client recognizes markers and keeps them away from event
+     * handlers. One marker follows the end of replay; later ones follow polls
+     * that read past events this stream did not deliver, at most every few
+     * seconds or every thousand journal positions.
+     * </pre>
+     *
+     * <code>bool progress_markers = 5 [json_name = "progressMarkers"];</code>
+     * @param value The progressMarkers to set.
+     * @return This builder for chaining.
+     */
+    public Builder setProgressMarkers(boolean value) {
+
+      progressMarkers_ = value;
+      bitField0_ |= 0x00000010;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Interleave progress markers with events (CDCEnvelope.progress_only). Set
+     * it only if the client recognizes markers and keeps them away from event
+     * handlers. One marker follows the end of replay; later ones follow polls
+     * that read past events this stream did not deliver, at most every few
+     * seconds or every thousand journal positions.
+     * </pre>
+     *
+     * <code>bool progress_markers = 5 [json_name = "progressMarkers"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearProgressMarkers() {
+      bitField0_ = (bitField0_ & ~0x00000010);
+      progressMarkers_ = false;
+      onChanged();
+      return this;
+    }
+
+    private int start_ = 0;
+    /**
+     * <pre>
+     * Where a consumer_name starts on its first subscription. Ignored once the
+     * name has a stored position, and for anonymous streams.
+     * </pre>
+     *
+     * <code>.udb.entity.v1.CdcConsumerStart start = 6 [json_name = "start"];</code>
+     * @return The enum numeric value on the wire for start.
+     */
+    @java.lang.Override public int getStartValue() {
+      return start_;
+    }
+    /**
+     * <pre>
+     * Where a consumer_name starts on its first subscription. Ignored once the
+     * name has a stored position, and for anonymous streams.
+     * </pre>
+     *
+     * <code>.udb.entity.v1.CdcConsumerStart start = 6 [json_name = "start"];</code>
+     * @param value The enum numeric value on the wire for start to set.
+     * @return This builder for chaining.
+     */
+    public Builder setStartValue(int value) {
+      start_ = value;
+      bitField0_ |= 0x00000020;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Where a consumer_name starts on its first subscription. Ignored once the
+     * name has a stored position, and for anonymous streams.
+     * </pre>
+     *
+     * <code>.udb.entity.v1.CdcConsumerStart start = 6 [json_name = "start"];</code>
+     * @return The start.
+     */
+    @java.lang.Override
+    public com.udb.entity.v1.CdcConsumerStart getStart() {
+      com.udb.entity.v1.CdcConsumerStart result = com.udb.entity.v1.CdcConsumerStart.forNumber(start_);
+      return result == null ? com.udb.entity.v1.CdcConsumerStart.UNRECOGNIZED : result;
+    }
+    /**
+     * <pre>
+     * Where a consumer_name starts on its first subscription. Ignored once the
+     * name has a stored position, and for anonymous streams.
+     * </pre>
+     *
+     * <code>.udb.entity.v1.CdcConsumerStart start = 6 [json_name = "start"];</code>
+     * @param value The start to set.
+     * @return This builder for chaining.
+     */
+    public Builder setStart(com.udb.entity.v1.CdcConsumerStart value) {
+      if (value == null) { throw new NullPointerException(); }
+      bitField0_ |= 0x00000020;
+      start_ = value.getNumber();
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Where a consumer_name starts on its first subscription. Ignored once the
+     * name has a stored position, and for anonymous streams.
+     * </pre>
+     *
+     * <code>.udb.entity.v1.CdcConsumerStart start = 6 [json_name = "start"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearStart() {
+      bitField0_ = (bitField0_ & ~0x00000020);
+      start_ = 0;
       onChanged();
       return this;
     }

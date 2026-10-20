@@ -26,38 +26,40 @@ namespace Udb.Events.V1 {
           string.Concat(
             "Ch51ZGIvZXZlbnRzL3YxL3VkYl9ldmVudHMucHJvdG8SDXVkYi5ldmVudHMu",
             "djEaHGdvb2dsZS9wcm90b2J1Zi9zdHJ1Y3QucHJvdG8aH2dvb2dsZS9wcm90",
-            "b2J1Zi90aW1lc3RhbXAucHJvdG8ixQEKC0NEQ0VudmVsb3BlEhkKCGV2ZW50",
+            "b2J1Zi90aW1lc3RhbXAucHJvdG8ilQIKC0NEQ0VudmVsb3BlEhkKCGV2ZW50",
             "X2lkGAEgASgJUgdldmVudElkEhQKBXRvcGljGAIgASgJUgV0b3BpYxIjCg1w",
             "YXJ0aXRpb25fa2V5GAMgASgJUgxwYXJ0aXRpb25LZXkSIQoMcGF5bG9hZF9q",
             "c29uGAQgASgJUgtwYXlsb2FkSnNvbhI9CgxwdWJsaXNoZWRfYXQYBSABKAsy",
-            "Gi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wUgtwdWJsaXNoZWRBdCKdAgoN",
-            "RXZlbnRFbnZlbG9wZRIZCghldmVudF9pZBgBIAEoCVIHZXZlbnRJZBIdCgpl",
-            "dmVudF90eXBlGAIgASgJUglldmVudFR5cGUSOAoJdGltZXN0YW1wGAMgASgL",
-            "MhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcFIJdGltZXN0YW1wEiUKDmNv",
-            "cnJlbGF0aW9uX2lkGAQgASgJUg1jb3JyZWxhdGlvbklkEh8KC2RvY3VtZW50",
-            "X2lkGAUgASgJUgpkb2N1bWVudElkEh0KCnNjaGVtYV91cmkYBiABKAlSCXNj",
-            "aGVtYVVyaRIxCgdwYXlsb2FkGAcgASgLMhcuZ29vZ2xlLnByb3RvYnVmLlN0",
-            "cnVjdFIHcGF5bG9hZCKiAgoSRHJpZnREZXRlY3RlZEV2ZW50EhkKCGV2ZW50",
-            "X2lkGAEgASgJUgdldmVudElkEjQKFnNjaGVtYV9jaGVja3N1bV9zaGEyNTYY",
-            "AiABKAlSFHNjaGVtYUNoZWNrc3VtU2hhMjU2EjYKF2Jsb2NrZWRfb3BlcmF0",
-            "aW9uX2NvdW50GAMgASgFUhVibG9ja2VkT3BlcmF0aW9uQ291bnQSHwoLcmVw",
-            "b3J0X2pzb24YBCABKAlSCnJlcG9ydEpzb24SJQoOY29ycmVsYXRpb25faWQY",
-            "BSABKAlSDWNvcnJlbGF0aW9uSWQSOwoLb2NjdXJyZWRfYXQYBiABKAsyGi5n",
-            "b29nbGUucHJvdG9idWYuVGltZXN0YW1wUgpvY2N1cnJlZEF0IokCChpQcm92",
-            "aXNpb25pbmdDb21wbGV0ZWRFdmVudBIZCghldmVudF9pZBgBIAEoCVIHZXZl",
-            "bnRJZBI0ChZzY2hlbWFfY2hlY2tzdW1fc2hhMjU2GAIgASgJUhRzY2hlbWFD",
-            "aGVja3N1bVNoYTI1NhI2ChdhcHBsaWVkX29wZXJhdGlvbl9jb3VudBgDIAEo",
-            "BVIVYXBwbGllZE9wZXJhdGlvbkNvdW50EiUKDmNvcnJlbGF0aW9uX2lkGAQg",
-            "ASgJUg1jb3JyZWxhdGlvbklkEjsKC29jY3VycmVkX2F0GAUgASgLMhouZ29v",
-            "Z2xlLnByb3RvYnVmLlRpbWVzdGFtcFIKb2NjdXJyZWRBdEK0AQoRY29tLnVk",
-            "Yi5ldmVudHMudjFCDlVkYkV2ZW50c1Byb3RvUAFaOWdpdGh1Yi5jb20vZmFo",
-            "YXJhMDIvdWRiL3Nkay9nby9nZW4vdWRiL2V2ZW50cy92MTtldmVudHN2MaIC",
-            "A1VFWKoCDVVkYi5FdmVudHMuVjHKAg1VZGJcRXZlbnRzXFYx4gIZVWRiXEdQ",
-            "Qk1ldGFkYXRhXEV2ZW50c1xWMeoCD1VkYjo6RXZlbnRzOjpWMWIGcHJvdG8z"));
+            "Gi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wUgtwdWJsaXNoZWRBdBIjCg1w",
+            "cm9ncmVzc19vbmx5GAYgASgIUgxwcm9ncmVzc09ubHkSKQoQam91cm5hbF9w",
+            "b3NpdGlvbhgHIAEoA1IPam91cm5hbFBvc2l0aW9uIp0CCg1FdmVudEVudmVs",
+            "b3BlEhkKCGV2ZW50X2lkGAEgASgJUgdldmVudElkEh0KCmV2ZW50X3R5cGUY",
+            "AiABKAlSCWV2ZW50VHlwZRI4Cgl0aW1lc3RhbXAYAyABKAsyGi5nb29nbGUu",
+            "cHJvdG9idWYuVGltZXN0YW1wUgl0aW1lc3RhbXASJQoOY29ycmVsYXRpb25f",
+            "aWQYBCABKAlSDWNvcnJlbGF0aW9uSWQSHwoLZG9jdW1lbnRfaWQYBSABKAlS",
+            "CmRvY3VtZW50SWQSHQoKc2NoZW1hX3VyaRgGIAEoCVIJc2NoZW1hVXJpEjEK",
+            "B3BheWxvYWQYByABKAsyFy5nb29nbGUucHJvdG9idWYuU3RydWN0UgdwYXls",
+            "b2FkIqICChJEcmlmdERldGVjdGVkRXZlbnQSGQoIZXZlbnRfaWQYASABKAlS",
+            "B2V2ZW50SWQSNAoWc2NoZW1hX2NoZWNrc3VtX3NoYTI1NhgCIAEoCVIUc2No",
+            "ZW1hQ2hlY2tzdW1TaGEyNTYSNgoXYmxvY2tlZF9vcGVyYXRpb25fY291bnQY",
+            "AyABKAVSFWJsb2NrZWRPcGVyYXRpb25Db3VudBIfCgtyZXBvcnRfanNvbhgE",
+            "IAEoCVIKcmVwb3J0SnNvbhIlCg5jb3JyZWxhdGlvbl9pZBgFIAEoCVINY29y",
+            "cmVsYXRpb25JZBI7CgtvY2N1cnJlZF9hdBgGIAEoCzIaLmdvb2dsZS5wcm90",
+            "b2J1Zi5UaW1lc3RhbXBSCm9jY3VycmVkQXQiiQIKGlByb3Zpc2lvbmluZ0Nv",
+            "bXBsZXRlZEV2ZW50EhkKCGV2ZW50X2lkGAEgASgJUgdldmVudElkEjQKFnNj",
+            "aGVtYV9jaGVja3N1bV9zaGEyNTYYAiABKAlSFHNjaGVtYUNoZWNrc3VtU2hh",
+            "MjU2EjYKF2FwcGxpZWRfb3BlcmF0aW9uX2NvdW50GAMgASgFUhVhcHBsaWVk",
+            "T3BlcmF0aW9uQ291bnQSJQoOY29ycmVsYXRpb25faWQYBCABKAlSDWNvcnJl",
+            "bGF0aW9uSWQSOwoLb2NjdXJyZWRfYXQYBSABKAsyGi5nb29nbGUucHJvdG9i",
+            "dWYuVGltZXN0YW1wUgpvY2N1cnJlZEF0QrQBChFjb20udWRiLmV2ZW50cy52",
+            "MUIOVWRiRXZlbnRzUHJvdG9QAVo5Z2l0aHViLmNvbS9mYWhhcmEwMi91ZGIv",
+            "c2RrL2dvL2dlbi91ZGIvZXZlbnRzL3YxO2V2ZW50c3YxogIDVUVYqgINVWRi",
+            "LkV2ZW50cy5WMcoCDVVkYlxFdmVudHNcVjHiAhlVZGJcR1BCTWV0YWRhdGFc",
+            "RXZlbnRzXFYx6gIPVWRiOjpFdmVudHM6OlYxYgZwcm90bzM="));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { global::Google.Protobuf.WellKnownTypes.StructReflection.Descriptor, global::Google.Protobuf.WellKnownTypes.TimestampReflection.Descriptor, },
           new pbr::GeneratedClrTypeInfo(null, null, new pbr::GeneratedClrTypeInfo[] {
-            new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Events.V1.CDCEnvelope), global::Udb.Events.V1.CDCEnvelope.Parser, new[]{ "EventId", "Topic", "PartitionKey", "PayloadJson", "PublishedAt" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Events.V1.CDCEnvelope), global::Udb.Events.V1.CDCEnvelope.Parser, new[]{ "EventId", "Topic", "PartitionKey", "PayloadJson", "PublishedAt", "ProgressOnly", "JournalPosition" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Events.V1.EventEnvelope), global::Udb.Events.V1.EventEnvelope.Parser, new[]{ "EventId", "EventType", "Timestamp", "CorrelationId", "DocumentId", "SchemaUri", "Payload" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Events.V1.DriftDetectedEvent), global::Udb.Events.V1.DriftDetectedEvent.Parser, new[]{ "EventId", "SchemaChecksumSha256", "BlockedOperationCount", "ReportJson", "CorrelationId", "OccurredAt" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Events.V1.ProvisioningCompletedEvent), global::Udb.Events.V1.ProvisioningCompletedEvent.Parser, new[]{ "EventId", "SchemaChecksumSha256", "AppliedOperationCount", "CorrelationId", "OccurredAt" }, null, null, null, null)
@@ -110,6 +112,8 @@ namespace Udb.Events.V1 {
       partitionKey_ = other.partitionKey_;
       payloadJson_ = other.payloadJson_;
       publishedAt_ = other.publishedAt_ != null ? other.publishedAt_.Clone() : null;
+      progressOnly_ = other.progressOnly_;
+      journalPosition_ = other.journalPosition_;
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
     }
 
@@ -179,6 +183,47 @@ namespace Udb.Events.V1 {
       }
     }
 
+    /// <summary>Field number for the "progress_only" field.</summary>
+    public const int ProgressOnlyFieldNumber = 6;
+    private bool progressOnly_;
+    /// <summary>
+    /// True for a progress marker, which is not an event. Markers are sent only
+    /// when CDCSubscriptionRequest.progress_markers is set. A marker says the
+    /// stream has read every committed journal row up to journal_position, so a
+    /// consumer whose topic is quiet still sees its position advance. Its fields:
+    /// event_id is a progress token (a version-8 UUID whose first six bytes are
+    /// "udbpro" and whose last eight carry the position); topic is the reserved
+    /// "udb.cdc.progress.v1"; partition_key is empty; payload_json is
+    /// {"kind":"progress","journal_position":"&lt;position>","caught_up":&lt;bool>}.
+    /// Do not pass a marker to event handlers. A durable consumer acknowledges it
+    /// with AckCdcEvents (event_id = the token) once every earlier event is
+    /// acknowledged; the token is also accepted as since_event_id.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool ProgressOnly {
+      get { return progressOnly_; }
+      set {
+        progressOnly_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "journal_position" field.</summary>
+    public const int JournalPositionFieldNumber = 7;
+    private long journalPosition_;
+    /// <summary>
+    /// Committed journal position of this event, or for a marker the position
+    /// read through. Positions increase in commit order and are never reused.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public long JournalPosition {
+      get { return journalPosition_; }
+      set {
+        journalPosition_ = value;
+      }
+    }
+
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public override bool Equals(object other) {
@@ -199,6 +244,8 @@ namespace Udb.Events.V1 {
       if (PartitionKey != other.PartitionKey) return false;
       if (PayloadJson != other.PayloadJson) return false;
       if (!object.Equals(PublishedAt, other.PublishedAt)) return false;
+      if (ProgressOnly != other.ProgressOnly) return false;
+      if (JournalPosition != other.JournalPosition) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
 
@@ -211,6 +258,8 @@ namespace Udb.Events.V1 {
       if (PartitionKey.Length != 0) hash ^= PartitionKey.GetHashCode();
       if (PayloadJson.Length != 0) hash ^= PayloadJson.GetHashCode();
       if (publishedAt_ != null) hash ^= PublishedAt.GetHashCode();
+      if (ProgressOnly != false) hash ^= ProgressOnly.GetHashCode();
+      if (JournalPosition != 0L) hash ^= JournalPosition.GetHashCode();
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
       }
@@ -249,6 +298,14 @@ namespace Udb.Events.V1 {
         output.WriteRawTag(42);
         output.WriteMessage(PublishedAt);
       }
+      if (ProgressOnly != false) {
+        output.WriteRawTag(48);
+        output.WriteBool(ProgressOnly);
+      }
+      if (JournalPosition != 0L) {
+        output.WriteRawTag(56);
+        output.WriteInt64(JournalPosition);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
       }
@@ -279,6 +336,14 @@ namespace Udb.Events.V1 {
         output.WriteRawTag(42);
         output.WriteMessage(PublishedAt);
       }
+      if (ProgressOnly != false) {
+        output.WriteRawTag(48);
+        output.WriteBool(ProgressOnly);
+      }
+      if (JournalPosition != 0L) {
+        output.WriteRawTag(56);
+        output.WriteInt64(JournalPosition);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(ref output);
       }
@@ -303,6 +368,12 @@ namespace Udb.Events.V1 {
       }
       if (publishedAt_ != null) {
         size += 1 + pb::CodedOutputStream.ComputeMessageSize(PublishedAt);
+      }
+      if (ProgressOnly != false) {
+        size += 1 + 1;
+      }
+      if (JournalPosition != 0L) {
+        size += 1 + pb::CodedOutputStream.ComputeInt64Size(JournalPosition);
       }
       if (_unknownFields != null) {
         size += _unknownFields.CalculateSize();
@@ -333,6 +404,12 @@ namespace Udb.Events.V1 {
           PublishedAt = new global::Google.Protobuf.WellKnownTypes.Timestamp();
         }
         PublishedAt.MergeFrom(other.PublishedAt);
+      }
+      if (other.ProgressOnly != false) {
+        ProgressOnly = other.ProgressOnly;
+      }
+      if (other.JournalPosition != 0L) {
+        JournalPosition = other.JournalPosition;
       }
       _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
     }
@@ -376,6 +453,14 @@ namespace Udb.Events.V1 {
             input.ReadMessage(PublishedAt);
             break;
           }
+          case 48: {
+            ProgressOnly = input.ReadBool();
+            break;
+          }
+          case 56: {
+            JournalPosition = input.ReadInt64();
+            break;
+          }
         }
       }
     #endif
@@ -416,6 +501,14 @@ namespace Udb.Events.V1 {
               PublishedAt = new global::Google.Protobuf.WellKnownTypes.Timestamp();
             }
             input.ReadMessage(PublishedAt);
+            break;
+          }
+          case 48: {
+            ProgressOnly = input.ReadBool();
+            break;
+          }
+          case 56: {
+            JournalPosition = input.ReadInt64();
             break;
           }
         }

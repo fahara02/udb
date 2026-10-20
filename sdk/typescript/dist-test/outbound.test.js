@@ -210,3 +210,12 @@ function fakeAuthClient(m) {
         node_assert_1.strict.equal(json.includes(banned), false, `leaked ${banned}`);
     }
 });
+(0, node_test_1.test)("metadata() always carries a fresh request context (native RPCs fail closed without one)", () => {
+    const first = (0, client_1.metadata)(meta({ correlationId: "" }));
+    const second = (0, client_1.metadata)(meta({ correlationId: "" }));
+    const requestId = first.get("x-request-id")[0];
+    node_assert_1.strict.match(requestId, /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
+    node_assert_1.strict.equal(first.get("x-correlation-id")[0], requestId);
+    node_assert_1.strict.notEqual(second.get("x-request-id")[0], requestId);
+    node_assert_1.strict.equal((0, client_1.metadata)(meta()).get("x-correlation-id")[0], "corr-123");
+});

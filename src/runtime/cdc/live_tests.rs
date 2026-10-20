@@ -738,7 +738,8 @@ async fn live_quiet_topic_poll_reads_only_its_topic_rows() {
         .execute(&pool)
         .await
         .expect("analyze journal");
-    let mut explain = sqlx::query_scalar::<_, String>(&format!("EXPLAIN {}", tail.sql))
+    let explain_sql = format!("EXPLAIN {}", tail.sql);
+    let mut explain = sqlx::query_scalar::<_, String>(&explain_sql)
         .bind(0i64)
         .bind(reached);
     for value in &tail.binds {

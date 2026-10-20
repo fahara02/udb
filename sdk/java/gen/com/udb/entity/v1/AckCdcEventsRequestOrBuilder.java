@@ -70,7 +70,9 @@ public interface AckCdcEventsRequestOrBuilder extends
    * The last event the consumer has fully handled. The next subscription
    * under this consumer name resumes after it. The event must be retained and
    * match the caller's tenant/project and topic pattern. An older acknowledgment
-   * succeeds without moving the stored cursor backward.
+   * succeeds without moving the stored cursor backward. A progress marker's
+   * token is also accepted: it moves the cursor to the marker's position.
+   * NackCdcEvents refuses a token (InvalidArgument).
    * </pre>
    *
    * <code>string event_id = 4 [json_name = "eventId"];</code>
@@ -82,7 +84,9 @@ public interface AckCdcEventsRequestOrBuilder extends
    * The last event the consumer has fully handled. The next subscription
    * under this consumer name resumes after it. The event must be retained and
    * match the caller's tenant/project and topic pattern. An older acknowledgment
-   * succeeds without moving the stored cursor backward.
+   * succeeds without moving the stored cursor backward. A progress marker's
+   * token is also accepted: it moves the cursor to the marker's position.
+   * NackCdcEvents refuses a token (InvalidArgument).
    * </pre>
    *
    * <code>string event_id = 4 [json_name = "eventId"];</code>

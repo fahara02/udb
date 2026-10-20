@@ -3136,8 +3136,7 @@ type GenericStoreOptions struct {
 	// Text search configuration for fts_columns (default "simple").
 	FtsConfig string `protobuf:"bytes,13,opt,name=fts_config,json=ftsConfig,proto3" json:"fts_config,omitempty"`
 	// Graph edge projections: the source/target fields of the edge row and the
-	// node labels they point at. Same as options["edge_source_field"] etc.; the
-	// older "from_label"/"to_label" keys are deprecated aliases.
+	// node labels they point at. Same as options["edge_source_field"] etc.
 	EdgeSourceField string `protobuf:"bytes,14,opt,name=edge_source_field,json=edgeSourceField,proto3" json:"edge_source_field,omitempty"`
 	EdgeTargetField string `protobuf:"bytes,15,opt,name=edge_target_field,json=edgeTargetField,proto3" json:"edge_target_field,omitempty"`
 	EdgeSourceLabel string `protobuf:"bytes,16,opt,name=edge_source_label,json=edgeSourceLabel,proto3" json:"edge_source_label,omitempty"`

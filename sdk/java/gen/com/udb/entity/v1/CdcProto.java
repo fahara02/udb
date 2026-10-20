@@ -71,54 +71,59 @@ public final class CdcProto {
   static {
     java.lang.String[] descriptorData = {
       "\n\027udb/entity/v1/cdc.proto\022\rudb.entity.v1" +
-      "\032\033udb/entity/v1/context.proto\"\301\001\n\026CDCSub" +
+      "\032\033udb/entity/v1/context.proto\"\243\002\n\026CDCSub" +
       "scriptionRequest\0227\n\007context\030\001 \001(\0132\035.udb." +
       "entity.v1.RequestContextR\007context\022#\n\rtop" +
       "ic_pattern\030\002 \001(\tR\014topicPattern\022$\n\016since_" +
       "event_id\030\003 \001(\tR\014sinceEventId\022#\n\rconsumer" +
-      "_name\030\004 \001(\tR\014consumerName\"\263\001\n\023AckCdcEven" +
-      "tsRequest\0227\n\007context\030\001 \001(\0132\035.udb.entity." +
-      "v1.RequestContextR\007context\022#\n\rconsumer_n" +
-      "ame\030\002 \001(\tR\014consumerName\022#\n\rtopic_pattern" +
-      "\030\003 \001(\tR\014topicPattern\022\031\n\010event_id\030\004 \001(\tR\007" +
-      "eventId\"\237\001\n\024AckCdcEventsResponse\022#\n\rcons" +
-      "umer_name\030\001 \001(\tR\014consumerName\022#\n\rtopic_p" +
-      "attern\030\002 \001(\tR\014topicPattern\022\031\n\010event_id\030\003" +
-      " \001(\tR\007eventId\022\"\n\racked_at_unix\030\004 \001(\003R\013ac" +
-      "kedAtUnix\"\367\001\n\024NackCdcEventsRequest\0227\n\007co" +
-      "ntext\030\001 \001(\0132\035.udb.entity.v1.RequestConte" +
-      "xtR\007context\022#\n\rconsumer_name\030\002 \001(\tR\014cons" +
-      "umerName\022#\n\rtopic_pattern\030\003 \001(\tR\014topicPa" +
-      "ttern\022\031\n\010event_id\030\004 \001(\tR\007eventId\022\032\n\010atte" +
-      "mpts\030\005 \001(\rR\010attempts\022%\n\016failure_reason\030\006" +
-      " \001(\tR\rfailureReason\"\201\001\n\021CdcControlReques" +
-      "t\0227\n\007context\030\001 \001(\0132\035.udb.entity.v1.Reque" +
-      "stContextR\007context\022\033\n\tslot_name\030\002 \001(\tR\010s" +
-      "lotName\022\026\n\006reason\030\003 \001(\tR\006reason\"\330\002\n\021CdcS" +
-      "tatusResponse\022\033\n\tslot_name\030\001 \001(\tR\010slotNa" +
-      "me\022\033\n\tis_leader\030\002 \001(\010R\010isLeader\022\026\n\006pause" +
-      "d\030\003 \001(\010R\006paused\022!\n\014pause_reason\030\004 \001(\tR\013p" +
-      "auseReason\022\"\n\rlast_event_id\030\005 \001(\tR\013lastE" +
-      "ventId\022\037\n\013lag_seconds\030\006 \001(\001R\nlagSeconds\022" +
-      "!\n\014outbox_depth\030\007 \001(\003R\013outboxDepth\022&\n\017up" +
-      "dated_at_unix\030\010 \001(\003R\rupdatedAtUnix\022>\n\tco" +
-      "nsumers\030\t \003(\0132 .udb.entity.v1.CdcConsume" +
-      "rStatusR\tconsumers\"\230\003\n\021CdcConsumerStatus" +
-      "\022#\n\rconsumer_name\030\001 \001(\tR\014consumerName\022#\n" +
-      "\rtopic_pattern\030\002 \001(\tR\014topicPattern\022\"\n\rla" +
-      "st_event_id\030\003 \001(\tR\013lastEventId\022\037\n\013lag_se" +
-      "conds\030\004 \001(\001R\nlagSeconds\022\"\n\racked_at_unix" +
-      "\030\005 \001(\003R\013ackedAtUnix\0223\n\026last_published_at" +
-      "_unix\030\006 \001(\003R\023lastPublishedAtUnix\022\033\n\ttena" +
-      "nt_id\030\007 \001(\tR\010tenantId\022\035\n\nproject_id\030\010 \001(" +
-      "\tR\tprojectId\022%\n\016owner_identity\030\t \001(\tR\row" +
-      "nerIdentity\0228\n\030owner_migration_required\030" +
-      "\n \001(\010R\026ownerMigrationRequiredB\256\001\n\021com.ud" +
-      "b.entity.v1B\010CdcProtoP\001Z9github.com/faha" +
-      "ra02/udb/sdk/go/gen/udb/entity/v1;entity" +
-      "v1\242\002\003UEX\252\002\rUdb.Entity.V1\312\002\rUdb\\Entity\\V1" +
-      "\342\002\031Udb\\GPBMetadata\\Entity\\V1\352\002\017Udb::Enti" +
-      "ty::V1b\006proto3"
+      "_name\030\004 \001(\tR\014consumerName\022)\n\020progress_ma" +
+      "rkers\030\005 \001(\010R\017progressMarkers\0225\n\005start\030\006 " +
+      "\001(\0162\037.udb.entity.v1.CdcConsumerStartR\005st" +
+      "art\"\263\001\n\023AckCdcEventsRequest\0227\n\007context\030\001" +
+      " \001(\0132\035.udb.entity.v1.RequestContextR\007con" +
+      "text\022#\n\rconsumer_name\030\002 \001(\tR\014consumerNam" +
+      "e\022#\n\rtopic_pattern\030\003 \001(\tR\014topicPattern\022\031" +
+      "\n\010event_id\030\004 \001(\tR\007eventId\"\237\001\n\024AckCdcEven" +
+      "tsResponse\022#\n\rconsumer_name\030\001 \001(\tR\014consu" +
+      "merName\022#\n\rtopic_pattern\030\002 \001(\tR\014topicPat" +
+      "tern\022\031\n\010event_id\030\003 \001(\tR\007eventId\022\"\n\racked" +
+      "_at_unix\030\004 \001(\003R\013ackedAtUnix\"\367\001\n\024NackCdcE" +
+      "ventsRequest\0227\n\007context\030\001 \001(\0132\035.udb.enti" +
+      "ty.v1.RequestContextR\007context\022#\n\rconsume" +
+      "r_name\030\002 \001(\tR\014consumerName\022#\n\rtopic_patt" +
+      "ern\030\003 \001(\tR\014topicPattern\022\031\n\010event_id\030\004 \001(" +
+      "\tR\007eventId\022\032\n\010attempts\030\005 \001(\rR\010attempts\022%" +
+      "\n\016failure_reason\030\006 \001(\tR\rfailureReason\"\201\001" +
+      "\n\021CdcControlRequest\0227\n\007context\030\001 \001(\0132\035.u" +
+      "db.entity.v1.RequestContextR\007context\022\033\n\t" +
+      "slot_name\030\002 \001(\tR\010slotName\022\026\n\006reason\030\003 \001(" +
+      "\tR\006reason\"\330\002\n\021CdcStatusResponse\022\033\n\tslot_" +
+      "name\030\001 \001(\tR\010slotName\022\033\n\tis_leader\030\002 \001(\010R" +
+      "\010isLeader\022\026\n\006paused\030\003 \001(\010R\006paused\022!\n\014pau" +
+      "se_reason\030\004 \001(\tR\013pauseReason\022\"\n\rlast_eve" +
+      "nt_id\030\005 \001(\tR\013lastEventId\022\037\n\013lag_seconds\030" +
+      "\006 \001(\001R\nlagSeconds\022!\n\014outbox_depth\030\007 \001(\003R" +
+      "\013outboxDepth\022&\n\017updated_at_unix\030\010 \001(\003R\ru" +
+      "pdatedAtUnix\022>\n\tconsumers\030\t \003(\0132 .udb.en" +
+      "tity.v1.CdcConsumerStatusR\tconsumers\"\230\003\n" +
+      "\021CdcConsumerStatus\022#\n\rconsumer_name\030\001 \001(" +
+      "\tR\014consumerName\022#\n\rtopic_pattern\030\002 \001(\tR\014" +
+      "topicPattern\022\"\n\rlast_event_id\030\003 \001(\tR\013las" +
+      "tEventId\022\037\n\013lag_seconds\030\004 \001(\001R\nlagSecond" +
+      "s\022\"\n\racked_at_unix\030\005 \001(\003R\013ackedAtUnix\0223\n" +
+      "\026last_published_at_unix\030\006 \001(\003R\023lastPubli" +
+      "shedAtUnix\022\033\n\ttenant_id\030\007 \001(\tR\010tenantId\022" +
+      "\035\n\nproject_id\030\010 \001(\tR\tprojectId\022%\n\016owner_" +
+      "identity\030\t \001(\tR\rownerIdentity\0228\n\030owner_m" +
+      "igration_required\030\n \001(\010R\026ownerMigrationR" +
+      "equired*v\n\020CdcConsumerStart\022\"\n\036CDC_CONSU" +
+      "MER_START_UNSPECIFIED\020\000\022\035\n\031CDC_CONSUMER_" +
+      "START_LATEST\020\001\022\037\n\033CDC_CONSUMER_START_EAR" +
+      "LIEST\020\002B\256\001\n\021com.udb.entity.v1B\010CdcProtoP" +
+      "\001Z9github.com/fahara02/udb/sdk/go/gen/ud" +
+      "b/entity/v1;entityv1\242\002\003UEX\252\002\rUdb.Entity." +
+      "V1\312\002\rUdb\\Entity\\V1\342\002\031Udb\\GPBMetadata\\Ent" +
+      "ity\\V1\352\002\017Udb::Entity::V1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -130,7 +135,7 @@ public final class CdcProto {
     internal_static_udb_entity_v1_CDCSubscriptionRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_CDCSubscriptionRequest_descriptor,
-        new java.lang.String[] { "Context", "TopicPattern", "SinceEventId", "ConsumerName", });
+        new java.lang.String[] { "Context", "TopicPattern", "SinceEventId", "ConsumerName", "ProgressMarkers", "Start", });
     internal_static_udb_entity_v1_AckCdcEventsRequest_descriptor =
       getDescriptor().getMessageTypes().get(1);
     internal_static_udb_entity_v1_AckCdcEventsRequest_fieldAccessorTable = new

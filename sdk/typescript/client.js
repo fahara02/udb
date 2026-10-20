@@ -42,15 +42,22 @@ exports.dataBrokerClient = dataBrokerClient;
 const grpc = __importStar(require("@grpc/grpc-js"));
 const protoLoader = __importStar(require("@grpc/proto-loader"));
 const path_1 = __importDefault(require("path"));
+const node_crypto_1 = require("node:crypto");
 require("./wkt"); // registers the google.protobuf.Struct serializer (must precede any loadSync)
 const protoRoot_1 = require("./protoRoot");
 exports.UDB_PROTOCOL_VERSION = "1.0.0";
 function metadata(meta) {
     const headers = new grpc.Metadata();
+    // §13: native RPCs require a request context (x-request-id / x-correlation-id /
+    // traceparent) and fail closed without one. Always send a request id, and fall
+    // back to it for the correlation id when the caller set none.
+    const requestId = (0, node_crypto_1.randomUUID)();
+    const correlationId = meta.correlationId || requestId;
     headers.set("x-tenant-id", meta.tenantId);
     headers.set("x-user-id", meta.userId ?? "");
     headers.set("x-purpose", meta.purpose);
-    headers.set("x-correlation-id", meta.correlationId);
+    headers.set("x-correlation-id", correlationId);
+    headers.set("x-request-id", requestId);
     headers.set("x-scopes", (meta.scopes ?? []).join(","));
     headers.set("x-service-identity", meta.serviceIdentity ?? "example.service");
     headers.set("x-udb-project-id", meta.projectId ?? "default");

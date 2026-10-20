@@ -10,18 +10,22 @@ from typing import ClassVar as _ClassVar, Optional as _Optional, Union as _Union
 DESCRIPTOR: _descriptor.FileDescriptor
 
 class CDCEnvelope(_message.Message):
-    __slots__ = ("event_id", "topic", "partition_key", "payload_json", "published_at")
+    __slots__ = ("event_id", "topic", "partition_key", "payload_json", "published_at", "progress_only", "journal_position")
     EVENT_ID_FIELD_NUMBER: _ClassVar[int]
     TOPIC_FIELD_NUMBER: _ClassVar[int]
     PARTITION_KEY_FIELD_NUMBER: _ClassVar[int]
     PAYLOAD_JSON_FIELD_NUMBER: _ClassVar[int]
     PUBLISHED_AT_FIELD_NUMBER: _ClassVar[int]
+    PROGRESS_ONLY_FIELD_NUMBER: _ClassVar[int]
+    JOURNAL_POSITION_FIELD_NUMBER: _ClassVar[int]
     event_id: str
     topic: str
     partition_key: str
     payload_json: str
     published_at: _timestamp_pb2.Timestamp
-    def __init__(self, event_id: _Optional[str] = ..., topic: _Optional[str] = ..., partition_key: _Optional[str] = ..., payload_json: _Optional[str] = ..., published_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
+    progress_only: bool
+    journal_position: int
+    def __init__(self, event_id: _Optional[str] = ..., topic: _Optional[str] = ..., partition_key: _Optional[str] = ..., payload_json: _Optional[str] = ..., published_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., progress_only: bool = ..., journal_position: _Optional[int] = ...) -> None: ...
 
 class EventEnvelope(_message.Message):
     __slots__ = ("event_id", "event_type", "timestamp", "correlation_id", "document_id", "schema_uri", "payload")
