@@ -485,8 +485,7 @@ message GenericStoreOptions {
   // Text search configuration for fts_columns (default "simple").
   string fts_config = 13;
   // Graph edge projections: the source/target fields of the edge row and the
-  // node labels they point at. Same as options["edge_source_field"] etc.; the
-  // older "from_label"/"to_label" keys are deprecated aliases.
+  // node labels they point at. Same as options["edge_source_field"] etc.
   string edge_source_field = 14;
   string edge_target_field = 15;
   string edge_source_label = 16;
