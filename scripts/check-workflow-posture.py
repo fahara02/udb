@@ -4343,6 +4343,8 @@ LINT_WORKFLOW_TRIGGER_PATHS = (
     ("scripts/cli_identity_live.py", "actual declarative identity proof"),
     ("scripts/capabilities_history_aba.py", "matched capabilities history runner"),
     ("scripts/extract-changelog-section.mjs", "release-notes extractor"),
+    ("scripts/go-rpc-contract-docs.test.mjs", "Go Client contract-doc tests"),
+    ("scripts/go-rpc-contract-docs.mjs", "Go Client contract-doc generator"),
     (".github/workflows/**", "workflow files"),
     (".github/actions/**", "composite action files"),
     ("docs/ci-architecture.md", "CI architecture contract"),
