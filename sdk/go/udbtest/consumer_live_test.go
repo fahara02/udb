@@ -82,7 +82,7 @@ func TestLiveDurableConsumerRedeliversUntilAcknowledged(t *testing.T) {
 				received <- event.ID
 				<-handlerContext.Done()
 				return handlerContext.Err()
-			}, udbclient.ConsumeOptions{MaxAttempts: 1, Backoff: time.Millisecond})
+			}, udbclient.ConsumeOptions{FromEarliest: true, MaxAttempts: 1, Backoff: time.Millisecond})
 	}()
 	var original string
 	select {
@@ -121,7 +121,7 @@ func TestLiveDurableConsumerRedeliversUntilAcknowledged(t *testing.T) {
 					}
 					broker.watched.Store(event.ID, true)
 					return nil
-				}, udbclient.ConsumeOptions{MaxAttempts: 1, Backoff: time.Millisecond})
+				}, udbclient.ConsumeOptions{FromEarliest: true, MaxAttempts: 1, Backoff: time.Millisecond})
 		}()
 		select {
 		case <-broker.acknowledged:
@@ -191,7 +191,7 @@ func TestLiveConsumerBatchesDeadLettersAndContinues(t *testing.T) {
 					stop()
 				}
 				return nil
-			}, udbclient.ConsumeOptions{MaxAttempts: 2, Backoff: time.Millisecond})
+			}, udbclient.ConsumeOptions{FromEarliest: true, MaxAttempts: 2, Backoff: time.Millisecond})
 	}()
 	waitHandled := func(file string) string {
 		t.Helper()
@@ -331,7 +331,7 @@ func TestLiveConsumerReauthenticatesAfterBearerExpiry(t *testing.T) {
 				counts[file]++
 				broker.watched.Store(event.ID, true)
 				return nil
-			}, udbclient.ConsumeOptions{Backoff: 10 * time.Millisecond,
+			}, udbclient.ConsumeOptions{FromEarliest: true, Backoff: 10 * time.Millisecond,
 				OnError: func(err error) {
 					if status.Code(err) == codes.Unauthenticated && strings.Contains(err.Error(), "expired") {
 						select {

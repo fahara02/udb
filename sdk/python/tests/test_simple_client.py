@@ -427,10 +427,17 @@ def test_events_ready_and_publish_and_wait(project: UdbProject) -> None:
     from udb.events.v1 import udb_events_pb2
 
     env = udb_events_pb2.CDCEnvelope(event_id="evt-1", topic="t")
+    # A progress marker is not an event: iteration must never yield it.
+    marker = udb_events_pb2.CDCEnvelope(
+        event_id="progress-token",
+        topic="udb.cdc.progress.v1",
+        progress_only=True,
+        journal_position=7,
+    )
 
     class _Stream:
         def __init__(self):
-            self._items = [env]
+            self._items = [marker, env]
 
         def initial_metadata(self):
             return ()
@@ -440,6 +447,7 @@ def test_events_ready_and_publish_and_wait(project: UdbProject) -> None:
 
     def fake_publishcdc(request, *, metadata=None, timeout=None):
         assert request.topic_pattern == "t"
+        assert request.progress_markers
         return _Stream()
 
     def fake_enqueue(request, *, metadata=None, timeout=None):
@@ -450,7 +458,9 @@ def test_events_ready_and_publish_and_wait(project: UdbProject) -> None:
 
     sub = project.events.subscribe("t")
     sub.ready()  # returns without a timer
-    got = project.events.publish_and_wait("t", {"k": "v"}, subscription=sub)
+    got = project.events.publish_and_wait(
+        "t", {"k": "v"}, match=lambda envelope: True, subscription=sub
+    )
     assert got.event_id == "evt-1"
 
 

@@ -50,9 +50,11 @@ type consumerTestBroker struct {
 	ack      func(context.Context) error
 	nack     func(context.Context) error
 	observed chan string
+	requests []*entityv1.CDCSubscriptionRequest
 }
 
-func (b *consumerTestBroker) PublishCDC(ctx context.Context, _ *entityv1.CDCSubscriptionRequest, _ ...grpc.CallOption) (grpc.ServerStreamingClient[eventsv1.CDCEnvelope], error) {
+func (b *consumerTestBroker) PublishCDC(ctx context.Context, req *entityv1.CDCSubscriptionRequest, _ ...grpc.CallOption) (grpc.ServerStreamingClient[eventsv1.CDCEnvelope], error) {
+	b.requests = append(b.requests, req)
 	b.order = append(b.order, "subscribe")
 	return &consumerTestStream{context: ctx, queue: append([]*eventsv1.CDCEnvelope(nil), b.queue...), idle: b.idle}, nil
 }
@@ -90,6 +92,53 @@ func consumerFixture(ids ...string) []*eventsv1.CDCEnvelope {
 	return queue
 }
 func consumerClient(b *consumerTestBroker) *Udb { return &Udb{Data: &Client{Broker: b}} }
+
+// progressMarker is what a broker sends when the stream has read the journal
+// up to position without an event for this consumer.
+func progressMarker(id string, position int64) *eventsv1.CDCEnvelope {
+	return &eventsv1.CDCEnvelope{
+		EventId:         id,
+		Topic:           "udb.cdc.progress.v1",
+		PayloadJson:     fmt.Sprintf(`{"kind":"progress","journal_position":"%d","caught_up":true}`, position),
+		ProgressOnly:    true,
+		JournalPosition: position,
+	}
+}
+
+func TestConsumerAcknowledgesProgressMarkersWithoutHandlingThem(t *testing.T) {
+	b := &consumerTestBroker{queue: consumerFixture("a", "b")}
+	b.queue = []*eventsv1.CDCEnvelope{b.queue[0], progressMarker("m1", 10), b.queue[1], progressMarker("m2", 20)}
+	var handled []string
+	handler := func(_ context.Context, event ConsumedEvent[*structpb.Struct]) error {
+		handled = append(handled, event.ID)
+		return nil
+	}
+	_ = consumeOnce(context.Background(), consumerClient(b), "consumer", "fixture", handler,
+		ConsumeOptions{AckInterval: time.Hour}, newRecentIDs(4096))
+	if !reflect.DeepEqual(handled, []string{"a", "b"}) {
+		t.Fatalf("markers reached the handler: %v", handled)
+	}
+	if want := []string{"subscribe", "ack:a", "ack:m1", "ack:b", "ack:m2"}; !reflect.DeepEqual(b.order, want) {
+		t.Fatalf("a marker must be acknowledged after every earlier event: got %v want %v", b.order, want)
+	}
+	if req := b.requests[0]; !req.GetProgressMarkers() || req.GetStart() != entityv1.CdcConsumerStart_CDC_CONSUMER_START_LATEST {
+		t.Fatalf("consumer subscription options: markers=%v start=%v", req.GetProgressMarkers(), req.GetStart())
+	}
+
+	// Batched: the marker is the newest watermark of its batch, never ahead of
+	// an event handled before it.
+	b = &consumerTestBroker{queue: consumerFixture("a", "b", "c")}
+	b.queue = []*eventsv1.CDCEnvelope{b.queue[0], progressMarker("m1", 10), b.queue[1], b.queue[2], progressMarker("m2", 20)}
+	handled = nil
+	_ = consumeOnce(context.Background(), consumerClient(b), "consumer", "fixture", handler,
+		ConsumeOptions{AckBatchSize: 3, AckInterval: time.Hour, FromEarliest: true}, newRecentIDs(4096))
+	if !reflect.DeepEqual(handled, []string{"a", "b", "c"}) || !reflect.DeepEqual(b.acks, []string{"b", "m2"}) {
+		t.Fatalf("batched markers: handled=%v acks=%v", handled, b.acks)
+	}
+	if got := b.requests[0].GetStart(); got != entityv1.CdcConsumerStart_CDC_CONSUMER_START_EARLIEST {
+		t.Fatalf("FromEarliest must request the earliest start, got %v", got)
+	}
+}
 
 func TestConsumerRetriesLostAckBeforeReplayWithoutHandlingAgain(t *testing.T) {
 	b := &consumerTestBroker{queue: consumerFixture("event")}

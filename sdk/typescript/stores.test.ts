@@ -130,6 +130,35 @@ test("a failed consumer handler cannot acknowledge a queued later event", async 
   assert.deepEqual(acked, []);
 });
 
+test("consumer acknowledges progress markers in order without handling them", async () => {
+  const controller = new AbortController();
+  const handled: string[] = [];
+  const acked: string[] = [];
+  let subscribed: any;
+  const event = (event_id: string) => ({ event_id, payload_json: JSON.stringify({ envelope_version: 2, payload: {} }) });
+  await consume({
+    unary: async (_service, _method, request) => { acked.push(request.event_id); return {}; },
+    serverStream: (_service, _method, request) => {
+      subscribed = request;
+      const stream = Object.assign(new EventEmitter(), { cancel: () => stream.emit("error", { code: 1 }) });
+      queueMicrotask(() => {
+        stream.emit("data", event("a"));
+        stream.emit("data", { event_id: "marker", topic: "udb.cdc.progress.v1", progress_only: true,
+          payload_json: JSON.stringify({ kind: "progress", journal_position: "7", caught_up: true }) });
+        stream.emit("data", event("b"));
+        stream.emit("end");
+      });
+      return stream;
+    },
+  }, "consumer", "topic", async (consumed) => {
+    handled.push(consumed.id);
+  }, { signal: controller.signal, onError: () => controller.abort(), fromEarliest: true });
+  assert.deepEqual(handled, ["a", "b"]);
+  assert.deepEqual(acked, ["a", "marker", "b"]);
+  assert.equal(subscribed.progress_markers, true);
+  assert.equal(subscribed.start, "CDC_CONSUMER_START_EARLIEST");
+});
+
 test("consumer stops on an unsupported envelope version without acknowledging it", async () => {
   let acked = false;
   await assert.rejects(consume({

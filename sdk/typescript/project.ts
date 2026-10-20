@@ -940,6 +940,8 @@ export class EventsFacade {
         }, deadlineMs);
         if (typeof (timer as any).unref === "function") (timer as any).unref();
         sub.stream.on("data", (envelope: any) => {
+          // A progress marker is not an event; never offer it to `match`.
+          if (envelope?.progress_only) return;
           if (match(envelope)) {
             clearTimeout(timer);
             resolve(envelope);

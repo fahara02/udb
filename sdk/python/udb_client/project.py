@@ -1264,12 +1264,18 @@ class _EventsSubscription:
         self._ready = True
 
     def __iter__(self) -> Any:
+        # Progress markers (``progress_only``) say how far the stream has read
+        # the journal; they are not events and never reach the caller.
         if self._has_peeked:
-            if self._peeked is not None:
+            if self._peeked is not None and not getattr(
+                self._peeked, "progress_only", False
+            ):
                 yield self._peeked
             self._peeked = None
             self._has_peeked = False
         for item in self._iter:
+            if getattr(item, "progress_only", False):
+                continue
             yield item
 
     def cancel(self) -> None:
@@ -1302,10 +1308,13 @@ class _EventsFacade:
         from udb.entity.v1 import types_pb2 as _t
 
         meta = metadata or self._owner._metadata
+        # A progress marker follows replay, so ``ready`` has a server signal
+        # even on a quiet topic; iteration drops markers.
         request = _t.CDCSubscriptionRequest(
             context=meta.to_request_context(),
             topic_pattern=topic,
             since_event_id=since_event_id,
+            progress_markers=True,
         )
         stream = self._data.stub.PublishCDC(
             request,

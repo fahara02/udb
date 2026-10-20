@@ -70,10 +70,13 @@ final class EventsService
         ?UdbMetadata $metadata = null,
     ): EventSubscription {
         $meta = $this->project->metadata($metadata);
+        // A progress marker follows replay, so the stream has a server signal
+        // even on a quiet topic; EventSubscription drops markers on iteration.
         $request = (new CDCSubscriptionRequest())
             ->setContext($meta->toRequestContext())
             ->setTopicPattern($topicPattern)
-            ->setSinceEventId($sinceEventId);
+            ->setSinceEventId($sinceEventId)
+            ->setProgressMarkers(true);
         $headers = $meta->toGrpcMetadata();
 
         $opener = $this->streamOpener ?? function (CDCSubscriptionRequest $req, array $md): object {

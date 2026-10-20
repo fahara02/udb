@@ -70,6 +70,11 @@ type ConsumeOptions struct {
 	// AckTimeout bounds each settlement, including a shutdown flush
 	// (default 5s, maximum 30s).
 	AckTimeout time.Duration
+	// FromEarliest makes a consumer name that has never subscribed replay the
+	// retained journal history. By default a new name starts at the journal
+	// head and receives only events committed after its first subscription.
+	// Once the name has a stored position this has no effect.
+	FromEarliest bool
 	// OnError observes handler failures and reconnects (optional).
 	OnError func(err error)
 }
@@ -213,9 +218,17 @@ func consumeOnce[T proto.Message](ctx context.Context, u *Udb, name, topicPatter
 	}
 	attemptCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
+	start := entityv1.CdcConsumerStart_CDC_CONSUMER_START_LATEST
+	if o.FromEarliest {
+		start = entityv1.CdcConsumerStart_CDC_CONSUMER_START_EARLIEST
+	}
 	stream, err := u.Data.Broker.PublishCDC(attemptCtx, &entityv1.CDCSubscriptionRequest{
 		TopicPattern: topicPattern,
 		ConsumerName: name,
+		// Progress markers let a consumer of a quiet topic move its stored
+		// position past the rest of the journal; they never reach handle.
+		ProgressMarkers: true,
+		Start:           start,
 	})
 	if err != nil {
 		return consumeAttemptError(fmt.Errorf("udb: consumer %s: %w", name, err))
@@ -275,6 +288,23 @@ func consumeOnce[T proto.Message](ctx context.Context, u *Udb, name, topicPatter
 			envelope := next.envelope
 			id := envelope.GetEventId()
 			if progress.pendingHas(id) {
+				continue
+			}
+			if envelope.GetProgressOnly() {
+				// A progress marker says the stream read every journal row up to
+				// its position. It is not an event, so the handler never sees it.
+				// Every earlier event is already settled or queued ahead of it,
+				// so its token goes last into the batch and is acknowledged only
+				// together with, or after, them.
+				if progress.durableHas(id) {
+					continue
+				}
+				progress.enqueue(id)
+				if !batched || progress.pendingCount() >= o.AckBatchSize {
+					if err := progress.settle(ctx, u, name, topicPattern, o); err != nil {
+						return err
+					}
+				}
 				continue
 			}
 			// A durable id needs nothing at all; a handled-but-not-durable id is

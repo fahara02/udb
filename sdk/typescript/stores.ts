@@ -420,14 +420,16 @@ export function decodeEnvelope(payloadJson: string): Record<string, unknown> {
 
 /** Deliver every event on `topicPattern` to `handle` as the durable consumer
  *  `name`: the broker keeps the position (AckCdcEvents), reconnects resume
- *  there, and an event is acked only after `handle` resolves. Returns when
- *  `signal` aborts or a refusal reconnecting cannot fix arrives. */
+ *  there, and an event is acked only after `handle` resolves. A name that has
+ *  never subscribed starts at the journal head unless `fromEarliest` asks for
+ *  the retained history. Returns when `signal` aborts or a refusal
+ *  reconnecting cannot fix arrives. */
 export async function consume(
   plane: StorePlane,
   name: string,
   topicPattern: string,
   handle: (event: ConsumedEvent) => Promise<void>,
-  opts: { signal?: AbortSignal; backoffMs?: number; onError?: (err: unknown) => void } = {},
+  opts: { signal?: AbortSignal; backoffMs?: number; onError?: (err: unknown) => void; fromEarliest?: boolean } = {},
 ): Promise<void> {
   if (!plane.serverStream) throw new Error("udb: this transport does not support streams");
   const seen = new Set<string>();
@@ -435,7 +437,14 @@ export async function consume(
   for (;;) {
     if (opts.signal?.aborted) return;
     const failure = await new Promise<unknown>((resolve) => {
-      const stream = plane.serverStream!(DATABROKER, "PublishCDC", { topic_pattern: topicPattern, consumer_name: name });
+      // Progress markers let a consumer of a quiet topic move its stored
+      // position past the rest of the journal; they never reach `handle`.
+      const stream = plane.serverStream!(DATABROKER, "PublishCDC", {
+        topic_pattern: topicPattern,
+        consumer_name: name,
+        progress_markers: true,
+        start: opts.fromEarliest ? "CDC_CONSUMER_START_EARLIEST" : "CDC_CONSUMER_START_LATEST",
+      });
       let chain = Promise.resolve();
       let closing = false;
       let stopped = false;
@@ -461,6 +470,13 @@ export async function consume(
           if (stopped || opts.signal?.aborted) return;
           const id = String(envelope?.event_id ?? "");
           if (seen.has(id)) return;
+          if (envelope?.progress_only) {
+            // Not an event: the stream read the journal up to this position.
+            // The queue is sequential, so every earlier event is already
+            // acknowledged when the marker's token is.
+            await plane.unary(DATABROKER, "AckCdcEvents", { consumer_name: name, topic_pattern: topicPattern, event_id: id });
+            return;
+          }
           const decoded = decodeEnvelope(String(envelope?.payload_json ?? ""));
           await handle({
             id,

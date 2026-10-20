@@ -95,7 +95,9 @@ final class EventSubscription implements \IteratorAggregate
 
     /**
      * Iterate the live `CDCEnvelope`s. Replays any envelope peeked by
-     * {@see ready()} first, then drains the stream's `responses()`.
+     * {@see ready()} first, then drains the stream's `responses()`. Progress
+     * markers (`progress_only`) say how far the stream has read the journal;
+     * they are not events and are never yielded.
      *
      * @return \Generator<int,object>
      */
@@ -105,7 +107,7 @@ final class EventSubscription implements \IteratorAggregate
             $first = $this->peeked;
             $this->peeked = null;
             $this->hasPeeked = false;
-            if ($first !== null) {
+            if ($first !== null && ! self::isProgressMarker($first)) {
                 yield $first;
             }
         }
@@ -113,8 +115,19 @@ final class EventSubscription implements \IteratorAggregate
         if ($responses !== null) {
             // Resume from wherever ready()'s peek left off (the same generator).
             for (; $responses->valid(); $responses->next()) {
-                yield $responses->current();
+                $envelope = $responses->current();
+                if (self::isProgressMarker($envelope)) {
+                    continue;
+                }
+                yield $envelope;
             }
         }
+    }
+
+    private static function isProgressMarker(mixed $envelope): bool
+    {
+        return is_object($envelope)
+            && method_exists($envelope, 'getProgressOnly')
+            && $envelope->getProgressOnly() === true;
     }
 }
