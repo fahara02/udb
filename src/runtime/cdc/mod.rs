@@ -286,6 +286,10 @@ pub struct CdcConfig {
     /// Per-topic-pattern shorter retention. A row matching a pattern is pruned
     /// after that age once every named consumer that may read it has acked past it.
     pub journal_retention_overrides: Vec<(String, u64)>,
+    /// `UDB_CDC_KEEP_UNACKED_CONSUMER_ORIGIN`: keep named consumers that never
+    /// acknowledged anything at journal position 0 instead of moving them to
+    /// the head once on upgrade.
+    pub keep_unacked_consumer_origin: bool,
     pub broadcast_capacity: usize,
     pub poll_interval_ms: u64,
     pub topic_policy_reload_interval_ms: u64,
@@ -427,6 +431,7 @@ impl Default for CdcConfig {
             journal_retention_overrides: parse_journal_retention_overrides(
                 DEFAULT_CDC_JOURNAL_RETENTION_OVERRIDES,
             ),
+            keep_unacked_consumer_origin: false,
             broadcast_capacity: DEFAULT_CDC_BROADCAST_CAPACITY,
             poll_interval_ms: DEFAULT_CDC_POLL_INTERVAL_MS,
             topic_policy_reload_interval_ms: DEFAULT_CDC_TOPIC_POLICY_RELOAD_INTERVAL_MS,
@@ -565,6 +570,9 @@ impl CdcConfig {
             journal_retention_overrides: std::env::var("UDB_CDC_JOURNAL_RETENTION_OVERRIDES")
                 .map(|value| parse_journal_retention_overrides(&value))
                 .unwrap_or(defaults.journal_retention_overrides),
+            keep_unacked_consumer_origin: std::env::var("UDB_CDC_KEEP_UNACKED_CONSUMER_ORIGIN")
+                .map(|value| matches!(value.trim(), "1" | "true" | "yes"))
+                .unwrap_or(defaults.keep_unacked_consumer_origin),
             broadcast_capacity: std::env::var("UDB_CDC_BROADCAST_CAPACITY")
                 .ok()
                 .and_then(|value| value.parse::<usize>().ok())
@@ -706,6 +714,9 @@ impl CdcConfig {
         }
         if let Ok(value) = std::env::var("UDB_CDC_JOURNAL_RETENTION_OVERRIDES") {
             self.journal_retention_overrides = parse_journal_retention_overrides(&value);
+        }
+        if let Ok(value) = std::env::var("UDB_CDC_KEEP_UNACKED_CONSUMER_ORIGIN") {
+            self.keep_unacked_consumer_origin = matches!(value.trim(), "1" | "true" | "yes");
         }
         if let Ok(value) = std::env::var("UDB_CDC_BROADCAST_CAPACITY")
             && let Ok(parsed) = value.parse::<usize>()

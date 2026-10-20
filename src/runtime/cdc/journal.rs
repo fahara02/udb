@@ -20,8 +20,6 @@ const READER_TABLE: &str = "udb_journal_reader_cursors";
 /// Reader row recording that never-acknowledged named cursors were moved to
 /// the head once, at the upgrade that made new consumers start there.
 const UNACKED_ORIGIN_MIGRATION: &str = "cdc.unacked_consumer_origin.v1";
-/// Opt-out: keep never-acknowledged named cursors at the journal origin.
-const KEEP_UNACKED_ORIGIN_ENV: &str = "UDB_CDC_KEEP_UNACKED_CONSUMER_ORIGIN";
 
 #[derive(Debug, Clone)]
 pub(crate) struct JournalEntry {
@@ -144,9 +142,7 @@ pub(crate) fn schema_statements(config: &SystemCatalogConfig) -> Vec<String> {
     let suffix = format!("{:016x}", fnv1a_64(journal.as_bytes()));
     let readers = reader_cursors_relation(config);
     let origin_marker = ql(UNACKED_ORIGIN_MIGRATION);
-    let keep_unacked_origin = std::env::var(KEEP_UNACKED_ORIGIN_ENV)
-        .is_ok_and(|value| matches!(value.trim(), "1" | "true" | "yes"));
-    let move_unacked = if keep_unacked_origin {
+    let move_unacked = if config.cdc.keep_unacked_consumer_origin {
         String::new()
     } else {
         format!(
