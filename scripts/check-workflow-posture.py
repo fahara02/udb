@@ -4344,6 +4344,7 @@ LINT_WORKFLOW_TRIGGER_PATHS = (
     ("scripts/capabilities_history_aba.py", "matched capabilities history runner"),
     ("scripts/extract-changelog-section.mjs", "release-notes extractor"),
     ("scripts/go-rpc-contract-docs.test.mjs", "Go Client contract-doc tests"),
+    ("scripts/check-single-branch.sh", "single-branch rule check"),
     ("scripts/go-rpc-contract-docs.mjs", "Go Client contract-doc generator"),
     (".github/workflows/**", "workflow files"),
     (".github/actions/**", "composite action files"),

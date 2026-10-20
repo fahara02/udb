@@ -37,6 +37,11 @@ git status --porcelain        # empty
 git ls-remote --heads origin  # only refs/heads/main
 ```
 
+`scripts/check-single-branch.sh --local` runs all four checks. CI runs the
+remote half on every push and daily (`.github/workflows/single-branch.yml`):
+it fails when a branch other than `main` is older than a day
+(`UDB_BRANCH_MAX_AGE_HOURS`) or no longer merges cleanly into `main`.
+
 Never park changes with `git stash`; commit them to `main` (a work-in-progress
 commit is fine) or bundle them.
 

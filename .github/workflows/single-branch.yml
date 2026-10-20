@@ -1,0 +1,30 @@
+name: Single-branch rule
+
+# CONTRIBUTING.md: main is the only long-lived branch. An experiment branch may
+# exist for a day and must keep merging cleanly into main; this check fails
+# otherwise, on every push and once a day.
+
+on:
+  push:
+  schedule:
+    - cron: "17 3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: single-branch-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  single-branch:
+    name: Only main, and experiments stay mergeable
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Check branches on origin
+        run: bash scripts/check-single-branch.sh
