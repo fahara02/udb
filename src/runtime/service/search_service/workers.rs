@@ -5,7 +5,9 @@
 //! invalidation, embedding work emitter): read published events from the durable
 //! CDC journal, join them to this service's own registrations, dedup by an
 //! output event carrying the source journal event id, and act ONLY through the
-//! mediated runtime seams. They are spawned by the leader via
+//! mediated runtime seams. Freshness and reindex read forward from durable
+//! reader cursors (`search.freshness`, `search.reindex`) one bounded position
+//! window at a time. They are spawned by the leader via
 //! `NativeWorkerHost::spawn_while_leader` (never a bare per-replica loop) — the
 //! `run_index_freshness_consumer` / `run_search_reindex_once` entry points are
 //! re-exported from `mod.rs` for `serve()`.
@@ -86,6 +88,8 @@ struct SearchFreshnessJob {
     tenant_id: String,
     project_id: String,
     payload: serde_json::Value,
+    /// The event's journal position; the freshness reader cursor follows it.
+    position: i64,
 }
 
 /// A `reindex.requested` journal event joined to its (non-deleted) index row.
@@ -95,6 +99,42 @@ struct SearchReindexJob {
     tenant_id: String,
     project_id: String,
     reindex_id: String,
+    /// The request's journal position; the reindex reader cursor follows it.
+    position: i64,
+}
+
+/// The freshness consumer's row in the journal reader cursors.
+pub(crate) const SEARCH_FRESHNESS_READER: &str = "search.freshness";
+/// The reindex worker's row in the journal reader cursors.
+pub(crate) const SEARCH_REINDEX_READER: &str = "search.reindex";
+/// Journal positions one freshness or reindex page scans at most.
+const SEARCH_JOURNAL_WINDOW: i64 = 5_000;
+/// Windows one pass reads at most while catching up on journal traffic that
+/// matches no index.
+const SEARCH_JOURNAL_WINDOWS_PER_PASS: usize = 20;
+
+/// Whether any ACTIVE index names a source CDC topic. Without one no journal
+/// event can be applied, so the freshness consumer skips the journal. Binds:
+/// `$1` = active status. Pure so the SQL shape is unit-asserted.
+pub(crate) fn freshness_indexes_exist_sql(model: &NativeModel) -> String {
+    format!(
+        "SELECT EXISTS (SELECT 1 FROM {relation} WHERE {status} = $1 \
+           AND COALESCE({source_cdc_topic}::TEXT, '') <> '')",
+        relation = model.relation,
+        status = model.q("status"),
+        source_cdc_topic = model.q("source_cdc_topic"),
+    )
+}
+
+/// Whether any index is not deleted. Without one no reindex request can join
+/// its index, so the reindex pass skips the journal. Binds: `$1` = deleted
+/// status. Pure so the SQL shape is unit-asserted.
+pub(crate) fn reindexable_indexes_exist_sql(model: &NativeModel) -> String {
+    format!(
+        "SELECT EXISTS (SELECT 1 FROM {relation} WHERE {status} <> $1)",
+        relation = model.relation,
+        status = model.q("status"),
+    )
 }
 
 /// An `index.deleted` journal event joined to its DELETED index row.
@@ -109,7 +149,9 @@ struct SearchTeardownJob {
 /// that carry a dense embedding, minus events already marked applied. The
 /// journal may ENVELOPE-NEST the emitted payload under `payload.payload`, so
 /// every payload key is read at BOTH levels (`COALESCE(top, nested)`).
-/// Binds: `$1` = active status, `$2` = applied-marker topic, `$3` = limit.
+/// Binds: `$1` = active status, `$2` = applied-marker topic, `$3` = limit,
+/// `$4`/`$5` = the journal position window `(from, to]` of the freshness
+/// reader cursor, so a pass never joins the whole retained journal.
 pub(crate) fn freshness_jobs_sql(
     model: &NativeModel,
     journal_relation: &str,
@@ -120,7 +162,8 @@ pub(crate) fn freshness_jobs_sql(
             j.event_id::TEXT AS event_id, \
             COALESCE(j.payload->>'tenant_id', j.payload->'payload'->>'tenant_id', '') AS event_tenant_id, \
             COALESCE(j.payload->>'project_id', j.payload->'payload'->>'project_id', '') AS project_id, \
-            j.payload::TEXT AS payload_json \
+            j.payload::TEXT AS payload_json, \
+            j.journal_position AS journal_position \
          FROM {journal_relation} j \
          JOIN {relation} s \
            ON s.{tenant_id}::TEXT = COALESCE(j.payload->>'tenant_id', j.payload->'payload'->>'tenant_id', '') \
@@ -128,6 +171,8 @@ pub(crate) fn freshness_jobs_sql(
           AND COALESCE(s.{source_cdc_topic}::TEXT, '') <> '' \
           AND s.{source_cdc_topic} = j.topic \
          WHERE j.delivery_state IN ('published', 'acked') \
+           AND j.journal_position > $4 \
+           AND j.journal_position <= $5 \
            AND COALESCE(j.payload->>'tenant_id', j.payload->'payload'->>'tenant_id', '') <> '' \
            AND (jsonb_typeof(j.payload->'vector') = 'array' \
                 OR jsonb_typeof(j.payload->'payload'->'vector') = 'array') \
@@ -141,20 +186,22 @@ pub(crate) fn freshness_jobs_sql(
                WHERE done.topic = $2 \
                  AND COALESCE(done.payload->>'source_event_id', done.payload->'payload'->>'source_event_id') = j.event_id::TEXT \
            ) \
-         ORDER BY j.published_at ASC, j.event_id ASC \
+         ORDER BY j.journal_position ASC, s.{index_id} ASC \
          LIMIT $3",
         cols = stored_index_columns_sql(model),
         relation = model.relation,
         tenant_id = model.q("tenant_id"),
         status = model.q("status"),
         source_cdc_topic = model.q("source_cdc_topic"),
+        index_id = model.q("index_id"),
     )
 }
 
 /// Reindex jobs: `reindex.requested` events joined to their non-deleted index
 /// row, minus requests that already produced a `reindex.completed` marker
 /// (keyed `reindex_event_id`). Binds: `$1` = deleted status (excluded),
-/// `$2` = requested topic, `$3` = completed topic, `$4` = limit.
+/// `$2` = requested topic, `$3` = completed topic, `$4` = limit, `$5`/`$6` =
+/// the journal position window `(from, to]` of the reindex reader cursor.
 pub(crate) fn reindex_jobs_sql(
     model: &NativeModel,
     journal_relation: &str,
@@ -165,7 +212,8 @@ pub(crate) fn reindex_jobs_sql(
             j.event_id::TEXT AS event_id, \
             COALESCE(j.payload->>'tenant_id', j.payload->'payload'->>'tenant_id', '') AS event_tenant_id, \
             COALESCE(j.payload->>'project_id', j.payload->'payload'->>'project_id', '') AS project_id, \
-            COALESCE(j.payload->>'reindex_id', j.payload->'payload'->>'reindex_id', '') AS reindex_id \
+            COALESCE(j.payload->>'reindex_id', j.payload->'payload'->>'reindex_id', '') AS reindex_id, \
+            j.journal_position AS journal_position \
          FROM {journal_relation} j \
          JOIN {relation} s \
            ON s.{tenant_id}::TEXT = COALESCE(j.payload->>'tenant_id', j.payload->'payload'->>'tenant_id', '') \
@@ -173,6 +221,8 @@ pub(crate) fn reindex_jobs_sql(
           AND s.{status} <> $1 \
          WHERE j.delivery_state IN ('published', 'acked') \
            AND j.topic = $2 \
+           AND j.journal_position > $5 \
+           AND j.journal_position <= $6 \
            AND COALESCE(j.payload->>'tenant_id', j.payload->'payload'->>'tenant_id', '') <> '' \
            AND COALESCE(j.payload->>'reindex_id', j.payload->'payload'->>'reindex_id', '') <> '' \
            AND NOT EXISTS ( \
@@ -185,13 +235,14 @@ pub(crate) fn reindex_jobs_sql(
                WHERE done.topic = $3 \
                  AND COALESCE(done.payload->>'reindex_event_id', done.payload->'payload'->>'reindex_event_id') = j.event_id::TEXT \
            ) \
-         ORDER BY j.published_at ASC, j.event_id ASC \
+         ORDER BY j.journal_position ASC, s.{index_id} ASC \
          LIMIT $4",
         cols = stored_index_columns_sql(model),
         relation = model.relation,
         tenant_id = model.q("tenant_id"),
         index_name = model.q("index_name"),
         status = model.q("status"),
+        index_id = model.q("index_id"),
     )
 }
 
@@ -242,6 +293,7 @@ async fn load_search_freshness_jobs(
     journal_relation: &str,
     outbox_relation: &str,
     batch: i64,
+    window: (i64, i64),
 ) -> Result<Vec<SearchFreshnessJob>, String> {
     let model = search_index_model();
     let rows = sqlx::query(&freshness_jobs_sql(
@@ -252,6 +304,8 @@ async fn load_search_freshness_jobs(
     .bind(STATUS_ACTIVE)
     .bind(TOPIC_FRESHNESS_APPLIED)
     .bind(batch.max(1))
+    .bind(window.0)
+    .bind(window.1)
     .fetch_all(pool)
     .await
     .map_err(|err| format!("load search freshness jobs failed: {err}"))?;
@@ -274,6 +328,9 @@ async fn load_search_freshness_jobs(
                 .try_get("project_id")
                 .map_err(|err| format!("decode search freshness project failed: {err}"))?,
             payload,
+            position: row
+                .try_get("journal_position")
+                .map_err(|err| format!("decode search freshness position failed: {err}"))?,
         });
     }
     Ok(jobs)
@@ -284,6 +341,7 @@ async fn load_search_reindex_jobs(
     journal_relation: &str,
     outbox_relation: &str,
     batch: i64,
+    window: (i64, i64),
 ) -> Result<Vec<SearchReindexJob>, String> {
     let model = search_index_model();
     let rows = sqlx::query(&reindex_jobs_sql(&model, journal_relation, outbox_relation))
@@ -291,6 +349,8 @@ async fn load_search_reindex_jobs(
         .bind(TOPIC_REINDEX)
         .bind(TOPIC_REINDEX_COMPLETED)
         .bind(batch.max(1))
+        .bind(window.0)
+        .bind(window.1)
         .fetch_all(pool)
         .await
         .map_err(|err| format!("load search reindex jobs failed: {err}"))?;
@@ -310,6 +370,9 @@ async fn load_search_reindex_jobs(
             reindex_id: row
                 .try_get("reindex_id")
                 .map_err(|err| format!("decode search reindex id failed: {err}"))?,
+            position: row
+                .try_get("journal_position")
+                .map_err(|err| format!("decode search reindex position failed: {err}"))?,
         });
     }
     Ok(jobs)
@@ -590,7 +653,11 @@ async fn apply_search_freshness_job(
 /// embedding-carrying change is upserted through the runtime's MEDIATED vector
 /// dispatch. Each consumed event is marked with a
 /// [`TOPIC_FRESHNESS_APPLIED`] outbox event keyed by `source_event_id`, so a
-/// pass never re-consumes the journal. The leader spawns this via
+/// pass never re-consumes an event. Each pass reads forward from the
+/// `search.freshness` reader cursor one bounded position window at a time;
+/// with no ACTIVE index naming a source topic it does not read the journal and
+/// moves the cursor to the head. A transient failure stops the cursor just
+/// before the failed event so the next pass retries it. The leader spawns this via
 /// `NativeWorkerHost::spawn_while_leader` (the `run_cache_invalidation_worker_once`
 /// shape). Returns the number of points upserted.
 pub(crate) async fn run_index_freshness_consumer(
@@ -606,28 +673,80 @@ pub(crate) async fn run_index_freshness_consumer(
         .outbox_relation
         .as_deref()
         .ok_or_else(|| "search freshness consumer requires transactional outbox".to_string())?;
-    let jobs = load_search_freshness_jobs(pool, journal_relation, outbox_relation, batch).await?;
+    use crate::runtime::cdc::journal;
+    let catalog = crate::runtime::system::SystemCatalogConfig::current();
+    // Read the head before looking for indexes, so an index created after this
+    // check only ever sees positions beyond the cursor set below.
+    let head = journal::head(pool, &catalog)
+        .await
+        .map_err(|err| format!("read CDC journal head failed: {err}"))?;
+    let any_index: bool = sqlx::query_scalar(&freshness_indexes_exist_sql(&search_index_model()))
+        .bind(STATUS_ACTIVE)
+        .fetch_one(pool)
+        .await
+        .map_err(|err| format!("check active search indexes failed: {err}"))?;
+    if !any_index {
+        // No event can be applied; skip the journal entirely.
+        journal::advance_reader(pool, &catalog, SEARCH_FRESHNESS_READER, head)
+            .await
+            .map_err(|err| format!("advance search freshness reader failed: {err}"))?;
+        return Ok(0);
+    }
     let mut applied = 0i64;
-    for job in &jobs {
-        let Some(was_applied) = apply_search_freshness_job(&service, job).await else {
-            // Transient failure: no applied marker, retried on the next pass.
-            continue;
-        };
-        if was_applied {
-            applied = applied.saturating_add(1);
+    for _ in 0..SEARCH_JOURNAL_WINDOWS_PER_PASS {
+        let window = journal::reader_window(
+            pool,
+            &catalog,
+            SEARCH_FRESHNESS_READER,
+            head,
+            SEARCH_JOURNAL_WINDOW,
+        )
+        .await
+        .map_err(|err| format!("read search freshness reader failed: {err}"))?;
+        if window.0 >= window.1 {
+            break;
         }
-        service
-            .emit_index_event(
-                TOPIC_FRESHNESS_APPLIED,
-                &job.tenant_id,
-                &job.project_id,
-                &job.index.index_name,
-                serde_json::json!({
-                    "source_event_id": job.event_id,
-                    "applied": was_applied,
-                }),
-            )
-            .await;
+        let jobs =
+            load_search_freshness_jobs(pool, journal_relation, outbox_relation, batch, window)
+                .await?;
+        let mut first_failed = None;
+        for job in &jobs {
+            let Some(was_applied) = apply_search_freshness_job(&service, job).await else {
+                // Transient failure: no applied marker; the reader stops before
+                // this event so the next pass retries it.
+                first_failed.get_or_insert(job.position);
+                continue;
+            };
+            if was_applied {
+                applied = applied.saturating_add(1);
+            }
+            service
+                .emit_index_event(
+                    TOPIC_FRESHNESS_APPLIED,
+                    &job.tenant_id,
+                    &job.project_id,
+                    &job.index.index_name,
+                    serde_json::json!({
+                        "source_event_id": job.event_id,
+                        "applied": was_applied,
+                    }),
+                )
+                .await;
+        }
+        let next_position = journal::reader_resume_position(
+            window,
+            (jobs.len() as i64) >= batch.max(1),
+            jobs.last().map(|job| job.position),
+            first_failed,
+        );
+        journal::advance_reader(pool, &catalog, SEARCH_FRESHNESS_READER, next_position)
+            .await
+            .map_err(|err| format!("advance search freshness reader failed: {err}"))?;
+        // A full page or a failure resumes on the next pass; a finished window
+        // moves straight on to the next one.
+        if next_position < window.1 {
+            break;
+        }
     }
     Ok(applied)
 }
@@ -928,6 +1047,85 @@ async fn process_search_teardown_job(
     }
 }
 
+/// The reindex stage of [`run_search_reindex_once`]: `reindex.requested`
+/// events in the windows after the `search.reindex` reader cursor. With no
+/// index left that is not deleted the journal is not read at all; the cursor
+/// moves to the head. A request whose writeback fails stops the cursor just
+/// before it and fails the pass, so the next pass retries it; requests already
+/// completed are excluded by `reindex_event_id`.
+async fn run_search_reindex_requests(
+    service: &SearchServiceImpl,
+    pool: &PgPool,
+    journal_relation: &str,
+    outbox_relation: &str,
+    batch: i64,
+) -> Result<i64, String> {
+    use crate::runtime::cdc::journal;
+    let catalog = crate::runtime::system::SystemCatalogConfig::current();
+    // Read the head before looking for indexes, so an index created after this
+    // check only ever sees positions beyond the cursor set below.
+    let head = journal::head(pool, &catalog)
+        .await
+        .map_err(|err| format!("read CDC journal head failed: {err}"))?;
+    let any_index: bool = sqlx::query_scalar(&reindexable_indexes_exist_sql(&search_index_model()))
+        .bind(STATUS_DELETED)
+        .fetch_one(pool)
+        .await
+        .map_err(|err| format!("check reindexable search indexes failed: {err}"))?;
+    if !any_index {
+        // No request can join its index; skip the journal entirely.
+        journal::advance_reader(pool, &catalog, SEARCH_REINDEX_READER, head)
+            .await
+            .map_err(|err| format!("advance search reindex reader failed: {err}"))?;
+        return Ok(0);
+    }
+    let mut acted = 0i64;
+    for _ in 0..SEARCH_JOURNAL_WINDOWS_PER_PASS {
+        let window = journal::reader_window(
+            pool,
+            &catalog,
+            SEARCH_REINDEX_READER,
+            head,
+            SEARCH_JOURNAL_WINDOW,
+        )
+        .await
+        .map_err(|err| format!("read search reindex reader failed: {err}"))?;
+        if window.0 >= window.1 {
+            break;
+        }
+        let jobs = load_search_reindex_jobs(pool, journal_relation, outbox_relation, batch, window)
+            .await?;
+        let mut failure = None;
+        for job in &jobs {
+            match process_search_reindex_job(service, job).await {
+                Ok(upserted) => acted = acted.saturating_add(upserted),
+                Err(err) => {
+                    failure = Some((job.position, err));
+                    break;
+                }
+            }
+        }
+        let next_position = journal::reader_resume_position(
+            window,
+            (jobs.len() as i64) >= batch.max(1),
+            jobs.last().map(|job| job.position),
+            failure.as_ref().map(|(position, _)| *position),
+        );
+        journal::advance_reader(pool, &catalog, SEARCH_REINDEX_READER, next_position)
+            .await
+            .map_err(|err| format!("advance search reindex reader failed: {err}"))?;
+        if let Some((_, err)) = failure {
+            return Err(err);
+        }
+        // A full page resumes on the next pass; a finished window moves
+        // straight on to the next one.
+        if next_position < window.1 {
+            break;
+        }
+    }
+    Ok(acted)
+}
+
 /// ONE leader-owned reindex/teardown pass (master-plan 16.2.2/16.2.3).
 /// Consumes the `reindex.requested` jobs the Reindex RPC emits (mediated source
 /// backfill → engine re-upsert → `REINDEXING → ACTIVE` writeback →
@@ -948,11 +1146,9 @@ pub(crate) async fn run_search_reindex_once(
         .outbox_relation
         .as_deref()
         .ok_or_else(|| "search reindex worker requires transactional outbox".to_string())?;
-    let jobs = load_search_reindex_jobs(pool, journal_relation, outbox_relation, batch).await?;
-    let mut acted = 0i64;
-    for job in &jobs {
-        acted = acted.saturating_add(process_search_reindex_job(&service, job).await?);
-    }
+    let mut acted =
+        run_search_reindex_requests(&service, pool, journal_relation, outbox_relation, batch)
+            .await?;
     let teardowns =
         load_search_teardown_jobs(pool, journal_relation, outbox_relation, batch).await?;
     for job in &teardowns {

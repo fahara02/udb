@@ -23,6 +23,7 @@ mod data_plane_live;
 mod data_plane_seam_live;
 mod data_plane_tenant_rls_live;
 mod data_revision_live;
+mod journal_reader_gate_live;
 #[cfg(feature = "kafka")]
 mod livequery_journal_live;
 mod native_events_live;

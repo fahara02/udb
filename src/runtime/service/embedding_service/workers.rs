@@ -7,6 +7,8 @@
 //! search freshness): read published events from the durable CDC journal, join
 //! them to this service's own registrations, dedup by an output event carrying
 //! the source journal event id, and act ONLY through the mediated runtime seams.
+//! The change-driven stage reads forward from its durable reader cursor
+//! (`embedding.work`) one bounded position window at a time.
 //! The `run_embedding_work_emitter_once` entry point is re-exported from `mod.rs`
 //! for `serve()`, which spawns it under leader election. The two `self`-using
 //! vector-delete helpers stay inherent methods on `EmbeddingServiceImpl` so their
@@ -39,6 +41,41 @@ struct EmbeddingWorkJob {
     tenant_id: String,
     project_id: String,
     payload: serde_json::Value,
+    /// The change's journal position; the emitter's reader cursor follows it.
+    position: i64,
+}
+
+/// What one change-driven work job did.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum WorkJobOutcome {
+    /// Work was emitted, or the row's vectors removed, and the change marked done.
+    Acted,
+    /// The change can never produce work for this source; retrying changes nothing.
+    NotApplicable,
+    /// The work failed; the change stays unmarked and is retried.
+    Failed,
+}
+
+/// The change-driven emitter's row in the journal reader cursors.
+pub(crate) const EMBEDDING_JOURNAL_READER: &str = "embedding.work";
+/// Journal positions one change-driven page scans at most.
+const EMBEDDING_JOURNAL_WINDOW: i64 = 5_000;
+/// Windows one pass reads at most while catching up on journal traffic that
+/// matches no source.
+const EMBEDDING_JOURNAL_WINDOWS_PER_PASS: usize = 20;
+
+/// Whether any ACTIVE source names a CDC topic. Without one no journal change
+/// can become work, so the emitter skips the journal. Binds: `$1` = active
+/// status. Pure so the SQL shape is unit-asserted.
+pub(crate) fn embedding_change_sources_exist_sql() -> String {
+    let source = embedding_source_model();
+    format!(
+        "SELECT EXISTS (SELECT 1 FROM {rel} WHERE {status} = $1 \
+           AND COALESCE({source_cdc_topic}::TEXT, '') <> '')",
+        rel = source.relation,
+        status = source.q("status"),
+        source_cdc_topic = source.q("source_cdc_topic"),
+    )
 }
 
 struct EmbeddingBackfillJob {
@@ -72,8 +109,10 @@ struct EmbeddingTeardownJob {
 /// payload key is read with the `COALESCE(payload->>k, payload->'payload'->>k)`
 /// nesting fallback because the CDC journal ENVELOPE-nests emitted payloads
 /// under `payload.payload` — the same lesson already applied to the backfill
-/// loader; a top-level-only read matches zero real rows. Pure so the SQL shape
-/// is unit-asserted.
+/// loader; a top-level-only read matches zero real rows. Binds: `$1` = active
+/// status, `$2` = completion topic, `$3` = limit, `$4`/`$5` = the journal
+/// position window `(from, to]` of the emitter's reader cursor, so a pass never
+/// joins the whole retained journal. Pure so the SQL shape is unit-asserted.
 pub(crate) fn embedding_work_jobs_sql(journal_relation: &str, outbox_relation: &str) -> String {
     let source = embedding_source_model();
     let source_rel = source.relation.clone();
@@ -92,7 +131,8 @@ pub(crate) fn embedding_work_jobs_sql(journal_relation: &str, outbox_relation: &
             j.event_id::TEXT AS event_id, \
             COALESCE(j.payload->>'tenant_id', j.payload->'payload'->>'tenant_id', '') AS event_tenant_id, \
             COALESCE(j.payload->>'project_id', j.payload->'payload'->>'project_id', '') AS project_id, \
-            j.payload::TEXT AS payload_json \
+            j.payload::TEXT AS payload_json, \
+            j.journal_position AS journal_position \
          FROM {journal_relation} j \
          JOIN {source_rel} s \
            ON s.{tenant_id}::TEXT = COALESCE(j.payload->>'tenant_id', j.payload->'payload'->>'tenant_id', '') \
@@ -100,6 +140,8 @@ pub(crate) fn embedding_work_jobs_sql(journal_relation: &str, outbox_relation: &
           AND COALESCE(s.{source_cdc_topic}::TEXT, '') <> '' \
           AND s.{source_cdc_topic} = j.topic \
          WHERE j.delivery_state IN ('published', 'acked') \
+           AND j.journal_position > $4 \
+           AND j.journal_position <= $5 \
            AND COALESCE(j.payload->>'tenant_id', j.payload->'payload'->>'tenant_id', '') <> '' \
            AND j.topic <> $2 \
            AND NOT EXISTS ( \
@@ -112,7 +154,7 @@ pub(crate) fn embedding_work_jobs_sql(journal_relation: &str, outbox_relation: &
                WHERE done.topic = $2 \
                  AND COALESCE(done.payload->>'source_event_id', done.payload->'payload'->>'source_event_id') = j.event_id::TEXT \
            ) \
-         ORDER BY j.published_at ASC, j.event_id ASC \
+         ORDER BY j.journal_position ASC, s.{source_id} ASC \
          LIMIT $3",
         source_id = source.q("source_id"),
         tenant_id = source.q("tenant_id"),
@@ -132,12 +174,15 @@ async fn load_embedding_work_jobs(
     journal_relation: &str,
     outbox_relation: &str,
     batch: i64,
+    window: (i64, i64),
 ) -> Result<Vec<EmbeddingWorkJob>, String> {
     let limit = batch.max(1);
     let rows = sqlx::query(&embedding_work_jobs_sql(journal_relation, outbox_relation))
         .bind(STATUS_ACTIVE)
         .bind(TOPIC_SOURCE_CHANGE_COMPLETED)
         .bind(limit)
+        .bind(window.0)
+        .bind(window.1)
         .fetch_all(pool)
         .await
         .map_err(|err| format!("load embedding work jobs failed: {err}"))?;
@@ -192,6 +237,9 @@ async fn load_embedding_work_jobs(
                 .try_get("project_id")
                 .map_err(|err| format!("decode embedding event project failed: {err}"))?,
             payload,
+            position: row
+                .try_get("journal_position")
+                .map_err(|err| format!("decode embedding event position failed: {err}"))?,
         });
     }
     Ok(jobs)
@@ -913,18 +961,18 @@ pub(crate) fn parse_source_text_fields(raw: &str) -> Vec<String> {
 async fn process_embedding_work_job(
     service: &EmbeddingServiceImpl,
     job: &EmbeddingWorkJob,
-) -> bool {
+) -> WorkJobOutcome {
     let source_tenant = job.source.tenant_id.trim();
     let event_tenant = job.tenant_id.trim();
     if source_tenant.is_empty() || event_tenant != source_tenant {
-        return false;
+        return WorkJobOutcome::NotApplicable;
     }
     if job.source.status != STATUS_ACTIVE || job.source.source_cdc_topic.trim().is_empty() {
-        return false;
+        return WorkJobOutcome::NotApplicable;
     }
     let row_pk = source_change_row_pk(&job.payload);
     if row_pk.is_empty() {
-        return false;
+        return WorkJobOutcome::NotApplicable;
     }
     let collection = job.source.collection();
     let model = match load_active_model(
@@ -938,18 +986,18 @@ async fn process_embedding_work_job(
         Ok(model) => model,
         Err(error) => {
             tracing::warn!(source = %job.source.source_name, %error, "embedding source change model lookup failed");
-            return false;
+            return WorkJobOutcome::Failed;
         }
     };
     if collection != model.active_collection {
         tracing::warn!(source = %job.source.source_name, "embedding source/model collection binding is inconsistent");
-        return false;
+        return WorkJobOutcome::Failed;
     }
     let store = match service.vector_store_for_model(&job.project_id, &model) {
         Ok(store) => store,
         Err(error) => {
             tracing::warn!(%error, "embedding vector store unavailable");
-            return false;
+            return WorkJobOutcome::Failed;
         }
     };
     if source_change_is_delete(&job.payload) {
@@ -958,14 +1006,14 @@ async fn process_embedding_work_job(
             && let Err(error) = store.delete_by_filter(&collection, filter).await
         {
             tracing::warn!(%error, "embedding row filtered delete failed");
-            return false;
+            return WorkJobOutcome::Failed;
         }
         if let Err(error) = store
             .delete_points(event_tenant, &collection, vec![row_pk.clone()])
             .await
         {
             tracing::warn!(%error, "embedding row point delete failed");
-            return false;
+            return WorkJobOutcome::Failed;
         }
         service
             .emit_source_event(
@@ -976,7 +1024,7 @@ async fn process_embedding_work_job(
                 serde_json::json!({"source_event_id": job.event_id, "deleted": true}),
             )
             .await;
-        return true;
+        return WorkJobOutcome::Acted;
     }
 
     let text_fields = parse_source_text_fields(&job.source.text_fields_json);
@@ -988,14 +1036,14 @@ async fn process_embedding_work_job(
             && let Err(error) = store.delete_by_filter(&collection, filter).await
         {
             tracing::warn!(%error, "embedding empty-row filtered delete failed");
-            return false;
+            return WorkJobOutcome::Failed;
         }
         if let Err(error) = store
             .delete_points(event_tenant, &collection, vec![row_pk.clone()])
             .await
         {
             tracing::warn!(%error, "embedding empty-row point delete failed");
-            return false;
+            return WorkJobOutcome::Failed;
         }
         service
             .emit_source_event(
@@ -1006,7 +1054,7 @@ async fn process_embedding_work_job(
                 serde_json::json!({"source_event_id": job.event_id, "empty": true}),
             )
             .await;
-        return true;
+        return WorkJobOutcome::Acted;
     }
     let chunks = super::chunking::chunk_source_text_for_model(&text, &model);
     let result = match service
@@ -1029,7 +1077,7 @@ async fn process_embedding_work_job(
         Ok(result) => result,
         Err(error) => {
             tracing::warn!(%error, "embedding source work persistence failed");
-            return false;
+            return WorkJobOutcome::Failed;
         }
     };
     if !result.stale_point_ids.is_empty() {
@@ -1038,7 +1086,7 @@ async fn process_embedding_work_job(
             .await
         {
             tracing::warn!(%error, "embedding stale tail chunk delete failed");
-            return false;
+            return WorkJobOutcome::Failed;
         }
     }
     service.emit_source_event(
@@ -1046,12 +1094,90 @@ async fn process_embedding_work_job(
         &job.source.source_name,
         serde_json::json!({"source_event_id": job.event_id, "chunks_emitted": result.emitted, "chunks_unchanged": result.unchanged}),
     ).await;
-    true
+    WorkJobOutcome::Acted
+}
+
+/// The change-driven stage of the emitter: active sources joined by
+/// `(tenant_id, source_cdc_topic)` to the published changes in the windows
+/// after the `embedding.work` reader cursor. With no ACTIVE source naming a
+/// topic the journal is not read at all; the cursor moves to the head. A
+/// change whose work failed stops the cursor just before it, so the next pass
+/// retries it; changes already completed are excluded by `source_event_id`.
+/// Returns the number of changes acted on.
+pub(crate) async fn emit_source_change_work(
+    service: &EmbeddingServiceImpl,
+    pool: &PgPool,
+    journal_relation: &str,
+    outbox_relation: &str,
+    batch: i64,
+) -> Result<i64, String> {
+    use crate::runtime::cdc::journal;
+    let catalog = crate::runtime::system::SystemCatalogConfig::current();
+    // Read the head before looking for sources, so a source registered after
+    // this check only ever sees positions beyond the cursor set below.
+    let head = journal::head(pool, &catalog)
+        .await
+        .map_err(|err| format!("read CDC journal head failed: {err}"))?;
+    let any_source: bool = sqlx::query_scalar(&embedding_change_sources_exist_sql())
+        .bind(STATUS_ACTIVE)
+        .fetch_one(pool)
+        .await
+        .map_err(|err| format!("check active embedding sources failed: {err}"))?;
+    if !any_source {
+        // No change can become work; skip the journal entirely.
+        journal::advance_reader(pool, &catalog, EMBEDDING_JOURNAL_READER, head)
+            .await
+            .map_err(|err| format!("advance embedding journal reader failed: {err}"))?;
+        return Ok(0);
+    }
+    let mut acted = 0i64;
+    for _ in 0..EMBEDDING_JOURNAL_WINDOWS_PER_PASS {
+        let window = journal::reader_window(
+            pool,
+            &catalog,
+            EMBEDDING_JOURNAL_READER,
+            head,
+            EMBEDDING_JOURNAL_WINDOW,
+        )
+        .await
+        .map_err(|err| format!("read embedding journal reader failed: {err}"))?;
+        if window.0 >= window.1 {
+            break;
+        }
+        let jobs = load_embedding_work_jobs(pool, journal_relation, outbox_relation, batch, window)
+            .await?;
+        let mut first_failed = None;
+        for job in &jobs {
+            match process_embedding_work_job(service, job).await {
+                WorkJobOutcome::Acted => acted = acted.saturating_add(1),
+                WorkJobOutcome::NotApplicable => {}
+                WorkJobOutcome::Failed => {
+                    first_failed.get_or_insert(job.position);
+                }
+            }
+        }
+        let next_position = journal::reader_resume_position(
+            window,
+            (jobs.len() as i64) >= batch.max(1),
+            jobs.last().map(|job| job.position),
+            first_failed,
+        );
+        journal::advance_reader(pool, &catalog, EMBEDDING_JOURNAL_READER, next_position)
+            .await
+            .map_err(|err| format!("advance embedding journal reader failed: {err}"))?;
+        // A full page or a failure resumes on the next pass; a finished window
+        // moves straight on to the next one.
+        if next_position < window.1 {
+            break;
+        }
+    }
+    Ok(acted)
 }
 
 /// Run one leader-owned pass over the durable CDC journal, in three stages:
-/// (1) active embedding sources are joined by `(tenant_id, source_cdc_topic)`
-/// to published source changes — source events that already produced
+/// (1) [`emit_source_change_work`]: active embedding sources are joined by
+/// `(tenant_id, source_cdc_topic)` to the published source changes after the
+/// emitter's reader cursor — source events that already produced
 /// `udb.embedding.work.v1` are skipped by `source_event_id` in both the outbox
 /// and replay journal; (2) requested backfills enumerate their source rows via
 /// the served SELECT path and emit per-row work; (3) `source.deleted` events
@@ -1070,13 +1196,8 @@ pub(crate) async fn run_embedding_work_emitter_once(
         .outbox_relation
         .as_deref()
         .ok_or_else(|| "embedding work emitter requires transactional outbox".to_string())?;
-    let jobs = load_embedding_work_jobs(pool, journal_relation, outbox_relation, batch).await?;
-    let mut acted = 0i64;
-    for job in &jobs {
-        if process_embedding_work_job(&service, job).await {
-            acted = acted.saturating_add(1);
-        }
-    }
+    let mut acted =
+        emit_source_change_work(&service, pool, journal_relation, outbox_relation, batch).await?;
     let backfills =
         load_embedding_backfill_jobs(pool, journal_relation, outbox_relation, batch).await?;
     for job in &backfills {

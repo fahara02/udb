@@ -58,49 +58,6 @@ fn project_request<T>(message: T) -> Request<T> {
     request
 }
 
-async fn ensure_outbox_and_journal(pool: &sqlx::PgPool) {
-    sqlx::query("CREATE SCHEMA IF NOT EXISTS udb_system")
-        .execute(pool)
-        .await
-        .expect("create udb_system schema");
-    // Outbox the search service emits its index/freshness markers into.
-    sqlx::query("DROP TABLE IF EXISTS udb_system.outbox_events CASCADE")
-        .execute(pool)
-        .await
-        .expect("drop outbox");
-    sqlx::query(
-        "CREATE TABLE udb_system.outbox_events ( \
-            event_seq     BIGSERIAL PRIMARY KEY, \
-            event_id      UUID NOT NULL UNIQUE, \
-            topic         TEXT NOT NULL, \
-            partition_key TEXT NOT NULL DEFAULT '', \
-            payload       JSONB NOT NULL, \
-            created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW() )",
-    )
-    .execute(pool)
-    .await
-    .expect("create outbox table");
-    // The durable CDC journal the freshness/teardown workers consume (columns the
-    // worker join SQL reads: event_id / topic / payload / delivery_state /
-    // published_at).
-    sqlx::query("DROP TABLE IF EXISTS udb_system.udb_cdc_event_journal CASCADE")
-        .execute(pool)
-        .await
-        .expect("drop journal");
-    sqlx::query(
-        "CREATE TABLE udb_system.udb_cdc_event_journal ( \
-            event_id       UUID PRIMARY KEY, \
-            topic          TEXT NOT NULL, \
-            partition_key  TEXT NOT NULL DEFAULT '', \
-            payload        JSONB NOT NULL, \
-            delivery_state TEXT NOT NULL DEFAULT 'published', \
-            published_at   TIMESTAMPTZ NOT NULL DEFAULT NOW() )",
-    )
-    .execute(pool)
-    .await
-    .expect("create journal table");
-}
-
 /// Insert one source-topic CDC journal row carrying a dense embedding for
 /// `tenant`, so the freshness worker upserts `tenant:pk` for it. `age_secs`
 /// orders application (older applied first — under a revert the newer clobbers).
@@ -193,7 +150,10 @@ async fn search_tenant_isolation_no_clobber_and_teardown_survives_live() {
     }
     let pool = live_pg_pool().await;
     migrate_native_service_db(&pool).await;
-    ensure_outbox_and_journal(&pool).await;
+    // The outbox the search service emits its index/freshness markers into. The
+    // journal is the one the system catalog bootstrap created: its insert
+    // trigger assigns the positions the workers' reader cursors follow.
+    reset_native_outbox(&pool).await;
     // The teardown worker enumerates the source PK for tenant A via the source
     // table; drop every FK on it so a bare source row can stand alone (the exact
     // constraint name is proto-declared, but drop them all to be robust).

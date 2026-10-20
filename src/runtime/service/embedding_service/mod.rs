@@ -81,6 +81,9 @@ mod workers;
 // cadence/batch knobs.
 pub(crate) use config::{EMBEDDING_WORK_EMITTER_BATCH, embedding_work_emitter_interval};
 pub(crate) use workers::run_embedding_work_emitter_once;
+// The live journal-reader seam drives the change-driven stage on its own.
+#[cfg(test)]
+pub(crate) use workers::{EMBEDDING_JOURNAL_READER, emit_source_change_work};
 // The hard tenant purge erases the tenant's vectors through this service's
 // shared vector seam (and discovers its model collections from the registry).
 pub(crate) use vector_store::{

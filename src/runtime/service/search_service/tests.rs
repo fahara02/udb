@@ -31,8 +31,10 @@ use super::handlers::hit_payload_json;
 use super::model::StoredIndex;
 use super::store::search_index_model;
 use super::workers::{
-    event_in_index_scope, freshness_event_body, freshness_jobs_sql, payload_vector,
-    reindex_jobs_sql, reindex_writeback, source_rows_select_request, teardown_jobs_sql,
+    SEARCH_FRESHNESS_READER, SEARCH_REINDEX_READER, event_in_index_scope, freshness_event_body,
+    freshness_indexes_exist_sql, freshness_jobs_sql, payload_vector, reindex_jobs_sql,
+    reindex_writeback, reindexable_indexes_exist_sql, source_rows_select_request,
+    teardown_jobs_sql,
 };
 
 fn decode_detail(status: &Status) -> ErrorDetail {
@@ -429,8 +431,12 @@ fn worker_job_loading_sql_shape() {
         2,
         "reindex dedup must check the completion marker in BOTH outbox and journal"
     );
-    assert!(reindex.contains("ORDER BY j.published_at ASC, j.event_id ASC"));
+    assert!(reindex.contains("ORDER BY j.journal_position ASC"));
     assert!(reindex.contains("LIMIT $4"));
+    // Bounded by the reindex reader cursor's position window.
+    assert!(reindex.contains("j.journal_position > $5"));
+    assert!(reindex.contains("j.journal_position <= $6"));
+    assert!(reindex.contains("j.journal_position AS journal_position"));
 
     let teardown = teardown_jobs_sql(&model, journal, outbox);
     assert!(teardown.contains("teardown_event_id"));
@@ -445,6 +451,40 @@ fn worker_job_loading_sql_shape() {
     assert!(freshness.contains("source_event_id"));
     assert_eq!(freshness.matches("NOT EXISTS").count(), 2);
     assert!(freshness.contains("LIMIT $3"));
+    // Bounded by the freshness reader cursor's position window, in journal order.
+    assert!(freshness.contains("j.journal_position > $4"));
+    assert!(freshness.contains("j.journal_position <= $5"));
+    assert!(freshness.contains("j.journal_position AS journal_position"));
+    assert!(freshness.contains("ORDER BY j.journal_position ASC"));
+    assert!(!freshness.contains("ORDER BY j.published_at"));
+}
+
+/// The gates that let the freshness and reindex passes skip the journal ask
+/// only the index registry, and name the reader cursors they move.
+#[test]
+fn worker_journal_gates_read_only_the_index_registry() {
+    let model = search_index_model();
+    let freshness = freshness_indexes_exist_sql(&model);
+    assert!(
+        freshness.starts_with("SELECT EXISTS (SELECT 1 FROM "),
+        "{freshness}"
+    );
+    assert!(freshness.contains("search_indexes"), "{freshness}");
+    assert!(freshness.contains("= $1"), "{freshness}");
+    assert!(freshness.contains("::TEXT, '') <> ''"), "{freshness}");
+    assert!(!freshness.contains("journal"), "{freshness}");
+
+    let reindex = reindexable_indexes_exist_sql(&model);
+    assert!(
+        reindex.starts_with("SELECT EXISTS (SELECT 1 FROM "),
+        "{reindex}"
+    );
+    assert!(reindex.contains("search_indexes"), "{reindex}");
+    assert!(reindex.contains("<> $1"), "{reindex}");
+    assert!(!reindex.contains("journal"), "{reindex}");
+
+    assert_eq!(SEARCH_FRESHNESS_READER, "search.freshness");
+    assert_eq!(SEARCH_REINDEX_READER, "search.reindex");
 }
 
 /// The CDC journal may envelope-nest the emitted payload under

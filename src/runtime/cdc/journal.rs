@@ -57,7 +57,8 @@ pub(crate) fn head_relation(config: &SystemCatalogConfig) -> String {
 }
 
 /// Durable positions of the broker's own journal readers (the webhook
-/// dispatcher, the cache invalidator). Each scans forward from its position
+/// dispatcher, the cache invalidator, the embedding work emitter, the search
+/// freshness and reindex workers). Each scans forward from its position
 /// instead of re-reading the whole retained journal on every tick.
 pub(crate) fn reader_cursors_relation(config: &SystemCatalogConfig) -> String {
     format!("{}.{}", qi(&config.cdc.system_schema), qi(READER_TABLE))
@@ -482,6 +483,27 @@ pub(crate) async fn reader_window(
     Ok((from, head.min(from.saturating_add(span.max(1)))))
 }
 
+/// Where a broker journal reader resumes after one page over `window`. A short
+/// page finished the window. A full page may have stopped inside its last
+/// event's fan-out, so the reader resumes just before that event; the loaders
+/// exclude whatever that event already completed. An event whose work failed
+/// is retried: the reader stops just before the first one. Never behind
+/// `window.0`.
+pub(crate) fn reader_resume_position(
+    window: (JournalPosition, JournalPosition),
+    full_page: bool,
+    last_loaded: Option<JournalPosition>,
+    first_failed: Option<JournalPosition>,
+) -> JournalPosition {
+    let done = match last_loaded {
+        Some(last) if full_page => last - 1,
+        _ => window.1,
+    };
+    first_failed
+        .map_or(done, |failed| done.min(failed - 1))
+        .max(window.0)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -495,6 +517,42 @@ mod tests {
             assert_eq!(&token.as_bytes()[..6], b"udbpro");
             assert_eq!(decode_progress_token(&token), Some(position), "{token}");
         }
+    }
+
+    #[test]
+    fn reader_resume_position_finishes_retries_and_never_regresses() {
+        // A short page finishes the window.
+        assert_eq!(
+            reader_resume_position((10, 5_010), false, Some(40), None),
+            5_010
+        );
+        assert_eq!(
+            reader_resume_position((10, 5_010), false, None, None),
+            5_010
+        );
+        // A full page resumes just before its last event.
+        assert_eq!(
+            reader_resume_position((10, 5_010), true, Some(40), None),
+            39
+        );
+        // A failed event is retried, even when later events succeeded.
+        assert_eq!(
+            reader_resume_position((10, 5_010), false, Some(40), Some(25)),
+            24
+        );
+        assert_eq!(
+            reader_resume_position((10, 5_010), true, Some(40), Some(25)),
+            24
+        );
+        // Never behind the window start.
+        assert_eq!(
+            reader_resume_position((10, 5_010), true, Some(11), None),
+            10
+        );
+        assert_eq!(
+            reader_resume_position((10, 5_010), false, Some(11), Some(11)),
+            10
+        );
     }
 
     #[test]

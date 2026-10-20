@@ -5,6 +5,30 @@ the package version in `Cargo.toml`; historical v0.3.2 audit material is folded
 into the v0.3.x entries because the codebase advanced to v0.3.7 before that
 release line was tagged.
 
+## [0.6.3] - Unreleased
+
+### Fixed
+
+- **The embedding work emitter and the search freshness and reindex workers
+  scanned the whole journal on every tick.** Each joined every retained
+  journal row to its registrations and checked each one against the outbox and
+  the journal for a completion marker. Each now keeps its position in
+  `udb_system.udb_journal_reader_cursors` (`embedding.work`,
+  `search.freshness`, `search.reindex`) and reads at most 5,000 journal
+  positions per query, in position order, moving on to the next window in the
+  same tick (up to 20) while a window holds nothing to do. With no ACTIVE
+  embedding source naming a CDC topic, the emitter's change stage does not read
+  the journal and moves its position to the head; with no ACTIVE search index
+  naming one, neither does the freshness worker; with no index that is not
+  deleted, neither does the reindex stage. An event whose work failed is
+  retried: the position stops just before it. Changes published before a
+  source or index exists are no longer picked up when it is registered; run
+  `Backfill` or `Reindex` for those.
+
+### Breaking for callers
+
+- None.
+
 ## [0.6.2] - 2026-10-21
 
 ### Added

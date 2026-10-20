@@ -30,9 +30,10 @@ use super::handlers::{parse_grpc_timeout, remaining_before_deadline};
 use super::model::{StoredSource, build_embedding_point, merge_retrieve_filter};
 use super::retrieval::public_payload;
 use super::workers::{
-    backfill_read_context, backfill_select_request, embedding_teardown_jobs_sql,
-    embedding_teardown_point_ids_sql, embedding_work_jobs_sql, extract_source_text,
-    parse_source_text_fields, source_change_is_delete, source_change_row, source_change_row_pk,
+    backfill_read_context, backfill_select_request, embedding_change_sources_exist_sql,
+    embedding_teardown_jobs_sql, embedding_teardown_point_ids_sql, embedding_work_jobs_sql,
+    extract_source_text, parse_source_text_fields, source_change_is_delete, source_change_row,
+    source_change_row_pk,
 };
 
 fn decode_detail(status: &Status) -> ErrorDetail {
@@ -1002,6 +1003,38 @@ fn work_loader_sql_reads_nested_journal_envelope() {
     assert!(
         !sql.contains("COALESCE(j.payload->>'tenant_id', '')"),
         "work loader SQL still reads tenant_id top-level only"
+    );
+}
+
+/// The change-driven loader reads only the reader cursor's position window, in
+/// journal order, and keeps the completion anti-joins as its idempotency guard.
+/// The gate that lets a pass skip the journal asks only the source registry.
+#[test]
+fn work_loader_reads_only_the_reader_window() {
+    let sql = embedding_work_jobs_sql("udb_cdc_event_journal", "udb_outbox");
+    for fragment in [
+        "j.journal_position > $4",
+        "j.journal_position <= $5",
+        "j.journal_position AS journal_position",
+        "ORDER BY j.journal_position ASC",
+        "SELECT 1 FROM udb_outbox o",
+        "SELECT 1 FROM udb_cdc_event_journal done",
+    ] {
+        assert!(sql.contains(fragment), "work loader SQL missing {fragment}");
+    }
+    assert!(
+        !sql.contains("ORDER BY j.published_at"),
+        "work loader must page in journal position order"
+    );
+    assert_eq!(super::workers::EMBEDDING_JOURNAL_READER, "embedding.work");
+
+    let gate = embedding_change_sources_exist_sql();
+    assert!(gate.starts_with("SELECT EXISTS (SELECT 1 FROM "), "{gate}");
+    assert!(gate.contains("= $1"), "{gate}");
+    assert!(gate.contains("::TEXT, '') <> ''"), "{gate}");
+    assert!(
+        !gate.contains("journal"),
+        "the gate must not read the journal: {gate}"
     );
 }
 
