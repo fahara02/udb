@@ -155,6 +155,8 @@ jobs:
         run: |
           python3 scripts/check-gap-closure-posture.py --selftest
           python3 scripts/check-gap-closure-posture.py
+      - name: Go Client contract docs match the native contract
+        run: node --test scripts/go-rpc-contract-docs.test.mjs
       - name: Bench harness posture guard
         run: |
           node --check scripts/gen-bench-bodies-skeleton.mjs

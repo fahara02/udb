@@ -201,6 +201,20 @@ when the request carries a caller-supplied idempotency key** — keyless mutatio
 fail closed instead of risking a double apply. Typed error details decode from
 the `udb-error-detail-bin` trailer via `Error.Detail()` in this package.
 
+Generated typed RPC client methods include the listener, required scopes,
+credential types, operation kind and retry contract in their Go documentation.
+
+`Table[T].Insert` creates a complete row and returns `CodeUnique` for any primary
+or unique-key collision. `TxScope.Insert` gives the same behavior inside an
+atomic transaction; a duplicate rolls back earlier writes and outbox events.
+The dedicated Insert RPC returns `Unimplemented` on brokers without this API.
+
+Inside a transaction, relational upserts, updates and deletes and vector upserts
+accept a per-mutation idempotency key (a relational key gets a durable replay
+receipt in the same transaction); any other mutation, such as an object or
+outbox write, refuses one and nothing is written. Do not replay a partially
+submitted transaction automatically.
+
 ## Durable Consumers
 
 `udbclient.Consume` owns reconnects, credential refresh and a named,
