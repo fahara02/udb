@@ -1200,6 +1200,12 @@ jobs:
       - uses: ./.github/actions/setup-sdk-toolchains
         with:
           go: "true"
+      # A consumer resolves the Go SDK from its committed go.mod/go.sum; an
+      # import added without `go mod tidy` breaks their build, not ours.
+      - name: Require committed Go module metadata
+        run: |
+          go mod tidy
+          git diff --exit-code -- go.mod go.sum
       - run: go vet ./...
       - run: go build ./...
       # Offline (no-broker) generator + enterprise-metadata regressions. Both use

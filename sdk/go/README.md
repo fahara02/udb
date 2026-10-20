@@ -257,6 +257,51 @@ err := udb.Generated.InvokeUnary(ctx,
 Every RPC's full method path, retry class, and idempotency contract is listed in
 [docs/generated/udb-native-contract.json](../../docs/generated/udb-native-contract.json).
 
+## Testing stores and policies
+
+`udbtest.NewFake(descriptorSet, policyFile)` serves descriptor-defined tables
+over loopback gRPC. Pass a `*descriptorpb.FileDescriptorSet` containing imports
+and the same JSON/YAML policy file used by `udb policy apply`; close the fake
+when the test ends. It denies data requests when no policy allows them.
+
+Provision keys with `AddIdentityAPIKey(key, udbtest.Identity{...})` and connect
+with `ClientForKey(t, key)`. Tenant, project, scopes and roles come from the
+verified identity. Policy deny overrides allow, including denies whose
+`required_scopes` the caller lacks. PII masking, codec coercion, CAS, primary
+and secondary uniqueness, atomic writes, soft deletes and paging use the
+descriptor rules. `New(t, messages...)` is the convenience fixture with an
+explicit allow-all test policy.
+
+`InjectFault` fails a bounded number of requests before writes apply. It also
+targets `Authenticate` to exercise credential refresh failures. `SetRateLimit`
+returns typed rate-limit errors, and `SetTokenLifetime` controls newly issued
+bearers. Named CDC consumers retain verified ownership and monotonic cursors;
+failed events use the ordinary DLQ operator APIs. Use the embedded tier for
+SQL default expressions or partial unique-index predicates beyond `IS NULL`
+and `IS NOT NULL`; the fake refuses unsupported schema behavior explicitly.
+
+## Testing with the real embedded broker
+
+`udbtest.Start(t, protoRoot, policyFile)` starts an installed embedded-capable UDB
+binary with PostgreSQL, logs in as its bootstrapped administrator and returns an
+authenticated `*udbclient.Udb`. All child processes and the client stop when the
+test ends. Each call uses a temporary project and separate loopback ports.
+
+```go
+u := udbtest.Start(t, "./proto", "./policies.yaml")
+files := udbclient.TableOf[*storagev1.File](u)
+```
+
+Use an empty proto root argument for native models only, and an empty policy
+argument when no policy file is needed. A supplied policy file goes through the
+production `udb policy apply` command. Set `UDB_TEST_BINARY` to select a CI build;
+otherwise the helper uses `udb` on PATH. It shares PostgreSQL's normal download
+cache; `UDB_HOME`, mirror and offline archive settings remain available. It
+does not build a broker binary. The Linux and Windows embedded CI lane runs the
+same table conformance suite used by `NewFake` and the external live broker.
+`StartPair` provisions two real tenant identities on one isolated broker so
+the suite includes cross-tenant isolation in all three modes.
+
 ## Notes For Users
 
 Use the `udbclient` package for normal app code. The `gen/` packages contain the
