@@ -86,7 +86,7 @@ pub(crate) use security::validate_webhook_target_url;
 pub(crate) use worker::run_webhook_delivery_worker_once;
 // Test-only loopback delivery switch for the live delivery-worker seam test.
 #[cfg(all(feature = "http-client", test))]
-pub(crate) use worker::ALLOW_LOOPBACK_HTTP_DELIVERY_FOR_TEST;
+pub(crate) use worker::{ALLOW_LOOPBACK_HTTP_DELIVERY_FOR_TEST, WEBHOOK_JOURNAL_READER};
 
 /// Postgres-backed `WebhookService` handler.
 pub struct WebhookServiceImpl {

@@ -61,7 +61,16 @@ pub(crate) struct WebhookEventCandidate {
 struct WebhookDeliveryJob {
     target: WebhookDeliveryTarget,
     event: WebhookEventCandidate,
+    /// The event's journal position; the dispatcher's reader cursor follows it.
+    position: i64,
 }
+
+/// The dispatcher's row in the journal reader cursors.
+#[cfg(feature = "http-client")]
+pub(crate) const WEBHOOK_JOURNAL_READER: &str = "webhook.dispatch";
+/// Journal positions one dispatcher tick scans at most.
+#[cfg(feature = "http-client")]
+const WEBHOOK_JOURNAL_WINDOW: i64 = 5_000;
 
 #[cfg(feature = "http-client")]
 async fn terminal_delivery_exists(
@@ -91,7 +100,9 @@ async fn terminal_delivery_exists(
 }
 
 /// The delivery-job loader query. Bind order: `$1..$3` the webhook service's own
-/// topics (never re-delivered), `$4`/`$5` the terminal statuses, `$6` the batch.
+/// topics (never re-delivered), `$4`/`$5` the terminal statuses, `$6` the batch,
+/// `$7`/`$8` the journal position window `(from, to]` the dispatcher's reader
+/// cursor allows, so a tick never joins the whole retained journal.
 ///
 /// Delivery window: an endpoint receives only journal events published at or
 /// after its own `created_at`. Without that bound a newly created endpoint was
@@ -114,7 +125,8 @@ pub(super) fn webhook_delivery_jobs_sql(journal_relation: &str) -> String {
             e.{max_attempts} AS max_attempts, \
             j.event_id::TEXT AS event_id, \
             j.topic AS topic, \
-            j.payload::TEXT AS payload_json \
+            j.payload::TEXT AS payload_json, \
+            j.journal_position AS journal_position \
          FROM {journal_relation} j \
          JOIN {endpoint_rel} e \
            ON e.{tenant_id}::TEXT = COALESCE(j.payload->>'tenant_id', '') \
@@ -129,6 +141,8 @@ pub(super) fn webhook_delivery_jobs_sql(journal_relation: &str) -> String {
               OR e.{topic_pattern} = j.topic \
           ) \
          WHERE j.delivery_state IN ('published', 'acked') \
+           AND j.journal_position > $7 \
+           AND j.journal_position <= $8 \
            AND j.topic <> $1 \
            AND j.topic <> $2 \
            AND j.topic <> $3 \
@@ -138,7 +152,7 @@ pub(super) fn webhook_delivery_jobs_sql(journal_relation: &str) -> String {
                  AND d.{delivery_event_id} = j.event_id::TEXT \
                  AND d.{delivery_status} IN ($4, $5) \
            ) \
-         ORDER BY j.published_at ASC, e.{endpoint_id} ASC \
+         ORDER BY j.journal_position ASC, e.{endpoint_id} ASC \
          LIMIT $6",
         endpoint_id = endpoint.q("endpoint_id"),
         tenant_id = endpoint.q("tenant_id"),
@@ -160,6 +174,7 @@ async fn load_webhook_delivery_jobs(
     pool: &PgPool,
     journal_relation: &str,
     batch: i64,
+    window: (i64, i64),
 ) -> Result<Vec<WebhookDeliveryJob>, String> {
     let limit = batch.max(1);
     let rows = sqlx::query(&webhook_delivery_jobs_sql(journal_relation))
@@ -169,6 +184,8 @@ async fn load_webhook_delivery_jobs(
         .bind(STATUS_DELIVERED)
         .bind(STATUS_DEAD)
         .bind(limit)
+        .bind(window.0)
+        .bind(window.1)
         .fetch_all(pool)
         .await
         .map_err(|err| format!("load webhook delivery jobs failed: {err}"))?;
@@ -210,6 +227,9 @@ async fn load_webhook_delivery_jobs(
                     .map_err(|err| format!("decode webhook event id failed: {err}"))?,
                 payload,
             },
+            position: row
+                .try_get("journal_position")
+                .map_err(|err| format!("decode webhook event position failed: {err}"))?,
         });
     }
     Ok(jobs)
@@ -729,7 +749,50 @@ pub(crate) async fn run_webhook_delivery_worker_once(
     metrics: Option<&Arc<dyn MetricsRecorder>>,
     runtime: &crate::runtime::DataBrokerRuntime,
 ) -> Result<i64, String> {
-    let loaded = load_webhook_delivery_jobs(pool, journal_relation, batch).await?;
+    use crate::runtime::cdc::journal;
+    let catalog = crate::runtime::system::SystemCatalogConfig::current();
+    // Read the head before looking for endpoints, so an endpoint created after
+    // this check only ever sees positions beyond the cursor set below.
+    let head = journal::head(pool, &catalog)
+        .await
+        .map_err(|err| format!("read CDC journal head failed: {err}"))?;
+    let endpoint = super::model::endpoint_model();
+    let any_endpoint: bool = sqlx::query_scalar(&format!(
+        "SELECT EXISTS (SELECT 1 FROM {rel} WHERE {active} = true AND {deleted_at} IS NULL)",
+        rel = endpoint.relation,
+        active = endpoint.q("active"),
+        deleted_at = endpoint.q("deleted_at"),
+    ))
+    .fetch_one(pool)
+    .await
+    .map_err(|err| format!("check active webhook endpoints failed: {err}"))?;
+    if !any_endpoint {
+        // Nothing can be delivered; skip the journal entirely.
+        journal::advance_reader(pool, &catalog, WEBHOOK_JOURNAL_READER, head)
+            .await
+            .map_err(|err| format!("advance webhook journal reader failed: {err}"))?;
+        return Ok(0);
+    }
+    let window = journal::reader_window(
+        pool,
+        &catalog,
+        WEBHOOK_JOURNAL_READER,
+        head,
+        WEBHOOK_JOURNAL_WINDOW,
+    )
+    .await
+    .map_err(|err| format!("read webhook journal reader failed: {err}"))?;
+    let loaded = load_webhook_delivery_jobs(pool, journal_relation, batch, window).await?;
+    // A full page may stop inside one event's endpoint fan-out, so the next
+    // tick re-reads that event; delivered pairs are excluded by the loader.
+    let next_position = if (loaded.len() as i64) < batch.max(1) {
+        window.1
+    } else {
+        loaded
+            .last()
+            .map_or(window.1, |job| job.position - 1)
+            .max(window.0)
+    };
     // NTF1: the loaded signing_secret is sealed at rest (see create_endpoint);
     // decrypt it to the plaintext HMAC key before signing. `decrypt_secret_at_rest`
     // returns a plaintext value unchanged, so a mixed plaintext/ciphertext rollout
@@ -783,5 +846,9 @@ pub(crate) async fn run_webhook_delivery_worker_once(
     for result in results {
         delivered = delivered.saturating_add(result?);
     }
+    // Every loaded pair reached a terminal record, so the window is done.
+    journal::advance_reader(pool, &catalog, WEBHOOK_JOURNAL_READER, next_position)
+        .await
+        .map_err(|err| format!("advance webhook journal reader failed: {err}"))?;
     Ok(i64::try_from(delivered).unwrap_or(i64::MAX))
 }

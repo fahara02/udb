@@ -4542,6 +4542,8 @@ fn proto_cdc_envelope(envelope: crate::cdc::CdcEnvelope) -> CdcEnvelope {
             seconds: envelope.published_at.timestamp(),
             nanos: envelope.published_at.timestamp_subsec_nanos() as i32,
         }),
+        progress_only: envelope.progress_only,
+        journal_position: envelope.journal_position,
     }
 }
 

@@ -866,6 +866,16 @@ fn prepare_outbox_envelope(
             "outbox topic is required",
         ));
     }
+    if crate::runtime::cdc::journal::is_reserved_topic(topic) {
+        return Err(core_invalid_field(
+            "topic",
+            "is reserved for CDC stream progress markers",
+            format!(
+                "outbox topic {} is reserved for CDC stream progress markers",
+                crate::runtime::cdc::journal::PROGRESS_TOPIC
+            ),
+        ));
+    }
     if partition_key.trim().is_empty() {
         return Err(core_invalid_field(
             "partition_key",

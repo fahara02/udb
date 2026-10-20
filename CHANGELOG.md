@@ -5,10 +5,55 @@ the package version in `Cargo.toml`; historical v0.3.2 audit material is folded
 into the v0.3.x entries because the codebase advanced to v0.3.7 before that
 release line was tagged.
 
-## [Unreleased]
+## [0.6.2] - Unreleased
 
 ### Added
 
+- **CDC streams read only the topics they subscribe to.** Each `PublishCDC`
+  journal poll now filters by the topic pattern in SQL and stops at the
+  committed journal head. A pattern without wildcards is an exact match; a
+  pattern with a literal prefix (`virtued.*`, `udb.*.recorded.v1`) is a
+  byte-order range over that prefix, narrowed with `LIKE` when it has more
+  wildcards than one trailing `*`; a pattern that starts with a wildcard is
+  still filtered in memory. Startup creates two journal indexes:
+  `(topic COLLATE "C", journal_position)` and `(published_at)`.
+- **Progress markers.** With `CDCSubscriptionRequest.progress_markers = true`
+  (field 5, off by default) a stream also sends markers saying how far it has
+  read the journal. One follows the end of replay; later ones follow polls that
+  passed events the stream did not deliver, at most every 5 seconds or every
+  1,000 journal positions. A marker is a `CDCEnvelope` with
+  `progress_only = true` (field 6) and `journal_position` (field 7, now also set
+  on every event) equal to the position read through; `topic` is the reserved
+  `udb.cdc.progress.v1`; `partition_key` is empty; `payload_json` is
+  `{"kind":"progress","journal_position":"<position>","caught_up":true}`; and
+  `event_id` is a progress token, a version-8 UUID whose bytes 0-5 are `udbpro`,
+  byte 6 is `0x80`, byte 7 is `0x00` and bytes 8-15 hold the position
+  big-endian under the variant bits `10`. A marker never carries another
+  event's id. `AckCdcEvents` accepts the token and moves the named cursor to the
+  marker's position; `NackCdcEvents` refuses it (`INVALID_ARGUMENT`); and
+  `since_event_id` accepts it even after retention removed the rows around it.
+  The Go and TypeScript durable consumers and the Python and PHP event
+  subscriptions request markers and never pass them to your code; the
+  consumers acknowledge a marker only after every earlier event.
+- **Choose where a new durable consumer starts.**
+  `CDCSubscriptionRequest.start` (field 6, enum `CdcConsumerStart`) takes
+  `CDC_CONSUMER_START_LATEST` (the default) or `CDC_CONSUMER_START_EARLIEST`.
+  It applies only to a name's first subscription. Go:
+  `ConsumeOptions{FromEarliest: true}`; TypeScript:
+  `consume(…, { fromEarliest: true })`.
+- **Journal retention settings.** `UDB_CDC_JOURNAL_RETENTION` (default `7d`)
+  prunes published and acknowledged journal rows older than it.
+  `UDB_CDC_JOURNAL_RETENTION_OVERRIDES` (default `udb.lock.*=1h`) sets shorter
+  retention for topic patterns as comma-separated `pattern=duration` pairs; a
+  set value replaces the default list and an empty value turns overrides off.
+  An override deletes a row only at or below the position of every named
+  consumer that could read it and acknowledged within the global retention.
+  Dead-lettered rows, the newest row of each topic and the journal head are
+  never deleted. Retention runs in batches of 5,000 rows, at most 20 per pass.
+- **Journal reader positions for the broker's own workers.** The webhook
+  dispatcher and the cache invalidator keep their position in
+  `udb_system.udb_journal_reader_cursors` (`webhook.dispatch`,
+  `cache.invalidate`) and read at most 5,000 journal positions per tick.
 - **Go durable consumers can acknowledge in batches.** `udbclient.ConsumeOptions`
   gains `AckBatchSize`, `AckInterval` and `AckTimeout`, so a high-throughput
   consumer settles a run of successful events as one watermark instead of one
@@ -16,18 +61,76 @@ release line was tagged.
   stream and `AckTimeout` bounds each settlement, including a shutdown flush.
   A redelivery of an event whose handler already completed is acknowledged again
   without re-running the handler, so a cursor the broker never saw confirmed
-  still advances.
+  still advances. `AckBatchSize` defaults to 1, which keeps the per-event
+  contract: an event is acknowledged before the next one is read, and a failed
+  acknowledgement stops the stream before later events can advance the cursor.
+  Raising it trades that guarantee for throughput; handlers must be idempotent,
+  which at-least-once delivery already requires.
+
+### Fixed
+
+- **A consumer of a quiet topic scanned the whole journal.** Every poll read
+  the next 1,000 journal rows of every topic and filtered them in memory, so a
+  stream on a topic with few events paged through all other traffic on every
+  reconnect, and a page full of other topics counted as "not caught up". The
+  poll now reads only the pattern's topics, up to the committed head, and
+  counts rows the pattern selected.
+- **A quiet consumer's stored position never moved.** A named consumer could
+  only acknowledge its own events, so on a quiet topic its cursor stayed far
+  behind the head and every restart rescanned everything since its last event.
+  Progress markers let it acknowledge the position it has read through.
+- **A new consumer name replayed the entire retained journal.** A new name
+  started before the first retained event, so adding a consumer to a busy
+  deployment delivered days of history before any new event. It now starts at
+  the head unless the first subscription asks for `CDC_CONSUMER_START_EARLIEST`.
+- **The journal grew without bound.** Retention removed only rows in state
+  `acked`, after the idempotency TTL; a row left in state `published` was never
+  pruned, and high-volume `udb.lock.*` events, which nothing in the broker
+  replays, stayed for the full TTL. Retention now covers published rows, has
+  its own setting and per-topic overrides, and deletes in bounded batches.
+- **The webhook dispatcher joined the whole journal on every tick**, even with
+  no active endpoint. With no endpoint it no longer reads the journal; with
+  endpoints it reads one window after its stored position.
+- **Two more full journal scans.** The consumer lag in `GetCdcStatus` and
+  `udb verify --live` ran an unanchored regex over the journal once per named
+  consumer; it now uses the topic index and reads the newest in-scope row. The
+  cache invalidator re-read the whole retained journal every tick; it now reads
+  one window after its stored position.
 
 ### Breaking for callers
 
-- None. `AckBatchSize` defaults to 1, which keeps the released per-event
-  contract: an event is acknowledged before the next one is read, a failed
-  acknowledgement stops the stream before later events can advance the cursor,
-  and a redelivery is re-acknowledged in place. Raising it is opt-in and trades
-  that guarantee for throughput.
-  - detect: code: `AckBatchSize:`
-  - fix: none needed unless you set it; handlers must be idempotent, which
-    at-least-once delivery already requires.
+- **A new durable consumer name starts at the journal head.** A
+  `consumer_name` that has never subscribed receives only events committed
+  after its first subscription; it used to replay the retained history first.
+  - detect: code: `consumer_name`
+  - detect: code: `ConsumerName:`
+  - fix: to replay history, set `start` to `CDC_CONSUMER_START_EARLIEST` on the name's first subscription (Go `udbclient.ConsumeOptions{FromEarliest: true}`, TypeScript `consume(…, { fromEarliest: true })`); names that already have a position are unaffected.
+- **Named consumers that never acknowledged anything move to the journal head
+  at upgrade.** The first 0.6.2 startup moves every cursor still at position 0
+  with no acknowledged event to the current head, once; later claims are never
+  moved.
+  - detect: sql: `SELECT tenant_id, consumer_name, topic_pattern FROM udb_system.udb_cdc_consumer_cursors WHERE last_journal_position = 0 AND last_event_id = '00000000-0000-0000-0000-000000000000'`
+  - fix: to keep them at the start of the journal, set `UDB_CDC_KEEP_UNACKED_CONSUMER_ORIGIN=1` before the first 0.6.2 startup; the decision is recorded and later restarts do not revisit it.
+- **Published journal rows now expire.** Published and acknowledged rows are
+  deleted after 7 days and `udb.lock.*` rows after 1 hour (once named consumers
+  have passed them). An anonymous `since_event_id` older than that gets
+  `NOT_FOUND` unless it is the newest row of its topic or a progress token.
+  `UDB_CDC_IDEMPOTENCY_TTL_SECS` no longer sets journal retention.
+  - detect: code: `since_event_id`
+  - detect: code: `SinceEventId`
+  - detect: env: `UDB_CDC_IDEMPOTENCY_TTL_SECS`
+  - fix: resume with a durable `consumer_name` (positions survive retention) or with the last progress marker's token, or lengthen `UDB_CDC_JOURNAL_RETENTION` / change `UDB_CDC_JOURNAL_RETENTION_OVERRIDES`.
+- **The topic `udb.cdc.progress.v1` is reserved.** Enqueueing an outbox event
+  or writing a journal row on it is refused (`INVALID_ARGUMENT`).
+  - detect: code: `udb.cdc.progress.v1`
+  - fix: publish on another topic name.
+- **`CdcEnvelope` and `CdcConfig` (Rust crate) have new public fields.**
+  `CdcEnvelope` gains `journal_position` and `progress_only`; `CdcConfig` gains
+  `journal_retention_secs` and `journal_retention_overrides`. A struct literal
+  without `..` no longer compiles.
+  - detect: code: `CdcEnvelope {`
+  - detect: code: `CdcConfig {`
+  - fix: add the new fields (`journal_position: 0, progress_only: false` for an envelope that is not a journal row) or end the literal with `..Default::default()` for `CdcConfig`.
 
 ## [0.6.1] - 2026-10-17
 

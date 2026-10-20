@@ -518,6 +518,30 @@ fn delivery_loader_window_starts_at_endpoint_creation() {
     }
 }
 
+/// The bug: every dispatcher tick joined the whole retained journal, even with
+/// nothing new to deliver. The loader now reads only the reader cursor's
+/// position window, in position order.
+#[test]
+fn delivery_loader_reads_only_the_reader_window() {
+    let sql = super::worker::webhook_delivery_jobs_sql("udb_system.udb_cdc_event_journal");
+    assert!(
+        sql.contains("AND j.journal_position > $7 AND j.journal_position <= $8"),
+        "{sql}"
+    );
+    assert!(
+        sql.contains("j.journal_position AS journal_position"),
+        "{sql}"
+    );
+    let endpoint_id = super::model::endpoint_model().q("endpoint_id");
+    assert!(
+        sql.contains(&format!(
+            "ORDER BY j.journal_position ASC, e.{endpoint_id} ASC"
+        )),
+        "{sql}"
+    );
+    assert!(!sql.contains("ORDER BY j.published_at"), "{sql}");
+}
+
 /// The bug: a secret that failed to decrypt was kept as-is and used as the
 /// HMAC key, signing deliveries with ciphertext. It now fails the delivery.
 #[test]

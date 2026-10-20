@@ -199,17 +199,33 @@ async fn consumer_lags(
         acked_at,
     ) in rows
     {
-        let head: Option<chrono::DateTime<chrono::Utc>> = sqlx::query_scalar(&format!(
-            "SELECT MAX(published_at) FROM {} WHERE topic ~ $3 \
+        // The scoped head is this consumer's newest readable row. Walking back
+        // in position order over the pattern's topic range stops at the first
+        // in-scope row instead of aggregating the tenant's whole history.
+        // A pattern that starts with a wildcard has no topic range; it keeps
+        // the exact regex form.
+        use crate::runtime::cdc::topic_filter::TopicFilter;
+        let (topic_predicate, topic_binds) = match TopicFilter::compile(&topic_pattern) {
+            TopicFilter::All if !matches!(topic_pattern.as_str(), "" | "*") => (
+                "topic ~ $3".to_string(),
+                vec![topic_pattern_regex(&topic_pattern)],
+            ),
+            filter => filter.sql("topic", 3),
+        };
+        let head_sql = format!(
+            "SELECT published_at FROM {} WHERE {topic_predicate} \
              AND payload->>'tenant_id'=$1 AND ($2='' OR payload->>'project_id'=$2) \
-             AND delivery_state IN ('published','acked')",
+             AND delivery_state IN ('published','acked') \
+             ORDER BY journal_position DESC LIMIT 1",
             config.cdc_journal_relation(),
-        ))
-        .bind(&tenant_id)
-        .bind(&project_id)
-        .bind(topic_pattern_regex(&topic_pattern))
-        .fetch_one(pool)
-        .await?;
+        );
+        let mut head_query = sqlx::query_scalar::<_, chrono::DateTime<chrono::Utc>>(&head_sql)
+            .bind(&tenant_id)
+            .bind(&project_id);
+        for value in &topic_binds {
+            head_query = head_query.bind(value);
+        }
+        let head = head_query.fetch_optional(pool).await?;
         consumers.push(CdcConsumerLag {
             consumer_name,
             topic_pattern,

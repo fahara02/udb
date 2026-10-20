@@ -10,18 +10,40 @@ option php_metadata_namespace = "Udb\\GPBMetadata\\Entity\\V1";
 
 import "udb/entity/v1/context.proto";
 
+// Where a durable consumer name starts the first time it subscribes.
+enum CdcConsumerStart {
+  // Same as CDC_CONSUMER_START_LATEST.
+  CDC_CONSUMER_START_UNSPECIFIED = 0;
+  // Start at the journal head: only events committed after the first
+  // subscription are delivered.
+  CDC_CONSUMER_START_LATEST = 1;
+  // Start before the earliest retained event and replay the retained history.
+  CDC_CONSUMER_START_EARLIEST = 2;
+}
+
 message CDCSubscriptionRequest {
   RequestContext context = 1;
   string topic_pattern = 2;
+  // Resume after this event: a retained event id, or a progress marker's
+  // token (see CDCEnvelope.progress_only), which stays valid after retention.
   string since_event_id = 3;
   // A durable consumer's name (1-120 chars of [A-Za-z0-9_.:-]). When set and
   // since_event_id is empty, the stream resumes after the last event this
   // consumer acknowledged with AckCdcEvents for this topic_pattern, so a
   // restarted (or reconnected) consumer resumes its acknowledged position.
-  // A new name reads the retained backlog. Positions survive journal retention.
+  // A new name starts where `start` says. Positions survive journal retention.
   // Names are owned by the verified principal within its tenant and project;
   // another principal cannot subscribe or acknowledge under the same name.
   string consumer_name = 4;
+  // Interleave progress markers with events (CDCEnvelope.progress_only). Set
+  // it only if the client recognizes markers and keeps them away from event
+  // handlers. One marker follows the end of replay; later ones follow polls
+  // that read past events this stream did not deliver, at most every few
+  // seconds or every thousand journal positions.
+  bool progress_markers = 5;
+  // Where a consumer_name starts on its first subscription. Ignored once the
+  // name has a stored position, and for anonymous streams.
+  CdcConsumerStart start = 6;
 }
 
 // AckCdcEvents records how far a durable consumer has processed a stream.
@@ -34,7 +56,9 @@ message AckCdcEventsRequest {
   // The last event the consumer has fully handled. The next subscription
   // under this consumer name resumes after it. The event must be retained and
   // match the caller's tenant/project and topic pattern. An older acknowledgment
-  // succeeds without moving the stored cursor backward.
+  // succeeds without moving the stored cursor backward. A progress marker's
+  // token is also accepted: it moves the cursor to the marker's position.
+  // NackCdcEvents refuses a token (InvalidArgument).
   string event_id = 4;
 }
 

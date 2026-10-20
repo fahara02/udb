@@ -472,6 +472,10 @@ impl DataBrokerService {
         } else {
             Some(request.since_event_id)
         };
+        let stream_options = crate::runtime::cdc::CdcStreamOptions {
+            progress_markers: request.progress_markers,
+        };
+        let start_earliest = request.start == crate::proto::CdcConsumerStart::Earliest as i32;
         // Claim every named subscription, including an explicit resume UUID,
         // before delivery. Anonymous subscriptions retain their existing anchor.
         let watermark = if named {
@@ -489,6 +493,7 @@ impl DataBrokerService {
                     request.consumer_name.trim(),
                     &topic_pattern,
                     &owner,
+                    start_earliest,
                 )
                 .await
             }
@@ -543,7 +548,7 @@ impl DataBrokerService {
                 Some(security.tenant_id.clone()),
                 Some(security.project_id.clone()),
                 watermark,
-                named,
+                stream_options,
             ),
         )
         .await;
@@ -709,21 +714,60 @@ impl DataBrokerService {
             let pool = runtime.pg_pool()?.clone();
             let config = crate::runtime::system::SystemCatalogConfig::current();
             let journal = config.cdc_journal_relation();
-            let event: Option<(String, serde_json::Value, chrono::DateTime<chrono::Utc>, i64)> = sqlx::query_as(&format!(
-                "SELECT topic, payload, published_at, journal_position FROM {journal} WHERE event_id = $1"
-            )).bind(event_id).fetch_optional(&pool).await.map_err(|err| {
-                crate::runtime::executor_utils::sqlx_error_to_status("CDC journal read failed", &err)
-            })?;
-            let Some((topic, payload, published_at, journal_position)) = event else {
-                return Err(crate::runtime::executor_utils::schema_status(
-                    Code::NotFound, "cdc", method, "cdc_ack_event_not_found",
-                    "acknowledged CDC event is unknown or no longer retained",
-                ));
-            };
-            engine.validate_consumer_event(
-                &security.scopes, &topic_pattern, &topic, &payload, &security.tenant_id, &security.project_id,
-            )?;
             let relation = config.cdc_consumer_cursors_relation();
+            let journal_read_failed = |err: sqlx::Error| {
+                crate::runtime::executor_utils::sqlx_error_to_status("CDC journal read failed", &err)
+            };
+            let not_retained = || crate::runtime::executor_utils::schema_status(
+                Code::NotFound, "cdc", method, "cdc_ack_event_not_found",
+                "acknowledged CDC event is unknown or no longer retained",
+            );
+            // A progress marker's token acknowledges "read through position P":
+            // the stream already applied this consumer's topic and scope filter
+            // to every row up to P, so no single row is authorized here and no
+            // foreign row's id is ever stored as the cursor.
+            let (published_at, journal_position, settled_event) =
+                match crate::runtime::cdc::journal::decode_progress_token(&event_id) {
+                    Some(position) => {
+                        if failure.is_some() {
+                            return Err(crate::runtime::executor_utils::invalid_argument_fields(
+                                "a progress marker is not an event and cannot be dead-lettered",
+                                [("event_id", "must be a retained event, not a progress token")],
+                            ));
+                        }
+                        let head = crate::runtime::cdc::journal::head(&pool, &config)
+                            .await
+                            .map_err(journal_read_failed)?;
+                        if position > head {
+                            return Err(not_retained());
+                        }
+                        let near: Option<chrono::DateTime<chrono::Utc>> = sqlx::query_scalar(&format!(
+                            "SELECT published_at FROM {journal} WHERE journal_position <= $1 ORDER BY journal_position DESC LIMIT 1"
+                        )).bind(position).fetch_optional(&pool).await.map_err(journal_read_failed)?;
+                        let published_at = match near {
+                            Some(published_at) => published_at,
+                            None => sqlx::query_scalar(&format!(
+                                "SELECT last_published_at FROM {relation} WHERE tenant_id = $1 AND project_id = $2 AND consumer_name = $3 AND topic_pattern = $4"
+                            ))
+                            .bind(&ctx.tenant_id).bind(&ctx.project_id).bind(&consumer).bind(&topic_pattern)
+                            .fetch_optional(&pool).await.map_err(journal_read_failed)?
+                            .unwrap_or(chrono::DateTime::<chrono::Utc>::UNIX_EPOCH),
+                        };
+                        (published_at, position, None)
+                    }
+                    None => {
+                        let event: Option<(String, serde_json::Value, chrono::DateTime<chrono::Utc>, i64)> = sqlx::query_as(&format!(
+                            "SELECT topic, payload, published_at, journal_position FROM {journal} WHERE event_id = $1"
+                        )).bind(event_id).fetch_optional(&pool).await.map_err(journal_read_failed)?;
+                        let Some((topic, payload, published_at, journal_position)) = event else {
+                            return Err(not_retained());
+                        };
+                        engine.validate_consumer_event(
+                            &security.scopes, &topic_pattern, &topic, &payload, &security.tenant_id, &security.project_id,
+                        )?;
+                        (published_at, journal_position, Some((topic, payload)))
+                    }
+                };
             let sql = format!(
                 "INSERT INTO {relation} AS current_cursor (tenant_id, project_id, consumer_name, topic_pattern, last_event_id, owner_identity, last_published_at, last_journal_position, acked_at) \
                  VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW()) \
@@ -744,7 +788,7 @@ impl DataBrokerService {
                     .fetch_optional(&mut *tx).await
                     .map_err(|err| crate::runtime::executor_utils::sqlx_error_to_status("CDC consumer cursor write failed", &err))?;
                 let Some(acked_at_unix) = acked_at else { return Err(cdc_consumer_owner_refusal()); };
-                if let Some(failure) = &failure {
+                if let (Some(failure), Some((topic, payload))) = (&failure, &settled_event) {
                     use sha2::{Digest, Sha256};
                     // An event can fail for several independent named consumers.
                     // The existing DLQ's unique(event_id) is kept; record each
@@ -781,7 +825,7 @@ impl DataBrokerService {
                          WHERE current_dlq.tenant_id = EXCLUDED.tenant_id AND current_dlq.project_id = EXCLUDED.project_id AND current_dlq.topic = EXCLUDED.topic \
                          RETURNING dlq_id"
                     ))
-                    .bind(event_id).bind(&topic).bind(&ctx.tenant_id).bind(&ctx.project_id)
+                    .bind(event_id).bind(topic.as_str()).bind(&ctx.tenant_id).bind(&ctx.project_id)
                     .bind(dlq_payload).bind(&failure.reason).bind(&failure_key)
                     .fetch_optional(&mut *tx).await
                     .map_err(|err| crate::runtime::executor_utils::sqlx_error_to_status("CDC consumer dead-letter write failed", &err))?;
@@ -822,23 +866,31 @@ impl DataBrokerService {
 
     /// Claim a name once and retain its ordered watermark independently of
     /// journal retention. Legacy unowned rows require explicit operator mapping.
+    /// A new name starts at the committed journal head unless the claim asks
+    /// for the earliest retained event; an existing name keeps its cursor.
     async fn load_cdc_consumer_cursor(
         &self,
         ctx: &crate::broker::RequestContext,
         consumer: &str,
         topic_pattern: &str,
         owner: &str,
+        start_earliest: bool,
     ) -> Result<i64, Status> {
         let runtime = self.runtime_snapshot();
         let pool = runtime.pg_pool()?.clone();
-        let relation =
-            crate::runtime::system::SystemCatalogConfig::current().cdc_consumer_cursors_relation();
+        let config = crate::runtime::system::SystemCatalogConfig::current();
+        let relation = config.cdc_consumer_cursors_relation();
+        let heads = crate::runtime::cdc::journal::head_relation(&config);
         sqlx::query(&format!(
-            "INSERT INTO {relation} (tenant_id, project_id, consumer_name, topic_pattern, last_event_id, owner_identity, last_published_at) \
-             VALUES ($1, $2, $3, $4, $5, $6, 'epoch') \
+            "INSERT INTO {relation} (tenant_id, project_id, consumer_name, topic_pattern, last_event_id, owner_identity, last_published_at, last_journal_position) \
+             VALUES ($1, $2, $3, $4, $5, $6, \
+               CASE WHEN $7::BOOLEAN THEN 'epoch'::TIMESTAMPTZ ELSE NOW() END, \
+               CASE WHEN $7::BOOLEAN THEN 0 ELSE COALESCE((SELECT last_position FROM {heads} WHERE journal_schema = $8 AND journal_table = $9), 0) END) \
              ON CONFLICT (tenant_id, project_id, consumer_name, topic_pattern) DO NOTHING"
         )).bind(&ctx.tenant_id).bind(&ctx.project_id).bind(consumer).bind(topic_pattern)
-            .bind(uuid::Uuid::nil()).bind(owner).execute(&pool).await.map_err(|err| {
+            .bind(uuid::Uuid::nil()).bind(owner).bind(start_earliest)
+            .bind(&config.cdc.system_schema).bind(&config.cdc_journal_table)
+            .execute(&pool).await.map_err(|err| {
                 crate::runtime::executor_utils::sqlx_error_to_status("CDC consumer claim failed", &err)
             })?;
         let (journal_position, stored_owner): (i64, String) = sqlx::query_as(&format!(

@@ -238,6 +238,8 @@ mod shared_tail_tests {
                     partition_key: String::new(),
                     payload_json: "{}".to_string(),
                     published_at: at(secs),
+                    journal_position: position,
+                    progress_only: false,
                 },
             };
         let a = envelope_watermark(&envelope(1, 11, "0000-z"));

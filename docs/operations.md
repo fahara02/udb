@@ -416,6 +416,63 @@ topic policy or failing to load a complete replacement generation makes CDC
 unavailable. Do not "recover" a missing/pruned cursor by starting at epoch: ask
 the caller to choose an explicit retained position or a new subscription.
 
+### Journal retention
+
+The CDC journal (`udb_system.udb_cdc_event_journal`) keeps every published
+event for replay. The CDC leader prunes it about once a minute, in batches of
+5,000 rows (at most 20 batches per pass).
+
+| Setting | Default | Meaning |
+| --- | --- | --- |
+| `UDB_CDC_JOURNAL_RETENTION` | `7d` | Published and acknowledged rows older than this are deleted. Accepts seconds or `s`/`m`/`h`/`d` (`36h`, `30d`). |
+| `UDB_CDC_JOURNAL_RETENTION_OVERRIDES` | `udb.lock.*=1h` | Comma-separated `pattern=duration` pairs for shorter retention on busy topics. Setting it replaces the default list; set it to an empty string to turn overrides off. |
+| `UDB_CDC_KEEP_UNACKED_CONSUMER_ORIGIN` | unset | Read once, on the first 0.6.2 startup. When `1`, named consumers that never acknowledged anything stay at the start of the journal instead of moving to its head. |
+
+What is never deleted:
+
+- dead-lettered rows (`delivery_state = 'dlq'`);
+- the newest row of each topic, so a client can always resume from a topic's
+  latest event;
+- the durable journal head, so positions never restart.
+
+An override deletes a row only when it is also at or below the position of
+every named consumer that could read that topic and acknowledged anything within
+`UDB_CDC_JOURNAL_RETENTION`. A consumer that has been silent for longer than the
+global retention no longer holds rows back.
+
+An anonymous stream that resumes with `since_event_id` gets `NotFound` once
+that event is pruned. Durable consumers (`consumer_name`) keep their position
+across retention, and a progress marker's token (below) is always accepted.
+
+### Consumer start and progress markers
+
+A new `consumer_name` starts at the journal head: it receives only events
+committed after its first subscription. Set
+`CDCSubscriptionRequest.start = CDC_CONSUMER_START_EARLIEST` on that first
+subscription to replay the retained history instead (Go
+`ConsumeOptions{FromEarliest: true}`, TypeScript
+`consume(…, { fromEarliest: true })`). A name that already has a position
+ignores `start`.
+
+With `progress_markers` set, a stream also sends progress markers:
+`CDCEnvelope.progress_only = true`, topic `udb.cdc.progress.v1`, and
+`journal_position` set to the position the stream has read through. One marker
+follows the end of replay; later ones follow polls that passed events the
+stream did not deliver, at most every 5 seconds or every 1,000 positions. A
+durable consumer acknowledges the marker's `event_id` (a token, not an event id)
+with `AckCdcEvents` after every earlier event, so a consumer of a quiet topic
+keeps its stored position close to the head. The Go, TypeScript, Python and PHP
+SDK consumers request markers and keep them away from your handlers. Publishing
+to `udb.cdc.progress.v1` is refused.
+
+### Broker journal readers
+
+The webhook dispatcher and the cache invalidator each keep their position in
+`udb_system.udb_journal_reader_cursors` (`webhook.dispatch`,
+`cache.invalidate`) and read at most 5,000 journal positions per tick from
+there. With no active webhook endpoint the dispatcher does not read the journal
+at all; it moves its position to the head.
+
 ## Common Runbooks
 
 When something breaks, start here. Each row pairs a symptom with the first things

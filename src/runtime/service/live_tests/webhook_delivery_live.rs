@@ -31,7 +31,7 @@ use super::support::{
 };
 use crate::runtime::native_catalog::native_model;
 use crate::runtime::service::webhook_service::{
-    ALLOW_LOOPBACK_HTTP_DELIVERY_FOR_TEST, run_webhook_delivery_worker_once,
+    ALLOW_LOOPBACK_HTTP_DELIVERY_FOR_TEST, WEBHOOK_JOURNAL_READER, run_webhook_delivery_worker_once,
 };
 use crate::runtime::system::SystemCatalogConfig;
 
@@ -235,6 +235,18 @@ async fn webhook_worker_windows_signs_and_dead_letters_unsignable_live() {
     let runtime = live_runtime().await;
     let (addr, received) = spawn_receiver().await;
 
+    // Start the dispatcher's journal reader at the current head, as a tick with
+    // no active endpoint would. Both events below then fall inside its window,
+    // so the pre-creation event is excluded by the endpoint's creation time
+    // rather than by the reader position.
+    let catalog = SystemCatalogConfig::current();
+    let head = crate::runtime::cdc::journal::head(&pool, &catalog)
+        .await
+        .expect("journal head");
+    crate::runtime::cdc::journal::advance_reader(&pool, &catalog, WEBHOOK_JOURNAL_READER, head)
+        .await
+        .expect("position the webhook journal reader");
+
     let tenant = Uuid::new_v4().to_string();
     // History from BEFORE the endpoint existed: must never be delivered.
     let old_event = journal_event(&pool, &tenant, "before-endpoint", -3600.0).await;
@@ -256,24 +268,40 @@ async fn webhook_worker_windows_signs_and_dead_letters_unsignable_live() {
     // Published after both endpoints were created.
     let new_event = journal_event(&pool, &tenant, "after-endpoint", 1.0).await;
 
+    // Concurrent tests may journal more rows than one window holds, so tick
+    // until the reader passes the new event.
+    let target = crate::runtime::cdc::journal::head(&pool, &catalog)
+        .await
+        .expect("journal head");
     ALLOW_LOOPBACK_HTTP_DELIVERY_FOR_TEST.store(true, Ordering::SeqCst);
     let journal = SystemCatalogConfig::current().cdc_journal_relation();
-    let delivered = tokio::time::timeout(
-        Duration::from_secs(60),
-        run_webhook_delivery_worker_once(
-            &reqwest::Client::new(),
-            &pool,
-            None,
-            &journal,
-            200,
-            None,
-            runtime.as_ref(),
-        ),
-    )
-    .await
-    .expect("webhook delivery tick must finish");
+    let mut delivered = 0;
+    for _ in 0..50 {
+        delivered += tokio::time::timeout(
+            Duration::from_secs(60),
+            run_webhook_delivery_worker_once(
+                &reqwest::Client::new(),
+                &pool,
+                None,
+                &journal,
+                200,
+                None,
+                runtime.as_ref(),
+            ),
+        )
+        .await
+        .expect("webhook delivery tick must finish")
+        .expect("webhook delivery tick");
+        let reader =
+            crate::runtime::cdc::journal::reader_position(&pool, &catalog, WEBHOOK_JOURNAL_READER)
+                .await
+                .expect("webhook journal reader")
+                .unwrap_or(0);
+        if reader >= target {
+            break;
+        }
+    }
     ALLOW_LOOPBACK_HTTP_DELIVERY_FOR_TEST.store(false, Ordering::SeqCst);
-    let delivered = delivered.expect("webhook delivery tick");
     assert_eq!(delivered, 1, "exactly the post-creation event is delivered");
 
     let requests = received.lock().await.clone();
@@ -354,5 +382,88 @@ async fn webhook_worker_windows_signs_and_dead_letters_unsignable_live() {
         received.lock().await.len(),
         1,
         "the second tick must not POST again"
+    );
+    retire_endpoints(&pool, Some(tenant.as_str())).await;
+}
+
+/// Soft-delete webhook endpoints: this tenant's, or every endpoint.
+async fn retire_endpoints(pool: &sqlx::PgPool, tenant_id: Option<&str>) {
+    let m = native_model(ENDPOINT_MSG, &["tenant_id", "deleted_at"]);
+    sqlx::query(&format!(
+        "UPDATE {rel} SET {deleted_at} = NOW() WHERE {deleted_at} IS NULL AND ($1::TEXT IS NULL OR {tenant_id}::TEXT = $1)",
+        rel = m.relation,
+        deleted_at = m.q("deleted_at"),
+        tenant_id = m.q("tenant_id"),
+    ))
+    .bind(tenant_id)
+    .execute(pool)
+    .await
+    .expect("retire webhook endpoints");
+}
+
+/// With no active endpoint the dispatcher never reads the journal: a tick
+/// completes while another session holds an exclusive lock on the journal,
+/// and the reader moves to the head.
+#[tokio::test]
+#[ignore = "requires live Postgres (UDB_INTEGRATION_PG_DSN); runs in the CI --ignored live lane"]
+async fn webhook_worker_without_endpoints_skips_the_journal_live() {
+    if require_live_dsn_any(&[
+        "UDB_LIVE_NATIVE_PG_DSN",
+        "UDB_LIVE_AUTH_PG_DSN",
+        "UDB_INTEGRATION_PG_DSN",
+    ])
+    .is_none()
+    {
+        eprintln!("live Postgres DSN unset — skipping webhook dispatcher journal skip");
+        return;
+    }
+    let _guard = live_native_service_db_lock().lock().await;
+    let pool = live_pg_pool().await;
+    migrate_native_service_db(&pool).await;
+    let runtime = live_runtime().await;
+    // Endpoints left by other tests in this database would make the tick read.
+    retire_endpoints(&pool, None).await;
+
+    let catalog = SystemCatalogConfig::current();
+    let journal = catalog.cdc_journal_relation();
+    let mut holder = pool.begin().await.expect("lock-holding transaction");
+    sqlx::query(&format!("LOCK TABLE {journal} IN ACCESS EXCLUSIVE MODE"))
+        .execute(&mut *holder)
+        .await
+        .expect("hold the journal lock");
+    let head = crate::runtime::cdc::journal::head(&pool, &catalog)
+        .await
+        .expect("journal head");
+    let started = std::time::Instant::now();
+    let ticked = tokio::time::timeout(
+        Duration::from_secs(2),
+        run_webhook_delivery_worker_once(
+            &reqwest::Client::new(),
+            &pool,
+            None,
+            &journal,
+            200,
+            None,
+            runtime.as_ref(),
+        ),
+    )
+    .await;
+    let elapsed = started.elapsed();
+    holder.rollback().await.expect("release the journal lock");
+    assert_eq!(
+        ticked
+            .expect("a tick with no endpoints must not wait on the journal")
+            .expect("webhook tick"),
+        0
+    );
+    assert!(elapsed < Duration::from_secs(2), "tick took {elapsed:?}");
+    let reader =
+        crate::runtime::cdc::journal::reader_position(&pool, &catalog, WEBHOOK_JOURNAL_READER)
+            .await
+            .expect("webhook journal reader")
+            .expect("the reader is recorded");
+    assert!(
+        reader >= head,
+        "the reader moves to the head without reading"
     );
 }

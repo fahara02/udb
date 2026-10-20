@@ -115,6 +115,37 @@ pub(crate) const DEFAULT_CDC_PRODUCER_BATCH_MESSAGES: u64 = 10_000;
 #[cfg(feature = "kafka")]
 pub(crate) const DEFAULT_CDC_PUBLISH_FAIL_LOG_COOLDOWN_SECS: u64 = 30;
 pub(crate) const DEFAULT_CDC_IDEMPOTENCY_KEY_PREFIX: &str = "idempotency:udb";
+/// Age after which published and acknowledged journal rows are pruned
+/// (`UDB_CDC_JOURNAL_RETENTION`).
+pub(crate) const DEFAULT_CDC_JOURNAL_RETENTION_SECS: u64 = 7 * 24 * 60 * 60;
+/// Shorter retention for high-volume topics nothing replays far back
+/// (`UDB_CDC_JOURNAL_RETENTION_OVERRIDES`; a set value replaces this list).
+pub(crate) const DEFAULT_CDC_JOURNAL_RETENTION_OVERRIDES: &str = "udb.lock.*=1h";
+
+/// Parse `pattern=duration` pairs separated by commas (`udb.lock.*=1h`). A
+/// malformed entry is logged and skipped; the rest still apply.
+pub(crate) fn parse_journal_retention_overrides(raw: &str) -> Vec<(String, u64)> {
+    let mut overrides = Vec::new();
+    for entry in raw
+        .split(',')
+        .map(str::trim)
+        .filter(|entry| !entry.is_empty())
+    {
+        let parsed = entry.split_once('=').and_then(|(pattern, duration)| {
+            let pattern = pattern.trim();
+            let secs = crate::runtime::executor_utils::parse_ttl_secs(duration)?;
+            (!pattern.is_empty()).then(|| (pattern.to_string(), secs))
+        });
+        match parsed {
+            Some(entry) => overrides.push(entry),
+            None => warn!(
+                entry = %entry,
+                "UDB_CDC_JOURNAL_RETENTION_OVERRIDES entry is not pattern=duration; ignoring it"
+            ),
+        }
+    }
+    overrides
+}
 
 /// CDC scale-out (master-plan 6.5) — producer-epoch fold layout.
 ///
@@ -249,6 +280,12 @@ pub struct CdcConfig {
     /// `UDB_CDC_SOURCE_SENSITIVE_FIELDS` (comma-separated). Empty = no source redaction.
     pub source_sensitive_fields: Vec<String>,
     pub idempotency_ttl_secs: u64,
+    /// Published and acknowledged journal rows older than this are pruned,
+    /// except the newest row of each topic. Dead-lettered rows are kept.
+    pub journal_retention_secs: u64,
+    /// Per-topic-pattern shorter retention. A row matching a pattern is pruned
+    /// after that age once every named consumer that may read it has acked past it.
+    pub journal_retention_overrides: Vec<(String, u64)>,
     pub broadcast_capacity: usize,
     pub poll_interval_ms: u64,
     pub topic_policy_reload_interval_ms: u64,
@@ -386,6 +423,10 @@ impl Default for CdcConfig {
             redaction_version: 1,
             source_sensitive_fields: Vec::new(),
             idempotency_ttl_secs: DEFAULT_CDC_IDEMPOTENCY_TTL_SECS,
+            journal_retention_secs: DEFAULT_CDC_JOURNAL_RETENTION_SECS,
+            journal_retention_overrides: parse_journal_retention_overrides(
+                DEFAULT_CDC_JOURNAL_RETENTION_OVERRIDES,
+            ),
             broadcast_capacity: DEFAULT_CDC_BROADCAST_CAPACITY,
             poll_interval_ms: DEFAULT_CDC_POLL_INTERVAL_MS,
             topic_policy_reload_interval_ms: DEFAULT_CDC_TOPIC_POLICY_RELOAD_INTERVAL_MS,
@@ -517,6 +558,13 @@ impl CdcConfig {
                 .ok()
                 .and_then(|value| value.parse::<u64>().ok())
                 .unwrap_or(defaults.idempotency_ttl_secs),
+            journal_retention_secs: std::env::var("UDB_CDC_JOURNAL_RETENTION")
+                .ok()
+                .and_then(|value| crate::runtime::executor_utils::parse_ttl_secs(&value))
+                .unwrap_or(defaults.journal_retention_secs),
+            journal_retention_overrides: std::env::var("UDB_CDC_JOURNAL_RETENTION_OVERRIDES")
+                .map(|value| parse_journal_retention_overrides(&value))
+                .unwrap_or(defaults.journal_retention_overrides),
             broadcast_capacity: std::env::var("UDB_CDC_BROADCAST_CAPACITY")
                 .ok()
                 .and_then(|value| value.parse::<usize>().ok())
@@ -651,6 +699,14 @@ impl CdcConfig {
         {
             self.idempotency_ttl_secs = parsed;
         }
+        if let Ok(value) = std::env::var("UDB_CDC_JOURNAL_RETENTION")
+            && let Some(parsed) = crate::runtime::executor_utils::parse_ttl_secs(&value)
+        {
+            self.journal_retention_secs = parsed;
+        }
+        if let Ok(value) = std::env::var("UDB_CDC_JOURNAL_RETENTION_OVERRIDES") {
+            self.journal_retention_overrides = parse_journal_retention_overrides(&value);
+        }
         if let Ok(value) = std::env::var("UDB_CDC_BROADCAST_CAPACITY")
             && let Ok(parsed) = value.parse::<usize>()
         {
@@ -724,6 +780,9 @@ impl CdcConfig {
         }
         if self.idempotency_ttl_secs == 0 {
             self.idempotency_ttl_secs = Self::default().idempotency_ttl_secs;
+        }
+        if self.journal_retention_secs == 0 {
+            self.journal_retention_secs = Self::default().journal_retention_secs;
         }
         if self.broadcast_capacity == 0 {
             self.broadcast_capacity = Self::default().broadcast_capacity;
@@ -1505,6 +1564,12 @@ pub struct CdcEnvelope {
     pub partition_key: String,
     pub payload_json: String,
     pub published_at: DateTime<Utc>,
+    /// Committed journal position of the row (or, for a progress marker, the
+    /// position the stream has read through). Zero for an envelope that never
+    /// came from the journal.
+    pub journal_position: i64,
+    /// A progress marker, not an event: see [`journal::progress_envelope`].
+    pub progress_only: bool,
 }
 
 pub struct CdcEngine {
@@ -1531,7 +1596,9 @@ impl fmt::Debug for CdcEngine {
 // Phase I: impl CdcEngine split into continuation impl modules.
 mod engine_dlq;
 mod engine_tail;
+pub(crate) use engine_tail::{CdcStreamOptions, JournalRetention};
 pub(crate) mod journal;
+pub(crate) mod topic_filter;
 // U21: Kafka transactional exactly-once publish.
 #[cfg(feature = "kafka")]
 pub mod kafka_tx;

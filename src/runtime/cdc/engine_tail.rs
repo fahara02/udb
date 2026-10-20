@@ -388,13 +388,77 @@ fn indoubt_sweep_applies(mode: CdcExactlyOnceMode) -> bool {
 }
 
 /// Read only positions beyond the last committed prefix. Timestamp/UUID are
-/// public metadata and cannot establish a safe publication cursor.
-fn replay_sql_from_anchor(journal_relation: &str, limit: i64) -> String {
-    format!(
-        "SELECT event_id, topic, partition_key, payload, published_at, journal_position \
-         FROM {journal_relation} WHERE journal_position > $1 \
-         ORDER BY journal_position ASC LIMIT {limit}"
+/// public metadata and cannot establish a safe publication cursor. `$2` is the
+/// committed head read just before the poll: the allocator holds the head row
+/// lock until commit, so every position at or below it is final and a poll
+/// that returns a short page has read the whole topic range up to it.
+/// `$3...` bind the topic pattern's SQL form.
+fn replay_sql_from_anchor(
+    journal_relation: &str,
+    filter: &super::topic_filter::TopicFilter,
+    limit: i64,
+) -> (String, Vec<String>) {
+    let (predicate, binds) = filter.sql("topic", 3);
+    (
+        format!(
+            "SELECT event_id, topic, partition_key, payload, published_at, journal_position \
+             FROM {journal_relation} WHERE journal_position > $1 AND journal_position <= $2 \
+             AND {predicate} ORDER BY journal_position ASC LIMIT {limit}"
+        ),
+        binds,
     )
+}
+
+/// One subscriber's ordered journal read, compiled once per stream.
+pub(super) struct JournalTail {
+    pub(super) sql: String,
+    pub(super) binds: Vec<String>,
+    limit: usize,
+    catalog: Arc<SystemCatalogConfig>,
+}
+
+impl JournalTail {
+    pub(super) fn new(catalog: Arc<SystemCatalogConfig>, topic_pattern: &str, limit: i64) -> Self {
+        let filter = super::topic_filter::TopicFilter::compile(topic_pattern);
+        let (sql, binds) = replay_sql_from_anchor(&catalog.cdc_journal_relation(), &filter, limit);
+        Self {
+            sql,
+            binds,
+            limit: usize::try_from(limit).unwrap_or(usize::MAX),
+            catalog,
+        }
+    }
+}
+
+/// The result of one journal poll. `scanned` counts rows the database
+/// returned for the topic pattern (matched or filtered later by scope);
+/// `reached` is set when the poll read everything up to the committed head,
+/// which then becomes the cursor even if no row matched.
+pub(super) struct PollOutcome {
+    pub(super) envelopes: Vec<CdcEnvelope>,
+    pub(super) scanned: usize,
+    pub(super) reached: Option<i64>,
+}
+
+/// Progress markers after replay: at most one per this interval...
+const PROGRESS_MARKER_INTERVAL: std::time::Duration = std::time::Duration::from_secs(5);
+/// ...unless the cursor moved at least this many positions since the last one.
+const PROGRESS_MARKER_STRIDE: i64 = 1_000;
+
+/// The live-loop progress marker due after a poll, if any. A marker is only
+/// worth sending when the cursor passed rows the subscriber never saw; one at
+/// the position of the last delivered event would say nothing new.
+fn live_progress_marker(
+    reached: Option<i64>,
+    last_yielded_position: i64,
+    last_marker_position: i64,
+    last_marker_at: std::time::Instant,
+) -> Option<i64> {
+    let reached = reached?;
+    (reached > last_yielded_position
+        && (last_marker_at.elapsed() >= PROGRESS_MARKER_INTERVAL
+            || reached - last_marker_position >= PROGRESS_MARKER_STRIDE))
+        .then_some(reached)
 }
 
 /// Bounded per-stream de-dup window for `stream_cdc`'s hybrid delivery: returns
@@ -419,15 +483,16 @@ fn cdc_dedup_admit(
     true
 }
 
-/// Poll the durable `cdc_journal` for rows after `(cursor_ts, cursor_id)`, applying
+/// Poll the durable `cdc_journal` for rows after the cursor position, applying
 /// the same topic-pattern + tenant/project scope filters as the live path and the
-/// shared de-dup window. Advances the cursor past every scanned row (matched or
-/// not) and returns the envelopes to yield. This is the cross-replica, race-free
-/// backstop behind the in-process broadcast fast-path.
+/// shared de-dup window. Only rows whose topic matches the pattern are read; the
+/// cursor advances past every returned row (in scope or not) and, when the page
+/// is short, to the committed head the poll was bounded by. This is the
+/// cross-replica, race-free backstop behind the in-process broadcast fast-path.
 #[allow(clippy::too_many_arguments)]
-async fn cdc_journal_poll(
+pub(super) async fn cdc_journal_poll(
     pool: &PgPool,
-    sql: &str,
+    tail: &JournalTail,
     cursor_position: &mut i64,
     matcher: &WildMatch,
     tenant_scope: &str,
@@ -437,9 +502,16 @@ async fn cdc_journal_poll(
     seen: &mut std::collections::HashSet<String>,
     order: &mut std::collections::VecDeque<String>,
     window: usize,
-) -> Result<Vec<CdcEnvelope>, tonic::Status> {
+) -> Result<PollOutcome, tonic::Status> {
+    let head = super::journal::head(pool, &tail.catalog)
+        .await
+        .map_err(|err| cdc_stream_journal_unavailable("journal_head", &err))?;
     let mut out = Vec::new();
-    let query = sqlx::query(sql).bind(*cursor_position);
+    let mut scanned = 0usize;
+    let mut query = sqlx::query(&tail.sql).bind(*cursor_position).bind(head);
+    for value in &tail.binds {
+        query = query.bind(value);
+    }
     let mut rows = query.fetch(pool);
     while let Some(row) = tokio_stream::StreamExt::next(&mut rows).await {
         let record = row.map_err(|err| cdc_stream_journal_unavailable("journal_poll", &err))?;
@@ -474,6 +546,7 @@ async fn cdc_journal_poll(
         }
         // Decode every field before advancing, including foreign rows.
         *cursor_position = position;
+        scanned += 1;
         if !matcher.matches(&topic) {
             continue;
         }
@@ -504,22 +577,101 @@ async fn cdc_journal_poll(
             partition_key,
             payload_json: payload.to_string(),
             published_at,
+            journal_position: position,
+            progress_only: false,
         });
     }
-    Ok(out)
+    // A short page read every committed row of the pattern up to the head.
+    let reached = (scanned < tail.limit).then(|| {
+        *cursor_position = (*cursor_position).max(head);
+        *cursor_position
+    });
+    Ok(PollOutcome {
+        envelopes: out,
+        scanned,
+        reached,
+    })
 }
 
-/// #26: retention sweep over the CDC journal. Bind `$1` = TTL in seconds
-/// (the engine passes `idempotency_ttl_secs`, so journal retention and the
-/// redis dedup-claim TTL age out together). Deletes only old acked rows:
-/// unacked `published`/`dlq` rows are durable operator/replay evidence and
-/// survive retention.
-fn journal_retention_sweep_sql(journal_relation: &str) -> String {
-    format!(
-        "DELETE FROM {journal_relation} j \
-         WHERE j.published_at < NOW() - make_interval(secs => $1::double precision) \
-           AND j.delivery_state = 'acked'"
+/// Rows one retention batch deletes, and batches one sweep runs per tick.
+const JOURNAL_RETENTION_BATCH: i64 = 5_000;
+const JOURNAL_RETENTION_MAX_BATCHES: usize = 20;
+
+/// One retention batch over the CDC journal. Binds: `$1` age in seconds,
+/// `$2` batch size, then (override pass) `$3` the position floor, then the
+/// pattern's SQL form. A row is deletable when it is `published` or `acked`
+/// (dead-lettered rows are operator evidence), older than the age, and not the
+/// newest row of its topic, so a topic's head event always stays resolvable as
+/// an anonymous resume point. An override pass also requires the row to be at or
+/// below `floor`, the lowest position a live named consumer has acked.
+/// Deletes go through `ctid` in `published_at` order so each batch is bounded.
+fn journal_retention_sweep_sql(
+    journal_relation: &str,
+    pattern: Option<&super::topic_filter::TopicFilter>,
+    scope: Option<&super::topic_filter::TopicFilter>,
+) -> (String, Vec<String>) {
+    let mut predicate = String::new();
+    let mut binds = Vec::new();
+    let mut next_bind = 3;
+    if let Some(pattern) = pattern {
+        predicate.push_str(" AND j.journal_position <= $3");
+        next_bind = 4;
+        let (sql, values) = pattern.sql("j.topic", next_bind);
+        predicate.push_str(&format!(" AND {sql}"));
+        next_bind += values.len();
+        binds.extend(values);
+    }
+    if let Some(scope) = scope {
+        let (sql, values) = scope.sql("j.topic", next_bind);
+        predicate.push_str(&format!(" AND {sql}"));
+        binds.extend(values);
+    }
+    (
+        format!(
+            "DELETE FROM {journal_relation} WHERE ctid = ANY(ARRAY( \
+               SELECT j.ctid FROM {journal_relation} j \
+               WHERE j.published_at < NOW() - make_interval(secs => $1::double precision) \
+                 AND j.delivery_state IN ('published', 'acked') \
+                 AND EXISTS (SELECT 1 FROM {journal_relation} n \
+                             WHERE n.topic = j.topic AND n.journal_position > j.journal_position){predicate} \
+               ORDER BY j.published_at LIMIT $2))"
+        ),
+        binds,
     )
+}
+
+/// Per-subscription delivery options for `CdcEngine::stream_cdc_with_cursor`.
+#[derive(Debug, Clone, Copy, Default)]
+pub(crate) struct CdcStreamOptions {
+    /// Interleave progress markers (`journal::progress_envelope`): one when
+    /// replay catches up, then while live whenever the cursor passed rows this
+    /// subscriber did not receive, at most every few seconds or every
+    /// thousand positions. Only a caller that recognizes them opts in.
+    pub(crate) progress_markers: bool,
+}
+
+/// Which journal rows a retention sweep may remove.
+#[derive(Debug, Clone, Default)]
+pub(crate) struct JournalRetention {
+    /// Age for every topic; `None` skips the global pass.
+    pub(crate) global_secs: Option<u64>,
+    /// Shorter ages for topic patterns, bounded by the named-consumer floor.
+    pub(crate) overrides: Vec<(String, u64)>,
+    /// Restrict every pass to topics matching this pattern. The leader's
+    /// sweep leaves it unset; it lets one caller prune its own topics only.
+    pub(crate) only_topics: Option<String>,
+}
+
+/// Whether a named consumer subscribed with `cursor_pattern` could read rows of
+/// `override_pattern`. Two wildcard languages are not proven disjoint, so they
+/// count as overlapping and the consumer keeps protecting the rows.
+fn consumer_may_read(cursor_pattern: &str, override_pattern: &str) -> bool {
+    let has_wildcard = |pattern: &str| pattern.contains(['*', '?']);
+    match (has_wildcard(cursor_pattern), has_wildcard(override_pattern)) {
+        (false, _) => WildMatch::new(override_pattern).matches(cursor_pattern),
+        (_, false) => WildMatch::new(cursor_pattern).matches(override_pattern),
+        (true, true) => true,
+    }
 }
 
 /// F-7: prune idempotency-dedup rows older than the dedup window. After the TTL a
@@ -971,31 +1123,98 @@ mod tests {
     /// instead of returning nothing.
     #[test]
     fn replay_sql_reads_cdc_journal() {
-        let anchored = replay_sql_from_anchor("udb_system.udb_cdc_journal", 10_000);
+        let all = super::super::topic_filter::TopicFilter::compile("*");
+        let (anchored, binds) = replay_sql_from_anchor("udb_system.udb_cdc_journal", &all, 10_000);
         assert!(anchored.contains("FROM udb_system.udb_cdc_journal"));
-        assert!(anchored.contains("journal_position > $1"));
-        assert!(anchored.contains("ORDER BY journal_position ASC"));
+        assert!(anchored.contains("journal_position > $1 AND journal_position <= $2"));
+        assert!(anchored.contains("ORDER BY journal_position ASC LIMIT 10000"));
         assert!(!anchored.contains("outbox"));
+        assert!(binds.is_empty());
     }
 
-    /// #26: the retention sweep removes only acked journal rows older than
-    /// the TTL. Unacked `published`/`dlq` rows survive because they are
-    /// durable publish/replay evidence. This pins the SQL shape; the actual
-    /// behavior is exercised by the env-gated live test
-    /// `cdc::live_tests::live_journal_retention_sweep_removes_only_old_acked_rows`,
-    /// which runs the real `run_journal_retention_sweep` against Postgres.
+    /// The tail reads only the pattern's topics, so a quiet topic on a busy
+    /// journal is not a full scan.
     #[test]
-    fn journal_retention_sweep_targets_only_acked_rows() {
-        let sql = journal_retention_sweep_sql("udb_system.udb_cdc_journal");
-        assert!(sql.starts_with("DELETE FROM udb_system.udb_cdc_journal"));
-        assert!(sql.contains("delivery_state = 'acked'"));
+    fn replay_sql_filters_by_topic_pattern() {
+        let exact = super::super::topic_filter::TopicFilter::compile("udb.lock.acquired.v1");
+        let (sql, binds) = replay_sql_from_anchor("j", &exact, 1_000);
+        assert!(sql.contains("AND topic = $3 ORDER BY"), "{sql}");
+        assert_eq!(binds, vec!["udb.lock.acquired.v1".to_string()]);
+        let prefix = super::super::topic_filter::TopicFilter::compile("virtued.*.recorded.v1");
+        let (sql, binds) = replay_sql_from_anchor("j", &prefix, 1_000);
+        assert!(
+            sql.contains(
+                "topic COLLATE \"C\" >= $3 AND topic COLLATE \"C\" < $4 AND topic LIKE $5 ESCAPE"
+            ),
+            "{sql}"
+        );
+        assert_eq!(binds.len(), 3);
+    }
+
+    #[test]
+    fn live_progress_marker_needs_unseen_progress_and_a_due_time_or_stride() {
+        let now = std::time::Instant::now();
+        let stale = now - PROGRESS_MARKER_INTERVAL;
+        // Nothing passed since the last real event or marker: no marker.
+        assert_eq!(live_progress_marker(Some(10), 10, 0, stale), None);
+        // The poll did not reach the head: no marker.
+        assert_eq!(live_progress_marker(None, 10, 0, stale), None);
+        // Progress, but neither the interval nor the stride elapsed.
+        assert_eq!(live_progress_marker(Some(20), 10, 10, now), None);
+        // Interval elapsed.
+        assert_eq!(live_progress_marker(Some(20), 10, 10, stale), Some(20));
+        // Stride passed.
+        assert_eq!(
+            live_progress_marker(Some(10 + PROGRESS_MARKER_STRIDE), 10, 10, now),
+            Some(10 + PROGRESS_MARKER_STRIDE)
+        );
+    }
+
+    /// Retention removes published and acked rows past their age, never
+    /// dead-lettered rows and never a topic's newest row, in bounded batches.
+    /// The behavior runs against Postgres in
+    /// `cdc::live_tests::live_journal_retention_keeps_topic_heads_dlq_and_consumer_floor`.
+    #[test]
+    fn journal_retention_sweep_targets_aged_published_and_acked_rows() {
+        let (sql, binds) = journal_retention_sweep_sql("udb_system.udb_cdc_journal", None, None);
+        assert!(sql.starts_with("DELETE FROM udb_system.udb_cdc_journal WHERE ctid = ANY(ARRAY("));
+        assert!(sql.contains("delivery_state IN ('published', 'acked')"));
         assert!(sql.contains("make_interval(secs => $1::double precision)"));
-        // Unacked states are never named by the sweep.
-        assert!(!sql.contains("'published'"));
+        assert!(sql.contains("n.topic = j.topic AND n.journal_position > j.journal_position"));
+        assert!(sql.contains("ORDER BY j.published_at LIMIT $2"));
         assert!(!sql.contains("'dlq'"));
-        assert!(!sql.contains("'publishing'"));
-        assert!(!sql.contains("'pending'"));
         assert!(!sql.contains("outbox"));
+        assert!(!sql.contains("udb_cdc_journal_heads"));
+        assert!(!sql.contains("$3"));
+        assert!(binds.is_empty());
+
+        let lock = super::super::topic_filter::TopicFilter::compile("udb.lock.*");
+        let scope = super::super::topic_filter::TopicFilter::compile("udb.lock.acquired.v1");
+        let (sql, binds) = journal_retention_sweep_sql("j", Some(&lock), Some(&scope));
+        assert!(sql.contains("AND j.journal_position <= $3"), "{sql}");
+        assert!(
+            sql.contains("j.topic COLLATE \"C\" >= $4 AND j.topic COLLATE \"C\" < $5"),
+            "{sql}"
+        );
+        assert!(sql.contains("AND j.topic = $6"), "{sql}");
+        assert_eq!(
+            binds,
+            vec![
+                "udb.lock.".to_string(),
+                "udb.lock/".to_string(),
+                "udb.lock.acquired.v1".to_string()
+            ]
+        );
+    }
+
+    #[test]
+    fn override_floor_counts_only_consumers_that_may_read_the_topics() {
+        assert!(consumer_may_read("udb.lock.acquired.v1", "udb.lock.*"));
+        assert!(!consumer_may_read("udb.orders.created.v1", "udb.lock.*"));
+        assert!(consumer_may_read("udb.*", "udb.lock.acquired.v1"));
+        assert!(!consumer_may_read("udb.orders.*", "udb.lock.acquired.v1"));
+        // Two wildcard patterns are treated as overlapping.
+        assert!(consumer_may_read("udb.orders.*", "udb.lock.*"));
     }
 
     /// #73: DLQ rows for rejected source events use a deterministic event_id
@@ -1535,25 +1754,23 @@ impl CdcEngine {
         }
     }
 
-    /// #26: prune acked CDC journal rows older than the idempotency TTL
-    /// (`idempotency_ttl_secs`, default [`DEFAULT_CDC_IDEMPOTENCY_TTL_SECS`])
-    /// so journal retention and the redis dedup-claim TTL age out together.
-    /// Unacked rows are kept as durable replay/operator evidence. Best-effort:
-    /// failures are logged and retried on the next maintenance tick.
+    /// Prune published and acknowledged journal rows past retention
+    /// (`journal_retention_secs`, `UDB_CDC_JOURNAL_RETENTION`) and past each
+    /// topic override (`UDB_CDC_JOURNAL_RETENTION_OVERRIDES`) once named
+    /// consumers have acked beyond them. Best-effort: failures are logged and
+    /// retried on the next maintenance tick.
     pub(crate) async fn run_journal_retention_sweep(&self) {
-        let journal_relation = SystemCatalogConfig::current().cdc_journal_relation();
-        let sweep_sql = journal_retention_sweep_sql(&journal_relation);
-        let ttl_secs = self.config.idempotency_ttl_secs.max(1) as f64;
-        match sqlx::query(&sweep_sql)
-            .bind(ttl_secs)
-            .execute(&self.pool)
-            .await
-        {
-            Ok(res) if res.rows_affected() > 0 => {
+        let retention = JournalRetention {
+            global_secs: Some(self.config.journal_retention_secs.max(1)),
+            overrides: self.config.journal_retention_overrides.clone(),
+            only_topics: None,
+        };
+        match self.run_journal_retention_sweep_with(&retention).await {
+            Ok(removed) if removed > 0 => {
                 info!(
-                    "[cdc] journal retention sweep removed {} acked rows older than {}s",
-                    res.rows_affected(),
-                    ttl_secs
+                    "[cdc] journal retention sweep removed {removed} rows (retention {}s, {} topic overrides)",
+                    self.config.journal_retention_secs,
+                    retention.overrides.len()
                 );
             }
             Ok(_) => {}
@@ -1561,6 +1778,93 @@ impl CdcEngine {
                 warn!("[cdc] journal retention sweep failed: {err}");
             }
         }
+    }
+
+    /// One retention sweep under explicit rules; returns the rows removed.
+    /// The durable head row is never touched, so positions never restart.
+    pub(crate) async fn run_journal_retention_sweep_with(
+        &self,
+        retention: &JournalRetention,
+    ) -> Result<u64, String> {
+        let journal_relation = SystemCatalogConfig::current().cdc_journal_relation();
+        let scope = retention
+            .only_topics
+            .as_deref()
+            .map(super::topic_filter::TopicFilter::compile);
+        let mut removed = 0u64;
+        if let Some(secs) = retention.global_secs {
+            let (sql, binds) = journal_retention_sweep_sql(&journal_relation, None, scope.as_ref());
+            removed += self.run_retention_batches(&sql, &binds, secs, None).await?;
+        }
+        if retention.overrides.is_empty() {
+            return Ok(removed);
+        }
+        let catalog = SystemCatalogConfig::current();
+        let head = super::journal::head(&self.pool, &catalog)
+            .await
+            .map_err(|err| format!("journal head read failed: {err}"))?;
+        // Named consumers still acking within retention hold back override
+        // pruning; one that went quiet for longer than retention does not.
+        let active_secs = retention.global_secs.map_or(-1.0, |secs| secs as f64);
+        let cursors: Vec<(String, i64)> = sqlx::query_as(&format!(
+            "SELECT topic_pattern, last_journal_position FROM {} \
+             WHERE owner_identity <> '' \
+               AND ($1 < 0 OR acked_at > NOW() - make_interval(secs => $1::double precision))",
+            catalog.cdc_consumer_cursors_relation()
+        ))
+        .bind(active_secs)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(|err| format!("consumer cursor read failed: {err}"))?;
+        for (pattern, secs) in &retention.overrides {
+            let floor = cursors
+                .iter()
+                .filter(|(cursor_pattern, _)| consumer_may_read(cursor_pattern, pattern))
+                .map(|(_, position)| *position)
+                .min()
+                .unwrap_or(head)
+                .min(head);
+            let filter = super::topic_filter::TopicFilter::compile(pattern);
+            let (sql, binds) =
+                journal_retention_sweep_sql(&journal_relation, Some(&filter), scope.as_ref());
+            removed += self
+                .run_retention_batches(&sql, &binds, *secs, Some(floor))
+                .await?;
+        }
+        Ok(removed)
+    }
+
+    /// Run one retention statement in bounded batches until a short batch or
+    /// the per-tick batch limit.
+    async fn run_retention_batches(
+        &self,
+        sql: &str,
+        binds: &[String],
+        age_secs: u64,
+        floor: Option<i64>,
+    ) -> Result<u64, String> {
+        let mut removed = 0u64;
+        for _ in 0..JOURNAL_RETENTION_MAX_BATCHES {
+            let mut query = sqlx::query(sql)
+                .bind(age_secs.max(1) as f64)
+                .bind(JOURNAL_RETENTION_BATCH);
+            if let Some(floor) = floor {
+                query = query.bind(floor);
+            }
+            for value in binds {
+                query = query.bind(value);
+            }
+            let deleted = query
+                .execute(&self.pool)
+                .await
+                .map_err(|err| format!("journal retention batch failed: {err}"))?
+                .rows_affected();
+            removed += deleted;
+            if deleted < JOURNAL_RETENTION_BATCH as u64 {
+                break;
+            }
+        }
+        Ok(removed)
     }
 
     /// F-7: prune expired idempotency-dedup rows. Runs on the leader-elected
@@ -1709,7 +2013,7 @@ impl CdcEngine {
             tenant_id,
             project_id,
             None,
-            false,
+            CdcStreamOptions::default(),
         )
         .await
     }
@@ -1725,7 +2029,7 @@ impl CdcEngine {
         tenant_id: Option<String>,
         project_id: Option<String>,
         watermark: Option<i64>,
-        _named: bool,
+        options: CdcStreamOptions,
     ) -> Result<
         Pin<
             Box<
@@ -1754,7 +2058,8 @@ impl CdcEngine {
         let topic_policies = self.topic_policies.clone();
         // #19: replay reads the durable cdc_journal — outbox rows are
         // deleted on ack, so the outbox cannot serve a reconnect gap.
-        let journal_relation = SystemCatalogConfig::current().cdc_journal_relation();
+        let catalog = SystemCatalogConfig::current_arc();
+        let journal_relation = catalog.cdc_journal_relation();
         // Resolve and validate before returning the lazy stream. A malformed,
         // unknown, pruned, or temporarily unreadable cursor must fail this RPC;
         // none of those states may silently become a full-history epoch replay.
@@ -1777,14 +2082,20 @@ impl CdcEngine {
             const TAIL_BATCH: i64 = 1_000;
             const TAIL_POLL: std::time::Duration = std::time::Duration::from_millis(500);
             const DEDUP_WINDOW: usize = 16_384;
-            let tail_sql = replay_sql_from_anchor(&journal_relation, TAIL_BATCH);
+            let tail = JournalTail::new(catalog, &topic_pattern, TAIL_BATCH);
             let mut seen: std::collections::HashSet<String> = std::collections::HashSet::new();
             let mut order: std::collections::VecDeque<String> = std::collections::VecDeque::new();
 
             let mut cursor_position = initial_cursor;
+            // Position of the last envelope or marker sent, and of the last
+            // real event: a marker is never sent at a real event's position.
+            let mut last_yielded_position = initial_cursor;
+            let mut last_event_position: Option<i64> = None;
+            let mut last_marker_position = initial_cursor;
+            let mut last_marker_at = std::time::Instant::now();
 
             // 1. Replay: drain the journal from the cursor (bounded per batch).
-            loop {
+            let replay_reached = loop {
                 let policy_snapshot = topic_policies.load_full();
                 ensure_cdc_stream_policy_current(
                     &policy_snapshot,
@@ -1793,25 +2104,35 @@ impl CdcEngine {
                     &project_scope,
                     privileged,
                 )?;
-                let batch = cdc_journal_poll(
-                    &pool, &tail_sql, &mut cursor_position, &matcher,
+                let outcome = cdc_journal_poll(
+                    &pool, &tail, &mut cursor_position, &matcher,
                     &tenant_scope, &project_scope, privileged, &policy_snapshot,
                     &mut seen, &mut order, DEDUP_WINDOW,
                 )
                 .await?;
-                let caught_up = batch.len() < TAIL_BATCH as usize;
-                for envelope in batch {
+                // Count rows the pattern selected, not rows delivered: a page
+                // full of other tenants' events is not the end of the backlog.
+                let caught_up = outcome.scanned < TAIL_BATCH as usize;
+                for envelope in outcome.envelopes {
+                    last_yielded_position = envelope.journal_position;
+                    last_event_position = Some(envelope.journal_position);
                     yield envelope;
                 }
                 if caught_up {
-                    break;
+                    break outcome.reached.unwrap_or(cursor_position);
                 }
+            };
+            if options.progress_markers && last_event_position != Some(replay_reached) {
+                last_yielded_position = replay_reached;
+                last_marker_position = replay_reached;
+                last_marker_at = std::time::Instant::now();
+                yield super::journal::progress_envelope(replay_reached, true);
             }
 
             // 2. Live: broadcast wake + ordered journal polling, de-duped by event_id.
             enum StreamWake {
                 Fast(Result<CdcEnvelope, broadcast::error::RecvError>),
-                Journal(Result<Vec<CdcEnvelope>, tonic::Status>),
+                Journal(Result<PollOutcome, tonic::Status>),
             }
             let mut rx = Some(rx);
             // Keep the journal deadline across broadcast wakes. Recreating a
@@ -1847,14 +2168,14 @@ impl CdcEngine {
                     received = fast_path => StreamWake::Fast(received),
                     _ = journal_tick.tick() => StreamWake::Journal(
                         cdc_journal_poll(
-                            &pool, &tail_sql, &mut cursor_position, &matcher,
+                            &pool, &tail, &mut cursor_position, &matcher,
                             &tenant_scope, &project_scope, privileged, &policy_snapshot,
                             &mut seen, &mut order, DEDUP_WINDOW,
                         )
                         .await
                     ),
                 };
-                match wake {
+                let polled = match wake {
                     StreamWake::Fast(received) => match received {
                         Ok(envelope) => {
                             // Unrelated traffic must not cause per-event database
@@ -1868,32 +2189,51 @@ impl CdcEngine {
                                     privileged, policy_snapshot.active_topic_is_policy_owned(&envelope.topic),
                                 )
                             {
-                                let batch = cdc_journal_poll(
-                                    &pool, &tail_sql, &mut cursor_position, &matcher,
+                                Some(cdc_journal_poll(
+                                    &pool, &tail, &mut cursor_position, &matcher,
                                     &tenant_scope, &project_scope, privileged, &policy_snapshot,
                                     &mut seen, &mut order, DEDUP_WINDOW,
-                                ).await?;
-                                for envelope in batch {
-                                    yield envelope;
-                                }
+                                ).await?)
+                            } else {
+                                None
                             }
                         }
                         // Dropped on lag — the journal backstop backfills them, so
                         // do NOT break the stream.
                         Err(broadcast::error::RecvError::Lagged(n)) => {
                             warn!("[cdc] PublishCDC fast-path lagged; {n} events dropped (journal backstop backfills)");
+                            None
                         }
                         // Fast-path gone — continue with the journal as the sole source.
                         Err(broadcast::error::RecvError::Closed) => {
                             rx = None;
+                            None
                         }
                     },
-                    StreamWake::Journal(batch) => {
-                        let batch = batch?;
-                        for envelope in batch {
-                            yield envelope;
-                        }
-                    }
+                    StreamWake::Journal(outcome) => Some(outcome?),
+                };
+                let Some(outcome) = polled else {
+                    continue;
+                };
+                for envelope in outcome.envelopes {
+                    last_yielded_position = envelope.journal_position;
+                    yield envelope;
+                }
+                let marker = if options.progress_markers {
+                    live_progress_marker(
+                        outcome.reached,
+                        last_yielded_position,
+                        last_marker_position,
+                        last_marker_at,
+                    )
+                } else {
+                    None
+                };
+                if let Some(position) = marker {
+                    last_yielded_position = position;
+                    last_marker_position = position;
+                    last_marker_at = std::time::Instant::now();
+                    yield super::journal::progress_envelope(position, true);
                 }
             }
         }))

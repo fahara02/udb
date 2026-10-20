@@ -67,18 +67,41 @@ pub(crate) fn invalidation_source_from_payload(payload: &serde_json::Value) -> S
     String::new()
 }
 
+/// The invalidator's row in the journal reader cursors.
+#[cfg(feature = "redis")]
+const CACHE_JOURNAL_READER: &str = "cache.invalidate";
+/// Journal positions one invalidation tick scans at most.
+#[cfg(feature = "redis")]
+const CACHE_JOURNAL_WINDOW: i64 = 5_000;
+
+/// One window of candidate events, plus the last journal position the query
+/// returned (before any row is skipped in memory).
+#[cfg(feature = "redis")]
+struct CacheInvalidationPage {
+    events: Vec<(i64, CacheInvalidationEvent)>,
+    rows: usize,
+    last_position: Option<i64>,
+}
+
+/// Bind order: `$1` the invalidation topic, `$2` the batch, `$3`/`$4` the
+/// journal position window `(from, to]` of the invalidator's reader cursor, so a
+/// tick never re-reads the whole retained journal.
 #[cfg(feature = "redis")]
 async fn load_cache_invalidation_events(
     pool: &PgPool,
     journal_relation: &str,
     outbox_relation: &str,
     batch: i64,
-) -> Result<Vec<CacheInvalidationEvent>, String> {
+    window: (i64, i64),
+) -> Result<CacheInvalidationPage, String> {
     let limit = batch.max(1);
     let rows = sqlx::query(&format!(
-        "SELECT j.event_id::TEXT AS event_id, j.topic AS topic, j.payload::TEXT AS payload_json \
+        "SELECT j.event_id::TEXT AS event_id, j.topic AS topic, j.payload::TEXT AS payload_json, \
+                j.journal_position AS journal_position \
          FROM {journal_relation} j \
          WHERE j.delivery_state IN ('published', 'acked') \
+           AND j.journal_position > $3 \
+           AND j.journal_position <= $4 \
            AND j.topic <> $1 \
            AND COALESCE(j.payload->>'tenant_id', '') <> '' \
            AND ( \
@@ -96,17 +119,25 @@ async fn load_cache_invalidation_events(
                WHERE done.topic = $1 \
                  AND done.payload->>'source_event_id' = j.event_id::TEXT \
            ) \
-         ORDER BY j.published_at ASC, j.event_id ASC \
+         ORDER BY j.journal_position ASC \
          LIMIT $2"
     ))
     .bind(TOPIC_INVALIDATED)
     .bind(limit)
+    .bind(window.0)
+    .bind(window.1)
     .fetch_all(pool)
     .await
     .map_err(|err| format!("load cache invalidation events failed: {err}"))?;
 
     let mut events = Vec::with_capacity(rows.len());
+    let row_count = rows.len();
+    let mut last_position = None;
     for row in rows {
+        let position: i64 = row
+            .try_get("journal_position")
+            .map_err(|err| format!("decode cache invalidation position failed: {err}"))?;
+        last_position = Some(position);
         let payload_json: String = row
             .try_get("payload_json")
             .map_err(|err| format!("decode cache invalidation payload failed: {err}"))?;
@@ -116,18 +147,25 @@ async fn load_cache_invalidation_events(
         if source_table.trim().is_empty() {
             continue;
         }
-        events.push(CacheInvalidationEvent {
-            event_id: row
-                .try_get("event_id")
-                .map_err(|err| format!("decode cache invalidation event id failed: {err}"))?,
-            topic: row
-                .try_get("topic")
-                .map_err(|err| format!("decode cache invalidation topic failed: {err}"))?,
-            source_table,
-            payload,
-        });
+        events.push((
+            position,
+            CacheInvalidationEvent {
+                event_id: row
+                    .try_get("event_id")
+                    .map_err(|err| format!("decode cache invalidation event id failed: {err}"))?,
+                topic: row
+                    .try_get("topic")
+                    .map_err(|err| format!("decode cache invalidation topic failed: {err}"))?,
+                source_table,
+                payload,
+            },
+        ));
     }
-    Ok(events)
+    Ok(CacheInvalidationPage {
+        events,
+        rows: row_count,
+        last_position,
+    })
 }
 
 /// Run ONE leader pass of CDC-driven cache invalidation (the consumer shape the
@@ -135,8 +173,9 @@ async fn load_cache_invalidation_events(
 /// source-table change event it: derives the tenant fail-closed from the payload
 /// (skipping tenant-less events), `SCAN`+`DEL`-sweeps the matching namespace for
 /// that tenant, and emits `udb.cache.invalidated.v1`. Returns the total number of
-/// cache keys invalidated. Best-effort per event: a single failing sweep is logged
-/// and skipped rather than aborting the whole pass.
+/// cache keys invalidated and the index of the first event whose sweep failed.
+/// Best-effort per event: a single failing sweep is logged and skipped rather
+/// than aborting the whole pass; the caller retries from it on the next tick.
 #[cfg_attr(test, allow(dead_code))]
 #[allow(dead_code)]
 #[cfg(feature = "redis")]
@@ -146,9 +185,10 @@ pub(crate) async fn run_cache_invalidation_once(
     outbox_relation: Option<&str>,
     events: &[CacheInvalidationEvent],
     metrics: Option<&Arc<dyn MetricsRecorder>>,
-) -> Result<u64, String> {
+) -> Result<(u64, Option<usize>), String> {
     let mut total: u64 = 0;
-    for event in events {
+    let mut first_failed = None;
+    for (index, event) in events.iter().enumerate() {
         // Fail-closed: a tenant-less event never sweeps another tenant's keyspace.
         let Some(tenant) = invalidation_tenant_scope(&event.payload) else {
             tracing::debug!(
@@ -169,6 +209,7 @@ pub(crate) async fn run_cache_invalidation_once(
                     error = %err,
                     "cache invalidation sweep failed; skipping event"
                 );
+                first_failed.get_or_insert(index);
                 continue;
             }
         };
@@ -202,7 +243,7 @@ pub(crate) async fn run_cache_invalidation_once(
         )
         .await;
     }
-    Ok(total)
+    Ok((total, first_failed))
 }
 
 /// One full worker tick: CDC-driven namespace invalidation, then a bounded
@@ -225,12 +266,43 @@ pub(crate) async fn run_cache_invalidation_worker_once(
     batch: i64,
     metrics: Option<&Arc<dyn MetricsRecorder>>,
 ) -> Result<i64, String> {
-    let events =
-        load_cache_invalidation_events(outbox_pool, journal_relation, outbox_relation, batch)
-            .await?;
-    let invalidated =
+    use crate::runtime::cdc::journal;
+    let catalog = crate::runtime::system::SystemCatalogConfig::current();
+    let head = journal::head(outbox_pool, &catalog)
+        .await
+        .map_err(|err| format!("read CDC journal head failed: {err}"))?;
+    let window = journal::reader_window(
+        outbox_pool,
+        &catalog,
+        CACHE_JOURNAL_READER,
+        head,
+        CACHE_JOURNAL_WINDOW,
+    )
+    .await
+    .map_err(|err| format!("read cache journal reader failed: {err}"))?;
+    let page = load_cache_invalidation_events(
+        outbox_pool,
+        journal_relation,
+        outbox_relation,
+        batch,
+        window,
+    )
+    .await?;
+    let (positions, events): (Vec<i64>, Vec<CacheInvalidationEvent>) =
+        page.events.into_iter().unzip();
+    let (invalidated, first_failed) =
         run_cache_invalidation_once(redis, outbox_pool, Some(outbox_relation), &events, metrics)
             .await?;
+    // Stop before a failed sweep so the next tick retries it; events already
+    // invalidated after it are excluded by the loader's dedupe.
+    let next_position = match first_failed {
+        Some(index) => positions[index] - 1,
+        None if (page.rows as i64) < batch.max(1) => window.1,
+        None => page.last_position.unwrap_or(window.1),
+    };
+    journal::advance_reader(outbox_pool, &catalog, CACHE_JOURNAL_READER, next_position)
+        .await
+        .map_err(|err| format!("advance cache journal reader failed: {err}"))?;
     match redis_engine::reconcile_bytes_counters_once(redis).await {
         Ok(reconciled) if reconciled > 0 => {
             tracing::debug!(

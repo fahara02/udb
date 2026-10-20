@@ -72,24 +72,7 @@ const INBOX_TTL_ENV: &str = "UDB_MESSAGING_INBOX_TTL";
 const DEFAULT_RETENTION_INTERVAL_SECS: u64 = 300;
 const RETENTION_INTERVAL_ENV: &str = "UDB_MESSAGING_RETENTION_INTERVAL_SECS";
 
-/// Parse a TTL: a bare number of seconds or a number with an `s`/`m`/`h`/`d`
-/// suffix (`30d`, `12h`). Zero, negative or malformed values are rejected.
-pub(crate) fn parse_ttl_secs(raw: &str) -> Option<u64> {
-    let raw = raw.trim();
-    let (digits, unit) = match raw.char_indices().last() {
-        Some((index, c)) if c.is_ascii_alphabetic() => (&raw[..index], c.to_ascii_lowercase()),
-        _ => (raw, 's'),
-    };
-    let value: u64 = digits.trim().parse().ok().filter(|v| *v > 0)?;
-    let scale = match unit {
-        's' => 1,
-        'm' => 60,
-        'h' => 60 * 60,
-        'd' => 24 * 60 * 60,
-        _ => return None,
-    };
-    value.checked_mul(scale)
-}
+pub(crate) use crate::runtime::executor_utils::parse_ttl_secs;
 
 /// Inbox TTL (`UDB_MESSAGING_INBOX_TTL`, default 30 days). Resolved once at
 /// worker spawn, never per request.

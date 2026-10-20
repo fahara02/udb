@@ -2291,6 +2291,26 @@ pub(crate) fn is_identifier(value: &str) -> bool {
             .all(|ch| ch.is_ascii_alphanumeric() || ch == '_')
 }
 
+/// Parse a duration: a bare number of seconds or a number with an
+/// `s`/`m`/`h`/`d` suffix (`30d`, `12h`). Zero, negative or malformed values
+/// are rejected.
+pub(crate) fn parse_ttl_secs(raw: &str) -> Option<u64> {
+    let raw = raw.trim();
+    let (digits, unit) = match raw.char_indices().last() {
+        Some((index, c)) if c.is_ascii_alphabetic() => (&raw[..index], c.to_ascii_lowercase()),
+        _ => (raw, 's'),
+    };
+    let value: u64 = digits.trim().parse().ok().filter(|v| *v > 0)?;
+    let scale = match unit {
+        's' => 1,
+        'm' => 60,
+        'h' => 60 * 60,
+        'd' => 24 * 60 * 60,
+        _ => return None,
+    };
+    value.checked_mul(scale)
+}
+
 pub(crate) fn env_u32(key: &str) -> Option<u32> {
     env::var(key).ok()?.parse().ok()
 }

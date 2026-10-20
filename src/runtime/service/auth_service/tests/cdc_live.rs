@@ -562,6 +562,8 @@ async fn live_cdc_journal_backstop_runs_during_unrelated_broadcast_traffic() {
         partition_key: "unrelated-fast-path".to_string(),
         payload_json: payload("tenant-a", "project-a").to_string(),
         published_at: chrono::Utc::now(),
+        journal_position: 0,
+        progress_only: false,
     };
     let (noise_stop, mut stop) = tokio::sync::oneshot::channel::<()>();
     let (noise_started, started) = tokio::sync::oneshot::channel::<()>();

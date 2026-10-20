@@ -172,7 +172,16 @@ fn acknowledgment(name: &str, topic: &str, event: Uuid) -> AckCdcEventsRequest {
         ..Default::default()
     }
 }
+/// These fixtures seed retained events before a name's first subscription, so
+/// the claim asks for the earliest retained event. `fresh_subscription` keeps
+/// the default start at the journal head.
 fn subscription(name: &str, topic: &str) -> CdcSubscriptionRequest {
+    CdcSubscriptionRequest {
+        start: crate::proto::CdcConsumerStart::Earliest as i32,
+        ..fresh_subscription(name, topic)
+    }
+}
+fn fresh_subscription(name: &str, topic: &str) -> CdcSubscriptionRequest {
     CdcSubscriptionRequest {
         consumer_name: name.into(),
         topic_pattern: topic.into(),
@@ -393,6 +402,8 @@ async fn broadcast_retained_fixture(f: &Fixture, engine: &CdcEngine, event: Uuid
             partition_key,
             payload_json: payload.to_string(),
             published_at,
+            journal_position: 0,
+            progress_only: false,
         });
 }
 async fn cursor(f: &Fixture, name: &str) -> (Uuid, String) {
@@ -996,6 +1007,341 @@ async fn live_cdc_nack_dead_letters_atomically_for_the_verified_owner() {
         .execute(&f.pool)
         .await
         .expect("clean DLQ fixture");
+    f.close().await;
+}
+
+async fn journal_has(f: &Fixture, event: Uuid) -> bool {
+    let journal = SystemCatalogConfig::current().cdc_journal_relation();
+    sqlx::query_scalar(&format!(
+        "SELECT EXISTS(SELECT 1 FROM {journal} WHERE event_id=$1)"
+    ))
+    .bind(event)
+    .fetch_one(&f.pool)
+    .await
+    .expect("read actual journal row")
+}
+
+/// A named consumer is owned from its first subscription, settles only events
+/// inside its tenant, project and topic, never rewinds, and resumes after the
+/// acknowledged row is gone, whether removed by hand or by the real retention
+/// sweep. Lag survives retention and ignores other scopes. A name subscribed
+/// with the default start receives only events committed after it subscribed.
+#[tokio::test]
+#[ignore = "requires real PostgreSQL; CI runs all ignored native lib tests"]
+async fn live_cdc_named_consumer_enforces_owner_scope_and_resumes_after_retention() {
+    let _guard = super::support::live_native_service_db_lock().lock().await;
+    let mut f = fixture().await;
+    let first = seed(&f, &f.topic, &f.tenant, "default", 1).await;
+    let second = seed(&f, &f.topic, &f.tenant, "default", 2).await;
+    let third = seed(&f, &f.topic, &f.tenant, "default", 3).await;
+    let foreign = seed(&f, &f.topic, "other-tenant", "default", 4).await;
+    let wrong_project = seed(&f, &f.topic, &f.tenant, "other-project", 5).await;
+    let other_topic = format!("udb.cdc.other.{}.v1", Uuid::new_v4().simple());
+    let wrong_topic = seed(&f, &other_topic, &f.tenant, "default", 6).await;
+
+    let mut stream = f
+        .client
+        .publish_cdc(request(subscription("reader", &f.topic), &f.tokens[0]))
+        .await
+        .expect("new named consumer opens the retained backlog")
+        .into_inner();
+    assert_eq!(next(&mut stream).await, first.to_string());
+    drop(stream);
+    // The name is owned at subscribe time, before its first acknowledgment.
+    assert_eq!(
+        f.client
+            .publish_cdc(request(subscription("reader", &f.topic), &f.tokens[1]))
+            .await
+            .err()
+            .expect("another principal cannot subscribe under the name")
+            .code(),
+        Code::PermissionDenied
+    );
+    for event in [foreign, wrong_project, wrong_topic] {
+        assert_eq!(
+            f.client
+                .ack_cdc_events(request(
+                    acknowledgment("reader", &f.topic, event),
+                    &f.tokens[0]
+                ))
+                .await
+                .unwrap_err()
+                .code(),
+            Code::PermissionDenied
+        );
+    }
+    assert_eq!(
+        f.client
+            .ack_cdc_events(request(
+                acknowledgment("reader", &f.topic, Uuid::new_v4()),
+                &f.tokens[0]
+            ))
+            .await
+            .unwrap_err()
+            .code(),
+        Code::NotFound
+    );
+    for event in [second, first] {
+        f.client
+            .ack_cdc_events(request(
+                acknowledgment("reader", &f.topic, event),
+                &f.tokens[0],
+            ))
+            .await
+            .expect("owner acknowledgment");
+    }
+    assert_eq!(
+        f.client
+            .ack_cdc_events(request(
+                acknowledgment("reader", &f.topic, third),
+                &f.tokens[1]
+            ))
+            .await
+            .unwrap_err()
+            .code(),
+        Code::PermissionDenied
+    );
+    let (position, owner) = cursor(&f, "reader").await;
+    assert_eq!(
+        position, second,
+        "a late acknowledgment must not rewind the cursor"
+    );
+    assert_eq!(owner, format!("user:{}", f.users[0]));
+
+    let journal = SystemCatalogConfig::current().cdc_journal_relation();
+    sqlx::query(&format!("DELETE FROM {journal} WHERE event_id=$1"))
+        .bind(second)
+        .execute(&f.pool)
+        .await
+        .expect("simulate journal retention of the acknowledged row");
+    // The real sweep, scoped to this topic and aged from one second, removes
+    // what the consumer has already passed and nothing beyond its position.
+    f.engine
+        .run_journal_retention_sweep_with(&crate::runtime::cdc::JournalRetention {
+            global_secs: None,
+            overrides: vec![(f.topic.clone(), 1)],
+            only_topics: Some(f.topic.clone()),
+        })
+        .await
+        .expect("scoped retention sweep");
+    assert!(
+        !journal_has(&f, first).await,
+        "acknowledged history is pruned"
+    );
+    for kept in [third, foreign, wrong_project] {
+        assert!(
+            journal_has(&f, kept).await,
+            "rows past the consumer's position are kept"
+        );
+    }
+
+    let health = f
+        .service
+        .runtime_snapshot()
+        .delivery_health(crate::runtime::core::delivery_health::DeliveryThresholds {
+            consumer_max_lag_secs: 0,
+            ..Default::default()
+        })
+        .await
+        .expect("delivery health after retention");
+    let reader_check = format!("consumer reader ({}, tenant {})", f.topic, f.tenant);
+    let health = health
+        .iter()
+        .find(|check| check.check == reader_check)
+        .expect("named consumer health");
+    assert!(
+        !health.passed && health.detail.starts_with("1s behind"),
+        "lag must survive retention and ignore other scopes: {}",
+        health.detail
+    );
+
+    let admin = token(
+        &f.security,
+        &f.tenant,
+        &f.users[0],
+        "",
+        &["udb:admin".into(), "udb:cdc:read".into()],
+    );
+    let slot = format!("consumer-status-{}", Uuid::new_v4().simple());
+    let control = crate::proto::CdcControlRequest {
+        slot_name: slot.clone(),
+        ..Default::default()
+    };
+    f.client
+        .pause_cdc(request(control.clone(), &admin))
+        .await
+        .expect("create an owned control slot");
+    let status = f
+        .client
+        .get_cdc_status(request(control.clone(), &admin))
+        .await
+        .expect("served consumer lag after retention")
+        .into_inner();
+    let reader = status
+        .consumers
+        .iter()
+        .find(|consumer| consumer.consumer_name == "reader")
+        .expect("named cursor appears in CDC status");
+    assert_eq!(reader.last_event_id, second.to_string());
+    assert_eq!(
+        reader.lag_seconds, 1.0,
+        "lag ignores foreign tenants/projects/topics"
+    );
+    assert_eq!(reader.owner_identity, owner);
+    assert!(!reader.owner_migration_required);
+    assert!(
+        status
+            .consumers
+            .iter()
+            .all(|consumer| consumer.tenant_id == f.tenant && consumer.project_id == "default")
+    );
+
+    let mut resumed = f
+        .client
+        .publish_cdc(request(subscription("reader", &f.topic), &f.tokens[0]))
+        .await
+        .expect("resume survives retention of the acknowledged row")
+        .into_inner();
+    assert_eq!(
+        next(&mut resumed).await,
+        third.to_string(),
+        "resume must not replay the older event"
+    );
+    drop(resumed);
+
+    // A new name with the default start begins at the journal head.
+    let mut fresh = f
+        .client
+        .publish_cdc(request(fresh_subscription("fresh", &f.topic), &f.tokens[0]))
+        .await
+        .expect("fresh named consumer")
+        .into_inner();
+    let late = seed(&f, &f.topic, &f.tenant, "default", 7).await;
+    assert_eq!(
+        next(&mut fresh).await,
+        late.to_string(),
+        "a fresh consumer skips the retained backlog"
+    );
+    drop(fresh);
+
+    // Pre-upgrade rows carry no verified owner and cannot be claimed silently.
+    let cursors = SystemCatalogConfig::current().cdc_consumer_cursors_relation();
+    sqlx::query(&format!(
+        "UPDATE {cursors} SET owner_identity='' WHERE tenant_id=$1"
+    ))
+    .bind(&f.tenant)
+    .execute(&f.pool)
+    .await
+    .expect("legacy cursor");
+    let status = f
+        .client
+        .get_cdc_status(request(control, &admin))
+        .await
+        .expect("legacy ownership is visible to the operator")
+        .into_inner();
+    assert!(
+        status
+            .consumers
+            .iter()
+            .find(|consumer| consumer.consumer_name == "reader")
+            .expect("legacy named cursor")
+            .owner_migration_required
+    );
+    assert_eq!(
+        f.client
+            .publish_cdc(request(subscription("reader", &f.topic), &f.tokens[0]))
+            .await
+            .err()
+            .expect("legacy ownership needs migration")
+            .code(),
+        Code::PermissionDenied
+    );
+
+    sqlx::query(&format!(
+        "DELETE FROM {} WHERE slot_name=$1",
+        SystemCatalogConfig::current().cdc_control_relation()
+    ))
+    .bind(slot)
+    .execute(&f.pool)
+    .await
+    .expect("remove control slot");
+    sqlx::query(&format!("DELETE FROM {journal} WHERE event_id=$1"))
+        .bind(foreign)
+        .execute(&f.pool)
+        .await
+        .expect("remove the other tenant's fixture row");
+    f.close().await;
+}
+
+/// A durable consumer of a quiet topic acknowledges progress markers: the
+/// token moves its stored position to the marker's journal position without
+/// naming any event, the next subscription resumes there, and a marker cannot
+/// be dead-lettered.
+#[tokio::test]
+#[ignore = "requires real PostgreSQL; CI runs all ignored native lib tests"]
+async fn live_cdc_progress_marker_ack_advances_named_cursor() {
+    let _guard = super::support::live_native_service_db_lock().lock().await;
+    let mut f = fixture().await;
+    let mut opened = fresh_subscription("quiet", &f.topic);
+    opened.progress_markers = true;
+    let mut stream = f
+        .client
+        .publish_cdc(request(opened, &f.tokens[0]))
+        .await
+        .expect("open a marker-aware named consumer")
+        .into_inner();
+    let marker = tokio::time::timeout(Duration::from_secs(3), stream.next())
+        .await
+        .expect("marker after replay")
+        .expect("open CDC stream")
+        .expect("served marker");
+    drop(stream);
+    assert!(marker.progress_only, "replay end is reported as a marker");
+    assert_eq!(marker.topic, crate::runtime::cdc::journal::PROGRESS_TOPIC);
+    let config = SystemCatalogConfig::current();
+    let head = crate::runtime::cdc::journal::head(&f.pool, &config)
+        .await
+        .expect("journal head");
+    assert!(marker.journal_position <= head);
+    let token = Uuid::parse_str(&marker.event_id).expect("marker token is a UUID");
+
+    assert_eq!(
+        f.client
+            .nack_cdc_events(request(dead_letter("quiet", &f.topic, token), &f.tokens[0]))
+            .await
+            .unwrap_err()
+            .code(),
+        Code::InvalidArgument,
+        "a marker is not an event and cannot be dead-lettered"
+    );
+    f.client
+        .ack_cdc_events(request(
+            acknowledgment("quiet", &f.topic, token),
+            &f.tokens[0],
+        ))
+        .await
+        .expect("acknowledge the marker");
+    let (stored_position, stored_id): (i64, Uuid) = sqlx::query_as(&format!(
+        "SELECT last_journal_position, last_event_id FROM {} WHERE tenant_id=$1 AND consumer_name='quiet' AND topic_pattern=$2",
+        config.cdc_consumer_cursors_relation()
+    ))
+    .bind(&f.tenant)
+    .bind(&f.topic)
+    .fetch_one(&f.pool)
+    .await
+    .expect("read the marker-acknowledged cursor");
+    assert_eq!(stored_position, marker.journal_position);
+    assert_eq!(stored_id, token);
+
+    let after = seed(&f, &f.topic, &f.tenant, "default", 1).await;
+    let mut resumed = f
+        .client
+        .publish_cdc(request(fresh_subscription("quiet", &f.topic), &f.tokens[0]))
+        .await
+        .expect("resume from the marker position")
+        .into_inner();
+    assert_eq!(next(&mut resumed).await, after.to_string());
+    drop(resumed);
     f.close().await;
 }
 

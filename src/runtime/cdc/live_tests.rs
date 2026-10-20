@@ -348,22 +348,54 @@ async fn live_embedded_outbox_waits_for_durable_journal_before_delivery() {
     .await
     .expect("read terminal journal state");
     assert_eq!(state, "acked", "journal-only rows participate in retention");
-    // published_at is immutable (journal trigger), so wait past the TTL.
+    // published_at is immutable (journal trigger), so wait past the age. The
+    // sweep is scoped to this topic so other tests' rows are never touched.
     tokio::time::sleep(Duration::from_millis(1500)).await;
-    engine.run_journal_retention_sweep().await;
-    let retained: bool = sqlx::query_scalar(&format!(
-        "SELECT EXISTS(SELECT 1 FROM {journal} WHERE event_id = $1)"
-    ))
-    .bind(event_id)
-    .fetch_one(&pool)
-    .await
-    .expect("check journal retention");
+    let retention = JournalRetention {
+        global_secs: Some(1),
+        overrides: Vec::new(),
+        only_topics: Some(topic.clone()),
+    };
+    let retained = |pool: PgPool, id: Uuid| {
+        let journal = journal.clone();
+        async move {
+            sqlx::query_scalar::<_, bool>(&format!(
+                "SELECT EXISTS(SELECT 1 FROM {journal} WHERE event_id = $1)"
+            ))
+            .bind(id)
+            .fetch_one(&pool)
+            .await
+            .expect("check journal retention")
+        }
+    };
+    engine
+        .run_journal_retention_sweep_with(&retention)
+        .await
+        .expect("scoped retention sweep");
     assert!(
-        !retained,
+        retained(pool.clone(), event_id).await,
+        "a topic's newest row stays as its resume point"
+    );
+    let newer = Uuid::new_v4();
+    sqlx::query(&format!(
+        "INSERT INTO {journal} (event_id, topic, partition_key, payload) VALUES ($1, $2, 'row-2', '{{}}'::JSONB)"
+    ))
+    .bind(newer)
+    .bind(&topic)
+    .execute(&pool)
+    .await
+    .expect("newer row on the topic");
+    engine
+        .run_journal_retention_sweep_with(&retention)
+        .await
+        .expect("scoped retention sweep");
+    assert!(
+        !retained(pool.clone(), event_id).await,
         "acknowledged journal-only delivery can be pruned"
     );
-    sqlx::query(&format!("DELETE FROM {journal} WHERE event_id = $1"))
-        .bind(event_id)
+    assert!(retained(pool.clone(), newer).await);
+    sqlx::query(&format!("DELETE FROM {journal} WHERE event_id = ANY($1)"))
+        .bind([event_id, newer].as_slice())
         .execute(&pool)
         .await
         .expect("clean journal");
@@ -450,87 +482,402 @@ async fn live_route_to_dlq_insert_failure_resets_row_to_pending() {
     delete_outbox_rows(&pool, &[event_id]).await;
 }
 
-/// Item 26: the real `run_journal_retention_sweep` against a live journal.
-/// Only `acked` rows older than `idempotency_ttl_secs` are pruned; fresh
-/// acked rows and unacked `published`/`dlq` rows (durable replay/operator
-/// evidence) survive. Complements the SQL-shape unit test in `engine_tail`.
-#[cfg(feature = "kafka")]
+/// Insert one published journal row aged `age_secs` and return its id and
+/// committed position.
+async fn insert_aged_journal_row(
+    pool: &PgPool,
+    topic: &str,
+    state: &str,
+    age_secs: f64,
+) -> (Uuid, i64) {
+    let event_id = Uuid::new_v4();
+    let journal = crate::runtime::system::SystemCatalogConfig::current().cdc_journal_relation();
+    let position: i64 = sqlx::query_scalar(&format!(
+        "INSERT INTO {journal} \
+         (event_id, topic, partition_key, payload, published_at, delivery_state) \
+         VALUES ($1, $2, 'live-test', $3::JSONB, NOW() - make_interval(secs => $4), $5) \
+         RETURNING journal_position"
+    ))
+    .bind(event_id)
+    .bind(topic)
+    .bind(
+        serde_json::json!({"tenant_id": "tenant-a", "project_id": "default", "payload": {}})
+            .to_string(),
+    )
+    .bind(age_secs)
+    .bind(state)
+    .fetch_one(pool)
+    .await
+    .expect("insert live journal row");
+    (event_id, position)
+}
+
+async fn journal_row_exists(pool: &PgPool, event_id: Uuid) -> bool {
+    let journal = crate::runtime::system::SystemCatalogConfig::current().cdc_journal_relation();
+    sqlx::query_scalar(&format!(
+        "SELECT EXISTS(SELECT 1 FROM {journal} WHERE event_id = $1)"
+    ))
+    .bind(event_id)
+    .fetch_one(pool)
+    .await
+    .expect("check live journal row")
+}
+
+/// Retention against a live journal. Published and acked rows past the age
+/// are pruned; dead-lettered rows and each topic's newest row stay. A topic
+/// override prunes sooner, but never past the position of a named consumer that
+/// is still acknowledging, and the durable head never moves backward. Every pass
+/// is scoped to this test's topics so concurrent tests' rows are untouched.
 #[tokio::test]
-#[ignore = "requires live Postgres: UDB_LIVE_CDC_TESTS=1 cargo test --lib cdc::live_tests -- --ignored --nocapture"]
-async fn live_journal_retention_sweep_removes_only_old_acked_rows() {
+#[ignore = "requires live Postgres; CI runs every ignored lib test"]
+async fn live_journal_retention_keeps_topic_heads_dlq_and_consumer_floor() {
     let _guard = live_cdc_db_lock().lock().await;
     let Some(pool) = live_cdc_pool().await else {
+        if crate::runtime::service::live_tests::support::live_lane_active() {
+            panic!("journal retention proof requires the CI Postgres DSN");
+        }
         eprintln!("{LIVE_GATE_HINT}");
         return;
     };
-    let dsn = live_pg_dsn().expect("live dsn present when pool connected");
-    let config = CdcConfig {
-        idempotency_ttl_secs: 3_600, // 1h TTL: "old" rows are 2h past
-        ..CdcConfig::default()
+    let engine = live_engine(pool.clone(), live_pg_dsn().unwrap(), CdcConfig::default());
+    let catalog = crate::runtime::system::SystemCatalogConfig::current();
+    let run = Uuid::new_v4().simple().to_string();
+    let scope = format!("udb.cdc.live.retention.{run}.*");
+    let events_topic = format!("udb.cdc.live.retention.{run}.events.v1");
+    let quiet_topic = format!("udb.cdc.live.retention.{run}.quiet.v1");
+    let lock_topic = format!("udb.cdc.live.retention.{run}.lock.acquired.v1");
+    const DAY: f64 = 86_400.0;
+    const HOUR: f64 = 3_600.0;
+
+    let (quiet_only, _) =
+        insert_aged_journal_row(&pool, &quiet_topic, "published", 8.0 * DAY).await;
+    let (old_published, _) =
+        insert_aged_journal_row(&pool, &events_topic, "published", 8.0 * DAY).await;
+    let (old_acked, _) = insert_aged_journal_row(&pool, &events_topic, "acked", 8.0 * DAY).await;
+    let (old_dlq, _) = insert_aged_journal_row(&pool, &events_topic, "dlq", 8.0 * DAY).await;
+    let (recent, _) = insert_aged_journal_row(&pool, &events_topic, "published", DAY).await;
+    let (lock_ancient, _) =
+        insert_aged_journal_row(&pool, &lock_topic, "published", 8.0 * DAY).await;
+    let (lock_old, lock_old_position) =
+        insert_aged_journal_row(&pool, &lock_topic, "published", 2.0 * HOUR).await;
+    let (lock_recent, _) = insert_aged_journal_row(&pool, &lock_topic, "published", 600.0).await;
+    let (lock_newest, _) = insert_aged_journal_row(&pool, &lock_topic, "published", 0.0).await;
+
+    // A named consumer of the lock topic that has not yet acked past the 2h row.
+    let cursors = catalog.cdc_consumer_cursors_relation();
+    let tenant = format!("retention-{run}");
+    sqlx::query(&format!(
+        "INSERT INTO {cursors} (tenant_id, project_id, consumer_name, topic_pattern, last_event_id, owner_identity, last_published_at, last_journal_position, acked_at) \
+         VALUES ($1, 'default', 'retention-floor', $2, $3, 'user:retention-test', 'epoch', $4, NOW())"
+    ))
+    .bind(&tenant)
+    .bind(&lock_topic)
+    .bind(Uuid::nil())
+    .bind(lock_old_position - 1)
+    .execute(&pool)
+    .await
+    .expect("named consumer below the 2h lock row");
+
+    let head_before = super::journal::head(&pool, &catalog).await.expect("head");
+    let retention = JournalRetention {
+        global_secs: Some(7 * 86_400),
+        overrides: vec![(lock_topic.clone(), 3_600)],
+        only_topics: Some(scope.clone()),
     };
-    let engine = live_engine(pool.clone(), dsn, config);
-
-    async fn insert_journal_row(pool: &PgPool, event_id: Uuid, state: &str, age_secs: f64) {
-        sqlx::query(
-            "INSERT INTO udb_system.udb_cdc_event_journal \
-             (event_id, topic, partition_key, payload, published_at, delivery_state) \
-             VALUES ($1, 'udb.cdc.live.retention.v1', 'live-test', '{}'::JSONB, \
-                     NOW() - make_interval(secs => $2), $3)",
-        )
-        .bind(event_id)
-        .bind(age_secs)
-        .bind(state)
-        .execute(pool)
+    engine
+        .run_journal_retention_sweep_with(&retention)
         .await
-        .expect("insert live journal row");
-    }
-    async fn journal_row_count(pool: &PgPool, event_id: Uuid) -> i64 {
-        sqlx::query_scalar(
-            "SELECT COUNT(*) FROM udb_system.udb_cdc_event_journal WHERE event_id = $1",
-        )
-        .bind(event_id)
-        .fetch_one(pool)
+        .expect("retention sweep");
+
+    assert!(
+        !journal_row_exists(&pool, old_published).await,
+        "8d published row is pruned"
+    );
+    assert!(
+        !journal_row_exists(&pool, old_acked).await,
+        "8d acked row is pruned"
+    );
+    assert!(
+        journal_row_exists(&pool, old_dlq).await,
+        "dead-lettered rows survive retention"
+    );
+    assert!(
+        journal_row_exists(&pool, recent).await,
+        "a row inside retention survives"
+    );
+    assert!(
+        journal_row_exists(&pool, quiet_only).await,
+        "a topic's newest row survives as its resume point"
+    );
+    assert!(
+        !journal_row_exists(&pool, lock_ancient).await,
+        "global retention applies whatever the consumer floor"
+    );
+    assert!(
+        journal_row_exists(&pool, lock_old).await,
+        "the override never prunes past a live named consumer"
+    );
+    assert!(
+        journal_row_exists(&pool, lock_recent).await,
+        "inside the override age"
+    );
+    assert!(journal_row_exists(&pool, lock_newest).await);
+
+    sqlx::query(&format!("DELETE FROM {cursors} WHERE tenant_id = $1"))
+        .bind(&tenant)
+        .execute(&pool)
         .await
-        .expect("count live journal row")
-    }
-
-    let old_acked = Uuid::new_v4();
-    let fresh_acked = Uuid::new_v4();
-    let old_published = Uuid::new_v4();
-    let old_dlq = Uuid::new_v4();
-    insert_journal_row(&pool, old_acked, "acked", 7_200.0).await;
-    insert_journal_row(&pool, fresh_acked, "acked", 0.0).await;
-    insert_journal_row(&pool, old_published, "published", 7_200.0).await;
-    insert_journal_row(&pool, old_dlq, "dlq", 7_200.0).await;
-
-    engine.run_journal_retention_sweep().await;
-
-    assert_eq!(
-        journal_row_count(&pool, old_acked).await,
-        0,
-        "acked row older than the TTL must be pruned"
+        .expect("remove the named consumer");
+    engine
+        .run_journal_retention_sweep_with(&retention)
+        .await
+        .expect("retention sweep");
+    assert!(
+        !journal_row_exists(&pool, lock_old).await,
+        "without a consumer behind it the 2h lock row passes the 1h override"
     );
-    assert_eq!(
-        journal_row_count(&pool, fresh_acked).await,
-        1,
-        "acked row inside the TTL must survive"
-    );
-    assert_eq!(
-        journal_row_count(&pool, old_published).await,
-        1,
-        "unacked 'published' rows are durable evidence and survive retention"
-    );
-    assert_eq!(
-        journal_row_count(&pool, old_dlq).await,
-        1,
-        "'dlq' rows are durable operator evidence and survive retention"
+    assert!(journal_row_exists(&pool, lock_recent).await);
+    assert!(journal_row_exists(&pool, lock_newest).await);
+    let head_after = super::journal::head(&pool, &catalog).await.expect("head");
+    assert!(
+        head_after >= head_before,
+        "retention never moves the durable head"
     );
 
-    sqlx::query("DELETE FROM udb_system.udb_cdc_event_journal WHERE event_id = ANY($1)")
-        .bind([old_acked, fresh_acked, old_published, old_dlq].as_slice())
+    let journal = catalog.cdc_journal_relation();
+    sqlx::query(&format!("DELETE FROM {journal} WHERE event_id = ANY($1)"))
+        .bind(
+            [
+                quiet_only,
+                old_published,
+                old_acked,
+                old_dlq,
+                recent,
+                lock_ancient,
+                lock_old,
+                lock_recent,
+                lock_newest,
+            ]
+            .as_slice(),
+        )
         .execute(&pool)
         .await
         .expect("clean up live journal rows");
+}
+
+/// A subscriber of a quiet topic on a busy journal reads only its topic's rows:
+/// from cursor 0 the poll returns the two quiet rows, not the noise between
+/// them, ends at the committed head, and the planner serves the pattern from
+/// the topic index.
+#[tokio::test]
+#[ignore = "requires live Postgres; CI runs every ignored lib test"]
+async fn live_quiet_topic_poll_reads_only_its_topic_rows() {
+    let _guard = live_cdc_db_lock().lock().await;
+    let Some(pool) = live_cdc_pool().await else {
+        if crate::runtime::service::live_tests::support::live_lane_active() {
+            panic!("quiet topic proof requires the CI Postgres DSN");
+        }
+        eprintln!("{LIVE_GATE_HINT}");
+        return;
+    };
+    let catalog = crate::runtime::system::SystemCatalogConfig::current_arc();
+    let journal = catalog.cdc_journal_relation();
+    let run = Uuid::new_v4().simple().to_string();
+    let noise_topic = format!("udb.cdc.live.noise.{run}.v1");
+    let quiet_pattern = format!("udb.cdc.live.quiet.{run}.*");
+    let quiet_topic = format!("udb.cdc.live.quiet.{run}.orders.v1");
+
+    let (first, _) = insert_aged_journal_row(&pool, &quiet_topic, "published", 0.0).await;
+    sqlx::query(&format!(
+        "INSERT INTO {journal} (event_id, topic, partition_key, payload) \
+         SELECT gen_random_uuid(), $1, 'noise', '{{}}'::JSONB FROM generate_series(1, 5000)"
+    ))
+    .bind(&noise_topic)
+    .execute(&pool)
+    .await
+    .expect("busy journal noise");
+    let (second, _) = insert_aged_journal_row(&pool, &quiet_topic, "published", 0.0).await;
+
+    let tail = super::engine_tail::JournalTail::new(catalog.clone(), &quiet_pattern, 1_000);
+    let snapshot = TopicPolicySnapshot {
+        policies: Vec::new(),
+        generation: 0,
+        loaded_at_unix: 0,
+        available: true,
+    };
+    let mut cursor = 0i64;
+    let mut seen = std::collections::HashSet::new();
+    let mut order = std::collections::VecDeque::new();
+    let outcome = super::engine_tail::cdc_journal_poll(
+        &pool,
+        &tail,
+        &mut cursor,
+        &WildMatch::new(&quiet_pattern),
+        "",
+        "",
+        true,
+        &snapshot,
+        &mut seen,
+        &mut order,
+        1_024,
+    )
+    .await
+    .expect("quiet topic poll");
+    assert_eq!(outcome.scanned, 2, "only the quiet topic's rows are read");
+    let ids: Vec<_> = outcome
+        .envelopes
+        .iter()
+        .map(|e| e.event_id.clone())
+        .collect();
+    assert_eq!(ids, vec![first.to_string(), second.to_string()]);
+    let reached = outcome.reached.expect("a short page reaches the head");
+    assert_eq!(cursor, reached);
+    assert!(reached >= outcome.envelopes[1].journal_position);
+
+    sqlx::query(&format!("ANALYZE {journal}"))
+        .execute(&pool)
+        .await
+        .expect("analyze journal");
+    let mut explain = sqlx::query_scalar::<_, String>(&format!("EXPLAIN {}", tail.sql))
+        .bind(0i64)
+        .bind(reached);
+    for value in &tail.binds {
+        explain = explain.bind(value);
+    }
+    let plan = explain
+        .fetch_all(&pool)
+        .await
+        .expect("explain tail")
+        .join("\n");
+    assert!(
+        plan.contains("udb_cdc_topic_"),
+        "the quiet-topic poll must use a topic index:\n{plan}"
+    );
+
+    sqlx::query(&format!("DELETE FROM {journal} WHERE topic = ANY($1)"))
+        .bind([noise_topic, quiet_topic].as_slice())
+        .execute(&pool)
+        .await
+        .expect("clean up live journal rows");
+}
+
+async fn open_progress_stream(
+    engine: &CdcEngine,
+    topic: &str,
+    since_event_id: Option<String>,
+) -> Pin<Box<dyn tokio_stream::Stream<Item = Result<CdcEnvelope, tonic::Status>> + Send>> {
+    engine
+        .stream_cdc_with_cursor(
+            vec!["udb:admin".to_string(), "udb:cdc:read".to_string()],
+            topic.to_string(),
+            since_event_id,
+            Some("tenant-a".to_string()),
+            Some("default".to_string()),
+            None,
+            CdcStreamOptions {
+                progress_markers: true,
+            },
+        )
+        .await
+        .expect("open progress stream")
+}
+
+async fn next_progress_item(
+    stream: &mut Pin<
+        Box<dyn tokio_stream::Stream<Item = Result<CdcEnvelope, tonic::Status>> + Send>,
+    >,
+) -> CdcEnvelope {
+    tokio::time::timeout(
+        Duration::from_secs(5),
+        tokio_stream::StreamExt::next(stream),
+    )
+    .await
+    .expect("stream item within five seconds")
+    .expect("stream stays open")
+    .expect("stream item is ok")
+}
+
+/// A progress marker reports the committed head after replay, and its token
+/// resumes a later stream even after the rows around it were deleted.
+#[tokio::test]
+#[ignore = "requires live Postgres; CI runs every ignored lib test"]
+async fn live_progress_marker_reports_head_and_resumes_after_retention() {
+    let _guard = live_cdc_db_lock().lock().await;
+    let Some(pool) = live_cdc_pool().await else {
+        if crate::runtime::service::live_tests::support::live_lane_active() {
+            panic!("progress marker proof requires the CI Postgres DSN");
+        }
+        eprintln!("{LIVE_GATE_HINT}");
+        return;
+    };
+    let catalog = crate::runtime::system::SystemCatalogConfig::current();
+    let topic = format!("udb.cdc.live.progress.{}.v1", Uuid::new_v4().simple());
+    let policy = catalog.topic_policy_relation();
+    sqlx::query(&format!(
+        "INSERT INTO {policy} (topic, owning_project, owning_service, schema_uri, enabled) \
+         VALUES ($1, 'default', 'progress-cdc-live', '', TRUE)"
+    ))
+    .bind(&topic)
+    .execute(&pool)
+    .await
+    .expect("allow progress topic");
+    let engine = live_engine(pool.clone(), live_pg_dsn().unwrap(), CdcConfig::default());
+    engine.load_topic_policies().await.expect("load policies");
+
+    let (before, before_position) = insert_aged_journal_row(&pool, &topic, "published", 0.0).await;
+    let head_before = super::journal::head(&pool, &catalog).await.expect("head");
+    let mut stream = open_progress_stream(&engine, &topic, None).await;
+    let marker = next_progress_item(&mut stream).await;
+    drop(stream);
+    let head_after = super::journal::head(&pool, &catalog).await.expect("head");
+    assert!(
+        marker.progress_only,
+        "a fresh stream reports where replay ended"
+    );
+    assert_eq!(marker.topic, super::journal::PROGRESS_TOPIC);
+    assert!(
+        (head_before..=head_after).contains(&marker.journal_position),
+        "the marker carries the committed head: {} not in {head_before}..={head_after}",
+        marker.journal_position
+    );
+    assert!(marker.journal_position >= before_position);
+    let token = Uuid::parse_str(&marker.event_id).expect("marker id is a UUID");
+    assert_eq!(
+        super::journal::decode_progress_token(&token),
+        Some(marker.journal_position)
+    );
+
+    // Retention removed this topic's rows; the token needs no row to resume.
+    let journal = catalog.cdc_journal_relation();
+    sqlx::query(&format!("DELETE FROM {journal} WHERE topic = $1"))
+        .bind(&topic)
+        .execute(&pool)
+        .await
+        .expect("simulate retention");
+    assert!(!journal_row_exists(&pool, before).await);
+    let mut resumed = open_progress_stream(&engine, &topic, Some(marker.event_id.clone())).await;
+    let (after, _) = insert_aged_journal_row(&pool, &topic, "published", 0.0).await;
+    let delivered = loop {
+        let item = next_progress_item(&mut resumed).await;
+        if !item.progress_only {
+            break item;
+        }
+        assert!(item.journal_position >= marker.journal_position);
+    };
+    assert_eq!(delivered.event_id, after.to_string());
+    assert!(delivered.journal_position > marker.journal_position);
+    drop(resumed);
+
+    sqlx::query(&format!("DELETE FROM {journal} WHERE topic = $1"))
+        .bind(&topic)
+        .execute(&pool)
+        .await
+        .expect("clean up live journal rows");
+    sqlx::query(&format!("DELETE FROM {policy} WHERE topic = $1"))
+        .bind(&topic)
+        .execute(&pool)
+        .await
+        .expect("clean topic policy");
 }
 
 /// The cross-replica LiveQuery tail: `journal_head_event_id` anchors a new

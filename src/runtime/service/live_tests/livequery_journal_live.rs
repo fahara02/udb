@@ -518,6 +518,8 @@ async fn live_livequery_commit_prefix_and_local_wake_keep_cross_replica_order() 
                 partition_key: row.try_get("partition_key").unwrap(),
                 payload_json: payload.to_string(),
                 published_at: row.try_get("published_at").unwrap(),
+                journal_position: row.try_get("journal_position").unwrap_or(0),
+                progress_only: false,
             })
             .expect("the actual shared feed must listen for local wakes");
     }
