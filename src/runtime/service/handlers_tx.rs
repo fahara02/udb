@@ -772,8 +772,8 @@ impl DataBrokerService {
                 "INSERT INTO {relation} AS current_cursor (tenant_id, project_id, consumer_name, topic_pattern, last_event_id, owner_identity, last_published_at, last_journal_position, acked_at) \
                  VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW()) \
                  ON CONFLICT (tenant_id, project_id, consumer_name, topic_pattern) DO UPDATE SET \
-                   last_event_id = CASE WHEN current_cursor.last_journal_position < EXCLUDED.last_journal_position THEN EXCLUDED.last_event_id ELSE current_cursor.last_event_id END, \
-                   last_published_at = CASE WHEN current_cursor.last_journal_position < EXCLUDED.last_journal_position THEN EXCLUDED.last_published_at ELSE current_cursor.last_published_at END, \
+                   last_event_id = CASE WHEN current_cursor.last_journal_position <= EXCLUDED.last_journal_position THEN EXCLUDED.last_event_id ELSE current_cursor.last_event_id END, \
+                   last_published_at = CASE WHEN current_cursor.last_journal_position <= EXCLUDED.last_journal_position THEN EXCLUDED.last_published_at ELSE current_cursor.last_published_at END, \
                    last_journal_position = GREATEST(current_cursor.last_journal_position, EXCLUDED.last_journal_position), acked_at = NOW() \
                  WHERE current_cursor.owner_identity = EXCLUDED.owner_identity \
                  RETURNING EXTRACT(EPOCH FROM acked_at)::BIGINT"
