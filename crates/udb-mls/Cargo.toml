@@ -14,7 +14,7 @@
 # through the caller's `StateStore`.
 [package]
 name = "udb-mls"
-version = "0.6.1"
+version = "0.6.2"
 edition = "2021"
 rust-version = "1.88"
 description = "Client-side MLS (RFC 9420) for UDB's end-to-end encrypted messaging service: device keys, KeyPackages, group commits, Welcome processing and message encryption over OpenMLS."
