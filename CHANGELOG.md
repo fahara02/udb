@@ -5,30 +5,6 @@ the package version in `Cargo.toml`; historical v0.3.2 audit material is folded
 into the v0.3.x entries because the codebase advanced to v0.3.7 before that
 release line was tagged.
 
-## [0.6.3] - Unreleased
-
-### Fixed
-
-- **The embedding work emitter and the search freshness and reindex workers
-  scanned the whole journal on every tick.** Each joined every retained
-  journal row to its registrations and checked each one against the outbox and
-  the journal for a completion marker. Each now keeps its position in
-  `udb_system.udb_journal_reader_cursors` (`embedding.work`,
-  `search.freshness`, `search.reindex`) and reads at most 5,000 journal
-  positions per query, in position order, moving on to the next window in the
-  same tick (up to 20) while a window holds nothing to do. With no ACTIVE
-  embedding source naming a CDC topic, the emitter's change stage does not read
-  the journal and moves its position to the head; with no ACTIVE search index
-  naming one, neither does the freshness worker; with no index that is not
-  deleted, neither does the reindex stage. An event whose work failed is
-  retried: the position stops just before it. Changes published before a
-  source or index exists are no longer picked up when it is registered; run
-  `Backfill` or `Reindex` for those.
-
-### Breaking for callers
-
-- None.
-
 ## [0.6.2] - 2026-10-21
 
 ### Added
@@ -121,8 +97,34 @@ release line was tagged.
   cache invalidator re-read the whole retained journal every tick; it now reads
   one window after its stored position.
 
+- **The embedding work emitter and the search freshness and reindex workers
+  scanned the whole journal on every tick.** Each joined every retained
+  journal row to its registrations and checked each one against the outbox and
+  the journal for a completion marker. Each now keeps its position in
+  `udb_system.udb_journal_reader_cursors` (`embedding.work`,
+  `search.freshness`, `search.reindex`) and reads at most 5,000 journal
+  positions per query, in position order, moving on to the next window in the
+  same tick (up to 20) while a window holds nothing to do. With no ACTIVE
+  embedding source naming a CDC topic, the emitter's change stage does not read
+  the journal and moves its position to the head; with no ACTIVE search index
+  naming one, neither does the freshness worker; with no index that is not
+  deleted, neither does the reindex stage. An event whose work failed is
+  retried: the position stops just before it. Changes published before a
+  source or index exists are no longer picked up when it is registered; run
+  `Backfill` or `Reindex` for those.
+
+
+
 ### Breaking for callers
 
+- **A new embedding source or search index no longer replays journal history
+  on its own.** The embedding work emitter and the search freshness and reindex
+  workers now read the journal from a durable cursor. A source or index
+  registered after the upgrade picks up only changes published after the
+  worker's cursor, not the whole retained journal it used to scan every tick.
+  - detect: code: `EmbeddingSource`
+  - detect: code: `SearchIndex`
+  - fix: after registering a source or index, call `EmbeddingService.Backfill` (or `SearchService.Reindex`) to process existing rows, as for any newly attached table.
 - **A new durable consumer name starts at the journal head.** A
   `consumer_name` that has never subscribed receives only events committed
   after its first subscription; it used to replay the retained history first.
