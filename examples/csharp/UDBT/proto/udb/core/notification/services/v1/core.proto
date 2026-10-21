@@ -1,0 +1,419 @@
+syntax = "proto3";
+
+package udb.core.notification.services.v1;
+
+import "udb/core/common/v1/dto.proto";
+import "udb/core/common/v1/types.proto";
+import "udb/core/notification/entity/v1/enums.proto";
+import "udb/core/notification/entity/v1/notification_log.proto";
+import "udb/core/notification/entity/v1/notification_preference.proto";
+import "udb/core/notification/entity/v1/notification_template.proto";
+import "udb/core/common/v1/security.proto";
+
+option csharp_namespace = "Udb.Core.Notification.Services.V1";
+option go_package = "github.com/udb-project/udb/gen/go/udb/core/notification/services/v1;notificationservicev1";
+option java_package = "com.udb.core.notification.services.v1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Notification\\Services\\V1";
+option php_namespace = "Udb\\Core\\Notification\\Services\\V1";
+
+message SendNotificationRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "notification"
+    generate_minimal_example: true
+  };
+  string event_type = 1; // Must match a template event_type
+  string recipient_id = 2;
+  string recipient_address = 3; // Resolved by caller or looked up in User service
+  string tenant_id = 4;
+  string project_id = 5;
+  string resource_type = 6;
+  string resource_id = 7;
+  string resource_name = 8;
+  string correlation_id = 9;
+  string locale = 10; // Defaults to 'en'
+  map<string, string> variables = 11; // Template variable substitutions
+  repeated udb.core.notification.entity.v1.NotificationChannel channels = 12; // Empty = use template-default channels
+  udb.core.common.v1.RequestContext context = 13;
+}
+
+message SendNotificationResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "notification"
+    generate_minimal_example: true
+  };
+  repeated udb.core.notification.entity.v1.NotificationLog logs = 1;
+}
+
+message GetNotificationRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "notification"
+    generate_minimal_example: true
+  };
+  string log_id = 1;
+}
+
+message GetNotificationResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "notification"
+    generate_minimal_example: true
+  };
+  udb.core.notification.entity.v1.NotificationLog log = 1;
+}
+
+message ListNotificationsRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "notification"
+    generate_minimal_example: true
+  };
+  string recipient_id = 1;
+  string tenant_id = 2;
+  string project_id = 3;
+  string resource_type = 4;
+  string resource_id = 5;
+  string event_type = 6;
+  udb.core.notification.entity.v1.NotificationChannel channel = 7;
+  udb.core.notification.entity.v1.NotificationStatus status = 8;
+  udb.core.common.v1.PageRequest page = 9;
+}
+
+message ListNotificationsResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "notification"
+    generate_minimal_example: true
+  };
+  repeated udb.core.notification.entity.v1.NotificationLog logs = 1;
+  udb.core.common.v1.PageResponse page = 2;
+}
+
+message RetryNotificationRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "notification"
+    generate_minimal_example: true
+  };
+  string log_id = 1;
+  udb.core.common.v1.RequestContext context = 2;
+}
+
+message RetryNotificationResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "notification"
+    generate_minimal_example: true
+  };
+  udb.core.notification.entity.v1.NotificationLog log = 1;
+}
+
+// ── Template management ─────────────────────────────────────────────────────
+
+message UpsertTemplateRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "notification"
+    generate_minimal_example: true
+  };
+  string event_type = 1;
+  udb.core.notification.entity.v1.NotificationChannel channel = 2;
+  string locale = 3;
+  string subject_template = 4;
+  string body_template = 5;
+  bool is_active = 6;
+  udb.core.common.v1.RequestContext context = 7;
+}
+
+message UpsertTemplateResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "notification"
+    generate_minimal_example: true
+  };
+  udb.core.notification.entity.v1.NotificationTemplate template = 1;
+}
+
+message GetTemplateRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "notification"
+    generate_minimal_example: true
+  };
+  string event_type = 1;
+  udb.core.notification.entity.v1.NotificationChannel channel = 2;
+  string locale = 3;
+}
+
+message GetTemplateResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "notification"
+    generate_minimal_example: true
+  };
+  udb.core.notification.entity.v1.NotificationTemplate template = 1;
+}
+
+message ListTemplatesRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "notification"
+    generate_minimal_example: true
+  };
+  string event_type = 1;
+  udb.core.notification.entity.v1.NotificationChannel channel = 2;
+  bool active_only = 3;
+  udb.core.common.v1.PageRequest page = 4;
+}
+
+message ListTemplatesResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "notification"
+    generate_minimal_example: true
+  };
+  repeated udb.core.notification.entity.v1.NotificationTemplate templates = 1;
+  udb.core.common.v1.PageResponse page = 2;
+}
+
+// ── Delivery stats ──────────────────────────────────────────────────────────
+
+message GetDeliveryStatsRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "notification"
+    generate_minimal_example: true
+  };
+  string tenant_id = 1;
+  string event_type = 2;
+  string date_from = 3; // YYYY-MM-DD
+  string date_to = 4;
+}
+
+message ChannelStats {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "notification"
+    generate_minimal_example: true
+  };
+  udb.core.notification.entity.v1.NotificationChannel channel = 1;
+  int64 sent = 2;
+  int64 delivered = 3;
+  int64 failed = 4;
+  int64 suppressed = 5;
+  double delivery_rate = 6;
+}
+
+message GetDeliveryStatsResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "notification"
+    generate_minimal_example: true
+  };
+  int64 total_sent = 1;
+  int64 total_delivered = 2;
+  int64 total_failed = 3;
+  double overall_delivery_rate = 4;
+  repeated ChannelStats by_channel = 5;
+}
+
+// ── Delivery reporting (master-plan 9.13) ───────────────────────────────────
+
+// ReportDelivery — an internal/SDK seam. An authenticated caller (the leader
+// delivery worker) or a provider webhook bridge reports the terminal per-channel
+// delivery outcome for a previously-sent NotificationLog. The handler upserts the
+// matching NotificationDeliveryAttempt row and emits
+// `udb.notification.delivery.<status>.v1` to the outbox.
+message ReportDeliveryRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "notification"
+    generate_minimal_example: true
+  };
+  string tenant_id = 1;
+  string log_id = 2; // The NotificationLog (intent) this outcome is for.
+  udb.core.notification.entity.v1.NotificationChannel channel = 3;
+  string provider = 4; // SES | SMTP | TWILIO | FCM | …
+  udb.core.notification.entity.v1.NotificationStatus status = 5; // queued|sent|delivered|failed
+  string provider_message_id = 6;
+  string error_message = 7;
+  udb.core.common.v1.RequestContext context = 8;
+}
+
+message ReportDeliveryResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "notification"
+    generate_minimal_example: true
+  };
+  udb.core.notification.entity.v1.NotificationDeliveryAttempt attempt = 1;
+}
+
+// ── User notification preferences ──────────────────────────────────────────
+
+message SetPreferenceRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "notification"
+    generate_minimal_example: true
+  };
+  string user_id = 1;
+  string tenant_id = 2;
+  udb.core.notification.entity.v1.NotificationChannel channel = 3;
+  string event_type = 4; // Empty = channel-wide opt-out
+  bool is_opted_out = 5;
+  udb.core.common.v1.RequestContext context = 6;
+}
+
+message SetPreferenceResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "notification"
+    generate_minimal_example: true
+  };
+  udb.core.notification.entity.v1.NotificationPreference preference = 1;
+}
+
+message GetPreferenceRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "notification"
+    generate_minimal_example: true
+  };
+  string user_id = 1;
+  string tenant_id = 2;
+  udb.core.notification.entity.v1.NotificationChannel channel = 3;
+  string event_type = 4;
+}
+
+message GetPreferenceResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "notification"
+    generate_minimal_example: true
+  };
+  udb.core.notification.entity.v1.NotificationPreference preference = 1;
+}
+
+message ListPreferencesRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "notification"
+    generate_minimal_example: true
+  };
+  string user_id = 1;
+  string tenant_id = 2;
+  udb.core.common.v1.PageRequest page = 3;
+}
+
+message ListPreferencesResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "notification"
+    generate_minimal_example: true
+  };
+  repeated udb.core.notification.entity.v1.NotificationPreference preferences = 1;
+  udb.core.common.v1.PageResponse page = 2;
+}

@@ -1,0 +1,79 @@
+syntax = "proto3";
+
+package udb.core.notification.entity.v1;
+
+import "google/protobuf/timestamp.proto";
+import "udb/core/common/v1/db.proto";
+import "udb/core/common/v1/security.proto";
+import "udb/core/notification/entity/v1/enums.proto";
+
+option csharp_namespace = "Udb.Core.Notification.Entity.V1";
+option go_package = "github.com/udb-project/udb/gen/go/udb/core/notification/entity/v1;notificationv1";
+option java_package = "com.udb.core.notification.entity.v1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Notification\\Entity\\V1";
+option php_namespace = "Udb\\Core\\Notification\\Entity\\V1";
+
+// Notification is the core domain entity for a queued or sent notification.
+message Notification {
+  option (udb.core.common.v1.pg_table) = {
+    table_name: "notifications"
+    schema_name: "udb_notification"
+    migration_order: 1
+    is_table: true
+    comment: "Queued, sent, delivered, and failed notification records"
+    soft_delete: true
+    audit_fields: true
+    enable_rls: true
+    rls_policies: {
+      policy_name: "tenant_isolation"
+      using: "(tenant_id::text = current_setting('app.current_tenant_id', true)::text)"
+      permissive: true
+    }
+    indexes: {
+      index_name: "idx_notifications_tenant_status"
+      index_type: "BTREE"
+      columns: "tenant_id"
+      columns: "status"
+    }
+    indexes: {
+      index_name: "idx_notifications_recipient"
+      index_type: "BTREE"
+      columns: "recipient_id"
+    }
+    replica_hint: "primary"
+    required_scope: "notification:write"
+  };
+  option (udb.core.common.v1.db_table_security) = {
+    tenant_isolation_mode: "tenant"
+    tenant_column: "tenant_id"
+    rls_policy_template: "tenant_id = current_setting('app.current_tenant_id')"
+    soft_delete_mode: "soft_delete"
+    retention_class: "notification.operational"
+    retention_days: 2555
+    audit_mode: AUDIT_MODE_MUTATION
+    encryption_profile: "tenant"
+    pii_profile: "recipient"
+    export_eligible: false
+    data_residency_policy_ref: "tenant.data_residency"
+  };
+
+  string notification_id = 1 [(udb.core.common.v1.pg_column) = { column_name: "notification_id" sql_type: "UUID" primary_key: true not_null: true default_value: "gen_random_uuid()" }];
+  string recipient_id = 2 [(udb.core.common.v1.pg_column) = { column_name: "recipient_id" sql_type: "UUID" not_null: true index: { index_name: "idx_notifications_recipient_id" index_type: "BTREE" } }];
+  NotificationType type = 3 [(udb.core.common.v1.pg_column) = { column_name: "type" sql_type: "VARCHAR(40)" not_null: true default_value: "'NOTIFICATION_TYPE_UNSPECIFIED'" }];
+  NotificationChannel channel = 4 [(udb.core.common.v1.pg_column) = { column_name: "channel" sql_type: "VARCHAR(40)" not_null: true default_value: "'NOTIFICATION_CHANNEL_UNSPECIFIED'" }];
+  string subject = 5 [(udb.core.common.v1.pg_column) = { column_name: "subject" sql_type: "TEXT" not_null: true default_value: "''" }];
+  string message = 6 [(udb.core.common.v1.pg_column) = { column_name: "message" sql_type: "TEXT" not_null: true default_value: "''" }];
+  map<string, string> template_data = 7 [(udb.core.common.v1.pg_column) = { column_name: "template_data" sql_type: "JSONB" is_json: true not_null: true default_value: "'{}'::jsonb" }];
+  NotificationPriority priority = 8 [(udb.core.common.v1.pg_column) = { column_name: "priority" sql_type: "VARCHAR(40)" not_null: true default_value: "'NOTIFICATION_PRIORITY_NORMAL'" }];
+  NotificationStatus status = 9 [(udb.core.common.v1.pg_column) = { column_name: "status" sql_type: "VARCHAR(40)" not_null: true default_value: "'NOTIFICATION_STATUS_PENDING'" index: { index_name: "idx_notifications_status" index_type: "BTREE" } }];
+  google.protobuf.Timestamp scheduled_at = 10 [(udb.core.common.v1.pg_column) = { column_name: "scheduled_at" sql_type: "TIMESTAMPTZ" }];
+  google.protobuf.Timestamp sent_at = 11 [(udb.core.common.v1.pg_column) = { column_name: "sent_at" sql_type: "TIMESTAMPTZ" }];
+  google.protobuf.Timestamp delivered_at = 12 [(udb.core.common.v1.pg_column) = { column_name: "delivered_at" sql_type: "TIMESTAMPTZ" }];
+  google.protobuf.Timestamp read_at = 13 [(udb.core.common.v1.pg_column) = { column_name: "read_at" sql_type: "TIMESTAMPTZ" }];
+  google.protobuf.Timestamp created_at = 14 [(udb.core.common.v1.pg_column) = { column_name: "created_at" sql_type: "TIMESTAMPTZ" not_null: true default_value: "CURRENT_TIMESTAMP" exclude_from_insert: true exclude_from_update: true }];
+  int32 retry_count = 15 [(udb.core.common.v1.pg_column) = { column_name: "retry_count" sql_type: "INTEGER" not_null: true default_value: "0" }];
+  string error_message = 16 [(udb.core.common.v1.pg_column) = { column_name: "error_message" sql_type: "TEXT" not_null: true default_value: "''" }];
+  string tenant_id = 17 [(udb.core.common.v1.pg_column) = { column_name: "tenant_id" tenant_column: true sql_type: "VARCHAR(64)" not_null: true index: { index_name: "idx_notifications_tenant" index_type: "BTREE" } }];
+  google.protobuf.Timestamp deleted_at = 18 [(udb.core.common.v1.pg_column) = { column_name: "deleted_at" sql_type: "TIMESTAMPTZ" index: { index_name: "idx_notifications_active" index_type: "BTREE" where_clause: "deleted_at IS NULL" } }];
+  string deleted_by = 19 [(udb.core.common.v1.pg_column) = { column_name: "deleted_by" sql_type: "UUID" }];
+}

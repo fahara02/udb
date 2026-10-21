@@ -1,0 +1,959 @@
+syntax = "proto3";
+
+package udb.core.authz.services.v1;
+
+import "google/api/field_behavior.proto";
+import "google/protobuf/field_mask.proto";
+import "google/protobuf/timestamp.proto";
+import "udb/core/authz/entity/v1/access_decision_audit.proto";
+import "udb/core/authz/entity/v1/enums.proto";
+import "udb/core/authz/entity/v1/policy_rule.proto";
+import "udb/core/authz/entity/v1/role.proto";
+import "udb/core/authz/entity/v1/user_role.proto";
+import "udb/core/common/v1/dto.proto";
+import "udb/core/common/v1/security.proto";
+
+option csharp_namespace = "Udb.Core.Authz.Services.V1";
+option go_package = "github.com/udb-project/udb/gen/go/udb/core/authz/services/v1;authzservicev1";
+option java_package = "com.udb.core.authz.services.v1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Authz\\Services\\V1";
+option php_namespace = "Udb\\Core\\Authz\\Services\\V1";
+
+// Authenticated caller claims copied from the UDB auth control plane and kept
+// local so authorization can be used by any project without importing broker
+// service protos.
+message Principal {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authz"
+    generate_minimal_example: true
+  };
+  string principal_id = 1;
+  string subject = 2;
+  string user_id = 3;
+  string service_identity = 4;
+  string tenant_id = 5;
+  string project_id = 6;
+  repeated string scopes = 7;
+  repeated string roles = 8;
+  string provider_id = 9;
+  string auth_method = 10;
+  int64 expires_at_unix = 11;
+  string account_kind = 12;
+  string domain = 13;
+  map<string, string> attributes = 14;
+}
+
+message ResourceRef {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authz"
+    generate_minimal_example: true
+  };
+  string resource_type = 1;
+  string resource_name = 2;
+  string message_type = 3;
+  string schema = 4;
+  string table = 5;
+  string backend = 6;
+  string instance = 7;
+  string resource_id = 8;
+  string collection = 9;
+  string bucket = 10;
+  string path = 11;
+  string service = 12;
+  string api = 13;
+  string tenant_id = 14;
+  string project_id = 15;
+  map<string, string> attributes = 16;
+}
+
+message Decision {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authz"
+    generate_minimal_example: true
+  };
+  string decision_id = 1;
+  bool allowed = 2;
+  string effect = 3;
+  string deny_reason = 4;
+  repeated string matched_policy_ids = 5;
+  repeated string required_scopes = 6;
+  string policy_version = 7;
+  string relationship_version = 8;
+  uint64 cache_ttl_seconds = 9;
+  bool audit_required = 10;
+}
+
+message AccessContext {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authz"
+    generate_minimal_example: true
+  };
+  string ip_address = 1;
+  string user_agent = 2;
+  string device_id = 3;
+  string token_id = 4;
+  string session_id = 5;
+  map<string, string> attributes = 6;
+}
+
+message CheckAccessRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authz"
+    generate_minimal_example: true
+  };
+  string user_id = 1 [(google.api.field_behavior) = REQUIRED];
+  string domain = 2 [(google.api.field_behavior) = REQUIRED];
+  string object = 3 [(google.api.field_behavior) = REQUIRED];
+  string action = 4 [(google.api.field_behavior) = REQUIRED];
+  AccessContext context = 5 [(google.api.field_behavior) = OPTIONAL];
+  Principal principal = 6 [(google.api.field_behavior) = OPTIONAL];
+  ResourceRef resource = 7 [(google.api.field_behavior) = OPTIONAL];
+  string purpose = 8 [(google.api.field_behavior) = OPTIONAL];
+  string tenant_id = 9 [(google.api.field_behavior) = OPTIONAL];
+  string project_id = 10 [(google.api.field_behavior) = OPTIONAL];
+  map<string, string> attributes = 11;
+}
+
+message CheckAccessResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authz"
+    generate_minimal_example: true
+  };
+  bool allowed = 1;
+  udb.core.authz.entity.v1.PolicyEffect effect = 2;
+  string matched_rule = 3;
+  string reason = 4;
+  Decision decision = 5;
+}
+
+message AuthzRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authz"
+    generate_minimal_example: true
+  };
+  Principal principal = 1;
+  string session_id = 2;
+  string tenant_id = 3;
+  string project_id = 4;
+  ResourceRef resource = 5;
+  string action = 6;
+  string purpose = 7;
+  map<string, string> attributes = 8;
+  AccessContext context = 9;
+  repeated string requested_scopes = 10;
+  string domain = 11;
+}
+
+message AuthzResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authz"
+    generate_minimal_example: true
+  };
+  Decision decision = 1;
+}
+
+message CreateRoleRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authz"
+    generate_minimal_example: true
+  };
+  string name = 1 [(google.api.field_behavior) = REQUIRED];
+  string description = 2 [(google.api.field_behavior) = OPTIONAL];
+  string created_by = 3 [(google.api.field_behavior) = REQUIRED];
+  string role_code = 4 [(google.api.field_behavior) = OPTIONAL];
+  string domain = 5 [(google.api.field_behavior) = OPTIONAL];
+  string tenant_id = 6 [(google.api.field_behavior) = OPTIONAL];
+  string project_id = 7 [(google.api.field_behavior) = OPTIONAL];
+  udb.core.authz.entity.v1.RoleScopeType scope_type = 8 [(google.api.field_behavior) = OPTIONAL];
+  string access_surface = 9 [(google.api.field_behavior) = OPTIONAL];
+  map<string, string> metadata = 10;
+}
+
+message CreateRoleResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authz"
+    generate_minimal_example: true
+  };
+  udb.core.authz.entity.v1.Role role = 1;
+}
+
+message AssignRoleRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authz"
+    generate_minimal_example: true
+  };
+  string user_id = 1 [(google.api.field_behavior) = REQUIRED];
+  string role_id = 2 [(google.api.field_behavior) = REQUIRED];
+  string domain = 3 [(google.api.field_behavior) = REQUIRED];
+  string assigned_by = 4 [(google.api.field_behavior) = REQUIRED];
+  google.protobuf.Timestamp expires_at = 5 [(google.api.field_behavior) = OPTIONAL];
+  string principal_id = 6 [(google.api.field_behavior) = OPTIONAL];
+  udb.core.authz.entity.v1.PrincipalKind principal_kind = 7 [(google.api.field_behavior) = OPTIONAL];
+  string tenant_id = 8 [(google.api.field_behavior) = OPTIONAL];
+  string project_id = 9 [(google.api.field_behavior) = OPTIONAL];
+}
+
+message AssignRoleResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authz"
+    generate_minimal_example: true
+  };
+  udb.core.authz.entity.v1.UserRole user_role = 1;
+}
+
+message CreatePolicyRuleRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authz"
+    generate_minimal_example: true
+  };
+  string subject = 1 [(google.api.field_behavior) = REQUIRED];
+  string domain = 2 [(google.api.field_behavior) = REQUIRED];
+  string object = 3 [(google.api.field_behavior) = REQUIRED];
+  string action = 4 [(google.api.field_behavior) = REQUIRED];
+  udb.core.authz.entity.v1.PolicyEffect effect = 5 [(google.api.field_behavior) = REQUIRED];
+  string condition = 6 [(google.api.field_behavior) = OPTIONAL];
+  string description = 7 [(google.api.field_behavior) = OPTIONAL];
+  string created_by = 8 [(google.api.field_behavior) = REQUIRED];
+  string tenant_id = 9 [(google.api.field_behavior) = OPTIONAL];
+  string project_id = 10 [(google.api.field_behavior) = OPTIONAL];
+  string resource_type = 11 [(google.api.field_behavior) = OPTIONAL];
+  map<string, string> attributes = 12;
+}
+
+message CreatePolicyRuleResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authz"
+    generate_minimal_example: true
+  };
+  udb.core.authz.entity.v1.PolicyRule policy = 1;
+}
+
+message ListUserPermissionsRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authz"
+    generate_minimal_example: true
+  };
+  string user_id = 1 [(google.api.field_behavior) = REQUIRED];
+  string domain = 2 [(google.api.field_behavior) = REQUIRED];
+  // Requested page size. Defaults to 50 and is capped at the native list maximum.
+  int32 page_size = 3 [(google.api.field_behavior) = OPTIONAL];
+  // Opaque pagination token returned by ListUserPermissionsResponse.next_page_token.
+  string page_token = 4 [(google.api.field_behavior) = OPTIONAL];
+}
+
+message EffectivePermission {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authz"
+    generate_minimal_example: true
+  };
+  // Canonical public permission object. Combined with action/domain/resource_type
+  // it forms the stable permission identity returned by ListUserPermissions.
+  string object = 1;
+  string action = 2;
+  string via_role = 3;
+  string resource_type = 4;
+  string domain = 5;
+}
+
+message ListUserPermissionsResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authz"
+    generate_minimal_example: true
+  };
+  repeated EffectivePermission permissions = 1;
+  // Opaque token for the next page; empty when no more permissions are available.
+  string next_page_token = 2;
+}
+
+message ListAccessDecisionAuditsRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authz"
+    generate_minimal_example: true
+  };
+  string user_id = 1 [(google.api.field_behavior) = OPTIONAL];
+  string domain = 2 [(google.api.field_behavior) = OPTIONAL];
+  string correlation_id = 3 [(google.api.field_behavior) = OPTIONAL];
+  udb.core.common.v1.PageRequest page = 4 [(google.api.field_behavior) = OPTIONAL];
+}
+
+message ListAccessDecisionAuditsResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authz"
+    generate_minimal_example: true
+  };
+  repeated udb.core.authz.entity.v1.AccessDecisionAudit audits = 1;
+  udb.core.common.v1.PageResponse page = 2;
+}
+
+message RevokeRoleRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authz"
+    generate_minimal_example: true
+  };
+  string user_id = 1;
+  string user_role_id = 2;
+  string reason = 3;
+  string revoked_by = 4;
+}
+
+message RevokeRoleResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authz"
+    generate_minimal_example: true
+  };
+  bool revoked = 1;
+}
+
+message ListUserRolesRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authz"
+    generate_minimal_example: true
+  };
+  string user_id = 1;
+  string domain = 2;
+  bool active_only = 3;
+  // Requested page size. Defaults to 50 and is capped at the native list maximum.
+  int32 page_size = 4;
+  // Opaque pagination token returned by ListUserRolesResponse.next_page_token.
+  string page_token = 5;
+}
+
+message ListUserRolesResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authz"
+    generate_minimal_example: true
+  };
+  repeated udb.core.authz.entity.v1.UserRole user_roles = 1;
+  // Opaque token for the next page; empty when no more user roles are available.
+  string next_page_token = 2;
+}
+
+message GetRoleRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authz"
+    generate_minimal_example: true
+  };
+  string role_id = 1;
+  string role_code = 2; // Alternative lookup
+  string domain = 3;
+}
+
+message GetRoleResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authz"
+    generate_minimal_example: true
+  };
+  udb.core.authz.entity.v1.Role role = 1;
+}
+
+message ListRolesRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authz"
+    generate_minimal_example: true
+  };
+  string domain = 1;
+  bool active_only = 2;
+  udb.core.common.v1.PageRequest page = 3;
+}
+
+message ListRolesResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authz"
+    generate_minimal_example: true
+  };
+  repeated udb.core.authz.entity.v1.Role roles = 1;
+  udb.core.common.v1.PageResponse page = 2;
+}
+
+message PermissionCheck {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authz"
+    generate_minimal_example: true
+  };
+  string object = 1;
+  string action = 2;
+}
+
+message BatchCheckPermissionsRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authz"
+    generate_minimal_example: true
+  };
+  string user_id = 1;
+  string domain = 2;
+  repeated PermissionCheck checks = 3;
+  AccessContext context = 4;
+}
+
+message BatchCheckPermissionsResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authz"
+    generate_minimal_example: true
+  };
+  map<string, bool> results = 1; // "object:action" → allowed
+}
+
+message UpdateRoleRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authz"
+    generate_minimal_example: true
+  };
+  string role_id = 1 [(google.api.field_behavior) = REQUIRED];
+  string name = 2 [(google.api.field_behavior) = OPTIONAL];
+  string description = 3 [(google.api.field_behavior) = OPTIONAL];
+  optional bool is_active = 4 [(google.api.field_behavior) = OPTIONAL];
+  string updated_by = 5 [(google.api.field_behavior) = REQUIRED];
+  // Optional PATCH mask relative to the role resource. When omitted, legacy
+  // clients keep the historical non-empty-field patch behavior.
+  google.protobuf.FieldMask update_mask = 6;
+}
+
+message UpdateRoleResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authz"
+    generate_minimal_example: true
+  };
+  udb.core.authz.entity.v1.Role role = 1;
+}
+
+message DeleteRoleRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authz"
+    generate_minimal_example: true
+  };
+  string role_id = 1 [(google.api.field_behavior) = REQUIRED];
+  string deleted_by = 2 [(google.api.field_behavior) = REQUIRED];
+}
+
+message DeleteRoleResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authz"
+    generate_minimal_example: true
+  };
+  bool deleted = 1;
+}
+
+message GetPolicyRuleRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authz"
+    generate_minimal_example: true
+  };
+  string policy_id = 1;
+}
+
+message GetPolicyRuleResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authz"
+    generate_minimal_example: true
+  };
+  udb.core.authz.entity.v1.PolicyRule policy = 1;
+}
+
+message ListPolicyRulesRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authz"
+    generate_minimal_example: true
+  };
+  string domain = 1;
+  string subject = 2;
+  string object = 3;
+  bool active_only = 4;
+  udb.core.common.v1.PageRequest page = 5;
+}
+
+message ListPolicyRulesResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authz"
+    generate_minimal_example: true
+  };
+  repeated udb.core.authz.entity.v1.PolicyRule policies = 1;
+  udb.core.common.v1.PageResponse page = 2;
+}
+
+message DeletePolicyRuleRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authz"
+    generate_minimal_example: true
+  };
+  string policy_id = 1;
+  string deleted_by = 2;
+}
+
+message DeletePolicyRuleResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authz"
+    generate_minimal_example: true
+  };
+  bool deleted = 1;
+}
+
+message AuthMutationResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authz"
+    generate_minimal_example: true
+  };
+  bool ok = 1;
+  string message = 2;
+}
+
+// RBAC binding scoped to a tenant/project domain.
+message RoleBinding {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authz"
+    generate_minimal_example: true
+  };
+  string subject = 1;
+  string role = 2;
+  string tenant = 3;
+  string project = 4;
+  int64 expires_at_unix = 5;
+  string source = 6;
+}
+
+// ReBAC tuple scoped to a tenant/project domain.
+message RelationshipTuple {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authz"
+    generate_minimal_example: true
+  };
+  string subject = 1;
+  string relation = 2;
+  string object = 3;
+  string tenant = 4;
+  string project = 5;
+  int64 version = 6;
+  int64 expires_at_unix = 7;
+  string source = 8;
+}
+
+message AuthzPolicyRecord {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authz"
+    generate_minimal_example: true
+  };
+  string id = 1;
+  int32 priority = 2;
+  bool enabled = 3;
+  string effect = 4;
+  string tenant = 5;
+  string project = 6;
+  string subject = 7;
+  string role = 8;
+  string action = 9;
+  string resource = 10;
+  string purpose = 11;
+  string relationship = 12;
+  map<string, string> conditions = 13;
+  repeated string required_scopes = 14;
+}
+
+message PutRoleBindingRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authz"
+    generate_minimal_example: true
+  };
+  RoleBinding binding = 1;
+}
+message PutRelationshipRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authz"
+    generate_minimal_example: true
+  };
+  RelationshipTuple tuple = 1;
+}
+message PutAuthzPolicyRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authz"
+    generate_minimal_example: true
+  };
+  AuthzPolicyRecord policy = 1;
+}
+message LintAuthzPoliciesRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authz"
+    generate_minimal_example: true
+  };
+}
+message LintAuthzPoliciesResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authz"
+    generate_minimal_example: true
+  };
+  repeated string findings = 1;
+}
+
+// ── Stage 2: native database fast-path access ──────────────────────────────
+//
+// `GetNativeAccess` runs the same `Authorize` decision and, when allowed,
+// mints a short-lived contract for the caller to talk to the backend
+// directly: a restricted role, a scoped DSN, and the exact set of
+// `app.current_*` session variables the SDK must `SET LOCAL` so the
+// broker-generated RLS policies still apply. UDB stays the source of the
+// authorization decision; the native grant only carries it forward.
+message NativeAccessRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authz"
+    generate_minimal_example: true
+  };
+  Principal principal = 1;
+  string session_id = 2;
+  string tenant_id = 3;
+  string project_id = 4;
+  ResourceRef resource = 5;
+  string action = 6;
+  string purpose = 7;
+  repeated string requested_scopes = 8;
+  AccessContext context = 9;
+  // Requested backend (default "postgres"); other backends are reserved.
+  string backend = 10;
+  map<string, string> attributes = 11;
+}
+
+// The minted native-access contract. Present only when the embedded
+// `Decision` allowed the request.
+message NativeAccessGrant {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authz"
+    generate_minimal_example: true
+  };
+  // Connection string scoped to the restricted role. Secret — redact in logs.
+  string dsn = 1;
+  // Restricted database role the DSN authenticates as.
+  string role = 2;
+  string backend = 3;
+  string database = 4;
+  string schema = 5;
+  // `app.current_*` session variables the caller must apply per transaction
+  // (`SET LOCAL`) so broker RLS policies see the same context the broker did.
+  map<string, string> session_variables = 6;
+  int64 expires_at_unix = 7;
+  uint64 ttl_seconds = 8;
+}
+
+message NativeAccessResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authz"
+    generate_minimal_example: true
+  };
+  Decision decision = 1;
+  NativeAccessGrant grant = 2;
+}
+
+// ── Stage 2: signed policy bundles for local SDK authorization caches ───────
+//
+// `GetPolicyBundle` serializes the live authorization snapshot (policies,
+// role bindings, relationship tuples) and signs it so an SDK can cache it
+// and answer `can()` locally without a round-trip, while still being able
+// to verify the bundle was issued by UDB and has not expired.
+message PolicyBundleRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authz"
+    generate_minimal_example: true
+  };
+  string tenant_id = 1;
+  string project_id = 2;
+  string domain = 3;
+}
+
+message SignedPolicyBundle {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authz"
+    generate_minimal_example: true
+  };
+  // Serialized snapshot payload (canonical JSON). Opaque to transport.
+  bytes bundle = 1;
+  // Base64 signature over `bundle`.
+  string signature = 2;
+  // Identifier of the signing key so callers can rotate/verify.
+  string key_id = 3;
+  // Signature algorithm, e.g. "HMAC-SHA256".
+  string algorithm = 4;
+  string policy_version = 5;
+  string relationship_version = 6;
+  int64 issued_at_unix = 7;
+  int64 expires_at_unix = 8;
+  uint64 ttl_seconds = 9;
+}
+
+message PolicyBundleResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authz"
+    generate_minimal_example: true
+  };
+  SignedPolicyBundle bundle = 1;
+}

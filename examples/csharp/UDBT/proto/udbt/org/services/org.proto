@@ -1,0 +1,132 @@
+syntax = "proto3";
+
+package ehr.organization.v1;
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
+
+service OrganizationService {
+  rpc GetOrganization(GetOrganizationRequest)
+      returns (Organization);
+
+  rpc ListOrganizations(ListOrganizationsRequest)
+      returns (ListOrganizationsResponse);
+
+  rpc CreateOrganization(CreateOrganizationRequest)
+      returns (Organization);
+
+  rpc GetUnit(GetUnitRequest)
+      returns (OrganizationUnit);
+
+  rpc ListUnits(ListUnitsRequest)
+      returns (ListUnitsResponse);
+
+  rpc GetRoom(GetRoomRequest)
+      returns (Room);
+
+  rpc GetBed(GetBedRequest)
+      returns (Bed);
+}
+
+message Organization {
+  string id = 1;
+  string code = 2;
+  string name = 3;
+  OrganizationType type = 4;
+
+
+  string phone = 6;
+  string email = 7;
+
+  google.protobuf.Timestamp created_at = 8;
+  google.protobuf.Timestamp updated_at = 9;
+}
+
+enum OrganizationType {
+  ORGANIZATION_TYPE_UNSPECIFIED = 0;
+  ORGANIZATION_TYPE_HEALTH_SYSTEM = 1;
+  ORGANIZATION_TYPE_HOSPITAL = 2;
+  ORGANIZATION_TYPE_CLINIC = 3;
+  ORGANIZATION_TYPE_NETWORK = 4;
+}
+
+
+message OrganizationUnit {
+  string id = 1;
+  string organization_id = 2;
+  string parent_unit_id = 3;
+  string location_id = 4;
+
+  string code = 5;
+  string name = 6;
+
+  UnitType type = 7;
+  string status = 8;
+}
+
+enum UnitType {
+  UNIT_TYPE_UNSPECIFIED = 0;
+  UNIT_TYPE_HOSPITAL = 1;
+  UNIT_TYPE_CLINIC = 2;
+  UNIT_TYPE_BRANCH = 3;
+  UNIT_TYPE_DEPARTMENT = 4;
+  UNIT_TYPE_UNIT = 5;
+  UNIT_TYPE_WARD = 6;
+}
+
+message Room {
+  string id = 1;
+  string unit_id = 2;
+  string room_number = 3;
+  string room_type = 4;
+  string status = 5;
+}
+
+message Bed {
+  string id = 1;
+  string room_id = 2;
+  string bed_number = 3;
+  string bed_type = 4;
+  string status = 5;
+}
+
+message GetOrganizationRequest {
+  string organization_id = 1;
+}
+
+message ListOrganizationsRequest {
+  int32 page_size = 1;
+  string page_token = 2;
+}
+
+message ListOrganizationsResponse {
+  repeated Organization organizations = 1;
+  string next_page_token = 2;
+}
+
+message CreateOrganizationRequest {
+  string code = 1;
+  string name = 2;
+  OrganizationType type = 3;
+}
+
+message GetUnitRequest {
+  string unit_id = 1;
+}
+
+message ListUnitsRequest {
+  string organization_id = 1;
+  string parent_unit_id = 2;
+}
+
+message ListUnitsResponse {
+  repeated OrganizationUnit units = 1;
+}
+
+message GetRoomRequest {
+  string room_id = 1;
+}
+
+message GetBedRequest {
+  string bed_id = 1;
+}
