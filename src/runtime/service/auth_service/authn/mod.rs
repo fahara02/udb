@@ -26,8 +26,8 @@ use crate::runtime::security::{SecurityConfig, validate_bearer_token};
 
 use super::events::{self, AuthEvent, AuthEventSink, ComplianceEnvelope, topics};
 use super::mappings::{
-    authn_principal_to_pb, authn_principal_to_pb_with_attributes, bounded_page_response,
-    bounded_page_window, principal_from_api_key, principal_from_session,
+    authn_principal_to_pb, authn_principal_to_pb_for_user, authn_principal_to_pb_with_attributes,
+    bounded_page_response, bounded_page_window, principal_from_api_key, principal_from_session,
     public_session_handle_from_hash, session_record_to_pb, timestamp_from_unix,
 };
 use super::now_unix;
@@ -1846,6 +1846,17 @@ pub(crate) fn test_otp_codes()
 #[cfg(test)]
 pub(crate) use mfa::{otp_dev_echo_enabled, otp_dev_echo_resolved};
 
+/// Outcome of re-checking a UDB-issued JWT against live persisted state
+/// (`AuthnServiceImpl::jwt_persisted_state_user`).
+pub(crate) enum JwtPersistedState {
+    /// No longer backed by live state: suspended/deleted subject, revoked or
+    /// replaced grant, revoked jti, ended session or refresh family.
+    Rejected,
+    /// Still live. `user` is the subject's user row when the check read it (a
+    /// human UUID subject); `None` for service bearers and non-UUID subjects.
+    Valid { user: Option<UserRecord> },
+}
+
 impl AuthnServiceImpl {
     pub fn new(config: AuthnConfig, security: SecurityConfig) -> Self {
         Self {
@@ -2344,26 +2355,46 @@ impl AuthnServiceImpl {
         )
     }
 
-    /// Is `user_id` a live, Active native UDB user? Only UUID subjects are
-    /// status-gated; empty/non-UUID subjects (service identities, external
-    /// subjects) have no user row and return `Ok(true)` (not gated here). `Err`
-    /// is reserved for real backend failures.
-    pub(super) async fn user_is_active(&self, user_id: &str) -> Result<bool, Status> {
-        if user_id.trim().is_empty() || Uuid::parse_str(user_id).is_err() {
-            return Ok(true);
-        }
-        match self.users.get_user_by_id(user_id).await {
-            Ok(Some(user)) => Ok(user.status.is_active()),
-            Ok(None) => Ok(false),
-            Err(err) => Err(authn_internal_status("user_is_active", err)),
-        }
-    }
-
     pub(crate) async fn jwt_persisted_state_valid(
         &self,
         claims: &crate::runtime::security::SecurityClaims,
         now: u64,
     ) -> Result<bool, Status> {
+        Ok(matches!(
+            self.jwt_persisted_state_user(claims, now).await?,
+            JwtPersistedState::Valid { .. }
+        ))
+    }
+
+    /// Read the native user row behind a credential subject, UNCACHED: the
+    /// caller projects its login name and profile, and a rename or suspension
+    /// must not be served stale. Non-UUID subjects (service identities,
+    /// external subjects) have no row and return `Ok(None)` without a query.
+    /// A backend failure is an error, never a silently-empty principal.
+    pub(super) async fn load_subject_user(
+        &self,
+        user_id: &str,
+    ) -> Result<Option<UserRecord>, Status> {
+        let user_id = user_id.trim();
+        if user_id.is_empty() || Uuid::parse_str(user_id).is_err() {
+            return Ok(None);
+        }
+        self.users
+            .get_user_by_id(user_id)
+            .await
+            .map_err(|err| authn_internal_status("load_subject_user", err))
+    }
+
+    /// `jwt_persisted_state_valid`, returning the subject's user row when the
+    /// check had to load it anyway (a human UUID subject), so the callers that
+    /// project `Principal.username` pay no extra query on that path. Service
+    /// bearers are validated against the typed grant and carry `user: None`.
+    pub(crate) async fn jwt_persisted_state_user(
+        &self,
+        claims: &crate::runtime::security::SecurityClaims,
+        now: u64,
+    ) -> Result<JwtPersistedState, Status> {
+        let mut loaded_user = None;
         let is_service = claims
             .service_identity
             .as_deref()
@@ -2390,13 +2421,19 @@ impl AuthnServiceImpl {
             .await
             .map_err(|error| authn_internal_status("jwt_service_grant_validate", error))?;
             if !valid {
-                return Ok(false);
+                return Ok(JwtPersistedState::Rejected);
             }
-        } else if !self
-            .user_is_active(claims.sub.as_deref().unwrap_or_default())
-            .await?
-        {
-            return Ok(false);
+        } else {
+            // Only UUID subjects are status-gated; empty/non-UUID subjects
+            // (external subjects) have no user row and are not gated here. A
+            // missing row is not active; a backend failure is an error.
+            let subject = claims.sub.as_deref().unwrap_or_default().trim();
+            if !subject.is_empty() && Uuid::parse_str(subject).is_ok() {
+                match self.load_subject_user(subject).await? {
+                    Some(user) if user.status.is_active() => loaded_user = Some(user),
+                    _ => return Ok(JwtPersistedState::Rejected),
+                }
+            }
         }
         // Phase 3 (I2.3): reject any token whose jti is on the durable cluster-wide
         // revocation deny list, before its natural expiry — across every node.
@@ -2411,7 +2448,7 @@ impl AuthnServiceImpl {
                 .await
                 .0
         {
-            return Ok(false);
+            return Ok(JwtPersistedState::Rejected);
         }
         if let Some(jti) = claims.jti.as_deref().filter(|j| j.starts_with("sess_")) {
             let expected = authn::SessionValidationScope {
@@ -2431,7 +2468,7 @@ impl AuthnServiceImpl {
             .await
             {
                 Ok(Some(_)) => {}
-                Ok(None) => return Ok(false),
+                Ok(None) => return Ok(JwtPersistedState::Rejected),
                 Err(err) => return Err(authn_internal_status("jwt_session_validate", err)),
             }
         }
@@ -2448,9 +2485,9 @@ impl AuthnServiceImpl {
                 )
                 .await?
         {
-            return Ok(false);
+            return Ok(JwtPersistedState::Rejected);
         }
-        Ok(true)
+        Ok(JwtPersistedState::Valid { user: loaded_user })
     }
 
     #[cfg(feature = "webauthn")]

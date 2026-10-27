@@ -1224,13 +1224,22 @@ impl AuthnServiceImpl {
                 // Phase 3: bind UDB-issued JWT validity to live persisted state
                 // (user status + issuing-session revocation). See
                 // `jwt_persisted_state_valid`.
-                if !self.jwt_persisted_state_valid(&claims, now).await? {
-                    self.metrics.record_auth_token_validation_failure();
-                    return Ok(Response::new(authn_pb::ValidateTokenResponse {
-                        valid: false,
-                        ..Default::default()
-                    }));
-                }
+                let user = match self.jwt_persisted_state_user(&claims, now).await? {
+                    // A human subject's row was already read by the check.
+                    super::JwtPersistedState::Valid { user: Some(user) } => Some(user),
+                    // Service bearers were checked against the typed grant;
+                    // read the account row once to name it.
+                    super::JwtPersistedState::Valid { user: None } => {
+                        self.load_subject_user(&subject).await?
+                    }
+                    super::JwtPersistedState::Rejected => {
+                        self.metrics.record_auth_token_validation_failure();
+                        return Ok(Response::new(authn_pb::ValidateTokenResponse {
+                            valid: false,
+                            ..Default::default()
+                        }));
+                    }
+                };
                 let principal = Principal {
                     principal_id: subject.clone(),
                     subject: subject.clone(),
@@ -1292,7 +1301,12 @@ impl AuthnServiceImpl {
                     device_id: String::new(),
                     token_id: claims.jti.clone().unwrap_or_default(),
                     session_type: authn_entity_pb::SessionType::Jwt as i32,
-                    principal: Some(authn_principal_to_pb(&principal, 0, token_account_kind)),
+                    principal: Some(authn_principal_to_pb_for_user(
+                        &principal,
+                        0,
+                        token_account_kind,
+                        user.as_ref(),
+                    )),
                     project_id: principal.project_id.clone(),
                     scopes: principal.scopes.clone(),
                     attributes: Default::default(),

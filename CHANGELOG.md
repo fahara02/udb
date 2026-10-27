@@ -5,6 +5,23 @@ the package version in `Cargo.toml`; historical v0.3.2 audit material is folded
 into the v0.3.x entries because the codebase advanced to v0.3.7 before that
 release line was tagged.
 
+## [0.6.4] - Unreleased
+
+### Added
+
+- **`Authenticate` and `ValidateToken` name the account.** `Principal` gains
+  `username` (field 15), and the JWT, session and API-key paths now also fill
+  `Principal.attributes` (redacted, scalar values only). Both come from the
+  live user row at the moment of the call, never from a token claim, so a
+  rename or suspension is never served stale: a human JWT reuses the row the
+  token's persisted-state check already reads; a service JWT, a session and an
+  API key cost one primary-key read. A credential with no native user row
+  (external IdP, OIDC) keeps `username` empty.
+
+### Breaking for callers
+
+- None.
+
 ## [0.6.3] - 2026-10-27
 
 ### Fixed

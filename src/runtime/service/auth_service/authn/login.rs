@@ -230,11 +230,15 @@ impl AuthnServiceImpl {
             } else {
                 rec.expires_at_unix as i64
             };
+            // The key owner's live row names the account (one primary-key read,
+            // uncached so a rename or suspension is never served stale).
+            let owner = self.load_subject_user(&rec.principal_id).await?;
             return Ok(Response::new(authn_pb::AuthnResponse {
-                principal: Some(authn_principal_to_pb(
+                principal: Some(authn_principal_to_pb_for_user(
                     &principal,
                     expires_at_unix,
                     authn_entity_pb::AccountKind::ServiceAccount as i32,
+                    owner.as_ref(),
                 )),
                 session_id: String::new(),
                 access_token,
@@ -262,13 +266,15 @@ impl AuthnServiceImpl {
                 )
             })?;
             let principal = principal_from_session(&rec);
+            let user = self.load_subject_user(&rec.user_id).await?;
             return Ok(Response::new(authn_pb::AuthnResponse {
-                principal: Some(authn_principal_to_pb(
+                principal: Some(authn_principal_to_pb_for_user(
                     &principal,
                     rec.expires_at_unix as i64,
                     // A server-side session record does not persist the account
                     // classification, so it stays UNSPECIFIED on this path.
                     authn_entity_pb::AccountKind::Unspecified as i32,
+                    user.as_ref(),
                 )),
                 session_id: String::new(),
                 access_token: String::new(),
@@ -385,12 +391,22 @@ impl AuthnServiceImpl {
             // Phase 3: a UDB-issued JWT must still be backed by live persisted
             // state — reject it here too if the subject user was suspended or the
             // issuing session revoked (same rule as ValidateToken).
-            if !self.jwt_persisted_state_valid(&claims, now_unix()).await? {
-                return Err(crate::runtime::executor_utils::unauthenticated_status(
-                    "subject_inactive",
-                    "token subject is no longer active",
-                ));
-            }
+            let user = match self.jwt_persisted_state_user(&claims, now_unix()).await? {
+                // A human subject's row was already read by the check.
+                super::JwtPersistedState::Valid { user: Some(user) } => Some(user),
+                // Service bearers were checked against the typed grant; read
+                // the account row once to name it.
+                super::JwtPersistedState::Valid { user: None } => {
+                    self.load_subject_user(claims.sub.as_deref().unwrap_or_default())
+                        .await?
+                }
+                super::JwtPersistedState::Rejected => {
+                    return Err(crate::runtime::executor_utils::unauthenticated_status(
+                        "subject_inactive",
+                        "token subject is no longer active",
+                    ));
+                }
+            };
             let subject = claims.sub.clone().unwrap_or_default();
             let principal = Principal {
                 principal_id: subject.clone(),
@@ -413,13 +429,14 @@ impl AuthnServiceImpl {
                 auth_method: authn::AuthnMethod::Jwt.as_str().to_string(),
             };
             return Ok(Response::new(authn_pb::AuthnResponse {
-                principal: Some(authn_principal_to_pb(
+                principal: Some(authn_principal_to_pb_for_user(
                     &principal,
                     0,
                     // Carry the account classification the login minted into the
                     // token so a service account stays assertable as one here —
                     // this is the path the enterprise SDKs read after login.
                     claims.account_kind.unwrap_or(0),
+                    user.as_ref(),
                 )),
                 session_id: String::new(),
                 access_token: String::new(),

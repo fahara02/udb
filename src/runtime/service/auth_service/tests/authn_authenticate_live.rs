@@ -62,6 +62,8 @@ async fn live_postgres_authn_roundtrip() {
         .expect("principal");
     assert_eq!(authed.user_id, user.user_id);
     assert_eq!(authed.tenant_id, "acme");
+    // The session path names the account from its live user row.
+    assert_eq!(authed.username, user.username);
 
     let sessions = svc
         .list_sessions(Request::new(authn_pb::ListSessionsRequest {
@@ -145,7 +147,24 @@ async fn live_postgres_authn_authenticate_api_key() {
     assert_eq!(principal.principal_id, user.user_id);
     assert_eq!(principal.scopes, vec!["data:read"]);
     assert_eq!(principal.service_identity, grant.service_identity);
+    // The API-key path names the key owner from its live user row.
+    assert_eq!(principal.username, user.username);
     assert!(!exchanged.access_token.is_empty());
+    // The exchanged service bearer, presented back to Authenticate, names the
+    // same account (service JWT path: one primary-key read after the grant
+    // check).
+    let jwt_principal = authn
+        .authenticate(Request::new(authn_pb::AuthnRequest {
+            bearer_token: exchanged.access_token.clone(),
+            ..Default::default()
+        }))
+        .await
+        .expect("authenticate exchanged service bearer")
+        .into_inner()
+        .principal
+        .expect("service bearer principal");
+    assert_eq!(jwt_principal.user_id, user.user_id);
+    assert_eq!(jwt_principal.username, user.username);
     let now = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .expect("system clock after unix epoch")
@@ -165,13 +184,11 @@ async fn live_postgres_authn_authenticate_api_key() {
     assert_eq!(validated.tenant_id, "acme");
     assert_eq!(validated.project_id, "billing");
     assert_eq!(validated.scopes, vec!["data:read"]);
-    assert_eq!(
-        validated
-            .principal
-            .expect("validated API-key bearer principal")
-            .service_identity,
-        grant.service_identity
-    );
+    let validated_principal = validated
+        .principal
+        .expect("validated API-key bearer principal");
+    assert_eq!(validated_principal.service_identity, grant.service_identity);
+    assert_eq!(validated_principal.username, user.username);
 
     let err = authn
         .authenticate(Request::new(authn_pb::AuthnRequest {
@@ -329,6 +346,60 @@ async fn live_postgres_revoked_api_key_cannot_obtain_broker_principal() {
         .await
         .expect_err("revoked API key must not yield a broker principal");
     assert_eq!(err.code(), tonic::Code::Unauthenticated);
+
+    cleanup_native_auth_db(&pool).await;
+}
+
+#[tokio::test]
+#[ignore = "requires live Postgres; run with UDB_LIVE_AUTH_TESTS=1 cargo test --lib live_postgres_authn_authenticate_jwt_returns_username -- --ignored --nocapture"]
+async fn live_postgres_authn_authenticate_jwt_returns_username() {
+    // A human login JWT presented to Authenticate and ValidateToken carries the
+    // account's login name and redacted profile attributes, read from the live
+    // user row (no username claim is minted into the token).
+    let _guard = live_auth_db_lock().lock().await;
+    let pool = live_pg_pool().await;
+    migrate_native_auth_db(&pool).await;
+    let authn = authn_service_with_jwt(pool.clone());
+    let user = create_verified_user(&authn, "jwt_username", "CorrectHorse1!").await;
+
+    let login = authn
+        .login(Request::new(authn_pb::LoginRequest {
+            username: user.username.clone(),
+            password: "CorrectHorse1!".to_string(),
+            device_name: "live-jwt-username".to_string(),
+            ..Default::default()
+        }))
+        .await
+        .expect("login human user")
+        .into_inner();
+    assert!(!login.access_token.is_empty());
+
+    let principal = authn
+        .authenticate(Request::new(authn_pb::AuthnRequest {
+            bearer_token: login.access_token.clone(),
+            ..Default::default()
+        }))
+        .await
+        .expect("authenticate human JWT")
+        .into_inner()
+        .principal
+        .expect("human JWT principal");
+    assert_eq!(principal.user_id, user.user_id);
+    assert_eq!(principal.username, user.username);
+
+    let validated = authn
+        .validate_token(Request::new(authn_pb::ValidateTokenRequest {
+            token: login.access_token,
+            token_type: authn_entity_pb::TokenType::JwtAccess as i32,
+        }))
+        .await
+        .expect("validate human JWT")
+        .into_inner();
+    assert!(validated.valid);
+    assert_eq!(
+        validated.principal.expect("validated principal").username,
+        user.username
+    );
 
     cleanup_native_auth_db(&pool).await;
 }

@@ -350,6 +350,11 @@ message Principal {
   udb.core.authn.entity.v1.AccountKind account_kind = 12;
   string domain = 13;
   map<string, string> attributes = 14;
+  // Login name of the authenticated account, read from the live user row at
+  // the moment of the call (never from a token claim), so a rename or
+  // suspension is never served stale. Empty when the credential has no native
+  // user row (external-IdP mapping, OIDC).
+  string username = 15;
 }
 
 message AuthnRequest {

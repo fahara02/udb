@@ -47,6 +47,9 @@ pub(super) fn authn_principal_to_pb(
         // nothing to project. A path that HAS the record should call
         // `authn_principal_to_pb_with_attributes` instead.
         attributes: std::collections::HashMap::new(),
+        // Same rule as `attributes`: only a path holding the live user row can
+        // name the account; see `authn_principal_to_pb_for_user`.
+        username: String::new(),
     }
 }
 
@@ -73,6 +76,34 @@ pub(super) fn authn_principal_to_pb_with_attributes(
     let mut pb = authn_principal_to_pb(p, expires_at_unix, account_kind);
     pb.attributes = profile_attributes_to_map(profile_attributes_json);
     pb
+}
+
+/// `authn_principal_to_pb`, plus the login name and redacted profile
+/// attributes of the LIVE user row behind the credential.
+///
+/// `user` is the row the caller just read (or the persisted-state check
+/// already loaded) — never a cached copy, so a rename or suspension shows up
+/// on the next call. `None` (no native user row: non-UUID subject, row gone)
+/// yields the plain mapping with an empty `username`.
+pub(super) fn authn_principal_to_pb_for_user(
+    p: &Principal,
+    expires_at_unix: i64,
+    account_kind: i32,
+    user: Option<&authn::UserRecord>,
+) -> authn_pb::Principal {
+    match user {
+        Some(user) => {
+            let mut pb = authn_principal_to_pb_with_attributes(
+                p,
+                expires_at_unix,
+                account_kind,
+                &user.profile_attributes_json,
+            );
+            pb.username = user.username.clone();
+            pb
+        }
+        None => authn_principal_to_pb(p, expires_at_unix, account_kind),
+    }
 }
 
 /// Flatten a redacted profile-attributes JSON object into `map<string, string>`.
@@ -486,5 +517,67 @@ mod tests {
         assert!(one.starts_with("sesspub_"));
         assert!(!one.contains("hmac-sha256"));
         assert_ne!(one, hash);
+    }
+
+    fn jwt_principal(subject: &str) -> Principal {
+        Principal {
+            principal_id: subject.to_string(),
+            subject: subject.to_string(),
+            user_id: subject.to_string(),
+            tenant_id: "acme".to_string(),
+            auth_method: authn::AuthnMethod::Jwt.as_str().to_string(),
+            ..Principal::default()
+        }
+    }
+
+    #[test]
+    fn principal_for_user_carries_username_and_redacted_attributes() {
+        let user = authn::UserRecord {
+            user_id: "u-1".to_string(),
+            username: "dr.ada".to_string(),
+            profile_attributes_json: serde_json::json!({
+                "display_name": "Dr. Ada",
+                "license_no": 1234,
+                "api_token": "secret",
+                "_internal": "x",
+                "nested": {"a": 1}
+            })
+            .to_string(),
+            ..authn::UserRecord::default()
+        };
+        let pb = authn_principal_to_pb_for_user(&jwt_principal("u-1"), 0, 1, Some(&user));
+
+        assert_eq!(pb.username, "dr.ada");
+        assert_eq!(pb.user_id, "u-1");
+        assert_eq!(pb.account_kind, 1);
+        assert_eq!(
+            pb.attributes.get("display_name").map(String::as_str),
+            Some("Dr. Ada")
+        );
+        assert_eq!(
+            pb.attributes.get("license_no").map(String::as_str),
+            Some("1234")
+        );
+        // Sensitive keys never leave as their stored value.
+        assert_ne!(
+            pb.attributes.get("api_token").map(String::as_str),
+            Some("secret")
+        );
+        assert_ne!(
+            pb.attributes.get("_internal").map(String::as_str),
+            Some("x")
+        );
+        // Non-scalar leaves are skipped, not stringified.
+        assert!(!pb.attributes.contains_key("nested"));
+    }
+
+    #[test]
+    fn principal_without_user_row_has_no_username_or_attributes() {
+        let pb = authn_principal_to_pb_for_user(&jwt_principal("svc"), 0, 0, None);
+        assert!(pb.username.is_empty());
+        assert!(pb.attributes.is_empty());
+
+        let plain = authn_principal_to_pb(&jwt_principal("svc"), 0, 0);
+        assert!(plain.username.is_empty());
     }
 }
