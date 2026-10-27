@@ -3517,13 +3517,16 @@ message CreateServiceAccountTenantMembershipRequest {
     boilerplate_recipe_tags: "authn"
     generate_minimal_example: true
   };
-  // The approving tenant; must be the caller's own tenant.
+  // The approving tenant; must be the caller's own tenant. Format: the
+  // tenant's canonical UUID (not its human code).
   string target_tenant_id = 1;
   // The service account (user id) being approved.
   string user_id = 2;
   // The tenant the service account lives in; must be its actual tenant.
+  // Format: the tenant's canonical UUID.
   string home_tenant_id = 3;
   // Project inside the target tenant the tokens are bound to ('' = none).
+  // Format: the project's stable id, as in the request context.
   string target_project_id = 4;
   // The most a target-tenant token may carry (non-empty; no admin, owner or
   // wildcard scope).
