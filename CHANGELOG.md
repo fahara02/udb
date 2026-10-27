@@ -21,6 +21,14 @@ release line was tagged.
   reply, and keep the stored one only when the reply has none (a legacy
   session-id refresh). The Go and Rust SDKs already did this; the C#, PHP and
   Java SDKs return the reply to the caller and keep no token.
+  - Every SDK (Go, Python, TypeScript, PHP, Rust, C#, Java) now runs a live
+    refresh-token rotation conformance test in CI on every push to main (job
+    `SDK refresh-token rotation (live)`): log in, refresh three times through
+    the SDK's own refresh path (or, for the SDKs without a token store, by
+    presenting each reply's refresh token to the next call), make an
+    authenticated call after every refresh, and prove the first, spent refresh
+    token is refused with `UNAUTHENTICATED`. Go and Rust also gained unit tests
+    against a single-use refresh-token issuer.
 
 ### Breaking for callers
 

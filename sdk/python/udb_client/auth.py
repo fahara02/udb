@@ -251,9 +251,10 @@ class UdbAuthClient:
         """Exchange a refresh token / session for a new short-lived access token.
 
         ``AuthnService.RefreshToken`` returns ``RefreshTokenResponse`` with a new
-        ``access_token`` + ``access_token_expires_in``. NOTE: the server does not
-        return a rotated refresh token here, so the caller keeps reusing the
-        original refresh credential until logout.
+        ``access_token`` + ``access_token_expires_in`` and a ROTATED
+        ``refresh_token``. The presented refresh token is single-use: the next
+        refresh must present the one this call returned, or the broker refuses
+        it as an invalid credential. :class:`TokenSession` does this for you.
         """
         request = authn.RefreshTokenRequest(
             refresh_token=refresh_token, session_id=session_id

@@ -1226,6 +1226,8 @@ CI_TOPOLOGY_QUICK_GATE_JOBS = (
 CI_TOPOLOGY_BUILD_BROKER_CONSUMERS = (
     "smoke",
     "scaffold-compiles",
+    # Every SDK's live refresh-token rotation conformance gates main.
+    "sdk-refresh-rotation-live",
 )
 
 CI_TOPOLOGY_PUSH_ONLY_JOBS = (

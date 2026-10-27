@@ -166,10 +166,7 @@ impl TokenManager {
             ));
         }
 
-        let mut req = tonic::Request::new(authn::RefreshTokenRequest {
-            refresh_token: stored.refresh_token.clone(),
-            session_id: stored.session_id.clone(),
-        });
+        let mut req = tonic::Request::new(refresh_request(&stored));
         self.inner.meta.apply(&mut req)?;
 
         let resp = {
@@ -177,15 +174,7 @@ impl TokenManager {
             client.refresh_token(req).await?.into_inner()
         };
 
-        stored.access_token = resp.access_token;
-        stored.expires_at_unix = expiry_from(resp.access_token_expires_in);
-        // Persist the ROTATED refresh token. Guarded on non-empty because the
-        // response omits it when the caller refreshed with a legacy server-side
-        // session id rather than a token-family credential; assigning blindly
-        // would erase a working credential.
-        if !resp.refresh_token.is_empty() {
-            stored.refresh_token = resp.refresh_token;
-        }
+        apply_refresh(&mut stored, resp);
         Ok(stored.clone())
     }
 
@@ -193,6 +182,27 @@ impl TokenManager {
     pub async fn authenticated_metadata(&self) -> Result<Metadata, Status> {
         let token = self.access_token().await?;
         Ok(self.inner.meta.clone().with_bearer_token(token))
+    }
+}
+
+/// The `RefreshToken` request for the stored credential.
+fn refresh_request(stored: &Token) -> authn::RefreshTokenRequest {
+    authn::RefreshTokenRequest {
+        refresh_token: stored.refresh_token.clone(),
+        session_id: stored.session_id.clone(),
+    }
+}
+
+/// Fold a `RefreshToken` reply into the stored credential.
+fn apply_refresh(stored: &mut Token, resp: authn::RefreshTokenResponse) {
+    stored.access_token = resp.access_token;
+    stored.expires_at_unix = expiry_from(resp.access_token_expires_in);
+    // Persist the ROTATED refresh token. Guarded on non-empty because the
+    // response omits it when the caller refreshed with a legacy server-side
+    // session id rather than a token-family credential; assigning blindly
+    // would erase a working credential.
+    if !resp.refresh_token.is_empty() {
+        stored.refresh_token = resp.refresh_token;
     }
 }
 
@@ -234,6 +244,110 @@ mod tests {
             !t.is_valid(980, Duration::from_secs(30)),
             "1010 >= 1000: inside the skew window, must refresh"
         );
+    }
+
+    /// Stands in for the broker: it accepts only the refresh token it minted
+    /// last and mints a new one on every refresh, so each token works once.
+    /// `None` is the broker's "invalid credential".
+    struct SingleUseIssuer {
+        live: String,
+        minted: u32,
+        presented: Vec<String>,
+    }
+
+    impl SingleUseIssuer {
+        fn new(first: &str) -> Self {
+            Self {
+                live: first.to_string(),
+                minted: 1,
+                presented: Vec::new(),
+            }
+        }
+
+        fn refresh(
+            &mut self,
+            req: authn::RefreshTokenRequest,
+        ) -> Option<authn::RefreshTokenResponse> {
+            self.presented.push(req.refresh_token.clone());
+            if req.refresh_token != self.live {
+                return None;
+            }
+            self.minted += 1;
+            self.live = format!("refresh-{}", self.minted);
+            Some(authn::RefreshTokenResponse {
+                access_token: format!("access-{}", self.minted),
+                access_token_expires_in: 900,
+                refresh_token: self.live.clone(),
+                refresh_token_expires_in: 86_400,
+                session_public_id: "public-session".into(),
+            })
+        }
+    }
+
+    // The production failure: keeping the login refresh token refreshed once and
+    // then failed every later refresh. Each refresh must present the token the
+    // previous one returned.
+    #[test]
+    fn repeated_refreshes_present_each_rotated_token() {
+        let mut issuer = SingleUseIssuer::new("refresh-1");
+        let mut stored = Token {
+            access_token: "access-1".into(),
+            refresh_token: "refresh-1".into(),
+            session_id: "legacy-session".into(),
+            expires_at_unix: 0,
+        };
+
+        for _ in 0..4 {
+            let resp = issuer
+                .refresh(refresh_request(&stored))
+                .expect("the rotated refresh token must be accepted");
+            apply_refresh(&mut stored, resp);
+        }
+
+        assert_eq!(
+            issuer.presented,
+            ["refresh-1", "refresh-2", "refresh-3", "refresh-4"]
+        );
+        assert_eq!(stored.refresh_token, "refresh-5");
+        assert_eq!(stored.access_token, "access-5");
+        assert_eq!(
+            stored.session_id, "legacy-session",
+            "the legacy refresh session id is kept"
+        );
+        assert!(stored.expires_at_unix >= now_unix());
+    }
+
+    #[test]
+    fn legacy_session_refresh_without_a_rotated_token_keeps_the_stored_one() {
+        let mut stored = Token {
+            access_token: "access-1".into(),
+            refresh_token: "refresh-1".into(),
+            session_id: "legacy-session".into(),
+            expires_at_unix: 0,
+        };
+        apply_refresh(
+            &mut stored,
+            authn::RefreshTokenResponse {
+                access_token: "access-2".into(),
+                access_token_expires_in: 900,
+                ..Default::default()
+            },
+        );
+        assert_eq!(stored.refresh_token, "refresh-1");
+        assert_eq!(stored.access_token, "access-2");
+    }
+
+    // Guards the stand-in itself: without rotation the second refresh fails,
+    // which is exactly what the test above proves the manager avoids.
+    #[test]
+    fn a_spent_refresh_token_is_refused_by_the_issuer() {
+        let mut issuer = SingleUseIssuer::new("refresh-1");
+        let spent = Token {
+            refresh_token: "refresh-1".into(),
+            ..Default::default()
+        };
+        assert!(issuer.refresh(refresh_request(&spent)).is_some());
+        assert!(issuer.refresh(refresh_request(&spent)).is_none());
     }
 
     #[test]
