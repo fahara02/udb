@@ -46,6 +46,7 @@ use super::events::{self, AuthEvent, AuthEventSink, topics};
 // Topic submodules: inherent `impl AuthzServiceImpl` blocks (+ helpers); the
 // single `impl AuthzService` trait block below delegates to them.
 mod audit;
+mod delegation;
 mod tuples;
 
 // Phase K: Authz Policy Governance. Pure logic in `governance_logic`; DB-backed
@@ -336,6 +337,9 @@ fn access_decision_audit_model() -> NativeModel {
             "span_id",
             "user_agent_hash",
             "decision_input",
+            // Delegated CheckAccess: the service caller that evaluated the row.
+            "evaluated_by",
+            "evaluated_by_service_identity",
         ],
     )
 }
@@ -1398,6 +1402,11 @@ impl AuthzServiceImpl {
     /// table. Errors are logged, never surfaced — auditing must not block the
     /// decision path. The UUID `user_id` column accepts any principal subject by
     /// deriving a stable UUID from it (service/external identities aren't UUIDs).
+    ///
+    /// `delegation` is set when a service account evaluated the decision for
+    /// another user (delegated CheckAccess): such a decision is ALWAYS audited,
+    /// allow included, with the caller in `evaluated_by` /
+    /// `evaluated_by_service_identity`.
     pub(super) async fn write_decision_audit(
         &self,
         principal: &Principal,
@@ -1405,13 +1414,14 @@ impl AuthzServiceImpl {
         action: &str,
         decision: &Decision,
         ctx: &AuditContext,
+        delegation: Option<&delegation::DelegatedEvaluation>,
     ) {
         // Phase 5: count every deny decision regardless of audit-sink/pool state
         // (this is the chokepoint all decision paths route through).
         if !decision.allowed {
             self.metrics.record_authz_deny();
         }
-        if decision.allowed && !decision.audit_required {
+        if decision.allowed && !decision.audit_required && delegation.is_none() {
             return;
         }
         let Some(runtime) = &self.runtime else {
@@ -1559,6 +1569,16 @@ impl AuthzServiceImpl {
             "decision_input".to_string(),
             LogicalValue::Json(decision_input),
         );
+        if let Some(delegation) = delegation {
+            record.insert(
+                "evaluated_by".to_string(),
+                LogicalValue::String(delegation.evaluated_by.clone()),
+            );
+            record.insert(
+                "evaluated_by_service_identity".to_string(),
+                LogicalValue::String(delegation.evaluated_by_service_identity.clone()),
+            );
+        }
         let audit_context = crate::RequestContext {
             tenant_id: principal.tenant_id.clone(),
             project_id: principal.project_id.clone(),
@@ -2197,8 +2217,16 @@ impl AuthzService for AuthzServiceImpl {
         }
         // Items 84–86: persist denies / audit-flagged allows to the proto audit table.
         let audit_ctx = AuditContext::from_attributes(&attributes, &req.purpose);
-        self.write_decision_audit(&principal, &resource, &req.action, &decision, &audit_ctx)
-            .await;
+        // Authorize evaluates the caller only (no delegation).
+        self.write_decision_audit(
+            &principal,
+            &resource,
+            &req.action,
+            &decision,
+            &audit_ctx,
+            None,
+        )
+        .await;
         // Publish a denial event so security dashboards (Kafka → Spark) see
         // deny rates in near-real-time, alongside the durable audit row.
         if !decision.allowed {
@@ -2547,7 +2575,10 @@ impl AuthzService for AuthzServiceImpl {
         // scopes to the verified claim so a tenant-A token cannot probe a tenant-B
         // user's access by supplying that user_id. A cross-tenant admin keeps the
         // body-derived "can user X do Y?" query. The in-process/loopback path (no
-        // claim) preserves the body-derived behavior above.
+        // claim) preserves the body-derived behavior above. The one exception is
+        // a delegated check (see `delegation`): a service account holding
+        // `udb:authz:check-access-for` evaluates a person of its own tenant.
+        let mut delegated = None;
         if crate::runtime::service::method_security::claim_context_present() {
             let ctx = crate::runtime::service::method_security::current_claim_context();
             crate::runtime::service::method_security::enforce_body_tenant_matches_claim(
@@ -2556,11 +2587,18 @@ impl AuthzService for AuthzServiceImpl {
                 &req.project_id,
             )?;
             if !ctx.is_cross_tenant_admin() {
-                // Roles, service_identity and principal_id are NOT taken from the
-                // body: a non-admin could otherwise inject `roles: ["admin"]` or
-                // another principal_id and have the PDP answer as that identity.
-                // Roles come from the binding snapshot, same as the data plane.
-                principal = bind_principal_to_claim(ctx.to_principal());
+                match delegation::delegated_check_subject(&ctx, &req.user_id)? {
+                    Some(subject) => {
+                        principal = delegation::delegated_principal(&subject, &ctx);
+                        delegated = Some(delegation::DelegatedEvaluation::from_claim(&ctx));
+                    }
+                    // Roles, service_identity and principal_id are NOT taken from
+                    // the body: a non-admin could otherwise inject
+                    // `roles: ["admin"]` or another principal_id and have the PDP
+                    // answer as that identity. Roles come from the binding
+                    // snapshot, same as the data plane.
+                    None => principal = bind_principal_to_claim(ctx.to_principal()),
+                }
             }
         }
 
@@ -2585,6 +2623,12 @@ impl AuthzService for AuthzServiceImpl {
         // tenant, held across the snapshot load + decision (same backpressure the
         // data plane returns on exhaustion).
         let _admit = self.admit(&principal.tenant_id).await?;
+        // A delegated subject must be an active person of the claim tenant
+        // before anything is evaluated for it (read under admission).
+        if delegated.is_some() {
+            self.resolve_delegated_subject(&principal.tenant_id, &principal.subject)
+                .await?;
+        }
         let snap = self.current_snapshot().await?;
         let decision = self
             .decide_with_snapshot(
@@ -2597,8 +2641,26 @@ impl AuthzService for AuthzServiceImpl {
             )
             .await;
         let audit_ctx = AuditContext::from_attributes(&attributes, &req.purpose);
-        self.write_decision_audit(&principal, &resource, &req.action, &decision, &audit_ctx)
+        self.write_decision_audit(
+            &principal,
+            &resource,
+            &req.action,
+            &decision,
+            &audit_ctx,
+            delegated.as_ref(),
+        )
+        .await;
+        if let Some(delegated) = delegated.as_ref() {
+            self.emit_delegated_decision_event(
+                delegated,
+                &principal,
+                &resource,
+                &req.action,
+                &decision,
+                &audit_ctx.correlation_id,
+            )
             .await;
+        }
         Ok(Response::new(authz_pb::CheckAccessResponse {
             allowed: decision.allowed,
             effect: effect_to_entity(decision.effect),
@@ -2609,6 +2671,9 @@ impl AuthzService for AuthzServiceImpl {
                 .unwrap_or_default(),
             reason: decision.deny_reason.clone(),
             decision: Some(decision_to_pb(&decision)),
+            // The subject actually evaluated: the caller itself, a delegated
+            // subject, or (cross-tenant admin / in-process) the body subject.
+            evaluated_subject: principal.subject.clone(),
         }))
     }
     async fn create_role(
@@ -3844,17 +3909,30 @@ impl AuthzService for AuthzServiceImpl {
             ..Default::default()
         };
         // Same claim binding as CheckAccess: a non-admin caller may only ask
-        // about itself, in its own tenant, with roles from the binding snapshot.
+        // about itself, in its own tenant, with roles from the binding snapshot —
+        // or, as a service account holding `udb:authz:check-access-for`, about a
+        // person of its own tenant (the same delegation as CheckAccess).
+        let mut delegated = None;
         if crate::runtime::service::method_security::claim_context_present() {
             let ctx = crate::runtime::service::method_security::current_claim_context();
             if !ctx.is_cross_tenant_admin() {
-                principal = bind_principal_to_claim(ctx.to_principal());
+                match delegation::delegated_check_subject(&ctx, &req.user_id)? {
+                    Some(subject) => {
+                        principal = delegation::delegated_principal(&subject, &ctx);
+                        delegated = Some(delegation::DelegatedEvaluation::from_claim(&ctx));
+                    }
+                    None => principal = bind_principal_to_claim(ctx.to_principal()),
+                }
             }
         }
         // Tier-0 #1: acquire ONE per-tenant fair-admission permit for the whole
         // batch (bounded cost) — not per-check — keyed by the resolved tenant.
         // Held across all checks in the batch (same backpressure on exhaustion).
         let _admit = self.admit(&principal.tenant_id).await?;
+        if delegated.is_some() {
+            self.resolve_delegated_subject(&principal.tenant_id, &principal.subject)
+                .await?;
+        }
         let snap = self.current_snapshot().await?;
         let audit_ctx = AuditContext::from_attributes(&attributes, "");
         let mut results = std::collections::HashMap::new();
@@ -3868,8 +3946,26 @@ impl AuthzService for AuthzServiceImpl {
             let decision = self
                 .decide_with_snapshot(&snap, &principal, &resource, &check.action, "", &attributes)
                 .await;
-            self.write_decision_audit(&principal, &resource, &check.action, &decision, &audit_ctx)
+            self.write_decision_audit(
+                &principal,
+                &resource,
+                &check.action,
+                &decision,
+                &audit_ctx,
+                delegated.as_ref(),
+            )
+            .await;
+            if let Some(delegated) = delegated.as_ref() {
+                self.emit_delegated_decision_event(
+                    delegated,
+                    &principal,
+                    &resource,
+                    &check.action,
+                    &decision,
+                    &audit_ctx.correlation_id,
+                )
                 .await;
+            }
             results.insert(
                 format!("{}:{}", check.object, check.action),
                 decision.allowed,
@@ -4545,8 +4641,15 @@ impl AuthzService for AuthzServiceImpl {
             )
             .await;
         let audit_ctx = AuditContext::from_attributes(&attributes, &req.purpose);
-        self.write_decision_audit(&principal, &resource, &req.action, &decision, &audit_ctx)
-            .await;
+        self.write_decision_audit(
+            &principal,
+            &resource,
+            &req.action,
+            &decision,
+            &audit_ctx,
+            None,
+        )
+        .await;
 
         let grant = NativeAccessConfig::from_env()
             .mint(

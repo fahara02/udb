@@ -154,6 +154,10 @@ message CheckAccessResponse {
   string matched_rule = 3;
   string reason = 4;
   Decision decision = 5;
+  // The subject the decision was actually evaluated for: the caller itself
+  // (claim-bound), the requested person (a service account holding
+  // `udb:authz:check-access-for`), or the body subject (cross-tenant admin).
+  string evaluated_subject = 6;
 }
 
 message AuthzRequest {

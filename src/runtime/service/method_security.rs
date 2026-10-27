@@ -1088,6 +1088,28 @@ impl VerifiedClaimContext {
                     .any(|required| required.eq_ignore_ascii_case(scope))
         })
     }
+
+    /// Whether this caller carries `required` LITERALLY. Unlike
+    /// [`Self::has_any_scope`] there is no broad-admin fallback and no
+    /// wildcard expansion: `udb:admin` or `udb:*` never imply it. For
+    /// capabilities that must be granted on purpose, never inherited.
+    pub fn has_exact_scope(&self, required: &str) -> bool {
+        let required = required.trim();
+        !required.is_empty()
+            && self
+                .scopes
+                .iter()
+                .any(|scope| scope.trim().eq_ignore_ascii_case(required))
+    }
+
+    /// Whether this caller authenticated as a service account: a verified
+    /// service-account credential that carries its grant's service identity.
+    /// Humans, raw API keys, sessions and bare certificates are not.
+    pub fn is_service_account_bearer(&self) -> bool {
+        self.authenticated
+            && self.credential_type == CredentialType::ServiceAccount as i32
+            && !self.service_identity.trim().is_empty()
+    }
 }
 
 tokio::task_local! {

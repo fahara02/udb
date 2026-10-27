@@ -106,6 +106,9 @@ pub(crate) mod topics {
     pub const NATIVE_ACCESS_GRANT_ISSUED: &str = "udb.authz.native.access.issued.v1";
     pub const NATIVE_ACCESS_GRANT_DENIED: &str = "udb.authz.native.access.denied.v1";
     pub const ACCESS_AUDIT_REQUIRED_ALLOW: &str = "udb.authz.access.audit.allow.v1";
+    /// A service account evaluated CheckAccess / BatchCheckPermissions for
+    /// another user of its tenant (allow or deny).
+    pub const CHECK_ACCESS_DELEGATED: &str = "udb.authz.check.access.delegated.v1";
     // operations — emergency / break-glass / readiness
     pub const OPS_KEY_ROTATION: &str = "udb.ops.key.rotation.v1";
     pub const OPS_EMERGENCY_REVOKE: &str = "udb.ops.emergency.revoke.v1";

@@ -17,6 +17,23 @@ release line was tagged.
   token's persisted-state check already reads; a service JWT, a session and an
   API key cost one primary-key read. A credential with no native user row
   (external IdP, OIDC) keeps `username` empty.
+- **A service account can check access for a user of its tenant.**
+  `CheckAccess` and `BatchCheckPermissions` evaluate the requested `user_id`
+  instead of the caller when the caller is a service account whose token
+  carries the scope `udb:authz:check-access-for` (granted literally;
+  `udb:admin` and `udb:*` do not imply it) and the user is an active person
+  of the token's tenant. The decision is evaluated in the token's tenant and
+  project, with the user's own role bindings and none of the caller's
+  identities, roles or scopes, so a policy with `required_scopes` never allows
+  a delegated check. A human or raw API key holding the scope is refused
+  (`delegated_check_requires_service_account`); a user id that is unknown, in
+  another tenant or not a person gets one identical refusal
+  (`delegated_subject_not_in_tenant`). Every delegated decision, allow and
+  deny, is written to the access-decision audit with the new
+  `AccessDecisionAudit.evaluated_by` (27) and `evaluated_by_service_identity`
+  (28), and published as `udb.authz.check.access.delegated.v1`.
+  `CheckAccessResponse` gains `evaluated_subject` (6), set on every call to
+  the subject actually evaluated. `Authorize` is unchanged.
 
 ### Changed
 

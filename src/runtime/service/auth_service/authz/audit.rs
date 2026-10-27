@@ -69,6 +69,8 @@ fn audit_select_projection(model: &NativeModel) -> String {
             model.q("matched_policy_ids")
         ),
         model.json_text_as("decision_input", "decision_input"),
+        model.text_or_empty("evaluated_by"),
+        model.text_or_empty("evaluated_by_service_identity"),
     ]
     .join(", ")
 }
@@ -114,6 +116,9 @@ fn audit_from_row(
         span_id: row.try_get("span_id").map_err(map)?,
         user_agent_hash: row.try_get("user_agent_hash").map_err(map)?,
         decision_input: redact_audit_text(row.try_get("decision_input").map_err(map)?),
+        // Set only on delegated CheckAccess rows (empty otherwise).
+        evaluated_by: row.try_get("evaluated_by").map_err(map)?,
+        evaluated_by_service_identity: row.try_get("evaluated_by_service_identity").map_err(map)?,
     })
 }
 
@@ -190,7 +195,8 @@ mod tests {
              ''::TEXT AS scopes, ARRAY[]::TEXT[] AS matched_policy_ids, \
              ''::TEXT AS project_id, ''::TEXT AS actor_kind, \
              ''::TEXT AS resource_type, ''::TEXT AS trace_id, ''::TEXT AS span_id, \
-             ''::TEXT AS user_agent_hash, '{}'::TEXT AS decision_input",
+             ''::TEXT AS user_agent_hash, '{}'::TEXT AS decision_input, \
+             ''::TEXT AS evaluated_by, ''::TEXT AS evaluated_by_service_identity",
         )
         .fetch_one(&pool)
         .await

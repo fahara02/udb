@@ -20,6 +20,7 @@ mod authn_session_validate_touch_live;
 mod authn_user_live;
 mod authn_webauthn_noleak_live;
 mod authz_admin_live;
+mod authz_check_access_delegation_live;
 mod authz_rbac_live;
 mod authz_rebac_live;
 #[cfg(feature = "kafka")]
