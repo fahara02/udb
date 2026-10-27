@@ -34,6 +34,54 @@ fn domain_allows(pattern: &str, value: &str) -> bool {
     pattern.is_empty() || pattern == "*" || pattern == value
 }
 
+/// A role code a service-account bearer may NEVER carry, even when an operator
+/// bound it to the account: a workload credential must not hold platform,
+/// owner, admin or break-glass authority through a claim role. Mirrors the
+/// segment rules of the service-scope validator (wildcard / admin / owner /
+/// superuser / root segments, owner aliases) and adds every role code that
+/// projects scopes into a token ([`ROLE_SCOPE_PROJECTIONS`]) plus the
+/// break-glass role. Fail-closed: a blank code is forbidden.
+pub(super) fn is_service_forbidden_role(role: &str) -> bool {
+    let role = role.trim();
+    if role.is_empty() {
+        return true;
+    }
+    if crate::runtime::service::method_security::is_platform_authority_role(role) {
+        return true;
+    }
+    if ROLE_SCOPE_PROJECTIONS
+        .iter()
+        .any(|(code, _)| role.eq_ignore_ascii_case(code))
+    {
+        return true;
+    }
+    let normalized = role.to_ascii_lowercase().replace(['-', '.', ':'], "_");
+    if normalized.contains("break_glass") || normalized.contains("breakglass") {
+        return true;
+    }
+    normalized.split('_').any(|segment| {
+        matches!(
+            segment,
+            "*" | "admin" | "administrator" | "owner" | "superuser" | "superadmin" | "root"
+        )
+    }) || matches!(
+        normalized.as_str(),
+        "organization_owner"
+            | "organisation_owner"
+            | "tenant_owner"
+            | "account_owner"
+            | "org_owner"
+    )
+}
+
+/// Role bindings resolved for a service-account bearer, split into the codes
+/// the bearer carries and the codes withheld by [`is_service_forbidden_role`].
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub(super) struct ServiceAccountRoles {
+    pub(super) kept: Vec<String>,
+    pub(super) withheld: Vec<String>,
+}
+
 impl AuthnServiceImpl {
     pub(super) fn issue_access_token(
         &self,
@@ -114,20 +162,7 @@ impl AuthnServiceImpl {
         tenant_id: &str,
         project_id: &str,
     ) -> (Vec<String>, Vec<String>) {
-        let Some(cell) = self.authz_snapshot.as_ref() else {
-            return (Vec::new(), Vec::new());
-        };
-        let snapshot = cell.load();
-        let mut roles: Vec<String> = Vec::new();
-        for binding in &snapshot.role_bindings {
-            if binding.subject.as_str() == user_id
-                && domain_allows(&binding.tenant, tenant_id)
-                && domain_allows(&binding.project, project_id)
-                && !roles.contains(&binding.role)
-            {
-                roles.push(binding.role.clone());
-            }
-        }
+        let roles = self.bound_role_codes(user_id, tenant_id, project_id);
         let mut scopes: Vec<String> = Vec::new();
         for role in &roles {
             for &(code, projected) in ROLE_SCOPE_PROJECTIONS {
@@ -142,6 +177,97 @@ impl AuthnServiceImpl {
             }
         }
         (scopes, roles)
+    }
+
+    /// The role codes bound to `user_id` in the tenant/project domain, read off
+    /// the warm authz snapshot's `role_bindings` (the roles half of
+    /// [`Self::resolve_effective_grants`]). No snapshot wired ⇒ no roles.
+    fn bound_role_codes(&self, user_id: &str, tenant_id: &str, project_id: &str) -> Vec<String> {
+        let Some(cell) = self.authz_snapshot.as_ref() else {
+            return Vec::new();
+        };
+        let snapshot = cell.load();
+        let mut roles: Vec<String> = Vec::new();
+        for binding in &snapshot.role_bindings {
+            if binding.subject.as_str() == user_id
+                && domain_allows(&binding.tenant, tenant_id)
+                && domain_allows(&binding.project, project_id)
+                && !roles.contains(&binding.role)
+            {
+                roles.push(binding.role.clone());
+            }
+        }
+        roles
+    }
+
+    /// The roles a service-account bearer carries: the codes bound to the
+    /// account in its grant's tenant/project, minus every
+    /// [`is_service_forbidden_role`] code. Roles ONLY — a service bearer's
+    /// scopes come exclusively from its typed grant, never from
+    /// [`ROLE_SCOPE_PROJECTIONS`].
+    pub(super) fn resolve_service_account_roles(
+        &self,
+        user_id: &str,
+        tenant_id: &str,
+        project_id: &str,
+    ) -> ServiceAccountRoles {
+        let (withheld, kept): (Vec<String>, Vec<String>) = self
+            .bound_role_codes(user_id, tenant_id, project_id)
+            .into_iter()
+            .partition(|role| is_service_forbidden_role(role));
+        ServiceAccountRoles { kept, withheld }
+    }
+
+    /// [`Self::resolve_service_account_roles`] for a bearer being minted on
+    /// `surface` (password login, API-key exchange, refresh). A withheld role
+    /// is reported — an audit-target warning plus an auth event — but never
+    /// fails the issue: the account still authenticates, just without it.
+    pub(super) async fn service_account_bearer_roles(
+        &self,
+        user_id: &str,
+        tenant_id: &str,
+        project_id: &str,
+        surface: &'static str,
+    ) -> Vec<String> {
+        let resolved = self.resolve_service_account_roles(user_id, tenant_id, project_id);
+        if !resolved.withheld.is_empty() {
+            tracing::warn!(
+                target: "udb.audit.authn",
+                user_id = %user_id,
+                tenant_id = %tenant_id,
+                project_id = %project_id,
+                surface,
+                withheld_roles = ?resolved.withheld,
+                "service-account bearer issued without role bindings a workload credential may never carry"
+            );
+            self.emit_event(
+                AuthEvent::new(
+                    topics::SERVICE_ACCOUNT_ROLE_WITHHELD,
+                    user_id.to_string(),
+                    tenant_id.to_string(),
+                    serde_json::json!({
+                        "user_id": user_id,
+                        "tenant_id": tenant_id,
+                        "project_id": project_id,
+                        "surface": surface,
+                        "withheld_roles": resolved.withheld.clone(),
+                    }),
+                )
+                .with_correlation(format!("service_role_withheld:{user_id}"))
+                .with_compliance(ComplianceEnvelope {
+                    actor: user_id.to_string(),
+                    actor_project: project_id.to_string(),
+                    target_resource: user_id.to_string(),
+                    operation: "service_account_token_issue".to_string(),
+                    outcome: "roles_withheld".to_string(),
+                    reason_code: "service_forbidden_role".to_string(),
+                    auth_method: surface.to_string(),
+                    ..ComplianceEnvelope::default()
+                }),
+            )
+            .await;
+        }
+        resolved.kept
     }
 
     /// Build the JWK Set for verifying UDB-issued JWTs. Order of preference:

@@ -1676,3 +1676,147 @@ async fn live_postgres_grant_and_binding_audit_failure_is_atomic() {
 
     cleanup_native_auth_db(&pool).await;
 }
+
+#[tokio::test]
+#[ignore = "requires live Postgres; run with UDB_LIVE_AUTH_TESTS=1 cargo test --lib live_postgres_service_bearers_carry_filtered_bound_roles -- --ignored --nocapture"]
+async fn live_postgres_service_bearers_carry_filtered_bound_roles() {
+    // A role bound to a service account rides its bearers (password login,
+    // API-key exchange, refresh); a code a workload credential may never carry
+    // is withheld, login still succeeds, and the scopes stay the typed grant's.
+    use crate::proto::udb::core::authz::services::v1 as authz_pb;
+    use crate::proto::udb::core::authz::services::v1::authz_service_server::AuthzService;
+
+    let _guard = live_auth_db_lock().lock().await;
+    let pool = live_pg_pool().await;
+    migrate_native_auth_db(&pool).await;
+    let broker = native_broker_service().await;
+    let (_, authz, _) = broker.build_auth_services();
+    let svc =
+        authn_service_with_jwt(pool.clone()).with_authz_snapshot(Some(broker.authz_snapshot()));
+    let apikey = api_key_service(pool.clone());
+    let password = "CorrectHorse1!";
+    let (user, _grant) =
+        create_service_account_with_grant(&svc, "svc_roles", password, &["udb:read"]).await;
+    let suffix = uuid::Uuid::new_v4().simple().to_string();
+
+    let reader_code = format!("reader_{suffix}");
+    let admin_code = format!("ops_admin_{suffix}");
+    for code in [reader_code.clone(), admin_code.clone()] {
+        let role = authz
+            .create_role(Request::new(authz_pb::CreateRoleRequest {
+                name: format!("Role {code}"),
+                description: "service bearer role live test".to_string(),
+                created_by: user.user_id.clone(),
+                role_code: code.clone(),
+                domain: "acme".to_string(),
+                tenant_id: "acme".to_string(),
+                project_id: "billing".to_string(),
+                ..Default::default()
+            }))
+            .await
+            .expect("create role")
+            .into_inner()
+            .role
+            .expect("role");
+        authz
+            .assign_role(Request::new(authz_pb::AssignRoleRequest {
+                user_id: user.user_id.clone(),
+                role_id: role.role_id,
+                domain: "acme".to_string(),
+                assigned_by: user.user_id.clone(),
+                tenant_id: "acme".to_string(),
+                project_id: "billing".to_string(),
+                ..Default::default()
+            }))
+            .await
+            .expect("assign role to service account");
+    }
+    authz.warm_shared_snapshot().await;
+
+    let assert_roles = |validated: &authn_pb::ValidateTokenResponse, surface: &str| {
+        assert!(validated.valid, "{surface}: bearer must validate");
+        assert!(
+            validated.roles.contains(&reader_code),
+            "{surface}: the bound role rides the bearer, got {:?}",
+            validated.roles
+        );
+        assert!(
+            !validated.roles.contains(&admin_code),
+            "{surface}: an admin-segment role is withheld, got {:?}",
+            validated.roles
+        );
+        assert_eq!(
+            validated.scopes,
+            vec!["udb:read"],
+            "{surface}: scopes stay the grant's"
+        );
+        let roles: Vec<&str> = validated.roles.iter().map(String::as_str).collect();
+        let ctx = test_claim_context(
+            &validated.user_id,
+            &validated.tenant_id,
+            &validated.project_id,
+            &["udb:read"],
+            &roles,
+        );
+        assert!(
+            !ctx.is_cross_tenant_admin(),
+            "{surface}: a service bearer's roles never confer cross-tenant authority"
+        );
+    };
+
+    let login = svc
+        .login(Request::new(login_request(&user.email, password)))
+        .await
+        .expect("service login with a withheld role still succeeds")
+        .into_inner();
+    let validated = validate_access_token(&svc, login.access_token.clone()).await;
+    assert_roles(&validated, "password login");
+
+    let refreshed = svc
+        .refresh_token(Request::new(authn_pb::RefreshTokenRequest {
+            session_id: login.session_id.clone(),
+            ..Default::default()
+        }))
+        .await
+        .expect("refresh service session")
+        .into_inner();
+    let validated = validate_access_token(&svc, refreshed.access_token).await;
+    assert_roles(&validated, "refresh");
+
+    let created = scope_claim_context_for_test(
+        test_claim_context(&user.user_id, "acme", "billing", &[], &[]),
+        apikey.create_api_key(Request::new(apikey_pb::CreateApiKeyRequest {
+            name: "service-roles-key".to_string(),
+            owner_id: user.user_id.clone(),
+            scopes: vec!["udb:read".to_string()],
+            context: Some(common_pb::RequestContext {
+                principal_id: user.user_id.clone(),
+                tenant: Some(common_pb::TenantContext {
+                    tenant_id: "acme".to_string(),
+                    project_id: "billing".to_string(),
+                    ..Default::default()
+                }),
+                ..Default::default()
+            }),
+            ..Default::default()
+        })),
+    )
+    .await
+    .expect("create service API key")
+    .into_inner();
+    let exchanged = svc
+        .authenticate(Request::new(authn_pb::AuthnRequest {
+            api_key: created.plain_key,
+            ..Default::default()
+        }))
+        .await
+        .expect("API-key exchange with a withheld role still succeeds")
+        .into_inner();
+    let principal = exchanged.principal.expect("api-key principal");
+    assert!(principal.roles.contains(&reader_code));
+    assert!(!principal.roles.contains(&admin_code));
+    let validated = validate_access_token(&svc, exchanged.access_token).await;
+    assert_roles(&validated, "api-key exchange");
+
+    cleanup_native_auth_db(&pool).await;
+}

@@ -616,9 +616,19 @@ impl AuthnServiceImpl {
         if scopes.is_empty() {
             return Err(refresh_service_grant_status());
         }
+        // Roles are re-resolved on every refresh like the scopes: an unbound
+        // role drops at the next refresh, a forbidden code is never carried.
+        let roles = self
+            .service_account_bearer_roles(
+                &user.user_id,
+                &user.tenant_id,
+                &user.project_id,
+                "refresh",
+            )
+            .await;
         Ok(RefreshGrants {
             scopes,
-            roles: Vec::new(),
+            roles,
             service_identity: grant.service_identity,
             account_kind: user.account_kind,
         })

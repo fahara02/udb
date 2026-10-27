@@ -96,8 +96,10 @@ fn reset_password_request_valid_status() -> Status {
 impl AuthnServiceImpl {
     /// Service-account password login resolves only through the typed durable
     /// grant. Legacy profile attributes are migration input, never a parallel
-    /// runtime authority.
-    fn resolve_password_login_grants_with_typed(
+    /// runtime authority. The bearer's roles are the account's role bindings
+    /// minus every code a workload credential may never carry; its scopes come
+    /// only from the grant.
+    async fn resolve_password_login_grants_with_typed(
         &self,
         user: &UserRecord,
         requested_scopes: &[String],
@@ -129,9 +131,17 @@ impl AuthnServiceImpl {
             }
             let scopes =
                 super::super::grants::validate_service_scopes(requested_scopes, &grant.scopes)?;
+            let roles = self
+                .service_account_bearer_roles(
+                    &user.user_id,
+                    &user.tenant_id,
+                    &user.project_id,
+                    "password_login",
+                )
+                .await;
             return Ok(PasswordLoginGrants {
                 scopes,
-                roles: Vec::new(),
+                roles,
                 service_identity: grant.service_identity.clone(),
             });
         }
@@ -213,12 +223,24 @@ impl AuthnServiceImpl {
                 requested_scopes
             };
             principal.scopes = token_scopes.clone();
+            // The owner's bound roles ride the exchanged bearer (filtered:
+            // never a platform / owner / admin / break-glass code); the scopes
+            // stay the grant-attenuated key scopes above.
+            let roles = self
+                .service_account_bearer_roles(
+                    &rec.principal_id,
+                    &rec.tenant_id,
+                    &rec.project_id,
+                    "api_key_exchange",
+                )
+                .await;
+            principal.roles = roles.clone();
             let (access_token, access_exp) = self.issue_access_token(
                 &rec.principal_id,
                 &rec.tenant_id,
                 &rec.project_id,
                 &token_scopes,
-                &[],
+                &roles,
                 &rec.service_identity,
                 &format!("apikey_{}", rec.key_prefix),
                 "api_key",
@@ -767,11 +789,13 @@ impl AuthnServiceImpl {
         } else {
             None
         };
-        let grants = self.resolve_password_login_grants_with_typed(
-            &user,
-            &requested_scopes,
-            typed_grant.as_ref(),
-        )?;
+        let grants = self
+            .resolve_password_login_grants_with_typed(
+                &user,
+                &requested_scopes,
+                typed_grant.as_ref(),
+            )
+            .await?;
         let scopes = grants.scopes.clone();
         let roles = grants.roles.clone();
         let session_result = self
@@ -1431,5 +1455,114 @@ mod tests {
                 "must satisfy the configured password policy",
             )],
         );
+    }
+
+    fn svc_with_role_bindings(bindings: &[(&str, &str, &str)]) -> AuthnServiceImpl {
+        use crate::runtime::authz::{AuthzSnapshot, RoleBinding};
+        let snapshot = AuthzSnapshot {
+            version: "service-roles-v1".to_string(),
+            role_bindings: bindings
+                .iter()
+                .map(|(subject, role, tenant)| RoleBinding {
+                    subject: subject.to_string(),
+                    role: role.to_string(),
+                    tenant: tenant.to_string(),
+                    project: String::new(),
+                })
+                .collect(),
+            ..AuthzSnapshot::default()
+        };
+        let cell = std::sync::Arc::new(arc_swap::ArcSwap::from_pointee(snapshot));
+        svc().with_authz_snapshot(Some(cell))
+    }
+
+    fn service_account(user_id: &str) -> UserRecord {
+        UserRecord {
+            user_id: user_id.to_string(),
+            username: "svc-reader".to_string(),
+            account_kind: authn::AccountKind::ServiceAccount,
+            status: authn::AccountStatus::Active,
+            tenant_id: "acme".to_string(),
+            project_id: "billing".to_string(),
+            ..UserRecord::default()
+        }
+    }
+
+    #[test]
+    fn service_forbidden_roles_cover_platform_owner_admin_and_break_glass() {
+        use super::super::tokens::is_service_forbidden_role;
+        for role in [
+            "platform_admin",
+            "udb:platform_admin",
+            "superadmin",
+            "Super_Admin",
+            "organization_owner",
+            "break_glass_admin",
+            "Break-Glass",
+            "tenant_admin",
+            "owner",
+            "org-owner",
+            "root",
+            "*",
+            "",
+            "  ",
+        ] {
+            assert!(is_service_forbidden_role(role), "{role:?} must be withheld");
+        }
+        for role in ["reader", "billing_writer", "clinic.scheduler", "auditor"] {
+            assert!(!is_service_forbidden_role(role), "{role:?} must be carried");
+        }
+    }
+
+    #[test]
+    fn service_account_roles_keep_bound_roles_and_withhold_forbidden_codes() {
+        let svc = svc_with_role_bindings(&[
+            ("svc-1", "reader", "acme"),
+            ("svc-1", "organization_owner", "acme"),
+            ("svc-1", "platform_admin", "acme"),
+            ("svc-1", "break_glass_admin", "acme"),
+            // Another tenant's binding never applies.
+            ("svc-1", "writer", "globex"),
+            // Another subject's binding never applies.
+            ("svc-2", "auditor", "acme"),
+        ]);
+        let resolved = svc.resolve_service_account_roles("svc-1", "acme", "billing");
+        assert_eq!(resolved.kept, vec!["reader".to_string()]);
+        assert_eq!(
+            resolved.withheld,
+            vec![
+                "organization_owner".to_string(),
+                "platform_admin".to_string(),
+                "break_glass_admin".to_string(),
+            ]
+        );
+    }
+
+    #[tokio::test]
+    async fn service_password_login_carries_filtered_roles_and_grant_scopes_only() {
+        let svc = svc_with_role_bindings(&[
+            ("svc-1", "reader", "acme"),
+            ("svc-1", "organization_owner", "acme"),
+            ("svc-1", "platform_admin", "acme"),
+        ]);
+        let grant = super::super::super::grants::GrantRecord {
+            user_id: "svc-1".to_string(),
+            service_identity: "spiffe://acme/svc-1".to_string(),
+            tenant_id: "acme".to_string(),
+            project_id: "billing".to_string(),
+            scopes: vec!["data:read".to_string()],
+            status: "ACTIVE".to_string(),
+            revision: 1,
+            ..Default::default()
+        };
+        let grants = svc
+            .resolve_password_login_grants_with_typed(&service_account("svc-1"), &[], Some(&grant))
+            .await
+            .expect("service login grants resolve");
+        assert_eq!(grants.roles, vec!["reader".to_string()]);
+        // Scopes come only from the typed grant: the withheld
+        // organization_owner / platform_admin bindings project nothing.
+        assert_eq!(grants.scopes, vec!["data:read".to_string()]);
+        assert_eq!(grants.service_identity, "spiffe://acme/svc-1");
     }
 }

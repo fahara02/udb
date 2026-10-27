@@ -83,6 +83,10 @@ pub(crate) mod topics {
     pub const PASSWORD_RESET_COMPLETED: &str = "udb.authn.password.reset.completed.v1";
     pub const PHONE_VERIFIED: &str = "udb.authn.user.phone.verified.v1";
     pub const SESSION_REFRESHED: &str = "udb.authn.session.refreshed.v1";
+    /// A service-account bearer was minted without one or more bound roles a
+    /// workload credential may never carry (platform / owner / admin /
+    /// break-glass codes).
+    pub const SERVICE_ACCOUNT_ROLE_WITHHELD: &str = "udb.authn.service.role.withheld.v1";
     // Emitted only from the `#[cfg(feature = "webauthn")]` registration/auth
     // ceremonies (authn/mod.rs); gate the definitions to match so the default
     // (webauthn-off) build doesn't see them as dead.

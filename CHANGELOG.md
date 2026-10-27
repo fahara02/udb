@@ -18,9 +18,30 @@ release line was tagged.
   API key cost one primary-key read. A credential with no native user row
   (external IdP, OIDC) keeps `username` empty.
 
+### Changed
+
+- **Service-account bearers carry the account's bound roles.** Password login,
+  API-key exchange (`Authenticate` with `api_key`) and refresh used to mint
+  service-account tokens with no roles at all; they now carry the roles bound
+  to the account in its grant's tenant and project, so `ValidateToken.roles`
+  and `Principal.roles` show them. A role a workload credential may never hold
+  is withheld: platform roles, every role that projects scopes into a token
+  (`organization_owner`, `platform_admin`), `break_glass_admin`, and any code
+  with a wildcard, `admin`, `owner`, `superuser` or `root` segment. A withheld
+  role does not fail the login; it is logged on target `udb.audit.authn` and
+  published as `udb.authn.service.role.withheld.v1`. The scopes still come only
+  from the typed grant, and authorization decisions still read roles from the
+  authz snapshot, so access is unchanged.
+
 ### Breaking for callers
 
-- None.
+- **Service-account tokens now list roles.** Code that treated an empty
+  `roles` list as "this is a service account", or that branches on the roles
+  of a service-account principal, sees the account's bound roles now.
+  - detect: code: `ValidateTokenResponse.roles`
+  - detect: code: `Principal.roles`
+  - detect: code: `.roles.is_empty()`
+  - fix: tell service accounts apart by `account_kind == ACCOUNT_KIND_SERVICE_ACCOUNT` (or a non-empty `service_identity`), not by empty roles; unbind any role a service account should not present.
 
 ## [0.6.3] - 2026-10-27
 
