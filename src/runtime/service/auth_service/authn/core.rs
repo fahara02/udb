@@ -320,13 +320,95 @@ mod tests {
             .await
             .expect_err("missing username/email must fail before authz or pool access");
 
-        assert_eq!(err.message(), "username and email are required");
+        assert_eq!(
+            err.message(),
+            "username and one of email or phone are required"
+        );
         assert_validation_fields(
             &err,
             &[
                 ("username", "must be a non-empty username"),
-                ("email", "must be a non-empty email address"),
+                ("email", "must include an email address or a phone number"),
+                ("phone", "must include an email address or a phone number"),
             ],
+        );
+    }
+
+    #[test]
+    fn create_user_identity_validation_matrix() {
+        // Accepted: username plus email, phone, or both.
+        for (email, phone) in [
+            ("ada@example.com", ""),
+            ("", "+8801712345678"),
+            ("ada@example.com", "+14155550123"),
+            ("", " +4915123456789 "),
+        ] {
+            validate_create_user_identity("ada", email, phone)
+                .unwrap_or_else(|err| panic!("{email:?}/{phone:?} must pass: {err}"));
+        }
+
+        let err = validate_create_user_identity("ada", "", "").expect_err("no contact");
+        assert_eq!(err.message(), "one of email or phone is required");
+        assert_validation_fields(
+            &err,
+            &[
+                ("email", "must include an email address or a phone number"),
+                ("phone", "must include an email address or a phone number"),
+            ],
+        );
+
+        let err =
+            validate_create_user_identity(" ", "", "+8801712345678").expect_err("no username");
+        assert_eq!(err.message(), "username is required");
+        assert_validation_fields(&err, &[("username", "must be a non-empty username")]);
+
+        for phone in [
+            "8801712345678",
+            "+0801712345678",
+            "+123456",
+            "+1234567890123456",
+            "+88017-1234567",
+            "+880 1712345678",
+            "+",
+        ] {
+            let err = validate_create_user_identity("ada", "", phone)
+                .expect_err("a malformed phone is refused");
+            assert_eq!(err.message(), "phone must be an E.164 number", "{phone:?}");
+            assert_validation_fields(
+                &err,
+                &[(
+                    "phone",
+                    "must be an E.164 number: + then 7 to 15 digits, not starting with 0",
+                )],
+            );
+        }
+        // A malformed phone is refused even when an email is present.
+        assert!(validate_create_user_identity("ada", "ada@example.com", "12345").is_err());
+    }
+
+    #[test]
+    fn e164_bounds_follow_the_documented_pattern() {
+        assert!(is_e164_phone("+1234567"));
+        assert!(is_e164_phone("+123456789012345"));
+        assert!(!is_e164_phone("+123456"));
+        assert!(!is_e164_phone("+1234567890123456"));
+        assert!(!is_e164_phone("+01234567"));
+    }
+
+    #[tokio::test]
+    async fn phone_only_create_user_without_sms_delivery_is_refused_before_any_write() {
+        // No notifier is mounted and no OTP webhook is configured in unit
+        // tests: a phone-only account could never receive its code.
+        if crate::runtime::authn::otp_delivery_webhook_configured() {
+            return;
+        }
+        let svc = deny_test_service();
+        assert!(!svc.sms_code_delivery_available());
+        assert_capability_detail(
+            &sms_delivery_unavailable_status(),
+            "create_user",
+            "sms_delivery_unavailable",
+            "a phone-only account needs SMS code delivery: configure an SMS notification template or UDB_OTP_DELIVERY_WEBHOOK_URL",
         );
     }
 
@@ -900,7 +982,75 @@ fn claim_bound_read_tenant(request_tenant: &str) -> Result<Option<String>, Statu
     Ok(Some(claim_tenant.to_string()))
 }
 
+/// E.164 as CreateUser accepts it: `+`, a non-zero leading digit, 7 to 15
+/// digits in all (`^\+[1-9]\d{6,14}$`).
+pub(super) fn is_e164_phone(phone: &str) -> bool {
+    let Some(digits) = phone.strip_prefix('+') else {
+        return false;
+    };
+    (7..=15).contains(&digits.len())
+        && digits.bytes().all(|byte| byte.is_ascii_digit())
+        && !digits.starts_with('0')
+}
+
+/// CreateUser identity: a username, plus an email or an E.164 phone (or both).
+/// Every missing field is named in the field violations.
+pub(super) fn validate_create_user_identity(
+    username: &str,
+    email: &str,
+    phone: &str,
+) -> Result<(), Status> {
+    let missing_username = username.trim().is_empty();
+    let missing_contact = email.trim().is_empty() && phone.trim().is_empty();
+    let mut violations = Vec::new();
+    if missing_username {
+        violations.push(("username", "must be a non-empty username"));
+    }
+    if missing_contact {
+        violations.push(("email", "must include an email address or a phone number"));
+        violations.push(("phone", "must include an email address or a phone number"));
+    }
+    if !violations.is_empty() {
+        let message = match (missing_username, missing_contact) {
+            (true, true) => "username and one of email or phone are required",
+            (true, false) => "username is required",
+            _ => "one of email or phone is required",
+        };
+        return Err(authn_core_invalid_fields(message, violations));
+    }
+    let phone = phone.trim();
+    if !phone.is_empty() && !is_e164_phone(phone) {
+        return Err(authn_core_invalid_fields(
+            "phone must be an E.164 number",
+            [(
+                "phone",
+                "must be an E.164 number: + then 7 to 15 digits, not starting with 0",
+            )],
+        ));
+    }
+    Ok(())
+}
+
+fn sms_delivery_unavailable_status() -> Status {
+    authn_capability_status(
+        "create_user",
+        "sms_delivery_unavailable",
+        "a phone-only account needs SMS code delivery: configure an SMS notification template or UDB_OTP_DELIVERY_WEBHOOK_URL",
+    )
+}
+
 impl AuthnServiceImpl {
+    /// Whether an SMS code can leave the broker: through the mounted
+    /// NotificationService (its SMS templates, shipped or tenant-defined, need
+    /// the runtime it is wired with) or the operator OTP webhook.
+    fn sms_code_delivery_available(&self) -> bool {
+        authn::otp_delivery_webhook_configured()
+            || self
+                .system_notifier
+                .as_ref()
+                .is_some_and(|notifier| notifier.require_runtime().is_ok())
+    }
+
     pub(super) async fn create_user_impl(
         &self,
         request: Request<authn_pb::CreateUserRequest>,
@@ -909,19 +1059,11 @@ impl AuthnServiceImpl {
             return Err(create_user_password_secret_status());
         }
         let req = request.into_inner();
-        let mut missing_identity = Vec::new();
-        if req.username.trim().is_empty() {
-            missing_identity.push(("username", "must be a non-empty username"));
-        }
-        if req.email.trim().is_empty() {
-            missing_identity.push(("email", "must be a non-empty email address"));
-        }
-        if !missing_identity.is_empty() {
-            return Err(authn_core_invalid_fields(
-                "username and email are required",
-                missing_identity,
-            ));
-        }
+        validate_create_user_identity(&req.username, &req.email, &req.phone)?;
+        let phone = req.phone.trim().to_string();
+        // A phone-only account: every code it needs (verification, invite)
+        // travels by SMS instead of email.
+        let phone_only = req.email.trim().is_empty();
         // D2: per-action authz beyond the coarse transport `udb:admin` gate, plus
         // D1: the new user's body tenant/project must match the validated bearer
         // tenant/project (a tenant-A admin token cannot mint a tenant-B user) unless
@@ -1044,22 +1186,35 @@ impl AuthnServiceImpl {
             profile_attributes_json: serde_json::to_string(&req.profile_attributes)
                 .unwrap_or_else(|_| "{}".to_string()),
         };
-        // Prepare the email-verification OTP (record + plaintext code) WITHOUT
+        // Prepare the verification OTP (record + plaintext code) WITHOUT
         // persisting or sending it yet, so the row can land inside the same
         // transaction as the user upsert and the registration event. The
         // notification is a side-effect that cannot be rolled back, so it is sent
         // only AFTER the transaction commits (best-effort, post-commit).
         // An invite sends a password-reset code instead: completing it sets the
-        // password and proves the address in one step.
+        // password and proves the address in one step. A phone-only account
+        // gets the same codes by SMS: a phone-verification code, or the invite's
+        // password-reset code.
+        let otp_type = match (invite, phone_only) {
+            (true, _) => authn_entity_pb::OtpType::PasswordReset as i32,
+            (false, true) => authn_entity_pb::OtpType::PhoneVerification as i32,
+            (false, false) => authn_entity_pb::OtpType::EmailVerification as i32,
+        };
+        let (otp_channel, otp_target) = if phone_only {
+            ("sms", phone.as_str())
+        } else {
+            ("email", rec.email.as_str())
+        };
+        // An account whose only code channel cannot be delivered could never be
+        // verified or activated: refuse it before anything is written.
+        if phone_only && !self.sms_code_delivery_available() {
+            return Err(sms_delivery_unavailable_status());
+        }
         let (otp_rec, otp_code) = self.prepare_otp_record(
             &rec,
-            if invite {
-                authn_entity_pb::OtpType::PasswordReset as i32
-            } else {
-                authn_entity_pb::OtpType::EmailVerification as i32
-            },
-            "email",
-            &rec.email,
+            otp_type,
+            otp_channel,
+            otp_target,
             format!("create_user:{user_id}"),
             now,
         )?;
@@ -1110,6 +1265,14 @@ impl AuthnServiceImpl {
             .put_user_in_tx(&mut *tx, rec.clone())
             .await
             .map_err(crate::runtime::executor_utils::status_from_store_string)?;
+        if !phone.is_empty() {
+            // Recorded unverified; the SMS code (phone-only) or a later
+            // SendPhoneVerification proves it.
+            self.users
+                .set_user_phone_in_tx(&mut *tx, &rec.user_id, &phone)
+                .await
+                .map_err(crate::runtime::executor_utils::status_from_store_string)?;
+        }
         self.users
             .put_otp_in_tx(&mut *tx, otp_rec)
             .await
@@ -1128,16 +1291,14 @@ impl AuthnServiceImpl {
             &otp_channel,
             &otp_address,
             &otp_code,
-            if invite {
-                authn_entity_pb::OtpType::PasswordReset as i32
-            } else {
-                authn_entity_pb::OtpType::EmailVerification as i32
-            },
+            otp_type,
             &otp_id,
         )
         .await;
+        let mut user = user_record_to_pb(&rec);
+        user.phone = phone;
         Ok(Response::new(authn_pb::CreateUserResponse {
-            user: Some(user_record_to_pb(&rec)),
+            user: Some(user),
             otp_id,
         }))
     }

@@ -51,6 +51,14 @@ message CreateUserRequest {
   // ResetPassword(otp_id, code, new_password), which activates the account.
   // `CreateUserResponse.otp_id` is that reset code's id.
   bool password_setup_required = 12;
+  // E.164 phone number (`+` then 7 to 15 digits). A username plus `email` or
+  // `phone` (or both) is required. With `phone` and no `email` the account is
+  // phone-only: its verification code (or, for an invite, its password-reset
+  // code) is sent by SMS, and VerifyOTP on that code activates it. A phone-only
+  // CreateUser is refused (FAILED_PRECONDITION, `sms_delivery_unavailable`)
+  // unless SMS can be delivered: a NotificationService with SMS templates or
+  // UDB_OTP_DELIVERY_WEBHOOK_URL. With both, the phone is stored unverified.
+  string phone = 13;
 }
 
 message CreateUserResponse {

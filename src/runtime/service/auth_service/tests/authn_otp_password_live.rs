@@ -781,3 +781,178 @@ async fn live_postgres_concurrent_otp_and_reset_issue_one_code_per_cooldown() {
         .expect("close independent OTP observer");
     cleanup_native_auth_db(&pool).await;
 }
+
+/// The stored phone and whether it is verified, read straight from the user
+/// row (the User DTO is built from the record, which does not carry them).
+async fn stored_phone(pool: &sqlx::PgPool, user_id: &str) -> (String, bool) {
+    let users = crate::runtime::native_catalog::native_model(
+        "udb.core.authn.entity.v1.User",
+        &["user_id", "phone", "phone_verified_at"],
+    );
+    let row: (Option<String>, bool) = sqlx::query_as(&format!(
+        "SELECT {phone}, {verified} IS NOT NULL FROM {rel} WHERE {uid} = $1::UUID",
+        phone = users.q("phone"),
+        verified = users.q("phone_verified_at"),
+        rel = users.relation,
+        uid = users.q("user_id"),
+    ))
+    .bind(user_id)
+    .fetch_one(pool)
+    .await
+    .expect("read stored phone");
+    (row.0.unwrap_or_default(), row.1)
+}
+
+#[tokio::test]
+#[ignore = "requires live Postgres; run with UDB_LIVE_AUTH_TESTS=1 cargo test --lib live_postgres_phone_only_create_user -- --ignored --nocapture"]
+async fn live_postgres_phone_only_create_user() {
+    use crate::runtime::service::live_tests::ops_seams_live::EnvRestore;
+
+    let _guard = live_auth_db_lock().lock().await;
+    let pool = live_pg_pool().await;
+    migrate_native_auth_db(&pool).await;
+    let svc = authn_service(pool.clone());
+
+    // No notifier is mounted and no webhook is configured: a phone-only account
+    // could never receive its code, so it is refused before anything is written.
+    {
+        let _no_webhook = EnvRestore::set("UDB_OTP_DELIVERY_WEBHOOK_URL", "");
+        let name = format!("phone_refused_{}", Uuid::new_v4().simple());
+        let err = svc
+            .create_user(Request::new(authn_pb::CreateUserRequest {
+                username: name.clone(),
+                phone: "+8801712345678".to_string(),
+                password: "CorrectHorse1!".to_string(),
+                tenant_id: "acme".to_string(),
+                project_id: "billing".to_string(),
+                ..Default::default()
+            }))
+            .await
+            .expect_err("phone-only CreateUser without SMS delivery is refused");
+        assert_eq!(err.code(), tonic::Code::FailedPrecondition);
+        assert_eq!(
+            decode_detail(&err).capability_required,
+            "sms_delivery_unavailable"
+        );
+        let lookup = svc
+            .get_user(Request::new(authn_pb::GetUserRequest {
+                username: name,
+                ..Default::default()
+            }))
+            .await;
+        assert!(
+            lookup.is_err() || lookup.unwrap().into_inner().user.is_none(),
+            "a refused phone-only CreateUser must write no user"
+        );
+    }
+
+    // The operator webhook is the SMS channel. Delivery itself is best-effort
+    // (nothing listens on the discard port); the issued code is captured by
+    // the test build.
+    let _webhook = EnvRestore::set("UDB_OTP_DELIVERY_WEBHOOK_URL", "http://127.0.0.1:9/otp");
+
+    // Self-registration: a phone-verification code by SMS; verifying it
+    // activates the email-less account and marks the phone verified.
+    let created = svc
+        .create_user(Request::new(authn_pb::CreateUserRequest {
+            username: format!("phone_only_{}", Uuid::new_v4().simple()),
+            phone: "+8801712345678".to_string(),
+            password: "CorrectHorse1!".to_string(),
+            tenant_id: "acme".to_string(),
+            project_id: "billing".to_string(),
+            ..Default::default()
+        }))
+        .await
+        .expect("phone-only CreateUser")
+        .into_inner();
+    let user = created.user.expect("created phone-only user");
+    assert!(user.email.is_empty());
+    assert_eq!(user.phone, "+8801712345678");
+    assert_eq!(
+        user.status,
+        authn_entity_pb::UserStatus::PendingVerification as i32
+    );
+    assert_eq!(
+        stored_phone(&pool, &user.user_id).await,
+        ("+8801712345678".to_string(), false)
+    );
+    let verified = verify_issued_otp(&svc, &created.otp_id).await;
+    assert!(verified.verified);
+    assert_eq!(
+        verified.otp_type,
+        authn_entity_pb::OtpType::PhoneVerification as i32
+    );
+    let activated = svc
+        .get_user(Request::new(authn_pb::GetUserRequest {
+            user_id: user.user_id.clone(),
+            ..Default::default()
+        }))
+        .await
+        .expect("re-read phone-only user")
+        .into_inner()
+        .user
+        .expect("phone-only user present");
+    assert_eq!(activated.status, authn_entity_pb::UserStatus::Active as i32);
+    assert!(stored_phone(&pool, &user.user_id).await.1);
+
+    // Invite: the password-reset code goes by SMS; setting the first password
+    // activates the account and proves the phone (not an email it lacks).
+    let invited = svc
+        .create_user(Request::new(authn_pb::CreateUserRequest {
+            username: format!("phone_invite_{}", Uuid::new_v4().simple()),
+            phone: "+14155550123".to_string(),
+            password_setup_required: true,
+            tenant_id: "acme".to_string(),
+            project_id: "billing".to_string(),
+            ..Default::default()
+        }))
+        .await
+        .expect("phone-only invite")
+        .into_inner();
+    let invitee = invited.user.expect("invited user");
+    assert_eq!(
+        invitee.status,
+        authn_entity_pb::UserStatus::PasswordSetupRequired as i32
+    );
+    svc.reset_password(Request::new(authn_pb::ResetPasswordRequest {
+        otp_id: invited.otp_id.clone(),
+        code: issued_test_otp_code(&invited.otp_id),
+        new_password: "CorrectHorse2!".to_string(),
+        ..Default::default()
+    }))
+    .await
+    .expect("set the first password from the SMS code");
+    let invitee = svc
+        .get_user(Request::new(authn_pb::GetUserRequest {
+            user_id: invitee.user_id.clone(),
+            ..Default::default()
+        }))
+        .await
+        .expect("re-read invitee")
+        .into_inner()
+        .user
+        .expect("invitee present");
+    assert_eq!(invitee.status, authn_entity_pb::UserStatus::Active as i32);
+    assert!(invitee.email_verified_at.is_none());
+    assert!(stored_phone(&pool, &invitee.user_id).await.1);
+
+    // Neither email nor phone: both fields are named.
+    let err = svc
+        .create_user(Request::new(authn_pb::CreateUserRequest {
+            username: format!("no_contact_{}", Uuid::new_v4().simple()),
+            password: "CorrectHorse1!".to_string(),
+            tenant_id: "acme".to_string(),
+            ..Default::default()
+        }))
+        .await
+        .expect_err("a contact is required");
+    assert_eq!(err.code(), tonic::Code::InvalidArgument);
+    let fields: Vec<String> = decode_detail(&err)
+        .field_violations
+        .into_iter()
+        .map(|violation| violation.field)
+        .collect();
+    assert_eq!(fields, vec!["email", "phone"]);
+
+    cleanup_native_auth_db(&pool).await;
+}

@@ -451,6 +451,24 @@ impl AuthnServiceImpl {
                     .map_err(|err| {
                         mfa_internal_status("verify_otp_phone_mark_verified", err.to_string())
                     })?;
+                // A phone-only account (no email to verify) is activated by
+                // proving its phone, the way an email account is by its email.
+                if let Some(mut user) =
+                    self.users
+                        .get_user_by_id(&rec.user_id)
+                        .await
+                        .map_err(|err| {
+                            mfa_internal_status("verify_otp_phone_user_load", err.to_string())
+                        })?
+                    && user.status == crate::runtime::authn::AccountStatus::PendingVerification
+                    && user.email.trim().is_empty()
+                {
+                    user.status = crate::runtime::authn::AccountStatus::Active;
+                    user.updated_at_unix = now_unix();
+                    self.users.put_user(user).await.map_err(|err| {
+                        mfa_internal_status("verify_otp_phone_user_activate", err.to_string())
+                    })?;
+                }
                 self.emit_event(
                     AuthEvent::new(
                         topics::PHONE_VERIFIED,

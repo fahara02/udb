@@ -1333,6 +1333,17 @@ pub trait UserStore: Send + Sync {
     async fn set_user_phone(&self, _user_id: &str, _phone: &str) -> Result<(), String> {
         Err("phone verification requires the Postgres user store".to_string())
     }
+    /// [`Self::set_user_phone`] on the caller's transaction connection, so the
+    /// number commits atomically with the user it belongs to (`CreateUser`).
+    /// Default fails closed; overridden by the Postgres store.
+    async fn set_user_phone_in_tx(
+        &self,
+        _conn: &mut sqlx::PgConnection,
+        _user_id: &str,
+        _phone: &str,
+    ) -> Result<(), String> {
+        Err("phone verification requires the Postgres user store".to_string())
+    }
     /// Mark the user's phone number verified. Default fails closed.
     async fn mark_phone_verified(&self, _user_id: &str, _now_unix: u64) -> Result<(), String> {
         Err("phone verification requires the Postgres user store".to_string())
@@ -1505,6 +1516,31 @@ fn eq(field: &str, value: LogicalValue) -> LogicalFilter {
         field: field.to_string(),
         op: ComparisonOp::Eq,
         value,
+    }
+}
+
+/// Record `phone` on the user and clear any prior verification of it.
+fn set_user_phone_update(user_id: &str, phone: &str) -> LogicalUpdate {
+    let mut assignments = std::collections::BTreeMap::new();
+    assignments.insert(
+        "phone".to_string(),
+        LogicalAssignment::Set {
+            value: LogicalValue::String(phone.to_string()),
+        },
+    );
+    assignments.insert(
+        "phone_verified_at".to_string(),
+        LogicalAssignment::Set {
+            value: LogicalValue::Null,
+        },
+    );
+    assignments.insert("updated_at".to_string(), LogicalAssignment::ServerNow);
+    LogicalUpdate {
+        message_type: USER_MSG.to_string(),
+        filter: eq("user_id", LogicalValue::String(user_id.to_string())),
+        assignments,
+        return_fields: Vec::new(),
+        require_affected: false,
     }
 }
 
@@ -3716,31 +3752,25 @@ impl UserStore for PostgresUserStore {
     }
 
     async fn set_user_phone(&self, user_id: &str, phone: &str) -> Result<(), String> {
-        let mut assignments = std::collections::BTreeMap::new();
-        assignments.insert(
-            "phone".to_string(),
-            LogicalAssignment::Set {
-                value: LogicalValue::String(phone.to_string()),
-            },
-        );
-        assignments.insert(
-            "phone_verified_at".to_string(),
-            LogicalAssignment::Set {
-                value: LogicalValue::Null,
-            },
-        );
-        assignments.insert("updated_at".to_string(), LogicalAssignment::ServerNow);
-        execute_typed_update_on(
-            &self.pool,
-            LogicalUpdate {
-                message_type: USER_MSG.to_string(),
-                filter: eq("user_id", LogicalValue::String(user_id.to_string())),
-                assignments,
-                return_fields: Vec::new(),
-                require_affected: false,
-            },
-        )
-        .await?;
+        execute_typed_update_on(&self.pool, set_user_phone_update(user_id, phone)).await?;
+        Ok(())
+    }
+
+    async fn set_user_phone_in_tx(
+        &self,
+        conn: &mut sqlx::PgConnection,
+        user_id: &str,
+        phone: &str,
+    ) -> Result<(), String> {
+        // The row was written earlier in this same transaction: a miss is a
+        // broken invariant, not a no-op.
+        let affected =
+            execute_typed_update_on(&mut *conn, set_user_phone_update(user_id, phone)).await?;
+        if affected != 1 {
+            return Err(format!(
+                "set user phone in transaction updated {affected} rows, expected 1"
+            ));
+        }
         Ok(())
     }
 
@@ -4116,6 +4146,17 @@ fn password_env_flag(key: &str, default: bool) -> bool {
         ),
         Err(_) => default,
     }
+}
+
+/// Whether [`deliver_otp`] can reach the operator's gateway at all: the
+/// webhook URL is configured and this build carries the HTTP client. A caller
+/// that must not create an account whose only code channel cannot be delivered
+/// (a phone-only `CreateUser`) checks this BEFORE committing.
+pub fn otp_delivery_webhook_configured() -> bool {
+    cfg!(feature = "http-client")
+        && std::env::var("UDB_OTP_DELIVERY_WEBHOOK_URL")
+            .ok()
+            .is_some_and(|url| !url.trim().is_empty())
 }
 
 /// Best-effort outbound OTP delivery to the operator's channel gateway via a

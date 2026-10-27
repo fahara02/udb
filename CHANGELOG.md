@@ -34,6 +34,20 @@ release line was tagged.
   (28), and published as `udb.authz.check.access.delegated.v1`.
   `CheckAccessResponse` gains `evaluated_subject` (6), set on every call to
   the subject actually evaluated. `Authorize` is unchanged.
+- **Phone-only accounts.** `CreateUserRequest` gains `phone` (field 13, E.164:
+  `+` then 7 to 15 digits). A username plus an email or a phone (or both) is
+  now required. With a phone and no email, the account's verification code is
+  sent by SMS (`PHONE_VERIFICATION` OTP), and `VerifyOTP` on it activates the
+  account and marks the phone verified; an invite
+  (`password_setup_required`) sends its password-reset code by SMS, and
+  `ResetPassword` with it activates the account and marks the phone verified.
+  The phone is written in the same transaction as the user. A phone-only
+  `CreateUser` is refused with `FAILED_PRECONDITION`
+  (`sms_delivery_unavailable`) before anything is written when SMS cannot be
+  delivered: no NotificationService with SMS templates is mounted and
+  `UDB_OTP_DELIVERY_WEBHOOK_URL` is not set. Signing in with a phone number is
+  not part of this release. With both an email and a phone, the email is
+  verified as before and the phone is stored unverified.
 
 ### Changed
 
@@ -59,6 +73,15 @@ release line was tagged.
   - detect: code: `Principal.roles`
   - detect: code: `.roles.is_empty()`
   - fix: tell service accounts apart by `account_kind == ACCOUNT_KIND_SERVICE_ACCOUNT` (or a non-empty `service_identity`), not by empty roles; unbind any role a service account should not present.
+- **`CreateUser` validation text changed.** A request without an email used to
+  fail with `username and email are required`; an email is now optional when a
+  phone is given. A request missing both now fails with `one of email or phone
+  is required` (or `username and one of email or phone are required` when the
+  username is missing too), with field violations on `email` and `phone`
+  (`must include an email address or a phone number`).
+  - detect: code: `username and email are required`
+  - detect: code: `must be a non-empty email address`
+  - fix: match the field violations (`field == "email"` / `field == "phone"`) instead of the message text.
 
 ## [0.6.3] - 2026-10-27
 

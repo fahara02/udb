@@ -1181,10 +1181,14 @@ impl AuthnServiceImpl {
         user.locked_until_unix = 0;
         user.updated_at_unix = now;
         // An invited account is activated by setting its first password: the
-        // code arrived at its email, which proves the address.
+        // code arrived at its email (or, for a phone-only account, by SMS at
+        // its phone), which proves that address.
+        let invite_proved_phone = user.status
+            == crate::runtime::authn::AccountStatus::PasswordSetupRequired
+            && rec.delivery_channel.eq_ignore_ascii_case("sms");
         if user.status == crate::runtime::authn::AccountStatus::PasswordSetupRequired {
             user.status = crate::runtime::authn::AccountStatus::Active;
-            if user.email_verified_at_unix == 0 {
+            if user.email_verified_at_unix == 0 && !invite_proved_phone {
                 user.email_verified_at_unix = now;
             }
         }
@@ -1194,6 +1198,14 @@ impl AuthnServiceImpl {
             .put_user(user)
             .await
             .map_err(|err| login_internal_status("reset_password_store", err.to_string()))?;
+        if invite_proved_phone {
+            self.users
+                .mark_phone_verified(&user_id, now)
+                .await
+                .map_err(|err| {
+                    login_internal_status("reset_password_phone_verified", err.to_string())
+                })?;
+        }
         // Invalidate every existing session after a reset.
         let _ = self.sessions.revoke_all_for_principal(&user_id, now).await;
         self.emit_event(
