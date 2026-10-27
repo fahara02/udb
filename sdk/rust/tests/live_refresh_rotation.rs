@@ -66,6 +66,8 @@ async fn live_refresh_token_rotation_survives_repeated_refreshes() {
     let mut base = Metadata::new(required("UDB_LIVE_TENANT"))
         .with_project(std::env::var("UDB_LIVE_PROJECT").unwrap_or_else(|_| "default".into()));
     base.purpose = "rust.live.refresh-rotation".into();
+    // Authenticated native calls require a request context header.
+    base.correlation_id = "rust-live-refresh-rotation".into();
 
     let tokens = TokenManager::with_skew(channel.clone(), base.clone(), ALWAYS_STALE);
     let login = tokens
