@@ -1544,7 +1544,13 @@ export class UdbProject {
           const expiresIn = Number(resp?.access_token_expires_in ?? 0);
           const next: StoredToken = {
             accessToken: resp?.access_token || current.accessToken,
-            refreshToken: current.refreshToken,
+            // The broker rotates the refresh token on every refresh: the one
+            // presented is single-use, so keeping it fails the NEXT refresh with
+            // "invalid credential". The reply omits it only for a legacy
+            // session-id refresh, where the stored credential stays valid.
+            refreshToken: resp?.refresh_token || current.refreshToken,
+            // session_public_id is the display id, not the legacy refresh
+            // session id this field holds, so the stored one is kept.
             sessionId: current.sessionId,
             expiresAt: expiresIn > 0 ? Date.now() + expiresIn * 1000 : 0,
           };

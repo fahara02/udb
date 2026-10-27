@@ -122,6 +122,67 @@ test("refreshIfNeeded hot-swaps the new bearer into core, auth, and webrtc core"
   }
 });
 
+test("refreshIfNeeded keeps the rotated refresh token across repeated refreshes", async () => {
+  // The broker rotates the refresh token on every RefreshToken call and each
+  // token works once; presenting a spent one is "invalid credential".
+  let live = "refresh-1";
+  let minted = 1;
+  const presented: string[] = [];
+  const auth: any = {
+    ...credSpy(),
+    refreshToken: async (req: any) => {
+      presented.push(req.refresh_token);
+      if (req.refresh_token !== live) throw new Error("16 UNAUTHENTICATED: invalid credential");
+      minted += 1;
+      live = `refresh-${minted}`;
+      return {
+        access_token: `token-${minted}`,
+        access_token_expires_in: 900,
+        refresh_token: live,
+        refresh_token_expires_in: 86400,
+        session_public_id: "public-session",
+      };
+    },
+  };
+  const store = memoryStore({
+    accessToken: "token-1",
+    refreshToken: "refresh-1",
+    sessionId: "legacy-session",
+    expiresAt: Date.now() - 1000,
+  });
+  const project = bareProject({ store, auth, core: credSpy() });
+
+  for (let i = 0; i < 4; i += 1) {
+    // Expire the stored access token so each call performs a real refresh.
+    await store.save({ ...store.current()!, expiresAt: Date.now() - 1000 });
+    await project.refreshIfNeeded();
+  }
+
+  assert.deepEqual(presented, ["refresh-1", "refresh-2", "refresh-3", "refresh-4"]);
+  assert.equal(store.current()!.refreshToken, "refresh-5");
+  assert.equal(store.current()!.accessToken, "token-5");
+  assert.equal(store.current()!.sessionId, "legacy-session", "the legacy refresh session id is kept");
+});
+
+test("a legacy session-id refresh without a rotated token keeps the stored refresh token", async () => {
+  const auth: any = {
+    ...credSpy(),
+    refreshToken: async () => ({ access_token: "token-2", access_token_expires_in: 900 }),
+  };
+  const store = memoryStore({
+    accessToken: "token-1",
+    refreshToken: "refresh-1",
+    sessionId: "legacy-session",
+    expiresAt: Date.now() - 1000,
+  });
+  const project = bareProject({ store, auth, core: credSpy() });
+
+  await project.refreshIfNeeded();
+
+  assert.equal(store.current()!.refreshToken, "refresh-1");
+  assert.equal(store.current()!.accessToken, "token-2");
+});
+
 test("logout clears active bearer credentials and raw API-key metadata", async () => {
   const auth: any = credSpy();
   const core = credSpy();

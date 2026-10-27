@@ -906,10 +906,10 @@ class TokenSession:
       expiry, and does so under a single lock so concurrent callers share ONE
       ``RefreshToken`` RPC (the single-flight guarantee) instead of stampeding.
 
-    Refresh shape note: ``RefreshToken`` returns a new ``access_token`` +
-    ``access_token_expires_in`` but NOT a rotated refresh token, so the original
-    refresh token / session_id is retained across refreshes. If the server later
-    rotates refresh tokens, update :meth:`_apply_refresh` to read the new value.
+    Refresh shape note: ``RefreshToken`` returns a new ``access_token`` and a
+    ROTATED ``refresh_token``; the presented refresh token is single-use, so
+    every refresh stores the new one. The reply carries no refresh token only
+    for a legacy session-id refresh, which keeps the stored credential.
     """
 
     def __init__(
@@ -1000,8 +1000,13 @@ class TokenSession:
         )
         refreshed = StoredToken(
             access_token=resp.access_token,
-            # RefreshToken does not rotate the refresh token; retain it.
-            refresh_token=token.refresh_token,
+            # The broker rotates the refresh token on every refresh: the one
+            # presented is single-use, so keeping it fails the NEXT refresh with
+            # "invalid credential". The reply omits it only for a legacy
+            # session-id refresh, where the stored credential stays valid.
+            refresh_token=resp.refresh_token or token.refresh_token,
+            # session_public_id is the display id, not the legacy refresh
+            # session id, so the stored one is kept.
             session_id=token.session_id,
             expires_at=expires_at,
         )
