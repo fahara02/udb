@@ -391,9 +391,11 @@ processAll("php cli launcher refs", "sdk/php/bin/udb", C["sdk-php"].version,
   /(^|[^0-9]v?)(0\.\d+\.\d+)([^0-9]|$)/gm);
 // package-lock.json has two "version" entries for @udb_plus/sdk – update both.
 processAll("ts package-lock", "sdk/typescript/package-lock.json", C["sdk-typescript"].version,
-  /("name": "@udb_plus\/sdk",\n\s*"version": ")(\d+\.\d+\.\d+)(")/);
+  /("name": "@udb_plus\/sdk",\r?\n\s*"version": ")(\d+\.\d+\.\d+)(")/);
 processTriple("cargo-lock udb", "Cargo.lock", C.udb.version,
-  /(name = "udb"\nversion = ")(\d+\.\d+\.\d+)(")/);
+  // \r?\n: a Windows checkout has CRLF line endings, which a bare \n never
+  // matches, so --fix silently left the crate's own lock entry behind.
+  /(name = "udb"\r?\nversion = ")(\d+\.\d+\.\d+)(")/);
 processTriple("native contract json", "docs/generated/udb-native-contract.json", C.udb.version,
   /("udb_version": ")(\d+\.\d+\.\d+)(")/);
 
