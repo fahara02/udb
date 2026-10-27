@@ -83,6 +83,56 @@ pub(super) struct ServiceAccountRoles {
 }
 
 impl AuthnServiceImpl {
+    /// Mint a tenant-membership access token (`ExchangeServiceTokenForTenant`)
+    /// for service account `subject` in the target `tenant_id`/`project_id`.
+    /// It carries the account's role bindings in the TARGET tenant (filtered
+    /// like every service-account bearer), the home grant's service identity,
+    /// and the membership pin; `ttl_secs` is already bounded by the caller.
+    /// Returns `(token, exp)`; a missing signing key is a capability error
+    /// (there is no session fallback for an exchanged token).
+    #[allow(clippy::too_many_arguments)]
+    pub(crate) async fn issue_membership_access_token(
+        &self,
+        subject: &str,
+        tenant_id: &str,
+        project_id: &str,
+        scopes: &[String],
+        service_identity: &str,
+        jti: &str,
+        pin: crate::runtime::security::MembershipPin<'_>,
+        now: u64,
+        ttl_secs: u64,
+    ) -> Result<(String, i64), Status> {
+        let roles = self
+            .service_account_bearer_roles(subject, tenant_id, project_id, "tenant_token_exchange")
+            .await;
+        match crate::runtime::security::sign_membership_access_token(
+            &self.security,
+            subject,
+            tenant_id,
+            project_id,
+            scopes,
+            &roles,
+            service_identity,
+            jti,
+            authn_entity_pb::AccountKind::ServiceAccount as i32,
+            now,
+            ttl_secs,
+            pin,
+        ) {
+            Ok(Some(signed)) => Ok(signed),
+            Ok(None) => Err(authn_capability_status(
+                "exchange_service_token_for_tenant",
+                "jwt_signing_key",
+                "exchanging for a tenant token requires a configured JWT signing key",
+            )),
+            Err(err) => Err(authn_internal_status(
+                "exchange_service_token_for_tenant_sign",
+                err,
+            )),
+        }
+    }
+
     pub(super) fn issue_access_token(
         &self,
         subject: &str,

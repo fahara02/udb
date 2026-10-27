@@ -93,7 +93,7 @@ const LIST_PAGE_SIZE_MAX: i64 = 200;
 
 // ── Status helpers (all through executor_utils, mirroring apikey.rs) ──────────
 
-fn grants_invalid_fields<I, F, D>(message: impl Into<String>, fields: I) -> Status
+pub(super) fn grants_invalid_fields<I, F, D>(message: impl Into<String>, fields: I) -> Status
 where
     I: IntoIterator<Item = (F, D)>,
     F: Into<String>,
@@ -138,11 +138,11 @@ fn uuid_field_status(field: &str) -> Status {
     )
 }
 
-fn parse_uuid(value: &str, field: &str) -> Result<Uuid, Status> {
+pub(super) fn parse_uuid(value: &str, field: &str) -> Result<Uuid, Status> {
     Uuid::parse_str(value.trim()).map_err(|_| uuid_field_status(field))
 }
 
-fn map_err(context: &'static str) -> impl Fn(sqlx::Error) -> Status {
+pub(super) fn map_err(context: &'static str) -> impl Fn(sqlx::Error) -> Status {
     // Classify recognised SQLSTATEs to typed gRPC codes (same as idp/store.rs).
     move |err| crate::runtime::executor_utils::sqlx_error_to_status(context, &err)
 }
@@ -150,7 +150,7 @@ fn map_err(context: &'static str) -> impl Fn(sqlx::Error) -> Status {
 /// The violated constraint name when `err` is a Postgres unique violation
 /// (SQLSTATE 23505), else `None`. Lets the creates map per-index collisions to
 /// typed `FailedPrecondition` instead of a generic AlreadyExists.
-fn unique_violation_constraint(err: &sqlx::Error) -> Option<String> {
+pub(super) fn unique_violation_constraint(err: &sqlx::Error) -> Option<String> {
     let db = err.as_database_error()?;
     if db.code().as_deref() == Some("23505") {
         Some(db.constraint().unwrap_or_default().to_string())
@@ -388,14 +388,14 @@ impl GrantRecord {
 }
 
 /// Serialize a scope list to the stored JSON array string form.
-fn scopes_to_json(scopes: &[String]) -> String {
+pub(super) fn scopes_to_json(scopes: &[String]) -> String {
     serde_json::to_string(scopes).unwrap_or_else(|_| "[]".to_string())
 }
 
 /// Parse a stored JSON array string back into a scope list (tolerant: a
 /// malformed column degrades to empty — which fails closed everywhere scopes
 /// are consumed, because empty effective scopes never authenticate).
-fn scopes_from_json(raw: &str) -> Vec<String> {
+pub(super) fn scopes_from_json(raw: &str) -> Vec<String> {
     serde_json::from_str::<Vec<String>>(raw.trim()).unwrap_or_default()
 }
 
@@ -1880,7 +1880,7 @@ pub(crate) async fn validate_service_principal_against_grant(
 
 /// CRIT-3 request-time check: is the account STILL an ACTIVE service account?
 /// Errors are stringly (this path's contract) and mean fail closed upstream.
-async fn owner_is_active_service_account(
+pub(super) async fn owner_is_active_service_account(
     pool: &PgPool,
     user_id: &str,
     tenant_id: &str,
@@ -2221,7 +2221,7 @@ pub(crate) async fn migrate_profile_grants(
 /// The caller principal for `updated_by`, from the method-security verified
 /// claim context (the SAME source apikey.rs uses); empty when no claim context
 /// is installed (e.g. internal/bootstrap paths).
-fn caller_updated_by() -> String {
+pub(super) fn caller_updated_by() -> String {
     if !crate::runtime::service::method_security::claim_context_present() {
         return String::new();
     }
@@ -2269,7 +2269,7 @@ fn request_timestamp_unix(
 
 /// Clamp `page_size` to 1..=200 (default 50) and parse the numeric-offset
 /// `page_token` (unparseable ⇒ 0). Returns `(limit, offset)`.
-fn page_window(page_size: i32, page_token: &str) -> (i64, i64) {
+pub(super) fn page_window(page_size: i32, page_token: &str) -> (i64, i64) {
     let limit = if page_size <= 0 {
         LIST_PAGE_SIZE_DEFAULT
     } else {
@@ -2281,7 +2281,7 @@ fn page_window(page_size: i32, page_token: &str) -> (i64, i64) {
 
 /// Next-page token: the next numeric offset when the page came back full,
 /// empty when this was the last page.
-fn next_page_token(returned: usize, limit: i64, offset: i64) -> String {
+pub(super) fn next_page_token(returned: usize, limit: i64, offset: i64) -> String {
     if returned as i64 == limit {
         (offset + limit).to_string()
     } else {
@@ -2291,7 +2291,7 @@ fn next_page_token(returned: usize, limit: i64, offset: i64) -> String {
 
 /// The `auth_method` compliance field from the current otel context (defaults
 /// to "bearer" when no method was recorded).
-fn event_auth_method() -> String {
+pub(super) fn event_auth_method() -> String {
     let method = crate::runtime::otel::current_auth_method();
     if method.trim().is_empty() {
         "bearer".to_string()
@@ -2377,7 +2377,7 @@ fn build_binding_event(
 }
 
 /// Begin the one HIGH-6 mutation transaction (typed internal Status on failure).
-async fn begin_grants_tx(
+pub(super) async fn begin_grants_tx(
     pool: &PgPool,
     operation: &'static str,
 ) -> Result<sqlx::Transaction<'static, sqlx::Postgres>, Status> {
@@ -2387,7 +2387,7 @@ async fn begin_grants_tx(
 }
 
 /// Commit the HIGH-6 mutation transaction (typed internal Status on failure).
-async fn commit_grants_tx(
+pub(super) async fn commit_grants_tx(
     tx: sqlx::Transaction<'_, sqlx::Postgres>,
     operation: &'static str,
 ) -> Result<(), Status> {

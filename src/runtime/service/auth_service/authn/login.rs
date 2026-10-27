@@ -430,21 +430,37 @@ impl AuthnServiceImpl {
                 }
             };
             let subject = claims.sub.clone().unwrap_or_default();
+            // A token without a tenant (or project) claim falls back to the
+            // caller's hint. The hint is unverified, so say so: the caller must
+            // not treat that tenant as proven by the token.
+            let mut warnings = Vec::new();
+            let claim_tenant = claims.tenant_id.clone().filter(|t| !t.trim().is_empty());
+            if claim_tenant.is_none() && !req.tenant_hint.trim().is_empty() {
+                tracing::warn!(
+                    target: "udb.audit.authn",
+                    subject = %subject,
+                    tenant_hint = %req.tenant_hint,
+                    "Authenticate: bearer carries no tenant claim; tenant_id taken from the unverified tenant_hint"
+                );
+                warnings.push(
+                    "tenant_id was taken from tenant_hint: the token carries no tenant claim, so the tenant is not verified"
+                        .to_string(),
+                );
+            }
+            let claim_project = claims.project_id.clone().filter(|p| !p.trim().is_empty());
+            if claim_project.is_none() && !req.project_hint.trim().is_empty() {
+                warnings.push(
+                    "project_id was taken from project_hint: the token carries no project claim, so the project is not verified"
+                        .to_string(),
+                );
+            }
             let principal = Principal {
                 principal_id: subject.clone(),
                 subject: subject.clone(),
                 user_id: subject,
                 service_identity: claims.service_identity.clone().unwrap_or_default(),
-                tenant_id: claims
-                    .tenant_id
-                    .clone()
-                    .filter(|t| !t.trim().is_empty())
-                    .unwrap_or_else(|| req.tenant_hint.clone()),
-                project_id: claims
-                    .project_id
-                    .clone()
-                    .filter(|p| !p.trim().is_empty())
-                    .unwrap_or_else(|| req.project_hint.clone()),
+                tenant_id: claim_tenant.unwrap_or_else(|| req.tenant_hint.clone()),
+                project_id: claim_project.unwrap_or_else(|| req.project_hint.clone()),
                 scopes: claims.resolved_scopes(),
                 roles: claims.roles.clone().unwrap_or_default(),
                 provider_id: String::new(),
@@ -464,7 +480,7 @@ impl AuthnServiceImpl {
                 access_token: String::new(),
                 expires_at_unix: 0,
                 relationship_version: claims.relationships_version.unwrap_or_default(),
-                warnings: Vec::new(),
+                warnings,
             }));
         }
 

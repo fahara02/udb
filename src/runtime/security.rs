@@ -918,6 +918,16 @@ pub struct SecurityClaims {
     /// `ACCOUNT_KIND_UNSPECIFIED`.
     #[serde(default)]
     pub account_kind: Option<i32>,
+    /// Tenant-membership tokens only (`ExchangeServiceTokenForTenant`): the
+    /// service account's HOME tenant, while `tenant_id` is the target tenant
+    /// the token acts in.
+    #[serde(default)]
+    pub home_tenant_id: Option<String>,
+    /// Tenant-membership tokens only: the membership pin
+    /// `"<membership_id>:<revision>"`. A token carrying it validates only while
+    /// that membership is ACTIVE at exactly that revision.
+    #[serde(default)]
+    pub mbr: Option<String>,
 }
 
 impl SecurityClaims {
@@ -1330,12 +1340,113 @@ pub fn sign_access_token_with_key(
     private_pem: &str,
     kid: &str,
 ) -> Result<(String, i64), String> {
+    sign_access_token_claims(
+        config,
+        subject,
+        tenant_id,
+        project_id,
+        scopes,
+        roles,
+        service_identity,
+        jti,
+        auth_method,
+        account_kind,
+        now_unix,
+        private_pem,
+        kid,
+        config.jwt_access_ttl_secs.max(1),
+        None,
+    )
+}
+
+/// The `auth_method` claim of every tenant-membership access token.
+pub const MEMBERSHIP_TOKEN_AUTH_METHOD: &str = "membership_exchange";
+
+/// What pins a tenant-membership access token to the membership it was minted
+/// from (`ExchangeServiceTokenForTenant`): the service account's home tenant
+/// and the `"<membership_id>:<revision>"` pin, stamped as the
+/// `home_tenant_id` and `mbr` claims.
+#[derive(Debug, Clone, Copy)]
+pub struct MembershipPin<'a> {
+    pub home_tenant_id: &'a str,
+    pub membership: &'a str,
+}
+
+/// Sign a tenant-membership access token (RS256) with the ACTIVE registry key,
+/// else the env key — the same key choice as every other UDB access token.
+/// `ttl_secs` is the caller's bound (never past the membership's expiry); the
+/// token carries no roles beyond `roles` and is always a service-account
+/// token. `Ok(None)` when no signing key is configured at all.
+#[allow(clippy::too_many_arguments)]
+pub fn sign_membership_access_token(
+    config: &SecurityConfig,
+    subject: &str,
+    tenant_id: &str,
+    project_id: &str,
+    scopes: &[String],
+    roles: &[String],
+    service_identity: &str,
+    jti: &str,
+    account_kind: i32,
+    now_unix: u64,
+    ttl_secs: u64,
+    pin: MembershipPin<'_>,
+) -> Result<Option<(String, i64)>, String> {
+    let (kid, private_pem) = match active_signing_key() {
+        Some(active) => active,
+        None => {
+            let Some(key_src) = config.jwt_private_key.clone() else {
+                return Ok(None);
+            };
+            let Some(pem) = SecurityConfig::resolve_pem(&key_src)? else {
+                return Ok(None);
+            };
+            (UDB_RS256_KID.to_string(), pem)
+        }
+    };
+    sign_access_token_claims(
+        config,
+        subject,
+        tenant_id,
+        project_id,
+        scopes,
+        roles,
+        service_identity,
+        jti,
+        MEMBERSHIP_TOKEN_AUTH_METHOD,
+        account_kind,
+        now_unix,
+        &private_pem,
+        &kid,
+        ttl_secs.max(1),
+        Some(pin),
+    )
+    .map(Some)
+}
+
+#[allow(clippy::too_many_arguments)]
+fn sign_access_token_claims(
+    config: &SecurityConfig,
+    subject: &str,
+    tenant_id: &str,
+    project_id: &str,
+    scopes: &[String],
+    roles: &[String],
+    service_identity: &str,
+    jti: &str,
+    auth_method: &str,
+    account_kind: i32,
+    now_unix: u64,
+    private_pem: &str,
+    kid: &str,
+    ttl: u64,
+    membership: Option<MembershipPin<'_>>,
+) -> Result<(String, i64), String> {
     use jsonwebtoken::{Algorithm, EncodingKey, Header, encode};
     use serde_json::json;
 
     let encoding_key = EncodingKey::from_rsa_pem(private_pem.as_bytes())
         .map_err(|e| format!("invalid JWT private key: {e}"))?;
-    let ttl = config.jwt_access_ttl_secs.max(1);
     let exp = now_unix.saturating_add(ttl) as i64;
     let mut claims = serde_json::Map::new();
     claims.insert("sub".into(), json!(subject));
@@ -1363,6 +1474,10 @@ pub fn sign_access_token_with_key(
     // so legacy verifiers and person tokens are unchanged.
     if account_kind != 0 {
         claims.insert("account_kind".into(), json!(account_kind));
+    }
+    if let Some(pin) = membership {
+        claims.insert("home_tenant_id".into(), json!(pin.home_tenant_id));
+        claims.insert("mbr".into(), json!(pin.membership));
     }
     if !auth_method.is_empty() {
         claims.insert("auth_method".into(), json!(auth_method));
@@ -1684,6 +1799,48 @@ pub(crate) fn enforce_certificate_credential_composition(
     credential_tenant: &str,
     credential_project: &str,
 ) -> Result<(), Status> {
+    enforce_certificate_credential_composition_for_home(
+        binding,
+        credential_service_identity,
+        credential_tenant,
+        credential_project,
+        "",
+    )
+}
+
+/// [`enforce_certificate_credential_composition`] for a bearer that may be a
+/// tenant-membership token. A certificate binding always resolves through the
+/// service account's HOME grant, so for a membership token
+/// (`credential_home_tenant` non-empty) the binding must belong to that home
+/// tenant; the token's own tenant/project are the target's and are re-checked
+/// against the membership on every use. The service identity must match
+/// either way. Every other bearer composes exactly as before.
+pub(crate) fn enforce_certificate_credential_composition_for_home(
+    binding: &crate::runtime::credential_layer::VerifiedPrincipal,
+    credential_service_identity: &str,
+    credential_tenant: &str,
+    credential_project: &str,
+    credential_home_tenant: &str,
+) -> Result<(), Status> {
+    if !credential_home_tenant.trim().is_empty() {
+        if credential_service_identity.trim() != binding.service_identity.trim() {
+            return Err(crate::runtime::executor_utils::policy_status_with_code(
+                tonic::Code::PermissionDenied,
+                "authenticate",
+                "certificate_credential_identity_mismatch",
+                "the client certificate binding belongs to a different service identity",
+            ));
+        }
+        if credential_home_tenant.trim() != binding.tenant_id.trim() {
+            return Err(crate::runtime::executor_utils::policy_status_with_code(
+                tonic::Code::PermissionDenied,
+                "authenticate",
+                "certificate_credential_tenant_mismatch",
+                "the client certificate binding belongs to a different tenant",
+            ));
+        }
+        return Ok(());
+    }
     if credential_service_identity.trim() != binding.service_identity.trim() {
         return Err(crate::runtime::executor_utils::policy_status_with_code(
             tonic::Code::PermissionDenied,
@@ -2123,11 +2280,12 @@ fn resolve_request_security<T>(
             .as_ref()
             .and_then(|pre| pre.certificate_principal.as_ref())
         {
-            enforce_certificate_credential_composition(
+            enforce_certificate_credential_composition_for_home(
                 binding,
                 claims.service_identity.as_deref().unwrap_or_default(),
                 claims.tenant_id.as_deref().unwrap_or_default(),
                 claims.project_id.as_deref().unwrap_or_default(),
+                claims.home_tenant_id.as_deref().unwrap_or_default(),
             )?;
         }
         // Compute before the struct literal: the literal partially moves `claims`.
@@ -4649,5 +4807,50 @@ mod tests {
                     .expect_err("spliced certificate/application credentials must be denied");
             assert_eq!(error.code(), tonic::Code::PermissionDenied);
         }
+    }
+
+    #[test]
+    fn certificate_composition_with_a_membership_token_binds_the_home_tenant() {
+        let binding = crate::runtime::credential_layer::VerifiedPrincipal {
+            service_identity: "spiffe://test.udb/workload".to_string(),
+            tenant_id: "home-tenant".to_string(),
+            project_id: "home-project".to_string(),
+            ..Default::default()
+        };
+        // A membership token acts in the target tenant/project; its
+        // certificate binding belongs to the home tenant.
+        enforce_certificate_credential_composition_for_home(
+            &binding,
+            "spiffe://test.udb/workload",
+            "target-tenant",
+            "target-project",
+            "home-tenant",
+        )
+        .expect("home-tenant binding composes with a membership token");
+        for (identity, home) in [
+            ("spiffe://test.udb/other", "home-tenant"),
+            ("spiffe://test.udb/workload", "third-tenant"),
+        ] {
+            let error = enforce_certificate_credential_composition_for_home(
+                &binding,
+                identity,
+                "target-tenant",
+                "target-project",
+                home,
+            )
+            .expect_err("a membership token from another lineage must not compose");
+            assert_eq!(error.code(), tonic::Code::PermissionDenied);
+        }
+        // Without a home tenant the strict target comparison still applies.
+        assert!(
+            enforce_certificate_credential_composition_for_home(
+                &binding,
+                "spiffe://test.udb/workload",
+                "target-tenant",
+                "target-project",
+                "",
+            )
+            .is_err()
+        );
     }
 }

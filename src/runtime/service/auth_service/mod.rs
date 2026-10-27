@@ -33,7 +33,10 @@ pub(crate) mod events;
 // reach `resolve_certificate_grant` / `validate_service_scopes`.
 pub(crate) mod grants;
 mod idp;
+// Cross-tenant service tokens: target-tenant memberships for service accounts
+// and the exchange of a home bearer for a short-lived target-tenant token.
 mod mappings;
+pub(crate) mod memberships;
 // Policy as code: `udb policy diff|apply` reconciles one tenant's policies.
 mod policy_reconcile;
 pub use policy_reconcile::{

@@ -2399,6 +2399,23 @@ impl AuthnServiceImpl {
             .service_identity
             .as_deref()
             .is_some_and(|s| !s.is_empty());
+        let membership_pin = claims
+            .mbr
+            .as_deref()
+            .map(str::trim)
+            .filter(|pin| !pin.is_empty());
+        let home_tenant = claims
+            .home_tenant_id
+            .as_deref()
+            .map(str::trim)
+            .filter(|home| !home.is_empty());
+        // A tenant-membership token carries BOTH claims and a service
+        // identity; any other combination is not a token UDB mints.
+        if (membership_pin.is_some() || home_tenant.is_some())
+            && (membership_pin.is_none() || home_tenant.is_none() || !is_service)
+        {
+            return Ok(JwtPersistedState::Rejected);
+        }
         if is_service {
             let subject = claims.sub.as_deref().unwrap_or_default().trim();
             let tenant = claims.tenant_id.as_deref().unwrap_or_default().trim();
@@ -2410,16 +2427,42 @@ impl AuthnServiceImpl {
                     "service bearer validation requires the durable typed-grant store",
                 ));
             };
-            let valid = super::grants::validate_service_principal_against_grant(
-                pool,
-                tenant,
-                subject,
-                project,
-                claims.service_identity.as_deref().unwrap_or_default(),
-                &claims.resolved_scopes(),
-            )
-            .await
-            .map_err(|error| authn_internal_status("jwt_service_grant_validate", error))?;
+            let valid = match (membership_pin, home_tenant) {
+                // A tenant-membership token: re-check the membership it is
+                // pinned to, the home grant and the account.
+                (Some(pin), Some(home_tenant_id)) => {
+                    super::memberships::validate_membership_principal(
+                        pool,
+                        &super::memberships::MembershipTokenClaims {
+                            pin,
+                            subject,
+                            tenant_id: tenant,
+                            project_id: project,
+                            home_tenant_id,
+                            service_identity: claims
+                                .service_identity
+                                .as_deref()
+                                .unwrap_or_default(),
+                            scopes: &claims.resolved_scopes(),
+                        },
+                        now,
+                    )
+                    .await
+                    .map_err(|error| {
+                        authn_internal_status("jwt_service_membership_validate", error)
+                    })?
+                }
+                _ => super::grants::validate_service_principal_against_grant(
+                    pool,
+                    tenant,
+                    subject,
+                    project,
+                    claims.service_identity.as_deref().unwrap_or_default(),
+                    &claims.resolved_scopes(),
+                )
+                .await
+                .map_err(|error| authn_internal_status("jwt_service_grant_validate", error))?,
+            };
             if !valid {
                 return Ok(JwtPersistedState::Rejected);
             }
@@ -3966,6 +4009,34 @@ impl AuthnService for AuthnServiceImpl {
     ) -> Result<Response<authn_pb::RevokeCertificateBindingResponse>, Status> {
         let pool = self.require_pool()?.clone();
         super::grants::revoke_certificate_binding(self, &pool, request).await
+    }
+    async fn create_service_account_tenant_membership(
+        &self,
+        request: Request<authn_pb::CreateServiceAccountTenantMembershipRequest>,
+    ) -> Result<Response<authn_pb::CreateServiceAccountTenantMembershipResponse>, Status> {
+        let pool = self.require_pool()?.clone();
+        super::memberships::create_service_account_tenant_membership(self, &pool, request).await
+    }
+    async fn list_service_account_tenant_memberships(
+        &self,
+        request: Request<authn_pb::ListServiceAccountTenantMembershipsRequest>,
+    ) -> Result<Response<authn_pb::ListServiceAccountTenantMembershipsResponse>, Status> {
+        let pool = self.require_pool()?.clone();
+        super::memberships::list_service_account_tenant_memberships(self, &pool, request).await
+    }
+    async fn revoke_service_account_tenant_membership(
+        &self,
+        request: Request<authn_pb::RevokeServiceAccountTenantMembershipRequest>,
+    ) -> Result<Response<authn_pb::RevokeServiceAccountTenantMembershipResponse>, Status> {
+        let pool = self.require_pool()?.clone();
+        super::memberships::revoke_service_account_tenant_membership(self, &pool, request).await
+    }
+    async fn exchange_service_token_for_tenant(
+        &self,
+        request: Request<authn_pb::ExchangeServiceTokenForTenantRequest>,
+    ) -> Result<Response<authn_pb::ExchangeServiceTokenForTenantResponse>, Status> {
+        let pool = self.require_pool()?.clone();
+        super::memberships::exchange_service_token_for_tenant(self, &pool, request).await
     }
     async fn send_otp(
         &self,

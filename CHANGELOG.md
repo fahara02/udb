@@ -48,6 +48,31 @@ release line was tagged.
   `UDB_OTP_DELIVERY_WEBHOOK_URL` is not set. Signing in with a phone number is
   not part of this release. With both an email and a phone, the email is
   verified as before and the phone is stored unverified.
+- **Per-tenant service tokens.** A service account keeps its single grant in
+  its home tenant; an administrator of ANOTHER tenant can now approve it to act
+  there with `CreateServiceAccountTenantMembership` (new entity
+  `ServiceAccountTenantMembership`, table
+  `udb_authn.service_account_tenant_memberships`). Only the target tenant's
+  administrator can approve, list (`ListServiceAccountTenantMemberships`) or
+  revoke (`RevokeServiceAccountTenantMembership`) — the caller's tenant must be
+  the target; a home-tenant administrator alone cannot. A membership names the
+  target project, approved scopes (validated like grant scopes, never
+  `udb:authn:exchange-tenant-token`) and an expiry at most one year away. The
+  account then calls `ExchangeServiceTokenForTenant` with its home bearer (scope
+  `udb:authn:exchange-tenant-token`, service accounts only) and receives a
+  target-tenant access token: subject = the account, tenant/project = the
+  target, scopes = the requested subset of the approved ones, service identity
+  = the home grant's, new claims `home_tenant_id` and `mbr`
+  (`<membership_id>:<revision>`), `jti` prefix `mbx_`, lifetime at most 15
+  minutes and never past the membership's expiry, no refresh token or session.
+  Every use re-checks the membership (active, same revision), the home grant
+  and the account, so revoking the membership, revoking the home grant or
+  deactivating the account stops the token at once. No, expired or revoked
+  membership gets one `PERMISSION_DENIED` (`service_tenant_membership_required`).
+  A client certificate composes with such a token when it is bound to the home
+  tenant. Approvals, revocations and exchanges are audited in both tenants
+  (`udb.authn.service.membership.changed.v1`,
+  `udb.authn.service.token.exchanged.v1`).
 
 ### Changed
 
@@ -63,6 +88,15 @@ release line was tagged.
   published as `udb.authn.service.role.withheld.v1`. The scopes still come only
   from the typed grant, and authorization decisions still read roles from the
   authz snapshot, so access is unchanged.
+
+### Fixed
+
+- **`Authenticate` says when the tenant came from the hint.** A bearer without
+  a `tenant_id` (or `project_id`) claim falls back to `tenant_hint`
+  (`project_hint`); the response now carries a warning in
+  `AuthnResponse.warnings` naming that fallback, and the tenant fallback is
+  logged on `udb.audit.authn`, so a caller no longer mistakes an unverified
+  hint for a tenant the token proves.
 
 ### Breaking for callers
 
@@ -82,6 +116,11 @@ release line was tagged.
   - detect: code: `username and email are required`
   - detect: code: `must be a non-empty email address`
   - fix: match the field violations (`field == "email"` / `field == "phone"`) instead of the message text.
+- **`SecurityClaims` (Rust crate) has two new public fields,
+  `home_tenant_id` and `mbr`.** A struct literal without `..` no longer
+  compiles.
+  - detect: code: `SecurityClaims {`
+  - fix: add `home_tenant_id: None, mbr: None` or end the literal with `..Default::default()`.
 
 ## [0.6.3] - 2026-10-27
 

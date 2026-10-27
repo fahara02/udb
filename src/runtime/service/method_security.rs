@@ -1716,11 +1716,12 @@ fn enforce(
         && let Some(binding) =
             preresolved.and_then(|resolved| resolved.certificate_principal.as_ref())
     {
-        crate::runtime::security::enforce_certificate_credential_composition(
+        crate::runtime::security::enforce_certificate_credential_composition_for_home(
             binding,
             claims.service_identity.as_deref().unwrap_or_default(),
             claims.tenant_id.as_deref().unwrap_or_default(),
             claims.project_id.as_deref().unwrap_or_default(),
+            claims.home_tenant_id.as_deref().unwrap_or_default(),
         )
         .map_err(|status| (status, deny_reason::CREDENTIAL_STATE))?;
     }
@@ -2768,6 +2769,8 @@ mod tests {
             },
             acr: None,
             account_kind: None,
+            home_tenant_id: None,
+            mbr: None,
         }
     }
 

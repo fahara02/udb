@@ -729,6 +729,11 @@ function fullSurfaceManifestFixtures(): PerfFixtures {
     // tenant, the grant transfer needs its own source account, and FinalizeUpload must
     // resend the reference_id established at register_upload.
     admin_purge_tenant_id: "tenant-admin-purge-1", grant_transfer_from_user_id: "user-grant-from-1",
+    // Cross-tenant service tokens: a service account homed in another tenant.
+    membership_user_id: "11111111-1111-4111-8111-000000000205",
+    membership_home_tenant_id: "tenant-membership-home-1",
+    membership_expires_at: "2030-01-01T00:00:00Z",
+    membership_id: "11111111-1111-4111-8111-000000000206",
     finalize_reference_id: "finalize-ref-1",
     embedding_job_id: "11111111-1111-4111-8111-000000000101",
     embedding_work_item_id: "11111111-1111-4111-8111-000000000102",

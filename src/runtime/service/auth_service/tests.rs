@@ -40,6 +40,7 @@ mod notification_events_live;
 mod notification_live;
 mod password_cpu_live;
 mod service_caller_conformance_live;
+mod service_tenant_exchange_live;
 mod support;
 mod tenant_live;
 mod tenant_suspension_served_live;
