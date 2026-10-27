@@ -26,7 +26,7 @@ package udbclient
 // hatches for RPCs that don't yet have a typed helper.
 //
 // Covers 403 RPCs across 29 services
-// (UDB v0.6.2, wire protocol 1.0.0).
+// (UDB v0.6.3, wire protocol 1.0.0).
 
 import (
 	"bytes"
@@ -66,7 +66,7 @@ const (
 // SDKVersion is the UDB release this generated layer was rendered from. It is
 // baked at generation time and is the version the bundled `udb` CLI launcher
 // (cmd/udb) will resolve.
-const SDKVersion = "0.6.2"
+const SDKVersion = "0.6.3"
 
 // VersionMismatchError reports an absent, malformed, or incompatible broker
 // release header. Compatibility requires the same major and minor release;

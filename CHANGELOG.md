@@ -5,6 +5,27 @@ the package version in `Cargo.toml`; historical v0.3.2 audit material is folded
 into the v0.3.x entries because the codebase advanced to v0.3.7 before that
 release line was tagged.
 
+## [0.6.3] - 2026-10-27
+
+### Fixed
+
+- **The TypeScript and Python SDKs keep the rotated refresh token.** The broker
+  rotates the refresh token on every `RefreshToken` call and each one is
+  single-use, but `UdbProject.refreshIfNeeded` (TypeScript) and
+  `TokenSession.refresh_if_needed` (Python) stored the token they had presented
+  instead of the one in the reply. The first refresh worked and the second was
+  refused with `UNAUTHENTICATED: invalid credential`, so a long-running service
+  lost its session about two access-token lifetimes after login (about 30
+  minutes with the default 15-minute access token), and its background
+  refresher then cleared the bearer. Both now store `refresh_token` from the
+  reply, and keep the stored one only when the reply has none (a legacy
+  session-id refresh). The Go and Rust SDKs already did this; the C#, PHP and
+  Java SDKs return the reply to the caller and keep no token.
+
+### Breaking for callers
+
+- None.
+
 ## [0.6.2] - 2026-10-21
 
 ### Added
