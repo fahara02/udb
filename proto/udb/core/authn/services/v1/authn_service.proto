@@ -3144,7 +3144,7 @@ service AuthnService {
       explicit_nulls: true
     };
     option (google.api.http) = {
-      post: "/v1/auth/service-tokens:exchange-for-tenant"
+      post: "/v1/auth/service-tokens:exchangeForTenant"
       body: "*"
     };
   }
