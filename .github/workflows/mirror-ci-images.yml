@@ -1,10 +1,10 @@
 name: Mirror · CI images
 
-# CI service containers pull the pinned PostgreSQL image anonymously, and
-# public.ecr.aws refuses runners past its data limit ("toomanyrequests: Data
-# limit exceeded") before any test runs. This copies that exact image, every
-# platform and the same sha256 digest, to ghcr.io/fahara02/udb-ci-postgres,
-# which GitHub runners pull without that limit. The copy is verified by digest.
+# CI service containers pull pinned images anonymously, and public.ecr.aws
+# refuses runners past its data limit ("toomanyrequests: Data limit exceeded")
+# before any test runs. This copies each exact image, every platform and the
+# same sha256 digest, to ghcr.io/fahara02/udb-ci-<name>, which GitHub runners
+# pull without that limit. Each copy is verified by digest.
 
 on:
   workflow_dispatch:
@@ -18,29 +18,36 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  mirror-postgres:
-    name: Mirror the pinned PostgreSQL image to GHCR
+  mirror:
+    name: Mirror ${{ matrix.pin }} to GHCR
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    env:
-      PIN: postgres:16-alpine@sha256:721873c34ceb9f8d8fc265984940dc982404c105f19ad51be9fdc5970a6080ea
-      DEST: ghcr.io/fahara02/udb-ci-postgres:16-alpine
+    strategy:
+      fail-fast: false
+      matrix:
+        pin:
+          - postgres:16-alpine@sha256:721873c34ceb9f8d8fc265984940dc982404c105f19ad51be9fdc5970a6080ea
+          - mongo:7@sha256:1f995ad6fdb93244a1addab1b58f934a0bc2f5643c38e02f5e9d7f0c7d227a7b
     steps:
       - name: Copy by digest and verify
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           ACTOR: ${{ github.actor }}
+          PIN: ${{ matrix.pin }}
         shell: bash
         run: |
           set -euo pipefail
+          name_tag="${PIN%@*}"
+          name="${name_tag%%:*}"
           digest="${PIN#*@}"
+          dest="ghcr.io/fahara02/udb-ci-${name_tag}"
           printf '%s' "$GH_TOKEN" | skopeo login ghcr.io --username "$ACTOR" --password-stdin
           # Docker Hub's official image and the ECR Public mirror of it carry the
           # same digest; whichever source answers first is copied unchanged.
           copied=""
           for attempt in 1 2 3 4 5; do
-            for source in "public.ecr.aws/docker/library/postgres@${digest}" "docker.io/library/postgres@${digest}"; do
-              if skopeo copy --all --preserve-digests --retry-times 3 "docker://${source}" "docker://${DEST}"; then
+            for source in "public.ecr.aws/docker/library/${name}@${digest}" "docker.io/library/${name}@${digest}"; do
+              if skopeo copy --all --preserve-digests --retry-times 3 "docker://${source}" "docker://${dest}"; then
                 copied="$source"
                 break 2
               fi
@@ -51,9 +58,9 @@ jobs:
             echo "::error::No source served ${PIN}"
             exit 1
           fi
-          actual="sha256:$(skopeo inspect --raw "docker://${DEST}" | sha256sum | cut -d' ' -f1)"
+          actual="sha256:$(skopeo inspect --raw "docker://${dest}" | sha256sum | cut -d' ' -f1)"
           if [ "$actual" != "$digest" ]; then
             echo "::error::Mirrored digest ${actual} does not match the pin ${digest}"
             exit 1
           fi
-          echo "Mirrored ${copied} to ${DEST}@${digest}"
+          echo "Mirrored ${copied} to ${dest}@${digest}"
