@@ -529,7 +529,6 @@ async fn live_service_account_delegation_conformance() {
             authn::VerifyOtpRequest {
                 otp_id: otp_id.clone(),
                 code: sent.dev_otp_code.clone(),
-                ..Default::default()
             },
         ))
         .await
