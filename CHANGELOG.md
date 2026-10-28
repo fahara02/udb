@@ -5,7 +5,7 @@ the package version in `Cargo.toml`; historical v0.3.2 audit material is folded
 into the v0.3.x entries because the codebase advanced to v0.3.7 before that
 release line was tagged.
 
-## [0.6.4] - Unreleased
+## [0.6.4] - 2026-10-28
 
 ### Added
 
