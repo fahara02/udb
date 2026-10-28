@@ -47,7 +47,10 @@ release line was tagged.
   delivered: no NotificationService with SMS templates is mounted and
   `UDB_OTP_DELIVERY_WEBHOOK_URL` is not set. Signing in with a phone number is
   not part of this release. With both an email and a phone, the email is
-  verified as before and the phone is stored unverified.
+  verified as before and the phone is stored unverified. Every `User` the
+  service returns (`GetUser`, `ListUsers`, `CreateUser`, `UpdateUser` and the
+  rest) now carries `phone` and `phone_verified_at`; both were always empty
+  before.
 - **Per-tenant service tokens.** A service account keeps its single grant in
   its home tenant; an administrator of ANOTHER tenant can now approve it to act
   there with `CreateServiceAccountTenantMembership` (new entity

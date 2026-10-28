@@ -666,6 +666,10 @@ pub struct UserRecord {
     pub external_provider_id: String,
     pub external_subject: String,
     pub profile_attributes_json: String,
+    /// E.164 phone ('' = none) and when it was verified (0 = unverified). Read
+    /// with the user; written only by the dedicated phone UPDATEs.
+    pub phone: String,
+    pub phone_verified_at_unix: u64,
 }
 
 // Manual `Debug` redacting the password verifier (`password_hash`) and the
@@ -699,6 +703,15 @@ impl std::fmt::Debug for UserRecord {
             .field("external_provider_id", &self.external_provider_id)
             .field("external_subject", &self.external_subject)
             .field("profile_attributes_json", &self.profile_attributes_json)
+            .field(
+                "phone",
+                &if self.phone.is_empty() {
+                    ""
+                } else {
+                    "[masked]"
+                },
+            )
+            .field("phone_verified_at_unix", &self.phone_verified_at_unix)
             .finish()
     }
 }
@@ -993,6 +1006,8 @@ fn user_from_row(row: &sqlx::postgres::PgRow) -> Result<UserRecord, sqlx::Error>
         external_provider_id: row.try_get("external_provider_id")?,
         external_subject: row.try_get("external_subject")?,
         profile_attributes_json: row.try_get("profile_attributes_json")?,
+        phone: row_string(row, "phone")?,
+        phone_verified_at_unix: row.try_get::<i64, _>("phone_verified_at_unix")?.max(0) as u64,
     })
 }
 
@@ -3044,6 +3059,8 @@ impl PostgresUserStore {
             m.text_or_empty("external_provider_id"),
             m.text_or_empty("external_subject"),
             m.json_text_as("profile_attributes_json", "profile_attributes_json"),
+            m.text_or_empty("phone"),
+            m.timestamp_unix_as("phone_verified_at", "phone_verified_at_unix"),
             m.timestamp_unix_as("locked_until", "locked_until_unix"),
             m.timestamp_unix_as("email_verified_at", "email_verified_at_unix"),
             m.timestamp_unix_as("last_login_at", "last_login_at_unix"),

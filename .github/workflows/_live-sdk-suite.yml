@@ -91,7 +91,7 @@ jobs:
       UDB_LIVE_MEMBERSHIP_HOME_TENANT: sdk-live-membership-home
     services:
       postgres:
-        image: public.ecr.aws/docker/library/postgres:16-alpine@sha256:721873c34ceb9f8d8fc265984940dc982404c105f19ad51be9fdc5970a6080ea
+        image: ghcr.io/fahara02/udb-ci-postgres:16-alpine@sha256:721873c34ceb9f8d8fc265984940dc982404c105f19ad51be9fdc5970a6080ea
         env:
           POSTGRES_DB: udb_ci
           POSTGRES_USER: udb

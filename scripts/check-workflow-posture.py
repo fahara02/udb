@@ -5934,7 +5934,7 @@ CI_INTEGRATION_IMAGE_PINS = {
     "UDB_INTEGRATION_MEMCACHED_IMAGE": "memcached:1.6-alpine@sha256:9e4de012dc607573052061c0bcb38abc775e1dd59b24e7ac38d1892842094aaf",
     "UDB_INTEGRATION_QDRANT_IMAGE": "qdrant/qdrant:v1.18.2@sha256:75eab8c4ba42096724fdcfde8b4de0b5713d529dde32f285a1f86fdcb2c9e50c",
 }
-CI_POSTGRES_SERVICE_IMAGE = "public.ecr.aws/docker/library/" + CI_INTEGRATION_IMAGE_PINS["UDB_INTEGRATION_PG_BASE_IMAGE"]
+CI_POSTGRES_SERVICE_IMAGE = "ghcr.io/fahara02/udb-ci-" + CI_INTEGRATION_IMAGE_PINS["UDB_INTEGRATION_PG_BASE_IMAGE"]
 
 
 def _workflow_step_block(text: str, name: str) -> str:
@@ -6185,19 +6185,19 @@ def selftest_ci_registry_dependencies() -> None:
                              '    services:\n'
                              '      postgres:\n'
                              '        image: '
-                             'public.ecr.aws/docker/library/postgres:16-alpine@sha256:721873c34ceb9f8d8fc265984940dc982404c105f19ad51be9fdc5970a6080ea\n',
+                             'ghcr.io/fahara02/udb-ci-postgres:16-alpine@sha256:721873c34ceb9f8d8fc265984940dc982404c105f19ad51be9fdc5970a6080ea\n',
  '.github/workflows/_live-sdk-suite.yml': 'jobs:\n'
                                           '  live:\n'
                                           '    services:\n'
                                           '      postgres:\n'
                                           '        image: '
-                                          'public.ecr.aws/docker/library/postgres:16-alpine@sha256:721873c34ceb9f8d8fc265984940dc982404c105f19ad51be9fdc5970a6080ea\n',
+                                          'ghcr.io/fahara02/udb-ci-postgres:16-alpine@sha256:721873c34ceb9f8d8fc265984940dc982404c105f19ad51be9fdc5970a6080ea\n',
  '.github/workflows/go-sdk-live.yml': 'jobs:\n'
                                       '  go-live:\n'
                                       '    services:\n'
                                       '      postgres:\n'
                                       '        image: '
-                                      'public.ecr.aws/docker/library/postgres:16-alpine@sha256:721873c34ceb9f8d8fc265984940dc982404c105f19ad51be9fdc5970a6080ea\n',
+                                      'ghcr.io/fahara02/udb-ci-postgres:16-alpine@sha256:721873c34ceb9f8d8fc265984940dc982404c105f19ad51be9fdc5970a6080ea\n',
  'docker-compose.integration.yml': 'x-udb-broker-env: &udb-broker-env\n'
                                    '  UDB_PG_DSN: postgres://udb:udb@postgres:5432/udb\n'
                                    '  UDB_REDIS_DSN: redis://redis:6379/0\n'
@@ -6393,8 +6393,8 @@ def selftest_ci_registry_dependencies() -> None:
             (".github/workflows/ci.yml", 'wait "$postgis_base_pid"', "true", "PostGIS pull failure propagation"),
             (".github/workflows/ci.yml", "docker image inspect --format '{{json .RepoDigests}}'", "echo", "actual image digest evidence"),
             (".github/workflows/ci.yml", "qdrant/qdrant:v1.18.2@sha256:75eab8c4ba42096724fdcfde8b4de0b5713d529dde32f285a1f86fdcb2c9e50c", "qdrant/qdrant:latest", "exact UDB_INTEGRATION_QDRANT_IMAGE image pin"),
-            (".github/workflows/_live-sdk-suite.yml", "public.ecr.aws/docker/library/", "", "pre-step _live-sdk-suite.yml Postgres mirror pin"),
-            (".github/workflows/go-sdk-live.yml", "public.ecr.aws/docker/library/", "", "pre-step go-sdk-live.yml Postgres mirror pin"),
+            (".github/workflows/_live-sdk-suite.yml", "ghcr.io/fahara02/udb-ci-", "", "pre-step _live-sdk-suite.yml Postgres mirror pin"),
+            (".github/workflows/go-sdk-live.yml", "ghcr.io/fahara02/udb-ci-", "", "pre-step go-sdk-live.yml Postgres mirror pin"),
             ("docker-compose.integration.yml", "${UDB_INTEGRATION_PG_BASE_IMAGE:-postgres:16-alpine}", "postgres:15-alpine", "preserved UDB_INTEGRATION_PG_BASE_IMAGE compose default"),
             ("docker/postgres-pg-partman/Dockerfile", "FROM ${POSTGIS_BASE_IMAGE}", "FROM postgres:16-alpine", "mirror-selectable original PostgreSQL/PostGIS base"),
         )

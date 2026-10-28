@@ -291,6 +291,8 @@ mod tests {
             external_provider_id: String::new(),
             external_subject: String::new(),
             profile_attributes_json: "{}".to_string(),
+            phone: String::new(),
+            phone_verified_at_unix: 0,
         }
     }
 

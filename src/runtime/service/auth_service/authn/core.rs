@@ -119,11 +119,10 @@ pub(super) fn user_record_to_pb(rec: &UserRecord) -> authn_entity_pb::User {
             &rec.profile_attributes_json,
         ),
         external_references_json: "[]".to_string(),
-        // Phone is persisted/verified via dedicated UPDATEs (set_user_phone /
-        // mark_phone_verified), not threaded through UserRecord; surfacing it in
-        // GetUser is a follow-up.
-        phone: String::new(),
-        phone_verified_at: None,
+        // Read with the user; written only by the dedicated phone UPDATEs
+        // (set_user_phone / mark_phone_verified), never by the user upsert.
+        phone: rec.phone.clone(),
+        phone_verified_at: timestamp_from_unix(rec.phone_verified_at_unix),
     };
     // §7: structurally blank every OUTPUT_VIEW_STORAGE_ONLY field (descriptor-driven
     // codegen) — covers new sensitive fields automatically, not just the hand-listed ones.
@@ -202,6 +201,8 @@ mod tests {
                 }
             })
             .to_string(),
+            phone: String::new(),
+            phone_verified_at_unix: 0,
         }
     }
 
@@ -1185,6 +1186,8 @@ impl AuthnServiceImpl {
             external_subject: req.external_subject,
             profile_attributes_json: serde_json::to_string(&req.profile_attributes)
                 .unwrap_or_else(|_| "{}".to_string()),
+            phone: phone.clone(),
+            phone_verified_at_unix: 0,
         };
         // Prepare the verification OTP (record + plaintext code) WITHOUT
         // persisting or sending it yet, so the row can land inside the same
@@ -1295,10 +1298,8 @@ impl AuthnServiceImpl {
             &otp_id,
         )
         .await;
-        let mut user = user_record_to_pb(&rec);
-        user.phone = phone;
         Ok(Response::new(authn_pb::CreateUserResponse {
-            user: Some(user),
+            user: Some(user_record_to_pb(&rec)),
             otp_id,
         }))
     }
