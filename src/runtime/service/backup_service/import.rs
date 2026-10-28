@@ -373,6 +373,108 @@ async fn preallocate_shared_role_restore_refs(
     Ok(())
 }
 
+/// A service-account tenant membership is the target tenant's approval of a
+/// service account that lives in ANOTHER (home) tenant, so a tenant export never
+/// contains that user. Preserve the user identity only when the account still
+/// exists in the row's recorded home tenant, and that home is not the tenant
+/// being restored into; anything else still requires an exact remap.
+async fn preallocate_membership_home_user_restore_refs(
+    conn: &mut PgConnection,
+    row: &serde_json::Map<String, serde_json::Value>,
+    table: &ManifestTable,
+    target_tenant_id: &str,
+    remaps: &mut RestoreValueRemaps,
+) -> Result<(), Status> {
+    let membership = native_model(
+        "udb.core.authn.entity.v1.ServiceAccountTenantMembership",
+        &["user_id", "home_tenant_id"],
+    );
+    if qualified_relation(&table.schema, &table.table) != membership.relation {
+        return Ok(());
+    }
+    let user = native_model("udb.core.authn.entity.v1.User", &["user_id", "tenant_id"]);
+    let Some(value) = row
+        .get(membership.column("user_id"))
+        .filter(|value| !value.is_null())
+    else {
+        return Ok(());
+    };
+    for fk in &table.foreign_keys {
+        if qualified_relation(&fk.ref_schema, &fk.ref_table) != user.relation {
+            continue;
+        }
+        for (column, ref_column) in fk.columns.iter().zip(&fk.ref_columns) {
+            if column != membership.column("user_id") || ref_column != user.column("user_id") {
+                continue;
+            }
+            let key = RestoreColumnKey {
+                schema: fk.ref_schema.clone(),
+                table: fk.ref_table.clone(),
+                column: ref_column.clone(),
+            };
+            let old_key = restore_value_key(value).ok_or_else(|| {
+                backup_topology_mismatch_status(
+                    "restore_tenant",
+                    "unsupported membership user reference",
+                )
+            })?;
+            if remaps
+                .get(&key)
+                .is_some_and(|values| values.contains_key(&old_key))
+            {
+                continue;
+            }
+            let user_id = value.as_str().ok_or_else(|| {
+                backup_topology_mismatch_status(
+                    "restore_tenant",
+                    "membership user reference must be a UUID",
+                )
+            })?;
+            let home_tenant_id = row
+                .get(membership.column("home_tenant_id"))
+                .and_then(serde_json::Value::as_str)
+                .map(str::trim)
+                .unwrap_or_default();
+            let home_user: Option<String> =
+                if home_tenant_id.is_empty() || home_tenant_id == target_tenant_id.trim() {
+                    None
+                } else {
+                    sqlx::query_scalar(&format!(
+                        "SELECT {}::text FROM {} WHERE {} = $1::uuid AND {} = $2 FOR SHARE",
+                        user.q("user_id"),
+                        user.relation,
+                        user.q("user_id"),
+                        user.q("tenant_id"),
+                    ))
+                    .bind(user_id)
+                    .bind(home_tenant_id)
+                    .fetch_optional(&mut *conn)
+                    .await
+                    .map_err(|err| {
+                        backup_internal_status(
+                            "restore_membership_home_user_probe",
+                            format!("membership home-user provenance probe failed: {err}"),
+                        )
+                    })?
+                };
+            if home_user.is_none() {
+                return Err(backup_topology_mismatch_status(
+                    "restore_tenant",
+                    format!(
+                        "foreign-key restore value for {}.{}.{} has no exact parent remap or home-tenant service-account provenance",
+                        table.schema, table.table, column
+                    ),
+                ));
+            }
+            remaps
+                .entry(key)
+                .or_default()
+                .insert(old_key, value.clone());
+        }
+    }
+    Ok(())
+}
+
 fn apply_parent_restore_remaps(
     row: &mut serde_json::Map<String, serde_json::Value>,
     table: &ManifestTable,
@@ -1736,6 +1838,14 @@ pub(crate) async fn restore_tenant(
                     &mut *tx,
                     &obj,
                     manifest_table,
+                    &mut restore_remaps,
+                )
+                .await?;
+                preallocate_membership_home_user_restore_refs(
+                    &mut *tx,
+                    &obj,
+                    manifest_table,
+                    &target_tenant_id,
                     &mut restore_remaps,
                 )
                 .await?;

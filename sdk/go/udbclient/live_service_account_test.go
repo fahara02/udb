@@ -41,6 +41,11 @@ func TestLiveServiceAccountDelegationConformance(t *testing.T) {
 	if os.Getenv("UDB_LIVE_SDK_TESTS") != "1" {
 		t.Skip("requires live UDB broker")
 	}
+	// Needs the provisioned service-account fixtures and the OTP dev-echo
+	// broker posture of the dedicated CI job, which requires this test's PASS.
+	if os.Getenv("UDB_LIVE_SERVICE_ACCOUNT_TESTS") != "1" {
+		t.Skip("requires the dedicated CI service-account opt-in")
+	}
 	target := requiredLiveEnv(t, "UDB_GRPC_TARGET")
 	authTarget := liveEnv("UDB_AUTH_GRPC_TARGET", target)
 	tenant := requiredLiveEnv(t, "UDB_LIVE_TENANT")

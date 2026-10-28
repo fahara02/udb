@@ -269,10 +269,19 @@ async fn live_postgres_service_tenant_token_exchange() {
         auth_method: "membership_exchange".to_string(),
         authenticated: true,
     };
-    enforce_body_tenant_matches_claim(&token_ctx, &target, "clinic")
+    // The guard is a no-op without an installed claim context (in-process
+    // callers), so each check runs as the exchanged token's request would.
+    let body_tenant_check = |tenant: String, project: &'static str| {
+        let ctx = token_ctx.clone();
+        scope_claim_context_for_test(token_ctx.clone(), async move {
+            enforce_body_tenant_matches_claim(&ctx, &tenant, project)
+        })
+    };
+    body_tenant_check(target.clone(), "clinic")
+        .await
         .expect("the target tenant accepts the token");
-    assert!(enforce_body_tenant_matches_claim(&token_ctx, "acme", "").is_err());
-    assert!(enforce_body_tenant_matches_claim(&token_ctx, &third, "").is_err());
+    assert!(body_tenant_check("acme".to_string(), "").await.is_err());
+    assert!(body_tenant_check(third.clone(), "").await.is_err());
     let third_denied = scope_claim_context_for_test(
         home_ctx.clone(),
         authn.exchange_service_token_for_tenant(exchange_request(&third)),

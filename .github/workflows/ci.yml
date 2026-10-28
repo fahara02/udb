@@ -1595,6 +1595,7 @@ jobs:
     # cooldown let every SDK complete the phone-verification flow.
     env:
       UDB_LIVE_SDK_TESTS: "1"
+      UDB_LIVE_SERVICE_ACCOUNT_TESTS: "1"
       UDB_PG_DSN: postgres://udb:udb@localhost:5432/udb_ci
       UDB_GRPC_ADDR: 127.0.0.1:50051
       UDB_GRPC_TARGET: 127.0.0.1:50051

@@ -111,6 +111,12 @@ release line was tagged.
   `AuthnResponse.warnings` naming that fallback, and the tenant fallback is
   logged on `udb.audit.authn`, so a caller no longer mistakes an unverified
   hint for a tenant the token proves.
+- **`RestoreTenant` restores a tenant that approved another tenant's service
+  account.** A membership row points at a user that lives in the account's
+  home tenant, which a tenant export never contains, so a cross-tenant restore
+  refused it (`no exact parent remap`). The restore now keeps that user id when
+  the account still exists in the row's recorded home tenant (and that home is
+  not the tenant being restored into); anything else is still refused.
 
 ### Breaking for callers
 

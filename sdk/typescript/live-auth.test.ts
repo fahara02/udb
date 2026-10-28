@@ -669,17 +669,23 @@ function manifestJSONBody(serviceName: string, methodName: string, fixtures?: Pe
   if (!resolved) return undefined;
   const body = JSON.parse(resolved);
   // The manifest uses canonical protobuf JSON; proto-loader expects Timestamp
-  // objects on this wire path. Convert the declared, whole-second fixture.
+  // objects on this wire path. Convert the declared, whole-second fixtures.
   if (serviceName === "DataBroker" && methodName === "time_series_write") {
     for (const point of body.points ?? []) {
-      if (typeof point.timestamp === "string") {
-        const milliseconds = Date.parse(point.timestamp);
-        if (!Number.isFinite(milliseconds)) throw new Error("invalid benchmark Timestamp");
-        point.timestamp = { seconds: Math.floor(milliseconds / 1000), nanos: (milliseconds % 1000) * 1_000_000 };
-      }
+      point.timestamp = protoTimestampFromJSON(point.timestamp);
     }
   }
+  if (serviceName === "AuthnService" && methodName === "create_service_account_tenant_membership") {
+    body.expires_at = protoTimestampFromJSON(body.expires_at);
+  }
   return body;
+}
+
+function protoTimestampFromJSON(value: unknown): unknown {
+  if (typeof value !== "string") return value;
+  const milliseconds = Date.parse(value);
+  if (!Number.isFinite(milliseconds)) throw new Error("invalid benchmark Timestamp");
+  return { seconds: Math.floor(milliseconds / 1000), nanos: (milliseconds % 1000) * 1_000_000 };
 }
 
 function uniquifyPerfBody(
