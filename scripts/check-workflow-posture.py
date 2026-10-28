@@ -1228,6 +1228,9 @@ CI_TOPOLOGY_BUILD_BROKER_CONSUMERS = (
     "scaffold-compiles",
     # Every SDK's live refresh-token rotation conformance gates main.
     "sdk-refresh-rotation-live",
+    # Every SDK's live service-account conformance (delegated CheckAccess,
+    # tenant token exchange, service-bearer roles, phone-only users) gates main.
+    "sdk-service-accounts-live",
 )
 
 CI_TOPOLOGY_PUSH_ONLY_JOBS = (
@@ -4396,6 +4399,7 @@ LINT_WORKFLOW_TRIGGER_PATHS = (
     ("scripts/locate_benchmark_report.py", "canonical benchmark artifact locator"),
     ("scripts/bootstrap_benchmark_project_catalog.py", "benchmark catalog bootstrap"),
     ("scripts/prepare-benchmark-fixtures.py", "served benchmark fixture preparation"),
+    ("scripts/provision-service-account-live.py", "SDK service-account live fixture provisioning"),
     ("scripts/run-plan-benchmark.sh", "plan-driven SDK benchmark runner"),
     ("scripts/fixtures/benchmark-analytics.sql", "stored analytics benchmark fixtures"),
     ("scripts/check-openapi-api-rules.mjs", "OpenAPI API-rule guard"),
@@ -8023,6 +8027,22 @@ jobs:
         with:
           name: udb-broker-debug
       - run: UDB_BIN=target/debug/udb bash scripts/check-scaffold-compiles.sh
+  sdk-refresh-rotation-live:
+    needs: build-broker
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download broker binary
+        uses: actions/download-artifact@v4
+        with:
+          name: udb-broker-debug
+  sdk-service-accounts-live:
+    needs: build-broker
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download broker binary
+        uses: actions/download-artifact@v4
+        with:
+          name: udb-broker-debug
   docs-links:
     name: Markdown local links + readiness artifacts
     runs-on: ubuntu-latest
