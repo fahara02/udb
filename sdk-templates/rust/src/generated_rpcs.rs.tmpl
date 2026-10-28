@@ -65,6 +65,9 @@ impl RpcSpec {
 }
 
 /// Every RPC the broker serves, sorted as the descriptor emits them.
+// Generated data: rustfmt would rewrap long HTTP routes and break the
+// byte-for-byte match with the generator's output.
+#[rustfmt::skip]
 pub static RPCS: &[RpcSpec] = &[
     // @@UDB_RPC_BEGIN
     RpcSpec {
