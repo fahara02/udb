@@ -331,6 +331,13 @@ public sealed class LivePerfTests
     private string _autoRefresh = "";
     private string _autoSession = "";
     private DateTime _refreshAt;
+    // The plan's service account (null when the plan names none), logged in
+    // lazily right before its first row and re-minted after three minutes, so a
+    // long run cannot hand that row an expired access token.
+    private JsonObject? _serviceAccountCaller;
+    private Identity? _serviceAccount;
+    private DateTime _serviceAccountMintedAt;
+    private bool _serviceAccountFailed;
 
     private void Bind(Credentials credentials)
     {
@@ -364,6 +371,49 @@ public sealed class LivePerfTests
         }
         long.TryParse(Text(response, "access_token_expires_in"), out var expires);
         _refreshAt = DateTime.UtcNow.AddSeconds(Math.Clamp((expires > 0 ? expires : 240) * 0.6, 60, 240));
+    }
+
+    private async Task EnsureServiceAccount()
+    {
+        if (_serviceAccountCaller is null || _serviceAccountFailed)
+        {
+            return;
+        }
+        if (_serviceAccount is not null && DateTime.UtcNow - _serviceAccountMintedAt < TimeSpan.FromSeconds(180))
+        {
+            return;
+        }
+        var username = _serviceAccountCaller["username"]?.GetValue<string>() ?? "";
+        try
+        {
+            var hints = _user.Copy();
+            hints.Tenant = _serviceAccountCaller["tenant_id"]!.GetValue<string>();
+            hints.Project = _serviceAccountCaller["project_id"]!.GetValue<string>();
+            hints.Bearer = "";
+            var credentials = await Login(hints, username, Env("UDB_LIVE_PASSWORD"), "csharp-sdk-perf-service-account")
+                .ConfigureAwait(false);
+            var who = await Principal(hints, credentials.Access).ConfigureAwait(false);
+            var minted = hints.Copy();
+            var whoTenant = Text(who, "tenant_id");
+            var whoProject = Text(who, "project_id");
+            if (whoTenant.Length > 0)
+            {
+                minted.Tenant = whoTenant;
+            }
+            if (whoProject.Length > 0)
+            {
+                minted.Project = whoProject;
+            }
+            minted.Bearer = credentials.Access;
+            _serviceAccount = minted;
+            _serviceAccountMintedAt = DateTime.UtcNow;
+        }
+        catch (Exception error)
+        {
+            Console.WriteLine($"[PERF-SERVICE-ACCOUNT] login as {username} failed; its rows run under the default identity: {error.Message}");
+            _serviceAccount = null;
+            _serviceAccountFailed = true;
+        }
     }
 
     private async Task<Outcome> CdcFirstEvent(JsonObject cdc, Identity identity)
@@ -423,7 +473,14 @@ public sealed class LivePerfTests
     private async Task<(double Ms, Outcome Outcome)> TimeOne(JsonObject plan, JsonObject rpc)
     {
         await EnsureFresh().ConfigureAwait(false);
-        var identity = rpc["platform"]!.GetValue<bool>() ? _platform : _user;
+        var asServiceAccount = rpc["service_account"]?.GetValue<bool>() == true;
+        if (asServiceAccount)
+        {
+            await EnsureServiceAccount().ConfigureAwait(false);
+        }
+        var identity = asServiceAccount && _serviceAccount is { } serviceAccount
+            ? serviceAccount
+            : rpc["platform"]!.GetValue<bool>() ? _platform : _user;
         var clock = System.Diagnostics.Stopwatch.StartNew();
         if (rpc["kind"]!.GetValue<string>() == "cdc_first_event")
         {
@@ -537,6 +594,7 @@ public sealed class LivePerfTests
             _platform.Tenant = Text(platformWho, "tenant_id");
             _platform.Project = _user.Project;
             _platform.Bearer = platformLogin.Access;
+            _serviceAccountCaller = plan["service_account_caller"] as JsonObject;
             var token = await Login(_user, username, password, "csharp-sdk-perf-token");
             var refresh = await Login(_user, username, password, "csharp-sdk-perf-refresh");
             var session = await Login(_user, username, password, "csharp-sdk-perf-session");

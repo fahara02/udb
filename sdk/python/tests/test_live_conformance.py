@@ -1721,6 +1721,13 @@ def requires_platform_perf_identity(client_cls, method_name: str) -> bool:
     )
 
 
+def requires_service_account_perf_identity(client_cls, method_name: str) -> bool:
+    """ExchangeServiceTokenForTenant is callable only by a service account
+    presenting its HOME-tenant bearer; membership create/list/revoke stay with
+    the bench tenant admin (the membership target)."""
+    return client_cls is AuthnServiceClient and method_name == "ExchangeServiceTokenForTenant"
+
+
 def test_platform_perf_identity_routing_is_narrow():
     assert requires_platform_perf_identity(DataBrokerClient, "ListProjects")
     assert requires_platform_perf_identity(AnalyticsServiceClient, "GetExecutorPerformance")
@@ -1732,6 +1739,12 @@ def test_platform_perf_identity_routing_is_narrow():
     assert not requires_platform_perf_identity(TenantServiceClient, "PurgeTenant")
     assert not requires_platform_perf_identity(DataBrokerClient, "Select")
     assert not requires_platform_perf_identity(DataBrokerClient, "EnsureProject")
+    assert requires_service_account_perf_identity(AuthnServiceClient, "ExchangeServiceTokenForTenant")
+    assert not requires_platform_perf_identity(AuthnServiceClient, "ExchangeServiceTokenForTenant")
+    for name in ("CreateServiceAccountTenantMembership", "ListServiceAccountTenantMemberships",
+                 "RevokeServiceAccountTenantMembership", "Login", "ValidateToken"):
+        assert not requires_service_account_perf_identity(AuthnServiceClient, name)
+    assert not requires_service_account_perf_identity(DataBrokerClient, "ListProjects")
 
 
 def test_timeseries_benchmark_body_keeps_resource_authority():
@@ -2560,6 +2573,19 @@ MESSAGING_FIXTURE_KEYS = (
     "mls_new_ratchet_tree",
 )
 
+#: The `membership_*` bench-body fixtures `scripts/prepare-benchmark-fixtures.py`
+#: provisions for the AuthnService tenant-membership RPCs (same list in every
+#: harness). No credential is ever written to the prepared file: the exchange
+#: account's password is ``UDB_LIVE_PASSWORD``.
+MEMBERSHIP_FIXTURE_KEYS = (
+    "membership_user_id",
+    "membership_home_tenant_id",
+    "membership_expires_at",
+    "membership_id",
+    "membership_exchange_username",
+    "membership_exchange_project_id",
+)
+
 
 def perf_seed(
     clients: dict,
@@ -2594,6 +2620,12 @@ def perf_seed(
         # MessagingService MLS objects minted by `udb messaging bench-fixture`;
         # absent when the benchmark broker predates the messaging service.
         for key in MESSAGING_FIXTURE_KEYS:
+            value = prepared.get("fixtures", {}).get(key)
+            if isinstance(value, str) and value:
+                fix.set(key, value)
+        # Per-tenant service-account membership fixtures; absent when the
+        # benchmark broker predates tenant memberships (0.6.4).
+        for key in MEMBERSHIP_FIXTURE_KEYS:
             value = prepared.get("fixtures", {}).get(key)
             if isinstance(value, str) and value:
                 fix.set(key, value)
@@ -4581,6 +4613,7 @@ def test_live_perf():
     authed_meta = metadata()
     clients = {}
     platform_clients = {}
+    service_account_state: dict = {"resolved": False, "client": None, "meta": None}
     seed_cleanup = lambda: None
     try:
         target = required_env("UDB_GRPC_TARGET")
@@ -4750,6 +4783,52 @@ def test_live_perf():
         def is_cdc_subscription(client_cls, method) -> bool:
             return client_cls is DataBrokerClient and method.name == "PublishCDC"
 
+        # ExchangeServiceTokenForTenant is callable only by a service account
+        # presenting its HOME-tenant bearer. The prepared fixtures name such an
+        # account (membership_exchange_username, password UDB_LIVE_PASSWORD) with
+        # an active membership in the bench tenant. Its client is built lazily,
+        # right before that single measured row, so the bearer is fresh. When the
+        # fixture is absent or the login fails the row is measured with the
+        # ordinary client and fails honestly.
+        def service_account_caller():
+            if service_account_state["resolved"]:
+                return service_account_state["client"], service_account_state["meta"]
+            service_account_state["resolved"] = True
+            username = fixtures.m.get("membership_exchange_username", "")
+            if not username:
+                print("[PERF-NOTE] service-account bench caller: prepared fixture "
+                      "membership_exchange_username is absent; measuring with the tenant admin", flush=True)
+                return None, None
+            home_meta = replace(
+                metadata(),
+                tenant_id=fixtures.m.get("membership_home_tenant_id", ""),
+                project_id=fixtures.m.get("membership_exchange_project_id", ""),
+                client_catalog_version="",
+            )
+            try:
+                sa_login = auth.login(
+                    username,
+                    required_env("UDB_LIVE_PASSWORD"),
+                    device_name="python-sdk-perf-service-account",
+                    metadata=home_meta,
+                )
+                sa_principal = auth.authenticate_bearer(sa_login.access_token, metadata=home_meta).principal
+            except Exception as exc:  # noqa: BLE001 - logged; the row then fails honestly
+                print(f"[PERF-NOTE] service-account bench caller: login failed: {exc}", flush=True)
+                return None, None
+            sa_meta = replace(
+                metadata(bearer_token=sa_login.access_token),
+                tenant_id=sa_principal.tenant_id,
+                project_id=sa_principal.project_id,
+                user_id=sa_principal.user_id,
+                service_identity=sa_principal.service_identity,
+                scopes=tuple(sa_principal.scopes),
+                client_catalog_version="",
+            )
+            service_account_state["client"] = AuthnServiceClient(auth_target, sa_meta, timeout=20.0)
+            service_account_state["meta"] = sa_meta
+            return service_account_state["client"], sa_meta
+
         def iters_for(kind):
             return 10 if kind == "read_only" else 1
 
@@ -4761,7 +4840,10 @@ def test_live_perf():
             # Every measured RPC must have an explicit doc-backed body. No reflective
             # fallback is allowed here; missing coverage is a harness error.
             ensure_fresh_perf_token()
-            if not requires_platform_perf_identity(client_cls, method.name):
+            if (requires_service_account_perf_identity(client_cls, method.name)
+                    and service_account_state["meta"] is not None):
+                call_meta = service_account_state["meta"]
+            elif not requires_platform_perf_identity(client_cls, method.name):
                 call_meta = authed_meta
             rpc_callable = getattr(client.stub, method.name)
             start = time.perf_counter()
@@ -4821,6 +4903,10 @@ def test_live_perf():
             use_platform = requires_platform_perf_identity(client_cls, method.name)
             client = platform_clients[client_cls] if use_platform else clients[client_cls]
             call_meta = platform_meta if use_platform else authed_meta
+            if requires_service_account_perf_identity(client_cls, method.name):
+                sa_client, sa_meta = service_account_caller()
+                if sa_client is not None:
+                    client, call_meta = sa_client, sa_meta
             streaming = method.client_streaming or method.server_streaming
             if is_cdc_subscription(client_cls, method):
                 kind, n = "cdc_first_event", 1
@@ -4880,5 +4966,7 @@ def test_live_perf():
             c.close()
         for c in platform_clients.values():
             c.close()
+        if service_account_state["client"] is not None:
+            service_account_state["client"].close()
 
     write_python_perf_report(samples, fixtures, authed_meta)

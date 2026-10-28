@@ -131,6 +131,34 @@ function requiresPlatformBenchmarkIdentity(serviceName: string, methodName: stri
   return PLATFORM_BENCHMARK_RPCS.has(`${serviceName}/${methodName}`);
 }
 
+// ExchangeServiceTokenForTenant is refused for a human or API-key caller: only a
+// service account presenting its HOME bearer may exchange it. The membership
+// create/list/revoke rows stay on the bench tenant's ordinary administrator.
+const SERVICE_ACCOUNT_BENCHMARK_RPCS = new Set([
+  "AuthnService/exchange_service_token_for_tenant",
+]);
+
+function requiresServiceAccountBenchmarkIdentity(serviceName: string, methodName: string): boolean {
+  return SERVICE_ACCOUNT_BENCHMARK_RPCS.has(`${serviceName}/${methodName}`);
+}
+
+/** The service account that measures ExchangeServiceTokenForTenant, from the
+ *  prepared fixtures; undefined when the fixture script provided none (an older
+ *  broker), in which case the row runs on the ordinary caller and fails honestly.
+ *  Read by EXACT key: PerfFixtures.lookup suffix-matches, so
+ *  `membership_exchange_username` would otherwise resolve to the `username` seed. */
+function serviceAccountBenchmarkLogin(
+  fixtures: PerfFixtures,
+): { username: string; tenantHint: string; projectHint: string } | undefined {
+  const username = fixtures.m.get("membership_exchange_username");
+  if (!username) return undefined;
+  return {
+    username,
+    tenantHint: fixtures.m.get("membership_home_tenant_id") ?? "",
+    projectHint: fixtures.m.get("membership_exchange_project_id") ?? "",
+  };
+}
+
 function governanceSeedActor(
   platformActorUserId: string,
   tenantId: string,
@@ -1988,6 +2016,7 @@ test("benchmark platform routing is exact and preserves ordinary Authz CRUD", ()
   assert.equal(requiresPlatformBenchmarkIdentity("TenantService", "purge_tenant"), false);
   assert.equal(requiresPlatformBenchmarkIdentity("DataBroker", "select"), false);
   assert.equal(requiresPlatformBenchmarkIdentity("DataBroker", "ensure_project"), false);
+  assert.equal(requiresPlatformBenchmarkIdentity("AuthnService", "exchange_service_token_for_tenant"), false);
 
   const fixtures = fullSurfaceManifestFixtures();
   const draft = perfRealBody("AuthzService", "create_policy_draft", "tenant-1", "project-1", fixtures);
@@ -2007,6 +2036,35 @@ test("benchmark platform routing is exact and preserves ordinary Authz CRUD", ()
   assert.equal(fixtures.lookup("user_id"), principal.user_id);
   assert.throws(() => verifiedNativeFixtureActor(principal, "foreign-tenant", "project-1"), /foreign authenticated tenant/);
   assert.throws(() => verifiedNativeFixtureActor(principal, "tenant-1", "foreign-project"), /foreign authenticated project/);
+});
+
+test("benchmark service-account routing covers only the tenant token exchange", () => {
+  assert.equal(requiresServiceAccountBenchmarkIdentity("AuthnService", "exchange_service_token_for_tenant"), true);
+  assert.equal(requiresServiceAccountBenchmarkIdentity("AuthnService", "create_service_account_tenant_membership"), false);
+  assert.equal(requiresServiceAccountBenchmarkIdentity("AuthnService", "list_service_account_tenant_memberships"), false);
+  assert.equal(requiresServiceAccountBenchmarkIdentity("AuthnService", "revoke_service_account_tenant_membership"), false);
+  assert.equal(requiresServiceAccountBenchmarkIdentity("AuthnService", "login"), false);
+  assert.equal(requiresServiceAccountBenchmarkIdentity("AuthzService", "check_access"), false);
+
+  // Absent fixture: no service-account caller, even though lookup() would
+  // suffix-match `membership_exchange_username` to the `username` seed.
+  const fixtures = fullSurfaceManifestFixtures();
+  assert.ok(fixtures.lookup("membership_exchange_username"));
+  assert.equal(serviceAccountBenchmarkLogin(fixtures), undefined);
+
+  fixtures.set("membership_exchange_username", "sdk-bench-svc");
+  fixtures.set("membership_home_tenant_id", "11111111-1111-4111-8111-000000000301");
+  fixtures.set("membership_exchange_project_id", "bench-home-project");
+  assert.deepEqual(serviceAccountBenchmarkLogin(fixtures), {
+    username: "sdk-bench-svc",
+    tenantHint: "11111111-1111-4111-8111-000000000301",
+    projectHint: "bench-home-project",
+  });
+
+  // The exchange body targets the bench tenant/project, whoever calls it.
+  const exchange = perfRealBody("AuthnService", "exchange_service_token_for_tenant", "tenant-1", "project-1", fixtures);
+  assert.equal(exchange?.target_tenant_id, "tenant-1");
+  assert.equal(exchange?.target_project_id, "project-1");
 });
 
 // A "kitchen-sink" request: protobufjs (under proto-loader) drops keys that the
@@ -2154,6 +2212,17 @@ const MESSAGING_FIXTURE_KEYS = [
   "mls_new_ratchet_tree",
 ];
 
+/** The cross-tenant service-token bench fixtures scripts/prepare-benchmark-fixtures.py
+ *  writes; all optional (an older broker has no tenant memberships). */
+const MEMBERSHIP_FIXTURE_KEYS = [
+  "membership_user_id",
+  "membership_home_tenant_id",
+  "membership_expires_at",
+  "membership_id",
+  "membership_exchange_username",
+  "membership_exchange_project_id",
+];
+
 async function seedPerfFixtures(
   gen: any,
   platformGen: any,
@@ -2180,6 +2249,13 @@ async function seedPerfFixtures(
     // MessagingService MLS objects minted by `udb messaging bench-fixture`;
     // absent when the benchmark broker predates the messaging service.
     for (const key of MESSAGING_FIXTURE_KEYS) {
+      const value = prepared.fixtures?.[key];
+      if (typeof value === "string" && value) fix.set(key, value);
+    }
+    // Cross-tenant service-token objects (a service account homed in another
+    // tenant, its membership in the bench tenant, and the account that measures
+    // ExchangeServiceTokenForTenant); absent on a broker that predates them.
+    for (const key of MEMBERSHIP_FIXTURE_KEYS) {
       const value = prepared.fixtures?.[key];
       if (typeof value === "string" && value) fix.set(key, value);
     }
@@ -5044,15 +5120,75 @@ test("live per-RPC perf", {
     // before the final self-PurgeTenant.
     phase3.sort((a, b) => Number(a.methodName === "admin_revoke_all_tenant_sessions") - Number(b.methodName === "admin_revoke_all_tenant_sessions"));
 
+    // ExchangeServiceTokenForTenant only accepts a service account's HOME bearer.
+    // Right before measuring it, log the fixture's service account in (in its home
+    // tenant), verify the bearer and measure on a client carrying that principal's
+    // tenant/project/user/service identity. Without the fixture (or if that login
+    // fails) the row runs on the ordinary caller and its refusal is recorded.
+    const measureAsServiceAccount = async (u: Unit): Promise<void> => {
+      const caller = serviceAccountBenchmarkLogin(fixtures);
+      if (!caller) {
+        await measureRpc(u.serviceName, u.api, u.methodName, u.fn);
+        return;
+      }
+      const loginProject = new UdbProject({
+        target, authTarget,
+        tenantId: caller.tenantHint || tenantId,
+        projectId: caller.projectHint || projectId,
+        purpose: "ts.live.perf.service-account.login", tokenStore: memoryStore(), deadlineMs: 20_000,
+      });
+      let callerProject: UdbProject | undefined;
+      try {
+        let selectedApi = u.api;
+        try {
+          const saLogin = await loginProject.login({
+            username: caller.username,
+            password,
+            tenant_hint: caller.tenantHint,
+            project_hint: caller.projectHint,
+            device_name: "ts-sdk-perf-service-account",
+          });
+          const bearer: string = saLogin?.access_token ?? "";
+          if (!bearer) throw new Error(`login returned no access token (mfa_required=${saLogin?.mfa_required})`);
+          const saPrincipal = (await loginProject.auth.authenticateBearer(bearer))?.principal ?? {};
+          if (!saPrincipal.tenant_id) throw new Error("the verified service-account principal has no tenant_id");
+          callerProject = new UdbProject({
+            target, authTarget,
+            tenantId: saPrincipal.tenant_id,
+            projectId: saPrincipal.project_id || caller.projectHint || projectId,
+            userId: saPrincipal.user_id || undefined,
+            serviceIdentity: saPrincipal.service_identity || undefined,
+            credentials: { bearerToken: bearer },
+            purpose: "ts.live.perf.service-account", tokenStore: memoryStore(), deadlineMs: 20_000,
+          });
+          selectedApi = ((callerProject as any).authGenerated ?? callerProject.generated)[u.serviceName];
+          if (typeof selectedApi?.[u.methodName] !== "function") {
+            throw new Error(`service-account benchmark surface is missing ${u.serviceName}/${u.methodName}`);
+          }
+        } catch (err) {
+          selectedApi = u.api;
+          console.error(`FAILDETAIL ${u.serviceName}/${u.methodName} [SERVICE_ACCOUNT_LOGIN] ${caller.username}: ${errText(err)}`);
+        }
+        await measureRpc(u.serviceName, selectedApi, u.methodName, selectedApi[u.methodName]);
+      } finally {
+        callerProject?.close();
+        loginProject.close();
+      }
+    };
+    const measureUnit = (u: Unit): Promise<void> =>
+      requiresServiceAccountBenchmarkIdentity(u.serviceName, u.methodName)
+        ? measureAsServiceAccount(u)
+        : measureRpc(u.serviceName, u.api, u.methodName, u.fn);
+
     // Phase 1: establish/validate the session FIRST (the seed phase already ran above
     // and captured the session/token fixtures these RPCs consume).
-    for (const u of phase1) await measureRpc(u.serviceName, u.api, u.methodName, u.fn);
+    for (const u of phase1) await measureUnit(u);
     // Phase 2: measure everything else under the live session.
-    for (const u of phase2) await measureRpc(u.serviceName, u.api, u.methodName, u.fn);
+    for (const u of phase2) await measureUnit(u);
     // Phase 3: tear the session/credentials down LAST against disposable seeded
     // targets. Some rows intentionally deactivate/revoke the current tenant's
     // authn state, so no later measurement may depend on that principal.
-    for (const u of phase3) await measureRpc(u.serviceName, u.api, u.methodName, u.fn);
+    for (const u of phase3) await measureUnit(u);
     // Terminal destructive RPCs can invalidate broad tenant state. The preceding
     // tenant-wide session revoke invalidated the old bearer by design, so acquire
     // a new verified session before measuring the final self-purge.

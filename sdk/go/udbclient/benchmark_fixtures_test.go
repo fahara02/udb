@@ -45,6 +45,27 @@ func loadPreparedBenchmarkFixtures(t testing.TB, fix *perfFixtures, tenant, proj
 			fix.set(key, value)
 		}
 	}
+	// Per-tenant service-account membership fixtures; absent when the
+	// benchmark broker predates tenant memberships (0.6.4).
+	for _, key := range membershipFixtureKeys {
+		if value := prepared.Fixtures[key]; value != "" {
+			fix.set(key, value)
+		}
+	}
+}
+
+// membershipFixtureKeys are the `membership_*` bench-body fixtures
+// scripts/prepare-benchmark-fixtures.py provisions for the AuthnService
+// tenant-membership RPCs (the same list in every harness). No credential is
+// ever part of the prepared file: the exchange account's password is
+// UDB_LIVE_PASSWORD.
+var membershipFixtureKeys = []string{
+	"membership_user_id",
+	"membership_home_tenant_id",
+	"membership_expires_at",
+	"membership_id",
+	"membership_exchange_username",
+	"membership_exchange_project_id",
 }
 
 // messagingFixtureKeys are the `mls_*` bench-body fixtures

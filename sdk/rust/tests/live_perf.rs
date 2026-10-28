@@ -97,6 +97,18 @@ struct Plan {
     seeded_fixture_keys: Vec<String>,
     cdc: CdcPlan,
     rpcs: Vec<RpcPlan>,
+    /// The service account the exporter provisioned for the rows that only a
+    /// service account may call. Its password is `UDB_LIVE_PASSWORD`, never in
+    /// the plan.
+    #[serde(default)]
+    service_account_caller: Option<ServiceAccountCaller>,
+}
+
+#[derive(Clone, serde::Deserialize)]
+struct ServiceAccountCaller {
+    username: String,
+    tenant_id: String,
+    project_id: String,
 }
 
 #[derive(serde::Deserialize)]
@@ -122,6 +134,8 @@ struct RpcPlan {
     iters: usize,
     warm_up: bool,
     platform: bool,
+    #[serde(default)]
+    service_account: bool,
     reauthenticate_before: bool,
     capability_optional: bool,
     #[serde(default)]
@@ -598,6 +612,14 @@ fn write_report(samples: &[Sample], fixture_keys: &[String], tenant: &str, error
 struct Session {
     user: Metadata,
     platform: Metadata,
+    /// Identity-only metadata (no bearer) the service-account login starts from.
+    base: Metadata,
+    service_account_caller: Option<ServiceAccountCaller>,
+    /// The service account's metadata and when it was minted: logged in
+    /// lazily right before the first service-account row, re-minted after
+    /// three minutes.
+    service_account: Option<(Metadata, Instant)>,
+    service_account_failed: bool,
     sentinels: BTreeMap<&'static str, String>,
     auto_refresh_token: String,
     auto_session_id: String,
@@ -650,6 +672,66 @@ async fn ensure_fresh(caller: &mut Caller, session: &mut Session) -> Result<(), 
     session.refresh_at =
         Instant::now() + Duration::from_secs_f64((expires * 0.6).clamp(60.0, 240.0));
     Ok(())
+}
+
+/// Log the plan's service account in and build its metadata from the verified
+/// principal, as the platform identity is built in `prepare`.
+async fn mint_service_account(
+    caller: &mut Caller,
+    base: &Metadata,
+    account: &ServiceAccountCaller,
+) -> Result<Metadata, String> {
+    let mut hints = base.clone().with_bearer_token("");
+    hints.tenant_id = account.tenant_id.clone();
+    hints.project_id = account.project_id.clone();
+    let password = required_env("UDB_LIVE_PASSWORD");
+    let credentials = login(
+        caller,
+        &hints,
+        &account.username,
+        &password,
+        "rust-sdk-perf-service-account",
+    )
+    .await?;
+    let who = principal(caller, &hints, &credentials.access_token).await?;
+    let mut meta = hints.with_bearer_token(credentials.access_token);
+    let tenant = text(&who, "tenant_id");
+    if !tenant.is_empty() {
+        meta.tenant_id = tenant;
+    }
+    let project = text(&who, "project_id");
+    if !project.is_empty() {
+        meta.project_id = project;
+    }
+    Ok(meta)
+}
+
+/// Mint the service-account identity on first use, so a long run cannot hand a
+/// late row an expired access token. A failed login is reported once and leaves
+/// the rows on the identity they would otherwise use; it never aborts the run.
+async fn ensure_service_account(caller: &mut Caller, session: &mut Session) {
+    if session.service_account_failed {
+        return;
+    }
+    if let Some((_, minted)) = &session.service_account {
+        if minted.elapsed() < Duration::from_secs(180) {
+            return;
+        }
+    }
+    let Some(account) = session.service_account_caller.clone() else {
+        return;
+    };
+    match mint_service_account(caller, &session.base, &account).await {
+        Ok(meta) => session.service_account = Some((meta, Instant::now())),
+        Err(err) => {
+            println!(
+                "[PERF-SERVICE-ACCOUNT] login as {} failed; its rows run under the default identity: {err}",
+                account.username
+            );
+            session.service_account = None;
+            session.service_account_failed = true;
+        }
+    }
 }
 
 fn substitute(body: &Value, sentinels: &BTreeMap<&'static str, String>) -> Value {
@@ -764,10 +846,13 @@ async fn time_one(
     rpc: &RpcPlan,
 ) -> Result<(f64, Outcome), String> {
     ensure_fresh(caller, session).await?;
-    let meta = if rpc.platform {
-        session.platform.clone()
-    } else {
-        session.user.clone()
+    if rpc.service_account {
+        ensure_service_account(caller, session).await;
+    }
+    let meta = match (&session.service_account, rpc.service_account) {
+        (Some((service_account, _)), true) => service_account.clone(),
+        _ if rpc.platform => session.platform.clone(),
+        _ => session.user.clone(),
     };
     let start = Instant::now();
     if rpc.kind == "cdc_first_event" {
@@ -1017,6 +1102,10 @@ async fn prepare(plan: &Plan) -> Result<(Caller, Session), String> {
     let session = Session {
         user: base.clone().with_bearer_token(first.access_token),
         platform,
+        base: base.clone(),
+        service_account_caller: plan.service_account_caller.clone(),
+        service_account: None,
+        service_account_failed: false,
         sentinels,
         auto_refresh_token: auto.refresh_token,
         auto_session_id: auto.session_id,

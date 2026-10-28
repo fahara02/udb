@@ -172,6 +172,53 @@ func TestLivePerf(t *testing.T) {
 	platformGen = NewGenerated(authConn, liveGeneratedOptions(platformMeta, platformAuthz))
 	platformBrokerGen = NewGenerated(brokerConn, liveGeneratedOptions(platformMeta, platformAuthz))
 
+	// ExchangeServiceTokenForTenant is callable only by a service account
+	// presenting its HOME-tenant bearer. The prepared fixtures name such an
+	// account (membership_exchange_username, password UDB_LIVE_PASSWORD) with an
+	// active membership in the bench tenant. Its client is built lazily, right
+	// before that single measured row, so the bearer is fresh. When the fixture is
+	// absent or the login fails the row is measured with the ordinary client and
+	// fails honestly.
+	var serviceAccountGen *GeneratedClient
+	serviceAccountResolved := false
+	serviceAccountClient := func() *GeneratedClient {
+		if serviceAccountResolved {
+			return serviceAccountGen
+		}
+		serviceAccountResolved = true
+		username, _ := fix.lookupSeed("membership_exchange_username")
+		if username == "" {
+			t.Logf("service-account bench caller: prepared fixture membership_exchange_username is absent; measuring with the tenant admin")
+			return nil
+		}
+		homeTenant, _ := fix.lookupSeed("membership_home_tenant_id")
+		homeProject, _ := fix.lookupSeed("membership_exchange_project_id")
+		saLogin, err := authnv1.NewAuthnServiceClient(authConn).Login(ctx, &authnv1.LoginRequest{
+			Username: username, Password: requiredLiveEnv(t, "UDB_LIVE_PASSWORD"),
+			TenantHint: homeTenant, ProjectHint: homeProject, DeviceName: "go-sdk-perf-service-account",
+		})
+		if err != nil {
+			t.Logf("service-account bench caller: Login failed: %v", err)
+			return nil
+		}
+		homeMeta := meta
+		homeMeta.TenantID = homeTenant
+		homeMeta.ProjectID = homeProject
+		saWho, err := NewAuthClient(authConn, homeMeta).AuthenticateBearer(ctx, saLogin.GetAccessToken())
+		if err != nil {
+			t.Logf("service-account bench caller: bearer validation failed: %v", err)
+			return nil
+		}
+		saMeta := meta
+		saMeta.TenantID = saWho.GetPrincipal().GetTenantId()
+		saMeta.ProjectID = saWho.GetPrincipal().GetProjectId()
+		saMeta.UserID = saWho.GetPrincipal().GetUserId()
+		saMeta.ServiceIdentity = saWho.GetPrincipal().GetServiceIdentity()
+		saMeta.Scopes = append([]string(nil), saWho.GetPrincipal().GetScopes()...)
+		serviceAccountGen = NewGenerated(authConn, liveGeneratedOptions(saMeta, "Bearer "+saLogin.GetAccessToken()))
+		return serviceAccountGen
+	}
+
 	// Re-mint FRESH credentials right before measurement, into THREE INDEPENDENT
 	// admin sessions — one per consumer — so the session-mutating Phase-1 RPCs don't
 	// invalidate each other:
@@ -316,6 +363,11 @@ func TestLivePerf(t *testing.T) {
 			}
 		}
 		gen := liveBenchmarkClient(rpc, brokerGen, authGen, platformBrokerGen, platformGen)
+		if requiresServiceAccountBenchmarkIdentity(rpc) {
+			if saGen := serviceAccountClient(); saGen != nil {
+				gen = saGen
+			}
+		}
 		iters, note := iterFor(rpc.OperationKind)
 		if isCdcSubscriptionRPC(rpc) {
 			// CDC first-event includes a real produce→deliver round-trip; keep the
@@ -549,6 +601,13 @@ func requiresPlatformBenchmarkIdentity(rpc RPCInfo) bool {
 	}
 }
 
+// ExchangeServiceTokenForTenant is the only RPC a human caller cannot succeed
+// on: the broker requires a service account presenting its HOME-tenant bearer.
+// Membership create/list/revoke stay with the bench tenant admin (the target).
+func requiresServiceAccountBenchmarkIdentity(rpc RPCInfo) bool {
+	return rpc.FullMethod == "/udb.core.authn.services.v1.AuthnService/ExchangeServiceTokenForTenant"
+}
+
 func liveBenchmarkClient(rpc RPCInfo, broker, auth, platformBroker, platformAuth *GeneratedClient) *GeneratedClient {
 	if rpc.Service == "DataBroker" {
 		if requiresPlatformBenchmarkIdentity(rpc) {
@@ -599,6 +658,28 @@ func TestPlatformBenchmarkIdentityRoutingIsNarrow(t *testing.T) {
 		if got := liveBenchmarkClient(test.rpc, broker, auth, platformBroker, platformAuth); got != test.want {
 			t.Fatalf("%s must retain its actual listener and narrow verified credential", test.rpc.FullMethod)
 		}
+	}
+}
+
+func TestServiceAccountBenchmarkIdentityRoutingIsNarrow(t *testing.T) {
+	exchange := RPCInfo{Service: "AuthnService", Name: "ExchangeServiceTokenForTenant", FullMethod: "/udb.core.authn.services.v1.AuthnService/ExchangeServiceTokenForTenant"}
+	if !requiresServiceAccountBenchmarkIdentity(exchange) {
+		t.Fatal("AuthnService/ExchangeServiceTokenForTenant must use the service-account fixture")
+	}
+	if requiresPlatformBenchmarkIdentity(exchange) {
+		t.Fatal("AuthnService/ExchangeServiceTokenForTenant must not use the platform fixture")
+	}
+	for _, name := range []string{
+		"CreateServiceAccountTenantMembership", "ListServiceAccountTenantMemberships",
+		"RevokeServiceAccountTenantMembership", "Login", "ValidateToken",
+	} {
+		rpc := RPCInfo{Service: "AuthnService", Name: name, FullMethod: "/udb.core.authn.services.v1.AuthnService/" + name}
+		if requiresServiceAccountBenchmarkIdentity(rpc) {
+			t.Fatalf("AuthnService/%s must retain the tenant admin identity", name)
+		}
+	}
+	if requiresServiceAccountBenchmarkIdentity(RPCInfo{Service: "DataBroker", Name: "ListProjects", FullMethod: "/udb.services.v1.DataBroker/ListProjects"}) {
+		t.Fatal("DataBroker/ListProjects must not use the service-account fixture")
 	}
 }
 

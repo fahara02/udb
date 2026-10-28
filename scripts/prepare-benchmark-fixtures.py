@@ -3,12 +3,15 @@
 
 Completion and acknowledgement consume state. Give them independent fixtures
 instead of timing a nonexistent upload or a workflow changed by SignalWorkflow.
-The JSON contains only reference IDs and ETags, never credentials or signed URLs.
+The JSON contains only reference IDs, ETags and one service-account username,
+never credentials or signed URLs (that account's password is the environment's
+UDB_LIVE_PASSWORD).
 """
 
 from __future__ import annotations
 
 import base64
+import datetime
 import json
 import os
 import shutil
@@ -20,8 +23,13 @@ from dataclasses import replace
 from pathlib import Path
 
 import grpc
+from google.protobuf import timestamp_pb2
 
 from bootstrap_benchmark_project_catalog import required_env
+from udb.core.authn.entity.v1 import enums_pb2 as authn_enums
+from udb.core.authn.services.v1 import authn_service_pb2 as authn_service_pb
+from udb.core.authn.services.v1 import authn_service_pb2_grpc as authn_grpc
+from udb.core.authn.services.v1 import core_pb2 as authn_pb
 from udb.core.messaging.services.v1 import messaging_service_pb2 as messaging_pb
 from udb.core.messaging.services.v1 import messaging_service_pb2_grpc as messaging_grpc
 from udb.core.workflow.services.v1 import workflow_service_pb2 as workflow_pb
@@ -110,6 +118,99 @@ def seed_messaging(channel, headers, tenant_id: str, subject: str) -> dict[str, 
     if not all(isinstance(value, str) and value for value in fixtures.values()):
         raise RuntimeError("messaging bench fixture has an empty value")
     return dict(fixtures)
+
+
+#: The home-tenant service accounts' grant: `udb:read` (what the bench tenant
+#: approves) and the exchange scope ExchangeServiceTokenForTenant requires.
+MEMBERSHIP_GRANT_SCOPES = ("udb:read", "udb:authn:exchange-tenant-token")
+MEMBERSHIP_APPROVED_SCOPES = ("udb:read",)
+
+
+def seed_memberships(channel, bench_headers, bench_tenant: str, bench_project: str) -> dict[str, str]:
+    """Service accounts homed in ANOTHER tenant, for the four tenant-membership
+    rows. The bench tenant is the membership TARGET, so its admin (the
+    benchmark principal) approves; the home tenant's admin is a separate
+    offline-bootstrapped principal (`UDB_LIVE_MEMBERSHIP_HOME_USERNAME`, password
+    `UDB_LIVE_PASSWORD`). Three accounts, so no measured row consumes another's
+    target:
+
+    - `membership_user_id`: grant only; the measured Create approves it;
+    - `membership_id`: a membership of a second account, the measured Revoke's target;
+    - `membership_exchange_username`: a third account with an approved
+      membership; the harnesses log in AS it (password `UDB_LIVE_PASSWORD`, never
+      written here) to measure ExchangeServiceTokenForTenant with its home bearer.
+
+    Empty when no home admin is configured or the broker predates 0.6.4."""
+    home_username = os.getenv("UDB_LIVE_MEMBERSHIP_HOME_USERNAME", "").strip()
+    home_code = os.getenv("UDB_LIVE_MEMBERSHIP_HOME_TENANT", "").strip()
+    if not home_username or not home_code:
+        print("membership fixture skipped: no UDB_LIVE_MEMBERSHIP_HOME_USERNAME/TENANT", flush=True)
+        return {}
+    password = required_env("UDB_LIVE_PASSWORD")
+    home_meta = Metadata(tenant_id=home_code, project_id=bench_project,
+                         purpose="ci.benchmark.fixtures.membership-home",
+                         correlation_id=str(uuid.uuid4()), client_catalog_version="")
+    with UdbAuthClient(required_env("UDB_AUTH_GRPC_TARGET"), home_meta, timeout=15.0) as auth:
+        login = auth.login(home_username, password, device_name="ci-benchmark-membership-home")
+        home = auth.authenticate_bearer(login.access_token).principal
+    if not home.tenant_id or home.tenant_id == bench_tenant:
+        raise RuntimeError("the membership home admin is not bound to a tenant of its own")
+    home_project = home.project_id or bench_project
+    home_headers = replace(home_meta, tenant_id=home.tenant_id, project_id=home_project,
+                           bearer_token=login.access_token).to_grpc_metadata()
+    authn = authn_grpc.AuthnServiceStub(channel)
+    suffix = uuid.uuid4().hex[:12]
+
+    def service_account(label: str) -> tuple[str, str]:
+        username = f"sdk-perf-membership-{label}-{suffix}"
+        user_id = authn.CreateUser(authn_pb.CreateUserRequest(
+            username=username, email=f"{username}@example.invalid", password=password,
+            tenant_id=home.tenant_id, project_id=home_project, full_name=f"SDK perf membership {label}",
+            account_kind=authn_enums.ACCOUNT_KIND_SERVICE_ACCOUNT),
+            metadata=home_headers, timeout=20.0).user.user_id
+        authn.ChangeUserStatus(authn_pb.ChangeUserStatusRequest(
+            user_id=user_id, new_status=authn_enums.USER_STATUS_ACTIVE,
+            reason="benchmark membership fixture"), metadata=home_headers, timeout=20.0)
+        authn.CreateServiceAccountGrant(authn_service_pb.CreateServiceAccountGrantRequest(
+            tenant_id=home.tenant_id, user_id=user_id,
+            service_identity=f"spiffe://bench/membership-{label}-{suffix}", project_id=home_project,
+            approved_scopes=list(MEMBERSHIP_GRANT_SCOPES), reason="benchmark membership fixture"),
+            metadata=home_headers, timeout=20.0)
+        return username, user_id
+
+    expires = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(days=30)
+
+    def approve(user_id: str) -> str:
+        membership = authn.CreateServiceAccountTenantMembership(
+            authn_service_pb.CreateServiceAccountTenantMembershipRequest(
+                target_tenant_id=bench_tenant, user_id=user_id, home_tenant_id=home.tenant_id,
+                target_project_id=bench_project, approved_scopes=list(MEMBERSHIP_APPROVED_SCOPES),
+                reason="benchmark membership fixture",
+                expires_at=timestamp_pb2.Timestamp(seconds=int(expires.timestamp()))),
+            metadata=bench_headers, timeout=20.0).membership
+        if membership.status != "ACTIVE" or not membership.membership_id:
+            raise RuntimeError("benchmark membership fixture is not ACTIVE")
+        return membership.membership_id
+
+    try:
+        _create_username, create_user_id = service_account("create")
+        _revoke_username, revoke_user_id = service_account("revoke")
+        exchange_username, exchange_user_id = service_account("exchange")
+        revoke_membership_id = approve(revoke_user_id)
+        approve(exchange_user_id)
+    except grpc.RpcError as exc:
+        if exc.code() != grpc.StatusCode.UNIMPLEMENTED:
+            raise
+        print("membership fixture skipped: the broker serves no tenant memberships", flush=True)
+        return {}
+    return {
+        "membership_user_id": create_user_id,
+        "membership_home_tenant_id": home.tenant_id,
+        "membership_expires_at": expires.strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "membership_id": revoke_membership_id,
+        "membership_exchange_username": exchange_username,
+        "membership_exchange_project_id": home_project,
+    }
 
 
 def main() -> int:
@@ -208,6 +309,8 @@ def main() -> int:
             time.sleep(0.1)
         messaging_fixtures = seed_messaging(
             native_channel, headers, principal.tenant_id, principal.subject)
+        membership_fixtures = seed_memberships(
+            native_channel, headers, principal.tenant_id, principal.project_id)
         output.parent.mkdir(parents=True, exist_ok=True)
         output.write_text(json.dumps({
             "schema_version": 1, "tenant_id": principal.tenant_id, "project_id": principal.project_id,
@@ -217,10 +320,12 @@ def main() -> int:
                 "ack_workflow_id": instance.workflow_id,
                 "cdc_ack_event_id": ack_event_id, "cdc_ack_topic": ack_topic,
                 **messaging_fixtures,
+                **membership_fixtures,
             },
         }, sort_keys=True) + "\n", encoding="utf-8")
-    print("Prepared real CDC event, multipart, dispatched workflow and messaging benchmark fixtures"
-          f" ({len(messaging_fixtures)} MLS values)")
+    print("Prepared real CDC event, multipart, dispatched workflow, messaging and tenant-membership"
+          f" benchmark fixtures ({len(messaging_fixtures)} MLS values, "
+          f"{len(membership_fixtures)} membership values)")
     return 0
 
 

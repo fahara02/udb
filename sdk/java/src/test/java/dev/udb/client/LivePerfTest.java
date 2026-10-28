@@ -424,6 +424,13 @@ class LivePerfTest {
   private String autoRefresh = "";
   private String autoSession = "";
   private long refreshAtNanos;
+  // The plan's service account (null when the plan names none), logged in
+  // lazily right before its first row and re-minted after three minutes, so a
+  // long run cannot hand that row an expired access token.
+  private JsonObject serviceAccountCaller;
+  private Identity serviceAccount;
+  private long serviceAccountMintedNanos;
+  private boolean serviceAccountFailed;
 
   private void bind(Credentials credentials) {
     user.bearer = credentials.access();
@@ -458,6 +465,46 @@ class LivePerfTest {
     long expires = Long.parseLong(text(response, "access_token_expires_in"));
     double seconds = Math.max(60, Math.min((expires > 0 ? expires : 240) * 0.6, 240));
     refreshAtNanos = System.nanoTime() + (long) (seconds * 1e9);
+  }
+
+  private void ensureServiceAccount() {
+    if (serviceAccountCaller == null || serviceAccountFailed) {
+      return;
+    }
+    if (serviceAccount != null
+        && System.nanoTime() - serviceAccountMintedNanos < TimeUnit.SECONDS.toNanos(180)) {
+      return;
+    }
+    String username = serviceAccountCaller.get("username").getAsString();
+    try {
+      Identity hints = user.copy();
+      hints.tenant = serviceAccountCaller.get("tenant_id").getAsString();
+      hints.project = serviceAccountCaller.get("project_id").getAsString();
+      hints.bearer = "";
+      Credentials credentials =
+          login(hints, username, env("UDB_LIVE_PASSWORD"), "java-sdk-perf-service-account");
+      DynamicMessage who = principal(hints, credentials.access());
+      Identity minted = hints.copy();
+      String whoTenant = text(who, "tenant_id");
+      String whoProject = text(who, "project_id");
+      if (!whoTenant.isEmpty()) {
+        minted.tenant = whoTenant;
+      }
+      if (!whoProject.isEmpty()) {
+        minted.project = whoProject;
+      }
+      minted.bearer = credentials.access();
+      serviceAccount = minted;
+      serviceAccountMintedNanos = System.nanoTime();
+    } catch (Exception error) {
+      System.out.println(
+          "[PERF-SERVICE-ACCOUNT] login as "
+              + username
+              + " failed; its rows run under the default identity: "
+              + error);
+      serviceAccount = null;
+      serviceAccountFailed = true;
+    }
   }
 
   private Outcome cdcFirstEvent(JsonObject cdc, Identity identity) throws IOException {
@@ -517,7 +564,17 @@ class LivePerfTest {
 
   private Run timeOne(JsonObject plan, JsonObject rpc) throws IOException {
     ensureFresh();
-    Identity identity = rpc.get("platform").getAsBoolean() ? platform : user;
+    boolean asServiceAccount =
+        rpc.has("service_account")
+            && rpc.get("service_account").isJsonPrimitive()
+            && rpc.get("service_account").getAsBoolean();
+    if (asServiceAccount) {
+      ensureServiceAccount();
+    }
+    Identity identity =
+        asServiceAccount && serviceAccount != null
+            ? serviceAccount
+            : rpc.get("platform").getAsBoolean() ? platform : user;
     long start = System.nanoTime();
     if ("cdc_first_event".equals(rpc.get("kind").getAsString())) {
       Outcome outcome = cdcFirstEvent(plan.getAsJsonObject("cdc"), identity);
@@ -635,6 +692,11 @@ class LivePerfTest {
       platform.tenant = text(platformWho, "tenant_id");
       platform.project = user.project;
       platform.bearer = platformLogin.access();
+      JsonElement serviceAccountPlan = plan.get("service_account_caller");
+      serviceAccountCaller =
+          serviceAccountPlan != null && serviceAccountPlan.isJsonObject()
+              ? serviceAccountPlan.getAsJsonObject()
+              : null;
       Credentials token = login(user, username, password, "java-sdk-perf-token");
       Credentials refresh = login(user, username, password, "java-sdk-perf-refresh");
       Credentials session = login(user, username, password, "java-sdk-perf-session");

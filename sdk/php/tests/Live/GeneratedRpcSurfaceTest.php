@@ -1670,6 +1670,88 @@ function phpRequiresPlatformPerfIdentity(string $serviceName, string $methodName
     return isset($rpcs[strtolower($serviceName).'/'.rpcSnake($methodName)]);
 }
 
+// ExchangeServiceTokenForTenant is callable only by a service account
+// presenting its HOME-tenant bearer; membership create/list/revoke stay with
+// the bench tenant admin (the membership target).
+function phpRequiresServiceAccountPerfIdentity(string $serviceName, string $methodName): bool
+{
+    return strtolower($serviceName).'/'.rpcSnake($methodName) === 'authnservice/exchange_service_token_for_tenant';
+}
+
+// Log in the prepared home-tenant service account (membership_exchange_username,
+// password UDB_LIVE_PASSWORD) and build a client whose metadata carries its
+// verified principal. Returns [GeneratedClient, UdbMetadata], or null (logged)
+// when the fixture is absent or the login fails; the row is then measured with
+// the ordinary client and fails honestly.
+function phpServiceAccountPerfCaller(PerfFixturesPhp $fix): ?array
+{
+    // Exact keys: lookup() suffix-matches, so `membership_exchange_username`
+    // would otherwise fall back to the seeded human `username`, and the home
+    // tenant/project to the benchmark tenant/project.
+    $username = $fix->exact('membership_exchange_username');
+    if ($username === null || $username === '') {
+        fwrite(STDERR, "service-account bench caller: prepared fixture membership_exchange_username is absent; measuring with the tenant admin\n");
+
+        return null;
+    }
+    $homeTenant = (string) ($fix->exact('membership_home_tenant_id') ?? '');
+    $homeProject = (string) ($fix->exact('membership_exchange_project_id') ?? '');
+    $authTarget = liveEnv('UDB_AUTH_GRPC_TARGET', liveEnv('UDB_GRPC_TARGET'));
+    try {
+        $base = liveMeta('', $homeTenant);
+        $homeMeta = new UdbMetadata(
+            tenantId: $homeTenant,
+            userId: '',
+            purpose: $base->purpose,
+            correlationId: $base->correlationId,
+            scopes: [],
+            serviceIdentity: $base->serviceIdentity,
+            projectId: $homeProject,
+            clientCatalogVersion: $base->clientCatalogVersion,
+        );
+        $open = new GeneratedClient(['endpoint' => $authTarget, 'deadline_ms' => 10_000, 'retry' => ['max_attempts' => 1]]);
+        $open->bindContext($homeMeta);
+        $login = $open->login(
+            (new LoginRequest())
+                ->setUsername($username)
+                ->setPassword(liveEnv('UDB_LIVE_PASSWORD'))
+                ->setTenantHint($homeTenant)
+                ->setProjectHint($homeProject)
+                ->setDeviceName('php-sdk-perf-service-account'),
+            $homeMeta,
+        );
+        $verifier = new UdbAuthClient(['endpoint' => $authTarget, 'deadline_ms' => 10_000]);
+        $verifier->bindContext($homeMeta);
+        $principal = $verifier->authenticateBearer($login->getAccessToken(), $homeMeta)?->getPrincipal();
+        if ($principal === null) {
+            throw new RuntimeException('AuthenticateBearer returned no principal');
+        }
+        $scopes = [];
+        foreach ($principal->getScopes() as $scope) {
+            $scopes[] = (string) $scope;
+        }
+        $saMeta = new UdbMetadata(
+            tenantId: $principal->getTenantId(),
+            userId: $principal->getUserId(),
+            purpose: $base->purpose,
+            correlationId: $base->correlationId,
+            scopes: $scopes,
+            serviceIdentity: $principal->getServiceIdentity(),
+            projectId: $principal->getProjectId(),
+            clientCatalogVersion: $base->clientCatalogVersion,
+            bearerToken: $login->getAccessToken(),
+        );
+        $client = new GeneratedClient(['endpoint' => $authTarget, 'deadline_ms' => 15_000, 'retry' => ['max_attempts' => 1]]);
+        $client->bindContext($saMeta);
+
+        return [$client, $saMeta];
+    } catch (\Throwable $e) {
+        fwrite(STDERR, "service-account bench caller: login failed: {$e->getMessage()}\n");
+
+        return null;
+    }
+}
+
 // Enumerate every (stub, method) by REFLECTION ONLY (no live call), so the
 // dataset is available at Pest collection time without a broker connection.
 function phpLiveRpcCatalog(): array
@@ -3618,7 +3700,18 @@ it('routes only global benchmark RPCs to the platform identity', function () {
         ->and(phpRequiresPlatformPerfIdentity('AuthzService', 'CreateRole'))->toBeFalse()
         ->and(phpRequiresPlatformPerfIdentity('DataBroker', 'Select'))->toBeFalse()
         ->and(phpRequiresPlatformPerfIdentity('DataBroker', 'EnsureProject'))->toBeFalse()
-        ->and(phpRequiresPlatformPerfIdentity('TenantService', 'PurgeTenant'))->toBeFalse();
+        ->and(phpRequiresPlatformPerfIdentity('TenantService', 'PurgeTenant'))->toBeFalse()
+        ->and(phpRequiresPlatformPerfIdentity('AuthnService', 'ExchangeServiceTokenForTenant'))->toBeFalse();
+});
+
+it('routes only the tenant token exchange to the service-account identity', function () {
+    expect(phpRequiresServiceAccountPerfIdentity('AuthnService', 'ExchangeServiceTokenForTenant'))->toBeTrue()
+        ->and(phpRequiresServiceAccountPerfIdentity('AuthnService', 'exchange_service_token_for_tenant'))->toBeTrue()
+        ->and(phpRequiresServiceAccountPerfIdentity('AuthnService', 'CreateServiceAccountTenantMembership'))->toBeFalse()
+        ->and(phpRequiresServiceAccountPerfIdentity('AuthnService', 'ListServiceAccountTenantMemberships'))->toBeFalse()
+        ->and(phpRequiresServiceAccountPerfIdentity('AuthnService', 'RevokeServiceAccountTenantMembership'))->toBeFalse()
+        ->and(phpRequiresServiceAccountPerfIdentity('AuthnService', 'Login'))->toBeFalse()
+        ->and(phpRequiresServiceAccountPerfIdentity('DataBroker', 'ListProjects'))->toBeFalse();
 });
 
 it('derives PHP authz attribution from the verified caller without changing target IDs', function () {
@@ -3738,6 +3831,12 @@ class PerfFixturesPhp
             'grpc_status' => grpcStatusNamePhp($grpcCode),
             'details' => $details,
         ];
+    }
+
+    /** The value stored under exactly this key; no suffix matching. */
+    public function exact(string $key): ?string
+    {
+        return $this->m[$key] ?? null;
     }
 
     public function lookup(string $field): ?string
@@ -3979,6 +4078,14 @@ function perfSeedPhp(array $s): array
         // (scripts/prepare-benchmark-fixtures.py); absent when the benchmark
         // broker predates the messaging service. Same list in every harness.
         foreach (['mls_subject_id', 'mls_device_id', 'mls_peer_device_id', 'mls_revoke_device_id', 'mls_register_device_id', 'mls_register_signature_key', 'mls_register_credential', 'mls_key_package', 'mls_group_id', 'mls_message_ciphertext', 'mls_commit_group_id', 'mls_commit', 'mls_welcome', 'mls_new_group_id', 'mls_new_group_info', 'mls_new_ratchet_tree'] as $key) {
+            $value = $prepared['fixtures'][$key] ?? null;
+            if (is_string($value) && $value !== '') $fix->set($key, $value);
+        }
+        // Per-tenant service-account membership fixtures; absent when the
+        // benchmark broker predates tenant memberships (0.6.4). Same list in
+        // every harness. No credential is ever in the prepared file: the
+        // exchange account's password is UDB_LIVE_PASSWORD.
+        foreach (['membership_user_id', 'membership_home_tenant_id', 'membership_expires_at', 'membership_id', 'membership_exchange_username', 'membership_exchange_project_id'] as $key) {
             $value = $prepared['fixtures'][$key] ?? null;
             if (is_string($value) && $value !== '') $fix->set($key, $value);
         }
@@ -5314,6 +5421,7 @@ it('measures per-RPC latency', function () {
                 'method' => $method,
                 'name' => $method->getName(),
                 'platform' => $usePlatform,
+                'service_account' => phpRequiresServiceAccountPerfIdentity($svc, $method->getName()),
                 'ordinal' => count($units),
             ];
         }
@@ -5351,6 +5459,10 @@ it('measures per-RPC latency', function () {
         return $withinPhase !== 0 ? $withinPhase : $a['ordinal'] <=> $b['ordinal'];
     });
     $reauthenticatedForPurge = false;
+    // Built lazily, right before the single ExchangeServiceTokenForTenant row,
+    // so the home-tenant service-account bearer is fresh.
+    $serviceAccountCaller = null;
+    $serviceAccountResolved = false;
     foreach ($units as $u) {
         {
             $stub = $u['stub']; $sdkClient = $u['client']; $svc = $u['svc']; $method = $u['method'];
@@ -5382,6 +5494,20 @@ it('measures per-RPC latency', function () {
                 $reauthenticatedForPurge = true;
             }
             $callMeta = $u['platform'] ? $s['platformMeta'] : $authedMeta;
+            // Request bodies resolve the bench tenant/project even when the
+            // caller is a service account homed in another tenant.
+            $bodyMeta = $callMeta;
+            if ($u['service_account']) {
+                if (! $serviceAccountResolved) {
+                    $serviceAccountResolved = true;
+                    $serviceAccountCaller = phpServiceAccountPerfCaller($fix);
+                }
+                if ($serviceAccountCaller !== null) {
+                    [$sdkClient, $callMeta] = $serviceAccountCaller;
+                    $stub = $sdkClient->AuthnServiceStub();
+                    $bodyMeta = $authedMeta;
+                }
+            }
             $apiAlias = $aliasOf($svc, $name);
             $sdkMethodName = sdkBenchMethodPhp($svc, $name, $apiAlias);
             if ($svc === 'IdentityProviderService' && in_array($name, ['ScimCreateGroup', 'ScimGetGroup', 'ScimPatchGroup', 'ScimDeleteGroup'], true)) {
@@ -5478,7 +5604,7 @@ it('measures per-RPC latency', function () {
                 // a factory and rebuilt PER ITERATION so create-style RPCs (random unique
                 // username/role_code/name) don't collide on a reused body (iters 2+ would
                 // hit the unique constraint and the broker leaks it as INTERNAL).
-                $mkBody = fn () => perfBodyPhp($name, $fix, $callMeta->tenantId, $callMeta->projectId, $svc);
+                $mkBody = fn () => perfBodyPhp($name, $fix, $bodyMeta->tenantId, $bodyMeta->projectId, $svc);
                 $buildBody = function () use ($mkBody): array {
                     $startedNs = hrtime(true);
                     try {

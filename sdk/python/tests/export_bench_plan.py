@@ -12,6 +12,16 @@ Credentials are never written. Request fields that carry the caller's own
 session material hold a sentinel instead (`__UDB_BENCH_*__`), which the
 measuring SDK replaces with credentials it minted itself.
 
+RPCs flagged ``"service_account": true`` (only
+AuthnService/ExchangeServiceTokenForTenant) must be measured as the service
+account named by the top-level ``service_account_caller`` object
+(``username``, home ``tenant_id``, home ``project_id``): the measuring SDK logs
+it in with the password from env ``UDB_LIVE_PASSWORD`` (the plan never carries
+it), authenticates the bearer and sends the row with that principal's
+metadata. ``service_account_caller`` is null when the prepared fixtures do not
+provision the account (a broker older than 0.6.4); the row is then measured
+with the ordinary caller and fails honestly.
+
 Usage (same environment as `UDB_LIVE_PERF=1 pytest`):
 
     python sdk/python/tests/export_bench_plan.py <plan.json>
@@ -63,6 +73,20 @@ def descriptor_set_b64() -> str:
     for _client_cls, method in live.ALL_RPCS:
         visit(method.containing_service.file)
     return base64.b64encode(descriptor_pb2.FileDescriptorSet(file=ordered).SerializeToString()).decode()
+
+
+def service_account_caller(fixtures) -> dict | None:
+    """The home-tenant service account that measures the ``service_account``
+    rows, or None when the prepared fixtures do not provision it. Never carries
+    a credential: its password is env ``UDB_LIVE_PASSWORD``."""
+    username = fixtures.m.get("membership_exchange_username", "")
+    if not username:
+        return None
+    return {
+        "username": username,
+        "tenant_id": fixtures.m.get("membership_home_tenant_id", ""),
+        "project_id": fixtures.m.get("membership_exchange_project_id", ""),
+    }
 
 
 def main(argv: list[str]) -> int:
@@ -136,6 +160,7 @@ def main(argv: list[str]) -> int:
             "iters": iters,
             "warm_up": kind == "read_only" and not streaming and method.name not in live.SINGLE_CALL_PERF_METHODS,
             "platform": live.requires_platform_perf_identity(client_cls, method.name),
+            "service_account": live.requires_service_account_perf_identity(client_cls, method.name),
             "reauthenticate_before": client_cls is live.TenantServiceClient and method.name == "PurgeTenant",
             "capability_optional": client_cls is live.RoomServiceClient
             and method.name in live.WEBRTC_EGRESS_OPTIONAL_METHODS,
@@ -166,6 +191,7 @@ def main(argv: list[str]) -> int:
             "conflict_fields": ["record_id"],
             "context": as_json(authed_meta.with_purpose("rust.live.perf.cdc").to_request_context()),
         },
+        "service_account_caller": service_account_caller(fixtures),
         "rpcs": rpcs,
         # For SDKs that build requests reflectively without their own copy of
         # the contract (Java's DynamicMessage).
