@@ -120,6 +120,10 @@ SDK metadata objects carry:
 
 Bearer credentials use `authorization: Bearer ...`. API keys use `x-api-key`.
 
+A backend that calls UDB as a service account (and asks UDB about its users,
+or acts in a second tenant) should read
+[Service accounts acting for users](../docs/service-accounts.md).
+
 ## Framework Adapters
 
 Adapters keep request metadata consistent in application code.

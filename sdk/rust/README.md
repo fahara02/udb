@@ -120,6 +120,10 @@ one is not automatically accepted by the other, and the mismatch presents as a
 permissions error rather than a wrong-address error. `UdbClient` speaks to the
 data plane (`:50051` by default).
 
+A service-account caller, delegated `CheckAccess` for a user, and tokens for a
+second tenant are covered in
+[Service accounts acting for users](../../docs/service-accounts.md).
+
 ## Identity is per-connection, audit is per-request
 
 `Metadata` splits deliberately:

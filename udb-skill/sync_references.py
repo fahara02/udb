@@ -24,6 +24,9 @@ PAIRS = {
     REPO_ROOT / "docs" / "generated" / "authn-authz-sensitive-fields.md": (
         SKILL_ROOT / "plugins" / "udb" / "skills" / "using-udb" / "references" / "sensitive-fields.md"
     ),
+    REPO_ROOT / "docs" / "service-accounts.md": (
+        SKILL_ROOT / "plugins" / "udb" / "skills" / "using-udb" / "references" / "service-accounts.md"
+    ),
     SKILL_ROOT / "shared" / "udb-coding-subsystem-checklist.md": (
         SKILL_ROOT
         / "plugins"

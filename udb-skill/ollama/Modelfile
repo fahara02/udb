@@ -563,6 +563,65 @@ gate on subject id, `service_identity`, role, or scope instead.
 - Missing keys/secrets → `UDB_JWT_PRIVATE_KEY` unset ⇒ tokens silently not minted
   (sessions-only); missing hash secret ⇒ preflight failure / API-key create error.
 
+### Service accounts acting for users (0.6.4)
+
+Full guide: `docs/service-accounts.md` (bundled for Claude as
+`references/service-accounts.md`). The rules an agent must not get wrong:
+
+- **Token contents.** Scopes come ONLY from the typed grant. Roles = the roles
+  bound to the account (`AssignRole`) minus every role a workload may never
+  hold: platform roles, `organization_owner`, `platform_admin`,
+  `break_glass_admin`, and any code with a wildcard/`admin`/`owner`/
+  `superuser`/`root` segment (withheld silently from the token, logged on
+  `udb.audit.authn`, event `udb.authn.service.role.withheld.v1`; login still
+  succeeds). Tell a service from a person by `account_kind ==
+  ACCOUNT_KIND_SERVICE_ACCOUNT` or a non-empty `service_identity`, never by
+  empty `roles`.
+- **Who is this token?** `Authenticate{bearer_token}` / `ValidateToken` return
+  `Principal.username` (field 15) and redacted `attributes`, read from the live
+  user row (empty for external-IdP tokens).
+- **CheckAccess evaluates the CALLER.** A body `user_id` naming someone else is
+  ignored for ordinary callers; `CheckAccessResponse.evaluated_subject` (6) says
+  whom the broker evaluated. `user_id` is still required (send the caller's own
+  id for a self-check). To get a USER's answer, the caller must be a service
+  account whose grant approves `udb:authz:check-access-for` LITERALLY
+  (`udb:admin`/`udb:*` do not imply it), and `user_id` must be an ACTIVE PERSON
+  of the token's tenant. Evaluated in the token's tenant+project with the
+  person's own roles and none of the caller's identities/roles/scopes (a policy
+  with `required_scopes` never allows it). Refusals: a human/API key with the
+  scope → `PERMISSION_DENIED delegated_check_requires_service_account`; unknown,
+  foreign-tenant or non-person id → one identical `PERMISSION_DENIED
+  delegated_subject_not_in_tenant`. Every delegated allow AND deny is audited
+  (`evaluated_by`, `evaluated_by_service_identity`) and published as
+  `udb.authz.check.access.delegated.v1`. `BatchCheckPermissions` delegates the
+  same way; `Authorize` never does.
+- **Acting in another tenant.** The TARGET tenant's admin (caller tenant ==
+  `target_tenant_id`; a home admin alone is refused) calls
+  `CreateServiceAccountTenantMembership{target_tenant_id, user_id,
+  home_tenant_id, target_project_id, approved_scopes, reason, expires_at ≤ 1
+  year}`; list/revoke with `ListServiceAccountTenantMemberships` /
+  `RevokeServiceAccountTenantMembership`. The account (grant must approve
+  `udb:authn:exchange-tenant-token`) calls `ExchangeServiceTokenForTenant
+  {target_tenant_id, target_project_id, requested_scopes ⊆ approved}` with its
+  HOME bearer → an access token for exactly that tenant/project, ≤ 15 min and
+  never past the membership's expiry, no refresh token, claims
+  `home_tenant_id` + `mbr`, `jti` prefix `mbx_`, never re-exchangeable. Every
+  use re-checks membership + home grant + account, so revocation is immediate.
+  No/expired/revoked membership → `PERMISSION_DENIED
+  service_tenant_membership_required`. Login `tenant_hint`/`project_hint` NEVER
+  grant a tenant (Authenticate warns in `warnings` when it fell back to a hint).
+- **Phone-only users.** `CreateUserRequest.phone` (13, E.164). Username + email
+  or phone required. Phone-only → SMS `OTP_TYPE_PHONE_VERIFICATION`;
+  `VerifyOTP` activates the account. Refused `FAILED_PRECONDITION
+  sms_delivery_unavailable` when no SMS path exists (no NotificationService SMS
+  delivery and no `UDB_OTP_DELIVERY_WEBHOOK_URL`). No phone sign-in yet.
+- **LockService contention.** `AcquireLock` on a lease another owner holds →
+  gRPC `ALREADY_EXISTS`, detail `capability_required: "lock_already_held"`
+  (marked not retryable, so SDKs won't retry): it means BUSY — back off with
+  jitter and retry within your deadline, or report busy. Success returns
+  `acquired: true`, a strictly increasing per-lock `fencing_token`,
+  `lock_name`, `expires_at_unix` (TTL 30 s default, max 3600 s).
+
 ### API keys vs bearers, quick rules
 - **Data plane** accepts a JWT bearer, mTLS, OR a scoped raw `x-api-key` from a
   hand-written client. The SDKs always exchange the key via

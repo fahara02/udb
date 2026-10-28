@@ -195,6 +195,10 @@ with UdbAuthClient("127.0.0.1:50051", meta) as auth:
     )
 ```
 
+`can` and `check_access` decide for the caller. A service account that needs a
+user's answer holds the scope `udb:authz:check-access-for` and names the user;
+see [Service accounts acting for users](../../docs/service-accounts.md).
+
 ## Consistency, Idempotency Replay, And Typed Errors
 
 A mutation returns a `WriteReceipt`; a follow-up read can carry a read fence

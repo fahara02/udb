@@ -26,6 +26,12 @@ table.
   with its required scope, tenant fields, request/response types, and
   handler. Ground truth for "which scope does this call need" and
   `PERMISSION_DENIED` on `:50061`.
+- [references/service-accounts.md](references/service-accounts.md) — service
+  accounts acting for users: what a service token carries (grant scopes,
+  filtered roles), `CheckAccess` for a user (`udb:authz:check-access-for`,
+  `evaluated_subject`), acting in another tenant (tenant memberships +
+  `ExchangeServiceTokenForTenant`), phone-only users, and `AcquireLock`
+  `ALREADY_EXISTS` = busy. Read before writing any service-to-UDB auth code.
 - [references/sensitive-fields.md](references/sensitive-fields.md) — which
   fields across the API are treated as sensitive (redacted from logs/audit,
   never echoed). Guard when building requests or reading responses.

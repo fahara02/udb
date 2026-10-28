@@ -73,6 +73,20 @@ release line was tagged.
   tenant. Approvals, revocations and exchanges are audited in both tenants
   (`udb.authn.service.membership.changed.v1`,
   `udb.authn.service.token.exchanged.v1`).
+- **Guide: [Service accounts acting for users](docs/service-accounts.md).**
+  What a service-account token carries, `CheckAccess` for one of your users,
+  acting in another tenant, phone-only users, and what `AcquireLock`'s
+  `ALREADY_EXISTS` (`lock_already_held`) means: the lock is busy, back off and
+  retry. The UDB agent skill bundles it.
+- Every SDK (Go, Python, TypeScript, PHP, Rust, C#, Java) runs a live
+  service-account conformance test in CI on every push to main (job
+  `SDK service accounts (live)`): `Principal.username` for a person and a
+  service account, the service bearer's bound roles without the admin-class
+  ones, a delegated `CheckAccess` (`evaluated_subject`), a tenant token
+  exchange that works in the target tenant and is refused where no membership
+  exists, and a phone-only user activated by its phone code. The SDK
+  benchmarks measure the four tenant-membership RPCs, the token exchange under
+  a service account's home bearer.
 
 ### Changed
 

@@ -49,6 +49,7 @@ Each row is a task. Read across to the guide that covers it.
 | Changing YOUR OWN model once it holds rows: the day-2 loop, worked end to end | [examples/schema_change](../examples/schema_change) |
 | From-scratch hardened/enterprise bring-up: minimal env set, TLS/mTLS, auth-plane exposure, ABAC vs policy_rules, pooler-safe DSN, SDK mTLS | [enterprise-deployment.md](enterprise-deployment.md) |
 | Request context, identity, authorization, sensitive data, and compliance profiles | [security.md](security.md) |
+| Service accounts acting for users: what a service token carries, CheckAccess for a user, acting in another tenant, phone-only users, lock contention | [service-accounts.md](service-accounts.md) |
 | Testing | [testing.md](testing.md) |
 | SDKs | [../sdk/README.md](../sdk/README.md) |
 

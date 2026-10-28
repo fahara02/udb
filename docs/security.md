@@ -80,6 +80,12 @@ A few habits keep tokens safe: use short token TTLs (time-to-live) for
 privileged workflows, rotate keys through JWKS (JSON Web Key Set) where you can,
 and keep private keys in a secret manager rather than in config files.
 
+A backend service authenticates as a service account: a `SERVICE_ACCOUNT` user
+plus a typed grant that caps its scopes. Its bearer carries the roles bound to
+it, minus every admin-class role a workload may never hold. To ask whether one
+of your users may do something, to act in a second tenant, or to read who a
+token belongs to, see [service-accounts.md](service-accounts.md).
+
 ## Authorization
 
 Authorization answers the next question: "is this caller allowed to do this?"
