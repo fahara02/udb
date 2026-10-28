@@ -142,6 +142,18 @@ class AccessDecisionAudit extends \Google\Protobuf\Internal\Message
      * Generated from protobuf field <code>string decision_input = 26 [json_name = "decisionInput", (.udb.core.common.v1.pg_column) = {</code>
      */
     protected $decision_input = '';
+    /**
+     * Delegated CheckAccess / BatchCheckPermissions: the service account
+     * (subject) that evaluated this decision for `user_id`, and its grant service
+     * identity. Empty on every non-delegated decision.
+     *
+     * Generated from protobuf field <code>string evaluated_by = 27 [json_name = "evaluatedBy", (.udb.core.common.v1.pg_column) = {</code>
+     */
+    protected $evaluated_by = '';
+    /**
+     * Generated from protobuf field <code>string evaluated_by_service_identity = 28 [json_name = "evaluatedByServiceIdentity", (.udb.core.common.v1.pg_column) = {</code>
+     */
+    protected $evaluated_by_service_identity = '';
 
     /**
      * Constructor.
@@ -188,6 +200,11 @@ class AccessDecisionAudit extends \Google\Protobuf\Internal\Message
      *           Hashed user-agent (never raw) from the request context.
      *     @type string $decision_input
      *           Redacted decision-input attributes (JSON; credential-shaped keys scrubbed).
+     *     @type string $evaluated_by
+     *           Delegated CheckAccess / BatchCheckPermissions: the service account
+     *           (subject) that evaluated this decision for `user_id`, and its grant service
+     *           identity. Empty on every non-delegated decision.
+     *     @type string $evaluated_by_service_identity
      * }
      */
     public function __construct($data = NULL) {
@@ -821,6 +838,58 @@ class AccessDecisionAudit extends \Google\Protobuf\Internal\Message
     {
         GPBUtil::checkString($var, True);
         $this->decision_input = $var;
+
+        return $this;
+    }
+
+    /**
+     * Delegated CheckAccess / BatchCheckPermissions: the service account
+     * (subject) that evaluated this decision for `user_id`, and its grant service
+     * identity. Empty on every non-delegated decision.
+     *
+     * Generated from protobuf field <code>string evaluated_by = 27 [json_name = "evaluatedBy", (.udb.core.common.v1.pg_column) = {</code>
+     * @return string
+     */
+    public function getEvaluatedBy()
+    {
+        return $this->evaluated_by;
+    }
+
+    /**
+     * Delegated CheckAccess / BatchCheckPermissions: the service account
+     * (subject) that evaluated this decision for `user_id`, and its grant service
+     * identity. Empty on every non-delegated decision.
+     *
+     * Generated from protobuf field <code>string evaluated_by = 27 [json_name = "evaluatedBy", (.udb.core.common.v1.pg_column) = {</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setEvaluatedBy($var)
+    {
+        GPBUtil::checkString($var, True);
+        $this->evaluated_by = $var;
+
+        return $this;
+    }
+
+    /**
+     * Generated from protobuf field <code>string evaluated_by_service_identity = 28 [json_name = "evaluatedByServiceIdentity", (.udb.core.common.v1.pg_column) = {</code>
+     * @return string
+     */
+    public function getEvaluatedByServiceIdentity()
+    {
+        return $this->evaluated_by_service_identity;
+    }
+
+    /**
+     * Generated from protobuf field <code>string evaluated_by_service_identity = 28 [json_name = "evaluatedByServiceIdentity", (.udb.core.common.v1.pg_column) = {</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setEvaluatedByServiceIdentity($var)
+    {
+        GPBUtil::checkString($var, True);
+        $this->evaluated_by_service_identity = $var;
 
         return $this;
     }

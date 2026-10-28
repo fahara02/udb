@@ -45,7 +45,7 @@ public final class AccessDecisionAuditProto {
       "\032\037google/protobuf/timestamp.proto\032$udb/c" +
       "ore/authz/entity/v1/enums.proto\032\033udb/cor" +
       "e/common/v1/db.proto\032!udb/core/common/v1" +
-      "/security.proto\"\301\022\n\023AccessDecisionAudit\022" +
+      "/security.proto\"\364\023\n\023AccessDecisionAudit\022" +
       "`\n\021decision_audit_id\030\001 \001(\tB4\202\267\0300\n\021decisi" +
       "on_audit_id\022\004UUID\030\001(\001:\021gen_random_uuid()" +
       "R\017decisionAuditId\022[\n\007user_id\030\002 \001(\tBB\202\267\030>" +
@@ -95,23 +95,27 @@ public final class AccessDecisionAuditProto {
       "user_agent_hash\030\031 \001(\tB\"\202\267\030\036\n\017user_agent_" +
       "hash\022\013VARCHAR(80)R\ruserAgentHash\022G\n\016deci" +
       "sion_input\030\032 \001(\tB \202\267\030\034\n\016decision_input\022\005" +
-      "JSONBx\001\200\001\001R\rdecisionInput:\347\002\372\266\030\315\001\n\026acces" +
-      "s_decision_audits\022\tudb_authz\030\005 \001*1Decisi" +
-      "on trail for sensitive authorization che" +
-      "cks@\001H\003R\ndecided_atX\373\023b^\n\020tenant_isolati" +
-      "on\032H(tenant_id::text = current_setting(\'" +
-      "app.current_tenant_id\', true)::text)(\001\212\262" +
-      "\031\220\001\n\006tenant\032\ttenant_id*4tenant_id = curr" +
-      "ent_setting(\'app.current_tenant_id\')2\004no" +
-      "ne:\021authz.operational@\373\023H\002R\006tenantZ\010stan" +
-      "dardr\025tenant.data_residencyB\203\002\n\034com.udb." +
-      "core.authz.entity.v1B\030AccessDecisionAudi" +
-      "tProtoP\001ZDgithub.com/fahara02/udb/sdk/go" +
-      "/gen/udb/core/authz/entity/v1;entityv1\242\002" +
-      "\004UCAE\252\002\030Udb.Core.Authz.Entity.V1\312\002\030Udb\\C" +
-      "ore\\Authz\\Entity\\V1\342\002$Udb\\GPBMetadata\\Co" +
-      "re\\Authz\\Entity\\V1\352\002\034Udb::Core::Authz::E" +
-      "ntity::V1b\006proto3"
+      "JSONBx\001\200\001\001R\rdecisionInput\022C\n\014evaluated_b" +
+      "y\030\033 \001(\tB \202\267\030\034\n\014evaluated_by\022\014VARCHAR(200" +
+      ")R\013evaluatedBy\022l\n\035evaluated_by_service_i" +
+      "dentity\030\034 \001(\tB)\202\267\030%\n\035evaluated_by_servic" +
+      "e_identity\022\004TEXTR\032evaluatedByServiceIden" +
+      "tity:\347\002\372\266\030\315\001\n\026access_decision_audits\022\tud" +
+      "b_authz\030\005 \001*1Decision trail for sensitiv" +
+      "e authorization checks@\001H\003R\ndecided_atX\373" +
+      "\023b^\n\020tenant_isolation\032H(tenant_id::text " +
+      "= current_setting(\'app.current_tenant_id" +
+      "\', true)::text)(\001\212\262\031\220\001\n\006tenant\032\ttenant_i" +
+      "d*4tenant_id = current_setting(\'app.curr" +
+      "ent_tenant_id\')2\004none:\021authz.operational" +
+      "@\373\023H\002R\006tenantZ\010standardr\025tenant.data_res" +
+      "idencyB\203\002\n\034com.udb.core.authz.entity.v1B" +
+      "\030AccessDecisionAuditProtoP\001ZDgithub.com/" +
+      "fahara02/udb/sdk/go/gen/udb/core/authz/e" +
+      "ntity/v1;entityv1\242\002\004UCAE\252\002\030Udb.Core.Auth" +
+      "z.Entity.V1\312\002\030Udb\\Core\\Authz\\Entity\\V1\342\002" +
+      "$Udb\\GPBMetadata\\Core\\Authz\\Entity\\V1\352\002\034" +
+      "Udb::Core::Authz::Entity::V1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -126,7 +130,7 @@ public final class AccessDecisionAuditProto {
     internal_static_udb_core_authz_entity_v1_AccessDecisionAudit_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_core_authz_entity_v1_AccessDecisionAudit_descriptor,
-        new java.lang.String[] { "DecisionAuditId", "UserId", "Domain", "Object", "Action", "Effect", "DecisionSource", "MatchedRule", "Reason", "IpAddress", "CorrelationId", "DecidedAt", "TenantId", "DecisionId", "PolicyVersion", "RelationshipVersion", "Purpose", "Scopes", "MatchedPolicyIds", "ProjectId", "ActorKind", "ResourceType", "TraceId", "SpanId", "UserAgentHash", "DecisionInput", });
+        new java.lang.String[] { "DecisionAuditId", "UserId", "Domain", "Object", "Action", "Effect", "DecisionSource", "MatchedRule", "Reason", "IpAddress", "CorrelationId", "DecidedAt", "TenantId", "DecisionId", "PolicyVersion", "RelationshipVersion", "Purpose", "Scopes", "MatchedPolicyIds", "ProjectId", "ActorKind", "ResourceType", "TraceId", "SpanId", "UserAgentHash", "DecisionInput", "EvaluatedBy", "EvaluatedByServiceIdentity", });
     descriptor.resolveAllFeaturesImmutable();
     com.google.protobuf.TimestampProto.getDescriptor();
     com.udb.core.authz.entity.v1.EnumsProto.getDescriptor();

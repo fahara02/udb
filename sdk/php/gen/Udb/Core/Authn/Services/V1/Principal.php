@@ -73,6 +73,15 @@ class Principal extends \Google\Protobuf\Internal\Message
      * Generated from protobuf field <code>map<string, string> attributes = 14 [json_name = "attributes"];</code>
      */
     private $attributes;
+    /**
+     * Login name of the authenticated account, read from the live user row at
+     * the moment of the call (never from a token claim), so a rename or
+     * suspension is never served stale. Empty when the credential has no native
+     * user row (external-IdP mapping, OIDC).
+     *
+     * Generated from protobuf field <code>string username = 15 [json_name = "username"];</code>
+     */
+    protected $username = '';
 
     /**
      * Constructor.
@@ -94,6 +103,11 @@ class Principal extends \Google\Protobuf\Internal\Message
      *     @type int $account_kind
      *     @type string $domain
      *     @type array|\Google\Protobuf\Internal\MapField $attributes
+     *     @type string $username
+     *           Login name of the authenticated account, read from the live user row at
+     *           the moment of the call (never from a token claim), so a rename or
+     *           suspension is never served stale. Empty when the credential has no native
+     *           user row (external-IdP mapping, OIDC).
      * }
      */
     public function __construct($data = NULL) {
@@ -405,6 +419,38 @@ class Principal extends \Google\Protobuf\Internal\Message
     {
         $arr = GPBUtil::checkMapField($var, \Google\Protobuf\Internal\GPBType::STRING, \Google\Protobuf\Internal\GPBType::STRING);
         $this->attributes = $arr;
+
+        return $this;
+    }
+
+    /**
+     * Login name of the authenticated account, read from the live user row at
+     * the moment of the call (never from a token claim), so a rename or
+     * suspension is never served stale. Empty when the credential has no native
+     * user row (external-IdP mapping, OIDC).
+     *
+     * Generated from protobuf field <code>string username = 15 [json_name = "username"];</code>
+     * @return string
+     */
+    public function getUsername()
+    {
+        return $this->username;
+    }
+
+    /**
+     * Login name of the authenticated account, read from the live user row at
+     * the moment of the call (never from a token claim), so a rename or
+     * suspension is never served stale. Empty when the credential has no native
+     * user row (external-IdP mapping, OIDC).
+     *
+     * Generated from protobuf field <code>string username = 15 [json_name = "username"];</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setUsername($var)
+    {
+        GPBUtil::checkString($var, True);
+        $this->username = $var;
 
         return $this;
     }

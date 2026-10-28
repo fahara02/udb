@@ -19,7 +19,7 @@ from typing import ClassVar as _ClassVar, Optional as _Optional, Union as _Union
 DESCRIPTOR: _descriptor.FileDescriptor
 
 class CreateUserRequest(_message.Message):
-    __slots__ = ("username", "email", "password", "tenant_id", "full_name", "context", "account_kind", "project_id", "external_provider_id", "external_subject", "profile_attributes", "password_setup_required")
+    __slots__ = ("username", "email", "password", "tenant_id", "full_name", "context", "account_kind", "project_id", "external_provider_id", "external_subject", "profile_attributes", "password_setup_required", "phone")
     class ProfileAttributesEntry(_message.Message):
         __slots__ = ("key", "value")
         KEY_FIELD_NUMBER: _ClassVar[int]
@@ -39,6 +39,7 @@ class CreateUserRequest(_message.Message):
     EXTERNAL_SUBJECT_FIELD_NUMBER: _ClassVar[int]
     PROFILE_ATTRIBUTES_FIELD_NUMBER: _ClassVar[int]
     PASSWORD_SETUP_REQUIRED_FIELD_NUMBER: _ClassVar[int]
+    PHONE_FIELD_NUMBER: _ClassVar[int]
     username: str
     email: str
     password: str
@@ -51,7 +52,8 @@ class CreateUserRequest(_message.Message):
     external_subject: str
     profile_attributes: _containers.ScalarMap[str, str]
     password_setup_required: bool
-    def __init__(self, username: _Optional[str] = ..., email: _Optional[str] = ..., password: _Optional[str] = ..., tenant_id: _Optional[str] = ..., full_name: _Optional[str] = ..., context: _Optional[_Union[_types_pb2.RequestContext, _Mapping]] = ..., account_kind: _Optional[_Union[_enums_pb2.AccountKind, str]] = ..., project_id: _Optional[str] = ..., external_provider_id: _Optional[str] = ..., external_subject: _Optional[str] = ..., profile_attributes: _Optional[_Mapping[str, str]] = ..., password_setup_required: bool = ...) -> None: ...
+    phone: str
+    def __init__(self, username: _Optional[str] = ..., email: _Optional[str] = ..., password: _Optional[str] = ..., tenant_id: _Optional[str] = ..., full_name: _Optional[str] = ..., context: _Optional[_Union[_types_pb2.RequestContext, _Mapping]] = ..., account_kind: _Optional[_Union[_enums_pb2.AccountKind, str]] = ..., project_id: _Optional[str] = ..., external_provider_id: _Optional[str] = ..., external_subject: _Optional[str] = ..., profile_attributes: _Optional[_Mapping[str, str]] = ..., password_setup_required: bool = ..., phone: _Optional[str] = ...) -> None: ...
 
 class CreateUserResponse(_message.Message):
     __slots__ = ("user", "otp_id")
@@ -231,7 +233,7 @@ class ResendOTPResponse(_message.Message):
     def __init__(self, otp_id: _Optional[str] = ..., expires_in_seconds: _Optional[int] = ..., cooldown_seconds: _Optional[int] = ..., attempts_remaining: _Optional[int] = ...) -> None: ...
 
 class Principal(_message.Message):
-    __slots__ = ("principal_id", "subject", "user_id", "service_identity", "tenant_id", "project_id", "scopes", "roles", "provider_id", "auth_method", "expires_at_unix", "account_kind", "domain", "attributes")
+    __slots__ = ("principal_id", "subject", "user_id", "service_identity", "tenant_id", "project_id", "scopes", "roles", "provider_id", "auth_method", "expires_at_unix", "account_kind", "domain", "attributes", "username")
     class AttributesEntry(_message.Message):
         __slots__ = ("key", "value")
         KEY_FIELD_NUMBER: _ClassVar[int]
@@ -253,6 +255,7 @@ class Principal(_message.Message):
     ACCOUNT_KIND_FIELD_NUMBER: _ClassVar[int]
     DOMAIN_FIELD_NUMBER: _ClassVar[int]
     ATTRIBUTES_FIELD_NUMBER: _ClassVar[int]
+    USERNAME_FIELD_NUMBER: _ClassVar[int]
     principal_id: str
     subject: str
     user_id: str
@@ -267,7 +270,8 @@ class Principal(_message.Message):
     account_kind: _enums_pb2.AccountKind
     domain: str
     attributes: _containers.ScalarMap[str, str]
-    def __init__(self, principal_id: _Optional[str] = ..., subject: _Optional[str] = ..., user_id: _Optional[str] = ..., service_identity: _Optional[str] = ..., tenant_id: _Optional[str] = ..., project_id: _Optional[str] = ..., scopes: _Optional[_Iterable[str]] = ..., roles: _Optional[_Iterable[str]] = ..., provider_id: _Optional[str] = ..., auth_method: _Optional[str] = ..., expires_at_unix: _Optional[int] = ..., account_kind: _Optional[_Union[_enums_pb2.AccountKind, str]] = ..., domain: _Optional[str] = ..., attributes: _Optional[_Mapping[str, str]] = ...) -> None: ...
+    username: str
+    def __init__(self, principal_id: _Optional[str] = ..., subject: _Optional[str] = ..., user_id: _Optional[str] = ..., service_identity: _Optional[str] = ..., tenant_id: _Optional[str] = ..., project_id: _Optional[str] = ..., scopes: _Optional[_Iterable[str]] = ..., roles: _Optional[_Iterable[str]] = ..., provider_id: _Optional[str] = ..., auth_method: _Optional[str] = ..., expires_at_unix: _Optional[int] = ..., account_kind: _Optional[_Union[_enums_pb2.AccountKind, str]] = ..., domain: _Optional[str] = ..., attributes: _Optional[_Mapping[str, str]] = ..., username: _Optional[str] = ...) -> None: ...
 
 class AuthnRequest(_message.Message):
     __slots__ = ("bearer_token", "session_id", "api_key", "external_provider_id", "external_token", "tenant_hint", "project_hint", "requested_scopes", "attributes", "credential_type", "client_id", "audience", "issuer")

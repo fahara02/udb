@@ -4,6 +4,7 @@ from google.api import annotations_pb2 as _annotations_pb2
 from google.protobuf import timestamp_pb2 as _timestamp_pb2
 from udb.core.authn.entity.v1 import certificate_binding_pb2 as _certificate_binding_pb2
 from udb.core.authn.entity.v1 import service_account_grant_pb2 as _service_account_grant_pb2
+from udb.core.authn.entity.v1 import service_account_tenant_membership_pb2 as _service_account_tenant_membership_pb2
 from udb.core.authn.services.v1 import core_pb2 as _core_pb2
 from udb.core.common.v1 import dto_pb2 as _dto_pb2
 from udb.core.common.v1 import security_pb2 as _security_pb2
@@ -250,3 +251,103 @@ class RevokeCertificateBindingResponse(_message.Message):
     message: str
     error: _dto_pb2.ApiError
     def __init__(self, revoked: bool = ..., message: _Optional[str] = ..., error: _Optional[_Union[_dto_pb2.ApiError, _Mapping]] = ...) -> None: ...
+
+class CreateServiceAccountTenantMembershipRequest(_message.Message):
+    __slots__ = ("target_tenant_id", "user_id", "home_tenant_id", "target_project_id", "approved_scopes", "reason", "expires_at")
+    TARGET_TENANT_ID_FIELD_NUMBER: _ClassVar[int]
+    USER_ID_FIELD_NUMBER: _ClassVar[int]
+    HOME_TENANT_ID_FIELD_NUMBER: _ClassVar[int]
+    TARGET_PROJECT_ID_FIELD_NUMBER: _ClassVar[int]
+    APPROVED_SCOPES_FIELD_NUMBER: _ClassVar[int]
+    REASON_FIELD_NUMBER: _ClassVar[int]
+    EXPIRES_AT_FIELD_NUMBER: _ClassVar[int]
+    target_tenant_id: str
+    user_id: str
+    home_tenant_id: str
+    target_project_id: str
+    approved_scopes: _containers.RepeatedScalarFieldContainer[str]
+    reason: str
+    expires_at: _timestamp_pb2.Timestamp
+    def __init__(self, target_tenant_id: _Optional[str] = ..., user_id: _Optional[str] = ..., home_tenant_id: _Optional[str] = ..., target_project_id: _Optional[str] = ..., approved_scopes: _Optional[_Iterable[str]] = ..., reason: _Optional[str] = ..., expires_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
+
+class CreateServiceAccountTenantMembershipResponse(_message.Message):
+    __slots__ = ("membership", "message", "error")
+    MEMBERSHIP_FIELD_NUMBER: _ClassVar[int]
+    MESSAGE_FIELD_NUMBER: _ClassVar[int]
+    ERROR_FIELD_NUMBER: _ClassVar[int]
+    membership: _service_account_tenant_membership_pb2.ServiceAccountTenantMembership
+    message: str
+    error: _dto_pb2.ApiError
+    def __init__(self, membership: _Optional[_Union[_service_account_tenant_membership_pb2.ServiceAccountTenantMembership, _Mapping]] = ..., message: _Optional[str] = ..., error: _Optional[_Union[_dto_pb2.ApiError, _Mapping]] = ...) -> None: ...
+
+class ListServiceAccountTenantMembershipsRequest(_message.Message):
+    __slots__ = ("target_tenant_id", "page_size", "page_token")
+    TARGET_TENANT_ID_FIELD_NUMBER: _ClassVar[int]
+    PAGE_SIZE_FIELD_NUMBER: _ClassVar[int]
+    PAGE_TOKEN_FIELD_NUMBER: _ClassVar[int]
+    target_tenant_id: str
+    page_size: int
+    page_token: str
+    def __init__(self, target_tenant_id: _Optional[str] = ..., page_size: _Optional[int] = ..., page_token: _Optional[str] = ...) -> None: ...
+
+class ListServiceAccountTenantMembershipsResponse(_message.Message):
+    __slots__ = ("memberships", "next_page_token", "message", "error")
+    MEMBERSHIPS_FIELD_NUMBER: _ClassVar[int]
+    NEXT_PAGE_TOKEN_FIELD_NUMBER: _ClassVar[int]
+    MESSAGE_FIELD_NUMBER: _ClassVar[int]
+    ERROR_FIELD_NUMBER: _ClassVar[int]
+    memberships: _containers.RepeatedCompositeFieldContainer[_service_account_tenant_membership_pb2.ServiceAccountTenantMembership]
+    next_page_token: str
+    message: str
+    error: _dto_pb2.ApiError
+    def __init__(self, memberships: _Optional[_Iterable[_Union[_service_account_tenant_membership_pb2.ServiceAccountTenantMembership, _Mapping]]] = ..., next_page_token: _Optional[str] = ..., message: _Optional[str] = ..., error: _Optional[_Union[_dto_pb2.ApiError, _Mapping]] = ...) -> None: ...
+
+class RevokeServiceAccountTenantMembershipRequest(_message.Message):
+    __slots__ = ("target_tenant_id", "membership_id", "reason")
+    TARGET_TENANT_ID_FIELD_NUMBER: _ClassVar[int]
+    MEMBERSHIP_ID_FIELD_NUMBER: _ClassVar[int]
+    REASON_FIELD_NUMBER: _ClassVar[int]
+    target_tenant_id: str
+    membership_id: str
+    reason: str
+    def __init__(self, target_tenant_id: _Optional[str] = ..., membership_id: _Optional[str] = ..., reason: _Optional[str] = ...) -> None: ...
+
+class RevokeServiceAccountTenantMembershipResponse(_message.Message):
+    __slots__ = ("revoked", "message", "error")
+    REVOKED_FIELD_NUMBER: _ClassVar[int]
+    MESSAGE_FIELD_NUMBER: _ClassVar[int]
+    ERROR_FIELD_NUMBER: _ClassVar[int]
+    revoked: bool
+    message: str
+    error: _dto_pb2.ApiError
+    def __init__(self, revoked: bool = ..., message: _Optional[str] = ..., error: _Optional[_Union[_dto_pb2.ApiError, _Mapping]] = ...) -> None: ...
+
+class ExchangeServiceTokenForTenantRequest(_message.Message):
+    __slots__ = ("target_tenant_id", "target_project_id", "requested_scopes")
+    TARGET_TENANT_ID_FIELD_NUMBER: _ClassVar[int]
+    TARGET_PROJECT_ID_FIELD_NUMBER: _ClassVar[int]
+    REQUESTED_SCOPES_FIELD_NUMBER: _ClassVar[int]
+    target_tenant_id: str
+    target_project_id: str
+    requested_scopes: _containers.RepeatedScalarFieldContainer[str]
+    def __init__(self, target_tenant_id: _Optional[str] = ..., target_project_id: _Optional[str] = ..., requested_scopes: _Optional[_Iterable[str]] = ...) -> None: ...
+
+class ExchangeServiceTokenForTenantResponse(_message.Message):
+    __slots__ = ("access_token", "expires_at_unix", "tenant_id", "project_id", "scopes", "membership_id", "message", "error")
+    ACCESS_TOKEN_FIELD_NUMBER: _ClassVar[int]
+    EXPIRES_AT_UNIX_FIELD_NUMBER: _ClassVar[int]
+    TENANT_ID_FIELD_NUMBER: _ClassVar[int]
+    PROJECT_ID_FIELD_NUMBER: _ClassVar[int]
+    SCOPES_FIELD_NUMBER: _ClassVar[int]
+    MEMBERSHIP_ID_FIELD_NUMBER: _ClassVar[int]
+    MESSAGE_FIELD_NUMBER: _ClassVar[int]
+    ERROR_FIELD_NUMBER: _ClassVar[int]
+    access_token: str
+    expires_at_unix: int
+    tenant_id: str
+    project_id: str
+    scopes: _containers.RepeatedScalarFieldContainer[str]
+    membership_id: str
+    message: str
+    error: _dto_pb2.ApiError
+    def __init__(self, access_token: _Optional[str] = ..., expires_at_unix: _Optional[int] = ..., tenant_id: _Optional[str] = ..., project_id: _Optional[str] = ..., scopes: _Optional[_Iterable[str]] = ..., membership_id: _Optional[str] = ..., message: _Optional[str] = ..., error: _Optional[_Union[_dto_pb2.ApiError, _Mapping]] = ...) -> None: ...

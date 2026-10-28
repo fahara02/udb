@@ -34,6 +34,14 @@ class CheckAccessResponse extends \Google\Protobuf\Internal\Message
      * Generated from protobuf field <code>.udb.core.authz.services.v1.Decision decision = 5 [json_name = "decision"];</code>
      */
     protected $decision = null;
+    /**
+     * The subject the decision was actually evaluated for: the caller itself
+     * (claim-bound), the requested person (a service account holding
+     * `udb:authz:check-access-for`), or the body subject (cross-tenant admin).
+     *
+     * Generated from protobuf field <code>string evaluated_subject = 6 [json_name = "evaluatedSubject"];</code>
+     */
+    protected $evaluated_subject = '';
 
     /**
      * Constructor.
@@ -46,6 +54,10 @@ class CheckAccessResponse extends \Google\Protobuf\Internal\Message
      *     @type string $matched_rule
      *     @type string $reason
      *     @type \Udb\Core\Authz\Services\V1\Decision $decision
+     *     @type string $evaluated_subject
+     *           The subject the decision was actually evaluated for: the caller itself
+     *           (claim-bound), the requested person (a service account holding
+     *           `udb:authz:check-access-for`), or the body subject (cross-tenant admin).
      * }
      */
     public function __construct($data = NULL) {
@@ -169,6 +181,36 @@ class CheckAccessResponse extends \Google\Protobuf\Internal\Message
     {
         GPBUtil::checkMessage($var, \Udb\Core\Authz\Services\V1\Decision::class);
         $this->decision = $var;
+
+        return $this;
+    }
+
+    /**
+     * The subject the decision was actually evaluated for: the caller itself
+     * (claim-bound), the requested person (a service account holding
+     * `udb:authz:check-access-for`), or the body subject (cross-tenant admin).
+     *
+     * Generated from protobuf field <code>string evaluated_subject = 6 [json_name = "evaluatedSubject"];</code>
+     * @return string
+     */
+    public function getEvaluatedSubject()
+    {
+        return $this->evaluated_subject;
+    }
+
+    /**
+     * The subject the decision was actually evaluated for: the caller itself
+     * (claim-bound), the requested person (a service account holding
+     * `udb:authz:check-access-for`), or the body subject (cross-tenant admin).
+     *
+     * Generated from protobuf field <code>string evaluated_subject = 6 [json_name = "evaluatedSubject"];</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setEvaluatedSubject($var)
+    {
+        GPBUtil::checkString($var, True);
+        $this->evaluated_subject = $var;
 
         return $this;
     }

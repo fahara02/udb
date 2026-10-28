@@ -64,8 +64,13 @@ type AccessDecisionAudit struct {
 	UserAgentHash string `protobuf:"bytes,25,opt,name=user_agent_hash,json=userAgentHash,proto3" json:"user_agent_hash,omitempty"`
 	// Redacted decision-input attributes (JSON; credential-shaped keys scrubbed).
 	DecisionInput string `protobuf:"bytes,26,opt,name=decision_input,json=decisionInput,proto3" json:"decision_input,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	// Delegated CheckAccess / BatchCheckPermissions: the service account
+	// (subject) that evaluated this decision for `user_id`, and its grant service
+	// identity. Empty on every non-delegated decision.
+	EvaluatedBy                string `protobuf:"bytes,27,opt,name=evaluated_by,json=evaluatedBy,proto3" json:"evaluated_by,omitempty"`
+	EvaluatedByServiceIdentity string `protobuf:"bytes,28,opt,name=evaluated_by_service_identity,json=evaluatedByServiceIdentity,proto3" json:"evaluated_by_service_identity,omitempty"`
+	unknownFields              protoimpl.UnknownFields
+	sizeCache                  protoimpl.SizeCache
 }
 
 func (x *AccessDecisionAudit) Reset() {
@@ -280,11 +285,25 @@ func (x *AccessDecisionAudit) GetDecisionInput() string {
 	return ""
 }
 
+func (x *AccessDecisionAudit) GetEvaluatedBy() string {
+	if x != nil {
+		return x.EvaluatedBy
+	}
+	return ""
+}
+
+func (x *AccessDecisionAudit) GetEvaluatedByServiceIdentity() string {
+	if x != nil {
+		return x.EvaluatedByServiceIdentity
+	}
+	return ""
+}
+
 var File_udb_core_authz_entity_v1_access_decision_audit_proto protoreflect.FileDescriptor
 
 const file_udb_core_authz_entity_v1_access_decision_audit_proto_rawDesc = "" +
 	"\n" +
-	"4udb/core/authz/entity/v1/access_decision_audit.proto\x12\x18udb.core.authz.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a$udb/core/authz/entity/v1/enums.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\"\xc1\x12\n" +
+	"4udb/core/authz/entity/v1/access_decision_audit.proto\x12\x18udb.core.authz.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a$udb/core/authz/entity/v1/enums.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\"\xf4\x13\n" +
 	"\x13AccessDecisionAudit\x12`\n" +
 	"\x11decision_audit_id\x18\x01 \x01(\tB4\x82\xb7\x180\n" +
 	"\x11decision_audit_id\x12\x04UUID\x18\x01(\x01:\x11gen_random_uuid()R\x0fdecisionAuditId\x12[\n" +
@@ -351,7 +370,11 @@ const file_udb_core_authz_entity_v1_access_decision_audit_proto_rawDesc = "" +
 	"\x0fuser_agent_hash\x18\x19 \x01(\tB\"\x82\xb7\x18\x1e\n" +
 	"\x0fuser_agent_hash\x12\vVARCHAR(80)R\ruserAgentHash\x12G\n" +
 	"\x0edecision_input\x18\x1a \x01(\tB \x82\xb7\x18\x1c\n" +
-	"\x0edecision_input\x12\x05JSONBx\x01\x80\x01\x01R\rdecisionInput:\xe7\x02\xfa\xb6\x18\xcd\x01\n" +
+	"\x0edecision_input\x12\x05JSONBx\x01\x80\x01\x01R\rdecisionInput\x12C\n" +
+	"\fevaluated_by\x18\x1b \x01(\tB \x82\xb7\x18\x1c\n" +
+	"\fevaluated_by\x12\fVARCHAR(200)R\vevaluatedBy\x12l\n" +
+	"\x1devaluated_by_service_identity\x18\x1c \x01(\tB)\x82\xb7\x18%\n" +
+	"\x1devaluated_by_service_identity\x12\x04TEXTR\x1aevaluatedByServiceIdentity:\xe7\x02\xfa\xb6\x18\xcd\x01\n" +
 	"\x16access_decision_audits\x12\tudb_authz\x18\x05 \x01*1Decision trail for sensitive authorization checks@\x01H\x03R\n" +
 	"decided_atX\xfb\x13b^\n" +
 	"\x10tenant_isolation\x1aH(tenant_id::text = current_setting('app.current_tenant_id', true)::text)(\x01\x8a\xb2\x19\x90\x01\n" +

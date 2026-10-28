@@ -47,6 +47,7 @@ private static final long serialVersionUID = 0L;
     authMethod_ = "";
     accountKind_ = 0;
     domain_ = "";
+    username_ = "";
   }
 
   public static final com.google.protobuf.Descriptors.Descriptor
@@ -607,6 +608,59 @@ java.lang.String defaultValue) {
     return map.get(key);
   }
 
+  public static final int USERNAME_FIELD_NUMBER = 15;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object username_ = "";
+  /**
+   * <pre>
+   * Login name of the authenticated account, read from the live user row at
+   * the moment of the call (never from a token claim), so a rename or
+   * suspension is never served stale. Empty when the credential has no native
+   * user row (external-IdP mapping, OIDC).
+   * </pre>
+   *
+   * <code>string username = 15 [json_name = "username"];</code>
+   * @return The username.
+   */
+  @java.lang.Override
+  public java.lang.String getUsername() {
+    java.lang.Object ref = username_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs =
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      username_ = s;
+      return s;
+    }
+  }
+  /**
+   * <pre>
+   * Login name of the authenticated account, read from the live user row at
+   * the moment of the call (never from a token claim), so a rename or
+   * suspension is never served stale. Empty when the credential has no native
+   * user row (external-IdP mapping, OIDC).
+   * </pre>
+   *
+   * <code>string username = 15 [json_name = "username"];</code>
+   * @return The bytes for username.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getUsernameBytes() {
+    java.lang.Object ref = username_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b =
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      username_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -666,6 +720,9 @@ java.lang.String defaultValue) {
         internalGetAttributes(),
         AttributesDefaultEntryHolder.defaultEntry,
         14);
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(username_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 15, username_);
+    }
     getUnknownFields().writeTo(output);
   }
 
@@ -736,6 +793,9 @@ java.lang.String defaultValue) {
       size += com.google.protobuf.CodedOutputStream
           .computeMessageSize(14, attributes__);
     }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(username_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(15, username_);
+    }
     size += getUnknownFields().getSerializedSize();
     memoizedSize = size;
     return size;
@@ -778,6 +838,8 @@ java.lang.String defaultValue) {
         .equals(other.getDomain())) return false;
     if (!internalGetAttributes().equals(
         other.internalGetAttributes())) return false;
+    if (!getUsername()
+        .equals(other.getUsername())) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -824,6 +886,8 @@ java.lang.String defaultValue) {
       hash = (37 * hash) + ATTRIBUTES_FIELD_NUMBER;
       hash = (53 * hash) + internalGetAttributes().hashCode();
     }
+    hash = (37 * hash) + USERNAME_FIELD_NUMBER;
+    hash = (53 * hash) + getUsername().hashCode();
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -998,6 +1062,7 @@ java.lang.String defaultValue) {
       accountKind_ = 0;
       domain_ = "";
       internalGetMutableAttributes().clear();
+      username_ = "";
       return this;
     }
 
@@ -1075,6 +1140,9 @@ java.lang.String defaultValue) {
       if (((from_bitField0_ & 0x00002000) != 0)) {
         result.attributes_ = internalGetAttributes();
         result.attributes_.makeImmutable();
+      }
+      if (((from_bitField0_ & 0x00004000) != 0)) {
+        result.username_ = username_;
       }
     }
 
@@ -1164,6 +1232,11 @@ java.lang.String defaultValue) {
       internalGetMutableAttributes().mergeFrom(
           other.internalGetAttributes());
       bitField0_ |= 0x00002000;
+      if (!other.getUsername().isEmpty()) {
+        username_ = other.username_;
+        bitField0_ |= 0x00004000;
+        onChanged();
+      }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
       return this;
@@ -1266,6 +1339,11 @@ java.lang.String defaultValue) {
               bitField0_ |= 0x00002000;
               break;
             } // case 114
+            case 122: {
+              username_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00004000;
+              break;
+            } // case 122
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -2360,6 +2438,113 @@ java.lang.String defaultValue) {
       internalGetMutableAttributes().getMutableMap()
           .putAll(values);
       bitField0_ |= 0x00002000;
+      return this;
+    }
+
+    private java.lang.Object username_ = "";
+    /**
+     * <pre>
+     * Login name of the authenticated account, read from the live user row at
+     * the moment of the call (never from a token claim), so a rename or
+     * suspension is never served stale. Empty when the credential has no native
+     * user row (external-IdP mapping, OIDC).
+     * </pre>
+     *
+     * <code>string username = 15 [json_name = "username"];</code>
+     * @return The username.
+     */
+    public java.lang.String getUsername() {
+      java.lang.Object ref = username_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        username_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <pre>
+     * Login name of the authenticated account, read from the live user row at
+     * the moment of the call (never from a token claim), so a rename or
+     * suspension is never served stale. Empty when the credential has no native
+     * user row (external-IdP mapping, OIDC).
+     * </pre>
+     *
+     * <code>string username = 15 [json_name = "username"];</code>
+     * @return The bytes for username.
+     */
+    public com.google.protobuf.ByteString
+        getUsernameBytes() {
+      java.lang.Object ref = username_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b =
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        username_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <pre>
+     * Login name of the authenticated account, read from the live user row at
+     * the moment of the call (never from a token claim), so a rename or
+     * suspension is never served stale. Empty when the credential has no native
+     * user row (external-IdP mapping, OIDC).
+     * </pre>
+     *
+     * <code>string username = 15 [json_name = "username"];</code>
+     * @param value The username to set.
+     * @return This builder for chaining.
+     */
+    public Builder setUsername(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      username_ = value;
+      bitField0_ |= 0x00004000;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Login name of the authenticated account, read from the live user row at
+     * the moment of the call (never from a token claim), so a rename or
+     * suspension is never served stale. Empty when the credential has no native
+     * user row (external-IdP mapping, OIDC).
+     * </pre>
+     *
+     * <code>string username = 15 [json_name = "username"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearUsername() {
+      username_ = getDefaultInstance().getUsername();
+      bitField0_ = (bitField0_ & ~0x00004000);
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Login name of the authenticated account, read from the live user row at
+     * the moment of the call (never from a token claim), so a rename or
+     * suspension is never served stale. Empty when the credential has no native
+     * user row (external-IdP mapping, OIDC).
+     * </pre>
+     *
+     * <code>string username = 15 [json_name = "username"];</code>
+     * @param value The bytes for username to set.
+     * @return This builder for chaining.
+     */
+    public Builder setUsernameBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      username_ = value;
+      bitField0_ |= 0x00004000;
+      onChanged();
       return this;
     }
 

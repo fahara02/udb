@@ -92,12 +92,13 @@ namespace Udb.Core.Authz.Services.V1 {
             "LmF1dGh6LnNlcnZpY2VzLnYxLkNoZWNrQWNjZXNzUmVxdWVzdC5BdHRyaWJ1",
             "dGVzRW50cnlSCmF0dHJpYnV0ZXMaPQoPQXR0cmlidXRlc0VudHJ5EhAKA2tl",
             "eRgBIAEoCVIDa2V5EhQKBXZhbHVlGAIgASgJUgV2YWx1ZToCOAE6HJqyGRgI",
-            "ARoDdWRiKLDqATADQAFKBWF1dGh6UAEiigIKE0NoZWNrQWNjZXNzUmVzcG9u",
+            "ARoDdWRiKLDqATADQAFKBWF1dGh6UAEitwIKE0NoZWNrQWNjZXNzUmVzcG9u",
             "c2USGAoHYWxsb3dlZBgBIAEoCFIHYWxsb3dlZBI+CgZlZmZlY3QYAiABKA4y",
             "Ji51ZGIuY29yZS5hdXRoei5lbnRpdHkudjEuUG9saWN5RWZmZWN0UgZlZmZl",
             "Y3QSIQoMbWF0Y2hlZF9ydWxlGAMgASgJUgttYXRjaGVkUnVsZRIWCgZyZWFz",
             "b24YBCABKAlSBnJlYXNvbhJACghkZWNpc2lvbhgFIAEoCzIkLnVkYi5jb3Jl",
-            "LmF1dGh6LnNlcnZpY2VzLnYxLkRlY2lzaW9uUghkZWNpc2lvbjocmrIZGAgB",
+            "LmF1dGh6LnNlcnZpY2VzLnYxLkRlY2lzaW9uUghkZWNpc2lvbhIrChFldmFs",
+            "dWF0ZWRfc3ViamVjdBgGIAEoCVIQZXZhbHVhdGVkU3ViamVjdDocmrIZGAgB",
             "GgN1ZGIosOoBMANAAUoFYXV0aHpQASLkBAoMQXV0aHpSZXF1ZXN0EkMKCXBy",
             "aW5jaXBhbBgBIAEoCzIlLnVkYi5jb3JlLmF1dGh6LnNlcnZpY2VzLnYxLlBy",
             "aW5jaXBhbFIJcHJpbmNpcGFsEh0KCnNlc3Npb25faWQYAiABKAlSCXNlc3Np",
@@ -342,7 +343,7 @@ namespace Udb.Core.Authz.Services.V1 {
             new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Core.Authz.Services.V1.Decision), global::Udb.Core.Authz.Services.V1.Decision.Parser, new[]{ "DecisionId", "Allowed", "Effect", "DenyReason", "MatchedPolicyIds", "RequiredScopes", "PolicyVersion", "RelationshipVersion", "CacheTtlSeconds", "AuditRequired" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Core.Authz.Services.V1.AccessContext), global::Udb.Core.Authz.Services.V1.AccessContext.Parser, new[]{ "IpAddress", "UserAgent", "DeviceId", "TokenId", "SessionId", "Attributes" }, null, null, null, new pbr::GeneratedClrTypeInfo[] { null, }),
             new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Core.Authz.Services.V1.CheckAccessRequest), global::Udb.Core.Authz.Services.V1.CheckAccessRequest.Parser, new[]{ "UserId", "Domain", "Object", "Action", "Context", "Principal", "Resource", "Purpose", "TenantId", "ProjectId", "Attributes" }, null, null, null, new pbr::GeneratedClrTypeInfo[] { null, }),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Core.Authz.Services.V1.CheckAccessResponse), global::Udb.Core.Authz.Services.V1.CheckAccessResponse.Parser, new[]{ "Allowed", "Effect", "MatchedRule", "Reason", "Decision" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Core.Authz.Services.V1.CheckAccessResponse), global::Udb.Core.Authz.Services.V1.CheckAccessResponse.Parser, new[]{ "Allowed", "Effect", "MatchedRule", "Reason", "Decision", "EvaluatedSubject" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Core.Authz.Services.V1.AuthzRequest), global::Udb.Core.Authz.Services.V1.AuthzRequest.Parser, new[]{ "Principal", "SessionId", "TenantId", "ProjectId", "Resource", "Action", "Purpose", "Attributes", "Context", "RequestedScopes", "Domain" }, null, null, null, new pbr::GeneratedClrTypeInfo[] { null, }),
             new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Core.Authz.Services.V1.AuthzResponse), global::Udb.Core.Authz.Services.V1.AuthzResponse.Parser, new[]{ "Decision" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Core.Authz.Services.V1.CreateRoleRequest), global::Udb.Core.Authz.Services.V1.CreateRoleRequest.Parser, new[]{ "Name", "Description", "CreatedBy", "RoleCode", "Domain", "TenantId", "ProjectId", "ScopeType", "AccessSurface", "Metadata" }, null, null, null, new pbr::GeneratedClrTypeInfo[] { null, }),
@@ -3296,6 +3297,7 @@ namespace Udb.Core.Authz.Services.V1 {
       matchedRule_ = other.matchedRule_;
       reason_ = other.reason_;
       decision_ = other.decision_ != null ? other.decision_.Clone() : null;
+      evaluatedSubject_ = other.evaluatedSubject_;
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
     }
 
@@ -3365,6 +3367,23 @@ namespace Udb.Core.Authz.Services.V1 {
       }
     }
 
+    /// <summary>Field number for the "evaluated_subject" field.</summary>
+    public const int EvaluatedSubjectFieldNumber = 6;
+    private string evaluatedSubject_ = "";
+    /// <summary>
+    /// The subject the decision was actually evaluated for: the caller itself
+    /// (claim-bound), the requested person (a service account holding
+    /// `udb:authz:check-access-for`), or the body subject (cross-tenant admin).
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string EvaluatedSubject {
+      get { return evaluatedSubject_; }
+      set {
+        evaluatedSubject_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public override bool Equals(object other) {
@@ -3385,6 +3404,7 @@ namespace Udb.Core.Authz.Services.V1 {
       if (MatchedRule != other.MatchedRule) return false;
       if (Reason != other.Reason) return false;
       if (!object.Equals(Decision, other.Decision)) return false;
+      if (EvaluatedSubject != other.EvaluatedSubject) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
 
@@ -3397,6 +3417,7 @@ namespace Udb.Core.Authz.Services.V1 {
       if (MatchedRule.Length != 0) hash ^= MatchedRule.GetHashCode();
       if (Reason.Length != 0) hash ^= Reason.GetHashCode();
       if (decision_ != null) hash ^= Decision.GetHashCode();
+      if (EvaluatedSubject.Length != 0) hash ^= EvaluatedSubject.GetHashCode();
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
       }
@@ -3435,6 +3456,10 @@ namespace Udb.Core.Authz.Services.V1 {
         output.WriteRawTag(42);
         output.WriteMessage(Decision);
       }
+      if (EvaluatedSubject.Length != 0) {
+        output.WriteRawTag(50);
+        output.WriteString(EvaluatedSubject);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
       }
@@ -3465,6 +3490,10 @@ namespace Udb.Core.Authz.Services.V1 {
         output.WriteRawTag(42);
         output.WriteMessage(Decision);
       }
+      if (EvaluatedSubject.Length != 0) {
+        output.WriteRawTag(50);
+        output.WriteString(EvaluatedSubject);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(ref output);
       }
@@ -3489,6 +3518,9 @@ namespace Udb.Core.Authz.Services.V1 {
       }
       if (decision_ != null) {
         size += 1 + pb::CodedOutputStream.ComputeMessageSize(Decision);
+      }
+      if (EvaluatedSubject.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(EvaluatedSubject);
       }
       if (_unknownFields != null) {
         size += _unknownFields.CalculateSize();
@@ -3519,6 +3551,9 @@ namespace Udb.Core.Authz.Services.V1 {
           Decision = new global::Udb.Core.Authz.Services.V1.Decision();
         }
         Decision.MergeFrom(other.Decision);
+      }
+      if (other.EvaluatedSubject.Length != 0) {
+        EvaluatedSubject = other.EvaluatedSubject;
       }
       _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
     }
@@ -3562,6 +3597,10 @@ namespace Udb.Core.Authz.Services.V1 {
             input.ReadMessage(Decision);
             break;
           }
+          case 50: {
+            EvaluatedSubject = input.ReadString();
+            break;
+          }
         }
       }
     #endif
@@ -3602,6 +3641,10 @@ namespace Udb.Core.Authz.Services.V1 {
               Decision = new global::Udb.Core.Authz.Services.V1.Decision();
             }
             input.ReadMessage(Decision);
+            break;
+          }
+          case 50: {
+            EvaluatedSubject = input.ReadString();
             break;
           }
         }

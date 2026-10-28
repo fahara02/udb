@@ -19,66 +19,70 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	AuthnService_CreateUser_FullMethodName                   = "/udb.core.authn.services.v1.AuthnService/CreateUser"
-	AuthnService_GetUser_FullMethodName                      = "/udb.core.authn.services.v1.AuthnService/GetUser"
-	AuthnService_ListUsers_FullMethodName                    = "/udb.core.authn.services.v1.AuthnService/ListUsers"
-	AuthnService_UpdateUser_FullMethodName                   = "/udb.core.authn.services.v1.AuthnService/UpdateUser"
-	AuthnService_ChangeUserStatus_FullMethodName             = "/udb.core.authn.services.v1.AuthnService/ChangeUserStatus"
-	AuthnService_AdminResetPassword_FullMethodName           = "/udb.core.authn.services.v1.AuthnService/AdminResetPassword"
-	AuthnService_SendOTP_FullMethodName                      = "/udb.core.authn.services.v1.AuthnService/SendOTP"
-	AuthnService_VerifyOTP_FullMethodName                    = "/udb.core.authn.services.v1.AuthnService/VerifyOTP"
-	AuthnService_ResendOTP_FullMethodName                    = "/udb.core.authn.services.v1.AuthnService/ResendOTP"
-	AuthnService_Authenticate_FullMethodName                 = "/udb.core.authn.services.v1.AuthnService/Authenticate"
-	AuthnService_Login_FullMethodName                        = "/udb.core.authn.services.v1.AuthnService/Login"
-	AuthnService_RefreshToken_FullMethodName                 = "/udb.core.authn.services.v1.AuthnService/RefreshToken"
-	AuthnService_Logout_FullMethodName                       = "/udb.core.authn.services.v1.AuthnService/Logout"
-	AuthnService_ChangePassword_FullMethodName               = "/udb.core.authn.services.v1.AuthnService/ChangePassword"
-	AuthnService_ValidateToken_FullMethodName                = "/udb.core.authn.services.v1.AuthnService/ValidateToken"
-	AuthnService_CreateSession_FullMethodName                = "/udb.core.authn.services.v1.AuthnService/CreateSession"
-	AuthnService_RefreshSession_FullMethodName               = "/udb.core.authn.services.v1.AuthnService/RefreshSession"
-	AuthnService_GetSession_FullMethodName                   = "/udb.core.authn.services.v1.AuthnService/GetSession"
-	AuthnService_ListSessions_FullMethodName                 = "/udb.core.authn.services.v1.AuthnService/ListSessions"
-	AuthnService_RevokeSession_FullMethodName                = "/udb.core.authn.services.v1.AuthnService/RevokeSession"
-	AuthnService_ValidateCSRF_FullMethodName                 = "/udb.core.authn.services.v1.AuthnService/ValidateCSRF"
-	AuthnService_EnrollMFA_FullMethodName                    = "/udb.core.authn.services.v1.AuthnService/EnrollMFA"
-	AuthnService_ConfirmMFAEnrollment_FullMethodName         = "/udb.core.authn.services.v1.AuthnService/ConfirmMFAEnrollment"
-	AuthnService_GenerateRecoveryCodes_FullMethodName        = "/udb.core.authn.services.v1.AuthnService/GenerateRecoveryCodes"
-	AuthnService_PutMfaPolicy_FullMethodName                 = "/udb.core.authn.services.v1.AuthnService/PutMfaPolicy"
-	AuthnService_GetMfaPolicy_FullMethodName                 = "/udb.core.authn.services.v1.AuthnService/GetMfaPolicy"
-	AuthnService_ForgotPassword_FullMethodName               = "/udb.core.authn.services.v1.AuthnService/ForgotPassword"
-	AuthnService_ResetPassword_FullMethodName                = "/udb.core.authn.services.v1.AuthnService/ResetPassword"
-	AuthnService_IntrospectToken_FullMethodName              = "/udb.core.authn.services.v1.AuthnService/IntrospectToken"
-	AuthnService_SendPhoneVerification_FullMethodName        = "/udb.core.authn.services.v1.AuthnService/SendPhoneVerification"
-	AuthnService_GetJwks_FullMethodName                      = "/udb.core.authn.services.v1.AuthnService/GetJwks"
-	AuthnService_StartWebAuthnRegistration_FullMethodName    = "/udb.core.authn.services.v1.AuthnService/StartWebAuthnRegistration"
-	AuthnService_FinishWebAuthnRegistration_FullMethodName   = "/udb.core.authn.services.v1.AuthnService/FinishWebAuthnRegistration"
-	AuthnService_StartWebAuthnAuthentication_FullMethodName  = "/udb.core.authn.services.v1.AuthnService/StartWebAuthnAuthentication"
-	AuthnService_FinishWebAuthnAuthentication_FullMethodName = "/udb.core.authn.services.v1.AuthnService/FinishWebAuthnAuthentication"
-	AuthnService_ListDevices_FullMethodName                  = "/udb.core.authn.services.v1.AuthnService/ListDevices"
-	AuthnService_RevokeDevice_FullMethodName                 = "/udb.core.authn.services.v1.AuthnService/RevokeDevice"
-	AuthnService_AdminRevokeSession_FullMethodName           = "/udb.core.authn.services.v1.AuthnService/AdminRevokeSession"
-	AuthnService_AdminRevokeAllUserSessions_FullMethodName   = "/udb.core.authn.services.v1.AuthnService/AdminRevokeAllUserSessions"
-	AuthnService_AdminRevokeAllTenantSessions_FullMethodName = "/udb.core.authn.services.v1.AuthnService/AdminRevokeAllTenantSessions"
-	AuthnService_EmergencyRevoke_FullMethodName              = "/udb.core.authn.services.v1.AuthnService/EmergencyRevoke"
-	AuthnService_IssueMfaChallenge_FullMethodName            = "/udb.core.authn.services.v1.AuthnService/IssueMfaChallenge"
-	AuthnService_VerifyMfaChallenge_FullMethodName           = "/udb.core.authn.services.v1.AuthnService/VerifyMfaChallenge"
-	AuthnService_ListMfaFactors_FullMethodName               = "/udb.core.authn.services.v1.AuthnService/ListMfaFactors"
-	AuthnService_DisableMfaFactor_FullMethodName             = "/udb.core.authn.services.v1.AuthnService/DisableMfaFactor"
-	AuthnService_RenamePasskey_FullMethodName                = "/udb.core.authn.services.v1.AuthnService/RenamePasskey"
-	AuthnService_RevokeRecoveryCodes_FullMethodName          = "/udb.core.authn.services.v1.AuthnService/RevokeRecoveryCodes"
-	AuthnService_AdminResetMfa_FullMethodName                = "/udb.core.authn.services.v1.AuthnService/AdminResetMfa"
-	AuthnService_ListWebAuthnCredentials_FullMethodName      = "/udb.core.authn.services.v1.AuthnService/ListWebAuthnCredentials"
-	AuthnService_DeleteWebAuthnCredential_FullMethodName     = "/udb.core.authn.services.v1.AuthnService/DeleteWebAuthnCredential"
-	AuthnService_CreateServiceAccountGrant_FullMethodName    = "/udb.core.authn.services.v1.AuthnService/CreateServiceAccountGrant"
-	AuthnService_GetServiceAccountGrant_FullMethodName       = "/udb.core.authn.services.v1.AuthnService/GetServiceAccountGrant"
-	AuthnService_ListServiceAccountGrants_FullMethodName     = "/udb.core.authn.services.v1.AuthnService/ListServiceAccountGrants"
-	AuthnService_ReplaceServiceAccountGrant_FullMethodName   = "/udb.core.authn.services.v1.AuthnService/ReplaceServiceAccountGrant"
-	AuthnService_RotateServiceAccountIdentity_FullMethodName = "/udb.core.authn.services.v1.AuthnService/RotateServiceAccountIdentity"
-	AuthnService_TransferServiceAccountGrant_FullMethodName  = "/udb.core.authn.services.v1.AuthnService/TransferServiceAccountGrant"
-	AuthnService_RevokeServiceAccountGrant_FullMethodName    = "/udb.core.authn.services.v1.AuthnService/RevokeServiceAccountGrant"
-	AuthnService_CreateCertificateBinding_FullMethodName     = "/udb.core.authn.services.v1.AuthnService/CreateCertificateBinding"
-	AuthnService_ListCertificateBindings_FullMethodName      = "/udb.core.authn.services.v1.AuthnService/ListCertificateBindings"
-	AuthnService_RevokeCertificateBinding_FullMethodName     = "/udb.core.authn.services.v1.AuthnService/RevokeCertificateBinding"
+	AuthnService_CreateUser_FullMethodName                           = "/udb.core.authn.services.v1.AuthnService/CreateUser"
+	AuthnService_GetUser_FullMethodName                              = "/udb.core.authn.services.v1.AuthnService/GetUser"
+	AuthnService_ListUsers_FullMethodName                            = "/udb.core.authn.services.v1.AuthnService/ListUsers"
+	AuthnService_UpdateUser_FullMethodName                           = "/udb.core.authn.services.v1.AuthnService/UpdateUser"
+	AuthnService_ChangeUserStatus_FullMethodName                     = "/udb.core.authn.services.v1.AuthnService/ChangeUserStatus"
+	AuthnService_AdminResetPassword_FullMethodName                   = "/udb.core.authn.services.v1.AuthnService/AdminResetPassword"
+	AuthnService_SendOTP_FullMethodName                              = "/udb.core.authn.services.v1.AuthnService/SendOTP"
+	AuthnService_VerifyOTP_FullMethodName                            = "/udb.core.authn.services.v1.AuthnService/VerifyOTP"
+	AuthnService_ResendOTP_FullMethodName                            = "/udb.core.authn.services.v1.AuthnService/ResendOTP"
+	AuthnService_Authenticate_FullMethodName                         = "/udb.core.authn.services.v1.AuthnService/Authenticate"
+	AuthnService_Login_FullMethodName                                = "/udb.core.authn.services.v1.AuthnService/Login"
+	AuthnService_RefreshToken_FullMethodName                         = "/udb.core.authn.services.v1.AuthnService/RefreshToken"
+	AuthnService_Logout_FullMethodName                               = "/udb.core.authn.services.v1.AuthnService/Logout"
+	AuthnService_ChangePassword_FullMethodName                       = "/udb.core.authn.services.v1.AuthnService/ChangePassword"
+	AuthnService_ValidateToken_FullMethodName                        = "/udb.core.authn.services.v1.AuthnService/ValidateToken"
+	AuthnService_CreateSession_FullMethodName                        = "/udb.core.authn.services.v1.AuthnService/CreateSession"
+	AuthnService_RefreshSession_FullMethodName                       = "/udb.core.authn.services.v1.AuthnService/RefreshSession"
+	AuthnService_GetSession_FullMethodName                           = "/udb.core.authn.services.v1.AuthnService/GetSession"
+	AuthnService_ListSessions_FullMethodName                         = "/udb.core.authn.services.v1.AuthnService/ListSessions"
+	AuthnService_RevokeSession_FullMethodName                        = "/udb.core.authn.services.v1.AuthnService/RevokeSession"
+	AuthnService_ValidateCSRF_FullMethodName                         = "/udb.core.authn.services.v1.AuthnService/ValidateCSRF"
+	AuthnService_EnrollMFA_FullMethodName                            = "/udb.core.authn.services.v1.AuthnService/EnrollMFA"
+	AuthnService_ConfirmMFAEnrollment_FullMethodName                 = "/udb.core.authn.services.v1.AuthnService/ConfirmMFAEnrollment"
+	AuthnService_GenerateRecoveryCodes_FullMethodName                = "/udb.core.authn.services.v1.AuthnService/GenerateRecoveryCodes"
+	AuthnService_PutMfaPolicy_FullMethodName                         = "/udb.core.authn.services.v1.AuthnService/PutMfaPolicy"
+	AuthnService_GetMfaPolicy_FullMethodName                         = "/udb.core.authn.services.v1.AuthnService/GetMfaPolicy"
+	AuthnService_ForgotPassword_FullMethodName                       = "/udb.core.authn.services.v1.AuthnService/ForgotPassword"
+	AuthnService_ResetPassword_FullMethodName                        = "/udb.core.authn.services.v1.AuthnService/ResetPassword"
+	AuthnService_IntrospectToken_FullMethodName                      = "/udb.core.authn.services.v1.AuthnService/IntrospectToken"
+	AuthnService_SendPhoneVerification_FullMethodName                = "/udb.core.authn.services.v1.AuthnService/SendPhoneVerification"
+	AuthnService_GetJwks_FullMethodName                              = "/udb.core.authn.services.v1.AuthnService/GetJwks"
+	AuthnService_StartWebAuthnRegistration_FullMethodName            = "/udb.core.authn.services.v1.AuthnService/StartWebAuthnRegistration"
+	AuthnService_FinishWebAuthnRegistration_FullMethodName           = "/udb.core.authn.services.v1.AuthnService/FinishWebAuthnRegistration"
+	AuthnService_StartWebAuthnAuthentication_FullMethodName          = "/udb.core.authn.services.v1.AuthnService/StartWebAuthnAuthentication"
+	AuthnService_FinishWebAuthnAuthentication_FullMethodName         = "/udb.core.authn.services.v1.AuthnService/FinishWebAuthnAuthentication"
+	AuthnService_ListDevices_FullMethodName                          = "/udb.core.authn.services.v1.AuthnService/ListDevices"
+	AuthnService_RevokeDevice_FullMethodName                         = "/udb.core.authn.services.v1.AuthnService/RevokeDevice"
+	AuthnService_AdminRevokeSession_FullMethodName                   = "/udb.core.authn.services.v1.AuthnService/AdminRevokeSession"
+	AuthnService_AdminRevokeAllUserSessions_FullMethodName           = "/udb.core.authn.services.v1.AuthnService/AdminRevokeAllUserSessions"
+	AuthnService_AdminRevokeAllTenantSessions_FullMethodName         = "/udb.core.authn.services.v1.AuthnService/AdminRevokeAllTenantSessions"
+	AuthnService_EmergencyRevoke_FullMethodName                      = "/udb.core.authn.services.v1.AuthnService/EmergencyRevoke"
+	AuthnService_IssueMfaChallenge_FullMethodName                    = "/udb.core.authn.services.v1.AuthnService/IssueMfaChallenge"
+	AuthnService_VerifyMfaChallenge_FullMethodName                   = "/udb.core.authn.services.v1.AuthnService/VerifyMfaChallenge"
+	AuthnService_ListMfaFactors_FullMethodName                       = "/udb.core.authn.services.v1.AuthnService/ListMfaFactors"
+	AuthnService_DisableMfaFactor_FullMethodName                     = "/udb.core.authn.services.v1.AuthnService/DisableMfaFactor"
+	AuthnService_RenamePasskey_FullMethodName                        = "/udb.core.authn.services.v1.AuthnService/RenamePasskey"
+	AuthnService_RevokeRecoveryCodes_FullMethodName                  = "/udb.core.authn.services.v1.AuthnService/RevokeRecoveryCodes"
+	AuthnService_AdminResetMfa_FullMethodName                        = "/udb.core.authn.services.v1.AuthnService/AdminResetMfa"
+	AuthnService_ListWebAuthnCredentials_FullMethodName              = "/udb.core.authn.services.v1.AuthnService/ListWebAuthnCredentials"
+	AuthnService_DeleteWebAuthnCredential_FullMethodName             = "/udb.core.authn.services.v1.AuthnService/DeleteWebAuthnCredential"
+	AuthnService_CreateServiceAccountGrant_FullMethodName            = "/udb.core.authn.services.v1.AuthnService/CreateServiceAccountGrant"
+	AuthnService_GetServiceAccountGrant_FullMethodName               = "/udb.core.authn.services.v1.AuthnService/GetServiceAccountGrant"
+	AuthnService_ListServiceAccountGrants_FullMethodName             = "/udb.core.authn.services.v1.AuthnService/ListServiceAccountGrants"
+	AuthnService_ReplaceServiceAccountGrant_FullMethodName           = "/udb.core.authn.services.v1.AuthnService/ReplaceServiceAccountGrant"
+	AuthnService_RotateServiceAccountIdentity_FullMethodName         = "/udb.core.authn.services.v1.AuthnService/RotateServiceAccountIdentity"
+	AuthnService_TransferServiceAccountGrant_FullMethodName          = "/udb.core.authn.services.v1.AuthnService/TransferServiceAccountGrant"
+	AuthnService_RevokeServiceAccountGrant_FullMethodName            = "/udb.core.authn.services.v1.AuthnService/RevokeServiceAccountGrant"
+	AuthnService_CreateCertificateBinding_FullMethodName             = "/udb.core.authn.services.v1.AuthnService/CreateCertificateBinding"
+	AuthnService_ListCertificateBindings_FullMethodName              = "/udb.core.authn.services.v1.AuthnService/ListCertificateBindings"
+	AuthnService_RevokeCertificateBinding_FullMethodName             = "/udb.core.authn.services.v1.AuthnService/RevokeCertificateBinding"
+	AuthnService_CreateServiceAccountTenantMembership_FullMethodName = "/udb.core.authn.services.v1.AuthnService/CreateServiceAccountTenantMembership"
+	AuthnService_ListServiceAccountTenantMemberships_FullMethodName  = "/udb.core.authn.services.v1.AuthnService/ListServiceAccountTenantMemberships"
+	AuthnService_RevokeServiceAccountTenantMembership_FullMethodName = "/udb.core.authn.services.v1.AuthnService/RevokeServiceAccountTenantMembership"
+	AuthnService_ExchangeServiceTokenForTenant_FullMethodName        = "/udb.core.authn.services.v1.AuthnService/ExchangeServiceTokenForTenant"
 )
 
 // AuthnServiceClient is the client API for AuthnService service.
@@ -697,6 +701,66 @@ type AuthnServiceClient interface {
 	// Idempotency fields: no declared method replay contract.
 	// End UDB contract.
 	RevokeCertificateBinding(ctx context.Context, in *RevokeCertificateBindingRequest, opts ...grpc.CallOption) (*RevokeCertificateBindingResponse, error)
+	// ── Cross-tenant service tokens (service-account tenant memberships) ──
+	// Approve a service account that lives in another (home) tenant to act in
+	// THIS tenant. Only an admin of the target tenant may call it (the caller's
+	// tenant must be target_tenant_id; a home-tenant admin alone cannot). The
+	// account must be an ACTIVE service account of home_tenant_id with an ACTIVE
+	// typed grant. Scopes go through the service-scope validator; expires_at is
+	// required and at most one year away. Written with its audit event in one
+	// transaction, in both tenants' audit trails.
+	// UDB contract: /udb.core.authn.services.v1.AuthnService/CreateServiceAccountTenantMembership
+	// Listener: control plane.
+	// Scopes: udb:authn:manage-grants.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
+	CreateServiceAccountTenantMembership(ctx context.Context, in *CreateServiceAccountTenantMembershipRequest, opts ...grpc.CallOption) (*CreateServiceAccountTenantMembershipResponse, error)
+	// Page through the memberships approved in the caller's tenant (the
+	// target tenant), newest first.
+	// UDB contract: /udb.core.authn.services.v1.AuthnService/ListServiceAccountTenantMemberships
+	// Listener: control plane.
+	// Scopes: udb:authn:read-grants.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
+	ListServiceAccountTenantMemberships(ctx context.Context, in *ListServiceAccountTenantMembershipsRequest, opts ...grpc.CallOption) (*ListServiceAccountTenantMembershipsResponse, error)
+	// Revoke a membership of the caller's tenant. Every token already minted
+	// from it stops validating immediately (fail closed, audited in both
+	// tenants).
+	// UDB contract: /udb.core.authn.services.v1.AuthnService/RevokeServiceAccountTenantMembership
+	// Listener: control plane.
+	// Scopes: udb:authn:manage-grants.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: destructive.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
+	RevokeServiceAccountTenantMembership(ctx context.Context, in *RevokeServiceAccountTenantMembershipRequest, opts ...grpc.CallOption) (*RevokeServiceAccountTenantMembershipResponse, error)
+	// Exchange a service account's HOME bearer for a short-lived access token
+	// in a tenant that approved it (ServiceAccountTenantMembership). Service
+	// accounts only, and never with a token minted by this RPC. The token's
+	// subject is the service account, its tenant/project are the target, its
+	// scopes are requested_scopes within the membership's approved scopes (all
+	// of them when empty), its service identity is the home grant's, and it
+	// carries `home_tenant_id` and the membership pin. Lifetime: at most 15
+	// minutes and never past the membership's expiry; no refresh token, no
+	// session. Every use re-checks the membership (ACTIVE, same revision), the
+	// home grant and the account. No, expired or revoked membership: one
+	// uniform PERMISSION_DENIED.
+	// UDB contract: /udb.core.authn.services.v1.AuthnService/ExchangeServiceTokenForTenant
+	// Listener: control plane.
+	// Scopes: udb:authn:exchange-tenant-token.
+	// Credential types: SERVICE_ACCOUNT (4).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
+	ExchangeServiceTokenForTenant(ctx context.Context, in *ExchangeServiceTokenForTenantRequest, opts ...grpc.CallOption) (*ExchangeServiceTokenForTenantResponse, error)
 }
 
 type authnServiceClient struct {
@@ -1307,6 +1371,46 @@ func (c *authnServiceClient) RevokeCertificateBinding(ctx context.Context, in *R
 	return out, nil
 }
 
+func (c *authnServiceClient) CreateServiceAccountTenantMembership(ctx context.Context, in *CreateServiceAccountTenantMembershipRequest, opts ...grpc.CallOption) (*CreateServiceAccountTenantMembershipResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CreateServiceAccountTenantMembershipResponse)
+	err := c.cc.Invoke(ctx, AuthnService_CreateServiceAccountTenantMembership_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authnServiceClient) ListServiceAccountTenantMemberships(ctx context.Context, in *ListServiceAccountTenantMembershipsRequest, opts ...grpc.CallOption) (*ListServiceAccountTenantMembershipsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListServiceAccountTenantMembershipsResponse)
+	err := c.cc.Invoke(ctx, AuthnService_ListServiceAccountTenantMemberships_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authnServiceClient) RevokeServiceAccountTenantMembership(ctx context.Context, in *RevokeServiceAccountTenantMembershipRequest, opts ...grpc.CallOption) (*RevokeServiceAccountTenantMembershipResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RevokeServiceAccountTenantMembershipResponse)
+	err := c.cc.Invoke(ctx, AuthnService_RevokeServiceAccountTenantMembership_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authnServiceClient) ExchangeServiceTokenForTenant(ctx context.Context, in *ExchangeServiceTokenForTenantRequest, opts ...grpc.CallOption) (*ExchangeServiceTokenForTenantResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ExchangeServiceTokenForTenantResponse)
+	err := c.cc.Invoke(ctx, AuthnService_ExchangeServiceTokenForTenant_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // AuthnServiceServer is the server API for AuthnService service.
 // All implementations should embed UnimplementedAuthnServiceServer
 // for forward compatibility.
@@ -1443,6 +1547,34 @@ type AuthnServiceServer interface {
 	// Revoke a certificate binding. Certificates matching the selector stop
 	// authenticating immediately — fail closed, audited.
 	RevokeCertificateBinding(context.Context, *RevokeCertificateBindingRequest) (*RevokeCertificateBindingResponse, error)
+	// ── Cross-tenant service tokens (service-account tenant memberships) ──
+	// Approve a service account that lives in another (home) tenant to act in
+	// THIS tenant. Only an admin of the target tenant may call it (the caller's
+	// tenant must be target_tenant_id; a home-tenant admin alone cannot). The
+	// account must be an ACTIVE service account of home_tenant_id with an ACTIVE
+	// typed grant. Scopes go through the service-scope validator; expires_at is
+	// required and at most one year away. Written with its audit event in one
+	// transaction, in both tenants' audit trails.
+	CreateServiceAccountTenantMembership(context.Context, *CreateServiceAccountTenantMembershipRequest) (*CreateServiceAccountTenantMembershipResponse, error)
+	// Page through the memberships approved in the caller's tenant (the
+	// target tenant), newest first.
+	ListServiceAccountTenantMemberships(context.Context, *ListServiceAccountTenantMembershipsRequest) (*ListServiceAccountTenantMembershipsResponse, error)
+	// Revoke a membership of the caller's tenant. Every token already minted
+	// from it stops validating immediately (fail closed, audited in both
+	// tenants).
+	RevokeServiceAccountTenantMembership(context.Context, *RevokeServiceAccountTenantMembershipRequest) (*RevokeServiceAccountTenantMembershipResponse, error)
+	// Exchange a service account's HOME bearer for a short-lived access token
+	// in a tenant that approved it (ServiceAccountTenantMembership). Service
+	// accounts only, and never with a token minted by this RPC. The token's
+	// subject is the service account, its tenant/project are the target, its
+	// scopes are requested_scopes within the membership's approved scopes (all
+	// of them when empty), its service identity is the home grant's, and it
+	// carries `home_tenant_id` and the membership pin. Lifetime: at most 15
+	// minutes and never past the membership's expiry; no refresh token, no
+	// session. Every use re-checks the membership (ACTIVE, same revision), the
+	// home grant and the account. No, expired or revoked membership: one
+	// uniform PERMISSION_DENIED.
+	ExchangeServiceTokenForTenant(context.Context, *ExchangeServiceTokenForTenantRequest) (*ExchangeServiceTokenForTenantResponse, error)
 }
 
 // UnimplementedAuthnServiceServer should be embedded to have
@@ -1631,6 +1763,18 @@ func (UnimplementedAuthnServiceServer) ListCertificateBindings(context.Context, 
 }
 func (UnimplementedAuthnServiceServer) RevokeCertificateBinding(context.Context, *RevokeCertificateBindingRequest) (*RevokeCertificateBindingResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method RevokeCertificateBinding not implemented")
+}
+func (UnimplementedAuthnServiceServer) CreateServiceAccountTenantMembership(context.Context, *CreateServiceAccountTenantMembershipRequest) (*CreateServiceAccountTenantMembershipResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method CreateServiceAccountTenantMembership not implemented")
+}
+func (UnimplementedAuthnServiceServer) ListServiceAccountTenantMemberships(context.Context, *ListServiceAccountTenantMembershipsRequest) (*ListServiceAccountTenantMembershipsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListServiceAccountTenantMemberships not implemented")
+}
+func (UnimplementedAuthnServiceServer) RevokeServiceAccountTenantMembership(context.Context, *RevokeServiceAccountTenantMembershipRequest) (*RevokeServiceAccountTenantMembershipResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method RevokeServiceAccountTenantMembership not implemented")
+}
+func (UnimplementedAuthnServiceServer) ExchangeServiceTokenForTenant(context.Context, *ExchangeServiceTokenForTenantRequest) (*ExchangeServiceTokenForTenantResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ExchangeServiceTokenForTenant not implemented")
 }
 func (UnimplementedAuthnServiceServer) testEmbeddedByValue() {}
 
@@ -2732,6 +2876,78 @@ func _AuthnService_RevokeCertificateBinding_Handler(srv interface{}, ctx context
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AuthnService_CreateServiceAccountTenantMembership_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateServiceAccountTenantMembershipRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthnServiceServer).CreateServiceAccountTenantMembership(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthnService_CreateServiceAccountTenantMembership_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthnServiceServer).CreateServiceAccountTenantMembership(ctx, req.(*CreateServiceAccountTenantMembershipRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthnService_ListServiceAccountTenantMemberships_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListServiceAccountTenantMembershipsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthnServiceServer).ListServiceAccountTenantMemberships(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthnService_ListServiceAccountTenantMemberships_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthnServiceServer).ListServiceAccountTenantMemberships(ctx, req.(*ListServiceAccountTenantMembershipsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthnService_RevokeServiceAccountTenantMembership_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RevokeServiceAccountTenantMembershipRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthnServiceServer).RevokeServiceAccountTenantMembership(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthnService_RevokeServiceAccountTenantMembership_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthnServiceServer).RevokeServiceAccountTenantMembership(ctx, req.(*RevokeServiceAccountTenantMembershipRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthnService_ExchangeServiceTokenForTenant_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ExchangeServiceTokenForTenantRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthnServiceServer).ExchangeServiceTokenForTenant(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthnService_ExchangeServiceTokenForTenant_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthnServiceServer).ExchangeServiceTokenForTenant(ctx, req.(*ExchangeServiceTokenForTenantRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // AuthnService_ServiceDesc is the grpc.ServiceDesc for AuthnService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -2978,6 +3194,22 @@ var AuthnService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "RevokeCertificateBinding",
 			Handler:    _AuthnService_RevokeCertificateBinding_Handler,
+		},
+		{
+			MethodName: "CreateServiceAccountTenantMembership",
+			Handler:    _AuthnService_CreateServiceAccountTenantMembership_Handler,
+		},
+		{
+			MethodName: "ListServiceAccountTenantMemberships",
+			Handler:    _AuthnService_ListServiceAccountTenantMemberships_Handler,
+		},
+		{
+			MethodName: "RevokeServiceAccountTenantMembership",
+			Handler:    _AuthnService_RevokeServiceAccountTenantMembership_Handler,
+		},
+		{
+			MethodName: "ExchangeServiceTokenForTenant",
+			Handler:    _AuthnService_ExchangeServiceTokenForTenant_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

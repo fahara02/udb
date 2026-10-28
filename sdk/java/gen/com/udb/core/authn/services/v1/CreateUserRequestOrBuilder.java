@@ -197,4 +197,36 @@ java.lang.String defaultValue);
    * @return The passwordSetupRequired.
    */
   boolean getPasswordSetupRequired();
+
+  /**
+   * <pre>
+   * E.164 phone number (`+` then 7 to 15 digits). A username plus `email` or
+   * `phone` (or both) is required. With `phone` and no `email` the account is
+   * phone-only: its verification code (or, for an invite, its password-reset
+   * code) is sent by SMS, and VerifyOTP on that code activates it. A phone-only
+   * CreateUser is refused (FAILED_PRECONDITION, `sms_delivery_unavailable`)
+   * unless SMS can be delivered: a NotificationService with SMS templates or
+   * UDB_OTP_DELIVERY_WEBHOOK_URL. With both, the phone is stored unverified.
+   * </pre>
+   *
+   * <code>string phone = 13 [json_name = "phone"];</code>
+   * @return The phone.
+   */
+  java.lang.String getPhone();
+  /**
+   * <pre>
+   * E.164 phone number (`+` then 7 to 15 digits). A username plus `email` or
+   * `phone` (or both) is required. With `phone` and no `email` the account is
+   * phone-only: its verification code (or, for an invite, its password-reset
+   * code) is sent by SMS, and VerifyOTP on that code activates it. A phone-only
+   * CreateUser is refused (FAILED_PRECONDITION, `sms_delivery_unavailable`)
+   * unless SMS can be delivered: a NotificationService with SMS templates or
+   * UDB_OTP_DELIVERY_WEBHOOK_URL. With both, the phone is stored unverified.
+   * </pre>
+   *
+   * <code>string phone = 13 [json_name = "phone"];</code>
+   * @return The bytes for phone.
+   */
+  com.google.protobuf.ByteString
+      getPhoneBytes();
 }

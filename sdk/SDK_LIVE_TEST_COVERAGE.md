@@ -7,7 +7,7 @@ Inputs:
 - `sdk/go/udbclient/generated_client.go`
 - `docs/site/bench-results.json`
 
-Current generated RPC surface: 403 RPCs across 29 services.
+Current generated RPC surface: 407 RPCs across 29 services.
 
 The benchmark body manifest is checked against generated SDK metadata before this
 file is written. A missing row, extra row, alias drift, operationId drift, or
@@ -37,7 +37,7 @@ stack, with request bodies taken from the plan the shared Python seed exports.
 | AnalyticsService | 7 | 5 | 2 | 0 | 0 |
 | ApiKeyService | 9 | 4 | 4 | 1 | 0 |
 | AssetService | 8 | 4 | 4 | 0 | 0 |
-| AuthnService | 60 | 17 | 32 | 11 | 0 |
+| AuthnService | 64 | 18 | 34 | 12 | 0 |
 | AuthzService | 41 | 18 | 17 | 6 | 0 |
 | BackupService | 8 | 4 | 3 | 1 | 0 |
 | CacheService | 7 | 3 | 3 | 1 | 0 |
@@ -106,12 +106,14 @@ benchmark harnesses.
 | AuthnService | `AuthnService/ConfirmMFAEnrollment` | `confirm_mfaenrollment` | `confirmMfaenrollment` | MUTATION | authn.md |
 | AuthnService | `AuthnService/CreateCertificateBinding` | `create_certificate_binding` | `createCertificateBinding` | MUTATION | authn.md |
 | AuthnService | `AuthnService/CreateServiceAccountGrant` | `create_service_account_grant` | `createServiceAccountGrant` | MUTATION | authn.md |
+| AuthnService | `AuthnService/CreateServiceAccountTenantMembership` | `create_service_account_tenant_membership` | `createServiceAccountTenantMembership` | MUTATION | authn.md |
 | AuthnService | `AuthnService/CreateSession` | `create_session` | `createSession` | MUTATION | authn.md |
 | AuthnService | `AuthnService/CreateUser` | `create_user` | `createUser` | MUTATION | authn.md |
 | AuthnService | `AuthnService/DeleteWebAuthnCredential` | `delete_web_authn_credential` | `deleteWebAuthnCredential` | MUTATION | authn.md |
 | AuthnService | `AuthnService/DisableMfaFactor` | `disable_mfa_factor` | `disableMfaFactor` | MUTATION | authn.md |
 | AuthnService | `AuthnService/EmergencyRevoke` | `emergency_revoke` | `emergencyRevoke` | DESTRUCTIVE | authn.md |
 | AuthnService | `AuthnService/EnrollMFA` | `enroll_mfa` | `enrollMfa` | MUTATION | authn.md |
+| AuthnService | `AuthnService/ExchangeServiceTokenForTenant` | `exchange_service_token_for_tenant` | `exchangeServiceTokenForTenant` | MUTATION | authn.md |
 | AuthnService | `AuthnService/FinishWebAuthnAuthentication` | `finish_web_authn_authentication` | `finishWebAuthnAuthentication` | MUTATION | authn.md |
 | AuthnService | `AuthnService/FinishWebAuthnRegistration` | `finish_web_authn_registration` | `finishWebAuthnRegistration` | MUTATION | authn.md |
 | AuthnService | `AuthnService/ForgotPassword` | `forgot_password` | `forgotPassword` | MUTATION | authn.md |
@@ -127,6 +129,7 @@ benchmark harnesses.
 | AuthnService | `AuthnService/ListDevices` | `list_devices` | `listDevices` | READ_ONLY | authn.md |
 | AuthnService | `AuthnService/ListMfaFactors` | `list_mfa_factors` | `listMfaFactors` | READ_ONLY | authn.md |
 | AuthnService | `AuthnService/ListServiceAccountGrants` | `list_service_account_grants` | `listServiceAccountGrants` | READ_ONLY | authn.md |
+| AuthnService | `AuthnService/ListServiceAccountTenantMemberships` | `list_service_account_tenant_memberships` | `listServiceAccountTenantMemberships` | READ_ONLY | authn.md |
 | AuthnService | `AuthnService/ListSessions` | `list_sessions` | `listSessions` | READ_ONLY | authn.md |
 | AuthnService | `AuthnService/ListUsers` | `list_users` | `listUsers` | READ_ONLY | authn.md |
 | AuthnService | `AuthnService/ListWebAuthnCredentials` | `list_web_authn_credentials` | `listWebAuthnCredentials` | READ_ONLY | authn.md |
@@ -143,6 +146,7 @@ benchmark harnesses.
 | AuthnService | `AuthnService/RevokeDevice` | `revoke_device` | `revokeDevice` | MUTATION | authn.md |
 | AuthnService | `AuthnService/RevokeRecoveryCodes` | `revoke_recovery_codes` | `revokeRecoveryCodes` | MUTATION | authn.md |
 | AuthnService | `AuthnService/RevokeServiceAccountGrant` | `revoke_service_account_grant` | `revokeServiceAccountGrant` | DESTRUCTIVE | authn.md |
+| AuthnService | `AuthnService/RevokeServiceAccountTenantMembership` | `revoke_service_account_tenant_membership` | `revokeServiceAccountTenantMembership` | DESTRUCTIVE | authn.md |
 | AuthnService | `AuthnService/RevokeSession` | `revoke_session` | `revokeSession` | MUTATION | authn.md |
 | AuthnService | `AuthnService/RotateServiceAccountIdentity` | `rotate_service_account_identity` | `rotateServiceAccountIdentity` | DESTRUCTIVE | authn.md |
 | AuthnService | `AuthnService/SendOTP` | `send_otp` | `sendOtp` | MUTATION | authn.md |

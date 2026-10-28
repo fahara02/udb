@@ -54,6 +54,8 @@ private static final long serialVersionUID = 0L;
     spanId_ = "";
     userAgentHash_ = "";
     decisionInput_ = "";
+    evaluatedBy_ = "";
+    evaluatedByServiceIdentity_ = "";
   }
 
   public static final com.google.protobuf.Descriptors.Descriptor
@@ -1127,6 +1129,96 @@ private static final long serialVersionUID = 0L;
     }
   }
 
+  public static final int EVALUATED_BY_FIELD_NUMBER = 27;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object evaluatedBy_ = "";
+  /**
+   * <pre>
+   * Delegated CheckAccess / BatchCheckPermissions: the service account
+   * (subject) that evaluated this decision for `user_id`, and its grant service
+   * identity. Empty on every non-delegated decision.
+   * </pre>
+   *
+   * <code>string evaluated_by = 27 [json_name = "evaluatedBy", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The evaluatedBy.
+   */
+  @java.lang.Override
+  public java.lang.String getEvaluatedBy() {
+    java.lang.Object ref = evaluatedBy_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs =
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      evaluatedBy_ = s;
+      return s;
+    }
+  }
+  /**
+   * <pre>
+   * Delegated CheckAccess / BatchCheckPermissions: the service account
+   * (subject) that evaluated this decision for `user_id`, and its grant service
+   * identity. Empty on every non-delegated decision.
+   * </pre>
+   *
+   * <code>string evaluated_by = 27 [json_name = "evaluatedBy", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The bytes for evaluatedBy.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getEvaluatedByBytes() {
+    java.lang.Object ref = evaluatedBy_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b =
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      evaluatedBy_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
+  public static final int EVALUATED_BY_SERVICE_IDENTITY_FIELD_NUMBER = 28;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object evaluatedByServiceIdentity_ = "";
+  /**
+   * <code>string evaluated_by_service_identity = 28 [json_name = "evaluatedByServiceIdentity", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The evaluatedByServiceIdentity.
+   */
+  @java.lang.Override
+  public java.lang.String getEvaluatedByServiceIdentity() {
+    java.lang.Object ref = evaluatedByServiceIdentity_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs =
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      evaluatedByServiceIdentity_ = s;
+      return s;
+    }
+  }
+  /**
+   * <code>string evaluated_by_service_identity = 28 [json_name = "evaluatedByServiceIdentity", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The bytes for evaluatedByServiceIdentity.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getEvaluatedByServiceIdentityBytes() {
+    java.lang.Object ref = evaluatedByServiceIdentity_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b =
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      evaluatedByServiceIdentity_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -1218,6 +1310,12 @@ private static final long serialVersionUID = 0L;
     }
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(decisionInput_)) {
       com.google.protobuf.GeneratedMessage.writeString(output, 26, decisionInput_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(evaluatedBy_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 27, evaluatedBy_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(evaluatedByServiceIdentity_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 28, evaluatedByServiceIdentity_);
     }
     getUnknownFields().writeTo(output);
   }
@@ -1314,6 +1412,12 @@ private static final long serialVersionUID = 0L;
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(decisionInput_)) {
       size += com.google.protobuf.GeneratedMessage.computeStringSize(26, decisionInput_);
     }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(evaluatedBy_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(27, evaluatedBy_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(evaluatedByServiceIdentity_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(28, evaluatedByServiceIdentity_);
+    }
     size += getUnknownFields().getSerializedSize();
     memoizedSize = size;
     return size;
@@ -1382,6 +1486,10 @@ private static final long serialVersionUID = 0L;
         .equals(other.getUserAgentHash())) return false;
     if (!getDecisionInput()
         .equals(other.getDecisionInput())) return false;
+    if (!getEvaluatedBy()
+        .equals(other.getEvaluatedBy())) return false;
+    if (!getEvaluatedByServiceIdentity()
+        .equals(other.getEvaluatedByServiceIdentity())) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -1449,6 +1557,10 @@ private static final long serialVersionUID = 0L;
     hash = (53 * hash) + getUserAgentHash().hashCode();
     hash = (37 * hash) + DECISION_INPUT_FIELD_NUMBER;
     hash = (53 * hash) + getDecisionInput().hashCode();
+    hash = (37 * hash) + EVALUATED_BY_FIELD_NUMBER;
+    hash = (53 * hash) + getEvaluatedBy().hashCode();
+    hash = (37 * hash) + EVALUATED_BY_SERVICE_IDENTITY_FIELD_NUMBER;
+    hash = (53 * hash) + getEvaluatedByServiceIdentity().hashCode();
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -1617,6 +1729,8 @@ private static final long serialVersionUID = 0L;
       spanId_ = "";
       userAgentHash_ = "";
       decisionInput_ = "";
+      evaluatedBy_ = "";
+      evaluatedByServiceIdentity_ = "";
       return this;
     }
 
@@ -1732,6 +1846,12 @@ private static final long serialVersionUID = 0L;
       }
       if (((from_bitField0_ & 0x02000000) != 0)) {
         result.decisionInput_ = decisionInput_;
+      }
+      if (((from_bitField0_ & 0x04000000) != 0)) {
+        result.evaluatedBy_ = evaluatedBy_;
+      }
+      if (((from_bitField0_ & 0x08000000) != 0)) {
+        result.evaluatedByServiceIdentity_ = evaluatedByServiceIdentity_;
       }
       result.bitField0_ |= to_bitField0_;
     }
@@ -1875,6 +1995,16 @@ private static final long serialVersionUID = 0L;
       if (!other.getDecisionInput().isEmpty()) {
         decisionInput_ = other.decisionInput_;
         bitField0_ |= 0x02000000;
+        onChanged();
+      }
+      if (!other.getEvaluatedBy().isEmpty()) {
+        evaluatedBy_ = other.evaluatedBy_;
+        bitField0_ |= 0x04000000;
+        onChanged();
+      }
+      if (!other.getEvaluatedByServiceIdentity().isEmpty()) {
+        evaluatedByServiceIdentity_ = other.evaluatedByServiceIdentity_;
+        bitField0_ |= 0x08000000;
         onChanged();
       }
       this.mergeUnknownFields(other.getUnknownFields());
@@ -2036,6 +2166,16 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x02000000;
               break;
             } // case 210
+            case 218: {
+              evaluatedBy_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x04000000;
+              break;
+            } // case 218
+            case 226: {
+              evaluatedByServiceIdentity_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x08000000;
+              break;
+            } // case 226
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -4213,6 +4353,180 @@ private static final long serialVersionUID = 0L;
       checkByteStringIsUtf8(value);
       decisionInput_ = value;
       bitField0_ |= 0x02000000;
+      onChanged();
+      return this;
+    }
+
+    private java.lang.Object evaluatedBy_ = "";
+    /**
+     * <pre>
+     * Delegated CheckAccess / BatchCheckPermissions: the service account
+     * (subject) that evaluated this decision for `user_id`, and its grant service
+     * identity. Empty on every non-delegated decision.
+     * </pre>
+     *
+     * <code>string evaluated_by = 27 [json_name = "evaluatedBy", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @return The evaluatedBy.
+     */
+    public java.lang.String getEvaluatedBy() {
+      java.lang.Object ref = evaluatedBy_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        evaluatedBy_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <pre>
+     * Delegated CheckAccess / BatchCheckPermissions: the service account
+     * (subject) that evaluated this decision for `user_id`, and its grant service
+     * identity. Empty on every non-delegated decision.
+     * </pre>
+     *
+     * <code>string evaluated_by = 27 [json_name = "evaluatedBy", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @return The bytes for evaluatedBy.
+     */
+    public com.google.protobuf.ByteString
+        getEvaluatedByBytes() {
+      java.lang.Object ref = evaluatedBy_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b =
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        evaluatedBy_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <pre>
+     * Delegated CheckAccess / BatchCheckPermissions: the service account
+     * (subject) that evaluated this decision for `user_id`, and its grant service
+     * identity. Empty on every non-delegated decision.
+     * </pre>
+     *
+     * <code>string evaluated_by = 27 [json_name = "evaluatedBy", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @param value The evaluatedBy to set.
+     * @return This builder for chaining.
+     */
+    public Builder setEvaluatedBy(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      evaluatedBy_ = value;
+      bitField0_ |= 0x04000000;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Delegated CheckAccess / BatchCheckPermissions: the service account
+     * (subject) that evaluated this decision for `user_id`, and its grant service
+     * identity. Empty on every non-delegated decision.
+     * </pre>
+     *
+     * <code>string evaluated_by = 27 [json_name = "evaluatedBy", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearEvaluatedBy() {
+      evaluatedBy_ = getDefaultInstance().getEvaluatedBy();
+      bitField0_ = (bitField0_ & ~0x04000000);
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Delegated CheckAccess / BatchCheckPermissions: the service account
+     * (subject) that evaluated this decision for `user_id`, and its grant service
+     * identity. Empty on every non-delegated decision.
+     * </pre>
+     *
+     * <code>string evaluated_by = 27 [json_name = "evaluatedBy", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @param value The bytes for evaluatedBy to set.
+     * @return This builder for chaining.
+     */
+    public Builder setEvaluatedByBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      evaluatedBy_ = value;
+      bitField0_ |= 0x04000000;
+      onChanged();
+      return this;
+    }
+
+    private java.lang.Object evaluatedByServiceIdentity_ = "";
+    /**
+     * <code>string evaluated_by_service_identity = 28 [json_name = "evaluatedByServiceIdentity", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @return The evaluatedByServiceIdentity.
+     */
+    public java.lang.String getEvaluatedByServiceIdentity() {
+      java.lang.Object ref = evaluatedByServiceIdentity_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        evaluatedByServiceIdentity_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <code>string evaluated_by_service_identity = 28 [json_name = "evaluatedByServiceIdentity", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @return The bytes for evaluatedByServiceIdentity.
+     */
+    public com.google.protobuf.ByteString
+        getEvaluatedByServiceIdentityBytes() {
+      java.lang.Object ref = evaluatedByServiceIdentity_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b =
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        evaluatedByServiceIdentity_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <code>string evaluated_by_service_identity = 28 [json_name = "evaluatedByServiceIdentity", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @param value The evaluatedByServiceIdentity to set.
+     * @return This builder for chaining.
+     */
+    public Builder setEvaluatedByServiceIdentity(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      evaluatedByServiceIdentity_ = value;
+      bitField0_ |= 0x08000000;
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>string evaluated_by_service_identity = 28 [json_name = "evaluatedByServiceIdentity", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearEvaluatedByServiceIdentity() {
+      evaluatedByServiceIdentity_ = getDefaultInstance().getEvaluatedByServiceIdentity();
+      bitField0_ = (bitField0_ & ~0x08000000);
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>string evaluated_by_service_identity = 28 [json_name = "evaluatedByServiceIdentity", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @param value The bytes for evaluatedByServiceIdentity to set.
+     * @return This builder for chaining.
+     */
+    public Builder setEvaluatedByServiceIdentityBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      evaluatedByServiceIdentity_ = value;
+      bitField0_ |= 0x08000000;
       onChanged();
       return this;
     }

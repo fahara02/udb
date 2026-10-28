@@ -435,4 +435,40 @@ public interface AccessDecisionAuditOrBuilder extends
    */
   com.google.protobuf.ByteString
       getDecisionInputBytes();
+
+  /**
+   * <pre>
+   * Delegated CheckAccess / BatchCheckPermissions: the service account
+   * (subject) that evaluated this decision for `user_id`, and its grant service
+   * identity. Empty on every non-delegated decision.
+   * </pre>
+   *
+   * <code>string evaluated_by = 27 [json_name = "evaluatedBy", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The evaluatedBy.
+   */
+  java.lang.String getEvaluatedBy();
+  /**
+   * <pre>
+   * Delegated CheckAccess / BatchCheckPermissions: the service account
+   * (subject) that evaluated this decision for `user_id`, and its grant service
+   * identity. Empty on every non-delegated decision.
+   * </pre>
+   *
+   * <code>string evaluated_by = 27 [json_name = "evaluatedBy", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The bytes for evaluatedBy.
+   */
+  com.google.protobuf.ByteString
+      getEvaluatedByBytes();
+
+  /**
+   * <code>string evaluated_by_service_identity = 28 [json_name = "evaluatedByServiceIdentity", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The evaluatedByServiceIdentity.
+   */
+  java.lang.String getEvaluatedByServiceIdentity();
+  /**
+   * <code>string evaluated_by_service_identity = 28 [json_name = "evaluatedByServiceIdentity", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The bytes for evaluatedByServiceIdentity.
+   */
+  com.google.protobuf.ByteString
+      getEvaluatedByServiceIdentityBytes();
 }

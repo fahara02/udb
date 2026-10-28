@@ -31,6 +31,7 @@ private static final long serialVersionUID = 0L;
     effect_ = 0;
     matchedRule_ = "";
     reason_ = "";
+    evaluatedSubject_ = "";
   }
 
   public static final com.google.protobuf.Descriptors.Descriptor
@@ -180,6 +181,57 @@ private static final long serialVersionUID = 0L;
     return decision_ == null ? com.udb.core.authz.services.v1.Decision.getDefaultInstance() : decision_;
   }
 
+  public static final int EVALUATED_SUBJECT_FIELD_NUMBER = 6;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object evaluatedSubject_ = "";
+  /**
+   * <pre>
+   * The subject the decision was actually evaluated for: the caller itself
+   * (claim-bound), the requested person (a service account holding
+   * `udb:authz:check-access-for`), or the body subject (cross-tenant admin).
+   * </pre>
+   *
+   * <code>string evaluated_subject = 6 [json_name = "evaluatedSubject"];</code>
+   * @return The evaluatedSubject.
+   */
+  @java.lang.Override
+  public java.lang.String getEvaluatedSubject() {
+    java.lang.Object ref = evaluatedSubject_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs =
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      evaluatedSubject_ = s;
+      return s;
+    }
+  }
+  /**
+   * <pre>
+   * The subject the decision was actually evaluated for: the caller itself
+   * (claim-bound), the requested person (a service account holding
+   * `udb:authz:check-access-for`), or the body subject (cross-tenant admin).
+   * </pre>
+   *
+   * <code>string evaluated_subject = 6 [json_name = "evaluatedSubject"];</code>
+   * @return The bytes for evaluatedSubject.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getEvaluatedSubjectBytes() {
+    java.lang.Object ref = evaluatedSubject_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b =
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      evaluatedSubject_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -209,6 +261,9 @@ private static final long serialVersionUID = 0L;
     if (((bitField0_ & 0x00000001) != 0)) {
       output.writeMessage(5, getDecision());
     }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(evaluatedSubject_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 6, evaluatedSubject_);
+    }
     getUnknownFields().writeTo(output);
   }
 
@@ -235,6 +290,9 @@ private static final long serialVersionUID = 0L;
     if (((bitField0_ & 0x00000001) != 0)) {
       size += com.google.protobuf.CodedOutputStream
         .computeMessageSize(5, getDecision());
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(evaluatedSubject_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(6, evaluatedSubject_);
     }
     size += getUnknownFields().getSerializedSize();
     memoizedSize = size;
@@ -263,6 +321,8 @@ private static final long serialVersionUID = 0L;
       if (!getDecision()
           .equals(other.getDecision())) return false;
     }
+    if (!getEvaluatedSubject()
+        .equals(other.getEvaluatedSubject())) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -287,6 +347,8 @@ private static final long serialVersionUID = 0L;
       hash = (37 * hash) + DECISION_FIELD_NUMBER;
       hash = (53 * hash) + getDecision().hashCode();
     }
+    hash = (37 * hash) + EVALUATED_SUBJECT_FIELD_NUMBER;
+    hash = (53 * hash) + getEvaluatedSubject().hashCode();
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -433,6 +495,7 @@ private static final long serialVersionUID = 0L;
         decisionBuilder_.dispose();
         decisionBuilder_ = null;
       }
+      evaluatedSubject_ = "";
       return this;
     }
 
@@ -485,6 +548,9 @@ private static final long serialVersionUID = 0L;
             : decisionBuilder_.build();
         to_bitField0_ |= 0x00000001;
       }
+      if (((from_bitField0_ & 0x00000020) != 0)) {
+        result.evaluatedSubject_ = evaluatedSubject_;
+      }
       result.bitField0_ |= to_bitField0_;
     }
 
@@ -518,6 +584,11 @@ private static final long serialVersionUID = 0L;
       }
       if (other.hasDecision()) {
         mergeDecision(other.getDecision());
+      }
+      if (!other.getEvaluatedSubject().isEmpty()) {
+        evaluatedSubject_ = other.evaluatedSubject_;
+        bitField0_ |= 0x00000020;
+        onChanged();
       }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
@@ -572,6 +643,11 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00000010;
               break;
             } // case 42
+            case 50: {
+              evaluatedSubject_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00000020;
+              break;
+            } // case 50
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -935,6 +1011,108 @@ private static final long serialVersionUID = 0L;
         decision_ = null;
       }
       return decisionBuilder_;
+    }
+
+    private java.lang.Object evaluatedSubject_ = "";
+    /**
+     * <pre>
+     * The subject the decision was actually evaluated for: the caller itself
+     * (claim-bound), the requested person (a service account holding
+     * `udb:authz:check-access-for`), or the body subject (cross-tenant admin).
+     * </pre>
+     *
+     * <code>string evaluated_subject = 6 [json_name = "evaluatedSubject"];</code>
+     * @return The evaluatedSubject.
+     */
+    public java.lang.String getEvaluatedSubject() {
+      java.lang.Object ref = evaluatedSubject_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        evaluatedSubject_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <pre>
+     * The subject the decision was actually evaluated for: the caller itself
+     * (claim-bound), the requested person (a service account holding
+     * `udb:authz:check-access-for`), or the body subject (cross-tenant admin).
+     * </pre>
+     *
+     * <code>string evaluated_subject = 6 [json_name = "evaluatedSubject"];</code>
+     * @return The bytes for evaluatedSubject.
+     */
+    public com.google.protobuf.ByteString
+        getEvaluatedSubjectBytes() {
+      java.lang.Object ref = evaluatedSubject_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b =
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        evaluatedSubject_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <pre>
+     * The subject the decision was actually evaluated for: the caller itself
+     * (claim-bound), the requested person (a service account holding
+     * `udb:authz:check-access-for`), or the body subject (cross-tenant admin).
+     * </pre>
+     *
+     * <code>string evaluated_subject = 6 [json_name = "evaluatedSubject"];</code>
+     * @param value The evaluatedSubject to set.
+     * @return This builder for chaining.
+     */
+    public Builder setEvaluatedSubject(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      evaluatedSubject_ = value;
+      bitField0_ |= 0x00000020;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * The subject the decision was actually evaluated for: the caller itself
+     * (claim-bound), the requested person (a service account holding
+     * `udb:authz:check-access-for`), or the body subject (cross-tenant admin).
+     * </pre>
+     *
+     * <code>string evaluated_subject = 6 [json_name = "evaluatedSubject"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearEvaluatedSubject() {
+      evaluatedSubject_ = getDefaultInstance().getEvaluatedSubject();
+      bitField0_ = (bitField0_ & ~0x00000020);
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * The subject the decision was actually evaluated for: the caller itself
+     * (claim-bound), the requested person (a service account holding
+     * `udb:authz:check-access-for`), or the body subject (cross-tenant admin).
+     * </pre>
+     *
+     * <code>string evaluated_subject = 6 [json_name = "evaluatedSubject"];</code>
+     * @param value The bytes for evaluatedSubject to set.
+     * @return This builder for chaining.
+     */
+    public Builder setEvaluatedSubjectBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      evaluatedSubject_ = value;
+      bitField0_ |= 0x00000020;
+      onChanged();
+      return this;
     }
 
     // @@protoc_insertion_point(builder_scope:udb.core.authz.services.v1.CheckAccessResponse)

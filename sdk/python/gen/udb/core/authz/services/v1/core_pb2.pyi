@@ -181,18 +181,20 @@ class CheckAccessRequest(_message.Message):
     def __init__(self, user_id: _Optional[str] = ..., domain: _Optional[str] = ..., object: _Optional[str] = ..., action: _Optional[str] = ..., context: _Optional[_Union[AccessContext, _Mapping]] = ..., principal: _Optional[_Union[Principal, _Mapping]] = ..., resource: _Optional[_Union[ResourceRef, _Mapping]] = ..., purpose: _Optional[str] = ..., tenant_id: _Optional[str] = ..., project_id: _Optional[str] = ..., attributes: _Optional[_Mapping[str, str]] = ...) -> None: ...
 
 class CheckAccessResponse(_message.Message):
-    __slots__ = ("allowed", "effect", "matched_rule", "reason", "decision")
+    __slots__ = ("allowed", "effect", "matched_rule", "reason", "decision", "evaluated_subject")
     ALLOWED_FIELD_NUMBER: _ClassVar[int]
     EFFECT_FIELD_NUMBER: _ClassVar[int]
     MATCHED_RULE_FIELD_NUMBER: _ClassVar[int]
     REASON_FIELD_NUMBER: _ClassVar[int]
     DECISION_FIELD_NUMBER: _ClassVar[int]
+    EVALUATED_SUBJECT_FIELD_NUMBER: _ClassVar[int]
     allowed: bool
     effect: _enums_pb2.PolicyEffect
     matched_rule: str
     reason: str
     decision: Decision
-    def __init__(self, allowed: bool = ..., effect: _Optional[_Union[_enums_pb2.PolicyEffect, str]] = ..., matched_rule: _Optional[str] = ..., reason: _Optional[str] = ..., decision: _Optional[_Union[Decision, _Mapping]] = ...) -> None: ...
+    evaluated_subject: str
+    def __init__(self, allowed: bool = ..., effect: _Optional[_Union[_enums_pb2.PolicyEffect, str]] = ..., matched_rule: _Optional[str] = ..., reason: _Optional[str] = ..., decision: _Optional[_Union[Decision, _Mapping]] = ..., evaluated_subject: _Optional[str] = ...) -> None: ...
 
 class AuthzRequest(_message.Message):
     __slots__ = ("principal", "session_id", "tenant_id", "project_id", "resource", "action", "purpose", "attributes", "context", "requested_scopes", "domain")

@@ -37,6 +37,7 @@ private static final long serialVersionUID = 0L;
     projectId_ = "";
     externalProviderId_ = "";
     externalSubject_ = "";
+    phone_ = "";
   }
 
   public static final com.google.protobuf.Descriptors.Descriptor
@@ -537,6 +538,65 @@ java.lang.String defaultValue) {
     return passwordSetupRequired_;
   }
 
+  public static final int PHONE_FIELD_NUMBER = 13;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object phone_ = "";
+  /**
+   * <pre>
+   * E.164 phone number (`+` then 7 to 15 digits). A username plus `email` or
+   * `phone` (or both) is required. With `phone` and no `email` the account is
+   * phone-only: its verification code (or, for an invite, its password-reset
+   * code) is sent by SMS, and VerifyOTP on that code activates it. A phone-only
+   * CreateUser is refused (FAILED_PRECONDITION, `sms_delivery_unavailable`)
+   * unless SMS can be delivered: a NotificationService with SMS templates or
+   * UDB_OTP_DELIVERY_WEBHOOK_URL. With both, the phone is stored unverified.
+   * </pre>
+   *
+   * <code>string phone = 13 [json_name = "phone"];</code>
+   * @return The phone.
+   */
+  @java.lang.Override
+  public java.lang.String getPhone() {
+    java.lang.Object ref = phone_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs =
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      phone_ = s;
+      return s;
+    }
+  }
+  /**
+   * <pre>
+   * E.164 phone number (`+` then 7 to 15 digits). A username plus `email` or
+   * `phone` (or both) is required. With `phone` and no `email` the account is
+   * phone-only: its verification code (or, for an invite, its password-reset
+   * code) is sent by SMS, and VerifyOTP on that code activates it. A phone-only
+   * CreateUser is refused (FAILED_PRECONDITION, `sms_delivery_unavailable`)
+   * unless SMS can be delivered: a NotificationService with SMS templates or
+   * UDB_OTP_DELIVERY_WEBHOOK_URL. With both, the phone is stored unverified.
+   * </pre>
+   *
+   * <code>string phone = 13 [json_name = "phone"];</code>
+   * @return The bytes for phone.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getPhoneBytes() {
+    java.lang.Object ref = phone_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b =
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      phone_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -589,6 +649,9 @@ java.lang.String defaultValue) {
         11);
     if (passwordSetupRequired_ != false) {
       output.writeBool(12, passwordSetupRequired_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(phone_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 13, phone_);
     }
     getUnknownFields().writeTo(output);
   }
@@ -645,6 +708,9 @@ java.lang.String defaultValue) {
       size += com.google.protobuf.CodedOutputStream
         .computeBoolSize(12, passwordSetupRequired_);
     }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(phone_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(13, phone_);
+    }
     size += getUnknownFields().getSerializedSize();
     memoizedSize = size;
     return size;
@@ -686,6 +752,8 @@ java.lang.String defaultValue) {
         other.internalGetProfileAttributes())) return false;
     if (getPasswordSetupRequired()
         != other.getPasswordSetupRequired()) return false;
+    if (!getPhone()
+        .equals(other.getPhone())) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -726,6 +794,8 @@ java.lang.String defaultValue) {
     hash = (37 * hash) + PASSWORD_SETUP_REQUIRED_FIELD_NUMBER;
     hash = (53 * hash) + com.google.protobuf.Internal.hashBoolean(
         getPasswordSetupRequired());
+    hash = (37 * hash) + PHONE_FIELD_NUMBER;
+    hash = (53 * hash) + getPhone().hashCode();
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -901,6 +971,7 @@ java.lang.String defaultValue) {
       externalSubject_ = "";
       internalGetMutableProfileAttributes().clear();
       passwordSetupRequired_ = false;
+      phone_ = "";
       return this;
     }
 
@@ -975,6 +1046,9 @@ java.lang.String defaultValue) {
       if (((from_bitField0_ & 0x00000800) != 0)) {
         result.passwordSetupRequired_ = passwordSetupRequired_;
       }
+      if (((from_bitField0_ & 0x00001000) != 0)) {
+        result.phone_ = phone_;
+      }
       result.bitField0_ |= to_bitField0_;
     }
 
@@ -1041,6 +1115,11 @@ java.lang.String defaultValue) {
       bitField0_ |= 0x00000400;
       if (other.getPasswordSetupRequired() != false) {
         setPasswordSetupRequired(other.getPasswordSetupRequired());
+      }
+      if (!other.getPhone().isEmpty()) {
+        phone_ = other.phone_;
+        bitField0_ |= 0x00001000;
+        onChanged();
       }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
@@ -1134,6 +1213,11 @@ java.lang.String defaultValue) {
               bitField0_ |= 0x00000800;
               break;
             } // case 96
+            case 106: {
+              phone_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00001000;
+              break;
+            } // case 106
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -2123,6 +2207,128 @@ java.lang.String defaultValue) {
     public Builder clearPasswordSetupRequired() {
       bitField0_ = (bitField0_ & ~0x00000800);
       passwordSetupRequired_ = false;
+      onChanged();
+      return this;
+    }
+
+    private java.lang.Object phone_ = "";
+    /**
+     * <pre>
+     * E.164 phone number (`+` then 7 to 15 digits). A username plus `email` or
+     * `phone` (or both) is required. With `phone` and no `email` the account is
+     * phone-only: its verification code (or, for an invite, its password-reset
+     * code) is sent by SMS, and VerifyOTP on that code activates it. A phone-only
+     * CreateUser is refused (FAILED_PRECONDITION, `sms_delivery_unavailable`)
+     * unless SMS can be delivered: a NotificationService with SMS templates or
+     * UDB_OTP_DELIVERY_WEBHOOK_URL. With both, the phone is stored unverified.
+     * </pre>
+     *
+     * <code>string phone = 13 [json_name = "phone"];</code>
+     * @return The phone.
+     */
+    public java.lang.String getPhone() {
+      java.lang.Object ref = phone_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        phone_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <pre>
+     * E.164 phone number (`+` then 7 to 15 digits). A username plus `email` or
+     * `phone` (or both) is required. With `phone` and no `email` the account is
+     * phone-only: its verification code (or, for an invite, its password-reset
+     * code) is sent by SMS, and VerifyOTP on that code activates it. A phone-only
+     * CreateUser is refused (FAILED_PRECONDITION, `sms_delivery_unavailable`)
+     * unless SMS can be delivered: a NotificationService with SMS templates or
+     * UDB_OTP_DELIVERY_WEBHOOK_URL. With both, the phone is stored unverified.
+     * </pre>
+     *
+     * <code>string phone = 13 [json_name = "phone"];</code>
+     * @return The bytes for phone.
+     */
+    public com.google.protobuf.ByteString
+        getPhoneBytes() {
+      java.lang.Object ref = phone_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b =
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        phone_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <pre>
+     * E.164 phone number (`+` then 7 to 15 digits). A username plus `email` or
+     * `phone` (or both) is required. With `phone` and no `email` the account is
+     * phone-only: its verification code (or, for an invite, its password-reset
+     * code) is sent by SMS, and VerifyOTP on that code activates it. A phone-only
+     * CreateUser is refused (FAILED_PRECONDITION, `sms_delivery_unavailable`)
+     * unless SMS can be delivered: a NotificationService with SMS templates or
+     * UDB_OTP_DELIVERY_WEBHOOK_URL. With both, the phone is stored unverified.
+     * </pre>
+     *
+     * <code>string phone = 13 [json_name = "phone"];</code>
+     * @param value The phone to set.
+     * @return This builder for chaining.
+     */
+    public Builder setPhone(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      phone_ = value;
+      bitField0_ |= 0x00001000;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * E.164 phone number (`+` then 7 to 15 digits). A username plus `email` or
+     * `phone` (or both) is required. With `phone` and no `email` the account is
+     * phone-only: its verification code (or, for an invite, its password-reset
+     * code) is sent by SMS, and VerifyOTP on that code activates it. A phone-only
+     * CreateUser is refused (FAILED_PRECONDITION, `sms_delivery_unavailable`)
+     * unless SMS can be delivered: a NotificationService with SMS templates or
+     * UDB_OTP_DELIVERY_WEBHOOK_URL. With both, the phone is stored unverified.
+     * </pre>
+     *
+     * <code>string phone = 13 [json_name = "phone"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearPhone() {
+      phone_ = getDefaultInstance().getPhone();
+      bitField0_ = (bitField0_ & ~0x00001000);
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * E.164 phone number (`+` then 7 to 15 digits). A username plus `email` or
+     * `phone` (or both) is required. With `phone` and no `email` the account is
+     * phone-only: its verification code (or, for an invite, its password-reset
+     * code) is sent by SMS, and VerifyOTP on that code activates it. A phone-only
+     * CreateUser is refused (FAILED_PRECONDITION, `sms_delivery_unavailable`)
+     * unless SMS can be delivered: a NotificationService with SMS templates or
+     * UDB_OTP_DELIVERY_WEBHOOK_URL. With both, the phone is stored unverified.
+     * </pre>
+     *
+     * <code>string phone = 13 [json_name = "phone"];</code>
+     * @param value The bytes for phone to set.
+     * @return This builder for chaining.
+     */
+    public Builder setPhoneBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      phone_ = value;
+      bitField0_ |= 0x00001000;
       onChanged();
       return this;
     }

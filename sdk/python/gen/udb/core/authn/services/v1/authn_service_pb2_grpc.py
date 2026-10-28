@@ -325,6 +325,26 @@ class AuthnServiceStub(object):
                 request_serializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_authn__service__pb2.RevokeCertificateBindingRequest.SerializeToString,
                 response_deserializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_authn__service__pb2.RevokeCertificateBindingResponse.FromString,
                 _registered_method=True)
+        self.CreateServiceAccountTenantMembership = channel.unary_unary(
+                '/udb.core.authn.services.v1.AuthnService/CreateServiceAccountTenantMembership',
+                request_serializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_authn__service__pb2.CreateServiceAccountTenantMembershipRequest.SerializeToString,
+                response_deserializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_authn__service__pb2.CreateServiceAccountTenantMembershipResponse.FromString,
+                _registered_method=True)
+        self.ListServiceAccountTenantMemberships = channel.unary_unary(
+                '/udb.core.authn.services.v1.AuthnService/ListServiceAccountTenantMemberships',
+                request_serializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_authn__service__pb2.ListServiceAccountTenantMembershipsRequest.SerializeToString,
+                response_deserializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_authn__service__pb2.ListServiceAccountTenantMembershipsResponse.FromString,
+                _registered_method=True)
+        self.RevokeServiceAccountTenantMembership = channel.unary_unary(
+                '/udb.core.authn.services.v1.AuthnService/RevokeServiceAccountTenantMembership',
+                request_serializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_authn__service__pb2.RevokeServiceAccountTenantMembershipRequest.SerializeToString,
+                response_deserializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_authn__service__pb2.RevokeServiceAccountTenantMembershipResponse.FromString,
+                _registered_method=True)
+        self.ExchangeServiceTokenForTenant = channel.unary_unary(
+                '/udb.core.authn.services.v1.AuthnService/ExchangeServiceTokenForTenant',
+                request_serializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_authn__service__pb2.ExchangeServiceTokenForTenantRequest.SerializeToString,
+                response_deserializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_authn__service__pb2.ExchangeServiceTokenForTenantResponse.FromString,
+                _registered_method=True)
 
 
 class AuthnServiceServicer(object):
@@ -761,6 +781,54 @@ class AuthnServiceServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def CreateServiceAccountTenantMembership(self, request, context):
+        """── Cross-tenant service tokens (service-account tenant memberships) ──
+        Approve a service account that lives in another (home) tenant to act in
+        THIS tenant. Only an admin of the target tenant may call it (the caller's
+        tenant must be target_tenant_id; a home-tenant admin alone cannot). The
+        account must be an ACTIVE service account of home_tenant_id with an ACTIVE
+        typed grant. Scopes go through the service-scope validator; expires_at is
+        required and at most one year away. Written with its audit event in one
+        transaction, in both tenants' audit trails.
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def ListServiceAccountTenantMemberships(self, request, context):
+        """Page through the memberships approved in the caller's tenant (the
+        target tenant), newest first.
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def RevokeServiceAccountTenantMembership(self, request, context):
+        """Revoke a membership of the caller's tenant. Every token already minted
+        from it stops validating immediately (fail closed, audited in both
+        tenants).
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def ExchangeServiceTokenForTenant(self, request, context):
+        """Exchange a service account's HOME bearer for a short-lived access token
+        in a tenant that approved it (ServiceAccountTenantMembership). Service
+        accounts only, and never with a token minted by this RPC. The token's
+        subject is the service account, its tenant/project are the target, its
+        scopes are requested_scopes within the membership's approved scopes (all
+        of them when empty), its service identity is the home grant's, and it
+        carries `home_tenant_id` and the membership pin. Lifetime: at most 15
+        minutes and never past the membership's expiry; no refresh token, no
+        session. Every use re-checks the membership (ACTIVE, same revision), the
+        home grant and the account. No, expired or revoked membership: one
+        uniform PERMISSION_DENIED.
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_AuthnServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
@@ -1063,6 +1131,26 @@ def add_AuthnServiceServicer_to_server(servicer, server):
                     servicer.RevokeCertificateBinding,
                     request_deserializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_authn__service__pb2.RevokeCertificateBindingRequest.FromString,
                     response_serializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_authn__service__pb2.RevokeCertificateBindingResponse.SerializeToString,
+            ),
+            'CreateServiceAccountTenantMembership': grpc.unary_unary_rpc_method_handler(
+                    servicer.CreateServiceAccountTenantMembership,
+                    request_deserializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_authn__service__pb2.CreateServiceAccountTenantMembershipRequest.FromString,
+                    response_serializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_authn__service__pb2.CreateServiceAccountTenantMembershipResponse.SerializeToString,
+            ),
+            'ListServiceAccountTenantMemberships': grpc.unary_unary_rpc_method_handler(
+                    servicer.ListServiceAccountTenantMemberships,
+                    request_deserializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_authn__service__pb2.ListServiceAccountTenantMembershipsRequest.FromString,
+                    response_serializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_authn__service__pb2.ListServiceAccountTenantMembershipsResponse.SerializeToString,
+            ),
+            'RevokeServiceAccountTenantMembership': grpc.unary_unary_rpc_method_handler(
+                    servicer.RevokeServiceAccountTenantMembership,
+                    request_deserializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_authn__service__pb2.RevokeServiceAccountTenantMembershipRequest.FromString,
+                    response_serializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_authn__service__pb2.RevokeServiceAccountTenantMembershipResponse.SerializeToString,
+            ),
+            'ExchangeServiceTokenForTenant': grpc.unary_unary_rpc_method_handler(
+                    servicer.ExchangeServiceTokenForTenant,
+                    request_deserializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_authn__service__pb2.ExchangeServiceTokenForTenantRequest.FromString,
+                    response_serializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_authn__service__pb2.ExchangeServiceTokenForTenantResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -2695,6 +2783,114 @@ class AuthnService(object):
             '/udb.core.authn.services.v1.AuthnService/RevokeCertificateBinding',
             udb_dot_core_dot_authn_dot_services_dot_v1_dot_authn__service__pb2.RevokeCertificateBindingRequest.SerializeToString,
             udb_dot_core_dot_authn_dot_services_dot_v1_dot_authn__service__pb2.RevokeCertificateBindingResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def CreateServiceAccountTenantMembership(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/udb.core.authn.services.v1.AuthnService/CreateServiceAccountTenantMembership',
+            udb_dot_core_dot_authn_dot_services_dot_v1_dot_authn__service__pb2.CreateServiceAccountTenantMembershipRequest.SerializeToString,
+            udb_dot_core_dot_authn_dot_services_dot_v1_dot_authn__service__pb2.CreateServiceAccountTenantMembershipResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def ListServiceAccountTenantMemberships(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/udb.core.authn.services.v1.AuthnService/ListServiceAccountTenantMemberships',
+            udb_dot_core_dot_authn_dot_services_dot_v1_dot_authn__service__pb2.ListServiceAccountTenantMembershipsRequest.SerializeToString,
+            udb_dot_core_dot_authn_dot_services_dot_v1_dot_authn__service__pb2.ListServiceAccountTenantMembershipsResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def RevokeServiceAccountTenantMembership(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/udb.core.authn.services.v1.AuthnService/RevokeServiceAccountTenantMembership',
+            udb_dot_core_dot_authn_dot_services_dot_v1_dot_authn__service__pb2.RevokeServiceAccountTenantMembershipRequest.SerializeToString,
+            udb_dot_core_dot_authn_dot_services_dot_v1_dot_authn__service__pb2.RevokeServiceAccountTenantMembershipResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def ExchangeServiceTokenForTenant(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/udb.core.authn.services.v1.AuthnService/ExchangeServiceTokenForTenant',
+            udb_dot_core_dot_authn_dot_services_dot_v1_dot_authn__service__pb2.ExchangeServiceTokenForTenantRequest.SerializeToString,
+            udb_dot_core_dot_authn_dot_services_dot_v1_dot_authn__service__pb2.ExchangeServiceTokenForTenantResponse.FromString,
             options,
             channel_credentials,
             insecure,

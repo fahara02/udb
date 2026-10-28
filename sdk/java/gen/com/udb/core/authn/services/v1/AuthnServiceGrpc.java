@@ -1882,6 +1882,130 @@ public final class AuthnServiceGrpc {
     return getRevokeCertificateBindingMethod;
   }
 
+  private static volatile io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.CreateServiceAccountTenantMembershipRequest,
+      com.udb.core.authn.services.v1.CreateServiceAccountTenantMembershipResponse> getCreateServiceAccountTenantMembershipMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "CreateServiceAccountTenantMembership",
+      requestType = com.udb.core.authn.services.v1.CreateServiceAccountTenantMembershipRequest.class,
+      responseType = com.udb.core.authn.services.v1.CreateServiceAccountTenantMembershipResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.CreateServiceAccountTenantMembershipRequest,
+      com.udb.core.authn.services.v1.CreateServiceAccountTenantMembershipResponse> getCreateServiceAccountTenantMembershipMethod() {
+    io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.CreateServiceAccountTenantMembershipRequest, com.udb.core.authn.services.v1.CreateServiceAccountTenantMembershipResponse> getCreateServiceAccountTenantMembershipMethod;
+    if ((getCreateServiceAccountTenantMembershipMethod = AuthnServiceGrpc.getCreateServiceAccountTenantMembershipMethod) == null) {
+      synchronized (AuthnServiceGrpc.class) {
+        if ((getCreateServiceAccountTenantMembershipMethod = AuthnServiceGrpc.getCreateServiceAccountTenantMembershipMethod) == null) {
+          AuthnServiceGrpc.getCreateServiceAccountTenantMembershipMethod = getCreateServiceAccountTenantMembershipMethod =
+              io.grpc.MethodDescriptor.<com.udb.core.authn.services.v1.CreateServiceAccountTenantMembershipRequest, com.udb.core.authn.services.v1.CreateServiceAccountTenantMembershipResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "CreateServiceAccountTenantMembership"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authn.services.v1.CreateServiceAccountTenantMembershipRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authn.services.v1.CreateServiceAccountTenantMembershipResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new AuthnServiceMethodDescriptorSupplier("CreateServiceAccountTenantMembership"))
+              .build();
+        }
+      }
+    }
+    return getCreateServiceAccountTenantMembershipMethod;
+  }
+
+  private static volatile io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.ListServiceAccountTenantMembershipsRequest,
+      com.udb.core.authn.services.v1.ListServiceAccountTenantMembershipsResponse> getListServiceAccountTenantMembershipsMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "ListServiceAccountTenantMemberships",
+      requestType = com.udb.core.authn.services.v1.ListServiceAccountTenantMembershipsRequest.class,
+      responseType = com.udb.core.authn.services.v1.ListServiceAccountTenantMembershipsResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.ListServiceAccountTenantMembershipsRequest,
+      com.udb.core.authn.services.v1.ListServiceAccountTenantMembershipsResponse> getListServiceAccountTenantMembershipsMethod() {
+    io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.ListServiceAccountTenantMembershipsRequest, com.udb.core.authn.services.v1.ListServiceAccountTenantMembershipsResponse> getListServiceAccountTenantMembershipsMethod;
+    if ((getListServiceAccountTenantMembershipsMethod = AuthnServiceGrpc.getListServiceAccountTenantMembershipsMethod) == null) {
+      synchronized (AuthnServiceGrpc.class) {
+        if ((getListServiceAccountTenantMembershipsMethod = AuthnServiceGrpc.getListServiceAccountTenantMembershipsMethod) == null) {
+          AuthnServiceGrpc.getListServiceAccountTenantMembershipsMethod = getListServiceAccountTenantMembershipsMethod =
+              io.grpc.MethodDescriptor.<com.udb.core.authn.services.v1.ListServiceAccountTenantMembershipsRequest, com.udb.core.authn.services.v1.ListServiceAccountTenantMembershipsResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "ListServiceAccountTenantMemberships"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authn.services.v1.ListServiceAccountTenantMembershipsRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authn.services.v1.ListServiceAccountTenantMembershipsResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new AuthnServiceMethodDescriptorSupplier("ListServiceAccountTenantMemberships"))
+              .build();
+        }
+      }
+    }
+    return getListServiceAccountTenantMembershipsMethod;
+  }
+
+  private static volatile io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.RevokeServiceAccountTenantMembershipRequest,
+      com.udb.core.authn.services.v1.RevokeServiceAccountTenantMembershipResponse> getRevokeServiceAccountTenantMembershipMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "RevokeServiceAccountTenantMembership",
+      requestType = com.udb.core.authn.services.v1.RevokeServiceAccountTenantMembershipRequest.class,
+      responseType = com.udb.core.authn.services.v1.RevokeServiceAccountTenantMembershipResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.RevokeServiceAccountTenantMembershipRequest,
+      com.udb.core.authn.services.v1.RevokeServiceAccountTenantMembershipResponse> getRevokeServiceAccountTenantMembershipMethod() {
+    io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.RevokeServiceAccountTenantMembershipRequest, com.udb.core.authn.services.v1.RevokeServiceAccountTenantMembershipResponse> getRevokeServiceAccountTenantMembershipMethod;
+    if ((getRevokeServiceAccountTenantMembershipMethod = AuthnServiceGrpc.getRevokeServiceAccountTenantMembershipMethod) == null) {
+      synchronized (AuthnServiceGrpc.class) {
+        if ((getRevokeServiceAccountTenantMembershipMethod = AuthnServiceGrpc.getRevokeServiceAccountTenantMembershipMethod) == null) {
+          AuthnServiceGrpc.getRevokeServiceAccountTenantMembershipMethod = getRevokeServiceAccountTenantMembershipMethod =
+              io.grpc.MethodDescriptor.<com.udb.core.authn.services.v1.RevokeServiceAccountTenantMembershipRequest, com.udb.core.authn.services.v1.RevokeServiceAccountTenantMembershipResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "RevokeServiceAccountTenantMembership"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authn.services.v1.RevokeServiceAccountTenantMembershipRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authn.services.v1.RevokeServiceAccountTenantMembershipResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new AuthnServiceMethodDescriptorSupplier("RevokeServiceAccountTenantMembership"))
+              .build();
+        }
+      }
+    }
+    return getRevokeServiceAccountTenantMembershipMethod;
+  }
+
+  private static volatile io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.ExchangeServiceTokenForTenantRequest,
+      com.udb.core.authn.services.v1.ExchangeServiceTokenForTenantResponse> getExchangeServiceTokenForTenantMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "ExchangeServiceTokenForTenant",
+      requestType = com.udb.core.authn.services.v1.ExchangeServiceTokenForTenantRequest.class,
+      responseType = com.udb.core.authn.services.v1.ExchangeServiceTokenForTenantResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.ExchangeServiceTokenForTenantRequest,
+      com.udb.core.authn.services.v1.ExchangeServiceTokenForTenantResponse> getExchangeServiceTokenForTenantMethod() {
+    io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.ExchangeServiceTokenForTenantRequest, com.udb.core.authn.services.v1.ExchangeServiceTokenForTenantResponse> getExchangeServiceTokenForTenantMethod;
+    if ((getExchangeServiceTokenForTenantMethod = AuthnServiceGrpc.getExchangeServiceTokenForTenantMethod) == null) {
+      synchronized (AuthnServiceGrpc.class) {
+        if ((getExchangeServiceTokenForTenantMethod = AuthnServiceGrpc.getExchangeServiceTokenForTenantMethod) == null) {
+          AuthnServiceGrpc.getExchangeServiceTokenForTenantMethod = getExchangeServiceTokenForTenantMethod =
+              io.grpc.MethodDescriptor.<com.udb.core.authn.services.v1.ExchangeServiceTokenForTenantRequest, com.udb.core.authn.services.v1.ExchangeServiceTokenForTenantResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "ExchangeServiceTokenForTenant"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authn.services.v1.ExchangeServiceTokenForTenantRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authn.services.v1.ExchangeServiceTokenForTenantResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new AuthnServiceMethodDescriptorSupplier("ExchangeServiceTokenForTenant"))
+              .build();
+        }
+      }
+    }
+    return getExchangeServiceTokenForTenantMethod;
+  }
+
   /**
    * Creates a new async stub that supports all call types for the service
    */
@@ -2496,6 +2620,66 @@ public final class AuthnServiceGrpc {
     default void revokeCertificateBinding(com.udb.core.authn.services.v1.RevokeCertificateBindingRequest request,
         io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.RevokeCertificateBindingResponse> responseObserver) {
       io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getRevokeCertificateBindingMethod(), responseObserver);
+    }
+
+    /**
+     * <pre>
+     * ── Cross-tenant service tokens (service-account tenant memberships) ──
+     * Approve a service account that lives in another (home) tenant to act in
+     * THIS tenant. Only an admin of the target tenant may call it (the caller's
+     * tenant must be target_tenant_id; a home-tenant admin alone cannot). The
+     * account must be an ACTIVE service account of home_tenant_id with an ACTIVE
+     * typed grant. Scopes go through the service-scope validator; expires_at is
+     * required and at most one year away. Written with its audit event in one
+     * transaction, in both tenants' audit trails.
+     * </pre>
+     */
+    default void createServiceAccountTenantMembership(com.udb.core.authn.services.v1.CreateServiceAccountTenantMembershipRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.CreateServiceAccountTenantMembershipResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getCreateServiceAccountTenantMembershipMethod(), responseObserver);
+    }
+
+    /**
+     * <pre>
+     * Page through the memberships approved in the caller's tenant (the
+     * target tenant), newest first.
+     * </pre>
+     */
+    default void listServiceAccountTenantMemberships(com.udb.core.authn.services.v1.ListServiceAccountTenantMembershipsRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.ListServiceAccountTenantMembershipsResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getListServiceAccountTenantMembershipsMethod(), responseObserver);
+    }
+
+    /**
+     * <pre>
+     * Revoke a membership of the caller's tenant. Every token already minted
+     * from it stops validating immediately (fail closed, audited in both
+     * tenants).
+     * </pre>
+     */
+    default void revokeServiceAccountTenantMembership(com.udb.core.authn.services.v1.RevokeServiceAccountTenantMembershipRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.RevokeServiceAccountTenantMembershipResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getRevokeServiceAccountTenantMembershipMethod(), responseObserver);
+    }
+
+    /**
+     * <pre>
+     * Exchange a service account's HOME bearer for a short-lived access token
+     * in a tenant that approved it (ServiceAccountTenantMembership). Service
+     * accounts only, and never with a token minted by this RPC. The token's
+     * subject is the service account, its tenant/project are the target, its
+     * scopes are requested_scopes within the membership's approved scopes (all
+     * of them when empty), its service identity is the home grant's, and it
+     * carries `home_tenant_id` and the membership pin. Lifetime: at most 15
+     * minutes and never past the membership's expiry; no refresh token, no
+     * session. Every use re-checks the membership (ACTIVE, same revision), the
+     * home grant and the account. No, expired or revoked membership: one
+     * uniform PERMISSION_DENIED.
+     * </pre>
+     */
+    default void exchangeServiceTokenForTenant(com.udb.core.authn.services.v1.ExchangeServiceTokenForTenantRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.ExchangeServiceTokenForTenantResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getExchangeServiceTokenForTenantMethod(), responseObserver);
     }
   }
 
@@ -3148,6 +3332,70 @@ public final class AuthnServiceGrpc {
       io.grpc.stub.ClientCalls.asyncUnaryCall(
           getChannel().newCall(getRevokeCertificateBindingMethod(), getCallOptions()), request, responseObserver);
     }
+
+    /**
+     * <pre>
+     * ── Cross-tenant service tokens (service-account tenant memberships) ──
+     * Approve a service account that lives in another (home) tenant to act in
+     * THIS tenant. Only an admin of the target tenant may call it (the caller's
+     * tenant must be target_tenant_id; a home-tenant admin alone cannot). The
+     * account must be an ACTIVE service account of home_tenant_id with an ACTIVE
+     * typed grant. Scopes go through the service-scope validator; expires_at is
+     * required and at most one year away. Written with its audit event in one
+     * transaction, in both tenants' audit trails.
+     * </pre>
+     */
+    public void createServiceAccountTenantMembership(com.udb.core.authn.services.v1.CreateServiceAccountTenantMembershipRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.CreateServiceAccountTenantMembershipResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getCreateServiceAccountTenantMembershipMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     * <pre>
+     * Page through the memberships approved in the caller's tenant (the
+     * target tenant), newest first.
+     * </pre>
+     */
+    public void listServiceAccountTenantMemberships(com.udb.core.authn.services.v1.ListServiceAccountTenantMembershipsRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.ListServiceAccountTenantMembershipsResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getListServiceAccountTenantMembershipsMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     * <pre>
+     * Revoke a membership of the caller's tenant. Every token already minted
+     * from it stops validating immediately (fail closed, audited in both
+     * tenants).
+     * </pre>
+     */
+    public void revokeServiceAccountTenantMembership(com.udb.core.authn.services.v1.RevokeServiceAccountTenantMembershipRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.RevokeServiceAccountTenantMembershipResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getRevokeServiceAccountTenantMembershipMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     * <pre>
+     * Exchange a service account's HOME bearer for a short-lived access token
+     * in a tenant that approved it (ServiceAccountTenantMembership). Service
+     * accounts only, and never with a token minted by this RPC. The token's
+     * subject is the service account, its tenant/project are the target, its
+     * scopes are requested_scopes within the membership's approved scopes (all
+     * of them when empty), its service identity is the home grant's, and it
+     * carries `home_tenant_id` and the membership pin. Lifetime: at most 15
+     * minutes and never past the membership's expiry; no refresh token, no
+     * session. Every use re-checks the membership (ACTIVE, same revision), the
+     * home grant and the account. No, expired or revoked membership: one
+     * uniform PERMISSION_DENIED.
+     * </pre>
+     */
+    public void exchangeServiceTokenForTenant(com.udb.core.authn.services.v1.ExchangeServiceTokenForTenantRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.ExchangeServiceTokenForTenantResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getExchangeServiceTokenForTenantMethod(), getCallOptions()), request, responseObserver);
+    }
   }
 
   /**
@@ -3718,6 +3966,66 @@ public final class AuthnServiceGrpc {
       return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
           getChannel(), getRevokeCertificateBindingMethod(), getCallOptions(), request);
     }
+
+    /**
+     * <pre>
+     * ── Cross-tenant service tokens (service-account tenant memberships) ──
+     * Approve a service account that lives in another (home) tenant to act in
+     * THIS tenant. Only an admin of the target tenant may call it (the caller's
+     * tenant must be target_tenant_id; a home-tenant admin alone cannot). The
+     * account must be an ACTIVE service account of home_tenant_id with an ACTIVE
+     * typed grant. Scopes go through the service-scope validator; expires_at is
+     * required and at most one year away. Written with its audit event in one
+     * transaction, in both tenants' audit trails.
+     * </pre>
+     */
+    public com.udb.core.authn.services.v1.CreateServiceAccountTenantMembershipResponse createServiceAccountTenantMembership(com.udb.core.authn.services.v1.CreateServiceAccountTenantMembershipRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getCreateServiceAccountTenantMembershipMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * Page through the memberships approved in the caller's tenant (the
+     * target tenant), newest first.
+     * </pre>
+     */
+    public com.udb.core.authn.services.v1.ListServiceAccountTenantMembershipsResponse listServiceAccountTenantMemberships(com.udb.core.authn.services.v1.ListServiceAccountTenantMembershipsRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getListServiceAccountTenantMembershipsMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * Revoke a membership of the caller's tenant. Every token already minted
+     * from it stops validating immediately (fail closed, audited in both
+     * tenants).
+     * </pre>
+     */
+    public com.udb.core.authn.services.v1.RevokeServiceAccountTenantMembershipResponse revokeServiceAccountTenantMembership(com.udb.core.authn.services.v1.RevokeServiceAccountTenantMembershipRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getRevokeServiceAccountTenantMembershipMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * Exchange a service account's HOME bearer for a short-lived access token
+     * in a tenant that approved it (ServiceAccountTenantMembership). Service
+     * accounts only, and never with a token minted by this RPC. The token's
+     * subject is the service account, its tenant/project are the target, its
+     * scopes are requested_scopes within the membership's approved scopes (all
+     * of them when empty), its service identity is the home grant's, and it
+     * carries `home_tenant_id` and the membership pin. Lifetime: at most 15
+     * minutes and never past the membership's expiry; no refresh token, no
+     * session. Every use re-checks the membership (ACTIVE, same revision), the
+     * home grant and the account. No, expired or revoked membership: one
+     * uniform PERMISSION_DENIED.
+     * </pre>
+     */
+    public com.udb.core.authn.services.v1.ExchangeServiceTokenForTenantResponse exchangeServiceTokenForTenant(com.udb.core.authn.services.v1.ExchangeServiceTokenForTenantRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getExchangeServiceTokenForTenantMethod(), getCallOptions(), request);
+    }
   }
 
   /**
@@ -4287,6 +4595,66 @@ public final class AuthnServiceGrpc {
     public com.udb.core.authn.services.v1.RevokeCertificateBindingResponse revokeCertificateBinding(com.udb.core.authn.services.v1.RevokeCertificateBindingRequest request) {
       return io.grpc.stub.ClientCalls.blockingUnaryCall(
           getChannel(), getRevokeCertificateBindingMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * ── Cross-tenant service tokens (service-account tenant memberships) ──
+     * Approve a service account that lives in another (home) tenant to act in
+     * THIS tenant. Only an admin of the target tenant may call it (the caller's
+     * tenant must be target_tenant_id; a home-tenant admin alone cannot). The
+     * account must be an ACTIVE service account of home_tenant_id with an ACTIVE
+     * typed grant. Scopes go through the service-scope validator; expires_at is
+     * required and at most one year away. Written with its audit event in one
+     * transaction, in both tenants' audit trails.
+     * </pre>
+     */
+    public com.udb.core.authn.services.v1.CreateServiceAccountTenantMembershipResponse createServiceAccountTenantMembership(com.udb.core.authn.services.v1.CreateServiceAccountTenantMembershipRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getCreateServiceAccountTenantMembershipMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * Page through the memberships approved in the caller's tenant (the
+     * target tenant), newest first.
+     * </pre>
+     */
+    public com.udb.core.authn.services.v1.ListServiceAccountTenantMembershipsResponse listServiceAccountTenantMemberships(com.udb.core.authn.services.v1.ListServiceAccountTenantMembershipsRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getListServiceAccountTenantMembershipsMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * Revoke a membership of the caller's tenant. Every token already minted
+     * from it stops validating immediately (fail closed, audited in both
+     * tenants).
+     * </pre>
+     */
+    public com.udb.core.authn.services.v1.RevokeServiceAccountTenantMembershipResponse revokeServiceAccountTenantMembership(com.udb.core.authn.services.v1.RevokeServiceAccountTenantMembershipRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getRevokeServiceAccountTenantMembershipMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * Exchange a service account's HOME bearer for a short-lived access token
+     * in a tenant that approved it (ServiceAccountTenantMembership). Service
+     * accounts only, and never with a token minted by this RPC. The token's
+     * subject is the service account, its tenant/project are the target, its
+     * scopes are requested_scopes within the membership's approved scopes (all
+     * of them when empty), its service identity is the home grant's, and it
+     * carries `home_tenant_id` and the membership pin. Lifetime: at most 15
+     * minutes and never past the membership's expiry; no refresh token, no
+     * session. Every use re-checks the membership (ACTIVE, same revision), the
+     * home grant and the account. No, expired or revoked membership: one
+     * uniform PERMISSION_DENIED.
+     * </pre>
+     */
+    public com.udb.core.authn.services.v1.ExchangeServiceTokenForTenantResponse exchangeServiceTokenForTenant(com.udb.core.authn.services.v1.ExchangeServiceTokenForTenantRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getExchangeServiceTokenForTenantMethod(), getCallOptions(), request);
     }
   }
 
@@ -4918,6 +5286,70 @@ public final class AuthnServiceGrpc {
       return io.grpc.stub.ClientCalls.futureUnaryCall(
           getChannel().newCall(getRevokeCertificateBindingMethod(), getCallOptions()), request);
     }
+
+    /**
+     * <pre>
+     * ── Cross-tenant service tokens (service-account tenant memberships) ──
+     * Approve a service account that lives in another (home) tenant to act in
+     * THIS tenant. Only an admin of the target tenant may call it (the caller's
+     * tenant must be target_tenant_id; a home-tenant admin alone cannot). The
+     * account must be an ACTIVE service account of home_tenant_id with an ACTIVE
+     * typed grant. Scopes go through the service-scope validator; expires_at is
+     * required and at most one year away. Written with its audit event in one
+     * transaction, in both tenants' audit trails.
+     * </pre>
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.udb.core.authn.services.v1.CreateServiceAccountTenantMembershipResponse> createServiceAccountTenantMembership(
+        com.udb.core.authn.services.v1.CreateServiceAccountTenantMembershipRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getCreateServiceAccountTenantMembershipMethod(), getCallOptions()), request);
+    }
+
+    /**
+     * <pre>
+     * Page through the memberships approved in the caller's tenant (the
+     * target tenant), newest first.
+     * </pre>
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.udb.core.authn.services.v1.ListServiceAccountTenantMembershipsResponse> listServiceAccountTenantMemberships(
+        com.udb.core.authn.services.v1.ListServiceAccountTenantMembershipsRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getListServiceAccountTenantMembershipsMethod(), getCallOptions()), request);
+    }
+
+    /**
+     * <pre>
+     * Revoke a membership of the caller's tenant. Every token already minted
+     * from it stops validating immediately (fail closed, audited in both
+     * tenants).
+     * </pre>
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.udb.core.authn.services.v1.RevokeServiceAccountTenantMembershipResponse> revokeServiceAccountTenantMembership(
+        com.udb.core.authn.services.v1.RevokeServiceAccountTenantMembershipRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getRevokeServiceAccountTenantMembershipMethod(), getCallOptions()), request);
+    }
+
+    /**
+     * <pre>
+     * Exchange a service account's HOME bearer for a short-lived access token
+     * in a tenant that approved it (ServiceAccountTenantMembership). Service
+     * accounts only, and never with a token minted by this RPC. The token's
+     * subject is the service account, its tenant/project are the target, its
+     * scopes are requested_scopes within the membership's approved scopes (all
+     * of them when empty), its service identity is the home grant's, and it
+     * carries `home_tenant_id` and the membership pin. Lifetime: at most 15
+     * minutes and never past the membership's expiry; no refresh token, no
+     * session. Every use re-checks the membership (ACTIVE, same revision), the
+     * home grant and the account. No, expired or revoked membership: one
+     * uniform PERMISSION_DENIED.
+     * </pre>
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.udb.core.authn.services.v1.ExchangeServiceTokenForTenantResponse> exchangeServiceTokenForTenant(
+        com.udb.core.authn.services.v1.ExchangeServiceTokenForTenantRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getExchangeServiceTokenForTenantMethod(), getCallOptions()), request);
+    }
   }
 
   private static final int METHODID_CREATE_USER = 0;
@@ -4980,6 +5412,10 @@ public final class AuthnServiceGrpc {
   private static final int METHODID_CREATE_CERTIFICATE_BINDING = 57;
   private static final int METHODID_LIST_CERTIFICATE_BINDINGS = 58;
   private static final int METHODID_REVOKE_CERTIFICATE_BINDING = 59;
+  private static final int METHODID_CREATE_SERVICE_ACCOUNT_TENANT_MEMBERSHIP = 60;
+  private static final int METHODID_LIST_SERVICE_ACCOUNT_TENANT_MEMBERSHIPS = 61;
+  private static final int METHODID_REVOKE_SERVICE_ACCOUNT_TENANT_MEMBERSHIP = 62;
+  private static final int METHODID_EXCHANGE_SERVICE_TOKEN_FOR_TENANT = 63;
 
   private static final class MethodHandlers<Req, Resp> implements
       io.grpc.stub.ServerCalls.UnaryMethod<Req, Resp>,
@@ -5237,6 +5673,22 @@ public final class AuthnServiceGrpc {
         case METHODID_REVOKE_CERTIFICATE_BINDING:
           serviceImpl.revokeCertificateBinding((com.udb.core.authn.services.v1.RevokeCertificateBindingRequest) request,
               (io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.RevokeCertificateBindingResponse>) responseObserver);
+          break;
+        case METHODID_CREATE_SERVICE_ACCOUNT_TENANT_MEMBERSHIP:
+          serviceImpl.createServiceAccountTenantMembership((com.udb.core.authn.services.v1.CreateServiceAccountTenantMembershipRequest) request,
+              (io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.CreateServiceAccountTenantMembershipResponse>) responseObserver);
+          break;
+        case METHODID_LIST_SERVICE_ACCOUNT_TENANT_MEMBERSHIPS:
+          serviceImpl.listServiceAccountTenantMemberships((com.udb.core.authn.services.v1.ListServiceAccountTenantMembershipsRequest) request,
+              (io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.ListServiceAccountTenantMembershipsResponse>) responseObserver);
+          break;
+        case METHODID_REVOKE_SERVICE_ACCOUNT_TENANT_MEMBERSHIP:
+          serviceImpl.revokeServiceAccountTenantMembership((com.udb.core.authn.services.v1.RevokeServiceAccountTenantMembershipRequest) request,
+              (io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.RevokeServiceAccountTenantMembershipResponse>) responseObserver);
+          break;
+        case METHODID_EXCHANGE_SERVICE_TOKEN_FOR_TENANT:
+          serviceImpl.exchangeServiceTokenForTenant((com.udb.core.authn.services.v1.ExchangeServiceTokenForTenantRequest) request,
+              (io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.ExchangeServiceTokenForTenantResponse>) responseObserver);
           break;
         default:
           throw new AssertionError();
@@ -5676,6 +6128,34 @@ public final class AuthnServiceGrpc {
               com.udb.core.authn.services.v1.RevokeCertificateBindingRequest,
               com.udb.core.authn.services.v1.RevokeCertificateBindingResponse>(
                 service, METHODID_REVOKE_CERTIFICATE_BINDING)))
+        .<com.udb.core.authn.services.v1.CreateServiceAccountTenantMembershipRequest, com.udb.core.authn.services.v1.CreateServiceAccountTenantMembershipResponse>addMethod(
+          getCreateServiceAccountTenantMembershipMethod(),
+          io.grpc.stub.ServerCalls.<com.udb.core.authn.services.v1.CreateServiceAccountTenantMembershipRequest, com.udb.core.authn.services.v1.CreateServiceAccountTenantMembershipResponse>asyncUnaryCall(
+            new MethodHandlers<
+              com.udb.core.authn.services.v1.CreateServiceAccountTenantMembershipRequest,
+              com.udb.core.authn.services.v1.CreateServiceAccountTenantMembershipResponse>(
+                service, METHODID_CREATE_SERVICE_ACCOUNT_TENANT_MEMBERSHIP)))
+        .<com.udb.core.authn.services.v1.ListServiceAccountTenantMembershipsRequest, com.udb.core.authn.services.v1.ListServiceAccountTenantMembershipsResponse>addMethod(
+          getListServiceAccountTenantMembershipsMethod(),
+          io.grpc.stub.ServerCalls.<com.udb.core.authn.services.v1.ListServiceAccountTenantMembershipsRequest, com.udb.core.authn.services.v1.ListServiceAccountTenantMembershipsResponse>asyncUnaryCall(
+            new MethodHandlers<
+              com.udb.core.authn.services.v1.ListServiceAccountTenantMembershipsRequest,
+              com.udb.core.authn.services.v1.ListServiceAccountTenantMembershipsResponse>(
+                service, METHODID_LIST_SERVICE_ACCOUNT_TENANT_MEMBERSHIPS)))
+        .<com.udb.core.authn.services.v1.RevokeServiceAccountTenantMembershipRequest, com.udb.core.authn.services.v1.RevokeServiceAccountTenantMembershipResponse>addMethod(
+          getRevokeServiceAccountTenantMembershipMethod(),
+          io.grpc.stub.ServerCalls.<com.udb.core.authn.services.v1.RevokeServiceAccountTenantMembershipRequest, com.udb.core.authn.services.v1.RevokeServiceAccountTenantMembershipResponse>asyncUnaryCall(
+            new MethodHandlers<
+              com.udb.core.authn.services.v1.RevokeServiceAccountTenantMembershipRequest,
+              com.udb.core.authn.services.v1.RevokeServiceAccountTenantMembershipResponse>(
+                service, METHODID_REVOKE_SERVICE_ACCOUNT_TENANT_MEMBERSHIP)))
+        .<com.udb.core.authn.services.v1.ExchangeServiceTokenForTenantRequest, com.udb.core.authn.services.v1.ExchangeServiceTokenForTenantResponse>addMethod(
+          getExchangeServiceTokenForTenantMethod(),
+          io.grpc.stub.ServerCalls.<com.udb.core.authn.services.v1.ExchangeServiceTokenForTenantRequest, com.udb.core.authn.services.v1.ExchangeServiceTokenForTenantResponse>asyncUnaryCall(
+            new MethodHandlers<
+              com.udb.core.authn.services.v1.ExchangeServiceTokenForTenantRequest,
+              com.udb.core.authn.services.v1.ExchangeServiceTokenForTenantResponse>(
+                service, METHODID_EXCHANGE_SERVICE_TOKEN_FOR_TENANT)))
         .build();
   }
 
@@ -5784,6 +6264,10 @@ public final class AuthnServiceGrpc {
               .addMethod(getCreateCertificateBindingMethod())
               .addMethod(getListCertificateBindingsMethod())
               .addMethod(getRevokeCertificateBindingMethod())
+              .addMethod(getCreateServiceAccountTenantMembershipMethod())
+              .addMethod(getListServiceAccountTenantMembershipsMethod())
+              .addMethod(getRevokeServiceAccountTenantMembershipMethod())
+              .addMethod(getExchangeServiceTokenForTenantMethod())
               .build();
         }
       }

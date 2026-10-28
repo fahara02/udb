@@ -28,7 +28,7 @@ namespace Udb.Core.Authz.Entity.V1 {
             "ZGl0LnByb3RvEhh1ZGIuY29yZS5hdXRoei5lbnRpdHkudjEaH2dvb2dsZS9w",
             "cm90b2J1Zi90aW1lc3RhbXAucHJvdG8aJHVkYi9jb3JlL2F1dGh6L2VudGl0",
             "eS92MS9lbnVtcy5wcm90bxobdWRiL2NvcmUvY29tbW9uL3YxL2RiLnByb3Rv",
-            "GiF1ZGIvY29yZS9jb21tb24vdjEvc2VjdXJpdHkucHJvdG8iwRIKE0FjY2Vz",
+            "GiF1ZGIvY29yZS9jb21tb24vdjEvc2VjdXJpdHkucHJvdG8i9BMKE0FjY2Vz",
             "c0RlY2lzaW9uQXVkaXQSYAoRZGVjaXNpb25fYXVkaXRfaWQYASABKAlCNIK3",
             "GDAKEWRlY2lzaW9uX2F1ZGl0X2lkEgRVVUlEGAEoAToRZ2VuX3JhbmRvbV91",
             "dWlkKClSD2RlY2lzaW9uQXVkaXRJZBJbCgd1c2VyX2lkGAIgASgJQkKCtxg+",
@@ -73,25 +73,29 @@ namespace Udb.Core.Authz.Entity.V1 {
             "c3BhbklkEkoKD3VzZXJfYWdlbnRfaGFzaBgZIAEoCUIigrcYHgoPdXNlcl9h",
             "Z2VudF9oYXNoEgtWQVJDSEFSKDgwKVINdXNlckFnZW50SGFzaBJHCg5kZWNp",
             "c2lvbl9pbnB1dBgaIAEoCUIggrcYHAoOZGVjaXNpb25faW5wdXQSBUpTT05C",
-            "eAGAAQFSDWRlY2lzaW9uSW5wdXQ65wL6thjNAQoWYWNjZXNzX2RlY2lzaW9u",
-            "X2F1ZGl0cxIJdWRiX2F1dGh6GAUgASoxRGVjaXNpb24gdHJhaWwgZm9yIHNl",
-            "bnNpdGl2ZSBhdXRob3JpemF0aW9uIGNoZWNrc0ABSANSCmRlY2lkZWRfYXRY",
-            "+xNiXgoQdGVuYW50X2lzb2xhdGlvbhpIKHRlbmFudF9pZDo6dGV4dCA9IGN1",
-            "cnJlbnRfc2V0dGluZygnYXBwLmN1cnJlbnRfdGVuYW50X2lkJywgdHJ1ZSk6",
-            "OnRleHQpKAGKshmQAQoGdGVuYW50Ggl0ZW5hbnRfaWQqNHRlbmFudF9pZCA9",
-            "IGN1cnJlbnRfc2V0dGluZygnYXBwLmN1cnJlbnRfdGVuYW50X2lkJykyBG5v",
-            "bmU6EWF1dGh6Lm9wZXJhdGlvbmFsQPsTSAJSBnRlbmFudFoIc3RhbmRhcmRy",
-            "FXRlbmFudC5kYXRhX3Jlc2lkZW5jeUKDAgocY29tLnVkYi5jb3JlLmF1dGh6",
-            "LmVudGl0eS52MUIYQWNjZXNzRGVjaXNpb25BdWRpdFByb3RvUAFaRGdpdGh1",
-            "Yi5jb20vZmFoYXJhMDIvdWRiL3Nkay9nby9nZW4vdWRiL2NvcmUvYXV0aHov",
-            "ZW50aXR5L3YxO2VudGl0eXYxogIEVUNBRaoCGFVkYi5Db3JlLkF1dGh6LkVu",
-            "dGl0eS5WMcoCGFVkYlxDb3JlXEF1dGh6XEVudGl0eVxWMeICJFVkYlxHUEJN",
-            "ZXRhZGF0YVxDb3JlXEF1dGh6XEVudGl0eVxWMeoCHFVkYjo6Q29yZTo6QXV0",
-            "aHo6OkVudGl0eTo6VjFiBnByb3RvMw=="));
+            "eAGAAQFSDWRlY2lzaW9uSW5wdXQSQwoMZXZhbHVhdGVkX2J5GBsgASgJQiCC",
+            "txgcCgxldmFsdWF0ZWRfYnkSDFZBUkNIQVIoMjAwKVILZXZhbHVhdGVkQnkS",
+            "bAodZXZhbHVhdGVkX2J5X3NlcnZpY2VfaWRlbnRpdHkYHCABKAlCKYK3GCUK",
+            "HWV2YWx1YXRlZF9ieV9zZXJ2aWNlX2lkZW50aXR5EgRURVhUUhpldmFsdWF0",
+            "ZWRCeVNlcnZpY2VJZGVudGl0eTrnAvq2GM0BChZhY2Nlc3NfZGVjaXNpb25f",
+            "YXVkaXRzEgl1ZGJfYXV0aHoYBSABKjFEZWNpc2lvbiB0cmFpbCBmb3Igc2Vu",
+            "c2l0aXZlIGF1dGhvcml6YXRpb24gY2hlY2tzQAFIA1IKZGVjaWRlZF9hdFj7",
+            "E2JeChB0ZW5hbnRfaXNvbGF0aW9uGkgodGVuYW50X2lkOjp0ZXh0ID0gY3Vy",
+            "cmVudF9zZXR0aW5nKCdhcHAuY3VycmVudF90ZW5hbnRfaWQnLCB0cnVlKTo6",
+            "dGV4dCkoAYqyGZABCgZ0ZW5hbnQaCXRlbmFudF9pZCo0dGVuYW50X2lkID0g",
+            "Y3VycmVudF9zZXR0aW5nKCdhcHAuY3VycmVudF90ZW5hbnRfaWQnKTIEbm9u",
+            "ZToRYXV0aHoub3BlcmF0aW9uYWxA+xNIAlIGdGVuYW50WghzdGFuZGFyZHIV",
+            "dGVuYW50LmRhdGFfcmVzaWRlbmN5QoMCChxjb20udWRiLmNvcmUuYXV0aHou",
+            "ZW50aXR5LnYxQhhBY2Nlc3NEZWNpc2lvbkF1ZGl0UHJvdG9QAVpEZ2l0aHVi",
+            "LmNvbS9mYWhhcmEwMi91ZGIvc2RrL2dvL2dlbi91ZGIvY29yZS9hdXRoei9l",
+            "bnRpdHkvdjE7ZW50aXR5djGiAgRVQ0FFqgIYVWRiLkNvcmUuQXV0aHouRW50",
+            "aXR5LlYxygIYVWRiXENvcmVcQXV0aHpcRW50aXR5XFYx4gIkVWRiXEdQQk1l",
+            "dGFkYXRhXENvcmVcQXV0aHpcRW50aXR5XFYx6gIcVWRiOjpDb3JlOjpBdXRo",
+            "ejo6RW50aXR5OjpWMWIGcHJvdG8z"));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { global::Google.Protobuf.WellKnownTypes.TimestampReflection.Descriptor, global::Udb.Core.Authz.Entity.V1.EnumsReflection.Descriptor, global::Udb.Core.Common.V1.DbReflection.Descriptor, global::Udb.Core.Common.V1.SecurityReflection.Descriptor, },
           new pbr::GeneratedClrTypeInfo(null, null, new pbr::GeneratedClrTypeInfo[] {
-            new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Core.Authz.Entity.V1.AccessDecisionAudit), global::Udb.Core.Authz.Entity.V1.AccessDecisionAudit.Parser, new[]{ "DecisionAuditId", "UserId", "Domain", "Object", "Action", "Effect", "DecisionSource", "MatchedRule", "Reason", "IpAddress", "CorrelationId", "DecidedAt", "TenantId", "DecisionId", "PolicyVersion", "RelationshipVersion", "Purpose", "Scopes", "MatchedPolicyIds", "ProjectId", "ActorKind", "ResourceType", "TraceId", "SpanId", "UserAgentHash", "DecisionInput" }, null, null, null, null)
+            new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Core.Authz.Entity.V1.AccessDecisionAudit), global::Udb.Core.Authz.Entity.V1.AccessDecisionAudit.Parser, new[]{ "DecisionAuditId", "UserId", "Domain", "Object", "Action", "Effect", "DecisionSource", "MatchedRule", "Reason", "IpAddress", "CorrelationId", "DecidedAt", "TenantId", "DecisionId", "PolicyVersion", "RelationshipVersion", "Purpose", "Scopes", "MatchedPolicyIds", "ProjectId", "ActorKind", "ResourceType", "TraceId", "SpanId", "UserAgentHash", "DecisionInput", "EvaluatedBy", "EvaluatedByServiceIdentity" }, null, null, null, null)
           }));
     }
     #endregion
@@ -159,6 +163,8 @@ namespace Udb.Core.Authz.Entity.V1 {
       spanId_ = other.spanId_;
       userAgentHash_ = other.userAgentHash_;
       decisionInput_ = other.decisionInput_;
+      evaluatedBy_ = other.evaluatedBy_;
+      evaluatedByServiceIdentity_ = other.evaluatedByServiceIdentity_;
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
     }
 
@@ -514,6 +520,35 @@ namespace Udb.Core.Authz.Entity.V1 {
       }
     }
 
+    /// <summary>Field number for the "evaluated_by" field.</summary>
+    public const int EvaluatedByFieldNumber = 27;
+    private string evaluatedBy_ = "";
+    /// <summary>
+    /// Delegated CheckAccess / BatchCheckPermissions: the service account
+    /// (subject) that evaluated this decision for `user_id`, and its grant service
+    /// identity. Empty on every non-delegated decision.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string EvaluatedBy {
+      get { return evaluatedBy_; }
+      set {
+        evaluatedBy_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "evaluated_by_service_identity" field.</summary>
+    public const int EvaluatedByServiceIdentityFieldNumber = 28;
+    private string evaluatedByServiceIdentity_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string EvaluatedByServiceIdentity {
+      get { return evaluatedByServiceIdentity_; }
+      set {
+        evaluatedByServiceIdentity_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public override bool Equals(object other) {
@@ -555,6 +590,8 @@ namespace Udb.Core.Authz.Entity.V1 {
       if (SpanId != other.SpanId) return false;
       if (UserAgentHash != other.UserAgentHash) return false;
       if (DecisionInput != other.DecisionInput) return false;
+      if (EvaluatedBy != other.EvaluatedBy) return false;
+      if (EvaluatedByServiceIdentity != other.EvaluatedByServiceIdentity) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
 
@@ -588,6 +625,8 @@ namespace Udb.Core.Authz.Entity.V1 {
       if (SpanId.Length != 0) hash ^= SpanId.GetHashCode();
       if (UserAgentHash.Length != 0) hash ^= UserAgentHash.GetHashCode();
       if (DecisionInput.Length != 0) hash ^= DecisionInput.GetHashCode();
+      if (EvaluatedBy.Length != 0) hash ^= EvaluatedBy.GetHashCode();
+      if (EvaluatedByServiceIdentity.Length != 0) hash ^= EvaluatedByServiceIdentity.GetHashCode();
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
       }
@@ -707,6 +746,14 @@ namespace Udb.Core.Authz.Entity.V1 {
         output.WriteRawTag(210, 1);
         output.WriteString(DecisionInput);
       }
+      if (EvaluatedBy.Length != 0) {
+        output.WriteRawTag(218, 1);
+        output.WriteString(EvaluatedBy);
+      }
+      if (EvaluatedByServiceIdentity.Length != 0) {
+        output.WriteRawTag(226, 1);
+        output.WriteString(EvaluatedByServiceIdentity);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
       }
@@ -818,6 +865,14 @@ namespace Udb.Core.Authz.Entity.V1 {
         output.WriteRawTag(210, 1);
         output.WriteString(DecisionInput);
       }
+      if (EvaluatedBy.Length != 0) {
+        output.WriteRawTag(218, 1);
+        output.WriteString(EvaluatedBy);
+      }
+      if (EvaluatedByServiceIdentity.Length != 0) {
+        output.WriteRawTag(226, 1);
+        output.WriteString(EvaluatedByServiceIdentity);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(ref output);
       }
@@ -903,6 +958,12 @@ namespace Udb.Core.Authz.Entity.V1 {
       }
       if (DecisionInput.Length != 0) {
         size += 2 + pb::CodedOutputStream.ComputeStringSize(DecisionInput);
+      }
+      if (EvaluatedBy.Length != 0) {
+        size += 2 + pb::CodedOutputStream.ComputeStringSize(EvaluatedBy);
+      }
+      if (EvaluatedByServiceIdentity.Length != 0) {
+        size += 2 + pb::CodedOutputStream.ComputeStringSize(EvaluatedByServiceIdentity);
       }
       if (_unknownFields != null) {
         size += _unknownFields.CalculateSize();
@@ -994,6 +1055,12 @@ namespace Udb.Core.Authz.Entity.V1 {
       }
       if (other.DecisionInput.Length != 0) {
         DecisionInput = other.DecisionInput;
+      }
+      if (other.EvaluatedBy.Length != 0) {
+        EvaluatedBy = other.EvaluatedBy;
+      }
+      if (other.EvaluatedByServiceIdentity.Length != 0) {
+        EvaluatedByServiceIdentity = other.EvaluatedByServiceIdentity;
       }
       _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
     }
@@ -1121,6 +1188,14 @@ namespace Udb.Core.Authz.Entity.V1 {
             DecisionInput = input.ReadString();
             break;
           }
+          case 218: {
+            EvaluatedBy = input.ReadString();
+            break;
+          }
+          case 226: {
+            EvaluatedByServiceIdentity = input.ReadString();
+            break;
+          }
         }
       }
     #endif
@@ -1245,6 +1320,14 @@ namespace Udb.Core.Authz.Entity.V1 {
           }
           case 210: {
             DecisionInput = input.ReadString();
+            break;
+          }
+          case 218: {
+            EvaluatedBy = input.ReadString();
+            break;
+          }
+          case 226: {
+            EvaluatedByServiceIdentity = input.ReadString();
             break;
           }
         }

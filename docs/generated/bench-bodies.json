@@ -421,6 +421,18 @@
   },
   {
     "file": "authn.md",
+    "rpc": "CreateServiceAccountTenantMembership",
+    "service": "AuthnService",
+    "wire_rpc": "AuthnService/CreateServiceAccountTenantMembership",
+    "api_alias": "create_service_account_tenant_membership",
+    "operation_id": "createServiceAccountTenantMembership",
+    "op_kind": "MUTATION",
+    "request_msg": "CreateServiceAccountTenantMembershipRequest",
+    "body": "`{ \"target_tenant_id\": \"<seed:tenant_id>\", \"user_id\": \"<seed:membership_user_id>\", \"home_tenant_id\": \"<seed:membership_home_tenant_id>\", \"target_project_id\": \"<seed:project>\", \"approved_scopes\": [\"udb:read\"], \"reason\": \"bench membership\", \"expires_at\": \"<seed:membership_expires_at>\" }`",
+    "notes": "The bench tenant (caller's own tenant) approves a service account homed in ANOTHER tenant: `membership_user_id` is an ACTIVE service account with an ACTIVE grant in `membership_home_tenant_id`; `membership_expires_at` is RFC3339, in the future and at most one year away. A home-tenant admin is refused."
+  },
+  {
+    "file": "authn.md",
     "rpc": "CreateSession",
     "service": "AuthnService",
     "wire_rpc": "AuthnService/CreateSession",
@@ -490,6 +502,18 @@
     "request_msg": "EnrollMFARequest",
     "body": "`{ \"user_id\": \"<seed:user_id>\", \"mfa_type\": \"AUTH_FACTOR_KIND_TOTP\" }`",
     "notes": "`mfa_type` enum (AuthFactorKind, non-UNSPECIFIED). Optional `context`."
+  },
+  {
+    "file": "authn.md",
+    "rpc": "ExchangeServiceTokenForTenant",
+    "service": "AuthnService",
+    "wire_rpc": "AuthnService/ExchangeServiceTokenForTenant",
+    "api_alias": "exchange_service_token_for_tenant",
+    "operation_id": "exchangeServiceTokenForTenant",
+    "op_kind": "MUTATION",
+    "request_msg": "ExchangeServiceTokenForTenantRequest",
+    "body": "`{ \"target_tenant_id\": \"<seed:tenant_id>\", \"target_project_id\": \"<seed:project>\", \"requested_scopes\": [\"udb:read\"] }`",
+    "notes": "Caller must be the `membership_user_id` service account presenting its HOME bearer with scope `udb:authn:exchange-tenant-token` (human and API-key callers get PERMISSION_DENIED). Mints a <=15-minute bench-tenant token pinned to the membership; no refresh token. Run after CreateServiceAccountTenantMembership and before RevokeServiceAccountTenantMembership."
   },
   {
     "file": "authn.md",
@@ -670,6 +694,18 @@
     "request_msg": "ListServiceAccountGrantsRequest",
     "body": "`{ \"tenant_id\": \"<seed:tenant_id>\", \"page_size\": 50 }`",
     "notes": "Numeric-offset page_token; next_page_token on full pages."
+  },
+  {
+    "file": "authn.md",
+    "rpc": "ListServiceAccountTenantMemberships",
+    "service": "AuthnService",
+    "wire_rpc": "AuthnService/ListServiceAccountTenantMemberships",
+    "api_alias": "list_service_account_tenant_memberships",
+    "operation_id": "listServiceAccountTenantMemberships",
+    "op_kind": "READ_ONLY",
+    "request_msg": "ListServiceAccountTenantMembershipsRequest",
+    "body": "`{ \"target_tenant_id\": \"<seed:tenant_id>\", \"page_size\": 50 }`",
+    "notes": "Memberships approved in the caller's own tenant only. Numeric-offset page_token; next_page_token on full pages."
   },
   {
     "file": "authn.md",
@@ -862,6 +898,18 @@
     "request_msg": "RevokeServiceAccountGrantRequest",
     "body": "`{ \"tenant_id\": \"<seed:tenant_id>\", \"user_id\": \"<seed:owner_id>\", \"reason\": \"bench revoke\" }`",
     "notes": "Idempotent; only ACTIVE grants flip."
+  },
+  {
+    "file": "authn.md",
+    "rpc": "RevokeServiceAccountTenantMembership",
+    "service": "AuthnService",
+    "wire_rpc": "AuthnService/RevokeServiceAccountTenantMembership",
+    "api_alias": "revoke_service_account_tenant_membership",
+    "operation_id": "revokeServiceAccountTenantMembership",
+    "op_kind": "DESTRUCTIVE",
+    "request_msg": "RevokeServiceAccountTenantMembershipRequest",
+    "body": "`{ \"target_tenant_id\": \"<seed:tenant_id>\", \"membership_id\": \"<seed:membership_id>\", \"reason\": \"bench revoke\" }`",
+    "notes": "`membership_id` from CreateServiceAccountTenantMembership. Tokens minted from it stop validating. Terminal membership row — run after ExchangeServiceTokenForTenant."
   },
   {
     "file": "authn.md",

@@ -73,6 +73,18 @@ class CreateUserRequest extends \Google\Protobuf\Internal\Message
      * Generated from protobuf field <code>bool password_setup_required = 12 [json_name = "passwordSetupRequired"];</code>
      */
     protected $password_setup_required = false;
+    /**
+     * E.164 phone number (`+` then 7 to 15 digits). A username plus `email` or
+     * `phone` (or both) is required. With `phone` and no `email` the account is
+     * phone-only: its verification code (or, for an invite, its password-reset
+     * code) is sent by SMS, and VerifyOTP on that code activates it. A phone-only
+     * CreateUser is refused (FAILED_PRECONDITION, `sms_delivery_unavailable`)
+     * unless SMS can be delivered: a NotificationService with SMS templates or
+     * UDB_OTP_DELIVERY_WEBHOOK_URL. With both, the phone is stored unverified.
+     *
+     * Generated from protobuf field <code>string phone = 13 [json_name = "phone"];</code>
+     */
+    protected $phone = '';
 
     /**
      * Constructor.
@@ -100,6 +112,14 @@ class CreateUserRequest extends \Google\Protobuf\Internal\Message
      *           password-reset code is sent to `email`; the user sets a password with
      *           ResetPassword(otp_id, code, new_password), which activates the account.
      *           `CreateUserResponse.otp_id` is that reset code's id.
+     *     @type string $phone
+     *           E.164 phone number (`+` then 7 to 15 digits). A username plus `email` or
+     *           `phone` (or both) is required. With `phone` and no `email` the account is
+     *           phone-only: its verification code (or, for an invite, its password-reset
+     *           code) is sent by SMS, and VerifyOTP on that code activates it. A phone-only
+     *           CreateUser is refused (FAILED_PRECONDITION, `sms_delivery_unavailable`)
+     *           unless SMS can be delivered: a NotificationService with SMS templates or
+     *           UDB_OTP_DELIVERY_WEBHOOK_URL. With both, the phone is stored unverified.
      * }
      */
     public function __construct($data = NULL) {
@@ -399,6 +419,44 @@ class CreateUserRequest extends \Google\Protobuf\Internal\Message
     {
         GPBUtil::checkBool($var);
         $this->password_setup_required = $var;
+
+        return $this;
+    }
+
+    /**
+     * E.164 phone number (`+` then 7 to 15 digits). A username plus `email` or
+     * `phone` (or both) is required. With `phone` and no `email` the account is
+     * phone-only: its verification code (or, for an invite, its password-reset
+     * code) is sent by SMS, and VerifyOTP on that code activates it. A phone-only
+     * CreateUser is refused (FAILED_PRECONDITION, `sms_delivery_unavailable`)
+     * unless SMS can be delivered: a NotificationService with SMS templates or
+     * UDB_OTP_DELIVERY_WEBHOOK_URL. With both, the phone is stored unverified.
+     *
+     * Generated from protobuf field <code>string phone = 13 [json_name = "phone"];</code>
+     * @return string
+     */
+    public function getPhone()
+    {
+        return $this->phone;
+    }
+
+    /**
+     * E.164 phone number (`+` then 7 to 15 digits). A username plus `email` or
+     * `phone` (or both) is required. With `phone` and no `email` the account is
+     * phone-only: its verification code (or, for an invite, its password-reset
+     * code) is sent by SMS, and VerifyOTP on that code activates it. A phone-only
+     * CreateUser is refused (FAILED_PRECONDITION, `sms_delivery_unavailable`)
+     * unless SMS can be delivered: a NotificationService with SMS templates or
+     * UDB_OTP_DELIVERY_WEBHOOK_URL. With both, the phone is stored unverified.
+     *
+     * Generated from protobuf field <code>string phone = 13 [json_name = "phone"];</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setPhone($var)
+    {
+        GPBUtil::checkString($var, True);
+        $this->phone = $var;
 
         return $this;
     }

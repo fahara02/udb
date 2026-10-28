@@ -65,4 +65,28 @@ public interface CheckAccessResponseOrBuilder extends
    * <code>.udb.core.authz.services.v1.Decision decision = 5 [json_name = "decision"];</code>
    */
   com.udb.core.authz.services.v1.DecisionOrBuilder getDecisionOrBuilder();
+
+  /**
+   * <pre>
+   * The subject the decision was actually evaluated for: the caller itself
+   * (claim-bound), the requested person (a service account holding
+   * `udb:authz:check-access-for`), or the body subject (cross-tenant admin).
+   * </pre>
+   *
+   * <code>string evaluated_subject = 6 [json_name = "evaluatedSubject"];</code>
+   * @return The evaluatedSubject.
+   */
+  java.lang.String getEvaluatedSubject();
+  /**
+   * <pre>
+   * The subject the decision was actually evaluated for: the caller itself
+   * (claim-bound), the requested person (a service account holding
+   * `udb:authz:check-access-for`), or the body subject (cross-tenant admin).
+   * </pre>
+   *
+   * <code>string evaluated_subject = 6 [json_name = "evaluatedSubject"];</code>
+   * @return The bytes for evaluatedSubject.
+   */
+  com.google.protobuf.ByteString
+      getEvaluatedSubjectBytes();
 }

@@ -927,4 +927,84 @@ class AuthnServiceClient extends \Grpc\BaseStub {
         $metadata, $options);
     }
 
+    /**
+     * ── Cross-tenant service tokens (service-account tenant memberships) ──
+     * Approve a service account that lives in another (home) tenant to act in
+     * THIS tenant. Only an admin of the target tenant may call it (the caller's
+     * tenant must be target_tenant_id; a home-tenant admin alone cannot). The
+     * account must be an ACTIVE service account of home_tenant_id with an ACTIVE
+     * typed grant. Scopes go through the service-scope validator; expires_at is
+     * required and at most one year away. Written with its audit event in one
+     * transaction, in both tenants' audit trails.
+     * @param \Udb\Core\Authn\Services\V1\CreateServiceAccountTenantMembershipRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall<\Udb\Core\Authn\Services\V1\CreateServiceAccountTenantMembershipResponse>
+     */
+    public function CreateServiceAccountTenantMembership(\Udb\Core\Authn\Services\V1\CreateServiceAccountTenantMembershipRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/udb.core.authn.services.v1.AuthnService/CreateServiceAccountTenantMembership',
+        $argument,
+        ['\Udb\Core\Authn\Services\V1\CreateServiceAccountTenantMembershipResponse', 'decode'],
+        $metadata, $options);
+    }
+
+    /**
+     * Page through the memberships approved in the caller's tenant (the
+     * target tenant), newest first.
+     * @param \Udb\Core\Authn\Services\V1\ListServiceAccountTenantMembershipsRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall<\Udb\Core\Authn\Services\V1\ListServiceAccountTenantMembershipsResponse>
+     */
+    public function ListServiceAccountTenantMemberships(\Udb\Core\Authn\Services\V1\ListServiceAccountTenantMembershipsRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/udb.core.authn.services.v1.AuthnService/ListServiceAccountTenantMemberships',
+        $argument,
+        ['\Udb\Core\Authn\Services\V1\ListServiceAccountTenantMembershipsResponse', 'decode'],
+        $metadata, $options);
+    }
+
+    /**
+     * Revoke a membership of the caller's tenant. Every token already minted
+     * from it stops validating immediately (fail closed, audited in both
+     * tenants).
+     * @param \Udb\Core\Authn\Services\V1\RevokeServiceAccountTenantMembershipRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall<\Udb\Core\Authn\Services\V1\RevokeServiceAccountTenantMembershipResponse>
+     */
+    public function RevokeServiceAccountTenantMembership(\Udb\Core\Authn\Services\V1\RevokeServiceAccountTenantMembershipRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/udb.core.authn.services.v1.AuthnService/RevokeServiceAccountTenantMembership',
+        $argument,
+        ['\Udb\Core\Authn\Services\V1\RevokeServiceAccountTenantMembershipResponse', 'decode'],
+        $metadata, $options);
+    }
+
+    /**
+     * Exchange a service account's HOME bearer for a short-lived access token
+     * in a tenant that approved it (ServiceAccountTenantMembership). Service
+     * accounts only, and never with a token minted by this RPC. The token's
+     * subject is the service account, its tenant/project are the target, its
+     * scopes are requested_scopes within the membership's approved scopes (all
+     * of them when empty), its service identity is the home grant's, and it
+     * carries `home_tenant_id` and the membership pin. Lifetime: at most 15
+     * minutes and never past the membership's expiry; no refresh token, no
+     * session. Every use re-checks the membership (ACTIVE, same revision), the
+     * home grant and the account. No, expired or revoked membership: one
+     * uniform PERMISSION_DENIED.
+     * @param \Udb\Core\Authn\Services\V1\ExchangeServiceTokenForTenantRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall<\Udb\Core\Authn\Services\V1\ExchangeServiceTokenForTenantResponse>
+     */
+    public function ExchangeServiceTokenForTenant(\Udb\Core\Authn\Services\V1\ExchangeServiceTokenForTenantRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/udb.core.authn.services.v1.AuthnService/ExchangeServiceTokenForTenant',
+        $argument,
+        ['\Udb\Core\Authn\Services\V1\ExchangeServiceTokenForTenantResponse', 'decode'],
+        $metadata, $options);
+    }
+
 }

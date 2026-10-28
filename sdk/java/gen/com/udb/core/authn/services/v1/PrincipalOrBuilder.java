@@ -218,4 +218,30 @@ java.lang.String defaultValue);
    */
   java.lang.String getAttributesOrThrow(
       java.lang.String key);
+
+  /**
+   * <pre>
+   * Login name of the authenticated account, read from the live user row at
+   * the moment of the call (never from a token claim), so a rename or
+   * suspension is never served stale. Empty when the credential has no native
+   * user row (external-IdP mapping, OIDC).
+   * </pre>
+   *
+   * <code>string username = 15 [json_name = "username"];</code>
+   * @return The username.
+   */
+  java.lang.String getUsername();
+  /**
+   * <pre>
+   * Login name of the authenticated account, read from the live user row at
+   * the moment of the call (never from a token claim), so a rename or
+   * suspension is never served stale. Empty when the credential has no native
+   * user row (external-IdP mapping, OIDC).
+   * </pre>
+   *
+   * <code>string username = 15 [json_name = "username"];</code>
+   * @return The bytes for username.
+   */
+  com.google.protobuf.ByteString
+      getUsernameBytes();
 }

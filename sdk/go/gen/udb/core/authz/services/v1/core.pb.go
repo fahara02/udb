@@ -666,14 +666,18 @@ func (x *CheckAccessRequest) GetAttributes() map[string]string {
 }
 
 type CheckAccessResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Allowed       bool                   `protobuf:"varint,1,opt,name=allowed,proto3" json:"allowed,omitempty"`
-	Effect        v1.PolicyEffect        `protobuf:"varint,2,opt,name=effect,proto3,enum=udb.core.authz.entity.v1.PolicyEffect" json:"effect,omitempty"`
-	MatchedRule   string                 `protobuf:"bytes,3,opt,name=matched_rule,json=matchedRule,proto3" json:"matched_rule,omitempty"`
-	Reason        string                 `protobuf:"bytes,4,opt,name=reason,proto3" json:"reason,omitempty"`
-	Decision      *Decision              `protobuf:"bytes,5,opt,name=decision,proto3" json:"decision,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state       protoimpl.MessageState `protogen:"open.v1"`
+	Allowed     bool                   `protobuf:"varint,1,opt,name=allowed,proto3" json:"allowed,omitempty"`
+	Effect      v1.PolicyEffect        `protobuf:"varint,2,opt,name=effect,proto3,enum=udb.core.authz.entity.v1.PolicyEffect" json:"effect,omitempty"`
+	MatchedRule string                 `protobuf:"bytes,3,opt,name=matched_rule,json=matchedRule,proto3" json:"matched_rule,omitempty"`
+	Reason      string                 `protobuf:"bytes,4,opt,name=reason,proto3" json:"reason,omitempty"`
+	Decision    *Decision              `protobuf:"bytes,5,opt,name=decision,proto3" json:"decision,omitempty"`
+	// The subject the decision was actually evaluated for: the caller itself
+	// (claim-bound), the requested person (a service account holding
+	// `udb:authz:check-access-for`), or the body subject (cross-tenant admin).
+	EvaluatedSubject string `protobuf:"bytes,6,opt,name=evaluated_subject,json=evaluatedSubject,proto3" json:"evaluated_subject,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
 }
 
 func (x *CheckAccessResponse) Reset() {
@@ -739,6 +743,13 @@ func (x *CheckAccessResponse) GetDecision() *Decision {
 		return x.Decision
 	}
 	return nil
+}
+
+func (x *CheckAccessResponse) GetEvaluatedSubject() string {
+	if x != nil {
+		return x.EvaluatedSubject
+	}
+	return ""
 }
 
 type AuthzRequest struct {
@@ -4093,13 +4104,14 @@ const file_udb_core_authz_services_v1_core_proto_rawDesc = "" +
 	"attributes\x1a=\n" +
 	"\x0fAttributesEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authzP\x01\"\x8a\x02\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authzP\x01\"\xb7\x02\n" +
 	"\x13CheckAccessResponse\x12\x18\n" +
 	"\aallowed\x18\x01 \x01(\bR\aallowed\x12>\n" +
 	"\x06effect\x18\x02 \x01(\x0e2&.udb.core.authz.entity.v1.PolicyEffectR\x06effect\x12!\n" +
 	"\fmatched_rule\x18\x03 \x01(\tR\vmatchedRule\x12\x16\n" +
 	"\x06reason\x18\x04 \x01(\tR\x06reason\x12@\n" +
-	"\bdecision\x18\x05 \x01(\v2$.udb.core.authz.services.v1.DecisionR\bdecision:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authzP\x01\"\xe4\x04\n" +
+	"\bdecision\x18\x05 \x01(\v2$.udb.core.authz.services.v1.DecisionR\bdecision\x12+\n" +
+	"\x11evaluated_subject\x18\x06 \x01(\tR\x10evaluatedSubject:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authzP\x01\"\xe4\x04\n" +
 	"\fAuthzRequest\x12C\n" +
 	"\tprincipal\x18\x01 \x01(\v2%.udb.core.authz.services.v1.PrincipalR\tprincipal\x12\x1d\n" +
 	"\n" +

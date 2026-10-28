@@ -8342,6 +8342,149 @@
         "x-udb-operation-kind": "destructive"
       }
     },
+    "/v1/auth/service-tokens:exchangeForTenant": {
+      "post": {
+        "summary": "Exchange a service account's HOME bearer for a short-lived access token\nin a tenant that approved it (ServiceAccountTenantMembership). Service\naccounts only, and never with a token minted by this RPC. The token's\nsubject is the service account, its tenant/project are the target, its\nscopes are requested_scopes within the membership's approved scopes (all\nof them when empty), its service identity is the home grant's, and it\ncarries `home_tenant_id` and the membership pin. Lifetime: at most 15\nminutes and never past the membership's expiry; no refresh token, no\nsession. Every use re-checks the membership (ACTIVE, same revision), the\nhome grant and the account. No, expired or revoked membership: one\nuniform PERMISSION_DENIED.",
+        "operationId": "exchangeServiceTokenForTenant",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ExchangeServiceTokenForTenantResponse"
+            }
+          },
+          "400": {
+            "description": "gRPC INVALID_ARGUMENT/FAILED_PRECONDITION mapped to HTTP 400. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "INVALID_ARGUMENT",
+              "FAILED_PRECONDITION"
+            ]
+          },
+          "401": {
+            "description": "gRPC UNAUTHENTICATED mapped to HTTP 401. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "UNAUTHENTICATED"
+            ]
+          },
+          "403": {
+            "description": "gRPC PERMISSION_DENIED mapped to HTTP 403. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "PERMISSION_DENIED"
+            ]
+          },
+          "404": {
+            "description": "gRPC NOT_FOUND mapped to HTTP 404. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "NOT_FOUND"
+            ]
+          },
+          "409": {
+            "description": "gRPC ALREADY_EXISTS/ABORTED mapped to HTTP 409. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "ALREADY_EXISTS",
+              "ABORTED"
+            ]
+          },
+          "429": {
+            "description": "gRPC RESOURCE_EXHAUSTED mapped to HTTP 429. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "RESOURCE_EXHAUSTED"
+            ]
+          },
+          "500": {
+            "description": "gRPC UNKNOWN/INTERNAL/DATA_LOSS mapped to HTTP 500. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "UNKNOWN",
+              "INTERNAL",
+              "DATA_LOSS"
+            ]
+          },
+          "501": {
+            "description": "gRPC UNIMPLEMENTED mapped to HTTP 501. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "UNIMPLEMENTED"
+            ]
+          },
+          "503": {
+            "description": "gRPC UNAVAILABLE mapped to HTTP 503. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "UNAVAILABLE"
+            ]
+          },
+          "504": {
+            "description": "gRPC DEADLINE_EXCEEDED mapped to HTTP 504. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "DEADLINE_EXCEEDED"
+            ]
+          },
+          "default": {
+            "description": "Unexpected gRPC error response. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "UNKNOWN"
+            ]
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1ExchangeServiceTokenForTenantRequest"
+            }
+          }
+        ],
+        "tags": [
+          "AuthnService"
+        ],
+        "x-udb-sdk-alias": "exchange_service_token_for_tenant",
+        "x-udb-scope": [
+          "udb:authn:exchange-tenant-token"
+        ],
+        "x-udb-retry-safe": false,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "auth",
+        "x-udb-operation-kind": "mutation"
+      }
+    },
     "/v1/auth/sessions": {
       "post": {
         "summary": "── Session management ───────────────────────────────────────────────────",
@@ -9248,6 +9391,466 @@
         },
         "x-udb-resource": "auth",
         "x-udb-operation-kind": "mutation"
+      }
+    },
+    "/v1/auth/tenants/{targetTenantId}/service-account-memberships": {
+      "get": {
+        "summary": "Page through the memberships approved in the caller's tenant (the\ntarget tenant), newest first.",
+        "operationId": "listServiceAccountTenantMemberships",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListServiceAccountTenantMembershipsResponse"
+            }
+          },
+          "400": {
+            "description": "gRPC INVALID_ARGUMENT/FAILED_PRECONDITION mapped to HTTP 400. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "INVALID_ARGUMENT",
+              "FAILED_PRECONDITION"
+            ]
+          },
+          "401": {
+            "description": "gRPC UNAUTHENTICATED mapped to HTTP 401. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "UNAUTHENTICATED"
+            ]
+          },
+          "403": {
+            "description": "gRPC PERMISSION_DENIED mapped to HTTP 403. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "PERMISSION_DENIED"
+            ]
+          },
+          "404": {
+            "description": "gRPC NOT_FOUND mapped to HTTP 404. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "NOT_FOUND"
+            ]
+          },
+          "409": {
+            "description": "gRPC ALREADY_EXISTS/ABORTED mapped to HTTP 409. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "ALREADY_EXISTS",
+              "ABORTED"
+            ]
+          },
+          "429": {
+            "description": "gRPC RESOURCE_EXHAUSTED mapped to HTTP 429. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "RESOURCE_EXHAUSTED"
+            ]
+          },
+          "500": {
+            "description": "gRPC UNKNOWN/INTERNAL/DATA_LOSS mapped to HTTP 500. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "UNKNOWN",
+              "INTERNAL",
+              "DATA_LOSS"
+            ]
+          },
+          "501": {
+            "description": "gRPC UNIMPLEMENTED mapped to HTTP 501. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "UNIMPLEMENTED"
+            ]
+          },
+          "503": {
+            "description": "gRPC UNAVAILABLE mapped to HTTP 503. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "UNAVAILABLE"
+            ]
+          },
+          "504": {
+            "description": "gRPC DEADLINE_EXCEEDED mapped to HTTP 504. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "DEADLINE_EXCEEDED"
+            ]
+          },
+          "default": {
+            "description": "Unexpected gRPC error response. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "UNKNOWN"
+            ]
+          }
+        },
+        "parameters": [
+          {
+            "name": "targetTenantId",
+            "description": "Must be the caller's own tenant.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "pageToken",
+            "description": "Opaque continuation token from a previous response.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "AuthnService"
+        ],
+        "x-udb-sdk-alias": "list_service_account_tenant_memberships",
+        "x-udb-scope": [
+          "udb:authn:read-grants"
+        ],
+        "x-udb-retry-safe": true,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "auth",
+        "x-udb-operation-kind": "read_only"
+      },
+      "post": {
+        "summary": "── Cross-tenant service tokens (service-account tenant memberships) ──\nApprove a service account that lives in another (home) tenant to act in\nTHIS tenant. Only an admin of the target tenant may call it (the caller's\ntenant must be target_tenant_id; a home-tenant admin alone cannot). The\naccount must be an ACTIVE service account of home_tenant_id with an ACTIVE\ntyped grant. Scopes go through the service-scope validator; expires_at is\nrequired and at most one year away. Written with its audit event in one\ntransaction, in both tenants' audit trails.",
+        "operationId": "createServiceAccountTenantMembership",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1CreateServiceAccountTenantMembershipResponse"
+            }
+          },
+          "400": {
+            "description": "gRPC INVALID_ARGUMENT/FAILED_PRECONDITION mapped to HTTP 400. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "INVALID_ARGUMENT",
+              "FAILED_PRECONDITION"
+            ]
+          },
+          "401": {
+            "description": "gRPC UNAUTHENTICATED mapped to HTTP 401. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "UNAUTHENTICATED"
+            ]
+          },
+          "403": {
+            "description": "gRPC PERMISSION_DENIED mapped to HTTP 403. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "PERMISSION_DENIED"
+            ]
+          },
+          "404": {
+            "description": "gRPC NOT_FOUND mapped to HTTP 404. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "NOT_FOUND"
+            ]
+          },
+          "409": {
+            "description": "gRPC ALREADY_EXISTS/ABORTED mapped to HTTP 409. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "ALREADY_EXISTS",
+              "ABORTED"
+            ]
+          },
+          "429": {
+            "description": "gRPC RESOURCE_EXHAUSTED mapped to HTTP 429. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "RESOURCE_EXHAUSTED"
+            ]
+          },
+          "500": {
+            "description": "gRPC UNKNOWN/INTERNAL/DATA_LOSS mapped to HTTP 500. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "UNKNOWN",
+              "INTERNAL",
+              "DATA_LOSS"
+            ]
+          },
+          "501": {
+            "description": "gRPC UNIMPLEMENTED mapped to HTTP 501. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "UNIMPLEMENTED"
+            ]
+          },
+          "503": {
+            "description": "gRPC UNAVAILABLE mapped to HTTP 503. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "UNAVAILABLE"
+            ]
+          },
+          "504": {
+            "description": "gRPC DEADLINE_EXCEEDED mapped to HTTP 504. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "DEADLINE_EXCEEDED"
+            ]
+          },
+          "default": {
+            "description": "Unexpected gRPC error response. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "UNKNOWN"
+            ]
+          }
+        },
+        "parameters": [
+          {
+            "name": "targetTenantId",
+            "description": "The approving tenant; must be the caller's own tenant. Format: the\ntenant's canonical UUID (not its human code).",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/AuthnServiceCreateServiceAccountTenantMembershipBody"
+            }
+          }
+        ],
+        "tags": [
+          "AuthnService"
+        ],
+        "x-udb-sdk-alias": "create_service_account_tenant_membership",
+        "x-udb-scope": [
+          "udb:authn:manage-grants"
+        ],
+        "x-udb-retry-safe": false,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "auth",
+        "x-udb-operation-kind": "mutation"
+      }
+    },
+    "/v1/auth/tenants/{targetTenantId}/service-account-memberships/{membershipId}:revoke": {
+      "post": {
+        "summary": "Revoke a membership of the caller's tenant. Every token already minted\nfrom it stops validating immediately (fail closed, audited in both\ntenants).",
+        "operationId": "revokeServiceAccountTenantMembership",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1RevokeServiceAccountTenantMembershipResponse"
+            }
+          },
+          "400": {
+            "description": "gRPC INVALID_ARGUMENT/FAILED_PRECONDITION mapped to HTTP 400. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "INVALID_ARGUMENT",
+              "FAILED_PRECONDITION"
+            ]
+          },
+          "401": {
+            "description": "gRPC UNAUTHENTICATED mapped to HTTP 401. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "UNAUTHENTICATED"
+            ]
+          },
+          "403": {
+            "description": "gRPC PERMISSION_DENIED mapped to HTTP 403. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "PERMISSION_DENIED"
+            ]
+          },
+          "404": {
+            "description": "gRPC NOT_FOUND mapped to HTTP 404. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "NOT_FOUND"
+            ]
+          },
+          "409": {
+            "description": "gRPC ALREADY_EXISTS/ABORTED mapped to HTTP 409. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "ALREADY_EXISTS",
+              "ABORTED"
+            ]
+          },
+          "429": {
+            "description": "gRPC RESOURCE_EXHAUSTED mapped to HTTP 429. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "RESOURCE_EXHAUSTED"
+            ]
+          },
+          "500": {
+            "description": "gRPC UNKNOWN/INTERNAL/DATA_LOSS mapped to HTTP 500. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "UNKNOWN",
+              "INTERNAL",
+              "DATA_LOSS"
+            ]
+          },
+          "501": {
+            "description": "gRPC UNIMPLEMENTED mapped to HTTP 501. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "UNIMPLEMENTED"
+            ]
+          },
+          "503": {
+            "description": "gRPC UNAVAILABLE mapped to HTTP 503. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "UNAVAILABLE"
+            ]
+          },
+          "504": {
+            "description": "gRPC DEADLINE_EXCEEDED mapped to HTTP 504. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "DEADLINE_EXCEEDED"
+            ]
+          },
+          "default": {
+            "description": "Unexpected gRPC error response. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "UNKNOWN"
+            ]
+          }
+        },
+        "parameters": [
+          {
+            "name": "targetTenantId",
+            "description": "Must be the caller's own tenant.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "membershipId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/AuthnServiceRevokeServiceAccountTenantMembershipBody"
+            }
+          }
+        ],
+        "tags": [
+          "AuthnService"
+        ],
+        "x-udb-sdk-alias": "revoke_service_account_tenant_membership",
+        "x-udb-scope": [
+          "udb:authn:manage-grants"
+        ],
+        "x-udb-retry-safe": false,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "auth",
+        "x-udb-operation-kind": "destructive"
       }
     },
     "/v1/auth/tenants/{tenantId}/mfa-policy": {
@@ -49243,6 +49846,38 @@
         }
       }
     },
+    "AuthnServiceCreateServiceAccountTenantMembershipBody": {
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "The service account (user id) being approved."
+        },
+        "homeTenantId": {
+          "type": "string",
+          "description": "The tenant the service account lives in; must be its actual tenant.\nFormat: the tenant's canonical UUID."
+        },
+        "targetProjectId": {
+          "type": "string",
+          "description": "Project inside the target tenant the tokens are bound to ('' = none).\nFormat: the project's stable id, as in the request context."
+        },
+        "approvedScopes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "The most a target-tenant token may carry (non-empty; no admin, owner or\nwildcard scope)."
+        },
+        "reason": {
+          "type": "string"
+        },
+        "expiresAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Required; in the future and at most one year away."
+        }
+      }
+    },
     "AuthnServiceDisableMfaFactorBody": {
       "type": "object",
       "properties": {
@@ -49363,6 +49998,14 @@
         "tenantId": {
           "type": "string"
         },
+        "reason": {
+          "type": "string"
+        }
+      }
+    },
+    "AuthnServiceRevokeServiceAccountTenantMembershipBody": {
+      "type": "object",
+      "properties": {
         "reason": {
           "type": "string"
         }
@@ -50530,6 +51173,10 @@
           "additionalProperties": {
             "type": "string"
           }
+        },
+        "username": {
+          "type": "string",
+          "description": "Login name of the authenticated account, read from the live user row at\nthe moment of the call (never from a token claim), so a rename or\nsuspension is never served stale. Empty when the credential has no native\nuser row (external-IdP mapping, OIDC)."
         }
       },
       "description": "An authenticated caller, normalized to the claims UDB and project services\nneed after token/session/API-key validation."
@@ -50861,6 +51508,13 @@
         "decisionInput": {
           "type": "string",
           "description": "Redacted decision-input attributes (JSON; credential-shaped keys scrubbed)."
+        },
+        "evaluatedBy": {
+          "type": "string",
+          "description": "Delegated CheckAccess / BatchCheckPermissions: the service account\n(subject) that evaluated this decision for `user_id`, and its grant service\nidentity. Empty on every non-delegated decision."
+        },
+        "evaluatedByServiceIdentity": {
+          "type": "string"
         }
       }
     },
@@ -52280,6 +52934,10 @@
         },
         "decision": {
           "$ref": "#/definitions/v1Decision"
+        },
+        "evaluatedSubject": {
+          "type": "string",
+          "description": "The subject the decision was actually evaluated for: the caller itself\n(claim-bound), the requested person (a service account holding\n`udb:authz:check-access-for`), or the body subject (cross-tenant admin)."
         }
       }
     },
@@ -53123,6 +53781,21 @@
         }
       }
     },
+    "v1CreateServiceAccountTenantMembershipResponse": {
+      "type": "object",
+      "properties": {
+        "membership": {
+          "$ref": "#/definitions/v1ServiceAccountTenantMembership"
+        },
+        "message": {
+          "type": "string"
+        },
+        "error": {
+          "$ref": "#/definitions/v1ApiError",
+          "title": "Error information if operation failed"
+        }
+      }
+    },
     "v1CreateSessionRequest": {
       "type": "object",
       "properties": {
@@ -53267,6 +53940,10 @@
         "passwordSetupRequired": {
           "type": "boolean",
           "description": "Invite instead of register: leave `password` empty. The account is created\nin USER_STATUS_PASSWORD_SETUP_REQUIRED with no usable password and a\npassword-reset code is sent to `email`; the user sets a password with\nResetPassword(otp_id, code, new_password), which activates the account.\n`CreateUserResponse.otp_id` is that reset code's id."
+        },
+        "phone": {
+          "type": "string",
+          "description": "E.164 phone number (`+` then 7 to 15 digits). A username plus `email` or\n`phone` (or both) is required. With `phone` and no `email` the account is\nphone-only: its verification code (or, for an invite, its password-reset\ncode) is sent by SMS, and VerifyOTP on that code activates it. A phone-only\nCreateUser is refused (FAILED_PRECONDITION, `sms_delivery_unavailable`)\nunless SMS can be delivered: a NotificationService with SMS templates or\nUDB_OTP_DELIVERY_WEBHOOK_URL. With both, the phone is stored unverified."
         }
       }
     },
@@ -54365,6 +55042,61 @@
         },
         "error": {
           "$ref": "#/definitions/v1ApiError"
+        }
+      }
+    },
+    "v1ExchangeServiceTokenForTenantRequest": {
+      "type": "object",
+      "properties": {
+        "targetTenantId": {
+          "type": "string",
+          "description": "The tenant to act in; must have an ACTIVE membership for the caller."
+        },
+        "targetProjectId": {
+          "type": "string"
+        },
+        "requestedScopes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Subset of the membership's approved scopes; empty = all of them."
+        }
+      }
+    },
+    "v1ExchangeServiceTokenForTenantResponse": {
+      "type": "object",
+      "properties": {
+        "accessToken": {
+          "type": "string",
+          "description": "Short-lived target-tenant access token (no refresh token is issued)."
+        },
+        "expiresAtUnix": {
+          "type": "string",
+          "format": "int64"
+        },
+        "tenantId": {
+          "type": "string"
+        },
+        "projectId": {
+          "type": "string"
+        },
+        "scopes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "membershipId": {
+          "type": "string",
+          "description": "The membership the token is pinned to."
+        },
+        "message": {
+          "type": "string"
+        },
+        "error": {
+          "$ref": "#/definitions/v1ApiError",
+          "title": "Error information if operation failed"
         }
       }
     },
@@ -56959,6 +57691,29 @@
         "nextPageToken": {
           "type": "string",
           "description": "Opaque pagination token; empty when this is the last page."
+        },
+        "message": {
+          "type": "string"
+        },
+        "error": {
+          "$ref": "#/definitions/v1ApiError",
+          "title": "Error information if operation failed"
+        }
+      }
+    },
+    "v1ListServiceAccountTenantMembershipsResponse": {
+      "type": "object",
+      "properties": {
+        "memberships": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1ServiceAccountTenantMembership"
+          }
+        },
+        "nextPageToken": {
+          "type": "string",
+          "description": "Empty on the last page."
         },
         "message": {
           "type": "string"
@@ -60516,6 +61271,22 @@
         }
       }
     },
+    "v1RevokeServiceAccountTenantMembershipResponse": {
+      "type": "object",
+      "properties": {
+        "revoked": {
+          "type": "boolean",
+          "description": "False when the membership was already revoked or expired."
+        },
+        "message": {
+          "type": "string"
+        },
+        "error": {
+          "$ref": "#/definitions/v1ApiError",
+          "title": "Error information if operation failed"
+        }
+      }
+    },
     "v1RevokeSessionResponse": {
       "type": "object",
       "properties": {
@@ -61551,6 +62322,65 @@
         }
       },
       "title": "---------------------------------------------------------------------------\nServiceAccountGrant — the TYPED, durable, operator-approved scope grant for a\nservice account (UDB-AUTH-003/006). Security policy no longer lives in the\nmutable free-form `users.profile_attributes_json`: a grant row is the single\nauthoritative source of a service account's immutable service identity,\ntenant/project binding, and approved scope set, consumed by password login,\nAPI-key creation/authentication, token refresh, and mTLS certificate\nbindings through ONE shared validation helper. Admin/owner/wildcard scopes\nare rejected at write time and again at every read (defense in depth).\nMutations require authn administrative scopes and produce durable audit\nevents; `revision` increments on every replace so dependent credentials can\ndetect stale grants.\n---------------------------------------------------------------------------"
+    },
+    "v1ServiceAccountTenantMembership": {
+      "type": "object",
+      "properties": {
+        "membershipId": {
+          "type": "string",
+          "description": "Server-assigned UUID identifying this membership."
+        },
+        "userId": {
+          "type": "string",
+          "description": "The service account (its user id, in its home tenant)."
+        },
+        "homeTenantId": {
+          "type": "string",
+          "description": "The tenant the service account and its typed grant live in."
+        },
+        "targetTenantId": {
+          "type": "string",
+          "description": "The tenant whose admin approved the membership; tokens are minted here."
+        },
+        "targetProjectId": {
+          "type": "string",
+          "description": "The project tokens are bound to inside the target tenant ('' = none)."
+        },
+        "approvedScopesJson": {
+          "type": "string",
+          "description": "Approved scopes (JSON array of strings): the most a target-tenant token\ncan carry. Admin/owner/wildcard scopes are rejected at write time and\nagain on every use."
+        },
+        "status": {
+          "type": "string",
+          "description": "ACTIVE | REVOKED | EXPIRED. Only an ACTIVE, unexpired membership mints or\nvalidates tokens."
+        },
+        "revision": {
+          "type": "string",
+          "format": "int64",
+          "description": "Incremented on every change (revoke). Issued tokens carry it and stop\nvalidating once it moves."
+        },
+        "approvedBy": {
+          "type": "string",
+          "description": "The target-tenant administrator who approved (or last changed) the\nmembership, and why."
+        },
+        "reason": {
+          "type": "string"
+        },
+        "expiresAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Hard end of the membership: at most one year after approval. Tokens never\noutlive it."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "title": "---------------------------------------------------------------------------\nServiceAccountTenantMembership — an admin of a TARGET tenant lets a service\naccount that lives in another (home) tenant act in the target tenant. The\nservice account keeps exactly one typed grant in its home tenant; a\nmembership adds no grant. Instead the account exchanges its home bearer for\na short-lived target-tenant token (ExchangeServiceTokenForTenant) whose\nscopes are bounded by `approved_scopes_json`. Every such token is pinned to\n`membership_id` and `revision` and re-validated on every use, so revoking\nthe membership, revoking the home grant or deactivating the account kills\nalready-issued tokens. Only an admin of the target tenant creates, lists or\nrevokes memberships; a home-tenant admin alone cannot. Rows are isolated by\nthe target tenant.\n---------------------------------------------------------------------------"
     },
     "v1Session": {
       "type": "object",

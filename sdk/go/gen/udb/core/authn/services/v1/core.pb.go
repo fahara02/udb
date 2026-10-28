@@ -46,8 +46,16 @@ type CreateUserRequest struct {
 	// ResetPassword(otp_id, code, new_password), which activates the account.
 	// `CreateUserResponse.otp_id` is that reset code's id.
 	PasswordSetupRequired bool `protobuf:"varint,12,opt,name=password_setup_required,json=passwordSetupRequired,proto3" json:"password_setup_required,omitempty"`
-	unknownFields         protoimpl.UnknownFields
-	sizeCache             protoimpl.SizeCache
+	// E.164 phone number (`+` then 7 to 15 digits). A username plus `email` or
+	// `phone` (or both) is required. With `phone` and no `email` the account is
+	// phone-only: its verification code (or, for an invite, its password-reset
+	// code) is sent by SMS, and VerifyOTP on that code activates it. A phone-only
+	// CreateUser is refused (FAILED_PRECONDITION, `sms_delivery_unavailable`)
+	// unless SMS can be delivered: a NotificationService with SMS templates or
+	// UDB_OTP_DELIVERY_WEBHOOK_URL. With both, the phone is stored unverified.
+	Phone         string `protobuf:"bytes,13,opt,name=phone,proto3" json:"phone,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *CreateUserRequest) Reset() {
@@ -162,6 +170,13 @@ func (x *CreateUserRequest) GetPasswordSetupRequired() bool {
 		return x.PasswordSetupRequired
 	}
 	return false
+}
+
+func (x *CreateUserRequest) GetPhone() string {
+	if x != nil {
+		return x.Phone
+	}
+	return ""
 }
 
 type CreateUserResponse struct {
@@ -1210,8 +1225,13 @@ type Principal struct {
 	AccountKind     v11.AccountKind        `protobuf:"varint,12,opt,name=account_kind,json=accountKind,proto3,enum=udb.core.authn.entity.v1.AccountKind" json:"account_kind,omitempty"`
 	Domain          string                 `protobuf:"bytes,13,opt,name=domain,proto3" json:"domain,omitempty"`
 	Attributes      map[string]string      `protobuf:"bytes,14,rep,name=attributes,proto3" json:"attributes,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	// Login name of the authenticated account, read from the live user row at
+	// the moment of the call (never from a token claim), so a rename or
+	// suspension is never served stale. Empty when the credential has no native
+	// user row (external-IdP mapping, OIDC).
+	Username      string `protobuf:"bytes,15,opt,name=username,proto3" json:"username,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *Principal) Reset() {
@@ -1340,6 +1360,13 @@ func (x *Principal) GetAttributes() map[string]string {
 		return x.Attributes
 	}
 	return nil
+}
+
+func (x *Principal) GetUsername() string {
+	if x != nil {
+		return x.Username
+	}
+	return ""
 }
 
 type AuthnRequest struct {
@@ -6678,7 +6705,7 @@ var File_udb_core_authn_services_v1_core_proto protoreflect.FileDescriptor
 
 const file_udb_core_authn_services_v1_core_proto_rawDesc = "" +
 	"\n" +
-	"%udb/core/authn/services/v1/core.proto\x12\x1audb.core.authn.services.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a google/protobuf/field_mask.proto\x1a$udb/core/authn/entity/v1/enums.proto\x1a&udb/core/authn/entity/v1/session.proto\x1a#udb/core/authn/entity/v1/user.proto\x1a%udb/core/authn/entity/v1/device.proto\x1a\x1cudb/core/common/v1/dto.proto\x1a\x1eudb/core/common/v1/types.proto\x1a!udb/core/common/v1/security.proto\"\xb0\x05\n" +
+	"%udb/core/authn/services/v1/core.proto\x12\x1audb.core.authn.services.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a google/protobuf/field_mask.proto\x1a$udb/core/authn/entity/v1/enums.proto\x1a&udb/core/authn/entity/v1/session.proto\x1a#udb/core/authn/entity/v1/user.proto\x1a%udb/core/authn/entity/v1/device.proto\x1a\x1cudb/core/common/v1/dto.proto\x1a\x1eudb/core/common/v1/types.proto\x1a!udb/core/common/v1/security.proto\"\xc6\x05\n" +
 	"\x11CreateUserRequest\x12\x1a\n" +
 	"\busername\x18\x01 \x01(\tR\busername\x12\x14\n" +
 	"\x05email\x18\x02 \x01(\tR\x05email\x12\x1a\n" +
@@ -6693,7 +6720,8 @@ const file_udb_core_authn_services_v1_core_proto_rawDesc = "" +
 	"\x10external_subject\x18\n" +
 	" \x01(\tR\x0fexternalSubject\x12s\n" +
 	"\x12profile_attributes\x18\v \x03(\v2D.udb.core.authn.services.v1.CreateUserRequest.ProfileAttributesEntryR\x11profileAttributes\x126\n" +
-	"\x17password_setup_required\x18\f \x01(\bR\x15passwordSetupRequired\x1aD\n" +
+	"\x17password_setup_required\x18\f \x01(\bR\x15passwordSetupRequired\x12\x14\n" +
+	"\x05phone\x18\r \x01(\tR\x05phone\x1aD\n" +
 	"\x16ProfileAttributesEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"}\n" +
@@ -6772,7 +6800,7 @@ const file_udb_core_authn_services_v1_core_proto_rawDesc = "" +
 	"\x06otp_id\x18\x01 \x01(\tR\x05otpId\x12,\n" +
 	"\x12expires_in_seconds\x18\x02 \x01(\x05R\x10expiresInSeconds\x12)\n" +
 	"\x10cooldown_seconds\x18\x03 \x01(\x05R\x0fcooldownSeconds\x12-\n" +
-	"\x12attempts_remaining\x18\x04 \x01(\x05R\x11attemptsRemaining:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"\xf6\x04\n" +
+	"\x12attempts_remaining\x18\x04 \x01(\x05R\x11attemptsRemaining:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"\x92\x05\n" +
 	"\tPrincipal\x12!\n" +
 	"\fprincipal_id\x18\x01 \x01(\tR\vprincipalId\x12\x18\n" +
 	"\asubject\x18\x02 \x01(\tR\asubject\x12\x17\n" +
@@ -6793,7 +6821,8 @@ const file_udb_core_authn_services_v1_core_proto_rawDesc = "" +
 	"\x06domain\x18\r \x01(\tR\x06domain\x12U\n" +
 	"\n" +
 	"attributes\x18\x0e \x03(\v25.udb.core.authn.services.v1.Principal.AttributesEntryR\n" +
-	"attributes\x1a=\n" +
+	"attributes\x12\x1a\n" +
+	"\busername\x18\x0f \x01(\tR\busername\x1a=\n" +
 	"\x0fAttributesEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"\x90\x05\n" +

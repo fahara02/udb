@@ -584,7 +584,7 @@ public final class CoreProto {
       "ser.proto\032%udb/core/authn/entity/v1/devi" +
       "ce.proto\032\034udb/core/common/v1/dto.proto\032\036" +
       "udb/core/common/v1/types.proto\032!udb/core" +
-      "/common/v1/security.proto\"\260\005\n\021CreateUser" +
+      "/common/v1/security.proto\"\306\005\n\021CreateUser" +
       "Request\022\032\n\010username\030\001 \001(\tR\010username\022\024\n\005e" +
       "mail\030\002 \001(\tR\005email\022\032\n\010password\030\003 \001(\tR\010pas" +
       "sword\022\033\n\ttenant_id\030\004 \001(\tR\010tenantId\022\033\n\tfu" +
@@ -599,517 +599,518 @@ public final class CoreProto {
       "re.authn.services.v1.CreateUserRequest.P" +
       "rofileAttributesEntryR\021profileAttributes" +
       "\0226\n\027password_setup_required\030\014 \001(\010R\025passw" +
-      "ordSetupRequired\032D\n\026ProfileAttributesEnt" +
-      "ry\022\020\n\003key\030\001 \001(\tR\003key\022\024\n\005value\030\002 \001(\tR\005val" +
-      "ue:\0028\001:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authnP\001\"}\n\022" +
-      "CreateUserResponse\0222\n\004user\030\001 \001(\0132\036.udb.c" +
-      "ore.authn.entity.v1.UserR\004user\022\025\n\006otp_id" +
-      "\030\002 \001(\tR\005otpId:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005auth" +
-      "nP\001\"y\n\016GetUserRequest\022\027\n\007user_id\030\001 \001(\tR\006" +
-      "userId\022\032\n\010username\030\002 \001(\tR\010username\022\024\n\005em" +
-      "ail\030\003 \001(\tR\005email:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005a" +
-      "uthnP\001\"c\n\017GetUserResponse\0222\n\004user\030\001 \001(\0132" +
-      "\036.udb.core.authn.entity.v1.UserR\004user:\034\232" +
-      "\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authnP\001\"\212\002\n\020ListUser" +
-      "sRequest\022\033\n\ttenant_id\030\001 \001(\tR\010tenantId\022H\n" +
-      "\014account_kind\030\002 \001(\0162%.udb.core.authn.ent" +
-      "ity.v1.AccountKindR\013accountKind\022<\n\006statu" +
-      "s\030\003 \001(\0162$.udb.core.authn.entity.v1.UserS" +
-      "tatusR\006status\0223\n\004page\030\004 \001(\0132\037.udb.core.c" +
-      "ommon.v1.PageRequestR\004page:\034\232\262\031\030\010\001\032\003udb(" +
-      "\260\352\0010\003@\001J\005authnP\001\"\235\001\n\021ListUsersResponse\0224" +
-      "\n\005users\030\001 \003(\0132\036.udb.core.authn.entity.v1" +
-      ".UserR\005users\0224\n\004page\030\002 \001(\0132 .udb.core.co" +
-      "mmon.v1.PageResponseR\004page:\034\232\262\031\030\010\001\032\003udb(" +
-      "\260\352\0010\003@\001J\005authnP\001\"\226\005\n\021UpdateUserRequest\022\027" +
-      "\n\007user_id\030\001 \001(\tR\006userId\022\033\n\tfull_name\030\002 \001" +
-      "(\tR\010fullName\022\024\n\005email\030\003 \001(\tR\005email\022\033\n\tte" +
-      "nant_id\030\004 \001(\tR\010tenantId\022<\n\007context\030\005 \001(\013" +
-      "2\".udb.core.common.v1.RequestContextR\007co" +
-      "ntext\022H\n\014account_kind\030\006 \001(\0162%.udb.core.a" +
-      "uthn.entity.v1.AccountKindR\013accountKind\022" +
-      "\035\n\nproject_id\030\007 \001(\tR\tprojectId\022s\n\022profil" +
-      "e_attributes\030\010 \003(\0132D.udb.core.authn.serv" +
-      "ices.v1.UpdateUserRequest.ProfileAttribu" +
-      "tesEntryR\021profileAttributes\0220\n\024external_" +
-      "provider_id\030\t \001(\tR\022externalProviderId\022)\n" +
-      "\020external_subject\030\n \001(\tR\017externalSubject" +
-      "\022;\n\013update_mask\030\013 \001(\0132\032.google.protobuf." +
-      "FieldMaskR\nupdateMask\032D\n\026ProfileAttribut" +
+      "ordSetupRequired\022\024\n\005phone\030\r \001(\tR\005phone\032D" +
+      "\n\026ProfileAttributesEntry\022\020\n\003key\030\001 \001(\tR\003k" +
+      "ey\022\024\n\005value\030\002 \001(\tR\005value:\0028\001:\034\232\262\031\030\010\001\032\003ud" +
+      "b(\260\352\0010\003@\001J\005authnP\001\"}\n\022CreateUserResponse" +
+      "\0222\n\004user\030\001 \001(\0132\036.udb.core.authn.entity.v" +
+      "1.UserR\004user\022\025\n\006otp_id\030\002 \001(\tR\005otpId:\034\232\262\031" +
+      "\030\010\001\032\003udb(\260\352\0010\003@\001J\005authnP\001\"y\n\016GetUserRequ" +
+      "est\022\027\n\007user_id\030\001 \001(\tR\006userId\022\032\n\010username" +
+      "\030\002 \001(\tR\010username\022\024\n\005email\030\003 \001(\tR\005email:\034" +
+      "\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authnP\001\"c\n\017GetUserR" +
+      "esponse\0222\n\004user\030\001 \001(\0132\036.udb.core.authn.e" +
+      "ntity.v1.UserR\004user:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001" +
+      "J\005authnP\001\"\212\002\n\020ListUsersRequest\022\033\n\ttenant" +
+      "_id\030\001 \001(\tR\010tenantId\022H\n\014account_kind\030\002 \001(" +
+      "\0162%.udb.core.authn.entity.v1.AccountKind" +
+      "R\013accountKind\022<\n\006status\030\003 \001(\0162$.udb.core" +
+      ".authn.entity.v1.UserStatusR\006status\0223\n\004p" +
+      "age\030\004 \001(\0132\037.udb.core.common.v1.PageReque" +
+      "stR\004page:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authnP\001\"\235" +
+      "\001\n\021ListUsersResponse\0224\n\005users\030\001 \003(\0132\036.ud" +
+      "b.core.authn.entity.v1.UserR\005users\0224\n\004pa" +
+      "ge\030\002 \001(\0132 .udb.core.common.v1.PageRespon" +
+      "seR\004page:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authnP\001\"\226" +
+      "\005\n\021UpdateUserRequest\022\027\n\007user_id\030\001 \001(\tR\006u" +
+      "serId\022\033\n\tfull_name\030\002 \001(\tR\010fullName\022\024\n\005em" +
+      "ail\030\003 \001(\tR\005email\022\033\n\ttenant_id\030\004 \001(\tR\010ten" +
+      "antId\022<\n\007context\030\005 \001(\0132\".udb.core.common" +
+      ".v1.RequestContextR\007context\022H\n\014account_k" +
+      "ind\030\006 \001(\0162%.udb.core.authn.entity.v1.Acc" +
+      "ountKindR\013accountKind\022\035\n\nproject_id\030\007 \001(" +
+      "\tR\tprojectId\022s\n\022profile_attributes\030\010 \003(\013" +
+      "2D.udb.core.authn.services.v1.UpdateUser" +
+      "Request.ProfileAttributesEntryR\021profileA" +
+      "ttributes\0220\n\024external_provider_id\030\t \001(\tR" +
+      "\022externalProviderId\022)\n\020external_subject\030" +
+      "\n \001(\tR\017externalSubject\022;\n\013update_mask\030\013 " +
+      "\001(\0132\032.google.protobuf.FieldMaskR\nupdateM" +
+      "ask\032D\n\026ProfileAttributesEntry\022\020\n\003key\030\001 \001" +
+      "(\tR\003key\022\024\n\005value\030\002 \001(\tR\005value:\0028\001:\034\232\262\031\030\010" +
+      "\001\032\003udb(\260\352\0010\003@\001J\005authnP\001\"f\n\022UpdateUserRes" +
+      "ponse\0222\n\004user\030\001 \001(\0132\036.udb.core.authn.ent" +
+      "ity.v1.UserR\004user:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005" +
+      "authnP\001\"\353\001\n\027ChangeUserStatusRequest\022\027\n\007u" +
+      "ser_id\030\001 \001(\tR\006userId\022C\n\nnew_status\030\002 \001(\016" +
+      "2$.udb.core.authn.entity.v1.UserStatusR\t" +
+      "newStatus\022\026\n\006reason\030\003 \001(\tR\006reason\022<\n\007con" +
+      "text\030\004 \001(\0132\".udb.core.common.v1.RequestC" +
+      "ontextR\007context:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005au" +
+      "thnP\001\"l\n\030ChangeUserStatusResponse\0222\n\004use" +
+      "r\030\001 \001(\0132\036.udb.core.authn.entity.v1.UserR" +
+      "\004user:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authnP\001\"\220\001\n\031" +
+      "AdminResetPasswordRequest\022\027\n\007user_id\030\001 \001" +
+      "(\tR\006userId\022<\n\007context\030\002 \001(\0132\".udb.core.c" +
+      "ommon.v1.RequestContextR\007context:\034\232\262\031\030\010\001" +
+      "\032\003udb(\260\352\0010\003@\001J\005authnP\001\"Q\n\032AdminResetPass" +
+      "wordResponse\022\025\n\006otp_id\030\001 \001(\tR\005otpId:\034\232\262\031" +
+      "\030\010\001\032\003udb(\260\352\0010\003@\001J\005authnP\001\"\352\001\n\016SendOTPReq" +
+      "uest\022\027\n\007user_id\030\001 \001(\tR\006userId\022<\n\010otp_typ" +
+      "e\030\002 \001(\0162!.udb.core.authn.entity.v1.OTPTy" +
+      "peR\007otpType\022%\n\016correlation_id\030\003 \001(\tR\rcor" +
+      "relationId\022<\n\007context\030\004 \001(\0132\".udb.core.c" +
+      "ommon.v1.RequestContextR\007context:\034\232\262\031\030\010\001" +
+      "\032\003udb(\260\352\0010\003@\001J\005authnP\001\"\301\001\n\017SendOTPRespon" +
+      "se\022\025\n\006otp_id\030\001 \001(\tR\005otpId\022,\n\022expires_in_" +
+      "seconds\030\002 \001(\005R\020expiresInSeconds\022)\n\020coold" +
+      "own_seconds\030\003 \001(\005R\017cooldownSeconds\022 \n\014de" +
+      "v_otp_code\030\004 \001(\tR\ndevOtpCode:\034\232\262\031\030\010\001\032\003ud" +
+      "b(\260\352\0010\003@\001J\005authnP\001\"[\n\020VerifyOTPRequest\022\025" +
+      "\n\006otp_id\030\001 \001(\tR\005otpId\022\022\n\004code\030\002 \001(\tR\004cod" +
+      "e:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authnP\001\"\244\001\n\021Veri" +
+      "fyOTPResponse\022\032\n\010verified\030\001 \001(\010R\010verifie" +
+      "d\022\027\n\007user_id\030\002 \001(\tR\006userId\022<\n\010otp_type\030\003" +
+      " \001(\0162!.udb.core.authn.entity.v1.OTPTypeR" +
+      "\007otpType:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authnP\001\"p" +
+      "\n\020ResendOTPRequest\022&\n\017original_otp_id\030\001 " +
+      "\001(\tR\roriginalOtpId\022\026\n\006reason\030\002 \001(\tR\006reas" +
+      "on:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authnP\001\"\320\001\n\021Res" +
+      "endOTPResponse\022\025\n\006otp_id\030\001 \001(\tR\005otpId\022,\n" +
+      "\022expires_in_seconds\030\002 \001(\005R\020expiresInSeco" +
+      "nds\022)\n\020cooldown_seconds\030\003 \001(\005R\017cooldownS" +
+      "econds\022-\n\022attempts_remaining\030\004 \001(\005R\021atte" +
+      "mptsRemaining:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005auth" +
+      "nP\001\"\222\005\n\tPrincipal\022!\n\014principal_id\030\001 \001(\tR" +
+      "\013principalId\022\030\n\007subject\030\002 \001(\tR\007subject\022\027" +
+      "\n\007user_id\030\003 \001(\tR\006userId\022)\n\020service_ident" +
+      "ity\030\004 \001(\tR\017serviceIdentity\022\033\n\ttenant_id\030" +
+      "\005 \001(\tR\010tenantId\022\035\n\nproject_id\030\006 \001(\tR\tpro" +
+      "jectId\022\026\n\006scopes\030\007 \003(\tR\006scopes\022\024\n\005roles\030" +
+      "\010 \003(\tR\005roles\022\037\n\013provider_id\030\t \001(\tR\nprovi" +
+      "derId\022\037\n\013auth_method\030\n \001(\tR\nauthMethod\022&" +
+      "\n\017expires_at_unix\030\013 \001(\003R\rexpiresAtUnix\022H" +
+      "\n\014account_kind\030\014 \001(\0162%.udb.core.authn.en" +
+      "tity.v1.AccountKindR\013accountKind\022\026\n\006doma" +
+      "in\030\r \001(\tR\006domain\022U\n\nattributes\030\016 \003(\01325.u" +
+      "db.core.authn.services.v1.Principal.Attr" +
+      "ibutesEntryR\nattributes\022\032\n\010username\030\017 \001(" +
+      "\tR\010username\032=\n\017AttributesEntry\022\020\n\003key\030\001 " +
+      "\001(\tR\003key\022\024\n\005value\030\002 \001(\tR\005value:\0028\001:\034\232\262\031\030" +
+      "\010\001\032\003udb(\260\352\0010\003@\001J\005authnP\001\"\220\005\n\014AuthnReques" +
+      "t\022!\n\014bearer_token\030\001 \001(\tR\013bearerToken\022\035\n\n" +
+      "session_id\030\002 \001(\tR\tsessionId\022\027\n\007api_key\030\003" +
+      " \001(\tR\006apiKey\0220\n\024external_provider_id\030\004 \001" +
+      "(\tR\022externalProviderId\022%\n\016external_token" +
+      "\030\005 \001(\tR\rexternalToken\022\037\n\013tenant_hint\030\006 \001" +
+      "(\tR\ntenantHint\022!\n\014project_hint\030\007 \001(\tR\013pr" +
+      "ojectHint\022)\n\020requested_scopes\030\010 \003(\tR\017req" +
+      "uestedScopes\022X\n\nattributes\030\t \003(\01328.udb.c" +
+      "ore.authn.services.v1.AuthnRequest.Attri" +
+      "butesEntryR\nattributes\022U\n\017credential_typ" +
+      "e\030\n \001(\0162,.udb.core.authn.entity.v1.AuthC" +
+      "redentialTypeR\016credentialType\022\033\n\tclient_" +
+      "id\030\013 \001(\tR\010clientId\022\032\n\010audience\030\014 \001(\tR\010au" +
+      "dience\022\026\n\006issuer\030\r \001(\tR\006issuer\032=\n\017Attrib" +
+      "utesEntry\022\020\n\003key\030\001 \001(\tR\003key\022\024\n\005value\030\002 \001" +
+      "(\tR\005value:\0028\001:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005auth" +
+      "nP\001\"\253\002\n\rAuthnResponse\022C\n\tprincipal\030\001 \001(\013" +
+      "2%.udb.core.authn.services.v1.PrincipalR" +
+      "\tprincipal\022\035\n\nsession_id\030\002 \001(\tR\tsessionI" +
+      "d\022!\n\014access_token\030\003 \001(\tR\013accessToken\022&\n\017" +
+      "expires_at_unix\030\004 \001(\003R\rexpiresAtUnix\0221\n\024" +
+      "relationship_version\030\005 \001(\tR\023relationship" +
+      "Version\022\032\n\010warnings\030\006 \003(\tR\010warnings:\034\232\262\031" +
+      "\030\010\001\032\003udb(\260\352\0010\003@\001J\005authnP\001\"\362\003\n\014LoginReque" +
+      "st\022\032\n\010username\030\001 \001(\tR\010username\022\032\n\010passwo" +
+      "rd\030\002 \001(\tR\010password\022E\n\013device_type\030\003 \001(\0162" +
+      "$.udb.core.authn.entity.v1.DeviceTypeR\nd" +
+      "eviceType\022\037\n\013device_name\030\004 \001(\tR\ndeviceNa" +
+      "me\022\035\n\nip_address\030\005 \001(\tR\tipAddress\022\035\n\nuse" +
+      "r_agent\030\006 \001(\tR\tuserAgent\022\033\n\tdevice_id\030\007 " +
+      "\001(\tR\010deviceId\022\034\n\nmfa_otp_id\030\010 \001(\tR\010mfaOt" +
+      "pId\022\033\n\ttotp_code\030\t \001(\tR\010totpCode\022\037\n\013tena" +
+      "nt_hint\030\n \001(\tR\ntenantHint\022!\n\014project_hin" +
+      "t\030\013 \001(\tR\013projectHint\022%\n\016access_surface\030\014" +
+      " \001(\tR\raccessSurface\022#\n\rrecovery_code\030\r \001" +
+      "(\tR\014recoveryCode:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005a" +
+      "uthnP\001\"\316\003\n\rLoginResponse\022\027\n\007user_id\030\001 \001(" +
+      "\tR\006userId\022\035\n\nsession_id\030\002 \001(\tR\tsessionId" +
+      "\022!\n\014access_token\030\003 \001(\tR\013accessToken\022#\n\rr" +
+      "efresh_token\030\004 \001(\tR\014refreshToken\0225\n\027acce" +
+      "ss_token_expires_in\030\005 \001(\005R\024accessTokenEx" +
+      "piresIn\022#\n\rsession_token\030\006 \001(\tR\014sessionT" +
+      "oken\022\035\n\ncsrf_token\030\007 \001(\tR\tcsrfToken\022!\n\014m" +
+      "fa_required\030\010 \001(\010R\013mfaRequired\022\034\n\nmfa_ot" +
+      "p_id\030\t \001(\tR\010mfaOtpId\0227\n\030refresh_token_ex" +
+      "pires_in\030\n \001(\005R\025refreshTokenExpiresIn\022*\n" +
+      "\021session_public_id\030\013 \001(\tR\017sessionPublicI" +
+      "d:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authnP\001\"w\n\023Refre" +
+      "shTokenRequest\022#\n\rrefresh_token\030\001 \001(\tR\014r" +
+      "efreshToken\022\035\n\nsession_id\030\002 \001(\tR\tsession" +
+      "Id:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authnP\001\"\230\002\n\024Ref" +
+      "reshTokenResponse\022!\n\014access_token\030\001 \001(\tR" +
+      "\013accessToken\0225\n\027access_token_expires_in\030" +
+      "\002 \001(\005R\024accessTokenExpiresIn\022#\n\rrefresh_t" +
+      "oken\030\003 \001(\tR\014refreshToken\0227\n\030refresh_toke" +
+      "n_expires_in\030\004 \001(\005R\025refreshTokenExpiresI" +
+      "n\022*\n\021session_public_id\030\005 \001(\tR\017sessionPub" +
+      "licId:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authnP\001\"\322\001\n\r" +
+      "LogoutRequest\022\035\n\nsession_id\030\001 \001(\tR\tsessi" +
+      "onId\022!\n\014all_sessions\030\002 \001(\010R\013allSessions\022" +
+      "#\n\rrevoke_reason\030\003 \001(\tR\014revokeReason\022<\n\007" +
+      "context\030\004 \001(\0132\".udb.core.common.v1.Reque" +
+      "stContextR\007context:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J" +
+      "\005authnP\001\"Y\n\016LogoutResponse\022)\n\020sessions_r" +
+      "evoked\030\001 \001(\005R\017sessionsRevoked:\034\232\262\031\030\010\001\032\003u" +
+      "db(\260\352\0010\003@\001J\005authnP\001\"\361\001\n\025ChangePasswordRe" +
+      "quest\022\027\n\007user_id\030\001 \001(\tR\006userId\022)\n\020curren" +
+      "t_password\030\002 \001(\tR\017currentPassword\022!\n\014new" +
+      "_password\030\003 \001(\tR\013newPassword\022\025\n\006otp_id\030\004" +
+      " \001(\tR\005otpId\022<\n\007context\030\005 \001(\0132\".udb.core." +
+      "common.v1.RequestContextR\007context:\034\232\262\031\030\010" +
+      "\001\032\003udb(\260\352\0010\003@\001J\005authnP\001\"\255\001\n\026ChangePasswo" +
+      "rdResponse\022\027\n\007user_id\030\001 \001(\tR\006userId\0229\n\nc" +
+      "hanged_at\030\002 \001(\0132\032.google.protobuf.Timest" +
+      "ampR\tchangedAt\022!\n\014operation_id\030\003 \001(\tR\013op" +
+      "erationId:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authnP\001\"" +
+      "\216\001\n\024ValidateTokenRequest\022\024\n\005token\030\001 \001(\tR" +
+      "\005token\022B\n\ntoken_type\030\002 \001(\0162#.udb.core.au" +
+      "thn.entity.v1.TokenTypeR\ttokenType:\034\232\262\031\030" +
+      "\010\001\032\003udb(\260\352\0010\003@\001J\005authnP\001\"\256\006\n\025ValidateTok" +
+      "enResponse\022\024\n\005valid\030\001 \001(\010R\005valid\022\027\n\007user" +
+      "_id\030\002 \001(\tR\006userId\022\035\n\nsession_id\030\003 \001(\tR\ts" +
+      "essionId\022H\n\014account_kind\030\004 \001(\0162%.udb.cor" +
+      "e.authn.entity.v1.AccountKindR\013accountKi" +
+      "nd\022\033\n\ttenant_id\030\005 \001(\tR\010tenantId\022\024\n\005roles" +
+      "\030\006 \003(\tR\005roles\0229\n\nexpires_at\030\007 \001(\0132\032.goog" +
+      "le.protobuf.TimestampR\texpiresAt\022%\n\016acce" +
+      "ss_surface\030\010 \001(\tR\raccessSurface\022\033\n\tdevic" +
+      "e_id\030\t \001(\tR\010deviceId\022\031\n\010token_id\030\n \001(\tR\007" +
+      "tokenId\022H\n\014session_type\030\013 \001(\0162%.udb.core" +
+      ".authn.entity.v1.SessionTypeR\013sessionTyp" +
+      "e\022C\n\tprincipal\030\014 \001(\0132%.udb.core.authn.se" +
+      "rvices.v1.PrincipalR\tprincipal\022\035\n\nprojec" +
+      "t_id\030\r \001(\tR\tprojectId\022\026\n\006scopes\030\016 \003(\tR\006s" +
+      "copes\022a\n\nattributes\030\017 \003(\0132A.udb.core.aut" +
+      "hn.services.v1.ValidateTokenResponse.Att" +
+      "ributesEntryR\nattributes\022*\n\021session_publ" +
+      "ic_id\030\020 \001(\tR\017sessionPublicId\032=\n\017Attribut" +
       "esEntry\022\020\n\003key\030\001 \001(\tR\003key\022\024\n\005value\030\002 \001(\t" +
       "R\005value:\0028\001:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authnP" +
-      "\001\"f\n\022UpdateUserResponse\0222\n\004user\030\001 \001(\0132\036." +
-      "udb.core.authn.entity.v1.UserR\004user:\034\232\262\031" +
-      "\030\010\001\032\003udb(\260\352\0010\003@\001J\005authnP\001\"\353\001\n\027ChangeUser" +
-      "StatusRequest\022\027\n\007user_id\030\001 \001(\tR\006userId\022C" +
-      "\n\nnew_status\030\002 \001(\0162$.udb.core.authn.enti" +
-      "ty.v1.UserStatusR\tnewStatus\022\026\n\006reason\030\003 " +
-      "\001(\tR\006reason\022<\n\007context\030\004 \001(\0132\".udb.core." +
+      "\001\"\311\001\n\024CreateSessionRequest\022C\n\tprincipal\030" +
+      "\001 \001(\0132%.udb.core.authn.services.v1.Princ" +
+      "ipalR\tprincipal\022\037\n\013ttl_seconds\030\002 \001(\003R\ntt" +
+      "lSeconds\022-\n\022client_fingerprint\030\003 \001(\tR\021cl" +
+      "ientFingerprint:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005au" +
+      "thnP\001\"|\n\025CreateSessionResponse\022\035\n\nsessio" +
+      "n_id\030\001 \001(\tR\tsessionId\022&\n\017expires_at_unix" +
+      "\030\002 \001(\003R\rexpiresAtUnix:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003" +
+      "@\001J\005authnP\001\"u\n\025RefreshSessionRequest\022\035\n\n" +
+      "session_id\030\001 \001(\tR\tsessionId\022\037\n\013ttl_secon" +
+      "ds\030\002 \001(\003R\nttlSeconds:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@" +
+      "\001J\005authnP\001\"v\n\026RefreshSessionResponse\022&\n\017" +
+      "expires_at_unix\030\001 \001(\003R\rexpiresAtUnix\022\026\n\006" +
+      "active\030\002 \001(\010R\006active:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@" +
+      "\001J\005authnP\001\"P\n\021GetSessionRequest\022\035\n\nsessi" +
+      "on_id\030\001 \001(\tR\tsessionId:\034\232\262\031\030\010\001\032\003udb(\260\352\0010" +
+      "\003@\001J\005authnP\001\"o\n\022GetSessionResponse\022;\n\007se" +
+      "ssion\030\001 \001(\0132!.udb.core.authn.entity.v1.S" +
+      "essionR\007session:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005au" +
+      "thnP\001\"\242\001\n\023ListSessionsRequest\022\027\n\007user_id" +
+      "\030\001 \001(\tR\006userId\022\037\n\013active_only\030\002 \001(\010R\nact" +
+      "iveOnly\0223\n\004page\030\003 \001(\0132\037.udb.core.common." +
+      "v1.PageRequestR\004page:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@" +
+      "\001J\005authnP\001\"\251\001\n\024ListSessionsResponse\022=\n\010s" +
+      "essions\030\001 \003(\0132!.udb.core.authn.entity.v1" +
+      ".SessionR\010sessions\0224\n\004page\030\002 \001(\0132 .udb.c" +
+      "ore.common.v1.PageResponseR\004page:\034\232\262\031\030\010\001" +
+      "\032\003udb(\260\352\0010\003@\001J\005authnP\001\"\205\002\n\024RevokeSession" +
+      "Request\022\035\n\nsession_id\030\001 \001(\tR\tsessionId\022#" +
+      "\n\rrevoke_reason\030\002 \001(\tR\014revokeReason\022<\n\007c" +
+      "ontext\030\003 \001(\0132\".udb.core.common.v1.Reques" +
+      "tContextR\007context\022!\n\014principal_id\030\004 \001(\tR" +
+      "\013principalId\022*\n\021all_for_principal\030\005 \001(\010R" +
+      "\017allForPrincipal:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005a" +
+      "uthnP\001\"\327\001\n\025RevokeSessionResponse\022\035\n\nsess" +
+      "ion_id\030\001 \001(\tR\tsessionId\0229\n\nrevoked_at\030\002 " +
+      "\001(\0132\032.google.protobuf.TimestampR\trevoked" +
+      "At\022!\n\014operation_id\030\003 \001(\tR\013operationId\022#\n" +
+      "\rrevoked_count\030\004 \001(\005R\014revokedCount:\034\232\262\031\030" +
+      "\010\001\032\003udb(\260\352\0010\003@\001J\005authnP\001\"q\n\023ValidateCSRF" +
+      "Request\022\035\n\nsession_id\030\001 \001(\tR\tsessionId\022\035" +
+      "\n\ncsrf_token\030\002 \001(\tR\tcsrfToken:\034\232\262\031\030\010\001\032\003u" +
+      "db(\260\352\0010\003@\001J\005authnP\001\"J\n\024ValidateCSRFRespo" +
+      "nse\022\024\n\005valid\030\001 \001(\010R\005valid:\034\232\262\031\030\010\001\032\003udb(\260" +
+      "\352\0010\003@\001J\005authnP\001\"\314\001\n\020EnrollMFARequest\022\027\n\007" +
+      "user_id\030\001 \001(\tR\006userId\022C\n\010mfa_type\030\002 \001(\0162" +
+      "(.udb.core.authn.entity.v1.AuthFactorKin" +
+      "dR\007mfaType\022<\n\007context\030\003 \001(\0132\".udb.core.c" +
+      "ommon.v1.RequestContextR\007context:\034\232\262\031\030\010\001" +
+      "\032\003udb(\260\352\0010\003@\001J\005authnP\001\"\226\001\n\021EnrollMFAResp" +
+      "onse\022\037\n\013totp_secret\030\001 \001(\tR\ntotpSecret\022\036\n" +
+      "\013totp_qr_uri\030\002 \001(\tR\ttotpQrUri\022\"\n\rverify_" +
+      "otp_id\030\003 \001(\tR\013verifyOtpId:\034\232\262\031\030\010\001\032\003udb(\260" +
+      "\352\0010\003@\001J\005authnP\001\"\275\001\n\033ConfirmMFAEnrollment" +
+      "Request\022\027\n\007user_id\030\001 \001(\tR\006userId\022\025\n\006otp_" +
+      "id\030\002 \001(\tR\005otpId\022\022\n\004code\030\003 \001(\tR\004code\022<\n\007c" +
+      "ontext\030\004 \001(\0132\".udb.core.common.v1.Reques" +
+      "tContextR\007context:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005" +
+      "authnP\001\"X\n\034ConfirmMFAEnrollmentResponse\022" +
+      "\032\n\010enrolled\030\001 \001(\010R\010enrolled:\034\232\262\031\030\010\001\032\003udb" +
+      "(\260\352\0010\003@\001J\005authnP\001\"\251\001\n\034GenerateRecoveryCo" +
+      "desRequest\022\027\n\007user_id\030\001 \001(\tR\006userId\022\024\n\005c" +
+      "ount\030\002 \001(\005R\005count\022<\n\007context\030\003 \001(\0132\".udb" +
+      ".core.common.v1.RequestContextR\007context:" +
+      "\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authnP\001\"q\n\035Generat" +
+      "eRecoveryCodesResponse\022\024\n\005codes\030\001 \003(\tR\005c" +
+      "odes\022\034\n\tgenerated\030\002 \001(\005R\tgenerated:\034\232\262\031\030" +
+      "\010\001\032\003udb(\260\352\0010\003@\001J\005authnP\001\"\257\001\n\023PutMfaPolic" +
+      "yRequest\022\033\n\ttenant_id\030\001 \001(\tR\010tenantId\022\037\n" +
+      "\013require_mfa\030\002 \001(\010R\nrequireMfa\022<\n\007contex" +
+      "t\030\003 \001(\0132\".udb.core.common.v1.RequestCont" +
+      "extR\007context:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authn" +
+      "P\001\"r\n\024PutMfaPolicyResponse\022\033\n\ttenant_id\030" +
+      "\001 \001(\tR\010tenantId\022\037\n\013require_mfa\030\002 \001(\010R\nre" +
+      "quireMfa:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authnP\001\"\216" +
+      "\001\n\023GetMfaPolicyRequest\022\033\n\ttenant_id\030\001 \001(" +
+      "\tR\010tenantId\022<\n\007context\030\002 \001(\0132\".udb.core." +
       "common.v1.RequestContextR\007context:\034\232\262\031\030\010" +
-      "\001\032\003udb(\260\352\0010\003@\001J\005authnP\001\"l\n\030ChangeUserSta" +
-      "tusResponse\0222\n\004user\030\001 \001(\0132\036.udb.core.aut" +
-      "hn.entity.v1.UserR\004user:\034\232\262\031\030\010\001\032\003udb(\260\352\001" +
-      "0\003@\001J\005authnP\001\"\220\001\n\031AdminResetPasswordRequ" +
-      "est\022\027\n\007user_id\030\001 \001(\tR\006userId\022<\n\007context\030" +
-      "\002 \001(\0132\".udb.core.common.v1.RequestContex" +
-      "tR\007context:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authnP\001" +
-      "\"Q\n\032AdminResetPasswordResponse\022\025\n\006otp_id" +
-      "\030\001 \001(\tR\005otpId:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005auth" +
-      "nP\001\"\352\001\n\016SendOTPRequest\022\027\n\007user_id\030\001 \001(\tR" +
-      "\006userId\022<\n\010otp_type\030\002 \001(\0162!.udb.core.aut" +
-      "hn.entity.v1.OTPTypeR\007otpType\022%\n\016correla" +
-      "tion_id\030\003 \001(\tR\rcorrelationId\022<\n\007context\030" +
-      "\004 \001(\0132\".udb.core.common.v1.RequestContex" +
-      "tR\007context:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authnP\001" +
-      "\"\301\001\n\017SendOTPResponse\022\025\n\006otp_id\030\001 \001(\tR\005ot" +
-      "pId\022,\n\022expires_in_seconds\030\002 \001(\005R\020expires" +
-      "InSeconds\022)\n\020cooldown_seconds\030\003 \001(\005R\017coo" +
-      "ldownSeconds\022 \n\014dev_otp_code\030\004 \001(\tR\ndevO" +
-      "tpCode:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authnP\001\"[\n\020" +
-      "VerifyOTPRequest\022\025\n\006otp_id\030\001 \001(\tR\005otpId\022" +
-      "\022\n\004code\030\002 \001(\tR\004code:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001" +
-      "J\005authnP\001\"\244\001\n\021VerifyOTPResponse\022\032\n\010verif" +
-      "ied\030\001 \001(\010R\010verified\022\027\n\007user_id\030\002 \001(\tR\006us" +
-      "erId\022<\n\010otp_type\030\003 \001(\0162!.udb.core.authn." +
-      "entity.v1.OTPTypeR\007otpType:\034\232\262\031\030\010\001\032\003udb(" +
-      "\260\352\0010\003@\001J\005authnP\001\"p\n\020ResendOTPRequest\022&\n\017" +
-      "original_otp_id\030\001 \001(\tR\roriginalOtpId\022\026\n\006" +
-      "reason\030\002 \001(\tR\006reason:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@" +
-      "\001J\005authnP\001\"\320\001\n\021ResendOTPResponse\022\025\n\006otp_" +
-      "id\030\001 \001(\tR\005otpId\022,\n\022expires_in_seconds\030\002 " +
-      "\001(\005R\020expiresInSeconds\022)\n\020cooldown_second" +
-      "s\030\003 \001(\005R\017cooldownSeconds\022-\n\022attempts_rem" +
-      "aining\030\004 \001(\005R\021attemptsRemaining:\034\232\262\031\030\010\001\032" +
-      "\003udb(\260\352\0010\003@\001J\005authnP\001\"\366\004\n\tPrincipal\022!\n\014p" +
-      "rincipal_id\030\001 \001(\tR\013principalId\022\030\n\007subjec" +
-      "t\030\002 \001(\tR\007subject\022\027\n\007user_id\030\003 \001(\tR\006userI" +
-      "d\022)\n\020service_identity\030\004 \001(\tR\017serviceIden" +
-      "tity\022\033\n\ttenant_id\030\005 \001(\tR\010tenantId\022\035\n\npro" +
-      "ject_id\030\006 \001(\tR\tprojectId\022\026\n\006scopes\030\007 \003(\t" +
-      "R\006scopes\022\024\n\005roles\030\010 \003(\tR\005roles\022\037\n\013provid" +
-      "er_id\030\t \001(\tR\nproviderId\022\037\n\013auth_method\030\n" +
-      " \001(\tR\nauthMethod\022&\n\017expires_at_unix\030\013 \001(" +
-      "\003R\rexpiresAtUnix\022H\n\014account_kind\030\014 \001(\0162%" +
-      ".udb.core.authn.entity.v1.AccountKindR\013a" +
-      "ccountKind\022\026\n\006domain\030\r \001(\tR\006domain\022U\n\nat" +
-      "tributes\030\016 \003(\01325.udb.core.authn.services" +
-      ".v1.Principal.AttributesEntryR\nattribute" +
-      "s\032=\n\017AttributesEntry\022\020\n\003key\030\001 \001(\tR\003key\022\024" +
-      "\n\005value\030\002 \001(\tR\005value:\0028\001:\034\232\262\031\030\010\001\032\003udb(\260\352" +
-      "\0010\003@\001J\005authnP\001\"\220\005\n\014AuthnRequest\022!\n\014beare" +
-      "r_token\030\001 \001(\tR\013bearerToken\022\035\n\nsession_id" +
-      "\030\002 \001(\tR\tsessionId\022\027\n\007api_key\030\003 \001(\tR\006apiK" +
-      "ey\0220\n\024external_provider_id\030\004 \001(\tR\022extern" +
-      "alProviderId\022%\n\016external_token\030\005 \001(\tR\rex" +
-      "ternalToken\022\037\n\013tenant_hint\030\006 \001(\tR\ntenant" +
-      "Hint\022!\n\014project_hint\030\007 \001(\tR\013projectHint\022" +
-      ")\n\020requested_scopes\030\010 \003(\tR\017requestedScop" +
-      "es\022X\n\nattributes\030\t \003(\01328.udb.core.authn." +
-      "services.v1.AuthnRequest.AttributesEntry" +
-      "R\nattributes\022U\n\017credential_type\030\n \001(\0162,." +
-      "udb.core.authn.entity.v1.AuthCredentialT" +
-      "ypeR\016credentialType\022\033\n\tclient_id\030\013 \001(\tR\010" +
-      "clientId\022\032\n\010audience\030\014 \001(\tR\010audience\022\026\n\006" +
-      "issuer\030\r \001(\tR\006issuer\032=\n\017AttributesEntry\022" +
-      "\020\n\003key\030\001 \001(\tR\003key\022\024\n\005value\030\002 \001(\tR\005value:" +
-      "\0028\001:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authnP\001\"\253\002\n\rAu" +
-      "thnResponse\022C\n\tprincipal\030\001 \001(\0132%.udb.cor" +
-      "e.authn.services.v1.PrincipalR\tprincipal" +
-      "\022\035\n\nsession_id\030\002 \001(\tR\tsessionId\022!\n\014acces" +
-      "s_token\030\003 \001(\tR\013accessToken\022&\n\017expires_at" +
-      "_unix\030\004 \001(\003R\rexpiresAtUnix\0221\n\024relationsh" +
-      "ip_version\030\005 \001(\tR\023relationshipVersion\022\032\n" +
-      "\010warnings\030\006 \003(\tR\010warnings:\034\232\262\031\030\010\001\032\003udb(\260" +
-      "\352\0010\003@\001J\005authnP\001\"\362\003\n\014LoginRequest\022\032\n\010user" +
-      "name\030\001 \001(\tR\010username\022\032\n\010password\030\002 \001(\tR\010" +
-      "password\022E\n\013device_type\030\003 \001(\0162$.udb.core" +
-      ".authn.entity.v1.DeviceTypeR\ndeviceType\022" +
-      "\037\n\013device_name\030\004 \001(\tR\ndeviceName\022\035\n\nip_a" +
-      "ddress\030\005 \001(\tR\tipAddress\022\035\n\nuser_agent\030\006 " +
-      "\001(\tR\tuserAgent\022\033\n\tdevice_id\030\007 \001(\tR\010devic" +
-      "eId\022\034\n\nmfa_otp_id\030\010 \001(\tR\010mfaOtpId\022\033\n\ttot" +
-      "p_code\030\t \001(\tR\010totpCode\022\037\n\013tenant_hint\030\n " +
-      "\001(\tR\ntenantHint\022!\n\014project_hint\030\013 \001(\tR\013p" +
-      "rojectHint\022%\n\016access_surface\030\014 \001(\tR\racce" +
-      "ssSurface\022#\n\rrecovery_code\030\r \001(\tR\014recove" +
-      "ryCode:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authnP\001\"\316\003\n" +
-      "\rLoginResponse\022\027\n\007user_id\030\001 \001(\tR\006userId\022" +
-      "\035\n\nsession_id\030\002 \001(\tR\tsessionId\022!\n\014access" +
-      "_token\030\003 \001(\tR\013accessToken\022#\n\rrefresh_tok" +
-      "en\030\004 \001(\tR\014refreshToken\0225\n\027access_token_e" +
-      "xpires_in\030\005 \001(\005R\024accessTokenExpiresIn\022#\n" +
-      "\rsession_token\030\006 \001(\tR\014sessionToken\022\035\n\ncs" +
-      "rf_token\030\007 \001(\tR\tcsrfToken\022!\n\014mfa_require" +
-      "d\030\010 \001(\010R\013mfaRequired\022\034\n\nmfa_otp_id\030\t \001(\t" +
-      "R\010mfaOtpId\0227\n\030refresh_token_expires_in\030\n" +
-      " \001(\005R\025refreshTokenExpiresIn\022*\n\021session_p" +
-      "ublic_id\030\013 \001(\tR\017sessionPublicId:\034\232\262\031\030\010\001\032" +
-      "\003udb(\260\352\0010\003@\001J\005authnP\001\"w\n\023RefreshTokenReq" +
-      "uest\022#\n\rrefresh_token\030\001 \001(\tR\014refreshToke" +
-      "n\022\035\n\nsession_id\030\002 \001(\tR\tsessionId:\034\232\262\031\030\010\001" +
-      "\032\003udb(\260\352\0010\003@\001J\005authnP\001\"\230\002\n\024RefreshTokenR" +
-      "esponse\022!\n\014access_token\030\001 \001(\tR\013accessTok" +
-      "en\0225\n\027access_token_expires_in\030\002 \001(\005R\024acc" +
-      "essTokenExpiresIn\022#\n\rrefresh_token\030\003 \001(\t" +
-      "R\014refreshToken\0227\n\030refresh_token_expires_" +
-      "in\030\004 \001(\005R\025refreshTokenExpiresIn\022*\n\021sessi" +
-      "on_public_id\030\005 \001(\tR\017sessionPublicId:\034\232\262\031" +
-      "\030\010\001\032\003udb(\260\352\0010\003@\001J\005authnP\001\"\322\001\n\rLogoutRequ" +
-      "est\022\035\n\nsession_id\030\001 \001(\tR\tsessionId\022!\n\014al" +
-      "l_sessions\030\002 \001(\010R\013allSessions\022#\n\rrevoke_" +
-      "reason\030\003 \001(\tR\014revokeReason\022<\n\007context\030\004 " +
-      "\001(\0132\".udb.core.common.v1.RequestContextR" +
-      "\007context:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authnP\001\"Y" +
-      "\n\016LogoutResponse\022)\n\020sessions_revoked\030\001 \001" +
-      "(\005R\017sessionsRevoked:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001" +
-      "J\005authnP\001\"\361\001\n\025ChangePasswordRequest\022\027\n\007u" +
-      "ser_id\030\001 \001(\tR\006userId\022)\n\020current_password" +
-      "\030\002 \001(\tR\017currentPassword\022!\n\014new_password\030" +
-      "\003 \001(\tR\013newPassword\022\025\n\006otp_id\030\004 \001(\tR\005otpI" +
-      "d\022<\n\007context\030\005 \001(\0132\".udb.core.common.v1." +
-      "RequestContextR\007context:\034\232\262\031\030\010\001\032\003udb(\260\352\001" +
-      "0\003@\001J\005authnP\001\"\255\001\n\026ChangePasswordResponse" +
-      "\022\027\n\007user_id\030\001 \001(\tR\006userId\0229\n\nchanged_at\030" +
-      "\002 \001(\0132\032.google.protobuf.TimestampR\tchang" +
-      "edAt\022!\n\014operation_id\030\003 \001(\tR\013operationId:" +
-      "\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authnP\001\"\216\001\n\024Valida" +
-      "teTokenRequest\022\024\n\005token\030\001 \001(\tR\005token\022B\n\n" +
-      "token_type\030\002 \001(\0162#.udb.core.authn.entity" +
-      ".v1.TokenTypeR\ttokenType:\034\232\262\031\030\010\001\032\003udb(\260\352" +
-      "\0010\003@\001J\005authnP\001\"\256\006\n\025ValidateTokenResponse" +
-      "\022\024\n\005valid\030\001 \001(\010R\005valid\022\027\n\007user_id\030\002 \001(\tR" +
-      "\006userId\022\035\n\nsession_id\030\003 \001(\tR\tsessionId\022H" +
-      "\n\014account_kind\030\004 \001(\0162%.udb.core.authn.en" +
-      "tity.v1.AccountKindR\013accountKind\022\033\n\ttena" +
-      "nt_id\030\005 \001(\tR\010tenantId\022\024\n\005roles\030\006 \003(\tR\005ro" +
-      "les\0229\n\nexpires_at\030\007 \001(\0132\032.google.protobu" +
-      "f.TimestampR\texpiresAt\022%\n\016access_surface" +
-      "\030\010 \001(\tR\raccessSurface\022\033\n\tdevice_id\030\t \001(\t" +
-      "R\010deviceId\022\031\n\010token_id\030\n \001(\tR\007tokenId\022H\n" +
-      "\014session_type\030\013 \001(\0162%.udb.core.authn.ent" +
-      "ity.v1.SessionTypeR\013sessionType\022C\n\tprinc" +
-      "ipal\030\014 \001(\0132%.udb.core.authn.services.v1." +
-      "PrincipalR\tprincipal\022\035\n\nproject_id\030\r \001(\t" +
-      "R\tprojectId\022\026\n\006scopes\030\016 \003(\tR\006scopes\022a\n\na" +
-      "ttributes\030\017 \003(\0132A.udb.core.authn.service" +
-      "s.v1.ValidateTokenResponse.AttributesEnt" +
-      "ryR\nattributes\022*\n\021session_public_id\030\020 \001(" +
-      "\tR\017sessionPublicId\032=\n\017AttributesEntry\022\020\n" +
-      "\003key\030\001 \001(\tR\003key\022\024\n\005value\030\002 \001(\tR\005value:\0028" +
-      "\001:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authnP\001\"\311\001\n\024Crea" +
-      "teSessionRequest\022C\n\tprincipal\030\001 \001(\0132%.ud" +
-      "b.core.authn.services.v1.PrincipalR\tprin" +
-      "cipal\022\037\n\013ttl_seconds\030\002 \001(\003R\nttlSeconds\022-" +
-      "\n\022client_fingerprint\030\003 \001(\tR\021clientFinger" +
-      "print:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authnP\001\"|\n\025C" +
-      "reateSessionResponse\022\035\n\nsession_id\030\001 \001(\t" +
-      "R\tsessionId\022&\n\017expires_at_unix\030\002 \001(\003R\rex" +
-      "piresAtUnix:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authnP" +
-      "\001\"u\n\025RefreshSessionRequest\022\035\n\nsession_id" +
-      "\030\001 \001(\tR\tsessionId\022\037\n\013ttl_seconds\030\002 \001(\003R\n" +
-      "ttlSeconds:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authnP\001" +
-      "\"v\n\026RefreshSessionResponse\022&\n\017expires_at" +
-      "_unix\030\001 \001(\003R\rexpiresAtUnix\022\026\n\006active\030\002 \001" +
-      "(\010R\006active:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authnP\001" +
-      "\"P\n\021GetSessionRequest\022\035\n\nsession_id\030\001 \001(" +
-      "\tR\tsessionId:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authn" +
-      "P\001\"o\n\022GetSessionResponse\022;\n\007session\030\001 \001(" +
-      "\0132!.udb.core.authn.entity.v1.SessionR\007se" +
-      "ssion:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authnP\001\"\242\001\n\023" +
-      "ListSessionsRequest\022\027\n\007user_id\030\001 \001(\tR\006us" +
-      "erId\022\037\n\013active_only\030\002 \001(\010R\nactiveOnly\0223\n" +
-      "\004page\030\003 \001(\0132\037.udb.core.common.v1.PageReq" +
-      "uestR\004page:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authnP\001" +
-      "\"\251\001\n\024ListSessionsResponse\022=\n\010sessions\030\001 " +
-      "\003(\0132!.udb.core.authn.entity.v1.SessionR\010" +
-      "sessions\0224\n\004page\030\002 \001(\0132 .udb.core.common" +
-      ".v1.PageResponseR\004page:\034\232\262\031\030\010\001\032\003udb(\260\352\0010" +
-      "\003@\001J\005authnP\001\"\205\002\n\024RevokeSessionRequest\022\035\n" +
-      "\nsession_id\030\001 \001(\tR\tsessionId\022#\n\rrevoke_r" +
-      "eason\030\002 \001(\tR\014revokeReason\022<\n\007context\030\003 \001" +
+      "\001\032\003udb(\260\352\0010\003@\001J\005authnP\001\"r\n\024GetMfaPolicyR" +
+      "esponse\022\033\n\ttenant_id\030\001 \001(\tR\010tenantId\022\037\n\013" +
+      "require_mfa\030\002 \001(\010R\nrequireMfa:\034\232\262\031\030\010\001\032\003u" +
+      "db(\260\352\0010\003@\001J\005authnP\001\"\223\001\n\025ForgotPasswordRe" +
+      "quest\022\036\n\nidentifier\030\001 \001(\tR\nidentifier\022<\n" +
+      "\007context\030\002 \001(\0132\".udb.core.common.v1.Requ" +
+      "estContextR\007context:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001" +
+      "J\005authnP\001\"o\n\026ForgotPasswordResponse\022\025\n\006o" +
+      "tp_id\030\001 \001(\tR\005otpId\022 \n\014dev_otp_code\030\002 \001(\t" +
+      "R\ndevOtpCode:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authn" +
+      "P\001\"\300\001\n\024ResetPasswordRequest\022\025\n\006otp_id\030\001 " +
+      "\001(\tR\005otpId\022\022\n\004code\030\002 \001(\tR\004code\022!\n\014new_pa" +
+      "ssword\030\003 \001(\tR\013newPassword\022<\n\007context\030\004 \001" +
       "(\0132\".udb.core.common.v1.RequestContextR\007" +
-      "context\022!\n\014principal_id\030\004 \001(\tR\013principal" +
-      "Id\022*\n\021all_for_principal\030\005 \001(\010R\017allForPri" +
-      "ncipal:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authnP\001\"\327\001\n" +
-      "\025RevokeSessionResponse\022\035\n\nsession_id\030\001 \001" +
-      "(\tR\tsessionId\0229\n\nrevoked_at\030\002 \001(\0132\032.goog" +
-      "le.protobuf.TimestampR\trevokedAt\022!\n\014oper" +
-      "ation_id\030\003 \001(\tR\013operationId\022#\n\rrevoked_c" +
-      "ount\030\004 \001(\005R\014revokedCount:\034\232\262\031\030\010\001\032\003udb(\260\352" +
-      "\0010\003@\001J\005authnP\001\"q\n\023ValidateCSRFRequest\022\035\n" +
-      "\nsession_id\030\001 \001(\tR\tsessionId\022\035\n\ncsrf_tok" +
-      "en\030\002 \001(\tR\tcsrfToken:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001" +
-      "J\005authnP\001\"J\n\024ValidateCSRFResponse\022\024\n\005val" +
-      "id\030\001 \001(\010R\005valid:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005au" +
-      "thnP\001\"\314\001\n\020EnrollMFARequest\022\027\n\007user_id\030\001 " +
-      "\001(\tR\006userId\022C\n\010mfa_type\030\002 \001(\0162(.udb.core" +
-      ".authn.entity.v1.AuthFactorKindR\007mfaType" +
-      "\022<\n\007context\030\003 \001(\0132\".udb.core.common.v1.R" +
-      "equestContextR\007context:\034\232\262\031\030\010\001\032\003udb(\260\352\0010" +
-      "\003@\001J\005authnP\001\"\226\001\n\021EnrollMFAResponse\022\037\n\013to" +
-      "tp_secret\030\001 \001(\tR\ntotpSecret\022\036\n\013totp_qr_u" +
-      "ri\030\002 \001(\tR\ttotpQrUri\022\"\n\rverify_otp_id\030\003 \001" +
-      "(\tR\013verifyOtpId:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005au" +
-      "thnP\001\"\275\001\n\033ConfirmMFAEnrollmentRequest\022\027\n" +
-      "\007user_id\030\001 \001(\tR\006userId\022\025\n\006otp_id\030\002 \001(\tR\005" +
-      "otpId\022\022\n\004code\030\003 \001(\tR\004code\022<\n\007context\030\004 \001" +
-      "(\0132\".udb.core.common.v1.RequestContextR\007" +
-      "context:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authnP\001\"X\n" +
-      "\034ConfirmMFAEnrollmentResponse\022\032\n\010enrolle" +
-      "d\030\001 \001(\010R\010enrolled:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005" +
-      "authnP\001\"\251\001\n\034GenerateRecoveryCodesRequest" +
-      "\022\027\n\007user_id\030\001 \001(\tR\006userId\022\024\n\005count\030\002 \001(\005" +
-      "R\005count\022<\n\007context\030\003 \001(\0132\".udb.core.comm" +
-      "on.v1.RequestContextR\007context:\034\232\262\031\030\010\001\032\003u" +
-      "db(\260\352\0010\003@\001J\005authnP\001\"q\n\035GenerateRecoveryC" +
-      "odesResponse\022\024\n\005codes\030\001 \003(\tR\005codes\022\034\n\tge" +
-      "nerated\030\002 \001(\005R\tgenerated:\034\232\262\031\030\010\001\032\003udb(\260\352" +
-      "\0010\003@\001J\005authnP\001\"\257\001\n\023PutMfaPolicyRequest\022\033" +
-      "\n\ttenant_id\030\001 \001(\tR\010tenantId\022\037\n\013require_m" +
-      "fa\030\002 \001(\010R\nrequireMfa\022<\n\007context\030\003 \001(\0132\"." +
+      "context:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authnP\001\"v\n" +
+      "\025ResetPasswordResponse\022\027\n\007user_id\030\001 \001(\tR" +
+      "\006userId\022&\n\017changed_at_unix\030\002 \001(\003R\rchange" +
+      "dAtUnix:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authnP\001\"\212\001" +
+      "\n\026IntrospectTokenRequest\022\024\n\005token\030\001 \001(\tR" +
+      "\005token\022<\n\007context\030\002 \001(\0132\".udb.core.commo" +
+      "n.v1.RequestContextR\007context:\034\232\262\031\030\010\001\032\003ud" +
+      "b(\260\352\0010\003@\001J\005authnP\001\"\363\002\n\027IntrospectTokenRe" +
+      "sponse\022\026\n\006active\030\001 \001(\010R\006active\022\030\n\007subjec" +
+      "t\030\002 \001(\tR\007subject\022\033\n\ttenant_id\030\003 \001(\tR\010ten" +
+      "antId\022)\n\020service_identity\030\004 \001(\tR\017service" +
+      "Identity\022\026\n\006scopes\030\005 \003(\tR\006scopes\022&\n\017expi" +
+      "res_at_unix\030\006 \001(\003R\rexpiresAtUnix\022\025\n\006key_" +
+      "id\030\007 \001(\tR\005keyId\022\035\n\ntoken_type\030\010 \001(\tR\ttok" +
+      "enType\022\035\n\nsession_id\030\t \001(\tR\tsessionId\022+\n" +
+      "\021revocation_reason\030\n \001(\tR\020revocationReas" +
+      "on:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authnP\001\"l\n\016GetJ" +
+      "wksRequest\022<\n\007context\030\001 \001(\0132\".udb.core.c" +
+      "ommon.v1.RequestContextR\007context:\034\232\262\031\030\010\001" +
+      "\032\003udb(\260\352\0010\003@\001J\005authnP\001\"L\n\017GetJwksRespons" +
+      "e\022\033\n\tjwks_json\030\001 \001(\tR\010jwksJson:\034\232\262\031\030\010\001\032\003" +
+      "udb(\260\352\0010\003@\001J\005authnP\001\"\251\001\n\034SendPhoneVerifi" +
+      "cationRequest\022\027\n\007user_id\030\001 \001(\tR\006userId\022\024" +
+      "\n\005phone\030\002 \001(\tR\005phone\022<\n\007context\030\003 \001(\0132\"." +
       "udb.core.common.v1.RequestContextR\007conte" +
-      "xt:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authnP\001\"r\n\024PutM" +
-      "faPolicyResponse\022\033\n\ttenant_id\030\001 \001(\tR\010ten" +
-      "antId\022\037\n\013require_mfa\030\002 \001(\010R\nrequireMfa:\034" +
-      "\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authnP\001\"\216\001\n\023GetMfaP" +
-      "olicyRequest\022\033\n\ttenant_id\030\001 \001(\tR\010tenantI" +
-      "d\022<\n\007context\030\002 \001(\0132\".udb.core.common.v1." +
-      "RequestContextR\007context:\034\232\262\031\030\010\001\032\003udb(\260\352\001" +
-      "0\003@\001J\005authnP\001\"r\n\024GetMfaPolicyResponse\022\033\n" +
-      "\ttenant_id\030\001 \001(\tR\010tenantId\022\037\n\013require_mf" +
-      "a\030\002 \001(\010R\nrequireMfa:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001" +
-      "J\005authnP\001\"\223\001\n\025ForgotPasswordRequest\022\036\n\ni" +
-      "dentifier\030\001 \001(\tR\nidentifier\022<\n\007context\030\002" +
+      "xt:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authnP\001\"v\n\035Send" +
+      "PhoneVerificationResponse\022\025\n\006otp_id\030\001 \001(" +
+      "\tR\005otpId\022 \n\014dev_otp_code\030\002 \001(\tR\ndevOtpCo" +
+      "de:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authnP\001\"\351\001\n Sta" +
+      "rtWebAuthnRegistrationRequest\022\027\n\007user_id" +
+      "\030\001 \001(\tR\006userId\022\024\n\005label\030\002 \001(\tR\005label\022\033\n\t" +
+      "tenant_id\030\003 \001(\tR\010tenantId\022\035\n\nproject_id\030" +
+      "\004 \001(\tR\tprojectId\022<\n\007context\030\005 \001(\0132\".udb." +
+      "core.common.v1.RequestContextR\007context:\034" +
+      "\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authnP\001\"\351\001\n!StartWe" +
+      "bAuthnRegistrationResponse\022!\n\014challenge_" +
+      "id\030\001 \001(\tR\013challengeId\022[\n+public_key_cred" +
+      "ential_creation_options_json\030\002 \001(\tR&publ" +
+      "icKeyCredentialCreationOptionsJson\022&\n\017ex" +
+      "pires_at_unix\030\003 \001(\003R\rexpiresAtUnix:\034\232\262\031\030" +
+      "\010\001\032\003udb(\260\352\0010\003@\001J\005authnP\001\"\365\001\n!FinishWebAu" +
+      "thnRegistrationRequest\022!\n\014challenge_id\030\001" +
+      " \001(\tR\013challengeId\022;\n\032public_key_credenti" +
+      "al_json\030\002 \001(\tR\027publicKeyCredentialJson\022\024" +
+      "\n\005label\030\003 \001(\tR\005label\022<\n\007context\030\004 \001(\0132\"." +
+      "udb.core.common.v1.RequestContextR\007conte" +
+      "xt:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authnP\001\"\240\001\n\"Fin" +
+      "ishWebAuthnRegistrationResponse\022\036\n\nregis" +
+      "tered\030\001 \001(\010R\nregistered\022#\n\rcredential_id" +
+      "\030\002 \001(\tR\014credentialId\022\027\n\007user_id\030\003 \001(\tR\006u" +
+      "serId:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authnP\001\"\325\001\n\"" +
+      "StartWebAuthnAuthenticationRequest\022\027\n\007us" +
+      "er_id\030\001 \001(\tR\006userId\022\033\n\ttenant_id\030\002 \001(\tR\010" +
+      "tenantId\022\035\n\nproject_id\030\003 \001(\tR\tprojectId\022" +
+      "<\n\007context\030\004 \001(\0132\".udb.core.common.v1.Re" +
+      "questContextR\007context:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003" +
+      "@\001J\005authnP\001\"\351\001\n#StartWebAuthnAuthenticat" +
+      "ionResponse\022!\n\014challenge_id\030\001 \001(\tR\013chall" +
+      "engeId\022Y\n*public_key_credential_request_" +
+      "options_json\030\002 \001(\tR%publicKeyCredentialR" +
+      "equestOptionsJson\022&\n\017expires_at_unix\030\003 \001" +
+      "(\003R\rexpiresAtUnix:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005" +
+      "authnP\001\"\341\001\n#FinishWebAuthnAuthentication" +
+      "Request\022!\n\014challenge_id\030\001 \001(\tR\013challenge" +
+      "Id\022;\n\032public_key_credential_json\030\002 \001(\tR\027" +
+      "publicKeyCredentialJson\022<\n\007context\030\003 \001(\013" +
+      "2\".udb.core.common.v1.RequestContextR\007co" +
+      "ntext:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authnP\001\"\230\002\n$" +
+      "FinishWebAuthnAuthenticationResponse\022C\n\t" +
+      "principal\030\001 \001(\0132%.udb.core.authn.service" +
+      "s.v1.PrincipalR\tprincipal\022\035\n\nsession_id\030" +
+      "\002 \001(\tR\tsessionId\022!\n\014access_token\030\003 \001(\tR\013" +
+      "accessToken\022&\n\017expires_at_unix\030\004 \001(\003R\rex" +
+      "piresAtUnix\022#\n\rcredential_id\030\005 \001(\tR\014cred" +
+      "entialId:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authnP\001\"\276" +
+      "\001\n\022ListDevicesRequest\022\027\n\007user_id\030\001 \001(\tR\006" +
+      "userId\0223\n\004page\030\002 \001(\0132\037.udb.core.common.v" +
+      "1.PageRequestR\004page\022<\n\007context\030\003 \001(\0132\".u" +
+      "db.core.common.v1.RequestContextR\007contex" +
+      "t:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authnP\001\"\245\001\n\023List" +
+      "DevicesResponse\022:\n\007devices\030\001 \003(\0132 .udb.c" +
+      "ore.authn.entity.v1.DeviceR\007devices\0224\n\004p" +
+      "age\030\002 \001(\0132 .udb.core.common.v1.PageRespo" +
+      "nseR\004page:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authnP\001\"" +
+      "\246\001\n\023RevokeDeviceRequest\022\033\n\tdevice_id\030\001 \001",
+      "(\tR\010deviceId\022\026\n\006reason\030\002 \001(\tR\006reason\022<\n\007" +
+      "context\030\003 \001(\0132\".udb.core.common.v1.Reque" +
+      "stContextR\007context:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J" +
+      "\005authnP\001\"\226\001\n\024RevokeDeviceResponse\022\030\n\007rev" +
+      "oked\030\001 \001(\010R\007revoked\022\033\n\tdevice_id\030\002 \001(\tR\010" +
+      "deviceId\022)\n\020sessions_revoked\030\003 \001(\003R\017sess" +
+      "ionsRevoked:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authnP" +
+      "\001\"\307\001\n\031AdminRevokeSessionRequest\022\027\n\007user_" +
+      "id\030\001 \001(\tR\006userId\022\035\n\nsession_id\030\002 \001(\tR\tse" +
+      "ssionId\022\026\n\006reason\030\003 \001(\tR\006reason\022<\n\007conte" +
+      "xt\030\004 \001(\0132\".udb.core.common.v1.RequestCon" +
+      "textR\007context:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005auth" +
+      "nP\001\"\177\n\032AdminRevokeSessionResponse\022\030\n\007rev" +
+      "oked\030\001 \001(\010R\007revoked\022)\n\020sessions_revoked\030" +
+      "\002 \001(\003R\017sessionsRevoked:\034\232\262\031\030\010\001\032\003udb(\260\352\0010" +
+      "\003@\001J\005authnP\001\"\260\001\n!AdminRevokeAllUserSessi" +
+      "onsRequest\022\027\n\007user_id\030\001 \001(\tR\006userId\022\026\n\006r" +
+      "eason\030\002 \001(\tR\006reason\022<\n\007context\030\003 \001(\0132\".u" +
+      "db.core.common.v1.RequestContextR\007contex" +
+      "t:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authnP\001\"m\n\"Admin" +
+      "RevokeAllUserSessionsResponse\022)\n\020session" +
+      "s_revoked\030\001 \001(\003R\017sessionsRevoked:\034\232\262\031\030\010\001" +
+      "\032\003udb(\260\352\0010\003@\001J\005authnP\001\"\266\001\n#AdminRevokeAl" +
+      "lTenantSessionsRequest\022\033\n\ttenant_id\030\001 \001(" +
+      "\tR\010tenantId\022\026\n\006reason\030\002 \001(\tR\006reason\022<\n\007c" +
+      "ontext\030\003 \001(\0132\".udb.core.common.v1.Reques" +
+      "tContextR\007context:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005" +
+      "authnP\001\"o\n$AdminRevokeAllTenantSessionsR" +
+      "esponse\022)\n\020sessions_revoked\030\001 \001(\003R\017sessi" +
+      "onsRevoked:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authnP\001" +
+      "\"\232\002\n\026EmergencyRevokeRequest\022$\n\016signing_k" +
+      "ey_id\030\001 \001(\tR\014signingKeyId\022&\n\017token_famil" +
+      "y_id\030\002 \001(\tR\rtokenFamilyId\022\033\n\ttenant_id\030\003" +
+      " \001(\tR\010tenantId\022!\n\014principal_id\030\004 \001(\tR\013pr" +
+      "incipalId\022\026\n\006reason\030\005 \001(\tR\006reason\022<\n\007con" +
+      "text\030\006 \001(\0132\".udb.core.common.v1.RequestC" +
+      "ontextR\007context:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005au" +
+      "thnP\001\"\333\001\n\027EmergencyRevokeResponse\022)\n\020fam" +
+      "ilies_revoked\030\001 \001(\003R\017familiesRevoked\022)\n\020" +
+      "sessions_revoked\030\002 \001(\003R\017sessionsRevoked\022" +
+      ")\n\020keys_compromised\030\003 \001(\003R\017keysCompromis" +
+      "ed\022!\n\014operation_id\030\004 \001(\tR\013operationId:\034\232" +
+      "\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authnP\001\"\361\002\n\030IssueMfa" +
+      "ChallengeRequest\022\027\n\007user_id\030\001 \001(\tR\006userI" +
+      "d\022I\n\013factor_kind\030\002 \001(\0162(.udb.core.authn." +
+      "entity.v1.AuthFactorKindR\nfactorKind\022G\n\007" +
+      "purpose\030\003 \001(\0162-.udb.core.authn.entity.v1" +
+      ".MfaChallengePurposeR\007purpose\022-\n\022device_" +
+      "fingerprint\030\004 \001(\tR\021deviceFingerprint\022\035\n\n" +
+      "ip_address\030\005 \001(\tR\tipAddress\022<\n\007context\030\006" +
       " \001(\0132\".udb.core.common.v1.RequestContext" +
       "R\007context:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authnP\001\"" +
-      "o\n\026ForgotPasswordResponse\022\025\n\006otp_id\030\001 \001(" +
-      "\tR\005otpId\022 \n\014dev_otp_code\030\002 \001(\tR\ndevOtpCo" +
-      "de:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authnP\001\"\300\001\n\024Res" +
-      "etPasswordRequest\022\025\n\006otp_id\030\001 \001(\tR\005otpId" +
-      "\022\022\n\004code\030\002 \001(\tR\004code\022!\n\014new_password\030\003 \001" +
-      "(\tR\013newPassword\022<\n\007context\030\004 \001(\0132\".udb.c" +
-      "ore.common.v1.RequestContextR\007context:\034\232" +
-      "\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authnP\001\"v\n\025ResetPass" +
-      "wordResponse\022\027\n\007user_id\030\001 \001(\tR\006userId\022&\n" +
-      "\017changed_at_unix\030\002 \001(\003R\rchangedAtUnix:\034\232" +
-      "\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authnP\001\"\212\001\n\026Introspe" +
-      "ctTokenRequest\022\024\n\005token\030\001 \001(\tR\005token\022<\n\007" +
-      "context\030\002 \001(\0132\".udb.core.common.v1.Reque" +
-      "stContextR\007context:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J" +
-      "\005authnP\001\"\363\002\n\027IntrospectTokenResponse\022\026\n\006" +
-      "active\030\001 \001(\010R\006active\022\030\n\007subject\030\002 \001(\tR\007s" +
-      "ubject\022\033\n\ttenant_id\030\003 \001(\tR\010tenantId\022)\n\020s" +
-      "ervice_identity\030\004 \001(\tR\017serviceIdentity\022\026" +
-      "\n\006scopes\030\005 \003(\tR\006scopes\022&\n\017expires_at_uni" +
-      "x\030\006 \001(\003R\rexpiresAtUnix\022\025\n\006key_id\030\007 \001(\tR\005" +
-      "keyId\022\035\n\ntoken_type\030\010 \001(\tR\ttokenType\022\035\n\n" +
-      "session_id\030\t \001(\tR\tsessionId\022+\n\021revocatio" +
-      "n_reason\030\n \001(\tR\020revocationReason:\034\232\262\031\030\010\001" +
-      "\032\003udb(\260\352\0010\003@\001J\005authnP\001\"l\n\016GetJwksRequest" +
-      "\022<\n\007context\030\001 \001(\0132\".udb.core.common.v1.R" +
-      "equestContextR\007context:\034\232\262\031\030\010\001\032\003udb(\260\352\0010" +
-      "\003@\001J\005authnP\001\"L\n\017GetJwksResponse\022\033\n\tjwks_" +
-      "json\030\001 \001(\tR\010jwksJson:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@" +
-      "\001J\005authnP\001\"\251\001\n\034SendPhoneVerificationRequ" +
-      "est\022\027\n\007user_id\030\001 \001(\tR\006userId\022\024\n\005phone\030\002 " +
-      "\001(\tR\005phone\022<\n\007context\030\003 \001(\0132\".udb.core.c" +
-      "ommon.v1.RequestContextR\007context:\034\232\262\031\030\010\001" +
-      "\032\003udb(\260\352\0010\003@\001J\005authnP\001\"v\n\035SendPhoneVerif" +
-      "icationResponse\022\025\n\006otp_id\030\001 \001(\tR\005otpId\022 " +
-      "\n\014dev_otp_code\030\002 \001(\tR\ndevOtpCode:\034\232\262\031\030\010\001" +
-      "\032\003udb(\260\352\0010\003@\001J\005authnP\001\"\351\001\n StartWebAuthn" +
-      "RegistrationRequest\022\027\n\007user_id\030\001 \001(\tR\006us" +
-      "erId\022\024\n\005label\030\002 \001(\tR\005label\022\033\n\ttenant_id\030" +
-      "\003 \001(\tR\010tenantId\022\035\n\nproject_id\030\004 \001(\tR\tpro" +
-      "jectId\022<\n\007context\030\005 \001(\0132\".udb.core.commo" +
-      "n.v1.RequestContextR\007context:\034\232\262\031\030\010\001\032\003ud" +
-      "b(\260\352\0010\003@\001J\005authnP\001\"\351\001\n!StartWebAuthnRegi" +
-      "strationResponse\022!\n\014challenge_id\030\001 \001(\tR\013" +
-      "challengeId\022[\n+public_key_credential_cre" +
-      "ation_options_json\030\002 \001(\tR&publicKeyCrede" +
-      "ntialCreationOptionsJson\022&\n\017expires_at_u" +
-      "nix\030\003 \001(\003R\rexpiresAtUnix:\034\232\262\031\030\010\001\032\003udb(\260\352" +
-      "\0010\003@\001J\005authnP\001\"\365\001\n!FinishWebAuthnRegistr" +
-      "ationRequest\022!\n\014challenge_id\030\001 \001(\tR\013chal" +
-      "lengeId\022;\n\032public_key_credential_json\030\002 " +
-      "\001(\tR\027publicKeyCredentialJson\022\024\n\005label\030\003 " +
-      "\001(\tR\005label\022<\n\007context\030\004 \001(\0132\".udb.core.c" +
-      "ommon.v1.RequestContextR\007context:\034\232\262\031\030\010\001" +
-      "\032\003udb(\260\352\0010\003@\001J\005authnP\001\"\240\001\n\"FinishWebAuth" +
-      "nRegistrationResponse\022\036\n\nregistered\030\001 \001(" +
-      "\010R\nregistered\022#\n\rcredential_id\030\002 \001(\tR\014cr" +
-      "edentialId\022\027\n\007user_id\030\003 \001(\tR\006userId:\034\232\262\031" +
-      "\030\010\001\032\003udb(\260\352\0010\003@\001J\005authnP\001\"\325\001\n\"StartWebAu" +
-      "thnAuthenticationRequest\022\027\n\007user_id\030\001 \001(" +
-      "\tR\006userId\022\033\n\ttenant_id\030\002 \001(\tR\010tenantId\022\035" +
-      "\n\nproject_id\030\003 \001(\tR\tprojectId\022<\n\007context" +
-      "\030\004 \001(\0132\".udb.core.common.v1.RequestConte" +
-      "xtR\007context:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authnP" +
-      "\001\"\351\001\n#StartWebAuthnAuthenticationRespons" +
-      "e\022!\n\014challenge_id\030\001 \001(\tR\013challengeId\022Y\n*" +
-      "public_key_credential_request_options_js" +
-      "on\030\002 \001(\tR%publicKeyCredentialRequestOpti" +
-      "onsJson\022&\n\017expires_at_unix\030\003 \001(\003R\rexpire" +
-      "sAtUnix:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authnP\001\"\341\001" +
-      "\n#FinishWebAuthnAuthenticationRequest\022!\n" +
-      "\014challenge_id\030\001 \001(\tR\013challengeId\022;\n\032publ" +
-      "ic_key_credential_json\030\002 \001(\tR\027publicKeyC" +
-      "redentialJson\022<\n\007context\030\003 \001(\0132\".udb.cor" +
-      "e.common.v1.RequestContextR\007context:\034\232\262\031" +
-      "\030\010\001\032\003udb(\260\352\0010\003@\001J\005authnP\001\"\230\002\n$FinishWebA" +
-      "uthnAuthenticationResponse\022C\n\tprincipal\030" +
-      "\001 \001(\0132%.udb.core.authn.services.v1.Princ" +
-      "ipalR\tprincipal\022\035\n\nsession_id\030\002 \001(\tR\tses" +
-      "sionId\022!\n\014access_token\030\003 \001(\tR\013accessToke" +
-      "n\022&\n\017expires_at_unix\030\004 \001(\003R\rexpiresAtUni" +
-      "x\022#\n\rcredential_id\030\005 \001(\tR\014credentialId:\034" +
-      "\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authnP\001\"\276\001\n\022ListDev" +
-      "icesRequest\022\027\n\007user_id\030\001 \001(\tR\006userId\0223\n\004" +
-      "page\030\002 \001(\0132\037.udb.core.common.v1.PageRequ" +
-      "estR\004page\022<\n\007context\030\003 \001(\0132\".udb.core.co" +
-      "mmon.v1.RequestContextR\007context:\034\232\262\031\030\010\001\032" +
-      "\003udb(\260\352\0010\003@\001J\005authnP\001\"\245\001\n\023ListDevicesRes" +
-      "ponse\022:\n\007devices\030\001 \003(\0132 .udb.core.authn." +
-      "entity.v1.DeviceR\007devices\0224\n\004page\030\002 \001(\0132" +
-      " .udb.core.common.v1.PageResponseR\004page:" +
-      "\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authnP\001\"\246\001\n\023Revoke" +
-      "DeviceRequest\022\033\n\tdevice_id\030\001 \001(\tR\010device" +
-      "Id\022\026\n\006reason\030\002 \001(\tR\006reason\022<\n\007context\030\003 ",
-      "\001(\0132\".udb.core.common.v1.RequestContextR" +
-      "\007context:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authnP\001\"\226" +
-      "\001\n\024RevokeDeviceResponse\022\030\n\007revoked\030\001 \001(\010" +
-      "R\007revoked\022\033\n\tdevice_id\030\002 \001(\tR\010deviceId\022)" +
-      "\n\020sessions_revoked\030\003 \001(\003R\017sessionsRevoke" +
-      "d:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authnP\001\"\307\001\n\031Admi" +
-      "nRevokeSessionRequest\022\027\n\007user_id\030\001 \001(\tR\006" +
-      "userId\022\035\n\nsession_id\030\002 \001(\tR\tsessionId\022\026\n" +
-      "\006reason\030\003 \001(\tR\006reason\022<\n\007context\030\004 \001(\0132\"" +
+      "\317\001\n\031IssueMfaChallengeResponse\022!\n\014challen" +
+      "ge_id\030\001 \001(\tR\013challengeId\022&\n\017expires_at_u" +
+      "nix\030\002 \001(\003R\rexpiresAtUnix\022I\n\013factor_kind\030" +
+      "\003 \001(\0162(.udb.core.authn.entity.v1.AuthFac" +
+      "torKindR\nfactorKind:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001" +
+      "J\005authnP\001\"\335\001\n\031VerifyMfaChallengeRequest\022" +
+      "!\n\014challenge_id\030\001 \001(\tR\013challengeId\022\022\n\004co" +
+      "de\030\002 \001(\tR\004code\022-\n\022device_fingerprint\030\003 \001" +
+      "(\tR\021deviceFingerprint\022<\n\007context\030\004 \001(\0132\"" +
       ".udb.core.common.v1.RequestContextR\007cont" +
-      "ext:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authnP\001\"\177\n\032Adm" +
-      "inRevokeSessionResponse\022\030\n\007revoked\030\001 \001(\010" +
-      "R\007revoked\022)\n\020sessions_revoked\030\002 \001(\003R\017ses" +
-      "sionsRevoked:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authn" +
-      "P\001\"\260\001\n!AdminRevokeAllUserSessionsRequest" +
-      "\022\027\n\007user_id\030\001 \001(\tR\006userId\022\026\n\006reason\030\002 \001(" +
-      "\tR\006reason\022<\n\007context\030\003 \001(\0132\".udb.core.co" +
-      "mmon.v1.RequestContextR\007context:\034\232\262\031\030\010\001\032" +
-      "\003udb(\260\352\0010\003@\001J\005authnP\001\"m\n\"AdminRevokeAllU" +
-      "serSessionsResponse\022)\n\020sessions_revoked\030" +
-      "\001 \001(\003R\017sessionsRevoked:\034\232\262\031\030\010\001\032\003udb(\260\352\0010" +
-      "\003@\001J\005authnP\001\"\266\001\n#AdminRevokeAllTenantSes" +
-      "sionsRequest\022\033\n\ttenant_id\030\001 \001(\tR\010tenantI" +
-      "d\022\026\n\006reason\030\002 \001(\tR\006reason\022<\n\007context\030\003 \001" +
-      "(\0132\".udb.core.common.v1.RequestContextR\007" +
-      "context:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authnP\001\"o\n" +
-      "$AdminRevokeAllTenantSessionsResponse\022)\n" +
-      "\020sessions_revoked\030\001 \001(\003R\017sessionsRevoked" +
-      ":\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authnP\001\"\232\002\n\026Emerg" +
-      "encyRevokeRequest\022$\n\016signing_key_id\030\001 \001(" +
-      "\tR\014signingKeyId\022&\n\017token_family_id\030\002 \001(\t" +
-      "R\rtokenFamilyId\022\033\n\ttenant_id\030\003 \001(\tR\010tena" +
-      "ntId\022!\n\014principal_id\030\004 \001(\tR\013principalId\022" +
-      "\026\n\006reason\030\005 \001(\tR\006reason\022<\n\007context\030\006 \001(\013" +
+      "ext:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authnP\001\"o\n\032Ver" +
+      "ifyMfaChallengeResponse\022\032\n\010verified\030\001 \001(" +
+      "\010R\010verified\022\027\n\007user_id\030\002 \001(\tR\006userId:\034\232\262" +
+      "\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authnP\001\"\253\001\n\020MfaFactor" +
+      "Summary\022I\n\013factor_kind\030\001 \001(\0162(.udb.core." +
+      "authn.entity.v1.AuthFactorKindR\nfactorKi" +
+      "nd\022\030\n\007enabled\030\002 \001(\010R\007enabled\022\024\n\005label\030\003 " +
+      "\001(\tR\005label:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authnP\001" +
+      "\"\310\001\n\025ListMfaFactorsRequest\022\027\n\007user_id\030\001 " +
+      "\001(\tR\006userId\022<\n\007context\030\002 \001(\0132\".udb.core." +
+      "common.v1.RequestContextR\007context\022\033\n\tpag" +
+      "e_size\030\003 \001(\005R\010pageSize\022\035\n\npage_token\030\004 \001" +
+      "(\tR\tpageToken:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005auth" +
+      "nP\001\"\246\001\n\026ListMfaFactorsResponse\022F\n\007factor" +
+      "s\030\001 \003(\0132,.udb.core.authn.services.v1.Mfa" +
+      "FactorSummaryR\007factors\022&\n\017next_page_toke" +
+      "n\030\002 \001(\tR\rnextPageToken:\034\232\262\031\030\010\001\032\003udb(\260\352\0010" +
+      "\003@\001J\005authnP\001\"\331\001\n\027DisableMfaFactorRequest" +
+      "\022\027\n\007user_id\030\001 \001(\tR\006userId\022I\n\013factor_kind" +
+      "\030\002 \001(\0162(.udb.core.authn.entity.v1.AuthFa" +
+      "ctorKindR\nfactorKind\022<\n\007context\030\003 \001(\0132\"." +
+      "udb.core.common.v1.RequestContextR\007conte" +
+      "xt:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authnP\001\"T\n\030Disa" +
+      "bleMfaFactorResponse\022\032\n\010disabled\030\001 \001(\010R\010" +
+      "disabled:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authnP\001\"\315" +
+      "\001\n\024RenamePasskeyRequest\022\027\n\007user_id\030\001 \001(\t" +
+      "R\006userId\022#\n\rcredential_id\030\002 \001(\tR\014credent" +
+      "ialId\022\033\n\tnew_label\030\003 \001(\tR\010newLabel\022<\n\007co" +
+      "ntext\030\004 \001(\0132\".udb.core.common.v1.Request" +
+      "ContextR\007context:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005a" +
+      "uthnP\001\"O\n\025RenamePasskeyResponse\022\030\n\007renam" +
+      "ed\030\001 \001(\010R\007renamed:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005" +
+      "authnP\001\"\221\001\n\032RevokeRecoveryCodesRequest\022\027" +
+      "\n\007user_id\030\001 \001(\tR\006userId\022<\n\007context\030\002 \001(\013" +
       "2\".udb.core.common.v1.RequestContextR\007co" +
-      "ntext:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authnP\001\"\333\001\n\027" +
-      "EmergencyRevokeResponse\022)\n\020families_revo" +
-      "ked\030\001 \001(\003R\017familiesRevoked\022)\n\020sessions_r" +
-      "evoked\030\002 \001(\003R\017sessionsRevoked\022)\n\020keys_co" +
-      "mpromised\030\003 \001(\003R\017keysCompromised\022!\n\014oper" +
-      "ation_id\030\004 \001(\tR\013operationId:\034\232\262\031\030\010\001\032\003udb" +
-      "(\260\352\0010\003@\001J\005authnP\001\"\361\002\n\030IssueMfaChallengeR" +
-      "equest\022\027\n\007user_id\030\001 \001(\tR\006userId\022I\n\013facto" +
-      "r_kind\030\002 \001(\0162(.udb.core.authn.entity.v1." +
-      "AuthFactorKindR\nfactorKind\022G\n\007purpose\030\003 " +
-      "\001(\0162-.udb.core.authn.entity.v1.MfaChalle" +
-      "ngePurposeR\007purpose\022-\n\022device_fingerprin" +
-      "t\030\004 \001(\tR\021deviceFingerprint\022\035\n\nip_address" +
-      "\030\005 \001(\tR\tipAddress\022<\n\007context\030\006 \001(\0132\".udb" +
-      ".core.common.v1.RequestContextR\007context:" +
-      "\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authnP\001\"\317\001\n\031IssueM" +
-      "faChallengeResponse\022!\n\014challenge_id\030\001 \001(" +
-      "\tR\013challengeId\022&\n\017expires_at_unix\030\002 \001(\003R" +
-      "\rexpiresAtUnix\022I\n\013factor_kind\030\003 \001(\0162(.ud" +
-      "b.core.authn.entity.v1.AuthFactorKindR\nf" +
-      "actorKind:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authnP\001\"" +
-      "\335\001\n\031VerifyMfaChallengeRequest\022!\n\014challen" +
-      "ge_id\030\001 \001(\tR\013challengeId\022\022\n\004code\030\002 \001(\tR\004" +
-      "code\022-\n\022device_fingerprint\030\003 \001(\tR\021device" +
-      "Fingerprint\022<\n\007context\030\004 \001(\0132\".udb.core." +
-      "common.v1.RequestContextR\007context:\034\232\262\031\030\010" +
-      "\001\032\003udb(\260\352\0010\003@\001J\005authnP\001\"o\n\032VerifyMfaChal" +
-      "lengeResponse\022\032\n\010verified\030\001 \001(\010R\010verifie" +
-      "d\022\027\n\007user_id\030\002 \001(\tR\006userId:\034\232\262\031\030\010\001\032\003udb(" +
-      "\260\352\0010\003@\001J\005authnP\001\"\253\001\n\020MfaFactorSummary\022I\n" +
-      "\013factor_kind\030\001 \001(\0162(.udb.core.authn.enti" +
-      "ty.v1.AuthFactorKindR\nfactorKind\022\030\n\007enab" +
-      "led\030\002 \001(\010R\007enabled\022\024\n\005label\030\003 \001(\tR\005label" +
-      ":\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authnP\001\"\310\001\n\025ListM" +
-      "faFactorsRequest\022\027\n\007user_id\030\001 \001(\tR\006userI" +
-      "d\022<\n\007context\030\002 \001(\0132\".udb.core.common.v1." +
-      "RequestContextR\007context\022\033\n\tpage_size\030\003 \001" +
-      "(\005R\010pageSize\022\035\n\npage_token\030\004 \001(\tR\tpageTo" +
-      "ken:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authnP\001\"\246\001\n\026Li" +
-      "stMfaFactorsResponse\022F\n\007factors\030\001 \003(\0132,." +
-      "udb.core.authn.services.v1.MfaFactorSumm" +
-      "aryR\007factors\022&\n\017next_page_token\030\002 \001(\tR\rn" +
-      "extPageToken:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authn" +
-      "P\001\"\331\001\n\027DisableMfaFactorRequest\022\027\n\007user_i" +
-      "d\030\001 \001(\tR\006userId\022I\n\013factor_kind\030\002 \001(\0162(.u" +
-      "db.core.authn.entity.v1.AuthFactorKindR\n" +
-      "factorKind\022<\n\007context\030\003 \001(\0132\".udb.core.c" +
-      "ommon.v1.RequestContextR\007context:\034\232\262\031\030\010\001" +
-      "\032\003udb(\260\352\0010\003@\001J\005authnP\001\"T\n\030DisableMfaFact" +
-      "orResponse\022\032\n\010disabled\030\001 \001(\010R\010disabled:\034" +
-      "\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authnP\001\"\315\001\n\024RenameP" +
-      "asskeyRequest\022\027\n\007user_id\030\001 \001(\tR\006userId\022#" +
-      "\n\rcredential_id\030\002 \001(\tR\014credentialId\022\033\n\tn" +
-      "ew_label\030\003 \001(\tR\010newLabel\022<\n\007context\030\004 \001(" +
-      "\0132\".udb.core.common.v1.RequestContextR\007c" +
-      "ontext:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authnP\001\"O\n\025" +
-      "RenamePasskeyResponse\022\030\n\007renamed\030\001 \001(\010R\007" +
-      "renamed:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authnP\001\"\221\001" +
-      "\n\032RevokeRecoveryCodesRequest\022\027\n\007user_id\030" +
-      "\001 \001(\tR\006userId\022<\n\007context\030\002 \001(\0132\".udb.cor" +
-      "e.common.v1.RequestContextR\007context:\034\232\262\031" +
-      "\030\010\001\032\003udb(\260\352\0010\003@\001J\005authnP\001\"`\n\033RevokeRecov" +
-      "eryCodesResponse\022#\n\rrevoked_count\030\001 \001(\003R" +
-      "\014revokedCount:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005auth" +
-      "nP\001\"\243\001\n\024AdminResetMfaRequest\022\027\n\007user_id\030" +
-      "\001 \001(\tR\006userId\022\026\n\006reason\030\002 \001(\tR\006reason\022<\n" +
-      "\007context\030\003 \001(\0132\".udb.core.common.v1.Requ" +
-      "estContextR\007context:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001" +
-      "J\005authnP\001\"K\n\025AdminResetMfaResponse\022\024\n\005re" +
-      "set\030\001 \001(\010R\005reset:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005a" +
-      "uthnP\001\"\307\001\n\031WebAuthnCredentialSummary\022#\n\r" +
-      "credential_id\030\001 \001(\tR\014credentialId\022\024\n\005lab" +
-      "el\030\002 \001(\tR\005label\022&\n\017created_at_unix\030\003 \001(\003" +
-      "R\rcreatedAtUnix\022)\n\021last_used_at_unix\030\004 \001" +
-      "(\003R\016lastUsedAtUnix:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J" +
-      "\005authnP\001\"\321\001\n\036ListWebAuthnCredentialsRequ" +
-      "est\022\027\n\007user_id\030\001 \001(\tR\006userId\022<\n\007context\030" +
-      "\002 \001(\0132\".udb.core.common.v1.RequestContex" +
-      "tR\007context\022\033\n\tpage_size\030\003 \001(\005R\010pageSize\022" +
-      "\035\n\npage_token\030\004 \001(\tR\tpageToken:\034\232\262\031\030\010\001\032\003" +
-      "udb(\260\352\0010\003@\001J\005authnP\001\"\300\001\n\037ListWebAuthnCre" +
-      "dentialsResponse\022W\n\013credentials\030\001 \003(\01325." +
-      "udb.core.authn.services.v1.WebAuthnCrede" +
-      "ntialSummaryR\013credentials\022&\n\017next_page_t" +
-      "oken\030\002 \001(\tR\rnextPageToken:\034\232\262\031\030\010\001\032\003udb(\260" +
-      "\352\0010\003@\001J\005authnP\001\"\273\001\n\037DeleteWebAuthnCreden" +
-      "tialRequest\022\027\n\007user_id\030\001 \001(\tR\006userId\022#\n\r" +
-      "credential_id\030\002 \001(\tR\014credentialId\022<\n\007con" +
-      "text\030\003 \001(\0132\".udb.core.common.v1.RequestC" +
-      "ontextR\007context:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005au" +
-      "thnP\001\"Z\n DeleteWebAuthnCredentialRespons" +
-      "e\022\030\n\007deleted\030\001 \001(\010R\007deleted:\034\232\262\031\030\010\001\032\003udb" +
-      "(\260\352\0010\003@\001J\005authnP\001B\202\002\n\036com.udb.core.authn" +
-      ".services.v1B\tCoreProtoP\001ZHgithub.com/fa" +
-      "hara02/udb/sdk/go/gen/udb/core/authn/ser" +
-      "vices/v1;servicesv1\242\002\004UCAS\252\002\032Udb.Core.Au" +
-      "thn.Services.V1\312\002\032Udb\\Core\\Authn\\Service" +
-      "s\\V1\342\002&Udb\\GPBMetadata\\Core\\Authn\\Servic" +
-      "es\\V1\352\002\036Udb::Core::Authn::Services::V1b\006" +
-      "proto3"
+      "ntext:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authnP\001\"`\n\033R" +
+      "evokeRecoveryCodesResponse\022#\n\rrevoked_co" +
+      "unt\030\001 \001(\003R\014revokedCount:\034\232\262\031\030\010\001\032\003udb(\260\352\001" +
+      "0\003@\001J\005authnP\001\"\243\001\n\024AdminResetMfaRequest\022\027" +
+      "\n\007user_id\030\001 \001(\tR\006userId\022\026\n\006reason\030\002 \001(\tR" +
+      "\006reason\022<\n\007context\030\003 \001(\0132\".udb.core.comm" +
+      "on.v1.RequestContextR\007context:\034\232\262\031\030\010\001\032\003u" +
+      "db(\260\352\0010\003@\001J\005authnP\001\"K\n\025AdminResetMfaResp" +
+      "onse\022\024\n\005reset\030\001 \001(\010R\005reset:\034\232\262\031\030\010\001\032\003udb(" +
+      "\260\352\0010\003@\001J\005authnP\001\"\307\001\n\031WebAuthnCredentialS" +
+      "ummary\022#\n\rcredential_id\030\001 \001(\tR\014credentia" +
+      "lId\022\024\n\005label\030\002 \001(\tR\005label\022&\n\017created_at_" +
+      "unix\030\003 \001(\003R\rcreatedAtUnix\022)\n\021last_used_a" +
+      "t_unix\030\004 \001(\003R\016lastUsedAtUnix:\034\232\262\031\030\010\001\032\003ud" +
+      "b(\260\352\0010\003@\001J\005authnP\001\"\321\001\n\036ListWebAuthnCrede" +
+      "ntialsRequest\022\027\n\007user_id\030\001 \001(\tR\006userId\022<" +
+      "\n\007context\030\002 \001(\0132\".udb.core.common.v1.Req" +
+      "uestContextR\007context\022\033\n\tpage_size\030\003 \001(\005R" +
+      "\010pageSize\022\035\n\npage_token\030\004 \001(\tR\tpageToken" +
+      ":\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authnP\001\"\300\001\n\037ListW" +
+      "ebAuthnCredentialsResponse\022W\n\013credential" +
+      "s\030\001 \003(\01325.udb.core.authn.services.v1.Web" +
+      "AuthnCredentialSummaryR\013credentials\022&\n\017n" +
+      "ext_page_token\030\002 \001(\tR\rnextPageToken:\034\232\262\031" +
+      "\030\010\001\032\003udb(\260\352\0010\003@\001J\005authnP\001\"\273\001\n\037DeleteWebA" +
+      "uthnCredentialRequest\022\027\n\007user_id\030\001 \001(\tR\006" +
+      "userId\022#\n\rcredential_id\030\002 \001(\tR\014credentia" +
+      "lId\022<\n\007context\030\003 \001(\0132\".udb.core.common.v" +
+      "1.RequestContextR\007context:\034\232\262\031\030\010\001\032\003udb(\260" +
+      "\352\0010\003@\001J\005authnP\001\"Z\n DeleteWebAuthnCredent" +
+      "ialResponse\022\030\n\007deleted\030\001 \001(\010R\007deleted:\034\232" +
+      "\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authnP\001B\202\002\n\036com.udb." +
+      "core.authn.services.v1B\tCoreProtoP\001ZHgit" +
+      "hub.com/fahara02/udb/sdk/go/gen/udb/core" +
+      "/authn/services/v1;servicesv1\242\002\004UCAS\252\002\032U" +
+      "db.Core.Authn.Services.V1\312\002\032Udb\\Core\\Aut" +
+      "hn\\Services\\V1\342\002&Udb\\GPBMetadata\\Core\\Au" +
+      "thn\\Services\\V1\352\002\036Udb::Core::Authn::Serv" +
+      "ices::V1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -1129,7 +1130,7 @@ public final class CoreProto {
     internal_static_udb_core_authn_services_v1_CreateUserRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_core_authn_services_v1_CreateUserRequest_descriptor,
-        new java.lang.String[] { "Username", "Email", "Password", "TenantId", "FullName", "Context", "AccountKind", "ProjectId", "ExternalProviderId", "ExternalSubject", "ProfileAttributes", "PasswordSetupRequired", });
+        new java.lang.String[] { "Username", "Email", "Password", "TenantId", "FullName", "Context", "AccountKind", "ProjectId", "ExternalProviderId", "ExternalSubject", "ProfileAttributes", "PasswordSetupRequired", "Phone", });
     internal_static_udb_core_authn_services_v1_CreateUserRequest_ProfileAttributesEntry_descriptor =
       internal_static_udb_core_authn_services_v1_CreateUserRequest_descriptor.getNestedTypes().get(0);
     internal_static_udb_core_authn_services_v1_CreateUserRequest_ProfileAttributesEntry_fieldAccessorTable = new
@@ -1249,7 +1250,7 @@ public final class CoreProto {
     internal_static_udb_core_authn_services_v1_Principal_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_core_authn_services_v1_Principal_descriptor,
-        new java.lang.String[] { "PrincipalId", "Subject", "UserId", "ServiceIdentity", "TenantId", "ProjectId", "Scopes", "Roles", "ProviderId", "AuthMethod", "ExpiresAtUnix", "AccountKind", "Domain", "Attributes", });
+        new java.lang.String[] { "PrincipalId", "Subject", "UserId", "ServiceIdentity", "TenantId", "ProjectId", "Scopes", "Roles", "ProviderId", "AuthMethod", "ExpiresAtUnix", "AccountKind", "Domain", "Attributes", "Username", });
     internal_static_udb_core_authn_services_v1_Principal_AttributesEntry_descriptor =
       internal_static_udb_core_authn_services_v1_Principal_descriptor.getNestedTypes().get(0);
     internal_static_udb_core_authn_services_v1_Principal_AttributesEntry_fieldAccessorTable = new
