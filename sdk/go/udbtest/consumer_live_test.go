@@ -191,7 +191,11 @@ func TestLiveConsumerBatchesDeadLettersAndContinues(t *testing.T) {
 					stop()
 				}
 				return nil
-			}, udbclient.ConsumeOptions{FromEarliest: true, MaxAttempts: 2, Backoff: time.Millisecond})
+				// Batched acks: the successful prefix is acknowledged as one batch
+				// when the poison event is reached, and `next` on shutdown. The
+				// batch exceeds every replayed event plus the replay-end marker,
+				// and the interval keeps the timer from flushing good-a alone.
+			}, udbclient.ConsumeOptions{FromEarliest: true, MaxAttempts: 2, Backoff: time.Millisecond, AckBatchSize: 64, AckInterval: time.Hour})
 	}()
 	waitHandled := func(file string) string {
 		t.Helper()

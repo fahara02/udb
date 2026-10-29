@@ -71,7 +71,7 @@ func TestLiveGoServiceExampleCommitsAndAcknowledges(t *testing.T) {
 		"UDB_TENANT_ID="+session.CanonicalTenantID,
 		"UDB_PROJECT_ID="+session.Udb.Meta.ProjectID,
 		"UDB_PURPOSE=go.live.table-conformance",
-		"UDB_API_KEY=", "UDB_BEARER="+session.Bearer(), "UDB_TLS=false",
+		"UDB_API_KEY=", "UDB_BEARER="+strings.TrimPrefix(session.Bearer(), "Bearer "), "UDB_TLS=false",
 		"EXAMPLE_FILE_ID="+fileID)
 	if err := service.Start(); err != nil {
 		t.Fatal(err)
@@ -100,7 +100,9 @@ func TestLiveGoServiceExampleCommitsAndAcknowledges(t *testing.T) {
 		select {
 		case err := <-stopped:
 			stopped <- err
-			t.Fatalf("Go service exited before handling its event: %v\n%s", err, contents)
+			// Re-read: the copy above predates the exit and misses its error.
+			final, _ := os.ReadFile(logPath)
+			t.Fatalf("Go service exited before handling its event: %v\n%s", err, final)
 		case <-ctx.Done():
 			t.Fatalf("Go service did not handle its event: %v\n%s", ctx.Err(), contents)
 		case <-time.After(100 * time.Millisecond):

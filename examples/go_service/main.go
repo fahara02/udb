@@ -28,5 +28,5 @@ func main() {
 	log.Fatal(udbclient.Consume(context.Background(), u, "go-service-"+file.FileId, udbclient.Topic(&storageeventsv1.FileMetadataUpdated{}), func(_ context.Context, event udbclient.ConsumedEvent[*storageeventsv1.FileMetadataUpdated]) error {
 		log.Printf("handled %s %s", event.Payload.GetFileId(), event.ID)
 		return nil
-	}))
+	}, udbclient.ConsumeOptions{FromEarliest: true}))
 }

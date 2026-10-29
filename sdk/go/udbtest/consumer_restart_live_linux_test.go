@@ -15,7 +15,9 @@ import (
 	"time"
 
 	storageeventsv1 "github.com/fahara02/udb/sdk/go/gen/udb/core/storage/events/v1"
+	entityv1 "github.com/fahara02/udb/sdk/go/gen/udb/entity/v1"
 	"github.com/fahara02/udb/sdk/go/udbclient"
+	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -222,6 +224,12 @@ func TestLiveConsumerResumesAfterBrokerCrash(t *testing.T) {
 	}
 	// A new Consume has an EMPTY in-process dedup set. The broker's durable
 	// watermark must prevent re-handling before, independent of SDK memory.
+	// The TCP probe above only proves the new broker listens; this session's
+	// gRPC connection may still be backing off from the crash, and a write
+	// (BeginTx) made then fails at once. Wait for the connection itself.
+	if _, err := sess.Udb.Data.Broker.GetCapabilities(ctx, &entityv1.CapabilitiesRequest{}, grpc.WaitForReady(true)); err != nil {
+		t.Fatalf("broker connection did not recover: %v", err)
+	}
 	freshContext, stopFresh := context.WithCancel(ctx)
 	defer stopFresh()
 	go func() { finished <- udbclient.Consume(freshContext, sess.Udb, name, topic, handler, options) }()
