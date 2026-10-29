@@ -32,6 +32,13 @@ class VerifyMfaChallengeRequest extends \Google\Protobuf\Internal\Message
      * Generated from protobuf field <code>.udb.core.common.v1.RequestContext context = 4 [json_name = "context"];</code>
      */
     protected $context = null;
+    /**
+     * WEBAUTHN challenges: the assertion (PublicKeyCredential JSON) produced
+     * from IssueMfaChallengeResponse.webauthn_options_json. `code` is ignored.
+     *
+     * Generated from protobuf field <code>string webauthn_assertion_json = 5 [json_name = "webauthnAssertionJson"];</code>
+     */
+    protected $webauthn_assertion_json = '';
 
     /**
      * Constructor.
@@ -44,6 +51,9 @@ class VerifyMfaChallengeRequest extends \Google\Protobuf\Internal\Message
      *           TOTP / OTP / recovery code proof
      *     @type string $device_fingerprint
      *     @type \Udb\Core\Common\V1\RequestContext $context
+     *     @type string $webauthn_assertion_json
+     *           WEBAUTHN challenges: the assertion (PublicKeyCredential JSON) produced
+     *           from IssueMfaChallengeResponse.webauthn_options_json. `code` is ignored.
      * }
      */
     public function __construct($data = NULL) {
@@ -149,6 +159,34 @@ class VerifyMfaChallengeRequest extends \Google\Protobuf\Internal\Message
     {
         GPBUtil::checkMessage($var, \Udb\Core\Common\V1\RequestContext::class);
         $this->context = $var;
+
+        return $this;
+    }
+
+    /**
+     * WEBAUTHN challenges: the assertion (PublicKeyCredential JSON) produced
+     * from IssueMfaChallengeResponse.webauthn_options_json. `code` is ignored.
+     *
+     * Generated from protobuf field <code>string webauthn_assertion_json = 5 [json_name = "webauthnAssertionJson"];</code>
+     * @return string
+     */
+    public function getWebauthnAssertionJson()
+    {
+        return $this->webauthn_assertion_json;
+    }
+
+    /**
+     * WEBAUTHN challenges: the assertion (PublicKeyCredential JSON) produced
+     * from IssueMfaChallengeResponse.webauthn_options_json. `code` is ignored.
+     *
+     * Generated from protobuf field <code>string webauthn_assertion_json = 5 [json_name = "webauthnAssertionJson"];</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setWebauthnAssertionJson($var)
+    {
+        GPBUtil::checkString($var, True);
+        $this->webauthn_assertion_json = $var;
 
         return $this;
     }

@@ -135,6 +135,9 @@ fn mfa_challenge_model() -> NativeModel {
             "expires_at",
             "consumed_at",
             "created_at",
+            "action",
+            "otp_id",
+            "webauthn_challenge_id",
         ],
     )
 }
@@ -1540,6 +1543,15 @@ impl AuthnServiceImpl {
         let now = now_unix();
         let expires = now.saturating_add(ttl);
         let challenge_id = Uuid::new_v4().to_string();
+        // 0.6.6 step-up: validate the action against the tenant's rule, then
+        // send the EMAIL/SMS code or start the WebAuthn assertion this
+        // challenge is answered with.
+        let action = super::step_up::normalize_step_up_action(&req.action)?;
+        self.ensure_step_up_factor_allowed(&user.tenant_id, &action, factor)
+            .await?;
+        let prepared = self
+            .prepare_mfa_challenge_factor(&user, factor, &challenge_id, now)
+            .await?;
         let fp_hash = if req.device_fingerprint.trim().is_empty() {
             String::new()
         } else {
@@ -1569,6 +1581,12 @@ impl AuthnServiceImpl {
                     LogicalValue::String(mask_ip(&req.ip_address)),
                 ),
                 ("expires_at", LogicalValue::Timestamp(expires_at)),
+                ("action", LogicalValue::String(action.clone())),
+                ("otp_id", LogicalValue::String(prepared.otp_id.clone())),
+                (
+                    "webauthn_challenge_id",
+                    LogicalValue::String(prepared.webauthn_challenge_id.clone()),
+                ),
             ]);
             runtime
                 .native_entity_write_for_service(
@@ -1586,11 +1604,14 @@ impl AuthnServiceImpl {
                 challenge_id,
                 expires_at_unix: expires as i64,
                 factor_kind: factor,
+                webauthn_options_json: prepared.webauthn_options_json,
+                otp_destination_masked: prepared.otp_destination_masked,
             }));
         }
         let sql = format!(
-            "INSERT INTO {rel} ({id}, {user}, {tenant}, {project}, {factor}, {purpose}, {fp}, {ip}, {expires}) \
-             VALUES ($1::UUID, $2, $3, $4, $5, $6, $7, $8, to_timestamp($9::DOUBLE PRECISION))",
+            "INSERT INTO {rel} ({id}, {user}, {tenant}, {project}, {factor}, {purpose}, {fp}, {ip}, {expires}, \
+                                {action}, {otp_id}, {webauthn_challenge_id}) \
+             VALUES ($1::UUID, $2, $3, $4, $5, $6, $7, $8, to_timestamp($9::DOUBLE PRECISION), $10, $11, $12)",
             rel = m.relation,
             id = m.q("challenge_id"),
             user = m.q("user_id"),
@@ -1601,6 +1622,9 @@ impl AuthnServiceImpl {
             fp = m.q("device_fingerprint_hash"),
             ip = m.q("ip_address_masked"),
             expires = m.q("expires_at"),
+            action = m.q("action"),
+            otp_id = m.q("otp_id"),
+            webauthn_challenge_id = m.q("webauthn_challenge_id"),
         );
         sqlx::query(&sql)
             .bind(&challenge_id)
@@ -1612,6 +1636,9 @@ impl AuthnServiceImpl {
             .bind(&fp_hash)
             .bind(mask_ip(&req.ip_address))
             .bind(expires as f64)
+            .bind(&action)
+            .bind(&prepared.otp_id)
+            .bind(&prepared.webauthn_challenge_id)
             .execute(pool)
             .await
             .map_err(|err| {
@@ -1624,6 +1651,8 @@ impl AuthnServiceImpl {
             challenge_id,
             expires_at_unix: expires as i64,
             factor_kind: factor,
+            webauthn_options_json: prepared.webauthn_options_json,
+            otp_destination_masked: prepared.otp_destination_masked,
         }))
     }
 
@@ -1669,6 +1698,9 @@ impl AuthnServiceImpl {
                     "user_id".to_string(),
                     "factor_kind".to_string(),
                     "device_fingerprint_hash".to_string(),
+                    "action".to_string(),
+                    "otp_id".to_string(),
+                    "webauthn_challenge_id".to_string(),
                 ],
                 require_affected: false,
             };
@@ -1682,10 +1714,20 @@ impl AuthnServiceImpl {
                     )
                 })?;
             let Some(row) = rows.first() else {
-                return Ok(Response::new(authn_pb::VerifyMfaChallengeResponse {
-                    verified: false,
-                    user_id: String::new(),
-                }));
+                return Ok(Response::new(
+                    authn_pb::VerifyMfaChallengeResponse::default(),
+                ));
+            };
+            let row_text = |field: &str| {
+                row.get(field)
+                    .and_then(serde_json::Value::as_str)
+                    .unwrap_or_default()
+                    .to_string()
+            };
+            let binding = super::step_up::ChallengeBinding {
+                action: row_text("action"),
+                otp_id: row_text("otp_id"),
+                webauthn_challenge_id: row_text("webauthn_challenge_id"),
             };
             let user_id = row
                 .get("user_id")
@@ -1704,10 +1746,9 @@ impl AuthnServiceImpl {
                     self.device_fingerprint_hash(&req.device_fingerprint)
                 };
                 if presented != fp_stored {
-                    return Ok(Response::new(authn_pb::VerifyMfaChallengeResponse {
-                        verified: false,
-                        user_id: String::new(),
-                    }));
+                    return Ok(Response::new(
+                        authn_pb::VerifyMfaChallengeResponse::default(),
+                    ));
                 }
             }
             let factor_db = row
@@ -1715,13 +1756,21 @@ impl AuthnServiceImpl {
                 .and_then(serde_json::Value::as_str)
                 .unwrap_or_default()
                 .to_string();
+            let now = now_unix();
             let verified = self
-                .verify_mfa_proof(&user_id, &factor_db, &req.code, now_unix())
+                .verify_mfa_proof(
+                    &user_id,
+                    &factor_db,
+                    &req.code,
+                    &req.webauthn_assertion_json,
+                    &binding,
+                    now,
+                )
                 .await?;
-            return Ok(Response::new(authn_pb::VerifyMfaChallengeResponse {
-                verified,
-                user_id: if verified { user_id } else { String::new() },
-            }));
+            return self
+                .verify_mfa_challenge_response(verified, user_id, &factor_db, &binding, now)
+                .await
+                .map(Response::new);
         }
         let pool = self.require_pool()?;
         let m = mfa_challenge_model();
@@ -1732,7 +1781,9 @@ impl AuthnServiceImpl {
             "UPDATE {rel} SET {consumed} = NOW(), {attempts} = {attempts} + 1 \
              WHERE {id} = $1::UUID AND {consumed} IS NULL AND {expires} > NOW() AND {attempts} < 5 \
              RETURNING {user}::TEXT AS user_id, {factor}::TEXT AS factor_kind, \
-                       COALESCE({fp}::TEXT,'') AS fp",
+                       COALESCE({fp}::TEXT,'') AS fp, COALESCE({action}::TEXT,'') AS action, \
+                       COALESCE({otp_id}::TEXT,'') AS otp_id, \
+                       COALESCE({webauthn_challenge_id}::TEXT,'') AS webauthn_challenge_id",
             rel = m.relation,
             consumed = m.q("consumed_at"),
             attempts = m.q("attempt_count"),
@@ -1741,6 +1792,9 @@ impl AuthnServiceImpl {
             user = m.q("user_id"),
             factor = m.q("factor_kind"),
             fp = m.q("device_fingerprint_hash"),
+            action = m.q("action"),
+            otp_id = m.q("otp_id"),
+            webauthn_challenge_id = m.q("webauthn_challenge_id"),
         );
         let Some(row) = sqlx::query(&consume_sql)
             .bind(&req.challenge_id)
@@ -1754,13 +1808,17 @@ impl AuthnServiceImpl {
             })?
         else {
             // Either expired, already consumed (replay), or over the attempt cap.
-            return Ok(Response::new(authn_pb::VerifyMfaChallengeResponse {
-                verified: false,
-                user_id: String::new(),
-            }));
+            return Ok(Response::new(
+                authn_pb::VerifyMfaChallengeResponse::default(),
+            ));
         };
         let user_id: String = row.try_get("user_id").unwrap_or_default();
         let fp_stored: String = row.try_get("fp").unwrap_or_default();
+        let binding = super::step_up::ChallengeBinding {
+            action: row.try_get("action").unwrap_or_default(),
+            otp_id: row.try_get("otp_id").unwrap_or_default(),
+            webauthn_challenge_id: row.try_get("webauthn_challenge_id").unwrap_or_default(),
+        };
         // Device binding: when a fingerprint was bound at issuance, the verifier
         // must present the same device.
         if !fp_stored.is_empty() {
@@ -1770,24 +1828,31 @@ impl AuthnServiceImpl {
                 self.device_fingerprint_hash(&req.device_fingerprint)
             };
             if presented != fp_stored {
-                return Ok(Response::new(authn_pb::VerifyMfaChallengeResponse {
-                    verified: false,
-                    user_id: String::new(),
-                }));
+                return Ok(Response::new(
+                    authn_pb::VerifyMfaChallengeResponse::default(),
+                ));
             }
         }
         let factor_db: String = row.try_get("factor_kind").unwrap_or_default();
         // Verify the proof against the user's factor. TOTP and recovery codes are
         // checked against the stored secret / code hashes (reusing existing
-        // helpers); email/SMS OTP challenges verify against the OTP store via code.
+        // helpers); email/SMS OTP challenges verify the code against the OTP
+        // issued with this challenge; WebAuthn verifies the assertion against
+        // the assertion challenge started with it.
         let now = now_unix();
         let verified = self
-            .verify_mfa_proof(&user_id, &factor_db, &req.code, now)
+            .verify_mfa_proof(
+                &user_id,
+                &factor_db,
+                &req.code,
+                &req.webauthn_assertion_json,
+                &binding,
+                now,
+            )
             .await?;
-        Ok(Response::new(authn_pb::VerifyMfaChallengeResponse {
-            verified,
-            user_id: if verified { user_id } else { String::new() },
-        }))
+        self.verify_mfa_challenge_response(verified, user_id, &factor_db, &binding, now)
+            .await
+            .map(Response::new)
     }
 
     async fn verify_mfa_proof(
@@ -1795,6 +1860,8 @@ impl AuthnServiceImpl {
         user_id: &str,
         factor_db: &str,
         code: &str,
+        webauthn_assertion_json: &str,
+        binding: &super::step_up::ChallengeBinding,
         now: u64,
     ) -> Result<bool, Status> {
         let user = self
@@ -1805,6 +1872,10 @@ impl AuthnServiceImpl {
                 lifecycle_internal_status("verify_mfa_proof_user_load", err.to_string())
             })?
             .ok_or_else(super::authn_user_not_found_status)?;
+        // A suspended, locked or deleted account proves nothing.
+        if !user.status.is_active() {
+            return Ok(false);
+        }
         let upper = factor_db.to_ascii_uppercase();
         if upper.contains("TOTP") {
             let ok = authn::totp::decrypt_secret(&user.totp_secret_hash, &self.otp_hash_key()?)
@@ -1822,8 +1893,39 @@ impl AuthnServiceImpl {
                     lifecycle_internal_status("verify_mfa_recovery_code", err.to_string())
                 });
         }
-        // For OTP-style factors the `code` is treated as a previously-issued OTP
-        // id+code is out of band; without that we cannot verify here.
+        if upper.contains("EMAIL_OTP") || upper.contains("SMS_OTP") {
+            // The code must answer exactly the SENSITIVE_OPERATION OTP issued
+            // with this challenge, to this user (single use, attempt-limited
+            // by the OTP store like every other code).
+            if binding.otp_id.trim().is_empty() || code.trim().is_empty() {
+                return Ok(false);
+            }
+            let record = self
+                .verify_otp_record(
+                    &binding.otp_id,
+                    code,
+                    Some(authn_entity_pb::OtpType::SensitiveOperation as i32),
+                    now,
+                )
+                .await?;
+            return Ok(matches!(record, Some(rec) if rec.user_id == user.user_id));
+        }
+        if upper.contains("WEBAUTHN") {
+            if binding.webauthn_challenge_id.trim().is_empty()
+                || webauthn_assertion_json.trim().is_empty()
+            {
+                return Ok(false);
+            }
+            // PASSKEYS' assertion check, bound to this user and challenge.
+            return self
+                .verify_webauthn_assertion_for_user(
+                    &user.user_id,
+                    &binding.webauthn_challenge_id,
+                    webauthn_assertion_json,
+                )
+                .await;
+        }
+        // PASSWORD (or an unknown factor) is not a second factor.
         Ok(false)
     }
 

@@ -13,7 +13,7 @@
 │    UNIVERSAL DATA BROKER                                                   │
 │    gRPC data plane | native control plane | tenant/project scope guard     │
 │                                                                            │
-│    crate v0.6.5 | protocol v1.0.0                                          │
+│    crate v0.6.6 | protocol v1.0.0                                          │
 └────────────────────────────────────────────────────────────────────────────┘
 ```
 This is the guide for running UDB in production. If you operate a UDB
@@ -136,9 +136,13 @@ are delivered one of two ways:
   `UDB_OTP_DELIVERY_AUTH_HEADER` as the `Authorization` header when set), and
   NotificationService is not used for codes.
 - **NotificationService.** Otherwise codes are queued through the
-  NotificationService mounted on the same listener. Shipped English templates
-  render `{{code}}`, `{{expires_in_minutes}}`, and `{{user_name}}`; an active
-  tenant template takes precedence. A queued message is only sent when
+  NotificationService mounted on the same listener. Shipped English (`en`) and
+  Bangla (`bn`) templates render `{{code}}`, `{{expires_in_minutes}}`, and
+  `{{user_name}}`; an active tenant template takes precedence. A message
+  renders in the user's locale (the `locale` column of the user row, else a
+  `locale` profile attribute): the exact locale (`bn-BD`), then its language
+  (`bn`), then `en`. Templates are unique per event, channel and locale, so an
+  `en` and a `bn` template for the same event coexist. A queued message is only sent when
   `UDB_NOTIFICATION_DELIVERY_PROVIDERS_JSON` configures a provider for its
   channel; without one it fails after the no-provider grace window.
 
@@ -584,7 +588,7 @@ paths:
 python data/gen_bench_data.py --target-mb 512
 cargo bench --features bench-internals --bench hotpath_bench
 UDB_BENCH_LIVE=1 cargo bench --features bench-internals --bench live_backends_bench
-python scripts/bench_snapshot.py --label "release-0.6.5"
+python scripts/bench_snapshot.py --label "release-0.6.6"
 ```
 
 Once you record a snapshot, its history is kept under `bench-history/`, and the

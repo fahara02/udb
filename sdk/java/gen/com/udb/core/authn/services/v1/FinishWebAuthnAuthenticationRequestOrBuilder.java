@@ -48,4 +48,76 @@ public interface FinishWebAuthnAuthenticationRequestOrBuilder extends
    * <code>.udb.core.common.v1.RequestContext context = 3 [json_name = "context"];</code>
    */
   com.udb.core.common.v1.RequestContextOrBuilder getContextOrBuilder();
+
+  /**
+   * <pre>
+   * Optional client details recorded on the session and device list, like Login.
+   * </pre>
+   *
+   * <code>string device_name = 4 [json_name = "deviceName"];</code>
+   * @return The deviceName.
+   */
+  java.lang.String getDeviceName();
+  /**
+   * <pre>
+   * Optional client details recorded on the session and device list, like Login.
+   * </pre>
+   *
+   * <code>string device_name = 4 [json_name = "deviceName"];</code>
+   * @return The bytes for deviceName.
+   */
+  com.google.protobuf.ByteString
+      getDeviceNameBytes();
+
+  /**
+   * <pre>
+   * forwarded by the gateway
+   * </pre>
+   *
+   * <code>string ip_address = 5 [json_name = "ipAddress"];</code>
+   * @return The ipAddress.
+   */
+  java.lang.String getIpAddress();
+  /**
+   * <pre>
+   * forwarded by the gateway
+   * </pre>
+   *
+   * <code>string ip_address = 5 [json_name = "ipAddress"];</code>
+   * @return The bytes for ipAddress.
+   */
+  com.google.protobuf.ByteString
+      getIpAddressBytes();
+
+  /**
+   * <code>string user_agent = 6 [json_name = "userAgent"];</code>
+   * @return The userAgent.
+   */
+  java.lang.String getUserAgent();
+  /**
+   * <code>string user_agent = 6 [json_name = "userAgent"];</code>
+   * @return The bytes for userAgent.
+   */
+  com.google.protobuf.ByteString
+      getUserAgentBytes();
+
+  /**
+   * <pre>
+   * client device fingerprint (registers the device for ListDevices)
+   * </pre>
+   *
+   * <code>string device_id = 7 [json_name = "deviceId"];</code>
+   * @return The deviceId.
+   */
+  java.lang.String getDeviceId();
+  /**
+   * <pre>
+   * client device fingerprint (registers the device for ListDevices)
+   * </pre>
+   *
+   * <code>string device_id = 7 [json_name = "deviceId"];</code>
+   * @return The bytes for deviceId.
+   */
+  com.google.protobuf.ByteString
+      getDeviceIdBytes();
 }

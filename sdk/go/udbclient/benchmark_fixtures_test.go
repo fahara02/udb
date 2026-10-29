@@ -52,6 +52,37 @@ func loadPreparedBenchmarkFixtures(t testing.TB, fix *perfFixtures, tenant, proj
 			fix.set(key, value)
 		}
 	}
+	// 0.6.6 identity-flow fixtures (tenant auth policy, passwordless sign-in,
+	// invitations, step-up, OIDC); absent when the benchmark broker predates
+	// them or (OIDC only) runs without UDB_OIDC_TEST_MODE.
+	for _, key := range identityFixtureKeys {
+		if value := prepared.Fixtures[key]; value != "" {
+			fix.set(key, value)
+		}
+	}
+}
+
+// identityFixtureKeys are the 0.6.6 identity-flow bench-body fixtures
+// scripts/prepare-benchmark-fixtures.py provisions (the same list in every
+// harness): single-use codes, invitation accept tokens and a step-up token for
+// disposable targets, never a password or an access/refresh token.
+var identityFixtureKeys = []string{
+	"login_otp_send_phone",
+	"login_otp_id",
+	"login_otp_code",
+	"invitation_get_id",
+	"invitation_get_token",
+	"invitation_start_id",
+	"invitation_start_token",
+	"invitation_accept_id",
+	"invitation_accept_token",
+	"invitation_accept_otp_id",
+	"invitation_accept_otp_code",
+	"invitation_revoke_id",
+	"invitation_resend_id",
+	"step_up_token",
+	"oidc_provider_id",
+	"oidc_state",
 }
 
 // membershipFixtureKeys are the `membership_*` bench-body fixtures

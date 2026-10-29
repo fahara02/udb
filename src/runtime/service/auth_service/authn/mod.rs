@@ -339,6 +339,12 @@ mod sessions;
 mod signing_keys;
 mod token_family;
 mod tokens;
+// 0.6.6 identity flows (one topic module each).
+mod invitations;
+mod oidc_login;
+mod passkeys;
+mod passwordless;
+mod step_up;
 // Q#9-11: dev-only software WebAuthn authenticator (UDB_WEBAUTHN_TEST_MODE).
 #[cfg(feature = "webauthn")]
 mod webauthn_softauth;
@@ -3092,11 +3098,30 @@ impl AuthnServiceImpl {
     /// IR compiler refuses to compile a query for one without a concrete tenant
     /// ("tenant_scope_required"). Passing an empty context made every WebAuthn finish
     /// fail INTERNAL at challenge consumption.
+    ///
+    /// Single use: consumption is a conditional `consumed_at IS NULL` update, and
+    /// a call that consumes nothing (a concurrent Finish already took the
+    /// challenge) is refused, so one challenge can never mint two sign-ins.
     async fn consume_webauthn_challenge(
         &self,
         tenant_id: &str,
         challenge_id: &str,
     ) -> Result<(), Status> {
+        let consumed = self
+            .consume_webauthn_challenge_rows(tenant_id, challenge_id)
+            .await?;
+        if consumed == 0 {
+            return Err(webauthn_invalid_ceremony_status("webauthn_challenge"));
+        }
+        Ok(())
+    }
+
+    #[cfg(feature = "webauthn")]
+    async fn consume_webauthn_challenge_rows(
+        &self,
+        tenant_id: &str,
+        challenge_id: &str,
+    ) -> Result<u64, Status> {
         if let Ok(runtime) = self.authn_runtime() {
             let context = self.authn_context(tenant_id, "");
             let mut assignments = std::collections::BTreeMap::new();
@@ -3114,7 +3139,7 @@ impl AuthnServiceImpl {
                 return_fields: Vec::new(),
                 require_affected: false,
             };
-            runtime
+            let (affected, _) = runtime
                 .native_entity_update_for_service("authn", &context, op)
                 .await
                 .map_err(|err| {
@@ -3123,12 +3148,12 @@ impl AuthnServiceImpl {
                         err,
                     )
                 })?;
-            return Ok(());
+            return Ok(affected);
         }
         let pool = self.require_pg_pool()?;
         let model = webauthn_challenge_model();
         let rel = &model.relation;
-        sqlx::query(&format!(
+        let result = sqlx::query(&format!(
             "UPDATE {rel} SET {} = NOW() WHERE {} = $1::UUID AND {} IS NULL",
             model.q("consumed_at"),
             model.q("challenge_id"),
@@ -3143,7 +3168,7 @@ impl AuthnServiceImpl {
                 format!("consume WebAuthn challenge failed: {err}"),
             )
         })?;
-        Ok(())
+        Ok(result.rows_affected())
     }
 
     #[cfg(feature = "webauthn")]
@@ -3344,8 +3369,6 @@ impl AuthnServiceImpl {
         &self,
         req: authn_pb::StartWebAuthnRegistrationRequest,
     ) -> Result<authn_pb::StartWebAuthnRegistrationResponse, Status> {
-        use webauthn_rs::prelude::{CredentialID, Passkey};
-
         if req.user_id.trim().is_empty() {
             return Err(Self::webauthn_user_id_required_status());
         }
@@ -3367,6 +3390,22 @@ impl AuthnServiceImpl {
                 "start_webauthn_registration",
             ));
         }
+        self.start_passkey_registration_for(&user, req.label).await
+    }
+
+    /// The registration ceremony for an already-resolved `user`: build the
+    /// creation options (excluding the user's existing passkeys), ask for a
+    /// resident (discoverable) key when the tenant WebAuthn policy does not
+    /// discourage one, and persist the challenge. Shared by
+    /// StartWebAuthnRegistration and the invitation passkey path, which runs
+    /// it for a user id it has reserved but not yet created.
+    #[cfg(feature = "webauthn")]
+    async fn start_passkey_registration_for(
+        &self,
+        user: &UserRecord,
+        label: String,
+    ) -> Result<authn_pb::StartWebAuthnRegistrationResponse, Status> {
+        use webauthn_rs::prelude::{CredentialID, Passkey};
 
         let exclude_credentials = self
             .load_webauthn_passkeys(&user.user_id)
@@ -3410,11 +3449,16 @@ impl AuthnServiceImpl {
                 format!("serialize WebAuthn registration challenge failed: {err}"),
             )
         })?;
+        // Usernameless sign-in needs a discoverable credential. webauthn-rs's
+        // passkey ceremony never asks for one, so the tenant policy decides it on
+        // the client-facing options (the server-side state does not depend on it).
+        let policy = self.resolve_webauthn_policy(&user.tenant_id).await;
+        let creation_json = passkeys::request_resident_key(&creation_json, &policy);
         let challenge_b64 =
             webauthn_softauth::challenge_from_options(&creation_json).unwrap_or_default();
         let state_json = serde_json::to_string(&WebAuthnStateEnvelope {
             state,
-            label: req.label,
+            label,
             challenge: challenge_b64,
         })
         .map_err(|err| {
@@ -3426,7 +3470,7 @@ impl AuthnServiceImpl {
         let cfg = self.webauthn_config()?;
         let expires_at_unix = now_unix().saturating_add(cfg.challenge_ttl_secs);
         let challenge_id = self
-            .store_webauthn_challenge(&user, "registration", state_json, expires_at_unix)
+            .store_webauthn_challenge(user, "registration", state_json, expires_at_unix)
             .await?;
         Ok(authn_pb::StartWebAuthnRegistrationResponse {
             challenge_id,
@@ -3440,8 +3484,6 @@ impl AuthnServiceImpl {
         &self,
         req: authn_pb::FinishWebAuthnRegistrationRequest,
     ) -> Result<authn_pb::FinishWebAuthnRegistrationResponse, Status> {
-        use webauthn_rs::prelude::{PasskeyRegistration, RegisterPublicKeyCredential, Url};
-
         Self::validate_webauthn_finish_fields(&req.challenge_id, &req.public_key_credential_json)?;
         let challenge = self
             .load_webauthn_challenge(&req.challenge_id, "registration")
@@ -3454,7 +3496,48 @@ impl AuthnServiceImpl {
                 authn_internal_status("finish_webauthn_registration_user_load", err.to_string())
             })?
             .ok_or_else(authn_user_not_found_status)?;
-        if challenge.tenant_id != user.tenant_id || challenge.project_id != user.project_id {
+        let credential_id = self
+            .finish_passkey_registration_for(
+                &user,
+                &challenge,
+                &req.challenge_id,
+                &req.public_key_credential_json,
+                &req.label,
+            )
+            .await?;
+        user.mfa_enabled = true;
+        user.updated_at_unix = now_unix();
+        self.users.put_user(user.clone()).await.map_err(|err| {
+            authn_internal_status("finish_webauthn_registration_user_store", err.to_string())
+        })?;
+        Ok(authn_pb::FinishWebAuthnRegistrationResponse {
+            registered: true,
+            credential_id,
+            user_id: user.user_id,
+        })
+    }
+
+    /// Verify a registration credential against a stored `registration`
+    /// challenge issued for `user`, enforce the tenant WebAuthn policy, persist
+    /// the passkey, consume the challenge and audit it. Returns the credential id.
+    /// The user record itself is not written: StartWebAuthnRegistration's
+    /// handler marks MFA enabled, and the invitation path creates the user.
+    /// The passkey row references `users`, so `user` must already be stored.
+    #[cfg(feature = "webauthn")]
+    async fn finish_passkey_registration_for(
+        &self,
+        user: &UserRecord,
+        challenge: &WebAuthnChallengeRecord,
+        challenge_id: &str,
+        public_key_credential_json: &str,
+        label: &str,
+    ) -> Result<String, Status> {
+        use webauthn_rs::prelude::{PasskeyRegistration, RegisterPublicKeyCredential, Url};
+
+        if challenge.user_id != user.user_id
+            || challenge.tenant_id != user.tenant_id
+            || challenge.project_id != user.project_id
+        {
             return Err(webauthn_invalid_ceremony_status(
                 "finish_webauthn_registration",
             ));
@@ -3470,7 +3553,7 @@ impl AuthnServiceImpl {
         // broker mints a REAL "none"-attestation credential (P-256/ES256) that the
         // production verifier below checks legitimately. Fail-closed off in prod.
         let credential: RegisterPublicKeyCredential = if webauthn_softauth::test_mode_enabled()
-            && req.public_key_credential_json.trim() == webauthn_softauth::TEST_CREDENTIAL_SENTINEL
+            && public_key_credential_json.trim() == webauthn_softauth::TEST_CREDENTIAL_SENTINEL
         {
             let cfg = self.webauthn_config()?;
             let origin = Url::parse(&cfg.rp_origin)
@@ -3501,11 +3584,11 @@ impl AuthnServiceImpl {
                 )
             })?
         } else {
-            serde_json::from_str(&req.public_key_credential_json)
+            serde_json::from_str(public_key_credential_json)
                 .map_err(|err| Self::invalid_webauthn_registration_credential_json_status(err))?
         };
         let dev_mode = webauthn_softauth::test_mode_enabled()
-            && req.public_key_credential_json.trim() == webauthn_softauth::TEST_CREDENTIAL_SENTINEL;
+            && public_key_credential_json.trim() == webauthn_softauth::TEST_CREDENTIAL_SENTINEL;
         let passkey = match self
             .webauthn()?
             .finish_passkey_registration(&credential, &envelope.state)
@@ -3527,14 +3610,10 @@ impl AuthnServiceImpl {
                 match existing {
                     Some(passkey) => {
                         let credential_id = Self::webauthn_credential_id_text(passkey.cred_id())?;
-                        self.consume_webauthn_challenge(&user.tenant_id, &req.challenge_id)
+                        self.consume_webauthn_challenge(&user.tenant_id, challenge_id)
                             .await
                             .ok();
-                        return Ok(authn_pb::FinishWebAuthnRegistrationResponse {
-                            registered: true,
-                            credential_id,
-                            user_id: user.user_id,
-                        });
+                        return Ok(credential_id);
                     }
                     None => return Err(Status::unauthenticated("invalid credential")),
                 }
@@ -3555,20 +3634,17 @@ impl AuthnServiceImpl {
                 format!("serialize WebAuthn passkey failed: {err}"),
             )
         })?;
-        let label = if req.label.trim().is_empty() {
+        let label = if label.trim().is_empty() {
             envelope.label.as_str()
         } else {
-            req.label.as_str()
+            label
         };
-        self.insert_webauthn_passkey(&user, &credential_id, passkey_json, label)
+        // Consume first: the conditional update refuses a challenge a concurrent
+        // Finish already took, so one ceremony can never store two passkeys.
+        self.consume_webauthn_challenge(&user.tenant_id, challenge_id)
             .await?;
-        self.consume_webauthn_challenge(&user.tenant_id, &req.challenge_id)
+        self.insert_webauthn_passkey(user, &credential_id, passkey_json, label)
             .await?;
-        user.mfa_enabled = true;
-        user.updated_at_unix = now_unix();
-        self.users.put_user(user.clone()).await.map_err(|err| {
-            authn_internal_status("finish_webauthn_registration_user_store", err.to_string())
-        })?;
         // Audit the passkey registration (security-sensitive). The credential id
         // is a public handle, never key material.
         self.emit_event(
@@ -3594,11 +3670,7 @@ impl AuthnServiceImpl {
             }),
         )
         .await;
-        Ok(authn_pb::FinishWebAuthnRegistrationResponse {
-            registered: true,
-            credential_id,
-            user_id: user.user_id,
-        })
+        Ok(credential_id)
     }
 
     #[cfg(feature = "webauthn")]
@@ -3609,7 +3681,8 @@ impl AuthnServiceImpl {
         use webauthn_rs::prelude::Passkey;
 
         if req.user_id.trim().is_empty() {
-            return Err(Self::webauthn_user_id_required_status());
+            // No user named: usernameless (discoverable-credential) sign-in.
+            return self.start_discoverable_authentication_impl(req).await;
         }
         let user = self
             .users
@@ -3690,76 +3763,125 @@ impl AuthnServiceImpl {
         &self,
         req: authn_pb::FinishWebAuthnAuthenticationRequest,
     ) -> Result<authn_pb::FinishWebAuthnAuthenticationResponse, Status> {
+        let (user, credential_id) = self
+            .verify_webauthn_authentication_assertion(
+                &req.challenge_id,
+                &req.public_key_credential_json,
+                None,
+            )
+            .await?;
+        // 0.6.6: a passkey sign-in issues exactly Login's credentials (session,
+        // access token, rotating refresh family, CSRF) through `complete_sign_in`.
+        self.passkey_sign_in(user, credential_id, &req).await
+    }
+
+    /// Verify a passkey assertion against a stored `authentication` challenge:
+    /// the WebAuthn signature, the UV floor and tenant policy, and the stored
+    /// passkey (whose sign counter is advanced). Consumes the challenge (single
+    /// use) and audits `WEBAUTHN_AUTHENTICATED`. Returns the authenticated user
+    /// and the credential id. Issues NO credentials: the sign-in path, the
+    /// password-login second factor and step-up all build on this.
+    ///
+    /// `expected_user_id` binds the challenge to one user (second factor /
+    /// step-up): a challenge issued for anyone else, or a usernameless one, is
+    /// refused. `None` accepts both a per-user and a usernameless challenge.
+    #[cfg(feature = "webauthn")]
+    async fn verify_webauthn_authentication_assertion(
+        &self,
+        challenge_id: &str,
+        public_key_credential_json: &str,
+        expected_user_id: Option<&str>,
+    ) -> Result<(UserRecord, String), Status> {
         use webauthn_rs::prelude::{Passkey, PasskeyAuthentication, PublicKeyCredential, Url};
 
-        Self::validate_webauthn_finish_fields(&req.challenge_id, &req.public_key_credential_json)?;
+        Self::validate_webauthn_finish_fields(challenge_id, public_key_credential_json)?;
         let challenge = self
-            .load_webauthn_challenge(&req.challenge_id, "authentication")
+            .load_webauthn_challenge(challenge_id, "authentication")
             .await?;
-        let user = self
-            .users
-            .get_user_by_id(&challenge.user_id)
-            .await
-            .map_err(|err| {
-                authn_internal_status("finish_webauthn_authentication_user_load", err.to_string())
-            })?
-            .ok_or_else(authn_user_not_found_status)?;
-        if challenge.tenant_id != user.tenant_id || challenge.project_id != user.project_id {
+        let discoverable = challenge.user_id == passkeys::DISCOVERABLE_CHALLENGE_USER_ID;
+        let bound_elsewhere = match expected_user_id {
+            Some(expected) => discoverable || expected != challenge.user_id,
+            None => false,
+        };
+        if bound_elsewhere {
             return Err(webauthn_invalid_ceremony_status(
                 "finish_webauthn_authentication",
             ));
         }
-        let envelope: WebAuthnStateEnvelope<PasskeyAuthentication> =
-            serde_json::from_str(&challenge.state_json).map_err(|err| {
-                authn_internal_status(
-                    "finish_webauthn_authentication_state_decode",
-                    format!("decode WebAuthn authentication state failed: {err}"),
-                )
-            })?;
-        // Q#9-11: dev soft-authenticator path (see finish_webauthn_registration_impl).
-        // Signs a genuine ES256 assertion with the keypair minted at registration;
-        // the production verifier below checks it. Fail-closed off in prod.
-        let credential: PublicKeyCredential = if webauthn_softauth::test_mode_enabled()
-            && req.public_key_credential_json.trim() == webauthn_softauth::TEST_CREDENTIAL_SENTINEL
-        {
-            let cfg = self.webauthn_config()?;
-            let origin = Url::parse(&cfg.rp_origin)
+        let (user, result) = if discoverable {
+            self.finish_discoverable_assertion(&challenge, public_key_credential_json)
+                .await?
+        } else {
+            let user = self
+                .users
+                .get_user_by_id(&challenge.user_id)
+                .await
                 .map_err(|err| {
                     authn_internal_status(
-                        "finish_webauthn_authentication_origin_parse",
-                        format!("invalid WebAuthn origin: {err}"),
+                        "finish_webauthn_authentication_user_load",
+                        err.to_string(),
                     )
                 })?
-                .origin()
-                .ascii_serialization();
-            // The userHandle (user UUID bytes) is derived inside make_assertion to
-            // match exactly what start_passkey_* bound as the passkey user handle.
-            let json = webauthn_softauth::make_assertion(
-                &user.user_id,
-                &cfg.rp_id,
-                &origin,
-                &envelope.challenge,
-            )
-            .map_err(|err| {
-                authn_internal_status(
-                    "finish_webauthn_authentication_dev_make",
-                    format!("dev WebAuthn assertion failed: {err}"),
+                .ok_or_else(authn_user_not_found_status)?;
+            if challenge.tenant_id != user.tenant_id || challenge.project_id != user.project_id {
+                return Err(webauthn_invalid_ceremony_status(
+                    "finish_webauthn_authentication",
+                ));
+            }
+            let envelope: WebAuthnStateEnvelope<PasskeyAuthentication> =
+                serde_json::from_str(&challenge.state_json).map_err(|err| {
+                    authn_internal_status(
+                        "finish_webauthn_authentication_state_decode",
+                        format!("decode WebAuthn authentication state failed: {err}"),
+                    )
+                })?;
+            // Q#9-11: dev soft-authenticator path (see finish_webauthn_registration_impl).
+            // Signs a genuine ES256 assertion with the keypair minted at registration;
+            // the production verifier below checks it. Fail-closed off in prod.
+            let credential: PublicKeyCredential = if webauthn_softauth::test_mode_enabled()
+                && public_key_credential_json.trim() == webauthn_softauth::TEST_CREDENTIAL_SENTINEL
+            {
+                let cfg = self.webauthn_config()?;
+                let origin = Url::parse(&cfg.rp_origin)
+                    .map_err(|err| {
+                        authn_internal_status(
+                            "finish_webauthn_authentication_origin_parse",
+                            format!("invalid WebAuthn origin: {err}"),
+                        )
+                    })?
+                    .origin()
+                    .ascii_serialization();
+                // The userHandle (user UUID bytes) is derived inside make_assertion to
+                // match exactly what start_passkey_* bound as the passkey user handle.
+                let json = webauthn_softauth::make_assertion(
+                    &user.user_id,
+                    &cfg.rp_id,
+                    &origin,
+                    &envelope.challenge,
                 )
-            })?;
-            serde_json::from_str(&json).map_err(|err| {
-                authn_internal_status(
-                    "finish_webauthn_authentication_dev_decode",
-                    format!("decode dev WebAuthn assertion failed: {err}"),
-                )
-            })?
-        } else {
-            serde_json::from_str(&req.public_key_credential_json)
-                .map_err(|err| Self::invalid_webauthn_authentication_credential_json_status(err))?
+                .map_err(|err| {
+                    authn_internal_status(
+                        "finish_webauthn_authentication_dev_make",
+                        format!("dev WebAuthn assertion failed: {err}"),
+                    )
+                })?;
+                serde_json::from_str(&json).map_err(|err| {
+                    authn_internal_status(
+                        "finish_webauthn_authentication_dev_decode",
+                        format!("decode dev WebAuthn assertion failed: {err}"),
+                    )
+                })?
+            } else {
+                serde_json::from_str(public_key_credential_json).map_err(|err| {
+                    Self::invalid_webauthn_authentication_credential_json_status(err)
+                })?
+            };
+            let result = self
+                .webauthn()?
+                .finish_passkey_authentication(&credential, &envelope.state)
+                .map_err(|_| Status::unauthenticated("invalid credential"))?;
+            (user, result)
         };
-        let result = self
-            .webauthn()?
-            .finish_passkey_authentication(&credential, &envelope.state)
-            .map_err(|_| Status::unauthenticated("invalid credential"))?;
         // Fail-closed UV floor: passkeys are UV-bound (webauthn-rs verifies with
         // UserVerificationPolicy::Required), so a UV=false assertion is rejected
         // outright and the per-tenant policy can only TIGHTEN, never loosen, this.
@@ -3793,43 +3915,12 @@ impl AuthnServiceImpl {
                 format!("serialize WebAuthn passkey failed: {err}"),
             )
         })?;
+        // Consume before anything is issued: the conditional update refuses a
+        // challenge a concurrent Finish already took (single use).
+        self.consume_webauthn_challenge(&user.tenant_id, challenge_id)
+            .await?;
         self.update_webauthn_passkey_after_auth(&user.tenant_id, &credential_id, passkey_json)
             .await?;
-        self.consume_webauthn_challenge(&user.tenant_id, &req.challenge_id)
-            .await?;
-        let now = now_unix();
-        // Block 1 (auth_fix.md, Decision E): resolve role-derived grants once,
-        // thread into the session record and the JWT.
-        let (scopes, roles) =
-            self.resolve_effective_grants(&user.user_id, &user.tenant_id, &user.project_id);
-        let (session_id, session_expires) = self
-            .create_login_session(
-                &user,
-                "webauthn".to_string(),
-                scopes.clone(),
-                roles.clone(),
-                String::new(),
-                now,
-            )
-            .await?;
-        let (access_token, access_exp) = self.issue_access_token(
-            &user.user_id,
-            &user.tenant_id,
-            &user.project_id,
-            &scopes,
-            &roles,
-            "",
-            &session_id,
-            "webauthn",
-            account_kind_to_proto(user.account_kind),
-            now,
-        );
-        let expires_at = if access_exp > 0 {
-            access_exp
-        } else {
-            session_expires as i64
-        };
-        let principal = principal_from_user_record(&user, authn::AuthnMethod::WebAuthn);
         // Audit the passkey authentication (security-sensitive).
         self.emit_event(
             AuthEvent::new(
@@ -3855,20 +3946,7 @@ impl AuthnServiceImpl {
             }),
         )
         .await;
-        Ok(authn_pb::FinishWebAuthnAuthenticationResponse {
-            // The passkey path HAS the user record, so project its profile
-            // attributes rather than returning the empty map every path used to.
-            principal: Some(authn_principal_to_pb_with_attributes(
-                &principal,
-                expires_at,
-                account_kind_to_proto(user.account_kind),
-                &user.profile_attributes_json,
-            )),
-            session_id,
-            access_token,
-            expires_at_unix: expires_at,
-            credential_id,
-        })
+        Ok((user, credential_id))
     }
 }
 
@@ -4336,6 +4414,111 @@ impl AuthnService for AuthnServiceImpl {
     ) -> Result<Response<authn_pb::DeleteWebAuthnCredentialResponse>, Status> {
         self.delete_web_authn_credential_impl(request).await
     }
+
+    // ── 0.6.6 passwordless login + tenant auth policy [PASSWORDLESS] ──
+    async fn put_tenant_auth_policy(
+        &self,
+        request: Request<authn_pb::PutTenantAuthPolicyRequest>,
+    ) -> Result<Response<authn_pb::PutTenantAuthPolicyResponse>, Status> {
+        self.put_tenant_auth_policy_impl(request).await
+    }
+    async fn get_tenant_auth_policy(
+        &self,
+        request: Request<authn_pb::GetTenantAuthPolicyRequest>,
+    ) -> Result<Response<authn_pb::GetTenantAuthPolicyResponse>, Status> {
+        self.get_tenant_auth_policy_impl(request).await
+    }
+    async fn send_login_otp(
+        &self,
+        request: Request<authn_pb::SendLoginOtpRequest>,
+    ) -> Result<Response<authn_pb::SendLoginOtpResponse>, Status> {
+        self.send_login_otp_impl(request).await
+    }
+    async fn login_with_otp(
+        &self,
+        request: Request<authn_pb::LoginWithOtpRequest>,
+    ) -> Result<Response<authn_pb::LoginWithOtpResponse>, Status> {
+        self.login_with_otp_impl(request).await
+    }
+    // [PASSWORDLESS-END]
+
+    // ── 0.6.6 passkeys [PASSKEYS] ──
+    // [PASSKEYS-END]
+
+    // ── 0.6.6 OIDC sign-in [OIDC] ──
+    async fn start_oidc_login(
+        &self,
+        request: Request<authn_pb::StartOidcLoginRequest>,
+    ) -> Result<Response<authn_pb::StartOidcLoginResponse>, Status> {
+        self.start_oidc_login_impl(request).await
+    }
+    async fn finish_oidc_login(
+        &self,
+        request: Request<authn_pb::FinishOidcLoginRequest>,
+    ) -> Result<Response<authn_pb::FinishOidcLoginResponse>, Status> {
+        self.finish_oidc_login_impl(request).await
+    }
+    async fn login_with_oidc_id_token(
+        &self,
+        request: Request<authn_pb::LoginWithOidcIdTokenRequest>,
+    ) -> Result<Response<authn_pb::LoginWithOidcIdTokenResponse>, Status> {
+        self.login_with_oidc_id_token_impl(request).await
+    }
+    // [OIDC-END]
+
+    // ── 0.6.6 invitations [INVITATIONS] ──
+    async fn create_invitation(
+        &self,
+        request: Request<authn_pb::CreateInvitationRequest>,
+    ) -> Result<Response<authn_pb::CreateInvitationResponse>, Status> {
+        self.create_invitation_impl(request).await
+    }
+    async fn list_invitations(
+        &self,
+        request: Request<authn_pb::ListInvitationsRequest>,
+    ) -> Result<Response<authn_pb::ListInvitationsResponse>, Status> {
+        self.list_invitations_impl(request).await
+    }
+    async fn revoke_invitation(
+        &self,
+        request: Request<authn_pb::RevokeInvitationRequest>,
+    ) -> Result<Response<authn_pb::RevokeInvitationResponse>, Status> {
+        self.revoke_invitation_impl(request).await
+    }
+    async fn resend_invitation(
+        &self,
+        request: Request<authn_pb::ResendInvitationRequest>,
+    ) -> Result<Response<authn_pb::ResendInvitationResponse>, Status> {
+        self.resend_invitation_impl(request).await
+    }
+    async fn get_invitation(
+        &self,
+        request: Request<authn_pb::GetInvitationRequest>,
+    ) -> Result<Response<authn_pb::GetInvitationResponse>, Status> {
+        self.get_invitation_impl(request).await
+    }
+    async fn start_invitation_acceptance(
+        &self,
+        request: Request<authn_pb::StartInvitationAcceptanceRequest>,
+    ) -> Result<Response<authn_pb::StartInvitationAcceptanceResponse>, Status> {
+        self.start_invitation_acceptance_impl(request).await
+    }
+    async fn accept_invitation(
+        &self,
+        request: Request<authn_pb::AcceptInvitationRequest>,
+    ) -> Result<Response<authn_pb::AcceptInvitationResponse>, Status> {
+        self.accept_invitation_impl(request).await
+    }
+    // [INVITATIONS-END]
+
+    // ── 0.6.6 step-up / MFA [STEPUP] ──
+    async fn check_step_up(
+        &self,
+        request: Request<authn_pb::CheckStepUpRequest>,
+    ) -> Result<Response<authn_pb::CheckStepUpResponse>, Status> {
+        self.check_step_up_impl(request).await
+    }
+    // [STEPUP-END]
 }
 
 #[cfg(test)]

@@ -22,6 +22,36 @@ class VerifyMfaChallengeResponse extends \Google\Protobuf\Internal\Message
      * Generated from protobuf field <code>string user_id = 2 [json_name = "userId"];</code>
      */
     protected $user_id = '';
+    /**
+     * Set when the challenge named an action, the proof verified, and the
+     * caller is the challenged user: a short-lived JWT proving this second
+     * factor for that action. It is NOT an access token (no scopes; refused as
+     * a bearer). Hand it to the resource server, which calls CheckStepUp.
+     * Empty when no JWT signing key is configured.
+     *
+     * Generated from protobuf field <code>string step_up_token = 3 [json_name = "stepUpToken"];</code>
+     */
+    protected $step_up_token = '';
+    /**
+     * When step_up_token stops being accepted: the tenant rule's
+     * max_age_seconds for the action, else 300 seconds after verification.
+     *
+     * Generated from protobuf field <code>int64 step_up_expires_at_unix = 4 [json_name = "stepUpExpiresAtUnix"];</code>
+     */
+    protected $step_up_expires_at_unix = 0;
+    /**
+     * Assurance level the step-up token states (`aal2`); empty when no token.
+     *
+     * Generated from protobuf field <code>string acr = 5 [json_name = "acr"];</code>
+     */
+    protected $acr = '';
+    /**
+     * Authentication methods (RFC 8176) the step-up token states, e.g. `otp`,
+     * `sms`, `webauthn`; empty when no token.
+     *
+     * Generated from protobuf field <code>repeated string amr = 6 [json_name = "amr"];</code>
+     */
+    private $amr;
 
     /**
      * Constructor.
@@ -31,6 +61,20 @@ class VerifyMfaChallengeResponse extends \Google\Protobuf\Internal\Message
      *
      *     @type bool $verified
      *     @type string $user_id
+     *     @type string $step_up_token
+     *           Set when the challenge named an action, the proof verified, and the
+     *           caller is the challenged user: a short-lived JWT proving this second
+     *           factor for that action. It is NOT an access token (no scopes; refused as
+     *           a bearer). Hand it to the resource server, which calls CheckStepUp.
+     *           Empty when no JWT signing key is configured.
+     *     @type int|string $step_up_expires_at_unix
+     *           When step_up_token stops being accepted: the tenant rule's
+     *           max_age_seconds for the action, else 300 seconds after verification.
+     *     @type string $acr
+     *           Assurance level the step-up token states (`aal2`); empty when no token.
+     *     @type string[] $amr
+     *           Authentication methods (RFC 8176) the step-up token states, e.g. `otp`,
+     *           `sms`, `webauthn`; empty when no token.
      * }
      */
     public function __construct($data = NULL) {
@@ -78,6 +122,122 @@ class VerifyMfaChallengeResponse extends \Google\Protobuf\Internal\Message
     {
         GPBUtil::checkString($var, True);
         $this->user_id = $var;
+
+        return $this;
+    }
+
+    /**
+     * Set when the challenge named an action, the proof verified, and the
+     * caller is the challenged user: a short-lived JWT proving this second
+     * factor for that action. It is NOT an access token (no scopes; refused as
+     * a bearer). Hand it to the resource server, which calls CheckStepUp.
+     * Empty when no JWT signing key is configured.
+     *
+     * Generated from protobuf field <code>string step_up_token = 3 [json_name = "stepUpToken"];</code>
+     * @return string
+     */
+    public function getStepUpToken()
+    {
+        return $this->step_up_token;
+    }
+
+    /**
+     * Set when the challenge named an action, the proof verified, and the
+     * caller is the challenged user: a short-lived JWT proving this second
+     * factor for that action. It is NOT an access token (no scopes; refused as
+     * a bearer). Hand it to the resource server, which calls CheckStepUp.
+     * Empty when no JWT signing key is configured.
+     *
+     * Generated from protobuf field <code>string step_up_token = 3 [json_name = "stepUpToken"];</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setStepUpToken($var)
+    {
+        GPBUtil::checkString($var, True);
+        $this->step_up_token = $var;
+
+        return $this;
+    }
+
+    /**
+     * When step_up_token stops being accepted: the tenant rule's
+     * max_age_seconds for the action, else 300 seconds after verification.
+     *
+     * Generated from protobuf field <code>int64 step_up_expires_at_unix = 4 [json_name = "stepUpExpiresAtUnix"];</code>
+     * @return int|string
+     */
+    public function getStepUpExpiresAtUnix()
+    {
+        return $this->step_up_expires_at_unix;
+    }
+
+    /**
+     * When step_up_token stops being accepted: the tenant rule's
+     * max_age_seconds for the action, else 300 seconds after verification.
+     *
+     * Generated from protobuf field <code>int64 step_up_expires_at_unix = 4 [json_name = "stepUpExpiresAtUnix"];</code>
+     * @param int|string $var
+     * @return $this
+     */
+    public function setStepUpExpiresAtUnix($var)
+    {
+        GPBUtil::checkInt64($var);
+        $this->step_up_expires_at_unix = $var;
+
+        return $this;
+    }
+
+    /**
+     * Assurance level the step-up token states (`aal2`); empty when no token.
+     *
+     * Generated from protobuf field <code>string acr = 5 [json_name = "acr"];</code>
+     * @return string
+     */
+    public function getAcr()
+    {
+        return $this->acr;
+    }
+
+    /**
+     * Assurance level the step-up token states (`aal2`); empty when no token.
+     *
+     * Generated from protobuf field <code>string acr = 5 [json_name = "acr"];</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setAcr($var)
+    {
+        GPBUtil::checkString($var, True);
+        $this->acr = $var;
+
+        return $this;
+    }
+
+    /**
+     * Authentication methods (RFC 8176) the step-up token states, e.g. `otp`,
+     * `sms`, `webauthn`; empty when no token.
+     *
+     * Generated from protobuf field <code>repeated string amr = 6 [json_name = "amr"];</code>
+     * @return RepeatedField<string>
+     */
+    public function getAmr()
+    {
+        return $this->amr;
+    }
+
+    /**
+     * Authentication methods (RFC 8176) the step-up token states, e.g. `otp`,
+     * `sms`, `webauthn`; empty when no token.
+     *
+     * Generated from protobuf field <code>repeated string amr = 6 [json_name = "amr"];</code>
+     * @param string[] $var
+     * @return $this
+     */
+    public function setAmr($var)
+    {
+        $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::STRING);
+        $this->amr = $arr;
 
         return $this;
     }

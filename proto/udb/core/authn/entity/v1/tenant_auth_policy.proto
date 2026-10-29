@@ -1,0 +1,93 @@
+syntax = "proto3";
+
+package udb.core.authn.entity.v1;
+
+import "google/protobuf/timestamp.proto";
+import "udb/core/common/v1/db.proto";
+import "udb/core/common/v1/security.proto";
+
+option csharp_namespace = "Udb.Core.Authn.Entity.V1";
+option go_package = "github.com/udb-project/udb/gen/go/udb/core/authn/entity/v1;authnv1";
+option java_package = "com.udb.core.authn.entity.v1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Authn\\Entity\\V1";
+option php_namespace = "Udb\\Core\\Authn\\Entity\\V1";
+
+// ---------------------------------------------------------------------------
+// TenantAuthPolicy — how the people of one tenant sign in. One row per tenant;
+// a tenant without a row gets the defaults (passwords required, no
+// passwordless channel, no magic link, no step-up rule).
+//
+// * `password_required = false` lets CreateUser make an account with no
+//   password; that account signs in by one-time code (SendLoginOtp +
+//   LoginWithOtp), a passkey or an external IdP.
+// * `passwordless_channels_json` lists the channels SendLoginOtp may send a
+//   sign-in code over ("SMS", "EMAIL"). A channel not listed sends nothing.
+// * `magic_link_base_url` is the https page that receives a magic link
+//   (`<base>?otp_id=<id>&code=<code>`) and the base of invitation links.
+// * `step_up_rules_json` lists the actions that need a fresh second factor
+//   (`{action, max_age_seconds, factors}`), checked by CheckStepUp.
+//
+// Written only by PutTenantAuthPolicy, by an administrator of the tenant.
+// `revision` grows on every write so a writer can refuse to overwrite a change
+// it has not seen.
+// ---------------------------------------------------------------------------
+message TenantAuthPolicy {
+  option (udb.core.common.v1.pg_table) = {
+    table_name: "tenant_auth_policies"
+    schema_name: "udb_authn"
+    migration_order: 29
+    is_table: true
+    comment: "Per-tenant sign-in policy: password requirement, passwordless channels, magic-link base URL, step-up rules"
+    soft_delete: false
+    audit_fields: true
+    enable_rls: true
+    rls_policies: {
+      policy_name: "tenant_isolation"
+      using: "(tenant_id::text = current_setting('app.current_tenant_id', true)::text)"
+      permissive: true
+    }
+    cdc_topic: "udb.authn.tenant_auth_policies.cdc"
+    required_scope: "udb:authn:read-auth-policy"
+    replica_hint: "primary"
+  };
+  option (udb.core.common.v1.db_table_security) = {
+    tenant_isolation_mode: "tenant"
+    tenant_column: "tenant_id"
+    rls_policy_template: "tenant_id = current_setting('app.current_tenant_id')"
+    soft_delete_mode: "none"
+    retention_class: "authn.policy"
+    audit_mode: AUDIT_MODE_MUTATION
+    encryption_profile: "tenant"
+    pii_profile: "standard"
+    export_eligible: false
+    data_residency_policy_ref: "tenant.data_residency"
+  };
+
+  // The tenant this policy governs (canonical tenant id, as stored on users).
+  string tenant_id = 1 [(udb.core.common.v1.pg_column) = { column_name: "tenant_id" tenant_column: true sql_type: "VARCHAR(120)" primary_key: true not_null: true }];
+
+  // false: CreateUser accepts an empty password and the account signs in
+  // without one. true (default): every new account needs a password.
+  bool password_required = 2 [(udb.core.common.v1.pg_column) = { column_name: "password_required" sql_type: "BOOLEAN" not_null: true default_value: "TRUE" }];
+
+  // JSON array of the channels sign-in codes may be sent over: "SMS", "EMAIL".
+  // Empty (default) disables passwordless sign-in for the tenant.
+  string passwordless_channels_json = 3 [(udb.core.common.v1.pg_column) = { column_name: "passwordless_channels_json" sql_type: "JSONB" is_json: true not_null: true default_value: "'[]'" }];
+
+  // https URL of the page that completes a magic link and an invitation
+  // (no query string or fragment). Empty: no magic links for this tenant.
+  string magic_link_base_url = 4 [(udb.core.common.v1.pg_column) = { column_name: "magic_link_base_url" sql_type: "VARCHAR(2048)" not_null: true default_value: "''" }];
+
+  // JSON array of step-up rules: {"action": "...", "max_age_seconds": N,
+  // "factors": ["TOTP", ...]}. Empty (default): no action needs step-up.
+  string step_up_rules_json = 5 [(udb.core.common.v1.pg_column) = { column_name: "step_up_rules_json" sql_type: "JSONB" is_json: true not_null: true default_value: "'[]'" }];
+
+  // Starts at 1 and grows by one on every write.
+  int64 revision = 6 [(udb.core.common.v1.pg_column) = { column_name: "revision" sql_type: "BIGINT" not_null: true default_value: "1" }];
+
+  // The administrator who last wrote the policy.
+  string updated_by = 7 [(udb.core.common.v1.pg_column) = { column_name: "updated_by" sql_type: "VARCHAR(255)" not_null: true default_value: "''" }];
+
+  google.protobuf.Timestamp created_at = 8 [(udb.core.common.v1.pg_column) = { column_name: "created_at" sql_type: "TIMESTAMPTZ" not_null: true default_value: "now()" }];
+  google.protobuf.Timestamp updated_at = 9 [(udb.core.common.v1.pg_column) = { column_name: "updated_at" sql_type: "TIMESTAMPTZ" not_null: true default_value: "now()" }];
+}

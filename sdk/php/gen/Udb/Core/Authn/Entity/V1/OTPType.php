@@ -46,6 +46,18 @@ class OTPType
      * Generated from protobuf enum <code>OTP_TYPE_PHONE_VERIFICATION = 5;</code>
      */
     const OTP_TYPE_PHONE_VERIFICATION = 5;
+    /**
+     * Passwordless sign-in code (SMS or email; also behind a magic link).
+     *
+     * Generated from protobuf enum <code>OTP_TYPE_LOGIN = 6;</code>
+     */
+    const OTP_TYPE_LOGIN = 6;
+    /**
+     * Proves an invitation's SMS/email channel on acceptance.
+     *
+     * Generated from protobuf enum <code>OTP_TYPE_INVITATION = 7;</code>
+     */
+    const OTP_TYPE_INVITATION = 7;
 
     private static $valueToName = [
         self::OTP_TYPE_UNSPECIFIED => 'OTP_TYPE_UNSPECIFIED',
@@ -54,6 +66,8 @@ class OTPType
         self::OTP_TYPE_PASSWORD_RESET => 'OTP_TYPE_PASSWORD_RESET',
         self::OTP_TYPE_SENSITIVE_OPERATION => 'OTP_TYPE_SENSITIVE_OPERATION',
         self::OTP_TYPE_PHONE_VERIFICATION => 'OTP_TYPE_PHONE_VERIFICATION',
+        self::OTP_TYPE_LOGIN => 'OTP_TYPE_LOGIN',
+        self::OTP_TYPE_INVITATION => 'OTP_TYPE_INVITATION',
     ];
 
     public static function name($value)

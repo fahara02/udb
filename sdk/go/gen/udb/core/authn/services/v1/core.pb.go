@@ -53,7 +53,10 @@ type CreateUserRequest struct {
 	// CreateUser is refused (FAILED_PRECONDITION, `sms_delivery_unavailable`)
 	// unless SMS can be delivered: a NotificationService with SMS templates or
 	// UDB_OTP_DELIVERY_WEBHOOK_URL. With both, the phone is stored unverified.
-	Phone         string `protobuf:"bytes,13,opt,name=phone,proto3" json:"phone,omitempty"`
+	Phone string `protobuf:"bytes,13,opt,name=phone,proto3" json:"phone,omitempty"`
+	// The language of this account's messages (auth codes, magic links), as a
+	// BCP 47 tag such as `bn` or `en-US`; empty = English.
+	Locale        string `protobuf:"bytes,14,opt,name=locale,proto3" json:"locale,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -175,6 +178,13 @@ func (x *CreateUserRequest) GetPasswordSetupRequired() bool {
 func (x *CreateUserRequest) GetPhone() string {
 	if x != nil {
 		return x.Phone
+	}
+	return ""
+}
+
+func (x *CreateUserRequest) GetLocale() string {
+	if x != nil {
+		return x.Locale
 	}
 	return ""
 }
@@ -469,7 +479,10 @@ type UpdateUserRequest struct {
 	ExternalSubject    string                 `protobuf:"bytes,10,opt,name=external_subject,json=externalSubject,proto3" json:"external_subject,omitempty"`
 	// Optional PATCH mask relative to the user resource. When omitted, legacy
 	// clients keep the historical non-empty-field patch behavior.
-	UpdateMask    *fieldmaskpb.FieldMask `protobuf:"bytes,11,opt,name=update_mask,json=updateMask,proto3" json:"update_mask,omitempty"`
+	UpdateMask *fieldmaskpb.FieldMask `protobuf:"bytes,11,opt,name=update_mask,json=updateMask,proto3" json:"update_mask,omitempty"`
+	// The language of this account's messages (BCP 47, e.g. `bn`); set it with
+	// `locale` in `update_mask` (an empty value then resets to English).
+	Locale        string `protobuf:"bytes,12,opt,name=locale,proto3" json:"locale,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -579,6 +592,13 @@ func (x *UpdateUserRequest) GetUpdateMask() *fieldmaskpb.FieldMask {
 		return x.UpdateMask
 	}
 	return nil
+}
+
+func (x *UpdateUserRequest) GetLocale() string {
+	if x != nil {
+		return x.Locale
+	}
+	return ""
 }
 
 type UpdateUserResponse struct {
@@ -1613,8 +1633,15 @@ type LoginRequest struct {
 	ProjectHint   string `protobuf:"bytes,11,opt,name=project_hint,json=projectHint,proto3" json:"project_hint,omitempty"`
 	AccessSurface string `protobuf:"bytes,12,opt,name=access_surface,json=accessSurface,proto3" json:"access_surface,omitempty"`
 	RecoveryCode  string `protobuf:"bytes,13,opt,name=recovery_code,json=recoveryCode,proto3" json:"recovery_code,omitempty"` // single-use MFA recovery/backup code (alternative second factor)
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	// Passkey second factor (alternative to totp_code / mfa_otp_id / recovery_code).
+	// After a Login answered mfa_required=true, call StartWebAuthnAuthentication with
+	// the returned user_id, sign the options with the user's passkey, then re-call
+	// Login with username + password + these two fields. The challenge must have been
+	// issued for this same user and is single use.
+	WebauthnChallengeId   string `protobuf:"bytes,14,opt,name=webauthn_challenge_id,json=webauthnChallengeId,proto3" json:"webauthn_challenge_id,omitempty"`       // challenge_id from StartWebAuthnAuthentication
+	WebauthnAssertionJson string `protobuf:"bytes,15,opt,name=webauthn_assertion_json,json=webauthnAssertionJson,proto3" json:"webauthn_assertion_json,omitempty"` // the PublicKeyCredential assertion JSON from navigator.credentials.get()
+	unknownFields         protoimpl.UnknownFields
+	sizeCache             protoimpl.SizeCache
 }
 
 func (x *LoginRequest) Reset() {
@@ -1734,6 +1761,20 @@ func (x *LoginRequest) GetAccessSurface() string {
 func (x *LoginRequest) GetRecoveryCode() string {
 	if x != nil {
 		return x.RecoveryCode
+	}
+	return ""
+}
+
+func (x *LoginRequest) GetWebauthnChallengeId() string {
+	if x != nil {
+		return x.WebauthnChallengeId
+	}
+	return ""
+}
+
+func (x *LoginRequest) GetWebauthnAssertionJson() string {
+	if x != nil {
+		return x.WebauthnAssertionJson
 	}
 	return ""
 }
@@ -2333,8 +2374,23 @@ type ValidateTokenResponse struct {
 	// it, and equal to LoginResponse.session_public_id; empty for tokens not
 	// minted from a login session (API-key exchange, service accounts).
 	SessionPublicId string `protobuf:"bytes,16,opt,name=session_public_id,json=sessionPublicId,proto3" json:"session_public_id,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	// JWTs only. Assurance level the token states: `aal2` after a second factor
+	// or a passkey, else `aal1`. Empty for sessions, API keys and tokens minted
+	// before 0.6.6 by external issuers that omit it.
+	Acr string `protobuf:"bytes,17,opt,name=acr,proto3" json:"acr,omitempty"`
+	// JWTs only. How the user authenticated (RFC 8176 values such as `pwd`,
+	// `otp`, `sms`, plus `webauthn` for a passkey and `fed` for an OIDC
+	// provider). Empty for refreshed tokens: a refresh does not re-authenticate.
+	Amr []string `protobuf:"bytes,18,rep,name=amr,proto3" json:"amr,omitempty"`
+	// JWTs only. Unix seconds when the user authenticated; 0 when the token
+	// does not say (refreshed tokens, API-key exchange, service accounts).
+	AuthTime int64 `protobuf:"varint,19,opt,name=auth_time,json=authTime,proto3" json:"auth_time,omitempty"`
+	// Set only when `token` is a step-up token from VerifyMfaChallenge: the
+	// action it was minted for. Such a token carries no scopes; use
+	// CheckStepUp to enforce it.
+	StepUpAction  string `protobuf:"bytes,20,opt,name=step_up_action,json=stepUpAction,proto3" json:"step_up_action,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *ValidateTokenResponse) Reset() {
@@ -2475,6 +2531,34 @@ func (x *ValidateTokenResponse) GetAttributes() map[string]string {
 func (x *ValidateTokenResponse) GetSessionPublicId() string {
 	if x != nil {
 		return x.SessionPublicId
+	}
+	return ""
+}
+
+func (x *ValidateTokenResponse) GetAcr() string {
+	if x != nil {
+		return x.Acr
+	}
+	return ""
+}
+
+func (x *ValidateTokenResponse) GetAmr() []string {
+	if x != nil {
+		return x.Amr
+	}
+	return nil
+}
+
+func (x *ValidateTokenResponse) GetAuthTime() int64 {
+	if x != nil {
+		return x.AuthTime
+	}
+	return 0
+}
+
+func (x *ValidateTokenResponse) GetStepUpAction() string {
+	if x != nil {
+		return x.StepUpAction
 	}
 	return ""
 }
@@ -4566,11 +4650,18 @@ func (x *FinishWebAuthnRegistrationResponse) GetUserId() string {
 }
 
 type StartWebAuthnAuthenticationRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	UserId        string                 `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
-	TenantId      string                 `protobuf:"bytes,2,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
-	ProjectId     string                 `protobuf:"bytes,3,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
-	Context       *v1.RequestContext     `protobuf:"bytes,4,opt,name=context,proto3" json:"context,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The user signing in. Leave EMPTY for usernameless sign-in: the options then
+	// ask the browser for any discoverable passkey (resident key) of this RP, and
+	// FinishWebAuthnAuthentication resolves the user from the passkey's user handle.
+	UserId string `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	// With user_id set: optional, must match the user's tenant. Usernameless: the
+	// tenant the passkey must belong to (empty = the deployment's default tenant).
+	TenantId string `protobuf:"bytes,2,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	// With user_id set: optional, must match the user's project. Usernameless:
+	// optional; when set, only a user of this project can complete the sign-in.
+	ProjectId     string             `protobuf:"bytes,3,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
+	Context       *v1.RequestContext `protobuf:"bytes,4,opt,name=context,proto3" json:"context,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -4698,8 +4789,13 @@ type FinishWebAuthnAuthenticationRequest struct {
 	ChallengeId             string                 `protobuf:"bytes,1,opt,name=challenge_id,json=challengeId,proto3" json:"challenge_id,omitempty"`
 	PublicKeyCredentialJson string                 `protobuf:"bytes,2,opt,name=public_key_credential_json,json=publicKeyCredentialJson,proto3" json:"public_key_credential_json,omitempty"`
 	Context                 *v1.RequestContext     `protobuf:"bytes,3,opt,name=context,proto3" json:"context,omitempty"`
-	unknownFields           protoimpl.UnknownFields
-	sizeCache               protoimpl.SizeCache
+	// Optional client details recorded on the session and device list, like Login.
+	DeviceName    string `protobuf:"bytes,4,opt,name=device_name,json=deviceName,proto3" json:"device_name,omitempty"` // human-readable device name
+	IpAddress     string `protobuf:"bytes,5,opt,name=ip_address,json=ipAddress,proto3" json:"ip_address,omitempty"`    // forwarded by the gateway
+	UserAgent     string `protobuf:"bytes,6,opt,name=user_agent,json=userAgent,proto3" json:"user_agent,omitempty"`
+	DeviceId      string `protobuf:"bytes,7,opt,name=device_id,json=deviceId,proto3" json:"device_id,omitempty"` // client device fingerprint (registers the device for ListDevices)
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *FinishWebAuthnAuthenticationRequest) Reset() {
@@ -4753,13 +4849,53 @@ func (x *FinishWebAuthnAuthenticationRequest) GetContext() *v1.RequestContext {
 	return nil
 }
 
+func (x *FinishWebAuthnAuthenticationRequest) GetDeviceName() string {
+	if x != nil {
+		return x.DeviceName
+	}
+	return ""
+}
+
+func (x *FinishWebAuthnAuthenticationRequest) GetIpAddress() string {
+	if x != nil {
+		return x.IpAddress
+	}
+	return ""
+}
+
+func (x *FinishWebAuthnAuthenticationRequest) GetUserAgent() string {
+	if x != nil {
+		return x.UserAgent
+	}
+	return ""
+}
+
+func (x *FinishWebAuthnAuthenticationRequest) GetDeviceId() string {
+	if x != nil {
+		return x.DeviceId
+	}
+	return ""
+}
+
 type FinishWebAuthnAuthenticationResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Principal     *Principal             `protobuf:"bytes,1,opt,name=principal,proto3" json:"principal,omitempty"`
 	SessionId     string                 `protobuf:"bytes,2,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
 	AccessToken   string                 `protobuf:"bytes,3,opt,name=access_token,json=accessToken,proto3" json:"access_token,omitempty"`
-	ExpiresAtUnix int64                  `protobuf:"varint,4,opt,name=expires_at_unix,json=expiresAtUnix,proto3" json:"expires_at_unix,omitempty"`
+	ExpiresAtUnix int64                  `protobuf:"varint,4,opt,name=expires_at_unix,json=expiresAtUnix,proto3" json:"expires_at_unix,omitempty"` // when access_token expires (unix seconds)
 	CredentialId  string                 `protobuf:"bytes,5,opt,name=credential_id,json=credentialId,proto3" json:"credential_id,omitempty"`
+	// A passkey sign-in returns the same credentials as Login (fields below).
+	// Rotating refresh token (rt_<family>.<jti>) for RefreshToken; empty for
+	// service accounts.
+	RefreshToken          string `protobuf:"bytes,6,opt,name=refresh_token,json=refreshToken,proto3" json:"refresh_token,omitempty"`
+	AccessTokenExpiresIn  int32  `protobuf:"varint,7,opt,name=access_token_expires_in,json=accessTokenExpiresIn,proto3" json:"access_token_expires_in,omitempty"`    // seconds
+	RefreshTokenExpiresIn int32  `protobuf:"varint,8,opt,name=refresh_token_expires_in,json=refreshTokenExpiresIn,proto3" json:"refresh_token_expires_in,omitempty"` // absolute lifetime of refresh_token, seconds
+	SessionToken          string `protobuf:"bytes,9,opt,name=session_token,json=sessionToken,proto3" json:"session_token,omitempty"`                                 // server-side session handle (WEB: set as an HttpOnly cookie)
+	CsrfToken             string `protobuf:"bytes,10,opt,name=csrf_token,json=csrfToken,proto3" json:"csrf_token,omitempty"`                                         // double-submit CSRF token bound to this session
+	// Stable non-secret session id (`sesspub_…`), as Login / ValidateToken report it.
+	SessionPublicId string `protobuf:"bytes,11,opt,name=session_public_id,json=sessionPublicId,proto3" json:"session_public_id,omitempty"`
+	// The signed-in user (on a usernameless sign-in, the user the passkey belongs to).
+	UserId        string `protobuf:"bytes,12,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -4825,6 +4961,55 @@ func (x *FinishWebAuthnAuthenticationResponse) GetExpiresAtUnix() int64 {
 func (x *FinishWebAuthnAuthenticationResponse) GetCredentialId() string {
 	if x != nil {
 		return x.CredentialId
+	}
+	return ""
+}
+
+func (x *FinishWebAuthnAuthenticationResponse) GetRefreshToken() string {
+	if x != nil {
+		return x.RefreshToken
+	}
+	return ""
+}
+
+func (x *FinishWebAuthnAuthenticationResponse) GetAccessTokenExpiresIn() int32 {
+	if x != nil {
+		return x.AccessTokenExpiresIn
+	}
+	return 0
+}
+
+func (x *FinishWebAuthnAuthenticationResponse) GetRefreshTokenExpiresIn() int32 {
+	if x != nil {
+		return x.RefreshTokenExpiresIn
+	}
+	return 0
+}
+
+func (x *FinishWebAuthnAuthenticationResponse) GetSessionToken() string {
+	if x != nil {
+		return x.SessionToken
+	}
+	return ""
+}
+
+func (x *FinishWebAuthnAuthenticationResponse) GetCsrfToken() string {
+	if x != nil {
+		return x.CsrfToken
+	}
+	return ""
+}
+
+func (x *FinishWebAuthnAuthenticationResponse) GetSessionPublicId() string {
+	if x != nil {
+		return x.SessionPublicId
+	}
+	return ""
+}
+
+func (x *FinishWebAuthnAuthenticationResponse) GetUserId() string {
+	if x != nil {
+		return x.UserId
 	}
 	return ""
 }
@@ -5550,8 +5735,14 @@ type IssueMfaChallengeRequest struct {
 	DeviceFingerprint string                  `protobuf:"bytes,4,opt,name=device_fingerprint,json=deviceFingerprint,proto3" json:"device_fingerprint,omitempty"`
 	IpAddress         string                  `protobuf:"bytes,5,opt,name=ip_address,json=ipAddress,proto3" json:"ip_address,omitempty"`
 	Context           *v1.RequestContext      `protobuf:"bytes,6,opt,name=context,proto3" json:"context,omitempty"`
-	unknownFields     protoimpl.UnknownFields
-	sizeCache         protoimpl.SizeCache
+	// Step-up: the protected action this challenge unlocks (for example
+	// `payments.approve`, at most 120 characters). When set, a successful
+	// VerifyMfaChallenge returns a step-up token for exactly this action, and a
+	// factor the tenant's step-up rule for the action does not allow is refused
+	// here. Empty = a plain second-factor check (no step-up token).
+	Action        string `protobuf:"bytes,7,opt,name=action,proto3" json:"action,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *IssueMfaChallengeRequest) Reset() {
@@ -5626,13 +5817,27 @@ func (x *IssueMfaChallengeRequest) GetContext() *v1.RequestContext {
 	return nil
 }
 
+func (x *IssueMfaChallengeRequest) GetAction() string {
+	if x != nil {
+		return x.Action
+	}
+	return ""
+}
+
 type IssueMfaChallengeResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	ChallengeId   string                 `protobuf:"bytes,1,opt,name=challenge_id,json=challengeId,proto3" json:"challenge_id,omitempty"`
 	ExpiresAtUnix int64                  `protobuf:"varint,2,opt,name=expires_at_unix,json=expiresAtUnix,proto3" json:"expires_at_unix,omitempty"`
 	FactorKind    v11.AuthFactorKind     `protobuf:"varint,3,opt,name=factor_kind,json=factorKind,proto3,enum=udb.core.authn.entity.v1.AuthFactorKind" json:"factor_kind,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	// WEBAUTHN challenges: the PublicKeyCredentialRequestOptions JSON to pass to
+	// `navigator.credentials.get()`; send the resulting assertion back as
+	// VerifyMfaChallengeRequest.webauthn_assertion_json. Empty for other factors.
+	WebauthnOptionsJson string `protobuf:"bytes,4,opt,name=webauthn_options_json,json=webauthnOptionsJson,proto3" json:"webauthn_options_json,omitempty"`
+	// EMAIL_OTP / SMS_OTP challenges: where the code was sent, masked
+	// (`r***@example.com`, `+88017******21`). Empty for other factors.
+	OtpDestinationMasked string `protobuf:"bytes,5,opt,name=otp_destination_masked,json=otpDestinationMasked,proto3" json:"otp_destination_masked,omitempty"`
+	unknownFields        protoimpl.UnknownFields
+	sizeCache            protoimpl.SizeCache
 }
 
 func (x *IssueMfaChallengeResponse) Reset() {
@@ -5686,14 +5891,31 @@ func (x *IssueMfaChallengeResponse) GetFactorKind() v11.AuthFactorKind {
 	return v11.AuthFactorKind(0)
 }
 
+func (x *IssueMfaChallengeResponse) GetWebauthnOptionsJson() string {
+	if x != nil {
+		return x.WebauthnOptionsJson
+	}
+	return ""
+}
+
+func (x *IssueMfaChallengeResponse) GetOtpDestinationMasked() string {
+	if x != nil {
+		return x.OtpDestinationMasked
+	}
+	return ""
+}
+
 type VerifyMfaChallengeRequest struct {
 	state             protoimpl.MessageState `protogen:"open.v1"`
 	ChallengeId       string                 `protobuf:"bytes,1,opt,name=challenge_id,json=challengeId,proto3" json:"challenge_id,omitempty"`
 	Code              string                 `protobuf:"bytes,2,opt,name=code,proto3" json:"code,omitempty"` // TOTP / OTP / recovery code proof
 	DeviceFingerprint string                 `protobuf:"bytes,3,opt,name=device_fingerprint,json=deviceFingerprint,proto3" json:"device_fingerprint,omitempty"`
 	Context           *v1.RequestContext     `protobuf:"bytes,4,opt,name=context,proto3" json:"context,omitempty"`
-	unknownFields     protoimpl.UnknownFields
-	sizeCache         protoimpl.SizeCache
+	// WEBAUTHN challenges: the assertion (PublicKeyCredential JSON) produced
+	// from IssueMfaChallengeResponse.webauthn_options_json. `code` is ignored.
+	WebauthnAssertionJson string `protobuf:"bytes,5,opt,name=webauthn_assertion_json,json=webauthnAssertionJson,proto3" json:"webauthn_assertion_json,omitempty"`
+	unknownFields         protoimpl.UnknownFields
+	sizeCache             protoimpl.SizeCache
 }
 
 func (x *VerifyMfaChallengeRequest) Reset() {
@@ -5754,10 +5976,31 @@ func (x *VerifyMfaChallengeRequest) GetContext() *v1.RequestContext {
 	return nil
 }
 
+func (x *VerifyMfaChallengeRequest) GetWebauthnAssertionJson() string {
+	if x != nil {
+		return x.WebauthnAssertionJson
+	}
+	return ""
+}
+
 type VerifyMfaChallengeResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Verified      bool                   `protobuf:"varint,1,opt,name=verified,proto3" json:"verified,omitempty"`
-	UserId        string                 `protobuf:"bytes,2,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	state    protoimpl.MessageState `protogen:"open.v1"`
+	Verified bool                   `protobuf:"varint,1,opt,name=verified,proto3" json:"verified,omitempty"`
+	UserId   string                 `protobuf:"bytes,2,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	// Set when the challenge named an action, the proof verified, and the
+	// caller is the challenged user: a short-lived JWT proving this second
+	// factor for that action. It is NOT an access token (no scopes; refused as
+	// a bearer). Hand it to the resource server, which calls CheckStepUp.
+	// Empty when no JWT signing key is configured.
+	StepUpToken string `protobuf:"bytes,3,opt,name=step_up_token,json=stepUpToken,proto3" json:"step_up_token,omitempty"`
+	// When step_up_token stops being accepted: the tenant rule's
+	// max_age_seconds for the action, else 300 seconds after verification.
+	StepUpExpiresAtUnix int64 `protobuf:"varint,4,opt,name=step_up_expires_at_unix,json=stepUpExpiresAtUnix,proto3" json:"step_up_expires_at_unix,omitempty"`
+	// Assurance level the step-up token states (`aal2`); empty when no token.
+	Acr string `protobuf:"bytes,5,opt,name=acr,proto3" json:"acr,omitempty"`
+	// Authentication methods (RFC 8176) the step-up token states, e.g. `otp`,
+	// `sms`, `webauthn`; empty when no token.
+	Amr           []string `protobuf:"bytes,6,rep,name=amr,proto3" json:"amr,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -5804,6 +6047,34 @@ func (x *VerifyMfaChallengeResponse) GetUserId() string {
 		return x.UserId
 	}
 	return ""
+}
+
+func (x *VerifyMfaChallengeResponse) GetStepUpToken() string {
+	if x != nil {
+		return x.StepUpToken
+	}
+	return ""
+}
+
+func (x *VerifyMfaChallengeResponse) GetStepUpExpiresAtUnix() int64 {
+	if x != nil {
+		return x.StepUpExpiresAtUnix
+	}
+	return 0
+}
+
+func (x *VerifyMfaChallengeResponse) GetAcr() string {
+	if x != nil {
+		return x.Acr
+	}
+	return ""
+}
+
+func (x *VerifyMfaChallengeResponse) GetAmr() []string {
+	if x != nil {
+		return x.Amr
+	}
+	return nil
 }
 
 type MfaFactorSummary struct {
@@ -6701,11 +6972,2862 @@ func (x *DeleteWebAuthnCredentialResponse) GetDeleted() bool {
 	return false
 }
 
+type PutTenantAuthPolicyRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The tenant whose policy is replaced; must be the caller's own tenant
+	// unless the caller is a cross-tenant administrator.
+	TenantId string `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	// Put replaces the whole policy. Unset means true: every new account needs a
+	// password. false lets CreateUser make accounts with no password.
+	PasswordRequired *bool `protobuf:"varint,2,opt,name=password_required,json=passwordRequired,proto3,oneof" json:"password_required,omitempty"`
+	// Channels sign-in codes may be sent over: "SMS", "EMAIL" (any case,
+	// duplicates ignored). Empty disables SendLoginOtp for the tenant.
+	PasswordlessChannels []string `protobuf:"bytes,3,rep,name=passwordless_channels,json=passwordlessChannels,proto3" json:"passwordless_channels,omitempty"`
+	// https URL (no query string or fragment, at most 2048 characters) of the
+	// page that completes a magic link (`?otp_id=..&code=..` is appended) and an
+	// invitation. Empty: no magic links.
+	MagicLinkBaseUrl string `protobuf:"bytes,4,opt,name=magic_link_base_url,json=magicLinkBaseUrl,proto3" json:"magic_link_base_url,omitempty"`
+	// JSON array of step-up rules, each {"action": "...", "max_age_seconds": N,
+	// "factors": ["TOTP", "WEBAUTHN", ...]}. Empty means "[]" (no rule).
+	StepUpRulesJson string `protobuf:"bytes,5,opt,name=step_up_rules_json,json=stepUpRulesJson,proto3" json:"step_up_rules_json,omitempty"`
+	// Optimistic concurrency: when non-zero, the write is refused (ABORTED) if
+	// the stored policy's revision differs. 0 writes unconditionally.
+	ExpectedRevision int64              `protobuf:"varint,6,opt,name=expected_revision,json=expectedRevision,proto3" json:"expected_revision,omitempty"`
+	Context          *v1.RequestContext `protobuf:"bytes,7,opt,name=context,proto3" json:"context,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
+}
+
+func (x *PutTenantAuthPolicyRequest) Reset() {
+	*x = PutTenantAuthPolicyRequest{}
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[103]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PutTenantAuthPolicyRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PutTenantAuthPolicyRequest) ProtoMessage() {}
+
+func (x *PutTenantAuthPolicyRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[103]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PutTenantAuthPolicyRequest.ProtoReflect.Descriptor instead.
+func (*PutTenantAuthPolicyRequest) Descriptor() ([]byte, []int) {
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{103}
+}
+
+func (x *PutTenantAuthPolicyRequest) GetTenantId() string {
+	if x != nil {
+		return x.TenantId
+	}
+	return ""
+}
+
+func (x *PutTenantAuthPolicyRequest) GetPasswordRequired() bool {
+	if x != nil && x.PasswordRequired != nil {
+		return *x.PasswordRequired
+	}
+	return false
+}
+
+func (x *PutTenantAuthPolicyRequest) GetPasswordlessChannels() []string {
+	if x != nil {
+		return x.PasswordlessChannels
+	}
+	return nil
+}
+
+func (x *PutTenantAuthPolicyRequest) GetMagicLinkBaseUrl() string {
+	if x != nil {
+		return x.MagicLinkBaseUrl
+	}
+	return ""
+}
+
+func (x *PutTenantAuthPolicyRequest) GetStepUpRulesJson() string {
+	if x != nil {
+		return x.StepUpRulesJson
+	}
+	return ""
+}
+
+func (x *PutTenantAuthPolicyRequest) GetExpectedRevision() int64 {
+	if x != nil {
+		return x.ExpectedRevision
+	}
+	return 0
+}
+
+func (x *PutTenantAuthPolicyRequest) GetContext() *v1.RequestContext {
+	if x != nil {
+		return x.Context
+	}
+	return nil
+}
+
+type PutTenantAuthPolicyResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The policy as stored, with its new revision.
+	Policy        *v11.TenantAuthPolicy `protobuf:"bytes,1,opt,name=policy,proto3" json:"policy,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PutTenantAuthPolicyResponse) Reset() {
+	*x = PutTenantAuthPolicyResponse{}
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[104]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PutTenantAuthPolicyResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PutTenantAuthPolicyResponse) ProtoMessage() {}
+
+func (x *PutTenantAuthPolicyResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[104]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PutTenantAuthPolicyResponse.ProtoReflect.Descriptor instead.
+func (*PutTenantAuthPolicyResponse) Descriptor() ([]byte, []int) {
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{104}
+}
+
+func (x *PutTenantAuthPolicyResponse) GetPolicy() *v11.TenantAuthPolicy {
+	if x != nil {
+		return x.Policy
+	}
+	return nil
+}
+
+type GetTenantAuthPolicyRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Must be the caller's own tenant unless the caller is a cross-tenant
+	// administrator.
+	TenantId      string             `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	Context       *v1.RequestContext `protobuf:"bytes,2,opt,name=context,proto3" json:"context,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetTenantAuthPolicyRequest) Reset() {
+	*x = GetTenantAuthPolicyRequest{}
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[105]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetTenantAuthPolicyRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetTenantAuthPolicyRequest) ProtoMessage() {}
+
+func (x *GetTenantAuthPolicyRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[105]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetTenantAuthPolicyRequest.ProtoReflect.Descriptor instead.
+func (*GetTenantAuthPolicyRequest) Descriptor() ([]byte, []int) {
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{105}
+}
+
+func (x *GetTenantAuthPolicyRequest) GetTenantId() string {
+	if x != nil {
+		return x.TenantId
+	}
+	return ""
+}
+
+func (x *GetTenantAuthPolicyRequest) GetContext() *v1.RequestContext {
+	if x != nil {
+		return x.Context
+	}
+	return nil
+}
+
+type GetTenantAuthPolicyResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The tenant's policy; the defaults (revision 0) when none was written.
+	Policy *v11.TenantAuthPolicy `protobuf:"bytes,1,opt,name=policy,proto3" json:"policy,omitempty"`
+	// true when the tenant never wrote a policy and `policy` holds the defaults.
+	IsDefault     bool `protobuf:"varint,2,opt,name=is_default,json=isDefault,proto3" json:"is_default,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetTenantAuthPolicyResponse) Reset() {
+	*x = GetTenantAuthPolicyResponse{}
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[106]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetTenantAuthPolicyResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetTenantAuthPolicyResponse) ProtoMessage() {}
+
+func (x *GetTenantAuthPolicyResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[106]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetTenantAuthPolicyResponse.ProtoReflect.Descriptor instead.
+func (*GetTenantAuthPolicyResponse) Descriptor() ([]byte, []int) {
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{106}
+}
+
+func (x *GetTenantAuthPolicyResponse) GetPolicy() *v11.TenantAuthPolicy {
+	if x != nil {
+		return x.Policy
+	}
+	return nil
+}
+
+func (x *GetTenantAuthPolicyResponse) GetIsDefault() bool {
+	if x != nil {
+		return x.IsDefault
+	}
+	return false
+}
+
+type SendLoginOtpRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The tenant to sign in to: its id (UUID) or its code.
+	TenantHint string `protobuf:"bytes,1,opt,name=tenant_hint,json=tenantHint,proto3" json:"tenant_hint,omitempty"`
+	// "SMS" or "EMAIL" (any case). The tenant policy must list it.
+	Channel string `protobuf:"bytes,2,opt,name=channel,proto3" json:"channel,omitempty"`
+	// E.164 phone number for SMS (`+` then 7 to 15 digits), email address for EMAIL.
+	Address string `protobuf:"bytes,3,opt,name=address,proto3" json:"address,omitempty"`
+	// When set, only an account of this project is sent a code.
+	ProjectHint string `protobuf:"bytes,4,opt,name=project_hint,json=projectHint,proto3" json:"project_hint,omitempty"`
+	// EMAIL only: send a link `<magic_link_base_url>?otp_id=..&code=..` instead
+	// of a bare code. Needs the tenant's magic_link_base_url.
+	MagicLink     bool               `protobuf:"varint,5,opt,name=magic_link,json=magicLink,proto3" json:"magic_link,omitempty"`
+	Context       *v1.RequestContext `protobuf:"bytes,6,opt,name=context,proto3" json:"context,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SendLoginOtpRequest) Reset() {
+	*x = SendLoginOtpRequest{}
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[107]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SendLoginOtpRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SendLoginOtpRequest) ProtoMessage() {}
+
+func (x *SendLoginOtpRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[107]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SendLoginOtpRequest.ProtoReflect.Descriptor instead.
+func (*SendLoginOtpRequest) Descriptor() ([]byte, []int) {
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{107}
+}
+
+func (x *SendLoginOtpRequest) GetTenantHint() string {
+	if x != nil {
+		return x.TenantHint
+	}
+	return ""
+}
+
+func (x *SendLoginOtpRequest) GetChannel() string {
+	if x != nil {
+		return x.Channel
+	}
+	return ""
+}
+
+func (x *SendLoginOtpRequest) GetAddress() string {
+	if x != nil {
+		return x.Address
+	}
+	return ""
+}
+
+func (x *SendLoginOtpRequest) GetProjectHint() string {
+	if x != nil {
+		return x.ProjectHint
+	}
+	return ""
+}
+
+func (x *SendLoginOtpRequest) GetMagicLink() bool {
+	if x != nil {
+		return x.MagicLink
+	}
+	return false
+}
+
+func (x *SendLoginOtpRequest) GetContext() *v1.RequestContext {
+	if x != nil {
+		return x.Context
+	}
+	return nil
+}
+
+type SendLoginOtpResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Pass to LoginWithOtp with the delivered code. Always present: an unknown
+	// address, a disabled channel or a resend within the cooldown get an id
+	// that never verifies, so the answer does not reveal whether an account exists.
+	OtpId string `protobuf:"bytes,1,opt,name=otp_id,json=otpId,proto3" json:"otp_id,omitempty"`
+	// When the code stops working (unix seconds).
+	ExpiresAtUnix int64 `protobuf:"varint,2,opt,name=expires_at_unix,json=expiresAtUnix,proto3" json:"expires_at_unix,omitempty"`
+	// Dev-only echo of the plaintext code, set ONLY when the broker runs with
+	// UDB_OTP_DEV_ECHO=1 outside production and a code was really sent. Empty
+	// in production.
+	DevOtpCode    string `protobuf:"bytes,3,opt,name=dev_otp_code,json=devOtpCode,proto3" json:"dev_otp_code,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SendLoginOtpResponse) Reset() {
+	*x = SendLoginOtpResponse{}
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[108]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SendLoginOtpResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SendLoginOtpResponse) ProtoMessage() {}
+
+func (x *SendLoginOtpResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[108]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SendLoginOtpResponse.ProtoReflect.Descriptor instead.
+func (*SendLoginOtpResponse) Descriptor() ([]byte, []int) {
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{108}
+}
+
+func (x *SendLoginOtpResponse) GetOtpId() string {
+	if x != nil {
+		return x.OtpId
+	}
+	return ""
+}
+
+func (x *SendLoginOtpResponse) GetExpiresAtUnix() int64 {
+	if x != nil {
+		return x.ExpiresAtUnix
+	}
+	return 0
+}
+
+func (x *SendLoginOtpResponse) GetDevOtpCode() string {
+	if x != nil {
+		return x.DevOtpCode
+	}
+	return ""
+}
+
+type LoginWithOtpRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// From SendLoginOtp, or the `otp_id` query parameter of a magic link.
+	OtpId string `protobuf:"bytes,1,opt,name=otp_id,json=otpId,proto3" json:"otp_id,omitempty"`
+	// The delivered code (or the `code` query parameter of a magic link). A code
+	// works once; a few wrong guesses invalidate it.
+	Code          string         `protobuf:"bytes,2,opt,name=code,proto3" json:"code,omitempty"`
+	DeviceType    v11.DeviceType `protobuf:"varint,3,opt,name=device_type,json=deviceType,proto3,enum=udb.core.authn.entity.v1.DeviceType" json:"device_type,omitempty"`
+	DeviceName    string         `protobuf:"bytes,4,opt,name=device_name,json=deviceName,proto3" json:"device_name,omitempty"` // human-readable
+	DeviceId      string         `protobuf:"bytes,5,opt,name=device_id,json=deviceId,proto3" json:"device_id,omitempty"`       // client device fingerprint (optional; registers the device)
+	IpAddress     string         `protobuf:"bytes,6,opt,name=ip_address,json=ipAddress,proto3" json:"ip_address,omitempty"`    // forwarded by gateway
+	UserAgent     string         `protobuf:"bytes,7,opt,name=user_agent,json=userAgent,proto3" json:"user_agent,omitempty"`
+	AccessSurface string         `protobuf:"bytes,8,opt,name=access_surface,json=accessSurface,proto3" json:"access_surface,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *LoginWithOtpRequest) Reset() {
+	*x = LoginWithOtpRequest{}
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[109]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *LoginWithOtpRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*LoginWithOtpRequest) ProtoMessage() {}
+
+func (x *LoginWithOtpRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[109]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use LoginWithOtpRequest.ProtoReflect.Descriptor instead.
+func (*LoginWithOtpRequest) Descriptor() ([]byte, []int) {
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{109}
+}
+
+func (x *LoginWithOtpRequest) GetOtpId() string {
+	if x != nil {
+		return x.OtpId
+	}
+	return ""
+}
+
+func (x *LoginWithOtpRequest) GetCode() string {
+	if x != nil {
+		return x.Code
+	}
+	return ""
+}
+
+func (x *LoginWithOtpRequest) GetDeviceType() v11.DeviceType {
+	if x != nil {
+		return x.DeviceType
+	}
+	return v11.DeviceType(0)
+}
+
+func (x *LoginWithOtpRequest) GetDeviceName() string {
+	if x != nil {
+		return x.DeviceName
+	}
+	return ""
+}
+
+func (x *LoginWithOtpRequest) GetDeviceId() string {
+	if x != nil {
+		return x.DeviceId
+	}
+	return ""
+}
+
+func (x *LoginWithOtpRequest) GetIpAddress() string {
+	if x != nil {
+		return x.IpAddress
+	}
+	return ""
+}
+
+func (x *LoginWithOtpRequest) GetUserAgent() string {
+	if x != nil {
+		return x.UserAgent
+	}
+	return ""
+}
+
+func (x *LoginWithOtpRequest) GetAccessSurface() string {
+	if x != nil {
+		return x.AccessSurface
+	}
+	return ""
+}
+
+// Same fields, names and numbers as LoginResponse.
+type LoginWithOtpResponse struct {
+	state       protoimpl.MessageState `protogen:"open.v1"`
+	UserId      string                 `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	SessionId   string                 `protobuf:"bytes,2,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
+	AccessToken string                 `protobuf:"bytes,3,opt,name=access_token,json=accessToken,proto3" json:"access_token,omitempty"`
+	// Rotating refresh token (rt_<family>.<jti>); reuse of a superseded value
+	// revokes the family.
+	RefreshToken         string `protobuf:"bytes,4,opt,name=refresh_token,json=refreshToken,proto3" json:"refresh_token,omitempty"`
+	AccessTokenExpiresIn int32  `protobuf:"varint,5,opt,name=access_token_expires_in,json=accessTokenExpiresIn,proto3" json:"access_token_expires_in,omitempty"` // seconds
+	SessionToken         string `protobuf:"bytes,6,opt,name=session_token,json=sessionToken,proto3" json:"session_token,omitempty"`
+	CsrfToken            string `protobuf:"bytes,7,opt,name=csrf_token,json=csrfToken,proto3" json:"csrf_token,omitempty"`
+	// Always false: a one-time code sign-in has no further step.
+	MfaRequired           bool   `protobuf:"varint,8,opt,name=mfa_required,json=mfaRequired,proto3" json:"mfa_required,omitempty"`
+	MfaOtpId              string `protobuf:"bytes,9,opt,name=mfa_otp_id,json=mfaOtpId,proto3" json:"mfa_otp_id,omitempty"`                                            // always empty
+	RefreshTokenExpiresIn int32  `protobuf:"varint,10,opt,name=refresh_token_expires_in,json=refreshTokenExpiresIn,proto3" json:"refresh_token_expires_in,omitempty"` // seconds
+	// Stable, non-secret public id of this session (`sesspub_…`), safe to log.
+	SessionPublicId string `protobuf:"bytes,11,opt,name=session_public_id,json=sessionPublicId,proto3" json:"session_public_id,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *LoginWithOtpResponse) Reset() {
+	*x = LoginWithOtpResponse{}
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[110]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *LoginWithOtpResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*LoginWithOtpResponse) ProtoMessage() {}
+
+func (x *LoginWithOtpResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[110]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use LoginWithOtpResponse.ProtoReflect.Descriptor instead.
+func (*LoginWithOtpResponse) Descriptor() ([]byte, []int) {
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{110}
+}
+
+func (x *LoginWithOtpResponse) GetUserId() string {
+	if x != nil {
+		return x.UserId
+	}
+	return ""
+}
+
+func (x *LoginWithOtpResponse) GetSessionId() string {
+	if x != nil {
+		return x.SessionId
+	}
+	return ""
+}
+
+func (x *LoginWithOtpResponse) GetAccessToken() string {
+	if x != nil {
+		return x.AccessToken
+	}
+	return ""
+}
+
+func (x *LoginWithOtpResponse) GetRefreshToken() string {
+	if x != nil {
+		return x.RefreshToken
+	}
+	return ""
+}
+
+func (x *LoginWithOtpResponse) GetAccessTokenExpiresIn() int32 {
+	if x != nil {
+		return x.AccessTokenExpiresIn
+	}
+	return 0
+}
+
+func (x *LoginWithOtpResponse) GetSessionToken() string {
+	if x != nil {
+		return x.SessionToken
+	}
+	return ""
+}
+
+func (x *LoginWithOtpResponse) GetCsrfToken() string {
+	if x != nil {
+		return x.CsrfToken
+	}
+	return ""
+}
+
+func (x *LoginWithOtpResponse) GetMfaRequired() bool {
+	if x != nil {
+		return x.MfaRequired
+	}
+	return false
+}
+
+func (x *LoginWithOtpResponse) GetMfaOtpId() string {
+	if x != nil {
+		return x.MfaOtpId
+	}
+	return ""
+}
+
+func (x *LoginWithOtpResponse) GetRefreshTokenExpiresIn() int32 {
+	if x != nil {
+		return x.RefreshTokenExpiresIn
+	}
+	return 0
+}
+
+func (x *LoginWithOtpResponse) GetSessionPublicId() string {
+	if x != nil {
+		return x.SessionPublicId
+	}
+	return ""
+}
+
+// Begin "Sign in with <provider>" (authorization code + PKCE S256 + nonce).
+// Send the browser to `authorization_url`; the provider redirects back to
+// `redirect_uri` with `code` and `state`, which go to FinishOidcLogin.
+type StartOidcLoginRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Tenant whose identity provider to use (its tenant id).
+	TenantHint string `protobuf:"bytes,1,opt,name=tenant_hint,json=tenantHint,proto3" json:"tenant_hint,omitempty"`
+	// The tenant's IdentityProvider id (kind OIDC, enabled).
+	ProviderId string `protobuf:"bytes,2,opt,name=provider_id,json=providerId,proto3" json:"provider_id,omitempty"`
+	// Where the provider sends the browser back. Must EXACTLY match one of the
+	// provider's configured `redirect_uris`.
+	RedirectUri string `protobuf:"bytes,3,opt,name=redirect_uri,json=redirectUri,proto3" json:"redirect_uri,omitempty"`
+	// Optional: bind this sign-in to an invitation. Such a sign-in is redeemed
+	// only by invitation acceptance, never by FinishOidcLogin.
+	InvitationId string `protobuf:"bytes,4,opt,name=invitation_id,json=invitationId,proto3" json:"invitation_id,omitempty"`
+	// Optional `login_hint` forwarded to the provider (e.g. the email the user
+	// typed), so it can preselect the account.
+	LoginHint     string `protobuf:"bytes,5,opt,name=login_hint,json=loginHint,proto3" json:"login_hint,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *StartOidcLoginRequest) Reset() {
+	*x = StartOidcLoginRequest{}
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[111]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *StartOidcLoginRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*StartOidcLoginRequest) ProtoMessage() {}
+
+func (x *StartOidcLoginRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[111]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use StartOidcLoginRequest.ProtoReflect.Descriptor instead.
+func (*StartOidcLoginRequest) Descriptor() ([]byte, []int) {
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{111}
+}
+
+func (x *StartOidcLoginRequest) GetTenantHint() string {
+	if x != nil {
+		return x.TenantHint
+	}
+	return ""
+}
+
+func (x *StartOidcLoginRequest) GetProviderId() string {
+	if x != nil {
+		return x.ProviderId
+	}
+	return ""
+}
+
+func (x *StartOidcLoginRequest) GetRedirectUri() string {
+	if x != nil {
+		return x.RedirectUri
+	}
+	return ""
+}
+
+func (x *StartOidcLoginRequest) GetInvitationId() string {
+	if x != nil {
+		return x.InvitationId
+	}
+	return ""
+}
+
+func (x *StartOidcLoginRequest) GetLoginHint() string {
+	if x != nil {
+		return x.LoginHint
+	}
+	return ""
+}
+
+type StartOidcLoginResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The provider's authorization endpoint with client_id, redirect_uri,
+	// scope "openid email profile", state, nonce and the S256 code_challenge.
+	AuthorizationUrl string `protobuf:"bytes,1,opt,name=authorization_url,json=authorizationUrl,proto3" json:"authorization_url,omitempty"`
+	// Opaque, single-use. The provider echoes it to redirect_uri; pass it to
+	// FinishOidcLogin. Keep it with the browser session (e.g. a cookie) and
+	// compare it on the callback to stop login CSRF.
+	State string `protobuf:"bytes,2,opt,name=state,proto3" json:"state,omitempty"`
+	// After this (10 minutes) the sign-in must be started again.
+	ExpiresAtUnix int64 `protobuf:"varint,3,opt,name=expires_at_unix,json=expiresAtUnix,proto3" json:"expires_at_unix,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *StartOidcLoginResponse) Reset() {
+	*x = StartOidcLoginResponse{}
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[112]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *StartOidcLoginResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*StartOidcLoginResponse) ProtoMessage() {}
+
+func (x *StartOidcLoginResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[112]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use StartOidcLoginResponse.ProtoReflect.Descriptor instead.
+func (*StartOidcLoginResponse) Descriptor() ([]byte, []int) {
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{112}
+}
+
+func (x *StartOidcLoginResponse) GetAuthorizationUrl() string {
+	if x != nil {
+		return x.AuthorizationUrl
+	}
+	return ""
+}
+
+func (x *StartOidcLoginResponse) GetState() string {
+	if x != nil {
+		return x.State
+	}
+	return ""
+}
+
+func (x *StartOidcLoginResponse) GetExpiresAtUnix() int64 {
+	if x != nil {
+		return x.ExpiresAtUnix
+	}
+	return 0
+}
+
+// Complete a sign-in started by StartOidcLogin. The broker redeems `code` at
+// the provider's token endpoint with the stored PKCE verifier and client
+// secret, verifies the ID token (signature, issuer, audience, expiry, nonce),
+// resolves the user like ResolveExternalIdentity (existing link,
+// account-linking policy, JIT provisioning) and signs them in.
+type FinishOidcLoginRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// `state` from the provider's redirect (as returned by StartOidcLogin).
+	State string `protobuf:"bytes,1,opt,name=state,proto3" json:"state,omitempty"`
+	// `code` from the provider's redirect.
+	Code          string         `protobuf:"bytes,2,opt,name=code,proto3" json:"code,omitempty"`
+	DeviceType    v11.DeviceType `protobuf:"varint,3,opt,name=device_type,json=deviceType,proto3,enum=udb.core.authn.entity.v1.DeviceType" json:"device_type,omitempty"`
+	DeviceName    string         `protobuf:"bytes,4,opt,name=device_name,json=deviceName,proto3" json:"device_name,omitempty"` // human-readable
+	DeviceId      string         `protobuf:"bytes,5,opt,name=device_id,json=deviceId,proto3" json:"device_id,omitempty"`       // client device fingerprint (optional; for JWT device binding)
+	IpAddress     string         `protobuf:"bytes,6,opt,name=ip_address,json=ipAddress,proto3" json:"ip_address,omitempty"`    // forwarded by gateway
+	UserAgent     string         `protobuf:"bytes,7,opt,name=user_agent,json=userAgent,proto3" json:"user_agent,omitempty"`
+	AccessSurface string         `protobuf:"bytes,8,opt,name=access_surface,json=accessSurface,proto3" json:"access_surface,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *FinishOidcLoginRequest) Reset() {
+	*x = FinishOidcLoginRequest{}
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[113]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *FinishOidcLoginRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*FinishOidcLoginRequest) ProtoMessage() {}
+
+func (x *FinishOidcLoginRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[113]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use FinishOidcLoginRequest.ProtoReflect.Descriptor instead.
+func (*FinishOidcLoginRequest) Descriptor() ([]byte, []int) {
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{113}
+}
+
+func (x *FinishOidcLoginRequest) GetState() string {
+	if x != nil {
+		return x.State
+	}
+	return ""
+}
+
+func (x *FinishOidcLoginRequest) GetCode() string {
+	if x != nil {
+		return x.Code
+	}
+	return ""
+}
+
+func (x *FinishOidcLoginRequest) GetDeviceType() v11.DeviceType {
+	if x != nil {
+		return x.DeviceType
+	}
+	return v11.DeviceType(0)
+}
+
+func (x *FinishOidcLoginRequest) GetDeviceName() string {
+	if x != nil {
+		return x.DeviceName
+	}
+	return ""
+}
+
+func (x *FinishOidcLoginRequest) GetDeviceId() string {
+	if x != nil {
+		return x.DeviceId
+	}
+	return ""
+}
+
+func (x *FinishOidcLoginRequest) GetIpAddress() string {
+	if x != nil {
+		return x.IpAddress
+	}
+	return ""
+}
+
+func (x *FinishOidcLoginRequest) GetUserAgent() string {
+	if x != nil {
+		return x.UserAgent
+	}
+	return ""
+}
+
+func (x *FinishOidcLoginRequest) GetAccessSurface() string {
+	if x != nil {
+		return x.AccessSurface
+	}
+	return ""
+}
+
+// Same credentials as LoginResponse (fields 1-11), plus `provisioned`.
+type FinishOidcLoginResponse struct {
+	state                 protoimpl.MessageState `protogen:"open.v1"`
+	UserId                string                 `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	SessionId             string                 `protobuf:"bytes,2,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
+	AccessToken           string                 `protobuf:"bytes,3,opt,name=access_token,json=accessToken,proto3" json:"access_token,omitempty"`
+	RefreshToken          string                 `protobuf:"bytes,4,opt,name=refresh_token,json=refreshToken,proto3" json:"refresh_token,omitempty"`
+	AccessTokenExpiresIn  int32                  `protobuf:"varint,5,opt,name=access_token_expires_in,json=accessTokenExpiresIn,proto3" json:"access_token_expires_in,omitempty"` // seconds
+	SessionToken          string                 `protobuf:"bytes,6,opt,name=session_token,json=sessionToken,proto3" json:"session_token,omitempty"`
+	CsrfToken             string                 `protobuf:"bytes,7,opt,name=csrf_token,json=csrfToken,proto3" json:"csrf_token,omitempty"`
+	MfaRequired           bool                   `protobuf:"varint,8,opt,name=mfa_required,json=mfaRequired,proto3" json:"mfa_required,omitempty"` // always false: the identity provider authenticated the user
+	MfaOtpId              string                 `protobuf:"bytes,9,opt,name=mfa_otp_id,json=mfaOtpId,proto3" json:"mfa_otp_id,omitempty"`         // always empty
+	RefreshTokenExpiresIn int32                  `protobuf:"varint,10,opt,name=refresh_token_expires_in,json=refreshTokenExpiresIn,proto3" json:"refresh_token_expires_in,omitempty"`
+	SessionPublicId       string                 `protobuf:"bytes,11,opt,name=session_public_id,json=sessionPublicId,proto3" json:"session_public_id,omitempty"`
+	// True when this sign-in created the account (JIT provisioning).
+	Provisioned   bool `protobuf:"varint,12,opt,name=provisioned,proto3" json:"provisioned,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *FinishOidcLoginResponse) Reset() {
+	*x = FinishOidcLoginResponse{}
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[114]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *FinishOidcLoginResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*FinishOidcLoginResponse) ProtoMessage() {}
+
+func (x *FinishOidcLoginResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[114]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use FinishOidcLoginResponse.ProtoReflect.Descriptor instead.
+func (*FinishOidcLoginResponse) Descriptor() ([]byte, []int) {
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{114}
+}
+
+func (x *FinishOidcLoginResponse) GetUserId() string {
+	if x != nil {
+		return x.UserId
+	}
+	return ""
+}
+
+func (x *FinishOidcLoginResponse) GetSessionId() string {
+	if x != nil {
+		return x.SessionId
+	}
+	return ""
+}
+
+func (x *FinishOidcLoginResponse) GetAccessToken() string {
+	if x != nil {
+		return x.AccessToken
+	}
+	return ""
+}
+
+func (x *FinishOidcLoginResponse) GetRefreshToken() string {
+	if x != nil {
+		return x.RefreshToken
+	}
+	return ""
+}
+
+func (x *FinishOidcLoginResponse) GetAccessTokenExpiresIn() int32 {
+	if x != nil {
+		return x.AccessTokenExpiresIn
+	}
+	return 0
+}
+
+func (x *FinishOidcLoginResponse) GetSessionToken() string {
+	if x != nil {
+		return x.SessionToken
+	}
+	return ""
+}
+
+func (x *FinishOidcLoginResponse) GetCsrfToken() string {
+	if x != nil {
+		return x.CsrfToken
+	}
+	return ""
+}
+
+func (x *FinishOidcLoginResponse) GetMfaRequired() bool {
+	if x != nil {
+		return x.MfaRequired
+	}
+	return false
+}
+
+func (x *FinishOidcLoginResponse) GetMfaOtpId() string {
+	if x != nil {
+		return x.MfaOtpId
+	}
+	return ""
+}
+
+func (x *FinishOidcLoginResponse) GetRefreshTokenExpiresIn() int32 {
+	if x != nil {
+		return x.RefreshTokenExpiresIn
+	}
+	return 0
+}
+
+func (x *FinishOidcLoginResponse) GetSessionPublicId() string {
+	if x != nil {
+		return x.SessionPublicId
+	}
+	return ""
+}
+
+func (x *FinishOidcLoginResponse) GetProvisioned() bool {
+	if x != nil {
+		return x.Provisioned
+	}
+	return false
+}
+
+// Sign in with an ID token a native app obtained itself (Google Sign-In /
+// Credential Manager, Sign in with Microsoft). The token must be issued by
+// the provider's issuer to one of its client_ids, unexpired, and is accepted
+// once. With `nonce` set the token's nonce must equal it; without one the
+// token must carry no nonce and be at most 10 minutes old.
+type LoginWithOidcIdTokenRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Tenant whose identity provider issued the token (its tenant id).
+	TenantHint string `protobuf:"bytes,1,opt,name=tenant_hint,json=tenantHint,proto3" json:"tenant_hint,omitempty"`
+	// The tenant's IdentityProvider id (kind OIDC, enabled).
+	ProviderId string `protobuf:"bytes,2,opt,name=provider_id,json=providerId,proto3" json:"provider_id,omitempty"`
+	// The raw ID token (JWS compact form).
+	IdToken string `protobuf:"bytes,3,opt,name=id_token,json=idToken,proto3" json:"id_token,omitempty"`
+	// The nonce the app passed to the provider's SDK, if any.
+	Nonce         string         `protobuf:"bytes,4,opt,name=nonce,proto3" json:"nonce,omitempty"`
+	DeviceType    v11.DeviceType `protobuf:"varint,5,opt,name=device_type,json=deviceType,proto3,enum=udb.core.authn.entity.v1.DeviceType" json:"device_type,omitempty"`
+	DeviceName    string         `protobuf:"bytes,6,opt,name=device_name,json=deviceName,proto3" json:"device_name,omitempty"` // human-readable
+	DeviceId      string         `protobuf:"bytes,7,opt,name=device_id,json=deviceId,proto3" json:"device_id,omitempty"`       // client device fingerprint (optional; for JWT device binding)
+	IpAddress     string         `protobuf:"bytes,8,opt,name=ip_address,json=ipAddress,proto3" json:"ip_address,omitempty"`    // forwarded by gateway
+	UserAgent     string         `protobuf:"bytes,9,opt,name=user_agent,json=userAgent,proto3" json:"user_agent,omitempty"`
+	AccessSurface string         `protobuf:"bytes,10,opt,name=access_surface,json=accessSurface,proto3" json:"access_surface,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *LoginWithOidcIdTokenRequest) Reset() {
+	*x = LoginWithOidcIdTokenRequest{}
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[115]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *LoginWithOidcIdTokenRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*LoginWithOidcIdTokenRequest) ProtoMessage() {}
+
+func (x *LoginWithOidcIdTokenRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[115]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use LoginWithOidcIdTokenRequest.ProtoReflect.Descriptor instead.
+func (*LoginWithOidcIdTokenRequest) Descriptor() ([]byte, []int) {
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{115}
+}
+
+func (x *LoginWithOidcIdTokenRequest) GetTenantHint() string {
+	if x != nil {
+		return x.TenantHint
+	}
+	return ""
+}
+
+func (x *LoginWithOidcIdTokenRequest) GetProviderId() string {
+	if x != nil {
+		return x.ProviderId
+	}
+	return ""
+}
+
+func (x *LoginWithOidcIdTokenRequest) GetIdToken() string {
+	if x != nil {
+		return x.IdToken
+	}
+	return ""
+}
+
+func (x *LoginWithOidcIdTokenRequest) GetNonce() string {
+	if x != nil {
+		return x.Nonce
+	}
+	return ""
+}
+
+func (x *LoginWithOidcIdTokenRequest) GetDeviceType() v11.DeviceType {
+	if x != nil {
+		return x.DeviceType
+	}
+	return v11.DeviceType(0)
+}
+
+func (x *LoginWithOidcIdTokenRequest) GetDeviceName() string {
+	if x != nil {
+		return x.DeviceName
+	}
+	return ""
+}
+
+func (x *LoginWithOidcIdTokenRequest) GetDeviceId() string {
+	if x != nil {
+		return x.DeviceId
+	}
+	return ""
+}
+
+func (x *LoginWithOidcIdTokenRequest) GetIpAddress() string {
+	if x != nil {
+		return x.IpAddress
+	}
+	return ""
+}
+
+func (x *LoginWithOidcIdTokenRequest) GetUserAgent() string {
+	if x != nil {
+		return x.UserAgent
+	}
+	return ""
+}
+
+func (x *LoginWithOidcIdTokenRequest) GetAccessSurface() string {
+	if x != nil {
+		return x.AccessSurface
+	}
+	return ""
+}
+
+// Same credentials as LoginResponse (fields 1-11), plus `provisioned`.
+type LoginWithOidcIdTokenResponse struct {
+	state                 protoimpl.MessageState `protogen:"open.v1"`
+	UserId                string                 `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	SessionId             string                 `protobuf:"bytes,2,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
+	AccessToken           string                 `protobuf:"bytes,3,opt,name=access_token,json=accessToken,proto3" json:"access_token,omitempty"`
+	RefreshToken          string                 `protobuf:"bytes,4,opt,name=refresh_token,json=refreshToken,proto3" json:"refresh_token,omitempty"`
+	AccessTokenExpiresIn  int32                  `protobuf:"varint,5,opt,name=access_token_expires_in,json=accessTokenExpiresIn,proto3" json:"access_token_expires_in,omitempty"` // seconds
+	SessionToken          string                 `protobuf:"bytes,6,opt,name=session_token,json=sessionToken,proto3" json:"session_token,omitempty"`
+	CsrfToken             string                 `protobuf:"bytes,7,opt,name=csrf_token,json=csrfToken,proto3" json:"csrf_token,omitempty"`
+	MfaRequired           bool                   `protobuf:"varint,8,opt,name=mfa_required,json=mfaRequired,proto3" json:"mfa_required,omitempty"` // always false: the identity provider authenticated the user
+	MfaOtpId              string                 `protobuf:"bytes,9,opt,name=mfa_otp_id,json=mfaOtpId,proto3" json:"mfa_otp_id,omitempty"`         // always empty
+	RefreshTokenExpiresIn int32                  `protobuf:"varint,10,opt,name=refresh_token_expires_in,json=refreshTokenExpiresIn,proto3" json:"refresh_token_expires_in,omitempty"`
+	SessionPublicId       string                 `protobuf:"bytes,11,opt,name=session_public_id,json=sessionPublicId,proto3" json:"session_public_id,omitempty"`
+	// True when this sign-in created the account (JIT provisioning).
+	Provisioned   bool `protobuf:"varint,12,opt,name=provisioned,proto3" json:"provisioned,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *LoginWithOidcIdTokenResponse) Reset() {
+	*x = LoginWithOidcIdTokenResponse{}
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[116]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *LoginWithOidcIdTokenResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*LoginWithOidcIdTokenResponse) ProtoMessage() {}
+
+func (x *LoginWithOidcIdTokenResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[116]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use LoginWithOidcIdTokenResponse.ProtoReflect.Descriptor instead.
+func (*LoginWithOidcIdTokenResponse) Descriptor() ([]byte, []int) {
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{116}
+}
+
+func (x *LoginWithOidcIdTokenResponse) GetUserId() string {
+	if x != nil {
+		return x.UserId
+	}
+	return ""
+}
+
+func (x *LoginWithOidcIdTokenResponse) GetSessionId() string {
+	if x != nil {
+		return x.SessionId
+	}
+	return ""
+}
+
+func (x *LoginWithOidcIdTokenResponse) GetAccessToken() string {
+	if x != nil {
+		return x.AccessToken
+	}
+	return ""
+}
+
+func (x *LoginWithOidcIdTokenResponse) GetRefreshToken() string {
+	if x != nil {
+		return x.RefreshToken
+	}
+	return ""
+}
+
+func (x *LoginWithOidcIdTokenResponse) GetAccessTokenExpiresIn() int32 {
+	if x != nil {
+		return x.AccessTokenExpiresIn
+	}
+	return 0
+}
+
+func (x *LoginWithOidcIdTokenResponse) GetSessionToken() string {
+	if x != nil {
+		return x.SessionToken
+	}
+	return ""
+}
+
+func (x *LoginWithOidcIdTokenResponse) GetCsrfToken() string {
+	if x != nil {
+		return x.CsrfToken
+	}
+	return ""
+}
+
+func (x *LoginWithOidcIdTokenResponse) GetMfaRequired() bool {
+	if x != nil {
+		return x.MfaRequired
+	}
+	return false
+}
+
+func (x *LoginWithOidcIdTokenResponse) GetMfaOtpId() string {
+	if x != nil {
+		return x.MfaOtpId
+	}
+	return ""
+}
+
+func (x *LoginWithOidcIdTokenResponse) GetRefreshTokenExpiresIn() int32 {
+	if x != nil {
+		return x.RefreshTokenExpiresIn
+	}
+	return 0
+}
+
+func (x *LoginWithOidcIdTokenResponse) GetSessionPublicId() string {
+	if x != nil {
+		return x.SessionPublicId
+	}
+	return ""
+}
+
+func (x *LoginWithOidcIdTokenResponse) GetProvisioned() bool {
+	if x != nil {
+		return x.Provisioned
+	}
+	return false
+}
+
+// An invitation as its tenant's administrators see it. The accept token is
+// never part of it: only CreateInvitation and ResendInvitation return a token,
+// once.
+type InvitationInfo struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	InvitationId  string                 `protobuf:"bytes,1,opt,name=invitation_id,json=invitationId,proto3" json:"invitation_id,omitempty"`
+	TenantId      string                 `protobuf:"bytes,2,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	ProjectId     string                 `protobuf:"bytes,3,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`               // '' = none
+	Channel       string                 `protobuf:"bytes,4,opt,name=channel,proto3" json:"channel,omitempty"`                                    // SMS | EMAIL | OIDC | PASSKEY
+	Address       string                 `protobuf:"bytes,5,opt,name=address,proto3" json:"address,omitempty"`                                    // E.164 phone (SMS) or email (EMAIL); empty for OIDC and PASSKEY
+	IdpProviderId string                 `protobuf:"bytes,6,opt,name=idp_provider_id,json=idpProviderId,proto3" json:"idp_provider_id,omitempty"` // OIDC only
+	Roles         []string               `protobuf:"bytes,7,rep,name=roles,proto3" json:"roles,omitempty"`                                        // role codes bound in the tenant on acceptance
+	FullName      string                 `protobuf:"bytes,8,opt,name=full_name,json=fullName,proto3" json:"full_name,omitempty"`
+	// PENDING | ACCEPTED | REVOKED | EXPIRED. A PENDING invitation past
+	// expires_at is reported as EXPIRED.
+	Status         string                 `protobuf:"bytes,9,opt,name=status,proto3" json:"status,omitempty"`
+	ExpiresAt      *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=expires_at,json=expiresAt,proto3" json:"expires_at,omitempty"`
+	CreatedBy      string                 `protobuf:"bytes,11,opt,name=created_by,json=createdBy,proto3" json:"created_by,omitempty"`                  // subject of the inviting administrator
+	AcceptedUserId string                 `protobuf:"bytes,12,opt,name=accepted_user_id,json=acceptedUserId,proto3" json:"accepted_user_id,omitempty"` // set once ACCEPTED
+	AcceptedAt     *timestamppb.Timestamp `protobuf:"bytes,13,opt,name=accepted_at,json=acceptedAt,proto3" json:"accepted_at,omitempty"`
+	SendCount      int32                  `protobuf:"varint,14,opt,name=send_count,json=sendCount,proto3" json:"send_count,omitempty"` // invitation messages sent so far
+	LastSentAt     *timestamppb.Timestamp `protobuf:"bytes,15,opt,name=last_sent_at,json=lastSentAt,proto3" json:"last_sent_at,omitempty"`
+	Revision       int64                  `protobuf:"varint,16,opt,name=revision,proto3" json:"revision,omitempty"` // grows on every change
+	CreatedAt      *timestamppb.Timestamp `protobuf:"bytes,17,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt      *timestamppb.Timestamp `protobuf:"bytes,18,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	Locale         string                 `protobuf:"bytes,19,opt,name=locale,proto3" json:"locale,omitempty"` // language of the invitation message ('' = English)
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *InvitationInfo) Reset() {
+	*x = InvitationInfo{}
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[117]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *InvitationInfo) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*InvitationInfo) ProtoMessage() {}
+
+func (x *InvitationInfo) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[117]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use InvitationInfo.ProtoReflect.Descriptor instead.
+func (*InvitationInfo) Descriptor() ([]byte, []int) {
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{117}
+}
+
+func (x *InvitationInfo) GetInvitationId() string {
+	if x != nil {
+		return x.InvitationId
+	}
+	return ""
+}
+
+func (x *InvitationInfo) GetTenantId() string {
+	if x != nil {
+		return x.TenantId
+	}
+	return ""
+}
+
+func (x *InvitationInfo) GetProjectId() string {
+	if x != nil {
+		return x.ProjectId
+	}
+	return ""
+}
+
+func (x *InvitationInfo) GetChannel() string {
+	if x != nil {
+		return x.Channel
+	}
+	return ""
+}
+
+func (x *InvitationInfo) GetAddress() string {
+	if x != nil {
+		return x.Address
+	}
+	return ""
+}
+
+func (x *InvitationInfo) GetIdpProviderId() string {
+	if x != nil {
+		return x.IdpProviderId
+	}
+	return ""
+}
+
+func (x *InvitationInfo) GetRoles() []string {
+	if x != nil {
+		return x.Roles
+	}
+	return nil
+}
+
+func (x *InvitationInfo) GetFullName() string {
+	if x != nil {
+		return x.FullName
+	}
+	return ""
+}
+
+func (x *InvitationInfo) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+func (x *InvitationInfo) GetExpiresAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.ExpiresAt
+	}
+	return nil
+}
+
+func (x *InvitationInfo) GetCreatedBy() string {
+	if x != nil {
+		return x.CreatedBy
+	}
+	return ""
+}
+
+func (x *InvitationInfo) GetAcceptedUserId() string {
+	if x != nil {
+		return x.AcceptedUserId
+	}
+	return ""
+}
+
+func (x *InvitationInfo) GetAcceptedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.AcceptedAt
+	}
+	return nil
+}
+
+func (x *InvitationInfo) GetSendCount() int32 {
+	if x != nil {
+		return x.SendCount
+	}
+	return 0
+}
+
+func (x *InvitationInfo) GetLastSentAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.LastSentAt
+	}
+	return nil
+}
+
+func (x *InvitationInfo) GetRevision() int64 {
+	if x != nil {
+		return x.Revision
+	}
+	return 0
+}
+
+func (x *InvitationInfo) GetCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return nil
+}
+
+func (x *InvitationInfo) GetUpdatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.UpdatedAt
+	}
+	return nil
+}
+
+func (x *InvitationInfo) GetLocale() string {
+	if x != nil {
+		return x.Locale
+	}
+	return ""
+}
+
+type CreateInvitationRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The tenant the invitee joins; must be the caller's own tenant (a
+	// cross-tenant admin may name any). Empty = the caller's tenant.
+	TenantId string `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	// Project of the new account; empty = the caller's project.
+	ProjectId string `protobuf:"bytes,2,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
+	// SMS | EMAIL | OIDC | PASSKEY: what the invitee proves on acceptance.
+	Channel string `protobuf:"bytes,3,opt,name=channel,proto3" json:"channel,omitempty"`
+	// SMS: E.164 phone (+ then 7 to 15 digits). EMAIL: email address. Must be
+	// empty for OIDC and PASSKEY. No other account may already use it.
+	Address string `protobuf:"bytes,4,opt,name=address,proto3" json:"address,omitempty"`
+	// OIDC only: the tenant identity provider the invitee signs in with.
+	IdpProviderId string `protobuf:"bytes,5,opt,name=idp_provider_id,json=idpProviderId,proto3" json:"idp_provider_id,omitempty"`
+	// Role CODES bound in the tenant on acceptance (at most 32). Reserved
+	// platform roles are refused; organization_owner needs a caller who holds
+	// it, or a cross-tenant admin.
+	Roles []string `protobuf:"bytes,6,rep,name=roles,proto3" json:"roles,omitempty"`
+	// The invitee's name (prefills the account; at most 255 bytes).
+	FullName string `protobuf:"bytes,7,opt,name=full_name,json=fullName,proto3" json:"full_name,omitempty"`
+	// Link lifetime in seconds: 0 = 7 days; between 300 and 2592000 (30 days).
+	ExpiresInSeconds int64 `protobuf:"varint,8,opt,name=expires_in_seconds,json=expiresInSeconds,proto3" json:"expires_in_seconds,omitempty"`
+	// BCP 47 language of the invitation message, e.g. "bn" or "en" (at most 35
+	// letters, digits and hyphens; empty = English). The new account keeps it
+	// as its locale.
+	Locale        string `protobuf:"bytes,9,opt,name=locale,proto3" json:"locale,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CreateInvitationRequest) Reset() {
+	*x = CreateInvitationRequest{}
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[118]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreateInvitationRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateInvitationRequest) ProtoMessage() {}
+
+func (x *CreateInvitationRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[118]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateInvitationRequest.ProtoReflect.Descriptor instead.
+func (*CreateInvitationRequest) Descriptor() ([]byte, []int) {
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{118}
+}
+
+func (x *CreateInvitationRequest) GetTenantId() string {
+	if x != nil {
+		return x.TenantId
+	}
+	return ""
+}
+
+func (x *CreateInvitationRequest) GetProjectId() string {
+	if x != nil {
+		return x.ProjectId
+	}
+	return ""
+}
+
+func (x *CreateInvitationRequest) GetChannel() string {
+	if x != nil {
+		return x.Channel
+	}
+	return ""
+}
+
+func (x *CreateInvitationRequest) GetAddress() string {
+	if x != nil {
+		return x.Address
+	}
+	return ""
+}
+
+func (x *CreateInvitationRequest) GetIdpProviderId() string {
+	if x != nil {
+		return x.IdpProviderId
+	}
+	return ""
+}
+
+func (x *CreateInvitationRequest) GetRoles() []string {
+	if x != nil {
+		return x.Roles
+	}
+	return nil
+}
+
+func (x *CreateInvitationRequest) GetFullName() string {
+	if x != nil {
+		return x.FullName
+	}
+	return ""
+}
+
+func (x *CreateInvitationRequest) GetExpiresInSeconds() int64 {
+	if x != nil {
+		return x.ExpiresInSeconds
+	}
+	return 0
+}
+
+func (x *CreateInvitationRequest) GetLocale() string {
+	if x != nil {
+		return x.Locale
+	}
+	return ""
+}
+
+type CreateInvitationResponse struct {
+	state      protoimpl.MessageState `protogen:"open.v1"`
+	Invitation *InvitationInfo        `protobuf:"bytes,1,opt,name=invitation,proto3" json:"invitation,omitempty"`
+	// The accept token, returned only here and by ResendInvitation; treat it as
+	// a secret. Hand it (or accept_link) to an OIDC or PASSKEY invitee yourself:
+	// nothing is sent for those channels.
+	AcceptToken string `protobuf:"bytes,2,opt,name=accept_token,json=acceptToken,proto3" json:"accept_token,omitempty"`
+	// `<magic_link_base_url>/invite?invitation_id=..&token=..` from the tenant
+	// auth policy; empty when the tenant has no magic_link_base_url.
+	AcceptLink string `protobuf:"bytes,3,opt,name=accept_link,json=acceptLink,proto3" json:"accept_link,omitempty"`
+	// True when an SMS/EMAIL invitation message was handed to a delivery
+	// channel (NotificationService or the OTP delivery webhook).
+	Delivered     bool `protobuf:"varint,4,opt,name=delivered,proto3" json:"delivered,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CreateInvitationResponse) Reset() {
+	*x = CreateInvitationResponse{}
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[119]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreateInvitationResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateInvitationResponse) ProtoMessage() {}
+
+func (x *CreateInvitationResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[119]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateInvitationResponse.ProtoReflect.Descriptor instead.
+func (*CreateInvitationResponse) Descriptor() ([]byte, []int) {
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{119}
+}
+
+func (x *CreateInvitationResponse) GetInvitation() *InvitationInfo {
+	if x != nil {
+		return x.Invitation
+	}
+	return nil
+}
+
+func (x *CreateInvitationResponse) GetAcceptToken() string {
+	if x != nil {
+		return x.AcceptToken
+	}
+	return ""
+}
+
+func (x *CreateInvitationResponse) GetAcceptLink() string {
+	if x != nil {
+		return x.AcceptLink
+	}
+	return ""
+}
+
+func (x *CreateInvitationResponse) GetDelivered() bool {
+	if x != nil {
+		return x.Delivered
+	}
+	return false
+}
+
+type ListInvitationsRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Must be the caller's own tenant (a cross-tenant admin may name any).
+	// Empty = the caller's tenant.
+	TenantId string `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	// PENDING | ACCEPTED | REVOKED | EXPIRED; empty = all.
+	Status        string `protobuf:"bytes,2,opt,name=status,proto3" json:"status,omitempty"`
+	PageSize      int32  `protobuf:"varint,3,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`   // 0 = 50, at most 200
+	PageToken     string `protobuf:"bytes,4,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"` // from the previous page's next_page_token
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListInvitationsRequest) Reset() {
+	*x = ListInvitationsRequest{}
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[120]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListInvitationsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListInvitationsRequest) ProtoMessage() {}
+
+func (x *ListInvitationsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[120]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListInvitationsRequest.ProtoReflect.Descriptor instead.
+func (*ListInvitationsRequest) Descriptor() ([]byte, []int) {
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{120}
+}
+
+func (x *ListInvitationsRequest) GetTenantId() string {
+	if x != nil {
+		return x.TenantId
+	}
+	return ""
+}
+
+func (x *ListInvitationsRequest) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+func (x *ListInvitationsRequest) GetPageSize() int32 {
+	if x != nil {
+		return x.PageSize
+	}
+	return 0
+}
+
+func (x *ListInvitationsRequest) GetPageToken() string {
+	if x != nil {
+		return x.PageToken
+	}
+	return ""
+}
+
+type ListInvitationsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Invitations   []*InvitationInfo      `protobuf:"bytes,1,rep,name=invitations,proto3" json:"invitations,omitempty"`                            // newest first
+	NextPageToken string                 `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"` // empty on the last page
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListInvitationsResponse) Reset() {
+	*x = ListInvitationsResponse{}
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[121]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListInvitationsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListInvitationsResponse) ProtoMessage() {}
+
+func (x *ListInvitationsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[121]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListInvitationsResponse.ProtoReflect.Descriptor instead.
+func (*ListInvitationsResponse) Descriptor() ([]byte, []int) {
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{121}
+}
+
+func (x *ListInvitationsResponse) GetInvitations() []*InvitationInfo {
+	if x != nil {
+		return x.Invitations
+	}
+	return nil
+}
+
+func (x *ListInvitationsResponse) GetNextPageToken() string {
+	if x != nil {
+		return x.NextPageToken
+	}
+	return ""
+}
+
+type RevokeInvitationRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// An invitation of the caller's tenant.
+	InvitationId  string `protobuf:"bytes,1,opt,name=invitation_id,json=invitationId,proto3" json:"invitation_id,omitempty"`
+	Reason        string `protobuf:"bytes,2,opt,name=reason,proto3" json:"reason,omitempty"` // at most 1024 bytes; recorded on the invitation
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RevokeInvitationRequest) Reset() {
+	*x = RevokeInvitationRequest{}
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[122]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RevokeInvitationRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RevokeInvitationRequest) ProtoMessage() {}
+
+func (x *RevokeInvitationRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[122]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RevokeInvitationRequest.ProtoReflect.Descriptor instead.
+func (*RevokeInvitationRequest) Descriptor() ([]byte, []int) {
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{122}
+}
+
+func (x *RevokeInvitationRequest) GetInvitationId() string {
+	if x != nil {
+		return x.InvitationId
+	}
+	return ""
+}
+
+func (x *RevokeInvitationRequest) GetReason() string {
+	if x != nil {
+		return x.Reason
+	}
+	return ""
+}
+
+type RevokeInvitationResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// False when the invitation was no longer PENDING (already accepted,
+	// revoked or expired): nothing changed.
+	Revoked       bool            `protobuf:"varint,1,opt,name=revoked,proto3" json:"revoked,omitempty"`
+	Invitation    *InvitationInfo `protobuf:"bytes,2,opt,name=invitation,proto3" json:"invitation,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RevokeInvitationResponse) Reset() {
+	*x = RevokeInvitationResponse{}
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[123]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RevokeInvitationResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RevokeInvitationResponse) ProtoMessage() {}
+
+func (x *RevokeInvitationResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[123]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RevokeInvitationResponse.ProtoReflect.Descriptor instead.
+func (*RevokeInvitationResponse) Descriptor() ([]byte, []int) {
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{123}
+}
+
+func (x *RevokeInvitationResponse) GetRevoked() bool {
+	if x != nil {
+		return x.Revoked
+	}
+	return false
+}
+
+func (x *RevokeInvitationResponse) GetInvitation() *InvitationInfo {
+	if x != nil {
+		return x.Invitation
+	}
+	return nil
+}
+
+type ResendInvitationRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// A PENDING, unexpired invitation of the caller's tenant.
+	InvitationId  string `protobuf:"bytes,1,opt,name=invitation_id,json=invitationId,proto3" json:"invitation_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ResendInvitationRequest) Reset() {
+	*x = ResendInvitationRequest{}
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[124]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ResendInvitationRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ResendInvitationRequest) ProtoMessage() {}
+
+func (x *ResendInvitationRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[124]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ResendInvitationRequest.ProtoReflect.Descriptor instead.
+func (*ResendInvitationRequest) Descriptor() ([]byte, []int) {
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{124}
+}
+
+func (x *ResendInvitationRequest) GetInvitationId() string {
+	if x != nil {
+		return x.InvitationId
+	}
+	return ""
+}
+
+type ResendInvitationResponse struct {
+	state      protoimpl.MessageState `protogen:"open.v1"`
+	Invitation *InvitationInfo        `protobuf:"bytes,1,opt,name=invitation,proto3" json:"invitation,omitempty"`
+	// The NEW accept token (the previous link stops working); treat it as a
+	// secret.
+	AcceptToken   string `protobuf:"bytes,2,opt,name=accept_token,json=acceptToken,proto3" json:"accept_token,omitempty"`
+	AcceptLink    string `protobuf:"bytes,3,opt,name=accept_link,json=acceptLink,proto3" json:"accept_link,omitempty"` // empty when the tenant has no magic_link_base_url
+	Delivered     bool   `protobuf:"varint,4,opt,name=delivered,proto3" json:"delivered,omitempty"`                    // as in CreateInvitationResponse
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ResendInvitationResponse) Reset() {
+	*x = ResendInvitationResponse{}
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[125]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ResendInvitationResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ResendInvitationResponse) ProtoMessage() {}
+
+func (x *ResendInvitationResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[125]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ResendInvitationResponse.ProtoReflect.Descriptor instead.
+func (*ResendInvitationResponse) Descriptor() ([]byte, []int) {
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{125}
+}
+
+func (x *ResendInvitationResponse) GetInvitation() *InvitationInfo {
+	if x != nil {
+		return x.Invitation
+	}
+	return nil
+}
+
+func (x *ResendInvitationResponse) GetAcceptToken() string {
+	if x != nil {
+		return x.AcceptToken
+	}
+	return ""
+}
+
+func (x *ResendInvitationResponse) GetAcceptLink() string {
+	if x != nil {
+		return x.AcceptLink
+	}
+	return ""
+}
+
+func (x *ResendInvitationResponse) GetDelivered() bool {
+	if x != nil {
+		return x.Delivered
+	}
+	return false
+}
+
+type GetInvitationRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Both from the invitation link.
+	InvitationId  string `protobuf:"bytes,1,opt,name=invitation_id,json=invitationId,proto3" json:"invitation_id,omitempty"`
+	Token         string `protobuf:"bytes,2,opt,name=token,proto3" json:"token,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetInvitationRequest) Reset() {
+	*x = GetInvitationRequest{}
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[126]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetInvitationRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetInvitationRequest) ProtoMessage() {}
+
+func (x *GetInvitationRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[126]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetInvitationRequest.ProtoReflect.Descriptor instead.
+func (*GetInvitationRequest) Descriptor() ([]byte, []int) {
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{126}
+}
+
+func (x *GetInvitationRequest) GetInvitationId() string {
+	if x != nil {
+		return x.InvitationId
+	}
+	return ""
+}
+
+func (x *GetInvitationRequest) GetToken() string {
+	if x != nil {
+		return x.Token
+	}
+	return ""
+}
+
+// What the invitee sees before accepting. An unknown, expired, revoked or
+// already accepted invitation (or a wrong token) is one identical refusal.
+type GetInvitationResponse struct {
+	state        protoimpl.MessageState `protogen:"open.v1"`
+	InvitationId string                 `protobuf:"bytes,1,opt,name=invitation_id,json=invitationId,proto3" json:"invitation_id,omitempty"`
+	TenantName   string                 `protobuf:"bytes,2,opt,name=tenant_name,json=tenantName,proto3" json:"tenant_name,omitempty"` // display name of the tenant ('' when unknown)
+	Channel      string                 `protobuf:"bytes,3,opt,name=channel,proto3" json:"channel,omitempty"`                         // SMS | EMAIL | OIDC | PASSKEY
+	Roles        []string               `protobuf:"bytes,4,rep,name=roles,proto3" json:"roles,omitempty"`                             // role codes the account receives
+	ExpiresAt    *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=expires_at,json=expiresAt,proto3" json:"expires_at,omitempty"`
+	// The invitation address with most characters hidden (`+88*******678`,
+	// `a***@example.com`); empty for OIDC and PASSKEY.
+	MaskedAddress string `protobuf:"bytes,6,opt,name=masked_address,json=maskedAddress,proto3" json:"masked_address,omitempty"`
+	IdpProviderId string `protobuf:"bytes,7,opt,name=idp_provider_id,json=idpProviderId,proto3" json:"idp_provider_id,omitempty"` // OIDC only
+	// Whether AcceptInvitation needs a password (tenant auth policy).
+	PasswordRequired bool `protobuf:"varint,8,opt,name=password_required,json=passwordRequired,proto3" json:"password_required,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
+}
+
+func (x *GetInvitationResponse) Reset() {
+	*x = GetInvitationResponse{}
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[127]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetInvitationResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetInvitationResponse) ProtoMessage() {}
+
+func (x *GetInvitationResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[127]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetInvitationResponse.ProtoReflect.Descriptor instead.
+func (*GetInvitationResponse) Descriptor() ([]byte, []int) {
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{127}
+}
+
+func (x *GetInvitationResponse) GetInvitationId() string {
+	if x != nil {
+		return x.InvitationId
+	}
+	return ""
+}
+
+func (x *GetInvitationResponse) GetTenantName() string {
+	if x != nil {
+		return x.TenantName
+	}
+	return ""
+}
+
+func (x *GetInvitationResponse) GetChannel() string {
+	if x != nil {
+		return x.Channel
+	}
+	return ""
+}
+
+func (x *GetInvitationResponse) GetRoles() []string {
+	if x != nil {
+		return x.Roles
+	}
+	return nil
+}
+
+func (x *GetInvitationResponse) GetExpiresAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.ExpiresAt
+	}
+	return nil
+}
+
+func (x *GetInvitationResponse) GetMaskedAddress() string {
+	if x != nil {
+		return x.MaskedAddress
+	}
+	return ""
+}
+
+func (x *GetInvitationResponse) GetIdpProviderId() string {
+	if x != nil {
+		return x.IdpProviderId
+	}
+	return ""
+}
+
+func (x *GetInvitationResponse) GetPasswordRequired() bool {
+	if x != nil {
+		return x.PasswordRequired
+	}
+	return false
+}
+
+type StartInvitationAcceptanceRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Both from the invitation link.
+	InvitationId string `protobuf:"bytes,1,opt,name=invitation_id,json=invitationId,proto3" json:"invitation_id,omitempty"`
+	Token        string `protobuf:"bytes,2,opt,name=token,proto3" json:"token,omitempty"`
+	// OIDC only: where the identity provider sends the browser back; must be
+	// allowlisted in the provider configuration.
+	RedirectUri   string `protobuf:"bytes,3,opt,name=redirect_uri,json=redirectUri,proto3" json:"redirect_uri,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *StartInvitationAcceptanceRequest) Reset() {
+	*x = StartInvitationAcceptanceRequest{}
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[128]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *StartInvitationAcceptanceRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*StartInvitationAcceptanceRequest) ProtoMessage() {}
+
+func (x *StartInvitationAcceptanceRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[128]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use StartInvitationAcceptanceRequest.ProtoReflect.Descriptor instead.
+func (*StartInvitationAcceptanceRequest) Descriptor() ([]byte, []int) {
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{128}
+}
+
+func (x *StartInvitationAcceptanceRequest) GetInvitationId() string {
+	if x != nil {
+		return x.InvitationId
+	}
+	return ""
+}
+
+func (x *StartInvitationAcceptanceRequest) GetToken() string {
+	if x != nil {
+		return x.Token
+	}
+	return ""
+}
+
+func (x *StartInvitationAcceptanceRequest) GetRedirectUri() string {
+	if x != nil {
+		return x.RedirectUri
+	}
+	return ""
+}
+
+// Exactly one group is set, by channel: SMS/EMAIL → otp_id (+ expiry);
+// PASSKEY → webauthn_*; OIDC → authorization_url + oidc_state.
+type StartInvitationAcceptanceResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// SMS/EMAIL: id of the one-time code sent to the invitation address. Asking
+	// again sends a new code, subject to the OTP cooldown.
+	OtpId            string `protobuf:"bytes,1,opt,name=otp_id,json=otpId,proto3" json:"otp_id,omitempty"`
+	OtpExpiresAtUnix int64  `protobuf:"varint,2,opt,name=otp_expires_at_unix,json=otpExpiresAtUnix,proto3" json:"otp_expires_at_unix,omitempty"`
+	// The plaintext code, only when UDB_OTP_DEV_ECHO is honoured (never in
+	// production).
+	DevOtpCode string `protobuf:"bytes,3,opt,name=dev_otp_code,json=devOtpCode,proto3" json:"dev_otp_code,omitempty"`
+	// PASSKEY: registration challenge and the WebAuthn creation options
+	// (PublicKeyCredentialCreationOptions JSON) for navigator.credentials.create.
+	WebauthnChallengeId string `protobuf:"bytes,4,opt,name=webauthn_challenge_id,json=webauthnChallengeId,proto3" json:"webauthn_challenge_id,omitempty"`
+	WebauthnOptionsJson string `protobuf:"bytes,5,opt,name=webauthn_options_json,json=webauthnOptionsJson,proto3" json:"webauthn_options_json,omitempty"`
+	// OIDC: send the browser to authorization_url; oidc_state identifies the
+	// sign-in attempt.
+	AuthorizationUrl string `protobuf:"bytes,6,opt,name=authorization_url,json=authorizationUrl,proto3" json:"authorization_url,omitempty"`
+	OidcState        string `protobuf:"bytes,7,opt,name=oidc_state,json=oidcState,proto3" json:"oidc_state,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
+}
+
+func (x *StartInvitationAcceptanceResponse) Reset() {
+	*x = StartInvitationAcceptanceResponse{}
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[129]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *StartInvitationAcceptanceResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*StartInvitationAcceptanceResponse) ProtoMessage() {}
+
+func (x *StartInvitationAcceptanceResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[129]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use StartInvitationAcceptanceResponse.ProtoReflect.Descriptor instead.
+func (*StartInvitationAcceptanceResponse) Descriptor() ([]byte, []int) {
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{129}
+}
+
+func (x *StartInvitationAcceptanceResponse) GetOtpId() string {
+	if x != nil {
+		return x.OtpId
+	}
+	return ""
+}
+
+func (x *StartInvitationAcceptanceResponse) GetOtpExpiresAtUnix() int64 {
+	if x != nil {
+		return x.OtpExpiresAtUnix
+	}
+	return 0
+}
+
+func (x *StartInvitationAcceptanceResponse) GetDevOtpCode() string {
+	if x != nil {
+		return x.DevOtpCode
+	}
+	return ""
+}
+
+func (x *StartInvitationAcceptanceResponse) GetWebauthnChallengeId() string {
+	if x != nil {
+		return x.WebauthnChallengeId
+	}
+	return ""
+}
+
+func (x *StartInvitationAcceptanceResponse) GetWebauthnOptionsJson() string {
+	if x != nil {
+		return x.WebauthnOptionsJson
+	}
+	return ""
+}
+
+func (x *StartInvitationAcceptanceResponse) GetAuthorizationUrl() string {
+	if x != nil {
+		return x.AuthorizationUrl
+	}
+	return ""
+}
+
+func (x *StartInvitationAcceptanceResponse) GetOidcState() string {
+	if x != nil {
+		return x.OidcState
+	}
+	return ""
+}
+
+type AcceptInvitationRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Both from the invitation link.
+	InvitationId string `protobuf:"bytes,1,opt,name=invitation_id,json=invitationId,proto3" json:"invitation_id,omitempty"`
+	Token        string `protobuf:"bytes,2,opt,name=token,proto3" json:"token,omitempty"`
+	// The new account's username: lowercase, starts with a letter, 3 to 80 of
+	// a-z 0-9 . _ -; must be free.
+	Username string `protobuf:"bytes,3,opt,name=username,proto3" json:"username,omitempty"`
+	// Optional; empty keeps the name the inviter typed.
+	FullName string `protobuf:"bytes,4,opt,name=full_name,json=fullName,proto3" json:"full_name,omitempty"`
+	// Required unless the tenant auth policy sets password_required=false; must
+	// satisfy the password policy when given.
+	Password string `protobuf:"bytes,5,opt,name=password,proto3" json:"password,omitempty"`
+	// Proof, by channel. SMS/EMAIL: otp_id + code from StartInvitationAcceptance.
+	OtpId string `protobuf:"bytes,6,opt,name=otp_id,json=otpId,proto3" json:"otp_id,omitempty"`
+	Code  string `protobuf:"bytes,7,opt,name=code,proto3" json:"code,omitempty"`
+	// OIDC (native apps): an ID token from the invitation's identity provider,
+	// and the nonce the client requested it with (empty: the token must carry
+	// no nonce and be at most 10 minutes old). Browsers use oidc_state +
+	// oidc_code instead.
+	OidcIdToken string `protobuf:"bytes,8,opt,name=oidc_id_token,json=oidcIdToken,proto3" json:"oidc_id_token,omitempty"`
+	OidcNonce   string `protobuf:"bytes,9,opt,name=oidc_nonce,json=oidcNonce,proto3" json:"oidc_nonce,omitempty"`
+	// PASSKEY: the challenge from StartInvitationAcceptance and the
+	// navigator.credentials.create() result as JSON.
+	WebauthnChallengeId     string `protobuf:"bytes,10,opt,name=webauthn_challenge_id,json=webauthnChallengeId,proto3" json:"webauthn_challenge_id,omitempty"`
+	WebauthnAttestationJson string `protobuf:"bytes,11,opt,name=webauthn_attestation_json,json=webauthnAttestationJson,proto3" json:"webauthn_attestation_json,omitempty"`
+	DeviceName              string `protobuf:"bytes,12,opt,name=device_name,json=deviceName,proto3" json:"device_name,omitempty"` // human-readable
+	DeviceId                string `protobuf:"bytes,13,opt,name=device_id,json=deviceId,proto3" json:"device_id,omitempty"`       // client device fingerprint (optional; registers the device)
+	IpAddress               string `protobuf:"bytes,14,opt,name=ip_address,json=ipAddress,proto3" json:"ip_address,omitempty"`    // forwarded by gateway
+	UserAgent               string `protobuf:"bytes,15,opt,name=user_agent,json=userAgent,proto3" json:"user_agent,omitempty"`
+	// OIDC (browsers): `state` and `code` from the identity provider's redirect
+	// after the authorization_url of StartInvitationAcceptance. Single use.
+	OidcState     string `protobuf:"bytes,16,opt,name=oidc_state,json=oidcState,proto3" json:"oidc_state,omitempty"`
+	OidcCode      string `protobuf:"bytes,17,opt,name=oidc_code,json=oidcCode,proto3" json:"oidc_code,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AcceptInvitationRequest) Reset() {
+	*x = AcceptInvitationRequest{}
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[130]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AcceptInvitationRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AcceptInvitationRequest) ProtoMessage() {}
+
+func (x *AcceptInvitationRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[130]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AcceptInvitationRequest.ProtoReflect.Descriptor instead.
+func (*AcceptInvitationRequest) Descriptor() ([]byte, []int) {
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{130}
+}
+
+func (x *AcceptInvitationRequest) GetInvitationId() string {
+	if x != nil {
+		return x.InvitationId
+	}
+	return ""
+}
+
+func (x *AcceptInvitationRequest) GetToken() string {
+	if x != nil {
+		return x.Token
+	}
+	return ""
+}
+
+func (x *AcceptInvitationRequest) GetUsername() string {
+	if x != nil {
+		return x.Username
+	}
+	return ""
+}
+
+func (x *AcceptInvitationRequest) GetFullName() string {
+	if x != nil {
+		return x.FullName
+	}
+	return ""
+}
+
+func (x *AcceptInvitationRequest) GetPassword() string {
+	if x != nil {
+		return x.Password
+	}
+	return ""
+}
+
+func (x *AcceptInvitationRequest) GetOtpId() string {
+	if x != nil {
+		return x.OtpId
+	}
+	return ""
+}
+
+func (x *AcceptInvitationRequest) GetCode() string {
+	if x != nil {
+		return x.Code
+	}
+	return ""
+}
+
+func (x *AcceptInvitationRequest) GetOidcIdToken() string {
+	if x != nil {
+		return x.OidcIdToken
+	}
+	return ""
+}
+
+func (x *AcceptInvitationRequest) GetOidcNonce() string {
+	if x != nil {
+		return x.OidcNonce
+	}
+	return ""
+}
+
+func (x *AcceptInvitationRequest) GetWebauthnChallengeId() string {
+	if x != nil {
+		return x.WebauthnChallengeId
+	}
+	return ""
+}
+
+func (x *AcceptInvitationRequest) GetWebauthnAttestationJson() string {
+	if x != nil {
+		return x.WebauthnAttestationJson
+	}
+	return ""
+}
+
+func (x *AcceptInvitationRequest) GetDeviceName() string {
+	if x != nil {
+		return x.DeviceName
+	}
+	return ""
+}
+
+func (x *AcceptInvitationRequest) GetDeviceId() string {
+	if x != nil {
+		return x.DeviceId
+	}
+	return ""
+}
+
+func (x *AcceptInvitationRequest) GetIpAddress() string {
+	if x != nil {
+		return x.IpAddress
+	}
+	return ""
+}
+
+func (x *AcceptInvitationRequest) GetUserAgent() string {
+	if x != nil {
+		return x.UserAgent
+	}
+	return ""
+}
+
+func (x *AcceptInvitationRequest) GetOidcState() string {
+	if x != nil {
+		return x.OidcState
+	}
+	return ""
+}
+
+func (x *AcceptInvitationRequest) GetOidcCode() string {
+	if x != nil {
+		return x.OidcCode
+	}
+	return ""
+}
+
+// Same fields, names and numbers as LoginResponse: the new account is signed
+// in.
+type AcceptInvitationResponse struct {
+	state       protoimpl.MessageState `protogen:"open.v1"`
+	UserId      string                 `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	SessionId   string                 `protobuf:"bytes,2,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
+	AccessToken string                 `protobuf:"bytes,3,opt,name=access_token,json=accessToken,proto3" json:"access_token,omitempty"`
+	// Rotating refresh token (rt_<family>.<jti>); reuse of a superseded value
+	// revokes the family.
+	RefreshToken         string `protobuf:"bytes,4,opt,name=refresh_token,json=refreshToken,proto3" json:"refresh_token,omitempty"`
+	AccessTokenExpiresIn int32  `protobuf:"varint,5,opt,name=access_token_expires_in,json=accessTokenExpiresIn,proto3" json:"access_token_expires_in,omitempty"` // seconds
+	SessionToken         string `protobuf:"bytes,6,opt,name=session_token,json=sessionToken,proto3" json:"session_token,omitempty"`
+	CsrfToken            string `protobuf:"bytes,7,opt,name=csrf_token,json=csrfToken,proto3" json:"csrf_token,omitempty"`
+	// Always false: accepting an invitation has no further step.
+	MfaRequired           bool   `protobuf:"varint,8,opt,name=mfa_required,json=mfaRequired,proto3" json:"mfa_required,omitempty"`
+	MfaOtpId              string `protobuf:"bytes,9,opt,name=mfa_otp_id,json=mfaOtpId,proto3" json:"mfa_otp_id,omitempty"`                                            // always empty
+	RefreshTokenExpiresIn int32  `protobuf:"varint,10,opt,name=refresh_token_expires_in,json=refreshTokenExpiresIn,proto3" json:"refresh_token_expires_in,omitempty"` // seconds
+	// Stable, non-secret public id of this session (`sesspub_…`), safe to log.
+	SessionPublicId string `protobuf:"bytes,11,opt,name=session_public_id,json=sessionPublicId,proto3" json:"session_public_id,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *AcceptInvitationResponse) Reset() {
+	*x = AcceptInvitationResponse{}
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[131]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AcceptInvitationResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AcceptInvitationResponse) ProtoMessage() {}
+
+func (x *AcceptInvitationResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[131]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AcceptInvitationResponse.ProtoReflect.Descriptor instead.
+func (*AcceptInvitationResponse) Descriptor() ([]byte, []int) {
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{131}
+}
+
+func (x *AcceptInvitationResponse) GetUserId() string {
+	if x != nil {
+		return x.UserId
+	}
+	return ""
+}
+
+func (x *AcceptInvitationResponse) GetSessionId() string {
+	if x != nil {
+		return x.SessionId
+	}
+	return ""
+}
+
+func (x *AcceptInvitationResponse) GetAccessToken() string {
+	if x != nil {
+		return x.AccessToken
+	}
+	return ""
+}
+
+func (x *AcceptInvitationResponse) GetRefreshToken() string {
+	if x != nil {
+		return x.RefreshToken
+	}
+	return ""
+}
+
+func (x *AcceptInvitationResponse) GetAccessTokenExpiresIn() int32 {
+	if x != nil {
+		return x.AccessTokenExpiresIn
+	}
+	return 0
+}
+
+func (x *AcceptInvitationResponse) GetSessionToken() string {
+	if x != nil {
+		return x.SessionToken
+	}
+	return ""
+}
+
+func (x *AcceptInvitationResponse) GetCsrfToken() string {
+	if x != nil {
+		return x.CsrfToken
+	}
+	return ""
+}
+
+func (x *AcceptInvitationResponse) GetMfaRequired() bool {
+	if x != nil {
+		return x.MfaRequired
+	}
+	return false
+}
+
+func (x *AcceptInvitationResponse) GetMfaOtpId() string {
+	if x != nil {
+		return x.MfaOtpId
+	}
+	return ""
+}
+
+func (x *AcceptInvitationResponse) GetRefreshTokenExpiresIn() int32 {
+	if x != nil {
+		return x.RefreshTokenExpiresIn
+	}
+	return 0
+}
+
+func (x *AcceptInvitationResponse) GetSessionPublicId() string {
+	if x != nil {
+		return x.SessionPublicId
+	}
+	return ""
+}
+
+type CheckStepUpRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The protected action about to be performed, exactly as named in
+	// IssueMfaChallengeRequest.action and the tenant's step-up rule.
+	Action string `protobuf:"bytes,1,opt,name=action,proto3" json:"action,omitempty"`
+	// The token from VerifyMfaChallengeResponse.step_up_token.
+	StepUpToken   string             `protobuf:"bytes,2,opt,name=step_up_token,json=stepUpToken,proto3" json:"step_up_token,omitempty"`
+	Context       *v1.RequestContext `protobuf:"bytes,3,opt,name=context,proto3" json:"context,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CheckStepUpRequest) Reset() {
+	*x = CheckStepUpRequest{}
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[132]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CheckStepUpRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CheckStepUpRequest) ProtoMessage() {}
+
+func (x *CheckStepUpRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[132]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CheckStepUpRequest.ProtoReflect.Descriptor instead.
+func (*CheckStepUpRequest) Descriptor() ([]byte, []int) {
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{132}
+}
+
+func (x *CheckStepUpRequest) GetAction() string {
+	if x != nil {
+		return x.Action
+	}
+	return ""
+}
+
+func (x *CheckStepUpRequest) GetStepUpToken() string {
+	if x != nil {
+		return x.StepUpToken
+	}
+	return ""
+}
+
+func (x *CheckStepUpRequest) GetContext() *v1.RequestContext {
+	if x != nil {
+		return x.Context
+	}
+	return nil
+}
+
+type CheckStepUpResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// True only when every check passed; allow the action only on true.
+	Satisfied bool `protobuf:"varint,1,opt,name=satisfied,proto3" json:"satisfied,omitempty"`
+	// Why: `satisfied`, `invalid_token` (bad signature, expired, revoked
+	// session, inactive user, not a step-up token), `action_mismatch`,
+	// `subject_mismatch` (minted for another user or tenant than the caller),
+	// `factor_not_allowed` (the tenant rule for the action does not accept the
+	// factor used) or `too_old` (proven longer ago than the rule's
+	// max_age_seconds).
+	Reason string `protobuf:"bytes,2,opt,name=reason,proto3" json:"reason,omitempty"`
+	// What the token states (empty/0 when it is invalid).
+	Acr      string   `protobuf:"bytes,3,opt,name=acr,proto3" json:"acr,omitempty"`
+	Amr      []string `protobuf:"bytes,4,rep,name=amr,proto3" json:"amr,omitempty"`
+	AuthTime int64    `protobuf:"varint,5,opt,name=auth_time,json=authTime,proto3" json:"auth_time,omitempty"`
+	// The user the step-up was proven by (empty when the token is invalid).
+	UserId string `protobuf:"bytes,6,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	// The factor used: TOTP, EMAIL_OTP, SMS_OTP, WEBAUTHN or RECOVERY_CODE.
+	FactorKind v11.AuthFactorKind `protobuf:"varint,7,opt,name=factor_kind,json=factorKind,proto3,enum=udb.core.authn.entity.v1.AuthFactorKind" json:"factor_kind,omitempty"`
+	// The max age applied: the tenant rule's max_age_seconds for the action, or
+	// 300 when the tenant has no rule for it.
+	MaxAgeSeconds int64 `protobuf:"varint,8,opt,name=max_age_seconds,json=maxAgeSeconds,proto3" json:"max_age_seconds,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CheckStepUpResponse) Reset() {
+	*x = CheckStepUpResponse{}
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[133]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CheckStepUpResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CheckStepUpResponse) ProtoMessage() {}
+
+func (x *CheckStepUpResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_authn_services_v1_core_proto_msgTypes[133]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CheckStepUpResponse.ProtoReflect.Descriptor instead.
+func (*CheckStepUpResponse) Descriptor() ([]byte, []int) {
+	return file_udb_core_authn_services_v1_core_proto_rawDescGZIP(), []int{133}
+}
+
+func (x *CheckStepUpResponse) GetSatisfied() bool {
+	if x != nil {
+		return x.Satisfied
+	}
+	return false
+}
+
+func (x *CheckStepUpResponse) GetReason() string {
+	if x != nil {
+		return x.Reason
+	}
+	return ""
+}
+
+func (x *CheckStepUpResponse) GetAcr() string {
+	if x != nil {
+		return x.Acr
+	}
+	return ""
+}
+
+func (x *CheckStepUpResponse) GetAmr() []string {
+	if x != nil {
+		return x.Amr
+	}
+	return nil
+}
+
+func (x *CheckStepUpResponse) GetAuthTime() int64 {
+	if x != nil {
+		return x.AuthTime
+	}
+	return 0
+}
+
+func (x *CheckStepUpResponse) GetUserId() string {
+	if x != nil {
+		return x.UserId
+	}
+	return ""
+}
+
+func (x *CheckStepUpResponse) GetFactorKind() v11.AuthFactorKind {
+	if x != nil {
+		return x.FactorKind
+	}
+	return v11.AuthFactorKind(0)
+}
+
+func (x *CheckStepUpResponse) GetMaxAgeSeconds() int64 {
+	if x != nil {
+		return x.MaxAgeSeconds
+	}
+	return 0
+}
+
 var File_udb_core_authn_services_v1_core_proto protoreflect.FileDescriptor
 
 const file_udb_core_authn_services_v1_core_proto_rawDesc = "" +
 	"\n" +
-	"%udb/core/authn/services/v1/core.proto\x12\x1audb.core.authn.services.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a google/protobuf/field_mask.proto\x1a$udb/core/authn/entity/v1/enums.proto\x1a&udb/core/authn/entity/v1/session.proto\x1a#udb/core/authn/entity/v1/user.proto\x1a%udb/core/authn/entity/v1/device.proto\x1a\x1cudb/core/common/v1/dto.proto\x1a\x1eudb/core/common/v1/types.proto\x1a!udb/core/common/v1/security.proto\"\xc6\x05\n" +
+	"%udb/core/authn/services/v1/core.proto\x12\x1audb.core.authn.services.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a google/protobuf/field_mask.proto\x1a$udb/core/authn/entity/v1/enums.proto\x1a&udb/core/authn/entity/v1/session.proto\x1a#udb/core/authn/entity/v1/user.proto\x1a%udb/core/authn/entity/v1/device.proto\x1a1udb/core/authn/entity/v1/tenant_auth_policy.proto\x1a\x1cudb/core/common/v1/dto.proto\x1a\x1eudb/core/common/v1/types.proto\x1a!udb/core/common/v1/security.proto\"\xde\x05\n" +
 	"\x11CreateUserRequest\x12\x1a\n" +
 	"\busername\x18\x01 \x01(\tR\busername\x12\x14\n" +
 	"\x05email\x18\x02 \x01(\tR\x05email\x12\x1a\n" +
@@ -6721,7 +9843,8 @@ const file_udb_core_authn_services_v1_core_proto_rawDesc = "" +
 	" \x01(\tR\x0fexternalSubject\x12s\n" +
 	"\x12profile_attributes\x18\v \x03(\v2D.udb.core.authn.services.v1.CreateUserRequest.ProfileAttributesEntryR\x11profileAttributes\x126\n" +
 	"\x17password_setup_required\x18\f \x01(\bR\x15passwordSetupRequired\x12\x14\n" +
-	"\x05phone\x18\r \x01(\tR\x05phone\x1aD\n" +
+	"\x05phone\x18\r \x01(\tR\x05phone\x12\x16\n" +
+	"\x06locale\x18\x0e \x01(\tR\x06locale\x1aD\n" +
 	"\x16ProfileAttributesEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"}\n" +
@@ -6741,7 +9864,7 @@ const file_udb_core_authn_services_v1_core_proto_rawDesc = "" +
 	"\x04page\x18\x04 \x01(\v2\x1f.udb.core.common.v1.PageRequestR\x04page:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"\x9d\x01\n" +
 	"\x11ListUsersResponse\x124\n" +
 	"\x05users\x18\x01 \x03(\v2\x1e.udb.core.authn.entity.v1.UserR\x05users\x124\n" +
-	"\x04page\x18\x02 \x01(\v2 .udb.core.common.v1.PageResponseR\x04page:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"\x96\x05\n" +
+	"\x04page\x18\x02 \x01(\v2 .udb.core.common.v1.PageResponseR\x04page:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"\xae\x05\n" +
 	"\x11UpdateUserRequest\x12\x17\n" +
 	"\auser_id\x18\x01 \x01(\tR\x06userId\x12\x1b\n" +
 	"\tfull_name\x18\x02 \x01(\tR\bfullName\x12\x14\n" +
@@ -6756,7 +9879,8 @@ const file_udb_core_authn_services_v1_core_proto_rawDesc = "" +
 	"\x10external_subject\x18\n" +
 	" \x01(\tR\x0fexternalSubject\x12;\n" +
 	"\vupdate_mask\x18\v \x01(\v2\x1a.google.protobuf.FieldMaskR\n" +
-	"updateMask\x1aD\n" +
+	"updateMask\x12\x16\n" +
+	"\x06locale\x18\f \x01(\tR\x06locale\x1aD\n" +
 	"\x16ProfileAttributesEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"f\n" +
@@ -6855,7 +9979,7 @@ const file_udb_core_authn_services_v1_core_proto_rawDesc = "" +
 	"\faccess_token\x18\x03 \x01(\tR\vaccessToken\x12&\n" +
 	"\x0fexpires_at_unix\x18\x04 \x01(\x03R\rexpiresAtUnix\x121\n" +
 	"\x14relationship_version\x18\x05 \x01(\tR\x13relationshipVersion\x12\x1a\n" +
-	"\bwarnings\x18\x06 \x03(\tR\bwarnings:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"\xf2\x03\n" +
+	"\bwarnings\x18\x06 \x03(\tR\bwarnings:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"\xde\x04\n" +
 	"\fLoginRequest\x12\x1a\n" +
 	"\busername\x18\x01 \x01(\tR\busername\x12\x1a\n" +
 	"\bpassword\x18\x02 \x01(\tR\bpassword\x12E\n" +
@@ -6876,7 +10000,9 @@ const file_udb_core_authn_services_v1_core_proto_rawDesc = "" +
 	"tenantHint\x12!\n" +
 	"\fproject_hint\x18\v \x01(\tR\vprojectHint\x12%\n" +
 	"\x0eaccess_surface\x18\f \x01(\tR\raccessSurface\x12#\n" +
-	"\rrecovery_code\x18\r \x01(\tR\frecoveryCode:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"\xce\x03\n" +
+	"\rrecovery_code\x18\r \x01(\tR\frecoveryCode\x122\n" +
+	"\x15webauthn_challenge_id\x18\x0e \x01(\tR\x13webauthnChallengeId\x126\n" +
+	"\x17webauthn_assertion_json\x18\x0f \x01(\tR\x15webauthnAssertionJson:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"\xce\x03\n" +
 	"\rLoginResponse\x12\x17\n" +
 	"\auser_id\x18\x01 \x01(\tR\x06userId\x12\x1d\n" +
 	"\n" +
@@ -6925,7 +10051,7 @@ const file_udb_core_authn_services_v1_core_proto_rawDesc = "" +
 	"\x14ValidateTokenRequest\x12\x14\n" +
 	"\x05token\x18\x01 \x01(\tR\x05token\x12B\n" +
 	"\n" +
-	"token_type\x18\x02 \x01(\x0e2#.udb.core.authn.entity.v1.TokenTypeR\ttokenType:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"\xae\x06\n" +
+	"token_type\x18\x02 \x01(\x0e2#.udb.core.authn.entity.v1.TokenTypeR\ttokenType:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"\x95\a\n" +
 	"\x15ValidateTokenResponse\x12\x14\n" +
 	"\x05valid\x18\x01 \x01(\bR\x05valid\x12\x17\n" +
 	"\auser_id\x18\x02 \x01(\tR\x06userId\x12\x1d\n" +
@@ -6948,7 +10074,11 @@ const file_udb_core_authn_services_v1_core_proto_rawDesc = "" +
 	"\n" +
 	"attributes\x18\x0f \x03(\v2A.udb.core.authn.services.v1.ValidateTokenResponse.AttributesEntryR\n" +
 	"attributes\x12*\n" +
-	"\x11session_public_id\x18\x10 \x01(\tR\x0fsessionPublicId\x1a=\n" +
+	"\x11session_public_id\x18\x10 \x01(\tR\x0fsessionPublicId\x12\x10\n" +
+	"\x03acr\x18\x11 \x01(\tR\x03acr\x12\x10\n" +
+	"\x03amr\x18\x12 \x03(\tR\x03amr\x12\x1b\n" +
+	"\tauth_time\x18\x13 \x01(\x03R\bauthTime\x12$\n" +
+	"\x0estep_up_action\x18\x14 \x01(\tR\fstepUpAction\x1a=\n" +
 	"\x0fAttributesEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"\xc9\x01\n" +
@@ -7119,18 +10249,34 @@ const file_udb_core_authn_services_v1_core_proto_rawDesc = "" +
 	"#StartWebAuthnAuthenticationResponse\x12!\n" +
 	"\fchallenge_id\x18\x01 \x01(\tR\vchallengeId\x12Y\n" +
 	"*public_key_credential_request_options_json\x18\x02 \x01(\tR%publicKeyCredentialRequestOptionsJson\x12&\n" +
-	"\x0fexpires_at_unix\x18\x03 \x01(\x03R\rexpiresAtUnix:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"\xe1\x01\n" +
+	"\x0fexpires_at_unix\x18\x03 \x01(\x03R\rexpiresAtUnix:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"\xdd\x02\n" +
 	"#FinishWebAuthnAuthenticationRequest\x12!\n" +
 	"\fchallenge_id\x18\x01 \x01(\tR\vchallengeId\x12;\n" +
 	"\x1apublic_key_credential_json\x18\x02 \x01(\tR\x17publicKeyCredentialJson\x12<\n" +
-	"\acontext\x18\x03 \x01(\v2\".udb.core.common.v1.RequestContextR\acontext:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"\x98\x02\n" +
+	"\acontext\x18\x03 \x01(\v2\".udb.core.common.v1.RequestContextR\acontext\x12\x1f\n" +
+	"\vdevice_name\x18\x04 \x01(\tR\n" +
+	"deviceName\x12\x1d\n" +
+	"\n" +
+	"ip_address\x18\x05 \x01(\tR\tipAddress\x12\x1d\n" +
+	"\n" +
+	"user_agent\x18\x06 \x01(\tR\tuserAgent\x12\x1b\n" +
+	"\tdevice_id\x18\a \x01(\tR\bdeviceId:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"\xb6\x04\n" +
 	"$FinishWebAuthnAuthenticationResponse\x12C\n" +
 	"\tprincipal\x18\x01 \x01(\v2%.udb.core.authn.services.v1.PrincipalR\tprincipal\x12\x1d\n" +
 	"\n" +
 	"session_id\x18\x02 \x01(\tR\tsessionId\x12!\n" +
 	"\faccess_token\x18\x03 \x01(\tR\vaccessToken\x12&\n" +
 	"\x0fexpires_at_unix\x18\x04 \x01(\x03R\rexpiresAtUnix\x12#\n" +
-	"\rcredential_id\x18\x05 \x01(\tR\fcredentialId:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"\xbe\x01\n" +
+	"\rcredential_id\x18\x05 \x01(\tR\fcredentialId\x12#\n" +
+	"\rrefresh_token\x18\x06 \x01(\tR\frefreshToken\x125\n" +
+	"\x17access_token_expires_in\x18\a \x01(\x05R\x14accessTokenExpiresIn\x127\n" +
+	"\x18refresh_token_expires_in\x18\b \x01(\x05R\x15refreshTokenExpiresIn\x12#\n" +
+	"\rsession_token\x18\t \x01(\tR\fsessionToken\x12\x1d\n" +
+	"\n" +
+	"csrf_token\x18\n" +
+	" \x01(\tR\tcsrfToken\x12*\n" +
+	"\x11session_public_id\x18\v \x01(\tR\x0fsessionPublicId\x12\x17\n" +
+	"\auser_id\x18\f \x01(\tR\x06userId:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"\xbe\x01\n" +
 	"\x12ListDevicesRequest\x12\x17\n" +
 	"\auser_id\x18\x01 \x01(\tR\x06userId\x123\n" +
 	"\x04page\x18\x02 \x01(\v2\x1f.udb.core.common.v1.PageRequestR\x04page\x12<\n" +
@@ -7178,7 +10324,7 @@ const file_udb_core_authn_services_v1_core_proto_rawDesc = "" +
 	"\x10families_revoked\x18\x01 \x01(\x03R\x0ffamiliesRevoked\x12)\n" +
 	"\x10sessions_revoked\x18\x02 \x01(\x03R\x0fsessionsRevoked\x12)\n" +
 	"\x10keys_compromised\x18\x03 \x01(\x03R\x0fkeysCompromised\x12!\n" +
-	"\foperation_id\x18\x04 \x01(\tR\voperationId:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"\xf1\x02\n" +
+	"\foperation_id\x18\x04 \x01(\tR\voperationId:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"\x89\x03\n" +
 	"\x18IssueMfaChallengeRequest\x12\x17\n" +
 	"\auser_id\x18\x01 \x01(\tR\x06userId\x12I\n" +
 	"\vfactor_kind\x18\x02 \x01(\x0e2(.udb.core.authn.entity.v1.AuthFactorKindR\n" +
@@ -7187,20 +10333,28 @@ const file_udb_core_authn_services_v1_core_proto_rawDesc = "" +
 	"\x12device_fingerprint\x18\x04 \x01(\tR\x11deviceFingerprint\x12\x1d\n" +
 	"\n" +
 	"ip_address\x18\x05 \x01(\tR\tipAddress\x12<\n" +
-	"\acontext\x18\x06 \x01(\v2\".udb.core.common.v1.RequestContextR\acontext:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"\xcf\x01\n" +
+	"\acontext\x18\x06 \x01(\v2\".udb.core.common.v1.RequestContextR\acontext\x12\x16\n" +
+	"\x06action\x18\a \x01(\tR\x06action:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"\xb9\x02\n" +
 	"\x19IssueMfaChallengeResponse\x12!\n" +
 	"\fchallenge_id\x18\x01 \x01(\tR\vchallengeId\x12&\n" +
 	"\x0fexpires_at_unix\x18\x02 \x01(\x03R\rexpiresAtUnix\x12I\n" +
 	"\vfactor_kind\x18\x03 \x01(\x0e2(.udb.core.authn.entity.v1.AuthFactorKindR\n" +
-	"factorKind:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"\xdd\x01\n" +
+	"factorKind\x122\n" +
+	"\x15webauthn_options_json\x18\x04 \x01(\tR\x13webauthnOptionsJson\x124\n" +
+	"\x16otp_destination_masked\x18\x05 \x01(\tR\x14otpDestinationMasked:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"\x95\x02\n" +
 	"\x19VerifyMfaChallengeRequest\x12!\n" +
 	"\fchallenge_id\x18\x01 \x01(\tR\vchallengeId\x12\x12\n" +
 	"\x04code\x18\x02 \x01(\tR\x04code\x12-\n" +
 	"\x12device_fingerprint\x18\x03 \x01(\tR\x11deviceFingerprint\x12<\n" +
-	"\acontext\x18\x04 \x01(\v2\".udb.core.common.v1.RequestContextR\acontext:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"o\n" +
+	"\acontext\x18\x04 \x01(\v2\".udb.core.common.v1.RequestContextR\acontext\x126\n" +
+	"\x17webauthn_assertion_json\x18\x05 \x01(\tR\x15webauthnAssertionJson:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"\xed\x01\n" +
 	"\x1aVerifyMfaChallengeResponse\x12\x1a\n" +
 	"\bverified\x18\x01 \x01(\bR\bverified\x12\x17\n" +
-	"\auser_id\x18\x02 \x01(\tR\x06userId:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"\xab\x01\n" +
+	"\auser_id\x18\x02 \x01(\tR\x06userId\x12\"\n" +
+	"\rstep_up_token\x18\x03 \x01(\tR\vstepUpToken\x124\n" +
+	"\x17step_up_expires_at_unix\x18\x04 \x01(\x03R\x13stepUpExpiresAtUnix\x12\x10\n" +
+	"\x03acr\x18\x05 \x01(\tR\x03acr\x12\x10\n" +
+	"\x03amr\x18\x06 \x03(\tR\x03amr:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"\xab\x01\n" +
 	"\x10MfaFactorSummary\x12I\n" +
 	"\vfactor_kind\x18\x01 \x01(\x0e2(.udb.core.authn.entity.v1.AuthFactorKindR\n" +
 	"factorKind\x12\x18\n" +
@@ -7259,7 +10413,303 @@ const file_udb_core_authn_services_v1_core_proto_rawDesc = "" +
 	"\rcredential_id\x18\x02 \x01(\tR\fcredentialId\x12<\n" +
 	"\acontext\x18\x03 \x01(\v2\".udb.core.common.v1.RequestContextR\acontext:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"Z\n" +
 	" DeleteWebAuthnCredentialResponse\x12\x18\n" +
-	"\adeleted\x18\x01 \x01(\bR\adeleted:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01B\x82\x02\n" +
+	"\adeleted\x18\x01 \x01(\bR\adeleted:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"\x9b\x03\n" +
+	"\x1aPutTenantAuthPolicyRequest\x12\x1b\n" +
+	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x120\n" +
+	"\x11password_required\x18\x02 \x01(\bH\x00R\x10passwordRequired\x88\x01\x01\x123\n" +
+	"\x15passwordless_channels\x18\x03 \x03(\tR\x14passwordlessChannels\x12-\n" +
+	"\x13magic_link_base_url\x18\x04 \x01(\tR\x10magicLinkBaseUrl\x12+\n" +
+	"\x12step_up_rules_json\x18\x05 \x01(\tR\x0fstepUpRulesJson\x12+\n" +
+	"\x11expected_revision\x18\x06 \x01(\x03R\x10expectedRevision\x12<\n" +
+	"\acontext\x18\a \x01(\v2\".udb.core.common.v1.RequestContextR\acontext:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01B\x14\n" +
+	"\x12_password_required\"\x7f\n" +
+	"\x1bPutTenantAuthPolicyResponse\x12B\n" +
+	"\x06policy\x18\x01 \x01(\v2*.udb.core.authn.entity.v1.TenantAuthPolicyR\x06policy:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"\x95\x01\n" +
+	"\x1aGetTenantAuthPolicyRequest\x12\x1b\n" +
+	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x12<\n" +
+	"\acontext\x18\x02 \x01(\v2\".udb.core.common.v1.RequestContextR\acontext:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"\x9e\x01\n" +
+	"\x1bGetTenantAuthPolicyResponse\x12B\n" +
+	"\x06policy\x18\x01 \x01(\v2*.udb.core.authn.entity.v1.TenantAuthPolicyR\x06policy\x12\x1d\n" +
+	"\n" +
+	"is_default\x18\x02 \x01(\bR\tisDefault:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"\x88\x02\n" +
+	"\x13SendLoginOtpRequest\x12\x1f\n" +
+	"\vtenant_hint\x18\x01 \x01(\tR\n" +
+	"tenantHint\x12\x18\n" +
+	"\achannel\x18\x02 \x01(\tR\achannel\x12\x18\n" +
+	"\aaddress\x18\x03 \x01(\tR\aaddress\x12!\n" +
+	"\fproject_hint\x18\x04 \x01(\tR\vprojectHint\x12\x1d\n" +
+	"\n" +
+	"magic_link\x18\x05 \x01(\bR\tmagicLink\x12<\n" +
+	"\acontext\x18\x06 \x01(\v2\".udb.core.common.v1.RequestContextR\acontext:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"\x95\x01\n" +
+	"\x14SendLoginOtpResponse\x12\x15\n" +
+	"\x06otp_id\x18\x01 \x01(\tR\x05otpId\x12&\n" +
+	"\x0fexpires_at_unix\x18\x02 \x01(\x03R\rexpiresAtUnix\x12 \n" +
+	"\fdev_otp_code\x18\x03 \x01(\tR\n" +
+	"devOtpCode:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"\xc8\x02\n" +
+	"\x13LoginWithOtpRequest\x12\x15\n" +
+	"\x06otp_id\x18\x01 \x01(\tR\x05otpId\x12\x12\n" +
+	"\x04code\x18\x02 \x01(\tR\x04code\x12E\n" +
+	"\vdevice_type\x18\x03 \x01(\x0e2$.udb.core.authn.entity.v1.DeviceTypeR\n" +
+	"deviceType\x12\x1f\n" +
+	"\vdevice_name\x18\x04 \x01(\tR\n" +
+	"deviceName\x12\x1b\n" +
+	"\tdevice_id\x18\x05 \x01(\tR\bdeviceId\x12\x1d\n" +
+	"\n" +
+	"ip_address\x18\x06 \x01(\tR\tipAddress\x12\x1d\n" +
+	"\n" +
+	"user_agent\x18\a \x01(\tR\tuserAgent\x12%\n" +
+	"\x0eaccess_surface\x18\b \x01(\tR\raccessSurface:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"\xd5\x03\n" +
+	"\x14LoginWithOtpResponse\x12\x17\n" +
+	"\auser_id\x18\x01 \x01(\tR\x06userId\x12\x1d\n" +
+	"\n" +
+	"session_id\x18\x02 \x01(\tR\tsessionId\x12!\n" +
+	"\faccess_token\x18\x03 \x01(\tR\vaccessToken\x12#\n" +
+	"\rrefresh_token\x18\x04 \x01(\tR\frefreshToken\x125\n" +
+	"\x17access_token_expires_in\x18\x05 \x01(\x05R\x14accessTokenExpiresIn\x12#\n" +
+	"\rsession_token\x18\x06 \x01(\tR\fsessionToken\x12\x1d\n" +
+	"\n" +
+	"csrf_token\x18\a \x01(\tR\tcsrfToken\x12!\n" +
+	"\fmfa_required\x18\b \x01(\bR\vmfaRequired\x12\x1c\n" +
+	"\n" +
+	"mfa_otp_id\x18\t \x01(\tR\bmfaOtpId\x127\n" +
+	"\x18refresh_token_expires_in\x18\n" +
+	" \x01(\x05R\x15refreshTokenExpiresIn\x12*\n" +
+	"\x11session_public_id\x18\v \x01(\tR\x0fsessionPublicId:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"\xde\x01\n" +
+	"\x15StartOidcLoginRequest\x12\x1f\n" +
+	"\vtenant_hint\x18\x01 \x01(\tR\n" +
+	"tenantHint\x12\x1f\n" +
+	"\vprovider_id\x18\x02 \x01(\tR\n" +
+	"providerId\x12!\n" +
+	"\fredirect_uri\x18\x03 \x01(\tR\vredirectUri\x12#\n" +
+	"\rinvitation_id\x18\x04 \x01(\tR\finvitationId\x12\x1d\n" +
+	"\n" +
+	"login_hint\x18\x05 \x01(\tR\tloginHint:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"\xa1\x01\n" +
+	"\x16StartOidcLoginResponse\x12+\n" +
+	"\x11authorization_url\x18\x01 \x01(\tR\x10authorizationUrl\x12\x14\n" +
+	"\x05state\x18\x02 \x01(\tR\x05state\x12&\n" +
+	"\x0fexpires_at_unix\x18\x03 \x01(\x03R\rexpiresAtUnix:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"\xca\x02\n" +
+	"\x16FinishOidcLoginRequest\x12\x14\n" +
+	"\x05state\x18\x01 \x01(\tR\x05state\x12\x12\n" +
+	"\x04code\x18\x02 \x01(\tR\x04code\x12E\n" +
+	"\vdevice_type\x18\x03 \x01(\x0e2$.udb.core.authn.entity.v1.DeviceTypeR\n" +
+	"deviceType\x12\x1f\n" +
+	"\vdevice_name\x18\x04 \x01(\tR\n" +
+	"deviceName\x12\x1b\n" +
+	"\tdevice_id\x18\x05 \x01(\tR\bdeviceId\x12\x1d\n" +
+	"\n" +
+	"ip_address\x18\x06 \x01(\tR\tipAddress\x12\x1d\n" +
+	"\n" +
+	"user_agent\x18\a \x01(\tR\tuserAgent\x12%\n" +
+	"\x0eaccess_surface\x18\b \x01(\tR\raccessSurface:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"\xfa\x03\n" +
+	"\x17FinishOidcLoginResponse\x12\x17\n" +
+	"\auser_id\x18\x01 \x01(\tR\x06userId\x12\x1d\n" +
+	"\n" +
+	"session_id\x18\x02 \x01(\tR\tsessionId\x12!\n" +
+	"\faccess_token\x18\x03 \x01(\tR\vaccessToken\x12#\n" +
+	"\rrefresh_token\x18\x04 \x01(\tR\frefreshToken\x125\n" +
+	"\x17access_token_expires_in\x18\x05 \x01(\x05R\x14accessTokenExpiresIn\x12#\n" +
+	"\rsession_token\x18\x06 \x01(\tR\fsessionToken\x12\x1d\n" +
+	"\n" +
+	"csrf_token\x18\a \x01(\tR\tcsrfToken\x12!\n" +
+	"\fmfa_required\x18\b \x01(\bR\vmfaRequired\x12\x1c\n" +
+	"\n" +
+	"mfa_otp_id\x18\t \x01(\tR\bmfaOtpId\x127\n" +
+	"\x18refresh_token_expires_in\x18\n" +
+	" \x01(\x05R\x15refreshTokenExpiresIn\x12*\n" +
+	"\x11session_public_id\x18\v \x01(\tR\x0fsessionPublicId\x12 \n" +
+	"\vprovisioned\x18\f \x01(\bR\vprovisioned:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"\x98\x03\n" +
+	"\x1bLoginWithOidcIdTokenRequest\x12\x1f\n" +
+	"\vtenant_hint\x18\x01 \x01(\tR\n" +
+	"tenantHint\x12\x1f\n" +
+	"\vprovider_id\x18\x02 \x01(\tR\n" +
+	"providerId\x12\x19\n" +
+	"\bid_token\x18\x03 \x01(\tR\aidToken\x12\x14\n" +
+	"\x05nonce\x18\x04 \x01(\tR\x05nonce\x12E\n" +
+	"\vdevice_type\x18\x05 \x01(\x0e2$.udb.core.authn.entity.v1.DeviceTypeR\n" +
+	"deviceType\x12\x1f\n" +
+	"\vdevice_name\x18\x06 \x01(\tR\n" +
+	"deviceName\x12\x1b\n" +
+	"\tdevice_id\x18\a \x01(\tR\bdeviceId\x12\x1d\n" +
+	"\n" +
+	"ip_address\x18\b \x01(\tR\tipAddress\x12\x1d\n" +
+	"\n" +
+	"user_agent\x18\t \x01(\tR\tuserAgent\x12%\n" +
+	"\x0eaccess_surface\x18\n" +
+	" \x01(\tR\raccessSurface:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"\xff\x03\n" +
+	"\x1cLoginWithOidcIdTokenResponse\x12\x17\n" +
+	"\auser_id\x18\x01 \x01(\tR\x06userId\x12\x1d\n" +
+	"\n" +
+	"session_id\x18\x02 \x01(\tR\tsessionId\x12!\n" +
+	"\faccess_token\x18\x03 \x01(\tR\vaccessToken\x12#\n" +
+	"\rrefresh_token\x18\x04 \x01(\tR\frefreshToken\x125\n" +
+	"\x17access_token_expires_in\x18\x05 \x01(\x05R\x14accessTokenExpiresIn\x12#\n" +
+	"\rsession_token\x18\x06 \x01(\tR\fsessionToken\x12\x1d\n" +
+	"\n" +
+	"csrf_token\x18\a \x01(\tR\tcsrfToken\x12!\n" +
+	"\fmfa_required\x18\b \x01(\bR\vmfaRequired\x12\x1c\n" +
+	"\n" +
+	"mfa_otp_id\x18\t \x01(\tR\bmfaOtpId\x127\n" +
+	"\x18refresh_token_expires_in\x18\n" +
+	" \x01(\x05R\x15refreshTokenExpiresIn\x12*\n" +
+	"\x11session_public_id\x18\v \x01(\tR\x0fsessionPublicId\x12 \n" +
+	"\vprovisioned\x18\f \x01(\bR\vprovisioned:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"\xfe\x05\n" +
+	"\x0eInvitationInfo\x12#\n" +
+	"\rinvitation_id\x18\x01 \x01(\tR\finvitationId\x12\x1b\n" +
+	"\ttenant_id\x18\x02 \x01(\tR\btenantId\x12\x1d\n" +
+	"\n" +
+	"project_id\x18\x03 \x01(\tR\tprojectId\x12\x18\n" +
+	"\achannel\x18\x04 \x01(\tR\achannel\x12\x18\n" +
+	"\aaddress\x18\x05 \x01(\tR\aaddress\x12&\n" +
+	"\x0fidp_provider_id\x18\x06 \x01(\tR\ridpProviderId\x12\x14\n" +
+	"\x05roles\x18\a \x03(\tR\x05roles\x12\x1b\n" +
+	"\tfull_name\x18\b \x01(\tR\bfullName\x12\x16\n" +
+	"\x06status\x18\t \x01(\tR\x06status\x129\n" +
+	"\n" +
+	"expires_at\x18\n" +
+	" \x01(\v2\x1a.google.protobuf.TimestampR\texpiresAt\x12\x1d\n" +
+	"\n" +
+	"created_by\x18\v \x01(\tR\tcreatedBy\x12(\n" +
+	"\x10accepted_user_id\x18\f \x01(\tR\x0eacceptedUserId\x12;\n" +
+	"\vaccepted_at\x18\r \x01(\v2\x1a.google.protobuf.TimestampR\n" +
+	"acceptedAt\x12\x1d\n" +
+	"\n" +
+	"send_count\x18\x0e \x01(\x05R\tsendCount\x12<\n" +
+	"\flast_sent_at\x18\x0f \x01(\v2\x1a.google.protobuf.TimestampR\n" +
+	"lastSentAt\x12\x1a\n" +
+	"\brevision\x18\x10 \x01(\x03R\brevision\x129\n" +
+	"\n" +
+	"created_at\x18\x11 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
+	"\n" +
+	"updated_at\x18\x12 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12\x16\n" +
+	"\x06locale\x18\x13 \x01(\tR\x06locale:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"\xc8\x02\n" +
+	"\x17CreateInvitationRequest\x12\x1b\n" +
+	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x12\x1d\n" +
+	"\n" +
+	"project_id\x18\x02 \x01(\tR\tprojectId\x12\x18\n" +
+	"\achannel\x18\x03 \x01(\tR\achannel\x12\x18\n" +
+	"\aaddress\x18\x04 \x01(\tR\aaddress\x12&\n" +
+	"\x0fidp_provider_id\x18\x05 \x01(\tR\ridpProviderId\x12\x14\n" +
+	"\x05roles\x18\x06 \x03(\tR\x05roles\x12\x1b\n" +
+	"\tfull_name\x18\a \x01(\tR\bfullName\x12,\n" +
+	"\x12expires_in_seconds\x18\b \x01(\x03R\x10expiresInSeconds\x12\x16\n" +
+	"\x06locale\x18\t \x01(\tR\x06locale:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"\xe6\x01\n" +
+	"\x18CreateInvitationResponse\x12J\n" +
+	"\n" +
+	"invitation\x18\x01 \x01(\v2*.udb.core.authn.services.v1.InvitationInfoR\n" +
+	"invitation\x12!\n" +
+	"\faccept_token\x18\x02 \x01(\tR\vacceptToken\x12\x1f\n" +
+	"\vaccept_link\x18\x03 \x01(\tR\n" +
+	"acceptLink\x12\x1c\n" +
+	"\tdelivered\x18\x04 \x01(\bR\tdelivered:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"\xa7\x01\n" +
+	"\x16ListInvitationsRequest\x12\x1b\n" +
+	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x12\x16\n" +
+	"\x06status\x18\x02 \x01(\tR\x06status\x12\x1b\n" +
+	"\tpage_size\x18\x03 \x01(\x05R\bpageSize\x12\x1d\n" +
+	"\n" +
+	"page_token\x18\x04 \x01(\tR\tpageToken:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"\xad\x01\n" +
+	"\x17ListInvitationsResponse\x12L\n" +
+	"\vinvitations\x18\x01 \x03(\v2*.udb.core.authn.services.v1.InvitationInfoR\vinvitations\x12&\n" +
+	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"t\n" +
+	"\x17RevokeInvitationRequest\x12#\n" +
+	"\rinvitation_id\x18\x01 \x01(\tR\finvitationId\x12\x16\n" +
+	"\x06reason\x18\x02 \x01(\tR\x06reason:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"\x9e\x01\n" +
+	"\x18RevokeInvitationResponse\x12\x18\n" +
+	"\arevoked\x18\x01 \x01(\bR\arevoked\x12J\n" +
+	"\n" +
+	"invitation\x18\x02 \x01(\v2*.udb.core.authn.services.v1.InvitationInfoR\n" +
+	"invitation:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"\\\n" +
+	"\x17ResendInvitationRequest\x12#\n" +
+	"\rinvitation_id\x18\x01 \x01(\tR\finvitationId:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"\xe6\x01\n" +
+	"\x18ResendInvitationResponse\x12J\n" +
+	"\n" +
+	"invitation\x18\x01 \x01(\v2*.udb.core.authn.services.v1.InvitationInfoR\n" +
+	"invitation\x12!\n" +
+	"\faccept_token\x18\x02 \x01(\tR\vacceptToken\x12\x1f\n" +
+	"\vaccept_link\x18\x03 \x01(\tR\n" +
+	"acceptLink\x12\x1c\n" +
+	"\tdelivered\x18\x04 \x01(\bR\tdelivered:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"o\n" +
+	"\x14GetInvitationRequest\x12#\n" +
+	"\rinvitation_id\x18\x01 \x01(\tR\finvitationId\x12\x14\n" +
+	"\x05token\x18\x02 \x01(\tR\x05token:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"\xe2\x02\n" +
+	"\x15GetInvitationResponse\x12#\n" +
+	"\rinvitation_id\x18\x01 \x01(\tR\finvitationId\x12\x1f\n" +
+	"\vtenant_name\x18\x02 \x01(\tR\n" +
+	"tenantName\x12\x18\n" +
+	"\achannel\x18\x03 \x01(\tR\achannel\x12\x14\n" +
+	"\x05roles\x18\x04 \x03(\tR\x05roles\x129\n" +
+	"\n" +
+	"expires_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\texpiresAt\x12%\n" +
+	"\x0emasked_address\x18\x06 \x01(\tR\rmaskedAddress\x12&\n" +
+	"\x0fidp_provider_id\x18\a \x01(\tR\ridpProviderId\x12+\n" +
+	"\x11password_required\x18\b \x01(\bR\x10passwordRequired:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"\x9e\x01\n" +
+	" StartInvitationAcceptanceRequest\x12#\n" +
+	"\rinvitation_id\x18\x01 \x01(\tR\finvitationId\x12\x14\n" +
+	"\x05token\x18\x02 \x01(\tR\x05token\x12!\n" +
+	"\fredirect_uri\x18\x03 \x01(\tR\vredirectUri:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"\xdd\x02\n" +
+	"!StartInvitationAcceptanceResponse\x12\x15\n" +
+	"\x06otp_id\x18\x01 \x01(\tR\x05otpId\x12-\n" +
+	"\x13otp_expires_at_unix\x18\x02 \x01(\x03R\x10otpExpiresAtUnix\x12 \n" +
+	"\fdev_otp_code\x18\x03 \x01(\tR\n" +
+	"devOtpCode\x122\n" +
+	"\x15webauthn_challenge_id\x18\x04 \x01(\tR\x13webauthnChallengeId\x122\n" +
+	"\x15webauthn_options_json\x18\x05 \x01(\tR\x13webauthnOptionsJson\x12+\n" +
+	"\x11authorization_url\x18\x06 \x01(\tR\x10authorizationUrl\x12\x1d\n" +
+	"\n" +
+	"oidc_state\x18\a \x01(\tR\toidcState:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"\xdd\x04\n" +
+	"\x17AcceptInvitationRequest\x12#\n" +
+	"\rinvitation_id\x18\x01 \x01(\tR\finvitationId\x12\x14\n" +
+	"\x05token\x18\x02 \x01(\tR\x05token\x12\x1a\n" +
+	"\busername\x18\x03 \x01(\tR\busername\x12\x1b\n" +
+	"\tfull_name\x18\x04 \x01(\tR\bfullName\x12\x1a\n" +
+	"\bpassword\x18\x05 \x01(\tR\bpassword\x12\x15\n" +
+	"\x06otp_id\x18\x06 \x01(\tR\x05otpId\x12\x12\n" +
+	"\x04code\x18\a \x01(\tR\x04code\x12\"\n" +
+	"\roidc_id_token\x18\b \x01(\tR\voidcIdToken\x12\x1d\n" +
+	"\n" +
+	"oidc_nonce\x18\t \x01(\tR\toidcNonce\x122\n" +
+	"\x15webauthn_challenge_id\x18\n" +
+	" \x01(\tR\x13webauthnChallengeId\x12:\n" +
+	"\x19webauthn_attestation_json\x18\v \x01(\tR\x17webauthnAttestationJson\x12\x1f\n" +
+	"\vdevice_name\x18\f \x01(\tR\n" +
+	"deviceName\x12\x1b\n" +
+	"\tdevice_id\x18\r \x01(\tR\bdeviceId\x12\x1d\n" +
+	"\n" +
+	"ip_address\x18\x0e \x01(\tR\tipAddress\x12\x1d\n" +
+	"\n" +
+	"user_agent\x18\x0f \x01(\tR\tuserAgent\x12\x1d\n" +
+	"\n" +
+	"oidc_state\x18\x10 \x01(\tR\toidcState\x12\x1b\n" +
+	"\toidc_code\x18\x11 \x01(\tR\boidcCode:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"\xd9\x03\n" +
+	"\x18AcceptInvitationResponse\x12\x17\n" +
+	"\auser_id\x18\x01 \x01(\tR\x06userId\x12\x1d\n" +
+	"\n" +
+	"session_id\x18\x02 \x01(\tR\tsessionId\x12!\n" +
+	"\faccess_token\x18\x03 \x01(\tR\vaccessToken\x12#\n" +
+	"\rrefresh_token\x18\x04 \x01(\tR\frefreshToken\x125\n" +
+	"\x17access_token_expires_in\x18\x05 \x01(\x05R\x14accessTokenExpiresIn\x12#\n" +
+	"\rsession_token\x18\x06 \x01(\tR\fsessionToken\x12\x1d\n" +
+	"\n" +
+	"csrf_token\x18\a \x01(\tR\tcsrfToken\x12!\n" +
+	"\fmfa_required\x18\b \x01(\bR\vmfaRequired\x12\x1c\n" +
+	"\n" +
+	"mfa_otp_id\x18\t \x01(\tR\bmfaOtpId\x127\n" +
+	"\x18refresh_token_expires_in\x18\n" +
+	" \x01(\x05R\x15refreshTokenExpiresIn\x12*\n" +
+	"\x11session_public_id\x18\v \x01(\tR\x0fsessionPublicId:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"\xac\x01\n" +
+	"\x12CheckStepUpRequest\x12\x16\n" +
+	"\x06action\x18\x01 \x01(\tR\x06action\x12\"\n" +
+	"\rstep_up_token\x18\x02 \x01(\tR\vstepUpToken\x12<\n" +
+	"\acontext\x18\x03 \x01(\v2\".udb.core.common.v1.RequestContextR\acontext:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01\"\xb6\x02\n" +
+	"\x13CheckStepUpResponse\x12\x1c\n" +
+	"\tsatisfied\x18\x01 \x01(\bR\tsatisfied\x12\x16\n" +
+	"\x06reason\x18\x02 \x01(\tR\x06reason\x12\x10\n" +
+	"\x03acr\x18\x03 \x01(\tR\x03acr\x12\x10\n" +
+	"\x03amr\x18\x04 \x03(\tR\x03amr\x12\x1b\n" +
+	"\tauth_time\x18\x05 \x01(\x03R\bauthTime\x12\x17\n" +
+	"\auser_id\x18\x06 \x01(\tR\x06userId\x12I\n" +
+	"\vfactor_kind\x18\a \x01(\x0e2(.udb.core.authn.entity.v1.AuthFactorKindR\n" +
+	"factorKind\x12&\n" +
+	"\x0fmax_age_seconds\x18\b \x01(\x03R\rmaxAgeSeconds:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x01B\x82\x02\n" +
 	"\x1ecom.udb.core.authn.services.v1B\tCoreProtoP\x01ZHgithub.com/fahara02/udb/sdk/go/gen/udb/core/authn/services/v1;servicesv1\xa2\x02\x04UCAS\xaa\x02\x1aUdb.Core.Authn.Services.V1\xca\x02\x1aUdb\\Core\\Authn\\Services\\V1\xe2\x02&Udb\\GPBMetadata\\Core\\Authn\\Services\\V1\xea\x02\x1eUdb::Core::Authn::Services::V1b\x06proto3"
 
 var (
@@ -7274,7 +10724,7 @@ func file_udb_core_authn_services_v1_core_proto_rawDescGZIP() []byte {
 	return file_udb_core_authn_services_v1_core_proto_rawDescData
 }
 
-var file_udb_core_authn_services_v1_core_proto_msgTypes = make([]protoimpl.MessageInfo, 108)
+var file_udb_core_authn_services_v1_core_proto_msgTypes = make([]protoimpl.MessageInfo, 139)
 var file_udb_core_authn_services_v1_core_proto_goTypes = []any{
 	(*CreateUserRequest)(nil),                    // 0: udb.core.authn.services.v1.CreateUserRequest
 	(*CreateUserResponse)(nil),                   // 1: udb.core.authn.services.v1.CreateUserResponse
@@ -7379,120 +10829,172 @@ var file_udb_core_authn_services_v1_core_proto_goTypes = []any{
 	(*ListWebAuthnCredentialsResponse)(nil),      // 100: udb.core.authn.services.v1.ListWebAuthnCredentialsResponse
 	(*DeleteWebAuthnCredentialRequest)(nil),      // 101: udb.core.authn.services.v1.DeleteWebAuthnCredentialRequest
 	(*DeleteWebAuthnCredentialResponse)(nil),     // 102: udb.core.authn.services.v1.DeleteWebAuthnCredentialResponse
-	nil,                                          // 103: udb.core.authn.services.v1.CreateUserRequest.ProfileAttributesEntry
-	nil,                                          // 104: udb.core.authn.services.v1.UpdateUserRequest.ProfileAttributesEntry
-	nil,                                          // 105: udb.core.authn.services.v1.Principal.AttributesEntry
-	nil,                                          // 106: udb.core.authn.services.v1.AuthnRequest.AttributesEntry
-	nil,                                          // 107: udb.core.authn.services.v1.ValidateTokenResponse.AttributesEntry
-	(*v1.RequestContext)(nil),                    // 108: udb.core.common.v1.RequestContext
-	(v11.AccountKind)(0),                         // 109: udb.core.authn.entity.v1.AccountKind
-	(*v11.User)(nil),                             // 110: udb.core.authn.entity.v1.User
-	(v11.UserStatus)(0),                          // 111: udb.core.authn.entity.v1.UserStatus
-	(*v1.PageRequest)(nil),                       // 112: udb.core.common.v1.PageRequest
-	(*v1.PageResponse)(nil),                      // 113: udb.core.common.v1.PageResponse
-	(*fieldmaskpb.FieldMask)(nil),                // 114: google.protobuf.FieldMask
-	(v11.OTPType)(0),                             // 115: udb.core.authn.entity.v1.OTPType
-	(v11.AuthCredentialType)(0),                  // 116: udb.core.authn.entity.v1.AuthCredentialType
-	(v11.DeviceType)(0),                          // 117: udb.core.authn.entity.v1.DeviceType
-	(*timestamppb.Timestamp)(nil),                // 118: google.protobuf.Timestamp
-	(v11.TokenType)(0),                           // 119: udb.core.authn.entity.v1.TokenType
-	(v11.SessionType)(0),                         // 120: udb.core.authn.entity.v1.SessionType
-	(*v11.Session)(nil),                          // 121: udb.core.authn.entity.v1.Session
-	(v11.AuthFactorKind)(0),                      // 122: udb.core.authn.entity.v1.AuthFactorKind
-	(*v11.Device)(nil),                           // 123: udb.core.authn.entity.v1.Device
-	(v11.MfaChallengePurpose)(0),                 // 124: udb.core.authn.entity.v1.MfaChallengePurpose
+	(*PutTenantAuthPolicyRequest)(nil),           // 103: udb.core.authn.services.v1.PutTenantAuthPolicyRequest
+	(*PutTenantAuthPolicyResponse)(nil),          // 104: udb.core.authn.services.v1.PutTenantAuthPolicyResponse
+	(*GetTenantAuthPolicyRequest)(nil),           // 105: udb.core.authn.services.v1.GetTenantAuthPolicyRequest
+	(*GetTenantAuthPolicyResponse)(nil),          // 106: udb.core.authn.services.v1.GetTenantAuthPolicyResponse
+	(*SendLoginOtpRequest)(nil),                  // 107: udb.core.authn.services.v1.SendLoginOtpRequest
+	(*SendLoginOtpResponse)(nil),                 // 108: udb.core.authn.services.v1.SendLoginOtpResponse
+	(*LoginWithOtpRequest)(nil),                  // 109: udb.core.authn.services.v1.LoginWithOtpRequest
+	(*LoginWithOtpResponse)(nil),                 // 110: udb.core.authn.services.v1.LoginWithOtpResponse
+	(*StartOidcLoginRequest)(nil),                // 111: udb.core.authn.services.v1.StartOidcLoginRequest
+	(*StartOidcLoginResponse)(nil),               // 112: udb.core.authn.services.v1.StartOidcLoginResponse
+	(*FinishOidcLoginRequest)(nil),               // 113: udb.core.authn.services.v1.FinishOidcLoginRequest
+	(*FinishOidcLoginResponse)(nil),              // 114: udb.core.authn.services.v1.FinishOidcLoginResponse
+	(*LoginWithOidcIdTokenRequest)(nil),          // 115: udb.core.authn.services.v1.LoginWithOidcIdTokenRequest
+	(*LoginWithOidcIdTokenResponse)(nil),         // 116: udb.core.authn.services.v1.LoginWithOidcIdTokenResponse
+	(*InvitationInfo)(nil),                       // 117: udb.core.authn.services.v1.InvitationInfo
+	(*CreateInvitationRequest)(nil),              // 118: udb.core.authn.services.v1.CreateInvitationRequest
+	(*CreateInvitationResponse)(nil),             // 119: udb.core.authn.services.v1.CreateInvitationResponse
+	(*ListInvitationsRequest)(nil),               // 120: udb.core.authn.services.v1.ListInvitationsRequest
+	(*ListInvitationsResponse)(nil),              // 121: udb.core.authn.services.v1.ListInvitationsResponse
+	(*RevokeInvitationRequest)(nil),              // 122: udb.core.authn.services.v1.RevokeInvitationRequest
+	(*RevokeInvitationResponse)(nil),             // 123: udb.core.authn.services.v1.RevokeInvitationResponse
+	(*ResendInvitationRequest)(nil),              // 124: udb.core.authn.services.v1.ResendInvitationRequest
+	(*ResendInvitationResponse)(nil),             // 125: udb.core.authn.services.v1.ResendInvitationResponse
+	(*GetInvitationRequest)(nil),                 // 126: udb.core.authn.services.v1.GetInvitationRequest
+	(*GetInvitationResponse)(nil),                // 127: udb.core.authn.services.v1.GetInvitationResponse
+	(*StartInvitationAcceptanceRequest)(nil),     // 128: udb.core.authn.services.v1.StartInvitationAcceptanceRequest
+	(*StartInvitationAcceptanceResponse)(nil),    // 129: udb.core.authn.services.v1.StartInvitationAcceptanceResponse
+	(*AcceptInvitationRequest)(nil),              // 130: udb.core.authn.services.v1.AcceptInvitationRequest
+	(*AcceptInvitationResponse)(nil),             // 131: udb.core.authn.services.v1.AcceptInvitationResponse
+	(*CheckStepUpRequest)(nil),                   // 132: udb.core.authn.services.v1.CheckStepUpRequest
+	(*CheckStepUpResponse)(nil),                  // 133: udb.core.authn.services.v1.CheckStepUpResponse
+	nil,                                          // 134: udb.core.authn.services.v1.CreateUserRequest.ProfileAttributesEntry
+	nil,                                          // 135: udb.core.authn.services.v1.UpdateUserRequest.ProfileAttributesEntry
+	nil,                                          // 136: udb.core.authn.services.v1.Principal.AttributesEntry
+	nil,                                          // 137: udb.core.authn.services.v1.AuthnRequest.AttributesEntry
+	nil,                                          // 138: udb.core.authn.services.v1.ValidateTokenResponse.AttributesEntry
+	(*v1.RequestContext)(nil),                    // 139: udb.core.common.v1.RequestContext
+	(v11.AccountKind)(0),                         // 140: udb.core.authn.entity.v1.AccountKind
+	(*v11.User)(nil),                             // 141: udb.core.authn.entity.v1.User
+	(v11.UserStatus)(0),                          // 142: udb.core.authn.entity.v1.UserStatus
+	(*v1.PageRequest)(nil),                       // 143: udb.core.common.v1.PageRequest
+	(*v1.PageResponse)(nil),                      // 144: udb.core.common.v1.PageResponse
+	(*fieldmaskpb.FieldMask)(nil),                // 145: google.protobuf.FieldMask
+	(v11.OTPType)(0),                             // 146: udb.core.authn.entity.v1.OTPType
+	(v11.AuthCredentialType)(0),                  // 147: udb.core.authn.entity.v1.AuthCredentialType
+	(v11.DeviceType)(0),                          // 148: udb.core.authn.entity.v1.DeviceType
+	(*timestamppb.Timestamp)(nil),                // 149: google.protobuf.Timestamp
+	(v11.TokenType)(0),                           // 150: udb.core.authn.entity.v1.TokenType
+	(v11.SessionType)(0),                         // 151: udb.core.authn.entity.v1.SessionType
+	(*v11.Session)(nil),                          // 152: udb.core.authn.entity.v1.Session
+	(v11.AuthFactorKind)(0),                      // 153: udb.core.authn.entity.v1.AuthFactorKind
+	(*v11.Device)(nil),                           // 154: udb.core.authn.entity.v1.Device
+	(v11.MfaChallengePurpose)(0),                 // 155: udb.core.authn.entity.v1.MfaChallengePurpose
+	(*v11.TenantAuthPolicy)(nil),                 // 156: udb.core.authn.entity.v1.TenantAuthPolicy
 }
 var file_udb_core_authn_services_v1_core_proto_depIdxs = []int32{
-	108, // 0: udb.core.authn.services.v1.CreateUserRequest.context:type_name -> udb.core.common.v1.RequestContext
-	109, // 1: udb.core.authn.services.v1.CreateUserRequest.account_kind:type_name -> udb.core.authn.entity.v1.AccountKind
-	103, // 2: udb.core.authn.services.v1.CreateUserRequest.profile_attributes:type_name -> udb.core.authn.services.v1.CreateUserRequest.ProfileAttributesEntry
-	110, // 3: udb.core.authn.services.v1.CreateUserResponse.user:type_name -> udb.core.authn.entity.v1.User
-	110, // 4: udb.core.authn.services.v1.GetUserResponse.user:type_name -> udb.core.authn.entity.v1.User
-	109, // 5: udb.core.authn.services.v1.ListUsersRequest.account_kind:type_name -> udb.core.authn.entity.v1.AccountKind
-	111, // 6: udb.core.authn.services.v1.ListUsersRequest.status:type_name -> udb.core.authn.entity.v1.UserStatus
-	112, // 7: udb.core.authn.services.v1.ListUsersRequest.page:type_name -> udb.core.common.v1.PageRequest
-	110, // 8: udb.core.authn.services.v1.ListUsersResponse.users:type_name -> udb.core.authn.entity.v1.User
-	113, // 9: udb.core.authn.services.v1.ListUsersResponse.page:type_name -> udb.core.common.v1.PageResponse
-	108, // 10: udb.core.authn.services.v1.UpdateUserRequest.context:type_name -> udb.core.common.v1.RequestContext
-	109, // 11: udb.core.authn.services.v1.UpdateUserRequest.account_kind:type_name -> udb.core.authn.entity.v1.AccountKind
-	104, // 12: udb.core.authn.services.v1.UpdateUserRequest.profile_attributes:type_name -> udb.core.authn.services.v1.UpdateUserRequest.ProfileAttributesEntry
-	114, // 13: udb.core.authn.services.v1.UpdateUserRequest.update_mask:type_name -> google.protobuf.FieldMask
-	110, // 14: udb.core.authn.services.v1.UpdateUserResponse.user:type_name -> udb.core.authn.entity.v1.User
-	111, // 15: udb.core.authn.services.v1.ChangeUserStatusRequest.new_status:type_name -> udb.core.authn.entity.v1.UserStatus
-	108, // 16: udb.core.authn.services.v1.ChangeUserStatusRequest.context:type_name -> udb.core.common.v1.RequestContext
-	110, // 17: udb.core.authn.services.v1.ChangeUserStatusResponse.user:type_name -> udb.core.authn.entity.v1.User
-	108, // 18: udb.core.authn.services.v1.AdminResetPasswordRequest.context:type_name -> udb.core.common.v1.RequestContext
-	115, // 19: udb.core.authn.services.v1.SendOTPRequest.otp_type:type_name -> udb.core.authn.entity.v1.OTPType
-	108, // 20: udb.core.authn.services.v1.SendOTPRequest.context:type_name -> udb.core.common.v1.RequestContext
-	115, // 21: udb.core.authn.services.v1.VerifyOTPResponse.otp_type:type_name -> udb.core.authn.entity.v1.OTPType
-	109, // 22: udb.core.authn.services.v1.Principal.account_kind:type_name -> udb.core.authn.entity.v1.AccountKind
-	105, // 23: udb.core.authn.services.v1.Principal.attributes:type_name -> udb.core.authn.services.v1.Principal.AttributesEntry
-	106, // 24: udb.core.authn.services.v1.AuthnRequest.attributes:type_name -> udb.core.authn.services.v1.AuthnRequest.AttributesEntry
-	116, // 25: udb.core.authn.services.v1.AuthnRequest.credential_type:type_name -> udb.core.authn.entity.v1.AuthCredentialType
+	139, // 0: udb.core.authn.services.v1.CreateUserRequest.context:type_name -> udb.core.common.v1.RequestContext
+	140, // 1: udb.core.authn.services.v1.CreateUserRequest.account_kind:type_name -> udb.core.authn.entity.v1.AccountKind
+	134, // 2: udb.core.authn.services.v1.CreateUserRequest.profile_attributes:type_name -> udb.core.authn.services.v1.CreateUserRequest.ProfileAttributesEntry
+	141, // 3: udb.core.authn.services.v1.CreateUserResponse.user:type_name -> udb.core.authn.entity.v1.User
+	141, // 4: udb.core.authn.services.v1.GetUserResponse.user:type_name -> udb.core.authn.entity.v1.User
+	140, // 5: udb.core.authn.services.v1.ListUsersRequest.account_kind:type_name -> udb.core.authn.entity.v1.AccountKind
+	142, // 6: udb.core.authn.services.v1.ListUsersRequest.status:type_name -> udb.core.authn.entity.v1.UserStatus
+	143, // 7: udb.core.authn.services.v1.ListUsersRequest.page:type_name -> udb.core.common.v1.PageRequest
+	141, // 8: udb.core.authn.services.v1.ListUsersResponse.users:type_name -> udb.core.authn.entity.v1.User
+	144, // 9: udb.core.authn.services.v1.ListUsersResponse.page:type_name -> udb.core.common.v1.PageResponse
+	139, // 10: udb.core.authn.services.v1.UpdateUserRequest.context:type_name -> udb.core.common.v1.RequestContext
+	140, // 11: udb.core.authn.services.v1.UpdateUserRequest.account_kind:type_name -> udb.core.authn.entity.v1.AccountKind
+	135, // 12: udb.core.authn.services.v1.UpdateUserRequest.profile_attributes:type_name -> udb.core.authn.services.v1.UpdateUserRequest.ProfileAttributesEntry
+	145, // 13: udb.core.authn.services.v1.UpdateUserRequest.update_mask:type_name -> google.protobuf.FieldMask
+	141, // 14: udb.core.authn.services.v1.UpdateUserResponse.user:type_name -> udb.core.authn.entity.v1.User
+	142, // 15: udb.core.authn.services.v1.ChangeUserStatusRequest.new_status:type_name -> udb.core.authn.entity.v1.UserStatus
+	139, // 16: udb.core.authn.services.v1.ChangeUserStatusRequest.context:type_name -> udb.core.common.v1.RequestContext
+	141, // 17: udb.core.authn.services.v1.ChangeUserStatusResponse.user:type_name -> udb.core.authn.entity.v1.User
+	139, // 18: udb.core.authn.services.v1.AdminResetPasswordRequest.context:type_name -> udb.core.common.v1.RequestContext
+	146, // 19: udb.core.authn.services.v1.SendOTPRequest.otp_type:type_name -> udb.core.authn.entity.v1.OTPType
+	139, // 20: udb.core.authn.services.v1.SendOTPRequest.context:type_name -> udb.core.common.v1.RequestContext
+	146, // 21: udb.core.authn.services.v1.VerifyOTPResponse.otp_type:type_name -> udb.core.authn.entity.v1.OTPType
+	140, // 22: udb.core.authn.services.v1.Principal.account_kind:type_name -> udb.core.authn.entity.v1.AccountKind
+	136, // 23: udb.core.authn.services.v1.Principal.attributes:type_name -> udb.core.authn.services.v1.Principal.AttributesEntry
+	137, // 24: udb.core.authn.services.v1.AuthnRequest.attributes:type_name -> udb.core.authn.services.v1.AuthnRequest.AttributesEntry
+	147, // 25: udb.core.authn.services.v1.AuthnRequest.credential_type:type_name -> udb.core.authn.entity.v1.AuthCredentialType
 	18,  // 26: udb.core.authn.services.v1.AuthnResponse.principal:type_name -> udb.core.authn.services.v1.Principal
-	117, // 27: udb.core.authn.services.v1.LoginRequest.device_type:type_name -> udb.core.authn.entity.v1.DeviceType
-	108, // 28: udb.core.authn.services.v1.LogoutRequest.context:type_name -> udb.core.common.v1.RequestContext
-	108, // 29: udb.core.authn.services.v1.ChangePasswordRequest.context:type_name -> udb.core.common.v1.RequestContext
-	118, // 30: udb.core.authn.services.v1.ChangePasswordResponse.changed_at:type_name -> google.protobuf.Timestamp
-	119, // 31: udb.core.authn.services.v1.ValidateTokenRequest.token_type:type_name -> udb.core.authn.entity.v1.TokenType
-	109, // 32: udb.core.authn.services.v1.ValidateTokenResponse.account_kind:type_name -> udb.core.authn.entity.v1.AccountKind
-	118, // 33: udb.core.authn.services.v1.ValidateTokenResponse.expires_at:type_name -> google.protobuf.Timestamp
-	120, // 34: udb.core.authn.services.v1.ValidateTokenResponse.session_type:type_name -> udb.core.authn.entity.v1.SessionType
+	148, // 27: udb.core.authn.services.v1.LoginRequest.device_type:type_name -> udb.core.authn.entity.v1.DeviceType
+	139, // 28: udb.core.authn.services.v1.LogoutRequest.context:type_name -> udb.core.common.v1.RequestContext
+	139, // 29: udb.core.authn.services.v1.ChangePasswordRequest.context:type_name -> udb.core.common.v1.RequestContext
+	149, // 30: udb.core.authn.services.v1.ChangePasswordResponse.changed_at:type_name -> google.protobuf.Timestamp
+	150, // 31: udb.core.authn.services.v1.ValidateTokenRequest.token_type:type_name -> udb.core.authn.entity.v1.TokenType
+	140, // 32: udb.core.authn.services.v1.ValidateTokenResponse.account_kind:type_name -> udb.core.authn.entity.v1.AccountKind
+	149, // 33: udb.core.authn.services.v1.ValidateTokenResponse.expires_at:type_name -> google.protobuf.Timestamp
+	151, // 34: udb.core.authn.services.v1.ValidateTokenResponse.session_type:type_name -> udb.core.authn.entity.v1.SessionType
 	18,  // 35: udb.core.authn.services.v1.ValidateTokenResponse.principal:type_name -> udb.core.authn.services.v1.Principal
-	107, // 36: udb.core.authn.services.v1.ValidateTokenResponse.attributes:type_name -> udb.core.authn.services.v1.ValidateTokenResponse.AttributesEntry
+	138, // 36: udb.core.authn.services.v1.ValidateTokenResponse.attributes:type_name -> udb.core.authn.services.v1.ValidateTokenResponse.AttributesEntry
 	18,  // 37: udb.core.authn.services.v1.CreateSessionRequest.principal:type_name -> udb.core.authn.services.v1.Principal
-	121, // 38: udb.core.authn.services.v1.GetSessionResponse.session:type_name -> udb.core.authn.entity.v1.Session
-	112, // 39: udb.core.authn.services.v1.ListSessionsRequest.page:type_name -> udb.core.common.v1.PageRequest
-	121, // 40: udb.core.authn.services.v1.ListSessionsResponse.sessions:type_name -> udb.core.authn.entity.v1.Session
-	113, // 41: udb.core.authn.services.v1.ListSessionsResponse.page:type_name -> udb.core.common.v1.PageResponse
-	108, // 42: udb.core.authn.services.v1.RevokeSessionRequest.context:type_name -> udb.core.common.v1.RequestContext
-	118, // 43: udb.core.authn.services.v1.RevokeSessionResponse.revoked_at:type_name -> google.protobuf.Timestamp
-	122, // 44: udb.core.authn.services.v1.EnrollMFARequest.mfa_type:type_name -> udb.core.authn.entity.v1.AuthFactorKind
-	108, // 45: udb.core.authn.services.v1.EnrollMFARequest.context:type_name -> udb.core.common.v1.RequestContext
-	108, // 46: udb.core.authn.services.v1.ConfirmMFAEnrollmentRequest.context:type_name -> udb.core.common.v1.RequestContext
-	108, // 47: udb.core.authn.services.v1.GenerateRecoveryCodesRequest.context:type_name -> udb.core.common.v1.RequestContext
-	108, // 48: udb.core.authn.services.v1.PutMfaPolicyRequest.context:type_name -> udb.core.common.v1.RequestContext
-	108, // 49: udb.core.authn.services.v1.GetMfaPolicyRequest.context:type_name -> udb.core.common.v1.RequestContext
-	108, // 50: udb.core.authn.services.v1.ForgotPasswordRequest.context:type_name -> udb.core.common.v1.RequestContext
-	108, // 51: udb.core.authn.services.v1.ResetPasswordRequest.context:type_name -> udb.core.common.v1.RequestContext
-	108, // 52: udb.core.authn.services.v1.IntrospectTokenRequest.context:type_name -> udb.core.common.v1.RequestContext
-	108, // 53: udb.core.authn.services.v1.GetJwksRequest.context:type_name -> udb.core.common.v1.RequestContext
-	108, // 54: udb.core.authn.services.v1.SendPhoneVerificationRequest.context:type_name -> udb.core.common.v1.RequestContext
-	108, // 55: udb.core.authn.services.v1.StartWebAuthnRegistrationRequest.context:type_name -> udb.core.common.v1.RequestContext
-	108, // 56: udb.core.authn.services.v1.FinishWebAuthnRegistrationRequest.context:type_name -> udb.core.common.v1.RequestContext
-	108, // 57: udb.core.authn.services.v1.StartWebAuthnAuthenticationRequest.context:type_name -> udb.core.common.v1.RequestContext
-	108, // 58: udb.core.authn.services.v1.FinishWebAuthnAuthenticationRequest.context:type_name -> udb.core.common.v1.RequestContext
+	152, // 38: udb.core.authn.services.v1.GetSessionResponse.session:type_name -> udb.core.authn.entity.v1.Session
+	143, // 39: udb.core.authn.services.v1.ListSessionsRequest.page:type_name -> udb.core.common.v1.PageRequest
+	152, // 40: udb.core.authn.services.v1.ListSessionsResponse.sessions:type_name -> udb.core.authn.entity.v1.Session
+	144, // 41: udb.core.authn.services.v1.ListSessionsResponse.page:type_name -> udb.core.common.v1.PageResponse
+	139, // 42: udb.core.authn.services.v1.RevokeSessionRequest.context:type_name -> udb.core.common.v1.RequestContext
+	149, // 43: udb.core.authn.services.v1.RevokeSessionResponse.revoked_at:type_name -> google.protobuf.Timestamp
+	153, // 44: udb.core.authn.services.v1.EnrollMFARequest.mfa_type:type_name -> udb.core.authn.entity.v1.AuthFactorKind
+	139, // 45: udb.core.authn.services.v1.EnrollMFARequest.context:type_name -> udb.core.common.v1.RequestContext
+	139, // 46: udb.core.authn.services.v1.ConfirmMFAEnrollmentRequest.context:type_name -> udb.core.common.v1.RequestContext
+	139, // 47: udb.core.authn.services.v1.GenerateRecoveryCodesRequest.context:type_name -> udb.core.common.v1.RequestContext
+	139, // 48: udb.core.authn.services.v1.PutMfaPolicyRequest.context:type_name -> udb.core.common.v1.RequestContext
+	139, // 49: udb.core.authn.services.v1.GetMfaPolicyRequest.context:type_name -> udb.core.common.v1.RequestContext
+	139, // 50: udb.core.authn.services.v1.ForgotPasswordRequest.context:type_name -> udb.core.common.v1.RequestContext
+	139, // 51: udb.core.authn.services.v1.ResetPasswordRequest.context:type_name -> udb.core.common.v1.RequestContext
+	139, // 52: udb.core.authn.services.v1.IntrospectTokenRequest.context:type_name -> udb.core.common.v1.RequestContext
+	139, // 53: udb.core.authn.services.v1.GetJwksRequest.context:type_name -> udb.core.common.v1.RequestContext
+	139, // 54: udb.core.authn.services.v1.SendPhoneVerificationRequest.context:type_name -> udb.core.common.v1.RequestContext
+	139, // 55: udb.core.authn.services.v1.StartWebAuthnRegistrationRequest.context:type_name -> udb.core.common.v1.RequestContext
+	139, // 56: udb.core.authn.services.v1.FinishWebAuthnRegistrationRequest.context:type_name -> udb.core.common.v1.RequestContext
+	139, // 57: udb.core.authn.services.v1.StartWebAuthnAuthenticationRequest.context:type_name -> udb.core.common.v1.RequestContext
+	139, // 58: udb.core.authn.services.v1.FinishWebAuthnAuthenticationRequest.context:type_name -> udb.core.common.v1.RequestContext
 	18,  // 59: udb.core.authn.services.v1.FinishWebAuthnAuthenticationResponse.principal:type_name -> udb.core.authn.services.v1.Principal
-	112, // 60: udb.core.authn.services.v1.ListDevicesRequest.page:type_name -> udb.core.common.v1.PageRequest
-	108, // 61: udb.core.authn.services.v1.ListDevicesRequest.context:type_name -> udb.core.common.v1.RequestContext
-	123, // 62: udb.core.authn.services.v1.ListDevicesResponse.devices:type_name -> udb.core.authn.entity.v1.Device
-	113, // 63: udb.core.authn.services.v1.ListDevicesResponse.page:type_name -> udb.core.common.v1.PageResponse
-	108, // 64: udb.core.authn.services.v1.RevokeDeviceRequest.context:type_name -> udb.core.common.v1.RequestContext
-	108, // 65: udb.core.authn.services.v1.AdminRevokeSessionRequest.context:type_name -> udb.core.common.v1.RequestContext
-	108, // 66: udb.core.authn.services.v1.AdminRevokeAllUserSessionsRequest.context:type_name -> udb.core.common.v1.RequestContext
-	108, // 67: udb.core.authn.services.v1.AdminRevokeAllTenantSessionsRequest.context:type_name -> udb.core.common.v1.RequestContext
-	108, // 68: udb.core.authn.services.v1.EmergencyRevokeRequest.context:type_name -> udb.core.common.v1.RequestContext
-	122, // 69: udb.core.authn.services.v1.IssueMfaChallengeRequest.factor_kind:type_name -> udb.core.authn.entity.v1.AuthFactorKind
-	124, // 70: udb.core.authn.services.v1.IssueMfaChallengeRequest.purpose:type_name -> udb.core.authn.entity.v1.MfaChallengePurpose
-	108, // 71: udb.core.authn.services.v1.IssueMfaChallengeRequest.context:type_name -> udb.core.common.v1.RequestContext
-	122, // 72: udb.core.authn.services.v1.IssueMfaChallengeResponse.factor_kind:type_name -> udb.core.authn.entity.v1.AuthFactorKind
-	108, // 73: udb.core.authn.services.v1.VerifyMfaChallengeRequest.context:type_name -> udb.core.common.v1.RequestContext
-	122, // 74: udb.core.authn.services.v1.MfaFactorSummary.factor_kind:type_name -> udb.core.authn.entity.v1.AuthFactorKind
-	108, // 75: udb.core.authn.services.v1.ListMfaFactorsRequest.context:type_name -> udb.core.common.v1.RequestContext
+	143, // 60: udb.core.authn.services.v1.ListDevicesRequest.page:type_name -> udb.core.common.v1.PageRequest
+	139, // 61: udb.core.authn.services.v1.ListDevicesRequest.context:type_name -> udb.core.common.v1.RequestContext
+	154, // 62: udb.core.authn.services.v1.ListDevicesResponse.devices:type_name -> udb.core.authn.entity.v1.Device
+	144, // 63: udb.core.authn.services.v1.ListDevicesResponse.page:type_name -> udb.core.common.v1.PageResponse
+	139, // 64: udb.core.authn.services.v1.RevokeDeviceRequest.context:type_name -> udb.core.common.v1.RequestContext
+	139, // 65: udb.core.authn.services.v1.AdminRevokeSessionRequest.context:type_name -> udb.core.common.v1.RequestContext
+	139, // 66: udb.core.authn.services.v1.AdminRevokeAllUserSessionsRequest.context:type_name -> udb.core.common.v1.RequestContext
+	139, // 67: udb.core.authn.services.v1.AdminRevokeAllTenantSessionsRequest.context:type_name -> udb.core.common.v1.RequestContext
+	139, // 68: udb.core.authn.services.v1.EmergencyRevokeRequest.context:type_name -> udb.core.common.v1.RequestContext
+	153, // 69: udb.core.authn.services.v1.IssueMfaChallengeRequest.factor_kind:type_name -> udb.core.authn.entity.v1.AuthFactorKind
+	155, // 70: udb.core.authn.services.v1.IssueMfaChallengeRequest.purpose:type_name -> udb.core.authn.entity.v1.MfaChallengePurpose
+	139, // 71: udb.core.authn.services.v1.IssueMfaChallengeRequest.context:type_name -> udb.core.common.v1.RequestContext
+	153, // 72: udb.core.authn.services.v1.IssueMfaChallengeResponse.factor_kind:type_name -> udb.core.authn.entity.v1.AuthFactorKind
+	139, // 73: udb.core.authn.services.v1.VerifyMfaChallengeRequest.context:type_name -> udb.core.common.v1.RequestContext
+	153, // 74: udb.core.authn.services.v1.MfaFactorSummary.factor_kind:type_name -> udb.core.authn.entity.v1.AuthFactorKind
+	139, // 75: udb.core.authn.services.v1.ListMfaFactorsRequest.context:type_name -> udb.core.common.v1.RequestContext
 	87,  // 76: udb.core.authn.services.v1.ListMfaFactorsResponse.factors:type_name -> udb.core.authn.services.v1.MfaFactorSummary
-	122, // 77: udb.core.authn.services.v1.DisableMfaFactorRequest.factor_kind:type_name -> udb.core.authn.entity.v1.AuthFactorKind
-	108, // 78: udb.core.authn.services.v1.DisableMfaFactorRequest.context:type_name -> udb.core.common.v1.RequestContext
-	108, // 79: udb.core.authn.services.v1.RenamePasskeyRequest.context:type_name -> udb.core.common.v1.RequestContext
-	108, // 80: udb.core.authn.services.v1.RevokeRecoveryCodesRequest.context:type_name -> udb.core.common.v1.RequestContext
-	108, // 81: udb.core.authn.services.v1.AdminResetMfaRequest.context:type_name -> udb.core.common.v1.RequestContext
-	108, // 82: udb.core.authn.services.v1.ListWebAuthnCredentialsRequest.context:type_name -> udb.core.common.v1.RequestContext
+	153, // 77: udb.core.authn.services.v1.DisableMfaFactorRequest.factor_kind:type_name -> udb.core.authn.entity.v1.AuthFactorKind
+	139, // 78: udb.core.authn.services.v1.DisableMfaFactorRequest.context:type_name -> udb.core.common.v1.RequestContext
+	139, // 79: udb.core.authn.services.v1.RenamePasskeyRequest.context:type_name -> udb.core.common.v1.RequestContext
+	139, // 80: udb.core.authn.services.v1.RevokeRecoveryCodesRequest.context:type_name -> udb.core.common.v1.RequestContext
+	139, // 81: udb.core.authn.services.v1.AdminResetMfaRequest.context:type_name -> udb.core.common.v1.RequestContext
+	139, // 82: udb.core.authn.services.v1.ListWebAuthnCredentialsRequest.context:type_name -> udb.core.common.v1.RequestContext
 	98,  // 83: udb.core.authn.services.v1.ListWebAuthnCredentialsResponse.credentials:type_name -> udb.core.authn.services.v1.WebAuthnCredentialSummary
-	108, // 84: udb.core.authn.services.v1.DeleteWebAuthnCredentialRequest.context:type_name -> udb.core.common.v1.RequestContext
-	85,  // [85:85] is the sub-list for method output_type
-	85,  // [85:85] is the sub-list for method input_type
-	85,  // [85:85] is the sub-list for extension type_name
-	85,  // [85:85] is the sub-list for extension extendee
-	0,   // [0:85] is the sub-list for field type_name
+	139, // 84: udb.core.authn.services.v1.DeleteWebAuthnCredentialRequest.context:type_name -> udb.core.common.v1.RequestContext
+	139, // 85: udb.core.authn.services.v1.PutTenantAuthPolicyRequest.context:type_name -> udb.core.common.v1.RequestContext
+	156, // 86: udb.core.authn.services.v1.PutTenantAuthPolicyResponse.policy:type_name -> udb.core.authn.entity.v1.TenantAuthPolicy
+	139, // 87: udb.core.authn.services.v1.GetTenantAuthPolicyRequest.context:type_name -> udb.core.common.v1.RequestContext
+	156, // 88: udb.core.authn.services.v1.GetTenantAuthPolicyResponse.policy:type_name -> udb.core.authn.entity.v1.TenantAuthPolicy
+	139, // 89: udb.core.authn.services.v1.SendLoginOtpRequest.context:type_name -> udb.core.common.v1.RequestContext
+	148, // 90: udb.core.authn.services.v1.LoginWithOtpRequest.device_type:type_name -> udb.core.authn.entity.v1.DeviceType
+	148, // 91: udb.core.authn.services.v1.FinishOidcLoginRequest.device_type:type_name -> udb.core.authn.entity.v1.DeviceType
+	148, // 92: udb.core.authn.services.v1.LoginWithOidcIdTokenRequest.device_type:type_name -> udb.core.authn.entity.v1.DeviceType
+	149, // 93: udb.core.authn.services.v1.InvitationInfo.expires_at:type_name -> google.protobuf.Timestamp
+	149, // 94: udb.core.authn.services.v1.InvitationInfo.accepted_at:type_name -> google.protobuf.Timestamp
+	149, // 95: udb.core.authn.services.v1.InvitationInfo.last_sent_at:type_name -> google.protobuf.Timestamp
+	149, // 96: udb.core.authn.services.v1.InvitationInfo.created_at:type_name -> google.protobuf.Timestamp
+	149, // 97: udb.core.authn.services.v1.InvitationInfo.updated_at:type_name -> google.protobuf.Timestamp
+	117, // 98: udb.core.authn.services.v1.CreateInvitationResponse.invitation:type_name -> udb.core.authn.services.v1.InvitationInfo
+	117, // 99: udb.core.authn.services.v1.ListInvitationsResponse.invitations:type_name -> udb.core.authn.services.v1.InvitationInfo
+	117, // 100: udb.core.authn.services.v1.RevokeInvitationResponse.invitation:type_name -> udb.core.authn.services.v1.InvitationInfo
+	117, // 101: udb.core.authn.services.v1.ResendInvitationResponse.invitation:type_name -> udb.core.authn.services.v1.InvitationInfo
+	149, // 102: udb.core.authn.services.v1.GetInvitationResponse.expires_at:type_name -> google.protobuf.Timestamp
+	139, // 103: udb.core.authn.services.v1.CheckStepUpRequest.context:type_name -> udb.core.common.v1.RequestContext
+	153, // 104: udb.core.authn.services.v1.CheckStepUpResponse.factor_kind:type_name -> udb.core.authn.entity.v1.AuthFactorKind
+	105, // [105:105] is the sub-list for method output_type
+	105, // [105:105] is the sub-list for method input_type
+	105, // [105:105] is the sub-list for extension type_name
+	105, // [105:105] is the sub-list for extension extendee
+	0,   // [0:105] is the sub-list for field type_name
 }
 
 func init() { file_udb_core_authn_services_v1_core_proto_init() }
@@ -7500,13 +11002,14 @@ func file_udb_core_authn_services_v1_core_proto_init() {
 	if File_udb_core_authn_services_v1_core_proto != nil {
 		return
 	}
+	file_udb_core_authn_services_v1_core_proto_msgTypes[103].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_udb_core_authn_services_v1_core_proto_rawDesc), len(file_udb_core_authn_services_v1_core_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   108,
+			NumMessages:   139,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

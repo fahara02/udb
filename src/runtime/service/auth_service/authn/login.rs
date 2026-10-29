@@ -28,6 +28,25 @@ struct PasswordLoginGrants {
     service_identity: String,
 }
 
+/// The per-path inputs of [`AuthnServiceImpl::complete_sign_in`].
+pub(super) struct SignIn<'a> {
+    pub device_name: &'a str,
+    pub ip_address: &'a str,
+    pub user_agent: &'a str,
+    /// Client device fingerprint; empty when the client sent none.
+    pub device_id: &'a str,
+    /// Scopes the caller asked for (`x-scopes`), narrowed by the user's grants.
+    pub requested_scopes: &'a [String],
+    /// Stamped into the token's `auth_method` claim; drives `acr`.
+    pub token_auth_method: &'static str,
+    /// The compliance record's `auth_method` and `reason_code`.
+    pub audit_auth_method: &'static str,
+    pub audit_reason_code: &'static str,
+    /// Written back when opening the session fails, undoing the caller's own
+    /// pre-session user update (the password path's attempt counters).
+    pub restore_on_failure: Option<authn::UserRecord>,
+}
+
 fn requested_scopes_from_metadata(metadata: &tonic::metadata::MetadataMap) -> Vec<String> {
     metadata
         .get("x-scopes")
@@ -686,7 +705,8 @@ impl AuthnServiceImpl {
             let has_otp = !req.mfa_otp_id.trim().is_empty();
             let has_totp = !req.totp_code.trim().is_empty();
             let has_recovery = !req.recovery_code.trim().is_empty();
-            if !has_otp && !has_totp && !has_recovery {
+            let has_passkey = !req.webauthn_challenge_id.trim().is_empty();
+            if !has_otp && !has_totp && !has_recovery && !has_passkey {
                 // Step-1: signal MFA is required. The client re-submits
                 // username + password + the second factor on the next call.
                 return Ok(Response::new(authn_pb::LoginResponse {
@@ -708,6 +728,15 @@ impl AuthnServiceImpl {
                             err.to_string(),
                         )
                     })?
+            } else if has_passkey {
+                // Passkey assertion against a StartWebAuthnAuthentication
+                // challenge issued for this same user (single use).
+                self.verify_webauthn_assertion_for_user(
+                    &user.user_id,
+                    &req.webauthn_challenge_id,
+                    &req.webauthn_assertion_json,
+                )
+                .await?
             } else if has_otp {
                 // Email/SMS one-time code: must be a LOGIN_2FA code issued to
                 // this same user (the code itself is carried in totp_code).
@@ -789,6 +818,53 @@ impl AuthnServiceImpl {
                 ));
             }
         }
+        let response = self
+            .complete_sign_in(
+                user.clone(),
+                SignIn {
+                    device_name: &req.device_name,
+                    ip_address: &req.ip_address,
+                    user_agent: &req.user_agent,
+                    device_id: &req.device_id,
+                    requested_scopes: &requested_scopes,
+                    // Password plus the second factor that was verified above
+                    // (`pwd_otp`, `pwd_totp`, ...): drives `acr = aal2` and `amr`.
+                    token_auth_method: super::step_up::password_sign_in_auth_method(
+                        user.mfa_enabled,
+                        &req.recovery_code,
+                        &req.mfa_otp_id,
+                        &req.totp_code,
+                    ),
+                    audit_auth_method: if user.mfa_enabled { "mfa" } else { "password" },
+                    audit_reason_code: "credentials_verified",
+                    restore_on_failure: Some({
+                        let mut restored = user.clone();
+                        restored.failed_login_count = prior_failed_login_count;
+                        restored.locked_until_unix = prior_locked_until_unix;
+                        restored.last_login_at_unix = prior_last_login_at_unix;
+                        restored.updated_at_unix = prior_updated_at_unix;
+                        restored.password_hash = prior_password_hash;
+                        restored
+                    }),
+                },
+                now,
+            )
+            .await?;
+        Ok(Response::new(response))
+    }
+
+    /// Everything a successful sign-in does once the user is authenticated, for
+    /// every sign-in path (password, one-time code, passkey, OIDC, invitation):
+    /// resolve the role/grant scopes, open the session, emit `USER_LOGGED_IN`,
+    /// sign the access token, register the device, mint the refresh family and
+    /// the CSRF token. One implementation so no path issues a weaker or
+    /// differently shaped credential than `Login`.
+    pub(super) async fn complete_sign_in(
+        &self,
+        user: authn::UserRecord,
+        sign_in: SignIn<'_>,
+        now: u64,
+    ) -> Result<authn_pb::LoginResponse, Status> {
         // Block 1 (auth_fix.md, Decision E): resolve the user's role-derived
         // grants ONCE from the warm authz snapshot and thread them into both the
         // session record (the refresh carrier) and the issued JWT below.
@@ -808,7 +884,7 @@ impl AuthnServiceImpl {
         let grants = self
             .resolve_password_login_grants_with_typed(
                 &user,
-                &requested_scopes,
+                sign_in.requested_scopes,
                 typed_grant.as_ref(),
             )
             .await?;
@@ -817,7 +893,10 @@ impl AuthnServiceImpl {
         let session_result = self
             .create_login_session(
                 &user,
-                format!("{}|{}|{}", req.device_name, req.ip_address, req.user_agent),
+                format!(
+                    "{}|{}|{}",
+                    sign_in.device_name, sign_in.ip_address, sign_in.user_agent
+                ),
                 scopes.clone(),
                 roles.clone(),
                 grants.service_identity.clone(),
@@ -827,13 +906,9 @@ impl AuthnServiceImpl {
         let (session_id, _expires) = match session_result {
             Ok(session) => session,
             Err(err) => {
-                let mut restored = user.clone();
-                restored.failed_login_count = prior_failed_login_count;
-                restored.locked_until_unix = prior_locked_until_unix;
-                restored.last_login_at_unix = prior_last_login_at_unix;
-                restored.updated_at_unix = prior_updated_at_unix;
-                restored.password_hash = prior_password_hash;
-                if let Err(restore_err) = self.users.put_user(restored).await {
+                if let Some(restored) = sign_in.restore_on_failure
+                    && let Err(restore_err) = self.users.put_user(restored).await
+                {
                     tracing::warn!(
                         user_id = %user.user_id,
                         error = %restore_err,
@@ -854,8 +929,8 @@ impl AuthnServiceImpl {
                     "session_public_id": public_session_handle_from_hash(&authn::hash_secret(&session_id, &self.hash_key())),
                     "tenant_id": user.tenant_id.clone(),
                     "project_id": user.project_id.clone(),
-                    "device_name": req.device_name.clone(),
-                    "ip_address": req.ip_address.clone(),
+                    "device_name": sign_in.device_name,
+                    "ip_address": sign_in.ip_address,
                 }),
             )
             .with_correlation(format!("login:{}", user.user_id))
@@ -865,10 +940,10 @@ impl AuthnServiceImpl {
                 target_resource: user.user_id.clone(),
                 operation: "login".to_string(),
                 outcome: "success".to_string(),
-                reason_code: "credentials_verified".to_string(),
-                auth_method: if user.mfa_enabled { "mfa" } else { "password" }.to_string(),
-                source_ip: req.ip_address.clone(),
-                user_agent: req.user_agent.clone(),
+                reason_code: sign_in.audit_reason_code.to_string(),
+                auth_method: sign_in.audit_auth_method.to_string(),
+                source_ip: sign_in.ip_address.to_string(),
+                user_agent: sign_in.user_agent.to_string(),
                 ..ComplianceEnvelope::default()
             }),
         )
@@ -885,7 +960,7 @@ impl AuthnServiceImpl {
             &roles,
             &grants.service_identity,
             &session_id,
-            "pwd",
+            sign_in.token_auth_method,
             super::account_kind_to_proto(user.account_kind),
             now,
         );
@@ -899,16 +974,16 @@ impl AuthnServiceImpl {
         // every RefreshToken call and reuse of a superseded value revokes the
         // family. Falls back to empty when no Postgres pool backs the registry.
         // P3 (bug_report.md): register/refresh this device so ListDevices returns
-        // it and RevokeDevice is reachable. `req.device_id` is the client device
-        // fingerprint (LoginRequest field 7). Best-effort; empty when no fingerprint.
+        // it and RevokeDevice is reachable. `sign_in.device_id` is the client device
+        // fingerprint (LoginRequest field 7 on the password path). Best-effort; empty when no fingerprint.
         let login_device_id = self
             .register_login_device(
                 &user.user_id,
                 &user.tenant_id,
                 &user.project_id,
-                &req.device_id,
-                &req.device_name,
-                &req.ip_address,
+                sign_in.device_id,
+                sign_in.device_name,
+                sign_in.ip_address,
             )
             .await
             .unwrap_or_default();
@@ -939,7 +1014,7 @@ impl AuthnServiceImpl {
         // and RefreshToken report for every token of this session.
         let session_public_id =
             public_session_handle_from_hash(&authn::hash_secret(&session_id, &self.hash_key()));
-        Ok(Response::new(authn_pb::LoginResponse {
+        Ok(authn_pb::LoginResponse {
             user_id: user.user_id,
             session_public_id,
             session_id: session_id.clone(),
@@ -950,7 +1025,7 @@ impl AuthnServiceImpl {
             access_token_expires_in,
             refresh_token_expires_in,
             ..Default::default()
-        }))
+        })
     }
 
     pub(super) async fn change_password_impl(

@@ -83,6 +83,21 @@ const (
 	AuthnService_ListServiceAccountTenantMemberships_FullMethodName  = "/udb.core.authn.services.v1.AuthnService/ListServiceAccountTenantMemberships"
 	AuthnService_RevokeServiceAccountTenantMembership_FullMethodName = "/udb.core.authn.services.v1.AuthnService/RevokeServiceAccountTenantMembership"
 	AuthnService_ExchangeServiceTokenForTenant_FullMethodName        = "/udb.core.authn.services.v1.AuthnService/ExchangeServiceTokenForTenant"
+	AuthnService_PutTenantAuthPolicy_FullMethodName                  = "/udb.core.authn.services.v1.AuthnService/PutTenantAuthPolicy"
+	AuthnService_GetTenantAuthPolicy_FullMethodName                  = "/udb.core.authn.services.v1.AuthnService/GetTenantAuthPolicy"
+	AuthnService_SendLoginOtp_FullMethodName                         = "/udb.core.authn.services.v1.AuthnService/SendLoginOtp"
+	AuthnService_LoginWithOtp_FullMethodName                         = "/udb.core.authn.services.v1.AuthnService/LoginWithOtp"
+	AuthnService_StartOidcLogin_FullMethodName                       = "/udb.core.authn.services.v1.AuthnService/StartOidcLogin"
+	AuthnService_FinishOidcLogin_FullMethodName                      = "/udb.core.authn.services.v1.AuthnService/FinishOidcLogin"
+	AuthnService_LoginWithOidcIdToken_FullMethodName                 = "/udb.core.authn.services.v1.AuthnService/LoginWithOidcIdToken"
+	AuthnService_CreateInvitation_FullMethodName                     = "/udb.core.authn.services.v1.AuthnService/CreateInvitation"
+	AuthnService_ListInvitations_FullMethodName                      = "/udb.core.authn.services.v1.AuthnService/ListInvitations"
+	AuthnService_RevokeInvitation_FullMethodName                     = "/udb.core.authn.services.v1.AuthnService/RevokeInvitation"
+	AuthnService_ResendInvitation_FullMethodName                     = "/udb.core.authn.services.v1.AuthnService/ResendInvitation"
+	AuthnService_GetInvitation_FullMethodName                        = "/udb.core.authn.services.v1.AuthnService/GetInvitation"
+	AuthnService_StartInvitationAcceptance_FullMethodName            = "/udb.core.authn.services.v1.AuthnService/StartInvitationAcceptance"
+	AuthnService_AcceptInvitation_FullMethodName                     = "/udb.core.authn.services.v1.AuthnService/AcceptInvitation"
+	AuthnService_CheckStepUp_FullMethodName                          = "/udb.core.authn.services.v1.AuthnService/CheckStepUp"
 )
 
 // AuthnServiceClient is the client API for AuthnService service.
@@ -761,6 +776,200 @@ type AuthnServiceClient interface {
 	// Idempotency fields: no declared method replay contract.
 	// End UDB contract.
 	ExchangeServiceTokenForTenant(ctx context.Context, in *ExchangeServiceTokenForTenantRequest, opts ...grpc.CallOption) (*ExchangeServiceTokenForTenantResponse, error)
+	// Replace the tenant's sign-in policy: whether passwords are required, the
+	// channels sign-in codes may go over, the magic-link page and the step-up
+	// rules. Only an administrator of that tenant (or a cross-tenant admin).
+	// UDB contract: /udb.core.authn.services.v1.AuthnService/PutTenantAuthPolicy
+	// Listener: control plane.
+	// Scopes: udb:authn:manage-auth-policy.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
+	PutTenantAuthPolicy(ctx context.Context, in *PutTenantAuthPolicyRequest, opts ...grpc.CallOption) (*PutTenantAuthPolicyResponse, error)
+	// Read the tenant's sign-in policy (the defaults when none was written).
+	// UDB contract: /udb.core.authn.services.v1.AuthnService/GetTenantAuthPolicy
+	// Listener: control plane.
+	// Scopes: udb:authn:read-auth-policy.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
+	GetTenantAuthPolicy(ctx context.Context, in *GetTenantAuthPolicyRequest, opts ...grpc.CallOption) (*GetTenantAuthPolicyResponse, error)
+	// Send a one-time sign-in code (or, for EMAIL, a magic link) to a phone or
+	// email address of the tenant. Public. The answer is the same whether or not
+	// the address belongs to an account and whether or not the tenant enabled
+	// the channel; only a real, enabled account is sent anything.
+	// UDB contract: /udb.core.authn.services.v1.AuthnService/SendLoginOtp
+	// Listener: control plane.
+	// Scopes: no endpoint scopes (PUBLIC); method-specific authorization still applies.
+	// Credential types: PUBLIC endpoint; method-specific request credentials.
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
+	SendLoginOtp(ctx context.Context, in *SendLoginOtpRequest, opts ...grpc.CallOption) (*SendLoginOtpResponse, error)
+	// Sign in with the code from SendLoginOtp (or the otp_id + code of a magic
+	// link). Public. Returns the same credentials as Login: access token,
+	// rotating refresh token, session and CSRF token.
+	// UDB contract: /udb.core.authn.services.v1.AuthnService/LoginWithOtp
+	// Listener: control plane.
+	// Scopes: no endpoint scopes (PUBLIC); method-specific authorization still applies.
+	// Credential types: PUBLIC endpoint; method-specific request credentials.
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
+	LoginWithOtp(ctx context.Context, in *LoginWithOtpRequest, opts ...grpc.CallOption) (*LoginWithOtpResponse, error)
+	// ── 0.6.6 OIDC sign-in RPCs [OIDC] ──
+	// "Sign in with Google / Microsoft / any OpenID provider" through a tenant
+	// IdentityProvider (kind OIDC). Browser flow: StartOidcLogin returns the
+	// provider's authorization URL (authorization code + PKCE S256 + nonce,
+	// state stored server-side for 10 minutes, single use); the provider
+	// redirects to an allowlisted redirect_uri with code + state, and
+	// FinishOidcLogin exchanges the code, verifies the ID token and returns the
+	// same credentials as Login. Native apps that already hold an ID token call
+	// LoginWithOidcIdToken. Users resolve exactly like ResolveExternalIdentity:
+	// an existing link, the provider's account-linking policy, or JIT
+	// provisioning under its jit_policy.
+	// UDB contract: /udb.core.authn.services.v1.AuthnService/StartOidcLogin
+	// Listener: control plane.
+	// Scopes: no endpoint scopes (PUBLIC); method-specific authorization still applies.
+	// Credential types: PUBLIC endpoint; method-specific request credentials.
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
+	StartOidcLogin(ctx context.Context, in *StartOidcLoginRequest, opts ...grpc.CallOption) (*StartOidcLoginResponse, error)
+	// UDB contract: /udb.core.authn.services.v1.AuthnService/FinishOidcLogin
+	// Listener: control plane.
+	// Scopes: no endpoint scopes (PUBLIC); method-specific authorization still applies.
+	// Credential types: PUBLIC endpoint; method-specific request credentials.
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
+	FinishOidcLogin(ctx context.Context, in *FinishOidcLoginRequest, opts ...grpc.CallOption) (*FinishOidcLoginResponse, error)
+	// UDB contract: /udb.core.authn.services.v1.AuthnService/LoginWithOidcIdToken
+	// Listener: control plane.
+	// Scopes: no endpoint scopes (PUBLIC); method-specific authorization still applies.
+	// Credential types: PUBLIC endpoint; method-specific request credentials.
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
+	LoginWithOidcIdToken(ctx context.Context, in *LoginWithOidcIdTokenRequest, opts ...grpc.CallOption) (*LoginWithOidcIdTokenResponse, error)
+	// ── 0.6.6 invitations RPCs [INVITATIONS] ──
+	// Invite a person into the caller's tenant with a set of roles. The
+	// invitee proves the invitation's channel on acceptance: an SMS or email
+	// code sent to `address`, a sign-in with the tenant identity provider
+	// (OIDC), or a new passkey (PASSKEY). SMS/EMAIL invitations are sent at
+	// once (event `authn.invitation`, link from the tenant auth policy's
+	// magic_link_base_url); the accept token is returned once and only its hash
+	// is stored. Reserved platform roles are refused; organization_owner needs a
+	// caller who holds it, or a cross-tenant admin.
+	// UDB contract: /udb.core.authn.services.v1.AuthnService/CreateInvitation
+	// Listener: control plane.
+	// Scopes: udb:authn:manage-invitations.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
+	CreateInvitation(ctx context.Context, in *CreateInvitationRequest, opts ...grpc.CallOption) (*CreateInvitationResponse, error)
+	// Page through the caller's tenant's invitations, newest first, optionally
+	// by status.
+	// UDB contract: /udb.core.authn.services.v1.AuthnService/ListInvitations
+	// Listener: control plane.
+	// Scopes: udb:authn:manage-invitations.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
+	ListInvitations(ctx context.Context, in *ListInvitationsRequest, opts ...grpc.CallOption) (*ListInvitationsResponse, error)
+	// Revoke a PENDING invitation of the caller's tenant: its link stops
+	// working at once and the account acceptance had started for (if any) is
+	// deleted. Already accepted, revoked or expired: revoked=false, nothing
+	// changes.
+	// UDB contract: /udb.core.authn.services.v1.AuthnService/RevokeInvitation
+	// Listener: control plane.
+	// Scopes: udb:authn:manage-invitations.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: destructive.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
+	RevokeInvitation(ctx context.Context, in *RevokeInvitationRequest, opts ...grpc.CallOption) (*RevokeInvitationResponse, error)
+	// Send a PENDING SMS/EMAIL invitation again with a NEW accept token (the
+	// previous link stops working). At most 5 messages per invitation, at least
+	// 60 seconds apart (RESOURCE_EXHAUSTED with a retry delay otherwise).
+	// UDB contract: /udb.core.authn.services.v1.AuthnService/ResendInvitation
+	// Listener: control plane.
+	// Scopes: udb:authn:manage-invitations.
+	// Credential types: BEARER_JWT (1), SESSION (2).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
+	ResendInvitation(ctx context.Context, in *ResendInvitationRequest, opts ...grpc.CallOption) (*ResendInvitationResponse, error)
+	// What an invitee sees before accepting: tenant name, channel, roles,
+	// expiry and the masked address. Public. An unknown, expired, revoked or
+	// accepted invitation, or a wrong token, is one identical refusal.
+	// UDB contract: /udb.core.authn.services.v1.AuthnService/GetInvitation
+	// Listener: control plane.
+	// Scopes: no endpoint scopes (PUBLIC); method-specific authorization still applies.
+	// Credential types: PUBLIC endpoint; method-specific request credentials.
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
+	GetInvitation(ctx context.Context, in *GetInvitationRequest, opts ...grpc.CallOption) (*GetInvitationResponse, error)
+	// Begin accepting an invitation. Public. SMS/EMAIL: sends a one-time code
+	// to the invitation address (OTP cooldown applies). PASSKEY: returns
+	// WebAuthn registration options. OIDC: returns the identity provider's
+	// authorization URL. Same refusal as GetInvitation for an unusable
+	// invitation.
+	// UDB contract: /udb.core.authn.services.v1.AuthnService/StartInvitationAcceptance
+	// Listener: control plane.
+	// Scopes: no endpoint scopes (PUBLIC); method-specific authorization still applies.
+	// Credential types: PUBLIC endpoint; method-specific request credentials.
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
+	StartInvitationAcceptance(ctx context.Context, in *StartInvitationAcceptanceRequest, opts ...grpc.CallOption) (*StartInvitationAcceptanceResponse, error)
+	// Accept an invitation with the channel proof. Public. Creates the ACTIVE
+	// account in the invitation's tenant and project with the proven channel
+	// verified (phone, email, linked identity or passkey), binds the invited
+	// roles, marks the invitation ACCEPTED and signs the account in: the same
+	// credentials as Login. An unusable invitation is the same refusal as
+	// GetInvitation; a taken username is ALREADY_EXISTS on `username`.
+	// UDB contract: /udb.core.authn.services.v1.AuthnService/AcceptInvitation
+	// Listener: control plane.
+	// Scopes: no endpoint scopes (PUBLIC); method-specific authorization still applies.
+	// Credential types: PUBLIC endpoint; method-specific request credentials.
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
+	AcceptInvitation(ctx context.Context, in *AcceptInvitationRequest, opts ...grpc.CallOption) (*AcceptInvitationResponse, error)
+	// Check a step-up token before a protected action. A resource server sends
+	// the token the user got from VerifyMfaChallenge and the action it is about
+	// to perform; the answer says whether the tenant's step-up rule for that
+	// action is met: same action, an allowed second factor, proven recently
+	// enough, by the calling user, in a session that is still live.
+	// UDB contract: /udb.core.authn.services.v1.AuthnService/CheckStepUp
+	// Listener: control plane.
+	// Scopes: udb:authn:check-step-up.
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
+	// Operation kind: read_only.
+	// Idempotency: read-only unary calls may retry transient failures.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
+	CheckStepUp(ctx context.Context, in *CheckStepUpRequest, opts ...grpc.CallOption) (*CheckStepUpResponse, error)
 }
 
 type authnServiceClient struct {
@@ -1411,6 +1620,156 @@ func (c *authnServiceClient) ExchangeServiceTokenForTenant(ctx context.Context, 
 	return out, nil
 }
 
+func (c *authnServiceClient) PutTenantAuthPolicy(ctx context.Context, in *PutTenantAuthPolicyRequest, opts ...grpc.CallOption) (*PutTenantAuthPolicyResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(PutTenantAuthPolicyResponse)
+	err := c.cc.Invoke(ctx, AuthnService_PutTenantAuthPolicy_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authnServiceClient) GetTenantAuthPolicy(ctx context.Context, in *GetTenantAuthPolicyRequest, opts ...grpc.CallOption) (*GetTenantAuthPolicyResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetTenantAuthPolicyResponse)
+	err := c.cc.Invoke(ctx, AuthnService_GetTenantAuthPolicy_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authnServiceClient) SendLoginOtp(ctx context.Context, in *SendLoginOtpRequest, opts ...grpc.CallOption) (*SendLoginOtpResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SendLoginOtpResponse)
+	err := c.cc.Invoke(ctx, AuthnService_SendLoginOtp_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authnServiceClient) LoginWithOtp(ctx context.Context, in *LoginWithOtpRequest, opts ...grpc.CallOption) (*LoginWithOtpResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(LoginWithOtpResponse)
+	err := c.cc.Invoke(ctx, AuthnService_LoginWithOtp_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authnServiceClient) StartOidcLogin(ctx context.Context, in *StartOidcLoginRequest, opts ...grpc.CallOption) (*StartOidcLoginResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(StartOidcLoginResponse)
+	err := c.cc.Invoke(ctx, AuthnService_StartOidcLogin_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authnServiceClient) FinishOidcLogin(ctx context.Context, in *FinishOidcLoginRequest, opts ...grpc.CallOption) (*FinishOidcLoginResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(FinishOidcLoginResponse)
+	err := c.cc.Invoke(ctx, AuthnService_FinishOidcLogin_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authnServiceClient) LoginWithOidcIdToken(ctx context.Context, in *LoginWithOidcIdTokenRequest, opts ...grpc.CallOption) (*LoginWithOidcIdTokenResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(LoginWithOidcIdTokenResponse)
+	err := c.cc.Invoke(ctx, AuthnService_LoginWithOidcIdToken_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authnServiceClient) CreateInvitation(ctx context.Context, in *CreateInvitationRequest, opts ...grpc.CallOption) (*CreateInvitationResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CreateInvitationResponse)
+	err := c.cc.Invoke(ctx, AuthnService_CreateInvitation_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authnServiceClient) ListInvitations(ctx context.Context, in *ListInvitationsRequest, opts ...grpc.CallOption) (*ListInvitationsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListInvitationsResponse)
+	err := c.cc.Invoke(ctx, AuthnService_ListInvitations_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authnServiceClient) RevokeInvitation(ctx context.Context, in *RevokeInvitationRequest, opts ...grpc.CallOption) (*RevokeInvitationResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RevokeInvitationResponse)
+	err := c.cc.Invoke(ctx, AuthnService_RevokeInvitation_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authnServiceClient) ResendInvitation(ctx context.Context, in *ResendInvitationRequest, opts ...grpc.CallOption) (*ResendInvitationResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ResendInvitationResponse)
+	err := c.cc.Invoke(ctx, AuthnService_ResendInvitation_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authnServiceClient) GetInvitation(ctx context.Context, in *GetInvitationRequest, opts ...grpc.CallOption) (*GetInvitationResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetInvitationResponse)
+	err := c.cc.Invoke(ctx, AuthnService_GetInvitation_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authnServiceClient) StartInvitationAcceptance(ctx context.Context, in *StartInvitationAcceptanceRequest, opts ...grpc.CallOption) (*StartInvitationAcceptanceResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(StartInvitationAcceptanceResponse)
+	err := c.cc.Invoke(ctx, AuthnService_StartInvitationAcceptance_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authnServiceClient) AcceptInvitation(ctx context.Context, in *AcceptInvitationRequest, opts ...grpc.CallOption) (*AcceptInvitationResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(AcceptInvitationResponse)
+	err := c.cc.Invoke(ctx, AuthnService_AcceptInvitation_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authnServiceClient) CheckStepUp(ctx context.Context, in *CheckStepUpRequest, opts ...grpc.CallOption) (*CheckStepUpResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CheckStepUpResponse)
+	err := c.cc.Invoke(ctx, AuthnService_CheckStepUp_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // AuthnServiceServer is the server API for AuthnService service.
 // All implementations should embed UnimplementedAuthnServiceServer
 // for forward compatibility.
@@ -1575,6 +1934,80 @@ type AuthnServiceServer interface {
 	// home grant and the account. No, expired or revoked membership: one
 	// uniform PERMISSION_DENIED.
 	ExchangeServiceTokenForTenant(context.Context, *ExchangeServiceTokenForTenantRequest) (*ExchangeServiceTokenForTenantResponse, error)
+	// Replace the tenant's sign-in policy: whether passwords are required, the
+	// channels sign-in codes may go over, the magic-link page and the step-up
+	// rules. Only an administrator of that tenant (or a cross-tenant admin).
+	PutTenantAuthPolicy(context.Context, *PutTenantAuthPolicyRequest) (*PutTenantAuthPolicyResponse, error)
+	// Read the tenant's sign-in policy (the defaults when none was written).
+	GetTenantAuthPolicy(context.Context, *GetTenantAuthPolicyRequest) (*GetTenantAuthPolicyResponse, error)
+	// Send a one-time sign-in code (or, for EMAIL, a magic link) to a phone or
+	// email address of the tenant. Public. The answer is the same whether or not
+	// the address belongs to an account and whether or not the tenant enabled
+	// the channel; only a real, enabled account is sent anything.
+	SendLoginOtp(context.Context, *SendLoginOtpRequest) (*SendLoginOtpResponse, error)
+	// Sign in with the code from SendLoginOtp (or the otp_id + code of a magic
+	// link). Public. Returns the same credentials as Login: access token,
+	// rotating refresh token, session and CSRF token.
+	LoginWithOtp(context.Context, *LoginWithOtpRequest) (*LoginWithOtpResponse, error)
+	// ── 0.6.6 OIDC sign-in RPCs [OIDC] ──
+	// "Sign in with Google / Microsoft / any OpenID provider" through a tenant
+	// IdentityProvider (kind OIDC). Browser flow: StartOidcLogin returns the
+	// provider's authorization URL (authorization code + PKCE S256 + nonce,
+	// state stored server-side for 10 minutes, single use); the provider
+	// redirects to an allowlisted redirect_uri with code + state, and
+	// FinishOidcLogin exchanges the code, verifies the ID token and returns the
+	// same credentials as Login. Native apps that already hold an ID token call
+	// LoginWithOidcIdToken. Users resolve exactly like ResolveExternalIdentity:
+	// an existing link, the provider's account-linking policy, or JIT
+	// provisioning under its jit_policy.
+	StartOidcLogin(context.Context, *StartOidcLoginRequest) (*StartOidcLoginResponse, error)
+	FinishOidcLogin(context.Context, *FinishOidcLoginRequest) (*FinishOidcLoginResponse, error)
+	LoginWithOidcIdToken(context.Context, *LoginWithOidcIdTokenRequest) (*LoginWithOidcIdTokenResponse, error)
+	// ── 0.6.6 invitations RPCs [INVITATIONS] ──
+	// Invite a person into the caller's tenant with a set of roles. The
+	// invitee proves the invitation's channel on acceptance: an SMS or email
+	// code sent to `address`, a sign-in with the tenant identity provider
+	// (OIDC), or a new passkey (PASSKEY). SMS/EMAIL invitations are sent at
+	// once (event `authn.invitation`, link from the tenant auth policy's
+	// magic_link_base_url); the accept token is returned once and only its hash
+	// is stored. Reserved platform roles are refused; organization_owner needs a
+	// caller who holds it, or a cross-tenant admin.
+	CreateInvitation(context.Context, *CreateInvitationRequest) (*CreateInvitationResponse, error)
+	// Page through the caller's tenant's invitations, newest first, optionally
+	// by status.
+	ListInvitations(context.Context, *ListInvitationsRequest) (*ListInvitationsResponse, error)
+	// Revoke a PENDING invitation of the caller's tenant: its link stops
+	// working at once and the account acceptance had started for (if any) is
+	// deleted. Already accepted, revoked or expired: revoked=false, nothing
+	// changes.
+	RevokeInvitation(context.Context, *RevokeInvitationRequest) (*RevokeInvitationResponse, error)
+	// Send a PENDING SMS/EMAIL invitation again with a NEW accept token (the
+	// previous link stops working). At most 5 messages per invitation, at least
+	// 60 seconds apart (RESOURCE_EXHAUSTED with a retry delay otherwise).
+	ResendInvitation(context.Context, *ResendInvitationRequest) (*ResendInvitationResponse, error)
+	// What an invitee sees before accepting: tenant name, channel, roles,
+	// expiry and the masked address. Public. An unknown, expired, revoked or
+	// accepted invitation, or a wrong token, is one identical refusal.
+	GetInvitation(context.Context, *GetInvitationRequest) (*GetInvitationResponse, error)
+	// Begin accepting an invitation. Public. SMS/EMAIL: sends a one-time code
+	// to the invitation address (OTP cooldown applies). PASSKEY: returns
+	// WebAuthn registration options. OIDC: returns the identity provider's
+	// authorization URL. Same refusal as GetInvitation for an unusable
+	// invitation.
+	StartInvitationAcceptance(context.Context, *StartInvitationAcceptanceRequest) (*StartInvitationAcceptanceResponse, error)
+	// Accept an invitation with the channel proof. Public. Creates the ACTIVE
+	// account in the invitation's tenant and project with the proven channel
+	// verified (phone, email, linked identity or passkey), binds the invited
+	// roles, marks the invitation ACCEPTED and signs the account in: the same
+	// credentials as Login. An unusable invitation is the same refusal as
+	// GetInvitation; a taken username is ALREADY_EXISTS on `username`.
+	AcceptInvitation(context.Context, *AcceptInvitationRequest) (*AcceptInvitationResponse, error)
+	// Check a step-up token before a protected action. A resource server sends
+	// the token the user got from VerifyMfaChallenge and the action it is about
+	// to perform; the answer says whether the tenant's step-up rule for that
+	// action is met: same action, an allowed second factor, proven recently
+	// enough, by the calling user, in a session that is still live.
+	CheckStepUp(context.Context, *CheckStepUpRequest) (*CheckStepUpResponse, error)
 }
 
 // UnimplementedAuthnServiceServer should be embedded to have
@@ -1775,6 +2208,51 @@ func (UnimplementedAuthnServiceServer) RevokeServiceAccountTenantMembership(cont
 }
 func (UnimplementedAuthnServiceServer) ExchangeServiceTokenForTenant(context.Context, *ExchangeServiceTokenForTenantRequest) (*ExchangeServiceTokenForTenantResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ExchangeServiceTokenForTenant not implemented")
+}
+func (UnimplementedAuthnServiceServer) PutTenantAuthPolicy(context.Context, *PutTenantAuthPolicyRequest) (*PutTenantAuthPolicyResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method PutTenantAuthPolicy not implemented")
+}
+func (UnimplementedAuthnServiceServer) GetTenantAuthPolicy(context.Context, *GetTenantAuthPolicyRequest) (*GetTenantAuthPolicyResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetTenantAuthPolicy not implemented")
+}
+func (UnimplementedAuthnServiceServer) SendLoginOtp(context.Context, *SendLoginOtpRequest) (*SendLoginOtpResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method SendLoginOtp not implemented")
+}
+func (UnimplementedAuthnServiceServer) LoginWithOtp(context.Context, *LoginWithOtpRequest) (*LoginWithOtpResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method LoginWithOtp not implemented")
+}
+func (UnimplementedAuthnServiceServer) StartOidcLogin(context.Context, *StartOidcLoginRequest) (*StartOidcLoginResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method StartOidcLogin not implemented")
+}
+func (UnimplementedAuthnServiceServer) FinishOidcLogin(context.Context, *FinishOidcLoginRequest) (*FinishOidcLoginResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method FinishOidcLogin not implemented")
+}
+func (UnimplementedAuthnServiceServer) LoginWithOidcIdToken(context.Context, *LoginWithOidcIdTokenRequest) (*LoginWithOidcIdTokenResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method LoginWithOidcIdToken not implemented")
+}
+func (UnimplementedAuthnServiceServer) CreateInvitation(context.Context, *CreateInvitationRequest) (*CreateInvitationResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method CreateInvitation not implemented")
+}
+func (UnimplementedAuthnServiceServer) ListInvitations(context.Context, *ListInvitationsRequest) (*ListInvitationsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListInvitations not implemented")
+}
+func (UnimplementedAuthnServiceServer) RevokeInvitation(context.Context, *RevokeInvitationRequest) (*RevokeInvitationResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method RevokeInvitation not implemented")
+}
+func (UnimplementedAuthnServiceServer) ResendInvitation(context.Context, *ResendInvitationRequest) (*ResendInvitationResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ResendInvitation not implemented")
+}
+func (UnimplementedAuthnServiceServer) GetInvitation(context.Context, *GetInvitationRequest) (*GetInvitationResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetInvitation not implemented")
+}
+func (UnimplementedAuthnServiceServer) StartInvitationAcceptance(context.Context, *StartInvitationAcceptanceRequest) (*StartInvitationAcceptanceResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method StartInvitationAcceptance not implemented")
+}
+func (UnimplementedAuthnServiceServer) AcceptInvitation(context.Context, *AcceptInvitationRequest) (*AcceptInvitationResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method AcceptInvitation not implemented")
+}
+func (UnimplementedAuthnServiceServer) CheckStepUp(context.Context, *CheckStepUpRequest) (*CheckStepUpResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method CheckStepUp not implemented")
 }
 func (UnimplementedAuthnServiceServer) testEmbeddedByValue() {}
 
@@ -2948,6 +3426,276 @@ func _AuthnService_ExchangeServiceTokenForTenant_Handler(srv interface{}, ctx co
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AuthnService_PutTenantAuthPolicy_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PutTenantAuthPolicyRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthnServiceServer).PutTenantAuthPolicy(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthnService_PutTenantAuthPolicy_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthnServiceServer).PutTenantAuthPolicy(ctx, req.(*PutTenantAuthPolicyRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthnService_GetTenantAuthPolicy_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetTenantAuthPolicyRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthnServiceServer).GetTenantAuthPolicy(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthnService_GetTenantAuthPolicy_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthnServiceServer).GetTenantAuthPolicy(ctx, req.(*GetTenantAuthPolicyRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthnService_SendLoginOtp_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SendLoginOtpRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthnServiceServer).SendLoginOtp(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthnService_SendLoginOtp_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthnServiceServer).SendLoginOtp(ctx, req.(*SendLoginOtpRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthnService_LoginWithOtp_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(LoginWithOtpRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthnServiceServer).LoginWithOtp(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthnService_LoginWithOtp_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthnServiceServer).LoginWithOtp(ctx, req.(*LoginWithOtpRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthnService_StartOidcLogin_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(StartOidcLoginRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthnServiceServer).StartOidcLogin(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthnService_StartOidcLogin_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthnServiceServer).StartOidcLogin(ctx, req.(*StartOidcLoginRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthnService_FinishOidcLogin_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(FinishOidcLoginRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthnServiceServer).FinishOidcLogin(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthnService_FinishOidcLogin_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthnServiceServer).FinishOidcLogin(ctx, req.(*FinishOidcLoginRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthnService_LoginWithOidcIdToken_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(LoginWithOidcIdTokenRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthnServiceServer).LoginWithOidcIdToken(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthnService_LoginWithOidcIdToken_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthnServiceServer).LoginWithOidcIdToken(ctx, req.(*LoginWithOidcIdTokenRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthnService_CreateInvitation_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateInvitationRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthnServiceServer).CreateInvitation(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthnService_CreateInvitation_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthnServiceServer).CreateInvitation(ctx, req.(*CreateInvitationRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthnService_ListInvitations_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListInvitationsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthnServiceServer).ListInvitations(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthnService_ListInvitations_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthnServiceServer).ListInvitations(ctx, req.(*ListInvitationsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthnService_RevokeInvitation_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RevokeInvitationRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthnServiceServer).RevokeInvitation(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthnService_RevokeInvitation_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthnServiceServer).RevokeInvitation(ctx, req.(*RevokeInvitationRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthnService_ResendInvitation_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ResendInvitationRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthnServiceServer).ResendInvitation(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthnService_ResendInvitation_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthnServiceServer).ResendInvitation(ctx, req.(*ResendInvitationRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthnService_GetInvitation_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetInvitationRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthnServiceServer).GetInvitation(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthnService_GetInvitation_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthnServiceServer).GetInvitation(ctx, req.(*GetInvitationRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthnService_StartInvitationAcceptance_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(StartInvitationAcceptanceRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthnServiceServer).StartInvitationAcceptance(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthnService_StartInvitationAcceptance_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthnServiceServer).StartInvitationAcceptance(ctx, req.(*StartInvitationAcceptanceRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthnService_AcceptInvitation_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AcceptInvitationRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthnServiceServer).AcceptInvitation(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthnService_AcceptInvitation_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthnServiceServer).AcceptInvitation(ctx, req.(*AcceptInvitationRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthnService_CheckStepUp_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CheckStepUpRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthnServiceServer).CheckStepUp(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthnService_CheckStepUp_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthnServiceServer).CheckStepUp(ctx, req.(*CheckStepUpRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // AuthnService_ServiceDesc is the grpc.ServiceDesc for AuthnService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -3210,6 +3958,66 @@ var AuthnService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ExchangeServiceTokenForTenant",
 			Handler:    _AuthnService_ExchangeServiceTokenForTenant_Handler,
+		},
+		{
+			MethodName: "PutTenantAuthPolicy",
+			Handler:    _AuthnService_PutTenantAuthPolicy_Handler,
+		},
+		{
+			MethodName: "GetTenantAuthPolicy",
+			Handler:    _AuthnService_GetTenantAuthPolicy_Handler,
+		},
+		{
+			MethodName: "SendLoginOtp",
+			Handler:    _AuthnService_SendLoginOtp_Handler,
+		},
+		{
+			MethodName: "LoginWithOtp",
+			Handler:    _AuthnService_LoginWithOtp_Handler,
+		},
+		{
+			MethodName: "StartOidcLogin",
+			Handler:    _AuthnService_StartOidcLogin_Handler,
+		},
+		{
+			MethodName: "FinishOidcLogin",
+			Handler:    _AuthnService_FinishOidcLogin_Handler,
+		},
+		{
+			MethodName: "LoginWithOidcIdToken",
+			Handler:    _AuthnService_LoginWithOidcIdToken_Handler,
+		},
+		{
+			MethodName: "CreateInvitation",
+			Handler:    _AuthnService_CreateInvitation_Handler,
+		},
+		{
+			MethodName: "ListInvitations",
+			Handler:    _AuthnService_ListInvitations_Handler,
+		},
+		{
+			MethodName: "RevokeInvitation",
+			Handler:    _AuthnService_RevokeInvitation_Handler,
+		},
+		{
+			MethodName: "ResendInvitation",
+			Handler:    _AuthnService_ResendInvitation_Handler,
+		},
+		{
+			MethodName: "GetInvitation",
+			Handler:    _AuthnService_GetInvitation_Handler,
+		},
+		{
+			MethodName: "StartInvitationAcceptance",
+			Handler:    _AuthnService_StartInvitationAcceptance_Handler,
+		},
+		{
+			MethodName: "AcceptInvitation",
+			Handler:    _AuthnService_AcceptInvitation_Handler,
+		},
+		{
+			MethodName: "CheckStepUp",
+			Handler:    _AuthnService_CheckStepUp_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

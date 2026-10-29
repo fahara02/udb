@@ -15,14 +15,24 @@ use Google\Protobuf\RepeatedField;
 class StartWebAuthnAuthenticationRequest extends \Google\Protobuf\Internal\Message
 {
     /**
+     * The user signing in. Leave EMPTY for usernameless sign-in: the options then
+     * ask the browser for any discoverable passkey (resident key) of this RP, and
+     * FinishWebAuthnAuthentication resolves the user from the passkey's user handle.
+     *
      * Generated from protobuf field <code>string user_id = 1 [json_name = "userId"];</code>
      */
     protected $user_id = '';
     /**
+     * With user_id set: optional, must match the user's tenant. Usernameless: the
+     * tenant the passkey must belong to (empty = the deployment's default tenant).
+     *
      * Generated from protobuf field <code>string tenant_id = 2 [json_name = "tenantId"];</code>
      */
     protected $tenant_id = '';
     /**
+     * With user_id set: optional, must match the user's project. Usernameless:
+     * optional; when set, only a user of this project can complete the sign-in.
+     *
      * Generated from protobuf field <code>string project_id = 3 [json_name = "projectId"];</code>
      */
     protected $project_id = '';
@@ -38,8 +48,15 @@ class StartWebAuthnAuthenticationRequest extends \Google\Protobuf\Internal\Messa
      *     Optional. Data for populating the Message object.
      *
      *     @type string $user_id
+     *           The user signing in. Leave EMPTY for usernameless sign-in: the options then
+     *           ask the browser for any discoverable passkey (resident key) of this RP, and
+     *           FinishWebAuthnAuthentication resolves the user from the passkey's user handle.
      *     @type string $tenant_id
+     *           With user_id set: optional, must match the user's tenant. Usernameless: the
+     *           tenant the passkey must belong to (empty = the deployment's default tenant).
      *     @type string $project_id
+     *           With user_id set: optional, must match the user's project. Usernameless:
+     *           optional; when set, only a user of this project can complete the sign-in.
      *     @type \Udb\Core\Common\V1\RequestContext $context
      * }
      */
@@ -49,6 +66,10 @@ class StartWebAuthnAuthenticationRequest extends \Google\Protobuf\Internal\Messa
     }
 
     /**
+     * The user signing in. Leave EMPTY for usernameless sign-in: the options then
+     * ask the browser for any discoverable passkey (resident key) of this RP, and
+     * FinishWebAuthnAuthentication resolves the user from the passkey's user handle.
+     *
      * Generated from protobuf field <code>string user_id = 1 [json_name = "userId"];</code>
      * @return string
      */
@@ -58,6 +79,10 @@ class StartWebAuthnAuthenticationRequest extends \Google\Protobuf\Internal\Messa
     }
 
     /**
+     * The user signing in. Leave EMPTY for usernameless sign-in: the options then
+     * ask the browser for any discoverable passkey (resident key) of this RP, and
+     * FinishWebAuthnAuthentication resolves the user from the passkey's user handle.
+     *
      * Generated from protobuf field <code>string user_id = 1 [json_name = "userId"];</code>
      * @param string $var
      * @return $this
@@ -71,6 +96,9 @@ class StartWebAuthnAuthenticationRequest extends \Google\Protobuf\Internal\Messa
     }
 
     /**
+     * With user_id set: optional, must match the user's tenant. Usernameless: the
+     * tenant the passkey must belong to (empty = the deployment's default tenant).
+     *
      * Generated from protobuf field <code>string tenant_id = 2 [json_name = "tenantId"];</code>
      * @return string
      */
@@ -80,6 +108,9 @@ class StartWebAuthnAuthenticationRequest extends \Google\Protobuf\Internal\Messa
     }
 
     /**
+     * With user_id set: optional, must match the user's tenant. Usernameless: the
+     * tenant the passkey must belong to (empty = the deployment's default tenant).
+     *
      * Generated from protobuf field <code>string tenant_id = 2 [json_name = "tenantId"];</code>
      * @param string $var
      * @return $this
@@ -93,6 +124,9 @@ class StartWebAuthnAuthenticationRequest extends \Google\Protobuf\Internal\Messa
     }
 
     /**
+     * With user_id set: optional, must match the user's project. Usernameless:
+     * optional; when set, only a user of this project can complete the sign-in.
+     *
      * Generated from protobuf field <code>string project_id = 3 [json_name = "projectId"];</code>
      * @return string
      */
@@ -102,6 +136,9 @@ class StartWebAuthnAuthenticationRequest extends \Google\Protobuf\Internal\Messa
     }
 
     /**
+     * With user_id set: optional, must match the user's project. Usernameless:
+     * optional; when set, only a user of this project can complete the sign-in.
+     *
      * Generated from protobuf field <code>string project_id = 3 [json_name = "projectId"];</code>
      * @param string $var
      * @return $this

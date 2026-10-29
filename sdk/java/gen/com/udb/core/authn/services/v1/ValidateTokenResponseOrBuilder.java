@@ -307,4 +307,112 @@ java.lang.String defaultValue);
    */
   com.google.protobuf.ByteString
       getSessionPublicIdBytes();
+
+  /**
+   * <pre>
+   * JWTs only. Assurance level the token states: `aal2` after a second factor
+   * or a passkey, else `aal1`. Empty for sessions, API keys and tokens minted
+   * before 0.6.6 by external issuers that omit it.
+   * </pre>
+   *
+   * <code>string acr = 17 [json_name = "acr"];</code>
+   * @return The acr.
+   */
+  java.lang.String getAcr();
+  /**
+   * <pre>
+   * JWTs only. Assurance level the token states: `aal2` after a second factor
+   * or a passkey, else `aal1`. Empty for sessions, API keys and tokens minted
+   * before 0.6.6 by external issuers that omit it.
+   * </pre>
+   *
+   * <code>string acr = 17 [json_name = "acr"];</code>
+   * @return The bytes for acr.
+   */
+  com.google.protobuf.ByteString
+      getAcrBytes();
+
+  /**
+   * <pre>
+   * JWTs only. How the user authenticated (RFC 8176 values such as `pwd`,
+   * `otp`, `sms`, plus `webauthn` for a passkey and `fed` for an OIDC
+   * provider). Empty for refreshed tokens: a refresh does not re-authenticate.
+   * </pre>
+   *
+   * <code>repeated string amr = 18 [json_name = "amr"];</code>
+   * @return A list containing the amr.
+   */
+  java.util.List<java.lang.String>
+      getAmrList();
+  /**
+   * <pre>
+   * JWTs only. How the user authenticated (RFC 8176 values such as `pwd`,
+   * `otp`, `sms`, plus `webauthn` for a passkey and `fed` for an OIDC
+   * provider). Empty for refreshed tokens: a refresh does not re-authenticate.
+   * </pre>
+   *
+   * <code>repeated string amr = 18 [json_name = "amr"];</code>
+   * @return The count of amr.
+   */
+  int getAmrCount();
+  /**
+   * <pre>
+   * JWTs only. How the user authenticated (RFC 8176 values such as `pwd`,
+   * `otp`, `sms`, plus `webauthn` for a passkey and `fed` for an OIDC
+   * provider). Empty for refreshed tokens: a refresh does not re-authenticate.
+   * </pre>
+   *
+   * <code>repeated string amr = 18 [json_name = "amr"];</code>
+   * @param index The index of the element to return.
+   * @return The amr at the given index.
+   */
+  java.lang.String getAmr(int index);
+  /**
+   * <pre>
+   * JWTs only. How the user authenticated (RFC 8176 values such as `pwd`,
+   * `otp`, `sms`, plus `webauthn` for a passkey and `fed` for an OIDC
+   * provider). Empty for refreshed tokens: a refresh does not re-authenticate.
+   * </pre>
+   *
+   * <code>repeated string amr = 18 [json_name = "amr"];</code>
+   * @param index The index of the value to return.
+   * @return The bytes of the amr at the given index.
+   */
+  com.google.protobuf.ByteString
+      getAmrBytes(int index);
+
+  /**
+   * <pre>
+   * JWTs only. Unix seconds when the user authenticated; 0 when the token
+   * does not say (refreshed tokens, API-key exchange, service accounts).
+   * </pre>
+   *
+   * <code>int64 auth_time = 19 [json_name = "authTime"];</code>
+   * @return The authTime.
+   */
+  long getAuthTime();
+
+  /**
+   * <pre>
+   * Set only when `token` is a step-up token from VerifyMfaChallenge: the
+   * action it was minted for. Such a token carries no scopes; use
+   * CheckStepUp to enforce it.
+   * </pre>
+   *
+   * <code>string step_up_action = 20 [json_name = "stepUpAction"];</code>
+   * @return The stepUpAction.
+   */
+  java.lang.String getStepUpAction();
+  /**
+   * <pre>
+   * Set only when `token` is a step-up token from VerifyMfaChallenge: the
+   * action it was minted for. Such a token carries no scopes; use
+   * CheckStepUp to enforce it.
+   * </pre>
+   *
+   * <code>string step_up_action = 20 [json_name = "stepUpAction"];</code>
+   * @return The bytes for stepUpAction.
+   */
+  com.google.protobuf.ByteString
+      getStepUpActionBytes();
 }

@@ -29,6 +29,10 @@ private static final long serialVersionUID = 0L;
   }
   private VerifyMfaChallengeResponse() {
     userId_ = "";
+    stepUpToken_ = "";
+    acr_ = "";
+    amr_ =
+        com.google.protobuf.LazyStringArrayList.emptyList();
   }
 
   public static final com.google.protobuf.Descriptors.Descriptor
@@ -94,6 +98,181 @@ private static final long serialVersionUID = 0L;
     }
   }
 
+  public static final int STEP_UP_TOKEN_FIELD_NUMBER = 3;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object stepUpToken_ = "";
+  /**
+   * <pre>
+   * Set when the challenge named an action, the proof verified, and the
+   * caller is the challenged user: a short-lived JWT proving this second
+   * factor for that action. It is NOT an access token (no scopes; refused as
+   * a bearer). Hand it to the resource server, which calls CheckStepUp.
+   * Empty when no JWT signing key is configured.
+   * </pre>
+   *
+   * <code>string step_up_token = 3 [json_name = "stepUpToken"];</code>
+   * @return The stepUpToken.
+   */
+  @java.lang.Override
+  public java.lang.String getStepUpToken() {
+    java.lang.Object ref = stepUpToken_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs =
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      stepUpToken_ = s;
+      return s;
+    }
+  }
+  /**
+   * <pre>
+   * Set when the challenge named an action, the proof verified, and the
+   * caller is the challenged user: a short-lived JWT proving this second
+   * factor for that action. It is NOT an access token (no scopes; refused as
+   * a bearer). Hand it to the resource server, which calls CheckStepUp.
+   * Empty when no JWT signing key is configured.
+   * </pre>
+   *
+   * <code>string step_up_token = 3 [json_name = "stepUpToken"];</code>
+   * @return The bytes for stepUpToken.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getStepUpTokenBytes() {
+    java.lang.Object ref = stepUpToken_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b =
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      stepUpToken_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
+  public static final int STEP_UP_EXPIRES_AT_UNIX_FIELD_NUMBER = 4;
+  private long stepUpExpiresAtUnix_ = 0L;
+  /**
+   * <pre>
+   * When step_up_token stops being accepted: the tenant rule's
+   * max_age_seconds for the action, else 300 seconds after verification.
+   * </pre>
+   *
+   * <code>int64 step_up_expires_at_unix = 4 [json_name = "stepUpExpiresAtUnix"];</code>
+   * @return The stepUpExpiresAtUnix.
+   */
+  @java.lang.Override
+  public long getStepUpExpiresAtUnix() {
+    return stepUpExpiresAtUnix_;
+  }
+
+  public static final int ACR_FIELD_NUMBER = 5;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object acr_ = "";
+  /**
+   * <pre>
+   * Assurance level the step-up token states (`aal2`); empty when no token.
+   * </pre>
+   *
+   * <code>string acr = 5 [json_name = "acr"];</code>
+   * @return The acr.
+   */
+  @java.lang.Override
+  public java.lang.String getAcr() {
+    java.lang.Object ref = acr_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs =
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      acr_ = s;
+      return s;
+    }
+  }
+  /**
+   * <pre>
+   * Assurance level the step-up token states (`aal2`); empty when no token.
+   * </pre>
+   *
+   * <code>string acr = 5 [json_name = "acr"];</code>
+   * @return The bytes for acr.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getAcrBytes() {
+    java.lang.Object ref = acr_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b =
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      acr_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
+  public static final int AMR_FIELD_NUMBER = 6;
+  @SuppressWarnings("serial")
+  private com.google.protobuf.LazyStringArrayList amr_ =
+      com.google.protobuf.LazyStringArrayList.emptyList();
+  /**
+   * <pre>
+   * Authentication methods (RFC 8176) the step-up token states, e.g. `otp`,
+   * `sms`, `webauthn`; empty when no token.
+   * </pre>
+   *
+   * <code>repeated string amr = 6 [json_name = "amr"];</code>
+   * @return A list containing the amr.
+   */
+  public com.google.protobuf.ProtocolStringList
+      getAmrList() {
+    return amr_;
+  }
+  /**
+   * <pre>
+   * Authentication methods (RFC 8176) the step-up token states, e.g. `otp`,
+   * `sms`, `webauthn`; empty when no token.
+   * </pre>
+   *
+   * <code>repeated string amr = 6 [json_name = "amr"];</code>
+   * @return The count of amr.
+   */
+  public int getAmrCount() {
+    return amr_.size();
+  }
+  /**
+   * <pre>
+   * Authentication methods (RFC 8176) the step-up token states, e.g. `otp`,
+   * `sms`, `webauthn`; empty when no token.
+   * </pre>
+   *
+   * <code>repeated string amr = 6 [json_name = "amr"];</code>
+   * @param index The index of the element to return.
+   * @return The amr at the given index.
+   */
+  public java.lang.String getAmr(int index) {
+    return amr_.get(index);
+  }
+  /**
+   * <pre>
+   * Authentication methods (RFC 8176) the step-up token states, e.g. `otp`,
+   * `sms`, `webauthn`; empty when no token.
+   * </pre>
+   *
+   * <code>repeated string amr = 6 [json_name = "amr"];</code>
+   * @param index The index of the value to return.
+   * @return The bytes of the amr at the given index.
+   */
+  public com.google.protobuf.ByteString
+      getAmrBytes(int index) {
+    return amr_.getByteString(index);
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -114,6 +293,18 @@ private static final long serialVersionUID = 0L;
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(userId_)) {
       com.google.protobuf.GeneratedMessage.writeString(output, 2, userId_);
     }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(stepUpToken_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 3, stepUpToken_);
+    }
+    if (stepUpExpiresAtUnix_ != 0L) {
+      output.writeInt64(4, stepUpExpiresAtUnix_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(acr_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 5, acr_);
+    }
+    for (int i = 0; i < amr_.size(); i++) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 6, amr_.getRaw(i));
+    }
     getUnknownFields().writeTo(output);
   }
 
@@ -129,6 +320,24 @@ private static final long serialVersionUID = 0L;
     }
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(userId_)) {
       size += com.google.protobuf.GeneratedMessage.computeStringSize(2, userId_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(stepUpToken_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(3, stepUpToken_);
+    }
+    if (stepUpExpiresAtUnix_ != 0L) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeInt64Size(4, stepUpExpiresAtUnix_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(acr_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(5, acr_);
+    }
+    {
+      int dataSize = 0;
+      for (int i = 0; i < amr_.size(); i++) {
+        dataSize += computeStringSizeNoTag(amr_.getRaw(i));
+      }
+      size += dataSize;
+      size += 1 * getAmrList().size();
     }
     size += getUnknownFields().getSerializedSize();
     memoizedSize = size;
@@ -149,6 +358,14 @@ private static final long serialVersionUID = 0L;
         != other.getVerified()) return false;
     if (!getUserId()
         .equals(other.getUserId())) return false;
+    if (!getStepUpToken()
+        .equals(other.getStepUpToken())) return false;
+    if (getStepUpExpiresAtUnix()
+        != other.getStepUpExpiresAtUnix()) return false;
+    if (!getAcr()
+        .equals(other.getAcr())) return false;
+    if (!getAmrList()
+        .equals(other.getAmrList())) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -165,6 +382,17 @@ private static final long serialVersionUID = 0L;
         getVerified());
     hash = (37 * hash) + USER_ID_FIELD_NUMBER;
     hash = (53 * hash) + getUserId().hashCode();
+    hash = (37 * hash) + STEP_UP_TOKEN_FIELD_NUMBER;
+    hash = (53 * hash) + getStepUpToken().hashCode();
+    hash = (37 * hash) + STEP_UP_EXPIRES_AT_UNIX_FIELD_NUMBER;
+    hash = (53 * hash) + com.google.protobuf.Internal.hashLong(
+        getStepUpExpiresAtUnix());
+    hash = (37 * hash) + ACR_FIELD_NUMBER;
+    hash = (53 * hash) + getAcr().hashCode();
+    if (getAmrCount() > 0) {
+      hash = (37 * hash) + AMR_FIELD_NUMBER;
+      hash = (53 * hash) + getAmrList().hashCode();
+    }
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -298,6 +526,11 @@ private static final long serialVersionUID = 0L;
       bitField0_ = 0;
       verified_ = false;
       userId_ = "";
+      stepUpToken_ = "";
+      stepUpExpiresAtUnix_ = 0L;
+      acr_ = "";
+      amr_ =
+          com.google.protobuf.LazyStringArrayList.emptyList();
       return this;
     }
 
@@ -337,6 +570,19 @@ private static final long serialVersionUID = 0L;
       if (((from_bitField0_ & 0x00000002) != 0)) {
         result.userId_ = userId_;
       }
+      if (((from_bitField0_ & 0x00000004) != 0)) {
+        result.stepUpToken_ = stepUpToken_;
+      }
+      if (((from_bitField0_ & 0x00000008) != 0)) {
+        result.stepUpExpiresAtUnix_ = stepUpExpiresAtUnix_;
+      }
+      if (((from_bitField0_ & 0x00000010) != 0)) {
+        result.acr_ = acr_;
+      }
+      if (((from_bitField0_ & 0x00000020) != 0)) {
+        amr_.makeImmutable();
+        result.amr_ = amr_;
+      }
     }
 
     @java.lang.Override
@@ -357,6 +603,29 @@ private static final long serialVersionUID = 0L;
       if (!other.getUserId().isEmpty()) {
         userId_ = other.userId_;
         bitField0_ |= 0x00000002;
+        onChanged();
+      }
+      if (!other.getStepUpToken().isEmpty()) {
+        stepUpToken_ = other.stepUpToken_;
+        bitField0_ |= 0x00000004;
+        onChanged();
+      }
+      if (other.getStepUpExpiresAtUnix() != 0L) {
+        setStepUpExpiresAtUnix(other.getStepUpExpiresAtUnix());
+      }
+      if (!other.getAcr().isEmpty()) {
+        acr_ = other.acr_;
+        bitField0_ |= 0x00000010;
+        onChanged();
+      }
+      if (!other.amr_.isEmpty()) {
+        if (amr_.isEmpty()) {
+          amr_ = other.amr_;
+          bitField0_ |= 0x00000020;
+        } else {
+          ensureAmrIsMutable();
+          amr_.addAll(other.amr_);
+        }
         onChanged();
       }
       this.mergeUnknownFields(other.getUnknownFields());
@@ -395,6 +664,27 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00000002;
               break;
             } // case 18
+            case 26: {
+              stepUpToken_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00000004;
+              break;
+            } // case 26
+            case 32: {
+              stepUpExpiresAtUnix_ = input.readInt64();
+              bitField0_ |= 0x00000008;
+              break;
+            } // case 32
+            case 42: {
+              acr_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00000010;
+              break;
+            } // case 42
+            case 50: {
+              java.lang.String s = input.readStringRequireUtf8();
+              ensureAmrIsMutable();
+              amr_.add(s);
+              break;
+            } // case 50
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -512,6 +802,413 @@ private static final long serialVersionUID = 0L;
       checkByteStringIsUtf8(value);
       userId_ = value;
       bitField0_ |= 0x00000002;
+      onChanged();
+      return this;
+    }
+
+    private java.lang.Object stepUpToken_ = "";
+    /**
+     * <pre>
+     * Set when the challenge named an action, the proof verified, and the
+     * caller is the challenged user: a short-lived JWT proving this second
+     * factor for that action. It is NOT an access token (no scopes; refused as
+     * a bearer). Hand it to the resource server, which calls CheckStepUp.
+     * Empty when no JWT signing key is configured.
+     * </pre>
+     *
+     * <code>string step_up_token = 3 [json_name = "stepUpToken"];</code>
+     * @return The stepUpToken.
+     */
+    public java.lang.String getStepUpToken() {
+      java.lang.Object ref = stepUpToken_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        stepUpToken_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <pre>
+     * Set when the challenge named an action, the proof verified, and the
+     * caller is the challenged user: a short-lived JWT proving this second
+     * factor for that action. It is NOT an access token (no scopes; refused as
+     * a bearer). Hand it to the resource server, which calls CheckStepUp.
+     * Empty when no JWT signing key is configured.
+     * </pre>
+     *
+     * <code>string step_up_token = 3 [json_name = "stepUpToken"];</code>
+     * @return The bytes for stepUpToken.
+     */
+    public com.google.protobuf.ByteString
+        getStepUpTokenBytes() {
+      java.lang.Object ref = stepUpToken_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b =
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        stepUpToken_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <pre>
+     * Set when the challenge named an action, the proof verified, and the
+     * caller is the challenged user: a short-lived JWT proving this second
+     * factor for that action. It is NOT an access token (no scopes; refused as
+     * a bearer). Hand it to the resource server, which calls CheckStepUp.
+     * Empty when no JWT signing key is configured.
+     * </pre>
+     *
+     * <code>string step_up_token = 3 [json_name = "stepUpToken"];</code>
+     * @param value The stepUpToken to set.
+     * @return This builder for chaining.
+     */
+    public Builder setStepUpToken(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      stepUpToken_ = value;
+      bitField0_ |= 0x00000004;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Set when the challenge named an action, the proof verified, and the
+     * caller is the challenged user: a short-lived JWT proving this second
+     * factor for that action. It is NOT an access token (no scopes; refused as
+     * a bearer). Hand it to the resource server, which calls CheckStepUp.
+     * Empty when no JWT signing key is configured.
+     * </pre>
+     *
+     * <code>string step_up_token = 3 [json_name = "stepUpToken"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearStepUpToken() {
+      stepUpToken_ = getDefaultInstance().getStepUpToken();
+      bitField0_ = (bitField0_ & ~0x00000004);
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Set when the challenge named an action, the proof verified, and the
+     * caller is the challenged user: a short-lived JWT proving this second
+     * factor for that action. It is NOT an access token (no scopes; refused as
+     * a bearer). Hand it to the resource server, which calls CheckStepUp.
+     * Empty when no JWT signing key is configured.
+     * </pre>
+     *
+     * <code>string step_up_token = 3 [json_name = "stepUpToken"];</code>
+     * @param value The bytes for stepUpToken to set.
+     * @return This builder for chaining.
+     */
+    public Builder setStepUpTokenBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      stepUpToken_ = value;
+      bitField0_ |= 0x00000004;
+      onChanged();
+      return this;
+    }
+
+    private long stepUpExpiresAtUnix_ ;
+    /**
+     * <pre>
+     * When step_up_token stops being accepted: the tenant rule's
+     * max_age_seconds for the action, else 300 seconds after verification.
+     * </pre>
+     *
+     * <code>int64 step_up_expires_at_unix = 4 [json_name = "stepUpExpiresAtUnix"];</code>
+     * @return The stepUpExpiresAtUnix.
+     */
+    @java.lang.Override
+    public long getStepUpExpiresAtUnix() {
+      return stepUpExpiresAtUnix_;
+    }
+    /**
+     * <pre>
+     * When step_up_token stops being accepted: the tenant rule's
+     * max_age_seconds for the action, else 300 seconds after verification.
+     * </pre>
+     *
+     * <code>int64 step_up_expires_at_unix = 4 [json_name = "stepUpExpiresAtUnix"];</code>
+     * @param value The stepUpExpiresAtUnix to set.
+     * @return This builder for chaining.
+     */
+    public Builder setStepUpExpiresAtUnix(long value) {
+
+      stepUpExpiresAtUnix_ = value;
+      bitField0_ |= 0x00000008;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * When step_up_token stops being accepted: the tenant rule's
+     * max_age_seconds for the action, else 300 seconds after verification.
+     * </pre>
+     *
+     * <code>int64 step_up_expires_at_unix = 4 [json_name = "stepUpExpiresAtUnix"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearStepUpExpiresAtUnix() {
+      bitField0_ = (bitField0_ & ~0x00000008);
+      stepUpExpiresAtUnix_ = 0L;
+      onChanged();
+      return this;
+    }
+
+    private java.lang.Object acr_ = "";
+    /**
+     * <pre>
+     * Assurance level the step-up token states (`aal2`); empty when no token.
+     * </pre>
+     *
+     * <code>string acr = 5 [json_name = "acr"];</code>
+     * @return The acr.
+     */
+    public java.lang.String getAcr() {
+      java.lang.Object ref = acr_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        acr_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <pre>
+     * Assurance level the step-up token states (`aal2`); empty when no token.
+     * </pre>
+     *
+     * <code>string acr = 5 [json_name = "acr"];</code>
+     * @return The bytes for acr.
+     */
+    public com.google.protobuf.ByteString
+        getAcrBytes() {
+      java.lang.Object ref = acr_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b =
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        acr_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <pre>
+     * Assurance level the step-up token states (`aal2`); empty when no token.
+     * </pre>
+     *
+     * <code>string acr = 5 [json_name = "acr"];</code>
+     * @param value The acr to set.
+     * @return This builder for chaining.
+     */
+    public Builder setAcr(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      acr_ = value;
+      bitField0_ |= 0x00000010;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Assurance level the step-up token states (`aal2`); empty when no token.
+     * </pre>
+     *
+     * <code>string acr = 5 [json_name = "acr"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearAcr() {
+      acr_ = getDefaultInstance().getAcr();
+      bitField0_ = (bitField0_ & ~0x00000010);
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Assurance level the step-up token states (`aal2`); empty when no token.
+     * </pre>
+     *
+     * <code>string acr = 5 [json_name = "acr"];</code>
+     * @param value The bytes for acr to set.
+     * @return This builder for chaining.
+     */
+    public Builder setAcrBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      acr_ = value;
+      bitField0_ |= 0x00000010;
+      onChanged();
+      return this;
+    }
+
+    private com.google.protobuf.LazyStringArrayList amr_ =
+        com.google.protobuf.LazyStringArrayList.emptyList();
+    private void ensureAmrIsMutable() {
+      if (!amr_.isModifiable()) {
+        amr_ = new com.google.protobuf.LazyStringArrayList(amr_);
+      }
+      bitField0_ |= 0x00000020;
+    }
+    /**
+     * <pre>
+     * Authentication methods (RFC 8176) the step-up token states, e.g. `otp`,
+     * `sms`, `webauthn`; empty when no token.
+     * </pre>
+     *
+     * <code>repeated string amr = 6 [json_name = "amr"];</code>
+     * @return A list containing the amr.
+     */
+    public com.google.protobuf.ProtocolStringList
+        getAmrList() {
+      amr_.makeImmutable();
+      return amr_;
+    }
+    /**
+     * <pre>
+     * Authentication methods (RFC 8176) the step-up token states, e.g. `otp`,
+     * `sms`, `webauthn`; empty when no token.
+     * </pre>
+     *
+     * <code>repeated string amr = 6 [json_name = "amr"];</code>
+     * @return The count of amr.
+     */
+    public int getAmrCount() {
+      return amr_.size();
+    }
+    /**
+     * <pre>
+     * Authentication methods (RFC 8176) the step-up token states, e.g. `otp`,
+     * `sms`, `webauthn`; empty when no token.
+     * </pre>
+     *
+     * <code>repeated string amr = 6 [json_name = "amr"];</code>
+     * @param index The index of the element to return.
+     * @return The amr at the given index.
+     */
+    public java.lang.String getAmr(int index) {
+      return amr_.get(index);
+    }
+    /**
+     * <pre>
+     * Authentication methods (RFC 8176) the step-up token states, e.g. `otp`,
+     * `sms`, `webauthn`; empty when no token.
+     * </pre>
+     *
+     * <code>repeated string amr = 6 [json_name = "amr"];</code>
+     * @param index The index of the value to return.
+     * @return The bytes of the amr at the given index.
+     */
+    public com.google.protobuf.ByteString
+        getAmrBytes(int index) {
+      return amr_.getByteString(index);
+    }
+    /**
+     * <pre>
+     * Authentication methods (RFC 8176) the step-up token states, e.g. `otp`,
+     * `sms`, `webauthn`; empty when no token.
+     * </pre>
+     *
+     * <code>repeated string amr = 6 [json_name = "amr"];</code>
+     * @param index The index to set the value at.
+     * @param value The amr to set.
+     * @return This builder for chaining.
+     */
+    public Builder setAmr(
+        int index, java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      ensureAmrIsMutable();
+      amr_.set(index, value);
+      bitField0_ |= 0x00000020;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Authentication methods (RFC 8176) the step-up token states, e.g. `otp`,
+     * `sms`, `webauthn`; empty when no token.
+     * </pre>
+     *
+     * <code>repeated string amr = 6 [json_name = "amr"];</code>
+     * @param value The amr to add.
+     * @return This builder for chaining.
+     */
+    public Builder addAmr(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      ensureAmrIsMutable();
+      amr_.add(value);
+      bitField0_ |= 0x00000020;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Authentication methods (RFC 8176) the step-up token states, e.g. `otp`,
+     * `sms`, `webauthn`; empty when no token.
+     * </pre>
+     *
+     * <code>repeated string amr = 6 [json_name = "amr"];</code>
+     * @param values The amr to add.
+     * @return This builder for chaining.
+     */
+    public Builder addAllAmr(
+        java.lang.Iterable<java.lang.String> values) {
+      ensureAmrIsMutable();
+      com.google.protobuf.AbstractMessageLite.Builder.addAll(
+          values, amr_);
+      bitField0_ |= 0x00000020;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Authentication methods (RFC 8176) the step-up token states, e.g. `otp`,
+     * `sms`, `webauthn`; empty when no token.
+     * </pre>
+     *
+     * <code>repeated string amr = 6 [json_name = "amr"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearAmr() {
+      amr_ =
+        com.google.protobuf.LazyStringArrayList.emptyList();
+      bitField0_ = (bitField0_ & ~0x00000020);;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Authentication methods (RFC 8176) the step-up token states, e.g. `otp`,
+     * `sms`, `webauthn`; empty when no token.
+     * </pre>
+     *
+     * <code>repeated string amr = 6 [json_name = "amr"];</code>
+     * @param value The bytes of the amr to add.
+     * @return This builder for chaining.
+     */
+    public Builder addAmrBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      ensureAmrIsMutable();
+      amr_.add(value);
+      bitField0_ |= 0x00000020;
       onChanged();
       return this;
     }

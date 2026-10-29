@@ -94,6 +94,37 @@ class ValidateTokenResponse extends \Google\Protobuf\Internal\Message
      * Generated from protobuf field <code>string session_public_id = 16 [json_name = "sessionPublicId"];</code>
      */
     protected $session_public_id = '';
+    /**
+     * JWTs only. Assurance level the token states: `aal2` after a second factor
+     * or a passkey, else `aal1`. Empty for sessions, API keys and tokens minted
+     * before 0.6.6 by external issuers that omit it.
+     *
+     * Generated from protobuf field <code>string acr = 17 [json_name = "acr"];</code>
+     */
+    protected $acr = '';
+    /**
+     * JWTs only. How the user authenticated (RFC 8176 values such as `pwd`,
+     * `otp`, `sms`, plus `webauthn` for a passkey and `fed` for an OIDC
+     * provider). Empty for refreshed tokens: a refresh does not re-authenticate.
+     *
+     * Generated from protobuf field <code>repeated string amr = 18 [json_name = "amr"];</code>
+     */
+    private $amr;
+    /**
+     * JWTs only. Unix seconds when the user authenticated; 0 when the token
+     * does not say (refreshed tokens, API-key exchange, service accounts).
+     *
+     * Generated from protobuf field <code>int64 auth_time = 19 [json_name = "authTime"];</code>
+     */
+    protected $auth_time = 0;
+    /**
+     * Set only when `token` is a step-up token from VerifyMfaChallenge: the
+     * action it was minted for. Such a token carries no scopes; use
+     * CheckStepUp to enforce it.
+     *
+     * Generated from protobuf field <code>string step_up_action = 20 [json_name = "stepUpAction"];</code>
+     */
+    protected $step_up_action = '';
 
     /**
      * Constructor.
@@ -128,6 +159,21 @@ class ValidateTokenResponse extends \Google\Protobuf\Internal\Message
      *           (`sesspub_…`). Identical for the login token and every token refreshed from
      *           it, and equal to LoginResponse.session_public_id; empty for tokens not
      *           minted from a login session (API-key exchange, service accounts).
+     *     @type string $acr
+     *           JWTs only. Assurance level the token states: `aal2` after a second factor
+     *           or a passkey, else `aal1`. Empty for sessions, API keys and tokens minted
+     *           before 0.6.6 by external issuers that omit it.
+     *     @type string[] $amr
+     *           JWTs only. How the user authenticated (RFC 8176 values such as `pwd`,
+     *           `otp`, `sms`, plus `webauthn` for a passkey and `fed` for an OIDC
+     *           provider). Empty for refreshed tokens: a refresh does not re-authenticate.
+     *     @type int|string $auth_time
+     *           JWTs only. Unix seconds when the user authenticated; 0 when the token
+     *           does not say (refreshed tokens, API-key exchange, service accounts).
+     *     @type string $step_up_action
+     *           Set only when `token` is a step-up token from VerifyMfaChallenge: the
+     *           action it was minted for. Such a token carries no scopes; use
+     *           CheckStepUp to enforce it.
      * }
      */
     public function __construct($data = NULL) {
@@ -535,6 +581,124 @@ class ValidateTokenResponse extends \Google\Protobuf\Internal\Message
     {
         GPBUtil::checkString($var, True);
         $this->session_public_id = $var;
+
+        return $this;
+    }
+
+    /**
+     * JWTs only. Assurance level the token states: `aal2` after a second factor
+     * or a passkey, else `aal1`. Empty for sessions, API keys and tokens minted
+     * before 0.6.6 by external issuers that omit it.
+     *
+     * Generated from protobuf field <code>string acr = 17 [json_name = "acr"];</code>
+     * @return string
+     */
+    public function getAcr()
+    {
+        return $this->acr;
+    }
+
+    /**
+     * JWTs only. Assurance level the token states: `aal2` after a second factor
+     * or a passkey, else `aal1`. Empty for sessions, API keys and tokens minted
+     * before 0.6.6 by external issuers that omit it.
+     *
+     * Generated from protobuf field <code>string acr = 17 [json_name = "acr"];</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setAcr($var)
+    {
+        GPBUtil::checkString($var, True);
+        $this->acr = $var;
+
+        return $this;
+    }
+
+    /**
+     * JWTs only. How the user authenticated (RFC 8176 values such as `pwd`,
+     * `otp`, `sms`, plus `webauthn` for a passkey and `fed` for an OIDC
+     * provider). Empty for refreshed tokens: a refresh does not re-authenticate.
+     *
+     * Generated from protobuf field <code>repeated string amr = 18 [json_name = "amr"];</code>
+     * @return RepeatedField<string>
+     */
+    public function getAmr()
+    {
+        return $this->amr;
+    }
+
+    /**
+     * JWTs only. How the user authenticated (RFC 8176 values such as `pwd`,
+     * `otp`, `sms`, plus `webauthn` for a passkey and `fed` for an OIDC
+     * provider). Empty for refreshed tokens: a refresh does not re-authenticate.
+     *
+     * Generated from protobuf field <code>repeated string amr = 18 [json_name = "amr"];</code>
+     * @param string[] $var
+     * @return $this
+     */
+    public function setAmr($var)
+    {
+        $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::STRING);
+        $this->amr = $arr;
+
+        return $this;
+    }
+
+    /**
+     * JWTs only. Unix seconds when the user authenticated; 0 when the token
+     * does not say (refreshed tokens, API-key exchange, service accounts).
+     *
+     * Generated from protobuf field <code>int64 auth_time = 19 [json_name = "authTime"];</code>
+     * @return int|string
+     */
+    public function getAuthTime()
+    {
+        return $this->auth_time;
+    }
+
+    /**
+     * JWTs only. Unix seconds when the user authenticated; 0 when the token
+     * does not say (refreshed tokens, API-key exchange, service accounts).
+     *
+     * Generated from protobuf field <code>int64 auth_time = 19 [json_name = "authTime"];</code>
+     * @param int|string $var
+     * @return $this
+     */
+    public function setAuthTime($var)
+    {
+        GPBUtil::checkInt64($var);
+        $this->auth_time = $var;
+
+        return $this;
+    }
+
+    /**
+     * Set only when `token` is a step-up token from VerifyMfaChallenge: the
+     * action it was minted for. Such a token carries no scopes; use
+     * CheckStepUp to enforce it.
+     *
+     * Generated from protobuf field <code>string step_up_action = 20 [json_name = "stepUpAction"];</code>
+     * @return string
+     */
+    public function getStepUpAction()
+    {
+        return $this->step_up_action;
+    }
+
+    /**
+     * Set only when `token` is a step-up token from VerifyMfaChallenge: the
+     * action it was minted for. Such a token carries no scopes; use
+     * CheckStepUp to enforce it.
+     *
+     * Generated from protobuf field <code>string step_up_action = 20 [json_name = "stepUpAction"];</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setStepUpAction($var)
+    {
+        GPBUtil::checkString($var, True);
+        $this->step_up_action = $var;
 
         return $this;
     }

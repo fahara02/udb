@@ -100,7 +100,7 @@ private static final long serialVersionUID = 0L;
    * <pre>
    * Machine code such as RESOURCE_CREATED, SLA_BREACH_WARNING, REVIEW_ASSIGNED.
    * Partial unique indexes above permit one project-global default and one
-   * per-tenant override for the same event/channel in each exact project.
+   * per-tenant override for the same event/channel/locale in each exact project.
    * </pre>
    *
    * <code>string event_type = 2 [json_name = "eventType", (.udb.core.common.v1.pg_column) = { ... }</code>
@@ -123,7 +123,7 @@ private static final long serialVersionUID = 0L;
    * <pre>
    * Machine code such as RESOURCE_CREATED, SLA_BREACH_WARNING, REVIEW_ASSIGNED.
    * Partial unique indexes above permit one project-global default and one
-   * per-tenant override for the same event/channel in each exact project.
+   * per-tenant override for the same event/channel/locale in each exact project.
    * </pre>
    *
    * <code>string event_type = 2 [json_name = "eventType", (.udb.core.common.v1.pg_column) = { ... }</code>
@@ -1272,7 +1272,7 @@ private static final long serialVersionUID = 0L;
      * <pre>
      * Machine code such as RESOURCE_CREATED, SLA_BREACH_WARNING, REVIEW_ASSIGNED.
      * Partial unique indexes above permit one project-global default and one
-     * per-tenant override for the same event/channel in each exact project.
+     * per-tenant override for the same event/channel/locale in each exact project.
      * </pre>
      *
      * <code>string event_type = 2 [json_name = "eventType", (.udb.core.common.v1.pg_column) = { ... }</code>
@@ -1294,7 +1294,7 @@ private static final long serialVersionUID = 0L;
      * <pre>
      * Machine code such as RESOURCE_CREATED, SLA_BREACH_WARNING, REVIEW_ASSIGNED.
      * Partial unique indexes above permit one project-global default and one
-     * per-tenant override for the same event/channel in each exact project.
+     * per-tenant override for the same event/channel/locale in each exact project.
      * </pre>
      *
      * <code>string event_type = 2 [json_name = "eventType", (.udb.core.common.v1.pg_column) = { ... }</code>
@@ -1317,7 +1317,7 @@ private static final long serialVersionUID = 0L;
      * <pre>
      * Machine code such as RESOURCE_CREATED, SLA_BREACH_WARNING, REVIEW_ASSIGNED.
      * Partial unique indexes above permit one project-global default and one
-     * per-tenant override for the same event/channel in each exact project.
+     * per-tenant override for the same event/channel/locale in each exact project.
      * </pre>
      *
      * <code>string event_type = 2 [json_name = "eventType", (.udb.core.common.v1.pg_column) = { ... }</code>
@@ -1336,7 +1336,7 @@ private static final long serialVersionUID = 0L;
      * <pre>
      * Machine code such as RESOURCE_CREATED, SLA_BREACH_WARNING, REVIEW_ASSIGNED.
      * Partial unique indexes above permit one project-global default and one
-     * per-tenant override for the same event/channel in each exact project.
+     * per-tenant override for the same event/channel/locale in each exact project.
      * </pre>
      *
      * <code>string event_type = 2 [json_name = "eventType", (.udb.core.common.v1.pg_column) = { ... }</code>
@@ -1352,7 +1352,7 @@ private static final long serialVersionUID = 0L;
      * <pre>
      * Machine code such as RESOURCE_CREATED, SLA_BREACH_WARNING, REVIEW_ASSIGNED.
      * Partial unique indexes above permit one project-global default and one
-     * per-tenant override for the same event/channel in each exact project.
+     * per-tenant override for the same event/channel/locale in each exact project.
      * </pre>
      *
      * <code>string event_type = 2 [json_name = "eventType", (.udb.core.common.v1.pg_column) = { ... }</code>

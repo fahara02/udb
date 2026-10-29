@@ -50,6 +50,10 @@ public interface FinishWebAuthnAuthenticationResponseOrBuilder extends
       getAccessTokenBytes();
 
   /**
+   * <pre>
+   * when access_token expires (unix seconds)
+   * </pre>
+   *
    * <code>int64 expires_at_unix = 4 [json_name = "expiresAtUnix"];</code>
    * @return The expiresAtUnix.
    */
@@ -66,4 +70,128 @@ public interface FinishWebAuthnAuthenticationResponseOrBuilder extends
    */
   com.google.protobuf.ByteString
       getCredentialIdBytes();
+
+  /**
+   * <pre>
+   * A passkey sign-in returns the same credentials as Login (fields below).
+   * Rotating refresh token (rt_&lt;family&gt;.&lt;jti&gt;) for RefreshToken; empty for
+   * service accounts.
+   * </pre>
+   *
+   * <code>string refresh_token = 6 [json_name = "refreshToken"];</code>
+   * @return The refreshToken.
+   */
+  java.lang.String getRefreshToken();
+  /**
+   * <pre>
+   * A passkey sign-in returns the same credentials as Login (fields below).
+   * Rotating refresh token (rt_&lt;family&gt;.&lt;jti&gt;) for RefreshToken; empty for
+   * service accounts.
+   * </pre>
+   *
+   * <code>string refresh_token = 6 [json_name = "refreshToken"];</code>
+   * @return The bytes for refreshToken.
+   */
+  com.google.protobuf.ByteString
+      getRefreshTokenBytes();
+
+  /**
+   * <pre>
+   * seconds
+   * </pre>
+   *
+   * <code>int32 access_token_expires_in = 7 [json_name = "accessTokenExpiresIn"];</code>
+   * @return The accessTokenExpiresIn.
+   */
+  int getAccessTokenExpiresIn();
+
+  /**
+   * <pre>
+   * absolute lifetime of refresh_token, seconds
+   * </pre>
+   *
+   * <code>int32 refresh_token_expires_in = 8 [json_name = "refreshTokenExpiresIn"];</code>
+   * @return The refreshTokenExpiresIn.
+   */
+  int getRefreshTokenExpiresIn();
+
+  /**
+   * <pre>
+   * server-side session handle (WEB: set as an HttpOnly cookie)
+   * </pre>
+   *
+   * <code>string session_token = 9 [json_name = "sessionToken"];</code>
+   * @return The sessionToken.
+   */
+  java.lang.String getSessionToken();
+  /**
+   * <pre>
+   * server-side session handle (WEB: set as an HttpOnly cookie)
+   * </pre>
+   *
+   * <code>string session_token = 9 [json_name = "sessionToken"];</code>
+   * @return The bytes for sessionToken.
+   */
+  com.google.protobuf.ByteString
+      getSessionTokenBytes();
+
+  /**
+   * <pre>
+   * double-submit CSRF token bound to this session
+   * </pre>
+   *
+   * <code>string csrf_token = 10 [json_name = "csrfToken"];</code>
+   * @return The csrfToken.
+   */
+  java.lang.String getCsrfToken();
+  /**
+   * <pre>
+   * double-submit CSRF token bound to this session
+   * </pre>
+   *
+   * <code>string csrf_token = 10 [json_name = "csrfToken"];</code>
+   * @return The bytes for csrfToken.
+   */
+  com.google.protobuf.ByteString
+      getCsrfTokenBytes();
+
+  /**
+   * <pre>
+   * Stable non-secret session id (`sesspub_…`), as Login / ValidateToken report it.
+   * </pre>
+   *
+   * <code>string session_public_id = 11 [json_name = "sessionPublicId"];</code>
+   * @return The sessionPublicId.
+   */
+  java.lang.String getSessionPublicId();
+  /**
+   * <pre>
+   * Stable non-secret session id (`sesspub_…`), as Login / ValidateToken report it.
+   * </pre>
+   *
+   * <code>string session_public_id = 11 [json_name = "sessionPublicId"];</code>
+   * @return The bytes for sessionPublicId.
+   */
+  com.google.protobuf.ByteString
+      getSessionPublicIdBytes();
+
+  /**
+   * <pre>
+   * The signed-in user (on a usernameless sign-in, the user the passkey belongs to).
+   * </pre>
+   *
+   * <code>string user_id = 12 [json_name = "userId"];</code>
+   * @return The userId.
+   */
+  java.lang.String getUserId();
+  /**
+   * <pre>
+   * The signed-in user (on a usernameless sign-in, the user the passkey belongs to).
+   * </pre>
+   *
+   * <code>string user_id = 12 [json_name = "userId"];</code>
+   * @return The bytes for userId.
+   */
+  com.google.protobuf.ByteString
+      getUserIdBytes();
 }

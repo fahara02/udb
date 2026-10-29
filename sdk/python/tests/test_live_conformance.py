@@ -2586,6 +2586,30 @@ MEMBERSHIP_FIXTURE_KEYS = (
     "membership_exchange_project_id",
 )
 
+#: The 0.6.6 identity-flow bench-body fixtures (tenant auth policy, passwordless
+#: sign-in, invitations, step-up, OIDC) `scripts/prepare-benchmark-fixtures.py`
+#: provisions (same list in every harness): single-use codes, invitation accept
+#: tokens and a step-up token for disposable targets, never a password or an
+#: access/refresh token.
+IDENTITY_FIXTURE_KEYS = (
+    "login_otp_send_phone",
+    "login_otp_id",
+    "login_otp_code",
+    "invitation_get_id",
+    "invitation_get_token",
+    "invitation_start_id",
+    "invitation_start_token",
+    "invitation_accept_id",
+    "invitation_accept_token",
+    "invitation_accept_otp_id",
+    "invitation_accept_otp_code",
+    "invitation_revoke_id",
+    "invitation_resend_id",
+    "step_up_token",
+    "oidc_provider_id",
+    "oidc_state",
+)
+
 
 def perf_seed(
     clients: dict,
@@ -2626,6 +2650,12 @@ def perf_seed(
         # Per-tenant service-account membership fixtures; absent when the
         # benchmark broker predates tenant memberships (0.6.4).
         for key in MEMBERSHIP_FIXTURE_KEYS:
+            value = prepared.get("fixtures", {}).get(key)
+            if isinstance(value, str) and value:
+                fix.set(key, value)
+        # 0.6.6 identity-flow fixtures; absent when the benchmark broker
+        # predates them or (OIDC only) runs without UDB_OIDC_TEST_MODE.
+        for key in IDENTITY_FIXTURE_KEYS:
             value = prepared.get("fixtures", {}).get(key)
             if isinstance(value, str) and value:
                 fix.set(key, value)
@@ -4505,7 +4535,11 @@ def assert_explicit_perf_body_coverage() -> None:
 
 assert_explicit_perf_body_coverage()
 
-AUTH_FIRST_PERF = ["Login", "RefreshToken", "RefreshSession", "Authenticate", "ValidateToken", "IntrospectToken", "GetJwks"]
+# The 0.6.6 sign-ins redeem single-use prepared proofs (a 10-minute login code,
+# OIDC state and invitation code) right after session setup. Each signs a
+# DIFFERENT account in; the benchmark bearer is kept.
+AUTH_FIRST_PERF = ["Login", "RefreshToken", "RefreshSession", "Authenticate", "ValidateToken", "IntrospectToken", "GetJwks",
+                   "LoginWithOtp", "FinishOidcLogin", "LoginWithOidcIdToken", "AcceptInvitation"]
 AUTH_FIRST_PERF_INDEX = {name: idx for idx, name in enumerate(AUTH_FIRST_PERF)}
 AUTH_LAST_PERF = {
     "Logout", "RevokeSession", "RevokeDevice", "DisableMfaFactor", "RevokeRecoveryCodes",

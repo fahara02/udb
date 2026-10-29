@@ -39,6 +39,7 @@ mod mappings;
 pub(crate) mod memberships;
 // Policy as code: `udb policy diff|apply` reconciles one tenant's policies.
 mod policy_reconcile;
+pub(crate) mod role_bindings;
 pub use policy_reconcile::{
     PolicyReconcileReport, normalize_declared_policies, reconcile_authz_policies_offline,
 };
@@ -819,7 +820,7 @@ pub(crate) const DEFAULT_TENANT_CODE: &str = "acme";
 /// Predictable, FIXED uuid of the DEFAULT tenant — NEVER random, so a zero-config
 /// bootstrap always lands on the same well-known id (same convention as
 /// [`SYSTEM_ORG_OWNER_ROLE_ID`]). Only the DEFAULT tenant is predictable; every
-/// real tenant minted via [`ensure_tenant`] / `CreateTenant` gets an unguessable
+/// real tenant minted via [`ensure_tenant_reporting`] / `CreateTenant` gets an unguessable
 /// random v4 id so one customer can never guess another's. Override:
 /// `UDB_DEFAULT_TENANT_ID`.
 pub(crate) const DEFAULT_TENANT_ID: &str = "00000000-0000-0000-0000-0000000d0001";
@@ -851,19 +852,10 @@ pub(crate) fn default_tenant_id() -> String {
 ///   and a loud warning is logged (so nobody ships production on the shared dev
 ///   tenant by accident).
 /// - Any other code → reuse the existing row's id if present, else mint a random v4.
-pub(crate) async fn ensure_tenant(
-    pool: &sqlx::PgPool,
-    tenant_in: &str,
-    name: Option<&str>,
-) -> Result<String, String> {
-    ensure_tenant_reporting(pool, tenant_in, name)
-        .await
-        .map(|(tenant_id, _)| tenant_id)
-}
-
-/// [`ensure_tenant`], also reporting whether THIS call created the tenant row
-/// (`false` when it already existed or a concurrent writer created it), so the
-/// offline bootstrap can say when an identifier it was given did not exist.
+///
+/// Returns the canonical id and whether THIS call created the row (`false` when
+/// it already existed or a concurrent writer created it), so the offline
+/// bootstrap can say when an identifier it was given did not exist.
 pub(crate) async fn ensure_tenant_reporting(
     pool: &sqlx::PgPool,
     tenant_in: &str,

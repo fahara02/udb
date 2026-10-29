@@ -45,7 +45,7 @@ public final class IdentityProviderProto {
       "/protobuf/timestamp.proto\032\"udb/core/idp/" +
       "entity/v1/enums.proto\032\033udb/core/common/v" +
       "1/db.proto\032!udb/core/common/v1/security." +
-      "proto\"\367\035\n\020IdentityProvider\022O\n\013provider_i" +
+      "proto\"\206\037\n\020IdentityProvider\022O\n\013provider_i" +
       "d\030\001 \001(\tB.\202\267\030*\n\013provider_id\022\004UUID\030\001(\001:\021ge" +
       "n_random_uuid()R\nproviderId\022j\n\ttenant_id" +
       "\030\002 \001(\tBM\202\267\030I\n\ttenant_id\022\014VARCHAR(120)\030\001R" +
@@ -128,26 +128,29 @@ public final class IdentityProviderProto {
       "datedAt\022o\n\ndeleted_at\030\033 \001(\0132\032.google.pro" +
       "tobuf.TimestampB4\202\267\0300\n\ndeleted_at\022\013TIMES" +
       "TAMPTZZ\025Soft-delete timestampR\tdeletedAt" +
-      ":\204\004\372\266\030\343\002\n\022identity_providers\022\007udb_idp\030\n " +
-      "\001*GTenant-scoped enterprise identity pro" +
-      "viders (OIDC/SAML/LDAP/custom JWT)0\0018\001@\001" +
-      "b^\n\020tenant_isolation\032H(tenant_id::text =" +
-      " current_setting(\'app.current_tenant_id\'" +
-      ", true)::text)(\001\212\001Y\n!uq_identity_provide" +
-      "rs_tenant_name\022\005BTREE\030\001:\022deleted_at IS N" +
-      "ULLZ\ttenant_idZ\014display_name\352\001\007primary\362\001" +
-      "\025udb.idp.providers.cdc\372\001\022idp:providers:r" +
-      "ead\212\262\031\227\001\n\006tenant\032\ttenant_id*4tenant_id =" +
-      " current_setting(\'app.current_tenant_id\'" +
-      ")2\013soft_delete:\021idp.configuration@\373\023H\002R\006" +
-      "tenantZ\010standardr\025tenant.data_residencyB" +
-      "\364\001\n\032com.udb.core.idp.entity.v1B\025Identity" +
-      "ProviderProtoP\001ZBgithub.com/fahara02/udb" +
-      "/sdk/go/gen/udb/core/idp/entity/v1;entit" +
-      "yv1\242\002\004UCIE\252\002\026Udb.Core.Idp.Entity.V1\312\002\026Ud" +
-      "b\\Core\\Idp\\Entity\\V1\342\002\"Udb\\GPBMetadata\\C" +
-      "ore\\Idp\\Entity\\V1\352\002\032Udb::Core::Idp::Enti" +
-      "ty::V1b\006proto3"
+      "\022\214\001\n\022redirect_uris_json\030\034 \001(\tB^\202\267\030Z\n\022red" +
+      "irect_uris_json\022\005JSONB\030\001:\013\'[]\'::jsonbZ,A" +
+      "llowlisted OIDC redirect URIs (exact mat" +
+      "ch)x\001R\020redirectUrisJson:\204\004\372\266\030\343\002\n\022identit" +
+      "y_providers\022\007udb_idp\030\n \001*GTenant-scoped " +
+      "enterprise identity providers (OIDC/SAML" +
+      "/LDAP/custom JWT)0\0018\001@\001b^\n\020tenant_isolat" +
+      "ion\032H(tenant_id::text = current_setting(" +
+      "\'app.current_tenant_id\', true)::text)(\001\212" +
+      "\001Y\n!uq_identity_providers_tenant_name\022\005B" +
+      "TREE\030\001:\022deleted_at IS NULLZ\ttenant_idZ\014d" +
+      "isplay_name\352\001\007primary\362\001\025udb.idp.provider" +
+      "s.cdc\372\001\022idp:providers:read\212\262\031\227\001\n\006tenant\032" +
+      "\ttenant_id*4tenant_id = current_setting(" +
+      "\'app.current_tenant_id\')2\013soft_delete:\021i" +
+      "dp.configuration@\373\023H\002R\006tenantZ\010standardr" +
+      "\025tenant.data_residencyB\364\001\n\032com.udb.core." +
+      "idp.entity.v1B\025IdentityProviderProtoP\001ZB" +
+      "github.com/fahara02/udb/sdk/go/gen/udb/c" +
+      "ore/idp/entity/v1;entityv1\242\002\004UCIE\252\002\026Udb." +
+      "Core.Idp.Entity.V1\312\002\026Udb\\Core\\Idp\\Entity" +
+      "\\V1\342\002\"Udb\\GPBMetadata\\Core\\Idp\\Entity\\V1" +
+      "\352\002\032Udb::Core::Idp::Entity::V1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -162,7 +165,7 @@ public final class IdentityProviderProto {
     internal_static_udb_core_idp_entity_v1_IdentityProvider_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_core_idp_entity_v1_IdentityProvider_descriptor,
-        new java.lang.String[] { "ProviderId", "TenantId", "Kind", "DisplayName", "Issuer", "EntityId", "JwksUrl", "SamlMetadataUrl", "ClientIdsJson", "AudiencesJson", "ClaimMappingJson", "GroupMappingJson", "JitPolicyJson", "AccountLinkingPolicy", "Enabled", "ClientSecret", "SamlSigningKeyPem", "SamlIdpCertsJson", "SamlSsoUrl", "Health", "LastJwksRefreshAt", "LastJwksRefreshStatus", "CreatedBy", "UpdatedBy", "CreatedAt", "UpdatedAt", "DeletedAt", });
+        new java.lang.String[] { "ProviderId", "TenantId", "Kind", "DisplayName", "Issuer", "EntityId", "JwksUrl", "SamlMetadataUrl", "ClientIdsJson", "AudiencesJson", "ClaimMappingJson", "GroupMappingJson", "JitPolicyJson", "AccountLinkingPolicy", "Enabled", "ClientSecret", "SamlSigningKeyPem", "SamlIdpCertsJson", "SamlSsoUrl", "Health", "LastJwksRefreshAt", "LastJwksRefreshStatus", "CreatedBy", "UpdatedBy", "CreatedAt", "UpdatedAt", "DeletedAt", "RedirectUrisJson", });
     descriptor.resolveAllFeaturesImmutable();
     com.google.protobuf.TimestampProto.getDescriptor();
     com.udb.core.idp.entity.v1.EnumsProto.getDescriptor();

@@ -82,6 +82,22 @@ class LoginRequest extends \Google\Protobuf\Internal\Message
      * Generated from protobuf field <code>string recovery_code = 13 [json_name = "recoveryCode"];</code>
      */
     protected $recovery_code = '';
+    /**
+     * Passkey second factor (alternative to totp_code / mfa_otp_id / recovery_code).
+     * After a Login answered mfa_required=true, call StartWebAuthnAuthentication with
+     * the returned user_id, sign the options with the user's passkey, then re-call
+     * Login with username + password + these two fields. The challenge must have been
+     * issued for this same user and is single use.
+     *
+     * Generated from protobuf field <code>string webauthn_challenge_id = 14 [json_name = "webauthnChallengeId"];</code>
+     */
+    protected $webauthn_challenge_id = '';
+    /**
+     * the PublicKeyCredential assertion JSON from navigator.credentials.get()
+     *
+     * Generated from protobuf field <code>string webauthn_assertion_json = 15 [json_name = "webauthnAssertionJson"];</code>
+     */
+    protected $webauthn_assertion_json = '';
 
     /**
      * Constructor.
@@ -112,6 +128,14 @@ class LoginRequest extends \Google\Protobuf\Internal\Message
      *     @type string $access_surface
      *     @type string $recovery_code
      *           single-use MFA recovery/backup code (alternative second factor)
+     *     @type string $webauthn_challenge_id
+     *           Passkey second factor (alternative to totp_code / mfa_otp_id / recovery_code).
+     *           After a Login answered mfa_required=true, call StartWebAuthnAuthentication with
+     *           the returned user_id, sign the options with the user's passkey, then re-call
+     *           Login with username + password + these two fields. The challenge must have been
+     *           issued for this same user and is single use.
+     *     @type string $webauthn_assertion_json
+     *           the PublicKeyCredential assertion JSON from navigator.credentials.get()
      * }
      */
     public function __construct($data = NULL) {
@@ -433,6 +457,66 @@ class LoginRequest extends \Google\Protobuf\Internal\Message
     {
         GPBUtil::checkString($var, True);
         $this->recovery_code = $var;
+
+        return $this;
+    }
+
+    /**
+     * Passkey second factor (alternative to totp_code / mfa_otp_id / recovery_code).
+     * After a Login answered mfa_required=true, call StartWebAuthnAuthentication with
+     * the returned user_id, sign the options with the user's passkey, then re-call
+     * Login with username + password + these two fields. The challenge must have been
+     * issued for this same user and is single use.
+     *
+     * Generated from protobuf field <code>string webauthn_challenge_id = 14 [json_name = "webauthnChallengeId"];</code>
+     * @return string
+     */
+    public function getWebauthnChallengeId()
+    {
+        return $this->webauthn_challenge_id;
+    }
+
+    /**
+     * Passkey second factor (alternative to totp_code / mfa_otp_id / recovery_code).
+     * After a Login answered mfa_required=true, call StartWebAuthnAuthentication with
+     * the returned user_id, sign the options with the user's passkey, then re-call
+     * Login with username + password + these two fields. The challenge must have been
+     * issued for this same user and is single use.
+     *
+     * Generated from protobuf field <code>string webauthn_challenge_id = 14 [json_name = "webauthnChallengeId"];</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setWebauthnChallengeId($var)
+    {
+        GPBUtil::checkString($var, True);
+        $this->webauthn_challenge_id = $var;
+
+        return $this;
+    }
+
+    /**
+     * the PublicKeyCredential assertion JSON from navigator.credentials.get()
+     *
+     * Generated from protobuf field <code>string webauthn_assertion_json = 15 [json_name = "webauthnAssertionJson"];</code>
+     * @return string
+     */
+    public function getWebauthnAssertionJson()
+    {
+        return $this->webauthn_assertion_json;
+    }
+
+    /**
+     * the PublicKeyCredential assertion JSON from navigator.credentials.get()
+     *
+     * Generated from protobuf field <code>string webauthn_assertion_json = 15 [json_name = "webauthnAssertionJson"];</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setWebauthnAssertionJson($var)
+    {
+        GPBUtil::checkString($var, True);
+        $this->webauthn_assertion_json = $var;
 
         return $this;
     }

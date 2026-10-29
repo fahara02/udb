@@ -85,6 +85,13 @@ class CreateUserRequest extends \Google\Protobuf\Internal\Message
      * Generated from protobuf field <code>string phone = 13 [json_name = "phone"];</code>
      */
     protected $phone = '';
+    /**
+     * The language of this account's messages (auth codes, magic links), as a
+     * BCP 47 tag such as `bn` or `en-US`; empty = English.
+     *
+     * Generated from protobuf field <code>string locale = 14 [json_name = "locale"];</code>
+     */
+    protected $locale = '';
 
     /**
      * Constructor.
@@ -120,6 +127,9 @@ class CreateUserRequest extends \Google\Protobuf\Internal\Message
      *           CreateUser is refused (FAILED_PRECONDITION, `sms_delivery_unavailable`)
      *           unless SMS can be delivered: a NotificationService with SMS templates or
      *           UDB_OTP_DELIVERY_WEBHOOK_URL. With both, the phone is stored unverified.
+     *     @type string $locale
+     *           The language of this account's messages (auth codes, magic links), as a
+     *           BCP 47 tag such as `bn` or `en-US`; empty = English.
      * }
      */
     public function __construct($data = NULL) {
@@ -457,6 +467,34 @@ class CreateUserRequest extends \Google\Protobuf\Internal\Message
     {
         GPBUtil::checkString($var, True);
         $this->phone = $var;
+
+        return $this;
+    }
+
+    /**
+     * The language of this account's messages (auth codes, magic links), as a
+     * BCP 47 tag such as `bn` or `en-US`; empty = English.
+     *
+     * Generated from protobuf field <code>string locale = 14 [json_name = "locale"];</code>
+     * @return string
+     */
+    public function getLocale()
+    {
+        return $this->locale;
+    }
+
+    /**
+     * The language of this account's messages (auth codes, magic links), as a
+     * BCP 47 tag such as `bn` or `en-US`; empty = English.
+     *
+     * Generated from protobuf field <code>string locale = 14 [json_name = "locale"];</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setLocale($var)
+    {
+        GPBUtil::checkString($var, True);
+        $this->locale = $var;
 
         return $this;
     }

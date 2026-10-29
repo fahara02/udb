@@ -64,6 +64,7 @@ private static final long serialVersionUID = 0L;
     lastJwksRefreshStatus_ = "";
     createdBy_ = "";
     updatedBy_ = "";
+    redirectUrisJson_ = "";
   }
 
   public static final com.google.protobuf.Descriptors.Descriptor
@@ -1131,6 +1132,65 @@ private static final long serialVersionUID = 0L;
     return deletedAt_ == null ? com.google.protobuf.Timestamp.getDefaultInstance() : deletedAt_;
   }
 
+  public static final int REDIRECT_URIS_JSON_FIELD_NUMBER = 28;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object redirectUrisJson_ = "";
+  /**
+   * <pre>
+   * ── OIDC sign-in (0.6.6) ──────────────────────────────────────────────────
+   * JSON array of the exact redirect URIs StartOidcLogin accepts for this
+   * provider (OAuth 2.0 exact-match; no wildcards). Each is https, an http
+   * loopback URI (http://127.0.0.1:&lt;port&gt;/..., native apps, RFC 8252), or a
+   * private-use scheme containing a dot (com.example.app:/callback). Empty =
+   * browser/redirect sign-in is off for this provider; LoginWithOidcIdToken
+   * does not use redirects and is unaffected.
+   * </pre>
+   *
+   * <code>string redirect_uris_json = 28 [json_name = "redirectUrisJson", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The redirectUrisJson.
+   */
+  @java.lang.Override
+  public java.lang.String getRedirectUrisJson() {
+    java.lang.Object ref = redirectUrisJson_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs =
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      redirectUrisJson_ = s;
+      return s;
+    }
+  }
+  /**
+   * <pre>
+   * ── OIDC sign-in (0.6.6) ──────────────────────────────────────────────────
+   * JSON array of the exact redirect URIs StartOidcLogin accepts for this
+   * provider (OAuth 2.0 exact-match; no wildcards). Each is https, an http
+   * loopback URI (http://127.0.0.1:&lt;port&gt;/..., native apps, RFC 8252), or a
+   * private-use scheme containing a dot (com.example.app:/callback). Empty =
+   * browser/redirect sign-in is off for this provider; LoginWithOidcIdToken
+   * does not use redirects and is unaffected.
+   * </pre>
+   *
+   * <code>string redirect_uris_json = 28 [json_name = "redirectUrisJson", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The bytes for redirectUrisJson.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getRedirectUrisJsonBytes() {
+    java.lang.Object ref = redirectUrisJson_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b =
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      redirectUrisJson_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -1225,6 +1285,9 @@ private static final long serialVersionUID = 0L;
     }
     if (((bitField0_ & 0x00000008) != 0)) {
       output.writeMessage(27, getDeletedAt());
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(redirectUrisJson_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 28, redirectUrisJson_);
     }
     getUnknownFields().writeTo(output);
   }
@@ -1323,6 +1386,9 @@ private static final long serialVersionUID = 0L;
       size += com.google.protobuf.CodedOutputStream
         .computeMessageSize(27, getDeletedAt());
     }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(redirectUrisJson_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(28, redirectUrisJson_);
+    }
     size += getUnknownFields().getSerializedSize();
     memoizedSize = size;
     return size;
@@ -1402,6 +1468,8 @@ private static final long serialVersionUID = 0L;
       if (!getDeletedAt()
           .equals(other.getDeletedAt())) return false;
     }
+    if (!getRedirectUrisJson()
+        .equals(other.getRedirectUrisJson())) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -1476,6 +1544,8 @@ private static final long serialVersionUID = 0L;
       hash = (37 * hash) + DELETED_AT_FIELD_NUMBER;
       hash = (53 * hash) + getDeletedAt().hashCode();
     }
+    hash = (37 * hash) + REDIRECT_URIS_JSON_FIELD_NUMBER;
+    hash = (53 * hash) + getRedirectUrisJson().hashCode();
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -1673,6 +1743,7 @@ private static final long serialVersionUID = 0L;
         deletedAtBuilder_.dispose();
         deletedAtBuilder_ = null;
       }
+      redirectUrisJson_ = "";
       return this;
     }
 
@@ -1799,6 +1870,9 @@ private static final long serialVersionUID = 0L;
             ? deletedAt_
             : deletedAtBuilder_.build();
         to_bitField0_ |= 0x00000008;
+      }
+      if (((from_bitField0_ & 0x08000000) != 0)) {
+        result.redirectUrisJson_ = redirectUrisJson_;
       }
       result.bitField0_ |= to_bitField0_;
     }
@@ -1935,6 +2009,11 @@ private static final long serialVersionUID = 0L;
       }
       if (other.hasDeletedAt()) {
         mergeDeletedAt(other.getDeletedAt());
+      }
+      if (!other.getRedirectUrisJson().isEmpty()) {
+        redirectUrisJson_ = other.redirectUrisJson_;
+        bitField0_ |= 0x08000000;
+        onChanged();
       }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
@@ -2105,6 +2184,11 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x04000000;
               break;
             } // case 218
+            case 226: {
+              redirectUrisJson_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x08000000;
+              break;
+            } // case 226
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -4478,6 +4562,128 @@ private static final long serialVersionUID = 0L;
         deletedAt_ = null;
       }
       return deletedAtBuilder_;
+    }
+
+    private java.lang.Object redirectUrisJson_ = "";
+    /**
+     * <pre>
+     * ── OIDC sign-in (0.6.6) ──────────────────────────────────────────────────
+     * JSON array of the exact redirect URIs StartOidcLogin accepts for this
+     * provider (OAuth 2.0 exact-match; no wildcards). Each is https, an http
+     * loopback URI (http://127.0.0.1:&lt;port&gt;/..., native apps, RFC 8252), or a
+     * private-use scheme containing a dot (com.example.app:/callback). Empty =
+     * browser/redirect sign-in is off for this provider; LoginWithOidcIdToken
+     * does not use redirects and is unaffected.
+     * </pre>
+     *
+     * <code>string redirect_uris_json = 28 [json_name = "redirectUrisJson", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @return The redirectUrisJson.
+     */
+    public java.lang.String getRedirectUrisJson() {
+      java.lang.Object ref = redirectUrisJson_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        redirectUrisJson_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <pre>
+     * ── OIDC sign-in (0.6.6) ──────────────────────────────────────────────────
+     * JSON array of the exact redirect URIs StartOidcLogin accepts for this
+     * provider (OAuth 2.0 exact-match; no wildcards). Each is https, an http
+     * loopback URI (http://127.0.0.1:&lt;port&gt;/..., native apps, RFC 8252), or a
+     * private-use scheme containing a dot (com.example.app:/callback). Empty =
+     * browser/redirect sign-in is off for this provider; LoginWithOidcIdToken
+     * does not use redirects and is unaffected.
+     * </pre>
+     *
+     * <code>string redirect_uris_json = 28 [json_name = "redirectUrisJson", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @return The bytes for redirectUrisJson.
+     */
+    public com.google.protobuf.ByteString
+        getRedirectUrisJsonBytes() {
+      java.lang.Object ref = redirectUrisJson_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b =
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        redirectUrisJson_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <pre>
+     * ── OIDC sign-in (0.6.6) ──────────────────────────────────────────────────
+     * JSON array of the exact redirect URIs StartOidcLogin accepts for this
+     * provider (OAuth 2.0 exact-match; no wildcards). Each is https, an http
+     * loopback URI (http://127.0.0.1:&lt;port&gt;/..., native apps, RFC 8252), or a
+     * private-use scheme containing a dot (com.example.app:/callback). Empty =
+     * browser/redirect sign-in is off for this provider; LoginWithOidcIdToken
+     * does not use redirects and is unaffected.
+     * </pre>
+     *
+     * <code>string redirect_uris_json = 28 [json_name = "redirectUrisJson", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @param value The redirectUrisJson to set.
+     * @return This builder for chaining.
+     */
+    public Builder setRedirectUrisJson(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      redirectUrisJson_ = value;
+      bitField0_ |= 0x08000000;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * ── OIDC sign-in (0.6.6) ──────────────────────────────────────────────────
+     * JSON array of the exact redirect URIs StartOidcLogin accepts for this
+     * provider (OAuth 2.0 exact-match; no wildcards). Each is https, an http
+     * loopback URI (http://127.0.0.1:&lt;port&gt;/..., native apps, RFC 8252), or a
+     * private-use scheme containing a dot (com.example.app:/callback). Empty =
+     * browser/redirect sign-in is off for this provider; LoginWithOidcIdToken
+     * does not use redirects and is unaffected.
+     * </pre>
+     *
+     * <code>string redirect_uris_json = 28 [json_name = "redirectUrisJson", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearRedirectUrisJson() {
+      redirectUrisJson_ = getDefaultInstance().getRedirectUrisJson();
+      bitField0_ = (bitField0_ & ~0x08000000);
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * ── OIDC sign-in (0.6.6) ──────────────────────────────────────────────────
+     * JSON array of the exact redirect URIs StartOidcLogin accepts for this
+     * provider (OAuth 2.0 exact-match; no wildcards). Each is https, an http
+     * loopback URI (http://127.0.0.1:&lt;port&gt;/..., native apps, RFC 8252), or a
+     * private-use scheme containing a dot (com.example.app:/callback). Empty =
+     * browser/redirect sign-in is off for this provider; LoginWithOidcIdToken
+     * does not use redirects and is unaffected.
+     * </pre>
+     *
+     * <code>string redirect_uris_json = 28 [json_name = "redirectUrisJson", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @param value The bytes for redirectUrisJson to set.
+     * @return This builder for chaining.
+     */
+    public Builder setRedirectUrisJsonBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      redirectUrisJson_ = value;
+      bitField0_ |= 0x08000000;
+      onChanged();
+      return this;
     }
 
     // @@protoc_insertion_point(builder_scope:udb.core.idp.entity.v1.IdentityProvider)

@@ -3148,6 +3148,888 @@ service AuthnService {
       body: "*"
     };
   }
+
+  // ── 0.6.6 passwordless login + tenant auth policy RPCs [PASSWORDLESS] ──
+
+  // Replace the tenant's sign-in policy: whether passwords are required, the
+  // channels sign-in codes may go over, the magic-link page and the step-up
+  // rules. Only an administrator of that tenant (or a cross-tenant admin).
+  rpc PutTenantAuthPolicy(PutTenantAuthPolicyRequest) returns (PutTenantAuthPolicyResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:authn:manage-auth-policy"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "authn.PutTenantAuthPolicy"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "put_tenant_auth_policy" rest_operation_id: "putTenantAuthPolicy"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "auth"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_cli_scaffold) = {
+      scaffold_package: "auth"
+      import_path: "udb/native/auth"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+      generated_files: "udb.native.auth.put_tenant_auth_policy.boilerplate"
+      route_name: "put_tenant_auth_policy"
+      middleware_name: "udb_auth"
+      required_native_services: "authn"
+      secret_placeholders: "UDB_API_KEY"
+      smoke_test_command: "udb native smoke"
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "authn"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "authn.PutTenantAuthPolicy"
+      outbox_topic: "authn.events"
+      partition_key_field: "tenant_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {
+      put: "/v1/auth/tenants/{tenant_id}/auth-policy"
+      body: "*"
+    };
+  }
+
+  // Read the tenant's sign-in policy (the defaults when none was written).
+  rpc GetTenantAuthPolicy(GetTenantAuthPolicyRequest) returns (GetTenantAuthPolicyResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:authn:read-auth-policy"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "authn.GetTenantAuthPolicy"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "get_tenant_auth_policy" rest_operation_id: "getTenantAuthPolicy"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "auth"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_cli_scaffold) = {
+      scaffold_package: "auth"
+      import_path: "udb/native/auth"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+      generated_files: "udb.native.auth.get_tenant_auth_policy.boilerplate"
+      route_name: "get_tenant_auth_policy"
+      middleware_name: "udb_auth"
+      required_native_services: "authn"
+      secret_placeholders: "UDB_API_KEY"
+      smoke_test_command: "udb native smoke"
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "authn"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {
+      get: "/v1/auth/tenants/{tenant_id}/auth-policy"
+    };
+  }
+
+  // Send a one-time sign-in code (or, for EMAIL, a magic link) to a phone or
+  // email address of the tenant. Public. The answer is the same whether or not
+  // the address belongs to an account and whether or not the tenant enabled
+  // the channel; only a real, enabled account is sent anything.
+  rpc SendLoginOtp(SendLoginOtpRequest) returns (SendLoginOtpResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_PUBLIC
+      tenant_required: false
+      rate_limit_policy_ref: "authn.login_otp.send.public"
+      abuse_policy_ref: "authn.login_otp.send.abuse"
+      audit_event_type: "authn.login_otp_sent"
+      decision_resource: "authn.SendLoginOtp"
+      request_context_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "send_login_otp" rest_operation_id: "sendLoginOtp"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "auth"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_cli_scaffold) = {
+      scaffold_package: "auth"
+      import_path: "udb/native/auth"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+      generated_files: "udb.native.auth.send_login_otp.boilerplate"
+      route_name: "send_login_otp"
+      middleware_name: "udb_auth"
+      required_native_services: "authn"
+      secret_placeholders: "UDB_API_KEY"
+      smoke_test_command: "udb native smoke"
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "authn"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "authn.SendLoginOtp"
+      outbox_topic: "authn.events"
+      partition_key_field: "tenant_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {
+      post: "/v1/auth/sessions:sendLoginOtp"
+      body: "*"
+    };
+  }
+
+  // Sign in with the code from SendLoginOtp (or the otp_id + code of a magic
+  // link). Public. Returns the same credentials as Login: access token,
+  // rotating refresh token, session and CSRF token.
+  rpc LoginWithOtp(LoginWithOtpRequest) returns (LoginWithOtpResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_PUBLIC
+      tenant_required: false
+      rate_limit_policy_ref: "authn.login_otp.public"
+      abuse_policy_ref: "authn.login.abuse"
+      audit_event_type: "authn.login"
+      decision_resource: "authn.LoginWithOtp"
+      request_context_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "login_with_otp" rest_operation_id: "loginWithOtp"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "auth"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_cli_scaffold) = {
+      scaffold_package: "auth"
+      import_path: "udb/native/auth"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+      generated_files: "udb.native.auth.login_with_otp.boilerplate"
+      route_name: "login_with_otp"
+      middleware_name: "udb_auth"
+      required_native_services: "authn"
+      secret_placeholders: "UDB_API_KEY"
+      smoke_test_command: "udb native smoke"
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "authn"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "authn.LoginWithOtp"
+      outbox_topic: "authn.events"
+      partition_key_field: "tenant_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {
+      post: "/v1/auth/sessions:loginWithOtp"
+      body: "*"
+    };
+  }
+  // [PASSWORDLESS-END]
+
+  // ── 0.6.6 passkeys RPCs [PASSKEYS] ──
+  // [PASSKEYS-END]
+
+  // ── 0.6.6 OIDC sign-in RPCs [OIDC] ──
+  // "Sign in with Google / Microsoft / any OpenID provider" through a tenant
+  // IdentityProvider (kind OIDC). Browser flow: StartOidcLogin returns the
+  // provider's authorization URL (authorization code + PKCE S256 + nonce,
+  // state stored server-side for 10 minutes, single use); the provider
+  // redirects to an allowlisted redirect_uri with code + state, and
+  // FinishOidcLogin exchanges the code, verifies the ID token and returns the
+  // same credentials as Login. Native apps that already hold an ID token call
+  // LoginWithOidcIdToken. Users resolve exactly like ResolveExternalIdentity:
+  // an existing link, the provider's account-linking policy, or JIT
+  // provisioning under its jit_policy.
+  rpc StartOidcLogin(StartOidcLoginRequest) returns (StartOidcLoginResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_PUBLIC
+      tenant_required: false
+      rate_limit_policy_ref: "authn.oidc_login_start.public"
+      abuse_policy_ref: "authn.login.abuse"
+      audit_event_type: "authn.oidc_login_start"
+      decision_resource: "authn.StartOidcLogin"
+      request_context_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "start_oidc_login" rest_operation_id: "startOidcLogin"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "auth"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_cli_scaffold) = {
+      scaffold_package: "auth"
+      import_path: "udb/native/auth"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+      generated_files: "udb.native.auth.start_oidc_login.boilerplate"
+      route_name: "start_oidc_login"
+      middleware_name: "udb_auth"
+      required_native_services: "authn"
+      secret_placeholders: "UDB_API_KEY"
+      smoke_test_command: "udb native smoke"
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "authn"
+      required_native_services: "idp"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {
+      post: "/v1/auth/oidc-logins:start"
+      body: "*"
+    };
+  }
+  rpc FinishOidcLogin(FinishOidcLoginRequest) returns (FinishOidcLoginResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_PUBLIC
+      tenant_required: false
+      rate_limit_policy_ref: "authn.oidc_login.public"
+      abuse_policy_ref: "authn.login.abuse"
+      audit_event_type: "authn.login"
+      decision_resource: "authn.FinishOidcLogin"
+      request_context_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "finish_oidc_login" rest_operation_id: "finishOidcLogin"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "auth"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_cli_scaffold) = {
+      scaffold_package: "auth"
+      import_path: "udb/native/auth"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+      generated_files: "udb.native.auth.finish_oidc_login.boilerplate"
+      route_name: "finish_oidc_login"
+      middleware_name: "udb_auth"
+      required_native_services: "authn"
+      secret_placeholders: "UDB_API_KEY"
+      smoke_test_command: "udb native smoke"
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "authn"
+      required_native_services: "idp"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "authn.FinishOidcLogin"
+      outbox_topic: "authn.events"
+      partition_key_field: "tenant_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {
+      post: "/v1/auth/sessions:finishOidcLogin"
+      body: "*"
+    };
+  }
+  rpc LoginWithOidcIdToken(LoginWithOidcIdTokenRequest) returns (LoginWithOidcIdTokenResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_PUBLIC
+      tenant_required: false
+      rate_limit_policy_ref: "authn.oidc_id_token_login.public"
+      abuse_policy_ref: "authn.login.abuse"
+      audit_event_type: "authn.login"
+      decision_resource: "authn.LoginWithOidcIdToken"
+      request_context_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "login_with_oidc_id_token" rest_operation_id: "loginWithOidcIdToken"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "auth"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_cli_scaffold) = {
+      scaffold_package: "auth"
+      import_path: "udb/native/auth"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+      generated_files: "udb.native.auth.login_with_oidc_id_token.boilerplate"
+      route_name: "login_with_oidc_id_token"
+      middleware_name: "udb_auth"
+      required_native_services: "authn"
+      secret_placeholders: "UDB_API_KEY"
+      smoke_test_command: "udb native smoke"
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "authn"
+      required_native_services: "idp"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "authn.LoginWithOidcIdToken"
+      outbox_topic: "authn.events"
+      partition_key_field: "tenant_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {
+      post: "/v1/auth/sessions:loginWithOidcIdToken"
+      body: "*"
+    };
+  }
+  // [OIDC-END]
+
+  // ── 0.6.6 invitations RPCs [INVITATIONS] ──
+  // Invite a person into the caller's tenant with a set of roles. The
+  // invitee proves the invitation's channel on acceptance: an SMS or email
+  // code sent to `address`, a sign-in with the tenant identity provider
+  // (OIDC), or a new passkey (PASSKEY). SMS/EMAIL invitations are sent at
+  // once (event `authn.invitation`, link from the tenant auth policy's
+  // magic_link_base_url); the accept token is returned once and only its hash
+  // is stored. Reserved platform roles are refused; organization_owner needs a
+  // caller who holds it, or a cross-tenant admin.
+  rpc CreateInvitation(CreateInvitationRequest) returns (CreateInvitationResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:authn:manage-invitations"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "authn.CreateInvitation"
+      request_context_required: true
+      tenant_required: true
+      tenant_field: "tenant_id"
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "create_invitation" rest_operation_id: "createInvitation"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "auth"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_cli_scaffold) = {
+      scaffold_package: "auth"
+      import_path: "udb/native/auth"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+      generated_files: "udb.native.auth.create_invitation.boilerplate"
+      route_name: "create_invitation"
+      middleware_name: "udb_auth"
+      required_native_services: "authn"
+      secret_placeholders: "UDB_API_KEY"
+      smoke_test_command: "udb native smoke"
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "authn"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "authn.CreateInvitation"
+      outbox_topic: "authn.events"
+      partition_key_field: "tenant_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {
+      post: "/v1/auth/invitations"
+      body: "*"
+    };
+  }
+  // Page through the caller's tenant's invitations, newest first, optionally
+  // by status.
+  rpc ListInvitations(ListInvitationsRequest) returns (ListInvitationsResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:authn:manage-invitations"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "authn.ListInvitations"
+      request_context_required: true
+      tenant_required: true
+      tenant_field: "tenant_id"
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "list_invitations" rest_operation_id: "listInvitations"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "auth"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_cli_scaffold) = {
+      scaffold_package: "auth"
+      import_path: "udb/native/auth"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+      generated_files: "udb.native.auth.list_invitations.boilerplate"
+      route_name: "list_invitations"
+      middleware_name: "udb_auth"
+      required_native_services: "authn"
+      secret_placeholders: "UDB_API_KEY"
+      smoke_test_command: "udb native smoke"
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "authn"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {get: "/v1/auth/invitations"};
+  }
+  // Revoke a PENDING invitation of the caller's tenant: its link stops
+  // working at once and the account acceptance had started for (if any) is
+  // deleted. Already accepted, revoked or expired: revoked=false, nothing
+  // changes.
+  rpc RevokeInvitation(RevokeInvitationRequest) returns (RevokeInvitationResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_DESTRUCTIVE;
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:authn:manage-invitations"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "authn.RevokeInvitation"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "revoke_invitation" rest_operation_id: "revokeInvitation"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "auth"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_cli_scaffold) = {
+      scaffold_package: "auth"
+      import_path: "udb/native/auth"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+      generated_files: "udb.native.auth.revoke_invitation.boilerplate"
+      route_name: "revoke_invitation"
+      middleware_name: "udb_auth"
+      required_native_services: "authn"
+      secret_placeholders: "UDB_API_KEY"
+      smoke_test_command: "udb native smoke"
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "authn"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "authn.RevokeInvitation"
+      outbox_topic: "authn.events"
+      partition_key_field: "tenant_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {
+      post: "/v1/auth/invitations/{invitation_id}:revoke"
+      body: "*"
+    };
+  }
+  // Send a PENDING SMS/EMAIL invitation again with a NEW accept token (the
+  // previous link stops working). At most 5 messages per invitation, at least
+  // 60 seconds apart (RESOURCE_EXHAUSTED with a retry delay otherwise).
+  rpc ResendInvitation(ResendInvitationRequest) returns (ResendInvitationResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:authn:manage-invitations"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "authn.ResendInvitation"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "resend_invitation" rest_operation_id: "resendInvitation"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "auth"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_cli_scaffold) = {
+      scaffold_package: "auth"
+      import_path: "udb/native/auth"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+      generated_files: "udb.native.auth.resend_invitation.boilerplate"
+      route_name: "resend_invitation"
+      middleware_name: "udb_auth"
+      required_native_services: "authn"
+      secret_placeholders: "UDB_API_KEY"
+      smoke_test_command: "udb native smoke"
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "authn"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "authn.ResendInvitation"
+      outbox_topic: "authn.events"
+      partition_key_field: "tenant_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {
+      post: "/v1/auth/invitations/{invitation_id}:resend"
+      body: "*"
+    };
+  }
+  // What an invitee sees before accepting: tenant name, channel, roles,
+  // expiry and the masked address. Public. An unknown, expired, revoked or
+  // accepted invitation, or a wrong token, is one identical refusal.
+  rpc GetInvitation(GetInvitationRequest) returns (GetInvitationResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_PUBLIC
+      tenant_required: false
+      rate_limit_policy_ref: "authn.invitation.public"
+      abuse_policy_ref: "authn.invitation.abuse"
+      audit_event_type: "authn.invitation_viewed"
+      decision_resource: "authn.GetInvitation"
+      request_context_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "get_invitation" rest_operation_id: "getInvitation"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "auth"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_cli_scaffold) = {
+      scaffold_package: "auth"
+      import_path: "udb/native/auth"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+      generated_files: "udb.native.auth.get_invitation.boilerplate"
+      route_name: "get_invitation"
+      middleware_name: "udb_auth"
+      required_native_services: "authn"
+      secret_placeholders: "UDB_API_KEY"
+      smoke_test_command: "udb native smoke"
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "authn"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {
+      post: "/v1/auth/invitations/{invitation_id}:preview"
+      body: "*"
+    };
+  }
+  // Begin accepting an invitation. Public. SMS/EMAIL: sends a one-time code
+  // to the invitation address (OTP cooldown applies). PASSKEY: returns
+  // WebAuthn registration options. OIDC: returns the identity provider's
+  // authorization URL. Same refusal as GetInvitation for an unusable
+  // invitation.
+  rpc StartInvitationAcceptance(StartInvitationAcceptanceRequest) returns (StartInvitationAcceptanceResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_PUBLIC
+      tenant_required: false
+      rate_limit_policy_ref: "authn.invitation.start.public"
+      abuse_policy_ref: "authn.invitation.abuse"
+      audit_event_type: "authn.invitation_acceptance_started"
+      decision_resource: "authn.StartInvitationAcceptance"
+      request_context_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "start_invitation_acceptance" rest_operation_id: "startInvitationAcceptance"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "auth"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_cli_scaffold) = {
+      scaffold_package: "auth"
+      import_path: "udb/native/auth"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+      generated_files: "udb.native.auth.start_invitation_acceptance.boilerplate"
+      route_name: "start_invitation_acceptance"
+      middleware_name: "udb_auth"
+      required_native_services: "authn"
+      secret_placeholders: "UDB_API_KEY"
+      smoke_test_command: "udb native smoke"
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "authn"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "authn.StartInvitationAcceptance"
+      outbox_topic: "authn.events"
+      partition_key_field: "tenant_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {
+      post: "/v1/auth/invitations/{invitation_id}:startAcceptance"
+      body: "*"
+    };
+  }
+  // Accept an invitation with the channel proof. Public. Creates the ACTIVE
+  // account in the invitation's tenant and project with the proven channel
+  // verified (phone, email, linked identity or passkey), binds the invited
+  // roles, marks the invitation ACCEPTED and signs the account in: the same
+  // credentials as Login. An unusable invitation is the same refusal as
+  // GetInvitation; a taken username is ALREADY_EXISTS on `username`.
+  rpc AcceptInvitation(AcceptInvitationRequest) returns (AcceptInvitationResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_PUBLIC
+      tenant_required: false
+      rate_limit_policy_ref: "authn.invitation.accept.public"
+      abuse_policy_ref: "authn.invitation.abuse"
+      audit_event_type: "authn.invitation_accepted"
+      decision_resource: "authn.AcceptInvitation"
+      request_context_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "accept_invitation" rest_operation_id: "acceptInvitation"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "auth"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_cli_scaffold) = {
+      scaffold_package: "auth"
+      import_path: "udb/native/auth"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+      generated_files: "udb.native.auth.accept_invitation.boilerplate"
+      route_name: "accept_invitation"
+      middleware_name: "udb_auth"
+      required_native_services: "authn"
+      secret_placeholders: "UDB_API_KEY"
+      smoke_test_command: "udb native smoke"
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "authn"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "authn.AcceptInvitation"
+      outbox_topic: "authn.events"
+      partition_key_field: "tenant_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {
+      post: "/v1/auth/invitations/{invitation_id}:accept"
+      body: "*"
+    };
+  }
+  // [INVITATIONS-END]
+
+  // ── 0.6.6 step-up / MFA RPCs [STEPUP] ──
+
+  // Check a step-up token before a protected action. A resource server sends
+  // the token the user got from VerifyMfaChallenge and the action it is about
+  // to perform; the answer says whether the tenant's step-up rule for that
+  // action is met: same action, an allowed second factor, proven recently
+  // enough, by the calling user, in a session that is still live.
+  rpc CheckStepUp(CheckStepUpRequest) returns (CheckStepUpResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:authn:check-step-up"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
+      decision_resource: "authn.CheckStepUp"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "check_step_up" rest_operation_id: "checkStepUp"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "auth"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "authn"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {
+      post: "/v1/auth/mfa/step-up:check"
+      body: "*"
+    };
+  }
+  // [STEPUP-END]
 }
 
 // ============================================================

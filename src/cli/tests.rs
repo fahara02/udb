@@ -1079,14 +1079,14 @@ fn baseline_generated_authn_authz_inventory_docs_are_present() {
     // Counts pin the CURRENT generator output (`node
     // scripts/generate-authn-authz-inventory.mjs`); regenerate the docs and
     // update these together when the RPC/field surface grows.
-    assert!(rpc.contains("- Native RPCs inventoried: 324"));
+    assert!(rpc.contains("- Native RPCs inventoried: 339"));
     assert!(rpc.contains("- RPCs without endpoint_security: 0"));
     assert!(rpc.contains("- WebRTC SignalingService.Signal endpoint security: present"));
 
     let fields =
         std::fs::read_to_string(root.join("docs/generated/authn-authz-sensitive-fields.md"))
             .expect("sensitive field inventory doc must be generated for Phase E");
-    assert!(fields.contains("- Sensitive-looking or annotated fields inventoried: 248"));
+    assert!(fields.contains("- Sensitive-looking or annotated fields inventoried: 321"));
     assert!(fields.contains("password_hash"));
     assert!(fields.contains("session_token_hash"));
     assert!(fields.contains("plain_key"));

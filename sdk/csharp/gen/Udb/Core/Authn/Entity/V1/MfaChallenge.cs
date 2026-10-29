@@ -28,7 +28,7 @@ namespace Udb.Core.Authn.Entity.V1 {
             "bxIYdWRiLmNvcmUuYXV0aG4uZW50aXR5LnYxGh9nb29nbGUvcHJvdG9idWYv",
             "dGltZXN0YW1wLnByb3RvGiR1ZGIvY29yZS9hdXRobi9lbnRpdHkvdjEvZW51",
             "bXMucHJvdG8aG3VkYi9jb3JlL2NvbW1vbi92MS9kYi5wcm90bxohdWRiL2Nv",
-            "cmUvY29tbW9uL3YxL3NlY3VyaXR5LnByb3RvIp4NCgxNZmFDaGFsbGVuZ2US",
+            "cmUvY29tbW9uL3YxL3NlY3VyaXR5LnByb3RvIo8QCgxNZmFDaGFsbGVuZ2US",
             "UgoMY2hhbGxlbmdlX2lkGAEgASgJQi+CtxgrCgxjaGFsbGVuZ2VfaWQSBFVV",
             "SUQYASgBOhFnZW5fcmFuZG9tX3V1aWQoKVILY2hhbGxlbmdlSWQSNgoHdXNl",
             "cl9pZBgCIAEoCUIdgrcYGQoHdXNlcl9pZBIMVkFSQ0hBUigxNjApGAFSBnVz",
@@ -56,27 +56,35 @@ namespace Udb.Core.Authn.Entity.V1 {
             "SU1FU1RBTVBUWlIKY29uc3VtZWRBdBJxCgpjcmVhdGVkX2F0GAwgASgLMhou",
             "Z29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcEI2grcYMgoKY3JlYXRlZF9hdBIL",
             "VElNRVNUQU1QVFoYAToRQ1VSUkVOVF9USU1FU1RBTVBgAWgBUgljcmVhdGVk",
-            "QXQ6ywP6thjNAgoObWZhX2NoYWxsZW5nZXMSCXVkYl9hdXRobhgYIAEqRkZp",
-            "cnN0LWNsYXNzIHN0ZXAtdXAgTUZBIGNoYWxsZW5nZSByZWNvcmRzIChzaW5n",
-            "bGUtdXNlLCBhdG9taWMgY29uc3VtZSlAAWJeChB0ZW5hbnRfaXNvbGF0aW9u",
-            "GkgodGVuYW50X2lkOjp0ZXh0ID0gY3VycmVudF9zZXR0aW5nKCdhcHAuY3Vy",
-            "cmVudF90ZW5hbnRfaWQnLCB0cnVlKTo6dGV4dCkoAYoBKQoXaWR4X21mYV9j",
-            "aGFsbGVuZ2VzX3VzZXISBUJUUkVFWgd1c2VyX2lkigEvChppZHhfbWZhX2No",
-            "YWxsZW5nZXNfZXhwaXJlcxIFQlRSRUVaCmV4cGlyZXNfYXTqAQdwcmltYXJ5",
-            "+gEZYXV0aG46bWZhLWNoYWxsZW5nZXM6cmVhZIqyGXUKBnRlbmFudBoJdGVu",
-            "YW50X2lkKjR0ZW5hbnRfaWQgPSBjdXJyZW50X3NldHRpbmcoJ2FwcC5jdXJy",
-            "ZW50X3RlbmFudF9pZCcpMgRub25lOg5hdXRobi5zZWN1cml0eUAeSAJSBnRl",
-            "bmFudFoIc3RhbmRhcmRC/AEKHGNvbS51ZGIuY29yZS5hdXRobi5lbnRpdHku",
-            "djFCEU1mYUNoYWxsZW5nZVByb3RvUAFaRGdpdGh1Yi5jb20vZmFoYXJhMDIv",
-            "dWRiL3Nkay9nby9nZW4vdWRiL2NvcmUvYXV0aG4vZW50aXR5L3YxO2VudGl0",
-            "eXYxogIEVUNBRaoCGFVkYi5Db3JlLkF1dGhuLkVudGl0eS5WMcoCGFVkYlxD",
-            "b3JlXEF1dGhuXEVudGl0eVxWMeICJFVkYlxHUEJNZXRhZGF0YVxDb3JlXEF1",
-            "dGhuXEVudGl0eVxWMeoCHFVkYjo6Q29yZTo6QXV0aG46OkVudGl0eTo6VjFi",
-            "BnByb3RvMw=="));
+            "QXQSbAoGYWN0aW9uGA0gASgJQlSCtxhQCgZhY3Rpb24SDFZBUkNIQVIoMTIw",
+            "KRgBOgInJ1oyUHJvdGVjdGVkIGFjdGlvbiBhIHN1Y2Nlc3NmdWwgdmVyaWZp",
+            "Y2F0aW9uIHVubG9ja3NSBmFjdGlvbhJlCgZvdHBfaWQYDiABKAlCToK3GEoK",
+            "Bm90cF9pZBILVkFSQ0hBUig2NCkYAToCJydaLU9UUCBpc3N1ZWQgZm9yIGFu",
+            "IEVNQUlMX09UUC9TTVNfT1RQIGNoYWxsZW5nZVIFb3RwSWQSmQEKFXdlYmF1",
+            "dGhuX2NoYWxsZW5nZV9pZBgPIAEoCUJlgrcYYQoVd2ViYXV0aG5fY2hhbGxl",
+            "bmdlX2lkEgtWQVJDSEFSKDY0KRgBOgInJ1o1V2ViQXV0aG4gYXNzZXJ0aW9u",
+            "IGNoYWxsZW5nZSBmb3IgYSBXRUJBVVRITiBjaGFsbGVuZ2VSE3dlYmF1dGhu",
+            "Q2hhbGxlbmdlSWQ6ywP6thjNAgoObWZhX2NoYWxsZW5nZXMSCXVkYl9hdXRo",
+            "bhgYIAEqRkZpcnN0LWNsYXNzIHN0ZXAtdXAgTUZBIGNoYWxsZW5nZSByZWNv",
+            "cmRzIChzaW5nbGUtdXNlLCBhdG9taWMgY29uc3VtZSlAAWJeChB0ZW5hbnRf",
+            "aXNvbGF0aW9uGkgodGVuYW50X2lkOjp0ZXh0ID0gY3VycmVudF9zZXR0aW5n",
+            "KCdhcHAuY3VycmVudF90ZW5hbnRfaWQnLCB0cnVlKTo6dGV4dCkoAYoBKQoX",
+            "aWR4X21mYV9jaGFsbGVuZ2VzX3VzZXISBUJUUkVFWgd1c2VyX2lkigEvChpp",
+            "ZHhfbWZhX2NoYWxsZW5nZXNfZXhwaXJlcxIFQlRSRUVaCmV4cGlyZXNfYXTq",
+            "AQdwcmltYXJ5+gEZYXV0aG46bWZhLWNoYWxsZW5nZXM6cmVhZIqyGXUKBnRl",
+            "bmFudBoJdGVuYW50X2lkKjR0ZW5hbnRfaWQgPSBjdXJyZW50X3NldHRpbmco",
+            "J2FwcC5jdXJyZW50X3RlbmFudF9pZCcpMgRub25lOg5hdXRobi5zZWN1cml0",
+            "eUAeSAJSBnRlbmFudFoIc3RhbmRhcmRC/AEKHGNvbS51ZGIuY29yZS5hdXRo",
+            "bi5lbnRpdHkudjFCEU1mYUNoYWxsZW5nZVByb3RvUAFaRGdpdGh1Yi5jb20v",
+            "ZmFoYXJhMDIvdWRiL3Nkay9nby9nZW4vdWRiL2NvcmUvYXV0aG4vZW50aXR5",
+            "L3YxO2VudGl0eXYxogIEVUNBRaoCGFVkYi5Db3JlLkF1dGhuLkVudGl0eS5W",
+            "McoCGFVkYlxDb3JlXEF1dGhuXEVudGl0eVxWMeICJFVkYlxHUEJNZXRhZGF0",
+            "YVxDb3JlXEF1dGhuXEVudGl0eVxWMeoCHFVkYjo6Q29yZTo6QXV0aG46OkVu",
+            "dGl0eTo6VjFiBnByb3RvMw=="));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { global::Google.Protobuf.WellKnownTypes.TimestampReflection.Descriptor, global::Udb.Core.Authn.Entity.V1.EnumsReflection.Descriptor, global::Udb.Core.Common.V1.DbReflection.Descriptor, global::Udb.Core.Common.V1.SecurityReflection.Descriptor, },
           new pbr::GeneratedClrTypeInfo(null, null, new pbr::GeneratedClrTypeInfo[] {
-            new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Core.Authn.Entity.V1.MfaChallenge), global::Udb.Core.Authn.Entity.V1.MfaChallenge.Parser, new[]{ "ChallengeId", "UserId", "TenantId", "ProjectId", "FactorKind", "Purpose", "DeviceFingerprintHash", "IpAddressMasked", "AttemptCount", "ExpiresAt", "ConsumedAt", "CreatedAt" }, null, null, null, null)
+            new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Core.Authn.Entity.V1.MfaChallenge), global::Udb.Core.Authn.Entity.V1.MfaChallenge.Parser, new[]{ "ChallengeId", "UserId", "TenantId", "ProjectId", "FactorKind", "Purpose", "DeviceFingerprintHash", "IpAddressMasked", "AttemptCount", "ExpiresAt", "ConsumedAt", "CreatedAt", "Action", "OtpId", "WebauthnChallengeId" }, null, null, null, null)
           }));
     }
     #endregion
@@ -142,6 +150,9 @@ namespace Udb.Core.Authn.Entity.V1 {
       expiresAt_ = other.expiresAt_ != null ? other.expiresAt_.Clone() : null;
       consumedAt_ = other.consumedAt_ != null ? other.consumedAt_.Clone() : null;
       createdAt_ = other.createdAt_ != null ? other.createdAt_.Clone() : null;
+      action_ = other.action_;
+      otpId_ = other.otpId_;
+      webauthnChallengeId_ = other.webauthnChallengeId_;
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
     }
 
@@ -303,6 +314,56 @@ namespace Udb.Core.Authn.Entity.V1 {
       }
     }
 
+    /// <summary>Field number for the "action" field.</summary>
+    public const int ActionFieldNumber = 13;
+    private string action_ = "";
+    /// <summary>
+    /// 0.6.6 step-up. The protected action this challenge unlocks (empty = a
+    /// plain second-factor check with no step-up token). Verification mints a
+    /// step-up token for exactly this action.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string Action {
+      get { return action_; }
+      set {
+        action_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "otp_id" field.</summary>
+    public const int OtpIdFieldNumber = 14;
+    private string otpId_ = "";
+    /// <summary>
+    /// EMAIL_OTP / SMS_OTP challenges: the OTP (type SENSITIVE_OPERATION) issued
+    /// to the user's verified address at IssueMfaChallenge; the code submitted to
+    /// VerifyMfaChallenge is checked against exactly this OTP.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string OtpId {
+      get { return otpId_; }
+      set {
+        otpId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "webauthn_challenge_id" field.</summary>
+    public const int WebauthnChallengeIdFieldNumber = 15;
+    private string webauthnChallengeId_ = "";
+    /// <summary>
+    /// WEBAUTHN challenges: the WebAuthn assertion challenge started at
+    /// IssueMfaChallenge; VerifyMfaChallenge's assertion must answer it.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string WebauthnChallengeId {
+      get { return webauthnChallengeId_; }
+      set {
+        webauthnChallengeId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public override bool Equals(object other) {
@@ -330,6 +391,9 @@ namespace Udb.Core.Authn.Entity.V1 {
       if (!object.Equals(ExpiresAt, other.ExpiresAt)) return false;
       if (!object.Equals(ConsumedAt, other.ConsumedAt)) return false;
       if (!object.Equals(CreatedAt, other.CreatedAt)) return false;
+      if (Action != other.Action) return false;
+      if (OtpId != other.OtpId) return false;
+      if (WebauthnChallengeId != other.WebauthnChallengeId) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
 
@@ -349,6 +413,9 @@ namespace Udb.Core.Authn.Entity.V1 {
       if (expiresAt_ != null) hash ^= ExpiresAt.GetHashCode();
       if (consumedAt_ != null) hash ^= ConsumedAt.GetHashCode();
       if (createdAt_ != null) hash ^= CreatedAt.GetHashCode();
+      if (Action.Length != 0) hash ^= Action.GetHashCode();
+      if (OtpId.Length != 0) hash ^= OtpId.GetHashCode();
+      if (WebauthnChallengeId.Length != 0) hash ^= WebauthnChallengeId.GetHashCode();
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
       }
@@ -415,6 +482,18 @@ namespace Udb.Core.Authn.Entity.V1 {
         output.WriteRawTag(98);
         output.WriteMessage(CreatedAt);
       }
+      if (Action.Length != 0) {
+        output.WriteRawTag(106);
+        output.WriteString(Action);
+      }
+      if (OtpId.Length != 0) {
+        output.WriteRawTag(114);
+        output.WriteString(OtpId);
+      }
+      if (WebauthnChallengeId.Length != 0) {
+        output.WriteRawTag(122);
+        output.WriteString(WebauthnChallengeId);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
       }
@@ -473,6 +552,18 @@ namespace Udb.Core.Authn.Entity.V1 {
         output.WriteRawTag(98);
         output.WriteMessage(CreatedAt);
       }
+      if (Action.Length != 0) {
+        output.WriteRawTag(106);
+        output.WriteString(Action);
+      }
+      if (OtpId.Length != 0) {
+        output.WriteRawTag(114);
+        output.WriteString(OtpId);
+      }
+      if (WebauthnChallengeId.Length != 0) {
+        output.WriteRawTag(122);
+        output.WriteString(WebauthnChallengeId);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(ref output);
       }
@@ -518,6 +609,15 @@ namespace Udb.Core.Authn.Entity.V1 {
       }
       if (createdAt_ != null) {
         size += 1 + pb::CodedOutputStream.ComputeMessageSize(CreatedAt);
+      }
+      if (Action.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(Action);
+      }
+      if (OtpId.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(OtpId);
+      }
+      if (WebauthnChallengeId.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(WebauthnChallengeId);
       }
       if (_unknownFields != null) {
         size += _unknownFields.CalculateSize();
@@ -575,6 +675,15 @@ namespace Udb.Core.Authn.Entity.V1 {
           CreatedAt = new global::Google.Protobuf.WellKnownTypes.Timestamp();
         }
         CreatedAt.MergeFrom(other.CreatedAt);
+      }
+      if (other.Action.Length != 0) {
+        Action = other.Action;
+      }
+      if (other.OtpId.Length != 0) {
+        OtpId = other.OtpId;
+      }
+      if (other.WebauthnChallengeId.Length != 0) {
+        WebauthnChallengeId = other.WebauthnChallengeId;
       }
       _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
     }
@@ -652,6 +761,18 @@ namespace Udb.Core.Authn.Entity.V1 {
             input.ReadMessage(CreatedAt);
             break;
           }
+          case 106: {
+            Action = input.ReadString();
+            break;
+          }
+          case 114: {
+            OtpId = input.ReadString();
+            break;
+          }
+          case 122: {
+            WebauthnChallengeId = input.ReadString();
+            break;
+          }
         }
       }
     #endif
@@ -726,6 +847,18 @@ namespace Udb.Core.Authn.Entity.V1 {
               CreatedAt = new global::Google.Protobuf.WellKnownTypes.Timestamp();
             }
             input.ReadMessage(CreatedAt);
+            break;
+          }
+          case 106: {
+            Action = input.ReadString();
+            break;
+          }
+          case 114: {
+            OtpId = input.ReadString();
+            break;
+          }
+          case 122: {
+            WebauthnChallengeId = input.ReadString();
             break;
           }
         }

@@ -52,6 +52,8 @@ mod tuples;
 // Phase K: Authz Policy Governance. Pure logic in `governance_logic`; DB-backed
 // handlers split across topic submodules (drafts, activation, simulation, store).
 mod governance;
+// Invitation acceptance binds roles and must honour governed mode too.
+pub(crate) use governance::governed_mode_enabled;
 mod governance_activate;
 mod governance_drafts;
 mod governance_logic;

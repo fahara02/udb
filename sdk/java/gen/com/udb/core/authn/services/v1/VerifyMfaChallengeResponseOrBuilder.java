@@ -27,4 +27,108 @@ public interface VerifyMfaChallengeResponseOrBuilder extends
    */
   com.google.protobuf.ByteString
       getUserIdBytes();
+
+  /**
+   * <pre>
+   * Set when the challenge named an action, the proof verified, and the
+   * caller is the challenged user: a short-lived JWT proving this second
+   * factor for that action. It is NOT an access token (no scopes; refused as
+   * a bearer). Hand it to the resource server, which calls CheckStepUp.
+   * Empty when no JWT signing key is configured.
+   * </pre>
+   *
+   * <code>string step_up_token = 3 [json_name = "stepUpToken"];</code>
+   * @return The stepUpToken.
+   */
+  java.lang.String getStepUpToken();
+  /**
+   * <pre>
+   * Set when the challenge named an action, the proof verified, and the
+   * caller is the challenged user: a short-lived JWT proving this second
+   * factor for that action. It is NOT an access token (no scopes; refused as
+   * a bearer). Hand it to the resource server, which calls CheckStepUp.
+   * Empty when no JWT signing key is configured.
+   * </pre>
+   *
+   * <code>string step_up_token = 3 [json_name = "stepUpToken"];</code>
+   * @return The bytes for stepUpToken.
+   */
+  com.google.protobuf.ByteString
+      getStepUpTokenBytes();
+
+  /**
+   * <pre>
+   * When step_up_token stops being accepted: the tenant rule's
+   * max_age_seconds for the action, else 300 seconds after verification.
+   * </pre>
+   *
+   * <code>int64 step_up_expires_at_unix = 4 [json_name = "stepUpExpiresAtUnix"];</code>
+   * @return The stepUpExpiresAtUnix.
+   */
+  long getStepUpExpiresAtUnix();
+
+  /**
+   * <pre>
+   * Assurance level the step-up token states (`aal2`); empty when no token.
+   * </pre>
+   *
+   * <code>string acr = 5 [json_name = "acr"];</code>
+   * @return The acr.
+   */
+  java.lang.String getAcr();
+  /**
+   * <pre>
+   * Assurance level the step-up token states (`aal2`); empty when no token.
+   * </pre>
+   *
+   * <code>string acr = 5 [json_name = "acr"];</code>
+   * @return The bytes for acr.
+   */
+  com.google.protobuf.ByteString
+      getAcrBytes();
+
+  /**
+   * <pre>
+   * Authentication methods (RFC 8176) the step-up token states, e.g. `otp`,
+   * `sms`, `webauthn`; empty when no token.
+   * </pre>
+   *
+   * <code>repeated string amr = 6 [json_name = "amr"];</code>
+   * @return A list containing the amr.
+   */
+  java.util.List<java.lang.String>
+      getAmrList();
+  /**
+   * <pre>
+   * Authentication methods (RFC 8176) the step-up token states, e.g. `otp`,
+   * `sms`, `webauthn`; empty when no token.
+   * </pre>
+   *
+   * <code>repeated string amr = 6 [json_name = "amr"];</code>
+   * @return The count of amr.
+   */
+  int getAmrCount();
+  /**
+   * <pre>
+   * Authentication methods (RFC 8176) the step-up token states, e.g. `otp`,
+   * `sms`, `webauthn`; empty when no token.
+   * </pre>
+   *
+   * <code>repeated string amr = 6 [json_name = "amr"];</code>
+   * @param index The index of the element to return.
+   * @return The amr at the given index.
+   */
+  java.lang.String getAmr(int index);
+  /**
+   * <pre>
+   * Authentication methods (RFC 8176) the step-up token states, e.g. `otp`,
+   * `sms`, `webauthn`; empty when no token.
+   * </pre>
+   *
+   * <code>repeated string amr = 6 [json_name = "amr"];</code>
+   * @param index The index of the value to return.
+   * @return The bytes of the amr at the given index.
+   */
+  com.google.protobuf.ByteString
+      getAmrBytes(int index);
 }

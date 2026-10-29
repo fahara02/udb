@@ -194,10 +194,14 @@ pub(crate) fn notification_suppressed_payload(
     })
 }
 
+/// Validate and canonicalize a template/recipient locale. Empty means `en`.
+/// `_` separators become `-`, the language subtag is lower-cased and a
+/// two-letter region upper-cased (`BN_bd` → `bn-BD`), so the same locale
+/// written two ways names one template rather than two.
 pub(crate) fn template_locale_or_default(locale: &str) -> Result<String, Status> {
     let locale = locale.trim();
     if locale.is_empty() {
-        return Ok("en".to_string());
+        return Ok(DEFAULT_TEMPLATE_LOCALE.to_string());
     }
     if locale.chars().count() > TEMPLATE_LOCALE_MAX_CHARS {
         return Err(notification_required_field(
@@ -206,7 +210,94 @@ pub(crate) fn template_locale_or_default(locale: &str) -> Result<String, Status>
             "locale must be 10 characters or fewer",
         ));
     }
-    Ok(locale.to_string())
+    let canonical = locale
+        .replace('_', "-")
+        .split('-')
+        .enumerate()
+        .map(|(index, part)| {
+            if index == 0 {
+                part.to_ascii_lowercase()
+            } else if part.len() == 2 {
+                part.to_ascii_uppercase()
+            } else {
+                part.to_string()
+            }
+        })
+        .collect::<Vec<_>>()
+        .join("-");
+    Ok(canonical)
+}
+
+/// The template lookup order for a canonical locale: the exact locale, then
+/// its language, then `en`, without repeats (`bn-BD` → `bn-BD`, `bn`, `en`;
+/// `en-GB` → `en-GB`, `en`; `en` → `en`).
+pub(crate) fn template_locale_candidates(locale: &str) -> Vec<String> {
+    let mut chain: Vec<String> = Vec::with_capacity(3);
+    let exact = locale.trim();
+    for candidate in [
+        exact,
+        exact.split('-').next().unwrap_or_default(),
+        DEFAULT_TEMPLATE_LOCALE,
+    ] {
+        if !candidate.is_empty() && !chain.iter().any(|seen| seen == candidate) {
+            chain.push(candidate.to_string());
+        }
+    }
+    chain
+}
+
+/// The locale every shipped template exists in, and the last lookup step.
+pub(crate) const DEFAULT_TEMPLATE_LOCALE: &str = "en";
+
+/// The languages the broker ships its own `authn.*` templates in.
+const BUILTIN_TEMPLATE_LOCALES: &[&str] = &["en", "bn"];
+
+/// Subject and body of one shipped `authn.*` template in one language.
+fn builtin_authn_text(event_type: &str, locale: &str) -> Option<(&'static str, &'static str)> {
+    let text = match (event_type, locale) {
+        ("authn.password_reset", "en") => (
+            "Set or reset your password",
+            include_str!("templates/authn.password_reset.txt"),
+        ),
+        ("authn.password_reset", "bn") => (
+            "আপনার পাসওয়ার্ড সেট বা রিসেট করুন",
+            include_str!("templates/authn.password_reset.bn.txt"),
+        ),
+        ("authn.email_verification", "en") => (
+            "Verify your email address",
+            include_str!("templates/authn.email_verification.txt"),
+        ),
+        ("authn.email_verification", "bn") => (
+            "আপনার ইমেইল ঠিকানা যাচাই করুন",
+            include_str!("templates/authn.email_verification.bn.txt"),
+        ),
+        ("authn.otp", "en") => (
+            "Your authentication code",
+            include_str!("templates/authn.otp.txt"),
+        ),
+        ("authn.otp", "bn") => (
+            "আপনার প্রমাণীকরণ কোড",
+            include_str!("templates/authn.otp.bn.txt"),
+        ),
+        ("authn.magic_link", "en") => (
+            "Your sign-in link",
+            include_str!("templates/authn.magic_link.txt"),
+        ),
+        ("authn.magic_link", "bn") => (
+            "আপনার সাইন-ইন লিংক",
+            include_str!("templates/authn.magic_link.bn.txt"),
+        ),
+        ("authn.invitation", "en") => (
+            "{{inviter_name}} invited you to {{tenant_name}}",
+            include_str!("templates/authn.invitation.txt"),
+        ),
+        ("authn.invitation", "bn") => (
+            "{{inviter_name}} আপনাকে {{tenant_name}}-এ আমন্ত্রণ জানিয়েছেন",
+            include_str!("templates/authn.invitation.bn.txt"),
+        ),
+        _ => return None,
+    };
+    Some(text)
 }
 
 pub(crate) fn json_object(row: &serde_json::Value) -> &serde_json::Map<String, serde_json::Value> {
@@ -348,44 +439,41 @@ pub(crate) fn template_from_json_row(
     }
 }
 
-/// Shipped English auth-code templates used only by internal auth issuance.
-/// A tenant's active template takes precedence. No template row is fabricated:
-/// the optional log template reference stays empty for this compiled default.
-pub(crate) fn builtin_authn_template(
+/// Shipped auth templates (English and Bangla) used only by the broker's own
+/// auth notifications, one per shipped language. A stored template for the
+/// same locale takes precedence. No template row is fabricated: the optional
+/// log template reference stays empty for these compiled defaults.
+///
+/// Variables: `authn.otp`, `authn.password_reset`, `authn.email_verification`
+/// use `code`, `expires_in_minutes`, `user_name`; `authn.magic_link` uses
+/// `link`, `expires_in_minutes`, `user_name`; `authn.invitation` uses `link`,
+/// `tenant_name`, `inviter_name`, `expires_in_days`.
+pub(crate) fn builtin_authn_templates(
     event_type: &str,
     channel: i32,
-) -> Option<notif_entity_pb::NotificationTemplate> {
+) -> Vec<notif_entity_pb::NotificationTemplate> {
     use notif_entity_pb::NotificationChannel;
     if !matches!(
         NotificationChannel::try_from(channel).ok(),
         Some(NotificationChannel::Email | NotificationChannel::Sms)
     ) {
-        return None;
+        return Vec::new();
     }
-    let (subject, body) = match event_type {
-        "authn.password_reset" => (
-            "Set or reset your password",
-            include_str!("templates/authn.password_reset.txt"),
-        ),
-        "authn.email_verification" => (
-            "Verify your email address",
-            include_str!("templates/authn.email_verification.txt"),
-        ),
-        "authn.otp" => (
-            "Your authentication code",
-            include_str!("templates/authn.otp.txt"),
-        ),
-        _ => return None,
-    };
-    Some(notif_entity_pb::NotificationTemplate {
-        event_type: event_type.to_string(),
-        channel,
-        subject_template: subject.to_string(),
-        body_template: body.to_string(),
-        locale: "en".to_string(),
-        is_active: true,
-        ..Default::default()
-    })
+    BUILTIN_TEMPLATE_LOCALES
+        .iter()
+        .filter_map(|locale| {
+            let (subject, body) = builtin_authn_text(event_type, locale)?;
+            Some(notif_entity_pb::NotificationTemplate {
+                event_type: event_type.to_string(),
+                channel,
+                subject_template: subject.to_string(),
+                body_template: body.to_string(),
+                locale: (*locale).to_string(),
+                is_active: true,
+                ..Default::default()
+            })
+        })
+        .collect()
 }
 
 /// Render a `{{placeholder}}` template against the request `variables` map.
@@ -682,5 +770,99 @@ mod secret_body_tests {
         let plain =
             serde_json::json!({"event_type": "orders.shipped", "rendered_body": "on its way"});
         assert_eq!(log_from_json(&plain).rendered_body, "on its way");
+    }
+}
+
+#[cfg(test)]
+mod locale_tests {
+    use super::{
+        builtin_authn_templates, render_template, template_locale_candidates,
+        template_locale_or_default,
+    };
+    use crate::proto::udb::core::notification::entity::v1::NotificationChannel;
+
+    #[test]
+    fn locale_is_canonicalized_and_defaults_to_english() {
+        assert_eq!(template_locale_or_default("").unwrap(), "en");
+        assert_eq!(template_locale_or_default(" bn ").unwrap(), "bn");
+        assert_eq!(template_locale_or_default("BN_bd").unwrap(), "bn-BD");
+        assert_eq!(template_locale_or_default("en-gb").unwrap(), "en-GB");
+        assert!(template_locale_or_default("much-too-long-locale").is_err());
+    }
+
+    #[test]
+    fn lookup_falls_back_exact_then_language_then_english() {
+        assert_eq!(template_locale_candidates("bn-BD"), ["bn-BD", "bn", "en"]);
+        assert_eq!(template_locale_candidates("bn"), ["bn", "en"]);
+        assert_eq!(template_locale_candidates("en-GB"), ["en-GB", "en"]);
+        assert_eq!(template_locale_candidates("en"), ["en"]);
+        assert_eq!(template_locale_candidates("fr"), ["fr", "en"]);
+    }
+
+    /// Every shipped auth template exists in English and Bangla for email and
+    /// SMS, and renders completely with exactly the variables its sender
+    /// supplies (an unknown `{{placeholder}}` would fail every send).
+    #[test]
+    fn shipped_templates_cover_english_and_bangla_and_render() {
+        let code_vars: std::collections::HashMap<String, String> = [
+            ("code", "482913"),
+            ("expires_in_minutes", "10"),
+            ("user_name", "Rahim"),
+        ]
+        .into_iter()
+        .map(|(k, v)| (k.to_string(), v.to_string()))
+        .collect();
+        let link_vars: std::collections::HashMap<String, String> = [
+            ("link", "https://app.example.com/signin?otp_id=x&code=y"),
+            ("expires_in_minutes", "10"),
+            ("user_name", "Rahim"),
+        ]
+        .into_iter()
+        .map(|(k, v)| (k.to_string(), v.to_string()))
+        .collect();
+        let invite_vars: std::collections::HashMap<String, String> = [
+            (
+                "link",
+                "https://app.example.com/invite?invitation_id=x&token=y",
+            ),
+            ("tenant_name", "Acme Clinic"),
+            ("inviter_name", "Karim"),
+            ("expires_in_days", "7"),
+        ]
+        .into_iter()
+        .map(|(k, v)| (k.to_string(), v.to_string()))
+        .collect();
+        for (event, vars, must_contain) in [
+            ("authn.otp", &code_vars, "482913"),
+            ("authn.password_reset", &code_vars, "482913"),
+            ("authn.email_verification", &code_vars, "482913"),
+            ("authn.magic_link", &link_vars, "otp_id=x"),
+            ("authn.invitation", &invite_vars, "invitation_id=x"),
+        ] {
+            for channel in [NotificationChannel::Email, NotificationChannel::Sms] {
+                let templates = builtin_authn_templates(event, channel as i32);
+                let locales: Vec<&str> = templates.iter().map(|t| t.locale.as_str()).collect();
+                assert_eq!(locales, ["en", "bn"], "{event}");
+                for template in &templates {
+                    let subject = render_template(&template.subject_template, vars)
+                        .unwrap_or_else(|missing| panic!("{event} subject needs {missing}"));
+                    let body = render_template(&template.body_template, vars)
+                        .unwrap_or_else(|missing| panic!("{event} body needs {missing}"));
+                    assert!(!subject.contains("{{") && !body.contains("{{"));
+                    assert!(body.contains(must_contain), "{event} {}", template.locale);
+                }
+                let bn = templates.iter().find(|t| t.locale == "bn").unwrap();
+                assert!(
+                    bn.body_template
+                        .chars()
+                        .any(|c| ('\u{0980}'..='\u{09FF}').contains(&c)),
+                    "{event} bn body is written in Bangla script"
+                );
+            }
+        }
+        assert!(builtin_authn_templates("authn.otp", NotificationChannel::Push as i32).is_empty());
+        assert!(
+            builtin_authn_templates("orders.shipped", NotificationChannel::Email as i32).is_empty()
+        );
     }
 }

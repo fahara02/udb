@@ -40,7 +40,8 @@ use super::model::{
     json_i64_field, json_object, json_string_field, log_from_json, log_from_row, log_model,
     log_select_projection, preference_from_json_row, preference_from_row, preference_model,
     preference_select_projection, render_template, status_to_db, template_from_json_row,
-    template_from_row, template_locale_or_default, template_model, template_select_projection,
+    template_from_row, template_locale_candidates, template_locale_or_default, template_model,
+    template_select_projection,
 };
 use super::store::{
     delivery_stats_aggregate, is_notification_opted_out, log_transition_allowed_prev,
@@ -64,18 +65,24 @@ pub(crate) async fn send_notification(
             "event_type is required",
         ));
     }
-    let logs = send_notification_in_context(svc, context, req, None).await?;
+    let logs = send_notification_in_context(svc, context, req, &[]).await?;
     Ok(Response::new(notif_pb::SendNotificationResponse { logs }))
 }
 
 /// The send itself, for a context that is already verified: the
 /// public RPC above, and the broker's own system notifications (auth codes),
 /// which run with the target user's tenant and no caller bearer.
+///
+/// Template resolution walks the request locale's fallback chain (exact
+/// `bn-BD`, then language `bn`, then `en`). At each step a stored template
+/// (tenant override first, then the project default) wins over a compiled
+/// `builtin_templates` entry for that same locale, and a built-in in the
+/// recipient's language wins over a stored template in a fallback language.
 pub(crate) async fn send_notification_in_context(
     svc: &NotificationServiceImpl,
     context: crate::RequestContext,
     req: notif_pb::SendNotificationRequest,
-    builtin_template: Option<notif_entity_pb::NotificationTemplate>,
+    builtin_templates: &[notif_entity_pb::NotificationTemplate],
 ) -> Result<Vec<notif_entity_pb::NotificationLog>, Status> {
     // Per-tenant fair admission (Write budget) so one tenant's send flood
     // can't starve the shared control plane.
@@ -102,43 +109,52 @@ pub(crate) async fn send_notification_in_context(
         req.channels.clone()
     };
     let locale = template_locale_or_default(&req.locale)?;
+    let locale_chain = template_locale_candidates(&locale);
     let mut logs = Vec::with_capacity(channels.len());
     for channel in channels.iter().copied() {
         // Resolve the active template for this (event_type, channel, locale,
         // tenant) scope. Identity/tenant come from the verified context only.
         let channel_db = channel_to_db(channel);
-        let template_filter = template_scope_filter(
-            &req.tenant_id,
-            &context.project_id,
-            &req.event_type,
-            channel_db,
-            Some(&locale),
-            true,
-        );
-        let template_rows = runtime
-            .native_entity_read_hybrid_tenant_for_service(
-                "notification",
-                &context,
-                template_read(template_filter, 0, 1),
-            )
-            .await?;
-        let template = match template_rows.first() {
-            Some(row) => template_from_json_row(row),
-            None => match builtin_template
-                .as_ref()
-                .filter(|template| template.channel == channel)
+        let mut resolved = None;
+        for candidate in &locale_chain {
+            let template_filter = template_scope_filter(
+                &req.tenant_id,
+                &context.project_id,
+                &req.event_type,
+                channel_db,
+                Some(candidate),
+                true,
+            );
+            let template_rows = runtime
+                .native_entity_read_hybrid_tenant_for_service(
+                    "notification",
+                    &context,
+                    template_read(template_filter, 0, 1),
+                )
+                .await?;
+            if let Some(row) = template_rows.first() {
+                resolved = Some(template_from_json_row(row));
+                break;
+            }
+            if let Some(builtin) = builtin_templates
+                .iter()
+                .find(|template| template.channel == channel && template.locale == *candidate)
             {
-                Some(template) => template.clone(),
-                None => {
-                    return Err(notification_template_not_found_status(
-                        "send_notification",
-                        format!(
-                            "no active notification template for event '{}' channel '{}' locale '{}'",
-                            req.event_type, channel_db, locale
-                        ),
-                    ));
-                }
-            },
+                resolved = Some(builtin.clone());
+                break;
+            }
+        }
+        let Some(template) = resolved else {
+            return Err(notification_template_not_found_status(
+                "send_notification",
+                format!(
+                    "no active notification template for event '{}' channel '{}' locale '{}' (tried {})",
+                    req.event_type,
+                    channel_db,
+                    locale,
+                    locale_chain.join(", ")
+                ),
+            ));
         };
         // Render subject/body against the request variables; an unsatisfied
         // `{{placeholder}}` fails closed naming the missing variable.
@@ -808,23 +824,29 @@ pub(crate) async fn upsert_template(
         )
     })?;
     crate::runtime::core::set_request_local_settings(&mut tx, &context).await?;
+    // Locale is part of the template identity (it is in both partial unique
+    // indexes), so an `en` and a `bn` template for the same event/channel are two
+    // rows. Before 0.6.6 the target omitted locale and a `bn` upsert overwrote
+    // the `en` row in place.
     let conflict_target = if template_tenant.is_some() {
         format!(
-            "({tenant_id}, {project_id}, {event_type}, {channel}) \
+            "({tenant_id}, {project_id}, {event_type}, {channel}, {locale}) \
              WHERE {tenant_id} IS NOT NULL AND {deleted_at} IS NULL",
             tenant_id = m.q("tenant_id"),
             project_id = m.q("project_id"),
             event_type = m.q("event_type"),
             channel = m.q("channel"),
+            locale = m.q("locale"),
             deleted_at = m.q("deleted_at"),
         )
     } else {
         format!(
-            "({project_id}, {event_type}, {channel}) \
+            "({project_id}, {event_type}, {channel}, {locale}) \
              WHERE {tenant_id} IS NULL AND {deleted_at} IS NULL",
             project_id = m.q("project_id"),
             event_type = m.q("event_type"),
             channel = m.q("channel"),
+            locale = m.q("locale"),
             tenant_id = m.q("tenant_id"),
             deleted_at = m.q("deleted_at"),
         )
@@ -835,7 +857,7 @@ pub(crate) async fn upsert_template(
          VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8) \
          ON CONFLICT {conflict_target} \
          DO UPDATE SET {subject} = EXCLUDED.{subject}, {body} = EXCLUDED.{body}, \
-                       {locale} = EXCLUDED.{locale}, {is_active} = EXCLUDED.{is_active} \
+                       {is_active} = EXCLUDED.{is_active} \
          RETURNING {projection}",
         template_id = m.q("template_id"),
         event_type = m.q("event_type"),

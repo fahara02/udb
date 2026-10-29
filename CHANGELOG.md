@@ -5,6 +5,119 @@ the package version in `Cargo.toml`; historical v0.3.2 audit material is folded
 into the v0.3.x entries because the codebase advanced to v0.3.7 before that
 release line was tagged.
 
+## [0.6.6] - 2026-10-30
+
+### Added
+
+- **Per-tenant sign-in policy.** `PutTenantAuthPolicy` / `GetTenantAuthPolicy`
+  (scopes `udb:authn:manage-auth-policy` / `udb:authn:read-auth-policy`, new
+  table `udb_authn.tenant_auth_policies`) set whether new accounts need a
+  password, which channels can carry a sign-in code (`SMS`, `EMAIL`), the https
+  page magic links and invitation links open, and step-up rules. With
+  `password_required=false`, `CreateUser` accepts an empty password and the
+  account signs in by code.
+- **Passwordless sign-in.** `SendLoginOtp{tenant_hint, channel, address,
+  magic_link}` sends a one-time code by SMS or email, or a magic link
+  (`<magic_link_base_url>?otp_id=…&code=…`) by email; `LoginWithOtp{otp_id,
+  code, …}` returns the same access token, rotating refresh token, session and
+  CSRF token as `Login`. Both are public and rate-limited, and `SendLoginOtp`
+  answers identically whether or not the address belongs to an account. A code
+  works once, and signing in with it verifies that phone or email. Accounts
+  with MFA enrolled, and tenants that require MFA, cannot sign in by code
+  alone. When `UDB_OTP_DELIVERY_WEBHOOK_URL` is set, magic links reach the
+  webhook as a `link` field.
+- **Sign in with Google, Microsoft or any OpenID provider.** Configure a tenant
+  identity provider (kind OIDC) with its client id, client secret and the new
+  `redirect_uris` allowlist. Web apps call `StartOidcLogin` (authorization code
+  + PKCE + nonce), send the browser to the returned URL, then call
+  `FinishOidcLogin{state, code}`; native apps holding a provider ID token call
+  `LoginWithOidcIdToken`. Both return `Login`'s credentials. Unknown users are
+  created or linked under the provider's JIT and account-linking policies, and
+  now get the provider's `default_roles` and group-mapped roles (add-only; an
+  identity-provider mapping never grants `organization_owner` or a platform
+  role). SAML sign-in binds mapped roles the same way. Google: issuer
+  `https://accounts.google.com`, the Web client id and secret, and the
+  console's authorized redirect URIs.
+- **Passkeys everywhere.** Passkey sign-in (`FinishWebAuthnAuthentication`)
+  now returns a rotating refresh token, session, CSRF token and `user_id` like
+  `Login`; `StartWebAuthnAuthentication` with an empty `user_id` starts a
+  usernameless sign-in with a discoverable passkey; and a passkey can be the
+  second factor for password `Login` (`webauthn_challenge_id` +
+  `webauthn_assertion_json`). Passkeys are registered as discoverable keys when
+  the tenant WebAuthn policy prefers or requires it.
+- **Invitations.** `CreateInvitation{channel SMS|EMAIL|OIDC|PASSKEY, address,
+  roles, locale, expires_in_seconds}`, `ListInvitations`, `RevokeInvitation`,
+  `ResendInvitation` (scope `udb:authn:manage-invitations`, new table
+  `udb_authn.invitations`). The invitee opens the link and proves the channel
+  with an SMS/email code, a sign-in at the tenant's identity provider, or a new
+  passkey (`GetInvitation`, `StartInvitationAcceptance`, `AcceptInvitation`),
+  and gets an active account with that channel verified, the roles bound, its
+  language set, and a signed-in session. Platform roles are never granted by
+  invitation, only an `organization_owner` or a cross-tenant admin can invite
+  another owner, and while governed authz mode is on invitations cannot carry
+  roles. Expired, revoked, used and unknown invitations get one identical
+  refusal.
+- **Step-up for sensitive actions.** `IssueMfaChallenge` takes an `action`;
+  `VerifyMfaChallenge` accepts TOTP, recovery codes, email and SMS codes (sent
+  to a verified address) and passkeys, and returns a short-lived
+  `step_up_token` (acr `aal2`, `amr`, `auth_time`, `step_up_action`). Tenant
+  step-up rules (`{action, max_age_seconds, factors}` in the sign-in policy)
+  are enforced by resource servers with the new `CheckStepUp{action,
+  step_up_token}` (scope `udb:authn:check-step-up`). `ValidateToken` reports
+  `acr`, `amr`, `auth_time` and `step_up_action`.
+- **Messages in the user's language.** `CreateUser`, `UpdateUser` (with
+  `locale` in `update_mask`) and invitations take a BCP 47 `locale` (e.g.
+  `bn`), returned on every `User`. Auth codes, magic links and invitations
+  render in it, falling back from the exact locale to the language to English.
+  English and Bangla templates ship for `authn.otp`, `authn.password_reset`,
+  `authn.email_verification`, `authn.magic_link` and `authn.invitation`.
+
+### Changed
+
+- Access tokens from a sign-in carry `amr` and `auth_time`, and a password
+  login finished with a second factor is `acr` `aal2` (it was `aal1`).
+- WebAuthn challenges are strictly single use, including under concurrent
+  Finish calls.
+
+### Fixed
+
+- **Notification templates in several languages coexist.** Template
+  uniqueness ignored `locale`, so saving a `bn` template overwrote the `en`
+  one. The two unique indexes now include `locale`; this release's migration
+  rebuilds them under a one-release `allow_drop` hint on
+  `NotificationTemplate`.
+
+### Upgrading
+
+- New tables `udb_authn.tenant_auth_policies`, `udb_authn.oidc_login_states`
+  and `udb_authn.invitations`, and new columns on identity providers
+  (`redirect_uris_json`), MFA challenges and invitations, are created by the
+  normal native migration. Stage and activate the catalogue with the 0.6.6 CLI
+  before `bootstrap`, as for 0.6.4.
+
+### Breaking for callers
+
+- **`StartWebAuthnAuthentication` with an empty `user_id` starts a usernameless
+  sign-in** instead of failing with `user_id is required`.
+  - detect: code: `StartWebAuthnAuthentication`
+  - fix: always send the `user_id` for a per-user sign-in, or handle the returned usernameless options.
+- **Reusing a consumed WebAuthn challenge fails** with `PERMISSION_DENIED`
+  (`invalid_webauthn_ceremony`).
+  - detect: code: `FinishWebAuthnAuthentication`
+  - fix: start a new ceremony for each attempt.
+- **`CreateProvider` / `UpdateProvider` validate `redirect_uris`** (exact https,
+  http on a loopback IP, or an app scheme containing a dot).
+  - detect: code: `redirect_uris`
+  - fix: register the exact redirect URIs your app uses.
+- **`IssueMfaChallenge` refuses `AUTH_FACTOR_KIND_PASSWORD`, and email/SMS
+  factors need a verified address.**
+  - detect: code: `AUTH_FACTOR_KIND_PASSWORD`
+  - fix: use TOTP, EMAIL_OTP, SMS_OTP, WEBAUTHN or RECOVERY_CODE; verify the user's email or phone first.
+- **A `SendNotification` locale without a template falls back to `en`** instead
+  of failing with template-not-found.
+  - detect: code: `TEMPLATE_NOT_FOUND`
+  - fix: check the rendered locale instead of relying on the refusal.
+
 ## [0.6.5] - 2026-10-30
 
 ### Added

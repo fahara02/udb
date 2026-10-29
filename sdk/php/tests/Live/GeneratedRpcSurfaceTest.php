@@ -4089,6 +4089,15 @@ function perfSeedPhp(array $s): array
             $value = $prepared['fixtures'][$key] ?? null;
             if (is_string($value) && $value !== '') $fix->set($key, $value);
         }
+        // 0.6.6 identity-flow fixtures (tenant auth policy, passwordless sign-in,
+        // invitations, step-up, OIDC); absent when the benchmark broker predates them
+        // or (OIDC only) runs without UDB_OIDC_TEST_MODE. Same list in every harness:
+        // single-use codes, invitation accept tokens and a step-up token for disposable
+        // targets, never a password or an access/refresh token.
+        foreach (['login_otp_send_phone', 'login_otp_id', 'login_otp_code', 'invitation_get_id', 'invitation_get_token', 'invitation_start_id', 'invitation_start_token', 'invitation_accept_id', 'invitation_accept_token', 'invitation_accept_otp_id', 'invitation_accept_otp_code', 'invitation_revoke_id', 'invitation_resend_id', 'step_up_token', 'oidc_provider_id', 'oidc_state'] as $key) {
+            $value = $prepared['fixtures'][$key] ?? null;
+            if (is_string($value) && $value !== '') $fix->set($key, $value);
+        }
     }
     $cleanups = [];
 
@@ -5392,7 +5401,10 @@ it('measures per-RPC latency', function () {
     // session FIRST, Phase 2 runs everything else (reads BEFORE mutations BEFORE destructive so a
     // read of a seeded entity isn't invalidated by a later rotate/revoke/delete), Phase 3 tears
     // the session/credentials down LAST.
-    $PHASE1_AUTHN = ['login', 'refresh_session', 'authenticate', 'validate_token', 'introspect_token', 'refresh_token', 'get_jwks'];
+    // The 0.6.6 sign-ins redeem single-use prepared proofs (a 10-minute login code, OIDC
+    // state and invitation code) right after session setup. Each signs a DIFFERENT account
+    // in; the benchmark bearer is kept.
+    $PHASE1_AUTHN = ['login', 'refresh_session', 'authenticate', 'validate_token', 'introspect_token', 'refresh_token', 'get_jwks', 'login_with_otp', 'finish_oidc_login', 'login_with_oidc_id_token', 'accept_invitation'];
     $PHASE3_AUTHN = ['logout', 'revoke_session', 'admin_revoke_session', 'admin_revoke_all_user_sessions', 'admin_revoke_all_tenant_sessions', 'emergency_revoke', 'change_password', 'reset_password', 'admin_reset_password', 'change_user_status', 'admin_reset_mfa', 'revoke_recovery_codes', 'revoke_device', 'delete_web_authn_credential', 'disable_mfa_factor'];
     $CATALOG_LIFECYCLE = ['StageCatalog' => 0, 'ActivateCatalog' => 1, 'RollbackCatalog' => 2];
     $okRank = ['read_only' => 0, 'mutation' => 1, 'destructive' => 2];

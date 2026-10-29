@@ -42,6 +42,10 @@ private static final long serialVersionUID = 0L;
     scopes_ =
         com.google.protobuf.LazyStringArrayList.emptyList();
     sessionPublicId_ = "";
+    acr_ = "";
+    amr_ =
+        com.google.protobuf.LazyStringArrayList.emptyList();
+    stepUpAction_ = "";
   }
 
   public static final com.google.protobuf.Descriptors.Descriptor
@@ -694,6 +698,185 @@ java.lang.String defaultValue) {
     }
   }
 
+  public static final int ACR_FIELD_NUMBER = 17;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object acr_ = "";
+  /**
+   * <pre>
+   * JWTs only. Assurance level the token states: `aal2` after a second factor
+   * or a passkey, else `aal1`. Empty for sessions, API keys and tokens minted
+   * before 0.6.6 by external issuers that omit it.
+   * </pre>
+   *
+   * <code>string acr = 17 [json_name = "acr"];</code>
+   * @return The acr.
+   */
+  @java.lang.Override
+  public java.lang.String getAcr() {
+    java.lang.Object ref = acr_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs =
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      acr_ = s;
+      return s;
+    }
+  }
+  /**
+   * <pre>
+   * JWTs only. Assurance level the token states: `aal2` after a second factor
+   * or a passkey, else `aal1`. Empty for sessions, API keys and tokens minted
+   * before 0.6.6 by external issuers that omit it.
+   * </pre>
+   *
+   * <code>string acr = 17 [json_name = "acr"];</code>
+   * @return The bytes for acr.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getAcrBytes() {
+    java.lang.Object ref = acr_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b =
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      acr_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
+  public static final int AMR_FIELD_NUMBER = 18;
+  @SuppressWarnings("serial")
+  private com.google.protobuf.LazyStringArrayList amr_ =
+      com.google.protobuf.LazyStringArrayList.emptyList();
+  /**
+   * <pre>
+   * JWTs only. How the user authenticated (RFC 8176 values such as `pwd`,
+   * `otp`, `sms`, plus `webauthn` for a passkey and `fed` for an OIDC
+   * provider). Empty for refreshed tokens: a refresh does not re-authenticate.
+   * </pre>
+   *
+   * <code>repeated string amr = 18 [json_name = "amr"];</code>
+   * @return A list containing the amr.
+   */
+  public com.google.protobuf.ProtocolStringList
+      getAmrList() {
+    return amr_;
+  }
+  /**
+   * <pre>
+   * JWTs only. How the user authenticated (RFC 8176 values such as `pwd`,
+   * `otp`, `sms`, plus `webauthn` for a passkey and `fed` for an OIDC
+   * provider). Empty for refreshed tokens: a refresh does not re-authenticate.
+   * </pre>
+   *
+   * <code>repeated string amr = 18 [json_name = "amr"];</code>
+   * @return The count of amr.
+   */
+  public int getAmrCount() {
+    return amr_.size();
+  }
+  /**
+   * <pre>
+   * JWTs only. How the user authenticated (RFC 8176 values such as `pwd`,
+   * `otp`, `sms`, plus `webauthn` for a passkey and `fed` for an OIDC
+   * provider). Empty for refreshed tokens: a refresh does not re-authenticate.
+   * </pre>
+   *
+   * <code>repeated string amr = 18 [json_name = "amr"];</code>
+   * @param index The index of the element to return.
+   * @return The amr at the given index.
+   */
+  public java.lang.String getAmr(int index) {
+    return amr_.get(index);
+  }
+  /**
+   * <pre>
+   * JWTs only. How the user authenticated (RFC 8176 values such as `pwd`,
+   * `otp`, `sms`, plus `webauthn` for a passkey and `fed` for an OIDC
+   * provider). Empty for refreshed tokens: a refresh does not re-authenticate.
+   * </pre>
+   *
+   * <code>repeated string amr = 18 [json_name = "amr"];</code>
+   * @param index The index of the value to return.
+   * @return The bytes of the amr at the given index.
+   */
+  public com.google.protobuf.ByteString
+      getAmrBytes(int index) {
+    return amr_.getByteString(index);
+  }
+
+  public static final int AUTH_TIME_FIELD_NUMBER = 19;
+  private long authTime_ = 0L;
+  /**
+   * <pre>
+   * JWTs only. Unix seconds when the user authenticated; 0 when the token
+   * does not say (refreshed tokens, API-key exchange, service accounts).
+   * </pre>
+   *
+   * <code>int64 auth_time = 19 [json_name = "authTime"];</code>
+   * @return The authTime.
+   */
+  @java.lang.Override
+  public long getAuthTime() {
+    return authTime_;
+  }
+
+  public static final int STEP_UP_ACTION_FIELD_NUMBER = 20;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object stepUpAction_ = "";
+  /**
+   * <pre>
+   * Set only when `token` is a step-up token from VerifyMfaChallenge: the
+   * action it was minted for. Such a token carries no scopes; use
+   * CheckStepUp to enforce it.
+   * </pre>
+   *
+   * <code>string step_up_action = 20 [json_name = "stepUpAction"];</code>
+   * @return The stepUpAction.
+   */
+  @java.lang.Override
+  public java.lang.String getStepUpAction() {
+    java.lang.Object ref = stepUpAction_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs =
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      stepUpAction_ = s;
+      return s;
+    }
+  }
+  /**
+   * <pre>
+   * Set only when `token` is a step-up token from VerifyMfaChallenge: the
+   * action it was minted for. Such a token carries no scopes; use
+   * CheckStepUp to enforce it.
+   * </pre>
+   *
+   * <code>string step_up_action = 20 [json_name = "stepUpAction"];</code>
+   * @return The bytes for stepUpAction.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getStepUpActionBytes() {
+    java.lang.Object ref = stepUpAction_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b =
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      stepUpAction_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -758,6 +941,18 @@ java.lang.String defaultValue) {
         15);
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(sessionPublicId_)) {
       com.google.protobuf.GeneratedMessage.writeString(output, 16, sessionPublicId_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(acr_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 17, acr_);
+    }
+    for (int i = 0; i < amr_.size(); i++) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 18, amr_.getRaw(i));
+    }
+    if (authTime_ != 0L) {
+      output.writeInt64(19, authTime_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(stepUpAction_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 20, stepUpAction_);
     }
     getUnknownFields().writeTo(output);
   }
@@ -838,6 +1033,24 @@ java.lang.String defaultValue) {
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(sessionPublicId_)) {
       size += com.google.protobuf.GeneratedMessage.computeStringSize(16, sessionPublicId_);
     }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(acr_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(17, acr_);
+    }
+    {
+      int dataSize = 0;
+      for (int i = 0; i < amr_.size(); i++) {
+        dataSize += computeStringSizeNoTag(amr_.getRaw(i));
+      }
+      size += dataSize;
+      size += 2 * getAmrList().size();
+    }
+    if (authTime_ != 0L) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeInt64Size(19, authTime_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(stepUpAction_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(20, stepUpAction_);
+    }
     size += getUnknownFields().getSerializedSize();
     memoizedSize = size;
     return size;
@@ -889,6 +1102,14 @@ java.lang.String defaultValue) {
         other.internalGetAttributes())) return false;
     if (!getSessionPublicId()
         .equals(other.getSessionPublicId())) return false;
+    if (!getAcr()
+        .equals(other.getAcr())) return false;
+    if (!getAmrList()
+        .equals(other.getAmrList())) return false;
+    if (getAuthTime()
+        != other.getAuthTime()) return false;
+    if (!getStepUpAction()
+        .equals(other.getStepUpAction())) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -943,6 +1164,17 @@ java.lang.String defaultValue) {
     }
     hash = (37 * hash) + SESSION_PUBLIC_ID_FIELD_NUMBER;
     hash = (53 * hash) + getSessionPublicId().hashCode();
+    hash = (37 * hash) + ACR_FIELD_NUMBER;
+    hash = (53 * hash) + getAcr().hashCode();
+    if (getAmrCount() > 0) {
+      hash = (37 * hash) + AMR_FIELD_NUMBER;
+      hash = (53 * hash) + getAmrList().hashCode();
+    }
+    hash = (37 * hash) + AUTH_TIME_FIELD_NUMBER;
+    hash = (53 * hash) + com.google.protobuf.Internal.hashLong(
+        getAuthTime());
+    hash = (37 * hash) + STEP_UP_ACTION_FIELD_NUMBER;
+    hash = (53 * hash) + getStepUpAction().hashCode();
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -1129,6 +1361,11 @@ java.lang.String defaultValue) {
           com.google.protobuf.LazyStringArrayList.emptyList();
       internalGetMutableAttributes().clear();
       sessionPublicId_ = "";
+      acr_ = "";
+      amr_ =
+          com.google.protobuf.LazyStringArrayList.emptyList();
+      authTime_ = 0L;
+      stepUpAction_ = "";
       return this;
     }
 
@@ -1219,6 +1456,19 @@ java.lang.String defaultValue) {
       }
       if (((from_bitField0_ & 0x00008000) != 0)) {
         result.sessionPublicId_ = sessionPublicId_;
+      }
+      if (((from_bitField0_ & 0x00010000) != 0)) {
+        result.acr_ = acr_;
+      }
+      if (((from_bitField0_ & 0x00020000) != 0)) {
+        amr_.makeImmutable();
+        result.amr_ = amr_;
+      }
+      if (((from_bitField0_ & 0x00040000) != 0)) {
+        result.authTime_ = authTime_;
+      }
+      if (((from_bitField0_ & 0x00080000) != 0)) {
+        result.stepUpAction_ = stepUpAction_;
       }
       result.bitField0_ |= to_bitField0_;
     }
@@ -1311,6 +1561,29 @@ java.lang.String defaultValue) {
       if (!other.getSessionPublicId().isEmpty()) {
         sessionPublicId_ = other.sessionPublicId_;
         bitField0_ |= 0x00008000;
+        onChanged();
+      }
+      if (!other.getAcr().isEmpty()) {
+        acr_ = other.acr_;
+        bitField0_ |= 0x00010000;
+        onChanged();
+      }
+      if (!other.amr_.isEmpty()) {
+        if (amr_.isEmpty()) {
+          amr_ = other.amr_;
+          bitField0_ |= 0x00020000;
+        } else {
+          ensureAmrIsMutable();
+          amr_.addAll(other.amr_);
+        }
+        onChanged();
+      }
+      if (other.getAuthTime() != 0L) {
+        setAuthTime(other.getAuthTime());
+      }
+      if (!other.getStepUpAction().isEmpty()) {
+        stepUpAction_ = other.stepUpAction_;
+        bitField0_ |= 0x00080000;
         onChanged();
       }
       this.mergeUnknownFields(other.getUnknownFields());
@@ -1429,6 +1702,27 @@ java.lang.String defaultValue) {
               bitField0_ |= 0x00008000;
               break;
             } // case 130
+            case 138: {
+              acr_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00010000;
+              break;
+            } // case 138
+            case 146: {
+              java.lang.String s = input.readStringRequireUtf8();
+              ensureAmrIsMutable();
+              amr_.add(s);
+              break;
+            } // case 146
+            case 152: {
+              authTime_ = input.readInt64();
+              bitField0_ |= 0x00040000;
+              break;
+            } // case 152
+            case 162: {
+              stepUpAction_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00080000;
+              break;
+            } // case 162
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -2889,6 +3183,422 @@ java.lang.String defaultValue) {
       checkByteStringIsUtf8(value);
       sessionPublicId_ = value;
       bitField0_ |= 0x00008000;
+      onChanged();
+      return this;
+    }
+
+    private java.lang.Object acr_ = "";
+    /**
+     * <pre>
+     * JWTs only. Assurance level the token states: `aal2` after a second factor
+     * or a passkey, else `aal1`. Empty for sessions, API keys and tokens minted
+     * before 0.6.6 by external issuers that omit it.
+     * </pre>
+     *
+     * <code>string acr = 17 [json_name = "acr"];</code>
+     * @return The acr.
+     */
+    public java.lang.String getAcr() {
+      java.lang.Object ref = acr_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        acr_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <pre>
+     * JWTs only. Assurance level the token states: `aal2` after a second factor
+     * or a passkey, else `aal1`. Empty for sessions, API keys and tokens minted
+     * before 0.6.6 by external issuers that omit it.
+     * </pre>
+     *
+     * <code>string acr = 17 [json_name = "acr"];</code>
+     * @return The bytes for acr.
+     */
+    public com.google.protobuf.ByteString
+        getAcrBytes() {
+      java.lang.Object ref = acr_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b =
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        acr_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <pre>
+     * JWTs only. Assurance level the token states: `aal2` after a second factor
+     * or a passkey, else `aal1`. Empty for sessions, API keys and tokens minted
+     * before 0.6.6 by external issuers that omit it.
+     * </pre>
+     *
+     * <code>string acr = 17 [json_name = "acr"];</code>
+     * @param value The acr to set.
+     * @return This builder for chaining.
+     */
+    public Builder setAcr(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      acr_ = value;
+      bitField0_ |= 0x00010000;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * JWTs only. Assurance level the token states: `aal2` after a second factor
+     * or a passkey, else `aal1`. Empty for sessions, API keys and tokens minted
+     * before 0.6.6 by external issuers that omit it.
+     * </pre>
+     *
+     * <code>string acr = 17 [json_name = "acr"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearAcr() {
+      acr_ = getDefaultInstance().getAcr();
+      bitField0_ = (bitField0_ & ~0x00010000);
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * JWTs only. Assurance level the token states: `aal2` after a second factor
+     * or a passkey, else `aal1`. Empty for sessions, API keys and tokens minted
+     * before 0.6.6 by external issuers that omit it.
+     * </pre>
+     *
+     * <code>string acr = 17 [json_name = "acr"];</code>
+     * @param value The bytes for acr to set.
+     * @return This builder for chaining.
+     */
+    public Builder setAcrBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      acr_ = value;
+      bitField0_ |= 0x00010000;
+      onChanged();
+      return this;
+    }
+
+    private com.google.protobuf.LazyStringArrayList amr_ =
+        com.google.protobuf.LazyStringArrayList.emptyList();
+    private void ensureAmrIsMutable() {
+      if (!amr_.isModifiable()) {
+        amr_ = new com.google.protobuf.LazyStringArrayList(amr_);
+      }
+      bitField0_ |= 0x00020000;
+    }
+    /**
+     * <pre>
+     * JWTs only. How the user authenticated (RFC 8176 values such as `pwd`,
+     * `otp`, `sms`, plus `webauthn` for a passkey and `fed` for an OIDC
+     * provider). Empty for refreshed tokens: a refresh does not re-authenticate.
+     * </pre>
+     *
+     * <code>repeated string amr = 18 [json_name = "amr"];</code>
+     * @return A list containing the amr.
+     */
+    public com.google.protobuf.ProtocolStringList
+        getAmrList() {
+      amr_.makeImmutable();
+      return amr_;
+    }
+    /**
+     * <pre>
+     * JWTs only. How the user authenticated (RFC 8176 values such as `pwd`,
+     * `otp`, `sms`, plus `webauthn` for a passkey and `fed` for an OIDC
+     * provider). Empty for refreshed tokens: a refresh does not re-authenticate.
+     * </pre>
+     *
+     * <code>repeated string amr = 18 [json_name = "amr"];</code>
+     * @return The count of amr.
+     */
+    public int getAmrCount() {
+      return amr_.size();
+    }
+    /**
+     * <pre>
+     * JWTs only. How the user authenticated (RFC 8176 values such as `pwd`,
+     * `otp`, `sms`, plus `webauthn` for a passkey and `fed` for an OIDC
+     * provider). Empty for refreshed tokens: a refresh does not re-authenticate.
+     * </pre>
+     *
+     * <code>repeated string amr = 18 [json_name = "amr"];</code>
+     * @param index The index of the element to return.
+     * @return The amr at the given index.
+     */
+    public java.lang.String getAmr(int index) {
+      return amr_.get(index);
+    }
+    /**
+     * <pre>
+     * JWTs only. How the user authenticated (RFC 8176 values such as `pwd`,
+     * `otp`, `sms`, plus `webauthn` for a passkey and `fed` for an OIDC
+     * provider). Empty for refreshed tokens: a refresh does not re-authenticate.
+     * </pre>
+     *
+     * <code>repeated string amr = 18 [json_name = "amr"];</code>
+     * @param index The index of the value to return.
+     * @return The bytes of the amr at the given index.
+     */
+    public com.google.protobuf.ByteString
+        getAmrBytes(int index) {
+      return amr_.getByteString(index);
+    }
+    /**
+     * <pre>
+     * JWTs only. How the user authenticated (RFC 8176 values such as `pwd`,
+     * `otp`, `sms`, plus `webauthn` for a passkey and `fed` for an OIDC
+     * provider). Empty for refreshed tokens: a refresh does not re-authenticate.
+     * </pre>
+     *
+     * <code>repeated string amr = 18 [json_name = "amr"];</code>
+     * @param index The index to set the value at.
+     * @param value The amr to set.
+     * @return This builder for chaining.
+     */
+    public Builder setAmr(
+        int index, java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      ensureAmrIsMutable();
+      amr_.set(index, value);
+      bitField0_ |= 0x00020000;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * JWTs only. How the user authenticated (RFC 8176 values such as `pwd`,
+     * `otp`, `sms`, plus `webauthn` for a passkey and `fed` for an OIDC
+     * provider). Empty for refreshed tokens: a refresh does not re-authenticate.
+     * </pre>
+     *
+     * <code>repeated string amr = 18 [json_name = "amr"];</code>
+     * @param value The amr to add.
+     * @return This builder for chaining.
+     */
+    public Builder addAmr(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      ensureAmrIsMutable();
+      amr_.add(value);
+      bitField0_ |= 0x00020000;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * JWTs only. How the user authenticated (RFC 8176 values such as `pwd`,
+     * `otp`, `sms`, plus `webauthn` for a passkey and `fed` for an OIDC
+     * provider). Empty for refreshed tokens: a refresh does not re-authenticate.
+     * </pre>
+     *
+     * <code>repeated string amr = 18 [json_name = "amr"];</code>
+     * @param values The amr to add.
+     * @return This builder for chaining.
+     */
+    public Builder addAllAmr(
+        java.lang.Iterable<java.lang.String> values) {
+      ensureAmrIsMutable();
+      com.google.protobuf.AbstractMessageLite.Builder.addAll(
+          values, amr_);
+      bitField0_ |= 0x00020000;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * JWTs only. How the user authenticated (RFC 8176 values such as `pwd`,
+     * `otp`, `sms`, plus `webauthn` for a passkey and `fed` for an OIDC
+     * provider). Empty for refreshed tokens: a refresh does not re-authenticate.
+     * </pre>
+     *
+     * <code>repeated string amr = 18 [json_name = "amr"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearAmr() {
+      amr_ =
+        com.google.protobuf.LazyStringArrayList.emptyList();
+      bitField0_ = (bitField0_ & ~0x00020000);;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * JWTs only. How the user authenticated (RFC 8176 values such as `pwd`,
+     * `otp`, `sms`, plus `webauthn` for a passkey and `fed` for an OIDC
+     * provider). Empty for refreshed tokens: a refresh does not re-authenticate.
+     * </pre>
+     *
+     * <code>repeated string amr = 18 [json_name = "amr"];</code>
+     * @param value The bytes of the amr to add.
+     * @return This builder for chaining.
+     */
+    public Builder addAmrBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      ensureAmrIsMutable();
+      amr_.add(value);
+      bitField0_ |= 0x00020000;
+      onChanged();
+      return this;
+    }
+
+    private long authTime_ ;
+    /**
+     * <pre>
+     * JWTs only. Unix seconds when the user authenticated; 0 when the token
+     * does not say (refreshed tokens, API-key exchange, service accounts).
+     * </pre>
+     *
+     * <code>int64 auth_time = 19 [json_name = "authTime"];</code>
+     * @return The authTime.
+     */
+    @java.lang.Override
+    public long getAuthTime() {
+      return authTime_;
+    }
+    /**
+     * <pre>
+     * JWTs only. Unix seconds when the user authenticated; 0 when the token
+     * does not say (refreshed tokens, API-key exchange, service accounts).
+     * </pre>
+     *
+     * <code>int64 auth_time = 19 [json_name = "authTime"];</code>
+     * @param value The authTime to set.
+     * @return This builder for chaining.
+     */
+    public Builder setAuthTime(long value) {
+
+      authTime_ = value;
+      bitField0_ |= 0x00040000;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * JWTs only. Unix seconds when the user authenticated; 0 when the token
+     * does not say (refreshed tokens, API-key exchange, service accounts).
+     * </pre>
+     *
+     * <code>int64 auth_time = 19 [json_name = "authTime"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearAuthTime() {
+      bitField0_ = (bitField0_ & ~0x00040000);
+      authTime_ = 0L;
+      onChanged();
+      return this;
+    }
+
+    private java.lang.Object stepUpAction_ = "";
+    /**
+     * <pre>
+     * Set only when `token` is a step-up token from VerifyMfaChallenge: the
+     * action it was minted for. Such a token carries no scopes; use
+     * CheckStepUp to enforce it.
+     * </pre>
+     *
+     * <code>string step_up_action = 20 [json_name = "stepUpAction"];</code>
+     * @return The stepUpAction.
+     */
+    public java.lang.String getStepUpAction() {
+      java.lang.Object ref = stepUpAction_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        stepUpAction_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <pre>
+     * Set only when `token` is a step-up token from VerifyMfaChallenge: the
+     * action it was minted for. Such a token carries no scopes; use
+     * CheckStepUp to enforce it.
+     * </pre>
+     *
+     * <code>string step_up_action = 20 [json_name = "stepUpAction"];</code>
+     * @return The bytes for stepUpAction.
+     */
+    public com.google.protobuf.ByteString
+        getStepUpActionBytes() {
+      java.lang.Object ref = stepUpAction_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b =
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        stepUpAction_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <pre>
+     * Set only when `token` is a step-up token from VerifyMfaChallenge: the
+     * action it was minted for. Such a token carries no scopes; use
+     * CheckStepUp to enforce it.
+     * </pre>
+     *
+     * <code>string step_up_action = 20 [json_name = "stepUpAction"];</code>
+     * @param value The stepUpAction to set.
+     * @return This builder for chaining.
+     */
+    public Builder setStepUpAction(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      stepUpAction_ = value;
+      bitField0_ |= 0x00080000;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Set only when `token` is a step-up token from VerifyMfaChallenge: the
+     * action it was minted for. Such a token carries no scopes; use
+     * CheckStepUp to enforce it.
+     * </pre>
+     *
+     * <code>string step_up_action = 20 [json_name = "stepUpAction"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearStepUpAction() {
+      stepUpAction_ = getDefaultInstance().getStepUpAction();
+      bitField0_ = (bitField0_ & ~0x00080000);
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Set only when `token` is a step-up token from VerifyMfaChallenge: the
+     * action it was minted for. Such a token carries no scopes; use
+     * CheckStepUp to enforce it.
+     * </pre>
+     *
+     * <code>string step_up_action = 20 [json_name = "stepUpAction"];</code>
+     * @param value The bytes for stepUpAction to set.
+     * @return This builder for chaining.
+     */
+    public Builder setStepUpActionBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      stepUpAction_ = value;
+      bitField0_ |= 0x00080000;
       onChanged();
       return this;
     }

@@ -21,7 +21,7 @@ class NotificationTemplate extends \Google\Protobuf\Internal\Message
     /**
      * Machine code such as RESOURCE_CREATED, SLA_BREACH_WARNING, REVIEW_ASSIGNED.
      * Partial unique indexes above permit one project-global default and one
-     * per-tenant override for the same event/channel in each exact project.
+     * per-tenant override for the same event/channel/locale in each exact project.
      *
      * Generated from protobuf field <code>string event_type = 2 [json_name = "eventType", (.udb.core.common.v1.pg_column) = {</code>
      */
@@ -90,7 +90,7 @@ class NotificationTemplate extends \Google\Protobuf\Internal\Message
      *     @type string $event_type
      *           Machine code such as RESOURCE_CREATED, SLA_BREACH_WARNING, REVIEW_ASSIGNED.
      *           Partial unique indexes above permit one project-global default and one
-     *           per-tenant override for the same event/channel in each exact project.
+     *           per-tenant override for the same event/channel/locale in each exact project.
      *     @type int $channel
      *     @type string $subject_template
      *     @type string $body_template
@@ -138,7 +138,7 @@ class NotificationTemplate extends \Google\Protobuf\Internal\Message
     /**
      * Machine code such as RESOURCE_CREATED, SLA_BREACH_WARNING, REVIEW_ASSIGNED.
      * Partial unique indexes above permit one project-global default and one
-     * per-tenant override for the same event/channel in each exact project.
+     * per-tenant override for the same event/channel/locale in each exact project.
      *
      * Generated from protobuf field <code>string event_type = 2 [json_name = "eventType", (.udb.core.common.v1.pg_column) = {</code>
      * @return string
@@ -151,7 +151,7 @@ class NotificationTemplate extends \Google\Protobuf\Internal\Message
     /**
      * Machine code such as RESOURCE_CREATED, SLA_BREACH_WARNING, REVIEW_ASSIGNED.
      * Partial unique indexes above permit one project-global default and one
-     * per-tenant override for the same event/channel in each exact project.
+     * per-tenant override for the same event/channel/locale in each exact project.
      *
      * Generated from protobuf field <code>string event_type = 2 [json_name = "eventType", (.udb.core.common.v1.pg_column) = {</code>
      * @param string $var

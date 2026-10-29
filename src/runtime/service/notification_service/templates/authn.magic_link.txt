@@ -1,0 +1,5 @@
+Hello {{user_name}},
+
+Use this link to sign in: {{link}}
+
+It expires in {{expires_in_minutes}} minutes. If you did not ask to sign in, ignore this message.

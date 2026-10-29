@@ -27,6 +27,8 @@ class FinishWebAuthnAuthenticationResponse extends \Google\Protobuf\Internal\Mes
      */
     protected $access_token = '';
     /**
+     * when access_token expires (unix seconds)
+     *
      * Generated from protobuf field <code>int64 expires_at_unix = 4 [json_name = "expiresAtUnix"];</code>
      */
     protected $expires_at_unix = 0;
@@ -34,6 +36,50 @@ class FinishWebAuthnAuthenticationResponse extends \Google\Protobuf\Internal\Mes
      * Generated from protobuf field <code>string credential_id = 5 [json_name = "credentialId"];</code>
      */
     protected $credential_id = '';
+    /**
+     * A passkey sign-in returns the same credentials as Login (fields below).
+     * Rotating refresh token (rt_<family>.<jti>) for RefreshToken; empty for
+     * service accounts.
+     *
+     * Generated from protobuf field <code>string refresh_token = 6 [json_name = "refreshToken"];</code>
+     */
+    protected $refresh_token = '';
+    /**
+     * seconds
+     *
+     * Generated from protobuf field <code>int32 access_token_expires_in = 7 [json_name = "accessTokenExpiresIn"];</code>
+     */
+    protected $access_token_expires_in = 0;
+    /**
+     * absolute lifetime of refresh_token, seconds
+     *
+     * Generated from protobuf field <code>int32 refresh_token_expires_in = 8 [json_name = "refreshTokenExpiresIn"];</code>
+     */
+    protected $refresh_token_expires_in = 0;
+    /**
+     * server-side session handle (WEB: set as an HttpOnly cookie)
+     *
+     * Generated from protobuf field <code>string session_token = 9 [json_name = "sessionToken"];</code>
+     */
+    protected $session_token = '';
+    /**
+     * double-submit CSRF token bound to this session
+     *
+     * Generated from protobuf field <code>string csrf_token = 10 [json_name = "csrfToken"];</code>
+     */
+    protected $csrf_token = '';
+    /**
+     * Stable non-secret session id (`sesspub_…`), as Login / ValidateToken report it.
+     *
+     * Generated from protobuf field <code>string session_public_id = 11 [json_name = "sessionPublicId"];</code>
+     */
+    protected $session_public_id = '';
+    /**
+     * The signed-in user (on a usernameless sign-in, the user the passkey belongs to).
+     *
+     * Generated from protobuf field <code>string user_id = 12 [json_name = "userId"];</code>
+     */
+    protected $user_id = '';
 
     /**
      * Constructor.
@@ -45,7 +91,24 @@ class FinishWebAuthnAuthenticationResponse extends \Google\Protobuf\Internal\Mes
      *     @type string $session_id
      *     @type string $access_token
      *     @type int|string $expires_at_unix
+     *           when access_token expires (unix seconds)
      *     @type string $credential_id
+     *     @type string $refresh_token
+     *           A passkey sign-in returns the same credentials as Login (fields below).
+     *           Rotating refresh token (rt_<family>.<jti>) for RefreshToken; empty for
+     *           service accounts.
+     *     @type int $access_token_expires_in
+     *           seconds
+     *     @type int $refresh_token_expires_in
+     *           absolute lifetime of refresh_token, seconds
+     *     @type string $session_token
+     *           server-side session handle (WEB: set as an HttpOnly cookie)
+     *     @type string $csrf_token
+     *           double-submit CSRF token bound to this session
+     *     @type string $session_public_id
+     *           Stable non-secret session id (`sesspub_…`), as Login / ValidateToken report it.
+     *     @type string $user_id
+     *           The signed-in user (on a usernameless sign-in, the user the passkey belongs to).
      * }
      */
     public function __construct($data = NULL) {
@@ -130,6 +193,8 @@ class FinishWebAuthnAuthenticationResponse extends \Google\Protobuf\Internal\Mes
     }
 
     /**
+     * when access_token expires (unix seconds)
+     *
      * Generated from protobuf field <code>int64 expires_at_unix = 4 [json_name = "expiresAtUnix"];</code>
      * @return int|string
      */
@@ -139,6 +204,8 @@ class FinishWebAuthnAuthenticationResponse extends \Google\Protobuf\Internal\Mes
     }
 
     /**
+     * when access_token expires (unix seconds)
+     *
      * Generated from protobuf field <code>int64 expires_at_unix = 4 [json_name = "expiresAtUnix"];</code>
      * @param int|string $var
      * @return $this
@@ -169,6 +236,192 @@ class FinishWebAuthnAuthenticationResponse extends \Google\Protobuf\Internal\Mes
     {
         GPBUtil::checkString($var, True);
         $this->credential_id = $var;
+
+        return $this;
+    }
+
+    /**
+     * A passkey sign-in returns the same credentials as Login (fields below).
+     * Rotating refresh token (rt_<family>.<jti>) for RefreshToken; empty for
+     * service accounts.
+     *
+     * Generated from protobuf field <code>string refresh_token = 6 [json_name = "refreshToken"];</code>
+     * @return string
+     */
+    public function getRefreshToken()
+    {
+        return $this->refresh_token;
+    }
+
+    /**
+     * A passkey sign-in returns the same credentials as Login (fields below).
+     * Rotating refresh token (rt_<family>.<jti>) for RefreshToken; empty for
+     * service accounts.
+     *
+     * Generated from protobuf field <code>string refresh_token = 6 [json_name = "refreshToken"];</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setRefreshToken($var)
+    {
+        GPBUtil::checkString($var, True);
+        $this->refresh_token = $var;
+
+        return $this;
+    }
+
+    /**
+     * seconds
+     *
+     * Generated from protobuf field <code>int32 access_token_expires_in = 7 [json_name = "accessTokenExpiresIn"];</code>
+     * @return int
+     */
+    public function getAccessTokenExpiresIn()
+    {
+        return $this->access_token_expires_in;
+    }
+
+    /**
+     * seconds
+     *
+     * Generated from protobuf field <code>int32 access_token_expires_in = 7 [json_name = "accessTokenExpiresIn"];</code>
+     * @param int $var
+     * @return $this
+     */
+    public function setAccessTokenExpiresIn($var)
+    {
+        GPBUtil::checkInt32($var);
+        $this->access_token_expires_in = $var;
+
+        return $this;
+    }
+
+    /**
+     * absolute lifetime of refresh_token, seconds
+     *
+     * Generated from protobuf field <code>int32 refresh_token_expires_in = 8 [json_name = "refreshTokenExpiresIn"];</code>
+     * @return int
+     */
+    public function getRefreshTokenExpiresIn()
+    {
+        return $this->refresh_token_expires_in;
+    }
+
+    /**
+     * absolute lifetime of refresh_token, seconds
+     *
+     * Generated from protobuf field <code>int32 refresh_token_expires_in = 8 [json_name = "refreshTokenExpiresIn"];</code>
+     * @param int $var
+     * @return $this
+     */
+    public function setRefreshTokenExpiresIn($var)
+    {
+        GPBUtil::checkInt32($var);
+        $this->refresh_token_expires_in = $var;
+
+        return $this;
+    }
+
+    /**
+     * server-side session handle (WEB: set as an HttpOnly cookie)
+     *
+     * Generated from protobuf field <code>string session_token = 9 [json_name = "sessionToken"];</code>
+     * @return string
+     */
+    public function getSessionToken()
+    {
+        return $this->session_token;
+    }
+
+    /**
+     * server-side session handle (WEB: set as an HttpOnly cookie)
+     *
+     * Generated from protobuf field <code>string session_token = 9 [json_name = "sessionToken"];</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setSessionToken($var)
+    {
+        GPBUtil::checkString($var, True);
+        $this->session_token = $var;
+
+        return $this;
+    }
+
+    /**
+     * double-submit CSRF token bound to this session
+     *
+     * Generated from protobuf field <code>string csrf_token = 10 [json_name = "csrfToken"];</code>
+     * @return string
+     */
+    public function getCsrfToken()
+    {
+        return $this->csrf_token;
+    }
+
+    /**
+     * double-submit CSRF token bound to this session
+     *
+     * Generated from protobuf field <code>string csrf_token = 10 [json_name = "csrfToken"];</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setCsrfToken($var)
+    {
+        GPBUtil::checkString($var, True);
+        $this->csrf_token = $var;
+
+        return $this;
+    }
+
+    /**
+     * Stable non-secret session id (`sesspub_…`), as Login / ValidateToken report it.
+     *
+     * Generated from protobuf field <code>string session_public_id = 11 [json_name = "sessionPublicId"];</code>
+     * @return string
+     */
+    public function getSessionPublicId()
+    {
+        return $this->session_public_id;
+    }
+
+    /**
+     * Stable non-secret session id (`sesspub_…`), as Login / ValidateToken report it.
+     *
+     * Generated from protobuf field <code>string session_public_id = 11 [json_name = "sessionPublicId"];</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setSessionPublicId($var)
+    {
+        GPBUtil::checkString($var, True);
+        $this->session_public_id = $var;
+
+        return $this;
+    }
+
+    /**
+     * The signed-in user (on a usernameless sign-in, the user the passkey belongs to).
+     *
+     * Generated from protobuf field <code>string user_id = 12 [json_name = "userId"];</code>
+     * @return string
+     */
+    public function getUserId()
+    {
+        return $this->user_id;
+    }
+
+    /**
+     * The signed-in user (on a usernameless sign-in, the user the passkey belongs to).
+     *
+     * Generated from protobuf field <code>string user_id = 12 [json_name = "userId"];</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setUserId($var)
+    {
+        GPBUtil::checkString($var, True);
+        $this->user_id = $var;
 
         return $this;
     }

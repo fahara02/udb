@@ -45,7 +45,7 @@ public final class NotificationTemplateProto {
       "tion.entity.v1\032\037google/protobuf/timestam" +
       "p.proto\032\033udb/core/common/v1/db.proto\032!ud" +
       "b/core/common/v1/security.proto\032+udb/cor" +
-      "e/notification/entity/v1/enums.proto\"\206\026\n" +
+      "e/notification/entity/v1/enums.proto\"\326\026\n" +
       "\024NotificationTemplate\022O\n\013template_id\030\001 \001" +
       "(\tB.\202\267\030*\n\013template_id\022\004UUID\030\001(\001:\021gen_ran" +
       "dom_uuid()R\ntemplateId\022>\n\nevent_type\030\002 \001" +
@@ -60,50 +60,52 @@ public final class NotificationTemplateProto {
       "ate\242\001\rbody_templateR\017subjectTemplate\022w\n\r" +
       "body_template\030\005 \001(\tBR\202\267\030N\n\rbody_template" +
       "\022\004TEXT\030\001Z5Full message body template wit" +
-      "h variable placeholdersR\014bodyTemplate\022B\n" +
-      "\006locale\030\006 \001(\tB*\202\267\030&\n\006locale\022\013VARCHAR(10)" +
-      "\030\001:\004\'en\'Z\007en | bnR\006locale\022=\n\tis_active\030\007" +
-      " \001(\010B \202\267\030\034\n\tis_active\022\007BOOLEAN\030\001:\004TRUER\010" +
-      "isActive\022q\n\ncreated_at\030\010 \001(\0132\032.google.pr" +
-      "otobuf.TimestampB6\202\267\0302\n\ncreated_at\022\013TIME" +
-      "STAMPTZ\030\001:\021CURRENT_TIMESTAMP`\001h\001R\tcreate" +
-      "dAt\022o\n\nupdated_at\030\t \001(\0132\032.google.protobu" +
-      "f.TimestampB4\202\267\0300\n\nupdated_at\022\013TIMESTAMP" +
-      "TZ\030\001:\021CURRENT_TIMESTAMP`\001R\tupdatedAt\022\221\001\n" +
-      "\ndeleted_at\030\n \001(\0132\032.google.protobuf.Time" +
-      "stampBV\202\267\030R\n\ndeleted_at\022\013TIMESTAMPTZR7\n\032" +
-      "idx_notif_templates_active\022\005BTREE:\022delet" +
-      "ed_at IS NULLR\tdeletedAt\022a\n\ncreated_by\030\013" +
-      " \001(\tBB\202\267\030>\n\ncreated_by\022\014VARCHAR(120)Z\"Id" +
-      "entity that created this record.R\tcreate" +
-      "dBy\022H\n\ndeleted_by\030\014 \001(\tB)\202\267\030%\n\ndeleted_b" +
-      "y\022\004UUIDZ\021Soft delete actorR\tdeletedBy\022\267\001" +
-      "\n\ttenant_id\030\r \001(\tB\231\001\202\267\030\224\001\n\ttenant_id\022\014VA" +
-      "RCHAR(120)R&\n\035idx_notif_templates_tenant" +
-      "_id\022\005BTREEZNOwning tenant for per-tenant" +
-      " overrides; NULL = project-global defaul" +
-      "t template\230\002\001R\010tenantId\022o\n\nproject_id\030\016 " +
-      "\001(\tBP\202\267\030L\n\nproject_id\022\014VARCHAR(120)\030\001:\002\'" +
-      "\'R\'\n\036idx_notif_templates_project_id\022\005BTR" +
-      "EE\240\002\001R\tprojectId:\332\t\372\266\030\312\007\n\026notification_t" +
-      "emplates\022\020udb_notification\030\001 \001*8Message " +
-      "templates for each notification type and" +
-      " channel0\0018\001@\001b\320\001\n\030tenant_project_isolat" +
-      "ion\022\003ALL\032\254\001((tenant_id IS NULL OR tenant" +
-      "_id::text = current_setting(\'app.current" +
-      "_tenant_id\', true)::text) AND project_id" +
-      "::text = current_setting(\'app.current_pr" +
-      "oject_id\', true)::text)(\001h\001\212\001\206\001\n0idx_not" +
-      "if_templates_project_global_event_channe" +
-      "l\022\005BTREE\030\001:(tenant_id IS NULL AND delete" +
-      "d_at IS NULLZ\nproject_idZ\nevent_typeZ\007ch" +
-      "annel\212\001\225\001\n0idx_notif_templates_tenant_pr" +
-      "oject_event_channel\022\005BTREE\030\001:,tenant_id " +
-      "IS NOT NULL AND deleted_at IS NULLZ\ttena" +
-      "nt_idZ\nproject_idZ\nevent_typeZ\007channel\252\001" +
-      "g\n+trg_notification_templates_touch_upda" +
-      "ted_at\022\006BEFORE\032\006UPDATE\"#udb_notification" +
-      ".touch_updated_at()*\003ROW\302\001\341\001\n\031touch_upda" +
+      "h variable placeholdersR\014bodyTemplate\022\177\n" +
+      "\006locale\030\006 \001(\tBg\202\267\030c\n\006locale\022\013VARCHAR(10)" +
+      "\030\001:\004\'en\'ZDBCP 47 locale such as en, bn o" +
+      "r bn-BD; part of the template identityR\006" +
+      "locale\022=\n\tis_active\030\007 \001(\010B \202\267\030\034\n\tis_acti" +
+      "ve\022\007BOOLEAN\030\001:\004TRUER\010isActive\022q\n\ncreated" +
+      "_at\030\010 \001(\0132\032.google.protobuf.TimestampB6\202" +
+      "\267\0302\n\ncreated_at\022\013TIMESTAMPTZ\030\001:\021CURRENT_" +
+      "TIMESTAMP`\001h\001R\tcreatedAt\022o\n\nupdated_at\030\t" +
+      " \001(\0132\032.google.protobuf.TimestampB4\202\267\0300\n\n" +
+      "updated_at\022\013TIMESTAMPTZ\030\001:\021CURRENT_TIMES" +
+      "TAMP`\001R\tupdatedAt\022\221\001\n\ndeleted_at\030\n \001(\0132\032" +
+      ".google.protobuf.TimestampBV\202\267\030R\n\ndelete" +
+      "d_at\022\013TIMESTAMPTZR7\n\032idx_notif_templates" +
+      "_active\022\005BTREE:\022deleted_at IS NULLR\tdele" +
+      "tedAt\022a\n\ncreated_by\030\013 \001(\tBB\202\267\030>\n\ncreated" +
+      "_by\022\014VARCHAR(120)Z\"Identity that created" +
+      " this record.R\tcreatedBy\022H\n\ndeleted_by\030\014" +
+      " \001(\tB)\202\267\030%\n\ndeleted_by\022\004UUIDZ\021Soft delet" +
+      "e actorR\tdeletedBy\022\267\001\n\ttenant_id\030\r \001(\tB\231" +
+      "\001\202\267\030\224\001\n\ttenant_id\022\014VARCHAR(120)R&\n\035idx_n" +
+      "otif_templates_tenant_id\022\005BTREEZNOwning " +
+      "tenant for per-tenant overrides; NULL = " +
+      "project-global default template\230\002\001R\010tena" +
+      "ntId\022o\n\nproject_id\030\016 \001(\tBP\202\267\030L\n\nproject_" +
+      "id\022\014VARCHAR(120)\030\001:\002\'\'R\'\n\036idx_notif_temp" +
+      "lates_project_id\022\005BTREE\240\002\001R\tprojectId:\355\t" +
+      "\372\266\030\335\007\n\026notification_templates\022\020udb_notif" +
+      "ication\030\001 \001*8Message templates for each " +
+      "notification type and channel0\0018\001@\001b\320\001\n\030" +
+      "tenant_project_isolation\022\003ALL\032\254\001((tenant" +
+      "_id IS NULL OR tenant_id::text = current" +
+      "_setting(\'app.current_tenant_id\', true):" +
+      ":text) AND project_id::text = current_se" +
+      "tting(\'app.current_project_id\', true)::t" +
+      "ext)(\001h\001\212\001\216\001\n0idx_notif_templates_projec" +
+      "t_global_event_channel\022\005BTREE\030\001:(tenant_" +
+      "id IS NULL AND deleted_at IS NULLZ\nproje" +
+      "ct_idZ\nevent_typeZ\007channelZ\006locale\212\001\235\001\n0" +
+      "idx_notif_templates_tenant_project_event" +
+      "_channel\022\005BTREE\030\001:,tenant_id IS NOT NULL" +
+      " AND deleted_at IS NULLZ\ttenant_idZ\nproj" +
+      "ect_idZ\nevent_typeZ\007channelZ\006locale\252\001g\n+" +
+      "trg_notification_templates_touch_updated" +
+      "_at\022\006BEFORE\032\006UPDATE\"#udb_notification.to" +
+      "uch_updated_at()*\003ROW\270\001\001\302\001\341\001\n\031touch_upda" +
       "ted_at_function\022\010postgres\032\017before_trigge" +
       "rs\"\250\001CREATE OR REPLACE FUNCTION udb_noti" +
       "fication.touch_updated_at()\nRETURNS trig" +

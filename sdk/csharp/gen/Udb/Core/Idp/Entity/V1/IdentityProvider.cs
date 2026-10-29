@@ -28,7 +28,7 @@ namespace Udb.Core.Idp.Entity.V1 {
             "b3RvEhZ1ZGIuY29yZS5pZHAuZW50aXR5LnYxGh9nb29nbGUvcHJvdG9idWYv",
             "dGltZXN0YW1wLnByb3RvGiJ1ZGIvY29yZS9pZHAvZW50aXR5L3YxL2VudW1z",
             "LnByb3RvGht1ZGIvY29yZS9jb21tb24vdjEvZGIucHJvdG8aIXVkYi9jb3Jl",
-            "L2NvbW1vbi92MS9zZWN1cml0eS5wcm90byL3HQoQSWRlbnRpdHlQcm92aWRl",
+            "L2NvbW1vbi92MS9zZWN1cml0eS5wcm90byKGHwoQSWRlbnRpdHlQcm92aWRl",
             "chJPCgtwcm92aWRlcl9pZBgBIAEoCUIugrcYKgoLcHJvdmlkZXJfaWQSBFVV",
             "SUQYASgBOhFnZW5fcmFuZG9tX3V1aWQoKVIKcHJvdmlkZXJJZBJqCgl0ZW5h",
             "bnRfaWQYAiABKAlCTYK3GEkKCXRlbmFudF9pZBIMVkFSQ0hBUigxMjApGAFS",
@@ -102,28 +102,31 @@ namespace Udb.Core.Idp.Entity.V1 {
             "OhFDVVJSRU5UX1RJTUVTVEFNUGABUgl1cGRhdGVkQXQSbwoKZGVsZXRlZF9h",
             "dBgbIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBCNIK3GDAKCmRl",
             "bGV0ZWRfYXQSC1RJTUVTVEFNUFRaWhVTb2Z0LWRlbGV0ZSB0aW1lc3RhbXBS",
-            "CWRlbGV0ZWRBdDqEBPq2GOMCChJpZGVudGl0eV9wcm92aWRlcnMSB3VkYl9p",
-            "ZHAYCiABKkdUZW5hbnQtc2NvcGVkIGVudGVycHJpc2UgaWRlbnRpdHkgcHJv",
-            "dmlkZXJzIChPSURDL1NBTUwvTERBUC9jdXN0b20gSldUKTABOAFAAWJeChB0",
-            "ZW5hbnRfaXNvbGF0aW9uGkgodGVuYW50X2lkOjp0ZXh0ID0gY3VycmVudF9z",
-            "ZXR0aW5nKCdhcHAuY3VycmVudF90ZW5hbnRfaWQnLCB0cnVlKTo6dGV4dCko",
-            "AYoBWQohdXFfaWRlbnRpdHlfcHJvdmlkZXJzX3RlbmFudF9uYW1lEgVCVFJF",
-            "RRgBOhJkZWxldGVkX2F0IElTIE5VTExaCXRlbmFudF9pZFoMZGlzcGxheV9u",
-            "YW1l6gEHcHJpbWFyefIBFXVkYi5pZHAucHJvdmlkZXJzLmNkY/oBEmlkcDpw",
-            "cm92aWRlcnM6cmVhZIqyGZcBCgZ0ZW5hbnQaCXRlbmFudF9pZCo0dGVuYW50",
-            "X2lkID0gY3VycmVudF9zZXR0aW5nKCdhcHAuY3VycmVudF90ZW5hbnRfaWQn",
-            "KTILc29mdF9kZWxldGU6EWlkcC5jb25maWd1cmF0aW9uQPsTSAJSBnRlbmFu",
-            "dFoIc3RhbmRhcmRyFXRlbmFudC5kYXRhX3Jlc2lkZW5jeUL0AQoaY29tLnVk",
-            "Yi5jb3JlLmlkcC5lbnRpdHkudjFCFUlkZW50aXR5UHJvdmlkZXJQcm90b1AB",
-            "WkJnaXRodWIuY29tL2ZhaGFyYTAyL3VkYi9zZGsvZ28vZ2VuL3VkYi9jb3Jl",
-            "L2lkcC9lbnRpdHkvdjE7ZW50aXR5djGiAgRVQ0lFqgIWVWRiLkNvcmUuSWRw",
-            "LkVudGl0eS5WMcoCFlVkYlxDb3JlXElkcFxFbnRpdHlcVjHiAiJVZGJcR1BC",
-            "TWV0YWRhdGFcQ29yZVxJZHBcRW50aXR5XFYx6gIaVWRiOjpDb3JlOjpJZHA6",
-            "OkVudGl0eTo6VjFiBnByb3RvMw=="));
+            "CWRlbGV0ZWRBdBKMAQoScmVkaXJlY3RfdXJpc19qc29uGBwgASgJQl6Ctxha",
+            "ChJyZWRpcmVjdF91cmlzX2pzb24SBUpTT05CGAE6CydbXSc6Ompzb25iWixB",
+            "bGxvd2xpc3RlZCBPSURDIHJlZGlyZWN0IFVSSXMgKGV4YWN0IG1hdGNoKXgB",
+            "UhByZWRpcmVjdFVyaXNKc29uOoQE+rYY4wIKEmlkZW50aXR5X3Byb3ZpZGVy",
+            "cxIHdWRiX2lkcBgKIAEqR1RlbmFudC1zY29wZWQgZW50ZXJwcmlzZSBpZGVu",
+            "dGl0eSBwcm92aWRlcnMgKE9JREMvU0FNTC9MREFQL2N1c3RvbSBKV1QpMAE4",
+            "AUABYl4KEHRlbmFudF9pc29sYXRpb24aSCh0ZW5hbnRfaWQ6OnRleHQgPSBj",
+            "dXJyZW50X3NldHRpbmcoJ2FwcC5jdXJyZW50X3RlbmFudF9pZCcsIHRydWUp",
+            "Ojp0ZXh0KSgBigFZCiF1cV9pZGVudGl0eV9wcm92aWRlcnNfdGVuYW50X25h",
+            "bWUSBUJUUkVFGAE6EmRlbGV0ZWRfYXQgSVMgTlVMTFoJdGVuYW50X2lkWgxk",
+            "aXNwbGF5X25hbWXqAQdwcmltYXJ58gEVdWRiLmlkcC5wcm92aWRlcnMuY2Rj",
+            "+gESaWRwOnByb3ZpZGVyczpyZWFkirIZlwEKBnRlbmFudBoJdGVuYW50X2lk",
+            "KjR0ZW5hbnRfaWQgPSBjdXJyZW50X3NldHRpbmcoJ2FwcC5jdXJyZW50X3Rl",
+            "bmFudF9pZCcpMgtzb2Z0X2RlbGV0ZToRaWRwLmNvbmZpZ3VyYXRpb25A+xNI",
+            "AlIGdGVuYW50WghzdGFuZGFyZHIVdGVuYW50LmRhdGFfcmVzaWRlbmN5QvQB",
+            "Chpjb20udWRiLmNvcmUuaWRwLmVudGl0eS52MUIVSWRlbnRpdHlQcm92aWRl",
+            "clByb3RvUAFaQmdpdGh1Yi5jb20vZmFoYXJhMDIvdWRiL3Nkay9nby9nZW4v",
+            "dWRiL2NvcmUvaWRwL2VudGl0eS92MTtlbnRpdHl2MaICBFVDSUWqAhZVZGIu",
+            "Q29yZS5JZHAuRW50aXR5LlYxygIWVWRiXENvcmVcSWRwXEVudGl0eVxWMeIC",
+            "IlVkYlxHUEJNZXRhZGF0YVxDb3JlXElkcFxFbnRpdHlcVjHqAhpVZGI6OkNv",
+            "cmU6OklkcDo6RW50aXR5OjpWMWIGcHJvdG8z"));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { global::Google.Protobuf.WellKnownTypes.TimestampReflection.Descriptor, global::Udb.Core.Idp.Entity.V1.EnumsReflection.Descriptor, global::Udb.Core.Common.V1.DbReflection.Descriptor, global::Udb.Core.Common.V1.SecurityReflection.Descriptor, },
           new pbr::GeneratedClrTypeInfo(null, null, new pbr::GeneratedClrTypeInfo[] {
-            new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Core.Idp.Entity.V1.IdentityProvider), global::Udb.Core.Idp.Entity.V1.IdentityProvider.Parser, new[]{ "ProviderId", "TenantId", "Kind", "DisplayName", "Issuer", "EntityId", "JwksUrl", "SamlMetadataUrl", "ClientIdsJson", "AudiencesJson", "ClaimMappingJson", "GroupMappingJson", "JitPolicyJson", "AccountLinkingPolicy", "Enabled", "ClientSecret", "SamlSigningKeyPem", "SamlIdpCertsJson", "SamlSsoUrl", "Health", "LastJwksRefreshAt", "LastJwksRefreshStatus", "CreatedBy", "UpdatedBy", "CreatedAt", "UpdatedAt", "DeletedAt" }, null, null, null, null)
+            new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Core.Idp.Entity.V1.IdentityProvider), global::Udb.Core.Idp.Entity.V1.IdentityProvider.Parser, new[]{ "ProviderId", "TenantId", "Kind", "DisplayName", "Issuer", "EntityId", "JwksUrl", "SamlMetadataUrl", "ClientIdsJson", "AudiencesJson", "ClaimMappingJson", "GroupMappingJson", "JitPolicyJson", "AccountLinkingPolicy", "Enabled", "ClientSecret", "SamlSigningKeyPem", "SamlIdpCertsJson", "SamlSsoUrl", "Health", "LastJwksRefreshAt", "LastJwksRefreshStatus", "CreatedBy", "UpdatedBy", "CreatedAt", "UpdatedAt", "DeletedAt", "RedirectUrisJson" }, null, null, null, null)
           }));
     }
     #endregion
@@ -205,6 +208,7 @@ namespace Udb.Core.Idp.Entity.V1 {
       createdAt_ = other.createdAt_ != null ? other.createdAt_.Clone() : null;
       updatedAt_ = other.updatedAt_ != null ? other.updatedAt_.Clone() : null;
       deletedAt_ = other.deletedAt_ != null ? other.deletedAt_.Clone() : null;
+      redirectUrisJson_ = other.redirectUrisJson_;
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
     }
 
@@ -584,6 +588,27 @@ namespace Udb.Core.Idp.Entity.V1 {
       }
     }
 
+    /// <summary>Field number for the "redirect_uris_json" field.</summary>
+    public const int RedirectUrisJsonFieldNumber = 28;
+    private string redirectUrisJson_ = "";
+    /// <summary>
+    /// ── OIDC sign-in (0.6.6) ──────────────────────────────────────────────────
+    /// JSON array of the exact redirect URIs StartOidcLogin accepts for this
+    /// provider (OAuth 2.0 exact-match; no wildcards). Each is https, an http
+    /// loopback URI (http://127.0.0.1:&lt;port>/..., native apps, RFC 8252), or a
+    /// private-use scheme containing a dot (com.example.app:/callback). Empty =
+    /// browser/redirect sign-in is off for this provider; LoginWithOidcIdToken
+    /// does not use redirects and is unaffected.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string RedirectUrisJson {
+      get { return redirectUrisJson_; }
+      set {
+        redirectUrisJson_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public override bool Equals(object other) {
@@ -626,6 +651,7 @@ namespace Udb.Core.Idp.Entity.V1 {
       if (!object.Equals(CreatedAt, other.CreatedAt)) return false;
       if (!object.Equals(UpdatedAt, other.UpdatedAt)) return false;
       if (!object.Equals(DeletedAt, other.DeletedAt)) return false;
+      if (RedirectUrisJson != other.RedirectUrisJson) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
 
@@ -660,6 +686,7 @@ namespace Udb.Core.Idp.Entity.V1 {
       if (createdAt_ != null) hash ^= CreatedAt.GetHashCode();
       if (updatedAt_ != null) hash ^= UpdatedAt.GetHashCode();
       if (deletedAt_ != null) hash ^= DeletedAt.GetHashCode();
+      if (RedirectUrisJson.Length != 0) hash ^= RedirectUrisJson.GetHashCode();
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
       }
@@ -786,6 +813,10 @@ namespace Udb.Core.Idp.Entity.V1 {
         output.WriteRawTag(218, 1);
         output.WriteMessage(DeletedAt);
       }
+      if (RedirectUrisJson.Length != 0) {
+        output.WriteRawTag(226, 1);
+        output.WriteString(RedirectUrisJson);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
       }
@@ -904,6 +935,10 @@ namespace Udb.Core.Idp.Entity.V1 {
         output.WriteRawTag(218, 1);
         output.WriteMessage(DeletedAt);
       }
+      if (RedirectUrisJson.Length != 0) {
+        output.WriteRawTag(226, 1);
+        output.WriteString(RedirectUrisJson);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(ref output);
       }
@@ -994,6 +1029,9 @@ namespace Udb.Core.Idp.Entity.V1 {
       }
       if (deletedAt_ != null) {
         size += 2 + pb::CodedOutputStream.ComputeMessageSize(DeletedAt);
+      }
+      if (RedirectUrisJson.Length != 0) {
+        size += 2 + pb::CodedOutputStream.ComputeStringSize(RedirectUrisJson);
       }
       if (_unknownFields != null) {
         size += _unknownFields.CalculateSize();
@@ -1099,6 +1137,9 @@ namespace Udb.Core.Idp.Entity.V1 {
           DeletedAt = new global::Google.Protobuf.WellKnownTypes.Timestamp();
         }
         DeletedAt.MergeFrom(other.DeletedAt);
+      }
+      if (other.RedirectUrisJson.Length != 0) {
+        RedirectUrisJson = other.RedirectUrisJson;
       }
       _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
     }
@@ -1239,6 +1280,10 @@ namespace Udb.Core.Idp.Entity.V1 {
             input.ReadMessage(DeletedAt);
             break;
           }
+          case 226: {
+            RedirectUrisJson = input.ReadString();
+            break;
+          }
         }
       }
     #endif
@@ -1376,6 +1421,10 @@ namespace Udb.Core.Idp.Entity.V1 {
               DeletedAt = new global::Google.Protobuf.WellKnownTypes.Timestamp();
             }
             input.ReadMessage(DeletedAt);
+            break;
+          }
+          case 226: {
+            RedirectUrisJson = input.ReadString();
             break;
           }
         }

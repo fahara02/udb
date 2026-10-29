@@ -313,6 +313,66 @@ namespace Udb.Core.Authn.Services.V1 {
     static readonly grpc::Marshaller<global::Udb.Core.Authn.Services.V1.ExchangeServiceTokenForTenantRequest> __Marshaller_udb_core_authn_services_v1_ExchangeServiceTokenForTenantRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Authn.Services.V1.ExchangeServiceTokenForTenantRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     static readonly grpc::Marshaller<global::Udb.Core.Authn.Services.V1.ExchangeServiceTokenForTenantResponse> __Marshaller_udb_core_authn_services_v1_ExchangeServiceTokenForTenantResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Authn.Services.V1.ExchangeServiceTokenForTenantResponse.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::Udb.Core.Authn.Services.V1.PutTenantAuthPolicyRequest> __Marshaller_udb_core_authn_services_v1_PutTenantAuthPolicyRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Authn.Services.V1.PutTenantAuthPolicyRequest.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::Udb.Core.Authn.Services.V1.PutTenantAuthPolicyResponse> __Marshaller_udb_core_authn_services_v1_PutTenantAuthPolicyResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Authn.Services.V1.PutTenantAuthPolicyResponse.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::Udb.Core.Authn.Services.V1.GetTenantAuthPolicyRequest> __Marshaller_udb_core_authn_services_v1_GetTenantAuthPolicyRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Authn.Services.V1.GetTenantAuthPolicyRequest.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::Udb.Core.Authn.Services.V1.GetTenantAuthPolicyResponse> __Marshaller_udb_core_authn_services_v1_GetTenantAuthPolicyResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Authn.Services.V1.GetTenantAuthPolicyResponse.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::Udb.Core.Authn.Services.V1.SendLoginOtpRequest> __Marshaller_udb_core_authn_services_v1_SendLoginOtpRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Authn.Services.V1.SendLoginOtpRequest.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::Udb.Core.Authn.Services.V1.SendLoginOtpResponse> __Marshaller_udb_core_authn_services_v1_SendLoginOtpResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Authn.Services.V1.SendLoginOtpResponse.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::Udb.Core.Authn.Services.V1.LoginWithOtpRequest> __Marshaller_udb_core_authn_services_v1_LoginWithOtpRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Authn.Services.V1.LoginWithOtpRequest.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::Udb.Core.Authn.Services.V1.LoginWithOtpResponse> __Marshaller_udb_core_authn_services_v1_LoginWithOtpResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Authn.Services.V1.LoginWithOtpResponse.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::Udb.Core.Authn.Services.V1.StartOidcLoginRequest> __Marshaller_udb_core_authn_services_v1_StartOidcLoginRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Authn.Services.V1.StartOidcLoginRequest.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::Udb.Core.Authn.Services.V1.StartOidcLoginResponse> __Marshaller_udb_core_authn_services_v1_StartOidcLoginResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Authn.Services.V1.StartOidcLoginResponse.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::Udb.Core.Authn.Services.V1.FinishOidcLoginRequest> __Marshaller_udb_core_authn_services_v1_FinishOidcLoginRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Authn.Services.V1.FinishOidcLoginRequest.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::Udb.Core.Authn.Services.V1.FinishOidcLoginResponse> __Marshaller_udb_core_authn_services_v1_FinishOidcLoginResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Authn.Services.V1.FinishOidcLoginResponse.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::Udb.Core.Authn.Services.V1.LoginWithOidcIdTokenRequest> __Marshaller_udb_core_authn_services_v1_LoginWithOidcIdTokenRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Authn.Services.V1.LoginWithOidcIdTokenRequest.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::Udb.Core.Authn.Services.V1.LoginWithOidcIdTokenResponse> __Marshaller_udb_core_authn_services_v1_LoginWithOidcIdTokenResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Authn.Services.V1.LoginWithOidcIdTokenResponse.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::Udb.Core.Authn.Services.V1.CreateInvitationRequest> __Marshaller_udb_core_authn_services_v1_CreateInvitationRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Authn.Services.V1.CreateInvitationRequest.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::Udb.Core.Authn.Services.V1.CreateInvitationResponse> __Marshaller_udb_core_authn_services_v1_CreateInvitationResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Authn.Services.V1.CreateInvitationResponse.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::Udb.Core.Authn.Services.V1.ListInvitationsRequest> __Marshaller_udb_core_authn_services_v1_ListInvitationsRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Authn.Services.V1.ListInvitationsRequest.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::Udb.Core.Authn.Services.V1.ListInvitationsResponse> __Marshaller_udb_core_authn_services_v1_ListInvitationsResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Authn.Services.V1.ListInvitationsResponse.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::Udb.Core.Authn.Services.V1.RevokeInvitationRequest> __Marshaller_udb_core_authn_services_v1_RevokeInvitationRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Authn.Services.V1.RevokeInvitationRequest.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::Udb.Core.Authn.Services.V1.RevokeInvitationResponse> __Marshaller_udb_core_authn_services_v1_RevokeInvitationResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Authn.Services.V1.RevokeInvitationResponse.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::Udb.Core.Authn.Services.V1.ResendInvitationRequest> __Marshaller_udb_core_authn_services_v1_ResendInvitationRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Authn.Services.V1.ResendInvitationRequest.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::Udb.Core.Authn.Services.V1.ResendInvitationResponse> __Marshaller_udb_core_authn_services_v1_ResendInvitationResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Authn.Services.V1.ResendInvitationResponse.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::Udb.Core.Authn.Services.V1.GetInvitationRequest> __Marshaller_udb_core_authn_services_v1_GetInvitationRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Authn.Services.V1.GetInvitationRequest.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::Udb.Core.Authn.Services.V1.GetInvitationResponse> __Marshaller_udb_core_authn_services_v1_GetInvitationResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Authn.Services.V1.GetInvitationResponse.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::Udb.Core.Authn.Services.V1.StartInvitationAcceptanceRequest> __Marshaller_udb_core_authn_services_v1_StartInvitationAcceptanceRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Authn.Services.V1.StartInvitationAcceptanceRequest.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::Udb.Core.Authn.Services.V1.StartInvitationAcceptanceResponse> __Marshaller_udb_core_authn_services_v1_StartInvitationAcceptanceResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Authn.Services.V1.StartInvitationAcceptanceResponse.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::Udb.Core.Authn.Services.V1.AcceptInvitationRequest> __Marshaller_udb_core_authn_services_v1_AcceptInvitationRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Authn.Services.V1.AcceptInvitationRequest.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::Udb.Core.Authn.Services.V1.AcceptInvitationResponse> __Marshaller_udb_core_authn_services_v1_AcceptInvitationResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Authn.Services.V1.AcceptInvitationResponse.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::Udb.Core.Authn.Services.V1.CheckStepUpRequest> __Marshaller_udb_core_authn_services_v1_CheckStepUpRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Authn.Services.V1.CheckStepUpRequest.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::Udb.Core.Authn.Services.V1.CheckStepUpResponse> __Marshaller_udb_core_authn_services_v1_CheckStepUpResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Authn.Services.V1.CheckStepUpResponse.Parser));
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     static readonly grpc::Method<global::Udb.Core.Authn.Services.V1.CreateUserRequest, global::Udb.Core.Authn.Services.V1.CreateUserResponse> __Method_CreateUser = new grpc::Method<global::Udb.Core.Authn.Services.V1.CreateUserRequest, global::Udb.Core.Authn.Services.V1.CreateUserResponse>(
@@ -825,6 +885,126 @@ namespace Udb.Core.Authn.Services.V1 {
         "ExchangeServiceTokenForTenant",
         __Marshaller_udb_core_authn_services_v1_ExchangeServiceTokenForTenantRequest,
         __Marshaller_udb_core_authn_services_v1_ExchangeServiceTokenForTenantResponse);
+
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Method<global::Udb.Core.Authn.Services.V1.PutTenantAuthPolicyRequest, global::Udb.Core.Authn.Services.V1.PutTenantAuthPolicyResponse> __Method_PutTenantAuthPolicy = new grpc::Method<global::Udb.Core.Authn.Services.V1.PutTenantAuthPolicyRequest, global::Udb.Core.Authn.Services.V1.PutTenantAuthPolicyResponse>(
+        grpc::MethodType.Unary,
+        __ServiceName,
+        "PutTenantAuthPolicy",
+        __Marshaller_udb_core_authn_services_v1_PutTenantAuthPolicyRequest,
+        __Marshaller_udb_core_authn_services_v1_PutTenantAuthPolicyResponse);
+
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Method<global::Udb.Core.Authn.Services.V1.GetTenantAuthPolicyRequest, global::Udb.Core.Authn.Services.V1.GetTenantAuthPolicyResponse> __Method_GetTenantAuthPolicy = new grpc::Method<global::Udb.Core.Authn.Services.V1.GetTenantAuthPolicyRequest, global::Udb.Core.Authn.Services.V1.GetTenantAuthPolicyResponse>(
+        grpc::MethodType.Unary,
+        __ServiceName,
+        "GetTenantAuthPolicy",
+        __Marshaller_udb_core_authn_services_v1_GetTenantAuthPolicyRequest,
+        __Marshaller_udb_core_authn_services_v1_GetTenantAuthPolicyResponse);
+
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Method<global::Udb.Core.Authn.Services.V1.SendLoginOtpRequest, global::Udb.Core.Authn.Services.V1.SendLoginOtpResponse> __Method_SendLoginOtp = new grpc::Method<global::Udb.Core.Authn.Services.V1.SendLoginOtpRequest, global::Udb.Core.Authn.Services.V1.SendLoginOtpResponse>(
+        grpc::MethodType.Unary,
+        __ServiceName,
+        "SendLoginOtp",
+        __Marshaller_udb_core_authn_services_v1_SendLoginOtpRequest,
+        __Marshaller_udb_core_authn_services_v1_SendLoginOtpResponse);
+
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Method<global::Udb.Core.Authn.Services.V1.LoginWithOtpRequest, global::Udb.Core.Authn.Services.V1.LoginWithOtpResponse> __Method_LoginWithOtp = new grpc::Method<global::Udb.Core.Authn.Services.V1.LoginWithOtpRequest, global::Udb.Core.Authn.Services.V1.LoginWithOtpResponse>(
+        grpc::MethodType.Unary,
+        __ServiceName,
+        "LoginWithOtp",
+        __Marshaller_udb_core_authn_services_v1_LoginWithOtpRequest,
+        __Marshaller_udb_core_authn_services_v1_LoginWithOtpResponse);
+
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Method<global::Udb.Core.Authn.Services.V1.StartOidcLoginRequest, global::Udb.Core.Authn.Services.V1.StartOidcLoginResponse> __Method_StartOidcLogin = new grpc::Method<global::Udb.Core.Authn.Services.V1.StartOidcLoginRequest, global::Udb.Core.Authn.Services.V1.StartOidcLoginResponse>(
+        grpc::MethodType.Unary,
+        __ServiceName,
+        "StartOidcLogin",
+        __Marshaller_udb_core_authn_services_v1_StartOidcLoginRequest,
+        __Marshaller_udb_core_authn_services_v1_StartOidcLoginResponse);
+
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Method<global::Udb.Core.Authn.Services.V1.FinishOidcLoginRequest, global::Udb.Core.Authn.Services.V1.FinishOidcLoginResponse> __Method_FinishOidcLogin = new grpc::Method<global::Udb.Core.Authn.Services.V1.FinishOidcLoginRequest, global::Udb.Core.Authn.Services.V1.FinishOidcLoginResponse>(
+        grpc::MethodType.Unary,
+        __ServiceName,
+        "FinishOidcLogin",
+        __Marshaller_udb_core_authn_services_v1_FinishOidcLoginRequest,
+        __Marshaller_udb_core_authn_services_v1_FinishOidcLoginResponse);
+
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Method<global::Udb.Core.Authn.Services.V1.LoginWithOidcIdTokenRequest, global::Udb.Core.Authn.Services.V1.LoginWithOidcIdTokenResponse> __Method_LoginWithOidcIdToken = new grpc::Method<global::Udb.Core.Authn.Services.V1.LoginWithOidcIdTokenRequest, global::Udb.Core.Authn.Services.V1.LoginWithOidcIdTokenResponse>(
+        grpc::MethodType.Unary,
+        __ServiceName,
+        "LoginWithOidcIdToken",
+        __Marshaller_udb_core_authn_services_v1_LoginWithOidcIdTokenRequest,
+        __Marshaller_udb_core_authn_services_v1_LoginWithOidcIdTokenResponse);
+
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Method<global::Udb.Core.Authn.Services.V1.CreateInvitationRequest, global::Udb.Core.Authn.Services.V1.CreateInvitationResponse> __Method_CreateInvitation = new grpc::Method<global::Udb.Core.Authn.Services.V1.CreateInvitationRequest, global::Udb.Core.Authn.Services.V1.CreateInvitationResponse>(
+        grpc::MethodType.Unary,
+        __ServiceName,
+        "CreateInvitation",
+        __Marshaller_udb_core_authn_services_v1_CreateInvitationRequest,
+        __Marshaller_udb_core_authn_services_v1_CreateInvitationResponse);
+
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Method<global::Udb.Core.Authn.Services.V1.ListInvitationsRequest, global::Udb.Core.Authn.Services.V1.ListInvitationsResponse> __Method_ListInvitations = new grpc::Method<global::Udb.Core.Authn.Services.V1.ListInvitationsRequest, global::Udb.Core.Authn.Services.V1.ListInvitationsResponse>(
+        grpc::MethodType.Unary,
+        __ServiceName,
+        "ListInvitations",
+        __Marshaller_udb_core_authn_services_v1_ListInvitationsRequest,
+        __Marshaller_udb_core_authn_services_v1_ListInvitationsResponse);
+
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Method<global::Udb.Core.Authn.Services.V1.RevokeInvitationRequest, global::Udb.Core.Authn.Services.V1.RevokeInvitationResponse> __Method_RevokeInvitation = new grpc::Method<global::Udb.Core.Authn.Services.V1.RevokeInvitationRequest, global::Udb.Core.Authn.Services.V1.RevokeInvitationResponse>(
+        grpc::MethodType.Unary,
+        __ServiceName,
+        "RevokeInvitation",
+        __Marshaller_udb_core_authn_services_v1_RevokeInvitationRequest,
+        __Marshaller_udb_core_authn_services_v1_RevokeInvitationResponse);
+
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Method<global::Udb.Core.Authn.Services.V1.ResendInvitationRequest, global::Udb.Core.Authn.Services.V1.ResendInvitationResponse> __Method_ResendInvitation = new grpc::Method<global::Udb.Core.Authn.Services.V1.ResendInvitationRequest, global::Udb.Core.Authn.Services.V1.ResendInvitationResponse>(
+        grpc::MethodType.Unary,
+        __ServiceName,
+        "ResendInvitation",
+        __Marshaller_udb_core_authn_services_v1_ResendInvitationRequest,
+        __Marshaller_udb_core_authn_services_v1_ResendInvitationResponse);
+
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Method<global::Udb.Core.Authn.Services.V1.GetInvitationRequest, global::Udb.Core.Authn.Services.V1.GetInvitationResponse> __Method_GetInvitation = new grpc::Method<global::Udb.Core.Authn.Services.V1.GetInvitationRequest, global::Udb.Core.Authn.Services.V1.GetInvitationResponse>(
+        grpc::MethodType.Unary,
+        __ServiceName,
+        "GetInvitation",
+        __Marshaller_udb_core_authn_services_v1_GetInvitationRequest,
+        __Marshaller_udb_core_authn_services_v1_GetInvitationResponse);
+
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Method<global::Udb.Core.Authn.Services.V1.StartInvitationAcceptanceRequest, global::Udb.Core.Authn.Services.V1.StartInvitationAcceptanceResponse> __Method_StartInvitationAcceptance = new grpc::Method<global::Udb.Core.Authn.Services.V1.StartInvitationAcceptanceRequest, global::Udb.Core.Authn.Services.V1.StartInvitationAcceptanceResponse>(
+        grpc::MethodType.Unary,
+        __ServiceName,
+        "StartInvitationAcceptance",
+        __Marshaller_udb_core_authn_services_v1_StartInvitationAcceptanceRequest,
+        __Marshaller_udb_core_authn_services_v1_StartInvitationAcceptanceResponse);
+
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Method<global::Udb.Core.Authn.Services.V1.AcceptInvitationRequest, global::Udb.Core.Authn.Services.V1.AcceptInvitationResponse> __Method_AcceptInvitation = new grpc::Method<global::Udb.Core.Authn.Services.V1.AcceptInvitationRequest, global::Udb.Core.Authn.Services.V1.AcceptInvitationResponse>(
+        grpc::MethodType.Unary,
+        __ServiceName,
+        "AcceptInvitation",
+        __Marshaller_udb_core_authn_services_v1_AcceptInvitationRequest,
+        __Marshaller_udb_core_authn_services_v1_AcceptInvitationResponse);
+
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Method<global::Udb.Core.Authn.Services.V1.CheckStepUpRequest, global::Udb.Core.Authn.Services.V1.CheckStepUpResponse> __Method_CheckStepUp = new grpc::Method<global::Udb.Core.Authn.Services.V1.CheckStepUpRequest, global::Udb.Core.Authn.Services.V1.CheckStepUpResponse>(
+        grpc::MethodType.Unary,
+        __ServiceName,
+        "CheckStepUp",
+        __Marshaller_udb_core_authn_services_v1_CheckStepUpRequest,
+        __Marshaller_udb_core_authn_services_v1_CheckStepUpResponse);
 
     /// <summary>Service descriptor</summary>
     public static global::Google.Protobuf.Reflection.ServiceDescriptor Descriptor
@@ -1476,6 +1656,220 @@ namespace Udb.Core.Authn.Services.V1 {
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
       public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Authn.Services.V1.ExchangeServiceTokenForTenantResponse> ExchangeServiceTokenForTenant(global::Udb.Core.Authn.Services.V1.ExchangeServiceTokenForTenantRequest request, grpc::ServerCallContext context)
+      {
+        throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
+      }
+
+      /// <summary>
+      /// Replace the tenant's sign-in policy: whether passwords are required, the
+      /// channels sign-in codes may go over, the magic-link page and the step-up
+      /// rules. Only an administrator of that tenant (or a cross-tenant admin).
+      /// </summary>
+      /// <param name="request">The request received from the client.</param>
+      /// <param name="context">The context of the server-side call handler being invoked.</param>
+      /// <returns>The response to send back to the client (wrapped by a task).</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Authn.Services.V1.PutTenantAuthPolicyResponse> PutTenantAuthPolicy(global::Udb.Core.Authn.Services.V1.PutTenantAuthPolicyRequest request, grpc::ServerCallContext context)
+      {
+        throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
+      }
+
+      /// <summary>
+      /// Read the tenant's sign-in policy (the defaults when none was written).
+      /// </summary>
+      /// <param name="request">The request received from the client.</param>
+      /// <param name="context">The context of the server-side call handler being invoked.</param>
+      /// <returns>The response to send back to the client (wrapped by a task).</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Authn.Services.V1.GetTenantAuthPolicyResponse> GetTenantAuthPolicy(global::Udb.Core.Authn.Services.V1.GetTenantAuthPolicyRequest request, grpc::ServerCallContext context)
+      {
+        throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
+      }
+
+      /// <summary>
+      /// Send a one-time sign-in code (or, for EMAIL, a magic link) to a phone or
+      /// email address of the tenant. Public. The answer is the same whether or not
+      /// the address belongs to an account and whether or not the tenant enabled
+      /// the channel; only a real, enabled account is sent anything.
+      /// </summary>
+      /// <param name="request">The request received from the client.</param>
+      /// <param name="context">The context of the server-side call handler being invoked.</param>
+      /// <returns>The response to send back to the client (wrapped by a task).</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Authn.Services.V1.SendLoginOtpResponse> SendLoginOtp(global::Udb.Core.Authn.Services.V1.SendLoginOtpRequest request, grpc::ServerCallContext context)
+      {
+        throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
+      }
+
+      /// <summary>
+      /// Sign in with the code from SendLoginOtp (or the otp_id + code of a magic
+      /// link). Public. Returns the same credentials as Login: access token,
+      /// rotating refresh token, session and CSRF token.
+      /// </summary>
+      /// <param name="request">The request received from the client.</param>
+      /// <param name="context">The context of the server-side call handler being invoked.</param>
+      /// <returns>The response to send back to the client (wrapped by a task).</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Authn.Services.V1.LoginWithOtpResponse> LoginWithOtp(global::Udb.Core.Authn.Services.V1.LoginWithOtpRequest request, grpc::ServerCallContext context)
+      {
+        throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
+      }
+
+      /// <summary>
+      /// ── 0.6.6 OIDC sign-in RPCs [OIDC] ──
+      /// "Sign in with Google / Microsoft / any OpenID provider" through a tenant
+      /// IdentityProvider (kind OIDC). Browser flow: StartOidcLogin returns the
+      /// provider's authorization URL (authorization code + PKCE S256 + nonce,
+      /// state stored server-side for 10 minutes, single use); the provider
+      /// redirects to an allowlisted redirect_uri with code + state, and
+      /// FinishOidcLogin exchanges the code, verifies the ID token and returns the
+      /// same credentials as Login. Native apps that already hold an ID token call
+      /// LoginWithOidcIdToken. Users resolve exactly like ResolveExternalIdentity:
+      /// an existing link, the provider's account-linking policy, or JIT
+      /// provisioning under its jit_policy.
+      /// </summary>
+      /// <param name="request">The request received from the client.</param>
+      /// <param name="context">The context of the server-side call handler being invoked.</param>
+      /// <returns>The response to send back to the client (wrapped by a task).</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Authn.Services.V1.StartOidcLoginResponse> StartOidcLogin(global::Udb.Core.Authn.Services.V1.StartOidcLoginRequest request, grpc::ServerCallContext context)
+      {
+        throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
+      }
+
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Authn.Services.V1.FinishOidcLoginResponse> FinishOidcLogin(global::Udb.Core.Authn.Services.V1.FinishOidcLoginRequest request, grpc::ServerCallContext context)
+      {
+        throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
+      }
+
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Authn.Services.V1.LoginWithOidcIdTokenResponse> LoginWithOidcIdToken(global::Udb.Core.Authn.Services.V1.LoginWithOidcIdTokenRequest request, grpc::ServerCallContext context)
+      {
+        throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
+      }
+
+      /// <summary>
+      /// ── 0.6.6 invitations RPCs [INVITATIONS] ──
+      /// Invite a person into the caller's tenant with a set of roles. The
+      /// invitee proves the invitation's channel on acceptance: an SMS or email
+      /// code sent to `address`, a sign-in with the tenant identity provider
+      /// (OIDC), or a new passkey (PASSKEY). SMS/EMAIL invitations are sent at
+      /// once (event `authn.invitation`, link from the tenant auth policy's
+      /// magic_link_base_url); the accept token is returned once and only its hash
+      /// is stored. Reserved platform roles are refused; organization_owner needs a
+      /// caller who holds it, or a cross-tenant admin.
+      /// </summary>
+      /// <param name="request">The request received from the client.</param>
+      /// <param name="context">The context of the server-side call handler being invoked.</param>
+      /// <returns>The response to send back to the client (wrapped by a task).</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Authn.Services.V1.CreateInvitationResponse> CreateInvitation(global::Udb.Core.Authn.Services.V1.CreateInvitationRequest request, grpc::ServerCallContext context)
+      {
+        throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
+      }
+
+      /// <summary>
+      /// Page through the caller's tenant's invitations, newest first, optionally
+      /// by status.
+      /// </summary>
+      /// <param name="request">The request received from the client.</param>
+      /// <param name="context">The context of the server-side call handler being invoked.</param>
+      /// <returns>The response to send back to the client (wrapped by a task).</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Authn.Services.V1.ListInvitationsResponse> ListInvitations(global::Udb.Core.Authn.Services.V1.ListInvitationsRequest request, grpc::ServerCallContext context)
+      {
+        throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
+      }
+
+      /// <summary>
+      /// Revoke a PENDING invitation of the caller's tenant: its link stops
+      /// working at once and the account acceptance had started for (if any) is
+      /// deleted. Already accepted, revoked or expired: revoked=false, nothing
+      /// changes.
+      /// </summary>
+      /// <param name="request">The request received from the client.</param>
+      /// <param name="context">The context of the server-side call handler being invoked.</param>
+      /// <returns>The response to send back to the client (wrapped by a task).</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Authn.Services.V1.RevokeInvitationResponse> RevokeInvitation(global::Udb.Core.Authn.Services.V1.RevokeInvitationRequest request, grpc::ServerCallContext context)
+      {
+        throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
+      }
+
+      /// <summary>
+      /// Send a PENDING SMS/EMAIL invitation again with a NEW accept token (the
+      /// previous link stops working). At most 5 messages per invitation, at least
+      /// 60 seconds apart (RESOURCE_EXHAUSTED with a retry delay otherwise).
+      /// </summary>
+      /// <param name="request">The request received from the client.</param>
+      /// <param name="context">The context of the server-side call handler being invoked.</param>
+      /// <returns>The response to send back to the client (wrapped by a task).</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Authn.Services.V1.ResendInvitationResponse> ResendInvitation(global::Udb.Core.Authn.Services.V1.ResendInvitationRequest request, grpc::ServerCallContext context)
+      {
+        throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
+      }
+
+      /// <summary>
+      /// What an invitee sees before accepting: tenant name, channel, roles,
+      /// expiry and the masked address. Public. An unknown, expired, revoked or
+      /// accepted invitation, or a wrong token, is one identical refusal.
+      /// </summary>
+      /// <param name="request">The request received from the client.</param>
+      /// <param name="context">The context of the server-side call handler being invoked.</param>
+      /// <returns>The response to send back to the client (wrapped by a task).</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Authn.Services.V1.GetInvitationResponse> GetInvitation(global::Udb.Core.Authn.Services.V1.GetInvitationRequest request, grpc::ServerCallContext context)
+      {
+        throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
+      }
+
+      /// <summary>
+      /// Begin accepting an invitation. Public. SMS/EMAIL: sends a one-time code
+      /// to the invitation address (OTP cooldown applies). PASSKEY: returns
+      /// WebAuthn registration options. OIDC: returns the identity provider's
+      /// authorization URL. Same refusal as GetInvitation for an unusable
+      /// invitation.
+      /// </summary>
+      /// <param name="request">The request received from the client.</param>
+      /// <param name="context">The context of the server-side call handler being invoked.</param>
+      /// <returns>The response to send back to the client (wrapped by a task).</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Authn.Services.V1.StartInvitationAcceptanceResponse> StartInvitationAcceptance(global::Udb.Core.Authn.Services.V1.StartInvitationAcceptanceRequest request, grpc::ServerCallContext context)
+      {
+        throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
+      }
+
+      /// <summary>
+      /// Accept an invitation with the channel proof. Public. Creates the ACTIVE
+      /// account in the invitation's tenant and project with the proven channel
+      /// verified (phone, email, linked identity or passkey), binds the invited
+      /// roles, marks the invitation ACCEPTED and signs the account in: the same
+      /// credentials as Login. An unusable invitation is the same refusal as
+      /// GetInvitation; a taken username is ALREADY_EXISTS on `username`.
+      /// </summary>
+      /// <param name="request">The request received from the client.</param>
+      /// <param name="context">The context of the server-side call handler being invoked.</param>
+      /// <returns>The response to send back to the client (wrapped by a task).</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Authn.Services.V1.AcceptInvitationResponse> AcceptInvitation(global::Udb.Core.Authn.Services.V1.AcceptInvitationRequest request, grpc::ServerCallContext context)
+      {
+        throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
+      }
+
+      /// <summary>
+      /// Check a step-up token before a protected action. A resource server sends
+      /// the token the user got from VerifyMfaChallenge and the action it is about
+      /// to perform; the answer says whether the tenant's step-up rule for that
+      /// action is met: same action, an allowed second factor, proven recently
+      /// enough, by the calling user, in a session that is still live.
+      /// </summary>
+      /// <param name="request">The request received from the client.</param>
+      /// <param name="context">The context of the server-side call handler being invoked.</param>
+      /// <returns>The response to send back to the client (wrapped by a task).</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Authn.Services.V1.CheckStepUpResponse> CheckStepUp(global::Udb.Core.Authn.Services.V1.CheckStepUpRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -3969,6 +4363,854 @@ namespace Udb.Core.Authn.Services.V1 {
       {
         return CallInvoker.AsyncUnaryCall(__Method_ExchangeServiceTokenForTenant, null, options, request);
       }
+      /// <summary>
+      /// Replace the tenant's sign-in policy: whether passwords are required, the
+      /// channels sign-in codes may go over, the magic-link page and the step-up
+      /// rules. Only an administrator of that tenant (or a cross-tenant admin).
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
+      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
+      /// <param name="cancellationToken">An optional token for canceling the call.</param>
+      /// <returns>The response received from the server.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::Udb.Core.Authn.Services.V1.PutTenantAuthPolicyResponse PutTenantAuthPolicy(global::Udb.Core.Authn.Services.V1.PutTenantAuthPolicyRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return PutTenantAuthPolicy(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      /// <summary>
+      /// Replace the tenant's sign-in policy: whether passwords are required, the
+      /// channels sign-in codes may go over, the magic-link page and the step-up
+      /// rules. Only an administrator of that tenant (or a cross-tenant admin).
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="options">The options for the call.</param>
+      /// <returns>The response received from the server.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::Udb.Core.Authn.Services.V1.PutTenantAuthPolicyResponse PutTenantAuthPolicy(global::Udb.Core.Authn.Services.V1.PutTenantAuthPolicyRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.BlockingUnaryCall(__Method_PutTenantAuthPolicy, null, options, request);
+      }
+      /// <summary>
+      /// Replace the tenant's sign-in policy: whether passwords are required, the
+      /// channels sign-in codes may go over, the magic-link page and the step-up
+      /// rules. Only an administrator of that tenant (or a cross-tenant admin).
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
+      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
+      /// <param name="cancellationToken">An optional token for canceling the call.</param>
+      /// <returns>The call object.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Authn.Services.V1.PutTenantAuthPolicyResponse> PutTenantAuthPolicyAsync(global::Udb.Core.Authn.Services.V1.PutTenantAuthPolicyRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return PutTenantAuthPolicyAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      /// <summary>
+      /// Replace the tenant's sign-in policy: whether passwords are required, the
+      /// channels sign-in codes may go over, the magic-link page and the step-up
+      /// rules. Only an administrator of that tenant (or a cross-tenant admin).
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="options">The options for the call.</param>
+      /// <returns>The call object.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Authn.Services.V1.PutTenantAuthPolicyResponse> PutTenantAuthPolicyAsync(global::Udb.Core.Authn.Services.V1.PutTenantAuthPolicyRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.AsyncUnaryCall(__Method_PutTenantAuthPolicy, null, options, request);
+      }
+      /// <summary>
+      /// Read the tenant's sign-in policy (the defaults when none was written).
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
+      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
+      /// <param name="cancellationToken">An optional token for canceling the call.</param>
+      /// <returns>The response received from the server.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::Udb.Core.Authn.Services.V1.GetTenantAuthPolicyResponse GetTenantAuthPolicy(global::Udb.Core.Authn.Services.V1.GetTenantAuthPolicyRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return GetTenantAuthPolicy(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      /// <summary>
+      /// Read the tenant's sign-in policy (the defaults when none was written).
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="options">The options for the call.</param>
+      /// <returns>The response received from the server.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::Udb.Core.Authn.Services.V1.GetTenantAuthPolicyResponse GetTenantAuthPolicy(global::Udb.Core.Authn.Services.V1.GetTenantAuthPolicyRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.BlockingUnaryCall(__Method_GetTenantAuthPolicy, null, options, request);
+      }
+      /// <summary>
+      /// Read the tenant's sign-in policy (the defaults when none was written).
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
+      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
+      /// <param name="cancellationToken">An optional token for canceling the call.</param>
+      /// <returns>The call object.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Authn.Services.V1.GetTenantAuthPolicyResponse> GetTenantAuthPolicyAsync(global::Udb.Core.Authn.Services.V1.GetTenantAuthPolicyRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return GetTenantAuthPolicyAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      /// <summary>
+      /// Read the tenant's sign-in policy (the defaults when none was written).
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="options">The options for the call.</param>
+      /// <returns>The call object.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Authn.Services.V1.GetTenantAuthPolicyResponse> GetTenantAuthPolicyAsync(global::Udb.Core.Authn.Services.V1.GetTenantAuthPolicyRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.AsyncUnaryCall(__Method_GetTenantAuthPolicy, null, options, request);
+      }
+      /// <summary>
+      /// Send a one-time sign-in code (or, for EMAIL, a magic link) to a phone or
+      /// email address of the tenant. Public. The answer is the same whether or not
+      /// the address belongs to an account and whether or not the tenant enabled
+      /// the channel; only a real, enabled account is sent anything.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
+      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
+      /// <param name="cancellationToken">An optional token for canceling the call.</param>
+      /// <returns>The response received from the server.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::Udb.Core.Authn.Services.V1.SendLoginOtpResponse SendLoginOtp(global::Udb.Core.Authn.Services.V1.SendLoginOtpRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return SendLoginOtp(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      /// <summary>
+      /// Send a one-time sign-in code (or, for EMAIL, a magic link) to a phone or
+      /// email address of the tenant. Public. The answer is the same whether or not
+      /// the address belongs to an account and whether or not the tenant enabled
+      /// the channel; only a real, enabled account is sent anything.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="options">The options for the call.</param>
+      /// <returns>The response received from the server.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::Udb.Core.Authn.Services.V1.SendLoginOtpResponse SendLoginOtp(global::Udb.Core.Authn.Services.V1.SendLoginOtpRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.BlockingUnaryCall(__Method_SendLoginOtp, null, options, request);
+      }
+      /// <summary>
+      /// Send a one-time sign-in code (or, for EMAIL, a magic link) to a phone or
+      /// email address of the tenant. Public. The answer is the same whether or not
+      /// the address belongs to an account and whether or not the tenant enabled
+      /// the channel; only a real, enabled account is sent anything.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
+      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
+      /// <param name="cancellationToken">An optional token for canceling the call.</param>
+      /// <returns>The call object.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Authn.Services.V1.SendLoginOtpResponse> SendLoginOtpAsync(global::Udb.Core.Authn.Services.V1.SendLoginOtpRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return SendLoginOtpAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      /// <summary>
+      /// Send a one-time sign-in code (or, for EMAIL, a magic link) to a phone or
+      /// email address of the tenant. Public. The answer is the same whether or not
+      /// the address belongs to an account and whether or not the tenant enabled
+      /// the channel; only a real, enabled account is sent anything.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="options">The options for the call.</param>
+      /// <returns>The call object.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Authn.Services.V1.SendLoginOtpResponse> SendLoginOtpAsync(global::Udb.Core.Authn.Services.V1.SendLoginOtpRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.AsyncUnaryCall(__Method_SendLoginOtp, null, options, request);
+      }
+      /// <summary>
+      /// Sign in with the code from SendLoginOtp (or the otp_id + code of a magic
+      /// link). Public. Returns the same credentials as Login: access token,
+      /// rotating refresh token, session and CSRF token.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
+      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
+      /// <param name="cancellationToken">An optional token for canceling the call.</param>
+      /// <returns>The response received from the server.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::Udb.Core.Authn.Services.V1.LoginWithOtpResponse LoginWithOtp(global::Udb.Core.Authn.Services.V1.LoginWithOtpRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return LoginWithOtp(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      /// <summary>
+      /// Sign in with the code from SendLoginOtp (or the otp_id + code of a magic
+      /// link). Public. Returns the same credentials as Login: access token,
+      /// rotating refresh token, session and CSRF token.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="options">The options for the call.</param>
+      /// <returns>The response received from the server.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::Udb.Core.Authn.Services.V1.LoginWithOtpResponse LoginWithOtp(global::Udb.Core.Authn.Services.V1.LoginWithOtpRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.BlockingUnaryCall(__Method_LoginWithOtp, null, options, request);
+      }
+      /// <summary>
+      /// Sign in with the code from SendLoginOtp (or the otp_id + code of a magic
+      /// link). Public. Returns the same credentials as Login: access token,
+      /// rotating refresh token, session and CSRF token.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
+      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
+      /// <param name="cancellationToken">An optional token for canceling the call.</param>
+      /// <returns>The call object.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Authn.Services.V1.LoginWithOtpResponse> LoginWithOtpAsync(global::Udb.Core.Authn.Services.V1.LoginWithOtpRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return LoginWithOtpAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      /// <summary>
+      /// Sign in with the code from SendLoginOtp (or the otp_id + code of a magic
+      /// link). Public. Returns the same credentials as Login: access token,
+      /// rotating refresh token, session and CSRF token.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="options">The options for the call.</param>
+      /// <returns>The call object.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Authn.Services.V1.LoginWithOtpResponse> LoginWithOtpAsync(global::Udb.Core.Authn.Services.V1.LoginWithOtpRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.AsyncUnaryCall(__Method_LoginWithOtp, null, options, request);
+      }
+      /// <summary>
+      /// ── 0.6.6 OIDC sign-in RPCs [OIDC] ──
+      /// "Sign in with Google / Microsoft / any OpenID provider" through a tenant
+      /// IdentityProvider (kind OIDC). Browser flow: StartOidcLogin returns the
+      /// provider's authorization URL (authorization code + PKCE S256 + nonce,
+      /// state stored server-side for 10 minutes, single use); the provider
+      /// redirects to an allowlisted redirect_uri with code + state, and
+      /// FinishOidcLogin exchanges the code, verifies the ID token and returns the
+      /// same credentials as Login. Native apps that already hold an ID token call
+      /// LoginWithOidcIdToken. Users resolve exactly like ResolveExternalIdentity:
+      /// an existing link, the provider's account-linking policy, or JIT
+      /// provisioning under its jit_policy.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
+      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
+      /// <param name="cancellationToken">An optional token for canceling the call.</param>
+      /// <returns>The response received from the server.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::Udb.Core.Authn.Services.V1.StartOidcLoginResponse StartOidcLogin(global::Udb.Core.Authn.Services.V1.StartOidcLoginRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return StartOidcLogin(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      /// <summary>
+      /// ── 0.6.6 OIDC sign-in RPCs [OIDC] ──
+      /// "Sign in with Google / Microsoft / any OpenID provider" through a tenant
+      /// IdentityProvider (kind OIDC). Browser flow: StartOidcLogin returns the
+      /// provider's authorization URL (authorization code + PKCE S256 + nonce,
+      /// state stored server-side for 10 minutes, single use); the provider
+      /// redirects to an allowlisted redirect_uri with code + state, and
+      /// FinishOidcLogin exchanges the code, verifies the ID token and returns the
+      /// same credentials as Login. Native apps that already hold an ID token call
+      /// LoginWithOidcIdToken. Users resolve exactly like ResolveExternalIdentity:
+      /// an existing link, the provider's account-linking policy, or JIT
+      /// provisioning under its jit_policy.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="options">The options for the call.</param>
+      /// <returns>The response received from the server.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::Udb.Core.Authn.Services.V1.StartOidcLoginResponse StartOidcLogin(global::Udb.Core.Authn.Services.V1.StartOidcLoginRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.BlockingUnaryCall(__Method_StartOidcLogin, null, options, request);
+      }
+      /// <summary>
+      /// ── 0.6.6 OIDC sign-in RPCs [OIDC] ──
+      /// "Sign in with Google / Microsoft / any OpenID provider" through a tenant
+      /// IdentityProvider (kind OIDC). Browser flow: StartOidcLogin returns the
+      /// provider's authorization URL (authorization code + PKCE S256 + nonce,
+      /// state stored server-side for 10 minutes, single use); the provider
+      /// redirects to an allowlisted redirect_uri with code + state, and
+      /// FinishOidcLogin exchanges the code, verifies the ID token and returns the
+      /// same credentials as Login. Native apps that already hold an ID token call
+      /// LoginWithOidcIdToken. Users resolve exactly like ResolveExternalIdentity:
+      /// an existing link, the provider's account-linking policy, or JIT
+      /// provisioning under its jit_policy.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
+      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
+      /// <param name="cancellationToken">An optional token for canceling the call.</param>
+      /// <returns>The call object.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Authn.Services.V1.StartOidcLoginResponse> StartOidcLoginAsync(global::Udb.Core.Authn.Services.V1.StartOidcLoginRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return StartOidcLoginAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      /// <summary>
+      /// ── 0.6.6 OIDC sign-in RPCs [OIDC] ──
+      /// "Sign in with Google / Microsoft / any OpenID provider" through a tenant
+      /// IdentityProvider (kind OIDC). Browser flow: StartOidcLogin returns the
+      /// provider's authorization URL (authorization code + PKCE S256 + nonce,
+      /// state stored server-side for 10 minutes, single use); the provider
+      /// redirects to an allowlisted redirect_uri with code + state, and
+      /// FinishOidcLogin exchanges the code, verifies the ID token and returns the
+      /// same credentials as Login. Native apps that already hold an ID token call
+      /// LoginWithOidcIdToken. Users resolve exactly like ResolveExternalIdentity:
+      /// an existing link, the provider's account-linking policy, or JIT
+      /// provisioning under its jit_policy.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="options">The options for the call.</param>
+      /// <returns>The call object.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Authn.Services.V1.StartOidcLoginResponse> StartOidcLoginAsync(global::Udb.Core.Authn.Services.V1.StartOidcLoginRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.AsyncUnaryCall(__Method_StartOidcLogin, null, options, request);
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::Udb.Core.Authn.Services.V1.FinishOidcLoginResponse FinishOidcLogin(global::Udb.Core.Authn.Services.V1.FinishOidcLoginRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return FinishOidcLogin(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::Udb.Core.Authn.Services.V1.FinishOidcLoginResponse FinishOidcLogin(global::Udb.Core.Authn.Services.V1.FinishOidcLoginRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.BlockingUnaryCall(__Method_FinishOidcLogin, null, options, request);
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Authn.Services.V1.FinishOidcLoginResponse> FinishOidcLoginAsync(global::Udb.Core.Authn.Services.V1.FinishOidcLoginRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return FinishOidcLoginAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Authn.Services.V1.FinishOidcLoginResponse> FinishOidcLoginAsync(global::Udb.Core.Authn.Services.V1.FinishOidcLoginRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.AsyncUnaryCall(__Method_FinishOidcLogin, null, options, request);
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::Udb.Core.Authn.Services.V1.LoginWithOidcIdTokenResponse LoginWithOidcIdToken(global::Udb.Core.Authn.Services.V1.LoginWithOidcIdTokenRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return LoginWithOidcIdToken(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::Udb.Core.Authn.Services.V1.LoginWithOidcIdTokenResponse LoginWithOidcIdToken(global::Udb.Core.Authn.Services.V1.LoginWithOidcIdTokenRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.BlockingUnaryCall(__Method_LoginWithOidcIdToken, null, options, request);
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Authn.Services.V1.LoginWithOidcIdTokenResponse> LoginWithOidcIdTokenAsync(global::Udb.Core.Authn.Services.V1.LoginWithOidcIdTokenRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return LoginWithOidcIdTokenAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Authn.Services.V1.LoginWithOidcIdTokenResponse> LoginWithOidcIdTokenAsync(global::Udb.Core.Authn.Services.V1.LoginWithOidcIdTokenRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.AsyncUnaryCall(__Method_LoginWithOidcIdToken, null, options, request);
+      }
+      /// <summary>
+      /// ── 0.6.6 invitations RPCs [INVITATIONS] ──
+      /// Invite a person into the caller's tenant with a set of roles. The
+      /// invitee proves the invitation's channel on acceptance: an SMS or email
+      /// code sent to `address`, a sign-in with the tenant identity provider
+      /// (OIDC), or a new passkey (PASSKEY). SMS/EMAIL invitations are sent at
+      /// once (event `authn.invitation`, link from the tenant auth policy's
+      /// magic_link_base_url); the accept token is returned once and only its hash
+      /// is stored. Reserved platform roles are refused; organization_owner needs a
+      /// caller who holds it, or a cross-tenant admin.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
+      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
+      /// <param name="cancellationToken">An optional token for canceling the call.</param>
+      /// <returns>The response received from the server.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::Udb.Core.Authn.Services.V1.CreateInvitationResponse CreateInvitation(global::Udb.Core.Authn.Services.V1.CreateInvitationRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return CreateInvitation(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      /// <summary>
+      /// ── 0.6.6 invitations RPCs [INVITATIONS] ──
+      /// Invite a person into the caller's tenant with a set of roles. The
+      /// invitee proves the invitation's channel on acceptance: an SMS or email
+      /// code sent to `address`, a sign-in with the tenant identity provider
+      /// (OIDC), or a new passkey (PASSKEY). SMS/EMAIL invitations are sent at
+      /// once (event `authn.invitation`, link from the tenant auth policy's
+      /// magic_link_base_url); the accept token is returned once and only its hash
+      /// is stored. Reserved platform roles are refused; organization_owner needs a
+      /// caller who holds it, or a cross-tenant admin.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="options">The options for the call.</param>
+      /// <returns>The response received from the server.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::Udb.Core.Authn.Services.V1.CreateInvitationResponse CreateInvitation(global::Udb.Core.Authn.Services.V1.CreateInvitationRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.BlockingUnaryCall(__Method_CreateInvitation, null, options, request);
+      }
+      /// <summary>
+      /// ── 0.6.6 invitations RPCs [INVITATIONS] ──
+      /// Invite a person into the caller's tenant with a set of roles. The
+      /// invitee proves the invitation's channel on acceptance: an SMS or email
+      /// code sent to `address`, a sign-in with the tenant identity provider
+      /// (OIDC), or a new passkey (PASSKEY). SMS/EMAIL invitations are sent at
+      /// once (event `authn.invitation`, link from the tenant auth policy's
+      /// magic_link_base_url); the accept token is returned once and only its hash
+      /// is stored. Reserved platform roles are refused; organization_owner needs a
+      /// caller who holds it, or a cross-tenant admin.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
+      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
+      /// <param name="cancellationToken">An optional token for canceling the call.</param>
+      /// <returns>The call object.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Authn.Services.V1.CreateInvitationResponse> CreateInvitationAsync(global::Udb.Core.Authn.Services.V1.CreateInvitationRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return CreateInvitationAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      /// <summary>
+      /// ── 0.6.6 invitations RPCs [INVITATIONS] ──
+      /// Invite a person into the caller's tenant with a set of roles. The
+      /// invitee proves the invitation's channel on acceptance: an SMS or email
+      /// code sent to `address`, a sign-in with the tenant identity provider
+      /// (OIDC), or a new passkey (PASSKEY). SMS/EMAIL invitations are sent at
+      /// once (event `authn.invitation`, link from the tenant auth policy's
+      /// magic_link_base_url); the accept token is returned once and only its hash
+      /// is stored. Reserved platform roles are refused; organization_owner needs a
+      /// caller who holds it, or a cross-tenant admin.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="options">The options for the call.</param>
+      /// <returns>The call object.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Authn.Services.V1.CreateInvitationResponse> CreateInvitationAsync(global::Udb.Core.Authn.Services.V1.CreateInvitationRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.AsyncUnaryCall(__Method_CreateInvitation, null, options, request);
+      }
+      /// <summary>
+      /// Page through the caller's tenant's invitations, newest first, optionally
+      /// by status.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
+      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
+      /// <param name="cancellationToken">An optional token for canceling the call.</param>
+      /// <returns>The response received from the server.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::Udb.Core.Authn.Services.V1.ListInvitationsResponse ListInvitations(global::Udb.Core.Authn.Services.V1.ListInvitationsRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return ListInvitations(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      /// <summary>
+      /// Page through the caller's tenant's invitations, newest first, optionally
+      /// by status.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="options">The options for the call.</param>
+      /// <returns>The response received from the server.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::Udb.Core.Authn.Services.V1.ListInvitationsResponse ListInvitations(global::Udb.Core.Authn.Services.V1.ListInvitationsRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.BlockingUnaryCall(__Method_ListInvitations, null, options, request);
+      }
+      /// <summary>
+      /// Page through the caller's tenant's invitations, newest first, optionally
+      /// by status.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
+      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
+      /// <param name="cancellationToken">An optional token for canceling the call.</param>
+      /// <returns>The call object.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Authn.Services.V1.ListInvitationsResponse> ListInvitationsAsync(global::Udb.Core.Authn.Services.V1.ListInvitationsRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return ListInvitationsAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      /// <summary>
+      /// Page through the caller's tenant's invitations, newest first, optionally
+      /// by status.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="options">The options for the call.</param>
+      /// <returns>The call object.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Authn.Services.V1.ListInvitationsResponse> ListInvitationsAsync(global::Udb.Core.Authn.Services.V1.ListInvitationsRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.AsyncUnaryCall(__Method_ListInvitations, null, options, request);
+      }
+      /// <summary>
+      /// Revoke a PENDING invitation of the caller's tenant: its link stops
+      /// working at once and the account acceptance had started for (if any) is
+      /// deleted. Already accepted, revoked or expired: revoked=false, nothing
+      /// changes.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
+      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
+      /// <param name="cancellationToken">An optional token for canceling the call.</param>
+      /// <returns>The response received from the server.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::Udb.Core.Authn.Services.V1.RevokeInvitationResponse RevokeInvitation(global::Udb.Core.Authn.Services.V1.RevokeInvitationRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return RevokeInvitation(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      /// <summary>
+      /// Revoke a PENDING invitation of the caller's tenant: its link stops
+      /// working at once and the account acceptance had started for (if any) is
+      /// deleted. Already accepted, revoked or expired: revoked=false, nothing
+      /// changes.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="options">The options for the call.</param>
+      /// <returns>The response received from the server.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::Udb.Core.Authn.Services.V1.RevokeInvitationResponse RevokeInvitation(global::Udb.Core.Authn.Services.V1.RevokeInvitationRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.BlockingUnaryCall(__Method_RevokeInvitation, null, options, request);
+      }
+      /// <summary>
+      /// Revoke a PENDING invitation of the caller's tenant: its link stops
+      /// working at once and the account acceptance had started for (if any) is
+      /// deleted. Already accepted, revoked or expired: revoked=false, nothing
+      /// changes.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
+      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
+      /// <param name="cancellationToken">An optional token for canceling the call.</param>
+      /// <returns>The call object.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Authn.Services.V1.RevokeInvitationResponse> RevokeInvitationAsync(global::Udb.Core.Authn.Services.V1.RevokeInvitationRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return RevokeInvitationAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      /// <summary>
+      /// Revoke a PENDING invitation of the caller's tenant: its link stops
+      /// working at once and the account acceptance had started for (if any) is
+      /// deleted. Already accepted, revoked or expired: revoked=false, nothing
+      /// changes.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="options">The options for the call.</param>
+      /// <returns>The call object.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Authn.Services.V1.RevokeInvitationResponse> RevokeInvitationAsync(global::Udb.Core.Authn.Services.V1.RevokeInvitationRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.AsyncUnaryCall(__Method_RevokeInvitation, null, options, request);
+      }
+      /// <summary>
+      /// Send a PENDING SMS/EMAIL invitation again with a NEW accept token (the
+      /// previous link stops working). At most 5 messages per invitation, at least
+      /// 60 seconds apart (RESOURCE_EXHAUSTED with a retry delay otherwise).
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
+      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
+      /// <param name="cancellationToken">An optional token for canceling the call.</param>
+      /// <returns>The response received from the server.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::Udb.Core.Authn.Services.V1.ResendInvitationResponse ResendInvitation(global::Udb.Core.Authn.Services.V1.ResendInvitationRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return ResendInvitation(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      /// <summary>
+      /// Send a PENDING SMS/EMAIL invitation again with a NEW accept token (the
+      /// previous link stops working). At most 5 messages per invitation, at least
+      /// 60 seconds apart (RESOURCE_EXHAUSTED with a retry delay otherwise).
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="options">The options for the call.</param>
+      /// <returns>The response received from the server.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::Udb.Core.Authn.Services.V1.ResendInvitationResponse ResendInvitation(global::Udb.Core.Authn.Services.V1.ResendInvitationRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.BlockingUnaryCall(__Method_ResendInvitation, null, options, request);
+      }
+      /// <summary>
+      /// Send a PENDING SMS/EMAIL invitation again with a NEW accept token (the
+      /// previous link stops working). At most 5 messages per invitation, at least
+      /// 60 seconds apart (RESOURCE_EXHAUSTED with a retry delay otherwise).
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
+      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
+      /// <param name="cancellationToken">An optional token for canceling the call.</param>
+      /// <returns>The call object.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Authn.Services.V1.ResendInvitationResponse> ResendInvitationAsync(global::Udb.Core.Authn.Services.V1.ResendInvitationRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return ResendInvitationAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      /// <summary>
+      /// Send a PENDING SMS/EMAIL invitation again with a NEW accept token (the
+      /// previous link stops working). At most 5 messages per invitation, at least
+      /// 60 seconds apart (RESOURCE_EXHAUSTED with a retry delay otherwise).
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="options">The options for the call.</param>
+      /// <returns>The call object.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Authn.Services.V1.ResendInvitationResponse> ResendInvitationAsync(global::Udb.Core.Authn.Services.V1.ResendInvitationRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.AsyncUnaryCall(__Method_ResendInvitation, null, options, request);
+      }
+      /// <summary>
+      /// What an invitee sees before accepting: tenant name, channel, roles,
+      /// expiry and the masked address. Public. An unknown, expired, revoked or
+      /// accepted invitation, or a wrong token, is one identical refusal.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
+      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
+      /// <param name="cancellationToken">An optional token for canceling the call.</param>
+      /// <returns>The response received from the server.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::Udb.Core.Authn.Services.V1.GetInvitationResponse GetInvitation(global::Udb.Core.Authn.Services.V1.GetInvitationRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return GetInvitation(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      /// <summary>
+      /// What an invitee sees before accepting: tenant name, channel, roles,
+      /// expiry and the masked address. Public. An unknown, expired, revoked or
+      /// accepted invitation, or a wrong token, is one identical refusal.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="options">The options for the call.</param>
+      /// <returns>The response received from the server.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::Udb.Core.Authn.Services.V1.GetInvitationResponse GetInvitation(global::Udb.Core.Authn.Services.V1.GetInvitationRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.BlockingUnaryCall(__Method_GetInvitation, null, options, request);
+      }
+      /// <summary>
+      /// What an invitee sees before accepting: tenant name, channel, roles,
+      /// expiry and the masked address. Public. An unknown, expired, revoked or
+      /// accepted invitation, or a wrong token, is one identical refusal.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
+      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
+      /// <param name="cancellationToken">An optional token for canceling the call.</param>
+      /// <returns>The call object.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Authn.Services.V1.GetInvitationResponse> GetInvitationAsync(global::Udb.Core.Authn.Services.V1.GetInvitationRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return GetInvitationAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      /// <summary>
+      /// What an invitee sees before accepting: tenant name, channel, roles,
+      /// expiry and the masked address. Public. An unknown, expired, revoked or
+      /// accepted invitation, or a wrong token, is one identical refusal.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="options">The options for the call.</param>
+      /// <returns>The call object.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Authn.Services.V1.GetInvitationResponse> GetInvitationAsync(global::Udb.Core.Authn.Services.V1.GetInvitationRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.AsyncUnaryCall(__Method_GetInvitation, null, options, request);
+      }
+      /// <summary>
+      /// Begin accepting an invitation. Public. SMS/EMAIL: sends a one-time code
+      /// to the invitation address (OTP cooldown applies). PASSKEY: returns
+      /// WebAuthn registration options. OIDC: returns the identity provider's
+      /// authorization URL. Same refusal as GetInvitation for an unusable
+      /// invitation.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
+      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
+      /// <param name="cancellationToken">An optional token for canceling the call.</param>
+      /// <returns>The response received from the server.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::Udb.Core.Authn.Services.V1.StartInvitationAcceptanceResponse StartInvitationAcceptance(global::Udb.Core.Authn.Services.V1.StartInvitationAcceptanceRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return StartInvitationAcceptance(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      /// <summary>
+      /// Begin accepting an invitation. Public. SMS/EMAIL: sends a one-time code
+      /// to the invitation address (OTP cooldown applies). PASSKEY: returns
+      /// WebAuthn registration options. OIDC: returns the identity provider's
+      /// authorization URL. Same refusal as GetInvitation for an unusable
+      /// invitation.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="options">The options for the call.</param>
+      /// <returns>The response received from the server.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::Udb.Core.Authn.Services.V1.StartInvitationAcceptanceResponse StartInvitationAcceptance(global::Udb.Core.Authn.Services.V1.StartInvitationAcceptanceRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.BlockingUnaryCall(__Method_StartInvitationAcceptance, null, options, request);
+      }
+      /// <summary>
+      /// Begin accepting an invitation. Public. SMS/EMAIL: sends a one-time code
+      /// to the invitation address (OTP cooldown applies). PASSKEY: returns
+      /// WebAuthn registration options. OIDC: returns the identity provider's
+      /// authorization URL. Same refusal as GetInvitation for an unusable
+      /// invitation.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
+      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
+      /// <param name="cancellationToken">An optional token for canceling the call.</param>
+      /// <returns>The call object.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Authn.Services.V1.StartInvitationAcceptanceResponse> StartInvitationAcceptanceAsync(global::Udb.Core.Authn.Services.V1.StartInvitationAcceptanceRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return StartInvitationAcceptanceAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      /// <summary>
+      /// Begin accepting an invitation. Public. SMS/EMAIL: sends a one-time code
+      /// to the invitation address (OTP cooldown applies). PASSKEY: returns
+      /// WebAuthn registration options. OIDC: returns the identity provider's
+      /// authorization URL. Same refusal as GetInvitation for an unusable
+      /// invitation.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="options">The options for the call.</param>
+      /// <returns>The call object.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Authn.Services.V1.StartInvitationAcceptanceResponse> StartInvitationAcceptanceAsync(global::Udb.Core.Authn.Services.V1.StartInvitationAcceptanceRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.AsyncUnaryCall(__Method_StartInvitationAcceptance, null, options, request);
+      }
+      /// <summary>
+      /// Accept an invitation with the channel proof. Public. Creates the ACTIVE
+      /// account in the invitation's tenant and project with the proven channel
+      /// verified (phone, email, linked identity or passkey), binds the invited
+      /// roles, marks the invitation ACCEPTED and signs the account in: the same
+      /// credentials as Login. An unusable invitation is the same refusal as
+      /// GetInvitation; a taken username is ALREADY_EXISTS on `username`.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
+      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
+      /// <param name="cancellationToken">An optional token for canceling the call.</param>
+      /// <returns>The response received from the server.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::Udb.Core.Authn.Services.V1.AcceptInvitationResponse AcceptInvitation(global::Udb.Core.Authn.Services.V1.AcceptInvitationRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return AcceptInvitation(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      /// <summary>
+      /// Accept an invitation with the channel proof. Public. Creates the ACTIVE
+      /// account in the invitation's tenant and project with the proven channel
+      /// verified (phone, email, linked identity or passkey), binds the invited
+      /// roles, marks the invitation ACCEPTED and signs the account in: the same
+      /// credentials as Login. An unusable invitation is the same refusal as
+      /// GetInvitation; a taken username is ALREADY_EXISTS on `username`.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="options">The options for the call.</param>
+      /// <returns>The response received from the server.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::Udb.Core.Authn.Services.V1.AcceptInvitationResponse AcceptInvitation(global::Udb.Core.Authn.Services.V1.AcceptInvitationRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.BlockingUnaryCall(__Method_AcceptInvitation, null, options, request);
+      }
+      /// <summary>
+      /// Accept an invitation with the channel proof. Public. Creates the ACTIVE
+      /// account in the invitation's tenant and project with the proven channel
+      /// verified (phone, email, linked identity or passkey), binds the invited
+      /// roles, marks the invitation ACCEPTED and signs the account in: the same
+      /// credentials as Login. An unusable invitation is the same refusal as
+      /// GetInvitation; a taken username is ALREADY_EXISTS on `username`.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
+      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
+      /// <param name="cancellationToken">An optional token for canceling the call.</param>
+      /// <returns>The call object.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Authn.Services.V1.AcceptInvitationResponse> AcceptInvitationAsync(global::Udb.Core.Authn.Services.V1.AcceptInvitationRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return AcceptInvitationAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      /// <summary>
+      /// Accept an invitation with the channel proof. Public. Creates the ACTIVE
+      /// account in the invitation's tenant and project with the proven channel
+      /// verified (phone, email, linked identity or passkey), binds the invited
+      /// roles, marks the invitation ACCEPTED and signs the account in: the same
+      /// credentials as Login. An unusable invitation is the same refusal as
+      /// GetInvitation; a taken username is ALREADY_EXISTS on `username`.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="options">The options for the call.</param>
+      /// <returns>The call object.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Authn.Services.V1.AcceptInvitationResponse> AcceptInvitationAsync(global::Udb.Core.Authn.Services.V1.AcceptInvitationRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.AsyncUnaryCall(__Method_AcceptInvitation, null, options, request);
+      }
+      /// <summary>
+      /// Check a step-up token before a protected action. A resource server sends
+      /// the token the user got from VerifyMfaChallenge and the action it is about
+      /// to perform; the answer says whether the tenant's step-up rule for that
+      /// action is met: same action, an allowed second factor, proven recently
+      /// enough, by the calling user, in a session that is still live.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
+      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
+      /// <param name="cancellationToken">An optional token for canceling the call.</param>
+      /// <returns>The response received from the server.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::Udb.Core.Authn.Services.V1.CheckStepUpResponse CheckStepUp(global::Udb.Core.Authn.Services.V1.CheckStepUpRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return CheckStepUp(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      /// <summary>
+      /// Check a step-up token before a protected action. A resource server sends
+      /// the token the user got from VerifyMfaChallenge and the action it is about
+      /// to perform; the answer says whether the tenant's step-up rule for that
+      /// action is met: same action, an allowed second factor, proven recently
+      /// enough, by the calling user, in a session that is still live.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="options">The options for the call.</param>
+      /// <returns>The response received from the server.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::Udb.Core.Authn.Services.V1.CheckStepUpResponse CheckStepUp(global::Udb.Core.Authn.Services.V1.CheckStepUpRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.BlockingUnaryCall(__Method_CheckStepUp, null, options, request);
+      }
+      /// <summary>
+      /// Check a step-up token before a protected action. A resource server sends
+      /// the token the user got from VerifyMfaChallenge and the action it is about
+      /// to perform; the answer says whether the tenant's step-up rule for that
+      /// action is met: same action, an allowed second factor, proven recently
+      /// enough, by the calling user, in a session that is still live.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
+      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
+      /// <param name="cancellationToken">An optional token for canceling the call.</param>
+      /// <returns>The call object.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Authn.Services.V1.CheckStepUpResponse> CheckStepUpAsync(global::Udb.Core.Authn.Services.V1.CheckStepUpRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return CheckStepUpAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      /// <summary>
+      /// Check a step-up token before a protected action. A resource server sends
+      /// the token the user got from VerifyMfaChallenge and the action it is about
+      /// to perform; the answer says whether the tenant's step-up rule for that
+      /// action is met: same action, an allowed second factor, proven recently
+      /// enough, by the calling user, in a session that is still live.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="options">The options for the call.</param>
+      /// <returns>The call object.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Authn.Services.V1.CheckStepUpResponse> CheckStepUpAsync(global::Udb.Core.Authn.Services.V1.CheckStepUpRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.AsyncUnaryCall(__Method_CheckStepUp, null, options, request);
+      }
       /// <summary>Creates a new instance of client from given <c>ClientBaseConfiguration</c>.</summary>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
       protected override AuthnServiceClient NewInstance(ClientBaseConfiguration configuration)
@@ -4046,7 +5288,22 @@ namespace Udb.Core.Authn.Services.V1 {
           .AddMethod(__Method_CreateServiceAccountTenantMembership, serviceImpl.CreateServiceAccountTenantMembership)
           .AddMethod(__Method_ListServiceAccountTenantMemberships, serviceImpl.ListServiceAccountTenantMemberships)
           .AddMethod(__Method_RevokeServiceAccountTenantMembership, serviceImpl.RevokeServiceAccountTenantMembership)
-          .AddMethod(__Method_ExchangeServiceTokenForTenant, serviceImpl.ExchangeServiceTokenForTenant).Build();
+          .AddMethod(__Method_ExchangeServiceTokenForTenant, serviceImpl.ExchangeServiceTokenForTenant)
+          .AddMethod(__Method_PutTenantAuthPolicy, serviceImpl.PutTenantAuthPolicy)
+          .AddMethod(__Method_GetTenantAuthPolicy, serviceImpl.GetTenantAuthPolicy)
+          .AddMethod(__Method_SendLoginOtp, serviceImpl.SendLoginOtp)
+          .AddMethod(__Method_LoginWithOtp, serviceImpl.LoginWithOtp)
+          .AddMethod(__Method_StartOidcLogin, serviceImpl.StartOidcLogin)
+          .AddMethod(__Method_FinishOidcLogin, serviceImpl.FinishOidcLogin)
+          .AddMethod(__Method_LoginWithOidcIdToken, serviceImpl.LoginWithOidcIdToken)
+          .AddMethod(__Method_CreateInvitation, serviceImpl.CreateInvitation)
+          .AddMethod(__Method_ListInvitations, serviceImpl.ListInvitations)
+          .AddMethod(__Method_RevokeInvitation, serviceImpl.RevokeInvitation)
+          .AddMethod(__Method_ResendInvitation, serviceImpl.ResendInvitation)
+          .AddMethod(__Method_GetInvitation, serviceImpl.GetInvitation)
+          .AddMethod(__Method_StartInvitationAcceptance, serviceImpl.StartInvitationAcceptance)
+          .AddMethod(__Method_AcceptInvitation, serviceImpl.AcceptInvitation)
+          .AddMethod(__Method_CheckStepUp, serviceImpl.CheckStepUp).Build();
     }
 
     /// <summary>Register service method with a service binder with or without implementation. Useful when customizing the service binding logic.
@@ -4120,6 +5377,21 @@ namespace Udb.Core.Authn.Services.V1 {
       serviceBinder.AddMethod(__Method_ListServiceAccountTenantMemberships, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Authn.Services.V1.ListServiceAccountTenantMembershipsRequest, global::Udb.Core.Authn.Services.V1.ListServiceAccountTenantMembershipsResponse>(serviceImpl.ListServiceAccountTenantMemberships));
       serviceBinder.AddMethod(__Method_RevokeServiceAccountTenantMembership, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Authn.Services.V1.RevokeServiceAccountTenantMembershipRequest, global::Udb.Core.Authn.Services.V1.RevokeServiceAccountTenantMembershipResponse>(serviceImpl.RevokeServiceAccountTenantMembership));
       serviceBinder.AddMethod(__Method_ExchangeServiceTokenForTenant, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Authn.Services.V1.ExchangeServiceTokenForTenantRequest, global::Udb.Core.Authn.Services.V1.ExchangeServiceTokenForTenantResponse>(serviceImpl.ExchangeServiceTokenForTenant));
+      serviceBinder.AddMethod(__Method_PutTenantAuthPolicy, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Authn.Services.V1.PutTenantAuthPolicyRequest, global::Udb.Core.Authn.Services.V1.PutTenantAuthPolicyResponse>(serviceImpl.PutTenantAuthPolicy));
+      serviceBinder.AddMethod(__Method_GetTenantAuthPolicy, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Authn.Services.V1.GetTenantAuthPolicyRequest, global::Udb.Core.Authn.Services.V1.GetTenantAuthPolicyResponse>(serviceImpl.GetTenantAuthPolicy));
+      serviceBinder.AddMethod(__Method_SendLoginOtp, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Authn.Services.V1.SendLoginOtpRequest, global::Udb.Core.Authn.Services.V1.SendLoginOtpResponse>(serviceImpl.SendLoginOtp));
+      serviceBinder.AddMethod(__Method_LoginWithOtp, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Authn.Services.V1.LoginWithOtpRequest, global::Udb.Core.Authn.Services.V1.LoginWithOtpResponse>(serviceImpl.LoginWithOtp));
+      serviceBinder.AddMethod(__Method_StartOidcLogin, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Authn.Services.V1.StartOidcLoginRequest, global::Udb.Core.Authn.Services.V1.StartOidcLoginResponse>(serviceImpl.StartOidcLogin));
+      serviceBinder.AddMethod(__Method_FinishOidcLogin, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Authn.Services.V1.FinishOidcLoginRequest, global::Udb.Core.Authn.Services.V1.FinishOidcLoginResponse>(serviceImpl.FinishOidcLogin));
+      serviceBinder.AddMethod(__Method_LoginWithOidcIdToken, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Authn.Services.V1.LoginWithOidcIdTokenRequest, global::Udb.Core.Authn.Services.V1.LoginWithOidcIdTokenResponse>(serviceImpl.LoginWithOidcIdToken));
+      serviceBinder.AddMethod(__Method_CreateInvitation, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Authn.Services.V1.CreateInvitationRequest, global::Udb.Core.Authn.Services.V1.CreateInvitationResponse>(serviceImpl.CreateInvitation));
+      serviceBinder.AddMethod(__Method_ListInvitations, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Authn.Services.V1.ListInvitationsRequest, global::Udb.Core.Authn.Services.V1.ListInvitationsResponse>(serviceImpl.ListInvitations));
+      serviceBinder.AddMethod(__Method_RevokeInvitation, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Authn.Services.V1.RevokeInvitationRequest, global::Udb.Core.Authn.Services.V1.RevokeInvitationResponse>(serviceImpl.RevokeInvitation));
+      serviceBinder.AddMethod(__Method_ResendInvitation, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Authn.Services.V1.ResendInvitationRequest, global::Udb.Core.Authn.Services.V1.ResendInvitationResponse>(serviceImpl.ResendInvitation));
+      serviceBinder.AddMethod(__Method_GetInvitation, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Authn.Services.V1.GetInvitationRequest, global::Udb.Core.Authn.Services.V1.GetInvitationResponse>(serviceImpl.GetInvitation));
+      serviceBinder.AddMethod(__Method_StartInvitationAcceptance, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Authn.Services.V1.StartInvitationAcceptanceRequest, global::Udb.Core.Authn.Services.V1.StartInvitationAcceptanceResponse>(serviceImpl.StartInvitationAcceptance));
+      serviceBinder.AddMethod(__Method_AcceptInvitation, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Authn.Services.V1.AcceptInvitationRequest, global::Udb.Core.Authn.Services.V1.AcceptInvitationResponse>(serviceImpl.AcceptInvitation));
+      serviceBinder.AddMethod(__Method_CheckStepUp, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Authn.Services.V1.CheckStepUpRequest, global::Udb.Core.Authn.Services.V1.CheckStepUpResponse>(serviceImpl.CheckStepUp));
     }
 
   }

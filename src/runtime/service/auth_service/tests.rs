@@ -33,14 +33,23 @@ mod grants_transfer_live;
 mod ha_convergence_live;
 mod ha_jwks_rotation_live;
 mod ha_multinode_live;
+mod invitations_live;
 #[cfg(feature = "http-client")]
 mod jwks_bearer_dos_live;
 #[cfg(feature = "kafka")]
 mod notification_events_live;
 mod notification_live;
+// The fake OpenID provider is reached over the IdP plane's HTTP client.
+#[cfg(feature = "http-client")]
+mod oidc_login_live;
 mod password_cpu_live;
+// Passkeys need the WebAuthn ceremony code, which only the `webauthn` build has.
+#[cfg(feature = "webauthn")]
+mod passkeys_live;
+mod passwordless_live;
 mod service_caller_conformance_live;
 mod service_tenant_exchange_live;
+mod step_up_live;
 mod support;
 mod tenant_live;
 mod tenant_suspension_served_live;

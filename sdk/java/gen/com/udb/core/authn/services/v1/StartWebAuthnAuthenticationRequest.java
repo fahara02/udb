@@ -51,6 +51,12 @@ private static final long serialVersionUID = 0L;
   @SuppressWarnings("serial")
   private volatile java.lang.Object userId_ = "";
   /**
+   * <pre>
+   * The user signing in. Leave EMPTY for usernameless sign-in: the options then
+   * ask the browser for any discoverable passkey (resident key) of this RP, and
+   * FinishWebAuthnAuthentication resolves the user from the passkey's user handle.
+   * </pre>
+   *
    * <code>string user_id = 1 [json_name = "userId"];</code>
    * @return The userId.
    */
@@ -68,6 +74,12 @@ private static final long serialVersionUID = 0L;
     }
   }
   /**
+   * <pre>
+   * The user signing in. Leave EMPTY for usernameless sign-in: the options then
+   * ask the browser for any discoverable passkey (resident key) of this RP, and
+   * FinishWebAuthnAuthentication resolves the user from the passkey's user handle.
+   * </pre>
+   *
    * <code>string user_id = 1 [json_name = "userId"];</code>
    * @return The bytes for userId.
    */
@@ -90,6 +102,11 @@ private static final long serialVersionUID = 0L;
   @SuppressWarnings("serial")
   private volatile java.lang.Object tenantId_ = "";
   /**
+   * <pre>
+   * With user_id set: optional, must match the user's tenant. Usernameless: the
+   * tenant the passkey must belong to (empty = the deployment's default tenant).
+   * </pre>
+   *
    * <code>string tenant_id = 2 [json_name = "tenantId"];</code>
    * @return The tenantId.
    */
@@ -107,6 +124,11 @@ private static final long serialVersionUID = 0L;
     }
   }
   /**
+   * <pre>
+   * With user_id set: optional, must match the user's tenant. Usernameless: the
+   * tenant the passkey must belong to (empty = the deployment's default tenant).
+   * </pre>
+   *
    * <code>string tenant_id = 2 [json_name = "tenantId"];</code>
    * @return The bytes for tenantId.
    */
@@ -129,6 +151,11 @@ private static final long serialVersionUID = 0L;
   @SuppressWarnings("serial")
   private volatile java.lang.Object projectId_ = "";
   /**
+   * <pre>
+   * With user_id set: optional, must match the user's project. Usernameless:
+   * optional; when set, only a user of this project can complete the sign-in.
+   * </pre>
+   *
    * <code>string project_id = 3 [json_name = "projectId"];</code>
    * @return The projectId.
    */
@@ -146,6 +173,11 @@ private static final long serialVersionUID = 0L;
     }
   }
   /**
+   * <pre>
+   * With user_id set: optional, must match the user's project. Usernameless:
+   * optional; when set, only a user of this project can complete the sign-in.
+   * </pre>
+   *
    * <code>string project_id = 3 [json_name = "projectId"];</code>
    * @return The bytes for projectId.
    */
@@ -579,6 +611,12 @@ private static final long serialVersionUID = 0L;
 
     private java.lang.Object userId_ = "";
     /**
+     * <pre>
+     * The user signing in. Leave EMPTY for usernameless sign-in: the options then
+     * ask the browser for any discoverable passkey (resident key) of this RP, and
+     * FinishWebAuthnAuthentication resolves the user from the passkey's user handle.
+     * </pre>
+     *
      * <code>string user_id = 1 [json_name = "userId"];</code>
      * @return The userId.
      */
@@ -595,6 +633,12 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
+     * <pre>
+     * The user signing in. Leave EMPTY for usernameless sign-in: the options then
+     * ask the browser for any discoverable passkey (resident key) of this RP, and
+     * FinishWebAuthnAuthentication resolves the user from the passkey's user handle.
+     * </pre>
+     *
      * <code>string user_id = 1 [json_name = "userId"];</code>
      * @return The bytes for userId.
      */
@@ -612,6 +656,12 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
+     * <pre>
+     * The user signing in. Leave EMPTY for usernameless sign-in: the options then
+     * ask the browser for any discoverable passkey (resident key) of this RP, and
+     * FinishWebAuthnAuthentication resolves the user from the passkey's user handle.
+     * </pre>
+     *
      * <code>string user_id = 1 [json_name = "userId"];</code>
      * @param value The userId to set.
      * @return This builder for chaining.
@@ -625,6 +675,12 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
+     * <pre>
+     * The user signing in. Leave EMPTY for usernameless sign-in: the options then
+     * ask the browser for any discoverable passkey (resident key) of this RP, and
+     * FinishWebAuthnAuthentication resolves the user from the passkey's user handle.
+     * </pre>
+     *
      * <code>string user_id = 1 [json_name = "userId"];</code>
      * @return This builder for chaining.
      */
@@ -635,6 +691,12 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
+     * <pre>
+     * The user signing in. Leave EMPTY for usernameless sign-in: the options then
+     * ask the browser for any discoverable passkey (resident key) of this RP, and
+     * FinishWebAuthnAuthentication resolves the user from the passkey's user handle.
+     * </pre>
+     *
      * <code>string user_id = 1 [json_name = "userId"];</code>
      * @param value The bytes for userId to set.
      * @return This builder for chaining.
@@ -651,6 +713,11 @@ private static final long serialVersionUID = 0L;
 
     private java.lang.Object tenantId_ = "";
     /**
+     * <pre>
+     * With user_id set: optional, must match the user's tenant. Usernameless: the
+     * tenant the passkey must belong to (empty = the deployment's default tenant).
+     * </pre>
+     *
      * <code>string tenant_id = 2 [json_name = "tenantId"];</code>
      * @return The tenantId.
      */
@@ -667,6 +734,11 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
+     * <pre>
+     * With user_id set: optional, must match the user's tenant. Usernameless: the
+     * tenant the passkey must belong to (empty = the deployment's default tenant).
+     * </pre>
+     *
      * <code>string tenant_id = 2 [json_name = "tenantId"];</code>
      * @return The bytes for tenantId.
      */
@@ -684,6 +756,11 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
+     * <pre>
+     * With user_id set: optional, must match the user's tenant. Usernameless: the
+     * tenant the passkey must belong to (empty = the deployment's default tenant).
+     * </pre>
+     *
      * <code>string tenant_id = 2 [json_name = "tenantId"];</code>
      * @param value The tenantId to set.
      * @return This builder for chaining.
@@ -697,6 +774,11 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
+     * <pre>
+     * With user_id set: optional, must match the user's tenant. Usernameless: the
+     * tenant the passkey must belong to (empty = the deployment's default tenant).
+     * </pre>
+     *
      * <code>string tenant_id = 2 [json_name = "tenantId"];</code>
      * @return This builder for chaining.
      */
@@ -707,6 +789,11 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
+     * <pre>
+     * With user_id set: optional, must match the user's tenant. Usernameless: the
+     * tenant the passkey must belong to (empty = the deployment's default tenant).
+     * </pre>
+     *
      * <code>string tenant_id = 2 [json_name = "tenantId"];</code>
      * @param value The bytes for tenantId to set.
      * @return This builder for chaining.
@@ -723,6 +810,11 @@ private static final long serialVersionUID = 0L;
 
     private java.lang.Object projectId_ = "";
     /**
+     * <pre>
+     * With user_id set: optional, must match the user's project. Usernameless:
+     * optional; when set, only a user of this project can complete the sign-in.
+     * </pre>
+     *
      * <code>string project_id = 3 [json_name = "projectId"];</code>
      * @return The projectId.
      */
@@ -739,6 +831,11 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
+     * <pre>
+     * With user_id set: optional, must match the user's project. Usernameless:
+     * optional; when set, only a user of this project can complete the sign-in.
+     * </pre>
+     *
      * <code>string project_id = 3 [json_name = "projectId"];</code>
      * @return The bytes for projectId.
      */
@@ -756,6 +853,11 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
+     * <pre>
+     * With user_id set: optional, must match the user's project. Usernameless:
+     * optional; when set, only a user of this project can complete the sign-in.
+     * </pre>
+     *
      * <code>string project_id = 3 [json_name = "projectId"];</code>
      * @param value The projectId to set.
      * @return This builder for chaining.
@@ -769,6 +871,11 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
+     * <pre>
+     * With user_id set: optional, must match the user's project. Usernameless:
+     * optional; when set, only a user of this project can complete the sign-in.
+     * </pre>
+     *
      * <code>string project_id = 3 [json_name = "projectId"];</code>
      * @return This builder for chaining.
      */
@@ -779,6 +886,11 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
+     * <pre>
+     * With user_id set: optional, must match the user's project. Usernameless:
+     * optional; when set, only a user of this project can complete the sign-in.
+     * </pre>
+     *
      * <code>string project_id = 3 [json_name = "projectId"];</code>
      * @param value The bytes for projectId to set.
      * @return This builder for chaining.

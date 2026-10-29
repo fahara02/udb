@@ -6,7 +6,7 @@ Inputs:
 - `docs/generated/bench-bodies.json`
 - `docs/site/bench-results.json`
 
-Current generated RPC surface: 408 RPCs across 29 services.
+Current generated RPC surface: 423 RPCs across 29 services.
 
 Published benchmark artifact: present.
 Release tag: v0.4.28.
@@ -52,7 +52,7 @@ Generated at: 2026-07-26T17:46:09+00:00.
 | AnalyticsService | 7 | 5 | 2 | 0 | 0 |
 | ApiKeyService | 9 | 4 | 4 | 1 | 0 |
 | AssetService | 8 | 4 | 4 | 0 | 0 |
-| AuthnService | 64 | 18 | 34 | 12 | 0 |
+| AuthnService | 79 | 22 | 44 | 13 | 0 |
 | AuthzService | 41 | 18 | 17 | 6 | 0 |
 | BackupService | 8 | 4 | 3 | 1 | 0 |
 | CacheService | 8 | 3 | 4 | 1 | 0 |
@@ -111,6 +111,7 @@ identity surface available to benchmark reports.
 | `AssetService/ListAssets` | `list_assets` | `listAssets` | READ_ONLY |
 | `AssetService/RegisterAsset` | `register_asset` | `registerAsset` | MUTATION |
 | `AssetService/StartPipeline` | `start_pipeline` | `startPipeline` | MUTATION |
+| `AuthnService/AcceptInvitation` | `accept_invitation` | `acceptInvitation` | MUTATION |
 | `AuthnService/AdminResetMfa` | `admin_reset_mfa` | `adminResetMfa` | DESTRUCTIVE |
 | `AuthnService/AdminResetPassword` | `admin_reset_password` | `adminResetPassword` | DESTRUCTIVE |
 | `AuthnService/AdminRevokeAllTenantSessions` | `admin_revoke_all_tenant_sessions` | `adminRevokeAllTenantSessions` | DESTRUCTIVE |
@@ -119,8 +120,10 @@ identity surface available to benchmark reports.
 | `AuthnService/Authenticate` | `authenticate` | `authenticate` | READ_ONLY |
 | `AuthnService/ChangePassword` | `change_password` | `changePassword` | MUTATION |
 | `AuthnService/ChangeUserStatus` | `change_user_status` | `changeUserStatus` | DESTRUCTIVE |
+| `AuthnService/CheckStepUp` | `check_step_up` | `checkStepUp` | READ_ONLY |
 | `AuthnService/ConfirmMFAEnrollment` | `confirm_mfaenrollment` | `confirmMfaenrollment` | MUTATION |
 | `AuthnService/CreateCertificateBinding` | `create_certificate_binding` | `createCertificateBinding` | MUTATION |
+| `AuthnService/CreateInvitation` | `create_invitation` | `createInvitation` | MUTATION |
 | `AuthnService/CreateServiceAccountGrant` | `create_service_account_grant` | `createServiceAccountGrant` | MUTATION |
 | `AuthnService/CreateServiceAccountTenantMembership` | `create_service_account_tenant_membership` | `createServiceAccountTenantMembership` | MUTATION |
 | `AuthnService/CreateSession` | `create_session` | `createSession` | MUTATION |
@@ -130,19 +133,23 @@ identity surface available to benchmark reports.
 | `AuthnService/EmergencyRevoke` | `emergency_revoke` | `emergencyRevoke` | DESTRUCTIVE |
 | `AuthnService/EnrollMFA` | `enroll_mfa` | `enrollMfa` | MUTATION |
 | `AuthnService/ExchangeServiceTokenForTenant` | `exchange_service_token_for_tenant` | `exchangeServiceTokenForTenant` | MUTATION |
+| `AuthnService/FinishOidcLogin` | `finish_oidc_login` | `finishOidcLogin` | MUTATION |
 | `AuthnService/FinishWebAuthnAuthentication` | `finish_web_authn_authentication` | `finishWebAuthnAuthentication` | MUTATION |
 | `AuthnService/FinishWebAuthnRegistration` | `finish_web_authn_registration` | `finishWebAuthnRegistration` | MUTATION |
 | `AuthnService/ForgotPassword` | `forgot_password` | `forgotPassword` | MUTATION |
 | `AuthnService/GenerateRecoveryCodes` | `generate_recovery_codes` | `generateRecoveryCodes` | MUTATION |
+| `AuthnService/GetInvitation` | `get_invitation` | `getInvitation` | READ_ONLY |
 | `AuthnService/GetJwks` | `get_jwks` | `getJwks` | READ_ONLY |
 | `AuthnService/GetMfaPolicy` | `get_mfa_policy` | `getMfaPolicy` | READ_ONLY |
 | `AuthnService/GetServiceAccountGrant` | `get_service_account_grant` | `getServiceAccountGrant` | READ_ONLY |
 | `AuthnService/GetSession` | `get_session` | `getSession` | READ_ONLY |
+| `AuthnService/GetTenantAuthPolicy` | `get_tenant_auth_policy` | `getTenantAuthPolicy` | READ_ONLY |
 | `AuthnService/GetUser` | `get_user` | `getUser` | READ_ONLY |
 | `AuthnService/IntrospectToken` | `introspect_token` | `introspectToken` | READ_ONLY |
 | `AuthnService/IssueMfaChallenge` | `issue_mfa_challenge` | `issueMfaChallenge` | MUTATION |
 | `AuthnService/ListCertificateBindings` | `list_certificate_bindings` | `listCertificateBindings` | READ_ONLY |
 | `AuthnService/ListDevices` | `list_devices` | `listDevices` | READ_ONLY |
+| `AuthnService/ListInvitations` | `list_invitations` | `listInvitations` | READ_ONLY |
 | `AuthnService/ListMfaFactors` | `list_mfa_factors` | `listMfaFactors` | READ_ONLY |
 | `AuthnService/ListServiceAccountGrants` | `list_service_account_grants` | `listServiceAccountGrants` | READ_ONLY |
 | `AuthnService/ListServiceAccountTenantMemberships` | `list_service_account_tenant_memberships` | `listServiceAccountTenantMemberships` | READ_ONLY |
@@ -150,23 +157,31 @@ identity surface available to benchmark reports.
 | `AuthnService/ListUsers` | `list_users` | `listUsers` | READ_ONLY |
 | `AuthnService/ListWebAuthnCredentials` | `list_web_authn_credentials` | `listWebAuthnCredentials` | READ_ONLY |
 | `AuthnService/Login` | `login` | `login` | MUTATION |
+| `AuthnService/LoginWithOidcIdToken` | `login_with_oidc_id_token` | `loginWithOidcIdToken` | MUTATION |
+| `AuthnService/LoginWithOtp` | `login_with_otp` | `loginWithOtp` | MUTATION |
 | `AuthnService/Logout` | `logout` | `logout` | MUTATION |
 | `AuthnService/PutMfaPolicy` | `put_mfa_policy` | `putMfaPolicy` | MUTATION |
+| `AuthnService/PutTenantAuthPolicy` | `put_tenant_auth_policy` | `putTenantAuthPolicy` | MUTATION |
 | `AuthnService/RefreshSession` | `refresh_session` | `refreshSession` | MUTATION |
 | `AuthnService/RefreshToken` | `refresh_token` | `refreshToken` | MUTATION |
 | `AuthnService/RenamePasskey` | `rename_passkey` | `renamePasskey` | MUTATION |
 | `AuthnService/ReplaceServiceAccountGrant` | `replace_service_account_grant` | `replaceServiceAccountGrant` | MUTATION |
+| `AuthnService/ResendInvitation` | `resend_invitation` | `resendInvitation` | MUTATION |
 | `AuthnService/ResendOTP` | `resend_otp` | `resendOtp` | MUTATION |
 | `AuthnService/ResetPassword` | `reset_password` | `resetPassword` | MUTATION |
 | `AuthnService/RevokeCertificateBinding` | `revoke_certificate_binding` | `revokeCertificateBinding` | DESTRUCTIVE |
 | `AuthnService/RevokeDevice` | `revoke_device` | `revokeDevice` | MUTATION |
+| `AuthnService/RevokeInvitation` | `revoke_invitation` | `revokeInvitation` | DESTRUCTIVE |
 | `AuthnService/RevokeRecoveryCodes` | `revoke_recovery_codes` | `revokeRecoveryCodes` | MUTATION |
 | `AuthnService/RevokeServiceAccountGrant` | `revoke_service_account_grant` | `revokeServiceAccountGrant` | DESTRUCTIVE |
 | `AuthnService/RevokeServiceAccountTenantMembership` | `revoke_service_account_tenant_membership` | `revokeServiceAccountTenantMembership` | DESTRUCTIVE |
 | `AuthnService/RevokeSession` | `revoke_session` | `revokeSession` | MUTATION |
 | `AuthnService/RotateServiceAccountIdentity` | `rotate_service_account_identity` | `rotateServiceAccountIdentity` | DESTRUCTIVE |
+| `AuthnService/SendLoginOtp` | `send_login_otp` | `sendLoginOtp` | MUTATION |
 | `AuthnService/SendOTP` | `send_otp` | `sendOtp` | MUTATION |
 | `AuthnService/SendPhoneVerification` | `send_phone_verification` | `sendPhoneVerification` | MUTATION |
+| `AuthnService/StartInvitationAcceptance` | `start_invitation_acceptance` | `startInvitationAcceptance` | MUTATION |
+| `AuthnService/StartOidcLogin` | `start_oidc_login` | `startOidcLogin` | MUTATION |
 | `AuthnService/StartWebAuthnAuthentication` | `start_web_authn_authentication` | `startWebAuthnAuthentication` | MUTATION |
 | `AuthnService/StartWebAuthnRegistration` | `start_web_authn_registration` | `startWebAuthnRegistration` | MUTATION |
 | `AuthnService/TransferServiceAccountGrant` | `transfer_service_account_grant` | `transferServiceAccountGrant` | DESTRUCTIVE |

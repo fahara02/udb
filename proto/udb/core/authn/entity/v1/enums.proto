@@ -59,6 +59,8 @@ enum OTPType {
   OTP_TYPE_PASSWORD_RESET = 3; // Password reset
   OTP_TYPE_SENSITIVE_OPERATION = 4; // Step-up auth for a protected action.
   OTP_TYPE_PHONE_VERIFICATION = 5; // Phone-number confirmation via SMS OTP.
+  OTP_TYPE_LOGIN = 6; // Passwordless sign-in code (SMS or email; also behind a magic link).
+  OTP_TYPE_INVITATION = 7; // Proves an invitation's SMS/email channel on acceptance.
 }
 
 enum OTPStatus {

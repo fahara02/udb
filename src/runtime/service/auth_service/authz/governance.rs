@@ -1018,7 +1018,7 @@ fn governed_role_mutation_status(rpc: &str) -> tonic::Status {
 /// relationship writes) require an explicit governance/break-glass grant rather
 /// than only a bearer token; otherwise they create drafts. Off by default so
 /// existing deployments keep working; opt in with `UDB_AUTHZ_GOVERNED_MODE=1`.
-pub(super) fn governed_mode_enabled() -> bool {
+pub(crate) fn governed_mode_enabled() -> bool {
     std::env::var("UDB_AUTHZ_GOVERNED_MODE")
         .ok()
         .map(|v| {

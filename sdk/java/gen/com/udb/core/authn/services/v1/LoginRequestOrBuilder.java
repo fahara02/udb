@@ -220,4 +220,52 @@ public interface LoginRequestOrBuilder extends
    */
   com.google.protobuf.ByteString
       getRecoveryCodeBytes();
+
+  /**
+   * <pre>
+   * Passkey second factor (alternative to totp_code / mfa_otp_id / recovery_code).
+   * After a Login answered mfa_required=true, call StartWebAuthnAuthentication with
+   * the returned user_id, sign the options with the user's passkey, then re-call
+   * Login with username + password + these two fields. The challenge must have been
+   * issued for this same user and is single use.
+   * </pre>
+   *
+   * <code>string webauthn_challenge_id = 14 [json_name = "webauthnChallengeId"];</code>
+   * @return The webauthnChallengeId.
+   */
+  java.lang.String getWebauthnChallengeId();
+  /**
+   * <pre>
+   * Passkey second factor (alternative to totp_code / mfa_otp_id / recovery_code).
+   * After a Login answered mfa_required=true, call StartWebAuthnAuthentication with
+   * the returned user_id, sign the options with the user's passkey, then re-call
+   * Login with username + password + these two fields. The challenge must have been
+   * issued for this same user and is single use.
+   * </pre>
+   *
+   * <code>string webauthn_challenge_id = 14 [json_name = "webauthnChallengeId"];</code>
+   * @return The bytes for webauthnChallengeId.
+   */
+  com.google.protobuf.ByteString
+      getWebauthnChallengeIdBytes();
+
+  /**
+   * <pre>
+   * the PublicKeyCredential assertion JSON from navigator.credentials.get()
+   * </pre>
+   *
+   * <code>string webauthn_assertion_json = 15 [json_name = "webauthnAssertionJson"];</code>
+   * @return The webauthnAssertionJson.
+   */
+  java.lang.String getWebauthnAssertionJson();
+  /**
+   * <pre>
+   * the PublicKeyCredential assertion JSON from navigator.credentials.get()
+   * </pre>
+   *
+   * <code>string webauthn_assertion_json = 15 [json_name = "webauthnAssertionJson"];</code>
+   * @return The bytes for webauthnAssertionJson.
+   */
+  com.google.protobuf.ByteString
+      getWebauthnAssertionJsonBytes();
 }

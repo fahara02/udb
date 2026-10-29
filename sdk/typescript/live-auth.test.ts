@@ -768,6 +768,14 @@ function fullSurfaceManifestFixtures(): PerfFixtures {
     membership_home_tenant_id: "tenant-membership-home-1",
     membership_expires_at: "2030-01-01T00:00:00Z",
     membership_id: "11111111-1111-4111-8111-000000000206",
+    // 0.6.6 identity flows (live: scripts/prepare-benchmark-fixtures.py).
+    login_otp_send_phone: "+15550000001", login_otp_id: "11111111-1111-4111-8111-000000000301", login_otp_code: "123456",
+    invitation_get_id: "11111111-1111-4111-8111-000000000302", invitation_get_token: "inv_get-1",
+    invitation_start_id: "11111111-1111-4111-8111-000000000303", invitation_start_token: "inv_start-1",
+    invitation_accept_id: "11111111-1111-4111-8111-000000000304", invitation_accept_token: "inv_accept-1",
+    invitation_accept_otp_id: "11111111-1111-4111-8111-000000000305", invitation_accept_otp_code: "654321",
+    invitation_revoke_id: "11111111-1111-4111-8111-000000000306", invitation_resend_id: "11111111-1111-4111-8111-000000000307",
+    step_up_token: "step-up-token-1", oidc_provider_id: "11111111-1111-4111-8111-000000000308", oidc_state: "oidc-state-1",
     finalize_reference_id: "finalize-ref-1",
     embedding_job_id: "11111111-1111-4111-8111-000000000101",
     embedding_work_item_id: "11111111-1111-4111-8111-000000000102",
@@ -2229,6 +2237,30 @@ const MEMBERSHIP_FIXTURE_KEYS = [
   "membership_exchange_project_id",
 ];
 
+/** The 0.6.6 identity-flow fixtures (tenant auth policy, passwordless sign-in,
+ *  invitations, step-up, OIDC) scripts/prepare-benchmark-fixtures.py writes
+ *  (same list in every harness): single-use codes, invitation accept tokens and
+ *  a step-up token for disposable targets, never a password or an access/refresh
+ *  token. All optional (an older broker has none; OIDC needs UDB_OIDC_TEST_MODE). */
+const IDENTITY_FIXTURE_KEYS = [
+  "login_otp_send_phone",
+  "login_otp_id",
+  "login_otp_code",
+  "invitation_get_id",
+  "invitation_get_token",
+  "invitation_start_id",
+  "invitation_start_token",
+  "invitation_accept_id",
+  "invitation_accept_token",
+  "invitation_accept_otp_id",
+  "invitation_accept_otp_code",
+  "invitation_revoke_id",
+  "invitation_resend_id",
+  "step_up_token",
+  "oidc_provider_id",
+  "oidc_state",
+];
+
 async function seedPerfFixtures(
   gen: any,
   platformGen: any,
@@ -2242,6 +2274,8 @@ async function seedPerfFixtures(
   const fix = fullSurfaceManifestFixtures();
   for (const key of ["multipart_bucket", "multipart_object_key", "multipart_upload_id", "multipart_etag", "ack_workflow_id", "cdc_ack_event_id", "cdc_ack_topic"]) fix.clear(key);
   for (const key of MESSAGING_FIXTURE_KEYS) fix.clear(key);
+  // A placeholder step-up token or login code would be measured as a real answer.
+  for (const key of IDENTITY_FIXTURE_KEYS) fix.clear(key);
   if (process.env.UDB_BENCH_FIXTURES) {
     const prepared = JSON.parse(readFileSync(process.env.UDB_BENCH_FIXTURES, "utf8"));
     if (prepared.schema_version !== 1 || prepared.tenant_id !== tenantId || prepared.project_id !== projectId) {
@@ -2262,6 +2296,12 @@ async function seedPerfFixtures(
     // tenant, its membership in the bench tenant, and the account that measures
     // ExchangeServiceTokenForTenant); absent on a broker that predates them.
     for (const key of MEMBERSHIP_FIXTURE_KEYS) {
+      const value = prepared.fixtures?.[key];
+      if (typeof value === "string" && value) fix.set(key, value);
+    }
+    // 0.6.6 identity-flow fixtures; absent on a broker that predates them or
+    // (OIDC only) runs without UDB_OIDC_TEST_MODE.
+    for (const key of IDENTITY_FIXTURE_KEYS) {
       const value = prepared.fixtures?.[key];
       if (typeof value === "string" && value) fix.set(key, value);
     }
@@ -5057,6 +5097,10 @@ test("live per-RPC perf", {
       // BEFORE RefreshToken (which rotates the shared family) — Go phase1AuthnOrder.
       "login", "refresh_session", "authenticate",
       "validate_token", "introspect_token", "refresh_token", "get_jwks",
+      // 0.6.6 sign-ins redeem single-use prepared proofs (a 10-minute login code,
+      // OIDC state and invitation code) right after session setup. Each signs a
+      // DIFFERENT account in; the benchmark bearer is kept.
+      "login_with_otp", "finish_oidc_login", "login_with_oidc_id_token", "accept_invitation",
     ];
     // Phase 3 (LAST): AuthnService RPCs that end a session / invalidate a principal
     // or credentials. Dedicated manifest seeds target disposable users for the

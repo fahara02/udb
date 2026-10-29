@@ -11,11 +11,23 @@ public interface StartWebAuthnAuthenticationRequestOrBuilder extends
     com.google.protobuf.MessageOrBuilder {
 
   /**
+   * <pre>
+   * The user signing in. Leave EMPTY for usernameless sign-in: the options then
+   * ask the browser for any discoverable passkey (resident key) of this RP, and
+   * FinishWebAuthnAuthentication resolves the user from the passkey's user handle.
+   * </pre>
+   *
    * <code>string user_id = 1 [json_name = "userId"];</code>
    * @return The userId.
    */
   java.lang.String getUserId();
   /**
+   * <pre>
+   * The user signing in. Leave EMPTY for usernameless sign-in: the options then
+   * ask the browser for any discoverable passkey (resident key) of this RP, and
+   * FinishWebAuthnAuthentication resolves the user from the passkey's user handle.
+   * </pre>
+   *
    * <code>string user_id = 1 [json_name = "userId"];</code>
    * @return The bytes for userId.
    */
@@ -23,11 +35,21 @@ public interface StartWebAuthnAuthenticationRequestOrBuilder extends
       getUserIdBytes();
 
   /**
+   * <pre>
+   * With user_id set: optional, must match the user's tenant. Usernameless: the
+   * tenant the passkey must belong to (empty = the deployment's default tenant).
+   * </pre>
+   *
    * <code>string tenant_id = 2 [json_name = "tenantId"];</code>
    * @return The tenantId.
    */
   java.lang.String getTenantId();
   /**
+   * <pre>
+   * With user_id set: optional, must match the user's tenant. Usernameless: the
+   * tenant the passkey must belong to (empty = the deployment's default tenant).
+   * </pre>
+   *
    * <code>string tenant_id = 2 [json_name = "tenantId"];</code>
    * @return The bytes for tenantId.
    */
@@ -35,11 +57,21 @@ public interface StartWebAuthnAuthenticationRequestOrBuilder extends
       getTenantIdBytes();
 
   /**
+   * <pre>
+   * With user_id set: optional, must match the user's project. Usernameless:
+   * optional; when set, only a user of this project can complete the sign-in.
+   * </pre>
+   *
    * <code>string project_id = 3 [json_name = "projectId"];</code>
    * @return The projectId.
    */
   java.lang.String getProjectId();
   /**
+   * <pre>
+   * With user_id set: optional, must match the user's project. Usernameless:
+   * optional; when set, only a user of this project can complete the sign-in.
+   * </pre>
+   *
    * <code>string project_id = 3 [json_name = "projectId"];</code>
    * @return The bytes for projectId.
    */

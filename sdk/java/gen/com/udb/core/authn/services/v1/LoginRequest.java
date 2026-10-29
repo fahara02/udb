@@ -41,6 +41,8 @@ private static final long serialVersionUID = 0L;
     projectHint_ = "";
     accessSurface_ = "";
     recoveryCode_ = "";
+    webauthnChallengeId_ = "";
+    webauthnAssertionJson_ = "";
   }
 
   public static final com.google.protobuf.Descriptors.Descriptor
@@ -598,6 +600,108 @@ private static final long serialVersionUID = 0L;
     }
   }
 
+  public static final int WEBAUTHN_CHALLENGE_ID_FIELD_NUMBER = 14;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object webauthnChallengeId_ = "";
+  /**
+   * <pre>
+   * Passkey second factor (alternative to totp_code / mfa_otp_id / recovery_code).
+   * After a Login answered mfa_required=true, call StartWebAuthnAuthentication with
+   * the returned user_id, sign the options with the user's passkey, then re-call
+   * Login with username + password + these two fields. The challenge must have been
+   * issued for this same user and is single use.
+   * </pre>
+   *
+   * <code>string webauthn_challenge_id = 14 [json_name = "webauthnChallengeId"];</code>
+   * @return The webauthnChallengeId.
+   */
+  @java.lang.Override
+  public java.lang.String getWebauthnChallengeId() {
+    java.lang.Object ref = webauthnChallengeId_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs =
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      webauthnChallengeId_ = s;
+      return s;
+    }
+  }
+  /**
+   * <pre>
+   * Passkey second factor (alternative to totp_code / mfa_otp_id / recovery_code).
+   * After a Login answered mfa_required=true, call StartWebAuthnAuthentication with
+   * the returned user_id, sign the options with the user's passkey, then re-call
+   * Login with username + password + these two fields. The challenge must have been
+   * issued for this same user and is single use.
+   * </pre>
+   *
+   * <code>string webauthn_challenge_id = 14 [json_name = "webauthnChallengeId"];</code>
+   * @return The bytes for webauthnChallengeId.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getWebauthnChallengeIdBytes() {
+    java.lang.Object ref = webauthnChallengeId_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b =
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      webauthnChallengeId_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
+  public static final int WEBAUTHN_ASSERTION_JSON_FIELD_NUMBER = 15;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object webauthnAssertionJson_ = "";
+  /**
+   * <pre>
+   * the PublicKeyCredential assertion JSON from navigator.credentials.get()
+   * </pre>
+   *
+   * <code>string webauthn_assertion_json = 15 [json_name = "webauthnAssertionJson"];</code>
+   * @return The webauthnAssertionJson.
+   */
+  @java.lang.Override
+  public java.lang.String getWebauthnAssertionJson() {
+    java.lang.Object ref = webauthnAssertionJson_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs =
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      webauthnAssertionJson_ = s;
+      return s;
+    }
+  }
+  /**
+   * <pre>
+   * the PublicKeyCredential assertion JSON from navigator.credentials.get()
+   * </pre>
+   *
+   * <code>string webauthn_assertion_json = 15 [json_name = "webauthnAssertionJson"];</code>
+   * @return The bytes for webauthnAssertionJson.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getWebauthnAssertionJsonBytes() {
+    java.lang.Object ref = webauthnAssertionJson_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b =
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      webauthnAssertionJson_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -651,6 +755,12 @@ private static final long serialVersionUID = 0L;
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(recoveryCode_)) {
       com.google.protobuf.GeneratedMessage.writeString(output, 13, recoveryCode_);
     }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(webauthnChallengeId_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 14, webauthnChallengeId_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(webauthnAssertionJson_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 15, webauthnAssertionJson_);
+    }
     getUnknownFields().writeTo(output);
   }
 
@@ -700,6 +810,12 @@ private static final long serialVersionUID = 0L;
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(recoveryCode_)) {
       size += com.google.protobuf.GeneratedMessage.computeStringSize(13, recoveryCode_);
     }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(webauthnChallengeId_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(14, webauthnChallengeId_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(webauthnAssertionJson_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(15, webauthnAssertionJson_);
+    }
     size += getUnknownFields().getSerializedSize();
     memoizedSize = size;
     return size;
@@ -740,6 +856,10 @@ private static final long serialVersionUID = 0L;
         .equals(other.getAccessSurface())) return false;
     if (!getRecoveryCode()
         .equals(other.getRecoveryCode())) return false;
+    if (!getWebauthnChallengeId()
+        .equals(other.getWebauthnChallengeId())) return false;
+    if (!getWebauthnAssertionJson()
+        .equals(other.getWebauthnAssertionJson())) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -777,6 +897,10 @@ private static final long serialVersionUID = 0L;
     hash = (53 * hash) + getAccessSurface().hashCode();
     hash = (37 * hash) + RECOVERY_CODE_FIELD_NUMBER;
     hash = (53 * hash) + getRecoveryCode().hashCode();
+    hash = (37 * hash) + WEBAUTHN_CHALLENGE_ID_FIELD_NUMBER;
+    hash = (53 * hash) + getWebauthnChallengeId().hashCode();
+    hash = (37 * hash) + WEBAUTHN_ASSERTION_JSON_FIELD_NUMBER;
+    hash = (53 * hash) + getWebauthnAssertionJson().hashCode();
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -921,6 +1045,8 @@ private static final long serialVersionUID = 0L;
       projectHint_ = "";
       accessSurface_ = "";
       recoveryCode_ = "";
+      webauthnChallengeId_ = "";
+      webauthnAssertionJson_ = "";
       return this;
     }
 
@@ -992,6 +1118,12 @@ private static final long serialVersionUID = 0L;
       }
       if (((from_bitField0_ & 0x00001000) != 0)) {
         result.recoveryCode_ = recoveryCode_;
+      }
+      if (((from_bitField0_ & 0x00002000) != 0)) {
+        result.webauthnChallengeId_ = webauthnChallengeId_;
+      }
+      if (((from_bitField0_ & 0x00004000) != 0)) {
+        result.webauthnAssertionJson_ = webauthnAssertionJson_;
       }
     }
 
@@ -1068,6 +1200,16 @@ private static final long serialVersionUID = 0L;
       if (!other.getRecoveryCode().isEmpty()) {
         recoveryCode_ = other.recoveryCode_;
         bitField0_ |= 0x00001000;
+        onChanged();
+      }
+      if (!other.getWebauthnChallengeId().isEmpty()) {
+        webauthnChallengeId_ = other.webauthnChallengeId_;
+        bitField0_ |= 0x00002000;
+        onChanged();
+      }
+      if (!other.getWebauthnAssertionJson().isEmpty()) {
+        webauthnAssertionJson_ = other.webauthnAssertionJson_;
+        bitField0_ |= 0x00004000;
         onChanged();
       }
       this.mergeUnknownFields(other.getUnknownFields());
@@ -1161,6 +1303,16 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00001000;
               break;
             } // case 106
+            case 114: {
+              webauthnChallengeId_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00002000;
+              break;
+            } // case 114
+            case 122: {
+              webauthnAssertionJson_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00004000;
+              break;
+            } // case 122
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -2229,6 +2381,210 @@ private static final long serialVersionUID = 0L;
       checkByteStringIsUtf8(value);
       recoveryCode_ = value;
       bitField0_ |= 0x00001000;
+      onChanged();
+      return this;
+    }
+
+    private java.lang.Object webauthnChallengeId_ = "";
+    /**
+     * <pre>
+     * Passkey second factor (alternative to totp_code / mfa_otp_id / recovery_code).
+     * After a Login answered mfa_required=true, call StartWebAuthnAuthentication with
+     * the returned user_id, sign the options with the user's passkey, then re-call
+     * Login with username + password + these two fields. The challenge must have been
+     * issued for this same user and is single use.
+     * </pre>
+     *
+     * <code>string webauthn_challenge_id = 14 [json_name = "webauthnChallengeId"];</code>
+     * @return The webauthnChallengeId.
+     */
+    public java.lang.String getWebauthnChallengeId() {
+      java.lang.Object ref = webauthnChallengeId_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        webauthnChallengeId_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <pre>
+     * Passkey second factor (alternative to totp_code / mfa_otp_id / recovery_code).
+     * After a Login answered mfa_required=true, call StartWebAuthnAuthentication with
+     * the returned user_id, sign the options with the user's passkey, then re-call
+     * Login with username + password + these two fields. The challenge must have been
+     * issued for this same user and is single use.
+     * </pre>
+     *
+     * <code>string webauthn_challenge_id = 14 [json_name = "webauthnChallengeId"];</code>
+     * @return The bytes for webauthnChallengeId.
+     */
+    public com.google.protobuf.ByteString
+        getWebauthnChallengeIdBytes() {
+      java.lang.Object ref = webauthnChallengeId_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b =
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        webauthnChallengeId_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <pre>
+     * Passkey second factor (alternative to totp_code / mfa_otp_id / recovery_code).
+     * After a Login answered mfa_required=true, call StartWebAuthnAuthentication with
+     * the returned user_id, sign the options with the user's passkey, then re-call
+     * Login with username + password + these two fields. The challenge must have been
+     * issued for this same user and is single use.
+     * </pre>
+     *
+     * <code>string webauthn_challenge_id = 14 [json_name = "webauthnChallengeId"];</code>
+     * @param value The webauthnChallengeId to set.
+     * @return This builder for chaining.
+     */
+    public Builder setWebauthnChallengeId(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      webauthnChallengeId_ = value;
+      bitField0_ |= 0x00002000;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Passkey second factor (alternative to totp_code / mfa_otp_id / recovery_code).
+     * After a Login answered mfa_required=true, call StartWebAuthnAuthentication with
+     * the returned user_id, sign the options with the user's passkey, then re-call
+     * Login with username + password + these two fields. The challenge must have been
+     * issued for this same user and is single use.
+     * </pre>
+     *
+     * <code>string webauthn_challenge_id = 14 [json_name = "webauthnChallengeId"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearWebauthnChallengeId() {
+      webauthnChallengeId_ = getDefaultInstance().getWebauthnChallengeId();
+      bitField0_ = (bitField0_ & ~0x00002000);
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Passkey second factor (alternative to totp_code / mfa_otp_id / recovery_code).
+     * After a Login answered mfa_required=true, call StartWebAuthnAuthentication with
+     * the returned user_id, sign the options with the user's passkey, then re-call
+     * Login with username + password + these two fields. The challenge must have been
+     * issued for this same user and is single use.
+     * </pre>
+     *
+     * <code>string webauthn_challenge_id = 14 [json_name = "webauthnChallengeId"];</code>
+     * @param value The bytes for webauthnChallengeId to set.
+     * @return This builder for chaining.
+     */
+    public Builder setWebauthnChallengeIdBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      webauthnChallengeId_ = value;
+      bitField0_ |= 0x00002000;
+      onChanged();
+      return this;
+    }
+
+    private java.lang.Object webauthnAssertionJson_ = "";
+    /**
+     * <pre>
+     * the PublicKeyCredential assertion JSON from navigator.credentials.get()
+     * </pre>
+     *
+     * <code>string webauthn_assertion_json = 15 [json_name = "webauthnAssertionJson"];</code>
+     * @return The webauthnAssertionJson.
+     */
+    public java.lang.String getWebauthnAssertionJson() {
+      java.lang.Object ref = webauthnAssertionJson_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        webauthnAssertionJson_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <pre>
+     * the PublicKeyCredential assertion JSON from navigator.credentials.get()
+     * </pre>
+     *
+     * <code>string webauthn_assertion_json = 15 [json_name = "webauthnAssertionJson"];</code>
+     * @return The bytes for webauthnAssertionJson.
+     */
+    public com.google.protobuf.ByteString
+        getWebauthnAssertionJsonBytes() {
+      java.lang.Object ref = webauthnAssertionJson_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b =
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        webauthnAssertionJson_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <pre>
+     * the PublicKeyCredential assertion JSON from navigator.credentials.get()
+     * </pre>
+     *
+     * <code>string webauthn_assertion_json = 15 [json_name = "webauthnAssertionJson"];</code>
+     * @param value The webauthnAssertionJson to set.
+     * @return This builder for chaining.
+     */
+    public Builder setWebauthnAssertionJson(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      webauthnAssertionJson_ = value;
+      bitField0_ |= 0x00004000;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * the PublicKeyCredential assertion JSON from navigator.credentials.get()
+     * </pre>
+     *
+     * <code>string webauthn_assertion_json = 15 [json_name = "webauthnAssertionJson"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearWebauthnAssertionJson() {
+      webauthnAssertionJson_ = getDefaultInstance().getWebauthnAssertionJson();
+      bitField0_ = (bitField0_ & ~0x00004000);
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * the PublicKeyCredential assertion JSON from navigator.credentials.get()
+     * </pre>
+     *
+     * <code>string webauthn_assertion_json = 15 [json_name = "webauthnAssertionJson"];</code>
+     * @param value The bytes for webauthnAssertionJson to set.
+     * @return This builder for chaining.
+     */
+    public Builder setWebauthnAssertionJsonBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      webauthnAssertionJson_ = value;
+      bitField0_ |= 0x00004000;
       onChanged();
       return this;
     }

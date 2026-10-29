@@ -31,6 +31,11 @@ private static final long serialVersionUID = 0L;
     sessionId_ = "";
     accessToken_ = "";
     credentialId_ = "";
+    refreshToken_ = "";
+    sessionToken_ = "";
+    csrfToken_ = "";
+    sessionPublicId_ = "";
+    userId_ = "";
   }
 
   public static final com.google.protobuf.Descriptors.Descriptor
@@ -154,6 +159,10 @@ private static final long serialVersionUID = 0L;
   public static final int EXPIRES_AT_UNIX_FIELD_NUMBER = 4;
   private long expiresAtUnix_ = 0L;
   /**
+   * <pre>
+   * when access_token expires (unix seconds)
+   * </pre>
+   *
    * <code>int64 expires_at_unix = 4 [json_name = "expiresAtUnix"];</code>
    * @return The expiresAtUnix.
    */
@@ -201,6 +210,275 @@ private static final long serialVersionUID = 0L;
     }
   }
 
+  public static final int REFRESH_TOKEN_FIELD_NUMBER = 6;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object refreshToken_ = "";
+  /**
+   * <pre>
+   * A passkey sign-in returns the same credentials as Login (fields below).
+   * Rotating refresh token (rt_&lt;family&gt;.&lt;jti&gt;) for RefreshToken; empty for
+   * service accounts.
+   * </pre>
+   *
+   * <code>string refresh_token = 6 [json_name = "refreshToken"];</code>
+   * @return The refreshToken.
+   */
+  @java.lang.Override
+  public java.lang.String getRefreshToken() {
+    java.lang.Object ref = refreshToken_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs =
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      refreshToken_ = s;
+      return s;
+    }
+  }
+  /**
+   * <pre>
+   * A passkey sign-in returns the same credentials as Login (fields below).
+   * Rotating refresh token (rt_&lt;family&gt;.&lt;jti&gt;) for RefreshToken; empty for
+   * service accounts.
+   * </pre>
+   *
+   * <code>string refresh_token = 6 [json_name = "refreshToken"];</code>
+   * @return The bytes for refreshToken.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getRefreshTokenBytes() {
+    java.lang.Object ref = refreshToken_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b =
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      refreshToken_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
+  public static final int ACCESS_TOKEN_EXPIRES_IN_FIELD_NUMBER = 7;
+  private int accessTokenExpiresIn_ = 0;
+  /**
+   * <pre>
+   * seconds
+   * </pre>
+   *
+   * <code>int32 access_token_expires_in = 7 [json_name = "accessTokenExpiresIn"];</code>
+   * @return The accessTokenExpiresIn.
+   */
+  @java.lang.Override
+  public int getAccessTokenExpiresIn() {
+    return accessTokenExpiresIn_;
+  }
+
+  public static final int REFRESH_TOKEN_EXPIRES_IN_FIELD_NUMBER = 8;
+  private int refreshTokenExpiresIn_ = 0;
+  /**
+   * <pre>
+   * absolute lifetime of refresh_token, seconds
+   * </pre>
+   *
+   * <code>int32 refresh_token_expires_in = 8 [json_name = "refreshTokenExpiresIn"];</code>
+   * @return The refreshTokenExpiresIn.
+   */
+  @java.lang.Override
+  public int getRefreshTokenExpiresIn() {
+    return refreshTokenExpiresIn_;
+  }
+
+  public static final int SESSION_TOKEN_FIELD_NUMBER = 9;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object sessionToken_ = "";
+  /**
+   * <pre>
+   * server-side session handle (WEB: set as an HttpOnly cookie)
+   * </pre>
+   *
+   * <code>string session_token = 9 [json_name = "sessionToken"];</code>
+   * @return The sessionToken.
+   */
+  @java.lang.Override
+  public java.lang.String getSessionToken() {
+    java.lang.Object ref = sessionToken_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs =
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      sessionToken_ = s;
+      return s;
+    }
+  }
+  /**
+   * <pre>
+   * server-side session handle (WEB: set as an HttpOnly cookie)
+   * </pre>
+   *
+   * <code>string session_token = 9 [json_name = "sessionToken"];</code>
+   * @return The bytes for sessionToken.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getSessionTokenBytes() {
+    java.lang.Object ref = sessionToken_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b =
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      sessionToken_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
+  public static final int CSRF_TOKEN_FIELD_NUMBER = 10;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object csrfToken_ = "";
+  /**
+   * <pre>
+   * double-submit CSRF token bound to this session
+   * </pre>
+   *
+   * <code>string csrf_token = 10 [json_name = "csrfToken"];</code>
+   * @return The csrfToken.
+   */
+  @java.lang.Override
+  public java.lang.String getCsrfToken() {
+    java.lang.Object ref = csrfToken_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs =
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      csrfToken_ = s;
+      return s;
+    }
+  }
+  /**
+   * <pre>
+   * double-submit CSRF token bound to this session
+   * </pre>
+   *
+   * <code>string csrf_token = 10 [json_name = "csrfToken"];</code>
+   * @return The bytes for csrfToken.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getCsrfTokenBytes() {
+    java.lang.Object ref = csrfToken_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b =
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      csrfToken_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
+  public static final int SESSION_PUBLIC_ID_FIELD_NUMBER = 11;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object sessionPublicId_ = "";
+  /**
+   * <pre>
+   * Stable non-secret session id (`sesspub_…`), as Login / ValidateToken report it.
+   * </pre>
+   *
+   * <code>string session_public_id = 11 [json_name = "sessionPublicId"];</code>
+   * @return The sessionPublicId.
+   */
+  @java.lang.Override
+  public java.lang.String getSessionPublicId() {
+    java.lang.Object ref = sessionPublicId_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs =
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      sessionPublicId_ = s;
+      return s;
+    }
+  }
+  /**
+   * <pre>
+   * Stable non-secret session id (`sesspub_…`), as Login / ValidateToken report it.
+   * </pre>
+   *
+   * <code>string session_public_id = 11 [json_name = "sessionPublicId"];</code>
+   * @return The bytes for sessionPublicId.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getSessionPublicIdBytes() {
+    java.lang.Object ref = sessionPublicId_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b =
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      sessionPublicId_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
+  public static final int USER_ID_FIELD_NUMBER = 12;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object userId_ = "";
+  /**
+   * <pre>
+   * The signed-in user (on a usernameless sign-in, the user the passkey belongs to).
+   * </pre>
+   *
+   * <code>string user_id = 12 [json_name = "userId"];</code>
+   * @return The userId.
+   */
+  @java.lang.Override
+  public java.lang.String getUserId() {
+    java.lang.Object ref = userId_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs =
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      userId_ = s;
+      return s;
+    }
+  }
+  /**
+   * <pre>
+   * The signed-in user (on a usernameless sign-in, the user the passkey belongs to).
+   * </pre>
+   *
+   * <code>string user_id = 12 [json_name = "userId"];</code>
+   * @return The bytes for userId.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getUserIdBytes() {
+    java.lang.Object ref = userId_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b =
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      userId_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -230,6 +508,27 @@ private static final long serialVersionUID = 0L;
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(credentialId_)) {
       com.google.protobuf.GeneratedMessage.writeString(output, 5, credentialId_);
     }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(refreshToken_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 6, refreshToken_);
+    }
+    if (accessTokenExpiresIn_ != 0) {
+      output.writeInt32(7, accessTokenExpiresIn_);
+    }
+    if (refreshTokenExpiresIn_ != 0) {
+      output.writeInt32(8, refreshTokenExpiresIn_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(sessionToken_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 9, sessionToken_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(csrfToken_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 10, csrfToken_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(sessionPublicId_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 11, sessionPublicId_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(userId_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 12, userId_);
+    }
     getUnknownFields().writeTo(output);
   }
 
@@ -255,6 +554,29 @@ private static final long serialVersionUID = 0L;
     }
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(credentialId_)) {
       size += com.google.protobuf.GeneratedMessage.computeStringSize(5, credentialId_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(refreshToken_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(6, refreshToken_);
+    }
+    if (accessTokenExpiresIn_ != 0) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeInt32Size(7, accessTokenExpiresIn_);
+    }
+    if (refreshTokenExpiresIn_ != 0) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeInt32Size(8, refreshTokenExpiresIn_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(sessionToken_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(9, sessionToken_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(csrfToken_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(10, csrfToken_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(sessionPublicId_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(11, sessionPublicId_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(userId_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(12, userId_);
     }
     size += getUnknownFields().getSerializedSize();
     memoizedSize = size;
@@ -284,6 +606,20 @@ private static final long serialVersionUID = 0L;
         != other.getExpiresAtUnix()) return false;
     if (!getCredentialId()
         .equals(other.getCredentialId())) return false;
+    if (!getRefreshToken()
+        .equals(other.getRefreshToken())) return false;
+    if (getAccessTokenExpiresIn()
+        != other.getAccessTokenExpiresIn()) return false;
+    if (getRefreshTokenExpiresIn()
+        != other.getRefreshTokenExpiresIn()) return false;
+    if (!getSessionToken()
+        .equals(other.getSessionToken())) return false;
+    if (!getCsrfToken()
+        .equals(other.getCsrfToken())) return false;
+    if (!getSessionPublicId()
+        .equals(other.getSessionPublicId())) return false;
+    if (!getUserId()
+        .equals(other.getUserId())) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -308,6 +644,20 @@ private static final long serialVersionUID = 0L;
         getExpiresAtUnix());
     hash = (37 * hash) + CREDENTIAL_ID_FIELD_NUMBER;
     hash = (53 * hash) + getCredentialId().hashCode();
+    hash = (37 * hash) + REFRESH_TOKEN_FIELD_NUMBER;
+    hash = (53 * hash) + getRefreshToken().hashCode();
+    hash = (37 * hash) + ACCESS_TOKEN_EXPIRES_IN_FIELD_NUMBER;
+    hash = (53 * hash) + getAccessTokenExpiresIn();
+    hash = (37 * hash) + REFRESH_TOKEN_EXPIRES_IN_FIELD_NUMBER;
+    hash = (53 * hash) + getRefreshTokenExpiresIn();
+    hash = (37 * hash) + SESSION_TOKEN_FIELD_NUMBER;
+    hash = (53 * hash) + getSessionToken().hashCode();
+    hash = (37 * hash) + CSRF_TOKEN_FIELD_NUMBER;
+    hash = (53 * hash) + getCsrfToken().hashCode();
+    hash = (37 * hash) + SESSION_PUBLIC_ID_FIELD_NUMBER;
+    hash = (53 * hash) + getSessionPublicId().hashCode();
+    hash = (37 * hash) + USER_ID_FIELD_NUMBER;
+    hash = (53 * hash) + getUserId().hashCode();
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -454,6 +804,13 @@ private static final long serialVersionUID = 0L;
       accessToken_ = "";
       expiresAtUnix_ = 0L;
       credentialId_ = "";
+      refreshToken_ = "";
+      accessTokenExpiresIn_ = 0;
+      refreshTokenExpiresIn_ = 0;
+      sessionToken_ = "";
+      csrfToken_ = "";
+      sessionPublicId_ = "";
+      userId_ = "";
       return this;
     }
 
@@ -506,6 +863,27 @@ private static final long serialVersionUID = 0L;
       if (((from_bitField0_ & 0x00000010) != 0)) {
         result.credentialId_ = credentialId_;
       }
+      if (((from_bitField0_ & 0x00000020) != 0)) {
+        result.refreshToken_ = refreshToken_;
+      }
+      if (((from_bitField0_ & 0x00000040) != 0)) {
+        result.accessTokenExpiresIn_ = accessTokenExpiresIn_;
+      }
+      if (((from_bitField0_ & 0x00000080) != 0)) {
+        result.refreshTokenExpiresIn_ = refreshTokenExpiresIn_;
+      }
+      if (((from_bitField0_ & 0x00000100) != 0)) {
+        result.sessionToken_ = sessionToken_;
+      }
+      if (((from_bitField0_ & 0x00000200) != 0)) {
+        result.csrfToken_ = csrfToken_;
+      }
+      if (((from_bitField0_ & 0x00000400) != 0)) {
+        result.sessionPublicId_ = sessionPublicId_;
+      }
+      if (((from_bitField0_ & 0x00000800) != 0)) {
+        result.userId_ = userId_;
+      }
       result.bitField0_ |= to_bitField0_;
     }
 
@@ -540,6 +918,37 @@ private static final long serialVersionUID = 0L;
       if (!other.getCredentialId().isEmpty()) {
         credentialId_ = other.credentialId_;
         bitField0_ |= 0x00000010;
+        onChanged();
+      }
+      if (!other.getRefreshToken().isEmpty()) {
+        refreshToken_ = other.refreshToken_;
+        bitField0_ |= 0x00000020;
+        onChanged();
+      }
+      if (other.getAccessTokenExpiresIn() != 0) {
+        setAccessTokenExpiresIn(other.getAccessTokenExpiresIn());
+      }
+      if (other.getRefreshTokenExpiresIn() != 0) {
+        setRefreshTokenExpiresIn(other.getRefreshTokenExpiresIn());
+      }
+      if (!other.getSessionToken().isEmpty()) {
+        sessionToken_ = other.sessionToken_;
+        bitField0_ |= 0x00000100;
+        onChanged();
+      }
+      if (!other.getCsrfToken().isEmpty()) {
+        csrfToken_ = other.csrfToken_;
+        bitField0_ |= 0x00000200;
+        onChanged();
+      }
+      if (!other.getSessionPublicId().isEmpty()) {
+        sessionPublicId_ = other.sessionPublicId_;
+        bitField0_ |= 0x00000400;
+        onChanged();
+      }
+      if (!other.getUserId().isEmpty()) {
+        userId_ = other.userId_;
+        bitField0_ |= 0x00000800;
         onChanged();
       }
       this.mergeUnknownFields(other.getUnknownFields());
@@ -595,6 +1004,41 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00000010;
               break;
             } // case 42
+            case 50: {
+              refreshToken_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00000020;
+              break;
+            } // case 50
+            case 56: {
+              accessTokenExpiresIn_ = input.readInt32();
+              bitField0_ |= 0x00000040;
+              break;
+            } // case 56
+            case 64: {
+              refreshTokenExpiresIn_ = input.readInt32();
+              bitField0_ |= 0x00000080;
+              break;
+            } // case 64
+            case 74: {
+              sessionToken_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00000100;
+              break;
+            } // case 74
+            case 82: {
+              csrfToken_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00000200;
+              break;
+            } // case 82
+            case 90: {
+              sessionPublicId_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00000400;
+              break;
+            } // case 90
+            case 98: {
+              userId_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00000800;
+              break;
+            } // case 98
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -879,6 +1323,10 @@ private static final long serialVersionUID = 0L;
 
     private long expiresAtUnix_ ;
     /**
+     * <pre>
+     * when access_token expires (unix seconds)
+     * </pre>
+     *
      * <code>int64 expires_at_unix = 4 [json_name = "expiresAtUnix"];</code>
      * @return The expiresAtUnix.
      */
@@ -887,6 +1335,10 @@ private static final long serialVersionUID = 0L;
       return expiresAtUnix_;
     }
     /**
+     * <pre>
+     * when access_token expires (unix seconds)
+     * </pre>
+     *
      * <code>int64 expires_at_unix = 4 [json_name = "expiresAtUnix"];</code>
      * @param value The expiresAtUnix to set.
      * @return This builder for chaining.
@@ -899,6 +1351,10 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
+     * <pre>
+     * when access_token expires (unix seconds)
+     * </pre>
+     *
      * <code>int64 expires_at_unix = 4 [json_name = "expiresAtUnix"];</code>
      * @return This builder for chaining.
      */
@@ -977,6 +1433,564 @@ private static final long serialVersionUID = 0L;
       checkByteStringIsUtf8(value);
       credentialId_ = value;
       bitField0_ |= 0x00000010;
+      onChanged();
+      return this;
+    }
+
+    private java.lang.Object refreshToken_ = "";
+    /**
+     * <pre>
+     * A passkey sign-in returns the same credentials as Login (fields below).
+     * Rotating refresh token (rt_&lt;family&gt;.&lt;jti&gt;) for RefreshToken; empty for
+     * service accounts.
+     * </pre>
+     *
+     * <code>string refresh_token = 6 [json_name = "refreshToken"];</code>
+     * @return The refreshToken.
+     */
+    public java.lang.String getRefreshToken() {
+      java.lang.Object ref = refreshToken_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        refreshToken_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <pre>
+     * A passkey sign-in returns the same credentials as Login (fields below).
+     * Rotating refresh token (rt_&lt;family&gt;.&lt;jti&gt;) for RefreshToken; empty for
+     * service accounts.
+     * </pre>
+     *
+     * <code>string refresh_token = 6 [json_name = "refreshToken"];</code>
+     * @return The bytes for refreshToken.
+     */
+    public com.google.protobuf.ByteString
+        getRefreshTokenBytes() {
+      java.lang.Object ref = refreshToken_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b =
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        refreshToken_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <pre>
+     * A passkey sign-in returns the same credentials as Login (fields below).
+     * Rotating refresh token (rt_&lt;family&gt;.&lt;jti&gt;) for RefreshToken; empty for
+     * service accounts.
+     * </pre>
+     *
+     * <code>string refresh_token = 6 [json_name = "refreshToken"];</code>
+     * @param value The refreshToken to set.
+     * @return This builder for chaining.
+     */
+    public Builder setRefreshToken(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      refreshToken_ = value;
+      bitField0_ |= 0x00000020;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * A passkey sign-in returns the same credentials as Login (fields below).
+     * Rotating refresh token (rt_&lt;family&gt;.&lt;jti&gt;) for RefreshToken; empty for
+     * service accounts.
+     * </pre>
+     *
+     * <code>string refresh_token = 6 [json_name = "refreshToken"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearRefreshToken() {
+      refreshToken_ = getDefaultInstance().getRefreshToken();
+      bitField0_ = (bitField0_ & ~0x00000020);
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * A passkey sign-in returns the same credentials as Login (fields below).
+     * Rotating refresh token (rt_&lt;family&gt;.&lt;jti&gt;) for RefreshToken; empty for
+     * service accounts.
+     * </pre>
+     *
+     * <code>string refresh_token = 6 [json_name = "refreshToken"];</code>
+     * @param value The bytes for refreshToken to set.
+     * @return This builder for chaining.
+     */
+    public Builder setRefreshTokenBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      refreshToken_ = value;
+      bitField0_ |= 0x00000020;
+      onChanged();
+      return this;
+    }
+
+    private int accessTokenExpiresIn_ ;
+    /**
+     * <pre>
+     * seconds
+     * </pre>
+     *
+     * <code>int32 access_token_expires_in = 7 [json_name = "accessTokenExpiresIn"];</code>
+     * @return The accessTokenExpiresIn.
+     */
+    @java.lang.Override
+    public int getAccessTokenExpiresIn() {
+      return accessTokenExpiresIn_;
+    }
+    /**
+     * <pre>
+     * seconds
+     * </pre>
+     *
+     * <code>int32 access_token_expires_in = 7 [json_name = "accessTokenExpiresIn"];</code>
+     * @param value The accessTokenExpiresIn to set.
+     * @return This builder for chaining.
+     */
+    public Builder setAccessTokenExpiresIn(int value) {
+
+      accessTokenExpiresIn_ = value;
+      bitField0_ |= 0x00000040;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * seconds
+     * </pre>
+     *
+     * <code>int32 access_token_expires_in = 7 [json_name = "accessTokenExpiresIn"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearAccessTokenExpiresIn() {
+      bitField0_ = (bitField0_ & ~0x00000040);
+      accessTokenExpiresIn_ = 0;
+      onChanged();
+      return this;
+    }
+
+    private int refreshTokenExpiresIn_ ;
+    /**
+     * <pre>
+     * absolute lifetime of refresh_token, seconds
+     * </pre>
+     *
+     * <code>int32 refresh_token_expires_in = 8 [json_name = "refreshTokenExpiresIn"];</code>
+     * @return The refreshTokenExpiresIn.
+     */
+    @java.lang.Override
+    public int getRefreshTokenExpiresIn() {
+      return refreshTokenExpiresIn_;
+    }
+    /**
+     * <pre>
+     * absolute lifetime of refresh_token, seconds
+     * </pre>
+     *
+     * <code>int32 refresh_token_expires_in = 8 [json_name = "refreshTokenExpiresIn"];</code>
+     * @param value The refreshTokenExpiresIn to set.
+     * @return This builder for chaining.
+     */
+    public Builder setRefreshTokenExpiresIn(int value) {
+
+      refreshTokenExpiresIn_ = value;
+      bitField0_ |= 0x00000080;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * absolute lifetime of refresh_token, seconds
+     * </pre>
+     *
+     * <code>int32 refresh_token_expires_in = 8 [json_name = "refreshTokenExpiresIn"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearRefreshTokenExpiresIn() {
+      bitField0_ = (bitField0_ & ~0x00000080);
+      refreshTokenExpiresIn_ = 0;
+      onChanged();
+      return this;
+    }
+
+    private java.lang.Object sessionToken_ = "";
+    /**
+     * <pre>
+     * server-side session handle (WEB: set as an HttpOnly cookie)
+     * </pre>
+     *
+     * <code>string session_token = 9 [json_name = "sessionToken"];</code>
+     * @return The sessionToken.
+     */
+    public java.lang.String getSessionToken() {
+      java.lang.Object ref = sessionToken_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        sessionToken_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <pre>
+     * server-side session handle (WEB: set as an HttpOnly cookie)
+     * </pre>
+     *
+     * <code>string session_token = 9 [json_name = "sessionToken"];</code>
+     * @return The bytes for sessionToken.
+     */
+    public com.google.protobuf.ByteString
+        getSessionTokenBytes() {
+      java.lang.Object ref = sessionToken_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b =
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        sessionToken_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <pre>
+     * server-side session handle (WEB: set as an HttpOnly cookie)
+     * </pre>
+     *
+     * <code>string session_token = 9 [json_name = "sessionToken"];</code>
+     * @param value The sessionToken to set.
+     * @return This builder for chaining.
+     */
+    public Builder setSessionToken(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      sessionToken_ = value;
+      bitField0_ |= 0x00000100;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * server-side session handle (WEB: set as an HttpOnly cookie)
+     * </pre>
+     *
+     * <code>string session_token = 9 [json_name = "sessionToken"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearSessionToken() {
+      sessionToken_ = getDefaultInstance().getSessionToken();
+      bitField0_ = (bitField0_ & ~0x00000100);
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * server-side session handle (WEB: set as an HttpOnly cookie)
+     * </pre>
+     *
+     * <code>string session_token = 9 [json_name = "sessionToken"];</code>
+     * @param value The bytes for sessionToken to set.
+     * @return This builder for chaining.
+     */
+    public Builder setSessionTokenBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      sessionToken_ = value;
+      bitField0_ |= 0x00000100;
+      onChanged();
+      return this;
+    }
+
+    private java.lang.Object csrfToken_ = "";
+    /**
+     * <pre>
+     * double-submit CSRF token bound to this session
+     * </pre>
+     *
+     * <code>string csrf_token = 10 [json_name = "csrfToken"];</code>
+     * @return The csrfToken.
+     */
+    public java.lang.String getCsrfToken() {
+      java.lang.Object ref = csrfToken_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        csrfToken_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <pre>
+     * double-submit CSRF token bound to this session
+     * </pre>
+     *
+     * <code>string csrf_token = 10 [json_name = "csrfToken"];</code>
+     * @return The bytes for csrfToken.
+     */
+    public com.google.protobuf.ByteString
+        getCsrfTokenBytes() {
+      java.lang.Object ref = csrfToken_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b =
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        csrfToken_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <pre>
+     * double-submit CSRF token bound to this session
+     * </pre>
+     *
+     * <code>string csrf_token = 10 [json_name = "csrfToken"];</code>
+     * @param value The csrfToken to set.
+     * @return This builder for chaining.
+     */
+    public Builder setCsrfToken(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      csrfToken_ = value;
+      bitField0_ |= 0x00000200;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * double-submit CSRF token bound to this session
+     * </pre>
+     *
+     * <code>string csrf_token = 10 [json_name = "csrfToken"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearCsrfToken() {
+      csrfToken_ = getDefaultInstance().getCsrfToken();
+      bitField0_ = (bitField0_ & ~0x00000200);
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * double-submit CSRF token bound to this session
+     * </pre>
+     *
+     * <code>string csrf_token = 10 [json_name = "csrfToken"];</code>
+     * @param value The bytes for csrfToken to set.
+     * @return This builder for chaining.
+     */
+    public Builder setCsrfTokenBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      csrfToken_ = value;
+      bitField0_ |= 0x00000200;
+      onChanged();
+      return this;
+    }
+
+    private java.lang.Object sessionPublicId_ = "";
+    /**
+     * <pre>
+     * Stable non-secret session id (`sesspub_…`), as Login / ValidateToken report it.
+     * </pre>
+     *
+     * <code>string session_public_id = 11 [json_name = "sessionPublicId"];</code>
+     * @return The sessionPublicId.
+     */
+    public java.lang.String getSessionPublicId() {
+      java.lang.Object ref = sessionPublicId_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        sessionPublicId_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <pre>
+     * Stable non-secret session id (`sesspub_…`), as Login / ValidateToken report it.
+     * </pre>
+     *
+     * <code>string session_public_id = 11 [json_name = "sessionPublicId"];</code>
+     * @return The bytes for sessionPublicId.
+     */
+    public com.google.protobuf.ByteString
+        getSessionPublicIdBytes() {
+      java.lang.Object ref = sessionPublicId_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b =
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        sessionPublicId_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <pre>
+     * Stable non-secret session id (`sesspub_…`), as Login / ValidateToken report it.
+     * </pre>
+     *
+     * <code>string session_public_id = 11 [json_name = "sessionPublicId"];</code>
+     * @param value The sessionPublicId to set.
+     * @return This builder for chaining.
+     */
+    public Builder setSessionPublicId(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      sessionPublicId_ = value;
+      bitField0_ |= 0x00000400;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Stable non-secret session id (`sesspub_…`), as Login / ValidateToken report it.
+     * </pre>
+     *
+     * <code>string session_public_id = 11 [json_name = "sessionPublicId"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearSessionPublicId() {
+      sessionPublicId_ = getDefaultInstance().getSessionPublicId();
+      bitField0_ = (bitField0_ & ~0x00000400);
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Stable non-secret session id (`sesspub_…`), as Login / ValidateToken report it.
+     * </pre>
+     *
+     * <code>string session_public_id = 11 [json_name = "sessionPublicId"];</code>
+     * @param value The bytes for sessionPublicId to set.
+     * @return This builder for chaining.
+     */
+    public Builder setSessionPublicIdBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      sessionPublicId_ = value;
+      bitField0_ |= 0x00000400;
+      onChanged();
+      return this;
+    }
+
+    private java.lang.Object userId_ = "";
+    /**
+     * <pre>
+     * The signed-in user (on a usernameless sign-in, the user the passkey belongs to).
+     * </pre>
+     *
+     * <code>string user_id = 12 [json_name = "userId"];</code>
+     * @return The userId.
+     */
+    public java.lang.String getUserId() {
+      java.lang.Object ref = userId_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        userId_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <pre>
+     * The signed-in user (on a usernameless sign-in, the user the passkey belongs to).
+     * </pre>
+     *
+     * <code>string user_id = 12 [json_name = "userId"];</code>
+     * @return The bytes for userId.
+     */
+    public com.google.protobuf.ByteString
+        getUserIdBytes() {
+      java.lang.Object ref = userId_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b =
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        userId_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <pre>
+     * The signed-in user (on a usernameless sign-in, the user the passkey belongs to).
+     * </pre>
+     *
+     * <code>string user_id = 12 [json_name = "userId"];</code>
+     * @param value The userId to set.
+     * @return This builder for chaining.
+     */
+    public Builder setUserId(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      userId_ = value;
+      bitField0_ |= 0x00000800;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * The signed-in user (on a usernameless sign-in, the user the passkey belongs to).
+     * </pre>
+     *
+     * <code>string user_id = 12 [json_name = "userId"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearUserId() {
+      userId_ = getDefaultInstance().getUserId();
+      bitField0_ = (bitField0_ & ~0x00000800);
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * The signed-in user (on a usernameless sign-in, the user the passkey belongs to).
+     * </pre>
+     *
+     * <code>string user_id = 12 [json_name = "userId"];</code>
+     * @param value The bytes for userId to set.
+     * @return This builder for chaining.
+     */
+    public Builder setUserIdBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      userId_ = value;
+      bitField0_ |= 0x00000800;
       onChanged();
       return this;
     }

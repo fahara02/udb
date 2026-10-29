@@ -44,6 +44,11 @@ message CreateProviderRequest {
   string saml_signing_key_pem = 16;
   string created_by = 17;
   udb.core.common.v1.RequestContext context = 18;
+  // OIDC redirect URIs StartOidcLogin may send the browser back to (exact
+  // match). Each must be https, http on a loopback IP for native apps, or a
+  // private-use scheme with a dot (com.example.app:/oauth2redirect). At most
+  // 20, each at most 512 characters, no fragment.
+  repeated string redirect_uris = 19;
 }
 
 message CreateProviderResponse {
@@ -71,6 +76,10 @@ message UpdateProviderRequest {
   // Optional PATCH mask relative to the provider resource. When omitted, legacy
   // clients keep the historical non-empty-field patch behavior.
   google.protobuf.FieldMask update_mask = 18;
+  // Replacement OIDC redirect-URI allowlist (same rules as CreateProvider).
+  // Without a mask a non-empty list replaces the stored one; to clear it,
+  // send `redirect_uris` in update_mask with an empty list.
+  repeated string redirect_uris = 19;
 }
 
 message UpdateProviderResponse {

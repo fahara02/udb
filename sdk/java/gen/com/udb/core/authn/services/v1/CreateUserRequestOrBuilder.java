@@ -229,4 +229,26 @@ java.lang.String defaultValue);
    */
   com.google.protobuf.ByteString
       getPhoneBytes();
+
+  /**
+   * <pre>
+   * The language of this account's messages (auth codes, magic links), as a
+   * BCP 47 tag such as `bn` or `en-US`; empty = English.
+   * </pre>
+   *
+   * <code>string locale = 14 [json_name = "locale"];</code>
+   * @return The locale.
+   */
+  java.lang.String getLocale();
+  /**
+   * <pre>
+   * The language of this account's messages (auth codes, magic links), as a
+   * BCP 47 tag such as `bn` or `en-US`; empty = English.
+   * </pre>
+   *
+   * <code>string locale = 14 [json_name = "locale"];</code>
+   * @return The bytes for locale.
+   */
+  com.google.protobuf.ByteString
+      getLocaleBytes();
 }

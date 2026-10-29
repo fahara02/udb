@@ -1,0 +1,149 @@
+syntax = "proto3";
+
+package udb.core.authn.entity.v1;
+
+import "google/protobuf/timestamp.proto";
+import "udb/core/common/v1/db.proto";
+import "udb/core/common/v1/security.proto";
+
+option csharp_namespace = "Udb.Core.Authn.Entity.V1";
+option go_package = "github.com/udb-project/udb/gen/go/udb/core/authn/entity/v1;authnv1";
+option java_package = "com.udb.core.authn.entity.v1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Authn\\Entity\\V1";
+option php_namespace = "Udb\\Core\\Authn\\Entity\\V1";
+
+// ---------------------------------------------------------------------------
+// Invitation — an administrator invites a person into a tenant (and project)
+// with a set of roles. The invitee opens the link, proves the invitation's
+// channel and gets an ACTIVE account with that channel already verified:
+//
+// * SMS / EMAIL: a one-time code is sent to `address` (StartInvitationAcceptance)
+//   and AcceptInvitation checks it; the phone or email is then verified.
+// * OIDC: the invitee signs in with the tenant's identity provider
+//   `idp_provider_id`; the external identity is linked to the new account.
+// * PASSKEY: the invitee registers a passkey during acceptance.
+//
+// The link carries a random accept token; only its keyed hash is stored, and
+// ResendInvitation replaces it (the previous link stops working). Roles are
+// role CODES bound in the invitation's tenant when it is accepted; reserved
+// platform roles are refused, and `organization_owner` needs an inviter who
+// holds it (or a cross-tenant admin). Rows are isolated by tenant.
+// ---------------------------------------------------------------------------
+message Invitation {
+  option (udb.core.common.v1.pg_table) = {
+    table_name: "invitations"
+    schema_name: "udb_authn"
+    migration_order: 31
+    is_table: true
+    comment: "Invitations into a tenant: channel to prove, roles to bind on acceptance, hashed accept token"
+    soft_delete: false
+    audit_fields: true
+    enable_rls: true
+    rls_policies: {
+      policy_name: "tenant_isolation"
+      using: "(tenant_id::text = current_setting('app.current_tenant_id', true)::text)"
+      permissive: true
+    }
+    // One open invitation per (tenant, channel, address). Accepted, revoked
+    // and expired rows stay for audit and do not block a new invitation.
+    indexes: {
+      index_name: "idx_invitations_open_address"
+      index_type: "BTREE"
+      columns: "tenant_id"
+      columns: "channel"
+      columns: "address"
+      unique: true
+      where_clause: "status = 'PENDING' AND address <> ''"
+    }
+    indexes: {
+      index_name: "idx_invitations_tenant_status"
+      index_type: "BTREE"
+      columns: "tenant_id"
+      columns: "status"
+      columns: "created_at"
+    }
+    cdc_topic: "udb.authn.invitations.cdc"
+    required_scope: "udb:authn:manage-invitations"
+    replica_hint: "primary"
+  };
+  option (udb.core.common.v1.db_table_security) = {
+    tenant_isolation_mode: "tenant"
+    tenant_column: "tenant_id"
+    rls_policy_template: "tenant_id = current_setting('app.current_tenant_id')"
+    soft_delete_mode: "none"
+    retention_class: "authn.operational"
+    audit_mode: AUDIT_MODE_MUTATION
+    encryption_profile: "tenant"
+    pii_profile: "standard"
+    export_eligible: false
+    data_residency_policy_ref: "tenant.data_residency"
+  };
+
+  // Server-assigned UUID identifying this invitation (part of the link).
+  string invitation_id = 1 [(udb.core.common.v1.pg_column) = { column_name: "invitation_id" sql_type: "UUID" primary_key: true not_null: true default_value: "gen_random_uuid()" }];
+
+  // The tenant the invitee joins (canonical tenant id, as stored on users).
+  string tenant_id = 2 [(udb.core.common.v1.pg_column) = { column_name: "tenant_id" tenant_column: true sql_type: "VARCHAR(120)" not_null: true index: { index_name: "idx_invitations_tenant" index_type: "BTREE" } }];
+
+  // The project the new account belongs to ('' = none).
+  string project_id = 3 [(udb.core.common.v1.pg_column) = { column_name: "project_id" sql_type: "VARCHAR(255)" not_null: true default_value: "''" }];
+
+  // SMS | EMAIL | OIDC | PASSKEY: the channel the invitee proves on acceptance.
+  string channel = 4 [(udb.core.common.v1.pg_column) = { column_name: "channel" sql_type: "VARCHAR(20)" not_null: true check_constraint: "channel IN ('SMS', 'EMAIL', 'OIDC', 'PASSKEY')" }];
+
+  // E.164 phone (SMS) or lowercase email (EMAIL); empty for OIDC and PASSKEY.
+  string address = 5 [(udb.core.common.v1.pg_column) = { column_name: "address" sql_type: "VARCHAR(320)" not_null: true default_value: "''" }, (udb.core.common.v1.pii) = true, (udb.core.common.v1.log_masked) = true, (udb.core.common.v1.data_purpose) = "Authentication and communication"];
+
+  // The tenant identity provider an OIDC invitee signs in with ('' otherwise).
+  string idp_provider_id = 6 [(udb.core.common.v1.pg_column) = { column_name: "idp_provider_id" sql_type: "VARCHAR(120)" not_null: true default_value: "''" }];
+
+  // Role codes (JSON array of strings) bound in the tenant on acceptance.
+  string roles_json = 7 [(udb.core.common.v1.pg_column) = { column_name: "roles_json" sql_type: "JSONB" is_json: true not_null: true default_value: "'[]'" }];
+
+  // The invitee's name as the inviter typed it (prefills the account).
+  string full_name = 8 [(udb.core.common.v1.pg_column) = { column_name: "full_name" sql_type: "VARCHAR(255)" not_null: true default_value: "''" }, (udb.core.common.v1.pii) = true, (udb.core.common.v1.log_masked) = true];
+
+  // PENDING | ACCEPTED | REVOKED | EXPIRED. Only a PENDING invitation whose
+  // expires_at is still ahead can be accepted.
+  string status = 9 [(udb.core.common.v1.pg_column) = { column_name: "status" sql_type: "VARCHAR(20)" not_null: true default_value: "'PENDING'" check_constraint: "status IN ('PENDING', 'ACCEPTED', 'REVOKED', 'EXPIRED')" }];
+
+  // Keyed HMAC of the accept token in the link. The token itself is never
+  // stored; ResendInvitation replaces it.
+  string token_hash = 10 [(udb.core.common.v1.pg_column) = { column_name: "token_hash" sql_type: "VARCHAR(128)" not_null: true comment: "Keyed HMAC digest of the invitation accept token" }, (udb.core.common.v1.sensitive) = true, (udb.core.common.v1.log_redacted) = true, (udb.core.common.v1.db_column_security) = { secret_classification: SECRET_CLASSIFICATION_TOKEN output_view: OUTPUT_VIEW_STORAGE_ONLY redaction_strategy: REDACTION_STRATEGY_REDACT hashing_algorithm: "hmac-sha256" encryption_key_class: "authn-token" uniqueness_scope: "tenant" }];
+
+  // When the link stops working (default 7 days after creation, at most 30
+  // days; ResendInvitation does not extend it).
+  google.protobuf.Timestamp expires_at = 11 [(udb.core.common.v1.pg_column) = { column_name: "expires_at" sql_type: "TIMESTAMPTZ" not_null: true }];
+
+  // Subject of the administrator who created the invitation.
+  string created_by = 12 [(udb.core.common.v1.pg_column) = { column_name: "created_by" sql_type: "VARCHAR(255)" not_null: true default_value: "''" }];
+
+  // The account acceptance started for (created when the invitee first asks
+  // for a code or a passkey challenge) and, once ACCEPTED, the invitee's
+  // account. Until acceptance it is a PENDING_VERIFICATION account nobody can
+  // sign in to; revoking the invitation deletes it.
+  string invitee_user_id = 13 [(udb.core.common.v1.pg_column) = { column_name: "invitee_user_id" sql_type: "UUID" comment: "FK to udb_authn.users.user_id" foreign_key: { references_table: "users" references_column: "user_id" references_schema: "udb_authn" on_delete: REFERENTIAL_ACTION_SET_NULL constraint_name: "fk_invitations_invitee_user_id" } }];
+
+  // The account the invitation created (set when ACCEPTED).
+  string accepted_user_id = 14 [(udb.core.common.v1.pg_column) = { column_name: "accepted_user_id" sql_type: "UUID" comment: "FK to udb_authn.users.user_id" foreign_key: { references_table: "users" references_column: "user_id" references_schema: "udb_authn" on_delete: REFERENTIAL_ACTION_SET_NULL constraint_name: "fk_invitations_accepted_user_id" } }];
+  google.protobuf.Timestamp accepted_at = 15 [(udb.core.common.v1.pg_column) = { column_name: "accepted_at" sql_type: "TIMESTAMPTZ" }];
+
+  // Who revoked the invitation, and why.
+  string revoked_by = 16 [(udb.core.common.v1.pg_column) = { column_name: "revoked_by" sql_type: "VARCHAR(255)" not_null: true default_value: "''" }];
+  string revoke_reason = 17 [(udb.core.common.v1.pg_column) = { column_name: "revoke_reason" sql_type: "VARCHAR(1024)" not_null: true default_value: "''" }];
+
+  // How many invitation messages were sent, and when the last one went out
+  // (ResendInvitation is throttled on both).
+  int32 send_count = 18 [(udb.core.common.v1.pg_column) = { column_name: "send_count" sql_type: "INTEGER" not_null: true default_value: "0" }];
+  google.protobuf.Timestamp last_sent_at = 19 [(udb.core.common.v1.pg_column) = { column_name: "last_sent_at" sql_type: "TIMESTAMPTZ" }];
+
+  // Incremented on every change (resend, revoke, accept).
+  int64 revision = 20 [(udb.core.common.v1.pg_column) = { column_name: "revision" sql_type: "BIGINT" not_null: true default_value: "1" }];
+
+  google.protobuf.Timestamp created_at = 21 [(udb.core.common.v1.pg_column) = { column_name: "created_at" sql_type: "TIMESTAMPTZ" not_null: true default_value: "now()" }];
+  google.protobuf.Timestamp updated_at = 22 [(udb.core.common.v1.pg_column) = { column_name: "updated_at" sql_type: "TIMESTAMPTZ" not_null: true default_value: "now()" }];
+
+  // BCP 47 language of the invitation message ('' = English); the accepted
+  // account keeps it as its locale, so later codes use the same language.
+  string locale = 23 [(udb.core.common.v1.pg_column) = { column_name: "locale" sql_type: "VARCHAR(35)" not_null: true default_value: "''" }];
+}

@@ -55,6 +55,22 @@ public enum OTPType
    * <code>OTP_TYPE_PHONE_VERIFICATION = 5;</code>
    */
   OTP_TYPE_PHONE_VERIFICATION(5),
+  /**
+   * <pre>
+   * Passwordless sign-in code (SMS or email; also behind a magic link).
+   * </pre>
+   *
+   * <code>OTP_TYPE_LOGIN = 6;</code>
+   */
+  OTP_TYPE_LOGIN(6),
+  /**
+   * <pre>
+   * Proves an invitation's SMS/email channel on acceptance.
+   * </pre>
+   *
+   * <code>OTP_TYPE_INVITATION = 7;</code>
+   */
+  OTP_TYPE_INVITATION(7),
   UNRECOGNIZED(-1),
   ;
 
@@ -111,6 +127,22 @@ public enum OTPType
    * <code>OTP_TYPE_PHONE_VERIFICATION = 5;</code>
    */
   public static final int OTP_TYPE_PHONE_VERIFICATION_VALUE = 5;
+  /**
+   * <pre>
+   * Passwordless sign-in code (SMS or email; also behind a magic link).
+   * </pre>
+   *
+   * <code>OTP_TYPE_LOGIN = 6;</code>
+   */
+  public static final int OTP_TYPE_LOGIN_VALUE = 6;
+  /**
+   * <pre>
+   * Proves an invitation's SMS/email channel on acceptance.
+   * </pre>
+   *
+   * <code>OTP_TYPE_INVITATION = 7;</code>
+   */
+  public static final int OTP_TYPE_INVITATION_VALUE = 7;
 
 
   public final int getNumber() {
@@ -143,6 +175,8 @@ public enum OTPType
       case 3: return OTP_TYPE_PASSWORD_RESET;
       case 4: return OTP_TYPE_SENSITIVE_OPERATION;
       case 5: return OTP_TYPE_PHONE_VERIFICATION;
+      case 6: return OTP_TYPE_LOGIN;
+      case 7: return OTP_TYPE_INVITATION;
       default: return null;
     }
   }

@@ -3,9 +3,11 @@
 
 Completion and acknowledgement consume state. Give them independent fixtures
 instead of timing a nonexistent upload or a workflow changed by SignalWorkflow.
-The JSON contains only reference IDs, ETags and one service-account username,
-never credentials or signed URLs (that account's password is the environment's
-UDB_LIVE_PASSWORD).
+The JSON contains reference IDs, ETags and one service-account username, never
+passwords or signed URLs (that account's password is the environment's
+UDB_LIVE_PASSWORD). The identity-flow fixtures add single-use proofs for
+disposable targets (one-time codes, invitation accept tokens, one step-up
+token); none of them is a password, an access token or a refresh token.
 """
 
 from __future__ import annotations
@@ -30,6 +32,10 @@ from udb.core.authn.entity.v1 import enums_pb2 as authn_enums
 from udb.core.authn.services.v1 import authn_service_pb2 as authn_service_pb
 from udb.core.authn.services.v1 import authn_service_pb2_grpc as authn_grpc
 from udb.core.authn.services.v1 import core_pb2 as authn_pb
+from udb.core.common.v1 import types_pb2 as common_pb
+from udb.core.idp.entity.v1 import enums_pb2 as idp_enums
+from udb.core.idp.services.v1 import core_pb2 as idp_pb
+from udb.core.idp.services.v1 import identity_provider_service_pb2_grpc as idp_grpc
 from udb.core.messaging.services.v1 import messaging_service_pb2 as messaging_pb
 from udb.core.messaging.services.v1 import messaging_service_pb2_grpc as messaging_grpc
 from udb.core.workflow.services.v1 import workflow_service_pb2 as workflow_pb
@@ -213,6 +219,171 @@ def seed_memberships(channel, bench_headers, bench_tenant: str, bench_project: s
     }
 
 
+#: The bench tenant's sign-in policy. The measured PutTenantAuthPolicy row
+#: (docs/bench-bodies/authn.md) writes exactly this policy again, so it can run
+#: in any order relative to the rows that depend on it. `password_required` is
+#: left unset (true): the correctness suites share this fixture and still expect
+#: CreateUser to demand a password.
+AUTH_POLICY_CHANNELS = ("SMS", "EMAIL")
+AUTH_POLICY_MAGIC_LINK_BASE_URL = "https://app.udb-test.invalid/auth"
+#: The step-up action CheckStepUp measures, with a rule whose max age (the
+#: step-up token's lifetime) outlasts a full benchmark run.
+STEP_UP_ACTION = "sdk.bench.step-up"
+AUTH_POLICY_STEP_UP_RULES = json.dumps(
+    [{"action": STEP_UP_ACTION, "max_age_seconds": 3600, "factors": ["RECOVERY_CODE", "OTP"]}],
+    separators=(",", ":"))
+#: The dev in-process OpenID provider the broker serves under
+#: UDB_OIDC_TEST_MODE (never in production), its client and redirect URI.
+OIDC_TEST_ISSUER = "https://oidc.udb-test.invalid"
+OIDC_TEST_CLIENT_ID = "sdk-bench-oidc-client"
+OIDC_TEST_REDIRECT_URI = "https://app.udb-test.invalid/oidc/callback"
+
+
+def seed_identity_flows(channel, headers, tenant: str, project: str, subject: str) -> dict[str, str]:
+    """Inputs for the 0.6.6 identity RPCs (tenant auth policy, passwordless
+    sign-in, invitations, step-up, OIDC sign-in). Every single-use input gets a
+    disposable target of its own so no measured row consumes another's:
+
+    - the tenant auth policy (passwordless SMS+EMAIL, an https magic-link page,
+      the `STEP_UP_ACTION` rule) is written first;
+    - `login_otp_send_phone`: a person account SendLoginOtp sends a real code to;
+    - `login_otp_id` / `login_otp_code`: a code already sent to a SECOND account
+      (dev echo, `UDB_OTP_DEV_ECHO`), redeemed once by LoginWithOtp;
+    - `invitation_{get,start,accept,revoke,resend}_*`: one EMAIL invitation per
+      row; the accept one has a started acceptance and its code. Resend needs
+      the last send to be a minute old: the reset script backdates
+      `invitation_resend_id` (the broker's 60 s resend interval);
+    - `step_up_token`: VerifyMfaChallenge's step-up token for the benchmark
+      principal itself (a recovery-code challenge for `STEP_UP_ACTION`);
+    - `oidc_provider_id` / `oidc_state`: a provider on the dev OpenID issuer and
+      a started sign-in for FinishOidcLogin (needs UDB_OIDC_TEST_MODE).
+
+    The OTP codes, accept tokens and the step-up token are single-use proofs for
+    disposable fixtures (the step-up token is not an access token), never a
+    password. Everything is skipped when the broker predates 0.6.6
+    (UNIMPLEMENTED). A group that cannot be prepared (for OIDC: the dev provider
+    is off) is reported and skipped, so only its own rows fail, naming the
+    missing seed, instead of the whole SDK run."""
+    authn = authn_grpc.AuthnServiceStub(channel)
+    suffix = uuid.uuid4().hex[:12]
+    scope = common_pb.RequestContext(tenant=common_pb.TenantContext(tenant_id=tenant, project_id=project))
+    fixtures: dict[str, str] = {}
+    try:
+        authn.PutTenantAuthPolicy(authn_pb.PutTenantAuthPolicyRequest(
+            tenant_id=tenant, passwordless_channels=list(AUTH_POLICY_CHANNELS),
+            magic_link_base_url=AUTH_POLICY_MAGIC_LINK_BASE_URL,
+            step_up_rules_json=AUTH_POLICY_STEP_UP_RULES), metadata=headers, timeout=20.0)
+    except grpc.RpcError as exc:
+        if exc.code() != grpc.StatusCode.UNIMPLEMENTED:
+            raise
+        print("identity fixture skipped: the broker serves no tenant auth policy", flush=True)
+        return {}
+
+    def person(label: str) -> tuple[str, str]:
+        """An ACTIVE person account with an email and an (unverified) phone."""
+        username = f"sdk-perf-{label}-{suffix}"
+        phone = f"+1555{uuid.uuid4().int % 10 ** 7:07d}"
+        user_id = authn.CreateUser(authn_pb.CreateUserRequest(
+            username=username, email=f"{username}@example.invalid",
+            password=required_env("UDB_LIVE_PASSWORD"), tenant_id=tenant, project_id=project,
+            full_name=f"SDK perf {label}", phone=phone,
+            account_kind=authn_enums.ACCOUNT_KIND_PERSON), metadata=headers, timeout=20.0).user.user_id
+        authn.ChangeUserStatus(authn_pb.ChangeUserStatusRequest(
+            user_id=user_id, new_status=authn_enums.USER_STATUS_ACTIVE,
+            reason="benchmark identity fixture", context=scope), metadata=headers, timeout=20.0)
+        return user_id, phone
+
+    def prepare(group: str, seed) -> None:
+        try:
+            seed()
+        except (grpc.RpcError, RuntimeError) as exc:
+            detail = f"{exc.code().name}: {exc.details()}" if isinstance(exc, grpc.RpcError) else str(exc)
+            print(f"identity fixture group {group} skipped: {detail}", flush=True)
+
+    def passwordless() -> None:
+        # SendLoginOtp measures one account; LoginWithOtp redeems a code
+        # already sent to a second one, so the measured send cannot supersede it.
+        _send_user, send_phone = person("login-otp-send")
+        fixtures["login_otp_send_phone"] = send_phone
+        _login_user, login_phone = person("login-otp")
+        sent = authn.SendLoginOtp(authn_pb.SendLoginOtpRequest(
+            tenant_hint=tenant, channel="SMS", address=login_phone, project_hint=project),
+            metadata=headers, timeout=20.0)
+        if not sent.dev_otp_code:
+            raise RuntimeError("SendLoginOtp echoed no dev code (UDB_OTP_DEV_ECHO off?)")
+        fixtures["login_otp_id"] = sent.otp_id
+        fixtures["login_otp_code"] = sent.dev_otp_code
+
+    # Invitations: one disposable EMAIL invitation per measured row.
+    def invite(label: str) -> tuple[str, str]:
+        created = authn.CreateInvitation(authn_pb.CreateInvitationRequest(
+            tenant_id=tenant, project_id=project, channel="EMAIL",
+            address=f"sdk-perf-invite-{label}-{suffix}@example.invalid",
+            full_name=f"SDK perf invitee {label}", expires_in_seconds=86400),
+            metadata=headers, timeout=20.0)
+        if not created.invitation.invitation_id or not created.accept_token:
+            raise RuntimeError(f"invitation fixture {label} returned no id or token")
+        return created.invitation.invitation_id, created.accept_token
+
+    def invitations() -> None:
+        for label in ("get", "start"):
+            invitation_id, token = invite(label)
+            fixtures[f"invitation_{label}_id"] = invitation_id
+            fixtures[f"invitation_{label}_token"] = token
+        fixtures["invitation_revoke_id"] = invite("revoke")[0]
+        fixtures["invitation_resend_id"] = invite("resend")[0]
+        accept_id, accept_token = invite("accept")
+        started = authn.StartInvitationAcceptance(authn_pb.StartInvitationAcceptanceRequest(
+            invitation_id=accept_id, token=accept_token), metadata=headers, timeout=20.0)
+        if not started.otp_id or not started.dev_otp_code:
+            raise RuntimeError("StartInvitationAcceptance echoed no dev code (UDB_OTP_DEV_ECHO off?)")
+        fixtures.update({
+            "invitation_accept_id": accept_id, "invitation_accept_token": accept_token,
+            "invitation_accept_otp_id": started.otp_id,
+            "invitation_accept_otp_code": started.dev_otp_code,
+        })
+
+    def step_up() -> None:
+        # The benchmark principal proves a recovery code for STEP_UP_ACTION on
+        # its own session, so CheckStepUp (called by that same user) is satisfied.
+        codes = authn.GenerateRecoveryCodes(authn_pb.GenerateRecoveryCodesRequest(
+            user_id=subject, count=4), metadata=headers, timeout=20.0).codes
+        challenge = authn.IssueMfaChallenge(authn_pb.IssueMfaChallengeRequest(
+            user_id=subject, factor_kind=authn_enums.AUTH_FACTOR_KIND_RECOVERY_CODE,
+            purpose=authn_enums.MFA_CHALLENGE_PURPOSE_SENSITIVE_OPERATION, action=STEP_UP_ACTION,
+            context=scope), metadata=headers, timeout=20.0)
+        verified = authn.VerifyMfaChallenge(authn_pb.VerifyMfaChallengeRequest(
+            challenge_id=challenge.challenge_id, code=codes[0], context=scope),
+            metadata=headers, timeout=20.0)
+        if not verified.verified or not verified.step_up_token:
+            raise RuntimeError("VerifyMfaChallenge returned no step-up token")
+        fixtures["step_up_token"] = verified.step_up_token
+
+    def oidc() -> None:
+        # A provider on the broker's dev OpenID issuer. StartOidcLogin answers
+        # UNAVAILABLE when the dev provider is off (no UDB_OIDC_TEST_MODE).
+        provider_id = idp_grpc.IdentityProviderServiceStub(channel).CreateProvider(
+            idp_pb.CreateProviderRequest(
+                tenant_id=tenant, kind=idp_enums.IDP_KIND_OIDC,
+                display_name=f"SDK perf dev OIDC {suffix}", issuer=OIDC_TEST_ISSUER,
+                client_ids=[OIDC_TEST_CLIENT_ID], redirect_uris=[OIDC_TEST_REDIRECT_URI],
+                claim_mapping_json="{}",
+                jit_policy_json=json.dumps({"require_verified_email": True, "default_project": project}),
+                account_linking_policy="explicit", enabled=True, created_by=subject, context=scope),
+            metadata=headers, timeout=20.0).provider.provider_id
+        started = authn.StartOidcLogin(authn_pb.StartOidcLoginRequest(
+            tenant_hint=tenant, provider_id=provider_id, redirect_uri=OIDC_TEST_REDIRECT_URI),
+            metadata=headers, timeout=20.0)
+        fixtures["oidc_provider_id"] = provider_id
+        fixtures["oidc_state"] = started.state
+
+    prepare("passwordless", passwordless)
+    prepare("invitations", invitations)
+    prepare("step-up", step_up)
+    prepare("oidc", oidc)
+    return fixtures
+
+
 def main() -> int:
     output = Path(required_env("UDB_BENCH_FIXTURES"))
     metadata = Metadata(
@@ -311,6 +482,8 @@ def main() -> int:
             native_channel, headers, principal.tenant_id, principal.subject)
         membership_fixtures = seed_memberships(
             native_channel, headers, principal.tenant_id, principal.project_id)
+        identity_fixtures = seed_identity_flows(
+            native_channel, headers, principal.tenant_id, principal.project_id, principal.subject)
         output.parent.mkdir(parents=True, exist_ok=True)
         output.write_text(json.dumps({
             "schema_version": 1, "tenant_id": principal.tenant_id, "project_id": principal.project_id,
@@ -321,11 +494,12 @@ def main() -> int:
                 "cdc_ack_event_id": ack_event_id, "cdc_ack_topic": ack_topic,
                 **messaging_fixtures,
                 **membership_fixtures,
+                **identity_fixtures,
             },
         }, sort_keys=True) + "\n", encoding="utf-8")
-    print("Prepared real CDC event, multipart, dispatched workflow, messaging and tenant-membership"
-          f" benchmark fixtures ({len(messaging_fixtures)} MLS values, "
-          f"{len(membership_fixtures)} membership values)")
+    print("Prepared real CDC event, multipart, dispatched workflow, messaging, tenant-membership"
+          f" and identity-flow benchmark fixtures ({len(messaging_fixtures)} MLS values, "
+          f"{len(membership_fixtures)} membership values, {len(identity_fixtures)} identity values)")
     return 0
 
 

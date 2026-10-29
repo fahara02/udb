@@ -164,6 +164,18 @@ class IdentityProvider extends \Google\Protobuf\Internal\Message
      * Generated from protobuf field <code>.google.protobuf.Timestamp deleted_at = 27 [json_name = "deletedAt", (.udb.core.common.v1.pg_column) = {</code>
      */
     protected $deleted_at = null;
+    /**
+     * ── OIDC sign-in (0.6.6) ──────────────────────────────────────────────────
+     * JSON array of the exact redirect URIs StartOidcLogin accepts for this
+     * provider (OAuth 2.0 exact-match; no wildcards). Each is https, an http
+     * loopback URI (http://127.0.0.1:<port>/..., native apps, RFC 8252), or a
+     * private-use scheme containing a dot (com.example.app:/callback). Empty =
+     * browser/redirect sign-in is off for this provider; LoginWithOidcIdToken
+     * does not use redirects and is unaffected.
+     *
+     * Generated from protobuf field <code>string redirect_uris_json = 28 [json_name = "redirectUrisJson", (.udb.core.common.v1.pg_column) = {</code>
+     */
+    protected $redirect_uris_json = '';
 
     /**
      * Constructor.
@@ -216,6 +228,14 @@ class IdentityProvider extends \Google\Protobuf\Internal\Message
      *     @type \Google\Protobuf\Timestamp $created_at
      *     @type \Google\Protobuf\Timestamp $updated_at
      *     @type \Google\Protobuf\Timestamp $deleted_at
+     *     @type string $redirect_uris_json
+     *           ── OIDC sign-in (0.6.6) ──────────────────────────────────────────────────
+     *           JSON array of the exact redirect URIs StartOidcLogin accepts for this
+     *           provider (OAuth 2.0 exact-match; no wildcards). Each is https, an http
+     *           loopback URI (http://127.0.0.1:<port>/..., native apps, RFC 8252), or a
+     *           private-use scheme containing a dot (com.example.app:/callback). Empty =
+     *           browser/redirect sign-in is off for this provider; LoginWithOidcIdToken
+     *           does not use redirects and is unaffected.
      * }
      */
     public function __construct($data = NULL) {
@@ -917,6 +937,44 @@ class IdentityProvider extends \Google\Protobuf\Internal\Message
     {
         GPBUtil::checkMessage($var, \Google\Protobuf\Timestamp::class);
         $this->deleted_at = $var;
+
+        return $this;
+    }
+
+    /**
+     * ── OIDC sign-in (0.6.6) ──────────────────────────────────────────────────
+     * JSON array of the exact redirect URIs StartOidcLogin accepts for this
+     * provider (OAuth 2.0 exact-match; no wildcards). Each is https, an http
+     * loopback URI (http://127.0.0.1:<port>/..., native apps, RFC 8252), or a
+     * private-use scheme containing a dot (com.example.app:/callback). Empty =
+     * browser/redirect sign-in is off for this provider; LoginWithOidcIdToken
+     * does not use redirects and is unaffected.
+     *
+     * Generated from protobuf field <code>string redirect_uris_json = 28 [json_name = "redirectUrisJson", (.udb.core.common.v1.pg_column) = {</code>
+     * @return string
+     */
+    public function getRedirectUrisJson()
+    {
+        return $this->redirect_uris_json;
+    }
+
+    /**
+     * ── OIDC sign-in (0.6.6) ──────────────────────────────────────────────────
+     * JSON array of the exact redirect URIs StartOidcLogin accepts for this
+     * provider (OAuth 2.0 exact-match; no wildcards). Each is https, an http
+     * loopback URI (http://127.0.0.1:<port>/..., native apps, RFC 8252), or a
+     * private-use scheme containing a dot (com.example.app:/callback). Empty =
+     * browser/redirect sign-in is off for this provider; LoginWithOidcIdToken
+     * does not use redirects and is unaffected.
+     *
+     * Generated from protobuf field <code>string redirect_uris_json = 28 [json_name = "redirectUrisJson", (.udb.core.common.v1.pg_column) = {</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setRedirectUrisJson($var)
+    {
+        GPBUtil::checkString($var, True);
+        $this->redirect_uris_json = $var;
 
         return $this;
     }

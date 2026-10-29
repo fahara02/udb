@@ -2140,7 +2140,7 @@ const file_udb_core_authn_services_v1_authn_service_proto_rawDesc = "" +
 	"\x06scopes\x18\x05 \x03(\tR\x06scopes\x12#\n" +
 	"\rmembership_id\x18\x06 \x01(\tR\fmembershipId\x12\x18\n" +
 	"\amessage\x18\a \x01(\tR\amessage\x122\n" +
-	"\x05error\x18\b \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x012ϴ\x02\n" +
+	"\x05error\x18\b \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x012̀\x03\n" +
 	"\fAuthnService\x12\xc5\x04\n" +
 	"\n" +
 	"CreateUser\x12-.udb.core.authn.services.v1.CreateUserRequest\x1a..udb.core.authn.services.v1.CreateUserResponse\"\xd7\x03\xca\xf3\x185\b\x02\x1a\x15udb:authn:create-user \x01J\x03\x01\x02\x04j\x10authn.CreateUser\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x180\b\x01\x12\vcreate_user\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x04authP\x01Z\n" +
@@ -2373,7 +2373,64 @@ const file_udb_core_authn_services_v1_authn_service_proto_rawDesc = "" +
 	"\x1dExchangeServiceTokenForTenant\x12@.udb.core.authn.services.v1.ExchangeServiceTokenForTenantRequest\x1aA.udb.core.authn.services.v1.ExchangeServiceTokenForTenantResponse\"\xfc\x04\xca\xf3\x18P\b\x02\x1a\x1fudb:authn:exchange-tenant-token \x01J\x01\x04j#authn.ExchangeServiceTokenForTenant\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18Y\b\x01\x12!exchange_service_token_for_tenant\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x04authP\x01Z\x1dexchangeServiceTokenForTenant\xe2\xf3\x18\xd7\x01\n" +
 	"\x04auth\x12\x0fudb/native/auth\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\"=udb.native.auth.exchange_service_token_for_tenant.boilerplate*!exchange_service_token_for_tenant2\budb_auth:\x05authnJ\vUDB_API_KEYZ\x10udb native smoke\xea\xf3\x18f\n" +
 	"#authn.ExchangeServiceTokenForTenant\x12\fauthn.events\x1a\x10target_tenant_id\"\bstandard*\rat_least_once2\x06stable\xf2\xf3\x18?\n" +
-	"\x05authn\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x02\x82\xd3\xe4\x93\x02.:\x01*\")/v1/auth/service-tokens:exchangeForTenant\x1a\xbf\x02\xca\xf0\x19U\n" +
+	"\x05authn\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x02\x82\xd3\xe4\x93\x02.:\x01*\")/v1/auth/service-tokens:exchangeForTenant\x12\xbc\x05\n" +
+	"\x13PutTenantAuthPolicy\x126.udb.core.authn.services.v1.PutTenantAuthPolicyRequest\x1a7.udb.core.authn.services.v1.PutTenantAuthPolicyResponse\"\xb3\x04\xca\xf3\x18D\b\x02\x1a\x1cudb:authn:manage-auth-policy \x01J\x02\x01\x02j\x19authn.PutTenantAuthPolicy\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18D\b\x01\x12\x16put_tenant_auth_policy\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x04authP\x01Z\x13putTenantAuthPolicy\xe2\xf3\x18\xc1\x01\n" +
+	"\x04auth\x12\x0fudb/native/auth\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\"2udb.native.auth.put_tenant_auth_policy.boilerplate*\x16put_tenant_auth_policy2\budb_auth:\x05authnJ\vUDB_API_KEYZ\x10udb native smoke\xea\xf3\x18U\n" +
+	"\x19authn.PutTenantAuthPolicy\x12\fauthn.events\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable\xf2\xf3\x18?\n" +
+	"\x05authn\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x02\x82\xd3\xe4\x93\x02-:\x01*\x1a(/v1/auth/tenants/{tenant_id}/auth-policy\x12\xde\x04\n" +
+	"\x13GetTenantAuthPolicy\x126.udb.core.authn.services.v1.GetTenantAuthPolicyRequest\x1a7.udb.core.authn.services.v1.GetTenantAuthPolicyResponse\"\xd5\x03\xca\xf3\x18B\b\x02\x1a\x1audb:authn:read-auth-policy \x01J\x02\x01\x02j\x19authn.GetTenantAuthPolicy\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18D\b\x01\x12\x16get_tenant_auth_policy\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x04authP\x01Z\x13getTenantAuthPolicy\xe2\xf3\x18\xc1\x01\n" +
+	"\x04auth\x12\x0fudb/native/auth\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\"2udb.native.auth.get_tenant_auth_policy.boilerplate*\x16get_tenant_auth_policy2\budb_auth:\x05authnJ\vUDB_API_KEYZ\x10udb native smoke\xf2\xf3\x18?\n" +
+	"\x05authn\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x01\x82\xd3\xe4\x93\x02*\x12(/v1/auth/tenants/{tenant_id}/auth-policy\x12\x9b\x05\n" +
+	"\fSendLoginOtp\x12/.udb.core.authn.services.v1.SendLoginOtpRequest\x1a0.udb.core.authn.services.v1.SendLoginOtpResponse\"\xa7\x04\xca\xf3\x18h\b\x01R\x1bauthn.login_otp.send.publicZ\x1aauthn.login_otp.send.abuseb\x14authn.login_otp_sentj\x12authn.SendLoginOtp\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x185\b\x01\x12\x0esend_login_otp\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x04authP\x01Z\fsendLoginOtp\xe2\xf3\x18\xb1\x01\n" +
+	"\x04auth\x12\x0fudb/native/auth\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\"*udb.native.auth.send_login_otp.boilerplate*\x0esend_login_otp2\budb_auth:\x05authnJ\vUDB_API_KEYZ\x10udb native smoke\xea\xf3\x18N\n" +
+	"\x12authn.SendLoginOtp\x12\fauthn.events\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable\xf2\xf3\x18?\n" +
+	"\x05authn\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x02\x82\xd3\xe4\x93\x02#:\x01*\"\x1e/v1/auth/sessions:sendLoginOtp\x12\x84\x05\n" +
+	"\fLoginWithOtp\x12/.udb.core.authn.services.v1.LoginWithOtpRequest\x1a0.udb.core.authn.services.v1.LoginWithOtpResponse\"\x90\x04\xca\xf3\x18Q\b\x01R\x16authn.login_otp.publicZ\x11authn.login.abuseb\vauthn.loginj\x12authn.LoginWithOtp\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x185\b\x01\x12\x0elogin_with_otp\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x04authP\x01Z\floginWithOtp\xe2\xf3\x18\xb1\x01\n" +
+	"\x04auth\x12\x0fudb/native/auth\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\"*udb.native.auth.login_with_otp.boilerplate*\x0elogin_with_otp2\budb_auth:\x05authnJ\vUDB_API_KEYZ\x10udb native smoke\xea\xf3\x18N\n" +
+	"\x12authn.LoginWithOtp\x12\fauthn.events\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable\xf2\xf3\x18?\n" +
+	"\x05authn\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x02\x82\xd3\xe4\x93\x02#:\x01*\"\x1e/v1/auth/sessions:loginWithOtp\x12\xd5\x04\n" +
+	"\x0eStartOidcLogin\x121.udb.core.authn.services.v1.StartOidcLoginRequest\x1a2.udb.core.authn.services.v1.StartOidcLoginResponse\"\xdb\x03\xca\xf3\x18e\b\x01R\x1dauthn.oidc_login_start.publicZ\x11authn.login.abuseb\x16authn.oidc_login_startj\x14authn.StartOidcLogin\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x189\b\x01\x12\x10start_oidc_login\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x04authP\x01Z\x0estartOidcLogin\xe2\xf3\x18\xb5\x01\n" +
+	"\x04auth\x12\x0fudb/native/auth\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\",udb.native.auth.start_oidc_login.boilerplate*\x10start_oidc_login2\budb_auth:\x05authnJ\vUDB_API_KEYZ\x10udb native smoke\xf2\xf3\x18D\n" +
+	"\x05authn\n" +
+	"\x03idp\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x02\x82\xd3\xe4\x93\x02\x1f:\x01*\"\x1a/v1/auth/oidc-logins:start\x12\xa8\x05\n" +
+	"\x0fFinishOidcLogin\x122.udb.core.authn.services.v1.FinishOidcLoginRequest\x1a3.udb.core.authn.services.v1.FinishOidcLoginResponse\"\xab\x04\xca\xf3\x18U\b\x01R\x17authn.oidc_login.publicZ\x11authn.login.abuseb\vauthn.loginj\x15authn.FinishOidcLogin\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18;\b\x01\x12\x11finish_oidc_login\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x04authP\x01Z\x0ffinishOidcLogin\xe2\xf3\x18\xb7\x01\n" +
+	"\x04auth\x12\x0fudb/native/auth\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\"-udb.native.auth.finish_oidc_login.boilerplate*\x11finish_oidc_login2\budb_auth:\x05authnJ\vUDB_API_KEYZ\x10udb native smoke\xea\xf3\x18Q\n" +
+	"\x15authn.FinishOidcLogin\x12\fauthn.events\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable\xf2\xf3\x18D\n" +
+	"\x05authn\n" +
+	"\x03idp\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x02\x82\xd3\xe4\x93\x02&:\x01*\"!/v1/auth/sessions:finishOidcLogin\x12\xe9\x05\n" +
+	"\x14LoginWithOidcIdToken\x127.udb.core.authn.services.v1.LoginWithOidcIdTokenRequest\x1a8.udb.core.authn.services.v1.LoginWithOidcIdTokenResponse\"\xdd\x04\xca\xf3\x18c\b\x01R authn.oidc_id_token_login.publicZ\x11authn.login.abuseb\vauthn.loginj\x1aauthn.LoginWithOidcIdToken\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18G\b\x01\x12\x18login_with_oidc_id_token\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x04authP\x01Z\x14loginWithOidcIdToken\xe2\xf3\x18\xc5\x01\n" +
+	"\x04auth\x12\x0fudb/native/auth\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\"4udb.native.auth.login_with_oidc_id_token.boilerplate*\x18login_with_oidc_id_token2\budb_auth:\x05authnJ\vUDB_API_KEYZ\x10udb native smoke\xea\xf3\x18V\n" +
+	"\x1aauthn.LoginWithOidcIdToken\x12\fauthn.events\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable\xf2\xf3\x18D\n" +
+	"\x05authn\n" +
+	"\x03idp\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x02\x82\xd3\xe4\x93\x02+:\x01*\"&/v1/auth/sessions:loginWithOidcIdToken\x12\x92\x05\n" +
+	"\x10CreateInvitation\x123.udb.core.authn.services.v1.CreateInvitationRequest\x1a4.udb.core.authn.services.v1.CreateInvitationResponse\"\x92\x04\xca\xf3\x18L\b\x02\x1a\x1cudb:authn:manage-invitations \x01J\x02\x01\x02j\x16authn.CreateInvitationz\ttenant_id\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18<\b\x01\x12\x11create_invitation\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x04authP\x01Z\x10createInvitation\xe2\xf3\x18\xb7\x01\n" +
+	"\x04auth\x12\x0fudb/native/auth\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\"-udb.native.auth.create_invitation.boilerplate*\x11create_invitation2\budb_auth:\x05authnJ\vUDB_API_KEYZ\x10udb native smoke\xea\xf3\x18R\n" +
+	"\x16authn.CreateInvitation\x12\fauthn.events\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable\xf2\xf3\x18?\n" +
+	"\x05authn\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x02\x82\xd3\xe4\x93\x02\x19:\x01*\"\x14/v1/auth/invitations\x12\xb1\x04\n" +
+	"\x0fListInvitations\x122.udb.core.authn.services.v1.ListInvitationsRequest\x1a3.udb.core.authn.services.v1.ListInvitationsResponse\"\xb4\x03\xca\xf3\x18K\b\x02\x1a\x1cudb:authn:manage-invitations \x01J\x02\x01\x02j\x15authn.ListInvitationsz\ttenant_id\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18:\b\x01\x12\x10list_invitations\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x04authP\x01Z\x0flistInvitations\xe2\xf3\x18\xb5\x01\n" +
+	"\x04auth\x12\x0fudb/native/auth\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\",udb.native.auth.list_invitations.boilerplate*\x10list_invitations2\budb_auth:\x05authnJ\vUDB_API_KEYZ\x10udb native smoke\xf2\xf3\x18?\n" +
+	"\x05authn\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x01\x82\xd3\xe4\x93\x02\x16\x12\x14/v1/auth/invitations\x12\x9e\x05\n" +
+	"\x10RevokeInvitation\x123.udb.core.authn.services.v1.RevokeInvitationRequest\x1a4.udb.core.authn.services.v1.RevokeInvitationResponse\"\x9e\x04\xca\xf3\x18A\b\x02\x1a\x1cudb:authn:manage-invitations \x01J\x02\x01\x02j\x16authn.RevokeInvitation\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18<\b\x01\x12\x11revoke_invitation\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x04authP\x01Z\x10revokeInvitation\xe2\xf3\x18\xb7\x01\n" +
+	"\x04auth\x12\x0fudb/native/auth\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\"-udb.native.auth.revoke_invitation.boilerplate*\x11revoke_invitation2\budb_auth:\x05authnJ\vUDB_API_KEYZ\x10udb native smoke\xea\xf3\x18R\n" +
+	"\x16authn.RevokeInvitation\x12\fauthn.events\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable\xf2\xf3\x18?\n" +
+	"\x05authn\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x03\x82\xd3\xe4\x93\x020:\x01*\"+/v1/auth/invitations/{invitation_id}:revoke\x12\x9e\x05\n" +
+	"\x10ResendInvitation\x123.udb.core.authn.services.v1.ResendInvitationRequest\x1a4.udb.core.authn.services.v1.ResendInvitationResponse\"\x9e\x04\xca\xf3\x18A\b\x02\x1a\x1cudb:authn:manage-invitations \x01J\x02\x01\x02j\x16authn.ResendInvitation\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18<\b\x01\x12\x11resend_invitation\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x04authP\x01Z\x10resendInvitation\xe2\xf3\x18\xb7\x01\n" +
+	"\x04auth\x12\x0fudb/native/auth\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\"-udb.native.auth.resend_invitation.boilerplate*\x11resend_invitation2\budb_auth:\x05authnJ\vUDB_API_KEYZ\x10udb native smoke\xea\xf3\x18R\n" +
+	"\x16authn.ResendInvitation\x12\fauthn.events\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable\xf2\xf3\x18?\n" +
+	"\x05authn\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x02\x82\xd3\xe4\x93\x020:\x01*\"+/v1/auth/invitations/{invitation_id}:resend\x12\xd7\x04\n" +
+	"\rGetInvitation\x120.udb.core.authn.services.v1.GetInvitationRequest\x1a1.udb.core.authn.services.v1.GetInvitationResponse\"\xe0\x03\xca\xf3\x18d\b\x01R\x17authn.invitation.publicZ\x16authn.invitation.abuseb\x17authn.invitation_viewedj\x13authn.GetInvitation\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x186\b\x01\x12\x0eget_invitation\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x04authP\x01Z\rgetInvitation\xe2\xf3\x18\xb1\x01\n" +
+	"\x04auth\x12\x0fudb/native/auth\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\"*udb.native.auth.get_invitation.boilerplate*\x0eget_invitation2\budb_auth:\x05authnJ\vUDB_API_KEYZ\x10udb native smoke\xf2\xf3\x18?\n" +
+	"\x05authn\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x01\x82\xd3\xe4\x93\x021:\x01*\",/v1/auth/invitations/{invitation_id}:preview\x12\xb4\x06\n" +
+	"\x19StartInvitationAcceptance\x12<.udb.core.authn.services.v1.StartInvitationAcceptanceRequest\x1a=.udb.core.authn.services.v1.StartInvitationAcceptanceResponse\"\x99\x05\xca\xf3\x18\x82\x01\b\x01R\x1dauthn.invitation.start.publicZ\x16authn.invitation.abuseb#authn.invitation_acceptance_startedj\x1fauthn.StartInvitationAcceptance\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18O\b\x01\x12\x1bstart_invitation_acceptance\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x04authP\x01Z\x19startInvitationAcceptance\xe2\xf3\x18\xcb\x01\n" +
+	"\x04auth\x12\x0fudb/native/auth\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\"7udb.native.auth.start_invitation_acceptance.boilerplate*\x1bstart_invitation_acceptance2\budb_auth:\x05authnJ\vUDB_API_KEYZ\x10udb native smoke\xea\xf3\x18[\n" +
+	"\x1fauthn.StartInvitationAcceptance\x12\fauthn.events\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable\xf2\xf3\x18?\n" +
+	"\x05authn\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x02\x82\xd3\xe4\x93\x029:\x01*\"4/v1/auth/invitations/{invitation_id}:startAcceptance\x12\xcd\x05\n" +
+	"\x10AcceptInvitation\x123.udb.core.authn.services.v1.AcceptInvitationRequest\x1a4.udb.core.authn.services.v1.AcceptInvitationResponse\"\xcd\x04\xca\xf3\x18p\b\x01R\x1eauthn.invitation.accept.publicZ\x16authn.invitation.abuseb\x19authn.invitation_acceptedj\x16authn.AcceptInvitation\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18<\b\x01\x12\x11accept_invitation\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x04authP\x01Z\x10acceptInvitation\xe2\xf3\x18\xb7\x01\n" +
+	"\x04auth\x12\x0fudb/native/auth\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\"-udb.native.auth.accept_invitation.boilerplate*\x11accept_invitation2\budb_auth:\x05authnJ\vUDB_API_KEYZ\x10udb native smoke\xea\xf3\x18R\n" +
+	"\x16authn.AcceptInvitation\x12\fauthn.events\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable\xf2\xf3\x18?\n" +
+	"\x05authn\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x02\x82\xd3\xe4\x93\x020:\x01*\"+/v1/auth/invitations/{invitation_id}:accept\x12\xda\x02\n" +
+	"\vCheckStepUp\x12..udb.core.authn.services.v1.CheckStepUpRequest\x1a/.udb.core.authn.services.v1.CheckStepUpResponse\"\xe9\x01\xca\xf3\x188\b\x02\x1a\x17udb:authn:check-step-up \x01J\x03\x01\x02\x04j\x11authn.CheckStepUp\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x183\b\x01\x12\rcheck_step_up\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x04authP\x01Z\vcheckStepUp\xf2\xf3\x18?\n" +
+	"\x05authn\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x01\x82\xd3\xe4\x93\x02\x1f:\x01*\"\x1a/v1/auth/mfa/step-up:check\x1a\xbf\x02\xca\xf0\x19U\n" +
 	"\x05authn\x12\x05authn\x1a\x05authn\"\x0eAuthentication*\x04auth0\x018\x01h\x01z\x04auth\x82\x01\x04auth\x8a\x01\x05authn\x92\x01\fnative.authn\xd2\xf0\x19\x17\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x04authP\x01\xda\xf0\x19\x83\x01\n" +
 	"\x04auth\x12\x0fudb/native/auth\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\"\x17udb.native.authn.config:\x05authnJ\vUDB_API_KEYZ\x0fudb native lint\xe2\xf0\x19?\n" +
 	"\x05authn\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGETB\x8a\x02\n" +
@@ -2476,56 +2533,86 @@ var file_udb_core_authn_services_v1_authn_service_proto_goTypes = []any{
 	(*AdminResetMfaRequest)(nil),                         // 80: udb.core.authn.services.v1.AdminResetMfaRequest
 	(*ListWebAuthnCredentialsRequest)(nil),               // 81: udb.core.authn.services.v1.ListWebAuthnCredentialsRequest
 	(*DeleteWebAuthnCredentialRequest)(nil),              // 82: udb.core.authn.services.v1.DeleteWebAuthnCredentialRequest
-	(*CreateUserResponse)(nil),                           // 83: udb.core.authn.services.v1.CreateUserResponse
-	(*GetUserResponse)(nil),                              // 84: udb.core.authn.services.v1.GetUserResponse
-	(*ListUsersResponse)(nil),                            // 85: udb.core.authn.services.v1.ListUsersResponse
-	(*UpdateUserResponse)(nil),                           // 86: udb.core.authn.services.v1.UpdateUserResponse
-	(*ChangeUserStatusResponse)(nil),                     // 87: udb.core.authn.services.v1.ChangeUserStatusResponse
-	(*AdminResetPasswordResponse)(nil),                   // 88: udb.core.authn.services.v1.AdminResetPasswordResponse
-	(*SendOTPResponse)(nil),                              // 89: udb.core.authn.services.v1.SendOTPResponse
-	(*VerifyOTPResponse)(nil),                            // 90: udb.core.authn.services.v1.VerifyOTPResponse
-	(*ResendOTPResponse)(nil),                            // 91: udb.core.authn.services.v1.ResendOTPResponse
-	(*AuthnResponse)(nil),                                // 92: udb.core.authn.services.v1.AuthnResponse
-	(*LoginResponse)(nil),                                // 93: udb.core.authn.services.v1.LoginResponse
-	(*RefreshTokenResponse)(nil),                         // 94: udb.core.authn.services.v1.RefreshTokenResponse
-	(*LogoutResponse)(nil),                               // 95: udb.core.authn.services.v1.LogoutResponse
-	(*ChangePasswordResponse)(nil),                       // 96: udb.core.authn.services.v1.ChangePasswordResponse
-	(*ValidateTokenResponse)(nil),                        // 97: udb.core.authn.services.v1.ValidateTokenResponse
-	(*CreateSessionResponse)(nil),                        // 98: udb.core.authn.services.v1.CreateSessionResponse
-	(*RefreshSessionResponse)(nil),                       // 99: udb.core.authn.services.v1.RefreshSessionResponse
-	(*GetSessionResponse)(nil),                           // 100: udb.core.authn.services.v1.GetSessionResponse
-	(*ListSessionsResponse)(nil),                         // 101: udb.core.authn.services.v1.ListSessionsResponse
-	(*RevokeSessionResponse)(nil),                        // 102: udb.core.authn.services.v1.RevokeSessionResponse
-	(*ValidateCSRFResponse)(nil),                         // 103: udb.core.authn.services.v1.ValidateCSRFResponse
-	(*EnrollMFAResponse)(nil),                            // 104: udb.core.authn.services.v1.EnrollMFAResponse
-	(*ConfirmMFAEnrollmentResponse)(nil),                 // 105: udb.core.authn.services.v1.ConfirmMFAEnrollmentResponse
-	(*GenerateRecoveryCodesResponse)(nil),                // 106: udb.core.authn.services.v1.GenerateRecoveryCodesResponse
-	(*PutMfaPolicyResponse)(nil),                         // 107: udb.core.authn.services.v1.PutMfaPolicyResponse
-	(*GetMfaPolicyResponse)(nil),                         // 108: udb.core.authn.services.v1.GetMfaPolicyResponse
-	(*ForgotPasswordResponse)(nil),                       // 109: udb.core.authn.services.v1.ForgotPasswordResponse
-	(*ResetPasswordResponse)(nil),                        // 110: udb.core.authn.services.v1.ResetPasswordResponse
-	(*IntrospectTokenResponse)(nil),                      // 111: udb.core.authn.services.v1.IntrospectTokenResponse
-	(*SendPhoneVerificationResponse)(nil),                // 112: udb.core.authn.services.v1.SendPhoneVerificationResponse
-	(*GetJwksResponse)(nil),                              // 113: udb.core.authn.services.v1.GetJwksResponse
-	(*StartWebAuthnRegistrationResponse)(nil),            // 114: udb.core.authn.services.v1.StartWebAuthnRegistrationResponse
-	(*FinishWebAuthnRegistrationResponse)(nil),           // 115: udb.core.authn.services.v1.FinishWebAuthnRegistrationResponse
-	(*StartWebAuthnAuthenticationResponse)(nil),          // 116: udb.core.authn.services.v1.StartWebAuthnAuthenticationResponse
-	(*FinishWebAuthnAuthenticationResponse)(nil),         // 117: udb.core.authn.services.v1.FinishWebAuthnAuthenticationResponse
-	(*ListDevicesResponse)(nil),                          // 118: udb.core.authn.services.v1.ListDevicesResponse
-	(*RevokeDeviceResponse)(nil),                         // 119: udb.core.authn.services.v1.RevokeDeviceResponse
-	(*AdminRevokeSessionResponse)(nil),                   // 120: udb.core.authn.services.v1.AdminRevokeSessionResponse
-	(*AdminRevokeAllUserSessionsResponse)(nil),           // 121: udb.core.authn.services.v1.AdminRevokeAllUserSessionsResponse
-	(*AdminRevokeAllTenantSessionsResponse)(nil),         // 122: udb.core.authn.services.v1.AdminRevokeAllTenantSessionsResponse
-	(*EmergencyRevokeResponse)(nil),                      // 123: udb.core.authn.services.v1.EmergencyRevokeResponse
-	(*IssueMfaChallengeResponse)(nil),                    // 124: udb.core.authn.services.v1.IssueMfaChallengeResponse
-	(*VerifyMfaChallengeResponse)(nil),                   // 125: udb.core.authn.services.v1.VerifyMfaChallengeResponse
-	(*ListMfaFactorsResponse)(nil),                       // 126: udb.core.authn.services.v1.ListMfaFactorsResponse
-	(*DisableMfaFactorResponse)(nil),                     // 127: udb.core.authn.services.v1.DisableMfaFactorResponse
-	(*RenamePasskeyResponse)(nil),                        // 128: udb.core.authn.services.v1.RenamePasskeyResponse
-	(*RevokeRecoveryCodesResponse)(nil),                  // 129: udb.core.authn.services.v1.RevokeRecoveryCodesResponse
-	(*AdminResetMfaResponse)(nil),                        // 130: udb.core.authn.services.v1.AdminResetMfaResponse
-	(*ListWebAuthnCredentialsResponse)(nil),              // 131: udb.core.authn.services.v1.ListWebAuthnCredentialsResponse
-	(*DeleteWebAuthnCredentialResponse)(nil),             // 132: udb.core.authn.services.v1.DeleteWebAuthnCredentialResponse
+	(*PutTenantAuthPolicyRequest)(nil),                   // 83: udb.core.authn.services.v1.PutTenantAuthPolicyRequest
+	(*GetTenantAuthPolicyRequest)(nil),                   // 84: udb.core.authn.services.v1.GetTenantAuthPolicyRequest
+	(*SendLoginOtpRequest)(nil),                          // 85: udb.core.authn.services.v1.SendLoginOtpRequest
+	(*LoginWithOtpRequest)(nil),                          // 86: udb.core.authn.services.v1.LoginWithOtpRequest
+	(*StartOidcLoginRequest)(nil),                        // 87: udb.core.authn.services.v1.StartOidcLoginRequest
+	(*FinishOidcLoginRequest)(nil),                       // 88: udb.core.authn.services.v1.FinishOidcLoginRequest
+	(*LoginWithOidcIdTokenRequest)(nil),                  // 89: udb.core.authn.services.v1.LoginWithOidcIdTokenRequest
+	(*CreateInvitationRequest)(nil),                      // 90: udb.core.authn.services.v1.CreateInvitationRequest
+	(*ListInvitationsRequest)(nil),                       // 91: udb.core.authn.services.v1.ListInvitationsRequest
+	(*RevokeInvitationRequest)(nil),                      // 92: udb.core.authn.services.v1.RevokeInvitationRequest
+	(*ResendInvitationRequest)(nil),                      // 93: udb.core.authn.services.v1.ResendInvitationRequest
+	(*GetInvitationRequest)(nil),                         // 94: udb.core.authn.services.v1.GetInvitationRequest
+	(*StartInvitationAcceptanceRequest)(nil),             // 95: udb.core.authn.services.v1.StartInvitationAcceptanceRequest
+	(*AcceptInvitationRequest)(nil),                      // 96: udb.core.authn.services.v1.AcceptInvitationRequest
+	(*CheckStepUpRequest)(nil),                           // 97: udb.core.authn.services.v1.CheckStepUpRequest
+	(*CreateUserResponse)(nil),                           // 98: udb.core.authn.services.v1.CreateUserResponse
+	(*GetUserResponse)(nil),                              // 99: udb.core.authn.services.v1.GetUserResponse
+	(*ListUsersResponse)(nil),                            // 100: udb.core.authn.services.v1.ListUsersResponse
+	(*UpdateUserResponse)(nil),                           // 101: udb.core.authn.services.v1.UpdateUserResponse
+	(*ChangeUserStatusResponse)(nil),                     // 102: udb.core.authn.services.v1.ChangeUserStatusResponse
+	(*AdminResetPasswordResponse)(nil),                   // 103: udb.core.authn.services.v1.AdminResetPasswordResponse
+	(*SendOTPResponse)(nil),                              // 104: udb.core.authn.services.v1.SendOTPResponse
+	(*VerifyOTPResponse)(nil),                            // 105: udb.core.authn.services.v1.VerifyOTPResponse
+	(*ResendOTPResponse)(nil),                            // 106: udb.core.authn.services.v1.ResendOTPResponse
+	(*AuthnResponse)(nil),                                // 107: udb.core.authn.services.v1.AuthnResponse
+	(*LoginResponse)(nil),                                // 108: udb.core.authn.services.v1.LoginResponse
+	(*RefreshTokenResponse)(nil),                         // 109: udb.core.authn.services.v1.RefreshTokenResponse
+	(*LogoutResponse)(nil),                               // 110: udb.core.authn.services.v1.LogoutResponse
+	(*ChangePasswordResponse)(nil),                       // 111: udb.core.authn.services.v1.ChangePasswordResponse
+	(*ValidateTokenResponse)(nil),                        // 112: udb.core.authn.services.v1.ValidateTokenResponse
+	(*CreateSessionResponse)(nil),                        // 113: udb.core.authn.services.v1.CreateSessionResponse
+	(*RefreshSessionResponse)(nil),                       // 114: udb.core.authn.services.v1.RefreshSessionResponse
+	(*GetSessionResponse)(nil),                           // 115: udb.core.authn.services.v1.GetSessionResponse
+	(*ListSessionsResponse)(nil),                         // 116: udb.core.authn.services.v1.ListSessionsResponse
+	(*RevokeSessionResponse)(nil),                        // 117: udb.core.authn.services.v1.RevokeSessionResponse
+	(*ValidateCSRFResponse)(nil),                         // 118: udb.core.authn.services.v1.ValidateCSRFResponse
+	(*EnrollMFAResponse)(nil),                            // 119: udb.core.authn.services.v1.EnrollMFAResponse
+	(*ConfirmMFAEnrollmentResponse)(nil),                 // 120: udb.core.authn.services.v1.ConfirmMFAEnrollmentResponse
+	(*GenerateRecoveryCodesResponse)(nil),                // 121: udb.core.authn.services.v1.GenerateRecoveryCodesResponse
+	(*PutMfaPolicyResponse)(nil),                         // 122: udb.core.authn.services.v1.PutMfaPolicyResponse
+	(*GetMfaPolicyResponse)(nil),                         // 123: udb.core.authn.services.v1.GetMfaPolicyResponse
+	(*ForgotPasswordResponse)(nil),                       // 124: udb.core.authn.services.v1.ForgotPasswordResponse
+	(*ResetPasswordResponse)(nil),                        // 125: udb.core.authn.services.v1.ResetPasswordResponse
+	(*IntrospectTokenResponse)(nil),                      // 126: udb.core.authn.services.v1.IntrospectTokenResponse
+	(*SendPhoneVerificationResponse)(nil),                // 127: udb.core.authn.services.v1.SendPhoneVerificationResponse
+	(*GetJwksResponse)(nil),                              // 128: udb.core.authn.services.v1.GetJwksResponse
+	(*StartWebAuthnRegistrationResponse)(nil),            // 129: udb.core.authn.services.v1.StartWebAuthnRegistrationResponse
+	(*FinishWebAuthnRegistrationResponse)(nil),           // 130: udb.core.authn.services.v1.FinishWebAuthnRegistrationResponse
+	(*StartWebAuthnAuthenticationResponse)(nil),          // 131: udb.core.authn.services.v1.StartWebAuthnAuthenticationResponse
+	(*FinishWebAuthnAuthenticationResponse)(nil),         // 132: udb.core.authn.services.v1.FinishWebAuthnAuthenticationResponse
+	(*ListDevicesResponse)(nil),                          // 133: udb.core.authn.services.v1.ListDevicesResponse
+	(*RevokeDeviceResponse)(nil),                         // 134: udb.core.authn.services.v1.RevokeDeviceResponse
+	(*AdminRevokeSessionResponse)(nil),                   // 135: udb.core.authn.services.v1.AdminRevokeSessionResponse
+	(*AdminRevokeAllUserSessionsResponse)(nil),           // 136: udb.core.authn.services.v1.AdminRevokeAllUserSessionsResponse
+	(*AdminRevokeAllTenantSessionsResponse)(nil),         // 137: udb.core.authn.services.v1.AdminRevokeAllTenantSessionsResponse
+	(*EmergencyRevokeResponse)(nil),                      // 138: udb.core.authn.services.v1.EmergencyRevokeResponse
+	(*IssueMfaChallengeResponse)(nil),                    // 139: udb.core.authn.services.v1.IssueMfaChallengeResponse
+	(*VerifyMfaChallengeResponse)(nil),                   // 140: udb.core.authn.services.v1.VerifyMfaChallengeResponse
+	(*ListMfaFactorsResponse)(nil),                       // 141: udb.core.authn.services.v1.ListMfaFactorsResponse
+	(*DisableMfaFactorResponse)(nil),                     // 142: udb.core.authn.services.v1.DisableMfaFactorResponse
+	(*RenamePasskeyResponse)(nil),                        // 143: udb.core.authn.services.v1.RenamePasskeyResponse
+	(*RevokeRecoveryCodesResponse)(nil),                  // 144: udb.core.authn.services.v1.RevokeRecoveryCodesResponse
+	(*AdminResetMfaResponse)(nil),                        // 145: udb.core.authn.services.v1.AdminResetMfaResponse
+	(*ListWebAuthnCredentialsResponse)(nil),              // 146: udb.core.authn.services.v1.ListWebAuthnCredentialsResponse
+	(*DeleteWebAuthnCredentialResponse)(nil),             // 147: udb.core.authn.services.v1.DeleteWebAuthnCredentialResponse
+	(*PutTenantAuthPolicyResponse)(nil),                  // 148: udb.core.authn.services.v1.PutTenantAuthPolicyResponse
+	(*GetTenantAuthPolicyResponse)(nil),                  // 149: udb.core.authn.services.v1.GetTenantAuthPolicyResponse
+	(*SendLoginOtpResponse)(nil),                         // 150: udb.core.authn.services.v1.SendLoginOtpResponse
+	(*LoginWithOtpResponse)(nil),                         // 151: udb.core.authn.services.v1.LoginWithOtpResponse
+	(*StartOidcLoginResponse)(nil),                       // 152: udb.core.authn.services.v1.StartOidcLoginResponse
+	(*FinishOidcLoginResponse)(nil),                      // 153: udb.core.authn.services.v1.FinishOidcLoginResponse
+	(*LoginWithOidcIdTokenResponse)(nil),                 // 154: udb.core.authn.services.v1.LoginWithOidcIdTokenResponse
+	(*CreateInvitationResponse)(nil),                     // 155: udb.core.authn.services.v1.CreateInvitationResponse
+	(*ListInvitationsResponse)(nil),                      // 156: udb.core.authn.services.v1.ListInvitationsResponse
+	(*RevokeInvitationResponse)(nil),                     // 157: udb.core.authn.services.v1.RevokeInvitationResponse
+	(*ResendInvitationResponse)(nil),                     // 158: udb.core.authn.services.v1.ResendInvitationResponse
+	(*GetInvitationResponse)(nil),                        // 159: udb.core.authn.services.v1.GetInvitationResponse
+	(*StartInvitationAcceptanceResponse)(nil),            // 160: udb.core.authn.services.v1.StartInvitationAcceptanceResponse
+	(*AcceptInvitationResponse)(nil),                     // 161: udb.core.authn.services.v1.AcceptInvitationResponse
+	(*CheckStepUpResponse)(nil),                          // 162: udb.core.authn.services.v1.CheckStepUpResponse
 }
 var file_udb_core_authn_services_v1_authn_service_proto_depIdxs = []int32{
 	28,  // 0: udb.core.authn.services.v1.CreateServiceAccountGrantResponse.grant:type_name -> udb.core.authn.entity.v1.ServiceAccountGrant
@@ -2619,72 +2706,102 @@ var file_udb_core_authn_services_v1_authn_service_proto_depIdxs = []int32{
 	22,  // 88: udb.core.authn.services.v1.AuthnService.ListServiceAccountTenantMemberships:input_type -> udb.core.authn.services.v1.ListServiceAccountTenantMembershipsRequest
 	24,  // 89: udb.core.authn.services.v1.AuthnService.RevokeServiceAccountTenantMembership:input_type -> udb.core.authn.services.v1.RevokeServiceAccountTenantMembershipRequest
 	26,  // 90: udb.core.authn.services.v1.AuthnService.ExchangeServiceTokenForTenant:input_type -> udb.core.authn.services.v1.ExchangeServiceTokenForTenantRequest
-	83,  // 91: udb.core.authn.services.v1.AuthnService.CreateUser:output_type -> udb.core.authn.services.v1.CreateUserResponse
-	84,  // 92: udb.core.authn.services.v1.AuthnService.GetUser:output_type -> udb.core.authn.services.v1.GetUserResponse
-	85,  // 93: udb.core.authn.services.v1.AuthnService.ListUsers:output_type -> udb.core.authn.services.v1.ListUsersResponse
-	86,  // 94: udb.core.authn.services.v1.AuthnService.UpdateUser:output_type -> udb.core.authn.services.v1.UpdateUserResponse
-	87,  // 95: udb.core.authn.services.v1.AuthnService.ChangeUserStatus:output_type -> udb.core.authn.services.v1.ChangeUserStatusResponse
-	88,  // 96: udb.core.authn.services.v1.AuthnService.AdminResetPassword:output_type -> udb.core.authn.services.v1.AdminResetPasswordResponse
-	89,  // 97: udb.core.authn.services.v1.AuthnService.SendOTP:output_type -> udb.core.authn.services.v1.SendOTPResponse
-	90,  // 98: udb.core.authn.services.v1.AuthnService.VerifyOTP:output_type -> udb.core.authn.services.v1.VerifyOTPResponse
-	91,  // 99: udb.core.authn.services.v1.AuthnService.ResendOTP:output_type -> udb.core.authn.services.v1.ResendOTPResponse
-	92,  // 100: udb.core.authn.services.v1.AuthnService.Authenticate:output_type -> udb.core.authn.services.v1.AuthnResponse
-	93,  // 101: udb.core.authn.services.v1.AuthnService.Login:output_type -> udb.core.authn.services.v1.LoginResponse
-	94,  // 102: udb.core.authn.services.v1.AuthnService.RefreshToken:output_type -> udb.core.authn.services.v1.RefreshTokenResponse
-	95,  // 103: udb.core.authn.services.v1.AuthnService.Logout:output_type -> udb.core.authn.services.v1.LogoutResponse
-	96,  // 104: udb.core.authn.services.v1.AuthnService.ChangePassword:output_type -> udb.core.authn.services.v1.ChangePasswordResponse
-	97,  // 105: udb.core.authn.services.v1.AuthnService.ValidateToken:output_type -> udb.core.authn.services.v1.ValidateTokenResponse
-	98,  // 106: udb.core.authn.services.v1.AuthnService.CreateSession:output_type -> udb.core.authn.services.v1.CreateSessionResponse
-	99,  // 107: udb.core.authn.services.v1.AuthnService.RefreshSession:output_type -> udb.core.authn.services.v1.RefreshSessionResponse
-	100, // 108: udb.core.authn.services.v1.AuthnService.GetSession:output_type -> udb.core.authn.services.v1.GetSessionResponse
-	101, // 109: udb.core.authn.services.v1.AuthnService.ListSessions:output_type -> udb.core.authn.services.v1.ListSessionsResponse
-	102, // 110: udb.core.authn.services.v1.AuthnService.RevokeSession:output_type -> udb.core.authn.services.v1.RevokeSessionResponse
-	103, // 111: udb.core.authn.services.v1.AuthnService.ValidateCSRF:output_type -> udb.core.authn.services.v1.ValidateCSRFResponse
-	104, // 112: udb.core.authn.services.v1.AuthnService.EnrollMFA:output_type -> udb.core.authn.services.v1.EnrollMFAResponse
-	105, // 113: udb.core.authn.services.v1.AuthnService.ConfirmMFAEnrollment:output_type -> udb.core.authn.services.v1.ConfirmMFAEnrollmentResponse
-	106, // 114: udb.core.authn.services.v1.AuthnService.GenerateRecoveryCodes:output_type -> udb.core.authn.services.v1.GenerateRecoveryCodesResponse
-	107, // 115: udb.core.authn.services.v1.AuthnService.PutMfaPolicy:output_type -> udb.core.authn.services.v1.PutMfaPolicyResponse
-	108, // 116: udb.core.authn.services.v1.AuthnService.GetMfaPolicy:output_type -> udb.core.authn.services.v1.GetMfaPolicyResponse
-	109, // 117: udb.core.authn.services.v1.AuthnService.ForgotPassword:output_type -> udb.core.authn.services.v1.ForgotPasswordResponse
-	110, // 118: udb.core.authn.services.v1.AuthnService.ResetPassword:output_type -> udb.core.authn.services.v1.ResetPasswordResponse
-	111, // 119: udb.core.authn.services.v1.AuthnService.IntrospectToken:output_type -> udb.core.authn.services.v1.IntrospectTokenResponse
-	112, // 120: udb.core.authn.services.v1.AuthnService.SendPhoneVerification:output_type -> udb.core.authn.services.v1.SendPhoneVerificationResponse
-	113, // 121: udb.core.authn.services.v1.AuthnService.GetJwks:output_type -> udb.core.authn.services.v1.GetJwksResponse
-	114, // 122: udb.core.authn.services.v1.AuthnService.StartWebAuthnRegistration:output_type -> udb.core.authn.services.v1.StartWebAuthnRegistrationResponse
-	115, // 123: udb.core.authn.services.v1.AuthnService.FinishWebAuthnRegistration:output_type -> udb.core.authn.services.v1.FinishWebAuthnRegistrationResponse
-	116, // 124: udb.core.authn.services.v1.AuthnService.StartWebAuthnAuthentication:output_type -> udb.core.authn.services.v1.StartWebAuthnAuthenticationResponse
-	117, // 125: udb.core.authn.services.v1.AuthnService.FinishWebAuthnAuthentication:output_type -> udb.core.authn.services.v1.FinishWebAuthnAuthenticationResponse
-	118, // 126: udb.core.authn.services.v1.AuthnService.ListDevices:output_type -> udb.core.authn.services.v1.ListDevicesResponse
-	119, // 127: udb.core.authn.services.v1.AuthnService.RevokeDevice:output_type -> udb.core.authn.services.v1.RevokeDeviceResponse
-	120, // 128: udb.core.authn.services.v1.AuthnService.AdminRevokeSession:output_type -> udb.core.authn.services.v1.AdminRevokeSessionResponse
-	121, // 129: udb.core.authn.services.v1.AuthnService.AdminRevokeAllUserSessions:output_type -> udb.core.authn.services.v1.AdminRevokeAllUserSessionsResponse
-	122, // 130: udb.core.authn.services.v1.AuthnService.AdminRevokeAllTenantSessions:output_type -> udb.core.authn.services.v1.AdminRevokeAllTenantSessionsResponse
-	123, // 131: udb.core.authn.services.v1.AuthnService.EmergencyRevoke:output_type -> udb.core.authn.services.v1.EmergencyRevokeResponse
-	124, // 132: udb.core.authn.services.v1.AuthnService.IssueMfaChallenge:output_type -> udb.core.authn.services.v1.IssueMfaChallengeResponse
-	125, // 133: udb.core.authn.services.v1.AuthnService.VerifyMfaChallenge:output_type -> udb.core.authn.services.v1.VerifyMfaChallengeResponse
-	126, // 134: udb.core.authn.services.v1.AuthnService.ListMfaFactors:output_type -> udb.core.authn.services.v1.ListMfaFactorsResponse
-	127, // 135: udb.core.authn.services.v1.AuthnService.DisableMfaFactor:output_type -> udb.core.authn.services.v1.DisableMfaFactorResponse
-	128, // 136: udb.core.authn.services.v1.AuthnService.RenamePasskey:output_type -> udb.core.authn.services.v1.RenamePasskeyResponse
-	129, // 137: udb.core.authn.services.v1.AuthnService.RevokeRecoveryCodes:output_type -> udb.core.authn.services.v1.RevokeRecoveryCodesResponse
-	130, // 138: udb.core.authn.services.v1.AuthnService.AdminResetMfa:output_type -> udb.core.authn.services.v1.AdminResetMfaResponse
-	131, // 139: udb.core.authn.services.v1.AuthnService.ListWebAuthnCredentials:output_type -> udb.core.authn.services.v1.ListWebAuthnCredentialsResponse
-	132, // 140: udb.core.authn.services.v1.AuthnService.DeleteWebAuthnCredential:output_type -> udb.core.authn.services.v1.DeleteWebAuthnCredentialResponse
-	1,   // 141: udb.core.authn.services.v1.AuthnService.CreateServiceAccountGrant:output_type -> udb.core.authn.services.v1.CreateServiceAccountGrantResponse
-	3,   // 142: udb.core.authn.services.v1.AuthnService.GetServiceAccountGrant:output_type -> udb.core.authn.services.v1.GetServiceAccountGrantResponse
-	5,   // 143: udb.core.authn.services.v1.AuthnService.ListServiceAccountGrants:output_type -> udb.core.authn.services.v1.ListServiceAccountGrantsResponse
-	7,   // 144: udb.core.authn.services.v1.AuthnService.ReplaceServiceAccountGrant:output_type -> udb.core.authn.services.v1.ReplaceServiceAccountGrantResponse
-	9,   // 145: udb.core.authn.services.v1.AuthnService.RotateServiceAccountIdentity:output_type -> udb.core.authn.services.v1.RotateServiceAccountIdentityResponse
-	11,  // 146: udb.core.authn.services.v1.AuthnService.TransferServiceAccountGrant:output_type -> udb.core.authn.services.v1.TransferServiceAccountGrantResponse
-	13,  // 147: udb.core.authn.services.v1.AuthnService.RevokeServiceAccountGrant:output_type -> udb.core.authn.services.v1.RevokeServiceAccountGrantResponse
-	15,  // 148: udb.core.authn.services.v1.AuthnService.CreateCertificateBinding:output_type -> udb.core.authn.services.v1.CreateCertificateBindingResponse
-	17,  // 149: udb.core.authn.services.v1.AuthnService.ListCertificateBindings:output_type -> udb.core.authn.services.v1.ListCertificateBindingsResponse
-	19,  // 150: udb.core.authn.services.v1.AuthnService.RevokeCertificateBinding:output_type -> udb.core.authn.services.v1.RevokeCertificateBindingResponse
-	21,  // 151: udb.core.authn.services.v1.AuthnService.CreateServiceAccountTenantMembership:output_type -> udb.core.authn.services.v1.CreateServiceAccountTenantMembershipResponse
-	23,  // 152: udb.core.authn.services.v1.AuthnService.ListServiceAccountTenantMemberships:output_type -> udb.core.authn.services.v1.ListServiceAccountTenantMembershipsResponse
-	25,  // 153: udb.core.authn.services.v1.AuthnService.RevokeServiceAccountTenantMembership:output_type -> udb.core.authn.services.v1.RevokeServiceAccountTenantMembershipResponse
-	27,  // 154: udb.core.authn.services.v1.AuthnService.ExchangeServiceTokenForTenant:output_type -> udb.core.authn.services.v1.ExchangeServiceTokenForTenantResponse
-	91,  // [91:155] is the sub-list for method output_type
-	27,  // [27:91] is the sub-list for method input_type
+	83,  // 91: udb.core.authn.services.v1.AuthnService.PutTenantAuthPolicy:input_type -> udb.core.authn.services.v1.PutTenantAuthPolicyRequest
+	84,  // 92: udb.core.authn.services.v1.AuthnService.GetTenantAuthPolicy:input_type -> udb.core.authn.services.v1.GetTenantAuthPolicyRequest
+	85,  // 93: udb.core.authn.services.v1.AuthnService.SendLoginOtp:input_type -> udb.core.authn.services.v1.SendLoginOtpRequest
+	86,  // 94: udb.core.authn.services.v1.AuthnService.LoginWithOtp:input_type -> udb.core.authn.services.v1.LoginWithOtpRequest
+	87,  // 95: udb.core.authn.services.v1.AuthnService.StartOidcLogin:input_type -> udb.core.authn.services.v1.StartOidcLoginRequest
+	88,  // 96: udb.core.authn.services.v1.AuthnService.FinishOidcLogin:input_type -> udb.core.authn.services.v1.FinishOidcLoginRequest
+	89,  // 97: udb.core.authn.services.v1.AuthnService.LoginWithOidcIdToken:input_type -> udb.core.authn.services.v1.LoginWithOidcIdTokenRequest
+	90,  // 98: udb.core.authn.services.v1.AuthnService.CreateInvitation:input_type -> udb.core.authn.services.v1.CreateInvitationRequest
+	91,  // 99: udb.core.authn.services.v1.AuthnService.ListInvitations:input_type -> udb.core.authn.services.v1.ListInvitationsRequest
+	92,  // 100: udb.core.authn.services.v1.AuthnService.RevokeInvitation:input_type -> udb.core.authn.services.v1.RevokeInvitationRequest
+	93,  // 101: udb.core.authn.services.v1.AuthnService.ResendInvitation:input_type -> udb.core.authn.services.v1.ResendInvitationRequest
+	94,  // 102: udb.core.authn.services.v1.AuthnService.GetInvitation:input_type -> udb.core.authn.services.v1.GetInvitationRequest
+	95,  // 103: udb.core.authn.services.v1.AuthnService.StartInvitationAcceptance:input_type -> udb.core.authn.services.v1.StartInvitationAcceptanceRequest
+	96,  // 104: udb.core.authn.services.v1.AuthnService.AcceptInvitation:input_type -> udb.core.authn.services.v1.AcceptInvitationRequest
+	97,  // 105: udb.core.authn.services.v1.AuthnService.CheckStepUp:input_type -> udb.core.authn.services.v1.CheckStepUpRequest
+	98,  // 106: udb.core.authn.services.v1.AuthnService.CreateUser:output_type -> udb.core.authn.services.v1.CreateUserResponse
+	99,  // 107: udb.core.authn.services.v1.AuthnService.GetUser:output_type -> udb.core.authn.services.v1.GetUserResponse
+	100, // 108: udb.core.authn.services.v1.AuthnService.ListUsers:output_type -> udb.core.authn.services.v1.ListUsersResponse
+	101, // 109: udb.core.authn.services.v1.AuthnService.UpdateUser:output_type -> udb.core.authn.services.v1.UpdateUserResponse
+	102, // 110: udb.core.authn.services.v1.AuthnService.ChangeUserStatus:output_type -> udb.core.authn.services.v1.ChangeUserStatusResponse
+	103, // 111: udb.core.authn.services.v1.AuthnService.AdminResetPassword:output_type -> udb.core.authn.services.v1.AdminResetPasswordResponse
+	104, // 112: udb.core.authn.services.v1.AuthnService.SendOTP:output_type -> udb.core.authn.services.v1.SendOTPResponse
+	105, // 113: udb.core.authn.services.v1.AuthnService.VerifyOTP:output_type -> udb.core.authn.services.v1.VerifyOTPResponse
+	106, // 114: udb.core.authn.services.v1.AuthnService.ResendOTP:output_type -> udb.core.authn.services.v1.ResendOTPResponse
+	107, // 115: udb.core.authn.services.v1.AuthnService.Authenticate:output_type -> udb.core.authn.services.v1.AuthnResponse
+	108, // 116: udb.core.authn.services.v1.AuthnService.Login:output_type -> udb.core.authn.services.v1.LoginResponse
+	109, // 117: udb.core.authn.services.v1.AuthnService.RefreshToken:output_type -> udb.core.authn.services.v1.RefreshTokenResponse
+	110, // 118: udb.core.authn.services.v1.AuthnService.Logout:output_type -> udb.core.authn.services.v1.LogoutResponse
+	111, // 119: udb.core.authn.services.v1.AuthnService.ChangePassword:output_type -> udb.core.authn.services.v1.ChangePasswordResponse
+	112, // 120: udb.core.authn.services.v1.AuthnService.ValidateToken:output_type -> udb.core.authn.services.v1.ValidateTokenResponse
+	113, // 121: udb.core.authn.services.v1.AuthnService.CreateSession:output_type -> udb.core.authn.services.v1.CreateSessionResponse
+	114, // 122: udb.core.authn.services.v1.AuthnService.RefreshSession:output_type -> udb.core.authn.services.v1.RefreshSessionResponse
+	115, // 123: udb.core.authn.services.v1.AuthnService.GetSession:output_type -> udb.core.authn.services.v1.GetSessionResponse
+	116, // 124: udb.core.authn.services.v1.AuthnService.ListSessions:output_type -> udb.core.authn.services.v1.ListSessionsResponse
+	117, // 125: udb.core.authn.services.v1.AuthnService.RevokeSession:output_type -> udb.core.authn.services.v1.RevokeSessionResponse
+	118, // 126: udb.core.authn.services.v1.AuthnService.ValidateCSRF:output_type -> udb.core.authn.services.v1.ValidateCSRFResponse
+	119, // 127: udb.core.authn.services.v1.AuthnService.EnrollMFA:output_type -> udb.core.authn.services.v1.EnrollMFAResponse
+	120, // 128: udb.core.authn.services.v1.AuthnService.ConfirmMFAEnrollment:output_type -> udb.core.authn.services.v1.ConfirmMFAEnrollmentResponse
+	121, // 129: udb.core.authn.services.v1.AuthnService.GenerateRecoveryCodes:output_type -> udb.core.authn.services.v1.GenerateRecoveryCodesResponse
+	122, // 130: udb.core.authn.services.v1.AuthnService.PutMfaPolicy:output_type -> udb.core.authn.services.v1.PutMfaPolicyResponse
+	123, // 131: udb.core.authn.services.v1.AuthnService.GetMfaPolicy:output_type -> udb.core.authn.services.v1.GetMfaPolicyResponse
+	124, // 132: udb.core.authn.services.v1.AuthnService.ForgotPassword:output_type -> udb.core.authn.services.v1.ForgotPasswordResponse
+	125, // 133: udb.core.authn.services.v1.AuthnService.ResetPassword:output_type -> udb.core.authn.services.v1.ResetPasswordResponse
+	126, // 134: udb.core.authn.services.v1.AuthnService.IntrospectToken:output_type -> udb.core.authn.services.v1.IntrospectTokenResponse
+	127, // 135: udb.core.authn.services.v1.AuthnService.SendPhoneVerification:output_type -> udb.core.authn.services.v1.SendPhoneVerificationResponse
+	128, // 136: udb.core.authn.services.v1.AuthnService.GetJwks:output_type -> udb.core.authn.services.v1.GetJwksResponse
+	129, // 137: udb.core.authn.services.v1.AuthnService.StartWebAuthnRegistration:output_type -> udb.core.authn.services.v1.StartWebAuthnRegistrationResponse
+	130, // 138: udb.core.authn.services.v1.AuthnService.FinishWebAuthnRegistration:output_type -> udb.core.authn.services.v1.FinishWebAuthnRegistrationResponse
+	131, // 139: udb.core.authn.services.v1.AuthnService.StartWebAuthnAuthentication:output_type -> udb.core.authn.services.v1.StartWebAuthnAuthenticationResponse
+	132, // 140: udb.core.authn.services.v1.AuthnService.FinishWebAuthnAuthentication:output_type -> udb.core.authn.services.v1.FinishWebAuthnAuthenticationResponse
+	133, // 141: udb.core.authn.services.v1.AuthnService.ListDevices:output_type -> udb.core.authn.services.v1.ListDevicesResponse
+	134, // 142: udb.core.authn.services.v1.AuthnService.RevokeDevice:output_type -> udb.core.authn.services.v1.RevokeDeviceResponse
+	135, // 143: udb.core.authn.services.v1.AuthnService.AdminRevokeSession:output_type -> udb.core.authn.services.v1.AdminRevokeSessionResponse
+	136, // 144: udb.core.authn.services.v1.AuthnService.AdminRevokeAllUserSessions:output_type -> udb.core.authn.services.v1.AdminRevokeAllUserSessionsResponse
+	137, // 145: udb.core.authn.services.v1.AuthnService.AdminRevokeAllTenantSessions:output_type -> udb.core.authn.services.v1.AdminRevokeAllTenantSessionsResponse
+	138, // 146: udb.core.authn.services.v1.AuthnService.EmergencyRevoke:output_type -> udb.core.authn.services.v1.EmergencyRevokeResponse
+	139, // 147: udb.core.authn.services.v1.AuthnService.IssueMfaChallenge:output_type -> udb.core.authn.services.v1.IssueMfaChallengeResponse
+	140, // 148: udb.core.authn.services.v1.AuthnService.VerifyMfaChallenge:output_type -> udb.core.authn.services.v1.VerifyMfaChallengeResponse
+	141, // 149: udb.core.authn.services.v1.AuthnService.ListMfaFactors:output_type -> udb.core.authn.services.v1.ListMfaFactorsResponse
+	142, // 150: udb.core.authn.services.v1.AuthnService.DisableMfaFactor:output_type -> udb.core.authn.services.v1.DisableMfaFactorResponse
+	143, // 151: udb.core.authn.services.v1.AuthnService.RenamePasskey:output_type -> udb.core.authn.services.v1.RenamePasskeyResponse
+	144, // 152: udb.core.authn.services.v1.AuthnService.RevokeRecoveryCodes:output_type -> udb.core.authn.services.v1.RevokeRecoveryCodesResponse
+	145, // 153: udb.core.authn.services.v1.AuthnService.AdminResetMfa:output_type -> udb.core.authn.services.v1.AdminResetMfaResponse
+	146, // 154: udb.core.authn.services.v1.AuthnService.ListWebAuthnCredentials:output_type -> udb.core.authn.services.v1.ListWebAuthnCredentialsResponse
+	147, // 155: udb.core.authn.services.v1.AuthnService.DeleteWebAuthnCredential:output_type -> udb.core.authn.services.v1.DeleteWebAuthnCredentialResponse
+	1,   // 156: udb.core.authn.services.v1.AuthnService.CreateServiceAccountGrant:output_type -> udb.core.authn.services.v1.CreateServiceAccountGrantResponse
+	3,   // 157: udb.core.authn.services.v1.AuthnService.GetServiceAccountGrant:output_type -> udb.core.authn.services.v1.GetServiceAccountGrantResponse
+	5,   // 158: udb.core.authn.services.v1.AuthnService.ListServiceAccountGrants:output_type -> udb.core.authn.services.v1.ListServiceAccountGrantsResponse
+	7,   // 159: udb.core.authn.services.v1.AuthnService.ReplaceServiceAccountGrant:output_type -> udb.core.authn.services.v1.ReplaceServiceAccountGrantResponse
+	9,   // 160: udb.core.authn.services.v1.AuthnService.RotateServiceAccountIdentity:output_type -> udb.core.authn.services.v1.RotateServiceAccountIdentityResponse
+	11,  // 161: udb.core.authn.services.v1.AuthnService.TransferServiceAccountGrant:output_type -> udb.core.authn.services.v1.TransferServiceAccountGrantResponse
+	13,  // 162: udb.core.authn.services.v1.AuthnService.RevokeServiceAccountGrant:output_type -> udb.core.authn.services.v1.RevokeServiceAccountGrantResponse
+	15,  // 163: udb.core.authn.services.v1.AuthnService.CreateCertificateBinding:output_type -> udb.core.authn.services.v1.CreateCertificateBindingResponse
+	17,  // 164: udb.core.authn.services.v1.AuthnService.ListCertificateBindings:output_type -> udb.core.authn.services.v1.ListCertificateBindingsResponse
+	19,  // 165: udb.core.authn.services.v1.AuthnService.RevokeCertificateBinding:output_type -> udb.core.authn.services.v1.RevokeCertificateBindingResponse
+	21,  // 166: udb.core.authn.services.v1.AuthnService.CreateServiceAccountTenantMembership:output_type -> udb.core.authn.services.v1.CreateServiceAccountTenantMembershipResponse
+	23,  // 167: udb.core.authn.services.v1.AuthnService.ListServiceAccountTenantMemberships:output_type -> udb.core.authn.services.v1.ListServiceAccountTenantMembershipsResponse
+	25,  // 168: udb.core.authn.services.v1.AuthnService.RevokeServiceAccountTenantMembership:output_type -> udb.core.authn.services.v1.RevokeServiceAccountTenantMembershipResponse
+	27,  // 169: udb.core.authn.services.v1.AuthnService.ExchangeServiceTokenForTenant:output_type -> udb.core.authn.services.v1.ExchangeServiceTokenForTenantResponse
+	148, // 170: udb.core.authn.services.v1.AuthnService.PutTenantAuthPolicy:output_type -> udb.core.authn.services.v1.PutTenantAuthPolicyResponse
+	149, // 171: udb.core.authn.services.v1.AuthnService.GetTenantAuthPolicy:output_type -> udb.core.authn.services.v1.GetTenantAuthPolicyResponse
+	150, // 172: udb.core.authn.services.v1.AuthnService.SendLoginOtp:output_type -> udb.core.authn.services.v1.SendLoginOtpResponse
+	151, // 173: udb.core.authn.services.v1.AuthnService.LoginWithOtp:output_type -> udb.core.authn.services.v1.LoginWithOtpResponse
+	152, // 174: udb.core.authn.services.v1.AuthnService.StartOidcLogin:output_type -> udb.core.authn.services.v1.StartOidcLoginResponse
+	153, // 175: udb.core.authn.services.v1.AuthnService.FinishOidcLogin:output_type -> udb.core.authn.services.v1.FinishOidcLoginResponse
+	154, // 176: udb.core.authn.services.v1.AuthnService.LoginWithOidcIdToken:output_type -> udb.core.authn.services.v1.LoginWithOidcIdTokenResponse
+	155, // 177: udb.core.authn.services.v1.AuthnService.CreateInvitation:output_type -> udb.core.authn.services.v1.CreateInvitationResponse
+	156, // 178: udb.core.authn.services.v1.AuthnService.ListInvitations:output_type -> udb.core.authn.services.v1.ListInvitationsResponse
+	157, // 179: udb.core.authn.services.v1.AuthnService.RevokeInvitation:output_type -> udb.core.authn.services.v1.RevokeInvitationResponse
+	158, // 180: udb.core.authn.services.v1.AuthnService.ResendInvitation:output_type -> udb.core.authn.services.v1.ResendInvitationResponse
+	159, // 181: udb.core.authn.services.v1.AuthnService.GetInvitation:output_type -> udb.core.authn.services.v1.GetInvitationResponse
+	160, // 182: udb.core.authn.services.v1.AuthnService.StartInvitationAcceptance:output_type -> udb.core.authn.services.v1.StartInvitationAcceptanceResponse
+	161, // 183: udb.core.authn.services.v1.AuthnService.AcceptInvitation:output_type -> udb.core.authn.services.v1.AcceptInvitationResponse
+	162, // 184: udb.core.authn.services.v1.AuthnService.CheckStepUp:output_type -> udb.core.authn.services.v1.CheckStepUpResponse
+	106, // [106:185] is the sub-list for method output_type
+	27,  // [27:106] is the sub-list for method input_type
 	27,  // [27:27] is the sub-list for extension type_name
 	27,  // [27:27] is the sub-list for extension extendee
 	0,   // [0:27] is the sub-list for field type_name

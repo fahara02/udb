@@ -136,4 +136,13 @@ message IdentityProvider {
   google.protobuf.Timestamp updated_at = 26 [(udb.core.common.v1.pg_column) = { column_name: "updated_at" sql_type: "TIMESTAMPTZ" not_null: true default_value: "CURRENT_TIMESTAMP" exclude_from_insert: true }];
 
   google.protobuf.Timestamp deleted_at = 27 [(udb.core.common.v1.pg_column) = { column_name: "deleted_at" sql_type: "TIMESTAMPTZ" comment: "Soft-delete timestamp" }];
+
+  // ── OIDC sign-in (0.6.6) ──────────────────────────────────────────────────
+  // JSON array of the exact redirect URIs StartOidcLogin accepts for this
+  // provider (OAuth 2.0 exact-match; no wildcards). Each is https, an http
+  // loopback URI (http://127.0.0.1:<port>/..., native apps, RFC 8252), or a
+  // private-use scheme containing a dot (com.example.app:/callback). Empty =
+  // browser/redirect sign-in is off for this provider; LoginWithOidcIdToken
+  // does not use redirects and is unaffected.
+  string redirect_uris_json = 28 [(udb.core.common.v1.pg_column) = { column_name: "redirect_uris_json" sql_type: "JSONB" is_json: true not_null: true default_value: "'[]'::jsonb" comment: "Allowlisted OIDC redirect URIs (exact match)" }];
 }

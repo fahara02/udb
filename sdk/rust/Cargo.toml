@@ -1,6 +1,6 @@
 [package]
 name = "udb-client"
-version = "0.6.5"
+version = "0.6.6"
 edition = "2021"
 rust-version = "1.88"
 description = "Rust client for UDB — a proto-driven gRPC broker over multiple databases. Typed tonic clients plus the tenant/project metadata and token lifecycle the broker expects."
@@ -68,7 +68,7 @@ base64 = "0.22"
 # End-to-end encrypted messaging (feature `mls`): the client-side MLS crate the
 # `messaging` module drives. Optional so the default client stays free of the
 # OpenMLS dependency tree.
-udb-mls = { path = "../../crates/udb-mls", version = "0.6.5", optional = true }
+udb-mls = { path = "../../crates/udb-mls", version = "0.6.6", optional = true }
 
 [features]
 default = []

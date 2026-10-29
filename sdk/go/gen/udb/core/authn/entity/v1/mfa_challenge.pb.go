@@ -51,8 +51,19 @@ type MfaChallenge struct {
 	ExpiresAt             *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=expires_at,json=expiresAt,proto3" json:"expires_at,omitempty"`
 	ConsumedAt            *timestamppb.Timestamp `protobuf:"bytes,11,opt,name=consumed_at,json=consumedAt,proto3" json:"consumed_at,omitempty"`
 	CreatedAt             *timestamppb.Timestamp `protobuf:"bytes,12,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	unknownFields         protoimpl.UnknownFields
-	sizeCache             protoimpl.SizeCache
+	// 0.6.6 step-up. The protected action this challenge unlocks (empty = a
+	// plain second-factor check with no step-up token). Verification mints a
+	// step-up token for exactly this action.
+	Action string `protobuf:"bytes,13,opt,name=action,proto3" json:"action,omitempty"`
+	// EMAIL_OTP / SMS_OTP challenges: the OTP (type SENSITIVE_OPERATION) issued
+	// to the user's verified address at IssueMfaChallenge; the code submitted to
+	// VerifyMfaChallenge is checked against exactly this OTP.
+	OtpId string `protobuf:"bytes,14,opt,name=otp_id,json=otpId,proto3" json:"otp_id,omitempty"`
+	// WEBAUTHN challenges: the WebAuthn assertion challenge started at
+	// IssueMfaChallenge; VerifyMfaChallenge's assertion must answer it.
+	WebauthnChallengeId string `protobuf:"bytes,15,opt,name=webauthn_challenge_id,json=webauthnChallengeId,proto3" json:"webauthn_challenge_id,omitempty"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
 }
 
 func (x *MfaChallenge) Reset() {
@@ -169,11 +180,32 @@ func (x *MfaChallenge) GetCreatedAt() *timestamppb.Timestamp {
 	return nil
 }
 
+func (x *MfaChallenge) GetAction() string {
+	if x != nil {
+		return x.Action
+	}
+	return ""
+}
+
+func (x *MfaChallenge) GetOtpId() string {
+	if x != nil {
+		return x.OtpId
+	}
+	return ""
+}
+
+func (x *MfaChallenge) GetWebauthnChallengeId() string {
+	if x != nil {
+		return x.WebauthnChallengeId
+	}
+	return ""
+}
+
 var File_udb_core_authn_entity_v1_mfa_challenge_proto protoreflect.FileDescriptor
 
 const file_udb_core_authn_entity_v1_mfa_challenge_proto_rawDesc = "" +
 	"\n" +
-	",udb/core/authn/entity/v1/mfa_challenge.proto\x12\x18udb.core.authn.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a$udb/core/authn/entity/v1/enums.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\"\x9e\r\n" +
+	",udb/core/authn/entity/v1/mfa_challenge.proto\x12\x18udb.core.authn.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a$udb/core/authn/entity/v1/enums.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\"\x8f\x10\n" +
 	"\fMfaChallenge\x12R\n" +
 	"\fchallenge_id\x18\x01 \x01(\tB/\x82\xb7\x18+\n" +
 	"\fchallenge_id\x12\x04UUID\x18\x01(\x01:\x11gen_random_uuid()R\vchallengeId\x126\n" +
@@ -207,7 +239,13 @@ const file_udb_core_authn_entity_v1_mfa_challenge_proto_rawDesc = "" +
 	"\n" +
 	"created_at\x18\f \x01(\v2\x1a.google.protobuf.TimestampB6\x82\xb7\x182\n" +
 	"\n" +
-	"created_at\x12\vTIMESTAMPTZ\x18\x01:\x11CURRENT_TIMESTAMP`\x01h\x01R\tcreatedAt:\xcb\x03\xfa\xb6\x18\xcd\x02\n" +
+	"created_at\x12\vTIMESTAMPTZ\x18\x01:\x11CURRENT_TIMESTAMP`\x01h\x01R\tcreatedAt\x12l\n" +
+	"\x06action\x18\r \x01(\tBT\x82\xb7\x18P\n" +
+	"\x06action\x12\fVARCHAR(120)\x18\x01:\x02''Z2Protected action a successful verification unlocksR\x06action\x12e\n" +
+	"\x06otp_id\x18\x0e \x01(\tBN\x82\xb7\x18J\n" +
+	"\x06otp_id\x12\vVARCHAR(64)\x18\x01:\x02''Z-OTP issued for an EMAIL_OTP/SMS_OTP challengeR\x05otpId\x12\x99\x01\n" +
+	"\x15webauthn_challenge_id\x18\x0f \x01(\tBe\x82\xb7\x18a\n" +
+	"\x15webauthn_challenge_id\x12\vVARCHAR(64)\x18\x01:\x02''Z5WebAuthn assertion challenge for a WEBAUTHN challengeR\x13webauthnChallengeId:\xcb\x03\xfa\xb6\x18\xcd\x02\n" +
 	"\x0emfa_challenges\x12\tudb_authn\x18\x18 \x01*FFirst-class step-up MFA challenge records (single-use, atomic consume)@\x01b^\n" +
 	"\x10tenant_isolation\x1aH(tenant_id::text = current_setting('app.current_tenant_id', true)::text)(\x01\x8a\x01)\n" +
 	"\x17idx_mfa_challenges_user\x12\x05BTREEZ\auser_id\x8a\x01/\n" +

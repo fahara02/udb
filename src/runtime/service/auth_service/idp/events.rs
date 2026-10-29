@@ -31,6 +31,8 @@ pub const SAML_METADATA_UPDATED: &str = "udb.idp.saml.metadata.updated.v1";
 pub const IDENTITY_LINKED: &str = "udb.idp.identity.linked.v1";
 pub const IDENTITY_UNLINKED: &str = "udb.idp.identity.unlinked.v1";
 pub const IDENTITY_PROVISIONED: &str = "udb.idp.identity.provisioned.v1";
+/// Roles an IdP mapping (JIT `default_roles` / group mapping) bound to a user.
+pub const IDENTITY_ROLES_BOUND: &str = "udb.idp.identity.roles.bound.v1";
 pub const SAML_ASSERTION_CONSUMED: &str = "udb.idp.saml.assertion.consumed.v1";
 pub const SAML_REPLAY_REJECTED: &str = "udb.idp.saml.replay.rejected.v1";
 pub const SCIM_USER_PROVISIONED: &str = "udb.idp.scim.user.provisioned.v1";

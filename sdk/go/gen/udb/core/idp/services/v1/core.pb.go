@@ -50,8 +50,13 @@ type CreateProviderRequest struct {
 	SamlSigningKeyPem string              `protobuf:"bytes,16,opt,name=saml_signing_key_pem,json=samlSigningKeyPem,proto3" json:"saml_signing_key_pem,omitempty"`
 	CreatedBy         string              `protobuf:"bytes,17,opt,name=created_by,json=createdBy,proto3" json:"created_by,omitempty"`
 	Context           *v11.RequestContext `protobuf:"bytes,18,opt,name=context,proto3" json:"context,omitempty"`
-	unknownFields     protoimpl.UnknownFields
-	sizeCache         protoimpl.SizeCache
+	// OIDC redirect URIs StartOidcLogin may send the browser back to (exact
+	// match). Each must be https, http on a loopback IP for native apps, or a
+	// private-use scheme with a dot (com.example.app:/oauth2redirect). At most
+	// 20, each at most 512 characters, no fragment.
+	RedirectUris  []string `protobuf:"bytes,19,rep,name=redirect_uris,json=redirectUris,proto3" json:"redirect_uris,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *CreateProviderRequest) Reset() {
@@ -210,6 +215,13 @@ func (x *CreateProviderRequest) GetContext() *v11.RequestContext {
 	return nil
 }
 
+func (x *CreateProviderRequest) GetRedirectUris() []string {
+	if x != nil {
+		return x.RedirectUris
+	}
+	return nil
+}
+
 type CreateProviderResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Provider      *v1.IdentityProvider   `protobuf:"bytes,1,opt,name=provider,proto3" json:"provider,omitempty"`
@@ -275,7 +287,11 @@ type UpdateProviderRequest struct {
 	Context              *v11.RequestContext    `protobuf:"bytes,17,opt,name=context,proto3" json:"context,omitempty"`
 	// Optional PATCH mask relative to the provider resource. When omitted, legacy
 	// clients keep the historical non-empty-field patch behavior.
-	UpdateMask    *fieldmaskpb.FieldMask `protobuf:"bytes,18,opt,name=update_mask,json=updateMask,proto3" json:"update_mask,omitempty"`
+	UpdateMask *fieldmaskpb.FieldMask `protobuf:"bytes,18,opt,name=update_mask,json=updateMask,proto3" json:"update_mask,omitempty"`
+	// Replacement OIDC redirect-URI allowlist (same rules as CreateProvider).
+	// Without a mask a non-empty list replaces the stored one; to clear it,
+	// send `redirect_uris` in update_mask with an empty list.
+	RedirectUris  []string `protobuf:"bytes,19,rep,name=redirect_uris,json=redirectUris,proto3" json:"redirect_uris,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -432,6 +448,13 @@ func (x *UpdateProviderRequest) GetContext() *v11.RequestContext {
 func (x *UpdateProviderRequest) GetUpdateMask() *fieldmaskpb.FieldMask {
 	if x != nil {
 		return x.UpdateMask
+	}
+	return nil
+}
+
+func (x *UpdateProviderRequest) GetRedirectUris() []string {
+	if x != nil {
+		return x.RedirectUris
 	}
 	return nil
 }
@@ -3868,7 +3891,7 @@ var File_udb_core_idp_services_v1_core_proto protoreflect.FileDescriptor
 
 const file_udb_core_idp_services_v1_core_proto_rawDesc = "" +
 	"\n" +
-	"#udb/core/idp/services/v1/core.proto\x12\x18udb.core.idp.services.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a google/protobuf/field_mask.proto\x1a.udb/core/idp/entity/v1/identity_provider.proto\x1a.udb/core/idp/entity/v1/external_identity.proto\x1a\"udb/core/idp/entity/v1/enums.proto\x1a\x1cudb/core/common/v1/dto.proto\x1a\x1eudb/core/common/v1/types.proto\"\xcc\x05\n" +
+	"#udb/core/idp/services/v1/core.proto\x12\x18udb.core.idp.services.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a google/protobuf/field_mask.proto\x1a.udb/core/idp/entity/v1/identity_provider.proto\x1a.udb/core/idp/entity/v1/external_identity.proto\x1a\"udb/core/idp/entity/v1/enums.proto\x1a\x1cudb/core/common/v1/dto.proto\x1a\x1eudb/core/common/v1/types.proto\"\xf1\x05\n" +
 	"\x15CreateProviderRequest\x12\x1b\n" +
 	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x123\n" +
 	"\x04kind\x18\x02 \x01(\x0e2\x1f.udb.core.idp.entity.v1.IdpKindR\x04kind\x12!\n" +
@@ -3890,9 +3913,10 @@ const file_udb_core_idp_services_v1_core_proto_rawDesc = "" +
 	"\x14saml_signing_key_pem\x18\x10 \x01(\tR\x11samlSigningKeyPem\x12\x1d\n" +
 	"\n" +
 	"created_by\x18\x11 \x01(\tR\tcreatedBy\x12<\n" +
-	"\acontext\x18\x12 \x01(\v2\".udb.core.common.v1.RequestContextR\acontext\"^\n" +
+	"\acontext\x18\x12 \x01(\v2\".udb.core.common.v1.RequestContextR\acontext\x12#\n" +
+	"\rredirect_uris\x18\x13 \x03(\tR\fredirectUris\"^\n" +
 	"\x16CreateProviderResponse\x12D\n" +
-	"\bprovider\x18\x01 \x01(\v2(.udb.core.idp.entity.v1.IdentityProviderR\bprovider\"\xdb\x05\n" +
+	"\bprovider\x18\x01 \x01(\v2(.udb.core.idp.entity.v1.IdentityProviderR\bprovider\"\x80\x06\n" +
 	"\x15UpdateProviderRequest\x12\x1f\n" +
 	"\vprovider_id\x18\x01 \x01(\tR\n" +
 	"providerId\x12\x1b\n" +
@@ -3916,7 +3940,8 @@ const file_udb_core_idp_services_v1_core_proto_rawDesc = "" +
 	"updated_by\x18\x10 \x01(\tR\tupdatedBy\x12<\n" +
 	"\acontext\x18\x11 \x01(\v2\".udb.core.common.v1.RequestContextR\acontext\x12;\n" +
 	"\vupdate_mask\x18\x12 \x01(\v2\x1a.google.protobuf.FieldMaskR\n" +
-	"updateMask\"^\n" +
+	"updateMask\x12#\n" +
+	"\rredirect_uris\x18\x13 \x03(\tR\fredirectUris\"^\n" +
 	"\x16UpdateProviderResponse\x12D\n" +
 	"\bprovider\x18\x01 \x01(\v2(.udb.core.idp.entity.v1.IdentityProviderR\bprovider\"\xb3\x01\n" +
 	"\x16DisableProviderRequest\x12\x1f\n" +

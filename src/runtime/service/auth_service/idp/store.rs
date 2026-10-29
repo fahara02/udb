@@ -120,6 +120,8 @@ pub struct ProviderRow {
     pub created_at_unix: i64,
     pub updated_at_unix: i64,
     pub last_jwks_refresh_at_unix: i64,
+    /// JSON array of allowlisted OIDC redirect URIs (exact match).
+    pub redirect_uris_json: String,
 }
 
 /// Resolved external-identity link row.
@@ -349,6 +351,7 @@ fn provider_select_columns() -> Vec<&'static str> {
         "updated_at",
         "last_jwks_refresh_at",
         "deleted_at",
+        "redirect_uris_json",
     ]
 }
 
@@ -390,6 +393,9 @@ fn provider_row_from(row: &sqlx::postgres::PgRow) -> ProviderRow {
         created_at_unix: row.try_get("created_at_unix").unwrap_or_default(),
         updated_at_unix: row.try_get("updated_at_unix").unwrap_or_default(),
         last_jwks_refresh_at_unix: row.try_get("last_jwks_refresh_at_unix").unwrap_or_default(),
+        redirect_uris_json: row
+            .try_get("redirect_uris_json")
+            .unwrap_or_else(|_| "[]".into()),
     }
 }
 
@@ -422,6 +428,7 @@ fn provider_select_clause() -> String {
         m.timestamp_unix_as("created_at", "created_at_unix"),
         m.timestamp_unix_as("updated_at", "updated_at_unix"),
         m.timestamp_unix_as("last_jwks_refresh_at", "last_jwks_refresh_at_unix"),
+        m.json_text_as("redirect_uris_json", "redirect_uris_json"),
     ];
     parts.join(", ")
 }
@@ -508,6 +515,17 @@ pub async fn insert_provider(
     record.insert(
         "saml_sso_url".to_string(),
         LogicalValue::String(row.saml_sso_url.clone()),
+    );
+    record.insert(
+        "redirect_uris_json".to_string(),
+        json_value(
+            if row.redirect_uris_json.is_empty() {
+                "[]"
+            } else {
+                &row.redirect_uris_json
+            },
+            "redirect_uris_json",
+        )?,
     );
     record.insert(
         "health".to_string(),
@@ -713,6 +731,7 @@ pub async fn update_provider(
         ("claim_mapping_json", fields.claim_mapping_json.as_str()),
         ("group_mapping_json", fields.group_mapping_json.as_str()),
         ("jit_policy_json", fields.jit_policy_json.as_str()),
+        ("redirect_uris_json", fields.redirect_uris_json.as_str()),
     ] {
         assignments.insert(
             field.to_string(),
@@ -1601,6 +1620,92 @@ pub async fn create_external_user(
             )
         })?;
     Ok(row.try_get::<String, _>("user_id").unwrap_or_default())
+}
+
+/// The project of a user ('' when unknown), the scope federated role
+/// bindings are resolved and revisioned in.
+pub async fn user_project_id(pool: &PgPool, user_id: &str) -> Result<String, Status> {
+    let m = native_model(USER_MSG, &["user_id", "project_id"]);
+    let sql = format!(
+        "SELECT COALESCE({project}, '')::TEXT AS project_id FROM {rel} WHERE {uid} = $1::UUID",
+        project = m.q("project_id"),
+        rel = m.relation,
+        uid = m.q("user_id"),
+    );
+    let uid = Uuid::parse_str(user_id.trim()).map_err(|_| uuid_field_status("user_id"))?;
+    let row = sqlx::query(&sql)
+        .bind(uid)
+        .fetch_optional(pool)
+        .await
+        .map_err(map_err("federated user project lookup failed"))?;
+    Ok(row
+        .map(|r| r.try_get::<String, _>("project_id").unwrap_or_default())
+        .unwrap_or_default())
+}
+
+/// Outcome of [`bind_federated_roles`].
+#[derive(Debug, Clone, Default)]
+pub struct FederatedRoleBinding {
+    /// Codes bound by this call (bindings that already existed are not listed).
+    pub bound: Vec<String>,
+    /// Codes with no active role of that code in the tenant (or global).
+    pub missing: Vec<String>,
+}
+
+/// ADD-ONLY role binding for an IdP-resolved user: each role CODE resolves to
+/// the tenant's own active role first, else a global system role (tenant
+/// `*`), unscoped or scoped to `project_id`; the binding is written with the
+/// same `user_roles` row shape AssignRole / bootstrap write
+/// (`ON CONFLICT (user_id, role_id, domain)`), but `DO NOTHING`, so an existing
+/// binding an administrator made is never rewritten and nothing is ever
+/// removed. When anything was bound, one role-assignment authz revision is
+/// appended (in the same transaction) so every node reloads its snapshot. The
+/// caller has already dropped reserved codes.
+pub async fn bind_federated_roles(
+    pool: &PgPool,
+    tenant_id: &str,
+    project_id: &str,
+    user_id: &str,
+    provider_id: &str,
+    role_codes: &[String],
+) -> Result<FederatedRoleBinding, Status> {
+    use crate::runtime::service::auth_service::role_bindings;
+    let mut outcome = FederatedRoleBinding::default();
+    if role_codes.is_empty() {
+        return Ok(outcome);
+    }
+    let uid = Uuid::parse_str(user_id.trim()).map_err(|_| uuid_field_status("user_id"))?;
+    let changed_by = format!("idp:{provider_id}");
+    let mut tx = pool
+        .begin()
+        .await
+        .map_err(map_err("federated role binding tx begin failed"))?;
+    let (resolved, missing) =
+        role_bindings::resolve_role_codes(&mut *tx, tenant_id, project_id, role_codes).await?;
+    outcome.missing = missing;
+    outcome.bound = role_bindings::bind_role_ids(
+        &mut *tx,
+        &uid,
+        tenant_id,
+        &resolved,
+        &uid,
+        &changed_by,
+        role_bindings::ExistingBinding::Keep,
+    )
+    .await?;
+    if !outcome.bound.is_empty() {
+        role_bindings::append_role_assignment_revision(
+            &mut *tx,
+            tenant_id,
+            project_id,
+            &changed_by,
+        )
+        .await?;
+    }
+    tx.commit()
+        .await
+        .map_err(map_err("federated role binding commit failed"))?;
+    Ok(outcome)
 }
 
 /// Deactivate (suspend) a user and revoke their active sessions — the SCIM

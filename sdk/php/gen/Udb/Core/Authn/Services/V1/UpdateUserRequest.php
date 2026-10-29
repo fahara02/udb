@@ -61,6 +61,13 @@ class UpdateUserRequest extends \Google\Protobuf\Internal\Message
      * Generated from protobuf field <code>.google.protobuf.FieldMask update_mask = 11 [json_name = "updateMask"];</code>
      */
     protected $update_mask = null;
+    /**
+     * The language of this account's messages (BCP 47, e.g. `bn`); set it with
+     * `locale` in `update_mask` (an empty value then resets to English).
+     *
+     * Generated from protobuf field <code>string locale = 12 [json_name = "locale"];</code>
+     */
+    protected $locale = '';
 
     /**
      * Constructor.
@@ -81,6 +88,9 @@ class UpdateUserRequest extends \Google\Protobuf\Internal\Message
      *     @type \Google\Protobuf\FieldMask $update_mask
      *           Optional PATCH mask relative to the user resource. When omitted, legacy
      *           clients keep the historical non-empty-field patch behavior.
+     *     @type string $locale
+     *           The language of this account's messages (BCP 47, e.g. `bn`); set it with
+     *           `locale` in `update_mask` (an empty value then resets to English).
      * }
      */
     public function __construct($data = NULL) {
@@ -352,6 +362,34 @@ class UpdateUserRequest extends \Google\Protobuf\Internal\Message
     {
         GPBUtil::checkMessage($var, \Google\Protobuf\FieldMask::class);
         $this->update_mask = $var;
+
+        return $this;
+    }
+
+    /**
+     * The language of this account's messages (BCP 47, e.g. `bn`); set it with
+     * `locale` in `update_mask` (an empty value then resets to English).
+     *
+     * Generated from protobuf field <code>string locale = 12 [json_name = "locale"];</code>
+     * @return string
+     */
+    public function getLocale()
+    {
+        return $this->locale;
+    }
+
+    /**
+     * The language of this account's messages (BCP 47, e.g. `bn`); set it with
+     * `locale` in `update_mask` (an empty value then resets to English).
+     *
+     * Generated from protobuf field <code>string locale = 12 [json_name = "locale"];</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setLocale($var)
+    {
+        GPBUtil::checkString($var, True);
+        $this->locale = $var;
 
         return $this;
     }

@@ -38,6 +38,16 @@ class IssueMfaChallengeRequest extends \Google\Protobuf\Internal\Message
      * Generated from protobuf field <code>.udb.core.common.v1.RequestContext context = 6 [json_name = "context"];</code>
      */
     protected $context = null;
+    /**
+     * Step-up: the protected action this challenge unlocks (for example
+     * `payments.approve`, at most 120 characters). When set, a successful
+     * VerifyMfaChallenge returns a step-up token for exactly this action, and a
+     * factor the tenant's step-up rule for the action does not allow is refused
+     * here. Empty = a plain second-factor check (no step-up token).
+     *
+     * Generated from protobuf field <code>string action = 7 [json_name = "action"];</code>
+     */
+    protected $action = '';
 
     /**
      * Constructor.
@@ -51,6 +61,12 @@ class IssueMfaChallengeRequest extends \Google\Protobuf\Internal\Message
      *     @type string $device_fingerprint
      *     @type string $ip_address
      *     @type \Udb\Core\Common\V1\RequestContext $context
+     *     @type string $action
+     *           Step-up: the protected action this challenge unlocks (for example
+     *           `payments.approve`, at most 120 characters). When set, a successful
+     *           VerifyMfaChallenge returns a step-up token for exactly this action, and a
+     *           factor the tenant's step-up rule for the action does not allow is refused
+     *           here. Empty = a plain second-factor check (no step-up token).
      * }
      */
     public function __construct($data = NULL) {
@@ -196,6 +212,40 @@ class IssueMfaChallengeRequest extends \Google\Protobuf\Internal\Message
     {
         GPBUtil::checkMessage($var, \Udb\Core\Common\V1\RequestContext::class);
         $this->context = $var;
+
+        return $this;
+    }
+
+    /**
+     * Step-up: the protected action this challenge unlocks (for example
+     * `payments.approve`, at most 120 characters). When set, a successful
+     * VerifyMfaChallenge returns a step-up token for exactly this action, and a
+     * factor the tenant's step-up rule for the action does not allow is refused
+     * here. Empty = a plain second-factor check (no step-up token).
+     *
+     * Generated from protobuf field <code>string action = 7 [json_name = "action"];</code>
+     * @return string
+     */
+    public function getAction()
+    {
+        return $this->action;
+    }
+
+    /**
+     * Step-up: the protected action this challenge unlocks (for example
+     * `payments.approve`, at most 120 characters). When set, a successful
+     * VerifyMfaChallenge returns a step-up token for exactly this action, and a
+     * factor the tenant's step-up rule for the action does not allow is refused
+     * here. Empty = a plain second-factor check (no step-up token).
+     *
+     * Generated from protobuf field <code>string action = 7 [json_name = "action"];</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setAction($var)
+    {
+        GPBUtil::checkString($var, True);
+        $this->action = $var;
 
         return $this;
     }

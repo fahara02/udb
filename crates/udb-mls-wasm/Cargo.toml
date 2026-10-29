@@ -14,7 +14,7 @@
 # its `js` feature below.
 [package]
 name = "udb-mls-wasm"
-version = "0.6.5"
+version = "0.6.6"
 edition = "2021"
 rust-version = "1.88"
 description = "WebAssembly (wasm-bindgen) bridge exposing udb-mls to the TypeScript SDK"

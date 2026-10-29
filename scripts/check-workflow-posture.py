@@ -803,6 +803,7 @@ COMPOSITE_ACTION_SOURCE_REQUIREMENTS = {
         ("echo \"UDB_ENCRYPTION_KEY=QkJC", "test encryption key env"),
         ("echo \"UDB_WEBAUTHN_TEST_MODE=1\"", "WebAuthn dev test mode"),
         ("echo \"UDB_SAML_TEST_MODE=1\"", "SAML dev test mode"),
+        ("echo \"UDB_OIDC_TEST_MODE=1\"", "OIDC dev test mode"),
         ("echo \"UDB_OTP_DEV_ECHO=1\"", "OTP dev echo env"),
         ("echo \"UDB_WEBRTC_REAP_INTERVAL_SECS=0\"", "WebRTC reaper disabled for harness"),
     ),

@@ -93,6 +93,14 @@ class UpdateProviderRequest extends \Google\Protobuf\Internal\Message
      * Generated from protobuf field <code>.google.protobuf.FieldMask update_mask = 18 [json_name = "updateMask"];</code>
      */
     protected $update_mask = null;
+    /**
+     * Replacement OIDC redirect-URI allowlist (same rules as CreateProvider).
+     * Without a mask a non-empty list replaces the stored one; to clear it,
+     * send `redirect_uris` in update_mask with an empty list.
+     *
+     * Generated from protobuf field <code>repeated string redirect_uris = 19 [json_name = "redirectUris"];</code>
+     */
+    private $redirect_uris;
 
     /**
      * Constructor.
@@ -122,6 +130,10 @@ class UpdateProviderRequest extends \Google\Protobuf\Internal\Message
      *     @type \Google\Protobuf\FieldMask $update_mask
      *           Optional PATCH mask relative to the provider resource. When omitted, legacy
      *           clients keep the historical non-empty-field patch behavior.
+     *     @type string[] $redirect_uris
+     *           Replacement OIDC redirect-URI allowlist (same rules as CreateProvider).
+     *           Without a mask a non-empty list replaces the stored one; to clear it,
+     *           send `redirect_uris` in update_mask with an empty list.
      * }
      */
     public function __construct($data = NULL) {
@@ -555,6 +567,36 @@ class UpdateProviderRequest extends \Google\Protobuf\Internal\Message
     {
         GPBUtil::checkMessage($var, \Google\Protobuf\FieldMask::class);
         $this->update_mask = $var;
+
+        return $this;
+    }
+
+    /**
+     * Replacement OIDC redirect-URI allowlist (same rules as CreateProvider).
+     * Without a mask a non-empty list replaces the stored one; to clear it,
+     * send `redirect_uris` in update_mask with an empty list.
+     *
+     * Generated from protobuf field <code>repeated string redirect_uris = 19 [json_name = "redirectUris"];</code>
+     * @return RepeatedField<string>
+     */
+    public function getRedirectUris()
+    {
+        return $this->redirect_uris;
+    }
+
+    /**
+     * Replacement OIDC redirect-URI allowlist (same rules as CreateProvider).
+     * Without a mask a non-empty list replaces the stored one; to clear it,
+     * send `redirect_uris` in update_mask with an empty list.
+     *
+     * Generated from protobuf field <code>repeated string redirect_uris = 19 [json_name = "redirectUris"];</code>
+     * @param string[] $var
+     * @return $this
+     */
+    public function setRedirectUris($var)
+    {
+        $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::STRING);
+        $this->redirect_uris = $arr;
 
         return $this;
     }

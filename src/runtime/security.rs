@@ -1424,6 +1424,141 @@ pub fn sign_membership_access_token(
     .map(Some)
 }
 
+/// The `acr` (assurance level) a token minted by `auth_method` states:
+/// `aal2` for a second factor or a phishing-resistant passkey, else `aal1`.
+/// Password logins completed with a second factor use the `pwd_*` methods.
+pub fn acr_for_auth_method(auth_method: &str) -> &'static str {
+    if matches!(
+        auth_method,
+        "mfa"
+            | "webauthn"
+            | "passkey"
+            | "totp"
+            | "pwd_otp"
+            | "pwd_totp"
+            | "pwd_recovery"
+            | "pwd_webauthn"
+            | STEP_UP_AUTH_METHOD
+    ) {
+        "aal2"
+    } else {
+        "aal1"
+    }
+}
+
+/// The RFC 8176 `amr` values a token minted by `auth_method` carries, or
+/// `None` when the token is not the result of the user authenticating (a
+/// refresh, an API-key or membership exchange, a service account): those keep
+/// no `amr`/`auth_time`. `webauthn` (a passkey), `fed` (an OIDC identity
+/// provider) and `invitation` (an accepted invitation's proven channel) name
+/// methods RFC 8176 has no value for.
+pub fn amr_for_auth_method(auth_method: &str) -> Option<&'static [&'static str]> {
+    let amr: &'static [&'static str] = match auth_method {
+        "pwd" | "password" => &["pwd"],
+        // A one-time code: email/SMS code, authenticator app, recovery code.
+        "pwd_otp" | "pwd_totp" | "pwd_recovery" => &["pwd", "otp"],
+        "pwd_webauthn" => &["pwd", "webauthn"],
+        "mfa" => &["pwd", "mfa"],
+        "otp" | "magic_link" | "totp" => &["otp"],
+        "webauthn" | "passkey" => &["webauthn"],
+        "oidc" => &["fed"],
+        "invitation" => &["invitation"],
+        _ => return None,
+    };
+    Some(amr)
+}
+
+/// The `auth_method` claim of every step-up token.
+pub const STEP_UP_AUTH_METHOD: &str = "step_up";
+
+/// The `amr` value a step-up proven with an `AuthFactorKind` short name
+/// (`TOTP`, `EMAIL_OTP`, `SMS_OTP`, `RECOVERY_CODE`, `WEBAUTHN`) states.
+pub fn amr_for_step_up_factor(factor: &str) -> Option<&'static str> {
+    match factor {
+        "TOTP" | "EMAIL_OTP" | "RECOVERY_CODE" => Some("otp"),
+        "SMS_OTP" => Some("sms"),
+        "WEBAUTHN" => Some("webauthn"),
+        _ => None,
+    }
+}
+
+/// What a step-up token is minted for: the session subject that just proved
+/// a second factor, the action it unlocks, and the factor used.
+#[derive(Debug, Clone, Copy)]
+pub struct StepUpGrant<'a> {
+    pub subject: &'a str,
+    pub tenant_id: &'a str,
+    pub project_id: &'a str,
+    /// The `jti`: the caller's own session-bound access-token id (`sess_…` /
+    /// `rtf_…`) so revoking that session also kills the step-up token.
+    pub jti: &'a str,
+    pub action: &'a str,
+    /// `AuthFactorKind` short name, e.g. `EMAIL_OTP`.
+    pub factor: &'a str,
+}
+
+/// Sign a short-lived step-up token (RS256, the ACTIVE registry key else the
+/// env key, like every UDB token). It carries `acr = aal2`, `amr` for the
+/// proven factor, `auth_time = now`, `step_up_action`, `step_up_factor` and
+/// `token_use = "step_up"`, and no scopes or roles: [`validate_bearer_token`]
+/// refuses it as an access token. `Ok(None)` when no signing key is
+/// configured.
+pub fn sign_step_up_token(
+    config: &SecurityConfig,
+    grant: StepUpGrant<'_>,
+    now_unix: u64,
+    ttl_secs: u64,
+) -> Result<Option<(String, i64)>, String> {
+    use jsonwebtoken::{Algorithm, EncodingKey, Header, encode};
+    use serde_json::json;
+
+    let (kid, private_pem) = match active_signing_key() {
+        Some(active) => active,
+        None => {
+            let Some(key_src) = config.jwt_private_key.clone() else {
+                return Ok(None);
+            };
+            let Some(pem) = SecurityConfig::resolve_pem(&key_src)? else {
+                return Ok(None);
+            };
+            (UDB_RS256_KID.to_string(), pem)
+        }
+    };
+    let encoding_key = EncodingKey::from_rsa_pem(private_pem.as_bytes())
+        .map_err(|e| format!("invalid JWT private key: {e}"))?;
+    let exp = now_unix.saturating_add(ttl_secs.max(1)) as i64;
+    let amr: Vec<&str> = amr_for_step_up_factor(grant.factor).into_iter().collect();
+    let mut claims = serde_json::Map::new();
+    claims.insert("sub".into(), json!(grant.subject));
+    claims.insert("iat".into(), json!(now_unix as i64));
+    claims.insert("exp".into(), json!(exp));
+    claims.insert("jti".into(), json!(grant.jti));
+    if !grant.tenant_id.is_empty() {
+        claims.insert("tenant_id".into(), json!(grant.tenant_id));
+    }
+    if !grant.project_id.is_empty() {
+        claims.insert("project_id".into(), json!(grant.project_id));
+    }
+    claims.insert("token_use".into(), json!(STEP_UP_TOKEN_USE));
+    claims.insert("auth_method".into(), json!(STEP_UP_AUTH_METHOD));
+    claims.insert("acr".into(), json!("aal2"));
+    claims.insert("amr".into(), json!(amr));
+    claims.insert("auth_time".into(), json!(now_unix as i64));
+    claims.insert("step_up_action".into(), json!(grant.action));
+    claims.insert("step_up_factor".into(), json!(grant.factor));
+    if let Some(iss) = &config.jwt_issuer {
+        claims.insert("iss".into(), json!(iss));
+    }
+    if let Some(aud) = &config.jwt_audience {
+        claims.insert("aud".into(), json!(aud));
+    }
+    let mut header = Header::new(Algorithm::RS256);
+    header.kid = Some(kid);
+    let token = encode(&header, &serde_json::Value::Object(claims), &encoding_key)
+        .map_err(|e| format!("failed to sign step-up token: {e}"))?;
+    Ok(Some((token, exp)))
+}
+
 #[allow(clippy::too_many_arguments)]
 fn sign_access_token_claims(
     config: &SecurityConfig,
@@ -1483,12 +1618,15 @@ fn sign_access_token_claims(
         claims.insert("auth_method".into(), json!(auth_method));
         // Assurance level (ACR): multi-factor / phishing-resistant methods are
         // AAL2; everything else is AAL1. Resource servers gate step-up on this.
-        let acr = if matches!(auth_method, "mfa" | "webauthn" | "passkey" | "totp") {
-            "aal2"
-        } else {
-            "aal1"
-        };
-        claims.insert("acr".into(), json!(acr));
+        claims.insert("acr".into(), json!(acr_for_auth_method(auth_method)));
+        // RFC 8176 authentication methods and the time the user proved them.
+        // Only a token minted by an actual sign-in carries them: a refreshed or
+        // exchanged token does not re-authenticate the user, so it states no
+        // `amr`/`auth_time` rather than a misleading "now".
+        if let Some(amr) = amr_for_auth_method(auth_method) {
+            claims.insert("amr".into(), json!(amr));
+            claims.insert("auth_time".into(), json!(now_unix as i64));
+        }
     }
     if let Some(iss) = &config.jwt_issuer {
         claims.insert("iss".into(), json!(iss));
@@ -1511,10 +1649,111 @@ fn sign_access_token_claims(
 /// path with the per-request broker flow (`security_from_request`) so the auth
 /// service's `Authenticate` RPC enforces the same `exp`/`nbf`/`iss`/`aud`/alg
 /// rules. `Err` carries a caller-safe message (no key material).
+///
+/// A step-up token ([`STEP_UP_TOKEN_USE`]) is refused here: it proves a recent
+/// second factor for one action and carries no scopes, so it must never pass
+/// as an access token. [`validate_step_up_token`] is its only validator.
 pub fn validate_bearer_token(
     config: &SecurityConfig,
     token: &str,
 ) -> Result<SecurityClaims, String> {
+    validate_bearer_token_with_assurance(config, token).map(|(claims, _)| claims)
+}
+
+/// [`validate_bearer_token`] plus the token's [`TokenAssurance`] claims
+/// (`acr`, `amr`, `auth_time`), from one signature verification.
+pub fn validate_bearer_token_with_assurance(
+    config: &SecurityConfig,
+    token: &str,
+) -> Result<(SecurityClaims, TokenAssurance), String> {
+    let payload = decode_verified_jwt_payload(config, token)?;
+    if payload.get("token_use").and_then(serde_json::Value::as_str) == Some(STEP_UP_TOKEN_USE) {
+        return Err("invalid JWT token: a step-up token is not an access token".to_string());
+    }
+    let assurance = TokenAssurance::from_payload(&payload);
+    let claims = serde_json::from_value::<SecurityClaims>(payload)
+        .map_err(|e| format!("invalid JWT token: {e}"))?;
+    Ok((claims, assurance))
+}
+
+/// Validate a step-up token minted by [`sign_step_up_token`]: the same
+/// signature/`exp`/`iss`/`aud`/alg rules as an access token, and it must carry
+/// `token_use = "step_up"` and a non-empty `step_up_action`. Returns the
+/// subject claims (scopes/roles empty) and the assurance claims.
+pub fn validate_step_up_token(
+    config: &SecurityConfig,
+    token: &str,
+) -> Result<(SecurityClaims, TokenAssurance), String> {
+    let payload = decode_verified_jwt_payload(config, token)?;
+    if payload.get("token_use").and_then(serde_json::Value::as_str) != Some(STEP_UP_TOKEN_USE) {
+        return Err("invalid step-up token: not a step-up token".to_string());
+    }
+    let assurance = TokenAssurance::from_payload(&payload);
+    if assurance.step_up_action.trim().is_empty() {
+        return Err("invalid step-up token: no step_up_action".to_string());
+    }
+    let claims = serde_json::from_value::<SecurityClaims>(payload)
+        .map_err(|e| format!("invalid step-up token: {e}"))?;
+    Ok((claims, assurance))
+}
+
+/// The `token_use` claim value that marks a step-up token.
+pub const STEP_UP_TOKEN_USE: &str = "step_up";
+
+/// Authentication-assurance claims of a verified UDB token: the assurance
+/// level, the methods used (RFC 8176 `amr`), when the user authenticated, and
+/// for a step-up token the action and second factor it was minted for.
+/// Fields are empty/0 when the token does not carry them (refreshed tokens,
+/// tokens minted before 0.6.6, external IdP tokens).
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct TokenAssurance {
+    pub acr: String,
+    pub amr: Vec<String>,
+    pub auth_time: i64,
+    pub step_up_action: String,
+    /// The `AuthFactorKind` short name (`TOTP`, `EMAIL_OTP`, `SMS_OTP`,
+    /// `WEBAUTHN`, `RECOVERY_CODE`) a step-up token was proven with.
+    pub step_up_factor: String,
+}
+
+impl TokenAssurance {
+    fn from_payload(payload: &serde_json::Value) -> Self {
+        let text = |key: &str| {
+            payload
+                .get(key)
+                .and_then(serde_json::Value::as_str)
+                .unwrap_or_default()
+                .to_string()
+        };
+        Self {
+            acr: text("acr"),
+            amr: payload
+                .get("amr")
+                .and_then(serde_json::Value::as_array)
+                .map(|values| {
+                    values
+                        .iter()
+                        .filter_map(serde_json::Value::as_str)
+                        .map(ToString::to_string)
+                        .collect()
+                })
+                .unwrap_or_default(),
+            auth_time: payload
+                .get("auth_time")
+                .and_then(serde_json::Value::as_i64)
+                .unwrap_or(0),
+            step_up_action: text("step_up_action"),
+            step_up_factor: text("step_up_factor"),
+        }
+    }
+}
+
+/// Signature/`exp`/`nbf`/`iss`/`aud`/alg verification shared by every UDB JWT
+/// validator; returns the raw claim payload.
+fn decode_verified_jwt_payload(
+    config: &SecurityConfig,
+    token: &str,
+) -> Result<serde_json::Value, String> {
     // Pick the decoding-key constructor by the token's declared algorithm
     // family. A blind `from_rsa_pem().or_else(from_ec_pem)…` chain can build a
     // wrong-family key from a PEM that several constructors accept by tag, which
@@ -1598,7 +1837,7 @@ pub fn validate_bearer_token(
             header.alg
         ));
     }
-    decode::<SecurityClaims>(token, &decoding_key, &validation)
+    decode::<serde_json::Value>(token, &decoding_key, &validation)
         .map(|data| data.claims)
         .map_err(|e| format!("invalid JWT token: {e}"))
 }
@@ -3445,6 +3684,126 @@ mod tests {
         // select the verification key.
         assert_eq!(header.kid.as_deref(), Some(UDB_RS256_KID));
         assert_eq!(header.alg, jsonwebtoken::Algorithm::RS256);
+    }
+
+    /// Sign-in methods map to RFC 8176 `amr` values and an assurance level;
+    /// a password login completed with a second factor is aal2, and a token
+    /// that does not re-authenticate the user (refresh, exchange) states no amr.
+    #[test]
+    fn auth_methods_map_to_amr_and_acr() {
+        let amr = |method: &str| amr_for_auth_method(method).map(|v| v.to_vec());
+        assert_eq!(amr("pwd"), Some(vec!["pwd"]));
+        assert_eq!(amr("pwd_otp"), Some(vec!["pwd", "otp"]));
+        assert_eq!(amr("pwd_totp"), Some(vec!["pwd", "otp"]));
+        assert_eq!(amr("pwd_recovery"), Some(vec!["pwd", "otp"]));
+        assert_eq!(amr("pwd_webauthn"), Some(vec!["pwd", "webauthn"]));
+        assert_eq!(amr("otp"), Some(vec!["otp"]));
+        assert_eq!(amr("magic_link"), Some(vec!["otp"]));
+        assert_eq!(amr("webauthn"), Some(vec!["webauthn"]));
+        assert_eq!(amr("oidc"), Some(vec!["fed"]));
+        assert_eq!(amr("invitation"), Some(vec!["invitation"]));
+        for none in [
+            "refresh",
+            "api_key",
+            MEMBERSHIP_TOKEN_AUTH_METHOD,
+            "service",
+            "",
+        ] {
+            assert_eq!(amr(none), None, "{none}");
+        }
+        assert_eq!(acr_for_auth_method("pwd"), "aal1");
+        assert_eq!(acr_for_auth_method("otp"), "aal1");
+        assert_eq!(acr_for_auth_method("refresh"), "aal1");
+        for aal2 in [
+            "pwd_otp",
+            "pwd_totp",
+            "pwd_recovery",
+            "pwd_webauthn",
+            "webauthn",
+            "mfa",
+        ] {
+            assert_eq!(acr_for_auth_method(aal2), "aal2", "{aal2}");
+        }
+        assert_eq!(amr_for_step_up_factor("SMS_OTP"), Some("sms"));
+        assert_eq!(amr_for_step_up_factor("EMAIL_OTP"), Some("otp"));
+        assert_eq!(amr_for_step_up_factor("WEBAUTHN"), Some("webauthn"));
+        assert_eq!(amr_for_step_up_factor("PASSWORD"), None);
+    }
+
+    /// A login token carries `amr` + `auth_time`; a refreshed one carries
+    /// neither; a step-up token validates only through its own validator and
+    /// is refused as an access token.
+    #[test]
+    fn amr_auth_time_and_step_up_tokens_round_trip() {
+        let config = SecurityConfig {
+            jwt_private_key: Some(include_str!("testdata/jwt_rs256_private.pem").to_string()),
+            jwt_public_key: Some(include_str!("testdata/jwt_rs256_public.pem").to_string()),
+            ..SecurityConfig::default()
+        };
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .expect("system clock after unix epoch")
+            .as_secs();
+        let sign = |method: &str| {
+            sign_access_token(
+                &config,
+                "user-1",
+                "acme",
+                "billing",
+                &[],
+                &[],
+                "",
+                "sess_x",
+                method,
+                0,
+                now,
+            )
+            .expect("sign")
+            .expect("key configured")
+            .0
+        };
+        let (_, login) =
+            validate_bearer_token_with_assurance(&config, &sign("pwd_otp")).expect("login token");
+        assert_eq!(login.acr, "aal2");
+        assert_eq!(login.amr, ["pwd", "otp"]);
+        assert_eq!(login.auth_time, now as i64);
+        let (_, refreshed) =
+            validate_bearer_token_with_assurance(&config, &sign("refresh")).expect("refresh token");
+        assert_eq!(refreshed.acr, "aal1");
+        assert!(refreshed.amr.is_empty());
+        assert_eq!(refreshed.auth_time, 0);
+
+        let (step_up, _) = sign_step_up_token(
+            &config,
+            StepUpGrant {
+                subject: "user-1",
+                tenant_id: "acme",
+                project_id: "billing",
+                jti: "sess_x",
+                action: "payments.approve",
+                factor: "EMAIL_OTP",
+            },
+            now,
+            120,
+        )
+        .expect("sign step-up")
+        .expect("key configured");
+        assert!(
+            validate_bearer_token(&config, &step_up).is_err(),
+            "a step-up token is never an access token"
+        );
+        let (claims, assurance) =
+            validate_step_up_token(&config, &step_up).expect("step-up token validates");
+        assert_eq!(claims.sub.as_deref(), Some("user-1"));
+        assert!(claims.resolved_scopes().is_empty());
+        assert_eq!(assurance.acr, "aal2");
+        assert_eq!(assurance.amr, ["otp"]);
+        assert_eq!(assurance.step_up_action, "payments.approve");
+        assert_eq!(assurance.step_up_factor, "EMAIL_OTP");
+        assert!(
+            validate_step_up_token(&config, &sign("pwd")).is_err(),
+            "an access token is not a step-up token"
+        );
     }
 
     #[test]

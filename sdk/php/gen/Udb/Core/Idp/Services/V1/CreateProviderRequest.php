@@ -95,6 +95,15 @@ class CreateProviderRequest extends \Google\Protobuf\Internal\Message
      * Generated from protobuf field <code>.udb.core.common.v1.RequestContext context = 18 [json_name = "context"];</code>
      */
     protected $context = null;
+    /**
+     * OIDC redirect URIs StartOidcLogin may send the browser back to (exact
+     * match). Each must be https, http on a loopback IP for native apps, or a
+     * private-use scheme with a dot (com.example.app:/oauth2redirect). At most
+     * 20, each at most 512 characters, no fragment.
+     *
+     * Generated from protobuf field <code>repeated string redirect_uris = 19 [json_name = "redirectUris"];</code>
+     */
+    private $redirect_uris;
 
     /**
      * Constructor.
@@ -125,6 +134,11 @@ class CreateProviderRequest extends \Google\Protobuf\Internal\Message
      *           Optional SP signing key (PEM) for SAML request signing (write-only).
      *     @type string $created_by
      *     @type \Udb\Core\Common\V1\RequestContext $context
+     *     @type string[] $redirect_uris
+     *           OIDC redirect URIs StartOidcLogin may send the browser back to (exact
+     *           match). Each must be https, http on a loopback IP for native apps, or a
+     *           private-use scheme with a dot (com.example.app:/oauth2redirect). At most
+     *           20, each at most 512 characters, no fragment.
      * }
      */
     public function __construct($data = NULL) {
@@ -552,6 +566,38 @@ class CreateProviderRequest extends \Google\Protobuf\Internal\Message
     {
         GPBUtil::checkMessage($var, \Udb\Core\Common\V1\RequestContext::class);
         $this->context = $var;
+
+        return $this;
+    }
+
+    /**
+     * OIDC redirect URIs StartOidcLogin may send the browser back to (exact
+     * match). Each must be https, http on a loopback IP for native apps, or a
+     * private-use scheme with a dot (com.example.app:/oauth2redirect). At most
+     * 20, each at most 512 characters, no fragment.
+     *
+     * Generated from protobuf field <code>repeated string redirect_uris = 19 [json_name = "redirectUris"];</code>
+     * @return RepeatedField<string>
+     */
+    public function getRedirectUris()
+    {
+        return $this->redirect_uris;
+    }
+
+    /**
+     * OIDC redirect URIs StartOidcLogin may send the browser back to (exact
+     * match). Each must be https, http on a loopback IP for native apps, or a
+     * private-use scheme with a dot (com.example.app:/oauth2redirect). At most
+     * 20, each at most 512 characters, no fragment.
+     *
+     * Generated from protobuf field <code>repeated string redirect_uris = 19 [json_name = "redirectUris"];</code>
+     * @param string[] $var
+     * @return $this
+     */
+    public function setRedirectUris($var)
+    {
+        $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::STRING);
+        $this->redirect_uris = $arr;
 
         return $this;
     }

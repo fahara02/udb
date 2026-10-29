@@ -288,4 +288,53 @@ public interface UpdateProviderRequestOrBuilder extends
    * <code>.google.protobuf.FieldMask update_mask = 18 [json_name = "updateMask"];</code>
    */
   com.google.protobuf.FieldMaskOrBuilder getUpdateMaskOrBuilder();
+
+  /**
+   * <pre>
+   * Replacement OIDC redirect-URI allowlist (same rules as CreateProvider).
+   * Without a mask a non-empty list replaces the stored one; to clear it,
+   * send `redirect_uris` in update_mask with an empty list.
+   * </pre>
+   *
+   * <code>repeated string redirect_uris = 19 [json_name = "redirectUris"];</code>
+   * @return A list containing the redirectUris.
+   */
+  java.util.List<java.lang.String>
+      getRedirectUrisList();
+  /**
+   * <pre>
+   * Replacement OIDC redirect-URI allowlist (same rules as CreateProvider).
+   * Without a mask a non-empty list replaces the stored one; to clear it,
+   * send `redirect_uris` in update_mask with an empty list.
+   * </pre>
+   *
+   * <code>repeated string redirect_uris = 19 [json_name = "redirectUris"];</code>
+   * @return The count of redirectUris.
+   */
+  int getRedirectUrisCount();
+  /**
+   * <pre>
+   * Replacement OIDC redirect-URI allowlist (same rules as CreateProvider).
+   * Without a mask a non-empty list replaces the stored one; to clear it,
+   * send `redirect_uris` in update_mask with an empty list.
+   * </pre>
+   *
+   * <code>repeated string redirect_uris = 19 [json_name = "redirectUris"];</code>
+   * @param index The index of the element to return.
+   * @return The redirectUris at the given index.
+   */
+  java.lang.String getRedirectUris(int index);
+  /**
+   * <pre>
+   * Replacement OIDC redirect-URI allowlist (same rules as CreateProvider).
+   * Without a mask a non-empty list replaces the stored one; to clear it,
+   * send `redirect_uris` in update_mask with an empty list.
+   * </pre>
+   *
+   * <code>repeated string redirect_uris = 19 [json_name = "redirectUris"];</code>
+   * @param index The index of the value to return.
+   * @return The bytes of the redirectUris at the given index.
+   */
+  com.google.protobuf.ByteString
+      getRedirectUrisBytes(int index);
 }

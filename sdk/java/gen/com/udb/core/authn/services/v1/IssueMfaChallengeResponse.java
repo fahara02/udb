@@ -30,6 +30,8 @@ private static final long serialVersionUID = 0L;
   private IssueMfaChallengeResponse() {
     challengeId_ = "";
     factorKind_ = 0;
+    webauthnOptionsJson_ = "";
+    otpDestinationMasked_ = "";
   }
 
   public static final com.google.protobuf.Descriptors.Descriptor
@@ -113,6 +115,106 @@ private static final long serialVersionUID = 0L;
     return result == null ? com.udb.core.authn.entity.v1.AuthFactorKind.UNRECOGNIZED : result;
   }
 
+  public static final int WEBAUTHN_OPTIONS_JSON_FIELD_NUMBER = 4;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object webauthnOptionsJson_ = "";
+  /**
+   * <pre>
+   * WEBAUTHN challenges: the PublicKeyCredentialRequestOptions JSON to pass to
+   * `navigator.credentials.get()`; send the resulting assertion back as
+   * VerifyMfaChallengeRequest.webauthn_assertion_json. Empty for other factors.
+   * </pre>
+   *
+   * <code>string webauthn_options_json = 4 [json_name = "webauthnOptionsJson"];</code>
+   * @return The webauthnOptionsJson.
+   */
+  @java.lang.Override
+  public java.lang.String getWebauthnOptionsJson() {
+    java.lang.Object ref = webauthnOptionsJson_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs =
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      webauthnOptionsJson_ = s;
+      return s;
+    }
+  }
+  /**
+   * <pre>
+   * WEBAUTHN challenges: the PublicKeyCredentialRequestOptions JSON to pass to
+   * `navigator.credentials.get()`; send the resulting assertion back as
+   * VerifyMfaChallengeRequest.webauthn_assertion_json. Empty for other factors.
+   * </pre>
+   *
+   * <code>string webauthn_options_json = 4 [json_name = "webauthnOptionsJson"];</code>
+   * @return The bytes for webauthnOptionsJson.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getWebauthnOptionsJsonBytes() {
+    java.lang.Object ref = webauthnOptionsJson_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b =
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      webauthnOptionsJson_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
+  public static final int OTP_DESTINATION_MASKED_FIELD_NUMBER = 5;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object otpDestinationMasked_ = "";
+  /**
+   * <pre>
+   * EMAIL_OTP / SMS_OTP challenges: where the code was sent, masked
+   * (`r***&#64;example.com`, `+88017******21`). Empty for other factors.
+   * </pre>
+   *
+   * <code>string otp_destination_masked = 5 [json_name = "otpDestinationMasked"];</code>
+   * @return The otpDestinationMasked.
+   */
+  @java.lang.Override
+  public java.lang.String getOtpDestinationMasked() {
+    java.lang.Object ref = otpDestinationMasked_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs =
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      otpDestinationMasked_ = s;
+      return s;
+    }
+  }
+  /**
+   * <pre>
+   * EMAIL_OTP / SMS_OTP challenges: where the code was sent, masked
+   * (`r***&#64;example.com`, `+88017******21`). Empty for other factors.
+   * </pre>
+   *
+   * <code>string otp_destination_masked = 5 [json_name = "otpDestinationMasked"];</code>
+   * @return The bytes for otpDestinationMasked.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getOtpDestinationMaskedBytes() {
+    java.lang.Object ref = otpDestinationMasked_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b =
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      otpDestinationMasked_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -136,6 +238,12 @@ private static final long serialVersionUID = 0L;
     if (factorKind_ != com.udb.core.authn.entity.v1.AuthFactorKind.AUTH_FACTOR_KIND_UNSPECIFIED.getNumber()) {
       output.writeEnum(3, factorKind_);
     }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(webauthnOptionsJson_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 4, webauthnOptionsJson_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(otpDestinationMasked_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 5, otpDestinationMasked_);
+    }
     getUnknownFields().writeTo(output);
   }
 
@@ -155,6 +263,12 @@ private static final long serialVersionUID = 0L;
     if (factorKind_ != com.udb.core.authn.entity.v1.AuthFactorKind.AUTH_FACTOR_KIND_UNSPECIFIED.getNumber()) {
       size += com.google.protobuf.CodedOutputStream
         .computeEnumSize(3, factorKind_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(webauthnOptionsJson_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(4, webauthnOptionsJson_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(otpDestinationMasked_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(5, otpDestinationMasked_);
     }
     size += getUnknownFields().getSerializedSize();
     memoizedSize = size;
@@ -176,6 +290,10 @@ private static final long serialVersionUID = 0L;
     if (getExpiresAtUnix()
         != other.getExpiresAtUnix()) return false;
     if (factorKind_ != other.factorKind_) return false;
+    if (!getWebauthnOptionsJson()
+        .equals(other.getWebauthnOptionsJson())) return false;
+    if (!getOtpDestinationMasked()
+        .equals(other.getOtpDestinationMasked())) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -194,6 +312,10 @@ private static final long serialVersionUID = 0L;
         getExpiresAtUnix());
     hash = (37 * hash) + FACTOR_KIND_FIELD_NUMBER;
     hash = (53 * hash) + factorKind_;
+    hash = (37 * hash) + WEBAUTHN_OPTIONS_JSON_FIELD_NUMBER;
+    hash = (53 * hash) + getWebauthnOptionsJson().hashCode();
+    hash = (37 * hash) + OTP_DESTINATION_MASKED_FIELD_NUMBER;
+    hash = (53 * hash) + getOtpDestinationMasked().hashCode();
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -328,6 +450,8 @@ private static final long serialVersionUID = 0L;
       challengeId_ = "";
       expiresAtUnix_ = 0L;
       factorKind_ = 0;
+      webauthnOptionsJson_ = "";
+      otpDestinationMasked_ = "";
       return this;
     }
 
@@ -370,6 +494,12 @@ private static final long serialVersionUID = 0L;
       if (((from_bitField0_ & 0x00000004) != 0)) {
         result.factorKind_ = factorKind_;
       }
+      if (((from_bitField0_ & 0x00000008) != 0)) {
+        result.webauthnOptionsJson_ = webauthnOptionsJson_;
+      }
+      if (((from_bitField0_ & 0x00000010) != 0)) {
+        result.otpDestinationMasked_ = otpDestinationMasked_;
+      }
     }
 
     @java.lang.Override
@@ -394,6 +524,16 @@ private static final long serialVersionUID = 0L;
       }
       if (other.factorKind_ != 0) {
         setFactorKindValue(other.getFactorKindValue());
+      }
+      if (!other.getWebauthnOptionsJson().isEmpty()) {
+        webauthnOptionsJson_ = other.webauthnOptionsJson_;
+        bitField0_ |= 0x00000008;
+        onChanged();
+      }
+      if (!other.getOtpDestinationMasked().isEmpty()) {
+        otpDestinationMasked_ = other.otpDestinationMasked_;
+        bitField0_ |= 0x00000010;
+        onChanged();
       }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
@@ -436,6 +576,16 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00000004;
               break;
             } // case 24
+            case 34: {
+              webauthnOptionsJson_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00000008;
+              break;
+            } // case 34
+            case 42: {
+              otpDestinationMasked_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00000010;
+              break;
+            } // case 42
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -604,6 +754,205 @@ private static final long serialVersionUID = 0L;
     public Builder clearFactorKind() {
       bitField0_ = (bitField0_ & ~0x00000004);
       factorKind_ = 0;
+      onChanged();
+      return this;
+    }
+
+    private java.lang.Object webauthnOptionsJson_ = "";
+    /**
+     * <pre>
+     * WEBAUTHN challenges: the PublicKeyCredentialRequestOptions JSON to pass to
+     * `navigator.credentials.get()`; send the resulting assertion back as
+     * VerifyMfaChallengeRequest.webauthn_assertion_json. Empty for other factors.
+     * </pre>
+     *
+     * <code>string webauthn_options_json = 4 [json_name = "webauthnOptionsJson"];</code>
+     * @return The webauthnOptionsJson.
+     */
+    public java.lang.String getWebauthnOptionsJson() {
+      java.lang.Object ref = webauthnOptionsJson_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        webauthnOptionsJson_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <pre>
+     * WEBAUTHN challenges: the PublicKeyCredentialRequestOptions JSON to pass to
+     * `navigator.credentials.get()`; send the resulting assertion back as
+     * VerifyMfaChallengeRequest.webauthn_assertion_json. Empty for other factors.
+     * </pre>
+     *
+     * <code>string webauthn_options_json = 4 [json_name = "webauthnOptionsJson"];</code>
+     * @return The bytes for webauthnOptionsJson.
+     */
+    public com.google.protobuf.ByteString
+        getWebauthnOptionsJsonBytes() {
+      java.lang.Object ref = webauthnOptionsJson_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b =
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        webauthnOptionsJson_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <pre>
+     * WEBAUTHN challenges: the PublicKeyCredentialRequestOptions JSON to pass to
+     * `navigator.credentials.get()`; send the resulting assertion back as
+     * VerifyMfaChallengeRequest.webauthn_assertion_json. Empty for other factors.
+     * </pre>
+     *
+     * <code>string webauthn_options_json = 4 [json_name = "webauthnOptionsJson"];</code>
+     * @param value The webauthnOptionsJson to set.
+     * @return This builder for chaining.
+     */
+    public Builder setWebauthnOptionsJson(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      webauthnOptionsJson_ = value;
+      bitField0_ |= 0x00000008;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * WEBAUTHN challenges: the PublicKeyCredentialRequestOptions JSON to pass to
+     * `navigator.credentials.get()`; send the resulting assertion back as
+     * VerifyMfaChallengeRequest.webauthn_assertion_json. Empty for other factors.
+     * </pre>
+     *
+     * <code>string webauthn_options_json = 4 [json_name = "webauthnOptionsJson"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearWebauthnOptionsJson() {
+      webauthnOptionsJson_ = getDefaultInstance().getWebauthnOptionsJson();
+      bitField0_ = (bitField0_ & ~0x00000008);
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * WEBAUTHN challenges: the PublicKeyCredentialRequestOptions JSON to pass to
+     * `navigator.credentials.get()`; send the resulting assertion back as
+     * VerifyMfaChallengeRequest.webauthn_assertion_json. Empty for other factors.
+     * </pre>
+     *
+     * <code>string webauthn_options_json = 4 [json_name = "webauthnOptionsJson"];</code>
+     * @param value The bytes for webauthnOptionsJson to set.
+     * @return This builder for chaining.
+     */
+    public Builder setWebauthnOptionsJsonBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      webauthnOptionsJson_ = value;
+      bitField0_ |= 0x00000008;
+      onChanged();
+      return this;
+    }
+
+    private java.lang.Object otpDestinationMasked_ = "";
+    /**
+     * <pre>
+     * EMAIL_OTP / SMS_OTP challenges: where the code was sent, masked
+     * (`r***&#64;example.com`, `+88017******21`). Empty for other factors.
+     * </pre>
+     *
+     * <code>string otp_destination_masked = 5 [json_name = "otpDestinationMasked"];</code>
+     * @return The otpDestinationMasked.
+     */
+    public java.lang.String getOtpDestinationMasked() {
+      java.lang.Object ref = otpDestinationMasked_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        otpDestinationMasked_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <pre>
+     * EMAIL_OTP / SMS_OTP challenges: where the code was sent, masked
+     * (`r***&#64;example.com`, `+88017******21`). Empty for other factors.
+     * </pre>
+     *
+     * <code>string otp_destination_masked = 5 [json_name = "otpDestinationMasked"];</code>
+     * @return The bytes for otpDestinationMasked.
+     */
+    public com.google.protobuf.ByteString
+        getOtpDestinationMaskedBytes() {
+      java.lang.Object ref = otpDestinationMasked_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b =
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        otpDestinationMasked_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <pre>
+     * EMAIL_OTP / SMS_OTP challenges: where the code was sent, masked
+     * (`r***&#64;example.com`, `+88017******21`). Empty for other factors.
+     * </pre>
+     *
+     * <code>string otp_destination_masked = 5 [json_name = "otpDestinationMasked"];</code>
+     * @param value The otpDestinationMasked to set.
+     * @return This builder for chaining.
+     */
+    public Builder setOtpDestinationMasked(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      otpDestinationMasked_ = value;
+      bitField0_ |= 0x00000010;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * EMAIL_OTP / SMS_OTP challenges: where the code was sent, masked
+     * (`r***&#64;example.com`, `+88017******21`). Empty for other factors.
+     * </pre>
+     *
+     * <code>string otp_destination_masked = 5 [json_name = "otpDestinationMasked"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearOtpDestinationMasked() {
+      otpDestinationMasked_ = getDefaultInstance().getOtpDestinationMasked();
+      bitField0_ = (bitField0_ & ~0x00000010);
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * EMAIL_OTP / SMS_OTP challenges: where the code was sent, masked
+     * (`r***&#64;example.com`, `+88017******21`). Empty for other factors.
+     * </pre>
+     *
+     * <code>string otp_destination_masked = 5 [json_name = "otpDestinationMasked"];</code>
+     * @param value The bytes for otpDestinationMasked to set.
+     * @return This builder for chaining.
+     */
+    public Builder setOtpDestinationMaskedBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      otpDestinationMasked_ = value;
+      bitField0_ |= 0x00000010;
       onChanged();
       return this;
     }

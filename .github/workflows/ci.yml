@@ -2233,6 +2233,38 @@ jobs:
           print("Permanent projection proof executed once: 1 passed, 0 failed, 0 ignored")
           PY
 
+      - name: Passkey live tests (webauthn feature)
+        id: passkeys_live
+        timeout-minutes: 20
+        # The all-ignored lane builds default features, which leave `webauthn`
+        # off, so the passkey sign-in, usernameless and second-factor live tests
+        # only exist in this build. A filter matching nothing would pass, so
+        # require every listed test to run and pass.
+        env:
+          UDB_LIVE_AUTH_TESTS: "1"
+          UDB_LIVE_REQUIRED: "1"
+          UDB_PG_DSN: ${{ env.UDB_PG_DSN }}
+          UDB_INTEGRATION_PG_DSN: ${{ env.UDB_INTEGRATION_PG_DSN }}
+          UDB_LIVE_NATIVE_PG_DSN: ${{ env.UDB_INTEGRATION_PG_DSN }}
+          UDB_ENCRYPTION_KEY: QkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkI=
+          CARGO_TERM_COLOR: never
+        run: |
+          set -euo pipefail
+          : "${UDB_PG_DSN:?required provisioned PostgreSQL DSN is missing}"
+          python3 scripts/run-live-tests.py -- cargo test --locked --lib --features webauthn passkeys_live -- --ignored --nocapture --test-threads=1 \
+            | tee "$RUNNER_TEMP/passkeys-live-result.log"
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
+          import re
+          lines = Path(os.environ["RUNNER_TEMP"], "passkeys-live-result.log").read_text(encoding="utf-8").splitlines()
+          summaries = [line for line in lines if line.startswith("test result:")]
+          ok = [m for m in (re.fullmatch(r"test result: ok[.] ([0-9]+) passed; 0 failed; 0 ignored; .*", s) for s in summaries) if m]
+          if len(summaries) != 1 or len(ok) != 1 or int(ok[0].group(1)) < 3:
+              raise SystemExit("passkey live tests must run: at least 3 passed, 0 failed, 0 ignored")
+          print(f"Passkey live tests executed: {ok[0].group(1)} passed")
+          PY
+
       - name: Postgres session diagnostics (live tests failed or hung)
         if: failure() && steps.native_live.outcome != 'success'
         # Name what a hung live test is waiting on: every session's state, wait

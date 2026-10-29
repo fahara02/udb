@@ -18,10 +18,10 @@ use Grpc\ChannelCredentials;
  * the embedded proto descriptor set by `udb sdk generate`, so its surface can
  * never drift from the wire contract.
  *
- *   UDB version ...... 0.6.5
+ *   UDB version ...... 0.6.6
  *   Protocol version . 1.0.0
  *   Services ......... 29
- *   RPCs ............. 408
+ *   RPCs ............. 423
  *
  * This class COMPOSES WITH the hand-written layer; it does not replace it:
  *   - it reuses {@see UdbMetadata} for the eight broker headers,
@@ -88,6 +88,7 @@ final class GeneratedClient
         "ListAssets" => "read_only",
         "RegisterAsset" => "mutation",
         "StartPipeline" => "mutation",
+        "AcceptInvitation" => "mutation",
         "AdminResetMfa" => "destructive",
         "AdminResetPassword" => "destructive",
         "AdminRevokeAllTenantSessions" => "destructive",
@@ -96,8 +97,10 @@ final class GeneratedClient
         "Authenticate" => "read_only",
         "ChangePassword" => "mutation",
         "ChangeUserStatus" => "destructive",
+        "CheckStepUp" => "read_only",
         "ConfirmMFAEnrollment" => "mutation",
         "CreateCertificateBinding" => "mutation",
+        "CreateInvitation" => "mutation",
         "CreateServiceAccountGrant" => "mutation",
         "CreateServiceAccountTenantMembership" => "mutation",
         "CreateSession" => "mutation",
@@ -107,19 +110,23 @@ final class GeneratedClient
         "EmergencyRevoke" => "destructive",
         "EnrollMFA" => "mutation",
         "ExchangeServiceTokenForTenant" => "mutation",
+        "FinishOidcLogin" => "mutation",
         "FinishWebAuthnAuthentication" => "mutation",
         "FinishWebAuthnRegistration" => "mutation",
         "ForgotPassword" => "mutation",
         "GenerateRecoveryCodes" => "mutation",
+        "GetInvitation" => "read_only",
         "GetJwks" => "read_only",
         "GetMfaPolicy" => "read_only",
         "GetServiceAccountGrant" => "read_only",
         "GetSession" => "read_only",
+        "GetTenantAuthPolicy" => "read_only",
         "GetUser" => "read_only",
         "IntrospectToken" => "read_only",
         "IssueMfaChallenge" => "mutation",
         "ListCertificateBindings" => "read_only",
         "ListDevices" => "read_only",
+        "ListInvitations" => "read_only",
         "ListMfaFactors" => "read_only",
         "ListServiceAccountGrants" => "read_only",
         "ListServiceAccountTenantMemberships" => "read_only",
@@ -127,23 +134,31 @@ final class GeneratedClient
         "ListUsers" => "read_only",
         "ListWebAuthnCredentials" => "read_only",
         "Login" => "mutation",
+        "LoginWithOidcIdToken" => "mutation",
+        "LoginWithOtp" => "mutation",
         "Logout" => "mutation",
         "PutMfaPolicy" => "mutation",
+        "PutTenantAuthPolicy" => "mutation",
         "RefreshSession" => "mutation",
         "RefreshToken" => "mutation",
         "RenamePasskey" => "mutation",
         "ReplaceServiceAccountGrant" => "mutation",
+        "ResendInvitation" => "mutation",
         "ResendOTP" => "mutation",
         "ResetPassword" => "mutation",
         "RevokeCertificateBinding" => "destructive",
         "RevokeDevice" => "mutation",
+        "RevokeInvitation" => "destructive",
         "RevokeRecoveryCodes" => "mutation",
         "RevokeServiceAccountGrant" => "destructive",
         "RevokeServiceAccountTenantMembership" => "destructive",
         "RevokeSession" => "mutation",
         "RotateServiceAccountIdentity" => "destructive",
+        "SendLoginOtp" => "mutation",
         "SendOTP" => "mutation",
         "SendPhoneVerification" => "mutation",
+        "StartInvitationAcceptance" => "mutation",
+        "StartOidcLogin" => "mutation",
         "StartWebAuthnAuthentication" => "mutation",
         "StartWebAuthnRegistration" => "mutation",
         "TransferServiceAccountGrant" => "destructive",
@@ -505,6 +520,7 @@ final class GeneratedClient
         "AssetService/ListAssets" => "read_only",
         "AssetService/RegisterAsset" => "mutation",
         "AssetService/StartPipeline" => "mutation",
+        "AuthnService/AcceptInvitation" => "mutation",
         "AuthnService/AdminResetMfa" => "destructive",
         "AuthnService/AdminResetPassword" => "destructive",
         "AuthnService/AdminRevokeAllTenantSessions" => "destructive",
@@ -513,8 +529,10 @@ final class GeneratedClient
         "AuthnService/Authenticate" => "read_only",
         "AuthnService/ChangePassword" => "mutation",
         "AuthnService/ChangeUserStatus" => "destructive",
+        "AuthnService/CheckStepUp" => "read_only",
         "AuthnService/ConfirmMFAEnrollment" => "mutation",
         "AuthnService/CreateCertificateBinding" => "mutation",
+        "AuthnService/CreateInvitation" => "mutation",
         "AuthnService/CreateServiceAccountGrant" => "mutation",
         "AuthnService/CreateServiceAccountTenantMembership" => "mutation",
         "AuthnService/CreateSession" => "mutation",
@@ -524,19 +542,23 @@ final class GeneratedClient
         "AuthnService/EmergencyRevoke" => "destructive",
         "AuthnService/EnrollMFA" => "mutation",
         "AuthnService/ExchangeServiceTokenForTenant" => "mutation",
+        "AuthnService/FinishOidcLogin" => "mutation",
         "AuthnService/FinishWebAuthnAuthentication" => "mutation",
         "AuthnService/FinishWebAuthnRegistration" => "mutation",
         "AuthnService/ForgotPassword" => "mutation",
         "AuthnService/GenerateRecoveryCodes" => "mutation",
+        "AuthnService/GetInvitation" => "read_only",
         "AuthnService/GetJwks" => "read_only",
         "AuthnService/GetMfaPolicy" => "read_only",
         "AuthnService/GetServiceAccountGrant" => "read_only",
         "AuthnService/GetSession" => "read_only",
+        "AuthnService/GetTenantAuthPolicy" => "read_only",
         "AuthnService/GetUser" => "read_only",
         "AuthnService/IntrospectToken" => "read_only",
         "AuthnService/IssueMfaChallenge" => "mutation",
         "AuthnService/ListCertificateBindings" => "read_only",
         "AuthnService/ListDevices" => "read_only",
+        "AuthnService/ListInvitations" => "read_only",
         "AuthnService/ListMfaFactors" => "read_only",
         "AuthnService/ListServiceAccountGrants" => "read_only",
         "AuthnService/ListServiceAccountTenantMemberships" => "read_only",
@@ -544,23 +566,31 @@ final class GeneratedClient
         "AuthnService/ListUsers" => "read_only",
         "AuthnService/ListWebAuthnCredentials" => "read_only",
         "AuthnService/Login" => "mutation",
+        "AuthnService/LoginWithOidcIdToken" => "mutation",
+        "AuthnService/LoginWithOtp" => "mutation",
         "AuthnService/Logout" => "mutation",
         "AuthnService/PutMfaPolicy" => "mutation",
+        "AuthnService/PutTenantAuthPolicy" => "mutation",
         "AuthnService/RefreshSession" => "mutation",
         "AuthnService/RefreshToken" => "mutation",
         "AuthnService/RenamePasskey" => "mutation",
         "AuthnService/ReplaceServiceAccountGrant" => "mutation",
+        "AuthnService/ResendInvitation" => "mutation",
         "AuthnService/ResendOTP" => "mutation",
         "AuthnService/ResetPassword" => "mutation",
         "AuthnService/RevokeCertificateBinding" => "destructive",
         "AuthnService/RevokeDevice" => "mutation",
+        "AuthnService/RevokeInvitation" => "destructive",
         "AuthnService/RevokeRecoveryCodes" => "mutation",
         "AuthnService/RevokeServiceAccountGrant" => "destructive",
         "AuthnService/RevokeServiceAccountTenantMembership" => "destructive",
         "AuthnService/RevokeSession" => "mutation",
         "AuthnService/RotateServiceAccountIdentity" => "destructive",
+        "AuthnService/SendLoginOtp" => "mutation",
         "AuthnService/SendOTP" => "mutation",
         "AuthnService/SendPhoneVerification" => "mutation",
+        "AuthnService/StartInvitationAcceptance" => "mutation",
+        "AuthnService/StartOidcLogin" => "mutation",
         "AuthnService/StartWebAuthnAuthentication" => "mutation",
         "AuthnService/StartWebAuthnRegistration" => "mutation",
         "AuthnService/TransferServiceAccountGrant" => "destructive",
@@ -922,6 +952,7 @@ final class GeneratedClient
         "AssetService/ListAssets" => "list_assets",
         "AssetService/RegisterAsset" => "register_asset",
         "AssetService/StartPipeline" => "start_pipeline",
+        "AuthnService/AcceptInvitation" => "accept_invitation",
         "AuthnService/AdminResetMfa" => "admin_reset_mfa",
         "AuthnService/AdminResetPassword" => "admin_reset_password",
         "AuthnService/AdminRevokeAllTenantSessions" => "admin_revoke_all_tenant_sessions",
@@ -930,8 +961,10 @@ final class GeneratedClient
         "AuthnService/Authenticate" => "authenticate",
         "AuthnService/ChangePassword" => "change_password",
         "AuthnService/ChangeUserStatus" => "change_user_status",
+        "AuthnService/CheckStepUp" => "check_step_up",
         "AuthnService/ConfirmMFAEnrollment" => "confirm_mfaenrollment",
         "AuthnService/CreateCertificateBinding" => "create_certificate_binding",
+        "AuthnService/CreateInvitation" => "create_invitation",
         "AuthnService/CreateServiceAccountGrant" => "create_service_account_grant",
         "AuthnService/CreateServiceAccountTenantMembership" => "create_service_account_tenant_membership",
         "AuthnService/CreateSession" => "create_session",
@@ -941,19 +974,23 @@ final class GeneratedClient
         "AuthnService/EmergencyRevoke" => "emergency_revoke",
         "AuthnService/EnrollMFA" => "enroll_mfa",
         "AuthnService/ExchangeServiceTokenForTenant" => "exchange_service_token_for_tenant",
+        "AuthnService/FinishOidcLogin" => "finish_oidc_login",
         "AuthnService/FinishWebAuthnAuthentication" => "finish_web_authn_authentication",
         "AuthnService/FinishWebAuthnRegistration" => "finish_web_authn_registration",
         "AuthnService/ForgotPassword" => "forgot_password",
         "AuthnService/GenerateRecoveryCodes" => "generate_recovery_codes",
+        "AuthnService/GetInvitation" => "get_invitation",
         "AuthnService/GetJwks" => "get_jwks",
         "AuthnService/GetMfaPolicy" => "get_mfa_policy",
         "AuthnService/GetServiceAccountGrant" => "get_service_account_grant",
         "AuthnService/GetSession" => "get_session",
+        "AuthnService/GetTenantAuthPolicy" => "get_tenant_auth_policy",
         "AuthnService/GetUser" => "get_user",
         "AuthnService/IntrospectToken" => "introspect_token",
         "AuthnService/IssueMfaChallenge" => "issue_mfa_challenge",
         "AuthnService/ListCertificateBindings" => "list_certificate_bindings",
         "AuthnService/ListDevices" => "list_devices",
+        "AuthnService/ListInvitations" => "list_invitations",
         "AuthnService/ListMfaFactors" => "list_mfa_factors",
         "AuthnService/ListServiceAccountGrants" => "list_service_account_grants",
         "AuthnService/ListServiceAccountTenantMemberships" => "list_service_account_tenant_memberships",
@@ -961,23 +998,31 @@ final class GeneratedClient
         "AuthnService/ListUsers" => "list_users",
         "AuthnService/ListWebAuthnCredentials" => "list_web_authn_credentials",
         "AuthnService/Login" => "login",
+        "AuthnService/LoginWithOidcIdToken" => "login_with_oidc_id_token",
+        "AuthnService/LoginWithOtp" => "login_with_otp",
         "AuthnService/Logout" => "logout",
         "AuthnService/PutMfaPolicy" => "put_mfa_policy",
+        "AuthnService/PutTenantAuthPolicy" => "put_tenant_auth_policy",
         "AuthnService/RefreshSession" => "refresh_session",
         "AuthnService/RefreshToken" => "refresh_token",
         "AuthnService/RenamePasskey" => "rename_passkey",
         "AuthnService/ReplaceServiceAccountGrant" => "replace_service_account_grant",
+        "AuthnService/ResendInvitation" => "resend_invitation",
         "AuthnService/ResendOTP" => "resend_otp",
         "AuthnService/ResetPassword" => "reset_password",
         "AuthnService/RevokeCertificateBinding" => "revoke_certificate_binding",
         "AuthnService/RevokeDevice" => "revoke_device",
+        "AuthnService/RevokeInvitation" => "revoke_invitation",
         "AuthnService/RevokeRecoveryCodes" => "revoke_recovery_codes",
         "AuthnService/RevokeServiceAccountGrant" => "revoke_service_account_grant",
         "AuthnService/RevokeServiceAccountTenantMembership" => "revoke_service_account_tenant_membership",
         "AuthnService/RevokeSession" => "revoke_session",
         "AuthnService/RotateServiceAccountIdentity" => "rotate_service_account_identity",
+        "AuthnService/SendLoginOtp" => "send_login_otp",
         "AuthnService/SendOTP" => "send_otp",
         "AuthnService/SendPhoneVerification" => "send_phone_verification",
+        "AuthnService/StartInvitationAcceptance" => "start_invitation_acceptance",
+        "AuthnService/StartOidcLogin" => "start_oidc_login",
         "AuthnService/StartWebAuthnAuthentication" => "start_web_authn_authentication",
         "AuthnService/StartWebAuthnRegistration" => "start_web_authn_registration",
         "AuthnService/TransferServiceAccountGrant" => "transfer_service_account_grant",
@@ -1338,6 +1383,7 @@ final class GeneratedClient
         "AssetService/ListAssets" => "listAssets",
         "AssetService/RegisterAsset" => "registerAsset",
         "AssetService/StartPipeline" => "startPipeline",
+        "AuthnService/AcceptInvitation" => "acceptInvitation",
         "AuthnService/AdminResetMfa" => "adminResetMfa",
         "AuthnService/AdminResetPassword" => "adminResetPassword",
         "AuthnService/AdminRevokeAllTenantSessions" => "adminRevokeAllTenantSessions",
@@ -1346,8 +1392,10 @@ final class GeneratedClient
         "AuthnService/Authenticate" => "authenticate",
         "AuthnService/ChangePassword" => "changePassword",
         "AuthnService/ChangeUserStatus" => "changeUserStatus",
+        "AuthnService/CheckStepUp" => "checkStepUp",
         "AuthnService/ConfirmMFAEnrollment" => "confirmMfaenrollment",
         "AuthnService/CreateCertificateBinding" => "createCertificateBinding",
+        "AuthnService/CreateInvitation" => "createInvitation",
         "AuthnService/CreateServiceAccountGrant" => "createServiceAccountGrant",
         "AuthnService/CreateServiceAccountTenantMembership" => "createServiceAccountTenantMembership",
         "AuthnService/CreateSession" => "createSession",
@@ -1357,19 +1405,23 @@ final class GeneratedClient
         "AuthnService/EmergencyRevoke" => "emergencyRevoke",
         "AuthnService/EnrollMFA" => "enrollMfa",
         "AuthnService/ExchangeServiceTokenForTenant" => "exchangeServiceTokenForTenant",
+        "AuthnService/FinishOidcLogin" => "finishOidcLogin",
         "AuthnService/FinishWebAuthnAuthentication" => "finishWebAuthnAuthentication",
         "AuthnService/FinishWebAuthnRegistration" => "finishWebAuthnRegistration",
         "AuthnService/ForgotPassword" => "forgotPassword",
         "AuthnService/GenerateRecoveryCodes" => "generateRecoveryCodes",
+        "AuthnService/GetInvitation" => "getInvitation",
         "AuthnService/GetJwks" => "getJwks",
         "AuthnService/GetMfaPolicy" => "getMfaPolicy",
         "AuthnService/GetServiceAccountGrant" => "getServiceAccountGrant",
         "AuthnService/GetSession" => "getSession",
+        "AuthnService/GetTenantAuthPolicy" => "getTenantAuthPolicy",
         "AuthnService/GetUser" => "getUser",
         "AuthnService/IntrospectToken" => "introspectToken",
         "AuthnService/IssueMfaChallenge" => "issueMfaChallenge",
         "AuthnService/ListCertificateBindings" => "listCertificateBindings",
         "AuthnService/ListDevices" => "listDevices",
+        "AuthnService/ListInvitations" => "listInvitations",
         "AuthnService/ListMfaFactors" => "listMfaFactors",
         "AuthnService/ListServiceAccountGrants" => "listServiceAccountGrants",
         "AuthnService/ListServiceAccountTenantMemberships" => "listServiceAccountTenantMemberships",
@@ -1377,23 +1429,31 @@ final class GeneratedClient
         "AuthnService/ListUsers" => "listUsers",
         "AuthnService/ListWebAuthnCredentials" => "listWebAuthnCredentials",
         "AuthnService/Login" => "login",
+        "AuthnService/LoginWithOidcIdToken" => "loginWithOidcIdToken",
+        "AuthnService/LoginWithOtp" => "loginWithOtp",
         "AuthnService/Logout" => "logout",
         "AuthnService/PutMfaPolicy" => "putMfaPolicy",
+        "AuthnService/PutTenantAuthPolicy" => "putTenantAuthPolicy",
         "AuthnService/RefreshSession" => "refreshSession",
         "AuthnService/RefreshToken" => "refreshToken",
         "AuthnService/RenamePasskey" => "renamePasskey",
         "AuthnService/ReplaceServiceAccountGrant" => "replaceServiceAccountGrant",
+        "AuthnService/ResendInvitation" => "resendInvitation",
         "AuthnService/ResendOTP" => "resendOtp",
         "AuthnService/ResetPassword" => "resetPassword",
         "AuthnService/RevokeCertificateBinding" => "revokeCertificateBinding",
         "AuthnService/RevokeDevice" => "revokeDevice",
+        "AuthnService/RevokeInvitation" => "revokeInvitation",
         "AuthnService/RevokeRecoveryCodes" => "revokeRecoveryCodes",
         "AuthnService/RevokeServiceAccountGrant" => "revokeServiceAccountGrant",
         "AuthnService/RevokeServiceAccountTenantMembership" => "revokeServiceAccountTenantMembership",
         "AuthnService/RevokeSession" => "revokeSession",
         "AuthnService/RotateServiceAccountIdentity" => "rotateServiceAccountIdentity",
+        "AuthnService/SendLoginOtp" => "sendLoginOtp",
         "AuthnService/SendOTP" => "sendOtp",
         "AuthnService/SendPhoneVerification" => "sendPhoneVerification",
+        "AuthnService/StartInvitationAcceptance" => "startInvitationAcceptance",
+        "AuthnService/StartOidcLogin" => "startOidcLogin",
         "AuthnService/StartWebAuthnAuthentication" => "startWebAuthnAuthentication",
         "AuthnService/StartWebAuthnRegistration" => "startWebAuthnRegistration",
         "AuthnService/TransferServiceAccountGrant" => "transferServiceAccountGrant",
@@ -1754,6 +1814,7 @@ final class GeneratedClient
         "AssetService/ListAssets" => "get",
         "AssetService/RegisterAsset" => "post",
         "AssetService/StartPipeline" => "post",
+        "AuthnService/AcceptInvitation" => "post",
         "AuthnService/AdminResetMfa" => "post",
         "AuthnService/AdminResetPassword" => "post",
         "AuthnService/AdminRevokeAllTenantSessions" => "post",
@@ -1762,8 +1823,10 @@ final class GeneratedClient
         "AuthnService/Authenticate" => "post",
         "AuthnService/ChangePassword" => "post",
         "AuthnService/ChangeUserStatus" => "post",
+        "AuthnService/CheckStepUp" => "post",
         "AuthnService/ConfirmMFAEnrollment" => "post",
         "AuthnService/CreateCertificateBinding" => "post",
+        "AuthnService/CreateInvitation" => "post",
         "AuthnService/CreateServiceAccountGrant" => "post",
         "AuthnService/CreateServiceAccountTenantMembership" => "post",
         "AuthnService/CreateSession" => "post",
@@ -1773,19 +1836,23 @@ final class GeneratedClient
         "AuthnService/EmergencyRevoke" => "post",
         "AuthnService/EnrollMFA" => "post",
         "AuthnService/ExchangeServiceTokenForTenant" => "post",
+        "AuthnService/FinishOidcLogin" => "post",
         "AuthnService/FinishWebAuthnAuthentication" => "post",
         "AuthnService/FinishWebAuthnRegistration" => "post",
         "AuthnService/ForgotPassword" => "post",
         "AuthnService/GenerateRecoveryCodes" => "post",
+        "AuthnService/GetInvitation" => "post",
         "AuthnService/GetJwks" => "get",
         "AuthnService/GetMfaPolicy" => "get",
         "AuthnService/GetServiceAccountGrant" => "get",
         "AuthnService/GetSession" => "get",
+        "AuthnService/GetTenantAuthPolicy" => "get",
         "AuthnService/GetUser" => "get",
         "AuthnService/IntrospectToken" => "post",
         "AuthnService/IssueMfaChallenge" => "post",
         "AuthnService/ListCertificateBindings" => "get",
         "AuthnService/ListDevices" => "get",
+        "AuthnService/ListInvitations" => "get",
         "AuthnService/ListMfaFactors" => "get",
         "AuthnService/ListServiceAccountGrants" => "get",
         "AuthnService/ListServiceAccountTenantMemberships" => "get",
@@ -1793,23 +1860,31 @@ final class GeneratedClient
         "AuthnService/ListUsers" => "get",
         "AuthnService/ListWebAuthnCredentials" => "get",
         "AuthnService/Login" => "post",
+        "AuthnService/LoginWithOidcIdToken" => "post",
+        "AuthnService/LoginWithOtp" => "post",
         "AuthnService/Logout" => "post",
         "AuthnService/PutMfaPolicy" => "put",
+        "AuthnService/PutTenantAuthPolicy" => "put",
         "AuthnService/RefreshSession" => "post",
         "AuthnService/RefreshToken" => "post",
         "AuthnService/RenamePasskey" => "post",
         "AuthnService/ReplaceServiceAccountGrant" => "post",
+        "AuthnService/ResendInvitation" => "post",
         "AuthnService/ResendOTP" => "post",
         "AuthnService/ResetPassword" => "post",
         "AuthnService/RevokeCertificateBinding" => "post",
         "AuthnService/RevokeDevice" => "delete",
+        "AuthnService/RevokeInvitation" => "post",
         "AuthnService/RevokeRecoveryCodes" => "post",
         "AuthnService/RevokeServiceAccountGrant" => "post",
         "AuthnService/RevokeServiceAccountTenantMembership" => "post",
         "AuthnService/RevokeSession" => "delete",
         "AuthnService/RotateServiceAccountIdentity" => "post",
+        "AuthnService/SendLoginOtp" => "post",
         "AuthnService/SendOTP" => "post",
         "AuthnService/SendPhoneVerification" => "post",
+        "AuthnService/StartInvitationAcceptance" => "post",
+        "AuthnService/StartOidcLogin" => "post",
         "AuthnService/StartWebAuthnAuthentication" => "post",
         "AuthnService/StartWebAuthnRegistration" => "post",
         "AuthnService/TransferServiceAccountGrant" => "post",
@@ -2170,6 +2245,7 @@ final class GeneratedClient
         "AssetService/ListAssets" => "/v1/assets",
         "AssetService/RegisterAsset" => "/v1/assets",
         "AssetService/StartPipeline" => "/v1/assets/pipelines",
+        "AuthnService/AcceptInvitation" => "/v1/auth/invitations/{invitation_id}:accept",
         "AuthnService/AdminResetMfa" => "/v1/auth/admin/users/{user_id}/mfa:reset",
         "AuthnService/AdminResetPassword" => "/v1/auth/users/{user_id}/passwords:reset",
         "AuthnService/AdminRevokeAllTenantSessions" => "/v1/auth/admin/tenants/{tenant_id}/sessions:revokeAll",
@@ -2178,8 +2254,10 @@ final class GeneratedClient
         "AuthnService/Authenticate" => "/v1/auth/credentials:authenticate",
         "AuthnService/ChangePassword" => "/v1/auth/passwords:change",
         "AuthnService/ChangeUserStatus" => "/v1/auth/users/{user_id}:changeStatus",
+        "AuthnService/CheckStepUp" => "/v1/auth/mfa/step-up:check",
         "AuthnService/ConfirmMFAEnrollment" => "/v1/auth/users/{user_id}/mfa:confirm",
         "AuthnService/CreateCertificateBinding" => "/v1/auth/certificate-bindings",
+        "AuthnService/CreateInvitation" => "/v1/auth/invitations",
         "AuthnService/CreateServiceAccountGrant" => "/v1/auth/service-accounts/{user_id}/grant",
         "AuthnService/CreateServiceAccountTenantMembership" => "/v1/auth/tenants/{target_tenant_id}/service-account-memberships",
         "AuthnService/CreateSession" => "/v1/auth/sessions",
@@ -2189,19 +2267,23 @@ final class GeneratedClient
         "AuthnService/EmergencyRevoke" => "/v1/auth/admin:emergencyRevoke",
         "AuthnService/EnrollMFA" => "/v1/auth/users/{user_id}/mfa:enroll",
         "AuthnService/ExchangeServiceTokenForTenant" => "/v1/auth/service-tokens:exchangeForTenant",
+        "AuthnService/FinishOidcLogin" => "/v1/auth/sessions:finishOidcLogin",
         "AuthnService/FinishWebAuthnAuthentication" => "/v1/auth/webauthn/authentication:finish",
         "AuthnService/FinishWebAuthnRegistration" => "/v1/auth/webauthn/registration:finish",
         "AuthnService/ForgotPassword" => "/v1/auth/passwords:forgot",
         "AuthnService/GenerateRecoveryCodes" => "/v1/auth/users/{user_id}/recovery-codes:generate",
+        "AuthnService/GetInvitation" => "/v1/auth/invitations/{invitation_id}:preview",
         "AuthnService/GetJwks" => "/v1/auth/.well-known/jwks.json",
         "AuthnService/GetMfaPolicy" => "/v1/auth/tenants/{tenant_id}/mfa-policy",
         "AuthnService/GetServiceAccountGrant" => "/v1/auth/service-accounts/{user_id}/grant",
         "AuthnService/GetSession" => "/v1/auth/sessions/{session_id}",
+        "AuthnService/GetTenantAuthPolicy" => "/v1/auth/tenants/{tenant_id}/auth-policy",
         "AuthnService/GetUser" => "/v1/auth/users/{user_id}",
         "AuthnService/IntrospectToken" => "/v1/auth/tokens:introspect",
         "AuthnService/IssueMfaChallenge" => "/v1/auth/mfa/challenges:issue",
         "AuthnService/ListCertificateBindings" => "/v1/auth/certificate-bindings",
         "AuthnService/ListDevices" => "/v1/auth/users/{user_id}/devices",
+        "AuthnService/ListInvitations" => "/v1/auth/invitations",
         "AuthnService/ListMfaFactors" => "/v1/auth/users/{user_id}/mfa/factors",
         "AuthnService/ListServiceAccountGrants" => "/v1/auth/service-account-grants",
         "AuthnService/ListServiceAccountTenantMemberships" => "/v1/auth/tenants/{target_tenant_id}/service-account-memberships",
@@ -2209,23 +2291,31 @@ final class GeneratedClient
         "AuthnService/ListUsers" => "/v1/auth/users",
         "AuthnService/ListWebAuthnCredentials" => "/v1/auth/users/{user_id}/webauthn/credentials",
         "AuthnService/Login" => "/v1/auth/password-sessions",
+        "AuthnService/LoginWithOidcIdToken" => "/v1/auth/sessions:loginWithOidcIdToken",
+        "AuthnService/LoginWithOtp" => "/v1/auth/sessions:loginWithOtp",
         "AuthnService/Logout" => "/v1/auth/sessions:logout",
         "AuthnService/PutMfaPolicy" => "/v1/auth/tenants/{tenant_id}/mfa-policy",
+        "AuthnService/PutTenantAuthPolicy" => "/v1/auth/tenants/{tenant_id}/auth-policy",
         "AuthnService/RefreshSession" => "/v1/auth/sessions/{session_id}:refresh",
         "AuthnService/RefreshToken" => "/v1/auth/tokens:refresh",
         "AuthnService/RenamePasskey" => "/v1/auth/users/{user_id}/webauthn/credentials:rename",
         "AuthnService/ReplaceServiceAccountGrant" => "/v1/auth/service-accounts/{user_id}/grant:replace",
+        "AuthnService/ResendInvitation" => "/v1/auth/invitations/{invitation_id}:resend",
         "AuthnService/ResendOTP" => "/v1/auth/otps:resend",
         "AuthnService/ResetPassword" => "/v1/auth/passwords:reset",
         "AuthnService/RevokeCertificateBinding" => "/v1/auth/certificate-bindings/{binding_id}:revoke",
         "AuthnService/RevokeDevice" => "/v1/auth/devices/{device_id}",
+        "AuthnService/RevokeInvitation" => "/v1/auth/invitations/{invitation_id}:revoke",
         "AuthnService/RevokeRecoveryCodes" => "/v1/auth/users/{user_id}/recovery-codes:revoke",
         "AuthnService/RevokeServiceAccountGrant" => "/v1/auth/service-accounts/{user_id}/grant:revoke",
         "AuthnService/RevokeServiceAccountTenantMembership" => "/v1/auth/tenants/{target_tenant_id}/service-account-memberships/{membership_id}:revoke",
         "AuthnService/RevokeSession" => "/v1/auth/sessions/{session_id}",
         "AuthnService/RotateServiceAccountIdentity" => "/v1/auth/service-accounts/{user_id}/grant:rotateIdentity",
+        "AuthnService/SendLoginOtp" => "/v1/auth/sessions:sendLoginOtp",
         "AuthnService/SendOTP" => "/v1/auth/otps:send",
         "AuthnService/SendPhoneVerification" => "/v1/auth/users/{user_id}/phones:verify",
+        "AuthnService/StartInvitationAcceptance" => "/v1/auth/invitations/{invitation_id}:startAcceptance",
+        "AuthnService/StartOidcLogin" => "/v1/auth/oidc-logins:start",
         "AuthnService/StartWebAuthnAuthentication" => "/v1/auth/webauthn/authentication:start",
         "AuthnService/StartWebAuthnRegistration" => "/v1/auth/users/{user_id}/webauthn/registration:start",
         "AuthnService/TransferServiceAccountGrant" => "/v1/auth/service-accounts/{from_user_id}/grant:transfer",
@@ -2584,17 +2674,20 @@ final class GeneratedClient
         "udb.core.asset.entity.v1.PipelineStep" => ['table' => "pipeline_steps", 'primary_keys' => ["step_id"], 'fields' => ["step_id", "instance_id", "step_name", "step_type", "status", "result", "error", "retry_count", "started_at", "completed_at", "audit_info", "tenant_id", "params", "created_at", "updated_at", "created_by"], 'relations_json' => "[]", 'version_field' => "", 'tenant_field' => "tenant_id", 'project_field' => "", 'php_type' => "Udb\Core\Asset\Entity\V1\PipelineStep"],
         "udb.core.authn.entity.v1.CertificateBinding" => ['table' => "certificate_bindings", 'primary_keys' => ["binding_id"], 'fields' => ["binding_id", "selector_kind", "selector_value", "user_id", "tenant_id", "grant_revision", "scope_subset_json", "status", "not_before", "not_after", "revoked_at", "revoke_reason", "updated_by", "reason", "created_at", "updated_at", "created_by"], 'relations_json' => "[{\"name\":\"user\",\"kind\":\"belongs_to\",\"local_fields\":[\"user_id\"],\"target_message_type\":\"udb.core.authn.entity.v1.User\",\"target_table\":\"udb_authn.users\",\"target_fields\":[\"user_id\"],\"on_delete\":\"CASCADE\",\"on_update\":\"NO ACTION\"}]", 'version_field' => "", 'tenant_field' => "tenant_id", 'project_field' => "", 'php_type' => "Udb\Core\Authn\Entity\V1\CertificateBinding"],
         "udb.core.authn.entity.v1.Device" => ['table' => "devices", 'primary_keys' => ["device_id"], 'fields' => ["device_id", "user_id", "tenant_id", "project_id", "device_name", "device_type", "fingerprint_hash", "last_ip_masked", "last_user_agent_hash", "last_seen_at", "created_at", "revoked_at", "revoked_by", "updated_at", "created_by"], 'relations_json' => "[]", 'version_field' => "", 'tenant_field' => "tenant_id", 'project_field' => "project_id", 'php_type' => "Udb\Core\Authn\Entity\V1\Device"],
-        "udb.core.authn.entity.v1.MfaChallenge" => ['table' => "mfa_challenges", 'primary_keys' => ["challenge_id"], 'fields' => ["challenge_id", "user_id", "tenant_id", "project_id", "factor_kind", "purpose", "device_fingerprint_hash", "ip_address_masked", "attempt_count", "expires_at", "consumed_at", "created_at", "updated_at", "created_by"], 'relations_json' => "[]", 'version_field' => "", 'tenant_field' => "tenant_id", 'project_field' => "project_id", 'php_type' => "Udb\Core\Authn\Entity\V1\MfaChallenge"],
+        "udb.core.authn.entity.v1.Invitation" => ['table' => "invitations", 'primary_keys' => ["invitation_id"], 'fields' => ["invitation_id", "tenant_id", "project_id", "channel", "address", "idp_provider_id", "roles_json", "full_name", "status", "token_hash", "expires_at", "created_by", "invitee_user_id", "accepted_user_id", "accepted_at", "revoked_by", "revoke_reason", "send_count", "last_sent_at", "revision", "created_at", "updated_at", "locale"], 'relations_json' => "[{\"name\":\"accepted_user\",\"kind\":\"belongs_to\",\"local_fields\":[\"accepted_user_id\"],\"target_message_type\":\"udb.core.authn.entity.v1.User\",\"target_table\":\"udb_authn.users\",\"target_fields\":[\"user_id\"],\"on_delete\":\"SET NULL\",\"on_update\":\"NO ACTION\"},{\"name\":\"invitee_user\",\"kind\":\"belongs_to\",\"local_fields\":[\"invitee_user_id\"],\"target_message_type\":\"udb.core.authn.entity.v1.User\",\"target_table\":\"udb_authn.users\",\"target_fields\":[\"user_id\"],\"on_delete\":\"SET NULL\",\"on_update\":\"NO ACTION\"}]", 'version_field' => "revision", 'tenant_field' => "tenant_id", 'project_field' => "project_id", 'php_type' => "Udb\Core\Authn\Entity\V1\Invitation"],
+        "udb.core.authn.entity.v1.MfaChallenge" => ['table' => "mfa_challenges", 'primary_keys' => ["challenge_id"], 'fields' => ["challenge_id", "user_id", "tenant_id", "project_id", "factor_kind", "purpose", "device_fingerprint_hash", "ip_address_masked", "attempt_count", "expires_at", "consumed_at", "created_at", "action", "otp_id", "webauthn_challenge_id", "updated_at", "created_by"], 'relations_json' => "[]", 'version_field' => "", 'tenant_field' => "tenant_id", 'project_field' => "project_id", 'php_type' => "Udb\Core\Authn\Entity\V1\MfaChallenge"],
         "udb.core.authn.entity.v1.MfaPolicy" => ['table' => "mfa_policies", 'primary_keys' => ["policy_id"], 'fields' => ["policy_id", "tenant_id", "require_mfa", "created_at", "updated_at", "created_by"], 'relations_json' => "[]", 'version_field' => "", 'tenant_field' => "tenant_id", 'project_field' => "", 'php_type' => "Udb\Core\Authn\Entity\V1\MfaPolicy"],
         "udb.core.authn.entity.v1.OTP" => ['table' => "otps", 'primary_keys' => ["otp_id"], 'fields' => ["otp_id", "user_id", "otp_type", "code_hash", "delivery_channel", "delivery_address", "status", "attempt_count", "superseded_by_id", "expires_at", "used_at", "created_at", "correlation_id", "tenant_id", "updated_at", "created_by"], 'relations_json' => "[{\"name\":\"otps\",\"kind\":\"has_many\",\"local_fields\":[\"otp_id\"],\"target_message_type\":\"udb.core.authn.entity.v1.OTP\",\"target_table\":\"udb_authn.otps\",\"target_fields\":[\"superseded_by_id\"],\"on_delete\":\"SET NULL\",\"on_update\":\"NO ACTION\"},{\"name\":\"superseded_by\",\"kind\":\"belongs_to\",\"local_fields\":[\"superseded_by_id\"],\"target_message_type\":\"udb.core.authn.entity.v1.OTP\",\"target_table\":\"udb_authn.otps\",\"target_fields\":[\"otp_id\"],\"on_delete\":\"SET NULL\",\"on_update\":\"NO ACTION\"},{\"name\":\"user\",\"kind\":\"belongs_to\",\"local_fields\":[\"user_id\"],\"target_message_type\":\"udb.core.authn.entity.v1.User\",\"target_table\":\"udb_authn.users\",\"target_fields\":[\"user_id\"],\"on_delete\":\"CASCADE\",\"on_update\":\"NO ACTION\"}]", 'version_field' => "", 'tenant_field' => "tenant_id", 'project_field' => "", 'php_type' => "Udb\Core\Authn\Entity\V1\OTP"],
+        "udb.core.authn.entity.v1.OidcLoginState" => ['table' => "oidc_login_states", 'primary_keys' => ["oidc_login_state_id"], 'fields' => ["oidc_login_state_id", "state_hash", "tenant_id", "provider_id", "redirect_uri", "nonce", "code_verifier", "invitation_id", "expires_at", "consumed_at", "created_at", "updated_at", "created_by"], 'relations_json' => "[]", 'version_field' => "", 'tenant_field' => "tenant_id", 'project_field' => "", 'php_type' => "Udb\Core\Authn\Entity\V1\OidcLoginState"],
         "udb.core.authn.entity.v1.RecoveryCode" => ['table' => "recovery_codes", 'primary_keys' => ["recovery_code_id"], 'fields' => ["recovery_code_id", "user_id", "code_hash", "used_at", "created_at", "tenant_id", "updated_at", "created_by"], 'relations_json' => "[{\"name\":\"user\",\"kind\":\"belongs_to\",\"local_fields\":[\"user_id\"],\"target_message_type\":\"udb.core.authn.entity.v1.User\",\"target_table\":\"udb_authn.users\",\"target_fields\":[\"user_id\"],\"on_delete\":\"CASCADE\",\"on_update\":\"NO ACTION\"}]", 'version_field' => "", 'tenant_field' => "tenant_id", 'project_field' => "", 'php_type' => "Udb\Core\Authn\Entity\V1\RecoveryCode"],
         "udb.core.authn.entity.v1.ServiceAccountGrant" => ['table' => "service_account_grants", 'primary_keys' => ["grant_id"], 'fields' => ["grant_id", "user_id", "service_identity", "tenant_id", "project_id", "approved_scopes_json", "status", "revision", "updated_by", "reason", "created_at", "updated_at", "created_by"], 'relations_json' => "[{\"name\":\"user\",\"kind\":\"belongs_to\",\"local_fields\":[\"user_id\"],\"target_message_type\":\"udb.core.authn.entity.v1.User\",\"target_table\":\"udb_authn.users\",\"target_fields\":[\"user_id\"],\"on_delete\":\"CASCADE\",\"on_update\":\"NO ACTION\"}]", 'version_field' => "revision", 'tenant_field' => "tenant_id", 'project_field' => "project_id", 'php_type' => "Udb\Core\Authn\Entity\V1\ServiceAccountGrant"],
         "udb.core.authn.entity.v1.ServiceAccountTenantMembership" => ['table' => "service_account_tenant_memberships", 'primary_keys' => ["membership_id"], 'fields' => ["membership_id", "user_id", "home_tenant_id", "target_tenant_id", "target_project_id", "approved_scopes_json", "status", "revision", "approved_by", "reason", "expires_at", "created_at", "updated_at", "created_by"], 'relations_json' => "[{\"name\":\"user\",\"kind\":\"belongs_to\",\"local_fields\":[\"user_id\"],\"target_message_type\":\"udb.core.authn.entity.v1.User\",\"target_table\":\"udb_authn.users\",\"target_fields\":[\"user_id\"],\"on_delete\":\"CASCADE\",\"on_update\":\"NO ACTION\"}]", 'version_field' => "revision", 'tenant_field' => "target_tenant_id", 'project_field' => "", 'php_type' => "Udb\Core\Authn\Entity\V1\ServiceAccountTenantMembership"],
         "udb.core.authn.entity.v1.Session" => ['table' => "sessions", 'primary_keys' => ["session_id", "created_at"], 'fields' => ["session_id", "user_id", "session_type", "session_token_lookup", "session_token_hash", "csrf_token_hash", "access_token_jti", "refresh_token_jti", "device_type", "device_name", "ip_address", "user_agent", "is_active", "expires_at", "last_active_at", "revoked_by", "revoke_reason", "created_at", "tenant_id", "project_id", "principal_id", "provider_id", "auth_method", "scopes_json", "metadata_json", "updated_at", "created_by"], 'relations_json' => "[{\"name\":\"revoked_by\",\"kind\":\"belongs_to\",\"local_fields\":[\"revoked_by\"],\"target_message_type\":\"udb.core.authn.entity.v1.User\",\"target_table\":\"udb_authn.users\",\"target_fields\":[\"user_id\"],\"on_delete\":\"SET NULL\",\"on_update\":\"NO ACTION\"},{\"name\":\"user\",\"kind\":\"belongs_to\",\"local_fields\":[\"user_id\"],\"target_message_type\":\"udb.core.authn.entity.v1.User\",\"target_table\":\"udb_authn.users\",\"target_fields\":[\"user_id\"],\"on_delete\":\"CASCADE\",\"on_update\":\"NO ACTION\"}]", 'version_field' => "", 'tenant_field' => "tenant_id", 'project_field' => "project_id", 'php_type' => "Udb\Core\Authn\Entity\V1\Session"],
         "udb.core.authn.entity.v1.SigningKey" => ['table' => "signing_keys", 'primary_keys' => ["key_id"], 'fields' => ["key_id", "tenant_id", "algorithm", "public_material", "encrypted_private_material", "kms_key_ref", "state", "not_before", "not_after", "created_at", "retired_at", "created_by", "retired_by", "rotation_reason", "updated_at"], 'relations_json' => "[]", 'version_field' => "", 'tenant_field' => "tenant_id", 'project_field' => "", 'php_type' => "Udb\Core\Authn\Entity\V1\SigningKey"],
+        "udb.core.authn.entity.v1.TenantAuthPolicy" => ['table' => "tenant_auth_policies", 'primary_keys' => ["tenant_id"], 'fields' => ["tenant_id", "password_required", "passwordless_channels_json", "magic_link_base_url", "step_up_rules_json", "revision", "updated_by", "created_at", "updated_at", "created_by"], 'relations_json' => "[]", 'version_field' => "revision", 'tenant_field' => "tenant_id", 'project_field' => "", 'php_type' => "Udb\Core\Authn\Entity\V1\TenantAuthPolicy"],
         "udb.core.authn.entity.v1.TokenFamily" => ['table' => "token_families", 'primary_keys' => ["family_id"], 'fields' => ["family_id", "session_id", "user_id", "principal_id", "tenant_id", "project_id", "device_id", "current_refresh_jti_hash", "previous_refresh_jti_hash", "reuse_detected_at", "revoked_at", "revocation_reason", "created_at", "updated_at", "created_by"], 'relations_json' => "[]", 'version_field' => "", 'tenant_field' => "tenant_id", 'project_field' => "project_id", 'php_type' => "Udb\Core\Authn\Entity\V1\TokenFamily"],
         "udb.core.authn.entity.v1.TokenRevocation" => ['table' => "token_revocations", 'primary_keys' => ["jti_hash"], 'fields' => ["jti_hash", "token_type", "tenant_id", "expires_at", "revoked_at", "revoked_by", "reason", "created_at", "updated_at", "created_by"], 'relations_json' => "[]", 'version_field' => "", 'tenant_field' => "tenant_id", 'project_field' => "", 'php_type' => "Udb\Core\Authn\Entity\V1\TokenRevocation"],
-        "udb.core.authn.entity.v1.User" => ['table' => "users", 'primary_keys' => ["user_id"], 'fields' => ["user_id", "username", "email", "password_hash", "account_kind", "status", "tenant_id", "full_name", "totp_secret_enc", "mfa_enabled", "failed_login_count", "locked_until", "email_verified_at", "last_login_at", "created_by", "created_at", "updated_at", "deleted_at", "deleted_by", "project_id", "external_provider_id", "external_subject", "locale", "timezone", "profile_attributes_json", "external_references_json", "phone", "phone_verified_at"], 'relations_json' => "[{\"name\":\"certificate_bindings\",\"kind\":\"has_many\",\"local_fields\":[\"user_id\"],\"target_message_type\":\"udb.core.authn.entity.v1.CertificateBinding\",\"target_table\":\"udb_authn.certificate_bindings\",\"target_fields\":[\"user_id\"],\"on_delete\":\"CASCADE\",\"on_update\":\"NO ACTION\"},{\"name\":\"created_by\",\"kind\":\"belongs_to\",\"local_fields\":[\"created_by\"],\"target_message_type\":\"udb.core.authn.entity.v1.User\",\"target_table\":\"udb_authn.users\",\"target_fields\":[\"user_id\"],\"on_delete\":\"SET NULL\",\"on_update\":\"NO ACTION\"},{\"name\":\"notification_logs\",\"kind\":\"has_many\",\"local_fields\":[\"user_id\"],\"target_message_type\":\"udb.core.notification.entity.v1.NotificationLog\",\"target_table\":\"udb_notification.notification_logs\",\"target_fields\":[\"recipient_id\"],\"on_delete\":\"SET NULL\",\"on_update\":\"NO ACTION\"},{\"name\":\"otps\",\"kind\":\"has_many\",\"local_fields\":[\"user_id\"],\"target_message_type\":\"udb.core.authn.entity.v1.OTP\",\"target_table\":\"udb_authn.otps\",\"target_fields\":[\"user_id\"],\"on_delete\":\"CASCADE\",\"on_update\":\"NO ACTION\"},{\"name\":\"recovery_codes\",\"kind\":\"has_many\",\"local_fields\":[\"user_id\"],\"target_message_type\":\"udb.core.authn.entity.v1.RecoveryCode\",\"target_table\":\"udb_authn.recovery_codes\",\"target_fields\":[\"user_id\"],\"on_delete\":\"CASCADE\",\"on_update\":\"NO ACTION\"},{\"name\":\"role_permissions\",\"kind\":\"has_many\",\"local_fields\":[\"user_id\"],\"target_message_type\":\"udb.core.authz.entity.v1.RolePermission\",\"target_table\":\"udb_authz.role_permissions\",\"target_fields\":[\"granted_by\"],\"on_delete\":\"SET NULL\",\"on_update\":\"NO ACTION\"},{\"name\":\"service_account_grants\",\"kind\":\"has_many\",\"local_fields\":[\"user_id\"],\"target_message_type\":\"udb.core.authn.entity.v1.ServiceAccountGrant\",\"target_table\":\"udb_authn.service_account_grants\",\"target_fields\":[\"user_id\"],\"on_delete\":\"CASCADE\",\"on_update\":\"NO ACTION\"},{\"name\":\"service_account_tenant_memberships\",\"kind\":\"has_many\",\"local_fields\":[\"user_id\"],\"target_message_type\":\"udb.core.authn.entity.v1.ServiceAccountTenantMembership\",\"target_table\":\"udb_authn.service_account_tenant_memberships\",\"target_fields\":[\"user_id\"],\"on_delete\":\"CASCADE\",\"on_update\":\"NO ACTION\"},{\"name\":\"sessions\",\"kind\":\"has_many\",\"local_fields\":[\"user_id\"],\"target_message_type\":\"udb.core.authn.entity.v1.Session\",\"target_table\":\"udb_authn.sessions\",\"target_fields\":[\"revoked_by\"],\"on_delete\":\"SET NULL\",\"on_update\":\"NO ACTION\"},{\"name\":\"sessions\",\"kind\":\"has_many\",\"local_fields\":[\"user_id\"],\"target_message_type\":\"udb.core.authn.entity.v1.Session\",\"target_table\":\"udb_authn.sessions\",\"target_fields\":[\"user_id\"],\"on_delete\":\"CASCADE\",\"on_update\":\"NO ACTION\"},{\"name\":\"user_roles\",\"kind\":\"has_many\",\"local_fields\":[\"user_id\"],\"target_message_type\":\"udb.core.authz.entity.v1.UserRole\",\"target_table\":\"udb_authz.user_roles\",\"target_fields\":[\"user_id\"],\"on_delete\":\"CASCADE\",\"on_update\":\"NO ACTION\"},{\"name\":\"users\",\"kind\":\"has_many\",\"local_fields\":[\"user_id\"],\"target_message_type\":\"udb.core.authn.entity.v1.User\",\"target_table\":\"udb_authn.users\",\"target_fields\":[\"created_by\"],\"on_delete\":\"SET NULL\",\"on_update\":\"NO ACTION\"},{\"name\":\"webauthn_credentials\",\"kind\":\"has_many\",\"local_fields\":[\"user_id\"],\"target_message_type\":\"udb.core.authn.entity.v1.WebAuthnCredential\",\"target_table\":\"udb_authn.webauthn_credentials\",\"target_fields\":[\"user_id\"],\"on_delete\":\"CASCADE\",\"on_update\":\"NO ACTION\"}]", 'version_field' => "", 'tenant_field' => "tenant_id", 'project_field' => "project_id", 'php_type' => "Udb\Core\Authn\Entity\V1\User"],
+        "udb.core.authn.entity.v1.User" => ['table' => "users", 'primary_keys' => ["user_id"], 'fields' => ["user_id", "username", "email", "password_hash", "account_kind", "status", "tenant_id", "full_name", "totp_secret_enc", "mfa_enabled", "failed_login_count", "locked_until", "email_verified_at", "last_login_at", "created_by", "created_at", "updated_at", "deleted_at", "deleted_by", "project_id", "external_provider_id", "external_subject", "locale", "timezone", "profile_attributes_json", "external_references_json", "phone", "phone_verified_at"], 'relations_json' => "[{\"name\":\"certificate_bindings\",\"kind\":\"has_many\",\"local_fields\":[\"user_id\"],\"target_message_type\":\"udb.core.authn.entity.v1.CertificateBinding\",\"target_table\":\"udb_authn.certificate_bindings\",\"target_fields\":[\"user_id\"],\"on_delete\":\"CASCADE\",\"on_update\":\"NO ACTION\"},{\"name\":\"created_by\",\"kind\":\"belongs_to\",\"local_fields\":[\"created_by\"],\"target_message_type\":\"udb.core.authn.entity.v1.User\",\"target_table\":\"udb_authn.users\",\"target_fields\":[\"user_id\"],\"on_delete\":\"SET NULL\",\"on_update\":\"NO ACTION\"},{\"name\":\"invitations\",\"kind\":\"has_many\",\"local_fields\":[\"user_id\"],\"target_message_type\":\"udb.core.authn.entity.v1.Invitation\",\"target_table\":\"udb_authn.invitations\",\"target_fields\":[\"accepted_user_id\"],\"on_delete\":\"SET NULL\",\"on_update\":\"NO ACTION\"},{\"name\":\"invitations\",\"kind\":\"has_many\",\"local_fields\":[\"user_id\"],\"target_message_type\":\"udb.core.authn.entity.v1.Invitation\",\"target_table\":\"udb_authn.invitations\",\"target_fields\":[\"invitee_user_id\"],\"on_delete\":\"SET NULL\",\"on_update\":\"NO ACTION\"},{\"name\":\"notification_logs\",\"kind\":\"has_many\",\"local_fields\":[\"user_id\"],\"target_message_type\":\"udb.core.notification.entity.v1.NotificationLog\",\"target_table\":\"udb_notification.notification_logs\",\"target_fields\":[\"recipient_id\"],\"on_delete\":\"SET NULL\",\"on_update\":\"NO ACTION\"},{\"name\":\"otps\",\"kind\":\"has_many\",\"local_fields\":[\"user_id\"],\"target_message_type\":\"udb.core.authn.entity.v1.OTP\",\"target_table\":\"udb_authn.otps\",\"target_fields\":[\"user_id\"],\"on_delete\":\"CASCADE\",\"on_update\":\"NO ACTION\"},{\"name\":\"recovery_codes\",\"kind\":\"has_many\",\"local_fields\":[\"user_id\"],\"target_message_type\":\"udb.core.authn.entity.v1.RecoveryCode\",\"target_table\":\"udb_authn.recovery_codes\",\"target_fields\":[\"user_id\"],\"on_delete\":\"CASCADE\",\"on_update\":\"NO ACTION\"},{\"name\":\"role_permissions\",\"kind\":\"has_many\",\"local_fields\":[\"user_id\"],\"target_message_type\":\"udb.core.authz.entity.v1.RolePermission\",\"target_table\":\"udb_authz.role_permissions\",\"target_fields\":[\"granted_by\"],\"on_delete\":\"SET NULL\",\"on_update\":\"NO ACTION\"},{\"name\":\"service_account_grants\",\"kind\":\"has_many\",\"local_fields\":[\"user_id\"],\"target_message_type\":\"udb.core.authn.entity.v1.ServiceAccountGrant\",\"target_table\":\"udb_authn.service_account_grants\",\"target_fields\":[\"user_id\"],\"on_delete\":\"CASCADE\",\"on_update\":\"NO ACTION\"},{\"name\":\"service_account_tenant_memberships\",\"kind\":\"has_many\",\"local_fields\":[\"user_id\"],\"target_message_type\":\"udb.core.authn.entity.v1.ServiceAccountTenantMembership\",\"target_table\":\"udb_authn.service_account_tenant_memberships\",\"target_fields\":[\"user_id\"],\"on_delete\":\"CASCADE\",\"on_update\":\"NO ACTION\"},{\"name\":\"sessions\",\"kind\":\"has_many\",\"local_fields\":[\"user_id\"],\"target_message_type\":\"udb.core.authn.entity.v1.Session\",\"target_table\":\"udb_authn.sessions\",\"target_fields\":[\"revoked_by\"],\"on_delete\":\"SET NULL\",\"on_update\":\"NO ACTION\"},{\"name\":\"sessions\",\"kind\":\"has_many\",\"local_fields\":[\"user_id\"],\"target_message_type\":\"udb.core.authn.entity.v1.Session\",\"target_table\":\"udb_authn.sessions\",\"target_fields\":[\"user_id\"],\"on_delete\":\"CASCADE\",\"on_update\":\"NO ACTION\"},{\"name\":\"user_roles\",\"kind\":\"has_many\",\"local_fields\":[\"user_id\"],\"target_message_type\":\"udb.core.authz.entity.v1.UserRole\",\"target_table\":\"udb_authz.user_roles\",\"target_fields\":[\"user_id\"],\"on_delete\":\"CASCADE\",\"on_update\":\"NO ACTION\"},{\"name\":\"users\",\"kind\":\"has_many\",\"local_fields\":[\"user_id\"],\"target_message_type\":\"udb.core.authn.entity.v1.User\",\"target_table\":\"udb_authn.users\",\"target_fields\":[\"created_by\"],\"on_delete\":\"SET NULL\",\"on_update\":\"NO ACTION\"},{\"name\":\"webauthn_credentials\",\"kind\":\"has_many\",\"local_fields\":[\"user_id\"],\"target_message_type\":\"udb.core.authn.entity.v1.WebAuthnCredential\",\"target_table\":\"udb_authn.webauthn_credentials\",\"target_fields\":[\"user_id\"],\"on_delete\":\"CASCADE\",\"on_update\":\"NO ACTION\"}]", 'version_field' => "", 'tenant_field' => "tenant_id", 'project_field' => "project_id", 'php_type' => "Udb\Core\Authn\Entity\V1\User"],
         "udb.core.authn.entity.v1.WebAuthnCredential" => ['table' => "webauthn_credentials", 'primary_keys' => ["credential_id"], 'fields' => ["credential_id", "user_id", "passkey_json", "label", "tenant_id", "project_id", "created_at", "updated_at", "last_used_at", "created_by"], 'relations_json' => "[{\"name\":\"user\",\"kind\":\"belongs_to\",\"local_fields\":[\"user_id\"],\"target_message_type\":\"udb.core.authn.entity.v1.User\",\"target_table\":\"udb_authn.users\",\"target_fields\":[\"user_id\"],\"on_delete\":\"CASCADE\",\"on_update\":\"NO ACTION\"}]", 'version_field' => "", 'tenant_field' => "tenant_id", 'project_field' => "project_id", 'php_type' => "Udb\Core\Authn\Entity\V1\WebAuthnCredential"],
         "udb.core.authn.entity.v1.WebAuthnPolicy" => ['table' => "webauthn_policies", 'primary_keys' => ["policy_id"], 'fields' => ["policy_id", "tenant_id", "required_user_verification", "required_resident_key", "allowed_attestation_conveyance", "created_at", "updated_at", "created_by"], 'relations_json' => "[]", 'version_field' => "", 'tenant_field' => "tenant_id", 'project_field' => "", 'php_type' => "Udb\Core\Authn\Entity\V1\WebAuthnPolicy"],
         "udb.core.authz.entity.v1.AccessDecisionAudit" => ['table' => "access_decision_audits", 'primary_keys' => ["decision_audit_id", "decided_at"], 'fields' => ["decision_audit_id", "user_id", "domain", "object", "action", "effect", "decision_source", "matched_rule", "reason", "ip_address", "correlation_id", "decided_at", "tenant_id", "decision_id", "policy_version", "relationship_version", "purpose", "scopes", "matched_policy_ids", "project_id", "actor_kind", "resource_type", "trace_id", "span_id", "user_agent_hash", "decision_input", "evaluated_by", "evaluated_by_service_identity", "created_at", "updated_at", "created_by"], 'relations_json' => "[]", 'version_field' => "", 'tenant_field' => "tenant_id", 'project_field' => "project_id", 'php_type' => "Udb\Core\Authz\Entity\V1\AccessDecisionAudit"],
@@ -2621,7 +2714,7 @@ final class GeneratedClient
         "udb.core.embedding.entity.v1.EmbeddingSource" => ['table' => "embedding_sources", 'primary_keys' => ["source_id"], 'fields' => ["source_id", "tenant_id", "source_name", "source_message_type", "text_fields_json", "target_collection", "model_id", "tenant_column", "source_cdc_topic", "status", "created_at", "updated_at", "metadata_json", "created_by"], 'relations_json' => "[{\"name\":\"model\",\"kind\":\"belongs_to\",\"local_fields\":[\"model_id\",\"tenant_id\"],\"target_message_type\":\"udb.core.embedding.entity.v1.EmbeddingModel\",\"target_table\":\"udb_embedding.embedding_models\",\"target_fields\":[\"model_id\",\"tenant_id\"],\"on_delete\":\"RESTRICT\",\"on_update\":\"NO ACTION\"}]", 'version_field' => "", 'tenant_field' => "tenant_id", 'project_field' => "", 'php_type' => "Udb\Core\Embedding\Entity\V1\EmbeddingSource"],
         "udb.core.embedding.entity.v1.EmbeddingWorkItem" => ['table' => "embedding_work_items", 'primary_keys' => ["work_item_id"], 'fields' => ["work_item_id", "tenant_id", "project_id", "job_id", "source_name", "parent_pk", "point_id", "document_id", "doc_version", "chunk_seq", "chunk_count", "chunk_hash", "chunk_text", "model_id", "target_collection", "status", "attempt_count", "max_attempts", "last_error", "retryable", "token_count", "next_attempt_at", "created_at", "last_emitted_at", "acked_at", "updated_at", "parent_text", "char_start", "char_end", "token_start", "token_end", "created_by"], 'relations_json' => "[{\"name\":\"job\",\"kind\":\"belongs_to\",\"local_fields\":[\"job_id\"],\"target_message_type\":\"udb.core.embedding.entity.v1.EmbeddingJob\",\"target_table\":\"udb_embedding.embedding_jobs\",\"target_fields\":[\"job_id\"],\"on_delete\":\"CASCADE\",\"on_update\":\"NO ACTION\"},{\"name\":\"model\",\"kind\":\"belongs_to\",\"local_fields\":[\"model_id\",\"tenant_id\"],\"target_message_type\":\"udb.core.embedding.entity.v1.EmbeddingModel\",\"target_table\":\"udb_embedding.embedding_models\",\"target_fields\":[\"model_id\",\"tenant_id\"],\"on_delete\":\"RESTRICT\",\"on_update\":\"NO ACTION\"}]", 'version_field' => "", 'tenant_field' => "tenant_id", 'project_field' => "project_id", 'php_type' => "Udb\Core\Embedding\Entity\V1\EmbeddingWorkItem"],
         "udb.core.idp.entity.v1.ExternalIdentity" => ['table' => "external_identities", 'primary_keys' => ["external_identity_id"], 'fields' => ["external_identity_id", "tenant_id", "provider_id", "subject", "user_id", "email", "email_verified", "linked_at", "last_login_at", "deleted_at", "created_at", "updated_at", "created_by"], 'relations_json' => "[{\"name\":\"provider\",\"kind\":\"belongs_to\",\"local_fields\":[\"provider_id\"],\"target_message_type\":\"udb.core.idp.entity.v1.IdentityProvider\",\"target_table\":\"udb_idp.identity_providers\",\"target_fields\":[\"provider_id\"],\"on_delete\":\"CASCADE\",\"on_update\":\"NO ACTION\"}]", 'version_field' => "", 'tenant_field' => "tenant_id", 'project_field' => "", 'php_type' => "Udb\Core\Idp\Entity\V1\ExternalIdentity"],
-        "udb.core.idp.entity.v1.IdentityProvider" => ['table' => "identity_providers", 'primary_keys' => ["provider_id"], 'fields' => ["provider_id", "tenant_id", "kind", "display_name", "issuer", "entity_id", "jwks_url", "saml_metadata_url", "client_ids_json", "audiences_json", "claim_mapping_json", "group_mapping_json", "jit_policy_json", "account_linking_policy", "enabled", "client_secret", "saml_signing_key_pem", "saml_idp_certs_json", "saml_sso_url", "health", "last_jwks_refresh_at", "last_jwks_refresh_status", "created_by", "updated_by", "created_at", "updated_at", "deleted_at"], 'relations_json' => "[{\"name\":\"external_identities\",\"kind\":\"has_many\",\"local_fields\":[\"provider_id\"],\"target_message_type\":\"udb.core.idp.entity.v1.ExternalIdentity\",\"target_table\":\"udb_idp.external_identities\",\"target_fields\":[\"provider_id\"],\"on_delete\":\"CASCADE\",\"on_update\":\"NO ACTION\"},{\"name\":\"scim_directory_state\",\"kind\":\"has_many\",\"local_fields\":[\"provider_id\"],\"target_message_type\":\"udb.core.idp.entity.v1.ScimDirectoryState\",\"target_table\":\"udb_idp.scim_directory_state\",\"target_fields\":[\"provider_id\"],\"on_delete\":\"CASCADE\",\"on_update\":\"NO ACTION\"}]", 'version_field' => "", 'tenant_field' => "tenant_id", 'project_field' => "", 'php_type' => "Udb\Core\Idp\Entity\V1\IdentityProvider"],
+        "udb.core.idp.entity.v1.IdentityProvider" => ['table' => "identity_providers", 'primary_keys' => ["provider_id"], 'fields' => ["provider_id", "tenant_id", "kind", "display_name", "issuer", "entity_id", "jwks_url", "saml_metadata_url", "client_ids_json", "audiences_json", "claim_mapping_json", "group_mapping_json", "jit_policy_json", "account_linking_policy", "enabled", "client_secret", "saml_signing_key_pem", "saml_idp_certs_json", "saml_sso_url", "health", "last_jwks_refresh_at", "last_jwks_refresh_status", "created_by", "updated_by", "created_at", "updated_at", "deleted_at", "redirect_uris_json"], 'relations_json' => "[{\"name\":\"external_identities\",\"kind\":\"has_many\",\"local_fields\":[\"provider_id\"],\"target_message_type\":\"udb.core.idp.entity.v1.ExternalIdentity\",\"target_table\":\"udb_idp.external_identities\",\"target_fields\":[\"provider_id\"],\"on_delete\":\"CASCADE\",\"on_update\":\"NO ACTION\"},{\"name\":\"scim_directory_state\",\"kind\":\"has_many\",\"local_fields\":[\"provider_id\"],\"target_message_type\":\"udb.core.idp.entity.v1.ScimDirectoryState\",\"target_table\":\"udb_idp.scim_directory_state\",\"target_fields\":[\"provider_id\"],\"on_delete\":\"CASCADE\",\"on_update\":\"NO ACTION\"}]", 'version_field' => "", 'tenant_field' => "tenant_id", 'project_field' => "", 'php_type' => "Udb\Core\Idp\Entity\V1\IdentityProvider"],
         "udb.core.idp.entity.v1.SamlReplayEntry" => ['table' => "saml_replay_entries", 'primary_keys' => ["saml_replay_entry_id"], 'fields' => ["saml_replay_entry_id", "tenant_id", "provider_id", "assertion_id", "not_on_or_after", "consumed_at"], 'relations_json' => "[]", 'version_field' => "", 'tenant_field' => "tenant_id", 'project_field' => "", 'php_type' => "Udb\Core\Idp\Entity\V1\SamlReplayEntry"],
         "udb.core.idp.entity.v1.ScimDirectoryState" => ['table' => "scim_directory_state", 'primary_keys' => ["scim_directory_state_id"], 'fields' => ["scim_directory_state_id", "tenant_id", "provider_id", "cursor", "last_sync_at", "failure_count", "last_error", "deprovision_policy", "created_at", "updated_at", "created_by"], 'relations_json' => "[{\"name\":\"provider\",\"kind\":\"belongs_to\",\"local_fields\":[\"provider_id\"],\"target_message_type\":\"udb.core.idp.entity.v1.IdentityProvider\",\"target_table\":\"udb_idp.identity_providers\",\"target_fields\":[\"provider_id\"],\"on_delete\":\"CASCADE\",\"on_update\":\"NO ACTION\"}]", 'version_field' => "", 'tenant_field' => "tenant_id", 'project_field' => "", 'php_type' => "Udb\Core\Idp\Entity\V1\ScimDirectoryState"],
         "udb.core.lock.entity.v1.Lock" => ['table' => "locks", 'primary_keys' => ["lock_id"], 'fields' => ["lock_id", "tenant_id", "lock_name", "owner_id", "fencing_token", "lease_ttl_seconds", "status", "acquired_at", "expires_at", "metadata_json", "created_at", "updated_at", "created_by"], 'relations_json' => "[]", 'version_field' => "", 'tenant_field' => "tenant_id", 'project_field' => "", 'php_type' => "Udb\Core\Lock\Entity\V1\Lock"],
@@ -2686,6 +2779,7 @@ final class GeneratedClient
         "list_assets" => "listAssets",
         "register_asset" => "registerAsset",
         "start_pipeline" => "startPipeline",
+        "accept_invitation" => "acceptInvitation",
         "admin_reset_mfa" => "adminResetMfa",
         "admin_reset_password" => "adminResetPassword",
         "admin_revoke_all_tenant_sessions" => "adminRevokeAllTenantSessions",
@@ -2694,9 +2788,11 @@ final class GeneratedClient
         "authenticate" => "authenticate",
         "change_password" => "changePassword",
         "change_user_status" => "changeUserStatus",
+        "check_step_up" => "checkStepUp",
         "confirm_mfaenrollment" => "confirmMfaenrollment",
         "confirm_m_f_a_enrollment" => "confirmMfaenrollment",
         "create_certificate_binding" => "createCertificateBinding",
+        "create_invitation" => "createInvitation",
         "create_service_account_grant" => "createServiceAccountGrant",
         "create_service_account_tenant_membership" => "createServiceAccountTenantMembership",
         "create_session" => "createSession",
@@ -2707,19 +2803,23 @@ final class GeneratedClient
         "enroll_mfa" => "enrollMfa",
         "enroll_m_f_a" => "enrollMfa",
         "exchange_service_token_for_tenant" => "exchangeServiceTokenForTenant",
+        "finish_oidc_login" => "finishOidcLogin",
         "finish_web_authn_authentication" => "finishWebAuthnAuthentication",
         "finish_web_authn_registration" => "finishWebAuthnRegistration",
         "forgot_password" => "forgotPassword",
         "generate_recovery_codes" => "generateRecoveryCodes",
+        "get_invitation" => "getInvitation",
         "get_jwks" => "getJwks",
         "get_mfa_policy" => "getMfaPolicy",
         "get_service_account_grant" => "getServiceAccountGrant",
         "get_session" => "getSession",
+        "get_tenant_auth_policy" => "getTenantAuthPolicy",
         "get_user" => "getUser",
         "introspect_token" => "introspectToken",
         "issue_mfa_challenge" => "issueMfaChallenge",
         "list_certificate_bindings" => "listCertificateBindings",
         "list_devices" => "listDevices",
+        "list_invitations" => "listInvitations",
         "list_mfa_factors" => "listMfaFactors",
         "list_service_account_grants" => "listServiceAccountGrants",
         "list_service_account_tenant_memberships" => "listServiceAccountTenantMemberships",
@@ -2727,25 +2827,33 @@ final class GeneratedClient
         "list_users" => "listUsers",
         "list_web_authn_credentials" => "listWebAuthnCredentials",
         "login" => "login",
+        "login_with_oidc_id_token" => "loginWithOidcIdToken",
+        "login_with_otp" => "loginWithOtp",
         "logout" => "logout",
         "put_mfa_policy" => "putMfaPolicy",
+        "put_tenant_auth_policy" => "putTenantAuthPolicy",
         "refresh_session" => "refreshSession",
         "refresh_token" => "refreshToken",
         "rename_passkey" => "renamePasskey",
         "replace_service_account_grant" => "replaceServiceAccountGrant",
+        "resend_invitation" => "resendInvitation",
         "resend_otp" => "resendOtp",
         "resend_o_t_p" => "resendOtp",
         "reset_password" => "resetPassword",
         "revoke_certificate_binding" => "revokeCertificateBinding",
         "revoke_device" => "revokeDevice",
+        "revoke_invitation" => "revokeInvitation",
         "revoke_recovery_codes" => "revokeRecoveryCodes",
         "revoke_service_account_grant" => "revokeServiceAccountGrant",
         "revoke_service_account_tenant_membership" => "revokeServiceAccountTenantMembership",
         "revoke_session" => "revokeSession",
         "rotate_service_account_identity" => "rotateServiceAccountIdentity",
+        "send_login_otp" => "sendLoginOtp",
         "send_otp" => "sendOtp",
         "send_o_t_p" => "sendOtp",
         "send_phone_verification" => "sendPhoneVerification",
+        "start_invitation_acceptance" => "startInvitationAcceptance",
+        "start_oidc_login" => "startOidcLogin",
         "start_web_authn_authentication" => "startWebAuthnAuthentication",
         "start_web_authn_registration" => "startWebAuthnRegistration",
         "transfer_service_account_grant" => "transferServiceAccountGrant",
@@ -3671,6 +3779,27 @@ final class GeneratedClient
         );
     }
     /**
+     * udb.core.authn.services.v1.AuthnService / AcceptInvitation (unary), public alias accept_invitation.
+     *
+     * Forwards to {@see stubFor()}->AcceptInvitation(); retries transient codes.
+     * Path: /udb.core.authn.services.v1.AuthnService/AcceptInvitation
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded AcceptInvitationResponse
+     */
+    public function acceptInvitation($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'AcceptInvitation',
+            'AuthnService',
+            'udb.core.authn.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->AcceptInvitation($request, $md, $opts),
+            $metadata,
+            'mutation' === 'read_only',
+            $request,
+        );
+    }
+    /**
      * udb.core.authn.services.v1.AuthnService / AdminResetMfa (unary), public alias admin_reset_mfa.
      *
      * Forwards to {@see stubFor()}->AdminResetMfa(); retries transient codes.
@@ -3839,6 +3968,27 @@ final class GeneratedClient
         );
     }
     /**
+     * udb.core.authn.services.v1.AuthnService / CheckStepUp (unary), public alias check_step_up.
+     *
+     * Forwards to {@see stubFor()}->CheckStepUp(); retries transient codes.
+     * Path: /udb.core.authn.services.v1.AuthnService/CheckStepUp
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded CheckStepUpResponse
+     */
+    public function checkStepUp($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'CheckStepUp',
+            'AuthnService',
+            'udb.core.authn.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->CheckStepUp($request, $md, $opts),
+            $metadata,
+            'read_only' === 'read_only',
+            $request,
+        );
+    }
+    /**
      * udb.core.authn.services.v1.AuthnService / ConfirmMFAEnrollment (unary), public alias confirm_mfaenrollment.
      *
      * Forwards to {@see stubFor()}->ConfirmMFAEnrollment(); retries transient codes.
@@ -3875,6 +4025,27 @@ final class GeneratedClient
             'AuthnService',
             'udb.core.authn.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->CreateCertificateBinding($request, $md, $opts),
+            $metadata,
+            'mutation' === 'read_only',
+            $request,
+        );
+    }
+    /**
+     * udb.core.authn.services.v1.AuthnService / CreateInvitation (unary), public alias create_invitation.
+     *
+     * Forwards to {@see stubFor()}->CreateInvitation(); retries transient codes.
+     * Path: /udb.core.authn.services.v1.AuthnService/CreateInvitation
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded CreateInvitationResponse
+     */
+    public function createInvitation($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'CreateInvitation',
+            'AuthnService',
+            'udb.core.authn.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->CreateInvitation($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
             $request,
@@ -4070,6 +4241,27 @@ final class GeneratedClient
         );
     }
     /**
+     * udb.core.authn.services.v1.AuthnService / FinishOidcLogin (unary), public alias finish_oidc_login.
+     *
+     * Forwards to {@see stubFor()}->FinishOidcLogin(); retries transient codes.
+     * Path: /udb.core.authn.services.v1.AuthnService/FinishOidcLogin
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded FinishOidcLoginResponse
+     */
+    public function finishOidcLogin($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'FinishOidcLogin',
+            'AuthnService',
+            'udb.core.authn.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->FinishOidcLogin($request, $md, $opts),
+            $metadata,
+            'mutation' === 'read_only',
+            $request,
+        );
+    }
+    /**
      * udb.core.authn.services.v1.AuthnService / FinishWebAuthnAuthentication (unary), public alias finish_web_authn_authentication.
      *
      * Forwards to {@see stubFor()}->FinishWebAuthnAuthentication(); retries transient codes.
@@ -4154,6 +4346,27 @@ final class GeneratedClient
         );
     }
     /**
+     * udb.core.authn.services.v1.AuthnService / GetInvitation (unary), public alias get_invitation.
+     *
+     * Forwards to {@see stubFor()}->GetInvitation(); retries transient codes.
+     * Path: /udb.core.authn.services.v1.AuthnService/GetInvitation
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded GetInvitationResponse
+     */
+    public function getInvitation($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'GetInvitation',
+            'AuthnService',
+            'udb.core.authn.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->GetInvitation($request, $md, $opts),
+            $metadata,
+            'read_only' === 'read_only',
+            $request,
+        );
+    }
+    /**
      * udb.core.authn.services.v1.AuthnService / GetJwks (unary), public alias get_jwks.
      *
      * Forwards to {@see stubFor()}->GetJwks(); retries transient codes.
@@ -4232,6 +4445,27 @@ final class GeneratedClient
             'AuthnService',
             'udb.core.authn.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->GetSession($request, $md, $opts),
+            $metadata,
+            'read_only' === 'read_only',
+            $request,
+        );
+    }
+    /**
+     * udb.core.authn.services.v1.AuthnService / GetTenantAuthPolicy (unary), public alias get_tenant_auth_policy.
+     *
+     * Forwards to {@see stubFor()}->GetTenantAuthPolicy(); retries transient codes.
+     * Path: /udb.core.authn.services.v1.AuthnService/GetTenantAuthPolicy
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded GetTenantAuthPolicyResponse
+     */
+    public function getTenantAuthPolicy($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'GetTenantAuthPolicy',
+            'AuthnService',
+            'udb.core.authn.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->GetTenantAuthPolicy($request, $md, $opts),
             $metadata,
             'read_only' === 'read_only',
             $request,
@@ -4337,6 +4571,27 @@ final class GeneratedClient
             'AuthnService',
             'udb.core.authn.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->ListDevices($request, $md, $opts),
+            $metadata,
+            'read_only' === 'read_only',
+            $request,
+        );
+    }
+    /**
+     * udb.core.authn.services.v1.AuthnService / ListInvitations (unary), public alias list_invitations.
+     *
+     * Forwards to {@see stubFor()}->ListInvitations(); retries transient codes.
+     * Path: /udb.core.authn.services.v1.AuthnService/ListInvitations
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded ListInvitationsResponse
+     */
+    public function listInvitations($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'ListInvitations',
+            'AuthnService',
+            'udb.core.authn.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->ListInvitations($request, $md, $opts),
             $metadata,
             'read_only' === 'read_only',
             $request,
@@ -4490,6 +4745,48 @@ final class GeneratedClient
         );
     }
     /**
+     * udb.core.authn.services.v1.AuthnService / LoginWithOidcIdToken (unary), public alias login_with_oidc_id_token.
+     *
+     * Forwards to {@see stubFor()}->LoginWithOidcIdToken(); retries transient codes.
+     * Path: /udb.core.authn.services.v1.AuthnService/LoginWithOidcIdToken
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded LoginWithOidcIdTokenResponse
+     */
+    public function loginWithOidcIdToken($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'LoginWithOidcIdToken',
+            'AuthnService',
+            'udb.core.authn.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->LoginWithOidcIdToken($request, $md, $opts),
+            $metadata,
+            'mutation' === 'read_only',
+            $request,
+        );
+    }
+    /**
+     * udb.core.authn.services.v1.AuthnService / LoginWithOtp (unary), public alias login_with_otp.
+     *
+     * Forwards to {@see stubFor()}->LoginWithOtp(); retries transient codes.
+     * Path: /udb.core.authn.services.v1.AuthnService/LoginWithOtp
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded LoginWithOtpResponse
+     */
+    public function loginWithOtp($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'LoginWithOtp',
+            'AuthnService',
+            'udb.core.authn.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->LoginWithOtp($request, $md, $opts),
+            $metadata,
+            'mutation' === 'read_only',
+            $request,
+        );
+    }
+    /**
      * udb.core.authn.services.v1.AuthnService / Logout (unary), public alias logout.
      *
      * Forwards to {@see stubFor()}->Logout(); retries transient codes.
@@ -4526,6 +4823,27 @@ final class GeneratedClient
             'AuthnService',
             'udb.core.authn.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->PutMfaPolicy($request, $md, $opts),
+            $metadata,
+            'mutation' === 'read_only',
+            $request,
+        );
+    }
+    /**
+     * udb.core.authn.services.v1.AuthnService / PutTenantAuthPolicy (unary), public alias put_tenant_auth_policy.
+     *
+     * Forwards to {@see stubFor()}->PutTenantAuthPolicy(); retries transient codes.
+     * Path: /udb.core.authn.services.v1.AuthnService/PutTenantAuthPolicy
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded PutTenantAuthPolicyResponse
+     */
+    public function putTenantAuthPolicy($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'PutTenantAuthPolicy',
+            'AuthnService',
+            'udb.core.authn.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->PutTenantAuthPolicy($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
             $request,
@@ -4616,6 +4934,27 @@ final class GeneratedClient
         );
     }
     /**
+     * udb.core.authn.services.v1.AuthnService / ResendInvitation (unary), public alias resend_invitation.
+     *
+     * Forwards to {@see stubFor()}->ResendInvitation(); retries transient codes.
+     * Path: /udb.core.authn.services.v1.AuthnService/ResendInvitation
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded ResendInvitationResponse
+     */
+    public function resendInvitation($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'ResendInvitation',
+            'AuthnService',
+            'udb.core.authn.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->ResendInvitation($request, $md, $opts),
+            $metadata,
+            'mutation' === 'read_only',
+            $request,
+        );
+    }
+    /**
      * udb.core.authn.services.v1.AuthnService / ResendOTP (unary), public alias resend_otp.
      *
      * Forwards to {@see stubFor()}->ResendOTP(); retries transient codes.
@@ -4696,6 +5035,27 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->RevokeDevice($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
+            $request,
+        );
+    }
+    /**
+     * udb.core.authn.services.v1.AuthnService / RevokeInvitation (unary), public alias revoke_invitation.
+     *
+     * Forwards to {@see stubFor()}->RevokeInvitation(); retries transient codes.
+     * Path: /udb.core.authn.services.v1.AuthnService/RevokeInvitation
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded RevokeInvitationResponse
+     */
+    public function revokeInvitation($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'RevokeInvitation',
+            'AuthnService',
+            'udb.core.authn.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->RevokeInvitation($request, $md, $opts),
+            $metadata,
+            'destructive' === 'read_only',
             $request,
         );
     }
@@ -4805,6 +5165,27 @@ final class GeneratedClient
         );
     }
     /**
+     * udb.core.authn.services.v1.AuthnService / SendLoginOtp (unary), public alias send_login_otp.
+     *
+     * Forwards to {@see stubFor()}->SendLoginOtp(); retries transient codes.
+     * Path: /udb.core.authn.services.v1.AuthnService/SendLoginOtp
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded SendLoginOtpResponse
+     */
+    public function sendLoginOtp($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'SendLoginOtp',
+            'AuthnService',
+            'udb.core.authn.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->SendLoginOtp($request, $md, $opts),
+            $metadata,
+            'mutation' === 'read_only',
+            $request,
+        );
+    }
+    /**
      * udb.core.authn.services.v1.AuthnService / SendOTP (unary), public alias send_otp.
      *
      * Forwards to {@see stubFor()}->SendOTP(); retries transient codes.
@@ -4841,6 +5222,48 @@ final class GeneratedClient
             'AuthnService',
             'udb.core.authn.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->SendPhoneVerification($request, $md, $opts),
+            $metadata,
+            'mutation' === 'read_only',
+            $request,
+        );
+    }
+    /**
+     * udb.core.authn.services.v1.AuthnService / StartInvitationAcceptance (unary), public alias start_invitation_acceptance.
+     *
+     * Forwards to {@see stubFor()}->StartInvitationAcceptance(); retries transient codes.
+     * Path: /udb.core.authn.services.v1.AuthnService/StartInvitationAcceptance
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded StartInvitationAcceptanceResponse
+     */
+    public function startInvitationAcceptance($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'StartInvitationAcceptance',
+            'AuthnService',
+            'udb.core.authn.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->StartInvitationAcceptance($request, $md, $opts),
+            $metadata,
+            'mutation' === 'read_only',
+            $request,
+        );
+    }
+    /**
+     * udb.core.authn.services.v1.AuthnService / StartOidcLogin (unary), public alias start_oidc_login.
+     *
+     * Forwards to {@see stubFor()}->StartOidcLogin(); retries transient codes.
+     * Path: /udb.core.authn.services.v1.AuthnService/StartOidcLogin
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded StartOidcLoginResponse
+     */
+    public function startOidcLogin($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'StartOidcLogin',
+            'AuthnService',
+            'udb.core.authn.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->StartOidcLogin($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
             $request,
@@ -11708,7 +12131,7 @@ final class GeneratedClient
         return $this->stubFor('AssetService', 'udb.core.asset.services.v1');
     }
     /**
-     * Underlying buf-generated stub for udb.core.authn.services.v1.AuthnService (64 RPC(s)).
+     * Underlying buf-generated stub for udb.core.authn.services.v1.AuthnService (79 RPC(s)).
      * Channel is shared with every other service stub on this client.
      *
      * @return BaseStub  a AuthnServiceClient
@@ -12284,6 +12707,10 @@ final class GeneratedClient
     {
         return self::repository("udb.core.authn.entity.v1.Device");
     }
+    public static function invitationRepository(): EntityRepository
+    {
+        return self::repository("udb.core.authn.entity.v1.Invitation");
+    }
     public static function mfaChallengeRepository(): EntityRepository
     {
         return self::repository("udb.core.authn.entity.v1.MfaChallenge");
@@ -12295,6 +12722,10 @@ final class GeneratedClient
     public static function otpRepository(): EntityRepository
     {
         return self::repository("udb.core.authn.entity.v1.OTP");
+    }
+    public static function oidcLoginStateRepository(): EntityRepository
+    {
+        return self::repository("udb.core.authn.entity.v1.OidcLoginState");
     }
     public static function recoveryCodeRepository(): EntityRepository
     {
@@ -12315,6 +12746,10 @@ final class GeneratedClient
     public static function signingKeyRepository(): EntityRepository
     {
         return self::repository("udb.core.authn.entity.v1.SigningKey");
+    }
+    public static function tenantAuthPolicyRepository(): EntityRepository
+    {
+        return self::repository("udb.core.authn.entity.v1.TenantAuthPolicy");
     }
     public static function tokenFamilyRepository(): EntityRepository
     {

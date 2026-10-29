@@ -345,6 +345,81 @@ class AuthnServiceStub(object):
                 request_serializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_authn__service__pb2.ExchangeServiceTokenForTenantRequest.SerializeToString,
                 response_deserializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_authn__service__pb2.ExchangeServiceTokenForTenantResponse.FromString,
                 _registered_method=True)
+        self.PutTenantAuthPolicy = channel.unary_unary(
+                '/udb.core.authn.services.v1.AuthnService/PutTenantAuthPolicy',
+                request_serializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.PutTenantAuthPolicyRequest.SerializeToString,
+                response_deserializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.PutTenantAuthPolicyResponse.FromString,
+                _registered_method=True)
+        self.GetTenantAuthPolicy = channel.unary_unary(
+                '/udb.core.authn.services.v1.AuthnService/GetTenantAuthPolicy',
+                request_serializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.GetTenantAuthPolicyRequest.SerializeToString,
+                response_deserializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.GetTenantAuthPolicyResponse.FromString,
+                _registered_method=True)
+        self.SendLoginOtp = channel.unary_unary(
+                '/udb.core.authn.services.v1.AuthnService/SendLoginOtp',
+                request_serializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.SendLoginOtpRequest.SerializeToString,
+                response_deserializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.SendLoginOtpResponse.FromString,
+                _registered_method=True)
+        self.LoginWithOtp = channel.unary_unary(
+                '/udb.core.authn.services.v1.AuthnService/LoginWithOtp',
+                request_serializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.LoginWithOtpRequest.SerializeToString,
+                response_deserializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.LoginWithOtpResponse.FromString,
+                _registered_method=True)
+        self.StartOidcLogin = channel.unary_unary(
+                '/udb.core.authn.services.v1.AuthnService/StartOidcLogin',
+                request_serializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.StartOidcLoginRequest.SerializeToString,
+                response_deserializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.StartOidcLoginResponse.FromString,
+                _registered_method=True)
+        self.FinishOidcLogin = channel.unary_unary(
+                '/udb.core.authn.services.v1.AuthnService/FinishOidcLogin',
+                request_serializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.FinishOidcLoginRequest.SerializeToString,
+                response_deserializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.FinishOidcLoginResponse.FromString,
+                _registered_method=True)
+        self.LoginWithOidcIdToken = channel.unary_unary(
+                '/udb.core.authn.services.v1.AuthnService/LoginWithOidcIdToken',
+                request_serializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.LoginWithOidcIdTokenRequest.SerializeToString,
+                response_deserializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.LoginWithOidcIdTokenResponse.FromString,
+                _registered_method=True)
+        self.CreateInvitation = channel.unary_unary(
+                '/udb.core.authn.services.v1.AuthnService/CreateInvitation',
+                request_serializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.CreateInvitationRequest.SerializeToString,
+                response_deserializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.CreateInvitationResponse.FromString,
+                _registered_method=True)
+        self.ListInvitations = channel.unary_unary(
+                '/udb.core.authn.services.v1.AuthnService/ListInvitations',
+                request_serializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.ListInvitationsRequest.SerializeToString,
+                response_deserializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.ListInvitationsResponse.FromString,
+                _registered_method=True)
+        self.RevokeInvitation = channel.unary_unary(
+                '/udb.core.authn.services.v1.AuthnService/RevokeInvitation',
+                request_serializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.RevokeInvitationRequest.SerializeToString,
+                response_deserializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.RevokeInvitationResponse.FromString,
+                _registered_method=True)
+        self.ResendInvitation = channel.unary_unary(
+                '/udb.core.authn.services.v1.AuthnService/ResendInvitation',
+                request_serializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.ResendInvitationRequest.SerializeToString,
+                response_deserializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.ResendInvitationResponse.FromString,
+                _registered_method=True)
+        self.GetInvitation = channel.unary_unary(
+                '/udb.core.authn.services.v1.AuthnService/GetInvitation',
+                request_serializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.GetInvitationRequest.SerializeToString,
+                response_deserializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.GetInvitationResponse.FromString,
+                _registered_method=True)
+        self.StartInvitationAcceptance = channel.unary_unary(
+                '/udb.core.authn.services.v1.AuthnService/StartInvitationAcceptance',
+                request_serializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.StartInvitationAcceptanceRequest.SerializeToString,
+                response_deserializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.StartInvitationAcceptanceResponse.FromString,
+                _registered_method=True)
+        self.AcceptInvitation = channel.unary_unary(
+                '/udb.core.authn.services.v1.AuthnService/AcceptInvitation',
+                request_serializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.AcceptInvitationRequest.SerializeToString,
+                response_deserializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.AcceptInvitationResponse.FromString,
+                _registered_method=True)
+        self.CheckStepUp = channel.unary_unary(
+                '/udb.core.authn.services.v1.AuthnService/CheckStepUp',
+                request_serializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.CheckStepUpRequest.SerializeToString,
+                response_deserializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.CheckStepUpResponse.FromString,
+                _registered_method=True)
 
 
 class AuthnServiceServicer(object):
@@ -829,6 +904,162 @@ class AuthnServiceServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def PutTenantAuthPolicy(self, request, context):
+        """── 0.6.6 passwordless login + tenant auth policy RPCs [PASSWORDLESS] ──
+
+        Replace the tenant's sign-in policy: whether passwords are required, the
+        channels sign-in codes may go over, the magic-link page and the step-up
+        rules. Only an administrator of that tenant (or a cross-tenant admin).
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def GetTenantAuthPolicy(self, request, context):
+        """Read the tenant's sign-in policy (the defaults when none was written).
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def SendLoginOtp(self, request, context):
+        """Send a one-time sign-in code (or, for EMAIL, a magic link) to a phone or
+        email address of the tenant. Public. The answer is the same whether or not
+        the address belongs to an account and whether or not the tenant enabled
+        the channel; only a real, enabled account is sent anything.
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def LoginWithOtp(self, request, context):
+        """Sign in with the code from SendLoginOtp (or the otp_id + code of a magic
+        link). Public. Returns the same credentials as Login: access token,
+        rotating refresh token, session and CSRF token.
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def StartOidcLogin(self, request, context):
+        """── 0.6.6 passkeys RPCs [PASSKEYS] ──
+        [PASSKEYS-END]
+
+        ── 0.6.6 OIDC sign-in RPCs [OIDC] ──
+        "Sign in with Google / Microsoft / any OpenID provider" through a tenant
+        IdentityProvider (kind OIDC). Browser flow: StartOidcLogin returns the
+        provider's authorization URL (authorization code + PKCE S256 + nonce,
+        state stored server-side for 10 minutes, single use); the provider
+        redirects to an allowlisted redirect_uri with code + state, and
+        FinishOidcLogin exchanges the code, verifies the ID token and returns the
+        same credentials as Login. Native apps that already hold an ID token call
+        LoginWithOidcIdToken. Users resolve exactly like ResolveExternalIdentity:
+        an existing link, the provider's account-linking policy, or JIT
+        provisioning under its jit_policy.
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def FinishOidcLogin(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def LoginWithOidcIdToken(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def CreateInvitation(self, request, context):
+        """── 0.6.6 invitations RPCs [INVITATIONS] ──
+        Invite a person into the caller's tenant with a set of roles. The
+        invitee proves the invitation's channel on acceptance: an SMS or email
+        code sent to `address`, a sign-in with the tenant identity provider
+        (OIDC), or a new passkey (PASSKEY). SMS/EMAIL invitations are sent at
+        once (event `authn.invitation`, link from the tenant auth policy's
+        magic_link_base_url); the accept token is returned once and only its hash
+        is stored. Reserved platform roles are refused; organization_owner needs a
+        caller who holds it, or a cross-tenant admin.
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def ListInvitations(self, request, context):
+        """Page through the caller's tenant's invitations, newest first, optionally
+        by status.
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def RevokeInvitation(self, request, context):
+        """Revoke a PENDING invitation of the caller's tenant: its link stops
+        working at once and the account acceptance had started for (if any) is
+        deleted. Already accepted, revoked or expired: revoked=false, nothing
+        changes.
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def ResendInvitation(self, request, context):
+        """Send a PENDING SMS/EMAIL invitation again with a NEW accept token (the
+        previous link stops working). At most 5 messages per invitation, at least
+        60 seconds apart (RESOURCE_EXHAUSTED with a retry delay otherwise).
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def GetInvitation(self, request, context):
+        """What an invitee sees before accepting: tenant name, channel, roles,
+        expiry and the masked address. Public. An unknown, expired, revoked or
+        accepted invitation, or a wrong token, is one identical refusal.
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def StartInvitationAcceptance(self, request, context):
+        """Begin accepting an invitation. Public. SMS/EMAIL: sends a one-time code
+        to the invitation address (OTP cooldown applies). PASSKEY: returns
+        WebAuthn registration options. OIDC: returns the identity provider's
+        authorization URL. Same refusal as GetInvitation for an unusable
+        invitation.
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def AcceptInvitation(self, request, context):
+        """Accept an invitation with the channel proof. Public. Creates the ACTIVE
+        account in the invitation's tenant and project with the proven channel
+        verified (phone, email, linked identity or passkey), binds the invited
+        roles, marks the invitation ACCEPTED and signs the account in: the same
+        credentials as Login. An unusable invitation is the same refusal as
+        GetInvitation; a taken username is ALREADY_EXISTS on `username`.
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def CheckStepUp(self, request, context):
+        """── 0.6.6 step-up / MFA RPCs [STEPUP] ──
+
+        Check a step-up token before a protected action. A resource server sends
+        the token the user got from VerifyMfaChallenge and the action it is about
+        to perform; the answer says whether the tenant's step-up rule for that
+        action is met: same action, an allowed second factor, proven recently
+        enough, by the calling user, in a session that is still live.
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_AuthnServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
@@ -1151,6 +1382,81 @@ def add_AuthnServiceServicer_to_server(servicer, server):
                     servicer.ExchangeServiceTokenForTenant,
                     request_deserializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_authn__service__pb2.ExchangeServiceTokenForTenantRequest.FromString,
                     response_serializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_authn__service__pb2.ExchangeServiceTokenForTenantResponse.SerializeToString,
+            ),
+            'PutTenantAuthPolicy': grpc.unary_unary_rpc_method_handler(
+                    servicer.PutTenantAuthPolicy,
+                    request_deserializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.PutTenantAuthPolicyRequest.FromString,
+                    response_serializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.PutTenantAuthPolicyResponse.SerializeToString,
+            ),
+            'GetTenantAuthPolicy': grpc.unary_unary_rpc_method_handler(
+                    servicer.GetTenantAuthPolicy,
+                    request_deserializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.GetTenantAuthPolicyRequest.FromString,
+                    response_serializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.GetTenantAuthPolicyResponse.SerializeToString,
+            ),
+            'SendLoginOtp': grpc.unary_unary_rpc_method_handler(
+                    servicer.SendLoginOtp,
+                    request_deserializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.SendLoginOtpRequest.FromString,
+                    response_serializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.SendLoginOtpResponse.SerializeToString,
+            ),
+            'LoginWithOtp': grpc.unary_unary_rpc_method_handler(
+                    servicer.LoginWithOtp,
+                    request_deserializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.LoginWithOtpRequest.FromString,
+                    response_serializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.LoginWithOtpResponse.SerializeToString,
+            ),
+            'StartOidcLogin': grpc.unary_unary_rpc_method_handler(
+                    servicer.StartOidcLogin,
+                    request_deserializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.StartOidcLoginRequest.FromString,
+                    response_serializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.StartOidcLoginResponse.SerializeToString,
+            ),
+            'FinishOidcLogin': grpc.unary_unary_rpc_method_handler(
+                    servicer.FinishOidcLogin,
+                    request_deserializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.FinishOidcLoginRequest.FromString,
+                    response_serializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.FinishOidcLoginResponse.SerializeToString,
+            ),
+            'LoginWithOidcIdToken': grpc.unary_unary_rpc_method_handler(
+                    servicer.LoginWithOidcIdToken,
+                    request_deserializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.LoginWithOidcIdTokenRequest.FromString,
+                    response_serializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.LoginWithOidcIdTokenResponse.SerializeToString,
+            ),
+            'CreateInvitation': grpc.unary_unary_rpc_method_handler(
+                    servicer.CreateInvitation,
+                    request_deserializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.CreateInvitationRequest.FromString,
+                    response_serializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.CreateInvitationResponse.SerializeToString,
+            ),
+            'ListInvitations': grpc.unary_unary_rpc_method_handler(
+                    servicer.ListInvitations,
+                    request_deserializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.ListInvitationsRequest.FromString,
+                    response_serializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.ListInvitationsResponse.SerializeToString,
+            ),
+            'RevokeInvitation': grpc.unary_unary_rpc_method_handler(
+                    servicer.RevokeInvitation,
+                    request_deserializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.RevokeInvitationRequest.FromString,
+                    response_serializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.RevokeInvitationResponse.SerializeToString,
+            ),
+            'ResendInvitation': grpc.unary_unary_rpc_method_handler(
+                    servicer.ResendInvitation,
+                    request_deserializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.ResendInvitationRequest.FromString,
+                    response_serializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.ResendInvitationResponse.SerializeToString,
+            ),
+            'GetInvitation': grpc.unary_unary_rpc_method_handler(
+                    servicer.GetInvitation,
+                    request_deserializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.GetInvitationRequest.FromString,
+                    response_serializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.GetInvitationResponse.SerializeToString,
+            ),
+            'StartInvitationAcceptance': grpc.unary_unary_rpc_method_handler(
+                    servicer.StartInvitationAcceptance,
+                    request_deserializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.StartInvitationAcceptanceRequest.FromString,
+                    response_serializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.StartInvitationAcceptanceResponse.SerializeToString,
+            ),
+            'AcceptInvitation': grpc.unary_unary_rpc_method_handler(
+                    servicer.AcceptInvitation,
+                    request_deserializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.AcceptInvitationRequest.FromString,
+                    response_serializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.AcceptInvitationResponse.SerializeToString,
+            ),
+            'CheckStepUp': grpc.unary_unary_rpc_method_handler(
+                    servicer.CheckStepUp,
+                    request_deserializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.CheckStepUpRequest.FromString,
+                    response_serializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.CheckStepUpResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -2891,6 +3197,411 @@ class AuthnService(object):
             '/udb.core.authn.services.v1.AuthnService/ExchangeServiceTokenForTenant',
             udb_dot_core_dot_authn_dot_services_dot_v1_dot_authn__service__pb2.ExchangeServiceTokenForTenantRequest.SerializeToString,
             udb_dot_core_dot_authn_dot_services_dot_v1_dot_authn__service__pb2.ExchangeServiceTokenForTenantResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def PutTenantAuthPolicy(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/udb.core.authn.services.v1.AuthnService/PutTenantAuthPolicy',
+            udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.PutTenantAuthPolicyRequest.SerializeToString,
+            udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.PutTenantAuthPolicyResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def GetTenantAuthPolicy(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/udb.core.authn.services.v1.AuthnService/GetTenantAuthPolicy',
+            udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.GetTenantAuthPolicyRequest.SerializeToString,
+            udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.GetTenantAuthPolicyResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def SendLoginOtp(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/udb.core.authn.services.v1.AuthnService/SendLoginOtp',
+            udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.SendLoginOtpRequest.SerializeToString,
+            udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.SendLoginOtpResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def LoginWithOtp(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/udb.core.authn.services.v1.AuthnService/LoginWithOtp',
+            udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.LoginWithOtpRequest.SerializeToString,
+            udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.LoginWithOtpResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def StartOidcLogin(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/udb.core.authn.services.v1.AuthnService/StartOidcLogin',
+            udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.StartOidcLoginRequest.SerializeToString,
+            udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.StartOidcLoginResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def FinishOidcLogin(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/udb.core.authn.services.v1.AuthnService/FinishOidcLogin',
+            udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.FinishOidcLoginRequest.SerializeToString,
+            udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.FinishOidcLoginResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def LoginWithOidcIdToken(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/udb.core.authn.services.v1.AuthnService/LoginWithOidcIdToken',
+            udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.LoginWithOidcIdTokenRequest.SerializeToString,
+            udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.LoginWithOidcIdTokenResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def CreateInvitation(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/udb.core.authn.services.v1.AuthnService/CreateInvitation',
+            udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.CreateInvitationRequest.SerializeToString,
+            udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.CreateInvitationResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def ListInvitations(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/udb.core.authn.services.v1.AuthnService/ListInvitations',
+            udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.ListInvitationsRequest.SerializeToString,
+            udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.ListInvitationsResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def RevokeInvitation(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/udb.core.authn.services.v1.AuthnService/RevokeInvitation',
+            udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.RevokeInvitationRequest.SerializeToString,
+            udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.RevokeInvitationResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def ResendInvitation(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/udb.core.authn.services.v1.AuthnService/ResendInvitation',
+            udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.ResendInvitationRequest.SerializeToString,
+            udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.ResendInvitationResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def GetInvitation(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/udb.core.authn.services.v1.AuthnService/GetInvitation',
+            udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.GetInvitationRequest.SerializeToString,
+            udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.GetInvitationResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def StartInvitationAcceptance(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/udb.core.authn.services.v1.AuthnService/StartInvitationAcceptance',
+            udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.StartInvitationAcceptanceRequest.SerializeToString,
+            udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.StartInvitationAcceptanceResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def AcceptInvitation(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/udb.core.authn.services.v1.AuthnService/AcceptInvitation',
+            udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.AcceptInvitationRequest.SerializeToString,
+            udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.AcceptInvitationResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def CheckStepUp(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/udb.core.authn.services.v1.AuthnService/CheckStepUp',
+            udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.CheckStepUpRequest.SerializeToString,
+            udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.CheckStepUpResponse.FromString,
             options,
             channel_credentials,
             insecure,

@@ -56,9 +56,106 @@ fn jwks_ttl_secs() -> u64 {
         .unwrap_or(3600)
 }
 
+/// Discovery metadata an OIDC sign-in needs from
+/// `<issuer>/.well-known/openid-configuration`.
+#[derive(Debug, Clone, Default)]
+pub struct OidcDiscovery {
+    pub issuer: String,
+    pub authorization_endpoint: String,
+    pub token_endpoint: String,
+    /// `token_endpoint_auth_methods_supported` (empty = not advertised, which
+    /// OIDC Discovery defines as `client_secret_basic`).
+    pub token_endpoint_auth_methods: Vec<String>,
+}
+
+#[derive(Clone)]
+struct DiscoveryEntry {
+    discovery: OidcDiscovery,
+    fetched_at: Instant,
+}
+
+/// The shortest interval between two JWKS fetches forced by an unknown `kid`.
+/// An ID token with a garbage `kid` must not turn every request into an
+/// outbound fetch; a genuine key rotation is still picked up after this.
+const JWKS_MIN_FORCED_REFRESH: Duration = Duration::from_secs(10);
+
+static SHARED_CACHE: std::sync::OnceLock<OidcJwksCache> = std::sync::OnceLock::new();
+
+static SHARED_DISCOVERY: std::sync::OnceLock<RwLock<HashMap<String, DiscoveryEntry>>> =
+    std::sync::OnceLock::new();
+
+fn discovery_cache() -> &'static RwLock<HashMap<String, DiscoveryEntry>> {
+    SHARED_DISCOVERY.get_or_init(|| RwLock::new(HashMap::new()))
+}
+
 impl OidcJwksCache {
     pub fn new() -> Self {
         Self::default()
+    }
+
+    /// The process-wide cache. `IdentityProviderService` and the AuthnService
+    /// OIDC sign-in share it, so an UpdateProvider or ForceJwksRefresh
+    /// invalidation is seen by sign-in immediately.
+    pub fn shared() -> Self {
+        SHARED_CACHE.get_or_init(Self::new).clone()
+    }
+
+    /// Resolve the JWKS that should hold `kid`. A cached set that already
+    /// advertises `kid` is used as is; otherwise the set is refetched, but at
+    /// most once per [`JWKS_MIN_FORCED_REFRESH`] per provider, so an unknown
+    /// `kid` then fails cleanly against the cached set.
+    pub async fn resolve_for_kid(
+        &self,
+        tenant_id: &str,
+        provider_id: &str,
+        issuer: &str,
+        jwks_url: &str,
+        kid: &str,
+    ) -> Result<JwksResolution, String> {
+        if let Some(entry) = self.cached(tenant_id, provider_id) {
+            if entry.kids.iter().any(|k| k == kid)
+                || entry.fetched_at.elapsed() < JWKS_MIN_FORCED_REFRESH
+            {
+                return Ok(JwksResolution {
+                    jwks_json: entry.jwks_json,
+                    kids: entry.kids,
+                    from_cache: true,
+                });
+            }
+        }
+        self.resolve(tenant_id, provider_id, issuer, jwks_url, true)
+            .await
+    }
+
+    /// Discovery metadata for a provider, cached with the JWKS TTL. The
+    /// document's `issuer` must equal the configured issuer exactly (OpenID
+    /// Connect Discovery 4.3); a mismatch is refused, never cached.
+    pub async fn discovery(
+        &self,
+        tenant_id: &str,
+        provider_id: &str,
+        issuer: &str,
+    ) -> Result<OidcDiscovery, String> {
+        let key = cache_key(tenant_id, provider_id);
+        let ttl = Duration::from_secs(jwks_ttl_secs());
+        if let Ok(guard) = discovery_cache().read()
+            && let Some(entry) = guard.get(&key)
+            && entry.fetched_at.elapsed() <= ttl
+            && entry.discovery.issuer == issuer.trim()
+        {
+            return Ok(entry.discovery.clone());
+        }
+        let discovery = fetch_discovery(issuer).await?;
+        if let Ok(mut guard) = discovery_cache().write() {
+            guard.insert(
+                key,
+                DiscoveryEntry {
+                    discovery: discovery.clone(),
+                    fetched_at: Instant::now(),
+                },
+            );
+        }
+        Ok(discovery)
     }
 
     /// Return the cached JWKS for a provider when present and within TTL.
@@ -87,8 +184,13 @@ impl OidcJwksCache {
     }
 
     /// Drop any cached entry for a provider (used before a forced refresh).
+    /// Discovery metadata is dropped with it: issuer and endpoints may have
+    /// changed together.
     pub fn invalidate(&self, tenant_id: &str, provider_id: &str) {
         if let Ok(mut guard) = self.inner.write() {
+            guard.remove(&cache_key(tenant_id, provider_id));
+        }
+        if let Ok(mut guard) = discovery_cache().write() {
             guard.remove(&cache_key(tenant_id, provider_id));
         }
     }
@@ -151,6 +253,59 @@ async fn discover_jwks_url(issuer: &str) -> Result<String, String> {
         .ok_or_else(|| "discovery document has no jwks_uri".to_string())
 }
 
+/// Fetch and check an issuer's discovery document for a sign-in: the
+/// authorization, token and JWKS endpoints must all be present, and the
+/// document's own `issuer` must equal the configured one.
+async fn fetch_discovery(issuer: &str) -> Result<OidcDiscovery, String> {
+    let issuer = issuer.trim();
+    if issuer.is_empty() {
+        return Err("OIDC issuer is required for discovery".to_string());
+    }
+    let well_known = format!(
+        "{}/.well-known/openid-configuration",
+        issuer.trim_end_matches('/')
+    );
+    let body = fetch_url(&well_known).await?;
+    parse_discovery(issuer, &body)
+}
+
+/// Parse a discovery document (split out so the issuer/endpoint checks are
+/// unit-tested without a network).
+pub fn parse_discovery(issuer: &str, body: &str) -> Result<OidcDiscovery, String> {
+    let doc: serde_json::Value =
+        serde_json::from_str(body).map_err(|e| format!("invalid discovery document: {e}"))?;
+    let field = |name: &str| -> Result<String, String> {
+        doc.get(name)
+            .and_then(|v| v.as_str())
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+            .map(ToString::to_string)
+            .ok_or_else(|| format!("discovery document has no {name}"))
+    };
+    let advertised = field("issuer")?;
+    if advertised != issuer.trim() {
+        return Err(format!(
+            "discovery issuer {advertised} does not match the configured issuer {}",
+            issuer.trim()
+        ));
+    }
+    Ok(OidcDiscovery {
+        issuer: advertised,
+        authorization_endpoint: field("authorization_endpoint")?,
+        token_endpoint: field("token_endpoint")?,
+        token_endpoint_auth_methods: doc
+            .get("token_endpoint_auth_methods_supported")
+            .and_then(|v| v.as_array())
+            .map(|methods| {
+                methods
+                    .iter()
+                    .filter_map(|m| m.as_str().map(ToString::to_string))
+                    .collect()
+            })
+            .unwrap_or_default(),
+    })
+}
+
 /// Extract the advertised `kid`s from a JWKS document (for health/rotation
 /// reporting and missing-kid diagnostics).
 pub fn parse_jwks_kids(jwks_json: &str) -> Vec<String> {
@@ -199,17 +354,7 @@ const MAX_IDP_DOCUMENT_BYTES: usize = 2 * 1024 * 1024;
 /// pinning that struct was written for and that nothing had wired up.
 #[cfg(feature = "http-client")]
 async fn fetch_url(url: &str) -> Result<String, String> {
-    let target = crate::runtime::service::webhook_service::resolve_and_pin_target(url)
-        .await
-        .map_err(|status| format!("refused to fetch {url}: {}", status.message()))?;
-    let client = reqwest::Client::builder()
-        .timeout(Duration::from_secs(10))
-        // A redirect is a second, unvalidated URL. Refuse rather than re-run the
-        // policy per hop: an IdP document is served directly in practice.
-        .redirect(reqwest::redirect::Policy::none())
-        .resolve_to_addrs(&target.host, &target.addrs)
-        .build()
-        .map_err(|e| format!("http client build failed: {e}"))?;
+    let client = pinned_client(url).await?;
     let resp = client
         .get(url)
         .send()
@@ -218,6 +363,56 @@ async fn fetch_url(url: &str) -> Result<String, String> {
     if !resp.status().is_success() {
         return Err(format!("GET {url} returned HTTP {}", resp.status()));
     }
+    read_bounded_body(url, resp).await
+}
+
+/// TEST-ONLY: lets the IdP fetches (discovery, JWKS, token endpoint) reach a
+/// cleartext `http://` LOOPBACK socket (`http://127.0.0.1:<port>/...`) so a
+/// live test can run a local fake OpenID provider. Compiled only into test
+/// builds; production keeps the full https + SSRF guard for every IdP URL.
+#[cfg(all(feature = "http-client", test))]
+pub(crate) static ALLOW_LOOPBACK_HTTP_IDP_FOR_TEST: std::sync::atomic::AtomicBool =
+    std::sync::atomic::AtomicBool::new(false);
+
+/// The SSRF-validated, address-pinned target of an IdP URL. In test builds
+/// only, a loopback `http://ip:port` URL is pinned directly when
+/// [`ALLOW_LOOPBACK_HTTP_IDP_FOR_TEST`] is set.
+#[cfg(feature = "http-client")]
+async fn idp_target(url: &str) -> Result<(String, Vec<std::net::SocketAddr>), String> {
+    #[cfg(test)]
+    if ALLOW_LOOPBACK_HTTP_IDP_FOR_TEST.load(std::sync::atomic::Ordering::SeqCst)
+        && let Some(addr) = url
+            .strip_prefix("http://")
+            .and_then(|rest| rest.split(['/', '?']).next())
+            .and_then(|hostport| hostport.parse::<std::net::SocketAddr>().ok())
+        && addr.ip().is_loopback()
+    {
+        return Ok((addr.ip().to_string(), vec![addr]));
+    }
+    let target = crate::runtime::service::webhook_service::resolve_and_pin_target(url)
+        .await
+        .map_err(|status| format!("refused to fetch {url}: {}", status.message()))?;
+    Ok((target.host, target.addrs))
+}
+
+/// A client bound to the SSRF-checked addresses of `url`: no redirects (a
+/// redirect is a second, unvalidated URL; IdP endpoints answer directly), a
+/// 10 second timeout, and the resolved addresses PINNED so a DNS rebind after
+/// the check cannot move the connection onto an internal address.
+#[cfg(feature = "http-client")]
+async fn pinned_client(url: &str) -> Result<reqwest::Client, String> {
+    let (host, addrs) = idp_target(url).await?;
+    reqwest::Client::builder()
+        .timeout(Duration::from_secs(10))
+        .redirect(reqwest::redirect::Policy::none())
+        .resolve_to_addrs(&host, &addrs)
+        .build()
+        .map_err(|e| format!("http client build failed: {e}"))
+}
+
+/// Read an IdP response body under [`MAX_IDP_DOCUMENT_BYTES`].
+#[cfg(feature = "http-client")]
+async fn read_bounded_body(url: &str, resp: reqwest::Response) -> Result<String, String> {
     // Refuse a DECLARED oversize body before reading a byte...
     if let Some(len) = resp.content_length()
         && len as usize > MAX_IDP_DOCUMENT_BYTES
@@ -242,6 +437,55 @@ async fn fetch_url(url: &str) -> Result<String, String> {
     String::from_utf8(body).map_err(|e| format!("reading {url} body failed: {e}"))
 }
 
+/// The outcome of a token-endpoint POST: the HTTP status and the bounded body.
+/// A 4xx carries the provider's OAuth error JSON, which the caller reduces to
+/// its `error` code.
+#[derive(Debug, Clone)]
+pub struct TokenEndpointResponse {
+    pub status: u16,
+    pub body: String,
+}
+
+/// POST an `application/x-www-form-urlencoded` token request (RFC 6749 4.1.3)
+/// under the same SSRF policy as the document fetches. `basic_auth` sends the
+/// client credentials as HTTP Basic (`client_secret_basic`); the caller puts
+/// them in `form` instead for `client_secret_post`.
+#[cfg(feature = "http-client")]
+pub async fn post_token_request(
+    url: &str,
+    form: &[(&str, &str)],
+    basic_auth: Option<(&str, &str)>,
+) -> Result<TokenEndpointResponse, String> {
+    let client = pinned_client(url).await?;
+    let mut request = client
+        .post(url)
+        .header("Accept", "application/json")
+        .form(form);
+    if let Some((client_id, client_secret)) = basic_auth {
+        // RFC 6749 2.3.1: both halves are form-urlencoded before Basic encoding.
+        request = request.basic_auth(
+            urlencoding::encode(client_id).into_owned(),
+            Some(urlencoding::encode(client_secret).into_owned()),
+        );
+    }
+    let resp = request
+        .send()
+        .await
+        .map_err(|e| format!("POST {url} failed: {e}"))?;
+    let status = resp.status().as_u16();
+    let body = read_bounded_body(url, resp).await?;
+    Ok(TokenEndpointResponse { status, body })
+}
+
+#[cfg(not(feature = "http-client"))]
+pub async fn post_token_request(
+    _url: &str,
+    _form: &[(&str, &str)],
+    _basic_auth: Option<(&str, &str)>,
+) -> Result<TokenEndpointResponse, String> {
+    Err("the OIDC token endpoint requires the `http-client` feature".to_string())
+}
+
 #[cfg(not(feature = "http-client"))]
 async fn fetch_url(_url: &str) -> Result<String, String> {
     Err("OIDC discovery/JWKS requires the `http-client` feature".to_string())
@@ -262,6 +506,28 @@ mod tests {
         assert_eq!(parse_jwks_kids(jwks), vec!["k1", "k2"]);
         assert!(parse_jwks_kids("not json").is_empty());
         assert!(parse_jwks_kids("{}").is_empty());
+    }
+
+    #[test]
+    fn discovery_requires_matching_issuer_and_all_endpoints() {
+        let doc = r#"{"issuer":"https://accounts.google.com",
+            "authorization_endpoint":"https://accounts.google.com/o/oauth2/v2/auth",
+            "token_endpoint":"https://oauth2.googleapis.com/token",
+            "jwks_uri":"https://www.googleapis.com/oauth2/v3/certs",
+            "token_endpoint_auth_methods_supported":["client_secret_post","client_secret_basic"]}"#;
+        let parsed = parse_discovery("https://accounts.google.com", doc).expect("valid document");
+        assert_eq!(parsed.token_endpoint, "https://oauth2.googleapis.com/token");
+        assert_eq!(parsed.token_endpoint_auth_methods.len(), 2);
+        // OpenID Connect Discovery 4.3: a document for another issuer is refused.
+        assert!(parse_discovery("https://evil.example", doc).is_err());
+        assert!(
+            parse_discovery(
+                "https://idp.example",
+                r#"{"issuer":"https://idp.example","jwks_uri":"https://idp.example/jwks"}"#
+            )
+            .is_err(),
+            "a document without authorization/token endpoints cannot drive a sign-in"
+        );
     }
 
     #[test]

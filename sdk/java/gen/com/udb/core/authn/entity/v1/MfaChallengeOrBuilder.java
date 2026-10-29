@@ -174,4 +174,74 @@ public interface MfaChallengeOrBuilder extends
    * <code>.google.protobuf.Timestamp created_at = 12 [json_name = "createdAt", (.udb.core.common.v1.pg_column) = { ... }</code>
    */
   com.google.protobuf.TimestampOrBuilder getCreatedAtOrBuilder();
+
+  /**
+   * <pre>
+   * 0.6.6 step-up. The protected action this challenge unlocks (empty = a
+   * plain second-factor check with no step-up token). Verification mints a
+   * step-up token for exactly this action.
+   * </pre>
+   *
+   * <code>string action = 13 [json_name = "action", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The action.
+   */
+  java.lang.String getAction();
+  /**
+   * <pre>
+   * 0.6.6 step-up. The protected action this challenge unlocks (empty = a
+   * plain second-factor check with no step-up token). Verification mints a
+   * step-up token for exactly this action.
+   * </pre>
+   *
+   * <code>string action = 13 [json_name = "action", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The bytes for action.
+   */
+  com.google.protobuf.ByteString
+      getActionBytes();
+
+  /**
+   * <pre>
+   * EMAIL_OTP / SMS_OTP challenges: the OTP (type SENSITIVE_OPERATION) issued
+   * to the user's verified address at IssueMfaChallenge; the code submitted to
+   * VerifyMfaChallenge is checked against exactly this OTP.
+   * </pre>
+   *
+   * <code>string otp_id = 14 [json_name = "otpId", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The otpId.
+   */
+  java.lang.String getOtpId();
+  /**
+   * <pre>
+   * EMAIL_OTP / SMS_OTP challenges: the OTP (type SENSITIVE_OPERATION) issued
+   * to the user's verified address at IssueMfaChallenge; the code submitted to
+   * VerifyMfaChallenge is checked against exactly this OTP.
+   * </pre>
+   *
+   * <code>string otp_id = 14 [json_name = "otpId", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The bytes for otpId.
+   */
+  com.google.protobuf.ByteString
+      getOtpIdBytes();
+
+  /**
+   * <pre>
+   * WEBAUTHN challenges: the WebAuthn assertion challenge started at
+   * IssueMfaChallenge; VerifyMfaChallenge's assertion must answer it.
+   * </pre>
+   *
+   * <code>string webauthn_challenge_id = 15 [json_name = "webauthnChallengeId", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The webauthnChallengeId.
+   */
+  java.lang.String getWebauthnChallengeId();
+  /**
+   * <pre>
+   * WEBAUTHN challenges: the WebAuthn assertion challenge started at
+   * IssueMfaChallenge; VerifyMfaChallenge's assertion must answer it.
+   * </pre>
+   *
+   * <code>string webauthn_challenge_id = 15 [json_name = "webauthnChallengeId", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The bytes for webauthnChallengeId.
+   */
+  com.google.protobuf.ByteString
+      getWebauthnChallengeIdBytes();
 }

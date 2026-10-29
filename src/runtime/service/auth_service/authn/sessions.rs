@@ -148,6 +148,8 @@ fn validate_session_response(
         ]
         .into_iter()
         .collect(),
+        // A server-side session states no JWT assurance claims.
+        ..Default::default()
     }
 }
 
@@ -293,6 +295,7 @@ mod tests {
             profile_attributes_json: "{}".to_string(),
             phone: String::new(),
             phone_verified_at_unix: 0,
+            locale: String::new(),
         }
     }
 
@@ -554,6 +557,8 @@ fn validate_api_key_response(rec: Option<authn::ApiKeyRecord>) -> authn_pb::Vali
         project_id: rec.project_id.clone(),
         scopes: rec.scopes.clone(),
         attributes: Default::default(),
+        // An API key states no JWT assurance claims.
+        ..Default::default()
     }
 }
 
@@ -1230,8 +1235,22 @@ impl AuthnServiceImpl {
                 validate_api_key_response(rec)
             }
             authn_entity_pb::TokenType::JwtAccess | authn_entity_pb::TokenType::JwtRefresh => {
-                let claims = validate_bearer_token(&self.security, &req.token)
-                    .map_err(|_| Status::unauthenticated("invalid credential"))?;
+                // An access token, else a step-up token from VerifyMfaChallenge
+                // (reported with its `step_up_action` and no scopes; the
+                // bearer path never accepts one).
+                let (claims, assurance) =
+                    match crate::runtime::security::validate_bearer_token_with_assurance(
+                        &self.security,
+                        &req.token,
+                    ) {
+                        Ok(validated) => validated,
+                        Err(_) => crate::runtime::security::validate_step_up_token(
+                            &self.security,
+                            &req.token,
+                        )
+                        .map_err(|_| Status::unauthenticated("invalid credential"))?,
+                    };
+                let is_step_up = !assurance.step_up_action.is_empty();
                 let subject = claims.sub.clone().unwrap_or_default();
                 // Phase 3: bind UDB-issued JWT validity to live persisted state
                 // (user status + issuing-session revocation). See
@@ -1309,7 +1328,7 @@ impl AuthnServiceImpl {
                         .exp
                         .filter(|exp| *exp > 0)
                         .and_then(|exp| super::super::mappings::timestamp_from_unix(exp as u64)),
-                    access_surface: "jwt".to_string(),
+                    access_surface: if is_step_up { "step_up" } else { "jwt" }.to_string(),
                     device_id: String::new(),
                     token_id: claims.jti.clone().unwrap_or_default(),
                     session_type: authn_entity_pb::SessionType::Jwt as i32,
@@ -1322,6 +1341,10 @@ impl AuthnServiceImpl {
                     project_id: principal.project_id.clone(),
                     scopes: principal.scopes.clone(),
                     attributes: Default::default(),
+                    acr: assurance.acr,
+                    amr: assurance.amr,
+                    auth_time: assurance.auth_time,
+                    step_up_action: assurance.step_up_action,
                 }
             }
             _ => {

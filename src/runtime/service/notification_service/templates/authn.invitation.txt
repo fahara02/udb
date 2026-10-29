@@ -1,0 +1,5 @@
+Hello,
+
+{{inviter_name}} has invited you to join {{tenant_name}}. Accept the invitation here: {{link}}
+
+The invitation expires in {{expires_in_days}} days.

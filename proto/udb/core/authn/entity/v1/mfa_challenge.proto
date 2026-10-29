@@ -91,4 +91,18 @@ message MfaChallenge {
   google.protobuf.Timestamp consumed_at = 11 [(udb.core.common.v1.pg_column) = { column_name: "consumed_at" sql_type: "TIMESTAMPTZ" }];
 
   google.protobuf.Timestamp created_at = 12 [(udb.core.common.v1.pg_column) = { column_name: "created_at" sql_type: "TIMESTAMPTZ" not_null: true default_value: "CURRENT_TIMESTAMP" exclude_from_insert: true exclude_from_update: true }];
+
+  // 0.6.6 step-up. The protected action this challenge unlocks (empty = a
+  // plain second-factor check with no step-up token). Verification mints a
+  // step-up token for exactly this action.
+  string action = 13 [(udb.core.common.v1.pg_column) = { column_name: "action" sql_type: "VARCHAR(120)" not_null: true default_value: "''" comment: "Protected action a successful verification unlocks" }];
+
+  // EMAIL_OTP / SMS_OTP challenges: the OTP (type SENSITIVE_OPERATION) issued
+  // to the user's verified address at IssueMfaChallenge; the code submitted to
+  // VerifyMfaChallenge is checked against exactly this OTP.
+  string otp_id = 14 [(udb.core.common.v1.pg_column) = { column_name: "otp_id" sql_type: "VARCHAR(64)" not_null: true default_value: "''" comment: "OTP issued for an EMAIL_OTP/SMS_OTP challenge" }];
+
+  // WEBAUTHN challenges: the WebAuthn assertion challenge started at
+  // IssueMfaChallenge; VerifyMfaChallenge's assertion must answer it.
+  string webauthn_challenge_id = 15 [(udb.core.common.v1.pg_column) = { column_name: "webauthn_challenge_id" sql_type: "VARCHAR(64)" not_null: true default_value: "''" comment: "WebAuthn assertion challenge for a WEBAUTHN challenge" }];
 }

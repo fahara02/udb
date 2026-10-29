@@ -8,6 +8,7 @@ import "udb/core/authn/entity/v1/enums.proto";
 import "udb/core/authn/entity/v1/session.proto";
 import "udb/core/authn/entity/v1/user.proto";
 import "udb/core/authn/entity/v1/device.proto";
+import "udb/core/authn/entity/v1/tenant_auth_policy.proto";
 import "udb/core/common/v1/dto.proto";
 import "udb/core/common/v1/types.proto";
 import "udb/core/common/v1/security.proto";
@@ -59,6 +60,9 @@ message CreateUserRequest {
   // unless SMS can be delivered: a NotificationService with SMS templates or
   // UDB_OTP_DELIVERY_WEBHOOK_URL. With both, the phone is stored unverified.
   string phone = 13;
+  // The language of this account's messages (auth codes, magic links), as a
+  // BCP 47 tag such as `bn` or `en-US`; empty = English.
+  string locale = 14;
 }
 
 message CreateUserResponse {
@@ -156,6 +160,9 @@ message UpdateUserRequest {
   // Optional PATCH mask relative to the user resource. When omitted, legacy
   // clients keep the historical non-empty-field patch behavior.
   google.protobuf.FieldMask update_mask = 11;
+  // The language of this account's messages (BCP 47, e.g. `bn`); set it with
+  // `locale` in `update_mask` (an empty value then resets to English).
+  string locale = 12;
 }
 
 message UpdateUserResponse {
@@ -437,6 +444,14 @@ message LoginRequest {
   string project_hint = 11;
   string access_surface = 12;
   string recovery_code = 13; // single-use MFA recovery/backup code (alternative second factor)
+
+  // Passkey second factor (alternative to totp_code / mfa_otp_id / recovery_code).
+  // After a Login answered mfa_required=true, call StartWebAuthnAuthentication with
+  // the returned user_id, sign the options with the user's passkey, then re-call
+  // Login with username + password + these two fields. The challenge must have been
+  // issued for this same user and is single use.
+  string webauthn_challenge_id = 14; // challenge_id from StartWebAuthnAuthentication
+  string webauthn_assertion_json = 15; // the PublicKeyCredential assertion JSON from navigator.credentials.get()
 }
 
 message LoginResponse {
@@ -629,6 +644,21 @@ message ValidateTokenResponse {
   // it, and equal to LoginResponse.session_public_id; empty for tokens not
   // minted from a login session (API-key exchange, service accounts).
   string session_public_id = 16;
+  // JWTs only. Assurance level the token states: `aal2` after a second factor
+  // or a passkey, else `aal1`. Empty for sessions, API keys and tokens minted
+  // before 0.6.6 by external issuers that omit it.
+  string acr = 17;
+  // JWTs only. How the user authenticated (RFC 8176 values such as `pwd`,
+  // `otp`, `sms`, plus `webauthn` for a passkey and `fed` for an OIDC
+  // provider). Empty for refreshed tokens: a refresh does not re-authenticate.
+  repeated string amr = 18;
+  // JWTs only. Unix seconds when the user authenticated; 0 when the token
+  // does not say (refreshed tokens, API-key exchange, service accounts).
+  int64 auth_time = 19;
+  // Set only when `token` is a step-up token from VerifyMfaChallenge: the
+  // action it was minted for. Such a token carries no scopes; use
+  // CheckStepUp to enforce it.
+  string step_up_action = 20;
 }
 
 // ============================================================
@@ -1196,8 +1226,15 @@ message StartWebAuthnAuthenticationRequest {
     boilerplate_recipe_tags: "authn"
     generate_minimal_example: true
   };
+  // The user signing in. Leave EMPTY for usernameless sign-in: the options then
+  // ask the browser for any discoverable passkey (resident key) of this RP, and
+  // FinishWebAuthnAuthentication resolves the user from the passkey's user handle.
   string user_id = 1;
+  // With user_id set: optional, must match the user's tenant. Usernameless: the
+  // tenant the passkey must belong to (empty = the deployment's default tenant).
   string tenant_id = 2;
+  // With user_id set: optional, must match the user's project. Usernameless:
+  // optional; when set, only a user of this project can complete the sign-in.
   string project_id = 3;
   udb.core.common.v1.RequestContext context = 4;
 }
@@ -1230,6 +1267,11 @@ message FinishWebAuthnAuthenticationRequest {
   string challenge_id = 1;
   string public_key_credential_json = 2;
   udb.core.common.v1.RequestContext context = 3;
+  // Optional client details recorded on the session and device list, like Login.
+  string device_name = 4; // human-readable device name
+  string ip_address = 5; // forwarded by the gateway
+  string user_agent = 6;
+  string device_id = 7; // client device fingerprint (registers the device for ListDevices)
 }
 
 message FinishWebAuthnAuthenticationResponse {
@@ -1245,8 +1287,21 @@ message FinishWebAuthnAuthenticationResponse {
   Principal principal = 1;
   string session_id = 2;
   string access_token = 3;
-  int64 expires_at_unix = 4;
+  int64 expires_at_unix = 4; // when access_token expires (unix seconds)
   string credential_id = 5;
+
+  // A passkey sign-in returns the same credentials as Login (fields below).
+  // Rotating refresh token (rt_<family>.<jti>) for RefreshToken; empty for
+  // service accounts.
+  string refresh_token = 6;
+  int32 access_token_expires_in = 7; // seconds
+  int32 refresh_token_expires_in = 8; // absolute lifetime of refresh_token, seconds
+  string session_token = 9; // server-side session handle (WEB: set as an HttpOnly cookie)
+  string csrf_token = 10; // double-submit CSRF token bound to this session
+  // Stable non-secret session id (`sesspub_…`), as Login / ValidateToken report it.
+  string session_public_id = 11;
+  // The signed-in user (on a usernameless sign-in, the user the passkey belongs to).
+  string user_id = 12;
 }
 
 // ============================================================
@@ -1349,6 +1404,12 @@ message IssueMfaChallengeRequest {
   string device_fingerprint = 4;
   string ip_address = 5;
   udb.core.common.v1.RequestContext context = 6;
+  // Step-up: the protected action this challenge unlocks (for example
+  // `payments.approve`, at most 120 characters). When set, a successful
+  // VerifyMfaChallenge returns a step-up token for exactly this action, and a
+  // factor the tenant's step-up rule for the action does not allow is refused
+  // here. Empty = a plain second-factor check (no step-up token).
+  string action = 7;
 }
 
 message IssueMfaChallengeResponse {
@@ -1356,6 +1417,13 @@ message IssueMfaChallengeResponse {
   string challenge_id = 1;
   int64 expires_at_unix = 2;
   udb.core.authn.entity.v1.AuthFactorKind factor_kind = 3;
+  // WEBAUTHN challenges: the PublicKeyCredentialRequestOptions JSON to pass to
+  // `navigator.credentials.get()`; send the resulting assertion back as
+  // VerifyMfaChallengeRequest.webauthn_assertion_json. Empty for other factors.
+  string webauthn_options_json = 4;
+  // EMAIL_OTP / SMS_OTP challenges: where the code was sent, masked
+  // (`r***@example.com`, `+88017******21`). Empty for other factors.
+  string otp_destination_masked = 5;
 }
 
 message VerifyMfaChallengeRequest {
@@ -1364,12 +1432,29 @@ message VerifyMfaChallengeRequest {
   string code = 2; // TOTP / OTP / recovery code proof
   string device_fingerprint = 3;
   udb.core.common.v1.RequestContext context = 4;
+  // WEBAUTHN challenges: the assertion (PublicKeyCredential JSON) produced
+  // from IssueMfaChallengeResponse.webauthn_options_json. `code` is ignored.
+  string webauthn_assertion_json = 5;
 }
 
 message VerifyMfaChallengeResponse {
   option (udb.core.common.v1.message_sdk_surface) = { include_in_facade: true required_credential_provider: "udb" default_deadline_ms: 30000 default_max_attempts: 3 server_only: true boilerplate_recipe_tags: "authn" generate_minimal_example: true };
   bool verified = 1;
   string user_id = 2;
+  // Set when the challenge named an action, the proof verified, and the
+  // caller is the challenged user: a short-lived JWT proving this second
+  // factor for that action. It is NOT an access token (no scopes; refused as
+  // a bearer). Hand it to the resource server, which calls CheckStepUp.
+  // Empty when no JWT signing key is configured.
+  string step_up_token = 3;
+  // When step_up_token stops being accepted: the tenant rule's
+  // max_age_seconds for the action, else 300 seconds after verification.
+  int64 step_up_expires_at_unix = 4;
+  // Assurance level the step-up token states (`aal2`); empty when no token.
+  string acr = 5;
+  // Authentication methods (RFC 8176) the step-up token states, e.g. `otp`,
+  // `sms`, `webauthn`; empty when no token.
+  repeated string amr = 6;
 }
 
 message MfaFactorSummary {
@@ -1485,3 +1570,689 @@ message DeleteWebAuthnCredentialResponse {
   option (udb.core.common.v1.message_sdk_surface) = { include_in_facade: true required_credential_provider: "udb" default_deadline_ms: 30000 default_max_attempts: 3 server_only: true boilerplate_recipe_tags: "authn" generate_minimal_example: true };
   bool deleted = 1;
 }
+
+// ── 0.6.6 passwordless login + tenant auth policy messages [PASSWORDLESS] ──
+
+message PutTenantAuthPolicyRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authn"
+    generate_minimal_example: true
+  };
+  // The tenant whose policy is replaced; must be the caller's own tenant
+  // unless the caller is a cross-tenant administrator.
+  string tenant_id = 1;
+  // Put replaces the whole policy. Unset means true: every new account needs a
+  // password. false lets CreateUser make accounts with no password.
+  optional bool password_required = 2;
+  // Channels sign-in codes may be sent over: "SMS", "EMAIL" (any case,
+  // duplicates ignored). Empty disables SendLoginOtp for the tenant.
+  repeated string passwordless_channels = 3;
+  // https URL (no query string or fragment, at most 2048 characters) of the
+  // page that completes a magic link (`?otp_id=..&code=..` is appended) and an
+  // invitation. Empty: no magic links.
+  string magic_link_base_url = 4;
+  // JSON array of step-up rules, each {"action": "...", "max_age_seconds": N,
+  // "factors": ["TOTP", "WEBAUTHN", ...]}. Empty means "[]" (no rule).
+  string step_up_rules_json = 5;
+  // Optimistic concurrency: when non-zero, the write is refused (ABORTED) if
+  // the stored policy's revision differs. 0 writes unconditionally.
+  int64 expected_revision = 6;
+  udb.core.common.v1.RequestContext context = 7;
+}
+
+message PutTenantAuthPolicyResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authn"
+    generate_minimal_example: true
+  };
+  // The policy as stored, with its new revision.
+  udb.core.authn.entity.v1.TenantAuthPolicy policy = 1;
+}
+
+message GetTenantAuthPolicyRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authn"
+    generate_minimal_example: true
+  };
+  // Must be the caller's own tenant unless the caller is a cross-tenant
+  // administrator.
+  string tenant_id = 1;
+  udb.core.common.v1.RequestContext context = 2;
+}
+
+message GetTenantAuthPolicyResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authn"
+    generate_minimal_example: true
+  };
+  // The tenant's policy; the defaults (revision 0) when none was written.
+  udb.core.authn.entity.v1.TenantAuthPolicy policy = 1;
+  // true when the tenant never wrote a policy and `policy` holds the defaults.
+  bool is_default = 2;
+}
+
+message SendLoginOtpRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authn"
+    generate_minimal_example: true
+  };
+  // The tenant to sign in to: its id (UUID) or its code.
+  string tenant_hint = 1;
+  // "SMS" or "EMAIL" (any case). The tenant policy must list it.
+  string channel = 2;
+  // E.164 phone number for SMS (`+` then 7 to 15 digits), email address for EMAIL.
+  string address = 3;
+  // When set, only an account of this project is sent a code.
+  string project_hint = 4;
+  // EMAIL only: send a link `<magic_link_base_url>?otp_id=..&code=..` instead
+  // of a bare code. Needs the tenant's magic_link_base_url.
+  bool magic_link = 5;
+  udb.core.common.v1.RequestContext context = 6;
+}
+
+message SendLoginOtpResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authn"
+    generate_minimal_example: true
+  };
+  // Pass to LoginWithOtp with the delivered code. Always present: an unknown
+  // address, a disabled channel or a resend within the cooldown get an id
+  // that never verifies, so the answer does not reveal whether an account exists.
+  string otp_id = 1;
+  // When the code stops working (unix seconds).
+  int64 expires_at_unix = 2;
+  // Dev-only echo of the plaintext code, set ONLY when the broker runs with
+  // UDB_OTP_DEV_ECHO=1 outside production and a code was really sent. Empty
+  // in production.
+  string dev_otp_code = 3;
+}
+
+message LoginWithOtpRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authn"
+    generate_minimal_example: true
+  };
+  // From SendLoginOtp, or the `otp_id` query parameter of a magic link.
+  string otp_id = 1;
+  // The delivered code (or the `code` query parameter of a magic link). A code
+  // works once; a few wrong guesses invalidate it.
+  string code = 2;
+  udb.core.authn.entity.v1.DeviceType device_type = 3;
+  string device_name = 4; // human-readable
+  string device_id = 5; // client device fingerprint (optional; registers the device)
+  string ip_address = 6; // forwarded by gateway
+  string user_agent = 7;
+  string access_surface = 8;
+}
+
+// Same fields, names and numbers as LoginResponse.
+message LoginWithOtpResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authn"
+    generate_minimal_example: true
+  };
+  string user_id = 1;
+  string session_id = 2;
+  string access_token = 3;
+  // Rotating refresh token (rt_<family>.<jti>); reuse of a superseded value
+  // revokes the family.
+  string refresh_token = 4;
+  int32 access_token_expires_in = 5; // seconds
+  string session_token = 6;
+  string csrf_token = 7;
+  // Always false: a one-time code sign-in has no further step.
+  bool mfa_required = 8;
+  string mfa_otp_id = 9; // always empty
+  int32 refresh_token_expires_in = 10; // seconds
+  // Stable, non-secret public id of this session (`sesspub_…`), safe to log.
+  string session_public_id = 11;
+}
+// [PASSWORDLESS-END]
+
+// ── 0.6.6 passkeys messages [PASSKEYS] ──
+// [PASSKEYS-END]
+
+// ── 0.6.6 OIDC sign-in messages [OIDC] ──
+
+// Begin "Sign in with <provider>" (authorization code + PKCE S256 + nonce).
+// Send the browser to `authorization_url`; the provider redirects back to
+// `redirect_uri` with `code` and `state`, which go to FinishOidcLogin.
+message StartOidcLoginRequest {
+  option (udb.core.common.v1.message_sdk_surface) = { include_in_facade: true required_credential_provider: "udb" default_deadline_ms: 30000 default_max_attempts: 3 server_only: true boilerplate_recipe_tags: "authn" generate_minimal_example: true };
+  // Tenant whose identity provider to use (its tenant id).
+  string tenant_hint = 1;
+  // The tenant's IdentityProvider id (kind OIDC, enabled).
+  string provider_id = 2;
+  // Where the provider sends the browser back. Must EXACTLY match one of the
+  // provider's configured `redirect_uris`.
+  string redirect_uri = 3;
+  // Optional: bind this sign-in to an invitation. Such a sign-in is redeemed
+  // only by invitation acceptance, never by FinishOidcLogin.
+  string invitation_id = 4;
+  // Optional `login_hint` forwarded to the provider (e.g. the email the user
+  // typed), so it can preselect the account.
+  string login_hint = 5;
+}
+
+message StartOidcLoginResponse {
+  option (udb.core.common.v1.message_sdk_surface) = { include_in_facade: true required_credential_provider: "udb" default_deadline_ms: 30000 default_max_attempts: 3 server_only: true boilerplate_recipe_tags: "authn" generate_minimal_example: true };
+  // The provider's authorization endpoint with client_id, redirect_uri,
+  // scope "openid email profile", state, nonce and the S256 code_challenge.
+  string authorization_url = 1;
+  // Opaque, single-use. The provider echoes it to redirect_uri; pass it to
+  // FinishOidcLogin. Keep it with the browser session (e.g. a cookie) and
+  // compare it on the callback to stop login CSRF.
+  string state = 2;
+  // After this (10 minutes) the sign-in must be started again.
+  int64 expires_at_unix = 3;
+}
+
+// Complete a sign-in started by StartOidcLogin. The broker redeems `code` at
+// the provider's token endpoint with the stored PKCE verifier and client
+// secret, verifies the ID token (signature, issuer, audience, expiry, nonce),
+// resolves the user like ResolveExternalIdentity (existing link,
+// account-linking policy, JIT provisioning) and signs them in.
+message FinishOidcLoginRequest {
+  option (udb.core.common.v1.message_sdk_surface) = { include_in_facade: true required_credential_provider: "udb" default_deadline_ms: 30000 default_max_attempts: 3 server_only: true boilerplate_recipe_tags: "authn" generate_minimal_example: true };
+  // `state` from the provider's redirect (as returned by StartOidcLogin).
+  string state = 1;
+  // `code` from the provider's redirect.
+  string code = 2;
+  udb.core.authn.entity.v1.DeviceType device_type = 3;
+  string device_name = 4; // human-readable
+  string device_id = 5; // client device fingerprint (optional; for JWT device binding)
+  string ip_address = 6; // forwarded by gateway
+  string user_agent = 7;
+  string access_surface = 8;
+}
+
+// Same credentials as LoginResponse (fields 1-11), plus `provisioned`.
+message FinishOidcLoginResponse {
+  option (udb.core.common.v1.message_sdk_surface) = { include_in_facade: true required_credential_provider: "udb" default_deadline_ms: 30000 default_max_attempts: 3 server_only: true boilerplate_recipe_tags: "authn" generate_minimal_example: true };
+  string user_id = 1;
+  string session_id = 2;
+  string access_token = 3;
+  string refresh_token = 4;
+  int32 access_token_expires_in = 5; // seconds
+  string session_token = 6;
+  string csrf_token = 7;
+  bool mfa_required = 8; // always false: the identity provider authenticated the user
+  string mfa_otp_id = 9; // always empty
+  int32 refresh_token_expires_in = 10;
+  string session_public_id = 11;
+  // True when this sign-in created the account (JIT provisioning).
+  bool provisioned = 12;
+}
+
+// Sign in with an ID token a native app obtained itself (Google Sign-In /
+// Credential Manager, Sign in with Microsoft). The token must be issued by
+// the provider's issuer to one of its client_ids, unexpired, and is accepted
+// once. With `nonce` set the token's nonce must equal it; without one the
+// token must carry no nonce and be at most 10 minutes old.
+message LoginWithOidcIdTokenRequest {
+  option (udb.core.common.v1.message_sdk_surface) = { include_in_facade: true required_credential_provider: "udb" default_deadline_ms: 30000 default_max_attempts: 3 server_only: true boilerplate_recipe_tags: "authn" generate_minimal_example: true };
+  // Tenant whose identity provider issued the token (its tenant id).
+  string tenant_hint = 1;
+  // The tenant's IdentityProvider id (kind OIDC, enabled).
+  string provider_id = 2;
+  // The raw ID token (JWS compact form).
+  string id_token = 3;
+  // The nonce the app passed to the provider's SDK, if any.
+  string nonce = 4;
+  udb.core.authn.entity.v1.DeviceType device_type = 5;
+  string device_name = 6; // human-readable
+  string device_id = 7; // client device fingerprint (optional; for JWT device binding)
+  string ip_address = 8; // forwarded by gateway
+  string user_agent = 9;
+  string access_surface = 10;
+}
+
+// Same credentials as LoginResponse (fields 1-11), plus `provisioned`.
+message LoginWithOidcIdTokenResponse {
+  option (udb.core.common.v1.message_sdk_surface) = { include_in_facade: true required_credential_provider: "udb" default_deadline_ms: 30000 default_max_attempts: 3 server_only: true boilerplate_recipe_tags: "authn" generate_minimal_example: true };
+  string user_id = 1;
+  string session_id = 2;
+  string access_token = 3;
+  string refresh_token = 4;
+  int32 access_token_expires_in = 5; // seconds
+  string session_token = 6;
+  string csrf_token = 7;
+  bool mfa_required = 8; // always false: the identity provider authenticated the user
+  string mfa_otp_id = 9; // always empty
+  int32 refresh_token_expires_in = 10;
+  string session_public_id = 11;
+  // True when this sign-in created the account (JIT provisioning).
+  bool provisioned = 12;
+}
+// [OIDC-END]
+
+// ── 0.6.6 invitations messages [INVITATIONS] ──
+
+// An invitation as its tenant's administrators see it. The accept token is
+// never part of it: only CreateInvitation and ResendInvitation return a token,
+// once.
+message InvitationInfo {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authn"
+    generate_minimal_example: true
+  };
+  string invitation_id = 1;
+  string tenant_id = 2;
+  string project_id = 3; // '' = none
+  string channel = 4; // SMS | EMAIL | OIDC | PASSKEY
+  string address = 5; // E.164 phone (SMS) or email (EMAIL); empty for OIDC and PASSKEY
+  string idp_provider_id = 6; // OIDC only
+  repeated string roles = 7; // role codes bound in the tenant on acceptance
+  string full_name = 8;
+  // PENDING | ACCEPTED | REVOKED | EXPIRED. A PENDING invitation past
+  // expires_at is reported as EXPIRED.
+  string status = 9;
+  google.protobuf.Timestamp expires_at = 10;
+  string created_by = 11; // subject of the inviting administrator
+  string accepted_user_id = 12; // set once ACCEPTED
+  google.protobuf.Timestamp accepted_at = 13;
+  int32 send_count = 14; // invitation messages sent so far
+  google.protobuf.Timestamp last_sent_at = 15;
+  int64 revision = 16; // grows on every change
+  google.protobuf.Timestamp created_at = 17;
+  google.protobuf.Timestamp updated_at = 18;
+  string locale = 19; // language of the invitation message ('' = English)
+}
+
+message CreateInvitationRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authn"
+    generate_minimal_example: true
+  };
+  // The tenant the invitee joins; must be the caller's own tenant (a
+  // cross-tenant admin may name any). Empty = the caller's tenant.
+  string tenant_id = 1;
+  // Project of the new account; empty = the caller's project.
+  string project_id = 2;
+  // SMS | EMAIL | OIDC | PASSKEY: what the invitee proves on acceptance.
+  string channel = 3;
+  // SMS: E.164 phone (+ then 7 to 15 digits). EMAIL: email address. Must be
+  // empty for OIDC and PASSKEY. No other account may already use it.
+  string address = 4;
+  // OIDC only: the tenant identity provider the invitee signs in with.
+  string idp_provider_id = 5;
+  // Role CODES bound in the tenant on acceptance (at most 32). Reserved
+  // platform roles are refused; organization_owner needs a caller who holds
+  // it, or a cross-tenant admin.
+  repeated string roles = 6;
+  // The invitee's name (prefills the account; at most 255 bytes).
+  string full_name = 7;
+  // Link lifetime in seconds: 0 = 7 days; between 300 and 2592000 (30 days).
+  int64 expires_in_seconds = 8;
+  // BCP 47 language of the invitation message, e.g. "bn" or "en" (at most 35
+  // letters, digits and hyphens; empty = English). The new account keeps it
+  // as its locale.
+  string locale = 9;
+}
+
+message CreateInvitationResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authn"
+    generate_minimal_example: true
+  };
+  InvitationInfo invitation = 1;
+  // The accept token, returned only here and by ResendInvitation; treat it as
+  // a secret. Hand it (or accept_link) to an OIDC or PASSKEY invitee yourself:
+  // nothing is sent for those channels.
+  string accept_token = 2;
+  // `<magic_link_base_url>/invite?invitation_id=..&token=..` from the tenant
+  // auth policy; empty when the tenant has no magic_link_base_url.
+  string accept_link = 3;
+  // True when an SMS/EMAIL invitation message was handed to a delivery
+  // channel (NotificationService or the OTP delivery webhook).
+  bool delivered = 4;
+}
+
+message ListInvitationsRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authn"
+    generate_minimal_example: true
+  };
+  // Must be the caller's own tenant (a cross-tenant admin may name any).
+  // Empty = the caller's tenant.
+  string tenant_id = 1;
+  // PENDING | ACCEPTED | REVOKED | EXPIRED; empty = all.
+  string status = 2;
+  int32 page_size = 3; // 0 = 50, at most 200
+  string page_token = 4; // from the previous page's next_page_token
+}
+
+message ListInvitationsResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authn"
+    generate_minimal_example: true
+  };
+  repeated InvitationInfo invitations = 1; // newest first
+  string next_page_token = 2; // empty on the last page
+}
+
+message RevokeInvitationRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authn"
+    generate_minimal_example: true
+  };
+  // An invitation of the caller's tenant.
+  string invitation_id = 1;
+  string reason = 2; // at most 1024 bytes; recorded on the invitation
+}
+
+message RevokeInvitationResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authn"
+    generate_minimal_example: true
+  };
+  // False when the invitation was no longer PENDING (already accepted,
+  // revoked or expired): nothing changed.
+  bool revoked = 1;
+  InvitationInfo invitation = 2;
+}
+
+message ResendInvitationRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authn"
+    generate_minimal_example: true
+  };
+  // A PENDING, unexpired invitation of the caller's tenant.
+  string invitation_id = 1;
+}
+
+message ResendInvitationResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authn"
+    generate_minimal_example: true
+  };
+  InvitationInfo invitation = 1;
+  // The NEW accept token (the previous link stops working); treat it as a
+  // secret.
+  string accept_token = 2;
+  string accept_link = 3; // empty when the tenant has no magic_link_base_url
+  bool delivered = 4; // as in CreateInvitationResponse
+}
+
+message GetInvitationRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authn"
+    generate_minimal_example: true
+  };
+  // Both from the invitation link.
+  string invitation_id = 1;
+  string token = 2;
+}
+
+// What the invitee sees before accepting. An unknown, expired, revoked or
+// already accepted invitation (or a wrong token) is one identical refusal.
+message GetInvitationResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authn"
+    generate_minimal_example: true
+  };
+  string invitation_id = 1;
+  string tenant_name = 2; // display name of the tenant ('' when unknown)
+  string channel = 3; // SMS | EMAIL | OIDC | PASSKEY
+  repeated string roles = 4; // role codes the account receives
+  google.protobuf.Timestamp expires_at = 5;
+  // The invitation address with most characters hidden (`+88*******678`,
+  // `a***@example.com`); empty for OIDC and PASSKEY.
+  string masked_address = 6;
+  string idp_provider_id = 7; // OIDC only
+  // Whether AcceptInvitation needs a password (tenant auth policy).
+  bool password_required = 8;
+}
+
+message StartInvitationAcceptanceRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authn"
+    generate_minimal_example: true
+  };
+  // Both from the invitation link.
+  string invitation_id = 1;
+  string token = 2;
+  // OIDC only: where the identity provider sends the browser back; must be
+  // allowlisted in the provider configuration.
+  string redirect_uri = 3;
+}
+
+// Exactly one group is set, by channel: SMS/EMAIL → otp_id (+ expiry);
+// PASSKEY → webauthn_*; OIDC → authorization_url + oidc_state.
+message StartInvitationAcceptanceResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authn"
+    generate_minimal_example: true
+  };
+  // SMS/EMAIL: id of the one-time code sent to the invitation address. Asking
+  // again sends a new code, subject to the OTP cooldown.
+  string otp_id = 1;
+  int64 otp_expires_at_unix = 2;
+  // The plaintext code, only when UDB_OTP_DEV_ECHO is honoured (never in
+  // production).
+  string dev_otp_code = 3;
+  // PASSKEY: registration challenge and the WebAuthn creation options
+  // (PublicKeyCredentialCreationOptions JSON) for navigator.credentials.create.
+  string webauthn_challenge_id = 4;
+  string webauthn_options_json = 5;
+  // OIDC: send the browser to authorization_url; oidc_state identifies the
+  // sign-in attempt.
+  string authorization_url = 6;
+  string oidc_state = 7;
+}
+
+message AcceptInvitationRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authn"
+    generate_minimal_example: true
+  };
+  // Both from the invitation link.
+  string invitation_id = 1;
+  string token = 2;
+  // The new account's username: lowercase, starts with a letter, 3 to 80 of
+  // a-z 0-9 . _ -; must be free.
+  string username = 3;
+  // Optional; empty keeps the name the inviter typed.
+  string full_name = 4;
+  // Required unless the tenant auth policy sets password_required=false; must
+  // satisfy the password policy when given.
+  string password = 5;
+  // Proof, by channel. SMS/EMAIL: otp_id + code from StartInvitationAcceptance.
+  string otp_id = 6;
+  string code = 7;
+  // OIDC (native apps): an ID token from the invitation's identity provider,
+  // and the nonce the client requested it with (empty: the token must carry
+  // no nonce and be at most 10 minutes old). Browsers use oidc_state +
+  // oidc_code instead.
+  string oidc_id_token = 8;
+  string oidc_nonce = 9;
+  // PASSKEY: the challenge from StartInvitationAcceptance and the
+  // navigator.credentials.create() result as JSON.
+  string webauthn_challenge_id = 10;
+  string webauthn_attestation_json = 11;
+  string device_name = 12; // human-readable
+  string device_id = 13; // client device fingerprint (optional; registers the device)
+  string ip_address = 14; // forwarded by gateway
+  string user_agent = 15;
+  // OIDC (browsers): `state` and `code` from the identity provider's redirect
+  // after the authorization_url of StartInvitationAcceptance. Single use.
+  string oidc_state = 16;
+  string oidc_code = 17;
+}
+
+// Same fields, names and numbers as LoginResponse: the new account is signed
+// in.
+message AcceptInvitationResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authn"
+    generate_minimal_example: true
+  };
+  string user_id = 1;
+  string session_id = 2;
+  string access_token = 3;
+  // Rotating refresh token (rt_<family>.<jti>); reuse of a superseded value
+  // revokes the family.
+  string refresh_token = 4;
+  int32 access_token_expires_in = 5; // seconds
+  string session_token = 6;
+  string csrf_token = 7;
+  // Always false: accepting an invitation has no further step.
+  bool mfa_required = 8;
+  string mfa_otp_id = 9; // always empty
+  int32 refresh_token_expires_in = 10; // seconds
+  // Stable, non-secret public id of this session (`sesspub_…`), safe to log.
+  string session_public_id = 11;
+}
+// [INVITATIONS-END]
+
+// ── 0.6.6 step-up / MFA messages [STEPUP] ──
+
+message CheckStepUpRequest {
+  option (udb.core.common.v1.message_sdk_surface) = { include_in_facade: true required_credential_provider: "udb" default_deadline_ms: 30000 default_max_attempts: 3 server_only: true boilerplate_recipe_tags: "authn" generate_minimal_example: true };
+  // The protected action about to be performed, exactly as named in
+  // IssueMfaChallengeRequest.action and the tenant's step-up rule.
+  string action = 1;
+  // The token from VerifyMfaChallengeResponse.step_up_token.
+  string step_up_token = 2;
+  udb.core.common.v1.RequestContext context = 3;
+}
+
+message CheckStepUpResponse {
+  option (udb.core.common.v1.message_sdk_surface) = { include_in_facade: true required_credential_provider: "udb" default_deadline_ms: 30000 default_max_attempts: 3 server_only: true boilerplate_recipe_tags: "authn" generate_minimal_example: true };
+  // True only when every check passed; allow the action only on true.
+  bool satisfied = 1;
+  // Why: `satisfied`, `invalid_token` (bad signature, expired, revoked
+  // session, inactive user, not a step-up token), `action_mismatch`,
+  // `subject_mismatch` (minted for another user or tenant than the caller),
+  // `factor_not_allowed` (the tenant rule for the action does not accept the
+  // factor used) or `too_old` (proven longer ago than the rule's
+  // max_age_seconds).
+  string reason = 2;
+  // What the token states (empty/0 when it is invalid).
+  string acr = 3;
+  repeated string amr = 4;
+  int64 auth_time = 5;
+  // The user the step-up was proven by (empty when the token is invalid).
+  string user_id = 6;
+  // The factor used: TOTP, EMAIL_OTP, SMS_OTP, WEBAUTHN or RECOVERY_CODE.
+  udb.core.authn.entity.v1.AuthFactorKind factor_kind = 7;
+  // The max age applied: the tenant rule's max_age_seconds for the action, or
+  // 300 when the tenant has no rule for it.
+  int64 max_age_seconds = 8;
+}
+// [STEPUP-END]

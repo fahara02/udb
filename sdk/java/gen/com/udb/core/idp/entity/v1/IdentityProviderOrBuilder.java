@@ -457,4 +457,36 @@ public interface IdentityProviderOrBuilder extends
    * <code>.google.protobuf.Timestamp deleted_at = 27 [json_name = "deletedAt", (.udb.core.common.v1.pg_column) = { ... }</code>
    */
   com.google.protobuf.TimestampOrBuilder getDeletedAtOrBuilder();
+
+  /**
+   * <pre>
+   * ── OIDC sign-in (0.6.6) ──────────────────────────────────────────────────
+   * JSON array of the exact redirect URIs StartOidcLogin accepts for this
+   * provider (OAuth 2.0 exact-match; no wildcards). Each is https, an http
+   * loopback URI (http://127.0.0.1:&lt;port&gt;/..., native apps, RFC 8252), or a
+   * private-use scheme containing a dot (com.example.app:/callback). Empty =
+   * browser/redirect sign-in is off for this provider; LoginWithOidcIdToken
+   * does not use redirects and is unaffected.
+   * </pre>
+   *
+   * <code>string redirect_uris_json = 28 [json_name = "redirectUrisJson", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The redirectUrisJson.
+   */
+  java.lang.String getRedirectUrisJson();
+  /**
+   * <pre>
+   * ── OIDC sign-in (0.6.6) ──────────────────────────────────────────────────
+   * JSON array of the exact redirect URIs StartOidcLogin accepts for this
+   * provider (OAuth 2.0 exact-match; no wildcards). Each is https, an http
+   * loopback URI (http://127.0.0.1:&lt;port&gt;/..., native apps, RFC 8252), or a
+   * private-use scheme containing a dot (com.example.app:/callback). Empty =
+   * browser/redirect sign-in is off for this provider; LoginWithOidcIdToken
+   * does not use redirects and is unaffected.
+   * </pre>
+   *
+   * <code>string redirect_uris_json = 28 [json_name = "redirectUrisJson", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The bytes for redirectUrisJson.
+   */
+  com.google.protobuf.ByteString
+      getRedirectUrisJsonBytes();
 }

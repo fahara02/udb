@@ -77,6 +77,29 @@ class MfaChallenge extends \Google\Protobuf\Internal\Message
      * Generated from protobuf field <code>.google.protobuf.Timestamp created_at = 12 [json_name = "createdAt", (.udb.core.common.v1.pg_column) = {</code>
      */
     protected $created_at = null;
+    /**
+     * 0.6.6 step-up. The protected action this challenge unlocks (empty = a
+     * plain second-factor check with no step-up token). Verification mints a
+     * step-up token for exactly this action.
+     *
+     * Generated from protobuf field <code>string action = 13 [json_name = "action", (.udb.core.common.v1.pg_column) = {</code>
+     */
+    protected $action = '';
+    /**
+     * EMAIL_OTP / SMS_OTP challenges: the OTP (type SENSITIVE_OPERATION) issued
+     * to the user's verified address at IssueMfaChallenge; the code submitted to
+     * VerifyMfaChallenge is checked against exactly this OTP.
+     *
+     * Generated from protobuf field <code>string otp_id = 14 [json_name = "otpId", (.udb.core.common.v1.pg_column) = {</code>
+     */
+    protected $otp_id = '';
+    /**
+     * WEBAUTHN challenges: the WebAuthn assertion challenge started at
+     * IssueMfaChallenge; VerifyMfaChallenge's assertion must answer it.
+     *
+     * Generated from protobuf field <code>string webauthn_challenge_id = 15 [json_name = "webauthnChallengeId", (.udb.core.common.v1.pg_column) = {</code>
+     */
+    protected $webauthn_challenge_id = '';
 
     /**
      * Constructor.
@@ -100,6 +123,17 @@ class MfaChallenge extends \Google\Protobuf\Internal\Message
      *     @type \Google\Protobuf\Timestamp $expires_at
      *     @type \Google\Protobuf\Timestamp $consumed_at
      *     @type \Google\Protobuf\Timestamp $created_at
+     *     @type string $action
+     *           0.6.6 step-up. The protected action this challenge unlocks (empty = a
+     *           plain second-factor check with no step-up token). Verification mints a
+     *           step-up token for exactly this action.
+     *     @type string $otp_id
+     *           EMAIL_OTP / SMS_OTP challenges: the OTP (type SENSITIVE_OPERATION) issued
+     *           to the user's verified address at IssueMfaChallenge; the code submitted to
+     *           VerifyMfaChallenge is checked against exactly this OTP.
+     *     @type string $webauthn_challenge_id
+     *           WEBAUTHN challenges: the WebAuthn assertion challenge started at
+     *           IssueMfaChallenge; VerifyMfaChallenge's assertion must answer it.
      * }
      */
     public function __construct($data = NULL) {
@@ -409,6 +443,94 @@ class MfaChallenge extends \Google\Protobuf\Internal\Message
     {
         GPBUtil::checkMessage($var, \Google\Protobuf\Timestamp::class);
         $this->created_at = $var;
+
+        return $this;
+    }
+
+    /**
+     * 0.6.6 step-up. The protected action this challenge unlocks (empty = a
+     * plain second-factor check with no step-up token). Verification mints a
+     * step-up token for exactly this action.
+     *
+     * Generated from protobuf field <code>string action = 13 [json_name = "action", (.udb.core.common.v1.pg_column) = {</code>
+     * @return string
+     */
+    public function getAction()
+    {
+        return $this->action;
+    }
+
+    /**
+     * 0.6.6 step-up. The protected action this challenge unlocks (empty = a
+     * plain second-factor check with no step-up token). Verification mints a
+     * step-up token for exactly this action.
+     *
+     * Generated from protobuf field <code>string action = 13 [json_name = "action", (.udb.core.common.v1.pg_column) = {</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setAction($var)
+    {
+        GPBUtil::checkString($var, True);
+        $this->action = $var;
+
+        return $this;
+    }
+
+    /**
+     * EMAIL_OTP / SMS_OTP challenges: the OTP (type SENSITIVE_OPERATION) issued
+     * to the user's verified address at IssueMfaChallenge; the code submitted to
+     * VerifyMfaChallenge is checked against exactly this OTP.
+     *
+     * Generated from protobuf field <code>string otp_id = 14 [json_name = "otpId", (.udb.core.common.v1.pg_column) = {</code>
+     * @return string
+     */
+    public function getOtpId()
+    {
+        return $this->otp_id;
+    }
+
+    /**
+     * EMAIL_OTP / SMS_OTP challenges: the OTP (type SENSITIVE_OPERATION) issued
+     * to the user's verified address at IssueMfaChallenge; the code submitted to
+     * VerifyMfaChallenge is checked against exactly this OTP.
+     *
+     * Generated from protobuf field <code>string otp_id = 14 [json_name = "otpId", (.udb.core.common.v1.pg_column) = {</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setOtpId($var)
+    {
+        GPBUtil::checkString($var, True);
+        $this->otp_id = $var;
+
+        return $this;
+    }
+
+    /**
+     * WEBAUTHN challenges: the WebAuthn assertion challenge started at
+     * IssueMfaChallenge; VerifyMfaChallenge's assertion must answer it.
+     *
+     * Generated from protobuf field <code>string webauthn_challenge_id = 15 [json_name = "webauthnChallengeId", (.udb.core.common.v1.pg_column) = {</code>
+     * @return string
+     */
+    public function getWebauthnChallengeId()
+    {
+        return $this->webauthn_challenge_id;
+    }
+
+    /**
+     * WEBAUTHN challenges: the WebAuthn assertion challenge started at
+     * IssueMfaChallenge; VerifyMfaChallenge's assertion must answer it.
+     *
+     * Generated from protobuf field <code>string webauthn_challenge_id = 15 [json_name = "webauthnChallengeId", (.udb.core.common.v1.pg_column) = {</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setWebauthnChallengeId($var)
+    {
+        GPBUtil::checkString($var, True);
+        $this->webauthn_challenge_id = $var;
 
         return $this;
     }

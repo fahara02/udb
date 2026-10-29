@@ -26,6 +26,21 @@ class IssueMfaChallengeResponse extends \Google\Protobuf\Internal\Message
      * Generated from protobuf field <code>.udb.core.authn.entity.v1.AuthFactorKind factor_kind = 3 [json_name = "factorKind"];</code>
      */
     protected $factor_kind = 0;
+    /**
+     * WEBAUTHN challenges: the PublicKeyCredentialRequestOptions JSON to pass to
+     * `navigator.credentials.get()`; send the resulting assertion back as
+     * VerifyMfaChallengeRequest.webauthn_assertion_json. Empty for other factors.
+     *
+     * Generated from protobuf field <code>string webauthn_options_json = 4 [json_name = "webauthnOptionsJson"];</code>
+     */
+    protected $webauthn_options_json = '';
+    /**
+     * EMAIL_OTP / SMS_OTP challenges: where the code was sent, masked
+     * (`r***\@example.com`, `+88017******21`). Empty for other factors.
+     *
+     * Generated from protobuf field <code>string otp_destination_masked = 5 [json_name = "otpDestinationMasked"];</code>
+     */
+    protected $otp_destination_masked = '';
 
     /**
      * Constructor.
@@ -36,6 +51,13 @@ class IssueMfaChallengeResponse extends \Google\Protobuf\Internal\Message
      *     @type string $challenge_id
      *     @type int|string $expires_at_unix
      *     @type int $factor_kind
+     *     @type string $webauthn_options_json
+     *           WEBAUTHN challenges: the PublicKeyCredentialRequestOptions JSON to pass to
+     *           `navigator.credentials.get()`; send the resulting assertion back as
+     *           VerifyMfaChallengeRequest.webauthn_assertion_json. Empty for other factors.
+     *     @type string $otp_destination_masked
+     *           EMAIL_OTP / SMS_OTP challenges: where the code was sent, masked
+     *           (`r***\@example.com`, `+88017******21`). Empty for other factors.
      * }
      */
     public function __construct($data = NULL) {
@@ -105,6 +127,64 @@ class IssueMfaChallengeResponse extends \Google\Protobuf\Internal\Message
     {
         GPBUtil::checkEnum($var, \Udb\Core\Authn\Entity\V1\AuthFactorKind::class);
         $this->factor_kind = $var;
+
+        return $this;
+    }
+
+    /**
+     * WEBAUTHN challenges: the PublicKeyCredentialRequestOptions JSON to pass to
+     * `navigator.credentials.get()`; send the resulting assertion back as
+     * VerifyMfaChallengeRequest.webauthn_assertion_json. Empty for other factors.
+     *
+     * Generated from protobuf field <code>string webauthn_options_json = 4 [json_name = "webauthnOptionsJson"];</code>
+     * @return string
+     */
+    public function getWebauthnOptionsJson()
+    {
+        return $this->webauthn_options_json;
+    }
+
+    /**
+     * WEBAUTHN challenges: the PublicKeyCredentialRequestOptions JSON to pass to
+     * `navigator.credentials.get()`; send the resulting assertion back as
+     * VerifyMfaChallengeRequest.webauthn_assertion_json. Empty for other factors.
+     *
+     * Generated from protobuf field <code>string webauthn_options_json = 4 [json_name = "webauthnOptionsJson"];</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setWebauthnOptionsJson($var)
+    {
+        GPBUtil::checkString($var, True);
+        $this->webauthn_options_json = $var;
+
+        return $this;
+    }
+
+    /**
+     * EMAIL_OTP / SMS_OTP challenges: where the code was sent, masked
+     * (`r***\@example.com`, `+88017******21`). Empty for other factors.
+     *
+     * Generated from protobuf field <code>string otp_destination_masked = 5 [json_name = "otpDestinationMasked"];</code>
+     * @return string
+     */
+    public function getOtpDestinationMasked()
+    {
+        return $this->otp_destination_masked;
+    }
+
+    /**
+     * EMAIL_OTP / SMS_OTP challenges: where the code was sent, masked
+     * (`r***\@example.com`, `+88017******21`). Empty for other factors.
+     *
+     * Generated from protobuf field <code>string otp_destination_masked = 5 [json_name = "otpDestinationMasked"];</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setOtpDestinationMasked($var)
+    {
+        GPBUtil::checkString($var, True);
+        $this->otp_destination_masked = $var;
 
         return $this;
     }

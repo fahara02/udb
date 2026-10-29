@@ -1,11 +1,11 @@
 {
   "generated_by": "node scripts/check-http-api-style.mjs --write-report",
   "counts": {
-    "native_contract_http_operations": 315,
-    "proto_http_annotations": 315,
+    "native_contract_http_operations": 330,
+    "proto_http_annotations": 330,
     "generated_route_style_exceptions": 0,
     "source_route_style_exceptions": 0,
-    "resource_identity_contract_exceptions": 0,
+    "resource_identity_contract_exceptions": 1,
     "pagination_contract_exceptions": 0,
     "query_update_contract_exceptions": 0,
     "operation_id_collisions": 0,
@@ -41,7 +41,22 @@
   },
   "route_style_exceptions_by_rule": {},
   "source_route_style_exceptions_by_rule": {},
-  "resource_identity_contract_exceptions_by_rule": {},
+  "resource_identity_contract_exceptions_by_rule": {
+    "user_chosen_id_format_undocumented": [
+      {
+        "rule": "user_chosen_id_format_undocumented",
+        "category": "resource_identity_contract",
+        "message": "caller-supplied identity field \"idp_provider_id\" must document allowed format or server-assigned semantics",
+        "service": "udb.core.authn.services.v1.AuthnService",
+        "rpc": "CreateInvitation",
+        "method": "POST",
+        "path": "/v1/auth/invitations",
+        "source": "proto/udb/core/authn/services/v1/authn_service.proto",
+        "requestType": "CreateInvitationRequest",
+        "field": "idp_provider_id"
+      }
+    ]
+  },
   "pagination_contract_exceptions_by_rule": {},
   "query_update_contract_exceptions_by_rule": {},
   "operation_id_collisions": [],

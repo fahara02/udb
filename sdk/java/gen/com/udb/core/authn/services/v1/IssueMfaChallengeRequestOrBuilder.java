@@ -82,4 +82,32 @@ public interface IssueMfaChallengeRequestOrBuilder extends
    * <code>.udb.core.common.v1.RequestContext context = 6 [json_name = "context"];</code>
    */
   com.udb.core.common.v1.RequestContextOrBuilder getContextOrBuilder();
+
+  /**
+   * <pre>
+   * Step-up: the protected action this challenge unlocks (for example
+   * `payments.approve`, at most 120 characters). When set, a successful
+   * VerifyMfaChallenge returns a step-up token for exactly this action, and a
+   * factor the tenant's step-up rule for the action does not allow is refused
+   * here. Empty = a plain second-factor check (no step-up token).
+   * </pre>
+   *
+   * <code>string action = 7 [json_name = "action"];</code>
+   * @return The action.
+   */
+  java.lang.String getAction();
+  /**
+   * <pre>
+   * Step-up: the protected action this challenge unlocks (for example
+   * `payments.approve`, at most 120 characters). When set, a successful
+   * VerifyMfaChallenge returns a step-up token for exactly this action, and a
+   * factor the tenant's step-up rule for the action does not allow is refused
+   * here. Empty = a plain second-factor check (no step-up token).
+   * </pre>
+   *
+   * <code>string action = 7 [json_name = "action"];</code>
+   * @return The bytes for action.
+   */
+  com.google.protobuf.ByteString
+      getActionBytes();
 }

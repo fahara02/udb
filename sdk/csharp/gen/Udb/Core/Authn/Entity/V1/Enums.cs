@@ -43,11 +43,12 @@ namespace Udb.Core.Authn.Entity.V1 {
             "UEVDSUZJRUQQABITCg9ERVZJQ0VfVFlQRV9XRUIQARITCg9ERVZJQ0VfVFlQ",
             "RV9BUEkQAhIXChNERVZJQ0VfVFlQRV9ERVNLVE9QEAMSFgoSREVWSUNFX1RZ",
             "UEVfTU9CSUxFEAQSFgoSREVWSUNFX1RZUEVfV09SS0VSEAUSEwoPREVWSUNF",
-            "X1RZUEVfQ0xJEAYqvAEKB09UUFR5cGUSGAoUT1RQX1RZUEVfVU5TUEVDSUZJ",
+            "X1RZUEVfQ0xJEAYq6QEKB09UUFR5cGUSGAoUT1RQX1RZUEVfVU5TUEVDSUZJ",
             "RUQQABIfChtPVFBfVFlQRV9FTUFJTF9WRVJJRklDQVRJT04QARIWChJPVFBf",
             "VFlQRV9MT0dJTl8yRkEQAhIbChdPVFBfVFlQRV9QQVNTV09SRF9SRVNFVBAD",
             "EiAKHE9UUF9UWVBFX1NFTlNJVElWRV9PUEVSQVRJT04QBBIfChtPVFBfVFlQ",
-            "RV9QSE9ORV9WRVJJRklDQVRJT04QBSqIAQoJT1RQU3RhdHVzEhoKFk9UUF9T",
+            "RV9QSE9ORV9WRVJJRklDQVRJT04QBRISCg5PVFBfVFlQRV9MT0dJThAGEhcK",
+            "E09UUF9UWVBFX0lOVklUQVRJT04QByqIAQoJT1RQU3RhdHVzEhoKFk9UUF9T",
             "VEFUVVNfVU5TUEVDSUZJRUQQABIWChJPVFBfU1RBVFVTX1BFTkRJTkcQARIT",
             "Cg9PVFBfU1RBVFVTX1VTRUQQAhIWChJPVFBfU1RBVFVTX0VYUElSRUQQAxIa",
             "ChZPVFBfU1RBVFVTX0lOVkFMSURBVEVEEAQqmAIKFElkZW50aXR5UHJvdmlk",
@@ -186,6 +187,14 @@ namespace Udb.Core.Authn.Entity.V1 {
     /// Phone-number confirmation via SMS OTP.
     /// </summary>
     [pbr::OriginalName("OTP_TYPE_PHONE_VERIFICATION")] PhoneVerification = 5,
+    /// <summary>
+    /// Passwordless sign-in code (SMS or email; also behind a magic link).
+    /// </summary>
+    [pbr::OriginalName("OTP_TYPE_LOGIN")] Login = 6,
+    /// <summary>
+    /// Proves an invitation's SMS/email channel on acceptance.
+    /// </summary>
+    [pbr::OriginalName("OTP_TYPE_INVITATION")] Invitation = 7,
   }
 
   public enum OTPStatus {

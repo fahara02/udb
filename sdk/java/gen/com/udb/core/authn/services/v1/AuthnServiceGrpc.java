@@ -2006,6 +2006,471 @@ public final class AuthnServiceGrpc {
     return getExchangeServiceTokenForTenantMethod;
   }
 
+  private static volatile io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.PutTenantAuthPolicyRequest,
+      com.udb.core.authn.services.v1.PutTenantAuthPolicyResponse> getPutTenantAuthPolicyMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "PutTenantAuthPolicy",
+      requestType = com.udb.core.authn.services.v1.PutTenantAuthPolicyRequest.class,
+      responseType = com.udb.core.authn.services.v1.PutTenantAuthPolicyResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.PutTenantAuthPolicyRequest,
+      com.udb.core.authn.services.v1.PutTenantAuthPolicyResponse> getPutTenantAuthPolicyMethod() {
+    io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.PutTenantAuthPolicyRequest, com.udb.core.authn.services.v1.PutTenantAuthPolicyResponse> getPutTenantAuthPolicyMethod;
+    if ((getPutTenantAuthPolicyMethod = AuthnServiceGrpc.getPutTenantAuthPolicyMethod) == null) {
+      synchronized (AuthnServiceGrpc.class) {
+        if ((getPutTenantAuthPolicyMethod = AuthnServiceGrpc.getPutTenantAuthPolicyMethod) == null) {
+          AuthnServiceGrpc.getPutTenantAuthPolicyMethod = getPutTenantAuthPolicyMethod =
+              io.grpc.MethodDescriptor.<com.udb.core.authn.services.v1.PutTenantAuthPolicyRequest, com.udb.core.authn.services.v1.PutTenantAuthPolicyResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "PutTenantAuthPolicy"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authn.services.v1.PutTenantAuthPolicyRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authn.services.v1.PutTenantAuthPolicyResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new AuthnServiceMethodDescriptorSupplier("PutTenantAuthPolicy"))
+              .build();
+        }
+      }
+    }
+    return getPutTenantAuthPolicyMethod;
+  }
+
+  private static volatile io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.GetTenantAuthPolicyRequest,
+      com.udb.core.authn.services.v1.GetTenantAuthPolicyResponse> getGetTenantAuthPolicyMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "GetTenantAuthPolicy",
+      requestType = com.udb.core.authn.services.v1.GetTenantAuthPolicyRequest.class,
+      responseType = com.udb.core.authn.services.v1.GetTenantAuthPolicyResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.GetTenantAuthPolicyRequest,
+      com.udb.core.authn.services.v1.GetTenantAuthPolicyResponse> getGetTenantAuthPolicyMethod() {
+    io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.GetTenantAuthPolicyRequest, com.udb.core.authn.services.v1.GetTenantAuthPolicyResponse> getGetTenantAuthPolicyMethod;
+    if ((getGetTenantAuthPolicyMethod = AuthnServiceGrpc.getGetTenantAuthPolicyMethod) == null) {
+      synchronized (AuthnServiceGrpc.class) {
+        if ((getGetTenantAuthPolicyMethod = AuthnServiceGrpc.getGetTenantAuthPolicyMethod) == null) {
+          AuthnServiceGrpc.getGetTenantAuthPolicyMethod = getGetTenantAuthPolicyMethod =
+              io.grpc.MethodDescriptor.<com.udb.core.authn.services.v1.GetTenantAuthPolicyRequest, com.udb.core.authn.services.v1.GetTenantAuthPolicyResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "GetTenantAuthPolicy"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authn.services.v1.GetTenantAuthPolicyRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authn.services.v1.GetTenantAuthPolicyResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new AuthnServiceMethodDescriptorSupplier("GetTenantAuthPolicy"))
+              .build();
+        }
+      }
+    }
+    return getGetTenantAuthPolicyMethod;
+  }
+
+  private static volatile io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.SendLoginOtpRequest,
+      com.udb.core.authn.services.v1.SendLoginOtpResponse> getSendLoginOtpMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "SendLoginOtp",
+      requestType = com.udb.core.authn.services.v1.SendLoginOtpRequest.class,
+      responseType = com.udb.core.authn.services.v1.SendLoginOtpResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.SendLoginOtpRequest,
+      com.udb.core.authn.services.v1.SendLoginOtpResponse> getSendLoginOtpMethod() {
+    io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.SendLoginOtpRequest, com.udb.core.authn.services.v1.SendLoginOtpResponse> getSendLoginOtpMethod;
+    if ((getSendLoginOtpMethod = AuthnServiceGrpc.getSendLoginOtpMethod) == null) {
+      synchronized (AuthnServiceGrpc.class) {
+        if ((getSendLoginOtpMethod = AuthnServiceGrpc.getSendLoginOtpMethod) == null) {
+          AuthnServiceGrpc.getSendLoginOtpMethod = getSendLoginOtpMethod =
+              io.grpc.MethodDescriptor.<com.udb.core.authn.services.v1.SendLoginOtpRequest, com.udb.core.authn.services.v1.SendLoginOtpResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "SendLoginOtp"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authn.services.v1.SendLoginOtpRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authn.services.v1.SendLoginOtpResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new AuthnServiceMethodDescriptorSupplier("SendLoginOtp"))
+              .build();
+        }
+      }
+    }
+    return getSendLoginOtpMethod;
+  }
+
+  private static volatile io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.LoginWithOtpRequest,
+      com.udb.core.authn.services.v1.LoginWithOtpResponse> getLoginWithOtpMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "LoginWithOtp",
+      requestType = com.udb.core.authn.services.v1.LoginWithOtpRequest.class,
+      responseType = com.udb.core.authn.services.v1.LoginWithOtpResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.LoginWithOtpRequest,
+      com.udb.core.authn.services.v1.LoginWithOtpResponse> getLoginWithOtpMethod() {
+    io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.LoginWithOtpRequest, com.udb.core.authn.services.v1.LoginWithOtpResponse> getLoginWithOtpMethod;
+    if ((getLoginWithOtpMethod = AuthnServiceGrpc.getLoginWithOtpMethod) == null) {
+      synchronized (AuthnServiceGrpc.class) {
+        if ((getLoginWithOtpMethod = AuthnServiceGrpc.getLoginWithOtpMethod) == null) {
+          AuthnServiceGrpc.getLoginWithOtpMethod = getLoginWithOtpMethod =
+              io.grpc.MethodDescriptor.<com.udb.core.authn.services.v1.LoginWithOtpRequest, com.udb.core.authn.services.v1.LoginWithOtpResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "LoginWithOtp"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authn.services.v1.LoginWithOtpRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authn.services.v1.LoginWithOtpResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new AuthnServiceMethodDescriptorSupplier("LoginWithOtp"))
+              .build();
+        }
+      }
+    }
+    return getLoginWithOtpMethod;
+  }
+
+  private static volatile io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.StartOidcLoginRequest,
+      com.udb.core.authn.services.v1.StartOidcLoginResponse> getStartOidcLoginMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "StartOidcLogin",
+      requestType = com.udb.core.authn.services.v1.StartOidcLoginRequest.class,
+      responseType = com.udb.core.authn.services.v1.StartOidcLoginResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.StartOidcLoginRequest,
+      com.udb.core.authn.services.v1.StartOidcLoginResponse> getStartOidcLoginMethod() {
+    io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.StartOidcLoginRequest, com.udb.core.authn.services.v1.StartOidcLoginResponse> getStartOidcLoginMethod;
+    if ((getStartOidcLoginMethod = AuthnServiceGrpc.getStartOidcLoginMethod) == null) {
+      synchronized (AuthnServiceGrpc.class) {
+        if ((getStartOidcLoginMethod = AuthnServiceGrpc.getStartOidcLoginMethod) == null) {
+          AuthnServiceGrpc.getStartOidcLoginMethod = getStartOidcLoginMethod =
+              io.grpc.MethodDescriptor.<com.udb.core.authn.services.v1.StartOidcLoginRequest, com.udb.core.authn.services.v1.StartOidcLoginResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "StartOidcLogin"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authn.services.v1.StartOidcLoginRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authn.services.v1.StartOidcLoginResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new AuthnServiceMethodDescriptorSupplier("StartOidcLogin"))
+              .build();
+        }
+      }
+    }
+    return getStartOidcLoginMethod;
+  }
+
+  private static volatile io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.FinishOidcLoginRequest,
+      com.udb.core.authn.services.v1.FinishOidcLoginResponse> getFinishOidcLoginMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "FinishOidcLogin",
+      requestType = com.udb.core.authn.services.v1.FinishOidcLoginRequest.class,
+      responseType = com.udb.core.authn.services.v1.FinishOidcLoginResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.FinishOidcLoginRequest,
+      com.udb.core.authn.services.v1.FinishOidcLoginResponse> getFinishOidcLoginMethod() {
+    io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.FinishOidcLoginRequest, com.udb.core.authn.services.v1.FinishOidcLoginResponse> getFinishOidcLoginMethod;
+    if ((getFinishOidcLoginMethod = AuthnServiceGrpc.getFinishOidcLoginMethod) == null) {
+      synchronized (AuthnServiceGrpc.class) {
+        if ((getFinishOidcLoginMethod = AuthnServiceGrpc.getFinishOidcLoginMethod) == null) {
+          AuthnServiceGrpc.getFinishOidcLoginMethod = getFinishOidcLoginMethod =
+              io.grpc.MethodDescriptor.<com.udb.core.authn.services.v1.FinishOidcLoginRequest, com.udb.core.authn.services.v1.FinishOidcLoginResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "FinishOidcLogin"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authn.services.v1.FinishOidcLoginRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authn.services.v1.FinishOidcLoginResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new AuthnServiceMethodDescriptorSupplier("FinishOidcLogin"))
+              .build();
+        }
+      }
+    }
+    return getFinishOidcLoginMethod;
+  }
+
+  private static volatile io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.LoginWithOidcIdTokenRequest,
+      com.udb.core.authn.services.v1.LoginWithOidcIdTokenResponse> getLoginWithOidcIdTokenMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "LoginWithOidcIdToken",
+      requestType = com.udb.core.authn.services.v1.LoginWithOidcIdTokenRequest.class,
+      responseType = com.udb.core.authn.services.v1.LoginWithOidcIdTokenResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.LoginWithOidcIdTokenRequest,
+      com.udb.core.authn.services.v1.LoginWithOidcIdTokenResponse> getLoginWithOidcIdTokenMethod() {
+    io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.LoginWithOidcIdTokenRequest, com.udb.core.authn.services.v1.LoginWithOidcIdTokenResponse> getLoginWithOidcIdTokenMethod;
+    if ((getLoginWithOidcIdTokenMethod = AuthnServiceGrpc.getLoginWithOidcIdTokenMethod) == null) {
+      synchronized (AuthnServiceGrpc.class) {
+        if ((getLoginWithOidcIdTokenMethod = AuthnServiceGrpc.getLoginWithOidcIdTokenMethod) == null) {
+          AuthnServiceGrpc.getLoginWithOidcIdTokenMethod = getLoginWithOidcIdTokenMethod =
+              io.grpc.MethodDescriptor.<com.udb.core.authn.services.v1.LoginWithOidcIdTokenRequest, com.udb.core.authn.services.v1.LoginWithOidcIdTokenResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "LoginWithOidcIdToken"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authn.services.v1.LoginWithOidcIdTokenRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authn.services.v1.LoginWithOidcIdTokenResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new AuthnServiceMethodDescriptorSupplier("LoginWithOidcIdToken"))
+              .build();
+        }
+      }
+    }
+    return getLoginWithOidcIdTokenMethod;
+  }
+
+  private static volatile io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.CreateInvitationRequest,
+      com.udb.core.authn.services.v1.CreateInvitationResponse> getCreateInvitationMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "CreateInvitation",
+      requestType = com.udb.core.authn.services.v1.CreateInvitationRequest.class,
+      responseType = com.udb.core.authn.services.v1.CreateInvitationResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.CreateInvitationRequest,
+      com.udb.core.authn.services.v1.CreateInvitationResponse> getCreateInvitationMethod() {
+    io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.CreateInvitationRequest, com.udb.core.authn.services.v1.CreateInvitationResponse> getCreateInvitationMethod;
+    if ((getCreateInvitationMethod = AuthnServiceGrpc.getCreateInvitationMethod) == null) {
+      synchronized (AuthnServiceGrpc.class) {
+        if ((getCreateInvitationMethod = AuthnServiceGrpc.getCreateInvitationMethod) == null) {
+          AuthnServiceGrpc.getCreateInvitationMethod = getCreateInvitationMethod =
+              io.grpc.MethodDescriptor.<com.udb.core.authn.services.v1.CreateInvitationRequest, com.udb.core.authn.services.v1.CreateInvitationResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "CreateInvitation"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authn.services.v1.CreateInvitationRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authn.services.v1.CreateInvitationResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new AuthnServiceMethodDescriptorSupplier("CreateInvitation"))
+              .build();
+        }
+      }
+    }
+    return getCreateInvitationMethod;
+  }
+
+  private static volatile io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.ListInvitationsRequest,
+      com.udb.core.authn.services.v1.ListInvitationsResponse> getListInvitationsMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "ListInvitations",
+      requestType = com.udb.core.authn.services.v1.ListInvitationsRequest.class,
+      responseType = com.udb.core.authn.services.v1.ListInvitationsResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.ListInvitationsRequest,
+      com.udb.core.authn.services.v1.ListInvitationsResponse> getListInvitationsMethod() {
+    io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.ListInvitationsRequest, com.udb.core.authn.services.v1.ListInvitationsResponse> getListInvitationsMethod;
+    if ((getListInvitationsMethod = AuthnServiceGrpc.getListInvitationsMethod) == null) {
+      synchronized (AuthnServiceGrpc.class) {
+        if ((getListInvitationsMethod = AuthnServiceGrpc.getListInvitationsMethod) == null) {
+          AuthnServiceGrpc.getListInvitationsMethod = getListInvitationsMethod =
+              io.grpc.MethodDescriptor.<com.udb.core.authn.services.v1.ListInvitationsRequest, com.udb.core.authn.services.v1.ListInvitationsResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "ListInvitations"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authn.services.v1.ListInvitationsRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authn.services.v1.ListInvitationsResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new AuthnServiceMethodDescriptorSupplier("ListInvitations"))
+              .build();
+        }
+      }
+    }
+    return getListInvitationsMethod;
+  }
+
+  private static volatile io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.RevokeInvitationRequest,
+      com.udb.core.authn.services.v1.RevokeInvitationResponse> getRevokeInvitationMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "RevokeInvitation",
+      requestType = com.udb.core.authn.services.v1.RevokeInvitationRequest.class,
+      responseType = com.udb.core.authn.services.v1.RevokeInvitationResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.RevokeInvitationRequest,
+      com.udb.core.authn.services.v1.RevokeInvitationResponse> getRevokeInvitationMethod() {
+    io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.RevokeInvitationRequest, com.udb.core.authn.services.v1.RevokeInvitationResponse> getRevokeInvitationMethod;
+    if ((getRevokeInvitationMethod = AuthnServiceGrpc.getRevokeInvitationMethod) == null) {
+      synchronized (AuthnServiceGrpc.class) {
+        if ((getRevokeInvitationMethod = AuthnServiceGrpc.getRevokeInvitationMethod) == null) {
+          AuthnServiceGrpc.getRevokeInvitationMethod = getRevokeInvitationMethod =
+              io.grpc.MethodDescriptor.<com.udb.core.authn.services.v1.RevokeInvitationRequest, com.udb.core.authn.services.v1.RevokeInvitationResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "RevokeInvitation"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authn.services.v1.RevokeInvitationRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authn.services.v1.RevokeInvitationResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new AuthnServiceMethodDescriptorSupplier("RevokeInvitation"))
+              .build();
+        }
+      }
+    }
+    return getRevokeInvitationMethod;
+  }
+
+  private static volatile io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.ResendInvitationRequest,
+      com.udb.core.authn.services.v1.ResendInvitationResponse> getResendInvitationMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "ResendInvitation",
+      requestType = com.udb.core.authn.services.v1.ResendInvitationRequest.class,
+      responseType = com.udb.core.authn.services.v1.ResendInvitationResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.ResendInvitationRequest,
+      com.udb.core.authn.services.v1.ResendInvitationResponse> getResendInvitationMethod() {
+    io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.ResendInvitationRequest, com.udb.core.authn.services.v1.ResendInvitationResponse> getResendInvitationMethod;
+    if ((getResendInvitationMethod = AuthnServiceGrpc.getResendInvitationMethod) == null) {
+      synchronized (AuthnServiceGrpc.class) {
+        if ((getResendInvitationMethod = AuthnServiceGrpc.getResendInvitationMethod) == null) {
+          AuthnServiceGrpc.getResendInvitationMethod = getResendInvitationMethod =
+              io.grpc.MethodDescriptor.<com.udb.core.authn.services.v1.ResendInvitationRequest, com.udb.core.authn.services.v1.ResendInvitationResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "ResendInvitation"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authn.services.v1.ResendInvitationRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authn.services.v1.ResendInvitationResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new AuthnServiceMethodDescriptorSupplier("ResendInvitation"))
+              .build();
+        }
+      }
+    }
+    return getResendInvitationMethod;
+  }
+
+  private static volatile io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.GetInvitationRequest,
+      com.udb.core.authn.services.v1.GetInvitationResponse> getGetInvitationMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "GetInvitation",
+      requestType = com.udb.core.authn.services.v1.GetInvitationRequest.class,
+      responseType = com.udb.core.authn.services.v1.GetInvitationResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.GetInvitationRequest,
+      com.udb.core.authn.services.v1.GetInvitationResponse> getGetInvitationMethod() {
+    io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.GetInvitationRequest, com.udb.core.authn.services.v1.GetInvitationResponse> getGetInvitationMethod;
+    if ((getGetInvitationMethod = AuthnServiceGrpc.getGetInvitationMethod) == null) {
+      synchronized (AuthnServiceGrpc.class) {
+        if ((getGetInvitationMethod = AuthnServiceGrpc.getGetInvitationMethod) == null) {
+          AuthnServiceGrpc.getGetInvitationMethod = getGetInvitationMethod =
+              io.grpc.MethodDescriptor.<com.udb.core.authn.services.v1.GetInvitationRequest, com.udb.core.authn.services.v1.GetInvitationResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "GetInvitation"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authn.services.v1.GetInvitationRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authn.services.v1.GetInvitationResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new AuthnServiceMethodDescriptorSupplier("GetInvitation"))
+              .build();
+        }
+      }
+    }
+    return getGetInvitationMethod;
+  }
+
+  private static volatile io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.StartInvitationAcceptanceRequest,
+      com.udb.core.authn.services.v1.StartInvitationAcceptanceResponse> getStartInvitationAcceptanceMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "StartInvitationAcceptance",
+      requestType = com.udb.core.authn.services.v1.StartInvitationAcceptanceRequest.class,
+      responseType = com.udb.core.authn.services.v1.StartInvitationAcceptanceResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.StartInvitationAcceptanceRequest,
+      com.udb.core.authn.services.v1.StartInvitationAcceptanceResponse> getStartInvitationAcceptanceMethod() {
+    io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.StartInvitationAcceptanceRequest, com.udb.core.authn.services.v1.StartInvitationAcceptanceResponse> getStartInvitationAcceptanceMethod;
+    if ((getStartInvitationAcceptanceMethod = AuthnServiceGrpc.getStartInvitationAcceptanceMethod) == null) {
+      synchronized (AuthnServiceGrpc.class) {
+        if ((getStartInvitationAcceptanceMethod = AuthnServiceGrpc.getStartInvitationAcceptanceMethod) == null) {
+          AuthnServiceGrpc.getStartInvitationAcceptanceMethod = getStartInvitationAcceptanceMethod =
+              io.grpc.MethodDescriptor.<com.udb.core.authn.services.v1.StartInvitationAcceptanceRequest, com.udb.core.authn.services.v1.StartInvitationAcceptanceResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "StartInvitationAcceptance"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authn.services.v1.StartInvitationAcceptanceRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authn.services.v1.StartInvitationAcceptanceResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new AuthnServiceMethodDescriptorSupplier("StartInvitationAcceptance"))
+              .build();
+        }
+      }
+    }
+    return getStartInvitationAcceptanceMethod;
+  }
+
+  private static volatile io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.AcceptInvitationRequest,
+      com.udb.core.authn.services.v1.AcceptInvitationResponse> getAcceptInvitationMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "AcceptInvitation",
+      requestType = com.udb.core.authn.services.v1.AcceptInvitationRequest.class,
+      responseType = com.udb.core.authn.services.v1.AcceptInvitationResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.AcceptInvitationRequest,
+      com.udb.core.authn.services.v1.AcceptInvitationResponse> getAcceptInvitationMethod() {
+    io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.AcceptInvitationRequest, com.udb.core.authn.services.v1.AcceptInvitationResponse> getAcceptInvitationMethod;
+    if ((getAcceptInvitationMethod = AuthnServiceGrpc.getAcceptInvitationMethod) == null) {
+      synchronized (AuthnServiceGrpc.class) {
+        if ((getAcceptInvitationMethod = AuthnServiceGrpc.getAcceptInvitationMethod) == null) {
+          AuthnServiceGrpc.getAcceptInvitationMethod = getAcceptInvitationMethod =
+              io.grpc.MethodDescriptor.<com.udb.core.authn.services.v1.AcceptInvitationRequest, com.udb.core.authn.services.v1.AcceptInvitationResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "AcceptInvitation"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authn.services.v1.AcceptInvitationRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authn.services.v1.AcceptInvitationResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new AuthnServiceMethodDescriptorSupplier("AcceptInvitation"))
+              .build();
+        }
+      }
+    }
+    return getAcceptInvitationMethod;
+  }
+
+  private static volatile io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.CheckStepUpRequest,
+      com.udb.core.authn.services.v1.CheckStepUpResponse> getCheckStepUpMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "CheckStepUp",
+      requestType = com.udb.core.authn.services.v1.CheckStepUpRequest.class,
+      responseType = com.udb.core.authn.services.v1.CheckStepUpResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.CheckStepUpRequest,
+      com.udb.core.authn.services.v1.CheckStepUpResponse> getCheckStepUpMethod() {
+    io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.CheckStepUpRequest, com.udb.core.authn.services.v1.CheckStepUpResponse> getCheckStepUpMethod;
+    if ((getCheckStepUpMethod = AuthnServiceGrpc.getCheckStepUpMethod) == null) {
+      synchronized (AuthnServiceGrpc.class) {
+        if ((getCheckStepUpMethod = AuthnServiceGrpc.getCheckStepUpMethod) == null) {
+          AuthnServiceGrpc.getCheckStepUpMethod = getCheckStepUpMethod =
+              io.grpc.MethodDescriptor.<com.udb.core.authn.services.v1.CheckStepUpRequest, com.udb.core.authn.services.v1.CheckStepUpResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "CheckStepUp"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authn.services.v1.CheckStepUpRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authn.services.v1.CheckStepUpResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new AuthnServiceMethodDescriptorSupplier("CheckStepUp"))
+              .build();
+        }
+      }
+    }
+    return getCheckStepUpMethod;
+  }
+
   /**
    * Creates a new async stub that supports all call types for the service
    */
@@ -2680,6 +3145,196 @@ public final class AuthnServiceGrpc {
     default void exchangeServiceTokenForTenant(com.udb.core.authn.services.v1.ExchangeServiceTokenForTenantRequest request,
         io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.ExchangeServiceTokenForTenantResponse> responseObserver) {
       io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getExchangeServiceTokenForTenantMethod(), responseObserver);
+    }
+
+    /**
+     * <pre>
+     * Replace the tenant's sign-in policy: whether passwords are required, the
+     * channels sign-in codes may go over, the magic-link page and the step-up
+     * rules. Only an administrator of that tenant (or a cross-tenant admin).
+     * </pre>
+     */
+    default void putTenantAuthPolicy(com.udb.core.authn.services.v1.PutTenantAuthPolicyRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.PutTenantAuthPolicyResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getPutTenantAuthPolicyMethod(), responseObserver);
+    }
+
+    /**
+     * <pre>
+     * Read the tenant's sign-in policy (the defaults when none was written).
+     * </pre>
+     */
+    default void getTenantAuthPolicy(com.udb.core.authn.services.v1.GetTenantAuthPolicyRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.GetTenantAuthPolicyResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getGetTenantAuthPolicyMethod(), responseObserver);
+    }
+
+    /**
+     * <pre>
+     * Send a one-time sign-in code (or, for EMAIL, a magic link) to a phone or
+     * email address of the tenant. Public. The answer is the same whether or not
+     * the address belongs to an account and whether or not the tenant enabled
+     * the channel; only a real, enabled account is sent anything.
+     * </pre>
+     */
+    default void sendLoginOtp(com.udb.core.authn.services.v1.SendLoginOtpRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.SendLoginOtpResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getSendLoginOtpMethod(), responseObserver);
+    }
+
+    /**
+     * <pre>
+     * Sign in with the code from SendLoginOtp (or the otp_id + code of a magic
+     * link). Public. Returns the same credentials as Login: access token,
+     * rotating refresh token, session and CSRF token.
+     * </pre>
+     */
+    default void loginWithOtp(com.udb.core.authn.services.v1.LoginWithOtpRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.LoginWithOtpResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getLoginWithOtpMethod(), responseObserver);
+    }
+
+    /**
+     * <pre>
+     * ── 0.6.6 OIDC sign-in RPCs [OIDC] ──
+     * "Sign in with Google / Microsoft / any OpenID provider" through a tenant
+     * IdentityProvider (kind OIDC). Browser flow: StartOidcLogin returns the
+     * provider's authorization URL (authorization code + PKCE S256 + nonce,
+     * state stored server-side for 10 minutes, single use); the provider
+     * redirects to an allowlisted redirect_uri with code + state, and
+     * FinishOidcLogin exchanges the code, verifies the ID token and returns the
+     * same credentials as Login. Native apps that already hold an ID token call
+     * LoginWithOidcIdToken. Users resolve exactly like ResolveExternalIdentity:
+     * an existing link, the provider's account-linking policy, or JIT
+     * provisioning under its jit_policy.
+     * </pre>
+     */
+    default void startOidcLogin(com.udb.core.authn.services.v1.StartOidcLoginRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.StartOidcLoginResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getStartOidcLoginMethod(), responseObserver);
+    }
+
+    /**
+     */
+    default void finishOidcLogin(com.udb.core.authn.services.v1.FinishOidcLoginRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.FinishOidcLoginResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getFinishOidcLoginMethod(), responseObserver);
+    }
+
+    /**
+     */
+    default void loginWithOidcIdToken(com.udb.core.authn.services.v1.LoginWithOidcIdTokenRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.LoginWithOidcIdTokenResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getLoginWithOidcIdTokenMethod(), responseObserver);
+    }
+
+    /**
+     * <pre>
+     * ── 0.6.6 invitations RPCs [INVITATIONS] ──
+     * Invite a person into the caller's tenant with a set of roles. The
+     * invitee proves the invitation's channel on acceptance: an SMS or email
+     * code sent to `address`, a sign-in with the tenant identity provider
+     * (OIDC), or a new passkey (PASSKEY). SMS/EMAIL invitations are sent at
+     * once (event `authn.invitation`, link from the tenant auth policy's
+     * magic_link_base_url); the accept token is returned once and only its hash
+     * is stored. Reserved platform roles are refused; organization_owner needs a
+     * caller who holds it, or a cross-tenant admin.
+     * </pre>
+     */
+    default void createInvitation(com.udb.core.authn.services.v1.CreateInvitationRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.CreateInvitationResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getCreateInvitationMethod(), responseObserver);
+    }
+
+    /**
+     * <pre>
+     * Page through the caller's tenant's invitations, newest first, optionally
+     * by status.
+     * </pre>
+     */
+    default void listInvitations(com.udb.core.authn.services.v1.ListInvitationsRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.ListInvitationsResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getListInvitationsMethod(), responseObserver);
+    }
+
+    /**
+     * <pre>
+     * Revoke a PENDING invitation of the caller's tenant: its link stops
+     * working at once and the account acceptance had started for (if any) is
+     * deleted. Already accepted, revoked or expired: revoked=false, nothing
+     * changes.
+     * </pre>
+     */
+    default void revokeInvitation(com.udb.core.authn.services.v1.RevokeInvitationRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.RevokeInvitationResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getRevokeInvitationMethod(), responseObserver);
+    }
+
+    /**
+     * <pre>
+     * Send a PENDING SMS/EMAIL invitation again with a NEW accept token (the
+     * previous link stops working). At most 5 messages per invitation, at least
+     * 60 seconds apart (RESOURCE_EXHAUSTED with a retry delay otherwise).
+     * </pre>
+     */
+    default void resendInvitation(com.udb.core.authn.services.v1.ResendInvitationRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.ResendInvitationResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getResendInvitationMethod(), responseObserver);
+    }
+
+    /**
+     * <pre>
+     * What an invitee sees before accepting: tenant name, channel, roles,
+     * expiry and the masked address. Public. An unknown, expired, revoked or
+     * accepted invitation, or a wrong token, is one identical refusal.
+     * </pre>
+     */
+    default void getInvitation(com.udb.core.authn.services.v1.GetInvitationRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.GetInvitationResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getGetInvitationMethod(), responseObserver);
+    }
+
+    /**
+     * <pre>
+     * Begin accepting an invitation. Public. SMS/EMAIL: sends a one-time code
+     * to the invitation address (OTP cooldown applies). PASSKEY: returns
+     * WebAuthn registration options. OIDC: returns the identity provider's
+     * authorization URL. Same refusal as GetInvitation for an unusable
+     * invitation.
+     * </pre>
+     */
+    default void startInvitationAcceptance(com.udb.core.authn.services.v1.StartInvitationAcceptanceRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.StartInvitationAcceptanceResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getStartInvitationAcceptanceMethod(), responseObserver);
+    }
+
+    /**
+     * <pre>
+     * Accept an invitation with the channel proof. Public. Creates the ACTIVE
+     * account in the invitation's tenant and project with the proven channel
+     * verified (phone, email, linked identity or passkey), binds the invited
+     * roles, marks the invitation ACCEPTED and signs the account in: the same
+     * credentials as Login. An unusable invitation is the same refusal as
+     * GetInvitation; a taken username is ALREADY_EXISTS on `username`.
+     * </pre>
+     */
+    default void acceptInvitation(com.udb.core.authn.services.v1.AcceptInvitationRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.AcceptInvitationResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getAcceptInvitationMethod(), responseObserver);
+    }
+
+    /**
+     * <pre>
+     * Check a step-up token before a protected action. A resource server sends
+     * the token the user got from VerifyMfaChallenge and the action it is about
+     * to perform; the answer says whether the tenant's step-up rule for that
+     * action is met: same action, an allowed second factor, proven recently
+     * enough, by the calling user, in a session that is still live.
+     * </pre>
+     */
+    default void checkStepUp(com.udb.core.authn.services.v1.CheckStepUpRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.CheckStepUpResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getCheckStepUpMethod(), responseObserver);
     }
   }
 
@@ -3396,6 +4051,211 @@ public final class AuthnServiceGrpc {
       io.grpc.stub.ClientCalls.asyncUnaryCall(
           getChannel().newCall(getExchangeServiceTokenForTenantMethod(), getCallOptions()), request, responseObserver);
     }
+
+    /**
+     * <pre>
+     * Replace the tenant's sign-in policy: whether passwords are required, the
+     * channels sign-in codes may go over, the magic-link page and the step-up
+     * rules. Only an administrator of that tenant (or a cross-tenant admin).
+     * </pre>
+     */
+    public void putTenantAuthPolicy(com.udb.core.authn.services.v1.PutTenantAuthPolicyRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.PutTenantAuthPolicyResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getPutTenantAuthPolicyMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     * <pre>
+     * Read the tenant's sign-in policy (the defaults when none was written).
+     * </pre>
+     */
+    public void getTenantAuthPolicy(com.udb.core.authn.services.v1.GetTenantAuthPolicyRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.GetTenantAuthPolicyResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getGetTenantAuthPolicyMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     * <pre>
+     * Send a one-time sign-in code (or, for EMAIL, a magic link) to a phone or
+     * email address of the tenant. Public. The answer is the same whether or not
+     * the address belongs to an account and whether or not the tenant enabled
+     * the channel; only a real, enabled account is sent anything.
+     * </pre>
+     */
+    public void sendLoginOtp(com.udb.core.authn.services.v1.SendLoginOtpRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.SendLoginOtpResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getSendLoginOtpMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     * <pre>
+     * Sign in with the code from SendLoginOtp (or the otp_id + code of a magic
+     * link). Public. Returns the same credentials as Login: access token,
+     * rotating refresh token, session and CSRF token.
+     * </pre>
+     */
+    public void loginWithOtp(com.udb.core.authn.services.v1.LoginWithOtpRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.LoginWithOtpResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getLoginWithOtpMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     * <pre>
+     * ── 0.6.6 OIDC sign-in RPCs [OIDC] ──
+     * "Sign in with Google / Microsoft / any OpenID provider" through a tenant
+     * IdentityProvider (kind OIDC). Browser flow: StartOidcLogin returns the
+     * provider's authorization URL (authorization code + PKCE S256 + nonce,
+     * state stored server-side for 10 minutes, single use); the provider
+     * redirects to an allowlisted redirect_uri with code + state, and
+     * FinishOidcLogin exchanges the code, verifies the ID token and returns the
+     * same credentials as Login. Native apps that already hold an ID token call
+     * LoginWithOidcIdToken. Users resolve exactly like ResolveExternalIdentity:
+     * an existing link, the provider's account-linking policy, or JIT
+     * provisioning under its jit_policy.
+     * </pre>
+     */
+    public void startOidcLogin(com.udb.core.authn.services.v1.StartOidcLoginRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.StartOidcLoginResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getStartOidcLoginMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     */
+    public void finishOidcLogin(com.udb.core.authn.services.v1.FinishOidcLoginRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.FinishOidcLoginResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getFinishOidcLoginMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     */
+    public void loginWithOidcIdToken(com.udb.core.authn.services.v1.LoginWithOidcIdTokenRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.LoginWithOidcIdTokenResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getLoginWithOidcIdTokenMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     * <pre>
+     * ── 0.6.6 invitations RPCs [INVITATIONS] ──
+     * Invite a person into the caller's tenant with a set of roles. The
+     * invitee proves the invitation's channel on acceptance: an SMS or email
+     * code sent to `address`, a sign-in with the tenant identity provider
+     * (OIDC), or a new passkey (PASSKEY). SMS/EMAIL invitations are sent at
+     * once (event `authn.invitation`, link from the tenant auth policy's
+     * magic_link_base_url); the accept token is returned once and only its hash
+     * is stored. Reserved platform roles are refused; organization_owner needs a
+     * caller who holds it, or a cross-tenant admin.
+     * </pre>
+     */
+    public void createInvitation(com.udb.core.authn.services.v1.CreateInvitationRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.CreateInvitationResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getCreateInvitationMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     * <pre>
+     * Page through the caller's tenant's invitations, newest first, optionally
+     * by status.
+     * </pre>
+     */
+    public void listInvitations(com.udb.core.authn.services.v1.ListInvitationsRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.ListInvitationsResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getListInvitationsMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     * <pre>
+     * Revoke a PENDING invitation of the caller's tenant: its link stops
+     * working at once and the account acceptance had started for (if any) is
+     * deleted. Already accepted, revoked or expired: revoked=false, nothing
+     * changes.
+     * </pre>
+     */
+    public void revokeInvitation(com.udb.core.authn.services.v1.RevokeInvitationRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.RevokeInvitationResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getRevokeInvitationMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     * <pre>
+     * Send a PENDING SMS/EMAIL invitation again with a NEW accept token (the
+     * previous link stops working). At most 5 messages per invitation, at least
+     * 60 seconds apart (RESOURCE_EXHAUSTED with a retry delay otherwise).
+     * </pre>
+     */
+    public void resendInvitation(com.udb.core.authn.services.v1.ResendInvitationRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.ResendInvitationResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getResendInvitationMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     * <pre>
+     * What an invitee sees before accepting: tenant name, channel, roles,
+     * expiry and the masked address. Public. An unknown, expired, revoked or
+     * accepted invitation, or a wrong token, is one identical refusal.
+     * </pre>
+     */
+    public void getInvitation(com.udb.core.authn.services.v1.GetInvitationRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.GetInvitationResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getGetInvitationMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     * <pre>
+     * Begin accepting an invitation. Public. SMS/EMAIL: sends a one-time code
+     * to the invitation address (OTP cooldown applies). PASSKEY: returns
+     * WebAuthn registration options. OIDC: returns the identity provider's
+     * authorization URL. Same refusal as GetInvitation for an unusable
+     * invitation.
+     * </pre>
+     */
+    public void startInvitationAcceptance(com.udb.core.authn.services.v1.StartInvitationAcceptanceRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.StartInvitationAcceptanceResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getStartInvitationAcceptanceMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     * <pre>
+     * Accept an invitation with the channel proof. Public. Creates the ACTIVE
+     * account in the invitation's tenant and project with the proven channel
+     * verified (phone, email, linked identity or passkey), binds the invited
+     * roles, marks the invitation ACCEPTED and signs the account in: the same
+     * credentials as Login. An unusable invitation is the same refusal as
+     * GetInvitation; a taken username is ALREADY_EXISTS on `username`.
+     * </pre>
+     */
+    public void acceptInvitation(com.udb.core.authn.services.v1.AcceptInvitationRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.AcceptInvitationResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getAcceptInvitationMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     * <pre>
+     * Check a step-up token before a protected action. A resource server sends
+     * the token the user got from VerifyMfaChallenge and the action it is about
+     * to perform; the answer says whether the tenant's step-up rule for that
+     * action is met: same action, an allowed second factor, proven recently
+     * enough, by the calling user, in a session that is still live.
+     * </pre>
+     */
+    public void checkStepUp(com.udb.core.authn.services.v1.CheckStepUpRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.CheckStepUpResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getCheckStepUpMethod(), getCallOptions()), request, responseObserver);
+    }
   }
 
   /**
@@ -4026,6 +4886,196 @@ public final class AuthnServiceGrpc {
       return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
           getChannel(), getExchangeServiceTokenForTenantMethod(), getCallOptions(), request);
     }
+
+    /**
+     * <pre>
+     * Replace the tenant's sign-in policy: whether passwords are required, the
+     * channels sign-in codes may go over, the magic-link page and the step-up
+     * rules. Only an administrator of that tenant (or a cross-tenant admin).
+     * </pre>
+     */
+    public com.udb.core.authn.services.v1.PutTenantAuthPolicyResponse putTenantAuthPolicy(com.udb.core.authn.services.v1.PutTenantAuthPolicyRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getPutTenantAuthPolicyMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * Read the tenant's sign-in policy (the defaults when none was written).
+     * </pre>
+     */
+    public com.udb.core.authn.services.v1.GetTenantAuthPolicyResponse getTenantAuthPolicy(com.udb.core.authn.services.v1.GetTenantAuthPolicyRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getGetTenantAuthPolicyMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * Send a one-time sign-in code (or, for EMAIL, a magic link) to a phone or
+     * email address of the tenant. Public. The answer is the same whether or not
+     * the address belongs to an account and whether or not the tenant enabled
+     * the channel; only a real, enabled account is sent anything.
+     * </pre>
+     */
+    public com.udb.core.authn.services.v1.SendLoginOtpResponse sendLoginOtp(com.udb.core.authn.services.v1.SendLoginOtpRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getSendLoginOtpMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * Sign in with the code from SendLoginOtp (or the otp_id + code of a magic
+     * link). Public. Returns the same credentials as Login: access token,
+     * rotating refresh token, session and CSRF token.
+     * </pre>
+     */
+    public com.udb.core.authn.services.v1.LoginWithOtpResponse loginWithOtp(com.udb.core.authn.services.v1.LoginWithOtpRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getLoginWithOtpMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * ── 0.6.6 OIDC sign-in RPCs [OIDC] ──
+     * "Sign in with Google / Microsoft / any OpenID provider" through a tenant
+     * IdentityProvider (kind OIDC). Browser flow: StartOidcLogin returns the
+     * provider's authorization URL (authorization code + PKCE S256 + nonce,
+     * state stored server-side for 10 minutes, single use); the provider
+     * redirects to an allowlisted redirect_uri with code + state, and
+     * FinishOidcLogin exchanges the code, verifies the ID token and returns the
+     * same credentials as Login. Native apps that already hold an ID token call
+     * LoginWithOidcIdToken. Users resolve exactly like ResolveExternalIdentity:
+     * an existing link, the provider's account-linking policy, or JIT
+     * provisioning under its jit_policy.
+     * </pre>
+     */
+    public com.udb.core.authn.services.v1.StartOidcLoginResponse startOidcLogin(com.udb.core.authn.services.v1.StartOidcLoginRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getStartOidcLoginMethod(), getCallOptions(), request);
+    }
+
+    /**
+     */
+    public com.udb.core.authn.services.v1.FinishOidcLoginResponse finishOidcLogin(com.udb.core.authn.services.v1.FinishOidcLoginRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getFinishOidcLoginMethod(), getCallOptions(), request);
+    }
+
+    /**
+     */
+    public com.udb.core.authn.services.v1.LoginWithOidcIdTokenResponse loginWithOidcIdToken(com.udb.core.authn.services.v1.LoginWithOidcIdTokenRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getLoginWithOidcIdTokenMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * ── 0.6.6 invitations RPCs [INVITATIONS] ──
+     * Invite a person into the caller's tenant with a set of roles. The
+     * invitee proves the invitation's channel on acceptance: an SMS or email
+     * code sent to `address`, a sign-in with the tenant identity provider
+     * (OIDC), or a new passkey (PASSKEY). SMS/EMAIL invitations are sent at
+     * once (event `authn.invitation`, link from the tenant auth policy's
+     * magic_link_base_url); the accept token is returned once and only its hash
+     * is stored. Reserved platform roles are refused; organization_owner needs a
+     * caller who holds it, or a cross-tenant admin.
+     * </pre>
+     */
+    public com.udb.core.authn.services.v1.CreateInvitationResponse createInvitation(com.udb.core.authn.services.v1.CreateInvitationRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getCreateInvitationMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * Page through the caller's tenant's invitations, newest first, optionally
+     * by status.
+     * </pre>
+     */
+    public com.udb.core.authn.services.v1.ListInvitationsResponse listInvitations(com.udb.core.authn.services.v1.ListInvitationsRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getListInvitationsMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * Revoke a PENDING invitation of the caller's tenant: its link stops
+     * working at once and the account acceptance had started for (if any) is
+     * deleted. Already accepted, revoked or expired: revoked=false, nothing
+     * changes.
+     * </pre>
+     */
+    public com.udb.core.authn.services.v1.RevokeInvitationResponse revokeInvitation(com.udb.core.authn.services.v1.RevokeInvitationRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getRevokeInvitationMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * Send a PENDING SMS/EMAIL invitation again with a NEW accept token (the
+     * previous link stops working). At most 5 messages per invitation, at least
+     * 60 seconds apart (RESOURCE_EXHAUSTED with a retry delay otherwise).
+     * </pre>
+     */
+    public com.udb.core.authn.services.v1.ResendInvitationResponse resendInvitation(com.udb.core.authn.services.v1.ResendInvitationRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getResendInvitationMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * What an invitee sees before accepting: tenant name, channel, roles,
+     * expiry and the masked address. Public. An unknown, expired, revoked or
+     * accepted invitation, or a wrong token, is one identical refusal.
+     * </pre>
+     */
+    public com.udb.core.authn.services.v1.GetInvitationResponse getInvitation(com.udb.core.authn.services.v1.GetInvitationRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getGetInvitationMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * Begin accepting an invitation. Public. SMS/EMAIL: sends a one-time code
+     * to the invitation address (OTP cooldown applies). PASSKEY: returns
+     * WebAuthn registration options. OIDC: returns the identity provider's
+     * authorization URL. Same refusal as GetInvitation for an unusable
+     * invitation.
+     * </pre>
+     */
+    public com.udb.core.authn.services.v1.StartInvitationAcceptanceResponse startInvitationAcceptance(com.udb.core.authn.services.v1.StartInvitationAcceptanceRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getStartInvitationAcceptanceMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * Accept an invitation with the channel proof. Public. Creates the ACTIVE
+     * account in the invitation's tenant and project with the proven channel
+     * verified (phone, email, linked identity or passkey), binds the invited
+     * roles, marks the invitation ACCEPTED and signs the account in: the same
+     * credentials as Login. An unusable invitation is the same refusal as
+     * GetInvitation; a taken username is ALREADY_EXISTS on `username`.
+     * </pre>
+     */
+    public com.udb.core.authn.services.v1.AcceptInvitationResponse acceptInvitation(com.udb.core.authn.services.v1.AcceptInvitationRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getAcceptInvitationMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * Check a step-up token before a protected action. A resource server sends
+     * the token the user got from VerifyMfaChallenge and the action it is about
+     * to perform; the answer says whether the tenant's step-up rule for that
+     * action is met: same action, an allowed second factor, proven recently
+     * enough, by the calling user, in a session that is still live.
+     * </pre>
+     */
+    public com.udb.core.authn.services.v1.CheckStepUpResponse checkStepUp(com.udb.core.authn.services.v1.CheckStepUpRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getCheckStepUpMethod(), getCallOptions(), request);
+    }
   }
 
   /**
@@ -4655,6 +5705,196 @@ public final class AuthnServiceGrpc {
     public com.udb.core.authn.services.v1.ExchangeServiceTokenForTenantResponse exchangeServiceTokenForTenant(com.udb.core.authn.services.v1.ExchangeServiceTokenForTenantRequest request) {
       return io.grpc.stub.ClientCalls.blockingUnaryCall(
           getChannel(), getExchangeServiceTokenForTenantMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * Replace the tenant's sign-in policy: whether passwords are required, the
+     * channels sign-in codes may go over, the magic-link page and the step-up
+     * rules. Only an administrator of that tenant (or a cross-tenant admin).
+     * </pre>
+     */
+    public com.udb.core.authn.services.v1.PutTenantAuthPolicyResponse putTenantAuthPolicy(com.udb.core.authn.services.v1.PutTenantAuthPolicyRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getPutTenantAuthPolicyMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * Read the tenant's sign-in policy (the defaults when none was written).
+     * </pre>
+     */
+    public com.udb.core.authn.services.v1.GetTenantAuthPolicyResponse getTenantAuthPolicy(com.udb.core.authn.services.v1.GetTenantAuthPolicyRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getGetTenantAuthPolicyMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * Send a one-time sign-in code (or, for EMAIL, a magic link) to a phone or
+     * email address of the tenant. Public. The answer is the same whether or not
+     * the address belongs to an account and whether or not the tenant enabled
+     * the channel; only a real, enabled account is sent anything.
+     * </pre>
+     */
+    public com.udb.core.authn.services.v1.SendLoginOtpResponse sendLoginOtp(com.udb.core.authn.services.v1.SendLoginOtpRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getSendLoginOtpMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * Sign in with the code from SendLoginOtp (or the otp_id + code of a magic
+     * link). Public. Returns the same credentials as Login: access token,
+     * rotating refresh token, session and CSRF token.
+     * </pre>
+     */
+    public com.udb.core.authn.services.v1.LoginWithOtpResponse loginWithOtp(com.udb.core.authn.services.v1.LoginWithOtpRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getLoginWithOtpMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * ── 0.6.6 OIDC sign-in RPCs [OIDC] ──
+     * "Sign in with Google / Microsoft / any OpenID provider" through a tenant
+     * IdentityProvider (kind OIDC). Browser flow: StartOidcLogin returns the
+     * provider's authorization URL (authorization code + PKCE S256 + nonce,
+     * state stored server-side for 10 minutes, single use); the provider
+     * redirects to an allowlisted redirect_uri with code + state, and
+     * FinishOidcLogin exchanges the code, verifies the ID token and returns the
+     * same credentials as Login. Native apps that already hold an ID token call
+     * LoginWithOidcIdToken. Users resolve exactly like ResolveExternalIdentity:
+     * an existing link, the provider's account-linking policy, or JIT
+     * provisioning under its jit_policy.
+     * </pre>
+     */
+    public com.udb.core.authn.services.v1.StartOidcLoginResponse startOidcLogin(com.udb.core.authn.services.v1.StartOidcLoginRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getStartOidcLoginMethod(), getCallOptions(), request);
+    }
+
+    /**
+     */
+    public com.udb.core.authn.services.v1.FinishOidcLoginResponse finishOidcLogin(com.udb.core.authn.services.v1.FinishOidcLoginRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getFinishOidcLoginMethod(), getCallOptions(), request);
+    }
+
+    /**
+     */
+    public com.udb.core.authn.services.v1.LoginWithOidcIdTokenResponse loginWithOidcIdToken(com.udb.core.authn.services.v1.LoginWithOidcIdTokenRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getLoginWithOidcIdTokenMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * ── 0.6.6 invitations RPCs [INVITATIONS] ──
+     * Invite a person into the caller's tenant with a set of roles. The
+     * invitee proves the invitation's channel on acceptance: an SMS or email
+     * code sent to `address`, a sign-in with the tenant identity provider
+     * (OIDC), or a new passkey (PASSKEY). SMS/EMAIL invitations are sent at
+     * once (event `authn.invitation`, link from the tenant auth policy's
+     * magic_link_base_url); the accept token is returned once and only its hash
+     * is stored. Reserved platform roles are refused; organization_owner needs a
+     * caller who holds it, or a cross-tenant admin.
+     * </pre>
+     */
+    public com.udb.core.authn.services.v1.CreateInvitationResponse createInvitation(com.udb.core.authn.services.v1.CreateInvitationRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getCreateInvitationMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * Page through the caller's tenant's invitations, newest first, optionally
+     * by status.
+     * </pre>
+     */
+    public com.udb.core.authn.services.v1.ListInvitationsResponse listInvitations(com.udb.core.authn.services.v1.ListInvitationsRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getListInvitationsMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * Revoke a PENDING invitation of the caller's tenant: its link stops
+     * working at once and the account acceptance had started for (if any) is
+     * deleted. Already accepted, revoked or expired: revoked=false, nothing
+     * changes.
+     * </pre>
+     */
+    public com.udb.core.authn.services.v1.RevokeInvitationResponse revokeInvitation(com.udb.core.authn.services.v1.RevokeInvitationRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getRevokeInvitationMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * Send a PENDING SMS/EMAIL invitation again with a NEW accept token (the
+     * previous link stops working). At most 5 messages per invitation, at least
+     * 60 seconds apart (RESOURCE_EXHAUSTED with a retry delay otherwise).
+     * </pre>
+     */
+    public com.udb.core.authn.services.v1.ResendInvitationResponse resendInvitation(com.udb.core.authn.services.v1.ResendInvitationRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getResendInvitationMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * What an invitee sees before accepting: tenant name, channel, roles,
+     * expiry and the masked address. Public. An unknown, expired, revoked or
+     * accepted invitation, or a wrong token, is one identical refusal.
+     * </pre>
+     */
+    public com.udb.core.authn.services.v1.GetInvitationResponse getInvitation(com.udb.core.authn.services.v1.GetInvitationRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getGetInvitationMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * Begin accepting an invitation. Public. SMS/EMAIL: sends a one-time code
+     * to the invitation address (OTP cooldown applies). PASSKEY: returns
+     * WebAuthn registration options. OIDC: returns the identity provider's
+     * authorization URL. Same refusal as GetInvitation for an unusable
+     * invitation.
+     * </pre>
+     */
+    public com.udb.core.authn.services.v1.StartInvitationAcceptanceResponse startInvitationAcceptance(com.udb.core.authn.services.v1.StartInvitationAcceptanceRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getStartInvitationAcceptanceMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * Accept an invitation with the channel proof. Public. Creates the ACTIVE
+     * account in the invitation's tenant and project with the proven channel
+     * verified (phone, email, linked identity or passkey), binds the invited
+     * roles, marks the invitation ACCEPTED and signs the account in: the same
+     * credentials as Login. An unusable invitation is the same refusal as
+     * GetInvitation; a taken username is ALREADY_EXISTS on `username`.
+     * </pre>
+     */
+    public com.udb.core.authn.services.v1.AcceptInvitationResponse acceptInvitation(com.udb.core.authn.services.v1.AcceptInvitationRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getAcceptInvitationMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * Check a step-up token before a protected action. A resource server sends
+     * the token the user got from VerifyMfaChallenge and the action it is about
+     * to perform; the answer says whether the tenant's step-up rule for that
+     * action is met: same action, an allowed second factor, proven recently
+     * enough, by the calling user, in a session that is still live.
+     * </pre>
+     */
+    public com.udb.core.authn.services.v1.CheckStepUpResponse checkStepUp(com.udb.core.authn.services.v1.CheckStepUpRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getCheckStepUpMethod(), getCallOptions(), request);
     }
   }
 
@@ -5350,6 +6590,211 @@ public final class AuthnServiceGrpc {
       return io.grpc.stub.ClientCalls.futureUnaryCall(
           getChannel().newCall(getExchangeServiceTokenForTenantMethod(), getCallOptions()), request);
     }
+
+    /**
+     * <pre>
+     * Replace the tenant's sign-in policy: whether passwords are required, the
+     * channels sign-in codes may go over, the magic-link page and the step-up
+     * rules. Only an administrator of that tenant (or a cross-tenant admin).
+     * </pre>
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.udb.core.authn.services.v1.PutTenantAuthPolicyResponse> putTenantAuthPolicy(
+        com.udb.core.authn.services.v1.PutTenantAuthPolicyRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getPutTenantAuthPolicyMethod(), getCallOptions()), request);
+    }
+
+    /**
+     * <pre>
+     * Read the tenant's sign-in policy (the defaults when none was written).
+     * </pre>
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.udb.core.authn.services.v1.GetTenantAuthPolicyResponse> getTenantAuthPolicy(
+        com.udb.core.authn.services.v1.GetTenantAuthPolicyRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getGetTenantAuthPolicyMethod(), getCallOptions()), request);
+    }
+
+    /**
+     * <pre>
+     * Send a one-time sign-in code (or, for EMAIL, a magic link) to a phone or
+     * email address of the tenant. Public. The answer is the same whether or not
+     * the address belongs to an account and whether or not the tenant enabled
+     * the channel; only a real, enabled account is sent anything.
+     * </pre>
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.udb.core.authn.services.v1.SendLoginOtpResponse> sendLoginOtp(
+        com.udb.core.authn.services.v1.SendLoginOtpRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getSendLoginOtpMethod(), getCallOptions()), request);
+    }
+
+    /**
+     * <pre>
+     * Sign in with the code from SendLoginOtp (or the otp_id + code of a magic
+     * link). Public. Returns the same credentials as Login: access token,
+     * rotating refresh token, session and CSRF token.
+     * </pre>
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.udb.core.authn.services.v1.LoginWithOtpResponse> loginWithOtp(
+        com.udb.core.authn.services.v1.LoginWithOtpRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getLoginWithOtpMethod(), getCallOptions()), request);
+    }
+
+    /**
+     * <pre>
+     * ── 0.6.6 OIDC sign-in RPCs [OIDC] ──
+     * "Sign in with Google / Microsoft / any OpenID provider" through a tenant
+     * IdentityProvider (kind OIDC). Browser flow: StartOidcLogin returns the
+     * provider's authorization URL (authorization code + PKCE S256 + nonce,
+     * state stored server-side for 10 minutes, single use); the provider
+     * redirects to an allowlisted redirect_uri with code + state, and
+     * FinishOidcLogin exchanges the code, verifies the ID token and returns the
+     * same credentials as Login. Native apps that already hold an ID token call
+     * LoginWithOidcIdToken. Users resolve exactly like ResolveExternalIdentity:
+     * an existing link, the provider's account-linking policy, or JIT
+     * provisioning under its jit_policy.
+     * </pre>
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.udb.core.authn.services.v1.StartOidcLoginResponse> startOidcLogin(
+        com.udb.core.authn.services.v1.StartOidcLoginRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getStartOidcLoginMethod(), getCallOptions()), request);
+    }
+
+    /**
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.udb.core.authn.services.v1.FinishOidcLoginResponse> finishOidcLogin(
+        com.udb.core.authn.services.v1.FinishOidcLoginRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getFinishOidcLoginMethod(), getCallOptions()), request);
+    }
+
+    /**
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.udb.core.authn.services.v1.LoginWithOidcIdTokenResponse> loginWithOidcIdToken(
+        com.udb.core.authn.services.v1.LoginWithOidcIdTokenRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getLoginWithOidcIdTokenMethod(), getCallOptions()), request);
+    }
+
+    /**
+     * <pre>
+     * ── 0.6.6 invitations RPCs [INVITATIONS] ──
+     * Invite a person into the caller's tenant with a set of roles. The
+     * invitee proves the invitation's channel on acceptance: an SMS or email
+     * code sent to `address`, a sign-in with the tenant identity provider
+     * (OIDC), or a new passkey (PASSKEY). SMS/EMAIL invitations are sent at
+     * once (event `authn.invitation`, link from the tenant auth policy's
+     * magic_link_base_url); the accept token is returned once and only its hash
+     * is stored. Reserved platform roles are refused; organization_owner needs a
+     * caller who holds it, or a cross-tenant admin.
+     * </pre>
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.udb.core.authn.services.v1.CreateInvitationResponse> createInvitation(
+        com.udb.core.authn.services.v1.CreateInvitationRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getCreateInvitationMethod(), getCallOptions()), request);
+    }
+
+    /**
+     * <pre>
+     * Page through the caller's tenant's invitations, newest first, optionally
+     * by status.
+     * </pre>
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.udb.core.authn.services.v1.ListInvitationsResponse> listInvitations(
+        com.udb.core.authn.services.v1.ListInvitationsRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getListInvitationsMethod(), getCallOptions()), request);
+    }
+
+    /**
+     * <pre>
+     * Revoke a PENDING invitation of the caller's tenant: its link stops
+     * working at once and the account acceptance had started for (if any) is
+     * deleted. Already accepted, revoked or expired: revoked=false, nothing
+     * changes.
+     * </pre>
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.udb.core.authn.services.v1.RevokeInvitationResponse> revokeInvitation(
+        com.udb.core.authn.services.v1.RevokeInvitationRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getRevokeInvitationMethod(), getCallOptions()), request);
+    }
+
+    /**
+     * <pre>
+     * Send a PENDING SMS/EMAIL invitation again with a NEW accept token (the
+     * previous link stops working). At most 5 messages per invitation, at least
+     * 60 seconds apart (RESOURCE_EXHAUSTED with a retry delay otherwise).
+     * </pre>
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.udb.core.authn.services.v1.ResendInvitationResponse> resendInvitation(
+        com.udb.core.authn.services.v1.ResendInvitationRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getResendInvitationMethod(), getCallOptions()), request);
+    }
+
+    /**
+     * <pre>
+     * What an invitee sees before accepting: tenant name, channel, roles,
+     * expiry and the masked address. Public. An unknown, expired, revoked or
+     * accepted invitation, or a wrong token, is one identical refusal.
+     * </pre>
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.udb.core.authn.services.v1.GetInvitationResponse> getInvitation(
+        com.udb.core.authn.services.v1.GetInvitationRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getGetInvitationMethod(), getCallOptions()), request);
+    }
+
+    /**
+     * <pre>
+     * Begin accepting an invitation. Public. SMS/EMAIL: sends a one-time code
+     * to the invitation address (OTP cooldown applies). PASSKEY: returns
+     * WebAuthn registration options. OIDC: returns the identity provider's
+     * authorization URL. Same refusal as GetInvitation for an unusable
+     * invitation.
+     * </pre>
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.udb.core.authn.services.v1.StartInvitationAcceptanceResponse> startInvitationAcceptance(
+        com.udb.core.authn.services.v1.StartInvitationAcceptanceRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getStartInvitationAcceptanceMethod(), getCallOptions()), request);
+    }
+
+    /**
+     * <pre>
+     * Accept an invitation with the channel proof. Public. Creates the ACTIVE
+     * account in the invitation's tenant and project with the proven channel
+     * verified (phone, email, linked identity or passkey), binds the invited
+     * roles, marks the invitation ACCEPTED and signs the account in: the same
+     * credentials as Login. An unusable invitation is the same refusal as
+     * GetInvitation; a taken username is ALREADY_EXISTS on `username`.
+     * </pre>
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.udb.core.authn.services.v1.AcceptInvitationResponse> acceptInvitation(
+        com.udb.core.authn.services.v1.AcceptInvitationRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getAcceptInvitationMethod(), getCallOptions()), request);
+    }
+
+    /**
+     * <pre>
+     * Check a step-up token before a protected action. A resource server sends
+     * the token the user got from VerifyMfaChallenge and the action it is about
+     * to perform; the answer says whether the tenant's step-up rule for that
+     * action is met: same action, an allowed second factor, proven recently
+     * enough, by the calling user, in a session that is still live.
+     * </pre>
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.udb.core.authn.services.v1.CheckStepUpResponse> checkStepUp(
+        com.udb.core.authn.services.v1.CheckStepUpRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getCheckStepUpMethod(), getCallOptions()), request);
+    }
   }
 
   private static final int METHODID_CREATE_USER = 0;
@@ -5416,6 +6861,21 @@ public final class AuthnServiceGrpc {
   private static final int METHODID_LIST_SERVICE_ACCOUNT_TENANT_MEMBERSHIPS = 61;
   private static final int METHODID_REVOKE_SERVICE_ACCOUNT_TENANT_MEMBERSHIP = 62;
   private static final int METHODID_EXCHANGE_SERVICE_TOKEN_FOR_TENANT = 63;
+  private static final int METHODID_PUT_TENANT_AUTH_POLICY = 64;
+  private static final int METHODID_GET_TENANT_AUTH_POLICY = 65;
+  private static final int METHODID_SEND_LOGIN_OTP = 66;
+  private static final int METHODID_LOGIN_WITH_OTP = 67;
+  private static final int METHODID_START_OIDC_LOGIN = 68;
+  private static final int METHODID_FINISH_OIDC_LOGIN = 69;
+  private static final int METHODID_LOGIN_WITH_OIDC_ID_TOKEN = 70;
+  private static final int METHODID_CREATE_INVITATION = 71;
+  private static final int METHODID_LIST_INVITATIONS = 72;
+  private static final int METHODID_REVOKE_INVITATION = 73;
+  private static final int METHODID_RESEND_INVITATION = 74;
+  private static final int METHODID_GET_INVITATION = 75;
+  private static final int METHODID_START_INVITATION_ACCEPTANCE = 76;
+  private static final int METHODID_ACCEPT_INVITATION = 77;
+  private static final int METHODID_CHECK_STEP_UP = 78;
 
   private static final class MethodHandlers<Req, Resp> implements
       io.grpc.stub.ServerCalls.UnaryMethod<Req, Resp>,
@@ -5689,6 +7149,66 @@ public final class AuthnServiceGrpc {
         case METHODID_EXCHANGE_SERVICE_TOKEN_FOR_TENANT:
           serviceImpl.exchangeServiceTokenForTenant((com.udb.core.authn.services.v1.ExchangeServiceTokenForTenantRequest) request,
               (io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.ExchangeServiceTokenForTenantResponse>) responseObserver);
+          break;
+        case METHODID_PUT_TENANT_AUTH_POLICY:
+          serviceImpl.putTenantAuthPolicy((com.udb.core.authn.services.v1.PutTenantAuthPolicyRequest) request,
+              (io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.PutTenantAuthPolicyResponse>) responseObserver);
+          break;
+        case METHODID_GET_TENANT_AUTH_POLICY:
+          serviceImpl.getTenantAuthPolicy((com.udb.core.authn.services.v1.GetTenantAuthPolicyRequest) request,
+              (io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.GetTenantAuthPolicyResponse>) responseObserver);
+          break;
+        case METHODID_SEND_LOGIN_OTP:
+          serviceImpl.sendLoginOtp((com.udb.core.authn.services.v1.SendLoginOtpRequest) request,
+              (io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.SendLoginOtpResponse>) responseObserver);
+          break;
+        case METHODID_LOGIN_WITH_OTP:
+          serviceImpl.loginWithOtp((com.udb.core.authn.services.v1.LoginWithOtpRequest) request,
+              (io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.LoginWithOtpResponse>) responseObserver);
+          break;
+        case METHODID_START_OIDC_LOGIN:
+          serviceImpl.startOidcLogin((com.udb.core.authn.services.v1.StartOidcLoginRequest) request,
+              (io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.StartOidcLoginResponse>) responseObserver);
+          break;
+        case METHODID_FINISH_OIDC_LOGIN:
+          serviceImpl.finishOidcLogin((com.udb.core.authn.services.v1.FinishOidcLoginRequest) request,
+              (io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.FinishOidcLoginResponse>) responseObserver);
+          break;
+        case METHODID_LOGIN_WITH_OIDC_ID_TOKEN:
+          serviceImpl.loginWithOidcIdToken((com.udb.core.authn.services.v1.LoginWithOidcIdTokenRequest) request,
+              (io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.LoginWithOidcIdTokenResponse>) responseObserver);
+          break;
+        case METHODID_CREATE_INVITATION:
+          serviceImpl.createInvitation((com.udb.core.authn.services.v1.CreateInvitationRequest) request,
+              (io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.CreateInvitationResponse>) responseObserver);
+          break;
+        case METHODID_LIST_INVITATIONS:
+          serviceImpl.listInvitations((com.udb.core.authn.services.v1.ListInvitationsRequest) request,
+              (io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.ListInvitationsResponse>) responseObserver);
+          break;
+        case METHODID_REVOKE_INVITATION:
+          serviceImpl.revokeInvitation((com.udb.core.authn.services.v1.RevokeInvitationRequest) request,
+              (io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.RevokeInvitationResponse>) responseObserver);
+          break;
+        case METHODID_RESEND_INVITATION:
+          serviceImpl.resendInvitation((com.udb.core.authn.services.v1.ResendInvitationRequest) request,
+              (io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.ResendInvitationResponse>) responseObserver);
+          break;
+        case METHODID_GET_INVITATION:
+          serviceImpl.getInvitation((com.udb.core.authn.services.v1.GetInvitationRequest) request,
+              (io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.GetInvitationResponse>) responseObserver);
+          break;
+        case METHODID_START_INVITATION_ACCEPTANCE:
+          serviceImpl.startInvitationAcceptance((com.udb.core.authn.services.v1.StartInvitationAcceptanceRequest) request,
+              (io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.StartInvitationAcceptanceResponse>) responseObserver);
+          break;
+        case METHODID_ACCEPT_INVITATION:
+          serviceImpl.acceptInvitation((com.udb.core.authn.services.v1.AcceptInvitationRequest) request,
+              (io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.AcceptInvitationResponse>) responseObserver);
+          break;
+        case METHODID_CHECK_STEP_UP:
+          serviceImpl.checkStepUp((com.udb.core.authn.services.v1.CheckStepUpRequest) request,
+              (io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.CheckStepUpResponse>) responseObserver);
           break;
         default:
           throw new AssertionError();
@@ -6156,6 +7676,111 @@ public final class AuthnServiceGrpc {
               com.udb.core.authn.services.v1.ExchangeServiceTokenForTenantRequest,
               com.udb.core.authn.services.v1.ExchangeServiceTokenForTenantResponse>(
                 service, METHODID_EXCHANGE_SERVICE_TOKEN_FOR_TENANT)))
+        .<com.udb.core.authn.services.v1.PutTenantAuthPolicyRequest, com.udb.core.authn.services.v1.PutTenantAuthPolicyResponse>addMethod(
+          getPutTenantAuthPolicyMethod(),
+          io.grpc.stub.ServerCalls.<com.udb.core.authn.services.v1.PutTenantAuthPolicyRequest, com.udb.core.authn.services.v1.PutTenantAuthPolicyResponse>asyncUnaryCall(
+            new MethodHandlers<
+              com.udb.core.authn.services.v1.PutTenantAuthPolicyRequest,
+              com.udb.core.authn.services.v1.PutTenantAuthPolicyResponse>(
+                service, METHODID_PUT_TENANT_AUTH_POLICY)))
+        .<com.udb.core.authn.services.v1.GetTenantAuthPolicyRequest, com.udb.core.authn.services.v1.GetTenantAuthPolicyResponse>addMethod(
+          getGetTenantAuthPolicyMethod(),
+          io.grpc.stub.ServerCalls.<com.udb.core.authn.services.v1.GetTenantAuthPolicyRequest, com.udb.core.authn.services.v1.GetTenantAuthPolicyResponse>asyncUnaryCall(
+            new MethodHandlers<
+              com.udb.core.authn.services.v1.GetTenantAuthPolicyRequest,
+              com.udb.core.authn.services.v1.GetTenantAuthPolicyResponse>(
+                service, METHODID_GET_TENANT_AUTH_POLICY)))
+        .<com.udb.core.authn.services.v1.SendLoginOtpRequest, com.udb.core.authn.services.v1.SendLoginOtpResponse>addMethod(
+          getSendLoginOtpMethod(),
+          io.grpc.stub.ServerCalls.<com.udb.core.authn.services.v1.SendLoginOtpRequest, com.udb.core.authn.services.v1.SendLoginOtpResponse>asyncUnaryCall(
+            new MethodHandlers<
+              com.udb.core.authn.services.v1.SendLoginOtpRequest,
+              com.udb.core.authn.services.v1.SendLoginOtpResponse>(
+                service, METHODID_SEND_LOGIN_OTP)))
+        .<com.udb.core.authn.services.v1.LoginWithOtpRequest, com.udb.core.authn.services.v1.LoginWithOtpResponse>addMethod(
+          getLoginWithOtpMethod(),
+          io.grpc.stub.ServerCalls.<com.udb.core.authn.services.v1.LoginWithOtpRequest, com.udb.core.authn.services.v1.LoginWithOtpResponse>asyncUnaryCall(
+            new MethodHandlers<
+              com.udb.core.authn.services.v1.LoginWithOtpRequest,
+              com.udb.core.authn.services.v1.LoginWithOtpResponse>(
+                service, METHODID_LOGIN_WITH_OTP)))
+        .<com.udb.core.authn.services.v1.StartOidcLoginRequest, com.udb.core.authn.services.v1.StartOidcLoginResponse>addMethod(
+          getStartOidcLoginMethod(),
+          io.grpc.stub.ServerCalls.<com.udb.core.authn.services.v1.StartOidcLoginRequest, com.udb.core.authn.services.v1.StartOidcLoginResponse>asyncUnaryCall(
+            new MethodHandlers<
+              com.udb.core.authn.services.v1.StartOidcLoginRequest,
+              com.udb.core.authn.services.v1.StartOidcLoginResponse>(
+                service, METHODID_START_OIDC_LOGIN)))
+        .<com.udb.core.authn.services.v1.FinishOidcLoginRequest, com.udb.core.authn.services.v1.FinishOidcLoginResponse>addMethod(
+          getFinishOidcLoginMethod(),
+          io.grpc.stub.ServerCalls.<com.udb.core.authn.services.v1.FinishOidcLoginRequest, com.udb.core.authn.services.v1.FinishOidcLoginResponse>asyncUnaryCall(
+            new MethodHandlers<
+              com.udb.core.authn.services.v1.FinishOidcLoginRequest,
+              com.udb.core.authn.services.v1.FinishOidcLoginResponse>(
+                service, METHODID_FINISH_OIDC_LOGIN)))
+        .<com.udb.core.authn.services.v1.LoginWithOidcIdTokenRequest, com.udb.core.authn.services.v1.LoginWithOidcIdTokenResponse>addMethod(
+          getLoginWithOidcIdTokenMethod(),
+          io.grpc.stub.ServerCalls.<com.udb.core.authn.services.v1.LoginWithOidcIdTokenRequest, com.udb.core.authn.services.v1.LoginWithOidcIdTokenResponse>asyncUnaryCall(
+            new MethodHandlers<
+              com.udb.core.authn.services.v1.LoginWithOidcIdTokenRequest,
+              com.udb.core.authn.services.v1.LoginWithOidcIdTokenResponse>(
+                service, METHODID_LOGIN_WITH_OIDC_ID_TOKEN)))
+        .<com.udb.core.authn.services.v1.CreateInvitationRequest, com.udb.core.authn.services.v1.CreateInvitationResponse>addMethod(
+          getCreateInvitationMethod(),
+          io.grpc.stub.ServerCalls.<com.udb.core.authn.services.v1.CreateInvitationRequest, com.udb.core.authn.services.v1.CreateInvitationResponse>asyncUnaryCall(
+            new MethodHandlers<
+              com.udb.core.authn.services.v1.CreateInvitationRequest,
+              com.udb.core.authn.services.v1.CreateInvitationResponse>(
+                service, METHODID_CREATE_INVITATION)))
+        .<com.udb.core.authn.services.v1.ListInvitationsRequest, com.udb.core.authn.services.v1.ListInvitationsResponse>addMethod(
+          getListInvitationsMethod(),
+          io.grpc.stub.ServerCalls.<com.udb.core.authn.services.v1.ListInvitationsRequest, com.udb.core.authn.services.v1.ListInvitationsResponse>asyncUnaryCall(
+            new MethodHandlers<
+              com.udb.core.authn.services.v1.ListInvitationsRequest,
+              com.udb.core.authn.services.v1.ListInvitationsResponse>(
+                service, METHODID_LIST_INVITATIONS)))
+        .<com.udb.core.authn.services.v1.RevokeInvitationRequest, com.udb.core.authn.services.v1.RevokeInvitationResponse>addMethod(
+          getRevokeInvitationMethod(),
+          io.grpc.stub.ServerCalls.<com.udb.core.authn.services.v1.RevokeInvitationRequest, com.udb.core.authn.services.v1.RevokeInvitationResponse>asyncUnaryCall(
+            new MethodHandlers<
+              com.udb.core.authn.services.v1.RevokeInvitationRequest,
+              com.udb.core.authn.services.v1.RevokeInvitationResponse>(
+                service, METHODID_REVOKE_INVITATION)))
+        .<com.udb.core.authn.services.v1.ResendInvitationRequest, com.udb.core.authn.services.v1.ResendInvitationResponse>addMethod(
+          getResendInvitationMethod(),
+          io.grpc.stub.ServerCalls.<com.udb.core.authn.services.v1.ResendInvitationRequest, com.udb.core.authn.services.v1.ResendInvitationResponse>asyncUnaryCall(
+            new MethodHandlers<
+              com.udb.core.authn.services.v1.ResendInvitationRequest,
+              com.udb.core.authn.services.v1.ResendInvitationResponse>(
+                service, METHODID_RESEND_INVITATION)))
+        .<com.udb.core.authn.services.v1.GetInvitationRequest, com.udb.core.authn.services.v1.GetInvitationResponse>addMethod(
+          getGetInvitationMethod(),
+          io.grpc.stub.ServerCalls.<com.udb.core.authn.services.v1.GetInvitationRequest, com.udb.core.authn.services.v1.GetInvitationResponse>asyncUnaryCall(
+            new MethodHandlers<
+              com.udb.core.authn.services.v1.GetInvitationRequest,
+              com.udb.core.authn.services.v1.GetInvitationResponse>(
+                service, METHODID_GET_INVITATION)))
+        .<com.udb.core.authn.services.v1.StartInvitationAcceptanceRequest, com.udb.core.authn.services.v1.StartInvitationAcceptanceResponse>addMethod(
+          getStartInvitationAcceptanceMethod(),
+          io.grpc.stub.ServerCalls.<com.udb.core.authn.services.v1.StartInvitationAcceptanceRequest, com.udb.core.authn.services.v1.StartInvitationAcceptanceResponse>asyncUnaryCall(
+            new MethodHandlers<
+              com.udb.core.authn.services.v1.StartInvitationAcceptanceRequest,
+              com.udb.core.authn.services.v1.StartInvitationAcceptanceResponse>(
+                service, METHODID_START_INVITATION_ACCEPTANCE)))
+        .<com.udb.core.authn.services.v1.AcceptInvitationRequest, com.udb.core.authn.services.v1.AcceptInvitationResponse>addMethod(
+          getAcceptInvitationMethod(),
+          io.grpc.stub.ServerCalls.<com.udb.core.authn.services.v1.AcceptInvitationRequest, com.udb.core.authn.services.v1.AcceptInvitationResponse>asyncUnaryCall(
+            new MethodHandlers<
+              com.udb.core.authn.services.v1.AcceptInvitationRequest,
+              com.udb.core.authn.services.v1.AcceptInvitationResponse>(
+                service, METHODID_ACCEPT_INVITATION)))
+        .<com.udb.core.authn.services.v1.CheckStepUpRequest, com.udb.core.authn.services.v1.CheckStepUpResponse>addMethod(
+          getCheckStepUpMethod(),
+          io.grpc.stub.ServerCalls.<com.udb.core.authn.services.v1.CheckStepUpRequest, com.udb.core.authn.services.v1.CheckStepUpResponse>asyncUnaryCall(
+            new MethodHandlers<
+              com.udb.core.authn.services.v1.CheckStepUpRequest,
+              com.udb.core.authn.services.v1.CheckStepUpResponse>(
+                service, METHODID_CHECK_STEP_UP)))
         .build();
   }
 
@@ -6268,6 +7893,21 @@ public final class AuthnServiceGrpc {
               .addMethod(getListServiceAccountTenantMembershipsMethod())
               .addMethod(getRevokeServiceAccountTenantMembershipMethod())
               .addMethod(getExchangeServiceTokenForTenantMethod())
+              .addMethod(getPutTenantAuthPolicyMethod())
+              .addMethod(getGetTenantAuthPolicyMethod())
+              .addMethod(getSendLoginOtpMethod())
+              .addMethod(getLoginWithOtpMethod())
+              .addMethod(getStartOidcLoginMethod())
+              .addMethod(getFinishOidcLoginMethod())
+              .addMethod(getLoginWithOidcIdTokenMethod())
+              .addMethod(getCreateInvitationMethod())
+              .addMethod(getListInvitationsMethod())
+              .addMethod(getRevokeInvitationMethod())
+              .addMethod(getResendInvitationMethod())
+              .addMethod(getGetInvitationMethod())
+              .addMethod(getStartInvitationAcceptanceMethod())
+              .addMethod(getAcceptInvitationMethod())
+              .addMethod(getCheckStepUpMethod())
               .build();
         }
       }

@@ -12,7 +12,7 @@ from typing import ClassVar as _ClassVar, Optional as _Optional, Union as _Union
 DESCRIPTOR: _descriptor.FileDescriptor
 
 class IdentityProvider(_message.Message):
-    __slots__ = ("provider_id", "tenant_id", "kind", "display_name", "issuer", "entity_id", "jwks_url", "saml_metadata_url", "client_ids_json", "audiences_json", "claim_mapping_json", "group_mapping_json", "jit_policy_json", "account_linking_policy", "enabled", "client_secret", "saml_signing_key_pem", "saml_idp_certs_json", "saml_sso_url", "health", "last_jwks_refresh_at", "last_jwks_refresh_status", "created_by", "updated_by", "created_at", "updated_at", "deleted_at")
+    __slots__ = ("provider_id", "tenant_id", "kind", "display_name", "issuer", "entity_id", "jwks_url", "saml_metadata_url", "client_ids_json", "audiences_json", "claim_mapping_json", "group_mapping_json", "jit_policy_json", "account_linking_policy", "enabled", "client_secret", "saml_signing_key_pem", "saml_idp_certs_json", "saml_sso_url", "health", "last_jwks_refresh_at", "last_jwks_refresh_status", "created_by", "updated_by", "created_at", "updated_at", "deleted_at", "redirect_uris_json")
     PROVIDER_ID_FIELD_NUMBER: _ClassVar[int]
     TENANT_ID_FIELD_NUMBER: _ClassVar[int]
     KIND_FIELD_NUMBER: _ClassVar[int]
@@ -40,6 +40,7 @@ class IdentityProvider(_message.Message):
     CREATED_AT_FIELD_NUMBER: _ClassVar[int]
     UPDATED_AT_FIELD_NUMBER: _ClassVar[int]
     DELETED_AT_FIELD_NUMBER: _ClassVar[int]
+    REDIRECT_URIS_JSON_FIELD_NUMBER: _ClassVar[int]
     provider_id: str
     tenant_id: str
     kind: _enums_pb2.IdpKind
@@ -67,4 +68,5 @@ class IdentityProvider(_message.Message):
     created_at: _timestamp_pb2.Timestamp
     updated_at: _timestamp_pb2.Timestamp
     deleted_at: _timestamp_pb2.Timestamp
-    def __init__(self, provider_id: _Optional[str] = ..., tenant_id: _Optional[str] = ..., kind: _Optional[_Union[_enums_pb2.IdpKind, str]] = ..., display_name: _Optional[str] = ..., issuer: _Optional[str] = ..., entity_id: _Optional[str] = ..., jwks_url: _Optional[str] = ..., saml_metadata_url: _Optional[str] = ..., client_ids_json: _Optional[str] = ..., audiences_json: _Optional[str] = ..., claim_mapping_json: _Optional[str] = ..., group_mapping_json: _Optional[str] = ..., jit_policy_json: _Optional[str] = ..., account_linking_policy: _Optional[str] = ..., enabled: bool = ..., client_secret: _Optional[str] = ..., saml_signing_key_pem: _Optional[str] = ..., saml_idp_certs_json: _Optional[str] = ..., saml_sso_url: _Optional[str] = ..., health: _Optional[_Union[_enums_pb2.ProviderHealth, str]] = ..., last_jwks_refresh_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., last_jwks_refresh_status: _Optional[str] = ..., created_by: _Optional[str] = ..., updated_by: _Optional[str] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., updated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., deleted_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
+    redirect_uris_json: str
+    def __init__(self, provider_id: _Optional[str] = ..., tenant_id: _Optional[str] = ..., kind: _Optional[_Union[_enums_pb2.IdpKind, str]] = ..., display_name: _Optional[str] = ..., issuer: _Optional[str] = ..., entity_id: _Optional[str] = ..., jwks_url: _Optional[str] = ..., saml_metadata_url: _Optional[str] = ..., client_ids_json: _Optional[str] = ..., audiences_json: _Optional[str] = ..., claim_mapping_json: _Optional[str] = ..., group_mapping_json: _Optional[str] = ..., jit_policy_json: _Optional[str] = ..., account_linking_policy: _Optional[str] = ..., enabled: bool = ..., client_secret: _Optional[str] = ..., saml_signing_key_pem: _Optional[str] = ..., saml_idp_certs_json: _Optional[str] = ..., saml_sso_url: _Optional[str] = ..., health: _Optional[_Union[_enums_pb2.ProviderHealth, str]] = ..., last_jwks_refresh_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., last_jwks_refresh_status: _Optional[str] = ..., created_by: _Optional[str] = ..., updated_by: _Optional[str] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., updated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., deleted_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., redirect_uris_json: _Optional[str] = ...) -> None: ...

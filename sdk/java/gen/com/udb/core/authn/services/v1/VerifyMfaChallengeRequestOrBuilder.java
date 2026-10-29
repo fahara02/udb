@@ -68,4 +68,26 @@ public interface VerifyMfaChallengeRequestOrBuilder extends
    * <code>.udb.core.common.v1.RequestContext context = 4 [json_name = "context"];</code>
    */
   com.udb.core.common.v1.RequestContextOrBuilder getContextOrBuilder();
+
+  /**
+   * <pre>
+   * WEBAUTHN challenges: the assertion (PublicKeyCredential JSON) produced
+   * from IssueMfaChallengeResponse.webauthn_options_json. `code` is ignored.
+   * </pre>
+   *
+   * <code>string webauthn_assertion_json = 5 [json_name = "webauthnAssertionJson"];</code>
+   * @return The webauthnAssertionJson.
+   */
+  java.lang.String getWebauthnAssertionJson();
+  /**
+   * <pre>
+   * WEBAUTHN challenges: the assertion (PublicKeyCredential JSON) produced
+   * from IssueMfaChallengeResponse.webauthn_options_json. `code` is ignored.
+   * </pre>
+   *
+   * <code>string webauthn_assertion_json = 5 [json_name = "webauthnAssertionJson"];</code>
+   * @return The bytes for webauthnAssertionJson.
+   */
+  com.google.protobuf.ByteString
+      getWebauthnAssertionJsonBytes();
 }

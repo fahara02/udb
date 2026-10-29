@@ -8,6 +8,9 @@
 //! Postgres pool. Submodules:
 //!   * [`mapping`] — pure claim/group/JIT/assurance logic (unit-tested).
 //!   * [`oidc`]    — per-tenant provider registry + bounded-TTL JWKS cache.
+//!   * [`oidc_signin`] — what AuthnService's OIDC sign-in needs from this plane:
+//!     provider config + sealed client secret, discovery, the token endpoint,
+//!     ID-token verification and federated user resolution.
 //!   * [`saml`]    — SAML metadata import, AuthnRequest, assertion validation.
 //!   * [`scim`]    — SCIM 2.0 JSON parsing + PATCH application.
 //!   * [`store`]   — Postgres persistence over the `udb_idp.*` tables.
@@ -17,6 +20,7 @@ mod c14n;
 mod events;
 mod mapping;
 mod oidc;
+pub(crate) mod oidc_signin;
 mod saml;
 mod saml_http;
 mod scim;
@@ -419,7 +423,9 @@ impl IdentityProviderServiceImpl {
             pg_pool: None,
             runtime: Arc::new(DataBrokerRuntime::planning_only()),
             event_sink: noop_sink(),
-            jwks_cache: oidc::OidcJwksCache::new(),
+            // The process-wide cache, so UpdateProvider / ForceJwksRefresh
+            // invalidations reach the AuthnService OIDC sign-in path too.
+            jwks_cache: oidc::OidcJwksCache::shared(),
             metrics: Arc::new(crate::metrics::NoopMetrics),
             #[cfg(feature = "redis")]
             jti_denylist: None,
@@ -635,6 +641,7 @@ fn provider_to_pb(row: &ProviderRow) -> idp_entity_pb::IdentityProvider {
         created_at: timestamp_from_unix(row.created_at_unix.max(0) as u64),
         updated_at: timestamp_from_unix(row.updated_at_unix.max(0) as u64),
         deleted_at: None,
+        redirect_uris_json: row.redirect_uris_json.clone(),
     }
 }
 
@@ -708,6 +715,7 @@ impl IdentityProviderService for IdentityProviderServiceImpl {
         if req.display_name.trim().is_empty() {
             return Err(idp_display_name_required_status());
         }
+        oidc_signin::validate_redirect_uris(&req.redirect_uris)?;
         let row = ProviderRow {
             tenant_id: req.tenant_id.clone(),
             kind: kind_to_db(req.kind),
@@ -728,6 +736,7 @@ impl IdentityProviderService for IdentityProviderServiceImpl {
             },
             enabled: req.enabled,
             saml_idp_certs_json: "[]".to_string(),
+            redirect_uris_json: vec_to_json_array(&req.redirect_uris),
             created_by: req.created_by.clone(),
             updated_by: req.created_by.clone(),
             ..Default::default()
@@ -800,8 +809,10 @@ impl IdentityProviderService for IdentityProviderServiceImpl {
                 "client_secret",
                 "saml_signing_key_pem",
                 "updated_by",
+                "redirect_uris",
             ],
         )?;
+        oidc_signin::validate_redirect_uris(&req.redirect_uris)?;
         let update_field = |field: &str, legacy_present: bool| {
             crate::runtime::service::native_helpers::update_mask_allows(
                 &update_mask,
@@ -888,6 +899,13 @@ impl IdentityProviderService for IdentityProviderServiceImpl {
                 req.updated_by.clone()
             } else {
                 String::new()
+            },
+            redirect_uris_json: if !update_field("redirect_uris", !req.redirect_uris.is_empty()) {
+                String::new()
+            } else if req.redirect_uris.is_empty() {
+                "[]".to_string()
+            } else {
+                vec_to_json_array(&req.redirect_uris)
             },
             ..Default::default()
         };
@@ -1318,27 +1336,17 @@ impl IdentityProviderService for IdentityProviderServiceImpl {
         let _ = self
             .load_provider(pool, &req.tenant_id, &req.provider_id)
             .await?;
-        if req.subject.trim().is_empty() || req.user_id.trim().is_empty() {
-            return Err(idp_subject_user_required_status());
-        }
-        let row = store::upsert_external_identity(
-            pool,
-            &req.tenant_id,
-            &req.provider_id,
-            &req.subject,
-            &req.user_id,
-            &req.email,
-            req.email_verified,
-        )
-        .await?;
-        events::emit(
-            self.event_sink.as_ref(),
-            events::IDENTITY_LINKED,
-            row.external_identity_id.clone(),
-            req.tenant_id.clone(),
-            json!({ "provider_id": req.provider_id, "subject": req.subject, "user_id": req.user_id }),
-        )
-        .await;
+        let row = self
+            .link_external_identity(
+                pool,
+                &req.tenant_id,
+                &req.provider_id,
+                &req.subject,
+                &req.user_id,
+                &req.email,
+                req.email_verified,
+            )
+            .await?;
         Ok(Response::new(idp_pb::LinkIdentityResponse {
             identity: Some(external_identity_to_pb(&row)),
         }))
@@ -1635,20 +1643,31 @@ impl IdentityProviderService for IdentityProviderServiceImpl {
         } else {
             mapped.subject.clone()
         };
-        let (roles, unmapped_groups) =
+        let (group_roles, unmapped_groups) =
             map_groups_to_roles(&provider.group_mapping_json, &mapped.groups);
         // Union the provider's JIT baseline roles (assigned to every federated
         // user, in addition to any group-mapped roles) so `default_roles` from the
         // provider policy is actually granted, not just parsed.
-        let roles = merge_default_roles(
-            roles,
-            JitPolicy::from_json(&provider.jit_policy_json).default_roles,
-        );
+        let policy = JitPolicy::from_json(&provider.jit_policy_json);
+        let roles = merge_default_roles(group_roles.clone(), policy.default_roles.clone());
 
         // Resolve/JIT-provision the UDB user, then link the external identity.
         let resolved = self
             .resolve_or_provision(pool, &provider, &subject, &mapped, &req.tenant_id)
             .await?;
+        // Bind the mapped roles exactly as OIDC sign-in does (add-only, never
+        // owner or platform roles).
+        self.bind_federated_identity_roles(
+            pool,
+            &provider,
+            &subject,
+            &resolved.user_id,
+            resolved.provisioned,
+            group_roles,
+            &roles,
+            &policy,
+        )
+        .await?;
 
         events::emit(
             self.event_sink.as_ref(),
@@ -1712,29 +1731,17 @@ impl IdentityProviderService for IdentityProviderServiceImpl {
         ensure_provider_active(&provider)?;
         let claims: Value =
             serde_json::from_str(req.claims_json.trim()).map_err(idp_claims_json_invalid_status)?;
-        let mapped = apply_claim_mapping(&provider.claim_mapping_json, &claims);
-        let subject = if mapped.subject.is_empty() {
-            return Err(idp_claims_subject_required_status());
-        } else {
-            mapped.subject.clone()
-        };
-        let (roles, _unmapped) = map_groups_to_roles(&provider.group_mapping_json, &mapped.groups);
-        // Also grant the provider's JIT baseline roles (`default_roles`).
-        let roles = merge_default_roles(
-            roles,
-            JitPolicy::from_json(&provider.jit_policy_json).default_roles,
-        );
         let resolved = self
-            .resolve_or_provision(pool, &provider, &subject, &mapped, &req.tenant_id)
+            .resolve_federated_identity(pool, &provider, &claims)
             .await?;
         Ok(Response::new(idp_pb::ResolveExternalIdentityResponse {
             user_id: resolved.user_id,
-            subject,
-            email: mapped.email,
+            subject: resolved.subject,
+            email: resolved.email,
             provisioned: resolved.provisioned,
             linked: resolved.linked,
-            roles,
-            assurance: assurance_to_pb(mapped.assurance),
+            roles: resolved.roles,
+            assurance: assurance_to_pb(resolved.assurance),
             detail: resolved.detail,
         }))
     }
@@ -2324,7 +2331,214 @@ struct ResolvedUser {
     detail: String,
 }
 
+/// A verified external identity resolved to its UDB user: the outcome of
+/// [`IdentityProviderServiceImpl::resolve_federated_identity`].
+#[derive(Debug, Clone)]
+pub(crate) struct FederatedIdentity {
+    pub user_id: String,
+    pub subject: String,
+    pub email: String,
+    pub provisioned: bool,
+    pub linked: bool,
+    /// Group-mapped roles plus the provider's JIT `default_roles`.
+    pub roles: Vec<String>,
+    /// Role codes this resolution newly bound to the user (empty when every
+    /// binding already existed). A sign-in reloads the authz snapshot when
+    /// this is non-empty so the token it issues already carries them.
+    pub bound_roles: Vec<String>,
+    pub assurance: idp_entity_pb::AssuranceLevel,
+    pub detail: String,
+}
+
+/// Role codes an IdP mapping may never bind: reserved platform authority and
+/// tenant ownership. A provider claim must not mint either; they are granted
+/// only by explicit administrator action.
+fn idp_role_binding_refused(role: &str) -> bool {
+    crate::runtime::service::method_security::is_platform_authority_role(role)
+        || role.trim().eq_ignore_ascii_case("organization_owner")
+}
+
+/// Drop the codes [`idp_role_binding_refused`] refuses, logging each one.
+fn idp_bindable_roles(provider_id: &str, roles: Vec<String>) -> Vec<String> {
+    roles
+        .into_iter()
+        .filter(|role| {
+            if idp_role_binding_refused(role) {
+                tracing::warn!(
+                    provider_id,
+                    role = %role,
+                    "identity-provider role mapping names a reserved role; not bound"
+                );
+                false
+            } else {
+                true
+            }
+        })
+        .collect()
+}
+
 impl IdentityProviderServiceImpl {
+    /// The LinkIdentity effect: (re)bind `(tenant, provider, subject)` to
+    /// `user_id` and emit `IDENTITY_LINKED`. The caller has already resolved
+    /// the provider for the tenant.
+    #[allow(clippy::too_many_arguments)]
+    pub(crate) async fn link_external_identity(
+        &self,
+        pool: &PgPool,
+        tenant_id: &str,
+        provider_id: &str,
+        subject: &str,
+        user_id: &str,
+        email: &str,
+        email_verified: bool,
+    ) -> Result<ExternalIdentityRow, Status> {
+        if subject.trim().is_empty() || user_id.trim().is_empty() {
+            return Err(idp_subject_user_required_status());
+        }
+        let row = store::upsert_external_identity(
+            pool,
+            tenant_id,
+            provider_id,
+            subject,
+            user_id,
+            email,
+            email_verified,
+        )
+        .await?;
+        events::emit(
+            self.event_sink.as_ref(),
+            events::IDENTITY_LINKED,
+            row.external_identity_id.clone(),
+            tenant_id.to_string(),
+            json!({ "provider_id": provider_id, "subject": subject, "user_id": user_id }),
+        )
+        .await;
+        Ok(row)
+    }
+
+    /// The ResolveExternalIdentity decision for already-VERIFIED claims, shared
+    /// by that RPC and AuthnService's OIDC sign-in: the provider must be
+    /// enabled, the claim mapping must yield a subject, then the existing link,
+    /// the account-linking policy or JIT provisioning resolves the user.
+    pub(crate) async fn resolve_federated_identity(
+        &self,
+        pool: &PgPool,
+        provider: &ProviderRow,
+        claims: &Value,
+    ) -> Result<FederatedIdentity, Status> {
+        ensure_provider_active(provider)?;
+        let mapped = apply_claim_mapping(&provider.claim_mapping_json, claims);
+        if mapped.subject.is_empty() {
+            return Err(idp_claims_subject_required_status());
+        }
+        let subject = mapped.subject.clone();
+        let (group_roles, _unmapped) =
+            map_groups_to_roles(&provider.group_mapping_json, &mapped.groups);
+        let policy = JitPolicy::from_json(&provider.jit_policy_json);
+        // Also grant the provider's JIT baseline roles (`default_roles`).
+        let roles = merge_default_roles(group_roles.clone(), policy.default_roles.clone());
+        let resolved = self
+            .resolve_or_provision(pool, provider, &subject, &mapped, &provider.tenant_id)
+            .await?;
+        let bound_roles = self
+            .bind_federated_identity_roles(
+                pool,
+                provider,
+                &subject,
+                &resolved.user_id,
+                resolved.provisioned,
+                group_roles,
+                &roles,
+                &policy,
+            )
+            .await?;
+        Ok(FederatedIdentity {
+            user_id: resolved.user_id,
+            subject,
+            email: mapped.email,
+            provisioned: resolved.provisioned,
+            linked: resolved.linked,
+            roles,
+            bound_roles,
+            assurance: mapped.assurance,
+            detail: resolved.detail,
+        })
+    }
+
+    /// Bind an IdP-resolved user's roles, add-only, by role code: a freshly
+    /// provisioned account gets `roles` (group-mapped plus the provider's
+    /// `default_roles`); a returning one only the group-mapped roles it lacks.
+    /// Reserved platform roles and `organization_owner` are never bound from a
+    /// mapping. Shared by OIDC sign-in, ResolveExternalIdentity and SAML ACS.
+    #[allow(clippy::too_many_arguments)]
+    pub(crate) async fn bind_federated_identity_roles(
+        &self,
+        pool: &PgPool,
+        provider: &ProviderRow,
+        subject: &str,
+        user_id: &str,
+        provisioned: bool,
+        group_roles: Vec<String>,
+        roles: &[String],
+        policy: &JitPolicy,
+    ) -> Result<Vec<String>, Status> {
+        // Bind the roles, add-only. A freshly provisioned account gets the
+        // baseline `default_roles` plus its group-mapped roles; on later
+        // resolutions only group-mapped roles it lacks are added, so a default
+        // role an administrator removed stays removed and nothing an
+        // administrator bound is ever taken away.
+        let to_bind = idp_bindable_roles(
+            &provider.provider_id,
+            if provisioned {
+                roles.to_vec()
+            } else {
+                merge_default_roles(group_roles, Vec::new())
+            },
+        );
+        if to_bind.is_empty() {
+            return Ok(Vec::new());
+        }
+        let project = if provisioned {
+            policy.default_project.clone()
+        } else {
+            store::user_project_id(pool, user_id).await?
+        };
+        let binding = store::bind_federated_roles(
+            pool,
+            &provider.tenant_id,
+            &project,
+            user_id,
+            &provider.provider_id,
+            &to_bind,
+        )
+        .await?;
+        if !binding.missing.is_empty() {
+            tracing::warn!(
+                provider_id = %provider.provider_id,
+                tenant_id = %provider.tenant_id,
+                missing = ?binding.missing,
+                "identity-provider role mapping names roles that do not exist in the tenant; not bound"
+            );
+        }
+        if !binding.bound.is_empty() {
+            events::emit(
+                self.event_sink.as_ref(),
+                events::IDENTITY_ROLES_BOUND,
+                user_id.to_string(),
+                provider.tenant_id.clone(),
+                json!({
+                    "provider_id": provider.provider_id,
+                    "subject": subject,
+                    "user_id": user_id,
+                    "granted_roles": binding.bound,
+                    "provisioned": provisioned,
+                }),
+            )
+            .await;
+        }
+        Ok(binding.bound)
+    }
+
     /// Resolve a UDB user for a verified external subject: returns the existing
     /// link if present; otherwise applies the account-linking policy (link to an
     /// existing email-matched user) or JIT-provisions a fresh user. Always

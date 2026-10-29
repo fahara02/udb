@@ -36,6 +36,7 @@ private static final long serialVersionUID = 0L;
     projectId_ = "";
     externalProviderId_ = "";
     externalSubject_ = "";
+    locale_ = "";
   }
 
   public static final com.google.protobuf.Descriptors.Descriptor
@@ -501,6 +502,55 @@ java.lang.String defaultValue) {
     return updateMask_ == null ? com.google.protobuf.FieldMask.getDefaultInstance() : updateMask_;
   }
 
+  public static final int LOCALE_FIELD_NUMBER = 12;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object locale_ = "";
+  /**
+   * <pre>
+   * The language of this account's messages (BCP 47, e.g. `bn`); set it with
+   * `locale` in `update_mask` (an empty value then resets to English).
+   * </pre>
+   *
+   * <code>string locale = 12 [json_name = "locale"];</code>
+   * @return The locale.
+   */
+  @java.lang.Override
+  public java.lang.String getLocale() {
+    java.lang.Object ref = locale_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs =
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      locale_ = s;
+      return s;
+    }
+  }
+  /**
+   * <pre>
+   * The language of this account's messages (BCP 47, e.g. `bn`); set it with
+   * `locale` in `update_mask` (an empty value then resets to English).
+   * </pre>
+   *
+   * <code>string locale = 12 [json_name = "locale"];</code>
+   * @return The bytes for locale.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getLocaleBytes() {
+    java.lang.Object ref = locale_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b =
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      locale_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -550,6 +600,9 @@ java.lang.String defaultValue) {
     }
     if (((bitField0_ & 0x00000002) != 0)) {
       output.writeMessage(11, getUpdateMask());
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(locale_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 12, locale_);
     }
     getUnknownFields().writeTo(output);
   }
@@ -603,6 +656,9 @@ java.lang.String defaultValue) {
       size += com.google.protobuf.CodedOutputStream
         .computeMessageSize(11, getUpdateMask());
     }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(locale_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(12, locale_);
+    }
     size += getUnknownFields().getSerializedSize();
     memoizedSize = size;
     return size;
@@ -645,6 +701,8 @@ java.lang.String defaultValue) {
       if (!getUpdateMask()
           .equals(other.getUpdateMask())) return false;
     }
+    if (!getLocale()
+        .equals(other.getLocale())) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -684,6 +742,8 @@ java.lang.String defaultValue) {
       hash = (37 * hash) + UPDATE_MASK_FIELD_NUMBER;
       hash = (53 * hash) + getUpdateMask().hashCode();
     }
+    hash = (37 * hash) + LOCALE_FIELD_NUMBER;
+    hash = (53 * hash) + getLocale().hashCode();
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -863,6 +923,7 @@ java.lang.String defaultValue) {
         updateMaskBuilder_.dispose();
         updateMaskBuilder_ = null;
       }
+      locale_ = "";
       return this;
     }
 
@@ -937,6 +998,9 @@ java.lang.String defaultValue) {
             : updateMaskBuilder_.build();
         to_bitField0_ |= 0x00000002;
       }
+      if (((from_bitField0_ & 0x00000800) != 0)) {
+        result.locale_ = locale_;
+      }
       result.bitField0_ |= to_bitField0_;
     }
 
@@ -998,6 +1062,11 @@ java.lang.String defaultValue) {
       }
       if (other.hasUpdateMask()) {
         mergeUpdateMask(other.getUpdateMask());
+      }
+      if (!other.getLocale().isEmpty()) {
+        locale_ = other.locale_;
+        bitField0_ |= 0x00000800;
+        onChanged();
       }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
@@ -1088,6 +1157,11 @@ java.lang.String defaultValue) {
               bitField0_ |= 0x00000400;
               break;
             } // case 90
+            case 98: {
+              locale_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00000800;
+              break;
+            } // case 98
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -2072,6 +2146,103 @@ java.lang.String defaultValue) {
         updateMask_ = null;
       }
       return updateMaskBuilder_;
+    }
+
+    private java.lang.Object locale_ = "";
+    /**
+     * <pre>
+     * The language of this account's messages (BCP 47, e.g. `bn`); set it with
+     * `locale` in `update_mask` (an empty value then resets to English).
+     * </pre>
+     *
+     * <code>string locale = 12 [json_name = "locale"];</code>
+     * @return The locale.
+     */
+    public java.lang.String getLocale() {
+      java.lang.Object ref = locale_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        locale_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <pre>
+     * The language of this account's messages (BCP 47, e.g. `bn`); set it with
+     * `locale` in `update_mask` (an empty value then resets to English).
+     * </pre>
+     *
+     * <code>string locale = 12 [json_name = "locale"];</code>
+     * @return The bytes for locale.
+     */
+    public com.google.protobuf.ByteString
+        getLocaleBytes() {
+      java.lang.Object ref = locale_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b =
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        locale_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <pre>
+     * The language of this account's messages (BCP 47, e.g. `bn`); set it with
+     * `locale` in `update_mask` (an empty value then resets to English).
+     * </pre>
+     *
+     * <code>string locale = 12 [json_name = "locale"];</code>
+     * @param value The locale to set.
+     * @return This builder for chaining.
+     */
+    public Builder setLocale(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      locale_ = value;
+      bitField0_ |= 0x00000800;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * The language of this account's messages (BCP 47, e.g. `bn`); set it with
+     * `locale` in `update_mask` (an empty value then resets to English).
+     * </pre>
+     *
+     * <code>string locale = 12 [json_name = "locale"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearLocale() {
+      locale_ = getDefaultInstance().getLocale();
+      bitField0_ = (bitField0_ & ~0x00000800);
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * The language of this account's messages (BCP 47, e.g. `bn`); set it with
+     * `locale` in `update_mask` (an empty value then resets to English).
+     * </pre>
+     *
+     * <code>string locale = 12 [json_name = "locale"];</code>
+     * @param value The bytes for locale to set.
+     * @return This builder for chaining.
+     */
+    public Builder setLocaleBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      locale_ = value;
+      bitField0_ |= 0x00000800;
+      onChanged();
+      return this;
     }
 
     // @@protoc_insertion_point(builder_scope:udb.core.authn.services.v1.UpdateUserRequest)

@@ -151,12 +151,13 @@ impl NotificationServiceImpl {
     }
 
     /// Send one of the broker's own notifications through the tenant's active
-    /// template for `event_type`, using the shipped auth-code template when
-    /// absent. `Ok(false)` if neither a tenant nor shipped template applies. The
-    /// rendered body of an `authn.*` event is redacted on every read and
-    /// scrubbed once delivered.
+    /// template for `event_type` in the recipient's `locale` (exact, then
+    /// language, then `en`; empty = `en`), using the shipped English/Bangla
+    /// auth template when no stored one applies. `Ok(false)` if neither a
+    /// stored nor shipped template applies. The rendered body of an `authn.*`
+    /// event is redacted on every read and scrubbed once delivered.
     #[allow(clippy::too_many_arguments)]
-    pub(crate) async fn send_system(
+    pub(crate) async fn send_system_localized(
         &self,
         tenant_id: &str,
         project_id: &str,
@@ -164,6 +165,7 @@ impl NotificationServiceImpl {
         channel: i32,
         recipient_id: &str,
         recipient_address: &str,
+        locale: &str,
         variables: std::collections::HashMap<String, String>,
     ) -> Result<bool, Status> {
         let context = crate::RequestContext {
@@ -179,10 +181,14 @@ impl NotificationServiceImpl {
             recipient_id: recipient_id.to_string(),
             recipient_address: recipient_address.to_string(),
             variables,
+            // A stored locale the template validator refuses (over 10 chars)
+            // falls back to English rather than failing the auth code.
+            locale: model::template_locale_or_default(locale)
+                .unwrap_or_else(|_| model::DEFAULT_TEMPLATE_LOCALE.to_string()),
             ..Default::default()
         };
-        let builtin = model::builtin_authn_template(event_type, channel);
-        match handlers::send_notification_in_context(self, context, request, builtin).await {
+        let builtin = model::builtin_authn_templates(event_type, channel);
+        match handlers::send_notification_in_context(self, context, request, &builtin).await {
             Ok(_) => Ok(true),
             Err(status)
                 if status.code() == tonic::Code::NotFound

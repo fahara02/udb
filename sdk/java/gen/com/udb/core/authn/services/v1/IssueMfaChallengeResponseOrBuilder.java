@@ -38,4 +38,50 @@ public interface IssueMfaChallengeResponseOrBuilder extends
    * @return The factorKind.
    */
   com.udb.core.authn.entity.v1.AuthFactorKind getFactorKind();
+
+  /**
+   * <pre>
+   * WEBAUTHN challenges: the PublicKeyCredentialRequestOptions JSON to pass to
+   * `navigator.credentials.get()`; send the resulting assertion back as
+   * VerifyMfaChallengeRequest.webauthn_assertion_json. Empty for other factors.
+   * </pre>
+   *
+   * <code>string webauthn_options_json = 4 [json_name = "webauthnOptionsJson"];</code>
+   * @return The webauthnOptionsJson.
+   */
+  java.lang.String getWebauthnOptionsJson();
+  /**
+   * <pre>
+   * WEBAUTHN challenges: the PublicKeyCredentialRequestOptions JSON to pass to
+   * `navigator.credentials.get()`; send the resulting assertion back as
+   * VerifyMfaChallengeRequest.webauthn_assertion_json. Empty for other factors.
+   * </pre>
+   *
+   * <code>string webauthn_options_json = 4 [json_name = "webauthnOptionsJson"];</code>
+   * @return The bytes for webauthnOptionsJson.
+   */
+  com.google.protobuf.ByteString
+      getWebauthnOptionsJsonBytes();
+
+  /**
+   * <pre>
+   * EMAIL_OTP / SMS_OTP challenges: where the code was sent, masked
+   * (`r***&#64;example.com`, `+88017******21`). Empty for other factors.
+   * </pre>
+   *
+   * <code>string otp_destination_masked = 5 [json_name = "otpDestinationMasked"];</code>
+   * @return The otpDestinationMasked.
+   */
+  java.lang.String getOtpDestinationMasked();
+  /**
+   * <pre>
+   * EMAIL_OTP / SMS_OTP challenges: where the code was sent, masked
+   * (`r***&#64;example.com`, `+88017******21`). Empty for other factors.
+   * </pre>
+   *
+   * <code>string otp_destination_masked = 5 [json_name = "otpDestinationMasked"];</code>
+   * @return The bytes for otpDestinationMasked.
+   */
+  com.google.protobuf.ByteString
+      getOtpDestinationMaskedBytes();
 }

@@ -46,6 +46,8 @@ private static final long serialVersionUID = 0L;
     clientSecret_ = "";
     samlSigningKeyPem_ = "";
     updatedBy_ = "";
+    redirectUris_ =
+        com.google.protobuf.LazyStringArrayList.emptyList();
   }
 
   public static final com.google.protobuf.Descriptors.Descriptor
@@ -765,6 +767,67 @@ private static final long serialVersionUID = 0L;
     return updateMask_ == null ? com.google.protobuf.FieldMask.getDefaultInstance() : updateMask_;
   }
 
+  public static final int REDIRECT_URIS_FIELD_NUMBER = 19;
+  @SuppressWarnings("serial")
+  private com.google.protobuf.LazyStringArrayList redirectUris_ =
+      com.google.protobuf.LazyStringArrayList.emptyList();
+  /**
+   * <pre>
+   * Replacement OIDC redirect-URI allowlist (same rules as CreateProvider).
+   * Without a mask a non-empty list replaces the stored one; to clear it,
+   * send `redirect_uris` in update_mask with an empty list.
+   * </pre>
+   *
+   * <code>repeated string redirect_uris = 19 [json_name = "redirectUris"];</code>
+   * @return A list containing the redirectUris.
+   */
+  public com.google.protobuf.ProtocolStringList
+      getRedirectUrisList() {
+    return redirectUris_;
+  }
+  /**
+   * <pre>
+   * Replacement OIDC redirect-URI allowlist (same rules as CreateProvider).
+   * Without a mask a non-empty list replaces the stored one; to clear it,
+   * send `redirect_uris` in update_mask with an empty list.
+   * </pre>
+   *
+   * <code>repeated string redirect_uris = 19 [json_name = "redirectUris"];</code>
+   * @return The count of redirectUris.
+   */
+  public int getRedirectUrisCount() {
+    return redirectUris_.size();
+  }
+  /**
+   * <pre>
+   * Replacement OIDC redirect-URI allowlist (same rules as CreateProvider).
+   * Without a mask a non-empty list replaces the stored one; to clear it,
+   * send `redirect_uris` in update_mask with an empty list.
+   * </pre>
+   *
+   * <code>repeated string redirect_uris = 19 [json_name = "redirectUris"];</code>
+   * @param index The index of the element to return.
+   * @return The redirectUris at the given index.
+   */
+  public java.lang.String getRedirectUris(int index) {
+    return redirectUris_.get(index);
+  }
+  /**
+   * <pre>
+   * Replacement OIDC redirect-URI allowlist (same rules as CreateProvider).
+   * Without a mask a non-empty list replaces the stored one; to clear it,
+   * send `redirect_uris` in update_mask with an empty list.
+   * </pre>
+   *
+   * <code>repeated string redirect_uris = 19 [json_name = "redirectUris"];</code>
+   * @param index The index of the value to return.
+   * @return The bytes of the redirectUris at the given index.
+   */
+  public com.google.protobuf.ByteString
+      getRedirectUrisBytes(int index) {
+    return redirectUris_.getByteString(index);
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -832,6 +895,9 @@ private static final long serialVersionUID = 0L;
     }
     if (((bitField0_ & 0x00000002) != 0)) {
       output.writeMessage(18, getUpdateMask());
+    }
+    for (int i = 0; i < redirectUris_.size(); i++) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 19, redirectUris_.getRaw(i));
     }
     getUnknownFields().writeTo(output);
   }
@@ -908,6 +974,14 @@ private static final long serialVersionUID = 0L;
       size += com.google.protobuf.CodedOutputStream
         .computeMessageSize(18, getUpdateMask());
     }
+    {
+      int dataSize = 0;
+      for (int i = 0; i < redirectUris_.size(); i++) {
+        dataSize += computeStringSizeNoTag(redirectUris_.getRaw(i));
+      }
+      size += dataSize;
+      size += 2 * getRedirectUrisList().size();
+    }
     size += getUnknownFields().getSerializedSize();
     memoizedSize = size;
     return size;
@@ -965,6 +1039,8 @@ private static final long serialVersionUID = 0L;
       if (!getUpdateMask()
           .equals(other.getUpdateMask())) return false;
     }
+    if (!getRedirectUrisList()
+        .equals(other.getRedirectUrisList())) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -1019,6 +1095,10 @@ private static final long serialVersionUID = 0L;
     if (hasUpdateMask()) {
       hash = (37 * hash) + UPDATE_MASK_FIELD_NUMBER;
       hash = (53 * hash) + getUpdateMask().hashCode();
+    }
+    if (getRedirectUrisCount() > 0) {
+      hash = (37 * hash) + REDIRECT_URIS_FIELD_NUMBER;
+      hash = (53 * hash) + getRedirectUrisList().hashCode();
     }
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
@@ -1186,6 +1266,8 @@ private static final long serialVersionUID = 0L;
         updateMaskBuilder_.dispose();
         updateMaskBuilder_ = null;
       }
+      redirectUris_ =
+          com.google.protobuf.LazyStringArrayList.emptyList();
       return this;
     }
 
@@ -1281,6 +1363,10 @@ private static final long serialVersionUID = 0L;
             ? updateMask_
             : updateMaskBuilder_.build();
         to_bitField0_ |= 0x00000002;
+      }
+      if (((from_bitField0_ & 0x00040000) != 0)) {
+        redirectUris_.makeImmutable();
+        result.redirectUris_ = redirectUris_;
       }
       result.bitField0_ |= to_bitField0_;
     }
@@ -1392,6 +1478,16 @@ private static final long serialVersionUID = 0L;
       }
       if (other.hasUpdateMask()) {
         mergeUpdateMask(other.getUpdateMask());
+      }
+      if (!other.redirectUris_.isEmpty()) {
+        if (redirectUris_.isEmpty()) {
+          redirectUris_ = other.redirectUris_;
+          bitField0_ |= 0x00040000;
+        } else {
+          ensureRedirectUrisIsMutable();
+          redirectUris_.addAll(other.redirectUris_);
+        }
+        onChanged();
       }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
@@ -1515,6 +1611,12 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00020000;
               break;
             } // case 146
+            case 154: {
+              java.lang.String s = input.readStringRequireUtf8();
+              ensureRedirectUrisIsMutable();
+              redirectUris_.add(s);
+              break;
+            } // case 154
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -3087,6 +3189,171 @@ private static final long serialVersionUID = 0L;
         updateMask_ = null;
       }
       return updateMaskBuilder_;
+    }
+
+    private com.google.protobuf.LazyStringArrayList redirectUris_ =
+        com.google.protobuf.LazyStringArrayList.emptyList();
+    private void ensureRedirectUrisIsMutable() {
+      if (!redirectUris_.isModifiable()) {
+        redirectUris_ = new com.google.protobuf.LazyStringArrayList(redirectUris_);
+      }
+      bitField0_ |= 0x00040000;
+    }
+    /**
+     * <pre>
+     * Replacement OIDC redirect-URI allowlist (same rules as CreateProvider).
+     * Without a mask a non-empty list replaces the stored one; to clear it,
+     * send `redirect_uris` in update_mask with an empty list.
+     * </pre>
+     *
+     * <code>repeated string redirect_uris = 19 [json_name = "redirectUris"];</code>
+     * @return A list containing the redirectUris.
+     */
+    public com.google.protobuf.ProtocolStringList
+        getRedirectUrisList() {
+      redirectUris_.makeImmutable();
+      return redirectUris_;
+    }
+    /**
+     * <pre>
+     * Replacement OIDC redirect-URI allowlist (same rules as CreateProvider).
+     * Without a mask a non-empty list replaces the stored one; to clear it,
+     * send `redirect_uris` in update_mask with an empty list.
+     * </pre>
+     *
+     * <code>repeated string redirect_uris = 19 [json_name = "redirectUris"];</code>
+     * @return The count of redirectUris.
+     */
+    public int getRedirectUrisCount() {
+      return redirectUris_.size();
+    }
+    /**
+     * <pre>
+     * Replacement OIDC redirect-URI allowlist (same rules as CreateProvider).
+     * Without a mask a non-empty list replaces the stored one; to clear it,
+     * send `redirect_uris` in update_mask with an empty list.
+     * </pre>
+     *
+     * <code>repeated string redirect_uris = 19 [json_name = "redirectUris"];</code>
+     * @param index The index of the element to return.
+     * @return The redirectUris at the given index.
+     */
+    public java.lang.String getRedirectUris(int index) {
+      return redirectUris_.get(index);
+    }
+    /**
+     * <pre>
+     * Replacement OIDC redirect-URI allowlist (same rules as CreateProvider).
+     * Without a mask a non-empty list replaces the stored one; to clear it,
+     * send `redirect_uris` in update_mask with an empty list.
+     * </pre>
+     *
+     * <code>repeated string redirect_uris = 19 [json_name = "redirectUris"];</code>
+     * @param index The index of the value to return.
+     * @return The bytes of the redirectUris at the given index.
+     */
+    public com.google.protobuf.ByteString
+        getRedirectUrisBytes(int index) {
+      return redirectUris_.getByteString(index);
+    }
+    /**
+     * <pre>
+     * Replacement OIDC redirect-URI allowlist (same rules as CreateProvider).
+     * Without a mask a non-empty list replaces the stored one; to clear it,
+     * send `redirect_uris` in update_mask with an empty list.
+     * </pre>
+     *
+     * <code>repeated string redirect_uris = 19 [json_name = "redirectUris"];</code>
+     * @param index The index to set the value at.
+     * @param value The redirectUris to set.
+     * @return This builder for chaining.
+     */
+    public Builder setRedirectUris(
+        int index, java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      ensureRedirectUrisIsMutable();
+      redirectUris_.set(index, value);
+      bitField0_ |= 0x00040000;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Replacement OIDC redirect-URI allowlist (same rules as CreateProvider).
+     * Without a mask a non-empty list replaces the stored one; to clear it,
+     * send `redirect_uris` in update_mask with an empty list.
+     * </pre>
+     *
+     * <code>repeated string redirect_uris = 19 [json_name = "redirectUris"];</code>
+     * @param value The redirectUris to add.
+     * @return This builder for chaining.
+     */
+    public Builder addRedirectUris(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      ensureRedirectUrisIsMutable();
+      redirectUris_.add(value);
+      bitField0_ |= 0x00040000;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Replacement OIDC redirect-URI allowlist (same rules as CreateProvider).
+     * Without a mask a non-empty list replaces the stored one; to clear it,
+     * send `redirect_uris` in update_mask with an empty list.
+     * </pre>
+     *
+     * <code>repeated string redirect_uris = 19 [json_name = "redirectUris"];</code>
+     * @param values The redirectUris to add.
+     * @return This builder for chaining.
+     */
+    public Builder addAllRedirectUris(
+        java.lang.Iterable<java.lang.String> values) {
+      ensureRedirectUrisIsMutable();
+      com.google.protobuf.AbstractMessageLite.Builder.addAll(
+          values, redirectUris_);
+      bitField0_ |= 0x00040000;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Replacement OIDC redirect-URI allowlist (same rules as CreateProvider).
+     * Without a mask a non-empty list replaces the stored one; to clear it,
+     * send `redirect_uris` in update_mask with an empty list.
+     * </pre>
+     *
+     * <code>repeated string redirect_uris = 19 [json_name = "redirectUris"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearRedirectUris() {
+      redirectUris_ =
+        com.google.protobuf.LazyStringArrayList.emptyList();
+      bitField0_ = (bitField0_ & ~0x00040000);;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Replacement OIDC redirect-URI allowlist (same rules as CreateProvider).
+     * Without a mask a non-empty list replaces the stored one; to clear it,
+     * send `redirect_uris` in update_mask with an empty list.
+     * </pre>
+     *
+     * <code>repeated string redirect_uris = 19 [json_name = "redirectUris"];</code>
+     * @param value The bytes of the redirectUris to add.
+     * @return This builder for chaining.
+     */
+    public Builder addRedirectUrisBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      ensureRedirectUrisIsMutable();
+      redirectUris_.add(value);
+      bitField0_ |= 0x00040000;
+      onChanged();
+      return this;
     }
 
     // @@protoc_insertion_point(builder_scope:udb.core.idp.services.v1.UpdateProviderRequest)

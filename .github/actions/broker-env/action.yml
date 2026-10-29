@@ -242,6 +242,9 @@ runs:
         echo "UDB_WEBAUTHN_TEST_MODE=1" >> "$env_file"
         # SAML: dev self-asserted IdP for the SamlAcs sentinel path.
         echo "UDB_SAML_TEST_MODE=1" >> "$env_file"
+        # OIDC: dev in-process OpenID provider (issuer https://oidc.udb-test.invalid)
+        # for StartOidcLogin/FinishOidcLogin/LoginWithOidcIdToken; refused in production.
+        echo "UDB_OIDC_TEST_MODE=1" >> "$env_file"
         # OTP: echo the dev code in SendOTP/IssueMfaChallenge so Verify*/Reset*
         # resolve; cooldown 0 so measured SendOTP/ResendOTP don't race the cooldown.
         echo "UDB_OTP_DEV_ECHO=1" >> "$env_file"

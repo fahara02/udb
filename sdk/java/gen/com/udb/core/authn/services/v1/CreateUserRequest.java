@@ -38,6 +38,7 @@ private static final long serialVersionUID = 0L;
     externalProviderId_ = "";
     externalSubject_ = "";
     phone_ = "";
+    locale_ = "";
   }
 
   public static final com.google.protobuf.Descriptors.Descriptor
@@ -597,6 +598,55 @@ java.lang.String defaultValue) {
     }
   }
 
+  public static final int LOCALE_FIELD_NUMBER = 14;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object locale_ = "";
+  /**
+   * <pre>
+   * The language of this account's messages (auth codes, magic links), as a
+   * BCP 47 tag such as `bn` or `en-US`; empty = English.
+   * </pre>
+   *
+   * <code>string locale = 14 [json_name = "locale"];</code>
+   * @return The locale.
+   */
+  @java.lang.Override
+  public java.lang.String getLocale() {
+    java.lang.Object ref = locale_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs =
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      locale_ = s;
+      return s;
+    }
+  }
+  /**
+   * <pre>
+   * The language of this account's messages (auth codes, magic links), as a
+   * BCP 47 tag such as `bn` or `en-US`; empty = English.
+   * </pre>
+   *
+   * <code>string locale = 14 [json_name = "locale"];</code>
+   * @return The bytes for locale.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getLocaleBytes() {
+    java.lang.Object ref = locale_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b =
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      locale_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -652,6 +702,9 @@ java.lang.String defaultValue) {
     }
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(phone_)) {
       com.google.protobuf.GeneratedMessage.writeString(output, 13, phone_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(locale_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 14, locale_);
     }
     getUnknownFields().writeTo(output);
   }
@@ -711,6 +764,9 @@ java.lang.String defaultValue) {
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(phone_)) {
       size += com.google.protobuf.GeneratedMessage.computeStringSize(13, phone_);
     }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(locale_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(14, locale_);
+    }
     size += getUnknownFields().getSerializedSize();
     memoizedSize = size;
     return size;
@@ -754,6 +810,8 @@ java.lang.String defaultValue) {
         != other.getPasswordSetupRequired()) return false;
     if (!getPhone()
         .equals(other.getPhone())) return false;
+    if (!getLocale()
+        .equals(other.getLocale())) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -796,6 +854,8 @@ java.lang.String defaultValue) {
         getPasswordSetupRequired());
     hash = (37 * hash) + PHONE_FIELD_NUMBER;
     hash = (53 * hash) + getPhone().hashCode();
+    hash = (37 * hash) + LOCALE_FIELD_NUMBER;
+    hash = (53 * hash) + getLocale().hashCode();
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -972,6 +1032,7 @@ java.lang.String defaultValue) {
       internalGetMutableProfileAttributes().clear();
       passwordSetupRequired_ = false;
       phone_ = "";
+      locale_ = "";
       return this;
     }
 
@@ -1049,6 +1110,9 @@ java.lang.String defaultValue) {
       if (((from_bitField0_ & 0x00001000) != 0)) {
         result.phone_ = phone_;
       }
+      if (((from_bitField0_ & 0x00002000) != 0)) {
+        result.locale_ = locale_;
+      }
       result.bitField0_ |= to_bitField0_;
     }
 
@@ -1119,6 +1183,11 @@ java.lang.String defaultValue) {
       if (!other.getPhone().isEmpty()) {
         phone_ = other.phone_;
         bitField0_ |= 0x00001000;
+        onChanged();
+      }
+      if (!other.getLocale().isEmpty()) {
+        locale_ = other.locale_;
+        bitField0_ |= 0x00002000;
         onChanged();
       }
       this.mergeUnknownFields(other.getUnknownFields());
@@ -1218,6 +1287,11 @@ java.lang.String defaultValue) {
               bitField0_ |= 0x00001000;
               break;
             } // case 106
+            case 114: {
+              locale_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00002000;
+              break;
+            } // case 114
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -2329,6 +2403,103 @@ java.lang.String defaultValue) {
       checkByteStringIsUtf8(value);
       phone_ = value;
       bitField0_ |= 0x00001000;
+      onChanged();
+      return this;
+    }
+
+    private java.lang.Object locale_ = "";
+    /**
+     * <pre>
+     * The language of this account's messages (auth codes, magic links), as a
+     * BCP 47 tag such as `bn` or `en-US`; empty = English.
+     * </pre>
+     *
+     * <code>string locale = 14 [json_name = "locale"];</code>
+     * @return The locale.
+     */
+    public java.lang.String getLocale() {
+      java.lang.Object ref = locale_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        locale_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <pre>
+     * The language of this account's messages (auth codes, magic links), as a
+     * BCP 47 tag such as `bn` or `en-US`; empty = English.
+     * </pre>
+     *
+     * <code>string locale = 14 [json_name = "locale"];</code>
+     * @return The bytes for locale.
+     */
+    public com.google.protobuf.ByteString
+        getLocaleBytes() {
+      java.lang.Object ref = locale_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b =
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        locale_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <pre>
+     * The language of this account's messages (auth codes, magic links), as a
+     * BCP 47 tag such as `bn` or `en-US`; empty = English.
+     * </pre>
+     *
+     * <code>string locale = 14 [json_name = "locale"];</code>
+     * @param value The locale to set.
+     * @return This builder for chaining.
+     */
+    public Builder setLocale(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      locale_ = value;
+      bitField0_ |= 0x00002000;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * The language of this account's messages (auth codes, magic links), as a
+     * BCP 47 tag such as `bn` or `en-US`; empty = English.
+     * </pre>
+     *
+     * <code>string locale = 14 [json_name = "locale"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearLocale() {
+      locale_ = getDefaultInstance().getLocale();
+      bitField0_ = (bitField0_ & ~0x00002000);
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * The language of this account's messages (auth codes, magic links), as a
+     * BCP 47 tag such as `bn` or `en-US`; empty = English.
+     * </pre>
+     *
+     * <code>string locale = 14 [json_name = "locale"];</code>
+     * @param value The bytes for locale to set.
+     * @return This builder for chaining.
+     */
+    public Builder setLocaleBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      locale_ = value;
+      bitField0_ |= 0x00002000;
       onChanged();
       return this;
     }

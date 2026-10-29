@@ -19,7 +19,11 @@ option php_namespace = "Udb\\Core\\Notification\\Entity\\V1";
 // F4.3 decision (hybrid tenant model inside an exact project): NULL tenant_id =
 // project-global default template; non-null tenant_id = per-tenant override.
 // Resolution prefers the per-tenant row over the project-global default for the
-// same (event_type, channel). Project ownership is always first-class.
+// same (event_type, channel, locale). Project ownership is always first-class.
+//
+// Locale is part of a template's identity: `en` and `bn` versions of the same
+// event and channel coexist. A send resolves the recipient's exact locale
+// (`bn-BD`), then its language (`bn`), then `en`.
 // ---------------------------------------------------------------------------
 
 message NotificationTemplate {
@@ -46,6 +50,7 @@ message NotificationTemplate {
       columns: "project_id"
       columns: "event_type"
       columns: "channel"
+      columns: "locale"
       where_clause: "tenant_id IS NULL AND deleted_at IS NULL"
     }
     indexes: {
@@ -56,6 +61,7 @@ message NotificationTemplate {
       columns: "project_id"
       columns: "event_type"
       columns: "channel"
+      columns: "locale"
       where_clause: "tenant_id IS NOT NULL AND deleted_at IS NULL"
     }
     sql_artifacts: {
@@ -81,6 +87,11 @@ message NotificationTemplate {
       for_each: "ROW"
     }
     required_scope: "notification:admin"
+    // 0.6.6 two-phase migration hint: both unique indexes above gained
+    // `locale`, which the migration applies as drop + re-create of the same
+    // index names; dropping a unique index needs this hint to apply without a
+    // reviewed plan. Remove it in the release after 0.6.6.
+    allow_drop: true
   };
   option (udb.core.common.v1.db_table_security) = {
     tenant_isolation_mode: "tenant"
@@ -102,7 +113,7 @@ message NotificationTemplate {
 
   // Machine code such as RESOURCE_CREATED, SLA_BREACH_WARNING, REVIEW_ASSIGNED.
   // Partial unique indexes above permit one project-global default and one
-  // per-tenant override for the same event/channel in each exact project.
+  // per-tenant override for the same event/channel/locale in each exact project.
   string event_type = 2 [(udb.core.common.v1.pg_column) = { column_name: "event_type" sql_type: "VARCHAR(80)" not_null: true }];
 
   NotificationChannel channel = 3 [(udb.core.common.v1.pg_column) = { column_name: "channel" sql_type: "VARCHAR(20)" not_null: true }];
@@ -111,7 +122,7 @@ message NotificationTemplate {
 
   string body_template = 5 [(udb.core.common.v1.pg_column) = { column_name: "body_template" sql_type: "TEXT" not_null: true comment: "Full message body template with variable placeholders" }];
 
-  string locale = 6 [(udb.core.common.v1.pg_column) = { column_name: "locale" sql_type: "VARCHAR(10)" not_null: true default_value: "'en'" comment: "en | bn" }];
+  string locale = 6 [(udb.core.common.v1.pg_column) = { column_name: "locale" sql_type: "VARCHAR(10)" not_null: true default_value: "'en'" comment: "BCP 47 locale such as en, bn or bn-BD; part of the template identity" }];
 
   bool is_active = 7 [(udb.core.common.v1.pg_column) = { column_name: "is_active" sql_type: "BOOLEAN" not_null: true default_value: "TRUE" }];
 

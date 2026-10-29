@@ -512,6 +512,10 @@ pub enum OtpType {
     PasswordReset = 3,
     SensitiveOperation = 4,
     PhoneVerification = 5,
+    /// Passwordless sign-in code (SMS or email; also behind a magic link) (0.6.6).
+    Login = 6,
+    /// Proves an invitation's SMS/email channel on acceptance (0.6.6).
+    Invitation = 7,
 }
 
 impl OtpType {
@@ -523,6 +527,8 @@ impl OtpType {
             OtpType::PasswordReset => "PASSWORD_RESET",
             OtpType::SensitiveOperation => "SENSITIVE_OPERATION",
             OtpType::PhoneVerification => "PHONE_VERIFICATION",
+            OtpType::Login => "LOGIN",
+            OtpType::Invitation => "INVITATION",
         }
     }
 
@@ -533,6 +539,8 @@ impl OtpType {
             "PASSWORD_RESET" => OtpType::PasswordReset,
             "SENSITIVE_OPERATION" => OtpType::SensitiveOperation,
             "PHONE_VERIFICATION" => OtpType::PhoneVerification,
+            "LOGIN" => OtpType::Login,
+            "INVITATION" => OtpType::Invitation,
             _ => OtpType::Unspecified,
         }
     }
@@ -548,6 +556,8 @@ impl OtpType {
             3 => OtpType::PasswordReset,
             4 => OtpType::SensitiveOperation,
             5 => OtpType::PhoneVerification,
+            6 => OtpType::Login,
+            7 => OtpType::Invitation,
             _ => OtpType::Unspecified,
         }
     }
@@ -670,6 +680,9 @@ pub struct UserRecord {
     /// with the user; written only by the dedicated phone UPDATEs.
     pub phone: String,
     pub phone_verified_at_unix: u64,
+    /// BCP 47 language of the account's messages ('' = English). Read with the
+    /// user; written only by its dedicated UPDATE, never by the user upsert.
+    pub locale: String,
 }
 
 // Manual `Debug` redacting the password verifier (`password_hash`) and the
@@ -712,6 +725,7 @@ impl std::fmt::Debug for UserRecord {
                 },
             )
             .field("phone_verified_at_unix", &self.phone_verified_at_unix)
+            .field("locale", &self.locale)
             .finish()
     }
 }
@@ -1008,6 +1022,7 @@ fn user_from_row(row: &sqlx::postgres::PgRow) -> Result<UserRecord, sqlx::Error>
         profile_attributes_json: row.try_get("profile_attributes_json")?,
         phone: row_string(row, "phone")?,
         phone_verified_at_unix: row.try_get::<i64, _>("phone_verified_at_unix")?.max(0) as u64,
+        locale: row_string(row, "locale")?,
     })
 }
 
@@ -3061,6 +3076,7 @@ impl PostgresUserStore {
             m.json_text_as("profile_attributes_json", "profile_attributes_json"),
             m.text_or_empty("phone"),
             m.timestamp_unix_as("phone_verified_at", "phone_verified_at_unix"),
+            m.text_or_empty("locale"),
             m.timestamp_unix_as("locked_until", "locked_until_unix"),
             m.timestamp_unix_as("email_verified_at", "email_verified_at_unix"),
             m.timestamp_unix_as("last_login_at", "last_login_at_unix"),
@@ -3407,9 +3423,17 @@ impl UserStore for PostgresUserStore {
         let deleted_at = self.users_model.q("deleted_at");
         let account_kind_filter = account_kind.to_db();
         let status_filter = status.to_db();
+        // An invitation's not-yet-accepted invitee account is an internal
+        // placeholder (it only anchors the acceptance code or passkey), not a
+        // tenant member: keep it out of user listings.
+        let invitee_placeholder = format!(
+            "({status_col} = 'PENDING_VERIFICATION' AND {username} LIKE 'invitee-%' AND COALESCE({profile} ->> 'invitation_id', '') <> '')",
+            username = self.users_model.q("username"),
+            profile = self.users_model.q("profile_attributes_json"),
+        );
         let rows = sqlx::query(&format!(
             "SELECT {projection} \
-             FROM {rel} WHERE {deleted_at} IS NULL AND ($1 = '' OR {tenant_id_col} = $1) AND ($2 = 'UNSPECIFIED' OR {account_kind_col} = $2) AND ($3 = 'UNSPECIFIED' OR {status_col} = $3) ORDER BY {created_at} DESC"
+             FROM {rel} WHERE {deleted_at} IS NULL AND ($1 = '' OR {tenant_id_col} = $1) AND ($2 = 'UNSPECIFIED' OR {account_kind_col} = $2) AND ($3 = 'UNSPECIFIED' OR {status_col} = $3) AND NOT {invitee_placeholder} ORDER BY {created_at} DESC"
         ))
         .bind(tenant_id)
         .bind(account_kind_filter)
@@ -3440,8 +3464,16 @@ impl UserStore for PostgresUserStore {
         let deleted_at = self.users_model.q("deleted_at");
         let account_kind_filter = account_kind.to_db();
         let status_filter = status.to_db();
+        // An invitation's not-yet-accepted invitee account is an internal
+        // placeholder (it only anchors the acceptance code or passkey), not a
+        // tenant member: keep it out of user listings.
+        let invitee_placeholder = format!(
+            "({status_col} = 'PENDING_VERIFICATION' AND {username} LIKE 'invitee-%' AND COALESCE({profile} ->> 'invitation_id', '') <> '')",
+            username = self.users_model.q("username"),
+            profile = self.users_model.q("profile_attributes_json"),
+        );
         let where_clause = format!(
-            "{deleted_at} IS NULL AND ($1 = '' OR {tenant_id_col} = $1) AND ($2 = 'UNSPECIFIED' OR {account_kind_col} = $2) AND ($3 = 'UNSPECIFIED' OR {status_col} = $3)"
+            "{deleted_at} IS NULL AND ($1 = '' OR {tenant_id_col} = $1) AND ($2 = 'UNSPECIFIED' OR {account_kind_col} = $2) AND ($3 = 'UNSPECIFIED' OR {status_col} = $3) AND NOT {invitee_placeholder}"
         );
         let total = sqlx::query(&format!(
             "SELECT COUNT(*)::BIGINT AS total_count FROM {rel} WHERE {where_clause}"
@@ -4179,12 +4211,20 @@ pub fn otp_delivery_webhook_configured() -> bool {
 /// Best-effort outbound OTP delivery to the operator's channel gateway via a
 /// generic HTTP webhook. The operator sets `UDB_OTP_DELIVERY_WEBHOOK_URL` (and
 /// optionally `UDB_OTP_DELIVERY_AUTH_HEADER`) to their email/SMS relay; UDB POSTs
-/// `{channel, address, code, otp_type, user_id}` as JSON. Delivery never fails
-/// OTP issuance — the OTP is already persisted and the caller holds the otp_id —
-/// so a gateway outage degrades to "not delivered" rather than blocking auth.
-/// With no webhook configured, delivery is skipped with a warning (the code is
-/// still retrievable via the otp_id in dev/test).
-pub async fn deliver_otp(channel: &str, address: &str, code: &str, otp_type: i32, user_id: &str) {
+/// `{channel, address, code, otp_type, user_id}` as JSON, plus `link` when the
+/// code is sent as a link the relay must deliver (a magic link). Delivery never
+/// fails OTP issuance — the OTP is already persisted and the caller holds the
+/// otp_id — so a gateway outage degrades to "not delivered" rather than
+/// blocking auth. With no webhook configured, delivery is skipped with a
+/// warning (the code is still retrievable via the otp_id in dev/test).
+pub async fn deliver_otp(
+    channel: &str,
+    address: &str,
+    code: &str,
+    otp_type: i32,
+    user_id: &str,
+    link: Option<&str>,
+) {
     let Some(url) = std::env::var("UDB_OTP_DELIVERY_WEBHOOK_URL")
         .ok()
         .filter(|u| !u.trim().is_empty())
@@ -4197,15 +4237,17 @@ pub async fn deliver_otp(channel: &str, address: &str, code: &str, otp_type: i32
     };
     #[cfg(feature = "http-client")]
     {
-        let mut builder = otp_delivery_client()
-            .post(url.trim())
-            .json(&serde_json::json!({
-                "channel": channel,
-                "address": address,
-                "code": code,
-                "otp_type": otp_type,
-                "user_id": user_id,
-            }));
+        let mut body = serde_json::json!({
+            "channel": channel,
+            "address": address,
+            "code": code,
+            "otp_type": otp_type,
+            "user_id": user_id,
+        });
+        if let Some(link) = link {
+            body["link"] = serde_json::Value::String(link.to_string());
+        }
+        let mut builder = otp_delivery_client().post(url.trim()).json(&body);
         if let Ok(auth) = std::env::var("UDB_OTP_DELIVERY_AUTH_HEADER") {
             if !auth.trim().is_empty() {
                 builder = builder.header("authorization", auth);
@@ -4227,7 +4269,7 @@ pub async fn deliver_otp(channel: &str, address: &str, code: &str, otp_type: i32
     }
     #[cfg(not(feature = "http-client"))]
     {
-        let _ = (url, address, code, otp_type, user_id);
+        let _ = (url, address, code, otp_type, user_id, link);
         tracing::error!(
             channel,
             "OTP delivery webhook configured but this build lacks the http-client feature"

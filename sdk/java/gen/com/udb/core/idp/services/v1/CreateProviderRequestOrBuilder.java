@@ -281,4 +281,57 @@ public interface CreateProviderRequestOrBuilder extends
    * <code>.udb.core.common.v1.RequestContext context = 18 [json_name = "context"];</code>
    */
   com.udb.core.common.v1.RequestContextOrBuilder getContextOrBuilder();
+
+  /**
+   * <pre>
+   * OIDC redirect URIs StartOidcLogin may send the browser back to (exact
+   * match). Each must be https, http on a loopback IP for native apps, or a
+   * private-use scheme with a dot (com.example.app:/oauth2redirect). At most
+   * 20, each at most 512 characters, no fragment.
+   * </pre>
+   *
+   * <code>repeated string redirect_uris = 19 [json_name = "redirectUris"];</code>
+   * @return A list containing the redirectUris.
+   */
+  java.util.List<java.lang.String>
+      getRedirectUrisList();
+  /**
+   * <pre>
+   * OIDC redirect URIs StartOidcLogin may send the browser back to (exact
+   * match). Each must be https, http on a loopback IP for native apps, or a
+   * private-use scheme with a dot (com.example.app:/oauth2redirect). At most
+   * 20, each at most 512 characters, no fragment.
+   * </pre>
+   *
+   * <code>repeated string redirect_uris = 19 [json_name = "redirectUris"];</code>
+   * @return The count of redirectUris.
+   */
+  int getRedirectUrisCount();
+  /**
+   * <pre>
+   * OIDC redirect URIs StartOidcLogin may send the browser back to (exact
+   * match). Each must be https, http on a loopback IP for native apps, or a
+   * private-use scheme with a dot (com.example.app:/oauth2redirect). At most
+   * 20, each at most 512 characters, no fragment.
+   * </pre>
+   *
+   * <code>repeated string redirect_uris = 19 [json_name = "redirectUris"];</code>
+   * @param index The index of the element to return.
+   * @return The redirectUris at the given index.
+   */
+  java.lang.String getRedirectUris(int index);
+  /**
+   * <pre>
+   * OIDC redirect URIs StartOidcLogin may send the browser back to (exact
+   * match). Each must be https, http on a loopback IP for native apps, or a
+   * private-use scheme with a dot (com.example.app:/oauth2redirect). At most
+   * 20, each at most 512 characters, no fragment.
+   * </pre>
+   *
+   * <code>repeated string redirect_uris = 19 [json_name = "redirectUris"];</code>
+   * @param index The index of the value to return.
+   * @return The bytes of the redirectUris at the given index.
+   */
+  com.google.protobuf.ByteString
+      getRedirectUrisBytes(int index);
 }

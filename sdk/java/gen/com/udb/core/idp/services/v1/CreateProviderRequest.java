@@ -46,6 +46,8 @@ private static final long serialVersionUID = 0L;
     clientSecret_ = "";
     samlSigningKeyPem_ = "";
     createdBy_ = "";
+    redirectUris_ =
+        com.google.protobuf.LazyStringArrayList.emptyList();
   }
 
   public static final com.google.protobuf.Descriptors.Descriptor
@@ -732,6 +734,71 @@ private static final long serialVersionUID = 0L;
     return context_ == null ? com.udb.core.common.v1.RequestContext.getDefaultInstance() : context_;
   }
 
+  public static final int REDIRECT_URIS_FIELD_NUMBER = 19;
+  @SuppressWarnings("serial")
+  private com.google.protobuf.LazyStringArrayList redirectUris_ =
+      com.google.protobuf.LazyStringArrayList.emptyList();
+  /**
+   * <pre>
+   * OIDC redirect URIs StartOidcLogin may send the browser back to (exact
+   * match). Each must be https, http on a loopback IP for native apps, or a
+   * private-use scheme with a dot (com.example.app:/oauth2redirect). At most
+   * 20, each at most 512 characters, no fragment.
+   * </pre>
+   *
+   * <code>repeated string redirect_uris = 19 [json_name = "redirectUris"];</code>
+   * @return A list containing the redirectUris.
+   */
+  public com.google.protobuf.ProtocolStringList
+      getRedirectUrisList() {
+    return redirectUris_;
+  }
+  /**
+   * <pre>
+   * OIDC redirect URIs StartOidcLogin may send the browser back to (exact
+   * match). Each must be https, http on a loopback IP for native apps, or a
+   * private-use scheme with a dot (com.example.app:/oauth2redirect). At most
+   * 20, each at most 512 characters, no fragment.
+   * </pre>
+   *
+   * <code>repeated string redirect_uris = 19 [json_name = "redirectUris"];</code>
+   * @return The count of redirectUris.
+   */
+  public int getRedirectUrisCount() {
+    return redirectUris_.size();
+  }
+  /**
+   * <pre>
+   * OIDC redirect URIs StartOidcLogin may send the browser back to (exact
+   * match). Each must be https, http on a loopback IP for native apps, or a
+   * private-use scheme with a dot (com.example.app:/oauth2redirect). At most
+   * 20, each at most 512 characters, no fragment.
+   * </pre>
+   *
+   * <code>repeated string redirect_uris = 19 [json_name = "redirectUris"];</code>
+   * @param index The index of the element to return.
+   * @return The redirectUris at the given index.
+   */
+  public java.lang.String getRedirectUris(int index) {
+    return redirectUris_.get(index);
+  }
+  /**
+   * <pre>
+   * OIDC redirect URIs StartOidcLogin may send the browser back to (exact
+   * match). Each must be https, http on a loopback IP for native apps, or a
+   * private-use scheme with a dot (com.example.app:/oauth2redirect). At most
+   * 20, each at most 512 characters, no fragment.
+   * </pre>
+   *
+   * <code>repeated string redirect_uris = 19 [json_name = "redirectUris"];</code>
+   * @param index The index of the value to return.
+   * @return The bytes of the redirectUris at the given index.
+   */
+  public com.google.protobuf.ByteString
+      getRedirectUrisBytes(int index) {
+    return redirectUris_.getByteString(index);
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -799,6 +866,9 @@ private static final long serialVersionUID = 0L;
     }
     if (((bitField0_ & 0x00000001) != 0)) {
       output.writeMessage(18, getContext());
+    }
+    for (int i = 0; i < redirectUris_.size(); i++) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 19, redirectUris_.getRaw(i));
     }
     getUnknownFields().writeTo(output);
   }
@@ -876,6 +946,14 @@ private static final long serialVersionUID = 0L;
       size += com.google.protobuf.CodedOutputStream
         .computeMessageSize(18, getContext());
     }
+    {
+      int dataSize = 0;
+      for (int i = 0; i < redirectUris_.size(); i++) {
+        dataSize += computeStringSizeNoTag(redirectUris_.getRaw(i));
+      }
+      size += dataSize;
+      size += 2 * getRedirectUrisList().size();
+    }
     size += getUnknownFields().getSerializedSize();
     memoizedSize = size;
     return size;
@@ -929,6 +1007,8 @@ private static final long serialVersionUID = 0L;
       if (!getContext()
           .equals(other.getContext())) return false;
     }
+    if (!getRedirectUrisList()
+        .equals(other.getRedirectUrisList())) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -982,6 +1062,10 @@ private static final long serialVersionUID = 0L;
     if (hasContext()) {
       hash = (37 * hash) + CONTEXT_FIELD_NUMBER;
       hash = (53 * hash) + getContext().hashCode();
+    }
+    if (getRedirectUrisCount() > 0) {
+      hash = (37 * hash) + REDIRECT_URIS_FIELD_NUMBER;
+      hash = (53 * hash) + getRedirectUrisList().hashCode();
     }
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
@@ -1144,6 +1228,8 @@ private static final long serialVersionUID = 0L;
         contextBuilder_.dispose();
         contextBuilder_ = null;
       }
+      redirectUris_ =
+          com.google.protobuf.LazyStringArrayList.emptyList();
       return this;
     }
 
@@ -1236,6 +1322,10 @@ private static final long serialVersionUID = 0L;
             ? context_
             : contextBuilder_.build();
         to_bitField0_ |= 0x00000001;
+      }
+      if (((from_bitField0_ & 0x00040000) != 0)) {
+        redirectUris_.makeImmutable();
+        result.redirectUris_ = redirectUris_;
       }
       result.bitField0_ |= to_bitField0_;
     }
@@ -1345,6 +1435,16 @@ private static final long serialVersionUID = 0L;
       }
       if (other.hasContext()) {
         mergeContext(other.getContext());
+      }
+      if (!other.redirectUris_.isEmpty()) {
+        if (redirectUris_.isEmpty()) {
+          redirectUris_ = other.redirectUris_;
+          bitField0_ |= 0x00040000;
+        } else {
+          ensureRedirectUrisIsMutable();
+          redirectUris_.addAll(other.redirectUris_);
+        }
+        onChanged();
       }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
@@ -1466,6 +1566,12 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00020000;
               break;
             } // case 146
+            case 154: {
+              java.lang.String s = input.readStringRequireUtf8();
+              ensureRedirectUrisIsMutable();
+              redirectUris_.add(s);
+              break;
+            } // case 154
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -2928,6 +3034,180 @@ private static final long serialVersionUID = 0L;
         context_ = null;
       }
       return contextBuilder_;
+    }
+
+    private com.google.protobuf.LazyStringArrayList redirectUris_ =
+        com.google.protobuf.LazyStringArrayList.emptyList();
+    private void ensureRedirectUrisIsMutable() {
+      if (!redirectUris_.isModifiable()) {
+        redirectUris_ = new com.google.protobuf.LazyStringArrayList(redirectUris_);
+      }
+      bitField0_ |= 0x00040000;
+    }
+    /**
+     * <pre>
+     * OIDC redirect URIs StartOidcLogin may send the browser back to (exact
+     * match). Each must be https, http on a loopback IP for native apps, or a
+     * private-use scheme with a dot (com.example.app:/oauth2redirect). At most
+     * 20, each at most 512 characters, no fragment.
+     * </pre>
+     *
+     * <code>repeated string redirect_uris = 19 [json_name = "redirectUris"];</code>
+     * @return A list containing the redirectUris.
+     */
+    public com.google.protobuf.ProtocolStringList
+        getRedirectUrisList() {
+      redirectUris_.makeImmutable();
+      return redirectUris_;
+    }
+    /**
+     * <pre>
+     * OIDC redirect URIs StartOidcLogin may send the browser back to (exact
+     * match). Each must be https, http on a loopback IP for native apps, or a
+     * private-use scheme with a dot (com.example.app:/oauth2redirect). At most
+     * 20, each at most 512 characters, no fragment.
+     * </pre>
+     *
+     * <code>repeated string redirect_uris = 19 [json_name = "redirectUris"];</code>
+     * @return The count of redirectUris.
+     */
+    public int getRedirectUrisCount() {
+      return redirectUris_.size();
+    }
+    /**
+     * <pre>
+     * OIDC redirect URIs StartOidcLogin may send the browser back to (exact
+     * match). Each must be https, http on a loopback IP for native apps, or a
+     * private-use scheme with a dot (com.example.app:/oauth2redirect). At most
+     * 20, each at most 512 characters, no fragment.
+     * </pre>
+     *
+     * <code>repeated string redirect_uris = 19 [json_name = "redirectUris"];</code>
+     * @param index The index of the element to return.
+     * @return The redirectUris at the given index.
+     */
+    public java.lang.String getRedirectUris(int index) {
+      return redirectUris_.get(index);
+    }
+    /**
+     * <pre>
+     * OIDC redirect URIs StartOidcLogin may send the browser back to (exact
+     * match). Each must be https, http on a loopback IP for native apps, or a
+     * private-use scheme with a dot (com.example.app:/oauth2redirect). At most
+     * 20, each at most 512 characters, no fragment.
+     * </pre>
+     *
+     * <code>repeated string redirect_uris = 19 [json_name = "redirectUris"];</code>
+     * @param index The index of the value to return.
+     * @return The bytes of the redirectUris at the given index.
+     */
+    public com.google.protobuf.ByteString
+        getRedirectUrisBytes(int index) {
+      return redirectUris_.getByteString(index);
+    }
+    /**
+     * <pre>
+     * OIDC redirect URIs StartOidcLogin may send the browser back to (exact
+     * match). Each must be https, http on a loopback IP for native apps, or a
+     * private-use scheme with a dot (com.example.app:/oauth2redirect). At most
+     * 20, each at most 512 characters, no fragment.
+     * </pre>
+     *
+     * <code>repeated string redirect_uris = 19 [json_name = "redirectUris"];</code>
+     * @param index The index to set the value at.
+     * @param value The redirectUris to set.
+     * @return This builder for chaining.
+     */
+    public Builder setRedirectUris(
+        int index, java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      ensureRedirectUrisIsMutable();
+      redirectUris_.set(index, value);
+      bitField0_ |= 0x00040000;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * OIDC redirect URIs StartOidcLogin may send the browser back to (exact
+     * match). Each must be https, http on a loopback IP for native apps, or a
+     * private-use scheme with a dot (com.example.app:/oauth2redirect). At most
+     * 20, each at most 512 characters, no fragment.
+     * </pre>
+     *
+     * <code>repeated string redirect_uris = 19 [json_name = "redirectUris"];</code>
+     * @param value The redirectUris to add.
+     * @return This builder for chaining.
+     */
+    public Builder addRedirectUris(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      ensureRedirectUrisIsMutable();
+      redirectUris_.add(value);
+      bitField0_ |= 0x00040000;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * OIDC redirect URIs StartOidcLogin may send the browser back to (exact
+     * match). Each must be https, http on a loopback IP for native apps, or a
+     * private-use scheme with a dot (com.example.app:/oauth2redirect). At most
+     * 20, each at most 512 characters, no fragment.
+     * </pre>
+     *
+     * <code>repeated string redirect_uris = 19 [json_name = "redirectUris"];</code>
+     * @param values The redirectUris to add.
+     * @return This builder for chaining.
+     */
+    public Builder addAllRedirectUris(
+        java.lang.Iterable<java.lang.String> values) {
+      ensureRedirectUrisIsMutable();
+      com.google.protobuf.AbstractMessageLite.Builder.addAll(
+          values, redirectUris_);
+      bitField0_ |= 0x00040000;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * OIDC redirect URIs StartOidcLogin may send the browser back to (exact
+     * match). Each must be https, http on a loopback IP for native apps, or a
+     * private-use scheme with a dot (com.example.app:/oauth2redirect). At most
+     * 20, each at most 512 characters, no fragment.
+     * </pre>
+     *
+     * <code>repeated string redirect_uris = 19 [json_name = "redirectUris"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearRedirectUris() {
+      redirectUris_ =
+        com.google.protobuf.LazyStringArrayList.emptyList();
+      bitField0_ = (bitField0_ & ~0x00040000);;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * OIDC redirect URIs StartOidcLogin may send the browser back to (exact
+     * match). Each must be https, http on a loopback IP for native apps, or a
+     * private-use scheme with a dot (com.example.app:/oauth2redirect). At most
+     * 20, each at most 512 characters, no fragment.
+     * </pre>
+     *
+     * <code>repeated string redirect_uris = 19 [json_name = "redirectUris"];</code>
+     * @param value The bytes of the redirectUris to add.
+     * @return This builder for chaining.
+     */
+    public Builder addRedirectUrisBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      ensureRedirectUrisIsMutable();
+      redirectUris_.add(value);
+      bitField0_ |= 0x00040000;
+      onChanged();
+      return this;
     }
 
     // @@protoc_insertion_point(builder_scope:udb.core.idp.services.v1.CreateProviderRequest)

@@ -7,7 +7,7 @@ Inputs:
 - `sdk/go/udbclient/generated_client.go`
 - `docs/site/bench-results.json`
 
-Current generated RPC surface: 408 RPCs across 29 services.
+Current generated RPC surface: 423 RPCs across 29 services.
 
 The benchmark body manifest is checked against generated SDK metadata before this
 file is written. A missing row, extra row, alias drift, operationId drift, or
@@ -37,7 +37,7 @@ stack, with request bodies taken from the plan the shared Python seed exports.
 | AnalyticsService | 7 | 5 | 2 | 0 | 0 |
 | ApiKeyService | 9 | 4 | 4 | 1 | 0 |
 | AssetService | 8 | 4 | 4 | 0 | 0 |
-| AuthnService | 64 | 18 | 34 | 12 | 0 |
+| AuthnService | 79 | 22 | 44 | 13 | 0 |
 | AuthzService | 41 | 18 | 17 | 6 | 0 |
 | BackupService | 8 | 4 | 3 | 1 | 0 |
 | CacheService | 8 | 3 | 4 | 1 | 0 |
@@ -95,6 +95,7 @@ benchmark harnesses.
 | AssetService | `AssetService/ListAssets` | `list_assets` | `listAssets` | READ_ONLY | asset.md |
 | AssetService | `AssetService/RegisterAsset` | `register_asset` | `registerAsset` | MUTATION | asset.md |
 | AssetService | `AssetService/StartPipeline` | `start_pipeline` | `startPipeline` | MUTATION | asset.md |
+| AuthnService | `AuthnService/AcceptInvitation` | `accept_invitation` | `acceptInvitation` | MUTATION | authn.md |
 | AuthnService | `AuthnService/AdminResetMfa` | `admin_reset_mfa` | `adminResetMfa` | DESTRUCTIVE | authn.md |
 | AuthnService | `AuthnService/AdminResetPassword` | `admin_reset_password` | `adminResetPassword` | DESTRUCTIVE | authn.md |
 | AuthnService | `AuthnService/AdminRevokeAllTenantSessions` | `admin_revoke_all_tenant_sessions` | `adminRevokeAllTenantSessions` | DESTRUCTIVE | authn.md |
@@ -103,8 +104,10 @@ benchmark harnesses.
 | AuthnService | `AuthnService/Authenticate` | `authenticate` | `authenticate` | READ_ONLY | authn.md |
 | AuthnService | `AuthnService/ChangePassword` | `change_password` | `changePassword` | MUTATION | authn.md |
 | AuthnService | `AuthnService/ChangeUserStatus` | `change_user_status` | `changeUserStatus` | DESTRUCTIVE | authn.md |
+| AuthnService | `AuthnService/CheckStepUp` | `check_step_up` | `checkStepUp` | READ_ONLY | authn.md |
 | AuthnService | `AuthnService/ConfirmMFAEnrollment` | `confirm_mfaenrollment` | `confirmMfaenrollment` | MUTATION | authn.md |
 | AuthnService | `AuthnService/CreateCertificateBinding` | `create_certificate_binding` | `createCertificateBinding` | MUTATION | authn.md |
+| AuthnService | `AuthnService/CreateInvitation` | `create_invitation` | `createInvitation` | MUTATION | authn.md |
 | AuthnService | `AuthnService/CreateServiceAccountGrant` | `create_service_account_grant` | `createServiceAccountGrant` | MUTATION | authn.md |
 | AuthnService | `AuthnService/CreateServiceAccountTenantMembership` | `create_service_account_tenant_membership` | `createServiceAccountTenantMembership` | MUTATION | authn.md |
 | AuthnService | `AuthnService/CreateSession` | `create_session` | `createSession` | MUTATION | authn.md |
@@ -114,19 +117,23 @@ benchmark harnesses.
 | AuthnService | `AuthnService/EmergencyRevoke` | `emergency_revoke` | `emergencyRevoke` | DESTRUCTIVE | authn.md |
 | AuthnService | `AuthnService/EnrollMFA` | `enroll_mfa` | `enrollMfa` | MUTATION | authn.md |
 | AuthnService | `AuthnService/ExchangeServiceTokenForTenant` | `exchange_service_token_for_tenant` | `exchangeServiceTokenForTenant` | MUTATION | authn.md |
+| AuthnService | `AuthnService/FinishOidcLogin` | `finish_oidc_login` | `finishOidcLogin` | MUTATION | authn.md |
 | AuthnService | `AuthnService/FinishWebAuthnAuthentication` | `finish_web_authn_authentication` | `finishWebAuthnAuthentication` | MUTATION | authn.md |
 | AuthnService | `AuthnService/FinishWebAuthnRegistration` | `finish_web_authn_registration` | `finishWebAuthnRegistration` | MUTATION | authn.md |
 | AuthnService | `AuthnService/ForgotPassword` | `forgot_password` | `forgotPassword` | MUTATION | authn.md |
 | AuthnService | `AuthnService/GenerateRecoveryCodes` | `generate_recovery_codes` | `generateRecoveryCodes` | MUTATION | authn.md |
+| AuthnService | `AuthnService/GetInvitation` | `get_invitation` | `getInvitation` | READ_ONLY | authn.md |
 | AuthnService | `AuthnService/GetJwks` | `get_jwks` | `getJwks` | READ_ONLY | authn.md |
 | AuthnService | `AuthnService/GetMfaPolicy` | `get_mfa_policy` | `getMfaPolicy` | READ_ONLY | authn.md |
 | AuthnService | `AuthnService/GetServiceAccountGrant` | `get_service_account_grant` | `getServiceAccountGrant` | READ_ONLY | authn.md |
 | AuthnService | `AuthnService/GetSession` | `get_session` | `getSession` | READ_ONLY | authn.md |
+| AuthnService | `AuthnService/GetTenantAuthPolicy` | `get_tenant_auth_policy` | `getTenantAuthPolicy` | READ_ONLY | authn.md |
 | AuthnService | `AuthnService/GetUser` | `get_user` | `getUser` | READ_ONLY | authn.md |
 | AuthnService | `AuthnService/IntrospectToken` | `introspect_token` | `introspectToken` | READ_ONLY | authn.md |
 | AuthnService | `AuthnService/IssueMfaChallenge` | `issue_mfa_challenge` | `issueMfaChallenge` | MUTATION | authn.md |
 | AuthnService | `AuthnService/ListCertificateBindings` | `list_certificate_bindings` | `listCertificateBindings` | READ_ONLY | authn.md |
 | AuthnService | `AuthnService/ListDevices` | `list_devices` | `listDevices` | READ_ONLY | authn.md |
+| AuthnService | `AuthnService/ListInvitations` | `list_invitations` | `listInvitations` | READ_ONLY | authn.md |
 | AuthnService | `AuthnService/ListMfaFactors` | `list_mfa_factors` | `listMfaFactors` | READ_ONLY | authn.md |
 | AuthnService | `AuthnService/ListServiceAccountGrants` | `list_service_account_grants` | `listServiceAccountGrants` | READ_ONLY | authn.md |
 | AuthnService | `AuthnService/ListServiceAccountTenantMemberships` | `list_service_account_tenant_memberships` | `listServiceAccountTenantMemberships` | READ_ONLY | authn.md |
@@ -134,23 +141,31 @@ benchmark harnesses.
 | AuthnService | `AuthnService/ListUsers` | `list_users` | `listUsers` | READ_ONLY | authn.md |
 | AuthnService | `AuthnService/ListWebAuthnCredentials` | `list_web_authn_credentials` | `listWebAuthnCredentials` | READ_ONLY | authn.md |
 | AuthnService | `AuthnService/Login` | `login` | `login` | MUTATION | authn.md |
+| AuthnService | `AuthnService/LoginWithOidcIdToken` | `login_with_oidc_id_token` | `loginWithOidcIdToken` | MUTATION | authn.md |
+| AuthnService | `AuthnService/LoginWithOtp` | `login_with_otp` | `loginWithOtp` | MUTATION | authn.md |
 | AuthnService | `AuthnService/Logout` | `logout` | `logout` | MUTATION | authn.md |
 | AuthnService | `AuthnService/PutMfaPolicy` | `put_mfa_policy` | `putMfaPolicy` | MUTATION | authn.md |
+| AuthnService | `AuthnService/PutTenantAuthPolicy` | `put_tenant_auth_policy` | `putTenantAuthPolicy` | MUTATION | authn.md |
 | AuthnService | `AuthnService/RefreshSession` | `refresh_session` | `refreshSession` | MUTATION | authn.md |
 | AuthnService | `AuthnService/RefreshToken` | `refresh_token` | `refreshToken` | MUTATION | authn.md |
 | AuthnService | `AuthnService/RenamePasskey` | `rename_passkey` | `renamePasskey` | MUTATION | authn.md |
 | AuthnService | `AuthnService/ReplaceServiceAccountGrant` | `replace_service_account_grant` | `replaceServiceAccountGrant` | MUTATION | authn.md |
+| AuthnService | `AuthnService/ResendInvitation` | `resend_invitation` | `resendInvitation` | MUTATION | authn.md |
 | AuthnService | `AuthnService/ResendOTP` | `resend_otp` | `resendOtp` | MUTATION | authn.md |
 | AuthnService | `AuthnService/ResetPassword` | `reset_password` | `resetPassword` | MUTATION | authn.md |
 | AuthnService | `AuthnService/RevokeCertificateBinding` | `revoke_certificate_binding` | `revokeCertificateBinding` | DESTRUCTIVE | authn.md |
 | AuthnService | `AuthnService/RevokeDevice` | `revoke_device` | `revokeDevice` | MUTATION | authn.md |
+| AuthnService | `AuthnService/RevokeInvitation` | `revoke_invitation` | `revokeInvitation` | DESTRUCTIVE | authn.md |
 | AuthnService | `AuthnService/RevokeRecoveryCodes` | `revoke_recovery_codes` | `revokeRecoveryCodes` | MUTATION | authn.md |
 | AuthnService | `AuthnService/RevokeServiceAccountGrant` | `revoke_service_account_grant` | `revokeServiceAccountGrant` | DESTRUCTIVE | authn.md |
 | AuthnService | `AuthnService/RevokeServiceAccountTenantMembership` | `revoke_service_account_tenant_membership` | `revokeServiceAccountTenantMembership` | DESTRUCTIVE | authn.md |
 | AuthnService | `AuthnService/RevokeSession` | `revoke_session` | `revokeSession` | MUTATION | authn.md |
 | AuthnService | `AuthnService/RotateServiceAccountIdentity` | `rotate_service_account_identity` | `rotateServiceAccountIdentity` | DESTRUCTIVE | authn.md |
+| AuthnService | `AuthnService/SendLoginOtp` | `send_login_otp` | `sendLoginOtp` | MUTATION | authn.md |
 | AuthnService | `AuthnService/SendOTP` | `send_otp` | `sendOtp` | MUTATION | authn.md |
 | AuthnService | `AuthnService/SendPhoneVerification` | `send_phone_verification` | `sendPhoneVerification` | MUTATION | authn.md |
+| AuthnService | `AuthnService/StartInvitationAcceptance` | `start_invitation_acceptance` | `startInvitationAcceptance` | MUTATION | authn.md |
+| AuthnService | `AuthnService/StartOidcLogin` | `start_oidc_login` | `startOidcLogin` | MUTATION | authn.md |
 | AuthnService | `AuthnService/StartWebAuthnAuthentication` | `start_web_authn_authentication` | `startWebAuthnAuthentication` | MUTATION | authn.md |
 | AuthnService | `AuthnService/StartWebAuthnRegistration` | `start_web_authn_registration` | `startWebAuthnRegistration` | MUTATION | authn.md |
 | AuthnService | `AuthnService/TransferServiceAccountGrant` | `transfer_service_account_grant` | `transferServiceAccountGrant` | DESTRUCTIVE | authn.md |

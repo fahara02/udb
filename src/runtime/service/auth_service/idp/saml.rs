@@ -617,7 +617,9 @@ pub const DEV_SENTINEL: &str = "__UDB_SAML_TEST__";
 /// Dev IdP signing keypair + self-signed cert (RSA-2048, generated once with
 /// openssl). The key only ever signs assertions consumed by THIS broker in test
 /// mode; it is inert unless `dev_self_assert` is called behind the runtime gate.
-const DEV_IDP_KEY_PKCS8_PEM: &str = "-----BEGIN PRIVATE KEY-----\n\
+/// The dev OpenID provider (`oidc_signin`, `UDB_OIDC_TEST_MODE`) signs its ID
+/// tokens with the same dev-only key, behind its own runtime gate.
+pub(super) const DEV_IDP_KEY_PKCS8_PEM: &str = "-----BEGIN PRIVATE KEY-----\n\
 MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQC1ghN2ucF/7n9B\n\
 UhQ7Ozcq8jU/ngwXeHp6umvGRjadfqOaA5MOoy6Zc1mFLHTOiJw58pHM+oFB7BRo\n\
 OKIM/FcTdGhDg6JX22SxXhRex7MYjjelStd0JRKjzzJs4lV7wrXUhCoDCeFftGSx\n\

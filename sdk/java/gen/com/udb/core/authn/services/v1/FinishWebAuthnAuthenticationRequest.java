@@ -30,6 +30,10 @@ private static final long serialVersionUID = 0L;
   private FinishWebAuthnAuthenticationRequest() {
     challengeId_ = "";
     publicKeyCredentialJson_ = "";
+    deviceName_ = "";
+    ipAddress_ = "";
+    userAgent_ = "";
+    deviceId_ = "";
   }
 
   public static final com.google.protobuf.Descriptors.Descriptor
@@ -150,6 +154,186 @@ private static final long serialVersionUID = 0L;
     return context_ == null ? com.udb.core.common.v1.RequestContext.getDefaultInstance() : context_;
   }
 
+  public static final int DEVICE_NAME_FIELD_NUMBER = 4;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object deviceName_ = "";
+  /**
+   * <pre>
+   * Optional client details recorded on the session and device list, like Login.
+   * </pre>
+   *
+   * <code>string device_name = 4 [json_name = "deviceName"];</code>
+   * @return The deviceName.
+   */
+  @java.lang.Override
+  public java.lang.String getDeviceName() {
+    java.lang.Object ref = deviceName_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs =
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      deviceName_ = s;
+      return s;
+    }
+  }
+  /**
+   * <pre>
+   * Optional client details recorded on the session and device list, like Login.
+   * </pre>
+   *
+   * <code>string device_name = 4 [json_name = "deviceName"];</code>
+   * @return The bytes for deviceName.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getDeviceNameBytes() {
+    java.lang.Object ref = deviceName_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b =
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      deviceName_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
+  public static final int IP_ADDRESS_FIELD_NUMBER = 5;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object ipAddress_ = "";
+  /**
+   * <pre>
+   * forwarded by the gateway
+   * </pre>
+   *
+   * <code>string ip_address = 5 [json_name = "ipAddress"];</code>
+   * @return The ipAddress.
+   */
+  @java.lang.Override
+  public java.lang.String getIpAddress() {
+    java.lang.Object ref = ipAddress_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs =
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      ipAddress_ = s;
+      return s;
+    }
+  }
+  /**
+   * <pre>
+   * forwarded by the gateway
+   * </pre>
+   *
+   * <code>string ip_address = 5 [json_name = "ipAddress"];</code>
+   * @return The bytes for ipAddress.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getIpAddressBytes() {
+    java.lang.Object ref = ipAddress_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b =
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      ipAddress_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
+  public static final int USER_AGENT_FIELD_NUMBER = 6;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object userAgent_ = "";
+  /**
+   * <code>string user_agent = 6 [json_name = "userAgent"];</code>
+   * @return The userAgent.
+   */
+  @java.lang.Override
+  public java.lang.String getUserAgent() {
+    java.lang.Object ref = userAgent_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs =
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      userAgent_ = s;
+      return s;
+    }
+  }
+  /**
+   * <code>string user_agent = 6 [json_name = "userAgent"];</code>
+   * @return The bytes for userAgent.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getUserAgentBytes() {
+    java.lang.Object ref = userAgent_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b =
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      userAgent_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
+  public static final int DEVICE_ID_FIELD_NUMBER = 7;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object deviceId_ = "";
+  /**
+   * <pre>
+   * client device fingerprint (registers the device for ListDevices)
+   * </pre>
+   *
+   * <code>string device_id = 7 [json_name = "deviceId"];</code>
+   * @return The deviceId.
+   */
+  @java.lang.Override
+  public java.lang.String getDeviceId() {
+    java.lang.Object ref = deviceId_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs =
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      deviceId_ = s;
+      return s;
+    }
+  }
+  /**
+   * <pre>
+   * client device fingerprint (registers the device for ListDevices)
+   * </pre>
+   *
+   * <code>string device_id = 7 [json_name = "deviceId"];</code>
+   * @return The bytes for deviceId.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getDeviceIdBytes() {
+    java.lang.Object ref = deviceId_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b =
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      deviceId_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -173,6 +357,18 @@ private static final long serialVersionUID = 0L;
     if (((bitField0_ & 0x00000001) != 0)) {
       output.writeMessage(3, getContext());
     }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(deviceName_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 4, deviceName_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(ipAddress_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 5, ipAddress_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(userAgent_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 6, userAgent_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(deviceId_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 7, deviceId_);
+    }
     getUnknownFields().writeTo(output);
   }
 
@@ -191,6 +387,18 @@ private static final long serialVersionUID = 0L;
     if (((bitField0_ & 0x00000001) != 0)) {
       size += com.google.protobuf.CodedOutputStream
         .computeMessageSize(3, getContext());
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(deviceName_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(4, deviceName_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(ipAddress_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(5, ipAddress_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(userAgent_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(6, userAgent_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(deviceId_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(7, deviceId_);
     }
     size += getUnknownFields().getSerializedSize();
     memoizedSize = size;
@@ -216,6 +424,14 @@ private static final long serialVersionUID = 0L;
       if (!getContext()
           .equals(other.getContext())) return false;
     }
+    if (!getDeviceName()
+        .equals(other.getDeviceName())) return false;
+    if (!getIpAddress()
+        .equals(other.getIpAddress())) return false;
+    if (!getUserAgent()
+        .equals(other.getUserAgent())) return false;
+    if (!getDeviceId()
+        .equals(other.getDeviceId())) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -235,6 +451,14 @@ private static final long serialVersionUID = 0L;
       hash = (37 * hash) + CONTEXT_FIELD_NUMBER;
       hash = (53 * hash) + getContext().hashCode();
     }
+    hash = (37 * hash) + DEVICE_NAME_FIELD_NUMBER;
+    hash = (53 * hash) + getDeviceName().hashCode();
+    hash = (37 * hash) + IP_ADDRESS_FIELD_NUMBER;
+    hash = (53 * hash) + getIpAddress().hashCode();
+    hash = (37 * hash) + USER_AGENT_FIELD_NUMBER;
+    hash = (53 * hash) + getUserAgent().hashCode();
+    hash = (37 * hash) + DEVICE_ID_FIELD_NUMBER;
+    hash = (53 * hash) + getDeviceId().hashCode();
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -379,6 +603,10 @@ private static final long serialVersionUID = 0L;
         contextBuilder_.dispose();
         contextBuilder_ = null;
       }
+      deviceName_ = "";
+      ipAddress_ = "";
+      userAgent_ = "";
+      deviceId_ = "";
       return this;
     }
 
@@ -425,6 +653,18 @@ private static final long serialVersionUID = 0L;
             : contextBuilder_.build();
         to_bitField0_ |= 0x00000001;
       }
+      if (((from_bitField0_ & 0x00000008) != 0)) {
+        result.deviceName_ = deviceName_;
+      }
+      if (((from_bitField0_ & 0x00000010) != 0)) {
+        result.ipAddress_ = ipAddress_;
+      }
+      if (((from_bitField0_ & 0x00000020) != 0)) {
+        result.userAgent_ = userAgent_;
+      }
+      if (((from_bitField0_ & 0x00000040) != 0)) {
+        result.deviceId_ = deviceId_;
+      }
       result.bitField0_ |= to_bitField0_;
     }
 
@@ -452,6 +692,26 @@ private static final long serialVersionUID = 0L;
       }
       if (other.hasContext()) {
         mergeContext(other.getContext());
+      }
+      if (!other.getDeviceName().isEmpty()) {
+        deviceName_ = other.deviceName_;
+        bitField0_ |= 0x00000008;
+        onChanged();
+      }
+      if (!other.getIpAddress().isEmpty()) {
+        ipAddress_ = other.ipAddress_;
+        bitField0_ |= 0x00000010;
+        onChanged();
+      }
+      if (!other.getUserAgent().isEmpty()) {
+        userAgent_ = other.userAgent_;
+        bitField0_ |= 0x00000020;
+        onChanged();
+      }
+      if (!other.getDeviceId().isEmpty()) {
+        deviceId_ = other.deviceId_;
+        bitField0_ |= 0x00000040;
+        onChanged();
       }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
@@ -496,6 +756,26 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00000004;
               break;
             } // case 26
+            case 34: {
+              deviceName_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00000008;
+              break;
+            } // case 34
+            case 42: {
+              ipAddress_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00000010;
+              break;
+            } // case 42
+            case 50: {
+              userAgent_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00000020;
+              break;
+            } // case 50
+            case 58: {
+              deviceId_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00000040;
+              break;
+            } // case 58
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -776,6 +1056,354 @@ private static final long serialVersionUID = 0L;
         context_ = null;
       }
       return contextBuilder_;
+    }
+
+    private java.lang.Object deviceName_ = "";
+    /**
+     * <pre>
+     * Optional client details recorded on the session and device list, like Login.
+     * </pre>
+     *
+     * <code>string device_name = 4 [json_name = "deviceName"];</code>
+     * @return The deviceName.
+     */
+    public java.lang.String getDeviceName() {
+      java.lang.Object ref = deviceName_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        deviceName_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <pre>
+     * Optional client details recorded on the session and device list, like Login.
+     * </pre>
+     *
+     * <code>string device_name = 4 [json_name = "deviceName"];</code>
+     * @return The bytes for deviceName.
+     */
+    public com.google.protobuf.ByteString
+        getDeviceNameBytes() {
+      java.lang.Object ref = deviceName_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b =
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        deviceName_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <pre>
+     * Optional client details recorded on the session and device list, like Login.
+     * </pre>
+     *
+     * <code>string device_name = 4 [json_name = "deviceName"];</code>
+     * @param value The deviceName to set.
+     * @return This builder for chaining.
+     */
+    public Builder setDeviceName(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      deviceName_ = value;
+      bitField0_ |= 0x00000008;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Optional client details recorded on the session and device list, like Login.
+     * </pre>
+     *
+     * <code>string device_name = 4 [json_name = "deviceName"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearDeviceName() {
+      deviceName_ = getDefaultInstance().getDeviceName();
+      bitField0_ = (bitField0_ & ~0x00000008);
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Optional client details recorded on the session and device list, like Login.
+     * </pre>
+     *
+     * <code>string device_name = 4 [json_name = "deviceName"];</code>
+     * @param value The bytes for deviceName to set.
+     * @return This builder for chaining.
+     */
+    public Builder setDeviceNameBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      deviceName_ = value;
+      bitField0_ |= 0x00000008;
+      onChanged();
+      return this;
+    }
+
+    private java.lang.Object ipAddress_ = "";
+    /**
+     * <pre>
+     * forwarded by the gateway
+     * </pre>
+     *
+     * <code>string ip_address = 5 [json_name = "ipAddress"];</code>
+     * @return The ipAddress.
+     */
+    public java.lang.String getIpAddress() {
+      java.lang.Object ref = ipAddress_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        ipAddress_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <pre>
+     * forwarded by the gateway
+     * </pre>
+     *
+     * <code>string ip_address = 5 [json_name = "ipAddress"];</code>
+     * @return The bytes for ipAddress.
+     */
+    public com.google.protobuf.ByteString
+        getIpAddressBytes() {
+      java.lang.Object ref = ipAddress_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b =
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        ipAddress_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <pre>
+     * forwarded by the gateway
+     * </pre>
+     *
+     * <code>string ip_address = 5 [json_name = "ipAddress"];</code>
+     * @param value The ipAddress to set.
+     * @return This builder for chaining.
+     */
+    public Builder setIpAddress(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      ipAddress_ = value;
+      bitField0_ |= 0x00000010;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * forwarded by the gateway
+     * </pre>
+     *
+     * <code>string ip_address = 5 [json_name = "ipAddress"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearIpAddress() {
+      ipAddress_ = getDefaultInstance().getIpAddress();
+      bitField0_ = (bitField0_ & ~0x00000010);
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * forwarded by the gateway
+     * </pre>
+     *
+     * <code>string ip_address = 5 [json_name = "ipAddress"];</code>
+     * @param value The bytes for ipAddress to set.
+     * @return This builder for chaining.
+     */
+    public Builder setIpAddressBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      ipAddress_ = value;
+      bitField0_ |= 0x00000010;
+      onChanged();
+      return this;
+    }
+
+    private java.lang.Object userAgent_ = "";
+    /**
+     * <code>string user_agent = 6 [json_name = "userAgent"];</code>
+     * @return The userAgent.
+     */
+    public java.lang.String getUserAgent() {
+      java.lang.Object ref = userAgent_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        userAgent_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <code>string user_agent = 6 [json_name = "userAgent"];</code>
+     * @return The bytes for userAgent.
+     */
+    public com.google.protobuf.ByteString
+        getUserAgentBytes() {
+      java.lang.Object ref = userAgent_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b =
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        userAgent_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <code>string user_agent = 6 [json_name = "userAgent"];</code>
+     * @param value The userAgent to set.
+     * @return This builder for chaining.
+     */
+    public Builder setUserAgent(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      userAgent_ = value;
+      bitField0_ |= 0x00000020;
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>string user_agent = 6 [json_name = "userAgent"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearUserAgent() {
+      userAgent_ = getDefaultInstance().getUserAgent();
+      bitField0_ = (bitField0_ & ~0x00000020);
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>string user_agent = 6 [json_name = "userAgent"];</code>
+     * @param value The bytes for userAgent to set.
+     * @return This builder for chaining.
+     */
+    public Builder setUserAgentBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      userAgent_ = value;
+      bitField0_ |= 0x00000020;
+      onChanged();
+      return this;
+    }
+
+    private java.lang.Object deviceId_ = "";
+    /**
+     * <pre>
+     * client device fingerprint (registers the device for ListDevices)
+     * </pre>
+     *
+     * <code>string device_id = 7 [json_name = "deviceId"];</code>
+     * @return The deviceId.
+     */
+    public java.lang.String getDeviceId() {
+      java.lang.Object ref = deviceId_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        deviceId_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <pre>
+     * client device fingerprint (registers the device for ListDevices)
+     * </pre>
+     *
+     * <code>string device_id = 7 [json_name = "deviceId"];</code>
+     * @return The bytes for deviceId.
+     */
+    public com.google.protobuf.ByteString
+        getDeviceIdBytes() {
+      java.lang.Object ref = deviceId_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b =
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        deviceId_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <pre>
+     * client device fingerprint (registers the device for ListDevices)
+     * </pre>
+     *
+     * <code>string device_id = 7 [json_name = "deviceId"];</code>
+     * @param value The deviceId to set.
+     * @return This builder for chaining.
+     */
+    public Builder setDeviceId(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      deviceId_ = value;
+      bitField0_ |= 0x00000040;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * client device fingerprint (registers the device for ListDevices)
+     * </pre>
+     *
+     * <code>string device_id = 7 [json_name = "deviceId"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearDeviceId() {
+      deviceId_ = getDefaultInstance().getDeviceId();
+      bitField0_ = (bitField0_ & ~0x00000040);
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * client device fingerprint (registers the device for ListDevices)
+     * </pre>
+     *
+     * <code>string device_id = 7 [json_name = "deviceId"];</code>
+     * @param value The bytes for deviceId to set.
+     * @return This builder for chaining.
+     */
+    public Builder setDeviceIdBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      deviceId_ = value;
+      bitField0_ |= 0x00000040;
+      onChanged();
+      return this;
     }
 
     // @@protoc_insertion_point(builder_scope:udb.core.authn.services.v1.FinishWebAuthnAuthenticationRequest)

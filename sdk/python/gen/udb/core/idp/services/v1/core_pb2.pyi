@@ -17,7 +17,7 @@ from typing import ClassVar as _ClassVar, Optional as _Optional, Union as _Union
 DESCRIPTOR: _descriptor.FileDescriptor
 
 class CreateProviderRequest(_message.Message):
-    __slots__ = ("tenant_id", "kind", "display_name", "issuer", "entity_id", "jwks_url", "saml_metadata_url", "client_ids", "audiences", "claim_mapping_json", "group_mapping_json", "jit_policy_json", "account_linking_policy", "enabled", "client_secret", "saml_signing_key_pem", "created_by", "context")
+    __slots__ = ("tenant_id", "kind", "display_name", "issuer", "entity_id", "jwks_url", "saml_metadata_url", "client_ids", "audiences", "claim_mapping_json", "group_mapping_json", "jit_policy_json", "account_linking_policy", "enabled", "client_secret", "saml_signing_key_pem", "created_by", "context", "redirect_uris")
     TENANT_ID_FIELD_NUMBER: _ClassVar[int]
     KIND_FIELD_NUMBER: _ClassVar[int]
     DISPLAY_NAME_FIELD_NUMBER: _ClassVar[int]
@@ -36,6 +36,7 @@ class CreateProviderRequest(_message.Message):
     SAML_SIGNING_KEY_PEM_FIELD_NUMBER: _ClassVar[int]
     CREATED_BY_FIELD_NUMBER: _ClassVar[int]
     CONTEXT_FIELD_NUMBER: _ClassVar[int]
+    REDIRECT_URIS_FIELD_NUMBER: _ClassVar[int]
     tenant_id: str
     kind: _enums_pb2.IdpKind
     display_name: str
@@ -54,7 +55,8 @@ class CreateProviderRequest(_message.Message):
     saml_signing_key_pem: str
     created_by: str
     context: _types_pb2.RequestContext
-    def __init__(self, tenant_id: _Optional[str] = ..., kind: _Optional[_Union[_enums_pb2.IdpKind, str]] = ..., display_name: _Optional[str] = ..., issuer: _Optional[str] = ..., entity_id: _Optional[str] = ..., jwks_url: _Optional[str] = ..., saml_metadata_url: _Optional[str] = ..., client_ids: _Optional[_Iterable[str]] = ..., audiences: _Optional[_Iterable[str]] = ..., claim_mapping_json: _Optional[str] = ..., group_mapping_json: _Optional[str] = ..., jit_policy_json: _Optional[str] = ..., account_linking_policy: _Optional[str] = ..., enabled: bool = ..., client_secret: _Optional[str] = ..., saml_signing_key_pem: _Optional[str] = ..., created_by: _Optional[str] = ..., context: _Optional[_Union[_types_pb2.RequestContext, _Mapping]] = ...) -> None: ...
+    redirect_uris: _containers.RepeatedScalarFieldContainer[str]
+    def __init__(self, tenant_id: _Optional[str] = ..., kind: _Optional[_Union[_enums_pb2.IdpKind, str]] = ..., display_name: _Optional[str] = ..., issuer: _Optional[str] = ..., entity_id: _Optional[str] = ..., jwks_url: _Optional[str] = ..., saml_metadata_url: _Optional[str] = ..., client_ids: _Optional[_Iterable[str]] = ..., audiences: _Optional[_Iterable[str]] = ..., claim_mapping_json: _Optional[str] = ..., group_mapping_json: _Optional[str] = ..., jit_policy_json: _Optional[str] = ..., account_linking_policy: _Optional[str] = ..., enabled: bool = ..., client_secret: _Optional[str] = ..., saml_signing_key_pem: _Optional[str] = ..., created_by: _Optional[str] = ..., context: _Optional[_Union[_types_pb2.RequestContext, _Mapping]] = ..., redirect_uris: _Optional[_Iterable[str]] = ...) -> None: ...
 
 class CreateProviderResponse(_message.Message):
     __slots__ = ("provider",)
@@ -63,7 +65,7 @@ class CreateProviderResponse(_message.Message):
     def __init__(self, provider: _Optional[_Union[_identity_provider_pb2.IdentityProvider, _Mapping]] = ...) -> None: ...
 
 class UpdateProviderRequest(_message.Message):
-    __slots__ = ("provider_id", "tenant_id", "display_name", "issuer", "entity_id", "jwks_url", "saml_metadata_url", "client_ids", "audiences", "claim_mapping_json", "group_mapping_json", "jit_policy_json", "account_linking_policy", "client_secret", "saml_signing_key_pem", "updated_by", "context", "update_mask")
+    __slots__ = ("provider_id", "tenant_id", "display_name", "issuer", "entity_id", "jwks_url", "saml_metadata_url", "client_ids", "audiences", "claim_mapping_json", "group_mapping_json", "jit_policy_json", "account_linking_policy", "client_secret", "saml_signing_key_pem", "updated_by", "context", "update_mask", "redirect_uris")
     PROVIDER_ID_FIELD_NUMBER: _ClassVar[int]
     TENANT_ID_FIELD_NUMBER: _ClassVar[int]
     DISPLAY_NAME_FIELD_NUMBER: _ClassVar[int]
@@ -82,6 +84,7 @@ class UpdateProviderRequest(_message.Message):
     UPDATED_BY_FIELD_NUMBER: _ClassVar[int]
     CONTEXT_FIELD_NUMBER: _ClassVar[int]
     UPDATE_MASK_FIELD_NUMBER: _ClassVar[int]
+    REDIRECT_URIS_FIELD_NUMBER: _ClassVar[int]
     provider_id: str
     tenant_id: str
     display_name: str
@@ -100,7 +103,8 @@ class UpdateProviderRequest(_message.Message):
     updated_by: str
     context: _types_pb2.RequestContext
     update_mask: _field_mask_pb2.FieldMask
-    def __init__(self, provider_id: _Optional[str] = ..., tenant_id: _Optional[str] = ..., display_name: _Optional[str] = ..., issuer: _Optional[str] = ..., entity_id: _Optional[str] = ..., jwks_url: _Optional[str] = ..., saml_metadata_url: _Optional[str] = ..., client_ids: _Optional[_Iterable[str]] = ..., audiences: _Optional[_Iterable[str]] = ..., claim_mapping_json: _Optional[str] = ..., group_mapping_json: _Optional[str] = ..., jit_policy_json: _Optional[str] = ..., account_linking_policy: _Optional[str] = ..., client_secret: _Optional[str] = ..., saml_signing_key_pem: _Optional[str] = ..., updated_by: _Optional[str] = ..., context: _Optional[_Union[_types_pb2.RequestContext, _Mapping]] = ..., update_mask: _Optional[_Union[_field_mask_pb2.FieldMask, _Mapping]] = ...) -> None: ...
+    redirect_uris: _containers.RepeatedScalarFieldContainer[str]
+    def __init__(self, provider_id: _Optional[str] = ..., tenant_id: _Optional[str] = ..., display_name: _Optional[str] = ..., issuer: _Optional[str] = ..., entity_id: _Optional[str] = ..., jwks_url: _Optional[str] = ..., saml_metadata_url: _Optional[str] = ..., client_ids: _Optional[_Iterable[str]] = ..., audiences: _Optional[_Iterable[str]] = ..., claim_mapping_json: _Optional[str] = ..., group_mapping_json: _Optional[str] = ..., jit_policy_json: _Optional[str] = ..., account_linking_policy: _Optional[str] = ..., client_secret: _Optional[str] = ..., saml_signing_key_pem: _Optional[str] = ..., updated_by: _Optional[str] = ..., context: _Optional[_Union[_types_pb2.RequestContext, _Mapping]] = ..., update_mask: _Optional[_Union[_field_mask_pb2.FieldMask, _Mapping]] = ..., redirect_uris: _Optional[_Iterable[str]] = ...) -> None: ...
 
 class UpdateProviderResponse(_message.Message):
     __slots__ = ("provider",)

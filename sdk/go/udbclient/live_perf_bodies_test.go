@@ -98,7 +98,15 @@ func TestLivePerfExplicitBodyCoverage(t *testing.T) {
 		"membership_home_tenant_id": "tenant-membership-home-1",
 		"membership_expires_at":     "2030-01-01T00:00:00Z",
 		"membership_id":             "11111111-1111-4111-8111-000000000206",
-		"join_session_room_id":      "join-room-1", "leave_peer_id": "leave-peer-1", "mark_saga_id": "mark-saga-1",
+		// 0.6.6 identity flows (live: scripts/prepare-benchmark-fixtures.py).
+		"login_otp_send_phone": "+15550000001", "login_otp_id": "11111111-1111-4111-8111-000000000301", "login_otp_code": "123456",
+		"invitation_get_id": "11111111-1111-4111-8111-000000000302", "invitation_get_token": "inv_get-1",
+		"invitation_start_id": "11111111-1111-4111-8111-000000000303", "invitation_start_token": "inv_start-1",
+		"invitation_accept_id": "11111111-1111-4111-8111-000000000304", "invitation_accept_token": "inv_accept-1",
+		"invitation_accept_otp_id": "11111111-1111-4111-8111-000000000305", "invitation_accept_otp_code": "654321",
+		"invitation_revoke_id": "11111111-1111-4111-8111-000000000306", "invitation_resend_id": "11111111-1111-4111-8111-000000000307",
+		"step_up_token": "step-up-token-1", "oidc_provider_id": "11111111-1111-4111-8111-000000000308", "oidc_state": "oidc-state-1",
+		"join_session_room_id": "join-room-1", "leave_peer_id": "leave-peer-1", "mark_saga_id": "mark-saga-1",
 		"otp_code": "123456", "otp_id": "otp-1", "recovery_code": "recovery-code-1", "owner_id": "owner-1", "quarantine_dlq_id": "quarantine-dlq-1",
 		"policy_version_id": "policy-version-1", "approve_draft_id": "approve-draft-1", "reject_draft_id": "reject-draft-1",
 		"refresh_session_id": "refresh-session-1", "reg_challenge_id": "reg-challenge-1", "replay_dlq_id": "replay-dlq-1",
@@ -137,6 +145,10 @@ var phase1AuthnOrder = []string{
 	// RefreshSession + Authenticate consume the dedicated refresh_session_id/auth_token
 	// and run BEFORE RefreshToken (which rotates the shared family) for belt-and-suspenders.
 	"Login", "RefreshSession", "Authenticate", "ValidateToken", "IntrospectToken", "RefreshToken", "GetJwks",
+	// 0.6.6 sign-ins redeem single-use prepared proofs (a 10-minute login
+	// code, OIDC state and invitation code), so they run right after session
+	// setup. Each signs a DIFFERENT account in; the benchmark bearer is kept.
+	"LoginWithOtp", "FinishOidcLogin", "LoginWithOidcIdToken", "AcceptInvitation",
 }
 
 var phase3Authn = map[string]bool{

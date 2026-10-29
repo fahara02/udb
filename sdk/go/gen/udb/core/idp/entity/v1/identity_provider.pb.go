@@ -76,13 +76,21 @@ type IdentityProvider struct {
 	LastJwksRefreshAt     *timestamppb.Timestamp `protobuf:"bytes,21,opt,name=last_jwks_refresh_at,json=lastJwksRefreshAt,proto3" json:"last_jwks_refresh_at,omitempty"`
 	LastJwksRefreshStatus string                 `protobuf:"bytes,22,opt,name=last_jwks_refresh_status,json=lastJwksRefreshStatus,proto3" json:"last_jwks_refresh_status,omitempty"`
 	// ── Audit (J4: changes are audited + rollbackable) ────────────────────────
-	CreatedBy     string                 `protobuf:"bytes,23,opt,name=created_by,json=createdBy,proto3" json:"created_by,omitempty"`
-	UpdatedBy     string                 `protobuf:"bytes,24,opt,name=updated_by,json=updatedBy,proto3" json:"updated_by,omitempty"`
-	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,25,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,26,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
-	DeletedAt     *timestamppb.Timestamp `protobuf:"bytes,27,opt,name=deleted_at,json=deletedAt,proto3" json:"deleted_at,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	CreatedBy string                 `protobuf:"bytes,23,opt,name=created_by,json=createdBy,proto3" json:"created_by,omitempty"`
+	UpdatedBy string                 `protobuf:"bytes,24,opt,name=updated_by,json=updatedBy,proto3" json:"updated_by,omitempty"`
+	CreatedAt *timestamppb.Timestamp `protobuf:"bytes,25,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt *timestamppb.Timestamp `protobuf:"bytes,26,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	DeletedAt *timestamppb.Timestamp `protobuf:"bytes,27,opt,name=deleted_at,json=deletedAt,proto3" json:"deleted_at,omitempty"`
+	// ── OIDC sign-in (0.6.6) ──────────────────────────────────────────────────
+	// JSON array of the exact redirect URIs StartOidcLogin accepts for this
+	// provider (OAuth 2.0 exact-match; no wildcards). Each is https, an http
+	// loopback URI (http://127.0.0.1:<port>/..., native apps, RFC 8252), or a
+	// private-use scheme containing a dot (com.example.app:/callback). Empty =
+	// browser/redirect sign-in is off for this provider; LoginWithOidcIdToken
+	// does not use redirects and is unaffected.
+	RedirectUrisJson string `protobuf:"bytes,28,opt,name=redirect_uris_json,json=redirectUrisJson,proto3" json:"redirect_uris_json,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
 }
 
 func (x *IdentityProvider) Reset() {
@@ -304,11 +312,18 @@ func (x *IdentityProvider) GetDeletedAt() *timestamppb.Timestamp {
 	return nil
 }
 
+func (x *IdentityProvider) GetRedirectUrisJson() string {
+	if x != nil {
+		return x.RedirectUrisJson
+	}
+	return ""
+}
+
 var File_udb_core_idp_entity_v1_identity_provider_proto protoreflect.FileDescriptor
 
 const file_udb_core_idp_entity_v1_identity_provider_proto_rawDesc = "" +
 	"\n" +
-	".udb/core/idp/entity/v1/identity_provider.proto\x12\x16udb.core.idp.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\"udb/core/idp/entity/v1/enums.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\"\xf7\x1d\n" +
+	".udb/core/idp/entity/v1/identity_provider.proto\x12\x16udb.core.idp.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\"udb/core/idp/entity/v1/enums.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\"\x86\x1f\n" +
 	"\x10IdentityProvider\x12O\n" +
 	"\vprovider_id\x18\x01 \x01(\tB.\x82\xb7\x18*\n" +
 	"\vprovider_id\x12\x04UUID\x18\x01(\x01:\x11gen_random_uuid()R\n" +
@@ -380,7 +395,9 @@ const file_udb_core_idp_entity_v1_identity_provider_proto_rawDesc = "" +
 	"\n" +
 	"deleted_at\x18\x1b \x01(\v2\x1a.google.protobuf.TimestampB4\x82\xb7\x180\n" +
 	"\n" +
-	"deleted_at\x12\vTIMESTAMPTZZ\x15Soft-delete timestampR\tdeletedAt:\x84\x04\xfa\xb6\x18\xe3\x02\n" +
+	"deleted_at\x12\vTIMESTAMPTZZ\x15Soft-delete timestampR\tdeletedAt\x12\x8c\x01\n" +
+	"\x12redirect_uris_json\x18\x1c \x01(\tB^\x82\xb7\x18Z\n" +
+	"\x12redirect_uris_json\x12\x05JSONB\x18\x01:\v'[]'::jsonbZ,Allowlisted OIDC redirect URIs (exact match)x\x01R\x10redirectUrisJson:\x84\x04\xfa\xb6\x18\xe3\x02\n" +
 	"\x12identity_providers\x12\audb_idp\x18\n" +
 	" \x01*GTenant-scoped enterprise identity providers (OIDC/SAML/LDAP/custom JWT)0\x018\x01@\x01b^\n" +
 	"\x10tenant_isolation\x1aH(tenant_id::text = current_setting('app.current_tenant_id', true)::text)(\x01\x8a\x01Y\n" +

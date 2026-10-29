@@ -179,7 +179,7 @@ impl AuthnServiceImpl {
             let _ = otp_id;
             return;
         }
-        authn::deliver_otp(channel, address, code, otp_type, &user.user_id).await;
+        authn::deliver_otp(channel, address, code, otp_type, &user.user_id, None).await;
         #[cfg(test)]
         if let Ok(mut codes) = test_otp_codes().lock() {
             codes.insert(otp_id.to_string(), code.to_string());
@@ -202,13 +202,10 @@ impl AuthnServiceImpl {
         let Some(notifier) = &self.system_notifier else {
             return false;
         };
-        let event_type = if otp_type == authn_entity_pb::OtpType::PasswordReset as i32 {
-            "authn.password_reset"
-        } else if otp_type == authn_entity_pb::OtpType::EmailVerification as i32 {
-            "authn.email_verification"
-        } else {
-            "authn.otp"
-        };
+        let event_type = super::step_up::otp_notification_event_type(otp_type);
+        // The code renders in the user's language (`bn` users get the Bangla
+        // template), falling back to English.
+        let locale = self.user_notification_locale(user).await;
         use crate::proto::udb::core::notification::entity::v1::NotificationChannel;
         let notification_channel = if channel.eq_ignore_ascii_case("sms") {
             NotificationChannel::Sms
@@ -229,13 +226,14 @@ impl AuthnServiceImpl {
             ("user_name".to_string(), user_name),
         ]);
         match notifier
-            .send_system(
+            .send_system_localized(
                 &user.tenant_id,
                 &user.project_id,
                 event_type,
                 notification_channel,
                 &user.user_id,
                 address,
+                &locale,
                 variables,
             )
             .await

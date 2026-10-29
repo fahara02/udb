@@ -26,6 +26,28 @@ class FinishWebAuthnAuthenticationRequest extends \Google\Protobuf\Internal\Mess
      * Generated from protobuf field <code>.udb.core.common.v1.RequestContext context = 3 [json_name = "context"];</code>
      */
     protected $context = null;
+    /**
+     * Optional client details recorded on the session and device list, like Login.
+     *
+     * Generated from protobuf field <code>string device_name = 4 [json_name = "deviceName"];</code>
+     */
+    protected $device_name = '';
+    /**
+     * forwarded by the gateway
+     *
+     * Generated from protobuf field <code>string ip_address = 5 [json_name = "ipAddress"];</code>
+     */
+    protected $ip_address = '';
+    /**
+     * Generated from protobuf field <code>string user_agent = 6 [json_name = "userAgent"];</code>
+     */
+    protected $user_agent = '';
+    /**
+     * client device fingerprint (registers the device for ListDevices)
+     *
+     * Generated from protobuf field <code>string device_id = 7 [json_name = "deviceId"];</code>
+     */
+    protected $device_id = '';
 
     /**
      * Constructor.
@@ -36,6 +58,13 @@ class FinishWebAuthnAuthenticationRequest extends \Google\Protobuf\Internal\Mess
      *     @type string $challenge_id
      *     @type string $public_key_credential_json
      *     @type \Udb\Core\Common\V1\RequestContext $context
+     *     @type string $device_name
+     *           Optional client details recorded on the session and device list, like Login.
+     *     @type string $ip_address
+     *           forwarded by the gateway
+     *     @type string $user_agent
+     *     @type string $device_id
+     *           client device fingerprint (registers the device for ListDevices)
      * }
      */
     public function __construct($data = NULL) {
@@ -115,6 +144,106 @@ class FinishWebAuthnAuthenticationRequest extends \Google\Protobuf\Internal\Mess
     {
         GPBUtil::checkMessage($var, \Udb\Core\Common\V1\RequestContext::class);
         $this->context = $var;
+
+        return $this;
+    }
+
+    /**
+     * Optional client details recorded on the session and device list, like Login.
+     *
+     * Generated from protobuf field <code>string device_name = 4 [json_name = "deviceName"];</code>
+     * @return string
+     */
+    public function getDeviceName()
+    {
+        return $this->device_name;
+    }
+
+    /**
+     * Optional client details recorded on the session and device list, like Login.
+     *
+     * Generated from protobuf field <code>string device_name = 4 [json_name = "deviceName"];</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setDeviceName($var)
+    {
+        GPBUtil::checkString($var, True);
+        $this->device_name = $var;
+
+        return $this;
+    }
+
+    /**
+     * forwarded by the gateway
+     *
+     * Generated from protobuf field <code>string ip_address = 5 [json_name = "ipAddress"];</code>
+     * @return string
+     */
+    public function getIpAddress()
+    {
+        return $this->ip_address;
+    }
+
+    /**
+     * forwarded by the gateway
+     *
+     * Generated from protobuf field <code>string ip_address = 5 [json_name = "ipAddress"];</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setIpAddress($var)
+    {
+        GPBUtil::checkString($var, True);
+        $this->ip_address = $var;
+
+        return $this;
+    }
+
+    /**
+     * Generated from protobuf field <code>string user_agent = 6 [json_name = "userAgent"];</code>
+     * @return string
+     */
+    public function getUserAgent()
+    {
+        return $this->user_agent;
+    }
+
+    /**
+     * Generated from protobuf field <code>string user_agent = 6 [json_name = "userAgent"];</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setUserAgent($var)
+    {
+        GPBUtil::checkString($var, True);
+        $this->user_agent = $var;
+
+        return $this;
+    }
+
+    /**
+     * client device fingerprint (registers the device for ListDevices)
+     *
+     * Generated from protobuf field <code>string device_id = 7 [json_name = "deviceId"];</code>
+     * @return string
+     */
+    public function getDeviceId()
+    {
+        return $this->device_id;
+    }
+
+    /**
+     * client device fingerprint (registers the device for ListDevices)
+     *
+     * Generated from protobuf field <code>string device_id = 7 [json_name = "deviceId"];</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setDeviceId($var)
+    {
+        GPBUtil::checkString($var, True);
+        $this->device_id = $var;
 
         return $this;
     }

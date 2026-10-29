@@ -328,7 +328,7 @@ public final class CoreProto {
       "v1/external_identity.proto\032\"udb/core/idp" +
       "/entity/v1/enums.proto\032\034udb/core/common/" +
       "v1/dto.proto\032\036udb/core/common/v1/types.p" +
-      "roto\"\314\005\n\025CreateProviderRequest\022\033\n\ttenant" +
+      "roto\"\361\005\n\025CreateProviderRequest\022\033\n\ttenant" +
       "_id\030\001 \001(\tR\010tenantId\0223\n\004kind\030\002 \001(\0162\037.udb." +
       "core.idp.entity.v1.IdpKindR\004kind\022!\n\014disp" +
       "lay_name\030\003 \001(\tR\013displayName\022\026\n\006issuer\030\004 " +
@@ -346,243 +346,244 @@ public final class CoreProto {
       "y_pem\030\020 \001(\tR\021samlSigningKeyPem\022\035\n\ncreate" +
       "d_by\030\021 \001(\tR\tcreatedBy\022<\n\007context\030\022 \001(\0132\"" +
       ".udb.core.common.v1.RequestContextR\007cont" +
-      "ext\"^\n\026CreateProviderResponse\022D\n\010provide" +
-      "r\030\001 \001(\0132(.udb.core.idp.entity.v1.Identit" +
-      "yProviderR\010provider\"\333\005\n\025UpdateProviderRe" +
-      "quest\022\037\n\013provider_id\030\001 \001(\tR\nproviderId\022\033" +
-      "\n\ttenant_id\030\002 \001(\tR\010tenantId\022!\n\014display_n" +
-      "ame\030\003 \001(\tR\013displayName\022\026\n\006issuer\030\004 \001(\tR\006" +
-      "issuer\022\033\n\tentity_id\030\005 \001(\tR\010entityId\022\031\n\010j" +
-      "wks_url\030\006 \001(\tR\007jwksUrl\022*\n\021saml_metadata_" +
-      "url\030\007 \001(\tR\017samlMetadataUrl\022\035\n\nclient_ids" +
-      "\030\010 \003(\tR\tclientIds\022\034\n\taudiences\030\t \003(\tR\tau" +
-      "diences\022,\n\022claim_mapping_json\030\n \001(\tR\020cla" +
-      "imMappingJson\022,\n\022group_mapping_json\030\013 \001(" +
-      "\tR\020groupMappingJson\022&\n\017jit_policy_json\030\014" +
-      " \001(\tR\rjitPolicyJson\0224\n\026account_linking_p" +
-      "olicy\030\r \001(\tR\024accountLinkingPolicy\022#\n\rcli" +
-      "ent_secret\030\016 \001(\tR\014clientSecret\022/\n\024saml_s" +
-      "igning_key_pem\030\017 \001(\tR\021samlSigningKeyPem\022" +
-      "\035\n\nupdated_by\030\020 \001(\tR\tupdatedBy\022<\n\007contex" +
-      "t\030\021 \001(\0132\".udb.core.common.v1.RequestCont" +
-      "extR\007context\022;\n\013update_mask\030\022 \001(\0132\032.goog" +
-      "le.protobuf.FieldMaskR\nupdateMask\"^\n\026Upd" +
-      "ateProviderResponse\022D\n\010provider\030\001 \001(\0132(." +
-      "udb.core.idp.entity.v1.IdentityProviderR" +
-      "\010provider\"\263\001\n\026DisableProviderRequest\022\037\n\013" +
-      "provider_id\030\001 \001(\tR\nproviderId\022\033\n\ttenant_" +
-      "id\030\002 \001(\tR\010tenantId\022\035\n\nupdated_by\030\003 \001(\tR\t" +
-      "updatedBy\022<\n\007context\030\004 \001(\0132\".udb.core.co" +
-      "mmon.v1.RequestContextR\007context\"_\n\027Disab" +
-      "leProviderResponse\022D\n\010provider\030\001 \001(\0132(.u" +
-      "db.core.idp.entity.v1.IdentityProviderR\010" +
-      "provider\"R\n\022GetProviderRequest\022\037\n\013provid" +
+      "ext\022#\n\rredirect_uris\030\023 \003(\tR\014redirectUris" +
+      "\"^\n\026CreateProviderResponse\022D\n\010provider\030\001" +
+      " \001(\0132(.udb.core.idp.entity.v1.IdentityPr" +
+      "oviderR\010provider\"\200\006\n\025UpdateProviderReque" +
+      "st\022\037\n\013provider_id\030\001 \001(\tR\nproviderId\022\033\n\tt" +
+      "enant_id\030\002 \001(\tR\010tenantId\022!\n\014display_name" +
+      "\030\003 \001(\tR\013displayName\022\026\n\006issuer\030\004 \001(\tR\006iss" +
+      "uer\022\033\n\tentity_id\030\005 \001(\tR\010entityId\022\031\n\010jwks" +
+      "_url\030\006 \001(\tR\007jwksUrl\022*\n\021saml_metadata_url" +
+      "\030\007 \001(\tR\017samlMetadataUrl\022\035\n\nclient_ids\030\010 " +
+      "\003(\tR\tclientIds\022\034\n\taudiences\030\t \003(\tR\taudie" +
+      "nces\022,\n\022claim_mapping_json\030\n \001(\tR\020claimM" +
+      "appingJson\022,\n\022group_mapping_json\030\013 \001(\tR\020" +
+      "groupMappingJson\022&\n\017jit_policy_json\030\014 \001(" +
+      "\tR\rjitPolicyJson\0224\n\026account_linking_poli" +
+      "cy\030\r \001(\tR\024accountLinkingPolicy\022#\n\rclient" +
+      "_secret\030\016 \001(\tR\014clientSecret\022/\n\024saml_sign" +
+      "ing_key_pem\030\017 \001(\tR\021samlSigningKeyPem\022\035\n\n" +
+      "updated_by\030\020 \001(\tR\tupdatedBy\022<\n\007context\030\021" +
+      " \001(\0132\".udb.core.common.v1.RequestContext" +
+      "R\007context\022;\n\013update_mask\030\022 \001(\0132\032.google." +
+      "protobuf.FieldMaskR\nupdateMask\022#\n\rredire" +
+      "ct_uris\030\023 \003(\tR\014redirectUris\"^\n\026UpdatePro" +
+      "viderResponse\022D\n\010provider\030\001 \001(\0132(.udb.co" +
+      "re.idp.entity.v1.IdentityProviderR\010provi" +
+      "der\"\263\001\n\026DisableProviderRequest\022\037\n\013provid" +
       "er_id\030\001 \001(\tR\nproviderId\022\033\n\ttenant_id\030\002 \001" +
-      "(\tR\010tenantId\"[\n\023GetProviderResponse\022D\n\010p" +
-      "rovider\030\001 \001(\0132(.udb.core.idp.entity.v1.I" +
-      "dentityProviderR\010provider\"\300\001\n\024ListProvid" +
-      "ersRequest\022\033\n\ttenant_id\030\001 \001(\tR\010tenantId\022" +
-      "3\n\004kind\030\002 \001(\0162\037.udb.core.idp.entity.v1.I" +
-      "dpKindR\004kind\022!\n\014enabled_only\030\003 \001(\010R\013enab" +
-      "ledOnly\0223\n\004page\030\004 \001(\0132\037.udb.core.common." +
-      "v1.PageRequestR\004page\"\225\001\n\025ListProvidersRe" +
-      "sponse\022F\n\tproviders\030\001 \003(\0132(.udb.core.idp" +
-      ".entity.v1.IdentityProviderR\tproviders\0224" +
+      "(\tR\010tenantId\022\035\n\nupdated_by\030\003 \001(\tR\tupdate" +
+      "dBy\022<\n\007context\030\004 \001(\0132\".udb.core.common.v" +
+      "1.RequestContextR\007context\"_\n\027DisableProv" +
+      "iderResponse\022D\n\010provider\030\001 \001(\0132(.udb.cor" +
+      "e.idp.entity.v1.IdentityProviderR\010provid" +
+      "er\"R\n\022GetProviderRequest\022\037\n\013provider_id\030" +
+      "\001 \001(\tR\nproviderId\022\033\n\ttenant_id\030\002 \001(\tR\010te" +
+      "nantId\"[\n\023GetProviderResponse\022D\n\010provide" +
+      "r\030\001 \001(\0132(.udb.core.idp.entity.v1.Identit" +
+      "yProviderR\010provider\"\300\001\n\024ListProvidersReq" +
+      "uest\022\033\n\ttenant_id\030\001 \001(\tR\010tenantId\0223\n\004kin" +
+      "d\030\002 \001(\0162\037.udb.core.idp.entity.v1.IdpKind" +
+      "R\004kind\022!\n\014enabled_only\030\003 \001(\010R\013enabledOnl" +
+      "y\0223\n\004page\030\004 \001(\0132\037.udb.core.common.v1.Pag" +
+      "eRequestR\004page\"\225\001\n\025ListProvidersResponse" +
+      "\022F\n\tproviders\030\001 \003(\0132(.udb.core.idp.entit" +
+      "y.v1.IdentityProviderR\tproviders\0224\n\004page" +
+      "\030\002 \001(\0132 .udb.core.common.v1.PageResponse" +
+      "R\004page\"\\\n\034TestProviderDiscoveryRequest\022\037" +
+      "\n\013provider_id\030\001 \001(\tR\nproviderId\022\033\n\ttenan" +
+      "t_id\030\002 \001(\tR\010tenantId\"\240\002\n\035TestProviderDis" +
+      "coveryResponse\022\034\n\treachable\030\001 \001(\010R\treach" +
+      "able\022>\n\006health\030\002 \001(\0162&.udb.core.idp.enti" +
+      "ty.v1.ProviderHealthR\006health\022\'\n\017resolved" +
+      "_issuer\030\003 \001(\tR\016resolvedIssuer\022*\n\021resolve" +
+      "d_jwks_url\030\004 \001(\tR\017resolvedJwksUrl\022\033\n\tkey" +
+      "_count\030\005 \001(\005R\010keyCount\022\027\n\007key_ids\030\006 \003(\tR" +
+      "\006keyIds\022\026\n\006detail\030\007 \001(\tR\006detail\"W\n\027Force" +
+      "JwksRefreshRequest\022\037\n\013provider_id\030\001 \001(\tR" +
+      "\nproviderId\022\033\n\ttenant_id\030\002 \001(\tR\010tenantId" +
+      "\"\267\001\n\030ForceJwksRefreshResponse\022\016\n\002ok\030\001 \001(" +
+      "\010R\002ok\022\033\n\tkey_count\030\002 \001(\005R\010keyCount\022\027\n\007ke" +
+      "y_ids\030\003 \003(\tR\006keyIds\022=\n\014refreshed_at\030\004 \001(" +
+      "\0132\032.google.protobuf.TimestampR\013refreshed" +
+      "At\022\026\n\006status\030\005 \001(\tR\006status\"\251\001\n\032PreviewCl" +
+      "aimMappingRequest\022\037\n\013provider_id\030\001 \001(\tR\n" +
+      "providerId\022\033\n\ttenant_id\030\002 \001(\tR\010tenantId\022" +
+      "\037\n\013claims_json\030\003 \001(\tR\nclaimsJson\022,\n\022clai" +
+      "m_mapping_json\030\004 \001(\tR\020claimMappingJson\"\251" +
+      "\002\n\033PreviewClaimMappingResponse\022\030\n\007subjec" +
+      "t\030\001 \001(\tR\007subject\022\024\n\005email\030\002 \001(\tR\005email\022%" +
+      "\n\016email_verified\030\003 \001(\010R\remailVerified\022!\n" +
+      "\014display_name\030\004 \001(\tR\013displayName\022\026\n\006grou" +
+      "ps\030\005 \003(\tR\006groups\022D\n\tassurance\030\006 \001(\0162&.ud" +
+      "b.core.idp.entity.v1.AssuranceLevelR\tass" +
+      "urance\0222\n\025mapped_principal_json\030\007 \001(\tR\023m" +
+      "appedPrincipalJson\"\240\001\n\032PreviewGroupMappi" +
+      "ngRequest\022\037\n\013provider_id\030\001 \001(\tR\nprovider" +
+      "Id\022\033\n\ttenant_id\030\002 \001(\tR\010tenantId\022\026\n\006group" +
+      "s\030\003 \003(\tR\006groups\022,\n\022group_mapping_json\030\004 " +
+      "\001(\tR\020groupMappingJson\"\\\n\033PreviewGroupMap" +
+      "pingResponse\022\024\n\005roles\030\001 \003(\tR\005roles\022\'\n\017un" +
+      "mapped_groups\030\002 \003(\tR\016unmappedGroups\"\253\001\n\035" +
+      "ListExternalIdentitiesRequest\022\033\n\ttenant_" +
+      "id\030\001 \001(\tR\010tenantId\022\037\n\013provider_id\030\002 \001(\tR" +
+      "\nproviderId\022\027\n\007user_id\030\003 \001(\tR\006userId\0223\n\004" +
+      "page\030\004 \001(\0132\037.udb.core.common.v1.PageRequ" +
+      "estR\004page\"\240\001\n\036ListExternalIdentitiesResp" +
+      "onse\022H\n\nidentities\030\001 \003(\0132(.udb.core.idp." +
+      "entity.v1.ExternalIdentityR\nidentities\0224" +
       "\n\004page\030\002 \001(\0132 .udb.core.common.v1.PageRe" +
-      "sponseR\004page\"\\\n\034TestProviderDiscoveryReq" +
+      "sponseR\004page\"\201\002\n\023LinkIdentityRequest\022\033\n\t" +
+      "tenant_id\030\001 \001(\tR\010tenantId\022\037\n\013provider_id" +
+      "\030\002 \001(\tR\nproviderId\022\030\n\007subject\030\003 \001(\tR\007sub" +
+      "ject\022\027\n\007user_id\030\004 \001(\tR\006userId\022\024\n\005email\030\005" +
+      " \001(\tR\005email\022%\n\016email_verified\030\006 \001(\010R\rema" +
+      "ilVerified\022<\n\007context\030\007 \001(\0132\".udb.core.c" +
+      "ommon.v1.RequestContextR\007context\"\\\n\024Link" +
+      "IdentityResponse\022D\n\010identity\030\001 \001(\0132(.udb" +
+      ".core.idp.entity.v1.ExternalIdentityR\010id" +
+      "entity\"\244\001\n\025UnlinkIdentityRequest\022\033\n\ttena" +
+      "nt_id\030\001 \001(\tR\010tenantId\0220\n\024external_identi" +
+      "ty_id\030\002 \001(\tR\022externalIdentityId\022<\n\007conte" +
+      "xt\030\003 \001(\0132\".udb.core.common.v1.RequestCon" +
+      "textR\007context\"4\n\026UnlinkIdentityResponse\022" +
+      "\032\n\010unlinked\030\001 \001(\010R\010unlinked\"\331\001\n\031ImportSa" +
+      "mlMetadataRequest\022\037\n\013provider_id\030\001 \001(\tR\n" +
+      "providerId\022\033\n\ttenant_id\030\002 \001(\tR\010tenantId\022" +
+      "!\n\014metadata_xml\030\003 \001(\tR\013metadataXml\022\035\n\nup" +
+      "dated_by\030\004 \001(\tR\tupdatedBy\022<\n\007context\030\005 \001" +
+      "(\0132\".udb.core.common.v1.RequestContextR\007" +
+      "context\"\267\001\n\032ImportSamlMetadataResponse\022\033" +
+      "\n\tentity_id\030\001 \001(\tR\010entityId\022\027\n\007sso_url\030\002" +
+      " \001(\tR\006ssoUrl\022\035\n\ncert_count\030\003 \001(\005R\tcertCo" +
+      "unt\022D\n\010provider\030\004 \001(\0132(.udb.core.idp.ent" +
+      "ity.v1.IdentityProviderR\010provider\"v\n\025Sta" +
+      "rtSamlLoginRequest\022\037\n\013provider_id\030\001 \001(\tR" +
+      "\nproviderId\022\033\n\ttenant_id\030\002 \001(\tR\010tenantId" +
+      "\022\037\n\013relay_state\030\003 \001(\tR\nrelayState\"\225\001\n\026St" +
+      "artSamlLoginResponse\022!\n\014redirect_url\030\001 \001" +
+      "(\tR\013redirectUrl\022!\n\014saml_request\030\002 \001(\tR\013s" +
+      "amlRequest\022\035\n\nrequest_id\030\003 \001(\tR\trequestI" +
+      "d\022\026\n\006signed\030\004 \001(\010R\006signed\"\322\001\n\016SamlAcsReq" +
       "uest\022\037\n\013provider_id\030\001 \001(\tR\nproviderId\022\033\n" +
-      "\ttenant_id\030\002 \001(\tR\010tenantId\"\240\002\n\035TestProvi" +
-      "derDiscoveryResponse\022\034\n\treachable\030\001 \001(\010R" +
-      "\treachable\022>\n\006health\030\002 \001(\0162&.udb.core.id" +
-      "p.entity.v1.ProviderHealthR\006health\022\'\n\017re" +
-      "solved_issuer\030\003 \001(\tR\016resolvedIssuer\022*\n\021r" +
-      "esolved_jwks_url\030\004 \001(\tR\017resolvedJwksUrl\022" +
-      "\033\n\tkey_count\030\005 \001(\005R\010keyCount\022\027\n\007key_ids\030" +
-      "\006 \003(\tR\006keyIds\022\026\n\006detail\030\007 \001(\tR\006detail\"W\n" +
-      "\027ForceJwksRefreshRequest\022\037\n\013provider_id\030" +
-      "\001 \001(\tR\nproviderId\022\033\n\ttenant_id\030\002 \001(\tR\010te" +
-      "nantId\"\267\001\n\030ForceJwksRefreshResponse\022\016\n\002o" +
-      "k\030\001 \001(\010R\002ok\022\033\n\tkey_count\030\002 \001(\005R\010keyCount" +
-      "\022\027\n\007key_ids\030\003 \003(\tR\006keyIds\022=\n\014refreshed_a" +
-      "t\030\004 \001(\0132\032.google.protobuf.TimestampR\013ref" +
-      "reshedAt\022\026\n\006status\030\005 \001(\tR\006status\"\251\001\n\032Pre" +
-      "viewClaimMappingRequest\022\037\n\013provider_id\030\001" +
-      " \001(\tR\nproviderId\022\033\n\ttenant_id\030\002 \001(\tR\010ten" +
-      "antId\022\037\n\013claims_json\030\003 \001(\tR\nclaimsJson\022," +
-      "\n\022claim_mapping_json\030\004 \001(\tR\020claimMapping" +
-      "Json\"\251\002\n\033PreviewClaimMappingResponse\022\030\n\007" +
-      "subject\030\001 \001(\tR\007subject\022\024\n\005email\030\002 \001(\tR\005e" +
-      "mail\022%\n\016email_verified\030\003 \001(\010R\remailVerif" +
-      "ied\022!\n\014display_name\030\004 \001(\tR\013displayName\022\026" +
-      "\n\006groups\030\005 \003(\tR\006groups\022D\n\tassurance\030\006 \001(" +
-      "\0162&.udb.core.idp.entity.v1.AssuranceLeve" +
-      "lR\tassurance\0222\n\025mapped_principal_json\030\007 " +
-      "\001(\tR\023mappedPrincipalJson\"\240\001\n\032PreviewGrou" +
-      "pMappingRequest\022\037\n\013provider_id\030\001 \001(\tR\npr" +
-      "oviderId\022\033\n\ttenant_id\030\002 \001(\tR\010tenantId\022\026\n" +
-      "\006groups\030\003 \003(\tR\006groups\022,\n\022group_mapping_j" +
-      "son\030\004 \001(\tR\020groupMappingJson\"\\\n\033PreviewGr" +
-      "oupMappingResponse\022\024\n\005roles\030\001 \003(\tR\005roles" +
-      "\022\'\n\017unmapped_groups\030\002 \003(\tR\016unmappedGroup" +
-      "s\"\253\001\n\035ListExternalIdentitiesRequest\022\033\n\tt" +
-      "enant_id\030\001 \001(\tR\010tenantId\022\037\n\013provider_id\030" +
-      "\002 \001(\tR\nproviderId\022\027\n\007user_id\030\003 \001(\tR\006user" +
-      "Id\0223\n\004page\030\004 \001(\0132\037.udb.core.common.v1.Pa" +
-      "geRequestR\004page\"\240\001\n\036ListExternalIdentiti" +
-      "esResponse\022H\n\nidentities\030\001 \003(\0132(.udb.cor" +
-      "e.idp.entity.v1.ExternalIdentityR\nidenti" +
-      "ties\0224\n\004page\030\002 \001(\0132 .udb.core.common.v1." +
-      "PageResponseR\004page\"\201\002\n\023LinkIdentityReque" +
-      "st\022\033\n\ttenant_id\030\001 \001(\tR\010tenantId\022\037\n\013provi" +
-      "der_id\030\002 \001(\tR\nproviderId\022\030\n\007subject\030\003 \001(" +
-      "\tR\007subject\022\027\n\007user_id\030\004 \001(\tR\006userId\022\024\n\005e" +
-      "mail\030\005 \001(\tR\005email\022%\n\016email_verified\030\006 \001(" +
-      "\010R\remailVerified\022<\n\007context\030\007 \001(\0132\".udb." +
-      "core.common.v1.RequestContextR\007context\"\\" +
-      "\n\024LinkIdentityResponse\022D\n\010identity\030\001 \001(\013" +
-      "2(.udb.core.idp.entity.v1.ExternalIdenti" +
-      "tyR\010identity\"\244\001\n\025UnlinkIdentityRequest\022\033" +
-      "\n\ttenant_id\030\001 \001(\tR\010tenantId\0220\n\024external_" +
-      "identity_id\030\002 \001(\tR\022externalIdentityId\022<\n" +
-      "\007context\030\003 \001(\0132\".udb.core.common.v1.Requ" +
-      "estContextR\007context\"4\n\026UnlinkIdentityRes" +
-      "ponse\022\032\n\010unlinked\030\001 \001(\010R\010unlinked\"\331\001\n\031Im" +
-      "portSamlMetadataRequest\022\037\n\013provider_id\030\001" +
-      " \001(\tR\nproviderId\022\033\n\ttenant_id\030\002 \001(\tR\010ten" +
-      "antId\022!\n\014metadata_xml\030\003 \001(\tR\013metadataXml" +
-      "\022\035\n\nupdated_by\030\004 \001(\tR\tupdatedBy\022<\n\007conte" +
-      "xt\030\005 \001(\0132\".udb.core.common.v1.RequestCon" +
-      "textR\007context\"\267\001\n\032ImportSamlMetadataResp" +
-      "onse\022\033\n\tentity_id\030\001 \001(\tR\010entityId\022\027\n\007sso" +
-      "_url\030\002 \001(\tR\006ssoUrl\022\035\n\ncert_count\030\003 \001(\005R\t" +
-      "certCount\022D\n\010provider\030\004 \001(\0132(.udb.core.i" +
-      "dp.entity.v1.IdentityProviderR\010provider\"" +
-      "v\n\025StartSamlLoginRequest\022\037\n\013provider_id\030" +
-      "\001 \001(\tR\nproviderId\022\033\n\ttenant_id\030\002 \001(\tR\010te" +
-      "nantId\022\037\n\013relay_state\030\003 \001(\tR\nrelayState\"" +
-      "\225\001\n\026StartSamlLoginResponse\022!\n\014redirect_u" +
-      "rl\030\001 \001(\tR\013redirectUrl\022!\n\014saml_request\030\002 " +
-      "\001(\tR\013samlRequest\022\035\n\nrequest_id\030\003 \001(\tR\tre" +
-      "questId\022\026\n\006signed\030\004 \001(\010R\006signed\"\322\001\n\016Saml" +
-      "AcsRequest\022\037\n\013provider_id\030\001 \001(\tR\nprovide" +
-      "rId\022\033\n\ttenant_id\030\002 \001(\tR\010tenantId\022#\n\rsaml" +
-      "_response\030\003 \001(\tR\014samlResponse\022\037\n\013relay_s" +
-      "tate\030\004 \001(\tR\nrelayState\022<\n\007context\030\005 \001(\0132" +
-      "\".udb.core.common.v1.RequestContextR\007con" +
-      "text\"\213\003\n\017SamlAcsResponse\022$\n\rauthenticate" +
-      "d\030\001 \001(\010R\rauthenticated\022\030\n\007subject\030\002 \001(\tR" +
-      "\007subject\022\027\n\007user_id\030\003 \001(\tR\006userId\022\024\n\005ema" +
-      "il\030\004 \001(\tR\005email\022%\n\016email_verified\030\005 \001(\010R" +
-      "\remailVerified\022\026\n\006groups\030\006 \003(\tR\006groups\022\024" +
-      "\n\005roles\030\007 \003(\tR\005roles\022D\n\tassurance\030\010 \001(\0162" +
-      "&.udb.core.idp.entity.v1.AssuranceLevelR" +
-      "\tassurance\022-\n\022signature_verified\030\t \001(\010R\021" +
-      "signatureVerified\022\026\n\006detail\030\n \001(\tR\006detai" +
-      "l\022\'\n\017attributes_json\030\013 \001(\tR\016attributesJs" +
-      "on\"\177\n\036ResolveExternalIdentityRequest\022\037\n\013" +
-      "provider_id\030\001 \001(\tR\nproviderId\022\033\n\ttenant_" +
-      "id\030\002 \001(\tR\010tenantId\022\037\n\013claims_json\030\003 \001(\tR" +
-      "\nclaimsJson\"\230\002\n\037ResolveExternalIdentityR" +
-      "esponse\022\027\n\007user_id\030\001 \001(\tR\006userId\022\030\n\007subj" +
-      "ect\030\002 \001(\tR\007subject\022\024\n\005email\030\003 \001(\tR\005email" +
-      "\022 \n\013provisioned\030\004 \001(\010R\013provisioned\022\026\n\006li" +
-      "nked\030\005 \001(\010R\006linked\022\024\n\005roles\030\006 \003(\tR\005roles" +
-      "\022D\n\tassurance\030\007 \001(\0162&.udb.core.idp.entit" +
-      "y.v1.AssuranceLevelR\tassurance\022\026\n\006detail" +
-      "\030\010 \001(\tR\006detail\"\273\001\n\010ScimUser\022\016\n\002id\030\001 \001(\tR" +
-      "\002id\022\033\n\tuser_name\030\002 \001(\tR\010userName\022!\n\014disp" +
-      "lay_name\030\003 \001(\tR\013displayName\022\024\n\005email\030\004 \001" +
-      "(\tR\005email\022\026\n\006active\030\005 \001(\010R\006active\022\026\n\006gro" +
-      "ups\030\006 \003(\tR\006groups\022\031\n\010raw_json\030\007 \001(\tR\007raw" +
-      "Json\"s\n\tScimGroup\022\016\n\002id\030\001 \001(\tR\002id\022!\n\014dis" +
-      "play_name\030\002 \001(\tR\013displayName\022\030\n\007members\030" +
-      "\003 \003(\tR\007members\022\031\n\010raw_json\030\004 \001(\tR\007rawJso" +
-      "n\"\271\001\n\025ScimCreateUserRequest\022\033\n\ttenant_id" +
-      "\030\001 \001(\tR\010tenantId\022\037\n\013provider_id\030\002 \001(\tR\np" +
-      "roviderId\022$\n\016scim_user_json\030\003 \001(\tR\014scimU" +
-      "serJson\022<\n\007context\030\004 \001(\0132\".udb.core.comm" +
-      "on.v1.RequestContextR\007context\"P\n\026ScimCre" +
-      "ateUserResponse\0226\n\004user\030\001 \001(\0132\".udb.core" +
-      ".idp.services.v1.ScimUserR\004user\"t\n\022ScimG" +
-      "etUserRequest\022\033\n\ttenant_id\030\001 \001(\tR\010tenant" +
-      "Id\022\037\n\013provider_id\030\002 \001(\tR\nproviderId\022 \n\014s" +
-      "cim_user_id\030\003 \001(\tR\nscimUserId\"M\n\023ScimGet" +
-      "UserResponse\0226\n\004user\030\001 \001(\0132\".udb.core.id" +
-      "p.services.v1.ScimUserR\004user\"\241\001\n\024ScimLis" +
-      "tUsersRequest\022\033\n\ttenant_id\030\001 \001(\tR\010tenant" +
-      "Id\022\037\n\013provider_id\030\002 \001(\tR\nproviderId\022\026\n\006f" +
-      "ilter\030\003 \001(\tR\006filter\0223\n\004page\030\004 \001(\0132\037.udb." +
-      "core.common.v1.PageRequestR\004page\"\207\001\n\025Sci" +
-      "mListUsersResponse\0228\n\005users\030\001 \003(\0132\".udb." +
-      "core.idp.services.v1.ScimUserR\005users\0224\n\004" +
-      "page\030\002 \001(\0132 .udb.core.common.v1.PageResp" +
-      "onseR\004page\"\334\001\n\026ScimReplaceUserRequest\022\033\n" +
-      "\ttenant_id\030\001 \001(\tR\010tenantId\022\037\n\013provider_i" +
-      "d\030\002 \001(\tR\nproviderId\022 \n\014scim_user_id\030\003 \001(" +
-      "\tR\nscimUserId\022$\n\016scim_user_json\030\004 \001(\tR\014s" +
-      "cimUserJson\022<\n\007context\030\005 \001(\0132\".udb.core." +
-      "common.v1.RequestContextR\007context\"Q\n\027Sci" +
-      "mReplaceUserResponse\0226\n\004user\030\001 \001(\0132\".udb" +
-      ".core.idp.services.v1.ScimUserR\004user\"P\n\013" +
-      "ScimPatchOp\022\016\n\002op\030\001 \001(\tR\002op\022\022\n\004path\030\002 \001(" +
-      "\tR\004path\022\035\n\nvalue_json\030\003 \001(\tR\tvalueJson\"\373" +
-      "\001\n\024ScimPatchUserRequest\022\033\n\ttenant_id\030\001 \001" +
-      "(\tR\010tenantId\022\037\n\013provider_id\030\002 \001(\tR\nprovi" +
-      "derId\022 \n\014scim_user_id\030\003 \001(\tR\nscimUserId\022" +
-      "E\n\noperations\030\004 \003(\0132%.udb.core.idp.servi" +
-      "ces.v1.ScimPatchOpR\noperations\022<\n\007contex" +
-      "t\030\005 \001(\0132\".udb.core.common.v1.RequestCont" +
-      "extR\007context\"O\n\025ScimPatchUserResponse\0226\n" +
-      "\004user\030\001 \001(\0132\".udb.core.idp.services.v1.S" +
-      "cimUserR\004user\"\265\001\n\025ScimDeleteUserRequest\022" +
-      "\033\n\ttenant_id\030\001 \001(\tR\010tenantId\022\037\n\013provider" +
-      "_id\030\002 \001(\tR\nproviderId\022 \n\014scim_user_id\030\003 " +
-      "\001(\tR\nscimUserId\022<\n\007context\030\004 \001(\0132\".udb.c" +
-      "ore.common.v1.RequestContextR\007context\":\n" +
-      "\026ScimDeleteUserResponse\022 \n\013deactivated\030\001" +
-      " \001(\010R\013deactivated\"\274\001\n\026ScimCreateGroupReq" +
-      "uest\022\033\n\ttenant_id\030\001 \001(\tR\010tenantId\022\037\n\013pro" +
-      "vider_id\030\002 \001(\tR\nproviderId\022&\n\017scim_group" +
-      "_json\030\003 \001(\tR\rscimGroupJson\022<\n\007context\030\004 " +
-      "\001(\0132\".udb.core.common.v1.RequestContextR" +
-      "\007context\"T\n\027ScimCreateGroupResponse\0229\n\005g" +
-      "roup\030\001 \001(\0132#.udb.core.idp.services.v1.Sc" +
-      "imGroupR\005group\"w\n\023ScimGetGroupRequest\022\033\n" +
-      "\ttenant_id\030\001 \001(\tR\010tenantId\022\037\n\013provider_i" +
-      "d\030\002 \001(\tR\nproviderId\022\"\n\rscim_group_id\030\003 \001" +
-      "(\tR\013scimGroupId\"Q\n\024ScimGetGroupResponse\022" +
-      "9\n\005group\030\001 \001(\0132#.udb.core.idp.services.v" +
-      "1.ScimGroupR\005group\"\242\001\n\025ScimListGroupsReq" +
-      "uest\022\033\n\ttenant_id\030\001 \001(\tR\010tenantId\022\037\n\013pro" +
-      "vider_id\030\002 \001(\tR\nproviderId\022\026\n\006filter\030\003 \001" +
-      "(\tR\006filter\0223\n\004page\030\004 \001(\0132\037.udb.core.comm" +
-      "on.v1.PageRequestR\004page\"\213\001\n\026ScimListGrou" +
-      "psResponse\022;\n\006groups\030\001 \003(\0132#.udb.core.id" +
-      "p.services.v1.ScimGroupR\006groups\0224\n\004page\030" +
-      "\002 \001(\0132 .udb.core.common.v1.PageResponseR" +
-      "\004page\"\376\001\n\025ScimPatchGroupRequest\022\033\n\ttenan" +
+      "\ttenant_id\030\002 \001(\tR\010tenantId\022#\n\rsaml_respo" +
+      "nse\030\003 \001(\tR\014samlResponse\022\037\n\013relay_state\030\004" +
+      " \001(\tR\nrelayState\022<\n\007context\030\005 \001(\0132\".udb." +
+      "core.common.v1.RequestContextR\007context\"\213" +
+      "\003\n\017SamlAcsResponse\022$\n\rauthenticated\030\001 \001(" +
+      "\010R\rauthenticated\022\030\n\007subject\030\002 \001(\tR\007subje" +
+      "ct\022\027\n\007user_id\030\003 \001(\tR\006userId\022\024\n\005email\030\004 \001" +
+      "(\tR\005email\022%\n\016email_verified\030\005 \001(\010R\remail" +
+      "Verified\022\026\n\006groups\030\006 \003(\tR\006groups\022\024\n\005role" +
+      "s\030\007 \003(\tR\005roles\022D\n\tassurance\030\010 \001(\0162&.udb." +
+      "core.idp.entity.v1.AssuranceLevelR\tassur" +
+      "ance\022-\n\022signature_verified\030\t \001(\010R\021signat" +
+      "ureVerified\022\026\n\006detail\030\n \001(\tR\006detail\022\'\n\017a" +
+      "ttributes_json\030\013 \001(\tR\016attributesJson\"\177\n\036" +
+      "ResolveExternalIdentityRequest\022\037\n\013provid" +
+      "er_id\030\001 \001(\tR\nproviderId\022\033\n\ttenant_id\030\002 \001" +
+      "(\tR\010tenantId\022\037\n\013claims_json\030\003 \001(\tR\nclaim" +
+      "sJson\"\230\002\n\037ResolveExternalIdentityRespons" +
+      "e\022\027\n\007user_id\030\001 \001(\tR\006userId\022\030\n\007subject\030\002 " +
+      "\001(\tR\007subject\022\024\n\005email\030\003 \001(\tR\005email\022 \n\013pr" +
+      "ovisioned\030\004 \001(\010R\013provisioned\022\026\n\006linked\030\005" +
+      " \001(\010R\006linked\022\024\n\005roles\030\006 \003(\tR\005roles\022D\n\tas" +
+      "surance\030\007 \001(\0162&.udb.core.idp.entity.v1.A" +
+      "ssuranceLevelR\tassurance\022\026\n\006detail\030\010 \001(\t" +
+      "R\006detail\"\273\001\n\010ScimUser\022\016\n\002id\030\001 \001(\tR\002id\022\033\n" +
+      "\tuser_name\030\002 \001(\tR\010userName\022!\n\014display_na" +
+      "me\030\003 \001(\tR\013displayName\022\024\n\005email\030\004 \001(\tR\005em" +
+      "ail\022\026\n\006active\030\005 \001(\010R\006active\022\026\n\006groups\030\006 " +
+      "\003(\tR\006groups\022\031\n\010raw_json\030\007 \001(\tR\007rawJson\"s" +
+      "\n\tScimGroup\022\016\n\002id\030\001 \001(\tR\002id\022!\n\014display_n" +
+      "ame\030\002 \001(\tR\013displayName\022\030\n\007members\030\003 \003(\tR" +
+      "\007members\022\031\n\010raw_json\030\004 \001(\tR\007rawJson\"\271\001\n\025" +
+      "ScimCreateUserRequest\022\033\n\ttenant_id\030\001 \001(\t" +
+      "R\010tenantId\022\037\n\013provider_id\030\002 \001(\tR\nprovide" +
+      "rId\022$\n\016scim_user_json\030\003 \001(\tR\014scimUserJso" +
+      "n\022<\n\007context\030\004 \001(\0132\".udb.core.common.v1." +
+      "RequestContextR\007context\"P\n\026ScimCreateUse" +
+      "rResponse\0226\n\004user\030\001 \001(\0132\".udb.core.idp.s" +
+      "ervices.v1.ScimUserR\004user\"t\n\022ScimGetUser" +
+      "Request\022\033\n\ttenant_id\030\001 \001(\tR\010tenantId\022\037\n\013" +
+      "provider_id\030\002 \001(\tR\nproviderId\022 \n\014scim_us" +
+      "er_id\030\003 \001(\tR\nscimUserId\"M\n\023ScimGetUserRe" +
+      "sponse\0226\n\004user\030\001 \001(\0132\".udb.core.idp.serv" +
+      "ices.v1.ScimUserR\004user\"\241\001\n\024ScimListUsers" +
+      "Request\022\033\n\ttenant_id\030\001 \001(\tR\010tenantId\022\037\n\013" +
+      "provider_id\030\002 \001(\tR\nproviderId\022\026\n\006filter\030" +
+      "\003 \001(\tR\006filter\0223\n\004page\030\004 \001(\0132\037.udb.core.c" +
+      "ommon.v1.PageRequestR\004page\"\207\001\n\025ScimListU" +
+      "sersResponse\0228\n\005users\030\001 \003(\0132\".udb.core.i" +
+      "dp.services.v1.ScimUserR\005users\0224\n\004page\030\002" +
+      " \001(\0132 .udb.core.common.v1.PageResponseR\004" +
+      "page\"\334\001\n\026ScimReplaceUserRequest\022\033\n\ttenan" +
+      "t_id\030\001 \001(\tR\010tenantId\022\037\n\013provider_id\030\002 \001(" +
+      "\tR\nproviderId\022 \n\014scim_user_id\030\003 \001(\tR\nsci" +
+      "mUserId\022$\n\016scim_user_json\030\004 \001(\tR\014scimUse" +
+      "rJson\022<\n\007context\030\005 \001(\0132\".udb.core.common" +
+      ".v1.RequestContextR\007context\"Q\n\027ScimRepla" +
+      "ceUserResponse\0226\n\004user\030\001 \001(\0132\".udb.core." +
+      "idp.services.v1.ScimUserR\004user\"P\n\013ScimPa" +
+      "tchOp\022\016\n\002op\030\001 \001(\tR\002op\022\022\n\004path\030\002 \001(\tR\004pat" +
+      "h\022\035\n\nvalue_json\030\003 \001(\tR\tvalueJson\"\373\001\n\024Sci" +
+      "mPatchUserRequest\022\033\n\ttenant_id\030\001 \001(\tR\010te" +
+      "nantId\022\037\n\013provider_id\030\002 \001(\tR\nproviderId\022" +
+      " \n\014scim_user_id\030\003 \001(\tR\nscimUserId\022E\n\nope" +
+      "rations\030\004 \003(\0132%.udb.core.idp.services.v1" +
+      ".ScimPatchOpR\noperations\022<\n\007context\030\005 \001(" +
+      "\0132\".udb.core.common.v1.RequestContextR\007c" +
+      "ontext\"O\n\025ScimPatchUserResponse\0226\n\004user\030" +
+      "\001 \001(\0132\".udb.core.idp.services.v1.ScimUse" +
+      "rR\004user\"\265\001\n\025ScimDeleteUserRequest\022\033\n\tten" +
+      "ant_id\030\001 \001(\tR\010tenantId\022\037\n\013provider_id\030\002 " +
+      "\001(\tR\nproviderId\022 \n\014scim_user_id\030\003 \001(\tR\ns" +
+      "cimUserId\022<\n\007context\030\004 \001(\0132\".udb.core.co" +
+      "mmon.v1.RequestContextR\007context\":\n\026ScimD" +
+      "eleteUserResponse\022 \n\013deactivated\030\001 \001(\010R\013" +
+      "deactivated\"\274\001\n\026ScimCreateGroupRequest\022\033" +
+      "\n\ttenant_id\030\001 \001(\tR\010tenantId\022\037\n\013provider_" +
+      "id\030\002 \001(\tR\nproviderId\022&\n\017scim_group_json\030" +
+      "\003 \001(\tR\rscimGroupJson\022<\n\007context\030\004 \001(\0132\"." +
+      "udb.core.common.v1.RequestContextR\007conte" +
+      "xt\"T\n\027ScimCreateGroupResponse\0229\n\005group\030\001" +
+      " \001(\0132#.udb.core.idp.services.v1.ScimGrou" +
+      "pR\005group\"w\n\023ScimGetGroupRequest\022\033\n\ttenan" +
       "t_id\030\001 \001(\tR\010tenantId\022\037\n\013provider_id\030\002 \001(" +
       "\tR\nproviderId\022\"\n\rscim_group_id\030\003 \001(\tR\013sc" +
-      "imGroupId\022E\n\noperations\030\004 \003(\0132%.udb.core" +
-      ".idp.services.v1.ScimPatchOpR\noperations" +
-      "\022<\n\007context\030\005 \001(\0132\".udb.core.common.v1.R" +
-      "equestContextR\007context\"x\n\026ScimPatchGroup" +
-      "Response\0229\n\005group\030\001 \001(\0132#.udb.core.idp.s" +
-      "ervices.v1.ScimGroupR\005group\022#\n\rgranted_r" +
-      "oles\030\002 \003(\tR\014grantedRoles\"\270\001\n\026ScimDeleteG" +
-      "roupRequest\022\033\n\ttenant_id\030\001 \001(\tR\010tenantId" +
-      "\022\037\n\013provider_id\030\002 \001(\tR\nproviderId\022\"\n\rsci" +
-      "m_group_id\030\003 \001(\tR\013scimGroupId\022<\n\007context" +
-      "\030\004 \001(\0132\".udb.core.common.v1.RequestConte" +
-      "xtR\007context\"3\n\027ScimDeleteGroupResponse\022\030" +
-      "\n\007deleted\030\001 \001(\010R\007deletedB\366\001\n\034com.udb.cor" +
-      "e.idp.services.v1B\tCoreProtoP\001ZFgithub.c" +
-      "om/fahara02/udb/sdk/go/gen/udb/core/idp/" +
-      "services/v1;servicesv1\242\002\004UCIS\252\002\030Udb.Core" +
-      ".Idp.Services.V1\312\002\030Udb\\Core\\Idp\\Services" +
-      "\\V1\342\002$Udb\\GPBMetadata\\Core\\Idp\\Services\\" +
-      "V1\352\002\034Udb::Core::Idp::Services::V1b\006proto" +
-      "3"
+      "imGroupId\"Q\n\024ScimGetGroupResponse\0229\n\005gro" +
+      "up\030\001 \001(\0132#.udb.core.idp.services.v1.Scim" +
+      "GroupR\005group\"\242\001\n\025ScimListGroupsRequest\022\033" +
+      "\n\ttenant_id\030\001 \001(\tR\010tenantId\022\037\n\013provider_" +
+      "id\030\002 \001(\tR\nproviderId\022\026\n\006filter\030\003 \001(\tR\006fi" +
+      "lter\0223\n\004page\030\004 \001(\0132\037.udb.core.common.v1." +
+      "PageRequestR\004page\"\213\001\n\026ScimListGroupsResp" +
+      "onse\022;\n\006groups\030\001 \003(\0132#.udb.core.idp.serv" +
+      "ices.v1.ScimGroupR\006groups\0224\n\004page\030\002 \001(\0132" +
+      " .udb.core.common.v1.PageResponseR\004page\"" +
+      "\376\001\n\025ScimPatchGroupRequest\022\033\n\ttenant_id\030\001" +
+      " \001(\tR\010tenantId\022\037\n\013provider_id\030\002 \001(\tR\npro" +
+      "viderId\022\"\n\rscim_group_id\030\003 \001(\tR\013scimGrou" +
+      "pId\022E\n\noperations\030\004 \003(\0132%.udb.core.idp.s" +
+      "ervices.v1.ScimPatchOpR\noperations\022<\n\007co" +
+      "ntext\030\005 \001(\0132\".udb.core.common.v1.Request" +
+      "ContextR\007context\"x\n\026ScimPatchGroupRespon" +
+      "se\0229\n\005group\030\001 \001(\0132#.udb.core.idp.service" +
+      "s.v1.ScimGroupR\005group\022#\n\rgranted_roles\030\002" +
+      " \003(\tR\014grantedRoles\"\270\001\n\026ScimDeleteGroupRe" +
+      "quest\022\033\n\ttenant_id\030\001 \001(\tR\010tenantId\022\037\n\013pr" +
+      "ovider_id\030\002 \001(\tR\nproviderId\022\"\n\rscim_grou" +
+      "p_id\030\003 \001(\tR\013scimGroupId\022<\n\007context\030\004 \001(\013" +
+      "2\".udb.core.common.v1.RequestContextR\007co" +
+      "ntext\"3\n\027ScimDeleteGroupResponse\022\030\n\007dele" +
+      "ted\030\001 \001(\010R\007deletedB\366\001\n\034com.udb.core.idp." +
+      "services.v1B\tCoreProtoP\001ZFgithub.com/fah" +
+      "ara02/udb/sdk/go/gen/udb/core/idp/servic" +
+      "es/v1;servicesv1\242\002\004UCIS\252\002\030Udb.Core.Idp.S" +
+      "ervices.V1\312\002\030Udb\\Core\\Idp\\Services\\V1\342\002$" +
+      "Udb\\GPBMetadata\\Core\\Idp\\Services\\V1\352\002\034U" +
+      "db::Core::Idp::Services::V1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -600,7 +601,7 @@ public final class CoreProto {
     internal_static_udb_core_idp_services_v1_CreateProviderRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_core_idp_services_v1_CreateProviderRequest_descriptor,
-        new java.lang.String[] { "TenantId", "Kind", "DisplayName", "Issuer", "EntityId", "JwksUrl", "SamlMetadataUrl", "ClientIds", "Audiences", "ClaimMappingJson", "GroupMappingJson", "JitPolicyJson", "AccountLinkingPolicy", "Enabled", "ClientSecret", "SamlSigningKeyPem", "CreatedBy", "Context", });
+        new java.lang.String[] { "TenantId", "Kind", "DisplayName", "Issuer", "EntityId", "JwksUrl", "SamlMetadataUrl", "ClientIds", "Audiences", "ClaimMappingJson", "GroupMappingJson", "JitPolicyJson", "AccountLinkingPolicy", "Enabled", "ClientSecret", "SamlSigningKeyPem", "CreatedBy", "Context", "RedirectUris", });
     internal_static_udb_core_idp_services_v1_CreateProviderResponse_descriptor =
       getDescriptor().getMessageTypes().get(1);
     internal_static_udb_core_idp_services_v1_CreateProviderResponse_fieldAccessorTable = new
@@ -612,7 +613,7 @@ public final class CoreProto {
     internal_static_udb_core_idp_services_v1_UpdateProviderRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_core_idp_services_v1_UpdateProviderRequest_descriptor,
-        new java.lang.String[] { "ProviderId", "TenantId", "DisplayName", "Issuer", "EntityId", "JwksUrl", "SamlMetadataUrl", "ClientIds", "Audiences", "ClaimMappingJson", "GroupMappingJson", "JitPolicyJson", "AccountLinkingPolicy", "ClientSecret", "SamlSigningKeyPem", "UpdatedBy", "Context", "UpdateMask", });
+        new java.lang.String[] { "ProviderId", "TenantId", "DisplayName", "Issuer", "EntityId", "JwksUrl", "SamlMetadataUrl", "ClientIds", "Audiences", "ClaimMappingJson", "GroupMappingJson", "JitPolicyJson", "AccountLinkingPolicy", "ClientSecret", "SamlSigningKeyPem", "UpdatedBy", "Context", "UpdateMask", "RedirectUris", });
     internal_static_udb_core_idp_services_v1_UpdateProviderResponse_descriptor =
       getDescriptor().getMessageTypes().get(3);
     internal_static_udb_core_idp_services_v1_UpdateProviderResponse_fieldAccessorTable = new

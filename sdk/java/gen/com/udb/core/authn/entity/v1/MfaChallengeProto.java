@@ -45,7 +45,7 @@ public final class MfaChallengeProto {
       "/protobuf/timestamp.proto\032$udb/core/auth" +
       "n/entity/v1/enums.proto\032\033udb/core/common" +
       "/v1/db.proto\032!udb/core/common/v1/securit" +
-      "y.proto\"\236\r\n\014MfaChallenge\022R\n\014challenge_id" +
+      "y.proto\"\217\020\n\014MfaChallenge\022R\n\014challenge_id" +
       "\030\001 \001(\tB/\202\267\030+\n\014challenge_id\022\004UUID\030\001(\001:\021ge" +
       "n_random_uuid()R\013challengeId\0226\n\007user_id\030" +
       "\002 \001(\tB\035\202\267\030\031\n\007user_id\022\014VARCHAR(160)\030\001R\006us" +
@@ -76,25 +76,34 @@ public final class MfaChallengeProto {
       "sumedAt\022q\n\ncreated_at\030\014 \001(\0132\032.google.pro" +
       "tobuf.TimestampB6\202\267\0302\n\ncreated_at\022\013TIMES" +
       "TAMPTZ\030\001:\021CURRENT_TIMESTAMP`\001h\001R\tcreated" +
-      "At:\313\003\372\266\030\315\002\n\016mfa_challenges\022\tudb_authn\030\030 " +
-      "\001*FFirst-class step-up MFA challenge rec" +
-      "ords (single-use, atomic consume)@\001b^\n\020t" +
-      "enant_isolation\032H(tenant_id::text = curr" +
-      "ent_setting(\'app.current_tenant_id\', tru" +
-      "e)::text)(\001\212\001)\n\027idx_mfa_challenges_user\022" +
-      "\005BTREEZ\007user_id\212\001/\n\032idx_mfa_challenges_e" +
-      "xpires\022\005BTREEZ\nexpires_at\352\001\007primary\372\001\031au" +
-      "thn:mfa-challenges:read\212\262\031u\n\006tenant\032\tten" +
-      "ant_id*4tenant_id = current_setting(\'app" +
-      ".current_tenant_id\')2\004none:\016authn.securi" +
-      "ty@\036H\002R\006tenantZ\010standardB\374\001\n\034com.udb.cor" +
-      "e.authn.entity.v1B\021MfaChallengeProtoP\001ZD" +
-      "github.com/fahara02/udb/sdk/go/gen/udb/c" +
-      "ore/authn/entity/v1;entityv1\242\002\004UCAE\252\002\030Ud" +
-      "b.Core.Authn.Entity.V1\312\002\030Udb\\Core\\Authn\\" +
-      "Entity\\V1\342\002$Udb\\GPBMetadata\\Core\\Authn\\E" +
-      "ntity\\V1\352\002\034Udb::Core::Authn::Entity::V1b" +
-      "\006proto3"
+      "At\022l\n\006action\030\r \001(\tBT\202\267\030P\n\006action\022\014VARCHA" +
+      "R(120)\030\001:\002\'\'Z2Protected action a success" +
+      "ful verification unlocksR\006action\022e\n\006otp_" +
+      "id\030\016 \001(\tBN\202\267\030J\n\006otp_id\022\013VARCHAR(64)\030\001:\002\'" +
+      "\'Z-OTP issued for an EMAIL_OTP/SMS_OTP c" +
+      "hallengeR\005otpId\022\231\001\n\025webauthn_challenge_i" +
+      "d\030\017 \001(\tBe\202\267\030a\n\025webauthn_challenge_id\022\013VA" +
+      "RCHAR(64)\030\001:\002\'\'Z5WebAuthn assertion chal" +
+      "lenge for a WEBAUTHN challengeR\023webauthn" +
+      "ChallengeId:\313\003\372\266\030\315\002\n\016mfa_challenges\022\tudb" +
+      "_authn\030\030 \001*FFirst-class step-up MFA chal" +
+      "lenge records (single-use, atomic consum" +
+      "e)@\001b^\n\020tenant_isolation\032H(tenant_id::te" +
+      "xt = current_setting(\'app.current_tenant" +
+      "_id\', true)::text)(\001\212\001)\n\027idx_mfa_challen" +
+      "ges_user\022\005BTREEZ\007user_id\212\001/\n\032idx_mfa_cha" +
+      "llenges_expires\022\005BTREEZ\nexpires_at\352\001\007pri" +
+      "mary\372\001\031authn:mfa-challenges:read\212\262\031u\n\006te" +
+      "nant\032\ttenant_id*4tenant_id = current_set" +
+      "ting(\'app.current_tenant_id\')2\004none:\016aut" +
+      "hn.security@\036H\002R\006tenantZ\010standardB\374\001\n\034co" +
+      "m.udb.core.authn.entity.v1B\021MfaChallenge" +
+      "ProtoP\001ZDgithub.com/fahara02/udb/sdk/go/" +
+      "gen/udb/core/authn/entity/v1;entityv1\242\002\004" +
+      "UCAE\252\002\030Udb.Core.Authn.Entity.V1\312\002\030Udb\\Co" +
+      "re\\Authn\\Entity\\V1\342\002$Udb\\GPBMetadata\\Cor" +
+      "e\\Authn\\Entity\\V1\352\002\034Udb::Core::Authn::En" +
+      "tity::V1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -109,7 +118,7 @@ public final class MfaChallengeProto {
     internal_static_udb_core_authn_entity_v1_MfaChallenge_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_core_authn_entity_v1_MfaChallenge_descriptor,
-        new java.lang.String[] { "ChallengeId", "UserId", "TenantId", "ProjectId", "FactorKind", "Purpose", "DeviceFingerprintHash", "IpAddressMasked", "AttemptCount", "ExpiresAt", "ConsumedAt", "CreatedAt", });
+        new java.lang.String[] { "ChallengeId", "UserId", "TenantId", "ProjectId", "FactorKind", "Purpose", "DeviceFingerprintHash", "IpAddressMasked", "AttemptCount", "ExpiresAt", "ConsumedAt", "CreatedAt", "Action", "OtpId", "WebauthnChallengeId", });
     descriptor.resolveAllFeaturesImmutable();
     com.google.protobuf.TimestampProto.getDescriptor();
     com.udb.core.authn.entity.v1.EnumsProto.getDescriptor();

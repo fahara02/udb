@@ -183,4 +183,26 @@ java.lang.String defaultValue);
    * <code>.google.protobuf.FieldMask update_mask = 11 [json_name = "updateMask"];</code>
    */
   com.google.protobuf.FieldMaskOrBuilder getUpdateMaskOrBuilder();
+
+  /**
+   * <pre>
+   * The language of this account's messages (BCP 47, e.g. `bn`); set it with
+   * `locale` in `update_mask` (an empty value then resets to English).
+   * </pre>
+   *
+   * <code>string locale = 12 [json_name = "locale"];</code>
+   * @return The locale.
+   */
+  java.lang.String getLocale();
+  /**
+   * <pre>
+   * The language of this account's messages (BCP 47, e.g. `bn`); set it with
+   * `locale` in `update_mask` (an empty value then resets to English).
+   * </pre>
+   *
+   * <code>string locale = 12 [json_name = "locale"];</code>
+   * @return The bytes for locale.
+   */
+  com.google.protobuf.ByteString
+      getLocaleBytes();
 }

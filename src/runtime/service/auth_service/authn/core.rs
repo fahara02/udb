@@ -113,7 +113,7 @@ pub(super) fn user_record_to_pb(rec: &UserRecord) -> authn_entity_pb::User {
         project_id: rec.project_id.clone(),
         external_provider_id: rec.external_provider_id.clone(),
         external_subject: rec.external_subject.clone(),
-        locale: String::new(),
+        locale: rec.locale.clone(),
         timezone: String::new(),
         profile_attributes_json: crate::runtime::authn::profile::redact_profile_attributes_json(
             &rec.profile_attributes_json,
@@ -203,6 +203,7 @@ mod tests {
             .to_string(),
             phone: String::new(),
             phone_verified_at_unix: 0,
+            locale: String::new(),
         }
     }
 
@@ -985,6 +986,59 @@ fn claim_bound_read_tenant(request_tenant: &str) -> Result<Option<String>, Statu
 
 /// E.164 as CreateUser accepts it: `+`, a non-zero leading digit, 7 to 15
 /// digits in all (`^\+[1-9]\d{6,14}$`).
+/// A BCP 47 language tag for a user's messages (`bn`, `en-US`): at most 35
+/// letters, digits and hyphens; empty means English. Auth codes, magic links
+/// and invitations render in this language when a template for it exists.
+pub(super) fn validated_user_locale(raw: &str) -> Result<String, Status> {
+    let locale = raw.trim();
+    let valid = locale.len() <= 35
+        && locale
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || c == '-')
+        && !locale.starts_with('-')
+        && !locale.ends_with('-');
+    if valid {
+        Ok(locale.to_string())
+    } else {
+        Err(authn_core_invalid_fields(
+            "locale must be a BCP 47 language tag",
+            [(
+                "locale",
+                "must be at most 35 letters, digits and hyphens, e.g. bn or en-US",
+            )],
+        ))
+    }
+}
+
+/// Write `users.locale`. Like the phone columns, the locale is written by this
+/// dedicated UPDATE (inside the caller's transaction), never by the user upsert.
+pub(super) async fn set_user_locale_in_tx(
+    conn: &mut sqlx::PgConnection,
+    user_id: &Uuid,
+    locale: &str,
+) -> Result<(), Status> {
+    let um = crate::runtime::native_catalog::native_model(
+        "udb.core.authn.entity.v1.User",
+        &["user_id", "locale", "updated_at"],
+    );
+    let sql = format!(
+        "UPDATE {rel} SET {locale} = $2, {updated} = now() WHERE {uid} = $1",
+        rel = um.relation,
+        locale = um.q("locale"),
+        updated = um.q("updated_at"),
+        uid = um.q("user_id"),
+    );
+    sqlx::query(&sql)
+        .bind(user_id)
+        .bind(locale)
+        .execute(&mut *conn)
+        .await
+        .map_err(|err| {
+            crate::runtime::executor_utils::sqlx_error_to_status("user locale update failed", &err)
+        })?;
+    Ok(())
+}
+
 pub(super) fn is_e164_phone(phone: &str) -> bool {
     let Some(digits) = phone.strip_prefix('+') else {
         return false;
@@ -1069,6 +1123,7 @@ impl AuthnServiceImpl {
         }
         let req = request.into_inner();
         validate_create_user_identity(&req.username, &req.email, &req.phone)?;
+        let locale = validated_user_locale(&req.locale)?;
         let phone = req.phone.trim().to_string();
         // A phone-only account: every code it needs (verification, invite)
         // travels by SMS instead of email.
@@ -1119,15 +1174,23 @@ impl AuthnServiceImpl {
                 )],
             ));
         }
+        // Passwordless: a tenant whose auth policy says password_required=false
+        // accepts an empty password; the account then signs in by one-time
+        // code (SendLoginOtp / LoginWithOtp). The policy is read only for such
+        // a request, so every other CreateUser is unchanged.
+        let passwordless = !invite
+            && req.password.is_empty()
+            && req.external_provider_id.trim().is_empty()
+            && !self.tenant_password_required(&tenant_id).await?;
         // Externally-provisioned (SSO/OIDC) users have no local password to vet.
-        if !invite && req.external_provider_id.trim().is_empty() {
+        if !invite && !passwordless && req.external_provider_id.trim().is_empty() {
             authn::PasswordPolicy::from_env()
                 .validate(&req.password)
                 .map_err(create_user_password_policy_status)?;
         }
-        // An invited account holds the hash of a random secret nobody knows,
-        // so no password matches it until ResetPassword replaces it.
-        let initial_password = if invite {
+        // An invited or passwordless account holds the hash of a random secret
+        // nobody knows, so no password matches it (until ResetPassword sets one).
+        let initial_password = if invite || passwordless {
             format!("{}{}", Uuid::new_v4(), Uuid::new_v4())
         } else {
             req.password.clone()
@@ -1196,6 +1259,7 @@ impl AuthnServiceImpl {
                 .unwrap_or_else(|_| "{}".to_string()),
             phone: phone.clone(),
             phone_verified_at_unix: 0,
+            locale: String::new(),
         };
         // Prepare the verification OTP (record + plaintext code) WITHOUT
         // persisting or sending it yet, so the row can land inside the same
@@ -1283,6 +1347,11 @@ impl AuthnServiceImpl {
                 .set_user_phone_in_tx(&mut *tx, &rec.user_id, &phone)
                 .await
                 .map_err(crate::runtime::executor_utils::status_from_store_string)?;
+        }
+        if !locale.is_empty() {
+            let user_uuid = Uuid::parse_str(&rec.user_id)
+                .map_err(|err| authn_core_internal_status("create_user_locale", err.to_string()))?;
+            set_user_locale_in_tx(&mut *tx, &user_uuid, &locale).await?;
         }
         self.users
             .put_otp_in_tx(&mut *tx, otp_rec)
@@ -1447,6 +1516,7 @@ impl AuthnServiceImpl {
                 "profile_attributes",
                 "external_provider_id",
                 "external_subject",
+                "locale",
             ],
         )?;
         if crate::runtime::service::native_helpers::update_mask_allows(
@@ -1506,11 +1576,31 @@ impl AuthnServiceImpl {
             rec.profile_attributes_json =
                 serde_json::to_string(&req.profile_attributes).unwrap_or_else(|_| "{}".to_string());
         }
+        let new_locale = if crate::runtime::service::native_helpers::update_mask_allows(
+            &update_mask,
+            "locale",
+            !req.locale.trim().is_empty(),
+        ) {
+            Some(validated_user_locale(&req.locale)?)
+        } else {
+            None
+        };
         rec.updated_at_unix = now_unix();
         self.users
             .put_user(rec.clone())
             .await
             .map_err(crate::runtime::executor_utils::status_from_store_string)?;
+        if let Some(locale) = new_locale {
+            let user_uuid = Uuid::parse_str(&rec.user_id)
+                .map_err(|err| authn_core_internal_status("update_user_locale", err.to_string()))?;
+            let pool = self.require_pool()?;
+            let mut conn = pool
+                .acquire()
+                .await
+                .map_err(|err| authn_core_internal_status("update_user_locale", err.to_string()))?;
+            set_user_locale_in_tx(&mut conn, &user_uuid, &locale).await?;
+            rec.locale = locale;
+        }
         Ok(Response::new(authn_pb::UpdateUserResponse {
             user: Some(user_record_to_pb(&rec)),
         }))
