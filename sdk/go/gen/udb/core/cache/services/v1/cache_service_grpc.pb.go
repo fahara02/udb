@@ -21,6 +21,7 @@ const _ = grpc.SupportPackageIsVersion9
 const (
 	CacheService_Get_FullMethodName               = "/udb.core.cache.services.v1.CacheService/Get"
 	CacheService_Set_FullMethodName               = "/udb.core.cache.services.v1.CacheService/Set"
+	CacheService_Increment_FullMethodName         = "/udb.core.cache.services.v1.CacheService/Increment"
 	CacheService_Delete_FullMethodName            = "/udb.core.cache.services.v1.CacheService/Delete"
 	CacheService_Scan_FullMethodName              = "/udb.core.cache.services.v1.CacheService/Scan"
 	CacheService_CreateNamespace_FullMethodName   = "/udb.core.cache.services.v1.CacheService/CreateNamespace"
@@ -70,6 +71,22 @@ type CacheServiceClient interface {
 	// Idempotency fields: no declared method replay contract.
 	// End UDB contract.
 	Set(ctx context.Context, in *SetRequest, opts ...grpc.CallOption) (*SetResponse, error)
+	// Atomically add `delta` to an integer counter and return the new value, in
+	// one Redis round trip: the shared-counter primitive a rate limiter needs
+	// (one call per decision). A missing key starts at 0 and takes the TTL from
+	// `ttl_seconds_if_created`; an existing key keeps its TTL. With `max` > 0 an
+	// increment that would take the value above `max` is not applied and
+	// `refused` is true. Not idempotent: a retried call adds `delta` again. Emits
+	// no outbox event (it is a hot-path counter, not a domain change).
+	// UDB contract: /udb.core.cache.services.v1.CacheService/Increment
+	// Listener: control plane.
+	// Scopes: udb:cache:increment.
+	// Credential types: BEARER_JWT (1), SESSION (2), SERVICE_ACCOUNT (4).
+	// Operation kind: mutation.
+	// Idempotency: no automatic mutation replay; a server-generated key alone does not permit retry.
+	// Idempotency fields: no declared method replay contract.
+	// End UDB contract.
+	Increment(ctx context.Context, in *IncrementRequest, opts ...grpc.CallOption) (*IncrementResponse, error)
 	// Delete a single namespaced key. Idempotent.
 	// UDB contract: /udb.core.cache.services.v1.CacheService/Delete
 	// Listener: control plane.
@@ -153,6 +170,16 @@ func (c *cacheServiceClient) Set(ctx context.Context, in *SetRequest, opts ...gr
 	return out, nil
 }
 
+func (c *cacheServiceClient) Increment(ctx context.Context, in *IncrementRequest, opts ...grpc.CallOption) (*IncrementResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(IncrementResponse)
+	err := c.cc.Invoke(ctx, CacheService_Increment_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *cacheServiceClient) Delete(ctx context.Context, in *DeleteRequest, opts ...grpc.CallOption) (*DeleteResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(DeleteResponse)
@@ -229,6 +256,14 @@ type CacheServiceServer interface {
 	// namespace over its per-tenant `max_bytes` budget fails closed with
 	// `resource_exhausted`.
 	Set(context.Context, *SetRequest) (*SetResponse, error)
+	// Atomically add `delta` to an integer counter and return the new value, in
+	// one Redis round trip: the shared-counter primitive a rate limiter needs
+	// (one call per decision). A missing key starts at 0 and takes the TTL from
+	// `ttl_seconds_if_created`; an existing key keeps its TTL. With `max` > 0 an
+	// increment that would take the value above `max` is not applied and
+	// `refused` is true. Not idempotent: a retried call adds `delta` again. Emits
+	// no outbox event (it is a hot-path counter, not a domain change).
+	Increment(context.Context, *IncrementRequest) (*IncrementResponse, error)
 	// Delete a single namespaced key. Idempotent.
 	Delete(context.Context, *DeleteRequest) (*DeleteResponse, error)
 	// Cursor-paged scan over a namespace key prefix. Implemented with Redis SCAN
@@ -256,6 +291,9 @@ func (UnimplementedCacheServiceServer) Get(context.Context, *GetRequest) (*GetRe
 }
 func (UnimplementedCacheServiceServer) Set(context.Context, *SetRequest) (*SetResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method Set not implemented")
+}
+func (UnimplementedCacheServiceServer) Increment(context.Context, *IncrementRequest) (*IncrementResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method Increment not implemented")
 }
 func (UnimplementedCacheServiceServer) Delete(context.Context, *DeleteRequest) (*DeleteResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method Delete not implemented")
@@ -324,6 +362,24 @@ func _CacheService_Set_Handler(srv interface{}, ctx context.Context, dec func(in
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(CacheServiceServer).Set(ctx, req.(*SetRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CacheService_Increment_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(IncrementRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CacheServiceServer).Increment(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CacheService_Increment_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CacheServiceServer).Increment(ctx, req.(*IncrementRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -432,6 +488,10 @@ var CacheService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Set",
 			Handler:    _CacheService_Set_Handler,
+		},
+		{
+			MethodName: "Increment",
+			Handler:    _CacheService_Increment_Handler,
 		},
 		{
 			MethodName: "Delete",

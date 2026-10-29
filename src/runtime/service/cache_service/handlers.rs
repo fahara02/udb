@@ -1,4 +1,4 @@
-//! The seven `CacheService` RPC handlers, extracted from the trait impl; `mod.rs`
+//! The eight `CacheService` RPC handlers, extracted from the trait impl; `mod.rs`
 //! delegates one line to each. The tenant is always taken from the VERIFIED
 //! claim/header (`validate_request_tenant`), never the request body.
 
@@ -122,6 +122,61 @@ pub(crate) async fn set(
     #[cfg(not(feature = "redis"))]
     {
         let _ = (&tenant, &namespace, &key, &req.value, req.ttl_seconds);
+        Err(no_redis_status())
+    }
+}
+
+pub(crate) async fn increment(
+    svc: &CacheServiceImpl,
+    request: Request<cache_pb::IncrementRequest>,
+) -> Result<Response<cache_pb::IncrementResponse>, Status> {
+    let metadata = request.metadata().clone();
+    let req = request.into_inner();
+    validate_request_tenant(&metadata, &req.tenant_id)?;
+    let tenant = req.tenant_id.trim().to_string();
+    let namespace = validate_namespace(&req.namespace)?;
+    let key = require_field("key", &req.key)?;
+    // A data mutation like `Set`, so it shares the Write admission lane.
+    let _admit = native_admit_on(
+        svc.channels.as_ref(),
+        &svc.metrics,
+        "cache",
+        OperationChannel::Write,
+        &tenant,
+        None,
+    )
+    .await?;
+    #[cfg(feature = "redis")]
+    {
+        let client = svc.require_redis()?;
+        let outcome = redis_engine::increment(
+            client,
+            &tenant,
+            &namespace,
+            &key,
+            req.delta,
+            req.ttl_seconds_if_created,
+            req.max,
+        )
+        .await?;
+        Ok(Response::new(cache_pb::IncrementResponse {
+            value: outcome.value,
+            created: outcome.created,
+            refused: outcome.refused,
+            ttl_remaining_seconds: outcome.ttl_remaining_seconds,
+            error: None,
+        }))
+    }
+    #[cfg(not(feature = "redis"))]
+    {
+        let _ = (
+            &tenant,
+            &namespace,
+            &key,
+            req.delta,
+            req.ttl_seconds_if_created,
+            req.max,
+        );
         Err(no_redis_status())
     }
 }

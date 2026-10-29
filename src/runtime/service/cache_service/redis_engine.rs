@@ -11,9 +11,11 @@ use super::config::{
     RECONCILE_NAMESPACES_PER_PASS, SWEEP_COMMAND, SWEEP_COUNT,
 };
 use super::keys::{
-    BUDGETED_DELETE_LUA, BUDGETED_SET_LUA, bytes_counter_key, clamped_scan_count, data_key,
-    data_match, effective_max_bytes, meta_key, meta_match_all, namespace_match_all, parse_meta_key,
-    reconcile_cursor_key, reconciled_sum, strip_data_prefix, would_exceed_budget,
+    BUDGETED_DELETE_LUA, BUDGETED_INCREMENT_LUA, BUDGETED_SET_LUA, INCREMENT_APPLIED,
+    INCREMENT_NOT_INTEGER, INCREMENT_OVER_BUDGET, INCREMENT_OVERFLOW, INCREMENT_REFUSED,
+    bytes_counter_key, clamped_scan_count, data_key, data_match, effective_max_bytes, meta_key,
+    meta_match_all, namespace_match_all, parse_meta_key, reconcile_cursor_key, reconciled_sum,
+    strip_data_prefix, would_exceed_budget,
 };
 
 fn map_err(context: &str, err: redis::RedisError) -> Status {
@@ -155,6 +157,75 @@ pub(crate) async fn set(
         used_bytes: used_after.max(0),
         max_bytes,
     })
+}
+
+pub(crate) struct IncrementOutcome {
+    pub value: i64,
+    pub created: bool,
+    pub refused: bool,
+    pub ttl_remaining_seconds: i64,
+}
+
+pub(crate) async fn increment(
+    client: &redis::Client,
+    tenant: &str,
+    namespace: &str,
+    key: &str,
+    delta: i64,
+    ttl_seconds_if_created: i64,
+    max: i64,
+) -> Result<IncrementOutcome, Status> {
+    let mut conn = connect(client).await?;
+    let full = data_key(tenant, namespace, key);
+    let meta = load_meta(&mut conn, tenant, namespace).await?;
+    let max_bytes = effective_max_bytes(meta.max_bytes);
+    // Same TTL resolution as `set`, applied only when this call creates the key.
+    let ttl = if ttl_seconds_if_created > 0 {
+        ttl_seconds_if_created
+    } else {
+        meta.default_ttl_seconds.max(0)
+    };
+    let (status, value, created, ttl_remaining): (i64, i64, i64, i64) =
+        redis::Script::new(BUDGETED_INCREMENT_LUA)
+            .key(&full)
+            .key(bytes_counter_key(tenant, namespace))
+            .arg(delta)
+            .arg(max.max(0))
+            .arg(ttl)
+            .arg(max_bytes)
+            .invoke_async(&mut conn)
+            .await
+            .map_err(|err| map_err("budgeted INCRBY", err))?;
+    match status {
+        INCREMENT_APPLIED | INCREMENT_REFUSED => Ok(IncrementOutcome {
+            value,
+            created: created == 1,
+            refused: status == INCREMENT_REFUSED,
+            ttl_remaining_seconds: ttl_remaining.max(0),
+        }),
+        INCREMENT_NOT_INTEGER => Err(crate::runtime::executor_utils::policy_status_with_code(
+            tonic::Code::FailedPrecondition,
+            "cache_increment",
+            "cache_value_not_integer",
+            format!("cache key '{key}' in namespace '{namespace}' does not hold an integer"),
+        )),
+        INCREMENT_OVERFLOW => Err(crate::runtime::executor_utils::policy_status_with_code(
+            tonic::Code::OutOfRange,
+            "cache_increment",
+            "cache_counter_overflow",
+            format!("incrementing cache key '{key}' by {delta} would overflow a 64-bit integer"),
+        )),
+        INCREMENT_OVER_BUDGET => Err(crate::runtime::executor_utils::quota_refusal_status(
+            "cache",
+            "namespace byte budget",
+            format!("cache namespace '{namespace}' byte budget exhausted (max {max_bytes})"),
+        )),
+        other => Err(crate::runtime::executor_utils::backend_transport_status(
+            "redis",
+            "budgeted INCRBY",
+            format!("unexpected increment script status {other}"),
+        )),
+    }
 }
 
 pub(crate) async fn delete(

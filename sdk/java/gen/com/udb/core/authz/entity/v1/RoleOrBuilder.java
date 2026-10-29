@@ -209,4 +209,32 @@ public interface RoleOrBuilder extends
    */
   com.google.protobuf.ByteString
       getMetadataJsonBytes();
+
+  /**
+   * <pre>
+   * JSON array of the token scopes a PERSON's access token carries while bound
+   * to this role in the role's tenant/project, e.g. ["udb:authn:manage-grants"].
+   * Projected at login/refresh time; service accounts never receive them (their
+   * scopes come only from their typed grant). Wildcard, admin, owner, platform
+   * and the token-exchange scope are refused on write.
+   * </pre>
+   *
+   * <code>string token_scopes_json = 18 [json_name = "tokenScopesJson", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The tokenScopesJson.
+   */
+  java.lang.String getTokenScopesJson();
+  /**
+   * <pre>
+   * JSON array of the token scopes a PERSON's access token carries while bound
+   * to this role in the role's tenant/project, e.g. ["udb:authn:manage-grants"].
+   * Projected at login/refresh time; service accounts never receive them (their
+   * scopes come only from their typed grant). Wildcard, admin, owner, platform
+   * and the token-exchange scope are refused on write.
+   * </pre>
+   *
+   * <code>string token_scopes_json = 18 [json_name = "tokenScopesJson", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The bytes for tokenScopesJson.
+   */
+  com.google.protobuf.ByteString
+      getTokenScopesJsonBytes();
 }

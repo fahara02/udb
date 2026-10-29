@@ -236,7 +236,7 @@ class AuthzResponse(_message.Message):
     def __init__(self, decision: _Optional[_Union[Decision, _Mapping]] = ...) -> None: ...
 
 class CreateRoleRequest(_message.Message):
-    __slots__ = ("name", "description", "created_by", "role_code", "domain", "tenant_id", "project_id", "scope_type", "access_surface", "metadata")
+    __slots__ = ("name", "description", "created_by", "role_code", "domain", "tenant_id", "project_id", "scope_type", "access_surface", "metadata", "token_scopes")
     class MetadataEntry(_message.Message):
         __slots__ = ("key", "value")
         KEY_FIELD_NUMBER: _ClassVar[int]
@@ -254,6 +254,7 @@ class CreateRoleRequest(_message.Message):
     SCOPE_TYPE_FIELD_NUMBER: _ClassVar[int]
     ACCESS_SURFACE_FIELD_NUMBER: _ClassVar[int]
     METADATA_FIELD_NUMBER: _ClassVar[int]
+    TOKEN_SCOPES_FIELD_NUMBER: _ClassVar[int]
     name: str
     description: str
     created_by: str
@@ -264,7 +265,8 @@ class CreateRoleRequest(_message.Message):
     scope_type: _enums_pb2.RoleScopeType
     access_surface: str
     metadata: _containers.ScalarMap[str, str]
-    def __init__(self, name: _Optional[str] = ..., description: _Optional[str] = ..., created_by: _Optional[str] = ..., role_code: _Optional[str] = ..., domain: _Optional[str] = ..., tenant_id: _Optional[str] = ..., project_id: _Optional[str] = ..., scope_type: _Optional[_Union[_enums_pb2.RoleScopeType, str]] = ..., access_surface: _Optional[str] = ..., metadata: _Optional[_Mapping[str, str]] = ...) -> None: ...
+    token_scopes: _containers.RepeatedScalarFieldContainer[str]
+    def __init__(self, name: _Optional[str] = ..., description: _Optional[str] = ..., created_by: _Optional[str] = ..., role_code: _Optional[str] = ..., domain: _Optional[str] = ..., tenant_id: _Optional[str] = ..., project_id: _Optional[str] = ..., scope_type: _Optional[_Union[_enums_pb2.RoleScopeType, str]] = ..., access_surface: _Optional[str] = ..., metadata: _Optional[_Mapping[str, str]] = ..., token_scopes: _Optional[_Iterable[str]] = ...) -> None: ...
 
 class CreateRoleResponse(_message.Message):
     __slots__ = ("role",)
@@ -503,20 +505,22 @@ class BatchCheckPermissionsResponse(_message.Message):
     def __init__(self, results: _Optional[_Mapping[str, bool]] = ...) -> None: ...
 
 class UpdateRoleRequest(_message.Message):
-    __slots__ = ("role_id", "name", "description", "is_active", "updated_by", "update_mask")
+    __slots__ = ("role_id", "name", "description", "is_active", "updated_by", "update_mask", "token_scopes")
     ROLE_ID_FIELD_NUMBER: _ClassVar[int]
     NAME_FIELD_NUMBER: _ClassVar[int]
     DESCRIPTION_FIELD_NUMBER: _ClassVar[int]
     IS_ACTIVE_FIELD_NUMBER: _ClassVar[int]
     UPDATED_BY_FIELD_NUMBER: _ClassVar[int]
     UPDATE_MASK_FIELD_NUMBER: _ClassVar[int]
+    TOKEN_SCOPES_FIELD_NUMBER: _ClassVar[int]
     role_id: str
     name: str
     description: str
     is_active: bool
     updated_by: str
     update_mask: _field_mask_pb2.FieldMask
-    def __init__(self, role_id: _Optional[str] = ..., name: _Optional[str] = ..., description: _Optional[str] = ..., is_active: bool = ..., updated_by: _Optional[str] = ..., update_mask: _Optional[_Union[_field_mask_pb2.FieldMask, _Mapping]] = ...) -> None: ...
+    token_scopes: _containers.RepeatedScalarFieldContainer[str]
+    def __init__(self, role_id: _Optional[str] = ..., name: _Optional[str] = ..., description: _Optional[str] = ..., is_active: bool = ..., updated_by: _Optional[str] = ..., update_mask: _Optional[_Union[_field_mask_pb2.FieldMask, _Mapping]] = ..., token_scopes: _Optional[_Iterable[str]] = ...) -> None: ...
 
 class UpdateRoleResponse(_message.Message):
     __slots__ = ("role",)

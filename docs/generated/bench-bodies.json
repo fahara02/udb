@@ -1705,6 +1705,18 @@
   },
   {
     "file": "cache.md",
+    "rpc": "Increment",
+    "service": "CacheService",
+    "wire_rpc": "CacheService/Increment",
+    "api_alias": "cache_increment",
+    "operation_id": "cacheNamespaceIncrement",
+    "op_kind": "MUTATION",
+    "request_msg": "IncrementRequest",
+    "body": "`{ \"tenant_id\": \"<seed:tenant_id>\", \"namespace\": \"sdk-perf-cache\", \"key\": \"sdk-perf-counter\", \"delta\": 1, \"ttl_seconds_if_created\": 300, \"max\": 0 }`",
+    "notes": "its own integer counter key (the seeded object key holds bytes, which Increment refuses); max 0 = unbounded, so every iteration applies."
+  },
+  {
+    "file": "cache.md",
     "rpc": "Scan",
     "service": "CacheService",
     "wire_rpc": "CacheService/Scan",

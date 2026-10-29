@@ -201,11 +201,16 @@ impl AuthnServiceImpl {
     /// the user — read straight off the pub `role_bindings` the central plane
     /// loads (the same source `list_user_permissions` uses), NOT the private
     /// `effective_roles`, and with NO parallel `user_roles` query — and the
-    /// scopes those roles project to via [`ROLE_SCOPE_PROJECTIONS`].
+    /// scopes those roles project to via [`ROLE_SCOPE_PROJECTIONS`], unioned
+    /// with the `token_scopes` each bound role configures
+    /// ([`Self::bound_role_token_scopes`]). PERSON bearers only: service
+    /// accounts resolve through [`Self::resolve_service_account_roles`].
     ///
     /// Returns `(scopes, roles)`. Fail-closed: no snapshot wired ⇒ no grants
     /// (never empty-as-admin). `empty ⇒ empty`, so revoking a user's last role
-    /// drops the projected admin scope at the next issue/refresh.
+    /// drops the projected admin scope at the next issue/refresh. Scopes are
+    /// projected at issue/refresh time only: after a role's scopes change, a
+    /// bound user carries the new set once they log in again or refresh.
     pub(super) fn resolve_effective_grants(
         &self,
         user_id: &str,
@@ -226,7 +231,53 @@ impl AuthnServiceImpl {
                 }
             }
         }
+        for scope in self.bound_role_token_scopes(user_id, tenant_id, project_id) {
+            if !scopes.contains(&scope) {
+                scopes.push(scope);
+            }
+        }
         (scopes, roles)
+    }
+
+    /// The configured `token_scopes` of every role bound to `user_id` in the
+    /// tenant/project domain: a binding matched exactly as in
+    /// [`Self::bound_role_codes`] contributes the scopes of the role row with
+    /// the SAME role key, tenant and project, so a role's scopes never leak
+    /// into another tenant or project. No snapshot wired ⇒ no scopes.
+    fn bound_role_token_scopes(
+        &self,
+        user_id: &str,
+        tenant_id: &str,
+        project_id: &str,
+    ) -> Vec<String> {
+        let Some(cell) = self.authz_snapshot.as_ref() else {
+            return Vec::new();
+        };
+        let snapshot = cell.load();
+        let mut scopes: Vec<String> = Vec::new();
+        for binding in &snapshot.role_bindings {
+            if binding.subject.as_str() != user_id
+                || !domain_allows(&binding.tenant, tenant_id)
+                || !domain_allows(&binding.project, project_id)
+            {
+                continue;
+            }
+            for configured in &snapshot.role_token_scopes {
+                // A role defined without a project applies to its bindings in
+                // any project of the tenant; a project role needs that project.
+                if configured.role == binding.role
+                    && configured.tenant == binding.tenant
+                    && (configured.project.is_empty() || configured.project == binding.project)
+                {
+                    for scope in &configured.scopes {
+                        if !scopes.contains(scope) {
+                            scopes.push(scope.clone());
+                        }
+                    }
+                }
+            }
+        }
+        scopes
     }
 
     /// The role codes bound to `user_id` in the tenant/project domain, read off
@@ -254,7 +305,7 @@ impl AuthnServiceImpl {
     /// account in its grant's tenant/project, minus every
     /// [`is_service_forbidden_role`] code. Roles ONLY — a service bearer's
     /// scopes come exclusively from its typed grant, never from
-    /// [`ROLE_SCOPE_PROJECTIONS`].
+    /// [`ROLE_SCOPE_PROJECTIONS`] or a bound role's configured token scopes.
     pub(super) fn resolve_service_account_roles(
         &self,
         user_id: &str,

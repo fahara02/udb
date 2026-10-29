@@ -165,6 +165,13 @@ impl CacheService for CacheServiceImpl {
         handlers::set(self, request).await
     }
 
+    async fn increment(
+        &self,
+        request: Request<cache_pb::IncrementRequest>,
+    ) -> Result<Response<cache_pb::IncrementResponse>, Status> {
+        handlers::increment(self, request).await
+    }
+
     async fn delete(
         &self,
         request: Request<cache_pb::DeleteRequest>,

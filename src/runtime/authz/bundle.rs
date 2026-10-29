@@ -267,6 +267,7 @@ mod tests {
             ],
             role_bindings: Vec::new(),
             tuples: Vec::new(),
+            role_token_scopes: Vec::new(),
             default_allow: false,
         }
     }

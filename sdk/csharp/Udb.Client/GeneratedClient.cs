@@ -3,10 +3,10 @@
 //
 // UDB C# SDK — generated robustness/forwarding layer.
 //   Language:         csharp
-//   UDB version:      0.6.4
+//   UDB version:      0.6.5
 //   Protocol version: 1.0.0
 //   Services:         29
-//   RPCs:             407
+//   RPCs:             408
 //
 // This file is RENDERED by `udb sdk generate` from
 //   sdk-templates/csharp/Udb.Client/GeneratedClient.cs.tmpl
@@ -205,6 +205,7 @@ public static class GeneratedRpcIdentities
         map["/udb.core.cache.services.v1.CacheService/DeleteNamespace"] = new RpcIdentity("/udb.core.cache.services.v1.CacheService/DeleteNamespace", "CacheService", "DeleteNamespace", "delete_cache_namespace", "deleteCacheNamespace", "destructive", "post", "/v1/cache/namespaces/{namespace}:flush");
         map["/udb.core.cache.services.v1.CacheService/Get"] = new RpcIdentity("/udb.core.cache.services.v1.CacheService/Get", "CacheService", "Get", "cache_get", "cacheNamespaceGet", "read_only", "get", "/v1/cache/{namespace}/{key}");
         map["/udb.core.cache.services.v1.CacheService/GetNamespaceStats"] = new RpcIdentity("/udb.core.cache.services.v1.CacheService/GetNamespaceStats", "CacheService", "GetNamespaceStats", "get_cache_namespace_stats", "getCacheNamespaceStats", "read_only", "get", "/v1/cache/namespaces/{namespace}/stats");
+        map["/udb.core.cache.services.v1.CacheService/Increment"] = new RpcIdentity("/udb.core.cache.services.v1.CacheService/Increment", "CacheService", "Increment", "cache_increment", "cacheNamespaceIncrement", "mutation", "post", "/v1/cache/{namespace}/{key}:increment");
         map["/udb.core.cache.services.v1.CacheService/Scan"] = new RpcIdentity("/udb.core.cache.services.v1.CacheService/Scan", "CacheService", "Scan", "cache_scan", "cacheNamespaceScan", "read_only", "get", "/v1/cache/{namespace}:scan");
         map["/udb.core.cache.services.v1.CacheService/Set"] = new RpcIdentity("/udb.core.cache.services.v1.CacheService/Set", "CacheService", "Set", "cache_set", "cacheNamespaceSet", "mutation", "put", "/v1/cache/{namespace}/{key}");
         map["/udb.core.config.services.v1.ConfigService/DeleteFlag"] = new RpcIdentity("/udb.core.config.services.v1.ConfigService/DeleteFlag", "ConfigService", "DeleteFlag", "delete_flag", "deleteFlag", "destructive", "post", "/v1/config/flags:delete");
@@ -644,7 +645,7 @@ public sealed partial class GeneratedBackupServiceClient : GeneratedServiceBase
 }
 /// <summary>
 /// Robustness wrapper for the <c>udb.core.cache.services.v1.CacheService</c> service
-/// (7 RPCs). Forwards to the buf-generated
+/// (8 RPCs). Forwards to the buf-generated
 /// <c>CacheServiceClient</c> stub.
 /// </summary>
 public sealed partial class GeneratedCacheServiceClient : GeneratedServiceBase
@@ -4527,6 +4528,29 @@ public sealed partial class GeneratedCacheServiceClient
             deadline,
             cancellationToken,
             "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
+    }
+}
+public sealed partial class GeneratedCacheServiceClient
+{
+    /// <summary>
+    /// <c>cache_increment</c> (unary) — forwards to <c>CacheServiceClient.IncrementAsync</c>.
+    /// gRPC path: <c>/udb.core.cache.services.v1.CacheService/Increment</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
+    /// </summary>
+    public Task<dynamic> CacheIncrementAsync(
+        dynamic request,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        // _stub.IncrementAsync returns a concrete AsyncUnaryCall<TResp>; box it
+        // as object so no dynamic-to-closed-generic cast is ever attempted.
+        return InvokeUnaryAsync(
+            "/udb.core.cache.services.v1.CacheService/Increment",
+            co => (object)_stub.IncrementAsync(request, co),
+            deadline,
+            cancellationToken,
+            "mutation" == "read_only",
             "false" == "true",
             (object)request);
     }
@@ -10676,7 +10700,7 @@ public static class UdbIr
             "udb.core.authz.entity.v1.Role",
             "roles",
             new List<string> { "role_id" },
-            new List<string> { "role_id", "name", "description", "is_system", "is_active", "created_by", "created_at", "updated_at", "deleted_at", "tenant_id", "deleted_by", "role_code", "domain", "project_id", "scope_type", "access_surface", "metadata_json" },
+            new List<string> { "role_id", "name", "description", "is_system", "is_active", "created_by", "created_at", "updated_at", "deleted_at", "tenant_id", "deleted_by", "role_code", "domain", "project_id", "scope_type", "access_surface", "metadata_json", "token_scopes_json" },
             "[{\"name\":\"role_permissions\",\"kind\":\"has_many\",\"local_fields\":[\"role_id\"],\"target_message_type\":\"udb.core.authz.entity.v1.RolePermission\",\"target_table\":\"udb_authz.role_permissions\",\"target_fields\":[\"role_id\"],\"on_delete\":\"CASCADE\",\"on_update\":\"NO ACTION\"},{\"name\":\"user_roles\",\"kind\":\"has_many\",\"local_fields\":[\"role_id\"],\"target_message_type\":\"udb.core.authz.entity.v1.UserRole\",\"target_table\":\"udb_authz.user_roles\",\"target_fields\":[\"role_id\"],\"on_delete\":\"CASCADE\",\"on_update\":\"NO ACTION\"}]",
             "",
             "tenant_id",

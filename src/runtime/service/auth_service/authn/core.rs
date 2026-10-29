@@ -409,7 +409,7 @@ mod tests {
             &sms_delivery_unavailable_status(),
             "create_user",
             "sms_delivery_unavailable",
-            "a phone-only account needs SMS code delivery: configure an SMS notification template or UDB_OTP_DELIVERY_WEBHOOK_URL",
+            "a phone-only account needs SMS code delivery: configure an SMS provider in UDB_NOTIFICATION_DELIVERY_PROVIDERS_JSON or UDB_OTP_DELIVERY_WEBHOOK_URL",
         );
     }
 
@@ -1036,7 +1036,7 @@ fn sms_delivery_unavailable_status() -> Status {
     authn_capability_status(
         "create_user",
         "sms_delivery_unavailable",
-        "a phone-only account needs SMS code delivery: configure an SMS notification template or UDB_OTP_DELIVERY_WEBHOOK_URL",
+        "a phone-only account needs SMS code delivery: configure an SMS provider in UDB_NOTIFICATION_DELIVERY_PROVIDERS_JSON or UDB_OTP_DELIVERY_WEBHOOK_URL",
     )
 }
 
@@ -1044,12 +1044,20 @@ impl AuthnServiceImpl {
     /// Whether an SMS code can leave the broker: through the mounted
     /// NotificationService (its SMS templates, shipped or tenant-defined, need
     /// the runtime it is wired with) or the operator OTP webhook.
+    /// Whether an SMS code can actually reach the phone: the operator webhook,
+    /// or the mounted NotificationService WITH a provider for the SMS channel.
+    /// A mounted NotificationService alone only queues the code, which then
+    /// fails after the no-provider grace window, so it does not count.
     fn sms_code_delivery_available(&self) -> bool {
         authn::otp_delivery_webhook_configured()
-            || self
+            || (self
                 .system_notifier
                 .as_ref()
                 .is_some_and(|notifier| notifier.require_runtime().is_ok())
+                && crate::runtime::service::notification_service::delivery_provider_configured(
+                    crate::proto::udb::core::notification::entity::v1::NotificationChannel::Sms
+                        as i32,
+                ))
     }
 
     pub(super) async fn create_user_impl(

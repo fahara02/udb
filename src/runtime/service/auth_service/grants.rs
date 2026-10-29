@@ -180,8 +180,9 @@ pub(crate) fn normalized_scope_list(raw: &[String]) -> Vec<String> {
 
 /// A scope no service account may EVER hold, requested or approved: wildcard /
 /// broker-admin / owner-role scopes would let a workload credential administer
-/// the deployment.
-fn is_forbidden_service_scope(scope: &str) -> bool {
+/// the deployment. Role token scopes (`CreateRole.token_scopes`) reuse it: a
+/// tenant role must not confer that authority on a person either.
+pub(crate) fn is_forbidden_service_scope(scope: &str) -> bool {
     if is_platform_authority_scope(scope) {
         return true;
     }

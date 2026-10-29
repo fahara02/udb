@@ -37,6 +37,8 @@ private static final long serialVersionUID = 0L;
     projectId_ = "";
     scopeType_ = 0;
     accessSurface_ = "";
+    tokenScopes_ =
+        com.google.protobuf.LazyStringArrayList.emptyList();
   }
 
   public static final com.google.protobuf.Descriptors.Descriptor
@@ -473,6 +475,79 @@ java.lang.String defaultValue) {
     return map.get(key);
   }
 
+  public static final int TOKEN_SCOPES_FIELD_NUMBER = 11;
+  @SuppressWarnings("serial")
+  private com.google.protobuf.LazyStringArrayList tokenScopes_ =
+      com.google.protobuf.LazyStringArrayList.emptyList();
+  /**
+   * <pre>
+   * Scopes a PERSON's access token carries while bound to this role in its
+   * tenant/project (e.g. "udb:authn:manage-grants"), projected at login and
+   * refresh. Service accounts never get them: their scopes come only from
+   * their typed grant. Refused: empty, wildcard, admin, owner, platform and
+   * the token-exchange scope; at most 64 scopes of at most 120 characters.
+   * Returned as `Role.token_scopes_json`.
+   * </pre>
+   *
+   * <code>repeated string token_scopes = 11 [json_name = "tokenScopes", (.google.api.field_behavior) = OPTIONAL];</code>
+   * @return A list containing the tokenScopes.
+   */
+  public com.google.protobuf.ProtocolStringList
+      getTokenScopesList() {
+    return tokenScopes_;
+  }
+  /**
+   * <pre>
+   * Scopes a PERSON's access token carries while bound to this role in its
+   * tenant/project (e.g. "udb:authn:manage-grants"), projected at login and
+   * refresh. Service accounts never get them: their scopes come only from
+   * their typed grant. Refused: empty, wildcard, admin, owner, platform and
+   * the token-exchange scope; at most 64 scopes of at most 120 characters.
+   * Returned as `Role.token_scopes_json`.
+   * </pre>
+   *
+   * <code>repeated string token_scopes = 11 [json_name = "tokenScopes", (.google.api.field_behavior) = OPTIONAL];</code>
+   * @return The count of tokenScopes.
+   */
+  public int getTokenScopesCount() {
+    return tokenScopes_.size();
+  }
+  /**
+   * <pre>
+   * Scopes a PERSON's access token carries while bound to this role in its
+   * tenant/project (e.g. "udb:authn:manage-grants"), projected at login and
+   * refresh. Service accounts never get them: their scopes come only from
+   * their typed grant. Refused: empty, wildcard, admin, owner, platform and
+   * the token-exchange scope; at most 64 scopes of at most 120 characters.
+   * Returned as `Role.token_scopes_json`.
+   * </pre>
+   *
+   * <code>repeated string token_scopes = 11 [json_name = "tokenScopes", (.google.api.field_behavior) = OPTIONAL];</code>
+   * @param index The index of the element to return.
+   * @return The tokenScopes at the given index.
+   */
+  public java.lang.String getTokenScopes(int index) {
+    return tokenScopes_.get(index);
+  }
+  /**
+   * <pre>
+   * Scopes a PERSON's access token carries while bound to this role in its
+   * tenant/project (e.g. "udb:authn:manage-grants"), projected at login and
+   * refresh. Service accounts never get them: their scopes come only from
+   * their typed grant. Refused: empty, wildcard, admin, owner, platform and
+   * the token-exchange scope; at most 64 scopes of at most 120 characters.
+   * Returned as `Role.token_scopes_json`.
+   * </pre>
+   *
+   * <code>repeated string token_scopes = 11 [json_name = "tokenScopes", (.google.api.field_behavior) = OPTIONAL];</code>
+   * @param index The index of the value to return.
+   * @return The bytes of the tokenScopes at the given index.
+   */
+  public com.google.protobuf.ByteString
+      getTokenScopesBytes(int index) {
+    return tokenScopes_.getByteString(index);
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -520,6 +595,9 @@ java.lang.String defaultValue) {
         internalGetMetadata(),
         MetadataDefaultEntryHolder.defaultEntry,
         10);
+    for (int i = 0; i < tokenScopes_.size(); i++) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 11, tokenScopes_.getRaw(i));
+    }
     getUnknownFields().writeTo(output);
   }
 
@@ -567,6 +645,14 @@ java.lang.String defaultValue) {
       size += com.google.protobuf.CodedOutputStream
           .computeMessageSize(10, metadata__);
     }
+    {
+      int dataSize = 0;
+      for (int i = 0; i < tokenScopes_.size(); i++) {
+        dataSize += computeStringSizeNoTag(tokenScopes_.getRaw(i));
+      }
+      size += dataSize;
+      size += 1 * getTokenScopesList().size();
+    }
     size += getUnknownFields().getSerializedSize();
     memoizedSize = size;
     return size;
@@ -601,6 +687,8 @@ java.lang.String defaultValue) {
         .equals(other.getAccessSurface())) return false;
     if (!internalGetMetadata().equals(
         other.internalGetMetadata())) return false;
+    if (!getTokenScopesList()
+        .equals(other.getTokenScopesList())) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -633,6 +721,10 @@ java.lang.String defaultValue) {
     if (!internalGetMetadata().getMap().isEmpty()) {
       hash = (37 * hash) + METADATA_FIELD_NUMBER;
       hash = (53 * hash) + internalGetMetadata().hashCode();
+    }
+    if (getTokenScopesCount() > 0) {
+      hash = (37 * hash) + TOKEN_SCOPES_FIELD_NUMBER;
+      hash = (53 * hash) + getTokenScopesList().hashCode();
     }
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
@@ -797,6 +889,8 @@ java.lang.String defaultValue) {
       scopeType_ = 0;
       accessSurface_ = "";
       internalGetMutableMetadata().clear();
+      tokenScopes_ =
+          com.google.protobuf.LazyStringArrayList.emptyList();
       return this;
     }
 
@@ -861,6 +955,10 @@ java.lang.String defaultValue) {
         result.metadata_ = internalGetMetadata();
         result.metadata_.makeImmutable();
       }
+      if (((from_bitField0_ & 0x00000400) != 0)) {
+        tokenScopes_.makeImmutable();
+        result.tokenScopes_ = tokenScopes_;
+      }
     }
 
     @java.lang.Override
@@ -921,6 +1019,16 @@ java.lang.String defaultValue) {
       internalGetMutableMetadata().mergeFrom(
           other.internalGetMetadata());
       bitField0_ |= 0x00000200;
+      if (!other.tokenScopes_.isEmpty()) {
+        if (tokenScopes_.isEmpty()) {
+          tokenScopes_ = other.tokenScopes_;
+          bitField0_ |= 0x00000400;
+        } else {
+          ensureTokenScopesIsMutable();
+          tokenScopes_.addAll(other.tokenScopes_);
+        }
+        onChanged();
+      }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
       return this;
@@ -1001,6 +1109,12 @@ java.lang.String defaultValue) {
               bitField0_ |= 0x00000200;
               break;
             } // case 82
+            case 90: {
+              java.lang.String s = input.readStringRequireUtf8();
+              ensureTokenScopesIsMutable();
+              tokenScopes_.add(s);
+              break;
+            } // case 90
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -1769,6 +1883,198 @@ java.lang.String defaultValue) {
       internalGetMutableMetadata().getMutableMap()
           .putAll(values);
       bitField0_ |= 0x00000200;
+      return this;
+    }
+
+    private com.google.protobuf.LazyStringArrayList tokenScopes_ =
+        com.google.protobuf.LazyStringArrayList.emptyList();
+    private void ensureTokenScopesIsMutable() {
+      if (!tokenScopes_.isModifiable()) {
+        tokenScopes_ = new com.google.protobuf.LazyStringArrayList(tokenScopes_);
+      }
+      bitField0_ |= 0x00000400;
+    }
+    /**
+     * <pre>
+     * Scopes a PERSON's access token carries while bound to this role in its
+     * tenant/project (e.g. "udb:authn:manage-grants"), projected at login and
+     * refresh. Service accounts never get them: their scopes come only from
+     * their typed grant. Refused: empty, wildcard, admin, owner, platform and
+     * the token-exchange scope; at most 64 scopes of at most 120 characters.
+     * Returned as `Role.token_scopes_json`.
+     * </pre>
+     *
+     * <code>repeated string token_scopes = 11 [json_name = "tokenScopes", (.google.api.field_behavior) = OPTIONAL];</code>
+     * @return A list containing the tokenScopes.
+     */
+    public com.google.protobuf.ProtocolStringList
+        getTokenScopesList() {
+      tokenScopes_.makeImmutable();
+      return tokenScopes_;
+    }
+    /**
+     * <pre>
+     * Scopes a PERSON's access token carries while bound to this role in its
+     * tenant/project (e.g. "udb:authn:manage-grants"), projected at login and
+     * refresh. Service accounts never get them: their scopes come only from
+     * their typed grant. Refused: empty, wildcard, admin, owner, platform and
+     * the token-exchange scope; at most 64 scopes of at most 120 characters.
+     * Returned as `Role.token_scopes_json`.
+     * </pre>
+     *
+     * <code>repeated string token_scopes = 11 [json_name = "tokenScopes", (.google.api.field_behavior) = OPTIONAL];</code>
+     * @return The count of tokenScopes.
+     */
+    public int getTokenScopesCount() {
+      return tokenScopes_.size();
+    }
+    /**
+     * <pre>
+     * Scopes a PERSON's access token carries while bound to this role in its
+     * tenant/project (e.g. "udb:authn:manage-grants"), projected at login and
+     * refresh. Service accounts never get them: their scopes come only from
+     * their typed grant. Refused: empty, wildcard, admin, owner, platform and
+     * the token-exchange scope; at most 64 scopes of at most 120 characters.
+     * Returned as `Role.token_scopes_json`.
+     * </pre>
+     *
+     * <code>repeated string token_scopes = 11 [json_name = "tokenScopes", (.google.api.field_behavior) = OPTIONAL];</code>
+     * @param index The index of the element to return.
+     * @return The tokenScopes at the given index.
+     */
+    public java.lang.String getTokenScopes(int index) {
+      return tokenScopes_.get(index);
+    }
+    /**
+     * <pre>
+     * Scopes a PERSON's access token carries while bound to this role in its
+     * tenant/project (e.g. "udb:authn:manage-grants"), projected at login and
+     * refresh. Service accounts never get them: their scopes come only from
+     * their typed grant. Refused: empty, wildcard, admin, owner, platform and
+     * the token-exchange scope; at most 64 scopes of at most 120 characters.
+     * Returned as `Role.token_scopes_json`.
+     * </pre>
+     *
+     * <code>repeated string token_scopes = 11 [json_name = "tokenScopes", (.google.api.field_behavior) = OPTIONAL];</code>
+     * @param index The index of the value to return.
+     * @return The bytes of the tokenScopes at the given index.
+     */
+    public com.google.protobuf.ByteString
+        getTokenScopesBytes(int index) {
+      return tokenScopes_.getByteString(index);
+    }
+    /**
+     * <pre>
+     * Scopes a PERSON's access token carries while bound to this role in its
+     * tenant/project (e.g. "udb:authn:manage-grants"), projected at login and
+     * refresh. Service accounts never get them: their scopes come only from
+     * their typed grant. Refused: empty, wildcard, admin, owner, platform and
+     * the token-exchange scope; at most 64 scopes of at most 120 characters.
+     * Returned as `Role.token_scopes_json`.
+     * </pre>
+     *
+     * <code>repeated string token_scopes = 11 [json_name = "tokenScopes", (.google.api.field_behavior) = OPTIONAL];</code>
+     * @param index The index to set the value at.
+     * @param value The tokenScopes to set.
+     * @return This builder for chaining.
+     */
+    public Builder setTokenScopes(
+        int index, java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      ensureTokenScopesIsMutable();
+      tokenScopes_.set(index, value);
+      bitField0_ |= 0x00000400;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Scopes a PERSON's access token carries while bound to this role in its
+     * tenant/project (e.g. "udb:authn:manage-grants"), projected at login and
+     * refresh. Service accounts never get them: their scopes come only from
+     * their typed grant. Refused: empty, wildcard, admin, owner, platform and
+     * the token-exchange scope; at most 64 scopes of at most 120 characters.
+     * Returned as `Role.token_scopes_json`.
+     * </pre>
+     *
+     * <code>repeated string token_scopes = 11 [json_name = "tokenScopes", (.google.api.field_behavior) = OPTIONAL];</code>
+     * @param value The tokenScopes to add.
+     * @return This builder for chaining.
+     */
+    public Builder addTokenScopes(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      ensureTokenScopesIsMutable();
+      tokenScopes_.add(value);
+      bitField0_ |= 0x00000400;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Scopes a PERSON's access token carries while bound to this role in its
+     * tenant/project (e.g. "udb:authn:manage-grants"), projected at login and
+     * refresh. Service accounts never get them: their scopes come only from
+     * their typed grant. Refused: empty, wildcard, admin, owner, platform and
+     * the token-exchange scope; at most 64 scopes of at most 120 characters.
+     * Returned as `Role.token_scopes_json`.
+     * </pre>
+     *
+     * <code>repeated string token_scopes = 11 [json_name = "tokenScopes", (.google.api.field_behavior) = OPTIONAL];</code>
+     * @param values The tokenScopes to add.
+     * @return This builder for chaining.
+     */
+    public Builder addAllTokenScopes(
+        java.lang.Iterable<java.lang.String> values) {
+      ensureTokenScopesIsMutable();
+      com.google.protobuf.AbstractMessageLite.Builder.addAll(
+          values, tokenScopes_);
+      bitField0_ |= 0x00000400;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Scopes a PERSON's access token carries while bound to this role in its
+     * tenant/project (e.g. "udb:authn:manage-grants"), projected at login and
+     * refresh. Service accounts never get them: their scopes come only from
+     * their typed grant. Refused: empty, wildcard, admin, owner, platform and
+     * the token-exchange scope; at most 64 scopes of at most 120 characters.
+     * Returned as `Role.token_scopes_json`.
+     * </pre>
+     *
+     * <code>repeated string token_scopes = 11 [json_name = "tokenScopes", (.google.api.field_behavior) = OPTIONAL];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearTokenScopes() {
+      tokenScopes_ =
+        com.google.protobuf.LazyStringArrayList.emptyList();
+      bitField0_ = (bitField0_ & ~0x00000400);;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Scopes a PERSON's access token carries while bound to this role in its
+     * tenant/project (e.g. "udb:authn:manage-grants"), projected at login and
+     * refresh. Service accounts never get them: their scopes come only from
+     * their typed grant. Refused: empty, wildcard, admin, owner, platform and
+     * the token-exchange scope; at most 64 scopes of at most 120 characters.
+     * Returned as `Role.token_scopes_json`.
+     * </pre>
+     *
+     * <code>repeated string token_scopes = 11 [json_name = "tokenScopes", (.google.api.field_behavior) = OPTIONAL];</code>
+     * @param value The bytes of the tokenScopes to add.
+     * @return This builder for chaining.
+     */
+    public Builder addTokenScopesBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      ensureTokenScopesIsMutable();
+      tokenScopes_.add(value);
+      bitField0_ |= 0x00000400;
+      onChanged();
       return this;
     }
 

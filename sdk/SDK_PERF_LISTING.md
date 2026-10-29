@@ -6,7 +6,7 @@ Inputs:
 - `docs/generated/bench-bodies.json`
 - `docs/site/bench-results.json`
 
-Current generated RPC surface: 407 RPCs across 29 services.
+Current generated RPC surface: 408 RPCs across 29 services.
 
 Published benchmark artifact: present.
 Release tag: v0.4.28.
@@ -55,7 +55,7 @@ Generated at: 2026-07-26T17:46:09+00:00.
 | AuthnService | 64 | 18 | 34 | 12 | 0 |
 | AuthzService | 41 | 18 | 17 | 6 | 0 |
 | BackupService | 8 | 4 | 3 | 1 | 0 |
-| CacheService | 7 | 3 | 3 | 1 | 0 |
+| CacheService | 8 | 3 | 4 | 1 | 0 |
 | ConfigService | 5 | 3 | 1 | 1 | 0 |
 | ControlPlaneService | 6 | 2 | 4 | 0 | 0 |
 | DataBroker | 84 | 35 | 42 | 7 | 0 |
@@ -229,6 +229,7 @@ identity surface available to benchmark reports.
 | `CacheService/DeleteNamespace` | `delete_cache_namespace` | `deleteCacheNamespace` | DESTRUCTIVE |
 | `CacheService/Get` | `cache_get` | `cacheNamespaceGet` | READ_ONLY |
 | `CacheService/GetNamespaceStats` | `get_cache_namespace_stats` | `getCacheNamespaceStats` | READ_ONLY |
+| `CacheService/Increment` | `cache_increment` | `cacheNamespaceIncrement` | MUTATION |
 | `CacheService/Scan` | `cache_scan` | `cacheNamespaceScan` | READ_ONLY |
 | `CacheService/Set` | `cache_set` | `cacheNamespaceSet` | MUTATION |
 | `ConfigService/DeleteFlag` | `delete_flag` | `deleteFlag` | DESTRUCTIVE |

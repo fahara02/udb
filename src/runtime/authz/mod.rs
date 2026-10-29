@@ -444,6 +444,19 @@ pub struct RoleBinding {
     pub project: String,
 }
 
+/// The token scopes a tenant role confers on a PERSON's access token while
+/// that person is bound to it (`Role.token_scopes_json`). Keyed by the same
+/// `role` string a [`RoleBinding`] carries (role code, else name, else id) and
+/// the role row's own tenant/project, so a role's scopes apply only inside the
+/// domain that owns it. Service-account bearers never read this.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct RoleTokenScopes {
+    pub role: String,
+    pub tenant: String,
+    pub project: String,
+    pub scopes: Vec<String>,
+}
+
 /// ReBAC: `subject <relation> object` within a tenant/project domain.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct RelationshipTuple {
@@ -513,6 +526,10 @@ pub struct AuthzSnapshot {
     pub policies: Vec<AuthzPolicy>,
     pub role_bindings: Vec<RoleBinding>,
     pub tuples: Vec<RelationshipTuple>,
+    /// Configured token scopes of active tenant roles (only roles with a
+    /// non-empty list). Read at access-token issue/refresh time, never by the
+    /// authorization decision itself.
+    pub role_token_scopes: Vec<RoleTokenScopes>,
     /// Fail-open only when no policy exists AND this is true (dev/local). In
     /// production this must be false (deny by default).
     pub default_allow: bool,

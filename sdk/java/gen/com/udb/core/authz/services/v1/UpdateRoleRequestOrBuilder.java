@@ -98,4 +98,65 @@ public interface UpdateRoleRequestOrBuilder extends
    * <code>.google.protobuf.FieldMask update_mask = 6 [json_name = "updateMask"];</code>
    */
   com.google.protobuf.FieldMaskOrBuilder getUpdateMaskOrBuilder();
+
+  /**
+   * <pre>
+   * Replaces the role's person token scopes (same rules as
+   * `CreateRoleRequest.token_scopes`; service accounts never get them).
+   * Without `update_mask` a non-empty list replaces the stored one; list
+   * `token_scopes` in `update_mask` to set it, including to clear it with an
+   * empty list. Bound users carry the new scopes after their next login or
+   * refresh.
+   * </pre>
+   *
+   * <code>repeated string token_scopes = 7 [json_name = "tokenScopes", (.google.api.field_behavior) = OPTIONAL];</code>
+   * @return A list containing the tokenScopes.
+   */
+  java.util.List<java.lang.String>
+      getTokenScopesList();
+  /**
+   * <pre>
+   * Replaces the role's person token scopes (same rules as
+   * `CreateRoleRequest.token_scopes`; service accounts never get them).
+   * Without `update_mask` a non-empty list replaces the stored one; list
+   * `token_scopes` in `update_mask` to set it, including to clear it with an
+   * empty list. Bound users carry the new scopes after their next login or
+   * refresh.
+   * </pre>
+   *
+   * <code>repeated string token_scopes = 7 [json_name = "tokenScopes", (.google.api.field_behavior) = OPTIONAL];</code>
+   * @return The count of tokenScopes.
+   */
+  int getTokenScopesCount();
+  /**
+   * <pre>
+   * Replaces the role's person token scopes (same rules as
+   * `CreateRoleRequest.token_scopes`; service accounts never get them).
+   * Without `update_mask` a non-empty list replaces the stored one; list
+   * `token_scopes` in `update_mask` to set it, including to clear it with an
+   * empty list. Bound users carry the new scopes after their next login or
+   * refresh.
+   * </pre>
+   *
+   * <code>repeated string token_scopes = 7 [json_name = "tokenScopes", (.google.api.field_behavior) = OPTIONAL];</code>
+   * @param index The index of the element to return.
+   * @return The tokenScopes at the given index.
+   */
+  java.lang.String getTokenScopes(int index);
+  /**
+   * <pre>
+   * Replaces the role's person token scopes (same rules as
+   * `CreateRoleRequest.token_scopes`; service accounts never get them).
+   * Without `update_mask` a non-empty list replaces the stored one; list
+   * `token_scopes` in `update_mask` to set it, including to clear it with an
+   * empty list. Bound users carry the new scopes after their next login or
+   * refresh.
+   * </pre>
+   *
+   * <code>repeated string token_scopes = 7 [json_name = "tokenScopes", (.google.api.field_behavior) = OPTIONAL];</code>
+   * @param index The index of the value to return.
+   * @return The bytes of the tokenScopes at the given index.
+   */
+  com.google.protobuf.ByteString
+      getTokenScopesBytes(int index);
 }

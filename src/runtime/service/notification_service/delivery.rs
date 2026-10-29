@@ -454,6 +454,23 @@ fn notification_delivery_providers() -> &'static Vec<NotificationDeliveryProvide
     })
 }
 
+/// Whether `UDB_NOTIFICATION_DELIVERY_PROVIDERS_JSON` configures a provider for
+/// `channel`. Without one a queued notification on that channel is never sent
+/// (it fails after the no-provider grace window), so callers that need a code
+/// to actually arrive, such as a phone-only `CreateUser`, check this first.
+#[cfg(feature = "http-client")]
+pub(crate) fn delivery_provider_configured(channel: i32) -> bool {
+    notification_delivery_providers()
+        .iter()
+        .any(|provider| provider.channel == channel)
+}
+
+/// No HTTP client means no delivery worker: nothing is ever delivered.
+#[cfg(not(feature = "http-client"))]
+pub(crate) fn delivery_provider_configured(_channel: i32) -> bool {
+    false
+}
+
 /// One queued notification intent (a PENDING NotificationLog) the worker drains.
 #[allow(dead_code)]
 #[derive(Debug, Clone)]

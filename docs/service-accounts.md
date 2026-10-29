@@ -231,8 +231,8 @@ or both.
 
 A phone-only `CreateUser` is refused with `FAILED_PRECONDITION`
 (`sms_delivery_unavailable`) before anything is written when the broker cannot
-send SMS: no NotificationService with SMS templates is mounted and
-`UDB_OTP_DELIVERY_WEBHOOK_URL` is not set. Signing in with a phone number is
+send SMS: `UDB_OTP_DELIVERY_WEBHOOK_URL` is not set and
+`UDB_NOTIFICATION_DELIVERY_PROVIDERS_JSON` configures no `SMS` provider. Signing in with a phone number is
 not supported yet; the user signs in with the username.
 
 A request with neither contact fails `INVALID_ARGUMENT` with field violations

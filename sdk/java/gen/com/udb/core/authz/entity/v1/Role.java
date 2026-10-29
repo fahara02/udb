@@ -40,6 +40,7 @@ private static final long serialVersionUID = 0L;
     scopeType_ = 0;
     accessSurface_ = "";
     metadataJson_ = "";
+    tokenScopesJson_ = "";
   }
 
   public static final com.google.protobuf.Descriptors.Descriptor
@@ -603,6 +604,61 @@ private static final long serialVersionUID = 0L;
     }
   }
 
+  public static final int TOKEN_SCOPES_JSON_FIELD_NUMBER = 18;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object tokenScopesJson_ = "";
+  /**
+   * <pre>
+   * JSON array of the token scopes a PERSON's access token carries while bound
+   * to this role in the role's tenant/project, e.g. ["udb:authn:manage-grants"].
+   * Projected at login/refresh time; service accounts never receive them (their
+   * scopes come only from their typed grant). Wildcard, admin, owner, platform
+   * and the token-exchange scope are refused on write.
+   * </pre>
+   *
+   * <code>string token_scopes_json = 18 [json_name = "tokenScopesJson", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The tokenScopesJson.
+   */
+  @java.lang.Override
+  public java.lang.String getTokenScopesJson() {
+    java.lang.Object ref = tokenScopesJson_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs =
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      tokenScopesJson_ = s;
+      return s;
+    }
+  }
+  /**
+   * <pre>
+   * JSON array of the token scopes a PERSON's access token carries while bound
+   * to this role in the role's tenant/project, e.g. ["udb:authn:manage-grants"].
+   * Projected at login/refresh time; service accounts never receive them (their
+   * scopes come only from their typed grant). Wildcard, admin, owner, platform
+   * and the token-exchange scope are refused on write.
+   * </pre>
+   *
+   * <code>string token_scopes_json = 18 [json_name = "tokenScopesJson", (.udb.core.common.v1.pg_column) = { ... }</code>
+   * @return The bytes for tokenScopesJson.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getTokenScopesJsonBytes() {
+    java.lang.Object ref = tokenScopesJson_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b =
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      tokenScopesJson_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -667,6 +723,9 @@ private static final long serialVersionUID = 0L;
     }
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(metadataJson_)) {
       com.google.protobuf.GeneratedMessage.writeString(output, 17, metadataJson_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(tokenScopesJson_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 18, tokenScopesJson_);
     }
     getUnknownFields().writeTo(output);
   }
@@ -734,6 +793,9 @@ private static final long serialVersionUID = 0L;
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(metadataJson_)) {
       size += com.google.protobuf.GeneratedMessage.computeStringSize(17, metadataJson_);
     }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(tokenScopesJson_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(18, tokenScopesJson_);
+    }
     size += getUnknownFields().getSerializedSize();
     memoizedSize = size;
     return size;
@@ -791,6 +853,8 @@ private static final long serialVersionUID = 0L;
         .equals(other.getAccessSurface())) return false;
     if (!getMetadataJson()
         .equals(other.getMetadataJson())) return false;
+    if (!getTokenScopesJson()
+        .equals(other.getTokenScopesJson())) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -844,6 +908,8 @@ private static final long serialVersionUID = 0L;
     hash = (53 * hash) + getAccessSurface().hashCode();
     hash = (37 * hash) + METADATA_JSON_FIELD_NUMBER;
     hash = (53 * hash) + getMetadataJson().hashCode();
+    hash = (37 * hash) + TOKEN_SCOPES_JSON_FIELD_NUMBER;
+    hash = (53 * hash) + getTokenScopesJson().hashCode();
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -1012,6 +1078,7 @@ private static final long serialVersionUID = 0L;
       scopeType_ = 0;
       accessSurface_ = "";
       metadataJson_ = "";
+      tokenScopesJson_ = "";
       return this;
     }
 
@@ -1106,6 +1173,9 @@ private static final long serialVersionUID = 0L;
       if (((from_bitField0_ & 0x00010000) != 0)) {
         result.metadataJson_ = metadataJson_;
       }
+      if (((from_bitField0_ & 0x00020000) != 0)) {
+        result.tokenScopesJson_ = tokenScopesJson_;
+      }
       result.bitField0_ |= to_bitField0_;
     }
 
@@ -1192,6 +1262,11 @@ private static final long serialVersionUID = 0L;
       if (!other.getMetadataJson().isEmpty()) {
         metadataJson_ = other.metadataJson_;
         bitField0_ |= 0x00010000;
+        onChanged();
+      }
+      if (!other.getTokenScopesJson().isEmpty()) {
+        tokenScopesJson_ = other.tokenScopesJson_;
+        bitField0_ |= 0x00020000;
         onChanged();
       }
       this.mergeUnknownFields(other.getUnknownFields());
@@ -1311,6 +1386,11 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00010000;
               break;
             } // case 138
+            case 146: {
+              tokenScopesJson_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00020000;
+              break;
+            } // case 146
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -2594,6 +2674,118 @@ private static final long serialVersionUID = 0L;
       checkByteStringIsUtf8(value);
       metadataJson_ = value;
       bitField0_ |= 0x00010000;
+      onChanged();
+      return this;
+    }
+
+    private java.lang.Object tokenScopesJson_ = "";
+    /**
+     * <pre>
+     * JSON array of the token scopes a PERSON's access token carries while bound
+     * to this role in the role's tenant/project, e.g. ["udb:authn:manage-grants"].
+     * Projected at login/refresh time; service accounts never receive them (their
+     * scopes come only from their typed grant). Wildcard, admin, owner, platform
+     * and the token-exchange scope are refused on write.
+     * </pre>
+     *
+     * <code>string token_scopes_json = 18 [json_name = "tokenScopesJson", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @return The tokenScopesJson.
+     */
+    public java.lang.String getTokenScopesJson() {
+      java.lang.Object ref = tokenScopesJson_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        tokenScopesJson_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <pre>
+     * JSON array of the token scopes a PERSON's access token carries while bound
+     * to this role in the role's tenant/project, e.g. ["udb:authn:manage-grants"].
+     * Projected at login/refresh time; service accounts never receive them (their
+     * scopes come only from their typed grant). Wildcard, admin, owner, platform
+     * and the token-exchange scope are refused on write.
+     * </pre>
+     *
+     * <code>string token_scopes_json = 18 [json_name = "tokenScopesJson", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @return The bytes for tokenScopesJson.
+     */
+    public com.google.protobuf.ByteString
+        getTokenScopesJsonBytes() {
+      java.lang.Object ref = tokenScopesJson_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b =
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        tokenScopesJson_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <pre>
+     * JSON array of the token scopes a PERSON's access token carries while bound
+     * to this role in the role's tenant/project, e.g. ["udb:authn:manage-grants"].
+     * Projected at login/refresh time; service accounts never receive them (their
+     * scopes come only from their typed grant). Wildcard, admin, owner, platform
+     * and the token-exchange scope are refused on write.
+     * </pre>
+     *
+     * <code>string token_scopes_json = 18 [json_name = "tokenScopesJson", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @param value The tokenScopesJson to set.
+     * @return This builder for chaining.
+     */
+    public Builder setTokenScopesJson(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      tokenScopesJson_ = value;
+      bitField0_ |= 0x00020000;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * JSON array of the token scopes a PERSON's access token carries while bound
+     * to this role in the role's tenant/project, e.g. ["udb:authn:manage-grants"].
+     * Projected at login/refresh time; service accounts never receive them (their
+     * scopes come only from their typed grant). Wildcard, admin, owner, platform
+     * and the token-exchange scope are refused on write.
+     * </pre>
+     *
+     * <code>string token_scopes_json = 18 [json_name = "tokenScopesJson", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearTokenScopesJson() {
+      tokenScopesJson_ = getDefaultInstance().getTokenScopesJson();
+      bitField0_ = (bitField0_ & ~0x00020000);
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * JSON array of the token scopes a PERSON's access token carries while bound
+     * to this role in the role's tenant/project, e.g. ["udb:authn:manage-grants"].
+     * Projected at login/refresh time; service accounts never receive them (their
+     * scopes come only from their typed grant). Wildcard, admin, owner, platform
+     * and the token-exchange scope are refused on write.
+     * </pre>
+     *
+     * <code>string token_scopes_json = 18 [json_name = "tokenScopesJson", (.udb.core.common.v1.pg_column) = { ... }</code>
+     * @param value The bytes for tokenScopesJson to set.
+     * @return This builder for chaining.
+     */
+    public Builder setTokenScopesJsonBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      tokenScopesJson_ = value;
+      bitField0_ |= 0x00020000;
       onChanged();
       return this;
     }

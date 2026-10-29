@@ -69,6 +69,10 @@ namespace Udb.Core.Cache.Services.V1 {
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     static readonly grpc::Marshaller<global::Udb.Core.Cache.Services.V1.SetResponse> __Marshaller_udb_core_cache_services_v1_SetResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Cache.Services.V1.SetResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::Udb.Core.Cache.Services.V1.IncrementRequest> __Marshaller_udb_core_cache_services_v1_IncrementRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Cache.Services.V1.IncrementRequest.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::Udb.Core.Cache.Services.V1.IncrementResponse> __Marshaller_udb_core_cache_services_v1_IncrementResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Cache.Services.V1.IncrementResponse.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     static readonly grpc::Marshaller<global::Udb.Core.Cache.Services.V1.DeleteRequest> __Marshaller_udb_core_cache_services_v1_DeleteRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Cache.Services.V1.DeleteRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     static readonly grpc::Marshaller<global::Udb.Core.Cache.Services.V1.DeleteResponse> __Marshaller_udb_core_cache_services_v1_DeleteResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Core.Cache.Services.V1.DeleteResponse.Parser));
@@ -104,6 +108,14 @@ namespace Udb.Core.Cache.Services.V1 {
         "Set",
         __Marshaller_udb_core_cache_services_v1_SetRequest,
         __Marshaller_udb_core_cache_services_v1_SetResponse);
+
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Method<global::Udb.Core.Cache.Services.V1.IncrementRequest, global::Udb.Core.Cache.Services.V1.IncrementResponse> __Method_Increment = new grpc::Method<global::Udb.Core.Cache.Services.V1.IncrementRequest, global::Udb.Core.Cache.Services.V1.IncrementResponse>(
+        grpc::MethodType.Unary,
+        __ServiceName,
+        "Increment",
+        __Marshaller_udb_core_cache_services_v1_IncrementRequest,
+        __Marshaller_udb_core_cache_services_v1_IncrementResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     static readonly grpc::Method<global::Udb.Core.Cache.Services.V1.DeleteRequest, global::Udb.Core.Cache.Services.V1.DeleteResponse> __Method_Delete = new grpc::Method<global::Udb.Core.Cache.Services.V1.DeleteRequest, global::Udb.Core.Cache.Services.V1.DeleteResponse>(
@@ -179,6 +191,24 @@ namespace Udb.Core.Cache.Services.V1 {
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
       public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Cache.Services.V1.SetResponse> Set(global::Udb.Core.Cache.Services.V1.SetRequest request, grpc::ServerCallContext context)
+      {
+        throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
+      }
+
+      /// <summary>
+      /// Atomically add `delta` to an integer counter and return the new value, in
+      /// one Redis round trip: the shared-counter primitive a rate limiter needs
+      /// (one call per decision). A missing key starts at 0 and takes the TTL from
+      /// `ttl_seconds_if_created`; an existing key keeps its TTL. With `max` > 0 an
+      /// increment that would take the value above `max` is not applied and
+      /// `refused` is true. Not idempotent: a retried call adds `delta` again. Emits
+      /// no outbox event (it is a hot-path counter, not a domain change).
+      /// </summary>
+      /// <param name="request">The request received from the client.</param>
+      /// <param name="context">The context of the server-side call handler being invoked.</param>
+      /// <returns>The response to send back to the client (wrapped by a task).</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Core.Cache.Services.V1.IncrementResponse> Increment(global::Udb.Core.Cache.Services.V1.IncrementRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -386,6 +416,78 @@ namespace Udb.Core.Cache.Services.V1 {
       public virtual grpc::AsyncUnaryCall<global::Udb.Core.Cache.Services.V1.SetResponse> SetAsync(global::Udb.Core.Cache.Services.V1.SetRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_Set, null, options, request);
+      }
+      /// <summary>
+      /// Atomically add `delta` to an integer counter and return the new value, in
+      /// one Redis round trip: the shared-counter primitive a rate limiter needs
+      /// (one call per decision). A missing key starts at 0 and takes the TTL from
+      /// `ttl_seconds_if_created`; an existing key keeps its TTL. With `max` > 0 an
+      /// increment that would take the value above `max` is not applied and
+      /// `refused` is true. Not idempotent: a retried call adds `delta` again. Emits
+      /// no outbox event (it is a hot-path counter, not a domain change).
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
+      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
+      /// <param name="cancellationToken">An optional token for canceling the call.</param>
+      /// <returns>The response received from the server.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::Udb.Core.Cache.Services.V1.IncrementResponse Increment(global::Udb.Core.Cache.Services.V1.IncrementRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return Increment(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      /// <summary>
+      /// Atomically add `delta` to an integer counter and return the new value, in
+      /// one Redis round trip: the shared-counter primitive a rate limiter needs
+      /// (one call per decision). A missing key starts at 0 and takes the TTL from
+      /// `ttl_seconds_if_created`; an existing key keeps its TTL. With `max` > 0 an
+      /// increment that would take the value above `max` is not applied and
+      /// `refused` is true. Not idempotent: a retried call adds `delta` again. Emits
+      /// no outbox event (it is a hot-path counter, not a domain change).
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="options">The options for the call.</param>
+      /// <returns>The response received from the server.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::Udb.Core.Cache.Services.V1.IncrementResponse Increment(global::Udb.Core.Cache.Services.V1.IncrementRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.BlockingUnaryCall(__Method_Increment, null, options, request);
+      }
+      /// <summary>
+      /// Atomically add `delta` to an integer counter and return the new value, in
+      /// one Redis round trip: the shared-counter primitive a rate limiter needs
+      /// (one call per decision). A missing key starts at 0 and takes the TTL from
+      /// `ttl_seconds_if_created`; an existing key keeps its TTL. With `max` > 0 an
+      /// increment that would take the value above `max` is not applied and
+      /// `refused` is true. Not idempotent: a retried call adds `delta` again. Emits
+      /// no outbox event (it is a hot-path counter, not a domain change).
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
+      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
+      /// <param name="cancellationToken">An optional token for canceling the call.</param>
+      /// <returns>The call object.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Cache.Services.V1.IncrementResponse> IncrementAsync(global::Udb.Core.Cache.Services.V1.IncrementRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return IncrementAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      /// <summary>
+      /// Atomically add `delta` to an integer counter and return the new value, in
+      /// one Redis round trip: the shared-counter primitive a rate limiter needs
+      /// (one call per decision). A missing key starts at 0 and takes the TTL from
+      /// `ttl_seconds_if_created`; an existing key keeps its TTL. With `max` > 0 an
+      /// increment that would take the value above `max` is not applied and
+      /// `refused` is true. Not idempotent: a retried call adds `delta` again. Emits
+      /// no outbox event (it is a hot-path counter, not a domain change).
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="options">The options for the call.</param>
+      /// <returns>The call object.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::Udb.Core.Cache.Services.V1.IncrementResponse> IncrementAsync(global::Udb.Core.Cache.Services.V1.IncrementRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.AsyncUnaryCall(__Method_Increment, null, options, request);
       }
       /// <summary>
       /// Delete a single namespaced key. Idempotent.
@@ -655,6 +757,7 @@ namespace Udb.Core.Cache.Services.V1 {
       return grpc::ServerServiceDefinition.CreateBuilder()
           .AddMethod(__Method_Get, serviceImpl.Get)
           .AddMethod(__Method_Set, serviceImpl.Set)
+          .AddMethod(__Method_Increment, serviceImpl.Increment)
           .AddMethod(__Method_Delete, serviceImpl.Delete)
           .AddMethod(__Method_Scan, serviceImpl.Scan)
           .AddMethod(__Method_CreateNamespace, serviceImpl.CreateNamespace)
@@ -671,6 +774,7 @@ namespace Udb.Core.Cache.Services.V1 {
     {
       serviceBinder.AddMethod(__Method_Get, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Cache.Services.V1.GetRequest, global::Udb.Core.Cache.Services.V1.GetResponse>(serviceImpl.Get));
       serviceBinder.AddMethod(__Method_Set, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Cache.Services.V1.SetRequest, global::Udb.Core.Cache.Services.V1.SetResponse>(serviceImpl.Set));
+      serviceBinder.AddMethod(__Method_Increment, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Cache.Services.V1.IncrementRequest, global::Udb.Core.Cache.Services.V1.IncrementResponse>(serviceImpl.Increment));
       serviceBinder.AddMethod(__Method_Delete, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Cache.Services.V1.DeleteRequest, global::Udb.Core.Cache.Services.V1.DeleteResponse>(serviceImpl.Delete));
       serviceBinder.AddMethod(__Method_Scan, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Cache.Services.V1.ScanRequest, global::Udb.Core.Cache.Services.V1.ScanResponse>(serviceImpl.Scan));
       serviceBinder.AddMethod(__Method_CreateNamespace, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Core.Cache.Services.V1.CreateNamespaceRequest, global::Udb.Core.Cache.Services.V1.CreateNamespaceResponse>(serviceImpl.CreateNamespace));

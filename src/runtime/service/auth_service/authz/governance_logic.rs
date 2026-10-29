@@ -70,6 +70,9 @@ impl PolicyDocument {
             policies: self.policies.clone(),
             role_bindings: self.role_bindings.clone(),
             tuples: self.tuples.clone(),
+            // Simulation/explain evaluates decisions only; token scopes are
+            // an issuance-time projection a governed document never carries.
+            role_token_scopes: Vec::new(),
             default_allow: false,
         }
     }

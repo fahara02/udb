@@ -216,6 +216,13 @@ message CreateRoleRequest {
   udb.core.authz.entity.v1.RoleScopeType scope_type = 8 [(google.api.field_behavior) = OPTIONAL];
   string access_surface = 9 [(google.api.field_behavior) = OPTIONAL];
   map<string, string> metadata = 10;
+  // Scopes a PERSON's access token carries while bound to this role in its
+  // tenant/project (e.g. "udb:authn:manage-grants"), projected at login and
+  // refresh. Service accounts never get them: their scopes come only from
+  // their typed grant. Refused: empty, wildcard, admin, owner, platform and
+  // the token-exchange scope; at most 64 scopes of at most 120 characters.
+  // Returned as `Role.token_scopes_json`.
+  repeated string token_scopes = 11 [(google.api.field_behavior) = OPTIONAL];
 }
 
 message CreateRoleResponse {
@@ -565,6 +572,13 @@ message UpdateRoleRequest {
   // Optional PATCH mask relative to the role resource. When omitted, legacy
   // clients keep the historical non-empty-field patch behavior.
   google.protobuf.FieldMask update_mask = 6;
+  // Replaces the role's person token scopes (same rules as
+  // `CreateRoleRequest.token_scopes`; service accounts never get them).
+  // Without `update_mask` a non-empty list replaces the stored one; list
+  // `token_scopes` in `update_mask` to set it, including to clear it with an
+  // empty list. Bound users carry the new scopes after their next login or
+  // refresh.
+  repeated string token_scopes = 7 [(google.api.field_behavior) = OPTIONAL];
 }
 
 message UpdateRoleResponse {

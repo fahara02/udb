@@ -307,6 +307,179 @@ func (x *SetResponse) GetError() *v1.ApiError {
 	return nil
 }
 
+type IncrementRequest struct {
+	state     protoimpl.MessageState `protogen:"open.v1"`
+	TenantId  string                 `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	Namespace string                 `protobuf:"bytes,2,opt,name=namespace,proto3" json:"namespace,omitempty"`
+	Key       string                 `protobuf:"bytes,3,opt,name=key,proto3" json:"key,omitempty"`
+	// Added to the counter; may be negative. 0 reads the current value without
+	// writing (a missing key reads as 0 and is not created).
+	Delta int64 `protobuf:"varint,4,opt,name=delta,proto3" json:"delta,omitempty"`
+	// TTL for a key this call creates; 0 = the namespace default TTL (or no
+	// expiry if none is configured). An existing key keeps its TTL.
+	TtlSecondsIfCreated int64 `protobuf:"varint,5,opt,name=ttl_seconds_if_created,json=ttlSecondsIfCreated,proto3" json:"ttl_seconds_if_created,omitempty"`
+	// Upper bound for the new value; 0 = no bound. An increment that would take
+	// the value above `max` is not applied and the response has `refused` set.
+	Max           int64 `protobuf:"varint,6,opt,name=max,proto3" json:"max,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *IncrementRequest) Reset() {
+	*x = IncrementRequest{}
+	mi := &file_udb_core_cache_services_v1_cache_service_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *IncrementRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*IncrementRequest) ProtoMessage() {}
+
+func (x *IncrementRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_cache_services_v1_cache_service_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use IncrementRequest.ProtoReflect.Descriptor instead.
+func (*IncrementRequest) Descriptor() ([]byte, []int) {
+	return file_udb_core_cache_services_v1_cache_service_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *IncrementRequest) GetTenantId() string {
+	if x != nil {
+		return x.TenantId
+	}
+	return ""
+}
+
+func (x *IncrementRequest) GetNamespace() string {
+	if x != nil {
+		return x.Namespace
+	}
+	return ""
+}
+
+func (x *IncrementRequest) GetKey() string {
+	if x != nil {
+		return x.Key
+	}
+	return ""
+}
+
+func (x *IncrementRequest) GetDelta() int64 {
+	if x != nil {
+		return x.Delta
+	}
+	return 0
+}
+
+func (x *IncrementRequest) GetTtlSecondsIfCreated() int64 {
+	if x != nil {
+		return x.TtlSecondsIfCreated
+	}
+	return 0
+}
+
+func (x *IncrementRequest) GetMax() int64 {
+	if x != nil {
+		return x.Max
+	}
+	return 0
+}
+
+type IncrementResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The counter after this call (unchanged when `refused`).
+	Value int64 `protobuf:"varint,1,opt,name=value,proto3" json:"value,omitempty"`
+	// True when this call created the key.
+	Created bool `protobuf:"varint,2,opt,name=created,proto3" json:"created,omitempty"`
+	// True when `max` was set and the increment would have exceeded it; nothing
+	// was written.
+	Refused bool `protobuf:"varint,3,opt,name=refused,proto3" json:"refused,omitempty"`
+	// Seconds until the key expires, rounded up; 0 when it has no TTL or does
+	// not exist. Lets a limiter send Retry-After without a second call.
+	TtlRemainingSeconds int64 `protobuf:"varint,4,opt,name=ttl_remaining_seconds,json=ttlRemainingSeconds,proto3" json:"ttl_remaining_seconds,omitempty"`
+	// Error information if operation failed
+	Error         *v1.ApiError `protobuf:"bytes,5,opt,name=error,proto3" json:"error,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *IncrementResponse) Reset() {
+	*x = IncrementResponse{}
+	mi := &file_udb_core_cache_services_v1_cache_service_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *IncrementResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*IncrementResponse) ProtoMessage() {}
+
+func (x *IncrementResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_cache_services_v1_cache_service_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use IncrementResponse.ProtoReflect.Descriptor instead.
+func (*IncrementResponse) Descriptor() ([]byte, []int) {
+	return file_udb_core_cache_services_v1_cache_service_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *IncrementResponse) GetValue() int64 {
+	if x != nil {
+		return x.Value
+	}
+	return 0
+}
+
+func (x *IncrementResponse) GetCreated() bool {
+	if x != nil {
+		return x.Created
+	}
+	return false
+}
+
+func (x *IncrementResponse) GetRefused() bool {
+	if x != nil {
+		return x.Refused
+	}
+	return false
+}
+
+func (x *IncrementResponse) GetTtlRemainingSeconds() int64 {
+	if x != nil {
+		return x.TtlRemainingSeconds
+	}
+	return 0
+}
+
+func (x *IncrementResponse) GetError() *v1.ApiError {
+	if x != nil {
+		return x.Error
+	}
+	return nil
+}
+
 type DeleteRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	TenantId      string                 `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
@@ -318,7 +491,7 @@ type DeleteRequest struct {
 
 func (x *DeleteRequest) Reset() {
 	*x = DeleteRequest{}
-	mi := &file_udb_core_cache_services_v1_cache_service_proto_msgTypes[4]
+	mi := &file_udb_core_cache_services_v1_cache_service_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -330,7 +503,7 @@ func (x *DeleteRequest) String() string {
 func (*DeleteRequest) ProtoMessage() {}
 
 func (x *DeleteRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_cache_services_v1_cache_service_proto_msgTypes[4]
+	mi := &file_udb_core_cache_services_v1_cache_service_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -343,7 +516,7 @@ func (x *DeleteRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteRequest.ProtoReflect.Descriptor instead.
 func (*DeleteRequest) Descriptor() ([]byte, []int) {
-	return file_udb_core_cache_services_v1_cache_service_proto_rawDescGZIP(), []int{4}
+	return file_udb_core_cache_services_v1_cache_service_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *DeleteRequest) GetTenantId() string {
@@ -380,7 +553,7 @@ type DeleteResponse struct {
 
 func (x *DeleteResponse) Reset() {
 	*x = DeleteResponse{}
-	mi := &file_udb_core_cache_services_v1_cache_service_proto_msgTypes[5]
+	mi := &file_udb_core_cache_services_v1_cache_service_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -392,7 +565,7 @@ func (x *DeleteResponse) String() string {
 func (*DeleteResponse) ProtoMessage() {}
 
 func (x *DeleteResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_cache_services_v1_cache_service_proto_msgTypes[5]
+	mi := &file_udb_core_cache_services_v1_cache_service_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -405,7 +578,7 @@ func (x *DeleteResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteResponse.ProtoReflect.Descriptor instead.
 func (*DeleteResponse) Descriptor() ([]byte, []int) {
-	return file_udb_core_cache_services_v1_cache_service_proto_rawDescGZIP(), []int{5}
+	return file_udb_core_cache_services_v1_cache_service_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *DeleteResponse) GetDeleted() bool {
@@ -452,7 +625,7 @@ type ScanRequest struct {
 
 func (x *ScanRequest) Reset() {
 	*x = ScanRequest{}
-	mi := &file_udb_core_cache_services_v1_cache_service_proto_msgTypes[6]
+	mi := &file_udb_core_cache_services_v1_cache_service_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -464,7 +637,7 @@ func (x *ScanRequest) String() string {
 func (*ScanRequest) ProtoMessage() {}
 
 func (x *ScanRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_cache_services_v1_cache_service_proto_msgTypes[6]
+	mi := &file_udb_core_cache_services_v1_cache_service_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -477,7 +650,7 @@ func (x *ScanRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ScanRequest.ProtoReflect.Descriptor instead.
 func (*ScanRequest) Descriptor() ([]byte, []int) {
-	return file_udb_core_cache_services_v1_cache_service_proto_rawDescGZIP(), []int{6}
+	return file_udb_core_cache_services_v1_cache_service_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *ScanRequest) GetTenantId() string {
@@ -527,7 +700,7 @@ type ScanResponse struct {
 
 func (x *ScanResponse) Reset() {
 	*x = ScanResponse{}
-	mi := &file_udb_core_cache_services_v1_cache_service_proto_msgTypes[7]
+	mi := &file_udb_core_cache_services_v1_cache_service_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -539,7 +712,7 @@ func (x *ScanResponse) String() string {
 func (*ScanResponse) ProtoMessage() {}
 
 func (x *ScanResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_cache_services_v1_cache_service_proto_msgTypes[7]
+	mi := &file_udb_core_cache_services_v1_cache_service_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -552,7 +725,7 @@ func (x *ScanResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ScanResponse.ProtoReflect.Descriptor instead.
 func (*ScanResponse) Descriptor() ([]byte, []int) {
-	return file_udb_core_cache_services_v1_cache_service_proto_rawDescGZIP(), []int{7}
+	return file_udb_core_cache_services_v1_cache_service_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *ScanResponse) GetItems() []*CacheItem {
@@ -589,7 +762,7 @@ type CacheItem struct {
 
 func (x *CacheItem) Reset() {
 	*x = CacheItem{}
-	mi := &file_udb_core_cache_services_v1_cache_service_proto_msgTypes[8]
+	mi := &file_udb_core_cache_services_v1_cache_service_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -601,7 +774,7 @@ func (x *CacheItem) String() string {
 func (*CacheItem) ProtoMessage() {}
 
 func (x *CacheItem) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_cache_services_v1_cache_service_proto_msgTypes[8]
+	mi := &file_udb_core_cache_services_v1_cache_service_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -614,7 +787,7 @@ func (x *CacheItem) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CacheItem.ProtoReflect.Descriptor instead.
 func (*CacheItem) Descriptor() ([]byte, []int) {
-	return file_udb_core_cache_services_v1_cache_service_proto_rawDescGZIP(), []int{8}
+	return file_udb_core_cache_services_v1_cache_service_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *CacheItem) GetKey() string {
@@ -653,7 +826,7 @@ type CreateNamespaceRequest struct {
 
 func (x *CreateNamespaceRequest) Reset() {
 	*x = CreateNamespaceRequest{}
-	mi := &file_udb_core_cache_services_v1_cache_service_proto_msgTypes[9]
+	mi := &file_udb_core_cache_services_v1_cache_service_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -665,7 +838,7 @@ func (x *CreateNamespaceRequest) String() string {
 func (*CreateNamespaceRequest) ProtoMessage() {}
 
 func (x *CreateNamespaceRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_cache_services_v1_cache_service_proto_msgTypes[9]
+	mi := &file_udb_core_cache_services_v1_cache_service_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -678,7 +851,7 @@ func (x *CreateNamespaceRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateNamespaceRequest.ProtoReflect.Descriptor instead.
 func (*CreateNamespaceRequest) Descriptor() ([]byte, []int) {
-	return file_udb_core_cache_services_v1_cache_service_proto_rawDescGZIP(), []int{9}
+	return file_udb_core_cache_services_v1_cache_service_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *CreateNamespaceRequest) GetTenantId() string {
@@ -723,7 +896,7 @@ type CreateNamespaceResponse struct {
 
 func (x *CreateNamespaceResponse) Reset() {
 	*x = CreateNamespaceResponse{}
-	mi := &file_udb_core_cache_services_v1_cache_service_proto_msgTypes[10]
+	mi := &file_udb_core_cache_services_v1_cache_service_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -735,7 +908,7 @@ func (x *CreateNamespaceResponse) String() string {
 func (*CreateNamespaceResponse) ProtoMessage() {}
 
 func (x *CreateNamespaceResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_cache_services_v1_cache_service_proto_msgTypes[10]
+	mi := &file_udb_core_cache_services_v1_cache_service_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -748,7 +921,7 @@ func (x *CreateNamespaceResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateNamespaceResponse.ProtoReflect.Descriptor instead.
 func (*CreateNamespaceResponse) Descriptor() ([]byte, []int) {
-	return file_udb_core_cache_services_v1_cache_service_proto_rawDescGZIP(), []int{10}
+	return file_udb_core_cache_services_v1_cache_service_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *CreateNamespaceResponse) GetNamespace() string {
@@ -799,7 +972,7 @@ type DeleteNamespaceRequest struct {
 
 func (x *DeleteNamespaceRequest) Reset() {
 	*x = DeleteNamespaceRequest{}
-	mi := &file_udb_core_cache_services_v1_cache_service_proto_msgTypes[11]
+	mi := &file_udb_core_cache_services_v1_cache_service_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -811,7 +984,7 @@ func (x *DeleteNamespaceRequest) String() string {
 func (*DeleteNamespaceRequest) ProtoMessage() {}
 
 func (x *DeleteNamespaceRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_cache_services_v1_cache_service_proto_msgTypes[11]
+	mi := &file_udb_core_cache_services_v1_cache_service_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -824,7 +997,7 @@ func (x *DeleteNamespaceRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteNamespaceRequest.ProtoReflect.Descriptor instead.
 func (*DeleteNamespaceRequest) Descriptor() ([]byte, []int) {
-	return file_udb_core_cache_services_v1_cache_service_proto_rawDescGZIP(), []int{11}
+	return file_udb_core_cache_services_v1_cache_service_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *DeleteNamespaceRequest) GetTenantId() string {
@@ -861,7 +1034,7 @@ type DeleteNamespaceResponse struct {
 
 func (x *DeleteNamespaceResponse) Reset() {
 	*x = DeleteNamespaceResponse{}
-	mi := &file_udb_core_cache_services_v1_cache_service_proto_msgTypes[12]
+	mi := &file_udb_core_cache_services_v1_cache_service_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -873,7 +1046,7 @@ func (x *DeleteNamespaceResponse) String() string {
 func (*DeleteNamespaceResponse) ProtoMessage() {}
 
 func (x *DeleteNamespaceResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_cache_services_v1_cache_service_proto_msgTypes[12]
+	mi := &file_udb_core_cache_services_v1_cache_service_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -886,7 +1059,7 @@ func (x *DeleteNamespaceResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteNamespaceResponse.ProtoReflect.Descriptor instead.
 func (*DeleteNamespaceResponse) Descriptor() ([]byte, []int) {
-	return file_udb_core_cache_services_v1_cache_service_proto_rawDescGZIP(), []int{12}
+	return file_udb_core_cache_services_v1_cache_service_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *DeleteNamespaceResponse) GetNamespace() string {
@@ -927,7 +1100,7 @@ type GetNamespaceStatsRequest struct {
 
 func (x *GetNamespaceStatsRequest) Reset() {
 	*x = GetNamespaceStatsRequest{}
-	mi := &file_udb_core_cache_services_v1_cache_service_proto_msgTypes[13]
+	mi := &file_udb_core_cache_services_v1_cache_service_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -939,7 +1112,7 @@ func (x *GetNamespaceStatsRequest) String() string {
 func (*GetNamespaceStatsRequest) ProtoMessage() {}
 
 func (x *GetNamespaceStatsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_cache_services_v1_cache_service_proto_msgTypes[13]
+	mi := &file_udb_core_cache_services_v1_cache_service_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -952,7 +1125,7 @@ func (x *GetNamespaceStatsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetNamespaceStatsRequest.ProtoReflect.Descriptor instead.
 func (*GetNamespaceStatsRequest) Descriptor() ([]byte, []int) {
-	return file_udb_core_cache_services_v1_cache_service_proto_rawDescGZIP(), []int{13}
+	return file_udb_core_cache_services_v1_cache_service_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *GetNamespaceStatsRequest) GetTenantId() string {
@@ -983,7 +1156,7 @@ type GetNamespaceStatsResponse struct {
 
 func (x *GetNamespaceStatsResponse) Reset() {
 	*x = GetNamespaceStatsResponse{}
-	mi := &file_udb_core_cache_services_v1_cache_service_proto_msgTypes[14]
+	mi := &file_udb_core_cache_services_v1_cache_service_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -995,7 +1168,7 @@ func (x *GetNamespaceStatsResponse) String() string {
 func (*GetNamespaceStatsResponse) ProtoMessage() {}
 
 func (x *GetNamespaceStatsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_cache_services_v1_cache_service_proto_msgTypes[14]
+	mi := &file_udb_core_cache_services_v1_cache_service_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1008,7 +1181,7 @@ func (x *GetNamespaceStatsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetNamespaceStatsResponse.ProtoReflect.Descriptor instead.
 func (*GetNamespaceStatsResponse) Descriptor() ([]byte, []int) {
-	return file_udb_core_cache_services_v1_cache_service_proto_rawDescGZIP(), []int{14}
+	return file_udb_core_cache_services_v1_cache_service_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *GetNamespaceStatsResponse) GetNamespace() string {
@@ -1075,7 +1248,20 @@ const file_udb_core_cache_services_v1_cache_service_proto_rawDesc = "" +
 	"used_bytes\x18\x02 \x01(\x03R\tusedBytes\x12\x1b\n" +
 	"\tmax_bytes\x18\x03 \x01(\x03R\bmaxBytes\x12\x18\n" +
 	"\amessage\x18\x04 \x01(\tR\amessage\x122\n" +
-	"\x05error\x18\x05 \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05cacheP\x01\"z\n" +
+	"\x05error\x18\x05 \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05cacheP\x01\"\xda\x01\n" +
+	"\x10IncrementRequest\x12\x1b\n" +
+	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x12\x1c\n" +
+	"\tnamespace\x18\x02 \x01(\tR\tnamespace\x12\x10\n" +
+	"\x03key\x18\x03 \x01(\tR\x03key\x12\x14\n" +
+	"\x05delta\x18\x04 \x01(\x03R\x05delta\x123\n" +
+	"\x16ttl_seconds_if_created\x18\x05 \x01(\x03R\x13ttlSecondsIfCreated\x12\x10\n" +
+	"\x03max\x18\x06 \x01(\x03R\x03max:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x01@\x01J\x05cacheP\x01\"\xe3\x01\n" +
+	"\x11IncrementResponse\x12\x14\n" +
+	"\x05value\x18\x01 \x01(\x03R\x05value\x12\x18\n" +
+	"\acreated\x18\x02 \x01(\bR\acreated\x12\x18\n" +
+	"\arefused\x18\x03 \x01(\bR\arefused\x122\n" +
+	"\x15ttl_remaining_seconds\x18\x04 \x01(\x03R\x13ttlRemainingSeconds\x122\n" +
+	"\x05error\x18\x05 \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x01@\x01J\x05cacheP\x01\"z\n" +
 	"\rDeleteRequest\x12\x1b\n" +
 	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x12\x1c\n" +
 	"\tnamespace\x18\x02 \x01(\tR\tnamespace\x12\x10\n" +
@@ -1132,13 +1318,15 @@ const file_udb_core_cache_services_v1_cache_service_proto_rawDesc = "" +
 	"\tmax_bytes\x18\x03 \x01(\x03R\bmaxBytes\x12\x1d\n" +
 	"\n" +
 	"item_count\x18\x04 \x01(\x04R\titemCount\x122\n" +
-	"\x05error\x18\x05 \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05cacheP\x012\xc9\x18\n" +
+	"\x05error\x18\x05 \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05cacheP\x012\xb1\x1b\n" +
 	"\fCacheService\x12\xae\x02\n" +
 	"\x03Get\x12&.udb.core.cache.services.v1.GetRequest\x1a'.udb.core.cache.services.v1.GetResponse\"\xd5\x01\xca\xf3\x18&\b\x02\x1a\rudb:cache:get \x01J\x03\x01\x02\x04j\tcache.Get\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x186\b\x01\x12\tcache_get\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05cacheP\x01Z\x11cacheNamespaceGet\xf2\xf3\x18<\n" +
 	"\x05cache\x1a\x05redis2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x01\x82\xd3\xe4\x93\x02\x1d\x12\x1b/v1/cache/{namespace}/{key}\x12\x84\x03\n" +
 	"\x03Set\x12&.udb.core.cache.services.v1.SetRequest\x1a'.udb.core.cache.services.v1.SetResponse\"\xab\x02\xca\xf3\x18&\b\x02\x1a\rudb:cache:set \x01J\x03\x01\x02\x04j\tcache.Set\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x186\b\x01\x12\tcache_set\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05cacheP\x01Z\x11cacheNamespaceSet\xea\xf3\x18O\n" +
 	"\tcache.Set\x12\x16udb.cache.entry.set.v1\x1a\tnamespace\"\bstandard*\rat_least_once2\x06stable\xf2\xf3\x18<\n" +
-	"\x05cache\x1a\x05redis2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x02\x82\xd3\xe4\x93\x02 :\x01*\x1a\x1b/v1/cache/{namespace}/{key}\x12\x9d\x03\n" +
+	"\x05cache\x1a\x05redis2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x02\x82\xd3\xe4\x93\x02 :\x01*\x1a\x1b/v1/cache/{namespace}/{key}\x12\xe5\x02\n" +
+	"\tIncrement\x12,.udb.core.cache.services.v1.IncrementRequest\x1a-.udb.core.cache.services.v1.IncrementResponse\"\xfa\x01\xca\xf3\x182\b\x02\x1a\x13udb:cache:increment \x01J\x03\x01\x02\x04j\x0fcache.Increment\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18B\b\x01\x12\x0fcache_increment\x1a\x03udb(\xb0\xea\x010\x01@\x01J\x05cacheP\x01Z\x17cacheNamespaceIncrement\xf2\xf3\x18<\n" +
+	"\x05cache\x1a\x05redis2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x02\x82\xd3\xe4\x93\x02*:\x01*\"%/v1/cache/{namespace}/{key}:increment\x12\x9d\x03\n" +
 	"\x06Delete\x12).udb.core.cache.services.v1.DeleteRequest\x1a*.udb.core.cache.services.v1.DeleteResponse\"\xbb\x02\xca\xf3\x18,\b\x02\x1a\x10udb:cache:delete \x01J\x03\x01\x02\x04j\fcache.Delete\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18<\b\x01\x12\fcache_delete\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05cacheP\x01Z\x14cacheNamespaceDelete\xea\xf3\x18V\n" +
 	"\fcache.Delete\x12\x1audb.cache.entry.deleted.v1\x1a\tnamespace\"\bstandard*\rat_least_once2\x06stable\xf2\xf3\x18<\n" +
 	"\x05cache\x1a\x05redis2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x02\x82\xd3\xe4\x93\x02\x1d*\x1b/v1/cache/{namespace}/{key}\x12\xb4\x02\n" +
@@ -1171,53 +1359,58 @@ func file_udb_core_cache_services_v1_cache_service_proto_rawDescGZIP() []byte {
 	return file_udb_core_cache_services_v1_cache_service_proto_rawDescData
 }
 
-var file_udb_core_cache_services_v1_cache_service_proto_msgTypes = make([]protoimpl.MessageInfo, 15)
+var file_udb_core_cache_services_v1_cache_service_proto_msgTypes = make([]protoimpl.MessageInfo, 17)
 var file_udb_core_cache_services_v1_cache_service_proto_goTypes = []any{
 	(*GetRequest)(nil),                // 0: udb.core.cache.services.v1.GetRequest
 	(*GetResponse)(nil),               // 1: udb.core.cache.services.v1.GetResponse
 	(*SetRequest)(nil),                // 2: udb.core.cache.services.v1.SetRequest
 	(*SetResponse)(nil),               // 3: udb.core.cache.services.v1.SetResponse
-	(*DeleteRequest)(nil),             // 4: udb.core.cache.services.v1.DeleteRequest
-	(*DeleteResponse)(nil),            // 5: udb.core.cache.services.v1.DeleteResponse
-	(*ScanRequest)(nil),               // 6: udb.core.cache.services.v1.ScanRequest
-	(*ScanResponse)(nil),              // 7: udb.core.cache.services.v1.ScanResponse
-	(*CacheItem)(nil),                 // 8: udb.core.cache.services.v1.CacheItem
-	(*CreateNamespaceRequest)(nil),    // 9: udb.core.cache.services.v1.CreateNamespaceRequest
-	(*CreateNamespaceResponse)(nil),   // 10: udb.core.cache.services.v1.CreateNamespaceResponse
-	(*DeleteNamespaceRequest)(nil),    // 11: udb.core.cache.services.v1.DeleteNamespaceRequest
-	(*DeleteNamespaceResponse)(nil),   // 12: udb.core.cache.services.v1.DeleteNamespaceResponse
-	(*GetNamespaceStatsRequest)(nil),  // 13: udb.core.cache.services.v1.GetNamespaceStatsRequest
-	(*GetNamespaceStatsResponse)(nil), // 14: udb.core.cache.services.v1.GetNamespaceStatsResponse
-	(*v1.ApiError)(nil),               // 15: udb.core.common.v1.ApiError
+	(*IncrementRequest)(nil),          // 4: udb.core.cache.services.v1.IncrementRequest
+	(*IncrementResponse)(nil),         // 5: udb.core.cache.services.v1.IncrementResponse
+	(*DeleteRequest)(nil),             // 6: udb.core.cache.services.v1.DeleteRequest
+	(*DeleteResponse)(nil),            // 7: udb.core.cache.services.v1.DeleteResponse
+	(*ScanRequest)(nil),               // 8: udb.core.cache.services.v1.ScanRequest
+	(*ScanResponse)(nil),              // 9: udb.core.cache.services.v1.ScanResponse
+	(*CacheItem)(nil),                 // 10: udb.core.cache.services.v1.CacheItem
+	(*CreateNamespaceRequest)(nil),    // 11: udb.core.cache.services.v1.CreateNamespaceRequest
+	(*CreateNamespaceResponse)(nil),   // 12: udb.core.cache.services.v1.CreateNamespaceResponse
+	(*DeleteNamespaceRequest)(nil),    // 13: udb.core.cache.services.v1.DeleteNamespaceRequest
+	(*DeleteNamespaceResponse)(nil),   // 14: udb.core.cache.services.v1.DeleteNamespaceResponse
+	(*GetNamespaceStatsRequest)(nil),  // 15: udb.core.cache.services.v1.GetNamespaceStatsRequest
+	(*GetNamespaceStatsResponse)(nil), // 16: udb.core.cache.services.v1.GetNamespaceStatsResponse
+	(*v1.ApiError)(nil),               // 17: udb.core.common.v1.ApiError
 }
 var file_udb_core_cache_services_v1_cache_service_proto_depIdxs = []int32{
-	15, // 0: udb.core.cache.services.v1.GetResponse.error:type_name -> udb.core.common.v1.ApiError
-	15, // 1: udb.core.cache.services.v1.SetResponse.error:type_name -> udb.core.common.v1.ApiError
-	15, // 2: udb.core.cache.services.v1.DeleteResponse.error:type_name -> udb.core.common.v1.ApiError
-	8,  // 3: udb.core.cache.services.v1.ScanResponse.items:type_name -> udb.core.cache.services.v1.CacheItem
-	15, // 4: udb.core.cache.services.v1.ScanResponse.error:type_name -> udb.core.common.v1.ApiError
-	15, // 5: udb.core.cache.services.v1.CreateNamespaceResponse.error:type_name -> udb.core.common.v1.ApiError
-	15, // 6: udb.core.cache.services.v1.DeleteNamespaceResponse.error:type_name -> udb.core.common.v1.ApiError
-	15, // 7: udb.core.cache.services.v1.GetNamespaceStatsResponse.error:type_name -> udb.core.common.v1.ApiError
-	0,  // 8: udb.core.cache.services.v1.CacheService.Get:input_type -> udb.core.cache.services.v1.GetRequest
-	2,  // 9: udb.core.cache.services.v1.CacheService.Set:input_type -> udb.core.cache.services.v1.SetRequest
-	4,  // 10: udb.core.cache.services.v1.CacheService.Delete:input_type -> udb.core.cache.services.v1.DeleteRequest
-	6,  // 11: udb.core.cache.services.v1.CacheService.Scan:input_type -> udb.core.cache.services.v1.ScanRequest
-	9,  // 12: udb.core.cache.services.v1.CacheService.CreateNamespace:input_type -> udb.core.cache.services.v1.CreateNamespaceRequest
-	11, // 13: udb.core.cache.services.v1.CacheService.DeleteNamespace:input_type -> udb.core.cache.services.v1.DeleteNamespaceRequest
-	13, // 14: udb.core.cache.services.v1.CacheService.GetNamespaceStats:input_type -> udb.core.cache.services.v1.GetNamespaceStatsRequest
-	1,  // 15: udb.core.cache.services.v1.CacheService.Get:output_type -> udb.core.cache.services.v1.GetResponse
-	3,  // 16: udb.core.cache.services.v1.CacheService.Set:output_type -> udb.core.cache.services.v1.SetResponse
-	5,  // 17: udb.core.cache.services.v1.CacheService.Delete:output_type -> udb.core.cache.services.v1.DeleteResponse
-	7,  // 18: udb.core.cache.services.v1.CacheService.Scan:output_type -> udb.core.cache.services.v1.ScanResponse
-	10, // 19: udb.core.cache.services.v1.CacheService.CreateNamespace:output_type -> udb.core.cache.services.v1.CreateNamespaceResponse
-	12, // 20: udb.core.cache.services.v1.CacheService.DeleteNamespace:output_type -> udb.core.cache.services.v1.DeleteNamespaceResponse
-	14, // 21: udb.core.cache.services.v1.CacheService.GetNamespaceStats:output_type -> udb.core.cache.services.v1.GetNamespaceStatsResponse
-	15, // [15:22] is the sub-list for method output_type
-	8,  // [8:15] is the sub-list for method input_type
-	8,  // [8:8] is the sub-list for extension type_name
-	8,  // [8:8] is the sub-list for extension extendee
-	0,  // [0:8] is the sub-list for field type_name
+	17, // 0: udb.core.cache.services.v1.GetResponse.error:type_name -> udb.core.common.v1.ApiError
+	17, // 1: udb.core.cache.services.v1.SetResponse.error:type_name -> udb.core.common.v1.ApiError
+	17, // 2: udb.core.cache.services.v1.IncrementResponse.error:type_name -> udb.core.common.v1.ApiError
+	17, // 3: udb.core.cache.services.v1.DeleteResponse.error:type_name -> udb.core.common.v1.ApiError
+	10, // 4: udb.core.cache.services.v1.ScanResponse.items:type_name -> udb.core.cache.services.v1.CacheItem
+	17, // 5: udb.core.cache.services.v1.ScanResponse.error:type_name -> udb.core.common.v1.ApiError
+	17, // 6: udb.core.cache.services.v1.CreateNamespaceResponse.error:type_name -> udb.core.common.v1.ApiError
+	17, // 7: udb.core.cache.services.v1.DeleteNamespaceResponse.error:type_name -> udb.core.common.v1.ApiError
+	17, // 8: udb.core.cache.services.v1.GetNamespaceStatsResponse.error:type_name -> udb.core.common.v1.ApiError
+	0,  // 9: udb.core.cache.services.v1.CacheService.Get:input_type -> udb.core.cache.services.v1.GetRequest
+	2,  // 10: udb.core.cache.services.v1.CacheService.Set:input_type -> udb.core.cache.services.v1.SetRequest
+	4,  // 11: udb.core.cache.services.v1.CacheService.Increment:input_type -> udb.core.cache.services.v1.IncrementRequest
+	6,  // 12: udb.core.cache.services.v1.CacheService.Delete:input_type -> udb.core.cache.services.v1.DeleteRequest
+	8,  // 13: udb.core.cache.services.v1.CacheService.Scan:input_type -> udb.core.cache.services.v1.ScanRequest
+	11, // 14: udb.core.cache.services.v1.CacheService.CreateNamespace:input_type -> udb.core.cache.services.v1.CreateNamespaceRequest
+	13, // 15: udb.core.cache.services.v1.CacheService.DeleteNamespace:input_type -> udb.core.cache.services.v1.DeleteNamespaceRequest
+	15, // 16: udb.core.cache.services.v1.CacheService.GetNamespaceStats:input_type -> udb.core.cache.services.v1.GetNamespaceStatsRequest
+	1,  // 17: udb.core.cache.services.v1.CacheService.Get:output_type -> udb.core.cache.services.v1.GetResponse
+	3,  // 18: udb.core.cache.services.v1.CacheService.Set:output_type -> udb.core.cache.services.v1.SetResponse
+	5,  // 19: udb.core.cache.services.v1.CacheService.Increment:output_type -> udb.core.cache.services.v1.IncrementResponse
+	7,  // 20: udb.core.cache.services.v1.CacheService.Delete:output_type -> udb.core.cache.services.v1.DeleteResponse
+	9,  // 21: udb.core.cache.services.v1.CacheService.Scan:output_type -> udb.core.cache.services.v1.ScanResponse
+	12, // 22: udb.core.cache.services.v1.CacheService.CreateNamespace:output_type -> udb.core.cache.services.v1.CreateNamespaceResponse
+	14, // 23: udb.core.cache.services.v1.CacheService.DeleteNamespace:output_type -> udb.core.cache.services.v1.DeleteNamespaceResponse
+	16, // 24: udb.core.cache.services.v1.CacheService.GetNamespaceStats:output_type -> udb.core.cache.services.v1.GetNamespaceStatsResponse
+	17, // [17:25] is the sub-list for method output_type
+	9,  // [9:17] is the sub-list for method input_type
+	9,  // [9:9] is the sub-list for extension type_name
+	9,  // [9:9] is the sub-list for extension extendee
+	0,  // [0:9] is the sub-list for field type_name
 }
 
 func init() { file_udb_core_cache_services_v1_cache_service_proto_init() }
@@ -1231,7 +1424,7 @@ func file_udb_core_cache_services_v1_cache_service_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_udb_core_cache_services_v1_cache_service_proto_rawDesc), len(file_udb_core_cache_services_v1_cache_service_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   15,
+			NumMessages:   17,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

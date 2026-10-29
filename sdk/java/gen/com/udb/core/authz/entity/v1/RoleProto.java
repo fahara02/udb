@@ -44,8 +44,8 @@ public final class RoleProto {
       "db.core.authz.entity.v1\032\037google/protobuf" +
       "/timestamp.proto\032$udb/core/authz/entity/" +
       "v1/enums.proto\032\033udb/core/common/v1/db.pr" +
-      "oto\032!udb/core/common/v1/security.proto\"\326" +
-      "\022\n\004Role\022C\n\007role_id\030\001 \001(\tB*\202\267\030&\n\007role_id\022" +
+      "oto\032!udb/core/common/v1/security.proto\"\337" +
+      "\023\n\004Role\022C\n\007role_id\030\001 \001(\tB*\202\267\030&\n\007role_id\022" +
       "\004UUID\030\001(\001:\021gen_random_uuid()R\006roleId\022r\n\004" +
       "name\030\002 \001(\tB^\202\267\030Z\n\004name\022\014VARCHAR(100)\030\001R(" +
       "\n\025idx_roles_name_domain\022\005BTREE\030\001Z\006domain" +
@@ -88,30 +88,33 @@ public final class RoleProto {
       "cessSurface\022o\n\rmetadata_json\030\021 \001(\tBJ\202\267\030F" +
       "\n\rmetadata_json\022\005JSONB\030\001:\013\'{}\'::jsonbZ\035P" +
       "roject-defined role metadatax\001R\014metadata" +
-      "Json:\230\005\372\266\030\367\003\n\005roles\022\tudb_authz\030\002 \001*IName" +
-      "d roles scoped by tenant, project, resou" +
-      "rce domain, or access surface0\0018\001@\001b^\n\020t" +
-      "enant_isolation\032H(tenant_id::text = curr" +
-      "ent_setting(\'app.current_tenant_id\', tru" +
-      "e)::text)(\001\252\001O\n\032trg_roles_touch_updated_" +
-      "at\022\006BEFORE\032\006UPDATE\"\034udb_authz.touch_upda" +
-      "ted_at()*\003ROW\302\001\332\001\n\031touch_updated_at_func" +
-      "tion\022\010postgres\032\017before_triggers\"\241\001CREATE" +
-      " OR REPLACE FUNCTION udb_authz.touch_upd" +
-      "ated_at()\nRETURNS trigger\nLANGUAGE plpgs" +
-      "ql\nAS $$\nBEGIN\n  NEW.updated_at = CURREN" +
-      "T_TIMESTAMP;\n  RETURN NEW;\nEND;\n$$;\212\262\031\227\001" +
-      "\n\006tenant\032\ttenant_id*4tenant_id = current" +
-      "_setting(\'app.current_tenant_id\')2\013soft_" +
-      "delete:\021authz.operational@\373\023H\002R\006tenantZ\010" +
-      "standardr\025tenant.data_residencyB\364\001\n\034com." +
-      "udb.core.authz.entity.v1B\tRoleProtoP\001ZDg" +
-      "ithub.com/fahara02/udb/sdk/go/gen/udb/co" +
-      "re/authz/entity/v1;entityv1\242\002\004UCAE\252\002\030Udb" +
-      ".Core.Authz.Entity.V1\312\002\030Udb\\Core\\Authz\\E" +
-      "ntity\\V1\342\002$Udb\\GPBMetadata\\Core\\Authz\\En" +
-      "tity\\V1\352\002\034Udb::Core::Authz::Entity::V1b\006" +
-      "proto3"
+      "Json\022\206\001\n\021token_scopes_json\030\022 \001(\tBZ\202\267\030V\n\021" +
+      "token_scopes_json\022\005JSONB\030\001:\004\'[]\'Z0Token " +
+      "scopes a person bound to this role carri" +
+      "esx\001R\017tokenScopesJson:\230\005\372\266\030\367\003\n\005roles\022\tud" +
+      "b_authz\030\002 \001*INamed roles scoped by tenan" +
+      "t, project, resource domain, or access s" +
+      "urface0\0018\001@\001b^\n\020tenant_isolation\032H(tenan" +
+      "t_id::text = current_setting(\'app.curren" +
+      "t_tenant_id\', true)::text)(\001\252\001O\n\032trg_rol" +
+      "es_touch_updated_at\022\006BEFORE\032\006UPDATE\"\034udb" +
+      "_authz.touch_updated_at()*\003ROW\302\001\332\001\n\031touc" +
+      "h_updated_at_function\022\010postgres\032\017before_" +
+      "triggers\"\241\001CREATE OR REPLACE FUNCTION ud" +
+      "b_authz.touch_updated_at()\nRETURNS trigg" +
+      "er\nLANGUAGE plpgsql\nAS $$\nBEGIN\n  NEW.up" +
+      "dated_at = CURRENT_TIMESTAMP;\n  RETURN N" +
+      "EW;\nEND;\n$$;\212\262\031\227\001\n\006tenant\032\ttenant_id*4te" +
+      "nant_id = current_setting(\'app.current_t" +
+      "enant_id\')2\013soft_delete:\021authz.operation" +
+      "al@\373\023H\002R\006tenantZ\010standardr\025tenant.data_r" +
+      "esidencyB\364\001\n\034com.udb.core.authz.entity.v" +
+      "1B\tRoleProtoP\001ZDgithub.com/fahara02/udb/" +
+      "sdk/go/gen/udb/core/authz/entity/v1;enti" +
+      "tyv1\242\002\004UCAE\252\002\030Udb.Core.Authz.Entity.V1\312\002" +
+      "\030Udb\\Core\\Authz\\Entity\\V1\342\002$Udb\\GPBMetad" +
+      "ata\\Core\\Authz\\Entity\\V1\352\002\034Udb::Core::Au" +
+      "thz::Entity::V1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -126,7 +129,7 @@ public final class RoleProto {
     internal_static_udb_core_authz_entity_v1_Role_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_core_authz_entity_v1_Role_descriptor,
-        new java.lang.String[] { "RoleId", "Name", "Description", "IsSystem", "IsActive", "CreatedBy", "CreatedAt", "UpdatedAt", "DeletedAt", "TenantId", "DeletedBy", "RoleCode", "Domain", "ProjectId", "ScopeType", "AccessSurface", "MetadataJson", });
+        new java.lang.String[] { "RoleId", "Name", "Description", "IsSystem", "IsActive", "CreatedBy", "CreatedAt", "UpdatedAt", "DeletedAt", "TenantId", "DeletedBy", "RoleCode", "Domain", "ProjectId", "ScopeType", "AccessSurface", "MetadataJson", "TokenScopesJson", });
     descriptor.resolveAllFeaturesImmutable();
     com.google.protobuf.TimestampProto.getDescriptor();
     com.udb.core.authz.entity.v1.EnumsProto.getDescriptor();

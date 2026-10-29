@@ -64,6 +64,27 @@ class CacheServiceClient extends \Grpc\BaseStub {
     }
 
     /**
+     * Atomically add `delta` to an integer counter and return the new value, in
+     * one Redis round trip: the shared-counter primitive a rate limiter needs
+     * (one call per decision). A missing key starts at 0 and takes the TTL from
+     * `ttl_seconds_if_created`; an existing key keeps its TTL. With `max` > 0 an
+     * increment that would take the value above `max` is not applied and
+     * `refused` is true. Not idempotent: a retried call adds `delta` again. Emits
+     * no outbox event (it is a hot-path counter, not a domain change).
+     * @param \Udb\Core\Cache\Services\V1\IncrementRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall<\Udb\Core\Cache\Services\V1\IncrementResponse>
+     */
+    public function Increment(\Udb\Core\Cache\Services\V1\IncrementRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/udb.core.cache.services.v1.CacheService/Increment',
+        $argument,
+        ['\Udb\Core\Cache\Services\V1\IncrementResponse', 'decode'],
+        $metadata, $options);
+    }
+
+    /**
      * Delete a single namespaced key. Idempotent.
      * @param \Udb\Core\Cache\Services\V1\DeleteRequest $argument input argument
      * @param array $metadata metadata

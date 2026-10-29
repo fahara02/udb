@@ -41,6 +41,17 @@ class UpdateRoleRequest extends \Google\Protobuf\Internal\Message
      * Generated from protobuf field <code>.google.protobuf.FieldMask update_mask = 6 [json_name = "updateMask"];</code>
      */
     protected $update_mask = null;
+    /**
+     * Replaces the role's person token scopes (same rules as
+     * `CreateRoleRequest.token_scopes`; service accounts never get them).
+     * Without `update_mask` a non-empty list replaces the stored one; list
+     * `token_scopes` in `update_mask` to set it, including to clear it with an
+     * empty list. Bound users carry the new scopes after their next login or
+     * refresh.
+     *
+     * Generated from protobuf field <code>repeated string token_scopes = 7 [json_name = "tokenScopes", (.google.api.field_behavior) = OPTIONAL];</code>
+     */
+    private $token_scopes;
 
     /**
      * Constructor.
@@ -56,6 +67,13 @@ class UpdateRoleRequest extends \Google\Protobuf\Internal\Message
      *     @type \Google\Protobuf\FieldMask $update_mask
      *           Optional PATCH mask relative to the role resource. When omitted, legacy
      *           clients keep the historical non-empty-field patch behavior.
+     *     @type string[] $token_scopes
+     *           Replaces the role's person token scopes (same rules as
+     *           `CreateRoleRequest.token_scopes`; service accounts never get them).
+     *           Without `update_mask` a non-empty list replaces the stored one; list
+     *           `token_scopes` in `update_mask` to set it, including to clear it with an
+     *           empty list. Bound users carry the new scopes after their next login or
+     *           refresh.
      * }
      */
     public function __construct($data = NULL) {
@@ -217,6 +235,42 @@ class UpdateRoleRequest extends \Google\Protobuf\Internal\Message
     {
         GPBUtil::checkMessage($var, \Google\Protobuf\FieldMask::class);
         $this->update_mask = $var;
+
+        return $this;
+    }
+
+    /**
+     * Replaces the role's person token scopes (same rules as
+     * `CreateRoleRequest.token_scopes`; service accounts never get them).
+     * Without `update_mask` a non-empty list replaces the stored one; list
+     * `token_scopes` in `update_mask` to set it, including to clear it with an
+     * empty list. Bound users carry the new scopes after their next login or
+     * refresh.
+     *
+     * Generated from protobuf field <code>repeated string token_scopes = 7 [json_name = "tokenScopes", (.google.api.field_behavior) = OPTIONAL];</code>
+     * @return RepeatedField<string>
+     */
+    public function getTokenScopes()
+    {
+        return $this->token_scopes;
+    }
+
+    /**
+     * Replaces the role's person token scopes (same rules as
+     * `CreateRoleRequest.token_scopes`; service accounts never get them).
+     * Without `update_mask` a non-empty list replaces the stored one; list
+     * `token_scopes` in `update_mask` to set it, including to clear it with an
+     * empty list. Bound users carry the new scopes after their next login or
+     * refresh.
+     *
+     * Generated from protobuf field <code>repeated string token_scopes = 7 [json_name = "tokenScopes", (.google.api.field_behavior) = OPTIONAL];</code>
+     * @param string[] $var
+     * @return $this
+     */
+    public function setTokenScopes($var)
+    {
+        $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::STRING);
+        $this->token_scopes = $arr;
 
         return $this;
     }

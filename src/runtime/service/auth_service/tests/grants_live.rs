@@ -1820,3 +1820,120 @@ async fn live_postgres_service_bearers_carry_filtered_bound_roles() {
 
     cleanup_native_auth_db(&pool).await;
 }
+
+#[tokio::test]
+#[ignore = "requires live Postgres; run with UDB_LIVE_AUTH_TESTS=1 cargo test --lib live_postgres_role_token_scopes_ride_person_bearers_only -- --ignored --nocapture"]
+async fn live_postgres_role_token_scopes_ride_person_bearers_only() {
+    // CreateRole{token_scopes} → AssignRole → a PERSON's login token carries
+    // the role's scope; a service account bound to the same role keeps only
+    // its typed grant's scopes; clearing the role's scopes drops the scope at
+    // the person's next refresh.
+    use crate::proto::udb::core::authz::services::v1 as authz_pb;
+    use crate::proto::udb::core::authz::services::v1::authz_service_server::AuthzService;
+
+    let _guard = live_auth_db_lock().lock().await;
+    let pool = live_pg_pool().await;
+    migrate_native_auth_db(&pool).await;
+    let broker = native_broker_service().await;
+    let (_, authz, _) = broker.build_auth_services();
+    let svc =
+        authn_service_with_jwt(pool.clone()).with_authz_snapshot(Some(broker.authz_snapshot()));
+    let password = "CorrectHorse1!";
+    let person = create_verified_user(&svc, "role_scopes_person", password).await;
+    let (service, _grant) =
+        create_service_account_with_grant(&svc, "role_scopes_svc", password, &["udb:read"]).await;
+    let suffix = uuid::Uuid::new_v4().simple().to_string();
+    let scope = "udb:authn:manage-grants".to_string();
+
+    let role = authz
+        .create_role(Request::new(authz_pb::CreateRoleRequest {
+            name: format!("Doctor {suffix}"),
+            description: "role token scopes live test".to_string(),
+            created_by: person.user_id.clone(),
+            role_code: format!("doctor_{suffix}"),
+            domain: "acme".to_string(),
+            tenant_id: "acme".to_string(),
+            project_id: "billing".to_string(),
+            token_scopes: vec![scope.clone()],
+            ..Default::default()
+        }))
+        .await
+        .expect("create role with token scopes")
+        .into_inner()
+        .role
+        .expect("role");
+    assert_eq!(
+        role.token_scopes_json,
+        serde_json::json!([scope.clone()]).to_string()
+    );
+    for user_id in [person.user_id.clone(), service.user_id.clone()] {
+        authz
+            .assign_role(Request::new(authz_pb::AssignRoleRequest {
+                user_id,
+                role_id: role.role_id.clone(),
+                domain: "acme".to_string(),
+                assigned_by: person.user_id.clone(),
+                tenant_id: "acme".to_string(),
+                project_id: "billing".to_string(),
+                ..Default::default()
+            }))
+            .await
+            .expect("assign role");
+    }
+    authz.warm_shared_snapshot().await;
+
+    let login = svc
+        .login(Request::new(login_request(&person.email, password)))
+        .await
+        .expect("person login")
+        .into_inner();
+    let validated = validate_access_token(&svc, login.access_token.clone()).await;
+    assert!(validated.valid);
+    assert!(
+        validated.scopes.contains(&scope),
+        "the bound role's scope rides the person's bearer, got {:?}",
+        validated.scopes
+    );
+
+    let service_login = svc
+        .login(Request::new(login_request(&service.email, password)))
+        .await
+        .expect("service login")
+        .into_inner();
+    let validated = validate_access_token(&svc, service_login.access_token).await;
+    assert_eq!(
+        validated.scopes,
+        vec!["udb:read"],
+        "a service bearer's scopes stay the grant's"
+    );
+
+    authz
+        .update_role(Request::new(authz_pb::UpdateRoleRequest {
+            role_id: role.role_id.clone(),
+            updated_by: person.user_id.clone(),
+            update_mask: Some(prost_types::FieldMask {
+                paths: vec!["token_scopes".to_string()],
+            }),
+            token_scopes: Vec::new(),
+            ..Default::default()
+        }))
+        .await
+        .expect("clear role token scopes");
+    authz.warm_shared_snapshot().await;
+    let refreshed = svc
+        .refresh_token(Request::new(authn_pb::RefreshTokenRequest {
+            session_id: login.session_id.clone(),
+            ..Default::default()
+        }))
+        .await
+        .expect("refresh person session")
+        .into_inner();
+    let validated = validate_access_token(&svc, refreshed.access_token).await;
+    assert!(
+        !validated.scopes.contains(&scope),
+        "a cleared role scope is gone after refresh, got {:?}",
+        validated.scopes
+    );
+
+    cleanup_native_auth_db(&pool).await;
+}

@@ -412,7 +412,7 @@ pub async fn bootstrap_admin_user(
     // that EVERY service accepts (the UUID-strict storage/webrtc/asset path and the
     // free-text control-plane path alike). This is the fix that removes the need for
     // a second "uuid tenant" admin.
-    let tenant_uuid = ensure_tenant(&pool, tenant, None).await?;
+    let (tenant_uuid, created_tenant) = ensure_tenant_reporting(&pool, tenant, None).await?;
 
     let session_store: Arc<dyn SessionStore> =
         Arc::new(PostgresSessionStore::new(pool.clone(), ""));
@@ -431,12 +431,16 @@ pub async fn bootstrap_admin_user(
     // that was created before the role-binding step existed (Block 1), rather
     // than failing at `create_user`. Usernames are stored lowercased.
     let login_name = username.trim().to_ascii_lowercase();
-    let (user_id, needs_activation) = match user_store
+    let (user_id, needs_activation, created_user) = match user_store
         .get_user_by_username(&login_name)
         .await
         .map_err(|err| format!("lookup user failed: {err}"))?
     {
-        Some(existing) => (existing.user_id, existing.status != AccountStatus::Active),
+        Some(existing) => (
+            existing.user_id,
+            existing.status != AccountStatus::Active,
+            false,
+        ),
         None => {
             let created = svc
                 .create_user(Request::new(authn_pb::CreateUserRequest {
@@ -455,7 +459,7 @@ pub async fn bootstrap_admin_user(
                 .user
                 .ok_or_else(|| "create_user returned no user".to_string())?
                 .user_id;
-            (new_id, true)
+            (new_id, true, true)
         }
     };
 
@@ -527,6 +531,8 @@ pub async fn bootstrap_admin_user(
     Ok(BootstrapAdmin {
         user_id,
         tenant_id: tenant_uuid,
+        created_user,
+        created_tenant,
     })
 }
 
@@ -787,6 +793,12 @@ pub async fn served_bootstrap_admin(
 pub struct BootstrapAdmin {
     pub user_id: String,
     pub tenant_id: String,
+    /// This run created the user (an existing username is reused, and its
+    /// password and email are left unchanged).
+    pub created_user: bool,
+    /// This run created the tenant: the `--tenant` given matched no existing
+    /// code or id.
+    pub created_tenant: bool,
 }
 
 /// Well-known id of the system `organization_owner` role row seeded by
@@ -844,6 +856,19 @@ pub(crate) async fn ensure_tenant(
     tenant_in: &str,
     name: Option<&str>,
 ) -> Result<String, String> {
+    ensure_tenant_reporting(pool, tenant_in, name)
+        .await
+        .map(|(tenant_id, _)| tenant_id)
+}
+
+/// [`ensure_tenant`], also reporting whether THIS call created the tenant row
+/// (`false` when it already existed or a concurrent writer created it), so the
+/// offline bootstrap can say when an identifier it was given did not exist.
+pub(crate) async fn ensure_tenant_reporting(
+    pool: &sqlx::PgPool,
+    tenant_in: &str,
+    name: Option<&str>,
+) -> Result<(String, bool), String> {
     use crate::runtime::native_catalog::native_model;
 
     let trimmed = tenant_in.trim();
@@ -890,7 +915,7 @@ pub(crate) async fn ensure_tenant(
         .await
         .map_err(|err| format!("tenant lookup failed: {err}"))?
     {
-        return Ok(found);
+        return Ok((found, false));
     }
 
     // 2. Not found — choose the canonical id. The DEFAULT tenant is the fixed
@@ -935,13 +960,15 @@ pub(crate) async fn ensure_tenant(
         branding = m.q("branding"),
         audit = m.q("audit_info"),
     );
-    sqlx::query(&insert_sql)
+    let inserted = sqlx::query(&insert_sql)
         .bind(&canonical_id)
         .bind(&code)
         .bind(&tenant_name)
         .execute(pool)
         .await
-        .map_err(|err| format!("create tenant '{code}' failed: {err}"))?;
+        .map_err(|err| format!("create tenant '{code}' failed: {err}"))?
+        .rows_affected()
+        > 0;
 
     // 4. Re-resolve (race-safe: a concurrent writer may have won the ON CONFLICT, in
     //    which case the surviving row's id — not ours — is canonical).
@@ -957,6 +984,7 @@ pub(crate) async fn ensure_tenant(
     .await
     .map_err(|err| format!("tenant re-lookup failed: {err}"))?
     .ok_or_else(|| "tenant ensure failed: row missing after insert".to_string())
+    .map(|tenant_id| (tenant_id, inserted))
 }
 
 /// Idempotently seed the system authz defaults the bootstrap admin path depends

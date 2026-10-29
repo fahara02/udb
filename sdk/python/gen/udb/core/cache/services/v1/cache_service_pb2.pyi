@@ -59,6 +59,36 @@ class SetResponse(_message.Message):
     error: _dto_pb2.ApiError
     def __init__(self, stored: bool = ..., used_bytes: _Optional[int] = ..., max_bytes: _Optional[int] = ..., message: _Optional[str] = ..., error: _Optional[_Union[_dto_pb2.ApiError, _Mapping]] = ...) -> None: ...
 
+class IncrementRequest(_message.Message):
+    __slots__ = ("tenant_id", "namespace", "key", "delta", "ttl_seconds_if_created", "max")
+    TENANT_ID_FIELD_NUMBER: _ClassVar[int]
+    NAMESPACE_FIELD_NUMBER: _ClassVar[int]
+    KEY_FIELD_NUMBER: _ClassVar[int]
+    DELTA_FIELD_NUMBER: _ClassVar[int]
+    TTL_SECONDS_IF_CREATED_FIELD_NUMBER: _ClassVar[int]
+    MAX_FIELD_NUMBER: _ClassVar[int]
+    tenant_id: str
+    namespace: str
+    key: str
+    delta: int
+    ttl_seconds_if_created: int
+    max: int
+    def __init__(self, tenant_id: _Optional[str] = ..., namespace: _Optional[str] = ..., key: _Optional[str] = ..., delta: _Optional[int] = ..., ttl_seconds_if_created: _Optional[int] = ..., max: _Optional[int] = ...) -> None: ...
+
+class IncrementResponse(_message.Message):
+    __slots__ = ("value", "created", "refused", "ttl_remaining_seconds", "error")
+    VALUE_FIELD_NUMBER: _ClassVar[int]
+    CREATED_FIELD_NUMBER: _ClassVar[int]
+    REFUSED_FIELD_NUMBER: _ClassVar[int]
+    TTL_REMAINING_SECONDS_FIELD_NUMBER: _ClassVar[int]
+    ERROR_FIELD_NUMBER: _ClassVar[int]
+    value: int
+    created: bool
+    refused: bool
+    ttl_remaining_seconds: int
+    error: _dto_pb2.ApiError
+    def __init__(self, value: _Optional[int] = ..., created: bool = ..., refused: bool = ..., ttl_remaining_seconds: _Optional[int] = ..., error: _Optional[_Union[_dto_pb2.ApiError, _Mapping]] = ...) -> None: ...
+
 class DeleteRequest(_message.Message):
     __slots__ = ("tenant_id", "namespace", "key")
     TENANT_ID_FIELD_NUMBER: _ClassVar[int]

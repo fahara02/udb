@@ -90,4 +90,10 @@ message Role {
   RoleScopeType scope_type = 15 [(udb.core.common.v1.pg_column) = { column_name: "scope_type" sql_type: "VARCHAR(40)" not_null: true default_value: "'TENANT'" }];
   string access_surface = 16 [(udb.core.common.v1.pg_column) = { column_name: "access_surface" sql_type: "VARCHAR(80)" comment: "Optional UI/API/workload surface this role is intended for" }];
   string metadata_json = 17 [(udb.core.common.v1.pg_column) = { column_name: "metadata_json" sql_type: "JSONB" is_json: true not_null: true default_value: "'{}'::jsonb" comment: "Project-defined role metadata" }];
+  // JSON array of the token scopes a PERSON's access token carries while bound
+  // to this role in the role's tenant/project, e.g. ["udb:authn:manage-grants"].
+  // Projected at login/refresh time; service accounts never receive them (their
+  // scopes come only from their typed grant). Wildcard, admin, owner, platform
+  // and the token-exchange scope are refused on write.
+  string token_scopes_json = 18 [(udb.core.common.v1.pg_column) = { column_name: "token_scopes_json" sql_type: "JSONB" is_json: true not_null: true default_value: "'[]'" comment: "Token scopes a person bound to this role carries" }];
 }

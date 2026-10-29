@@ -14,7 +14,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file udb/core/cache/services/v1/cache_service.proto.
  */
 export const file_udb_core_cache_services_v1_cache_service: GenFile = /*@__PURE__*/
-  fileDesc("Ci51ZGIvY29yZS9jYWNoZS9zZXJ2aWNlcy92MS9jYWNoZV9zZXJ2aWNlLnByb3RvEhp1ZGIuY29yZS5jYWNoZS5zZXJ2aWNlcy52MSJdCgpHZXRSZXF1ZXN0EhEKCXRlbmFudF9pZBgBIAEoCRIRCgluYW1lc3BhY2UYAiABKAkSCwoDa2V5GAMgASgJOhyashkYCAEaA3VkYiiw6gEwA0ABSgVjYWNoZVABIpUBCgtHZXRSZXNwb25zZRINCgVmb3VuZBgBIAEoCBINCgV2YWx1ZRgCIAEoDBIdChV0dGxfcmVtYWluaW5nX3NlY29uZHMYAyABKAMSKwoFZXJyb3IYBCABKAsyHC51ZGIuY29yZS5jb21tb24udjEuQXBpRXJyb3I6HJqyGRgIARoDdWRiKLDqATADQAFKBWNhY2hlUAEigQEKClNldFJlcXVlc3QSEQoJdGVuYW50X2lkGAEgASgJEhEKCW5hbWVzcGFjZRgCIAEoCRILCgNrZXkYAyABKAkSDQoFdmFsdWUYBCABKAwSEwoLdHRsX3NlY29uZHMYBSABKAM6HJqyGRgIARoDdWRiKLDqATADQAFKBWNhY2hlUAEioAEKC1NldFJlc3BvbnNlEg4KBnN0b3JlZBgBIAEoCBISCgp1c2VkX2J5dGVzGAIgASgDEhEKCW1heF9ieXRlcxgDIAEoAxIPCgdtZXNzYWdlGAQgASgJEisKBWVycm9yGAUgASgLMhwudWRiLmNvcmUuY29tbW9uLnYxLkFwaUVycm9yOhyashkYCAEaA3VkYiiw6gEwA0ABSgVjYWNoZVABImAKDURlbGV0ZVJlcXVlc3QSEQoJdGVuYW50X2lkGAEgASgJEhEKCW5hbWVzcGFjZRgCIAEoCRILCgNrZXkYAyABKAk6HJqyGRgIARoDdWRiKLDqATADQAFKBWNhY2hlUAEikQEKDkRlbGV0ZVJlc3BvbnNlEg8KB2RlbGV0ZWQYASABKAgSEgoKdXNlZF9ieXRlcxgCIAEoAxIPCgdtZXNzYWdlGAMgASgJEisKBWVycm9yGAQgASgLMhwudWRiLmNvcmUuY29tbW9uLnYxLkFwaUVycm9yOhyashkYCAEaA3VkYiiw6gEwA0ABSgVjYWNoZVABIogBCgtTY2FuUmVxdWVzdBIRCgl0ZW5hbnRfaWQYASABKAkSEQoJbmFtZXNwYWNlGAIgASgJEhIKCmtleV9wcmVmaXgYAyABKAkSDQoFbGltaXQYBCABKAUSEgoKcGFnZV90b2tlbhgFIAEoCTocmrIZGAgBGgN1ZGIosOoBMANAAUoFY2FjaGVQASKoAQoMU2NhblJlc3BvbnNlEjQKBWl0ZW1zGAEgAygLMiUudWRiLmNvcmUuY2FjaGUuc2VydmljZXMudjEuQ2FjaGVJdGVtEhcKD25leHRfcGFnZV90b2tlbhgCIAEoCRIrCgVlcnJvchgDIAEoCzIcLnVkYi5jb3JlLmNvbW1vbi52MS5BcGlFcnJvcjocmrIZGAgBGgN1ZGIosOoBMANAAUoFY2FjaGVQASJkCglDYWNoZUl0ZW0SCwoDa2V5GAEgASgJEg0KBXZhbHVlGAIgASgMEh0KFXR0bF9yZW1haW5pbmdfc2Vjb25kcxgDIAEoAzocmrIZGAgBGgN1ZGIosOoBMANAAUoFY2FjaGVQASKMAQoWQ3JlYXRlTmFtZXNwYWNlUmVxdWVzdBIRCgl0ZW5hbnRfaWQYASABKAkSEQoJbmFtZXNwYWNlGAIgASgJEhEKCW1heF9ieXRlcxgDIAEoAxIbChNkZWZhdWx0X3R0bF9zZWNvbmRzGAQgASgDOhyashkYCAEaA3VkYiiw6gEwA0ABSgVjYWNoZVABIrgBChdDcmVhdGVOYW1lc3BhY2VSZXNwb25zZRIRCgluYW1lc3BhY2UYASABKAkSEQoJbWF4X2J5dGVzGAIgASgDEhsKE2RlZmF1bHRfdHRsX3NlY29uZHMYAyABKAMSDwoHbWVzc2FnZRgEIAEoCRIrCgVlcnJvchgFIAEoCzIcLnVkYi5jb3JlLmNvbW1vbi52MS5BcGlFcnJvcjocmrIZGAgBGgN1ZGIosOoBMANAAUoFY2FjaGVQASJ4ChZEZWxldGVOYW1lc3BhY2VSZXF1ZXN0EhEKCXRlbmFudF9pZBgBIAEoCRIRCgluYW1lc3BhY2UYAiABKAkSGgoSY29uZmlybWF0aW9uX3Rva2VuGAMgASgJOhyashkYCAEaA3VkYiiw6gEwA0ABSgVjYWNoZVABIp4BChdEZWxldGVOYW1lc3BhY2VSZXNwb25zZRIRCgluYW1lc3BhY2UYASABKAkSFAoMa2V5c19kZWxldGVkGAIgASgEEg8KB21lc3NhZ2UYAyABKAkSKwoFZXJyb3IYBCABKAsyHC51ZGIuY29yZS5jb21tb24udjEuQXBpRXJyb3I6HJqyGRgIARoDdWRiKLDqATADQAFKBWNhY2hlUAEiXgoYR2V0TmFtZXNwYWNlU3RhdHNSZXF1ZXN0EhEKCXRlbmFudF9pZBgBIAEoCRIRCgluYW1lc3BhY2UYAiABKAk6HJqyGRgIARoDdWRiKLDqATADQAFKBWNhY2hlUAEitAEKGUdldE5hbWVzcGFjZVN0YXRzUmVzcG9uc2USEQoJbmFtZXNwYWNlGAEgASgJEhIKCnVzZWRfYnl0ZXMYAiABKAMSEQoJbWF4X2J5dGVzGAMgASgDEhIKCml0ZW1fY291bnQYBCABKAQSKwoFZXJyb3IYBSABKAsyHC51ZGIuY29yZS5jb21tb24udjEuQXBpRXJyb3I6HJqyGRgIARoDdWRiKLDqATADQAFKBWNhY2hlUAEyyRgKDENhY2hlU2VydmljZRKuAgoDR2V0EiYudWRiLmNvcmUuY2FjaGUuc2VydmljZXMudjEuR2V0UmVxdWVzdBonLnVkYi5jb3JlLmNhY2hlLnNlcnZpY2VzLnYxLkdldFJlc3BvbnNlItUByvMYJggCGg11ZGI6Y2FjaGU6Z2V0IAFKAwECBGoJY2FjaGUuR2V0kAEB0vMYBggBEAEgAdrzGDYIARIJY2FjaGVfZ2V0GgN1ZGIosOoBMANAAUoFY2FjaGVQAVoRY2FjaGVOYW1lc3BhY2VHZXTy8xg8CgVjYWNoZRoFcmVkaXMyG1VEQl9OQVRJVkVfU0VSVklDRVNfRU5BQkxFRDIPVURCX0dSUENfVEFSR0VU+PMYAYLT5JMCHRIbL3YxL2NhY2hlL3tuYW1lc3BhY2V9L3trZXl9EoQDCgNTZXQSJi51ZGIuY29yZS5jYWNoZS5zZXJ2aWNlcy52MS5TZXRSZXF1ZXN0GicudWRiLmNvcmUuY2FjaGUuc2VydmljZXMudjEuU2V0UmVzcG9uc2UiqwLK8xgmCAIaDXVkYjpjYWNoZTpzZXQgAUoDAQIEagljYWNoZS5TZXSQAQHS8xgGCAEQASAB2vMYNggBEgljYWNoZV9zZXQaA3VkYiiw6gEwA0ABSgVjYWNoZVABWhFjYWNoZU5hbWVzcGFjZVNldOrzGE8KCWNhY2hlLlNldBIWdWRiLmNhY2hlLmVudHJ5LnNldC52MRoJbmFtZXNwYWNlIghzdGFuZGFyZCoNYXRfbGVhc3Rfb25jZTIGc3RhYmxl8vMYPAoFY2FjaGUaBXJlZGlzMhtVREJfTkFUSVZFX1NFUlZJQ0VTX0VOQUJMRUQyD1VEQl9HUlBDX1RBUkdFVPjzGAKC0+STAiA6ASoaGy92MS9jYWNoZS97bmFtZXNwYWNlfS97a2V5fRKdAwoGRGVsZXRlEikudWRiLmNvcmUuY2FjaGUuc2VydmljZXMudjEuRGVsZXRlUmVxdWVzdBoqLnVkYi5jb3JlLmNhY2hlLnNlcnZpY2VzLnYxLkRlbGV0ZVJlc3BvbnNlIrsCyvMYLAgCGhB1ZGI6Y2FjaGU6ZGVsZXRlIAFKAwECBGoMY2FjaGUuRGVsZXRlkAEB0vMYBggBEAEgAdrzGDwIARIMY2FjaGVfZGVsZXRlGgN1ZGIosOoBMANAAUoFY2FjaGVQAVoUY2FjaGVOYW1lc3BhY2VEZWxldGXq8xhWCgxjYWNoZS5EZWxldGUSGnVkYi5jYWNoZS5lbnRyeS5kZWxldGVkLnYxGgluYW1lc3BhY2UiCHN0YW5kYXJkKg1hdF9sZWFzdF9vbmNlMgZzdGFibGXy8xg8CgVjYWNoZRoFcmVkaXMyG1VEQl9OQVRJVkVfU0VSVklDRVNfRU5BQkxFRDIPVURCX0dSUENfVEFSR0VU+PMYAoLT5JMCHSobL3YxL2NhY2hlL3tuYW1lc3BhY2V9L3trZXl9ErQCCgRTY2FuEicudWRiLmNvcmUuY2FjaGUuc2VydmljZXMudjEuU2NhblJlcXVlc3QaKC51ZGIuY29yZS5jYWNoZS5zZXJ2aWNlcy52MS5TY2FuUmVzcG9uc2Ui2AHK8xgoCAIaDnVkYjpjYWNoZTpzY2FuIAFKAwECBGoKY2FjaGUuU2NhbpABAdLzGAYIARABIAHa8xg4CAESCmNhY2hlX3NjYW4aA3VkYiiw6gEwA0ABSgVjYWNoZVABWhJjYWNoZU5hbWVzcGFjZVNjYW7y8xg8CgVjYWNoZRoFcmVkaXMyG1VEQl9OQVRJVkVfU0VSVklDRVNfRU5BQkxFRDIPVURCX0dSUENfVEFSR0VU+PMYAYLT5JMCHBIaL3YxL2NhY2hlL3tuYW1lc3BhY2V9OnNjYW4S3QMKD0NyZWF0ZU5hbWVzcGFjZRIyLnVkYi5jb3JlLmNhY2hlLnNlcnZpY2VzLnYxLkNyZWF0ZU5hbWVzcGFjZVJlcXVlc3QaMy51ZGIuY29yZS5jYWNoZS5zZXJ2aWNlcy52MS5DcmVhdGVOYW1lc3BhY2VSZXNwb25zZSLgAsrzGD4IAhoadWRiOmNhY2hlOmNyZWF0ZS1uYW1lc3BhY2UgAUoCAQJqFWNhY2hlLkNyZWF0ZU5hbWVzcGFjZZABAdLzGAYIARABIAHa8xhGCAESFmNyZWF0ZV9jYWNoZV9uYW1lc3BhY2UaA3VkYiiw6gEwA0ABSgVjYWNoZVABWhRjcmVhdGVDYWNoZU5hbWVzcGFjZerzGGMKFWNhY2hlLkNyZWF0ZU5hbWVzcGFjZRIedWRiLmNhY2hlLm5hbWVzcGFjZS5jcmVhdGVkLnYxGgluYW1lc3BhY2UiCHN0YW5kYXJkKg1hdF9sZWFzdF9vbmNlMgZzdGFibGXy8xg8CgVjYWNoZRoFcmVkaXMyG1VEQl9OQVRJVkVfU0VSVklDRVNfRU5BQkxFRDIPVURCX0dSUENfVEFSR0VU+PMYAoLT5JMCGToBKiIUL3YxL2NhY2hlL25hbWVzcGFjZXMS6QMKD0RlbGV0ZU5hbWVzcGFjZRIyLnVkYi5jb3JlLmNhY2hlLnNlcnZpY2VzLnYxLkRlbGV0ZU5hbWVzcGFjZVJlcXVlc3QaMy51ZGIuY29yZS5jYWNoZS5zZXJ2aWNlcy52MS5EZWxldGVOYW1lc3BhY2VSZXNwb25zZSLsAsrzGD4IAhoadWRiOmNhY2hlOmRlbGV0ZS1uYW1lc3BhY2UgAUoCAQJqFWNhY2hlLkRlbGV0ZU5hbWVzcGFjZZABAdLzGAYIARABIAHa8xhGCAESFmRlbGV0ZV9jYWNoZV9uYW1lc3BhY2UaA3VkYiiw6gEwA0ABSgVjYWNoZVABWhRkZWxldGVDYWNoZU5hbWVzcGFjZerzGF0KFWNhY2hlLkRlbGV0ZU5hbWVzcGFjZRIYdWRiLmNhY2hlLmludmFsaWRhdGVkLnYxGgluYW1lc3BhY2UiCHN0YW5kYXJkKg1hdF9sZWFzdF9vbmNlMgZzdGFibGXy8xg8CgVjYWNoZRoFcmVkaXMyG1VEQl9OQVRJVkVfU0VSVklDRVNfRU5BQkxFRDIPVURCX0dSUENfVEFSR0VU+PMYA4LT5JMCKzoBKiImL3YxL2NhY2hlL25hbWVzcGFjZXMve25hbWVzcGFjZX06Zmx1c2gSlQMKEUdldE5hbWVzcGFjZVN0YXRzEjQudWRiLmNvcmUuY2FjaGUuc2VydmljZXMudjEuR2V0TmFtZXNwYWNlU3RhdHNSZXF1ZXN0GjUudWRiLmNvcmUuY2FjaGUuc2VydmljZXMudjEuR2V0TmFtZXNwYWNlU3RhdHNSZXNwb25zZSKSAsrzGEMIAhoddWRiOmNhY2hlOmdldC1uYW1lc3BhY2Utc3RhdHMgAUoCAQJqF2NhY2hlLkdldE5hbWVzcGFjZVN0YXRzkAEB0vMYBggBEAEgAdrzGEsIARIZZ2V0X2NhY2hlX25hbWVzcGFjZV9zdGF0cxoDdWRiKLDqATADQAFKBWNhY2hlUAFaFmdldENhY2hlTmFtZXNwYWNlU3RhdHPy8xg8CgVjYWNoZRoFcmVkaXMyG1VEQl9OQVRJVkVfU0VSVklDRVNfRU5BQkxFRDIPVURCX0dSUENfVEFSR0VU+PMYAYLT5JMCKBImL3YxL2NhY2hlL25hbWVzcGFjZXMve25hbWVzcGFjZX0vc3RhdHMaxQLK8BlRCgVjYWNoZRIFY2FjaGUaBWNhY2hlIgVDYWNoZSoFY2FjaGUwATgBQAFoAXoFY2FjaGWCAQVjYWNoZYoBBWNhY2hlkgEMbmF0aXZlLmNhY2hl0vAZGAgBGgN1ZGIosOoBMANAAUoFY2FjaGVQAdrwGYUBCgVjYWNoZRIQdWRiL25hdGl2ZS9jYWNoZRobVURCX05BVElWRV9TRVJWSUNFU19FTkFCTEVEGg9VREJfR1JQQ19UQVJHRVQiF3VkYi5uYXRpdmUuY2FjaGUuY29uZmlnOgVjYWNoZUoLVURCX0FQSV9LRVlaD3VkYiBuYXRpdmUgbGludOLwGUYKBWNhY2hlGghwb3N0Z3JlcxoFcmVkaXMyG1VEQl9OQVRJVkVfU0VSVklDRVNfRU5BQkxFRDIPVURCX0dSUENfVEFSR0VUQooCCh5jb20udWRiLmNvcmUuY2FjaGUuc2VydmljZXMudjFCEUNhY2hlU2VydmljZVByb3RvUAFaSGdpdGh1Yi5jb20vZmFoYXJhMDIvdWRiL3Nkay9nby9nZW4vdWRiL2NvcmUvY2FjaGUvc2VydmljZXMvdjE7c2VydmljZXN2MaICBFVDQ1OqAhpVZGIuQ29yZS5DYWNoZS5TZXJ2aWNlcy5WMcoCGlVkYlxDb3JlXENhY2hlXFNlcnZpY2VzXFYx4gImVWRiXEdQQk1ldGFkYXRhXENvcmVcQ2FjaGVcU2VydmljZXNcVjHqAh5VZGI6OkNvcmU6OkNhY2hlOjpTZXJ2aWNlczo6VjFiBnByb3RvMw", [file_google_api_annotations, file_udb_core_common_v1_dto, file_udb_core_common_v1_security]);
+  fileDesc("Ci51ZGIvY29yZS9jYWNoZS9zZXJ2aWNlcy92MS9jYWNoZV9zZXJ2aWNlLnByb3RvEhp1ZGIuY29yZS5jYWNoZS5zZXJ2aWNlcy52MSJdCgpHZXRSZXF1ZXN0EhEKCXRlbmFudF9pZBgBIAEoCRIRCgluYW1lc3BhY2UYAiABKAkSCwoDa2V5GAMgASgJOhyashkYCAEaA3VkYiiw6gEwA0ABSgVjYWNoZVABIpUBCgtHZXRSZXNwb25zZRINCgVmb3VuZBgBIAEoCBINCgV2YWx1ZRgCIAEoDBIdChV0dGxfcmVtYWluaW5nX3NlY29uZHMYAyABKAMSKwoFZXJyb3IYBCABKAsyHC51ZGIuY29yZS5jb21tb24udjEuQXBpRXJyb3I6HJqyGRgIARoDdWRiKLDqATADQAFKBWNhY2hlUAEigQEKClNldFJlcXVlc3QSEQoJdGVuYW50X2lkGAEgASgJEhEKCW5hbWVzcGFjZRgCIAEoCRILCgNrZXkYAyABKAkSDQoFdmFsdWUYBCABKAwSEwoLdHRsX3NlY29uZHMYBSABKAM6HJqyGRgIARoDdWRiKLDqATADQAFKBWNhY2hlUAEioAEKC1NldFJlc3BvbnNlEg4KBnN0b3JlZBgBIAEoCBISCgp1c2VkX2J5dGVzGAIgASgDEhEKCW1heF9ieXRlcxgDIAEoAxIPCgdtZXNzYWdlGAQgASgJEisKBWVycm9yGAUgASgLMhwudWRiLmNvcmUuY29tbW9uLnYxLkFwaUVycm9yOhyashkYCAEaA3VkYiiw6gEwA0ABSgVjYWNoZVABIp8BChBJbmNyZW1lbnRSZXF1ZXN0EhEKCXRlbmFudF9pZBgBIAEoCRIRCgluYW1lc3BhY2UYAiABKAkSCwoDa2V5GAMgASgJEg0KBWRlbHRhGAQgASgDEh4KFnR0bF9zZWNvbmRzX2lmX2NyZWF0ZWQYBSABKAMSCwoDbWF4GAYgASgDOhyashkYCAEaA3VkYiiw6gEwAUABSgVjYWNoZVABIq4BChFJbmNyZW1lbnRSZXNwb25zZRINCgV2YWx1ZRgBIAEoAxIPCgdjcmVhdGVkGAIgASgIEg8KB3JlZnVzZWQYAyABKAgSHQoVdHRsX3JlbWFpbmluZ19zZWNvbmRzGAQgASgDEisKBWVycm9yGAUgASgLMhwudWRiLmNvcmUuY29tbW9uLnYxLkFwaUVycm9yOhyashkYCAEaA3VkYiiw6gEwAUABSgVjYWNoZVABImAKDURlbGV0ZVJlcXVlc3QSEQoJdGVuYW50X2lkGAEgASgJEhEKCW5hbWVzcGFjZRgCIAEoCRILCgNrZXkYAyABKAk6HJqyGRgIARoDdWRiKLDqATADQAFKBWNhY2hlUAEikQEKDkRlbGV0ZVJlc3BvbnNlEg8KB2RlbGV0ZWQYASABKAgSEgoKdXNlZF9ieXRlcxgCIAEoAxIPCgdtZXNzYWdlGAMgASgJEisKBWVycm9yGAQgASgLMhwudWRiLmNvcmUuY29tbW9uLnYxLkFwaUVycm9yOhyashkYCAEaA3VkYiiw6gEwA0ABSgVjYWNoZVABIogBCgtTY2FuUmVxdWVzdBIRCgl0ZW5hbnRfaWQYASABKAkSEQoJbmFtZXNwYWNlGAIgASgJEhIKCmtleV9wcmVmaXgYAyABKAkSDQoFbGltaXQYBCABKAUSEgoKcGFnZV90b2tlbhgFIAEoCTocmrIZGAgBGgN1ZGIosOoBMANAAUoFY2FjaGVQASKoAQoMU2NhblJlc3BvbnNlEjQKBWl0ZW1zGAEgAygLMiUudWRiLmNvcmUuY2FjaGUuc2VydmljZXMudjEuQ2FjaGVJdGVtEhcKD25leHRfcGFnZV90b2tlbhgCIAEoCRIrCgVlcnJvchgDIAEoCzIcLnVkYi5jb3JlLmNvbW1vbi52MS5BcGlFcnJvcjocmrIZGAgBGgN1ZGIosOoBMANAAUoFY2FjaGVQASJkCglDYWNoZUl0ZW0SCwoDa2V5GAEgASgJEg0KBXZhbHVlGAIgASgMEh0KFXR0bF9yZW1haW5pbmdfc2Vjb25kcxgDIAEoAzocmrIZGAgBGgN1ZGIosOoBMANAAUoFY2FjaGVQASKMAQoWQ3JlYXRlTmFtZXNwYWNlUmVxdWVzdBIRCgl0ZW5hbnRfaWQYASABKAkSEQoJbmFtZXNwYWNlGAIgASgJEhEKCW1heF9ieXRlcxgDIAEoAxIbChNkZWZhdWx0X3R0bF9zZWNvbmRzGAQgASgDOhyashkYCAEaA3VkYiiw6gEwA0ABSgVjYWNoZVABIrgBChdDcmVhdGVOYW1lc3BhY2VSZXNwb25zZRIRCgluYW1lc3BhY2UYASABKAkSEQoJbWF4X2J5dGVzGAIgASgDEhsKE2RlZmF1bHRfdHRsX3NlY29uZHMYAyABKAMSDwoHbWVzc2FnZRgEIAEoCRIrCgVlcnJvchgFIAEoCzIcLnVkYi5jb3JlLmNvbW1vbi52MS5BcGlFcnJvcjocmrIZGAgBGgN1ZGIosOoBMANAAUoFY2FjaGVQASJ4ChZEZWxldGVOYW1lc3BhY2VSZXF1ZXN0EhEKCXRlbmFudF9pZBgBIAEoCRIRCgluYW1lc3BhY2UYAiABKAkSGgoSY29uZmlybWF0aW9uX3Rva2VuGAMgASgJOhyashkYCAEaA3VkYiiw6gEwA0ABSgVjYWNoZVABIp4BChdEZWxldGVOYW1lc3BhY2VSZXNwb25zZRIRCgluYW1lc3BhY2UYASABKAkSFAoMa2V5c19kZWxldGVkGAIgASgEEg8KB21lc3NhZ2UYAyABKAkSKwoFZXJyb3IYBCABKAsyHC51ZGIuY29yZS5jb21tb24udjEuQXBpRXJyb3I6HJqyGRgIARoDdWRiKLDqATADQAFKBWNhY2hlUAEiXgoYR2V0TmFtZXNwYWNlU3RhdHNSZXF1ZXN0EhEKCXRlbmFudF9pZBgBIAEoCRIRCgluYW1lc3BhY2UYAiABKAk6HJqyGRgIARoDdWRiKLDqATADQAFKBWNhY2hlUAEitAEKGUdldE5hbWVzcGFjZVN0YXRzUmVzcG9uc2USEQoJbmFtZXNwYWNlGAEgASgJEhIKCnVzZWRfYnl0ZXMYAiABKAMSEQoJbWF4X2J5dGVzGAMgASgDEhIKCml0ZW1fY291bnQYBCABKAQSKwoFZXJyb3IYBSABKAsyHC51ZGIuY29yZS5jb21tb24udjEuQXBpRXJyb3I6HJqyGRgIARoDdWRiKLDqATADQAFKBWNhY2hlUAEysRsKDENhY2hlU2VydmljZRKuAgoDR2V0EiYudWRiLmNvcmUuY2FjaGUuc2VydmljZXMudjEuR2V0UmVxdWVzdBonLnVkYi5jb3JlLmNhY2hlLnNlcnZpY2VzLnYxLkdldFJlc3BvbnNlItUByvMYJggCGg11ZGI6Y2FjaGU6Z2V0IAFKAwECBGoJY2FjaGUuR2V0kAEB0vMYBggBEAEgAdrzGDYIARIJY2FjaGVfZ2V0GgN1ZGIosOoBMANAAUoFY2FjaGVQAVoRY2FjaGVOYW1lc3BhY2VHZXTy8xg8CgVjYWNoZRoFcmVkaXMyG1VEQl9OQVRJVkVfU0VSVklDRVNfRU5BQkxFRDIPVURCX0dSUENfVEFSR0VU+PMYAYLT5JMCHRIbL3YxL2NhY2hlL3tuYW1lc3BhY2V9L3trZXl9EoQDCgNTZXQSJi51ZGIuY29yZS5jYWNoZS5zZXJ2aWNlcy52MS5TZXRSZXF1ZXN0GicudWRiLmNvcmUuY2FjaGUuc2VydmljZXMudjEuU2V0UmVzcG9uc2UiqwLK8xgmCAIaDXVkYjpjYWNoZTpzZXQgAUoDAQIEagljYWNoZS5TZXSQAQHS8xgGCAEQASAB2vMYNggBEgljYWNoZV9zZXQaA3VkYiiw6gEwA0ABSgVjYWNoZVABWhFjYWNoZU5hbWVzcGFjZVNldOrzGE8KCWNhY2hlLlNldBIWdWRiLmNhY2hlLmVudHJ5LnNldC52MRoJbmFtZXNwYWNlIghzdGFuZGFyZCoNYXRfbGVhc3Rfb25jZTIGc3RhYmxl8vMYPAoFY2FjaGUaBXJlZGlzMhtVREJfTkFUSVZFX1NFUlZJQ0VTX0VOQUJMRUQyD1VEQl9HUlBDX1RBUkdFVPjzGAKC0+STAiA6ASoaGy92MS9jYWNoZS97bmFtZXNwYWNlfS97a2V5fRLlAgoJSW5jcmVtZW50EiwudWRiLmNvcmUuY2FjaGUuc2VydmljZXMudjEuSW5jcmVtZW50UmVxdWVzdBotLnVkYi5jb3JlLmNhY2hlLnNlcnZpY2VzLnYxLkluY3JlbWVudFJlc3BvbnNlIvoByvMYMggCGhN1ZGI6Y2FjaGU6aW5jcmVtZW50IAFKAwECBGoPY2FjaGUuSW5jcmVtZW50kAEB0vMYBggBEAEgAdrzGEIIARIPY2FjaGVfaW5jcmVtZW50GgN1ZGIosOoBMAFAAUoFY2FjaGVQAVoXY2FjaGVOYW1lc3BhY2VJbmNyZW1lbnTy8xg8CgVjYWNoZRoFcmVkaXMyG1VEQl9OQVRJVkVfU0VSVklDRVNfRU5BQkxFRDIPVURCX0dSUENfVEFSR0VU+PMYAoLT5JMCKjoBKiIlL3YxL2NhY2hlL3tuYW1lc3BhY2V9L3trZXl9OmluY3JlbWVudBKdAwoGRGVsZXRlEikudWRiLmNvcmUuY2FjaGUuc2VydmljZXMudjEuRGVsZXRlUmVxdWVzdBoqLnVkYi5jb3JlLmNhY2hlLnNlcnZpY2VzLnYxLkRlbGV0ZVJlc3BvbnNlIrsCyvMYLAgCGhB1ZGI6Y2FjaGU6ZGVsZXRlIAFKAwECBGoMY2FjaGUuRGVsZXRlkAEB0vMYBggBEAEgAdrzGDwIARIMY2FjaGVfZGVsZXRlGgN1ZGIosOoBMANAAUoFY2FjaGVQAVoUY2FjaGVOYW1lc3BhY2VEZWxldGXq8xhWCgxjYWNoZS5EZWxldGUSGnVkYi5jYWNoZS5lbnRyeS5kZWxldGVkLnYxGgluYW1lc3BhY2UiCHN0YW5kYXJkKg1hdF9sZWFzdF9vbmNlMgZzdGFibGXy8xg8CgVjYWNoZRoFcmVkaXMyG1VEQl9OQVRJVkVfU0VSVklDRVNfRU5BQkxFRDIPVURCX0dSUENfVEFSR0VU+PMYAoLT5JMCHSobL3YxL2NhY2hlL3tuYW1lc3BhY2V9L3trZXl9ErQCCgRTY2FuEicudWRiLmNvcmUuY2FjaGUuc2VydmljZXMudjEuU2NhblJlcXVlc3QaKC51ZGIuY29yZS5jYWNoZS5zZXJ2aWNlcy52MS5TY2FuUmVzcG9uc2Ui2AHK8xgoCAIaDnVkYjpjYWNoZTpzY2FuIAFKAwECBGoKY2FjaGUuU2NhbpABAdLzGAYIARABIAHa8xg4CAESCmNhY2hlX3NjYW4aA3VkYiiw6gEwA0ABSgVjYWNoZVABWhJjYWNoZU5hbWVzcGFjZVNjYW7y8xg8CgVjYWNoZRoFcmVkaXMyG1VEQl9OQVRJVkVfU0VSVklDRVNfRU5BQkxFRDIPVURCX0dSUENfVEFSR0VU+PMYAYLT5JMCHBIaL3YxL2NhY2hlL3tuYW1lc3BhY2V9OnNjYW4S3QMKD0NyZWF0ZU5hbWVzcGFjZRIyLnVkYi5jb3JlLmNhY2hlLnNlcnZpY2VzLnYxLkNyZWF0ZU5hbWVzcGFjZVJlcXVlc3QaMy51ZGIuY29yZS5jYWNoZS5zZXJ2aWNlcy52MS5DcmVhdGVOYW1lc3BhY2VSZXNwb25zZSLgAsrzGD4IAhoadWRiOmNhY2hlOmNyZWF0ZS1uYW1lc3BhY2UgAUoCAQJqFWNhY2hlLkNyZWF0ZU5hbWVzcGFjZZABAdLzGAYIARABIAHa8xhGCAESFmNyZWF0ZV9jYWNoZV9uYW1lc3BhY2UaA3VkYiiw6gEwA0ABSgVjYWNoZVABWhRjcmVhdGVDYWNoZU5hbWVzcGFjZerzGGMKFWNhY2hlLkNyZWF0ZU5hbWVzcGFjZRIedWRiLmNhY2hlLm5hbWVzcGFjZS5jcmVhdGVkLnYxGgluYW1lc3BhY2UiCHN0YW5kYXJkKg1hdF9sZWFzdF9vbmNlMgZzdGFibGXy8xg8CgVjYWNoZRoFcmVkaXMyG1VEQl9OQVRJVkVfU0VSVklDRVNfRU5BQkxFRDIPVURCX0dSUENfVEFSR0VU+PMYAoLT5JMCGToBKiIUL3YxL2NhY2hlL25hbWVzcGFjZXMS6QMKD0RlbGV0ZU5hbWVzcGFjZRIyLnVkYi5jb3JlLmNhY2hlLnNlcnZpY2VzLnYxLkRlbGV0ZU5hbWVzcGFjZVJlcXVlc3QaMy51ZGIuY29yZS5jYWNoZS5zZXJ2aWNlcy52MS5EZWxldGVOYW1lc3BhY2VSZXNwb25zZSLsAsrzGD4IAhoadWRiOmNhY2hlOmRlbGV0ZS1uYW1lc3BhY2UgAUoCAQJqFWNhY2hlLkRlbGV0ZU5hbWVzcGFjZZABAdLzGAYIARABIAHa8xhGCAESFmRlbGV0ZV9jYWNoZV9uYW1lc3BhY2UaA3VkYiiw6gEwA0ABSgVjYWNoZVABWhRkZWxldGVDYWNoZU5hbWVzcGFjZerzGF0KFWNhY2hlLkRlbGV0ZU5hbWVzcGFjZRIYdWRiLmNhY2hlLmludmFsaWRhdGVkLnYxGgluYW1lc3BhY2UiCHN0YW5kYXJkKg1hdF9sZWFzdF9vbmNlMgZzdGFibGXy8xg8CgVjYWNoZRoFcmVkaXMyG1VEQl9OQVRJVkVfU0VSVklDRVNfRU5BQkxFRDIPVURCX0dSUENfVEFSR0VU+PMYA4LT5JMCKzoBKiImL3YxL2NhY2hlL25hbWVzcGFjZXMve25hbWVzcGFjZX06Zmx1c2gSlQMKEUdldE5hbWVzcGFjZVN0YXRzEjQudWRiLmNvcmUuY2FjaGUuc2VydmljZXMudjEuR2V0TmFtZXNwYWNlU3RhdHNSZXF1ZXN0GjUudWRiLmNvcmUuY2FjaGUuc2VydmljZXMudjEuR2V0TmFtZXNwYWNlU3RhdHNSZXNwb25zZSKSAsrzGEMIAhoddWRiOmNhY2hlOmdldC1uYW1lc3BhY2Utc3RhdHMgAUoCAQJqF2NhY2hlLkdldE5hbWVzcGFjZVN0YXRzkAEB0vMYBggBEAEgAdrzGEsIARIZZ2V0X2NhY2hlX25hbWVzcGFjZV9zdGF0cxoDdWRiKLDqATADQAFKBWNhY2hlUAFaFmdldENhY2hlTmFtZXNwYWNlU3RhdHPy8xg8CgVjYWNoZRoFcmVkaXMyG1VEQl9OQVRJVkVfU0VSVklDRVNfRU5BQkxFRDIPVURCX0dSUENfVEFSR0VU+PMYAYLT5JMCKBImL3YxL2NhY2hlL25hbWVzcGFjZXMve25hbWVzcGFjZX0vc3RhdHMaxQLK8BlRCgVjYWNoZRIFY2FjaGUaBWNhY2hlIgVDYWNoZSoFY2FjaGUwATgBQAFoAXoFY2FjaGWCAQVjYWNoZYoBBWNhY2hlkgEMbmF0aXZlLmNhY2hl0vAZGAgBGgN1ZGIosOoBMANAAUoFY2FjaGVQAdrwGYUBCgVjYWNoZRIQdWRiL25hdGl2ZS9jYWNoZRobVURCX05BVElWRV9TRVJWSUNFU19FTkFCTEVEGg9VREJfR1JQQ19UQVJHRVQiF3VkYi5uYXRpdmUuY2FjaGUuY29uZmlnOgVjYWNoZUoLVURCX0FQSV9LRVlaD3VkYiBuYXRpdmUgbGludOLwGUYKBWNhY2hlGghwb3N0Z3JlcxoFcmVkaXMyG1VEQl9OQVRJVkVfU0VSVklDRVNfRU5BQkxFRDIPVURCX0dSUENfVEFSR0VUQooCCh5jb20udWRiLmNvcmUuY2FjaGUuc2VydmljZXMudjFCEUNhY2hlU2VydmljZVByb3RvUAFaSGdpdGh1Yi5jb20vZmFoYXJhMDIvdWRiL3Nkay9nby9nZW4vdWRiL2NvcmUvY2FjaGUvc2VydmljZXMvdjE7c2VydmljZXN2MaICBFVDQ1OqAhpVZGIuQ29yZS5DYWNoZS5TZXJ2aWNlcy5WMcoCGlVkYlxDb3JlXENhY2hlXFNlcnZpY2VzXFYx4gImVWRiXEdQQk1ldGFkYXRhXENvcmVcQ2FjaGVcU2VydmljZXNcVjHqAh5VZGI6OkNvcmU6OkNhY2hlOjpTZXJ2aWNlczo6VjFiBnByb3RvMw", [file_google_api_annotations, file_udb_core_common_v1_dto, file_udb_core_common_v1_security]);
 
 /**
  * @generated from message udb.core.cache.services.v1.GetRequest
@@ -158,6 +158,106 @@ export const SetResponseSchema: GenMessage<SetResponse> = /*@__PURE__*/
   messageDesc(file_udb_core_cache_services_v1_cache_service, 3);
 
 /**
+ * @generated from message udb.core.cache.services.v1.IncrementRequest
+ */
+export type IncrementRequest = Message<"udb.core.cache.services.v1.IncrementRequest"> & {
+  /**
+   * @generated from field: string tenant_id = 1;
+   */
+  tenantId: string;
+
+  /**
+   * @generated from field: string namespace = 2;
+   */
+  namespace: string;
+
+  /**
+   * @generated from field: string key = 3;
+   */
+  key: string;
+
+  /**
+   * Added to the counter; may be negative. 0 reads the current value without
+   * writing (a missing key reads as 0 and is not created).
+   *
+   * @generated from field: int64 delta = 4;
+   */
+  delta: bigint;
+
+  /**
+   * TTL for a key this call creates; 0 = the namespace default TTL (or no
+   * expiry if none is configured). An existing key keeps its TTL.
+   *
+   * @generated from field: int64 ttl_seconds_if_created = 5;
+   */
+  ttlSecondsIfCreated: bigint;
+
+  /**
+   * Upper bound for the new value; 0 = no bound. An increment that would take
+   * the value above `max` is not applied and the response has `refused` set.
+   *
+   * @generated from field: int64 max = 6;
+   */
+  max: bigint;
+};
+
+/**
+ * Describes the message udb.core.cache.services.v1.IncrementRequest.
+ * Use `create(IncrementRequestSchema)` to create a new message.
+ */
+export const IncrementRequestSchema: GenMessage<IncrementRequest> = /*@__PURE__*/
+  messageDesc(file_udb_core_cache_services_v1_cache_service, 4);
+
+/**
+ * @generated from message udb.core.cache.services.v1.IncrementResponse
+ */
+export type IncrementResponse = Message<"udb.core.cache.services.v1.IncrementResponse"> & {
+  /**
+   * The counter after this call (unchanged when `refused`).
+   *
+   * @generated from field: int64 value = 1;
+   */
+  value: bigint;
+
+  /**
+   * True when this call created the key.
+   *
+   * @generated from field: bool created = 2;
+   */
+  created: boolean;
+
+  /**
+   * True when `max` was set and the increment would have exceeded it; nothing
+   * was written.
+   *
+   * @generated from field: bool refused = 3;
+   */
+  refused: boolean;
+
+  /**
+   * Seconds until the key expires, rounded up; 0 when it has no TTL or does
+   * not exist. Lets a limiter send Retry-After without a second call.
+   *
+   * @generated from field: int64 ttl_remaining_seconds = 4;
+   */
+  ttlRemainingSeconds: bigint;
+
+  /**
+   * Error information if operation failed
+   *
+   * @generated from field: udb.core.common.v1.ApiError error = 5;
+   */
+  error?: ApiError | undefined;
+};
+
+/**
+ * Describes the message udb.core.cache.services.v1.IncrementResponse.
+ * Use `create(IncrementResponseSchema)` to create a new message.
+ */
+export const IncrementResponseSchema: GenMessage<IncrementResponse> = /*@__PURE__*/
+  messageDesc(file_udb_core_cache_services_v1_cache_service, 5);
+
+/**
  * @generated from message udb.core.cache.services.v1.DeleteRequest
  */
 export type DeleteRequest = Message<"udb.core.cache.services.v1.DeleteRequest"> & {
@@ -182,7 +282,7 @@ export type DeleteRequest = Message<"udb.core.cache.services.v1.DeleteRequest"> 
  * Use `create(DeleteRequestSchema)` to create a new message.
  */
 export const DeleteRequestSchema: GenMessage<DeleteRequest> = /*@__PURE__*/
-  messageDesc(file_udb_core_cache_services_v1_cache_service, 4);
+  messageDesc(file_udb_core_cache_services_v1_cache_service, 6);
 
 /**
  * @generated from message udb.core.cache.services.v1.DeleteResponse
@@ -216,7 +316,7 @@ export type DeleteResponse = Message<"udb.core.cache.services.v1.DeleteResponse"
  * Use `create(DeleteResponseSchema)` to create a new message.
  */
 export const DeleteResponseSchema: GenMessage<DeleteResponse> = /*@__PURE__*/
-  messageDesc(file_udb_core_cache_services_v1_cache_service, 5);
+  messageDesc(file_udb_core_cache_services_v1_cache_service, 7);
 
 /**
  * @generated from message udb.core.cache.services.v1.ScanRequest
@@ -258,7 +358,7 @@ export type ScanRequest = Message<"udb.core.cache.services.v1.ScanRequest"> & {
  * Use `create(ScanRequestSchema)` to create a new message.
  */
 export const ScanRequestSchema: GenMessage<ScanRequest> = /*@__PURE__*/
-  messageDesc(file_udb_core_cache_services_v1_cache_service, 6);
+  messageDesc(file_udb_core_cache_services_v1_cache_service, 8);
 
 /**
  * @generated from message udb.core.cache.services.v1.ScanResponse
@@ -287,7 +387,7 @@ export type ScanResponse = Message<"udb.core.cache.services.v1.ScanResponse"> & 
  * Use `create(ScanResponseSchema)` to create a new message.
  */
 export const ScanResponseSchema: GenMessage<ScanResponse> = /*@__PURE__*/
-  messageDesc(file_udb_core_cache_services_v1_cache_service, 7);
+  messageDesc(file_udb_core_cache_services_v1_cache_service, 9);
 
 /**
  * One scanned namespace entry. `key` is the namespace-local key (the
@@ -317,7 +417,7 @@ export type CacheItem = Message<"udb.core.cache.services.v1.CacheItem"> & {
  * Use `create(CacheItemSchema)` to create a new message.
  */
 export const CacheItemSchema: GenMessage<CacheItem> = /*@__PURE__*/
-  messageDesc(file_udb_core_cache_services_v1_cache_service, 8);
+  messageDesc(file_udb_core_cache_services_v1_cache_service, 10);
 
 /**
  * @generated from message udb.core.cache.services.v1.CreateNamespaceRequest
@@ -354,7 +454,7 @@ export type CreateNamespaceRequest = Message<"udb.core.cache.services.v1.CreateN
  * Use `create(CreateNamespaceRequestSchema)` to create a new message.
  */
 export const CreateNamespaceRequestSchema: GenMessage<CreateNamespaceRequest> = /*@__PURE__*/
-  messageDesc(file_udb_core_cache_services_v1_cache_service, 9);
+  messageDesc(file_udb_core_cache_services_v1_cache_service, 11);
 
 /**
  * @generated from message udb.core.cache.services.v1.CreateNamespaceResponse
@@ -393,7 +493,7 @@ export type CreateNamespaceResponse = Message<"udb.core.cache.services.v1.Create
  * Use `create(CreateNamespaceResponseSchema)` to create a new message.
  */
 export const CreateNamespaceResponseSchema: GenMessage<CreateNamespaceResponse> = /*@__PURE__*/
-  messageDesc(file_udb_core_cache_services_v1_cache_service, 10);
+  messageDesc(file_udb_core_cache_services_v1_cache_service, 12);
 
 /**
  * @generated from message udb.core.cache.services.v1.DeleteNamespaceRequest
@@ -423,7 +523,7 @@ export type DeleteNamespaceRequest = Message<"udb.core.cache.services.v1.DeleteN
  * Use `create(DeleteNamespaceRequestSchema)` to create a new message.
  */
 export const DeleteNamespaceRequestSchema: GenMessage<DeleteNamespaceRequest> = /*@__PURE__*/
-  messageDesc(file_udb_core_cache_services_v1_cache_service, 11);
+  messageDesc(file_udb_core_cache_services_v1_cache_service, 13);
 
 /**
  * @generated from message udb.core.cache.services.v1.DeleteNamespaceResponse
@@ -457,7 +557,7 @@ export type DeleteNamespaceResponse = Message<"udb.core.cache.services.v1.Delete
  * Use `create(DeleteNamespaceResponseSchema)` to create a new message.
  */
 export const DeleteNamespaceResponseSchema: GenMessage<DeleteNamespaceResponse> = /*@__PURE__*/
-  messageDesc(file_udb_core_cache_services_v1_cache_service, 12);
+  messageDesc(file_udb_core_cache_services_v1_cache_service, 14);
 
 /**
  * @generated from message udb.core.cache.services.v1.GetNamespaceStatsRequest
@@ -479,7 +579,7 @@ export type GetNamespaceStatsRequest = Message<"udb.core.cache.services.v1.GetNa
  * Use `create(GetNamespaceStatsRequestSchema)` to create a new message.
  */
 export const GetNamespaceStatsRequestSchema: GenMessage<GetNamespaceStatsRequest> = /*@__PURE__*/
-  messageDesc(file_udb_core_cache_services_v1_cache_service, 13);
+  messageDesc(file_udb_core_cache_services_v1_cache_service, 15);
 
 /**
  * @generated from message udb.core.cache.services.v1.GetNamespaceStatsResponse
@@ -518,7 +618,7 @@ export type GetNamespaceStatsResponse = Message<"udb.core.cache.services.v1.GetN
  * Use `create(GetNamespaceStatsResponseSchema)` to create a new message.
  */
 export const GetNamespaceStatsResponseSchema: GenMessage<GetNamespaceStatsResponse> = /*@__PURE__*/
-  messageDesc(file_udb_core_cache_services_v1_cache_service, 14);
+  messageDesc(file_udb_core_cache_services_v1_cache_service, 16);
 
 /**
  * CacheService (master-plan 9.6) — a cache that invalidates itself.
@@ -561,6 +661,22 @@ export const CacheService: GenService<{
     methodKind: "unary";
     input: typeof SetRequestSchema;
     output: typeof SetResponseSchema;
+  },
+  /**
+   * Atomically add `delta` to an integer counter and return the new value, in
+   * one Redis round trip: the shared-counter primitive a rate limiter needs
+   * (one call per decision). A missing key starts at 0 and takes the TTL from
+   * `ttl_seconds_if_created`; an existing key keeps its TTL. With `max` > 0 an
+   * increment that would take the value above `max` is not applied and
+   * `refused` is true. Not idempotent: a retried call adds `delta` again. Emits
+   * no outbox event (it is a hot-path counter, not a domain change).
+   *
+   * @generated from rpc udb.core.cache.services.v1.CacheService.Increment
+   */
+  increment: {
+    methodKind: "unary";
+    input: typeof IncrementRequestSchema;
+    output: typeof IncrementResponseSchema;
   },
   /**
    * Delete a single namespaced key. Idempotent.

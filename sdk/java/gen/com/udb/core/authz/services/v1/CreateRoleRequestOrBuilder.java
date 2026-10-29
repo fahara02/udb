@@ -150,4 +150,65 @@ java.lang.String defaultValue);
    */
   java.lang.String getMetadataOrThrow(
       java.lang.String key);
+
+  /**
+   * <pre>
+   * Scopes a PERSON's access token carries while bound to this role in its
+   * tenant/project (e.g. "udb:authn:manage-grants"), projected at login and
+   * refresh. Service accounts never get them: their scopes come only from
+   * their typed grant. Refused: empty, wildcard, admin, owner, platform and
+   * the token-exchange scope; at most 64 scopes of at most 120 characters.
+   * Returned as `Role.token_scopes_json`.
+   * </pre>
+   *
+   * <code>repeated string token_scopes = 11 [json_name = "tokenScopes", (.google.api.field_behavior) = OPTIONAL];</code>
+   * @return A list containing the tokenScopes.
+   */
+  java.util.List<java.lang.String>
+      getTokenScopesList();
+  /**
+   * <pre>
+   * Scopes a PERSON's access token carries while bound to this role in its
+   * tenant/project (e.g. "udb:authn:manage-grants"), projected at login and
+   * refresh. Service accounts never get them: their scopes come only from
+   * their typed grant. Refused: empty, wildcard, admin, owner, platform and
+   * the token-exchange scope; at most 64 scopes of at most 120 characters.
+   * Returned as `Role.token_scopes_json`.
+   * </pre>
+   *
+   * <code>repeated string token_scopes = 11 [json_name = "tokenScopes", (.google.api.field_behavior) = OPTIONAL];</code>
+   * @return The count of tokenScopes.
+   */
+  int getTokenScopesCount();
+  /**
+   * <pre>
+   * Scopes a PERSON's access token carries while bound to this role in its
+   * tenant/project (e.g. "udb:authn:manage-grants"), projected at login and
+   * refresh. Service accounts never get them: their scopes come only from
+   * their typed grant. Refused: empty, wildcard, admin, owner, platform and
+   * the token-exchange scope; at most 64 scopes of at most 120 characters.
+   * Returned as `Role.token_scopes_json`.
+   * </pre>
+   *
+   * <code>repeated string token_scopes = 11 [json_name = "tokenScopes", (.google.api.field_behavior) = OPTIONAL];</code>
+   * @param index The index of the element to return.
+   * @return The tokenScopes at the given index.
+   */
+  java.lang.String getTokenScopes(int index);
+  /**
+   * <pre>
+   * Scopes a PERSON's access token carries while bound to this role in its
+   * tenant/project (e.g. "udb:authn:manage-grants"), projected at login and
+   * refresh. Service accounts never get them: their scopes come only from
+   * their typed grant. Refused: empty, wildcard, admin, owner, platform and
+   * the token-exchange scope; at most 64 scopes of at most 120 characters.
+   * Returned as `Role.token_scopes_json`.
+   * </pre>
+   *
+   * <code>repeated string token_scopes = 11 [json_name = "tokenScopes", (.google.api.field_behavior) = OPTIONAL];</code>
+   * @param index The index of the value to return.
+   * @return The bytes of the tokenScopes at the given index.
+   */
+  com.google.protobuf.ByteString
+      getTokenScopesBytes(int index);
 }

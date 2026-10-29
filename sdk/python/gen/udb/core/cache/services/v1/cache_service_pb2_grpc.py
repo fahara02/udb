@@ -37,6 +37,11 @@ class CacheServiceStub(object):
                 request_serializer=udb_dot_core_dot_cache_dot_services_dot_v1_dot_cache__service__pb2.SetRequest.SerializeToString,
                 response_deserializer=udb_dot_core_dot_cache_dot_services_dot_v1_dot_cache__service__pb2.SetResponse.FromString,
                 _registered_method=True)
+        self.Increment = channel.unary_unary(
+                '/udb.core.cache.services.v1.CacheService/Increment',
+                request_serializer=udb_dot_core_dot_cache_dot_services_dot_v1_dot_cache__service__pb2.IncrementRequest.SerializeToString,
+                response_deserializer=udb_dot_core_dot_cache_dot_services_dot_v1_dot_cache__service__pb2.IncrementResponse.FromString,
+                _registered_method=True)
         self.Delete = channel.unary_unary(
                 '/udb.core.cache.services.v1.CacheService/Delete',
                 request_serializer=udb_dot_core_dot_cache_dot_services_dot_v1_dot_cache__service__pb2.DeleteRequest.SerializeToString,
@@ -98,6 +103,19 @@ class CacheServiceServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def Increment(self, request, context):
+        """Atomically add `delta` to an integer counter and return the new value, in
+        one Redis round trip: the shared-counter primitive a rate limiter needs
+        (one call per decision). A missing key starts at 0 and takes the TTL from
+        `ttl_seconds_if_created`; an existing key keeps its TTL. With `max` > 0 an
+        increment that would take the value above `max` is not applied and
+        `refused` is true. Not idempotent: a retried call adds `delta` again. Emits
+        no outbox event (it is a hot-path counter, not a domain change).
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
     def Delete(self, request, context):
         """Delete a single namespaced key. Idempotent.
         """
@@ -148,6 +166,11 @@ def add_CacheServiceServicer_to_server(servicer, server):
                     servicer.Set,
                     request_deserializer=udb_dot_core_dot_cache_dot_services_dot_v1_dot_cache__service__pb2.SetRequest.FromString,
                     response_serializer=udb_dot_core_dot_cache_dot_services_dot_v1_dot_cache__service__pb2.SetResponse.SerializeToString,
+            ),
+            'Increment': grpc.unary_unary_rpc_method_handler(
+                    servicer.Increment,
+                    request_deserializer=udb_dot_core_dot_cache_dot_services_dot_v1_dot_cache__service__pb2.IncrementRequest.FromString,
+                    response_serializer=udb_dot_core_dot_cache_dot_services_dot_v1_dot_cache__service__pb2.IncrementResponse.SerializeToString,
             ),
             'Delete': grpc.unary_unary_rpc_method_handler(
                     servicer.Delete,
@@ -242,6 +265,33 @@ class CacheService(object):
             '/udb.core.cache.services.v1.CacheService/Set',
             udb_dot_core_dot_cache_dot_services_dot_v1_dot_cache__service__pb2.SetRequest.SerializeToString,
             udb_dot_core_dot_cache_dot_services_dot_v1_dot_cache__service__pb2.SetResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def Increment(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/udb.core.cache.services.v1.CacheService/Increment',
+            udb_dot_core_dot_cache_dot_services_dot_v1_dot_cache__service__pb2.IncrementRequest.SerializeToString,
+            udb_dot_core_dot_cache_dot_services_dot_v1_dot_cache__service__pb2.IncrementResponse.FromString,
             options,
             channel_credentials,
             insecure,

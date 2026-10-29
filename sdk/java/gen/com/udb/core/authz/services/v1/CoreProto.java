@@ -468,7 +468,7 @@ public final class CoreProto {
       "\003@\001J\005authzP\001\"o\n\rAuthzResponse\022@\n\010decisio" +
       "n\030\001 \001(\0132$.udb.core.authz.services.v1.Dec" +
       "isionR\010decision:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005au" +
-      "thzP\001\"\251\004\n\021CreateRoleRequest\022\027\n\004name\030\001 \001(" +
+      "thzP\001\"\321\004\n\021CreateRoleRequest\022\027\n\004name\030\001 \001(" +
       "\tB\003\340A\002R\004name\022%\n\013description\030\002 \001(\tB\003\340A\001R\013" +
       "description\022\"\n\ncreated_by\030\003 \001(\tB\003\340A\002R\tcr" +
       "eatedBy\022 \n\trole_code\030\004 \001(\tB\003\340A\001R\010roleCod" +
@@ -479,7 +479,8 @@ public final class CoreProto {
       "eB\003\340A\001R\tscopeType\022*\n\016access_surface\030\t \001(" +
       "\tB\003\340A\001R\raccessSurface\022W\n\010metadata\030\n \003(\0132" +
       ";.udb.core.authz.services.v1.CreateRoleR" +
-      "equest.MetadataEntryR\010metadata\032;\n\rMetada" +
+      "equest.MetadataEntryR\010metadata\022&\n\014token_" +
+      "scopes\030\013 \003(\tB\003\340A\001R\013tokenScopes\032;\n\rMetada" +
       "taEntry\022\020\n\003key\030\001 \001(\tR\003key\022\024\n\005value\030\002 \001(\t" +
       "R\005value:\0028\001:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authzP" +
       "\001\"f\n\022CreateRoleResponse\0222\n\004role\030\001 \001(\0132\036." +
@@ -584,14 +585,15 @@ public final class CoreProto {
       "hz.services.v1.BatchCheckPermissionsResp" +
       "onse.ResultsEntryR\007results\032:\n\014ResultsEnt" +
       "ry\022\020\n\003key\030\001 \001(\tR\003key\022\024\n\005value\030\002 \001(\010R\005val" +
-      "ue:\0028\001:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authzP\001\"\245\002\n" +
+      "ue:\0028\001:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authzP\001\"\315\002\n" +
       "\021UpdateRoleRequest\022\034\n\007role_id\030\001 \001(\tB\003\340A\002" +
       "R\006roleId\022\027\n\004name\030\002 \001(\tB\003\340A\001R\004name\022%\n\013des" +
       "cription\030\003 \001(\tB\003\340A\001R\013description\022%\n\tis_a" +
       "ctive\030\004 \001(\010B\003\340A\001H\000R\010isActive\210\001\001\022\"\n\nupdat" +
       "ed_by\030\005 \001(\tB\003\340A\002R\tupdatedBy\022;\n\013update_ma" +
       "sk\030\006 \001(\0132\032.google.protobuf.FieldMaskR\nup" +
-      "dateMask:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authzP\001B\014" +
+      "dateMask\022&\n\014token_scopes\030\007 \003(\tB\003\340A\001R\013tok" +
+      "enScopes:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authzP\001B\014" +
       "\n\n_is_active\"f\n\022UpdateRoleResponse\0222\n\004ro" +
       "le\030\001 \001(\0132\036.udb.core.authz.entity.v1.Role" +
       "R\004role:\034\232\262\031\030\010\001\032\003udb(\260\352\0010\003@\001J\005authzP\001\"s\n\021" +
@@ -813,7 +815,7 @@ public final class CoreProto {
     internal_static_udb_core_authz_services_v1_CreateRoleRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_core_authz_services_v1_CreateRoleRequest_descriptor,
-        new java.lang.String[] { "Name", "Description", "CreatedBy", "RoleCode", "Domain", "TenantId", "ProjectId", "ScopeType", "AccessSurface", "Metadata", });
+        new java.lang.String[] { "Name", "Description", "CreatedBy", "RoleCode", "Domain", "TenantId", "ProjectId", "ScopeType", "AccessSurface", "Metadata", "TokenScopes", });
     internal_static_udb_core_authz_services_v1_CreateRoleRequest_MetadataEntry_descriptor =
       internal_static_udb_core_authz_services_v1_CreateRoleRequest_descriptor.getNestedTypes().get(0);
     internal_static_udb_core_authz_services_v1_CreateRoleRequest_MetadataEntry_fieldAccessorTable = new
@@ -963,7 +965,7 @@ public final class CoreProto {
     internal_static_udb_core_authz_services_v1_UpdateRoleRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_core_authz_services_v1_UpdateRoleRequest_descriptor,
-        new java.lang.String[] { "RoleId", "Name", "Description", "IsActive", "UpdatedBy", "UpdateMask", });
+        new java.lang.String[] { "RoleId", "Name", "Description", "IsActive", "UpdatedBy", "UpdateMask", "TokenScopes", });
     internal_static_udb_core_authz_services_v1_UpdateRoleResponse_descriptor =
       getDescriptor().getMessageTypes().get(31);
     internal_static_udb_core_authz_services_v1_UpdateRoleResponse_fieldAccessorTable = new

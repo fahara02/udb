@@ -48,7 +48,7 @@ export RUSTUP_HOME=$root/.rustup CARGO_HOME=$root/.cargo GOROOT=$root/go GOPATH=
 export GOCACHE=$root/cache/go-build GOMODCACHE=$root/gopath/pkg/mod PIP_CACHE_DIR=$root/cache/pip
 export JAVA_HOME=$root/jdk DOTNET_ROOT=$root/dotnet DOTNET_CLI_HOME=$root/cache/dotnet NUGET_PACKAGES=$root/cache/nuget
 export MAVEN_OPTS=-Dmaven.repo.local=$root/cache/m2 DOTNET_CLI_TELEMETRY_OPTOUT=1 npm_config_cache=$root/cache/npm
-export PATH=$root/.cargo/bin:$root/go/bin:$root/jdk/bin:$root/maven/bin:$root/dotnet:$root/node/bin:$root/venv/bin:\$PATH
+export PATH=$root/.cargo/bin:$root/go/bin:$root/jdk/bin:$root/maven/bin:$root/dotnet:$root/node/bin:$root/venv/bin:$root/bin:\$PATH
 export CARGO_BUILD_JOBS=$jobs CARGO_TARGET_DIR=$root/target CARGO_INCREMENTAL=0
 EOF
 }
@@ -84,9 +84,17 @@ if [ ! -x '$root/node/bin/node' ]; then
   mkdir -p '$root/node'
   curl -fsSL 'https://nodejs.org/dist/v20.18.1/node-v20.18.1-linux-x64.tar.xz' | tar -C '$root/node' -xJ --strip-components=1
 fi
+# buf regenerates the committed gRPC stubs; the version matches CI's buf-setup pin.
+if [ ! -x '$root/bin/buf' ] || [ "\$('$root/bin/buf' --version)" != 1.65.0 ]; then
+  mkdir -p '$root/bin'
+  curl -fsSL 'https://github.com/bufbuild/buf/releases/download/v1.65.0/buf-Linux-x86_64' -o '$root/bin/buf'
+  chmod +x '$root/bin/buf'
+fi
 [ -x '$root/venv/bin/python' ] || python3 -m venv '$root/venv'
 [ -d '$root/repo/.git' ] || git clone -q '$repo_url' '$root/repo'
-echo "provisioned: \$(rustc --version); \$(go version); \$(python --version); java \$(java -version 2>&1 | head -1); \$(mvn -v | head -1); dotnet \$(dotnet --version)"
+# The Python SDK's tests (pytest + its dev extras) run from the repo checkout.
+'$root/venv/bin/pip' install -q -e '$root/repo/sdk/python[dev]' >'$root/pip.log' 2>&1
+echo "provisioned: \$(rustc --version); \$(go version); \$(python --version); java \$(java -version 2>&1 | head -1); \$(mvn -v | head -1); dotnet \$(dotnet --version); buf \$(buf --version)"
 EOF
     ;;
   sync)

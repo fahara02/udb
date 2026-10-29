@@ -88,6 +88,37 @@ public final class CacheServiceGrpc {
     return getSetMethod;
   }
 
+  private static volatile io.grpc.MethodDescriptor<com.udb.core.cache.services.v1.IncrementRequest,
+      com.udb.core.cache.services.v1.IncrementResponse> getIncrementMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "Increment",
+      requestType = com.udb.core.cache.services.v1.IncrementRequest.class,
+      responseType = com.udb.core.cache.services.v1.IncrementResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.udb.core.cache.services.v1.IncrementRequest,
+      com.udb.core.cache.services.v1.IncrementResponse> getIncrementMethod() {
+    io.grpc.MethodDescriptor<com.udb.core.cache.services.v1.IncrementRequest, com.udb.core.cache.services.v1.IncrementResponse> getIncrementMethod;
+    if ((getIncrementMethod = CacheServiceGrpc.getIncrementMethod) == null) {
+      synchronized (CacheServiceGrpc.class) {
+        if ((getIncrementMethod = CacheServiceGrpc.getIncrementMethod) == null) {
+          CacheServiceGrpc.getIncrementMethod = getIncrementMethod =
+              io.grpc.MethodDescriptor.<com.udb.core.cache.services.v1.IncrementRequest, com.udb.core.cache.services.v1.IncrementResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "Increment"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.cache.services.v1.IncrementRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.cache.services.v1.IncrementResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new CacheServiceMethodDescriptorSupplier("Increment"))
+              .build();
+        }
+      }
+    }
+    return getIncrementMethod;
+  }
+
   private static volatile io.grpc.MethodDescriptor<com.udb.core.cache.services.v1.DeleteRequest,
       com.udb.core.cache.services.v1.DeleteResponse> getDeleteMethod;
 
@@ -346,6 +377,22 @@ public final class CacheServiceGrpc {
 
     /**
      * <pre>
+     * Atomically add `delta` to an integer counter and return the new value, in
+     * one Redis round trip: the shared-counter primitive a rate limiter needs
+     * (one call per decision). A missing key starts at 0 and takes the TTL from
+     * `ttl_seconds_if_created`; an existing key keeps its TTL. With `max` &gt; 0 an
+     * increment that would take the value above `max` is not applied and
+     * `refused` is true. Not idempotent: a retried call adds `delta` again. Emits
+     * no outbox event (it is a hot-path counter, not a domain change).
+     * </pre>
+     */
+    default void increment(com.udb.core.cache.services.v1.IncrementRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.cache.services.v1.IncrementResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getIncrementMethod(), responseObserver);
+    }
+
+    /**
+     * <pre>
      * Delete a single namespaced key. Idempotent.
      * </pre>
      */
@@ -481,6 +528,23 @@ public final class CacheServiceGrpc {
 
     /**
      * <pre>
+     * Atomically add `delta` to an integer counter and return the new value, in
+     * one Redis round trip: the shared-counter primitive a rate limiter needs
+     * (one call per decision). A missing key starts at 0 and takes the TTL from
+     * `ttl_seconds_if_created`; an existing key keeps its TTL. With `max` &gt; 0 an
+     * increment that would take the value above `max` is not applied and
+     * `refused` is true. Not idempotent: a retried call adds `delta` again. Emits
+     * no outbox event (it is a hot-path counter, not a domain change).
+     * </pre>
+     */
+    public void increment(com.udb.core.cache.services.v1.IncrementRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.cache.services.v1.IncrementResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getIncrementMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     * <pre>
      * Delete a single namespaced key. Idempotent.
      * </pre>
      */
@@ -594,6 +658,22 @@ public final class CacheServiceGrpc {
 
     /**
      * <pre>
+     * Atomically add `delta` to an integer counter and return the new value, in
+     * one Redis round trip: the shared-counter primitive a rate limiter needs
+     * (one call per decision). A missing key starts at 0 and takes the TTL from
+     * `ttl_seconds_if_created`; an existing key keeps its TTL. With `max` &gt; 0 an
+     * increment that would take the value above `max` is not applied and
+     * `refused` is true. Not idempotent: a retried call adds `delta` again. Emits
+     * no outbox event (it is a hot-path counter, not a domain change).
+     * </pre>
+     */
+    public com.udb.core.cache.services.v1.IncrementResponse increment(com.udb.core.cache.services.v1.IncrementRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getIncrementMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
      * Delete a single namespaced key. Idempotent.
      * </pre>
      */
@@ -698,6 +778,22 @@ public final class CacheServiceGrpc {
     public com.udb.core.cache.services.v1.SetResponse set(com.udb.core.cache.services.v1.SetRequest request) {
       return io.grpc.stub.ClientCalls.blockingUnaryCall(
           getChannel(), getSetMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * Atomically add `delta` to an integer counter and return the new value, in
+     * one Redis round trip: the shared-counter primitive a rate limiter needs
+     * (one call per decision). A missing key starts at 0 and takes the TTL from
+     * `ttl_seconds_if_created`; an existing key keeps its TTL. With `max` &gt; 0 an
+     * increment that would take the value above `max` is not applied and
+     * `refused` is true. Not idempotent: a retried call adds `delta` again. Emits
+     * no outbox event (it is a hot-path counter, not a domain change).
+     * </pre>
+     */
+    public com.udb.core.cache.services.v1.IncrementResponse increment(com.udb.core.cache.services.v1.IncrementRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getIncrementMethod(), getCallOptions(), request);
     }
 
     /**
@@ -812,6 +908,23 @@ public final class CacheServiceGrpc {
 
     /**
      * <pre>
+     * Atomically add `delta` to an integer counter and return the new value, in
+     * one Redis round trip: the shared-counter primitive a rate limiter needs
+     * (one call per decision). A missing key starts at 0 and takes the TTL from
+     * `ttl_seconds_if_created`; an existing key keeps its TTL. With `max` &gt; 0 an
+     * increment that would take the value above `max` is not applied and
+     * `refused` is true. Not idempotent: a retried call adds `delta` again. Emits
+     * no outbox event (it is a hot-path counter, not a domain change).
+     * </pre>
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.udb.core.cache.services.v1.IncrementResponse> increment(
+        com.udb.core.cache.services.v1.IncrementRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getIncrementMethod(), getCallOptions()), request);
+    }
+
+    /**
+     * <pre>
      * Delete a single namespaced key. Idempotent.
      * </pre>
      */
@@ -871,11 +984,12 @@ public final class CacheServiceGrpc {
 
   private static final int METHODID_GET = 0;
   private static final int METHODID_SET = 1;
-  private static final int METHODID_DELETE = 2;
-  private static final int METHODID_SCAN = 3;
-  private static final int METHODID_CREATE_NAMESPACE = 4;
-  private static final int METHODID_DELETE_NAMESPACE = 5;
-  private static final int METHODID_GET_NAMESPACE_STATS = 6;
+  private static final int METHODID_INCREMENT = 2;
+  private static final int METHODID_DELETE = 3;
+  private static final int METHODID_SCAN = 4;
+  private static final int METHODID_CREATE_NAMESPACE = 5;
+  private static final int METHODID_DELETE_NAMESPACE = 6;
+  private static final int METHODID_GET_NAMESPACE_STATS = 7;
 
   private static final class MethodHandlers<Req, Resp> implements
       io.grpc.stub.ServerCalls.UnaryMethod<Req, Resp>,
@@ -901,6 +1015,10 @@ public final class CacheServiceGrpc {
         case METHODID_SET:
           serviceImpl.set((com.udb.core.cache.services.v1.SetRequest) request,
               (io.grpc.stub.StreamObserver<com.udb.core.cache.services.v1.SetResponse>) responseObserver);
+          break;
+        case METHODID_INCREMENT:
+          serviceImpl.increment((com.udb.core.cache.services.v1.IncrementRequest) request,
+              (io.grpc.stub.StreamObserver<com.udb.core.cache.services.v1.IncrementResponse>) responseObserver);
           break;
         case METHODID_DELETE:
           serviceImpl.delete((com.udb.core.cache.services.v1.DeleteRequest) request,
@@ -954,6 +1072,13 @@ public final class CacheServiceGrpc {
               com.udb.core.cache.services.v1.SetRequest,
               com.udb.core.cache.services.v1.SetResponse>(
                 service, METHODID_SET)))
+        .<com.udb.core.cache.services.v1.IncrementRequest, com.udb.core.cache.services.v1.IncrementResponse>addMethod(
+          getIncrementMethod(),
+          io.grpc.stub.ServerCalls.<com.udb.core.cache.services.v1.IncrementRequest, com.udb.core.cache.services.v1.IncrementResponse>asyncUnaryCall(
+            new MethodHandlers<
+              com.udb.core.cache.services.v1.IncrementRequest,
+              com.udb.core.cache.services.v1.IncrementResponse>(
+                service, METHODID_INCREMENT)))
         .<com.udb.core.cache.services.v1.DeleteRequest, com.udb.core.cache.services.v1.DeleteResponse>addMethod(
           getDeleteMethod(),
           io.grpc.stub.ServerCalls.<com.udb.core.cache.services.v1.DeleteRequest, com.udb.core.cache.services.v1.DeleteResponse>asyncUnaryCall(
@@ -1039,6 +1164,7 @@ public final class CacheServiceGrpc {
               .setSchemaDescriptor(new CacheServiceFileDescriptorSupplier())
               .addMethod(getGetMethod())
               .addMethod(getSetMethod())
+              .addMethod(getIncrementMethod())
               .addMethod(getDeleteMethod())
               .addMethod(getScanMethod())
               .addMethod(getCreateNamespaceMethod())

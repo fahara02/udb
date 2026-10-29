@@ -1593,4 +1593,94 @@ mod tests {
         assert_eq!(grants.scopes, vec!["data:read".to_string()]);
         assert_eq!(grants.service_identity, "spiffe://acme/svc-1");
     }
+
+    /// `doctor` is a tenant role in BOTH acme and globex, each configuring its
+    /// own token scopes; the caller passes the bindings to install.
+    fn svc_with_doctor_role_scopes(bindings: &[(&str, &str, &str)]) -> AuthnServiceImpl {
+        use crate::runtime::authz::{AuthzSnapshot, RoleBinding, RoleTokenScopes};
+        let snapshot = AuthzSnapshot {
+            version: "role-token-scopes-v1".to_string(),
+            role_bindings: bindings
+                .iter()
+                .map(|(subject, role, tenant)| RoleBinding {
+                    subject: subject.to_string(),
+                    role: role.to_string(),
+                    tenant: tenant.to_string(),
+                    project: String::new(),
+                })
+                .collect(),
+            role_token_scopes: vec![
+                RoleTokenScopes {
+                    role: "doctor".to_string(),
+                    tenant: "acme".to_string(),
+                    project: String::new(),
+                    scopes: vec!["udb:authn:manage-grants".to_string()],
+                },
+                RoleTokenScopes {
+                    role: "doctor".to_string(),
+                    tenant: "globex".to_string(),
+                    project: String::new(),
+                    scopes: vec!["udb:authn:read-sessions".to_string()],
+                },
+            ],
+            ..AuthzSnapshot::default()
+        };
+        let cell = std::sync::Arc::new(arc_swap::ArcSwap::from_pointee(snapshot));
+        svc().with_authz_snapshot(Some(cell))
+    }
+
+    #[test]
+    fn bound_tenant_role_projects_its_token_scopes_for_a_person() {
+        let svc = svc_with_doctor_role_scopes(&[
+            ("user-1", "doctor", "acme"),
+            ("user-1", "organization_owner", "acme"),
+        ]);
+        let (scopes, roles) = svc.resolve_effective_grants("user-1", "acme", "");
+        assert_eq!(
+            roles,
+            vec!["doctor".to_string(), "organization_owner".to_string()]
+        );
+        // The hardcoded projection and the role's configured scope are unioned,
+        // deduplicated; globex's `doctor` scopes never apply in acme.
+        assert_eq!(
+            scopes,
+            vec![
+                "udb:admin".to_string(),
+                "udb:*".to_string(),
+                "udb:authn:manage-grants".to_string(),
+            ]
+        );
+    }
+
+    #[test]
+    fn role_token_scopes_do_not_apply_in_another_tenant() {
+        let svc = svc_with_doctor_role_scopes(&[("user-1", "doctor", "acme")]);
+        let (scopes, roles) = svc.resolve_effective_grants("user-1", "globex", "");
+        assert!(roles.is_empty(), "{roles:?}");
+        assert!(scopes.is_empty(), "{scopes:?}");
+        // Another subject bound in acme never inherits user-1's scopes.
+        let (scopes, _) = svc.resolve_effective_grants("user-2", "acme", "");
+        assert!(scopes.is_empty(), "{scopes:?}");
+    }
+
+    #[tokio::test]
+    async fn service_account_never_carries_role_token_scopes() {
+        let svc = svc_with_doctor_role_scopes(&[("svc-1", "doctor", "acme")]);
+        let grant = super::super::super::grants::GrantRecord {
+            user_id: "svc-1".to_string(),
+            service_identity: "spiffe://acme/svc-1".to_string(),
+            tenant_id: "acme".to_string(),
+            project_id: "billing".to_string(),
+            scopes: vec!["data:read".to_string()],
+            status: "ACTIVE".to_string(),
+            revision: 1,
+            ..Default::default()
+        };
+        let grants = svc
+            .resolve_password_login_grants_with_typed(&service_account("svc-1"), &[], Some(&grant))
+            .await
+            .expect("service login grants resolve");
+        assert_eq!(grants.roles, vec!["doctor".to_string()]);
+        assert_eq!(grants.scopes, vec!["data:read".to_string()]);
+    }
 }

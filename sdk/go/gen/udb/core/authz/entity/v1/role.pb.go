@@ -42,8 +42,14 @@ type Role struct {
 	ScopeType     RoleScopeType          `protobuf:"varint,15,opt,name=scope_type,json=scopeType,proto3,enum=udb.core.authz.entity.v1.RoleScopeType" json:"scope_type,omitempty"`
 	AccessSurface string                 `protobuf:"bytes,16,opt,name=access_surface,json=accessSurface,proto3" json:"access_surface,omitempty"`
 	MetadataJson  string                 `protobuf:"bytes,17,opt,name=metadata_json,json=metadataJson,proto3" json:"metadata_json,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	// JSON array of the token scopes a PERSON's access token carries while bound
+	// to this role in the role's tenant/project, e.g. ["udb:authn:manage-grants"].
+	// Projected at login/refresh time; service accounts never receive them (their
+	// scopes come only from their typed grant). Wildcard, admin, owner, platform
+	// and the token-exchange scope are refused on write.
+	TokenScopesJson string `protobuf:"bytes,18,opt,name=token_scopes_json,json=tokenScopesJson,proto3" json:"token_scopes_json,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *Role) Reset() {
@@ -195,11 +201,18 @@ func (x *Role) GetMetadataJson() string {
 	return ""
 }
 
+func (x *Role) GetTokenScopesJson() string {
+	if x != nil {
+		return x.TokenScopesJson
+	}
+	return ""
+}
+
 var File_udb_core_authz_entity_v1_role_proto protoreflect.FileDescriptor
 
 const file_udb_core_authz_entity_v1_role_proto_rawDesc = "" +
 	"\n" +
-	"#udb/core/authz/entity/v1/role.proto\x12\x18udb.core.authz.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a$udb/core/authz/entity/v1/enums.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\"\xd6\x12\n" +
+	"#udb/core/authz/entity/v1/role.proto\x12\x18udb.core.authz.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a$udb/core/authz/entity/v1/enums.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\"\xdf\x13\n" +
 	"\x04Role\x12C\n" +
 	"\arole_id\x18\x01 \x01(\tB*\x82\xb7\x18&\n" +
 	"\arole_id\x12\x04UUID\x18\x01(\x01:\x11gen_random_uuid()R\x06roleId\x12r\n" +
@@ -254,7 +267,9 @@ const file_udb_core_authz_entity_v1_role_proto_rawDesc = "" +
 	"\x0eaccess_surface\x18\x10 \x01(\tB]\x82\xb7\x18Y\n" +
 	"\x0eaccess_surface\x12\vVARCHAR(80)Z:Optional UI/API/workload surface this role is intended forR\raccessSurface\x12o\n" +
 	"\rmetadata_json\x18\x11 \x01(\tBJ\x82\xb7\x18F\n" +
-	"\rmetadata_json\x12\x05JSONB\x18\x01:\v'{}'::jsonbZ\x1dProject-defined role metadatax\x01R\fmetadataJson:\x98\x05\xfa\xb6\x18\xf7\x03\n" +
+	"\rmetadata_json\x12\x05JSONB\x18\x01:\v'{}'::jsonbZ\x1dProject-defined role metadatax\x01R\fmetadataJson\x12\x86\x01\n" +
+	"\x11token_scopes_json\x18\x12 \x01(\tBZ\x82\xb7\x18V\n" +
+	"\x11token_scopes_json\x12\x05JSONB\x18\x01:\x04'[]'Z0Token scopes a person bound to this role carriesx\x01R\x0ftokenScopesJson:\x98\x05\xfa\xb6\x18\xf7\x03\n" +
 	"\x05roles\x12\tudb_authz\x18\x02 \x01*INamed roles scoped by tenant, project, resource domain, or access surface0\x018\x01@\x01b^\n" +
 	"\x10tenant_isolation\x1aH(tenant_id::text = current_setting('app.current_tenant_id', true)::text)(\x01\xaa\x01O\n" +
 	"\x1atrg_roles_touch_updated_at\x12\x06BEFORE\x1a\x06UPDATE\"\x1cudb_authz.touch_updated_at()*\x03ROW\xc2\x01\xda\x01\n" +

@@ -671,6 +671,19 @@ impl CdcConfig {
         if let Ok(value) = std::env::var("UDB_CDC_EXACTLY_ONCE_MODE") {
             self.exactly_once_mode = CdcExactlyOnceMode::from_env_value(&value);
         }
+        // Read here too, not only in `from_env_uninstalled`: a served broker
+        // configures CDC through this overlay, and without it the relay ignored
+        // journal-only mode and waited on Kafka acknowledgements.
+        if let Ok(value) = std::env::var("UDB_CDC_JOURNAL_ONLY") {
+            self.journal_only = matches!(value.trim(), "1" | "true" | "yes");
+        }
+        if let Ok(value) = std::env::var("UDB_CDC_SOURCE_SENSITIVE_FIELDS") {
+            self.source_sensitive_fields = value
+                .split(',')
+                .map(|field| field.trim().to_string())
+                .filter(|field| !field.is_empty())
+                .collect();
+        }
         if let Ok(value) = std::env::var("UDB_CDC_TRANSACTIONAL_ID_PREFIX") {
             self.transactional_id_prefix = value;
         }
@@ -1629,6 +1642,39 @@ mod live_tests;
 mod tests {
     use super::*;
     use serde_json::json;
+
+    /// The served broker configures CDC through `merge_env`; a variable read
+    /// only by `from_env_uninstalled` is silently ignored there (this is how
+    /// `UDB_CDC_JOURNAL_ONLY` went missing). Compare the two bodies' env reads.
+    #[test]
+    fn merge_env_reads_every_variable_from_env_reads() {
+        fn env_reads(body: &str) -> std::collections::BTreeSet<String> {
+            body.split("std::env::var(\"")
+                .skip(1)
+                .filter_map(|rest| rest.split('"').next())
+                .chain(
+                    body.split("env_identifier(\"")
+                        .skip(1)
+                        .filter_map(|rest| rest.split('"').next()),
+                )
+                .map(str::to_string)
+                .collect()
+        }
+        let source = include_str!("mod.rs");
+        let body_of = |signature: &str| {
+            let start = source.find(signature).expect("function present");
+            let rest = &source[start..];
+            let end = rest.find("\n    }\n").expect("function end");
+            &rest[..end]
+        };
+        let from_env = env_reads(body_of("pub fn from_env_uninstalled() -> Self {"));
+        let merged = env_reads(body_of("pub fn merge_env(&mut self) {"));
+        let missing: Vec<_> = from_env.difference(&merged).collect();
+        assert!(
+            missing.is_empty(),
+            "merge_env ignores variables from_env_uninstalled reads: {missing:?}"
+        );
+    }
 
     fn topic_policy(pattern: &str, tenant: &str, project: &str, enabled: bool) -> TopicPolicy {
         TopicPolicy {

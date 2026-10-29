@@ -60,6 +60,7 @@ pub(crate) use config::{notification_delivery_batch, notification_delivery_inter
 // TODO(leader-wire) in config.rs). Unused until then, hence the allow.
 #[allow(unused_imports)]
 pub(crate) use config::notification_delivery_timeout;
+pub(crate) use delivery::delivery_provider_configured;
 #[cfg(feature = "http-client")]
 pub(crate) use delivery::run_notification_delivery_worker_once;
 // Test-only surface for the live notification HTTP delivery seam test: the

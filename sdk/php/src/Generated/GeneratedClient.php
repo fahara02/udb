@@ -18,10 +18,10 @@ use Grpc\ChannelCredentials;
  * the embedded proto descriptor set by `udb sdk generate`, so its surface can
  * never drift from the wire contract.
  *
- *   UDB version ...... 0.6.4
+ *   UDB version ...... 0.6.5
  *   Protocol version . 1.0.0
  *   Services ......... 29
- *   RPCs ............. 407
+ *   RPCs ............. 408
  *
  * This class COMPOSES WITH the hand-written layer; it does not replace it:
  *   - it reuses {@see UdbMetadata} for the eight broker headers,
@@ -206,6 +206,7 @@ final class GeneratedClient
         "DeleteNamespace" => "destructive",
         "Get" => "read_only",
         "GetNamespaceStats" => "read_only",
+        "Increment" => "mutation",
         "Scan" => "read_only",
         "Set" => "mutation",
         "DeleteFlag" => "destructive",
@@ -622,6 +623,7 @@ final class GeneratedClient
         "CacheService/DeleteNamespace" => "destructive",
         "CacheService/Get" => "read_only",
         "CacheService/GetNamespaceStats" => "read_only",
+        "CacheService/Increment" => "mutation",
         "CacheService/Scan" => "read_only",
         "CacheService/Set" => "mutation",
         "ConfigService/DeleteFlag" => "destructive",
@@ -1038,6 +1040,7 @@ final class GeneratedClient
         "CacheService/DeleteNamespace" => "delete_cache_namespace",
         "CacheService/Get" => "cache_get",
         "CacheService/GetNamespaceStats" => "get_cache_namespace_stats",
+        "CacheService/Increment" => "cache_increment",
         "CacheService/Scan" => "cache_scan",
         "CacheService/Set" => "cache_set",
         "ConfigService/DeleteFlag" => "delete_flag",
@@ -1453,6 +1456,7 @@ final class GeneratedClient
         "CacheService/DeleteNamespace" => "deleteCacheNamespace",
         "CacheService/Get" => "cacheNamespaceGet",
         "CacheService/GetNamespaceStats" => "getCacheNamespaceStats",
+        "CacheService/Increment" => "cacheNamespaceIncrement",
         "CacheService/Scan" => "cacheNamespaceScan",
         "CacheService/Set" => "cacheNamespaceSet",
         "ConfigService/DeleteFlag" => "deleteFlag",
@@ -1868,6 +1872,7 @@ final class GeneratedClient
         "CacheService/DeleteNamespace" => "post",
         "CacheService/Get" => "get",
         "CacheService/GetNamespaceStats" => "get",
+        "CacheService/Increment" => "post",
         "CacheService/Scan" => "get",
         "CacheService/Set" => "put",
         "ConfigService/DeleteFlag" => "post",
@@ -2283,6 +2288,7 @@ final class GeneratedClient
         "CacheService/DeleteNamespace" => "/v1/cache/namespaces/{namespace}:flush",
         "CacheService/Get" => "/v1/cache/{namespace}/{key}",
         "CacheService/GetNamespaceStats" => "/v1/cache/namespaces/{namespace}/stats",
+        "CacheService/Increment" => "/v1/cache/{namespace}/{key}:increment",
         "CacheService/Scan" => "/v1/cache/{namespace}:scan",
         "CacheService/Set" => "/v1/cache/{namespace}/{key}",
         "ConfigService/DeleteFlag" => "/v1/config/flags:delete",
@@ -2601,7 +2607,7 @@ final class GeneratedClient
         "udb.core.authz.entity.v1.PolicySimulation" => ['table' => "policy_simulations", 'primary_keys' => ["simulation_id"], 'fields' => ["simulation_id", "policy_version_id", "principal_json", "resource_json", "action", "purpose", "active_decision_json", "draft_decision_json", "diff_json", "tenant_id", "project_id", "created_at", "updated_at", "created_by"], 'relations_json' => "[]", 'version_field' => "", 'tenant_field' => "tenant_id", 'project_field' => "project_id", 'php_type' => "Udb\Core\Authz\Entity\V1\PolicySimulation"],
         "udb.core.authz.entity.v1.PolicyTuple" => ['table' => "policy_tuples", 'primary_keys' => ["policy_tuple_id"], 'fields' => ["policy_tuple_id", "tuple_kind", "subject", "domain", "object", "action", "effect", "condition", "tenant_id", "project_id", "created_at", "updated_at", "created_by"], 'relations_json' => "[]", 'version_field' => "", 'tenant_field' => "tenant_id", 'project_field' => "project_id", 'php_type' => "Udb\Core\Authz\Entity\V1\PolicyTuple"],
         "udb.core.authz.entity.v1.PolicyVersion" => ['table' => "policy_versions", 'primary_keys' => ["policy_version_id"], 'fields' => ["policy_version_id", "policy_set_id", "version_number", "state", "snapshot_hash", "created_by", "created_at", "activated_by", "activated_at", "rollback_of", "change_reason", "revision", "content_hash", "tenant_id", "project_id", "payload_json", "high_risk", "submitted_by", "source_draft_id", "updated_at"], 'relations_json' => "[{\"name\":\"policy_canaries\",\"kind\":\"has_many\",\"local_fields\":[\"policy_version_id\"],\"target_message_type\":\"udb.core.authz.entity.v1.PolicyCanary\",\"target_table\":\"udb_authz.policy_canaries\",\"target_fields\":[\"policy_version_id\"],\"on_delete\":\"CASCADE\",\"on_update\":\"NO ACTION\"},{\"name\":\"policy_set\",\"kind\":\"belongs_to\",\"local_fields\":[\"policy_set_id\"],\"target_message_type\":\"udb.core.authz.entity.v1.PolicySet\",\"target_table\":\"udb_authz.policy_sets\",\"target_fields\":[\"policy_set_id\"],\"on_delete\":\"CASCADE\",\"on_update\":\"NO ACTION\"}]", 'version_field' => "revision", 'tenant_field' => "tenant_id", 'project_field' => "project_id", 'php_type' => "Udb\Core\Authz\Entity\V1\PolicyVersion"],
-        "udb.core.authz.entity.v1.Role" => ['table' => "roles", 'primary_keys' => ["role_id"], 'fields' => ["role_id", "name", "description", "is_system", "is_active", "created_by", "created_at", "updated_at", "deleted_at", "tenant_id", "deleted_by", "role_code", "domain", "project_id", "scope_type", "access_surface", "metadata_json"], 'relations_json' => "[{\"name\":\"role_permissions\",\"kind\":\"has_many\",\"local_fields\":[\"role_id\"],\"target_message_type\":\"udb.core.authz.entity.v1.RolePermission\",\"target_table\":\"udb_authz.role_permissions\",\"target_fields\":[\"role_id\"],\"on_delete\":\"CASCADE\",\"on_update\":\"NO ACTION\"},{\"name\":\"user_roles\",\"kind\":\"has_many\",\"local_fields\":[\"role_id\"],\"target_message_type\":\"udb.core.authz.entity.v1.UserRole\",\"target_table\":\"udb_authz.user_roles\",\"target_fields\":[\"role_id\"],\"on_delete\":\"CASCADE\",\"on_update\":\"NO ACTION\"}]", 'version_field' => "", 'tenant_field' => "tenant_id", 'project_field' => "project_id", 'php_type' => "Udb\Core\Authz\Entity\V1\Role"],
+        "udb.core.authz.entity.v1.Role" => ['table' => "roles", 'primary_keys' => ["role_id"], 'fields' => ["role_id", "name", "description", "is_system", "is_active", "created_by", "created_at", "updated_at", "deleted_at", "tenant_id", "deleted_by", "role_code", "domain", "project_id", "scope_type", "access_surface", "metadata_json", "token_scopes_json"], 'relations_json' => "[{\"name\":\"role_permissions\",\"kind\":\"has_many\",\"local_fields\":[\"role_id\"],\"target_message_type\":\"udb.core.authz.entity.v1.RolePermission\",\"target_table\":\"udb_authz.role_permissions\",\"target_fields\":[\"role_id\"],\"on_delete\":\"CASCADE\",\"on_update\":\"NO ACTION\"},{\"name\":\"user_roles\",\"kind\":\"has_many\",\"local_fields\":[\"role_id\"],\"target_message_type\":\"udb.core.authz.entity.v1.UserRole\",\"target_table\":\"udb_authz.user_roles\",\"target_fields\":[\"role_id\"],\"on_delete\":\"CASCADE\",\"on_update\":\"NO ACTION\"}]", 'version_field' => "", 'tenant_field' => "tenant_id", 'project_field' => "project_id", 'php_type' => "Udb\Core\Authz\Entity\V1\Role"],
         "udb.core.authz.entity.v1.RolePermission" => ['table' => "role_permissions", 'primary_keys' => ["role_permission_id"], 'fields' => ["role_permission_id", "role_id", "permission_code", "granted_by", "granted_at", "tenant_id", "created_at", "updated_at", "created_by"], 'relations_json' => "[{\"name\":\"granted_by\",\"kind\":\"belongs_to\",\"local_fields\":[\"granted_by\"],\"target_message_type\":\"udb.core.authn.entity.v1.User\",\"target_table\":\"udb_authn.users\",\"target_fields\":[\"user_id\"],\"on_delete\":\"SET NULL\",\"on_update\":\"NO ACTION\"},{\"name\":\"role\",\"kind\":\"belongs_to\",\"local_fields\":[\"role_id\"],\"target_message_type\":\"udb.core.authz.entity.v1.Role\",\"target_table\":\"udb_authz.roles\",\"target_fields\":[\"role_id\"],\"on_delete\":\"CASCADE\",\"on_update\":\"NO ACTION\"}]", 'version_field' => "", 'tenant_field' => "tenant_id", 'project_field' => "", 'php_type' => "Udb\Core\Authz\Entity\V1\RolePermission"],
         "udb.core.authz.entity.v1.UserRole" => ['table' => "user_roles", 'primary_keys' => ["user_role_id"], 'fields' => ["user_role_id", "user_id", "role_id", "domain", "assigned_by", "assigned_at", "expires_at", "created_at", "updated_at", "created_by", "tenant_id"], 'relations_json' => "[{\"name\":\"role\",\"kind\":\"belongs_to\",\"local_fields\":[\"role_id\"],\"target_message_type\":\"udb.core.authz.entity.v1.Role\",\"target_table\":\"udb_authz.roles\",\"target_fields\":[\"role_id\"],\"on_delete\":\"CASCADE\",\"on_update\":\"NO ACTION\"},{\"name\":\"user\",\"kind\":\"belongs_to\",\"local_fields\":[\"user_id\"],\"target_message_type\":\"udb.core.authn.entity.v1.User\",\"target_table\":\"udb_authn.users\",\"target_fields\":[\"user_id\"],\"on_delete\":\"CASCADE\",\"on_update\":\"NO ACTION\"}]", 'version_field' => "", 'tenant_field' => "tenant_id", 'project_field' => "", 'php_type' => "Udb\Core\Authz\Entity\V1\UserRole"],
         "udb.core.backup.entity.v1.BackupPolicy" => ['table' => "backup_policies", 'primary_keys' => ["policy_id"], 'fields' => ["policy_id", "tenant_id", "policy_name", "schedule_cron", "retention_days", "max_retained_backups", "enabled", "object_backend", "object_bucket", "created_at", "updated_at", "metadata_json", "project_id", "created_by"], 'relations_json' => "[]", 'version_field' => "", 'tenant_field' => "tenant_id", 'project_field' => "project_id", 'php_type' => "Udb\Core\Backup\Entity\V1\BackupPolicy"],
@@ -2807,6 +2813,8 @@ final class GeneratedClient
         "get" => "cacheServiceGet",
         "get_cache_namespace_stats" => "getCacheNamespaceStats",
         "get_namespace_stats" => "getCacheNamespaceStats",
+        "cache_increment" => "cacheIncrement",
+        "increment" => "cacheIncrement",
         "scan" => "cacheServiceScan",
         "set" => "cacheServiceSet",
         "delete_flag" => "deleteFlag",
@@ -6137,6 +6145,27 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->GetNamespaceStats($request, $md, $opts),
             $metadata,
             'read_only' === 'read_only',
+            $request,
+        );
+    }
+    /**
+     * udb.core.cache.services.v1.CacheService / Increment (unary), public alias cache_increment.
+     *
+     * Forwards to {@see stubFor()}->Increment(); retries transient codes.
+     * Path: /udb.core.cache.services.v1.CacheService/Increment
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded IncrementResponse
+     */
+    public function cacheIncrement($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'Increment',
+            'CacheService',
+            'udb.core.cache.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->Increment($request, $md, $opts),
+            $metadata,
+            'mutation' === 'read_only',
             $request,
         );
     }
@@ -11709,7 +11738,7 @@ final class GeneratedClient
         return $this->stubFor('BackupService', 'udb.core.backup.services.v1');
     }
     /**
-     * Underlying buf-generated stub for udb.core.cache.services.v1.CacheService (7 RPC(s)).
+     * Underlying buf-generated stub for udb.core.cache.services.v1.CacheService (8 RPC(s)).
      * Channel is shared with every other service stub on this client.
      *
      * @return BaseStub  a CacheServiceClient

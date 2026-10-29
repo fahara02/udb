@@ -158,14 +158,18 @@ impl AuthnServiceImpl {
         otp_type: i32,
         otp_id: &str,
     ) {
-        // Through NotificationService when the tenant has an active template for
-        // the code's event (`authn.password_reset`, `authn.email_verification`,
-        // `authn.otp`; variables `code`, `expires_in_minutes`, `user_name`).
-        // The stored body is redacted on read and scrubbed once delivered.
-        // Without a template, the operator webhook delivers as before.
-        if self
-            .deliver_otp_via_notification(user, channel, address, code, otp_type)
-            .await
+        // A configured `UDB_OTP_DELIVERY_WEBHOOK_URL` is the operator's explicit
+        // choice and always wins. Otherwise the code goes through
+        // NotificationService (tenant template for the code's event, else the
+        // built-in one: `authn.password_reset`, `authn.email_verification`,
+        // `authn.otp`; variables `code`, `expires_in_minutes`, `user_name`),
+        // whose stored body is redacted on read and scrubbed once delivered.
+        // Before 0.6.5 the built-in templates made the notification path win
+        // even with the webhook set, so the webhook was never called.
+        if !authn::otp_delivery_webhook_configured()
+            && self
+                .deliver_otp_via_notification(user, channel, address, code, otp_type)
+                .await
         {
             #[cfg(test)]
             if let Ok(mut codes) = test_otp_codes().lock() {

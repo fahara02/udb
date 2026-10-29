@@ -13,7 +13,7 @@
 │    UNIVERSAL DATA BROKER                                                   │
 │    gRPC data plane | native control plane | tenant/project scope guard     │
 │                                                                            │
-│    crate v0.6.4 | protocol v1.0.0                                          │
+│    crate v0.6.5 | protocol v1.0.0                                          │
 └────────────────────────────────────────────────────────────────────────────┘
 ```
 This is the guide for running UDB in production. If you operate a UDB
@@ -128,13 +128,21 @@ their original typed error and detail trailer.
 
 ### Auth-code delivery and invitation setup
 
-Auth issuance queues `authn.email_verification`, `authn.password_reset`, and
-`authn.otp` through the NotificationService mounted on the same listener.
-Shipped English templates render `{{code}}`, `{{expires_in_minutes}}`, and
-`{{user_name}}`; an active tenant template takes precedence. Configure a
-notification channel provider to deliver the queued messages. If notification
-queuing is unavailable, the configured `UDB_OTP_DELIVERY_WEBHOOK_URL` is the
-fallback. Issuance remains a durable operation when delivery is unavailable.
+Auth codes (`authn.email_verification`, `authn.password_reset`, `authn.otp`)
+are delivered one of two ways:
+
+- **Your webhook.** When `UDB_OTP_DELIVERY_WEBHOOK_URL` is set, every code is
+  POSTed there as JSON `{channel, address, code, otp_type, user_id}` (with
+  `UDB_OTP_DELIVERY_AUTH_HEADER` as the `Authorization` header when set), and
+  NotificationService is not used for codes.
+- **NotificationService.** Otherwise codes are queued through the
+  NotificationService mounted on the same listener. Shipped English templates
+  render `{{code}}`, `{{expires_in_minutes}}`, and `{{user_name}}`; an active
+  tenant template takes precedence. A queued message is only sent when
+  `UDB_NOTIFICATION_DELIVERY_PROVIDERS_JSON` configures a provider for its
+  channel; without one it fails after the no-provider grace window.
+
+Issuance remains a durable operation when delivery is unavailable.
 
 Notification read/send responses redact auth-code subjects and bodies. The
 worker retains the delivery material while retries are pending and scrubs it
@@ -576,7 +584,7 @@ paths:
 python data/gen_bench_data.py --target-mb 512
 cargo bench --features bench-internals --bench hotpath_bench
 UDB_BENCH_LIVE=1 cargo bench --features bench-internals --bench live_backends_bench
-python scripts/bench_snapshot.py --label "release-0.6.4"
+python scripts/bench_snapshot.py --label "release-0.6.5"
 ```
 
 Once you record a snapshot, its history is kept under `bench-history/`, and the

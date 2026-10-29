@@ -31,7 +31,7 @@ use crate::runtime::DataBrokerRuntime;
 use crate::runtime::authz::Effect;
 use crate::runtime::authz::{
     AuthzPolicy, AuthzQuery, AuthzSnapshot, Decision, PolicyEngine, Principal, RelationshipTuple,
-    ResourceRef, RoleBinding,
+    ResourceRef, RoleBinding, RoleTokenScopes,
 };
 use crate::runtime::channels::{ChannelManager, ChannelPermit, OperationChannel};
 use crate::runtime::core::native_store::NativeEntityTransactionOp;
@@ -217,6 +217,88 @@ fn require_platform_claim_for_reserved_role(
     }
 }
 
+/// Most token scopes one role may confer on a person.
+const ROLE_TOKEN_SCOPES_MAX: usize = 64;
+/// Longest single role token scope, in characters.
+const ROLE_TOKEN_SCOPE_MAX_CHARS: usize = 120;
+
+/// The token scopes a role may confer on a PERSON (`token_scopes`): every
+/// entry non-empty, at most [`ROLE_TOKEN_SCOPE_MAX_CHARS`] characters with no
+/// whitespace or control characters, and never a scope the service-scope
+/// validator forbids (wildcard / admin / owner / superuser / root segment,
+/// platform authority), never any `*`, and never the token-exchange scope.
+/// Deduplicated case-insensitively, first spelling kept, at most
+/// [`ROLE_TOKEN_SCOPES_MAX`]. A refusal is INVALID_ARGUMENT on `token_scopes`.
+fn validated_role_token_scopes(raw: &[String]) -> Result<Vec<String>, Status> {
+    let refuse = |message: String, description: &str| {
+        authz_invalid_fields(message, [("token_scopes", description.to_string())])
+    };
+    for scope in raw {
+        let scope = scope.trim();
+        if scope.is_empty() {
+            return Err(refuse(
+                "token_scopes must not contain an empty scope".to_string(),
+                "every scope must be non-empty",
+            ));
+        }
+        if scope.chars().count() > ROLE_TOKEN_SCOPE_MAX_CHARS
+            || scope.chars().any(|c| c.is_whitespace() || c.is_control())
+        {
+            return Err(refuse(
+                format!("token scope '{scope}' is malformed"),
+                "every scope must be at most 120 characters with no whitespace or control characters",
+            ));
+        }
+        if scope.contains('*')
+            || super::grants::is_forbidden_service_scope(scope)
+            || scope.eq_ignore_ascii_case(super::memberships::EXCHANGE_TENANT_TOKEN_SCOPE)
+        {
+            return Err(refuse(
+                format!("token scope '{scope}' cannot be conferred by a role"),
+                "must not be a wildcard, admin, owner, platform or token-exchange scope",
+            ));
+        }
+    }
+    let scopes = super::grants::normalized_scope_list(raw);
+    if scopes.len() > ROLE_TOKEN_SCOPES_MAX {
+        return Err(refuse(
+            format!("token_scopes must contain at most {ROLE_TOKEN_SCOPES_MAX} scopes"),
+            "must contain at most 64 distinct scopes",
+        ));
+    }
+    Ok(scopes)
+}
+
+/// `organization_owner` projects the tenant superuser scopes (`udb:admin`,
+/// `udb:*`) into the bearer's token, so granting or revoking it is reserved for
+/// a caller who already holds it (in its own tenant; the cross-tenant check
+/// runs separately) or a cross-tenant admin. Holding `udb:authz:assign-role`
+/// alone would otherwise let any role administrator mint a tenant owner. Keyed
+/// on the role CODE, which is what token issuance projects from.
+fn require_owner_claim_for_owner_role(role: &str, operation: &'static str) -> Result<(), Status> {
+    if !role
+        .trim()
+        .eq_ignore_ascii_case(crate::runtime::service::auth_service::ORG_OWNER_ROLE_CODE)
+        || !crate::runtime::service::method_security::claim_context_present()
+    {
+        return Ok(());
+    }
+    let claim = crate::runtime::service::method_security::current_claim_context();
+    let holds_owner = claim.roles.iter().any(|held| {
+        held.trim()
+            .eq_ignore_ascii_case(crate::runtime::service::auth_service::ORG_OWNER_ROLE_CODE)
+    });
+    if claim.is_cross_tenant_admin() || holds_owner {
+        Ok(())
+    } else {
+        Err(authz_attribution_policy_status(
+            operation,
+            "organization_owner_authority_required",
+            "only an organization_owner or a cross-tenant admin may grant or revoke organization_owner",
+        ))
+    }
+}
+
 fn policy_bundle_signing_not_configured_status() -> Status {
     authz_capability_status(
         "policy_bundle_signing",
@@ -286,6 +368,7 @@ fn role_model() -> NativeModel {
             "scope_type",
             "access_surface",
             "metadata_json",
+            "token_scopes_json",
         ],
     )
 }
@@ -429,6 +512,7 @@ fn role_select_projection(model: &NativeModel) -> String {
         model.select("scope_type"),
         model.text_or_empty("access_surface"),
         model.json_text_as("metadata_json", "metadata_json"),
+        model.json_text_as("token_scopes_json", "token_scopes_json"),
         model.text_or_empty("deleted_by"),
     ]
     .join(", ")
@@ -811,6 +895,7 @@ fn role_from_row(row: &sqlx::postgres::PgRow) -> Result<authz_entity_pb::Role, S
         scope_type: role_scope_type_from_db(&row.try_get::<String, _>("scope_type").map_err(map)?),
         access_surface: row.try_get("access_surface").map_err(map)?,
         metadata_json: row.try_get("metadata_json").map_err(map)?,
+        token_scopes_json: row.try_get("token_scopes_json").map_err(map)?,
     })
 }
 
@@ -888,6 +973,16 @@ fn role_from_native_row(row: &serde_json::Value) -> Result<authz_entity_pb::Role
                 return Err(authz_internal_status(
                     "decode_role",
                     "returned role metadata is missing",
+                ));
+            }
+        },
+        token_scopes_json: match row.get("token_scopes_json") {
+            Some(serde_json::Value::Null) => "[]".to_string(),
+            Some(value) => value.to_string(),
+            None => {
+                return Err(authz_internal_status(
+                    "decode_role",
+                    "returned role token scopes are missing",
                 ));
             }
         },
@@ -1346,7 +1441,8 @@ impl AuthzServiceImpl {
                 "reserved platform role lacks trusted system/global provenance",
             ));
         }
-        require_platform_claim_for_reserved_role(&role, operation)
+        require_platform_claim_for_reserved_role(&role, operation)?;
+        require_owner_claim_for_owner_role(&role, operation)
     }
 
     /// Role/assignment/audit management is durable-only: fail closed when no
@@ -1867,6 +1963,64 @@ impl AuthzServiceImpl {
             });
         }
 
+        // Person token scopes configured on active roles, keyed exactly like the
+        // binding above (role code, else name, else id) plus the role row's own
+        // tenant/project. Each stored scope is re-validated so a row written
+        // outside CreateRole/UpdateRole can never project a forbidden scope.
+        let role_scope_rows = sqlx::query(&format!(
+            "SELECT COALESCE(NULLIF({role_code}, ''), NULLIF({name}, ''), {role_id}::TEXT) AS role, COALESCE({tenant_id}, '') AS tenant, \
+                    COALESCE({project_id}, '') AS project, {token_scopes_json}::TEXT AS token_scopes_json \
+             FROM {role_rel} \
+             WHERE {deleted_at} IS NULL AND {is_active} = TRUE AND {token_scopes_json} <> '[]'::jsonb",
+            role_rel = role.relation.clone(),
+            role_code = role.q("role_code"),
+            name = role.q("name"),
+            role_id = role.q("role_id"),
+            tenant_id = role.q("tenant_id"),
+            project_id = role.q("project_id"),
+            token_scopes_json = role.q("token_scopes_json"),
+            deleted_at = role.q("deleted_at"),
+            is_active = role.q("is_active"),
+        ))
+        .fetch_all(pool)
+        .await
+        .map_err(|err| {
+            crate::runtime::executor_utils::sqlx_error_to_status("load_role_token_scopes", &err)
+        })?;
+        let mut role_token_scopes = Vec::with_capacity(role_scope_rows.len());
+        for row in role_scope_rows {
+            let decode = |err: sqlx::Error| {
+                crate::runtime::executor_utils::sqlx_error_to_status(
+                    "decode_role_token_scopes",
+                    &err,
+                )
+            };
+            let role: String = row.try_get("role").map_err(decode)?;
+            let raw: String = row.try_get("token_scopes_json").map_err(decode)?;
+            let (scopes, refused): (Vec<String>, Vec<String>) =
+                super::grants::scopes_from_json(&raw)
+                    .into_iter()
+                    .partition(|scope| {
+                        validated_role_token_scopes(std::slice::from_ref(scope)).is_ok()
+                    });
+            if !refused.is_empty() {
+                tracing::error!(
+                    role = %role,
+                    refused_scopes = ?refused,
+                    "ignoring stored role token scopes a role may never confer"
+                );
+            }
+            if scopes.is_empty() {
+                continue;
+            }
+            role_token_scopes.push(RoleTokenScopes {
+                role,
+                tenant: row.try_get("tenant").map_err(decode)?,
+                project: row.try_get("project").map_err(decode)?,
+                scopes,
+            });
+        }
+
         let grouping_rows = sqlx::query(&format!(
             "SELECT {subject}, {action} AS role, {tenant_id} AS tenant, COALESCE({project_id}, '') AS project, {condition} \
              FROM {tuple_rel} \
@@ -1997,6 +2151,7 @@ impl AuthzServiceImpl {
             policies,
             role_bindings,
             tuples,
+            role_token_scopes,
             // The dev/bootstrap escape hatch must SURVIVE a PG warm: the broker's
             // data-plane authorize() reads this same PG-warmed cell, so if this were
             // hardcoded false, `UDB_ABAC_DEFAULT_ALLOW=true` would silently stop
@@ -2718,6 +2873,7 @@ impl AuthzService for AuthzServiceImpl {
                 "reserved platform roles can only be provisioned by the trusted offline bootstrap",
             ));
         }
+        let token_scopes = validated_role_token_scopes(&req.token_scopes)?;
         // Bind `created_by` to the authenticated caller on the served path: derive
         // it from the claim subject when the body omits it, and forge-guard a
         // supplied value that disagrees with the caller's claim-derived UUID unless
@@ -2802,6 +2958,10 @@ impl AuthzService for AuthzServiceImpl {
                     .unwrap_or_else(|_| serde_json::Value::Object(Default::default())),
             ),
         );
+        record.insert(
+            "token_scopes_json".to_string(),
+            LogicalValue::Json(serde_json::json!(token_scopes)),
+        );
         self.mutate_authz_with_revision(
             &tenant_id,
             &req.project_id,
@@ -2828,6 +2988,7 @@ impl AuthzService for AuthzServiceImpl {
                     "tenant_id": tenant_id.clone(),
                     "project_id": req.project_id.clone(),
                     "created_by": req.created_by.clone(),
+                    "token_scopes": token_scopes.clone(),
                 }),
             )
             .with_correlation(format!("role_create:{role_id}"))
@@ -2865,6 +3026,7 @@ impl AuthzService for AuthzServiceImpl {
                 scope_type: req.scope_type,
                 access_surface: req.access_surface,
                 metadata_json,
+                token_scopes_json: serde_json::json!(token_scopes).to_string(),
             }),
         }))
     }
@@ -3998,7 +4160,7 @@ impl AuthzService for AuthzServiceImpl {
         }
         let update_mask = crate::runtime::service::native_helpers::update_mask_path_set(
             req.update_mask.as_ref(),
-            &["name", "description", "is_active"],
+            &["name", "description", "is_active", "token_scopes"],
         )?;
         if update_mask
             .as_ref()
@@ -4026,6 +4188,18 @@ impl AuthzService for AuthzServiceImpl {
             "is_active",
             req.is_active.is_some(),
         );
+        // Without a mask only a non-empty list replaces the stored scopes; an
+        // explicit `token_scopes` mask path may also clear them.
+        let update_token_scopes = crate::runtime::service::native_helpers::update_mask_allows(
+            &update_mask,
+            "token_scopes",
+            !req.token_scopes.is_empty(),
+        );
+        let token_scopes = if update_token_scopes {
+            validated_role_token_scopes(&req.token_scopes)?
+        } else {
+            Vec::new()
+        };
         self.enforce_role_authority_mutation(role_id, "update_role")
             .await?;
         let id_filter = LogicalFilter::Comparison {
@@ -4048,6 +4222,7 @@ impl AuthzService for AuthzServiceImpl {
             "scope_type",
             "access_surface",
             "metadata_json",
+            "token_scopes_json",
         ];
         let Some(scope_row) = self
             .read_authz_mutation_row(
@@ -4079,6 +4254,11 @@ impl AuthzService for AuthzServiceImpl {
                 "is_active",
                 update_is_active,
                 LogicalValue::Bool(req.is_active.unwrap_or(false)),
+            ),
+            (
+                "token_scopes_json",
+                update_token_scopes,
+                LogicalValue::Json(serde_json::json!(token_scopes)),
             ),
         ] {
             if enabled {
@@ -5606,6 +5786,120 @@ mod validation_tests {
                 "reserved platform roles can only be provisioned by the trusted offline bootstrap",
             );
         }
+    }
+
+    #[tokio::test]
+    async fn owner_role_grant_requires_an_owner_or_cross_tenant_admin() {
+        use crate::runtime::service::method_security::{
+            scope_claim_context_for_test, test_claim_context,
+        };
+        let check = |roles: &[&str], role: &'static str| {
+            let ctx =
+                test_claim_context("caller", "tenant-a", "", &["udb:authz:assign-role"], roles);
+            scope_claim_context_for_test(ctx, async move {
+                require_owner_claim_for_owner_role(role, "assign_role")
+            })
+        };
+        let refused = check(&[], "organization_owner")
+            .await
+            .expect_err("a role administrator alone cannot mint a tenant owner");
+        assert!(
+            refused.message().contains("organization_owner"),
+            "{}",
+            refused.message()
+        );
+        check(&[], "Organization_Owner")
+            .await
+            .expect_err("the role code is matched case-insensitively");
+        check(&["organization_owner"], "organization_owner")
+            .await
+            .expect("an owner may grant owner in its tenant");
+        check(&["platform_admin"], "organization_owner")
+            .await
+            .expect("a cross-tenant admin may grant owner");
+        check(&[], "doctor")
+            .await
+            .expect("other roles are unaffected");
+    }
+
+    const ROLE_TOKEN_SCOPE_REFUSAL: &str =
+        "must not be a wildcard, admin, owner, platform or token-exchange scope";
+
+    #[test]
+    fn role_token_scopes_are_trimmed_deduplicated_and_order_preserving() {
+        let raw = [" udb:authn:manage-grants ", "udb:read", "UDB:READ"].map(str::to_string);
+        assert_eq!(
+            validated_role_token_scopes(&raw).unwrap(),
+            vec![
+                "udb:authn:manage-grants".to_string(),
+                "udb:read".to_string()
+            ]
+        );
+        assert!(validated_role_token_scopes(&[]).unwrap().is_empty());
+    }
+
+    #[test]
+    fn role_token_scopes_refuse_admin_wildcard_platform_exchange_and_empty() {
+        for scope in [
+            "udb:admin",
+            "udb:*",
+            "*",
+            "udb:auth:admin",
+            "udb:platform_admin",
+            "foo:*",
+            "udb:read*",
+            "tenant:owner",
+            "udb:authn:exchange-tenant-token",
+        ] {
+            let err = validated_role_token_scopes(&["udb:read".to_string(), scope.to_string()])
+                .expect_err(scope);
+            assert_validation_fields(&err, &[("token_scopes", ROLE_TOKEN_SCOPE_REFUSAL)]);
+        }
+        for (scopes, description) in [
+            (vec![String::new()], "every scope must be non-empty"),
+            (vec!["  ".to_string()], "every scope must be non-empty"),
+            (
+                vec!["a".repeat(121)],
+                "every scope must be at most 120 characters with no whitespace or control characters",
+            ),
+            (
+                (0..65).map(|i| format!("app:scope{i}")).collect(),
+                "must contain at most 64 distinct scopes",
+            ),
+        ] {
+            let err = validated_role_token_scopes(&scopes).expect_err(description);
+            assert_validation_fields(&err, &[("token_scopes", description)]);
+        }
+    }
+
+    #[tokio::test]
+    async fn create_role_refuses_forbidden_token_scope_before_runtime_access() {
+        let err = svc()
+            .create_role(Request::new(authz_pb::CreateRoleRequest {
+                name: "Doctor".to_string(),
+                role_code: "doctor".to_string(),
+                tenant_id: "tenant-a".to_string(),
+                created_by: "2a75f9e0-11b2-4625-80a3-1f47e4b45151".to_string(),
+                token_scopes: vec!["udb:authn:manage-grants".to_string(), "udb:*".to_string()],
+                ..Default::default()
+            }))
+            .await
+            .expect_err("a role must not confer a wildcard scope");
+        assert_validation_fields(&err, &[("token_scopes", ROLE_TOKEN_SCOPE_REFUSAL)]);
+    }
+
+    #[tokio::test]
+    async fn update_role_refuses_forbidden_token_scope_before_postgres_access() {
+        let err = svc()
+            .update_role(Request::new(authz_pb::UpdateRoleRequest {
+                role_id: "2a75f9e0-11b2-4625-80a3-1f47e4b45151".to_string(),
+                updated_by: "2a75f9e0-11b2-4625-80a3-1f47e4b45151".to_string(),
+                token_scopes: vec!["udb:admin".to_string()],
+                ..Default::default()
+            }))
+            .await
+            .expect_err("a role must not confer the admin scope");
+        assert_validation_fields(&err, &[("token_scopes", ROLE_TOKEN_SCOPE_REFUSAL)]);
     }
 
     #[tokio::test]

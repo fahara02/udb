@@ -82,6 +82,16 @@ class Role extends \Google\Protobuf\Internal\Message
      * Generated from protobuf field <code>string metadata_json = 17 [json_name = "metadataJson", (.udb.core.common.v1.pg_column) = {</code>
      */
     protected $metadata_json = '';
+    /**
+     * JSON array of the token scopes a PERSON's access token carries while bound
+     * to this role in the role's tenant/project, e.g. ["udb:authn:manage-grants"].
+     * Projected at login/refresh time; service accounts never receive them (their
+     * scopes come only from their typed grant). Wildcard, admin, owner, platform
+     * and the token-exchange scope are refused on write.
+     *
+     * Generated from protobuf field <code>string token_scopes_json = 18 [json_name = "tokenScopesJson", (.udb.core.common.v1.pg_column) = {</code>
+     */
+    protected $token_scopes_json = '';
 
     /**
      * Constructor.
@@ -106,6 +116,12 @@ class Role extends \Google\Protobuf\Internal\Message
      *     @type int $scope_type
      *     @type string $access_surface
      *     @type string $metadata_json
+     *     @type string $token_scopes_json
+     *           JSON array of the token scopes a PERSON's access token carries while bound
+     *           to this role in the role's tenant/project, e.g. ["udb:authn:manage-grants"].
+     *           Projected at login/refresh time; service accounts never receive them (their
+     *           scopes come only from their typed grant). Wildcard, admin, owner, platform
+     *           and the token-exchange scope are refused on write.
      * }
      */
     public function __construct($data = NULL) {
@@ -513,6 +529,40 @@ class Role extends \Google\Protobuf\Internal\Message
     {
         GPBUtil::checkString($var, True);
         $this->metadata_json = $var;
+
+        return $this;
+    }
+
+    /**
+     * JSON array of the token scopes a PERSON's access token carries while bound
+     * to this role in the role's tenant/project, e.g. ["udb:authn:manage-grants"].
+     * Projected at login/refresh time; service accounts never receive them (their
+     * scopes come only from their typed grant). Wildcard, admin, owner, platform
+     * and the token-exchange scope are refused on write.
+     *
+     * Generated from protobuf field <code>string token_scopes_json = 18 [json_name = "tokenScopesJson", (.udb.core.common.v1.pg_column) = {</code>
+     * @return string
+     */
+    public function getTokenScopesJson()
+    {
+        return $this->token_scopes_json;
+    }
+
+    /**
+     * JSON array of the token scopes a PERSON's access token carries while bound
+     * to this role in the role's tenant/project, e.g. ["udb:authn:manage-grants"].
+     * Projected at login/refresh time; service accounts never receive them (their
+     * scopes come only from their typed grant). Wildcard, admin, owner, platform
+     * and the token-exchange scope are refused on write.
+     *
+     * Generated from protobuf field <code>string token_scopes_json = 18 [json_name = "tokenScopesJson", (.udb.core.common.v1.pg_column) = {</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setTokenScopesJson($var)
+    {
+        GPBUtil::checkString($var, True);
+        $this->token_scopes_json = $var;
 
         return $this;
     }

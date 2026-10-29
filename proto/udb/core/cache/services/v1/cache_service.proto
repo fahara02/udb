@@ -157,6 +157,52 @@ service CacheService {
     };
   }
 
+  // Atomically add `delta` to an integer counter and return the new value, in
+  // one Redis round trip: the shared-counter primitive a rate limiter needs
+  // (one call per decision). A missing key starts at 0 and takes the TTL from
+  // `ttl_seconds_if_created`; an existing key keeps its TTL. With `max` > 0 an
+  // increment that would take the value above `max` is not applied and
+  // `refused` is true. Not idempotent: a retried call adds `delta` again. Emits
+  // no outbox event (it is a hot-path counter, not a domain change).
+  rpc Increment(IncrementRequest) returns (IncrementResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:cache:increment"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
+      decision_resource: "cache.Increment"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "cache_increment" rest_operation_id: "cacheNamespaceIncrement"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 1
+      server_only: true
+      boilerplate_recipe_tags: "cache"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "cache"
+      required_backends: "redis"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {
+      post: "/v1/cache/{namespace}/{key}:increment"
+      body: "*"
+    };
+  }
+
   // Delete a single namespaced key. Idempotent.
   rpc Delete(DeleteRequest) returns (DeleteResponse) {
     option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
@@ -435,6 +481,54 @@ message SetResponse {
   int64 used_bytes = 2;
   int64 max_bytes = 3;
   string message = 4;
+  // Error information if operation failed
+  udb.core.common.v1.ApiError error = 5;
+}
+
+message IncrementRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 1
+    server_only: true
+    boilerplate_recipe_tags: "cache"
+    generate_minimal_example: true
+  };
+  string tenant_id = 1;
+  string namespace = 2;
+  string key = 3;
+  // Added to the counter; may be negative. 0 reads the current value without
+  // writing (a missing key reads as 0 and is not created).
+  int64 delta = 4;
+  // TTL for a key this call creates; 0 = the namespace default TTL (or no
+  // expiry if none is configured). An existing key keeps its TTL.
+  int64 ttl_seconds_if_created = 5;
+  // Upper bound for the new value; 0 = no bound. An increment that would take
+  // the value above `max` is not applied and the response has `refused` set.
+  int64 max = 6;
+}
+
+message IncrementResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 1
+    server_only: true
+    boilerplate_recipe_tags: "cache"
+    generate_minimal_example: true
+  };
+  // The counter after this call (unchanged when `refused`).
+  int64 value = 1;
+  // True when this call created the key.
+  bool created = 2;
+  // True when `max` was set and the increment would have exceeded it; nothing
+  // was written.
+  bool refused = 3;
+  // Seconds until the key expires, rounded up; 0 when it has no TTL or does
+  // not exist. Lets a limiter send Retry-After without a second call.
+  int64 ttl_remaining_seconds = 4;
   // Error information if operation failed
   udb.core.common.v1.ApiError error = 5;
 }

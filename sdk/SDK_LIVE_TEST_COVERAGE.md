@@ -7,7 +7,7 @@ Inputs:
 - `sdk/go/udbclient/generated_client.go`
 - `docs/site/bench-results.json`
 
-Current generated RPC surface: 407 RPCs across 29 services.
+Current generated RPC surface: 408 RPCs across 29 services.
 
 The benchmark body manifest is checked against generated SDK metadata before this
 file is written. A missing row, extra row, alias drift, operationId drift, or
@@ -40,7 +40,7 @@ stack, with request bodies taken from the plan the shared Python seed exports.
 | AuthnService | 64 | 18 | 34 | 12 | 0 |
 | AuthzService | 41 | 18 | 17 | 6 | 0 |
 | BackupService | 8 | 4 | 3 | 1 | 0 |
-| CacheService | 7 | 3 | 3 | 1 | 0 |
+| CacheService | 8 | 3 | 4 | 1 | 0 |
 | ConfigService | 5 | 3 | 1 | 1 | 0 |
 | ControlPlaneService | 6 | 2 | 4 | 0 | 0 |
 | DataBroker | 84 | 35 | 42 | 7 | 0 |
@@ -213,6 +213,7 @@ benchmark harnesses.
 | CacheService | `CacheService/DeleteNamespace` | `delete_cache_namespace` | `deleteCacheNamespace` | DESTRUCTIVE | cache.md |
 | CacheService | `CacheService/Get` | `cache_get` | `cacheNamespaceGet` | READ_ONLY | cache.md |
 | CacheService | `CacheService/GetNamespaceStats` | `get_cache_namespace_stats` | `getCacheNamespaceStats` | READ_ONLY | cache.md |
+| CacheService | `CacheService/Increment` | `cache_increment` | `cacheNamespaceIncrement` | MUTATION | cache.md |
 | CacheService | `CacheService/Scan` | `cache_scan` | `cacheNamespaceScan` | READ_ONLY | cache.md |
 | CacheService | `CacheService/Set` | `cache_set` | `cacheNamespaceSet` | MUTATION | cache.md |
 | ConfigService | `ConfigService/DeleteFlag` | `delete_flag` | `deleteFlag` | DESTRUCTIVE | config.md |

@@ -2,7 +2,7 @@
   "swagger": "2.0",
   "info": {
     "title": "UDB Control-Plane API",
-    "version": "0.6.4",
+    "version": "0.6.5",
     "description": "HTTP/JSON (gRPC-gateway) surface for UDB control-plane services. The core DataBroker data-plane RPCs are gRPC-native and are not represented here."
   },
   "tags": [
@@ -23022,6 +23022,161 @@
         "x-udb-sdk-alias": "cache_set",
         "x-udb-scope": [
           "udb:cache:set"
+        ],
+        "x-udb-retry-safe": false,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "cache",
+        "x-udb-operation-kind": "mutation"
+      }
+    },
+    "/v1/cache/{namespace}/{key}:increment": {
+      "post": {
+        "summary": "Atomically add `delta` to an integer counter and return the new value, in\none Redis round trip: the shared-counter primitive a rate limiter needs\n(one call per decision). A missing key starts at 0 and takes the TTL from\n`ttl_seconds_if_created`; an existing key keeps its TTL. With `max` > 0 an\nincrement that would take the value above `max` is not applied and\n`refused` is true. Not idempotent: a retried call adds `delta` again. Emits\nno outbox event (it is a hot-path counter, not a domain change).",
+        "operationId": "cacheNamespaceIncrement",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1IncrementResponse"
+            }
+          },
+          "400": {
+            "description": "gRPC INVALID_ARGUMENT/FAILED_PRECONDITION mapped to HTTP 400. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "INVALID_ARGUMENT",
+              "FAILED_PRECONDITION"
+            ]
+          },
+          "401": {
+            "description": "gRPC UNAUTHENTICATED mapped to HTTP 401. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "UNAUTHENTICATED"
+            ]
+          },
+          "403": {
+            "description": "gRPC PERMISSION_DENIED mapped to HTTP 403. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "PERMISSION_DENIED"
+            ]
+          },
+          "404": {
+            "description": "gRPC NOT_FOUND mapped to HTTP 404. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "NOT_FOUND"
+            ]
+          },
+          "409": {
+            "description": "gRPC ALREADY_EXISTS/ABORTED mapped to HTTP 409. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "ALREADY_EXISTS",
+              "ABORTED"
+            ]
+          },
+          "429": {
+            "description": "gRPC RESOURCE_EXHAUSTED mapped to HTTP 429. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "RESOURCE_EXHAUSTED"
+            ]
+          },
+          "500": {
+            "description": "gRPC UNKNOWN/INTERNAL/DATA_LOSS mapped to HTTP 500. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "UNKNOWN",
+              "INTERNAL",
+              "DATA_LOSS"
+            ]
+          },
+          "501": {
+            "description": "gRPC UNIMPLEMENTED mapped to HTTP 501. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "UNIMPLEMENTED"
+            ]
+          },
+          "503": {
+            "description": "gRPC UNAVAILABLE mapped to HTTP 503. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "UNAVAILABLE"
+            ]
+          },
+          "504": {
+            "description": "gRPC DEADLINE_EXCEEDED mapped to HTTP 504. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "DEADLINE_EXCEEDED"
+            ]
+          },
+          "default": {
+            "description": "Unexpected gRPC error response. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "UNKNOWN"
+            ]
+          }
+        },
+        "parameters": [
+          {
+            "name": "namespace",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "key",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1CacheServiceIncrementBody"
+            }
+          }
+        ],
+        "tags": [
+          "CacheService"
+        ],
+        "x-udb-sdk-alias": "cache_increment",
+        "x-udb-scope": [
+          "udb:cache:increment"
         ],
         "x-udb-retry-safe": false,
         "x-udb-idempotency": {
@@ -50181,6 +50336,13 @@
         "updateMask": {
           "type": "string",
           "description": "Optional PATCH mask relative to the role resource. When omitted, legacy\nclients keep the historical non-empty-field patch behavior."
+        },
+        "tokenScopes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Replaces the role's person token scopes (same rules as\n`CreateRoleRequest.token_scopes`; service accounts never get them).\nWithout `update_mask` a non-empty list replaces the stored one; list\n`token_scopes` in `update_mask` to set it, including to clear it with an\nempty list. Bound users carry the new scopes after their next login or\nrefresh."
         }
       },
       "required": [
@@ -52680,6 +52842,29 @@
       },
       "description": "One scanned namespace entry. `key` is the namespace-local key (the\n`udb:cache:<tenant>:<ns>:` prefix is stripped before it leaves the server)."
     },
+    "v1CacheServiceIncrementBody": {
+      "type": "object",
+      "properties": {
+        "tenantId": {
+          "type": "string"
+        },
+        "delta": {
+          "type": "string",
+          "format": "int64",
+          "description": "Added to the counter; may be negative. 0 reads the current value without\nwriting (a missing key reads as 0 and is not created)."
+        },
+        "ttlSecondsIfCreated": {
+          "type": "string",
+          "format": "int64",
+          "description": "TTL for a key this call creates; 0 = the namespace default TTL (or no\nexpiry if none is configured). An existing key keeps its TTL."
+        },
+        "max": {
+          "type": "string",
+          "format": "int64",
+          "description": "Upper bound for the new value; 0 = no bound. An increment that would take\nthe value above `max` is not applied and the response has `refused` set."
+        }
+      }
+    },
     "v1CanaryResponse": {
       "type": "object",
       "properties": {
@@ -53714,6 +53899,13 @@
           "additionalProperties": {
             "type": "string"
           }
+        },
+        "tokenScopes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Scopes a PERSON's access token carries while bound to this role in its\ntenant/project (e.g. \"udb:authn:manage-grants\"), projected at login and\nrefresh. Service accounts never get them: their scopes come only from\ntheir typed grant. Refused: empty, wildcard, admin, owner, platform and\nthe token-exchange scope; at most 64 scopes of at most 120 characters.\nReturned as `Role.token_scopes_json`."
         }
       },
       "required": [
@@ -56706,6 +56898,33 @@
         "createdAtUnix": {
           "type": "string",
           "format": "int64"
+        }
+      }
+    },
+    "v1IncrementResponse": {
+      "type": "object",
+      "properties": {
+        "value": {
+          "type": "string",
+          "format": "int64",
+          "description": "The counter after this call (unchanged when `refused`)."
+        },
+        "created": {
+          "type": "boolean",
+          "description": "True when this call created the key."
+        },
+        "refused": {
+          "type": "boolean",
+          "description": "True when `max` was set and the increment would have exceeded it; nothing\nwas written."
+        },
+        "ttlRemainingSeconds": {
+          "type": "string",
+          "format": "int64",
+          "description": "Seconds until the key expires, rounded up; 0 when it has no TTL or does\nnot exist. Lets a limiter send Retry-After without a second call."
+        },
+        "error": {
+          "$ref": "#/definitions/v1ApiError",
+          "title": "Error information if operation failed"
         }
       }
     },
@@ -61394,6 +61613,10 @@
         },
         "metadataJson": {
           "type": "string"
+        },
+        "tokenScopesJson": {
+          "type": "string",
+          "description": "JSON array of the token scopes a PERSON's access token carries while bound\nto this role in the role's tenant/project, e.g. [\"udb:authn:manage-grants\"].\nProjected at login/refresh time; service accounts never receive them (their\nscopes come only from their typed grant). Wildcard, admin, owner, platform\nand the token-exchange scope are refused on write."
         }
       }
     },

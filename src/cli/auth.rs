@@ -151,12 +151,29 @@ async fn run_auth_command_async(command: AuthCommand) -> Result<serde_json::Valu
                 )
                 .await?
             };
+            // An unknown --tenant or --username is created rather than refused,
+            // so a typo silently mints a new tenant or user; say so loudly.
+            if admin.created_tenant {
+                eprintln!(
+                    "warning: no tenant matched --tenant '{tenant}', so a new tenant {} was created",
+                    admin.tenant_id
+                );
+            }
+            if admin.created_user {
+                eprintln!("warning: no user named '{username}' existed, so a new user was created");
+            } else {
+                eprintln!(
+                    "note: reused the existing user '{username}'; its password and email were not changed"
+                );
+            }
             Ok(json!({
                 "bootstrapped": true,
                 "served": served,
                 "platform_admin": platform_admin,
                 "user_id": admin.user_id,
                 "username": username,
+                "created_user": admin.created_user,
+                "created_tenant": admin.created_tenant,
                 // `tenant` is the human code/input; `tenant_id` is the CANONICAL
                 // UUID the principal was bound to (and that the Login JWT claim
                 // carries). Clients/tests MUST send this UUID in request bodies.

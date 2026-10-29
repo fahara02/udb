@@ -932,6 +932,13 @@ type CreateRoleRequest struct {
 	ScopeType     v1.RoleScopeType       `protobuf:"varint,8,opt,name=scope_type,json=scopeType,proto3,enum=udb.core.authz.entity.v1.RoleScopeType" json:"scope_type,omitempty"`
 	AccessSurface string                 `protobuf:"bytes,9,opt,name=access_surface,json=accessSurface,proto3" json:"access_surface,omitempty"`
 	Metadata      map[string]string      `protobuf:"bytes,10,rep,name=metadata,proto3" json:"metadata,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	// Scopes a PERSON's access token carries while bound to this role in its
+	// tenant/project (e.g. "udb:authn:manage-grants"), projected at login and
+	// refresh. Service accounts never get them: their scopes come only from
+	// their typed grant. Refused: empty, wildcard, admin, owner, platform and
+	// the token-exchange scope; at most 64 scopes of at most 120 characters.
+	// Returned as `Role.token_scopes_json`.
+	TokenScopes   []string `protobuf:"bytes,11,rep,name=token_scopes,json=tokenScopes,proto3" json:"token_scopes,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1032,6 +1039,13 @@ func (x *CreateRoleRequest) GetAccessSurface() string {
 func (x *CreateRoleRequest) GetMetadata() map[string]string {
 	if x != nil {
 		return x.Metadata
+	}
+	return nil
+}
+
+func (x *CreateRoleRequest) GetTokenScopes() []string {
+	if x != nil {
+		return x.TokenScopes
 	}
 	return nil
 }
@@ -2361,7 +2375,14 @@ type UpdateRoleRequest struct {
 	UpdatedBy   string                 `protobuf:"bytes,5,opt,name=updated_by,json=updatedBy,proto3" json:"updated_by,omitempty"`
 	// Optional PATCH mask relative to the role resource. When omitted, legacy
 	// clients keep the historical non-empty-field patch behavior.
-	UpdateMask    *fieldmaskpb.FieldMask `protobuf:"bytes,6,opt,name=update_mask,json=updateMask,proto3" json:"update_mask,omitempty"`
+	UpdateMask *fieldmaskpb.FieldMask `protobuf:"bytes,6,opt,name=update_mask,json=updateMask,proto3" json:"update_mask,omitempty"`
+	// Replaces the role's person token scopes (same rules as
+	// `CreateRoleRequest.token_scopes`; service accounts never get them).
+	// Without `update_mask` a non-empty list replaces the stored one; list
+	// `token_scopes` in `update_mask` to set it, including to clear it with an
+	// empty list. Bound users carry the new scopes after their next login or
+	// refresh.
+	TokenScopes   []string `protobuf:"bytes,7,rep,name=token_scopes,json=tokenScopes,proto3" json:"token_scopes,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2434,6 +2455,13 @@ func (x *UpdateRoleRequest) GetUpdatedBy() string {
 func (x *UpdateRoleRequest) GetUpdateMask() *fieldmaskpb.FieldMask {
 	if x != nil {
 		return x.UpdateMask
+	}
+	return nil
+}
+
+func (x *UpdateRoleRequest) GetTokenScopes() []string {
+	if x != nil {
+		return x.TokenScopes
 	}
 	return nil
 }
@@ -4133,7 +4161,7 @@ const file_udb_core_authz_services_v1_core_proto_rawDesc = "" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authzP\x01\"o\n" +
 	"\rAuthzResponse\x12@\n" +
-	"\bdecision\x18\x01 \x01(\v2$.udb.core.authz.services.v1.DecisionR\bdecision:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authzP\x01\"\xa9\x04\n" +
+	"\bdecision\x18\x01 \x01(\v2$.udb.core.authz.services.v1.DecisionR\bdecision:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authzP\x01\"\xd1\x04\n" +
 	"\x11CreateRoleRequest\x12\x17\n" +
 	"\x04name\x18\x01 \x01(\tB\x03\xe0A\x02R\x04name\x12%\n" +
 	"\vdescription\x18\x02 \x01(\tB\x03\xe0A\x01R\vdescription\x12\"\n" +
@@ -4148,7 +4176,8 @@ const file_udb_core_authz_services_v1_core_proto_rawDesc = "" +
 	"scope_type\x18\b \x01(\x0e2'.udb.core.authz.entity.v1.RoleScopeTypeB\x03\xe0A\x01R\tscopeType\x12*\n" +
 	"\x0eaccess_surface\x18\t \x01(\tB\x03\xe0A\x01R\raccessSurface\x12W\n" +
 	"\bmetadata\x18\n" +
-	" \x03(\v2;.udb.core.authz.services.v1.CreateRoleRequest.MetadataEntryR\bmetadata\x1a;\n" +
+	" \x03(\v2;.udb.core.authz.services.v1.CreateRoleRequest.MetadataEntryR\bmetadata\x12&\n" +
+	"\ftoken_scopes\x18\v \x03(\tB\x03\xe0A\x01R\vtokenScopes\x1a;\n" +
 	"\rMetadataEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authzP\x01\"f\n" +
@@ -4262,7 +4291,7 @@ const file_udb_core_authz_services_v1_core_proto_rawDesc = "" +
 	"\aresults\x18\x01 \x03(\v2F.udb.core.authz.services.v1.BatchCheckPermissionsResponse.ResultsEntryR\aresults\x1a:\n" +
 	"\fResultsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\bR\x05value:\x028\x01:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authzP\x01\"\xa5\x02\n" +
+	"\x05value\x18\x02 \x01(\bR\x05value:\x028\x01:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authzP\x01\"\xcd\x02\n" +
 	"\x11UpdateRoleRequest\x12\x1c\n" +
 	"\arole_id\x18\x01 \x01(\tB\x03\xe0A\x02R\x06roleId\x12\x17\n" +
 	"\x04name\x18\x02 \x01(\tB\x03\xe0A\x01R\x04name\x12%\n" +
@@ -4271,7 +4300,8 @@ const file_udb_core_authz_services_v1_core_proto_rawDesc = "" +
 	"\n" +
 	"updated_by\x18\x05 \x01(\tB\x03\xe0A\x02R\tupdatedBy\x12;\n" +
 	"\vupdate_mask\x18\x06 \x01(\v2\x1a.google.protobuf.FieldMaskR\n" +
-	"updateMask:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authzP\x01B\f\n" +
+	"updateMask\x12&\n" +
+	"\ftoken_scopes\x18\a \x03(\tB\x03\xe0A\x01R\vtokenScopes:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authzP\x01B\f\n" +
 	"\n" +
 	"_is_active\"f\n" +
 	"\x12UpdateRoleResponse\x122\n" +

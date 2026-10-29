@@ -12,7 +12,7 @@ from typing import ClassVar as _ClassVar, Optional as _Optional, Union as _Union
 DESCRIPTOR: _descriptor.FileDescriptor
 
 class Role(_message.Message):
-    __slots__ = ("role_id", "name", "description", "is_system", "is_active", "created_by", "created_at", "updated_at", "deleted_at", "tenant_id", "deleted_by", "role_code", "domain", "project_id", "scope_type", "access_surface", "metadata_json")
+    __slots__ = ("role_id", "name", "description", "is_system", "is_active", "created_by", "created_at", "updated_at", "deleted_at", "tenant_id", "deleted_by", "role_code", "domain", "project_id", "scope_type", "access_surface", "metadata_json", "token_scopes_json")
     ROLE_ID_FIELD_NUMBER: _ClassVar[int]
     NAME_FIELD_NUMBER: _ClassVar[int]
     DESCRIPTION_FIELD_NUMBER: _ClassVar[int]
@@ -30,6 +30,7 @@ class Role(_message.Message):
     SCOPE_TYPE_FIELD_NUMBER: _ClassVar[int]
     ACCESS_SURFACE_FIELD_NUMBER: _ClassVar[int]
     METADATA_JSON_FIELD_NUMBER: _ClassVar[int]
+    TOKEN_SCOPES_JSON_FIELD_NUMBER: _ClassVar[int]
     role_id: str
     name: str
     description: str
@@ -47,4 +48,5 @@ class Role(_message.Message):
     scope_type: _enums_pb2.RoleScopeType
     access_surface: str
     metadata_json: str
-    def __init__(self, role_id: _Optional[str] = ..., name: _Optional[str] = ..., description: _Optional[str] = ..., is_system: bool = ..., is_active: bool = ..., created_by: _Optional[str] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., updated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., deleted_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., tenant_id: _Optional[str] = ..., deleted_by: _Optional[str] = ..., role_code: _Optional[str] = ..., domain: _Optional[str] = ..., project_id: _Optional[str] = ..., scope_type: _Optional[_Union[_enums_pb2.RoleScopeType, str]] = ..., access_surface: _Optional[str] = ..., metadata_json: _Optional[str] = ...) -> None: ...
+    token_scopes_json: str
+    def __init__(self, role_id: _Optional[str] = ..., name: _Optional[str] = ..., description: _Optional[str] = ..., is_system: bool = ..., is_active: bool = ..., created_by: _Optional[str] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., updated_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., deleted_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., tenant_id: _Optional[str] = ..., deleted_by: _Optional[str] = ..., role_code: _Optional[str] = ..., domain: _Optional[str] = ..., project_id: _Optional[str] = ..., scope_type: _Optional[_Union[_enums_pb2.RoleScopeType, str]] = ..., access_surface: _Optional[str] = ..., metadata_json: _Optional[str] = ..., token_scopes_json: _Optional[str] = ...) -> None: ...

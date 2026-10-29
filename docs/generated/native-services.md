@@ -12,7 +12,7 @@ Contract version `8.0.0` · 28 native services.
 | `authn` | Authentication | auth | yes | postgres | 64 | control-plane |
 | `authz` | Authorization | governance | yes | postgres | 41 | control-plane |
 | `backup` | Backup | backup | yes | postgres | 8 | control-plane |
-| `cache` | Cache | cache | yes | postgres, redis | 7 | control-plane |
+| `cache` | Cache | cache | yes | postgres, redis | 8 | control-plane |
 | `config` | Config | config | yes | postgres | 5 | control-plane |
 | `control` | Control Plane Distribution | control | yes | postgres | 6 | control-plane |
 | `embedding` | Embeddings | embedding | yes | postgres | 19 | control-plane |

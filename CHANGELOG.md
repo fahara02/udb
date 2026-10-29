@@ -5,6 +5,109 @@ the package version in `Cargo.toml`; historical v0.3.2 audit material is folded
 into the v0.3.x entries because the codebase advanced to v0.3.7 before that
 release line was tagged.
 
+## [0.6.5] - 2026-10-30
+
+### Added
+
+- **A tenant role can give its people token scopes.** `CreateRole` and
+  `UpdateRole` accept `token_scopes` (a list such as
+  `["udb:authn:manage-grants"]`), and every returned `Role` shows the stored
+  list in `token_scopes_json`. A person bound to the role in the role's
+  tenant and project carries those scopes in their access token, next to the
+  scopes `organization_owner` and `platform_admin` already give; the role
+  confers nothing in any other tenant or project. Service accounts bound to
+  the role get none of them: their scopes still come only from their typed
+  grant. A role refuses an empty scope, any scope containing `*`, admin,
+  owner, superuser, root and platform scopes, and
+  `udb:authn:exchange-tenant-token`, with `INVALID_ARGUMENT` on
+  `token_scopes`; at most 64 scopes of at most 120 characters. Scopes are
+  read when a token is issued or refreshed, so after changing a role's scopes
+  its people must log in again or refresh. On `UpdateRole`, a non-empty list
+  replaces the stored one; put `token_scopes` in `update_mask` to clear it.
+- **`CacheService.Increment`: an atomic counter in one round trip.**
+  `Increment{tenant_id, namespace, key, delta, ttl_seconds_if_created, max}`
+  returns `{value, created, refused, ttl_remaining_seconds}`
+  (`POST /v1/cache/{namespace}/{key}:increment`). It is one Redis script, so
+  concurrent callers never lose an update, and a rate limiter needs one call
+  per decision instead of lock, get, set and unlock. A missing key starts at 0
+  and takes `ttl_seconds_if_created` (0 = the namespace default TTL); an
+  existing key keeps its TTL. With `max` > 0, an increment that would pass
+  `max` is not applied and `refused` is true; `ttl_remaining_seconds` lets the
+  limiter answer with `Retry-After` straight away. `delta` may be negative,
+  and 0 reads without writing. A value that is not an integer is refused with
+  `FAILED_PRECONDITION` (`cache_value_not_integer`), an int64 overflow with
+  `OUT_OF_RANGE` (`cache_counter_overflow`), and the namespace byte budget
+  applies as for `Set`. It needs the new scope `udb:cache:increment`
+  (`udb:cache:set` does not imply it), is not retried by the SDKs (a retry
+  would add `delta` again), and emits no outbox event. Every SDK has it typed.
+- **The offline `udb auth bootstrap user` says what it created.** Its JSON
+  output adds `created_user` and `created_tenant`, and it warns on stderr when
+  `--tenant` or `--username` matched nothing and a new tenant or user was
+  created, or notes that an existing user was reused unchanged. A mistyped
+  tenant or username no longer goes unnoticed.
+
+### Fixed
+
+- **Durable event consumers receive events on a served broker with
+  `UDB_CDC_JOURNAL_ONLY=true`.** The served broker reads its CDC settings
+  through an environment overlay that skipped `UDB_CDC_JOURNAL_ONLY` (and
+  `UDB_CDC_SOURCE_SENSITIVE_FIELDS`). With Kafka brokers configured but
+  journal-only requested, the outbox relay waited for Kafka acknowledgements
+  that never came, so no event reached the journal and no consumer saw one.
+  Both variables are now honoured, and a test keeps the two configuration
+  paths reading the same variables.
+- **`UDB_OTP_DELIVERY_WEBHOOK_URL` is used when it is set.** NotificationService
+  ships built-in auth-code templates, so with the webhook configured every code
+  was still queued as a notification and the webhook was never called; with no
+  notification provider those codes failed after the grace window. A
+  configured webhook now receives every code (`{channel, address, code,
+  otp_type, user_id}`), and NotificationService delivers codes only when no
+  webhook is set.
+- **A phone-only `CreateUser` is refused when no SMS can be sent.** The check
+  passed whenever NotificationService was mounted, even with no SMS provider,
+  so an account was created whose code could never arrive. It now requires
+  `UDB_OTP_DELIVERY_WEBHOOK_URL` or an `SMS` provider in
+  `UDB_NOTIFICATION_DELIVERY_PROVIDERS_JSON`.
+- **Only an owner or a cross-tenant admin can grant `organization_owner`.**
+  The role gives `udb:admin` and `udb:*` in its tenant, yet any caller with
+  `udb:authz:assign-role` could assign it (or update or delete an
+  `organization_owner` role). `AssignRole`, `UpdateRole` and `DeleteRole` on a
+  role whose code is `organization_owner` now need a caller who holds
+  `organization_owner` or is a cross-tenant admin (`platform_admin`), else
+  `PERMISSION_DENIED` (`organization_owner_authority_required`).
+
+### Upgrading from 0.6.2 or 0.6.3 to 0.6.4 or later
+
+- **Stage and activate the catalogue again after upgrading the CLI.** The
+  generated catalogue manifest includes the broker's own native tables, and
+  0.6.4 added one (`udb_authn.service_account_tenant_memberships`), so
+  `bootstrap` reports unchanged application protos as differing from the
+  catalogue activated by the older CLI and refuses. Stage and activate a
+  catalogue with the new CLI, then run `bootstrap`.
+- **Downgrading needs the backup taken before the upgrade.** A broker older
+  than 0.6.4 started against a database 0.6.4 has migrated tries to drop
+  `udb_authn.service_account_tenant_memberships`, is blocked, and restarts in
+  a loop. To go back, restore the pre-upgrade backup.
+
+### Breaking for callers
+
+- **A configured OTP webhook now receives every auth code.** Deployments that
+  set `UDB_OTP_DELIVERY_WEBHOOK_URL` and also relied on NotificationService
+  templates or providers for auth codes now get the codes at the webhook
+  instead.
+  - detect: env: `UDB_OTP_DELIVERY_WEBHOOK_URL`
+  - fix: unset `UDB_OTP_DELIVERY_WEBHOOK_URL` to keep auth codes in NotificationService, or make the webhook deliver them.
+- **A phone-only `CreateUser` needs a real SMS route.** With NotificationService
+  mounted but no SMS provider and no webhook, a phone-only `CreateUser` used
+  to succeed (and its code was never sent); it now fails `FAILED_PRECONDITION`
+  (`sms_delivery_unavailable`) before anything is written.
+  - detect: code: `sms_delivery_unavailable`
+  - fix: configure an `SMS` provider in `UDB_NOTIFICATION_DELIVERY_PROVIDERS_JSON` or set `UDB_OTP_DELIVERY_WEBHOOK_URL` before creating phone-only users.
+- **Granting `organization_owner` needs an owner or a cross-tenant admin.** A
+  role administrator without that role now gets `PERMISSION_DENIED`.
+  - detect: code: `organization_owner_authority_required`
+  - fix: grant the role from an `organization_owner` of that tenant or a `platform_admin` operator.
+
 ## [0.6.4] - 2026-10-28
 
 ### Added

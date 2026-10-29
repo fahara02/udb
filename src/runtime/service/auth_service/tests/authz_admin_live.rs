@@ -56,6 +56,7 @@ async fn live_postgres_authz_admin_crud_and_audit_lifecycle() {
             scope_type: authz_entity_pb::RoleScopeType::Project as i32,
             access_surface: "native-authz".to_string(),
             metadata: [("suite".to_string(), "live".to_string())].into(),
+            token_scopes: Vec::new(),
         }))
         .await
         .expect("create role for admin lifecycle")

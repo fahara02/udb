@@ -28,7 +28,7 @@ namespace Udb.Core.Authz.Entity.V1 {
             "cmUuYXV0aHouZW50aXR5LnYxGh9nb29nbGUvcHJvdG9idWYvdGltZXN0YW1w",
             "LnByb3RvGiR1ZGIvY29yZS9hdXRoei9lbnRpdHkvdjEvZW51bXMucHJvdG8a",
             "G3VkYi9jb3JlL2NvbW1vbi92MS9kYi5wcm90bxohdWRiL2NvcmUvY29tbW9u",
-            "L3YxL3NlY3VyaXR5LnByb3RvItYSCgRSb2xlEkMKB3JvbGVfaWQYASABKAlC",
+            "L3YxL3NlY3VyaXR5LnByb3RvIt8TCgRSb2xlEkMKB3JvbGVfaWQYASABKAlC",
             "KoK3GCYKB3JvbGVfaWQSBFVVSUQYASgBOhFnZW5fcmFuZG9tX3V1aWQoKVIG",
             "cm9sZUlkEnIKBG5hbWUYAiABKAlCXoK3GFoKBG5hbWUSDFZBUkNIQVIoMTAw",
             "KRgBUigKFWlkeF9yb2xlc19uYW1lX2RvbWFpbhIFQlRSRUUYAVoGZG9tYWlu",
@@ -66,32 +66,35 @@ namespace Udb.Core.Authz.Entity.V1 {
             "b3JrbG9hZCBzdXJmYWNlIHRoaXMgcm9sZSBpcyBpbnRlbmRlZCBmb3JSDWFj",
             "Y2Vzc1N1cmZhY2USbwoNbWV0YWRhdGFfanNvbhgRIAEoCUJKgrcYRgoNbWV0",
             "YWRhdGFfanNvbhIFSlNPTkIYAToLJ3t9Jzo6anNvbmJaHVByb2plY3QtZGVm",
-            "aW5lZCByb2xlIG1ldGFkYXRheAFSDG1ldGFkYXRhSnNvbjqYBfq2GPcDCgVy",
-            "b2xlcxIJdWRiX2F1dGh6GAIgASpJTmFtZWQgcm9sZXMgc2NvcGVkIGJ5IHRl",
-            "bmFudCwgcHJvamVjdCwgcmVzb3VyY2UgZG9tYWluLCBvciBhY2Nlc3Mgc3Vy",
-            "ZmFjZTABOAFAAWJeChB0ZW5hbnRfaXNvbGF0aW9uGkgodGVuYW50X2lkOjp0",
-            "ZXh0ID0gY3VycmVudF9zZXR0aW5nKCdhcHAuY3VycmVudF90ZW5hbnRfaWQn",
-            "LCB0cnVlKTo6dGV4dCkoAaoBTwoadHJnX3JvbGVzX3RvdWNoX3VwZGF0ZWRf",
-            "YXQSBkJFRk9SRRoGVVBEQVRFIhx1ZGJfYXV0aHoudG91Y2hfdXBkYXRlZF9h",
-            "dCgpKgNST1fCAdoBChl0b3VjaF91cGRhdGVkX2F0X2Z1bmN0aW9uEghwb3N0",
-            "Z3JlcxoPYmVmb3JlX3RyaWdnZXJzIqEBQ1JFQVRFIE9SIFJFUExBQ0UgRlVO",
-            "Q1RJT04gdWRiX2F1dGh6LnRvdWNoX3VwZGF0ZWRfYXQoKQpSRVRVUk5TIHRy",
-            "aWdnZXIKTEFOR1VBR0UgcGxwZ3NxbApBUyAkJApCRUdJTgogIE5FVy51cGRh",
-            "dGVkX2F0ID0gQ1VSUkVOVF9USU1FU1RBTVA7CiAgUkVUVVJOIE5FVzsKRU5E",
-            "OwokJDuKshmXAQoGdGVuYW50Ggl0ZW5hbnRfaWQqNHRlbmFudF9pZCA9IGN1",
-            "cnJlbnRfc2V0dGluZygnYXBwLmN1cnJlbnRfdGVuYW50X2lkJykyC3NvZnRf",
-            "ZGVsZXRlOhFhdXRoei5vcGVyYXRpb25hbED7E0gCUgZ0ZW5hbnRaCHN0YW5k",
-            "YXJkchV0ZW5hbnQuZGF0YV9yZXNpZGVuY3lC9AEKHGNvbS51ZGIuY29yZS5h",
-            "dXRoei5lbnRpdHkudjFCCVJvbGVQcm90b1ABWkRnaXRodWIuY29tL2ZhaGFy",
-            "YTAyL3VkYi9zZGsvZ28vZ2VuL3VkYi9jb3JlL2F1dGh6L2VudGl0eS92MTtl",
-            "bnRpdHl2MaICBFVDQUWqAhhVZGIuQ29yZS5BdXRoei5FbnRpdHkuVjHKAhhV",
-            "ZGJcQ29yZVxBdXRoelxFbnRpdHlcVjHiAiRVZGJcR1BCTWV0YWRhdGFcQ29y",
-            "ZVxBdXRoelxFbnRpdHlcVjHqAhxVZGI6OkNvcmU6OkF1dGh6OjpFbnRpdHk6",
-            "OlYxYgZwcm90bzM="));
+            "aW5lZCByb2xlIG1ldGFkYXRheAFSDG1ldGFkYXRhSnNvbhKGAQoRdG9rZW5f",
+            "c2NvcGVzX2pzb24YEiABKAlCWoK3GFYKEXRva2VuX3Njb3Blc19qc29uEgVK",
+            "U09OQhgBOgQnW10nWjBUb2tlbiBzY29wZXMgYSBwZXJzb24gYm91bmQgdG8g",
+            "dGhpcyByb2xlIGNhcnJpZXN4AVIPdG9rZW5TY29wZXNKc29uOpgF+rYY9wMK",
+            "BXJvbGVzEgl1ZGJfYXV0aHoYAiABKklOYW1lZCByb2xlcyBzY29wZWQgYnkg",
+            "dGVuYW50LCBwcm9qZWN0LCByZXNvdXJjZSBkb21haW4sIG9yIGFjY2VzcyBz",
+            "dXJmYWNlMAE4AUABYl4KEHRlbmFudF9pc29sYXRpb24aSCh0ZW5hbnRfaWQ6",
+            "OnRleHQgPSBjdXJyZW50X3NldHRpbmcoJ2FwcC5jdXJyZW50X3RlbmFudF9p",
+            "ZCcsIHRydWUpOjp0ZXh0KSgBqgFPChp0cmdfcm9sZXNfdG91Y2hfdXBkYXRl",
+            "ZF9hdBIGQkVGT1JFGgZVUERBVEUiHHVkYl9hdXRoei50b3VjaF91cGRhdGVk",
+            "X2F0KCkqA1JPV8IB2gEKGXRvdWNoX3VwZGF0ZWRfYXRfZnVuY3Rpb24SCHBv",
+            "c3RncmVzGg9iZWZvcmVfdHJpZ2dlcnMioQFDUkVBVEUgT1IgUkVQTEFDRSBG",
+            "VU5DVElPTiB1ZGJfYXV0aHoudG91Y2hfdXBkYXRlZF9hdCgpClJFVFVSTlMg",
+            "dHJpZ2dlcgpMQU5HVUFHRSBwbHBnc3FsCkFTICQkCkJFR0lOCiAgTkVXLnVw",
+            "ZGF0ZWRfYXQgPSBDVVJSRU5UX1RJTUVTVEFNUDsKICBSRVRVUk4gTkVXOwpF",
+            "TkQ7CiQkO4qyGZcBCgZ0ZW5hbnQaCXRlbmFudF9pZCo0dGVuYW50X2lkID0g",
+            "Y3VycmVudF9zZXR0aW5nKCdhcHAuY3VycmVudF90ZW5hbnRfaWQnKTILc29m",
+            "dF9kZWxldGU6EWF1dGh6Lm9wZXJhdGlvbmFsQPsTSAJSBnRlbmFudFoIc3Rh",
+            "bmRhcmRyFXRlbmFudC5kYXRhX3Jlc2lkZW5jeUL0AQocY29tLnVkYi5jb3Jl",
+            "LmF1dGh6LmVudGl0eS52MUIJUm9sZVByb3RvUAFaRGdpdGh1Yi5jb20vZmFo",
+            "YXJhMDIvdWRiL3Nkay9nby9nZW4vdWRiL2NvcmUvYXV0aHovZW50aXR5L3Yx",
+            "O2VudGl0eXYxogIEVUNBRaoCGFVkYi5Db3JlLkF1dGh6LkVudGl0eS5WMcoC",
+            "GFVkYlxDb3JlXEF1dGh6XEVudGl0eVxWMeICJFVkYlxHUEJNZXRhZGF0YVxD",
+            "b3JlXEF1dGh6XEVudGl0eVxWMeoCHFVkYjo6Q29yZTo6QXV0aHo6OkVudGl0",
+            "eTo6VjFiBnByb3RvMw=="));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { global::Google.Protobuf.WellKnownTypes.TimestampReflection.Descriptor, global::Udb.Core.Authz.Entity.V1.EnumsReflection.Descriptor, global::Udb.Core.Common.V1.DbReflection.Descriptor, global::Udb.Core.Common.V1.SecurityReflection.Descriptor, },
           new pbr::GeneratedClrTypeInfo(null, null, new pbr::GeneratedClrTypeInfo[] {
-            new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Core.Authz.Entity.V1.Role), global::Udb.Core.Authz.Entity.V1.Role.Parser, new[]{ "RoleId", "Name", "Description", "IsSystem", "IsActive", "CreatedBy", "CreatedAt", "UpdatedAt", "DeletedAt", "TenantId", "DeletedBy", "RoleCode", "Domain", "ProjectId", "ScopeType", "AccessSurface", "MetadataJson" }, null, null, null, null)
+            new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Core.Authz.Entity.V1.Role), global::Udb.Core.Authz.Entity.V1.Role.Parser, new[]{ "RoleId", "Name", "Description", "IsSystem", "IsActive", "CreatedBy", "CreatedAt", "UpdatedAt", "DeletedAt", "TenantId", "DeletedBy", "RoleCode", "Domain", "ProjectId", "ScopeType", "AccessSurface", "MetadataJson", "TokenScopesJson" }, null, null, null, null)
           }));
     }
     #endregion
@@ -150,6 +153,7 @@ namespace Udb.Core.Authz.Entity.V1 {
       scopeType_ = other.scopeType_;
       accessSurface_ = other.accessSurface_;
       metadataJson_ = other.metadataJson_;
+      tokenScopesJson_ = other.tokenScopesJson_;
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
     }
 
@@ -363,6 +367,25 @@ namespace Udb.Core.Authz.Entity.V1 {
       }
     }
 
+    /// <summary>Field number for the "token_scopes_json" field.</summary>
+    public const int TokenScopesJsonFieldNumber = 18;
+    private string tokenScopesJson_ = "";
+    /// <summary>
+    /// JSON array of the token scopes a PERSON's access token carries while bound
+    /// to this role in the role's tenant/project, e.g. ["udb:authn:manage-grants"].
+    /// Projected at login/refresh time; service accounts never receive them (their
+    /// scopes come only from their typed grant). Wildcard, admin, owner, platform
+    /// and the token-exchange scope are refused on write.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string TokenScopesJson {
+      get { return tokenScopesJson_; }
+      set {
+        tokenScopesJson_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public override bool Equals(object other) {
@@ -395,6 +418,7 @@ namespace Udb.Core.Authz.Entity.V1 {
       if (ScopeType != other.ScopeType) return false;
       if (AccessSurface != other.AccessSurface) return false;
       if (MetadataJson != other.MetadataJson) return false;
+      if (TokenScopesJson != other.TokenScopesJson) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
 
@@ -419,6 +443,7 @@ namespace Udb.Core.Authz.Entity.V1 {
       if (ScopeType != global::Udb.Core.Authz.Entity.V1.RoleScopeType.Unspecified) hash ^= ScopeType.GetHashCode();
       if (AccessSurface.Length != 0) hash ^= AccessSurface.GetHashCode();
       if (MetadataJson.Length != 0) hash ^= MetadataJson.GetHashCode();
+      if (TokenScopesJson.Length != 0) hash ^= TokenScopesJson.GetHashCode();
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
       }
@@ -505,6 +530,10 @@ namespace Udb.Core.Authz.Entity.V1 {
         output.WriteRawTag(138, 1);
         output.WriteString(MetadataJson);
       }
+      if (TokenScopesJson.Length != 0) {
+        output.WriteRawTag(146, 1);
+        output.WriteString(TokenScopesJson);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
       }
@@ -583,6 +612,10 @@ namespace Udb.Core.Authz.Entity.V1 {
         output.WriteRawTag(138, 1);
         output.WriteString(MetadataJson);
       }
+      if (TokenScopesJson.Length != 0) {
+        output.WriteRawTag(146, 1);
+        output.WriteString(TokenScopesJson);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(ref output);
       }
@@ -643,6 +676,9 @@ namespace Udb.Core.Authz.Entity.V1 {
       }
       if (MetadataJson.Length != 0) {
         size += 2 + pb::CodedOutputStream.ComputeStringSize(MetadataJson);
+      }
+      if (TokenScopesJson.Length != 0) {
+        size += 2 + pb::CodedOutputStream.ComputeStringSize(TokenScopesJson);
       }
       if (_unknownFields != null) {
         size += _unknownFields.CalculateSize();
@@ -715,6 +751,9 @@ namespace Udb.Core.Authz.Entity.V1 {
       }
       if (other.MetadataJson.Length != 0) {
         MetadataJson = other.MetadataJson;
+      }
+      if (other.TokenScopesJson.Length != 0) {
+        TokenScopesJson = other.TokenScopesJson;
       }
       _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
     }
@@ -812,6 +851,10 @@ namespace Udb.Core.Authz.Entity.V1 {
             MetadataJson = input.ReadString();
             break;
           }
+          case 146: {
+            TokenScopesJson = input.ReadString();
+            break;
+          }
         }
       }
     #endif
@@ -906,6 +949,10 @@ namespace Udb.Core.Authz.Entity.V1 {
           }
           case 138: {
             MetadataJson = input.ReadString();
+            break;
+          }
+          case 146: {
+            TokenScopesJson = input.ReadString();
             break;
           }
         }

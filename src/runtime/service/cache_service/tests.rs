@@ -19,9 +19,9 @@ use super::config::{
 };
 use super::errors::{redis_capability_status, require_field, validate_namespace};
 use super::keys::{
-    BUDGETED_DELETE_LUA, BUDGETED_SET_LUA, bytes_counter_key, clamped_scan_count, data_key,
-    data_match, effective_max_bytes, meta_key, meta_match_all, namespace_match_all, parse_meta_key,
-    reconcile_cursor_key, reconciled_sum, would_exceed_budget,
+    BUDGETED_DELETE_LUA, BUDGETED_INCREMENT_LUA, BUDGETED_SET_LUA, bytes_counter_key,
+    clamped_scan_count, data_key, data_match, effective_max_bytes, meta_key, meta_match_all,
+    namespace_match_all, parse_meta_key, reconcile_cursor_key, reconciled_sum, would_exceed_budget,
 };
 use super::worker::{
     invalidation_source_from_payload, invalidation_tenant_scope, namespace_for_source_table,
@@ -183,6 +183,30 @@ fn budgeted_set_and_delete_are_single_atomic_scripts() {
     let release = del.find("INCRBY").expect("delete script releases bytes");
     assert!(probe < remove && remove < release);
     assert!(del.contains("-old"), "releases exactly the removed length");
+}
+
+/// `Increment` is one script: the bound check refuses before any write, the
+/// INCRBY runs under `pcall` (a non-integer or overflowing value becomes a
+/// status, not a script error), a created key is the only one given a TTL, and
+/// the byte counter is charged by the measured length change.
+#[test]
+fn increment_is_a_single_bounded_atomic_script() {
+    let script = BUDGETED_INCREMENT_LUA;
+    let bound = script
+        .find("cap > 0 and current + tonumber(ARGV[1]) > cap")
+        .expect("bound check");
+    let write = script
+        .find("redis.pcall('INCRBY', KEYS[1], ARGV[1])")
+        .expect("guarded INCRBY");
+    let measure = script.find("STRLEN").expect("length measured after write");
+    let expire = script
+        .find("if created == 1 and ttl > 0 then redis.call('EXPIRE'")
+        .expect("TTL only for a created key");
+    let charge = script
+        .find("redis.call('INCRBY', KEYS[2], len_delta)")
+        .expect("byte counter charge");
+    assert!(bound < write && write < measure && measure < expire && expire < charge);
+    assert!(!script.contains("KEYS'"), "never the KEYS command");
 }
 
 /// Prefix sweeps MUST use SCAN, never KEYS, and the data-key match pattern is

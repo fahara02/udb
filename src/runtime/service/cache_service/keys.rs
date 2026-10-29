@@ -147,6 +147,72 @@ local after = used \
 if delta ~= 0 then after = redis.call('INCRBY', KEYS[2], delta) end \
 return {1, after, delta}";
 
+/// Atomic counter increment for `Increment` (same single-script rationale as
+/// [`BUDGETED_SET_LUA`]): the bound check, the `INCRBY`, the TTL of a created
+/// key, the byte-budget charge and the remaining-TTL read cannot interleave
+/// with another writer. The budget is charged by the exact `STRLEN` change; an
+/// increment that would overrun it is reverted before the script returns.
+///
+/// `KEYS[1]` = data key, `KEYS[2]` = byte counter.
+/// `ARGV[1]` = delta, `ARGV[2]` = max (`<= 0` = no bound), `ARGV[3]` = TTL
+/// seconds for a created key (`<= 0` = no expiry), `ARGV[4]` = effective max
+/// bytes.
+/// Returns `{status, value, created(0|1), ttl_remaining_seconds}` where status
+/// is [`INCREMENT_APPLIED`], [`INCREMENT_REFUSED`] (over `max`; nothing
+/// written), [`INCREMENT_NOT_INTEGER`], [`INCREMENT_OVERFLOW`] or
+/// [`INCREMENT_OVER_BUDGET`] (reverted). A missing key reports TTL 0.
+#[cfg_attr(not(feature = "redis"), allow(dead_code))]
+pub(crate) const BUDGETED_INCREMENT_LUA: &str = "\
+local function remaining() \
+  local p = redis.call('PTTL', KEYS[1]) \
+  if p > 0 then return math.ceil(p / 1000) end \
+  return 0 \
+end \
+local raw = redis.call('GET', KEYS[1]) \
+local created = 0 \
+local current = 0 \
+local old_len = 0 \
+if raw then \
+  current = tonumber(raw) \
+  if current == nil or current ~= math.floor(current) then return {-1, 0, 0, remaining()} end \
+  old_len = string.len(raw) \
+else \
+  created = 1 \
+end \
+local cap = tonumber(ARGV[2]) or 0 \
+if cap > 0 and current + tonumber(ARGV[1]) > cap then \
+  return {0, current, 0, remaining()} \
+end \
+if tonumber(ARGV[1]) == 0 then return {1, current, 0, remaining()} end \
+local after = redis.pcall('INCRBY', KEYS[1], ARGV[1]) \
+if type(after) == 'table' and after.err then \
+  if string.find(after.err, 'overflow') then return {-2, current, 0, remaining()} end \
+  return {-1, 0, 0, remaining()} \
+end \
+local len_delta = redis.call('STRLEN', KEYS[1]) - old_len \
+local used = tonumber(redis.call('GET', KEYS[2]) or '0') or 0 \
+if used < 0 then used = 0 end \
+if len_delta > 0 and used + len_delta > tonumber(ARGV[4]) then \
+  if created == 1 then redis.call('DEL', KEYS[1]) else redis.call('SET', KEYS[1], raw, 'KEEPTTL') end \
+  return {-3, current, 0, remaining()} \
+end \
+local ttl = tonumber(ARGV[3]) or 0 \
+if created == 1 and ttl > 0 then redis.call('EXPIRE', KEYS[1], ttl) end \
+if len_delta ~= 0 then redis.call('INCRBY', KEYS[2], len_delta) end \
+return {1, after, created, remaining()}";
+
+/// [`BUDGETED_INCREMENT_LUA`] statuses.
+#[cfg_attr(not(feature = "redis"), allow(dead_code))]
+pub(crate) const INCREMENT_APPLIED: i64 = 1;
+#[cfg_attr(not(feature = "redis"), allow(dead_code))]
+pub(crate) const INCREMENT_REFUSED: i64 = 0;
+#[cfg_attr(not(feature = "redis"), allow(dead_code))]
+pub(crate) const INCREMENT_NOT_INTEGER: i64 = -1;
+#[cfg_attr(not(feature = "redis"), allow(dead_code))]
+pub(crate) const INCREMENT_OVERFLOW: i64 = -2;
+#[cfg_attr(not(feature = "redis"), allow(dead_code))]
+pub(crate) const INCREMENT_OVER_BUDGET: i64 = -3;
+
 /// Atomic delete + counter release (same single-script rationale as
 /// [`BUDGETED_SET_LUA`]): the released length is the length of the value that
 /// was actually removed, so a concurrent overwrite between a separate STRLEN

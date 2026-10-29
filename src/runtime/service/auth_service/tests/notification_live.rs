@@ -150,7 +150,10 @@ async fn authn_webhook_fallback_delivers_actual_codes_for_every_issuance_path() 
 #[tokio::test]
 #[ignore = "requires live Postgres; CI runs every ignored lib test"]
 async fn authn_reset_codes_are_queued_but_never_returned_by_notification_apis() {
+    use crate::runtime::service::live_tests::ops_seams_live::EnvRestore;
     let _guard = live_auth_db_lock().lock().await;
+    // A configured webhook takes the codes instead of NotificationService.
+    let _no_webhook = EnvRestore::set("UDB_OTP_DELIVERY_WEBHOOK_URL", "");
     let pool = live_pg_pool().await;
     migrate_native_auth_db(&pool).await;
     let notifier = std::sync::Arc::new(notification_service(pool.clone()).await);
@@ -766,5 +769,74 @@ async fn live_postgres_notification_service_crud_roundtrip() {
     );
     assert_eq!(stored.retry_count, 0);
 
+    cleanup_native_auth_db(&pool).await;
+}
+
+/// With NotificationService mounted: (1) a phone-only CreateUser is refused
+/// when nothing can deliver an SMS (no SMS provider, no webhook), because a
+/// mounted notifier alone only queues a code that is never sent; (2) a
+/// configured `UDB_OTP_DELIVERY_WEBHOOK_URL` takes the code even though the
+/// notifier is mounted (before 0.6.5 the built-in templates won and the webhook
+/// was never called).
+#[cfg(feature = "http-client")]
+#[tokio::test]
+#[ignore = "requires live Postgres; CI runs every ignored lib test"]
+async fn authn_otp_webhook_wins_over_mounted_notification_service() {
+    use crate::runtime::service::live_tests::notification_http_live::spawn_provider;
+    use crate::runtime::service::live_tests::ops_seams_live::EnvRestore;
+    let _guard = live_auth_db_lock().lock().await;
+    let pool = live_pg_pool().await;
+    migrate_native_auth_db(&pool).await;
+    let notifier = std::sync::Arc::new(notification_service(pool.clone()).await);
+    let authn = authn_service(pool.clone()).with_system_notifier(notifier);
+    let tenant = uuid::Uuid::new_v4().to_string();
+    let phone_only = |name: String| authn_pb::CreateUserRequest {
+        username: name,
+        phone: "+8801712345678".to_string(),
+        password: "CorrectHorse1!".to_string(),
+        tenant_id: tenant.clone(),
+        project_id: "default".to_string(),
+        ..Default::default()
+    };
+
+    {
+        let _no_webhook = EnvRestore::set("UDB_OTP_DELIVERY_WEBHOOK_URL", "");
+        let refused = authn
+            .create_user(Request::new(phone_only(format!(
+                "sms-none-{}",
+                uuid::Uuid::new_v4().simple()
+            ))))
+            .await
+            .expect_err("no SMS route: phone-only CreateUser is refused");
+        assert_eq!(refused.code(), tonic::Code::FailedPrecondition);
+        assert!(
+            refused.message().contains("SMS code delivery"),
+            "names the missing SMS delivery: {}",
+            refused.message()
+        );
+    }
+
+    let (addr, received) = spawn_provider("200 OK").await;
+    let _url = EnvRestore::set(
+        "UDB_OTP_DELIVERY_WEBHOOK_URL",
+        &format!("http://{addr}/otp"),
+    );
+    let created = authn
+        .create_user(Request::new(phone_only(format!(
+            "sms-webhook-{}",
+            uuid::Uuid::new_v4().simple()
+        ))))
+        .await
+        .expect("the webhook is an SMS route")
+        .into_inner();
+    let user = created.user.expect("created phone-only user");
+    let requests = received.lock().await;
+    assert_eq!(requests.len(), 1, "the webhook receives the code");
+    let body: serde_json::Value =
+        serde_json::from_slice(&requests[0].body).expect("JSON webhook body");
+    assert_eq!(body["channel"], "sms");
+    assert_eq!(body["address"], "+8801712345678");
+    assert_eq!(body["user_id"], user.user_id);
+    drop(requests);
     cleanup_native_auth_db(&pool).await;
 }

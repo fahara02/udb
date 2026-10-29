@@ -54,6 +54,17 @@ class CreateRoleRequest extends \Google\Protobuf\Internal\Message
      * Generated from protobuf field <code>map<string, string> metadata = 10 [json_name = "metadata"];</code>
      */
     private $metadata;
+    /**
+     * Scopes a PERSON's access token carries while bound to this role in its
+     * tenant/project (e.g. "udb:authn:manage-grants"), projected at login and
+     * refresh. Service accounts never get them: their scopes come only from
+     * their typed grant. Refused: empty, wildcard, admin, owner, platform and
+     * the token-exchange scope; at most 64 scopes of at most 120 characters.
+     * Returned as `Role.token_scopes_json`.
+     *
+     * Generated from protobuf field <code>repeated string token_scopes = 11 [json_name = "tokenScopes", (.google.api.field_behavior) = OPTIONAL];</code>
+     */
+    private $token_scopes;
 
     /**
      * Constructor.
@@ -71,6 +82,13 @@ class CreateRoleRequest extends \Google\Protobuf\Internal\Message
      *     @type int $scope_type
      *     @type string $access_surface
      *     @type array|\Google\Protobuf\Internal\MapField $metadata
+     *     @type string[] $token_scopes
+     *           Scopes a PERSON's access token carries while bound to this role in its
+     *           tenant/project (e.g. "udb:authn:manage-grants"), projected at login and
+     *           refresh. Service accounts never get them: their scopes come only from
+     *           their typed grant. Refused: empty, wildcard, admin, owner, platform and
+     *           the token-exchange scope; at most 64 scopes of at most 120 characters.
+     *           Returned as `Role.token_scopes_json`.
      * }
      */
     public function __construct($data = NULL) {
@@ -294,6 +312,42 @@ class CreateRoleRequest extends \Google\Protobuf\Internal\Message
     {
         $arr = GPBUtil::checkMapField($var, \Google\Protobuf\Internal\GPBType::STRING, \Google\Protobuf\Internal\GPBType::STRING);
         $this->metadata = $arr;
+
+        return $this;
+    }
+
+    /**
+     * Scopes a PERSON's access token carries while bound to this role in its
+     * tenant/project (e.g. "udb:authn:manage-grants"), projected at login and
+     * refresh. Service accounts never get them: their scopes come only from
+     * their typed grant. Refused: empty, wildcard, admin, owner, platform and
+     * the token-exchange scope; at most 64 scopes of at most 120 characters.
+     * Returned as `Role.token_scopes_json`.
+     *
+     * Generated from protobuf field <code>repeated string token_scopes = 11 [json_name = "tokenScopes", (.google.api.field_behavior) = OPTIONAL];</code>
+     * @return RepeatedField<string>
+     */
+    public function getTokenScopes()
+    {
+        return $this->token_scopes;
+    }
+
+    /**
+     * Scopes a PERSON's access token carries while bound to this role in its
+     * tenant/project (e.g. "udb:authn:manage-grants"), projected at login and
+     * refresh. Service accounts never get them: their scopes come only from
+     * their typed grant. Refused: empty, wildcard, admin, owner, platform and
+     * the token-exchange scope; at most 64 scopes of at most 120 characters.
+     * Returned as `Role.token_scopes_json`.
+     *
+     * Generated from protobuf field <code>repeated string token_scopes = 11 [json_name = "tokenScopes", (.google.api.field_behavior) = OPTIONAL];</code>
+     * @param string[] $var
+     * @return $this
+     */
+    public function setTokenScopes($var)
+    {
+        $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::STRING);
+        $this->token_scopes = $arr;
 
         return $this;
     }

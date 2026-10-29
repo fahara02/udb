@@ -802,6 +802,123 @@ async fn f6_cache_byte_budget_admits_exactly_budget_under_concurrent_sets() {
     assert_eq!(stats.item_count, 10, "only admitted entries were written");
 }
 
+/// F6b: `Increment` is one atomic server-side script: 50 concurrent `+1`
+/// calls bounded by `max: 30` apply exactly 30 and refuse 20, exactly one call
+/// creates the key, the created key takes `ttl_seconds_if_created` while a
+/// later call keeps it, and a non-integer value or an int64 overflow is refused
+/// with its own status instead of a transport error.
+#[cfg(feature = "redis")]
+#[tokio::test]
+#[ignore = "requires live Redis; run with UDB_INTEGRATION_REDIS_URL=redis://127.0.0.1:56379 ... -- --ignored --test-threads=1"]
+async fn f6b_cache_increment_is_atomic_bounded_and_keeps_ttl() {
+    use crate::proto::udb::core::cache::services::v1 as cache_pb;
+    use crate::proto::udb::core::cache::services::v1::cache_service_server::CacheService;
+    use crate::runtime::service::cache_service::CacheServiceImpl;
+    use std::sync::Arc;
+
+    let redis_url = super::support::live_env("UDB_INTEGRATION_REDIS_URL")
+        .or_else(|| super::support::live_env("UDB_REDIS_DSN"))
+        .unwrap_or_else(|| "redis://127.0.0.1:56379".to_string());
+    let client = redis::Client::open(redis_url.as_str()).expect("create live redis client");
+    let svc = Arc::new(CacheServiceImpl::new().with_redis(Some(client)));
+    let tenant_id = Uuid::new_v4().to_string();
+    let namespace = format!("f6b-{}", Uuid::new_v4().simple());
+    svc.create_namespace(tenant_request(
+        cache_pb::CreateNamespaceRequest {
+            tenant_id: tenant_id.clone(),
+            namespace: namespace.clone(),
+            ..Default::default()
+        },
+        &tenant_id,
+    ))
+    .await
+    .expect("create namespace");
+    let increment = |key: &str, delta: i64, ttl: i64, max: i64| {
+        let svc = svc.clone();
+        let tenant_id = tenant_id.clone();
+        let request = cache_pb::IncrementRequest {
+            tenant_id: tenant_id.clone(),
+            namespace: namespace.clone(),
+            key: key.to_string(),
+            delta,
+            ttl_seconds_if_created: ttl,
+            max,
+        };
+        async move { svc.increment(tenant_request(request, &tenant_id)).await }
+    };
+
+    let mut tasks = Vec::new();
+    for _ in 0..50 {
+        tasks.push(tokio::spawn(increment("limiter", 1, 60, 30)));
+    }
+    let (mut applied, mut refused, mut created) = (0, 0, 0);
+    for task in tasks {
+        let reply = task
+            .await
+            .expect("increment task joins")
+            .expect("increment succeeds")
+            .into_inner();
+        if reply.refused {
+            refused += 1;
+            assert_eq!(reply.value, 30, "a refusal reports the unchanged value");
+        } else {
+            applied += 1;
+        }
+        if reply.created {
+            created += 1;
+        }
+        assert!(
+            (1..=60).contains(&reply.ttl_remaining_seconds),
+            "every reply carries the created key's TTL"
+        );
+    }
+    assert_eq!((applied, refused, created), (30, 20, 1));
+
+    // An existing key keeps its TTL; delta 0 reads the value.
+    let read = increment("limiter", 0, 3600, 0)
+        .await
+        .expect("read")
+        .into_inner();
+    assert_eq!(read.value, 30);
+    assert!(!read.created && !read.refused);
+    assert!(read.ttl_remaining_seconds <= 60, "existing TTL is kept");
+
+    // No TTL requested and no namespace default: the key never expires.
+    let plain = increment("plain", -5, 0, 0)
+        .await
+        .expect("negative delta")
+        .into_inner();
+    assert_eq!(
+        (plain.value, plain.created, plain.ttl_remaining_seconds),
+        (-5, true, 0)
+    );
+
+    svc.set(tenant_request(
+        cache_pb::SetRequest {
+            tenant_id: tenant_id.clone(),
+            namespace: namespace.clone(),
+            key: "text".to_string(),
+            value: b"not-a-number".to_vec(),
+            ttl_seconds: 0,
+        },
+        &tenant_id,
+    ))
+    .await
+    .expect("set a non-integer value");
+    let not_integer = increment("text", 1, 0, 0)
+        .await
+        .expect_err("a non-integer value is refused");
+    assert_eq!(not_integer.code(), Code::FailedPrecondition);
+
+    increment("big", i64::MAX, 0, 0)
+        .await
+        .expect("reach i64::MAX");
+    let overflow = increment("big", 1, 0, 0)
+        .await
+        .expect_err("overflow is refused");
+    assert_eq!(overflow.code(), Code::OutOfRange);
+}
+
 /// F7: presign and HEAD are S3/MinIO-only; dispatching either at Azure Blob or
 /// GCS fails with an explicit FAILED_PRECONDITION capability error naming the
 /// backend and the required capability, before any network call (so no live
