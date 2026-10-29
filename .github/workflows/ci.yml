@@ -290,6 +290,12 @@ jobs:
     # only saved on success), and then the release-binary build overran 45
     # minutes after every test had already passed.
     timeout-minutes: ${{ matrix.os == 'windows-latest' && 120 || 45 }}
+    # Windows runners have a small paging file: with full debug info, the
+    # parallel test links each map the multi-hundred-MB `udb` rlib and fail
+    # with "The paging file is too small" (os error 1455). Line tables keep
+    # backtraces readable at a fraction of the size. Linux keeps full info.
+    env:
+      CARGO_PROFILE_DEV_DEBUG: ${{ matrix.os == 'windows-latest' && 'line-tables-only' || 'true' }}
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup-rust
