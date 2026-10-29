@@ -1634,6 +1634,10 @@ jobs:
       UDB_AUDIT_SINK_URL: file:///tmp/udb-service-accounts-audit.jsonl
       UDB_OTP_DEV_ECHO: "1"
       UDB_OTP_COOLDOWN_SECONDS: "0"
+      # A phone-only CreateUser needs a real SMS route. This webhook is the
+      # route; nothing listens on the discard port, and the SDK steps read the
+      # issued code through the dev echo above.
+      UDB_OTP_DELIVERY_WEBHOOK_URL: http://127.0.0.1:9/otp
     steps:
       - uses: actions/checkout@v4
       - name: Download broker binary
