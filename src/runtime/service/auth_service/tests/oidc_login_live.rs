@@ -365,8 +365,12 @@ async fn live_oidc_sign_in_code_flow_native_id_token_and_refusals() {
     let _loopback = LoopbackIdpSwitch::on();
     let (issuer, fake) = spawn_fake_provider().await;
     let tenant = Uuid::new_v4().to_string();
-    let idp =
-        super::super::idp::IdentityProviderServiceImpl::new().with_postgres(Some(pool.clone()));
+    // One keyed runtime seals the client secret (IdP) and unseals it at the
+    // token exchange (sign-in), in any posture the test process runs in.
+    let keyed = Arc::new(crate::runtime::core::DataBrokerRuntime::with_test_encryption_key().await);
+    let idp = super::super::idp::IdentityProviderServiceImpl::new()
+        .with_postgres(Some(pool.clone()))
+        .with_runtime(keyed.clone());
 
     // The redirect allowlist is validated when the provider is configured.
     let refused = idp
@@ -404,7 +408,7 @@ async fn live_oidc_sign_in_code_flow_native_id_token_and_refusals() {
         .expect("created provider")
         .provider_id;
 
-    let svc = authn_service_with_jwt(pool.clone());
+    let svc = authn_service_with_jwt(pool.clone()).with_runtime(Some(keyed.clone()));
 
     // ── refusals before any redirect ────────────────────────────────────────
     let not_allowlisted = svc
@@ -737,10 +741,13 @@ async fn live_oidc_jit_user_gets_mapped_roles_bound_and_never_reserved_ones() {
         seed_tenant_role(&pool, &tenant, code).await;
     }
     let broker = native_broker_service().await;
-    let svc =
-        authn_service_with_jwt(pool.clone()).with_authz_snapshot(Some(broker.authz_snapshot()));
-    let idp =
-        super::super::idp::IdentityProviderServiceImpl::new().with_postgres(Some(pool.clone()));
+    let keyed = Arc::new(crate::runtime::core::DataBrokerRuntime::with_test_encryption_key().await);
+    let svc = authn_service_with_jwt(pool.clone())
+        .with_authz_snapshot(Some(broker.authz_snapshot()))
+        .with_runtime(Some(keyed.clone()));
+    let idp = super::super::idp::IdentityProviderServiceImpl::new()
+        .with_postgres(Some(pool.clone()))
+        .with_runtime(keyed.clone());
     let provider_id = idp
         .create_provider(Request::new(idp_pb::CreateProviderRequest {
             tenant_id: tenant.clone(),

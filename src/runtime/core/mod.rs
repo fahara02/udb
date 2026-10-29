@@ -350,6 +350,26 @@ impl DataBrokerRuntime {
         self.canonical_stores.lock().ok()?.default_store()
     }
 
+    /// A runtime with a fixed at-rest key, for live tests that store and read
+    /// back sealed secrets (identity-provider client secrets) in whatever
+    /// posture the test process runs: fail-closed mode refuses to store them
+    /// without a key.
+    #[cfg(test)]
+    pub(crate) async fn with_test_encryption_key() -> Self {
+        use crate::runtime::config::EncryptionSettings;
+        use base64::{Engine as _, engine::general_purpose::STANDARD as B64};
+        let mut settings = EncryptionSettings::default();
+        settings.keys.insert(1, B64.encode([0x5au8; 32]));
+        let enc = EncryptionRuntime::from_settings(&settings)
+            .await
+            .expect("test encryption settings parse")
+            .expect("a test key was configured");
+        DataBrokerRuntime {
+            encryption: Some(enc),
+            ..DataBrokerRuntime::default()
+        }
+    }
+
     /// Encrypt a UDB-owned secret string for at-rest storage (Phase 5). Returns
     /// the AES-256-GCM-SIV envelope when an encryption key is configured. When no
     /// key is configured: plaintext in dev, but ERROR in `fail_closed_mode` (so
