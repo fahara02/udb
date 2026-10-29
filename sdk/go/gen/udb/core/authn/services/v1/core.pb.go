@@ -8478,6 +8478,7 @@ type CreateInvitationRequest struct {
 	// empty for OIDC and PASSKEY. No other account may already use it.
 	Address string `protobuf:"bytes,4,opt,name=address,proto3" json:"address,omitempty"`
 	// OIDC only: the tenant identity provider the invitee signs in with.
+	// Format: the provider's UUID (`provider_id` from IdentityProviderService).
 	IdpProviderId string `protobuf:"bytes,5,opt,name=idp_provider_id,json=idpProviderId,proto3" json:"idp_provider_id,omitempty"`
 	// Role CODES bound in the tenant on acceptance (at most 32). Reserved
 	// platform roles are refused; organization_owner needs a caller who holds

@@ -42,6 +42,7 @@ class CreateInvitationRequest extends \Google\Protobuf\Internal\Message
     protected $address = '';
     /**
      * OIDC only: the tenant identity provider the invitee signs in with.
+     * Format: the provider's UUID (`provider_id` from IdentityProviderService).
      *
      * Generated from protobuf field <code>string idp_provider_id = 5 [json_name = "idpProviderId"];</code>
      */
@@ -93,6 +94,7 @@ class CreateInvitationRequest extends \Google\Protobuf\Internal\Message
      *           empty for OIDC and PASSKEY. No other account may already use it.
      *     @type string $idp_provider_id
      *           OIDC only: the tenant identity provider the invitee signs in with.
+     *           Format: the provider's UUID (`provider_id` from IdentityProviderService).
      *     @type string[] $roles
      *           Role CODES bound in the tenant on acceptance (at most 32). Reserved
      *           platform roles are refused; organization_owner needs a caller who holds
@@ -222,6 +224,7 @@ class CreateInvitationRequest extends \Google\Protobuf\Internal\Message
 
     /**
      * OIDC only: the tenant identity provider the invitee signs in with.
+     * Format: the provider's UUID (`provider_id` from IdentityProviderService).
      *
      * Generated from protobuf field <code>string idp_provider_id = 5 [json_name = "idpProviderId"];</code>
      * @return string
@@ -233,6 +236,7 @@ class CreateInvitationRequest extends \Google\Protobuf\Internal\Message
 
     /**
      * OIDC only: the tenant identity provider the invitee signs in with.
+     * Format: the provider's UUID (`provider_id` from IdentityProviderService).
      *
      * Generated from protobuf field <code>string idp_provider_id = 5 [json_name = "idpProviderId"];</code>
      * @param string $var

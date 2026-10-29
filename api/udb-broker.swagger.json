@@ -56184,7 +56184,7 @@
         },
         "idpProviderId": {
           "type": "string",
-          "description": "OIDC only: the tenant identity provider the invitee signs in with."
+          "description": "OIDC only: the tenant identity provider the invitee signs in with.\nFormat: the provider's UUID (`provider_id` from IdentityProviderService)."
         },
         "roles": {
           "type": "array",

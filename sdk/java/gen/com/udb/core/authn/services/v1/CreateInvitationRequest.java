@@ -250,6 +250,7 @@ private static final long serialVersionUID = 0L;
   /**
    * <pre>
    * OIDC only: the tenant identity provider the invitee signs in with.
+   * Format: the provider's UUID (`provider_id` from IdentityProviderService).
    * </pre>
    *
    * <code>string idp_provider_id = 5 [json_name = "idpProviderId"];</code>
@@ -271,6 +272,7 @@ private static final long serialVersionUID = 0L;
   /**
    * <pre>
    * OIDC only: the tenant identity provider the invitee signs in with.
+   * Format: the provider's UUID (`provider_id` from IdentityProviderService).
    * </pre>
    *
    * <code>string idp_provider_id = 5 [json_name = "idpProviderId"];</code>
@@ -1348,6 +1350,7 @@ private static final long serialVersionUID = 0L;
     /**
      * <pre>
      * OIDC only: the tenant identity provider the invitee signs in with.
+     * Format: the provider's UUID (`provider_id` from IdentityProviderService).
      * </pre>
      *
      * <code>string idp_provider_id = 5 [json_name = "idpProviderId"];</code>
@@ -1368,6 +1371,7 @@ private static final long serialVersionUID = 0L;
     /**
      * <pre>
      * OIDC only: the tenant identity provider the invitee signs in with.
+     * Format: the provider's UUID (`provider_id` from IdentityProviderService).
      * </pre>
      *
      * <code>string idp_provider_id = 5 [json_name = "idpProviderId"];</code>
@@ -1389,6 +1393,7 @@ private static final long serialVersionUID = 0L;
     /**
      * <pre>
      * OIDC only: the tenant identity provider the invitee signs in with.
+     * Format: the provider's UUID (`provider_id` from IdentityProviderService).
      * </pre>
      *
      * <code>string idp_provider_id = 5 [json_name = "idpProviderId"];</code>
@@ -1406,6 +1411,7 @@ private static final long serialVersionUID = 0L;
     /**
      * <pre>
      * OIDC only: the tenant identity provider the invitee signs in with.
+     * Format: the provider's UUID (`provider_id` from IdentityProviderService).
      * </pre>
      *
      * <code>string idp_provider_id = 5 [json_name = "idpProviderId"];</code>
@@ -1420,6 +1426,7 @@ private static final long serialVersionUID = 0L;
     /**
      * <pre>
      * OIDC only: the tenant identity provider the invitee signs in with.
+     * Format: the provider's UUID (`provider_id` from IdentityProviderService).
      * </pre>
      *
      * <code>string idp_provider_id = 5 [json_name = "idpProviderId"];</code>

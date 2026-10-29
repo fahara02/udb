@@ -4438,6 +4438,7 @@ export type CreateInvitationRequest = Message<"udb.core.authn.services.v1.Create
 
   /**
    * OIDC only: the tenant identity provider the invitee signs in with.
+   * Format: the provider's UUID (`provider_id` from IdentityProviderService).
    *
    * @generated from field: string idp_provider_id = 5;
    */

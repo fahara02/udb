@@ -39380,6 +39380,7 @@ namespace Udb.Core.Authn.Services.V1 {
     private string idpProviderId_ = "";
     /// <summary>
     /// OIDC only: the tenant identity provider the invitee signs in with.
+    /// Format: the provider's UUID (`provider_id` from IdentityProviderService).
     /// </summary>
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]

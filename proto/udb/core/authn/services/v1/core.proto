@@ -1925,6 +1925,7 @@ message CreateInvitationRequest {
   // empty for OIDC and PASSKEY. No other account may already use it.
   string address = 4;
   // OIDC only: the tenant identity provider the invitee signs in with.
+  // Format: the provider's UUID (`provider_id` from IdentityProviderService).
   string idp_provider_id = 5;
   // Role CODES bound in the tenant on acceptance (at most 32). Reserved
   // platform roles are refused; organization_owner needs a caller who holds
