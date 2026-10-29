@@ -70,6 +70,9 @@ impl FakeProvider {
             "name": "Oidc Person",
             "iat": now,
             "exp": now + 600,
+            // Distinct per token: two sign-ins in one second must not mint
+            // byte-identical tokens, which the replay guard rightly refuses.
+            "jti": Uuid::new_v4().to_string(),
         });
         if let Some(nonce) = nonce {
             claims["nonce"] = serde_json::Value::String(nonce.to_string());
@@ -367,7 +370,7 @@ async fn live_oidc_sign_in_code_flow_native_id_token_and_refusals() {
     let tenant = Uuid::new_v4().to_string();
     // One keyed runtime seals the client secret (IdP) and unseals it at the
     // token exchange (sign-in), in any posture the test process runs in.
-    let keyed = Arc::new(crate::runtime::core::DataBrokerRuntime::with_test_encryption_key().await);
+    let keyed = keyed_live_runtime().await;
     let idp = super::super::idp::IdentityProviderServiceImpl::new()
         .with_postgres(Some(pool.clone()))
         .with_runtime(keyed.clone());
@@ -741,7 +744,7 @@ async fn live_oidc_jit_user_gets_mapped_roles_bound_and_never_reserved_ones() {
         seed_tenant_role(&pool, &tenant, code).await;
     }
     let broker = native_broker_service().await;
-    let keyed = Arc::new(crate::runtime::core::DataBrokerRuntime::with_test_encryption_key().await);
+    let keyed = keyed_live_runtime().await;
     let svc = authn_service_with_jwt(pool.clone())
         .with_authz_snapshot(Some(broker.authz_snapshot()))
         .with_runtime(Some(keyed.clone()));

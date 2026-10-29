@@ -254,6 +254,23 @@ pub(super) fn api_key_service(pool: sqlx::PgPool) -> ApiKeyServiceImpl {
         .with_postgres(Some(pool))
 }
 
+/// A served-broker runtime over the live database WITH a fixed at-rest key, for
+/// tests that seal secrets (identity-provider client secrets) and also need the
+/// runtime's native stores (token families, sessions), whatever posture the
+/// test process runs in: fail-closed mode refuses to store a secret unsealed.
+pub(super) async fn keyed_live_runtime() -> Arc<DataBrokerRuntime> {
+    use base64::{Engine as _, engine::general_purpose::STANDARD as B64};
+    let mut config = UdbConfig {
+        primary: DbConfig {
+            direct_dsn: live_pg_dsn(),
+            ..DbConfig::default()
+        },
+        ..UdbConfig::default()
+    };
+    config.encryption.keys.insert(1, B64.encode([0x5au8; 32]));
+    Arc::new(DataBrokerRuntime::from_config(config).await)
+}
+
 pub(super) async fn native_broker_service() -> DataBrokerService {
     let config = UdbConfig {
         primary: DbConfig {
