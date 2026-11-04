@@ -59,9 +59,9 @@ CHECKS: tuple[SourceCheck, ...] = (
             "write_receipt_json",
             "def entity(self, message_type: str",
             "def table(self, name: str",
-            "class _BoundEntity:",
+            "class _BoundEntity(_EntityBase):",
             "def upsert(",
-            "conflict_fields=self._key",
+            "conflict_fields=list(self._key)",
         ),
     ),
     SourceCheck(
